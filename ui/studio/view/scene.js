@@ -4,6 +4,8 @@ import {
   eyeLocation,
   eyeRadius,
   fieldOrigin,
+  fishOutline,
+  organTitle,
   BODY_RADIUS_PIXELS,
   nodeLocation,
   organLocation,
@@ -41,9 +43,9 @@ import {
 } from '../model/document.js';
 import {BODY_FRAME, onMidline, sitePoint} from '../model/layout.js';
 import {regionSlots, routedLinks} from '../model/regions.js';
-import {cameraBox, fishPath} from './frame.js';
+import {cameraBox} from './frame.js';
 
-export const organTitle = organ => t('studio.organs.' + organ.type);
+export {organTitle};
 // A node of a planned region is named by its place in the plan: a map node by the directions it
 // takes (and its colour type), the output, the contrast cells.
 export function centerTitle(center) {
@@ -68,15 +70,16 @@ export function moduleName(doc, assembly) {
 }
 // What a wire attaches to, by name: an organ; a center of the brain; a node of an organ or a
 // center of a brain region with its organ.
-export function endpointTitle(doc, id) {
+export function endpointTitle(doc, id, sites = null) {
   const organ = findOrgan(doc, id);
   if (organ)
-    return organTitle(organ);
+    return organTitle(organ, sites);
   const found = findCenter(doc, id);
   if (!found)
     return '';
-  return found.organ.type === 'brain' ? centerTitle(found.center)
-                                      : organTitle(found.organ) + ' · ' + centerTitle(found.center);
+  return found.organ.type === 'brain'
+             ? centerTitle(found.center)
+             : organTitle(found.organ, sites) + ' · ' + centerTitle(found.center);
 }
 export const tone = kind => {
   if ([ 'eye', 'nose', 'proximity', 'lateral', 'touch', 'pain' ].includes(kind))
@@ -314,8 +317,8 @@ function wireSvg(state, centers) {
         '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
         '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) + '"' +
         (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
-        escapeText(endpointTitle(doc, ends[0].link.from) + ' → ' +
-                   endpointTitle(doc, ends[0].link.to) +
+        escapeText(endpointTitle(doc, ends[0].link.from, state.sites) + ' → ' +
+                   endpointTitle(doc, ends[0].link.to, state.sites) +
                    (wireIds.size > 1 ? ' · ' + wireIds.size + ' ' + t('studio.app.wires') : '')) +
         '</title></g>';
     const startDirection = curveDirection(q, s0), endDirection = curveDirection(q, s1);
@@ -505,7 +508,7 @@ function hormoneOverlay(state) {
     }
   // A body that grows with the substance carries its colour along its outline.
   const growth = growsWith(doc, substance.index, capabilities)
-                     ? '<path class="aid-hormone-body" d="' + fishPath() +
+                     ? '<path class="aid-hormone-body" d="' + fishOutline(state) +
                            '" style="--hormone:' + color + '"/>'
                      : '';
   const paths = targets
@@ -620,7 +623,7 @@ function centersSvg(state) {
       result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
                 fixed(pos.y + 47 / zoom) +
                 '" text-anchor="middle" class="aid-organ-label" font-size="' + fixed(14 / zoom) +
-                '">' + escapeText(organTitle(organ)) + '</text>';
+                '">' + escapeText(organTitle(organ, state.sites)) + '</text>';
     }
   }
   return result;
@@ -770,12 +773,13 @@ function slotsSvg(state) {
     const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
     slots.forEach((slot, i) => {
       const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
-      const state = slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
+      const fill = slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
       const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
-      const name = t('studio.regions.slots.' + slot.key) + ' · ' +
-                   t(slot.required ? 'studio.regions.required' : 'studio.regions.optional') +
-                   (slot.filled.length ? ': ' + slot.filled.map(organTitle).join(', ') : '');
-      html += '<g class="aid-slot-chip ' + state + ' ' + slot.dir + '" data-slot-region="' +
+      const name =
+          t('studio.regions.slots.' + slot.key) + ' · ' +
+          t(slot.required ? 'studio.regions.required' : 'studio.regions.optional') +
+          (slot.filled.length ? ': ' + slot.filled.map(o => organTitle(o, sites)).join(', ') : '');
+      html += '<g class="aid-slot-chip ' + fill + ' ' + slot.dir + '" data-slot-region="' +
               escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '" transform="translate(' +
               fixed(x) + ' ' + fixed(y) + ') scale(' + fixed(1 / zoom) + ')"><title>' +
               escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +

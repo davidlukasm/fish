@@ -82,7 +82,7 @@
   "organs": {
     "brain": "Gehirn",
     "eye": "Auge",
-    "nose": "Geruchs­organ",
+    "nose": "Nase",
     "proximity": "Nahsinn",
     "lateral": "Seiten­linie",
     "touch": "Tastsinn",
@@ -92,7 +92,7 @@
     "bladder": "Schwimm­blase",
     "muscle": "Muskel",
     "defense": "Abwehr­gewebe",
-    "pigment": "Pigment­zellen",
+    "pigment": "Pigmen­tierung",
     "eggs": "Eiorgan",
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
@@ -321,7 +321,9 @@
     "bothSides": "Diese Baugruppe liegt schon auf beiden Seiten.",
     "removeModule": "Löschen",
     "partOf": "Teil von",
-    "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden."
+    "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden.",
+    "strength": "Kraft",
+    "moduleName": "Name der Baugruppe"
   },
   "effects": [
     "Erregung",
@@ -670,5 +672,51 @@
     "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrer geben.",
     "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",
     "develop": "Fisch entwickeln, das Ergebnis ansehen und die Eier ins Aquarium setzen."
+  },
+  "muscleTitles": [
+    "Schwanz­muskel",
+    "Flossen­muskel",
+    "Saug­muskel",
+    "Kiefer­muskel"
+  ],
+  "muscle": {
+    "nodesHandle": "Ziehen: mehr oder weniger Knoten",
+    "strengthHandle": "Ziehen: Kraft jedes Knotens",
+    "readout": "{nodes} Knoten · Kraft {strength}",
+    "undulation": {
+      "handle": "Ziehen: wie weit der Körper mitschwingt",
+      "beat": "Schwanzschlag",
+      "wave": "Schlängeln",
+      "mixed": "halb und halb"
+    },
+    "jaw": {
+      "handle": "Ziehen: Länge des Kiefers",
+      "lever": "Bisskraft ×{n}"
+    },
+    "teeth": {
+      "handle": "Ziehen: spitze oder stumpfe Zähne",
+      "sharp": "spitz",
+      "blunt": "stumpf",
+      "mixed": "mittel"
+    },
+    "title": {
+      "0": "Schwanzflosse",
+      "1": "Seitenflosse",
+      "2": "Saugmaul",
+      "5": "Kiefer",
+      "6": "Stacheln",
+      "7": "Pigmentierung"
+    },
+    "hint": {
+      "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
+      "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
+      "2": "Mehr Kraft saugt stärker und weiter an und macht die Lippen dicker. Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
+      "5": "Ein langer Kiefer öffnet ein weites Maul, beißt aber schwächer. Stumpfe Zähne knacken Krebse und Muscheln, spitze packen Würmer und Fische.",
+      "6": "Jeder Knoten trägt Stacheln auf der Haut; mehr Kraft macht sie länger.",
+      "7": "Die Farbe des Fisches mischt sich aus allen Pigmentknoten, wie in der Engine: wenige tönen ihn nur leicht, viele kräftige färben ihn deutlich."
+    },
+    "pigment": {
+      "body": "Farbe des Fisches"
+    }
   }
 }

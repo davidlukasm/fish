@@ -2,7 +2,7 @@
 // projection of the fish, and how near a point must be to snap to one.
 export const SNAP_DISTANCE = 95;
 export const PLACEMENT_MARGIN = 120;
-const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
+export const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
 

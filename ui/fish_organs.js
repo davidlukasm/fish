@@ -295,11 +295,13 @@ const GUT = Object.freeze({
   lift : .3,
   height : .48
 });
+// The gut's loops, as the engine's body plan turns it: TURNS plus TURNS_PER_LENGTH of its length.
+export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);
 export function fishSatietyShape(a) {
   const front = a.headBack - GUT.front, back = a.chestBack + GUT.back * a.chestLength,
         x = (front + back) / 2, half = Math.max(GUT.min_half, (front - back) / 2),
         breadth = Math.max(GUT.min_breadth, Math.min(a.shoulder, a.joinWidth) * GUT.breadth),
-        turns = GUT.turns + GUT.turns_per_length * (a.gutLength || 0),
+        turns = gutTurns(a.gutLength),
         tube = Math.min(GUT.tube + GUT.tube_per_fill * Math.sqrt(a.gutFilling || 0),
                         half / (turns * GUT.loop_tubes));
   return {x, y : breadth * GUT.lift, rx : half, ry : breadth * GUT.height, turns, tube};
@@ -676,6 +678,10 @@ const MOUTH = Object.freeze({
   min_length : .08,
   eye_gap : .035
 });
+// The lips' width at rest, thickened by suction (its size, 0 to 1), and how far back the jaw
+// reaches from the snout for its length trait.
+export const lipWidth = suction => MOUTH.lip + MOUTH.lip_per_suction * suction;
+export const jawReach = jaw => MOUTH.jaw + MOUTH.jaw_per_length * jaw;
 export function fishMouthShape(a) {
   const signature = [
     a.bitePose, a.swallowPose, a.mouthOpening, a.mouthOffset, a.snout, a.faceWidth, a.aperture,
@@ -689,15 +695,13 @@ export function fishMouthShape(a) {
         gap = MOUTH.closed_gap + (a.aperture || a.faceWidth * MOUTH.aperture) * gape;
   const shape = {
     front : Number.isFinite(a.mouthOffset) ? (a.origin?.[0] || 0) + a.mouthOffset : a.snout,
-    back : Math.max(
-        a.headBack + MOUTH.min_back * a.headLength,
-        a.snout - Math.min(a.faceLength * MOUTH.max_jaw, MOUTH.jaw + MOUTH.jaw_per_length * a.jaw) -
-            gap * (MOUTH.gap_back + MOUTH.gap_back_per_bite * biteOpen) *
-                (1 - MOUTH.suction_shorten * suction)),
+    back : Math.max(a.headBack + MOUTH.min_back * a.headLength,
+                    a.snout - Math.min(a.faceLength * MOUTH.max_jaw, jawReach(a.jaw)) -
+                        gap * (MOUTH.gap_back + MOUTH.gap_back_per_bite * biteOpen) *
+                            (1 - MOUTH.suction_shorten * suction)),
     hinge : MOUTH.closed_gap + MOUTH.hinge_per_gap * gap,
     gap,
-    lip : MOUTH.lip + MOUTH.lip_per_plan * plan.lip + MOUTH.lip_per_suction * a.suction +
-              MOUTH.lip_per_pump * suction,
+    lip : lipWidth(a.suction) + MOUTH.lip_per_plan * plan.lip + MOUTH.lip_per_pump * suction,
     hook : plan.hook * biteOpen * (1 - MOUTH.hook_blunting * a.teeth),
     gape,
     open,
@@ -1320,16 +1324,25 @@ const TEETH = Object.freeze({
   blunting : .42,
   max_height : .68
 });
+// How many teeth a jaw side of a biting power (0 to 1) carries and how they look: how far they
+// reach, the share of their base their tip keeps flat and of their reach they stand high.
+export function toothForm(power, bluntness = 0, spread = 0) {
+  return {
+    count :
+        TEETH.count + Math.round(TEETH.count_per_power * power + TEETH.count_per_spread * spread +
+                                 TEETH.count_per_bluntness * bluntness),
+    reach : TEETH.reach + TEETH.reach_per_power * power,
+    flat : TEETH.flat + TEETH.flat_per_bluntness * bluntness,
+    height : 1 - TEETH.blunting * bluntness
+  };
+}
 export function fishTeeth(a, side) {
   const f = fishForm(a, MOTOR_TISSUE.aggression), power = a.attackSides[side],
         opening = fishMouthShape(a).gape;
   if (!power || opening < TEETH.min_gape)
     return [];
-  const q = fishMouthShape(a),
-        count =
-            TEETH.count + Math.round(TEETH.count_per_power * power + TEETH.count_per_spread * f.sy +
-                                     TEETH.count_per_bluntness * a.teeth),
-        reach = TEETH.reach + TEETH.reach_per_power * power,
+  const q = fishMouthShape(a), form = toothForm(power, a.teeth || 0, f.sy), count = form.count,
+        reach = form.reach,
         broad = Math.min(TEETH.width + TEETH.width_per_spread * f.sy,
                          (q.front - q.back) * TEETH.max_width / count),
         result = [];
@@ -1337,9 +1350,8 @@ export function fishTeeth(a, side) {
     const t = TEETH.start + TEETH.span * (i + TEETH.offset + TEETH.side_offset * side) / count,
           p = fishJawEdge(a, side, t), sign = side ? 1 : -1,
           tip = reach * (TEETH.tip + TEETH.tip_wave * Math.sin(Math.PI * t));
-    const flat = broad * (TEETH.flat + TEETH.flat_per_bluntness * (a.teeth || 0)),
-          height = Math.min(tip * (1 - TEETH.blunting * (a.teeth || 0)),
-                            Math.abs(p[1]) * TEETH.max_height);
+    const flat = broad * form.flat,
+          height = Math.min(tip * form.height, Math.abs(p[1]) * TEETH.max_height);
     const tooth = [
       [ p[0] - broad, p[1] ], [ p[0] - flat, p[1] - sign * height ],
       [ p[0] + flat, p[1] - sign * height ], [ p[0] + broad, p[1] ]
@@ -1429,10 +1441,10 @@ function fishFinAttachment(a, index, lobe = 0) {
 
 // Fin size grows with the power POWER of its cells and strength, in shares CELLS and STRENGTH.
 const FIN_SIZE = Object.freeze({min : .01, cells : .6, strength : .4, power : .37});
+export const finVolumeOf = (cells, strength) => Math.pow(
+    Math.max(FIN_SIZE.min, FIN_SIZE.cells * cells + FIN_SIZE.strength * strength), FIN_SIZE.power);
 export const finVolume = (a, index) =>
-    Math.pow(Math.max(FIN_SIZE.min, FIN_SIZE.cells * a.fin(index)[FIN_SHAPE.cells] +
-                                        FIN_SIZE.strength * a.fin(index)[FIN_SHAPE.strength]),
-             FIN_SIZE.power);
+    finVolumeOf(a.fin(index)[FIN_SHAPE.cells], a.fin(index)[FIN_SHAPE.strength]);
 // Fin rims run over the curves from the first to the last index here.
 const FIN_RIM = Object.freeze([ 1, 6 ]);
 // The tail fin grows with its size; the stroke stretches and narrows it. Its lobe and tip knots
@@ -1446,6 +1458,11 @@ const TAIL_FIN = Object.freeze({
   narrowing : .18,
   min_slope : .001,
   push_out : 1.08
+});
+// A tail fin's length and width at rest for its size, before its plan shapes it.
+export const tailFinSize = volume => ({
+  length : TAIL_FIN.length + TAIL_FIN.length_per_size * volume,
+  width : TAIL_FIN.width + TAIL_FIN.width_per_size * volume
 });
 // Tail fin knots over the upper half; the lower half mirrors the leading, lobe and tip knots.
 const TAIL_KNOT = Object.freeze({lead : 1, lobe : 2, tip : 3, fork : 4});
@@ -1473,6 +1490,11 @@ const SIDE_FIN = Object.freeze({
   rake : .55,
   rake_per_pose : .80,
   root_at : .35
+});
+// A side fin's length and spread past the flank for its size, before its plan and stroke.
+export const sideFinSize = volume => ({
+  length : SIDE_FIN.length + SIDE_FIN.length_per_size * volume,
+  spread : SIDE_FIN.spread + SIDE_FIN.spread_per_size * volume
 });
 // Side-fin knots from the root over the leading edge and tip to the trailing edge and base.
 const SIDE_KNOT =
@@ -1529,12 +1551,9 @@ export function fishFinShape(a, index, lobe = 0) {
         pose = a.finPose(index), volume = finVolume(a, index),
         shape = {plan : fishFinPlan(a, index), rimRange : FIN_RIM};
   if (index === FIN.tail) {
-    const root = [ a.tailRoot, 0 ],
-          length = (TAIL_FIN.length + TAIL_FIN.length_per_size * volume) * plan.length +
-                   TAIL_FIN.length_per_pose * pose,
-          width = (TAIL_FIN.width + TAIL_FIN.width_per_size * volume) * plan.width *
-                  (1 - TAIL_FIN.narrowing * pose),
-          half = [
+    const root = [ a.tailRoot, 0 ], size = tailFinSize(volume),
+          length = size.length * plan.length + TAIL_FIN.length_per_pose * pose,
+          width = size.width * plan.width * (1 - TAIL_FIN.narrowing * pose), half = [
             [ 0, 0 ], [ plan.lead_along, -plan.lead_out ], [ plan.lobe_along, -plan.lobe_out ],
             [ plan.tip_along, -plan.tip_out ], [ plan.fork, 0 ]
           ];
@@ -1568,7 +1587,7 @@ export function fishFinShape(a, index, lobe = 0) {
     const sign = side ? 1 : -1, t = fishFinAttachment(a, index, lobe),
           anchor = fishFlank(a, side, t),
           length = SIDE_FIN.scale *
-                   Math.min((SIDE_FIN.length + SIDE_FIN.length_per_size * volume) * plan.length,
+                   Math.min(sideFinSize(volume).length * plan.length,
                             SIDE_FIN.max_length * (a.chestLength + a.hindLength)) *
                    (lobe ? SIDE_FIN.lobe_length : 1),
           // A fin that exists always shows past the flank, however weak or folded it is.
@@ -1581,8 +1600,7 @@ export function fishFinShape(a, index, lobe = 0) {
         swing = SIDE_FIN.scale *
                 Math.min((SIDE_FIN.swing + SIDE_FIN.swing_per_size * volume) * plan.swing,
                          SIDE_FIN.max_swing + SIDE_FIN.max_swing_per_width * Math.abs(anchor[1])),
-          spread = (Math.max(0, widest - Math.abs(anchor[1])) + SIDE_FIN.spread +
-                    SIDE_FIN.spread_per_size * volume +
+          spread = (Math.max(0, widest - Math.abs(anchor[1])) + sideFinSize(volume).spread +
                     swing * (SIDE_FIN.swing_rest + SIDE_FIN.swing_per_pose * pose)) *
                    (lobe ? dual : 1),
           root = [ anchor[0], anchor[1] * SIDE_FIN.root_inset ],

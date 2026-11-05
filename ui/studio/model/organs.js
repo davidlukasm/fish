@@ -97,15 +97,19 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  {key : 'muscle', category : 'motor', centers : [ motor('muscle', 'site', 4) ]},
+  // Organs that recruit nodes: more places of the same kind, as many as `nodes` at most, all
+  // with the settings of the first.
+  {key : 'muscle', category : 'motor', nodes : 8, centers : [ motor('muscle', 'site', 4) ]},
   {
     key : 'defense',
     category : 'motor',
+    nodes : 8,
     centers : [ motor('armor', MOTOR_KIND.defense, 3, 'outer') ]
   },
   {
     key : 'pigment',
     category : 'motor',
+    nodes : 24,
     centers : [ motor('colour', MOTOR_KIND.pigment, 5, 'outer') ]
   },
   // Gonads, like brain regions, say what can be wired to them: a trigger to release (they also
@@ -246,6 +250,16 @@ export const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
   [ MOTOR_KIND.aggression, 3 ]
 ]);
+
+// What a muscle's qualities shape in the engine's body plan, by its function: the trait each one
+// sets, the strength-weighted mean of (1 + quality) / 2 over all muscles of that function.
+export const MUSCLE_TRAITS = Object.freeze({
+  [MOTOR_KIND.forward] : Object.freeze({q1 : 'undulation'}),
+  [MOTOR_KIND.suction] : Object.freeze({q1 : 'gut_length'}),
+  [MOTOR_KIND.aggression] : Object.freeze({q1 : 'blunt_teeth', q2 : 'jaw_length'})
+});
+export const traitOf = quality => (1 + quality) / 2;
+export const qualityOf = trait => 2 * Math.max(0, Math.min(1, trait)) - 1;
 
 export function functionFor(center, site) {
   if (center.functionCode !== 'site')

@@ -1,4 +1,5 @@
 import {visionInspector} from './vision.js';
+import {effectorGraphic} from './effectors.js';
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} from '../../schema.js';
 import {hormoneColors} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
@@ -277,8 +278,8 @@ function pairedOrganGraphic(organ, selected) {
          escapeText(organTitle(organ)) + '">' + outline + nodes + '</svg>';
 }
 // A muscle does what its place makes of it: drive the tail, steer, suck in or bite. The four
-// functions stand side by side as small fish, the muscle's own one marked; another one moves the
-// muscle to the nearest place with that function. Below it, its fibres, as many as its cells.
+// functions stand side by side, the muscle's own one marked; another one moves the muscle to the
+// nearest places with that function.
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
   [MOTOR_KIND.turn] : 'M5 18c0-7 5-12 13-12M18 6l-4-2M18 6l-2 4',
@@ -307,41 +308,7 @@ function muscleGraphic(state, center) {
                    MUSCLE_ICON[code] + '"/></svg><span>' +
                    escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
           .join('');
-  const lines =
-      Array
-          .from({length : center.copies},
-                (_, i) => {
-                  const y = 13 + (i + .5) * 82 / center.copies;
-                  return '<path d="M27 ' + number(y) + ' Q125 ' + number(y - 12) + ' 255 ' +
-                         number(y) +
-                         '" stroke="#eaa886" stroke-opacity=".8" stroke-width="1.4" fill="none"/>';
-                })
-          .join('');
-  const width = 20 + 60 * center.copies / ATELIER_LIMITS.max_copies;
-  return '<div class="aid-muscle-functions">' + chips + '</div>' +
-         '<svg class="aid-muscle-fibres" viewBox="0 0 280 110" role="img" aria-label="' +
-         escapeText(organTitle({type : 'muscle'})) + '"><rect x="8" y="' + number(55 - width / 2) +
-         '" width="264" height="' + number(width) +
-         '" rx="22" fill="#eaa886" fill-opacity=".12"/>' + lines + '</svg>';
-}
-function tissueGraphic(organ, center) {
-  const defense = organ.type === 'defense';
-  const count = center.copies;
-  const spokes =
-      Array
-          .from({length : count},
-                (_, i) => {
-                  const x = 16 + (i + .5) * 240 / count;
-                  return defense
-                             ? '<path d="M' + number(x - 7) + ' 85 L' + number(x) + ' 19 L' +
-                                   number(x + 7) +
-                                   ' 85 Z" fill="#eaa886" fill-opacity=".55" stroke="#eaa886"/>'
-                             : '<path d="M35 90 Q' + number(x) +
-                                   ' 40 240 19" stroke="#79d2be" fill="none" stroke-opacity=".6"/>';
-                })
-          .join('');
-  return '<svg class="aid-organ-tissue" viewBox="0 0 280 110" role="img" aria-label="' +
-         escapeText(organTitle(organ)) + '">' + spokes + '</svg>';
+  return '<div class="aid-muscle-functions">' + chips + '</div>';
 }
 
 function organSettings(state, organ, center) {
@@ -355,13 +322,13 @@ function organSettings(state, organ, center) {
   if (organ.type === 'nose') {
     html += compass(center);
   } else if (organ.type === 'pigment') {
-    html += pigmentSpectrum(state, center);
+    html += pigmentSpectrum(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'gut' || organ.type === 'bladder') {
     html += pairedOrganGraphic(organ, center);
   } else if (organ.type === 'muscle') {
-    html += muscleGraphic(state, center);
+    html += muscleGraphic(state, center) + effectorGraphic(state, organ);
   } else if (organ.type === 'defense') {
-    html += tissueGraphic(organ, center);
+    html += effectorGraphic(state, organ);
   } else if (organ.type === 'gland') {
     html += glandProfile(state, center);
   } else if (organ.type === 'eggs' || organ.type === 'sperm') {
@@ -378,8 +345,12 @@ function organSettings(state, organ, center) {
   }
   if (center.role === 'nerve')
     html += outgoingField(state, center);
-  html += '<div class="aid-cell-count-title">' + label('inspector.count') + ' <strong>' +
-          center.copies + '</strong></div>' + iconCells(center.copies, center.id);
+  // An organ that recruits nodes sets them and their strength on its graphic; other effectors
+  // make no more cells, only stronger ones.
+  if (!ORGAN_BY_KEY[organ.type]?.nodes)
+    html += '<div class="aid-cell-count-title">' +
+            label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +
+            ' <strong>' + center.copies + '</strong></div>' + iconCells(center.copies, center.id);
   if (center.role === 'sensor') {
     html += sensorAnswer(state, center) + sensorAdaptation(state, center);
   } else if (center.role === 'motor') {
@@ -626,26 +597,26 @@ function slotsSection(state, organ) {
     return '';
   const slots =
       regionSlots(state.document, organ)
-          .map(slot =>
-                   '<li class="' +
-                   (slot.filled.length ? 'filled'
-                    : slot.required    ? 'missing'
-                                       : 'free') +
-                   '"><span>' + label('regions.slots.' + slot.key) + '</span><small>' +
-                   label(slot.required ? 'regions.required' : 'regions.optional') +
-                   '</small><span class="aid-slot-ends">' +
-                   (slot.filled.length
-                        ? slot.filled
-                              .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
-                                        icon(o.type, 16) + escapeText(organTitle(o)) + '</button>')
-                              .join('')
-                        : '') +
-                   // Any slot takes one more: a click starts the wire there.
-                   '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
-                   '" data-slot-dir="' + slot.dir + '" title="' +
-                   label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') + '">' +
-                   (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
-                   '</span></li>')
+          .map(slot => '<li class="' +
+                       (slot.filled.length ? 'filled'
+                        : slot.required    ? 'missing'
+                                           : 'free') +
+                       '"><span>' + label('regions.slots.' + slot.key) + '</span><small>' +
+                       label(slot.required ? 'regions.required' : 'regions.optional') +
+                       '</small><span class="aid-slot-ends">' +
+                       (slot.filled.length
+                            ? slot.filled
+                                  .map(o => '<button data-select-organ="' + escapeText(o.id) +
+                                            '">' + icon(o.type, 16) +
+                                            escapeText(organTitle(o, state.sites)) + '</button>')
+                                  .join('')
+                            : '') +
+                       // Any slot takes one more: a click starts the wire there.
+                       '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
+                       '" data-slot-dir="' + slot.dir + '" title="' +
+                       label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') + '">' +
+                       (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
+                       '</span></li>')
           .join('');
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
@@ -855,7 +826,7 @@ function organInspector(state, organ) {
                    ? regionTerm(organ.type)
                    : label(isRegion(organ) ? 'sections.regions' : 'inspector.organType');
   let html = '<header class="aid-inspector-head"><span>' + term + '</span>' +
-             heading(organTitle(organ)) + '</header>' +
+             heading(organTitle(organ, state.sites)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
@@ -929,7 +900,8 @@ function outgoingField(state, center) {
 function wireInspector(state, wire) {
   const doc = state.document;
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
-         heading(endpointTitle(doc, wire.from) + ' → ' + endpointTitle(doc, wire.to)) +
+         heading(endpointTitle(doc, wire.from, state.sites) + ' → ' +
+                 endpointTitle(doc, wire.to, state.sites)) +
          '</header>' +
          (wire.pairing ? '<div class="aid-wire-pairing">' + pairingButton(wire) + '</div>' : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) +
@@ -1293,17 +1265,19 @@ function hormoneInspector(state) {
   html += '<div class="aid-substances">' +
           doc.substances
               .map(substance => {
-                const title = substance.name || (label('inspector.substanceName') + ' ' +
-                                                 String.fromCharCode(65 + substance.index));
-                return '<div class="aid-substance-row">' +
-                       '<button class="aid-substance-pill' +
-                       (state.focusSubstance === substance.index ? ' active' : '') +
-                       '" data-select-substance="' + substance.index +
+                // The name is written in place; the swatch chooses the substance.
+                const fallback = label('inspector.substanceName') + ' ' +
+                                 String.fromCharCode(65 + substance.index);
+                return '<div class="aid-substance-row' +
+                       (state.focusSubstance === substance.index ? ' active' : '') + '">' +
+                       '<button class="aid-substance-pill" data-select-substance="' +
+                       substance.index + '" aria-label="' + escapeText(fallback) +
                        '"><span class="aid-substance-swatch" style="--substance:' +
-                       substanceColour(substance.index) + '"></span>' + escapeText(title) +
-                       '</button>' +
-                       '<button class="aid-row-menu" data-rename-substance="' + substance.index +
-                       '" title="' + label('inspector.substanceName') + '">✎</button>' +
+                       substanceColour(substance.index) + '"></span></button>' +
+                       '<input class="aid-inline-name" data-substance-name="' + substance.index +
+                       '" value="' + escapeText(substance.name) + '" placeholder="' +
+                       escapeText(fallback) + '" maxlength="32" aria-label="' +
+                       label('inspector.substanceName') + '">' +
                        '<button class="aid-row-menu" data-remove-substance="' + substance.index +
                        '" aria-label="' + label('inspector.removeSubstance') + '">×</button></div>';
               })
@@ -1322,7 +1296,8 @@ function hormoneInspector(state) {
     const glands = organs =>
         organs
             .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                          icon(organ.type, 18) + escapeText(organTitle(organ)) + '</button>')
+                          icon(organ.type, 18) + escapeText(organTitle(organ, state.sites)) +
+                          '</button>')
             .join('');
     const buttons = (members, effects = () => []) =>
         members
@@ -1416,14 +1391,14 @@ function teacherChain(state, center) {
   const rows = teachersOf(doc, center, state.capabilities).map(({substance, glands}) => {
     const name = substance.name || String.fromCharCode(65 + substance.index);
     const sources =
-        glands.length
-            ? organsOf(doc, glands)
-                  .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                                icon(organ.type, 18) + escapeText(organTitle(organ)) + '</button>')
-                  .join('')
-            : '<button class="aid-secondary" data-add-gland="' + substance.index + '" data-near="' +
-                  escapeText(center.id) + '">+ ' +
-                  escapeText(t('studio.inspector.addTeacher', {name})) + '</button>';
+        glands.length ? organsOf(doc, glands)
+                            .map(organ => '<button data-select-organ="' + escapeText(organ.id) +
+                                          '">' + icon(organ.type, 18) +
+                                          escapeText(organTitle(organ, state.sites)) + '</button>')
+                            .join('')
+                      : '<button class="aid-secondary" data-add-gland="' + substance.index +
+                            '" data-near="' + escapeText(center.id) + '">+ ' +
+                            escapeText(t('studio.inspector.addTeacher', {name})) + '</button>';
     return '<div class="aid-teacher"><div class="aid-teacher-sources">' + sources +
            '</div><span class="aid-teacher-substance" style="--substance:' +
            substanceColour(substance.index) + '">' + escapeText(name) + '</span>' +
@@ -1485,12 +1460,16 @@ function learningInspector(state) {
 function assemblyInspector(state, assembly) {
   const doc = state.document;
   return '<header class="aid-inspector-head"><span>' + label('sections.module') + '</span>' +
-         heading(moduleName(doc, assembly)) + '</header><div class="aid-assembly-list">' +
+         '<input class="aid-inline-name aid-inline-title" data-assembly-name="' +
+         escapeText(assembly.id) + '" value="' + escapeText(moduleName(doc, assembly)) +
+         '" maxlength="40" aria-label="' + label('inspector.moduleName') + '"></header>' +
+         '<div class="aid-assembly-list">' +
          assembly.organIds
              .map(id => {
                const organ = findOrgan(state.document, id);
                return organ ? '<button data-select-organ="' + escapeText(id) + '">' +
-                                  icon(organ.type, 22) + escapeText(organTitle(organ)) + '</button>'
+                                  icon(organ.type, 22) +
+                                  escapeText(organTitle(organ, state.sites)) + '</button>'
                             : '';
              })
              .join('') +
@@ -1511,7 +1490,7 @@ function multiInspector(state) {
   const chosen = [...state.multi ].flatMap(id => {
     const organ = findOrgan(state.document, id);
     if (organ)
-      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ)} ];
+      return [ {id, kind : 'organ', type : organ.type, name : organTitle(organ, state.sites)} ];
     const hit = findCenter(state.document, id);
     return hit ? [ {id, kind : 'center', type : hit.organ.type, name : centerTitle(hit.center)} ]
                : [];

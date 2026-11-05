@@ -1,14 +1,16 @@
-import {BODY_FRAME, sitePoint} from '../model/layout.js';
+import {BODY_FRAME, ZONE_X, sitePoint} from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {wrapAngle} from '../../units.js';
-import {fishBodyColour} from '../model/pigment.js';
-import {SNOUT_TIP, finPaths, fishPath} from './frame.js';
-import {ANATOMY} from '../../schema.js';
-import {t} from '../../strings.js';
+import {absorptionColour, fishBodyColour, pigmentAbsorption} from '../model/pigment.js';
+import {SNOUT_TIP, finPaths, finSizes, fishPath, skinAt} from './frame.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT} from '../../schema.js';
+import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
+import {mouthShare, organSize} from '../../fish_forms.js';
+import {t, tList} from '../../strings.js';
 import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {bearing} from '../model/retina.js';
-import {isRegion} from '../model/organs.js';
+import {MUSCLE_LABEL_INDEX, functionFor, isRegion} from '../model/organs.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {scentAffinities} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
@@ -22,6 +24,13 @@ import {scentColors} from '../../brain_model.js';
 export const BODY_RADIUS_PIXELS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 
 const lookup = (sites, id) => sites.find(s => s.id === id);
+// An organ's name; a muscle's by what it does where it lies, when the sites are known.
+export function organTitle(organ, sites = null) {
+  const site = organ.type === 'muscle' ? sites?.find(s => s.id === organ.centers?.[0]?.site) : null;
+  const index = site ? MUSCLE_LABEL_INDEX.get(functionFor(organ.centers[0], site)) : undefined;
+  return index === undefined ? t('studio.organs.' + organ.type)
+                             : tList('studio.muscleTitles')[index];
+}
 
 // Where a center lies: on its site of the abstract frame.
 export function centerLocation(center, organType, sites) {
@@ -147,9 +156,15 @@ const GLYPH = Object.freeze({
   egg : 5,
   sperm : 3,
   bladder : [ 39, 24 ],
-  gut_reach : 112,
-  gut_wave : 27,
+  gut_wave : 22,
+  gut_past : 24,
+  gut_steps : 64,
+  blood : [ 7, 11 ],
+  blood_drops : 3,
+  blood_step : 13,
   spikes : 3,
+  scale : 6,
+  scale_depth : 100,
   spike_step : 12,
   spike : [ 8, 30 ],
   gland : [ 26, 19 ],
@@ -207,22 +222,52 @@ function organGlyph(state, organ, drawnEyes) {
   case 'bladder':
     return '<ellipse class="aid-anatomical-bladder" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
            '" rx="' + G.bladder[0] + '" ry="' + G.bladder[1] + '"/>';
-  case 'gut': {
-    const q = G.gut_reach / 4;
-    return '<path class="aid-anatomical-gut" d="M' + fixed(pos.x - 2 * q) + ' ' + fixed(pos.y) +
-           ' c' + fixed(q) + ' -' + G.gut_wave + ' ' + fixed(q) + ' ' + G.gut_wave + ' ' +
-           fixed(2 * q) + ' 0 s' + fixed(q) + ' ' + G.gut_wave + ' ' + fixed(2 * q) + ' 0"/>';
+  case 'gut':
+    return gutPath(state, organ);
+  // The blood sense: drops of blood where its cells read it.
+  case 'blood': {
+    let html = '';
+    for (let i = 0; i < G.blood_drops; ++i) {
+      const x = pos.x + (i - (G.blood_drops - 1) / 2) * G.blood_step, [ w, h ] = G.blood;
+      html += '<path class="aid-anatomical-blood" d="M' + fixed(x) + ' ' + fixed(pos.y - h) + ' C' +
+              fixed(x + w) + ' ' + fixed(pos.y) + ' ' + fixed(x + w / 2) + ' ' +
+              fixed(pos.y + h / 2) + ' ' + fixed(x) + ' ' + fixed(pos.y + h / 2) + ' C' +
+              fixed(x - w / 2) + ' ' + fixed(pos.y + h / 2) + ' ' + fixed(x - w) + ' ' +
+              fixed(pos.y) + ' ' + fixed(x) + ' ' + fixed(pos.y - h) + 'Z"/>';
+    }
+    return html;
   }
-  // Spines stand out of the skin, away from the midline, as the Aquarium raises them.
+  // Spines stand out of the skin at each node, away from the midline, as the Aquarium raises
+  // them, the longer the stronger the node.
   case 'defense': {
     const out = sideOf(organ);
     let html = '';
-    for (let i = 0; i < G.spikes; i++)
-      html += '<path class="aid-anatomical-spike" d="M' +
-              fixed(pos.x + (i - (G.spikes - 1) / 2) * G.spike_step - G.spike[0] / 2) + ' ' +
-              fixed(pos.y) + ' l' + G.spike[0] / 2 + ' ' + out * G.spike[1] + ' l' +
-              G.spike[0] / 2 + ' ' + -out * G.spike[1] + '"/>';
+    for (const center of organ.centers) {
+      const at = centerLocation(center, organ.type, sites),
+            reach = G.spike[1] * (.5 + center.copies / ATELIER_LIMITS.max_copies);
+      for (let i = 0; i < G.spikes; i++) {
+        const x = at.x + (i - (G.spikes - 1) / 2) * G.spike_step, skin = skinAt(x, out);
+        html += '<path class="aid-anatomical-spike" d="M' + fixed(x - G.spike[0] / 2) + ' ' +
+                fixed(skin) + ' l' + G.spike[0] / 2 + ' ' + fixed(out * reach) + ' l' +
+                G.spike[0] / 2 + ' ' + fixed(-out * reach) + '"/>';
+      }
+    }
     return html;
+  }
+  // Pigment as scales in the hue its cells keep, at each node.
+  case 'pigment': {
+    const hue =
+        absorptionColour(pigmentAbsorption(organ.centers[0]).map(value => value * G.scale_depth),
+                         state.capabilities?.pigmentHalf);
+    return organ.centers
+        .map(center => {
+          const at = centerLocation(center, organ.type, sites), r = G.scale;
+          return '<path class="aid-anatomical-scale" style="fill:' + hue + '" d="M' +
+                 fixed(at.x - r) + ' ' + fixed(at.y) + ' L' + fixed(at.x) + ' ' + fixed(at.y - r) +
+                 ' L' + fixed(at.x + r) + ' ' + fixed(at.y) + ' L' + fixed(at.x) + ' ' +
+                 fixed(at.y + r) + 'Z"/>';
+        })
+        .join('');
   }
   case 'gland':
     return '<ellipse class="aid-anatomical-gland" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
@@ -231,17 +276,36 @@ function organGlyph(state, organ, drawnEyes) {
     return '<path class="aid-anatomical-lateral" d="M' + fixed(pos.x - G.lateral_reach) + ' ' +
            fixed(pos.y) + ' Q' + fixed(pos.x) + ' ' + fixed(pos.y - G.lateral_bend) + ' ' +
            fixed(pos.x + G.lateral_reach) + ' ' + fixed(pos.y) + '"/>';
+  // A bundle of fibres on each node of a muscle.
   case 'muscle': {
     let html = '';
-    for (let i = 0; i < G.muscle_lines; ++i)
-      html += '<path class="aid-anatomical-muscle" d="M' + fixed(pos.x - G.muscle_reach) + ' ' +
-              fixed(pos.y + (i - (G.muscle_lines - 1) / 2) * G.muscle_step) + ' l' +
-              2 * G.muscle_reach + ' 0"/>';
+    for (const center of organ.centers) {
+      const at = centerLocation(center, organ.type, sites);
+      for (let i = 0; i < G.muscle_lines; ++i)
+        html += '<path class="aid-anatomical-muscle" d="M' + fixed(at.x - G.muscle_reach) + ' ' +
+                fixed(at.y + (i - (G.muscle_lines - 1) / 2) * G.muscle_step) + ' l' +
+                2 * G.muscle_reach + ' 0"/>';
+    }
     return html;
   }
   default:
     return isRegion(organ) ? regionGlyph(state, organ) : '';
   }
+}
+// The gut runs from behind the head, where the body's cavity starts, back past its hindmost
+// cells by GUT.past, in as many loops as the engine and the Aquarium give its length.
+function gutPath(state, organ) {
+  const G = GLYPH, xs = organ.centers.map(c => centerLocation(c, organ.type, state.sites).x);
+  if (!xs.length)
+    return '';
+  const front = ZONE_X[1][0], back = Math.max(...xs) + G.gut_past;
+  const turns = gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle);
+  const points = Array.from({length : G.gut_steps + 1}, (_, k) => {
+    const t = k / G.gut_steps;
+    return fixed(front + (back - front) * t) + ' ' +
+           fixed(BODY_FRAME.middle + G.gut_wave * Math.sin(2 * Math.PI * turns * t));
+  });
+  return '<path class="aid-anatomical-gut" d="M' + points.join(' L') + '"/>';
 }
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
 // A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
@@ -309,7 +373,7 @@ function feltCells(state, organ) {
 }
 // The fish's outline, masked to the directions touch and injury cells feel: in steps of
 // FELT.step radians from the body's centre, each as bright as the cells' kernels weigh it there.
-function feltSkin(cells, id) {
+function feltSkin(cells, id, sizes) {
   let wedges = '';
   for (let a = -Math.PI; a < Math.PI; a += FELT.step) {
     const middle = a + FELT.step / 2;
@@ -329,7 +393,7 @@ function feltSkin(cells, id) {
   const mask = 'aid-felt-' + escapeText(id);
   return '<mask id="' + mask + '" maskUnits="userSpaceOnUse" x="' + -FELT.reach + '" y="' +
          -FELT.reach + '" width="' + 4 * FELT.reach + '" height="' + 4 * FELT.reach + '">' +
-         wedges + '</mask><path d="' + fishPath() + '" mask="url(#' + mask + ')"/>';
+         wedges + '</mask><path d="' + fishPath(sizes) + '" mask="url(#' + mask + ')"/>';
 }
 function feltFlow(cells) {
   return cells
@@ -355,17 +419,22 @@ function feltSvg(state, organ) {
   if (!cells.length)
     return '';
   return '<g class="aid-felt ' + organ.type + '">' +
-         (organ.type === 'lateral' ? feltFlow(cells) : feltSkin(cells, organ.id)) + '</g>';
+         (organ.type === 'lateral' ? feltFlow(cells)
+                                   : feltSkin(cells, organ.id, finSizes(state.anatomy?.fins))) +
+         '</g>';
 }
 // What grows at the head, as the engine's design view finds it and the Aquarium draws it: a
-// mouth where muscles suck, a jaw with teeth where they bite, and barbels where smell cells also
-// feel touch.
+// mouth where muscles suck or bite, as wide and deep as the jaw is long and with lips as thick
+// as they suck; teeth on each side of its rim where muscles bite there, as many, as long and as
+// blunt as the Aquarium grows them; and barbels where smell cells also feel touch. HEAD.mouth is
+// the mouth of a middle jaw, HEAD.lip its lips without suction, HEAD.tooth the base and reach
+// of a tooth at full biting power; the teeth of a side spread over HEAD.tooth_arc of the rim.
 const HEAD = Object.freeze({
   mouth : [ 7, 13 ],
   mouth_in : 9,
-  teeth : 5,
-  tooth_spread : .55,
-  tooth : [ 4, 5 ],
+  lip : 1.6,
+  tooth_arc : 1.4,
+  tooth : [ 4, 6 ],
   barbel_root : [ 26, 15 ],
   barbel_bend : [ 4, 46 ],
   barbel_end : [ -14, 62 ]
@@ -383,30 +452,47 @@ function headSvg(state) {
               ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' + fixed(tip.x + H.barbel_end[0]) +
               ' ' + fixed(tip.y + side * H.barbel_end[1]) + '">' + title('studio.head.barbels') +
               '</path>';
-  // Teeth stand on the rim of the mouth around its front, pointing into it.
+  const middle = BODY_UNIT.trait_middle, jaw = columns[ANATOMY.jaw_length] ?? middle;
+  const rx = H.mouth[0] * jawReach(jaw) / jawReach(middle),
+        ry = H.mouth[1] * mouthShare(jaw) / mouthShare(middle);
   const mouth = {x : tip.x + H.mouth_in, y : tip.y};
-  if (columns[ANATOMY.aggression] > 0)
-    for (let i = 0; i < H.teeth; ++i) {
-      const angle = Math.PI + (i - (H.teeth - 1) / 2) * H.tooth_spread, c = Math.cos(angle),
+  // Teeth stand on the rim of the mouth around its front, pointing into it.
+  const bluntness = columns[ANATOMY.blunt_teeth] ?? middle, full = toothForm(1, bluntness).reach;
+  for (const [k, side] of [-1, 1].entries()) {
+    const power = organSize(columns[ANATOMY.attack_left + k]);
+    if (!power)
+      continue;
+    const form = toothForm(power, bluntness), half = H.tooth[0] / 2,
+          height = H.tooth[1] * form.reach / full * form.height;
+    for (let i = 0; i < form.count; ++i) {
+      const angle = Math.PI - side * H.tooth_arc * (i + .5) / form.count, c = Math.cos(angle),
             s = Math.sin(angle);
-      const base = {x : mouth.x + c * H.mouth[0], y : mouth.y + s * H.mouth[1]};
-      const half = H.tooth[0] / 2;
-      html += '<path class="aid-head-tooth" d="M' + fixed(base.x - s * half) + ' ' +
-              fixed(base.y + c * half) + ' L' + fixed(base.x - c * H.tooth[1]) + ' ' +
-              fixed(base.y - s * H.tooth[1]) + ' L' + fixed(base.x + s * half) + ' ' +
-              fixed(base.y - c * half) + 'Z">' + title('studio.head.jaw') + '</path>';
+      const base = {x : mouth.x + c * rx, y : mouth.y + s * ry};
+      const at = (along, inward) =>
+          fixed(base.x - s * along - c * inward) + ' ' + fixed(base.y + c * along - s * inward);
+      html += '<path class="aid-head-tooth" d="M' + at(-half, 0) + ' L' +
+              at(-half * form.flat, height) + ' L' + at(half * form.flat, height) + ' L' +
+              at(half, 0) + 'Z">' + title('studio.head.jaw') + '</path>';
     }
-  if (columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.mouth] > 0)
+  }
+  if (columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
+      columns[ANATOMY.mouth] > 0) {
+    const lips = H.lip * lipWidth(organSize(columns[ANATOMY.suction_strength])) / lipWidth(0);
     html = '<ellipse class="aid-head-mouth" cx="' + fixed(mouth.x) + '" cy="' + fixed(mouth.y) +
-           '" rx="' + H.mouth[0] + '" ry="' + H.mouth[1] + '">' + title('studio.head.mouth') +
-           '</ellipse>' + html;
+           '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '" style="stroke-width:' + fixed(lips) +
+           '">' + title('studio.head.mouth') + '</ellipse>' + html;
+  }
   return '<g class="aid-head">' + html + '</g>';
 }
+// The outline of the fish with its fins as large as their muscles grow them.
+export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy, state.capabilities?.pigmentHalf);
-  const drawnEyes = new Set();
+  const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
   let organs = '', felt = '';
-  for (const organ of state.document.organs) {
+  // The gut lies under the other organs.
+  const order = [...state.document.organs ].sort((a, b) => (b.type === 'gut') - (a.type === 'gut'));
+  for (const organ of order) {
     felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (glyph)
@@ -414,9 +500,9 @@ export function bodySvg(state) {
           '<g class="aid-anatomical-organ' +
           (state.selected?.kind === 'organ' && state.selected.id === organ.id ? ' selected' : '') +
           '" data-organ="' + escapeText(organ.id) + '"><title>' +
-          escapeText(t('studio.organs.' + organ.type)) + '</title>' + glyph + '</g>';
+          escapeText(organTitle(organ, state.sites)) + '</title>' + glyph + '</g>';
   }
-  return finPaths().map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
-         '<path class="aid-fish-body" d="' + fishPath() + '" fill="' + fill + '"/>' +
+  return finPaths(sizes).map(d => '<path class="aid-fish-fin" d="' + d + '"/>').join('') +
+         '<path class="aid-fish-body" d="' + fishPath(sizes) + '" fill="' + fill + '"/>' +
          headSvg(state) + felt + organs;
 }

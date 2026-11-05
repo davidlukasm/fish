@@ -352,7 +352,6 @@
 .aid-muscle-function svg path{fill:none;stroke:#eaa886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-muscle-function.current{border-color:#ecdba8;background:#35504a}
 .aid-muscle-function:disabled{opacity:.35}
-.aid-muscle-fibres{display:block;width:100%;height:auto}
 .aid-hormone-teach{fill:none;stroke:var(--hormone);stroke-width:2;stroke-dasharray:2 4}
 .aid-hormone-word{fill:var(--hormone);font:600 11px system-ui;paint-order:stroke;stroke:#09212a;stroke-width:3}
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
@@ -490,3 +489,37 @@
 /* How far a chosen nerve center's signals reach. */
 .aid-reach{pointer-events:none}
 .aid-reach .aid-reach-edge{fill:none;stroke:#b8c5e1;stroke-width:1;stroke-dasharray:4 4;opacity:.6;vector-effect:non-scaling-stroke}
+.aid-anatomical-blood{fill:#c8555588;stroke:#e9a3a0;stroke-width:1.6}
+/* A muscle as what it moves: fin, mouth or jaw, its nodes as bundles with their handles. */
+.aid-effector-graphic{display:block;width:100%;height:auto;margin:6px 0 2px;background:#0c252b;border:1px solid #2c4d55;border-radius:12px}
+.aid-effector-graphic text{font-size:11px;fill:#d9e6dc}
+.aid-muscle-body{fill:#3a8380;fill-opacity:.55;stroke:#89c9bb;stroke-width:2}
+.aid-muscle-fin{fill:#3a8380aa;stroke:#89c9bb;stroke-width:2;stroke-linejoin:round}
+.aid-muscle-ray{stroke:#b8d9cc;stroke-opacity:.45;stroke-linecap:round}
+.aid-muscle-ray.own{stroke:#eaa886;stroke-opacity:.95}
+.aid-muscle-bundle{fill:#eaa88633;stroke:#eaa88677;stroke-width:1.4}
+.aid-muscle-bundle.own{fill:#eaa886aa;stroke:#f4c7ad}
+.aid-muscle-wave{fill:none;stroke:#f1e4b8;stroke-width:1.6;stroke-dasharray:4 4;opacity:.8}
+.aid-muscle-flow{fill:none;stroke:#9fd8e6;stroke-width:1.6;stroke-linecap:round;opacity:.85}
+.aid-muscle-mouth{fill:#0b1d22;stroke:#e9b9a3}
+.aid-muscle-gap{fill:#0b1d22}
+.aid-muscle-jaw{fill:none;stroke:#e3dcb8;stroke-width:5;stroke-linecap:round}
+.aid-muscle-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:2}
+.aid-muscle-tooth{fill:#f3eedc;stroke:#0d262c;stroke-width:.6}
+.aid-muscle-tooth.sample{stroke:#f3eedc;stroke-width:1}
+.aid-muscle-handle.nodes{cursor:ew-resize}
+
+.aid-muscle-handle.strength{cursor:ns-resize}
+.aid-muscle-readout{margin:2px 0 4px;font-size:12px;color:#d6e6dc}
+/* Names written in place. */
+.aid-inline-name{flex:1;min-width:0;padding:8px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:#e6efe4;font:inherit}
+.aid-inline-name:hover{border-color:#325961}
+.aid-inline-name:focus{outline:none;border-color:#d6d3a6;background:#163840}
+.aid-inline-title{font:20px Georgia,serif;padding:2px 6px;margin-left:-6px;width:100%}
+.aid-substance-row .aid-substance-pill{flex:0 0 auto}
+.aid-substance-row.active .aid-substance-pill{border-color:#d6d3a6;background:#2c5050}
+.aid-muscle-spine{fill:#a6c3b3;stroke:#edc99d;stroke-width:1.6;stroke-linejoin:round}
+.aid-pigment-skin{stroke:#89c9bb;stroke-width:1.5}
+.aid-pigment-skin+text{fill:#0d262c;font-weight:600}
+g[style*="--scale"] .aid-muscle-bundle.own{fill:var(--scale);stroke:#0d262c}
+.aid-anatomical-scale{stroke:#0d262c;stroke-width:1.2;opacity:.9}

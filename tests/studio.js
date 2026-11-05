@@ -46,10 +46,10 @@ const ENGINE_REVIEW = Object.freeze({
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
   "src/retina.hh" : "2699500b47122562",
-  "ui/fish_forms.js" : "03122fe37bb8b553",
+  "ui/fish_forms.js" : "81584965edc34e09",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "7f0604d4797cdd0f",
-  "ui/fish_organs.js" : "300d9bc24693b256",
+  "ui/fish_organs.js" : "77fe64bdf703f690",
   "ui/fish_painter.js" : "8a55c784199f5207",
   "src/brain_interface.hh" : "338ddb60bbfdfa1d",
   "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
@@ -90,7 +90,8 @@ function semanticFingerprint(source) {
     SENSE_KIND,
     TUNING
   } = await import('../ui/schema.js');
-  const {ORGANS, MUSCLES, eligible, functionFor} = await import('../ui/studio/model/organs.js');
+  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor} =
+      await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts(
       {default : 'de'},
@@ -1066,6 +1067,59 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   movement.notice = () => {};
   movement.pointerUp({clientX : 500, clientY : 300, preventDefault() {}});
   assert.equal(deleted, true);
+  // Organs that recruit nodes: a tail muscle grows nodes on its side with its function, its
+  // linked twin with it; the engine's fins grow with them as the Aquarium draws them.
+  {
+    const {MOTOR_KIND : MK} = await import('../ui/schema.js');
+    const {finVolumeOf, tailFinSize} = await import('../ui/fish_organs.js');
+    const tail = model.addOrgan(model.newDocument('Knoten'), 'muscle', sites, {x : 870, y : 340});
+    assert.ok(tail);
+    const grown = model.setOrganNodes(tail.document, tail.organId, 4, sites);
+    const organ = model.findOrgan(grown, tail.organId), twin = model.findOrgan(grown, organ.pair);
+    assert.equal(organ.centers.length, 4);
+    assert.equal(twin.centers.length, 4, 'The linked twin recruits as many nodes');
+    const siteOf = c => sites.find(s => s.id === c.site);
+    for (const c of [...organ.centers, ...twin.centers])
+      assert.equal(functionFor(c, siteOf(c)), MK.forward, 'Every node drives the tail');
+    assert.equal(new Set(organ.centers.map(c => siteOf(c).side)).size, 1);
+    assert.equal(new Set([...organ.centers, ...twin.centers ].map(c => c.site)).size, 8);
+    assert.equal(
+        model.findOrgan(model.setOrganNodes(grown, organ.id, 2, sites), organ.id).centers.length, 2,
+        'The last nodes go first');
+    assert.equal(model.setOrganNodes(grown, 'brain', 3, sites), null);
+    assert.ok(
+        model.findOrgan(model.setOrganNodes(grown, organ.id, 99, sites), organ.id).centers.length <=
+        ORGAN_BY_KEY.muscle.nodes);
+    assert.ok(tailFinSize(finVolumeOf(8, 1)).length > tailFinSize(finVolumeOf(2, 1)).length,
+              'More cells make a longer tail fin');
+    // How the fish swims is the trait of all its tail muscles.
+    assert.equal(model.muscleTrait(grown, MK.forward, 'undulation', sites), .5);
+    const waving = model.setMuscleTrait(grown, MK.forward, 'undulation', .9, sites);
+    assert.ok(Math.abs(model.muscleTrait(waving, MK.forward, 'undulation', sites) - .9) < 1e-9);
+    assert.equal(model.setMuscleTrait(grown, MK.aggression, 'jaw_length', .2, sites), null,
+                 'Without biting muscles there is no jaw to set');
+    // The graphic's handles say what they set.
+    const effectors = await import('../ui/studio/view/effectors.js');
+    assert.deepEqual(effectors.effectorPatch('muscle', MK.forward, -1, 'nodes', 1, .5),
+                     {nodes : ORGAN_BY_KEY.muscle.nodes});
+    assert.equal(effectors.effectorPatch('muscle', MK.forward, -1, 'nodes', 0, .5).nodes, 1);
+    const patch = effectorPatch => effectorPatch('muscle', MK.aggression, 1, 'trait:q2', 0, .5);
+    assert.deepEqual(patch(effectors.effectorPatch), {trait : 'jaw_length', value : 1});
+    const html = effectors.effectorGraphic({document : grown, sites, anatomy : null}, organ);
+    assert.ok(html.includes('data-effector-handle="nodes"') &&
+              html.includes('data-effector-handle="trait:q1"'));
+    assert.match(views.organTitle(organ, sites), /Schwanz/);
+    // Pigment recruits nodes too and colours the fish more deeply with them.
+    const pigment =
+        model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});
+    const deeper = model.setOrganNodes(pigment.document, pigment.organId, 12, sites);
+    assert.equal(model.findOrgan(deeper, pigment.organId).centers.length, 12);
+    // Names are written in place.
+    const group = model.assemble(grown, [ organ.id, twin.id ], '');
+    const renamed = model.renameAssembly(group, group.assemblies[0].id, 'Schwanz');
+    assert.equal(renamed.assemblies[0].name, 'Schwanz');
+    assert.equal(model.renameAssembly(group, group.assemblies[0].id, ''), null);
+  }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');
 })().catch(error => {

@@ -2,6 +2,7 @@ import {bearing, retinalBins, fieldRecipe, generateRetina, HALF_VIEW} from './re
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../../schema.js';
 import {
   MODULES,
+  MUSCLE_TRAITS,
   NEURON_BY_KEY,
   ORGAN_BY_KEY,
   PAIRINGS,
@@ -9,7 +10,9 @@ import {
   defaultPairing,
   eligible,
   functionFor,
-  isRegion
+  isRegion,
+  qualityOf,
+  traitOf
 } from './organs.js';
 import {onMidline, pointDistance, sitePoint} from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
@@ -432,9 +435,12 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
       x : fixed.x + current.x - anchor.x,
       y : fixed.y + (current.y - anchor.y) * sideFlip
     };
+    // A muscle's further nodes keep the function of its first one.
     const site = index === 0
                      ? first
-                     : closestSite(center, sites, used, wanted, old.side * sideFlip, organ.type);
+                     : candidates(center, sites, used, wanted, old.side * sideFlip, organ.type)
+                           .map(c => c.site)
+                           .find(s => functionFor(center, s) === functionFor(center, first));
     if (!site || pointDistance(site, wanted, organ.type) > snapDistance)
       return null;
     center.site = site.id;
@@ -456,6 +462,74 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     findOrgan(moved, other.id).linked = true;
     return moved;
   }
+  return draft;
+}
+// The nodes of an organ that recruits them (ORGANS' `nodes`): the places its cells take, all
+// with the function and on the side of its first one. Each node is a cell of the engine's fin,
+// mouth, spines or colour, so more of them make a fin grow as the Aquarium draws it or colour
+// the fish more deeply. New nodes take the free places nearest to the organ with its settings
+// (on the twin of a linked pair the mirrored places); the last ones go first.
+export function setOrganNodes(doc, organId, count, sites) {
+  const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.nodes;
+  if (!most || !original.centers.length)
+    return null;
+  const wanted = clamp(Math.round(count), 1, most), draft = copy(doc);
+  const main = findOrgan(draft, organId);
+  const twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const organ of [main, twin].filter(Boolean)) {
+    const dropped = new Set(organ.centers.slice(wanted).map(c => c.id));
+    organ.centers = organ.centers.slice(0, wanted);
+    draft.wires = draft.wires.filter(w => !dropped.has(w.from) && !dropped.has(w.to));
+    const first = organ.centers[0], home = sites.find(s => s.id === first.site);
+    if (!home)
+      return null;
+    const code = functionFor(first, home);
+    while (organ.centers.length < wanted) {
+      const used = new Set(allCenters(draft).map(c => c.site));
+      const partner = organ === twin ? main.centers[organ.centers.length] : null;
+      const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
+      const at = organ.centers.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
+      const middle = {
+        x : at.reduce((n, p) => n + p.x, 0) / at.length,
+        y : at.reduce((n, p) => n + p.y, 0) / at.length
+      };
+      const site = mirror && !used.has(mirror.id)
+                       ? mirror
+                       : candidates(first, sites, used, middle, home.side, organ.type)
+                             .map(c => c.site)
+                             .find(s => functionFor(first, s) === code);
+      if (!site)
+        return null;
+      organ.centers.push({...copy(first), id : identifier('center'), site : site.id});
+    }
+  }
+  for (const assembly of draft.assemblies)
+    assembly.centerIds = assemblyCenters(draft, assembly);
+  return draft;
+}
+// The muscle nodes of a function (null for none), as the engine sees them.
+const musclesOf = (doc, code, sites) =>
+    doc.organs.filter(o => o.type === 'muscle').flatMap(o => o.centers).filter(c => {
+      const site = sites.find(s => s.id === c.site);
+      return site && functionFor(c, site) === code;
+    });
+// A trait of the fish its muscles of a function shape (MUSCLE_TRAITS), as the engine's body plan
+// takes it: the mean over them, weighted by their strength; null without such muscles.
+export function muscleTrait(doc, code, key, sites) {
+  const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
+  const muscles = quality ? musclesOf(doc, code, sites) : [];
+  const weight = muscles.reduce((sum, c) => sum + c.copies, 0);
+  return weight ? muscles.reduce((sum, c) => sum + c.copies * traitOf(c[quality]), 0) / weight
+                : null;
+}
+// The trait set for the whole fish: the quality behind it on all its muscles of that function.
+export function setMuscleTrait(doc, code, key, trait, sites) {
+  const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
+  if (!quality || !musclesOf(doc, code, sites).length)
+    return null;
+  const draft = copy(doc);
+  for (const center of musclesOf(draft, code, sites))
+    center[quality] = qualityOf(trait);
   return draft;
 }
 export function removeOrgan(doc, id) {
@@ -953,6 +1027,13 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   const joined = grown.assemblies.pop();
   Object.assign(grown.assemblies.find(a => a.id === assemblyId), {...joined, id : assemblyId});
   return {document : grown, assemblyId};
+}
+export function renameAssembly(doc, assemblyId, name) {
+  const draft = copy(doc), assembly = draft.assemblies.find(a => a.id === assemblyId);
+  if (!assembly || !name)
+    return null;
+  assembly.name = String(name).slice(0, ATELIER_LIMITS.max_name);
+  return draft;
 }
 export function removeAssembly(doc, assemblyId) {
   const assembly = doc.assemblies.find(a => a.id === assemblyId);

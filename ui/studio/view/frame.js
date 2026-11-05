@@ -1,4 +1,6 @@
 import {BODY_FRAME, BODY_KNOTS, halfWidth} from '../model/layout.js';
+import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
+import {FIN} from '../../schema.js';
 
 // The drawing frame of the Atelier: the camera over the design and the abstract fish seen from
 // above.
@@ -34,22 +36,44 @@ export const SNOUT_TIP =
     Object.freeze({x : BODY_KNOTS[0][0] - OUTLINE.nose, y : BODY_FRAME.middle});
 // A quarter ellipse is a cubic with its handles KAPPA of the radii long.
 const KAPPA = .5523;
-export function fishPath() {
+// The fins grow with their muscles as the Aquarium grows them, from the volume of the engine's
+// fins (tail, left, right); the outline's fins are those of a fin of volume FIN_REFERENCE, and
+// of that size while the engine has not answered.
+const FIN_REFERENCE = 1;
+export function finSizes(fins = null) {
+  const ratio = (size, index, key) => {
+    const fin = fins?.[index];
+    const volume = fin ? finVolumeOf(fin.cells, fin.strength) : FIN_REFERENCE;
+    return size(volume)[key] / size(FIN_REFERENCE)[key];
+  };
+  return {
+    tail : {
+      reach : ratio(tailFinSize, FIN.tail, 'length'),
+      spread : ratio(tailFinSize, FIN.tail, 'width')
+    },
+    sides : [ FIN.left, FIN.right ].map(index => ({
+                                          length : ratio(sideFinSize, index, 'length'),
+                                          out : ratio(sideFinSize, index, 'spread')
+                                        }))
+  };
+}
+export function fishPath(sizes = finSizes()) {
   const {middle} = BODY_FRAME, O = OUTLINE, knots = BODY_KNOTS.slice(1);
   const nose = [ BODY_KNOTS[0][0] - O.nose, middle ], root = knots.at(-1);
   const upper = knots.map(([ x, h ]) => [x, middle - h * O.margin]);
   const lower = [...knots ].reverse().map(([ x, h ]) => [x, middle + h * O.margin]);
+  const reach = O.tail.reach * sizes.tail.reach, spread = O.tail.spread * sizes.tail.spread;
   const tail = [
-    [ root[0] + O.tail.reach, middle - O.tail.spread ],
-    [ root[0] + O.tail.reach - O.tail.fork, middle ],
-    [ root[0] + O.tail.reach, middle + O.tail.spread ], lower[0]
+    [ root[0] + reach, middle - spread ],
+    [ root[0] + reach - O.tail.fork * sizes.tail.reach, middle ],
+    [ root[0] + reach, middle + spread ], lower[0]
   ];
   // The head rounds off in two quarter ellipses from the first knot on each side to the snout.
   // Its handles at the knots continue the body's line there, so the outline has no kink.
-  const [front, back] = [ upper[0], lower.at(-1) ], reach = KAPPA * (front[0] - nose[0]);
+  const [front, back] = [ upper[0], lower.at(-1) ], handle = KAPPA * (front[0] - nose[0]);
   const along = (from, to) => {
     const dx = to[0] - from[0], dy = to[1] - from[1], length = Math.hypot(dx, dy);
-    return [ from[0] - dx / length * reach, from[1] - dy / length * reach ];
+    return [ from[0] - dx / length * handle, from[1] - dy / length * handle ];
   };
   const head = ' C' + xy(along(back, lower.at(-2))) + ' ' +
                xy([ nose[0], middle + KAPPA * (back[1] - middle) ]) + ' ' + xy(nose) + ' C' +
@@ -58,16 +82,20 @@ export function fishPath() {
   return 'M' + xy(front) + through(upper) + ' L' + tail.map(xy).join(' L') + through(lower) + head +
          ' Z';
 }
-// The pectoral fins, one on each side.
-export function finPaths() {
+// Where the skin lies at x on a side (-1 or 1).
+export const skinAt = (x, side) => BODY_FRAME.middle + side * halfWidth(x) * OUTLINE.margin;
+// The pectoral fins, one on each side (the engine's left fin on side -1), swept back and
+// standing out as far as their sizes say.
+export function finPaths(sizes = finSizes()) {
   const {middle} = BODY_FRAME, F = OUTLINE.fins;
-  return [ -1, 1 ].map(side => {
+  return [ -1, 1 ].map((side, k) => {
+    const sweep = F.sweep * sizes.sides[k].length, out = F.out * sizes.sides[k].out;
     const base = middle + side * halfWidth(F.at) * OUTLINE.margin * F.inset,
           end = middle + side * halfWidth(F.at + F.length) * OUTLINE.margin * F.inset;
-    const tip = [ F.at + F.length / 2 + F.sweep, base + side * F.out ];
-    return 'M' + f(F.at) + ' ' + f(base) + ' Q' + f(F.at + F.sweep / 2) + ' ' +
-           f(base + side * F.out) + ' ' + f(tip[0]) + ' ' + f(tip[1]) + ' Q' + f(F.at + F.length) +
-           ' ' + f(end + side * F.out / 2) + ' ' + f(F.at + F.length) + ' ' + f(end) + ' Z';
+    const tip = [ F.at + F.length / 2 + sweep, base + side * out ];
+    return 'M' + f(F.at) + ' ' + f(base) + ' Q' + f(F.at + sweep / 2) + ' ' + f(base + side * out) +
+           ' ' + f(tip[0]) + ' ' + f(tip[1]) + ' Q' + f(F.at + F.length) + ' ' +
+           f(end + side * out / 2) + ' ' + f(F.at + F.length) + ' ' + f(end) + ' Z';
   });
 }
 // Where the camera looks at first and after fitting: a little left of the box's middle, so the

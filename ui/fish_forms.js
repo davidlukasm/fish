@@ -120,6 +120,8 @@ const animationPhase = p =>
 const waterMotion = p => Math.min(1, (p[FISH.relative_speed] || 0) / SWIM.motion_speed);
 // The mouth's share of the body radius, as the engine's mouth_share.
 export const mouthShare = jaw => BODY_UNIT.mouth_share_short + BODY_UNIT.mouth_share_span * jaw;
+// How hard a jaw of a length presses, as the engine's jaw_leverage: 1 for a middle jaw.
+export const jawLeverage = jaw => mouthShare(BODY_UNIT.trait_middle) / mouthShare(jaw);
 // Movement and face pulses stay continuous; body geometry can reuse a quantized state.
 // The body's rear bends with the tail stroke.
 function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }
@@ -156,15 +158,15 @@ const ANATOMY_SCALE = Object.freeze({
   min_radius : .001,
   gut_fill_max : 1.6
 });
+// An organ's size (0 to 1) from its anatomy column: half at ORGAN_HALF squared.
+export const organSize = n => {
+  const v = Math.sqrt(Math.max(0, n || 0));
+  return v / (v + ANATOMY_SCALE.organ_half);
+};
 export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p),
                             origin = fishShapeOrigin(p)) {
   const organs = p[FISH.organs] || [], forms = p[FISH.forms] || [], fins = p[FISH.fins] || [],
-        size =
-            n => {
-              const v = Math.sqrt(Math.max(0, n || 0));
-              return v / (v + ANATOMY_SCALE.organ_half);
-            },
-        fin = i => fins[i] || Array(FIN_SHAPE.count).fill(0),
+        size = organSize, fin = i => fins[i] || Array(FIN_SHAPE.count).fill(0),
         muscle = column => size(organs[column]);
   const finPose = i =>
       Math.max(0, Math.min(1, ((o?.[FISH.fin_pose]?.[i] ?? p[FISH.fin_pose]?.[i] ?? 0) +

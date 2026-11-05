@@ -2,11 +2,13 @@ import {
   sensitivityEditor,
   spectrumEditor,
   testLightMarkup,
-  visionDragPatch
+  visionDragPatch,
+  visionFan
 } from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
+import {effectorGraphic, effectorPatch} from './view/effectors.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
@@ -39,6 +41,7 @@ import {
   mirrorOrgan,
   moveAssembly,
   removeAssembly,
+  renameAssembly,
   moveCenter,
   moveOrgan,
   newDocument,
@@ -52,6 +55,8 @@ import {
   removeWire,
   selectionCenters,
   setLifePhase,
+  setOrganNodes,
+  setMuscleTrait,
   setSubstance,
   updateCenter,
   updateGrowth,
@@ -72,7 +77,8 @@ import {
   placementPreview,
   placementHints,
   hintLegend,
-  arrowSize
+  arrowSize,
+  moduleName
 } from './view/scene.js';
 import {escapeText} from './view/markup.js';
 import {centerLocation, nodeLocation} from './view/body.js';
@@ -722,17 +728,34 @@ export class OrganStudio {
             this.requestDesign();
         });
   }
+  // An answer for the design already shown changes only what the eyes see (the test light was
+  // moved): the fields of view follow alone, so dragging the light stays smooth.
   showAnatomy(anatomy) {
+    const sightOnly = this.shownDesign === this.state.document;
+    this.shownDesign = this.state.document;
     this.state.anatomy = anatomy;
     this.bringSight();
+    if (sightOnly) {
+      this.refreshVision();
+      this.drawSight();
+      return;
+    }
     this.refreshScene();
     this.refreshGraphics();
+  }
+  refreshVision() {
+    for (const fan of this.root.querySelectorAll('#aid-body-map [data-vision-organ]')) {
+      const organ = findOrgan(this.state.document, fan.dataset.visionOrgan);
+      if (organ)
+        fan.outerHTML = visionFan(this.state, organ);
+    }
   }
   // The inspector's graphics follow the design at once and the engine's curves when they
   // arrive, without rebuilding the inspector around them.
   refreshGraphics() {
     this.refreshSpectrum();
     this.refreshSensitivity();
+    this.refreshEffectors();
     this.drawSight();
     this.drawScents();
   }
@@ -877,6 +900,8 @@ export class OrganStudio {
     const drag = this.driveControl;
     const fx = (event.clientX - drag.rect.left) / drag.rect.width,
           fy = (event.clientY - drag.rect.top) / drag.rect.height;
+    if (drag.handle === 'effector')
+      return this.effectorPointer(drag, fx, fy);
     const doc = drag.handle === 'start' || drag.handle === 'end'
                     ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
                     : updateCenter(this.state.document, drag.id,
@@ -884,6 +909,32 @@ export class OrganStudio {
                                                              : drivePatch(drag.handle, fx, fy));
     this.changeDocument(doc, this.state.selected, false, 'drive:' + drag.id);
     this.refreshInspector();
+  }
+  // An effector organ's handles: its nodes, their strength, or a trait its function shapes.
+  effectorPointer(drag, fx, fy) {
+    const doc = this.state.document, organ = findOrgan(doc, drag.id);
+    const patch = organ && effectorPatch(organ.type, drag.code, drag.side, drag.name, fx, fy);
+    if (!patch)
+      return;
+    const changed =
+        'nodes' in patch ? patch.nodes !== organ.centers.length &&
+                               setOrganNodes(doc, organ.id, patch.nodes, this.state.sites)
+        : 'copies' in patch
+            ? patch.copies !== organ.centers[0].copies &&
+                  updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
+            : setMuscleTrait(doc, drag.code, patch.trait, patch.value, this.state.sites);
+    if (!changed)
+      return;
+    this.changeDocument(changed, this.state.selected, false, 'effector:' + drag.id);
+    this.refreshInspector();
+  }
+  // An effector's graphic follows the engine's fins, mouth and colour when they arrive.
+  refreshEffectors() {
+    for (const block of this.root.querySelectorAll('[data-effector-block]')) {
+      const organ = findOrgan(this.state.document, block.dataset.effectorBlock);
+      if (organ)
+        block.outerHTML = effectorGraphic(this.state, organ);
+    }
   }
   // The time constant follows the handle; the curve stretches with it in time.
   adaptationPointer(event) {
@@ -1587,15 +1638,6 @@ export class OrganStudio {
         this.changeDocument(doc, this.state.selected);
       return;
     }
-    const rename = event.target.closest?.('[data-rename-substance]');
-    if (rename) {
-      const index = Number(rename.dataset.renameSubstance);
-      const current = this.state.document.substances.find(s => s.index === index);
-      const name = prompt(label('inspector.substanceName'), current?.name ?? '');
-      if (name !== null)
-        this.changeDocument(setSubstance(this.state.document, index, name), this.state.selected);
-      return;
-    }
     const rmSub = event.target.closest?.('[data-remove-substance]');
     if (rmSub)
       return this.changeDocument(
@@ -1659,9 +1701,7 @@ export class OrganStudio {
     const assembly = this.state.document.assemblies.find(a => a.id === id);
     if (!assembly)
       return;
-    const name = prompt(label('inspector.saveModule'), assembly.name);
-    if (!name)
-      return;
+    const name = moduleName(this.state.document, assembly);
     const memberCenters = new Set(assembly.centerIds ?? []);
     const organs =
         this.state.document.organs.filter(o => assembly.organIds.includes(o.id))
@@ -1741,6 +1781,19 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && this.cppnChange(event))
       return;
+    // Names are written in place and kept when the field is left.
+    if (element.dataset.substanceName !== undefined) {
+      this.changeDocument(setSubstance(this.state.document, Number(element.dataset.substanceName),
+                                       element.value.trim()),
+                          this.state.selected);
+      return;
+    }
+    if (element.dataset.assemblyName !== undefined) {
+      this.changeDocument(
+          renameAssembly(this.state.document, element.dataset.assemblyName, element.value.trim()),
+          this.state.selected);
+      return;
+    }
     if (element.dataset.growthActive !== undefined) {
       this.changeDocument(updateGrowth(this.state.document, {active : element.checked ? 1 : 0}),
                           this.state.selected);
@@ -2049,6 +2102,21 @@ export class OrganStudio {
         id : phase.dataset.phase,
         handle : event.target.closest('[data-phase-handle]').dataset.phaseHandle,
         rect : phase.getBoundingClientRect()
+      };
+      event.preventDefault();
+      this.drivePointer(event);
+      return;
+    }
+    const effector = event.target.closest?.('[data-effector-handle]') &&
+                     event.target.closest('[data-effector-graphic]');
+    if (effector) {
+      this.driveControl = {
+        id : effector.dataset.effectorGraphic,
+        handle : 'effector',
+        name : event.target.closest('[data-effector-handle]').dataset.effectorHandle,
+        code : Number(effector.dataset.effectorCode),
+        side : Number(effector.dataset.effectorSide),
+        rect : effector.getBoundingClientRect()
       };
       event.preventDefault();
       this.drivePointer(event);
