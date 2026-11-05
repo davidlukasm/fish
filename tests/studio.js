@@ -99,7 +99,12 @@ function semanticFingerprint(source) {
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   const model = await import('../ui/studio/model/document.js');
-  const views = await import('../ui/studio/view/scene.js');
+  // The scene, the hints while placing and the organs' names, as one view of the fish.
+  const views = {
+    ...await import('../ui/studio/view/scene.js'),
+    ...await import('../ui/studio/view/placing.js'),
+    ...await import('../ui/studio/view/body.js')
+  };
   // The inspector, the library and the substances' graphics, as one view of the panels.
   const panels = {
     ...await import('../ui/studio/view/panels.js'),

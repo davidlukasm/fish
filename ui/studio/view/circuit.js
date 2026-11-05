@@ -1,12 +1,14 @@
 import {substanceColor} from '../../hormones.js';
 import {ORGAN_BY_KEY} from '../model/organs.js';
 import {findCenter, findOrgan, teachersOf, wholeEndpoint} from '../model/document.js';
-import {centerMarker, centerTitle, organTitle} from './scene.js';
+import {centerMarker} from './scene.js';
 import {escapeText, fixed} from './markup.js';
 import {sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 import {namedText, t, tList} from '../../strings.js';
 import {ICON, icon, iconCells, label} from './kit.js';
+import {centerTitle} from './names.js';
+import {organTitle} from './body.js';
 
 // A brain region's wiring in the inspector: its circuit plan, its slots and its settings.
 // A brain region: how it is wired (which organs feed it, where it sends, on which side) and its

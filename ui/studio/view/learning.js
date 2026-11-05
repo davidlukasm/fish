@@ -2,12 +2,12 @@ import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
 import {boundEffects, findCenter, findOrgan} from '../model/document.js';
-import {centerTitle} from './scene.js';
 import {escapeText, fixed, padPoint, padValues, pointMarks} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {joinParts, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
 import {effectCurve, receptorProfile, substanceName, substanceWheel} from './substances.js';
+import {centerTitle} from './names.js';
 
 // How a nerve center learns: its learning pad, the rule its teachers drive, its inspector.
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),

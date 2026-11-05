@@ -9,11 +9,12 @@ import {
   receivers,
   SUBSTANCE_NAME_LENGTH
 } from '../model/document.js';
-import {organTitle, tone} from './scene.js';
 import {escapeText} from './markup.js';
 import {namedText, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
 import {measurement, organsOf} from './substances.js';
+import {organTitle} from './body.js';
+import {tone} from './names.js';
 
 // The library beside the scene: organs, modules and substances to drag onto the fish, and the
 // tool palette.

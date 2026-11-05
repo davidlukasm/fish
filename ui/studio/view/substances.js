@@ -13,10 +13,10 @@ import {
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
-import {centerTitle} from './scene.js';
 import {escapeText, fixed, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
+import {centerTitle} from './names.js';
 
 // The blood's substances in the inspector: the substance wheel where glands release and senses
 // read them, receptors' response curves and life phases, the hormone inspector and measurements.

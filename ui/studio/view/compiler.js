@@ -1,7 +1,7 @@
 import {t} from '../../strings.js';
 import {allCenters, compilerOptions} from '../model/document.js';
-import {endpointTitle} from './scene.js';
 import {escapeText} from './markup.js';
+import {endpointTitle} from './names.js';
 
 const label = key => escapeText(t('studio.compiler.' + key));
 export const acceptedGenome = state =>

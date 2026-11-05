@@ -33,7 +33,6 @@ import {
   oneSided,
   wiredCrossing
 } from '../model/document.js';
-import {CATEGORY_TONE, centerTitle, endpointTitle, moduleName, organTitle, tone} from './scene.js';
 import {escapeText, fixed, padPoint, padValues, pointMarks, pointText} from './markup.js';
 import {onMidline, sideIndex} from '../model/layout.js';
 import {
@@ -51,6 +50,8 @@ import {pairingButton, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
+import {CATEGORY_TONE, centerTitle, endpointTitle, moduleName, tone} from './names.js';
+import {organTitle} from './body.js';
 
 // A touch or pain cell's field: a sector of its half angle on a ring around the cell, ahead
 // upwards, with a handle on its edge; the pointer's direction from the cell sets the half angle.
