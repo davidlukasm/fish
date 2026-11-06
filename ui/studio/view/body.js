@@ -64,10 +64,11 @@ import {organTitle} from './names.js';
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
 
-// The brain from above, one organ: its outline with the spinal cord, then its lobes (each side's
-// mirrored), each over those before it, its edge among them a groove, and the fissures between
-// the halves; a rim round all of it, the lobes shaded as rounded.
-function brainSvg() {
+// The brain from above, one organ, drawn as a scheme like the other organs: its outline (with the
+// spinal cord) in the brain's colour round all of it, inside the body's own colour, its lobes
+// (each side's mirrored), each over those before it, their edges among them as grooves, the
+// fissures between the halves, and over all of it a tint of the brain's colour.
+function brainSvg(fill) {
   const M = BODY_FRAME.middle, B = BRAIN, [ endX, endHalf ] = B.outline.at(-1);
   // The outline's upper side from the front, round the cord's end, its lower side back.
   const lower = [...B.outline ].reverse().map(([ x, h ]) => [x, M + h]);
@@ -87,14 +88,10 @@ function brainSvg() {
   const fissures =
       B.fissures.map(([ from, to ]) => 'M' + from + ' ' + M + ' L' + to + ' ' + M).join(' ');
   return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
-         '</title><defs><radialGradient id="aid-brain-lobe" cx=".42" cy=".38" r=".8">' +
-         '<stop offset="0" stop-color="#efe3e2"/><stop offset="1" stop-color="#d6c2c6"/>' +
-         '</radialGradient><linearGradient id="aid-brain-cylinder" x1="0" y1="0" x2="0" ' +
-         'y2="1"><stop offset="0" stop-color="#c9b3b9"/><stop offset=".5" ' +
-         'stop-color="#eadbdb"/><stop offset="1" stop-color="#c9b3b9"/></linearGradient></defs>' +
-         '<g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px"><path d="' + body +
-         '"/>' + lobes('') + '</g><path class="aid-brain-body" d="' + body + '"/>' +
-         lobes('aid-brain-lobe') + '<path class="aid-brain-fissure" d="' + fissures + '"/></g>';
+         '</title><g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px"><path d="' +
+         body + '"/>' + lobes('') + '</g><g fill="' + fill + '"><path d="' + body + '"/>' +
+         lobes('aid-brain-lobe') + '</g><path class="aid-brain-fissure" d="' + fissures +
+         '"/><g class="aid-brain-tint"><path d="' + body + '"/>' + lobes('') + '</g></g>';
 }
 function retinaNodes(state, organs) {
   const zoom = zoomOf(state);
@@ -639,5 +636,6 @@ export function bodySvg(state) {
          'stop-opacity="' + S.back + '"/><stop offset="1" stop-color="#fff" stop-opacity="' +
          S.flank + '"/></linearGradient><path class="aid-fish-shade" d="' + body +
          '" fill="url(#aid-fish-shade)"/><path class="aid-fish-skin" d="' +
-         fishPath(sizes, false, true) + '"/>' + gut + brainSvg() + headSvg(state) + felt + organs;
+         fishPath(sizes, false, true) + '"/>' + gut + brainSvg(fill) + headSvg(state) + felt +
+         organs;
 }

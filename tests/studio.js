@@ -1174,8 +1174,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const inside = {side : currentEye.side, bearing : 30, distance : 0, radius : .01, hue : 20};
   const cleared = vision.clearOfFish(rendered, currentEye, inside);
   const lit = fan.pointText(cleared.bearing, cleared.distance * fan.world);
-  assert.ok(cleared.distance > 0 &&
-            Math.hypot(lit.x - fan.eye.x, lit.y - fan.eye.y) >= fan.cut);
+  assert.ok(cleared.distance > 0 && Math.hypot(lit.x - fan.eye.x, lit.y - fan.eye.y) >= fan.cut);
   const onRing = fan.ring(currentEye.side * 45, fan.handle);
   assert.ok(Math.abs(Math.hypot(onRing.x - fan.eye.x, onRing.y - fan.eye.y) - fan.handle) < 1e-6);
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
