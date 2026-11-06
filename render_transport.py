@@ -10,9 +10,10 @@ from wording import Refusal
 
 MAX_SCENE_BYTES = 64 * 1024 * 1024
 # Replies are read in READ_CHUNK bytes, a header line takes at most HEADER_BYTES; a request
-# waits TIMEOUT_S. Brain and inspection keys stay within their lengths, the focus below
+# waits TIMEOUT_S. While one run gives way to the next, a request waits up to SWITCH_S for the
+# new engine to connect. Brain and inspection keys stay within their lengths, the focus below
 # MAX_FOCUS; the base frame is a 32-bit counter.
-READ_CHUNK, HEADER_BYTES, TIMEOUT_S = 1 << 20, 4096, 15
+READ_CHUNK, HEADER_BYTES, TIMEOUT_S, SWITCH_S = 1 << 20, 4096, 15, 3
 BRAIN_KEY, INSPECTION_KEY, MAX_FOCUS, MAX_BASE = 100, 512, 100000, 0xFFFFFFFF
 
 
@@ -82,17 +83,22 @@ class SceneLink:
 
 
 class SceneChannel:
-    """Serial image requests; each new engine run replaces the previous connection."""
+    """Serial image requests; each new engine run replaces the previous connection. A request
+    that meets no engine, or one whose run has just ended, waits for the next run's engine; the
+    old run's base frame and inspection do no harm there, the new engine answers with a whole
+    frame."""
 
-    def __init__(self, path, timeout=TIMEOUT_S):
+    def __init__(self, path, timeout=TIMEOUT_S, switch=SWITCH_S):
         self.path = path
         self.timeout = timeout
+        self.switch = switch
         self.listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self.listener.bind(path)
         self.listener.listen(4)
         # Serial requests isolate tabs with different viewports.
         self.request_lock = threading.Lock()
         self.lock = threading.Lock()
+        self.connected = threading.Condition(self.lock)
         self.link = None
         self.request = 0
         threading.Thread(target=self.accept, daemon=True, name="fish-scenes").start()
@@ -105,6 +111,7 @@ class SceneChannel:
                 return
             with self.lock:
                 previous, self.link = self.link, SceneLink(connection, self.timeout)
+                self.connected.notify_all()
             if previous:
                 # Wakes a waiting request; it fails and releases the request lock.
                 try:
@@ -120,6 +127,13 @@ class SceneChannel:
                 self.link = None
         link.close()
 
+    def current(self, stale=None):
+        """The engine's link, waiting up to the switch time for one other than `stale`."""
+        with self.connected:
+            self.connected.wait_for(lambda: self.link is not None and self.link is not stale,
+                                    self.switch)
+            return self.link if self.link is not stale else None
+
     def render(self, base, viewport, brain_key="", inspection_key="", focus=-1):
         if (
             not 0 <= base <= MAX_BASE
@@ -132,29 +146,41 @@ class SceneChannel:
             raise Refusal("invalidImageSection")
         values = " ".join(format(v, ".17g") for v in viewport)
         with self.request_lock:
-            with self.lock:
-                link = self.link
-            if link is None:
-                raise Refusal("noCurrentImage")
-            self.request += 1
-            request = self.request
-            try:
-                link.connection.sendall(
-                    f"request {request} render {base} {values} {json.dumps(brain_key)} "
-                    f"{json.dumps(inspection_key)} {focus}\n".encode()
+            payload, message, stale = self.ask(base, values, brain_key, inspection_key, focus)
+            if stale:
+                # The run ended under the request; the next run's engine answers it.
+                payload, message, stale = self.ask(
+                    base, values, brain_key, inspection_key, focus, stale
                 )
-                # Answers to abandoned requests precede the current one.
-                number = None
-                while number != request:
-                    number, payload, message = link.reply()
-            except TimeoutError:
-                raise Refusal("imageNotDelivered") from None
-            except (OSError, EOFError, ValueError):
-                self.drop(link)
-                raise Refusal("noCurrentImage") from None
+            if stale:
+                raise Refusal("noCurrentImage")
         if payload is None:
             raise ValueError(message)
         return check_scene(payload)
+
+    def ask(self, base, values, brain_key, inspection_key, focus, stale=None):
+        """One render request on the current link: its payload and message, or the link that
+        broke under it."""
+        link = self.current(stale)
+        if link is None:
+            raise Refusal("noCurrentImage")
+        self.request += 1
+        request = self.request
+        try:
+            link.connection.sendall(
+                f"request {request} render {base} {values} {json.dumps(brain_key)} "
+                f"{json.dumps(inspection_key)} {focus}\n".encode()
+            )
+            # Answers to abandoned requests precede the current one.
+            number = None
+            while number != request:
+                number, payload, message = link.reply()
+        except TimeoutError:
+            raise Refusal("imageNotDelivered") from None
+        except (OSError, EOFError, ValueError):
+            self.drop(link)
+            return None, None, link
+        return payload, message, None
 
     def close(self):
         self.listener.close()
