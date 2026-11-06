@@ -8,18 +8,9 @@ import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 import {t, tList} from '../../strings.js';
 
-// The skin's pigment cells, as real fish, octopus and chameleons have them: kinds of cell, each
-// with a pigment of its own colour. At rest a cell keeps its pigment gathered; excited, it spreads
-// it over the skin, and the fish takes its colour.
 const label = (key, values) => t('studio.pigment.' + key, values);
 const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
 
-// The pigment wheel: every pigment a cell can carry, by the colour it shows. Around the wheel
-// the hue it shows (the opposite of the one it absorbs); from the rim inwards it absorbs ever more
-// broadly, down to black in the middle, as melanin does: at a width w it lies 1 - w² of the way
-// out, so the narrow pigments, which absorb hardly anything between the colour channels, take a
-// thin rim and the colours room. RINGS × SECTORS patches paint it, each in the colour of its
-// pigment; the cell's pigment is a ring.
 const PIGMENT_WHEEL =
     Object.freeze({size : 200, centre : 100, radius : 88, rings : 8, sectors : 36, ring : 9});
 const W = PIGMENT_WHEEL, TURN = 360, HALF_TURN = 180;
@@ -27,7 +18,6 @@ const wheelAt = (shown, r) => ({
   x : W.centre + r * Math.sin(shown * Math.PI / HALF_TURN),
   y : W.centre - r * Math.cos(shown * Math.PI / HALF_TURN)
 });
-// Where a cell's pigment lies on the wheel, and the pigment under a pointer at (fx, fy).
 const wheelRadius = width => W.radius * (1 - width * width);
 const wheelWidth = r => Math.sqrt(1 - Math.min(1, r / W.radius));
 const wheelPoint = center =>
@@ -67,15 +57,12 @@ function pigmentWheel(center) {
          '" cy="' + W.centre + '" r="' + W.radius + '"/><circle class="aid-pigment-choice" cx="' +
          fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' + W.ring + '"/></svg>';
 }
-// The kinds of cell as chips in their pigment's colour, the chosen one marked; one more kind can
-// be added while there is room, the chosen one removed while there are others.
 function kindChips(organ, chosen) {
   return typeChips(organ, chosen, type => {
     const rgb = pigmentColour(type.centers[0]);
     return {icon : '<i style="background:' + cssColour(rgb) + '"></i>', name : kindName(rgb)};
   }, {add : label('add'), remove : label('remove')});
 }
-// How much pigment a kind of cell has: its nodes, along a track up to all the organ has room for.
 const AMOUNT = Object.freeze({width : 240, height : 34, track : [ 30, 200 ], y : 16});
 function amountTrack(organ, chosen) {
   const most = ORGAN_BY_KEY[organ.type].nodes,
@@ -89,11 +76,8 @@ function amountTrack(organ, chosen) {
                     label('amount', {n : room})) +
          '</svg></div>';
 }
-// The nodes a pointer along the amount track asks for.
 export const pigmentAmount = (fx, room) =>
     1 + Math.round(trackShare(fx * AMOUNT.width, AMOUNT.track) * Math.max(0, room - 1));
-// The fish's colours from the engine: from its pigment gathered to spread fully, its ground
-// colour marked where its cells' resting activity leaves it, its skin without pigment beside.
 const RANGE = Object.freeze({
   width : 240,
   height : 58,
@@ -134,10 +118,6 @@ export function pigmentInspector(state, organ, center) {
          pigmentWheel(chosen.centers[0]) + amountTrack(organ, chosen) + colourRange(state) +
          '</div>';
 }
-// The organ on the fish: pigment cells all over the skin, every DOTS.step along and across it
-// (from DOTS.ends steps behind the snout to as many before the tail, `inset` inside the skin),
-// each of a kind by its share of the nodes; gathered small at rest (by the ground colour's place
-// in the range), with the spread they take shown faintly while the organ is chosen.
 const DOTS = Object.freeze({step : 44, ends : [ 1, 2 ], inset : 16, least : 1.6, most : 8});
 export function chromatophoresSvg(state, organ, chosen) {
   const types = organTypes(organ);

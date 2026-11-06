@@ -1,5 +1,3 @@
-"""Latest scene, immutable shared assets and client synchronization state."""
-
 from frame_assets import hydrate_brain, hydrate_render
 from view_transport import FrameDecoder, SceneHistory
 from copy import copy

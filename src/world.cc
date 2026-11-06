@@ -8,48 +8,29 @@
 #include <cstring>
 namespace fishsim {
 namespace {
-// Food sinks FOOD_SINK_GAIN times its configured sinking by buoyancy and drifts with FOOD_DRIFT.
 constexpr double FOOD_SINK_GAIN = 6, FOOD_DRIFT = .09504;
-// Decay clocks: harvested small animals age at a quarter, eggs at half, flesh twice as fast.
 constexpr double HARVESTED_DECAY_RATE = .25, EGG_DECAY_RATE = .5, FLESH_DECAY_RATE = 2;
-// Food resting on a surface is lifted by a current faster than LIFT_SPEED, by at most MAX_LIFT.
 constexpr double LIFT_PROBE = .2, MAX_LIFT = 2, LIFT_SPEED = .3, LIFT_KEEP = .2, CONTACT_GAP = .1;
-// Sprayed food starts with a small random speed.
 constexpr double SPRAY_SPEED = .12;
-// Water: a slow background wave, damping, current sources and solver iterations.
 constexpr double BACKGROUND_FLOW = .002, BACKGROUND_WAVE = .012, BACKGROUND_TEMPO = .001,
                  WATER_KEEP = .996, CURRENT_PULL = .2, CURRENT_NOISE_KEEP = .999,
                  CURRENT_NOISE = .013;
 constexpr int WATER_ITERATIONS = 30;
-// Food moves in batches of this cell size.
 constexpr double FOOD_BATCH_CELL = 32;
-// Food moves in parallel chunks of FOOD_CHUNK pieces; foliage brakes food by its radius in units
-// of FOLIAGE_DRAG_RADIUS; sweeps test SWEEP_MARGIN beyond the move; shape lookups reach
-// SHAPE_LOOKUP_MARGIN beyond the radius.
 constexpr std::size_t FOOD_CHUNK = 8;
 constexpr double FOLIAGE_DRAG_RADIUS = 4, SWEEP_MARGIN = .001, SHAPE_LOOKUP_MARGIN = .01;
-// The bounding box of an obstacle.
 struct Bounds {
   double left, right, top, bottom;
 };
-// Sight ignores dust that dims the view by less than NEGLIGIBLE_DIMMING; the scan reaches one
-// cell beyond the range on each side.
 constexpr double NEGLIGIBLE_DIMMING = .001;
-// Obstacles are indexed with SHAPE_MARGIN around them; random placement tries PLACEMENT_TRIES
-// times; rays scan at least RAY_MIN_REACH beyond twice the margin.
 constexpr double SHAPE_MARGIN = 8, RAY_MIN_REACH = 16;
 constexpr int PLACEMENT_TRIES = 300;
-// Overlapping bodies are pushed out in up to PUSH_PASSES passes, to SEPARATION beyond contact.
 constexpr int PUSH_PASSES = 4;
 constexpr double SEPARATION = .001;
-// Current sources are at most MAX_CURRENT strong.
 constexpr double MAX_CURRENT = 6;
-// Pressure relaxation keeps RELAX_KEEP of the old value and checks convergence every
-// CONVERGENCE_CHECK iterations, against an absolute and a velocity-relative tolerance.
 constexpr float RELAX_KEEP = .2f;
 constexpr int CONVERGENCE_CHECK = 8;
 constexpr double ABSOLUTE_TOLERANCE = .00001, RELATIVE_TOLERANCE = .001;
-// Water cell neighbours: left, right, up, down; the first two are horizontal.
 constexpr std::array<std::array<int, 2>, 4> WATER_SIDES{{{{-1, 0}}, {{1, 0}}, {{0, -1}}, {{0, 1}}}};
 constexpr int HORIZONTAL_SIDES = 2;
 }
@@ -123,7 +104,6 @@ void SightMedium::prepare(const Field &field, double px, double py) {
     ray.clear();
   for (auto &bin : plant_angles)
     bin.clear();
-  // Bilinear samples can only use these cells inside the observation radius.
   dusty = false;
   auto check_grid = [&](const auto &energy, int nx, int ny) {
     if (dusty || energy.empty())
@@ -179,7 +159,6 @@ void SightMedium::prepare(const Field &field, double px, double py) {
                 {dx, dy, p.hx, p.hy, stroke_width(p), p.radius, field.foliage_depth(p.organ_kind)});
         }
       });
-  // Group nearby foliage by bearing once for the observer.
   const int bins = int(plant_angles.size());
   const double scale = bins / (2 * PI);
   for (std::size_t i = 0; i < plants.size(); ++i) {
@@ -253,7 +232,6 @@ std::array<double, 4> SightMedium::transmission(double tx, double ty) const {
                              int(plant_angles.size()) - 1);
   for (auto i : plant_angles[bin]) {
     const auto &p = plants[i];
-    // A stroke containing the target point is the target itself; its own opacity is its colour.
     if (stroke_distance(p.hx, p.hy, p.width, dx - p.x, dy - p.y) <= 0)
       continue;
     const double crossing = stroke_optical_depth(p.x, p.y, p.hx, p.hy, p.width, 1, dx, dy);
@@ -670,7 +648,6 @@ Color Field::filter_color(double x, double y, double tx, double ty, Color color)
 void Field::collide(Body &b, double ox, double oy, double radius) const {
   if (radius < 0)
     radius = collision_radius(b);
-  // A larger body can overlap geometry_ before moving (feeding_, growth or hatching).
   bool expanded = !free(ox, oy, radius);
   if (expanded) {
     double start_x = ox, start_y = oy;
@@ -883,7 +860,6 @@ void Water::update(const Field &f, int iterations, bool adaptive) {
     v.assign(nx * (ny + 1), 0);
     solid.resize(nx * ny);
   }
-  // Quiescent water is an exact fixed point, including after an editor change.
   if (f.flow == 0 &&
       std::none_of(f.currents().begin(), f.currents().end(),
                    [](const CurrentSource &s) { return s.strength * (1 + s.noise) > 0; }) &&
@@ -966,7 +942,6 @@ void Water::advect_velocity(const Field &f, int nx, int ny, double dx, double dy
       auto vel = old_velocity(x, y);
       v[j * nx + i] = WATER_KEEP * old_velocity(x - vel.x, y - vel.y).y - background_v[i];
     }
-  // Sources, advection and pressure all share the horizontal seam.
   for (const auto &source : f.currents()) {
     double strength = std::clamp(source.strength * (1 + source.noise), 0., MAX_CURRENT),
            radius = source.width / 2;
@@ -1130,8 +1105,6 @@ void Field::motion(const Water *replay_water) {
   } else
     water_.update(*this, WATER_ITERATIONS);
 
-  // Share conservative free-space tests for grains in the same small region.
-  // Every grain keeps its position, velocity, energy, radius and identity.
   struct Batch {
     double step = 0, radius = 0;
     bool active = false, clear = false, dry = false;
@@ -1236,8 +1209,6 @@ void Field::motion(const Water *replay_water) {
           slowed = sediment_velocity({p.vx, p.vy}, p.x, p.y, radius);
         p.vx = slowed.x;
         p.vy = slowed.y;
-        // Foliage catches food: large pieces hang in leaves and dense blades, crumbs slip
-        // through between them.
         if (!batch.dry && env_.foliage_food_drag > 0 && vegetation_.indexed_plant_radius > 0) {
           const double blocked = foliage_contact(p.x, p.y, radius).blocked;
           if (blocked > 0) {

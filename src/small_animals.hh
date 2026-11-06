@@ -7,7 +7,6 @@
 #include <map>
 #include <vector>
 namespace fishsim {
-// Sides of a plankton cell; PlanktonField::links holds the bit 1 << side for each open side.
 namespace cell_side {
 inline constexpr int left = 0, right = 1, up = 2, down = 3, count = 4;
 }
@@ -20,7 +19,6 @@ inline constexpr int side_dy(int side) {
 inline constexpr bool side_linked(unsigned links, int side) {
   return links & (1u << side);
 }
-// The cell across a side; columns wrap around the tank.
 template <class Index> constexpr Index cell_neighbor(Index at, int side, Index columns) {
   const Index x = at % columns, y = at / columns;
   return side == cell_side::left    ? y * columns + (x + columns - 1) % columns
@@ -28,7 +26,6 @@ template <class Index> constexpr Index cell_neighbor(Index at, int side, Index c
          : side == cell_side::up    ? at - columns
                                     : at + columns;
 }
-// Energy stores of the food web; the first `animals` stores follow food_kind::plankton in order.
 namespace animal_store {
 inline constexpr int plankton = 0, worms = 1, crabs = 2, mussels = 3, detritus = 4, count = 5,
                      animals = 4;
@@ -36,32 +33,24 @@ inline constexpr int plankton = 0, worms = 1, crabs = 2, mussels = 3, detritus =
 inline constexpr int store_food_kind(int store) {
   return food_kind::plankton + store;
 }
-// Crab meals show for CRAB_FEEDING_STEPS, plant meals for CRAB_PLANT_FEEDING_STEPS.
 inline constexpr int CRAB_FEEDING_STEPS = 18, CRAB_PLANT_FEEDING_STEPS = 22;
-// Crabs walk on surfaces whose upward normal reaches CRAB_FOOTING. They aim for spots
-// CRAB_SITE_MARGIN inside a surface and stop CRAB_END_MARGIN before its ends.
 inline constexpr double CRAB_FOOTING = .35, CRAB_SITE_MARGIN = .1, CRAB_END_MARGIN = .02;
-// Grazing traces within GRAZING_TRACE_CELL merge; at most MAX_GRAZING_TRACES are kept per step.
 inline constexpr double GRAZING_TRACE_CELL = 8;
 inline constexpr std::size_t MAX_GRAZING_TRACES = 32;
-// At most MAX_EMPTY_SHELLS shells and crab plates lie in the tank.
 inline constexpr std::size_t MAX_EMPTY_SHELLS = 128;
-// Plankton grows from at most MAX_PLANKTON_SOURCES nurseries.
 inline constexpr std::size_t MAX_PLANKTON_SOURCES = 256;
-// Empty shells vanish after SHELL_LIFETIME steps.
 inline constexpr int SHELL_LIFETIME = 1600;
 struct PlanktonField {
   int columns = 0, rows = 0;
   bool nonempty = false; // Conservative derived flag; it may stay true after feeding.
   double width = 0, height = 0, water_area = 0;
   std::vector<double> energy, scratch, strain;
-  std::vector<Point> flow; // Derived once per occupied cell and its immediate neighborhood.
+  std::vector<Point> flow;
   std::vector<unsigned char> sampled;
   std::vector<Point> sources;  // Persistent positions as fractions of tank dimensions.
   std::vector<double> nursery; // Derived source/rock field; current sediment is checked when used.
   std::vector<std::uint16_t> cooldown;
   std::vector<unsigned char> open, links;
-  // Food, algae, plants, worms/crabs, plankton, carrion, eggs/sperm, mussels.
   std::vector<float> odor, odor_scratch;
 };
 struct WormHead {
@@ -119,8 +108,6 @@ struct EmptyShell {
 struct GrazingTrace {
   double x = 0, y = 0, radius = 0, amount = 0;
 };
-// Traces are identified by their grid cell, above every animal id; they show at least
-// GRAZING_TRACE_MIN_RADIUS wide.
 inline constexpr std::uint64_t GRAZING_TRACE_IDS = 9000000000000ULL, GRAZING_TRACE_ROW = 65536;
 inline constexpr double GRAZING_TRACE_MIN_RADIUS = .5;
 inline std::uint64_t grazing_trace_id(const GrazingTrace &g) {
@@ -138,9 +125,9 @@ struct FoodWebState {
   std::vector<Crab> crabs;
   std::vector<Mussel> mussels;
   std::vector<EmptyShell> shells;
-  std::vector<GrazingTrace> grazing; // Bounded display evidence of this step, like combat effects.
+  std::vector<GrazingTrace> grazing;
   std::vector<std::vector<std::size_t>> neighbors;
-  std::map<std::uint64_t, std::size_t> patches; // Derived with neighbors after geometry changes.
+  std::map<std::uint64_t, std::size_t> patches;
   std::uint64_t next_id = 1, geometry = 0;
   double introduced = 0, initial = 0, released = 0, food_eaten = 0, neighbor_gap = -1;
   void write(std::ostream &) const;

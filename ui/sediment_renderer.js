@@ -15,19 +15,13 @@ import {sceneState} from './state.js';
 import {displayLight} from './water_view.js';
 import {SEDIMENT_MASK} from './water_display.js';
 export const sediment_rendererState = {};
-// Hovering deposited sediment makes it see-through within this screen radius.
 export const SEDIMENT_PEEK_RADIUS = 128;
-// Suspended sediment shows as dust from MIN_DENSITY on; DENSITY maps amount per area to opacity.
 export const DUST = Object.freeze({density : 64, min_density : .003, tint : hexColor('#91805e')});
 export let sedimentVertexShader;
 
 export let sedimentFragmentShader;
 
-// Grain instances: cell (x, y and cell size, or a plankton animal's birth step), motion (velocity,
-// size, density), seed (two noise values, start step, rank) and intake (mouth x, y, start step,
-// duration).
 const GRAIN_ATTRIBUTES = [ [ 'cell', 4 ], [ 'motion', 4 ], [ 'seed', 4 ], [ 'intake', 4 ] ];
-// Grain buffers hold at least MIN_GRAINS grains.
 const MIN_GRAINS = 4;
 const {at : GRAIN_AT, floats : GRAIN_FLOATS} = attributeLayout(GRAIN_ATTRIBUTES),
                                GRAIN_IDLE = new Float32Array(GRAIN_ATTRIBUTES.at(-1)[1]);
@@ -104,14 +98,11 @@ export let bedVertex;
 
 export let bedFragment;
 
-// Bed and algae strips: endpoints (a, b), depths (normal and depth at both ends), tint (left
-// colour and material), the depths before and the right colour.
 const BED_ATTRIBUTES = [
   [ 'endpoints', 4 ], [ 'depths', 4 ], [ 'tint', 4 ], [ 'beforeDepth', 2 ], [ 'rightTint', 3 ]
 ];
 const BED_FLOATS = attributeLayout(BED_ATTRIBUTES).floats;
 const BED_MATERIAL = Object.freeze({algae : 0, sediment : 1});
-// Algae colour: BASE, brightened by LIGHT per unit of light and greened by FILL when dense.
 const ALGAE_SHADE =
     Object.freeze({base : [ .13, .23, .16 ], light : [ .08, 0, -.06 ], fill : [ 0, .23, 0 ]});
 class SurfaceRenderer extends TankBatch {
@@ -346,7 +337,6 @@ export function updateSedimentRendererState(patch) {
 
 const initializers = {
   "sedimentVertexShader" : () => {
-    // Sediment detail uses one point draw. The optical field is drawn by a separate GPU batch.
     sedimentVertexShader = `#version 300 es
 precision highp float;
 ${attributeInputs(GRAIN_ATTRIBUTES)}
@@ -407,7 +397,6 @@ void main(){
   },
   "gpuSediment" : () => { sediment_rendererState.gpuSediment = null; },
   "bedVertex" : () => {
-    // Deposited sand is world geometry, independent of screen-sized cached layers.
     bedVertex = `#version 300 es
 precision highp float;
 ${attributeInputs(BED_ATTRIBUTES)}
@@ -449,7 +438,6 @@ void main(){float alpha=1.;if(material>${
   },
   "gpuSurface" : () => { sediment_rendererState.gpuSurface = null; },
   "sedimentCloudVertex" : () => {
-    // The optical sediment field is sampled on the GPU; particles remain a separate detail batch.
     sedimentCloudVertex = `#version 300 es
 precision highp float;
 uniform vec2 viewport,offset,size;

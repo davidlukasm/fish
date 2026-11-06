@@ -14,7 +14,6 @@ const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + i
                                      : t('units.numbered', {name : label('cppn.hidden'), n : id});
 export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
 const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
-// The outputs a scope shows: all, the cells' identity, the traits or the addresses.
 function scopeOutputs(scope, shape) {
   const inputs = shape.cppnInputs;
   return Array.from({length : shape.cppnOutputs}, (_, i) => i + inputs).filter(id => {
@@ -25,7 +24,6 @@ function scopeOutputs(scope, shape) {
            (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
   });
 }
-// The nodes each node hears through an enabled link.
 function incomingLinks(cppn) {
   const incoming = new Map();
   for (const link of cppn.links.map(cppnLink))
@@ -33,8 +31,6 @@ function incomingLinks(cppn) {
       incoming.set(link.to, [...(incoming.get(link.to) ?? []), link.from ]);
   return incoming;
 }
-// What the graph shows: the inputs, the outputs asked for and all they hear from, and a chosen
-// node.
 function shownNodes(requested, incoming, inputCount, selection) {
   const included = new Set([...requested, ...Array.from({length : inputCount}, (_, i) => i) ]);
   if (selection?.kind === 'node')
@@ -53,7 +49,6 @@ function shownNodes(requested, incoming, inputCount, selection) {
     ancestors(id);
   return included;
 }
-// How many links deep a node lies behind the inputs (a loop counts once).
 function linkDepth(incoming, inputCount) {
   const layer = new Map(), visit = new Set();
   const depth = id => {
@@ -69,8 +64,6 @@ function linkDepth(incoming, inputCount) {
   };
   return depth;
 }
-// The graph laid out in columns: inputs first, outputs last, every other node by its depth; each
-// column's nodes spread evenly down it.
 function project(report, scope, shape, selection = null) {
   const cppn = report.cppn, inputCount = shape.cppnInputs;
   const nodes = new Map(cppn.nodes.map(n => [n[0], n]));
@@ -101,9 +94,6 @@ function project(report, scope, shape, selection = null) {
   }
   return {nodes, points, width, height};
 }
-// The CPPN as columns COLUMN apart from LEFT on, at least COLUMNS of them, and as high as ROW per
-// node of the fullest column, at least HEIGHT, MARGIN wider; a link runs between nodes NODE out
-// from their middles, bowing REACH of the way, its ink as wide as its weight (INK).
 const CPPN_GRAPH = Object.freeze({
   column : 260,
   left : 110,
@@ -114,7 +104,6 @@ const CPPN_GRAPH = Object.freeze({
   node : 24,
   reach : .43,
   ink : {least : 1, most : 4, per_weight : 1.7},
-  // A node's glyph by its kind, its number NUMBER and its name CAPTION below its middle.
   glyphs : {
     output : '<path d="M-24 -18 L18 -18 L25 0 L18 18 L-24 18 Z"/>',
     input : '<rect x="-24" y="-17" width="48" height="34" rx="8"/>',
@@ -123,11 +112,8 @@ const CPPN_GRAPH = Object.freeze({
   number : 4,
   caption : 37
 });
-// A CPPN link as the engine reports it (werkzeug/atelier.cc): its id, the nodes it leads from and
-// to, its weight, whether it is enabled and the port it feeds.
 export const cppnLink = ([ id, from, to, weight, enabled, port ]) =>
     ({id, from, to, weight, enabled, port});
-// A CPPN node as the engine reports it: its id, function, parameter and role.
 export const cppnNode = ([ id, type, parameter, role ]) => ({id, type, parameter, role});
 export const findCppnNode = (report, id) => {
   const row = report?.cppn?.nodes.find(n => n[0] === id);
@@ -193,9 +179,7 @@ export function cppnGraph(state) {
          '" role="img" aria-label="' + label('cppn.graph') + '">' +
          '<g class="aid-cppn-edges">' + edges + '</g>' + nodes + '</svg></div>';
 }
-// A weight's or parameter's field keeps within the engine's bounds for CPPN edits, in STEP steps.
 const CPPN_STEP = Object.freeze({weight : .1, parameter : .05});
-// A hidden node shows its parameter with CPPN_DIGITS decimals.
 const CPPN_DIGITS = 2;
 const limits = (shape, step) =>
     'min="' + -shape.cppnLimit + '" max="' + shape.cppnLimit + '" step="' + step + '"';

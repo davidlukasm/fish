@@ -1,5 +1,3 @@
-"""Local HTTP routes: image front process and statistics process (viewer_commands)."""
-
 import json
 import hashlib
 import secrets
@@ -15,12 +13,8 @@ from atelier_service import run as run_atelier, CompileJobs
 from wording import Refusal, worded, wording
 from protocol_schema import Route
 
-# A posted command may carry at most COMMAND_LIMIT bytes, a frame-rate report REPORT_LIMIT.
 COMMAND_LIMIT, REPORT_LIMIT = 2000000, 32768
-# A genome export is awaited EXPORT_WAIT_S, checked every EXPORT_POLL_S.
 EXPORT_WAIT_S, EXPORT_POLL_S = 3, 0.01
-# The relay to the statistics process waits RELAY_TIMEOUT_S, forwards requests in RELAY_CHUNK
-# and answers in RELAY_ANSWER_CHUNK bytes.
 RELAY_TIMEOUT_S, RELAY_CHUNK, RELAY_ANSWER_CHUNK = 120, 1 << 16, 1 << 20
 
 
@@ -198,7 +192,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class FrontHandler(Handler):
-    """Serves the scene route itself; passes every other request byte for byte to the statistics process."""
 
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -268,7 +261,6 @@ class FrontServer(ThreadingHTTPServer):
 
 
 class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
-    """Statistics routes on a private Unix socket behind the front process."""
 
     daemon_threads = True
 
@@ -282,8 +274,6 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
             ".css": "text/css",
             ".json": "application/json; charset=utf-8",
         }
-        # Code and style anywhere below ui/ (the Atelier keeps its own folder), wording below
-        # ui/text/<locale>/.
         for source in sorted((ROOT / "ui").rglob("*")):
             relative = source.relative_to(ROOT / "ui")
             key = Route.ASSETS + relative.as_posix()

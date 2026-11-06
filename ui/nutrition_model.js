@@ -1,23 +1,16 @@
-// What a fish or species ate and where it lived, as plain shares: diet amounts per food source
-// (rooted and drifting plants apart) and time shares per habitat.
 import {columnNames, FISH, FOOD_KIND, HABITAT, RATE_WINDOW} from './schema.js';
 export const nutrition_modelState = {};
 
-// Display slots of the food sources: the food kinds in order, with plants split into rooted
-// plants and drifting pieces right after them.
 const slotOf = kind => kind + (kind > FOOD_KIND.plant ? 1 : 0);
 export const FOOD_SLOT = Object.freeze({
   ...Object.fromEntries(Object.entries(FOOD_KIND).map(([ name, kind ]) => [name, slotOf(kind)])),
   drift : FOOD_KIND.plant + 1
 });
 export const FOOD_KINDS = Object.keys(FOOD_KIND).length;
-// Rates show per RATE_WINDOW.display_steps steps; the engine counts some per RATE_WINDOW.steps.
 export const shownRate = perStep => perStep * RATE_WINDOW.display_steps;
 export const displayRate = rate => shownRate(rate / RATE_WINDOW.steps);
-// A fish's energy intake per step.
 export const fishIntake = p =>
     p[FISH.nutrition_steps] ? p[FISH.nutrition] / p[FISH.nutrition_steps] : 0;
-// The food kind a display slot shows.
 export function foodKindOf(slot) { return slot > FOOD_SLOT.plant ? slot - 1 : slot; }
 
 export function ecologyFor(t) {

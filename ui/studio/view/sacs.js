@@ -11,14 +11,6 @@ import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 import {biasScale} from './panels.js';
 
-// The inner organs that hold something: the egg and sperm sacs, which fill and release, and the
-// swim bladder.
-// A gonad as the engine reckons it (the capabilities' gonads): each of its motor cells gives it
-// room for perCell, up to most; its growth cells move energy in as fast as their drive A at rest
-// lets them (A / (1 + A) of fill a step, A the sum of their strengths times their rest activity);
-// its release cells let it out on their own once their drive at rest reaches release, else only
-// when a trigger drives them. An ovary lays at spawnShare of its room, a testis from spawnLeast
-// on. An egg needs the build's eggMinimum to hatch; with less it is food.
 export function gonadStore(state, organ) {
   const G = state.capabilities?.gonads, own = G?.[organ.type];
   if (!own)
@@ -45,15 +37,6 @@ export function gonadStore(state, organ) {
     minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
   };
 }
-// The gonad drawn as a vessel along an axis of energy from LEFT to RIGHT (the most its nodes could
-// hold), MIDDLE high, HALF thick, ROUND at its ends; a chamber for each motor cell, the release
-// cells' last before the valve. An arrow INFLOW long brings the energy in, as wide as the growth
-// cells fill (FLOW: least and span); a valve VALVE long lets it out, open as far as the release
-// cells drive it at rest (at least SHUT). What one spawning gives stands after the valve, GAP
-// apart: an egg as big as its yolk (EGG: the largest radius, at the axis' end), the egg it needs
-// to hatch dashed around it, or sperm (as many as the chambers). The stretch line marks where the
-// pressure cells answer half. Numbers stand on the axis at AXIS, TICK long. The arrow's head is
-// HEAD long and wide beside its shaft.
 const STORE = Object.freeze({
   width : 300,
   height : 126,
@@ -75,7 +58,6 @@ const STORE = Object.freeze({
   label : 13,
   handle : 7
 });
-// A sperm's head, and its tail TAIL long in two waves WAVE high (a quarter of the tail each).
 const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4});
 const at = (store, energy) =>
     STORE.left + (STORE.right - STORE.left) * Math.min(1, energy / store.scale);
@@ -86,7 +68,6 @@ const sperm = (x, y) => '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '
                         ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
 const egg = (x, y, r, kind) => '<circle class="aid-sac-' + kind + '" cx="' + fixed(x) + '" cy="' +
                                fixed(y) + '" r="' + fixed(r) + '"/>';
-// The chambers from the k-th cell on to the end, each holding a gamete or two.
 function chambers(store, type, from, to, kind) {
   const S = STORE, width = at(store, store.own.perCell) - S.left;
   let html = '';
@@ -100,7 +81,6 @@ function chambers(store, type, from, to, kind) {
   }
   return html;
 }
-// What one spawning gives, after the valve at x.
 function product(store, type, x) {
   const S = STORE, radius = energy => S.egg * Math.sqrt(Math.min(1, energy / store.scale));
   if (type !== 'eggs') {
@@ -117,7 +97,6 @@ function product(store, type, x) {
                               '" r="' + fixed(radius(store.minimum)) + '"/>'
                         : '');
 }
-// The axis' numbers: none, the room, the ceiling where it stops the room and an egg's minimum.
 function axis(store) {
   const S = STORE, mark = (energy, kind) => {
     const x = fixed(at(store, energy));
@@ -178,8 +157,6 @@ export function gonadGraphic(state, organ, selected) {
                  : '') +
          '</svg>';
 }
-// A handle on the gonad graphic at (fx, fy), fractions of it: its growth cells as many as fill the
-// vessel to there, or the stretch line there along its room.
 export function sacPatch(state, organ, handle, fx) {
   const store = gonadStore(state, organ);
   if (!store)
@@ -192,10 +169,6 @@ export function sacPatch(state, organ, handle, fx) {
   const cells = Math.round((x - STORE.left) / (at(store, store.own.perCell) - STORE.left));
   return {nodes : clamp(cells - (store.motors - store.growth), 1, kindLimit(organ, null))};
 }
-// What the gonad's settings do, each fact on the part it belongs to: the growth cells fill it in
-// so many steps (or only when driven), more of them than its ceiling hold no more; the release
-// lets it out on its own or on a trigger; one spawning gives an egg that hatches or is food, or
-// so much sperm.
 export function gonadFacts(state, organ) {
   const store = gonadStore(state, organ);
   if (!store)
@@ -227,8 +200,6 @@ export function gonadFacts(state, organ) {
                            {share : percent(activationLevel(unitOfPlan(pressure.threshold)))})) +
          '</ul>';
 }
-// What an organ's pressure cells measure as the engine bound them; a warning where they measure
-// another organ than their own.
 export function pressureNote(state, organ) {
   const own = PRESSURE_OF[organ.type], cell = organ.centers.find(c => c.key === own?.key);
   const measured = cell ? groupReport(state.document, state.anatomy, 'pressure', cell.id) : null;
@@ -242,9 +213,6 @@ export function pressureNote(state, organ) {
              : '<p class="aid-hint aid-warning">' +
                    escapeText(t('studio.inspector.measuresWrong', {measures : text})) + '</p>';
 }
-// The swim bladder as an ellipse around its nodes, in rows of COLUMNS, COLUMN apart from LEFT,
-// ROW apart, as ellipses NODE wide; the bladder at least LEAST high and PAD more than its rows,
-// INSET in. A node's number stands BASELINE below its middle.
 const BLADDER = Object.freeze({
   width : 286,
   cx : 142,
@@ -260,7 +228,6 @@ const BLADDER = Object.freeze({
   baseline : 5
 });
 export function bladderGraphic(organ, selected) {
-  // Each neural group remains selectable as more groups are added to the same organ.
   const B = BLADDER, rows = Math.ceil(organ.centers.length / B.columns);
   const height = Math.max(B.least, rows * B.row + B.pad);
   const outline = '<ellipse class="aid-paired-organ" cx="' + B.cx + '" cy="' + fixed(height / 2) +

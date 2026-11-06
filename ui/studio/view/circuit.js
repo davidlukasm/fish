@@ -10,10 +10,6 @@ import {cellTrack, cellWords, ICON, icon, label, slotFill, slotShape} from './ki
 import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
 import {organTitle} from './names.js';
 
-// A brain region's wiring in the inspector: its circuit plan, its slots and its settings.
-// A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
-// nodes with their cell counts. Each connection's side guidance is a glyph to click through.
-// Its glyphs are drawn in a PAIRING_BOX square.
 const PAIRING_BOX = 20;
 const PAIRING_GLYPH = Object.freeze({
   same : 'M3 6h14M3 14h14',
@@ -30,13 +26,6 @@ export function pairingButton(wire) {
          glyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
          label('inspector.pairing.' + wire.pairing) + '</span></button>';
 }
-// A brain region as a circuit: its kinds of node on both sides of the midline (the region and its
-// twin), one row each however many nodes of a kind it has (they share their settings), the
-// organs feeding it above, those it drives below, and every connection as the engine makes it,
-// crossing the midline where it crosses; a connection from an inhibiting node ends in a bar, a
-// kind's connections among themselves in a loop LOOP out. Each wire's side guidance is a glyph to
-// click through beside the midline; nodes and organs are chosen by a click.
-// Names stand right-aligned at LABEL, left of the two columns.
 const CIRCUIT = Object.freeze({
   width : 300,
   label : 80,
@@ -61,12 +50,8 @@ const CIRCUIT = Object.freeze({
   baseline : 4,
   side_y : 14
 });
-// A circuit's arrowhead is drawn in an ARROW_BOX square; a connection's control points stand a
-// third of the way from each end.
 const ARROW_BOX = 10, BEZIER_THIRD = 3;
 const circuitSide = organ => sideIndex(organ?.side);
-// The region's families of node on both sides, each by its first node's id with its side and
-// row; and for every node of the region the first of its family.
 function circuitMembers(doc, organ) {
   const sides = [ organ, findOrgan(doc, organ.pair) ];
   if (circuitSide(organ) === 1)
@@ -82,9 +67,6 @@ function circuitMembers(doc, organ) {
   }));
   return {members, kindOf};
 }
-// The region's connections, one for each pair of ends; an organ outside stands as a whole,
-// however many of its nodes the region hears. A connection inside the region gathers the plan's
-// links it stands for (keys), cut while all of them are.
 function circuitLinks(state, {members, kindOf}) {
   const doc = state.document, joined = new Map();
   for (const l of routedLinks(doc, state.sites, true)) {
@@ -107,7 +89,6 @@ function circuitLinks(state, {members, kindOf}) {
   }
   return [...joined.values() ];
 }
-// Organs and centers outside the region, a row for each kind.
 const circuitEnd = (doc, id) =>
     findOrgan(doc, id) ? {organ : findOrgan(doc, id)} : findCenter(doc, id);
 function endRows(doc, ids) {
@@ -121,7 +102,6 @@ function endRows(doc, ids) {
   }
   return rows;
 }
-// Ends of one row on one side fan out around their column; unpaired ones around the middle.
 function placeRows(doc, rows, top) {
   const C = CIRCUIT, at = new Map();
   const sideOf = id => {
@@ -140,8 +120,6 @@ function placeRows(doc, rows, top) {
   });
   return at;
 }
-// Where everything stands: inputs above, the region's nodes in its rows, outputs below. An end
-// that both feeds the region and is fed by it stands in both rows.
 function circuitLayout(doc, organ, members, links) {
   const C = CIRCUIT;
   const inputs =
@@ -167,9 +145,6 @@ function circuitLayout(doc, organ, members, links) {
     height : outTop + Math.max(0, outputs.length - 1) * C.row + C.bottom + C.node
   };
 }
-// A connection: a curve from end to end, bowing outward between nodes of one column, a loop out
-// of a node to itself. A link of the region's own plan can be taken out and put back with a
-// click.
 function circuitLink(organ, l, a, b) {
   const C = CIRCUIT;
   const crossing = a.side !== null && b.side !== null && a.side !== b.side;
@@ -190,7 +165,6 @@ function circuitLink(organ, l, a, b) {
          (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut') : '') +
          '</title></path>';
 }
-// A wire's side guidance beside the midline, between the rows it joins.
 function pairingMark(wire, links, layout) {
   const C = CIRCUIT;
   const ys =
@@ -202,7 +176,6 @@ function pairingMark(wire, links, layout) {
          '" height="' + 2 * C.glyph + '" rx="' + C.round + '"/>' +
          placedGlyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {}, {box : PAIRING_BOX}) + '</g>';
 }
-// An organ outside shows as its icon and name; a center of the brain as its own glyph and name.
 const brainCenter = end => end.center && end.organ.type === 'brain';
 const endTitle = end => brainCenter(end) ? centerTitle(end.center) : organTitle(end.organ);
 const circuitEnds = (doc, rows, at) => rows.flatMap(row => row.ids.map(id => {
@@ -235,8 +208,6 @@ function circuitNode(state, id, m, p) {
                   : '') +
          '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
 }
-// The ends of connections: an arrowhead where a node excites, a bar across where it inhibits;
-// and the frame: the midline and the sides' names.
 const arrowMarker = () =>
     '<defs><marker id="aid-circuit-arrow" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
     '" refX="' + fixed(ARROW_BOX + CIRCUIT.node * ARROW_BOX / CIRCUIT.arrow) + '" refY="' +
@@ -276,8 +247,6 @@ function regionCircuit(state, organ) {
          [...members ].map(([ id, m ]) => circuitNode(state, id, m, L.nodePos.get(id))).join('') +
          pairings.map(wire => pairingMark(wire, links, L)).join('') + '</svg>';
 }
-// An organ's or region's slots, each with the organs filling it or marked free (and needed, when
-// it needs one there).
 export function slotsSection(state, organ) {
   if (!ORGAN_BY_KEY[organ.type].slots)
     return '';
@@ -296,7 +265,6 @@ export function slotsSection(state, organ) {
                                             escapeText(organTitle(o, state.sites)) + '</button>')
                                   .join('')
                             : '') +
-                       // Any slot takes one more: a click starts the wire there.
                        '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
                        '" data-slot-dir="' + slot.dir + '" title="' +
                        label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') + '">' +
@@ -306,13 +274,10 @@ export function slotsSection(state, organ) {
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
-// A planned region's slots, its own settings and whether its plan follows its organs.
 function regionControls(state, organ) {
   if (!planned(organ))
     return '';
   const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
-  // A setting the plan cannot reach as asked (a tectum's bands with many colour types apart)
-  // shows what it reaches.
   const most = regionPlan(state.document, organ).most ?? {};
   const choices =
       Object.entries(settings)
@@ -334,7 +299,6 @@ function regionControls(state, organ) {
                    '</span><div class="aid-button-group">' + buttons + '</div></div>';
           })
           .join('');
-  // Only a region whose plan follows its organs has the switch.
   const follows = regionPlan(state.document, organ).view
                       ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
                             escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
@@ -345,7 +309,6 @@ function regionControls(state, organ) {
                             }) +
                             '</p>'
                       : '';
-  // A plan larger than the free sites around the region says how much of it found room.
   const wanted = regionPlan(state.document, organ).nodes.length;
   const crowded =
       organ.centers.length < wanted

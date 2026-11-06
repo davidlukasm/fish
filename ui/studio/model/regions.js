@@ -13,13 +13,8 @@ import {
   usedSites
 } from './document.js';
 
-// Brain regions with a plan. Their nodes, their inner circuit and how a wire to the region as a
-// whole spreads over its nodes follow from the region's settings and, while it follows the organs
-// wired to it, from those organs. A node is named by its place in the plan, so it keeps its wires
-// and its own settings for as long as the plan has it.
 export const planned = organ => !!PLANS[organ?.type];
 const regionNodeId = (organ, node) => organ.id + ':' + node;
-// A region's settings as placed: each at its initial value, following its organs.
 export function initialRegion(type, site) {
   const settings = ORGAN_BY_KEY[type].settings;
   return {
@@ -42,11 +37,6 @@ export function fedBy(doc, organ) {
                          .filter(Boolean)) ];
 }
 
-// The optic tectum. While it follows its eyes, its map spans their fields and keeps as many colour
-// types apart as they have, at most MAP_NODES nodes in all. A map node hears its light cells
-// alone, so it keeps their direction: a cell group hears the senders around one address. Contrast
-// cells (none, few, many) take from the whole map and hold the output down by what lights it all
-// alike, so the output answers what stands out.
 const MAP_NODES = 8, CONTRAST_CELLS = Object.freeze([ 0, 2, 5 ]);
 function tectumView(doc, organ) {
   const region = organ.region;
@@ -62,8 +52,6 @@ function tectumView(doc, organ) {
 }
 function tectumPlan(doc, organ) {
   const region = organ.region, view = tectumView(doc, organ);
-  // Colour types kept apart stay apart: with many of them the map takes fewer bands, so that
-  // bands times types stay within MAP_NODES.
   const types = region.colours ? Math.max(1, Math.min(view.types, MAP_NODES)) : 1;
   const bands = Math.max(1, Math.min(region.resolution, Math.floor(MAP_NODES / types)));
   const step = (view.hi - view.lo) / bands;
@@ -85,8 +73,6 @@ function tectumPlan(doc, organ) {
     nodes.push({node : 'inhibit', preset : 'inhibit', port : 'none', set : {copies : cells}});
     inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }
-  // A light cell reaches the map node of its direction and, with colours apart, of its colour
-  // type; a near-sense cell the map node of its direction, of the first colour type.
   const route = (sites, cell, field) => {
     const site = findSite(sites, cell.site);
     if (!site)
@@ -102,10 +88,6 @@ function tectumPlan(doc, organ) {
   return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
 }
 
-// The spinal cord beats the swimming wave: a rhythm node on each side drives the muscles wired
-// to the region, with as many cells as the stroke is wide and the beat asked; it drives
-// inhibitory cells that hold the other side's rhythm down, so the sides beat in turn. With
-// steering on, a steering node takes the region's inputs and drives the rhythm of its side.
 const BEAT_TAU = Object.freeze([ .75, .5, .25 ]), STROKE_CELLS = Object.freeze([ 2, 4, 7 ]);
 function spinalPlan(doc, organ) {
   const region = organ.region;
@@ -126,10 +108,6 @@ function spinalPlan(doc, organ) {
   return {nodes, inner, cross : [ [ 'cross', 'beat' ] ], route : () => null, view : null};
 }
 
-// The olfactory bulb gathers the smell of its side's nose and passes it on; the torus does so with
-// the water its side's lateral line feels. Comparing the sides, their inhibitory cells (none, few,
-// many) take from their own side and hold the other side's output down, so each output answers
-// by how much more its side senses.
 const COMPARE_CELLS = Object.freeze([ 0, 2, 5 ]);
 function bulbPlan(doc, organ) {
   const region = organ.region;
@@ -145,10 +123,6 @@ function bulbPlan(doc, organ) {
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
-// The hindbrain's command node fires when the alarm it gathers passes its threshold (low,
-// middle, high), quickly or slowly as asked, and drives the muscles it is wired to, the far side's
-// as escape cells do; through inhibitory cells it holds the other side's command down, so the fish
-// flees one way.
 const COMMAND_THRESHOLD = Object.freeze([ .2, .5, .8 ]), COMMAND_TAU = Object.freeze([ .1, .4 ]);
 function hindbrainPlan(doc, organ) {
   const region = organ.region;
@@ -196,9 +170,6 @@ function palliumPlan(doc, organ) {
     view
   };
 }
-// The cerebellum smooths what it is told to move: its output holds a command as long as asked,
-// and brake cells (none, few, many) cut it short again, so movements start and stop cleanly. What
-// it feels of balance (its balance slot) reaches the output directly and corrects it.
 const SMOOTH_TAU = Object.freeze([ .2, .45, .7 ]), BRAKE_CELLS = Object.freeze([ 0, 2, 5 ]);
 function cerebellumPlan(doc, organ) {
   const region = organ.region;
@@ -214,9 +185,6 @@ function cerebellumPlan(doc, organ) {
   }
   return {nodes, inner, cross : [], route : () => null, view : null};
 }
-// The hypothalamus feels inner states and answers with drive: its output fires the more easily
-// the higher its gain, and stirs (excites) or calms (inhibits) what it is wired to, glands among
-// them.
 const DRIVE_THRESHOLD = Object.freeze([ .6, .2, -.2 ]),
       DRIVE_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
 function hypothalamusPlan(doc, organ) {
@@ -248,12 +216,7 @@ const PLANS = Object.freeze({
 });
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
-// A region's inner circuit runs on a wire of its own, with no spread.
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
-// Every connection, with wires to and from planned regions as a whole spread over their nodes:
-// outgoing from the output nodes, incoming at the input nodes, from light cells by their
-// direction; and the regions' inner circuits, but for the links taken out of them (which come
-// along marked as cut when asked for).
 export function routedLinks(doc, sites, withCut = false) {
   const plans = new Map(doc.organs.filter(planned).map(o => [o.id, regionPlan(doc, o)]));
   const out = (organ, plan) =>
@@ -276,9 +239,7 @@ export function routedLinks(doc, sites, withCut = false) {
         for (const [cell, node] of routed)
           links.push({...link, from : cell, to : regionNodeId(target, node)});
       else {
-        // An input slot may name the node its organs reach; others reach every input node.
         const type = organOf(doc, from)?.type;
-        // A plan that keeps its inputs apart names the node for each kind of source.
         const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
                                                                 s.fits.includes(type));
         const node = plan.source?.(type) ?? slot?.node;
@@ -287,7 +248,6 @@ export function routedLinks(doc, sites, withCut = false) {
       }
     }
   }
-  // Inside a region, and across to its twin on the other side.
   for (const [id, plan] of plans) {
     const organ = findOrgan(doc, id), twin = findOrgan(doc, organ.pair);
     const cut = new Set(organ.region.cut ?? []);
@@ -307,24 +267,16 @@ export function routedLinks(doc, sites, withCut = false) {
       for (const [from, to] of plan.cross)
         inner(from, to, twin, innerKey(from, to, true));
   }
-  // A node the plan has but no free site took is not there to connect.
   const ids = new Set([...doc.organs.map(o => o.id), ...allCenters(doc).map(c => c.id) ]);
   return links.filter(link => ids.has(link.from) && ids.has(link.to));
 }
 
-// What a node is: its preset and port, the band and colour type of a map node, and the values
-// the plan sets (its cells, its beat). A value the plan sets is set again only when the plan
-// changes it; in between the node keeps what was made of it.
 const shape = n => [n.node, n.preset, n.port, n.band?.map(Math.round).join('-') ?? '', n.type ?? '',
                     JSON.stringify(n.set ?? null)]
                        .join('|');
 const centerShape = c => [c.node, c.key, c.port, c.band?.map(Math.round).join('-') ?? '',
                           c.type ?? '', JSON.stringify(c.planned ?? null)]
                              .join('|');
-// Brings every planned region in line with its plan: nodes the plan no longer has go with their
-// wires, new ones take the free inner sites of their zones nearest to where the region was
-// placed, nodes it keeps stay where they are with their settings. While a region follows its
-// organs, what it saw of them is kept, so it stays so when it stops following.
 export function settleRegions(doc, sites) {
   let draft = doc;
   for (const original of doc.organs.filter(planned)) {
@@ -346,7 +298,6 @@ export function settleRegions(doc, sites) {
     const home = findSite(sites, organ.region.site);
     const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
-    // Where sites run short, what the region passes on comes first, then what it takes in.
     const rank = n => n.port === 'out' ? 0 : n.port === 'in' ? 1 : 2;
     const made = new Map();
     for (const n of [...plan.nodes].sort((a, b) => rank(a) - rank(b))) {
@@ -387,16 +338,13 @@ export function settleRegions(doc, sites) {
   settleAssemblies(draft);
   return draft;
 }
-// A new node's cells, and what a preset makes of a node.
 const NODE_CELLS = 3;
 const presetOf = key => {
   const {sign, mode, pace, modulator} = NEURON_BY_KEY[key];
   return {sign, mode, pace, modulator};
 };
 
-// An inner link of a region's plan by its ends, across to the twin or not.
 export const innerKey = (from, to, across = false) => from + (across ? '>>' : '>') + to;
-// A link of a region's plan taken out, or put back, on both sides of a pair.
 export function toggleInnerLink(doc, organId, keys) {
   const draft = structuredClone(doc), organ = findOrgan(draft, organId);
   if (!planned(organ))
@@ -412,7 +360,6 @@ export function toggleInnerLink(doc, organId, keys) {
     target.region.cut = [...cut ];
   return draft;
 }
-// A region's settings changed, on both sides of a pair.
 export function updateRegion(doc, organId, patch, sites) {
   const draft = structuredClone(doc), organ = findOrgan(draft, organId);
   if (!planned(organ))
@@ -430,7 +377,6 @@ export function updateRegion(doc, organId, patch, sites) {
   return settleRegions(draft, sites);
 }
 
-// A region's slots and what fills them: the organs wired in or out there.
 export function regionSlots(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
   const links = expandedWires(doc);

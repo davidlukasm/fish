@@ -52,11 +52,9 @@ int main() {
       assert(std::abs(e.get_weight()) <= 2);
     cppn::CPPN net(g.cppn);
     assert(cppn::Program(net).safe());
-    // The former global expression weight grew to count-1 and collapsed at the mutation clamp.
     for (const auto &e : g.cppn->get_connection_genes())
       if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + out::expression)
         assert(e.get_weight() == -1);
-    // A trait weight is local to its group, including at unoccupied development sites.
     const auto &edge = *std::find_if(
         g.cppn->get_connection_genes().begin(), g.cppn->get_connection_genes().end(),
         [](const auto &e) { return e.get_target() == cppn::INPUTS + out::threshold; });
@@ -71,7 +69,6 @@ int main() {
           std::abs(before[i] - changed.query_view(field::development_site(i))[out::threshold]) >
           1e-5;
     assert(differences == 1);
-    // Small changes to every spatial boundary retain the chosen grid sites.
     for (const auto &node : g.cppn->get_node_genes())
       if (node.get_type() == NodeType::CUTOFF)
         g.cppn->edit_node(node.get_id(), node.get_weight() + .001f, node.get_type());
@@ -91,7 +88,6 @@ int main() {
       assert(std::abs(net.query_view(field::development_site(i))[out::threshold] -
                       (i < 2 ? .22f : .2f)) < 1e-5f);
   }
-  // Binding is smooth, preserves the half-height and has exact finite support.
   assert(field::contact_affinity(0) == 1);
   assert(std::abs(field::contact_affinity(std::log(2.)) - .5) < 1e-12);
   assert(field::contact_affinity(field::CONTACT_SUPPORT) == 0);
@@ -129,10 +125,8 @@ int main() {
     std::ostringstream left, right;
     first->write(left);
     second->write(right);
-    assert(left.str() == right.str()); // mutation observations keep their exact query order
+    assert(left.str() == right.str());
   }
-  // The address index must retain every possible contact across narrow and broad receivers,
-  // including the fallback to a full scan.
   {
     constexpr std::size_t COUNT = 257;
     std::vector<field::Neuron> neurons(COUNT);
@@ -233,7 +227,6 @@ int main() {
   leaky.cppn = Builder().build(broad);
   leaky.compile(false);
   assert(!assess(broad, leaky).ok());
-  // Capacity tolerances apply to the intended cell count.
   auto tolerant = p;
   tolerant.groups[0].copies = 5;
   assert(!assess(tolerant, g).ok());
@@ -250,7 +243,6 @@ int main() {
   assert(!assess(hormones, g).ok());
   hormones.options.traitTolerance = .25f;
   assert(assess(hormones, g).ok());
-  // Validation catches a missing required connection even with an otherwise valid fish.
   p.connections.push_back({2, 3, 2, 0});
   assert(!assess(p, g).ok());
   std::cout << "Compiler: local traits, stable sites, weight bounds and planned contacts passed\n";

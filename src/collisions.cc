@@ -4,14 +4,9 @@
 #include "physiology.hh"
 namespace fishsim {
 namespace {
-// A food piece weighs FOOD_BASE_MASS plus FOOD_MASS_PER_ENERGY per unit of energy. Bumps return
-// FOOD_RESTITUTION (fish on food) or FISH_RESTITUTION (fish on fish) times the closing impulse;
-// only the closing speed beyond HARMLESS_SPEED injures, IMPACT_SHARE to each fish, whose mass
-// counts as at least MIN_IMPACT_MASS. Overlaps are resolved with SEPARATION_SLACK to spare.
 constexpr double FOOD_BASE_MASS = .03, FOOD_MASS_PER_ENERGY = .0008, FOOD_RESTITUTION = 1.45,
                  FISH_RESTITUTION = 1.90, HARMLESS_SPEED = .75, IMPACT_SHARE = .5,
                  MIN_IMPACT_MASS = .2, SEPARATION_SLACK = .001;
-// Kinetic energy of a closing speed between two masses of the given inverse sum.
 double kinetic_energy(double inverse, double closing) {
   return closing * closing / (2 * inverse);
 }
@@ -48,8 +43,6 @@ void Field::collide_food(Body &b, double ox, double oy, const PhysiologyParamete
           p.vx += impulse * nx / mb;
           p.vy += impulse * ny / mb;
         }
-        // Prefer moving the light piece. Correct the fish only when geometry
-        // blocks that motion.
         double push = radius - d + SEPARATION_SLACK, px = p.x + nx * push, py = p.y + ny * push;
         if (this->free(px, py, food_radius(p))) {
           moved.push_back({i, p.x, p.y});

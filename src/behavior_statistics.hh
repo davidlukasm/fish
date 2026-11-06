@@ -3,11 +3,9 @@
 #include "hormone_observations.hh"
 namespace fishsim {
 constexpr std::size_t BEHAVIOR_FEATURES = behavior_feature_column::count;
-// Traits observed over the window: the colour channels from color, then aggression and defence.
 namespace window_trait {
 inline constexpr std::size_t color = 0, aggression = 3, defense = 4, count = 5;
 }
-// Places visited are marked on a VISIT_GRID by VISIT_GRID grid of bits.
 inline constexpr int VISIT_GRID = 8;
 struct BehaviorStatistics {
   HormoneMoments hormones, window_hormones;

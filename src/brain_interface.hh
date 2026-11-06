@@ -8,7 +8,6 @@
 #include <memory>
 #include <algorithm>
 namespace fishsim {
-// What an inner pressure cell measures: gonad filling, sperm store, bladder or a body shape.
 enum PressureSource {
   PressureNone = pressure_source::none,
   PressureEggs = pressure_source::eggs,
@@ -16,13 +15,10 @@ enum PressureSource {
   PressureBladder = pressure_source::bladder,
   PressureShape = pressure_source::shape
 };
-// Chemistry, flow, intake, damage and blood adapt to their own running mean.
 inline bool adapting_sense(int s) {
   return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage ||
          s == field::Blood;
 }
-// Light, chemistry, flow, intake, damage and blood report an open intensity; the others a
-// bounded state.
 inline bool intensity_sense(int s) {
   return s <= field::Flow || s == field::Intake || s == field::Damage || s == field::Blood;
 }
@@ -46,7 +42,7 @@ struct BrainInterface {
     std::uint32_t shared_receptor = 0;
     int pressure_target = -1, pressure_kind = -1;
     double time_steps = 4;
-    double adaptation_rate = 0; // Derived once from the cell time constant.
+    double adaptation_rate = 0;
     bool visual() const { return channel == field::Light || channel == field::Proximity; }
     float visual_gain() const { return senses[field::Light] + senses[field::Proximity]; }
     int dominant_sense() const { return channel; }
@@ -70,7 +66,6 @@ struct BrainInterface {
   std::array<std::vector<std::pair<double, double>>, 2> eye_intervals;
   std::array<std::vector<std::uint32_t>, 2> eye_receptors;
   std::array<std::vector<std::pair<double, std::uint32_t>>, EYES> retinal_neighbors;
-  // Precomputed angles per adaptation (off, on) and per view (left eye, right eye, single eye).
   static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
   std::array<std::array<std::vector<double>, EYE_VIEWS>, EYES> retinal_knots;
   std::array<float, ORGAN_PORTS> motor_counts{};
@@ -84,17 +79,11 @@ struct BrainInterface {
   double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
          undulation = TRAIT_MIDDLE;
   std::array<float, 3> visual_coverage{};
-  // Functional mouth, eyes L/R, thrust L/R, eggs, sperm, defense, attack;
-  // smell L/R, lateral line L/R, touch L/R; normalized eye RGB L/R.
-  // Slots 21..29: functional muscle strength for the same nine organ slots.
   static constexpr std::size_t ANATOMY_FIELDS = anatomy_column::count;
   std::array<float, ANATOMY_FIELDS> anatomy{};
   struct Fin {
     double cells = 0, strength = 0, x = 0, y = 0, spread = 0;
   };
-  // Weighted location and spread per organ side: the CNS, then a left/right pair for each of the
-  // first EARLY_ORGANS senses, the first EARLY_ORGANS motors, the remaining senses but blood,
-  // the remaining motors, and blood.
   struct OrganForm {
     double weight = 0, x = 0, y = 0, z = 0, sy = 0, sz = 0;
   };
@@ -118,19 +107,14 @@ struct BrainInterface {
            side;
   }
   std::array<OrganForm, FORM_COUNT> forms{};
-  std::array<std::array<double, 2>, EYES> eye_positions{}; // Along and across.
-  std::array<std::array<double, 3>, 2> eye_shape{};        // radii in body radii, pupil
-  // The near sense measures from the eye's place but is an organ of its own: round, no pupil.
+  std::array<std::array<double, 2>, EYES> eye_positions{};
+  std::array<std::array<double, 3>, 2> eye_shape{}; // radii in body radii, pupil
   std::array<std::array<double, 3>, 2> proximity_shape{};
   double eye_clearance = 0;
   std::array<std::array<double, field::PLAN_POINTS>, field::body_plan_part::count> body_plans{};
-  // headBack, headLength, faceLength, shoulder, faceWidth, chestLength,
-  // hindLength, trunk, neckWidth, chestPhase, origin, extent.
   std::array<double, field::body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
-  // Head, cord, then the turn-fin tissue of each side in region_layout::lobes lobes.
   std::array<OrganForm, region_layout::turn_fin + SIDES * region_layout::lobes> regions{};
-  // Eight axial tissue bins per side, tail to head.
   static constexpr int CONTOUR_BINS = contour::bins, CONTOUR_POINTS = SIDES * CONTOUR_BINS;
   std::array<float, CONTOUR_POINTS> contour{};
   std::array<Fin, fin::count> fins{};

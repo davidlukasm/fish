@@ -13,21 +13,16 @@ import {
   SEABED,
   TOLERANCE
 } from './schema.js';
-// Cover boxes reach COVER_MARGIN beyond small animals.
 const COVER_MARGIN = 2;
 import {cameraState} from './camera.js';
 import {sceneState, blendParticle, blendSmallAnimal} from './state.js';
 export const plant_geometryState = {};
 export const BED_LAYERS = 6;
-// Animals and plants without a measured place lie at MIDDLE_DEPTH of the bed.
 export const MIDDLE_DEPTH = .5;
 export function bedLayer(depth) {
   return Math.min(BED_LAYERS - 1, Math.max(0, Math.floor(depth * BED_LAYERS)));
 }
-// Organic matter darkens the sediment by these shares per channel at full density.
 const ORGANIC_SHADE = Object.freeze([ .16, .19, .12 ]);
-// Bed edges are matched by their ends in 1 / POSITION_BINS units and their normal in
-// 1 / NORMAL_BINS steps.
 const BED_KEY = Object.freeze({position_bins : 16, normal_bins : 4});
 export function bedColor(f, p, along = .5) {
   const color = SEABED.sediment_color;
@@ -67,9 +62,6 @@ export function bedColor(f, p, along = .5) {
   }, organic = at(0) * (1 - along) + at(1) * along;
   return color.map((v, k) => v * (1 - ORGANIC_SHADE[k] * organic));
 }
-// The same sediment pigment is used by the bed, root mounds and animal burrows.
-// Surface candidates are indexed once per snapshot, not searched for every animation frame.
-// Soil is looked up in CELL pixel cells, each holding the beds within MARGIN.
 const SOIL_GRID = Object.freeze({margin : 8, cell : 64});
 export function bedColorAt(f, x, y) {
   if (!plant_geometryState.soilGrid || plant_geometryState.soilPlants !== f.plants) {
@@ -118,10 +110,8 @@ export function bedColorAt(f, x, y) {
   }
   return nearest ? bedColor(f, nearest, along) : SEABED.sediment_color;
 }
-// Things deep in the bed are shown up to GROWTH larger.
 const BED_GROWTH = Object.freeze({growth : .5});
 export function bedScale(depth) { return 1 + BED_GROWTH.growth * Math.max(0, Math.min(1, depth)); }
-// A plant's foot is found over STEPS points per part.
 const PLANT_FOOT = Object.freeze({steps : 24});
 export function plantFoot(p) {
   const cache = plant_geometryState.plantFeet ??= new WeakMap(), parts = plantRenderParts(p),
@@ -152,7 +142,6 @@ export function plantFoot(p) {
   cache.set(p, {parts, bounds : result});
   return result;
 }
-// Where a small animal touches the bed and how far its cover reaches, in body radii.
 const ANIMAL_FOOT = Object.freeze({
   worm_foot : .31,
   body_reach : .15,
@@ -205,8 +194,6 @@ export function animalFoot(p) {
     top : p[INVERTEBRATE.y] - r * ANIMAL_FOOT.reach
   };
 }
-// Bed items within MARGIN pixels of the view are drawn in depth order; food from FOOD_MIN_SCALE
-// zoom on; fish over the bed reach FISH_REACH radii.
 const RENDER_ORDER = Object.freeze({
   margin : 48,
   food_min_scale : 1.5,
@@ -275,7 +262,6 @@ export function bedRenderOrder(f, c, shifts, blend, fishItems = []) {
   }
   return items.sort((a, b) => a.foot.y - b.foot.y);
 }
-// A plant root lies in the bed once the bed is MIN_DEPTH deep.
 const PLANT_DEPTH = Object.freeze({min_depth : .01});
 export function plantDepth(p) {
   if (p[PLANT.root]?.[PLANT_ROOT.visual_depth] >= 0)
@@ -293,8 +279,6 @@ export function plantDepth(p) {
                                                depth))
              : MIDDLE_DEPTH;
 }
-// Fish in plant cover keep their drawing layer for at least HOLD steps; cover is indexed in CELL
-// pixel cells; layers reshuffle every RESHUFFLE steps by the golden ratio.
 const COVER_GRID = Object.freeze({
   cell : 64,
   hold : 160,
@@ -360,7 +344,6 @@ export function fishVegetationLayer(p, f) {
 }
 export let plantPartsCache;
 
-// Plant parts stay LIFT pixels above the floor, found in BISECTIONS halvings.
 const RENDER_PARTS = Object.freeze({lift : .5, bisections : 4});
 export function plantRenderParts(p) {
   const saved = plantPartsCache.get(p);
@@ -419,7 +402,6 @@ export function plantRenderParts(p) {
   return parts;
 }
 
-// Width profile along an organ, the same as the engine's (organ_profile) and the grass shader's.
 function plantProfile(kind, t) {
   if (kind === ORGAN_KIND.blade)
     return Math.max(0, 1 - t ** O.blade_power) ** O.blade_shape;
@@ -433,7 +415,6 @@ function plantProfile(kind, t) {
              ? s ** O.leaf_power * (1 + O.leaf_ripple * Math.sin(O.leaf_ripples * Math.PI * v))
              : s ** O.round_power * (1 - O.round_taper * v);
 }
-// Leaf ribbons narrow where the curve bends tighter than CURL_ROOM of its length.
 export const RIBBON = Object.freeze({min_length : .001, curl_room : .72, min_curvature : .00001});
 export function plantRibbon(q, width, kind, t) {
   const u = 1 - t, p = plantCurvePoint(q, t),
@@ -449,7 +430,6 @@ export function plantRibbon(q, width, kind, t) {
                                              : Infinity);
   return {p, nx : -dy / length, ny : dx / length, width : w};
 }
-// Bounding box of a cubic curve's control points, widened by margin.
 export function plantCurveBox(q, margin = 0) {
   return {
     left : Math.min(q[0], q[2], q[4], q[6]) - margin,
@@ -459,11 +439,9 @@ export function plantCurveBox(q, margin = 0) {
   };
 }
 function plantCurveLength(q) { return Math.hypot(q[6] - q[0], q[7] - q[1]); }
-// The plant type a plant trait encodes, as the engine reads it (grass_type).
 export const plantType = trait =>
     Math.max(0, Math.min(Object.keys(PLANT_TYPE).length - 1,
                          Math.floor(trait * Object.keys(PLANT_TYPE).length)));
-// Length of a curve's control polygon, an upper bound of its arc length.
 export function plantCurveSpan(q) {
   return Math.hypot(q[2] - q[0], q[3] - q[1]) + Math.hypot(q[4] - q[2], q[5] - q[3]) +
          Math.hypot(q[6] - q[4], q[7] - q[5]);
@@ -499,7 +477,6 @@ export function plantWakeGeometry(f) {
   return objects;
 }
 
-// Curves are checked in MIN_STEPS to MAX_STEPS steps, about one per pixel.
 const CURVE_CLEAR = Object.freeze({min_steps : 8, max_steps : 64});
 export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(f)) {
   const {left : minX,
@@ -539,7 +516,6 @@ export function plantCurveClear(f, q, width, kind, geometry = plantWakeGeometry(
   return true;
 }
 
-// Plant parts count as visible within VIEW_MARGIN pixels, MARGIN beyond their width.
 const PART_VISIBLE = Object.freeze({margin : 24, view_margin : 160});
 export function plantPartVisible(q, width, c, shifts) {
   if (!c)
@@ -553,10 +529,6 @@ export function plantPartVisible(q, width, c, shifts) {
                                   cameraState.viewportWidth + PART_VISIBLE.view_margin);
 }
 
-// How plants give way to a passing fish (visual only). A push on any leaf or blade also bends
-// everything it hangs on, down to the root, the more the farther out it is attached; so the whole
-// plant leans away. Push: tip offset per unit of contact and fish size; reach: the largest tip
-// offset as a share of the part's height. Wakes are drawn from this zoom on.
 const GRASS_WAKE = Object.freeze({
   blade_push : 6.5,
   leaf_push : 3,
@@ -648,7 +620,6 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
         states = new Map();
   const bend = (q, x, y) =>
       q.map((v, k) => v + (k < 2 ? 0 : (k % 2 ? y : x) * GRASS_WAKE.profile[k >> 1]));
-  // Push of the passing fish on one part, from where they touch its resting curve.
   const contactForce = part => {
     const q = part.q, samples = [];
     let tx = 0, ty = 0;
@@ -693,8 +664,6 @@ export function prepareGrassWakes(f, c = null, shifts = [ 0 ]) {
     const old = oldPlants.get(p[0]), parts = plantRenderParts(p),
           lookup = new Map(parts.map(o => [o.stem, o])),
           prior = new Map((old ? plantRenderParts(old) : []).map(o => [o.stem, o]));
-    // Contact forces on the resting shape, handed on to the part each one hangs on (children
-    // before their parents), so a push on a leaf reaches the root.
     const forces = new Map(parts.map(part => [part.stem, contactForce(part)]));
     for (let k = parts.length - 1; k >= 0; --k) {
       const part = parts[k], own = forces.get(part.stem), up = forces.get(part.parent);
@@ -787,7 +756,6 @@ export function grassWakeCurve(p, stem) {
 
 export function algaeDisplay(p, f) {
   const start = p[PLANT.algae_start], end = p[PLANT.algae_end];
-  // Without tank parameters yet, the algae are not known.
   if (!f.parameters)
     return {fill : 0, thickness : 0, start, end};
   const fill =
@@ -795,7 +763,6 @@ export function algaeDisplay(p, f) {
                                                                (p[PLANT.length] * (end - start) +
                                                                 (p[PLANT.mussel_arc] || 0)) /
                                                                SEABED.algae_capacity_unit)));
-  // Thin algae stay visible: the shown thickness grows with the root of the filling.
   return {fill, thickness : f.parameters.algae_thickness * Math.sqrt(fill), start, end};
 }
 

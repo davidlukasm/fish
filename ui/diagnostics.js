@@ -1,6 +1,5 @@
 import {ROUTE} from './schema.js';
 import {t} from './strings.js';
-// Bounded local flight recorder. No scene arrays, disk writes or uploads on the frame path.
 class DiagnosticRing {
   constructor(limit) {
     this.rows = new Array(limit);
@@ -12,11 +11,6 @@ class DiagnosticRing {
     return Array.from({length : size}, (_, i) => this.rows[(start + i) % this.rows.length]);
   }
 }
-// The recorder keeps FRAMES frames, EVENTS events and the WORST episodes. A gap or work of at
-// least SPIKE_MS opens an episode from BEFORE_MS before to AFTER_MS after it, holding up to
-// EPISODE_FRAMES frames (EARLIER_FRAMES of them from before) and EPISODE_EVENTS events
-// (EARLIER_EVENTS from before). Times keep 1/ROUNDING ms; messages keep TEXT characters, stacks
-// STACK, a long frame SCRIPTS scripts. An export may take EXPORT_MS; its link lives LINK_MS.
 const RECORDER = Object.freeze({
   frames : 3600,
   events : 1024,
@@ -35,8 +29,6 @@ const RECORDER = Object.freeze({
   export_ms : 15000,
   link_ms : 60000
 });
-// A guarded view stops after STOP failures and waits RETRY_MS per failure before the next try;
-// the simulation status stays current for STATUS_MS.
 const FAULTS = Object.freeze({stop : 3, retry_ms : 250, status_ms : 5000});
 const diagnosticRound = v => Math.round(v * RECORDER.rounding) / RECORDER.rounding;
 function diagnosticPath(value) {
@@ -86,8 +78,6 @@ export class BrowserDiagnostics {
     if (severity < RECORDER.spike_ms)
       return;
     this.spikeCount++;
-    // Keep separate episodes, including the frames before a block. Retain the worst ones for the
-    // whole tab lifetime, even when the rolling frame buffer wraps.
     const overlapping = this.spikes.find(s => row.at <= s.until && row.at >= s.from);
     if (overlapping) {
       if (severity > overlapping.severity_ms) {
@@ -132,7 +122,7 @@ export class BrowserDiagnostics {
           const observer = new PerformanceObserver(list => this.entries(type, list.getEntries()));
           observer.observe({type, buffered : true});
           this.observers.push({type, observer});
-        } catch { /* Explicitly listed as unavailable in the report. */
+        } catch {
         }
       }
     }
@@ -265,8 +255,6 @@ export class BrowserDiagnostics {
 }
 export const diagnostics = new BrowserDiagnostics();
 
-// Keep failures local to the affected view. Repeated failed attempts stop only that stage;
-// successful stages and the animation callback continue running.
 export class DisplayFaults {
   constructor(recorder) {
     this.recorder = recorder;
@@ -281,7 +269,6 @@ export class DisplayFaults {
     const issue =
         {scope, error, message, count, guarded, retryAt : Date.now() + FAULTS.retry_ms * count};
     this.issues.set(scope, issue);
-    // Retain the first failures and occasional repetitions, without flooding the recorder.
     if (count <= FAULTS.stop || (count & (count - 1)) === 0)
       this.recorder.event(
           'display-error',

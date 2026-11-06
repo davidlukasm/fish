@@ -1,13 +1,7 @@
-// Every interface module links and evaluates: imports name existing exports, module code runs
-// without errors, and the wording loads as app.js loads it. The modules are evaluated twice:
-// all of them in file order, and in app.js's import order, which is the order of the real start.
-// A module that reads a constant of a module in its import cycle before that one has run fails
-// in one of the two orders.
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const {createFixture} = require('./dom_fixture');
 async function evaluate(source) {
   const {sandbox} = createFixture({}), context = vm.createContext(sandbox), cache = new Map();
-  // Modules are named by their path below ui/; imports resolve relative to the importing module.
   function load(specifier, referrer) {
     const name = path.posix.normalize(
         path.posix.join(path.posix.dirname(referrer?.identifier || 'entry.js'), specifier));

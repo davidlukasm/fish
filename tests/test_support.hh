@@ -5,7 +5,6 @@
 #include <stdexcept>
 namespace test {
 using namespace fishsim;
-// Fixtures set a fish's private motion, brain and development directly.
 struct StateAccess {
   static MotorState &motor(Body &b) { return b.motor_; }
   static const MotorState &motor(const Body &b) { return b.motor(); }
@@ -16,7 +15,6 @@ inline void check(bool value, const char *message) {
   if (!value)
     throw std::runtime_error(message);
 }
-// The whole tank as a checkpoint writes it.
 inline std::string saved(const Ecosystem &w) {
   std::ostringstream out;
   w.write(out);
@@ -30,8 +28,6 @@ inline void no_mutation(Ecosystem &w) {
           r.gate_insert = r.gate_switch = r.gate_remove = r.transfer = 0;
   w.mutation_burst.strength = 0;
 }
-// A hatched, grown fish with a finished brain: ADULT_ENERGY reserve and ADULT_TISSUE tissue,
-// ADULT_AGE steps old, resting.
 inline constexpr double ADULT_SPAWN_ENERGY = 300, ADULT_ENERGY = 260, ADULT_TISSUE = 40;
 inline constexpr int ADULT_AGE = 100;
 inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
@@ -55,8 +51,6 @@ inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
     StateAccess::development(b)->advance();
   return p;
 }
-// An unfertilised egg at EGG_X, EGG_Y, laid by natural mother EGG_MOTHER of generation
-// EGG_MOTHER_GENERATION at lineage depth EGG_DEPTH.
 inline constexpr double EGG_X = 400, EGG_Y = 250;
 inline constexpr std::uint64_t EGG_MOTHER = 77;
 inline constexpr int EGG_DEPTH = 1;

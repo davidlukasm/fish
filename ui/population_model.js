@@ -1,5 +1,3 @@
-// The population figures behind the overview, as plain data: replacement, generations,
-// self-sustaining species and the state of the assistance pulses. Views only format them.
 import {FISH} from './schema.js';
 export const population_modelState = {};
 

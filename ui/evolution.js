@@ -132,7 +132,6 @@ export function setView(v, {preview = false} = {}) {
   }
   rememberViewScroll();
   evolutionState.activeView = v;
-  // One cockpit width for every tab; only the divider changes it.
   for (const key of ['ecosystem', 'evolution', 'species', 'fish', 'events', 'brain']) {
     const active = key === v || key === 'fish' && v === 'brain';
     el('view-' + key).hidden = evolutionState.editing || !active;
@@ -164,7 +163,6 @@ export function setView(v, {preview = false} = {}) {
   }
 }
 
-// Fish tab parts: Fisch (overview), Organe and Nervensystem; the tank zoom follows the part.
 function syncFishTabs() {
   const brain = evolutionState.activeView === 'brain', organs = brainState.brainView === 'organs';
   el('fish-overview').setAttribute('aria-pressed', String(evolutionState.activeView === 'fish'));
@@ -187,22 +185,15 @@ async function showFishPart(part) {
   if (!p?.[FISH.hatched])
     return;
   await zoomToFish(id, part === 'organs' ? ZOOM.organs : ZOOM.brain);
-  // Selecting resets the inspection view, so the part is chosen after the zoom.
   if (brainState.brainView !== part)
     setBrainView(part);
   setView('brain');
 }
 
-// Inspection zooms to a fish at these sizes; the species list refreshes at most every
-// SPECIES_REFRESH ms.
 const ZOOM = Object.freeze({organs : 112, brain : 260}), SPECIES_REFRESH = 1500;
-// A species card's pin, PIN.size wide, filled while the card is pinned.
 const PIN = Object.freeze({icon : 'M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z', size : 16});
-// Profile changes: at most DELTA.count changes above DELTA.minimum are drawn as bars, origin
-// changes above ORIGIN_DELTA.minimum at most ORIGIN_DELTA.count.
 const DELTA = Object.freeze({minimum : .04, count : 5}),
       ORIGIN_DELTA = Object.freeze({minimum : .12, count : 3});
-// Chart sizes in canvas pixels.
 const ANATOMY_CHART = Object.freeze({width : 360, height : 570}), DELTA_CHART = Object.freeze({
   width : 360,
   top : 30,
@@ -242,7 +233,6 @@ const ANATOMY_CHART = Object.freeze({width : 360, height : 570}), DELTA_CHART = 
         pointer : 25,
         livingAlpha : .55
       });
-// Individuals are listed MEMBER_PAGE at a time.
 const MEMBER_PAGE = 12;
 export function featureValue(index, value) {
   const F = BEHAVIOR_FEATURE;
@@ -508,7 +498,6 @@ export function openSpeciesDetails(id) {
   }
 }
 
-// A species card's population trace, drawn anew when the journal's trace changed.
 function refreshTrace(item, trace, species) {
   const traces = JSON.stringify(journal().traces[String(species.id)] || []);
   if (traces === item.traceSignature)
@@ -644,7 +633,6 @@ export function renderSpecies(f, force = false) {
         refreshTrace(item, trace, s);
         evolutionState.speciesPreviews.push({canvas : portrait, species : s.id, ids : []});
       } else {
-        // Extinct: when it lived and how its population went.
         const lived = t('evolution.lifeSpan',
                         {from : formatNumber(s.born || 0), to : formatNumber(s.extinct_at || 0)});
         if (info.textContent !== lived)
@@ -1045,7 +1033,6 @@ const initializers = {
       el('tab-' + v).onclick = () => setView(v);
   },
   "fish_summary_onclick" : () => {
-    // The counts open their lists: living fish, developing eggs, species.
     const open = async stage => {
       setFishListStage(stage);
       await selectFish(0, {details : false});

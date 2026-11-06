@@ -6,21 +6,14 @@
 #include <deque>
 #include <map>
 namespace fishsim {
-// At most MAX_SPECIES species are registered, MAX_ARCHIVE behaviour profiles archived and
-// MAX_BREEDER_SLOTS breeders kept per tank beyond one per species.
 inline constexpr std::size_t MAX_SPECIES = 4096, MAX_ARCHIVE = 128, MAX_BREEDER_SLOTS = 64;
 inline constexpr std::size_t MAX_SPERM_RELEASES = 2000;
-// Running records are sampled every SAMPLE_PERIOD steps and keep at most HISTORY_SAMPLES samples.
 inline constexpr std::uint64_t SAMPLE_PERIOD = record_sample::period;
 inline constexpr std::size_t HISTORY_SAMPLES = 8192;
-// Fish from NATURAL_GENERATION on were born in the tank, from SUPPORT_GENERATION on to tank-born
-// parents; performance compares their deaths with the hatches of the generation after them.
 inline constexpr unsigned NATURAL_GENERATION = generation::natural,
                           SUPPORT_GENERATION = generation::support;
-// Generations count up to MAX_GENERATION; the event journal keeps the last MAX_EVENTS commands.
 inline constexpr unsigned MAX_GENERATION = generation::max;
 inline constexpr std::size_t MAX_EVENTS = 64;
-// Novelty, the behavioural distance to the nearest neighbours, stays below MAX_NOVELTY.
 inline constexpr double MAX_NOVELTY = 4;
 struct Sperm {
   Genome genome;
@@ -58,8 +51,6 @@ struct Breeder {
   int offspring = 0, depth = 0;
   double food_rate = 0, resting_cost = 0;
   int observed_steps = 0;
-  // A breeder is judged after MIN_OBSERVED_STEPS steps; resting costs below MIN_RESTING_COST
-  // count as MIN_RESTING_COST.
   static constexpr int MIN_OBSERVED_STEPS = 80;
   static constexpr double MIN_RESTING_COST = .001;
   bool feeds_adequately() const {
@@ -70,7 +61,6 @@ struct Breeder {
            offspring_weight * std::log1p(offspring);
   }
 };
-// Adjustable evolution parameters.
 struct EvolutionParameters {
   double nutrient_egg_threshold = 1, recruitment_target = 150, assist_min_population = 15,
          assist_species_minimum = 3;
@@ -82,7 +72,6 @@ struct EvolutionParameters {
   double development_work = 65536;
   double sperm_fill_rate = .2, sperm_portion = 2;
   double egg_crowding_radius = 64, egg_crowding_limit = 4;
-  // Five equally weighted groups describe observed ways of life.
   double novelty_neighbors = 15;
   MutationRates rates{};
 };
@@ -90,11 +79,6 @@ struct DiseaseParameters {
   double rate = .00005, carrion = .02, food = .005, reach = 24, spread = .05, duration = 400,
          harm = .001;
 };
-// Bursts start and last between BURST_EARLY and BURST_LATE times their set gap and duration, at
-// most MAX_BURST_GAP and MAX_BURST_DURATION steps. Food bursts scale food size within BURST_SIZE
-// and draw clusters within BURST_CLUSTER times the set cluster, from 1 to MAX_FOOD_CLUSTER.
-// Strength reaches MAX_FOOD_BURST and MAX_MUTATION_BURST; a manual mutation burst without a set
-// strength uses MANUAL_MUTATION, and a strong mutation step multiplies the rate by BURST_MUTATION.
 inline constexpr double BURST_EARLY = .7, BURST_LATE = 1.3, MAX_BURST_GAP = 100000,
                         MAX_BURST_DURATION = 10000, MAX_FOOD_CLUSTER = 20, MAX_FOOD_BURST = 9,
                         MAX_MUTATION_BURST = 1, MANUAL_MUTATION = .25, BURST_MUTATION = 2.5;
@@ -133,9 +117,8 @@ struct Corpse {
   double angle = 0, radius = 0;
   bool hatched = true;
   std::uint64_t bone_age = 0;
-  // Frozen outline and fins, relative to the living body's radius.
   std::shared_ptr<const BrainInterface> visual{};
-  std::array<double, corpse_state_column::count> visual_state{}; // In corpse_state order.
+  std::array<double, corpse_state_column::count> visual_state{};
   bool resting = false;
   double decay_age = -1;
   std::uint64_t blood_id = 0, species = 0;
@@ -275,8 +258,6 @@ struct GeneticSpecies {
   int comparison_parents = 0;
   std::array<double, BEHAVIOR_FEATURES> first_delta{};
 };
-// A first in the tank (first hatch, a confirmed species …); a new one triggers an extra
-// observation point. The journal words the events the interface shows.
 struct EcologicalMilestone {
   std::uint64_t tick = 0, species = 0;
   std::string key;

@@ -35,8 +35,6 @@ namespace {
 using namespace atelier;
 
 constexpr int MEASURE_DIGITS = 4, REPORT_DIGITS = 8, DIET_DIGITS = 6;
-// A brain on trial runs as this individual, with its body clock going as in the tank: the clock
-// beats its pacemakers, and it runs only while the brain steps with hormone levels.
 constexpr std::uint64_t TRIAL_INDIVIDUAL = 1;
 void measure(const Genome &g, const std::vector<Group> &groups, int substance, float level,
              float maturity, int steps) {
@@ -133,8 +131,6 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
       stimulated.push_back(i);
   }
   ensure(!stimulated.empty(), "selected organ has no developed active cells");
-  // Both brains run as in the tank, with the body clock going but no hormone and no learning, so
-  // the stimulus teaches nothing and the pacemakers beat in both alike.
   field::Network network(g.blueprint), baseline(g.blueprint);
   for (auto *n : {&network, &baseline})
     n->set_plasticity(false);
@@ -182,11 +178,9 @@ struct SightScene {
   double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
 constexpr const char *START_FISH = "start";
-// The innovation draws of the Atelier's genomes start alike in every run.
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
 constexpr float CPPN_EDIT_LIMIT = 16;
 constexpr int CPPN_MOST_NODES = 1024;
-// The sight tank's seed: any open water serves.
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
 SightScene read_sight(std::istream &in) {
   SightScene scene;

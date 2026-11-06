@@ -35,17 +35,11 @@ export let grassVertexShader;
 
 export let grassFragmentShader;
 
-// Per organ instance: the old and new curve (control points 0-1 and 2-3), widths, fibre and
-// kind, tint and side, light at root and tip, and two bite marks (along, depth, share each).
 const GRASS_ATTRIBUTES = [
   [ 'old01', 4 ], [ 'old23', 4 ], [ 'next01', 4 ], [ 'next23', 4 ], [ 'shape', 4 ], [ 'tint', 4 ],
   [ 'organLight', 2 ], [ 'notchA', 4 ], [ 'notchB', 4 ]
 ];
 const {at : GRASS_AT, floats : GRASS_FLOATS} = attributeLayout(GRASS_ATTRIBUTES);
-// Ribbon segments per organ by its length on screen: SEGMENTS[k] below SPANS[k] pixels, the last
-// beyond; below MIN_SCALE zoom always the fewest. Grass reshapes over at most MAX_INTERVAL steps;
-// instance buffers hold at least MIN_CAPACITY organs; bounds reach PAD pixels beyond the curves,
-// and an upload covers MARGIN pixels around the view.
 const GRASS = Object.freeze({
   min_scale : .4,
   spans : [ 10, 28, 72 ],
@@ -55,8 +49,6 @@ const GRASS = Object.freeze({
   pad : 40,
   margin : 128
 });
-// Bite marks: the margin at least MIN_MARGIN, the chord at least MIN_CHORD, the cut between
-// MIN_CUT and MAX_CUT margins deep.
 const BITE = Object.freeze({min_margin : .05, min_chord : .15, min_cut : .12, max_cut : 1.8});
 const sideOf = stem => stem % 2 ? 1 : -1;
 
@@ -182,12 +174,10 @@ class GrassRenderer extends TankBatch {
       this.hitBounds.set(p[PLANT.id], bounds);
       this.instances.set(pose.before, at + GRASS_AT.old01);
       this.instances.set(pose.next, at + GRASS_AT.next01);
-      // The engine's organ colour already holds drying and the stalk tint.
       this.instances.set([ pose.beforeWidth, pose.width, fiber, kind, ...color, sideOf(stem) ],
                          at + GRASS_AT.shape);
       this.instances.set([ displayLight(f, q[0], q[1]), displayLight(f, q[6], q[7]) ],
                          at + GRASS_AT.organLight);
-      // The two deepest bite marks: position, signed depth share, half-width share.
       const marks = [];
       for (let k = 0; k + 2 < (notches?.length || 0); k += 3)
         marks.push(notches.slice(k, k + 3));
@@ -288,7 +278,6 @@ class GrassRenderer extends TankBatch {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     if (typeof layer === 'number' && !this.layerCopy) {
-      // The layer-grouped copy is only needed by the overview; upload it on first use.
       const base = GRASS_FLOATS * this.count, n = GRASS_FLOATS;
       this.layerOrder.forEach(
           (index, k) => { this.instances.copyWithin(base + n * k, n * index, n * index + n); });
@@ -315,7 +304,6 @@ class GrassRenderer extends TankBatch {
   }
 }
 
-// Read the same interpolated root used by the grass batch, after its upload.
 export function grassHitBounds(p) {
   const renderer = vegetationState.gpuGrass;
   return renderer?.plants === sceneState.frame?.plants
@@ -367,8 +355,6 @@ export function resetTankBatches() {
 
 const initializers = {
   "grassVertexShader" : () => {
-    // A fixed ribbon grid is reused by every grass patch. Only instance data changes with
-    // simulation frames.
     const K = ORGAN_KIND, O = ORGAN_PROFILE;
     grassVertexShader = `#version 300 es
 precision highp float;
@@ -396,7 +382,6 @@ float organProfile(int kind,float t){
         glsl(O.leaf_ripples *
              Math.PI)}*v)):pow(s,${glsl(O.round_power)})*(1.0-${glsl(O.round_taper)}*v);
 }
-// A bite mark is a disc that reaches into the margin: centre (along, across), radius, active.
 vec4 biteDisc(float at,float depth,float share,float length,float width,int kind){
  if(depth==0.0||share<=0.0)return vec4(0.0);
  float margin=max(${glsl(BITE.min_margin)},width*organProfile(kind,clamp(at,0.0,1.0))),chord=max(${
@@ -429,7 +414,7 @@ void main(){
 }`;
   },
   "grassFragmentShader" : () => {
-    grassFragmentShader = `#version 300 es
+    grassFragmentShader = `
 precision highp float;
 in vec3 color;
 in vec4 leafSurface;
@@ -439,7 +424,6 @@ flat in vec4 biteB;
 out vec4 fragment;
 float biteDistance(vec4 disc){return disc.w>0.0?length(leafPoint-disc.xy)-disc.z:1e6;}
 void main(){
- // Crescent bite marks are cut out of the blade with a thin brown wound edge.
  float wound=min(biteDistance(biteA),biteDistance(biteB));
  if(wound<0.0)discard;
  float x=leafSurface.x,t=leafSurface.y,edge=abs(x),pixel=max(.015,fwidth(x));

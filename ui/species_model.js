@@ -1,10 +1,7 @@
-// The species of the tank as plain data: who lives (has adult fish), who died out, how many
-// genera, and which fish best show a species right now (the newest of its deepest generation).
 import {FISH} from './schema.js';
 import {textArea} from './strings.js';
 export const species_modelState = {};
 
-// Why a species carries its name: the engine sends a key, the texts say it in words.
 export function nameReason(key) {
   return key ? textArea('species_model').reasons?.[key] ?? key : '';
 }

@@ -5,14 +5,10 @@ import {frameFish, frameBlend, blendFish, horizontalDelta} from './state.js';
 import {fishBodyRadius} from './fish_fins.js';
 export const vision_viewState = {};
 
-// A raster pixel: the colour channels, then its covered width and nearest distance.
 const CHANNELS = Object.keys(RGB).length;
 export const PIXEL =
     Object.freeze({...RGB, width : CHANNELS, distance : CHANNELS + 1, count : CHANNELS + 2});
 const EYES = Object.keys(EYE).length;
-// The field of view per eye in its colour: filled at FILL and outlined at LINE opacity (active,
-// idle) with a DASH; the seen colours at RASTER times the exposure once the fish is DETAIL pixels
-// large; the eye a dot of DOT_RADIUS at DOT opacity.
 const VISION_FAN = Object.freeze({
   colors : Object.freeze([ '#88d5e8', '#f1ce80' ]),
   detail : 6,
@@ -23,7 +19,6 @@ const VISION_FAN = Object.freeze({
   dot : .85,
   dot_radius : 2.5
 });
-// The light image of each eye in VISION.pixels bearings, as the overlay paints it.
 export function retinalRaster(vision) {
   const I = IMAGE_BAND, count = VISION.pixels, step = 2 * Math.PI / count,
         raster = Array.from({length : EYES},

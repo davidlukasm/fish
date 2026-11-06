@@ -9,9 +9,6 @@ import {horizontalDelta, sceneState} from './state.js';
 import {setTool, worldState} from './world.js';
 export const world_sourcesState = {};
 
-// A source button: a WIDTH by HEIGHT icon drawn at SCALE; the source an ellipse RX (growing with
-// the root of its size up to MAX_RX) by RY around the middle, a current with its arrow, a feeder
-// with GRAINS grains spread over the grain box at (X, Y), DX by DY.
 const SOURCE_ICON = Object.freeze({
   width : 88,
   height : 34,
@@ -86,8 +83,6 @@ export function currentValues() {
   };
 }
 
-// The currents' and the feeders' lists: a button to choose each source and one to place a new
-// one; a chosen source that is gone is chosen no more.
 const SOURCE_LIST = Object.freeze({
   current :
       {list : 'current-list', selection : 'currentSelection', tool : 'current', current : true},

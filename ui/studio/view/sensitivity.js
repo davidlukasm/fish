@@ -5,13 +5,6 @@ import {linePaint} from '../../glyph.js';
 import {CHANGE_ICON, LEVEL_ICON} from './drive.js';
 import {PICTURE} from './stimuli.js';
 
-// How strongly a sensory cell answers, over the stimulus: for intensity senses (light, scents,
-// flow, food, injury, blood) on a log axis from the engine's dimmest stimulus to full strength,
-// for bounded ones (touch, pressure) from nothing to full. The handle sits at the stimulus of
-// half the answer: the threshold. On the log axis moving it shifts the curve, as a threshold
-// scales the stimulus the answer depends on. The axis has TICKS; under the handle the sense's
-// stimulus is drawn as strong as the threshold, LARGE times a picture's size, under the axis'
-// ends the weakest and the strongest, END times (each named in its title), GAP below the ticks.
 const SENSITIVITY = Object.freeze({
   width : 360,
   height : 140,
@@ -29,29 +22,19 @@ const SENSITIVITY = Object.freeze({
 const BASELINE = SENSITIVITY.top + SENSITIVITY.plot;
 const PICTURE_Y =
     BASELINE + SENSITIVITY.tick + SENSITIVITY.gap + PICTURE.size * SENSITIVITY.large / 2;
-// The axis: a log one from `dimmest` to 1, or a linear one from 0 to 1 when there is none.
 const axisFraction = (stimulus, dimmest) =>
     dimmest ? 1 - Math.log(stimulus) / Math.log(dimmest) : stimulus;
 const axisX = (stimulus, dimmest) =>
     SENSITIVITY.left + (SENSITIVITY.right - SENSITIVITY.left) * axisFraction(stimulus, dimmest);
 const stimulusAt = (f, dimmest) => dimmest ? Math.exp(Math.log(dimmest) * (1 - f)) : f;
-// The stimulus at a share of the way along the axis.
 export const stimulusOfShare = stimulusAt;
-// How strong a stimulus looks: its place along the axis, from 0 to 1.
 export const stimulusShare = (stimulus, dimmest) => clamp(axisFraction(stimulus, dimmest));
-// A stimulus's share of full strength as text.
 export const stimulusText = (stimulus, dimmest) =>
     formatNumber(PERCENT * stimulus, dimmest ? 2 : 0) + ' %';
-// The stimulus at a fraction of the element's width.
 export function sensitivityStimulus(fx, dimmest) {
   const S = SENSITIVITY, x = Math.max(S.left, Math.min(S.right, fx * S.width));
   return stimulusAt((x - S.left) / (S.right - S.left), dimmest);
 }
-// answer: the engine's curve ({response, half}); dimmest: the log axis' start, or null for a
-// linear one; picture(share, point, title, size): the sense's stimulus drawn; shift: the factor a
-// log threshold is moved by while dragging, before the engine answers; half: where the handle is
-// dragged to on a linear axis. held: the stimulus the adaptation below is held at, marked on the
-// curve.
 export function sensitivityElement(answer, dimmest, target, label, picture, shift = 1,
                                    dragged = null, held = null) {
   if (!answer?.response?.length || !(answer.half > 0))
@@ -89,12 +72,10 @@ export function sensitivityElement(answer, dimmest, target, label, picture, shif
          `<circle class="aid-spectrum-handle" data-sensitivity-handle="half" cx="${x}" cy="${
              y}" r="${S.handle}"/></svg>`;
 }
-// The held stimulus on the curve: where the adaptation below starts.
 function heldMark(answer, dimmest, shift, held) {
   if (!(held > 0))
     return '';
   const count = answer.response.length;
-  // The curve's samples run over the axis; the held stimulus lies between two of them.
   const at = k => stimulusAt(k / (count - 1), dimmest) * (dimmest ? shift : 1);
   let k = 1;
   while (k < count - 1 && at(k) < held)
@@ -107,9 +88,6 @@ function heldMark(answer, dimmest, shift, held) {
 }
 const HELD_MARK = 4.5;
 
-// How a sensory cell gets used to a held stimulus: its answer step by step over a few of its time
-// constants, the stimulus drawn HELD times along the first SPAN of the time axis as it stays. The
-// handle sits at one time constant; moving it stretches the curve in time.
 const ADAPTATION = Object.freeze({
   width : 360,
   height : 140,
@@ -124,12 +102,10 @@ const ADAPTATION = Object.freeze({
   line : 1.6
 });
 const ADAPT_BASE = ADAPTATION.top + ADAPTATION.plot;
-// The time constant in steps at a fraction of the element's width, for a curve of `count` steps.
 export function adaptationSteps(fx, count) {
   const A = ADAPTATION, x = Math.max(A.left, Math.min(A.right, fx * A.width));
   return Math.max(1, (x - A.left) / (A.right - A.left) * count);
 }
-// held(point, size): the held stimulus drawn around a point, size times a picture's size.
 export function adaptationElement(adapt, target, label, stepsLabel, held, stretch = 1) {
   if (!adapt?.response?.length || !(adapt.steps > 0))
     return '';
@@ -151,7 +127,7 @@ export function adaptationElement(adapt, target, label, stepsLabel, held, stretc
                 },
                                A.size))
           .join('');
-  // The handle's way runs from answering a change (soon used to it) to answering the stimulus.
+
   const ends =
       [ CHANGE_ICON, LEVEL_ICON ]
           .map((path, k) => placedGlyph(

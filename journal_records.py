@@ -1,15 +1,9 @@
-"""Genome record candidates and species diversity milestones."""
-
 from protocol_schema import Fish, Anatomy, RateWindow
 
-# Records count fish that ate for at least MIN_STEPS steps. At most LINEAGES lineage
-# representatives are kept; a known one is replaced by a new fish, by GAIN times its score or
-# after REFRESH_STEPS steps.
 MIN_STEPS, LINEAGES, GAIN, REFRESH_STEPS = 500, 16, 1.1, 1000
 
 
 def intake(p):
-    """A fish's intake per RateWindow.DISPLAY_STEPS steps, as the interface shows it."""
     return RateWindow.DISPLAY_STEPS * p[Fish.NUTRITION] / max(1, p[Fish.NUTRITION_STEPS])
 
 
@@ -35,7 +29,6 @@ def choose_records(journal, fish):
         s = journal.species.get(p[Fish.SPECIES])
         if s:
             tasks.append(("record", category, p, s, value))
-    # Keep successful representatives of distinct genera and resource/sense niches.
     representatives = {}
     for p in qualified:
         if p[Fish.NUTRITION] <= 0:
@@ -53,7 +46,6 @@ def choose_records(journal, fish):
         old = representatives.get(key)
         if old is None or score > old[-1]:
             representatives[key] = ("lineage", key, p, s, score)
-    # Round-robin across genera gives each lineage a slot before any receives a second.
     groups = {}
     for task in sorted(representatives.values(), key=lambda t: t[-1], reverse=True):
         genus = task[3].get("genus_name", task[3]["name"].split()[0])

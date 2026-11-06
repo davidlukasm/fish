@@ -6,7 +6,6 @@
 #include "food_web_parameters.hh"
 namespace fishsim {
 namespace {
-// Plausible extents of a restored food web: animals per kind, crab turns and shell radii.
 constexpr std::size_t MAX_ANIMALS = 100000;
 constexpr double MAX_TURNS = 32, MAX_SHELL_RADIUS = 1000;
 }
@@ -186,7 +185,6 @@ void FoodWebState::read(std::istream &in) {
     scalar(in, s.x, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
     scalar(in, s.y, -PLAUSIBLE_EXTENT, PLAUSIBLE_EXTENT);
     scalar(in, s.radius, 0, MAX_SHELL_RADIUS);
-    // Mussel shells take the mussel families, crab plates follow from crab_shell_morph.
     scalar(in, s.morph, 0, fauna::crab_shell_morph + crab_families - tolerance::precision);
     scalar(in, s.angle, -PLAUSIBLE_RUNNING, PLAUSIBLE_RUNNING);
     value(in, s.age);

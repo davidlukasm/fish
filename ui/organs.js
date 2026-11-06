@@ -21,9 +21,7 @@ import {drawOrganTuning} from './organ_tuning.js';
 import {sceneState} from './state.js';
 export const organsState = {};
 
-// Signal histories: at most ORGANS organs, each up to SAMPLES samples from the last STEPS steps.
 const HISTORY = Object.freeze({organs : 64, samples : 120, steps : 300});
-// Bearings within STRAIGHT_AHEAD degrees count as straight ahead.
 const STRAIGHT_AHEAD = 2;
 export function organSignalHistory(d, tissue, info) {
   const key = d.b.layout_id + ':' + tissue.key + ':' + tissue.side + ':' + (tissue.variant || '');
@@ -92,9 +90,6 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
   };
 }
 
-// Organ symbols (24 × 24 paths) and the groups the Organe tab shows them in.
-
-// The gonad pressure sense has two receptor kinds (eggs, sperm); each is an organ of its own.
 function organIconKey(tissue) {
   return tissue.variant === BARBEL                    ? BARBEL
          : tissue.key === SENSE_TISSUE.gonad_pressure ? sidedTissue(tissue.key, tissue.side)
@@ -108,8 +103,6 @@ function organName(key) {
                                                 : brainTissueName(base);
 }
 
-// The stimulus panel follows the chosen organ: light for the eyes, scent for nose and barbels,
-// the matching body sense otherwise; organs without a sense get no stimulus.
 function matchStimulus(tissue) {
   const key = tissue ? tissue.key : '', signature = key + ':' + (tissue?.variant || '');
   if (organsState.stimulusFor === signature)
@@ -139,8 +132,6 @@ function matchStimulus(tissue) {
       t('organs.stimulusFor', {name : organName(organIconKey(tissue))});
 }
 
-// Only organs this fish has: one symbol per organ, both sides together; a click shows it and
-// marks it on the fish, another click on a paired organ switches the side.
 export function renderOrganIcons(d) {
   const box = el('organ-icons');
   if (!box)

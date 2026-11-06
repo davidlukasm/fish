@@ -18,26 +18,17 @@
 #include <string>
 #include <functional>
 namespace fishsim {
-// Full immersion in sediment adds SEDIMENT_DRAG times the drag; rising out of it only
-// SEDIMENT_RISE_DRAG of that.
 inline constexpr double SEDIMENT_DRAG = 18, SEDIMENT_RISE_DRAG = .25;
-// Algal capacity is per ALGAE_CAPACITY_UNIT of exposed length; mussels tolerate algae up to
-// MUSSEL_ALGAE_TOLERANCE times their limit; bitten pieces crumble at BITTEN_CRUMB_SHARE of the
-// crumb size.
 inline constexpr double ALGAE_CAPACITY_UNIT = seabed::algae_capacity_unit,
                         MUSSEL_ALGAE_TOLERANCE = 2, BITTEN_CRUMB_SHARE = .5;
-// Tank edits without a brush.
 inline constexpr double DEFAULT_EDIT_RADIUS = 24, DEFAULT_EDIT_AMOUNT = 8;
 inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {
   return 1 + SEDIMENT_DRAG * immersion * immersion *
                  (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT)) *
                  (1 - std::clamp(undulation, 0., 1.));
 }
-// A swimming fish stirs the water within disturbance_reach of its centre; fish whose flow stays
-// below STILL_FLOW do not.
 inline constexpr double DISTURBANCE_BASE = 8, DISTURBANCE_PER_RADIUS = 6, DISTURBANCE_MAX = 80,
                         STILL_FLOW = .02;
-// Searches for surfaces reach this far beyond the nominal distance.
 inline constexpr double SURFACE_SEARCH_MARGIN = 16;
 inline double disturbance_reach(double radius) {
   return std::min(DISTURBANCE_MAX, DISTURBANCE_BASE + DISTURBANCE_PER_RADIUS * radius);
@@ -75,12 +66,10 @@ public:
   void startle_animals(double x, double y, double radius);
   bool crush_target(int kind, std::uint64_t id, int organ, double along = 0);
   bool encourage_target(int kind, std::uint64_t id, unsigned steps = GrowthBoost::steps);
-  // A standard fish bite at one place of a plant organ (inspection: see how bites look).
   bool bite_target(std::uint64_t id, int organ, double along);
   void index_small_animals(std::vector<VisibleBody> &) const;
   double plankton_density(double, double) const;
   bool plankton_water_cell(std::size_t) const;
-  // Records which cells hold water for the rest of this step; queries then need no geometry.
   void refresh_water_cells();
   double optical_turbidity(double x, double y) const {
     return turbidity(x, y) + optical_density_scale * plankton_density(x, y);
@@ -95,7 +84,6 @@ public:
   double grip_worm(double, double, double, double);
   void deposit_feces(double, double, double);
   std::optional<std::size_t> bottom_patch(double, double) const;
-  // A worm head gives at most `portion` and keeps the rest; shellfish are taken whole.
   std::optional<SmallAnimalMeal>
   take_small_animal(int, std::size_t, double force, bool biting, bool buried = false,
                     double portion = std::numeric_limits<double>::infinity());
@@ -103,7 +91,6 @@ public:
   double feed_crabs(double x, double y, double energy, double radius);
   std::array<double, animal_store::count> small_animal_stores() const;
   double small_animal_energy() const;
-  // The smallest algae film that lasts where it cannot grow; smaller ones vanish into detritus.
   double algae_remnant() const { return ALGAE_REMNANT_SHARE * env_.seed_energy; }
   double algae_capacity(const SurfacePatch &p) const {
     return env_.algae_capacity * (p.length * (p.algae_open[1] - p.algae_open[0]) + p.mussel_arc) /
@@ -185,7 +172,6 @@ public:
   void begin_production();
   void finish_production();
   void request_production(double amount, std::function<double(double)> apply);
-  // Outside the shared budget: served after all producers, only from the tank's free energy.
   void request_leftover(double amount, std::function<double(double)> apply);
   double producer_supply() const {
     return std::max(0., energy_supply() - artificial_supply() - small_animal_supply());
@@ -214,8 +200,6 @@ public:
   std::size_t erase_current(double, double);
   void set_energy_headroom(double);
   int fund_from_sources(double);
-  // Bite part `index`; for a stroke, at position `along_stroke` (-1 … 1) along it, from the
-  // side `side` (+1 along the curve normal, -1 against it).
   std::optional<Food> bite_plant(Body &, std::size_t, double along_stroke = 0, double side = 1);
   void consume_algae(std::size_t, double);
   void collide_food(Body &, double, double, const PhysiologyParameters &);
@@ -235,14 +219,12 @@ public:
                ? vegetation_.surfaces[i]
                : vegetation_.drifting_grass[i - vegetation_.surfaces.size()].plant;
   }
-  // The id under which the view shows a plant: its surface's, or the drifting piece's own.
   std::uint64_t plant_id(std::size_t i) const {
     return i < vegetation_.surfaces.size()
                ? vegetation_.surfaces[i].id
                : vegetation_.drifting_grass[i - vegetation_.surfaces.size()].id;
   }
   void prepare_organs(SurfacePatch &, bool drifting = false);
-  // Returns whether a fish body bent the plant.
   bool shape_organs(SurfacePatch &);
   void index_organs(SurfacePatch &, std::size_t);
   void cut_organ(std::size_t, int, double);
@@ -282,14 +264,10 @@ public:
   double turbidity(double, double) const;
   double sediment_transmission(double, double, double, double) const;
   Color grass_transmission(double, double, double, double) const;
-  // Foliage overlapping a body: covered share of the body area, weighted by organ opacity, and
-  // the unit direction from the body towards that foliage.
   struct FoliageContact {
     double cover = 0;
     Point toward{};
-    double blocked = 0; // Share of the body's diameter barred by organs, weighted by opacity.
-    // Mechanical resistance: cover weighted once more by opacity, so thin translucent blades
-    // bend away almost freely while dense leaves still hold a fish back.
+    double blocked = 0;
     double stiffness = 0;
   };
   FoliageContact foliage_contact(double x, double y, double radius) const;
@@ -326,8 +304,6 @@ public:
   };
   std::vector<Production> production, leftover;
 
-  // Food pieces: energy in [food_min,food_max], rich pieces rarer.
-
   double water_clarity = 90;
   double ink_density = .96;
 
@@ -338,14 +314,14 @@ public:
   void place_food(double x, double y, double vx, double vy, double energy);
   double food_energy() const;
   void distribute_start_food(const std::vector<Point> &eggs);
-  int remove_deepest(double energy); // takes exactly this energy, deepest pieces first
+  int remove_deepest(double energy);
 
   struct OdorSource {
     double x, y, energy;
   };
   struct SpermCell {
     double density = 0;
-    Color color{}; // Mean color, weighted by local sperm mass.
+    Color color{};
   };
   const std::vector<SpermCell> &sperm_field() const { return sperm_field_; }
   void set_sperm_field(std::vector<SpermCell>, double opaque);
@@ -402,7 +378,6 @@ public:
   bool clear_line(double x, double y, double tx, double ty) const;
   double ray(double, double, double, double, double margin = 0, double reach = RANGE) const;
   double ray_local(double, double, double, double, double, double) const;
-  // Water-borne odor field (plankton grid), read at a point; advanced once per step.
   std::array<double, odor_kind::count> odor_field(double x, double y) const;
   void advance_odor();
 

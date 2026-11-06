@@ -1,5 +1,3 @@
-"""Optional append-only browser timing report."""
-
 import hashlib
 import platform
 import json
@@ -31,7 +29,6 @@ def source_fingerprint():
 
 
 class FpsReport:
-    """One append-only report per viewer launch; browser summaries contain no scene arrays."""
 
     def __init__(self, args):
         args.data_dir.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,3 @@
-"""A trait combines a measured predicate, evidence keys and how it is explained."""
-
 from dataclasses import dataclass
 from typing import Callable
 from trait_context import CATALOGUE, FACTS, LIMITS
@@ -15,8 +13,6 @@ class TraitRule:
     priority: int = 50
     facet: str = ""
     basis: str = "anatomy"
-    # How the interface explains the trait: its own note (default), a list of combined
-    # parts, or a measured interval.
     explain: dict = None
 
     @property
@@ -38,7 +34,6 @@ class TraitRule:
 
 
 class Condition:
-    """A catalogue condition with its own limits; the limits it reads explain the trait."""
 
     def __init__(self, entry):
         self.expression = Expression(entry["when"])
@@ -48,7 +43,6 @@ class Condition:
         return self.expression({**context.scope, **self.limits})
 
     def explained(self):
-        """The limits the condition reads, its own and through derived facts."""
         seen, todo, used = set(), list(self.expression.names()), {}
         while todo:
             name = todo.pop()
@@ -65,7 +59,6 @@ class Condition:
 
 
 def catalogue_rules():
-    """The catalogue's own rules and its combinations of parts."""
     rules, combinations = [], []
     for entry in CATALOGUE["rules"]:
         condition = Condition(entry)

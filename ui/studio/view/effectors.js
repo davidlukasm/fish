@@ -17,24 +17,15 @@ import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
-// An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
-// it steers with, the mouth it sucks with or the jaw it bites with, drawn as the Aquarium grows
-// them; spines on the skin. Below the graphic two tracks set how many nodes it takes and how
-// strong each is. What the muscles of a function shape for the whole fish (how it swims, how long
-// and toothed its jaw is) has a handle of its own, on the graphic and on the charts below it.
 const label = (key, values) => t('studio.muscle.' + key, values);
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
-// Handles: their radius.
 const HANDLE = Object.freeze({radius : 5.5});
 const handle = (name, x, y, title) =>
     '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replace(':', '-') +
     '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
-// A fin's ray per node is RAY.least wide, RAY.span more when strongest.
 const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
-// The tracks under the graphic: how many of the places its side has for its work the organ takes
-// (`most`), and how strong each of its nodes is; each named above its track (TITLE higher).
 const CONTROLS =
     Object.freeze({width : 300, height : 92, track : [ 10, 290 ], rows : [ 34, 78 ], title : 14});
 const countShare = (count, most) => most > 1 ? (count - 1) / (most - 1) : null;
@@ -54,8 +45,6 @@ function nodeControls(organ, code, most) {
              label('strengthHandle')) +
          '</svg>';
 }
-// A handle of an organ moved to (fx, fy), fractions of its graphic: the organ's nodes (of `most`
-// places) or their strength on the tracks, a trait of the fish on the graphic or on a chart.
 export function effectorPatch(code, name, fx, fy, most) {
   if (name === 'nodes' || name === 'strength') {
     const share = trackShare(fx * CONTROLS.width, CONTROLS.track);
@@ -75,10 +64,6 @@ export function effectorPatch(code, name, fx, fy, most) {
                : null;
 }
 
-// The tail: the body's end to its ROOT, BODY half high at its start and the root, and the tail
-// fin as long and wide as the Aquarium grows it (UNIT pixels per body radius, at most MOST). A
-// line WAVE.amplitude high at most shows how the body swings: from the tail alone (its swing
-// grows with the STIFF power along) to the whole body (BASE of it at the front).
 const TAIL = Object.freeze({
   root : 150,
   body : [ 60, 24 ],
@@ -89,7 +74,6 @@ const TAIL = Object.freeze({
   wave : {amplitude : 22, at : 22, stiff : 3, base : .35, steps : 48, length : 105},
   caption : [ 10, 160 ]
 });
-// A trait's style by its third: low, middle or high.
 const TRAIT_THIRD = 1 / 3;
 const traitStyle = (value, [ low, middle, high ]) => value < TRAIT_THIRD       ? low
                                                      : value > 1 - TRAIT_THIRD ? high
@@ -100,7 +84,6 @@ const tailTip = volume => {
     Math.min(TAIL.most[0], TAIL.unit * size.length), Math.min(TAIL.most[1], TAIL.unit * size.width)
   ];
 };
-// How far the body swings at x along the graphic (0 at the front, 1 at the fin's tip).
 const swing = (undulation, along) =>
     TAIL.wave.amplitude * ((1 - undulation) * along ** TAIL.wave.stiff +
                            undulation * (TAIL.wave.base + (1 - TAIL.wave.base) * along));
@@ -118,7 +101,6 @@ function tailGraphic(state, organ, centers, twin) {
                        fixed(R + length * L.along) + ' ' + fixed(M + sign * width * L.out) + ' ' +
                        fixed(end) + ' ' + fixed(M + sign * width) + ' L' +
                        fixed(R + length * TAIL.fork) + ' ' + M + ' L' + R + ' ' + M + 'Z';
-  // One ray of the fin per node on its side, as thick as the node is strong.
   const rays = (sign, nodes, own) =>
       nodes
           .map((center, k) => {
@@ -144,16 +126,11 @@ function tailGraphic(state, organ, centers, twin) {
          TAIL.caption[0] + '" y="' + TAIL.caption[1] + '">' + label('undulation.' + style) +
          '</text>';
 }
-// How swinging the body is at a handle's height.
 const undulationAt = (x, y) => {
   const along = TAIL.wave.at / TAIL.root, low = swing(0, along), high = swing(1, along);
   return (FRAME.middle - y - low) / (high - low);
 };
 
-// A side fin: the flank down to its SKIN, the fin from its ROOT along the skin, swept back and
-// standing out as far as the body's own side fins (FIN of the Atelier's outline, SCALE times).
-// Its rays leave the root FOOT of the base along and reach SWEEP of its sweep back, from LEAST of
-// its reach out to all of it.
 const SIDE = Object.freeze({
   skin : 74,
   root : 96,
@@ -185,9 +162,6 @@ function sideGraphic(state, organ, centers) {
          '<path class="aid-muscle-fin" d="' + fin + '"/>' + rays;
 }
 
-// The mouth from above: the snout at SNOUT, a mouth as wide and deep as the jaw is long (the
-// Atelier's mouth, SCALE times), lips as thick as the suction; water drawn in along FLOW lines,
-// the longer the stronger it sucks.
 const MOUTH = Object.freeze({
   snout : 96,
   head : 66,
@@ -223,10 +197,6 @@ function suctionGraphic(state, organ, centers, twin) {
          fixed(rx) + '" ry="' + fixed(ry) + '" stroke-width="' + fixed(lips) + '"/>';
 }
 
-// The jaw from the side: the head cut open by the mouth from the jaw's HINGE to its tip, the jaw
-// reaching UNIT pixels per body radius of the Aquarium's reach forward from the hinge, its tip
-// GAP apart at the hinge and the tip; teeth on both jaws as many, long and blunt as the Aquarium
-// grows them (TOOTH: base and full reach); a larger tooth (SAMPLE) shows their shape.
 const JAW = Object.freeze({
   hinge : [ 212, 86 ],
   unit : 380,
@@ -235,14 +205,9 @@ const JAW = Object.freeze({
   eye : [ 252, 48, 10 ],
   tooth : [ 6, 22 ],
   sample : {x : 40, y : 158, base : 10, height : 30},
-  // Teeth fill ROW of the jaw from its tip; the lower jaw's tip stands DROP behind the upper's.
   row : .85,
   drop : 4,
-  // The head's outline: forehead and throat bulge out by HINGE behind the hinge, by TIP and THROAT
-  // past the jaws' tips; the forehead RISEs over the head and LIFTs over the upper tip; the
-  // outline ends TUCK above the throat at the frame's edge.
   brow : {hinge : 30, tip : 34, throat : 40, rise : 6, lift : 30, tuck : 4},
-  // The sample tooth's style is named GAP right of it, LIFT above its base.
   caption : {gap : 8, lift : 4}
 });
 const jawTip = trait => JAW.hinge[0] - JAW.unit * jawReach(trait);
@@ -272,8 +237,6 @@ function jawGraphic(state, organ, centers) {
                fixed(x + half) + ' ' + fixed(y) + 'Z"/>';
     }
   }
-  // The head runs over the forehead to the upper jaw's tip, into the mouth to the hinge, out to
-  // the lower jaw's tip and back under the throat.
   const B = JAW.brow;
   const head = 'M' + W + ' ' + (hy - up) + ' C' + (hx + B.hinge) + ' ' + (hy - up - B.rise) + ' ' +
                fixed(tip + B.tip) + ' ' + (hy - wide - B.lift) + ' ' + fixed(tip) + ' ' +
@@ -296,7 +259,6 @@ function jawGraphic(state, organ, centers) {
          (T.x + T.base + JAW.caption.gap) + '" y="' + (T.y - JAW.caption.lift) + '">' +
          label('teeth.' + style) + '</text>';
 }
-// What the handles on traits set, from where they are dragged to.
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
   [MOTOR_KIND.suction] : {'trait:q1' : {key : 'gut_length', at : x => trackShare(x, GUT.track)}},
@@ -312,8 +274,6 @@ const TRAIT_HANDLES = Object.freeze({
   }
 });
 
-// Spines out of the skin at SKIN, one at each node from X on, STEP apart, as long as it is strong
-// (LEAST to MOST).
 const SPINE =
     Object.freeze({skin : 96, base : 9, least : 10, most : 52, lean : .3, x : 34, step : 32});
 function defenseGraphic(state, organ, centers) {
@@ -331,16 +291,8 @@ function defenseGraphic(state, organ, centers) {
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
          spines;
 }
-// How the spines shield the body all round, as the engine finds it: around a small fish (snout
-// left, side +1 below, as on the canvas) the shield in each direction at rest (filled) and
-// fully raised (dashed), from the INNER ring (none) to the OUTER (full); the organ's nodes as
-// dots on the inner ring in the directions their spines centre on, and the spread of the first
-// node's spines, which all its nodes share, as a sector with a handle on its edge. The fish is
-// FISH of its frame size.
 const SPINE_RING =
     Object.freeze({width : 300, height : 170, cx : 150, cy : 85, inner : 30, outer : 80});
-// The spines' spread the pointer (fractions of the ring) sets: how far its direction lies from
-// where they centre (aim).
 export function spinePatch(fx, fy, aim) {
   const R = SPINE_RING, angle = Math.atan2(fy * R.height - R.cy, R.cx - fx * R.width);
   return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
@@ -364,7 +316,6 @@ export function spineField(state, organ) {
           .join(' L') +
       'Z';
   const half = radians(contactHalfAngle(first.field));
-  // Directions grow counter-clockwise on screen, so the sector sweeps that way.
   const sector = half >= Math.PI ? '<circle class="aid-spine-spread" cx="' + R.cx + '" cy="' +
                                        R.cy + '" r="' + R.inner + '"/>'
                                  : '<path class="aid-spine-spread" d="M' + R.cx + ' ' + R.cy +
@@ -395,7 +346,6 @@ export function spineField(state, organ) {
          escapeText(label('spines.spreadHandle')) + '</title></circle>' + legend() +
          '</svg></section></div>';
 }
-// The field's legend at its upper left: a swatch for each line and what it shows.
 const LEGEND = Object.freeze({x : 6, y : 14, step : 16, swatch : 14, gap : 5, baseline : 4});
 const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raised' ]]
                          .map(([ name, key ], k) => {
@@ -406,10 +356,6 @@ const legend = () => [[ 'aid-spine-rest', 'rest' ], [ 'aid-spine-raised', 'raise
                                   escapeText(label('spines.' + key)) + '</text>';
                          })
                          .join('');
-// The gut as long as the suction muscles make it (their trait, the engine's and the Aquarium's
-// loops for it): a tube coiling AMPLITUDE across from FROM to TO, its food cells as dots on its
-// wall and its stretch cells as a band inside, each choosing its node; a handle on the TRACK
-// below sets the length, from short (meat) to long (plants), where suction muscles exist.
 const GUT = Object.freeze({
   from : 24,
   to : 276,
@@ -458,26 +404,17 @@ export function gutGraphic(state, organ, selected) {
           dietChart(state, 'gut', organ));
 }
 
-// An effector's block: its graphic in the frame, named `title` and drawn for `side`, and what
-// stands below it.
 const effectorBlock = (organ, code, side, title, graphic, below) =>
     '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
     '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
     '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
     '" data-effector-side="' + side + '" role="img" aria-label="' + escapeText(title) + '">' +
     graphic + '</svg>' + below + '</div>';
-// A hint under a muscle's controls where one helps.
 function muscleHint(code) {
   const hint = textArea('studio').muscle?.hint?.[code];
   return hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '';
 }
 
-// How a trait the muscles shape serves each kind of food, as the engine reckons it (the
-// capabilities' diet, sampled over the trait from 0 to 1): a curve for each, named at its right
-// end with its value where the fish stands, which a line marks; a value of another scale (the
-// gut's room) is told in words below. CHART: the frame, the plot's
-// ends, its top and baseline, the gap before the names and below the axis. Shares show as
-// percent, factors against a middle trait as times.
 const CHART = Object.freeze({
   width : 300,
   height : 118,
@@ -513,7 +450,6 @@ const DIET_CHARTS = Object.freeze({
   },
   suction : {source : 'suction', code : MOTOR_KIND.suction, curves : [ [ 'gulp', 'factor' ] ]}
 });
-// The suction muscles' strength in all, as the engine sums their capacities.
 const suctionStrength = (doc, sites) =>
     doc.organs.filter(o => o.type === 'muscle')
         .flatMap(o => o.centers)
@@ -522,8 +458,6 @@ const suctionStrength = (doc, sites) =>
           return site && functionFor(c, site) === MOTOR_KIND.suction;
         })
         .reduce((sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies, 0);
-// A chart of a trait is itself its handle: dragged across, it sets the trait for the organ whose
-// graphic it stands under.
 const CHART_HANDLE = 'chart:';
 function dietChart(state, kind, organ = null) {
   const spec = DIET_CHARTS[kind], data = state.capabilities?.diet?.[spec.source], C = CHART;
@@ -592,8 +526,6 @@ function dietChart(state, kind, organ = null) {
          '" text-anchor="end">' + escapeText(words('high')) + '</text>' + knob + '</svg>' +
          readout + '</section>';
 }
-// The graphic of an organ that recruits nodes, by its function, with its readout; empty for one
-// without a function here.
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);
   const twinOrgan = findOrgan(state.document, organ.pair);

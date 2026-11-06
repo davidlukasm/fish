@@ -211,15 +211,9 @@ function metricRow(box, label, value, maximum, formatted, color, title) {
   box.append(row);
 }
 
-// The observed diet is kept per food kind.
 const dietLabels = () =>
           Object.keys(FOOD_KIND).map(kind => t('population_picker.dietNames.' + kind)),
       dietColor = kind => FOOD_COLORS[foodDisplayIndex(kind)];
-// Cards: a portrait PORTRAIT_WIDTH by PORTRAIT_HEIGHT showing the fish PORTRAIT_SPAN pixels long,
-// its fins beating at FIN_RATE radians per second around FIN_REST by FIN_SWING, each fin FIN_PHASE
-// later, redrawn every FRAME_MS. More cards load within MORE_PX of the list end. Diets name the
-// LEADING foods; senses share a scale up to SENSE_SCALE cells; a session shows SESSION
-// characters.
 const PICKER = Object.freeze({
   portrait_width : 260,
   portrait_height : 125,
@@ -324,7 +318,6 @@ function details(entry, portrait, box) {
   nutritionSummary(entry, box);
   anatomySummary({...entry, portrait}, box);
   const comparable = entries.filter(e => e.group === entry.group);
-  // Speed in pixels per step and the turning impulse, each against the largest of its group.
   for (const [key, label, color, unit, title] of [
            [
              'speed', t('population_picker.tempo'), '#7dbfc9', 'units.px',
@@ -385,7 +378,6 @@ function animate() {
         continue;
       const {canvas, portrait, fit} = item, g = canvas.getContext('2d'),
                                phase = t * PICKER.fin_rate + item.phase;
-      // Anatomy and framing are stable; only the illustrative fin pose changes.
       const a = {
         ...fit.a,
         finShapeCache : null,
@@ -545,7 +537,6 @@ async function loadMore() {
         }
       });
   }
-  // Develop previews sequentially, only as their batch approaches the viewport.
   try {
     for (const load of pending)
       await load();
@@ -583,7 +574,6 @@ export async function openPopulationPicker() {
 
 export function populationStarted() { restoreRunning = false; }
 
-// The population catalogue's entries as the server lists them.
 async function catalogEntries() {
   const response = await request(ROUTE.population), data = await response.json();
   if (!response.ok)
@@ -652,8 +642,6 @@ export function bindPopulationPicker() {
 
 let offered = false;
 export function shouldOfferPopulation(data) {
-  // A fresh run is paused while waiting for founders. The institute's home
-  // screen and atelier stay available until the Aquarium station is opened.
   return !!(data.offer_population && !offered && sceneState.frame && tankVisible());
 }
 

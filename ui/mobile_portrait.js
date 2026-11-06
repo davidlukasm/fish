@@ -1,7 +1,3 @@
-// A phone's full-screen portrait of the chosen fish: the fish itself, large and alive; its mood
-// and latest thoughts; reserve, health and age as rings; its organs by current activity; its
-// strongest nerve lines as strips of stations; and every figure of its profile. Opened from the
-// fish card, closed by ✕, a downward swipe or the system's back gesture.
 import {PALETTE} from './palette.js';
 import {lineColor} from './nerve_map.js';
 import {RESOLUTION} from './camera.js';
@@ -25,8 +21,6 @@ export const mobile_portraitState = {
 
 const REFRESH = 300, LINES_SHOWN = 6, CLOSE_SWIPE = 70, RING_RADIUS = 26, FISH_SPAN = 6.5,
       SIBLING_SWIPE = 60;
-// The shared card: WIDTH by HEIGHT, the portrait inset by MARGIN from TOP, texts from TEXT_X at
-// their baselines, the thought wrapped in lines of LINE, the footer FOOTER above the bottom.
 const CARD = Object.freeze({
   width : 1080,
   height : 1350,
@@ -45,8 +39,6 @@ const CARD = Object.freeze({
   footer_text : Object.freeze({color : PALETTE.mint, font : '600 30px system-ui, sans-serif'}),
   link_ms : 1000
 });
-// A nerve line pulses every SLOWEST_S seconds when quiet, up to RANGE_S faster as its activity
-// reaches 1 / ACTIVITY_GAIN; the period keeps DIGITS decimals.
 const PULSE = Object.freeze({slowest_s : 2.6, range_s : 2, activity_gain : 3, digits : 2});
 const RINGS = [
   {key : 'reserve', color : PALETTE.gold}, {key : 'health', color : PALETTE.mint},
@@ -116,8 +108,6 @@ function build() {
       close, share, canvas, siblings, name, species, mood, thought, rings,
       section(t('mobile.portrait.organs'), organs), section(t('mobile.portrait.lines'), lines),
       section(t('mobile.portrait.family'), family), section(t('mobile.portrait.values'), values));
-  // A downward swipe from the top of the layer closes it; sideways over the fish moves to the
-  // next or previous fish of the same species.
   let start = null;
   layer.addEventListener('pointerdown',
                          e => start = {x : e.clientX, y : e.clientY, top : layer.scrollTop <= 0});
@@ -149,7 +139,6 @@ function build() {
   });
 }
 
-// The living hatched fish of the chosen fish's species, in a stable order.
 function kin(f, p) {
   return f.fish.filter(q => q[FISH.hatched] && q[FISH.species] === p[FISH.species])
       .map(q => q[FISH.id])
@@ -167,7 +156,6 @@ function sibling(step) {
   selectFish(ids[(at + step + ids.length) % ids.length], {details : false});
 }
 
-// A shareable picture of the fish: portrait, name, species, mood and its latest thought.
 function wrap(g, text, x, y, width, line) {
   const words = text.split(' ');
   let row = '';
@@ -220,7 +208,6 @@ async function shareCard() {
       await navigator.share({files : [ file ], title : s.name.textContent});
       return;
     } catch {
-      // Cancelled by the visitor: nothing else to do.
       return;
     }
   }
@@ -231,7 +218,6 @@ async function shareCard() {
   setTimeout(() => URL.revokeObjectURL(link.href), CARD.link_ms);
 }
 
-// The fish, drawn the way the tank draws it, filling the portrait's width.
 function paint() {
   const s = mobile_portraitState;
   if (!s.open)
@@ -288,8 +274,6 @@ function renderOrgans(plan) {
         '--pulse', (PULSE.slowest_s - PULSE.range_s * Math.min(1, activity * PULSE.activity_gain))
                            .toFixed(PULSE.digits) +
                        's');
-    // Sense and muscle carry their side ("Auge links"), so mirrored lines stay apart; the
-    // relay stations between them keep their short names.
     stations.forEach((m, k) => {
       const names = stationNames(m), end = k === 0 || k === stations.length - 1;
       row.append(make('span', 'portrait-stop ' + m.kind, end ? names.name : names.label));
@@ -298,7 +282,6 @@ function renderOrgans(plan) {
   }));
 }
 
-// Parents and offspring from the family records; living relatives can be visited directly.
 const FAMILY_SHOWN = 12;
 function renderFamily(f, id) {
   const s = mobile_portraitState, record = familyRecord(id, f), parents = familyParents(record),
@@ -379,7 +362,6 @@ export function openPortrait() {
   mobile_portraitState.open = true;
   document.body.classList.add('portrait-open');
   mobile_portraitState.layer.scrollTop = 0;
-  // The nerve lines need the brain in detail while the portrait is open.
   command('brain', {value : 1});
   history.pushState({fishPortrait : true}, '');
   navigator.vibrate?.(HAPTIC.open);
@@ -397,5 +379,4 @@ function closePortrait(fromHistory = false) {
     history.back();
 }
 
-// The system's back gesture closes an open portrait instead of leaving the page.
 export function bindPortrait() { window.addEventListener('popstate', () => closePortrait(true)); }

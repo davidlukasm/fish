@@ -24,27 +24,16 @@ inline double visual_area(const BrainInterface::Receptor &r, double left, double
                (right - middle) * (visual_weight(r, middle) + visual_weight(r, right)));
 }
 std::shared_ptr<const BrainInterface> anatomical_interface(const field::Substrate &);
-// How densely spines stand in each body sector: each defence effector spreads its strength over
-// the sectors around its direction from the body's centre, less the further from it, none
-// beyond its contact width. An effector's direction is its cell's from the body's centre (0
-// ahead, positive towards side +1).
 double spine_aim(const BrainInterface::Effector &, const field::Substrate &);
 void spread_spines(std::array<double, BODY_SECTORS> &, const BrainInterface::Effector &,
                    const field::Substrate &);
 std::array<double, BODY_SECTORS> spine_density(const BrainInterface &, const field::Substrate &);
-// What the pigment absorbs in each channel at its `dispersion` there (0 at rest: aggregated, it
-// covers `pigment_rest` of what it covers spread fully at 1), as chromatophores do.
 Color visible_absorption(const BrainInterface &, const Color &dispersion,
                          const PhysiologyParameters &);
-// How far the pigment absorbing each channel is dispersed at rest: as active as its cells are
-// at rest, so a fish's ground colour is inherited with its pigment cells' resting activity.
 Color resting_dispersion(const BrainInterface &, const field::Substrate &);
-// How well spines raised to `defense` shield the body at `relative` radians from ahead (positive
-// towards side +1): in proportion to their density there against their mean, at most fully.
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative);
 bool has_required_organs(const field::Substrate &);
-// The lateral line samples the water at LATERAL_CORNERS corners around the body.
 inline constexpr int LATERAL_CORNERS = 4;
 template <class T> using LateralSamples = std::array<T, LATERAL_CORNERS>;
 struct SensoryFrame {
@@ -60,12 +49,7 @@ SensoryFrame prepare_sensory_frame(const Body &, const BrainInterface &, const F
                                    double gonad = 0);
 SensoryFrame prepare_sensory_frame(const Body &, double gonad = 0, double sediment_contact = 0,
                                    Point disturbance = {});
-// The lateral line's corners lie LATERAL_ALONG body radii ahead and behind and LATERAL_ACROSS
-// radii to either side.
 inline constexpr double LATERAL_ALONG = .7, LATERAL_ACROSS = .5;
-// How much a lateral-line cell weighs the water at each of the corners the lateral line samples
-// (k & 1: ahead, else behind; k & 2: towards side +1, else -1): the more the nearer the cell
-// lies, blended towards all alike by its spatial width.
 LateralSamples<double> lateral_weights(const BrainInterface::Receptor &);
 double anatomical_stimulus(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                            double sediment_contact, const PhysiologyParameters &);
@@ -81,7 +65,6 @@ float bounded_response(double stimulus, double threshold);
 void record_touch(Body &, double nx, double ny, double impact = 0);
 Point olfactory_position(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
-// The share of its paid work a running stroke delivers this step.
 double stroke_delivery(const StrokeState &, const StrokeTiming &);
 struct EffectorActivity {
   std::array<double, ORGAN_PORTS> sum{};

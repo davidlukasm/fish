@@ -67,11 +67,6 @@ import {
 import {blendFish, displayStep, horizontalDelta, sceneState, wrapScreenX} from './state.js';
 import {displayLight, clipSediment} from './water_view.js';
 export const animalsState = {};
-// Animals share one world-space mesh atlas of ATLAS.width by ATLAS.height texels of TEXEL floats,
-// one instance format and camera transform; detail levels sample the same contours and zoom never
-// changes a cached body's size. Each model starts with ATLAS.header texels (HEADER: its levels,
-// bounds, two texels of body widths, outline, pattern, accent, both eye colours, origin and mouth),
-// then its vertices of MESH_VERTEX layout.
 const TEXEL = 4;
 export const ATLAS = Object.freeze({width : 1024, height : 2048, header : 16});
 const HEADER = Object.freeze({
@@ -87,14 +82,11 @@ const HEADER = Object.freeze({
   mouth : 10
 });
 const PROFILE_WIDTHS = 2 * TEXEL;
-// Mesh vertex: rest and open point, uv, material, drive, suction point and an anchor.
 const MESH_VERTEX = [
   [ 'rest', 2 ], [ 'open', 2 ], [ 'uv', 2 ], [ 'material', 1 ], [ 'drive', 1 ], [ 'suction', 2 ],
   [ 'anchor', 2 ]
 ];
 const VERTEX_FLOATS = attributeLayout(MESH_VERTEX).floats, VERTEX_TEXELS = VERTEX_FLOATS / TEXEL;
-// Mesh materials as the fragment shader paints them; drives as the vertex shader moves them (fins
-// drive by FIN index from TAIL on).
 const MATERIAL = Object.freeze({
   body : 0,
   fin : 1,
@@ -113,15 +105,11 @@ const MATERIAL = Object.freeze({
 });
 const DRIVE = Object.freeze(
     {none : 0, tail : 1, left_fin : 2, right_fin : 3, spine : 4, mouth : 5, gill : 6, tooth : 7});
-// Instance kinds: eggs, fish, embryos inside their eggs and corpses.
 export const ANIMAL_KIND = Object.freeze({egg : 0, fish : 1, embryo : 1.25, corpse : 2});
-// Instances: pose, tint, muscles, state, status, face, extra and movement.
 const ANIMAL_ATTRIBUTES =
     [ 'pose', 'tint', 'muscles', 'state', 'status', 'face', 'extra', 'movement' ].map(
         name => [name, TEXEL]);
 const ANIMAL_FLOATS = attributeLayout(ANIMAL_ATTRIBUTES).floats;
-// Body widths are sampled at PROFILE_WIDTHS points from tail to snout, the curves at
-// CURVE_SAMPLES points each; eye colours run from EYE_TINT.base over EYE_TINT.span.
 const MESH = Object.freeze({
   curve_samples : 4,
   steps : 2,
@@ -247,7 +235,6 @@ export function animalMesh(a, level) {
               }
             }
           };
-    // Membranes are triangulated from their outline, including forked and concave fins.
     for (let index = 0; index < FINS; index++)
       if (a.fin(index)[FIN_SHAPE.strength] > 0) {
         const rest = fishFinShapes(neutral, index), open = fishFinShapes(full, index);
@@ -344,7 +331,6 @@ export function animalMesh(a, level) {
           const n = fishNoseShape(a, side);
           quad(n.x, n.y, n.rx, n.ry, MATERIAL.nose);
         }
-      // The near sense: a crescent of small sensory pits behind the eye.
       for (const side of [0, 1])
         for (const pit of fishProximityPits(a, side))
           quad(pit.x, pit.y, pit.r, pit.r, MATERIAL.nose);
@@ -384,7 +370,6 @@ export function animalMesh(a, level) {
                  [ j / (points.length - 1), side ? 1 : -1 ]);
         }
       }
-    // The skeleton is geometry in the same atlas; remains never allocate body/bone images.
     const skeleton = new TankPath();
     fishSkeletonPath(skeleton, 1, a);
     for (const path of skeleton.paths)
@@ -421,7 +406,6 @@ export function animalMesh(a, level) {
   };
 }
 
-// Hurt fish flash for STEPS steps, pulsing PULSES times between BASE and BASE + PULSE.
 const DAMAGE_FLASH = Object.freeze({steps : 24, pulses : 3, base : .25, pulse : .55});
 const HURTING = [ FEEDING_EFFECT.none, FEEDING_EFFECT.wound, FEEDING_EFFECT.pinch ];
 function animalDamageFlash(p, step = displayStep(sceneState.frame)) {
@@ -437,13 +421,8 @@ function animalDamageFlash(p, step = displayStep(sceneState.frame)) {
   return flash;
 }
 
-// Detail levels by screen radius, with hysteresis: near detail from NEAR_UP pixels (kept down to
-// NEAR_DOWN), high detail from HIGH_UP (kept down to HIGH_DOWN); REMEMBERED levels are kept and
-// at most BUILDS meshes are built at once.
 const LOD = Object.freeze(
     {near_up : 5.3, near_down : 3.8, high_up : 41, high_down : 32, remembered : 4096, builds : 16});
-// Body waves: the amplitude follows undulation from BASE, rising with speed per SPEED and the tail
-// stroke; the phase advances by RATE plus the undulation and a per-fish spread.
 const WAVE = Object.freeze({
   base : .025,
   speed : 1.5,
@@ -617,7 +596,6 @@ export class AnimalRenderer extends TankBatch {
         this.previousModels.set(item.kind + ':' + item.p[FISH.id], {model, frame : ctx.clock});
       groups[Math.min(item.level, limit)].push(item);
     }
-    // Group similar mesh sizes so one elaborate animal does not pad every other instance.
     const batches = groups.flatMap((items, level) => {
       const sizes = new Map();
       for (const v of items) {
@@ -707,10 +685,6 @@ export class AnimalRenderer extends TankBatch {
 }
 
 export let animalEggMesh;
-// Scene animals: the right eye's uv is shifted by EYE_UV; fish seen through sediment are REVEALED
-// opaque; embryos show from EMBRYO_PIXELS and EMBRYO_DEVELOPMENT on, lit from EMBRYO_LIGHT; the
-// inspected fish fades by INSPECTED_FADE; corpse meat follows MEAT_CURVE and corpses vanish below
-// MIN_VISIBLE.
 const SCENE = Object.freeze({
   eye_uv : 4,
   revealed : .85,
@@ -739,7 +713,6 @@ function animalItem(p, c, kind = ANIMAL_KIND.fish, a = null) {
   return {p, a, r, extent, kind, light : displayLight(sceneState.frame, p[FISH.x], p[FISH.y])};
 }
 
-// Buried fish seen through the hovered, see-through sediment: no sediment mask, a little faded.
 export function paintRevealedAnimals(items, c, shifts, f, blend) {
   animalsState.gpuAnimals.paint(
       items.map(v => ({...v, opacity : SCENE.revealed * (v.opacity ?? 1)})), c, shifts, f, blend);

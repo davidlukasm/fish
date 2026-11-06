@@ -28,21 +28,11 @@ import {planOfUnit, unitOfPlan} from '../../tuning.js';
 import {finSizes, fishPath, skinAt, SNOUT_TIP, steadyAt, zoomOf} from './frame.js';
 
 const label = key => t('studio.vision.' + key);
-// The test light's size knob, in frame units.
 const LIGHT_KNOB = 6;
-// A field reaches as deep as the grown fish sees, like the fans in the Aquarium. Its rays run from
-// where the engine's eye looks from, which lies elsewhere in the fish than the eye drawn at its
-// side, but it shows only outside the fish and outside a circle around the drawn eye, the cut,
-// which reaches CUT.margin past the eye's glyph and past the engine's eye. Its handles lie on
-// rings around the drawn eye, the edges' HANDLE.reach past the cut and at least HANDLE.radius out.
 const HANDLE = Object.freeze({radius : 235, reach : 150, hint : 1.7});
 const CUT = Object.freeze({margin : 10});
-// Field handles: the resolution handle RESOLUTION_REACH of the way from the cut to the edges'
-// ring, density rings DENSITY_STEP apart from DENSITY_START past the cut.
 const FIELD = Object.freeze(
     {resolution_reach : .77, density_start : 14, density_step : 7, density_max : 16, mark : 7});
-// Where the engine's eye of a side looks from (anatomy.eyePlaces: body radii along the body and
-// across it), in frame units; null before the design view answers.
 function enginePlace(anatomy, side) {
   const place = anatomy?.eyePlaces?.[sideIndex(side)];
   return place ? {
@@ -61,14 +51,11 @@ export function visionGeometry(state, organ) {
     origin,
     eye,
     radius : a?.visionDepth > 0 ? a.visionDepth * BODY_RADIUS : HANDLE.radius,
-    // Frame units per world unit.
     world : a?.bodyRadius > 0 ? BODY_RADIUS / a.bodyRadius : null,
-    // The point at an angle from the origin and a distance from it.
     pointText(angle, radius) {
       const r = radians(angle);
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};
     },
-    // The point at an angle from the origin on the ring of a radius around the drawn eye.
     ring(angle, radius) {
       const r = radians(angle), ux = -Math.cos(r), uy = Math.sin(r);
       const ox = origin.x - eye.x, oy = origin.y - eye.y, b = ox * ux + oy * uy;
@@ -83,13 +70,6 @@ export function visionGeometry(state, organ) {
   g.handle = Math.max(HANDLE.radius, g.cut + HANDLE.reach);
   return g;
 }
-// How deep a near sense senses: an object at its depth counts half, one twice as far a quarter
-// (proximity_depth in src/retina.cc); its range moves the depth between the engine's least and
-// most. Depths reach many body lengths, so the fan shows them on a log scale from its cut at the
-// least depth to its handles' ring at the most, with rings at whole body lengths doubling outward
-// and the fill fading as the sense does over NEAR.stops.
-// Its handle sits NEAR.handle of the way from the fan's start to its end, clear of the density
-// handle in the middle.
 const NEAR = Object.freeze({stops : 12, fill : .5, handle : .25});
 function nearScale(state, profile, g) {
   const [least, most] = state.capabilities?.nearDepth ?? [];
@@ -110,8 +90,6 @@ function nearScale(state, profile, g) {
   });
   return {depth, least, most, length, radius : at(depth), rings, stops};
 }
-// A field's sector from its origin out to a distance (`sector`) or to a ring around the drawn
-// eye (`ringSector`).
 const arcFlag = (left, right) => right - left > FULL_TURN / 2 ? 1 : 0;
 const sector = (g, left, right, radius) => {
   if (right < left)
@@ -125,8 +103,6 @@ const ringSector = (g, left, right, radius) => {
   return `M${pointText(g.origin)} L${pointText(g.ring(left, radius))} A${radius} ${radius} 0 ${
       arcFlag(left, right)} 0 ${pointText(g.ring(right, radius))} Z`;
 };
-// What hides a field: the fish, and the circle of its cut; each clips everything around its origin
-// as far as the field reaches (`id` with -body and -cut).
 function fieldClips(g, id) {
   const reach = Math.max(g.radius, g.handle * BANDS.reach) + g.cut, side = 2 * reach, c = g.cut;
   const around = `M${fixed(g.origin.x - reach)} ${fixed(g.origin.y - reach)}h${fixed(side)}v${
@@ -137,7 +113,6 @@ function fieldClips(g, id) {
          clip('cut', `M${fixed(g.eye.x - c)} ${fixed(g.eye.y)}a${fixed(c)} ${fixed(c)} 0 1 0 ${
                          fixed(2 * c)} 0a${fixed(c)} ${fixed(c)} 0 1 0 ${fixed(-2 * c)} 0Z`);
 }
-// A near sense's ray shows at least RAY_FAINTEST, fully where its cell answers fully.
 const RAY_FAINTEST = .15;
 function organCells(state, organ) {
   const sight = state.anatomy?.sight;
@@ -156,8 +131,6 @@ function organCells(state, organ) {
     } ];
   });
 }
-// What a side's eye receives, as the Aquarium paints it into its fields: each bearing of the
-// light image coloured as seen, reaching to the nearest thing seen there.
 function seenLight(state, organ, g) {
   const sight = state.anatomy?.sight;
   if (!sight?.bands || !g.world)
@@ -175,8 +148,6 @@ function seenLight(state, organ, g) {
   });
   return html + '</g>';
 }
-// The test light: a food-sized disc of one hue at a bearing and distance from a side's view
-// origin, moved by dragging it and sized by its knob; for a near sense the thing it senses.
 function testLight(state, organ, g) {
   const probe = state.sightProbe;
   if (!probe || !g.world || probe.side !== sideOf(organ))
@@ -191,9 +162,6 @@ function testLight(state, organ, g) {
              fixed(c.x + r)}" cy="${fixed(c.y)}" r="${LIGHT_KNOB}" aria-label="${
              label(near ? 'objectSize' : 'size')}"/></g>`;
 }
-// The test light alone, to move it while it is dragged without redrawing the scene.
-// While an optic tectum (or one of its nodes) is chosen, each eye feeding it shows how its field
-// splits over the tectum's map: a ray at each border, the map node's number amid its band.
 const BANDS = Object.freeze({reach : 2.2, label : 1.7});
 export function tectumBands(state) {
   const doc = state.document, chosen = organOf(doc, state.selected?.id);
@@ -221,8 +189,6 @@ export function testLightMarkup(state, organ) {
   const g = visionGeometry(state, organ);
   return g ? testLight(state, organ, g) : '';
 }
-// A near sense's field on its depth scale, shaded by how near things are felt, with rings at
-// lengths of the fish, all on rings around the drawn eye.
 function nearField(organ, g, near, [ lo, hi ]) {
   const id = `aid-near-${idSafe(organ.id)}`;
   return `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${fixed(g.eye.x)}" cy="${
@@ -243,9 +209,6 @@ function nearField(organ, g, near, [ lo, hi ]) {
                       ring.lengths}</text>`)
              .join('');
 }
-// Every cell of the organ is one ray along its middle, as bright as it answers; a chosen node's
-// cells also show the whole field each of them sees. Before the engine answers, the design's
-// rays stand in for them. Fields and rays reach as far as `reach` says.
 function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
   const cells = organCells(state, organ);
   let html = '';
@@ -270,9 +233,6 @@ function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
           pointText(reach.end(ray.angle))}" class="aid-vision-ray pending"/>`;
   return html;
 }
-// The field's handles: its edges, its resolution beside the middle ray, its density and a near
-// sense's depth, on rings around the drawn eye. Handles keep their size on screen at any zoom, as
-// organ stamps do.
 function fieldHandles(state, organ, g, near, middle) {
   const zoom = zoomOf(state), f = organ.field;
   const handle = (key, p, value) => `<g class="aid-vision-handle" data-vision-handle="${
@@ -300,8 +260,6 @@ export function visionFan(state, organ) {
   const g = visionGeometry(state, organ);
   if (!g)
     return '';
-  // The organ is chosen as a whole or through one of its nodes, whose rays then stand out.
-  // Both eyes of a pair open their fields when either is chosen.
   const chosenNode = organ.centers.find(c => c.id === state.selected?.id)?.id ?? null;
   const selected = isChosen(state.selected, organ) ||
                    isChosen(state.selected, organ.pair && findOrgan(state.document, organ.pair));
@@ -310,9 +268,6 @@ export function visionFan(state, organ) {
   const rays = retinalRays(organ, state.sites).filter(r => r.profile === profile.id);
   if (!rays.length)
     return '';
-  // Only the chosen organ's field reaches as far as the fish sees, a near sense on its depth
-  // scale; the others stay a hint HANDLE.hint times as far as the handles' ring. A field not
-  // chosen picks its organ.
   const near = organ.type === 'proximity' ? nearScale(state, profile, g) : null;
   const deep = selected && !near,
         hint = Math.max(g.cut, Math.min(g.radius, g.handle * HANDLE.hint));
@@ -339,7 +294,6 @@ export function visionFan(state, organ) {
          cellRays(state, organ, g, profile, rays, chosenNode, reach) + '</g></g>' +
          fieldHandles(state, organ, g, near, middle) + testLight(state, organ, g) + '</g>';
 }
-// The colour of a colour type: its tuning with the engine's balance, the test light's hue.
 export function spectrumEditor(state, organ, profile) {
   const light = state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const [centre, width, opponent] = spectrumValues(profile, true);
@@ -355,8 +309,6 @@ export function spectrumEditor(state, organ, profile) {
                           centre)}</span><span>${labelledText(label('width'), width)}</span><span>${
              labelledText(label('opponent'), opponent)}</span></div></div>`;
 }
-// How sensitive a colour type is: the engine's answer over brightness, the threshold's handle.
-// While its handle is dragged, the curve the drag started from shifted by the threshold's factor.
 export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
   const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const graphic = sensitivityElement(
@@ -372,9 +324,6 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
                     percent(light.half * shift, 2)}</span></div>`
               : ''}</div>`;
 }
-// How each cell of a near sense answers to the test object, from ahead to the side as its rays
-// lie in the fan: one bar each, as high as it answers; in a block the controller redraws as the
-// design view answers.
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
 export function nearAnswers(state, organ) {
@@ -394,7 +343,6 @@ export function nearAnswers(state, organ) {
              label('ahead')}</text><text x="${B.width}" y="${B.label}" text-anchor="end">${
              label('aside')}</text></svg></div>`;
 }
-// What both eyes see now, drawn as the Aquarium draws an eye's view on a canvas this large.
 const SIGHT_CANVAS = Object.freeze({width : 360, height : 132});
 const sightEyes = () => `<div class="aid-sight-eyes">${
         [0, 1]
@@ -409,7 +357,6 @@ export function visionInspector(state, organ) {
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
     return section('nearAnswer', nearAnswers(state, organ));
-  // Each colour type by its name, numbered where two share one.
   const names = profiles.map(profileName);
   const chip = (profile, i) => {
     const name = names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i]
@@ -429,9 +376,6 @@ export function visionInspector(state, organ) {
          section('spectrum', spectrumEditor(state, organ, p)) +
          section('sensitivity', sensitivityEditor(state, organ, p)) + section('sight', sightEyes());
 }
-// The test light lies where the engine sees it, from where the engine's eye looks; it shows
-// only outside the fish and outside the cut round the drawn eye. A light that would lie within
-// either moves out along its bearing, a STEP of the cut at a time, at most as far as the eye sees.
 const CLEAR = Object.freeze({step : .25});
 export function clearOfFish(state, organ, probe) {
   const g = visionGeometry(state, organ), range = state.capabilities?.visionRange;
@@ -450,8 +394,6 @@ export function clearOfFish(state, organ, probe) {
     d = Math.min(range, d + g.cut * CLEAR.step / g.world);
   return d === probe.distance ? probe : {...probe, distance : d};
 }
-// A new test light starts out beyond the field's handles, BEYOND times as far from the eye as
-// their ring, so it covers none of them.
 const BEYOND = 1.3;
 export function beyondHandles(state, organ, probe) {
   const g = visionGeometry(state, organ), range = state.capabilities?.visionRange;

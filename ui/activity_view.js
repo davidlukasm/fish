@@ -1,5 +1,3 @@
-// The chosen fish's activity as meters: a settled bar and a reading per activity. The numbers
-// follow the bars at a calm pace so they stay readable while the fish moves.
 import {cssPercent, formatNumber, percent, t, tList} from './strings.js';
 export const activity_viewState = {};
 

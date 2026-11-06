@@ -9,8 +9,6 @@ import {label} from './kit.js';
 import {GENOME_SUFFIX} from '../requests.js';
 import {LAYER_KEYS, layerMode, layerShown} from './layers.js';
 
-// The studio's frame: the hub that leads to the aquarium and the atelier, and the atelier's
-// station with its header, library, scene and inspector.
 const button = (attributes, text, {active = false, disabled = false, cls = ''} = {}) =>
     '<button ' + attributes +
     (active || cls ? ' class="' + [ cls, active ? 'active' : '' ].filter(Boolean).join(' ') + '"'
@@ -23,11 +21,8 @@ const footer = (message, brand) => '<footer class="aid-station-footer"><span cla
                                    escapeText(message) + '</span><span>' + brand +
                                    '</span></footer>';
 
-// The side panels' widths as the workspace's style.
 export const panelStyle = panels =>
     Object.entries(panels).map(([ key, width ]) => `--aid-${key}:${width}px`).join(';');
-// What the header says of the fish: how far a build has got while it runs, else its cells. While
-// a build runs its button stops it, so the header keeps its width.
 export const headerStatus = state =>
     state.compileProgress ? compilerProgress(state) : cellStatus(state);
 export function developAction(state) {
@@ -39,10 +34,7 @@ export function developAction(state) {
     disabled : state.busy
   };
 }
-// The scene's zoom as its toolbar shows it.
 export const zoomStamp = camera => percent(camera.zoom);
-// The fish's cells: those it developed with its contacts, or those the engine plans for the
-// draft (its nerve and sense cells copied, one per effector), once it has answered.
 export function cellStatus(state) {
   const {report, stale, anatomy} = state;
   if (report && !stale)
@@ -65,7 +57,6 @@ export function hubShell() {
          footer(label('status.waiting'), label('app.hubFooter')) + '</div>';
 }
 
-// The header: the plan's file actions together, then the way from plan to aquarium.
 function stationHeader(s) {
   const accepted = acceptedGenome(s);
   return '<header class="aid-header"><div class="aid-header-brand">' +
@@ -91,10 +82,7 @@ function stationHeader(s) {
          '<input type="file" id="' + GENOME_FILE_ID + '" accept="' + GENOME_SUFFIX +
          ',text/plain" hidden/></header>';
 }
-// The file input that opens a genome and the CPPN's scene, by their ids.
 export const GENOME_FILE_ID = 'aid-genome-file', CPPN_SCENE_ID = 'aid-cppn-scene';
-// A view switch: its dot filled while what it switches shows; set to follow the tool, the dot is
-// ringed by a dashed circle and the switch says so.
 function layerSwitch(s, key) {
   const mode = layerMode(s, key), shown = layerShown(s, key);
   return button('data-layer="' + key + '" data-layer-mode="' + mode + '" aria-pressed="' + shown +
@@ -102,7 +90,6 @@ function layerSwitch(s, key) {
                 label('layers.' + key), {active : shown});
 }
 export const layerSwitches = s => LAYER_KEYS.map(key => layerSwitch(s, key)).join('');
-// The scene of the fish with its view options, or the CPPN's graph.
 function stationStage(s, cppn) {
   if (cppn)
     return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +

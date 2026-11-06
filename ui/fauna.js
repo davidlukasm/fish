@@ -1,11 +1,9 @@
-// Shapes of the small animals, from the same constants as the engine (src/material.hh).
 import {FAUNA, INVERTEBRATE_KIND, SEABED} from './schema.js';
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 const familyOf = (morph, table) => Math.max(0, Math.min(table.length - 1, Math.floor(morph)));
 
 export const morphVariant = morph => morph - Math.floor(morph);
-// A family's typical morph: the middle of its variants.
 export const familyMorph = family => family + .5;
 export function familyCount(kind) {
   return (kind === INVERTEBRATE_KIND.mussel ? FAUNA.mussel_family_size
@@ -22,13 +20,10 @@ export function crabSize(morph) {
   return FAUNA.crab_family_size[familyOf(morph, FAUNA.crab_family_size)] *
          (FAUNA.crab_size_base + FAUNA.crab_size_spread * morphVariant(morph));
 }
-// Families of mussels and worms, in the order of their tables.
 export const MUSSEL_FAMILY =
     Object.freeze({narrow : 0, long : 1, wide : 2, ribbed : 3, razor : 4, pen : 5, zebra : 6});
 export const WORM_FAMILY = Object.freeze({short : 0, slender : 1, broad : 2, bristled : 3});
 export const CRAB_FAMILY = Object.freeze({round : 0, tall : 1, angular : 2, broad : 3});
-// Mussel shells per family (narrow, long, wide, ribbed, razor, pen, zebra): height, width, gape
-// and spread in shell radii; heights vary by HEIGHT_VARIATION with the morph.
 export const MUSSEL_SHELLS = Object.freeze({
   heights : [ 1.37, 1.48, 1.10, 1.19, 1.55, 1.30, .98 ],
   widths : [ .245, .17, .39, .33, .115, .30, .36 ],

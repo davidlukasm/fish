@@ -10,8 +10,6 @@
 namespace field {
 inline constexpr double MIN_RANGE = .1;
 inline constexpr int IDENTITY_CORNERS = 4, IDENTITY_VARIANTS = 2;
-// The same fixed developmental sites and organ constraints are used by the
-// evolving substrate and the manual-design editor.
 inline cppn::Point development_site(std::size_t index) {
   constexpr std::array<std::array<int, 3>, cppn::input::zones> sizes{
       {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}}};
@@ -61,4 +59,4 @@ inline int development_function(const cppn::Point &p, Role role, int corner, int
     return surface ? Pigment : none;
   return p.zone == 0 ? none : p.zone == 1 ? Gland : p.zone == 2 ? Bladder : variant ? Sperm : Eggs;
 }
-} // namespace field
+}

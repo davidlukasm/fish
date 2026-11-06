@@ -24,7 +24,6 @@ import {endEggPlacement, setTool, worldState} from './world.js';
 import {newEnergyFields, showBursts, showWorld} from './world_parameters.js';
 export const controllerState = {};
 
-// What the start dialog currently asks for: fish count, start lines, world, energy and seed.
 export function newRunChoice() {
   return {
     fish : Number(el('new-fish').value),
@@ -36,8 +35,6 @@ export function newRunChoice() {
   };
 }
 
-// Starts a run; the desktop dialog and the phone's quick start share it. The last start is
-// kept (without its seed) so the same start can be run again.
 export async function startNewRun(choice) {
   if (sessionState.busy)
     return false;
@@ -106,7 +103,6 @@ export function showFrame(f, data) {
                       : f.paused                ? t('controller.pausiert')
                       : brainState.brainOpen    ? t('controller.untersuchen')
                                                 : t('controller.fischHeranzoomen'));
-  // A tempo outside the menu is a view tempo: someone inspects a fish up close.
   const preset = [...el('speed').options ].some(o => o.value === String(f.delay_ms));
   if (document.activeElement !== el('speed'))
     el('speed').value = brainState.brainOpen ? 'inspection'
@@ -169,7 +165,6 @@ export function showFrame(f, data) {
     tasks.forEach(task => task());
     return;
   }
-  // DOM changes stay on the main thread, in small turns between tank frames.
   const generation = sessionState.generation, run = deadline => {
     if (generation !== sessionState.generation || showFrame.envelope !== data ||
         showFrame.key !== key)
@@ -231,11 +226,7 @@ export let movingSliders;
 
 export let sliderHold;
 
-// Panel updates run in idle turns of at most TURN_MS while more than RESERVE_MS of the idle time
-// remain, and at the latest after TIMEOUT_MS.
 const IDLE = Object.freeze({turn_ms : 3, reserve_ms : 2, timeout_ms : 1000});
-// Total supply on a logarithmic scale around the engine's default: the middle of the slider is
-// 100 %, its ends SUPPLY_FACTOR times less and more.
 const SUPPLY_FACTOR = 4, MUTATION_DIGITS = 3;
 const supplyHalf = () => Number(el('feeding').max) / 2;
 function supplyValue(position) {
@@ -255,11 +246,9 @@ function supplyLabel(position) {
 }
 const mutationLabel = v =>
     v.toLocaleString(t('units.locale'), {maximumFractionDigits : MUTATION_DIGITS});
-// The top of the bottom-residence slider means no limit (0 for the engine).
 const unlimitedResidence = () => Number(el('bottom-residence').max);
 const residenceLabel = v =>
     v === unlimitedResidence() ? t('controller.unbegrenzt') : t('controller.residence', {n : v});
-// A slider keeps the value just sent for SLIDER_HOLD_MS before frames may set it again.
 const SLIDER_HOLD_MS = 500;
 export function holdSlider(id) { sliderHold.set(id, Date.now() + SLIDER_HOLD_MS); }
 

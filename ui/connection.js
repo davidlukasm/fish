@@ -42,9 +42,6 @@ import {updateMinds} from './mind.js';
 import {cancelWorldGesture} from './world.js';
 import {decodeScene, lightCache, resetScene, transportState} from './transport.js';
 export const connectionState = {};
-// The scene is asked for every PLAYBACK.interval_ms, every SLOW_MS while hidden, racing or
-// failing; statistics every STATISTICS_MS, history and journal after HISTORY_MS. A worker answers
-// within WORKER_MS.
 const POLL =
     Object.freeze({slow_ms : 1000, statistics_ms : 1000, history_ms : 2000, worker_ms : 15000});
 
@@ -107,7 +104,6 @@ function hydrateFrame(f) {
     throw Error(t('connection.gehirnbauplanWirdErneutGeladen'));
   const brain = {...connectionState.cachedBrainLayout, ...b, visual_image : f.vision?.bands || []};
   delete brain.layout;
-  // Each neuron state column fills the neuron column of the same name.
   brain.neurons = (brain.neurons || []).map(n => {
     const row = n.slice(), state = b.neuron_state?.[row[NEURON.index]];
     if (state)
@@ -124,8 +120,6 @@ function hydrateFrame(f) {
   return {...f, brain};
 }
 
-// A new snapshot: what belonged to the old scene starts afresh, egg births are traced, then the
-// frame becomes current and families and minds learn from it.
 export function acceptFrame(next, now = displayNow(), from = null,
                             interval = PLAYBACK.interval_ms) {
   if (frameChangesContext(next)) {
@@ -324,7 +318,6 @@ export function receiveState(d) {
       connectionState.envelope = d;
       if (startDisplay)
         updateDisplay();
-      // Turbo has no image stream; its regular status still drives the controls.
       if (f.turbo || !sceneState.frame) {
         acceptFrame(f);
         showFrame(f, d);
@@ -367,8 +360,6 @@ function recoverConnection(e, scope) {
     text('tank-status', t('connection.startFehlgeschlagen'));
 }
 
-// What every request for the view names: the brain layout held, the inspection open and the
-// neuron in focus (none: -1).
 const viewKeys = () => ({
   brain : connectionState.cachedBrainLayout?.layout_id || '',
   inspection : connectionState.display.inspection?.inspection_id || '',

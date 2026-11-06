@@ -4,23 +4,16 @@
 #include <algorithm>
 namespace fishsim {
 namespace {
-// The population limit is at least SEED_LIMIT or SEED_LIMIT_PER_FISH per start fish, between
-// SEED_LIMIT_MIN and the population maximum.
 constexpr int SEED_LIMIT = 800, SEED_LIMIT_PER_FISH = 4, SEED_LIMIT_MIN = 20;
-// Start eggs are placed within SPOT_SPREAD of a food cloud, widening by SPOT_WIDEN every
-// SPOT_ROUND attempts up to SPOT_ATTEMPTS; they keep SPOT_CLEARANCE from walls and at least
-// SPOT_GAP (or SPOT_GAP_RADII times both radii) from other eggs.
 constexpr int SPOT_ATTEMPTS = 1600, SPOT_ROUND = 80;
 constexpr double SPOT_SPREAD = 48, SPOT_WIDEN = 16, SPOT_CLEARANCE = 8, SPOT_GAP = 40,
                  SPOT_GAP_RADII = 3;
-// Each planned edge is stored in both directions.
 constexpr std::size_t EDGE_COPIES = 2;
 }
 bool viable_entrant(const Genome &g) {
   return g.blueprint && g.interface && g.interface->mobile_reproductive && g.viable() &&
          !g.blueprint->resource_limited && !g.blueprint->edges.empty();
 }
-// Every chosen line starts as copies of its genome, spread over the food clouds.
 void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
                      const std::function<void(int)> &progress,
                      const std::function<void()> &configure) {
@@ -35,7 +28,6 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
   field.place_initial_food();
   std::vector<Genome> roots;
   for (const auto &founder : founders) {
-    // Each run receives fresh histories for its start lines.
     roots.push_back(Genome::immigrants({founder}, rng).front());
     if (!funded_egg_energy(roots.back(), physiology_.neural_cost, evo.yolk))
       throw std::runtime_error(

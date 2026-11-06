@@ -1,11 +1,8 @@
-"""Species nicknames from measured senses, anatomy and behaviour."""
-
 from protocol_schema import Fish
 from trait_context import prepare_traits
 from trait_metrics import RULES as MEASURED_RULES
 from trait_rule import catalogue_rules
 
-# The catalogue's rules (traits.json), the measured intervals, then the combinations.
 CATALOGUE_RULES, COMBINATIONS = catalogue_rules()
 RULES = CATALOGUE_RULES + MEASURED_RULES + COMBINATIONS
 assert len({r.name for r in RULES}) == len(RULES), "Doppelte Merkmalsnamen"
@@ -62,7 +59,6 @@ def summary_labels(details, limit=4):
 
 
 def profile_labels(details, limit=6):
-    """Show several areas before filling spare places with further combinations."""
     ranked = sorted(details, key=lambda word: (details[word]["priority"], word))
     target = max(0, min(6, limit, len(ranked)))
     selected = summary_labels(details, min(4, target))

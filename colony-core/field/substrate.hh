@@ -92,7 +92,6 @@ constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX
 constexpr float MAX_BIAS_SCALE = 2;
 constexpr double CELL_COPIES = 16;
 constexpr int CELL_COPY_LIMIT = 16;
-// Upper bound for checkpoint replay: pair trials plus all preparation, adjacency and layout passes.
 constexpr std::size_t DEVELOPMENT_OVERHEAD_PASSES = 32;
 constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
     DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES + MAX_NODES * MAX_NODES +

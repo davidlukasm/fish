@@ -65,7 +65,6 @@ import {paintSelection} from './tank.js';
 import {plantNoise} from './water_view.js';
 export const fish_painterState = {};
 
-// Fins shade from the root towards the tip from MIN_RADIUS pixels on; smaller ones are FLAT.
 const FIN_SHADE =
     Object.freeze({min_radius : 14, flat : .10, root : .06, mid_at : .55, mid : .14, edge : .36});
 function fishFinColor(g, r, a, index, tint) {
@@ -81,8 +80,6 @@ function fishFinColor(g, r, a, index, tint) {
   return shade;
 }
 
-// Small fish: body and fins in one tint, the pattern from PATTERN_MIN_RADIUS pixels on, eyes and a
-// sickness dot.
 const OVERVIEW = Object.freeze({
   pose_tolerance : 1e-5,
   body : .90,
@@ -144,9 +141,6 @@ function paintFishOverview(g, p, r, angle, a, light = 1, opacity = 1) {
   g.restore();
 }
 
-// Cacheable skin uses the exact inspection contours, pigments and light shading.
-// Skin: shading across the body, outline, a gloss line, the gill slit, lateral line pores and
-// touch marks, each from its pixel size on.
 const SURFACE = Object.freeze({
   shade_min_radius : 7,
   shade_edge : .25,
@@ -280,9 +274,6 @@ function paintFishSurface(ctx, p, r, anatomy, opacity = 1, light = 1) {
   }
 }
 
-// Inspection and ordinary fish share face and condition geometry.
-// Face and condition features, each from its pixel radius on: cheeks and gill folds, nose,
-// barbels, mouth and lips, jaw muscle, eyes, the sperm organ, sickness spots and wounds.
 const FEATURES = Object.freeze({
   cheek_shade : .10,
   cheek_rage : .25,
@@ -631,10 +622,7 @@ function paintFishFeatures(ctx, p, r, anatomy, opacity = 1, light = 1) {
   }
 }
 
-// Fin rays run at these shares across the tail and side fins.
 const TAIL_RAYS = Object.freeze([ .18, .50, .82 ]), SIDE_RAYS = Object.freeze([ .20, .50, .80 ]);
-// Eggs with yolk, embryo and development ring; hatched fish with fins, rays, rear fins, spines and
-// an impact flash, each from its pixel radius on.
 const GLYPH = Object.freeze({
   min_radius : .1,
   embryo_min_radius : 10,
@@ -748,7 +736,6 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
   } else {
     const {fin} = anatomy;
     const central = fin(FIN.tail);
-    // Each physical pulse opens its fin; the pose relaxes during the glide.
     if (central[FIN_SHAPE.strength] > 0) {
       ctx.fillStyle = fishFinColor(ctx, r, anatomy, FIN.tail, tint);
       ctx.strokeStyle = tint(-GLYPH.fin_edge);
@@ -860,7 +847,6 @@ export function corpseFish(p) {
                           'mouth_aperture', 'gut_fill', 'gut_energy'])
       q[FISH[column]] = state[S[column]];
     q[FISH.fin_pose] = [ state[S.fin_tail], state[S.fin_left], state[S.fin_right] ];
-    // A corpse keeps the tissue of an adult with its reserve capacity.
     q[FISH.tissue] = state[S.reserve_capacity] * BODY_UNIT.body_tissue / BODY_UNIT.adult_reserve;
     q[FISH.radius] = p[CORPSE.radius];
     q[FISH.neuron_budget] = DEVELOPMENT.sites;
@@ -874,10 +860,7 @@ export function corpseFish(p) {
   return q;
 }
 
-// A defence spine's outline reaches its tip at this point.
 const SPINE_TIP = 2;
-// Skeletons: skull and jaw inside the head curves, eye rings, ribs along the body (fewer below
-// COARSE_RADIUS pixels) and fin rays.
 const SKELETON = Object.freeze({
   coarse_radius : 18,
   snout_gap : .025,
@@ -908,7 +891,6 @@ export function fishSkeletonPath(g, r, a) {
   g.moveTo((a.snout - SKELETON.snout_gap) * r, 0);
   g.lineTo(head.cx * r, 0);
   g.quadraticCurveTo(a.headBack * r, 0, rear * r, a.flex * r);
-  // The skull and jaws follow the same head/face as the live fish.
   for (const side of [0, 1]) {
     const curves = fishHeadCurves(a, side);
     g.moveTo(...point([ a.snout * SKELETON.skull_snout, 0 ]));

@@ -18,7 +18,6 @@ import {finVolume, fishFinDual, fishFinShape, fishGlyphPoints} from './fish_orga
 import {clipEars, holdsWithEdges} from './polygon.js';
 export const fish_finsState = {};
 
-// A side fin shows its second lobe from FIN_LOBE_MIN of a second pair on.
 export const FIN_LOBE_MIN = .025;
 export function fishFinShapes(a, index) {
   return index && fishFinDual(a, index) > FIN_LOBE_MIN
@@ -35,7 +34,6 @@ export function fishFinPoint(a, index, t, across, lobe = 0) {
   return p;
 }
 
-// Rear fins grow like the tail fin, at most MAX_HEIGHT of the body width; their tip leans back.
 const REAR_FIN = Object.freeze({
   scale : 1.3,
   height : .20,
@@ -46,7 +44,6 @@ const REAR_FIN = Object.freeze({
   trail_back : .10,
   trail_lift : .60
 });
-// Mirror the familiar side-profile fin silhouette on both flanks of the 2D animal.
 export function fishRearFinShape(a, side) {
   const cache = a.profileFins ??= [];
   if (cache[side])
@@ -76,8 +73,6 @@ export function fishRearFinShape(a, side) {
   ];
 }
 
-// Triangulate a sampled membrane once; concave forks and scallops retain their cut-outs.
-// Fin membranes sample each curve in FIN_MESH_STEPS points.
 const FIN_MESH_STEPS = 3;
 export function fishFinTriangles(shape, steps = FIN_MESH_STEPS) {
   const key = 'triangles' + steps;
@@ -92,8 +87,6 @@ export function fishFinTriangles(shape, steps = FIN_MESH_STEPS) {
   return shape[key] = {points, indices : triangles.slice(0, count), complete};
 }
 
-// Fin points stay MARGIN (at most MARGIN_SHARE of the span) inside an outline of STEPS points
-// per curve.
 const FIN_CONTAIN = Object.freeze({steps : 24, margin : .003, margin_share : .15});
 function fishFinContain(shape, p) {
   if (!shape.outline)
@@ -136,8 +129,6 @@ export let fishTemplateScales;
 
 export function fishBodyRadius(p) { return p[FISH.radius] ?? BODY_UNIT.radius; }
 
-// A template reaches at least MIN_REACH body radii, REACH_MARGIN past its hatch envelope; each
-// asset keeps LAYOUTS layouts.
 const TEMPLATE = Object.freeze({min_reach : 1.4, reach_margin : 1.05, layouts : 8});
 function fishTemplate(p) {
   const asset = p[FISH.forms] || p, layout = [
@@ -187,7 +178,6 @@ export function fishShapeScale(p) { return fishTemplate(p).scale; }
 
 export function fishShapeOrigin(p) { return fishTemplate(p).origin; }
 
-// The hatch envelope is at least MIN body radii.
 const HATCH_ENVELOPE = Object.freeze({min : .1});
 function fishHatchEnvelope(a) {
   return Math.max(HATCH_ENVELOPE.min,
@@ -199,7 +189,6 @@ export function fishRenderRadius(p) {
   return p[FISH.hatched] ? fishBodyRadius(p) * fishShapeScale(p)
                          : (p[FISH.radius] ?? BODY_UNIT.radius);
 }
-// Bounds include room for EGGS egg radii of yolk and SPERM of sperm.
 const BOUNDS = Object.freeze({eggs : 4, sperm : 2});
 export function fishBoundingRadius(p) {
   return p[FISH.hatched] ? fishBodyRadius(p) * fishTemplate(p).reach +
@@ -210,14 +199,11 @@ export function fishBoundingRadius(p) {
 
 export function fishDisplayRadius(p, scale) { return fishRenderRadius(p) * scale; }
 
-// A pure hue as a share of the colour wheel, as RGB.
 const fishHue = share => hueRGB(share * FULL_TURN);
 
-// Pigment patterns: stripes, a wavy line, spots, bars, a saddle or bands.
 export const PATTERN_KIND =
     Object.freeze({stripes : 0, line : 1, spots : 2, bars : 3, saddle : 4, bands : 5});
 const PATTERNS = Object.keys(PATTERN_KIND).length;
-// The pattern follows the pigment cells' form: hashed kind, hue, stripe count and amount.
 const PATTERN_HASH = Object.freeze({
   phase_y : .79,
   phase_z : 1.63,
@@ -266,9 +252,7 @@ export function fishPattern(a) {
   };
 }
 
-// Injured skin pales towards this colour.
 const INJURY_TINT = Object.freeze([ .31, .23, .20 ]);
-// Skin mixes OWN of the fish's colour with PATTERN of its pattern; injury fades and pales it.
 const TINT = Object.freeze(
     {level : .40, level_span : .60, own : .55, pattern : .45, injury_fade : .42, injury : .30});
 export function fishTint(p, a, injury = 1 - Math.max(0, Math.min(1, p[FISH.health] ?? 1))) {
@@ -280,12 +264,7 @@ export function fishTint(p, a, injury = 1 - Math.max(0, Math.min(1, p[FISH.healt
 }
 
 const initializers = {
-  "fishTemplateScales" : () => {
-    // One world-space unit for bodies, organs, injury contours and picking.
-    // The immutable trunk supplies proportions; simulation tissue supplies size. Fins stay
-    // appendages.
-    fishTemplateScales = new WeakMap();
-  }
+  "fishTemplateScales" : () => { fishTemplateScales = new WeakMap(); }
 };
 export function initialize(steps) {
   for (const step of steps)

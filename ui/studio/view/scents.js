@@ -8,13 +8,6 @@ import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
 import {typeChips} from './types.js';
 
-// A nose's scent map: the scent sphere seen from its pole, food (at the pole) in the middle and
-// every scent around it by its longitude (quality 1), as far out as the part of the sphere
-// nearer the pole than it takes of the whole (equal area): most scents lie within 55 degrees of
-// food, and the far pole, where none lies, narrows to the rim. The nose's preference is a ring;
-// around it, its halo holds what it smells at least half as well (its true shape on the sphere),
-// and each scent fills as strongly as it is smelled. Dragging moves the preference (near a scent
-// onto it); a track below sets the width.
 export const SCENT_MAP = Object.freeze({
   size : 240,
   height : 262,
@@ -29,7 +22,6 @@ export const SCENT_MAP = Object.freeze({
   track_y : 248
 });
 const turn = 2 * Math.PI;
-// A point of the sphere (colatitude from the pole and longitude, radians) on the map, and back.
 const mapPoint = (colatitude, longitude) => {
   const r = SCENT_MAP.radius * Math.sin(colatitude / 2);
   return {
@@ -39,8 +31,6 @@ const mapPoint = (colatitude, longitude) => {
 };
 export const scentMapPoint = (q1, q2) => mapPoint(Math.acos(clamp(q2, -1)), Math.PI * (q1 + 1));
 const scentPoint = k => scentMapPoint(scentTuning(k).q1, scentTuning(k).q2);
-// The tuning under a pointer at a fraction (fx, fy) of the map: the scent there when it is
-// within SNAP of one.
 export function scentMapTuning(fx, fy) {
   const M = SCENT_MAP, x = fx * M.size, y = fy * M.height;
   const near = TUNING.scent_latitudes.findIndex(
@@ -53,8 +43,6 @@ export function scentMapTuning(fx, fy) {
   return {q1 : longitude / Math.PI - 1, q2 : Math.cos(colatitude)};
 }
 export const scentMapWidth = fx => trackShare(fx * SCENT_MAP.size, SCENT_MAP.track);
-// The halo: the circle on the sphere `reach` radians around the preference, as a path; where it
-// holds the far pole, the map's rim closes it from outside.
 const POLE = 1e-9;
 function haloPath(q1, q2, reach) {
   const M = SCENT_MAP, rim = 'M' + (M.centre - M.radius) + ' ' + M.centre + ' a' + M.radius + ' ' +
@@ -64,8 +52,6 @@ function haloPath(q1, q2, reach) {
     return rim;
   const h = clamp(q2, -1), r = Math.sqrt(1 - h * h), phi = Math.PI * (q1 + 1);
   const p = [ r * Math.cos(phi), r * Math.sin(phi), h ];
-  // Two directions across the sphere at the preference; at a pole (within POLE of it) any east
-  // will do.
   const east = r > POLE ? [ -Math.sin(phi), Math.cos(phi), 0 ] : [ 0, 1, 0 ];
   const north = [
     p[1] * east[2] - p[2] * east[1], p[2] * east[0] - p[0] * east[2],
@@ -80,8 +66,6 @@ function haloPath(q1, q2, reach) {
   const ring = 'M' + points.join(' L') + 'Z';
   return Math.acos(-h) < reach ? rim + ring : ring;
 }
-// The scent a profile smells best, and its name: that scent's, numbered where two profiles of
-// the organ share it.
 export function profileNames(organ) {
   const best = organTypes(organ).map(type => preferredScent(type.centers[0]));
   return best.map((k, i) => best.indexOf(k) === best.lastIndexOf(k)
@@ -91,8 +75,6 @@ export function profileNames(organ) {
                                     n : best.slice(0, i + 1).filter(b => b === k).length
                                   }));
 }
-// A nose's profiles as chips with their best scent's sign, the chosen one marked; another can be
-// added while there is room, the chosen one removed while there are others.
 function profileChips(organ, chosen) {
   const names = profileNames(organ);
   return typeChips(organ, chosen, (type, i) => {
@@ -104,7 +86,6 @@ function profileChips(organ, chosen) {
     };
   }, {add : t('studio.inspector.addProfile'), remove : t('studio.inspector.removeProfile')});
 }
-// The map of a nose's chosen profile; the organ's other profiles show as fainter rings.
 export function scentMap(organ, center) {
   const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2);
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];

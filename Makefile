@@ -29,7 +29,6 @@ CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
 .PHONY: all objects FORCE
 all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/build-check
-# Compile only: checks the code without linking.
 objects: $(OBJECTS)
 NATIVE_TESTS := $(shell python3 -B tests/suite.py native)
 $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check

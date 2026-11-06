@@ -25,11 +25,6 @@
 #include <unistd.h>
 namespace fishsim {
 namespace {
-// The loop saves every AUTOSAVE_PERIOD; reads commands in blocks of INPUT_BLOCK bytes; runs at
-// most MAX_CREDIT steps per round, MS_PER_SECOND / delay steps per second (TURBO_RATE without a
-// delay) and stops a batch after BATCH_TIME; it averages step time with TICK_SMOOTHING of each new
-// step; it publishes frames every FRAME_TIME (STREAM_FRAME_TIME while streaming or in turbo) and
-// sleeps PAUSED_SLEEP while paused, otherwise RUNNING_SLEEP.
 constexpr auto AUTOSAVE_PERIOD = std::chrono::seconds(30);
 constexpr std::size_t INPUT_BLOCK = 4096;
 constexpr double MAX_CREDIT = 32, MS_PER_SECOND = 1000, TURBO_RATE = 10000, TICK_SMOOTHING = .05;
@@ -102,7 +97,6 @@ int InteractiveSession::run() {
   if (o.resume.empty() && !world.fish.empty())
     selected = world.fish.front().id;
   choose();
-  // Only transport assets are interned; simulation and checkpoint precision stay intact.
   if (o.resume.empty()) {
     snapshot(false);
     autosave();

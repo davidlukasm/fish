@@ -6,10 +6,7 @@ import {cameraState} from './camera.js';
 import {sceneState} from './state.js';
 import {clipObstacles, sedimentGeometry} from './water_view.js';
 import {OBSERVER_LIGHT, SEDIMENT_MASK} from './water_display.js';
-// Sperm clouds: a field of RGBA cells (colour times density, density); textures before and
-// after the frame, the light field and the water mask.
 const RGBA = 4, UNIT = Object.freeze({before : 0, after : 1, light : 2, barriers : 3});
-// Ink opacity stays below MAX_OPACITY.
 const MAX_OPACITY = .999999;
 const spermVertex = `#version 300 es
 precision highp float;
@@ -56,7 +53,6 @@ class SpermRenderer extends TankBatch {
   }
   paint(f, c, blend) {
     const p = f.plankton, nx = p?.columns, ny = p?.rows;
-    // Sperm needs the tank parameters, which come with the statistics.
     if (!nx || !ny || !f.parameters)
       return true;
     const gl = this.gl;
@@ -69,7 +65,6 @@ class SpermRenderer extends TankBatch {
       this.frame = f;
       this.revision = sceneState.frameRevision;
       const current = new Float32Array(nx * ny * RGBA), previous = new Float32Array(nx * ny * RGBA);
-      // A gamete row names its cell by id, counted from one.
       const put = (out, rows) => {
         for (const row of rows || []) {
           const i = (row[GAMETE.id] - 1) * RGBA, density = row[GAMETE.density];

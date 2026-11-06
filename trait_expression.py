@@ -1,18 +1,9 @@
-"""Conditions of the trait catalogue: small expressions over named facts and limits.
-
-An expression reads like Python: comparisons (also chained), and, or, not, x if c else y,
-+ - * / %, None, names,
-attributes of named groups (d.travel, shares.algae, thresholds.flow) and the functions listed in
-FUNCTIONS. Nothing else is accepted, and nothing is executed beyond these operations.
-"""
-
 import ast
 import colorsys
 import operator
 
 
 class Named:
-    """Values that are read by name (group.name) and also act as a sequence (sum, max)."""
 
     def __init__(self, names, values, default=None):
         self._index = {name: i for i, name in enumerate(names)}
@@ -31,7 +22,6 @@ class Named:
 
 
 class Fields(Named):
-    """A record of optional fields: missing fields read as `default`."""
 
     def __init__(self, record, default=0):
         super().__init__(list(record), list(record.values()), default)
@@ -51,12 +41,10 @@ def _at_least(values, limit):
 
 
 def _ratio(x, y):
-    """x per y, or nothing when either is unmeasured or y is not positive."""
     return x / y if x is not None and y is not None and y > 0 else None
 
 
 def _part(x, rest):
-    """x as a share of x and rest, or nothing when x is unmeasured or both are zero."""
     return x / (x + rest) if x is not None and x + rest > 0 else None
 
 
@@ -95,7 +83,6 @@ class Expression:
                 raise ValueError(f"{self.text}: unknown function")
 
     def names(self):
-        """The plain names the expression reads (facts, limits and groups)."""
         calls = {id(n.func) for n in ast.walk(self.tree) if isinstance(n, ast.Call)}
         return {n.id for n in ast.walk(self.tree)
                 if isinstance(n, ast.Name) and id(n) not in calls}

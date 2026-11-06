@@ -5,7 +5,6 @@ namespace fishsim {
 struct CurrentSource {
   double x = 0, y = 0, angle = 0, width = 40, strength = 2, noise = 0;
 };
-// Water moves on a grid of WATER_CELL cells.
 inline constexpr double WATER_CELL = water_grid::cell;
 struct Water {
   int columns = 0, rows = 0;

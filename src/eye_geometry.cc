@@ -12,7 +12,6 @@ namespace A = anatomy_column;
 namespace M = field::body_metric;
 namespace Q = field::plan_point;
 namespace S = body_shape;
-// Absent organs sit at a neutral place and spread; forms are rounded to FORM_PRECISION.
 constexpr Form NEUTRAL_FORM{0,
                             form_layout::absent_place,
                             form_layout::absent_place,
@@ -20,36 +19,22 @@ constexpr Form NEUTRAL_FORM{0,
                             form_layout::absent_spread,
                             form_layout::absent_spread};
 constexpr double FORM_PRECISION = 1000, CONTOUR_LEVELS = contour::levels;
-// Curves are sampled at CURVE_SAMPLES points; widths are found in WIDTH_BISECTIONS halvings.
 constexpr int CURVE_SAMPLES = 9, WIDTH_BISECTIONS = 14;
-// Head: brain size from the head organ (per BRAIN_UNIT, power BRAIN_POWER), skull length and
-// shoulder by brain size.
 constexpr double BRAIN_UNIT = 8, BRAIN_POWER = .43, HEAD_BACK = .18, HEAD_BASE = .24,
                  HEAD_BRAIN = .68, SHOULDER_BASE = .11, SHOULDER_BRAIN = .43;
-// Face: length by jaw, width by jaw, suction and biting, at least FACE_MIN_WIDTH.
 constexpr double FACE_BASE = .14, FACE_JAW = .40, FACE_MIN_WIDTH = .045, FACE_WIDTH_BASE = .055,
                  FACE_WIDTH_JAW = .22, FACE_WIDTH_SUCTION = .020, FACE_WIDTH_BITE = .018;
-// Chest and hind length by cord size and placement; the gut stretches the hind.
 constexpr double CHEST_BASE = .20, CHEST_CORD = .12, CHEST_CORD_PLACE = .65, CHEST_SPREAD = .18,
                  HIND_BASE = .30, HIND_CORD = .20, HIND_CORD_PLACE = 1.25, HIND_SPREAD = .14,
                  HIND_GUT = .28;
-// Trunk width from gonads, defense and the rear fins.
 constexpr double TRUNK_BASE = .15, TRUNK_GONADS = .11, TRUNK_DEFENSE = .06, TRUNK_FINS = .035;
-// Organ size saturates at half for SIZE_HALF.
 constexpr double SIZE_HALF = 3;
-// The tail bridge's control point lies TAIL_CONTROL hind lengths behind the chest.
 constexpr double TAIL_CONTROL = (-.96 + .22) / .65;
-// Burial probes: BURIAL_AXIAL points along the body and two at the chest sides, BURIAL_SIDE
-// of the chest width out.
 constexpr int BURIAL_AXIAL = 5;
 constexpr double BURIAL_SIDE = .7;
-// Eyes lie EYE_FRONT along the face plus EYE_SPAN by their place; their radius grows from
-// EYE_BASE by EYE_GAIN times the weight to EYE_POWER; their width follows spread and depth.
 constexpr double EYE_FRONT = .12, EYE_SPAN = 1.70, EYE_BASE = .035, EYE_GAIN = .048,
                  EYE_POWER = .30, EYE_WIDTH = .8, EYE_WIDTH_SPREAD = 1.1, EYE_WIDTH_DEPTH = .5;
-// A near-sense organ is round, PROXIMITY_SIZE of an eye of the same weight.
 constexpr double PROXIMITY_SIZE = .5;
-// Eye shapes take the plan order after all body plans.
 constexpr int EYE_PLAN_ORDER = plan_order::eye;
 static_assert(plan_order::head == field::body_plan_part::head &&
               plan_order::chest == field::body_plan_part::chest &&
@@ -62,7 +47,6 @@ Form compact(Form f) {
     *v = std::round(*v * FORM_PRECISION) / FORM_PRECISION;
   return f;
 }
-// Phase of a plan variant from the organ's form; shared with the viewer.
 double plan_phase(const Form &f, int order) {
   const auto &w = body_plan::phase_weights;
   return body_plan::variants *
@@ -102,7 +86,6 @@ Form section(const BrainInterface &b, bool rear) {
                                         I::sense_form(field::Damage),
                                         I::sense_form(field::BladderPressure)}))
     parts.push_back({combined(b, i), 1});
-  // Organs reaching across both sections count half in each.
   for (int i :
        {I::sense_form(field::Flow), I::motor_form(field::Defense), I::motor_form(field::Pigment)})
     parts.push_back({combined(b, i), .5});
@@ -165,13 +148,10 @@ double join_width(double chest, double hind) {
   return S::join_chest * chest + (1 - S::join_chest) * hind;
 }
 namespace {
-// The measures of the head that shape its outline.
 struct HeadShape {
   double back, length, face_length, shoulder, face_width, neck_width;
   std::array<double, field::PLAN_POINTS> head, face;
 };
-// The outline of one side of the head: the face from snout to cheek, then the skull from cheek
-// to neck. Eyes sit on it.
 std::array<XYCurve, 2> head_outline(const HeadShape &s) {
   const double front = s.back + s.length, snout = front + s.face_length;
   return {
@@ -194,7 +174,6 @@ HeadShape head_shape(const BrainInterface &b) {
 }
 std::array<double, 2> eye_seat(const BrainInterface &b, int side, double place) {
   const auto outline = head_outline(head_shape(b));
-  // Eyes lie continuously along the face and skull, from snout towards neck.
   const double along = EYE_FRONT + EYE_SPAN * (1 - std::clamp(place, 0., 1.));
   const auto eye = along < 1 ? bezier(outline[0], along) : bezier(outline[1], along - 1);
   const double origin = b.body_geometry[M::center], extent = b.body_geometry[M::extent];
@@ -305,7 +284,6 @@ void prepare_body_geometry(BrainInterface &b) {
       auto p = bezier(q, double(k) / (CURVE_SAMPLES - 1));
       extent = std::max(extent, std::hypot(p[0] - origin, p[1]));
     }
-  // The tail bridge has a quadratic control just behind the tail root.
   double tail = chestBack + TAIL_CONTROL * hindLength,
          bw = S::tail_base + S::tail_fin * size(b.fins[fin::tail].strength);
   XYCurve bridge{{{tailRoot, bw},
@@ -316,7 +294,6 @@ void prepare_body_geometry(BrainInterface &b) {
     auto p = bezier(bridge, double(k) / (CURVE_SAMPLES - 1));
     extent = std::max(extent, std::hypot(p[0] - origin, p[1]));
   }
-  // The bridge also participates in the longitudinal reference origin.
   double bridgeLo = lo;
   for (int k = 0; k < CURVE_SAMPLES; ++k)
     bridgeLo = std::min(bridgeLo, bezier(bridge, double(k) / (CURVE_SAMPLES - 1))[0]);
@@ -345,7 +322,6 @@ void prepare_body_geometry(BrainInterface &b) {
     const double y = axial ? 0 : (k == BURIAL_AXIAL ? -1 : 1) * chestWidth * BURIAL_SIDE;
     b.burial_points[k] = {(x - origin) / extent, y / extent};
   }
-  // The eye sits where the light cells lie on average along the body.
   for (int side = 0; side < 2; ++side)
     b.eye_positions[side] =
         eye_seat(b, side, compact(b.forms[BrainInterface::sense_form(field::Light, side)]).y);
@@ -396,7 +372,6 @@ void prepare_zonal_geometry(field::Substrate &s) {
   const double cw = chest_width(g[M::trunk], g[M::rest_shoulder], s.body_plans[P::chest]),
                hw = hind_width(g[M::trunk], s.body_plans[P::torso]);
   s.body_length = (boundary[0] - boundary[4]) / scale;
-  // Per side, the light cells' and the near-sense cells' weight and place.
   std::array<std::array<double, 2>, 2> weight{};
   std::array<std::array<std::array<double, 2>, 2>, 2> place{};
   for (auto &n : s.neurons) {
@@ -456,8 +431,6 @@ void prepare_zonal_geometry(field::Substrate &s) {
     n.x = float(p.side * p.w * width / scale);
     n.y = float((y - origin) / scale);
     n.z = float((2 * p.v - 1) * width / scale);
-    // Light and near-sense cells measure from the eye's place at the skin: amid the light cells
-    // of a side, amid its near-sense cells where it has none.
     const int kind = n.functions.senses[field::Light] > 0       ? 0
                      : n.functions.senses[field::Proximity] > 0 ? 1
                                                                 : -1;

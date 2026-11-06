@@ -33,8 +33,6 @@ const STORE_COLORS = {
   sperm : '#71818c'
 };
 
-// Energy trend: at most MAX_POINTS samples from the last WINDOW steps; the stock line rises
-// LINE_HEIGHT above LINE_BOTTOM, and the mean reserve bar warns below LOW_RESERVE.
 const TREND = Object.freeze({
   max_points : 240,
   min_points : 2,
@@ -117,8 +115,6 @@ function renderEnergyTrend(f) {
   cv.title = t('energy_view.verlaufSeitOeffnenDer');
 }
 
-// Habitat cross-section in chart pixels: water above the sand, dark on the left and bright on the
-// right; from left to right a shadowed cave, a rock face, grass, sediment and light rays.
 const HABITAT_SCENE = Object.freeze({
   water_top : 4,
   water_bottom : 110,
@@ -135,8 +131,6 @@ const HABITAT_SCENE = Object.freeze({
   rays : 'M422 4L384 102L402 102L428 4M439 4L403 102L422 102L445 4M456 4L422 102L442 102L462 4',
   ray_color : '#e7d78b25'
 });
-// Grass stalks from x, SPACING apart, with tops spread by a hash between TOP and TOP + TOP_RANGE,
-// and LEAVES leaves each; sediment grains scattered over the sand by another hash.
 const HABITAT_GRASS = Object.freeze({
   stalks : 9,
   x : 200,
@@ -148,7 +142,6 @@ const HABITAT_GRASS = Object.freeze({
   width : 1.5,
   width_step : .6,
   width_steps : 3,
-  // Stalk curve: first control point (dx, y), second (dx, dy below the top), tip dx.
   bend : [ 8, 80, -11, 12, 2 ],
   leaves : 3,
   leaf_y : 14,
@@ -169,8 +162,6 @@ const HABITAT_GRAINS = Object.freeze({
   size : [ 1.5, 1 ],
   color : '#ccb379'
 });
-// Small fish in each habitat column, FISH_PER_SHARE for the whole time, every LEFT_EVERY-th facing
-// left; sediment fish lie in the sand, the others swim in the water.
 const HABITAT_FISH = Object.freeze({
   per_share : 14,
   margin : 14,
@@ -185,7 +176,6 @@ const HABITAT_FISH = Object.freeze({
   eye : [ 2.5, -.4, .7 ],
   eye_color : '#112e36'
 });
-// The habitats from left to right, with their colours; names and bars below.
 const HABITAT_ORDER =
     [ HABITAT.shadow, HABITAT.surface, HABITAT.grass, HABITAT.buried, HABITAT.light ];
 const HABITAT_COLORS = indexedBy(HABITAT, {
@@ -301,8 +291,6 @@ function renderHabitat(f) {
   cv.title = labels.map((n, i) => n + ': ' + percent(values[i])).join(' · ');
 }
 
-// Health chart: up to MAX_DOTS fish as dots, PER_ROW in a row, sick ones first; below, one bar per
-// disease route.
 const HEALTH = Object.freeze({
   max_dots : 100,
   x : 10,
@@ -359,9 +347,7 @@ function renderHealth(f) {
   });
 }
 
-// The energy source rows: icon size, then one bar each for stock and uptake.
 const SOURCE_ICON = 24, BUDGET_COLUMNS = [ 'stock', 'uptake' ];
-// The inhabitants: one tile each with its icon, count and name.
 const INHABITANT_ICONS = {
   fish : 'fish',
   eggs : 'eggs',
@@ -506,14 +492,8 @@ export function renderEnergy(f) {
        f.population_size >= f.population_limit ? t('energy_view.alleTierplaetzeBelegt') : '');
 }
 
-// The supply bar itself is the control: drag a border between two colours to shift the shares of
-// artificial food, plankton and bottom animals; the rest feeds the producers (Bewuchs).
 const SUPPLY_SHARES = [ 'food_supply_share', 'plankton_supply_share', 'benthic_supply_share' ];
-// Colours of artificial food, plankton, bottom animals and producers.
 const SUPPLY_COLORS = [ '#e6b568', '#69b7bd', '#bd937e', '#79b35e' ];
-// Shares go out at most every SEND_MS, rounded to 1/RESOLUTION, and only changes above
-// MIN_CHANGE; the server echo matches within ECHO, else the local shares hold for GRACE_MS. A
-// border is grabbed within GRAB pixels; rates show DIGITS decimals.
 const SUPPLY = Object.freeze({
   send_ms : 100,
   grace_ms : 3000,
@@ -523,7 +503,6 @@ const SUPPLY = Object.freeze({
   grab : 12,
   digits : 2
 });
-// Shares between consecutive cumulative borders.
 const differences = c => c.map((v, i) => v - (i ? c[i - 1] : 0));
 
 // While dragging, and after release until the server echoes the new shares (or a grace period
@@ -630,7 +609,6 @@ function renderSupplyShares(f) {
     const best = Math.min(...c.map(v => Math.abs(v - x)));
     if (best > SUPPLY.grab / rect.width)
       return;
-    // Borders on the same spot: the first movement decides which one follows the pointer.
     const ties = [...c.keys() ].filter(k => Math.abs(c[k] - x) <= best + TOLERANCE.precision);
     track.setPointerCapture(e.pointerId);
     track.dragging = {border : ties.length > 1 ? -1 : ties[0], ties, c, x : e.clientX};

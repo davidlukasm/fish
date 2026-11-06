@@ -25,17 +25,12 @@ import {
   TOLERANCE
 } from './schema.js';
 export const organ_tuningState = {};
-// Tuning charts draw at most CURVES curves of CURVE_POINTS points; sensitivity spans DECADES
-// decades.
 const CURVES = 48, CURVE_POINTS = 48, DECADES = 4;
 
-// Senses that answer the stimulus intensity; the others answer a share.
 const INTENSITY_SENSES = Object.freeze([
   SENSE_KIND.light, SENSE_KIND.odor, SENSE_KIND.flow, SENSE_KIND.intake, SENSE_KIND.damage,
   SENSE_KIND.blood
 ]);
-// The tuning graphic: response curves or time constants on the left, the cells' function mix
-// with its RANKED largest parts on the right.
 const TUNING_GRAPHIC = Object.freeze({
   font : '10px system-ui',
   width : 360,
@@ -119,7 +114,6 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                                      nodes.some(n => n[NEURON.index] === e[EFFECTOR.neuron])),
           components = d.components ??= new Map(
               (d.b.sensory_components || []).map(row => [row[SENSORY_COMPONENT.neuron], row]));
-    // Bounded drawing cost: at most CURVES representative curves, all cells in the mean.
     const stride = Math.max(1, Math.ceil(records.length / CURVES));
     for (let j = 0; j < records.length; j += stride) {
       const r = records[j],
@@ -191,8 +185,6 @@ export function drawOrganTuning(canvas, info, d, tissue) {
             TUNING_GRAPHIC.dot, 0, Math.PI * 2);
       g.fill();
     }
-    // Axis ends and middle: a stimulus over DECADES decades, a signed output from −1 to +1,
-    // otherwise a share.
     const [low, middle, high] =
         sense    ? [ 10 ** -DECADES, 10 ** (-DECADES / 2), 1 ].map(v => percent(v, DECADES))
         : signed ? tList('units.signedAxis')

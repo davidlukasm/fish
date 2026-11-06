@@ -1,6 +1,4 @@
 #!/bin/bash
-# Briefkasten: holt Aufträge aus dem Zweig "box" (jobs/NAME.sh), startet jeden neuen Auftrag
-# einmal im Hintergrund und schiebt Logs und Ergebnisse (results/NAME/) zurück.
 # Aufruf per cron jede Minute:  * * * * * $HOME/fish/werkzeug/briefkasten.sh >> $HOME/briefkasten.log 2>&1
 set -u
 CODE="$HOME/fish"

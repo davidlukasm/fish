@@ -24,9 +24,6 @@ from render_transport import SceneChannel
 from viewer_http import FrontServer
 from viewer_commands import PARAMETER_NAME
 
-# The viewer listens on DEFAULT_PORT; seeds have SEED_BITS bits; a parameter value from the
-# command line takes up to VALUE_CHARS characters. The server checks for shutdown every POLL_S,
-# and the statistics process gets STOP_S to finish.
 DEFAULT_PORT, SEED_BITS, VALUE_CHARS, POLL_S, STOP_S = 8765, 32, 24, 0.2, 30
 
 
@@ -124,7 +121,6 @@ def main():
                 ]
             ).returncode
         )
-    # Private directory for the image socket of the engine and the statistics socket.
     directory = Path(tempfile.mkdtemp(prefix="fish-viewer-"))
     scenes = server = worker = None
     try:

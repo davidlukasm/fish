@@ -1,6 +1,5 @@
 import {cssPercent, t, textArea, tList} from './strings.js';
 import {HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
-// Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a' ];
 const BODY_SIGNAL_COLOR = '#b7d3c9';
 export const substanceColor = index => hormoneColors[index] ?? BODY_SIGNAL_COLOR;

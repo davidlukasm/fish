@@ -57,8 +57,6 @@ const flashes = moments => {
 const cell = moments => '<circle class="aid-effect-base" cx="' + P.cx + '" cy="' + P.cy + '" r="' +
                         P.r + '"/><circle class="aid-effect-cell" cx="' + P.cx + '" cy="' + P.cy +
                         '" r="' + P.r + '" fill-opacity=".3">' + flashes(moments) + '</circle>';
-// An input line; one growing to `grows` keeps a faint trace of that width, so the change shows when
-// the loop stands still too.
 function input(y, moments, cls = '', grows = null) {
   const to = edge(P.side, y), path = way(P.side, y, to.x, to.y);
   return (grows === null ? '' : line(P.side, y, to.x, to.y, 'ghost', grows)) +
@@ -72,7 +70,6 @@ const output = (moments, r = P.pulse, width = P.thick) =>
                                       P.play))
                  .join('')
            : '');
-// How often the cell fires, standing still under its output: a tick for each firing.
 const spikes = n => '<path class="aid-effect-spikes" d="' +
                     Array
                         .from({length : n}, (_, k) => 'M' + fixed(P.cx + P.r + P.spike * (k + 1)) +
@@ -218,8 +215,6 @@ function sideBySide(draw, colour, ends, cloud = true) {
          P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
          side(true, P.width) + '</svg>';
 }
-// One cell as the receptor's response R makes it, in a cloud as dense as the substance bound
-// (`share`), PANEL wide and high.
 export function effectPanel(effect, r, colour, share) {
   const draw = SCENES[effect];
   return draw ? (share > 0 ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +

@@ -50,7 +50,6 @@ export const selectionState = {};
 
 function fishRelatives(f, p) { renderIndividualFamily(el('fish-family'), f, p[FISH.id]); }
 
-// The life stages the fish tab shows, and the decay stages of remains.
 const LIFE_STAGE = Object.freeze({egg : 0, fish : 1, corpse : 2}),
       DECAY = Object.freeze({fresh : 0, resting : 1, skeleton : 2});
 function showLifeStage(index) {
@@ -63,8 +62,6 @@ function showLifeStage(index) {
                                                  : t('selection.tabFish'));
 }
 
-// Living fish as cards (portrait, name, species, age, reserve); sorted by symbol buttons.
-// Sort keys of the fish list: value and whether larger values come first.
 const FISH_SORTS = {
   energy : [ p => p[FISH.energy] / Math.max(1, p[FISH.reserve_capacity]), -1 ],
   health : [ p => p[FISH.health], -1 ],
@@ -77,10 +74,6 @@ const FISH_SORTS = {
   name : [ p => (fishName(p[FISH.id]) || '\uffff') + String(p[FISH.id]).padStart(10, '0'), 1 ]
 };
 
-// Portraits: a fish card is CARD_WIDTH by CARD_HEIGHT and shows the fish CARD_SPAN body radii
-// long, repainted at most every CARD_REPAINT_MS; the list refreshes at most every LIST_MS. The
-// selected fish shows SELECTED_SPAN radii long, remains SPAN_REMAINS pixels; without a body a
-// remains blot and an egg with its development ring stand in.
 const PORTRAIT = Object.freeze({
   card_width : 400,
   card_height : 150,
@@ -94,8 +87,6 @@ const PORTRAIT = Object.freeze({
   egg : Object.freeze({color : '#d9bd77', rx : 28, ry : 35}),
   ring : Object.freeze({color : '#91bdad', width : 5, radius : 43})
 });
-// A fish card follows the species cards: name and generation, a large portrait, the species,
-// key figures and the reserve and health bars.
 function fishListCard(id) {
   const card = document.createElement('div'), button = document.createElement('button'),
         head = document.createElement('div'), name = document.createElement('span'),
@@ -161,7 +152,6 @@ function renderFishList(f, force = false) {
     return;
   selectionState.fishListTime = now;
   selectionState.fishCards ??= new Map();
-  // The list shows living fish or the eggs still developing (nutrient eggs never hatch).
   const eggs = selectionState.listStage === 'eggs',
         key = FISH_SORTS[el('fish-sort')?.value] ? el('fish-sort').value : 'energy',
         [ value, direction ] = FISH_SORTS[key],
@@ -169,7 +159,6 @@ function renderFishList(f, force = false) {
             f.fish.filter(p => eggs ? !p[FISH.hatched] && !p[FISH.nutrient_egg] : p[FISH.hatched]);
   el('list-fish').setAttribute('aria-pressed', String(!eggs));
   el('list-eggs').setAttribute('aria-pressed', String(eggs));
-  // Favourites lead the list; the chosen order applies within both parts.
   fish.sort((a, b) => {
     const x = value(a), y = value(b);
     return fishFavorite(b[FISH.id]) - fishFavorite(a[FISH.id]) ||
@@ -187,7 +176,6 @@ function renderFishList(f, force = false) {
     let item = selectionState.fishCards.get(id);
     if (!item)
       selectionState.fishCards.set(id, item = fishListCard(id));
-    // Eggs placed without a mother belong to no species yet.
     const lineage = eggs ? p[FISH.maternal_species] || p[FISH.species] : p[FISH.species],
           species = frameSpecies(f, lineage),
           reserve =
@@ -199,7 +187,6 @@ function renderFishList(f, force = false) {
           {generation : p[FISH.depth] || 0, age : formatNumber(p[FISH.adult_age] || 0)});
     item.species.textContent =
         species?.name || (lineage ? t('selection.speciesNumber', {id : lineage}) : '');
-    // An egg's development shows in its bar; its figures are what it carries.
     const figures =
               eggs ? [
                 [ t('selection.eggFigureEnergy'), formatNumber(p[FISH.energy] || 0, 1) ],
@@ -235,7 +222,6 @@ function renderFishList(f, force = false) {
     if (!alive.has(id))
       selectionState.fishCards.delete(id);
   syncChildren(el('fish-list'), cards);
-  // Portraits are painted once the cards are laid out, and only where they are visible.
   for (const p of fish)
     paintFishCard(selectionState.fishCards.get(p[FISH.id]), p);
 }
@@ -252,7 +238,6 @@ function showRemains(f, c, preview) {
   if (!preview)
     setFollowing(false);
   showRevival(el('remains-revive'), preview ? null : f, id);
-  // Cause, decay stage and nutrient left; the species is the link below.
   const stage = c[CORPSE.energy] <= 0 ? DECAY.skeleton
                 : c[CORPSE.resting]   ? DECAY.resting
                                       : DECAY.fresh,
@@ -304,7 +289,6 @@ function showRemains(f, c, preview) {
   }
 }
 
-// The fish's name or number, or which egg it still is.
 function livingTitle(p) {
   return p[FISH.hatched]
              ? fishTitle(p[FISH.id])
@@ -422,7 +406,6 @@ export function showSelection(f) {
   text('fish-info', p[FISH.hatched] ? t('selection.fishInfo',
                                         {origin : fishOrigin(p), generation : p[FISH.generation]})
                                     : t('selection.eggInfo', {state, origin : fishOrigin(p)}));
-  // Laid eggs and hatched young are the first things a breeder asks about.
   el('fish-brood').hidden = !p[FISH.hatched];
   text('fish-eggs-laid', formatNumber(p[FISH.eggs_laid] || 0));
   text('fish-young', formatNumber(p[FISH.offspring] || 0));
@@ -446,7 +429,6 @@ export function showSelection(f) {
   el('fish-release-sperm').onclick = () => command('release-sperm', {value : p[FISH.id]});
   showShield(el('fish-immortal'), f, preview || dead ? null : p);
   showRevival(el('fish-revive'), dead && !preview ? f : null, p[FISH.id]);
-  // A kept favourite shows a golden star; the set lives in this browser.
   const favorite = fishFavorite(p[FISH.id]);
   el('favorite-fish').setAttribute('aria-pressed', String(favorite));
   el('favorite-fish').title =
@@ -525,7 +507,6 @@ export function animateSelectedFish() {
   g.restore();
 }
 
-// Which list the fish tab shows without a chosen fish: living fish or developing eggs.
 export function setFishListStage(stage) {
   selectionState.listStage = stage;
   if (sceneState.frame)

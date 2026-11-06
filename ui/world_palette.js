@@ -7,8 +7,6 @@ import {toolNames, worldState} from './world.js';
 import {currentValues} from './world_sources.js';
 export const world_paletteState = {};
 
-// Animal icons per family, in pixels: colours, shell tilt and size, worm width and length,
-// crab body size.
 const MUSSEL_ICON = Object.freeze({
   colors : [ '#80734c', '#344b58', '#b29b70', '#777660', '#8a7a4c', '#a05a40', '#b8a77a' ],
   tilts : [ .24, .32, .40, .48, .10, .30, .30 ],
@@ -25,7 +23,6 @@ const CRAB_ICON = Object.freeze({
   widths : [ 12, 9, 13, 10 ],
   heights : [ 6, 10, 7, 9 ]
 });
-// Mussel icon geometry in pixels: foot, two valves, razor bands, fan ribs, zebra stripes or spots.
 const MUSSEL_SHAPE = Object.freeze({
   foot_y : 8,
   foot_rx : 3,
@@ -81,7 +78,6 @@ function drawMusselIcon(g, family) {
     g.rotate(side * MUSSEL_ICON.tilts[family]);
     g.beginPath();
     if (family === MUSSEL_FAMILY.pen) {
-      // Fächerförmige Schale: schmal am Schloss, breit gerippt am Rand.
       g.moveTo(side * 1, 0);
       g.lineTo(side * MUSSEL_SHAPE.fan_x, -MUSSEL_SHAPE.fan_y);
       g.quadraticCurveTo(side * MUSSEL_SHAPE.fan_rim_x, -MUSSEL_SHAPE.fan_rim_y,
@@ -141,7 +137,6 @@ function drawMusselIcon(g, family) {
   }
 }
 
-// Worm icon geometry in pixels: a curved body with tentacles, bristles or a head.
 const WORM_SHAPE = Object.freeze({
   bend_x : 5,
   bend_at : .3,
@@ -203,7 +198,6 @@ function drawWormIcon(g, family) {
   }
 }
 
-// Crab icon geometry in pixels: legs, body with bumps, arms and claws.
 const CRAB_SHAPE = Object.freeze({
   legs : 4,
   leg_root : 7,
@@ -265,7 +259,6 @@ function drawCrabIcon(g, family) {
   }
 }
 
-// The animal tools by their small animal kind and icon.
 export const ANIMAL_TOOLS = Object.freeze({
   mussels : {
     kind : INVERTEBRATE_KIND.mussel,
@@ -276,7 +269,6 @@ export const ANIMAL_TOOLS = Object.freeze({
       {kind : INVERTEBRATE_KIND.worm, draw : drawWormIcon, names : 'world_palette.wormFamilies'},
   crabs : {kind : INVERTEBRATE_KIND.crab, draw : drawCrabIcon, names : 'world_palette.crabFamilies'}
 });
-// Animal icons are drawn with LINE_WIDTH pixel lines.
 const ANIMAL_ICON = Object.freeze({line_width : 1.5});
 export function drawAnimalChoice(g, tool, family, x, y, scale = 1) {
   g.save();
@@ -288,7 +280,6 @@ export function drawAnimalChoice(g, tool, family, x, y, scale = 1) {
   animal.draw(g, Math.min(family, familyCount(animal.kind) - 1));
   g.restore();
 }
-// Animal family buttons in pixels.
 const ANIMAL_BUTTON = Object.freeze({width : 70, height : 58, x : 35, y : 47});
 export function drawAnimalChoices() {
   const box = el('animal-palette'), selectedTool = worldState.tool;
@@ -321,15 +312,11 @@ export function drawAnimalChoices() {
   });
 }
 
-// The plant tool places a mix (MIXED_PLANTS, shown by MIX_TYPES) or one plant type, each with
-// its icon colour.
 export const MIXED_PLANTS = -1;
 const MIX_TYPES =
     Object.freeze([ PLANT_TYPE.fine_grass, PLANT_TYPE.lance_rosette, PLANT_TYPE.paired_stem ]);
 const PLANT_ICON_COLORS =
     Object.freeze([ '#a9cf71', '#4caa9e', '#b0c98e', '#b99483', '#8fbbad', '#72a4ac' ]);
-// Plant icon geometry in pixels: grass blades, rosette leaves fanned around the root, or a stem
-// with paired or alternate leaves.
 const PLANT_ICON = Object.freeze({
   line_width : 1.7,
   mix_spacing : 17,
@@ -484,7 +471,6 @@ export function drawPlantChoice(g, type, x, y, scale = 1) {
 
 export let plantNames;
 
-// The tool preview in pixels: a floor line and a picture of what the tool places or removes.
 const TOOL_PREVIEW = Object.freeze({
   font : '11px system-ui',
   width : 300,
@@ -696,7 +682,6 @@ export function drawToolPalettePreview() {
   }
 }
 
-// Plant buttons in pixels.
 const PLANT_BUTTON = Object.freeze({width : 80, height : 64, x : 40, y : 59, scale : .95});
 const initializers = {
   "plantNames" : () => {

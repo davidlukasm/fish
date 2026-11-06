@@ -17,11 +17,6 @@ import {selectFish} from './fish_choice.js';
 import {draw, tankState} from './tank.js';
 import {FISH} from './schema.js';
 export const cameraState = {};
-// Zoom levels: from DETAIL on, beds and animals sort by depth one by one; from CLOSE on, food
-// and small things are drawn as individual shapes. The zoom runs up to MAX; zooming in onto a fish
-// selects it once it shows SELECT pixels of radius, zooming out below RELEASE stops following;
-// following zooms to at least FOLLOW. The wheel zooms by WHEEL per unit and pulls towards the fish
-// by PULL; fish are hit within HIT_SLOP pixels.
 export const ZOOM = Object.freeze({
   detail : .7,
   close : 1.5,
@@ -33,9 +28,7 @@ export const ZOOM = Object.freeze({
   pull : .004,
   hit_slop : 6
 });
-// Before the first layout the view counts as SCREEN.width by SCREEN.height pixels.
 export const SCREEN = Object.freeze({width : 1400, height : 900});
-// A press turns into a drag once the pointer moves more than DRAG pixels.
 export const POINTER = Object.freeze({drag : 5});
 
 export function resetCamera() {
@@ -51,8 +44,6 @@ export function camera(f = sceneState.frame) {
   const scale =
       Math.min(cameraState.viewportWidth / f.width, cameraState.viewportHeight / f.height) *
       cameraState.zoom;
-  // While the whole water column fits on screen it stays centred; once it is taller, the surface
-  // or the floor may come all the way to the middle of the screen.
   cameraState.cameraY = cameraState.viewportHeight / scale >= f.height
                             ? f.height / 2
                             : Math.max(0, Math.min(f.height, cameraState.cameraY ?? f.height / 2));
@@ -83,7 +74,6 @@ export function worldToScreen(p, c = camera()) {
   return {x : x * c.scale + c.ox, y : p.y * c.scale + c.oy};
 }
 
-// The world repeats sideways: the tile under the view centre and its two neighbours.
 export function horizontalShifts(f, c) {
   const tile = Math.floor((cameraState.viewportWidth / 2 - c.ox) / c.scale / f.width);
   return [ tile - 1, tile, tile + 1 ].map(i => i * f.width);
@@ -102,11 +92,6 @@ export function setFollowing(value, fromZoom = false) {
   el('follow').title = value ? t('camera.folgenBeenden') : t('camera.folgen');
 }
 
-// Dynamic resolution: slow frames lower the canvas pixel density step by step (down to one
-// device-independent pixel), fluent frames raise it back. FISH_FIXED_RESOLUTION disables it.
-// The pixel ratio stays at most MAX_RATIO; frame times are smoothed by SMOOTHING (from FRAME_MS,
-// each at most MAX_DT); after HOLD_MS a mean above SLOW_MS lowers the ratio by STEP, below FAST_MS
-// raises it.
 export const RESOLUTION = Object.freeze({
   max_ratio : 2,
   frame_ms : 16,
@@ -169,8 +154,6 @@ export function resizeAquarium() {
     draw(sceneState.frame);
 }
 
-// Zooming keeps aiming at one fish while the pointer stays within REACH pixels, for HOLD_MS;
-// fish are picked within MIN_PICK to MAX_PICK pixels (PICK_SHARE of the view).
 const INTENT = Object.freeze({
   reach : 70,
   hold_ms : 450,
@@ -211,7 +194,6 @@ export function nearbyZoomFish(point, scale, event, now = displayNow()) {
           hit = fishBodyContains(p, point.x, point.y, ZOOM.hit_slop / scale, scale);
     if (!hit && distance > reach)
       continue;
-    // Hit fish come first, the nearest among them; the selected fish wins near ties.
     const candidate = (hit ? INTENT.hit_rank + distance * INTENT.hit_distance : distance) -
                       (raw[FISH.id] === sceneState.frame.selected ? INTENT.selected_bonus : 0);
     if (candidate < score) {
@@ -226,15 +208,12 @@ export function nearbyZoomFish(point, scale, event, now = displayNow()) {
   return best;
 }
 
-// Screen radius of the fish body when the view shows `share` times its sight range around it.
 const SIGHT_SHARE = 1.75;
 export function fishSightPixels(share = SIGHT_SHARE) {
   return p => Math.min(cameraState.viewportWidth, cameraState.viewportHeight) / 2 *
               fishBodyRadius(p) / (share * sceneState.frame.parameters.vision_range);
 }
 
-// Centre, follow and zoom so the fish body appears with the given radius in screen pixels
-// (or the radius a function of the fish returns).
 export async function zoomToFish(id, pixels) {
   if (!frameFish(sceneState.frame, id))
     return;
@@ -255,7 +234,6 @@ export async function zoomToFish(id, pixels) {
   draw(sceneState.frame);
 }
 
-// A specimen picked from a list comes into view at least this large, never farther away than now.
 const SPECIMEN_PIXELS = 55;
 export function zoomToSpecimen(id) {
   return zoomToFish(id, p => Math.max(SPECIMEN_PIXELS, fishBodyRadius(p) * camera().scale));
@@ -286,7 +264,6 @@ const initializers = {
       if (!sceneState.frame)
         return;
       e.preventDefault();
-      // Detail rebuilds of the inspection drawing wait until the wheel rests.
       cameraState.wheelAt = performance.now();
       tankState.contextMenu = null;
       const before = point(e), oldScale = camera().scale,

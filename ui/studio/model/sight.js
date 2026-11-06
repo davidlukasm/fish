@@ -1,9 +1,5 @@
 import {sideIndex, sideOf} from './layout.js';
 
-// The test light in front of the eyes: a food-sized disc in a fully saturated light of one hue,
-// at a bearing (degrees, right positive) and a distance (world units) from where one side looks
-// from. It starts in the middle of the field it is brought to, REACH body radii away and SIZE
-// body radii across.
 const SIGHT = Object.freeze({reach : .5, size : .08, hue : 20});
 export function defaultSight(organ, capabilities, anatomy) {
   const radius = anatomy?.bodyRadius;
@@ -18,7 +14,6 @@ export function defaultSight(organ, capabilities, anatomy) {
     hue : SIGHT.hue
   };
 }
-// The scene the design operation senses: the eye side as the engine counts it (0 left).
 export const sightScene = probe => probe ? {
   side : sideIndex(probe.side),
   bearing : probe.bearing,

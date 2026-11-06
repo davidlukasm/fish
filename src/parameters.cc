@@ -5,12 +5,8 @@
 #include <type_traits>
 #include <limits>
 namespace fishsim {
-// Adjustable evolution and food parameters (interactive "parameter", --param, current checkpoint).
 namespace {
-// Performance is measured over PERFORMANCE_CYCLES of the longest burst cycle at its latest, at
-// least PERFORMANCE_MIN_WINDOW steps, or PERFORMANCE_WINDOW steps without bursts.
 constexpr double PERFORMANCE_CYCLES = 3, PERFORMANCE_MIN_WINDOW = 1000, PERFORMANCE_WINDOW = 6000;
-// A food-web parameter steps by the step of the first scale its initial value reaches.
 struct StepScale {
   double from, step;
 };

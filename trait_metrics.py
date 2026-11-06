@@ -1,6 +1,3 @@
-"""Trait vocabulary for measured ranges (the bands of traits.json). Missing measurements never
-mean zero."""
-
 import math
 from trait_context import CATALOGUE, SCALES
 from trait_expression import Expression
@@ -10,7 +7,6 @@ PRIORITY = CATALOGUE["bandPriority"]
 
 
 class Band:
-    """A measurement read from the context and named per interval between its cuts."""
 
     def __init__(self, entry):
         self.key = entry["key"]

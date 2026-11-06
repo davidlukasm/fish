@@ -8,7 +8,6 @@
 #include <stdexcept>
 namespace fishsim {
 inline void validate_command_arguments(const std::string &op, std::istringstream &source) {
-  // Required prefixes; command handlers validate ranges and variable-length tails.
   static const std::map<std::string, std::string> signatures{{"neural-cost", "n"},
                                                              {"parameter", "sn"},
                                                              {"burst", "s"},

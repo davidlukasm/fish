@@ -71,7 +71,6 @@ def outputs():
             f"    {key.upper()} = {tuple(value) if isinstance(value, list) else value!r}"
             for key, value in values.items()
         )
-    # Named subsets of a column group, as column indices.
     for group, sets in schema["column_sets"].items():
         names = groups[group]
         title = "".join(part.capitalize() for part in group.split("_")) + "Set"
@@ -90,7 +89,6 @@ def outputs():
             python.append(f"    {key.upper()} = {tuple(indices)!r}")
         cpp.append("}")
         js.append("});")
-    # The organ port each motor kind works through, in motor kind order.
     ports = schema["motor_ports"]
     assert len(ports) == len(schema["values"]["motor_kind"])
     port_values = [schema["values"]["organ_port"][name] for name in ports]
@@ -109,11 +107,9 @@ def outputs():
     python.append("\nclass BehaviorScale:")
     python.extend(f"    {key.upper()} = {value}" for key, value in scales.items())
     js += [
-        "// Names of a column group, in column order.",
         "export function columnNames(columns) {",
         "  return Object.keys(columns).filter(name => name !== 'count');",
         "}",
-        "// An array indexed by a column or value group, from a table keyed by the group's names.",
         "export function indexedBy(group, table) {",
         "  const out = [];",
         "  for (const [name, index] of Object.entries(group))",
@@ -133,7 +129,6 @@ def outputs():
         f"inline constexpr std::size_t count = {len(groups['cppn_output'])};",
         "}}",
     ]
-    # Sense and motor kinds of the body field, as the core's enums.
     field = ["#pragma once", "#include <cstddef>", "namespace field {"]
     for group, title, count in (
         ("sense_kind", "Sense", "SENSE_COUNT"),
@@ -147,10 +142,6 @@ def outputs():
             + " };"
         )
         field.append(f"constexpr int {count} = {len(kinds)};")
-    # The points of a body plan: length and width scales for every part; the head then sets its
-    # front handle and the lift of its front and back handles; chest and torso set their peak and
-    # the reach of their front and back handles; the face sets its handle width, handle reach and
-    # snout width; an eye sets its width, size and pupil.
     field.append("namespace plan_point {")
     field.extend(
         f"constexpr std::size_t {name} = {value};"
@@ -163,7 +154,6 @@ def outputs():
     field.append(f"constexpr double TIME_CONSTANT_PACE_MIN = {span['pace_min_steps']};")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")
-    # The hand-drawn plan bridge shares one field order between C++ and Python.
     atelier = schema["atelier_plan"]
     group_fields, receptor_fields = atelier["group"], atelier["receptor"]
     for names in (group_fields, receptor_fields):
@@ -206,7 +196,6 @@ def outputs():
     }
     result["werkzeug/atelier_plan_schema.hh"] = "\n".join(plan_header) + "\n"
     result["protocol_schema.py"] += "\nSCENE_HEADER = " + repr(schema["scene_header"]) + "\n"
-    # A scene bundle: its magic, then the size of each part, then the parts.
     bundle = schema["scene_bundle"]
     bundle = {**bundle, "header_bytes": len(bundle["magic"]) + bundle["size_bytes"] * len(bundle["parts"])}
     result["protocol_schema.py"] += "\nSCENE_BUNDLE = " + repr(bundle) + "\n"
@@ -224,7 +213,6 @@ def outputs():
         "f32": 4,
     }
     header = schema["scene_header"]
-    # Each header field reaches to the next one; the last to the end of the header.
     offsets = sorted(header["offsets"].items(), key=lambda item: item[1])
     widths = {
         name: (offsets[i + 1][1] if i + 1 < len(offsets) else header["bytes"]) - offset

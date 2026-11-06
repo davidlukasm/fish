@@ -16,28 +16,14 @@ import {
 } from '../../tuning.js';
 import {idSafe, rounded} from './markup.js';
 
-// Light colours as the hue circle shows them: hsl at their hue.
 const SPECTRUM_COLOUR = Object.freeze({saturation : 85, lightness : 55});
-// A colour type's colour; white for one that answers every colour alike, as the Aquarium shows it.
 export const profileColor = p =>
     typeColour(tuningHue(p.q1), hueAffinities(tuningHue(p.q1), p.qwidth));
-// A colour type's name, as the Aquarium's eye view marks it.
 export const profileName = p => tList('organ_graphics.hues')[typeNameIndex(
     tuningHue(p.q1), hueAffinities(tuningHue(p.q1), p.qwidth))];
-// The test light's colour on the scene, as on the hue circle of the colour view.
 export const lightColor = hue =>
     `hsl(${Number(hue.toFixed(1))} ${SPECTRUM_COLOUR.saturation}% ${SPECTRUM_COLOUR.lightness}%)`;
 
-// One element for every colour preference (light cells, pigment cells), drawn over the hue
-// circle along its bottom, with an axis on the left: excitation above the middle line,
-// inhibition below it.
-// - the tuning, a Gaussian around the centre hue as the engine derives the cell's colour channels
-//   from it; a square handle on its peak moves the centre, a round one a sigma away the width;
-// - for light cells the engine's balance of a full light of every hue: above the line the colours
-//   that excite the cell, below it those that inhibit it (the opponent colour). A round handle at
-//   the hue opposite the centre pulls the inhibition down from the line;
-// - the test light's hue as a diamond on the hue circle, to be moved along it.
-// Only the handles move anything.
 const SPECTRUM = Object.freeze({
   width : 360,
   left : 30,
@@ -58,12 +44,9 @@ const STRIP = ZERO + SPECTRUM.inhibit + SPECTRUM.gap;
 const HEIGHT = STRIP + SPECTRUM.strip;
 const hueX = hue =>
     SPECTRUM.left + ((hue % HUE_CIRCLE + HUE_CIRCLE) % HUE_CIRCLE) * PLOT / HUE_CIRCLE;
-// A level relative to the peak excitation: 1 at the top, 0 on the line, negative below it.
 const levelY = level =>
     ZERO - SPECTRUM.excite * Math.max(-SPECTRUM.inhibit / SPECTRUM.excite, level);
 
-// The engine's balance at the cell's opponency (the tuning's q2), relative to its peak
-// excitation; null without engine curves.
 function balance(tuning, light) {
   if (!light?.excitation?.length)
     return null;
@@ -73,14 +56,11 @@ function balance(tuning, light) {
   const opponency = unitOfPlan(tuning.q2);
   return light.excitation.map((e, k) => (e - opponency * light.inhibition[k]) / peak);
 }
-// Where a hue lies across the element, as a fraction of its width.
 export const hueFraction = hue => hueX(hue) / SPECTRUM.width;
 const sampleIndex = (values, hue) =>
     Math.round((hueX(hue) - SPECTRUM.left) / PLOT * values.length) % values.length;
 const opposite = tuning => tuningHue(tuning.q1) + HUE_CIRCLE / 2;
 
-// A pointer at (fx, fy), fractions of the element, as a change: of the tuning (centre, width, the
-// opponency through q2), or of the test light's hue. Null when it changes nothing.
 export function spectrumPatch(tuning, handle, fx, fy, light = null) {
   const hue = clamp((fx * SPECTRUM.width - SPECTRUM.left) / PLOT) * HUE_CIRCLE;
   if (handle === 'width')
@@ -101,15 +81,12 @@ export function spectrumPatch(tuning, handle, fx, fy, light = null) {
   return {q1 : hueQuality(hue)};
 }
 
-// Values sampled evenly around the hue circle as a line, closed back to the first hue.
 const line = values => [...values, values[0]]
                            .map((v, k) => rounded(SPECTRUM.left + PLOT * k / values.length) + ' ' +
                                           rounded(levelY(v)))
                            .join(' L');
 const area = values => `M${SPECTRUM.left} ${ZERO} L${line(values)} L${SPECTRUM.width} ${ZERO} Z`;
 
-// tuning: {q1, qwidth, q2}; target: the data attributes naming what the element tunes; light:
-// the engine's curves of a light cell; testHue: the test light's hue.
 export function spectrumElement(tuning, target, label, light = null, testHue = null, axisWords = {
   excite : '',
   inhibit : ''
@@ -128,7 +105,6 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
                               SPECTRUM_COLOUR.lightness}%)"/>`)
                     .join('');
   const values = balance(tuning, light);
-  // The axis: excitation up, inhibition down, as words beside the plot.
   const word = (text, from, to) => `<text class="aid-spectrum-axis" transform="translate(${
       S.axis} ${rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${text}</text>`;
   let html =
@@ -168,7 +144,6 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
              rounded(levelY(tuningAffinity(sigma, tuning.qwidth)))}" r="${S.handle}"/></svg>`;
 }
 
-// The centre hue and width, and for light cells the opponency, as the inspector writes them.
 export const spectrumValues =
     (tuning, opponent = false) => [t('units.degrees', {n : formatNumber(tuningHue(tuning.q1))}),
                                    percent(tuning.qwidth),

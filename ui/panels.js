@@ -9,9 +9,6 @@ export let screenWidth;
 
 export let detailWidth;
 
-// The cockpit is PANEL.width pixels wide unless dragged, at least PANEL.min_width, and leaves the
-// tank PANEL.tank_room; arrow keys move the divider by PANEL.key_step, End sets the detail width
-// of at most PANEL.detail_width.
 const PANEL = Object.freeze(
     {width : 420, min_width : 285, tank_room : 280, key_step : 40, detail_width : 480});
 const panelLimit = () => Math.max(PANEL.min_width, screenWidth() - PANEL.tank_room);
@@ -37,7 +34,6 @@ export function applyPanelWidth(value) {
     redrawFamilies();
 }
 
-// One width for all cockpit tabs; switching tabs never changes it.
 function savePanelWidth() {
   panelsState.panelWidths.cockpit = panelWidth();
   try {

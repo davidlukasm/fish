@@ -292,8 +292,6 @@ export function hormoneRoles(state) {
   return roles;
 }
 
-// Hormones travel through the blood, not along wires: a leg from each gland to each cell its
-// substance binds on; only an effect on firing pushes the cell, so the signal can run on there.
 export function hormoneLegs(state) {
   const {document : doc, sites, capabilities} = state;
   if (!capabilities)
@@ -334,7 +332,6 @@ export function hormoneLegs(state) {
                      '</g>'
         });
       }
-  // Legs from one gland share one cloud, drawn by the longest.
   const reach = leg =>
       Math.hypot(leg.points[1].x - leg.points[0].x, leg.points[1].y - leg.points[0].y);
   const farthest = new Map();

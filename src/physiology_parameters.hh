@@ -3,9 +3,7 @@
 #include "simulation_types.hh"
 #include "food_web_parameters.hh"
 namespace fishsim {
-// Organ mass of a standard body; tissue capacity and growth refer to it.
 inline constexpr double DEFAULT_ORGAN_MASS_REF = 1.56;
-// The neural cost factor stays within NEURAL_COST_MIN and NEURAL_COST_MAX.
 inline constexpr double NEURAL_COST_MIN = .01, NEURAL_COST_MAX = 100;
 struct PhysiologyParameters {
   double embryo_fold = 0.55;
@@ -25,34 +23,15 @@ struct PhysiologyParameters {
   double max_bite_force = default_max_bite_force;
   double gut_time = 400, fill_plant = 2, fill_sediment = 3;
   static constexpr double digestion_cost = .12;
-  // Biosynthesis: each unit of new tissue costs 1 + growth_cost from the digested surplus.
   static constexpr double growth_cost = .3;
-  // Basal cost per step: basal_rate * basal_metabolism() * (basal_fixed + (1 - basal_fixed) *
-  // tissue / BODY_TISSUE); the fixed share does not shrink with the body.
   static constexpr double basal_rate = .06, basal_fixed = .35;
-  // Growth only above growth_reserve of the reserve capacity, at most growth_rate *
-  // sqrt(tissue / BODY_TISSUE) per step.
   static constexpr double growth_reserve = .10, growth_rate = .16;
-  // Healing above heal_reserve of the reserve capacity: heal_rate health for heal_cost energy.
-  // A starving fish does not repair wounds, disease and ageing damage, so it dies earlier. (A
-  // higher limit fails: eggs take everything above the spawning reserve, about 40 %.)
   static constexpr double heal_reserve = .15, heal_rate = .001, heal_cost = .03;
-  // Starvation breaks tissue down to tissue_floor_share of the peak; each unit yields
-  // catabolism_yield energy.
   static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
-  // Utilisation: artificial and sediment food fixed_utilisation; animal food
-  // 1 - gut_linear * L - gut_square * L^2 for gut length L, plant food the same with 1 - L.
-  // Gut volume and transit scale with (1 + L) / (1 + TRAIT_MIDDLE).
   static constexpr double fixed_utilisation = .8, gut_linear = .5, gut_square = .4;
-  // Nutrient signal: share of swallowed usable energy, kept per step.
   static constexpr double nutrient_share = .2, nutrient_keep = .8;
-  // Spines that block an impact cost spine_block_cost * BODY_TISSUE per blocked damage.
   static constexpr double spine_block_cost = .5;
-  // Senescence starts at senescence_start() * (1 +- senescence_spread / 2), fixed per individual.
   static constexpr double senescence_spread = .4;
-  // The pace of life follows the lifespan of a well-fed fish (steps after hatching): ageing starts
-  // after senescence_share of it and runs so fast that a fish repairing heal_rate per step dies at
-  // the lifespan; a full adult reserve carries the basal cost alone for fasting_share of it.
   static constexpr double senescence_share = .37, fasting_share = 1.5;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = .5, pigment_rest = .2;
@@ -76,7 +55,6 @@ struct PhysiologyParameters {
   double bite_wound;
   double wound_weakness;
   double size_physics;
-  // size_physics is a switch: bodies move by their size when it is on.
   bool scaled_by_size() const { return size_physics >= .5; }
   double sperm_capacity;
   double sperm_mixing;

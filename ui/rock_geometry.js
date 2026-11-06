@@ -1,7 +1,4 @@
-// Placement geometry only. The simulation receives this exact polygon.
 import {TOLERANCE} from './schema.js';
-// A new rock: the hull of POINTS points around a circle, each up to JITTER of a step off its
-// place and between MIN_RADIUS and 1 out; flattened to MIN_HEIGHT to 1 and cut at TOP.
 const ROCK =
     Object.freeze({points : 10, jitter : .15, min_radius : .72, min_height : .65, top : .55});
 export function newRockShape(random = Math.random) {
@@ -27,7 +24,6 @@ export function newRockShape(random = Math.random) {
   return [...half(points), ...half([...points ].reverse()) ];
 }
 
-// Vertical translations for which a convex rock intersects a solid edge.
 function edgeInterval(rock, a, b) {
   if (Math.max(a.x, b.x) <= Math.min(...rock.map(p => p.x)) + TOLERANCE.negligible ||
       Math.min(a.x, b.x) >= Math.max(...rock.map(p => p.x)) - TOLERANCE.negligible)
@@ -67,7 +63,6 @@ export function snapRock(rock, frame) {
                 interval = edgeInterval(rock, a, b);
           if (interval)
             intervals.push(interval);
-          // Covers placements wholly inside an obstacle, with no edge intersection.
           if ((a.x > vertex.x) !== (b.x > vertex.x))
             crossings.push(a.y + (b.y - a.y) * (vertex.x - a.x) / (b.x - a.x) - vertex.y);
         }

@@ -78,8 +78,7 @@ inline F8 gather8(const float *base, const I8 &index) {
   return v;
 #endif
 }
-// tanh8: a rational function (odd 13th / even 6th degree, the approximation Eigen uses),
-// |error| < 4e-7, about 14 times faster than std::tanh.
+// The approximation Eigen uses.
 inline __attribute__((always_inline)) F8 tanh8(const F8 &a) {
   constexpr float TANH_LIMIT = 7.99881172180175781f;
   constexpr float NUMERATOR[] = {

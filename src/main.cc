@@ -17,8 +17,6 @@
 #include <stdexcept>
 using namespace fishsim;
 namespace {
-// Metadata goes to a descriptor from FIRST_FREE_DESCRIPTOR (after the standard streams) to
-// MAX_DESCRIPTOR; a previewed fish is PREVIEW_AGE steps old.
 constexpr int FIRST_FREE_DESCRIPTOR = 3, MAX_DESCRIPTOR = 1048576;
 constexpr std::uint64_t PREVIEW_AGE = 100;
 void stop(int) {

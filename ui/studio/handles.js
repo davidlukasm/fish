@@ -50,11 +50,6 @@ import {
 import {learnModePatch, learnRatePatch, learnResponseOf, learnTracePatch} from './view/learning.js';
 import {cellPatch, label} from './view/kit.js';
 
-// The handles on the panels' graphics and the side panels' grips: what a press holds, how the
-// held handle follows the pointer and what its let-go finishes.
-
-// The library and the inspector beside the scene are as wide as the viewer pulls them, within
-// these bounds, and stay so in this browser.
 const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
 const PANEL_STORE = 'aid.atelier.panels';
 export function storedPanels() {
@@ -67,9 +62,6 @@ export function storedPanels() {
     return {};
   }
 }
-// Handles the pointer holds, by what they move: follow names the method that follows the pointer,
-// done what follows the let-go. A held handle's changes end their history batch with it; the
-// click its let-go makes on the scene is no choice, unless the handle keeps it.
 export const HANDLES = Object.freeze({
   panel : {follow : 'panelPointer', done : 'keepPanels', keepsClick : true},
   receptor : {follow : 'receptorPointer'},
@@ -84,13 +76,8 @@ export const HANDLES = Object.freeze({
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'refreshInspector', keepsClick : true}
 });
-// Where the pointer lies on a held graphic, as fractions of its width (fx) and height (fy).
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
-// Pads that tune what they show, by their kind (see pointerDown): patch turns the pointer
-// (fractions of the pad) into a change of the center or the wire it tunes, marks moves the pad's
-// marks to the changed item, or redraw draws the pad anew; handle turns the pointer on one of its
-// handles into a change. A change below PAD_STILL is none.
 const PADS = Object.freeze({
   wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
   output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
@@ -118,17 +105,10 @@ const PADS = Object.freeze({
     handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))
   }
 });
-// The pads by the data attribute that marks them; a pad that is only handles (no patch of its
-// own, nothing to follow) is held by its handles alone.
 const PAD_SELECTOR = Object.values(PADS).map(pad => '[' + dataAttribute(pad.key) + ']').join(',');
 const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
-// The graphics in the panels and on the fish a press holds by a handle, in the order they are
-// tried: the graphic, the handle the press must lie in (any press on a graphic that CLAIMS its
-// presses is its own, handle or not), which kind of handle it holds and what the drag starts
-// with; a start that gives nothing holds nothing. The drag keeps the graphic's place on screen
-// (rect) unless it follows the scene's camera.
 export const GRIPS = Object.freeze([
   {
     graphic : '[data-spectrum]',
@@ -230,7 +210,6 @@ export const GRIPS = Object.freeze([
     rect : false,
     start : (studio, g) => ({key : g.dataset.visionHandle, id : g.dataset.visionId})
   },
-  // A pad: by its handle, or anywhere on it unless it is only handles.
   {
     graphic : PAD_SELECTOR,
     held : 'graphic',
@@ -244,14 +223,8 @@ export const GRIPS = Object.freeze([
   }
 ]);
 const PAD_STILL = .001;
-// How long after a drag's let-go a click on the scene is the drag's own (ms), and how far the
-// pointer moves on the scene before a press becomes a drag (px).
 export const DRAG_CLICK = 350, DRAG_START = 5;
-// The studio's methods for held handles (mixed into OrganStudio).
 export const handleMethods = {
-  // A pad follows the pointer: a handle on it sets a width or an angle, and the inspector draws
-  // it anew around the handle; elsewhere its marks follow at once, and the pad is drawn anew
-  // only where its whole picture changes with them.
   tuneGraphic(event) {
     const control = this.handleDrag, bounds = control.rect;
     if (!bounds.width || !bounds.height)
@@ -321,7 +294,6 @@ export const handleMethods = {
     this.tuneDesign(changed, 'amount:' + control.id);
     this.refreshPigment();
   },
-  // A sensitivity graphic's owner: a colour type of a field organ, or a sensory center.
   sensitivityTarget(block) {
     if (block.dataset.sensitivityBlock === 'field')
       return this.spectrumTarget({
@@ -332,15 +304,11 @@ export const handleMethods = {
     const found = findCenter(this.state.document, block.dataset.sensitivityId);
     return found && {tuning : found.center, center : found.center};
   },
-  // What a spectrum editor tunes: a light-cell profile of a field organ.
   spectrumTarget({spectrumId : id, profileId}) {
     const organ = findOrgan(this.state.document, id);
     const profile = organ?.field?.profiles.find(p => p.id === profileId);
     return profile && {tuning : profile, organ};
   },
-  // The threshold follows the handle. On a log axis its quality moves as the stimulus of half the
-  // answer does, and the curve shifts with it until the engine's new one arrives; on a linear
-  // axis the handle is the threshold's activation level itself.
   sensitivityPointer(event) {
     const drag = this.handleDrag, dimmest = drag.log ? this.state.anatomy?.lightDimmest : null;
     if (drag.log && !(dimmest > 0))
@@ -396,8 +364,6 @@ export const handleMethods = {
                     'receptor:' + drag.target);
     this.refreshInspector();
   },
-  // Graphics whose handles change a center: rest activity, recovery and beat on the drive
-  // graphic, the marks of a life phase; and a gonad's growth cells and stretch line.
   drivePointer(event) {
     const drag = this.handleDrag;
     const {fx, fy} = pointerShare(event, drag.rect);
@@ -418,7 +384,6 @@ export const handleMethods = {
     this.tuneDesign(doc, 'drive:' + drag.id);
     this.refreshInspector();
   },
-  // An effector organ's handles: its nodes, their strength, or a trait its function shapes.
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
     const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, nodeLimit(organ, sites));
@@ -436,7 +401,6 @@ export const handleMethods = {
     this.tuneDesign(changed, 'effector:' + drag.id);
     this.refreshInspector();
   },
-  // A gonad's growth nodes fill its vessel up to the handle; its stretch line follows the other.
   sacPointer(drag, fx) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);
     const patch = organ && sacPatch(this.state, organ, drag.name, fx);
@@ -452,7 +416,6 @@ export const handleMethods = {
     this.tuneDesign(changed, 'sac:' + drag.id);
     this.refreshInspector();
   },
-  // The time constant follows the handle; the curve stretches with it in time.
   adaptationPointer(event) {
     const drag = this.handleDrag;
     const steps =
@@ -488,9 +451,6 @@ export const handleMethods = {
     this.editField(id, {profile : {id : profileId, ...patch}}, false);
     this.refreshSpectrum();
   },
-  // The stimulus follows the pointer at once; what the senses feel when the engine answers.
-  // A bend of a wire follows the pointer (mirrored back where its bundle is drawn for the other
-  // side).
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const wire = doc.wires.find(w => w.id === drag.wires[0]);
@@ -525,7 +485,6 @@ export const handleMethods = {
     const patch = visionDragPatch(this.state, organ, drag.key, position);
     if (!patch)
       return;
-    // The test light moves at once; what the eyes see follows when the engine answers.
     if (drag.key === 'probe' || drag.key === 'probe-size') {
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
       const light = this.bodyMap()?.querySelector('.aid-sight-light');
@@ -538,16 +497,12 @@ export const handleMethods = {
     } else
       this.editField(organ.id, patch, false);
   },
-  // The pointer holds a handle: it follows from here until the let-go.
-  // A handle tunes the design as it moves: the selection stays, the inspector keeps its graphics
-  // (the handle redraws what it changes), and one step of history holds the whole drag (`batch`).
   tuneDesign(doc, batch) { return this.changeDocument(doc, this.state.selected, false, batch);},
   holdHandle(event, held, drag) {
     this.handleDrag = {held, ...drag};
     event.preventDefault();
     this[HANDLES[held].follow](event);
   },
-  // The handle of that kind the pointer holds, if any.
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {
     const how = HANDLES[this.handleDrag.held];
@@ -559,16 +514,13 @@ export const handleMethods = {
     if (how.done)
       this[how.done]();
   },
-  // The panels keep their widths for the next visit; the scene takes the rest.
   keepPanels() {
     try {
       localStorage.setItem(PANEL_STORE, JSON.stringify(this.state.panels));
     } catch {
-      // Without storage the width lasts until the page is left.
     }
     this.refreshScene();
   },
-  // A side panel follows its grip; the scene takes the rest.
   panelPointer(event) {
     const drag = this.handleDrag, [ low, high ] = PANEL_WIDTH[drag.panel];
     const width = Math.round(
@@ -577,7 +529,6 @@ export const handleMethods = {
     this.root.querySelector('.aid-workspace-main')
         ?.setAttribute('style', panelStyle(this.state.panels));
   },
-  // A sensitivity graphic's handle holds its threshold, once the engine has answered for it.
   sensitivityGrip(graphic) {
     const block = graphic.closest('[data-sensitivity-block]');
     const target = block && this.sensitivityTarget(block);
@@ -596,8 +547,6 @@ export const handleMethods = {
     }
                                       : null;
   },
-  // A skin sense's graphic holds its field's edge or its middle hair: the way the cell faces and,
-  // for the hair, the cell's answer and threshold as the drag starts.
   skinGrip(graphic, handle) {
     const found = findCenter(this.state.document, graphic.dataset.skinField);
     if (!found)
@@ -621,7 +570,6 @@ export const handleMethods = {
     this.tuneDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id);
     this.refreshInspector();
   },
-  // An adaptation graphic holds its time constant, once the engine has answered for it.
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;
     const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;

@@ -16,12 +16,8 @@ import {sessionState} from './session.js';
 import {sceneState} from './state.js';
 export const chartsState = {};
 export let curveInfo;
-// Habitat icons of the niche places bottom, surface, solid faces and grass.
 const NICHE_PLACE_ICONS = [ 'buried', 'light', 'surface', 'grass' ];
 
-// The charts show 20 000 steps; the two overview trends can be paged back and forth through the
-// recorded run (older history is kept thinned) by half that span; the main chart always ends at
-// the present.
 const CHART_SPAN = 20000;
 
 function chartHistory(data) {
@@ -54,7 +50,6 @@ function pageOverview(direction) {
     return;
   const view = overviewWindow(data), latest = chartHistory(data).at(-1)?.step ?? 0,
         end = view.end + direction * CHART_SPAN / 2;
-  // The page belongs to this run; another run starts at its present again.
   chartsState.overviewPage = end >= latest ? null : {session : sessionState.sessionId, end};
   overviewPlots(data);
 }
@@ -70,8 +65,6 @@ export function helpSummary(f) {
   ].join(' · ');
 }
 
-// Main chart layout in pixels: the plot from LEFT to RIGHT and TOP to BOTTOM (values rise HEIGHT),
-// event markers MARKER_Y below the axis.
 const CHART = Object.freeze({
   marker_hit : 9,
   marker_hit_x : 8,
@@ -100,7 +93,6 @@ const CHART = Object.freeze({
   natural : PALETTE.gold,
   axis : '#38515c'
 });
-// The event marker, chart point and niche cell under a chart position, or nothing.
 export function chartMarkerAt(x, y) {
   return cockpitState.chartMarkers.find(p => Math.abs(p.x - x) < CHART.marker_hit_x &&
                                              Math.abs(y - CHART.marker_y) <= CHART.marker_hit);
@@ -209,8 +201,6 @@ export function chart(data) {
   }
 }
 
-// The two overview trends, in pixels inside their canvases: plot margins, label offsets and
-// colours; replacement trends span at least MIN_MAX.
 const OVERVIEW = Object.freeze({
   left : 24,
   right : 8,
@@ -266,7 +256,6 @@ function overviewPlots(data) {
     g.fillText(t('charts.schritte'), w - O.right, h - O.label_dy);
     g.textAlign = 'left';
     if (!percent) {
-      // Replacement 1: each loss is made good.
       g.strokeStyle = O.balance;
       g.setLineDash(O.dash);
       g.beginPath();
@@ -305,7 +294,6 @@ function overviewPlots(data) {
   }
 }
 
-// Deaths of hatched fish, as the history counts them.
 const ADULT_DEATHS =
     [ DEATH_REASON.hunger, DEATH_REASON.injury, DEATH_REASON.age, DEATH_REASON.disease ];
 export function rates(f) {
@@ -332,10 +320,6 @@ export function rates(f) {
               base.total_adult_deaths));
 }
 
-// Which niches the fish occupy: rows are main foods, columns usual places; a cell shows how
-// many observed fish live there (circle) and how many archived profiles keep it (gold diamond).
-// Niche map in pixels: food rows ROW high below TOP, place columns from LEFT; fish as dots growing
-// by DOT_GROWTH per root count, archived profiles as diamonds.
 const NICHE_MAP = Object.freeze({
   left : 92,
   row : 26,
@@ -385,7 +369,6 @@ export function behaviorMap(f) {
     if (k < NICHE_OPEN_WATER)
       paintEcologyIcon(g, NICHE_PLACE_ICONS[k], x, NICHE_MAP.icon_y, NICHE_MAP.place, 1);
     else {
-      // Open water: two waves.
       g.strokeStyle = NICHE_MAP.place;
       g.lineWidth = NICHE_MAP.wave_width;
       for (const dy of [-NICHE_MAP.wave, NICHE_MAP.wave]) {

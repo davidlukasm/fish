@@ -11,7 +11,6 @@ import {paintWaterLight, displayLight} from './water_view.js';
 export const tank_sceneryState = {};
 export let scenery;
 
-// The cached scenery reaches SCENERY_PADDING pixels beyond the view.
 export const SCENERY_PADDING = 160;
 
 export function paintScenery(f, c) {
@@ -26,9 +25,6 @@ export function paintScenery(f, c) {
     paintSceneryTile(f, {...c, ox : c.ox + shift * c.scale});
 }
 
-// Scenery: water, the floor strip FLOOR deep and round stones as CORNERS-gons; facets meet near
-// FACET_Y of a stone's height, grains appear from GRAIN_SCALE zoom on, one per GRAIN_AREA square
-// pixels.
 const STONE = Object.freeze({
   corners : 16,
   water_mid : .55,
@@ -43,7 +39,6 @@ const STONE = Object.freeze({
   grain : .25,
   grain_spread : .6,
   grain_hash : 2.3,
-  // Grain positions hash the grain and stone indices with these factors.
   grain_place : Object.freeze({u_grain : 127.1, u_stone : 33.7, v_grain : 269.5, v_stone : 19.3}),
   grain_aspect : 2,
   grain_tilt : .4,
@@ -151,15 +146,12 @@ export function paintSceneryTile(f, c) {
   ctx.restore();
 }
 
-// The soil mound around a plant's roots: its foot FOOT below the root, its top curve leaning by
-// LEFT and RIGHT of the spread, its underside BELOW the root.
 const MOUND = Object.freeze({foot : .6, left : .65, right : .4, below : 1.3});
 function traceMound(spread, rise, scale) {
   ctx.moveTo(-spread, MOUND.foot * scale);
   ctx.bezierCurveTo(-spread * MOUND.left, -rise, spread * MOUND.right, -rise, spread,
                     MOUND.foot * scale);
 }
-// A tile of soil grain: a hashed pattern of bright and dark specks as RGBA bytes.
 const SOIL_GRAIN = Object.freeze({
   width : 128,
   height : 64,
@@ -179,9 +171,6 @@ function soilGrainImage() {
   g.putImageData(pixels, 0, 0);
   return image;
 }
-// Soil mounds around at most MAX_BEDS plant roots: they spread at least MIN_SPREAD and ROOT_SPREAD
-// root widths beyond the roots and rise RISE of their spread, at most MAX_RISE plus RISE_PER_ROOT
-// root widths; the soil gradient takes SOIL_STOPS steps; grain tiles are GRAIN_TILE wide.
 const BED_OPENING = Object.freeze({
   max_beds : 180,
   min_spread : 5,
@@ -277,8 +266,6 @@ export function paintBedOpenings(f, c, blend, layer = null, only = null) {
   }
 }
 
-// Source markers in pixels: dashed rings at least MIN_FOOD, MIN_FEEDER and MIN_PLANKTON wide,
-// plankton as CELLS small cells, currents as arrows at least MIN_ARROW long.
 const SOURCE_MARK = Object.freeze({
   min_food : 3,
   food_dash : [ 2, 4 ],

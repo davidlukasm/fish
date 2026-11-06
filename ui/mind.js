@@ -1,8 +1,3 @@
-// Every fish may think. Observers turn what is known about a fish into neutral facts; the rules
-// in the thought resource turn facts into thoughts. The selected fish is observed in detail (its
-// body readings and, while its brain is inspected, the brain plan); the others only through what
-// the tank shows of them, and only their strongest thoughts surface. Pure model: views read the
-// logs and bubbles from here.
 import {displayFaults} from './diagnostics.js';
 import {STATION, hormoneEffects, planFor, updatePlanLive} from './brain_plan.js';
 import {ANATOMY, FISH, HORMONE_EFFECT, HORMONES, NEURON, SENSE_KIND, TOLERANCE} from './schema.js';
@@ -12,7 +7,6 @@ import {moodOf, think} from './thoughts.js';
 export const mindState = {
   minds : new Map(),
   bubbles : new Map(),
-  // The short versions said in the tank lately, by any fish: no fish echoes another.
   said : [],
   version : 0,
   othersAt : 0
@@ -29,7 +23,6 @@ export function thoughtLog(id) { return mindState.minds.get(id)?.log || NO_THOUG
 export function moodFor(id) { return mindState.minds.get(id)?.mood || null; }
 export function thoughtBubbles() { return mindState.bubbles; }
 
-// A visitor stimulated one station of the inspected brain.
 export function notePoke(station) { mindState.poked = {id : station, at : performance.now()}; }
 
 function mindOf(id, now) {
@@ -51,9 +44,6 @@ function mindOf(id, now) {
   return mind;
 }
 
-// Thought observation: a side counts once it leads by SIDE of the total; peaks decay by
-// PEAK_DECAY per observation; news weighs the rise against the peak (NEWS_GAIN, NEWS_RISE) and
-// the level (NEWS_LEVEL); hunger mixes empty gut and low reserve by HUNGER_GUT and HUNGER_RESERVE.
 const MIND = Object.freeze({
   side : .2,
   peak_decay : .997,
@@ -63,11 +53,6 @@ const MIND = Object.freeze({
   hunger_gut : .6,
   hunger_reserve : .4
 });
-// Observation of the senses and feelings: eye, near-sense and lateral-line rises count EYE_GAIN,
-// NEAR_GAIN and LATERAL_GAIN times; scents, intentions, surprise and hormones follow their slow
-// baselines at their rates; scent strength falls into SCENT_BANDS bands; a surprise is news above
-// SURPRISE_SHARE of its peak, weighed by SURPRISE_GAIN; hormone effects keep EFFECT_KEEP of their
-// slow value per observation; a mood counts as changed once it held MOOD_SETTLE observations.
 const OBSERVE = Object.freeze({
   eye_gain : 6,
   near_gain : 6,
@@ -91,8 +76,6 @@ function senseFamily(meta) {
   return meta.kind === STATION.sense ? meta.family : meta.inFamily || '';
 }
 
-// Every numeric fact also gets <name>_rise (above its slow baseline), <name>_norm (relative to its
-// recent peak), <name>_prev and <name>_prevNorm (the previous observation).
 function trackAll(m, raw, rates) {
   const facts = {...raw};
   for (const [name, value] of Object.entries(raw)) {
@@ -113,8 +96,6 @@ function trackAll(m, raw, rates) {
   return facts;
 }
 
-// The strongest of several tracked channels relative to its own recent peak: news is a rise of
-// the size, whatever the sign; the value keeps its sign.
 function strongest(m, prefix, values, rate) {
   let best = {index : -1, news : 0, level : 0, value : 0};
   values.forEach((v, k) => {
@@ -129,7 +110,6 @@ function strongest(m, prefix, values, rate) {
   return best;
 }
 
-// Which senses a fish has, by sense kind, when its cells are not shown: from its body plan.
 const BODY_SENSES = Object.freeze({
   light : [ ANATOMY.eye_left, ANATOMY.eye_right ],
   odor : [ ANATOMY.smell_left, ANATOMY.smell_right ],
@@ -139,10 +119,6 @@ const BODY_SENSES = Object.freeze({
   inner_pressure : [ ANATOMY.satiety ],
   gonad_pressure : [ ANATOMY.gonad ]
 });
-// What the fish senses, by sense kind: has_<sense> when it has cells for it and sense_<sense>
-// their signal (the busier side). The selected fish's senses report every step (cells, mean
-// signal per side, the scents its smell cells pick up, busy hubs and pigment cells); for the
-// others the body plan says which senses they have.
 function senseReport(row, b) {
   const r = b?.sense_report, organs = row[FISH.organs] || [], report = {};
   Object.keys(SENSE_KIND).forEach((name, k) => {
@@ -165,7 +141,6 @@ function senseReport(row, b) {
       noseR : side(SENSE_KIND.odor, 'right'),
       touch : report.sense_touch,
       pigment : r?.pigment || 0,
-      // How busy the processing hubs are.
       mindBusy : r?.hubs || 0,
       hasPigment : r?.pigment_cells > 0 ? 1 : 0
     },
@@ -173,9 +148,6 @@ function senseReport(row, b) {
   };
 }
 
-// Body states reach the thoughts only through a sense for them: the gut's filling or the blood
-// for hunger, the filling for satiety, pain cells for injuries and health, the gonads' pressure
-// for readiness. Without the sense the fish feels nothing (health: nothing wrong).
 function feltReadings(body, r) {
   const felt = (sense, value, none = 0) => sense ? value : none;
   return {
@@ -187,7 +159,6 @@ function feltReadings(body, r) {
   };
 }
 
-// Body readings: from the brain readout of the selected fish, otherwise from its tank record.
 function bodyReadings(row, b, cover) {
   const share = (v, of) => of > 0 ? clamp(v / of) : 0;
   if (b) {
@@ -284,7 +255,6 @@ function observe(T, m, now, row, b, plan, cover) {
     mouthStation : (b?.bite_signal || 0) > (b?.eat_signal || 0) ? 'bite' : 'suck',
     gonadStation : facts.eggReady >= facts.spermReady ? 'egg' : 'sperm'
   });
-  // The scent the smell cells pick up most, and the nostril whose cells fire more.
   const scent = strongest(m, 'scent', senses.scents, OBSERVE.scent_rate);
   Object.assign(facts, {
     scentIndex : senses.shown && facts.has_odor ? scent.index : -1,
@@ -294,8 +264,6 @@ function observe(T, m, now, row, b, plan, cover) {
     noseStation : facts.noseL > facts.noseR ? 'noseL' : 'noseR'
   });
   if (plan) {
-    // Intentions: how strongly each sense, directly or through its hubs, drives (or, negative,
-    // holds back) each organ family.
     const drive = new Map();
     for (const p of plan.pairs.values()) {
       const to = plan.meta.get(p.to), sense = senseFamily(plan.meta.get(p.from));
@@ -318,7 +286,6 @@ function observe(T, m, now, row, b, plan, cover) {
                             ''
       });
     }
-    // Learning: which sense has come to mean most for which organ.
     let most = 0;
     facts.lessonKey = '';
     for (const p of plan.pairs.values()) {
@@ -326,7 +293,6 @@ function observe(T, m, now, row, b, plan, cover) {
       if (to.kind === STATION.motor && sense && p.learned > most)
         [most, facts.lessonKey] = [ p.learned, sense + '>' + to.family ];
     }
-    // Surprise: the cell most surprised by its last learning step, and where it sits.
     let top = 0, where = '';
     for (const n of b.neurons) {
       const v = Math.abs(b.learning?.surprise?.[n[NEURON.index]]?.[0] || 0);
@@ -344,7 +310,6 @@ function observe(T, m, now, row, b, plan, cover) {
       surpriseSense : where ? senseFamily(plan.meta.get(where)) : ''
     });
   }
-  // Feelings: the hormone effect that shifts most while the hormone levels stir.
   const shift = effects.map((v, k) => [k, v - (m.effectSlow?.[k] ?? v)])
                     .sort((p, q) => Math.abs(q[1]) - Math.abs(p[1]))[0];
   m.effectSlow = effects.map((v, k) => (m.effectSlow?.[k] ?? v) * OBSERVE.effect_keep +
@@ -362,12 +327,10 @@ function observe(T, m, now, row, b, plan, cover) {
     feelShift : shift?.[1] ?? 0,
     feelSign : (shift?.[1] ?? 0) > 0 ? 'up' : 'down'
   });
-  // A probe the visitor placed: its colour and scent.
   const c = b?.probe?.color;
   facts.probeColour = Math.floor((c ? hueOf(c) : 0) / FULL_TURN * T.lexicon.colour.length) %
                       T.lexicon.colour.length;
   facts.probeScent = b?.probe?.scents ? b.probe.scents.indexOf(Math.max(...b.probe.scents)) : 0;
-  // The mood, and whether a new one has just settled.
   facts.mood = moodOf(T, facts).name;
   if (facts.mood === m.moodSeen)
     m.moodRun++;
@@ -384,7 +347,6 @@ function post(T, mind, thought, now, shown) {
   if (!thought)
     return;
   mind.log = [ {...thought, at : now, time : Date.now()}, ...mind.log ].slice(0, T.compose.log);
-  // In the tank only the short, sound-like version appears.
   if (shown && thought.brief) {
     mindState.bubbles.set(mind.id, {text : thought.brief, at : now});
     mindState.said = [ thought.brief, ...mindState.said ].slice(0, T.compose.remember);

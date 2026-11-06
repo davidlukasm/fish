@@ -2,8 +2,6 @@ import {shownRate} from './nutrition_model.js';
 import {plantType} from './plant_geometry.js';
 import {PERCENT} from './units.js';
 import {SENSE_TISSUE} from './tissue.js';
-// What the interface says about any object in the tank: a title, a subtitle, a few metrics and a
-// fill level, independent of where it is shown (tooltip, info panel or any other view).
 import {brainSelectedTissue, brainState} from './brain.js';
 import {
   brainConnectivity,
@@ -40,11 +38,8 @@ import {fishTitle} from './fish_names.js';
 import {formatNumber, t, tList, textArea, percent} from './strings.js';
 import {frameSpecies, sceneState} from './state.js';
 export const object_infoState = {};
-// Crabs count as buried below CRAB_BURIED_EXPOSURE; worms showing less than WORM_IN_BURROW are in
-// their burrow.
 const CRAB_BURIED_EXPOSURE = .02, WORM_IN_BURROW = .25;
 
-// Names of the small animal families (morph = family + variation), as plants have theirs.
 function smallAnimalName(kind, morph) {
   const family = textArea('object_info').smallAnimals?.[kind], names = family?.variants;
   return names?.[Math.max(0, Math.min(names.length - 1, Math.floor(morph || 0)))] ?? family?.name;
@@ -57,10 +52,7 @@ export function tankObjectInfo(hit) {
   return info;
 }
 
-// Densities show per DENSITY_AREA square pixels.
 const DENSITY_AREA = 1000, PLATFORM_CORNERS = 4;
-// Decimals of fine readings (light, thresholds of light cells, gamete density), of plankton and of
-// other thresholds, densities and risks.
 const DIGITS = Object.freeze({fine : 5, plankton : 4, coarse : 3});
 export function tankOdors(point, f = sceneState.frame) {
   const g = f?.odors;
@@ -130,7 +122,6 @@ function objectInfo(hit) {
     return {
       kind : 'rock',
       color : '#8b9997',
-      // Platforms are four-cornered stones.
       title : hit.shape?.length === PLATFORM_CORNERS ? t('object_info.plattformStein')
                                                      : t('object_info.felsen'),
       metrics : [

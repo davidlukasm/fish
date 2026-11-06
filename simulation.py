@@ -1,5 +1,3 @@
-"""Simulation process, acknowledged commands and observation lifecycle."""
-
 from frame_store import FrameStore
 from protocol_schema import EditLimit, Fish
 import json
@@ -20,8 +18,6 @@ from wording import worded, wording
 UNCHANGED_OBSERVATION = object()
 
 
-# The simulation keeps LOG_LINES engine messages, curates the archive every CURATE_S, waits
-# REPLY_S for a command to be confirmed and keeps PROFILE_VERSIONS species profile versions.
 LOG_LINES, CURATE_S, REPLY_S, PROFILE_VERSIONS = 20, 0.5, 15, 16
 
 class Simulation:
@@ -115,7 +111,6 @@ class Simulation:
                 str(self.history.session),
             ]
             command.extend(["--compute", self.args.compute])
-            # Images bypass this process: the engine answers the front's /scene directly.
             if getattr(self.args, "render_socket", None):
                 command.extend(["--render-socket", self.args.render_socket])
             for name, flag in [
@@ -591,8 +586,6 @@ class Simulation:
                     for name in ("latest", "previous")
                     if (self.history.session / (name + ".state")).exists()
                 ]
-            # Profiles use the versioned statistics channel. Snapshots retain them,
-            # but the journal UI consumes only events, ancestry, traces and records.
             data.pop("profiles", None)
             return {
                 **data,
@@ -643,7 +636,6 @@ class Simulation:
                 "species_profile_ids": list(profiles)}
 
     def fish_people(self):
-        """Names and favourites the user gave to individual fish (kept beside the run data)."""
         path = self.args.data_dir / "names.json"
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -673,7 +665,6 @@ class Simulation:
             try:
                 self.command(f"remember-fish {identifier} {int(keep)}")
             except ValueError as error:
-                # A fish that had already died unremembered keeps its marks in the history only.
                 if worded(error) != wording("notFound"):
                     raise
             with self.lock:
@@ -782,7 +773,6 @@ class Simulation:
 
     @staticmethod
     def example_genomes():
-        """The hand-built fish begin a run when nothing else is chosen."""
         return sorted((ROOT / "genomes/handbau").glob("*.genome"))
 
     def close(self):

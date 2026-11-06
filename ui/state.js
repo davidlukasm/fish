@@ -1,5 +1,3 @@
-
-
 import {SECOND_MS, wrapAngle} from './units.js';
 import {
   CORPSE,
@@ -21,9 +19,6 @@ export function displayNow() { return sceneState.renderTime ?? Date.now(); }
 
 export let frameIndexes;
 
-// Playback blends frames over INTERVAL_MS until the next arrives; it keeps up to BUFFER received
-// frames, AHEAD of them in reserve, and shows them at least DELAY_MS late. A gap of more than
-// STALE_MS starts it afresh. Fish blend their endpoint speeds up to SPEED_LIMIT times the path.
 export const PLAYBACK = Object.freeze(
     {interval_ms : 50, buffer : 16, ahead : 2, delay_ms : 150, stale_ms : 2000, speed_limit : 3});
 export function frameIndex(items, key) {
@@ -69,15 +64,12 @@ export function wrapScreenX(x) {
   return sceneState.frame ? x - sceneState.frame.width * Math.floor(x / sceneState.frame.width) : x;
 }
 
-// One interpolation clock for the pair selected by buffered playback.
 export function displayStep(f = sceneState.frame, blend = frameBlend()) {
   return sceneState.previous
              ? sceneState.previous.step + (f.step - sceneState.previous.step) * blend
              : f.step;
 }
 
-// What taking a frame involves is the application's business (connection.js registers it);
-// the playback buffer below only decides when a frame is taken.
 let frameTaker = storeFrame;
 export function takeFramesWith(take) { frameTaker = take; }
 
@@ -105,11 +97,8 @@ export function receiveFrame(next, now = Date.now()) {
     playback.points.shift();
 }
 
-// Held actions from the tank and the nerve map (growth, stimulation) last this long.
 export const HELD_ACTION_SECONDS = 3;
 
-// Simulation steps that pass in the given seconds at the current pace: measured from the
-// received frames, otherwise from the requested step delay; within the engine's limit.
 export function stepsInSeconds(seconds) {
   const points = sceneState.playback?.points || [], first = points[0], last = points.at(-1),
         measured = points.length > 1 && last.at > first.at
@@ -138,7 +127,6 @@ export function frameBlend(now = displayNow()) {
   return Math.max(0, Math.min(1, (now - sceneState.frameTime) / sceneState.frameInterval));
 }
 
-// Endpoint speeds recover acceleration during a sampled stroke without moving either endpoint.
 function fishPositionBlend(old, p, t) {
   const dt = Math.max(0, (p[FISH.age] ?? 0) - (old[FISH.age] ?? p[FISH.age] ?? 0)),
         d = Math.hypot(horizontalDelta(p[FISH.x] - old[FISH.x]), p[FISH.y] - old[FISH.y]);
@@ -174,7 +162,6 @@ export function mouthCyclePose(p, old, t) {
   return {phase : at, opening : pose};
 }
 
-// Eggs being laid take their pose from the mother; egg_births.js hands that pose in.
 let birthPose = p => p;
 export function blendBirthsWith(pose) { birthPose = pose; }
 
@@ -253,7 +240,6 @@ export function blendSmallAnimal(p, blend = frameBlend()) {
   }
   return v;
 }
-// Food, small animals and remains share their first columns: position and energy.
 export function blendParticle(p, origins, idIndex, blend) {
   const old = origins.get(p[idIndex]);
   if (!old)
@@ -265,9 +251,6 @@ export function blendParticle(p, origins, idIndex, blend) {
   return v;
 }
 
-// Takes the next snapshot as the current frame; the one before stays as the origin of every
-// interpolated pose.
-// A steady phase per id in [0, 1): ids spread by the golden ratio over ID_CYCLE.
 const ID_CYCLE = 997, GOLDEN = .61803398875;
 export const idPhase = id => (id % ID_CYCLE * GOLDEN) % 1;
 export function storeFrame(next, now, from = null, interval = PLAYBACK.interval_ms) {
@@ -283,7 +266,6 @@ export function storeFrame(next, now, from = null, interval = PLAYBACK.interval_
   sceneState.frameRevision++;
 }
 
-// A frame from another run, observation, size or speed starts the scene afresh.
 export function frameStartsAnew(next) {
   const f = sceneState.frame;
   return !f || f.render_epoch !== next.render_epoch || next.step < f.step ||
@@ -291,7 +273,6 @@ export function frameStartsAnew(next) {
          f.width !== next.width || f.height !== next.height || f.turbo !== next.turbo;
 }
 
-// A frame from another run or observation brings other species and families.
 export function frameChangesContext(next) {
   const f = sceneState.frame;
   return !f || f.render_epoch !== next.render_epoch || next.step < f.step ||
@@ -304,16 +285,11 @@ export function updateSceneState(patch) {
 }
 
 const initializers = {
-  // Species or sick fish marked in the tank, on every view.
   "highlightSpecies" : () => { sceneState.highlightSpecies = 0; },
   "highlightSick" : () => { sceneState.highlightSick = false; },
-  // "desktop" or "phone": phones inspect a fish in their own portrait, with their own tempo.
   "layout" : () => { sceneState.layout = 'desktop'; },
   "renderInputRevision" : () => { sceneState.renderInputRevision = 0; },
-  "renderTime" : () => {
-    // One clock for camera, body and organ poses within a rendered image.
-    sceneState.renderTime = null;
-  },
+  "renderTime" : () => { sceneState.renderTime = null; },
   "renderScale" : () => { sceneState.renderScale = null; },
   "eggBirths" : () => { sceneState.eggBirths = new Map(); },
   "maternalBirths" : () => { sceneState.maternalBirths = new Map(); },
@@ -326,10 +302,7 @@ const initializers = {
   "frame" : () => { sceneState.frame = null; },
   "previous" : () => { sceneState.previous = null; },
   "frameTime" : () => { sceneState.frameTime = 0; },
-  "frameIndexes" : () => {
-    // UI lookups share one index for each snapshot array, including preview frames.
-    frameIndexes = new WeakMap();
-  },
+  "frameIndexes" : () => { frameIndexes = new WeakMap(); },
   "addEventListener_input" :
       () => { document.addEventListener('input', () => sceneState.renderInputRevision++); },
   "addEventListener_change" :

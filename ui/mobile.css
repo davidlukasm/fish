@@ -1,5 +1,3 @@
-/* Phones in portrait (ui/mobile.js): water on the whole screen and a deck of three cards.
-   None of the desktop interface is shown. */
 .deck-shell{display:none}
 
 body.mobile{
@@ -18,7 +16,6 @@ body.mobile .aquarium{position:fixed!important;inset:0!important;width:100vw!imp
 min-height:0!important;margin:0!important;border:0!important;border-radius:0!important}
 body.mobile #tank{width:100%;height:100%;display:block;touch-action:none}
 
-/* The deck. */
 body.mobile .deck-shell{
 display:block;position:fixed;z-index:40;left:0;right:0;
 bottom:calc(10px + env(safe-area-inset-bottom));
@@ -53,7 +50,6 @@ border-radius:0 0 24px 24px;border-top:0;opacity:0;transition:opacity .3s}
 body.mobile.deck-up .deck-body{opacity:1}
 body.mobile:not(.deck-up) .deck-body{visibility:hidden}
 
-/* Contents. */
 body.mobile .deck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));grid-auto-flow:dense;gap:8px;margin:10px 0}
 body.mobile .deck-stat.wide{grid-column:span 2}
 body.mobile .deck-stat{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.06)}
@@ -84,18 +80,15 @@ body.mobile .deck-kinds li span{color:var(--muted);font-size:13px;z-index:1;whit
 body.mobile .deck-kinds li i{position:absolute;left:0;top:0;bottom:0;background:rgba(162,217,198,.12)}
 body.mobile dialog{width:calc(100vw - 16px);max-width:none;max-height:calc(100dvh - 24px);z-index:80}
 
-/* A resting finger holds time: the water dims at the edges while the fish drift in slow motion. */
 body.mobile .aquarium::after{
 content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
 background:radial-gradient(ellipse at center,transparent 55%,rgba(4,12,16,.55) 100%);
 transition:opacity .35s var(--ease)}
 body.mobile.time-held .aquarium::after{opacity:1}
 
-/* Panning: the deck steps aside. */
 body.mobile.panning .deck-shell{transform:translateY(55%);opacity:.35;transition:transform .3s var(--ease),opacity .3s}
 body.mobile .deck-shell{transition:transform .4s var(--ease),opacity .4s}
 
-/* Arrow at the edge towards a chosen fish that left the screen. */
 .edge-arrow{display:none}
 body.mobile .edge-arrow:not([hidden]){
 display:grid;place-items:center;position:fixed;left:-22px;top:-22px;z-index:35;
@@ -103,7 +96,6 @@ width:44px;height:44px;padding:0;border-radius:50%;border:1px solid var(--edge);
 background:var(--glass);color:var(--gold);font-size:18px;
 backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 
-/* Species marked by a long press. */
 body.mobile .deck-kinds li.marked{outline:2px solid var(--gold);outline-offset:-2px}
 body.mobile .deck-kinds li.marked strong{color:var(--gold)}
 body.mobile .deck-chronicle{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:2px}
@@ -113,7 +105,6 @@ body.mobile .deck-chronicle-mark{color:var(--muted);text-align:center}
 body.mobile .deck-chronicle li.milestone .deck-chronicle-mark,body.mobile .deck-chronicle li.important .deck-chronicle-mark{color:var(--gold)}
 body.mobile .deck-chronicle li.visit{cursor:pointer}
 
-/* The portrait: one full-screen layer about the chosen fish. */
 .portrait{display:none}
 body.mobile.portrait-open .portrait{
 display:block;position:fixed;inset:0;z-index:70;overflow-y:auto;overscroll-behavior:contain;
@@ -159,7 +150,6 @@ body.mobile .portrait-stop{position:relative;z-index:1;flex:none;padding:4px 10p
 border:2px solid var(--line);background:#0c1a1f;font-size:12px;white-space:nowrap}
 body.mobile .portrait-stop.h{border-style:dashed;color:var(--muted)}
 
-/* Thought ticker: the latest strong thought of any fish, at the top. */
 .thought-ticker,.event-toast,.feed-ring{display:none}
 body.mobile .thought-ticker:not([hidden]){
 display:block;position:fixed;z-index:36;left:50%;top:calc(12px + env(safe-area-inset-top));
@@ -170,7 +160,6 @@ backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 body.mobile .thought-ticker.fresh{animation:ticker-in .5s var(--ease)}
 @keyframes ticker-in{from{transform:translate(-50%,-14px);opacity:0}}
 
-/* Important moments as toasts, under the ticker. */
 body.mobile .event-toast:not([hidden]){
 display:block;position:fixed;z-index:37;left:16px;right:16px;top:calc(58px + env(safe-area-inset-top));
 padding:12px 16px;border-radius:18px;border:1px solid rgba(233,193,133,.45);
@@ -180,7 +169,6 @@ box-shadow:0 10px 26px rgba(0,0,0,.35);animation:toast-in .45s var(--ease)}
 @keyframes toast-in{from{transform:translateY(-20px);opacity:0}}
 body.mobile.portrait-open .thought-ticker,body.mobile.portrait-open .event-toast{display:none!important}
 
-/* Feeding: taps drop food where the finger touches; a ring answers each tap. */
 body.mobile .deck-action.active{background:rgba(233,193,133,.25);border-color:var(--gold);color:#fbe9c8}
 body.mobile.feeding .aquarium{box-shadow:inset 0 0 0 3px rgba(233,193,133,.55)}
 body.mobile .feed-ring{
@@ -189,14 +177,12 @@ border:2px solid var(--gold);pointer-events:none;animation:feed-ring .7s var(--e
 @keyframes feed-ring{from{transform:scale(.3);opacity:1}to{transform:scale(1.6);opacity:0}}
 body.mobile .deck-race{touch-action:none;-webkit-user-select:none;user-select:none}
 
-/* Phones held sideways: the water stays whole, the deck becomes a column on the right. */
 body.mobile.landscape{--low:76px;--high:calc(100dvh - 54px)}
 body.mobile.landscape .deck-shell{left:auto;right:10px;bottom:10px;width:min(380px,44vw)}
 body.mobile.landscape .thought-ticker:not([hidden]){left:calc((100vw - min(380px,44vw)) / 2);max-width:50vw}
 body.mobile.landscape .event-toast:not([hidden]){right:calc(min(380px,44vw) + 24px)}
 body.mobile.landscape .portrait-fish{height:46dvh}
 
-/* Portrait: sharing, and the place among the fish of the same species (swipe the fish). */
 body.mobile .portrait-share{
 position:sticky;top:0;float:right;z-index:2;width:44px;height:44px;margin-right:8px;padding:0;border-radius:50%;
 border:1px solid var(--edge);background:rgba(10,22,27,.9);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#eef6f3;font-size:18px}
@@ -204,7 +190,6 @@ body.mobile .portrait-siblings{margin:-4px 0 8px;text-align:center;font-size:12p
 body.mobile .portrait-siblings:empty{display:none}
 body.mobile .portrait-fish{touch-action:pan-y}
 
-/* Becken card: energy strip and habitat bars. */
 body.mobile .deck-sub{margin:14px 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
 body.mobile .deck-energy{display:flex;height:14px;border-radius:7px;overflow:hidden;background:rgba(255,255,255,.06)}
 body.mobile .deck-energy i{display:block;height:100%;transition:width .6s var(--ease)}
@@ -215,7 +200,6 @@ body.mobile .deck-habitat-row{display:grid;grid-template-columns:96px 1fr 42px;a
 body.mobile .deck-habitat-row i{display:block;height:6px;border-radius:3px;background:var(--mint);transition:width .6s var(--ease)}
 body.mobile .deck-habitat-row b{text-align:right;font-weight:500;color:var(--muted)}
 
-/* Portrait: family. */
 body.mobile .portrait-family{display:grid;gap:10px}
 body.mobile .portrait-kin-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 body.mobile .portrait-kin-group>span{flex-basis:100%;font-size:12px;color:var(--muted)}
@@ -223,7 +207,6 @@ body.mobile .portrait-kin{padding:7px 12px;border-radius:999px;border:1px solid 
 background:rgba(255,255,255,.05);color:var(--muted);font-size:13px}
 body.mobile .portrait-kin.alive{color:#eef6f3;border-color:rgba(162,217,198,.5)}
 
-/* Quick start of a new run, as a sheet from the bottom. */
 body.mobile .run-sheet{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;background:rgba(3,10,13,.55);animation:portrait-rise .25s var(--ease)}
 body.mobile .run-sheet-panel{width:100%;display:grid;gap:10px;padding:18px 18px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:#0c1d23;border-top:1px solid var(--edge)}
 body.mobile .run-sheet-panel h2{margin:0 0 4px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mint)}

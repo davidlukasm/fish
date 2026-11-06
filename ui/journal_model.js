@@ -1,6 +1,3 @@
-// The run's journal as the viewer keeps it: events, archive, species traces, records and
-// autosaves. Loading and merging live here, so the event log, the charts and the phone
-// chronicle read the same journal.
 import {ROUTE} from './schema.js';
 import {loadFamilyHistory} from './family_model.js';
 import {matchesObservation, observationContext, request} from './session.js';
@@ -17,7 +14,6 @@ export const journal_modelState = {
 
 export function journal() { return journal_modelState.journal; }
 
-// A new run or observation starts with an empty journal; requests still running are dropped.
 export function resetJournal() {
   Object.assign(journal_modelState, {journal : emptyJournal(), loadedAt : 0, busy : false});
 }
@@ -31,9 +27,6 @@ function mergeJournalEvents(events) {
 
 export function hasEarlierEvents() { return journal_modelState.journal.events[0]?.id > 1; }
 
-// Fetches the journal with the events after the newest one known. Only the latest events are
-// kept unless `keepOlder()` says pages further back are in use. Resolves to the new events, or
-// to null when another request is running or the answer belongs to another observation.
 export async function loadJournal(keepOlder = () => false) {
   const s = journal_modelState, context = observationContext(), token = {};
   if ((sceneState.frame?.observation?.key || 'live') !== context.key || s.busy)
@@ -60,8 +53,6 @@ export async function loadJournal(keepOlder = () => false) {
   }
 }
 
-// Fetches the page of events before the oldest one known. Resolves to true when it added
-// events, false when there are none further back, null when the observation changed meanwhile.
 export async function loadEarlierEvents(context) {
   const before = journal_modelState.journal.events[0]?.id;
   if (!(before > 1))

@@ -13,7 +13,6 @@ inline constexpr double plant_light_floor = .08, algae_light_floor = .18;
 inline double algae_light(double value) {
   return std::pow(std::clamp((value - algae_light_floor) / (1 - algae_light_floor), 0., 1.), 2);
 }
-// Morph: the integer part is the family, the fraction the variant within it.
 inline double morph_variant(double morph) {
   return morph - std::floor(morph);
 }
@@ -41,8 +40,6 @@ inline double crab_radius(double energy, const FoodWebParameters &p, double morp
           fauna::crab_radius_growth *
               std::clamp(energy / (fauna::crab_grown_share * crab_capacity(morph, p)), 0., 1.));
 }
-// Clearance follows the same depth perspective as the drawing. Feet enter sand;
-// their lower envelope always clears the solid supporting surface.
 inline double crab_support_height(double radius, double depth, double fraction) {
   if (depth <= seabed::bare_depth)
     return fauna::crab_bare_lift * radius;
@@ -50,7 +47,6 @@ inline double crab_support_height(double radius, double depth, double fraction) 
       {depth * fraction, fauna::crab_min_lift * radius,
        fauna::crab_lift_gain * radius / (1 + fauna::crab_lift_flatten * radius / depth)});
 }
-// Muschelfamilien: Schmal, Lang, Breit, Gerippt, Scheide, Fächer, Zebra.
 namespace mussel_form {
 inline constexpr int narrow = 0, elongate = 1, broad = 2, ribbed = 3, razor = 4, fan = 5, zebra = 6;
 }
@@ -69,7 +65,6 @@ inline double mussel_radius(double energy, const FoodWebParameters &p, double mo
   return fauna::mussel_radius * mussel_size(morph) *
          (1 + std::clamp(energy / mussel_capacity(morph, p), 0., 1.));
 }
-// Space along the bed follows shell width, rather than its taller upright radius.
 inline double mussel_bed_radius(double morph, const FoodWebParameters &p) {
   return std::max(p.mussel_spacing * mussel_size(morph),
                   fauna::mussel_family_width[mussel_family(morph)] *
@@ -77,7 +72,6 @@ inline double mussel_bed_radius(double morph, const FoodWebParameters &p) {
          2;
 }
 inline constexpr double mussel_algae_share = .25;
-// Flesh colours of the small animals; fauna holds the colours fish and viewers see.
 inline constexpr Color WORM_FLESH_COLOR{.85, .15, .12}, CRAB_FLESH_COLOR{.9, .35, .2},
     MUSSEL_FLESH_COLOR{.75, .25, .6};
 inline const Color &small_animal_color(int kind) {
@@ -85,7 +79,6 @@ inline const Color &small_animal_color(int kind) {
          : kind == food_kind::crab ? fauna::crab_color
                                    : fauna::mussel_color;
 }
-// Front value where a surface carries no sediment.
 inline constexpr double BARE_FRONT = .5;
 inline double sediment_front(double x, double y, double ax, double ay, double bx, double by,
                              double nx, double ny, double left, double right) {
@@ -97,18 +90,15 @@ inline double sediment_front(double x, double y, double ax, double ay, double bx
   return depth > seabed::bare_depth ? std::clamp(1 - height / depth, 0., 1.) : BARE_FRONT;
 }
 inline constexpr double worm_head_radius = fauna::worm_head_radius;
-// Individual lifespans spread by LIFESPAN_SPREAD around the mean, by a variant in [0, 1].
 inline constexpr double LIFESPAN_SPREAD = .4;
 inline double individual_lifespan(double lifespan, double variant) {
   return lifespan * (1 - LIFESPAN_SPREAD / 2 + LIFESPAN_SPREAD * variant);
 }
 inline constexpr int worm_families = int(fauna::worm_family_length.size());
-// Fixed individual variation of a worm in [0, 1].
 inline double worm_individuality(std::uint64_t id) {
   return double(id * fauna::worm_hash_factor % fauna::worm_hash_modulus) /
          (fauna::worm_hash_modulus - 1);
 }
-// Share of the sediment depth that covers a buried base.
 inline double burial_share(double individual) {
   return fauna::burial_min + fauna::burial_spread * individual;
 }
@@ -139,7 +129,6 @@ inline double plant_bite_hardness(int organ, double fiber, const FoodWebParamete
 inline double algae_density(double energy, double length, double thickness) {
   return length > 0 && thickness > 0 ? energy / (length * thickness) : 0;
 }
-// Largest algae flake a scrape or suction takes; the scraped share grows with the force.
 inline constexpr double ALGAE_FLAKE_RADIUS = .5, SCRAPE_FORCE_GAIN = 2;
 inline double scraped_algae(double density, double thickness, double force,
                             const FoodWebParameters &p) {
@@ -147,9 +136,6 @@ inline double scraped_algae(double density, double thickness, double force,
   return density * radius * radius * std::min(1., SCRAPE_FORCE_GAIN * force) *
          crack_success(force, p.hardness_algae, p);
 }
-// Fragments: about one per FRAGMENT_ENERGY, each between FRAGMENT_MIN_CRUMBS and
-// FRAGMENT_MAX_CRUMBS crumbs; shares rise linearly from FRAGMENT_SHARE_MIN by
-// FRAGMENT_SHARE_SPREAD.
 inline constexpr double FRAGMENT_ENERGY = 6, FRAGMENT_MIN_CRUMBS = 1.25, FRAGMENT_MAX_CRUMBS = 3,
                         FRAGMENT_SHARE_MIN = .8, FRAGMENT_SHARE_SPREAD = .4;
 inline std::vector<double> fragment_shares(double energy, double force, double hardness,
@@ -161,7 +147,6 @@ inline std::vector<double> fragment_shares(double energy, double force, double h
                p.fragment_min + std::round(p.fragment_gain *
                                            (hardness > 0 ? force / hardness - 1 : p.fragment_max))),
       p.fragment_min, std::max(p.fragment_min, p.fragment_max)));
-  // Larger prey produces more edible pieces rather than larger individual chunks.
   const int count = std::max(
       1, std::min(std::max(desired, int(std::ceil(energy / (FRAGMENT_MAX_CRUMBS * p.crumb_min)))),
                   int(std::floor(energy / (FRAGMENT_MIN_CRUMBS * p.crumb_min)))));
@@ -178,9 +163,6 @@ inline std::vector<double> fragment_shares(double energy, double force, double h
 inline double resting_spine_height(double capacity, double height, double half) {
   return height * capacity / (capacity + half);
 }
-// Skin without pigment reflects SKIN_REFLECTANCE, a pale grey-green. Pigment dims each channel by
-// what it absorbs there, half of it at `half` absorption: a pigment absorbing all channels darkens
-// the skin towards black, one absorbing a single channel tints it its colour.
 inline constexpr Color SKIN_REFLECTANCE{.62, .66, .64};
 inline Color pigment_color(const Color &absorption, double half) {
   Color result{};
@@ -188,7 +170,6 @@ inline Color pigment_color(const Color &absorption, double half) {
     result[c] = SKIN_REFLECTANCE[c] * half / (half + std::max(0., absorption[c]));
   return result;
 }
-// Extra drag of fully turbid water.
 inline constexpr double TURBIDITY_DRAG = .12;
 inline double turbidity_resistance(double turbidity) {
   return 1 + TURBIDITY_DRAG * std::clamp(turbidity, 0., 1.);

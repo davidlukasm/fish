@@ -1,11 +1,8 @@
-// How two behaviour profiles differ: per-feature contributions to the novelty distance, grouped
-// as the simulation groups them, and the strongest differences as short phrases.
 import {FOOD_SLOT} from './nutrition_model.js';
 import {tList} from './strings.js';
 import {BEHAVIOR, BEHAVIOR_FEATURE, BEHAVIOR_FEATURE_SET as SET, TOLERANCE} from './schema.js';
 export const behavior_modelState = {};
 
-// Movement, food, habitat, reproduction and signals: feature indices of each group.
 export const BEHAVIOR_GROUPS =
     [ SET.movement, SET.diet, SET.habitat, SET.reproduction, SET.signals ];
 const DIET_GROUP = BEHAVIOR_GROUPS.indexOf(SET.diet);
@@ -49,9 +46,6 @@ export function behaviorDeltaLabels(a, b, count = 2) {
       .slice(0, count);
 }
 
-// Where one fish stands in the novelty search: its score from the simulation (mean distance to
-// its nearest behaviour profiles), the share of the other observed living fish it exceeds, and
-// the single closest profile among those fish and the archive of this environment.
 export function noveltyStanding(f, id) {
   const observed = (f.behavior || []).filter(b => b.samples >= BEHAVIOR.min_samples),
         own = observed.find(b => b.id === id);
@@ -79,10 +73,6 @@ export function noveltyStanding(f, id) {
   };
 }
 
-// Niches of the novelty search: the main food (as a feeding icon index) and the usual place of
-// each observed living fish and each archived profile of this environment. Food features in
-// descriptor order with their feeding icons; places bottom, surface, solid faces, grass, else
-// open water.
 const F = BEHAVIOR_FEATURE, S = FOOD_SLOT;
 const NICHE_FOODS = [
   [ F.diet_feed, S.feed ], [ F.diet_fish, S.fish ], [ F.diet_egg, S.egg ],

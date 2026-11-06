@@ -12,7 +12,6 @@ import {
 } from './schema.js';
 import {fishAlong, fishForm, formRecord, GAMETE_GROWTH, organGrowth} from './fish_forms.js';
 export const fish_geometryState = {};
-// Eggs hold the reserve energy per mass of a body-radius fish in their area, like the engine's.
 const EGG_ENERGY_PER_RADIUS2 = BODY_UNIT.reserve_energy_per_mass / BODY_UNIT.radius ** 2;
 export function eggRadius(energy) {
   return Math.sqrt(Math.max(0, energy) / EGG_ENERGY_PER_RADIUS2);
@@ -41,16 +40,6 @@ export function fishPlanPhase(a, name, f) {
               BODY_PLAN.phase_order * PLAN_ORDER[name]);
 }
 
-// The columns of each shape plan in FISH_PLANS, all in body-radius or shape units.
-// Tail: length and width scales; the upper half's knots (along, out) from the leading knot over
-// the upper lobe to the tip, then the fork's depth; the roundness at those knots and at the root.
-// Side fins: length and swing scales, the leading edge's fullness, the sweep back, the lobing,
-// the share of a second fin pair, the attachment along the flank, the base length and the fringe.
-// Mouth: lip thickness and the hook of the upper jaw.
-// Spines: length, lean back, base width, curve, count scale, start along the outline and spread.
-// Nose: place on the head curve, place across, length and height.
-// Barbel: length, the tip's reach along and across, the root on the head curve and the bend.
-// Rear fins (by the chest phase): start, end and peak along the flank, height and front lift.
 const PLAN_COLUMNS = Object.freeze({
   tail : [
     'length', 'width', 'lead_along', 'lead_out', 'lobe_along', 'lobe_out', 'tip_along', 'tip_out',
@@ -72,7 +61,6 @@ export function fishPlan(a, name, f) {
   cache.set(key, plan);
   return plan;
 }
-// A shape plan at a phase, with named columns.
 export function fishPlanAt(name, phase) {
   const q = fishMixPlan(name, phase);
   return Object.fromEntries(PLAN_COLUMNS[name].map((column, k) => [column, q[k]]));
@@ -83,17 +71,10 @@ export function fishRegion(a, index, fallback = INTERNAL_TISSUE, side = -1) {
   return p?.length ? formRecord(p) : fishForm(a, fallback, side);
 }
 
-// A Bézier quarter circle's handles reach CIRCLE_HANDLE of its radius.
 const CIRCLE_HANDLE = 4 * (Math.SQRT2 - 1) / 3;
-// An egg is at most 1/EGG_ROOM of the hind body long. The body's outline ends TAIL_END behind
-// its centre.
 const EGG_ROOM = 2.16;
 export const TAIL_END = .96;
-// The egg organ is at least EGG_ORGAN_RADIUS body radii, growing with its cells.
 const EGG_ORGAN_RADIUS = .045;
-// Live shape: an egg widens the hind body and moves its peak to EGG_PEAK; gut filling, sperm
-// and side fins widen the flank. The hind body holds EGG_HIND_MASS of the body mass besides the
-// yolk (at least MIN_MASS) and fills HIND_FILL of its bounding box.
 const SHAPE = Object.freeze({
   min_face : .001,
   gape_width : .50,
@@ -112,16 +93,11 @@ export function fishShapeAnatomy(a) {
   const chest = a.chestPlan, torso = a.torsoPlan;
   a.eyeVolumes = [ 0, 1 ].map(side => fishForm(a, SENSE_TISSUE.light, side).weight);
   a.headFront = a.headBack + a.headLength;
-  // A wide physical gape needs a long enough jaw and cheek, including at rest.
-  // The face ends at the same point used for feeding and the animated lips.
   if (Number.isFinite(a.mouthOffset))
     a.faceLength = Math.max(SHAPE.min_face, (a.origin?.[0] || 0) + a.mouthOffset - a.headFront);
   a.faceWidth = Math.max(a.faceWidth, SHAPE.gape_width * (a.aperture || 0));
   a.snout = a.headFront + a.faceLength;
   a.shoulder = a.restShoulder;
-  // Yolk counts in the body mass at the reserve's density, as in the engine. The hind body swells
-  // by the yolk's share of its mass: wider, never longer, so head and mouth keep their size. The
-  // drawn egg takes the added area, at most 1/EGG_ROOM of the hind body long.
   a.hindLength = a.baseHindLength;
   const yolkMass = (a.yolk || 0) / BODY_UNIT.reserve_energy_per_mass,
         hind = (a.trunk + SHAPE.sperm_width * a.spermFilled) * torso[1] +
@@ -287,7 +263,6 @@ function fishFlankCurves(a, side) {
           S.tail_base + S.tail_fin * a.size(a.fin(FIN.tail)[FIN_SHAPE.strength]),
           a.hindWidth * (S.detail_base + S.detail_gain * detail[1]), a.torsoPlan, a.hindPeak,
           a.eggRoom);
-  // A stroke bends the body towards its rear.
   if (a.flex)
     for (const p of new Set(curves.flat())) {
       const u = Math.max(0, Math.min(1, (a.headBack - p[0]) / (a.headBack - a.tailRoot)));
@@ -305,8 +280,6 @@ export function fishFlank(a, side, t) {
 
 export function fishHeadCurve(a, side) { return fishHeadCurves(a, side)[1]; }
 
-// Side-profile silhouettes turn in the 2D tank. Neural tissue and live state deform every plan.
-// Adjacent plans interpolate continuously; no animal ID enters shape or markings.
 export const FISH_PLANS = Object.freeze({
   tail : [
     [ .92, 1.12, .70, .94, 1.00, .75, 1.13, .38, 1.15, .80, .85, .85, 1, .15 ],

@@ -44,9 +44,6 @@ import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
 import {GENOME_FILE_ID} from './view/shell.js';
 
-// What a click in the studio does, by what it lands on. Each table lists selectors in the order
-// they are tried; the first one the click's target lies in handles it (studio, the element it
-// matched, the event), unless its handler returns PASS and lets the next ones try.
 export const PASS = Symbol('pass');
 export function clickOn(studio, event, table) {
   for (const [selector, handle] of table) {
@@ -56,18 +53,14 @@ export function clickOn(studio, event, table) {
   }
   return false;
 }
-// A change of a form element: the first entry of the table whose dataset key it carries
-// handles it.
 export function changeOn(studio, element, table) {
   const entry = table.find(([ key ]) => element.dataset[key] !== undefined);
   entry?.[1](studio, element);
   return !!entry;
 }
-// The kind of item an element marks: the first of `kinds` it carries a data attribute for.
 export const markedKind = (element, kinds) =>
     kinds.find(kind => element?.hasAttribute('data-' + kind)) ?? null;
 
-// The header's actions, by name.
 const ACTIONS = Object.freeze({
   home : studio => studio.navigate('hub'),
   aquarium : studio => studio.navigate('aquarium'),
@@ -83,7 +76,6 @@ const ACTIONS = Object.freeze({
   open : studio => studio.root.querySelector('#' + GENOME_FILE_ID)?.click()
 });
 
-// Anywhere: the header's actions, the compiler's issues and the modes.
 export const ANYWHERE_CLICKS = Object.freeze([
   [
     '[data-action]',
@@ -107,10 +99,8 @@ export const ANYWHERE_CLICKS = Object.freeze([
   [ '[data-mode]', (studio, e) => studio.setMode(e.dataset.mode) ]
 ]);
 
-// In the studio: its tools, history, zoom and views.
 export const STUDIO_CLICKS = Object.freeze([
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
-  // Library tiles that act when clicked: a wiring tile is held ready, a stimulus appears.
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
   [ '[data-history]', (studio, e) => studio.stepHistory(e.dataset.history) ],
@@ -142,7 +132,6 @@ export const STUDIO_CLICKS = Object.freeze([
   ]
 ]);
 
-// The chosen organ when it is a field organ (an eye or a near sense), and its chosen colour type.
 function chosenField(studio) {
   const organ = findOrgan(studio.state.document, studio.state.selected?.id);
   if (!organ?.field)
@@ -150,15 +139,11 @@ function chosenField(studio) {
   const profiles = organ.field.profiles;
   return {organ, profile : profiles.find(p => p.id === studio.state.visionProfile) ?? profiles[0]};
 }
-// A change of the document that keeps the selection; one that may find no room says so.
 const keep = (studio, doc) => studio.changeDocument(doc, studio.state.selected);
 const keepIfRoom = (studio, doc) => doc ? keep(studio, doc) : studio.notice(label('status.noRoom'));
 const ITEM_KINDS = Object.freeze([ 'contact', 'wire', 'center', 'assembly', 'organ' ]);
 const REMOVE_KINDS = Object.freeze([ 'remove-organ', 'remove-center', 'remove-wire' ]);
 
-// A click on an item of the fish: the erase tool removes it, the wire tool wires it (from the
-// item chosen before, or to the slot a wire was started from), the stimulus tool stimulates its
-// centers; otherwise it is chosen, unless the pointer moved the item.
 function clickItem(studio, element, event) {
   const kind = markedKind(element, ITEM_KINDS), id = element.dataset[kind];
   const doc = studio.state.document, tool = studio.state.tool;
@@ -194,8 +179,6 @@ function wireItem(studio, kind, id) {
   }
   studio.refreshViews();
 }
-// A region's slot starts a wire there: from the region to what is clicked next, or the other
-// way round.
 function startSlotWire(studio, element) {
   const region = element.dataset.slotRegion, out = element.dataset.slotDir === 'out';
   studio.setTool('wire');
@@ -205,7 +188,6 @@ function startSlotWire(studio, element) {
   studio.refreshScene();
   studio.notice(label(out ? 'status.slotOut' : 'status.slotIn'));
 }
-// A muscle moves to the nearest free place with the function asked for.
 function moveMuscle(studio, element) {
   const doc = studio.state.document, sites = studio.state.sites;
   const found = findCenter(doc, element.dataset.centerId);
@@ -214,16 +196,12 @@ function moveMuscle(studio, element) {
                                           sites, usedSites(doc), sitePoint(here), here.side);
   keepIfRoom(studio, target && moveOrgan(doc, found.organ.id, sites, sitePoint(target)));
 }
-// The throat (the suction muscle on both sides), which carries the gut's length in the engine,
-// at its home; the gut stays chosen.
 function addThroat(studio) {
   const {document : doc, sites} = studio.state;
   const home = muscleHomes(doc, sites)
                    .find(h => h.code === MOTOR_KIND.suction && h.side > 0 && h.free.length);
   keepIfRoom(studio, home && studio.placeOrgan('muscle', home.middle)?.document);
 }
-// An organ's kinds of cell (a nose's scent profiles, the skin's pigment cells): another one with
-// the tuning the organ lacks most, chosen at once.
 function addType(studio, element) {
   const doc = studio.state.document, organ = findOrgan(doc, element.dataset.addType);
   const added = organ && addOrganType(doc, organ.id, studio.state.sites,
@@ -233,10 +211,8 @@ function addType(studio, element) {
   const first = findOrgan(added.document, organ.id).centers.find(c => c.profile === added.typeId);
   studio.changeDocument(added.document, {kind : 'center', id : first.id});
 }
-// A change of a center that chooses it.
 const changeCenter = (studio, id, patch) =>
     studio.changeDocument(updateCenter(studio.state.document, id, patch), {kind : 'center', id});
-// Something shown anew after a choice of what the panels show.
 function showChoice(studio, change, library = false) {
   change(studio.state);
   if (library)
@@ -244,7 +220,6 @@ function showChoice(studio, change, library = false) {
   studio.refreshViews();
 }
 
-// On the fish and in its panels, in the order they are tried.
 export const FISH_CLICKS = Object.freeze([
   [
     '[data-link-pair]',
@@ -317,7 +292,6 @@ export const FISH_CLICKS = Object.freeze([
                                              {[e.dataset.regionSetting] : Number(e.dataset.regionValue)},
                                              studio.state.sites))
   ],
-  // A tool opened for a cell group: the group stays chosen.
   [
     '[data-open-tool]',
     (studio, e) => {
@@ -391,7 +365,6 @@ export const FISH_CLICKS = Object.freeze([
         studio.changeDocument(result.document, {kind : 'organ', id : result.organId});
     }
   ],
-  // An organ's kinds of cell: a chip chooses one, another can be added, the chosen one removed.
   [
     '[data-organ-type]',
     (studio, e) => studio.select('center', e.dataset.organType, null, false)
@@ -505,7 +478,6 @@ export const FISH_CLICKS = Object.freeze([
       state.selected = null;
     }, true)
   ],
-  // A click on nothing on the fish chooses nothing and drops a wire begun.
   [
     BODY_MAP,
     studio => {
@@ -515,8 +487,6 @@ export const FISH_CLICKS = Object.freeze([
   ]
 ]);
 
-// Changes of the fish's form elements. Names are written in place and kept when the field is
-// left.
 export const FISH_CHANGES = Object.freeze([
   [
     'substanceName',

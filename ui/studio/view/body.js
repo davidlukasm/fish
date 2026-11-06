@@ -56,30 +56,15 @@ import {
 } from './places.js';
 import {organTitle} from './names.js';
 
-// The Atelier draws a fixed, abstract fish: this outline and simple glyphs where the organs'
-// cells sit. It does not change with the design. The engine's body shape follows from where the
-// cells sit and how much tissue lies there; the Aquarium shows it.
-//
-// The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
-// is two body radii long; fields of view and test lights are drawn at that scale.
-
-// The brain from above, as a brain is pictured, drawn as a scheme like the other organs: the rim
-// of all of it (cerebrum, cerebellum, cord) in the brain's colour, inside the body's own colour;
-// the cerebrum's two hemispheres with their folds, the cerebellum striped across, the cord; over
-// all of it a tint of the brain's colour.
 const BRAIN_STEPS = 72;
-// A hemisphere's half width at a share `u` along it: an egg, narrower at the front.
 function hemisphereWidth(u) {
   const C = BRAIN.cerebrum;
   return C.half * Math.sin(Math.PI * u) ** C.full * (C.front + (1 - C.front) * u);
 }
-// A point of a hemisphere (`side` -1 or 1) at shares along and across it from the midline.
 function hemispherePoint(side, [ u, v ]) {
   const C = BRAIN.cerebrum;
   return {x : C.from + u * (C.to - C.from), y : BODY_FRAME.middle + side * v * hemisphereWidth(u)};
 }
-// A hemisphere: from the front of the midline round its rim to the back, the rim scalloped into
-// lobes of equal length, each bulging out; closed along the midline.
 function hemisphere(side) {
   const C = BRAIN.cerebrum;
   const rim = Array.from({length : BRAIN_STEPS + 1},
@@ -93,14 +78,12 @@ function hemisphere(side) {
   let d = 'M' + fixed(ends[0].x) + ' ' + fixed(ends[0].y);
   for (let k = 1; k < ends.length; k++) {
     const a = ends[k - 1], b = ends[k], dx = b.x - a.x, dy = b.y - a.y;
-    // Outwards is away from the midline.
     const turn = Math.sign(side * dx) || side;
     d += ' Q' + fixed((a.x + b.x) / 2 - turn * dy * C.bulge * 2) + ' ' +
          fixed((a.y + b.y) / 2 + turn * dx * C.bulge * 2) + ' ' + fixed(b.x) + ' ' + fixed(b.y);
   }
   return d + 'Z';
 }
-// A smooth curve through points (Catmull-Rom as cubic pieces).
 function smoothThrough(points) {
   const n = points.length - 1;
   let d = 'M' + fixed(points[0].x) + ' ' + fixed(points[0].y);
@@ -122,7 +105,6 @@ function brainSvg(fill) {
                ' Q' + (C.to + C.end) + ' ' + (M + C.half[1]) + ' ' + C.to + ' ' + (M + C.half[1]) +
                ' L' + C.from + ' ' + (M + C.half[0]) + 'Z"/>';
   const hemispheres = '<path d="' + hemisphere(-1) + '"/><path d="' + hemisphere(1) + '"/>';
-  // The cerebellum's folds run across it from rim to rim, curved like its back edge.
   const rimAt = x => E.ry * Math.sqrt(Math.max(0, 1 - ((x - E.x) / E.rx) ** 2));
   const folia = Array
                     .from({length : E.folia},
@@ -137,8 +119,6 @@ function brainSvg(fill) {
       [ -1, 1 ]
           .flatMap(side => B.folds.map(f => smoothThrough(f.map(p => hemispherePoint(side, p)))))
           .join(' ');
-  // Back to front, each part over the one behind it: the cord, the cerebellum and its folds, the
-  // hemispheres and theirs.
   const part = (shapes, lines) => '<g class="aid-brain-lobe" fill="' + fill + '">' + shapes +
                                   '</g><path class="aid-brain-fissure" d="' + lines + '"/>';
   return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
@@ -155,7 +135,6 @@ function retinaNodes(state, organs) {
       const p = nodeLocation(state.document, state.sites, center, organ.type);
       const profile = organ.field?.profiles.find(q => q.id === center.profile);
       const chosen = state.selected?.id === center.id || state.multi?.has(center.id);
-      // The colour type being edited stands out; the others stay behind it.
       const other = state.visionProfile && center.profile !== state.visionProfile;
       html += '<circle class="aid-retina-node' + (chosen ? ' selected' : '') +
               (other ? ' other' : '') + '" data-center="' + escapeText(center.id) + '" cx="' +
@@ -164,7 +143,6 @@ function retinaNodes(state, organs) {
     }
   return html;
 }
-// Glyph sizes in frame units.
 const GLYPH = Object.freeze({
   near_dot : 5,
   near_arcs : [ [ 14, 35, 12 ], [ 23, 53, 21 ] ],
@@ -177,8 +155,6 @@ const GLYPH = Object.freeze({
   gland : [ 16, 11 ],
   lateral_pore : 3.2
 });
-// Each organ's glyph on the fish, drawn at the organ's place `pos`; a pair of eyes shares one
-// glyph per side (drawnEyes holds the sides drawn).
 function eyeGlyph(state, organ, pos, drawnEyes) {
   const {document : doc, sites} = state, side = sideOf(organ), eye = eyeLocation(doc, sites, side);
   if (!eye || drawnEyes.has(side))
@@ -192,8 +168,6 @@ function eyeGlyph(state, organ, pos, drawnEyes) {
          '" r="' + fixed(r * EYE.pupil) + '"/>' +
          (showsNodes(state, eyes) ? retinaNodes(state, eyes) : '');
 }
-// The near sense at the eye's place: a dot with arcs reaching ahead, or beside an eye its arcs
-// alone, NEAR_GAP in front of it.
 const NEAR_GAP = 3;
 function proximityGlyph(state, organ, pos) {
   const side = sideOf(organ), eye = eyeLocation(state.document, state.sites, side);
@@ -212,15 +186,12 @@ function proximityGlyph(state, organ, pos) {
              .join(' ') +
          '"/></g>';
 }
-// A nose in the colour of the scent it prefers, as the Aquarium colours smell cells.
 function noseGlyph(state, organ, pos) {
   const c = organ.centers[0], colour = c ? scentColors?.[preferredScent(c)] : null;
   return '<ellipse class="aid-anatomical-nose" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
          '" rx="' + GLYPH.nose[0] + '" ry="' + GLYPH.nose[1] + '"' +
          (colour ? ' style="fill:' + colour + '"' : '') + '/>';
 }
-// The ovary a sac of round eggs, the more the more its growth cells make; the testis a slimmer
-// pale sac streaked with sperm.
 function ovaryGlyph(state, organ, pos) {
   const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
   const count =
@@ -228,7 +199,6 @@ function ovaryGlyph(state, organ, pos) {
   let html = '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
              '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
   for (let i = 0; i < count; ++i) {
-    // Eggs on a sunflower spiral, filling the sac.
     const r = Math.sqrt((i + .5) / count), a = i * O.turn;
     html += '<circle class="aid-anatomical-egg" cx="' +
             fixed(pos.x + Math.cos(a) * r * (O.sac[0] - O.egg)) + '" cy="' +
@@ -248,11 +218,9 @@ function testisGlyph(state, organ, pos) {
   }
   return html + '"/>';
 }
-// An organ drawn as an ellipse of its size at its place.
 const ellipseGlyph = (cls, [ rx, ry ]) => (state, organ, pos) =>
     '<ellipse class="' + cls + '" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) + '" rx="' + rx +
     '" ry="' + ry + '"/>';
-// The blood sense: drops of blood where its cells read it.
 function bloodGlyph(state, organ, pos) {
   const G = GLYPH, types = organTypes(organ), wheel = state.capabilities;
   let html = '';
@@ -267,7 +235,6 @@ function bloodGlyph(state, organ, pos) {
   }
   return html;
 }
-// The lateral line along the flank with its pores; a broad band behind it takes clicks.
 function lateralGlyph(state, organ) {
   const points = lateralLine(state.document, state.sites, organ);
   const line = 'M' + points.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L');
@@ -278,7 +245,6 @@ function lateralGlyph(state, organ) {
                        fixed(p.y) + '" r="' + GLYPH.lateral_pore + '"/>')
              .join('');
 }
-// A muscle as one shape where it works, in the colour of its work, its nodes marked across it.
 function muscleGlyph(state, organ) {
   const shape = muscleShape(organ, state.sites);
   if (!shape)
@@ -287,8 +253,6 @@ function muscleGlyph(state, organ) {
   return '<path class="aid-anatomical-muscle" d="' + shape.path + '" style="--muscle:' + tone +
          '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') + '"/>';
 }
-// The skin's pigment cells lie all over the fish, not at their nodes; the skin senses, spines and
-// gut have their own drawings, brain regions theirs.
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,
   proximity : proximityGlyph,
@@ -311,15 +275,7 @@ function organGlyph(state, organ, drawnEyes) {
   return draw ? draw(state, organ, organLocation(organ, state.sites, state.document), drawnEyes)
               : '';
 }
-// Spines stand out of the skin, SPINES.step apart along it, where the engine finds them shielding
-// the body: in each direction around it as long as they shield it there at rest, from
-// SPINES.length's least (hardly) to its most (fully), leaning back by SPINES.lean of that; behind
-// them, as the organ is chosen or raises them, as long as they shield it fully raised. Each organ
-// draws the spines of the directions its nodes spread the most into; until the engine has
-// answered, one spine at each node.
 const SPINES = Object.freeze({step : 15, base : 8, length : [ 6, 64 ], lean : .3, least : .03});
-// A value of the engine's samples around the body (the middles of equal arcs from straight
-// behind) at a direction, between the two nearest.
 function aroundAt(samples, angle) {
   const count = samples.length, at = (angle + Math.PI) / (2 * Math.PI) * count - .5;
   const k = Math.floor(at), share = at - k;
@@ -360,9 +316,6 @@ function spinesSvg(state, organ) {
          'data-spines="' + escapeText(organ.id) + '"><g class="aid-spines-raised">' + lifted +
          '</g><g class="aid-spines-rest">' + resting + '</g></g>';
 }
-// Touch cells as bristles out of the skin where each node lies, pain cells as nerve endings
-// forking under it; a disc around each takes clicks. SKIN_SENSE: the bristles' spacing, how far
-// they reach out and start inside, the fork's stem and spread, the disc's radius.
 const SKIN_SENSE = Object.freeze(
     {hairs : [ -5, 0, 5 ], fan : 1.4, reach : 8, root : 3, stem : 12, fork : 5, hit : 13});
 function skinSenseSvg(organ, sites) {
@@ -383,9 +336,6 @@ function skinSenseSvg(organ, sites) {
       })
       .join('');
 }
-// The gut from the throat to the vent (gutShape), its intestine in as many loops as the engine
-// and the Aquarium give its length: the gullet and the intestine as one tube, the stomach as a
-// sac on it.
 function gutPath(state) {
   const turns = gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle);
   const G = gutShape(turns), S = INSIDE.gut.stomach;
@@ -394,7 +344,6 @@ function gutPath(state) {
          '"/><ellipse class="aid-anatomical-stomach" cx="' + S.x + '" cy="' + fixed(G.stomach.y) +
          '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
 }
-// The gut takes clicks on its stomach and intestine, not on the gullet under the brain.
 function gutHit(state) {
   const G = gutShape(
             gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle)),
@@ -403,9 +352,6 @@ function gutHit(state) {
          G.intestine.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L') + '"/><ellipse cx="' + S.x +
          '" cy="' + fixed(G.stomach.y) + '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
 }
-// A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
-// A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
-// size), kept at its size on screen.
 const REGION = Object.freeze({pad : 9, least : 16, badge : 11, icon : 14, corner : .7});
 function regionHull(state, organ) {
   const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
@@ -428,7 +374,6 @@ function regionGlyph(state, organ) {
          '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>' +
          regionBadge(state, organ, hull);
 }
-// A region's symbol at its hull's upper left.
 function regionBadge(state, organ, hull = regionHull(state, organ)) {
   if (!hull)
     return '';
@@ -438,10 +383,7 @@ function regionBadge(state, organ, hull = regionHull(state, organ)) {
          '><circle r="' + REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) +
          '</g>';
 }
-// The abstract fish in the colour of its pigment, with its organs.
-// The nodes of an organ with several, each on its site, to choose or wire one of them alone.
 function organNodes(state, organ) {
-  // A brain region's nodes are drawn as nerve centers.
   if (organ.type === 'eye' || organ.type === 'pigment' || isRegion(organ) ||
       organ.centers.length < 2 || !showsNodes(state, [ organ ]))
     return '';
@@ -457,20 +399,13 @@ function organNodes(state, organ) {
       })
       .join('');
 }
-// What touch, injury and lateral-line cells feel, from the engine's design view, while their
-// organ is chosen: the skin touch and injury cells feel on, the brighter the more their angular
-// kernel weighs it (at least BASE, so the whole field stands out); for lateral-line cells the way
-// water passing them makes them answer.
 const FELT = Object.freeze(
     {step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, corner : 2.2});
-// The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
   return organ.centers.flatMap(
       c => (groupReport(state.document, state.anatomy, 'felt', c.id) ??
             []).map(cell => ({cell, at : centerLocation(c, organ.type, state.sites)})));
 }
-// The skin where touch and injury cells feel, in pieces FELT.step long, each as bright as the
-// cells' kernels weigh its direction.
 function feltSkin(state, cells) {
   const points = skinPoints(FELT.step);
   return points.slice(1)
@@ -487,9 +422,6 @@ function feltSkin(state, cells) {
       })
       .join('');
 }
-// While a lateral line is chosen: the corners where it samples the water, as large as its cells
-// weigh them, and at each of its nodes on the skin an arrow of the water streaming against it
-// from the way its cells face.
 function feltFlow(state, organ, cells) {
   const feel = lateralFeel(state, organ), corners = state.capabilities?.lateralCorners;
   const centre = BODY_MIDDLE;
@@ -521,7 +453,6 @@ function feltSvg(state, organ) {
          '</g>';
 }
 const headTitle = key => '<title>' + escapeText(t(key)) + '</title>';
-// Barbels at the snout on each side where smell cells also feel touch.
 function barbelsSvg(columns) {
   const tip = SNOUT_TIP, H = HEAD;
   return [ -1, 1 ]
@@ -533,8 +464,6 @@ function barbelsSvg(columns) {
                    '">' + headTitle('studio.head.barbels') + '</path>')
       .join('');
 }
-// The mouth as the jaw shapes it (half width RX, half height RY, its jaws REACH long), and how
-// strongly the fish bites and sucks.
 function mouthShape(columns) {
   const H = HEAD, middle = BODY_UNIT.trait_middle, jaw = columns[ANATOMY.jaw_length] ?? middle;
   const reach = jawReach(jaw) / jawReach(middle);
@@ -547,9 +476,6 @@ function mouthShape(columns) {
     suction : organSize(columns[ANATOMY.suction_strength])
   };
 }
-// The throat from the back of the mouth to the gut; water drawn into the mouth from ahead, the
-// further the stronger the suction; the cheeks swelling with suction; and the jaws from the
-// corners of the mouth back to their hinges.
 function throatSvg({at, rx, suction}) {
   return '<path class="aid-head-throat" data-part="throat" d="M' + fixed(at.x + rx) + ' ' +
          fixed(at.y) + ' L' + HEAD.throat_end + ' ' + fixed(at.y) +
@@ -591,13 +517,11 @@ function jawsSvg({at, ry, reach, bite}) {
                    headTitle('studio.head.jaw') + '</path>')
       .join('');
 }
-// The mouth's rim, its lips as thick as they suck.
 const mouthSvg = ({at, rx, ry, suction}) =>
     '<ellipse class="aid-head-mouth" data-part="mouth" cx="' + fixed(at.x) + '" cy="' +
     fixed(at.y) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) +
     '" style="stroke-width:' + fixed(HEAD.lip * lipWidth(suction) / lipWidth(0)) + '">' +
     headTitle('studio.head.mouth') + '</ellipse>';
-// Teeth stand on the rim of the mouth around its front, pointing into it, over the mouth.
 function teethSvg(columns, {at, rx, ry}) {
   const H = HEAD, bluntness = columns[ANATOMY.blunt_teeth] ?? BODY_UNIT.trait_middle;
   const full = toothForm(1, bluntness).reach;
@@ -634,12 +558,9 @@ function headSvg(state) {
                : '') +
          teethSvg(columns, mouth) + '</g>';
 }
-// The outline of the fish with its fins as large as their muscles grow them.
 export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
 // Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
-// over the whole of a fine or hollow glyph (a lateral line, a near sense's pits). A region
-// takes them at its symbol, a wire elsewhere; the gut, under everything, takes them below, the
-// skin's pigment cells under the other organs.
+// over the whole of a fine or hollow glyph (a lateral line, a near sense's pits).
 const SKIN_FIRST = (a, b) => (b.type === 'pigment') - (a.type === 'pigment');
 export function organHitsSvg(state) {
   const drawnEyes = new Set();
@@ -657,15 +578,11 @@ export function organHitsSvg(state) {
   }
   return '<g class="aid-organ-hits">' + html + '</g>';
 }
-// The body's shading across it, REACH either way of the midline: lighter at the flanks (FLANK),
-// darker along the back (BACK).
 const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
   let organs = '', gut = '', felt = '';
-  // The gut lies under the brain, its gullet beneath it; the skin's pigment cells under the other
-  // organs.
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
     felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
@@ -681,8 +598,6 @@ export function bodySvg(state) {
     else
       organs += drawn;
   }
-  // Fins and the tail fin are drawn apart from the body, each with its rays, to beat about its
-  // root. The body is shaded darker along its back, as a fish seen from above is.
   const tail = tailFin(sizes), roots = finRoots(), rays = finRays(sizes),
         origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
   const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;

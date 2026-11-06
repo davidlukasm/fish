@@ -16,10 +16,6 @@ import {cubicWeights, zoomOf} from './frame.js';
 import {centerTitle, endpointTitle, isSelected} from './names.js';
 import {isModulator} from '../model/organs.js';
 
-// The wires on the fish: drawn connections bundled into trunks that branch to their nodes, the
-// signals a stimulus sends along them, the developed contacts, and their arrowheads.
-
-// A way between two points bows up as a wire does over the way along, plus its own curve.
 const bowRise = (from, to) =>
     clamp(Math.abs(to.x - from.x) * WIRE_BOW.share, WIRE_BOW.least, WIRE_BOW.most);
 export function pathTo(from, to, curve = 0) {
@@ -90,15 +86,10 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
       }
   return active;
 }
-// Where a wire attaches: an organ as a whole at its glyph (an eye at its eye), a nerve center at
-// its node.
 function organAnchor(doc, sites, organ) {
   return organ.type === 'eye' ? eyeLocation(doc, sites, sideOf(organ))
                               : organLocation(organ, sites, doc);
 }
-// Where a wire's trunk ends: at an organ or a brain region, also for one of its nodes, whose
-// wires bundle there and branch to the nodes; at a free nerve center of the brain on its own.
-// The key names that place, so wires ending at the same one share their trunk.
 function endpointAnchor(doc, sites, id, centers) {
   const organ = findOrgan(doc, id);
   if (organ)
@@ -114,8 +105,6 @@ function endpointAnchor(doc, sites, id, centers) {
                  organ : found.organ
                };
 }
-// A wire drawn from or to one node, while that node shows, runs from or to the node itself, not
-// along its organ's trunk; else its end is the organ's or region's place.
 function wireEnd(state, centers, wireId, linkId) {
   const found = centers.get(linkId), {document : doc, sites} = state;
   if (found && found.organ.type !== 'brain' && !findOrgan(doc, wireId) &&
@@ -123,8 +112,6 @@ function wireEnd(state, centers, wireId, linkId) {
     return {key : linkId, point : nodeLocation(doc, sites, found.center, found.organ.type)};
   return endpointAnchor(doc, sites, linkId, centers);
 }
-// The nodes a wire branches to at one end, while its organ's nodes show: all of them for the
-// organ as a whole (when it has more than one), the one for a node.
 function branchNodes(state, id, anchor, centers) {
   const organ = anchor.organ;
   if (!organ || !showsNodes(state, [ organ ]))
@@ -136,8 +123,6 @@ function branchNodes(state, id, anchor, centers) {
       center =>
           ({id : center.id, ...nodeLocation(state.document, state.sites, center, organ.type)}));
 }
-// A trunk's course: a quadratic curve bowed to the left of its direction, so the two directions
-// between the same places run apart; each further kind of signal bows further.
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19, lane : 9});
 function course(from, to, lane) {
   const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
@@ -155,15 +140,11 @@ function curveDirection([ a, c, b ], s) {
         y = 2 * (1 - s) * (c.y - a.y) + 2 * s * (b.y - c.y), length = Math.hypot(x, y) || 1;
   return {x : x / length, y : y / length};
 }
-// The piece of a quadratic curve between two of its parameters, itself a quadratic curve.
 const curvePart =
     (q, s0,
      s1) => [curveAt(q, s0),
              mix(q[0], q[1], q[2], (1 - s0) * (1 - s1), (1 - s0) * s1 + s0 * (1 - s1), s0 * s1),
              curveAt(q, s1)];
-// Where branches join a trunk: past the farthest node they come from, by BRANCH.beyond, at most
-// BRANCH.share of the way; they leave their node towards the join (BRANCH.lead of the way to
-// their last guide point) and meet the trunk along it, pulled in by BRANCH.pull of their length.
 const BRANCH = Object.freeze({beyond : 28, share : .4, lead : .3, pull : .5, least_width : 1});
 function joinAt(anchor, nodes, chord) {
   if (!nodes.length)
@@ -171,8 +152,6 @@ function joinAt(anchor, nodes, chord) {
   const reach = Math.max(...nodes.map(p => Math.hypot(p.x - anchor.x, p.y - anchor.y)));
   return Math.min(BRANCH.share, (reach + BRANCH.beyond) / Math.max(1, chord));
 }
-// A branch from a node into the trunk (towards: the trunk's direction there) or out of it to a
-// node, as one smooth curve.
 function branchCurve(node, join, towards, inward) {
   const pull = Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull;
   const guide = {
@@ -189,9 +168,6 @@ const branchPath = (...args) => {
   const [a, b, c, d] = branchCurve(...args);
   return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 };
-// A trunk's way, as a point and a direction at a share s of it and its piece between two shares
-// drawn: a quadratic curve, or a smooth line through the bends set by hand (cubic pieces through
-// its points, BENT_STEPS samples a piece when drawn).
 const BENT_STEPS = 14;
 function quadraticWay(q) {
   return {
@@ -233,7 +209,6 @@ function bentWay(points) {
     }
   };
 }
-// The bends a link runs through: its wire's, mirrored for a link from the other side of a pair.
 function bendsOf(doc, link) {
   const bends = link.wire.bends ?? [];
   return linkMirrored(doc, link) ? bends.map(p => ({x : p.x, y : 2 * BODY_FRAME.middle - p.y}))
@@ -256,14 +231,6 @@ const WIRE_KINDS = Object.freeze({
 });
 const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
 const INNER_BOW = -10;
-// Every connection of every wire: a wire between paired organs draws one on each side, or two
-// crossing the midline, or all four. Wires between the same two places with the same kind of
-// signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the
-// trunk splits before it in smooth branches, one to each node a wire joins; at the start the
-// branches from the nodes flow together into it. Clicking a trunk selects its wires in turn.
-// The drawn bundles: wires between the same two places with the same kind of signal, with
-// their trunk (the part of their course between where branches join it) and, per wire, the
-// nodes it branches from and to. Wires within one organ come back as `inside`.
 function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected) : null;
@@ -271,8 +238,6 @@ function wireBundles(state, centers) {
   for (const link of routedLinks(doc, sites)) {
     if (members && !(members.has(link.from) && members.has(link.to)))
       continue;
-    // A region's own circuit shows as fine lines between its nodes, as do other wires within one
-    // organ.
     const within = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
                    centers.get(link.from).organ === centers.get(link.to).organ &&
                    !findOrgan(doc, link.from) && !findOrgan(doc, link.to);
@@ -326,11 +291,6 @@ function wireBundles(state, centers) {
 const signalKind = center => isModulator(center) ? 'modulate'
                              : center.sign < 0   ? 'inhibit'
                                                  : 'excite';
-// Every connection of every wire: a wire between paired organs draws one on each side, or two
-// crossing the midline, or all four. Wires between the same two places with the same kind of
-// signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the
-// trunk splits before it in smooth branches, one to each node a wire joins; at the start the
-// branches from the nodes flow together into it. Clicking a trunk selects its wires in turn.
 export function wireSvg(state, centers) {
   const {document : doc, sites, selected} = state;
   const {bundles, inside} = wireBundles(state, centers);
@@ -349,7 +309,6 @@ export function wireSvg(state, centers) {
     const d = way.path(s0, s1);
     const width = Math.hypot(...ends.map(e => e.width));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
-    // A click on the trunk selects the wire after the selected one.
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
     html += '<g data-wire="' +
@@ -386,8 +345,6 @@ export function wireSvg(state, centers) {
   }
   return html + (state.tool === 'wire' ? bendHandles(state, bundles) : '');
 }
-// With the wiring tool, each bend set by hand is a handle to drag (a double click removes it),
-// BEND_HANDLE wide on screen.
 const BEND_HANDLE = 6;
 function bendHandles(state, bundles) {
   const zoom = zoomOf(state);
@@ -403,10 +360,6 @@ function bendHandles(state, bundles) {
       })
       .join('');
 }
-// The wire a dragged or held wiring tile is aimed at: of the drawn bundles (of those with paired
-// ends alone, `paired`) the one running nearest the point, within AIM.reach screen pixels of it,
-// looked for at AIM.steps points along its trunk: its wires, whether it is drawn for the other
-// side, and the point on it nearest.
 const AIM = Object.freeze({reach : 36, steps : 48});
 export const drawnBundles = state => wireBundles(state, endpointIndex(state.document)).bundles;
 export function aimedWire(state, bundles, point, paired) {
@@ -429,13 +382,9 @@ export function aimedWire(state, bundles, point, paired) {
   }
   return best;
 }
-// The aimed point as it shows: a bend's handle, BEND_HANDLE wide.
 export const aimMark = (state, aimed) => '<circle class="aid-wire-aim" cx="' + fixed(aimed.at.x) +
                                          '" cy="' + fixed(aimed.at.y) + '" r="' +
                                          fixed(BEND_HANDLE / zoomOf(state)) + '"/>';
-// The bends of the wires drawn as one bundle with a point put in where the way runs nearest it
-// (where it lengthens the way least), as the wires store them (mirrored back for a bundle drawn
-// for the other side); null where no bundle of those wires is drawn.
 export function bendsWith(state, wireIds, point, mirrored) {
   const wanted = new Set(wireIds);
   const bundle = wireBundles(state, endpointIndex(state.document))
@@ -455,13 +404,7 @@ export function bendsWith(state, wireIds, point, mirrored) {
   bends.splice(best, 0, point);
   return bends.map(p => mirrored ? {x : p.x, y : 2 * BODY_FRAME.middle - p.y} : p);
 }
-// The ways a stimulus takes, as the wires are drawn: one leg for each part (an organ as a whole
-// or a nerve center) that sends along a bundle to another, kind by kind, running from the
-// nodes it leaves along their branches into the bundle's trunk and out along the branches to
-// the nodes it reaches; and one for each link of an organ's own circuit, between its nodes.
-// Each with what its source sends, its wires and how strong it is.
 const SIGNAL_STEPS = 24;
-// Every center and every organ (but the brain, by its first center) of a design, by id.
 export function endpointIndex(doc) {
   const centers = new Map();
   for (const organ of doc.organs) {
@@ -524,10 +467,6 @@ export function signalLinks(state) {
                                    arrives : [...way.arrives.values() ]
                                  }));
 }
-// The developed contacts drawn: the MOST important (by count and FLOOR plus their mean weights),
-// exciting and inhibiting ones in lanes LANE apart, bowed by STEPS kinds of curve STEP apart; a
-// contact of a cell with itself as a loop ahead of it (LOOP); lines as wide as their count's
-// logarithm (WIDTH), each kind in its colour.
 const CONTACTS = Object.freeze({
   most : 120,
   floor : .1,
@@ -602,8 +541,6 @@ export function developedContactsSvg(state, centers) {
       })
       .join('');
 }
-// Arrowheads of wires and contacts keep their size on screen at any zoom, as the wires keep
-// their width.
 const ARROW = Object.freeze({size : 8, tip : 7, middle : 3});
 export const arrowSize = zoom => fixed(ARROW.size / zoom);
 export function wireMarkers(zoom) {

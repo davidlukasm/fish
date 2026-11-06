@@ -1,12 +1,9 @@
-"""Step-based ecological observations and complete, compressed milestones."""
-
 from datetime import datetime, timezone
 from pathlib import Path
 import gzip, json, uuid, shutil
 from file_io import atomic_write
 from wording import Refusal
 
-# Current checkpoint family.
 MODEL = "tank-ecology-47"
 MAX_POINTS = 600
 MAX_MILESTONES = 10
@@ -123,8 +120,6 @@ class History:
                         pass
 
     def trim(self):
-        # Recent points stay dense; whenever the list is full, the older half is thinned to
-        # every second point, so the whole run stays reachable at a coarser grain.
         while len(self.points) > MAX_POINTS:
             older, recent = self.points[:-MAX_POINTS // 2], self.points[-MAX_POINTS // 2:]
             self.points = older[::2] + recent
@@ -258,7 +253,6 @@ class History:
                         directory / f"{blob_id}.journal.json",
                         json.dumps(journal, ensure_ascii=False, allow_nan=False),
                     )
-            # The interface words the reason; the name is absent for the tank as a whole.
             self.milestones.append(
                 {
                     **point,

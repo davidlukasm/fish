@@ -45,8 +45,6 @@ import {draw} from './tank.js';
 import {setTool} from './world.js';
 import {showWorld} from './world_parameters.js';
 export const cockpitState = {};
-// Species show up to SUMMARY_LABELS labels; a protection toggle waits PROTECTION_PENDING_MS for
-// the server's echo.
 const SUMMARY_LABELS = 4, PROTECTION_PENDING_MS = 4000, DISTANCE_DIGITS = 3;
 export let speciesLabels;
 
@@ -146,7 +144,6 @@ export function appendSpeciesSummary(button, s) {
   appendSpeciesSpread(button, s);
 }
 
-// Species sparklines: WIDTH by HEIGHT canvases, lines PAD_X and PAD_Y inside.
 const SPARK = Object.freeze({
   width : 140,
   height : 24,
@@ -301,7 +298,6 @@ export function renderDiversity(f) {
   text('living-species-count', living.length);
 }
 
-// Reproduction chart in pixels: one row per way of starting, ROW apart from TOP, bars from BAR_X.
 const REPRODUCTION = Object.freeze({
   top : 12,
   row : 35,
@@ -516,7 +512,6 @@ export function updateCockpit(f) {
     showWorld(f);
 }
 
-// Reserve and gut bars under fish: WIDTH by HEIGHT pixels, GAP below the body, STEP apart.
 const FISH_BARS = Object.freeze({
   width : 20,
   height : 3,
@@ -527,8 +522,6 @@ const FISH_BARS = Object.freeze({
   reserve : '#93abb1',
   gut : '#d8b778'
 });
-// Observation overlays: feeding rings GAIN_RING plus the gain wide (at most MAX_GAIN), health shown
-// below WOUNDED, view cones VIEW_ALPHA faint, shared among all shown.
 const OBSERVE = Object.freeze({
   gain_ring : 9,
   max_gain : 20,
@@ -645,7 +638,6 @@ function renderLiveOverview(f) {
                 ? t('cockpit.minimumStock', {target : o.help.target, missing : o.help.shortfall})
                 : t('cockpit.ausgeschaltet')
   });
-  // A click shows its result at once; the server echo follows with the next frames.
   const protection = el('pulse-protection'), pending = cockpitState.protectionPending;
   if (pending && (pending.on === o.protection.on || performance.now() > pending.until))
     cockpitState.protectionPending = null;
@@ -783,7 +775,6 @@ const initializers = {
           sceneState.frame && !sceneState.frame.historical && command('burst', {kind});
   },
   "pulse_protection_onclick" : () => {
-    // Artenschutz = species minimum above 0; switching off remembers the last minimum.
     cockpitState.protectionMinimum = 3;
     el('pulse-protection').onclick = async () => {
       const f = sceneState.frame, minimum = f?.assistance?.species_minimum || 0,

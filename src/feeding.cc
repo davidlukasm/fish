@@ -4,21 +4,12 @@
 #include "plants.hh"
 namespace fishsim {
 namespace {
-// A flesh bite takes FLESH_BITE tissue per doubled bite force at body scale 1, at most a quarter
-// of the prey (FLESH_SHARE); a smaller eater still counts as a quarter of the prey's mass. The
-// wound is measured in the same unit. A bite of LETHAL_BITE_SHARE of the tissue kills.
 constexpr double FLESH_BITE = 3, FLESH_SHARE = .25, FLESH_MIN_MASS_RATIO = .25,
                  LETHAL_BITE_SHARE = .2;
-// Loose pieces keep most of their source's motion and take a quarter of the eater's.
 constexpr double FRAGMENT_INERTIA = .75;
-// A food piece whose rest would fall below half the crumb limit is taken whole.
 constexpr double CRUMB_REST_SHARE = .5;
-// Carrion sinks; other loose pieces float neutrally.
 constexpr double CARRION_BUOYANCY = 1.2, NEUTRAL_BUOYANCY = 1;
-// Sucked items move at least SUCTION_MIN_STEP per step, by SUCTION_PULL of the reach times the
-// flow, and arrive within ARRIVAL_SHARE of the gape.
 constexpr double SUCTION_MIN_STEP = .15, SUCTION_PULL = .5, ARRIVAL_SHARE = .35;
-// Feeding effects last feeding_effect_steps; at most Ecosystem::MAX_COMBAT_EFFECTS are kept.
 constexpr Color EFFECT_COLOR{1, 0, 0};
 }
 FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life) {
@@ -34,7 +25,6 @@ FleshBite sever_flesh(Body &eater, Body &prey, double wound, bool protected_life
   const double requested = std::min(
                    {maximum, FLESH_SHARE * tissue, tissue * gape * gape / (radius * radius)}),
                damage = wound * requested / FLESH_BITE * BODY_TISSUE / tissue;
-  // Spines facing the bite block it; holding them costs the prey energy.
   const double bearing = std::atan2(eater.y - prey.y, eater.x - prey.x),
                spines = prey.local_defense(bearing),
                cost = PhysiologyParameters::spine_block_cost * BODY_TISSUE * damage * spines,
@@ -94,7 +84,6 @@ class Ecosystem::FeedingSession {
                 bool blunt = false) {
     if (amount <= 0)
       return;
-    // Cracked shellfish leaves loose meat; every other fitting bite goes straight into the gut.
     if (origin != food_kind::crab && origin != food_kind::mussel &&
         radius <= maximum_mouth_aperture(b)) {
       const double eaten = std::min(amount, gut_room(b, origin, world.physiology_));
@@ -180,7 +169,6 @@ class Ecosystem::FeedingSession {
             candidate(q.kind, j, q.x, q.y, q.radius);
             return;
           }
-          // A stroke is reached at its point nearest to the mouth.
           const double s = stroke_closest(q.hx, q.hy, world.field.delta_x(mx - q.x), my - q.y);
           candidate(food_kind::plant, j, world.field.wrap_x(q.x + s * q.hx), q.y + s * q.hy,
                     stroke_width(q));
@@ -265,8 +253,6 @@ class Ecosystem::FeedingSession {
           bitten[target] = 1;
       }
     } else if (kind == food_kind::egg) {
-      // An egg is one morsel: its embryo and remaining yolk. A bite never divides it; an egg too
-      // large for the mouth or the gut stays where it is.
       auto &q = world.fish[target];
       const double amount = stored_energy(q.body), radius = collision_radius(q.body);
       if (amount > 0 && radius <= maximum_mouth_aperture(b) &&
@@ -303,7 +289,6 @@ class Ecosystem::FeedingSession {
       if (amount > 0)
         effect(feeding_effect::bite, q.x, q.y, morsel, amount);
     } else if (kind == food_kind::worm) {
-      // A bite tears a piece off the head; the rest withdraws into the bed.
       const double force = bite_force(b);
       if (world.rng.uniform() <
           crack_success(force, world.field.env().hardness_leaf, world.field.env()))
@@ -341,13 +326,12 @@ class Ecosystem::FeedingSession {
                            ? stroke_closest(part.hx, part.hy, world.field.delta_x(mx - part.x),
                                             my - part.y)
                            : 0,
-                   // The organ normal (-hy, hx) points to side +1, as in the drawing.
-          side = part.kind == food_kind::plant &&
-                         -part.hy * world.field.delta_x(mx - part.x - s * part.hx) +
-                                 part.hx * (my - part.y - s * part.hy) <
-                             0
-                     ? -1.
-                     : 1.;
+                   side = part.kind == food_kind::plant &&
+                                  -part.hy * world.field.delta_x(mx - part.x - s * part.hx) +
+                                          part.hx * (my - part.y - s * part.hy) <
+                                      0
+                              ? -1.
+                              : 1.;
       if (auto piece = world.bite_plant(b, target, s, side)) {
         fragment(piece->x, piece->y, piece->radius, radius, piece->vx, piece->vy, piece->energy,
                  piece->origin, piece->color, 0, piece->buoyancy, piece->drift_plant, -1,
@@ -375,7 +359,6 @@ class Ecosystem::FeedingSession {
         candidate(food_kind::feed, j, q.x, q.y, food_radius(q));
       }
     });
-    // Suction removes a thin flake from soft algae; stems and leaves still require a bite.
     world.field.vegetation().plant_grid.nearby(
         mx, my, reach + world.field.vegetation().indexed_plant_radius, [&](std::uint32_t j) {
           const auto &q = world.field.vegetation().plants[j];
@@ -583,7 +566,6 @@ public:
                                              gut_room(b, food_kind::benthic, world.physiology_));
     if (bed > 0) {
       ingest(bed, food_kind::benthic);
-      // Detritus uses the same remaining pump transport, never a second allowance.
       area = 0;
       if (b.feeding_action_age <= feeding_effect_steps::brief) {
         b.feeding_action = feeding_effect::scrape;

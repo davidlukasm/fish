@@ -3,11 +3,7 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// Released sperm spreads over cells within its radius (at least half a cell diagonal), falling
-// off as exp(-SEED_FALLOFF d² / r²).
 constexpr double SEED_FALLOFF = 2;
-// Optical coefficients refer to an OPTICAL_PATH long path; dense clouds saturate at SATURATION
-// times the opaque density; ink density stays below 1 by tolerance::precision.
 constexpr double OPTICAL_PATH = 16, SATURATION = 3;
 }
 void Ecosystem::refresh_sperm_field() {
@@ -152,8 +148,6 @@ void Ecosystem::drift_sperm() {
     initial += s.energy;
   for (auto &s : sperm)
     s.cells = transport.advance(s.cells);
-  // Dilution only reads the combined density. Build pigment mixtures and the
-  // optical occupancy index once, after the rejected material has been removed.
   thread_local std::vector<double> density;
   density.assign(p.energy.size(), 0.);
   const double area = p.width / p.columns * p.height / p.rows;
@@ -203,7 +197,6 @@ bool Field::sperm_on_path(double x, double y, double tx, double ty) const {
   const auto &p = food_web_.plankton;
   if (!has_sperm_ || sperm_occupied_.empty())
     return false;
-  // Reject empty rectangles before optical integration. Include the bilinear halo.
   const double dx = p.width / p.columns, dy = p.height / p.rows;
   x = wrap_x(x);
   tx = x + delta_x(tx - x);
@@ -242,13 +235,10 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
   double dx = delta_x(tx - x), dy = ty - y, length = std::hypot(dx, dy);
   if (length <= 0)
     return out;
-  // One sample per grid cell, interpolated straight from the open cells of the grid. Walls are
-  // not traced for every sample: the cloud already stays in water, and the eye only sees it.
   const double cell_x = p.width / p.columns, cell_y = p.height / p.rows,
                spacing = std::min(cell_x, cell_y);
   int n = std::max(1, int(std::ceil(length / spacing)));
   double step = length / n;
-  // Density is measured per pixel squared.
   double strength = std::clamp(ink_density, 0., 1 - tolerance::precision), scatterTransmission = 1;
   for (int k = 0; k < n; ++k) {
     double t = (k + .5) / n, px = x + t * dx, py = y + t * dy;
@@ -284,7 +274,6 @@ Field::SpermOptics Field::sperm_optics(double x, double y, double tx, double ty)
     density /= total;
     for (auto &h : pigment)
       h /= total;
-    // Dense clouds saturate: even their core stays partly transparent.
     const double colour_density = density;
     density = density / (1 + density / (SATURATION * std::max(tolerance::rounding, sperm_opaque_)));
     const double scatterTr =

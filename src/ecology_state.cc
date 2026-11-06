@@ -19,9 +19,6 @@ using state::same_options;
 using state::scalar;
 using state::value;
 namespace {
-// Plausible extents of a restored checkpoint: plant cache parts per kind and in all, part and
-// corpse extents, corpse decay, parameters, corpses, shared genomes,
-// milestones, founder distance, reserve lines, release radius and sperm cells.
 constexpr std::size_t PLANT_CACHE_PARTS = 2000000, PLANT_CACHE_TOTAL = 4000000,
                       MAX_PARAMETERS = 512, MAX_CORPSES = 20000, MAX_SHARED_GENOMES = 16384,
                       MAX_MILESTONES = 20000, MAX_RESERVE_LINES = 100, MAX_SPERM_CELLS = 4000000;
@@ -350,7 +347,6 @@ void EnvironmentCheckpoint::read_cache(std::istream &in, Field &field) {
   auto count = [&](std::size_t maximum) { return state::count(in, maximum); };
   std::string tag;
   value(in, tag);
-  // PACED_ENV caches hold round parts only; PACED_ENV2 adds the stroke geometry.
   if (tag != "PACED_ENV" && tag != "PACED_ENV2")
     throw std::runtime_error("missing paced environment");
   const bool strokes = tag == "PACED_ENV2";
@@ -449,8 +445,6 @@ void EnvironmentCheckpoint::read_energy_flow(std::istream &in, Field &field) {
   scalar(in, field.feeding_.food_manual, 0, PLAUSIBLE_TOTAL);
   scalar(in, field.feeding_.food_support, 0, PLAUSIBLE_TOTAL);
 }
-// Complexity exception: this transactional decoder follows the checkpoint field order.
-// Publish only a fully read world.
 void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   std::string magic;
   value(in, magic);
@@ -520,7 +514,6 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         throw std::runtime_error("unknown parameter " + name);
     }
   }
-  // Physical darkness is independent of the observer exposure in the renderer.
   auto sample = [&](PerformanceSample &s) {
     value(in, s.tick);
     value(in, s.exposure);
@@ -1000,11 +993,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     p.body.reproduction_.motor_reserve = maternal_reserve(p.body, evo.egg_reserve);
   }
 
-  {
-    // Geometry-dependent capacities may shrink below energy already present.
-    // The import headroom stays zero until natural consumption releases it.
-    refresh_food_allowance();
-  }
+  { refresh_food_allowance(); }
   field.update_sediment_light();
   refresh_sperm_field();
 }

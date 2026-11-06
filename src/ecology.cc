@@ -20,9 +20,6 @@
 #include "stable_hash.hh"
 namespace fishsim {
 namespace {
-// The starter tank in shares of its width and height: walls, and platforms alternating between
-// rimmed planters and plain ledges. Walls are WALL_THICKNESS thick; planters sit PLANTER_LIFT
-// higher with PLANTER_LIP wide rims of PLANTER_RIM plus PLANTER_RIM_STEP per platform.
 struct WallLayout {
   double x0, y0, x1, y1;
 };
@@ -38,32 +35,18 @@ constexpr std::array<PlatformLayout, 6> STARTER_PLATFORMS{{{.055, .235, .24},
                                                            {.08, .155, .83}}};
 constexpr double WALL_THICKNESS = 24, PLANTER_LIFT = 12, PLANTER_RIM = 10, PLANTER_RIM_STEP = 2,
                  PLANTER_LIP = 10;
-// ROCKS rocks: the first FLOOR_ROCKS lie on the floor at FLOOR_ROCK_FIRST plus FLOOR_ROCK_STEP
-// per rock, give or take FLOOR_ROCK_JITTER; the others fall from HIGH_ROCK_TOP, spread over
-// HIGH_ROCK_SLOTS slots of the width from HIGH_ROCK_OFFSET with HIGH_ROCK_JITTER. Each has radii
-// in ROCK_RX and ROCK_RY, a tilt up to ROCK_TILT, MIN_CORNERS plus up to EXTRA_CORNERS corners and
-// a base flattened at ROCK_FLAT of its height; floor rocks start ROCK_FLOOR_LIFT of their width
-// plus ROCK_FLOOR_GAP above the floor.
 constexpr int ROCKS = 6, FLOOR_ROCKS = 2, MIN_CORNERS = 6, EXTRA_CORNERS = 5;
 constexpr double FLOOR_ROCK_FIRST = .12, FLOOR_ROCK_STEP = .70, FLOOR_ROCK_JITTER = .035,
                  HIGH_ROCK_TOP = .06, HIGH_ROCK_SLOTS = 4, HIGH_ROCK_OFFSET = 1.55,
                  HIGH_ROCK_JITTER = .1, ROCK_TILT = .45, ROCK_FLAT = .48, ROCK_FLOOR_LIFT = .45,
                  ROCK_FLOOR_GAP = 4;
 constexpr std::array<double, 2> ROCK_RX{42, 95}, ROCK_RY{30, 78};
-// A rock falls in DROP_STEP steps, then DROP_REFINE halvings; it tries the sideways shifts
-// ROCK_SHIFTS (in radii) and settles where SUPPORTED of SUPPORT_PROBES probes reach ground within
-// SUPPORT_REACH. Corners within BASE_TOLERANCE of the lowest form its base.
 constexpr double DROP_STEP = 4, SUPPORT_REACH = 4, BASE_TOLERANCE = .01;
 constexpr int DROP_REFINE = 10, SUPPORT_PROBES = 5, SUPPORTED = 4;
 constexpr std::array<double, 5> ROCK_SHIFTS{0., -.5, .5, -1., 1.};
-// Combat effects are kept for COMBAT_MEMORY steps; sediment moves in SEDIMENT_PHASES interleaved
-// parts; species are pruned every PRUNE_PERIOD steps; at most MAX_RESERVE immigrants are kept as
-// reserve.
 constexpr std::uint64_t COMBAT_MEMORY = 16, PRUNE_PERIOD = 200;
 constexpr int SEDIMENT_PHASES = 5;
 constexpr std::size_t MAX_RESERVE = 32;
-// Restored life gets at least RESTORE_TISSUE times its tissue floor and RESTORE_RESERVE of its
-// reserve capacity.
 constexpr double RESTORE_TISSUE = 2, RESTORE_RESERVE = .5;
 }
 Ecosystem Ecosystem::fork() const {
@@ -108,7 +91,6 @@ int developing_eggs(const Ecosystem &w) {
     return p.body.alive && p.developing() && !p.body.hatched;
   }));
 }
-// Count shared CPPN construction jobs; tissue maturation consumes no query budget.
 int planning_brains(const Ecosystem &w) {
   std::set<const field::Substrate *> plans;
   std::set<std::tuple<const evolution::Genome *, std::uint64_t, std::uint64_t>> unstarted;
@@ -259,7 +241,6 @@ int Ecosystem::viable_population() const {
 }
 void Ecosystem::starter_world() {
   const double w = field.geometry().width, h = field.geometry().height;
-  // Staggered platforms leave lit planting sites and open passages at every depth.
   for (const auto &s : STARTER_WALLS)
     wall(s.x0 * w, s.y0 * h, s.x1 * w, s.y1 * h, WALL_THICKNESS);
   int platform = 0;
@@ -352,7 +333,6 @@ void Ecosystem::starter_world() {
 void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_water) {
   using Clock = std::chrono::steady_clock;
   auto stamp = profile_steps ? Clock::now() : Clock::time_point{};
-  // Each phase records the time since the previous mark.
   auto mark = [&](int phase) {
     if (profile_steps) {
       auto now = Clock::now();
@@ -360,7 +340,6 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
       stamp = now;
     }
   };
-  // Independent founder trials use one local worker and immutable water frames.
   if (replay_water && (workers != 1 || reproduce))
     throw std::invalid_argument("Water replay requires a solitary, non-reproducing trial");
   while (!combat_effects.empty() && combat_effects.front().tick + COMBAT_MEMORY < ticks)
@@ -520,7 +499,6 @@ void Ecosystem::immortal_fish(std::uint64_t id, bool enabled) {
         Individual restored = p;
         restore_life(restored);
         const double added = stored_energy(restored.body) - stored_energy(p.body);
-        // A smaller tank may already exceed its limit; protection can still add no energy.
         if (added > tolerance::negligible &&
             total_energy() + added > energy_limit() + tolerance::negligible)
           throw Refusal("revivalBudget");

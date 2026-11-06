@@ -1,14 +1,9 @@
-"""Species measurements, stable trait confirmation and lifecycle events."""
-
 from dataclasses import dataclass
 from protocol_schema import Fish, FoodKind, RateWindow, SpeciesTrace
 
-# Species traces keep the last TRACE_LENGTH samples.
 TRACE_LENGTH = 32
 from species_traits import CATALOG, describe, summary_labels, profile_labels
 
-# A species counts as extinct after this many steps without fish or gametes; it replaces its
-# losses once hatches have matched deaths for the sustain window.
 EXTINCT_AFTER = 800
 SUSTAIN_AFTER = 1200
 
@@ -178,7 +173,6 @@ def confirm_traits(journal, f, s, k, members, facts, step):
         k["labels"] = confirmed
     else:
         k["labels"] = previous
-    # Notes explain a trait as the catalogue defines it now, also for earlier findings.
     details = {
         word: {**known_details.get(word, {**CATALOG[word], "evidence": []}),
                "note": CATALOG[word]["note"]}

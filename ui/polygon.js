@@ -1,10 +1,5 @@
 import {TOLERANCE} from './schema.js';
 
-// Polygons [[x, y], ...] cut into triangles by ear clipping. The ring of corners is walked in the
-// polygon's own winding; a corner that does not turn is dropped, a convex one is cut off as an ear
-// unless the triangle holds another corner. `holds(sign, a, b, c, q)` decides that (strictly or
-// with the edges counted in). Clipping stops when LEAST corners are left, no ear is found (stuck)
-// or TRIES rounds are spent; it returns the ears' corner indices and the ring left.
 const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
 const windingOf = points =>
     points.reduce((v, p, i) => v + p[0] * points[(i + 1) % points.length][1] -
@@ -38,7 +33,6 @@ export function clipEars(points, holds, least, tries = Infinity) {
   }
   return {ears, ring, stuck : false};
 }
-// Whether a triangle holds a point within it, edges included or not.
 export const holdsWithEdges = (sign, a, b, c, q) =>
     sign * cross(a, b, q) >= -TOLERANCE.negligible &&
     sign * cross(b, c, q) >= -TOLERANCE.negligible &&

@@ -13,14 +13,11 @@ export let tankPoint;
 
 const tankPrograms = new WeakMap();
 const TANK_MASK_COLOR = [ 0, 0, 0, 0 ];
-// Paint modes of the vector shader and the primitive shapes of its quads.
 const PAINT = Object.freeze({solid : 0, image : 1, linear : 2, radial : 3, dash : 4});
 const SHAPE = Object.freeze({none : 0, disc : 1, ring : 2});
-// Vertex attributes of the vector shader in location order, with their float counts.
 const VERTEX_ATTRIBUTES = [ [ 'position', 2 ], [ 'uv', 2 ], [ 'rgba', 4 ], [ 'primitive', 2 ] ];
 const FLOAT_BYTES = Float32Array.BYTES_PER_ELEMENT,
       VERTEX_FLOATS = attributeLayout(VERTEX_ATTRIBUTES).floats;
-// The stencil keeps the clip depth in its low bits and marks paths in its top bit.
 const STENCIL_PATH = 128;
 const STENCIL = Object.freeze({
   path : STENCIL_PATH,
@@ -28,10 +25,6 @@ const STENCIL = Object.freeze({
   all : 2 * STENCIL_PATH - 1,
   max_depth : STENCIL_PATH - 2
 });
-// Curves split until their control points lie within FLATTEN.error of the chord (at most
-// MAX_DEPTH halvings); arcs take ARC_MIN to ARC_MAX segments, more for larger radii; round caps
-// at least CAP_MIN. Strokes up to THIN pixels wide are drawn as plain segment quads; miters reach
-// at most MITER times the half width. A circle stroke within RING of round is drawn as one ring.
 const FLATTEN = Object.freeze({
   max_depth : 8,
   error : .4,
@@ -44,9 +37,6 @@ const FLATTEN = Object.freeze({
   min_miter : .01,
   ring : .05
 });
-// Vertex buffers start with VERTICES floats; textures beyond TEXTURE_LIMIT bytes are released,
-// oldest first, down to TEXTURE_TARGET; gradient ramps are RAMP texels wide, and at most RAMPS
-// ramps and LABELS text labels stay cached. At most FRAMES frames are in flight.
 const MIB = KIB * KIB;
 const RENDER = Object.freeze({
   vertices : 32768,
@@ -58,9 +48,7 @@ const RENDER = Object.freeze({
   frames : 2,
   compile_poll_ms : 8
 });
-// Text labels: the font size when the font names none, padding and line height per font size.
 const LABEL = Object.freeze({font_size : 10, pad : 3, line : 1.6, baseline : 1.2});
-// The tank's water behind everything.
 const CLEAR_COLOR = [...hexColor('#091a21'), 1 ];
 function cachedTankProgram(gl, vertex, fragment) {
   let cache = tankPrograms.get(gl);
@@ -110,12 +98,10 @@ function finishTankProgram(gl, linked, cache, key) {
       gl.deleteShader(shader);
   }
 }
-// A number as a GLSL float literal.
 export function glsl(value) {
   const text = String(value);
   return /[.e]/.test(text) ? text : text + '.0';
 }
-// GLSL constants PREFIX_NAME (float or int) for the entries of a value table.
 export function glslConstants(prefix, table, type = 'float') {
   return Object.entries(table)
       .filter(([ name ]) => name !== 'count')
@@ -123,13 +109,10 @@ export function glslConstants(prefix, table, type = 'float') {
                type === 'int' ? String(value) : glsl(value)};`)
       .join('\n');
 }
-// A GLSL float array literal.
 export function glslArray(values) {
   return `float[${values.length}](${values.map(glsl).join(',')})`;
 }
-// Two triangles make one quad or ribbon segment.
 export const QUAD_VERTICES = 6;
-// Float offsets of vertex attributes [name, size] laid out in order, and their total.
 export function attributeLayout(attributes) {
   const at = {};
   let floats = 0;
@@ -139,15 +122,12 @@ export function attributeLayout(attributes) {
   }
   return {at : Object.freeze(at), floats};
 }
-// GLSL inputs for vertex attributes [name, size], at locations from `first` on.
 export function attributeInputs(attributes, first = 0) {
   return attributes
       .map(([ name, size ], i) =>
                `layout(location=${first + i}) in ${size > 1 ? 'vec' + size : 'float'} ${name};`)
       .join('\n');
 }
-// The bound 2D texture samples its texels with `filter` (gl.NEAREST or gl.LINEAR) and clamps at
-// its edges.
 export function clampedTexture(gl, filter) {
   for (const parameter of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
     gl.texParameteri(gl.TEXTURE_2D, parameter, filter);
@@ -181,7 +161,6 @@ export async function prepareTankProgram(gl, vertex, fragment) {
   return finishTankProgram(gl, linked, cache, key);
 }
 
-// World batches and vector layers account for the same submitted GPU work.
 function tankDraw(gl, stats, mode, vertices, instances) {
   if (instances === undefined)
     gl.drawArrays(mode, 0, vertices);
@@ -204,7 +183,6 @@ export function mergeInstanceRanges(ranges) {
   }
   return merged;
 }
-// A vertex array and its buffer, both bound; a program's uniform locations by name.
 function vertexStore(gl) {
   const vao = gl.createVertexArray(), buffer = gl.createBuffer();
   gl.bindVertexArray(vao);
@@ -213,7 +191,6 @@ function vertexStore(gl) {
 }
 const uniformLocations = (gl, program, names) =>
     Object.fromEntries(names.map(name => [name, gl.getUniformLocation(program, name)]));
-// Every world batch uses the same pipeline setup; only its data and shaders differ.
 export class TankBatch {
   constructor(canvas, renderer, vertex, fragment, sizes, uniforms, divisor = 1) {
     this.canvas = canvas;
@@ -227,8 +204,6 @@ export class TankBatch {
     this.revision = -1;
     this.capacity = this.count = 0;
   }
-  // Drawing starts with the batch's program in the camera's viewport; on the whole canvas when the
-  // last pass drew elsewhere.
   begin(camera) {
     this.gl.useProgram(this.program);
     this.gl.uniform2f(this.uniforms.viewport, camera.viewportWidth, camera.viewportHeight);
@@ -252,7 +227,6 @@ export class TankBatch {
   }
 }
 
-// The same flattened paths provide CPU hit testing and GPU fill/stroke geometry.
 export class TankPath {
   constructor() {
     this.transform = tankIdentity();
@@ -810,8 +784,6 @@ class TankRenderer extends TankPath {
       this.texture = texture;
     }
   }
-  // One vertex in VERTEX_ATTRIBUTES order: position, uv, premultiplied colour, shape and inner
-  // radius.
   vertex(x, y, u, v, color, shape = SHAPE.none, inner = 0) {
     if (this.used + VERTEX_FLOATS > this.vertices.length) {
       const larger = new Float32Array(this.vertices.length * 2);
@@ -877,8 +849,6 @@ class TankRenderer extends TankPath {
     gl.stencilMask(STENCIL.path);
     gl.stencilFunc(gl.EQUAL, this.clipDepth, STENCIL.clip);
     gl.stencilOp(gl.KEEP, gl.KEEP, rule === 'evenodd' ? gl.INVERT : gl.REPLACE);
-    // One draw per run of paths: INVERT toggles and REPLACE sets the same bit, so both are
-    // order-independent within a run. A mask of many sediment beds used to cost one draw each.
     this.select(PAINT.solid, null);
     const fan = points => {
       for (let i = 1; i < points.length - 1; i++) {
@@ -898,7 +868,6 @@ class TankRenderer extends TankPath {
           for (const p of tri)
             this.vertex(p[0], p[1], 0, 0, TANK_MASK_COLOR);
         else {
-          // Self-intersecting outline: its own inverted fan, in order between the replacements.
           this.flush();
           gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT);
           fan(points);
@@ -1214,7 +1183,6 @@ class TankRenderer extends TankPath {
         this.select(PAINT.dash, null);
       } else
         this.paintStyle(this.strokeStyle);
-      // Thin wiring uses segment quads; clipped portions never enter the upload buffer.
       if (r <= FLATTEN.thin) {
         const bounds = this.clipBounds, pad = r + 1, color = style(p[0])[2];
         for (let i = 0; i < n - (path.closed ? 0 : 1); i++) {
@@ -1502,7 +1470,6 @@ export function touchTankImage(image) {
 
 const initializers = {
   "tankVertexSource" : () => {
-    // One WebGL context owns the tank, vector organs, particles and cached image textures.
     tankVertexSource = `#version 300 es
 precision highp float;
 ${attributeInputs(VERTEX_ATTRIBUTES)}

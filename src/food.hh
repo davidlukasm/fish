@@ -1,11 +1,8 @@
 #pragma once
 #include "simulation_types.hh"
 namespace fishsim {
-// Colour of algae wherever they appear: on surfaces, bitten off or sucked in.
 inline constexpr Color ALGAE_COLOR{.25, .65, .20};
-// Loose algae float, loose plant pieces sink.
 inline constexpr double ALGAE_BUOYANCY = .2, PLANT_BUOYANCY = -.25;
-// Colour of fresh artificial food.
 inline constexpr Color FEED_COLOR{1, .2, .1};
 // Transient drawing identities never enter checkpoints, randomness or physics.
 std::uint64_t next_render_id();
@@ -23,7 +20,6 @@ struct Food {
 };
 inline constexpr double FOOD_DENSITY = 100; // Energy per radius squared, scaled by 16.
 inline double food_radius(double energy) {
-  // 25 % smaller than before (factor 4): pieces of the same energy are denser.
   return 3 * std::sqrt(std::max(0., energy) / FOOD_DENSITY);
 }
 inline double food_radius(const Food &f) {

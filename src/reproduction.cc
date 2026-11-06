@@ -3,9 +3,7 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// Fertility of waiting eggs is checked every this many steps.
 constexpr int FERTILITY_CHECK_PERIOD = 100;
-// Recruitment falls off steeply once the adults reach the target.
 constexpr double RECRUITMENT_STEEPNESS = 4;
 }
 namespace {
@@ -308,7 +306,6 @@ void Ecosystem::reproduction(bool fertile) {
     fill_sperm(p);
   }
   refresh_sperm_field();
-  // Local compatible concentration weights fathers; novelty retains its configured contribution.
   for (std::size_t e = 0; e < fish.size(); ++e) {
     auto &egg = fish[(e + ticks) % fish.size()];
     if (egg.nutrient_egg || egg.developing() || !egg.body.alive)

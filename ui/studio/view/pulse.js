@@ -1,22 +1,5 @@
 import {clamp, SECOND_MS} from '../../units.js';
 
-// A stimulus as signals running through the drawn network. From the stimulated parts a signal
-// runs along each wire that leaves a part when it answers, as the wires are drawn: from the nodes
-// a part sends from along their branches, together along the trunk, and apart along the branches
-// to the nodes it reaches. A firing part sends a dot in the colour of what it sends (exciting,
-// inhibiting or modulating); a quieted part withdraws what it sent, a trail in the inhibiting
-// colour along its wires. A signal pushes the part it reaches up (excited, or freed from an
-// inhibition withdrawn) or down (inhibited, or left without an excitation withdrawn); a
-// modulating one tunes it. As a preview along the drawn wires the part follows the push: it fires
-// when pushed up, it is quieted when pushed down. Once the fish is built as drawn, the engine's
-// probe decides: the part answers when the signal pushes it the way the probe found it going (a
-// modulating one either way); any other signal fades there. A part answers once, to the first
-// signal that reaches it. Effectors twitch as they fire, firing parts light up, quieted ones
-// pulse in the inhibiting colour and darken, and all stay marked. The drawing paces the way at
-// SPEED frame units a second, each leg LEAST to MOST milliseconds long (a hormone's BLOOD times
-// slower, its cloud THINNING as it spreads), a fading signal FADE, a withdrawn one a TRAIL long. A
-// part counts as rising or falling by its first clear swing: the first step its swing reaches CLEAR
-// of its largest, which the CUTOFF must reach at all.
 const NS = 'http://www.w3.org/2000/svg';
 export const SIGNAL = Object.freeze({
   blood : 1.6,
@@ -38,7 +21,6 @@ const COLOURS = Object.freeze({
   fade : [ '#8aa0a3', '#c3d1d2' ]
 });
 
-// The way along points to each of them, and its whole length.
 function distances(points) {
   const along = [ 0 ];
   for (let k = 1; k < points.length; ++k)
@@ -47,8 +29,6 @@ function distances(points) {
   return along;
 }
 const lineLength = points => distances(points).at(-1);
-// The point a fraction of the way along points, by their length, so a signal keeps its pace
-// over short and long stretches alike.
 export function signalPoint(points, fraction) {
   if (!points.length)
     return {x : 0, y : 0};
@@ -62,17 +42,12 @@ export function signalPoint(points, fraction) {
   return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
 }
 const duration = length => clamp(SECOND_MS * length / SIGNAL.speed, SIGNAL.least, SIGNAL.most);
-// How long a signal takes along points.
 export const legDuration = points => duration(lineLength(points));
-// The stages of a link's way, as its wires are drawn: from the nodes it leaves along their
-// branches (`starts`, all at once) into its trunk (`points`), and out of it along the branches
-// to the nodes it reaches (`arrives`); each stage with its lines and the length of its longest.
 export function legStages(link) {
   return [ link.starts ?? [], [ link.points ], link.arrives ?? [] ]
       .filter(lines => lines.length)
       .map(lines => ({lines, length : Math.max(...lines.map(lineLength))}));
 }
-// How long a signal takes along a link's whole way.
 const linkDuration = link => duration(legStages(link).reduce((sum, s) => sum + s.length, 0)) *
                              (link.kind === HORMONE ? SIGNAL.blood : 1);
 const HORMONE = 'hormone';
@@ -91,19 +66,9 @@ export function signalAnswer(frames, indices) {
   }
   return best?.answer ?? null;
 }
-// Which way a signal pushes the part it reaches, by what its sender does ('fire' or 'quiet') and
-// what it sends: a quieted part withdraws its signal, which then works the other way.
 const PUSH = Object.freeze(
     {fire : {excite : 'rise', inhibit : 'fall'}, quiet : {excite : 'fall', inhibit : 'rise'}});
 const ANSWER_MODE = Object.freeze({rise : 'fire', fall : 'quiet'});
-// The way of a stimulus: from the parts `starts`, along `links` ({from, to, kind, points, ...}),
-// with `response(key, push)` saying how a part answers to a signal pushing it ('rise', 'fall', or
-// null for a modulating one): 'rise', 'fall' or null, as the probe found it or, as a preview, as
-// pushed. Each leg starts
-// when its part answers and ends where the next one answers or the signal fades; `parts` holds
-// each part that answers with the time it does and how ('fire' or 'quiet'), each leg what its
-// sender does (`sends`) and how the part it reaches answers to it (`answers`, null where it
-// fades).
 export function signalSchedule(starts, links, response) {
   const parts = new Map(starts.map(key => [key, {time : 0, mode : 'fire'}])), done = new Set(),
         legs = [];
@@ -115,7 +80,6 @@ export function signalSchedule(starts, links, response) {
       continue;
     done.add(key);
     const sends = parts.get(key).mode;
-    // A gland quieted releases nothing.
     for (const link of links.filter(l => l.from === key && l.to !== key &&
                                          (l.kind !== HORMONE || sends === 'fire'))) {
       const push = link.kind === HORMONE ? link.push : PUSH[sends][link.kind] ?? null;
@@ -131,19 +95,12 @@ export function signalSchedule(starts, links, response) {
   }
   return {legs, parts};
 }
-// Plays a schedule in the scene: `marks(key)` gives the elements of a part, `moves(key)` the
-// [element, class] pairs that set what it moves going when it fires (a fin, the jaw),
-// `reached({key, mode, link})` hears each part as it answers (`mode` 'fire' or 'quiet') and each
-// leg as it starts (`link`, `mode` what its sender does). The scene may be drawn anew while it
-// plays: `attach` moves the signals into the new one; `running` says whether it still plays. A
-// part takes its mark as it answers (ANSWERED) and glows meanwhile (ANSWERING).
 const ANSWERING = Object.freeze({fire : 'aid-pulse-active', quiet : 'aid-pulse-quieting'});
 const ANSWERED = Object.freeze({fire : 'aid-pulse-fired', quiet : 'aid-pulse-quieted'});
 const MOVES = Object.freeze({fire : true, quiet : false});
 export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
-  // On each line of a leg's stage a firing part's signal is a dot, a quieted part's a trail.
   const signal = (leg, points) => {
     const size =
         SIGNAL.radius[0] + (SIGNAL.radius[1] - SIGNAL.radius[0]) * (leg.link.strength ?? 1);
@@ -177,8 +134,6 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
     overlay.appendChild(trail);
     return {points, trail, length};
   };
-  // A dot sits a fraction along its line; a trail runs from before its line's start until its
-  // tail has left the line's end.
   const place = (line, along) => {
     if (line.quiet)
       return;
@@ -196,8 +151,6 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   const show = (line, visible) =>
       line.quiet ||
       (line.wave ?? line.dot ?? line.trail).setAttribute('opacity', visible ? '1' : '0');
-  // Each leg runs its stages one after the other, each over its share of the leg's time by its
-  // length.
   const legs = schedule.legs.map(leg => {
     const stages = legStages(leg.link), total = stages.reduce((sum, s) => sum + s.length, 0) || 1;
     let from = 0;
@@ -267,7 +220,6 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
     if (item.state !== 'running')
       return;
     const share = (elapsed - leg.start) / (leg.end - leg.start);
-    // A signal shows while its stage runs; the last stage's dots stay at their ends to fade.
     stages.forEach((stage, k) => {
       const last = k === stages.length - 1,
             along = (share - stage.from) / (stage.to - stage.from || 1);
@@ -281,8 +233,6 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
     });
     if (share < 1)
       return;
-    // At its end a modulating signal marks the part it tunes; a dot whose part does not answer
-    // fades in grey.
     if (!item.arrived) {
       item.arrived = true;
       if (leg.link.kind === 'modulate' && leg.sends === 'fire')

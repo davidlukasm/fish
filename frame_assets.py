@@ -1,5 +1,3 @@
-"""Shared immutable render and inspection assets."""
-
 from protocol_schema import Corpse, Fish, Neuron, NeuronState, Receptor
 from wording import Refusal
 
@@ -44,7 +42,6 @@ def hydrate_brain(frame, layouts):
     states = brain.get("neuron_state", [])
     signals = brain.get("sensor_state", [])
     brain["neurons"] = [row[:] for row in brain.get("neurons", [])]
-    # Each neuron state column fills the neuron column of the same name.
     columns = [
         (getattr(Neuron, name), column)
         for name, column in vars(NeuronState).items()

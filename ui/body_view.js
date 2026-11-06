@@ -1,6 +1,3 @@
-// The body plan of a fish or a species: measures, the four build traits as one scale each with a
-// word for the reading, and the sense cells by group. The second body (species mean, or the living
-// part of a species) shows as a thin mark on the same scales.
 import {bodyMeasures, bodySenseGroups, bodyTraitRows} from './body_model.js';
 import {brainSenseColors} from './brain_model.js';
 import {cssPercent, formatNumber, percent, t} from './strings.js';

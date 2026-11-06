@@ -1,5 +1,3 @@
-// Wording is data: every key the code and the markup ask for exists, every thought rule parses,
-// every wording resolves all its placeholders, and the engine never leaks raw templates.
 const fs = require('fs'), assert = require('assert');
 const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
 (async () => {
@@ -24,8 +22,6 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
     for (const name of names)
       (texts[locale] ??= {})[name] =
           JSON.parse(fs.readFileSync(`ui/text/${locale}/${name}.json`, 'utf8'));
-  // Every literal key the code names exists in the default language: a wording for t(), a list
-  // for tList(), and any other 'area.key' literal (keys chosen by a condition) as either.
   const lookup = key => key.split('.').reduce((node, part) => node?.[part], texts[index.default]);
   const areas = Object.keys(texts[index.default]).join('|');
   for (const file of fs.readdirSync('ui', {recursive : true}).filter(n => n.endsWith('.js'))) {
@@ -36,7 +32,6 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
     for (const [, key] of source.matchAll(new RegExp(`'((?:${areas})\\.[\\w.]*\\w)'`, 'g')))
       assert.ok(lookup(key) !== undefined, file + ': missing text ' + key);
   }
-  // Every data-t key in the markup exists too.
   for (const [, key] of fs.readFileSync('viewer.html', 'utf8')
            .matchAll(/data-t(?:-[\w-]+)?="([\w.]+)"/g)) {
     let node = texts[index.default];
@@ -52,8 +47,6 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
     if (m.when)
       evaluate(m.when, {});
 
-  // Random situations: every thought that comes out is fully worded, one sentence, and no
-  // wording comes back while it is still among the recent ones.
   const sides = [ 'left', 'right', 'front' ], organs = Object.keys(T.lexicon.accusative),
         keys = Object.keys(T.lexicon.intent), lessons = Object.keys(T.lexicon.learned),
         surprises = Object.keys(T.lexicon.surprise),
@@ -125,14 +118,12 @@ const asModule = source => 'data:text/javascript,' + encodeURIComponent(source);
   const kinds = new Set(T.rules.map(r => r.topic.split(':')[0]));
   assert(said.length > 2000, 'the engine speaks');
   assert(topics.size > kinds.size / 3, 'many topics come up: ' + topics.size + ' of ' + kinds.size);
-  // Every wording in the pools is one sentence.
   const pools = node => typeof node === 'string' ? [ node ]
                         : Array.isArray(node)    ? node.flatMap(pools)
                                                  : Object.values(node || {}).flatMap(pools);
   for (const area of ['say', 'brief', 'intent', 'learned', 'surprise'])
     for (const text of pools(T.lexicon[area]))
       assert(oneSentence(text), 'more than one sentence: ' + text);
-  // Every rule can produce wording somewhere; a combined rule covers known topics.
   const known = new Set(T.rules.map(r => r.topic));
   for (const r of T.rules) {
     const f = random();

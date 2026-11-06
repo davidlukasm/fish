@@ -1,4 +1,3 @@
-// DOM and drawing surface used by controller and native-module integration tests.
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 function createFixture(fixture) {
   const page = fs.readFileSync('viewer.html', 'utf8'), requests = [];
@@ -49,7 +48,6 @@ function createFixture(fixture) {
       height : 350,
       children : [],
       get lastChild() { return this.children.at(-1); },
-      // A select's options are its option children.
       get options() { return this.children; },
       classList : {
         values : new Set(),

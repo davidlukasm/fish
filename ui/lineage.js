@@ -18,9 +18,6 @@ import {paintFishGlyph} from './fish_painter.js';
 import {frameSpecies, sceneState} from './state.js';
 import {selectFish} from './fish_choice.js';
 import {BEHAVIOR_FEATURE, FISH, FISH_ORIGIN} from './schema.js';
-// Family views page their children PAGE at a time, trace up to ANCESTORS generations back and
-// name up to GRANDCHILDREN grandchild species. A portrait card is CARD_WIDTH by CARD_HEIGHT; the
-// fish fills FIT_HEIGHT of it and spans SPAN body radii. Links between generations are LINK.
 const FAMILY = Object.freeze({
   page : 4,
   ancestors : 5,
@@ -31,7 +28,6 @@ const FAMILY = Object.freeze({
   span : 4.5,
   link : '#8baeb0'
 });
-// Named ancestor generations, the mother first; further back they are counted.
 const ANCESTOR_WORDS = Object.freeze([ 'lineage.mutterart', 'lineage.grossmutterart' ]);
 const familyPage = (box, children) =>
     Math.min(box.childPage || 0, Math.max(0, Math.ceil(children.length / FAMILY.page) - 1));
@@ -129,8 +125,6 @@ export function redrawFamilies() {
 }
 
 function renderFamilyDiagram(box, bands, links) {
-  // The stage is as wide as its widest band; a newly focused individual starts centred in view,
-  // otherwise the reader's scroll position stays.
   const focus =
             bands.flatMap(b => b.nodes || b.groups.flatMap(g => g.nodes)).find(n => n.focus)?.id,
         left = box.graphFocus === focus ? box.graphScroll?.scrollLeft : null;

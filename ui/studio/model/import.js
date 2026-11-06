@@ -28,8 +28,6 @@ function kind(g) {
     throw new Error('studio.errors.invalidDocument');
   return kinds[g.function];
 }
-// Cover the contact field with whole-organ wires wherever every member pair belongs to it.
-// Remaining wires keep their individual endpoints; no new candidate pair is introduced.
 function importWires(doc, centers, connections) {
   const remaining = new Set(connections.map(([ a, b ]) => `${centers[a].id}/${centers[b].id}`));
   const endpoints = doc.organs.filter(o => o.type !== 'brain' && o.centers.length > 1)

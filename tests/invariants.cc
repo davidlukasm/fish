@@ -1,19 +1,11 @@
-// Lasting rules of the simulation, independent of balance values: a closed tank never creates
-// energy, a restored checkpoint continues exactly like the running tank, a cut keeps bite marks
-// within their piece, a starving fish
-// breaks down tissue without losing maturity, a body grows only while a hormone occupies its
-// growth receptor, maturity switches cells for good, and algae do not linger in traces.
 #include "test_support.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
 namespace {
-// The standard tank with its rocks, plants and small animals, FISH adult fish SPACING apart from
-// FIRST_X at DEPTH, run for STEPS steps.
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
-// The tank receives no energy from outside: no supply, no assistance, no bursts, no mutation.
 Ecosystem closed_tank(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
@@ -26,7 +18,6 @@ Ecosystem closed_tank(const Genome &g) {
     adult(w, g, FIRST_X + k * SPACING, DEPTH);
   return w;
 }
-// Energy in the tank plus what left it into the water, minus what was introduced.
 double tracked_energy(const Ecosystem &w) {
   const auto &web = w.field.food_web();
   return w.total_energy() + web.released - web.introduced;
@@ -42,7 +33,6 @@ void closed_tank_creates_no_energy(const Genome &g) {
     before = now;
   }
 }
-// Fish without reserve live on their tissue; their brains keep the maturity they reached.
 void maturity_never_decreases(const Genome &g) {
   auto w = closed_tank(g);
   std::map<std::uint64_t, double> tissue, maturity;
@@ -64,7 +54,6 @@ void maturity_never_decreases(const Genome &g) {
   }
   check(starved, "a fish without reserve breaks down tissue");
 }
-// Young fish with a full gut: those whose glands are silenced keep their size, the others grow.
 constexpr double YOUNG_TISSUE = 20, FULL_GUT = 300;
 void growth_needs_a_hormone(const Genome &g) {
   auto w = closed_tank(g);
@@ -96,8 +85,6 @@ void growth_needs_a_hormone(const Genome &g) {
   check(quiet > 0, "a fish without growth hormone was observed");
   check(grew, "a body with growth hormone grows");
 }
-// Maturity switches cells: in a mature body the cells whose death receptor answers maturity die
-// and stay dead, in a young body they live. The hand-built fish loses its juvenile colour so.
 constexpr double VISIBLE_COLOUR_CHANGE = .05;
 void life_phases_follow_maturity(const Genome &g) {
   auto w = closed_tank(g);
@@ -135,8 +122,6 @@ void life_phases_follow_maturity(const Genome &g) {
     change += std::abs(young_fish->body.color[c] - mature_fish->body.color[c]);
   check(change > VISIBLE_COLOUR_CHANGE, "young and mature fish differ in colour");
 }
-// Algae vanish instead of lingering in traces: a film buried under BURY_DEPTH of sediment turns
-// into detritus without creating energy.
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
 void algae_vanish_in_traces(const Genome &g) {
   auto w = closed_tank(g);
@@ -161,7 +146,6 @@ void algae_vanish_in_traces(const Genome &g) {
     if (s.id == id)
       check(s.algae == 0, "algae buried under sediment vanish");
 }
-// A queue of fresh, distinct genomes must not prepare all evaluators in one tick.
 void development_queue_is_bounded(const Genome &g) {
   auto w = closed_tank(g);
   w.fish.clear();
@@ -191,7 +175,6 @@ void development_queue_is_bounded(const Genome &g) {
   check(immigrant != w.fish.end() && (immigrant->genome.growing || immigrant->genome.blueprint),
         "immigrant preparation keeps its reserved share");
 }
-// Checkpoints inside each newly resumable stage preserve the population's shared plans and work.
 void development_checkpoint_stages(const Genome &g) {
   constexpr std::size_t SLICE = 37;
   for (int stage = 0; stage < 3; ++stage) {
@@ -254,8 +237,6 @@ void development_finalization_uses_budget(const Genome &g) {
   check(used <= WORK_BUDGET, "finalization obeys the population work budget");
   check(!pending || used == WORK_BUDGET, "pending finalization uses the available budget");
 }
-// A bite mark WIDE_MARK wide in the middle of a stump SHORT_STUMP long covers the stump, no more:
-// a saved tank holds only marks within their organ.
 constexpr double WIDE_MARK = .3, SHORT_STUMP = .15, MARK_DEPTH = .5;
 void cut_marks_stay_on_their_piece() {
   const PlantNotch mark{SHORT_STUMP / 2, MARK_DEPTH, WIDE_MARK, 0},

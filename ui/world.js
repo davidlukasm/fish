@@ -48,11 +48,8 @@ import {
   wormIndividuality,
   wormLength
 } from './fauna.js';
-// Requested families are placed with their middle variant; bare surfaces hold their front midway.
 const MIDDLE_VARIANT = .5, BARE_FRONT = .5;
 export const worldState = {};
-// One placement adds at most ANIMALS small animals, or OTHER food pieces; brushes paint at most
-// every PAINT_MS; R turns a dragged object by ROTATE.
 const TOOL_COUNT = Object.freeze({
   animals : EDIT_LIMIT.max_stock,
   other : EDIT_LIMIT.max_spray_count,
@@ -165,7 +162,6 @@ function nearestPlacement(p, f, tool, surfaces = placementSurfaces(f)) {
   }
   return best;
 }
-// The egg count from its input, within the input's own bounds.
 function eggPlacementCount() {
   const input = el('egg-placement-count');
   return Math.max(Number(input.min), Math.min(Number(input.max), Math.trunc(Number(input.value)) ||
@@ -260,7 +256,6 @@ export function plantPlacement(p, f = sceneState.frame, selectedTool = worldStat
   const best = nearestPlacement(p, f, selectedTool);
   if (!best)
     return null;
-  // New plants show at half the soil depth above their root.
   const lift = selectedTool === 'grass' ? best.depth / 2 : 0, S = PLACEMENT_SURFACE;
   return {
     ...best,
@@ -368,7 +363,6 @@ export function toolSettings() {
   el('current-list').hidden = worldState.tool !== 'current';
   el('undo-geometry').disabled =
       !evolutionState.editing || !!sceneState.frame?.historical || !sceneState.frame?.can_undo;
-  // The brush keeps the bounds of the markup, narrowed for rocks and food.
   const brush = el('brush');
   brush.dataset.min ??= brush.min;
   brush.dataset.max ??= brush.max;
@@ -384,8 +378,6 @@ export function toolSettings() {
   text('tool-count-value', el('tool-count').value);
 }
 
-// Polygons take MIN_POINTS to MAX_POINTS corners and close on a click within CLOSE pixels of the
-// first one.
 const POLYGON = Object.freeze({min_points : 3, max_points : 32, close : 10});
 function finishPolygon() {
   if (worldState.polygonPoints.length >= POLYGON.min_points)
@@ -393,11 +385,8 @@ function finishPolygon() {
   worldState.polygonPoints = [];
 }
 
-// Rock brushes are at least ROCK_MIN wide, food brushes at most FEED_MAX.
 const BRUSH =
     Object.freeze({rock_min : EDIT_LIMIT.min_stone_radius, feed_max : EDIT_LIMIT.max_spray_radius});
-// Planters: a rim of MIN_RIM to MAX_RIM, walls up to 1/WALL_SHARE of the span; the span takes at
-// least MIN_SPAN wall widths.
 const PLANTER = Object.freeze({min_rim : 8, max_rim : 24, wall_share : 4, min_span : 4});
 export function planterPoints(a, b, width) {
   const right = a.x + horizontalDelta(b.x - a.x), left = Math.min(a.x, right),
@@ -443,10 +432,7 @@ export function rockPlacement(p, f = sceneState.frame) {
   return points;
 }
 
-// Tool previews: aiming a current needs AIM pixels of drag; plants show at PLANT_SCALE.
 const PREVIEW = Object.freeze({aim : 5, plant_scale : .55});
-// Tool preview drawing in pixels: eggs at least MIN_EGG wide, blocked sites as a crossed ring,
-// links dashed, currents as arrows at least MIN_ARROW long.
 const TOOL_DRAW = Object.freeze({
   min_egg : 3,
   egg : 2.4,
@@ -699,7 +685,6 @@ export function bindGenomeImport() {
   };
 }
 
-// The mouse wheel changes a current's width and strength by these steps.
 const CURRENT_WHEEL = Object.freeze({'current-width' : 8, 'current-strength' : .1, digits : 1});
 const INPUT_LIMITS = [
   [ 'minimum-population', 0, POPULATION_LIMITS.max_fish ],
@@ -715,7 +700,6 @@ const INPUT_LIMITS = [
   [ 'wall-width', EDIT_LIMIT.min_wall_width, EDIT_LIMIT.max_wall_width ],
   [ 'tool-count', 1, TOOL_COUNT.other ], [ 'egg-placement-count', 1, EDIT_LIMIT.max_removal ]
 ];
-// Inputs that start at the engine's default.
 const INPUT_DEFAULTS = [ [ 'sediment-amount', EDIT_LIMIT.brush_amount ] ];
 const initializers = {
   "editorPlant" : () => { worldState.editorPlant = MIXED_PLANTS; },
@@ -976,7 +960,6 @@ const initializers = {
     });
   },
   "tankWheel" : () => { tankWheel = canvas.onwheel; },
-  // Tank, population, source and tool inputs take their limits and defaults from the engine's.
   "inputLimits" : () => {
     for (const [id, lo, hi] of INPUT_LIMITS) {
       el(id).min = String(lo);

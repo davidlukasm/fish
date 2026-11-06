@@ -36,8 +36,6 @@ export function brainDrawCurve(g, q) {
     g.bezierCurveTo(q[i], q[i + 1], q[i + 2], q[i + 3], q[i + 4], q[i + 5]);
 }
 
-// Nerve branches run from a cell to its organ's root, then to an entry on the cord between
-// ENTRY_MIN behind and ENTRY_MAX before the centre.
 const BRANCH = Object.freeze({
   fin_start : .18,
   fin_span : .62,
@@ -123,7 +121,6 @@ function brainOrganBranch(d, part) {
   return part.branch;
 }
 
-// A cell's link to itself loops REACH around its root between MIN and MAX along the body.
 const LOOP = Object.freeze({reach : .035, min : .68, max : .45, out : .018, min_length : .001});
 export function brainConnection(d, a, b, self = false) {
   const from = brainOrganBranch(d, a), to = brainOrganBranch(d, b), p = from.slice(-2),

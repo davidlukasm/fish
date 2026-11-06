@@ -1,8 +1,6 @@
 import {RATE_WINDOW, ROUTE} from './schema.js';
 import {PERCENT} from './units.js';
-// User-facing text lives in resource files under ui/text/<locale>/, never in code. This module
-// loads them, fills placeholders and evaluates the small condition expressions used by
-// data-driven rules (numbers, fact names, arithmetic, comparisons, && || !, min/max/abs/clamp).
+// User-facing text lives in resource files under ui/text/<locale>/, never in code.
 export const stringsState = {};
 const loaded = new Map(), compiled = new Map();
 
@@ -16,8 +14,6 @@ function loadStrings(path) {
   return loaded.get(path);
 }
 
-// Every resource named in ui/text/index.json is loaded once before the interface starts, so
-// t() answers synchronously everywhere.
 const areas = {}, missing = new Set();
 let fallback, voice;
 
@@ -31,7 +27,6 @@ export async function loadTexts() {
   applyTexts(globalThis.document);
 }
 
-// Resources handed over directly, {locale: {area: data}}: where nothing is fetched (tests).
 export function useTexts(index, resources) {
   fallback = index.default;
   voice = index.voice;
@@ -40,7 +35,6 @@ export function useTexts(index, resources) {
 }
 
 export function textArea(name, locale = fallback) { return areas[locale]?.[name] || {}; }
-// A resource in the fishes' own language.
 export function voiceArea(name) { return textArea(name, voice); }
 
 function node(key, locale) {
@@ -66,7 +60,6 @@ export function t(key, vars, locale = fallback) {
   return vars || text.includes('{') ? format(text, vars) : text;
 }
 
-// A list of wordings, e.g. names indexed by kind.
 export function tList(key, locale = fallback) {
   const list = node(key, locale);
   if (!Array.isArray(list)) {
@@ -76,9 +69,6 @@ export function tList(key, locale = fallback) {
   return list;
 }
 
-// Markup names its wording instead of containing it: data-t sets the text; data-t-title,
-// data-t-aria-label and data-t-placeholder set those attributes, data-t-empty the data-empty
-// text that styles show for an empty element.
 const TEXT_ATTRIBUTES = Object.freeze({
   title : 'title',
   'aria-label' : 'aria-label',
@@ -95,14 +85,10 @@ function applyTexts(root) {
       e.setAttribute(attribute, t(e.getAttribute('data-t-' + name)));
 }
 
-// A share in percent, with at most `digits` decimals.
-// A share as a CSS percentage.
 export function cssPercent(share) { return PERCENT * share + '%'; }
 export function percent(share, digits = 0) {
   return t('units.percent', {n : formatNumber(PERCENT * share, digits)});
 }
-// Numbers in the interface language: at most `digits` decimals, exactly that many if `fixed`;
-// signed ones with their sign also when positive.
 const numberFormats = new Map();
 function numberFormat(value, digits, fixed, signDisplay) {
   if (!Number.isFinite(value))
@@ -122,8 +108,6 @@ export function formatNumber(value, digits = 0, fixed = false) {
 export function formatSigned(value, digits = 0, fixed = false) {
   return numberFormat(value, digits, fixed, 'exceptZero');
 }
-// Parts of one reading in a row, the empty ones left out; items of a list; where something
-// leads from and to; a name and what it is.
 export function joinParts(parts) {
   return parts.filter(part => part !== null && part !== undefined && part !== '')
       .join(t('units.separator'));
@@ -133,7 +117,6 @@ export const linkText = (from, to) => t('units.link', {from, to});
 export const namedText = (name, value) => t('units.named', {name, value});
 export const labelledText = (name, value) => t('units.labelled', {name, value});
 
-// Large counts shortened: from COMPACT.thousands_from in thousands, from a million in millions.
 const COMPACT = Object.freeze({million : 1e6, thousand : 1e3, thousands_from : 1e4, digits : 1});
 export function compactNumber(v) {
   return v >= COMPACT.million
@@ -145,8 +128,6 @@ export function compactNumber(v) {
 
 const capital = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
-// The word form that goes with a count: "{n:Fisch|Fische}" lists the forms in the order of the
-// language's plural categories (one, other); a formatted count is read by its digits.
 let pluralRules = null;
 function countForm(value, forms) {
   pluralRules ??= new Intl.PluralRules(t('units.locale'));
@@ -155,10 +136,7 @@ function countForm(value, forms) {
   return choices[order.indexOf(pluralRules.select(count))] ?? choices.at(-1);
 }
 
-// Placeholders every wording may use: the steps a rate is shown per.
 const SHARED = Object.freeze({rateSteps : RATE_WINDOW.display_steps});
-// "{name}" takes the value, "{Name}" the same value with a capital first letter, and
-// "{n:Fisch|Fische}" the word form for the count n; shared placeholders fill what vars leave.
 export function format(template, vars = {}) {
   const value = key => vars[key] ?? SHARED[key];
   return String(template).replace(/\{(\w+)(?::([^{}]*))?\}/g, (all, key, forms) => {
@@ -189,7 +167,6 @@ function tokens(text) {
   return out;
 }
 
-// Precedence climbing into closures; facts missing from the input count as 0.
 function parse(text) {
   const list = tokens(text);
   let at = 0;

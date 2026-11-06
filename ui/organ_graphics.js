@@ -28,7 +28,6 @@ import {organSignalHistory} from './organs.js';
 import {sceneState} from './state.js';
 export const organ_graphicsState = {};
 
-// The scent wheel: one bar per odour channel around the centre, icons outside.
 const SCENT_WHEEL = Object.freeze({
   size : 144,
   half_concentration : .1,
@@ -42,10 +41,8 @@ const SCENT_WHEEL = Object.freeze({
   icon_scale : .9,
   digits : 3
 });
-// Shown strength of a scent concentration on the wheel's fixed scale.
 export const scentStrength = concentration =>
     Math.sqrt(concentration / (concentration + SCENT_WHEEL.half_concentration));
-// The scent channel under a pointer on the wheel canvas, or -1 on its hub.
 export function scentWheelChannel(canvas, clientX, clientY) {
   const r = canvas.getBoundingClientRect(), W = SCENT_WHEEL, n = scentColors.length,
         x = (clientX - r.left) / r.width * W.size - W.center,
@@ -57,7 +54,6 @@ export function scentWheelChannel(canvas, clientX, clientY) {
 export function drawScentWheel(canvas, odors) {
   const g = chartContext(canvas, () => drawScentWheel(canvas, odors));
   g.clearRect(0, 0, SCENT_WHEEL.size, SCENT_WHEEL.size);
-  // Fixed concentration scale: channels remain comparable as the water moves.
   for (let k = 0; k < scentColors.length; ++k) {
     const angle = k * 2 * Math.PI / scentColors.length, co = Math.cos(angle), si = Math.sin(angle),
           value = scentStrength(Math.max(0, odors[k] || 0));
@@ -83,7 +79,6 @@ export function drawScentWheel(canvas, odors) {
   canvas.setAttribute('aria-label', canvas.title);
 }
 
-// The gut as a winding tube, longer guts winding more; figures in the right column.
 const GUT_GRAPHIC = Object.freeze({
   tube_width : 14,
   steps : 64,
@@ -140,7 +135,6 @@ function drawGutGraphic({g, d, color, label, bar}) {
         GUT_GRAPHIC.transit_y);
 }
 
-// One bar per hormone level.
 const HORMONE_GRAPHIC = Object.freeze({
   name_x : 12,
   row_y : 18,
@@ -161,7 +155,6 @@ function drawHormoneGraphic({info, label, bar}) {
   }
 }
 
-// The swim bladder with its gas volume.
 const BLADDER_GRAPHIC = Object.freeze({
   line_width : 2,
   cx : 84,
@@ -199,7 +192,6 @@ function drawBladderGraphic({g, info, color, label, bar}) {
   label(t('organ_graphics.gasfuellung'), BLADDER_GRAPHIC.column, BLADDER_GRAPHIC.label_y);
 }
 
-// Scent channels in two columns: preference track and stimulus.
 const SCENT_GRAPHIC = Object.freeze({
   columns : 2,
   left_x : 8,
@@ -242,10 +234,6 @@ function drawScentGraphic({g, canvas, info, label}) {
   canvas.setAttribute('aria-label', canvas.title);
 }
 
-// Light at the eye, then the answer of each colour type, each as a strip from left to right:
-// the light in its colours, a type's answer from black (none) to white (full) with the type's
-// colour beside it, marked with its name's first letters (its full name on hover). A type's strip
-// stays empty where none of its cells looks.
 const EYE_GRAPHIC = Object.freeze({
   mark_x : 4,
   mark_box : 20,
@@ -270,7 +258,6 @@ const EYE_GRAPHIC = Object.freeze({
   empty_y : 69,
   back : '#07131b'
 });
-// The bearing in degrees (left negative) the eye graphic shows under the pointer.
 export function eyeGraphicAngle(e, canvas) {
   const rect = canvas.getBoundingClientRect(),
         x = (e.clientX - rect.left) / rect.width * ORGAN_GRAPHIC.width;
@@ -319,7 +306,6 @@ function drawEyeGraphic({g, canvas, info, label}) {
     label(t('organ_graphics.nochKeinSehbild'), E.empty_x, E.empty_y);
 }
 
-// Water flow at the lateral lines relative to the body, with the cells along it.
 const DIRECTION_GRAPHIC = Object.freeze({
   line_width : 1.5,
   cx : 180,
@@ -415,7 +401,6 @@ function drawDirectionGraphic({g, info, d, color, label}) {
         DIRECTION_GRAPHIC.note_y);
 }
 
-// Depth between surface and floor.
 const DEPTH_GRAPHIC = Object.freeze({
   top : 12,
   height : 100,
@@ -456,7 +441,6 @@ function drawDepthGraphic({g, info, color, label}) {
   label(t('organ_graphics.boden'), DEPTH_GRAPHIC.bottom_label_x, DEPTH_GRAPHIC.bottom_label_y);
 }
 
-// Coming pulses over PERIODS periods, between MIN_EXTENT and MAX_EXTENT steps.
 const PULSE_GRAPHIC = Object.freeze({
   left : 8,
   axis_y : 101,
@@ -513,7 +497,6 @@ function drawPulseGraphic({g, info, color, label}) {
   }
 }
 
-// The signal history over at least WINDOW steps.
 const SIGNAL_GRAPHIC = Object.freeze({
   window : 30,
   axis_x : 30,
@@ -572,7 +555,6 @@ function drawSignalGraphic({g, info, d, tissue, color, label}) {
   }
 }
 
-// The reserve organ, filled with fat, and its filling.
 const RESERVE_GRAPHIC = Object.freeze({
   radius : 43,
   cx : 83,
@@ -605,7 +587,6 @@ function drawReserveGraphic({g, info, d, color, label, bar}) {
   label(t('organ_graphics.full'), RESERVE_GRAPHIC.full_x, RESERVE_GRAPHIC.label_y);
 }
 
-// A gamete organ filling from below.
 const GONAD_GRAPHIC = Object.freeze({
   line_width : 2,
   cx : 83,
@@ -651,9 +632,7 @@ function drawGonadGraphic({g, info, d, color, label, bar}) {
   label(t('organ_graphics.full'), GONAD_GRAPHIC.full_x, GONAD_GRAPHIC.label_y);
 }
 
-// Red, green and blue channel bars.
 const CHANNEL_COLORS = Object.freeze([ '#df907d', '#8bcf9e', '#89aee0' ]);
-// Pigment channels and the resulting colour.
 const COLOR_GRAPHIC = Object.freeze({
   name_x : 14,
   row_y : 24,
@@ -681,7 +660,6 @@ function drawColorGraphic({g, info, label, bar}) {
              COLOR_GRAPHIC.swatch_height);
 }
 
-// Body organs drawn into a fitted frame: mouth and jaw muscles, cheeks, spines or the body.
 const BODY_GRAPHIC = Object.freeze({
   cheek_points : 13,
   cheek_steps : 12,
@@ -777,7 +755,6 @@ function drawBodyGraphic({g, info, d, color, label, bar}) {
         BODY_GRAPHIC.column, BODY_GRAPHIC.label_y);
 }
 
-// Each organ graphic by its kind; signal histories otherwise.
 const GRAPHICS = Object.freeze({
   gut : drawGutGraphic,
   hormones : drawHormoneGraphic,
@@ -797,7 +774,6 @@ const GRAPHICS = Object.freeze({
   touch : drawBodyGraphic,
   mouth : drawBodyGraphic
 });
-// Organ graphics are WIDTH by HEIGHT pixels.
 const ORGAN_GRAPHIC = Object.freeze({
   font : '11px system-ui',
   width : 360,

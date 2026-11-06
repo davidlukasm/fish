@@ -1,5 +1,3 @@
-"""Persistent editable fish designs and user-built organ assemblies."""
-
 import json
 import os
 import tempfile

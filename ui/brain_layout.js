@@ -36,12 +36,7 @@ import {blendFish, frameFish} from './state.js';
 import {EFFECTOR, FISH, NEURON, RECEPTOR, SYNAPSE, TOLERANCE, VISUAL_SAMPLE} from './schema.js';
 export const brain_layoutState = {};
 
-// The brain is laid out in a square of BRAIN_SPACE units around its centre; the body radius is
-// BRAIN_BODY_RADIUS units.
 export const BRAIN_SPACE = 1024, BRAIN_BODY_RADIUS = 200;
-// Brain layout: cell detail grows over DETAIL_STEPS doublings of the body radius from
-// DETAIL_RADIUS pixels; the strongest edges are drawn (more with detail), refreshed every REFRESH
-// steps, wider when stronger and fading at the end.
 const LAYOUT = Object.freeze({
   detail_radius : 95,
   detail_steps : 4,
@@ -228,7 +223,6 @@ export function brainBuild(f, c = camera(f)) {
       if (e[SYNAPSE.source] === sessionState.neuronFocus ||
           e[SYNAPSE.target] === sessionState.neuronFocus)
         visibleIds.add(e[SYNAPSE.id]);
-  // A pair of organs keeps the same strongest representative as the cells move.
   if (!cellMode && !brainState.brainEdgeCache.organOrdered) {
     const seen = new Set(), organOrdered = [];
     for (const e of ordered) {
@@ -268,7 +262,6 @@ export function brainBuild(f, c = camera(f)) {
     if (!cellMode && d.edges.length >= shownCount)
       break;
   }
-  // Build each organ's signed edge lists once, preserving drawing order and self-edge uniqueness.
   d.organEdges = new Map();
   for (const edge of d.edges)
     for (const key of new Set(edge.tissues || [])) {
@@ -304,7 +297,6 @@ export function brainBuild(f, c = camera(f)) {
   bottom = Math.ceil(bottom + LAYOUT.pad);
   d.meshBounds =
       {x : left, y : top, width : Math.max(1, right - left), height : Math.max(1, bottom - top)};
-  // The wiring stays vector strokes, grouped by look, so the inspection draws it sharp at any zoom.
   const strokes = new Map();
   for (let i = 0; i < d.edges.length; i++) {
     const edge = d.edges[i],

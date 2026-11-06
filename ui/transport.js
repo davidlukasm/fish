@@ -4,7 +4,6 @@ import {t} from './strings.js';
 export const transportState = {};
 export let lightCache;
 
-// A change mask holds FRAME_PATCH.mask_digit_bits flags per hex digit.
 const HEX = 16, BITS = FRAME_PATCH.mask_digit_bits;
 export function applyFramePatch(value, patch) {
   const K = PATCH_KIND;

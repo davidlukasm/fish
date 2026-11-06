@@ -25,7 +25,6 @@ public:
     double x, y, angle, radius, strength;
     Color color{1, 0, 0};
   };
-  // Drawing only; excluded from saves and randomness. At most MAX_COMBAT_EFFECTS are kept.
   static constexpr std::size_t MAX_COMBAT_EFFECTS = 64;
   std::deque<CombatEffect> combat_effects; // Drawing only; excluded from saves and randomness.
   std::uint64_t next_combat_effect = 1;
@@ -69,7 +68,6 @@ public:
   void feed_burst();
   void prune_species();
   const GeneticSpecies *find_species(std::uint64_t) const;
-  // A name chosen by the user; it replaces the generated one and stops automatic naming.
   void rename_species(std::uint64_t id, const std::string &name);
 
   std::uint64_t performance_window() const;
@@ -97,7 +95,6 @@ public:
   std::uint64_t environment = 0;
 
   std::vector<WorldEvent> events;
-  // Optional experiment: natural laying/mating bias. Assistance novelty is separate.
   double novelty_strength = 0;
 
   std::size_t neural_budget = default_neural_budget;
@@ -121,7 +118,6 @@ public:
       p.body.identity = p.id;
   }
   void starter_world();
-  // Starts the chosen lines; progress reports the eggs placed so far.
   void seed(const std::vector<Genome> &, int count, int food,
             const std::function<void(int)> &progress = {},
             const std::function<void()> &configure = {});
@@ -163,7 +159,6 @@ public:
   void observe_ecology();
   int population_size() const;
   int adult_population() const;
-  // Chance that a fertile egg is recruited rather than becoming a nutrient egg.
   double recruitment_chance() const;
   double total_energy() const;
   void refresh_food_allowance();

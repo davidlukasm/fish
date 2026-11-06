@@ -56,8 +56,6 @@ import {
 } from './schema.js';
 export const brain_geometryState = {};
 
-// The brain fills the skull behind the eyes and stays INSET inside the head curve; the cord runs
-// to CORD_END behind the centre.
 const CNS = Object.freeze({
   head_half : 4,
   back : .025,
@@ -105,7 +103,6 @@ export function fishCNSShape(a) {
   };
 }
 
-// Internal cells fill the brain over the first BRAIN_SHARE of their depth, the cord after it.
 const CNS_POINT =
     Object.freeze({brain_share : .4, front : .75, span : 1.5, width : .82, cord_share : .6});
 export function brainCNSPoint(n, t, a) {
@@ -145,7 +142,6 @@ export function brainLocal(p, d = brainState.brainDrawing) {
   return [ x * c + y * s, -x * s + y * c ];
 }
 
-// Fin cells spread across ACROSS_SPAN of the fin from ACROSS.
 const FIN_LOCATION = Object.freeze({across : .15, across_span : .7});
 export function brainFinLocation(n, k, a) {
   const index = k === MOTOR_KIND.forward ? FIN.tail : FIN.left + cellSide(n),
@@ -162,7 +158,6 @@ export function brainFinLocation(n, k, a) {
   };
 }
 
-// Fin muscle fibres run between START and START plus SPAN of the fin.
 const FIN_FIBER = Object.freeze({start : .30, span : .45, half : .17});
 export function brainFiber(n, k, d) {
   const a = d.a, depth = brainClamp((n[NEURON.y] + 1) / 2);
@@ -176,8 +171,6 @@ export function brainFiber(n, k, d) {
   return fishJawFiber(a, cellSide(n), depth);
 }
 
-// Where a cell sits in its organ: on an eye ring, along the egg duct, in the sperm organ, the
-// cheek, the swim bladder or the gland.
 const PART = Object.freeze({
   eye_ring : .5,
   eye_ring_span : .35,
@@ -204,7 +197,6 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
     return d.nerve.get(n[NEURON.index]) || brainCNSPoint(n, depth, a);
   const M = MOTOR_KIND;
   if (isSenseTissue(key)) {
-    // Near-sense cells sit in the pits behind the eye, spread over their pit by their site.
     const pits = k === SENSE_KIND.proximity ? fishProximityPits(a, side) : [];
     if (pits.length) {
       const pit = pits[n[NEURON.index] % pits.length], site = n[NEURON.site] || [],
@@ -272,8 +264,6 @@ export function brainOrganKey(key, n, receptor) {
   return sidedTissue(key, paired ? cellSide(n) : 0);
 }
 
-// Pigment cells form at most GROUPS groups, each placed on the skin among CANDIDATES hashed spots
-// clear of the organs, close to its wiring and its cells' place.
 const PIGMENT_PLACE = Object.freeze({
   shape_bins : 20,
   fill_bins : 8,
@@ -304,7 +294,6 @@ const PIGMENT_PLACE = Object.freeze({
   first : .02,
   last : .98
 });
-// Pigment cells scatter by an integer hash: multiply by A and B, fold by SHIFT bits.
 const PIGMENT_HASH = Object.freeze({a : 0x9e3779b9, b : 0x85ebca6b, shift : 13});
 export function brainPigmentPositions(b, a) {
   const shape = [ a.bodyStretch, a.restShoulder ?? a.shoulder, ...a.flank ]
@@ -440,8 +429,6 @@ export function brainPigmentPositions(b, a) {
                   PIGMENT_PLACE.depth * Math.abs(layer - (PIGMENT_PLACE.depth_layer +
                                                           PIGMENT_PLACE.depth_layer_span *
                                                               (group.center[AXIS.depth] + 1) / 2));
-        // A candidate with a missing measurement ranks last but still counts, so every pigment
-        // group gets a place.
         const rank = Number.isFinite(quality) ? quality : -Infinity;
         if (!best || rank > score) {
           score = rank;
@@ -474,7 +461,6 @@ export function brainPigmentPositions(b, a) {
   return positions;
 }
 
-// Pigment levels follow activity over DECAY steps; at most CACHE levels are kept.
 const PIGMENT_STATE = Object.freeze(
     {decay : 60, ink : .12, ink_per_level : .88, cache : 4096, color : .10, color_span : .9});
 export function brainPigmentState(group, d, now = displayNow()) {
@@ -515,7 +501,6 @@ export function brainPigmentState(group, d, now = displayNow()) {
   };
 }
 
-// Pigment stars grow with activity, larger when there are fewer groups.
 const PIGMENT_RADIUS = Object.freeze(
     {max_room : 2.2, min_radius : 2.2, max_radius : 25, radius : .04, base : .30, span : .70});
 export function brainPigmentRadius(r, value = 0, count = PIGMENT_PLACE.groups) {
@@ -529,7 +514,6 @@ export function brainPigmentRadius(r, value = 0, count = PIGMENT_PLACE.groups) {
                    room));
 }
 
-// A pigment star with POINTS points, the inner ones at INNER of the radius.
 const PIGMENT_STAR = Object.freeze({points : 12, inner : .72});
 export function brainPigmentStar(g, x, y, r) {
   const points = Array.from({length : PIGMENT_STAR.points}, (_, i) => {
@@ -542,8 +526,6 @@ export function brainPigmentStar(g, x, y, r) {
   g.closePath();
 }
 
-// Geometry lives in a bounded local coordinate system. Camera motion only projects it.
-// Cells appear from START pixels body radius (ORGAN_START in the organ view) over SPAN.
 const CELL_DETAIL_RADIUS = Object.freeze({organ_start : 170, start : 125, span : 130});
 export function brainCellDetail(p, c) {
   const radius = fishBodyRadius(p) * c.scale, start = brainState.brainView === 'organs'

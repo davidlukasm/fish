@@ -92,7 +92,6 @@ import {
 } from './fish_organs.js';
 export const brain_tissueState = {};
 
-// The opened body: a dark interior with a rim in the fish's colour.
 const INTERIOR = Object.freeze({
   alpha : .94,
   rim_alpha : .55,
@@ -117,14 +116,11 @@ export function brainDrawInterior(g, d) {
   g.restore();
 }
 
-// Single cells fade in from FROM of the cell detail over SPAN.
 export const CELL_DETAIL = Object.freeze({from : .45, span : .35});
 export function brainCellOpacity(d) {
   return brainEase((d.cellDetail - CELL_DETAIL.from) / CELL_DETAIL.span);
 }
 
-// Muscle bundles: FINE_BANDS or COARSE_BANDS bands per side, shaded by contraction and signals,
-// with three cross stripes.
 const MUSCLE = Object.freeze({
   fine_bands : 3,
   coarse_bands : 2,
@@ -260,7 +256,6 @@ export function brainDrawMuscles(g, d, now, only = null) {
   }
 }
 
-// Light cells take a hue over the full circle from their quality.
 function brainTissueColor(key, n) {
   const k = tissueKind(key);
   return isSenseTissue(key)         ? (k === SENSE_KIND.odor    ? brainScentRGB(brainScentWeights(n))
@@ -270,8 +265,6 @@ function brainTissueColor(key, n) {
                                     : null;
 }
 
-// Tissue outlines: the brain and cord, barbels and lateral lines in STEPS points, the filled swim
-// bladder, blood sensors beside the brain and inner pressure pores.
 const TISSUE_PATH = Object.freeze({
   neck_reach : .01,
   handle : .55,
@@ -394,7 +387,6 @@ export function brainTissuePath(g, d, key, side, variant = '') {
   }
 }
 
-// Flow lines through the pump, brighter while it pumps.
 const SUCTION_LINES = Object.freeze({
   alpha : .34,
   alpha_per_pump : .4,
@@ -429,8 +421,6 @@ function brainSuctionLines(g, d) {
   g.restore();
 }
 
-// The gut wall and its content: PELLETS pellets move through it once every CYCLE_STEPS steps
-// while it digests.
 const GUT_CONTENT = Object.freeze({
   alpha : .82,
   min_width : .6,
@@ -481,7 +471,6 @@ function brainGutContent(g, d) {
   g.restore();
 }
 
-// Each gland half shows one lobe per row of hormones (two hormones a row) and DUCTS ducts.
 const GLAND_HORMONES = Object.freeze({
   alpha : .3,
   alpha_per_level : .65,
@@ -524,7 +513,6 @@ function brainGlandHormones(g, d) {
   g.restore();
 }
 
-// Cheek folds glow with aggression.
 const CHEEK_FOLDS = Object.freeze(
     {alpha : .4, alpha_per_aggression : .45, min_width : .65, width : .006, folds : '#dca693'});
 function brainCheekFolds(g, d, tissue) {
@@ -539,7 +527,6 @@ function brainCheekFolds(g, d, tissue) {
   g.restore();
 }
 
-// Pigment groups fill with their activation.
 const PIGMENT_GROUPS = Object.freeze({alpha : .16, alpha_per_value : .48, width : .65});
 function brainPigmentGroups(g, d, now) {
   const r = d.r;
@@ -557,7 +544,6 @@ function brainPigmentGroups(g, d, now) {
   }
 }
 
-// The brain: shaded tissue with four folds across it.
 const CNS_FOLDS = Object.freeze({
   shade_middle : .45,
   alpha : .72,
@@ -573,7 +559,6 @@ const CNS_FOLDS = Object.freeze({
   dark : '#37465f',
   folds : '#c1c9db'
 });
-// Brain folds sit at these shares of its length from the centre.
 const CNS_FOLD_PLACES = Object.freeze([ -.52, -.12, .28, .62 ]);
 function brainCNSFolds(g, d, tissue) {
   const r = d.r, a = d.a;
@@ -606,8 +591,6 @@ function brainCNSFolds(g, d, tissue) {
   g.restore();
 }
 
-// The eye with its stalk, pupil and glint; each light cell draws its arc of view in the light it
-// receives, on a ring set by its hue.
 const RETINA = Object.freeze({
   alpha : .95,
   pupil_shift : .012,
@@ -672,7 +655,6 @@ function brainRetina(g, d, tissue) {
   g.restore();
 }
 
-// Fat drops in two rows of ROW, larger and denser as the reserve fills.
 const RESERVE_FAT = Object.freeze({
   drops : 12,
   drop_start : .10,
@@ -714,7 +696,6 @@ function brainReserveFat(g, d) {
   g.restore();
 }
 
-// Filled gamete organs: yolk with a gloss, or CELLS sperm cells in COLUMNS columns.
 const GAMETE_CONTENT = Object.freeze({
   alpha : .12,
   alpha_per_fill : .16,
@@ -795,8 +776,6 @@ function brainGameteContent(g, d, tissue) {
   }
 }
 
-// The tongue reddens with nutrient flow; a bolus runs down it for SWALLOW_SHOWN steps after a
-// swallow, filtered food loops every FILTER_STEPS steps.
 const TONGUE_TISSUE = Object.freeze({
   flow_half : 4,
   red : .58,
@@ -895,7 +874,6 @@ function brainTongue(g, d, tissue) {
   }
 }
 
-// The mouth opening.
 const MOUTH_TISSUE =
     Object.freeze({min_width : .6, width : .005, inside : '#081b25', rim : '#bd8798'});
 function brainMouthTissue(g, d) {
@@ -910,11 +888,7 @@ function brainMouthTissue(g, d) {
   fishMouthInterior(g, r, a);
 }
 
-// Sense cells gather in ALONG bins along the organ and, for fins, pigment and touch, ACROSS bins
-// across it.
 const CELL_BINS = Object.freeze({along : 8, across : 4});
-// Sense cells by organ: touch hooks, flow pores with a tail, pigment stars, damage sparks,
-// bladder strokes, barbel segments and scent hooks, brighter with activity.
 const SENSE_CELLS = Object.freeze({
   alpha : .24,
   alpha_per_value : .64,
@@ -1127,7 +1101,6 @@ function brainSenseCells(g, d, tissue, now, color, closed) {
   g.restore();
 }
 
-// Tissue outlines and fills; damage sensors redden with injury.
 const TISSUE = Object.freeze({
   damage_base : .55,
   damage_red : .35,

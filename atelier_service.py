@@ -1,5 +1,3 @@
-"""The studio's validated bridge to the v019 CPPN compiler."""
-
 import json
 import math
 import subprocess
@@ -15,10 +13,7 @@ from studio_storage import run as store_design
 from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport, Hormones
 from wording import Refusal, worded
 
-# The design view and the sites answer within QUICK_SECONDS; an engine error is passed on with at
-# most DETAIL_CHARACTERS of its message.
 QUICK_SECONDS = 8
-# Completed jobs remain available briefly for polling; one compiler runs at a time.
 COMPILE_JOB_TTL_SECONDS = 300
 COMPILE_JOB_RESULTS = 4
 COMPILE_TIMEOUT_SECONDS = 35
@@ -30,7 +25,6 @@ SEED_MAX = (1 << 64) - 1
 
 
 class CompileJobs:
-    """One bounded compiler process per viewer; completed results expire after five minutes."""
     def __init__(self):
         self.lock = threading.Lock()
         self.jobs = {}
@@ -165,7 +159,6 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidReceptors")
         for r in receptors:
             rows.append(receptor_row(r))
-    # The body's growth receptor follows the groups.
     rows.append(receptor_row(plan.get("growth")))
     options = plan.get("compiler")
     connections = plan.get("connections")
@@ -251,8 +244,6 @@ def run(data, data_dir=None, progress=None, cancel=None):
     if not tool.is_file():
         raise Refusal("studio.errors.compilerMissing")
     if op == "design":
-        # The design view: the engine's anatomy of the plan, without CPPN or development, and
-        # with a sight or a sense scene what the eyes or the other senses take of it.
         body = (sight_line(data.get("sight")) + sense_line(data.get("sense")) +
                 encode_plan(data.get("plan")))
         try:

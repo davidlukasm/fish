@@ -9,7 +9,6 @@ struct SpeciesRegistry {
   std::vector<GeneticSpecies> species;
   std::vector<EcologicalMilestone> milestones;
   double mating_distance = .1125;
-  // A genus spans GENUS_SPAN mating distances; typical members lie within TYPICAL_SHARE of one.
   static constexpr double GENUS_SPAN = 3, TYPICAL_SHARE = .5;
   double genus_distance() const { return GENUS_SPAN * mating_distance; }
   double typical_distance() const { return TYPICAL_SHARE * mating_distance; }

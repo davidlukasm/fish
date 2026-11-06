@@ -2,11 +2,8 @@
 #include "environment.hh"
 #include <map>
 namespace fishsim {
-// Bilinear samples weight the four surrounding cell centres.
 inline constexpr int SAMPLE_CORNERS = 4;
-// Diffusion moves at most this share of a cell to each open neighbour per step.
 inline constexpr double MAX_DIFFUSION_SHARE = .2;
-// The odour probe previews this many transport steps from the probe's source.
 inline constexpr int ODOR_PREVIEW_STEPS = 12;
 struct WaterborneSample {
   std::array<std::size_t, SAMPLE_CORNERS> index{};

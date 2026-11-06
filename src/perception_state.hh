@@ -8,14 +8,10 @@ struct VisualEye {
   bool present = false;
   double pull = 1;
 };
-// Visual objects carry their food_kind; the visual probe takes the kind plankton, which is never
-// seen as an object.
 inline constexpr int PROBE_OBJECT = sensory_probe::object_kind;
 static_assert(PROBE_OBJECT == food_kind::plankton);
-// Probe bounds: energy, radius and colour channel values.
 inline constexpr double PROBE_MAX_ENERGY = 20000, PROBE_MIN_RADIUS = .1, PROBE_MAX_RADIUS = 16,
                         PROBE_MAX_COLOR = 3;
-// Temporary inspection input; belongs to the open instrument, not to the fish's genome.
 struct SensoryProbe {
   int kind = -1, sense = 0, remaining = 0;
   double x = 0, y = 0, radius = sensory_probe::radius, energy = sensory_probe::energy, value = 0;

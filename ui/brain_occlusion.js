@@ -18,8 +18,6 @@ function brainBehindSkin(key, variant = '') {
          variant === BARBEL;
 }
 
-// Drawing layers from back to front after the tissues behind the skin; unlisted tissues lie on
-// UNLISTED_LAYER, just above the skin.
 const TISSUE_LAYERS = Object.freeze([
   [ SENSE_TISSUE.intake ], [ INTERNAL_TISSUE ],
   [
@@ -38,7 +36,6 @@ export function brainOrganLayer(tissue) {
   return layer < 0 ? UNLISTED_LAYER : layer + 1;
 }
 
-// Paths are recorded once per geometry frame and reused for paint, clipping and picking.
 export function brainPathBounds(path) {
   if (path.bounds)
     return path.bounds;
@@ -121,7 +118,6 @@ export function brainTissueGeometry(d, t) {
   return brainGeometry(d).paths.get(t.key + ':' + t.side + ':' + (t.variant || ''));
 }
 
-// From OPEN_DETAIL on the brain is drawn open and hides nothing.
 const OPEN_DETAIL = .5;
 function brainOccluders(d, t) {
   if ((t.key === SENSE_TISSUE.light || t.key === SENSE_TISSUE.proximity) || t.variant === BARBEL ||
@@ -146,7 +142,6 @@ function brainOccluders(d, t) {
   return result;
 }
 
-// Clips reach REACH body radii past the view and PAD pixels past a tissue.
 const CLIP = Object.freeze({reach : 4, pad : 8});
 function brainClipOutside(g, d, path, bounds) {
   const b = bounds || {

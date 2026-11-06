@@ -72,7 +72,6 @@ export let brainContext;
 
 export let brainReduced;
 
-// The hue in degrees a light cell is tuned to.
 export const lightCellHue = n => tuningHue(n[NEURON.parameters]?.[NEURON_PARAMETER.quality1] ?? 0);
 export function brainOrganRGB(n) {
   const absorb =
@@ -82,21 +81,15 @@ export function brainOrganRGB(n) {
   return absorb.map(v => 1 - v / total);
 }
 
-// Senses and motors with an organ on each side.
 const S = SENSE_KIND;
 export const PAIRED_SENSES =
                  Object.freeze([ S.light, S.odor, S.flow, S.touch, S.proximity, S.damage ]),
              PAIRED_MOTORS = Object.freeze([ MOTOR_KIND.turn, MOTOR_KIND.defense ]),
-             // Motors whose fibres run along the midline: tail, suction and jaw.
-    MIDLINE_MOTORS =
-        Object.freeze([ MOTOR_KIND.forward, MOTOR_KIND.suction, MOTOR_KIND.aggression ]);
-// The side of a paired cell: 0 left, 1 right.
-// A cell's coordinates across, along and in depth, in AXIS order.
+             MIDLINE_MOTORS =
+                 Object.freeze([ MOTOR_KIND.forward, MOTOR_KIND.suction, MOTOR_KIND.aggression ]);
 export const CELL_AXES = Object.freeze([ NEURON.x, NEURON.y, NEURON.z ]);
 export const AXIS = Object.freeze({across : 0, along : 1, depth : 2});
-// Exciting and inhibiting signals.
 export const EXCITE_COLOR = '#79cf95', INHIBIT_COLOR = '#ea8784';
-// Tissue colours: the body organs' own, otherwise by sense or motor kind.
 const BODY_TISSUE_COLORS = Object.freeze(
     {[INTERNAL_TISSUE] : INTERNAL_COLOR, [GUT_TISSUE] : '#b18f65', [RESERVE_TISSUE] : '#c4b66b'});
 export function tissueColor(key) {
@@ -176,8 +169,6 @@ const initializers = {
       '#c7b978', '#db8d9d', '#c7aceb'
     ];
   },
-  // Odour channels of the simulation: food, algae, plants, worms and crabs, plankton, carrion,
-  // spawn (eggs and sperm), mussels. Icons are the feeding icons of the same source.
   "scentNames" : () => { scentNames = tList('brain_model.scentNames'); },
   "scentColors" : () => {
     scentColors =

@@ -1054,7 +1054,6 @@ height:1px;
 overflow:hidden;
 clip-path:inset(50%)}
 
-/* The sick-fish toggle is a chip in the ecosystem's pulse row. */
 .pulse-row>#live-disease{
 color:#efa461}
 #live-disease[aria-pressed="true"],#disease-summary[aria-pressed="true"]{
@@ -1076,7 +1075,6 @@ font-style:italic}
 #cockpit{
 scrollbar-gutter:stable;
 overflow-anchor:none}
-/* Fixed slots for changing values; descriptions live in tooltips and closed details. */
 #generation{
 flex:0 0 16ch;
 white-space:nowrap;
@@ -1700,7 +1698,6 @@ color:var(--muted)}
 .remains-energy small{color:var(--muted)}
 .remains-energy progress{width:100%;height:7px;accent-color:#c8a26e}
 .remains-energy output{font-variant-numeric:tabular-nums}
-/* Inspection controls share the cockpit; the aquarium keeps its full drawing area. */
 #brain-workspace.brain-dock{
 position:static;
 display:flex;
@@ -1868,7 +1865,6 @@ font-size:11px;
 gap:8px;
 flex-wrap:wrap}
 .tank-tooltip{
-/* Anchored to the aquarium's lower right corner, so it follows every change of the layout. */
 position:absolute;
 right:12px;
 bottom:12px;
@@ -2323,7 +2319,6 @@ font-variant-numeric:tabular-nums}
 
 #tank-tooltip-scents{display:block;width:144px;height:144px;margin:6px auto 0;}
 
-/* Aufgeräumtes Layout: Kopfzeile = alle Steuerung, Mitte = Becken, rechts = Cockpit. */
 main{grid-template-rows:minmax(0,1fr) auto}
 aside,#panel-divider{grid-row:1/3}
 footer{grid-row:2}
@@ -2374,7 +2369,6 @@ header .icon-button{min-width:36px;height:36px;padding:0 8px;font-size:18px;line
 .view-section .view-toggle:not(.view-radio)[aria-pressed="false"]::after{background:#2a3f45 radial-gradient(circle at 6px 6px,#8aa 4px,transparent 4.5px)}
 @media(max-width:700px){.view-menu-panel{grid-template-columns:1fr;max-height:70vh;overflow:auto}}
 
-/* Kopfzeile: Ansichtsmenü ersetzt Cockpit-Knopf und Werkzeugleiste über dem Becken. */
 header .view-menu{margin:0;padding:0;border:0;background:none;align-self:center}
 header .view-menu>summary{box-sizing:border-box;height:36px;padding:0 12px;font-size:15px;background:none;border:1px solid var(--line);border-radius:7px}
 header .view-menu[open]>summary{border-color:var(--mint)}
@@ -2383,7 +2377,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .view-section .view-action i{font-style:normal;width:18px;text-align:center;font-size:14px;color:#f1d98e}
 .view-section .view-action:hover{background:#1a3a44}
 
-/* Becken: Statuszeile unten links, Markierung oben links, ⓘ unten rechts. */
 .tank-hud{position:absolute;left:12px;bottom:10px;display:flex;align-items:center;gap:8px;max-width:calc(100% - 70px);pointer-events:none}
 .tank-hud #tank-status{background:#102730d9;color:#bdd2d3;border-radius:5px;padding:4px 8px;font-size:12px;white-space:nowrap}
 .tank-hud #tank-fps{padding:4px 8px;font-size:11px;white-space:nowrap}
@@ -2398,7 +2391,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .tank-tooltip-close:hover{color:#f0e8cc}
 @media(max-width:700px){.tank-hud #tank-frame-times,.tank-hud #tank-fps{display:none}}
 
-/* Fisch: Kopf mit Unterreitern, Liste aller Fische, kompakte Einzelansicht. */
 #view-fish .fish-head{padding:14px 18px 0}
 #view-fish .fish-head h1{margin:0;font-size:18px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #view-fish .fish-head .section-title button{font-size:12px;padding:4px 9px}
@@ -2451,7 +2443,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 /* Infopanel: Werte bleiben einzeilig, damit die Höhe nicht springt. */
 #tank-tooltip-values>div strong,#tank-tooltip-values>div b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tank-tooltip-values small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Fischliste: Karten wie die Spezieskarten */
 .fish-list .fish-card>button{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left}
 .fish-card .fish-card-portrait{width:100%;height:auto;aspect-ratio:8/3}
 .fish-card-species{color:var(--muted)}
@@ -2469,7 +2460,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-card.sick{border-color:#a8665c}
 .fish-list .fish-card{display:block;grid-template-columns:none;padding:0}
 .fish-card-bars .fish-card-health,.fish-card-bars .fish-card-reserve{height:5px;background:#1d333b}
-/* Fischdetail: Merkmale oben, eigene umrandet; Favorit golden; Eier/Sperma beschriftet */
 #fish-trait-words{margin:6px 0 8px}
 #fish-trait-words .own-trait{outline:1.5px solid #e6cf8f;outline-offset:-1px}
 #favorite-fish[aria-pressed="true"]{color:#f2c94c;border-color:#c9a23a;background:#3a3218;text-shadow:0 0 6px #f2c94c88}
@@ -2480,7 +2470,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .revivable-fish span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .revivable-fish{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 #fish-place-eggs,#fish-release-sperm{display:inline-flex;align-items:center;gap:4px;width:auto;padding:0 9px}
-/* Organe-Tab: Organsymbole in Gruppen */
 .organ-icons{display:grid;gap:4px;margin:2px 0 8px}
 .organ-icon-group{display:grid;grid-template-columns:86px 1fr;align-items:start;gap:0 6px}
 .organ-icon-group>small{padding-top:5px;font-size:10px;line-height:1.2;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
@@ -2492,7 +2481,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .organ-icon[aria-pressed="true"]{border-color:var(--organ-color,#7fb0a4);background:#1f3c44;box-shadow:0 0 0 1px var(--organ-color,#7fb0a4) inset}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
 #view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none{display:none}
-/* Ansichtsmenü mit echten Schaltern */
 .view-section label.view-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:4px 8px;margin:1px 0;border-radius:6px;font-size:12.5px;color:#c9dad5;cursor:pointer}
 .view-section label.view-toggle::after{display:none}
 .view-section label.view-toggle:hover{background:#1a3a44}
@@ -2504,7 +2492,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .view-select i{font-style:normal;width:18px;text-align:center;color:#7f9f99}
 .view-select select{flex:1;font-size:12.5px}
 
-/* Nervensystem als Liniennetz */
 #view-brain[data-mode=organs] .nerve-plan,#view-brain:not([data-mode=organs]) #brain-inputs,#view-brain:not([data-mode=organs]) #brain-inputs-none,#view-brain:not([data-mode=organs]) #brain-organ-info{display:none}
 .nerve-plan{display:grid;gap:8px}
 .nerve-plan-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -2540,7 +2527,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .nerve-thoughts time{color:var(--muted);font-size:10px}
 .nerve-tags{grid-column:2;display:flex;gap:3px}
 .nerve-tags i{width:7px;height:7px;border-radius:50%}
-/* A new entry grows in from the top, so the older ones slide down instead of being redrawn. */
 .nerve-thoughts li.thought-enter,.tank-events li.thought-enter{animation:list-enter .5s ease-out;overflow:hidden}
 @keyframes list-enter{from{opacity:0;max-height:0;padding-top:0;padding-bottom:0;transform:translateY(-8px)}to{opacity:1;max-height:6em;transform:none}}
 @media(prefers-reduced-motion:reduce){.nerve-thoughts li.thought-enter,.tank-events li.thought-enter{animation:none}}
@@ -2566,7 +2552,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .nerve-thoughts-recent{margin:6px 0 2px}
 .nerve-thoughts-recent li{cursor:default}
 .nerve-thoughts-recent:empty{display:none}
-/* Fischliste: lebende Fische oder Eier */
 .list-stage{display:flex;align-items:center;gap:6px;margin:10px 0 6px}
 .list-stage button{padding:4px 12px}
 .list-stage button[aria-pressed="true"]{border-color:var(--mint);color:var(--mint)}
@@ -2575,7 +2560,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .fish-brood span{display:flex;flex-direction:column}
 .fish-brood strong{font-size:19px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums}
 .fish-brood small{font-size:11px;color:var(--muted)}
-/* Tank console above the frame rate: the latest important events, older ones fainter. */
 .tank-events{position:absolute;left:12px;bottom:46px;width:min(380px,calc(100% - 90px));margin:0;padding:5px 8px;list-style:none;display:grid;gap:2px;border-radius:5px;background:#102730b3;color:#bdd2d3;font:11px/1.35 system-ui;cursor:pointer;overflow:hidden}
 .tank-events li{display:flex;align-items:center;gap:6px;min-width:0}
 .tank-events li:nth-child(2){opacity:.75}
@@ -2586,8 +2570,6 @@ header .view-menu-panel{left:auto;right:0;z-index:60}
 .tank-events li.record span{color:var(--gold)}
 .tank-events li.extinction span,.tank-events li.warning span{color:#dc9d8f}
 @media(max-width:700px){.tank-events{display:none}}
-/* Ecosystem tab: the habitat scene spans the panel without a heading; below it the inhabitants as
-   tiles, the food and sickness pulses, the food web, health and causes of death. */
 .habitat-banner{display:block;width:100%;height:auto;border-bottom:1px solid var(--line)}
 .inhabitants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 14px}
 .inhabitant{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:8px;align-items:center}

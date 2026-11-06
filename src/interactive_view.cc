@@ -49,7 +49,6 @@ bool InteractiveSession::emit(bool done) {
     auto baseline = reference ? std::make_shared<Ecosystem>(reference->observation()) : nullptr;
     const bool reset = reset_metadata;
     reset_metadata = false;
-    // Selected-eye and brain activity travel with the independent scene stream.
     std::string inspection;
     if (!o.render_stream) {
       std::ostringstream data;

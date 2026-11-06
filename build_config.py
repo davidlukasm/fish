@@ -1,5 +1,3 @@
-"""Shared build directory, CPU budget and compiler target detection."""
-
 import hashlib
 import math
 import os

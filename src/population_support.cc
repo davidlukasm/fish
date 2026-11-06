@@ -9,20 +9,11 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// Breeders rank by tier: other environment, feeding poorly, feeding well, with offspring.
 constexpr int OTHER_TIER = -1, POOR_TIER = 0, FEEDING_TIER = 1, PARENT_TIER = 2;
-// Protection: PROTECTION_PAUSE steps apart, with groups of PROTECTION_GROUP eggs and
-// PROTECTION_TRIES sites.
 constexpr int PROTECTION_GROUP = 3, PROTECTION_TRIES = 6;
 constexpr std::uint64_t PROTECTION_PAUSE = 600;
-// Protection sites need SITE_CLEARANCE of open water with less than SITE_SEDIMENT sediment; bed
-// food sites lie SITE_LIFT off the bed; food sites lie FOOD_LIFT above food, PREY_LIFT above
-// fish and corpses and SHELL_LIFT above crabs and mussels, but at least SITE_TOP below the top.
 constexpr double SITE_CLEARANCE = 16, SITE_SEDIMENT = .1, SITE_LIFT = 60, FOOD_LIFT = 32,
                  PREY_LIFT = 48, SHELL_LIFT = 60, SITE_TOP = 24;
-// Groups spread over at least GROUP_SPREAD, or GROUP_SPREAD_RADII radii times the root of their
-// size; each egg tries GROUP_ATTEMPTS places, SPOT_CLEARANCE off walls and at least SPOT_GAP (or
-// SPOT_GAP_RADII times both radii) from other eggs.
 constexpr double GROUP_SPREAD = 96, GROUP_SPREAD_RADII = 4, SPOT_CLEARANCE = 12, SPOT_GAP = 64,
                  SPOT_GAP_RADII = 4;
 constexpr int GROUP_ATTEMPTS = 300;
@@ -152,7 +143,6 @@ std::optional<Point> protection_site(Ecosystem &w, const GeneticSpecies &s) {
   return pool[std::discrete_distribution<std::size_t>(local.begin(), local.end())(w.rng.engine)]
       .first;
 }
-// Check resource limits and safe positions before insertion.
 }
 int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
   auto g = job.source;
@@ -245,7 +235,6 @@ int Ecosystem::insert_group(SupportGroup &job, Point anchor) {
     positions.push_back(p);
     occupied.push_back({p, radii[std::size_t(i)]});
   }
-  // These supplied genotypes are complete; development starts without another mating or mutation.
   int added = 0;
   for (std::size_t index = 0; index < positions.size(); ++index) {
     const auto &p = positions[index];
@@ -292,8 +281,6 @@ void PopulationSupport::remember_breeder(const Individual &p,
                  p.body.nutrition / std::max(behavior::min_samples, p.body.nutrition_steps));
   Breeder candidate{p.genome,    p.id,   p.species, environment, p.body.nutrition / FOOD_ENERGY,
                     p.offspring, p.depth};
-  // Compare a rate in the current observation window with this body's actual resting cost.
-  // Lifetime food is retained as an energy record, not an age-dependent selection score.
   candidate.observed_steps = p.observations().window_steps;
   candidate.food_rate = p.observations().window_steps >= behavior::min_samples
                             ? p.observations().window_nutrition / p.observations().window_steps
@@ -431,7 +418,6 @@ void Ecosystem::restore_population() {
     const int added = insert_group(job, site);
     if (added > 0) {
       missing -= added;
-      // A new settlement renews protection; topping up a surviving settlement does not.
       if (absent)
         if (auto *s = taxonomy_.find(job.species)) {
           s->protection_used = 0;

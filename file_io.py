@@ -1,5 +1,3 @@
-"""Atomic, durable local file replacement."""
-
 import os
 import tempfile
 from pathlib import Path

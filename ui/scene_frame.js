@@ -63,7 +63,6 @@ export class SceneDecoder {
   }
 }
 
-// Owns the display state independently of statistics and the DOM.
 export class DisplayScene {
   constructor() { this.reset(); }
   reset() {
@@ -99,7 +98,6 @@ export class DisplayScene {
     row[FISH.hatch_shape] = [ value.hatch_radius, value.birth_tissue ];
     for (const [flag, column] of Object.entries(flagColumns))
       row[column] = Number(!!(value.flags & FISH_FLAGS[flag]));
-    // Fin strokes in fin_event order: starts, strengths, durations.
     const events = [
       value.fin_age_tail, value.fin_age_left, value.fin_age_right, value.fin_peak_tail,
       value.fin_peak_left, value.fin_peak_right, value.fin_steps_tail, value.fin_steps_left,

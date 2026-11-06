@@ -1,7 +1,3 @@
-// Phones in portrait get their own interface, built only from the data models (population,
-// fish profile, thoughts, species, events) and not from the desktop panels: the water fills the
-// screen, and a deck of four cards lies at the bottom: Becken, Fisch, Arten, Chronik. Swipe
-// sideways between them, tap a card's head to raise or lower the deck.
 import {PERCENT} from './units.js';
 import {
   camera,
@@ -38,16 +34,12 @@ export const mobileState = {
   card : 0
 };
 
-// Any phone or tablet held upright, and any narrow upright window, gets the mobile interface.
 const QUERY = '(orientation: portrait) and ((max-width: 900px) or (pointer: coarse)), ' +
               '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)';
 const LANDSCAPE = '(orientation: landscape)';
 const REFRESH = 150, SPECIES_SHOWN = 30, SWIPE = 36, LONG_PRESS = 450, EDGE_MARGIN = 28;
-// Vibration in milliseconds: a card turns (TURN), a tap lands (TAP), an action starts (ACTION), a
-// portrait opens (OPEN), a fish is picked (PICK), a species is marked (MARK).
 export const HAPTIC =
     Object.freeze({turn : 4, tap : 6, action : 8, open : 10, pick : 12, mark : 18});
-// A thought stays the tank line for THOUGHT_MS; the fish card lists THOUGHTS thoughts.
 const THOUGHT_MS = 8000, THOUGHTS = 4, RATIO_DIGITS = 2;
 const on = () => document.body.classList.contains('mobile');
 const CARDS = [ 'tank', 'fish', 'species', 'events' ];
@@ -73,7 +65,6 @@ const button = (className, text, label, action) => {
   return b;
 };
 
-// Zoom at which the world's height fills the screen (the desktop fits the whole world).
 function fillZoom() {
   const f = sceneState.frame;
   if (!f?.width || !cameraState.viewportWidth)
@@ -82,10 +73,6 @@ function fillZoom() {
   return Math.max(1, cameraState.viewportHeight / f.height / fit);
 }
 
-// ------------------------------------------------------------------- touch on the water
-// The water has its own touch language: one finger pans, two fingers zoom, a tap picks the
-// nearest fish (generously: fingers are wide), a double tap zooms in, and a resting finger slows
-// time almost to a standstill, so a fish can be picked out of a swarm.
 const TAP_MOVE = 10, TAP_TIME = 320, DOUBLE_TAP = 300, HOLD_AFTER = 260, PICK_RADIUS = 46,
       ZOOM_TIME = 260;
 
@@ -104,8 +91,6 @@ function nearestFish(clientX, clientY) {
   return best?.id || 0;
 }
 
-// Zoom changes glide instead of jumping; the point under the fingers stays put. Without a
-// point (while following a fish) the fish itself stays put.
 function zoomTo(target, clientX, clientY) {
   const from = cameraState.zoom, start = performance.now(),
         at = clientX === undefined ? null : canvasPoint({clientX, clientY});
@@ -234,11 +219,6 @@ function bindTouch() {
   canvas.addEventListener('pointercancel', lift, {capture : true});
 }
 
-// ------------------------------------------------------------------- tempo follows the eye
-// Closer means slower, more strongly than on the desktop, and a resting finger nearly stops
-// time (the slowest tempo the simulation takes). The simulation's step delay glides towards the
-// wanted value; leaving restores the visitor's own tempo. Any other tempo is a view tempo the
-// server lets lapse unless it is renewed.
 const HOLD_DELAY = 1000, MAX_DELAY = 900, ZOOM_SLOWING = 1.6, TEMPO_EVERY = 300, TEMPO_GLIDE = .45,
       TEMPO_TOLERANCE = .12, TEMPO_SETTLE = 1500, TEMPO_SNAP = 4;
 
@@ -253,8 +233,6 @@ function steerTempo(f) {
   if (f.paused || f.turbo || f.historical)
     return;
   const now = performance.now();
-  // At rest the visitor's tempo is the one the simulation runs at, perhaps changed in another
-  // window; frames from before the last request may still show the view tempo.
   if (mobileState.baseDelay === undefined ||
       !mobileState.viewTempo && now - (mobileState.tempoAt || 0) > TEMPO_SETTLE &&
           f.delay_ms !== undefined && f.delay_ms !== mobileState.baseDelay) {
@@ -284,8 +262,6 @@ function steerTempo(f) {
   requestTempo(value, own);
 }
 
-// Holding the fast-forward button runs the simulation as fast as it can while still drawn;
-// letting go glides back to the visitor's tempo.
 function bindRace(race) {
   const stop = () => {
     if (!mobileState.racing)
@@ -306,8 +282,6 @@ function bindRace(race) {
     race.addEventListener(type, stop);
 }
 
-// Feeding mode: every tap on the water drops food exactly there, until the mode is switched off
-// or the water rests for a while.
 const FEED_IDLE = 8000, FEED_COUNT = 10, FEED_RADIUS = 26;
 function setFeeding(value) {
   mobileState.feeding = value;
@@ -330,8 +304,6 @@ function feedAt(clientX, clientY) {
   command('spray', {x : p.x, y : p.y, count : FEED_COUNT, radius : FEED_RADIUS});
 }
 
-// A new run in one tap: the seven example classes, the same start as last time, or the full
-// choice of start lines in the desktop dialog.
 function openRunSheet() {
   const sheet = make('div', 'run-sheet'), panel = make('div', 'run-sheet-panel'),
         close = () => sheet.remove(), start = async choice => {
@@ -365,13 +337,11 @@ function show(index) {
   deck.scrollTo({left : index * deck.clientWidth, behavior : 'smooth'});
 }
 
-// ------------------------------------------------------------------------- the cards
 function card(key) {
   const c = make('article', 'deck-card deck-' + key), head = make('div', 'deck-head'),
         title = make('h2', '', t('mobile.cards.' + key)), line = make('p', 'deck-line'),
         body = make('div', 'deck-body');
   head.append(title, line);
-  // Up opens more (for the fish its portrait), down lowers the deck, a tap toggles it.
   let start = null;
   head.addEventListener('pointerdown', e => start = e.clientY);
   head.addEventListener('pointerup', e => {
@@ -446,7 +416,6 @@ function renderTank(f, view) {
     generation : o.generation,
     selfSustaining : o.success
   };
-  // Labels follow the number they stand under ("1 Art", "3 Arten").
   for (const [key, value] of Object.entries(values)) {
     setStatValue(view.parts.stats[key], value);
     view.parts.stats[key].lastChild.textContent = t('mobile.' + key, {n : value});
@@ -461,8 +430,6 @@ function renderTank(f, view) {
     setFeeding(false);
 }
 
-// Where the tank's energy sits: one strip, a segment per food source in its usual colour, and
-// the largest stores named below it.
 const ENERGY_NAMED = 3;
 function renderEnergyStrip(f, box, legend) {
   const budget = energyBudget(f), names = textArea('energy_view').groupNames,
@@ -488,7 +455,6 @@ function renderEnergyStrip(f, box, legend) {
   });
 }
 
-// Where the living fish spend their time, as five short bars.
 function renderHabitat(f, box) {
   const shares = populationHabitat(f).shares, names = tList('energy_view.habitatNames');
   if (box.children.length !== HABITATS.length)
@@ -509,7 +475,6 @@ const FISH_STATS_EVERY = 1000;
 function renderFish(f, view) {
   const p = frameFish(f);
   if (!p) {
-    // A chosen fish that died says so, instead of the card simply falling back to the hint.
     const died = f.selected && f.selected_death?.id === f.selected,
           name = died && fishTitle(f.selected), cause = died && deathNames[f.selected_death.cause];
     view.line.textContent = !died   ? t('mobile.noFish')
@@ -547,7 +512,6 @@ function renderFish(f, view) {
   showShield(view.parts.shield, f, p);
   if (view.thoughtAt !== thoughts[0]?.time) {
     view.thoughtAt = thoughts[0]?.time;
-    // The newest thought already stands in the card head; the list keeps the ones before it.
     view.parts.thoughts.replaceChildren(...thoughts.slice(1).map(x => make('li', '', x.text)));
   }
   const now = performance.now();
@@ -614,8 +578,6 @@ function renderSpecies(f, view) {
     view.list.append(...order);
 }
 
-// A chosen fish outside the screen is shown by an arrow at the edge; tapping it brings the fish
-// back.
 function updateArrow(f) {
   const arrow = mobileState.arrow, p = frameFish(f);
   let visible = false;
@@ -646,7 +608,6 @@ function refresh() {
     renderChronicle(mobileState.views.events, () => show(1));
     updateArrow(f);
     updateEvents();
-    // A fish the visitor taps in the water is followed and its card comes forward.
     const id = f.selected || 0;
     if (mobileState.chosen !== undefined && id && id !== mobileState.chosen) {
       approach();
@@ -694,7 +655,6 @@ function apply(active) {
   });
 }
 
-// While someone watches the water the screen stays on (where the browser allows it).
 function keepAwake() {
   const request = async () => {
     if (!on() || document.visibilityState !== 'visible' || mobileState.wake)
@@ -712,7 +672,6 @@ function keepAwake() {
 }
 
 export function initMobile() {
-  // ?mobile=1 or ?mobile=0 overrides the screen query; without a browser window nothing happens.
   const forced = new URLSearchParams(globalThis.location?.search || '').get('mobile'),
         media = globalThis.matchMedia?.(QUERY);
   if (!media)

@@ -17,9 +17,6 @@ struct VisualObject {
   double attenuation = -1;
   bool pending_filter = false;
   int eye = -1;
-  // Plant strokes: centre (sx, sy) and half vector (hx, hy) in the observer's body frame relative
-  // to the eye; `radius` is then the half-width, `distance` the distance to the centre line and
-  // `far` the largest depth the stroke can have.
   bool stroke = false;
   double sx = 0, sy = 0, hx = 0, hy = 0, far = -1;
 };
@@ -34,8 +31,6 @@ struct ComputeStatus {
 void configure_compute(const std::string &);
 bool opencl_loader_available();
 const ComputeStatus &compute_status();
-// An attenuation query runs from an eye at x, y to a target at tx, ty; the answer holds one
-// factor per colour channel.
 namespace optics_query {
 inline constexpr std::size_t x = 0, y = 1, tx = 2, ty = 3, count = 4;
 }

@@ -9,23 +9,13 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// Organ mass per unit of sensor and of muscle capacity.
 constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
-// Nostrils sit NOSE_AHEAD radii ahead, twice NOSE_OFFSET radii plus NOSE_GAP apart (at least
-// NOSE_MIN_OFFSET); lateral samples probe the sediment with LATERAL_PROBE.
 constexpr double NOSE_AHEAD = .8, NOSE_OFFSET = .6, NOSE_GAP = .2, NOSE_MIN_OFFSET = 3,
                  LATERAL_PROBE = .5;
-// Receptors with thresholds up to EARLY_THRESHOLD respond early, from LATE_THRESHOLD late; only
-// receptors of at least SPAN_WEIGHT span the threshold range; directions count apart from
-// DIRECTION_GAP.
 constexpr double EARLY_THRESHOLD = .3, LATE_THRESHOLD = .7, SPAN_WEIGHT = .25, DIRECTION_GAP = .08;
-// The gut path runs from GUT_FRONT behind the head to GUT_BACK of the chest, at least
-// GUT_MIN_HALF long, GUT_BREADTH of the narrower width (at least GUT_MIN_BREADTH) wide, offset by
-// GUT_OFFSET and swinging GUT_SWING in GUT_LOOPS plus GUT_LOOPS_GAIN times the gut length loops.
 constexpr double GUT_FRONT = .025, GUT_BACK = .93, GUT_MIN_HALF = .03, GUT_MIN_BREADTH = .035,
                  GUT_BREADTH = .72, GUT_OFFSET = .3, GUT_SWING = .48, GUT_LOOPS = .5,
                  GUT_LOOPS_GAIN = 2.5;
-// Eye colour columns: red, green and blue of the left eye, then of the right.
 constexpr std::size_t eye_color_column(int side) {
   return anatomy_column::red_left + 3 * std::size_t(side);
 }
@@ -76,7 +66,6 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
     }
     for (int j = 0; j < STROKE_COUNT; ++j)
       if (e.port == STROKE_PORTS[j]) {
-        // Only the releasing tissue sets the gonad's release rhythm.
         const double w = e.strength * ((j == StrokeEgg || j == StrokeSperm) ? e.outside : 1);
         steps[j] += w * tau;
         weight[j] += w;
@@ -104,7 +93,6 @@ class AnatomyBuilder {
     double value() const { return weight > 0 ? sum / weight : .5; }
   };
   std::array<Mean, 4> traits;
-  // Smell and touch at the head, per side: barbels grow where both are.
   std::array<double, 2> head_smell{}, head_touch{};
 
   std::shared_ptr<BrainInterface> result = std::make_shared<BrainInterface>();
@@ -228,8 +216,6 @@ class AnatomyBuilder {
       std::copy(scents.begin(), scents.end(), r.scents.begin());
       r.hormones =
           field::hormone_affinity<field::BLOOD_SUBSTANCES>(p.quality1, p.quality2, p.quality_width);
-      // Touch, injury and lateral-line cells keep their angular kernel; lateral cells use it
-      // while hatching.
       if (r.dominant_sense() == field::Touch || r.dominant_sense() == field::Damage ||
           r.dominant_sense() == field::Flow) {
         double total = 0;
@@ -256,7 +242,6 @@ class AnatomyBuilder {
         result->anatomy[A::eye_left + side] += fn.senses[field::Light];
         for (int c = 0; c < rgb::count; ++c)
           result->anatomy[eye_color_column(side) + c] += fn.senses[field::Light] * r.spectrum[c];
-        // Smell, lateral line and touch fill their left/right pairs in sense order.
         for (int k = field::Odor; k <= field::Touch; ++k)
           if (r.channel == k)
             result->anatomy[A::smell_left + 2 * (k - field::Odor) + side] += fn.senses[k];
@@ -275,8 +260,6 @@ class AnatomyBuilder {
         const int port = motor_ports[j];
         const float capacity = strength * fn.motors[j];
         const auto &p = n.parameters;
-        // A pigment cell's pigment absorbs each channel as its tuning takes it, up to all of it;
-        // other tissues show the colour of their tuning's share of each.
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
         const double total = j == field::Pigment ? 1 : absorb[0] + absorb[1] + absorb[2];
         std::array<float, 3> color{};
@@ -324,7 +307,6 @@ class AnatomyBuilder {
                           : j == field::Defense    ? int(A::defense)
                           : j == field::Aggression ? int(A::aggression)
                                                    : -1;
-        // Each organ's strength column follows its count column at a fixed distance.
         if (organ >= 0) {
           result->anatomy[organ] += fn.motors[j];
           result->anatomy[organ + A::suction_strength - A::mouth] += capacity;
@@ -408,7 +390,6 @@ class AnatomyBuilder {
     }
   }
   void prepare_vision() {
-    // Direction bins belong to the fixed head lattice, even where neighbouring groups are absent.
     std::vector<double> bearings;
     for (int u = 0; u < 4; ++u)
       for (int w = 0; w < 3; ++w)
@@ -450,7 +431,6 @@ class AnatomyBuilder {
     for (int c = 0; c < rgb::count; ++c) {
       auto &rays = result->visual[c];
       std::sort(rays.begin(), rays.end());
-      // Integrate spectral coverage once per angular segment, including overlapping mixed cells.
       std::vector<double> edges{-GENERATED_HALF_VIEW, GENERATED_HALF_VIEW};
       for (const auto &ray : rays) {
         const auto &r = result->sensory[ray.second];
@@ -472,7 +452,6 @@ class AnatomyBuilder {
       }
       result->visual_coverage[c] = float(std::clamp(coverage / (2 * GENERATED_HALF_VIEW), 0., 1.));
     }
-    // Compile the interval unions once, including each eye's default binocular overlap.
     auto unite = [](auto &views) {
       std::sort(views.begin(), views.end());
       std::size_t spans = 0;
@@ -499,11 +478,9 @@ class AnatomyBuilder {
   }
 
   void summarize_senses() {
-    // Barbels: as much smell as the head also feels by touch on that side.
     for (int side = 0; side < 2; ++side)
       result->anatomy[anatomy_column::smell_outer_left + side] =
           float(std::min(head_smell[side], head_touch[side]));
-    // Effective thresholds describe each modality on its own; weak mixtures need stronger input.
     for (int sense = 0; sense < field::SENSE_COUNT; ++sense) {
       std::vector<float> angles;
       double low = 1, high = 0;
@@ -833,8 +810,6 @@ Point olfactory_position(const Body &b, const BrainInterface &, int side) {
                c = std::cos(b.angle), s = std::sin(b.angle);
   return {b.x + NOSE_AHEAD * r * c - offset * s, b.y + NOSE_AHEAD * r * s + offset * c};
 }
-// The lateral line samples the four corners LATERAL_ALONG radii ahead and behind and
-// LATERAL_ACROSS radii to either side.
 static Point lateral_offset(int k, double radius, double angle) {
   const double along = (k & 1 ? 1 : -1) * LATERAL_ALONG * radius,
                across = (k & 2 ? 1 : -1) * LATERAL_ACROSS * radius, c = std::cos(angle),
@@ -1055,8 +1030,6 @@ double stroke_step(StrokeState &stroke, double drive, const StrokeTiming &timing
   stroke.recovery = timing.recovery;
   return work;
 }
-// Delivery follows sin² over the stroke's steps, most in the middle as the fin sweeps; the shares
-// sum to one for strokes of two or more steps.
 double stroke_delivery(const StrokeState &stroke, const StrokeTiming &timing) {
   if (stroke.recovery <= 0 || timing.recovery <= 0)
     return 0;
@@ -1216,7 +1189,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       p.swimming_cost * forward + p.turn_cost * turn + pump_work +
       p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[organ_port::pigment];
-  // A bite is paid once at the start; its bounded activation lasts until that closure ends.
   const double combat =
       p.bite_cost * work[StrokeBite] + p.defense_cost * strokes[StrokeDefense].power;
   const double bladder_delta =
@@ -1227,7 +1199,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double cost = muscle + combat + extra,
                f = cost <= 0 ? 1 : pay_activity(b, cost, protected_life) / cost;
   b.motor_.motor_factor = f;
-  // Swimming strokes deliver their paid work over their own duration.
   constexpr std::array<int, fin::count> SWIMMING{StrokeTail, StrokeTurnLeft, StrokeTurnRight};
   for (int j : SWIMMING)
     if (work[j] > 0)
@@ -1253,7 +1224,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     b.bite_signal *= f;
   }
   b.mouth.flow *= f;
-  // Already paid transport credit is retained; only this step's new transport is reduced.
   const double retained = work[StrokeSuction] > 0 ? 0 : std::min(old_credit, b.mouth.budget);
   b.mouth.credit = retained + (b.mouth.credit - retained) * f;
   b.mouth.closing &= b.bite_signal > 0;
@@ -1272,8 +1242,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.defense = std::clamp(b.motor_.defense * layout.stroke_timing[StrokeDefense].keep +
                                     p.spine_rate * f * strokes[StrokeDefense].power,
                                 0., p.spine_max);
-  // The pigment disperses as far as its cells are active and gathers again at rest, at the pace
-  // of their time constants.
   for (int c = 0; c < rgb::count; ++c) {
     const double full = layout.pigment_absorption[c],
                  active = full > 0 ? std::clamp(pigment[c] / full, 0., 1.) : 0.;
@@ -1306,7 +1274,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     b.motor_.fin_tension[fin::left] = pose(StrokeTurnLeft);
     b.motor_.fin_tension[fin::right] = pose(StrokeTurnRight);
   }
-  // Each fin records its stroke: start, duration and strength; the tail alternates sides.
   if (forward > 0 && f > 0)
     b.motor_.fin_stroke_side = !b.motor_.fin_stroke_side;
   for (std::size_t fin = 0; fin < SWIMMING.size(); ++fin)

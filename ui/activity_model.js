@@ -1,6 +1,3 @@
-// What the chosen fish is doing, averaged over the last seconds so the readings settle instead
-// of following single steps: swimming, turning, suction, biting, defence and digestion. The
-// averages only move while the simulation advances; a new fish starts from its current values.
 import {degrees, wrapAngle} from './units.js';
 import {BEHAVIOR_SCALE, FISH} from './schema.js';
 export const activity_modelState = {};
@@ -34,7 +31,6 @@ export function fishActivity(p, step, now) {
     Object.assign(tracked, {step, angle : p[FISH.angle], time : now});
   }
   const v = tracked.values;
-  // Speed and turning on a square-root scale of the behaviour limits, so ordinary values show.
   return [
     {key : 'speed', share : Math.sqrt(clamp(v.speed / BEHAVIOR_SCALE.speed)), amount : v.speed},
     {key : 'turn', share : Math.sqrt(clamp(v.turn / BEHAVIOR_SCALE.turn_degrees)), amount : v.turn},

@@ -7,27 +7,18 @@
 #include <unordered_set>
 namespace fishsim {
 namespace {
-// Grant older plans useful chunks before opening more plans' temporary structures.
 constexpr std::size_t DEVELOPMENT_WORK_CHUNK = 16384;
-// Reserve one share for immigrants, including a preparation turn at the same interval.
 constexpr std::size_t IMMIGRANT_SHARES = 8;
-// A swimming fish stirs the water by WAKE_SHARE of its thrust; impacts fade by IMPACT_KEEP.
 constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
-// Eggs denser than EGG_NEUTRAL_DENSITY of yolk sink, lighter ones rise (rising slower).
 constexpr double EGG_NEUTRAL_DENSITY = .75, EGG_BUOYANCY_GAIN = 2, EGG_BUOYANCY_LIMIT = .5,
                  EGG_RISE_SHARE = .8, EGG_DRIFT = .14256;
-// Habitat observations: near the surface, dark, strong current, bottom and top zones.
 constexpr double SURFACE_GAP = habitat_zone::surface_gap, DARK_LIGHT = habitat_zone::dark_light,
                  STRONG_CURRENT = habitat_zone::strong_current,
                  BOTTOM_ZONE = habitat_zone::bottom_zone, TOP_ZONE = habitat_zone::top_zone;
-// Moving above MOVING_SPEED, pausing below CRUISING_SPEED.
 constexpr double MOVING_SPEED = .05, CRUISING_SPEED = behavior_scale::cruising_speed;
-// Hormone contexts are sampled every HORMONE_SAMPLE_PERIOD steps.
 constexpr std::uint64_t HORMONE_SAMPLE_PERIOD = 16;
 constexpr double INJURED = .1, WEAKENED = .75, GONAD_HALF = .5;
-// Foliage touches with at least FOLIAGE_TOUCH_BASE, rising with cover to FOLIAGE_TOUCH_MAX.
 constexpr double FOLIAGE_TOUCH_BASE = .1, FOLIAGE_TOUCH_GAIN = .2, FOLIAGE_TOUCH_MAX = .3;
-// Records of recent deaths kept for statistics.
 constexpr std::size_t RECENT_RECORDS = 256;
 }
 void Ecosystem::develop_population() {
@@ -35,7 +26,6 @@ void Ecosystem::develop_population() {
   for (std::size_t i = 0; i < fish.size(); ++i)
     if (fish[i].developing() && fish[i].body.alive && !fish[i].genome.blueprint)
       pending.push_back(i);
-  // All embryos share one fixed work budget, including preparation and finalization.
   const auto work_budget = std::size_t(evo.development_work);
   std::size_t budget = work_budget;
   bool prepared = false;
@@ -75,8 +65,6 @@ void Ecosystem::develop_population() {
       auto share =
           std::min(remaining, std::max(DEVELOPMENT_WORK_CHUNK, remaining / (active.size() - at)));
       while (share && !g.blueprint) {
-        // Genotype validation precedes the resumable preparation. Admit one new plan per step;
-        // all subsequent work, including preparation and finalization, uses the shared budget.
         if (!g.growing) {
           if (prepared)
             break;
@@ -99,7 +87,6 @@ void Ecosystem::develop_population() {
           ? work_budget / IMMIGRANT_SHARES
           : 0;
   std::size_t primary = budget - reserved;
-  // Let the reserved immigrant share start a CPPN too, even with a continuous natural queue.
   if (ticks % IMMIGRANT_SHARES == 0)
     develop_tier(2, reserved);
   develop_tier(0, primary);
@@ -155,7 +142,6 @@ void Ecosystem::index_organisms() {
       odors.push_back({c.x, c.y,
                        c.energy * field.env().odor_freshness(corpse_decay_age(c)) *
                            odor_maturity(c.age, field.env())});
-  // drift_sperm has already published the final density, pigments and optical index.
   field.index_small_animals(visible);
   field.index(visible, std::move(odors));
 }
@@ -363,7 +349,6 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
         species->hormones.window.add(sample);
       }
     }
-    // Neural work runs in parallel; species totals are collected here serially.
     if (species && p.observations_.habitat_sampled) {
       ++species->habitat_steps;
       for (std::size_t k = 0; k < habitat_column::count; ++k)
@@ -404,7 +389,6 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     for (int kind = food_kind::plankton; kind <= food_kind::mussel; ++kind)
       animal_nutrition += meal.nutrition[kind];
     field.stir_sediment(b);
-    // Foliage touches the body from the side where it lies, more firmly the more it covers.
     if (const auto leaves = field.foliage_contact(b.x, b.y, body_radius(b)); leaves.cover > 0) {
       const double touch =
           std::min(FOLIAGE_TOUCH_MAX, FOLIAGE_TOUCH_BASE + FOLIAGE_TOUCH_GAIN * leaves.cover);
@@ -466,7 +450,6 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
         remembered_dead.push_back(p);
         auto &body = remembered_dead.back().body;
         body.energy = std::max(0., p.body.energy);
-        // Swallowing can exhaust the retained yolk before corpse collection ends laying.
         body.reproduction_.egg_laying = false;
       }
       recent_deaths.emplace_back(p.id, p.genome);

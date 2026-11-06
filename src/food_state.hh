@@ -9,23 +9,18 @@ struct FoodCloud {
   Point position; // Fractions of the tank dimensions, also used when resizing.
   double angle = 0, turn = 0;
 };
-// Food clouds turn by at most MAX_CLOUD_TURN per step.
 inline constexpr double MAX_CLOUD_TURN = .00003;
 struct Rng;
 struct FoodSupply {
   double rate, minimum, maximum, cluster, limit, factor;
 };
-// Food energies are drawn quadratically between lo and hi: rich pieces are rarer. Mean lo + (hi -
-// lo) / 3.
 inline double quadratic_draw(double lo, double hi, double u) {
   return lo + (hi - lo) * u * u;
 }
 inline double quadratic_draw_mean(double lo, double hi) {
   return lo + (hi - lo) / 3;
 }
-// Food pieces are FOOD_SIZE_MIN to FOOD_SIZE_MAX energy.
 constexpr double FOOD_SIZE_MIN = 1, FOOD_SIZE_MAX = 200;
-// Food sources wander at most MAX_SOURCE_MOTION.
 constexpr double MAX_SOURCE_MOTION = 1000;
 struct FoodState {
   double energy_from(int origin) const;

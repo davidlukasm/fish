@@ -3,14 +3,8 @@ import {addOrgan, findOrgan, updateField} from './document.js';
 import {sitePoint, ZONE} from './layout.js';
 import {siteRole} from './organs.js';
 
-// Organs with a field of view (eyes, the near sense) have no place of their own: their field
-// decides which head sites their cells take, and the body seats the organ where those cells lie.
-// A placement is one such choice as a whole design; the engine's design view tells where each
-// one puts the organ.
 export const hasField = type => type === 'eye' || type === 'proximity';
 
-// Moving a field organ: its field keeps its width and starts at every bearing of the head
-// lattice (clamped to the side's view).
 export function fieldPlacements(doc, organId, sites) {
   const organ = findOrgan(doc, organId);
   if (!organ?.field)
@@ -28,8 +22,6 @@ export function fieldPlacements(doc, organId, sites) {
   return result;
 }
 
-// A new field organ: one placement centred on every bearing of the head lattice. Paired organs
-// mirror themselves, so one side is enough.
 export function newFieldPlacements(doc, type, sites) {
   const anchors = new Map();
   for (const site of sites)

@@ -38,7 +38,6 @@ import {removeAssembly} from './model/assemblies.js';
 import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
 import {bendsWith} from './view/wires.js';
-// Two clicks on the same thing at most DOUBLE_CLICK ms apart are a double click.
 const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
@@ -64,19 +63,9 @@ import {MEASURE_LEVEL, trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 
-// The Atelier's controller: the station's state, its draft and history, and how the views follow
-// them. Its methods for parts of the work live beside it and are mixed in: the engine's view of
-// the draft (design.js), the graphics' handles (handles.js), dropping from the library
-// (drops.js), trials on the developed fish (trials.js) and the pointer on the scene
-// (gestures.js). What clicks and changes do stands in tables (events.js; cppn.js for the genome
-// mode); the model (model/) and the views (view/) know nothing of the controller.
 let instance = null;
-// An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
-// The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
-// BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back.
 const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40;
-// A genome file's name keeps letters, digits, umlauts, '-' and spaces.
 const FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
 export class OrganStudio {
   constructor(root) {
@@ -98,18 +87,12 @@ export class OrganStudio {
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
       measurement : null,
-      // The test light in front of the eyes: side, bearing, distance, radius, hue.
       sightProbe : null,
-      // The test stimulus of the selected nose, touch, pain or lateral organ: its organ, kind,
-      // side, bearing, distance, strength and scent.
       senseProbe : null,
-      // A library tile held ready to act on what is clicked next: its kind and value.
       armed : null,
       visionProfile : null,
       panels : storedPanels(),
       layers : storedLayers(),
-      // The engine's view of the design (cells, light-cell curves, what the eyes see) and, while
-      // a field organ is placed, the places it can take; report is the developed fish.
       anatomy : null,
       choices : null,
       report : null,
@@ -119,7 +102,6 @@ export class OrganStudio {
       cppnConnectFrom : null,
       busy : false,
       compileProgress : null,
-      // The compiler's check of the developed genome, and the network a stimulus reached.
       robustness : null,
       stimulus : null,
       stale : true,
@@ -130,10 +112,7 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    // The stimuli playing on the scene, each with the centers it stimulated.
     this.pulsePlayers = [];
-    // A wire begun by a click: from an item to the next one clicked, or from the next one clicked
-    // to a region's input slot.
     this.pendingWire = null;
     this.ignoreClickUntil = 0;
     this.handleDrag = null;
@@ -145,8 +124,6 @@ export class OrganStudio {
     this.choiceFrame = 0;
     this.choicePoint = null;
     this.shownChoice = null;
-    // The build under way and whether it was cancelled; the design last shown and last checked
-    // for pressure.
     this.compileJob = null;
     this.cancelCompile = false;
     this.shownDesign = null;
@@ -165,7 +142,6 @@ export class OrganStudio {
   }
   initialize() {
     this.root.addEventListener('click', event => this.click(event));
-    // A right click lets a held tile go.
     this.root.addEventListener('contextmenu', event => {
       if (this.release())
         event.preventDefault();
@@ -199,7 +175,6 @@ export class OrganStudio {
       this.state.capabilities = results[0];
       this.state.sites = results[0].sites;
       this.state.userModules = results[2]?.modules ?? [];
-      // A draft the Atelier can no longer read gives way to a new fish, and says so.
       if (results[1]?.document)
         try {
           this.state.document =
@@ -234,13 +209,11 @@ export class OrganStudio {
     this.state.mode = mode;
     this.renderShell();
   }
-  // The scene shows the contacts as drawn, not as the developed fish made them.
   showDrawnContacts() {
     this.state.contactView = 'design';
     for (const button of this.root.querySelectorAll('[data-contacts]'))
       button.classList.toggle('active', button.dataset.contacts === 'design');
   }
-  // Wiring starts from nothing chosen: what was chosen to move or inspect is let go.
   setTool(tool) {
     this.pendingWire = null;
     const entering = tool !== this.state.tool;
@@ -262,7 +235,6 @@ export class OrganStudio {
     this.refreshSwitches();
     this.refreshViews();
   }
-  // The view switches follow the tool and the zoom where they are set to.
   refreshSwitches() {
     const switches = this.root.querySelector('.aid-layer-switches');
     if (switches)
@@ -324,11 +296,7 @@ export class OrganStudio {
     this.markStimulus();
     this.markFocus();
   }
-  // A chosen organ or nerve center keeps itself, what it is wired with and those wires in full
-  // colour; the rest stands back.
-  // The scene's drawing of the fish, while it stands in the page.
   bodyMap() { return this.root.querySelector(BODY_MAP); }
-  // The scene and the inspector follow the state.
   refreshViews() {
     this.refreshScene();
     this.refreshInspector();
@@ -341,7 +309,6 @@ export class OrganStudio {
     element.innerHTML =
         this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
     element.scrollTop = scroll;
-    // Canvases are drawn once they stand in the page.
     this.drawSight();
   }
   refreshTools() {
@@ -424,7 +391,6 @@ export class OrganStudio {
     this.recordHistory(batch);
     if (finish)
       this.historyBatch = null;
-    // Regions with a plan follow every change at once.
     this.state.document = validateDocument(settleRegions(doc, this.state.sites));
     this.state.selected = selected;
     this.state.multi.clear();
@@ -439,8 +405,6 @@ export class OrganStudio {
     this.requestDesign();
     return true;
   }
-  // The design changed: what was developed, stimulated or measured from it no longer holds, and
-  // it is saved; the engine is asked for its view anew once the studio shows the change.
   designChanged() {
     this.stopPulse();
     this.state.stimulus = null;
@@ -450,7 +414,6 @@ export class OrganStudio {
     this.state.genome = '';
     this.persist();
   }
-  // Choosing on the fish toggles; a button in a panel (a tab, a list entry) chooses without.
   select(kind, id, event = null, toggle = true) {
     const current = this.state.selected;
     if ((event?.ctrlKey || event?.metaKey || event?.shiftKey) &&
@@ -482,8 +445,6 @@ export class OrganStudio {
                                 ? null
                                 : {kind, id};
     }
-    // A chosen light cell brings its colour type to the inspector: what is edited is what was
-    // chosen.
     const cell = this.state.selected?.kind === 'center'
                      ? findCenter(this.state.document, this.state.selected.id)
                      : null;
@@ -494,7 +455,6 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshInspector(true);
   }
-  // A developed fish only on request: genome, brain and wiring.
   async develop() {
     if (this.state.busy)
       return;
@@ -586,8 +546,6 @@ export class OrganStudio {
       this.notice(error.message);
     }
   }
-  // The genome's file name: the design's name, or the default one, with what a file name may not
-  // hold replaced.
   genomeFileName() {
     return (this.state.document.name || label('app.fileName')).replace(FILE_NAME_UNSAFE, '_') +
            GENOME_SUFFIX;
@@ -603,7 +561,6 @@ export class OrganStudio {
     a.click();
     URL.revokeObjectURL(url);
   }
-  // Reconstruct the Aquarium's start fish as an editable document, then check its compilation.
   async startFish() {
     if (this.state.busy)
       return;
@@ -660,7 +617,6 @@ export class OrganStudio {
                        : null;
     const now = performance.now(), last = this.lastClick;
     this.lastClick = hit ? {hit, at : now} : null;
-    // A single click on a bend does nothing else.
     if (!hit || last?.hit !== hit || now - last.at > DOUBLE_CLICK)
       return !!bend;
     this.lastClick = null;
@@ -676,8 +632,6 @@ export class OrganStudio {
           cameraCoordinates(event, this.bodyMap(), this.state.camera));
     return true;
   }
-  // A bend put into the wires of a drawn bundle (on the side it is drawn for) where it runs
-  // nearest the point.
   bendWire({wires, mirrored}, point) {
     const bends = bendsWith(this.state, wires, point, mirrored);
     const doc = bends && setBends(this.state.document, wires, bends);
@@ -756,7 +710,6 @@ export class OrganStudio {
     if (!changeOn(this, element, FISH_CHANGES))
       this.input(event);
   }
-  // How much of a substance a measurement doses.
   input(event) {
     const dose = event.target.closest?.('[data-measure-level]');
     if (!dose)
@@ -801,8 +754,6 @@ export class OrganStudio {
       this.removeSelection(this.state.selected);
   }
 }
-// The studio's methods for the design view, held handles and drags from the library live beside
-// it.
 Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods, trialMethods,
               gestureMethods);
 export function initializeStudio() {

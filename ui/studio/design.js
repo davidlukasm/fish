@@ -35,15 +35,8 @@ import {label} from './view/kit.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 
-// The design view: what the engine makes of the draft as it stands (its anatomy, what the eyes
-// and senses take of a test stimulus), asked for after every change, and the panels' graphics
-// that follow its answers.
-
-// A pressure cell measuring another organ tries at most PRESSURE_TRIES places nearer its own.
 const PRESSURE_TRIES = 12;
-// The studio's methods for the design view (mixed into OrganStudio).
 export const designMethods = {
-  // The pigment inspector follows its cells and the engine's colours.
   refreshPigment() {
     const selected = this.state.selected;
     this.redrawBlocks('pigmentBlock', findOrgan, organ => {
@@ -51,12 +44,9 @@ export const designMethods = {
       return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
     });
   },
-  // A nose's scent map follows its dragged preference.
   refreshScentMaps() {
     this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
   },
-  // A selected field organ brings the test light to its side, mirrored from the other one; a
-  // selected nose, touch, pain or lateral organ (or a node of one) its test stimulus.
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
     const organ = organOf(doc, id);
@@ -82,14 +72,10 @@ export const designMethods = {
       this.requestDesign();
     }
   },
-  // The test stimulus of the design request: the shown one while its organ is in the design.
   senseScene() {
     const probe = this.state.senseProbe;
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
-  // The design view: the engine's anatomy of the design (body, organ seats, fields), made from
-  // the planned cells without CPPN or development. One request at a time; the newest design
-  // follows as soon as the last one is answered.
   requestDesign() {
     if (this.designRunning) {
       this.designPending = true;
@@ -119,9 +105,6 @@ export const designMethods = {
             this.requestDesign();
         });
   },
-  // An answer for the design already shown changes only what the eyes see and the senses feel
-  // (a test stimulus was moved): the fields of view and the probes follow alone, so dragging a
-  // stimulus stays smooth.
   showAnatomy(anatomy) {
     const probesOnly = this.shownDesign === this.state.document;
     this.shownDesign = this.state.document;
@@ -138,10 +121,6 @@ export const designMethods = {
     this.refreshGraphics();
     this.checkPressure();
   },
-  // The engine binds pressure cells to the organ nearest to them: one of an egg or sperm organ,
-  // a bladder or the gut that measures another organ moves, once per design, to the nearest
-  // free place where the engine's design view finds it measuring its own organ (at most
-  // PRESSURE_TRIES places); the inspector says what it measures where none is found.
   async checkPressure() {
     const doc = this.state.document, pressure = this.state.anatomy?.pressure;
     if (!Array.isArray(pressure) || this.pressureChecked === doc)
@@ -175,8 +154,6 @@ export const designMethods = {
   refreshVision() {
     this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ), BODY_MAP);
   },
-  // The inspector's graphics follow the design at once and the engine's curves when they
-  // arrive, without rebuilding the inspector around them.
   refreshGraphics() {
     this.refreshSpectrum();
     this.refreshSensitivity();
@@ -185,8 +162,6 @@ export const designMethods = {
     this.drawSight();
     this.refreshProbes();
   },
-  // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
-  // answers the test object.
   refreshProbes() {
     const layer = this.bodyMap()?.querySelector('#' + PROBE_LAYER);
     if (layer)
@@ -196,7 +171,6 @@ export const designMethods = {
       scents.innerHTML = probeScents(this.state);
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
   },
-  // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.
   drawSight() {
     const sight = this.state.anatomy?.sight;
     for (const canvas of this.root.querySelectorAll('[data-sight-eye]')) {
@@ -210,7 +184,6 @@ export const designMethods = {
                          {key : SENSE_TISSUE.light});
     }
   },
-  // The spectrum editor follows its tuning at once and the engine's curves when they arrive.
   refreshSpectrum() {
     const block = this.root.querySelector('[data-spectrum-block]');
     const editor = block?.querySelector('[data-spectrum]');
@@ -222,8 +195,6 @@ export const designMethods = {
     const drag = this.heldHandle('sensitivity');
     this.redrawBlocks(
         'sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block), target => {
-          // While its handle is dragged, a log curve shifts from where the drag
-          // began; a linear one follows the engine's answers as they arrive.
           const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
           const shift = own ? drag.shift : 1, start = own && drag.log ? drag.answer : null;
           return target.organ
@@ -238,7 +209,6 @@ export const designMethods = {
                               own ? adapt.adapt : null);
     });
   },
-  // An effector's graphic follows the engine's fins, mouth, colour and spines when they arrive.
   refreshEffectors() {
     this.redrawBlocks('effectorBlock', findOrgan,
                       organ => organ.type === 'gut'
@@ -247,9 +217,6 @@ export const designMethods = {
     this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
     this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },
-  // Redraws every block whose data attribute (by its dataset key, as 'probeBlock') still finds its
-  // item in the document, with what render makes of that item; within narrows the blocks to a
-  // part of the studio.
   redrawBlocks(key, find, render, within = '') {
     const selector = `[${dataAttribute(key)}]`;
     for (const block of this.root.querySelectorAll(within ? within + ' ' + selector : selector)) {

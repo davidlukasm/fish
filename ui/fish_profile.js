@@ -1,6 +1,3 @@
-// The vital figures the interface shows about one fish (reserve, age, health, sickness) as plain
-// data: label, value, explanation and gauge. Any view lays them out; build, activity and novelty
-// have their own models.
 import {bodyTraitRows} from './body_model.js';
 import {FISH} from './schema.js';
 import {formatNumber, t, percent} from './strings.js';
@@ -14,7 +11,6 @@ export function fishOrigin(p) {
          t('selection.unbekannt');
 }
 
-// Health shows good above GOOD, fair above FAIR, otherwise poor.
 const HEALTH_GAUGE = Object.freeze(
     {good : .65, fair : .3, colors : Object.freeze([ '#8cc4ac', '#d3bb72', '#d89787' ])});
 export function fishProfile(p, b) {
@@ -50,8 +46,6 @@ export function fishProfile(p, b) {
   return {stats, gauges};
 }
 
-// The build traits as compact figures for the small cards: the reading as a word, its effect as
-// the explanation.
 export function fishBuildStats(body) {
   return body ? bodyTraitRows(body, null)
                     .map(r => ({key : r.key, label : r.name, value : r.word, note : r.effect}))

@@ -29,18 +29,10 @@ import {label} from './view/kit.js';
 import {arrowSize} from './view/wires.js';
 import {placementPreview} from './view/placing.js';
 
-// The pointer on the scene: a press takes an item or the view, a drag moves the item, draws a
-// wire from it, pans the view or throws the item away; the wheel and the zoom buttons zoom about a
-// point. Graphics in the panels move by their handles (handles.js).
-
-// The items on the fish, by the data attributes that mark them: those a press on the scene takes
-// and those a wire dragged out ends on.
 const PRESSED_ITEMS = Object.freeze([ 'contact', 'center', 'assembly', 'organ', 'wire' ]);
 const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
-// The items a drag moves across the fish (or into the trash).
 const MOVED_ITEMS = Object.freeze([ 'organ', 'center', 'assembly' ]);
 const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
-// The studio's methods for pointer gestures and zoom (mixed into OrganStudio).
 export const gestureMethods = {
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
@@ -70,7 +62,6 @@ export const gestureMethods = {
       }
     } else
       this.refreshScene();
-    // What the scene shows may change with the zoom (layers.js).
     const shown = zoom =>
         LAYER_KEYS.map(key => layerShown({...this.state, camera : {...c, zoom}}, key)).join();
     if (shown(previous) !== shown(c.zoom)) {
@@ -81,7 +72,6 @@ export const gestureMethods = {
     if (stamp)
       stamp.textContent = zoomStamp(c);
   },
-  // The view zooms out until a point dragged beyond it is in it again.
   keepInView(point) {
     const c = this.state.camera;
     const inside = () => {
@@ -92,7 +82,6 @@ export const gestureMethods = {
     while (!inside() && c.zoom > CAMERA_ZOOM.min)
       this.zoom('out');
   },
-  // The line from where a wire begins to the pointer.
   drawConnectingLine(from, to) {
     this.root.querySelector(LAYER.line)
         ?.setAttribute('d', 'M' + pointText(from) + ' L' + pointText(to));
@@ -112,7 +101,6 @@ export const gestureMethods = {
         panel,
         x : event.clientX,
         width : grip.parentElement.getBoundingClientRect().width,
-        // The library grows to the right, the inspector to the left.
         sign : panel === 'library' ? 1 : -1
       });
       return;
@@ -120,7 +108,6 @@ export const gestureMethods = {
     if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
         this.state.mode !== 'fish')
       return;
-    // Graphics move only by their handles.
     for (const grip of GRIPS) {
       const graphic = event.target.closest?.(grip.graphic),
             handle = grip.handle ? event.target.closest?.(grip.handle) : null;
@@ -153,7 +140,6 @@ export const gestureMethods = {
     else if (kind === 'organ' && this.state.tool === 'select' &&
              findOrgan(this.state.document, id)?.field)
       this.prepareChoices(fieldPlacements(this.state.document, id, this.state.sites));
-    // Dragging on nothing moves the view, whatever the tool.
     if (this.state.tool === 'pan' || !kind || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   },
@@ -163,7 +149,6 @@ export const gestureMethods = {
     const drag = this.pointer;
     if (!drag) {
       const svg = event.target?.closest?.(BODY_MAP);
-      // A held wiring tile shows the wire it aims at.
       if (svg && this.state.armed?.kind === 'wiring')
         this.aimWire(this.state.armed.value, event);
       if (svg && this.pendingWire?.from && this.state.tool === 'wire') {
@@ -262,7 +247,6 @@ export const gestureMethods = {
       return this.clearPreview();
     const doc = this.state.document, sites = this.state.sites;
     const moveTo = {
-      // A nerve center snaps to the free site of its kind nearest the point, if near enough.
       center : () => {
         const found = findCenter(doc, drag.id), type = found?.organ.type;
         const site = found && closestSite(found.center, sites,

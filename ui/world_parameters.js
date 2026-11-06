@@ -10,8 +10,6 @@ import {renderCurrentSources, renderFeeders} from './world_sources.js';
 export const world_parametersState = {};
 export let newEnergyFields;
 
-// Names, explanations and units of the world parameters come from the texts; the engine only
-// sends name, range and group. Without an own explanation the name explains itself.
 function parameterLabel(name) { return textArea('parameters').labels?.[name] ?? name; }
 function parameterHelp(name) { return textArea('parameters').help?.[name] ?? parameterLabel(name); }
 function parameterUnit(name) { return textArea('parameters').units?.[name] ?? ''; }
@@ -91,7 +89,6 @@ function filterParameters() {
       group.open = true;
   }
 }
-// The eye diagram: a circle of radius R around (C, C); a sector opens by the given angle.
 const VISION_DIAGRAM = Object.freeze({c : 60, r : 44});
 function visionDiagram(parameters) {
   const {c, r} = VISION_DIAGRAM, sector = angle => {
@@ -184,10 +181,7 @@ export function showWorld(f) {
   toolSettings();
 }
 
-// Burst sliders: gaps and durations on a logarithmic scale of LOG_STEPS positions, food strength
-// in steps of STRENGTH_STEP, mutation strength in percent.
 const BURST_SLIDER = Object.freeze({log_steps : 1000, strength_step : .1});
-// Mutation strength shows in percent.
 const burstUnit = (group, suffix) =>
     group === 'burst-mutation' && suffix === 'strength' ? PERCENT : 1;
 export function showBursts(f) {

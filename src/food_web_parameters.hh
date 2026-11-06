@@ -1,6 +1,5 @@
 #pragma once
 namespace fishsim {
-// One declaration supplies defaults and the world-parameter registry; the interface names them.
 #define FISH_FOOD_WEB_PARAMETERS(X)                                                                \
   X(crack_exponent, 4, 1, 12)                                                                      \
   X(hardness_algae, .01, 0, 2)                                                                     \
@@ -118,7 +117,6 @@ struct FoodWebParameters {
   FISH_FOOD_WEB_PARAMETERS(FISH_DECLARE_FOOD_PARAMETER)
 #undef FISH_DECLARE_FOOD_PARAMETER
 };
-// The range of each food-web parameter.
 namespace food_web_range {
 #define FISH_FOOD_PARAMETER_RANGE(name, value, lo, hi)                                             \
   inline constexpr double name##_min = lo, name##_max = hi;

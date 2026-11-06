@@ -63,9 +63,7 @@ export function brainArmProbe(value) {
                                                       : t('brain_input.unterMaus'));
 }
 
-// Tissue outlines are hit within these stroke widths in pixels, the thinnest first.
 const HIT_WIDTHS = Object.freeze([ 1.5, 3, 5, 7 ]);
-// Organ hits score by the thinnest outline stroke they touch; insides and near cells count too.
 const ORGAN_HIT = Object.freeze({
   pigment_reach : 6,
   score_per_width : .5,
@@ -156,7 +154,6 @@ export function brainHit(p) {
   return hit;
 }
 
-// Cells are hit within REACH pixels once they are MIN_OPACITY visible.
 const CELL_HIT = Object.freeze({min_opacity : .15, reach : 9});
 function brainHitModel(p, d) {
   if (brainCellOpacity(d) > CELL_HIT.min_opacity) {
@@ -220,7 +217,6 @@ async function brainStimulateHit(hit) {
   }
 }
 
-// A click within the body (from TAIL behind the centre, MARGIN around it) clears the focus.
 const BODY_HIT = Object.freeze({tail : 1.8, margin : .35});
 export function brainCanvasClick(e) {
   if (!brainState.brainOpen || !brainState.brainDrawing)

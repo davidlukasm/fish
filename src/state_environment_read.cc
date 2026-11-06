@@ -7,13 +7,10 @@ namespace fishsim {
 using state::scalar;
 using state::value;
 namespace {
-// Plausible extents of a restored environment: drifting patches, food pieces, their resting steps,
-// energy, buoyancy and hardness, food clouds, current noise and sediment cells.
 constexpr std::size_t MAX_FOOD_PIECES = 2000000, MAX_FOOD_CLOUDS = 2000, MAX_SEDIMENT_CELLS = 20000;
 constexpr std::uint64_t MAX_RESTING_STEPS = 100000;
 constexpr double MIN_DRIFT_PATCH = .001, MAX_PIECE_ENERGY = 20000, MAX_BUOYANCY = 4,
                  MAX_FOOD_HARDNESS = 2, MAX_CURRENT_NOISE = 10;
-// The largest water grid of the largest tank.
 constexpr int MAX_WATER_COLUMNS = int(tank::max_width / WATER_CELL) + 1,
               MAX_WATER_ROWS = int(tank::max_height / WATER_CELL) + 1;
 }
@@ -22,7 +19,6 @@ void read_plant_organs(std::istream &in, SurfacePatch &p, double grass_limit) {
 
   std::string tag;
   value(in, tag);
-  // PLANT_STRUCTURE2 adds the bite marks of every organ.
   if (tag != "PLANT_STRUCTURE" && tag != "PLANT_STRUCTURE2")
     throw std::runtime_error("invalid plant structure");
   const bool notches = tag == "PLANT_STRUCTURE2";
@@ -327,7 +323,6 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
     field.sync_environment();
     field.sync_food_web();
   }
-  // Geometry setup may move sources out of obstacles. A checkpoint restores exact positions.
   field.feeding_.clouds = clouds;
   field.refresh_niche_limits();
 }

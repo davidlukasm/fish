@@ -65,10 +65,6 @@ function resetFpsDisplay(label = t('report.fpsMsMax')) {
 }
 const frameIntervals = [];
 let graphAt = -Infinity;
-// Frame times over the last WINDOW_MS: one bar per frame, MS_PER_PIXEL milliseconds per pixel up
-// to BASE pixels, the dashed line at one display frame (FRAME_MS); frames above LATE_MS or SLOW_MS
-// stand out. Gaps above SLOW_MS count even without a new frame; at most SAMPLES are kept and the
-// graph is redrawn every REFRESH_MS.
 const FRAME_GRAPH = Object.freeze({
   window_ms : 5000,
   samples : 600,
@@ -139,9 +135,6 @@ export function updateFps(now) {
   text('tank-fps', t('report.fps', {rate : fpsDisplay.rate, ms : Math.round(peaks[0].ms)}));
 }
 
-// Local per-frame evidence is always bounded. Disk summaries remain optional: summaries go out
-// every FLUSH_MS with at most SAMPLES percentile samples, values to DIGITS decimals; frames ready
-// after LATE_MS and SLOW_MS are counted.
 const REPORT = Object.freeze({
   samples : 4096,
   flush_ms : 1000,
@@ -150,7 +143,6 @@ const REPORT = Object.freeze({
   slow_ms : 100,
   upload_timeout_ms : 3000
 });
-// How many of each kind of object a frame holds; its gametes are counted as sperm grid cells.
 const COUNTED =
     Object.freeze([ 'fish', 'food', 'corpses', 'gametes', 'plants', 'surfaces', 'invertebrates' ]);
 const objectCounts = f => Object.fromEntries(
@@ -289,7 +281,6 @@ export class FpsReport {
     w.over100 += Number(this.readyDelta > REPORT.slow_ms);
     w.minZoom = Math.min(w.minZoom, cameraState.zoom);
     w.maxZoom = Math.max(w.maxZoom, cameraState.zoom);
-    // Only percentile samples need storage; totals and maxima include every frame.
     if (w.intervals.length < REPORT.samples) {
       w.intervals.push(dt);
       w.works.push(work);

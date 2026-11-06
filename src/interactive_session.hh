@@ -37,7 +37,6 @@ class InteractiveSession {
   std::map<std::string, std::pair<double, std::uint64_t>> record_candidates;
   std::map<std::uint64_t, std::uint64_t> recent_success;
   std::shared_ptr<const field::Substrate> sent_plan;
-  // wiring revision of the shown brain (+1, 0 without a brain) when its layout was last sent
   std::uint64_t sent_wiring = 0;
   Clock::time_point wiring_sent{};
   std::uint64_t stimulus_revision = 0;

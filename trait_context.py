@@ -1,12 +1,9 @@
-"""Measured inputs and evidence shared by species trait rules."""
-
 import json
 from viewer_paths import ROOT
 from protocol_schema import (BehaviorScale, BodyUnit, RateWindow, BehaviorFeature as F,
                              SenseKind as S, FoodKind as K, OdorKind as O, Rgb, Tolerance)
 from trait_expression import Expression, Fields, Named
 
-# The trait catalogue: limits, derived facts, rules, parts and their combinations.
 CATALOGUE = json.loads((ROOT / "traits.json").read_text())
 LIMITS = CATALOGUE["limits"]
 FACTS = {name: Expression(text) for name, text in CATALOGUE["facts"].items()}
@@ -23,7 +20,6 @@ FEATURES, SENSES, FOODS, ODORS, CHANNELS = (
 
 
 class TraitContext:
-    """The names a condition reads (scope) and the measurements the interval rules read."""
 
     def __init__(self, scope, d, observed, body, senses, ecology, proof):
         self.scope, self.d, self.observed, self.body = scope, d, observed, body
@@ -58,7 +54,6 @@ def prepare_traits(
     sight = array("vision", Rgb.COUNT)
     peak = max(sight)
     nose = senses[S.ODOR] >= LIMITS["noseCells"]
-    # A broad nose detects all scents. Preference requires an above-average tuning.
     preferred = [nose and value > LIMITS["preferenceGain"] * sum(scents) / O.COUNT
                  and value >= LIMITS["preferencePeak"] * max(scents) for value in scents]
     sensitive = [calibrated and senses[i] >= LIMITS["sensitiveCells"]
@@ -97,7 +92,6 @@ def prepare_traits(
     }
     for name, fact in FACTS.items():
         scope[name] = fact(scope)
-    # Evidence as wordings: a template key and raw values; the interface phrases and formats them.
     proof = {
         "vision": {"key": "vision", "values": {"peak": peak, "directions": directions[S.LIGHT]}},
         "color": {"key": "color", "values": {"sight": list(sight)}},

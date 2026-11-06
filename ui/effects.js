@@ -28,8 +28,6 @@ import {
 import {clipObstacles, plantNoise} from './water_view.js';
 export const effectsState = {};
 
-// Combat events count for RECENT steps; at most SEEN ids are remembered and SHOWN effects drawn
-// for SHOWN_STEPS steps.
 const COMBAT_MEMORY = Object.freeze({recent : 64, seen : 256, shown_steps : 24, shown : 40});
 export function collectCombat(f, now = displayNow()) {
   if (effectsState.combatEpoch !== f.render_epoch || f.step < effectsState.combatStep) {
@@ -62,8 +60,6 @@ export function collectCombat(f, now = displayNow()) {
   return effectsState.combatEffects;
 }
 
-// Same oval body, forked tail and antennae as the cloud's plankton shader.
-// Plankton drawn in body sizes.
 const INTAKE_PLANKTON = Object.freeze({
   min_width : .4,
   width : .12,
@@ -100,9 +96,6 @@ function paintIntakePlankton(g, x, y, size, angle) {
   g.stroke();
   g.restore();
 }
-// Whether the scene-wide paintFeeding/paintCombat pass can draw anything at all (a superset of
-// their own conditions). The overview masks every sediment bed before that pass; without
-// visible effects the mask is pure cost.
 export function sceneEffectsPending(f, c, blend) {
   if (collectCombat(f).some(e => e.event[COMBAT.kind] !== FEEDING_EFFECT.shell_closed))
     return true;
@@ -115,8 +108,6 @@ export function sceneEffectsPending(f, c, blend) {
     }
   return false;
 }
-// Suction streams: lanes of water drawn into the mouth, more with intake, grains when scraping,
-// and gill outflow; at most MAX_FISH fish from MIN_RADIUS pixels on.
 const FEEDING = Object.freeze({
   min_flow : .01,
   min_radius : 7,
@@ -254,8 +245,6 @@ export function paintFeeding(f, c, blend, only = null) {
   ctx.restore();
 }
 
-// Small animals feeding: grazers nibble in a pulsing ring, mussels and worms draw plankton into
-// their inlet; at most MAX_ANIMALS from the detail zoom on.
 const ECOLOGY_FEEDING = Object.freeze({
   min_rate : 1e-5,
   margin : 40,
@@ -399,8 +388,6 @@ export function paintEcologyFeeding(f, c, blend, layer = null, only = null) {
   ctx.restore();
 }
 
-// Combat and feeding events for SHOWN_STEPS steps: crumbs from plants and shells, a gulped fish
-// shrinking into the mouth, and blood drops spraying from wounds.
 const COMBAT_DRAW = Object.freeze({
   shown_steps : 24,
   max_radius : 360,
@@ -485,7 +472,7 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
     if (only && !only.has(e[COMBAT.source]))
       continue;
     if (e[COMBAT.kind] === FEEDING_EFFECT.shell_closed)
-      continue; // Pressure/release belongs to the jaw pose, never blood.
+      continue;
     const t = Math.max(0, (displayStep(f) - born) / COMBAT_DRAW.shown_steps), fade = (1 - t) ** 2,
           r = Math.min(COMBAT_DRAW.max_radius, e[COMBAT.radius] * c.scale),
           strength = Math.min(1, Math.sqrt(Math.max(0, e[COMBAT.strength]))),
@@ -502,7 +489,6 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
     if ([ FEEDING_EFFECT.scrape, FEEDING_EFFECT.bite, FEEDING_EFFECT.crack ].includes(
             e[COMBAT.kind])) {
       const fish = frameFish(f, e[COMBAT.source]);
-      // Plant bites stay visible at every zoom: a puff of crumbs in the organ's own colour.
       const plant = e[COMBAT.kind] !== FEEDING_EFFECT.scrape;
       if (!fish || (!plant && fishDisplayRadius(fish, c.scale) < COMBAT_DRAW.min_fish_radius))
         continue;
@@ -569,7 +555,6 @@ export function paintCombat(f, c, now = displayNow(), only = null) {
         if (u >= 1)
           continue;
         ctx.save();
-        // The jaw is the clipping plane: a morsel keeps its size until it enters.
         ctx.translate(target.x, target.y);
         ctx.rotate(shown[FISH.angle]);
         ctx.beginPath();
@@ -673,10 +658,7 @@ export function resetBlood() {
   effectsState.bloodReady = false;
 }
 
-// Blood drops come in BLOOD_SHADES and fade in BLOOD_FADES steps.
 const BLOOD_SHADES = Object.freeze([ '#b62838', '#d53946', '#7e172b' ]), BLOOD_FADES = 4;
-// Blood sprays up to MAX_DROPS drops per wound, faster and more with the loss, each living LIFE
-// plus up to LIFE_SPREAD steps.
 const BLOOD = Object.freeze({
   min_loss : .0005,
   max_drops : 96,
@@ -738,7 +720,6 @@ function prepareBlood(f) {
       effectsState.bloodParticles.filter(p => f.step - p.birth < p.life).slice(-BLOOD.kept);
 }
 
-// Drops slow with DRAG per step and sink; fresh ones stretch along their path.
 const BLOOD_DRAW = Object.freeze(
     {drag : .052, sink : .0012, min_radius : .3, stretch : 1.8, stretch_time : 7, alpha : .85});
 export function paintBlood(f, c, blend, shifts) {

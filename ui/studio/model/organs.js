@@ -1,11 +1,9 @@
 import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 
-// Structural definitions only. Names, colours and controls live in the view.
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
 // zones: where in the body the Atelier offers the organ, when the engine allows more than makes
 // sense to place it (smell cells grow on all the skin, a nose belongs to the head).
-// A sense or motor node has COPIES cells unless its organ gives it more or fewer.
 const COPIES = 3;
 const sensor = (key, functionCode, copies = COPIES, surface = 'any', zones = null) =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
@@ -20,8 +18,6 @@ export const NEURONS = Object.freeze([
   {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
-// A center modulates the cells it reaches, rather than driving them, when its modulator trait lies
-// above MODULATING; it beats as a pacemaker when its rhythm trait does.
 const MODULATING = .5;
 export const isModulator = center => center.modulator > MODULATING;
 export const isPacemaker = center => center.pace > MODULATING;
@@ -30,8 +26,6 @@ export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : center.sign < 0     ? 'inhibit'
                                    : center.key === 'learn' || center.mode > MODULATING ? 'learn'
                                                                                         : 'relay';
-// A brain region's nerve centers: a preset cell type, how many cells and the zones they lie in
-// (inner sites only).
 export const nerve = (key, copies, zones) => Object.freeze({
   key,
   role : 'nerve',
@@ -41,18 +35,10 @@ export const nerve = (key, copies, zones) => Object.freeze({
   zones : Object.freeze(zones),
   ...NEURON_BY_KEY[key]
 });
-// A brain region's slot: where wires of the region as a whole come in (in) or go out (out), which
-// organs fit there (any when none are named), whether the region needs one there and, for an
-// input, the node of its plan they reach (else every input node). A gonad's slots name the node
-// (by its key) that hears or sends for the organ as a whole.
 const slot = (key, dir, fits = [], required = false, node = null) =>
     Object.freeze({key, dir, fits : Object.freeze(fits), required, node});
-// A brain region's own settings: whole numbers from least to most, starting at initial; named
-// ones show their values by name.
 const setting = (least, most, initial, named = false) =>
     Object.freeze({least, most, initial, named});
-// How wires between the two sides of paired organs run: on each side (same), across the midline
-// (crossed) or both.
 export const PAIRINGS = Object.freeze([ 'same', 'crossed', 'both' ]);
 
 export const ORGANS = Object.freeze([
@@ -63,7 +49,6 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ sensor('retina', SENSE_KIND.light, 6) ]
   },
-  // A nose may smell with up to `types` scent profiles, each a cell group of its own.
   {
     key : 'nose',
     category : 'senses',
@@ -95,8 +80,6 @@ export const ORGANS = Object.freeze([
     skin : true,
     centers : [ sensor('injury', SENSE_KIND.damage, 3) ]
   },
-  // The blood is the same all through the fish: one blood sense serves both sides, a type for
-  // each substance it reads.
   {
     key : 'blood',
     category : 'internal',
@@ -122,11 +105,6 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  // Organs that recruit nodes: more places of the same kind, as many as `nodes` at most, all
-  // with the settings of the first.
-  // A muscle does the work of where it lies (its function: driving the tail, steering with a side
-  // fin, sucking with the throat, biting with the jaw) and is the one muscle of that work on its
-  // side; it recruits as many nodes as its side has places for that work.
   {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 4) ]},
   {
     key : 'defense',
@@ -134,9 +112,6 @@ export const ORGANS = Object.freeze([
     nodes : 8,
     centers : [ motor('armor', MOTOR_KIND.defense, 3, 'outer') ]
   },
-  // The skin's pigment cells, one organ over the whole fish: up to `types` kinds of cell, each
-  // with its pigment and as many nodes as it has pigment; a new organ starts with a dark one, as
-  // melanophores are.
   {
     key : 'pigment',
     category : 'motor',
@@ -145,11 +120,6 @@ export const ORGANS = Object.freeze([
     types : 4,
     centers : [ Object.freeze({...motor('colour', MOTOR_KIND.pigment, 5, 'outer'), qwidth : 1}) ]
   },
-  // Gonads, like brain regions, say what can be wired to them: a trigger that reaches their
-  // release (they also release from rest when ripe), and the fullness their pressure cells pass
-  // on. They recruit growth nodes: the engine gives a gonad room for ten eggs or sperm portions
-  // per cell, so a gonad of few cells holds too little for an egg; at the engine's usual ceilings
-  // more than `nodes` cells in all add nothing.
   {
     key : 'eggs',
     category : 'reproduction',
@@ -177,14 +147,6 @@ export const ORGANS = Object.freeze([
     ]
   },
   {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
-  // Brain regions, one on each side. The optic tectum maps what the eyes see, fed across the
-  // midline as the optic nerves cross in fish; the olfactory bulb takes the nose of its side; the
-  // hindbrain's escape cells answer sudden stimuli and drive the far side's muscles away from
-  // them; the spinal cord's rhythm cells drive their side and silence the other one through
-  // crossing inhibitory cells, so the sides beat in turn.
-  // The optic tectum keeps a map of what the eyes see: a node for each band of directions (and
-  // colour type, when colours stay apart), and an output node that reports what stands out,
-  // held down by contrast cells as much as asked where everything is lit alike.
   {
     key : 'tectum',
     category : 'regions',
@@ -275,8 +237,6 @@ export const ORGANS = Object.freeze([
                               : item.centers)
 })));
 export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'regions';
-// The role a site is drawn for an organ type: the brain's and its regions' nerve centers in the
-// brain (NERVE_ROLE), the skin senses' at the skin (SKIN_ROLE), the others as their type.
 export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROLE
                                 : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
                                                                      : type;
@@ -288,16 +248,12 @@ export const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.aggression, 3 ]
 ]);
 
-// What the pressure cells of an organ are to measure (PRESSURE_SOURCE), by the organ and the
-// key of its node: the engine binds each to the organ nearest to it, so the Atelier checks it.
 export const PRESSURE_OF = Object.freeze({
   eggs : {key : 'pressure', source : PRESSURE_SOURCE.eggs},
   sperm : {key : 'pressure', source : PRESSURE_SOURCE.sperm},
   bladder : {key : 'pressure', source : PRESSURE_SOURCE.bladder},
   gut : {key : 'fullness', source : PRESSURE_SOURCE.none}
 });
-// What a muscle's qualities shape in the engine's body plan, by its function: the trait each one
-// sets, the strength-weighted mean of (1 + quality) / 2 over all muscles of that function.
 export const MUSCLE_TRAITS = Object.freeze({
   [MOTOR_KIND.forward] : Object.freeze({q1 : 'undulation'}),
   [MOTOR_KIND.suction] : Object.freeze({q1 : 'gut_length'}),
@@ -309,31 +265,21 @@ export function functionFor(center, site) {
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
 }
-// The places on a side (-1 or 1) for a muscle's work (its function code).
 export const musclePlaces = (sites, code, side) => sites.filter(
     s => sideSign(s.side) === sideSign(side) && functionFor({functionCode : 'site'}, s) === code);
-// How many nodes an organ that recruits them may have: a muscle as many as its side has places
-// for its work, any other its kind's `nodes`.
 export function nodeLimit(organ, sites) {
   const most = ORGAN_BY_KEY[organ?.type]?.nodes ?? 0;
   return organ?.type === 'muscle' && organ.centers.length
              ? musclePlaces(sites, organFunction(organ, sites), organ.side).length
              : most;
 }
-// The nodes of an organ's first kind (a gonad's growth cells, a muscle's all), and how many of
-// them it may have: its nodes less its other kinds of node.
 export const kindNodes = organ => organ.centers.filter(c => c.key === organ.centers[0]?.key);
 export const kindLimit = (organ, sites) =>
     nodeLimit(organ, sites) - (organ.centers.length - kindNodes(organ).length);
-// What an organ's first node does where it lies (a muscle's function); -1 where it lies nowhere.
 export function organFunction(organ, sites) {
   const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);
   return site ? functionFor(first, site) : -1;
 }
-// Nerve centers lie inside, organs on sites whose cells can do their work; organs of a pair keep
-// off the midline, where both would meet.
-// Whether a center of an organ of a type may lie on a site: by its own kind and the zones the
-// organ's definition gives it, so moving or growing an organ keeps its places.
 export function fitsOrgan(type, center, site) {
   const desc = ORGAN_BY_KEY[type]?.centers.find(c => c.key === center.key);
   return eligible(desc?.zones ? {...center, zones : desc.zones} : center, site);
@@ -353,9 +299,6 @@ export function eligible(center, site) {
          (center.surface === 'any' || (center.surface === 'outer') === isOuter);
 }
 
-// Built-in modules: organs and brain regions wired as wholes, from one organ of the list to
-// another (with the way the sides pair where they cross); the muscle goes to the zone where it
-// does the module's work.
 export const MODULES = Object.freeze([
   {
     key : 'vision-steering',

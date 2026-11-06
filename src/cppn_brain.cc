@@ -22,7 +22,6 @@
 
 namespace fishsim {
 namespace {
-// Mutated gene weights stay within MAX_GENE_WEIGHT; gating doubles a boundary weight by GATE_GAIN.
 constexpr double GATE_GAIN = 2;
 }
 std::size_t default_neural_budget = run_limit::default_neural_budget;
@@ -33,22 +32,15 @@ field::Options default_development_options = []() {
   return o;
 }();
 namespace {
-// Light passes each of the three foliage layers.
 constexpr double FOLIAGE_LAYERS = 3;
-// Sediment contact is probed with SEDIMENT_PROBE; the lateral line samples LATERAL_POINTS points.
 constexpr double SEDIMENT_PROBE = .5;
 constexpr int LATERAL_POINTS = 4;
-// Immediate compilation drives the same stages in DEVELOPMENT_STEP work units.
 constexpr std::size_t DEVELOPMENT_STEP = 8192;
-// Mutation: step evolution switch, its spread, the chance of a large step and its size, the
-// rate scale, rewiring trials, gate zones.
 constexpr double STEP_SWITCH = .5, STEP_SPREAD = .1, LARGE_STEP_CHANCE = .1, LARGE_STEP = 10,
                  RATE_SCALE = .15, MIN_STEP = 1e-5;
 constexpr int REWIRE_TRIALS = 24, GATE_ZONES = 4;
-// The snout sits SNOUT_MOUTH of the mouth share ahead when the face is shorter.
 constexpr double SNOUT_MOUTH = .8;
 std::mutex genetics;
-// Hidden node types a type change draws from.
 constexpr std::array<evolution::NodeType, 6> HIDDEN_TYPES{
     evolution::NodeType::GAUSSIAN, evolution::NodeType::SINE,    evolution::NodeType::COSINE,
     evolution::NodeType::LINEAR,   evolution::NodeType::SIGMOID, evolution::NodeType::ABS};
@@ -129,7 +121,6 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
              half = distance <= radius ? PI : std::asin(radius / distance), far = -1, opacity = 1;
       VisualObject shape{};
       if (stroke) {
-        // Strokes live in the body frame of the observer: centre, half vector and half-width.
         const double sx = ca * dx + sa * dy, sy = -sa * dx + ca * dy,
                      hx = ca * stroke->hx + sa * stroke->hy,
                      hy = -sa * stroke->hx + ca * stroke->hy, w = stroke_width(*stroke),
@@ -150,7 +141,6 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
               std::hypot(bx, by) > tolerance::rounding ? std::atan2(by, bx) : std::atan2(sy, sx);
           half = std::min(PI, span / 2 + std::asin(std::min(1., w / line)));
         }
-        // Light reflected by a translucent organ scales with how much of the view it covers.
         const double crossings =
             line <= w ? 1 : stroke_optical_depth(sx, sy, hx, hy, w, 1, 2 * sx, 2 * sy);
         const auto depth = world.foliage_depth(stroke->organ_kind);
@@ -515,7 +505,6 @@ bool Genome::advance_development(std::size_t budget, bool record_work) {
   if (blueprint)
     return true;
   if (!growing) {
-    // CPPN construction validates the genotype once before preparing its evaluator.
     growth_query = std::make_shared<cppn::CPPN>(cppn, cppn::Preparation::Deferred);
     growing = std::make_shared<field::Substrate>(*growth_query, development_options);
     growing->development_seed = development_seed;
@@ -549,8 +538,6 @@ bool Genome::same_genes(const Genome &other) const {
       cppn->nodes() != other.cppn->nodes() ||
       cppn->get_connection_genes().size() != other.cppn->get_connection_genes().size())
     return false;
-  // Copies retain insertion order. Compare corresponding genes directly, while still
-  // accepting an equivalent genotype whose nodes or connections were reordered.
   auto node = other.cppn->get_node_genes().begin();
   for (const auto &n : cppn->get_node_genes()) {
     auto p = node->get_id() == n.get_id() ? &*node : other.cppn->get_node(n.get_id());
@@ -617,7 +604,6 @@ Genome Genome::read(std::istream &in, bool develop,
   std::string tag;
   if (!(in >> tag >> g.development_seed >> g.variation_seed) || tag != "SEEDS")
     throw std::runtime_error("Ungueltiger Genomblock SEEDS");
-  // An optional line names the line; '~' starts no other token that may follow a genome.
   if ((in >> std::ws).peek() == '~') {
     std::string marker;
     if (!(in >> marker >> std::quoted(g.name)) || marker != "~NAME" ||
@@ -818,8 +804,6 @@ Genome cross_cppn(const Genome &a, const Genome &b, Rng &r, double fa, double fb
     child.cppn = evolution::Genome::crossover(*a.cppn, *b.cppn, float(fa), float(fb));
     child.development_options = a.development_options;
     child.mutation_step = r.uniform() < .5 ? a.mutation_step : b.mutation_step;
-    // the structural seed is inherited like a gene; the variation is the newborn's own
-    // (begin_individual)
     child.development_seed = r.uniform() < .5 ? a.development_seed : b.development_seed;
   }
   if (develop)
@@ -861,7 +845,6 @@ void Body::prepare(const Genome &g) {
   motor_.turn = 0;
   eat_signal = 0;
   reproduction_.egg_role = g.interface->motor_counts[organ_port::eggs] > 0;
-  // The pigment starts as far dispersed as at rest: a fish shows its ground colour from the egg.
   motor_.pigment = resting_dispersion(*g.interface, *g.blueprint);
 }
 void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiology,

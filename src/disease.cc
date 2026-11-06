@@ -48,7 +48,6 @@ void Ecosystem::advance_diseases(bool protected_life) {
     if (b.alive && b.hatched && b.health > 0)
       grid.add(b.x, b.y, std::uint32_t(i));
   }
-  // Only carriers present at the beginning transmit this step; newly infected fish wait one step.
   for (auto i : carriers) {
     const auto &p = fish[i];
     const auto &source = p.body;

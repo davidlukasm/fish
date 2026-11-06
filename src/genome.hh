@@ -7,11 +7,9 @@
 #include <string>
 #include <iosfwd>
 namespace fishsim {
-// The hand-built example fish, a known viable body.
 inline constexpr const char *HAND_BUILT_GENOME = "genomes/handbau/handfisch.genome";
 extern field::Options default_development_options;
 constexpr std::size_t BRAIN_QUERY_LIMIT = field::DEVELOPMENT_QUERY_LIMIT;
-// Technical bounds of a genotype; mutation stops growing nodes at MAX_GROWING_NODES.
 inline constexpr double MAX_GENE_WEIGHT = 16;
 constexpr int MAX_GENOME_NODES = 1024, MAX_GROWING_NODES = 1000;
 constexpr std::size_t MAX_GENOME_CONNECTIONS = 16384, MAX_GENOME_NAME = 40;
@@ -27,17 +25,13 @@ struct Genome {
   // like a gene, so a mutation changes only what it changes. The variation seed (small position
   // jitter of the cell copies and their bias) is the individual's own: every newborn draws one.
   std::uint64_t development_seed = 0, variation_seed = 0;
-  // Optional name of a hand-built or imported line; a founder species takes it as its genus.
   std::string name;
   field::Options development_options = default_development_options;
-  // Seeds the innovation draws of a run.
   static void begin_run(std::uint64_t);
   static std::vector<Genome> immigrants(const std::vector<Genome> &, Rng &);
   static void unite(std::vector<Genome> &, Genome *champion = nullptr);
   void mutate(Rng &, double scale, bool develop = true, const MutationRates &rates = {});
-  // a newborn: its own developmental variation (the developed brain is discarded)
   void begin_individual(Rng &);
-  // forget the developed brain after a change of the genes or of the variation
   void discard_development();
   static Genome cross(const Genome &, const Genome &, Rng &, double fitness_a = 1,
                       double fitness_b = 1, bool develop = true);

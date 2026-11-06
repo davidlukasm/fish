@@ -15,7 +15,6 @@ export let ctx;
 
 export let rgb;
 
-// The Institute's stations (home screen, Atelier) cover the tank; it is seen only at the Aquarium.
 export const tankVisible = () => document.body.dataset.station === 'aquarium';
 
 const chartSizes = new WeakMap();
@@ -57,7 +56,6 @@ export function redrawCharts() {
   }
 }
 export function chartSize(canvas) { return chartSizes.get(canvas) || canvas; }
-// Where a pointer event lies on a chart, in the chart's own units.
 export function chartPointer(canvas, event) {
   const r = canvas.getBoundingClientRect(), size = chartSize(canvas);
   return {
@@ -66,7 +64,6 @@ export function chartPointer(canvas, event) {
   };
 }
 
-// A chart whose content decides its height keeps its width and logical scale.
 export function setChartHeight(canvas, height) {
   const size = chartSizes.get(canvas);
   if (!size)
@@ -87,7 +84,6 @@ export function syncChildren(parent, nodes) {
 
 export let uiIconPaths;
 
-// A tool's or a trait's icon; a removing tool's icon is its subject's, struck through.
 const STRUCK = Object.freeze({path : 'M3 21 21 3', colour : '#d99887', width : 2.3});
 export function uiIcon(name) {
   const key = name === 'remove-plants' ? 'grass' : name === 'remove-sediment' ? 'sediment' : name;
@@ -126,7 +122,6 @@ function traitIcon(group) {
          'chart';
 }
 
-// One list of trait words: the species' words first, then those only this fish shows (outlined).
 export function renderMergedTraitChips(box, species, own) {
   const speciesWords = species?.summary_labels || species?.profile_labels || [],
         ownWords = own?.profile_labels || [],
@@ -224,7 +219,6 @@ const initializers = {
         ')';
   },
   "uiIconPaths" : () => {
-    // Fixed SVG vocabulary shared by tools, traits and event cards.
     uiIconPaths = {
       inspect : 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14M15 15l6 6',
       planter : 'M3 5h3v10h12V5h3v14H3zM7 12h10',

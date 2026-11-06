@@ -1,5 +1,3 @@
-"""Compact species profiles, durable events and twelve deduplicated genome slots."""
-
 from journal_population import NOTICE_STEPS, record_births, record_viability, record_dominance
 from journal_records import choose_records, record_diversity
 from journal_species import observe_species
@@ -14,8 +12,6 @@ from wording import Refusal
 from species_traits import CATALOG, summary_labels
 
 
-# The journal keeps the last KEPT_EVENTS events in memory and hands them out PAGE at a time. A
-# record is news again after NOTICE_STEPS steps or when it grows by RECORD_GAIN.
 KEPT_EVENTS, PAGE, RECORD_GAIN = 4096, 500, 1.15
 
 
@@ -260,7 +256,6 @@ class Journal:
         sessions = sorted({e["session"] for group in ("runs", "lineages") for e in self.catalog[group].values()}, reverse=True)[:8]
         for group in ("runs", "lineages"):
             self.catalog[group] = {k: e for k, e in self.catalog[group].items() if e["session"] in sessions}
-        # Bound automatic representatives, preserving genera before second niches.
         keep = {}
         for session in sessions:
             groups = {}

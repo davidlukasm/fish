@@ -3,9 +3,6 @@ import {organTypes} from '../model/document.js';
 import {escapeText} from './markup.js';
 import {t} from '../../strings.js';
 
-// An organ's types as chips, the chosen one marked, each with its mark and name (mark(type, i)
-// gives both); another type can be added while there is room, the chosen one removed while there
-// are others. `words` names what adding and removing make.
 export function typeChips(organ, chosen, mark, words) {
   const types = organTypes(organ), most = ORGAN_BY_KEY[organ.type].types;
   if (!(most > 1))

@@ -26,7 +26,6 @@
 #include <unistd.h>
 namespace fishsim {
 namespace {
-// Plants and the small animals can be encouraged and crushed.
 bool editable(int kind) {
   return kind == food_kind::plant || kind == food_kind::worm || kind == food_kind::crab ||
          kind == food_kind::mussel;

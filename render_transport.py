@@ -1,5 +1,3 @@
-"""Image channel of the front process: the engine connects per run; buffers stay opaque."""
-
 import json
 import math
 import socket
@@ -9,10 +7,6 @@ from protocol_schema import SCENE_BUNDLE, SCENE_HEADER
 from wording import Refusal
 
 MAX_SCENE_BYTES = 64 * 1024 * 1024
-# Replies are read in READ_CHUNK bytes, a header line takes at most HEADER_BYTES; a request
-# waits TIMEOUT_S. While one run gives way to the next, a request waits up to SWITCH_S for the
-# new engine to connect. Brain and inspection keys stay within their lengths, the focus below
-# MAX_FOCUS; the base frame is a 32-bit counter.
 READ_CHUNK, HEADER_BYTES, TIMEOUT_S, SWITCH_S = 1 << 20, 4096, 15, 3
 BRAIN_KEY, INSPECTION_KEY, MAX_FOCUS, MAX_BASE = 100, 512, 100000, 0xFFFFFFFF
 
@@ -113,7 +107,6 @@ class SceneChannel:
                 previous, self.link = self.link, SceneLink(connection, self.timeout)
                 self.connected.notify_all()
             if previous:
-                # Wakes a waiting request; it fails and releases the request lock.
                 try:
                     previous.connection.shutdown(socket.SHUT_RDWR)
                 except OSError:
@@ -128,7 +121,6 @@ class SceneChannel:
         link.close()
 
     def current(self, stale=None):
-        """The engine's link, waiting up to the switch time for one other than `stale`."""
         with self.connected:
             self.connected.wait_for(lambda: self.link is not None and self.link is not stale,
                                     self.switch)
@@ -148,7 +140,6 @@ class SceneChannel:
         with self.request_lock:
             payload, message, stale = self.ask(base, values, brain_key, inspection_key, focus)
             if stale:
-                # The run ended under the request; the next run's engine answers it.
                 payload, message, stale = self.ask(
                     base, values, brain_key, inspection_key, focus, stale
                 )
@@ -159,8 +150,6 @@ class SceneChannel:
         return check_scene(payload)
 
     def ask(self, base, values, brain_key, inspection_key, focus, stale=None):
-        """One render request on the current link: its payload and message, or the link that
-        broke under it."""
         link = self.current(stale)
         if link is None:
             raise Refusal("noCurrentImage")

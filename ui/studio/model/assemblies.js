@@ -25,8 +25,6 @@ import {
   usedSites
 } from './document.js';
 
-// Modules of a design: organs and brain centers grouped to be moved, mirrored, named, removed or
-// stored as one, and stored modules placed on the fish again.
 export function assemble(doc, organIds, name = '', chosenCenters = null) {
   const ids = [...new Set(organIds) ].filter(id => doc.organs.some(o => o.id === id));
   if (!ids.length)
@@ -47,7 +45,6 @@ export function assemble(doc, organIds, name = '', chosenCenters = null) {
   return draft;
 }
 
-// A module of the chosen parts: whole organs with all their nodes, single nodes with their organ.
 export function assembleSelection(doc, chosen) {
   const organs = [], members = new Set();
   for (const id of chosen) {
@@ -63,14 +60,11 @@ export function assembleSelection(doc, chosen) {
   }
   return assemble(doc, organs, '', [...members ]);
 }
-// The parts of a module stay where they are, no longer grouped.
 export function ungroupAssembly(doc, id) {
   const draft = copy(doc);
   draft.assemblies = draft.assemblies.filter(a => a.id !== id);
   return draft;
 }
-// A module with parts on one side only, which its mirror image would complete: an organ that
-// comes in pairs but has lost its twin, or a nerve center of the brain off the midline.
 export function oneSided(doc, sites, assembly) {
   return assemblyCenters(doc, assembly).some(id => {
     const found = findCenter(doc, id);
@@ -85,7 +79,6 @@ export function oneSided(doc, sites, assembly) {
     return ORGAN_BY_KEY[found.organ.type]?.scope === 'side' && !findOrgan(doc, found.organ.pair);
   });
 }
-// The modules an organ or a center is part of.
 export const modulesOf = (doc, id) => doc.assemblies.filter(
     a => a.organIds.includes(id) || (a.centerIds ?? []).includes(id) ||
          findOrgan(doc, id)?.centers.some(c => (a.centerIds ?? []).includes(c.id)));
@@ -153,7 +146,6 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   }
   for (const id of assemblyCenters(doc, assembly)
            .filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
-    // A center on the midline serves both sides already.
     const center = findCenter(doc, id).center, own = findSite(sites, center.site);
     if (onMidline(own)) {
       mapping.set(id, id);
@@ -174,7 +166,6 @@ export function mirrorAssembly(doc, assemblyId, sites) {
     if (added)
       draft = updateWire(added.document, added.wireId, wire);
   }
-  // The mirror image joins the module, which then lies on both sides.
   const grown = assemble(draft, [...assembly.organIds, ...organIds ], assembly.name,
                          [...(assembly.centerIds ?? []), ...centerIds ]);
   const joined = grown.assemblies.pop();
@@ -198,8 +189,6 @@ export function removeAssembly(doc, assemblyId) {
   draft.assemblies = draft.assemblies.filter(a => a.id !== assemblyId);
   return draft;
 }
-// A stored module's organs with nodes, if it is well formed and every organ is of a known type
-// on known sites; null otherwise.
 function storedOrgans(module, sites) {
   if (!module || !Array.isArray(module.organs) || !Array.isArray(module.wires))
     return null;
@@ -223,9 +212,6 @@ function placeStoredNeurons(draft, original, sites, offset, snapDistance, mappin
   }
   return {draft, ids};
 }
-// A stored organ placed anew near where it stood, with its settings: a field organ its field and
-// nodes, a region its plan (its nodes take what was made of them), any other its nodes' settings
-// by kind. The new draft and the placed organ, or null.
 function placeStoredOrgan(doc, draft, original, sites, offset, snapDistance) {
   const at = offset(sitePoint(findSite(sites, original.centers[0].site), siteRole(original.type)));
   const added = addOrgan(draft, original.type, sites, at, snapDistance, false);
@@ -253,10 +239,6 @@ function placeStoredOrgan(doc, draft, original, sites, offset, snapDistance) {
       keep(c, original.centers.find(p => p.key === c.key));
   return {draft, organ : findOrgan(draft, fresh.id)};
 }
-// Saved modules contain whole organs and selected neural regions. Recipes and semantic links
-// survive new identifiers; no partial retinal cell cloud is loaded or reconstructed. A module
-// with both sides of a pair keeps its sides where they are and moves along the body; a one-sided
-// one goes to the side it is dropped on.
 export function placeStoredModule(doc, module, sites, position, snapDistance = Infinity) {
   const originals = storedOrgans(module, sites);
   if (!originals)
@@ -334,7 +316,6 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   const assembly = assemble(draft, organIds, moduleKey, centerByOrgan.flat());
   if (!assembly)
     return null;
-  // A built-in module serves both sides at once: its one-sided part gets its mirror image.
   const placed = {document : assembly, assemblyId : assembly.assemblies.at(-1).id};
   return oneSided(assembly, sites, assembly.assemblies.at(-1))
              ? mirrorAssembly(assembly, placed.assemblyId, sites) ?? placed

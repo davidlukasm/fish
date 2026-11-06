@@ -175,7 +175,6 @@ void InteractiveSession::execute_genomes(const std::string &op, std::istringstre
       reply = insertion_message(added, requested, removed);
     }
   } else if (op == "clone-eggs") {
-    // Eggs of one fish, living or remembered after its death (named or favourite).
     std::uint64_t id;
     double x, y;
     int n;

@@ -15,8 +15,6 @@ class SightMedium {
   const Field *world = nullptr;
   double x = 0, y = 0;
   bool dusty = true;
-  // Only the smooth suspended medium is sampled in polar cells. Solid beds and
-  // foliage retain their geometric intersections.
   static constexpr std::size_t DUST_BEARINGS = 64, PLANT_BEARINGS = 128;
   mutable std::array<std::vector<double>, DUST_BEARINGS> dust_integrals;
   std::vector<Bed> beds;
@@ -25,10 +23,8 @@ class SightMedium {
 
 public:
   void prepare(const Field &, double, double);
-  // Suspended medium, then the foliage transmission per colour channel.
   std::array<double, 4> transmission(double, double) const;
 };
-// Geometry local to one observer, reused by all of its visual receptors.
 class SightFilter {
   const Field *world = nullptr;
   double x = 0, y = 0;

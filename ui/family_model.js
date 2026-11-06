@@ -1,6 +1,3 @@
-// Who descends from whom: a record per fish ever seen (species, mother or template, father,
-// generation, birth, origin, death), the living fish of the current frame, and the species known
-// from the run's history. Views (family diagrams, the species tree, the mobile cards) read it.
 import {columnNames, DEATH_RECORD, FISH, FISH_ORIGIN, JOURNAL, PEDIGREE} from './schema.js';
 const MAX_PEDIGREE = JOURNAL.max_pedigree;
 import {t} from './strings.js';
@@ -60,7 +57,6 @@ export function rememberFamilies(f) {
   }
 }
 
-// Rows of a journal answer; a saved world on screen only takes the rows of its own observation.
 export function loadFamilyHistory(rows, species, observation, frame) {
   if (frame?.historical && (!observation || observation !== frame.observation?.key))
     return;

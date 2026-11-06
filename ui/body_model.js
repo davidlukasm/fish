@@ -11,15 +11,10 @@ import {
   tissueKind,
   tissueSide
 } from './tissue.js';
-// What a body plan amounts to, as plain rows any view can lay out: the measures, the four build
-// traits with a word for where each value lies and what it does, and the sense cells grouped the
-// way the Organe tab groups the organs.
 import {t, tList} from './strings.js';
 import {PRESSURE_SOURCE, TOLERANCE} from './schema.js';
 export const body_modelState = {};
 
-// Organ groups of similar size: senses outside, at the body and inside, then the organs.
-// The gonad pressure sense counts as two organs, one per pressure source (eggs, sperm).
 const GONAD_TISSUES = [ PRESSURE_SOURCE.eggs, PRESSURE_SOURCE.sperm ].map(
     source => sidedTissue(SENSE_TISSUE.gonad_pressure, source));
 export const ORGAN_GROUPS = [
@@ -70,7 +65,6 @@ export function bodyTraitRows(body, comparison) {
   });
 }
 
-// Cell counts per sense, grouped like ORGAN_GROUPS; the gonad pressure split into eggs and sperm.
 export function bodySenseGroups(body, comparison) {
   const names = tList('body_model.senseNames'), fillings = tList('body_model.fillingNames');
   const count = (source, key) => {

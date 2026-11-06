@@ -15,10 +15,7 @@ export const behavior_viewState = {};
 
 export let behaviorGroupNames;
 
-// One colour per behaviour group: movement, feeding, place, offspring, activity and colour.
 const GROUP_COLORS = [ '#8bcab6', '#e2a77b', '#78b8d0', '#c1a3d9', '#d2bd79' ];
-// Behaviour comparison canvas in pixels: the ROWS most different features in rows ROW apart from
-// ROW_TOP, both values as half bars, then the behaviour groups GROUP_WIDTH apart from GROUPS_Y on.
 const COMPARISON = Object.freeze({
   width : 480,
   height : 210,
@@ -145,8 +142,6 @@ export function appendBehaviorComparison(
   };
 }
 
-// Lifetime profile canvas in pixels: one feature per ROW from ROW_TOP, lifetime bars above, living
-// ones LIVING_ALPHA faint below.
 const LIFETIME = Object.freeze({
   width : 360,
   top : 32,

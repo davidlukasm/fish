@@ -2,7 +2,6 @@ import {UINT32_RANGE} from './units.js';
 import {t} from './strings.js';
 import {RENDER_KINDS, RENDER_RECORDS, SCENE_HEADER} from './render_schema.js';
 
-// A 64-bit value as two 32-bit halves.
 const HALF = 4;
 function integer64(view, offset, signed = false) {
   const high = signed ? view.getInt32(offset + HALF, true) : view.getUint32(offset + HALF, true);
@@ -45,7 +44,6 @@ function records(cursor, previous, fields, count, removed, delta) {
   const rows = delta ? new Map(previous) : new Map();
   if (count + removed > SCENE_HEADER.max_records)
     throw Error(t('binary_scene.zuVieleBildobjekte'));
-  // The column mask as two halves of HALF_BITS bits.
   const HALF_BITS = 32, MASK_BITS = 2 * HALF_BITS;
   for (let i = 0; i < count; ++i) {
     const id = cursor.id(), low = cursor.view.getUint32(cursor.offset, true),

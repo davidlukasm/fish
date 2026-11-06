@@ -1,5 +1,3 @@
-"""Lossless scene patches; immutable snapshots and bounded reconnect history."""
-
 from collections import deque
 from scene_patches import compose
 from wording import Refusal

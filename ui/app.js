@@ -70,7 +70,6 @@ import {initialize as initialize_connection} from './connection.js';
 import {initialize as initialize_egg_births} from './egg_births.js';
 import {initialize as initialize_tooltips} from './tooltips.js';
 import {initialize as initialize_schema} from './schema.js';
-// Wording first: every module may ask for its texts from the start.
 await loadTexts();
 initialize_renderer([ "tankVertexSource", "tankFragmentSource", "tankIdentity", "tankPoint" ]);
 initialize_transport([ "rawScene", "sceneKey", "lightCache" ]);
@@ -316,7 +315,6 @@ bindPopulationPicker();
 initMobile();
 initializeStudio();
 
-// Shader compilation is startup work, spread across tasks before the first tank frame.
 async function prepareDrawing() {
   try {
     const shaders = [

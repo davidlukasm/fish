@@ -2,10 +2,7 @@ import {KEY} from './keys.js';
 import {animate} from './tank.js';
 export const tooltipsState = {};
 
-// A tooltip sits GAP above or below its anchor, at least EDGE inside the window, otherwise CURSOR_Y
-// below the pointer and CURSOR_X right of it; it appears after DELAY_MS.
 const TOOLTIP = Object.freeze({gap : 10, edge : 8, cursor_x : 12, cursor_y : 18, delay_ms : 350});
-// Keep one tooltip open while live values or the DOM beneath the pointer change.
 export function installTooltips(doc = document, host = window) {
   if (!doc.body || !host.MutationObserver)
     return;
@@ -188,7 +185,6 @@ export function installTooltips(doc = document, host = window) {
           return;
         if (records.every(record => record.target === bubble || bubble.contains(record.target)))
           return;
-        // Removing our native title also queues a mutation; an unchanged source is harmless.
         select(focus?.isConnected ? focus : underPointer());
       })
       .observe(
@@ -198,10 +194,7 @@ export function installTooltips(doc = document, host = window) {
 
 const initializers = {
   "installTooltips" : () => { installTooltips(); },
-  "requestAnimationFrame" : () => {
-    // Start once, after all UI modules are loaded.
-    requestAnimationFrame(animate);
-  }
+  "requestAnimationFrame" : () => { requestAnimationFrame(animate); }
 };
 export function initialize(steps) {
   for (const step of steps)

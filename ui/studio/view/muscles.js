@@ -5,11 +5,6 @@ import {usedSites} from '../model/document.js';
 import {FIN_BASE, HEAD, skinAt, SNOUT_TIP} from './frame.js';
 import {fixed} from './markup.js';
 
-// Each muscle is one organ where it works, whatever engine places its cells take: the tail's
-// along the tail stalk, a side fin's at the fin's base, the jaw's at the hinge of its jaw, the
-// throat's beside the throat. It is drawn as one shape there, the fuller the more of its side's
-// places it takes and the thicker the stronger its nodes are, with a mark across it at each node,
-// where its wires reach it. Each work has its colour (TONE), in the order WORKS.
 export const MUSCLE_TONE = Object.freeze({
   [MOTOR_KIND.forward] : '#7eabe4',
   [MOTOR_KIND.turn] : '#b99ddf',
@@ -18,23 +13,11 @@ export const MUSCLE_TONE = Object.freeze({
 });
 export const WORKS = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
-// How much of its side's places a muscle takes, and how strong its nodes are on the whole (both
-// from 0 to 1).
 export function muscleBuild(organ, sites) {
   const most = nodeLimit(organ, sites), count = organ.centers.length;
   const copies = organ.centers.reduce((sum, c) => sum + c.copies, 0) / Math.max(1, count);
   return {fill : most ? count / most : 0, strength : copies / ATELIER_LIMITS.max_copies};
 }
-// The shapes in frame units, each from least to least plus span (LENGTH, THICK, REACH, SIZE,
-// WIDTH). TAIL: a spindle of STEPS segments along the stalk from its back end (STALK[1]) forward,
-// its middle DEPTH of the body's half width off the midline, THICK of the half width thick; a
-// myomere at each node, a chevron MARK of the spindle's half width and LEAN of it back. FIN: a
-// fan in from the fin's base, INSET inside the skin, bowing in REACH; a ray from its root to its
-// base at each node. JAW: an ellipse AT of the way back along the jaw, its fibres across it at
-// each node, SPREAD of its width apart, FIBRE of its height long and leaning in by TILT. THROAT:
-// a pouch along the throat from AFTER behind the mouth, LENGTH long, OFF the midline, bulging out
-// by OUT and in by IN of its width; a ring across it at each node, reaching IN and RING of the
-// width.
 const SHAPE = Object.freeze({
   tail : {
     stalk : [ 690, 880 ],
@@ -53,8 +36,6 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-// A muscle's shape for its work and side, how full and strong it is and how many nodes it has:
-// its outline (path data), the line its nodes lie along (from, to) and a mark for each node.
 export function workShape(code, side, {fill, strength}, count) {
   const s = sideSign(side), along = k => (k + .5) / Math.max(1, count);
   if (code === MOTOR_KIND.forward) {
@@ -138,7 +119,6 @@ export function workShape(code, side, {fill, strength}, count) {
 }
 export const muscleShape = (organ, sites) => workShape(
     organFunction(organ, sites), sideOf(organ), muscleBuild(organ, sites), organ.centers.length);
-// Where a muscle's index-th node lies: along its shape.
 export function muscleNode(organ, index, sites) {
   const shape = muscleShape(organ, sites);
   if (!shape)
@@ -150,11 +130,6 @@ export function muscleNode(organ, index, sites) {
   };
 }
 
-// Where a muscle can go: for each work on each side its home, the shape of a muscle there (the
-// one there, else one node at HOME of full strength), how many places for the work are still
-// free, and the muscle already there. A muscle dropped goes to the home nearest to where it is
-// dropped that has a muscle or a free place; a new one takes the free place for the work nearest
-// to its home.
 const HOME = Object.freeze({fill : .5, strength : .5});
 export function muscleHomes(doc, sites) {
   const used = usedSites(doc);

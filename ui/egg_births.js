@@ -1,6 +1,3 @@
-// Eggs leaving their mother: an egg that is new in the frame comes out of the mother's duct
-// over a short time while her yolk shrinks. Fish blending takes the pose through state.js's
-// hook, so the pose model does not depend on the fish geometry.
 import {cameraState} from './camera.js';
 import {fishDisplayRadius, fishRenderRadius} from './fish_fins.js';
 import {fishAnatomy} from './fish_forms.js';
@@ -17,9 +14,6 @@ import {
   sceneState
 } from './state.js';
 
-// Births show for fish at least MIN_RADIUS pixels large and last one step delay, between MIN_MS
-// and MAX_MS. The egg travels the duct for the first DUCT share of the birth, then slips free,
-// squeezed by up to SQUEEZE. A nutrient egg's mother lies within REACH of her radius.
 const EGG_BIRTH = Object.freeze(
     {min_radius : 3, min_ms : 400, max_ms : 1000, duct : .55, squeeze : .48, reach : 3});
 const smoothstep = t => t * t * (3 - 2 * t);

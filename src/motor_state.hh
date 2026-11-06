@@ -2,7 +2,6 @@
 #include "simulation_types.hh"
 #include "field/functions.hh"
 namespace fishsim {
-// Strokes (stroke_kind).
 enum StrokeIndex {
   StrokeTail = stroke_kind::tail,
   StrokeTurnLeft = stroke_kind::turn_left,
@@ -14,19 +13,14 @@ enum StrokeIndex {
   StrokeDefense = stroke_kind::defense,
   STROKE_COUNT = stroke_kind::count
 };
-// Organ ports: the body-plan output an organ drives.
-// Effectors drive organs through their ports (organ_port); ports run up to ORGAN_PORTS.
 inline constexpr int ORGAN_PORTS = organ_port::gland + 1;
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
     organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,
     organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense};
-// A stroke fires once its mean drive passes the threshold and then runs for its recovery; the
-// paid work of the running stroke is delivered over that time.
 struct StrokeState {
   double mean = 0, power = 0, paid = 0;
   int recovery = 0;
 };
-// A stroke lasts MIN_STROKE_STEPS to MAX_STROKE_STEPS steps, the range of cell time constants.
 inline constexpr double MIN_STROKE_STEPS = field::TIME_CONSTANT_MIN,
                         MAX_STROKE_STEPS = field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN;
 struct StrokeTiming {
@@ -38,10 +32,9 @@ struct StrokeTiming {
     recovery = int(std::lround(steps));
   }
 };
-// The fins (fin): the central tail and the rear left and right fins.
 struct MotorState {
   double speed = 2;
-  double turn = 0; // Actual angle change in the last step (senses and observation).
+  double turn = 0;
   double angular_velocity = 0;
   double travel = 0;
   double vx = 0;
@@ -58,16 +51,13 @@ struct MotorState {
   double impulse_right = 0;
   double tail = 0;
   double impulse_forward = 0;
-  // Paid stroke work delivered this step: tail, left and right turn.
   double drive_forward = 0, drive_left = 0, drive_right = 0;
   double motor_factor = 1;
   double mouth_pose = 0;
   double suction_pose = 0;
   double bite_pose = 0;
-  // Last paid motor events, for inspection only.
   std::array<unsigned char, field::MOTOR_COUNT> motor_pulses{};
   std::array<StrokeState, STROKE_COUNT> strokes{};
-  // How far the pigment absorbing each channel is dispersed: 0 gathered at rest, 1 spread fully.
   Color pigment{};
   std::array<double, fin::count> fin_tension{};
   // Presentation history of the tail and the two side fins (fin_event); excluded from saved

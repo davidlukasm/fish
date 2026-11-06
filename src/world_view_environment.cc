@@ -7,7 +7,6 @@
 #include <iomanip>
 namespace fishsim {
 namespace {
-// Bite marks show from VISIBLE_NOTCH depth on; grass is drawn SHOWN_GRASS_WIDTH of its width.
 constexpr double VISIBLE_NOTCH = .02, SHOWN_GRASS_WIDTH = .7;
 }
 void WorldViewWriter::sources() {
@@ -119,8 +118,6 @@ void WorldViewWriter::plants(ViewSchedule cadence) {
                                                                      p.visual_depth)
                   .finish();
             };
-            // The organs with their drawn curve, colour and visible bite marks (organ position,
-            // signed depth share, half-width share).
             auto write_organs = [&](std::ostream &organs) {
               organs << '[';
               bool first = true;

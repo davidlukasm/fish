@@ -186,9 +186,6 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
         0, Math.min(state.capabilities?.steepnessSteps ?? 0, Math.round(Math.log2(Math.max(1, n)))))
   };
 }
-// The cell without the substance and with plenty of it, side by side, under the amount of substance
-// as a band whose cloud thickens: the levers are gauges in the effect's own measure beside each
-// side, the band's handle where the receptor switches, its pips how sharply.
 const DOSE = Object.freeze({
   gauge : {width : 10, gap : 4, knob : 6},
   band : {top : 4, height : 12, handle : 7, gap : 6},
@@ -263,7 +260,6 @@ function doseStrip(state, receptor, effect, target) {
               : '') +
          '</svg>';
 }
-// A lever of the dose strip moved to the pointer's share of the strip (fx, fy).
 export function dosePatch(state, receptor, effect, handle, fx, fy) {
   const {k, top, width, height, bandX} = doseGeometry(state, receptor, effect);
   const px = fx * width, py = fy * height;

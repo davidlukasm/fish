@@ -1,5 +1,3 @@
-"""Coalesce skipped display updates into one change ending at the latest scene."""
-
 from protocol_schema import FramePatch, PatchKind as K
 
 BITS = FramePatch.MASK_DIGIT_BITS
@@ -66,7 +64,6 @@ def _entities(first, second, current):
 
 
 def compose(first, second, current):
-    """Compose ordered patches, reading only final values at changed paths."""
     if first[0] == K.OBJECT and second[0] == K.OBJECT and isinstance(current, dict):
         return _object(first, second, current)
     if first[0] in (K.ARRAY, K.MASK) and second[0] in (K.ARRAY, K.MASK) and isinstance(current, list):

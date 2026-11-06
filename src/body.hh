@@ -22,7 +22,6 @@ struct EffectorActivity;
 struct Point;
 struct FleshBite;
 class PopulationCheckpoint;
-// Scalar physiology is also the immutable input of asynchronous statistics.
 struct MouthState {
   double phase = -1, duration = MOUTH_CYCLE_STEPS;
   std::uint32_t cycle = 0;
@@ -125,15 +124,12 @@ public:
   void stimulate_neuron(std::size_t, float, unsigned steps = 1);
   void stimulate_neurons(const std::vector<std::size_t> &, float, unsigned steps = 1);
   void set_probe(SensoryProbe);
-  // What open instruments read out of the senses: the light image and samples (vision), the
-  // retina, and one cell. True when a readout newly starts.
   bool set_inspection(bool vision, bool retina, int neuron);
   void reset_probe();
   void advance_probe();
   void clear_probe(const Genome &, const Field &, const PhysiologyParameters & = {});
   void refresh_senses(const Genome &, const Field &, const PhysiologyParameters & = {});
   void disable_sense(int);
-  // Trial-local, post-hatch intervention; normal organ capacities and payments still apply.
   void set_actuation_probe(std::function<float(std::uint32_t, float)> probe) {
     actuation_probe_ = std::move(probe);
   }

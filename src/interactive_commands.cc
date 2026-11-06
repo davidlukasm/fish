@@ -38,7 +38,6 @@ std::string InteractiveSession::insertion_message(int added, int requested, int 
                  {{"added", added}, {"requested", requested}, {"removed", removed}});
 }
 void InteractiveSession::dispatch(const CommandLine &command) {
-  // Commands may change the world without a request ID, or reuse an earlier ID.
   ++scene_revision;
   std::istringstream line(command.text);
   std::string op;
@@ -144,7 +143,6 @@ void InteractiveSession::dispatch(const CommandLine &command) {
                                                  "mussels",
                                                  "worms",
                                                  "crabs"};
-    // Mouse actions on plants and animals change the scene at once, like edits.
     if (environmental.count(op) || environment_effect || op == "mutation" || op == "parameter") {
       if (environmental.count(op) || environment_effect)
         world.environment_changed();

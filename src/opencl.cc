@@ -115,7 +115,6 @@ struct Api {
       dlclose(library);
   }
 };
-// Slots of the configuration buffer, shared with the kernel through generated definitions.
 namespace cfg_slot {
 enum : int {
   width = 0,
@@ -151,7 +150,6 @@ constexpr const char *config_names[config_slots] = {
     "CFG_PLANKTON_ROWS",   "CFG_PLANKTON_OFFSET",  "CFG_OPTICAL_DENSITY",
     "CFG_OPTICAL_SPACING", "CFG_PLANT_RADIUS",
 };
-// Device buffers in the order of the kernel arguments.
 enum BufferSlot : int {
   query_buffer,
   config_buffer,
@@ -164,18 +162,11 @@ enum BufferSlot : int {
   result_buffer,
   buffer_slots
 };
-// OpenCL API values used here.
 constexpr unsigned long DEVICE_TYPE_CPU = 2, DEVICE_TYPE_GPU = 4, QUEUE_PROFILING = 2;
 constexpr unsigned BUILD_LOG = 0x1183, PROFILING_START = 0x1282, PROFILING_END = 0x1283;
-// Profiled event kinds.
 enum EventKind : int { upload_event = 0, kernel_event = 1, download_event = 3 };
-// Work groups of KERNEL_GROUP queries; buffers grow in powers of two from MIN_BUFFER bytes;
-// compiler logs are cut at MAX_LOG characters; at most MAX_VENDORS vendor files are listed.
 constexpr std::size_t KERNEL_GROUP = 64, MIN_BUFFER = 16, MAX_LOG = 1200, MAX_VENDORS = 4;
-// Plant parts and surfaces travel as two and three float4 each.
 constexpr std::size_t PLANT_FLOATS = 8, SURFACE_FLOATS = 12;
-// Results are checked to RESULT_TOLERANCE above 1 and against VALIDATION_SAMPLES CPU queries
-// within MATCH_TOLERANCE.
 constexpr double RESULT_TOLERANCE = 1.00001, MATCH_TOLERANCE = 3.e-4;
 constexpr std::size_t VALIDATION_SAMPLES = 64;
 constexpr double BYTES_PER_KIB = 1024;
@@ -384,7 +375,6 @@ struct Engine {
     profiling = enabled;
     queue = enabled ? profile_queue : normal_queue;
   }
-  // Device timestamps exclude host packing, queue submission and waiting gaps.
   Handle *event(int kind) {
     if (!profiling)
       return nullptr;
@@ -508,7 +498,6 @@ std::vector<Int> grid_data(const SpatialGrid &grid) {
   data[grid.bins.size()] = Int(data.size());
   return data;
 }
-// Only optical queries, environment and attenuation factors remain resident.
 void upload_environment(const Field &f, std::size_t query_count) {
   std::vector<float> cfg(config_slots);
   cfg[cfg_slot::width] = float(f.geometry().width);
@@ -540,8 +529,6 @@ void upload_environment(const Field &f, std::size_t query_count) {
                 f.food_web().plankton.energy.end());
   plants.reserve(f.vegetation().plants.size() * PLANT_FLOATS);
   surfaces.reserve(f.vegetation().surfaces.size() * SURFACE_FLOATS);
-  // Two float4 per part: centre and half vector; half-width (negative: no foliage) and the
-  // optical depth of one crossing per colour channel.
   for (const auto &p : f.vegetation().plants) {
     const auto depth = f.foliage_depth(p.organ_kind);
     for (float x : {float(p.x), float(p.y), float(p.hx), float(p.hy),
@@ -639,7 +626,6 @@ bool opencl_attenuation(const Field &f, const std::vector<OpticsQuery> &queries,
                        plant_grid_buffer, surface_buffer, surface_grid_buffer, result_buffer});
     engine->launch(engine->kernel, queries.size());
     engine->read(result_buffer, output);
-    // Three colour channels per query.
     for (std::size_t i = 0; i < queries.size(); ++i) {
       if (output[rgb::count * i] == -1) {
         const auto cpu = reference(f, queries[i]);
@@ -755,15 +741,11 @@ void write_compute_status(std::ostream &out) {
       << '}';
 }
 namespace {
-// Benchmark: a fixed seed, dust in every DUST_STRIDE-th cell, the number of optical queries,
-// repetitions and trials, warm-up steps, the start food pieces, diagnostic steps, the margin for
-// recommending OpenCL and the step count from which progress is shown.
 constexpr std::uint64_t BENCHMARK_SEED = 42;
 constexpr std::size_t DUST_STRIDE = 11, BENCHMARK_QUERIES = 32768;
 constexpr double BENCHMARK_DUST = .5, EDGE_GAP = .01, RECOMMEND_MARGIN = .98;
 constexpr int REPEATS = 5, TRIALS = 3, WARMUP_STEPS = 10, START_FOOD = 60, DIAGNOSTIC_STEPS = 100,
               ANNOUNCE_STEPS = 1000;
-// Exit codes: OpenCL matches, deviates, or could not be used.
 constexpr int BENCHMARK_OK = 0, BENCHMARK_MISMATCH = 1, BENCHMARK_UNAVAILABLE = 2;
 }
 int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) {
@@ -970,7 +952,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
       << preparation_ms / batches << ", OpenCL/Übertragung " << execution_ms / batches
       << ", CPU-Nachlauf " << fallback_ms / batches << "\n";
   // Profile a separate replay so device events do not distort the throughput comparison.
-  std::array<double, 3> device_ms{}; // Upload, filter and download.
+  std::array<double, 3> device_ms{};
   bool device_profiling = true;
   const int diagnostics = std::min(steps, DIAGNOSTIC_STEPS);
   try {

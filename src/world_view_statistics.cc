@@ -21,7 +21,6 @@ void WorldViewWriter::performance() {
   }
   out << ']';
   out << ",\"recent_drift\":" << performance.drift;
-  // Intake per rate_window::display_steps steps of exposure.
   out << ",\"performance\":{\"exposure\":" << performance.exposure << ",\"food_rate\":"
       << rate_window::display_steps * performance.food /
              std::max<std::uint64_t>(1, performance.exposure)

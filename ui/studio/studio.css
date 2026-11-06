@@ -1,16 +1,10 @@
-/* Organ-first atelier. All rules stay inside the station root. */
-/* Colours: page and panels. */
 #station-root{--aid-ground:#09212a;--aid-graphic:#0c2b33;--aid-control:#17353d;--aid-control-edge:#4a6a6d;--aid-chip:#0f2c34;--aid-panel-edge:#2d5059;--aid-card-edge:#325961;--aid-control-text:#cfe2d8;--aid-soft-text:#9fbcbc;--aid-label-text:#a9c6c2;--aid-hint-text:#9fbab6;--aid-axis-text:#a7c2be;--aid-circuit-text:#c8d8d4;--aid-name-text:#e6efe4;--aid-primary:#d1dfbd;--aid-grip:#9fcebd}
-/* Colours: marks and handles. */
 #station-root{--aid-handle:#f1dda6;--aid-handle-hover:#f5e1ac;--aid-handle-core:#153a40;--aid-chosen:#fffbe5;--aid-chosen-edge:#d6d3a6;--aid-point:#fff;--aid-light:#fff8d8;--aid-teach:#e2c487;--aid-trace:#f4e3a0;--aid-substance:#d7c294;--aid-cell-on:#bee2b7;--aid-hover:#e0ecc5}
-/* Colours: organ categories and signals. */
 #station-root{--aid-senses:#79d2be;--aid-brain:#b8c5e1;--aid-motor:#eaa886;--aid-inhibit:#e8a2b5}
-/* Colours: the drawn fish and its organs. */
 #station-root{--aid-fish-line:#8ac7bb;--aid-fin-line:#89c9bb;--aid-sketch-line:#84b9b3;--aid-sketch:#2c5a5e;--aid-limit:#3b6a6c;--aid-rim:#8fbea8;--aid-node-edge:#0c2328;--aid-ink:#0d262c;--aid-pupil:#0a232b;--aid-spine:#edc99d;--aid-spine-fill:#a6c3b3;--aid-flow:#bfe3f0;--aid-flow-light:#e9f6fb;--aid-lateral:#83cbd0;--aid-touch:#a3ddcf;--aid-touch-felt:#f2cf7e;--aid-pain-felt:#f1a08a;--aid-gut:#d2c9a8;--aid-sperm:#f3f8fb;--aid-tooth:#f3eedc;--aid-size:#9fc9d8}
 #station-root{position:fixed;inset:0;z-index:100;background:var(--aid-ground);color:#d7e6e3;overflow:hidden;font:14px/1.45 system-ui,sans-serif}
 #station-root[hidden]{display:none}
 #station-root button,#station-root input{font:inherit}
-/* Without weight of its own, so the colour of a button's class (active, primary) wins. */
 :where(#station-root) button{color:inherit;cursor:pointer}
 #station-root button:focus-visible,#station-root input:focus-visible{outline:2px solid #e3d5a4;outline-offset:2px}
 #station-root button:disabled{opacity:.38;cursor:default}
@@ -496,14 +490,12 @@
 .aid-workflow button{width:34px;height:34px;display:grid;place-items:center;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;color:#e6efe8;padding:0}
 .aid-workflow button:hover{background:#26525a}
 .aid-workflow-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--aid-primary);color:#18362f;font-weight:700}
-/* The grip on a side panel's inner edge, to pull it wider or narrower. */
 .aid-panel-grip{position:absolute;top:0;bottom:0;width:8px;z-index:5;cursor:col-resize}
 .aid-library .aid-panel-grip{right:-4px}
 .aid-inspector .aid-panel-grip{left:-4px}
 .aid-panel-grip:hover,.aid-panel-grip:active{background:linear-gradient(90deg,transparent 3px,var(--aid-grip) 3px,var(--aid-grip) 5px,transparent 5px)}
 .aid-retina-node.other{opacity:.45}
 .aid-vision-cell-field{fill:currentColor;fill-opacity:.22;stroke:currentColor;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
-/* A wire's fan from its trunk's end to the nodes it joins, once the nodes show. */
 .aid-wire-branches{pointer-events:none}
 .aid-wire-branch{fill:none;opacity:.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-wire-branch.selected{opacity:1}
@@ -514,32 +506,25 @@
 .aid-module-actions button:first-child{border-radius:9px 0 0 9px;margin-left:0}
 .aid-module-actions button:last-child{border-radius:0 9px 9px 0}
 .aid-wide{width:100%;margin:4px 0}
-/* What touch, injury and lateral-line cells feel, while their organ is chosen. */
 .aid-felt{pointer-events:none;fill:none;stroke-linecap:round}
 .aid-felt.touch>path{stroke:var(--aid-touch-felt);stroke-width:12}
 .aid-felt.pain>path{stroke:var(--aid-pain-felt);stroke-width:12}
 .aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:3;stroke-linejoin:round}
-/* What the placement hints' colours stand for, while something is dragged. */
-/* Whether a stimulus is a preview along the drawing or runs through the built fish. */
 .aid-stimulus-kind{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;padding:6px 14px;border-radius:999px;font-size:12.5px;white-space:nowrap;pointer-events:none;background:#0b2229e6;border:1.5px dashed var(--aid-hint-text);color:var(--aid-control-text)}
 .aid-stimulus-kind.real{border-style:solid;border-color:var(--aid-primary);color:var(--aid-primary)}
 .aid-hint-legend{position:absolute;left:76px;bottom:16px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 14px;max-width:calc(100% - 220px);padding:8px 12px;border-radius:12px;background:#0b2229e6;border:1px solid #2c4c55;font-size:12.5px;pointer-events:none}
 .aid-hint-legend span{display:flex;align-items:center;gap:6px}
 .aid-hint-legend i{width:10px;height:10px;border-radius:50%;border:3px solid}
-/* What substances do to the chosen cell group, in the organ inspector. */
 .aid-chemistry dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 10px;font-size:13px}
 .aid-chemistry dt{color:var(--aid-soft-text)}
 .aid-chemistry dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .aid-substance-chip{display:inline-flex;align-items:center;gap:5px}
 .aid-substance-chip .aid-substance-swatch{height:11px;width:11px;border-width:1.5px}
-/* What grows at the head. */
 .aid-head-barbel{fill:none;stroke:#d9c99a;stroke-width:3;stroke-linecap:round}
 .aid-head-tooth{fill:var(--aid-tooth);stroke:var(--aid-ink);stroke-width:.5}
 .aid-head-mouth{fill:#0b1d22;stroke:#e9b9a3;stroke-width:1.6}
-/* A region's own circuit between its nodes. */
 .aid-region-inner{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-dasharray:3 3;opacity:.55;pointer-events:none;vector-effect:non-scaling-stroke}
 .aid-region-inner.inhibit{stroke:var(--aid-inhibit)}
-/* A planned region's slots and settings. */
 .aid-region-slots{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .aid-region-slots li{display:grid;grid-template-columns:auto auto 1fr;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--aid-panel-edge);border-radius:8px}
 .aid-region-slots li.missing{border-color:#c98b6e;background:#3a2a2280}
@@ -555,7 +540,6 @@
 .aid-region-setting{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin:6px 0}
 .aid-region-setting .aid-button-group{flex-wrap:wrap}
 .aid-region-setting .aid-button-group button.active{background:#d6e3b8;color:#12313a}
-/* A brain region's slots beside its nodes. */
 .aid-slot-chip{cursor:pointer}
 .aid-slot-chip rect{fill:#10303a;stroke:#6f9aa0;stroke-width:1.4}
 .aid-slot-chip path{fill:none;stroke:#cfe3dc;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -566,7 +550,6 @@
 .aid-slot-chip:hover rect{stroke:#f3e1a8}
 .aid-center-side{margin:8px 0}
 .aid-center-side button.active{background:#d6e3b8;color:#12313a}
-/* How an eye's field splits over the map of a chosen tectum. */
 .aid-tectum-bands{pointer-events:none}
 .aid-tectum-bands path{stroke:var(--aid-brain);stroke-width:1.2;stroke-dasharray:6 5;opacity:.8;vector-effect:non-scaling-stroke}
 .aid-tectum-bands text{fill:#dfe6f5;font:600 13px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
@@ -575,11 +558,9 @@
 .aid-region-badge path{fill:none;stroke:#e9a886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-slot-add{padding:2px 8px;border-radius:7px;border:1px dashed #6f9aa0;background:transparent;color:#cfe3dc;font-size:12px}
 .aid-region-slots li.missing .aid-slot-add{border-color:#e9a27f;color:#f0c1a6}
-/* How far a chosen nerve center's signals reach. */
 .aid-reach{pointer-events:none}
 .aid-reach .aid-reach-edge{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-dasharray:4 4;opacity:.6;vector-effect:non-scaling-stroke}
 .aid-anatomical-blood{fill:#c8555588;stroke:#e9a3a0;stroke-width:1.6}
-/* A muscle as what it moves: fin, mouth or jaw, its nodes as bundles with their handles. */
 .aid-effector-graphic{display:block;width:100%;height:auto;margin:6px 0 2px;background:#0c252b;border:1px solid #2c4d55;border-radius:12px}
 .aid-effector-graphic text{font-size:11px;fill:#d9e6dc}
 .aid-muscle-body{fill:#3a8380;fill-opacity:.55;stroke:var(--aid-fin-line);stroke-width:2}
@@ -598,14 +579,11 @@
 .aid-muscle-handle.strength{cursor:ns-resize}
 .aid-effector-controls{display:block;width:100%;height:auto;margin:4px 0}
 .aid-control-title{font-size:12px;fill:#d6e6dc}
-/* Names written in place. */
 .aid-inline-name{flex:1;min-width:0;padding:8px 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--aid-name-text);font:inherit}
 .aid-inline-name:hover{border-color:var(--aid-card-edge)}
 .aid-inline-name:focus{outline:none;border-color:var(--aid-chosen-edge);background:#163840}
 .aid-inline-title{font:20px Georgia,serif;padding:2px 6px;margin-left:-6px;width:100%}
 .aid-muscle-spine{fill:var(--aid-spine-fill);stroke:var(--aid-spine);stroke-width:1.6;stroke-linejoin:round}
-/* The skin's pigment cells: chips per kind, the pigment wheel, the amount, the colour range; on
-   the fish small gathered dots, their spread shown faintly while chosen. */
 .aid-type-chips{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
 .aid-type-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:14px;border:1px solid #3d5f66;background:var(--aid-chip);color:#d8ebe5;font-size:12px;cursor:pointer}
 .aid-type-chip i{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #0a1a20}
@@ -629,24 +607,19 @@
 .aid-move-spread{transform-box:fill-box;transform-origin:center;animation:aid-spread 1.4s ease-in-out}
 @keyframes aid-spread{0%,100%{transform:scale(1)}40%,70%{transform:scale(3.2)}}
 .aid-region-setting button.beyond{opacity:.45}
-/* Organs take clicks above the wires, over the whole of their glyphs. */
 .aid-organ-hit{opacity:0}
 .aid-organ-hit:hover{opacity:.14}
 .aid-organ-hits *{fill:var(--aid-hover);stroke:var(--aid-hover);stroke-width:12px;vector-effect:non-scaling-stroke;cursor:pointer}
 .aid-organ-hits text,.aid-organ-hits title{pointer-events:none}
-/* An eye's cell nodes lie close: each takes clicks on itself alone. */
 .aid-organ-hits .aid-retina-node{stroke-width:2px}
-/* The place in the head where all brain regions lie. */
 .aid-brain{pointer-events:none}
 .aid-brain-edge{fill:var(--aid-brain);stroke:var(--aid-brain);opacity:.8;vector-effect:non-scaling-stroke;stroke-linejoin:round}
 .aid-brain-lobe{stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;vector-effect:non-scaling-stroke}
 .aid-brain-fissure{fill:none;stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-brain-tint{fill:var(--aid-brain);opacity:.1}
-/* A stimulus: the network it reached stays marked, the rest stands back. */
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
-/* A chosen part keeps what it is wired with in full colour. */
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
 .aid-pulse-fired{filter:drop-shadow(0 0 5px #f1e7a8aa)}
@@ -664,14 +637,9 @@
 .aid-drive .aid-drive-band{fill:#f1dda61a}
 .aid-drive .aid-drive-idle{fill:#0d262c66}
 .aid-drive text{font-size:10px;fill:#a9c2bb}
-/* While a muscle is placed, the body shows where each of its works lies. */
 .aid-muscle-areas rect{opacity:.16}
 .aid-muscle-areas text{fill:var(--aid-name-text);font-weight:600;letter-spacing:.04em;opacity:.9;paint-order:stroke;stroke:var(--aid-ink);stroke-width:3px;pointer-events:none}
 .aid-muscle-areas{pointer-events:none}
-/* A quieted part pulses in the inhibiting colour, then stays darkened with a ring in it; the
-   signal it withdraws runs as a trail in that colour, and its wires show dashed in it. A tuned
-   part shows violet. */
-/* An eye stimulated through some of its cells shows those, the others stand back. */
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted) .aid-retina-node:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.35}
 #aid-body-map .aid-retina-node.aid-pulse-fired{stroke:#fff3b0;stroke-width:2}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit));opacity:.85}
@@ -683,8 +651,6 @@
 #aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--hormone))}
 .aid-hormone-wave{fill:var(--hormone);fill-opacity:.06;stroke:var(--hormone);stroke-opacity:.6;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
 .aid-hormone-arrival{pointer-events:none}
-/* Effectors move when a stimulus reaches them: the tail fin beats, a side fin strokes, the jaw
-   bites, the throat sucks. */
 .aid-move-tail{animation:aid-tail-beat .42s ease-in-out 3}
 @keyframes aid-tail-beat{0%,100%{transform:rotate(0)}25%{transform:rotate(-13deg)}75%{transform:rotate(13deg)}}
 .aid-move-fin-up{animation:aid-fin-up .5s ease-in-out 2}
@@ -789,8 +755,6 @@
 .aid-teacher-list button,.aid-teacher-chip{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
 .aid-teacher-list small{color:var(--aid-soft-text)}
 .aid-teacher-dot{width:9px;height:9px;border-radius:50%;background:var(--teacher)}
-/* A learning episode (episode.js): lines, traces glowing on them, pulses, the cell, its
-   pacemaker's beat, the teaching signal from above and the cell's expectation. */
 .aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
 .aid-episode.big{margin:4px 0}
 .aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
@@ -810,13 +774,11 @@
 .aid-episode text{fill:var(--aid-label-text);font-size:11px}
 .aid-episode-label.teach{fill:var(--aid-teach)}
 .aid-episode-caption{fill:var(--aid-name-text)}
-/* With the learning tool: taught cells' rings, the ways their teachers teach along. */
 .aid-teach-mark{fill:none;stroke:var(--aid-teach);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 .aid-teach-way{fill:none;stroke-width:2.5;stroke-opacity:.6;stroke-dasharray:6 5;vector-effect:non-scaling-stroke}
 .aid-teach-pulse{stroke:#0d262c;stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-held-mark{fill:var(--aid-teach);stroke:var(--aid-node-edge);stroke-width:1.2}
 .aid-held-line{stroke:#e2c48799;stroke-width:1;stroke-dasharray:3 3}
-/* A sense's stimulus drawn on its charts, in its kind's colour unless its own sets one. */
 .aid-stimulus{color:var(--aid-axis-text)}
 .aid-stimulus.k-light{color:#f3e7a1}
 .aid-stimulus.k-odor{color:#c9b5e8}

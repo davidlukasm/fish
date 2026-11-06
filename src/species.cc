@@ -10,7 +10,6 @@
 #include <functional>
 namespace fishsim {
 namespace {
-// Each naming attempt draws from its own stream.
 constexpr std::uint64_t ATTEMPT_SALT = 0xd6e8feb86659fd93ull;
 // Naming has its own stable hash; it never advances the simulation's RNG.
 std::uint64_t name_hash(const std::string &text) {
@@ -52,7 +51,6 @@ std::string species_name(std::uint64_t id, const std::string &lineage, unsigned 
       a.pop_back();
     return a + b;
   };
-  // The word patterns a name is built from.
   const std::function<std::string()> patterns[] = {
       [&] { return join(pick(roots), pick(short_end)); },
       [&] { return join(pick(roots) + "o", pick(long_end)); },
@@ -78,7 +76,6 @@ std::string available_epithet(const std::string &alternatives, std::uint64_t see
       break;
     start = end + 1;
   } while (true);
-  // Keep a fitting candidate stable throughout its observation period.
   if (!used.count(candidate) && std::find(words.begin(), words.end(), candidate) != words.end())
     return candidate;
   const auto offset = name_draw(seed) % words.size();
@@ -138,40 +135,24 @@ struct NameChoice {
   std::string word, meaning;
   double score;
 };
-// A trait scores from its threshold up, over at least MIN_HEADROOM; fish with less coverage than
-// NO_VISION count as blind; fish below SMALL_RADIUS count as small.
 constexpr double MIN_HEADROOM = .01, NO_VISION = .001, SMALL_RADIUS = 8;
-// Candidates are compared with PREFERENCE_MIN plus up to PREFERENCE_SPREAD of chance and
-// GENUS_CONTRAST of their lead over the genus; a candidate becomes the name after NAME_DELAY steps.
 constexpr double PREFERENCE_MIN = .94, PREFERENCE_SPREAD = .06, GENUS_CONTRAST = .8;
 constexpr std::uint64_t NAME_DELAY = 400;
-// Activity scores reach their full share at 1 / PULSE_SCALE pulses, 1 / AGGRESSION_SCALE
-// aggression and 1 / GAMETE_SCALE spawning; armour, mouth and bite score half at ARMOR_HALF,
-// MOUTH_HALF and BITE_HALF.
 constexpr double PULSE_SCALE = 12, AGGRESSION_SCALE = 8, GAMETE_SCALE = 100;
 constexpr double ARMOR_HALF = 4, MOUTH_HALF = 10, BITE_HALF = 10;
-// A species is confirmed after CONFIRM_STEPS steps with CONFIRM_COUNT hatches, successful
-// offspring and adults.
 constexpr std::uint64_t CONFIRM_STEPS = 800;
 constexpr int CONFIRM_COUNT = 3;
-// A changed environment is mastered after ENVIRONMENT_STEPS steps without help, with
-// ENVIRONMENT_BIRTHS births and at least ENVIRONMENT_ADULTS adults or ENVIRONMENT_SHARE of the
-// adults at the change.
 constexpr std::uint64_t ENVIRONMENT_STEPS = 1200;
 constexpr int ENVIRONMENT_BIRTHS = 3, ENVIRONMENT_ADULTS = 3, ENVIRONMENT_SHARE = 4;
-// Pruning keeps the RETAINED_EXTINCT best extinct species.
 constexpr std::size_t RETAINED_EXTINCT = 16;
-// An archived parent gains ARCHIVE_GAIN quality for each hatched offspring.
 constexpr double ARCHIVE_GAIN = .02;
 bool printable(char c) {
   return static_cast<unsigned char>(c) >= ' ';
 }
 std::vector<NameChoice> naming_choices(const GeneticSpecies &s, const NamingBody &body) {
   namespace F = behavior_feature_column;
-  // Each name rule scores how clearly a trait shows; thresholds and weights are the rule's data.
   const auto &p = s.profile;
   std::vector<NameChoice> out;
-  // The reason for a name is a key (the first word of its group); the interface words it.
   auto add = [&](const char *word, double score) {
     const std::string words = word;
     out.push_back({words, words.substr(0, words.find('|')), std::clamp(score, 0., 1.)});
@@ -388,7 +369,6 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   const GeneticSpecies *mother = maternal_species ? find(maternal_species) : nullptr;
   if (maternal_species && (!mother || mother->representative.cppn->history()->lineage() != lineage))
     return 0;
-  // Unparented admissions begin at their own lineage's first representative.
   if (!mother)
     for (const auto &old : species)
       if (old.representative.cppn->history()->lineage() == lineage) {
@@ -418,7 +398,6 @@ std::uint64_t SpeciesRegistry::classify(const Genome &g, std::uint64_t maternal_
   s.genus = s.id;
   s.mother_species = mother ? mother->id : 0;
   std::string genus_label = species_name(s.id, lineage);
-  // A named founder line (hand-built or imported) gives its name to the genus.
   std::string given;
   if (!mother) {
     for (char c : g.name) {
@@ -515,7 +494,6 @@ void Ecosystem::record_hatch(Individual &p) {
         std::none_of(fish.begin(), fish.end(),
                      [&](const Individual &living) { return living.id == b.id; }))
       ++b.offspring;
-  // The archive carries its exemplar's identity, including parents no longer in the breeder bank.
   for (const auto id : {p.parent, p.father != p.parent ? p.father : 0})
     if (id) {
       for (auto &a : support_.archive)
@@ -689,7 +667,6 @@ void Ecosystem::prune_species() {
   for (const auto &s : taxonomy_.species)
     if (s.hormones.investigations)
       keep(s.id);
-  // These genomes are selected breeders and the novelty archive; their ancestry remains useful.
   for (const auto &b : support_.breeders)
     keep(b.species);
   for (const auto &a : support_.archive)

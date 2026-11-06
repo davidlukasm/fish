@@ -31,17 +31,9 @@ import {
 } from './state.js';
 import {selectFish, syncBrainRequest} from './fish_choice.js';
 export const brainState = {};
-// The inspection fades over FADE_MS (frames of at most MAX_DT, FRAME_MS before the first) and
-// counts as shown above VISIBLE opacity.
 export const BRAIN_FADE =
     Object.freeze({visible : .005, fade_ms : 160, max_dt : 100, frame_ms : 16});
 export const brainVisible = () => brainState.brainOpacity > BRAIN_FADE.visible;
-// The inspection opens once the selected fish shows OPEN pixels of radius and closes below CLOSE
-// (after EXIT_MS); after a death the fish under the pointer is taken once it shows the select
-// zoom for ACQUIRE_MS; closing zooms out to OUT pixels. Inspecting slows the tempo from SLOW_MIN to
-// SLOW_MIN + SLOW_SPAN ms per step over SLOW_ZOOM more pixels, updated at most every TEMPO_MS when
-// it changes by TEMPO_STEP; DEFAULT_DELAY is the normal tempo. The panel slides in by SLIDE.
-// A new probe starts at BEARING radians and DISTANCE units from the fish.
 const PROBE_START = Object.freeze({bearing : -.4, distance : 65});
 const BRAIN_ZOOM = Object.freeze({
   open : 52,
@@ -57,8 +49,6 @@ const BRAIN_ZOOM = Object.freeze({
   default_delay : 30,
   slide : 6
 });
-// The drawing keeps its detail while the wheel turned within WHEEL_MS; poses rebuild it in
-// 1/POSE_STEPS steps, at most every REBUILD_MS, the detail in 1/DETAIL_STEPS.
 const BRAIN_DRAW =
     Object.freeze({wheel_ms : 220, pose_steps : 8, detail_steps : 16, rebuild_ms : 100});
 export let brainClamp;
@@ -343,7 +333,6 @@ export function brainDrawOverlay(f, c) {
   const raw = frameFish(f);
   if (!raw?.[FISH.hatched])
     return;
-  // While the wheel turns, the drawing keeps its detail level and is only scaled.
   const zooming = performance.now() - (cameraState.wheelAt || 0) < BRAIN_DRAW.wheel_ms;
   const shown = brainPresentationFish(blendFish(raw)), bodyPixels = fishBodyRadius(shown) * c.scale,
         detail = zooming && brainState.brainDetail !== undefined
@@ -359,7 +348,6 @@ export function brainDrawOverlay(f, c) {
           brainState.brainPinnedTissue, brainState.brainView
         ].join(':');
   const body = fishSnapshotAnatomy(raw);
-  // New brain data or moving fins alone rebuild the layout at most ten times a second.
   const fresh = (brainState.brainDrawing?.b !== f.brain || brainState.brainPoseKey !== poseKey) &&
                 performance.now() - (brainState.brainBuiltAt || 0) > BRAIN_DRAW.rebuild_ms;
   if (key !== brainState.brainDrawingKey || fresh || !brainState.brainDrawing ||
@@ -445,7 +433,6 @@ const initializers = {
   "brainDrawingKey" : () => { brainState.brainDrawingKey = ''; },
   "brainTool" : () => { brainState.brainTool = 'light'; },
   "brainHue" : () => { brainState.brainHue = 0; },
-  // The scent probe starts as pure food scent.
   "brainMix" : () => {
     brainState.brainMix = Object.values(ODOR_KIND).map(k => k === ODOR_KIND.food ? 1 : 0);
   },

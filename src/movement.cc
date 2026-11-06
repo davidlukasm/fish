@@ -3,13 +3,9 @@
 #include "body_plan.hh"
 namespace fishsim {
 namespace {
-// Thrust divides by the body mass, but never by less than this.
 constexpr double MIN_THRUST_MASS = .5;
 }
 namespace {
-// One brake for everything that moves through foliage, saturating: even a dense thicket only
-// slows a fish. It slows the fish's own swimming and, by the same factor, the current between
-// the plants, so a fish in a thicket feels only part of it.
 double foliage_brake(const Field &field, double x, double y, double radius) {
   const double s = field.foliage_contact(x, y, radius).stiffness;
   return 1 + field.env().foliage_drag * s / (1 + s);
@@ -18,7 +14,7 @@ Point sheltered_water(const Field &field, double x, double y, double brake) {
   const auto water = field.water().velocity(x, y);
   return {water.x / brake, water.y / brake};
 }
-} // namespace
+}
 void limit_swimming(Body &b, const Field &field, const PhysiologyParameters &physiology) {
   auto water = sheltered_water(field, b.x, b.y, foliage_brake(field, b.x, b.y, body_radius(b)));
   const double immersion = field.sediment_immersion(b.x, b.y, body_radius(b)),
@@ -65,7 +61,6 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   Point water = world ? sheltered_water(*world, b.x, b.y, brush) : Point{};
   b.motor_.thrust = b.motor_.torque = 0;
   if (b.motor_.swimming_pending) {
-    // Strokes push while they run; their delivered work is already paid.
     b.motor_.torque = b.motor_.drive_left - b.motor_.drive_right;
     b.motor_.angular_velocity =
         std::clamp(b.motor_.angular_velocity +
@@ -148,7 +143,6 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
       record_touch(b, b.motor_.contact_x, b.motor_.contact_y, b.motor_.impact);
     }
   }
-  // Only actual displacement through the bed abrades raised spines.
   if (world && !protected_life && immersion > 0 && defense > 0) {
     double dx = world->delta_x(b.x - old_x), dy = b.y - old_y;
     harm_body(b, physiology.spine_abrasion * defense * immersion * std::min(1., dx * dx + dy * dy),

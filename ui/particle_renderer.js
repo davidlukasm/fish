@@ -40,12 +40,7 @@ export let foodFragmentShader;
 
 export function foodDisplayRadius(p) { return p[FOOD.radius]; }
 
-// Food pieces as shapes: carrion and animal food as polygons of CRUMB_SIDES plus up to
-// Algae on mussels: the engine's cover shows on each mussel at FLOOR to 1 of its strength (by
-// mussel), as a patchy mat at most MAX_MIX strong whose filaments reach FRINGE over the margin;
-// COVER_GAIN sets how fast the mat closes.
 const MUSSEL_ALGAE = Object.freeze({floor : .35, max_mix : .55, fringe : .07, cover_gain : 2.5});
-// CRUMB_SPREAD more sides, algae as ALGAE_SIDES-gons, the rest round; the fraction turns them.
 const FOOD_SHAPE = Object.freeze({crumb_sides : 5, crumb_spread : 3, algae_sides : 6, round : 0});
 export function foodShape(p) {
   const phase = idPhase(p[FOOD.id]), S = FOOD_SHAPE;
@@ -66,9 +61,6 @@ export function paintFaunaPreview(f, c, rows) {
 }
 function smallAnimalLayer(p) { return bedLayer(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH); }
 
-// Far out, pieces too small to see are left out: the food odour shows where food lies, and
-// merged groups only confused the picture. Pieces count within MARGIN pixels of the view and
-// from MIN_RADIUS pixels on; the upload is redone per GRID pixels of panning and 1/LEVELS zoom.
 const FOOD_VIEW = Object.freeze({margin : 24, min_radius : .75, grid : 24, levels : 64});
 export function overviewFood(pieces, c) {
   const M = FOOD_VIEW.margin;
@@ -79,15 +71,11 @@ export function overviewFood(pieces, c) {
            (c.scale >= ZOOM.close || foodDisplayRadius(p) * c.scale >= FOOD_VIEW.min_radius);
   });
 }
-// Instances: positions (old, new), radii and red, green, blue and shape; small animals add
-// individual, morphology, substrate, soil tint and food location.
 const FOOD_ATTRIBUTES = [ [ 'positions', 4 ], [ 'radiiRG', 4 ], [ 'blueShape', 3 ] ],
       ANIMAL_ATTRIBUTES = [
         ...FOOD_ATTRIBUTES, [ 'individual', 4 ], [ 'morphology', 4 ], [ 'substrate', 4 ],
         [ 'soilTint', 3 ], [ 'foodLocation', 2 ]
       ];
-// Instance buffers hold at least MIN_FLOATS; artificial food shows MUTED of its colour and DIM
-// as bright.
 const FOOD_BATCH = Object.freeze({min_floats : 640, muted : .62, dim : .9});
 
 export class FoodRenderer extends TankBatch {
@@ -120,7 +108,6 @@ export class FoodRenderer extends TankBatch {
       this.revision = sceneState.frameRevision;
       if (!count)
         return true;
-      // Animals keep room for their layer-grouped copy as well.
       const rows = this.animals ? 2 * count : count;
       if (!this.data || this.data.length < rows * stride)
         this.data = new Float32Array(
@@ -144,8 +131,6 @@ export class FoodRenderer extends TankBatch {
       this.count = ordered.length;
       if (this.animals)
         this.ranges = new Map(ordered.map((p, start) => [p[FOOD.id], {start, count : 1}]));
-      // Layers interleave in depth order; a layer-grouped copy behind the depth-ordered rows
-      // keeps each layer one contiguous instance range with the same order inside the layer.
       const layerOrder = [];
       if (this.animals) {
         const layerOf = ordered.map(smallAnimalLayer);
@@ -174,8 +159,6 @@ export class FoodRenderer extends TankBatch {
                          ? p[FOOD.radius] * bedScale(p[INVERTEBRATE.bed_depth] ?? MIDDLE_DEPTH)
                      : c.scale < ZOOM.close ? p[FOOD.radius]
                                             : foodDisplayRadius(p);
-        // Artificial food is drawn a little muted so it does not dominate the picture; the
-        // shared shader applies local illumination.
         const feed = !this.animals && p[FOOD.origin] === FOOD_KIND.feed,
               muted = feed ? FOOD_BATCH.muted : 1, dim = feed ? FOOD_BATCH.dim : 1,
               rgb = [ p[FOOD.red], p[FOOD.green], p[FOOD.blue] ], grey = luma(rgb);
@@ -194,7 +177,6 @@ export class FoodRenderer extends TankBatch {
           data[at++] = idPhase(p[FOOD.id]);
           data[at++] = old?.[INVERTEBRATE.angle] ?? p[INVERTEBRATE.angle] ?? 0;
           data[at++] = p[INVERTEBRATE.angle] || 0;
-          // The pose channel is shell closure for mussels, visible fraction for crabs.
           data[at++] = p[INVERTEBRATE.kind] === INVERTEBRATE_KIND.worm
                            ? (old?.[INVERTEBRATE.length] ?? p[INVERTEBRATE.length] ?? 0)
                            : (old?.[INVERTEBRATE.closed] ?? p[INVERTEBRATE.closed] ?? 0);
@@ -325,7 +307,6 @@ export function updateParticleRendererState(patch) {
 
 const initializers = {
   "foodVertexShader" : () => {
-    // Individual grains share one GPU batch; their ecology and picking remain individual.
     foodVertexShader = `#version 300 es
 precision highp float;
 ${attributeInputs(ANIMAL_ATTRIBUTES)}
@@ -385,7 +366,7 @@ void main(){
      point.y=2.*bodyY/max(.001,drawn*scale)-1.;
      corner=vec2(point.x*width,bodyY);
      screenRadius=max(radius,drawn*scale*.25);
-     visibility=1.; // The anchored burrow remains when the body has withdrawn.
+     visibility=1.;
    }
    if(kind==KIND_CRAB){
      point.x*=1.5;corner.x*=1.5;
@@ -474,7 +455,6 @@ void main(){
      d=length(vec2((point.x-bend)/width,max(0.,abs(point.y)-.88)/.12));
      if(soilPoint.y>0. || ground<-.995)d=3.;
      if(family==WORM_FAMILY_BRISTLED){for(int k=0;k<9;k++){float y=-.8+float(k)*.2,wiggle=.08*sin(phase+y*7.);for(int side=-1;side<=1;side+=2)d=min(d,limb(point,vec2(bend+float(side)*width*.7,y),vec2(bend+float(side)*(width+.19),y+wiggle),.025));}}
-     // Feeding crowns and flattened heads distinguish the exposed worm families.
      if(family==WORM_FAMILY_SLENDER){
        for(int k=0;k<7;k++){
          float fan=(float(k)-3.)*.19,tip=-.93+.08*abs(float(k)-3.);
@@ -487,7 +467,6 @@ void main(){
      tint=mix(tint,skin,.8)*rings;
      tint*=.78+.22*(1.-abs(point.x-bend)/width);
      if(soilPoint.y>0. || ground<-.995)d=3.;
-     // The opening belongs to this worm's own instance and shares its depth order.
      float hole=length(vec2(soilPoint.x/2.15,soilPoint.y/.62));
      if(hole<1.&&d>1.){d=hole;tint=soilColor*.46;}
      float lip=length(vec2(soilPoint.x/2.65,(soilPoint.y-.30)/.52));
@@ -615,10 +594,7 @@ void main(){
        if(shell<shells){shells=shell;valve=local;}
      }
      float up=-q.y,spread=max(.02,height*.30*tan(opening));
-     // The soft body shows between the valves of every family, also of the slim ones.
      float flesh=length(vec2(q.x/max(spread*.34+.025,family>3.5?.07:.0),(up-height*.30)/(height*.23)));
-     // Algae sit on the valves: a mat in valve coordinates, so it opens and closes with them,
-     // with short filaments over the margin where the coating is thick.
      float growth=behavior.x==MUSSEL_EMPTY_SHELL?0.:clamp(algae,0.,1.),vt=clamp(valve.y/height,0.,1.),
            vray=atan(valve.x,valve.y),
            fringe=1.+MUSSEL_ALGAE_FRINGE*growth*smoothstep(.25,.7,vt)*pow(.5+.5*sin(vray*53.+v*13.+2.*sin(vt*19.)),3.);
@@ -654,7 +630,6 @@ void main(){
        float seam=exp(-abs(q.x)*110.)*smoothstep(.06,.30,up)*(1.-smoothstep(height*.85,height,up));
        tint*=1.-.65*seam*behavior.z;
        if(growth>.02){
-         // Patchy filamentous mat, thickest towards the open margin, fibres along the growth lines.
          float cover=1.-exp(-MUSSEL_ALGAE_COVER_GAIN*growth),
                mottle=.5+.28*sin(valve.x*31.+vt*13.+v*9.)*sin(vt*23.-valve.x*19.)+.22*sin((valve.x+vt)*67.+v*4.),
                mask=smoothstep(.62-.5*cover,.86-.3*cover,mottle+.25*smoothstep(.2,.9,vt)),

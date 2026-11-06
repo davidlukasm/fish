@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Statistics process: simulation, archive and all routes except /scene (started by viewer.py)."""
 
 import gc
 import json
@@ -53,7 +52,6 @@ def main():
     gc.set_threshold(50000, 50, 200)
     directory, port, ready = sys.argv[1], int(sys.argv[2]), int(sys.argv[3])
     args = arguments(sys.argv[4:])
-    # The engine sends images straight to the front process.
     args.render_socket = os.path.join(directory, "scene.sock")
     simulation = Simulation(args)
     token = secrets.token_urlsafe(24)
@@ -71,7 +69,6 @@ def main():
     )
 
     def watch_front():
-        # EOF: the front process has ended.
         sys.stdin.buffer.read()
         server.shutdown()
 

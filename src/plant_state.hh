@@ -9,7 +9,7 @@ struct PlantGeometryCache {
   std::vector<PlantPart> parts;
   std::vector<Cell> canopy;
   bool canopy_ready = false;
-  bool bent = false; // Shaped around a fish body; reshaped again once it has left.
+  bool bent = false;
   bool empty() const { return parts.empty(); }
   void clear() {
     parts.clear();
@@ -32,7 +32,6 @@ struct PlantState {
   std::vector<PlantGeometryCache> plant_geometry_cache;
   std::uint64_t algae_exposure_geometry = ~std::uint64_t(0);
   std::vector<double> algae_exposure_sediment;
-  // Freie Teilstrecke je Fläche ohne Kontakt zu anderen Festkörpern; folgt der Geometrie.
   std::uint64_t algae_contact_geometry = ~std::uint64_t(0);
   std::vector<std::array<double, 2>> algae_contact;
 };

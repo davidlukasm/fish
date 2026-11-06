@@ -1,14 +1,7 @@
-"""Birth, generation, viability and dominance observations."""
-
 from protocol_schema import Fish, FishOrigin
 
-# A notice of the same kind, a changed population state or a record waits NOTICE_STEPS steps.
 NOTICE_STEPS = 1200
 
-# Natural generations worth a milestone; generations count from GENERATIONS on. A population
-# sustains itself once SUSTAINING_DEATHS deaths were replaced without help; it is in crisis below
-# CRISIS of a peak of at least CRISIS_PEAK. A window without supply counts from SUPPLY_GENERATIONS
-# generations on.
 GENERATION_MILESTONES = (3, 5, 10, 15, 20, 25, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 80000, 100000)
 GENERATIONS, SUSTAINING_DEATHS, CRISIS, CRISIS_PEAK, SUPPLY_GENERATIONS = 2, 5, 0.25, 20, 3
 

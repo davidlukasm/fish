@@ -29,10 +29,7 @@ function setBrainMix(k, value) {
   brainUpdateWheel();
 }
 
-// The colour wheel in percent of its box: the hue mark on RADIUS around CENTER, scent handles
-// from HANDLE outwards by HANDLE_SPAN at full share.
 const WHEEL = Object.freeze({center : 50, radius : 43, handle : 12, handle_span : 31});
-// A moving probe is sent every INTERVAL ms once it moved MOVE world units, otherwise every IDLE ms.
 const PROBE_SEND = Object.freeze({move : .25, interval : 120, idle : 700});
 export function brainUpdateWheel() {
   const scent = brainState.brainTool === 'scent', body = brainState.brainTool === 'body';
@@ -85,7 +82,6 @@ export async function sendBrainProbe(location = brainState.brainProbePoint) {
                                               : PROBE_KIND.sight,
     x : point.x,
     y : point.y,
-    // A scent probe has to stand out against the tank's accumulated odours.
     energy : SENSORY_PROBE.energy * strength *
                  (brainState.brainTool === 'scent' ? SENSORY_PROBE.scent_gain : 1),
     radius : brainState.brainTool === 'light' ? Number(el('brain-size').value)
@@ -137,7 +133,6 @@ export function updateBrainProbeState(patch) {
   return Object.values(patch)[0];
 }
 
-// The stimulus tool follows the organ chosen in the Organe tab.
 export function setBrainTool(tool) {
   updateBrainState({brainTool : tool});
   el('brain-inputs').open = true;
@@ -145,7 +140,6 @@ export function setBrainTool(tool) {
   brainUpdateWheel();
 }
 
-// Network or organ drawing of the inspected fish (Nervensystem and Organe tabs).
 export function setBrainView(view) {
   updateBrainState({brainView : view});
   updateBrainState({brainHover : null});
@@ -163,7 +157,6 @@ const initializers = {
     for (let k = 0; k < 8; k++) {
       const label = document.createElement('label'), name = document.createElement('span'),
             output = document.createElement('output'), input = document.createElement('input');
-      // Same colours as the scent compass of the info panel.
       name.textContent = '● ' + scentNames[k];
       name.style.color = scentColors[k];
       input.type = 'range';

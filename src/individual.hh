@@ -10,7 +10,6 @@ struct IndividualState {
   std::uint64_t last_sperm = 0;
   std::uint64_t species = 0, maternal_species = 0, paternal_species = 0;
   unsigned g = 0, maternal_g = 0;
-  // Consecutive naturally born, self-feeding generations in this species (capped at two).
   unsigned feeding_generations = 0;
 
   int maternal_depth = 0;
@@ -39,7 +38,6 @@ struct Individual : IndividualState {
     Individual result;
     static_cast<IndividualState &>(result) = *this;
     result.body = body.observation();
-    // Completed plans and genes are immutable. Planning jobs are only compared by identity.
     result.genome.growth_query.reset();
     return result;
   }

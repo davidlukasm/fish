@@ -17,13 +17,9 @@
 #include <chrono>
 namespace fishsim {
 namespace {
-// Obstacles: radius bounds, coordinate bound, pick margin for erasing and moving.
 constexpr double MIN_OBSTACLE_RADIUS = 1, MAX_OBSTACLE_RADIUS = 10000, MAX_COORDINATE = 1000000,
                  PICK_MARGIN = 8;
-// Drifting grass keeps DRIFT_EDGE from the top and bottom after a resize.
 constexpr double DRIFT_EDGE = .4;
-// A placed rock has ROCK_POINTS points with a radius varying by ROCK_ROUGHNESS; a round obstacle
-// becomes a polygon of ROUND_POINTS points when moved; walls are at least MIN_WALL_LENGTH long.
 constexpr int ROCK_POINTS = 9, ROUND_POINTS = 12;
 constexpr double ROCK_ROUGHNESS = .2, ROCK_ROUGHNESS_PHASE = 13, MIN_WALL_LENGTH = 4;
 bool valid_radius(double radius) {
@@ -66,8 +62,6 @@ void Ecosystem::resize(double w, double h) {
     c.x = field.wrap_x(c.x);
     c.y = std::clamp(c.y, 0., h);
   }
-  // An archive stores the last position as the revival starting point. Keep it valid
-  // after a resize; revival itself will find a free location for the full body.
   for (auto &p : remembered_dead) {
     p.body.x = field.wrap_x(p.body.x);
     p.body.y = std::clamp(p.body.y, 0., h);
@@ -91,7 +85,6 @@ bool Ecosystem::polygon(const std::vector<Point> &points) {
     o.radius = std::max(o.radius, std::hypot(p.x - o.x, p.y - o.y));
   if (!valid_radius(o.radius))
     return false;
-  // The editor can be on any horizontal copy of the periodic tank.
   double shift = field.wrap_x(o.x) - o.x;
   o.x += shift;
   for (auto &p : o.vertices)

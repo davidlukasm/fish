@@ -1,5 +1,3 @@
-// Choosing a fish: the simulation is told, the views that showed the previous fish are reset
-// and the camera follows the new one. Brain data is requested while a chosen fish is inspected.
 import {brainState, resetBrainView} from './brain.js';
 import {setFollowing, updateCameraState} from './camera.js';
 import {el} from './dom.js';

@@ -4,11 +4,7 @@
 #include <stdexcept>
 namespace fishsim {
 namespace {
-// Objects within VIEW_MARGIN screen pixels of the view are included; coordinates are quantised to
-// an eighth of a pixel (SUBPIXELS), but no finer than the wire's coordinate units.
 constexpr double VIEW_MARGIN = 96, SUBPIXELS = 8;
-// Views lie within MAX_VIEW_CENTER, span at most MAX_VIEW_SIZE and scale between MIN_VIEW_SCALE
-// and MAX_VIEW_SCALE pixels per unit.
 constexpr double MAX_VIEW_CENTER = 1e9, MAX_VIEW_SIZE = 1e8, MIN_VIEW_SCALE = 1e-4,
                  MAX_VIEW_SCALE = 1e6;
 }

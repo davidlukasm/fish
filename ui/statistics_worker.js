@@ -58,7 +58,6 @@ self.onmessage = async ({data}) => {
       }
       speciesFingerprints = next;
       delete result.prepared_frame.species;
-      // Transfer each value once and retain unchanged species fields on the UI thread.
       for (const key of ['frame', 'frame_patches', 'render_assets', 'asset_ids', 'brain_layout',
                          'species_profiles', 'species_profile_ids', 'individual_profile'])
         delete result[key];

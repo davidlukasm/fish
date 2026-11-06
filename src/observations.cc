@@ -12,8 +12,6 @@
 #include <string_view>
 namespace fishsim {
 namespace {
-// The anatomy cache drops plans of extinct bodies every CACHE_SWEEP misses; forms are written
-// to COMPACT_DIGITS decimals.
 constexpr unsigned CACHE_SWEEP = 128;
 constexpr double COMPACT_SCALE = 1000;
 double compact(double v) {
@@ -68,7 +66,6 @@ const AnatomyText &anatomy_text(std::ostream &out,
     if (fin)
       stream << ',';
     const auto shape = binding ? binding->fins[fin] : BrainInterface::Fin{};
-    // The fin_shape columns.
     static_assert(fin_shape_column::count == 5);
     stream << '[' << shape.cells << ',' << shape.strength << ',' << shape.x << ',' << shape.y << ','
            << shape.spread << ']';
@@ -83,7 +80,6 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[';
     if (binding) {
       const auto &q = binding->forms[i];
-      // The organ_form columns; only eyes and near-sense organs carry their place and shape.
       static_assert(organ_form_column::weight == organ_form_column::sz + 1 &&
                     organ_form_column::count ==
                         organ_form_column::eye_along +
@@ -129,7 +125,6 @@ const AnatomyText &anatomy_text(std::ostream &out,
     stream << '[';
     if (binding) {
       const auto &q = binding->regions[i];
-      // Regions use the organ_form columns up to the weight.
       if (q.weight > 0) {
         stream << compact(q.x) << ',' << compact(q.y) << ',' << compact(q.z) << ',' << compact(q.sy)
                << ',' << compact(q.sz) << ',' << q.weight;
@@ -190,7 +185,6 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
     text.body = "null";
     return text;
   }();
-  // A shared morphology asset replaces the anatomy texts.
   const auto &shape = morphology ? empty : anatomy_text(out, p.genome.interface);
   const auto anatomy = [&](const std::string &text) {
     return morphology ? std::string_view("null") : std::string_view(text);
@@ -222,7 +216,6 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
       F::reserve_capacity, reserve_capacity(b))(F::adult_age,
                                                 b.hatched ? std::max(0, b.age - b.hatch_age) : 0)(
       F::impulse_forward, motor.impulse_forward)(F::motor_factor, motor.motor_factor)
-      // The fin tensions, then the fin strokes in fin_event order: starts, strengths, durations.
       .with(F::fin_pose,
             [&](std::ostream &o) {
               static_assert(fin_event_column::age_tail == 0 &&
@@ -271,7 +264,6 @@ void write_corpse_visual(std::ostream &out, const Corpse &c) {
     return;
   }
   const auto &shape = anatomy_text(out, c.visual);
-  // The corpse_visual columns, fins and forms side by side.
   static_assert(corpse_visual_column::forms == corpse_visual_column::fins + 1 &&
                 corpse_visual_column::count == 7);
   out << '[' << shape.organs << ',' << shape.fins << ',' << shape.forms << ',' << shape.contour
@@ -662,7 +654,6 @@ void write_sight(std::ostream &out, const PerceptionState &state) {
           .finish();
   }
   out << "],\"bands\":[";
-  // Match the angular resolution of the tank overlay before crossing the process boundary.
   constexpr int count = vision::pixels;
   constexpr double step = 2 * PI / count;
   struct Pixel {

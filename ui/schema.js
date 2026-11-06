@@ -986,11 +986,9 @@ export const BEHAVIOR_FEATURE_SET = Object.freeze({
 export const MOTOR_PORTS = Object.freeze([ 1, 2, 6, 4, 5, 10, 11, 7, 12, 13 ]);
 export const BEHAVIOR_SCALE =
     Object.freeze({"speed" : 8.64, "turn_degrees" : 54, "cruising_speed" : 0.75});
-// Names of a column group, in column order.
 export function columnNames(columns) {
   return Object.keys(columns).filter(name => name !== 'count');
 }
-// An array indexed by a column or value group, from a table keyed by the group's names.
 export function indexedBy(group, table) {
   const out = [];
   for (const [name, index] of Object.entries(group))

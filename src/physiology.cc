@@ -22,7 +22,6 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     ++m.cycle;
     m.biting = true;
     m.phase = 0;
-    // Finish the closure before this organ can recover and start another one.
     m.duration = std::min(MOUTH_CYCLE_STEPS, std::max(MOUTH_HALF_CYCLE, std::floor(bite_steps)));
   }
   if (pump_started) {
@@ -30,7 +29,6 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     m.credit = 0;
   }
   if (m.biting) {
-    // The opening at each whole phase of the cycle, the last one closing it.
     constexpr auto &opening = mouth_cycle::opening;
     static_assert(opening.size() == mouth_cycle::steps + 1);
     const int step = int(m.phase);
@@ -56,8 +54,6 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   double energy = HATCH_TISSUE +
                   HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
-  // Mandatory costs at minimum viable tissue, following the same construction schedule
-  // as Body::prepare_step. Motor, secretion and delayed hatching costs remain additional.
   for (int step = 0, steps = stage.ticks(); step < steps; ++step) {
     const double tissue = HATCH_TISSUE * stage.progress();
     energy += basal_cost(tissue, p) + muscle_upkeep(g.interface->muscle_maintenance, tissue, p);
@@ -139,7 +135,6 @@ void mature_body(Body &b) {
   b.peak_tissue = std::max(b.peak_tissue, b.tissue);
   b.hatched = true;
   b.hatch_age = b.age;
-  // Unreleased embryonic secretion remains nonfertile through birth.
   b.embryo.pending += b.embryo.secretion;
   b.embryo.secretion = 0;
 }
@@ -259,9 +254,6 @@ void maintain_body(Body &b, bool protected_life) {
     b.alive = false;
     return;
   }
-  // Growth draws on the digested surplus over this step's whole expenditure (rest, swimming,
-  // bites), with a proportional synthesis cost: activity is paid before the body grows. Its pace
-  // follows the hormones on the growth receptor.
   const double surplus = (1 - PhysiologyParameters::digestion_cost) * b.digestion -
                          b.ledger().movement_cost - b.ledger().brain_cost;
   using P = PhysiologyParameters;
@@ -288,7 +280,6 @@ void injure(Body &b, double damage, bool protected_life, Point normal) {
     return;
   const double bearing = (normal.x || normal.y) ? std::atan2(normal.y, normal.x)
                                                 : std::numeric_limits<double>::quiet_NaN();
-  // Spines facing the impact block it; holding them against the blow costs energy.
   double prevented = damage * b.local_defense(bearing),
          cost = prevented * BODY_TISSUE * PhysiologyParameters::spine_block_cost;
   const double paid = pay_activity(b, cost);
@@ -385,7 +376,6 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
     tissue += tissue_work;
     peak_tissue = std::max(peak_tissue, tissue);
     nutrient_flow += physiology.embryo_nutrient_gain * tissue_work;
-    // Settlement records death once at the population barrier; no further action below reserve.
     return protected_life ||
            energy - std::max(0., embryo.target_tissue - tissue) >= hatch_search_reserve(*this);
   }

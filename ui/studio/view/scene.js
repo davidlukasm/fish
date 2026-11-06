@@ -27,10 +27,6 @@ import {stimulusKind} from './stimulus.js';
 import {probeScents, senseProbeSvg} from './probes.js';
 import {layerShown} from './layers.js';
 
-// A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
-// with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of what it is
-// by its traits (nerveKind);
-// the marks in INK on its colour, drawn for a marker SIZE wide and scaled to the one asked.
 const MARKER = Object.freeze({
   size : 5.5,
   ink : '#10292d',
@@ -77,8 +73,6 @@ function centersSvg(state) {
                         (state.multi?.has(organ.id) ?? false) ||
                         (activeAssembly?.organIds.includes(organ.id) &&
                          organ.centers.some(center => assemblyCenters.has(center.id)));
-    // A region shows its nodes while it is chosen or the scene shows nodes (layers.js); else it
-    // stands as its hull and symbol.
     if (organ.type !== 'brain' && !(isRegion(organ) && showsNodes(state, [ organ ])))
       continue;
     for (const center of organ.centers) {
@@ -109,7 +103,6 @@ function centersSvg(state) {
   return result;
 }
 
-// A module's stamp, a card with two waves, stands ABOVE the middle of its nodes.
 const STAMP = Object.freeze({
   above : 45,
   glyph : '<rect x="-17" y="-15" width="34" height="30" rx="9"/>' +
@@ -132,13 +125,9 @@ function assembliesSvg(state) {
       })
       .join('');
 }
-// A chosen organ's name stands BELOW its glyph, SIZE high, both kept on screen as the view zooms.
 const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
 export const organLabelPlace = (y, zoom) =>
     ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
-// The slots of a brain region (or a gonad) beside its nodes, away from the midline: what fills
-// them, or the kind of organ that fits, marked where it needs one. A chosen one shows them all,
-// others only the ones they still need. A click on one starts a wire there.
 const SLOT = Object.freeze({width : 26, height : 20, round : 6, gap : 5, away : 22, icon : 14});
 function slotsSvg(state) {
   const {document : doc, sites, selected} = state, zoom = zoomOf(state);
@@ -172,15 +161,10 @@ function slotsSvg(state) {
   }
   return html;
 }
-// How far a chosen nerve center's signals reach, as the engine weighs a contact: falling to 1/e
-// at its reach (from the engine's least reach to the whole body as its range goes from 0 to 1),
-// on its own half of the body as much as it keeps to its side, on the other half as much as it
-// crosses; a center on the midline reaches both halves alike.
 function reachSvg(state) {
   const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
   const site = findSite(sites, found?.center.site);
-  // A region's nodes stand in the drawn brain, not where their cells lie: they show no reach.
   if (!found || found.center.role !== 'nerve' || isRegion(found.organ) || !(least >= 0) || !site)
     return '';
   const p = nodeLocation(doc, sites, found.center, found.organ.type);
@@ -189,7 +173,6 @@ function reachSvg(state) {
   const own = onMidline(site) ? 1 : clamp(1 - crossing),
         other = onMidline(site) ? 1 : clamp(1 + crossing);
   const upper = p.y < BODY_FRAME.middle || onMidline(site) && site.side < 0;
-  // The weight falls by e with each reach: drawn out to REACH.span reaches.
   const fade = '<radialGradient id="aid-reach-fade">' +
                Array
                    .from({length : REACH.span + 1},
@@ -204,7 +187,6 @@ function reachSvg(state) {
                        '" fill="url(#aid-reach-fade)" clip-path="url(#aid-reach-' +
                        (top ? 'upper' : 'lower') + ')" opacity="' + fixed(weight) + '"/>'
                  : '';
-  // Each half is cut as far out as the halo reaches.
   const far = reach * REACH.span;
   const clip = (id, y) => '<clipPath id="aid-reach-' + id + '"><rect x="' + fixed(p.x - far) +
                           '" y="' + fixed(y) + '" width="' + fixed(2 * far) + '" height="' +
@@ -216,9 +198,6 @@ function reachSvg(state) {
          fixed(reach) + '"/></g>';
 }
 const REACH = Object.freeze({fill : .32, span : 2});
-// The scene's drawing of the fish, by its id and as a selector, and the layers on it for what
-// follows the pointer: placement hints, the places a field organ can take, a dragged item's preview
-// and the line a wire being drawn follows.
 export const BODY_MAP_ID = 'aid-body-map', BODY_MAP = '#' + BODY_MAP_ID;
 const LAYER_ID = Object.freeze({
   hints : 'aid-placement-hints',
@@ -226,12 +205,9 @@ const LAYER_ID = Object.freeze({
   preview : 'aid-drag-preview',
   line : 'aid-connecting-line'
 });
-// The layer of a sense's test stimulus on the fish (probes.js).
 export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
-// The wires as drawn or as the engine made them; while the scene does not show wires, those of
-// the network chosen alone.
 function wiresShown(state, centers) {
   const shown = layerShown(state, 'wires') ? state
                 : state.selected           ? {...state, wireScope : 'focus'}
@@ -242,8 +218,6 @@ function wiresShown(state, centers) {
              ? developedContactsSvg(shown, centers)
              : wireSvg(shown, centers);
 }
-// The fields of view stand back while another outer sense is chosen (a nose, the lateral line,
-// touch or pain cells), whose stimulus shows instead.
 function fieldsShown(state) {
   const organ = organOf(state.document, state.selected?.id);
   return !organ || !!organ.field || ORGAN_BY_KEY[organ.type]?.category !== 'senses';
@@ -279,7 +253,6 @@ export function fishScene(state) {
          probeScents(state) + '</div>' +
          '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
-// While an organ is dragged, dropping it here removes it.
 function trashZone() {
   return '<div class="aid-trash" data-trash hidden title="' + escapeText(t('studio.tools.trash')) +
          '">' + glyph(TOOL_ICON.erase, ICON.trash, {line : true}) + '<span>' +

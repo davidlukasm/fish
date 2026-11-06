@@ -1,7 +1,4 @@
 import {fishLabel} from './fish_names.js';
-// What happens in the tank, told on a phone without looking for it: a thought ticker at the top
-// (the latest strong thought of any fish, tap to go there), short toasts for the important
-// moments of the run (tap to see the species concerned) and the chronicle card of the deck.
 import {zoomToSpecimen} from './camera.js';
 import {journal} from './journal_model.js';
 import {eventText} from './event_model.js';
@@ -14,7 +11,6 @@ export const mobile_eventsState = {
 };
 
 const TICKER_LIFE = 5000, TOAST_LIFE = 4800, TOAST_GAP = 400, TOASTS_KEPT = 4, CHRONICLE = 40;
-// A toast buzzes twice: on, off and on again in milliseconds.
 const TOAST_BUZZ = Object.freeze([ 10, 60, 10 ]);
 
 function make(tag, className, text = '') {
@@ -37,7 +33,6 @@ export function buildEvents() {
   Object.assign(mobile_eventsState, {ticker, toast});
 }
 
-// The newest strong thought of a fish other than the chosen one.
 function updateTicker(now) {
   const s = mobile_eventsState, chosen = sceneState.frame?.selected;
   let newest = null;
@@ -56,7 +51,6 @@ function updateTicker(now) {
   s.ticker.hidden = !show;
 }
 
-// Important journal entries become toasts, one after another; old ones are not replayed.
 function updateToasts(now) {
   const s = mobile_eventsState, events = journal().events;
   const newest = events.at(-1)?.id || 0;
@@ -82,7 +76,6 @@ function updateToasts(now) {
   navigator.vibrate?.(TOAST_BUZZ);
 }
 
-// The typical fish of the species an event speaks of, brought close; false if none is alive.
 function showSpeciesOf(id) {
   const species = (sceneState.frame?.species || []).find(s => s?.id === id);
   if (!species?.typical_fish)
@@ -91,8 +84,6 @@ function showSpeciesOf(id) {
   return true;
 }
 
-// The chronicle card: the run's events, newest first; a tap visits the species concerned.
-// Rows are rebuilt only when a new event arrives.
 export function renderChronicle(view, onVisit) {
   const events = journal().events, newest = events.at(-1);
   view.line.textContent = newest ? eventText(newest) : t('mobile.chronicleEmpty');

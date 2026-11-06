@@ -1,6 +1,3 @@
-// Generic thought engine. Facts come from the observers; everything the fish can think, when,
-// how urgently and in which words is declared in the thought resource (rules, lexicon, moods,
-// composition). Nothing here knows about any particular topic.
 import {evaluate, format} from './strings.js';
 import {SECOND_MS} from './units.js';
 export const thoughtsState = {};
@@ -21,7 +18,6 @@ function lookup(T, path, vars) {
   return words(node);
 }
 
-// A text source is a list, a lexicon path (or several, joined), or the first matching case.
 export function source(T, spec, vars) {
   if (spec === undefined)
     return [];
@@ -37,9 +33,6 @@ export function source(T, spec, vars) {
   return found.length || !spec.else ? found : lookup(T, spec.else, vars);
 }
 
-// A wording returns only after a while, whatever words fill its placeholders, so nothing turns
-// into a refrain; nor does one that another fish has just said (shared). Gives the worded text
-// and the wording's key.
 function fresh(T, mind, key, templates, vars, now, shared = []) {
   const wait = SECOND_MS * T.compose.repeatAfter,
         open = templates.map(template => [format(template, vars), key + ':' + template])
@@ -52,7 +45,6 @@ export function moodOf(T, facts) {
   return T.moods.find(m => m.when === undefined || evaluate(m.when, facts));
 }
 
-// A topic just thought, or covered by a combined thought, waits for others unless it is urgent.
 function candidate(T, rule, facts, mind, now, shared) {
   if (!evaluate(rule.when, facts))
     return null;
@@ -81,9 +73,6 @@ function candidate(T, rule, facts, mind, now, shared) {
   };
 }
 
-// One thought per call at most, one sentence: the most salient fresh candidate. Several
-// impressions at once are the rules' business, which word them as one combined thought and cool
-// down the topics they cover. Shared lists the short versions other fish have just said.
 export function think(T, facts, mind, now, shared = []) {
   const C = T.compose,
         found = T.rules.map(r => candidate(T, r, facts, mind, now, shared)).filter(Boolean);
@@ -102,7 +91,6 @@ export function think(T, facts, mind, now, shared = []) {
   return {
     text : best.text,
     icon : best.icon,
-    // The short, sound-like version of the thought: for the tank.
     brief : best.brief,
     strength : best.s,
     stations : best.stations

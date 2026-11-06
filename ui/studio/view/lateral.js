@@ -4,12 +4,6 @@ import {fieldFish, fieldPoint, skinAt} from './frame.js';
 import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {t} from '../../strings.js';
 
-// What a lateral line feels, from the engine's design view: the four corners around the body
-// where the lateral line samples the water (the capabilities' lateralCorners, in body radii along
-// and across), each as large as the organ's cells weigh it, and how strongly water streaming
-// against the resting fish from each direction stirs them, against the most (its tuning), as a
-// lobe around it; an arrow comes from where it stirs them most. The organ's averages over its
-// groups (null without any).
 export function lateralFeel(state, organ) {
   const found = organ.centers.map(c => groupReport(state.document, state.anatomy, 'lateral', c.id))
                     .filter(Boolean);
@@ -19,14 +13,8 @@ export function lateralFeel(state, organ) {
       found[0][key].map((_, k) => found.reduce((sum, f) => sum + f[key][k], 0) / found.length);
   return {weights : mean('weights'), tuning : mean('tuning')};
 }
-// A direction around the body of the k-th of `count` samples (the middles of equal arcs from
-// straight behind, 0 ahead, positive towards side +1).
 const sampleAngle = (k, count) => -Math.PI + (k + .5) * 2 * Math.PI / count;
-// The lateral line samples the water at LATERAL_SAMPLES corners (body_plan.hh, LATERAL_CORNERS).
 const LATERAL_SAMPLES = 4;
-// The corners on the frame of a fish with centre `centre`: the engine's round body stretched to
-// the drawn one, its radius `length` along it and `width` across (ahead lies left, side +1
-// below); in the engine's order (k & 1 ahead, k & 2 towards side +1).
 export function lateralCorners(corners, centre, length, width) {
   const [along, across] = corners;
   return Array.from({length : LATERAL_SAMPLES}, (_, k) => ({
@@ -34,8 +22,6 @@ export function lateralCorners(corners, centre, length, width) {
                                                   y : centre.y + (k & 2 ? 1 : -1) * across * width
                                                 }));
 }
-// The corner discs: CORNER.least plus CORNER.span times the square root of their weight.
-// In the lateral field the corners are FIELD times as large as on the fish.
 const CORNER = Object.freeze({least : 3, span : 10, field : .8});
 export function cornerDiscs(points, weights, scale = 1) {
   return points
@@ -46,7 +32,6 @@ export function cornerDiscs(points, weights, scale = 1) {
                '"/>')
       .join('');
 }
-// An arrow from `from` to `to`, its head HEAD long, SPREAD radians to each side.
 const ARROW = Object.freeze({head : 9, spread : .45});
 export function arrowPath(from, to, head = ARROW.head) {
   const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
@@ -59,10 +44,6 @@ export function arrowPath(from, to, head = ARROW.head) {
          side(ARROW.spread) + ' L' + fixed(to.x) + ' ' + fixed(to.y) + ' L' + side(-ARROW.spread);
 }
 
-// The inspector's view: a small fish (FIELD.scale of the frame) with the corner discs, the lobe
-// from FIELD.inner (not stirred) out by FIELD.reach (stirred most), the arrow from where it is
-// stirred most, and below a track from local (the cells weigh the corners near them) to the whole
-// body (all corners alike) with a handle on the cells' spatial width.
 const LATERAL_FIELD = Object.freeze({
   width : 300,
   height : 228,
@@ -75,7 +56,6 @@ const LATERAL_FIELD = Object.freeze({
   track : [ 60, 240 ],
   track_y : 204
 });
-// The reach the pointer (a fraction of the field's width) sets along the track.
 export const lateralPatch = fx =>
     ({field : trackShare(fx * LATERAL_FIELD.width, LATERAL_FIELD.track)});
 export function lateralField(state, organ) {

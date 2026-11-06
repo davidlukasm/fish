@@ -1,10 +1,6 @@
-"""Bounded pedigree and recorded mortality."""
-
 from protocol_schema import DeathRecord, Fish, Journal, Pedigree
 
-# The pedigree keeps at most MAX_PEDIGREE fish, the living and their parents first.
 MAX_PEDIGREE = Journal.MAX_PEDIGREE
-# Columns copied from a fish row into its pedigree row.
 COPIED = ("ID", "SPECIES", "PARENT", "FATHER", "DEPTH", "GENERATION", "BORN", "ORIGIN", "CLONAL")
 
 

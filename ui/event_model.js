@@ -1,5 +1,3 @@
-// Journal events arrive as a wording key with plain values; this model phrases them in the
-// interface language, so the event log, the chart markers and the mobile notices agree.
 import {PALETTE} from './palette.js';
 import {format, formatNumber, t, textArea} from './strings.js';
 import {nameReason} from './species_model.js';
@@ -47,8 +45,6 @@ export function eventKindName(e) {
   return t('event_model.kinds.' + (e.kind in EVENT_KINDS ? e.kind : 'evolution'));
 }
 export function eventText(e) { return t('event_model.wordings.' + e.wording, eventValues(e)); }
-// Background for the title: why a species got its name, what a trait means, how long a
-// species has been gone or replacing its losses.
 export function eventDetail(e) {
   const template = textArea('event_model').details?.[e.wording];
   return template ? format(template, eventValues(e)).trim() : '';

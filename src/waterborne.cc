@@ -9,9 +9,7 @@ bool waterborne_path(const Field &f, double x, double y, double tx, double ty) {
          f.ray(x, y, dx / distance, dy / distance, 0, distance) >= distance - tolerance::negligible;
 }
 namespace {
-// Cached per-cell answers: not yet known, true or false.
 enum : unsigned char { UNKNOWN = 0, YES = 1, NO = 2 };
-// Bits of the transport scratch: cell is a destination, cell received diffusion.
 enum : unsigned char { MOVED = 1, DIFFUSED = 2 };
 WaterborneSample sample_waterborne(const Field &f, double x, double y, WaterborneTransport *cache) {
   WaterborneSample out;
@@ -32,8 +30,6 @@ WaterborneSample sample_waterborne(const Field &f, double x, double y, Waterborn
                   : NO;
     clear = saved == YES;
   }
-  // Empty geometry bins prove every segment in this stencil is clear. Near walls
-  // retain the point and ray checks; the cache lasts only for this transport step.
   if (!clear && !f.free(x, y, 0))
     return out;
   double fx = gx - i, fy = gy - j, sum = 0;
@@ -103,7 +99,6 @@ Point WaterborneTransport::flow(std::size_t at) {
     const auto &p = field.food_web().plankton;
     velocity[at] = field.water().velocity((at % p.columns + .5) * p.width / p.columns,
                                           (at / p.columns + .5) * p.height / p.rows);
-    // Odours and clouds are light and follow the current more readily than heavier bodies.
     velocity[at] = {velocity[at].x * field.env().waterborne_drift,
                     velocity[at].y * field.env().waterborne_drift};
     sampled[at] = 1;
@@ -146,8 +141,6 @@ std::map<std::uint32_t, double>
 WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
   if (source.empty())
     return {};
-  // Accumulate on the bounded water grid rather than allocating/searching a tree
-  // node for every contribution. Keep ascending traversal and addition order.
   struct Scratch {
     std::vector<double> moved, next;
     std::vector<unsigned char> seen;
@@ -179,7 +172,6 @@ WaterborneTransport::advance(const std::map<std::uint32_t, double> &source) {
       }
       s.next[at] += amount;
     };
-    // Scatter diffusion from every transported destination, including its full halo.
     for (auto at : s.active) {
       const double mass = s.moved[at];
       double retained = 1;

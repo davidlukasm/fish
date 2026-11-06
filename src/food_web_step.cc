@@ -6,107 +6,56 @@
 #include <limits>
 namespace fishsim {
 namespace {
-// The benthic groups in order; each follows animal_store::worms and food_kind::worm.
 namespace benthic {
 constexpr int worms = 0, crabs = 1, mussels = 2, count = 3;
 }
-// Surfaces are probed and joined at their middle.
 constexpr double PATCH_MIDDLE = .5;
-// Empty shells rest when they touch the bed with SHELL_CONTACT_SHARE of their radius (at least
-// SHELL_CONTACT_MIN); otherwise they drift with SHELL_DRIFT of the water, sink SHELL_SINK per step
-// and turn SHELL_SPIN per unit moved.
 constexpr double SHELL_CONTACT_MIN = .2, SHELL_CONTACT_SHARE = .3, SHELL_DRIFT = .3,
                  SHELL_SINK = .9, SHELL_SPIN = .025;
-// Plankton moves to denser cells, preferring calm water by CALM_PREFERENCE; crowding relaxes in at
-// most CROWDING_PASSES passes; each unit of excess density adds one half-life per
-// CROWDING_HALF_LIFE steps.
 constexpr double CALM_PREFERENCE = .3, CROWDING_HALF_LIFE = 60;
 constexpr int CROWDING_PASSES = 4;
-// Worm colonies share a family within cells of WORM_COLONY_CELL.
 constexpr double WORM_COLONY_CELL = 80;
 constexpr std::uint64_t WORM_COLONY_ROW = 7, WORM_COLONY_OWNER = 13;
-// Displayed filter rates are running means that keep this share per step.
 constexpr double WORM_FILTER_KEEP = .92, MUSSEL_FILTER_KEEP = .96;
-// Worms withdraw over WORM_WITHDRAW_STEPS and extend over WORM_EXTEND_STEPS, plus a spread by
-// individuality; the base follows the bed by at most WORM_BASE_SPEED per step.
 constexpr double WORM_WITHDRAW_STEPS = 16, WORM_WITHDRAW_SPREAD = 12, WORM_EXTEND_STEPS = 12,
                  WORM_EXTEND_SPREAD = 8, WORM_BASE_SPEED = .25;
-// Worm sway: amplitude and rate per step by individuality, bending WORM_FLOW_BEND with the flow.
 constexpr double WORM_SWAY_AMPLITUDE = .025, WORM_SWAY_AMPLITUDE_SPREAD = .035,
                  WORM_SWAY_RATE = .025, WORM_SWAY_RATE_SPREAD = .025, WORM_FLOW_BEND = .12,
                  WORM_CLEARANCE = .01;
-// Worms filter when more than WORM_FEEDING_EXTENSION out, within WORM_FILTER_RADIUS plus a spread.
 constexpr double WORM_FEEDING_EXTENSION = .5, WORM_FILTER_RADIUS = 4, WORM_FILTER_SPREAD = 2;
-// Bed searches double their reach up to SEARCH_DIAGONALS tank diagonals.
 constexpr double SEARCH_DIAGONALS = 2;
-// Crab jumps arc CROSSING_ARC_RADII radii plus CROSSING_ARC_SPAN of the distance high. Planning
-// checks at least CROSSING_SAMPLES points, spaced CROSSING_SPACING radii (at least
-// CROSSING_MIN_SPACING), with a probe of CROSSING_PROBE radii. A jump takes at least
-// CROSSING_MIN_STEPS steps; its path counts the span CROSSING_SPAN_WEIGHT and the arc
-// CROSSING_HEIGHT_WEIGHT times; it moves at least CROSSING_MIN_SPEED.
 constexpr double CROSSING_ARC_RADII = .6, CROSSING_ARC_SPAN = .5, CROSSING_SPACING = .5,
                  CROSSING_MIN_SPACING = 2, CROSSING_PROBE = .15, CROSSING_MIN_STEPS = 12,
                  CROSSING_SPAN_WEIGHT = 2, CROSSING_HEIGHT_WEIGHT = 4, CROSSING_MIN_SPEED = .05;
 constexpr int CROSSING_SAMPLES = 12;
-// Crab paths may use surfaces whose normal points down by at most CRAB_OVERHANG; turns sharper
-// than CRAB_MAX_TURN need a jump.
 constexpr double CRAB_OVERHANG = .35, CRAB_MAX_TURN = .52;
-// Crabs below CRAB_HUNGRY of their capacity look for food. Wandering weighs beds by their
-// detritus plus WANDER_WEIGHT.
 constexpr double CRAB_HUNGRY = .9, WANDER_WEIGHT = .2;
-// Destinations: meals within CRAB_MEAL_MARGIN of an end, walks within CRAB_WANDER_MARGIN and at
-// least CRAB_MIN_WALK long, landings within CRAB_LANDING_MARGIN.
 constexpr double CRAB_MEAL_MARGIN = .04, CRAB_WANDER_MARGIN = .08, CRAB_MIN_WALK = .15,
                  CRAB_LANDING_MARGIN = .2;
-// A frightened crab stays alert CRAB_FLEE_TIME steps; walks last CRAB_WALK_INTERVALS move
-// intervals; after a landing it pauses CRAB_LANDING_PAUSE steps.
 constexpr std::uint64_t CRAB_FLEE_TIME = 360, CRAB_LANDING_PAUSE = 60;
 constexpr double CRAB_WALK_INTERVALS = 2;
-// Newborn crabs keep CRAB_BIRTH_SPACING of the crab spacing from others.
 constexpr double CRAB_BIRTH_SPACING_MIN = .25, CRAB_BIRTH_SPACING_MAX = .6;
-// Walking crabs bob between burial depths with this phase, period and rate.
 constexpr double CRAB_BOB_PHASE = 1.73, CRAB_BOB_PERIOD = 170, CRAB_BOB_PERIOD_SPREAD = 90,
                  CRAB_BOB_RATE = .0015;
-// A crab counts as out above CRAB_OUT exposure and fully out above CRAB_FULLY_OUT; it emerges
-// over CRAB_EMERGE_STEPS.
 constexpr double CRAB_OUT = .5, CRAB_FULLY_OUT = .99, CRAB_EMERGE_STEPS = 36;
-// Crabs leave CRAB_CRUMB_SHARE of a bite as crumbs; organs shorter than MIN_SHORTEN_LENGTH are
-// not shortened.
 constexpr double CRAB_CRUMB_SHARE = .5, MIN_SHORTEN_LENGTH = 2;
-// A crab breeds on a bed with CRAB_BIRTH_DETRITUS times its leaving detritus.
 constexpr double CRAB_BIRTH_DETRITUS = 2;
-// Burrowing needs open water CRAB_HEADROOM radii above (probe CRAB_HEADROOM_PROBE radii) and
-// sediment CRAB_BURROW_DEPTH radii deep (at least MIN_BURROW_DEPTH for exposure).
 constexpr double CRAB_HEADROOM = 1.5, CRAB_HEADROOM_PROBE = .6, CRAB_BURROW_DEPTH = 1.2,
                  MIN_BURROW_DEPTH = .1;
-// Goals are checked every CRAB_GOAL_CHECK steps; walks are replanned every CRAB_REPLAN steps.
 constexpr std::uint64_t CRAB_GOAL_CHECK = 50, CRAB_REPLAN = 100;
-// Crabs keep CRAB_SEPARATION of their combined radii apart; a blocked crab waits
-// CRAB_BLOCKED_WAIT plus up to CRAB_BLOCKED_SPREAD steps.
 constexpr double CRAB_SEPARATION = 1.1, CRAB_LOOK_AHEAD = .05;
 constexpr std::uint64_t CRAB_BLOCKED_WAIT = 30, CRAB_BLOCKED_SPREAD = 70;
-// Gait: speed varies between CRAB_GAIT_MIN and 1 at CRAB_GAIT_RATE per step; steps are at least
-// CRAB_MIN_STEP; legs cycle CRAB_STRIDE_RATE times per radius walked (radius at least 1).
 constexpr double CRAB_GAIT_MIN = .75, CRAB_GAIT_RATE = .025, CRAB_MIN_STEP = .2,
                  CRAB_STRIDE_RATE = 3;
-// A crab moving less than CRAB_STALL_MOVE for CRAB_STALL_STEPS steps swims elsewhere.
 constexpr double CRAB_STALL_MOVE = .02;
 constexpr int CRAB_STALL_STEPS = 90;
-// External crabs settle one per CRAB_SETTLER_SPACINGS crab spacings of bed.
 constexpr double CRAB_SETTLER_SPACINGS = 3;
-// Mussel larvae: reach by variant, habitat preferences of fans and razors, settling trials and
-// the distance from the parent.
 constexpr double MUSSEL_REACH_MIN = .7, MUSSEL_REACH_SPREAD = .6, FAN_TOP_NORMAL = .3,
                  RAZOR_FLANK_NORMAL = .75, HABITAT_AVOIDANCE = .6, LARVA_MIN_REACH = .3;
 constexpr int SETTLE_TRIALS = 4, FAR_TRIALS = 8, NEAR_TRIALS = 6;
-// Broods vary between BROOD_MIN and BROOD_MIN + BROOD_SPREAD times the family brood.
 constexpr double BROOD_MIN = .4, BROOD_SPREAD = .8;
-// External mussels: one settler per MUSSEL_SETTLER_LENGTH of bare surface, the richest of
-// MUSSEL_CANDIDATES sites (plankton probed PLANKTON_PROBE_LIFT above), MUSSEL_SETTLE_TRIALS
-// tries and MUSSEL_CLUSTER_TRIALS tries per neighbour for the cluster.
 constexpr double MUSSEL_SETTLER_LENGTH = 80, PLANKTON_PROBE_LIFT = 3;
 constexpr int MUSSEL_CANDIDATES = 8, MUSSEL_SETTLE_TRIALS = 24, MUSSEL_CLUSTER_TRIALS = 3;
-// Ausbreitung je Muschelfamilie: Brutgröße, Reichweite, Algengrenze.
 struct MusselSpread {
   double brood, reach, algae;
 };
@@ -135,7 +84,6 @@ void Field::advance_food_web() {
                  height = crab_support_height(r, depth, c.depth), lift = height - depth;
     return patch_position(s, c.along, lift);
   };
-  // Planning and motion use the identical arch, including turns across a pot rim.
   auto crossing_point = [&](Point from, Point to, double from_angle, double to_angle, double radius,
                             double t) {
     const double blend = t * t * (3 - 2 * t),
@@ -146,7 +94,6 @@ void Field::advance_food_web() {
     return Point{wrap_x(from.x + blend * delta_x(to.x - from.x) + arc * std::sin(angle)),
                  from.y + blend * (to.y - from.y) - arc * std::cos(angle)};
   };
-  // Empty valves carry no nutrition. Their bounded visual state drifts and settles independently.
   for (auto &shell : web.shells) {
     ++shell.age;
     const double contact = std::max(SHELL_CONTACT_MIN, shell.radius * SHELL_CONTACT_SHARE);
@@ -195,8 +142,6 @@ void Field::advance_food_web() {
     web.initial += accepted;
     return accepted;
   };
-  // External settlement is a whole animal, born only when its group's remaining allocation
-  // covers it; the animal then joins the shared headroom allocation.
   auto birth_funds = [&](int kind) {
     return std::min(energy_available, time == 1 ? energy_available : benthic_left[kind]);
   };
@@ -285,8 +230,6 @@ void Field::advance_food_web() {
     p.cooldown[at] = p.cooldown[target] = std::uint16_t(env_.plankton_flee_pause);
   }
   p.energy.swap(p.scratch);
-  // Crowding moves biomass into connected water cells. A bounded number of
-  // local passes lets congestion relax over successive steps without mass loss.
   for (int pass = 0; pass < CROWDING_PASSES; ++pass) {
     bool moved = false;
     p.scratch = p.energy;
@@ -316,7 +259,6 @@ void Field::advance_food_web() {
   }
   const double limit = env_.plankton_limit * p.water_area;
   double total = std::accumulate(p.energy.begin(), p.energy.end(), 0.);
-  // Transfers from any suspended food remain internal, including carrion and plant scraps.
   for (std::size_t i = 0; i < feeding_.pieces.size(); ++i) {
     auto &food = feeding_.pieces[i];
     const double amount = feed_plankton(food.x, food.y, food.energy, food_radius(food));
@@ -339,7 +281,6 @@ void Field::advance_food_web() {
   }
   // The normal aging rate is shared by the field; only crowding needs a new exponential.
   const double base_mortality = half_life_loss(1 / env_.microfauna_lifespan);
-  // Density above the local carrying capacity increases mortality. Energy settles below.
   for (int at = 0; at < nx * ny; ++at) {
     const double v = p.energy[at];
     if (v <= 0)
@@ -549,8 +490,6 @@ void Field::advance_food_web() {
   auto algae_food = [&](const SurfacePatch &s) {
     return std::max(0., s.algae - env_.mussel_algae_limit * algae_capacity(s));
   };
-  // Nearest bed with sediment (other than the crab's own patch when `leave`), reached by a
-  // jump in an arc; `clear` demands a free arc, otherwise any bed will do as a last resort.
   auto nearest_bed = [&](Crab &c, std::size_t from, bool leave, bool clear, double &nearest) {
     std::size_t target = from;
     nearest = std::numeric_limits<double>::infinity();
@@ -669,7 +608,6 @@ void Field::advance_food_web() {
             target = i;
           }
         } else if (sediment_depth(s) >= env_.burrow_depth) {
-          // Wandering always heads for a bed it can dig into.
           const double weight = s.detritus + WANDER_WEIGHT;
           sum += weight;
           if (rng.uniform() * sum < weight)
@@ -730,7 +668,6 @@ void Field::advance_food_web() {
                                                                    env_.crab_move_interval_max)));
     return true;
   };
-  // A crab that cannot get anywhere on foot swims (jumps in an arc) to another sediment bed.
   auto escape = [&](Crab &c) {
     const auto start = ids.find(c.patch);
     if (start == ids.end())
@@ -925,7 +862,6 @@ void Field::advance_food_web() {
               append_fragment(crumb);
             }
             if (o.energy > 0 && o.length > MIN_SHORTEN_LENGTH) {
-              // Shorten the remaining blade with the same cubic split used by feeding.
               const double t =
                   std::clamp(o.energy / std::max(.001, o.energy + amount + crumbs), 0., 1.);
               o.curve = lower_curve(o.curve, t);
@@ -941,7 +877,6 @@ void Field::advance_food_web() {
         danger_near(c.x, c.y, env_.worm_retreat_radius, env_.worm_retreat_body, -1);
     const auto bed_edges = sediment_edges(found->second);
     const double local_depth = bed_edges[0] + c.along * (bed_edges[1] - bed_edges[0]);
-    // Under a resting rock there is no open water above the bed: no burrow and no walk there.
     const double body = crab_radius(c.energy, env_, c.morph);
     const auto open_water = [&](double x, double y) {
       return free(x + s.normal.x * CRAB_HEADROOM * body, y + s.normal.y * CRAB_HEADROOM * body,
@@ -961,7 +896,6 @@ void Field::advance_food_web() {
       c.digging = 0;
       plan_walk(c, danger);
     }
-    // A bare feeding place remains a goal while its algae supply lasts.
     if (c.state == crab_state::foraging && c.crossing <= 0 && c.age % CRAB_GOAL_CHECK == 0) {
       const auto goal = ids.find(c.target);
       if (goal == ids.end() ||
@@ -1133,7 +1067,6 @@ void Field::advance_food_web() {
             c.state = crab_state::digging;
             c.digging = 0;
           } else {
-            // Turn away from the other crab (the patch may run either way).
             Crab probe = c;
             probe.along = std::min(1 - CRAB_END_MARGIN, c.along + CRAB_LOOK_AHEAD);
             const auto ahead = crab_position(probe, s);
@@ -1170,7 +1103,6 @@ void Field::advance_food_web() {
     const double travelled = std::hypot(delta_x(c.x - old_x), c.y - old_y);
     if (crab_walking(c))
       c.stride += travelled * CRAB_STRIDE_RATE / std::max(1., crab_radius(c.energy, env_, c.morph));
-    // Never stand frozen in the open: after a while without progress swim elsewhere.
     if (crab_walking(c) && !crossing && c.crossing <= 0 && c.exposure > CRAB_OUT &&
         c.feeding.remaining <= 0 && travelled < CRAB_STALL_MOVE) {
       if (++c.stalled >= CRAB_STALL_STEPS) {
@@ -1235,12 +1167,10 @@ void Field::advance_food_web() {
       max_clearance = std::max(max_clearance, clearances.back());
     }
   std::vector<Mussel> young;
-  // Reichweite einer Brut: Familie und Elterntier streuen sie.
   auto spawn_reach = [&](const Mussel &m) {
     return env_.mussel_spawn_radius * mussel_spread(m.morph).reach *
            (MUSSEL_REACH_MIN + MUSSEL_REACH_SPREAD * morph_variant(m.morph));
   };
-  // `far`: a larva drifted away and settles without distance limit.
   auto settle = [&](std::size_t i, double &funds, bool external, const Mussel *parent = nullptr,
                     bool far = false) {
     auto &s = vegetation_.surfaces[i];
@@ -1249,10 +1179,8 @@ void Field::advance_food_web() {
         s.algae_open[1] <= s.algae_open[0] || funds < env_.mussel_birth_energy)
       return false;
     const double family = parent ? std::floor(parent->morph) : double(rng.index(mussel_families));
-    // Larven meiden dichten Algenrasen; manche Familien vertragen etwas mehr.
     if (s.algae > env_.mussel_algae_limit * mussel_spread(family).algae * algae_capacity(s))
       return false;
-    // Fächer siedeln lieber auf Oberseiten, Scheiden an steilen Flanken.
     const int kind = mussel_family(family);
     if ((kind == mussel_form::fan && s.normal.y > -FAN_TOP_NORMAL &&
          rng.uniform() < HABITAT_AVOIDANCE) ||
@@ -1263,7 +1191,6 @@ void Field::advance_food_web() {
     for (int trial = 0; trial < SETTLE_TRIALS; ++trial) {
       const double morph = family + rng.uniform() * placement::morph_span,
                    along = parent && !far && parent->patch == s.id
-                               // Larvae settle beside the parent, not on top of it.
                                ? std::clamp(parent->along + (rng.uniform() < .5 ? -1. : 1.) *
                                                                 rng.uniform(LARVA_MIN_REACH, 1.) *
                                                                 reach / s.length,
@@ -1273,7 +1200,6 @@ void Field::advance_food_web() {
       const auto point = patch_position(s, along, 0);
       if (parent && !far && std::hypot(delta_x(point.x - parent->x), point.y - parent->y) > reach)
         continue;
-      // Both shells contribute their adult width, independent of settlement order.
       const double spacing = mussel_bed_radius(morph, env_);
       mussel_sites.nearby(point.x, point.y, spacing + max_clearance, [&](std::uint32_t j) {
         if (std::hypot(delta_x(point.x - locations[j].x), point.y - locations[j].y) <
@@ -1338,7 +1264,6 @@ void Field::advance_food_web() {
     }
     auto &s = vegetation_.surfaces[found->second];
     const double radius = mussel_radius(m.energy, env_, m.morph);
-    // The byssus remains attached to the hard support, even if sand arrives.
     m.x = wrap_x(s.a.x + m.along * (s.b.x - s.a.x) + s.normal.x * fauna::mussel_lift * radius);
     m.y = s.a.y + m.along * (s.b.y - s.a.y) + s.normal.y * fauna::mussel_lift * radius;
     const double capacity = mussel_capacity(m.morph, env_);
@@ -1382,7 +1307,6 @@ void Field::advance_food_web() {
           1 + rng.index(std::max(
                   1, int(std::lround(spread.brood * (BROOD_MIN + BROOD_SPREAD * rng.uniform())))));
       int born = 0;
-      // Einzelne Larven treiben weit fort und gründen neue Bänke.
       if (rng.uniform() < env_.mussel_far_settling)
         for (int trial = 0; trial < FAR_TRIALS && !born; ++trial)
           born += settle(std::size_t(rng.index(int(vegetation_.surfaces.size()))), m.energy, false,
@@ -1429,7 +1353,6 @@ void Field::advance_food_web() {
       if (!placed)
         break;
       const Mussel anchor = young.back();
-      // Siedlergruppen: manche bleiben einzeln, andere gründen dichte Bänke.
       const auto start = young.size(),
                  cluster = std::size_t(rng.index(int(1 + mussel_spread(anchor.morph).brood)));
       vegetation_.surface_grid.nearby(
@@ -1444,8 +1367,6 @@ void Field::advance_food_web() {
   for (const auto &m : young)
     if (m.energy > 0)
       web.mussels.push_back(m);
-  // Allocate each group's remaining regular supply over its eligible capacity gaps.
-  // Feeding, reproduction and migration above only transfer already existing energy.
   std::array<double, benthic::count> gaps{};
   auto worm_gap = [&](const SurfacePatch &s) {
     if (s.normal.y > -seabed::floor_normal || sediment_depth(s) < env_.burrow_depth)
@@ -1498,7 +1419,6 @@ void Field::advance_food_web() {
     feeding_.food_allowance = std::max(0., feeding_.food_allowance - amount);
     return amount;
   });
-  // Transport, feeding and mortality are complete. Growth uses the remaining live field.
   std::vector<double> plankton(p.energy.size());
   double plankton_want = 0;
   total = std::accumulate(p.energy.begin(), p.energy.end(), 0.);

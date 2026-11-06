@@ -1,4 +1,3 @@
-// Fischbau v019: Bauplan -> CPPN -> Entwicklung durch die Engine -> Pruefung -> Versuche.
 // Aufruf: bin/fischbau [ausgabe.genome] [name=wert ...], z. B. spur=1 schwanz=8
 #include "../tests/test_support.hh"
 #include "body_plan.hh"
@@ -55,7 +54,7 @@ const Code MOUTH_FIELD{0, .5f};
 struct Box {
   int zone;
   float u0 = 0, u1 = 1, v0 = 0, v1 = 1, w0 = 0, w1 = 1;
-  int side = 0; // -1, +1, 0 beide
+  int side = 0;
   bool has(const cppn::Point &p) const {
     return p.zone == zone && p.u > u0 - .05f && p.u < u1 + .05f && p.v > v0 - .05f &&
            p.v < v1 + .05f && p.w > w0 - .05f && p.w < w1 + .05f && (!side || p.side == side);
@@ -373,7 +372,6 @@ std::vector<Cell> plan(bool crossed) {
       p.push_back(reach);
     Cell fin{
         left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, .5f, 1, s}, Kind::Effector, field::Turn};
-    // Kurze Zeitkonstante: kleine, haeufige Schlaege statt weniger grosser.
     fin.copies = int(knob("flosse", 4));
     fin.tau = 0;
     fin.threshold = .3f;
@@ -413,7 +411,6 @@ std::vector<Cell> plan(bool crossed) {
   p.push_back(mouth);
   Cell jaw{"Kiefer", {0, float(knob("kiefer_u", .3))}, Kind::Effector, field::Aggression};
   jaw.copies = 16;
-  // Biss kostet 2 x 0.03 x Antrieb x Schlagdauer: kurze Schlaege (4 Schritte) lohnen, lange nicht.
   jaw.tau = 0;
     jaw.q1 = -1;
   jaw.threshold = float(knob("kiefer_schwelle", .5));
@@ -428,7 +425,6 @@ std::vector<Cell> plan(bool crossed) {
     p.push_back(lever);
   }
   Cell pump{"Pumpe", {1, 0, 1, 0, 0}, Kind::Effector, field::Suction};
-  // Zweite Reihe hinten im Kopf: Pumpe 36 statt 24 (v018b-Klassen 64; mehr Platz ist nicht frei).
   // Ohne bessere Futtersuche kostet sie mehr Unterhalt, als sie einbringt: nur als Versuch.
   if (knob("pumpe2", 0) > 0) {
     Cell more{"Pumpe2", {1, 0, .34f, 1, 1}, Kind::Effector, field::Suction};
@@ -443,9 +439,6 @@ std::vector<Cell> plan(bool crossed) {
   pump.threshold = float(knob("pumpe_schwelle", .5));
   pump.receiver = channel(Mouth);
   p.push_back(pump);
-  // Dauerantrieb nur ueber den eigenen Bias (tanh .3 = .29): Tempo kommt aus der Organgroesse.
-  // Ganzes hinteres Hinterteil, 72 Plaetze. Kraft 18 (schwanz=14: 63 wie die v018b-Klassen; mehr
-  // Unterhalt, aber ohne bessere Futtersuche kein Gewinn).
   Cell tail{"Schwanz", {3, 0, .5f}, Kind::Effector, field::Forward};
   tail.copies = int(knob("schwanz", 4));
   tail.receiver = channel(Brake);
@@ -453,7 +446,6 @@ std::vector<Cell> plan(bool crossed) {
   // Schlaengeln (q1 -1..1 = 0..1): kostet im freien Wasser bis zur Haelfte des Schubs, senkt aber
   // den Widerstand im Sediment. Versuch schlaengeln=0: Arena ein Drittel weniger Futter; aus.
   tail.q1 = float(knob("schlaengeln", -1));
-  // Futter direkt vor dem Maul bremst: der Fisch bleibt und beisst nach.
   Cell brake{"Bremse", {2, 0, 0, 1.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
   brake.copies = 1;
   brake.sign = -1;
@@ -463,8 +455,6 @@ std::vector<Cell> plan(bool crossed) {
   brake.gain = float(knob("bremse", .01));
   brake.sender = channel(Brake);
   p.push_back(brake);
-  // Tiefe: Drucksinn neben einer (untaetigen) Schwimmblase misst y / Hoehe. Steigt der Fisch,
-  // dreht er immer zur selben Seite, bis er wieder sinkt (Klinokinese). So findet er den Boden.
   if (knob("tiefe", 0) > 0) {
     Cell bladder{"Blase", {2, 1, 1, 1.f / 3, 1.f / 3, 0, 0, 1}, Kind::Effector, field::Bladder};
     bladder.copies = 1;
@@ -545,7 +535,6 @@ std::vector<Cell> plan(bool crossed) {
                organ};
     inner.copies = eggs ? int(knob("eikraft", 12)) : 4; // Staerke je Zelle in Sechzehnteln
     inner.threshold = -1;
-    // Pubertaet: der Eierstock arbeitet erst mit der Reife, halb bei Reife pubertaet (0: immer).
     // Das Spermaorgan bleibt an: sein Sekret oeffnet beim Schlupf die Eihuelle.
     if (eggs && knob("pubertaet", .7) > 0)
       inner.receptors = {{field::Output, -1, 2, float(knob("pubertaet", .7)),
@@ -987,7 +976,7 @@ bool test_approach(const Genome &g) {
   for (double height : {205., 350., 380.})
     for (double bearing : {-60., -30., 0., 30., 60.}) {
       auto l = lab(g, 300, height);
-      if (height > 370) // Futter liegt am Boden, 50 voraus
+      if (height > 370)
         check(place_trial_food(l->w, 300 + 50 * std::cos(bearing * PI / 360), 404, 100), "Futter");
       else
         food_at(*l, bearing, 50, 100);
@@ -1204,7 +1193,6 @@ Life arena_life(const Genome &g, unsigned seed, int steps, bool trace, const std
                 const std::vector<int> &kind_of) {
   auto l = std::make_unique<Lab>();
   if (knob("zufuhr", 0) > 0) {
-    // Standardbecken mit Futterzufuhr: 3000 Schritte ohne Fisch einschwingen.
     l->w = Ecosystem(seed);
     l->w.resize(615, 410);
     l->w.workers = 1;
@@ -1568,7 +1556,7 @@ void test_phases(const Genome &g, const std::vector<Cell> &p, const std::vector<
     std::cout << "\n";
   }
 }
-} // namespace
+}
 
 int main(int argc, char **argv) {
   try {

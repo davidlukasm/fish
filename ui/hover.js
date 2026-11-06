@@ -71,7 +71,6 @@ export function tankPanelFrame(f) {
   };
 }
 
-// soft: clicks, drags and selections keep a pinned info panel (Infopanel on).
 export function tankHideTooltip(soft = false) {
   if (soft && hoverState.persistent)
     return;
@@ -114,8 +113,6 @@ export function tankShowTooltip(info) {
     drawScentWheel(scents, info.odors);
 }
 
-// Odour cloud overlay: while the pointer rests on one scent of the info panel's wheel, the tank
-// shows where that odour is, as a coloured cloud over the visible part.
 function odorOverlay() {
   let overlay = document.getElementById('tank-odor-overlay');
   if (!overlay && canvas.parentElement) {
@@ -135,7 +132,6 @@ function paintOdorCloud(channel) {
   overlay.style.top = canvas.offsetTop + 'px';
   overlay.style.width = rect.width + 'px';
   overlay.style.height = rect.height + 'px';
-  // Assigning a canvas size reallocates and clears its pixels, even with the same value.
   const width = Math.max(1, Math.round(rect.width * dpr)),
         height = Math.max(1, Math.round(rect.height * dpr));
   if (overlay.width !== width)
@@ -147,7 +143,6 @@ function paintOdorCloud(channel) {
   overlay.hidden = channel < 0;
   if (channel < 0 || !grid?.columns || !grid.rows || !grid.cells)
     return;
-  // The repaint runs every 250 ms while a scent is shown: reuse the small grid image.
   let cloud = hoverState.odorCloud;
   if (!cloud || cloud.columns !== grid.columns || cloud.rows !== grid.rows) {
     const image = document.createElement('canvas');
@@ -176,7 +171,6 @@ function paintOdorCloud(channel) {
     g.drawImage(image, (c.ox + shift * c.scale) * k, c.oy * k, f.width * c.scale * k,
                 f.height * c.scale * k);
 }
-// The odour cloud is at most ALPHA opaque and refreshed every REFRESH_MS.
 const ODOR_CLOUD = Object.freeze({alpha : .45, refresh_ms : 250});
 function bindScentWheel() {
   const wheel = el('tank-tooltip-scents');
@@ -215,10 +209,6 @@ function corpseBodyContains(p, x, y, padding, scale) {
 
 export let tankHoverProviders;
 
-// Hits: places without a size of their own get RADIUS; pointers reach SLOP screen pixels beyond
-// small things, and plant ribbons RIBBON_SLOP; ribbons are tested in MIN_STEPS to MAX_STEPS
-// pieces, one per STEP_PIXELS. RANK lifts objects of the drawn depth order above all others;
-// corpses lie flat, CORPSE_FLATTEN as high as long.
 const HIT = Object.freeze({
   radius : 4,
   slop : 3,
@@ -229,8 +219,6 @@ const HIT = Object.freeze({
   rank : 1e6,
   corpse_flatten : .55
 });
-// The info panel opens after DELAY_MS on one object, follows the pointer at most every
-// THROTTLE_MS and shows up to ROWS values.
 const HOVER = Object.freeze({delay_ms : 180, throttle_ms : 50, rows : 4});
 export function tankSedimentHit(world, f = sceneState.frame) {
   for (const p of f.plants || []) {
@@ -399,8 +387,6 @@ export function tankWaterHit(world, f = sceneState.frame) {
   };
 }
 
-// Worms shorter than MIN_LENGTH are hit as ellipses LONG by SHORT radii; longer ones along their
-// body, at least MIN_RADIUS wide.
 const WORM_HIT = Object.freeze({min_length : .25, long : 2.45, short : .55, min_radius : .6});
 export function smallAnimalContains(p, x, y, tolerance) {
   const dx = horizontalDelta(x - p[INVERTEBRATE.x]), dy = y - p[INVERTEBRATE.y],
@@ -502,7 +488,6 @@ export function tankHoverUpdate(now = Date.now()) {
   if (!hoverState.tankPointer || now - hoverState.tankHoverLast < HOVER.throttle_ms)
     return;
   hoverState.tankHoverLast = now;
-  // The info panel sits fixed in the corner; without it there is no object info at all.
   if (!hoverState.persistent) {
     clearFishPreview();
     tankHideTooltip();
@@ -513,7 +498,6 @@ export function tankHoverUpdate(now = Date.now()) {
     tankHideTooltip();
     return;
   }
-  // Clicking or dragging in the tank keeps the panel showing the last object.
   if (cameraState.drag)
     return;
   let hit;
@@ -572,17 +556,14 @@ export function updateHoverState(patch) {
 
 const initializers = {
   "tankPointer" : () => {
-    // Aquarium objects share one hit test and one stable tooltip.
     hoverState.tankPointer = null;
     const toggle = el('keep-hover-info');
-    // Shown by default; only an explicit choice switches it off.
     hoverState.persistent = true;
     try {
       hoverState.persistent = window.localStorage?.getItem('fish-infopanel') !== '0';
     } catch {
     }
     toggle.checked = hoverState.persistent;
-    // The panel's ✕ minimises it to the ⓘ chip in the tank corner; both use the same switch.
     const chip = el('infopanel-chip'), choose = on => {
       toggle.checked = on;
       if (toggle.dispatchEvent)

@@ -3,10 +3,6 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// Organ colours: a base per plant type, brightened by vigour and darkened by fibre; soft plants
-// take red, hard ones blue. Each organ shades and shimmers a little; old blades and leaves dry
-// over ORGAN_DRYING bare steps up to MAX_DRYNESS; the leaves of paired stem plants redden
-// towards the tip.
 constexpr std::array<Color, plant_type::count> TYPE_COLORS{{{{.40, .76, .12}},
                                                             {{.08, .46, .43}},
                                                             {{.34, .48, .17}},
@@ -55,34 +51,22 @@ Color plant_organ_color(const SurfacePatch &p, int index) {
   return index >= 0 && std::size_t(index) < p.organs.size() ? p.organs[index].tint : grass_color(p);
 }
 namespace {
-// The separate random draws of a plant's organs.
 constexpr NoiseSalt BLADE_SALT{9.7, 3.1}, ROOT_SALT{3.7, 7.3}, ROSETTE_SALT{7.1, 6.7},
     ROSETTE_LEAF_SALT{1.3, 7.2}, NODE_SALT{4.1, 9.2}, STEM_LEAF_SALT{1.7, 3.2},
     BLADE_PAUSE_SALT{1, 91}, BUD_SALT{19.1, 3.7}, SHAPE_SALT{1.7, 3.19}, BLADE_GROWTH_SALT{1, 7.13},
     LEAF_GROWTH_SALT{2.91, 7.13}, ORGAN_LIFE_SALT{3.17, 8.31};
-// Paired stem plants carry NODE_LEAVES leaves per node, alternate ones a single leaf; rosette
-// organs come as stalk and leaf, ROSETTE_PAIR at a time, alternating sides. Organ growth counts
-// targets below MIN_TARGET as MIN_TARGET.
 constexpr int NODE_LEAVES = 2, ROSETTE_PAIR = 2;
 constexpr double MIN_TARGET = .001;
-// Blade lengths: ribbon grass and fine grass, from a base by variation.
 constexpr double RIBBON_LENGTH = .85, RIBBON_SPREAD = .40, FINE_LENGTH = .40, FINE_SPREAD = .25;
-// Organs attach within ATTACH_MARGIN of the patch ends; roots spread ROOT_SPREAD times their
-// spread around the crown.
 constexpr double ATTACH_MARGIN = .025, ROOT_SPREAD = 5;
-// Wall clearance: CLEARANCE_GAIN times the girth plus CLEARANCE_MIN, and at most
-// CLEARANCE_LENGTH of the length so far; CONSTRAIN_SAMPLE units per sample.
 constexpr double CLEARANCE_GAIN = 1.07, CLEARANCE_MIN = .08, CLEARANCE_LENGTH = .45,
                  CONSTRAIN_SAMPLE = 4, POSITION_TOLERANCE = .01;
 constexpr int MIN_CONSTRAIN_SAMPLES = 8, MAX_CONSTRAIN_SAMPLES = 40;
-// Leaves are at most LEAF_MAX_WIDTH (round leaves ROUND_MAX_WIDTH) wide, at least LEAF_MIN_WIDTH.
 constexpr double LEAF_MAX_WIDTH = 5.7, ROUND_MAX_WIDTH = 6.9, LEAF_MIN_WIDTH = .15;
-// Organ kinds with a profile; each is cached at midpoints and at ends.
 constexpr int PROFILE_KINDS = plant_organ::round_leaf + 1;
 double grass_blade_length(bool band, double variation) {
   return band ? RIBBON_LENGTH + RIBBON_SPREAD * variation : FINE_LENGTH + FINE_SPREAD * variation;
 }
-// A crown may sit anywhere in its support slot. Its leaves share that root neighbourhood.
 double crown_anchor(const SurfacePatch &s) {
   return grass_anchor(s);
 }
@@ -116,7 +100,6 @@ bool passage(const Field &f, Point a, Point b, double margin = 0) {
          f.ray(a.x, a.y, dx / length, dy / length, margin, length + POSITION_TOLERANCE) >=
              length - POSITION_TOLERANCE;
 }
-// Width profile along an organ (organ_profile, shared with the viewer).
 double profile(int kind, double t) {
   namespace O = organ_profile;
   if (kind == plant_organ::blade)
@@ -132,7 +115,6 @@ double profile(int kind, double t) {
                                    : std::pow(s, O::round_power) * (1 - O::round_taper * u);
 }
 const std::vector<double> &sampled_profile(int kind, int n, bool midpoint = true) {
-  // Reuse both midpoint profiles for indexing and endpoint profiles for wall tests.
   thread_local std::array<std::vector<std::vector<double>>, 2 * PROFILE_KINDS> cache;
   auto &grids = cache[kind + (midpoint ? 0 : PROFILE_KINDS)];
   if (grids.size() <= std::size_t(n))
@@ -248,7 +230,6 @@ Curve lower_curve(Curve q, double t) {
   return result;
 }
 void release_organ(PlantOrgan &o, double cut) {
-  // Detached material inherits the plant's actual geometry, including folding and wall contact.
   if (o.display_width > 0) {
     o.curve = o.draw_curve;
     o.loose_width = o.display_width;
@@ -263,53 +244,33 @@ void release_organ(PlantOrgan &o, double cut) {
 namespace {
 using Traits = GrassTraits;
 namespace T = grass_trait;
-// Organ sizes are shares of the plant's reach; weights are shares of its capacity.
 struct OrganShape {
   double length, width, weight, hardness;
 };
-// Stalks are STALK_SHARE_MIN plus STALK_SHARE_VIGOR of their nominal length (rosettes only
-// ROSETTE_STALK_SHARE).
 constexpr double ROSETTE_STALK_SHARE = .18, STALK_SHARE_MIN = .60, STALK_SHARE_VIGOR = .20;
-// Grass: at least MIN_BLADES blades, ribbon grass FEWER_RIBBONS fewer and fine grass MORE_FINE
-// more than its stems; roots spread by type and size; blades are wide by type and size; new
-// blades come up to EXTRA_BLADES above the stem count, BLADE_PAUSE (spread BLADE_PAUSE_SPREAD)
-// steps apart.
 constexpr int MIN_BLADES = 3, FEWER_RIBBONS = 1, MORE_FINE = 2, EXTRA_BLADES = 4;
 constexpr double RIBBON_SPREAD_ROOT = .22, FINE_SPREAD_ROOT = .10, SPREAD_SIZE = .055,
                  BUD_SPREAD = .035, BUD_SPREAD_SIZE = .05, RIBBON_WIDTH = 1.5,
                  RIBBON_WIDTH_SIZE = 1.0, FINE_WIDTH = .28, FINE_WIDTH_SIZE = .24,
                  ROOT_JITTER_MIN = .2, ROOT_JITTER = .6, BLADE_PAUSE = 900,
                  BLADE_PAUSE_SPREAD = 700;
-// Rosettes: MIN_ROSETTE_LEAVES plus up to ROSETTE_LEAVES_SIZE by size, later up to
-// MAX_ROSETTE_LEAVES plus ROSETTE_BUDS_SIZE; leaves fan within ROSETTE_FAN of the crown.
 constexpr int MIN_ROSETTE_LEAVES = 3, ROSETTE_LEAVES_SIZE = 3, MAX_ROSETTE_LEAVES = 5,
               ROSETTE_BUDS_SIZE = 2;
 constexpr double ROSETTE_FAN = .12, ROSETTE_STALK_WEIGHT = .35, LEAF_WIDENING = 1.4;
-// Stem plants: MIN_NODES plus up to NODES_SIZE nodes, later up to MAX_NODES; the second leaf of a
-// pair sits SECOND_LEAF along the node.
 constexpr int MIN_NODES = 2, NODES_SIZE = 2, MAX_NODES = 16;
 constexpr double STEM_STALK_WEIGHT = .65, SECOND_LEAF = .88, NODE_LENGTH = .10,
                  LATER_NODE_LENGTH = .13, NODE_LENGTH_SPREAD = .065;
-// New organs wait BUD_PAUSE steps (grass) or LEAF_PAUSE steps (others).
 constexpr double BUD_PAUSE = 900, LEAF_PAUSE = 440;
-// Seedlings below SEEDLING_SHARE of the capacity fill one root and their first parents only.
 constexpr double SEEDLING_SHARE = .18;
 constexpr int FIRST_STEM_PARENTS = 3;
-// Budding: the last organ must be filled to BUD_FILL (encouraged BOOSTED_BUD_FILL) and blades
-// stretched to BUD_STRETCH; the plant must hold BUDDING_FILL of its capacity.
 constexpr double BUD_FILL = .68, BOOSTED_BUD_FILL = .35, BUD_STRETCH = .35,
                  BOOSTED_BUD_STRETCH = .1, BUDDING_FILL = .28;
-// Growth: a new blade waits until its neighbour is NEIGHBOUR_STRETCH out; a rosette root until
-// the previous one holds ROSETTE_FILL and is ROSETTE_FILL out; buds until their parent holds
-// STALK_PARENT_FILL (stalks) or LEAF_PARENT_FILL (leaves).
 constexpr double NEIGHBOUR_STRETCH = .22, ROSETTE_FILL = .2, STALK_PARENT_FILL = .62,
                  LEAF_PARENT_FILL = .35;
 double stalk_share(int form, const Traits &t) {
   return form == plant_form::rosette ? ROSETTE_STALK_SHARE
                                      : STALK_SHARE_MIN + STALK_SHARE_VIGOR * t[T::vigor];
 }
-// Organ shapes by rule: length is a base plus gains by size and chance, width and hardness a
-// base plus a gain by fibre. Leaves weigh LEAF_WEIGHT.
 struct ShapeRule {
   double length, length_size, length_chance, width, width_fiber, hardness, hardness_fiber;
 };
@@ -342,7 +303,6 @@ OrganShape stem_leaf(bool alternate, const Traits &t, double h) {
 int leaf_kind(bool round) {
   return round ? plant_organ::round_leaf : plant_organ::leaf;
 }
-// Adds an organ; a root that has no room at its place moves to the crown.
 int add_organ(Field &f, SurfacePatch &s, int kind, int parent, double at, const OrganShape &shape,
               std::uint64_t ready) {
   PlantOrgan o;
@@ -427,7 +387,6 @@ void Field::seed_organs(SurfacePatch &s) {
     weights += o.target;
   for (auto &o : s.organs)
     o.target *= std::max(1., env_.grass_capacity) / weights;
-  // Rosettes start in the crown; later pairs unfold further out.
   const bool seedling = s.grass < env_.grass_capacity * SEEDLING_SHARE;
   double weights_first = 0;
   int leaves = 0;
@@ -498,7 +457,6 @@ void Field::prepare_organs(SurfacePatch &s, bool drifting) {
        ++pass) {
     double wanted = 0;
     std::vector<unsigned char> eligible(s.organs.size());
-    // Extend the stem and its tip before filling the leaves below it.
     const bool stems = form == plant_form::stem &&
                        std::any_of(s.organs.begin(), s.organs.end(), [&](const auto &o) {
                          return o.kind == plant_organ::stem &&
@@ -543,7 +501,6 @@ void bud_organs(Field &f, SurfacePatch &s) {
       }
       mature += o.energy;
     }
-    // Encouraged plants bud while the last organ is still young.
     const bool boosted = time < s.boost_until;
     const auto &last = form == plant_form::stem && tip >= 0 ? s.organs[tip] : s.organs.back();
     const bool ready = last.ready <= time &&
@@ -599,7 +556,6 @@ void bud_organs(Field &f, SurfacePatch &s) {
             o.ready = time + std::uint64_t((form == plant_form::grass ? BUD_PAUSE : LEAF_PAUSE) /
                                            (boosted ? GrowthBoost::budding : 1.));
         }
-        // Root reserves fund buds only once their emergence time is reached.
         if (reserve > 0)
           s.organs.front().energy += reserve;
       }
@@ -608,12 +564,8 @@ void bud_organs(Field &f, SurfacePatch &s) {
 }
 }
 namespace {
-// Reach: grass reaches GRASS_REACH times as far; the tank's grass length beyond the base is
-// stretched by REACH_STRETCH up to MAX_REACH; size and chance vary it from REACH_MIN.
 constexpr double GRASS_REACH = 1.5, MAX_REACH = 160, REACH_STRETCH = 1.65, REACH_MIN = .64,
                  REACH_SIZE = .62, REACH_CHANCE = .22, REACH_PHASE = 8.31;
-// Each plant has a fixed character: stature, fan, curvature, leafiness and sway rate, each a
-// base plus a spread by a wave of its id.
 struct Character {
   double stature, fan, curvature, leafness, sway_rate;
 };
@@ -632,8 +584,6 @@ Character character(std::uint64_t id) {
   return {trait(id, STATURE), trait(id, FAN), trait(id, CURVATURE), trait(id, LEAFNESS),
           trait(id, SWAY_RATE_WAVE)};
 }
-// Organ length: at least MIN_ORGAN_LENGTH, leaves at most MAX_LEAF_LENGTH, growing from
-// YOUNG_SHARE of the full length.
 constexpr double MIN_ORGAN_LENGTH = .8, MAX_LEAF_LENGTH = 45, YOUNG_SHARE = .035;
 double organ_length(const PlantOrgan &o, double reach, double grown) {
   return std::max(MIN_ORGAN_LENGTH,
@@ -641,30 +591,20 @@ double organ_length(const PlantOrgan &o, double reach, double grown) {
                                                : reach * o.length) *
                       (YOUNG_SHARE + (1 - YOUNG_SHARE) * grown));
 }
-// Shaping: blades lean by type, rosette stalks open with their leaves, stem stalks and leaves
-// alternate; the current bends them by CURRENT_BEND over the root fibre, at most CURRENT_LEAN;
-// waves sway blades BLADE_SWAY and others OTHER_SWAY per unit speed (at most MAX_SWAY_SPEED);
-// wilted leaves droop WILT_LEAF, others WILT_STEM.
 constexpr double CURRENT_BEND = .22, CURRENT_LEAN = .48, BLADE_SWAY = .11, OTHER_SWAY = .025,
                  MAX_SWAY_SPEED = 2, WILT_LEAF = .95, WILT_STEM = .35, FLUTTER = .018,
                  FLOW_PROBE = .5;
-// Curve handles: the first at HANDLE_START of the length along the initial direction, the
-// second at HANDLE_MIDDLE plus HANDLE_VIGOR of the way; arcs by organ kind.
 constexpr double HANDLE_START = .26, HANDLE_MIDDLE = .60, HANDLE_VIGOR = .20, WILT_DROP = .16,
                  BLADE_ARC = .12, STEM_ARC = .08, RIBBON_ARC = .18, RIBBON_ARC_SPREAD = .16,
                  INITIAL_TURN = .55, BLADE_RISE = .26;
-// Lean of blades by type and size, opening of rosette stalks and leaves with maturity, leaves of
-// stem plants.
 constexpr double FINE_LEAN = .65, FINE_LEAN_SIZE = .55, RIBBON_LEAN = .18, RIBBON_LEAN_SIZE = .24,
                  ROSETTE_OPEN = .35, ROSETTE_OPENING = 1.25, MAX_FAN = 1.1, ROOT_STALK_LEAN = .5,
                  STALK_LEAN = .34, LEAF_OPEN = .22, LEAF_OPENING = 1.24, LEAF_JITTER = .14,
                  LEAF_UNFOLD = .20, STEM_LEAF_ANGLE = .9, STEM_LEAF_SPREAD = .35;
-// Sway: two waves over time and place.
 constexpr double SWAY_RATE = .045, SWAY_ALONG = .026, SWAY_DEPTH = .009, SWAY_BLADE = .83,
                  SWAY_SECOND = .35, SWAY_SECOND_RATE = .071, SWAY_SECOND_ALONG = .013,
                  SWAY_SECOND_ORGAN = 1.71, FLUTTER_RATE = .035, FLUTTER_ID = .41,
                  FLUTTER_ORGAN = 1.3;
-// Rosette leaves spread, rise and droop with maturity; their handles by share of the span.
 constexpr double LEAF_SPAN = .25, LEAF_RISE = .65, LEAF_RISE_MIN = .08, LEAF_DROP = .10,
                  LEAF_HANDLE_1 = .30, LEAF_HANDLE_2 = .78, LEAF_HANDLE_RISE = .60,
                  LEAF_TIP_RISE = .25;
@@ -803,9 +743,6 @@ bool Field::shape_organs(SurfacePatch &s) {
                  {root.x + side * span * LEAF_HANDLE_2, root.y - rise * LEAF_HANDLE_RISE},
                  {root.x + side * span, root.y + drop - rise * LEAF_TIP_RISE}};
     }
-    // Fish bodies part the plant: a control point inside a body moves out of it, the more
-    // freely the farther it lies from the organ's base, at most to the body's edge. Children
-    // follow their parent's curve.
     if (env_.foliage_yield > 0) {
       const double width = organ_width(o, length);
       body_grid_.nearby(
@@ -841,19 +778,11 @@ bool Field::shape_organs(SurfacePatch &s) {
   return bent;
 }
 namespace {
-// Leaves wider than CANOPY_MIN_WIDTH claim canopy cells, sampled at CANOPY_SAMPLES points; a cell
-// holds at most CANOPY_LAYERS leaves.
 constexpr double CANOPY_MIN_WIDTH = .45;
 constexpr int CANOPY_SAMPLES = 12, CANOPY_LAYERS = 4;
-// Young blades are YOUNG_GIRTH thin and thicken with their stretch; walls are tested at
-// WALL_SAMPLES points in WALL_BISECTIONS halvings, down to MIN_GIRTH. Leaf segments are about
-// SEGMENT_LEAF_GIRTHS girths long (at least MIN_SEGMENT), at most MAX_LEAF_SEGMENTS; strokes are at
-// least MIN_STROKE_WIDTH.
 constexpr double YOUNG_GIRTH = .15, MIN_GIRTH = .01, SEGMENT_LEAF_GIRTHS = 2.5, MIN_SEGMENT = .5,
                  MIN_STROKE_WIDTH = .08;
 constexpr int WALL_SAMPLES = 16, WALL_BISECTIONS = 7, MAX_LEAF_SEGMENTS = 6;
-// Canopy shading: blades shade BLADE_SHADE, leaves LEAF_SHADE per footprint; parts smaller than
-// MIN_SHADING_RADIUS do not shade.
 constexpr double BLADE_SHADE = .22, LEAF_SHADE = .85, MIN_SHADING_RADIUS = .1;
 }
 void Field::reserve_canopy(const SurfacePatch &s, PlantGeometryCache &cache) {
@@ -962,9 +891,6 @@ void Field::index_organs(SurfacePatch &s, std::size_t patch) {
     o.display_width = girth;
     o.draw_curve = qcurve;
     o.tint = organ_tint(s, int(j));
-    // Each organ is a bent stroke: one straight segment per 12–24 px of its curve (long blades
-    // get more), with the organ's own width profile. A leaf gets segments about as long as it
-    // is wide, so a round leaf is a single round stroke and a long one follows its outline.
     if (o.kind >= plant_organ::leaf)
       n = std::clamp(int(std::ceil(length / std::max(MIN_SEGMENT, SEGMENT_LEAF_GIRTHS * girth))), 1,
                      MAX_LEAF_SEGMENTS);
@@ -979,8 +905,6 @@ void Field::index_organs(SurfacePatch &s, std::size_t patch) {
       part.hx = (to.x - from.x) / 2;
       part.hy = (to.y - from.y) / 2;
       double remaining_width = notched_width(o, t, time, env_.plant_notch_heal);
-      // A narrow bite can lie between the segment centres, including at their joint.
-      // Keep its deepest point in the physical stroke rather than sampling past it.
       for (const auto &notch : o.notches)
         if (notch.depth != 0 && notch.width > 0)
           remaining_width =
@@ -1018,7 +942,6 @@ void Field::update_canopy_light() {
     const auto &o = s.organs[p.organ];
     if (o.kind == plant_organ::stem)
       continue;
-    // Canopy shading keeps its calibrated footprint per unit length of organ.
     const double spacing = 2 * stroke_half_length(p),
                  footprint = std::max(MIN_STROKE_WIDTH, std::hypot(p.width, stroke_half_length(p)));
     const double optical = (o.kind == plant_organ::blade ? BLADE_SHADE : LEAF_SHADE) * 2 * spacing *
@@ -1036,33 +959,17 @@ void Field::update_canopy_light() {
   update_sediment_light();
 }
 namespace {
-// The energy beyond a cut follows the width profile
-// sampled at CUT_SAMPLES points; a cut organ regrows after REGROWTH_PAUSE steps; pieces below
-// MIN_DRIFT_ENERGY are not cut loose; drifting pieces keep at most DRIFT_VITALITY and spin by up
-// to half DRIFT_SPIN; they stay DRIFT_EDGE inside the tank.
 constexpr int CUT_SAMPLES = 64;
 constexpr std::uint64_t REGROWTH_PAUSE = 600;
 constexpr double MIN_DRIFT_ENERGY = .02, DRIFT_VITALITY = .9, DRIFT_SPIN = .012, DRIFT_EDGE = .01;
-// Anchored plants live PLANT_LIFE_MIN plus up to PLANT_LIFE_SPREAD lifespans; a stem without
-// leaves or living children dies after BARE_STEM_STEPS; blades grow over BLADE_GROWTH (plus
-// vigour and chance), rosette leaves over LEAF_GROWTH (plus chance); a grown organ lasts
-// ORGAN_LIFE plus ORGAN_LIFE_SPREAD steps and regrows after REGROW_PAUSE plus REGROW_SPREAD
-// from REGROW_STRETCH.
 constexpr double PLANT_LIFE_MIN = .45, PLANT_LIFE_SPREAD = 1.3, PLANT_LIFE_ID = 17.831,
                  PLANT_LIFE_PHASE = 4.73, BLADE_GROWTH = 3600, BLADE_GROWTH_VIGOR = 3600,
                  BLADE_GROWTH_SPREAD = 1200, LEAF_GROWTH = 2800, LEAF_GROWTH_SPREAD = 4800,
                  ORGAN_LIFE = 2400, ORGAN_LIFE_SPREAD = 4800, REGROW_PAUSE = 1200,
                  REGROW_SPREAD = 2400, REGROW_STRETCH = .04;
 constexpr std::uint64_t BARE_STEM_STEPS = 600;
-// Roots: lean decays by LEAN_KEEP per step; an organ anchors fully at ANCHOR_DEPTH; roots grow
-// towards their depth by at most ROOT_SINK and rise by at most ROOT_RISE, between ROOT_MIN_SHARE
-// and ROOT_MAX_SHARE of the bed; the drawn depth follows by at most DEPTH_RATE. Plants anchored
-// by less than UPROOT_SHARE of their roots float away.
 constexpr double LEAN_KEEP = .992, ANCHOR_DEPTH = .6, ROOT_SINK = .03, ROOT_RISE = .015,
                  ROOT_MIN_SHARE = .2, ROOT_MAX_SHARE = .8, DEPTH_RATE = .02, UPROOT_SHARE = .25;
-// Vitality halves over VITALITY_HALF_LIFE steps in the dark or with age and recovers by
-// VITALITY_GAIN in light; below WILT_VITALITY a plant drops an organ every WILT_PERIOD steps and
-// dies below DEATH_VITALITY.
 constexpr double VITALITY_HALF_LIFE = 240, VITALITY_GAIN = .005, WILT_VITALITY = .5,
                  DEATH_VITALITY = .08;
 constexpr std::uint64_t WILT_PERIOD = 20;
@@ -1093,7 +1000,6 @@ void Field::cut_organ(std::size_t patch, int index, double t) {
       continue;
     auto copy = o;
     if (int(i) == index) {
-      // The energy beyond the cut follows the organ's width profile, not just its length.
       double total = 0, beyond = 0;
       for (int k = 0; k < CUT_SAMPLES; ++k) {
         const double u = (k + .5) / CUT_SAMPLES, w = profile(o.kind, u);
@@ -1108,11 +1014,9 @@ void Field::cut_organ(std::size_t patch, int index, double t) {
       ++o.cuts;
       if (t > 0) {
         o.length *= t;
-        // The stump ends at the cut at once, before the next shaping pass.
         o.curve = lower_curve(o.curve, t);
         o.draw_curve = lower_curve(o.draw_curve, t);
       }
-      // Bite marks stay where they were: on the stump or on the drifting piece.
       for (auto &n : o.notches)
         n = n.at < t && t > 0 ? notch_on_piece(n, 0, t) : PlantNotch{};
       for (auto &n : copy.notches)
@@ -1193,7 +1097,6 @@ void Field::advance_anchored_grass() {
                   ? BLADE_GROWTH + BLADE_GROWTH_VIGOR * grass_traits(s)[T::vigor] +
                         BLADE_GROWTH_SPREAD * noise(BLADE_GROWTH_SALT, s.id, k)
                   : LEAF_GROWTH + LEAF_GROWTH_SPREAD * noise(LEAF_GROWTH_SALT, s.id, k);
-          // Encouraged plants stretch visibly faster for a few hundred steps.
           o.elongation = std::min(1., o.elongation + (time >= s.boost_until ? 1.
                                                       : o.kind == plant_organ::blade
                                                           ? GrowthBoost::blade_stretch
@@ -1264,36 +1167,18 @@ void Field::advance_anchored_grass() {
     }
 }
 namespace {
-// Drifting plants feel WAKE_SHARE of the fish wake. Loose leaves start buoyant at LEAF_BUOYANCY
-// and sink towards LEAF_BUOYANCY + LEAF_SINKING with a half-life of LEAF_SOAK steps; stems sink
-// with STEM_SINKING plus WILT_SINKING when wilted. LEAF_DRAG and STEM_DRAG set how fast each
-// follows the water.
 constexpr double WAKE_SHARE = .35, LEAF_BUOYANCY = -2.5, LEAF_SINKING = 4, LEAF_SOAK = 350,
                  STEM_SINKING = 4, WILT_SINKING = 2, LEAF_DRAG = .218592, STEM_DRAG = .123552;
-// Fish push drifting plants aside by PUSH_ASIDE of their share; sediment slows them as a body of
-// DRIFT_RADIUS; spin follows the flow difference along the plant and SLIP_TORQUE of the slip,
-// keeps SPIN_KEEP, gains SPIN_GAIN of the torque and stays within MAX_SPIN.
 constexpr double PUSH_ASIDE = .05, DRIFT_RADIUS = .4, SLIP_TORQUE = .08, SPIN_KEEP = .95248,
                  SPIN_GAIN = .0152064, MAX_SPIN = .03, MIN_DRIFT_LENGTH = 1;
-// Blocked pieces slide SLIDE_ASIDE sideways and SLIDE_DOWN down; the root keeps ROOT_MARGIN and
-// the curve points POINT_MARGIN from walls; points are slowed as bodies of POINT_RADIUS.
 constexpr double SLIDE_ASIDE = .35, SLIDE_DOWN = .1, ROOT_MARGIN = .3, POINT_MARGIN = .08,
                  POINT_RADIUS = .1;
-// Leaves flutter by at most MAX_FLUTTER: FLUTTER_BASE plus FLUTTER_WILT when wilted, per length
-// and flow speed (at most MAX_FLUTTER_SPEED); waves of FLUTTER_STEP per step and FLUTTER_SHIFT per
-// organ. Organs stretched beyond MAX_STRETCH are pulled back to their loose length.
 constexpr double MAX_FLUTTER = 1.8, FLUTTER_BASE = .008, FLUTTER_WILT = .018, MAX_FLUTTER_SPEED = 2,
                  FLUTTER_STEP = .065, FLUTTER_SHIFT = 2.1, MAX_STRETCH = 1.015,
                  DRIFT_VITALITY_HALF_LIFE = 110;
-// Stems longer than BREAK_LENGTH break every BREAK_PERIOD steps BREAK_PIECE from their root
-// (between MIN_BREAK and MAX_BREAK of their length); the lower piece spins back by BREAK_SPIN.
-// Below SHED_VITALITY, a leaf falls every SHED_PERIOD steps with SHED_SINK.
 constexpr std::uint64_t BREAK_PERIOD = 24, SHED_PERIOD = 12;
 constexpr double BREAK_LENGTH = 28, BREAK_PIECE = 20, MIN_BREAK = .2, MAX_BREAK = .8,
                  BREAK_SPIN = -.6, SHED_VITALITY = .68, SHED_SINK = .02;
-// Drifting plants replant from REPLANT_VITALITY, searching REPLANT_SEARCH beyond the deepest
-// sediment for a bed covering them by more than REPLANT_COVER, while slower than REPLANT_SPEED.
-// Faster drift loses REPLANT_LOSS steps of contact.
 constexpr double REPLANT_VITALITY = .25, REPLANT_SEARCH = 20, REPLANT_COVER = .1,
                  REPLANT_SPEED = .35, MIN_LENGTH = .001;
 constexpr int REPLANT_LOSS = 2;
@@ -1330,7 +1215,6 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   auto drift = drift_velocity({d.vx, d.vy}, flow, material, drag);
   d.vx = drift.x;
   d.vy = drift.y;
-  // A fish swimming into drifting plant matter shoves it along and aside.
   if (env_.foliage_yield > 0) {
     const auto &axis = p.organs[0].curve;
     const double cx = d.x + delta_x(axis.back().x - axis.front().x) / 2,
@@ -1434,7 +1318,6 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   for (auto &o : p.organs) {
     for (auto &q : o.curve)
       q.x += shift;
-    // Keep the release geometry current when a leaf falls before the next indexing pass.
     o.draw_curve = o.curve;
   }
   p.blade = p.organs[0].curve;
@@ -1583,7 +1466,6 @@ void Field::replant_grass(DriftingGrass &d) {
         std::max(MIN_LENGTH, (physical_length / leafness - cover) / std::max(MIN_LENGTH, reach));
     o.elongation = 1;
     o.loose_length = 0;
-    // loose_width is the inherited material width, also used by rooted rendering.
   }
   soil.vitality = d.plant.vitality;
   soil.spin = 0;
@@ -1613,15 +1495,9 @@ void Field::advance_grass() {
     vegetation_.drifting_grass.push_back(std::move(d));
 }
 namespace {
-// Sediment thinner than THIN_SEDIMENT clears; exposure is rebuilt once the bed changes by
-// EXPOSURE_TOLERANCE. Contact probes test every CONTACT_SPACING (at least MIN_CONTACT_PROBES)
-// with a disc of CONTACT_GAP one unit off the surface. Beds reach algae up to ALGAE_REACH beyond
-// their depth plus BED_MARGIN; algae sit ALGAE_LIFT above their rock.
 constexpr double THIN_SEDIMENT = .25, EXPOSURE_TOLERANCE = .1, CONTACT_GAP = 5, CONTACT_SPACING = 2,
                  ALGAE_REACH = 16, BED_MARGIN = 1.5, ALGAE_LIFT = .03;
 constexpr int MIN_CONTACT_PROBES = 3;
-// Bed changes on PATCH_NEIGHBORS patches to each side reshape shoots shorter than SHORT_SHOOT;
-// a buried shoot up to MAX_COVER deep shows SHOOT_SHOW above the bed.
 constexpr int PATCH_NEIGHBORS = 2;
 constexpr double SHORT_SHOOT = 5.3, MAX_COVER = 3.5, SHOOT_SHOW = 1.8, MIN_TARGET_ENERGY = .001;
 }
@@ -1643,8 +1519,6 @@ void Field::refresh_algae_exposure() {
       cache.size() == vegetation_.surfaces.size() &&
       std::equal(cache.begin(), cache.end(), vegetation_.surfaces.begin(),
                  [](double amount, const SurfacePatch &s) {
-                   // Accumulate changes against the last rebuilt geometry, with a
-                   // tenth-pixel tolerance. Covering/uncovering remains immediate.
                    return (amount > tolerance::negligible) ==
                               (s.sediment > tolerance::negligible) &&
                           std::abs(sediment_depth(amount - s.sediment, s.length)) <
@@ -1661,9 +1535,6 @@ void Field::refresh_algae_exposure() {
       contact.size() != vegetation_.surfaces.size()) {
     vegetation_.algae_contact_geometry = environment_signature;
     contact.assign(vegetation_.surfaces.size(), {0., 1.});
-    // Where a rock rests on the floor, a wall or another rock, or nearly touches it, no
-    // light and water reach the surface: no algae, no mussels. A probe disc in front of
-    // the surface clears the own body by 1 px and reaches the gap width.
     for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
       const auto &s = vegetation_.surfaces[i];
       const int n = std::max(MIN_CONTACT_PROBES, int(std::ceil(s.length / CONTACT_SPACING)));
@@ -1740,8 +1611,6 @@ void Field::refresh_algae_exposure() {
 }
 void Field::settle_plant_geometry(const std::vector<double> &bed_before, bool grazed) {
   refresh_algae_exposure();
-  // Stirring changes cloud light even when no vegetation_ was bitten. Tiny shoots can also change
-  // their exposed length.
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i)
     if (vegetation_.surfaces[i].sediment != bed_before[i]) {
       for (int offset = -PATCH_NEIGHBORS; offset <= PATCH_NEIGHBORS; ++offset) {

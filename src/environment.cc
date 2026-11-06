@@ -9,128 +9,69 @@
 #include <limits>
 namespace fishsim {
 namespace {
-// Algal capacity varies between ALGAE_MAX_MIN and ALGAE_MAX_MIN + ALGAE_MAX_SPREAD of the nominal
-// capacity, growth between ALGAE_GROWTH_MIN and ALGAE_GROWTH_MIN + ALGAE_GROWTH_SPREAD; each draws
-// with its own salt.
 constexpr double ALGAE_MAX_MIN = .4, ALGAE_MAX_SPREAD = 1.2, ALGAE_GROWTH_MIN = .45,
                  ALGAE_GROWTH_SPREAD = 1.1;
 constexpr std::uint64_t ALGAE_CAPACITY_SALT = 1, ALGAE_GROWTH_SALT = 2;
-// Grass cannot settle where algae cover this share of their capacity.
 constexpr double ALGAE_BLOCKS_GRASS = .25;
-// Tolerances of positions and of spans along a surface.
 constexpr double POSITION_TOLERANCE = .01, SPAN_TOLERANCE = .001;
-// A resting grain needs RESTING_MIN_DEPTH of bed and sinks up to RESTING_SINK of its radius.
 constexpr double RESTING_MIN_DEPTH = .05, RESTING_SINK = .55;
-// The light grid has cells of LIGHT_CELL; the sky is sampled at these angles (degrees).
 constexpr double LIGHT_CELL = 32;
 constexpr std::array<double, 9> SKY_ANGLES{-65, -48, -32, -16, 0, 16, 32, 48, 65},
     SKY_WEIGHTS{1, 1, 1, 1, 2, 1, 1, 1, 1};
-// Sediment cells link to their NEIGHBOURHOOD x NEIGHBOURHOOD neighbours, one bit each.
 constexpr int NEIGHBOURHOOD = 3;
 constexpr std::uint16_t link_bit(int sx, int sy) {
   return std::uint16_t(1 << ((sy + 1) * NEIGHBOURHOOD + sx + 1));
 }
-// Edges split into patches of PATCH_SPACING plus up to PATCH_SPACING_SPREAD, varied by owner and
-// edge; a patch exists where the water PATCH_PROBE above it is free.
 constexpr double PATCH_SPACING = 6.4, PATCH_SPACING_SPREAD = 4, PATCH_OWNER_PHASE = 1.73,
                  PATCH_EDGE_PHASE = 2.31, PATCH_PROBE = .6;
-// Beds curve up within RIM_LENGTH of a planter wall; a lip holds HOLD_SHARE of its height, at
-// most MAX_HOLD.
 constexpr double RIM_LENGTH = 28, MAX_HOLD = 6, HOLD_SHARE = .45;
-// Grass needs MIN_GRASS_CLEARANCE of water above its bed; the clearance for full grass grows by
-// GRASS_CLEARANCE_GAIN per unit of grass length beyond the base length.
 constexpr double MIN_GRASS_CLEARANCE = 16, GRASS_CLEARANCE_GAIN = 2;
-// Round rocks get at least CIRCLE_VERTICES vertices, one per CIRCLE_EDGE of perimeter.
 constexpr int CIRCLE_VERTICES = 32;
 constexpr double CIRCLE_EDGE = 16;
-// Sediment cells are at least SEDIMENT_CELL_MIN wide; the tank holds about SEDIMENT_CELLS.
 constexpr double SEDIMENT_CELL_MIN = 16, SEDIMENT_CELLS = 16000;
-// Released sediment enters the water RELEASE_LIFT above a patch, or RELEASE_CELLS cells above
-// its bed.
 constexpr double RELEASE_LIFT = .5, RELEASE_CELLS = .6;
-// Shade is clamped at MAX_SHADE halvings; light spreads SIDE_LIGHT to each side per row.
 constexpr double MAX_SHADE = 64, SIDE_LIGHT = .25;
-// A fish disturbs the water with DISTURBANCE_STRENGTH within its radius; weaker flows are dropped.
 constexpr double DISTURBANCE_STRENGTH = .65, MIN_DISTURBANCE = .001;
-// Surface colour: sediment above BURIED_SURFACE immersion (probe SURFACE_PROBE), otherwise algae
-// over bare rock, from the nearest surface within SURFACE_COLOR_REACH.
 constexpr double SURFACE_PROBE = .15, BURIED_SURFACE = .05, SURFACE_COLOR_REACH = 20,
                  SURFACE_COLOR_DISTANCE = 9;
 constexpr Color SEDIMENT_COLOR{seabed::sediment_color[0], seabed::sediment_color[1],
                                seabed::sediment_color[2]},
     BARE_SURFACE_COLOR{0, 0, 1};
-// Plants keep ROOT_SEARCH apart at most; grass competes with COMPETITION_REACH neighbours on each
-// side; soil reaches full fertility at FULL_SOIL_DEPTH.
 constexpr double ROOT_SEARCH = 40, FULL_SOIL_DEPTH = 10;
 constexpr int COMPETITION_REACH = 2;
-// Competition of neighbouring grass by form.
 constexpr std::array<double, plant_form::count> FORM_COMPETITION{.35, .65, .35};
-// Root stability: the base share of the grass, the fertility gain, the depth of a full root and
-// the gain of the strength.
 constexpr double ROOT_BASE = .2, ROOT_FERTILITY = .5, ROOT_FULL_COVER = 4, ROOT_GAIN = 16;
-// Drifting grass spins by up to DRIFT_SPIN.
 constexpr double DRIFT_SPIN = .008, DRIFT_SPIN_PHASE = 1.71;
-// A new tank: sediment per unit length on beds and on stone tops (per BED_UNIT), varied along
-// the floor; stone flanks below STONE_TOP_NORMAL stay bare.
 constexpr double BED_SEDIMENT = 96, STONE_SEDIMENT = 32, BED_UNIT = 16, BED_MIN_SHARE = .15,
                  BED_WAVELENGTH = 142, BED_OWNER_PHASE = .3, STONE_TOP_NORMAL = .9;
-// Seeding: clump chance and span of grass by form (plus up to SEED_EXTRA_SPAN), algae chance.
 constexpr std::array<double, plant_form::count> CLUMP_CHANCE{.22, .12, .12};
 constexpr std::array<int, plant_form::count> CLUMP_SPAN{3, 2, 2};
 constexpr int SEED_EXTRA_SPAN = 3;
 constexpr double SEED_ALGAE_CHANCE = .3;
-// Light is measured ALGAE_LIGHT_LIFT above exposed algae (PLANT_LIGHT_LIFT above a bed).
 constexpr double ALGAE_LIGHT_LIFT = 2;
-// Growth gains of fertile soil; seeds sprout at random with SPROUT_RATE, algae with ALGAE_SPROUT.
 constexpr double FERTILITY_GAIN = 2, SPROUT_BASE = .5, SPROUT_RATE = 1. / 4000,
                  ALGAE_SPROUT = 1. / 800;
-// Spreading: algae every ALGAE_SPREAD_STEPS from ALGAE_SPREAD_FILL, grass after GRASS_SPREAD_STEPS
-// by form from GRASS_SPREAD_FILL, within SPREAD_SEARCH; grass along its edge within GRASS_REACH,
-// algae only to touching patches.
 constexpr std::uint64_t ALGAE_SPREAD_STEPS = 600;
 constexpr std::array<std::uint64_t, 3> GRASS_SPREAD_STEPS{250, 500, 500};
 constexpr double ALGAE_SPREAD_FILL = .5, GRASS_SPREAD_FILL = .45, SPREAD_SEARCH = 32,
                  GRASS_REACH = 40, TOUCHING = .05;
-// Plant index: algae samples per ALGAE_SAMPLE of length,
-// algae on mussels MUSSEL_COVER radii high, every PLANT_SHAPE_STEPS-th step shaped when paced,
-// canopy light every CANOPY_PERIOD steps.
 constexpr double ALGAE_SAMPLE = 8, MUSSEL_COVER = 1.15, MIN_ALGAE_RADIUS = .1;
 constexpr std::uint64_t PLANT_SHAPE_STEPS = 3, CANOPY_PERIOD = 10;
-// Light passes each of the three foliage layers.
 constexpr double FOLIAGE_LAYERS = 3;
-// Sediment edges blend a patch with its neighbours (weights 1 3 3 1) and rise at rims by
-// RIM_RISE of the depth, at most MAX_RIM_RISE.
 constexpr double EDGE_NEAR = 3, EDGE_FAR = 1, RIM_RISE = .1, MAX_RIM_RISE = 1.5;
-// Beds update every BED_PERIOD steps when paced; films thinner than MIN_SLIDE_DEPTH rest.
 constexpr int BED_PERIOD = 10;
 constexpr double MIN_SLIDE_DEPTH = .2;
-// Sliding: per step at most SLIDE_SHARE of the bed, at SLIDE_RATE per drop beyond SLIDE_STEP,
-// with stability counted up to MAX_STABILITY; at least SLIDE_GRAIN per length, at most
-// SLIDE_MAX of the bed, SLIDE_EQUILIBRIUM of the equilibrium and SLIDE_LENGTH per length.
 constexpr double SLIDE_SHARE = .1, SLIDE_RATE = .025, SLIDE_STEP = .25, MAX_STABILITY = 3,
                  SLIDE_GRAIN = .01, SLIDE_MAX = .4, SLIDE_EQUILIBRIUM = .45, SLIDE_LENGTH = .125;
-// Creep over an unsupported lip: at most CREEP_SHARE of the bed at CREEP_RATE per overhang;
-// grains start LIP_PROBE beyond the rim and are tried up to LIP_ATTEMPTS cells out.
 constexpr double CREEP_SHARE = .15, CREEP_RATE = .04, LIP_PROBE = .6;
 constexpr int LIP_ATTEMPTS = 4;
-// Currents lift loose sediment at EROSION_RATE per unit flow beyond EROSION_FLOW, per BED_UNIT.
 constexpr double EROSION_RATE = .05, EROSION_FLOW = .3;
-// Settling sediment shares NEIGHBOUR_SETTLING with each neighbouring patch; dust sinks
-// SEDIMENT_FALL half-lives per step; trickles below MIN_DUST settle at once.
 constexpr double NEIGHBOUR_SETTLING = .25, SEDIMENT_FALL = 20, MIN_DUST = 1e-4;
-// Blocked dust slides at most SLIDE_CELL of a cell, preferring downward (DOWNWARD_PREFERENCE) and
-// the current (CURRENT_PREFERENCE), at SLIDE_SPEED plus the current.
 constexpr double SLIDE_CELL = .4, DOWNWARD_PREFERENCE = 4, CURRENT_PREFERENCE = .01,
                  SLIDE_SPEED = .6;
-// Fish stir sediment by speed, thrust and turning; the bed must be in clear view (STIR_VIEW).
 constexpr double STIR_SPEED = .02, STIR_THRUST = 2, STIR_TURN = .1, STIR_VIEW = .7;
-// Edits: the stir releases STIR_RELEASE per length, added algae at least a remnant film
-// (algae_remnant) or ALGAE_ADD_SHARE of the capacity.
 constexpr double STIR_RELEASE = .5, ALGAE_ADD_SHARE = .05;
-// Manual grass mixes local traits with chance.
 constexpr double FIBER_LOCAL = .6, HEIGHT_LOCAL = .5;
-// Each surface has its own algal vigour (shade, water, chance): some patches carry thick mats,
-// others only a thin film, and they grow back at different speeds.
 double algae_vigor(std::uint64_t id, std::uint64_t salt) {
   return unit_interval(splitmix_finish(id * SPLITMIX_GAMMA + salt * SPLITMIX_MIX1));
 }
@@ -203,7 +144,6 @@ double Field::sediment_cover(double x, double y) const {
       });
   return result;
 }
-// The soil strip also encodes depth towards the viewer. Resting crumbs retain that depth.
 bool Field::rests_on_sediment(Point point, double radius) const {
   bool supported = false;
   vegetation_.surface_grid.nearby(
@@ -230,7 +170,6 @@ double Field::plant_growth_rate() const {
   return total / std::max<std::size_t>(1, vegetation_.growth_history.size());
 }
 void Field::rebuild_clear_light() {
-  // Broad light from the upper hemisphere. Oblique rays brighten the edge of a shadow.
   lighting_.columns = std::max(2, int(std::ceil(geometry_.width / LIGHT_CELL)) + 1);
   lighting_.rows = std::max(2, int(std::ceil(geometry_.height / LIGHT_CELL)) + 1);
   lighting_.illumination.resize(lighting_.columns * lighting_.rows);
@@ -260,7 +199,6 @@ void Field::rebuild_clear_light() {
     }
 }
 void Field::rebuild_sediment_masks(int nx, int ny) {
-  // Static center and whole-cell clearance masks are rebuilt with the geometry_.
   sediment_.sediment_floor.assign(nx * ny, 0);
   sediment_.sediment_open.resize(nx * ny);
   sediment_.sediment_safe.resize(nx * ny);
@@ -771,8 +709,6 @@ void Field::seed_plants() {
   sync_environment();
   std::vector<double> desired(vegetation_.surfaces.size());
   double wanted = 0;
-  // A new tank has its gravel on the floor and in planters. Stones keep only a thin layer on
-  // their flat tops, where plants can root; their flanks start bare for algae.
   for (auto &s : vegetation_.surfaces)
     if (s.normal.y <= -seabed::floor_normal) {
       const bool bed = s.owner == 0 || s.sediment_hold > 0;
@@ -788,7 +724,6 @@ void Field::seed_plants() {
   double algae_left = std::max(0., niche_limit(food_kind::algae) - algae_energy()),
          grass_left = std::min(energy_available,
                                std::max(0., niche_limit(food_kind::plant) - grass_energy()));
-  // Adjacent rooted patches form clumps; normalisation shares the budget across all platforms.
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     const auto &anchor = vegetation_.surfaces[i];
     if (anchor.grass_max <= 0 || rng.uniform() >= CLUMP_CHANCE[grass_form(anchor)])
@@ -841,8 +776,6 @@ void Field::grow_plants(bool paced) {
   std::vector<bool> seedlings(vegetation_.surfaces.size());
   double want_a = 0, want_g = 0, weight_a = 0, weight_g = 0;
   std::vector<double> aw(algae.size()), gw(grass.size());
-  // Encouraged plants grow outside the shared producer budget and the niche limit; only the
-  // tank's free energy bounds them.
   std::vector<double> boosted(grass.size());
   for (std::size_t i = 0; i < vegetation_.surfaces.size(); ++i) {
     auto &s = vegetation_.surfaces[i];
@@ -865,7 +798,6 @@ void Field::grow_plants(bool paced) {
                 : 0;
     weight_a += aw[i];
     weight_g += gw[i];
-    // In the dark algae decay into detritus by half-lives.
     const bool dark = algae_light(algae_illumination) <= 0;
     if (dark) {
       const double loss = s.algae * half_life_loss((1 - algae_illumination / algae_light_floor) /
@@ -873,9 +805,6 @@ void Field::grow_plants(bool paced) {
       s.algae -= loss;
       deposit_detritus(p.x, p.y, loss);
     }
-    // No algae linger in traces: a buried film vanishes into detritus at once, and so does a film
-    // below a remnant that cannot grow, in the dark or on a patch too small to hold a remnant.
-    // Young films on lit patches grow through the small sizes.
     if (s.algae > 0 && (algae_buried(s) || (s.algae < algae_remnant() &&
                                             (dark || algae_max(*this, s) < algae_remnant())))) {
       deposit_detritus(p.x, p.y, s.algae);
@@ -898,8 +827,6 @@ void Field::grow_plants(bool paced) {
                                           (1 - env_.fiber_growth_cost * fiber);
       want_g += grass[i];
     } else {
-      // Dormant seeds can establish away from living neighbours; photosynthesis
-      // still pays for their biomass through the same source and total budgets.
       const double capacity = grass_capacity(s);
       if (depth >= placement::grass_min_soil && capacity >= env_.seed_energy && room_for_plant(s) &&
           plant_light(illumination) > 0 &&
@@ -943,8 +870,6 @@ void Field::grow_plants(bool paced) {
                    std::min({want_g, feeding_.supply_grass,
                              std::max(0., niche_limit(food_kind::plant) - grass_energy())}),
                proposed = available_a + available_g;
-  // Encouraged plants grow outside the shared producer budget and the niche limit; only the
-  // tank's free energy bounds them.
   for (std::size_t i = 0; i < boosted.size(); ++i)
     request_leftover(boosted[i], [this, i](double extra) {
       vegetation_.surfaces[i].grass += extra;
@@ -989,8 +914,6 @@ void Field::grow_plants(bool paced) {
     feeding_.food_allowance = std::max(0., feeding_.food_allowance - accepted);
     return accepted;
   });
-  // Freeze only colonisation inputs. Capacity still observes earlier neighbours
-  // in this step, so newly established colonies keep their existing influence.
   struct Colony {
     Point a, b, normal;
     double length, algae, grass, sediment;
@@ -1119,19 +1042,15 @@ void Field::index_plants(bool paced, bool edited) {
   for (auto &s : vegetation_.surfaces)
     if (s.stump)
       prepare_organs(s);
-  // Edits follow the scheduled pass; only invalidated plants need shaping again.
-  // A plant with a fish body near it (or one that was bent around a body) is shaped every pass.
   auto touched = [&](std::size_t i) {
     const auto &s = vegetation_.surfaces[i];
     const auto &cache = vegetation_.plant_geometry_cache[i];
-    // Every third step, staggered between plants, is enough to follow a passing fish.
     if (paced && (s.id + time) % PLANT_SHAPE_STEPS)
       return false;
     if (cache.bent)
       return true;
     if (env_.foliage_yield <= 0 || cache.parts.empty())
       return false;
-    // Only a fish body reaching into the plant's current outline can bend it.
     constexpr double far = std::numeric_limits<double>::infinity();
     double left = far, right = -far, top = far, bottom = -far;
     const double origin = cache.parts.front().x;
@@ -1278,7 +1197,6 @@ Field::FoliageContact Field::foliage_contact(double x, double y, double radius) 
                      qx = px - s * p.hx, qy = py - s * p.hy, d = std::hypot(qx, qy);
         if (d >= radius + w)
           return;
-        // The stroke's centre line inside the body, times its width.
         const double across = half > tolerance::rounding ? std::abs(p.hx * py - p.hy * px) / half
                                                          : std::hypot(px, py);
         const double inside = std::min(
@@ -1520,7 +1438,6 @@ void Field::advance_sediment_bed(int period, double dx, double dy) {
         amount = std::min(amount, remaining);
         if (amount > 0) {
           auto edge = side > 0 ? s.b : s.a;
-          // A lip blocks sideways creep below its rim.
           if (!free(edge.x + side * (s.b.x - s.a.x) / s.length * LIP_PROBE + s.normal.x * depth,
                     edge.y + side * (s.b.y - s.a.y) / s.length * LIP_PROBE + s.normal.y * depth, 0))
             continue;
@@ -1633,7 +1550,6 @@ void Field::advance_sediment(int phase, int period) {
                                  ox * v.x * CURRENT_PREFERENCE;
             if (score > best) {
               best = score;
-              // Slide a fraction of a cell per update; no instant sideways jumps.
               tx = wrap_x(x +
                           ox * std::min(dx * SLIDE_CELL, period * (SLIDE_SPEED + std::abs(v.x))));
               ty = y + oy * std::min(dy * SLIDE_CELL, period * SLIDE_SPEED);
@@ -1677,7 +1593,6 @@ void Field::advance_sediment(int phase, int period) {
                    ? std::clamp(delta_x(x - support.a.x) / (support.b.x - support.a.x), 0., 1.)
                    : .5,
            sy = support.a.y + t * (support.b.y - support.a.y), depth = sediment_depth(support);
-    // Invisible residual dust settles into its supporting bed, conserving mass.
     double amount = next[k] < MIN_DUST ? next[k] : y + dy >= sy - depth ? next[k] * fall : 0;
     deposit(sediment_.sediment_floor[k], amount);
     next[k] -= amount;

@@ -18,7 +18,6 @@
 
 namespace fishsim {
 namespace {
-// New food pieces try this many free spots and keep this distance from the top and bottom.
 constexpr int PLACEMENT_ATTEMPTS = 30;
 constexpr double EDGE_GAP = 2;
 }
@@ -167,9 +166,6 @@ void Field::top_up(FoodSupply supply) {
     feeder_weight += f.rate;
   if (source_count() + feeder_weight <= 0)
     return;
-  // Each step spends its own granted budget. Grains are cut to what is left of it, so no
-  // source accumulates credit; locations divide the budget. A budget below the smallest grain
-  // (small tanks) yields one smallest grain with matching probability: the mean stays the budget.
   const double budget = std::min(feeding_.food_allowance, supply.rate * mean),
                requested = budget >= env_.crumb_min                  ? budget
                            : rng.uniform() * env_.crumb_min < budget ? env_.crumb_min
@@ -242,7 +238,6 @@ bool bite_reaches(const Body &b, const Field &f, double x, double y, double tx, 
   return true;
 }
 int behavior_niche(double speed, double turn, double pauses) {
-  // Three speed classes, four curve classes and resting or not.
   constexpr double SLOW = 1.3, FAST = 2.6, STRAIGHT = .01, CURVED = .035, CIRCLING = .08,
                    RESTING = .25;
   constexpr int CURVE_CLASSES = 4, PAUSE_CLASSES = 2;

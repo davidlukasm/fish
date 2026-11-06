@@ -16,13 +16,6 @@ import {escapeText, fixed} from './markup.js';
 import {percent, t} from '../../strings.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 
-// A touch or pain cell's skin, on the fish from above at SCALE of the frame with its middle at
-// (CX, CY): the skin it feels on (its field, the brighter the more the engine's kernel weighs a
-// direction, in pieces STEP long), and on that skin a hair every HAIR (touch) or a nerve ending
-// (pain), as long as the cell is sensitive: from LENGTH[0] to LENGTH[0] + LENGTH[1] frame units
-// at its middle, shorter towards the field's edges; a nerve ending forks FORK of its length from
-// its tip. Two handles: the field's edge (how far round the body it feels) and the middle hair's
-// tip (how sensitive); the cell itself as a dot DOT wide.
 const SKIN_FIELD = Object.freeze({
   width : 300,
   height : 140,
@@ -45,8 +38,6 @@ const toField = p => ({
   x : SKIN_FIELD.cx + (p.x - BODY_MIDDLE.x) * SKIN_FIELD.scale,
   y : SKIN_FIELD.cy + (p.y - BODY_MIDDLE.y) * SKIN_FIELD.scale
 });
-// Which way round the body the cell faces: as the engine's cells do once it has answered, else
-// from where its node lies on the skin.
 function skinAim(state, organ, center) {
   const felt = groupReport(state.document, state.anatomy, 'felt', center.id);
   if (felt?.length)
@@ -56,8 +47,6 @@ function skinAim(state, organ, center) {
   const {x} = centerLocation(center, organ.type, state.sites);
   return skinDirection({x, y : skinAt(x, side)}, state.anatomy?.zones);
 }
-// How sensitive the cell is, from 0 to 1: the stimulus of half its answer, along the engine's
-// axis for it (a log one for injury), turned round; a touch cell's from its threshold alone.
 function sensitivityOf(state, center) {
   const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
   const dimmest = answer?.intensity ? state.anatomy?.lightDimmest : null;
@@ -65,7 +54,6 @@ function sensitivityOf(state, center) {
     return 1 - stimulusShare(answer.half, dimmest);
   return answer?.intensity ? null : 1 - activationLevel(unitOfPlan(center.threshold));
 }
-// The skin's points with how much the cell feels there.
 function weighed(state, aim, width, step) {
   return skinPoints(step).map(
       point => ({
@@ -137,8 +125,6 @@ export function skinField(state, organ, center) {
                                                     {share : percent(sensitive)}))) +
          '</p>';
 }
-// A handle on the skin graphic at (fx, fy), fractions of it: the field reaches round to the
-// pointer's direction; the middle hair reaches out to it, the cell as sensitive as long it is.
 export function skinPatch(state, center, aim, handle, fx, fy, start) {
   const S = SKIN_FIELD, p = toFrame(fx, fy);
   if (handle === 'field') {

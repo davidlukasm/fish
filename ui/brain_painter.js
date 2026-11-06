@@ -82,7 +82,6 @@ import {sessionState} from './session.js';
 import {displayNow, horizontalDelta, sceneState} from './state.js';
 export const brain_painterState = {};
 
-// The mouth over the brain view: its jaw edges in STEPS points, blue while it sucks.
 const BRAIN_MOUTH = Object.freeze({
   steps : 16,
   suction_min : .05,
@@ -146,8 +145,6 @@ function brainDrawCells(g, d, now) {
   g.restore();
 }
 
-// Cells: a dot that grows with zoom and activity, dimmed when dead or idle, dashed when unwired,
-// with a flash ring for arrivals and a ring when chosen.
 const CELL = Object.freeze({
   light_saturation : 65,
   light_lightness : 65,
@@ -231,7 +228,6 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
   g.globalAlpha = 1;
 }
 
-// The focused tissue: filled, or a thick line for barbels and lateral lines.
 const FOCUS = Object.freeze({
   alpha : .34,
   line_min_width : 3.5,
@@ -284,8 +280,6 @@ function brainSourcePosition(x, y, d = brainState.brainDrawing) {
   return [ p.x, p.y ];
 }
 
-// Stimulus sources: objects near the view, the probe with its distance, the brightest seen objects
-// and the probe pointer.
 const SOURCES = Object.freeze({
   font : '12px system-ui',
   margin : 20,
@@ -354,7 +348,6 @@ function brainDrawSources(g, d) {
         brainClamp(q[1] + radius + SOURCES.label_gap, SOURCES.label_top,
                    cameraState.viewportHeight - SOURCES.label_bottom));
   }
-  // The brightest SHOWN_CONTRIBUTIONS objects seen by the focused cell are traced.
   const SHOWN_CONTRIBUTIONS = 3;
   const focus = brainState.brainHover?.id ?? sessionState.neuronFocus, V = VISUAL_CONTRIBUTION,
         hits = (d.b.visual_contributions || [])
@@ -422,7 +415,6 @@ function brainSignalPointVisible(d, packet, point) {
   return true;
 }
 
-// Arrived signals ring out for SHOWN ms.
 const ARRIVAL_RING = Object.freeze({
   shown : 280,
   min_strength : .03,
@@ -483,8 +475,6 @@ function brainDrawArrivals(g, d, now) {
   }
 }
 
-// Mixed-cell links are static within a geometry frame and share one stroke per style.
-// Links between the parts of mixed cells, dashed.
 const MIXED = Object.freeze({
   width : .8,
   dash : 2,
@@ -523,7 +513,6 @@ export function brainDrawMixed(g, d) {
   g.restore();
 }
 
-// Learning signals in BANDS strength bands, exciting and inhibiting.
 const LEARNING = Object.freeze(
     {bands : 10, min : .001, inhibit_offset : 5, alpha : .22, base_width : .5, width_step : .5});
 function brainDrawLearning(g, d) {
@@ -552,7 +541,6 @@ function brainDrawLearning(g, d) {
   g.restore();
 }
 
-// The wiring between the stations, as vector strokes.
 function brainDrawWiring(g, d) {
   for (const group of d.wiringStrokes) {
     g.globalAlpha = group.alpha;
@@ -567,22 +555,11 @@ function brainDrawWiring(g, d) {
   brainDrawMixed(g, d);
 }
 
-// The inspection drawing is painted into textures in the fish's own frame; every frame only
-// places them on the moving, zooming fish and adds the travelling signals. The wiring (tens of
-// thousands of curves in a large brain) lies in its own texture that is repainted only when the
-// view region, zoom step or highlighted part changes, and every few seconds for the learned
-// weights. Tissues below and cells above it show activity and are repainted at most ten times a
-// second, less often when a large brain makes that costly. The textures cover what the view
-// shows of the fish at least at the screen's resolution. Room for the next movements (SLACK of
-// the shown span on each side) shrinks so that a texture spans at most CACHE_SCREENS screens
-// and the renderer's texture limit; only a view larger than that lowers the resolution.
 const BRAIN_CACHE_SCREENS = 1.5, BRAIN_CACHE_MARGIN = .15, BRAIN_CACHE_SLACK = .25,
       BRAIN_LIVE_REFRESH_MS = 100, BRAIN_WIRING_REFRESH_MS = 3000, BRAIN_LIVE_SHARE = .1;
 
-// A layer of the region at the given resolution, painted by `paint` in the fish's frame.
 function brainPaintLayer(layer, region, resolution, paint) {
   layer ||= new TankLayer();
-  // Assigning the size also starts a fresh drawing and a new texture version.
   layer.width = Math.max(1, Math.ceil((region.right - region.left) * resolution));
   layer.height = Math.max(1, Math.ceil((region.bottom - region.top) * resolution));
   const lg = layer.getContext();
@@ -592,7 +569,6 @@ function brainPaintLayer(layer, region, resolution, paint) {
   return layer;
 }
 
-// Extent of the drawing in the fish's frame: the body outline and the wiring, with a margin.
 function brainDrawingBounds(d) {
   let left = d.meshBounds.x, top = d.meshBounds.y, right = left + d.meshBounds.width,
       bottom = top + d.meshBounds.height;
@@ -612,7 +588,6 @@ function brainDrawingBounds(d) {
   return {left : left - pad, top : top - pad, right : right + pad, bottom : bottom + pad};
 }
 
-// The part of the fish's frame that the viewport shows.
 function brainViewRegion(d, origin) {
   const v = d.view, cos = Math.cos(-v.angle), sin = Math.sin(-v.angle),
         w = cameraState.viewportWidth, h = cameraState.viewportHeight;
@@ -637,8 +612,6 @@ function brainIntersect(a, b) {
   };
 }
 
-// The painted brain is cached in resolution buckets of half zoom steps; zooming holds it for
-// ZOOM_HOLD ms.
 const PAINT_CACHE =
     Object.freeze({zoom_hold : 220, min_bucket : .125, min_wanted : 1e-3, half_steps : 2});
 function brainPaintCached(g, d, time, origin) {
@@ -654,9 +627,7 @@ function brainPaintCached(g, d, time, origin) {
   ].join(':');
   const covered = cache && cache.region.left <= shown.left && cache.region.top <= shown.top &&
                   cache.region.right >= shown.right && cache.region.bottom >= shown.bottom,
-        // The resolution steps with the zoom alone, never below the screen's; the fish's own
-        // movements never change it.
-      wanted = v.scale * cameraState.pixelRatio,
+        wanted = v.scale * cameraState.pixelRatio,
         bucket =
             Math.max(PAINT_CACHE.min_bucket,
                      Math.pow(2, Math.ceil(Math.log2(Math.max(PAINT_CACHE.min_wanted, wanted)) *
@@ -696,7 +667,6 @@ function brainPaintCached(g, d, time, origin) {
                                })
     };
   }
-  // A new region or resolution needs matching activity layers at once, even while zooming.
   if (cache.liveTime === -Infinity ||
       (!zooming && now - cache.liveTime >
                        Math.max(BRAIN_LIVE_REFRESH_MS, (cache.liveCost || 0) / BRAIN_LIVE_SHARE))) {
@@ -723,7 +693,6 @@ function brainPaintCached(g, d, time, origin) {
       g.drawImage(layer, r.left, r.top, r.right - r.left, r.bottom - r.top);
 }
 
-// Signal packets travel their curve as a dot with a short trail, fading in and out.
 const PACKETS = Object.freeze({
   line_alpha : .17,
   line_width : .8,

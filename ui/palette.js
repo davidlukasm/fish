@@ -1,5 +1,3 @@
-// The interface's named colours. ui/style.css declares the same tokens (--mint and so on);
-// tests/build_check.py keeps both alike.
 export const PALETTE = Object.freeze({
   bg : '#101b21',
   panel : '#17272e',

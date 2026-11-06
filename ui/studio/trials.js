@@ -18,16 +18,9 @@ import {API_WAIT, requestBody} from './requests.js';
 import {builtAsDrawn} from './view/stimulus.js';
 import {hormoneLegs} from './view/influence.js';
 
-// Trials on the developed fish: a stimulus runs through the network the design wires and the
-// engine reports which parts answered; a measurement doses a substance and reports what it changes.
-// The parts a trial or the selection reached stay marked on the scene.
-
-// A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
 export const MEASURE_LEVEL = .5;
 const MEASURE_MATURITY = 1;
-// A stimulus runs PULSE_STEPS steps.
 const PULSE_STEPS = 24;
-// The studio's methods for trials and their marks on the scene (mixed into OrganStudio).
 export const trialMethods = {
   markFocus() {
     const svg = this.bodyMap(), {selected, document : doc} = this.state;
@@ -61,8 +54,6 @@ export const trialMethods = {
       for (const element of this.wireMarks(id))
         element.classList.add('aid-focus-near');
   },
-  // The network a stimulus reached stays marked, the rest stands back, until the wire tool is
-  // taken or the design changes.
   markStimulus() {
     const svg = this.bodyMap(), stimulus = this.state.stimulus;
     if (!svg || !stimulus)
@@ -79,11 +70,9 @@ export const trialMethods = {
         element.classList.add('aid-pulse-used',
                               ...stimulus.sent.has(id) ? [] : [ 'aid-pulse-withdrawn' ]);
   },
-  // What shows a wire on the scene.
   wireMarks(id) {
     return [...this.bodyMap()?.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]') ?? [] ];
   },
-  // A node not drawn shows through its organ.
   stimulusMarks(key) {
     const svg = this.bodyMap();
     if (!svg)
@@ -98,10 +87,6 @@ export const trialMethods = {
     const owner = marks.length ? null : findCenter(this.state.document, key)?.organ;
     return owner && owner.type !== 'brain' ? this.stimulusMarks(owner.id) : marks;
   },
-  // A stimulus runs as a preview along the drawn wires; once the fish is built as drawn, through
-  // its developed brain as the engine's probe finds it. Nothing is built for it. In the built fish
-  // the stimuli still playing act together with a new one: the probe stimulates them all at once,
-  // and the new one shows what the brain does with all of them.
   async stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
@@ -127,8 +112,6 @@ export const trialMethods = {
       this.notice(error.message);
     }
   },
-  // What the focused substance does in the fish built as drawn: the atelier runs its brain with
-  // and without the substance and reports the change per cell group and organ drive.
   async measure() {
     if (!this.state.sites.length || !builtAsDrawn(this.state))
       return;
@@ -149,10 +132,6 @@ export const trialMethods = {
       this.notice(error.message);
     }
   },
-  // The stimulus runs through the drawn network from the stimulated parts: each part answers as
-  // the engine's probe `frames` found it, rising or falling by its first clear swing, or without
-  // them as the signal reaching it pushes it. Stimuli given while others run play alongside them,
-  // each on its own, and their marks join; one given after all have run starts the marks afresh.
   playPulse(centerIds, frames) {
     this.pulsePlayers = this.playingPulses();
     const alongside = this.pulsePlayers.length > 0 && this.state.stimulus;
@@ -163,8 +142,6 @@ export const trialMethods = {
         frames?.length
             ? key => signalAnswer(frames, endpointCenters(doc, key).map(c => indexOf.get(c.id)))
             : (key, push) => push;
-    // The signal runs between the parts as wired; a part stimulated through some of its nodes
-    // shows those alone and sends from their branches only.
     const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ],
           chosen = new Set(centerIds);
     const whole = key => chosen.has(key) || endpointCenters(doc, key).every(c => chosen.has(c.id));
@@ -180,7 +157,6 @@ export const trialMethods = {
                                 : [];
     });
     const schedule = signalSchedule(starts, [...links, ...hormoneLegs(this.state) ], response);
-    // The wires a signal ran along stay marked, those only a quieted part withdrew from apart.
     const stimulus =
         alongside ? this.state.stimulus
                   : {fired : new Set(), quieted : new Set(), wires : new Set(), sent : new Set()};
@@ -215,12 +191,7 @@ export const trialMethods = {
     this.pulsePlayers.push({player, centers : centerIds});
     player.start();
   },
-  // The stimuli still playing, each with the centers it stimulated.
   playingPulses() { return this.pulsePlayers.filter(pulse => pulse.player.running());},
-  // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
-  // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
-  // cheeks and throat, defence raises its spines, pigment cells spread their pigment; every
-  // effector's own glyph twitches.
   stimulusMoves(key) {
     const svg = this.bodyMap(), doc = this.state.document;
     const organ = organOf(doc, key);

@@ -37,15 +37,11 @@ import {
 } from './fish_geometry.js';
 export const fish_organsState = {};
 
-// Normals along a curve need a tangent of at least TANGENT_MIN body radii.
 const TANGENT_MIN = .001;
-// Eyes and near-sense organs as the engine places and shapes them (organ_form columns).
 function rawHeadSense(a, key, side) {
   const f = fishForm(a, key, side);
   if (!f.weight)
     return {x : 0, y : 0, r : 0, rx : 0, ry : 0, pupil : 0};
-  // They lie out as far as their cells' lateral centroid lies within the head's half width,
-  // scaled by the vision eye offset, as the engine's retina places them (eye_view_place).
   const location = a.forms[formIndex(key) + side], rx = a.eyeScale * location[ORGAN_FORM.eye_rx],
         ry = a.eyeScale * location[ORGAN_FORM.eye_ry],
         halfWidth = Math.abs(location[ORGAN_FORM.eye_across]),
@@ -61,9 +57,6 @@ function rawHeadSense(a, key, side) {
   };
 }
 const rawFishEye = (a, side) => rawHeadSense(a, SENSE_TISSUE.light, side);
-// The near sense measures from the eye's place but is an organ of its own: COUNT small pits on
-// an arc of SPAN behind the eye, centred on the eye, GAP of a pit radius clear of it. Together
-// the pits cover the area of the engine's round organ.
 const PROXIMITY_PITS = Object.freeze({count : 5, span : Math.PI, gap : .4});
 export function fishProximityShape(a, side) {
   return rawHeadSense(a, SENSE_TISSUE.proximity, side);
@@ -84,14 +77,12 @@ export function fishProximityPits(a, side) {
   });
 }
 
-// The eye socket's base sits at ALONG of the head curve and WIDTH of its width.
 const EYE_SOCKET = Object.freeze({along : .55, width : .72});
 export function fishEye(a, side) {
   const eye = rawFishEye(a, side), other = rawFishEye(a, 1 - side);
   if (!eye.r)
     return eye;
   const sign = side ? 1 : -1;
-  // Include the outer socket; the free gap is half the larger eye diameter.
   const clearance =
       other.r ? BODY_SHAPE.eye_clearance * (eye.ry + other.ry) + Math.max(eye.r, other.r) : 0;
   eye.y = sign * Math.max(Math.abs(eye.y), clearance / 2);
@@ -104,8 +95,6 @@ export function fishEye(a, side) {
   return eye;
 }
 
-// Barbel length in body radii from its size and cells' spread; the bend sits BEND_AT plus
-// BEND_PER_REACH of the tip's reach along.
 const BARBEL = Object.freeze({
   length : .22,
   length_per_size : .35,
@@ -127,7 +116,6 @@ export function fishBarbelCurve(a, side) {
   return [ root, control, tip ];
 }
 
-// Barbels trail DRAG behind in moving water and sway with the animation, WAVE radians along.
 const BARBEL_SWAY =
     Object.freeze({drag : .04, sway : .025, sway_per_motion : .055, rate : .73, wave : 2});
 export function fishBarbel(a, side, t) {
@@ -144,8 +132,6 @@ export function fishBarbel(a, side, t) {
   ];
 }
 
-// The nose sits between FIRST and LAST of the head curve, shifted with the cells' place; its
-// size grows with the nose and stays within the face.
 const NOSE = Object.freeze({
   first : .12,
   last : .88,
@@ -176,7 +162,6 @@ export function fishNoseShape(a, side) {
   };
 }
 
-// Scent points spread from INNER over SPAN of the nose by their hue.
 const NOSE_POINT = Object.freeze({inner : .25, span : .6});
 export function fishNosePoint(a, side, direction, hue) {
   const q = fishNoseShape(a, side), angle = Math.PI + direction,
@@ -190,8 +175,6 @@ export function fishNosePath(g, r, a, side) {
   g.ellipse(q.x * r, q.y * r, q.rx * r, q.ry * r, 0, 0, Math.PI * 2);
 }
 
-// The sperm organ lies on the flank at ALONG, stretched by its cells' depth and spread, and
-// swells with its filling.
 const SPERM_ORGAN = Object.freeze({
   elongation : .65,
   elongation_per_depth : .75,
@@ -232,7 +215,6 @@ export function fishGameteShape(a, kind) {
   };
 }
 
-// The reserve sits BACK behind the chest, as long as the body is wide and as thick as it is full.
 const RESERVE = Object.freeze({
   back : .04,
   growth : .22,
@@ -270,7 +252,6 @@ export function fishReservePoint(a, t, across = 0) {
   ];
 }
 
-// The swim bladder spans the bladder sense, shifted SHIFT of the chest backwards.
 const SWIM_BLADDER =
     Object.freeze({shift : .08, length : 1.25, length_per_spread : .20, height : 1.4});
 export function fishSwimBladderShape(a) {
@@ -283,8 +264,6 @@ export function fishSwimBladderShape(a) {
   };
 }
 
-// The gut runs from behind the head to the chest in TURNS plus TURNS_PER_LENGTH loops; its
-// tube thickens with filling and stays below LOOP_TUBES per loop.
 const GUT = Object.freeze({
   front : .025,
   back : .07,
@@ -299,7 +278,6 @@ const GUT = Object.freeze({
   lift : .3,
   height : .48
 });
-// The gut's loops, as the engine's body plan turns it: TURNS plus TURNS_PER_LENGTH of its length.
 export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);
 export function fishSatietyShape(a) {
   const front = a.headBack - GUT.front, back = a.chestBack + GUT.back * a.chestLength,
@@ -319,7 +297,6 @@ export function fishGutPoint(a, t, across = 0) {
   return [ x - dy / length * q.tube * across, y + dx / length * q.tube * across ];
 }
 
-// Gut outlines take STEPS plus STEPS_PER_LENGTH points.
 const GUT_PATH = Object.freeze({steps : 24, steps_per_length : 48});
 export function fishGutPath(g, r, a) {
   g.beginPath();
@@ -335,7 +312,6 @@ export function fishGutPath(g, r, a) {
   g.closePath();
 }
 
-// The gland sits behind the head, growing with its cells (half at HALF_CELLS).
 const GLAND = Object.freeze({
   size : .8,
   size_per_cells : .35,
@@ -358,7 +334,6 @@ export function fishGlandShape(a) {
   };
 }
 
-// Each gland half is a lobed ring of STEPS points.
 const GLAND_PATH =
     Object.freeze({steps : 32, lobe : .88, lobe_depth : .12, lobes : 5, offset : .48, width : .6});
 export function fishGlandPath(g, r, a, append = false) {
@@ -380,7 +355,6 @@ export function fishGlandPath(g, r, a, append = false) {
   }
 }
 
-// Pain sensors sit on the front flank, slightly outside the outline.
 const PAIN = Object.freeze({
   along : .19,
   along_per_place : .08,
@@ -402,7 +376,6 @@ export function fishPainShape(a, side) {
   };
 }
 
-// The bladder sense lies on the flank behind the head.
 const BLADDER = Object.freeze({
   along : .12,
   along_per_place : .23,
@@ -428,7 +401,6 @@ export function fishBladderShape(a) {
   };
 }
 
-// The reserve outline: rounded caps of CAP of its width, side handles at HANDLE of its length.
 const RESERVE_PATH = Object.freeze({cap : .3, handle : .55});
 export function fishReservePath(g, r, a) {
   const q = fishReserveShape(a), x = q.x, y = q.y, w = q.ry, h = q.rx, b = -q.bend;
@@ -450,7 +422,6 @@ export function fishSurfacePoint(a, side, t, layer) {
   return [ p[0], p[1] * layer ];
 }
 
-// Touch cells cover the front SPAN of the flank just inside the outline.
 const SKIN =
     Object.freeze({start : .02, span : .45, layer : .96, depth : .018, depth_per_spread : .03});
 export function fishSkinPoint(a, side, t, z = 0, key = SENSE_TISSUE.touch) {
@@ -459,7 +430,6 @@ export function fishSkinPoint(a, side, t, z = 0, key = SENSE_TISSUE.touch) {
                           SKIN.layer + (SKIN.depth + SKIN.depth_per_spread * q.f.sz) * z);
 }
 
-// Pigment lies at LAYER of the flank width, deeper with its cells' depth.
 const PIGMENT =
     Object.freeze({layer : .45, layer_per_out : .06, depth : .06, depth_per_spread : .16});
 export function fishPigmentPoint(a, side, t, z = 0) {
@@ -469,7 +439,6 @@ export function fishPigmentPoint(a, side, t, z = 0) {
                               (PIGMENT.depth + PIGMENT.depth_per_spread * q.f.sz) * z);
 }
 
-// The lateral line runs at LAYER of the flank width with a slight wave.
 const LATERAL = Object.freeze({layer : .76, layer_per_out : .03, wave : .015});
 export function fishLateralPoint(a, side, t) {
   const q = fishOrganSpan(a, SENSE_TISSUE.flow, side);
@@ -478,7 +447,6 @@ export function fishLateralPoint(a, side, t) {
                               LATERAL.wave * Math.sin(t * Math.PI) * q.f.z);
 }
 
-// The tongue runs from the mouth to the gut, bowed with the shoulder.
 const TONGUE = Object.freeze({mouth_gap : .025, width : .020, width_per_spread : .024, bow : .96});
 function fishTongueShape(a) {
   const f = fishForm(a, SENSE_TISSUE.intake);
@@ -491,7 +459,6 @@ function fishTongueShape(a) {
   };
 }
 
-// Swallowing thickens the tongue by SWALLOW; its bow lies at BOW of the shoulder.
 const TONGUE_WAVE = Object.freeze({swallow : .010, bow : .3});
 export function fishTonguePoint(a, t, across = 0) {
   const q = fishTongueShape(a),
@@ -503,7 +470,6 @@ export function fishTonguePoint(a, t, across = 0) {
   return [ x - dy / length * width, y + dx / length * width ];
 }
 
-// Tongue outlines take STEPS points per side.
 const TONGUE_PATH = Object.freeze({steps : 24});
 export function fishTonguePath(g, r, a) {
   g.beginPath();
@@ -519,7 +485,6 @@ export function fishTonguePath(g, r, a) {
   g.closePath();
 }
 
-// The egg duct runs from the egg organ to the vent at VENT of the body behind the centre.
 const EGG_DUCT = Object.freeze({
   vent : .82,
   bend_back : .35,
@@ -542,7 +507,6 @@ export function fishEggDuctCurve(a) {
   ];
 }
 
-// A laid egg passes the duct within TRAVEL of the birth, widening it over LENGTH.
 const EGG_PASSAGE = Object.freeze(
     {travel : .55, length : .20, width : .024, width_per_muscle : .012, width_per_egg : .14});
 function fishEggDuctWidth(a, t) {
@@ -553,7 +517,6 @@ function fishEggDuctWidth(a, t) {
          EGG_PASSAGE.width_per_egg * passage;
 }
 
-// Duct tangents span STEP of the duct.
 const EGG_DUCT_TANGENT = Object.freeze({step : .002});
 export function fishEggDuctPoint(a, t, across = 0) {
   const q = fishEggDuctCurve(a), p = fishBezier(q, t),
@@ -564,7 +527,6 @@ export function fishEggDuctPoint(a, t, across = 0) {
   return [ p[0] - dy / length * width, p[1] + dx / length * width ];
 }
 
-// Duct outlines take STEPS points per side.
 const EGG_DUCT_PATH = Object.freeze({steps : 20});
 export function fishEggDuctPath(g, r, a, append = false) {
   if (!append)
@@ -583,7 +545,6 @@ export function fishEggDuctPath(g, r, a, append = false) {
   g.closePath();
 }
 
-// Duct muscle fibres reach from INNER to OUTER of the duct's half width.
 const EGG_MUSCLE = Object.freeze({inner : .22, outer : 1.15});
 export function fishEggMuscleFiber(a, t, side) {
   const sign = side ? 1 : -1;
@@ -592,7 +553,6 @@ export function fishEggMuscleFiber(a, t, side) {
   ];
 }
 
-// Skin outlines take STEPS points per side.
 const SKIN_PATH = Object.freeze({steps : 24});
 export function fishSkinPath(g, r, a, side) {
   g.beginPath();
@@ -610,7 +570,6 @@ export function fishSkinPath(g, r, a, side) {
   g.closePath();
 }
 
-// Damage sensors sit on the front flank and grow with their cells.
 const INJURY = Object.freeze({
   along : .06,
   along_per_place : .30,
@@ -633,7 +592,6 @@ export function fishInjuryShape(a, side) {
   };
 }
 
-// Damage cells fill LENGTH and HEIGHT of the sensor.
 const INJURY_SPAN = Object.freeze({length : .80, height : .66});
 export function fishInjuryPoint(a, side, t, z) {
   const q = fishInjuryShape(a, side), u = 2 * t - 1;
@@ -643,7 +601,6 @@ export function fishInjuryPoint(a, side, t, z) {
   ];
 }
 
-// The damage sensor is a wavy ring of STEPS points.
 const INJURY_PATH = Object.freeze({steps : 48, wave : .82, wave_depth : .18, waves : 6});
 export function fishInjuryPath(g, r, a, side) {
   const q = fishInjuryShape(a, side);
@@ -660,8 +617,6 @@ export function fishInjuryPath(g, r, a, side) {
   g.closePath();
 }
 
-// The mouth: a gap that opens with the gape, a jaw from the hinge to the snout that stays in
-// front of the eyes, lips thickened by suction and a hook blunted by the teeth.
 const MOUTH = Object.freeze({
   closed_gap : .0015,
   aperture : .8,
@@ -682,8 +637,6 @@ const MOUTH = Object.freeze({
   min_length : .08,
   eye_gap : .035
 });
-// The lips' width at rest, thickened by suction (its size, 0 to 1), and how far back the jaw
-// reaches from the snout for its length trait.
 export const lipWidth = suction => MOUTH.lip + MOUTH.lip_per_suction * suction;
 export const jawReach = jaw => MOUTH.jaw + MOUTH.jaw_per_length * jaw;
 export function fishMouthShape(a) {
@@ -722,7 +675,6 @@ export function fishMouthShape(a) {
   return shape;
 }
 
-// The jaw edge rises from the hinge to a crest before the lip; suction and blunt teeth round it.
 const JAW_EDGE = Object.freeze({
   round_per_suction : .7,
   round_per_teeth : .3,
@@ -755,7 +707,6 @@ export function fishJawEdge(a, side, t) {
       t);
 }
 
-// Mouth outlines take STEPS points per jaw and CORNERS around the lip; suction bulges the lip.
 const MOUTH_CONTOUR = Object.freeze({steps : 16, corners : 5, bulge : .48});
 export function fishMouthContour(a, steps = MOUTH_CONTOUR.steps) {
   const q = fishMouthShape(a), points = [];
@@ -784,7 +735,6 @@ export function fishMouthPath(g, r, a, append = false) {
   g.closePath();
 }
 
-// An open mouth of at least MIN_RADIUS pixels shows the throat, palate ridges and teeth.
 const MOUTH_INTERIOR = Object.freeze({
   min_radius : 22,
   min_gape : .08,
@@ -853,7 +803,6 @@ export function fishMouthInterior(g, r, a) {
   g.restore();
 }
 
-// Suction draws three water lanes into the mouth from REACH in front of it.
 const SUCTION_FLOW = Object.freeze({
   min_suction : .08,
   min_radius : 16,
@@ -891,7 +840,6 @@ export function fishSuctionFlow(g, r, a) {
   g.restore();
 }
 
-// The sperm organ's outline: a rounded front and a blunt nose, in shares of its radii.
 const SPERM_PATH =
     Object.freeze({tip_x : .88, tip_y : .42, nose_x : 1.12, nose_y : .32, shoulder : .30});
 export function fishGametePath(g, r, a, kind) {
@@ -913,7 +861,6 @@ export function fishGametePath(g, r, a, kind) {
   }
 }
 
-// The outline runs over the head curve for its first HEAD, then along the flank.
 const OUTLINE = Object.freeze({head : .4});
 function fishOutlinePoint(a, side, t) {
   if (t < OUTLINE.head)
@@ -921,8 +868,6 @@ function fishOutlinePoint(a, side, t) {
   return fishFlank(a, side, (t - OUTLINE.head) / (1 - OUTLINE.head));
 }
 
-// Defence spines stand along the outline behind the eye, more and longer with capacity; they fold
-// back at rest and stand out when erect.
 const SPINES = Object.freeze({
   max_count : 10,
   min_count : 2,
@@ -1002,7 +947,6 @@ export function fishDefenseSpines(a, side) {
   return result;
 }
 
-// The gill arc behind the head opens with the pump.
 const GILL = Object.freeze({
   at : .12,
   width : .62,
@@ -1030,7 +974,6 @@ export function fishGillShape(a, side, pump = 0) {
   ];
 }
 
-// The suction pump sits behind the mouth and swells while it pumps.
 const SUCTION = Object.freeze({
   front : .015,
   mouth_gap : .02,
@@ -1057,7 +1000,6 @@ export function fishSuctionShape(a) {
   };
 }
 
-// The pump outline: FRONT and BACK handle heights, the rear INSET.
 const SUCTION_PATH = Object.freeze({front : .85, back : .45, inset : .025});
 export function fishSuctionPath(g, r, a, append = false) {
   const q = fishSuctionShape(a), mid = (q.front + q.back) / 2;
@@ -1072,7 +1014,6 @@ export function fishSuctionPath(g, r, a, append = false) {
   g.closePath();
 }
 
-// Jaw muscle fibres run slanted across the pump.
 const JAW_FIBER = Object.freeze(
     {start : .16, span : .68, across : .48, bulge : .15, slant : .035, inner : .45, outer : 1.10});
 export function fishJawFiber(a, side, t) {
@@ -1084,7 +1025,6 @@ export function fishJawFiber(a, side, t) {
   ];
 }
 
-// The jaw muscle wraps the pump from its ROOT height to the front.
 const JAW_MUSCLE =
     Object.freeze({root : .45, handle : .07, tip : .025, inner_handle : .08, inner_root : .18});
 export function fishJawMusclePath(g, r, a, side, append = false) {
@@ -1101,7 +1041,6 @@ export function fishJawMusclePath(g, r, a, side, append = false) {
   g.closePath();
 }
 
-// Glyph bounds sample each curve and barbel in CURVE_STEPS and BARBEL_STEPS steps.
 const GLYPH_POINTS = Object.freeze({curve_steps : 4, barbel_steps : 4});
 export function fishGlyphPoints(a) {
   const curves = [...fishBodyCurves(a) ];
@@ -1132,7 +1071,6 @@ export function fishGlyphPoints(a) {
 
 export function fishGlyphBounds(a, angle = 0) { return fishPointBounds(fishGlyphPoints(a), angle); }
 
-// Bounds are at least MIN_SIZE body radii wide and high.
 const POINT_BOUNDS = Object.freeze({min_size : .1});
 function fishPointBounds(points, angle) {
   const co = Math.cos(angle), si = Math.sin(angle),
@@ -1151,10 +1089,8 @@ function fishPointBounds(points, angle) {
   };
 }
 
-// Previews keep SNOUT_MARGIN before the snout and the lips' reach.
 const PREVIEW_BOUNDS = Object.freeze({snout_margin : .01, lip_reach : .24});
 export function fishPreviewBounds(a, angle = 0) {
-  // Fit the full motion envelope, independently of the current muscle pulses.
   const pose = {
     ...a,
     mouthOpening : 1,
@@ -1170,8 +1106,6 @@ export function fishPreviewBounds(a, angle = 0) {
   for (const x of [a.snout + PREVIEW_BOUNDS.snout_margin,
                    mouth.front + PREVIEW_BOUNDS.lip_reach * mouth.gap])
     points.push([ x, -halfHeight ], [ x, halfHeight ]);
-  // Fin control points vary linearly with activation. Their endpoint hulls also
-  // enclose every intermediate pose, including both directions of the tail stroke.
   for (const active of [0, 1]) {
     pose.finPose = () => active;
     for (let i = 0; i < FINS; i++)
@@ -1189,7 +1123,6 @@ export function fishPreviewBounds(a, angle = 0) {
   return fishPointBounds(points, angle);
 }
 
-// Previews keep MARGIN pixels free.
 const PREVIEW = Object.freeze({margin : 12});
 export function fishPreviewPose(p, width, height, desired, angle = 0) {
   const a = fishAnatomy(p), bounds = fishPreviewBounds(a, angle),
@@ -1198,7 +1131,6 @@ export function fishPreviewPose(p, width, height, desired, angle = 0) {
   return {a, r, x : width / 2 - bounds.cx * r, y : height / 2 - bounds.cy * r};
 }
 
-// A fish's shown length runs from the snout to its tail fin or the outline's end, at least MIN.
 const DISPLAY_LENGTH = Object.freeze({min : .1});
 function fishDisplayLength(a) {
   if (a.displayLength !== undefined)
@@ -1211,7 +1143,6 @@ function fishDisplayLength(a) {
                                     (a.jaw || a.attack ? fishMouthShape(a).front : a.snout) - rear);
 }
 
-// The biting cheek muscle runs from the face root to the jaw.
 const CHEEK = Object.freeze({
   root_along : .08,
   root_out : .35,
@@ -1239,7 +1170,6 @@ function fishCheekShape(a, side = -1) {
   };
 }
 
-// The cheek bulges by PAD plus PAD_PER_JAW of the jaw.
 const CHEEK_PAD = Object.freeze({pad : .025, pad_per_jaw : .04});
 export function fishCheekPoint(a, side, t, across = .5) {
   const jaw = fishJawEdge(a, side, t), skin = fishBezier(fishHeadCurves(a, side)[0], 1 - t),
@@ -1251,7 +1181,6 @@ export function fishCheekPoint(a, side, t, across = .5) {
   ];
 }
 
-// A glyph reaches at least past the snout, the tail and its widest flank.
 const GLYPH_EXTENT = Object.freeze({snout : .8, tail : 1.05, width : 1.8, flank_margin : 2.5});
 export function fishGlyphExtent(a) {
   if (a.glyphExtent !== undefined)
@@ -1276,7 +1205,6 @@ export function fishGlyphExtent(a) {
   return a.glyphExtent = extent;
 }
 
-// Cheek folds: RAYS lines across, each STEPS long, and hinge lines.
 const GILL_FOLDS = Object.freeze(
     {min_pixels : .05, rays : 6, start : .10, steps : 8, span : .87, hinge_steps : 16});
 export function fishGillFolds(g, r, a, side) {
@@ -1305,7 +1233,6 @@ export function fishGillFolds(g, r, a, side) {
   }
 }
 
-// Teeth line the jaw edge, more and longer with biting power; blunt teeth are flat and short.
 const TEETH = Object.freeze({
   min_gape : .08,
   count : 2,
@@ -1328,8 +1255,6 @@ const TEETH = Object.freeze({
   blunting : .42,
   max_height : .68
 });
-// How many teeth a jaw side of a biting power (0 to 1) carries and how they look: how far they
-// reach, the share of their base their tip keeps flat and of their reach they stand high.
 export function toothForm(power, bluntness = 0, spread = 0) {
   return {
     count :
@@ -1367,7 +1292,6 @@ export function fishTeeth(a, side) {
   return result;
 }
 
-// Cheek outlines take EDGE_STEPS points along and RIM_STEPS across.
 const CHEEK_PATH = Object.freeze({min_pixels : .05, edge_steps : 16, rim_steps : 24});
 export function fishCheekPath(g, r, a, side, append = false) {
   if (!append)
@@ -1405,8 +1329,6 @@ function fishFinPlan(a, index) {
   return Math.floor(((fishPlanPhase(a, name, f) % n) + n) % n);
 }
 
-// Closed Catmull-Rom curves: each handle reaches a sixth of the neighbours' span, times the
-// knot's roundness.
 function fishClosedCurves(points, roundness) {
   return points.map((p, i) => {
     const n = points.length, prev = points[(i + n - 1) % n], q = points[(i + 1) % n],
@@ -1418,7 +1340,6 @@ function fishClosedCurves(points, roundness) {
   });
 }
 
-// Side fins attach along the flank between FIRST and LAST; a rear lobe sits behind REAR.
 const FIN_ATTACHMENT = Object.freeze({
   rear : .505,
   rear_per_plan : .08,
@@ -1443,16 +1364,12 @@ function fishFinAttachment(a, index, lobe = 0) {
                                       FIN_ATTACHMENT.front_per_place * (1 - f.y)));
 }
 
-// Fin size grows with the power POWER of its cells and strength, in shares CELLS and STRENGTH.
 const FIN_SIZE = Object.freeze({min : .01, cells : .6, strength : .4, power : .37});
 export const finVolumeOf = (cells, strength) => Math.pow(
     Math.max(FIN_SIZE.min, FIN_SIZE.cells * cells + FIN_SIZE.strength * strength), FIN_SIZE.power);
 export const finVolume = (a, index) =>
     finVolumeOf(a.fin(index)[FIN_SHAPE.cells], a.fin(index)[FIN_SHAPE.strength]);
-// Fin rims run over the curves from the first to the last index here.
 const FIN_RIM = Object.freeze([ 1, 6 ]);
-// The tail fin grows with its size; the stroke stretches and narrows it. Its lobe and tip knots
-// stand out at least PUSH_OUT times the leading slope.
 const TAIL_FIN = Object.freeze({
   length : .20,
   length_per_size : .32,
@@ -1463,18 +1380,12 @@ const TAIL_FIN = Object.freeze({
   min_slope : .001,
   push_out : 1.08
 });
-// A tail fin's length and width at rest for its size, before its plan shapes it.
 export const tailFinSize = volume => ({
   length : TAIL_FIN.length + TAIL_FIN.length_per_size * volume,
   width : TAIL_FIN.width + TAIL_FIN.width_per_size * volume
 });
-// Tail fin knots over the upper half; the lower half mirrors the leading, lobe and tip knots.
 const TAIL_KNOT = Object.freeze({lead : 1, lobe : 2, tip : 3, fork : 4});
-// Tail and side fins both reach their tip at this knot.
 export const FIN_TIP = TAIL_KNOT.tip;
-// Side fins: shown SCALE times their length and swing, within the body's length and width; a
-// rear lobe is LOBE_LENGTH as long. Each fin spreads SPREAD past the flank, more with size and
-// swing, and rakes back with RAKE less RAKE_PER_POSE while it beats.
 const SIDE_FIN = Object.freeze({
   scale : 1.3,
   length : .16,
@@ -1495,15 +1406,12 @@ const SIDE_FIN = Object.freeze({
   rake_per_pose : .80,
   root_at : .35
 });
-// A side fin's length and spread past the flank for its size, before its plan and stroke.
 export const sideFinSize = volume => ({
   length : SIDE_FIN.length + SIDE_FIN.length_per_size * volume,
   spread : SIDE_FIN.spread + SIDE_FIN.spread_per_size * volume
 });
-// Side-fin knots from the root over the leading edge and tip to the trailing edge and base.
 const SIDE_KNOT =
     Object.freeze({root : 0, lead : 1, shoulder : 2, tip : 3, trail : 4, notch : 5, base : 6});
-// Their places (along, out) in fin lengths and spreads.
 const SIDE_KNOTS = Object.freeze({
   lead_along : .10,
   lead_out : .28,
@@ -1520,11 +1428,8 @@ const SIDE_KNOTS = Object.freeze({
   base_out : .025,
   base_end : .60
 });
-// A fringed fin moves the knots from the shoulder on towards these places.
 const FRINGE_KNOTS =
     Object.freeze([ [ .12, 1.02 ], [ -.22, .80 ], [ -.53, 1.12 ], [ -.67, .64 ], [ -.87, .70 ] ]);
-// Roundness at each side-fin knot, plain and fully fringed; the plain tip follows the leading
-// edge.
 const SIDE_ROUND = Object.freeze({
   plain : [ .1, .85, .85, 0, .85, .8, .4, .2 ],
   fringed : [ .1, .70, .30, .42, .30, .42, .30, .2 ],
@@ -1594,16 +1499,14 @@ export function fishFinShape(a, index, lobe = 0) {
                    Math.min(sideFinSize(volume).length * plan.length,
                             SIDE_FIN.max_length * (a.chestLength + a.hindLength)) *
                    (lobe ? SIDE_FIN.lobe_length : 1),
-          // A fin that exists always shows past the flank, however weak or folded it is.
-        widest = Array
-                     .from({length : SIDE_FIN.flank_samples},
-                           (_, k) => fishFlank(a, side, t + (1 - t) * k / SIDE_FIN.flank_samples))
-                     .filter(q => q[0] >= anchor[0] - length && q[0] <= anchor[0])
-                     .reduce((m, q) => Math.max(m, Math.abs(q[1])), Math.abs(anchor[1])),
-          // The swing comes on top of the part past the flank, so even a weak fin beats visibly.
-        swing = SIDE_FIN.scale *
-                Math.min((SIDE_FIN.swing + SIDE_FIN.swing_per_size * volume) * plan.swing,
-                         SIDE_FIN.max_swing + SIDE_FIN.max_swing_per_width * Math.abs(anchor[1])),
+          widest = Array
+                       .from({length : SIDE_FIN.flank_samples},
+                             (_, k) => fishFlank(a, side, t + (1 - t) * k / SIDE_FIN.flank_samples))
+                       .filter(q => q[0] >= anchor[0] - length && q[0] <= anchor[0])
+                       .reduce((m, q) => Math.max(m, Math.abs(q[1])), Math.abs(anchor[1])),
+          swing = SIDE_FIN.scale *
+                  Math.min((SIDE_FIN.swing + SIDE_FIN.swing_per_size * volume) * plan.swing,
+                           SIDE_FIN.max_swing + SIDE_FIN.max_swing_per_width * Math.abs(anchor[1])),
           spread = (Math.max(0, widest - Math.abs(anchor[1])) + sideFinSize(volume).spread +
                     swing * (SIDE_FIN.swing_rest + SIDE_FIN.swing_per_pose * pose)) *
                    (lobe ? dual : 1),

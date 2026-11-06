@@ -31,13 +31,10 @@ export let fishAnatomyCache;
 
 function fishGutCapacity(p) {
   const length = p[FISH.organs]?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle;
-  // Like the engine's gut_capacity: the reserve capacity scaled by the gut length.
   return Math.max(1, p[FISH.reserve_capacity] || BODY_UNIT.adult_reserve) * (1 + length) /
          (1 + BODY_UNIT.trait_middle);
 }
 
-// Snapshots quantize the live state in power-of-two bins, BINS_PER_PIXEL per pixel between
-// MIN_BINS and MAX_BINS; each asset keeps LAYOUTS layouts with STATES states each.
 export const SNAPSHOT = Object.freeze(
     {pixels : 16, min_bins : 4, max_bins : 32, bins_per_pixel : 2, layouts : 8, states : 4});
 const snapshotBins = pixels => Math.max(
@@ -100,7 +97,6 @@ export function fishSnapshotAnatomy(p, pixels = SNAPSHOT.pixels) {
   return a;
 }
 
-// One physical jaw; pump flow and contact effects are independent overlays.
 export function fishFeedingPose(p) {
   return {
     mouthOpening : p[FISH.mouth_pose] || 0,
@@ -109,8 +105,6 @@ export function fishFeedingPose(p) {
   };
 }
 
-// Fins and barbels animate at PHASE_RATE plus PHASE_PER_UNDULATION radians per step, offset per
-// fish by its id modulo PHASE_SPREAD; water moves them fully at MOTION_SPEED relative speed.
 const SWIM = Object.freeze(
     {phase_rate : .065, phase_per_undulation : .08, phase_spread : 11, motion_speed : 1.5});
 const animationPhase = p =>
@@ -118,10 +112,7 @@ const animationPhase = p =>
                           SWIM.phase_per_undulation * (p[FISH.organs]?.[ANATOMY.undulation] || 0)) +
     (p[FISH.id] || 0) % SWIM.phase_spread;
 const waterMotion = p => Math.min(1, (p[FISH.relative_speed] || 0) / SWIM.motion_speed);
-// The mouth's share of the body radius, as the engine's mouth_share.
 export const mouthShare = jaw => BODY_UNIT.mouth_share_short + BODY_UNIT.mouth_share_span * jaw;
-// Movement and face pulses stay continuous; body geometry can reuse a quantized state.
-// The body's rear bends with the tail stroke.
 function strokeFlex(tailPose, direction) { return FIN_STROKE.body_bend * tailPose * direction; }
 export function fishPoseAnatomy(a, p) {
   const direction = tailDirection(p[FISH.fin_pose]?.[FINS]),
@@ -146,7 +137,6 @@ export function fishPoseAnatomy(a, p) {
                        fishFeedingPose(p));
 }
 
-// Organ sizes saturate, half at ORGAN_HALF squared cells; fillings may show up to their maxima.
 const ANATOMY_SCALE = Object.freeze({
   organ_half : 3,
   egg_fill_max : 1.6,
@@ -156,7 +146,6 @@ const ANATOMY_SCALE = Object.freeze({
   min_radius : .001,
   gut_fill_max : 1.6
 });
-// An organ's size (0 to 1) from its anatomy column: half at ORGAN_HALF squared.
 export const organSize = n => {
   const v = Math.sqrt(Math.max(0, n || 0));
   return v / (v + ANATOMY_SCALE.organ_half);
@@ -281,9 +270,6 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
   return fishShapeAnatomy(a);
 }
 
-// The first form of each organ as the engine lays them out (BrainInterface::sense_form and
-// motor_form): the internal tissue, a side pair for each early sense, each early motor, the late
-// senses but blood, the late motors, and blood.
 const SIDES = 2, EARLY = FORM_LAYOUT.early_organs,
       FIRST_MOTOR = FORM_LAYOUT.first_sense + SIDES * EARLY,
       LATE_SENSE = FIRST_MOTOR + SIDES * EARLY,
@@ -299,9 +285,7 @@ export function formIndex(key) {
                                   : LATE_SENSE + SIDES * (k - EARLY);
   return k < EARLY ? FIRST_MOTOR + SIDES * k : LATE_MOTOR + SIDES * (k - EARLY);
 }
-// Placement coordinates of a form, before its weight; a form without weight counts fully.
 const PLACEMENT = [ 'x', 'y', 'z', 'sy', 'sz' ];
-// Where an organ without cells sits, and how far it spreads.
 const ABSENT_FORM = Object.freeze({
   x : FORM_LAYOUT.absent_place,
   y : FORM_LAYOUT.absent_place,
@@ -310,19 +294,15 @@ const ABSENT_FORM = Object.freeze({
   sz : FORM_LAYOUT.absent_spread,
   weight : 0
 });
-// Organs grow with their cells in units of GROWTH_UNIT cell weights; gamete organs with the
-// power GAMETE_GROWTH.
 const GROWTH_UNIT = 8;
 export const GAMETE_GROWTH = .26;
 export const organGrowth = (f, power) => Math.pow(1 + f.weight / GROWTH_UNIT, power);
-// A form or region as sent: its placement and weight.
 export function formRecord(p) {
   return {
     ...Object.fromEntries(PLACEMENT.map(name => [name, p[ORGAN_FORM[name]]])),
     weight : p[ORGAN_FORM.weight]
   };
 }
-// Organ shape uses the same normalized coordinates as the cells it contains.
 export function fishForm(a, key, side = -1) {
   const cache = a.formCache ??= new Map(), cacheKey = key + ':' + side;
   if (cache.has(cacheKey))
@@ -349,8 +329,6 @@ export function fishForm(a, key, side = -1) {
   return form;
 }
 
-// An organ spans BASE plus PER_SPREAD of its cells' spread, centred by their place, between
-// FIRST and LAST.
 const ORGAN_SPAN = Object.freeze({
   max : .94,
   base : .25,
@@ -371,7 +349,6 @@ export function fishOrganSpan(a, key, side) {
   };
 }
 
-// Along coordinates: the head ends at HEAD, the chest at CHEST and the hind body at TAIL.
 export const ALONG = Object.freeze({head : .18, chest : -.22, tail : -.87});
 export function fishAlong(a, x) {
   return x >= ALONG.head ? x
@@ -380,7 +357,6 @@ export function fishAlong(a, x) {
              : a.chestBack + (x - ALONG.chest) / (ALONG.chest - ALONG.tail) * a.hindLength;
 }
 
-// Hits count within an ellipse from the snout to TAIL behind the centre.
 const HIT = Object.freeze({tail : .95});
 export function fishBodyContains(p, x, y, padding = 0, scale = 0) {
   const dx = horizontalDelta(x - p[FISH.x]), dy = y - p[FISH.y],
@@ -398,7 +374,6 @@ export function fishBodyContains(p, x, y, padding = 0, scale = 0) {
   return ((localX - center) / rx) ** 2 + (localY / ry) ** 2 <= 1;
 }
 
-// Spot patterns: ROWS rows of hashed spots per stripe, jittered and staggered.
 export const PATTERN_SPOTS = Object.freeze({
   rows : 3,
   hash_i : 12.73,
@@ -428,10 +403,7 @@ function fishPatternSpots(pattern) {
   return spots;
 }
 
-// Dark pattern ink, scaled by the light.
 export const PATTERN_INK = Object.freeze([ .025, .075, .11 ]);
-// Pattern drawing in body lengths along and flank widths across; the pattern phase turns each
-// wave by PHASE_TURNS radians.
 export const PATTERN = Object.freeze({
   clip_height : 3,
   stripe_start : .13,

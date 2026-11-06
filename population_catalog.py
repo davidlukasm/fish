@@ -1,5 +1,3 @@
-"""Start-line selection reuses the persistent genome archive and native anatomy."""
-
 import copy
 import hashlib
 import time
@@ -12,7 +10,6 @@ from history import atomic_write
 from protocol_schema import Fish, Anatomy, GenomeImport, RateWindow
 from viewer_paths import ROOT, command_path, engine_path
 
-# Milliseconds per second; at most PREVIEW_CACHE developed previews are kept.
 SECOND_MS, PREVIEW_CACHE = 1000, 128
 
 
@@ -22,7 +19,6 @@ class PopulationCatalog:
         self.preview_lock = threading.Lock()
         self.previews = {}
 
-    # Shipped fish: every genome below genomes/, labelled by its folder.
 
     @staticmethod
     def examples():
@@ -94,7 +90,6 @@ class PopulationCatalog:
             if row["group"] != "examples" and not row.get("imported"):
                 row["observed_speed"] = portrait[Fish.RELATIVE_SPEED] if len(portrait) > Fish.RELATIVE_SPEED else None
                 row["observed_torque"] = abs(portrait[Fish.TORQUE]) if len(portrait) > Fish.TORQUE else None
-        # Present different genera before another representative of the same genus.
         ordered = []
         for category in ("favorites", "saved"):
             groups = {}

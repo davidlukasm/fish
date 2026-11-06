@@ -1,4 +1,3 @@
-// Organ-first atelier: engine anatomical sites, real compiler plans and UI gestures.
 const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {readFileSync} = require('node:fs');
@@ -108,13 +107,10 @@ function semanticFingerprint(source) {
     de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
-  // The design and its modules, as one model.
   const model = {
     ...await import('../ui/studio/model/document.js'),
     ...await import('../ui/studio/model/assemblies.js')
   };
-  // The scene, the hints while placing, where organs are drawn and their names, as one view of the
-  // fish.
   const views = {
     ...await import('../ui/studio/view/scene.js'),
     ...await import('../ui/studio/view/placing.js'),
@@ -122,7 +118,6 @@ function semanticFingerprint(source) {
     ...await import('../ui/studio/view/places.js'),
     ...await import('../ui/studio/view/names.js')
   };
-  // The inspector, the library and the substances' graphics, as one view of the panels.
   const panels = {
     ...await import('../ui/studio/view/panels.js'),
     ...await import('../ui/studio/view/library.js'),
@@ -176,14 +171,11 @@ function semanticFingerprint(source) {
     assert.equal(checked.synapses, source.synapses);
     assert.equal(checked.viable, source.viable);
   }
-  // A stimulus runs from its source along the drawn network: a part fires once, at the first
-  // signal's arrival, when the engine found it active; a signal to a quiet part fades there.
   {
     const line = (x0, x1) => [{x : x0, y : 0}, {x : x1, y : 0}];
     assert.deepEqual(pulse.signalPoint(line(0, 100), .5), {x : 50, y : 0});
     assert.equal(pulse.legDuration(line(0, 1)), pulse.SIGNAL.least);
     assert.equal(pulse.legDuration(line(0, 1e6)), pulse.SIGNAL.most);
-    // A signal runs from the nodes along their branches, along the trunk and out to the nodes.
     assert.deepEqual(pulse
                          .legStages({
                            points : line(0, 100),
@@ -224,7 +216,6 @@ function semanticFingerprint(source) {
                      [ 'quiet', 'quiet', 'quiet' ], 'A quieted part withdraws what it sends');
     assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 3,
                  'A part sends once to each of its targets');
-    // As a preview along the drawn wires every part follows the first signal that reaches it.
     const preview = pulse.signalSchedule(
         [ 'eye' ],
         [
@@ -238,12 +229,9 @@ function semanticFingerprint(source) {
                                   .sort();
     assert.deepEqual(previewed('fire'), [ 'eye', 'freed', 'muscle', 'tectum' ]);
     assert.deepEqual(previewed('quiet'), [ 'muted', 'quiet' ]);
-    // A part that is pushed down and swings back past its rest still counts as falling; one whose
-    // swing stays below the cutoff does not answer.
     const frames = [ [ 0, 0, 0 ], [ .9, -.8, .01 ], [ .2, -.3, -.02 ], [ -.3, .2, .01 ] ];
     assert.deepEqual([ [ 0 ], [ 1 ], [ 2 ], [ 1, 0 ] ].map(i => pulse.signalAnswer(frames, i)),
                      [ 'rise', 'fall', null, 'rise' ]);
-    // The player marks each part as it fires and each wire as its signal starts.
     const oldFrame = globalThis.requestAnimationFrame, oldCancel = globalThis.cancelAnimationFrame;
     const scheduled = [], reached = [], classes = new Set();
     const element = {classList : {add : (...c) => c.forEach(x => classes.add(x)), remove() {}}};
@@ -282,7 +270,6 @@ function semanticFingerprint(source) {
       globalThis.cancelAnimationFrame = oldCancel;
     }
   }
-  // A stimulus runs through the fish only when it is built as drawn; the scene says which.
   {
     const {builtAsDrawn, stimulusKind} = await import('../ui/studio/view/stimulus.js');
     const drawn =
@@ -294,7 +281,6 @@ function semanticFingerprint(source) {
     assert.doesNotMatch(stimulusKind({...drawn, stale : true}), /real/);
     assert.equal(stimulusKind({...drawn, tool : 'select'}), '');
   }
-  // Every sense draws its stimulus on its charts, differently as it grows, named in its title.
   {
     const {stimulusPicture} = await import('../ui/studio/view/stimuli.js');
     const {SENSE_KIND} = await import('../ui/schema.js');
@@ -309,7 +295,6 @@ function semanticFingerprint(source) {
     ...await import('../ui/studio/view/frame.js')
   };
   assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
-  // Panning follows SVG's actual letterboxed area, including narrow or short canvases.
   const camera = {zoom : 2, x : 560, y : 365};
   const cameraBox = geometry.cameraBox(camera);
   const shortViewport = {width : 1200, height : 480};
@@ -338,8 +323,6 @@ function semanticFingerprint(source) {
     assert.ok(added, definition.key);
     assert.doesNotThrow(() => model.compileDocument(added.document, sites));
   }
-  // Brain regions sit on both sides with their own circuit: the spinal cord's rhythm cells drive
-  // their side's inhibitory cells, which silence the other side's rhythm.
   {
     const site = sites.find(s => s.zone === 2 && !s.outer);
     const spinal =
@@ -348,7 +331,6 @@ function semanticFingerprint(source) {
     const left = model.findOrgan(spinal.document, spinal.organId),
           right = model.findOrgan(spinal.document, left.pair);
     assert.ok(right && right.side === -left.side);
-    // Its plan beats each side and holds the other side down; steering drives the beat.
     const regions = await import('../ui/studio/model/regions.js');
     assert.deepEqual(left.centers.map(c => c.node), [ 'beat', 'cross', 'steer' ]);
     assert.equal(spinal.document.wires.length, 0, 'The plan needs no wires of its own');
@@ -359,7 +341,6 @@ function semanticFingerprint(source) {
                 inner.includes(node(a, 'steer') + '>' + node(a, 'beat')));
     assert.ok(inner.includes(node(left, 'cross') + '>' + node(right, 'beat')) &&
               inner.includes(node(right, 'cross') + '>' + node(left, 'beat')));
-    // A link of the plan is taken out on both sides, shows as cut in the circuit and comes back.
     const crossKey = regions.innerKey('cross', 'beat', true);
     const loose = regions.toggleInnerLink(spinal.document, spinal.organId, crossKey);
     model.validateDocument(loose);
@@ -369,7 +350,6 @@ function semanticFingerprint(source) {
         'Both sides lose the link');
     assert.ok(regions.routedLinks(regions.toggleInnerLink(loose, left.pair, crossKey), sites)
                   .some(l => l.key === crossKey));
-    // Its circuit ends the inhibiting cells' links in a bar.
     const spinalPanels = await import('../ui/studio/view/panels.js');
     const spinalCircuit = spinalPanels.inspector({
       document : spinal.document,
@@ -383,7 +363,6 @@ function semanticFingerprint(source) {
       contactView : 'design'
     });
     assert.match(spinalCircuit, /aid-circuit-link crossing inhibits[^>]*url\(#aid-circuit-bar\)/);
-    // Moved, a region takes its nodes along and grows new ones where it now is.
     const movedSpinal = model.moveOrgan(spinal.document, spinal.organId, sites, {x : 700, y : 420});
     assert.ok(movedSpinal, 'A region can be moved');
     const movedLeft = model.findOrgan(movedSpinal, spinal.organId);
@@ -395,8 +374,6 @@ function semanticFingerprint(source) {
     const allCentersOf = doc => model.allCenters(doc).length;
     const regionPlan = model.compileDocument(spinal.document, sites);
     assert.equal(regionPlan.groups.length, 6);
-    // The olfactory bulb gathers its side's nose and, comparing, holds the other side's output
-    // down.
     const nosed = model.addOrgan(model.newDocument('Riechen'), 'nose', sites, {x : 185, y : 318});
     const bulbSite = sites.find(s => s.zone === 1 && !s.outer && s.w > 0);
     const bulb = model.addOrgan(nosed.document, 'olfactory', sites, geometry.sitePoint(bulbSite));
@@ -411,7 +388,6 @@ function semanticFingerprint(source) {
         smellLinks.some(l => l.from === nosed.organId && l.to === bulbNode(bulbLeft, 'gather')));
     assert.ok(smellLinks.some(l => l.from === bulbNode(bulbLeft, 'compare') &&
                                    l.to === bulbNode(bulbRight, 'out')));
-    // The hindbrain's command fires past its threshold and holds the other side's down.
     const hind = model.addOrgan(model.newDocument('Flucht'), 'hindbrain', sites,
                                 geometry.sitePoint(bulbSite));
     const hindLeft = model.findOrgan(hind.document, hind.organId),
@@ -424,7 +400,6 @@ function semanticFingerprint(source) {
     assert.ok(bulbNode(hindLeft, 'command') &&
               model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
                   model.findCenter(hind.document, bulbNode(hindLeft, 'command')).center.threshold);
-    // Every region can be placed, grows its plan and compiles; a paired one on both sides.
     for (const region of ORGANS.filter(o => o.category === 'regions')) {
       const home = sites.find(s => !s.outer && s.w > 0 && region.centers[0].zones.includes(s.zone));
       const placed = model.addOrgan(model.newDocument(region.key), region.key, sites,
@@ -436,7 +411,6 @@ function semanticFingerprint(source) {
       assert.ok(model.compileDocument(placed.document, sites).groups.length >=
                 organ.centers.length);
     }
-    // A slot can name the node its organs reach: balance goes to the cerebellum's output.
     const balanced =
         model.addOrgan(model.newDocument('Gleichgewicht'), 'lateral', sites, {x : 573, y : 300});
     const cerebellumSite = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side === -1);
@@ -450,8 +424,6 @@ function semanticFingerprint(source) {
     assert.ok(
         steadyLinks.length &&
         steadyLinks.every(l => model.findCenter(steady.document, l.to).center.node === 'smooth'));
-    // An eye wired to the optic tectum joins the sides as drawn: to the tectum on its side each
-    // eye feeds its own, to the far one each eye feeds the far tectum.
     let wired = model.addOrgan(spinal.document, 'eye', sites, {x : 345, y : 290}).document;
     const tectumSite = sites.find(s => s.zone === 1 && !s.outer);
     const tectum = model.addOrgan(wired, 'tectum', sites, geometry.sitePoint(tectumSite));
@@ -479,9 +451,6 @@ function semanticFingerprint(source) {
                              model.findOrgan(connected.document, l.to).side),
               'Optic wires cross');
     assert.ok(tectumLeft);
-    // The tectum takes the eye as a whole and spreads it over its map: each light cell reaches
-    // the map node of its direction on the far side, the map its output, the contrast cells the
-    // map; its nodes follow its settings.
     const retina = await import('../ui/studio/model/retina.js');
     const settled = regions.settleRegions(connected.document, sites);
     const routed = regions.routedLinks(settled, sites);
@@ -509,8 +478,6 @@ function semanticFingerprint(source) {
                      [ [ 'sight', true ], [ 'near', false ], [ 'onward', false ] ]);
     const plan = model.compileDocument(connected.document, sites);
     assert.equal(plan.groups.length, allCentersOf(connected.document));
-    // Between any two paired organs a wire joins the sides as drawn: drawn on one side each side
-    // keeps to itself, drawn across each crosses.
     {
       let tried = 0;
       const pairedTypes = ORGANS.filter(o => !o.fixed && o.category !== 'internal').map(o => o.key);
@@ -550,7 +517,6 @@ function semanticFingerprint(source) {
         }
       assert.ok(tried > 40, 'Many pairs of organs tried: ' + tried);
     }
-    // Drawn to a node of the far tectum, an optic wire crosses as drawn.
     const twin = model.findOrgan(wired, tectumLeft.pair);
     const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
     assert.equal(across.document.wires.at(-1).pairing, 'crossed');
@@ -561,32 +527,25 @@ function semanticFingerprint(source) {
                   .filter(l => l.wire.id === across.wireId)
                   .every(l => sideOf(l.from) !== sideOf(l.to)),
               'Optic wires cross whichever twin they were drawn to');
-    // A wire between twin tecta joins the sides as drawn, never a tectum to itself.
     const commissure = model.addWire(wired, tectumLeft.centers[0].id, twin.centers[0].id);
     assert.ok(commissure);
     assert.ok(model.expandedWires(commissure.document).every(l => l.from !== l.to));
-    // A wire whose connections are already made is refused: drawn to the far tectum with the
-    // same guidance, the optic wire repeats the one drawn to the near tectum.
     const opticDoc = connected.document;
     assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.id), null);
-    // A built-in module wires its organs as a whole.
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
-    // Every built-in module can be placed, on both sides.
     for (const {key} of (await import('../ui/studio/model/organs.js')).MODULES) {
       const placed = model.placeModule(model.newDocument(key), key, sites, {x : 345, y : 290});
       assert.ok(placed, key + ' can be placed');
       assert.ok(!model.oneSided(placed.document, sites, placed.document.assemblies[0]), key);
     }
-    // A built-in module comes on both sides.
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
     assert.equal(steering.document.assemblies.length, 1);
     assert.ok(steering.document.wires.every(w => model.findOrgan(steering.document, w.from) &&
                                                  model.findOrgan(steering.document, w.to)));
     assert.ok(steering.document.organs.some(o => o.type === 'tectum'),
               'Seeing and steering runs through the optic tectum');
-    // Either tectum's circuit shows the optic wires crossing and their side guidance.
     for (const id of [tectum.organId, tectumLeft.pair]) {
       const circuit = panels.inspector({
         document : connected.document,
@@ -659,7 +618,6 @@ function semanticFingerprint(source) {
   doc = model.updateField(doc, id, {lo : 30, hi : 100}, sites);
   assert.deepEqual(doc.wires, wires, 'Regenerating an eye preserves its connections');
   const planAfter = model.compileDocument(doc, sites);
-  // The native compiler receives every intended retinal source, grouped as one wire.
   const retinalIndices =
       planAfter.groups.map((g, i) => g.name.startsWith('eye:') && g.side === left.side ? i : -1)
           .filter(i => i >= 0);
@@ -684,7 +642,6 @@ function semanticFingerprint(source) {
   const relayIndex = model.allCenters(fromNode.document).findIndex(c => c.id === relay.centerId);
   assert.deepEqual(nodePlan.connections.filter(e => e.to === relayIndex).map(e => e.from),
                    [ nodeIndex ]);
-  // A node's wires go with it when its colour type is removed.
   const twoTypes = model.updateField(
       fromNode.document, id,
       {addProfile : {id : 'extra', q1 : .4, q2 : -1, qwidth : .2, threshold : -.6}}, sites);
@@ -717,7 +674,6 @@ function semanticFingerprint(source) {
           .field.profiles.every(
               p => model.findOrgan(denseNear.document, id).centers.some(c => c.profile === p.id)));
   model.validateDocument(denseNear.document);
-  // Whole organs round-trip as a module with stable semantic wires and new identifiers.
   const module = {name : 'Vision', organs : doc.organs, wires : doc.wires};
   const points =
       module.organs.filter(o => o.centers.length)
@@ -736,7 +692,6 @@ function semanticFingerprint(source) {
   assert.equal(placed.document.organs.filter(o => o.type === 'eye').length, 2);
   assert.ok(placed.document.organs.filter(o => o.type === 'eye')
                 .every(o => o.field.profiles.length === 5));
-  // A module with a brain region keeps the region's settings and what was made of its nodes.
   const regionsModel = await import('../ui/studio/model/regions.js');
   let withTectum =
       model.placeModule(model.newDocument('Sehen'), 'vision-steering', sites, {x : 345, y : 290})
@@ -746,7 +701,6 @@ function semanticFingerprint(source) {
       regionsModel.updateRegion(withTectum, tectumId, {resolution : 4, contrast : 2}, sites);
   const output = model.findOrgan(withTectum, tectumId).centers.find(c => c.node === 'out');
   withTectum = model.updateCenter(withTectum, output.id, {tau : .9});
-  // Dropped off the middle, a module with both sides keeps its sides.
   const stored = model.placeStoredModule(
       model.newDocument('Wieder'),
       {name : 'Sehen', organs : withTectum.organs, wires : withTectum.wires}, sites,
@@ -760,11 +714,9 @@ function semanticFingerprint(source) {
   const malformed = structuredClone(module);
   malformed.organs.find(o => o.centers.length).centers[0].site = -1;
   assert.equal(model.placeStoredModule(model.newDocument(), malformed, sites, position), null);
-  // A relay on the midline serves both sides; one beside it makes a module one-sided.
   assert.ok(geometry.onMidline(
       sites.find(s => s.id === model.findCenter(baseDoc, relay.centerId).center.site)));
   const beside = model.addNeuron(baseDoc, 'relay', sites, {x : 500, y : 400});
-  // A chosen nerve center shows how far its signals reach.
   assert.match(views.fishScene({
     document : beside.document,
     sites,
@@ -778,7 +730,6 @@ function semanticFingerprint(source) {
     contactView : 'design'
   }),
                /class="aid-reach"/);
-  // A nerve center moves to the midline, and from there to either side.
   const centred = model.moveCenterToSide(beside.document, beside.centerId, 0, sites);
   const siteOf = (d, c) => sites.find(s => s.id === model.findCenter(d, c).center.site);
   assert.ok(centred && geometry.onMidline(siteOf(centred, beside.centerId)));
@@ -793,7 +744,6 @@ function semanticFingerprint(source) {
   model.validateDocument(mirrored.document);
   assert.equal(mirrored.document.organs.filter(o => o.type === 'eye').length, 2,
                'Mirroring a circuit reuses the opposite eye');
-  // The mirror image joins the module, which then lies on both sides and goes as one.
   assert.equal(mirrored.assemblyId, circuit.assemblies[0].id);
   assert.equal(mirrored.document.assemblies.length, 1);
   assert.ok(model.oneSided(circuit, sites, circuit.assemblies[0]));
@@ -863,28 +813,21 @@ function semanticFingerprint(source) {
     wireScope : 'all',
     contactView : 'design'
   };
-  // With the hormone tool the gland releasing the substance shows on the fish, and the body
-  // growing with it.
   const hormoneScene = views.fishScene({...state, tool : 'hormone', focusSubstance : 0});
   assert.match(hormoneScene, /aid-hormone-producer/);
   assert.match(hormoneScene, /aid-hormone-body/);
-  // The library names brain regions by their short technical terms and says on hover, in
-  // German, what each is for.
   assert.match(panels.libraryOf(state).html, /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
-  // Dragging a muscle shows the homes of the four works on both sides, named and coloured.
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
   assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
                    [ 'Flossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
   assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 4);
   assert.equal(muscleHints.svg.match(/aid-muscle-home/g).length, 8);
   const eyePanel = panels.inspector(state);
-  // An organ's inspector says what substances do to it and opens the tools that change that.
   assert.match(eyePanel, /Hormone und Lernen/);
   assert.match(eyePanel, /data-open-tool="hormone"/);
   assert.match(eyePanel, /data-spectrum="field"/);
   assert.match(eyePanel, /data-sight-eye="0"/);
   assert.doesNotMatch(eyePanel, /type="range"/, 'The eye has no sliders');
-  // The spectrum's width handle sits a sigma from the centre and sets the width back.
   const spectrum = await import('../ui/studio/view/spectrum.js');
   const tuning = await import('../ui/tuning.js');
   const tuned = {q1 : -.5, qwidth : .4},
@@ -895,9 +838,6 @@ function semanticFingerprint(source) {
       Math.abs(
           spectrum.spectrumPatch(tuned, 'centre', spectrum.hueFraction(tuning.HUE_CIRCLE / 2)).q1) <
       1e-9);
-  // A nose aimed at a scent prefers it most; the scent map puts each scent where aiming at it
-  // brings the preference, and a pointer there tunes to it; between scents a pointer tunes to
-  // the place under it.
   const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
   const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
   for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
@@ -908,14 +848,11 @@ function semanticFingerprint(source) {
   }
   const between = {q1 : .3, q2 : -.2}, back = tunedAt(scents.scentMapPoint(between.q1, between.q2));
   assert.ok(Math.abs(back.q1 - between.q1) < 1e-9 && Math.abs(back.q2 - between.q2) < 1e-9);
-  // The halo holds what the nose smells at least half as well.
   const half = tuning.tuningHalfOffset(.3);
   assert.ok(Math.abs(tuning.tuningAffinity(half, .3) - .5) < 1e-9);
   const pigmentSite =
       sites.find(s => eligible(ORGANS.find(o => o.key === 'pigment').centers[0], s));
   const pigment = model.addOrgan(doc, 'pigment', sites, geometry.sitePoint(pigmentSite));
-  // The skin's pigment cells: one organ, its kinds of cell on chips, their pigment on the wheel
-  // and their amount on a track; another kind starts with another pigment and can go again.
   assert.equal(model.findOrgan(pigment.document, pigment.organId).pair, null);
   const pigmentPanel = panels.inspector(
       {...state, document : pigment.document, selected : {kind : 'organ', id : pigment.organId}});
@@ -945,12 +882,10 @@ function semanticFingerprint(source) {
   assert.match(
       panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0}),
       /data-phase-handle="start"/);
-  // A life phase's marks sit on the maturity axis; one at the axis' end leaves its side open.
   assert.deepEqual(panels.phasePatch('start', 0), {start : null});
   assert.deepEqual(panels.phasePatch('end', 1), {end : null});
   assert.ok(panels.phasePatch('end', 0).end > 0, 'A cell dies at some maturity, never at none');
   assert.ok(Math.abs(panels.phasePatch('end', (36 + 107) / 260).end - .5) < 1e-9);
-  // A near sense reaches deeper the higher its range, as the engine computes it.
   assert.ok(sitesResult.nearDepth[0] > 0 && sitesResult.nearDepth[1] > sitesResult.nearDepth[0]);
   const sensorEffects = [
     ...panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0})
@@ -964,14 +899,10 @@ function semanticFingerprint(source) {
     effect : E.learning
   });
   assert.match(learner, /data-learn-rate/);
-  // Without a teacher the episode's teaching arrow stays dashed; each part of learning offers a
-  // substance for it, the teaching signal too.
   assert.match(learner, /aid-episode-arrow teach none/);
   for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
     assert.match(learner,
                  new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
-  // The learning tool offers its own library: the cells learning needs and, per substance, what
-  // it can do to learning.
   const learnShelf = panels.libraryOf({...state, tool : 'learn'});
   assert.equal(learnShelf.kind, 'learn');
   for (const key of ['learn', 'modulate', 'pacemaker'])
@@ -981,7 +912,6 @@ function semanticFingerprint(source) {
   assert.doesNotMatch(learnShelf.html, new RegExp('data-drag-value="0:' + E.death + '"'));
   assert.equal(panels.libraryOf({...state, tool : 'hormone'}).kind, 'hormone');
   assert.equal(panels.libraryOf({...state, tool : 'select'}).kind, 'select');
-  // With nothing chosen the inspector shows the way through the Atelier, its steps as tools.
   const guide = panels.inspector({...state, selected : null});
   assert.match(guide, /aid-workflow/);
   assert.match(guide, /data-tool="wire"/);
@@ -1086,20 +1016,16 @@ assert example['compiler']['ok'],example['compiler']
 print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
-  // The example fish can go to the aquarium: it senses, swims, eats and reproduces.
   const exampleStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(exampleStudio.state, {sites, capabilities : sitesResult});
   const regionModel = await import('../ui/studio/model/regions.js');
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
-  // The pallium learns each kind of input in a node of its own, each taught by the food
-  // substance.
   const examplePallium = exampleStudio.state.document.organs.find(o => o.type === 'pallium');
   const learning = examplePallium.centers.filter(c => c.stream);
   assert.deepEqual(learning.map(c => c.stream), [ 'olfactory', 'tectum' ]);
   assert.ok(learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
-  // A modulator wired onto one of its learners teaches it and opens no stream of its own.
   const teacherPlaced =
       model.addNeuron(exampleStudio.state.document, 'modulate', sites,
                       geometry.sitePoint(sites.find(x => x.id === learning[0].site)));
@@ -1115,8 +1041,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     selected : {kind : 'organ', id : examplePallium.id}
   }),
                /Für jede Art von Eingang/);
-  // A plan too large for the free sites around it keeps what fits, wires only what is there and
-  // says so.
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
   const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
                                               {resolution : 6, colours : 1}, sites);
@@ -1128,7 +1052,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.doesNotThrow(
       () => panels.inspector(
           {...state, document : crowdedDoc, selected : {kind : 'organ', id : exampleTectum.id}}));
-  // The example's brain is built of regions, each with every node of its plan.
   for (const organ of exampleStudio.state.document.organs.filter(o => o.region))
     assert.equal(organ.centers.length,
                  regionModel.regionPlan(exampleStudio.state.document, organ).nodes.length,
@@ -1154,8 +1077,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }));
   const {built, designed, target : seen, outside, blue} = response;
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
-  // In the example the eyes reach the optic tecta across the midline only, as wired, and a tectum
-  // does not talk to itself.
   const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);
   const organOf = index => model.findCenter(exampleDoc, exampleCenters[index].id).organ;
   const optic = response.example.contacts.filter(([ from, to ]) => organOf(from).type === 'eye' &&
@@ -1165,8 +1086,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
-  // Its mouth is wired: the tectum and the pallium reach the biting muscles, the olfactory bulb
-  // and the pallium the sucking ones, in the drawing and in the built fish.
   for (const [kind, sources] of [[ MOTOR_KIND.aggression, [ 'pallium', 'tectum' ] ],
                                  [ MOTOR_KIND.suction, [ 'olfactory', 'pallium' ] ]]) {
     const muscles =
@@ -1179,7 +1098,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(response.example.contacts.some(([, to ]) => muscles.includes(organOf(to))),
               'The built fish reaches its mouth muscles of kind ' + kind);
   }
-  // Zoomed out the whole way, the camera shows where an eye's field ends.
   assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=
             response.designed.visionDepth * geometry.BODY_RADIUS);
   console.log('Atelier compilation: ' + response.duration.toFixed(3) + ' s');
@@ -1200,8 +1118,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           .map(row => answers(r).get(row[RECEPTOR.neuron]) ?? 0));
   assert.ok(responseAt(seen) > responseAt(blue) + .01,
             'Red-selective cells distinguish red from blue at the target');
-  // The eye's view has one answer strip per colour type, each answer between none and full and
-  // empty only where none of the type's cells looks.
   const readout = await import('../ui/organ_readout.js');
   const typeRows =
       readout.eyeTypeAnswers(readout.eyeSight(seen.sight.bands, seen.sight.samples, eyeCells(seen),
@@ -1210,7 +1126,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                new Set(model.findOrgan(doc, id).field.profiles.map(p => p.id)).size);
   assert.ok(typeRows.every(row => row.values.some(v => v !== null) &&
                                   row.values.every(v => v === null || (v >= 0 && v <= 1))));
-  // Every displayed ray must match an engine cell, including half-bin offsets.
   for (const ray of rayPlan) {
     const index = model.allCenters(doc).findIndex(c => c.id === ray.center);
     const actual = seen.sight.receptors.find(
@@ -1220,7 +1135,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(actual[RECEPTOR.view_left] * 180 / Math.PI - ray.left) < .001);
     assert.ok(Math.abs(actual[RECEPTOR.view_right] * 180 / Math.PI - ray.right) < .001);
   }
-  // The scene: a fixed abstract fish with the organs' glyphs, the field with the engine's cells.
   const rendered = {
     ...state,
     anatomy : seen,
@@ -1251,8 +1165,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(doc.organs.filter(o => o.type === type)
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
               type + ' remains selectable');
-  // A field's rays start where the engine's eye looks from; the field shows outside a circle
-  // around the eye as drawn, past where its rays leave the body.
   const fan = vision.visionGeometry(rendered, currentEye),
         place = seen.eyePlaces[currentEye.side < 0 ? 0 : 1];
   assert.deepEqual(fan.eye, views.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
@@ -1260,15 +1172,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       Math.abs(fan.origin.x - (geometry.BODY_MIDDLE.x - place[0] * geometry.BODY_RADIUS)) < 1e-9 &&
       Math.abs(fan.origin.y - (geometry.BODY_MIDDLE.y + place[1] * geometry.BODY_RADIUS)) < 1e-9);
   assert.ok(fan.cut > Math.hypot(fan.origin.x - fan.eye.x, fan.origin.y - fan.eye.y));
-  // A test light that would lie in the fish or the cut moves out along its bearing; the field
-  // still runs from where the engine sees.
   const inside = {side : currentEye.side, bearing : 30, distance : 0, radius : .01, hue : 20};
   const cleared = vision.clearOfFish(rendered, currentEye, inside);
   const lit = fan.pointText(cleared.bearing, cleared.distance * fan.world);
   assert.ok(cleared.distance > 0 && Math.hypot(lit.x - fan.eye.x, lit.y - fan.eye.y) >= fan.cut);
-  // A hormone turns an effect either way, as its receptor says: passing on rises from half to
-  // full where it starts at nothing and gains (as in the start fish), falls where it starts full;
-  // a cell dies with the substance or, needing it, without it.
   {
     const E = HORMONE_EFFECT, r = (baseline, sensitivity) => ({baseline, sensitivity});
     assert.equal(model.effectLevel(E.output, 0), .5);
@@ -1285,7 +1192,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const substancesView = await import('../ui/studio/view/substances.js');
     assert.match(substancesView.boundEffect(E.output, 1), /aid-direction/);
   }
-  // A new test light starts beyond the field's handles.
   const started = vision.beyondHandles(rendered, currentEye, cleared);
   const away = fan.pointText(started.bearing, started.distance * fan.world);
   assert.ok(Math.hypot(away.x - fan.eye.x, away.y - fan.eye.y) > fan.handle,
@@ -1356,21 +1262,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   pan.pointerMove({clientX : 240, clientY : 220});
   assert.notEqual(pan.state.camera.x, 560);
   pan.pointerUp({preventDefault() {}});
-  // Choosing a light cell edits its own colour type.
   const chooser = new OrganStudio(emptyRoot);
   chooser.state = {...chooser.state, ...state, document : twoTypes, visionProfile : null};
   chooser.refreshScene = chooser.refreshInspector = () => {};
   chooser.api = () => new Promise(() => {});
   chooser.select('center', extraNode);
   assert.equal(chooser.state.visionProfile, 'extra');
-  // Choosing an organ or nothing keeps it.
   chooser.select('organ', id);
   assert.deepEqual(chooser.state.selected, {kind : 'organ', id});
   chooser.select(null, null);
   assert.equal(chooser.state.selected, null);
   assert.equal(chooser.state.visionProfile, 'extra');
-  // A wire bends through points set by hand: put in where it runs nearest, mirrored for the
-  // other side of a pair, and gone again when they are taken away.
   const wiresView = await import('../ui/studio/view/wires.js');
   const bentWire = doc.wires[0];
   const bendState = {...state, document : doc, tool : 'wire'};
@@ -1385,8 +1287,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       undefined);
   assert.throws(() => model.validateDocument(
                     {...bentDoc, wires : [ {...bentWire, bends : [ {x : 'a', y : 1} ]} ]}));
-  // With the learning tool a modulator dropped onto a nerve center is placed and wired to teach
-  // it; the learner stays chosen.
   const toTeach = model.addNeuron(model.newDocument('Lehrer'), 'learn', sites, {x : 380, y : 325});
   const teacherStudio = new OrganStudio(emptyRoot);
   teacherStudio
@@ -1406,8 +1306,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                'modulate');
   assert.deepEqual(teacherStudio.state.selected, {kind : 'center', id : learnerCell.id});
   assert.equal(teacherStudio.state.tool, 'learn');
-  // A learning circuit dropped onto a relay makes that node learn in competition; its marker
-  // follows what it is.
   const relayNode =
       model.addNeuron(teacherStudio.state.document, 'relay', sites, {x : 420, y : 325});
   teacherStudio.state.document = relayNode.document;
@@ -1420,7 +1318,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.equal(nerveKind(learned), 'learn');
   assert.equal(learned.key, 'relay');
   assert.ok(learned.qwidth > 0);
-  // Explicit deletion only: a move ending outside the fish is cancelled.
   const movement = new OrganStudio({
     querySelector : () => ({
       getBoundingClientRect : () => ({left : 0, top : 0, right : 1000, bottom : 620}),
@@ -1436,13 +1333,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   movement.removeSelection = () => { deleted = true; };
   movement.pointerUp({clientX : 1500, clientY : 20, preventDefault() {}});
   assert.equal(deleted, false);
-  // Dropped on the bin, an organ goes.
   movement.pointer = {kind : 'organ', id, moved : true, svg : svgElement};
   movement.notice = () => {};
   movement.pointerUp({clientX : 500, clientY : 300, preventDefault() {}});
   assert.equal(deleted, true);
-  // Organs that recruit nodes: a tail muscle grows nodes on its side with its function, its
-  // linked twin with it; the engine's fins grow with them as the Aquarium draws them.
   {
     const {MOTOR_KIND : MK, ATELIER_LIMITS} = await import('../ui/schema.js');
     const {finVolumeOf, tailFinSize} = await import('../ui/fish_organs.js');
@@ -1461,8 +1355,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.findOrgan(model.setOrganNodes(grown, organ.id, 2, sites), organ.id).centers.length, 2,
         'The last nodes go first');
     assert.equal(model.setOrganNodes(grown, 'brain', 3, sites), null);
-    // A muscle takes at most the places its side has for its work; a second one of that work on
-    // its side is the first one.
     const most = nodeLimit(organ, sites);
     assert.equal(most, musclePlaces(sites, MK.forward, organ.side).length);
     assert.equal(
@@ -1473,14 +1365,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(again.document.organs.length, grown.organs.length);
     assert.ok(tailFinSize(finVolumeOf(8, 1)).length > tailFinSize(finVolumeOf(2, 1)).length,
               'More cells make a longer tail fin');
-    // How the fish swims is the trait of all its tail muscles.
     assert.equal(model.muscleTrait(grown, MK.forward, 'undulation', sites), .5);
     const waving = model.setMuscleTrait(grown, MK.forward, 'undulation', .9, sites);
     assert.ok(Math.abs(model.muscleTrait(waving, MK.forward, 'undulation', sites) - .9) < 1e-9);
     assert.equal(model.setMuscleTrait(grown, MK.aggression, 'jaw_length', .2, sites), null,
                  'Without biting muscles there is no jaw to set');
-    // The graphic's handles say what they set: the tracks the nodes (of the places there are)
-    // and their strength, the graphic and the charts a trait.
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
     assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);
@@ -1496,12 +1385,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
               html.includes('data-effector-handle="strength"') &&
               html.includes('data-effector-handle="trait:q1"') && !html.includes('ellipse'));
     assert.match(views.organTitle(organ, sites), /Schwanz/);
-    // Pigment recruits nodes too and colours the fish more deeply with them.
     const pigment =
         model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});
     const deeper = model.setOrganNodes(pigment.document, pigment.organId, 12, sites);
     assert.equal(model.findOrgan(deeper, pigment.organId).centers.length, 12);
-    // The blood sense is one for both sides; each further type reads another substance.
     const blood = model.addOrgan(model.newDocument('Blut'), 'blood', sites, {x : 610, y : 405});
     assert.equal(model.findOrgan(blood.document, blood.organId).pair, null);
     assert.equal(model.addOrgan(blood.document, 'blood', sites, {x : 610, y : 325}).organId,
@@ -1515,8 +1402,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                       .map(type => model.substanceRead(sitesResult, type.centers[0]));
     assert.equal(reads.length, 2);
     assert.ok(reads.includes(firstRead) && new Set(reads).size === 2);
-    // A gonad recruits growth cells, each with room for eggs; its release and pressure cells
-    // stay one each, and all its cells together are its nodes at most.
     const ovary = model.addOrgan(model.newDocument('Eier'), 'eggs', sites, {x : 708, y : 380});
     const fertile = model.setOrganNodes(ovary.document, ovary.organId, 99, sites);
     const gonad = model.findOrgan(fertile, ovary.organId), keys = gonad.centers.map(c => c.key);
@@ -1528,8 +1413,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
     assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
                      [ 'growth', 'growth', 'pressure', 'release' ]);
-    // Its vessel holds what its motor cells give room for, a chamber each; a handle further along
-    // recruits more growth cells. An egg too small to hatch is food.
     const small = model.findOrgan(fewer, gonad.id);
     const sacState = {document : fewer, sites, capabilities : sitesResult};
     const store = sacs.gonadStore(sacState, small);
@@ -1538,7 +1421,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
     assert.ok(sacs.sacPatch(sacState, small, 'cells', .6).nodes > 2);
-    // A testis gives sperm as its cells make room for them.
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
     const testisState = {document : testis.document, sites, capabilities : sitesResult};
@@ -1549,14 +1431,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         !facts(sacState).includes(t('studio.inspector.gonad.food', {least : 0}).split(':')[0]));
     assert.ok(facts({...sacState, stale : false, report : {eggMinimum : store.room * 2}})
                   .includes(t('studio.inspector.gonad.food', {least : 0}).split(':')[0]));
-    // Names are written in place.
     const group = model.assemble(grown, [ organ.id, twin.id ], '');
     const renamed = model.renameAssembly(group, group.assemblies[0].id, 'Schwanz');
     assert.equal(renamed.assemblies[0].name, 'Schwanz');
     assert.equal(model.renameAssembly(group, group.assemblies[0].id, ''), null);
   }
-  // A gonad's slots reach their own nodes: its fullness goes out from its pressure cells, a
-  // trigger reaches its release alone; its release keeps the rest set for it.
   {
     const eggs = model.addOrgan(model.newDocument('Ei'), 'eggs', sites, {x : 850, y : 365});
     assert.ok(eggs);
@@ -1574,7 +1453,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(targetGroups.includes(group('release')), 'The trigger reaches the release');
     assert.ok(!targetGroups.includes(group('growth')), 'The trigger leaves the growth alone');
     assert.equal(group('release').threshold, .9, 'A gonad keeps the rest set for it');
-    // A nose stays in the head when it is moved.
     const nose = model.addOrgan(model.newDocument('Nase'), 'nose', sites, {x : 150, y : 340});
     assert.ok(nose);
     const moved = model.moveOrgan(nose.document, nose.organId, sites, {x : 880, y : 340});
@@ -1582,8 +1460,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         sites.find(s => s.id === model.findOrgan(doc, nose.organId).centers[0].site).zone;
     assert.ok(!moved || zoneOf(moved) === 0, 'A nose cannot be moved out of the head');
   }
-  // At rest a cell is as active as the engine's bias makes it: tanh of -scale times threshold,
-  // and the rest handle sets that threshold back.
   {
     const drive = await import('../ui/studio/view/drive.js');
     const scale = sitesResult.biasScale;
@@ -1593,7 +1469,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const back = drive.drivePatch('rest', .1, 0, scale).threshold;
     assert.ok(Math.abs(back + 1) < 1e-9, 'The top of the rest band is the lowest threshold');
   }
-  // A pressure cell moves to the free places of its organ next to its organ's other nodes.
   {
     const bladder =
         model.addOrgan(model.newDocument('Blase'), 'bladder', sites, {x : 600, y : 365});
@@ -1607,8 +1482,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(model.placeNode(bladder.document, sensor.id, motor.site, sites), null,
                  'A node takes a free place only');
   }
-  // The shared helpers: units, numbers and texts, pads and tracks, places and readers of the
-  // engine's answers, each in one place for every view that needs it.
   {
     const units = await import('../ui/units.js');
     assert.equal(units.clamp(2), 1);
@@ -1645,7 +1518,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.doesNotMatch(markup.namedTrack([ 10, 90 ], 5, null, 'data-x', 'T', [ 'a', 'b' ]),
                         /aid-graphic-handle|data-x/, 'A track without a share has no handle');
     assert.equal(markup.trackShare(50, [ 10, 90 ]), .5);
-    // Pads read their handles back where their marks put them.
     const substancesView = await import('../ui/studio/view/substances.js');
     const wheelMarks = substancesView.wheelMarks({q1 : .4, q2 : -.3});
     const wheelMark = Object.values(wheelMarks)[0];
@@ -1653,9 +1525,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const wheelBack = substancesView.wheelPatch(wheelMark.cx / W.size, wheelMark.cy / W.height);
     assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
     const learningView = await import('../ui/studio/view/learning.js');
-    // What the scene shows by tool and zoom: zoomed out no single nodes anywhere, wires while
-    // wiring but not while moving things, the hormones' marks with the hormone tool; a switch
-    // goes from automatic to on, off and back, and holds in every tool.
     const layersView = await import('../ui/studio/view/layers.js');
     const far = {tool : 'wire', camera : {zoom : .5}, layers : {}};
     assert.ok(!layersView.layerShown(far, 'nodes') && layersView.layerShown(far, 'wires'));
@@ -1670,7 +1539,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(
         layersView.layerMode({...far, layers : layersView.switchLayer(off, 'nodes')}, 'nodes'),
         layersView.AUTO);
-    // A learning cell's rate and way each have a track; the middle of the way is neutral.
     assert.ok(Math.abs(learningView.learnModePatch(.5).mode) < 1e-9);
     assert.ok(learningView.learnRatePatch(1).qwidth === 1 &&
               learningView.learnRatePatch(0).qwidth === 0);
@@ -1685,23 +1553,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
               learnPanel.includes('data-learn-trace'));
-    // A competing cell learns without a teacher too: the line firing with it grows, the still one
-    // shrinks.
     assert.match(learnPanel, /ohne Lehrer: nur Wettbewerb/);
     const widths = [
       ...learnPanel.matchAll(
           /aid-episode-line[^>]*><animate attributeName="stroke-width" values="([^"]+)"/g)
     ].map(m => m[1].split(';').map(Number));
     assert.ok(Math.max(...widths[0]) > widths[0][0] && Math.min(...widths[1]) < widths[1][0]);
-    // The trace's handle sits at the trace's time and reads it back.
     const traceHandle = /data-graphic-handle="learn-trace" cx="([^"]+)"/.exec(learnPanel);
     const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
     assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).tau - learnCell.tau) <
               1e-2);
-    // A substance's track sets what plenty of it does, nothing in its middle.
     assert.ok(Math.abs(learningView.learnResponseOf(.5)) < 1e-9);
-    // Bound to a substance, a part of learning shows the substance's track and plays in its
-    // colour; the teaching substance teaches in the episode.
     const taughtDoc =
         model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.excitation, 0);
     const taughtPanel = learningView.learningInspector({
@@ -1712,8 +1574,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.match(taughtPanel, /data-learn-receptor="[^"]+" data-learn-effect="0"/);
     assert.doesNotMatch(taughtPanel, /aid-episode-arrow teach none/);
-    // A skin sense's handles read back what they show: its field's edge how far round the body
-    // the cell feels, its middle hair's tip how sensitive it is.
     const skinView = await import('../ui/studio/view/skin.js');
     const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
     const touchOrgan = model.findOrgan(touched.document, touched.organId),
@@ -1726,8 +1586,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const box = /viewBox="0 0 (\S+) (\S+)"/.exec(skinMarkup);
       return skinView.skinPatch(skinState, touchCell, skinAim, name, cx / box[1], cy / box[2], {});
     };
-    // A sense's test stimulus stands on the fish while its organ is chosen, its handle where the
-    // probe's bearing and distance (or strength) put it.
     const probesView = await import('../ui/studio/view/probes.js');
     const {probeFor} = await import('../ui/studio/model/probe.js');
     for (const [type, at] of [[ 'nose', {x : 200, y : 330} ], [ 'touch', {x : 400, y : 265} ]]) {
@@ -1757,7 +1615,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});
     assert.ok(sites.filter(layout.nerveZone)
                   .every(s => s.zone === layout.ZONE.head || s.zone === layout.ZONE.trunk));
-    // Readers of the engine's tuples name their fields.
     assert.deepEqual(model.contactBundle([ 1, 2, 3, .5, 2, 1, .7, -.4 ]), {
       from : 1,
       to : 2,
@@ -1772,7 +1629,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                      {id : 9, type : 3, parameter : .25, role : 0});
     assert.deepEqual(graph.cppnLink([ 4, 1, 9, -.5, 1, 0 ]),
                      {id : 4, from : 1, to : 9, weight : -.5, enabled : 1, port : 0});
-    // Places: the sites the design holds, the nearest free one doing a work, an organ's home.
     const gutDoc = model.addOrgan(model.newDocument('Darm'), 'gut', sites, {x : 760, y : 360});
     const held = model.usedSites(gutDoc.document);
     assert.equal(held.size, model.allCenters(gutDoc.document).length);
@@ -1784,8 +1640,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const regionTarget = views.placementTarget(model.newDocument(''), 'tectum', {x : 300, y : 330});
     assert.deepEqual(regionTarget.position, {x : 300, y : 330},
                      'A region goes to the free places in the brain nearest to where it is put');
-    // Nerve centers stand in the drawn brain: a free node put on the tectum stays there, a region
-    // put there clusters around the place it took.
     const brainPlaces = await import('../ui/studio/view/places.js');
     const cerebrum = brainPlaces.BRAIN.cerebrum;
     const onLobe = {x : (cerebrum.from + cerebrum.to) / 2, y : 365 - cerebrum.half / 2};
@@ -1794,8 +1648,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                               'brain', sites);
     assert.ok(Math.hypot(nodeAt.x - onLobe.x, nodeAt.y - onLobe.y) < 60,
               'A node stays in the brain');
-    // A node set on the midline stands on it; with a node on the other side's place there too,
-    // each stands a little off it on its own side.
     {
       const layout = await import('../ui/studio/model/layout.js');
       const middle = model.moveCenterToSide(node.document, node.centerId, 0, sites);
@@ -1817,7 +1669,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
                                               torus.document);
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
-    // A gut without a throat to carry its length offers one.
     const effectorsView = await import('../ui/studio/view/effectors.js');
     const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
     assert.ok(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone)
@@ -1826,25 +1677,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
     const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
     assert.deepEqual(freeTarget.position, {x : 300, y : 330});
-    // A selection becomes a module; ungrouping keeps its parts.
     const grouped = model.assembleSelection(gutDoc.document, new Set([ gutDoc.organId ]));
     assert.equal(grouped.assemblies.length, 1);
     const ungrouped = model.ungroupAssembly(grouped, grouped.assemblies[0].id);
     assert.equal(ungrouped.assemblies.length, 0);
     assert.equal(ungrouped.organs.length, grouped.organs.length);
-    // A receptor switched on that answered nothing answers: an output receptor lowers.
     const receptorCenter = model.allCenters(gutDoc.document)[0];
     const switched =
         model.switchReceptor(gutDoc.document, receptorCenter.id, HORMONE_EFFECT.excitation, true);
     assert.ok(model.findCenter(switched, receptorCenter.id)
                   .center.receptors[HORMONE_EFFECT.excitation]
                   .sensitivity > 0);
-    // The example fish is a document the model accepts.
     const exampleModel = await import('../ui/studio/model/example.js');
     const exampleDoc =
         exampleModel.exampleDocument({fish : 'B', growth : 'W', food : 'F'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
-    assert.equal(exampleDoc.substances.length, 2); // Lookups by id and what a choice stands for.
+    assert.equal(exampleDoc.substances.length, 2);
     assert.equal(layout.findSite(sites, sites[3].id), sites[3]);
     assert.equal(model.findAssembly(grouped, grouped.assemblies[0].id), grouped.assemblies[0]);
     assert.equal(model.findAssembly(grouped, 'none'), null);
@@ -1855,14 +1703,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const organsModel = await import('../ui/studio/model/organs.js');
     assert.ok(organsModel.isModulator({modulator : 1}) &&
               !organsModel.isModulator({modulator : -1}));
-    // Icons share one drawing; a line icon is an outline in the text colour.
     const glyphs = await import('../ui/glyph.js');
     const line = glyphs.glyph('M0 0h24', {size : 16, paint : glyphs.linePaint()});
     assert.match(line, /width="16" height="16" viewBox="0 0 24 24"/);
     assert.match(line, /fill="none" stroke="currentColor" stroke-width="1.6"/);
     assert.doesNotMatch(glyphs.glyph('M0 0h24'), /width=/, 'Without a size its style sizes it');
-    // Polygons are cut into triangles by ear clipping; the triangles cover the polygon, a notched
-    // square when corners on an edge count as held, a triangle with a corner on one edge.
     const polygon = await import('../ui/polygon.js');
     const areaOf = ps => Math.abs(ps.reduce((v, p, i) => v + p[0] * ps[(i + 1) % ps.length][1] -
                                                          p[1] * ps[(i + 1) % ps.length][0],
@@ -1879,8 +1724,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(covered(notched, polygon.holdsWithEdges), areaOf(notched));
     const flat = [ [ 0, 0 ], [ 2, 0 ], [ 4, 0 ], [ 2, 3 ] ];
     assert.equal(covered(flat, polygon.holdsInside), areaOf(flat));
-    // Marks that keep their size on screen scale against the zoom; the view box follows the
-    // camera.
     const frame = await import('../ui/studio/view/frame.js');
     assert.equal(frame.zoomOf({camera : {zoom : 2}}), 2);
     assert.equal(frame.zoomOf({}), 1);

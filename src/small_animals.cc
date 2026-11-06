@@ -8,41 +8,22 @@
 #include <limits>
 namespace fishsim {
 namespace {
-// Odour transport runs in row tiles of at least ODOR_TILE_CELLS cells.
 constexpr std::size_t ODOR_TILE_CELLS = 1024;
-// Strain needs the flow FLOW_HALO cells around every occupied cell.
 constexpr int FLOW_HALO = 2;
-// Plankton cells are at least PLANKTON_CELL_MIN wide; the tank holds about PLANKTON_CELLS.
 constexpr double PLANKTON_CELL_MIN = 24, PLANKTON_CELLS = 12000;
-// Each new nursery is the best of SOURCE_TRIALS draws.
 constexpr int SOURCE_TRIALS = 48;
-// A deposit may sit SURFACE_TOLERANCE above the sediment.
 constexpr double SURFACE_TOLERANCE = .1;
-// Placed crabs first move after CRAB_FIRST_MOVE plus up to CRAB_FIRST_MOVE_SPREAD steps.
 constexpr std::uint64_t CRAB_FIRST_MOVE = 300, CRAB_FIRST_MOVE_SPREAD = 400;
-// A startled crab runs to an end and hides for CRAB_HIDE_TIME plus up to CRAB_HIDE_SPREAD steps;
-// it eats only when exposed beyond CRAB_FEEDING_EXPOSURE.
 constexpr double CRAB_FEEDING_EXPOSURE = .1;
 constexpr std::uint64_t CRAB_HIDE_TIME = 420, CRAB_HIDE_SPREAD = 180;
-// The mouse cuts and crushes with unlimited force, scattering pieces MOUSE_SCATTER wide; it bites
-// plants like a fish of MOUSE_TISSUE body tissues with this jaw.
 constexpr double MOUSE_FORCE = 1, MOUSE_SCATTER = 4, MOUSE_TISSUE = 3, MOUSE_BITE_STRENGTH = 24,
                  MOUSE_JAW = .6;
-// Grazing returns plankton only to cells above PLANKTON_RETURN_MIN of their capacity, up to
-// PLANKTON_RETURN_MAX capacities, at PLANKTON_RETURN_RATE of the offer; tiny offers return whole.
 constexpr double PLANKTON_RETURN_MIN = .2, PLANKTON_RETURN_MAX = 2, PLANKTON_RETURN_RATE = .0005,
                  PLANKTON_RETURN_WHOLE = .001;
-// Bed grazing starts above GRAZE_IMMERSION of immersion.
 constexpr double GRAZE_IMMERSION = .1;
-// Cracked prey bursts by sqrt(force / hardness), clamped to [BURST_MIN, BURST_MAX], over at least
-// SCATTER_REACH; on the bed the spread is flattened to BED_FLATTEN. Pieces fly at SCATTER_SPEED
-// of the burst and float with FRAGMENT_BUOYANCY.
 constexpr double MIN_HARDNESS = .01, BURST_MIN = .5, BURST_MAX = 3, SCATTER_REACH = 2,
                  BED_FLATTEN = .15, SCATTER_SPEED = .3, FRAGMENT_BUOYANCY = .3;
-// Closed mussels are this many times harder.
 constexpr double CLOSED_SHELL_HARDNESS = 2;
-// A cracked crab leaves CRAB_PLATES plates, CRAB_PLATE_SPACING radii apart, of CRAB_PLATE_SIZE
-// plus CRAB_PLATE_GROWTH radii each, tilted by CRAB_PLATE_TILT.
 constexpr int CRAB_PLATES = 3;
 constexpr double CRAB_PLATE_SPACING = .8, CRAB_PLATE_SIZE = .28, CRAB_PLATE_GROWTH = .08,
                  CRAB_PLATE_TILT = .7;
@@ -94,7 +75,6 @@ void Field::advance_odor() {
         p.odor[sample.index[k] * odor_kind::count + channel] +=
             float(env_.odor_emission * energy / area * sample.weight[k]);
   };
-  // Carrion and eggs are rare and short-lived, but smell strongly.
   auto strong = [&](int channel, double x, double y, double energy) {
     emit(channel, x, y,
          energy * (channel == odor_kind::carrion ? env_.odor_strength_carrion
@@ -138,8 +118,6 @@ void Field::advance_odor() {
       if (p.energy[at] > 0 && transport.wet(at))
         p.odor[at * odor_kind::count + odor_kind::plankton] +=
             float(env_.odor_emission * p.energy[at] / area);
-  // Sperm is a local source, like eggs. Its smell persists and travels independently
-  // of the material used for fertilisation and pigment optics.
   if (has_sperm_ && env_.odor_emission > 0)
     for (std::size_t at = 0; at < sperm_field_.size(); ++at)
       if (sperm_field_[at].density > 0 && transport.wet(at))
@@ -147,8 +125,6 @@ void Field::advance_odor() {
             float(env_.odor_emission * env_.odor_strength_eggs * sperm_field_[at].density);
   if (std::none_of(p.odor.begin(), p.odor.end(), [](float v) { return v > 0; }))
     return;
-  // The dense field shares one wet mask and one flow sample per cell. Diffusion
-  // gathers from neighbours, so every worker owns its destination outright.
   struct TransportCell {
     Point flow;
     unsigned char wet;
@@ -187,8 +163,6 @@ void Field::advance_odor() {
   };
   thread_local std::vector<Plane> planes;
   planes.resize(tiles);
-  // Advection reaches at most one adjacent row. Each worker only needs its rows
-  // plus that halo, rather than a complete copy of every channel in the tank.
   if (tiles > 1)
     for (std::size_t tile = 0; tile < tiles; ++tile) {
       auto &plane = planes[tile];
@@ -263,9 +237,6 @@ void Field::prepare_plankton_flow() {
   p.flow.resize(p.energy.size());
   p.strain.assign(p.energy.size(), 0);
   p.sampled.assign(p.energy.size(), 0);
-  // The halo supports both the derivative and the safer neighboring destination.
-  // Expand each occupied row horizontally once, then combine neighboring rows.
-  // Dense swarms no longer mark the same neighborhood for every single cell.
   thread_local std::vector<unsigned char> horizontal;
   horizontal.resize(p.energy.size());
   for (int y = 0; y < ny; ++y) {
@@ -302,7 +273,6 @@ void Field::prepare_plankton_flow() {
   for (int at = 0; at < nx * ny; ++at)
     if (p.sampled[at])
       p.flow[at] = water_.velocity((at % nx + .5) * dx, (at / nx + .5) * dy);
-  // Scatter each fish's existing disturbance model locally; no per-particle queries.
   for (const auto &f : visible_) {
     if (f.kind != food_kind::fish || f.hidden || !f.hatched ||
         std::hypot(f.flow_x, f.flow_y) < STILL_FLOW)
@@ -335,7 +305,6 @@ void Field::prepare_plankton_flow() {
       return Point{(p.flow[b].x - p.flow[a].x) / span, (p.flow[b].y - p.flow[a].y) / span};
     };
     const auto horizontal = axis(l, r, dx), vertical = axis(u, d, dy);
-    // Symmetric velocity gradient: uniform drift and rigid rotation cause no strain.
     const double shear = horizontal.y + vertical.x;
     p.strain[at] = horizontal.x * horizontal.x + vertical.y * vertical.y + .5 * shear * shear;
   }
@@ -509,7 +478,6 @@ bool Field::crush_target(int kind, std::uint64_t id, int organ, double along) {
     const auto &plant = plant_source(patch);
     if (organ < 0 || std::size_t(organ) >= plant.organs.size() || plant.organs[organ].energy <= 0)
       return false;
-    // Cut where the organ was picked; a leaf comes off at its base.
     cut_organ(patch, organ,
               plant.organs[organ].kind >= plant_organ::leaf ? 0
                                                             : std::clamp(along, 0., MAX_CUT_ALONG));
@@ -544,7 +512,6 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
     if (part.kind != food_kind::plant || part.organ != organ || part.energy <= 0 ||
         plant_id(part.patch) != id)
       continue;
-    // The stroke of this organ that covers the picked position.
     const double lo = stroke_along(part, -1), hi = stroke_along(part, 1);
     if (along < std::min(lo, hi) - tolerance::precision ||
         along > std::max(lo, hi) + tolerance::precision)
@@ -559,7 +526,6 @@ bool Field::bite_target(std::uint64_t id, int organ, double along) {
     b.blunt_teeth = TRAIT_MIDDLE;
     b.force_scale = default_max_bite_force;
     const double s = hi != lo ? std::clamp(2 * (along - lo) / (hi - lo) - 1, -1., 1.) : 0.;
-    // Without a fish the bitten side alternates.
     if (auto piece = bite_plant(b, i, s, (time + id) % 2 ? 1. : -1.)) {
       append_fragment(*piece);
       index_plants();
@@ -582,12 +548,10 @@ bool Field::encourage_target(int kind, std::uint64_t id, unsigned steps) {
                  (o.kind == plant_organ::blade ||
                   (grass_form(s) == 1 && o.kind >= plant_organ::leaf));
         });
-        // A full plant still grows on by putting out new organs, funded from its old ones.
         const bool budding = s.organs.size() < MAX_PLANT_ORGANS && s.vitality > BUDDING_VITALITY;
         if (growth <= 0 && !young && !budding)
           return false;
         s.boost_until = time + steps;
-        // Buds that are still waiting emerge sooner.
         for (auto &o : s.organs)
           if (o.energy <= 0 && o.ready > time)
             o.ready = time + std::uint64_t((o.ready - time) / GrowthBoost::budding);
@@ -675,7 +639,6 @@ double Field::feed_crabs(double x, double y, double energy, double radius) {
   return eaten;
 }
 void Field::sync_food_web() {
-  // Biomass uses a coarse water field; individual crustaceans are a display effect.
   const double cell =
       std::max(PLANKTON_CELL_MIN, std::sqrt(geometry_.width * geometry_.height / PLANKTON_CELLS));
   const int nx = int(std::ceil(geometry_.width / cell)),
@@ -1190,7 +1153,6 @@ void Field::scatter_fragments(const SmallAnimalMeal &meal, double force, double 
   scatter(meal.algae_energy, food_kind::algae, ALGAE_COLOR, env_.hardness_algae);
 }
 void Field::release_excess_algae(SurfacePatch &s) {
-  // Buried algae turn into detritus where they lie instead of rising as flakes.
   if (algae_buried(s) && s.algae > 0) {
     const auto mid = surface_midpoint(s);
     deposit_detritus(mid.x, mid.y, s.algae);

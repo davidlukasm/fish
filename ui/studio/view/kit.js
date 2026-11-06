@@ -3,11 +3,7 @@ import {STUDIO_ICON} from '../../organ_icons.js';
 import {escapeText, glyph, plainTrack, trackShare} from './markup.js';
 import {percent, t} from '../../strings.js';
 
-// What the inspector's and the library's views share: their words, organ icons and headings.
 export const label = key => t('studio.' + key);
-// Glyph sizes (frame units): an organ's icon in the palette, as the organ's metric, in a circuit,
-// in lists and in the slots and parts; a tool in the tool bar and in the workflow; a substance
-// card's mark, a muscle to choose and the trash.
 export const ICON = Object.freeze({
   palette : 25,
   metric : 50,
@@ -23,8 +19,6 @@ export const ICON = Object.freeze({
 });
 export const icon = (kind, size = ICON.palette) =>
     glyph(STUDIO_ICON[kind] ?? STUDIO_ICON.brain, size, {line : true});
-// A slot's symbol, on the fish and in the inspector alike: the organ that fills it, else the kind
-// that fits, else an arrow in or out; and how it stands (filled, missing where needed, or free).
 const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
 export function slotShape(slot) {
   const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
@@ -32,15 +26,12 @@ export function slotShape(slot) {
 }
 export const slotFill = slot => slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
 export const heading = text => '<h3>' + escapeText(text) + '</h3>';
-// How many cells a node makes, or how strong an effector's cell is, on one line: its word and
-// number at the left, a track to the right of WORDS (WIDTH wide, HEIGHT high).
 const CELL_TRACK = Object.freeze({width : 300, height : 28, words : 150, end : 290, line : 15});
 export const cellShare = copies => (copies - 1) / (ATELIER_LIMITS.max_copies - 1);
 export const cellPatch = fx => ({
   copies : 1 + Math.round(trackShare(fx * CELL_TRACK.width, [ CELL_TRACK.words, CELL_TRACK.end ]) *
                           (ATELIER_LIMITS.max_copies - 1))
 });
-// A node's cells in words: a sense or nerve node's number, an effector's strength.
 const CELL_WORDS = Object.freeze({sensor : 'senseCells', nerve : 'nerveCells', motor : 'strength'});
 export const cellWords = center =>
     t('studio.inspector.' + CELL_WORDS[center.role],
@@ -54,5 +45,4 @@ export function cellTrack(center, words) {
                     words) +
          '</svg>';
 }
-// A brain region's technical term, shorter than its German name.
 export const regionTerm = key => label('regions.' + key + '.term');

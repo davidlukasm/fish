@@ -119,8 +119,6 @@ void Ecosystem::observe_behavior() {
         *weakest = std::move(entry);
     }
   }
-  // Re-evaluate archive novelty against the current population and archive; scores are not frozen
-  // at admission.
   for (std::size_t i = 0; i < support_.archive.size(); ++i)
     if (support_.archive[i].environment == environment) {
       std::vector<double> distances;
@@ -151,7 +149,6 @@ void Ecosystem::remember() {
                        return a.environment == environment;
                      return a.novelty > b.novelty;
                    });
-  // Reserve space for both proven breeders and distinct observed lifestyles.
   for (std::size_t i = 0;
        i < std::max(support_.breeders.size(), entries.size()) && bank.size() < 32; ++i) {
     if (i < support_.breeders.size())

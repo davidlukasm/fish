@@ -15,10 +15,6 @@ import {command, matchesObservation, observationContext, sessionState} from './s
 import {sceneState} from './state.js';
 import {beginEggPlacement} from './world.js';
 export const event_viewState = {};
-// Egg cards are PORTRAIT_WIDTH by PORTRAIT_HEIGHT with the egg SPAN body radii long. The log
-// shows PAGE events at a time, the live list LIVE; within TOP pixels a list counts as scrolled
-// to the top.
-// The tank console shows the TANK latest important events.
 const EVENT_VIEW = Object.freeze({
   portrait_width : 400,
   portrait_height : 200,
@@ -31,7 +27,6 @@ const EVENT_VIEW = Object.freeze({
 
 export function resetJournalRequests() { event_viewState.pageRequest = null; }
 
-// The events the log shows: all of them, or only the important ones.
 const shownEvents = (events, important) =>
     important ? events.filter(e => e.important ?? e.milestone) : events;
 
@@ -263,8 +258,6 @@ export function renderEvents() {
     updateCockpitState({eventSeen : fresh});
 }
 
-// The tank console: the latest important events, newest on top. A new one slides in like a new
-// thought and pushes the others down; the first fill appears at once.
 function renderTankEvents(events) {
   const box = el('tank-events'), latest = shownEvents(events, true).slice(0, EVENT_VIEW.tank),
         shown = new Map([...box.children ].map(item => [item.dataset.eventId, item])),

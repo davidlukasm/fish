@@ -1,5 +1,3 @@
-"""Validated HTTP commands dispatched to focused handlers."""
-
 import math
 import re
 import secrets
@@ -12,19 +10,13 @@ from protocol_schema import (
     SourceLimits, Tank, WaterSetting,
 )
 
-# Ids stay below MAX_ID, cell indices up to MAX_NEURON, names up to MAX_NAME characters,
-# gaze turns within FULL_TURN degrees either way.
 MAX_ID, MAX_NEURON, MAX_NAME, FULL_TURN = 10**12, 65535, 64, 360
-# Engine parameters are named by up to forty lower-case letters and underscores.
 PARAMETER_NAME = r"[a-z_]{1,40}"
-# Eggs come EGG_COUNT at a time unless asked otherwise; mutants differ by MUTANT_STRENGTH; a
-# probe starts with PROBE's energy and radius; bottom rest lasts at most MAX_REST steps.
 EGG_COUNT, MUTANT_STRENGTH, MAX_REST = 3, 0.15, 100000
 PROBE = {"energy": 120, "radius": 2}
 
 
 def command_steps(data):
-    """Optional duration of a held command in simulation steps, as the last argument."""
     steps = data.get("steps")
     if steps is None:
         return ""
@@ -148,8 +140,6 @@ class CommandRouter:
 
     def handle_favorite(self, data):
         if data["command"] == "favorite-fish":
-            # A favourite keeps its genome in the catalogue and is remembered by the engine,
-            # so it can be revived or cloned after its death; value 0 only drops the mark.
             identifier, value = data.get("id"), data.get("value", 1)
             if type(identifier) != int or not 0 < identifier < MAX_ID:
                 raise Refusal("invalidFish")
@@ -179,8 +169,6 @@ class CommandRouter:
         return self.simulation.command(f"rename-species {identifier} {quoted}")
 
     def handle_life(self, data):
-        """Shields a living fish from death (value 1) or lifts the shield (value 0); revive
-        brings a remembered (named or favourite) fish back."""
         identifier = data.get("id")
         if type(identifier) != int or not 0 < identifier < MAX_ID:
             raise Refusal("invalidSelection")
@@ -192,7 +180,6 @@ class CommandRouter:
         return self.simulation.command(f"immortal {identifier} {value}")
 
     def handle_clone(self, data):
-        """Eggs of one fish, living or remembered after its death."""
         identifier, x, y, count = data.get("id"), data.get("x"), data.get("y"), data.get("count", EGG_COUNT)
         if type(identifier) != int or not 0 < identifier < MAX_ID:
             raise Refusal("invalidSelection")
@@ -253,7 +240,6 @@ class CommandRouter:
             return self.simulation.command(f"delay {value}")
 
     def lapse_view_tempo(self):
-        """Returns to the visitor's tempo once a view stopped renewing its slowdown."""
         with self.tempo_lock:
             if self.view_tempo is None or time.monotonic() < self.view_tempo["until"]:
                 return
@@ -759,7 +745,6 @@ class CommandRouter:
             budgets[name] = value
         chosen = simulation.population_catalog.selected(data.get("population", []), fish, budgets)
         if not chosen:
-            # Without a choice the run starts with the shipped example fish.
             chosen = [path.read_bytes() for path in simulation.example_genomes()]
         if not chosen:
             raise Refusal("chooseFounders")

@@ -15,8 +15,6 @@ inline const field::Maturation &maturation_template(const Genome &g, bool capabl
     return found->second.value;
   if (found != cache.end())
     cache.erase(found);
-  // Keep all live immutable plans. Clearing a full cache makes larger
-  // populations rebuild every plan on every pass through the fish.
   thread_local unsigned misses = 0;
   if (cache.size() >= 256 && ++misses % 128 == 0)
     for (auto i = cache.begin(); i != cache.end();) {

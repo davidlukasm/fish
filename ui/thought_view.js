@@ -1,5 +1,3 @@
-// Views of the fish thoughts (ui/mind.js): a list (the full log in the nervous system tab, the
-// latest few in the fish tab) and speech bubbles in the tank.
 import {SECOND_MS} from './units.js';
 import {cameraState} from './camera.js';
 import {ctx, syncChildren} from './dom.js';
@@ -9,13 +7,8 @@ import {FISH} from './schema.js';
 import {blendFish, frameFish, wrapScreenX} from './state.js';
 import {t, voiceArea} from './strings.js';
 export const thought_viewState = {};
-// A thought list shows THOUGHTS_LISTED thoughts unless told otherwise.
 const THOUGHTS_LISTED = 3;
 
-// Updated only when a thought arrived or another fish is shown. A new thought of the same fish
-// slides in at the top and pushes the others down; the shown ones stay as they are. Options:
-// limit, and for the nervous system the station colours, names and a focus action for a clicked
-// thought.
 export function renderThoughtList(list, id, {limit = THOUGHTS_LISTED, color, name, focus} = {}) {
   if (!list)
     return;
@@ -68,9 +61,6 @@ function thoughtItem(entry, color, name, focus) {
   return item;
 }
 
-// Bubbles: FONT pixels, fading over FADE ms, LIFT above the fish; the selected fish's at
-// SELECTED opacity, others at OTHER; INK on a SHADOW one pixel below right, with thought dots
-// [dx, dy, r] towards the fish.
 const BUBBLE = Object.freeze({
   font : 11,
   fade : 500,
@@ -82,8 +72,6 @@ const BUBBLE = Object.freeze({
   dots : Object.freeze([ [ 3, 4, 1.2 ], [ 6, 9, 1.8 ] ])
 });
 
-// A single short line of text floating above the fish, fading in and out; no box. It rides on
-// the fish as drawn: the same interpolated pose and the same wrap-around copies of the tank.
 export function paintThoughtBubbles(f, c, blend, shifts, now = performance.now()) {
   if (!mindState.bubbles.size)
     return;

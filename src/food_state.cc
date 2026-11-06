@@ -6,28 +6,16 @@
 #include <stdexcept>
 namespace fishsim {
 namespace {
-// Start food lands START_FOOD_MIN to START_FOOD_MAX from an egg, tried START_FOOD_TRIALS times,
-// clear of walls by FOOD_CLEARANCE.
 constexpr int START_FOOD_TRIALS = 64;
 constexpr double START_FOOD_MIN = 12, START_FOOD_MAX = 42, FOOD_CLEARANCE = 1;
-// Food clouds start on a ring: CLOUD_CENTER plus CLOUD_SPAN across, CLOUD_TOP plus up to
-// CLOUD_DEPTH down by a wave of CLOUD_WAVE per cloud from CLOUD_PHASE.
 constexpr double CLOUD_CENTER = .5, CLOUD_SPAN = .38, CLOUD_TOP = .18, CLOUD_DEPTH = .42,
                  CLOUD_PHASE = 1.7, CLOUD_WAVE = 3;
-// Manual feeding sprays 1 to MAX_SPRAY_COUNT pieces within 1 to MAX_SPRAY_RADIUS; the supply
-// is at most MAX_ENERGY_SUPPLY.
 constexpr int MAX_SPRAY_COUNT = edit_limit::max_spray_count;
 constexpr double MAX_SPRAY_RADIUS = edit_limit::max_spray_radius, MAX_ENERGY_SUPPLY = .01;
-// Clouds need CLOUD_CLEARANCE of open water; a misplaced cloud searches rings CLOUD_SEARCH apart
-// in CLOUD_DIRECTIONS directions. Source motion is in thousandths of a unit per step; each cloud
-// picks a new turn of up to MAX_CLOUD_TURN every CLOUD_TURN_PERIOD steps, offset CLOUD_TURN_OFFSET
-// per cloud.
 constexpr double CLOUD_CLEARANCE = 2, CLOUD_SEARCH = 4, SOURCE_MOTION_UNIT = 1000;
 constexpr int CLOUD_DIRECTIONS = 32;
 constexpr std::uint64_t CLOUD_TURN_PERIOD = 4096, CLOUD_TURN_OFFSET = 431;
-// Editing: sources and feeders need SOURCE_CLEARANCE of water.
 constexpr double SOURCE_CLEARANCE = 1;
-// Shared energy is settled in at most SETTLE_ROUNDS rounds.
 constexpr int SETTLE_ROUNDS = 3;
 }
 double FoodState::energy_from(int origin) const {
@@ -366,8 +354,6 @@ void Field::request_leftover(double amount, std::function<double(double)> apply)
 }
 void Field::finish_production() {
   production_pending = false;
-  // All four sources have declared usable demand. Apply one common shortage factor.
-  // Failed settlement releases its share for the remaining declared demand in this step.
   for (int round = 0; round < SETTLE_ROUNDS && energy_available > tolerance::negligible; ++round) {
     double total = 0;
     for (const auto &p : production)

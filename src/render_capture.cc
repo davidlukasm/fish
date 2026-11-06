@@ -8,10 +8,6 @@
 #include <unordered_map>
 namespace fishsim {
 namespace {
-// Records reach VISIBLE_RADII times an object's radius into view; plankton and sediment are
-// quantised to GRID_LEVELS levels per cell; below GROUP_SCALE food grains are grouped into cells of
-// about GROUP_PIXELS screen pixels, shown at most GROUP_RADIUS of a cell wide, with keys from
-// GROUP_KEY on.
 constexpr double VISIBLE_RADII = 8, GRID_LEVELS = 64 * 255, GROUP_SCALE = .75, GROUP_PIXELS = 6,
                  GROUP_RADIUS = .4;
 constexpr std::uint64_t GROUP_KEY = 1ULL << render_group::key_bits;
@@ -233,7 +229,6 @@ RenderCapture capture_render(const Ecosystem &world, const RenderView &view, std
           b.motor().blood_y, collision_radius(b), b.motor().vx, b.motor().vy);
   }
   if (view.configured && view.scale < GROUP_SCALE) {
-    // Only the picture combines subpixel grains. Feeding and motion keep their real objects.
     const double cell = std::exp2(std::ceil(std::log2(GROUP_PIXELS / view.scale)));
     const int columns = int(std::ceil(width / cell)),
               rows = int(std::ceil(world.field.geometry().height / cell));

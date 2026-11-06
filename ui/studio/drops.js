@@ -34,11 +34,7 @@ import {
 } from './view/placing.js';
 import {BODY_MAP, LAYER} from './view/scene.js';
 
-// Dragging from the library onto the fish: previews, places and hints while dragging, and what a
-// drop adds; a field organ's choices of place; the trash.
-
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
-// The wiring tile that bends a wire; the sense each test stimulus is for.
 const BEND = 'bend';
 const STIMULUS_ORGAN = Object.freeze({
   light : 'eye',
@@ -51,9 +47,7 @@ const STIMULUS_ORGAN = Object.freeze({
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze(
     {gland : {kind : 'organ', value : 'gland'}, reserve : {kind : 'organ', value : 'blood'}});
-// Where a dropped life phase starts or ends on the body's maturity.
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
-// The studio's methods for drags from the library (mixed into OrganStudio).
 export const dropMethods = {
   dragStart(event) {
     const item = event.target.closest?.('[data-drag-kind]');
@@ -61,8 +55,6 @@ export const dropMethods = {
       return;
     const {dragKind : kind, dragValue : value} = item.dataset;
     this.dragging = {kind, value};
-    // Where it may go shows from the start: the parts it can be dropped on, a field organ's
-    // placements, the free places of everything else.
     if (DROP_ON_PARTS.includes(kind))
       this.markDropTargets(kind, value);
     else if (kind === 'wiring')
@@ -114,12 +106,10 @@ export const dropMethods = {
       this.showChoices(position);
       return;
     }
-    // Away from the fish only the preview goes; the places stay in sight.
     if (!nearFish(position, this.state.sites)) {
       this.root.querySelector(LAYER.preview)?.replaceChildren();
       return;
     }
-    // A gland or a blood sense from a substance card is placed as the organ it is.
     const {kind, value} = ORGAN_FROM_CARD[this.dragging.kind] ?? this.dragging;
     const module = kind === 'module' || kind === 'user-module';
     const preview = this.root.querySelector(LAYER.preview);
@@ -128,7 +118,6 @@ export const dropMethods = {
                                  : organPreview(this.state, kind, value, position);
     this.showHints(kind, value, kind + ':' + value);
   },
-  // Where the dragged item may go, and what the hints' colours stand for.
   showHints(kind, value, key, moving = null) {
     const hints = this.root.querySelector(LAYER.hints);
     if (!hints || hints.dataset.active === key)
@@ -194,15 +183,12 @@ export const dropMethods = {
     this.refreshTools();
     this.notice(label('status.placed'));
   },
-  // The wires a wiring tile can be dropped on stand out while it is dragged.
   markWires() {
     const svg = this.bodyMap();
     svg?.classList.add('aid-dropping');
     for (const element of svg?.querySelectorAll('[data-wires]') ?? [])
       element.classList.add('aid-drop-target');
   },
-  // A way of pairing dropped on a wire sets it for the wires drawn there; a bend goes into them
-  // at the point of the wire nearest the drop.
   dropWiring(value, aimed) {
     this.dragging = null;
     this.clearPreview();
@@ -218,15 +204,12 @@ export const dropMethods = {
       doc = updateWire(doc, id, {pairing : value}) ?? doc;
     this.changeDocument(doc, this.state.selected);
   },
-  // The drawn bundles a wiring tile can aim at, kept while the design and its view stay.
   aimBundles() {
     const s = this.state, key = [ s.document, s.camera?.zoom, s.wireScope, s.selected?.id ];
     if (!this.aimCache || this.aimCache.key.some((k, i) => k !== key[i]))
       this.aimCache = {key, bundles : drawnBundles(s)};
     return this.aimCache.bundles;
   },
-  // The wire a wiring tile aims at from the pointer (a bend at any wire, a way of pairing at one
-  // between paired ends), shown: the wire stands out, and where a bend would go in its point.
   aimWire(value, event) {
     const svg = this.bodyMap();
     if (!svg)
@@ -245,9 +228,6 @@ export const dropMethods = {
       preview.innerHTML = aimed && value === BEND ? aimMark(this.state, aimed) : '';
     return aimed;
   },
-  // A wiring tile clicked is held ready for one wire, clicked again for any number until let go
-  // (clicked a third time, a right click, a click beside the wires, Escape or another tool); the
-  // pointer carries its symbol, the wires it can act on stand out, the one aimed at most.
   armWiring(value) {
     const armed = this.state.armed;
     this.state.armed = armed?.value !== value ? {kind : 'wiring', value, keep : false}
@@ -276,8 +256,6 @@ export const dropMethods = {
     }
     this.refreshLibrary();
   },
-  // A click on the fish with a tile held acts on the wire aimed at, or, beside the wires, lets the
-  // tile go.
   clickArmed(event) {
     const armed = this.state.armed;
     if (armed?.kind !== 'wiring' || !event.target.closest?.(BODY_MAP))
@@ -289,10 +267,6 @@ export const dropMethods = {
       this.wireWith(armed.value, aimed);
     return true;
   },
-  // A test stimulus tile clicked brings the stimulus to its sense at once: the chosen one of its
-  // kind, else the first; a light or an object for an eye or near sense, a scent, a current, a
-  // touch or a bite for a nose, a lateral line, touch or pain cells. The sense is chosen, so its
-  // stimulus and answer show, and its signal runs on through the fish.
   placeStimulus(value) {
     const doc = this.state.document, type = STIMULUS_ORGAN[value];
     const organs = doc.organs.filter(o => o.type === type);
@@ -323,7 +297,6 @@ export const dropMethods = {
     if (!svg)
       return;
     svg.classList.add('aid-dropping');
-    // A node is made to learn on its own, a region is taught as a whole.
     const selector =
         kind === 'neuron' && value === 'learn' ? '[data-center]' : '[data-organ],[data-center]';
     for (const element of svg.querySelectorAll(selector)) {
@@ -333,7 +306,6 @@ export const dropMethods = {
         element.classList.add('aid-drop-target');
     }
   },
-  // The organ or node under a dragged effect, when it can carry it.
   dropTarget(event) {
     const element = event.target.closest?.('[data-center],[data-organ]');
     if (!element?.classList.contains('aid-drop-target'))
@@ -361,7 +333,6 @@ export const dropMethods = {
       const [substance, effect] = value.split(':').map(Number);
       doc = bindReceptor(doc, center.id, effect, substance) ?? doc;
     }
-    // The inspector and the fish show what was dropped.
     if (kind === 'effect') {
       const [substance, effect] = value.split(':').map(Number);
       this.state.focusSubstance = substance;
@@ -369,8 +340,6 @@ export const dropMethods = {
     }
     this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
   },
-  // An organ dropped at a position, where placementTarget puts it; a muscle at the muscle's home
-  // nearest to it, on the free place for its work nearest to the home, or as the muscle there.
   placeOrgan(type, position) {
     if (type === 'muscle') {
       const {document : doc, sites} = this.state, home = muscleTarget(doc, sites, position);
@@ -407,8 +376,6 @@ export const dropMethods = {
     this.changeDocument(wired.document, {kind : 'center', id : target.centers[0].id});
     this.notice(label('learnCard.wired.' + key));
   },
-  // A gland dragged from a substance card releases that substance; a blood sense from the body's
-  // signals reads the energy reserve, as the fish's one blood sense, or as a further type of it.
   dropFromCard(kind, value, position) {
     this.dragging = null;
     this.clearPreview();
@@ -448,9 +415,6 @@ export const dropMethods = {
     if (legend)
       legend.hidden = true;
   },
-  // Field organs (eyes, the near sense) go where their field puts their cells. While one is
-  // dragged, every placement its field can take is a seat; the nearest shows, and dropping takes
-  // exactly that one.
   prepareChoices(placements) {
     this.state.choices = placements.length ? placements : null;
     this.showChoices(this.choicePoint);
@@ -465,7 +429,6 @@ export const dropMethods = {
       }
     return best;
   },
-  // Drawn at most once per frame, and only when another choice becomes the nearest.
   showChoices(point) {
     this.choicePoint = point;
     if (this.choiceFrame)
@@ -496,7 +459,6 @@ export const dropMethods = {
     this.shownChoice = null;
     this.root.querySelector(LAYER.choices)?.replaceChildren();
   },
-  // While an organ is dragged, a bin in the frame removes it.
   showTrash(visible) {
     const trash = this.root.querySelector('[data-trash]');
     if (trash) {
@@ -504,7 +466,6 @@ export const dropMethods = {
       trash.classList.remove('armed');
     }
   },
-  // What is dragged onto the bin or out of the fish is removed when let go.
   overTrash(event) {
     const trash = this.root.querySelector('[data-trash]');
     if (!trash || trash.hidden)

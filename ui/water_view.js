@@ -1,7 +1,6 @@
 import {ALPHA, CHANNEL_MAX, PIXEL_BYTES, sineHash} from './units.js';
 import {OBSERVER_LIGHT, SEDIMENT_MASK} from './water_display.js';
 import {FISH, PLANT, PLANT_ROOT, TOLERANCE, WATER_CELL, WATER_GRID} from './schema.js';
-// Water samples lie WATER_SPACING apart.
 const WATER_SPACING = WATER_GRID.cell * WATER_GRID.view_stride;
 import {fishRenderRadius} from './fish_fins.js';
 import {fishPoseAnatomy, fishSnapshotAnatomy} from './fish_forms.js';
@@ -60,10 +59,8 @@ export function paintCloudLight(f, c) {
   paintGpuCloudLight(f, c);
 }
 
-// Salts of the grain noise: position, size, rank, rounding of the count and presence.
 const GRAIN_SALT =
     Object.freeze({y : 197, size : 71, rank : 401, count : 391, presence : 39, presence_step : 83});
-// Plant noise hashes the seed scaled by SCALE and shifted by SHIFT.
 const PLANT_NOISE = Object.freeze({scale : 12.9898, shift : 78.233});
 export function plantNoise(seed) { return sineHash(seed * PLANT_NOISE.scale + PLANT_NOISE.shift); }
 
@@ -177,7 +174,6 @@ export function sedimentGeometry(f, columns, rows, resolution) {
         }
     }
   }
-  // Grains stay in the connected water interval containing their physical cell center.
   for (let i = 0; i < columns; ++i) {
     const x = (i + .5) * dx, intervals = [];
     for (const o of geometry) {
@@ -262,10 +258,6 @@ function updateSedimentView(f) {
     }
 }
 
-// Plankton animals: cells above MIN_SHARE of the densest show up to PER_CELL animals, one per
-// AREA square pixels, at most MAX_GRAINS in all; an animal is renewed where its water falls below
-// MIN_LOCAL or it drifted MAX_DRIFT cells away. New animals count as SETTLED steps old; sizes vary
-// from SIZE by SIZE_SPREAD; animals show within MARGIN pixels of the view.
 const PLANKTON_GRAINS = Object.freeze({
   min_share : .04,
   per_cell : 4,
@@ -303,9 +295,8 @@ export function planktonGrains(f, c) {
         wx = xs[1] - xs[0] || WATER_SPACING, wy = ys[1] - ys[0] || WATER_SPACING,
         previous = cached?.grid === grid && step >= cached.step ? cached.tracks : null,
         elapsed = previous ? step - cached.step : 0,
-        // Global density sampling is independent of camera position and visible cell count.
-      perCell = Math.min(P.per_cell, dx * dy * c.scale * c.scale / P.area,
-                         P.max_grains / Math.max(1, cells.length)),
+        perCell = Math.min(P.per_cell, dx * dy * c.scale * c.scale / P.area,
+                           P.max_grains / Math.max(1, cells.length)),
         tracks = new Map(), grains = [];
   for (const [i, j, density] of cells) {
     const seed = (j * p.columns + i) * P.cell_salt, count = perCell * density, S = GRAIN_SALT;
@@ -357,10 +348,6 @@ export function planktonGrains(f, c) {
       {amounts : p.amounts, water : f.water, key, grid, step, grains : visible, tracks};
   return visible;
 }
-// Captured display particles keep their own origin; the field remains the food source. Mouths
-// sort into CELL pixel cells; animals at least MIN_AGE steps old are drawn in within a cone
-// widening by CONE per unit ahead, over MIN_DURATION plus PACE per root distance (at most
-// MAX_DURATION) steps; captures end after MAX_CAPTURE steps and are forgotten after FORGET.
 const PLANKTON_INTAKE = Object.freeze({
   cell : 32,
   forget : 320,
@@ -449,7 +436,6 @@ export function planktonIntake(grains, mouths, step, epoch) {
     }
     if (!capture)
       return g;
-    // A swallowed glyph stays absent until this local sample is renewed.
     return drawCapture(capture, id);
   });
   // Depletion of the field must not erase an animal halfway to the mouth.
@@ -458,8 +444,6 @@ export function planktonIntake(grains, mouths, step, epoch) {
       visible.push(drawCapture(capture, id));
   return visible;
 }
-// Fish draw plankton in once their suction pose passes MIN_SUCTION; the reach follows the mouth
-// aperture between MIN_APERTURE and MAX_APERTURE.
 const MOUTH_DRAW = Object.freeze({min_suction : .01, min_aperture : .5, max_aperture : 8});
 function planktonMouths(f, c) {
   const result = [], blend = frameBlend(), time = displayStep(f), tracked = new Set();
@@ -493,8 +477,6 @@ function planktonMouths(f, c) {
   }
   return result;
 }
-// Plankton shows as a tinted cloud below CLOUD_UNTIL zoom, fading out over CLOUD_FADE, and as
-// single animals from ANIMALS_FROM on.
 const PLANKTON_VIEW = Object.freeze({
   cloud_until : 4,
   cloud_fade : 16 / 3,
@@ -506,12 +488,10 @@ const PLANKTON_VIEW = Object.freeze({
 });
 export function paintPlankton(f, c) {
   const p = f.plankton;
-  // Plankton needs the tank parameters, which come with the statistics.
   if (!f.parameters || !p?.columns || !p.rows || !p.amounts || c.ox >= cameraState.viewportWidth ||
       c.ox + f.width * c.scale <= 0 || c.oy >= cameraState.viewportHeight ||
       c.oy + f.height * c.scale <= 0)
     return;
-  // One cached density texture supplies the overview; individual animals take over nearby.
   const P = PLANKTON_VIEW;
   if (c.scale < P.cloud_until) {
     const key = [ f.environment, f.width, f.height, p.columns, p.rows ].join(':');
@@ -542,7 +522,6 @@ export function paintPlankton(f, c) {
   ctx.restore();
 }
 
-// Suspended sediment is checked PAD cells beyond the view.
 const SUSPENDED = Object.freeze({pad : 2});
 export function paintSuspendedSediment(f, c, blend = 1) {
   const grid = f.sediment;
@@ -578,9 +557,6 @@ export function paintSuspendedSediment(f, c, blend = 1) {
   ctx.restore();
 }
 
-// Dust grains: up to PER_CELL per cell, one per AREA square pixels at the zoom rounded to a power
-// of two, at most MAX_GRAINS; they sink SETTLE half-life lengths per step and vary in size from
-// SIZE by SIZE_SPREAD.
 const DUST_GRAINS = Object.freeze({
   min_scale : .001,
   per_cell : 7,
@@ -607,7 +583,6 @@ function sedimentGrains(f, c) {
   water_viewState.grainRevision = water_viewState.sedimentRevision;
   water_viewState.grainScale = scale;
   water_viewState.grainData = [];
-  // The smooth opacity field carries the cloud; individual grains are screen-space detail.
   const cells = water_viewState.dustCells.filter(
             q => (q.i + 1) * q.dx >= left - dx && q.i * q.dx <= right + dx &&
                  q.top + q.dy >= top - dy && q.top <= bottom + dy),
@@ -636,9 +611,6 @@ function sedimentGrains(f, c) {
   return water_viewState.grainData;
 }
 
-// Match the interpolated, smoothly joined top edge of the sediment shader.
-// Fish batches reach EXTENT body radii; bed tops follow the shader's smooth edge in EDGE_SAMPLES
-// steps.
 const SEDIMENT_CLIP = Object.freeze({extent : 4, edge_samples : 8});
 export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
   if (water_viewState.clipFrame !== f) {
@@ -650,7 +622,6 @@ export function clipSediment(f, c, g, shifts, blend = 1, items = null) {
     water_viewState.clipPrevious =
         new Map((sceneState.previous?.plants || []).map(p => [p[PLANT.id], p]));
   }
-  // Only mask beds that can touch this fish batch; open-water batches need no stencil work.
   const nearby = items?.map(v => {
     const r = v.r * (v.extent || SEDIMENT_CLIP.extent);
     return [ v.p[FISH.x] - r, v.p[FISH.y] - r, v.p[FISH.x] + r, v.p[FISH.y] + r ];

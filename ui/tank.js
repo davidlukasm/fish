@@ -101,14 +101,11 @@ import {drawToolPreview, plantPlacement, worldState} from './world.js';
 import {ANIMAL_TOOLS, drawAnimalChoice, drawPlantChoice, MIXED_PLANTS} from './world_palette.js';
 import {plantCurveClear, plantRenderParts} from './plant_geometry.js';
 export const tankState = {};
-// Picking keys of drawn objects in depth order: their kind and id.
 const PICK_ID =
     Object.freeze({plant : PLANT.id, fish : FISH.id, food : FOOD.id, animal : INVERTEBRATE.id});
 export function pickingKey(kind, item) { return kind + ':' + item[PICK_ID[kind]]; }
-// World radius that one stir from the menu loosens.
 const STIR_RADIUS = 24;
 
-// The target ID stays captured while a moving animal leaves the pointer.
 export function objectActions(hit) {
   if (hit?.kind === 'plant')
     return [
@@ -167,9 +164,6 @@ function currentMenuItem(hit) {
   return (plant ? sceneState.frame.plants || [] : sceneState.frame.invertebrates || [])
       .find(p => p[index] === hit.item[index]);
 }
-// The radial menu around the pointer: rings from INNER to OUTER pixels, icons at ICON with their
-// labels LABEL_Y below; the menu keeps MARGIN pixels from the view edges and takes presses
-// within REACH. Sectors leave GAP radians between them.
 const MENU = Object.freeze({
   inner : 25,
   outer : 92,
@@ -195,7 +189,6 @@ const MENU = Object.freeze({
   close : '#aac4bc',
   food : '#dfc991'
 });
-// Menu icons as path data (see path_data.js), around the icon centre.
 const MENU_ICONS = Object.freeze({
   stir : 'M-9 8L9 8M0 8C-8 2 8 -2 0 -4C-6 -6 4 -10 1 -11',
   back : 'M9 0L-8 0L-2 -6M-8 0L-2 6',
@@ -206,7 +199,6 @@ const MENU_ICONS = Object.freeze({
   crush : 'M-10 -5L-3 0L-10 5M10 -5L3 0L10 5M0 -8L-2 -1L2 2L0 8',
   close : 'M-4 -4L4 4M-4 4L4 -4'
 });
-// The eye of "inspect" and the open mouth of "encourage" with its morsel.
 const INSPECT_ICON = Object.freeze({rx : 10, ry : 6, pupil : 2.5});
 const FEED_ICON = Object.freeze({x : 3, r : 9, mouth : .8, food_x : 12, food_r : 2});
 export function radialChoice(menu, x, y) {
@@ -239,9 +231,6 @@ function openObjectMenu(hit, e) {
   sceneState.renderInputRevision++;
   return true;
 }
-// Menu placements: within REACH pixels of the click (or the depth found), with brushes of
-// PLANT_RADIUS or ANIMAL_RADIUS; bites aim at ALONG of an organ; a startle reaches STARTLE animal
-// radii, between MIN_STARTLE and MAX_STARTLE.
 const PLACE = Object.freeze({
   reach : 60,
   plant_radius : 5,
@@ -333,9 +322,6 @@ function runObjectAction(menu) {
     tankShowTooltip(tankObjectInfo({...hit, item}));
   }
 }
-// Encouraged plants: the plant itself glows in a slow pulse while the growth boost lasts.
-// Growth boosts glow for at most HORIZON steps, pulsing every PULSE_MS and fading over their last
-// FADE_STEPS.
 const BOOST_GLOW = Object.freeze({
   pulse_ms : 260,
   horizon : 800,
@@ -462,15 +448,12 @@ function paintDriftTile(f, c, blend) {
   fpsReport?.mark('gametes');
 }
 
-// Selection marks fade in as fish shrink below FULL_BELOW + FADE_SPAN pixels, fully shown below
-// FULL_BELOW.
 const SELECTION_FADE = Object.freeze({full_below : 36, fade_span : 20});
 function selectionOpacity(r) {
   const t = Math.max(0, Math.min(1, (SELECTION_FADE.full_below - r) / SELECTION_FADE.fade_span));
   return t * t * (3 - 2 * t);
 }
 
-// Selection corners PAD pixels outside the body, their arms ARM of the radius long.
 const SELECTION = Object.freeze({line_width : 2, pad : 4, min_arm : 3, arm : .25});
 export function paintSelection(ctx, r, color) {
   const alpha = selectionOpacity(r);
@@ -505,9 +488,6 @@ export function draw(f = sceneState.frame) {
   draw.error = displayFaults.issues.get(t('tank.tank'))?.error || null;
 }
 
-// Tank view: scenery is repainted once the camera moves SCENERY_SHIFT of its padding; tiles draw
-// within MARGIN pixels of the view; fish more than PEEK_COVER buried show under the sediment peek,
-// those more than BURIED_COVER get a marker.
 const TANK_VIEW = Object.freeze({
   scenery_shift : .6,
   margin : 80,
@@ -820,13 +800,10 @@ function paintTank(f) {
   }
 }
 
-// Display faults are shown at most once per ERROR_STATUS_MS.
 const ANIMATE = Object.freeze({error_status_ms : 1000});
 export function animate(now) {
   try {
     displayFaults.run(t('tank.animation'), () => {
-      // Under a station the tank keeps following the stream but draws nothing, so the
-      // station's own animations get the whole frame.
       if (!tankVisible()) {
         displayFaults.run(t('tank.bilduebernahme'), advanceScene);
         return;
@@ -934,7 +911,6 @@ const initializers = {
       const menu = tankState.contextMenu;
       if (menu) {
         menu.pressed = false;
-        // A click opens; dragging or a second click selects. The center cancels.
         if (menu.choice >= 0)
           runObjectAction(menu);
         else if (menu.opened) {
@@ -1021,7 +997,6 @@ const initializers = {
       sceneState.renderInputRevision++;
       draw.idleStamp = null;
     };
-    // Markers switched on or off appear at once, also while the run is paused.
     for (const id of ['show-current-sources', 'show-food-sources', 'show-plankton-sources'])
       el(id)?.addEventListener?.('change', () => {
         updateTankSceneryState({sceneryKey : ''});

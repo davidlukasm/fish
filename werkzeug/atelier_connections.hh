@@ -29,8 +29,8 @@ struct AddressFit {
 };
 using CompileProgress = std::function<void(const char *, const AddressFit &)>;
 namespace fit {
-// The explicit compile action may spend four seconds fitting. Periodic checks keep progress
-// responsive without reading the clock for every pair. Fixed restarts make short fits repeatable.
+// Periodic checks keep progress responsive without reading the clock for every pair.
+// Fixed restarts make short fits repeatable.
 inline constexpr double budget_ms = 4000, notice_ms = 150;
 inline constexpr int restarts = 64, iterations = 1600, check_period = 32, repair_period = 2;
 inline constexpr std::uint64_t restart_salt = 7919;

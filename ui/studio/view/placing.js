@@ -19,18 +19,10 @@ import {FISH_BOX, steadyAt, zoomOf} from './frame.js';
 import {centerTitle, tone} from './names.js';
 import {MUSCLE_TONE, muscleHomes, muscleTarget, WORKS} from './muscles.js';
 
-// While an organ is dragged: where it may go and what the hints' colours mean, its preview, and
-// a field organ's choices of place.
-
-// Each colour identifies a real centre role. Shared sites are split into separate ring sectors,
-// GAP apart on a ring RADIUS wide and WIDTH thick.
 const HINT_RING = Object.freeze({radius : 9, width : 3, gap : 1.4});
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
-// An organ type without a home in the drawing looks for engine places of its own.
 const homeless = (doc, type) => !organHome(doc, type);
-// The centers an item brings that look for places of their own: those of an organ without a
-// home, a nerve center, and those of a module's or a stored module's organs without homes.
 function seekingCenters(state, kind, value) {
   const found = [], doc = state.document;
   const add = (type, center) => {
@@ -59,15 +51,10 @@ function seekingCenters(state, kind, value) {
   }
   return found;
 }
-// An inner organ, with a home in the drawing, goes there, whatever engine places it takes: the
-// next place of its kind.
 function organHomes(state, kind, value) {
   return kind !== 'organ' || homeless(state.document, value) ? []
                                                              : [ organHome(state.document, value) ];
 }
-// The places to show, each with the keys of what may go there; each key's colour and name; and
-// for a muscle's works, the stretch of the body its places span. The sites of an organ being
-// moved count as free.
 function hintPlaces(state, kind, value, moving) {
   const labels = new Map(), sites = new Map(), areas = new Map();
   const centers = seekingCenters(state, kind, value), types = new Set(centers.map(d => d.type));
@@ -107,7 +94,6 @@ function hintPlaces(state, kind, value, moving) {
     }
   return {labels, sites, areas};
 }
-// A muscle's works lie in stretches of the body: each tinted in its colour and named.
 const MUSCLE_CLIP = 'aid-hint-body';
 function muscleBands(state, areas, labels, zoom) {
   if (!areas.size)
@@ -127,8 +113,6 @@ function muscleBands(state, areas, labels, zoom) {
              .join('') +
          '</g>';
 }
-// A place's ring, one sector in the colour of each thing that may go there; the place nearest the
-// pointer is filled in its first colour.
 function hintRing({point, keys}, labels, zoom, near = false) {
   const entries = [...keys ];
   const H = HINT_RING, length = 2 * Math.PI * H.radius, span = length / entries.length;
@@ -147,8 +131,6 @@ function hintRing({point, keys}, labels, zoom, near = false) {
                     : '';
   return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + fill + arcs + '</g>';
 }
-// A muscle goes to the home of a work: each home shows the muscle there or one that would come,
-// in its work's colour, dimmed where no place for the work is left; its legend names the works.
 function muscleHints(state) {
   const homes = muscleHomes(state.document, state.sites);
   const names = tList('studio.muscleTitles');
@@ -164,7 +146,6 @@ function muscleHints(state) {
         code => ({colour : MUSCLE_TONE[code], name : names[MUSCLE_LABEL_INDEX.get(code)]}))
   };
 }
-// The places an item may go, as rings, and what their colours mean.
 export function placementHints(state, kind, value, moving = null) {
   if (!state.sites.length)
     return {svg : ''};
@@ -178,18 +159,13 @@ export function placementHints(state, kind, value, moving = null) {
     legend : labels.size > 1 ? [...labels.values() ] : []
   };
 }
-// A muscle's area reaches PAD past its outer places; its name stands LABEL below the midline,
-// SIZE pixels high on screen.
 const MUSCLE_AREA = Object.freeze({pad : 14, label : 6, size : 15});
-// What the colours of the placement hints stand for: a muscle's work there, or the part of an
-// organ or module that may sit there.
 export function hintLegend(legend) {
   return legend
       .map(({colour, name}) =>
                '<span><i style="border-color:' + colour + '"></i>' + escapeText(name) + '</span>')
       .join('');
 }
-// The field organs a choice moves or adds: whose field differs from the current design.
 function movedFieldOrgans(state, choice) {
   return choice.document.organs.filter(organ => {
     if (!organ.field)
@@ -200,10 +176,7 @@ function movedFieldOrgans(state, choice) {
                JSON.stringify(organ.centers.map(c => c.site));
   });
 }
-// A field organ's places show as the rings every organ's places show, in the first colour.
 const SEAT = 'seat', SEAT_LABELS = new Map([ [ SEAT, {colour : HINT_SHADES[0]} ] ]);
-// Where field organs can go while one is dragged: a mark at every seat the body offers, and at
-// the nearest one the organ itself with its field, exactly where that choice places them.
 const seatOf = (state, choice, organ) => fieldOrigin(choice.document, state.sites, organ);
 export function choicesSvg(state, choices, nearest) {
   const zoom = zoomOf(state);
@@ -217,8 +190,6 @@ export function choicesSvg(state, choices, nearest) {
     }
   if (!nearest)
     return html;
-  // Where the engine's eyes look from is known for the design shown only: the field of a moved
-  // organ starts at its drawn place.
   const view = {
     ...state,
     document : nearest.document,
@@ -236,17 +207,10 @@ export function choicesSvg(state, choices, nearest) {
   }
   return html;
 }
-// The seat of a field organ for a choice, to find the one nearest the pointer.
 export function choiceSeats(state, choice) {
   return movedFieldOrgans(state, choice).map(organ => seatOf(state, choice, organ)).filter(Boolean);
 }
-// An eye's ghost at its place is at least SEAT_MARK frame units wide at zoom 1.
 const SEAT_MARK = 7;
-// A cursor marker identifies the organ being placed.
-// A brain region goes to its spot in the brain on the side it is dragged over.
-// A dragged organ shows where it will lie: at its home in the drawing when it has one (a brain
-// region at its spot on the side it is over, an inner organ at its place in the plan), any other
-// where it is dropped.
 export function organPreview(state, kind, key, position) {
   if (kind === 'organ' && key === 'muscle') {
     const home = muscleTarget(state.document, state.sites, position);
@@ -266,8 +230,6 @@ export function assemblyPreview(state, placed) {
                                  organLocation(o, state.sites, placed.document)))
       .join('');
 }
-// A dragged organ's preview: its icon ICON wide, drawn LINE thick in INK, on a ring RING wide in
-// its colour.
 const PREVIEW = Object.freeze({ring : 26, icon : 28, line : 2, ink : '#072e34'});
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)

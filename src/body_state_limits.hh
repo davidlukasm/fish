@@ -3,8 +3,6 @@
 #include "physiology.hh"
 #include "state_validation.hh"
 namespace fishsim::state {
-// Plausible extents of a restored body: velocities, speed, signals and impulses, shell radius,
-// brain cost and gamete transfers.
 inline constexpr double MAX_BODY_VELOCITY = 1024, MAX_BODY_SPEED = 2048, MAX_SIGNAL = 65536,
                         MAX_SHELL_RADIUS = 1000, MAX_BRAIN_COST = 1000, MAX_TRANSFER = 4;
 struct ScalarBounds {

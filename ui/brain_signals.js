@@ -31,12 +31,7 @@ import {sessionState} from './session.js';
 import {displayNow, frameBlend, frameFish, sceneState} from './state.js';
 export const brain_signalsState = {};
 
-// A bite shows its closing for BITE_SHOWN steps of the mouth cycle. Motors animate the inspected
-// fish once the brain view is SHOWN_OPACITY opaque.
 const BITE_SHOWN = 2, SHOWN_OPACITY = .5;
-// Signal packets: at most PACKETS at once, grouped in BIN pixel cells; strokes send STROKE_PACKETS
-// packets SPACING ms apart that arrive with the stroke; ordinary packets fly with the frame
-// interval and are ranked by focus, strength and a hashed turn.
 const TRACE = Object.freeze({
   packets : 56,
   bin : 16,
@@ -283,8 +278,6 @@ function brainTensionTrack(k, side = 0) {
   return brain_signalsState.brainMotorTensions.get(key);
 }
 
-// Shown tension leaks over at least MIN_LIFETIME ms or LIFETIME_SHARE of the motor interval; it
-// rises over RISE ms.
 const CHARGE = Object.freeze({min_lifetime : 600, lifetime_share : .85, rise : 150});
 export function brainDisplayCharge(k, side = 0, now = displayNow()) {
   if (k === MOTOR_KIND.suction || k === MOTOR_KIND.aggression) {
@@ -300,7 +293,6 @@ export function brainDisplayCharge(k, side = 0, now = displayNow()) {
   const lifetime = Math.max(CHARGE.min_lifetime, sceneState.frameInterval * organMotorInterval(k) *
                                                      CHARGE.lifetime_share),
         age = Math.max(0, now - track.at);
-  // A received signal adds tension; during silence it leaks away. No clock fills the muscle.
   const mix = brainEase(age / (track.rise || CHARGE.rise));
   return ((track.from ?? track.value) + (track.value - (track.from ?? track.value)) * mix) *
          Math.exp(-age / lifetime);
@@ -313,7 +305,6 @@ export function brainCycleContraction(k, side, now) {
       return 0;
     if (k === MOTOR_KIND.suction)
       return p[FISH.suction_pose] || 0;
-    // The bite closes in the mouth cycle's second half, for BITE_SHOWN steps.
     const phase = p[FISH.mouth_phase] ?? -1, closing = MOUTH_CYCLE.steps / 2;
     return phase >= closing && phase <= closing + BITE_SHOWN
                ? (1 - (p[FISH.mouth_pose] || 0)) * (p[FISH.aggression] || 0)
@@ -331,7 +322,6 @@ export function brainCycleContraction(k, side, now) {
   return cycle.pose * rise * release;
 }
 
-// Fins pre-tense by LEAD of their pose over LEAD_TIME ms before a stroke.
 const FIN_RELEASE = Object.freeze({lead : .08, lead_time : 45});
 function brainFinRelease(k, side, now) {
   const cycle = brain_signalsState.brainMotorCycles.get(brainCycleKey(k, side));
@@ -364,7 +354,6 @@ function brainDisplayMotorValue(p, k, value, side = 0) {
   return value;
 }
 
-// Tail poses scale against at least MIN_POSE.
 const DISPLAY_TAIL = Object.freeze({min_pose : .001});
 function brainDisplayTail(p, value) {
   if (!brainState.brainOpen || brainState.brainOpacity < SHOWN_OPACITY ||
@@ -383,13 +372,11 @@ export function brainPresentationFish(p) {
   const out = p.slice();
   if (p.birthing)
     Object.assign(out, {birthing : true, birthProgress : p.birthProgress, birthDuct : p.birthDuct});
-  // The tail fin follows the forward motor, the side fins the turn motor of their side.
   out[FISH.fin_pose] = Object.values(FIN).map(
       fin => brainDisplayMotorValue(p, fin === FIN.tail ? MOTOR_KIND.forward : MOTOR_KIND.turn,
                                     p[FISH.fin_pose]?.[fin] || 0,
                                     fin === FIN.tail ? 0 : fin - FIN.left));
   out[FISH.fin_pose][FINS] = p[FISH.fin_pose]?.[FINS];
-  // Mouth geometry and pump flow are the simulation's values, including in inspection.
   out[FISH.tail] = brainDisplayTail(p, p[FISH.tail] || 0);
   out[FISH.egg_yolk] = p.birthing
                            ? p[FISH.egg_yolk]
@@ -411,7 +398,6 @@ export function brainMotorActivity(n, k, d) {
   const port = MOTOR_PORTS[k],
         e = (d.effectors.get(n[NEURON.index]) || []).find(e => e[EFFECTOR.port] === port),
         state = n[NEURON.state] ?? n[NEURON.activity];
-  // Bladder and gland work in both directions.
   return e && n[NEURON.functional] && n[NEURON.ready] && !n[NEURON.muted]
              ? brainClamp(k === MOTOR_KIND.bladder || k === MOTOR_KIND.gland ? Math.abs(state)
                                                                              : state)
@@ -438,8 +424,6 @@ function brainMotorEffort(n, k, d) {
   return peak > 0 ? brainMotorActivity(n, k, d) / peak : 0;
 }
 
-// A motor pulse plays as a cycle of the frame interval's length within bounds, starting after a
-// lead; it rises over ATTACK_SHARE (at most MAX_ATTACK ms) and holds HOLD ms.
 const MOTOR_CYCLE = Object.freeze({
   min_duration : 460,
   max_duration : 760,
@@ -507,7 +491,6 @@ export function brainPreDraw(f, now = displayNow()) {
   brainRememberMotors({b, raw, p : raw, step : f.step}, now);
 }
 
-// Arrived signals fade over DECAY ms.
 const ARRIVAL = Object.freeze({decay : 260});
 export function brainArrivalValue(id, now) {
   const q = brain_signalsState.brainArrivals.get(id);
@@ -517,8 +500,6 @@ export function brainArrivalValue(id, now) {
   return {positive : q.positive * decay, negative : q.negative * decay, age};
 }
 
-// Arrivals add GAIN plus GAIN_PER_STRENGTH; work starts WORK_DELAY ms after arrival; old
-// arrivals are forgotten after FORGET ms.
 const ARRIVALS = Object.freeze({
   gain : .22,
   gain_per_strength : .65,
@@ -600,8 +581,6 @@ function brainMotorReadiness(k, d, side = 0) {
   return brainClamp(mean / threshold);
 }
 
-// Muscle input fades over INPUT_DECAY ms; a laid egg passes the duct muscles; spines erect with
-// the defence activity.
 const MUSCLE_STATE = Object.freeze({
   input_decay : 180,
   duct_start : .32,
@@ -647,7 +626,6 @@ export function brainMuscleState(n, k, d, now) {
   };
 }
 
-// Motor colours brighten with charge or contraction around a gray of GRAY.
 const MOTOR_TONE = Object.freeze({
   min_span : .01,
   base : .15,
@@ -674,8 +652,6 @@ export function brainMotorColor(k, state) {
   return rgb(base.map(c => gray + (c - gray) * tone));
 }
 
-// Effector fibres per organ: along the egg duct, across the sperm organ, along the cheek, up the
-// spines.
 const EFFECTOR_FIBER = Object.freeze({
   duct_start : .32,
   duct_span : .60,
@@ -737,7 +713,6 @@ function brainEffectorFiber(n, k, d, center) {
   ];
 }
 
-// Muscles shorten and thicken as they contract or charge, at least MIN_PIXELS wide.
 const MUSCLE_SHAPE = Object.freeze({
   min_length : .001,
   shortening : .52,

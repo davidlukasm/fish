@@ -10,7 +10,6 @@ import {KEY} from './keys.js';
 export const feeding_viewState = {};
 export let deathNames;
 
-// One symbol (24 × 24 SVG path) and colour per cause of death.
 export const DEATH_COLORS = indexedBy(DEATH_REASON, {
   hunger : '#d3bb72',
   injury : '#e08a7d',
@@ -34,8 +33,6 @@ const DEATH_ICONS = indexedBy(DEATH_REASON, {
       'M12 7a5 5 0 1 0 .01 0M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'
 });
 
-// The cause as symbol BADGE_ICON wide and short name, coloured; the full count or note goes into
-// the title.
 const BADGE_ICON = 16;
 export function deathBadge(cause, extra = '') {
   const badge = document.createElement('span');
@@ -92,7 +89,6 @@ export let foodSources;
 
 export let foodShortNames;
 
-// One colour per food display slot.
 export const FOOD_COLORS = indexedBy(FOOD_SLOT, {
   feed : '#e8ba78',
   fish : '#db8c7b',
@@ -110,10 +106,6 @@ export const FOOD_COLORS = indexedBy(FOOD_SLOT, {
 
 export let habitatSources;
 
-// Feeding and habitat icons around their centre, about 20 units wide, keyed by food display slot
-// or habitat name. Each part is one stroked (or filled) path (see path_data.js) plus full
-// circles [x, y, r], optionally with its own line width, opacity, rotation, scale and vertical
-// offset.
 const ICON_FISH = 'M-6 0C-1 -5 4 -4 7 0C4 4 -1 5 -6 0L-10 4L-10 -4Z',
       ICON_BLADES = 'M-3 6Q-4 -1 -5 -7M0 6Q-2 -1 0 -7M3 6Q0 -1 5 -7',
       ICON_GRASS = [ {path : ICON_BLADES}, {path : 'M-9 7L9 7', alpha : .6} ];
@@ -187,7 +179,6 @@ export function paintEcologyIcon(g, kind, x, y, color, size = 1) {
   g.restore();
 }
 
-// The same icon as SVG markup around the origin, for pages drawn as SVG.
 export function ecologyIconSvg(kind, color, size = 1) {
   const parts = ECOLOGY_ICONS[kind] ?? [];
   return '<g transform="scale(' + size + ')" stroke-linecap="round" stroke-linejoin="round">' +
@@ -216,8 +207,6 @@ export function ecologyIconSvg(kind, color, size = 1) {
          '</g>';
 }
 
-// Feeding chart layout in CSS pixels: the uptake ring left, one bar row per food slot right, the
-// habitat rings below; rates are per RATE_WINDOW.display_steps steps.
 const FEEDING_CHART = Object.freeze({
   pad : 4,
   title_y : 15,
@@ -470,8 +459,6 @@ function paintFeedingChart(box) {
                  }));
 }
 
-// The chart follows its box between MIN_WIDTH and MAX_WIDTH pixels (WIDTH before layout); its
-// height fits the layout above.
 const FEEDING_SIZE = Object.freeze({min_width : 300, max_width : 600, width : 340, height : 406});
 export function renderFeeding(box, diet, steps, eco = {}, living = null) {
   if (!box.feedingChart) {

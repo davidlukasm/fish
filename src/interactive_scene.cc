@@ -36,7 +36,6 @@ static bool send_all(int fd, const std::string &bytes) {
   }
   return true;
 }
-// Replies: "FSCENE <request> <bytes>\n<bundle>" or "FERROR <request> <JSON string>\n".
 void InteractiveSession::serve_scenes() {
   if (render_fd < 0)
     return;

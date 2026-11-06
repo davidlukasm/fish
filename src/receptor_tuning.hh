@@ -5,19 +5,15 @@
 #include <array>
 #include <cmath>
 namespace fishsim {
-// Tuning of receptors and pigments; the viewer uses the same constants (tuning).
-// A tuning curve of the given width: Gaussian in degrees, with a flat floor for wide curves.
 inline double tuning_affinity(double offset_degrees, double width) {
   width = std::clamp(width, 0., 1.);
   const double sigma = tuning::sigma_min + tuning::sigma_span * width * width,
                wide = std::pow(width, tuning::wide_power);
   return wide + (1 - wide) * std::exp(-offset_degrees * offset_degrees / (2 * sigma * sigma));
 }
-// Hue in degrees from a quality in [-1, 1].
 inline double tuning_hue(double quality) {
   return tuning::hue_half_circle * (std::clamp(quality, -1., 1.) + 1);
 }
-// Affinity of a hue to the three colour channels (red, green, blue at CHANNEL_HUE apart).
 inline Color hue_affinities(double hue, double width) {
   Color result{};
   for (int c = 0; c < rgb::count; ++c)
@@ -25,8 +21,6 @@ inline Color hue_affinities(double hue, double width) {
         std::remainder(hue - tuning::channel_hue * c, 2 * tuning::hue_half_circle), width);
   return result;
 }
-// A fully saturated light of this hue in degrees, on the hue circle the interface shows (red,
-// green, blue CHANNEL_HUE apart): each channel full within half that distance, fading to none.
 inline Color hue_light(double hue) {
   Color result{};
   for (int c = 0; c < rgb::count; ++c) {
@@ -36,7 +30,6 @@ inline Color hue_light(double hue) {
   }
   return result;
 }
-// Affinity to each odour channel; channels sit at fixed points on a sphere of preferences.
 inline std::array<float, odor_kind::count> scent_affinities(double quality1, double quality2,
                                                             double width) {
   static_assert(tuning::scent_latitudes.size() == std::size_t(odor_kind::count));
@@ -53,7 +46,6 @@ inline std::array<float, odor_kind::count> scent_affinities(double quality1, dou
   }
   return result;
 }
-// Response threshold of chemical and visual receptors, log-spaced from THRESHOLD_MIN.
 inline double response_threshold(double t) {
   return tuning::threshold_min * std::pow(tuning::threshold_range, std::clamp(t, 0., 1.));
 }
@@ -61,7 +53,6 @@ inline double response_threshold_quality(double threshold) {
   return std::log(std::max(tuning::threshold_min, threshold) / tuning::threshold_min) /
          std::log(tuning::threshold_range);
 }
-// Linear activation level from a quality in [0, 1].
 inline double activation_level(double t) {
   return tuning::level_min + tuning::level_span * t;
 }

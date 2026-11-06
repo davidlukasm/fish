@@ -46,7 +46,6 @@ export let organNumber;
 
 export let organPercent;
 
-// An egg is released once it fills FILL of the organ.
 const EGG_RELEASE = Object.freeze({fill : .95});
 function eggLayingStatus(d, rate, limit) {
   const b = d.b, stored = (d.raw || d.p)[FISH.egg_yolk] || 0,
@@ -98,8 +97,6 @@ function organVisualWeight(r, angle) {
                           (r[RECEPTOR.view_right] - r[RECEPTOR.angle]));
 }
 
-// What one eye sees for its eye graphic: the light image of its side (bands), what its cells
-// took of it (samples) and its cells (receptor rows). The Atelier draws its eyes with it too.
 export function eyeSight(bands, samples, receptors, side) {
   return {
     graphic : 'eye',
@@ -110,9 +107,6 @@ export function eyeSight(bands, samples, receptors, side) {
     receptors
   };
 }
-// The answer of each colour type of an eye, direction by direction: its cells' answers weighted by
-// how much of each direction they see, null where none of them looks. A type is the cells of one
-// tuning (hue, colour channels, opponency, threshold); its colour is the hue it prefers.
 export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
   const half = radians(TUNING.visual_width_max), types = new Map();
   for (const r of info.receptors ?? []) {
@@ -147,7 +141,6 @@ export function eyeTypeAnswers(info, count = EYE_IMAGE.samples) {
                             })
       }));
 }
-// Eye images sample SAMPLES directions.
 const EYE_IMAGE = Object.freeze({samples : 120});
 export function eyeImage(info, count = EYE_IMAGE.samples) {
   const half = radians(TUNING.visual_width_max), bands = info.image || [];
@@ -158,7 +151,6 @@ export function eyeImage(info, count = EYE_IMAGE.samples) {
   });
 }
 
-// The stroke of each striding motor kind; turning has one stroke per side.
 const MOTOR_STROKES = Object.freeze([
   STROKE_KIND.tail, STROKE_KIND.turn_left, STROKE_KIND.suction, STROKE_KIND.egg, STROKE_KIND.sperm,
   STROKE_KIND.bite, STROKE_KIND.defense
@@ -227,8 +219,6 @@ function spermReleaseStatus(d, rate, limit, portion) {
                          : t('organ_readout.sammeltAbgabemuskelSetztSpermien');
 }
 
-// Readout figures: cells count as firing from FIRING; strokes push at least MIN_MASS; size physics
-// is on from SIZE_PHYSICS; turns below STRAIGHT count as straight.
 const READOUT = Object.freeze({
   firing : .05,
   min_mass : .2,
@@ -581,7 +571,6 @@ export function brainOrganReadout(d, tissue) {
                                             d.b.contact_vector[1] * Math.sin(angle));
           }
         }
-        // Detailed pressure is supplied by the measured receptor components above.
       }
       info.hero = contact > 0 ? t('organ_readout.beruehrtEtwas') : t('organ_readout.keinKontakt');
       info.caption = t('organ_readout.beruehrungUndSedimentkontaktDer');
@@ -656,7 +645,6 @@ export function brainOrganReadout(d, tissue) {
       ];
     }
   }
-  // Gland and blood show the hormones, other organs two figures.
   const hormonal = isMotorTissue(key) ? k === MOTOR_KIND.gland
                                       : k === SENSE_KIND.inner_pressure || k === SENSE_KIND.blood;
   info.metrics = info.metrics.slice(0, hormonal ? HORMONES.levels : 2);
@@ -664,10 +652,7 @@ export function brainOrganReadout(d, tissue) {
 }
 
 const initializers = {
-  "organHistory" : () => {
-    // Organ cards use the same capacities, thresholds and motor periods as the body.
-    organHistory = new Map();
-  },
+  "organHistory" : () => { organHistory = new Map(); },
   "organNumber" : () => { organNumber = (v, d = 1) => formatNumber(Number(v || 0), d); },
   "organPercent" : () => { organPercent = v => percent(brainClamp(v)); }
 };

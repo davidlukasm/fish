@@ -2,10 +2,6 @@ import {FULL_TURN, PERCENT} from './units.js';
 import {isActivation} from './keys.js';
 import './tissue.js';
 import {HORMONES, NEURON} from './schema.js';
-// View of the brain plan (ui/brain_plan.js) as a metro map: organ stations at fixed anchors, hubs
-// placed between what they connect, the plan's lines drawn octilinearly with their own tracks.
-// Also the hormone weather and the full thought log of the inspected fish.
-// Wording comes from ui/text/de/nerve_map.json (interface) and ui/text/de-AT/thoughts.json.
 import {tissueColor} from './brain_model.js';
 import {el} from './dom.js';
 import {hormoneColors, hormoneEffect, hormoneName} from './hormones.js';
@@ -20,8 +16,6 @@ export const nerve_mapState = {};
 const NS = 'http://www.w3.org/2000/svg';
 const BODY = 'M150 10C214 12 266 88 281 186C292 268 252 398 178 518L214 594Q150 566 86 594' +
              'L122 518C48 398 8 268 19 186C34 88 86 12 150 10Z';
-// Organ stations: [anchor x, anchor y, organ key, family]
-// Where organ stations sit on the map: the head at the top, the tail at the bottom.
 const ANCHORS = {
   suck : [ 118, 30 ],
   bite : [ 182, 30 ],
@@ -50,7 +44,6 @@ export const LINE_COLORS = [
   '#e8a33d', '#5fb3d9', '#d46a8c', '#7cc47f', '#a58be0', '#e0c85a', '#4fc0b0', '#e07f5f', '#8fa7e8',
   '#c9a3c9', '#9cc95f', '#d99a6c'
 ];
-// The colour of nerve line i: the palette, then hues around the colour wheel.
 export const lineColor = i =>
     LINE_COLORS[i] ||
     `hsl(${(i * MAP.hue_step + MAP.hue_start) % FULL_TURN} ${MAP.saturation}% ${MAP.lightness}%)`;
@@ -69,9 +62,6 @@ function stationColor(meta) {
   return tissueColor(meta.organ);
 }
 
-// Hubs sit between whatever they connect; the same wiring always gives the same picture.
-// Hubs settle between the stations they link over ROUNDS rounds, keep MIN_GAP apart inside the
-// body, then snap to SNAP and move to a free grid place CLEARANCE from other stations.
 const HUB_PLACE = Object.freeze({
   center : 150,
   spread : 40,
@@ -140,8 +130,6 @@ function placeHubs(meta, pairs) {
     }
   }
   const taken = [...meta.values() ].filter(m => m.kind !== STATION.hub);
-  // Free places around a hub: itself, its eight neighbours one grid step away, then two steps
-  // along the axes.
   const g = HUB_PLACE.grid, steps = [
     [ 0, 0 ], [ g, 0 ], [ -g, 0 ], [ 0, g ], [ 0, -g ], [ g, g ], [ -g, g ], [ g, -g ], [ -g, -g ],
     [ 2 * g, 0 ], [ -2 * g, 0 ], [ 0, 2 * g ], [ 0, -2 * g ]
@@ -159,8 +147,6 @@ function placeHubs(meta, pairs) {
   }
 }
 
-// Octilinear like a metro map. Three shapes per section: diagonal in the middle, at the end or
-// at the start; the drawing picks the one that crosses and covers the least.
 function octilinearShapes(a, b) {
   const dx = b.x - a.x, dy = b.y - a.y, ax = Math.abs(dx), ay = Math.abs(dy), sx = Math.sign(dx),
         sy = Math.sign(dy), shapes = [];
@@ -207,8 +193,6 @@ const pathData = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(
 
 function octilinear(a, b) { return pathData(octilinearShapes(a, b)[0]); }
 
-// Samples of drawn lines on a coarse grid: who runs where and in which direction.
-// Lines are sampled every STEP map units in one of DIRECTIONS directions.
 const SAMPLES = Object.freeze({step : 3, directions : 4});
 function samples(pts, step = SAMPLES.step) {
   const out = [];
@@ -222,7 +206,6 @@ function samples(pts, step = SAMPLES.step) {
   }
   return out;
 }
-// Lines are tracked in square cells of GRID_CELL map units; the map is MAP_WIDTH by MAP_HEIGHT.
 const GRID_CELL = 4, MAP_WIDTH = 300, MAP_HEIGHT = 600;
 const cell = (x, y) => Math.round(x / GRID_CELL) + ',' + Math.round(y / GRID_CELL);
 
@@ -234,10 +217,7 @@ function node(tag, attrs, parent) {
   return e;
 }
 
-// Side tracks a section may take, in map units off its centre line.
 const TRACKS = Object.freeze([ 0, 4.8, -4.8, 9.6, -9.6 ]);
-// The map is laid out in units around CENTER; lines whose weight reaches MAJOR of the first are
-// major; sections pick the track and shape with the least cost; LINKS footpaths more.
 const MAP = Object.freeze({
   hue_step : 53,
   hue_start : 200,
@@ -294,8 +274,6 @@ function buildPlan(model, svg) {
                 weather));
   const linkLayer = node('g', {}, svg), lineLayer = node('g', {}, svg),
         stationLayer = node('g', {}, svg), segs = [];
-  // Each section takes the shape and side track that cover and cross the fewest other lines;
-  // lines sharing a corridor run side by side, crossings get a gap from the dark casing.
   const grid = new Map(), onRoute = new Set(), reach = new Map();
   const cost = (pts, r) => {
     let c = 0;
@@ -344,7 +322,6 @@ function buildPlan(model, svg) {
       r.segs.push(seg);
     }
   }
-  // Remaining notable connections: thin footpaths without trains.
   const links = [...pairs.values() ]
                     .filter(p => !onRoute.has(p.key) && p.sum > MAP.link_min * max)
                     .sort((p, q) => q.sum - p.sum)
@@ -407,9 +384,6 @@ function buildPlan(model, svg) {
   return plan;
 }
 
-// Labels go where they cover no other label or station and as few lines as possible.
-// Labels try eight places around their station and take the one that overlaps least with other
-// labels, stations, the map edge and lines.
 const LABEL = Object.freeze({
   margin : 2,
   hub_char : 5,
@@ -471,7 +445,6 @@ function placeLabels(stations, grid) {
   }
 }
 
-// Legend flashes last FLASH ms.
 const LEGEND = Object.freeze({flash : 6000});
 function renderLegend(plan) {
   const box = el('nerve-lines');
@@ -510,7 +483,6 @@ function stationText(plan, s) {
     active : clampedPercent(plan.model.activity.get(s.id) || 0)
   });
 }
-// Hovered stations name their first NAMES links in and out.
 const HOVER_STATION = Object.freeze({names : 3});
 function hoverStation(id) {
   nerve_mapState.hover = id ? {stations : new Set([ id ]), segs : null} : null;
@@ -537,7 +509,6 @@ function hoverStation(id) {
                   : '');
 }
 
-// Hovered sections share their weight from MIN_WEIGHT on.
 const HOVER_SEGMENT = Object.freeze({min_weight : .001});
 function hoverSegment(seg) {
   const plan = nerve_mapState.plan, p = seg.pair;
@@ -590,8 +561,6 @@ function highlight(plan, now) {
   }
 }
 
-// Live state from the plan model: station activity as halos, signal flow as moving trains.
-// Live state: station halos with activity, trains with the flow, learning glow and hormone clouds.
 const LIVE = Object.freeze({
   halo : .6,
   halo_gain : 1.4,
@@ -641,7 +610,6 @@ function updateLive(b, plan) {
     c.setAttribute('opacity', (LIVE.cloud_alpha + LIVE.cloud_alpha_span * v).toFixed(LIVE.digits));
   });
 }
-// Trains run at SPEED plus SPEED_PER_FLOW map units per second; frames count at most MAX_DT s.
 const TRAINS =
     Object.freeze({max_dt : .1, ms : 1000, speed : 8, speed_per_flow : 70, dash_period : 1000});
 function moveTrains(plan, now) {
@@ -656,11 +624,8 @@ function moveTrains(plan, now) {
   }
 }
 
-// Hormone weather: a sky symbol filling with the level.
 const SKY = Object.freeze([ [ .15, '○' ], [ .4, '◔' ], [ .65, '◑' ], [ .85, '◕' ] ]),
       FULL_SKY = '●';
-// Levels trend up or down past TREND; the slow level keeps SLOW of itself per update; effects
-// from SHOWN on are listed with DIGITS significant digits.
 const WEATHER = Object.freeze({trend : .01, slow : .95, slow_share : .05, digits : 2, shown : .03});
 function renderWeather(b, effects) {
   const box = el('nerve-weather'), h = b.hormones;
@@ -713,20 +678,16 @@ function renderWeather(b, effects) {
                      : t('nerve_map.noEffect');
 }
 
-// The stations and lines a plan model draws; new synapses alone keep the drawn map.
 function planShape(model) {
   return model.shape ??= [...model.meta.keys() ].join(',') + '|' +
                          model.routes.map(r => r.path.join('>')).join(';');
 }
-// The drawn map takes the live figures of a new model with the same shape.
 function rebindPlan(plan, model) {
   for (const seg of [...plan.segs, ...plan.links])
     seg.pair = model.pairs.get(seg.pair.key) || seg.pair;
   Object.assign(plan, {model, station : model.station, pairs : model.pairs, max : model.max});
 }
 
-// The map refreshes live values every LIVE ms and the weather every WEATHER ms; a focus from the
-// thought log holds FOCUS ms.
 const REFRESH = Object.freeze({live : 100, weather : 700, focus : 5000});
 export function renderNerveMap(f) {
   const svg = el('nerve-map'), b = f?.brain, model = planFor(b);

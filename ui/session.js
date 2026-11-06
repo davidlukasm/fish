@@ -27,7 +27,6 @@ export function matchesObservation(context, response = {}) {
          (!response.observation || response.observation === current.key);
 }
 
-// A genome file sent to the population catalogue; the reply names the saved entry.
 export async function importGenome(file) {
   if (file.size > GENOME_IMPORT.max_bytes)
     throw Error(t('session.genomZuGross', {bytes : formatNumber(GENOME_IMPORT.max_bytes)}));
@@ -39,12 +38,9 @@ export async function importGenome(file) {
     throw Error(serverText(result.error));
   return result;
 }
-// A genome file saved for its eggs to be placed: the catalogue entry, which the reply names after
-// ARCHIVE_PREFIX.
 const ARCHIVE_PREFIX = /^archive:/;
 export const savedGenome = async file =>
     String((await importGenome(file)).message).replace(ARCHIVE_PREFIX, '');
-// Requests give up after REQUEST_MS; feedback stays FEEDBACK_MS.
 const REQUEST_MS = 15000, FEEDBACK_MS = 5000;
 export async function request(url, options = {}, timeout = REQUEST_MS) {
   const controller = new AbortController(), parent = options.signal;
@@ -80,13 +76,9 @@ export async function request(url, options = {}, timeout = REQUEST_MS) {
   }
 }
 
-// Server and engine replies carry a wording key with values; other text arrives already phrased
-// and is shown as it is. A wording may count things (removed fish, eggs …): only those present
-// are listed after it.
 export function serverText(reply) {
   if (!reply || typeof reply !== 'object')
     return String(reply ?? '');
-  // Counts are shown in the interface's number format.
   const counts = reply.values || {},
         values = Object.fromEntries(Object.entries(counts).map(
             ([ name, value ]) => [name, typeof value === 'number' ? formatNumber(value) : value])),
@@ -98,8 +90,6 @@ export function serverText(reply) {
          (items.length ? format(list.intro, {list : items.join(', ')}) : '');
 }
 
-// A body posted as JSON with the session's token, within `timeout` ms; further options (a signal,
-// keepalive) go with the request.
 export function postJson(url, body, {timeout = REQUEST_MS, ...options} = {}) {
   const headers = {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN};
   return request(url, {...options, method : 'POST', headers, body : JSON.stringify(body)}, timeout);

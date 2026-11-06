@@ -1,6 +1,3 @@
-// The tank as a budget, in plain numbers: where the stored energy sits and what the fish took
-// from each source recently, which habitats the living fish use, how many are sick and from
-// what, and what the fish died of. Views give the groups their names and colours.
 import {
   FISH,
   FOOD_KIND as K,
@@ -12,7 +9,6 @@ import {
 } from './schema.js';
 export const ecosystem_modelState = {};
 
-// Food sources of the energy budget; `sources` index the diet vectors of the simulation.
 const ENERGY_GROUPS = [
   {key : 'food', sources : [ K.feed ]}, {key : 'grass', sources : [ K.plant ]},
   {key : 'drift', sources : [ K.plant ]}, {key : 'algae', sources : [ K.algae ]},
@@ -20,13 +16,10 @@ const ENERGY_GROUPS = [
   {key : 'shellfish', sources : [ K.crab, K.mussel ]}, {key : 'detritus', sources : [ K.benthic ]},
   {key : 'animal', sources : [ K.fish, K.egg, K.carrion ]}
 ];
-// Energy held outside the food sources.
 export const ENERGY_STORES = [ 'gut', 'sperm' ];
 export const HABITATS = columnNames(HABITAT);
 const DISEASE_ROUTES = [ 'spontaneous', 'food', 'carrion', 'contact' ];
 
-// Who lives in the tank now, counted: hatched fish, eggs, carcasses, loose food pieces, crabs and
-// living mussels. Worms, plankton and plants are energy stores, shown in the budget.
 export const INHABITANTS = [ 'fish', 'eggs', 'corpses', 'food', 'crabs', 'mussels' ];
 export function inhabitants(f) {
   const animals = f.invertebrates || [],
@@ -64,7 +57,6 @@ export function energyBudget(f) {
   };
 }
 
-// Time shares of the living fish per habitat, from their observed ecology.
 export function populationHabitat(f) {
   const ids = new Set((f.fish || []).filter(p => p[FISH.hatched]).map(p => p[FISH.id])),
         observed = (f.traits || []).filter(trait => ids.has(trait.id)),

@@ -1,4 +1,3 @@
-"""One inventory for make and the test runner. No simulation campaigns."""
 from pathlib import Path
 import sys
 
@@ -8,7 +7,6 @@ from build_config import build_directory
 
 BUILD = build_directory(ROOT)
 
-# Lasting rules only: energy and checkpoints in the engine; module links and wording in the UI.
 NATIVE = ["invariants", "compiler"]
 JAVASCRIPT = ["texts", "studio"]
 

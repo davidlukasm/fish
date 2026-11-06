@@ -12,8 +12,6 @@ using state::same_options;
 using state::scalar;
 using state::value;
 namespace {
-// Plausible extents of a restored population: individuals, development plans, receptors, scale
-// factors, pigment and disease.
 constexpr std::size_t MAX_INDIVIDUALS = 20000000, MAX_DEVELOPMENT_PLANS = 2000,
                       MAX_RECEPTORS = 65536;
 constexpr double MIN_SCALE = .001, MAX_DISEASE = 100000;
@@ -124,7 +122,6 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
       }
     }
   } else if (!p.nutrient_egg && !p.genome.blueprint) {
-    // Saved work observations already include this development.
     p.genome.compile(false);
     for (auto &gene : genes)
       if (state::same_development(gene, p.genome)) {

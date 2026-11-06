@@ -4,17 +4,6 @@ import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tu
 import {idSafe, placedGlyph, rounded} from './markup.js';
 import {linePaint} from '../../glyph.js';
 
-// How an effector or nerve center idles and recovers, on the engine's activity from -1 to 1. At
-// rest, without input, a cell is as active as the tanh of its bias, its threshold times -scale
-// (the engine's bias scale), so its rest lies within the band the scale allows. A command lifts
-// it to full and it returns to rest over its time constant (cell time constants run from
-// TIME_CONSTANT.min_steps over TIME_CONSTANT.span times that). One handle on the rest line sets
-// the threshold, one on the return the time constant. A pacemaker instead swings around its rest,
-// less near full activity, with a period of its time constant, at least
-// TIME_CONSTANT.pace_min_steps; the handle on its first crest sets the period. Below zero a
-// muscle does nothing, a bladder empties and a gland binds; above it they work (`meaning` names
-// the halves, INSET from the left, LABEL below the top and RISE above the bottom). The time axis
-// spans SPANS of the longest time constant, or BEATS for a pacemaker.
 const DRIVE = Object.freeze({
   width : 360,
   height : 124,
@@ -34,7 +23,6 @@ const DRIVE = Object.freeze({
   rise : 3
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
-// A rhythm's first crest lies a quarter of its period after its start.
 const CREST_QUARTERS = 4;
 const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats
                                    : LONGEST_TIME_CONSTANT * DRIVE.spans / (1 - DRIVE.command[1]);
@@ -42,9 +30,7 @@ const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(t
 const stepAt = (fx, rhythm) =>
     (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps(rhythm);
 const y = level => MIDDLE - HALF * level;
-// A center's activity at rest, as the engine's bias makes it.
 export const restLevel = (center, scale) => Math.tanh(-scale * center.threshold);
-// A pointer at (fx, fy), fractions of the element, as a change of the center.
 export function drivePatch(handle, fx, fy, scale) {
   if (handle === 'adapt')
     return {
@@ -56,7 +42,6 @@ export function drivePatch(handle, fx, fy, scale) {
     const level = Math.max(-most, Math.min(most, (MIDDLE - fy * DRIVE.height) / HALF));
     return {threshold : clamp(-Math.atanh(level) / scale, -1)};
   }
-  // The first crest lies a quarter period after the start.
   if (handle === 'beat')
     return {
       tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, CREST_QUARTERS * stepAt(fx, true)))
@@ -85,7 +70,6 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
   const command = rhythm ? ''
                          : `<rect class="aid-drive-command" x="${rounded(x(from))}" y="${
                                D.top}" width="${rounded(x(to) - x(from))}" height="${D.plot}"/>`;
-  // Where an effector does nothing, and what its halves mean.
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';
@@ -109,11 +93,6 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
       stepsLabel(Math.round(tc))}</text></svg>`;
 }
 
-// A nerve cell keeps no activity of its own from step to step; it subtracts the running mean of its
-// input, which follows the input over ADAPTATION_SPAN of its time constants (substrate.cc). So a
-// short time constant answers a change and soon forgets a held input, a long one answers the input
-// itself. Shown: an input held from HELD[0] to HELD[1] of the axis and the cell's answer, with the
-// handle one adaptation time after the input starts; below, the two ends of the handle's way.
 const ADAPTATION_SPAN = 10;
 const ICON_LINE = 1.6;
 const ADAPT = Object.freeze({held : [ .1, .55 ], input : .9, samples : 160, icon : 14, below : 9});

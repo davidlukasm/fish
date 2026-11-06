@@ -6,18 +6,12 @@
 #include <limits>
 namespace fishsim {
 namespace {
-// Eyes sit at most EYE_OUTSET of their lateral position out, probe the sediment with EYE_PROBE
-// and back off from obstacles by RAY_BACKOFF, refined in EYE_BISECTIONS halvings. Burial counts
-// from VISION_BURIAL_SWITCH.
 constexpr double EYE_OUTSET = eye_place::outset, EYE_PROBE = .1, EYE_SEDIMENT_PROBE = .01,
                  RAY_BACKOFF = 1e-4, EYE_CLEARANCE = 1e-5, VISION_BURIAL_SWITCH = .5;
 constexpr int EYE_BISECTIONS = 8;
-// Retinal knots are at most KNOT_SPACING apart; a binocular field counts half per eye.
 constexpr double KNOT_SPACING = PI / 18, BINOCULAR_SHARE = .5;
-// Proximity banks: depth scales from NEAR_RANGE growing by NEAR_SPAN over PROXIMITY_STEPS steps.
 constexpr int PROXIMITY_STEPS = 7, PROXIMITY_BANKS = PROXIMITY_STEPS + 1;
 constexpr double NEAR_RANGE = 8, NEAR_SPAN = 16;
-// Inspection lists the brightest INSPECTED_OBJECTS objects per receptor.
 constexpr std::size_t INSPECTED_OBJECTS = 3;
 int proximity_bank(double range) {
   return std::min(PROXIMITY_STEPS - 1, int(range * PROXIMITY_STEPS));
@@ -28,14 +22,11 @@ double proximity_depth(double range) {
 }
 std::optional<std::array<double, 2>> eye_view_place(const BrainInterface &binding,
                                                     const EnvironmentParameters &env, int side) {
-  // Light and near-sense cells of a side measure from the eye's place.
   const auto &light = binding.forms[BrainInterface::sense_form(field::Light, side)],
              &near = binding.forms[BrainInterface::sense_form(field::Proximity, side)];
   const double weight = light.weight + near.weight;
   if (weight <= 0)
     return std::nullopt;
-  // The cells' lateral centroid is a distance from the axis; its share of the head's half width
-  // at the seat sets how far out the eye lies.
   const double centroid = (light.weight * light.x + near.weight * near.x) / weight,
                half_width = std::abs(binding.eye_positions[side][1]),
                share = half_width > tolerance::negligible ? centroid / half_width : 0;
@@ -60,7 +51,6 @@ std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &
       const double axial = radius * (*place)[0], lateral = radius * (*place)[1],
                    dx = axial * ca - lateral * sa, dy = axial * sa + lateral * ca,
                    length = std::hypot(dx, dy);
-      // Stop at the first obstacle even when the nominal point lies beyond a thin wall.
       double fraction = length > tolerance::negligible
                             ? std::clamp((world.ray(b.x, b.y, dx / length, dy / length, 0, length) -
                                           RAY_BACKOFF) /
@@ -275,9 +265,6 @@ void integrate_retinal_receptors(const BrainInterface &binding,
 }
 
 }
-// Lateral inhibition within each eye: every receptor of sight loses strength x the mean stimulus
-// of the receptors of the same eye within +-surround degrees of its bearing (itself included);
-// the two eyes do not inhibit each other.
 void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float> &values,
                                double strength, double surround) {
   if (strength <= 0)
@@ -337,7 +324,6 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                   const std::vector<VisualObject> &objects, Body *inspected,
                                   int stride, bool diagnostic,
                                   const std::array<VisualEye, EYES> *origins) {
-  // Workers reuse storage; every observed value is overwritten before it is read.
   struct Contribution {
     std::size_t band, object;
   };
@@ -544,9 +530,6 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     }
     for (std::size_t j = 0; j < n; ++j)
       covered[j] = nearest[j] != objects.size();
-    // Unoccluded translucent objects add the same light to an entire interval.
-    // A depth minimum proves visibility before replacing that band's repeated
-    // circle intersections and additions with two range events.
     auto &changes = cache.changes;
     auto &minimum_depth = cache.minimum_depth;
     changes.assign(n + 1, {});

@@ -5,24 +5,15 @@
 #include "plants.hh"
 namespace fishsim {
 namespace {
-// Bitten-off plant pieces are at least MIN_PIECE_RADIUS.
 constexpr double MIN_PIECE_RADIUS = .2;
-// Shares of a part's energy are taken against at least MIN_PART_ENERGY; bites and widths count as
-// at least MIN_BITE; marks span bites over at least MIN_MARK_LENGTH.
 constexpr double MIN_PART_ENERGY = .01, MIN_BITE = .1, MIN_MARK_LENGTH = 1;
-// A bite wider than LEAF_THROUGH leaf widths cuts through; thin blades need less force.
 constexpr double LEAF_THROUGH = 1.6, CUT_FORCE = .35, CUT_FORCE_MIN = .08;
-// Bite notches: depth, widening and the margin of an organ that is never cut.
 constexpr double NOTCH_MIN_WIDTH = .04, NOTCH_MAX_DEPTH = .85, NOTCH_CUT_DEPTH = .95,
                  NOTCH_MARGIN = .12, NOTCH_MIN_SPAN = .03, NOTCH_MAX_SPAN = .3, NOTCH_DEEPEST = .9,
                  NOTCH_DEEPEN = .6, NOTCH_WIDEN = 1.15;
-// Remains lose their tissue colour along this curve and shade towards bone.
 constexpr double REMAINS_TISSUE_CURVE = .65, BONE_SHADE = .18, BONE_BLUE = .70, BONE_WARM = .82;
-// Corpses sink faster with age, scaled to the tank height; dead eggs drift with the water.
 constexpr double CORPSE_SINK_START = .65, CORPSE_SINK_GAIN = 7.35, EGG_CORPSE_DRAG = 9.6,
                  CORPSE_DRIFT = .19008;
-// Burial is probed at five points along the body (from BURIAL_START radii in BURIAL_STEP steps)
-// and two BURIAL_ACROSS radii across it, once sediment lies within BURIAL_REACH radii.
 constexpr int BURIAL_POINTS = 7, AXIAL_BURIAL_POINTS = 5;
 constexpr double BURIAL_START = -.8, BURIAL_STEP = .4, BURIAL_ACROSS = .7, BURIAL_REACH = 2;
 constexpr double BURIED_DEPTH = .15, BURIAL_DRAG = 31, COVER_DRAG = 32, COVER_DEPTH = 16,
@@ -122,8 +113,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                            ? source.organs[part.organ].energy
                            : store,
                bite = bite_radius(b), width = stroke_width(part), half = stroke_half_length(part),
-               // Share of a stroke inside the bite: a disc of the bite radius across its width.
-      area = 4 * width * half + PI * width * width,
+               area = 4 * width * half + PI * width * width,
                covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
                                           std::min(2 * bite, 2 * width) /
                                           std::max(tolerance::precision, area)),
@@ -162,13 +152,9 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     vegetation_.plant_geometry_cache[part.patch].clear();
   if (kind == food_kind::plant && part.organ >= 0) {
     source.organs[part.organ].energy -= amount;
-    // A bite that goes through cuts the organ exactly where it was bitten; any other bite
-    // leaves a crescent notch on the side the fish came from. A leaf is cut only when the
-    // bite spans its whole width; otherwise the bite takes a piece out of its margin.
     const double at = stroke_along(part, s);
     auto &organ = source.organs[part.organ];
     const bool through = organ.kind < plant_organ::leaf || bite > LEAF_THROUGH * width;
-    // Thin blades need less force to go through; repeated bites at one place cut as well.
     const double needed =
         std::clamp(CUT_FORCE * width / std::max(MIN_BITE, bite), CUT_FORCE_MIN, CUT_FORCE);
     double worn = 0;
@@ -183,8 +169,6 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
       this->cut_organ(part.patch, part.organ, at);
     else {
       const double length = curve_length(organ.draw_curve);
-      // The mark has the size of the mouth that bit, not of the piece it tore off: a small
-      // mouthful from an energy-rich leaf still leaves a clearly visible bite.
       const double heal = env_.plant_notch_heal,
                    depth = std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width)),
                    span = std::clamp(bite / std::max(MIN_MARK_LENGTH, length), NOTCH_MIN_SPAN,
@@ -193,7 +177,6 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
       for (auto &n : organ.notches)
         if (std::abs(notch_depth(n, time, heal)) < std::abs(notch_depth(*slot, time, heal)))
           slot = &n;
-      // A second bite into the same mark widens and deepens it.
       for (auto &n : organ.notches)
         if (n.width > 0 && (n.depth < 0) == (side < 0) && std::abs(n.at - at) < n.width) {
           slot = &n;
@@ -279,7 +262,6 @@ void Ecosystem::drift_corpses() {
     const double burial = buried / BURIAL_POINTS,
                  factor = 1 + BURIAL_DRAG * burial +
                           COVER_DRAG * std::clamp((cover - radius) / COVER_DEPTH, 0., 1.);
-    // Slow drifting in open water is not ground contact.
     const bool ground_contact = field.ray(c.x, c.y, 0, 1, radius, GROUND_PROBE) < GROUND_GAP;
     c.resting = burial > 0 || ground_contact;
     if (c.resting && c.energy > 0) {

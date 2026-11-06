@@ -7,22 +7,12 @@
 #include "physiology_parameters.hh"
 namespace fishsim {
 constexpr double HATCH_RESERVE_FRACTION = .2, FOUNDER_UPKEEP_ALLOWANCE = .06;
-// The smallest body counts as a fifth of a standard one; no fish is drawn or collides smaller
-// than BODY_RADIUS.
 constexpr double MIN_BODY_MASS = .2;
-// The reference organ mass carries this many standard bodies of tissue.
 constexpr double TISSUE_PER_ORGAN_REF = 2.25;
-// Individual spread of the senescence start: identity hashed into buckets.
 constexpr std::uint64_t IDENTITY_HASH = 2654435761ULL, IDENTITY_BUCKETS = 1009;
-// Mouth width as a share of the body radius, from short to long jaws.
 constexpr double MOUTH_SHARE_SHORT = body_unit::mouth_share_short,
                  MOUTH_SHARE_SPAN = body_unit::mouth_share_span;
-// Mouth force doubles into suction. A bite closes over a disc of BITE_REACH of the mouth width
-// and takes what lies inside it: the share of a piece by area, so its energy follows the piece's
-// density. The force only decides whether the jaws cut through (crack_success).
 constexpr double MOUTH_FORCE_GAIN = 2, BITE_REACH = .9;
-// Suction reaches between these distances; the swallowed area is SWALLOW_AREA mouth widths
-// squared and shrinks with swimming speed.
 constexpr double MOUTH_REACH_MIN = .5, MOUTH_REACH_MAX = 8, SWALLOW_AREA = 4,
                  SWALLOW_SPEED_LOSS = 3;
 constexpr double DEFAULT_FLESH_WOUND = .25;
@@ -52,8 +42,6 @@ inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   return P::basal_rate * p.basal_metabolism() *
          (P::basal_fixed + (1 - P::basal_fixed) * std::max(0., tissue) / BODY_TISSUE);
 }
-// Muscles grow with the body like its gonads: a hatchling with half the tissue keeps half the
-// muscle mass and pays half the upkeep.
 inline double muscle_upkeep(double maintenance, double tissue, const PhysiologyParameters &p) {
   return maintenance * p.basal_metabolism() *
          std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE);
@@ -63,9 +51,7 @@ double development_energy(const Genome &, double neural_cost, double hatch_tissu
 inline double bounded_filling(double content, double capacity) {
   return capacity > 0 ? std::clamp(content / capacity, 0., 1.) : content > 0 ? 1. : 0.;
 }
-// A mother whose yolk reaches this share of the ovary lays.
 constexpr double EGG_FULL_SHARE = .95;
-// A gonad's room for eggs or sperm per motor cell, unless the parameters set another.
 constexpr double ORGAN_CELL_CAPACITY = 10;
 double organ_capacity(const Body &, const Genome &, int port, double ceiling,
                       double per_cell = ORGAN_CELL_CAPACITY);
@@ -74,7 +60,6 @@ double gut_filling(const Body &);
 double ovary_capacity(const Body &, const Genome &, double ceiling, double per_cell);
 double body_mass(const Body &);
 double pay_activity(Body &, double requested, bool protected_life = false);
-// Starvation: breaks tissue down until the energy reaches target or the tissue its floor.
 void mobilize_tissue(Body &, double target);
 inline void harm_body(Body &b, double damage, int cause,
                       double bearing = std::numeric_limits<double>::quiet_NaN()) {
@@ -108,8 +93,6 @@ inline double body_radius(const Body &b) {
 inline double tissue_capacity(const Body &b) {
   return std::min(MAX_TISSUE, TISSUE_PER_ORGAN_REF * BODY_TISSUE * b.organ_mass / b.organ_mass_ref);
 }
-// Share of its growth the body may make now: how strongly hormones occupy its growth receptor.
-// Without such a hormone a fish keeps its hatch size.
 inline double growth_permission(const Body &b) {
   return b.brain() ? b.brain()->blueprint().growth_receptor.occupancy(b.hormones().levels()) : 0;
 }
@@ -119,7 +102,6 @@ inline double body_maturity(const Body &b) {
                         std::max(tolerance::negligible, tissue_capacity(b)),
                     0., 1.);
 }
-// Yolk has the same material density inside the parent and in the laid egg.
 constexpr double EGG_ENERGY_PER_RADIUS2 = RESERVE_ENERGY_PER_MASS / (BODY_RADIUS * BODY_RADIUS);
 inline double egg_radius(double energy) {
   return std::sqrt(std::max(0., energy) / EGG_ENERGY_PER_RADIUS2);
@@ -132,7 +114,6 @@ inline double collision_radius(const Body &b) {
   return b.hatched ? body_radius(b) : std::max(b.egg_shell_radius, egg_radius(b.energy));
 }
 void size_egg(Body &);
-// A young fish can still hold one rich grain alongside its starting reserve.
 inline double reserve_capacity_for_tissue(double tissue) {
   return std::max(HATCH_RESERVE,
                   ADULT_RESERVE * std::clamp(tissue / BODY_TISSUE, 0., MAX_TISSUE / BODY_TISSUE));
@@ -140,7 +121,6 @@ inline double reserve_capacity_for_tissue(double tissue) {
 inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
-// A gut of length 0 to 1 holds and keeps food this much longer than a middle one.
 inline double gut_size(double length) {
   return (1 + length) / (1 + TRAIT_MIDDLE);
 }
@@ -159,8 +139,6 @@ inline double nutrient_signal(const Body &b) {
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
-// How much of a food a gut of length 0 to 1 takes in: plants and algae the more, the longer it is,
-// animal food the more, the shorter; sediment and feed alike in any.
 inline double gut_utilisation(double length, int source) {
   using P = PhysiologyParameters;
   const auto utilisation = [](double l) { return 1 - P::gut_linear * l - P::gut_square * l * l; };
@@ -192,14 +170,12 @@ inline double mouth_force(const Body &b) {
 inline double mouth_share(double jaw_length) {
   return MOUTH_SHARE_SHORT + MOUTH_SHARE_SPAN * jaw_length;
 }
-// A middle jaw has lever 1; shorter jaws press harder.
 inline double jaw_lever(double jaw_length) {
   return mouth_share(TRAIT_MIDDLE) / mouth_share(jaw_length);
 }
 inline double jaw_leverage(const Body &b) {
   return jaw_lever(b.jaw_length);
 }
-// How much of a bite's force teeth of bluntness 0 to 1 bring to hard prey (shells) or soft.
 inline double tooth_grip(double blunt, bool hard) {
   return hard ? blunt : 1 - blunt;
 }
@@ -216,7 +192,6 @@ inline double bite_force(const Body &b, bool hard = false) {
 inline double mouth_factor(const Body &b) {
   return MOUTH_FORCE_GAIN * mouth_force(b);
 }
-// The share of a full gulp that suction of this strength draws in, against the force scale.
 inline double suction_share(double suction, double force_scale) {
   return std::min(1., MOUTH_FORCE_GAIN * effective_force(suction, force_scale));
 }
@@ -229,7 +204,6 @@ inline double mouth_aperture(const Body &b) {
 inline double bite_radius(const Body &b) {
   return BITE_REACH * maximum_mouth_aperture(b);
 }
-// The share of a round piece of this radius inside one bite.
 inline double bite_share(const Body &b, double radius) {
   const double bite = bite_radius(b);
   return radius > bite ? bite * bite / (radius * radius) : 1;
@@ -250,7 +224,6 @@ constexpr double MOUTH_TRANSPORT_RATE = 1 / MOUTH_CYCLE_STEPS;
 void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_steps,
                    double bite_steps);
 double stored_energy(const Body &);
-// Empties every store stored_energy counts, and the gut's filling with them.
 void empty_stores(Body &);
 // Excess hatch funding becomes tissue instead of overflowing a tiny reserve.
 inline double hatch_tissue(double energy) {

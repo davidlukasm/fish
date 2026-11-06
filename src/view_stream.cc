@@ -83,11 +83,7 @@ std::map<Text, Text> members(Text text) {
   }
   return result;
 }
-// Text numbers are rounded for display only; simulation and checkpoints are untouched. Numbers
-// of at least one keep WHOLE_PLACES decimals, smaller ones FRACTION_PLACES; rounded values keep
-// ROUNDED_DIGITS significant digits.
 constexpr int WHOLE_PLACES = 2, FRACTION_PLACES = 3, ROUNDED_DIGITS = 7;
-// Numbers are formatted in buffers of NUMBER_CHARS characters.
 constexpr std::size_t NUMBER_CHARS = 64;
 std::string display_numbers(Text text) {
   std::string result;
@@ -143,23 +139,15 @@ std::string rounded(Text text, double step) {
   return std::string(buffer, result.ptr);
 }
 namespace {
-// Coarse frames round angles to ANGLE_STEP, colours to COLOR_STEP, poses and signals to
-// POSE_STEP, radii to RADIUS_STEP and stores to STORE_LEVELS levels of their capacity.
 constexpr double ANGLE_STEP = .001, COLOR_STEP = .01, POSE_STEP = .02, RADIUS_STEP = .05,
                  STORE_LEVELS = 64;
-// Coordinates are rounded to FINE_COORDINATE while paused or inspected, else COARSE_COORDINATE.
 constexpr double FINE_COORDINATE = .01, COARSE_COORDINATE = .5;
-// Water velocities are rounded to FINE_FLOW or COARSE_FLOW, sediment amounts to SEDIMENT_STEP;
-// combat effects carry their id first; patches nest at most MAX_PATCH_DEPTH levels; change
-// masks hold MASK_DIGIT_BITS bits per hex digit.
 constexpr double FINE_FLOW = .001, COARSE_FLOW = .05, SEDIMENT_STEP = .01;
 constexpr int COMBAT_ID = 0;
 constexpr unsigned MAX_PATCH_DEPTH = 16, MASK_DIGIT_BITS = frame_patch::mask_digit_bits;
-// The opening of a patch of the given kind: "[kind,".
 std::string patch_head(int kind) {
   return '[' + std::to_string(kind) + ',';
 }
-// Stores and the columns of their capacities.
 constexpr std::array<std::array<std::size_t, 2>, 3> STORES{
     {{fish_column::energy, fish_column::reserve_capacity},
      {fish_column::egg_yolk, fish_column::egg_capacity},
@@ -174,8 +162,6 @@ std::string display_fish(Text text, Text previous, Text selected, double coordin
       auto cells = elements(row);
       known.emplace(cells[C::id], std::move(cells));
     }
-  // Only these columns drive motion, shape, colour or transitions in the tank.
-  // Other per-animal diagnostics are refreshed with the statistics.
   static const std::set<std::size_t> animated = {C::x,
                                                  C::y,
                                                  C::angle,
@@ -303,8 +289,6 @@ std::string display_plant_organs(Text text, double step) {
   return result;
 }
 namespace {
-// Coarse frames round food energy to FOOD_ENERGY_STEP, corpse energy and gamete density to
-// REMAINS_STEP and ages to AGE_STEP.
 constexpr double FOOD_ENERGY_STEP = 1, REMAINS_STEP = .25, AGE_STEP = 8;
 static_assert(corpse_column::x == food_column::x && corpse_column::y == food_column::y &&
               gamete_column::x == food_column::x && gamete_column::y == food_column::y);
@@ -334,7 +318,6 @@ std::string display_rows(Text text, Text previous, Text key, double step, bool f
     auto prior = known.find(cells[id_column]);
     if (plants && !statistics && !fine && prior != known.end() &&
         elements(cells[plant_column::root])[plant_root_column::drift_age] == "0") {
-      // Static plants grow slowly; drifting plants still follow the moving water.
       result.pop_back();
       result.append(known_rows.at(cells[plant_column::id]));
       continue;
@@ -414,7 +397,6 @@ std::string project(Text current, Text previous, bool environment, bool particle
           result += ',';
         first_cell = false;
         auto cells = elements(row);
-        // Water cells: position, then velocity.
         const double step = fine ? FINE_FLOW : COARSE_FLOW;
         result += '[' + std::string(cells[0]) + ',' + std::string(cells[1]) + ',' +
                   rounded(cells[2], step) + ',' + rounded(cells[3], step) + ']';
@@ -562,7 +544,6 @@ std::string difference(Text old, Text now, unsigned depth, int identity) {
       first = false;
       int id = -1;
       if (depth == 0) {
-        // Lists matched by their identity column; combat effects start with their id.
         if (key == "\"fish\"")
           id = int(fish_column::id);
         else if (key == "\"food\"")
@@ -601,7 +582,6 @@ std::string view_patch(std::string_view previous, std::string_view current) {
 }
 ViewSchedule ViewStream::schedule(bool forced) {
   const auto now = std::chrono::steady_clock::now();
-  // Environment and particles refresh every SCENE_PERIOD, light every LIGHT_PERIOD.
   constexpr auto SCENE_PERIOD = std::chrono::milliseconds(200),
                  LIGHT_PERIOD = std::chrono::milliseconds(500);
   bool environment = forced || now - environment_time >= SCENE_PERIOD;

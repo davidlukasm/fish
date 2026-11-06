@@ -18,7 +18,6 @@ export function layerShown(state, key) {
   const mode = layerMode(state, key);
   return mode === AUTO ? LAYER_DEFAULTS[key](state.tool, zoomOf(state)) : mode;
 }
-// The viewer's switches as kept, and kept anew.
 export function storedLayers() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORE) ?? '{}');
@@ -31,10 +30,8 @@ export function keepLayers(layers) {
   try {
     localStorage.setItem(STORE, JSON.stringify(layers));
   } catch {
-    // Without storage the switches last until the page is left.
   }
 }
-// A switch clicked: from auto to on, to off, back to auto.
 export function switchLayer(state, key) {
   const mode = layerMode(state, key);
   return {
