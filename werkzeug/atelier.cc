@@ -896,6 +896,9 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
+  // The least yolk an egg needs to hatch; an egg laid with less is food.
+  std::cout << ",\"eggMinimum\":"
+            << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{});
   const auto group = anatomy_report(t, g.interface, groups, true);
   std::cout << ",\"contacts\":[";
   struct ContactBundle {
@@ -947,6 +950,23 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   }
   std::cout << "]}}\n";
 }
+}
+// What the gonads hold and how they fill and spawn, with the engine's usual parameters: room per
+// motor cell (perCell) up to a ceiling (most), the energy a step moves in at full transfer (fill;
+// a gonad's growth cells transfer as their drive A does, A / (1 + A)), when it spawns (eggs at a
+// share of their room, sperm from a portion on) and the drive its release cells need (release).
+std::string gonad_report() {
+  const fishsim::EvolutionParameters evolution{};
+  const fishsim::PhysiologyParameters physiology{};
+  std::ostringstream out;
+  out << "{\"eggs\":{\"perCell\":" << evolution.egg_organ_capacity
+      << ",\"most\":" << evolution.egg_capacity << ",\"fill\":" << evolution.egg_fill_rate
+      << ",\"spawnShare\":" << fishsim::EGG_FULL_SHARE
+      << "},\"sperm\":{\"perCell\":" << fishsim::ORGAN_CELL_CAPACITY
+      << ",\"most\":" << physiology.sperm_capacity << ",\"fill\":" << evolution.sperm_fill_rate
+      << ",\"spawnLeast\":" << evolution.sperm_portion
+      << "},\"release\":" << physiology.stroke_threshold << '}';
+  return out.str();
 }
 
 // How the traits the muscles shape serve each kind of food, sampled at DIET_SAMPLES values from
@@ -1034,6 +1054,9 @@ int main(int argc, char **argv) {
                 << ",\"lateralCorners\":[" << fishsim::LATERAL_ALONG << ','
                 << fishsim::LATERAL_ACROSS
                 << ']'
+                // What the gonads hold and how they fill and spawn (gonad_report).
+                << ",\"gonads\":"
+                << gonad_report()
                 // A planned cell's bias is its threshold times -biasScale; at rest, without
                 // input, it is as active as the tanh of its bias.
                 << ",\"biasScale\":" << field::Options{}.bias_scale

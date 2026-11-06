@@ -3,8 +3,6 @@
 #include <numeric>
 namespace fishsim {
 namespace {
-// A mother whose yolk reaches this share of the ovary lays.
-constexpr double EGG_FULL_SHARE = .95;
 // Fertility of waiting eggs is checked every this many steps.
 constexpr int FERTILITY_CHECK_PERIOD = 100;
 // Recruitment falls off steeply once the adults reach the target.

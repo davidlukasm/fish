@@ -21,7 +21,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/substrate.cc" : "673a3dfa84a7fc33",
   "src/body_plan.cc" : "e4be3b8341694c77",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
-  "src/physiology.hh" : "140a72a59b05e082",
+  "src/physiology.hh" : "aec5ae2457d1326b",
   "src/physiology.cc" : "fea2c274a8c6b138",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
@@ -97,7 +97,7 @@ function semanticFingerprint(source) {
     MUSCLES,
     eligible,
     functionFor,
-    growthMost,
+    kindLimit,
     musclePlaces,
     nodeLimit,
     organFunction
@@ -1308,7 +1308,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const ovary = model.addOrgan(model.newDocument('Eier'), 'eggs', sites, {x : 708, y : 380});
     const fertile = model.setOrganNodes(ovary.document, ovary.organId, 99, sites);
     const gonad = model.findOrgan(fertile, ovary.organId), keys = gonad.centers.map(c => c.key);
-    assert.equal(keys.filter(k => k === 'growth').length, growthMost(gonad));
+    assert.equal(keys.filter(k => k === 'growth').length, kindLimit(gonad, sites));
     assert.equal(keys.length, ORGAN_BY_KEY.eggs.nodes);
     assert.deepEqual(keys.filter(k => k !== 'growth'), [ 'release', 'pressure' ]);
     assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
@@ -1316,10 +1316,21 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
     assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
                      [ 'growth', 'growth', 'pressure', 'release' ]);
-    const sac = sacs.pressureGraphic({document : fewer, sites}, model.findOrgan(fewer, gonad.id));
-    assert.equal(sac.match(/aid-sac-cell"/g).length, 2);
-    assert.ok(sac.includes('data-sac-cells-handle'));
-    assert.equal(sacs.sacCellsPatch(gonad, 0, .5).nodes > 1, true);
+    // Its vessel holds what its motor cells give room for, a chamber each; a handle further along
+    // recruits more growth cells. An egg too small to hatch is food.
+    const small = model.findOrgan(fewer, gonad.id);
+    const sacState = {document : fewer, sites, capabilities : sitesResult};
+    const store = sacs.gonadStore(sacState, small);
+    assert.equal(store.room, sitesResult.gonads.eggs.perCell * 3);
+    const sac = sacs.gonadGraphic(sacState, small);
+    assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
+    assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
+    assert.ok(sacs.sacPatch(sacState, small, 'cells', .6).nodes > 2);
+    const facts = state => sacs.gonadFacts(state, small);
+    assert.ok(
+        !facts(sacState).includes(t('studio.inspector.gonad.food', {least : 0}).split(':')[0]));
+    assert.ok(facts({...sacState, stale : false, report : {eggMinimum : store.room * 2}})
+                  .includes(t('studio.inspector.gonad.food', {least : 0}).split(':')[0]));
     // Names are written in place.
     const group = model.assemble(grown, [ organ.id, twin.id ], '');
     const renamed = model.renameAssembly(group, group.assemblies[0].id, 'Schwanz');

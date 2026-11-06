@@ -1,148 +1,231 @@
 import {clamp} from '../../units.js';
 import {restLevel} from './drive.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
-import {growthMost, PRESSURE_OF} from '../model/organs.js';
+import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
+import {ATELIER_LIMITS} from '../../schema.js';
 import {groupReport} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
-import {t, tList} from '../../strings.js';
+import {percent, t, tList} from '../../strings.js';
 import {label} from './kit.js';
 import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 import {biasScale} from './panels.js';
 
-// The inner organs that hold something, each drawn as one vessel around its nodes: the egg and
-// sperm sacs, which fill and release, and the swim bladder.
-// The egg or sperm organ as one sac: cells along its wall make the gametes (growth), as many as
-// its growth nodes (drag the last one's handle for more or fewer), a stretch line across it marks
-// the filling at which its pressure cells answer half (drag its handle), and a valve lets them out
-// (release), open as far as the release cells rest active. Each part picks its center for the
-// details below. The ovary fills with round eggs, the testis with sperm (a head and a wavy tail,
-// SPERM), each in its own colours.
-const SAC = Object.freeze({
+// The inner organs that hold something: the egg and sperm sacs, which fill and release, and the
+// swim bladder.
+// A gonad as the engine reckons it (the capabilities' gonads): each of its motor cells gives it
+// room for perCell, up to most; its growth cells move energy in as fast as their drive A at rest
+// lets them (A / (1 + A) of fill a step, A the sum of their strengths times their rest activity);
+// its release cells let it out on their own once their drive at rest reaches release, else only
+// when a trigger drives them. An ovary lays at spawnShare of its room, a testis from spawnLeast
+// on. An egg needs the build's eggMinimum to hatch; with less it is food.
+export function gonadStore(state, organ) {
+  const G = state.capabilities?.gonads, own = G?.[organ.type];
+  if (!own)
+    return null;
+  const scale = biasScale(state), cells = kind => organ.centers.filter(c => c.key === kind);
+  const drive = kind => cells(kind).reduce(
+      (sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies * Math.max(0, restLevel(c, scale)), 0);
+  const growth = cells('growth').length, motors = organ.centers.filter(c => c.role === 'motor');
+  const room = Math.min(own.most, own.perCell * motors.length), fill = drive('growth');
+  const transfer = fill / (1 + fill), perStep = transfer * own.fill;
+  const spawn = organ.type === 'eggs' ? own.spawnShare * room : room;
+  const minimum = !state.stale && organ.type === 'eggs' ? state.report?.eggMinimum : undefined;
+  return {
+    own,
+    growth,
+    motors : motors.length,
+    room,
+    scale : own.perCell * nodeLimit(organ, null),
+    transfer,
+    steps : perStep > 0 ? Math.ceil(spawn / perStep) : Infinity,
+    opening : Math.min(1, drive('release') / G.release),
+    self : drive('release') >= G.release,
+    spawn,
+    minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
+  };
+}
+// The gonad drawn as a vessel along an axis of energy from LEFT to RIGHT (the most its nodes could
+// hold), MIDDLE high, HALF thick, ROUND at its ends; a chamber for each motor cell, the release
+// cells' last before the valve. An arrow INFLOW long brings the energy in, as wide as the growth
+// cells fill (FLOW: least and span); a valve VALVE long lets it out, open as far as the release
+// cells drive it at rest (at least SHUT). What one spawning gives stands after the valve, GAP
+// apart: an egg as big as its yolk (EGG: the largest radius, at the axis' end), the egg it needs
+// to hatch dashed around it, or sperm (as many as the chambers). The stretch line marks where the
+// pressure cells answer half. Numbers stand on the axis at AXIS, TICK long. The arrow's head is
+// HEAD long and wide beside its shaft.
+const STORE = Object.freeze({
   width : 300,
-  height : 150,
-  cx : 140,
-  cy : 75,
-  rx : 108,
-  ry : 56,
-  wall : 9,
-  egg : 7,
-  eggs : 26,
-  valve : 18,
-  handle : 7,
-  label : 12,
-  // Eggs are EGG / EGG_SIZE wide, rows START eggs above the bottom, ROW eggs apart, keep IN eggs
-  // from the wall and stand ALONG eggs apart in a row.
-  egg_size : 1.4,
-  rows : {start : 2, row : 1.8, in : 1.5, along : 2.1},
-  // The wall's cells spread over ARC of a half turn from FROM on, CELL wide.
-  wall_cells : {from : .65, arc : .7, cell : 4},
-  // The valve stands at least SHUT open.
+  height : 126,
+  left : 36,
+  right : 234,
+  middle : 52,
+  half : 26,
+  round : 9,
+  inflow : 30,
+  flow : [ 1.5, 10 ],
+  head : 7,
+  valve : 14,
   shut : .2,
-  // Without pressure cells the stretch line stands UNMEASURED of the way up.
-  unmeasured : .5
+  gap : 6,
+  egg : 22,
+  gamete : 4,
+  axis : 100,
+  tick : 5,
+  label : 13,
+  handle : 7
 });
 // A sperm's head, and its tail TAIL long in two waves WAVE high (a quarter of the tail each).
 const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4});
-// The half width of the sac at height y.
-const sacHalf = y => SAC.rx * Math.sqrt(Math.max(0, 1 - ((y - SAC.cy) / SAC.ry) ** 2));
-// Gametes fill the sac from the bottom up to the stretch line at lineY, in rows: round eggs, or
-// sperm with a head and a wavy tail.
-function gametes(type, lineY) {
-  const S = SAC, R = S.rows;
-  const gamete = (x, y) =>
-      type === 'eggs'
-          ? '<circle class="aid-sac-egg" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
-                fixed(S.egg / S.egg_size) + '"/>'
-          : '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
-                SPERM.head + '"/><path class="aid-sac-sperm" d="M' + fixed(x - SPERM.head) + ' ' +
-                fixed(y) + ' q' + -SPERM.tail / SPERM.quarters + ' ' + -SPERM.wave + ' ' +
-                -SPERM.tail / 2 + ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
+const at = (store, energy) =>
+    STORE.left + (STORE.right - STORE.left) * Math.min(1, energy / store.scale);
+const sperm = (x, y) => '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' + fixed(y) +
+                        '" r="' + SPERM.head + '"/><path class="aid-sac-sperm" d="M' +
+                        fixed(x - SPERM.head) + ' ' + fixed(y) + ' q' +
+                        -SPERM.tail / SPERM.quarters + ' ' + -SPERM.wave + ' ' + -SPERM.tail / 2 +
+                        ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
+const egg = (x, y, r, kind) => '<circle class="aid-sac-' + kind + '" cx="' + fixed(x) + '" cy="' +
+                               fixed(y) + '" r="' + fixed(r) + '"/>';
+// The chambers from the k-th cell on to the end, each holding a gamete or two.
+function chambers(store, type, from, to, kind) {
+  const S = STORE, width = at(store, store.own.perCell) - S.left;
   let html = '';
-  for (let k = 0, y = S.cy + S.ry - S.egg * R.start; k < S.eggs && y > lineY; y -= S.egg * R.row) {
-    const reach = sacHalf(y) - S.egg * R.in;
-    for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * R.along, ++k)
-      html += gamete(x, y);
+  for (let k = from; k < to; ++k) {
+    const x = S.left + k * width, middle = x + width / 2;
+    html += '<rect class="aid-sac-chamber ' + kind + '" x="' + fixed(x) + '" y="' +
+            (S.middle - S.half) + '" width="' + fixed(width) + '" height="' + 2 * S.half + '"/>' +
+            (type === 'eggs' ? egg(middle, S.middle - S.half / 2, S.gamete, 'egg') +
+                                   egg(middle, S.middle + S.half / 2, S.gamete, 'egg')
+                             : sperm(middle + SPERM.tail / 2, S.middle));
   }
   return html;
 }
-// The places along the sac's wall for its growth cells, the most it may have spread over the arc;
-// the cells take them from the first on.
-function wallPoint(k, most) {
-  const S = SAC, W = S.wall_cells, a = Math.PI * (W.from + W.arc * k / Math.max(1, most - 1));
-  return {x : S.cx + Math.cos(a) * (S.rx - S.wall), y : S.cy - Math.sin(a) * (S.ry - S.wall)};
+// What one spawning gives, after the valve at x.
+function product(store, type, x) {
+  const S = STORE, radius = energy => S.egg * Math.sqrt(Math.min(1, energy / store.scale));
+  if (type !== 'eggs')
+    return Array
+        .from({length : Math.min(store.motors, store.room / store.own.perCell)},
+              (_, k, all) => sperm(x + S.gap + SPERM.tail + SPERM.head,
+                                   S.middle + (k - (all.length - 1) / 2) * SPERM.head * 2))
+        .join('');
+  const r = radius(store.spawn), cx = x + S.gap + S.egg;
+  const short = store.minimum && store.spawn < store.minimum;
+  return egg(cx, S.middle, r, short ? 'egg food' : 'egg') +
+         (store.minimum ? '<circle class="aid-sac-least" cx="' + fixed(cx) + '" cy="' + S.middle +
+                              '" r="' + fixed(radius(store.minimum)) + '"/>'
+                        : '');
 }
-const wallCells = (count, most) => Array
-                                       .from({length : count},
-                                             (_, k) => {
-                                               const p = wallPoint(k, most);
-                                               return '<circle class="aid-sac-cell" cx="' +
-                                                      fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-                                                      SAC.wall_cells.cell + '"/>';
-                                             })
-                                       .join('');
-// The number of growth cells for a pointer on the sac graphic (fractions of it): the wall place
-// nearest to it along the arc.
-export function sacCellsPatch(organ, fx, fy) {
-  const S = SAC, W = S.wall_cells, most = growthMost(organ);
-  const turn = Math.atan2((S.cy - fy * S.height) / (S.ry - S.wall),
-                          (fx * S.width - S.cx) / (S.rx - S.wall)) /
-               Math.PI;
-  const along = clamp(((turn < 0 ? turn + 2 : turn) - W.from) / W.arc);
-  return {nodes : 1 + Math.round(along * (most - 1))};
+// The axis' numbers: none, the room, the ceiling where it stops the room and an egg's minimum.
+function axis(store) {
+  const S = STORE, mark = (energy, kind) => {
+    const x = fixed(at(store, energy));
+    return '<path class="aid-sac-tick ' + kind + '" d="M' + x + ' ' + S.axis + ' v' + S.tick +
+           '"/><text class="' + kind + '" x="' + x + '" y="' + (S.axis + S.tick + S.label) +
+           '" text-anchor="middle">' + Math.round(energy) + '</text>';
+  };
+  return '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.axis + ' H' + S.right + '"/>' +
+         mark(0, '') + mark(store.room, 'room') +
+         (store.own.most < store.scale ? mark(store.own.most, 'ceiling') : '') +
+         (store.minimum ? mark(store.minimum, 'least') : '');
 }
-// The valve stands as open as the release cells work at rest.
-function valve(state, release) {
-  const S = SAC, scale = biasScale(state), vx = S.cx + S.rx;
-  const open = release && scale ? Math.max(0, restLevel(release, scale)) / Math.tanh(scale) : 0;
-  return '<path class="aid-sac-valve" d="M' + vx + ' ' + fixed(S.cy - S.valve * (S.shut + open)) +
-         ' L' + (vx + S.valve) + ' ' + S.cy + ' L' + vx + ' ' +
-         fixed(S.cy + S.valve * (S.shut + open)) + '"/>';
-}
-export function pressureGraphic(state, organ, selected) {
-  const S = SAC, find = key => organ.centers.find(c => c.key === key);
+export function gonadGraphic(state, organ, selected) {
+  const S = STORE, store = gonadStore(state, organ);
+  if (!store)
+    return '';
+  const find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
-  const cells = organ.centers.filter(c => c.key === 'growth').length, most = growthMost(organ);
-  const last = wallPoint(cells - 1, most);
-  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : S.unmeasured;
-  const lineY = S.cy + S.ry - 2 * S.ry * stretch, vx = S.cx + S.rx;
-  const chosen = center => center && selected?.id === center.id ? ' selected' : '';
+  const chosen = center => center && selected?.key === center.key ? ' selected' : '';
   const part = (center, body) => center ? '<g class="aid-sac-part' + chosen(center) +
                                               '" data-select-center="' + escapeText(center.id) +
                                               '"><title>' + escapeText(centerTitle(center)) +
                                               '</title>' + body + '</g>'
                                         : '';
+  const end = at(store, store.room), held = Math.round(store.room / store.own.perCell);
+  const kept = Math.min(store.growth, held);
+  const shaft = S.flow[0] + S.flow[1] * store.transfer, tip = S.left - S.tick / 2;
+  const inflow = '<path class="aid-sac-inflow' + (store.transfer ? '' : ' idle') + '" d="M' +
+                 (S.left - S.inflow) + ' ' + S.middle + ' H' + fixed(tip - S.head) +
+                 '" style="stroke-width:' + fixed(shaft) + '"/><path class="aid-sac-head" d="M' +
+                 fixed(tip - S.head) + ' ' + fixed(S.middle - shaft / 2 - S.head) + ' L' +
+                 fixed(tip) + ' ' + S.middle + ' L' + fixed(tip - S.head) + ' ' +
+                 fixed(S.middle + shaft / 2 + S.head) + 'Z"/>';
+  const open = Math.max(S.shut, store.opening);
+  const valve = '<path class="aid-sac-valve' + (store.self ? ' open' : '') + '" d="M' + fixed(end) +
+                ' ' + fixed(S.middle - S.half * open) + ' L' + fixed(end + S.valve) + ' ' +
+                S.middle + ' L' + fixed(end) + ' ' + fixed(S.middle + S.half * open) + '"/>';
+  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : null;
+  const lineX = stretch === null ? 0 : S.left + (end - S.left) * stretch;
+  const cellsX = fixed(at(store, store.motors * store.own.perCell));
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
-         organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
-         (growth ? ' data-sac-cells="' + escapeText(organ.id) + '"' : '') + ' role="img">' +
-         '<ellipse class="aid-sac-body" cx="' + S.cx + '" cy="' + S.cy + '" rx="' + S.rx +
-         '" ry="' + S.ry + '"/>' + gametes(organ.type, lineY) +
-         part(growth, wallCells(cells, most) + '<text x="' + (S.cx - S.rx) + '" y="' + (S.label) +
-                          '">' + label('centers.growth') + '</text>') +
-         part(release, valve(state, release) + '<text x="' + (vx + S.valve) + '" y="' +
-                           (S.cy - S.valve - S.label / 2) + '" text-anchor="end">' +
-                           label('centers.release') + '</text>') +
-         part(pressure, '<line class="aid-sac-line" x1="' + fixed(S.cx - sacHalf(lineY)) +
-                            '" y1="' + fixed(lineY) + '" x2="' + fixed(S.cx + sacHalf(lineY)) +
-                            '" y2="' + fixed(lineY) + '"/><text x="' + fixed(S.cx) + '" y="' +
-                            fixed(lineY - S.label / 2) + '" text-anchor="middle">' +
-                            label('inspector.stretch') + '</text>') +
-         (pressure ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
-                         fixed(S.cx + sacHalf(lineY)) + '" cy="' + fixed(lineY) + '" r="' +
-                         S.handle + '"/>'
+         organ.type + '" data-sac="' + escapeText(organ.id) + '" role="img">' +
+         '<rect class="aid-sac-body" x="' + S.left + '" y="' + (S.middle - S.half) + '" width="' +
+         fixed(end - S.left) + '" height="' + 2 * S.half + '" rx="' + S.round + '"/>' +
+         part(growth, inflow + chambers(store, organ.type, 0, kept, 'growth')) +
+         part(release, chambers(store, organ.type, kept, held, 'release') + valve) +
+         product(store, organ.type, end + S.valve) + axis(store) +
+         part(pressure, '<path class="aid-sac-line" d="M' + fixed(lineX) + ' ' +
+                            (S.middle - S.half - S.tick) + ' V' + (S.middle + S.half + S.tick) +
+                            '"/>') +
+         (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' +
+                         fixed(lineX) + '" cy="' + (S.middle + S.half + S.tick) + '" r="' +
+                         S.handle + '"><title>' + label('inspector.stretch') + '</title></circle>'
                    : '') +
-         (growth ? '<circle class="aid-graphic-handle" data-sac-cells-handle cx="' + fixed(last.x) +
-                       '" cy="' + fixed(last.y) + '" r="' + S.handle + '"><title>' +
+         (growth ? '<circle class="aid-graphic-handle" data-sac-handle="cells" cx="' + cellsX +
+                       '" cy="' + (S.middle - S.half) + '" r="' + S.handle + '"><title>' +
                        label('inspector.cellsHandle') + '</title></circle>'
                  : '') +
          '</svg>';
 }
-// The stretch line's filling at a pointer's height (fraction of the sac graphic).
-export function stretchPatch(fy) {
-  const level = clamp((SAC.cy + SAC.ry - fy * SAC.height) / (2 * SAC.ry));
-  return {threshold : planOfUnit(activationQuality(level))};
+// A handle on the gonad graphic at (fx, fy), fractions of it: its growth cells as many as fill the
+// vessel to there, or the stretch line there along its room.
+export function sacPatch(state, organ, handle, fx) {
+  const store = gonadStore(state, organ);
+  if (!store)
+    return null;
+  const x = fx * STORE.width;
+  if (handle === 'stretch') {
+    const level = clamp((x - STORE.left) / Math.max(1, at(store, store.room) - STORE.left));
+    return {threshold : planOfUnit(activationQuality(level))};
+  }
+  const cells = Math.round((x - STORE.left) / (at(store, store.own.perCell) - STORE.left));
+  return {nodes : clamp(cells - (store.motors - store.growth), 1, kindLimit(organ, null))};
 }
-
+// What the gonad's settings do, each fact on the part it belongs to: the growth cells fill it in
+// so many steps (or only when driven), more of them than its ceiling hold no more; the release
+// lets it out on its own or on a trigger; one spawning gives an egg that hatches or is food, or
+// so much sperm.
+export function gonadFacts(state, organ) {
+  const store = gonadStore(state, organ);
+  if (!store)
+    return '';
+  const words = key => t('studio.inspector.gonad.' + key, {
+    n : Number.isFinite(store.steps) ? store.steps : 0,
+    cells : store.growth,
+    most : store.own.most,
+    energy : Math.round(store.spawn),
+    least : Math.round(store.minimum ?? 0)
+  });
+  const find = key => organ.centers.find(c => c.key === key), pressure = find('pressure');
+  const row = (center, ...facts) =>
+      center ? '<li data-select-center="' + escapeText(center.id) + '"><b>' +
+                   escapeText(centerTitle(center)) + '</b><span>' +
+                   escapeText(facts.filter(Boolean).join(' · ')) + '</span></li>'
+             : '';
+  const product = organ.type !== 'eggs'         ? words('sperm')
+                  : !store.minimum              ? words('egg')
+                  : store.spawn < store.minimum ? words('food')
+                                                : words('hatches');
+  return '<ul class="aid-gonad-facts">' +
+         row(find('growth'), words('cells'),
+             words(Number.isFinite(store.steps) ? 'fullIn' : 'driven'),
+             store.motors * store.own.perCell > store.own.most ? words('ceiling') : '') +
+         row(find('release'), words(store.self ? 'self' : 'trigger'), product) +
+         row(pressure,
+             pressure && t('studio.inspector.gonad.stretch',
+                           {share : percent(activationLevel(unitOfPlan(pressure.threshold)))})) +
+         '</ul>';
+}
 // What an organ's pressure cells measure as the engine bound them; a warning where they measure
 // another organ than their own.
 export function pressureNote(state, organ) {

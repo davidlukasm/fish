@@ -364,22 +364,41 @@
 .aid-drive-command{fill:#f1dda61f}
 .aid-drive [data-drive-handle="rest"]{cursor:ns-resize}
 .aid-drive [data-drive-handle="tau"]{cursor:ew-resize}
-.aid-sac{display:block;width:100%;height:auto;margin:6px 0 10px;touch-action:none}
+.aid-sac{display:block;width:100%;height:auto;margin:6px 0 4px;touch-action:none}
 .aid-sac-body{fill:#dfbc8718;stroke:#dfbc87;stroke-width:2.4}
-.aid-sac-egg{fill:#f2ad62;stroke:#ffe9c9;stroke-width:1}
 .aid-sac.eggs .aid-sac-body{fill:#a8683a33;stroke:#f1c08c}
 .aid-sac.sperm .aid-sac-body{fill:#dce8f01f;stroke:#e6f0f6}
-.aid-sac.sperm .aid-sac-cell{fill:#cfe1ec}
-.aid-sac.sperm .aid-sac-valve{stroke:#cfe1ec}
+.aid-sac-chamber{fill:none;stroke:#f1c08c55;stroke-width:1}
+.aid-sac-chamber.release{fill:color-mix(in srgb,var(--aid-motor) 22%,transparent)}
+.aid-sac.sperm .aid-sac-chamber{stroke:#e6f0f655}
+.aid-sac-egg{fill:#f2ad62;stroke:#ffe9c9;stroke-width:1}
+.aid-sac-egg.food{fill:#8f7a64;stroke:#e9a07a;stroke-dasharray:3 2}
+.aid-sac-least{fill:none;stroke:#ffe9c9;stroke-width:1.4;stroke-dasharray:4 3}
 .aid-sac-sperm-head{fill:var(--aid-sperm)}
 .aid-sac-sperm{fill:none;stroke:var(--aid-sperm);stroke-width:1.2;stroke-linecap:round;opacity:.85}
-.aid-sac-cell{fill:var(--aid-motor);stroke:var(--aid-pupil);stroke-width:1}
+.aid-sac-inflow{stroke:#f1c08c;stroke-linecap:round;marker-end:none}
+.aid-sac.sperm .aid-sac-inflow{stroke:#e6f0f6}
+.aid-sac-inflow.idle{stroke-dasharray:3 3;opacity:.6}
+.aid-sac-head{fill:#f1c08c}
+.aid-sac.sperm .aid-sac-head{fill:#e6f0f6}
+.aid-sac-part.selected .aid-sac-head{fill:var(--aid-handle)}
 .aid-sac-valve{fill:none;stroke:var(--aid-motor);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
-.aid-sac-line{stroke:#b29bdc;stroke-width:2.4;stroke-dasharray:6 4}
-.aid-sac text{fill:#e6efe8;font:11px system-ui}
+.aid-sac-line{stroke:#c9b5f0;stroke-width:3;stroke-dasharray:6 3}
+.aid-sac-axis,.aid-sac-tick{stroke:#9fb6b2;stroke-width:1;fill:none}
+.aid-sac-tick.least{stroke:#ffe9c9}
+.aid-sac-tick.ceiling{stroke:#e9a07a}
+.aid-sac text{fill:#c2d6d2;font:11px system-ui}
+.aid-sac text.room{fill:#e6efe8;font-weight:600}
+.aid-sac text.least{fill:#ffe9c9}
+.aid-sac text.ceiling{fill:#e9a07a}
 .aid-sac-part{cursor:pointer}
-.aid-sac-part.selected text{fill:#f6d99d;font-weight:600}
-.aid-sac [data-stretch-handle]{cursor:ns-resize}
+.aid-sac-part.selected .aid-sac-chamber{stroke:var(--aid-handle)}
+.aid-sac-part.selected .aid-sac-valve,.aid-sac-part.selected .aid-sac-inflow{stroke:var(--aid-handle)}
+.aid-sac-part.selected .aid-sac-line{stroke:var(--aid-handle)}
+.aid-sac [data-sac-handle]{cursor:ew-resize}
+.aid-gonad-facts{list-style:none;margin:0 0 8px;padding:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 10px;font-size:12px;color:#c2d6d2}
+.aid-gonad-facts li{display:contents;cursor:pointer}
+.aid-gonad-facts b{color:#e6efe8;font-weight:600}
 .aid-muscle-kind{margin:10px 0 4px;border-top:1px solid #24484d;padding-top:8px}
 .aid-muscle-kind summary{cursor:pointer;font-size:12px;color:var(--aid-label-text);letter-spacing:.04em}
 .aid-muscle-kind[open] summary{margin-bottom:4px}

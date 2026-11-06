@@ -24,16 +24,7 @@ import {
 import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph, padPoint, padValues, pointMarks, pointText} from './markup.js';
 import {findSite, onMidline, sideIndex} from '../model/layout.js';
-import {
-  formatNumber,
-  formatSigned,
-  joinParts,
-  linkText,
-  namedText,
-  percent,
-  t,
-  tList
-} from '../../strings.js';
+import {formatNumber, formatSigned, linkText, namedText, percent, t, tList} from '../../strings.js';
 import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
 import {pairingButton, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
@@ -41,7 +32,7 @@ import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, moduleName} from './names.js';
 import {organTitle} from './names.js';
-import {bladderGraphic, pressureGraphic, pressureNote} from './sacs.js';
+import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
 
 // A touch or pain cell's field: a sector of its half angle on a ring around the cell, ahead
 // upwards, with a handle on its edge; the pointer's direction from the cell sets the half angle.
@@ -123,8 +114,8 @@ function driveMeaning(state, center) {
 // scent map (barbels grow where the head also feels by touch on the nose's side), the sacs and
 // the gut what fills them and what their pressure cells measure, effectors what they move, the
 // senses what they feel. An organ without graphics of its own shows its icon and name.
-const pressurePanel = (state, organ, center) =>
-    pressureGraphic(state, organ, center) + pressureNote(state, organ);
+const gonadPanel = (state, organ, center) =>
+    gonadGraphic(state, organ, center) + gonadFacts(state, organ) + pressureNote(state, organ);
 const skinPanel = (state, organ, center) => contactField(center) + probeField(state, organ);
 const nervePanel = (state, organ, center) => nerveProperties(state, center);
 const ORGAN_PANELS = Object.freeze({
@@ -140,8 +131,8 @@ const ORGAN_PANELS = Object.freeze({
   muscle : (state, organ) => effectorGraphic(state, organ),
   defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, center),
-  eggs : pressurePanel,
-  sperm : pressurePanel,
+  eggs : gonadPanel,
+  sperm : gonadPanel,
   lateral : (state, organ) => lateralField(state, organ) + probeField(state, organ),
   touch : skinPanel,
   pain : skinPanel,
@@ -285,11 +276,17 @@ function selectedCenter(state, organ) {
     return organ.centers.find(c => c.id === selected.id) ?? organ.centers[0];
   return organ.centers[0] ?? null;
 }
-// An organ's centers as tabs; an organ with types (a nose, the skin's pigment cells) chooses them
-// on its own chips instead.
+// An organ's kinds of node as tabs, one for all nodes of a kind (they share their settings), with
+// how many there are; an organ with types (a nose, the skin's pigment cells) chooses them on its
+// own chips instead. The free nerve nodes of the brain each have their own.
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types)
     return '';
+  const kinds = organ.type === 'brain' ? organ.centers.map(c => [c])
+                                       : [...Map.groupBy(organ.centers, c => c.key).values() ];
+  if (kinds.length < 2 && !isRegion(organ))
+    return '';
+  const chosen = kind => kind.some(c => c.id === state.selected?.id);
   // A brain region is chosen as a whole from its first tab: its slots, settings and circuit.
   const whole = isRegion(organ)
                     ? '<button data-select-organ="' + escapeText(organ.id) + '" class="' +
@@ -297,10 +294,14 @@ function centerTabs(state, organ) {
                           label('inspector.region.whole') + '</button>'
                     : '';
   return '<div class="aid-center-tabs">' + whole +
-         organ.centers
-             .map((c, index) => '<button data-select-center="' + escapeText(c.id) + '" class="' +
-                                (state.selected?.id === c.id ? 'selected' : '') + '">' +
-                                escapeText(joinParts([ index + 1, centerTitle(c) ])) + '</button>')
+         kinds
+             .map(kind =>
+                      '<button data-select-center="' + escapeText(kind[0].id) + '" class="' +
+                      (chosen(kind) ? 'selected' : '') + '">' +
+                      escapeText(kind.length > 1 ? t('studio.inspector.kindCount',
+                                                     {name : centerTitle(kind[0]), n : kind.length})
+                                                 : centerTitle(kind[0])) +
+                      '</button>')
              .join('') +
          '</div>';
 }

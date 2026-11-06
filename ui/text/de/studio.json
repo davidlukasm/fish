@@ -322,8 +322,22 @@
     "steps": "{n} Schritte",
     "drive": "Ruhe und Erholung",
     "recovery": "zurück in {n} Schritten",
+    "kindCount": "{name} ×{n}",
     "stretch": "Dehnung",
     "cellsHandle": "Ziehen: mehr oder weniger Keimzellen",
+    "gonad": {
+      "cells": "{cells} {cells:Zelle|Zellen}",
+      "fullIn": "voll nach {n} {n:Schritt|Schritten}",
+      "driven": "füllt sich nur erregt",
+      "ceiling": "Platz höchstens für {most}",
+      "self": "von selbst",
+      "trigger": "nur auf Auslöser",
+      "egg": "Ei mit {energy} Energie",
+      "hatches": "Ei mit {energy} Energie schlüpft",
+      "food": "Nährei: schlüpft erst ab {least}",
+      "sperm": "{energy} Energie je Abgabe",
+      "stretch": "meldet halb bei {share} Füllung"
+    },
     "curve": {
       "baseline": "ohne Stoff",
       "sensitivity": "bei viel Stoff",

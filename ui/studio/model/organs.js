@@ -318,7 +318,6 @@ export function nodeLimit(organ, sites) {
 export const kindNodes = organ => organ.centers.filter(c => c.key === organ.centers[0]?.key);
 export const kindLimit = (organ, sites) =>
     nodeLimit(organ, sites) - (organ.centers.length - kindNodes(organ).length);
-export const growthMost = organ => kindLimit(organ, null);
 // What an organ's first node does where it lies (a muscle's function); -1 where it lies nowhere.
 export function organFunction(organ, sites) {
   const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);

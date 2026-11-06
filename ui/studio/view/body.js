@@ -34,7 +34,7 @@ import {t} from '../../strings.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
-import {growthMost, isRegion, organFunction} from '../model/organs.js';
+import {isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {MUSCLE_TONE, muscleShape} from './muscles.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
@@ -139,7 +139,7 @@ function noseGlyph(state, organ, pos) {
 function ovaryGlyph(state, organ, pos) {
   const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
   const count =
-      Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * cells / Math.max(1, growthMost(organ)));
+      Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * cells / Math.max(1, kindLimit(organ, null)));
   let html = '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
              '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
   for (let i = 0; i < count; ++i) {

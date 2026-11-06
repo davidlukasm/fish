@@ -63,7 +63,12 @@ double development_energy(const Genome &, double neural_cost, double hatch_tissu
 inline double bounded_filling(double content, double capacity) {
   return capacity > 0 ? std::clamp(content / capacity, 0., 1.) : content > 0 ? 1. : 0.;
 }
-double organ_capacity(const Body &, const Genome &, int port, double ceiling, double per_cell = 10);
+// A mother whose yolk reaches this share of the ovary lays.
+constexpr double EGG_FULL_SHARE = .95;
+// A gonad's room for eggs or sperm per motor cell, unless the parameters set another.
+constexpr double ORGAN_CELL_CAPACITY = 10;
+double organ_capacity(const Body &, const Genome &, int port, double ceiling,
+                      double per_cell = ORGAN_CELL_CAPACITY);
 double gonad_filling(const Body &);
 double gut_filling(const Body &);
 double ovary_capacity(const Body &, const Genome &, double ceiling, double per_cell);
