@@ -192,21 +192,23 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
 const DOSE = Object.freeze({
   gauge : {width : 10, gap : 4, knob : 6},
   band : {top : 4, height : 12, handle : 7, gap : 6},
-  pips : {step : 8, r : 2.6, after : 14}
+  pips : {step : 8, r : 2.6, after : 14},
+  ends : {height : 16, baseline : 11}
 });
 function doseGeometry(state, receptor, effect) {
   const k = receptorCurve(state, receptor, effect), D = DOSE, G = D.gauge;
   const side = G.width + 2 * G.gap, top = D.band.top + D.band.height + D.band.gap;
-  const width = 2 * EFFECT_PANEL.width + 2 * side, height = top + EFFECT_PANEL.height;
+  const width = 2 * EFFECT_PANEL.width + 2 * side, bottom = top + EFFECT_PANEL.height;
+  const height = bottom + D.ends.height;
   const cellX = i => side + i * EFFECT_PANEL.width;
   const gaugeX = i => i ? width - G.gap - G.width : G.gap;
   const level = v => top + EFFECT_PANEL.height * (k.scale.high - v) / (k.scale.high - k.scale.low);
   const bandX = f => side + 2 * EFFECT_PANEL.width * f;
-  return {k, side, top, width, height, cellX, gaugeX, level, bandX};
+  return {k, side, top, bottom, width, height, cellX, gaugeX, level, bandX};
 }
 function doseStrip(state, receptor, effect, target) {
   const D = DOSE, B = D.band, G = D.gauge;
-  const {k, top, width, height, cellX, gaugeX, level, bandX} =
+  const {k, top, bottom, width, height, cellX, gaugeX, level, bandX} =
       doseGeometry(state, receptor, effect);
   const colour = receptor.active ? substanceColor(receptor.substance) : 'currentColor';
   const halfAt = clamp(k.fraction(receptor.half));
@@ -220,7 +222,12 @@ function doseStrip(state, receptor, effect, target) {
                          '</svg>')
           .join('') +
       '<line class="aid-effect-divide" x1="' + cellX(1) + '" y1="' + top + '" x2="' + cellX(1) +
-      '" y2="' + height + '"/>';
+      '" y2="' + bottom + '"/>' +
+      [ 'baseline', 'sensitivity' ]
+          .map((key, i) => '<text class="aid-dose-end" x="' + (cellX(i) + EFFECT_PANEL.width / 2) +
+                           '" y="' + (bottom + D.ends.baseline) + '" text-anchor="middle">' +
+                           escapeText(label('inspector.curve.' + key)) + '</text>')
+          .join('');
   const gauge = (i, handle) => {
     const x = gaugeX(i), y = level(k.scale.value(responses[i]));
     const zero = level(k.scale.value(0));
@@ -552,8 +559,7 @@ const receptorEditor = (state, center, effects, effect) =>
     '</div>' + receptorBody(state, center, effect);
 function receptorBody(state, center, effect) {
   const receptor = center.receptors[effect], target = center.id + ':' + effect;
-  return doseStrip(state, receptor, effect, target) +
-         '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
+  return '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
          escapeText(center.id) + '" data-receptor-effect="' + effect + '" ' +
          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
          '</label>' + substanceWheel(state, receptorProfile(state, receptor), {
@@ -564,7 +570,8 @@ function receptorBody(state, center, effect) {
                        effect + '"',
            selected : receptor.substance,
            widthTarget : target
-         });
+         }) +
+         doseStrip(state, receptor, effect, target);
 }
 const GROW_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
 function substanceInspector(state) {
@@ -657,7 +664,8 @@ export function hormoneInspector(state) {
     return substanceInspector(state);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
              heading(label('tools.hormone')) + '</header>';
-  const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
+  const own = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
+  const effects = EFFECT_ORDER.filter(e => own.includes(e));
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
   if (!focus.receptors?.[effect])
     return html;

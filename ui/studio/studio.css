@@ -855,6 +855,7 @@
 .aid-dose-threshold{stroke:#e66a5c;stroke-width:2;vector-effect:non-scaling-stroke}
 .aid-dose-pip{fill:var(--aid-chip);stroke:currentColor;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}
 .aid-dose-pip.active{fill:currentColor}
+.aid-dose-end{fill:var(--aid-label-text);font-size:10px}
 .aid-effect-mark{fill:none;stroke:#9fb9b4;stroke-width:1.2}
 .aid-effect-mark.with{stroke:none}
 .aid-effect-divide{stroke:#2f5356;stroke-width:1;stroke-dasharray:3 3}
