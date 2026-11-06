@@ -10,9 +10,9 @@ import {
   findOrgan,
   wholeEndpoint
 } from '../model/document.js';
-import {sideOf} from '../model/layout.js';
+import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {routedLinks} from '../model/regions.js';
-import {cubicWeights} from './frame.js';
+import {cubicWeights, zoomOf} from './frame.js';
 import {centerTitle, endpointTitle, isSelected} from './names.js';
 import {isModulator} from '../model/organs.js';
 
@@ -189,6 +189,59 @@ const branchPath = (...args) => {
   const [a, b, c, d] = branchCurve(...args);
   return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 };
+// A trunk's way, as a point and a direction at a share s of it and its piece between two shares
+// drawn: a quadratic curve, or a smooth line through the bends set by hand (cubic pieces through
+// its points, BENT_STEPS samples a piece when drawn).
+const BENT_STEPS = 14;
+function quadraticWay(q) {
+  return {
+    at : s => curveAt(q, s),
+    direction : s => curveDirection(q, s),
+    path : (s0, s1) => {
+      const [a, c, b] = curvePart(q, s0, s1);
+      return 'M' + pointText(a) + ' Q' + pointText(c) + ' ' + pointText(b);
+    }
+  };
+}
+function bentWay(points) {
+  const n = points.length - 1;
+  const piece = k => {
+    const p0 = points[Math.max(0, k - 1)], p1 = points[k], p2 = points[k + 1],
+          p3 = points[Math.min(n, k + 2)];
+    return [
+      p1, {x : p1.x + (p2.x - p0.x) / 6, y : p1.y + (p2.y - p0.y) / 6},
+      {x : p2.x - (p3.x - p1.x) / 6, y : p2.y - (p3.y - p1.y) / 6}, p2
+    ];
+  };
+  const at = s => {
+    const t = Math.min(n - 1e-9, Math.max(0, s * n)), k = Math.floor(t);
+    return cubicAt(piece(k), t - k);
+  };
+  const step = 1 / (n * BENT_STEPS);
+  return {
+    at,
+    direction : s => {
+      const a = at(Math.max(0, s - step)), b = at(Math.min(1, s + step));
+      const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      return {x : (b.x - a.x) / length, y : (b.y - a.y) / length};
+    },
+    path : (s0, s1) => {
+      const count = Math.max(2, Math.ceil((s1 - s0) * n * BENT_STEPS));
+      return 'M' +
+             Array.from({length : count + 1}, (_, k) => pointText(at(s0 + (s1 - s0) * k / count)))
+                 .join(' L');
+    }
+  };
+}
+// The bends a link runs through: its wire's, mirrored for a link from the other side of a pair.
+function bendsOf(doc, link) {
+  const bends = link.wire.bends ?? [];
+  return linkMirrored(doc, link) ? bends.map(p => ({x : p.x, y : 2 * BODY_FRAME.middle - p.y}))
+                                 : bends;
+}
+const linkMirrored = (doc, link) =>
+    wholeEndpoint(doc, link.from) !== wholeEndpoint(doc, link.wire.from);
+const bendKey = bends => bends.map(p => fixed(p.x) + ',' + fixed(p.y)).join(' ');
 const cubicAt = (points, s) => {
   const w = cubicWeights(s);
   return {
@@ -232,14 +285,17 @@ function wireBundles(state, centers) {
           to = wireEnd(state, centers, link.wire.to, link.to);
     if (!a || !centers.get(link.to) || !from || !to)
       continue;
-    const kind = signalKind(a.center);
-    const key = from.key + '>' + to.key + '>' + kind;
+    const kind = signalKind(a.center), bends = bendsOf(doc, link);
+    const key = from.key + '>' + to.key + '>' + kind + '>' + bendKey(bends);
     if (!bundles.has(key))
-      bundles.set(key, {from, to, kind, links : []});
+      bundles.set(key, {from, to, kind, bends, mirrored : linkMirrored(doc, link), links : []});
     bundles.get(key).links.push(link);
   }
-  const drawn = [...bundles.values() ].map(({from, to, kind, links}) => {
-    const q = course(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind));
+  const drawn = [...bundles.values() ].map(({from, to, kind, bends, mirrored, links}) => {
+    const way =
+        bends.length
+            ? bentWay([ from.point, ...bends, to.point ])
+            : quadraticWay(course(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind)));
     const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
     const ends = links.map(link => ({
                              link,
@@ -254,9 +310,15 @@ function wireBundles(state, centers) {
       to,
       kind,
       ends,
-      trunk : curvePart(q, s0, s1),
-      startDirection : curveDirection(q, s0),
-      endDirection : curveDirection(q, s1)
+      bends,
+      mirrored,
+      way,
+      s0,
+      s1,
+      start : way.at(s0),
+      end : way.at(s1),
+      startDirection : way.direction(s0),
+      endDirection : way.direction(s1)
     };
   });
   return {bundles : drawn, inside};
@@ -281,9 +343,10 @@ export function wireSvg(state, centers) {
                      nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
               '"/>';
   }
-  for (const {kind, ends, trunk, startDirection, endDirection} of bundles) {
+  for (const bundle of bundles) {
+    const {kind, ends, way, s0, s1, start, end, startDirection, endDirection} = bundle;
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
-    const d = 'M' + pointText(trunk[0]) + ' Q' + pointText(trunk[1]) + ' ' + pointText(trunk[2]);
+    const d = way.path(s0, s1);
     const width = Math.hypot(...ends.map(e => e.width));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
     // A click on the trunk selects the wire after the selected one.
@@ -291,7 +354,8 @@ export function wireSvg(state, centers) {
     const wireIds = new Set(ends.map(e => e.link.wire.id));
     html += '<g data-wire="' +
             escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
-            '" data-wires="' + escapeText([...wireIds ].join(' ')) + '" class="aid-wire-group' +
+            '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
+            (bundle.mirrored ? ' data-mirrored' : '') + ' class="aid-wire-group' +
             (chosen >= 0 ? ' selected' : '') + '">' +
             '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
             '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) +
@@ -308,8 +372,8 @@ export function wireSvg(state, centers) {
                   node => '<path class="aid-wire-branch' +
                           (isSelected(selected, 'wire', e.link.wire.id) ? ' selected' : '') +
                           '" d="' +
-                          (inward ? branchPath(node, trunk[0], startDirection, true)
-                                  : branchPath(node, trunk[2], endDirection, false)) +
+                          (inward ? branchPath(node, start, startDirection, true)
+                                  : branchPath(node, end, endDirection, false)) +
                           '" stroke-width="' +
                           fixed(Math.max(BRANCH.least_width, e.width / Math.sqrt(nodes.length))) +
                           '"' + (inward ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/>');
@@ -319,7 +383,46 @@ export function wireSvg(state, centers) {
     if (branches)
       html += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
   }
-  return html;
+  return html + (state.tool === 'wire' ? bendHandles(state, bundles) : '');
+}
+// With the wiring tool, each bend set by hand is a handle to drag (a double click removes it),
+// BEND_HANDLE wide on screen.
+const BEND_HANDLE = 6;
+function bendHandles(state, bundles) {
+  const zoom = zoomOf(state);
+  return bundles.filter(b => b.bends.length)
+      .map(b => {
+        const wires = [...new Set(b.ends.map(e => e.link.wire.id)) ].join(' ');
+        return b.bends
+            .map((p, k) => '<circle class="aid-bend" data-bend-wires="' + escapeText(wires) +
+                           '" data-bend-index="' + k + '"' + (b.mirrored ? ' data-mirrored' : '') +
+                           ' cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+                           fixed(BEND_HANDLE / zoom) + '"/>')
+            .join('');
+      })
+      .join('');
+}
+// The bends of the wires drawn as one bundle with a point put in where the way runs nearest it
+// (where it lengthens the way least), as the wires store them (mirrored back for a bundle drawn
+// for the other side); null where no bundle of those wires is drawn.
+export function bendsWith(state, wireIds, point, mirrored) {
+  const wanted = new Set(wireIds);
+  const bundle = wireBundles(state, endpointIndex(state.document))
+                     .bundles.find(b => b.mirrored === mirrored &&
+                                        b.ends.some(e => wanted.has(e.link.wire.id)));
+  if (!bundle)
+    return null;
+  const way = [ bundle.from.point, ...bundle.bends, bundle.to.point ];
+  const gap = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  let best = 0, least = Infinity;
+  for (let k = 0; k + 1 < way.length; ++k) {
+    const added = gap(way[k], point) + gap(point, way[k + 1]) - gap(way[k], way[k + 1]);
+    if (added < least)
+      [best, least] = [ k, added ];
+  }
+  const bends = [...bundle.bends ];
+  bends.splice(best, 0, point);
+  return bends.map(p => mirrored ? {x : p.x, y : 2 * BODY_FRAME.middle - p.y} : p);
 }
 // The ways a stimulus takes, as the wires are drawn: one leg for each part (an organ as a whole
 // or a nerve center) that sends along a bundle to another, kind by kind, running from the
@@ -327,14 +430,19 @@ export function wireSvg(state, centers) {
 // the nodes it reaches; and one for each link of an organ's own circuit, between its nodes.
 // Each with what its source sends, its wires and how strong it is.
 const SIGNAL_STEPS = 24;
-export function signalLinks(state) {
-  const {document : doc, sites} = state, centers = new Map();
+// Every center and every organ (but the brain, by its first center) of a design, by id.
+export function endpointIndex(doc) {
+  const centers = new Map();
   for (const organ of doc.organs) {
     for (const center of organ.centers)
       centers.set(center.id, {center, organ});
     if (organ.type !== 'brain' && organ.centers.length)
       centers.set(organ.id, {organ, center : organ.centers[0]});
   }
+  return centers;
+}
+export function signalLinks(state) {
+  const {document : doc, sites} = state, centers = endpointIndex(doc);
   const sample = (at, curve) =>
       Array.from({length : SIGNAL_STEPS + 1}, (_, k) => at(curve, k / SIGNAL_STEPS));
   const legs = new Map();
@@ -354,14 +462,15 @@ export function signalLinks(state) {
     return legs.get(key);
   };
   const {bundles, inside} = wireBundles(state, centers);
-  for (const {kind, ends, trunk, startDirection, endDirection} of bundles)
+  for (const {kind, ends, way : course, s0, s1, start, end, startDirection, endDirection} of
+           bundles)
     for (const {link, starts, arrives} of ends) {
       const way = leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), kind,
-                      sample(curveAt, trunk));
+                      sample((_, s) => course.at(s0 + (s1 - s0) * s), null));
       for (const node of starts)
-        way.starts.set(node.id, sample(cubicAt, branchCurve(node, trunk[0], startDirection, true)));
+        way.starts.set(node.id, sample(cubicAt, branchCurve(node, start, startDirection, true)));
       for (const node of arrives)
-        way.arrives.set(node.id, sample(cubicAt, branchCurve(node, trunk[2], endDirection, false)));
+        way.arrives.set(node.id, sample(cubicAt, branchCurve(node, end, endDirection, false)));
       way.wires.add(link.wire.id);
       way.strength = Math.min(1, way.strength + .5);
     }

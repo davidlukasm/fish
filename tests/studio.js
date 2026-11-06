@@ -779,7 +779,7 @@ function semanticFingerprint(source) {
   assert.match(hormoneScene, /aid-hormone-body/);
   // The library names brain regions by their short technical terms and says on hover, in
   // German, what each is for.
-  assert.match(panels.library(state), /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
+  assert.match(panels.libraryOf(state).html, /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
   // Dragging a muscle shows the homes of the four works on both sides, named and coloured.
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
   assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
@@ -882,14 +882,14 @@ function semanticFingerprint(source) {
   // The learning tool offers its own library: the cells learning needs and, per substance, what
   // it can do to learning.
   const learnShelf = panels.libraryOf({...state, tool : 'learn'});
-  assert.equal(learnShelf.kind, 'learning');
+  assert.equal(learnShelf.kind, 'learn');
   for (const key of ['learn', 'modulate', 'pacemaker'])
     assert.match(learnShelf.html, new RegExp('data-drag-kind="neuron" data-drag-value="' + key));
   for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
     assert.match(learnShelf.html, new RegExp('data-drag-value="0:' + effect + '"'));
   assert.doesNotMatch(learnShelf.html, new RegExp('data-drag-value="0:' + E.death + '"'));
-  assert.equal(panels.libraryOf({...state, tool : 'hormone'}).kind, 'hormones');
-  assert.equal(panels.libraryOf({...state, tool : 'select'}).kind, 'organs');
+  assert.equal(panels.libraryOf({...state, tool : 'hormone'}).kind, 'hormone');
+  assert.equal(panels.libraryOf({...state, tool : 'select'}).kind, 'select');
   // With nothing chosen the inspector shows the way through the Atelier, its steps as tools.
   const guide = panels.inspector({...state, selected : null});
   assert.match(guide, /aid-workflow/);
@@ -1244,6 +1244,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   chooser.select(null, null);
   assert.equal(chooser.state.selected, null);
   assert.equal(chooser.state.visionProfile, 'extra');
+  // A wire bends through points set by hand: put in where it runs nearest, mirrored for the
+  // other side of a pair, and gone again when they are taken away.
+  const wiresView = await import('../ui/studio/view/wires.js');
+  const bentWire = doc.wires[0];
+  const bendState = {...state, document : doc, tool : 'wire'};
+  const bendPoint = {x : 400, y : 300};
+  const bends = wiresView.bendsWith(bendState, [ bentWire.id ], bendPoint, false);
+  assert.deepEqual(bends, [ bendPoint ]);
+  const bentDoc = model.setBends(doc, [ bentWire.id ], bends);
+  assert.deepEqual(bentDoc.wires.find(w => w.id === bentWire.id).bends, [ bendPoint ]);
+  assert.match(views.fishScene({...bendState, document : bentDoc}), /data-bend-index="0"/);
+  assert.equal(
+      model.setBends(bentDoc, [ bentWire.id ], []).wires.find(w => w.id === bentWire.id).bends,
+      undefined);
+  assert.throws(() => model.validateDocument(
+                    {...bentDoc, wires : [ {...bentWire, bends : [ {x : 'a', y : 1} ]} ]}));
   // With the learning tool a modulator dropped onto a nerve center is placed and wired to teach
   // it; the learner stays chosen.
   const toTeach = model.addNeuron(model.newDocument('Lehrer'), 'learn', sites, {x : 380, y : 325});

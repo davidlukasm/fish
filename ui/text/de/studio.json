@@ -45,7 +45,7 @@
   "tools": {
     "undo": "Rückgängig",
     "redo": "Wiederholen",
-    "select": "Auswählen und verschieben",
+    "select": "Platzieren",
     "wire": "Verschalten",
     "hormone": "Hormone",
     "learn": "Lernen",
@@ -367,7 +367,6 @@
     "bothSides": "Diese Baugruppe liegt schon auf beiden Seiten.",
     "removeModule": "Löschen",
     "partOf": "Teil von",
-    "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden.",
     "strength": "Kraft {share}",
     "moduleName": "Name der Baugruppe",
     "measures": [
@@ -927,7 +926,7 @@
     "reserve": "Energie",
     "reserveSense": "+ Energie im Blut fühlen",
     "growthWith": "Wachstum des Körpers · {name}",
-    "dropHint": "Wirkungen aus einer Stoffkarte auf ein Organ oder einen Knoten ziehen.",
+    "more": "Neu",
     "noTarget": "Hier wirkt das nicht."
   },
   "neuronPurpose": {
@@ -937,9 +936,32 @@
     "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich seinen Takt anrechnen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
     "modulate": "Lehrer: sein Feuern ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },
+  "wiring": {
+    "pairings": "Seiten",
+    "shape": "Verlauf",
+    "same": "gleichseitig",
+    "sameTitle": "Auf eine Verbindung ziehen: jede Seite bleibt bei sich",
+    "crossed": "gekreuzt",
+    "crossedTitle": "Auf eine Verbindung ziehen: links nach rechts, rechts nach links",
+    "both": "beidseitig",
+    "bothTitle": "Auf eine Verbindung ziehen: jede Seite zu beiden",
+    "bend": "Biegepunkt",
+    "bendTitle": "In eine Verbindung ziehen; den Punkt danach verschieben",
+    "bent": "Biegepunkt gesetzt.",
+    "paired": "Verbindung geändert.",
+    "noWire": "Hier liegt keine Verbindung."
+  },
+  "stimulusCard": {
+    "senses": "Reize",
+    "light": "Licht",
+    "object": "Gegenstand",
+    "scent": "Duft",
+    "flow": "Strömung",
+    "touch": "Berührung",
+    "pain": "Verletzung"
+  },
   "learnCard": {
     "cells": "Zellen fürs Lernen",
-    "substances": "Stoffe fürs Lernen",
     "tiles": [
       "Lehrsignal",
       "Lerntempo",

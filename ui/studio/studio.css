@@ -41,6 +41,11 @@
 .aid-palette-tile:active{cursor:grabbing}
 .aid-palette-icon{width:29px;height:29px;border:1px solid var(--organ-color);border-radius:13px;display:grid;place-items:center;color:var(--organ-color);background:#113039}
 .aid-palette-icon svg{display:block}
+.aid-palette-tile.off{opacity:.38;cursor:default}
+.aid-palette-tile.add{border-style:dashed}
+.aid-palette-tile.add .aid-palette-icon{border-style:dashed;color:var(--aid-soft-text);font-size:18px}
+.aid-substance-title{display:inline-flex;align-items:center}
+.aid-substance-title button,.aid-substance-title>span{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:#dfe9e1;font:inherit;letter-spacing:.02em;cursor:pointer}
 .aid-stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:radial-gradient(circle at 55% 48%,#163b42,#071f27 73%);overflow:hidden}
 .aid-scene-top{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:10px 18px;gap:10px;background:#102d34;border-bottom:1px solid #274650}
 .aid-scene-top span{font:24px Georgia,serif;color:#e8eee4}
@@ -86,6 +91,9 @@
 .aid-neural-dot{stroke:#0e373c;stroke-width:1.6}
 .aid-organ-label{fill:#e8ead5;font-family:system-ui,sans-serif;font-weight:600;paint-order:stroke;stroke:#0d2a31;stroke-width:.21em}
 .aid-wire-hit{stroke:transparent;stroke-width:18;fill:none;cursor:pointer;vector-effect:non-scaling-stroke}
+.aid-bend{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2;cursor:grab;vector-effect:non-scaling-stroke}
+.aid-bend:hover{fill:var(--aid-handle)}
+#aid-body-map.aid-dropping .aid-wire-group.aid-drop-hover .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 6px #f1dca0)}
 .aid-wire-ink{fill:none;opacity:.67;pointer-events:none;vector-effect:non-scaling-stroke}
 .aid-contact-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:16px 0}
 .aid-contact-summary>div{border:1px solid #31565c;background:#173942;border-radius:11px;padding:12px;display:flex;flex-direction:column;gap:3px}
@@ -207,7 +215,6 @@
 .aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
 .aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
 .aid-substance-pill.active{border-color:var(--aid-chosen-edge);background:#2c5050}
-.aid-workspace-main.cards{grid-template-columns:max(var(--aid-library,184px),300px) minmax(0,1fr) var(--aid-inspector,320px)}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}

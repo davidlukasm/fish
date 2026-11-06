@@ -115,10 +115,30 @@ export function validateDocument(doc) {
     throw new Error('studio.errors.invalidDocument');
   for (const wire of doc.wires) {
     if (!ids.has(wire.from) || !ids.has(wire.to) ||
-        (wire.pairing != null && !PAIRINGS.includes(wire.pairing)))
+        (wire.pairing != null && !PAIRINGS.includes(wire.pairing)) ||
+        (wire.bends !== undefined && !validBends(wire.bends)))
       throw new Error('studio.errors.invalidDocument');
   }
   return doc;
+}
+// A wire may run through up to BENDS_MOST points of the drawing set by hand, in order from its
+// start; they only shape how it is drawn.
+export const BENDS_MOST = 8;
+const validBends = bends => Array.isArray(bends) && bends.length <= BENDS_MOST &&
+                            bends.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y));
+export function setBends(doc, wireIds, bends) {
+  if (!validBends(bends))
+    return null;
+  const draft = copy(doc), wanted = new Set(wireIds);
+  const wires = draft.wires.filter(w => wanted.has(w.id));
+  if (!wires.length)
+    return null;
+  for (const wire of wires)
+    if (bends.length)
+      wire.bends = bends.map(({x, y}) => ({x, y}));
+    else
+      delete wire.bends;
+  return draft;
 }
 // The substance wheel of colony-core/field/hormones.hh (hormone_affinity): substance k sits at
 // angle 2πk/bloodSubstances on the unit circle. A profile at (x, y) with width w binds it with

@@ -22,6 +22,7 @@ import {
   findOrgan,
   groupReport,
   profileIndex,
+  setBends,
   setMuscleTrait,
   setOrganNodes,
   typeOfCenter,
@@ -31,6 +32,7 @@ import {
   updateWire
 } from './model/document.js';
 import {cameraCoordinates} from './view/frame.js';
+import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
 import {skinPatch} from './view/skin.js';
@@ -75,6 +77,7 @@ export const HANDLES = Object.freeze({
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
+  bend : {follow : 'bendPointer', keepsClick : true},
   skin : {follow : 'skinPointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'refreshInspector', keepsClick : true}
@@ -197,6 +200,16 @@ export const GRIPS = Object.freeze([
     graphic : '[data-adaptation]',
     held : 'adaptation',
     start : (studio, g) => studio.adaptationGrip(g)
+  },
+  {
+    graphic : '[data-bend-index]',
+    held : 'bend',
+    rect : false,
+    start : (studio, g) => ({
+      wires : g.dataset.bendWires.split(' '),
+      index : Number(g.dataset.bendIndex),
+      mirrored : g.hasAttribute('data-mirrored')
+    })
   },
   {
     graphic : '[data-sense-handle]',
@@ -460,6 +473,20 @@ export const handleMethods = {
     this.refreshSpectrum();
   },
   // The stimulus follows the pointer at once; what the senses feel when the engine answers.
+  // A bend of a wire follows the pointer (mirrored back where its bundle is drawn for the other
+  // side).
+  bendPointer(event) {
+    const drag = this.handleDrag, doc = this.state.document;
+    const wire = doc.wires.find(w => w.id === drag.wires[0]);
+    if (!wire?.bends?.[drag.index])
+      return;
+    const p = cameraCoordinates(event, this.bodyMap(), this.state.camera);
+    const bends = wire.bends.map(
+        (b, k) => k === drag.index
+                      ? {x : p.x, y : drag.mirrored ? 2 * BODY_FRAME.middle - p.y : p.y}
+                      : b);
+    this.tuneDesign(setBends(doc, drag.wires, bends), 'bend:' + drag.wires[0]);
+  },
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe,
           faintest = this.state.anatomy?.lightDimmest;

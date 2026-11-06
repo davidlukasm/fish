@@ -14,7 +14,7 @@ import {regionSlots} from '../model/regions.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
-import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
+import {developedContactsSvg, endpointIndex, wireMarkers, wireSvg} from './wires.js';
 import {ICON, slotFill, slotShape} from './kit.js';
 import {stimulusKind} from './stimulus.js';
 import {probeScents, senseProbeSvg} from './probes.js';
@@ -239,15 +239,8 @@ function wiresShown(state, centers) {
 }
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
-  const centers = new Map();
-  for (const organ of state.document.organs)
-    for (const center of organ.centers)
-      centers.set(center.id, {center, organ});
+  const centers = endpointIndex(state.document);
   const anatomy = bodySvg(state);
-  for (const organ of state.document.organs) {
-    if (organ.type !== 'brain' && organ.centers.length)
-      centers.set(organ.id, {organ, center : organ.centers[0]});
-  }
   const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
                 tectumBands(state);
   return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +

@@ -28,13 +28,17 @@ import {
   removeOrgan,
   removeWire,
   selectionCenters,
+  setBends,
   setLifePhase,
   updateField,
   validateDocument
 } from './model/document.js';
 import {removeAssembly} from './model/assemblies.js';
 import {centroid, findSite} from './model/layout.js';
-import {CAMERA_HOME} from './view/frame.js';
+import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
+import {bendsWith} from './view/wires.js';
+// Two clicks on the same thing at most DOUBLE_CLICK ms apart are a double click.
+const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
 import {inspector} from './view/panels.js';
@@ -253,10 +257,7 @@ export class OrganStudio {
     if (!scroll || this.state.mode !== 'fish')
       return;
     const offered = libraryOf(this.state);
-    // The substance cards need more room than the organ tiles.
-    this.root.querySelector('.aid-workspace-main')
-        ?.classList.toggle('cards', offered.kind !== 'organs');
-    if (offered.kind === 'organs' && scroll.dataset.library === 'organs')
+    if (offered.kind === 'select' && scroll.dataset.library === 'select')
       return;
     scroll.innerHTML = offered.html;
     scroll.dataset.library = offered.kind;
@@ -415,7 +416,7 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshHeader();
     this.refreshTools();
-    if (this.state.tool === 'hormone' || this.state.tool === 'learn')
+    if ([ 'hormone', 'learn', 'stimulate' ].includes(this.state.tool))
       this.refreshLibrary();
     if (updateInspector)
       this.refreshInspector();
@@ -625,8 +626,47 @@ export class OrganStudio {
     if (next)
       this.changeDocument(next);
   }
+  // With the wiring tool a second click on a wire or a bend within DOUBLE_CLICK ms of the first
+  // bends the wire there or removes the bend. The scene is drawn anew between the clicks, so the
+  // browser's own double click does not reach it; the clicks are matched by what they hit.
+  doubleClick(event) {
+    if (this.state.tool !== 'wire')
+      return false;
+    const bend = event.target.closest?.('[data-bend-index]'),
+          wire = bend ? null : event.target.closest?.('[data-wires]');
+    const hit = bend   ? 'bend:' + bend.dataset.bendWires + ':' + bend.dataset.bendIndex
+                : wire ? 'wire:' + wire.dataset.wires
+                       : null;
+    const now = performance.now(), last = this.lastClick;
+    this.lastClick = hit ? {hit, at : now} : null;
+    // A single click on a bend does nothing else.
+    if (!hit || last?.hit !== hit || now - last.at > DOUBLE_CLICK)
+      return !!bend;
+    this.lastClick = null;
+    const doc = this.state.document;
+    if (bend) {
+      const wires = bend.dataset.bendWires.split(' '), index = Number(bend.dataset.bendIndex);
+      const bends = doc.wires.find(w => w.id === wires[0])?.bends ?? [];
+      this.changeDocument(setBends(doc, wires, bends.filter((_, k) => k !== index)),
+                          this.state.selected);
+    } else
+      this.bendWire(wire, cameraCoordinates(event, this.bodyMap(), this.state.camera));
+    return true;
+  }
+  // A bend put into the wires of a drawn bundle where it runs nearest the point.
+  bendWire(element, point) {
+    const wires = element.dataset.wires.split(' ');
+    const bends = bendsWith(this.state, wires, point, element.hasAttribute('data-mirrored'));
+    const doc = bends && setBends(this.state.document, wires, bends);
+    if (!doc)
+      return this.notice(label('wiring.noWire'));
+    this.changeDocument(doc, this.state.selected);
+    this.notice(label('wiring.bent'));
+  }
   click(event) {
     if (performance.now() < this.ignoreClickUntil && event.target.closest?.(BODY_MAP))
+      return;
+    if (this.doubleClick(event))
       return;
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
