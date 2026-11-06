@@ -23,7 +23,7 @@ import {
 } from './view/frame.js';
 import {BODY_MAP, LAYER, organLabelPlace} from './view/scene.js';
 import {dataAttribute, fixed, pointText} from './view/markup.js';
-import {nodesAtZoom} from './view/places.js';
+import {LAYER_KEYS, layerShown} from './view/layers.js';
 import {zoomStamp} from './view/shell.js';
 import {label} from './view/kit.js';
 import {arrowSize} from './view/wires.js';
@@ -70,7 +70,10 @@ export const gestureMethods = {
       }
     } else
       this.refreshScene();
-    if (nodesAtZoom(previous) !== nodesAtZoom(c.zoom))
+    // What the scene shows may change with the zoom (layers.js).
+    const shown = zoom =>
+        LAYER_KEYS.map(key => layerShown({...this.state, camera : {...c, zoom}}, key)).join();
+    if (shown(previous) !== shown(c.zoom))
       this.refreshScene();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)

@@ -795,3 +795,8 @@
 .aid-compiler-options .aid-compiler-issue { display:block; width:100%; white-space:normal;
   text-align:left; color:#ffb1a4; margin:4px 0; }
 .aid-compiler-region { display:flex; align-items:center; gap:7px; margin:12px 0; font-size:12px; }
+.aid-view-options .aid-layer-switches{gap:6px}
+.aid-view-options .aid-layer-switches button,.aid-view-options .aid-layer-switches button:first-child,.aid-view-options .aid-layer-switches button:last-child{display:inline-flex;align-items:center;gap:7px;margin:0;border-radius:999px}
+.aid-view-options .aid-layer-switches button.active{background:#183940;color:var(--aid-primary);border-color:var(--aid-primary)}
+.aid-layer-switches button::before{content:'';width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}
+.aid-layer-switches button.active::before{background:currentColor}

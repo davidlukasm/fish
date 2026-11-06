@@ -11,10 +11,11 @@ import {
   ZONE
 } from '../model/layout.js';
 import {radians} from '../../units.js';
-import {skinAt, zoomOf} from './frame.js';
+import {skinAt} from './frame.js';
 import {bearing} from '../model/retina.js';
 import {isRegion, siteRole} from '../model/organs.js';
 import {muscleNode} from './muscles.js';
+import {layerShown} from './layers.js';
 
 // Where the Atelier draws the organs and their nodes on its fixed fish: senses on their sites,
 // nerve centers (the brain's and its regions') on theirs in the drawn brain, the eyes where the
@@ -247,14 +248,12 @@ export const EYE =
 // An eye's cells as nodes behind it, where its retina lies: through the pupil a cell looking
 // ahead sits at the back, one looking out at the inner side. Each colour type has its own arc,
 // NODE.ring times the eye's size for the first and NODE.layer more for each further one. Shown
-// while the eye is chosen, a tool works on nodes, or from NODE.zoom on.
-export const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35});
-const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ]);
-export const nodesAtZoom = zoom => zoom >= NODE.zoom;
+// while the eye is chosen or the scene shows nodes (layers.js).
+export const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5});
 export function showsNodes(state, organs) {
   const ids = new Set(organs.flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
-  return nodesAtZoom(zoomOf(state)) || NODE_TOOLS.includes(state.tool) ||
-         ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
+  return layerShown(state, 'nodes') || ids.has(state.selected?.id) ||
+         organs.some(o => state.multi?.has(o.id));
 }
 // Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,
 // opposite their bearing; a region's in its cluster; other nodes on their site (a nerve

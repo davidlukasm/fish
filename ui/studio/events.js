@@ -1,5 +1,6 @@
 import {HORMONES, MOTOR_KIND} from '../schema.js';
 import {muscleHomes} from './view/muscles.js';
+import {keepLayers, switchLayer} from './view/layers.js';
 import {PAIRINGS} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
 import {findSite, sitePoint} from './model/layout.js';
@@ -124,6 +125,14 @@ export const STUDIO_CLICKS = Object.freeze([
     '[data-network]',
     (studio, e) => {
       studio.state.wireScope = e.dataset.network;
+      studio.renderShell();
+    }
+  ],
+  [
+    '[data-layer]',
+    (studio, e) => {
+      studio.state.layers = switchLayer(studio.state, e.dataset.layer);
+      keepLayers(studio.state.layers);
       studio.renderShell();
     }
   ]

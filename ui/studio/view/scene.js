@@ -18,6 +18,7 @@ import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
 import {ICON, slotFill, slotShape} from './kit.js';
 import {stimulusKind} from './stimulus.js';
 import {probeScents, senseProbeSvg} from './probes.js';
+import {layerShown} from './layers.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
 // with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
@@ -69,8 +70,8 @@ function centersSvg(state) {
                         (state.multi?.has(organ.id) ?? false) ||
                         (activeAssembly?.organIds.includes(organ.id) &&
                          organ.centers.some(center => assemblyCenters.has(center.id)));
-    // A region shows its nodes while it is chosen, a tool works on nodes or from NODE.zoom on;
-    // else it stands as its hull and symbol.
+    // A region shows its nodes while it is chosen or the scene shows nodes (layers.js); else it
+    // stands as its hull and symbol.
     if (organ.type !== 'brain' && !(isRegion(organ) && showsNodes(state, [ organ ])))
       continue;
     for (const center of organ.centers) {
@@ -222,6 +223,18 @@ const LAYER_ID = Object.freeze({
 export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
+// The wires as drawn or as the engine made them; while the scene does not show wires, those of
+// the network chosen alone.
+function wiresShown(state, centers) {
+  const shown = layerShown(state, 'wires') ? state
+                : state.selected           ? {...state, wireScope : 'focus'}
+                                           : null;
+  if (!shown)
+    return '';
+  return state.contactView === 'actual' && !state.stale && state.report?.contacts
+             ? developedContactsSvg(shown, centers)
+             : wireSvg(shown, centers);
+}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -242,12 +255,8 @@ export function fishScene(state) {
          fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
          '" class="aid-canvas-ground"/>' +
          '<g class="aid-anatomy">' + anatomy + '</g>' + hormoneOverlay(state) +
-         '<g class="aid-wires">' +
-         (state.contactView === 'actual' && !state.stale && state.report?.contacts
-              ? developedContactsSvg(state, centers)
-              : wireSvg(state, centers)) +
-         '</g>' + reachSvg(state) + organHitsSvg(state) + '<g class="aid-centers">' +
-         centersSvg(state) + '</g>' +
+         '<g class="aid-wires">' + wiresShown(state, centers) + '</g>' + reachSvg(state) +
+         organHitsSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
          '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +

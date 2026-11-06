@@ -8,6 +8,7 @@ import {
 } from './events.js';
 import {exampleDocument} from './model/example.js';
 import {handleMethods, storedPanels} from './handles.js';
+import {storedLayers} from './view/layers.js';
 import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
 import {compilerPanel, acceptedGenome} from './view/compiler.js';
@@ -99,6 +100,7 @@ export class OrganStudio {
       senseProbe : null,
       visionProfile : null,
       panels : storedPanels(),
+      layers : storedLayers(),
       // The engine's view of the design (cells, light-cell curves, what the eyes see) and, while
       // a field organ is placed, the places it can take; report is the developed fish.
       anatomy : null,

@@ -7,6 +7,7 @@ import {percent, t} from '../../strings.js';
 import {hormoneLibrary, library, toolPalette} from './library.js';
 import {label} from './kit.js';
 import {GENOME_SUFFIX} from '../requests.js';
+import {LAYER_KEYS, layerShown} from './layers.js';
 
 // The studio's frame: the hub that leads to the aquarium and the atelier, and the atelier's
 // station with its header, library, scene and inspector.
@@ -109,6 +110,12 @@ function stationStage(s, cppn) {
                       {active : s.wireScope === 'all'}) +
                button('data-network="focus"', label('tools.focusedNetwork'),
                       {active : s.wireScope === 'focus'})) +
+         group(LAYER_KEYS
+                   .map(key => button('data-layer="' + key + '" aria-pressed="' +
+                                          layerShown(s, key) + '"',
+                                      label('layers.' + key), {active : layerShown(s, key)}))
+                   .join(''),
+               label('layers.title'), 'aid-layer-switches') +
          '</div></div><div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
          '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' + zoomStamp(s.camera) +
          '</span></div>';

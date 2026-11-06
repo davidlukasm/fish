@@ -1450,6 +1450,15 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const wheelBack = substancesView.wheelPatch(wheelMark.cx / W.size, wheelMark.cy / W.height);
     assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
     const learningView = await import('../ui/studio/view/learning.js');
+    // What the scene shows by tool and zoom: zoomed out no single nodes anywhere, wires while
+    // wiring but not while moving things; a switch for a tool stays with that tool.
+    const layersView = await import('../ui/studio/view/layers.js');
+    const far = {tool : 'wire', camera : {zoom : .5}, layers : {}};
+    assert.ok(!layersView.layerShown(far, 'nodes') && layersView.layerShown(far, 'wires'));
+    assert.ok(!layersView.layerShown({...far, tool : 'select'}, 'wires'));
+    const kept = {...far, layers : layersView.switchLayer(far, 'nodes')};
+    assert.ok(layersView.layerShown(kept, 'nodes'));
+    assert.ok(!layersView.layerShown({...kept, tool : 'learn'}, 'nodes'));
     // A learning cell's rate and way each have a track; the middle of the way is neutral.
     assert.ok(Math.abs(learningView.learnModePatch(.5).mode) < 1e-9);
     assert.ok(learningView.learnRatePatch(1).qwidth === 1 &&

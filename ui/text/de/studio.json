@@ -45,7 +45,7 @@
   "tools": {
     "undo": "Rückgängig",
     "redo": "Wiederholen",
-    "select": "Bewegen",
+    "select": "Auswählen und verschieben",
     "wire": "Verschalten",
     "hormone": "Hormone",
     "learn": "Lernen",
@@ -63,6 +63,11 @@
     "showSignals": "Signalfluss",
     "showOrgans": "Organe",
     "showSites": "Entwicklungsorte"
+  },
+  "layers": {
+    "title": "Anzeige",
+    "wires": "Verbindungen",
+    "nodes": "Knoten"
   },
   "sections": {
     "brain": "Gehirn und Schaltkreise",
