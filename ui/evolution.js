@@ -508,6 +508,15 @@ export function openSpeciesDetails(id) {
   }
 }
 
+// A species card's population trace, drawn anew when the journal's trace changed.
+function refreshTrace(item, trace, species) {
+  const traces = JSON.stringify(journal().traces[String(species.id)] || []);
+  if (traces === item.traceSignature)
+    return;
+  item.traceSignature = traces;
+  trace.replaceChildren();
+  drawSpeciesTrace(trace, species);
+}
 export function renderSpecies(f, force = false) {
   const {all, living, extinct, genera} = speciesCensus(f);
   text('living-species-count', living.length);
@@ -632,12 +641,7 @@ export function renderSpecies(f, force = false) {
           info.replaceChildren();
           appendSpeciesSummary(info, s);
         }
-        const traces = JSON.stringify(journal().traces[String(s.id)] || []);
-        if (traces !== item.traceSignature) {
-          item.traceSignature = traces;
-          trace.replaceChildren();
-          drawSpeciesTrace(trace, s);
-        }
+        refreshTrace(item, trace, s);
         evolutionState.speciesPreviews.push({canvas : portrait, species : s.id, ids : []});
       } else {
         // Extinct: when it lived and how its population went.
@@ -645,12 +649,7 @@ export function renderSpecies(f, force = false) {
                         {from : formatNumber(s.born || 0), to : formatNumber(s.extinct_at || 0)});
         if (info.textContent !== lived)
           info.textContent = lived;
-        const traces = JSON.stringify(journal().traces[String(s.id)] || []);
-        if (traces !== item.traceSignature) {
-          item.traceSignature = traces;
-          trace.replaceChildren();
-          drawSpeciesTrace(trace, s);
-        }
+        refreshTrace(item, trace, s);
       }
       cards.push(card);
     }

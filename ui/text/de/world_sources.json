@@ -1,5 +1,6 @@
 {
  "neueQuelle": "Neue Quelle",
+ "add": "+",
  "current": "Strömung {n} · {speed} px/Schritt",
  "food": "Futterquelle {n} · {share} × Quellenanteil"
 }

@@ -86,6 +86,34 @@ export function currentValues() {
   };
 }
 
+// The currents' and the feeders' lists: a button to choose each source and one to place a new
+// one; a chosen source that is gone is chosen no more.
+const SOURCE_LIST = Object.freeze({
+  current :
+      {list : 'current-list', selection : 'currentSelection', tool : 'current', current : true},
+  feeder : {list : 'feeder-list', selection : 'feederSelection', tool : 'feeder', current : false}
+});
+function sourceList({list, selection, tool, current}, sources, select) {
+  const box = el(list);
+  box.replaceChildren();
+  for (const [i, q] of sources.entries()) {
+    const button = sourceButton(q, i, current);
+    button.onclick = () => select(i);
+    box.appendChild(button);
+  }
+  const add = document.createElement('button');
+  add.textContent = t('world_sources.add');
+  add.title = t('world_sources.neueQuelle');
+  add.setAttribute('aria-label', t('world_sources.neueQuelle'));
+  add.onclick = () => {
+    updateWorldState({[selection] : -1});
+    setTool(tool);
+    markSource(list, -1);
+  };
+  box.appendChild(add);
+  if (worldState[selection] >= sources.length)
+    updateWorldState({[selection] : -1});
+}
 export function selectCurrent(index) {
   updateWorldState({currentSelection : index});
   const q = sceneState.frame?.currents?.[index];
@@ -103,25 +131,7 @@ export function renderCurrentSources(f) {
   if (signature === worldState.currentSignature)
     return;
   updateWorldState({currentSignature : signature});
-  const box = el('current-list');
-  box.replaceChildren();
-  for (const [i, q] of (f.currents || []).entries()) {
-    const button = sourceButton(q, i, true);
-    button.onclick = () => selectCurrent(i);
-    box.appendChild(button);
-  }
-  const add = document.createElement('button');
-  add.textContent = '+';
-  add.title = t('world_sources.neueQuelle');
-  add.setAttribute('aria-label', t('world_sources.neueQuelle'));
-  add.onclick = () => {
-    updateWorldState({currentSelection : -1});
-    setTool('current');
-    markSource('current-list', -1);
-  };
-  box.appendChild(add);
-  if (worldState.currentSelection >= (f.currents || []).length)
-    updateWorldState({currentSelection : -1});
+  sourceList(SOURCE_LIST.current, f.currents || [], selectCurrent);
 }
 
 function sourceAt(p, rows, radius) {
@@ -158,25 +168,7 @@ export function renderFeeders(f) {
   if (signature === worldState.feederSignature)
     return;
   updateWorldState({feederSignature : signature});
-  const box = el('feeder-list');
-  box.replaceChildren();
-  for (const [i, q] of (f.feeders || []).entries()) {
-    const button = sourceButton(q, i, false);
-    button.onclick = () => selectFeeder(i);
-    box.appendChild(button);
-  }
-  const add = document.createElement('button');
-  add.textContent = '+';
-  add.title = t('world_sources.neueQuelle');
-  add.setAttribute('aria-label', t('world_sources.neueQuelle'));
-  add.onclick = () => {
-    updateWorldState({feederSelection : -1});
-    setTool('feeder');
-    markSource('feeder-list', -1);
-  };
-  box.appendChild(add);
-  if (worldState.feederSelection >= (f.feeders || []).length)
-    updateWorldState({feederSelection : -1});
+  sourceList(SOURCE_LIST.feeder, f.feeders || [], selectFeeder);
 }
 
 const initializers = {

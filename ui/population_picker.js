@@ -570,10 +570,7 @@ export async function openPopulationPicker() {
   dialog.showModal();
   text('population-count', t('population_picker.startlinienWerdenGeladen'));
   try {
-    const response = await request(ROUTE.population), data = await response.json();
-    if (!response.ok)
-      throw Error(serverText(data.error));
-    entries = data.entries;
+    entries = await catalogEntries();
     const available = new Set(entries.map(e => e.id));
     for (const id of chosen)
       if (!available.has(id))
@@ -586,13 +583,18 @@ export async function openPopulationPicker() {
 
 export function populationStarted() { restoreRunning = false; }
 
+// The population catalogue's entries as the server lists them.
+async function catalogEntries() {
+  const response = await request(ROUTE.population), data = await response.json();
+  if (!response.ok)
+    throw Error(serverText(data.error));
+  return data.entries;
+}
+
 export function bindPopulationPicker() {
   el('population-refresh').onclick = async () => {
     try {
-      const response = await request(ROUTE.population), data = await response.json();
-      if (!response.ok)
-        throw Error(serverText(data.error));
-      entries = data.entries;
+      entries = await catalogEntries();
       await render();
     } catch (error) {
       text('population-count', error.message);
@@ -606,11 +608,8 @@ export function bindPopulationPicker() {
     const button = el('population-import');
     button.disabled = true;
     try {
-      const result = await importGenome(file), catalog = await request(ROUTE.population),
-            data = await catalog.json();
-      if (!catalog.ok)
-        throw Error(serverText(data.error));
-      entries = data.entries;
+      const result = await importGenome(file);
+      entries = await catalogEntries();
       chosen.add(result.message);
       group = 'favorites';
       el('population-group').value = group;
