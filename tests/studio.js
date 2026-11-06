@@ -147,16 +147,36 @@ function semanticFingerprint(source) {
       {from : 'quiet', to : 'muscle', points : line(300, 400), kind : 'excite'},
       {from : 'muscle', to : 'tectum', points : line(400, 200), kind : 'excite'}
     ];
-    const schedule =
-        pulse.signalSchedule([ 'eye' ], links, key => key === 'quiet' ? 'fall' : 'rise');
-    assert.deepEqual([...schedule.fired.keys() ].sort(), [ 'eye', 'muscle', 'tectum' ]);
-    assert.ok(schedule.fired.get('muscle') > schedule.fired.get('tectum'));
-    assert.equal(schedule.legs.filter(l => l.link.to === 'quiet' && l.quiets).length, 1,
-                 'An inhibiting signal quiets a part that falls');
-    assert.equal(schedule.legs.filter(l => l.link.from === 'quiet').length, 0,
-                 'A quiet part sends nothing on');
-    assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 2,
+    const answers = {quiet : 'fall', freed : 'rise', drained : 'fall'};
+    const schedule = pulse.signalSchedule(
+        [ 'eye' ],
+        [
+          ...links, {from : 'quiet', to : 'freed', points : line(300, 350), kind : 'inhibit'},
+          {from : 'quiet', to : 'drained', points : line(300, 360), kind : 'excite'},
+          {from : 'tectum', to : 'drained', points : line(200, 260), kind : 'excite'}
+        ],
+        key => answers[key] ?? 'rise');
+    const modes = mode => [...schedule.parts]
+                              .filter(([, part ]) => part.mode === mode)
+                              .map(([ key ]) => key)
+                              .sort();
+    assert.deepEqual(modes('fire'), [ 'eye', 'freed', 'muscle', 'tectum' ]);
+    assert.deepEqual(
+        modes('quiet'), [ 'drained', 'quiet' ],
+        'An inhibiting signal quiets a part that falls, as does an excitation withdrawn');
+    assert.ok(schedule.parts.get('muscle').time > schedule.parts.get('tectum').time);
+    assert.ok(
+        schedule.legs.every(l => l.link.to !== 'drained' || l.link.from === 'quiet' || !l.answers),
+        'An exciting signal does not quiet the part it reaches');
+    assert.deepEqual(schedule.legs.filter(l => l.link.from === 'quiet').map(l => l.sends),
+                     [ 'quiet', 'quiet', 'quiet' ], 'A quieted part withdraws what it sends');
+    assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 3,
                  'A part sends once to each of its targets');
+    // A part that is pushed down and swings back past its rest still counts as falling; one whose
+    // swing stays below the cutoff does not answer.
+    const frames = [ [ 0, 0, 0 ], [ .9, -.8, .01 ], [ .2, -.3, -.02 ], [ -.3, .2, .01 ] ];
+    assert.deepEqual([ [ 0 ], [ 1 ], [ 2 ], [ 1, 0 ] ].map(i => pulse.signalAnswer(frames, i)),
+                     [ 'rise', 'fall', null, 'rise' ]);
     // The player marks each part as it fires and each wire as its signal starts.
     const oldFrame = globalThis.requestAnimationFrame, oldCancel = globalThis.cancelAnimationFrame;
     const scheduled = [], reached = [], classes = new Set();
@@ -179,7 +199,7 @@ function semanticFingerprint(source) {
       const player = pulse.createSignalPlayer(fakeSvg, schedule, {
         marks : () => [element],
         moves : key => key === 'muscle' ? [ [ element, 'aid-move-tail' ] ] : [],
-        reached : (key, link, quieted) => reached.push(key ?? link?.to ?? quieted)
+        reached : ({key, link}) => reached.push(key ?? link?.to)
       });
       player.start();
       for (const time of [0, 10, 1e6]) {

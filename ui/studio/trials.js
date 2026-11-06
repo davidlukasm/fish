@@ -10,7 +10,7 @@ import {
   wholeEndpoint
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
-import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
+import {createSignalPlayer, signalAnswer, signalSchedule} from './view/pulse.js';
 import {routedLinks} from './model/regions.js';
 import {label} from './view/kit.js';
 import {signalLinks} from './view/wires.js';
@@ -74,7 +74,8 @@ export const trialMethods = {
         element.classList.add('aid-pulse-quieted');
     for (const id of stimulus.wires)
       for (const element of this.wireMarks(id))
-        element.classList.add('aid-pulse-used');
+        element.classList.add('aid-pulse-used',
+                              ...stimulus.sent.has(id) ? [] : [ 'aid-pulse-withdrawn' ]);
   },
   // What shows a wire on the scene.
   wireMarks(id) {
@@ -156,20 +157,17 @@ export const trialMethods = {
     this.showDrawnContacts();
     if (!Array.isArray(frames) || !frames.length)
       return;
-    // How far each part rose above and fell below where it stood at the first step.
+    // How the engine found each part: rising or falling by its first clear swing.
     const doc = this.state.document, centers = allCenters(doc);
-    const swing = (index, sign) =>
-        Math.max(...frames.map(f => sign * ((f[index] ?? 0) - (frames[0][index] ?? 0))));
     const indexOf = new Map(centers.map((c, index) => [c.id, index]));
-    const response = key => {
-      const indices = endpointCenters(doc, key).map(c => indexOf.get(c.id));
-      return indices.some(i => swing(i, 1) >= SIGNAL.cutoff)    ? 'rise'
-             : indices.some(i => swing(i, -1) >= SIGNAL.cutoff) ? 'fall'
-                                                                : null;
-    };
+    const response = key =>
+        signalAnswer(frames, endpointCenters(doc, key).map(c => indexOf.get(c.id)));
     const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
     const schedule = signalSchedule(starts, signalLinks(this.state), response);
-    this.state.stimulus = {fired : new Set(starts), wires : new Set(), quieted : new Set()};
+    // The wires a signal ran along stay marked, those only a quieted part withdrew from apart.
+    const stimulus =
+        {fired : new Set(starts), quieted : new Set(), wires : new Set(), sent : new Set()};
+    this.state.stimulus = stimulus;
     this.refreshScene();
     const svg = this.bodyMap();
     if (!svg)
@@ -177,15 +175,17 @@ export const trialMethods = {
     this.pulsePlayer = createSignalPlayer(svg, schedule, {
       marks : key => this.stimulusMarks(key),
       moves : key => this.stimulusMoves(key),
-      reached : (key, link, quieted) => {
+      reached : ({key, mode, link}) => {
         if (key)
-          this.state.stimulus?.fired.add(key);
-        if (quieted)
-          this.state.stimulus?.quieted.add(quieted);
+          stimulus[mode === 'fire' ? 'fired' : 'quieted'].add(key);
         for (const id of link?.wires ?? []) {
-          this.state.stimulus?.wires.add(id);
-          for (const element of this.wireMarks(id))
+          stimulus.wires.add(id);
+          if (mode === 'fire')
+            stimulus.sent.add(id);
+          for (const element of this.wireMarks(id)) {
             element.classList.add('aid-pulse-used');
+            element.classList.toggle('aid-pulse-withdrawn', !stimulus.sent.has(id));
+          }
         }
       }
     });

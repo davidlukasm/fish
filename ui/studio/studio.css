@@ -571,7 +571,7 @@
 /* A stimulus: the network it reached stays marked, the rest stands back. */
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
-#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired){opacity:.4;filter:saturate(.15)}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
 /* A chosen part keeps what it is wired with in full colour. */
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
@@ -594,8 +594,14 @@
 .aid-muscle-areas rect{opacity:.16}
 .aid-muscle-areas text{fill:var(--aid-name-text);font-weight:600;letter-spacing:.04em;opacity:.9;paint-order:stroke;stroke:var(--aid-ink);stroke-width:3px;pointer-events:none}
 .aid-muscle-areas{pointer-events:none}
-/* A part an inhibiting signal quieted darkens with a pink ring; a tuned one shows violet. */
-#aid-body-map .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit)) !important;opacity:.85}
+/* A quieted part pulses in the inhibiting colour, then stays darkened with a ring in it; the
+   signal it withdraws runs as a trail in that colour, and its wires show dashed in it. A tuned
+   part shows violet. */
+#aid-body-map.aid-stimulus-view .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit));opacity:.85}
+#aid-body-map.aid-stimulus-view .aid-pulse-quieting{animation:aid-quieting .55s ease-in-out 2}
+@keyframes aid-quieting{50%{filter:brightness(.9) drop-shadow(0 0 13px var(--aid-inhibit))}}
+.aid-signal-withdrawn{fill:none;stroke:var(--aid-inhibit);stroke-linecap:round;filter:drop-shadow(0 0 4px var(--aid-inhibit));pointer-events:none}
+#aid-body-map.aid-stimulus-view .aid-pulse-withdrawn .aid-wire-ink{stroke:var(--aid-inhibit);stroke-dasharray:6 5}
 #aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}
 /* Effectors move when a stimulus reaches them: the tail fin beats, a side fin strokes, the jaw
    bites, the throat sucks. */
