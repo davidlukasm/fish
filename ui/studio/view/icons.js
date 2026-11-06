@@ -24,3 +24,4 @@ export const DIRECTION_ICON = Object.freeze({rises : 'M12 5l6 8H6z', falls : 'M1
 export const PHASE_ICON =
     Object.freeze({start : 'M4 19h16M12 15V5M8 9l4-4 4 4', end : 'M4 19h16M12 5v10M8 11l4 4 4-4'});
 export const BODY_SIGNAL = '#d7c294';
+export const GROWTH_ICON = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';

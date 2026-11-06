@@ -49,6 +49,8 @@
 #station-root[data-armed="wiring"] #aid-body-map .aid-wire-group.aid-drop-hover .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 7px #f1dca0)}
 #station-root[data-armed="wiring"]:not([data-armed-value="bend"]) #aid-body-map .aid-wire-group:not([data-paired]){opacity:.2;pointer-events:none}
 .aid-palette-tile.add{border-style:dashed}
+.aid-palette-tile.suggested{border-color:var(--aid-handle);box-shadow:0 0 10px color-mix(in srgb,var(--aid-handle) 45%,transparent)}
+.aid-palette-tile.suggested .aid-palette-icon{border-color:var(--aid-handle)}
 .aid-palette-tile.add .aid-palette-icon{border-style:dashed;color:var(--aid-soft-text);font-size:18px}
 .aid-substance-title{display:flex;align-items:center;gap:6px;width:100%;padding:0;border:0;background:none;color:#dfe9e1;font:inherit;letter-spacing:.02em;cursor:pointer}
 .aid-substance-title::after{content:"";margin-left:auto;width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);opacity:.7}

@@ -898,6 +898,25 @@
     "whole": "ganzer Körper",
     "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper"
   },
+  "systems": {
+    "title": "Regelkreise",
+    "fits": "Passt zu deinem Fisch.",
+    "reward": {
+      "name": "Belohnung",
+      "title": "Futter im Darm lehrt die Lernkreise, was zum Futter geführt hat.",
+      "substance": "Belohnung"
+    },
+    "growth": {
+      "name": "Wachstum",
+      "title": "Futter im Darm lässt den Körper wachsen.",
+      "substance": "Wachstumshormon"
+    },
+    "alarm": {
+      "name": "Alarm",
+      "title": "Schmerz macht über das Stammhirn alle Muskeln kräftiger.",
+      "substance": "Alarmstoff"
+    }
+  },
   "hormoneCard": {
     "title": "Stoffe",
     "summary": "{glands} Drüsen · wirkt auf {targets}",

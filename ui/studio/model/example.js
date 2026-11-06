@@ -1,19 +1,5 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {
-  addOrgan,
-  addSubstance,
-  addWire,
-  findOrgan,
-  GROWTH_START,
-  newDocument,
-  pairEndpoint,
-  setOrganNodes,
-  setSubstance,
-  updateCenter,
-  updateGrowth,
-  updateReceptor,
-  wheelPlace
-} from './document.js';
+import {addOrgan, addWire, newDocument, setOrganNodes} from './document.js';
+import {placeSystem} from './systems.js';
 
 const PLACES = Object.freeze({
   eye : [ 'eye', 360, 300 ],
@@ -30,21 +16,17 @@ const PLACES = Object.freeze({
   suck : [ 'muscle', 330, 302 ],
   eggs : [ 'eggs', 848, 330 ],
   sperm : [ 'sperm', 760, 395 ],
-  growth : [ 'gland', 260, 351 ],
   gut : [ 'gut', 780, 357 ],
-  hypothalamus : [ 'hypothalamus', 336, 365 ],
-  reward : [ 'gland', 470, 383 ]
+  hypothalamus : [ 'hypothalamus', 336, 365 ]
 });
 const WIRES = Object.freeze([
   [ 'eye', 'tectum', 'crossed' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ],
   [ 'bulb', 'pallium' ], [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ],
   [ 'lateral', 'hindbrain' ], [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ],
-  [ 'pallium', 'bite' ], [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ],
-  [ 'hypothalamus', 'reward' ], [ 'hypothalamus', 'reward:twin' ], [ 'hypothalamus', 'growth' ],
-  [ 'hypothalamus', 'growth:twin' ]
+  [ 'pallium', 'bite' ], [ 'pallium', 'suck' ]
 ]);
 const GROWTH_CELLS = Object.freeze({eggs : 11, sperm : 3});
-const REWARD = Object.freeze({sensitivity : 1, half : .1, teaching : .5});
+const SYSTEM_GLANDS = Object.freeze([ [ 'growth', 260, 351 ], [ 'reward', 470, 383 ] ]);
 
 export function exampleDocument(names, sites, wheel) {
   let doc = newDocument(names.fish);
@@ -60,40 +42,10 @@ export function exampleDocument(names, sites, wheel) {
     if (grown)
       doc = grown;
   }
-  const substance = name => {
-    const next = addSubstance(doc, HORMONES.levels);
-    if (!next)
-      return null;
-    const index = next.substances.at(-1).index;
-    doc = setSubstance(next, index, name);
-    return index;
-  };
-  const release = (gland, index) => {
-    const [q1, q2] = wheelPlace(wheel, index);
-    doc = updateCenter(doc, gland, {q1, q2, qwidth : 0, tau : 1});
-  };
-  const growth = substance(names.growth);
-  if (placed.growth.node && growth !== null) {
-    release(placed.growth.node, growth);
-    doc = updateGrowth(doc, {active : 1, substance : growth, ...GROWTH_START});
-  }
-  const food = substance(names.food);
-  const learner = findOrgan(doc, placed.pallium.organ)?.centers.find(c => c.node === 'learn')?.id;
-  if (placed.reward.node && learner && food !== null) {
-    release(placed.reward.node, food);
-    for (const id of [learner, pairEndpoint(doc, learner)].filter(Boolean))
-      for (const [effect, sensitivity] of [[ HORMONE_EFFECT.learning, REWARD.sensitivity ],
-                                           [ HORMONE_EFFECT.teaching, REWARD.teaching ]])
-        doc = updateReceptor(doc, id, effect,
-                             {active : 1, substance : food, sensitivity, half : REWARD.half});
-  }
-  const end = key => {
-    const [name, part] = key.split(':');
-    return part === 'twin' ? findOrgan(doc, placed[name].organ)?.pair
-                           : placed[name][part ?? 'organ'];
-  };
+  for (const [key, x, y] of SYSTEM_GLANDS)
+    doc = placeSystem(doc, key, sites, wheel, {x, y}, names[key])?.document ?? doc;
   for (const [from, to, pairing] of WIRES) {
-    const r = addWire(doc, end(from), end(to), pairing);
+    const r = addWire(doc, placed[from].organ, placed[to].organ, pairing);
     if (r)
       doc = r.document;
   }

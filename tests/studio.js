@@ -1765,9 +1765,26 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                   .sensitivity > 0);
     const exampleModel = await import('../ui/studio/model/example.js');
     const exampleDoc =
-        exampleModel.exampleDocument({fish : 'B', growth : 'W', food : 'F'}, sites, sitesResult);
+        exampleModel.exampleDocument({fish : 'B', growth : 'W', reward : 'F'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
     assert.equal(exampleDoc.substances.length, 2);
+    const systems = await import('../ui/studio/model/systems.js');
+    assert.ok(!systems.systemFits(exampleDoc, 'reward') &&
+              !systems.systemFits(exampleDoc, 'growth'));
+    const bare = model.newDocument('Regelkreis');
+    const muscled = model.addOrgan(bare, 'muscle', sites, {x : 890, y : 350}).document;
+    assert.ok(systems.systemFits(muscled, 'alarm'));
+    const alarm =
+        systems.placeSystem(muscled, 'alarm', sites, sitesResult, {x : 500, y : 400}, 'S');
+    const types = alarm.document.organs.map(o => o.type);
+    assert.ok([ 'pain', 'hindbrain', 'gland' ].every(type => types.includes(type)));
+    assert.equal(alarm.document.substances.length, 1);
+    assert.ok(!systems.systemFits(alarm.document, 'alarm'));
+    const strong = alarm.document.organs.find(o => o.type === 'muscle').centers[0];
+    assert.equal(strong.receptors[HORMONE_EFFECT.output].substance, alarm.substance);
+    assert.ok(alarm.document.wires.some(
+        w => w.to === alarm.organId ||
+             w.to === model.findOrgan(alarm.document, alarm.organId).pair));
     assert.equal(layout.findSite(sites, sites[3].id), sites[3]);
     assert.equal(model.findAssembly(grouped, grouped.assemblies[0].id), grouped.assemblies[0]);
     assert.equal(model.findAssembly(grouped, 'none'), null);

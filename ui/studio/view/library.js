@@ -1,6 +1,7 @@
-import {HORMONES} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {BODY_SIGNAL, EFFECT_ICON, GROWTH_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {SYSTEMS, systemFits} from '../model/systems.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -24,11 +25,12 @@ function tile({
   act = false,
   drag = !act,
   armed = false,
-  wide = false
+  wide = false,
+  suggested = false
 }) {
   const v = escapeText(value);
   return '<button class="aid-palette-tile' + (off ? ' off' : '') + (wide ? ' wide' : '') +
-         (armed ? ' armed ' + armed : '') + '"' +
+         (suggested ? ' suggested' : '') + (armed ? ' armed ' + armed : '') + '"' +
          (off    ? ' disabled'
           : drag ? ' draggable="true"'
                  : '') +
@@ -184,6 +186,7 @@ function hormoneLibrary(state) {
                                                 .join(''));
              })
              .join('') +
+         systemsSection(state, SYSTEMS.map(s => s.key)) +
          section(label('hormoneCard.body'), tile({
                                               kind : 'phase',
                                               value : 'start',
@@ -205,11 +208,31 @@ function hormoneLibrary(state) {
                                             })) +
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
+const SYSTEM_ICON = Object.freeze({
+  reward : EFFECT_ICON[HORMONE_EFFECT.teaching],
+  growth : GROWTH_ICON,
+  alarm : STUDIO_ICON.pain
+});
+const systemTile = (state, key) => {
+  const fits = state.capabilities && systemFits(state.document, key);
+  return tile({
+    kind : 'system',
+    value : key,
+    name : label('systems.' + key + '.name'),
+    path : SYSTEM_ICON[key],
+    colour : BODY_SIGNAL,
+    title : label('systems.' + key + '.title') + (fits ? ' ' + label('systems.fits') : ''),
+    suggested : fits
+  });
+};
+const systemsSection = (state, keys) =>
+    section(label('systems.title'), keys.map(key => systemTile(state, key)).join(''));
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 function learningLibrary(state) {
   const titles = tList('studio.learnCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
   return section(label('learnCard.cells'), LEARNING_CELLS.map(cellTile).join('')) +
+         systemsSection(state, [ 'reward' ]) +
          substances
              .map(sub => {
                const index = sub.index, colour = substanceColor(index);

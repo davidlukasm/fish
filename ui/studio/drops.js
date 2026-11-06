@@ -17,6 +17,7 @@ import {
   wheelPlace
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
+import {placeSystem} from './model/systems.js';
 import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
@@ -45,8 +46,11 @@ const STIMULUS_ORGAN = Object.freeze({
   pain : 'pain'
 });
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
-const ORGAN_FROM_CARD = Object.freeze(
-    {gland : {kind : 'organ', value : 'gland'}, reserve : {kind : 'organ', value : 'blood'}});
+const ORGAN_FROM_CARD = Object.freeze({
+  gland : {kind : 'organ', value : 'gland'},
+  system : {kind : 'organ', value : 'gland'},
+  reserve : {kind : 'organ', value : 'blood'}
+});
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
 export const dropMethods = {
   dragStart(event) {
@@ -382,6 +386,15 @@ export const dropMethods = {
     const wheel = this.state.capabilities, doc = this.state.document;
     if (!wheel || !nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
+    if (kind === 'system') {
+      const placed = placeSystem(doc, value, this.state.sites, wheel, position,
+                                 label('systems.' + value + '.substance'));
+      if (!placed)
+        return this.notice(label('status.noRoom'));
+      this.state.focusSubstance = placed.substance;
+      this.changeDocument(placed.document, null);
+      return this.notice(label('status.placed'));
+    }
     const index = kind === 'gland' ? Number(value) : HORMONES.levels + 1;
     const [q1, q2] = wheelPlace(wheel, index), tuning = {q1, q2, qwidth : 0};
     const sense = kind === 'reserve' && doc.organs.find(o => o.type === 'blood');

@@ -26,7 +26,7 @@ import {
 import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
-import {DIRECTION_ICON, EFFECT_ICON} from './icons.js';
+import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON} from './icons.js';
 import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
@@ -573,7 +573,6 @@ function receptorBody(state, center, effect) {
          }) +
          doseStrip(state, receptor, effect, target);
 }
-const GROW_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
   const substance = doc.substances.find(s => s.index === state.focusSubstance);
@@ -610,7 +609,7 @@ function substanceInspector(state) {
          SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') +
          '"></header><button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
-         grows + '">' + glyph(GROW_MARK, ICON.mark, {line : true}) + '<span>' +
+         grows + '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '<span>' +
          label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '</span></button>' +
          (grows ? growthEditor(state) : '') +
          row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
