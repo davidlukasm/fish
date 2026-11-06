@@ -1,13 +1,7 @@
 import {visionFan} from './vision.js';
-import {
-  eyeRadius,
-  fieldOrigin,
-  fishOutline,
-  organHome,
-  organLocation,
-  organTitle,
-  placementTarget
-} from './body.js';
+import {eyeRadius, fieldOrigin, organHome, organLocation, placementTarget} from './places.js';
+import {fishOutline} from './body.js';
+import {organTitle} from './names.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {joinParts, tList} from '../../strings.js';
@@ -32,33 +26,24 @@ import {centerTitle, tone} from './names.js';
 const HINT_RING = Object.freeze({radius : 9, width : 3, gap : 1.4});
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
-// The free sites an organ can take; the sites of an organ being moved count as free.
-export function placementHints(state, kind, value, moving = null) {
-  if (!state.sites.length)
-    return {svg : ''};
-  const descriptors = [];
+// An organ type without a home in the drawing looks for engine places of its own.
+const homeless = (doc, type) => !organHome(doc, type, 0);
+// The centers an item brings that look for places of their own: those of an organ without a
+// home, a nerve center, and those of a module's or a stored module's organs without homes.
+function seekingCenters(state, kind, value) {
+  const found = [], doc = state.document;
   const add = (type, center) => {
     if (center)
-      descriptors.push({type, center});
+      found.push({type, center});
   };
-  // An organ with a home in the drawing goes there, whatever engine places it takes: a brain
-  // region to its spot on either side or on the midline (on the midline alone for one that
-  // serves both sides), an inner organ to the next place of its kind. Others show the free
-  // places they can take.
-  const placed = type => !organHome(state.document, type, 0);
-  const homes =
-      kind === 'organ' && !placed(value)
-          ? (isRegion({type : value}) && ORGAN_BY_KEY[value].scope !== 'single' ? [ -1, 0, 1 ]
-                                                                                : [ 0 ])
-                .map(side => organHome(state.document, value, side))
-          : [];
-  if (kind === 'organ' && placed(value))
+  if (kind === 'organ' && homeless(doc, value))
     for (const center of ORGAN_BY_KEY[value]?.centers ?? [])
       add(value, center);
   if (kind === 'neuron')
     add('brain', {key : value, role : 'nerve', functionCode : -1});
   if (kind === 'module')
-    for (const type of (MODULES.find(m => m.key === value)?.organs ?? []).filter(placed))
+    for (const type of (MODULES.find(m => m.key === value)?.organs ?? [])
+             .filter(type => homeless(doc, type)))
       for (const center of ORGAN_BY_KEY[type]?.centers ?? [])
         add(type, center);
   if (kind === 'user-module') {
@@ -71,16 +56,32 @@ export function placementHints(state, kind, value, moving = null) {
         add(organ.type, desc);
       }
   }
-  const used = usedSites(state.document, c => c.organId !== moving);
-  const labels = new Map(), sites = new Map(), types = new Set(descriptors.map(d => d.type));
-  const areas = new Map();
-  for (const point of homes) {
+  return found;
+}
+// An organ with a home in the drawing goes there, whatever engine places it takes: a brain
+// region to its spot on either side or on the midline (on the midline alone for one that serves
+// both sides), an inner organ to the next place of its kind.
+function organHomes(state, kind, value) {
+  if (kind !== 'organ' || homeless(state.document, value))
+    return [];
+  const sides =
+      isRegion({type : value}) && ORGAN_BY_KEY[value].scope !== 'single' ? [ -1, 0, 1 ] : [ 0 ];
+  return sides.map(side => organHome(state.document, value, side));
+}
+// The places to show, each with the keys of what may go there; each key's colour and name; and
+// for a muscle's works, the stretch of the body its places span. The sites of an organ being
+// moved count as free.
+function hintPlaces(state, kind, value, moving) {
+  const labels = new Map(), sites = new Map(), areas = new Map();
+  const centers = seekingCenters(state, kind, value), types = new Set(centers.map(d => d.type));
+  for (const point of organHomes(state, kind, value)) {
     const key = 'home:' + value;
     if (!labels.has(key))
       labels.set(key, {colour : HINT_SHADES[0], name : organTitle({type : value})});
     sites.set(point.x + ':' + point.y, {point, keys : new Set([ key ])});
   }
-  for (const {type, center} of descriptors)
+  const used = usedSites(state.document, c => c.organId !== moving);
+  for (const {type, center} of centers)
     for (const site of state.sites) {
       if (used.has(site.id) || !eligible(center, site) ||
           (center.role === 'nerve' && !nerveZone(site)))
@@ -107,48 +108,55 @@ export function placementHints(state, kind, value, moving = null) {
         areas.set(key, {from : Math.min(area.from, point.x), to : Math.max(area.to, point.x)});
       }
     }
+  return {labels, sites, areas};
+}
+// A muscle's works lie in stretches of the body: each tinted in its colour and named.
+const MUSCLE_CLIP = 'aid-hint-body';
+function muscleBands(state, areas, labels, zoom) {
+  if (!areas.size)
+    return '';
+  return '<defs><clipPath id="' + MUSCLE_CLIP + '"><path d="' + fishOutline(state) +
+         '"/></clipPath></defs><g class="aid-muscle-areas" clip-path="url(#' + MUSCLE_CLIP + ')">' +
+         [...areas.entries() ]
+             .map(([ key, {from, to} ]) => {
+               const {colour, name} = labels.get(key), pad = MUSCLE_AREA.pad;
+               return '<rect x="' + fixed(from - pad) + '" y="0" width="' +
+                      fixed(to - from + 2 * pad) + '" height="' + (FISH_BOX.y + FISH_BOX.height) +
+                      '" fill="' + colour + '"/><text x="' + fixed((from + to) / 2) + '" y="' +
+                      fixed(BODY_FRAME.middle + MUSCLE_AREA.label) +
+                      '" text-anchor="middle" style="font-size:' + fixed(MUSCLE_AREA.size / zoom) +
+                      'px">' + escapeText(name) + '</text>';
+             })
+             .join('') +
+         '</g>';
+}
+// A place's ring, one sector in the colour of each thing that may go there.
+function hintRing({point, keys}, labels, zoom) {
+  const entries = [...keys ];
+  const H = HINT_RING, length = 2 * Math.PI * H.radius, span = length / entries.length;
+  const arcs = entries
+                   .map((key, i) => {
+                     const color = labels.get(key).colour;
+                     const dash = entries.length === 1 ? length : Math.max(0, span - H.gap);
+                     return '<circle r="' + H.radius + '" fill="none" stroke="' + color +
+                            '" stroke-width="' + H.width + '" stroke-dasharray="' + fixed(dash) +
+                            ' ' + fixed(length - dash) + '" stroke-dashoffset="' +
+                            fixed(-i * span) + '" transform="rotate(-90)"/>';
+                   })
+                   .join('');
+  return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + arcs + '</g>';
+}
+// The places an item may go, as rings, and what their colours mean.
+export function placementHints(state, kind, value, moving = null) {
+  if (!state.sites.length)
+    return {svg : ''};
+  const {labels, sites, areas} = hintPlaces(state, kind, value, moving);
   const zoom = state.camera.zoom ?? 1;
-  // A muscle's works lie in stretches of the body: each tinted in its colour and named.
-  const clip = 'aid-hint-body';
-  const bands =
-      areas.size
-          ? '<defs><clipPath id="' + clip + '"><path d="' + fishOutline(state) +
-                '"/></clipPath></defs><g class="aid-muscle-areas" clip-path="url(#' + clip + ')">' +
-                [...areas.entries() ]
-                    .map(([ key, {from, to} ]) => {
-                      const {colour, name} = labels.get(key), pad = MUSCLE_AREA.pad;
-                      return '<rect x="' + fixed(from - pad) + '" y="0" width="' +
-                             fixed(to - from + 2 * pad) + '" height="' +
-                             (FISH_BOX.y + FISH_BOX.height) + '" fill="' + colour + '"/><text x="' +
-                             fixed((from + to) / 2) + '" y="' +
-                             fixed(BODY_FRAME.middle + MUSCLE_AREA.label) +
-                             '" text-anchor="middle" style="font-size:' +
-                             fixed(MUSCLE_AREA.size / zoom) + 'px">' + escapeText(name) + '</text>';
-                    })
-                    .join('') +
-                '</g>'
-          : '';
-  const svg =
-      bands +
-      [...sites.values() ]
-          .map(({point, keys}) => {
-            const entries = [...keys ];
-            const H = HINT_RING, length = 2 * Math.PI * H.radius, span = length / entries.length;
-            const arcs =
-                entries
-                    .map((key, i) => {
-                      const color = labels.get(key).colour;
-                      const dash = entries.length === 1 ? length : Math.max(0, span - H.gap);
-                      return '<circle r="' + H.radius + '" fill="none" stroke="' + color +
-                             '" stroke-width="' + H.width + '" stroke-dasharray="' + fixed(dash) +
-                             ' ' + fixed(length - dash) + '" stroke-dashoffset="' +
-                             fixed(-i * span) + '" transform="rotate(-90)"/>';
-                    })
-                    .join('');
-            return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + arcs + '</g>';
-          })
-          .join('');
-  return {svg, legend : labels.size > 1 ? [...labels.values() ] : []};
+  return {
+    svg : muscleBands(state, areas, labels, zoom) +
+              [...sites.values() ].map(site => hintRing(site, labels, zoom)).join(''),
+    legend : labels.size > 1 ? [...labels.values() ] : []
+  };
 }
 // A muscle's area reaches PAD past its outer places; its name stands LABEL below the midline,
 // SIZE pixels high on screen.

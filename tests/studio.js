@@ -99,11 +99,14 @@ function semanticFingerprint(source) {
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   const model = await import('../ui/studio/model/document.js');
-  // The scene, the hints while placing and the organs' names, as one view of the fish.
+  // The scene, the hints while placing, where organs are drawn and their names, as one view of the
+  // fish.
   const views = {
     ...await import('../ui/studio/view/scene.js'),
     ...await import('../ui/studio/view/placing.js'),
-    ...await import('../ui/studio/view/body.js')
+    ...await import('../ui/studio/view/body.js'),
+    ...await import('../ui/studio/view/places.js'),
+    ...await import('../ui/studio/view/names.js')
   };
   // The inspector, the library and the substances' graphics, as one view of the panels.
   const panels = {
@@ -1003,7 +1006,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(actual[RECEPTOR.view_right] * 180 / Math.PI - ray.right) < .001);
   }
   // The scene: a fixed abstract fish with the organs' glyphs, the field with the engine's cells.
-  const body = await import('../ui/studio/view/body.js');
   const rendered = {
     ...state,
     anatomy : seen,
@@ -1027,7 +1029,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.match(svg, /class="aid-retina-node/, 'The chosen eye shows its cells as nodes');
   assert.doesNotMatch(svg, /NaN|Infinity|undefined/);
   for (const c of model.allCenters(doc)) {
-    const p = body.nodeLocation(doc, sites, c, c.organType);
+    const p = views.nodeLocation(doc, sites, c, c.organType);
     assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
   }
   for (const type of ['eye', 'proximity', 'muscle', 'eggs', 'sperm', 'gland'])
@@ -1035,7 +1037,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
               type + ' remains selectable');
   assert.deepEqual(vision.visionGeometry(rendered, currentEye).origin,
-                   body.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
+                   views.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
   const withoutOptions = structuredClone(doc);
   delete withoutOptions.compiler;
@@ -1319,11 +1321,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.closestSiteDoing(muscle, MOTOR_KIND.forward, sites, held, {x : 850, y : 360});
     assert.ok(free && !held.has(free.id) && functionFor(muscle, free) === MOTOR_KIND.forward,
               'The nearest free place doing the work asked for');
-    const bodyView = await import('../ui/studio/view/body.js');
-    const regionTarget =
-        bodyView.placementTarget(model.newDocument(''), 'tectum', {x : 300, y : 330});
+    const regionTarget = views.placementTarget(model.newDocument(''), 'tectum', {x : 300, y : 330});
     assert.equal(regionTarget.snap, Infinity, 'A region goes to its home from any distance');
-    const freeTarget = bodyView.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
+    const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
     assert.deepEqual(freeTarget.position, {x : 300, y : 330});
     // A selection becomes a module; ungrouping keeps its parts.
     const grouped = model.assembleSelection(gutDoc.document, new Set([ gutDoc.organId ]));

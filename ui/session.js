@@ -31,18 +31,19 @@ export function matchesObservation(context, response = {}) {
 export async function importGenome(file) {
   if (file.size > GENOME_IMPORT.max_bytes)
     throw Error(t('session.genomZuGross', {bytes : formatNumber(GENOME_IMPORT.max_bytes)}));
-  const response = await request(ROUTE.command, {
-    method : 'POST',
-    headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-    body : JSON.stringify(
-        {command : 'population-import', name : file.name, genome : await file.text()})
-  },
-                                 GENOME_IMPORT.timeout_ms),
+  const response = await postJson(
+      ROUTE.command, {command : 'population-import', name : file.name, genome : await file.text()},
+      {timeout : GENOME_IMPORT.timeout_ms}),
         result = await response.json();
   if (!response.ok)
     throw Error(serverText(result.error));
   return result;
 }
+// A genome file saved for its eggs to be placed: the catalogue entry, which the reply names after
+// ARCHIVE_PREFIX.
+const ARCHIVE_PREFIX = /^archive:/;
+export const savedGenome = async file =>
+    String((await importGenome(file)).message).replace(ARCHIVE_PREFIX, '');
 // Requests give up after REQUEST_MS; feedback stays FEEDBACK_MS.
 const REQUEST_MS = 15000, FEEDBACK_MS = 5000;
 export async function request(url, options = {}, timeout = REQUEST_MS) {
@@ -97,13 +98,15 @@ export function serverText(reply) {
          (items.length ? format(list.intro, {list : items.join(', ')}) : '');
 }
 
+// A body posted as JSON with the session's token, within `timeout` ms; further options (a signal,
+// keepalive) go with the request.
+export function postJson(url, body, {timeout = REQUEST_MS, ...options} = {}) {
+  const headers = {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN};
+  return request(url, {...options, method : 'POST', headers, body : JSON.stringify(body)}, timeout);
+}
 export async function command(op, extra = {}) {
   try {
-    const r = await request(ROUTE.command, {
-      method : 'POST',
-      headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-      body : JSON.stringify({command : op, ...extra})
-    });
+    const r = await postJson(ROUTE.command, {command : op, ...extra});
     const d = await r.json();
     if (!r.ok)
       throw Error(serverText(d.error));

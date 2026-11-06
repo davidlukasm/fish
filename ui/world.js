@@ -7,7 +7,7 @@ import {brainState, closeBrain} from './brain.js';
 import {camera, cameraState, point} from './camera.js';
 import {canvas, ctx, el, text, uiIcon} from './dom.js';
 import {evolutionState, setView} from './evolution.js';
-import {command, importGenome} from './session.js';
+import {command, savedGenome} from './session.js';
 import {horizontalDelta, sceneState, wrapScreenX} from './state.js';
 import {ANIMAL_TOOLS, drawToolPalettePreview, MIXED_PLANTS} from './world_palette.js';
 import {showWorld} from './world_parameters.js';
@@ -689,8 +689,7 @@ export function bindGenomeImport() {
       return;
     button.disabled = true;
     try {
-      const result = await importGenome(file);
-      beginEggPlacement({saved : result.message.replace(/^archive:/, '')});
+      beginEggPlacement({saved : await savedGenome(file)});
     } catch (error) {
       text('error', error.message);
     } finally {

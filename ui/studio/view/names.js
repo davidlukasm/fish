@@ -1,8 +1,15 @@
-import {organTitle} from './body.js';
-import {joinParts, t} from '../../strings.js';
-import {ORGAN_BY_KEY} from '../model/organs.js';
+import {joinParts, t, tList} from '../../strings.js';
+import {MUSCLE_LABEL_INDEX, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {findCenter, findOrgan} from '../model/document.js';
 
+// An organ's name; a muscle's by what it does where it lies, when the sites are known.
+export function organTitle(organ, sites = null) {
+  const index = organ.type === 'muscle' && organ.centers
+                    ? MUSCLE_LABEL_INDEX.get(organFunction(organ, sites))
+                    : undefined;
+  return index === undefined ? t('studio.organs.' + organ.type)
+                             : tList('studio.muscleTitles')[index];
+}
 // What the scene calls its parts and how it colours them: centers, modules and the ends of
 // wires by name, organs by their category's tone.
 

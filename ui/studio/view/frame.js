@@ -256,3 +256,33 @@ export function cameraCoordinates(event, svg, camera) {
   const top = rect.top + (rect.height - box.height * scale) / 2;
   return {x : box.x + (event.clientX - left) / scale, y : box.y + (event.clientY - top) / scale};
 }
+// What grows at the head, as the engine's design view finds it and the Aquarium draws it: a
+// mouth where muscles suck or bite, as wide and deep as the jaw is long and with lips as thick
+// as they suck; teeth on each side of its rim where muscles bite there, as many, as long and as
+// blunt as the Aquarium grows them; and barbels where smell cells also feel touch. HEAD.mouth is
+// the mouth of a middle jaw, HEAD.lip its lips without suction, HEAD.tooth the base and reach
+// of a tooth at full biting power; the teeth of a side spread over HEAD.tooth_arc of the rim.
+// Behind the mouth the jaws run back JAW_BACK (for a middle jaw) to their hinges, JAW_SPREAD
+// further out, as thick as they bite (JAW_WIDTH, least and more at full power); the cheeks
+// swell CHEEK with suction; the throat, THROAT wide, leads back to THROAT_END, below the brain.
+// Suction draws INTAKE.lines streams of water into the mouth from LEAST plus SPAN at full
+// strength ahead, SPREAD times the mouth's height apart there and NARROW at the mouth.
+export const HEAD = Object.freeze({
+  mouth : [ 10, 20 ],
+  mouth_in : 12,
+  lip : 1.6,
+  tooth_arc : 1.4,
+  tooth : [ 5, 8 ],
+  jaw_back : 66,
+  jaw_spread : 14,
+  jaw_width : [ 3, 4 ],
+  cheek : [ 40, 16 ],
+  cheek_least : .6,
+  jaw_bow : 1.4,
+  throat : 10,
+  throat_end : 195,
+  intake : {lines : 5, least : 18, span : 46, spread : 1.7, bend : .45, gap : 3, narrow : .45},
+  barbel_root : [ 26, 15 ],
+  barbel_bend : [ 4, 46 ],
+  barbel_end : [ -14, 62 ]
+});

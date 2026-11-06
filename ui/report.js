@@ -2,13 +2,12 @@ import {PALETTE} from './palette.js';
 import {ROUTE} from './schema.js';
 import {SECOND_MS} from './units.js';
 import {t} from './strings.js';
-import {request} from './session.js';
 import {animalsState} from './animals.js';
 import {brainState, brainVisible} from './brain.js';
 import {cameraState} from './camera.js';
 import {canvas, chartContext, chartSize, ctx, el, text} from './dom.js';
 import {evolutionState} from './evolution.js';
-import {sessionState} from './session.js';
+import {postJson, sessionState} from './session.js';
 import {sceneState} from './state.js';
 import {draw} from './tank.js';
 import {diagnostics} from './diagnostics.js';
@@ -409,13 +408,7 @@ export class FpsReport {
     this.pending = true;
     const controller = new AbortController(),
           timeout = setTimeout(() => controller.abort(), REPORT.upload_timeout_ms);
-    request(ROUTE.fps_report, {
-      method : 'POST',
-      headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-      body : JSON.stringify(data),
-      keepalive : true,
-      signal : controller.signal
-    })
+    postJson(ROUTE.fps_report, data, {keepalive : true, signal : controller.signal})
         .then(async response => {
           await response.text();
           if (!response.ok)

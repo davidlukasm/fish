@@ -22,7 +22,7 @@ import {
 } from './view/frame.js';
 import {BODY_MAP, LAYER, organLabelPlace} from './view/scene.js';
 import {dataAttribute, fixed, pointText} from './view/markup.js';
-import {nodesAtZoom} from './view/body.js';
+import {nodesAtZoom} from './view/places.js';
 import {zoomStamp} from './view/shell.js';
 import {label} from './view/kit.js';
 import {arrowSize} from './view/wires.js';

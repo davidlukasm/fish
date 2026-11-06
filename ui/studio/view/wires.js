@@ -1,5 +1,5 @@
 import {clamp} from '../../units.js';
-import {eyeLocation, nodeLocation, organLocation, showsNodes} from './body.js';
+import {eyeLocation, nodeLocation, organLocation, showsNodes} from './places.js';
 import {escapeText, fixed, pointText} from './markup.js';
 import {joinParts, linkText, t} from '../../strings.js';
 import {

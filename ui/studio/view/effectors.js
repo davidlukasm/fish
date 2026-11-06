@@ -458,22 +458,25 @@ export function gutGraphic(state, organ, selected) {
                                 })
                           .join('')
                     : '';
-  return '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
-         '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
-         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-         '" data-effector-side="1" role="img" aria-label="' + escapeText(label('gut.title')) +
-         '">' +
-         '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube +
-         '"/>' + part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
-         part(food, dots) +
-         namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
-                    label('gut.handle'), [ label('gut.short'), label('gut.long') ]) +
-         '</svg>' +
-         (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>'
-                          : '') +
-         dietChart(state, 'gut') + '</div>';
+  return effectorBlock(
+      organ, code, 1, label('gut.title'),
+      '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
+          part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
+          part(food, dots) +
+          namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
+                     label('gut.handle'), [ label('gut.short'), label('gut.long') ]),
+      (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>' : '') +
+          dietChart(state, 'gut'));
 }
 
+// An effector's block: its graphic in the frame, named `title` and drawn for `side`, and what
+// stands below it.
+const effectorBlock = (organ, code, side, title, graphic, below) =>
+    '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
+    '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
+    '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
+    '" data-effector-side="' + side + '" role="img" aria-label="' + escapeText(title) + '">' +
+    graphic + '</svg>' + below + '</div>';
 // The readout under a muscle's graphic: its nodes and strength, and a hint where one helps.
 function readout(state, code, centers) {
   const strength = centers.reduce((sum, c) => sum + c.copies, 0) / ATELIER_LIMITS.max_copies;
@@ -595,14 +598,10 @@ export function effectorGraphic(state, organ) {
   }[code];
   if (!draw)
     return '';
-  return '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
-         '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
-         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-         '" data-effector-side="' + sideOf(organ) + '" role="img" aria-label="' +
-         escapeText(label('title.' + code)) + '">' + draw(state, organ, organ.centers, twin) +
-         '</svg>' + readout(state, code, organ.centers) +
-         (code === MOTOR_KIND.aggression ? dietChart(state, 'teeth') + dietChart(state, 'jaw')
-          : code === MOTOR_KIND.suction  ? dietChart(state, 'suction')
-                                         : '') +
-         '</div>';
+  return effectorBlock(
+      organ, code, sideOf(organ), label('title.' + code), draw(state, organ, organ.centers, twin),
+      readout(state, code, organ.centers) +
+          (code === MOTOR_KIND.aggression ? dietChart(state, 'teeth') + dietChart(state, 'jaw')
+           : code === MOTOR_KIND.suction  ? dietChart(state, 'suction')
+                                          : ''));
 }

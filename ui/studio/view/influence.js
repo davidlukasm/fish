@@ -1,4 +1,5 @@
-import {fishOutline, nodeLocation} from './body.js';
+import {fishOutline} from './body.js';
+import {nodeLocation} from './places.js';
 import {escapeText, fixed} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {t} from '../../strings.js';

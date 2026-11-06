@@ -12,8 +12,8 @@ import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
 import {beginEggPlacement} from '../world.js';
-import {HORMONE_EFFECT, ROUTE} from '../schema.js';
-import {request as sessionRequest, serverText} from '../session.js';
+import {HORMONE_EFFECT} from '../schema.js';
+import {postJson, savedGenome, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
   compileDocument,
@@ -36,7 +36,7 @@ import {
 import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME} from './view/frame.js';
 import {BODY_MAP, fishScene} from './view/scene.js';
-import {nodeLocation} from './view/body.js';
+import {nodeLocation} from './view/places.js';
 import {inspector} from './view/panels.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
@@ -56,6 +56,8 @@ const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 // The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
 // BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back.
 const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40;
+// A genome file ends in GENOME_SUFFIX; its name keeps letters, digits, umlauts, '-' and spaces.
+const GENOME_SUFFIX = '.genome', FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
 export class OrganStudio {
   constructor(root) {
     this.root = root;
@@ -127,12 +129,7 @@ export class OrganStudio {
     this.pressureChecked = null;
   }
   async api(body, timeout = API_WAIT.usual) {
-    const response = await sessionRequest(API, {
-      method : 'POST',
-      headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-      body : JSON.stringify(body)
-    },
-                                          timeout);
+    const response = await postJson(API, body, {timeout});
     const payload = await response.json();
     if (!response.ok || !payload.ok)
       throw new Error(typeof payload.error === 'string' ? payload.error
@@ -543,24 +540,18 @@ export class OrganStudio {
     if (!acceptedGenome(this.state) || !this.state.report?.viable)
       return;
     try {
-      const response = await sessionRequest(ROUTE.command, {
-        method : 'POST',
-        headers : {'Content-Type' : 'application/json', 'X-Fish-Token' : window.FISH_TOKEN},
-        body : JSON.stringify({
-          command : 'population-import',
-          genome : this.state.genome,
-          name : this.state.document.name + '.genome'
-        })
-      },
-                                            API_WAIT.long);
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(serverText(result.error));
+      const saved = await savedGenome(new File([ this.state.genome ], this.genomeFileName()));
       this.navigate('aquarium');
-      beginEggPlacement({saved : String(result.message).replace(/^archive:/, '')});
+      beginEggPlacement({saved});
     } catch (error) {
       this.notice(error.message);
     }
+  }
+  // The genome's file name: the design's name, or the default one, with what a file name may not
+  // hold replaced.
+  genomeFileName() {
+    return (this.state.document.name || label('app.fileName')).replace(FILE_NAME_UNSAFE, '_') +
+           GENOME_SUFFIX;
   }
   download() {
     if (!acceptedGenome(this.state))
@@ -569,8 +560,7 @@ export class OrganStudio {
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download =
-        (this.state.document.name || 'fisch').replace(/[^\w\-äöüÄÖÜ ]/g, '_') + '.genome';
+    a.download = this.genomeFileName();
     a.click();
     URL.revokeObjectURL(url);
   }

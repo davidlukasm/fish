@@ -1,13 +1,8 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
-import {
-  bodySvg,
-  nodeLocation,
-  organHitsSvg,
-  organLocation,
-  organTitle,
-  showsNodes
-} from './body.js';
+import {bodySvg, organHitsSvg} from './body.js';
+import {nodeLocation, organLocation, showsNodes} from './places.js';
+import {organTitle} from './names.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';

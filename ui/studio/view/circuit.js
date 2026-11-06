@@ -8,7 +8,7 @@ import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js
 import {namedText, t, tList} from '../../strings.js';
 import {ICON, icon, iconCells, label} from './kit.js';
 import {centerTitle} from './names.js';
-import {organTitle} from './body.js';
+import {organTitle} from './names.js';
 
 // A brain region's wiring in the inspector: its circuit plan, its slots and its settings.
 // A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
@@ -61,153 +61,186 @@ const CIRCUIT = Object.freeze({
 // third of the way from each end.
 const ARROW_BOX = 10, BEZIER_THIRD = 3;
 const circuitSide = organ => sideIndex(organ?.side);
-function regionCircuit(state, organ) {
-  const doc = state.document, C = CIRCUIT;
+// The region's nodes on both sides by id, each with its side and row.
+function circuitMembers(doc, organ) {
   const sides = [ organ, findOrgan(doc, organ.pair) ];
   if (circuitSide(organ) === 1)
     sides.reverse();
   const members = new Map();
   sides.forEach(o => o?.centers.forEach((center, index) => members.set(
                                             center.id, {side : circuitSide(o), index, center})));
-  // An organ outside stands as a whole, however many of its nodes the region hears.
-  const seen = new Set();
-  const links = routedLinks(doc, state.sites, true)
-                    .filter(l => members.has(l.from) || members.has(l.to))
-                    .map(l => ({
-                           ...l,
-                           from : members.has(l.from) ? l.from : wholeEndpoint(doc, l.from),
-                           to : members.has(l.to) ? l.to : wholeEndpoint(doc, l.to)
-                         }))
-                    .filter(l => !seen.has(l.from + '>' + l.to) && seen.add(l.from + '>' + l.to));
-  if (!links.length)
-    return '';
-  // Organs and centers outside the region, a row for each kind, inputs above and outputs below.
-  const outside = id => findOrgan(doc, id) ? {organ : findOrgan(doc, id)} : findCenter(doc, id);
-  const rowsOf = ids => {
-    const rows = [];
-    for (const id of ids) {
-      const end = outside(id), key = end.organ.type + ':' + (end.center?.key ?? '');
-      let row = rows.find(r => r.key === key);
-      if (!row)
-        rows.push(row = {key, end, ids : []});
-      row.ids.push(id);
+  return members;
+}
+// The region's connections; an organ outside stands as a whole, however many of its nodes the
+// region hears.
+function circuitLinks(state, members) {
+  const doc = state.document, seen = new Set();
+  return routedLinks(doc, state.sites, true)
+      .filter(l => members.has(l.from) || members.has(l.to))
+      .map(l => ({
+             ...l,
+             from : members.has(l.from) ? l.from : wholeEndpoint(doc, l.from),
+             to : members.has(l.to) ? l.to : wholeEndpoint(doc, l.to)
+           }))
+      .filter(l => !seen.has(l.from + '>' + l.to) && seen.add(l.from + '>' + l.to));
+}
+// Organs and centers outside the region, a row for each kind.
+const circuitEnd = (doc, id) =>
+    findOrgan(doc, id) ? {organ : findOrgan(doc, id)} : findCenter(doc, id);
+function endRows(doc, ids) {
+  const rows = [];
+  for (const id of ids) {
+    const end = circuitEnd(doc, id), key = end.organ.type + ':' + (end.center?.key ?? '');
+    let row = rows.find(r => r.key === key);
+    if (!row)
+      rows.push(row = {key, end, ids : []});
+    row.ids.push(id);
+  }
+  return rows;
+}
+// Ends of one row on one side fan out around their column; unpaired ones around the middle.
+function placeRows(doc, rows, top) {
+  const C = CIRCUIT, at = new Map();
+  const sideOf = id => {
+    const end = circuitEnd(doc, id);
+    return end.organ.pair && findOrgan(doc, end.organ.pair) ? circuitSide(end.organ) : null;
+  };
+  rows.forEach((row, r) => {
+    for (const side of [0, 1, null]) {
+      const ids = row.ids.filter(id => sideOf(id) === side);
+      const column = side === null ? C.middle : side ? C.right : C.left;
+      const step = side === null ? C.spread : C.fan;
+      ids.forEach(
+          (id, k) => at.set(
+              id, {x : column + (k - (ids.length - 1) / 2) * step, y : top + r * C.row, side}));
     }
-    return rows;
-  };
-  const inputs = rowsOf([...new Set(links.filter(l => !members.has(l.from)).map(l => l.from)) ]);
-  const outputs = rowsOf([...new Set(links.filter(l => !members.has(l.to)).map(l => l.to)) ]);
-  // Ends of one row on one side fan out around their column; unpaired ones around the middle.
-  // An end that both feeds the region and is fed by it stands in both rows.
-  const count = organ.centers.length;
-  const place = (rows, top) => {
-    const at = new Map();
-    rows.forEach((row, r) => {
-      const sideOf = id => {
-        const end = outside(id);
-        return end.organ.pair && findOrgan(doc, end.organ.pair) ? circuitSide(end.organ) : null;
-      };
-      for (const side of [0, 1, null]) {
-        const ids = row.ids.filter(id => sideOf(id) === side);
-        const column = side === null ? C.middle : side ? C.right : C.left;
-        const step = side === null ? C.spread : C.fan;
-        ids.forEach(
-            (id, k) => at.set(
-                id, {x : column + (k - (ids.length - 1) / 2) * step, y : top + r * C.row, side}));
-      }
-    });
-    return at;
-  };
-  const inPos = place(inputs, C.top);
+  });
+  return at;
+}
+// Where everything stands: inputs above, the region's nodes in its rows, outputs below. An end
+// that both feeds the region and is fed by it stands in both rows.
+function circuitLayout(doc, organ, members, links) {
+  const C = CIRCUIT;
+  const inputs =
+      endRows(doc, [...new Set(links.filter(l => !members.has(l.from)).map(l => l.from)) ]);
+  const outputs = endRows(doc, [...new Set(links.filter(l => !members.has(l.to)).map(l => l.to)) ]);
+  const inPos = placeRows(doc, inputs, C.top);
   const nodeTop = C.top + inputs.length * C.row;
   const nodePos = new Map([...members ].map(
       ([
         id, m
       ]) => [id, {x : m.side ? C.right : C.left, y : nodeTop + m.index * C.row, side : m.side}]));
-  const outTop = nodeTop + count * C.row;
-  const outPos = place(outputs, outTop);
-  const fromPos = id => nodePos.get(id) ?? inPos.get(id);
-  const toPos = id => nodePos.get(id) ?? outPos.get(id);
-  const height = outTop + Math.max(0, outputs.length - 1) * C.row + C.bottom + C.node;
-  // Connections: a curve from end to end, bowing outward between nodes of one column.
-  const lines = links.map(l => {
-    const a = fromPos(l.from), b = toPos(l.to);
-    const crossing = a.side !== null && b.side !== null && a.side !== b.side;
-    const bow = a.x === b.x ? (a.x < C.middle ? -C.bend : C.bend) : 0;
-    // A link of the region's own plan can be taken out and put back with a click.
-    const own = l.wire.inner ? ' data-inner-link="' + escapeText(l.key) + '" data-organ-id="' +
-                                   escapeText(organ.id) + '"'
-                             : '';
-    return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
-           (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x +
-           ' ' + a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / BEZIER_THIRD) + ' ' +
-           (b.x + bow) + ' ' + fixed(b.y - (b.y - a.y) / BEZIER_THIRD) + ' ' + b.x + ' ' + b.y +
-           '" marker-end="url(#aid-circuit-arrow)"><title>' +
-           (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut')
-                         : '') +
-           '</title></path>';
-  });
-  // A wire's side guidance beside the midline, between the rows it joins.
-  const wires = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
-  const glyphs = wires.map(wire => {
-    const ys = links.filter(l => l.wire === wire).flatMap(l => [fromPos(l.from).y, toPos(l.to).y]);
-    const y = fixed((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
-    return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
-           '" transform="translate(' + x + ' ' + y + ')"><title>' + pairingTitle(wire) +
-           '</title><rect x="-' + C.glyph + '" y="-' + C.glyph + '" width="' + 2 * C.glyph +
-           '" height="' + 2 * C.glyph + '" rx="' + C.round + '"/>' +
-           placedGlyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {}, {box : PAIRING_BOX}) + '</g>';
-  });
-  // An organ shows as its icon and name; a center of the brain as its own glyph and name.
-  const brainCenter = end => end.center && end.organ.type === 'brain';
-  const endTitle = end => brainCenter(end) ? centerTitle(end.center) : organTitle(end.organ);
-  const ends = (rows, at) => rows.flatMap(row => row.ids.map(id => {
-    const p = at.get(id), end = outside(id);
-    return '<g class="aid-circuit-organ" ' +
-           (brainCenter(end) ? 'data-select-center="' + escapeText(end.center.id)
-                             : 'data-select-organ="' + escapeText(end.organ.id)) +
-           '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' + escapeText(endTitle(end)) +
-           '</title><circle r="' + C.organ + '"/>' +
-           (brainCenter(end)
-                ? centerMarker(end.center, C.marker)
-                : '<g transform="translate(' + -ICON.circuit / 2 + ' ' + -ICON.circuit / 2 + ')">' +
-                      icon(end.organ.type, ICON.circuit) + '</g>') +
-           '</g>';
-  }));
-  const rowLabels = (rows, at) =>
-      rows.map(row => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
-                      (at.get(row.ids[0]).y + C.baseline) + '" text-anchor="end">' +
-                      escapeText(endTitle(row.end)) + '</text>');
-  // A node that learns from a substance wears a ring in its colour, as on the fish.
-  const nodes = [...members ].map(([ id, m ]) => {
-    const p = nodePos.get(id);
-    const teacher = state.capabilities ? teachersOf(doc, m.center, state.capabilities)[0] : null;
-    return '<g class="aid-circuit-node" data-select-center="' + escapeText(id) +
-           '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
-           escapeText(centerTitle(m.center)) + '</title>' +
-           (teacher ? '<circle class="aid-circuit-teach" r="' + (C.node + C.teach) +
-                          '" style="--substance:' + substanceColor(teacher.substance.index) + '"/>'
-                    : '') +
-           '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
-  });
-  const nodeLabels =
-      organ.centers.map((center, i) => '<text class="aid-circuit-label" x="' + C.label + '" y="' +
-                                       (nodeTop + i * C.row + C.baseline) + '" text-anchor="end">' +
-                                       escapeText(centerTitle(center)) + '</text>');
-  return '<svg class="aid-circuit" viewBox="0 0 ' + C.width + ' ' + height +
-         '" role="img" aria-label="' + label('inspector.region.circuit') +
-         '"><defs><marker id="aid-circuit-arrow" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
-         '" refX="' + fixed(ARROW_BOX + C.node * ARROW_BOX / C.arrow) + '" refY="' + ARROW_BOX / 2 +
-         '" markerUnits="userSpaceOnUse" markerWidth="' + C.arrow + '" markerHeight="' + C.arrow +
-         '" orient="auto"><path d="M0 0 L' + ARROW_BOX + ' ' + ARROW_BOX / 2 + ' L0 ' + ARROW_BOX +
-         ' Z"/></marker></defs>' +
-         '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
+  const outTop = nodeTop + organ.centers.length * C.row;
+  const outPos = placeRows(doc, outputs, outTop);
+  return {
+    inputs,
+    outputs,
+    inPos,
+    outPos,
+    nodePos,
+    nodeTop,
+    from : id => nodePos.get(id) ?? inPos.get(id),
+    to : id => nodePos.get(id) ?? outPos.get(id),
+    height : outTop + Math.max(0, outputs.length - 1) * C.row + C.bottom + C.node
+  };
+}
+// A connection: a curve from end to end, bowing outward between nodes of one column. A link of
+// the region's own plan can be taken out and put back with a click.
+function circuitLink(organ, l, a, b) {
+  const C = CIRCUIT;
+  const crossing = a.side !== null && b.side !== null && a.side !== b.side;
+  const bow = a.x === b.x ? (a.x < C.middle ? -C.bend : C.bend) : 0;
+  const own = l.wire.inner ? ' data-inner-link="' + escapeText(l.key) + '" data-organ-id="' +
+                                 escapeText(organ.id) + '"'
+                           : '';
+  return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
+         (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x + ' ' +
+         a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / BEZIER_THIRD) + ' ' +
+         (b.x + bow) + ' ' + fixed(b.y - (b.y - a.y) / BEZIER_THIRD) + ' ' + b.x + ' ' + b.y +
+         '" marker-end="url(#aid-circuit-arrow)"><title>' +
+         (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut') : '') +
+         '</title></path>';
+}
+// A wire's side guidance beside the midline, between the rows it joins.
+function pairingMark(wire, links, layout) {
+  const C = CIRCUIT;
+  const ys =
+      links.filter(l => l.wire === wire).flatMap(l => [layout.from(l.from).y, layout.to(l.to).y]);
+  const y = fixed((Math.min(...ys) + Math.max(...ys)) / 2), x = C.middle;
+  return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
+         '" transform="translate(' + x + ' ' + y + ')"><title>' + pairingTitle(wire) +
+         '</title><rect x="-' + C.glyph + '" y="-' + C.glyph + '" width="' + 2 * C.glyph +
+         '" height="' + 2 * C.glyph + '" rx="' + C.round + '"/>' +
+         placedGlyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {}, {box : PAIRING_BOX}) + '</g>';
+}
+// An organ outside shows as its icon and name; a center of the brain as its own glyph and name.
+const brainCenter = end => end.center && end.organ.type === 'brain';
+const endTitle = end => brainCenter(end) ? centerTitle(end.center) : organTitle(end.organ);
+const circuitEnds = (doc, rows, at) => rows.flatMap(row => row.ids.map(id => {
+  const C = CIRCUIT, p = at.get(id), end = circuitEnd(doc, id);
+  return '<g class="aid-circuit-organ" ' +
+         (brainCenter(end) ? 'data-select-center="' + escapeText(end.center.id)
+                           : 'data-select-organ="' + escapeText(end.organ.id)) +
+         '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' + escapeText(endTitle(end)) +
+         '</title><circle r="' + C.organ + '"/>' +
+         (brainCenter(end)
+              ? centerMarker(end.center, C.marker)
+              : '<g transform="translate(' + -ICON.circuit / 2 + ' ' + -ICON.circuit / 2 + ')">' +
+                    icon(end.organ.type, ICON.circuit) + '</g>') +
+         '</g>';
+}));
+const circuitLabel = (y, text) => '<text class="aid-circuit-label" x="' + CIRCUIT.label + '" y="' +
+                                  (y + CIRCUIT.baseline) + '" text-anchor="end">' +
+                                  escapeText(text) + '</text>';
+const rowLabels = (rows, at) =>
+    rows.map(row => circuitLabel(at.get(row.ids[0]).y, endTitle(row.end)));
+// A node that learns from a substance wears a ring in its colour, as on the fish.
+function circuitNode(state, id, m, p) {
+  const C = CIRCUIT;
+  const teacher =
+      state.capabilities ? teachersOf(state.document, m.center, state.capabilities)[0] : null;
+  return '<g class="aid-circuit-node" data-select-center="' + escapeText(id) +
+         '" transform="translate(' + p.x + ' ' + p.y + ')"><title>' +
+         escapeText(centerTitle(m.center)) + '</title>' +
+         (teacher ? '<circle class="aid-circuit-teach" r="' + (C.node + C.teach) +
+                        '" style="--substance:' + substanceColor(teacher.substance.index) + '"/>'
+                  : '') +
+         '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
+}
+// The arrowhead at a connection's end, and the frame: the midline and the sides' names.
+const arrowMarker = () =>
+    '<defs><marker id="aid-circuit-arrow" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
+    '" refX="' + fixed(ARROW_BOX + CIRCUIT.node * ARROW_BOX / CIRCUIT.arrow) + '" refY="' +
+    ARROW_BOX / 2 + '" markerUnits="userSpaceOnUse" markerWidth="' + CIRCUIT.arrow +
+    '" markerHeight="' + CIRCUIT.arrow + '" orient="auto"><path d="M0 0 L' + ARROW_BOX + ' ' +
+    ARROW_BOX / 2 + ' L0 ' + ARROW_BOX + ' Z"/></marker></defs>';
+const circuitFrame = height => {
+  const C = CIRCUIT;
+  return '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
          '" y2="' + height + '"/><text class="aid-circuit-side" x="' + C.left + '" y="' + C.side_y +
          '" text-anchor="middle">' + label('inspector.side.left') +
          '</text><text class="aid-circuit-side" x="' + C.right + '" y="' + C.side_y +
-         '" text-anchor="middle">' + label('inspector.side.right') + '</text>' + lines.join('') +
-         rowLabels(inputs, inPos).join('') + rowLabels(outputs, outPos).join('') +
-         nodeLabels.join('') + ends(inputs, inPos).join('') + ends(outputs, outPos).join('') +
-         nodes.join('') + glyphs.join('') + '</svg>';
+         '" text-anchor="middle">' + label('inspector.side.right') + '</text>';
+};
+function regionCircuit(state, organ) {
+  const doc = state.document, members = circuitMembers(doc, organ);
+  const links = circuitLinks(state, members);
+  if (!links.length)
+    return '';
+  const L = circuitLayout(doc, organ, members, links);
+  const pairings = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
+  return '<svg class="aid-circuit" viewBox="0 0 ' + CIRCUIT.width + ' ' + L.height +
+         '" role="img" aria-label="' + label('inspector.region.circuit') + '">' + arrowMarker() +
+         circuitFrame(L.height) +
+         links.map(l => circuitLink(organ, l, L.from(l.from), L.to(l.to))).join('') +
+         rowLabels(L.inputs, L.inPos).join('') + rowLabels(L.outputs, L.outPos).join('') +
+         organ.centers
+             .map((center, i) => circuitLabel(L.nodeTop + i * CIRCUIT.row, centerTitle(center)))
+             .join('') +
+         circuitEnds(doc, L.inputs, L.inPos).join('') +
+         circuitEnds(doc, L.outputs, L.outPos).join('') +
+         [...members ].map(([ id, m ]) => circuitNode(state, id, m, L.nodePos.get(id))).join('') +
+         pairings.map(wire => pairingMark(wire, links, L)).join('') + '</svg>';
 }
 // An organ's or region's slots, each with the organs filling it or marked free (and needed, when
 // it needs one there).

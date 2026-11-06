@@ -31,14 +31,8 @@ import {
 } from './model/document.js';
 import {cameraCoordinates} from './view/frame.js';
 import {dataAttribute, fixed} from './view/markup.js';
-import {
-  contactPatch,
-  outputMarks,
-  outputPatch,
-  stretchPatch,
-  wireMarks,
-  wirePatch
-} from './view/panels.js';
+import {contactPatch, outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
+import {stretchPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
   GROWTH,

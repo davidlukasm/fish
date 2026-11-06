@@ -13,7 +13,7 @@ import {sensitivityElement} from './sensitivity.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
-import {fieldOrigin} from './body.js';
+import {fieldOrigin} from './places.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 import {BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
 import {planOfUnit, unitOfPlan} from '../../tuning.js';

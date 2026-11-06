@@ -15,7 +15,7 @@ import {
 } from './model/document.js';
 import {nearFish, SNAP_DISTANCE} from './model/layout.js';
 import {cameraCoordinates} from './view/frame.js';
-import {placementTarget} from './view/body.js';
+import {placementTarget} from './view/places.js';
 import {label} from './view/kit.js';
 import {
   assemblyPreview,
