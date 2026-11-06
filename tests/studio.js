@@ -1343,7 +1343,31 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const exampleDoc =
         exampleModel.exampleDocument({fish : 'B', growth : 'W', food : 'F'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
-    assert.equal(exampleDoc.substances.length, 2);
+    assert.equal(exampleDoc.substances.length, 2); // Lookups by id and what a choice stands for.
+    assert.equal(layout.findSite(sites, sites[3].id), sites[3]);
+    assert.equal(model.findAssembly(grouped, grouped.assemblies[0].id), grouped.assemblies[0]);
+    assert.equal(model.findAssembly(grouped, 'none'), null);
+    const gutOrgan = model.findOrgan(gutDoc.document, gutDoc.organId);
+    assert.equal(model.chosenCenter(gutDoc.document, {kind : 'organ', id : gutOrgan.id}),
+                 gutOrgan.centers[0]);
+    assert.equal(model.chosenCenter(gutDoc.document, {kind : 'wire', id : gutOrgan.id}), null);
+    const organsModel = await import('../ui/studio/model/organs.js');
+    assert.ok(organsModel.isModulator({modulator : 1}) &&
+              !organsModel.isModulator({modulator : -1}));
+    // Icons share one drawing; a line icon is an outline in the text colour.
+    const glyphs = await import('../ui/glyph.js');
+    const line = glyphs.glyph('M0 0h24', {size : 16, paint : glyphs.linePaint()});
+    assert.match(line, /width="16" height="16" viewBox="0 0 24 24"/);
+    assert.match(line, /fill="none" stroke="currentColor" stroke-width="1.6"/);
+    assert.doesNotMatch(glyphs.glyph('M0 0h24'), /width=/, 'Without a size its style sizes it');
+    // Marks that keep their size on screen scale against the zoom; the view box follows the
+    // camera.
+    const frame = await import('../ui/studio/view/frame.js');
+    assert.equal(frame.zoomOf({camera : {zoom : 2}}), 2);
+    assert.equal(frame.zoomOf({}), 1);
+    assert.match(frame.steadyAt({x : 10, y : 20}, 2),
+                 /data-steady transform="translate\(10.00 20.00\) scale\(0.50\)"/);
+    assert.equal(frame.viewBoxOf({zoom : 1, ...frame.CAMERA_HOME}).split(' ').length, 4);
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

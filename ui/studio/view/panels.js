@@ -118,76 +118,80 @@ function driveMeaning(state, center) {
     idle : key === 'muscle'
   };
 }
+// Each organ's own graphics in its inspector, above what each of its nodes shows: a nose its
+// scent map (barbels grow where the head also feels by touch on the nose's side), the sacs and
+// the gut what fills them and what their pressure cells measure, effectors what they move, the
+// senses what they feel. An organ without graphics of its own shows its icon and name.
+const pressurePanel = (state, organ, center) =>
+    pressureGraphic(state, organ, center) + pressureNote(state, organ);
+const skinPanel = (state, organ, center) => contactField(center) + probeField(state, organ);
+const nervePanel = (state, organ, center) => nerveProperties(state, center);
+const ORGAN_PANELS = Object.freeze({
+  nose : (state, organ, center) => {
+    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + sideIndex(organ.side)];
+    return scentMap(organ, center) + '<p class="aid-hint">' +
+           label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
+           probeField(state, organ);
+  },
+  pigment : (state, organ, center) => pigmentInspector(state, organ, center),
+  gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ),
+  bladder : (state, organ, center) => bladderGraphic(organ, center) + pressureNote(state, organ),
+  muscle : (state, organ) => effectorGraphic(state, organ),
+  defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
+  gland : (state, organ, center) => glandProfile(state, center),
+  eggs : pressurePanel,
+  sperm : pressurePanel,
+  lateral : (state, organ) => lateralField(state, organ) + probeField(state, organ),
+  touch : skinPanel,
+  pain : skinPanel,
+  blood : (state, organ, center) => hormonePad(state, center),
+  brain : nervePanel
+});
+const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
+                                      icon(organ.type, ICON.metric) + '<span>' +
+                                      escapeText(organTitle(organ)) + '</span></div>';
+const organPanel = (state, organ, center) => (
+    ORGAN_PANELS[organ.type] ?? (isRegion(organ) ? nervePanel : organMetric))(state, organ, center);
+// An organ that recruits nodes sets them and their strength on its graphic; other effectors make
+// no more cells, only stronger ones.
+const cellCount = (organ, center) =>
+    ORGAN_BY_KEY[organ.type]?.nodes
+        ? ''
+        : '<div class="aid-cell-count-title">' +
+              label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +
+              ' <strong>' + center.copies + '</strong></div>' + iconCells(center.copies, center.id);
+// What a node answers: a sense cell to its stimulus and as it adapts; an effector's drive (a
+// muscle's also what it does); a nerve center rests, answers and fades, a pacemaker beats.
+const section = (title, body) =>
+    '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
+const sensorSection = (state, organ, center) =>
+    section(escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})),
+            sensorAnswer(state, center) + sensorAdaptation(state, center));
+const motorSection = (state, organ, center) =>
+    section(label('inspector.drive'),
+            driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
+                         {scale : biasScale(state), meaning : driveMeaning(state, center)})) +
+    (organ.type === 'muscle' ? muscleKind(state, center) : '');
+function nerveSection(state, organ, center) {
+  const rhythm = center.key === 'pacemaker';
+  const title = label(rhythm ? 'inspector.beat' : 'inspector.afterglow');
+  return section(
+      title,
+      driveElement(center, title,
+                   n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
+                   {scale : biasScale(state), rhythm}));
+}
+const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
-  let html = '';
   if (organ.field)
     return visionInspector(state, organ);
   if (isRegion(organ) && state.selected?.kind !== 'center')
     return regionSettings(state, organ);
-  if (organ.type === 'nose') {
-    // Barbels grow where the head also feels by touch on the nose's side.
-    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + sideIndex(organ.side)];
-    html += scentMap(organ, center) + '<p class="aid-hint">' +
-            label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
-            probeField(state, organ);
-  } else if (organ.type === 'pigment') {
-    html += pigmentInspector(state, organ, center);
-  } else if (organ.type === 'gut') {
-    html += gutGraphic(state, organ, center) + pressureNote(state, organ);
-  } else if (organ.type === 'bladder') {
-    html += bladderGraphic(organ, center) + pressureNote(state, organ);
-  } else if (organ.type === 'muscle') {
-    html += effectorGraphic(state, organ);
-  } else if (organ.type === 'defense') {
-    html += effectorGraphic(state, organ) + spineField(state, organ);
-  } else if (organ.type === 'gland') {
-    html += glandProfile(state, center);
-  } else if (organ.type === 'eggs' || organ.type === 'sperm') {
-    html += pressureGraphic(state, organ, center) + pressureNote(state, organ);
-  } else if (organ.type === 'lateral') {
-    html += lateralField(state, organ) + probeField(state, organ);
-  } else if ([ 'touch', 'pain' ].includes(organ.type)) {
-    html += contactField(center) + probeField(state, organ);
-  } else if (organ.type === 'blood') {
-    html += hormonePad(state, center);
-  } else if (organ.type === 'brain' || isRegion(organ)) {
-    html += nerveProperties(state, center);
-  } else {
-    html += '<div class="aid-organ-metric">' + icon(organ.type, ICON.metric) + '<span>' +
-            escapeText(organTitle(organ)) + '</span></div>';
-  }
-  if (center.role === 'nerve')
-    html += outgoingField(state, center);
-  // An organ that recruits nodes sets them and their strength on its graphic; other effectors
-  // make no more cells, only stronger ones.
-  if (!ORGAN_BY_KEY[organ.type]?.nodes)
-    html += '<div class="aid-cell-count-title">' +
-            label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +
-            ' <strong>' + center.copies + '</strong></div>' + iconCells(center.copies, center.id);
-  if (center.role === 'sensor') {
-    html += '<section class="aid-eye-section"><h4>' +
-            escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})) +
-            '</h4>' + sensorAnswer(state, center) + sensorAdaptation(state, center) + '</section>';
-  } else if (center.role === 'motor') {
-    html += '<section class="aid-eye-section"><h4>' + label('inspector.drive') + '</h4>' +
-            driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
-                         {scale : biasScale(state), meaning : driveMeaning(state, center)}) +
-            '</section>';
-    return organ.type === 'muscle' ? html + muscleKind(state, center) : html;
-  } else {
-    // A nerve center rests, answers and fades; a pacemaker beats.
-    const rhythm = center.key === 'pacemaker';
-    html +=
-        '<section class="aid-eye-section"><h4>' +
-        label(rhythm ? 'inspector.beat' : 'inspector.afterglow') + '</h4>' +
-        driveElement(center, label(rhythm ? 'inspector.beat' : 'inspector.afterglow'),
-                     n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
-                     {scale : biasScale(state), rhythm}) +
-        '</section>';
-  }
-  return html;
+  return organPanel(state, organ, center) +
+         (center.role === 'nerve' ? outgoingField(state, center) : '') + cellCount(organ, center) +
+         (ROLE_SECTIONS[center.role] ?? nerveSection)(state, organ, center);
 }
 // What a sensory center's cells sense, as the stimulus its answer is drawn over.
 function stimulusName(state, center) {

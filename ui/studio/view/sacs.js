@@ -37,78 +37,85 @@ const SAC = Object.freeze({
   // The wall's cells spread over ARC of a half turn from FROM on, CELL wide.
   wall_cells : {from : .65, arc : .7, cell : 4},
   // The valve stands at least SHUT open.
-  shut : .2
+  shut : .2,
+  // Without pressure cells the stretch line stands UNMEASURED of the way up.
+  unmeasured : .5
 });
 // A sperm's head, and its tail TAIL long in two waves WAVE high (a quarter of the tail each).
 const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4});
-export function pressureGraphic(state, organ, selected) {
-  const S = SAC, find = key => organ.centers.find(c => c.key === key);
-  const growth = find('growth'), release = find('release'), pressure = find('pressure');
-  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : .5;
-  const lineY = S.cy + S.ry - 2 * S.ry * stretch;
-  const half = y => S.rx * Math.sqrt(Math.max(0, 1 - ((y - S.cy) / S.ry) ** 2));
-  const chosen = center => center && selected?.id === center.id ? ' selected' : '';
-  const part = (center, body) => center ? '<g class="aid-sac-part' + chosen(center) +
-                                              '" data-select-center="' + escapeText(center.id) +
-                                              '"><title>' + escapeText(centerTitle(center)) +
-                                              '</title>' + body + '</g>'
-                                        : '';
-  // Gametes fill the sac from the bottom up to the stretch line, in rows.
+// The half width of the sac at height y.
+const sacHalf = y => SAC.rx * Math.sqrt(Math.max(0, 1 - ((y - SAC.cy) / SAC.ry) ** 2));
+// Gametes fill the sac from the bottom up to the stretch line at lineY, in rows: round eggs, or
+// sperm with a head and a wavy tail.
+function gametes(type, lineY) {
+  const S = SAC, R = S.rows;
   const gamete = (x, y) =>
-      organ.type === 'eggs'
+      type === 'eggs'
           ? '<circle class="aid-sac-egg" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
                 fixed(S.egg / S.egg_size) + '"/>'
           : '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
                 SPERM.head + '"/><path class="aid-sac-sperm" d="M' + fixed(x - SPERM.head) + ' ' +
                 fixed(y) + ' q' + -SPERM.tail / SPERM.quarters + ' ' + -SPERM.wave + ' ' +
                 -SPERM.tail / 2 + ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
-  let eggs = '';
-  const R = S.rows;
+  let html = '';
   for (let k = 0, y = S.cy + S.ry - S.egg * R.start; k < S.eggs && y > lineY; y -= S.egg * R.row) {
-    const reach = half(y) - S.egg * R.in;
+    const reach = sacHalf(y) - S.egg * R.in;
     for (let x = S.cx - reach; x <= S.cx + reach && k < S.eggs; x += S.egg * R.along, ++k)
-      eggs += gamete(x, y);
+      html += gamete(x, y);
   }
-  const wallCells =
-      growth
-          ? Array
-                .from({length : growth.copies},
-                      (_, k) => {
-                        const W = S.wall_cells,
-                              a = Math.PI * (W.from + W.arc * k / Math.max(1, growth.copies - 1));
-                        return '<circle class="aid-sac-cell" cx="' +
-                               fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
-                               fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="' +
-                               S.wall_cells.cell + '"/>';
-                      })
-                .join('')
-          : '';
-  // The valve stands as open as the release cells work at rest.
-  const scale = biasScale(state);
+  return html;
+}
+// The growth cells along the sac's wall, one for each.
+function wallCells(growth) {
+  const S = SAC, W = S.wall_cells;
+  return Array
+      .from({length : growth.copies},
+            (_, k) => {
+              const a = Math.PI * (W.from + W.arc * k / Math.max(1, growth.copies - 1));
+              return '<circle class="aid-sac-cell" cx="' +
+                     fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
+                     fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="' + W.cell + '"/>';
+            })
+      .join('');
+}
+// The valve stands as open as the release cells work at rest.
+function valve(state, release) {
+  const S = SAC, scale = biasScale(state), vx = S.cx + S.rx;
   const open = release && scale ? Math.max(0, restLevel(release, scale)) / Math.tanh(scale) : 0;
-  const vx = S.cx + S.rx, valve = '<path class="aid-sac-valve" d="M' + vx + ' ' +
-                                  fixed(S.cy - S.valve * (S.shut + open)) + ' L' + (vx + S.valve) +
-                                  ' ' + S.cy + ' L' + vx + ' ' +
-                                  fixed(S.cy + S.valve * (S.shut + open)) + '"/>';
+  return '<path class="aid-sac-valve" d="M' + vx + ' ' + fixed(S.cy - S.valve * (S.shut + open)) +
+         ' L' + (vx + S.valve) + ' ' + S.cy + ' L' + vx + ' ' +
+         fixed(S.cy + S.valve * (S.shut + open)) + '"/>';
+}
+export function pressureGraphic(state, organ, selected) {
+  const S = SAC, find = key => organ.centers.find(c => c.key === key);
+  const growth = find('growth'), release = find('release'), pressure = find('pressure');
+  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : S.unmeasured;
+  const lineY = S.cy + S.ry - 2 * S.ry * stretch, vx = S.cx + S.rx;
+  const chosen = center => center && selected?.id === center.id ? ' selected' : '';
+  const part = (center, body) => center ? '<g class="aid-sac-part' + chosen(center) +
+                                              '" data-select-center="' + escapeText(center.id) +
+                                              '"><title>' + escapeText(centerTitle(center)) +
+                                              '</title>' + body + '</g>'
+                                        : '';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
          ' role="img">' +
          '<ellipse class="aid-sac-body" cx="' + S.cx + '" cy="' + S.cy + '" rx="' + S.rx +
-         '" ry="' + S.ry + '"/>' + eggs +
-         part(growth, wallCells + '<text x="' + (S.cx - S.rx) + '" y="' + (S.label) + '">' +
-                          label('centers.growth') + '</text>') +
-         part(release, valve + '<text x="' + (vx + S.valve) + '" y="' +
+         '" ry="' + S.ry + '"/>' + gametes(organ.type, lineY) +
+         part(growth, (growth ? wallCells(growth) : '') + '<text x="' + (S.cx - S.rx) + '" y="' +
+                          (S.label) + '">' + label('centers.growth') + '</text>') +
+         part(release, valve(state, release) + '<text x="' + (vx + S.valve) + '" y="' +
                            (S.cy - S.valve - S.label / 2) + '" text-anchor="end">' +
                            label('centers.release') + '</text>') +
-         part(pressure, '<line class="aid-sac-line" x1="' + fixed(S.cx - half(lineY)) + '" y1="' +
-                            fixed(lineY) + '" x2="' + fixed(S.cx + half(lineY)) + '" y2="' +
-                            fixed(lineY) + '"/><text x="' + fixed(S.cx) + '" y="' +
+         part(pressure, '<line class="aid-sac-line" x1="' + fixed(S.cx - sacHalf(lineY)) +
+                            '" y1="' + fixed(lineY) + '" x2="' + fixed(S.cx + sacHalf(lineY)) +
+                            '" y2="' + fixed(lineY) + '"/><text x="' + fixed(S.cx) + '" y="' +
                             fixed(lineY - S.label / 2) + '" text-anchor="middle">' +
                             label('inspector.stretch') + '</text>') +
-         (pressure
-              ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
-                    fixed(S.cx + half(lineY)) + '" cy="' + fixed(lineY) + '" r="' + S.handle + '"/>'
-              : '') +
+         (pressure ? '<circle class="aid-graphic-handle" data-stretch-handle cx="' +
+                         fixed(S.cx + sacHalf(lineY)) + '" cy="' + fixed(lineY) + '" r="' +
+                         S.handle + '"/>'
+                   : '') +
          '</svg>';
 }
 // The stretch line's filling at a pointer's height (fraction of the sac graphic).
