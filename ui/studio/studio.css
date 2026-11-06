@@ -628,7 +628,7 @@
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
-#aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
+#aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near):not(.selected),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
 .aid-pulse-fired{filter:drop-shadow(0 0 5px #f1e7a8aa)}
 .aid-pulse-active{filter:drop-shadow(0 0 10px #fff3b0)}
 .aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}

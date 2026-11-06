@@ -30,10 +30,11 @@ export const trialMethods = {
       const found = findCenter(doc, id);
       return found && found.organ.type === 'brain' ? id : found ? found.organ.id : id;
     };
-    const chosen = owner(selected.id), near = new Set([ chosen ]), wires = new Set();
+    const chosen = new Set([ selected.id, ...this.state.multi ].map(owner));
+    const near = new Set(chosen), wires = new Set();
     for (const link of routedLinks(doc, this.state.sites)) {
       const from = owner(link.from), to = owner(link.to);
-      if (from !== chosen && to !== chosen)
+      if (!chosen.has(from) && !chosen.has(to))
         continue;
       near.add(from);
       near.add(to);

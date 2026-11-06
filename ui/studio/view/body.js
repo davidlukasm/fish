@@ -7,7 +7,14 @@ import {
   sideOf,
   sideSign
 } from '../model/layout.js';
-import {centerIndex, groupReport, isChosen, organTypes, substanceRead} from '../model/document.js';
+import {
+  centerIndex,
+  findAssembly,
+  groupReport,
+  isChosen,
+  organTypes,
+  substanceRead
+} from '../model/document.js';
 import {substanceColor} from '../../hormones.js';
 import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
@@ -578,6 +585,14 @@ export function organHitsSvg(state) {
   }
   return '<g class="aid-organ-hits">' + html + '</g>';
 }
+// Chosen itself, or one of several organs chosen together or as a module.
+function organChosen(state, organ) {
+  const {selected} = state, own = id => id === organ.id || (!!organ.pair && id === organ.pair);
+  return selected?.kind === 'organ' && selected.id === organ.id ||
+         [...state.multi ?? [] ].some(own) ||
+         (selected?.kind === 'assembly' &&
+          (findAssembly(state.document, selected.id)?.organIds.some(own) ?? false));
+}
 const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
@@ -588,11 +603,10 @@ export function bodySvg(state) {
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (!glyph)
       continue;
-    const drawn =
-        '<g class="aid-anatomical-organ' +
-        (state.selected?.kind === 'organ' && state.selected.id === organ.id ? ' selected' : '') +
-        '" data-organ="' + escapeText(organ.id) + '"><title>' +
-        escapeText(organTitle(organ, state.sites)) + '</title>' + glyph + '</g>';
+    const drawn = '<g class="aid-anatomical-organ' +
+                  (organChosen(state, organ) ? ' selected' : '') + '" data-organ="' +
+                  escapeText(organ.id) + '"><title>' + escapeText(organTitle(organ, state.sites)) +
+                  '</title>' + glyph + '</g>';
     if (organ.type === 'gut')
       gut += drawn;
     else
