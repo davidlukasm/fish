@@ -20,8 +20,10 @@ import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
 const NEW_DOCUMENT = 'v019-fish-atelier';
+// A new part's id: its kind, the time and a serial number, written in base ID_RADIX.
+const ID_RADIX = 36;
 export const identifier = (kind = 'part') =>
-    `${kind}-${Date.now().toString(36)}-${(++serial).toString(36)}`;
+    `${kind}-${Date.now().toString(ID_RADIX)}-${(++serial).toString(ID_RADIX)}`;
 export const copy = object => structuredClone(object);
 
 // A receptor of no effect: full output, no other effect (the engine's neutral receptor). The

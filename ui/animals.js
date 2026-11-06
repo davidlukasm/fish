@@ -57,6 +57,7 @@ import {corpseFish, fishSkeletonPath} from './fish_painter.js';
 import {
   attributeInputs,
   attributeLayout,
+  clampedTexture,
   glsl,
   glslConstants,
   QUAD_VERTICES,
@@ -461,10 +462,7 @@ export class AnimalRenderer extends TankBatch {
     this.texture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.NEAREST);
-    for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
+    clampedTexture(gl, gl.NEAREST);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, ATLAS.width, ATLAS.height, 0, gl.RGBA, gl.FLOAT,
                   null);
     this.rows = new Map();

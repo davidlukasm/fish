@@ -15,6 +15,7 @@ import {canvas, ctx} from './dom.js';
 import {
   attributeInputs,
   attributeLayout,
+  clampedTexture,
   glsl,
   glslArray,
   glslConstants,
@@ -279,10 +280,7 @@ export function foodLightTexture(f) {
     const texture = gl.createTexture();
     particle_rendererState.tankLightField = {texture, revision : -1};
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR);
-    for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
+    clampedTexture(gl, gl.LINEAR);
   }
   const t = particle_rendererState.tankLightField;
   gl.bindTexture(gl.TEXTURE_2D, t.texture);

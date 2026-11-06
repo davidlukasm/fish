@@ -145,6 +145,14 @@ export function attributeInputs(attributes, first = 0) {
                `layout(location=${first + i}) in ${size > 1 ? 'vec' + size : 'float'} ${name};`)
       .join('\n');
 }
+// The bound 2D texture samples its texels with `filter` (gl.NEAREST or gl.LINEAR) and clamps at
+// its edges.
+export function clampedTexture(gl, filter) {
+  for (const parameter of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
+    gl.texParameteri(gl.TEXTURE_2D, parameter, filter);
+  for (const parameter of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
+    gl.texParameteri(gl.TEXTURE_2D, parameter, gl.CLAMP_TO_EDGE);
+}
 export function tankProgram(gl, vertex, fragment) {
   const {cache, key} = cachedTankProgram(gl, vertex, fragment);
   return cache.get(key) || finishTankProgram(gl, linkTankProgram(gl, vertex, fragment), cache, key);
@@ -1329,10 +1337,7 @@ class TankRenderer extends TankPath {
     gl.bindTexture(gl.TEXTURE_2D, entry.texture);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, dom);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    for (const param of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, param, gl.CLAMP_TO_EDGE);
+    clampedTexture(gl, gl.LINEAR);
     try {
       if (dom)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
@@ -1365,10 +1370,7 @@ class TankRenderer extends TankPath {
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, entry.texture);
-    for (const param of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-      gl.texParameteri(gl.TEXTURE_2D, param, gl.LINEAR);
-    for (const param of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-      gl.texParameteri(gl.TEXTURE_2D, param, gl.CLAMP_TO_EDGE);
+    clampedTexture(gl, gl.LINEAR);
     const resized = entry.width !== layer.width || entry.height !== layer.height;
     if (resized) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, layer.width, layer.height, 0, gl.RGBA,

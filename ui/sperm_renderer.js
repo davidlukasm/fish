@@ -1,6 +1,6 @@
 import {GAMETE} from './schema.js';
 import {CHANNEL_MAX} from './units.js';
-import {glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
+import {clampedTexture, glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
 import {canvas, ctx} from './dom.js';
 import {cameraState} from './camera.js';
 import {sceneState} from './state.js';
@@ -93,10 +93,7 @@ class SpermRenderer extends TankBatch {
       for (const k of [UNIT.before, UNIT.after]) {
         gl.activeTexture(gl.TEXTURE0 + k);
         gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
-        for (const a of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-          gl.texParameteri(gl.TEXTURE_2D, a, gl.NEAREST);
-        for (const a of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-          gl.texParameteri(gl.TEXTURE_2D, a, gl.CLAMP_TO_EDGE);
+        clampedTexture(gl, gl.NEAREST);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, nx, ny, 0, gl.RGBA, gl.FLOAT,
                       k === UNIT.after ? current : previous);
       }
@@ -106,10 +103,7 @@ class SpermRenderer extends TankBatch {
       this.ly = light?.rows || 1;
       gl.activeTexture(gl.TEXTURE0 + UNIT.light);
       gl.bindTexture(gl.TEXTURE_2D, this.textures[UNIT.light]);
-      for (const a of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-        gl.texParameteri(gl.TEXTURE_2D, a, gl.NEAREST);
-      for (const a of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-        gl.texParameteri(gl.TEXTURE_2D, a, gl.CLAMP_TO_EDGE);
+      clampedTexture(gl, gl.NEAREST);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, this.lx, this.ly, 0, gl.RED, gl.FLOAT, values);
       const resolution = SEDIMENT_MASK.resolution,
             geometry = sedimentGeometry(f, nx, ny, resolution);
@@ -117,10 +111,7 @@ class SpermRenderer extends TankBatch {
         this.geometry = geometry;
         gl.activeTexture(gl.TEXTURE0 + UNIT.barriers);
         gl.bindTexture(gl.TEXTURE_2D, this.textures[UNIT.barriers]);
-        for (const key of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-          gl.texParameteri(gl.TEXTURE_2D, key, gl.NEAREST);
-        for (const key of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-          gl.texParameteri(gl.TEXTURE_2D, key, gl.CLAMP_TO_EDGE);
+        clampedTexture(gl, gl.NEAREST);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, nx * resolution, ny * resolution, 0, gl.RGBA,
                       gl.UNSIGNED_BYTE, geometry.mask);
       }

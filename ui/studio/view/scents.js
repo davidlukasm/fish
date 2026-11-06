@@ -55,6 +55,7 @@ export function scentMapTuning(fx, fy) {
 export const scentMapWidth = fx => trackShare(fx * SCENT_MAP.size, SCENT_MAP.track);
 // The halo: the circle on the sphere `reach` radians around the preference, as a path; where it
 // holds the far pole, the map's rim closes it from outside.
+const POLE = 1e-9;
 function haloPath(q1, q2, reach) {
   const M = SCENT_MAP, rim = 'M' + (M.centre - M.radius) + ' ' + M.centre + ' a' + M.radius + ' ' +
                              M.radius + ' 0 1 0 ' + 2 * M.radius + ' 0 a' + M.radius + ' ' +
@@ -63,8 +64,9 @@ function haloPath(q1, q2, reach) {
     return rim;
   const h = clamp(q2, -1), r = Math.sqrt(1 - h * h), phi = Math.PI * (q1 + 1);
   const p = [ r * Math.cos(phi), r * Math.sin(phi), h ];
-  // Two directions across the sphere at the preference.
-  const east = r > 1e-9 ? [ -Math.sin(phi), Math.cos(phi), 0 ] : [ 0, 1, 0 ];
+  // Two directions across the sphere at the preference; at a pole (within POLE of it) any east
+  // will do.
+  const east = r > POLE ? [ -Math.sin(phi), Math.cos(phi), 0 ] : [ 0, 1, 0 ];
   const north = [
     p[1] * east[2] - p[2] * east[1], p[2] * east[0] - p[0] * east[2],
     p[0] * east[1] - p[1] * east[0]

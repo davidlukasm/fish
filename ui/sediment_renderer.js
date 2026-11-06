@@ -3,7 +3,14 @@ import {PLANT, PLANT_ROOT} from './schema.js';
 import {bedColor, algaeDisplay} from './plant_geometry.js';
 import {cameraState} from './camera.js';
 import {canvas, ctx} from './dom.js';
-import {attributeInputs, attributeLayout, glsl, QUAD_VERTICES, TankBatch} from './renderer.js';
+import {
+  attributeInputs,
+  attributeLayout,
+  clampedTexture,
+  glsl,
+  QUAD_VERTICES,
+  TankBatch
+} from './renderer.js';
 import {sceneState} from './state.js';
 import {displayLight} from './water_view.js';
 import {SEDIMENT_MASK} from './water_display.js';
@@ -212,10 +219,7 @@ export class SedimentCloudRenderer extends TankBatch {
     gl.activeTexture(gl.TEXTURE0 + 2);
     gl.bindTexture(gl.TEXTURE_2D, this.outputTexture);
     if (this.image?.width !== width || this.image?.height !== height) {
-      for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-        gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR);
-      for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-        gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
+      clampedTexture(gl, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       this.image =
           {width, height, tankTexture : {texture : this.outputTexture, width, height, flip : true}};
@@ -260,10 +264,7 @@ export class SedimentCloudRenderer extends TankBatch {
       gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
       if (k === 0 && this.revision !== sceneState.frameRevision ||
           k === 1 && this.geometry !== geometry) {
-        for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-          gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR);
-        for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-          gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
+        clampedTexture(gl, gl.LINEAR);
         if (k === 0)
           this.uploadScalar(0, s.columns, s.rows, s.amounts);
         else
@@ -314,10 +315,7 @@ class CloudLightRenderer extends SedimentCloudRenderer {
       gl.bindTexture(gl.TEXTURE_2D, this.textures[k]);
       if (k === 0 && this.revision !== sceneState.frameRevision ||
           k === 1 && this.clearKey !== clearKey) {
-        for (const p of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER])
-          gl.texParameteri(gl.TEXTURE_2D, p, gl.LINEAR);
-        for (const p of [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T])
-          gl.texParameteri(gl.TEXTURE_2D, p, gl.CLAMP_TO_EDGE);
+        clampedTexture(gl, gl.LINEAR);
         this.uploadScalar(k, l.columns, l.rows, k ? l.clear_values : l.values);
       }
     }

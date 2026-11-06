@@ -198,77 +198,98 @@ export function removeAssembly(doc, assemblyId) {
   draft.assemblies = draft.assemblies.filter(a => a.id !== assemblyId);
   return draft;
 }
-// Saved modules contain whole organs and selected neural regions. Recipes and semantic links
-// survive new identifiers; no partial retinal cell cloud is loaded or reconstructed.
-export function placeStoredModule(doc, module, sites, position, snapDistance = Infinity) {
+// A stored module's organs with nodes, if it is well formed and every organ is of a known type
+// on known sites; null otherwise.
+function storedOrgans(module, sites) {
   if (!module || !Array.isArray(module.organs) || !Array.isArray(module.wires))
     return null;
-  const originals = module.organs.filter(o => o.centers?.length);
-  if (!originals.length)
+  const organs = module.organs.filter(o => o.centers?.length);
+  const known = organs.every(o => ORGAN_BY_KEY[o.type] &&
+                                  o.centers.every(c => sites.some(s => s.id === c.site)));
+  return organs.length && known ? organs : null;
+}
+// The brain's nodes of a stored module, each placed anew near where it stood (`offset`) with its
+// settings; `mapping` learns their new ids. The new draft and the ids, or null where one finds
+// no room.
+function placeStoredNeurons(draft, original, sites, offset, snapDistance, mapping) {
+  const ids = [];
+  for (const previous of original.centers) {
+    const at = offset(sitePoint(findSite(sites, previous.site), 'brain'));
+    const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
+    if (!placed)
+      return null;
+    draft = placed.document;
+    const fresh = findCenter(draft, placed.centerId).center;
+    Object.assign(fresh, copy(previous), {id : placed.centerId, site : fresh.site});
+    mapping.set(previous.id, fresh.id);
+    ids.push(fresh.id);
+  }
+  return {draft, ids};
+}
+// A stored organ placed anew near where it stood, with its settings: a field organ its field and
+// nodes, a region its plan (its nodes take what was made of them), any other its nodes' settings
+// by kind. The new draft and the placed organ, or null.
+function placeStoredOrgan(doc, draft, original, sites, offset, snapDistance) {
+  const at = offset(sitePoint(findSite(sites, original.centers[0].site), original.type));
+  const added = addOrgan(draft, original.type, sites, at, snapDistance, false);
+  if (!added || doc.organs.some(o => o.id === added.organId))
     return null;
-  if (originals.some(o => !ORGAN_BY_KEY[o.type] ||
-                          o.centers.some(c => !sites.some(s => s.id === c.site))))
+  draft = added.document;
+  const fresh = findOrgan(draft, added.organId);
+  const keep = (c, previous) => {
+    if (previous)
+      Object.assign(c, copy(previous), {id : c.id, site : c.site});
+  };
+  if (original.field) {
+    fresh.field = copy(original.field);
+    fresh.centers =
+        original.centers.map(c => ({...copy(c), id : fresh.id + c.id.slice(original.id.length)}));
+    if (!regenerateFields(draft, sites))
+      return null;
+  } else if (original.region) {
+    fresh.region = {...copy(original.region), site : fresh.region.site};
+    draft = settleRegions(draft, sites);
+    for (const c of findOrgan(draft, fresh.id).centers)
+      keep(c, original.centers.find(p => p.node === c.node));
+  } else
+    for (const c of fresh.centers)
+      keep(c, original.centers.find(p => p.key === c.key));
+  return {draft, organ : findOrgan(draft, fresh.id)};
+}
+// Saved modules contain whole organs and selected neural regions. Recipes and semantic links
+// survive new identifiers; no partial retinal cell cloud is loaded or reconstructed. A module
+// with both sides of a pair keeps its sides where they are and moves along the body; a one-sided
+// one goes to the side it is dropped on.
+export function placeStoredModule(doc, module, sites, position, snapDistance = Infinity) {
+  const originals = storedOrgans(module, sites);
+  if (!originals)
     return null;
-  const points = originals.map(o => sitePoint(findSite(sites, o.centers[0].site), o.type));
-  const source = centroid(points);
-  // A module with both sides of a pair keeps its sides where they are and moves along the body;
-  // a one-sided one goes to the side it is dropped on.
+  const source =
+      centroid(originals.map(o => sitePoint(findSite(sites, o.centers[0].site), o.type)));
   const bothSides = originals.some(o => originals.some(other => other.id === o.pair));
   const offset = p =>
       ({x : p.x + position.x - source.x, y : bothSides ? p.y : p.y + position.y - source.y});
   let draft = copy(doc);
   const mapping = new Map(), organIds = [], centerIds = [];
   for (const original of originals) {
-    if (!ORGAN_BY_KEY[original.type])
-      return null;
     if (original.type === 'brain') {
-      for (const previous of original.centers) {
-        const at = offset(sitePoint(findSite(sites, previous.site), 'brain'));
-        const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
-        if (!placed)
-          return null;
-        draft = placed.document;
-        const fresh = findCenter(draft, placed.centerId).center;
-        Object.assign(fresh, copy(previous), {id : placed.centerId, site : fresh.site});
-        mapping.set(previous.id, fresh.id);
-        centerIds.push(fresh.id);
-      }
+      const placed = placeStoredNeurons(draft, original, sites, offset, snapDistance, mapping);
+      if (!placed)
+        return null;
+      draft = placed.draft;
+      centerIds.push(...placed.ids);
       organIds.push('brain');
       continue;
     }
-    const at = offset(sitePoint(findSite(sites, original.centers[0].site), original.type));
-    const added = addOrgan(draft, original.type, sites, at, snapDistance, false);
-    if (!added || doc.organs.some(o => o.id === added.organId))
+    const placed = placeStoredOrgan(doc, draft, original, sites, offset, snapDistance);
+    if (!placed)
       return null;
-    draft = added.document;
-    const fresh = findOrgan(draft, added.organId);
-    if (original.field) {
-      fresh.field = copy(original.field);
-      fresh.centers =
-          original.centers.map(c => ({...copy(c), id : fresh.id + c.id.slice(original.id.length)}));
-      if (!regenerateFields(draft, sites))
-        return null;
-    } else if (original.region) {
-      // A region grows its plan from the stored settings; its nodes take what was made of them.
-      fresh.region = {...copy(original.region), site : fresh.region.site};
-      draft = settleRegions(draft, sites);
-      for (const c of findOrgan(draft, fresh.id).centers) {
-        const previous = original.centers.find(p => p.node === c.node);
-        if (previous)
-          Object.assign(c, copy(previous), {id : c.id, site : c.site});
-      }
-    } else
-      for (const c of fresh.centers) {
-        const previous = original.centers.find(p => p.key === c.key);
-        if (previous)
-          Object.assign(c, copy(previous), {id : c.id, site : c.site});
-      }
-    const placed = findOrgan(draft, fresh.id);
+    draft = placed.draft;
     for (const center of original.centers)
-      mapping.set(center.id, matchingNode(original, placed, center.id));
-    mapping.set(original.id, placed.id);
-    organIds.push(placed.id);
-    centerIds.push(...placed.centers.map(c => c.id));
+      mapping.set(center.id, matchingNode(original, placed.organ, center.id));
+    mapping.set(original.id, placed.organ.id);
+    organIds.push(placed.organ.id);
+    centerIds.push(...placed.organ.centers.map(c => c.id));
   }
   for (const original of originals) {
     const fresh = findOrgan(draft, mapping.get(original.id));
