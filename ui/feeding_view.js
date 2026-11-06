@@ -4,6 +4,7 @@ import {FOOD_SLOT, foodAmounts, foodKindOf, shownRate} from './nutrition_model.j
 import {compactNumber, formatNumber, percent, t, tList} from './strings.js';
 import {brainClamp} from './brain.js';
 import {el} from './dom.js';
+import {glyph, linePaint} from './glyph.js';
 import {DEATH_REASON, FOOD_KIND, HABITAT_ZONE, indexedBy, TOLERANCE} from './schema.js';
 import {KEY} from './keys.js';
 export const feeding_viewState = {};
@@ -33,15 +34,14 @@ const DEATH_ICONS = indexedBy(DEATH_REASON, {
       'M12 7a5 5 0 1 0 .01 0M12 2v5M12 17v5M2 12h5M17 12h5M5 5l3.5 3.5M15.5 15.5L19 19M19 5l-3.5 3.5M8.5 15.5L5 19'
 });
 
-// The cause as symbol and short name, coloured; the full count or note goes into the title.
+// The cause as symbol BADGE_ICON wide and short name, coloured; the full count or note goes into
+// the title.
+const BADGE_ICON = 16;
 export function deathBadge(cause, extra = '') {
   const badge = document.createElement('span');
   badge.className = 'death-badge';
   badge.style.color = DEATH_COLORS[cause];
-  badge.innerHTML =
-      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="' +
-      DEATH_ICONS[cause] +
-      '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  badge.innerHTML = glyph(DEATH_ICONS[cause], {size : BADGE_ICON, paint : linePaint()});
   const label = document.createElement('span');
   label.textContent = deathNames[cause] + extra;
   badge.append(label);

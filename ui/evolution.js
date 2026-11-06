@@ -1,4 +1,5 @@
 import {PALETTE} from './palette.js';
+import {FILL, glyph, linePaint} from './glyph.js';
 import {PERCENT} from './units.js';
 import {isActivation} from './keys.js';
 import {fishLabel, fishTitle} from './fish_names.js';
@@ -195,6 +196,8 @@ async function showFishPart(part) {
 // Inspection zooms to a fish at these sizes; the species list refreshes at most every
 // SPECIES_REFRESH ms.
 const ZOOM = Object.freeze({organs : 112, brain : 260}), SPECIES_REFRESH = 1500;
+// A species card's pin, PIN.size wide, filled while the card is pinned.
+const PIN = Object.freeze({icon : 'M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z', size : 16});
 // Profile changes: at most DELTA.count changes above DELTA.minimum are drawn as bars, origin
 // changes above ORIGIN_DELTA.minimum at most ORIGIN_DELTA.count.
 const DELTA = Object.freeze({minimum : .04, count : 5}),
@@ -601,9 +604,8 @@ export function renderSpecies(f, force = false) {
       const favorite = favoriteSpecies().has(s.id);
       star.setAttribute('aria-pressed', String(favorite));
       star.title = t(favorite ? 'evolution.favoritLoesen' : 'evolution.alsFavorit');
-      pin.innerHTML =
-          '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M8 3h8l-1 6 4 4v2h-6v6l-1 2-1-2v-6H5v-2l4-4z" fill="' +
-          (pinned ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.5"/></svg>';
+      pin.innerHTML = glyph(
+          PIN.icon, {size : PIN.size, paint : linePaint({fill : pinned ? FILL.ink : FILL.none})});
       pin.setAttribute('aria-label',
                        pinned ? t('evolution.karteLoesen') : t('evolution.karteAnheften'));
       pin.title =

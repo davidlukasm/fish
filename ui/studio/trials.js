@@ -154,11 +154,7 @@ export const trialMethods = {
   // along the wires from the stimulated ones.
   playPulse(centerIds, frames) {
     this.stopPulse();
-    if (this.state.contactView !== 'design') {
-      this.state.contactView = 'design';
-      for (const button of this.root.querySelectorAll('[data-contacts]'))
-        button.classList.toggle('active', button.dataset.contacts === 'design');
-    }
+    this.showDrawnContacts();
     if (!Array.isArray(frames) || !frames.length)
       return;
     // How far each part rose above and fell below where it stood at the first step.

@@ -41,6 +41,8 @@ export const sideOf = organ => sideSign(organ.side);
 const MIDLINE_BAND = 14;
 export const sideAt = point =>
     Math.abs(point.y - CENTRE_Y) < MIDLINE_BAND ? 0 : Math.sign(point.y - CENTRE_Y);
+// A site by its id.
+export const findSite = (sites, id) => sites.find(s => s.id === id);
 // A site lies off the midline by its depth (w), from INNER of the half width to INNER + SPAN, at
 // least LEAST and at most SKIN of the half width. Muscle sites deeper than FIN_ANCHOR.depth in the
 // trunk and the tail anchor the side fins and lie out in them, as far as the zone's entry says.

@@ -5,10 +5,10 @@ import {fishScene} from './scene.js';
 import {escapeText} from './markup.js';
 import {percent, t} from '../../strings.js';
 import {hormoneLibrary, library, toolPalette} from './library.js';
+import {label} from './kit.js';
 
 // The studio's frame: the hub that leads to the aquarium and the atelier, and the atelier's
 // station with its header, library, scene and inspector.
-const label = key => t('studio.' + key);
 const button = (attributes, text, {active = false, disabled = false, cls = ''} = {}) =>
     '<button ' + attributes +
     (active || cls ? ' class="' + [ cls, active ? 'active' : '' ].filter(Boolean).join(' ') + '"'

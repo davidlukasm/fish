@@ -19,6 +19,7 @@ import {
   compileDocument,
   compilerOptions,
   connectSelections,
+  findAssembly,
   findCenter,
   findOrgan,
   identifier,
@@ -32,7 +33,7 @@ import {
   updateField,
   validateDocument
 } from './model/document.js';
-import {centroid} from './model/layout.js';
+import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME} from './view/frame.js';
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/body.js';
@@ -207,16 +208,19 @@ export class OrganStudio {
     this.state.mode = mode;
     this.renderShell();
   }
+  // The scene shows the contacts as drawn, not as the developed fish made them.
+  showDrawnContacts() {
+    this.state.contactView = 'design';
+    for (const button of this.root.querySelectorAll('[data-contacts]'))
+      button.classList.toggle('active', button.dataset.contacts === 'design');
+  }
   setTool(tool) {
     this.pendingWire = null;
     this.state.tool = tool;
     if (tool === 'wire')
       this.clearStimulus();
-    if (tool === 'wire' && this.state.contactView !== 'design') {
-      this.state.contactView = 'design';
-      for (const button of this.root.querySelectorAll('[data-contacts]'))
-        button.classList.toggle('active', button.dataset.contacts === 'design');
-    }
+    if (tool === 'wire')
+      this.showDrawnContacts();
     if (tool === 'learn' && ![HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning,
                               HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition]
                                  .includes(this.state.effect))
@@ -241,16 +245,15 @@ export class OrganStudio {
     scroll.dataset.library = hormones ? 'hormones' : 'organs';
   }
   wirePoint(selection) {
-    const points =
-        selectionCenters(this.state.document, selection)
-            .map(id => {
-              const found = findCenter(this.state.document, id);
-              const site = this.state.sites.find(candidate => candidate.id === found?.center.site);
-              return site ? nodeLocation(this.state.document, this.state.sites, found.center,
-                                         found.organ.type)
-                          : null;
-            })
-            .filter(Boolean);
+    const points = selectionCenters(this.state.document, selection)
+                       .map(id => {
+                         const found = findCenter(this.state.document, id);
+                         const site = findSite(this.state.sites, found?.center.site);
+                         return site ? nodeLocation(this.state.document, this.state.sites,
+                                                    found.center, found.organ.type)
+                                     : null;
+                       })
+                       .filter(Boolean);
     if (!points.length)
       return null;
     return centroid(points);
@@ -404,7 +407,7 @@ export class OrganStudio {
     this.stopPulse();
     this.state.stimulus = null;
     this.state.stale = true;
-    this.state.contactView = 'design';
+    this.showDrawnContacts();
     this.state.measurement = null;
     this.state.genome = '';
     this.persist();
@@ -609,7 +612,7 @@ export class OrganStudio {
     clickOn(this, event, FISH_CLICKS);
   }
   async saveAssembly(id) {
-    const assembly = this.state.document.assemblies.find(a => a.id === id);
+    const assembly = findAssembly(this.state.document, id);
     if (!assembly)
       return;
     const name = moduleName(this.state.document, assembly);

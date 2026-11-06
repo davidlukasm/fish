@@ -1,8 +1,7 @@
 import {HORMONES} from '../schema.js';
-import {t} from '../strings.js';
 import {PAIRINGS} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
-import {sitePoint} from './model/layout.js';
+import {findSite, sitePoint} from './model/layout.js';
 import {toggleInnerLink, updateRegion} from './model/regions.js';
 import {
   addOrganType,
@@ -10,6 +9,7 @@ import {
   allCenters,
   assembleSelection,
   closestSiteDoing,
+  findAssembly,
   findCenter,
   findOrgan,
   GROWTH_START,
@@ -36,12 +36,12 @@ import {
   wheelPlace
 } from './model/document.js';
 import {BODY_MAP} from './view/scene.js';
+import {label} from './view/kit.js';
 
 // What a click in the studio does, by what it lands on. Each table lists selectors in the order
 // they are tried; the first one the click's target lies in handles it (studio, the element it
 // matched, the event), unless its handler returns PASS and lets the next ones try.
 export const PASS = Symbol('pass');
-const label = key => t('studio.' + key);
 export function clickOn(studio, event, table) {
   for (const [selector, handle] of table) {
     const element = event.target.closest?.(selector);
@@ -150,7 +150,7 @@ function clickItem(studio, element, event) {
     return wireItem(studio, kind, id);
   if (tool === 'stimulate') {
     const centers = kind === 'organ'      ? findOrgan(doc, id)?.centers.map(center => center.id)
-                    : kind === 'assembly' ? doc.assemblies.find(a => a.id === id)?.centerIds
+                    : kind === 'assembly' ? findAssembly(doc, id)?.centerIds
                     : kind === 'center'   ? [ id ]
                                           : [];
     if (centers?.length)
@@ -192,7 +192,7 @@ function startSlotWire(studio, element) {
 function moveMuscle(studio, element) {
   const doc = studio.state.document, sites = studio.state.sites;
   const found = findCenter(doc, element.dataset.centerId);
-  const here = sites.find(s => s.id === found?.center.site);
+  const here = findSite(sites, found?.center.site);
   const target = here && closestSiteDoing(found.center, Number(element.dataset.muscleFunction),
                                           sites, usedSites(doc), sitePoint(here), here.side);
   keepIfRoom(studio, target && moveOrgan(doc, found.organ.id, sites, sitePoint(target)));

@@ -1,15 +1,15 @@
 import {NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
 import {HALF_VIEW, bearing} from './retina.js';
-import {sitePoint} from './layout.js';
+import {findSite, sitePoint} from './layout.js';
 import {
   allCenters,
-  assemblyCenters,
   closestSite,
   defaults,
   expandedWires,
   findCenter,
   findOrgan,
   organOf,
+  settleAssemblies,
   usedSites
 } from './document.js';
 
@@ -85,7 +85,7 @@ function tectumPlan(doc, organ) {
   // A light cell reaches the map node of its direction and, with colours apart, of its colour
   // type; a near-sense cell the map node of its direction, of the first colour type.
   const route = (sites, cell, field) => {
-    const site = sites.find(s => s.id === cell.site);
+    const site = findSite(sites, cell.site);
     if (!site)
       return null;
     const band = Math.max(0, Math.min(bands - 1, Math.floor((bearing(site) - view.lo) / step)));
@@ -345,7 +345,7 @@ export function settleRegions(doc, sites) {
     const kept = new Map(organ.centers.map(c => [c.id, c]));
     const wanted = new Set(plan.nodes.map(n => regionNodeId(organ, n.node)));
     const used = usedSites(draft, c => c.organId !== organ.id || wanted.has(c.id));
-    const home = sites.find(s => s.id === organ.region.site);
+    const home = findSite(sites, organ.region.site);
     const near = home ? sitePoint(home) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
     // Where sites run short, what the region passes on comes first, then what it takes in.
@@ -388,8 +388,7 @@ export function settleRegions(doc, sites) {
     return doc;
   const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
   draft.wires = draft.wires.filter(w => ids.has(w.from) && ids.has(w.to));
-  for (const assembly of draft.assemblies)
-    assembly.centerIds = assemblyCenters(draft, assembly);
+  settleAssemblies(draft);
   return draft;
 }
 // A new node's cells, and what a preset makes of a node.

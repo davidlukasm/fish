@@ -3,6 +3,7 @@ import {
   BODY_MIDDLE,
   BODY_RADIUS,
   centroid,
+  findSite,
   sideAt,
   sideIndex,
   sideOf,
@@ -48,7 +49,6 @@ import {scentColors} from '../../brain_model.js';
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
 
-const lookup = (sites, id) => sites.find(s => s.id === id);
 // An organ's name; a muscle's by what it does where it lies, when the sites are known.
 export function organTitle(organ, sites = null) {
   const index = organ.type === 'muscle' && organ.centers
@@ -60,7 +60,7 @@ export function organTitle(organ, sites = null) {
 
 // Where a center lies: on its site of the abstract frame.
 function centerLocation(center, organType, sites) {
-  const site = lookup(sites, center.site);
+  const site = findSite(sites, center.site);
   return site ? sitePoint(site, organType) : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
 // The brain as the Atelier draws it: one place in the head where all brain regions lie as in a
@@ -182,7 +182,7 @@ export function placementTarget(doc, type, position) {
 // INSET inside the skin or OFF the throat; STALK is the tail stalk's stretch.
 const MUSCLE_AT = Object.freeze({inset : 30, off : 9, stalk : [ 770, 875 ], jaw : [ .3, .95 ]});
 function musclePoint(organ, index, sites) {
-  const first = organ.centers[0], site = sites.find(s => s.id === first?.site);
+  const first = organ.centers[0], site = findSite(sites, first?.site);
   const code = organFunction(organ, sites), side = sideOf(organ);
   const share = (index + .5) / Math.max(1, organ.centers.length), M = MUSCLE_AT, H = HEAD;
   const along = ([ from, to ]) => from + (to - from) * share;
@@ -296,7 +296,7 @@ export function showsNodes(state, organs) {
 // same point (they differ in depth alone) stand NODE.spread around it, each to be seen and
 // chosen.
 export function nodeLocation(doc, sites, center, organType) {
-  const site = lookup(sites, center.site);
+  const site = findSite(sites, center.site);
   if (organType === 'eye' && site) {
     const side = sideSign(site.side), eye = eyeLocation(doc, sites, side);
     if (eye) {
@@ -582,7 +582,7 @@ function skinSenseSvg(organ, sites) {
   const S = SKIN_SENSE;
   return organ.centers
       .map(center => {
-        const site = lookup(sites, center.site), side = sideSign(site?.side);
+        const site = findSite(sites, center.site), side = sideSign(site?.side);
         const {x} = centerLocation(center, organ.type, sites), skin = skinAt(x, side);
         const at = (dx, depth) => fixed(x + dx) + ' ' + fixed(skin - side * depth);
         const strokes =

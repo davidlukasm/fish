@@ -26,6 +26,7 @@ import {
 import {
   allCenters,
   contactBundle,
+  findAssembly,
   findCenter,
   findOrgan,
   groupReport,
@@ -34,7 +35,7 @@ import {
   wiredCrossing
 } from '../model/document.js';
 import {escapeText, fixed, glyph, padPoint, padValues, pointMarks, pointText} from './markup.js';
-import {onMidline, sideIndex} from '../model/layout.js';
+import {findSite, onMidline, sideIndex} from '../model/layout.js';
 import {
   formatNumber,
   formatSigned,
@@ -281,7 +282,7 @@ const biasScale = state => state.capabilities?.biasScale ?? 0;
 // What an effector's activity does above and below zero: a bladder fills and empties, a gland
 // secretes and binds, the others work or do nothing.
 function driveMeaning(state, center) {
-  const site = state.sites.find(s => s.id === center.site);
+  const site = findSite(state.sites, center.site);
   const code = site ? functionFor(center, site) : -1;
   const key = code === MOTOR_KIND.bladder ? 'bladder'
               : code === MOTOR_KIND.gland ? 'gland'
@@ -365,7 +366,7 @@ function organSettings(state, organ, center) {
 }
 // What a sensory center's cells sense, as the stimulus its answer is drawn over.
 function stimulusName(state, center) {
-  const site = state.sites.find(s => s.id === center.site);
+  const site = findSite(state.sites, center.site);
   return tList('studio.inspector.stimuli')[site ? functionFor(center, site) : -1] ?? '';
 }
 // What a sensory center answers over its stimulus, drawn from the engine's curve, with the
@@ -687,7 +688,7 @@ export function inspector(state) {
   if (selected.kind === 'contact')
     return developedContactInspector(state);
   if (selected.kind === 'assembly') {
-    const assembly = state.document.assemblies.find(a => a.id === selected.id);
+    const assembly = findAssembly(state.document, selected.id);
     return assembly ? assemblyInspector(state, assembly) : '';
   }
   const organ = selected.kind === 'organ' ? findOrgan(state.document, selected.id)

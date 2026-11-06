@@ -6,6 +6,7 @@ import {
   allCenters,
   contactBundle,
   endpointCenters,
+  findAssembly,
   findOrgan,
   wholeEndpoint
 } from '../model/document.js';
@@ -53,7 +54,7 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
       active.add(c.id);
   }
   if (selection.kind === 'assembly') {
-    const a = doc.assemblies.find(a => a.id === selection.id);
+    const a = findAssembly(doc, selection.id);
     for (const id of a?.centerIds ?? [])
       active.add(id);
   }

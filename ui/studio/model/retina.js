@@ -1,7 +1,7 @@
 import {degrees} from '../../units.js';
 import {hueQuality} from '../../tuning.js';
 import {VISION, TUNING} from '../../schema.js';
-import {ZONE} from './layout.js';
+import {findSite, ZONE} from './layout.js';
 
 // body_plan.cc::prepare_vision: directions and bin boundaries of the fixed head lattice; the
 // eyes see HALF_VIEW degrees to each side (simulation_types.hh, GENERATED_HALF_VIEW).
@@ -91,7 +91,7 @@ export function generateRetina(organ, sites, used, create) {
 export function retinalRays(organ, sites) {
   const bins = retinalBins(sites);
   return organ.centers.flatMap(center => {
-    const site = sites.find(s => s.id === center.site);
+    const site = findSite(sites, center.site);
     if (!site)
       return [];
     const bin = bins.reduce(

@@ -444,10 +444,11 @@ export function renderEnergy(f) {
       nameTag.textContent = name;
       label.append(icon, nameTag);
       row.appendChild(label);
-      for (const _ of BUDGET_COLUMNS) {
+      for (const column of BUDGET_COLUMNS) {
         const cell = document.createElement('div'), track = document.createElement('div'),
               fill = document.createElement('i');
         cell.className = 'energy-source-value';
+        cell.dataset.column = column;
         track.className = 'energy-track';
         fill.style.background = color;
         track.appendChild(fill);

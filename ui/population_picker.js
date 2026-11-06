@@ -3,6 +3,7 @@ import {FOOD_COLORS} from './feeding_view.js';
 import {PERCENT, SECOND_MS} from './units.js';
 import {cssPercent, formatNumber, t} from './strings.js';
 import {el, tankVisible, text} from './dom.js';
+import {glyph, linePaint} from './glyph.js';
 import {command, importGenome, request, serverText} from './session.js';
 import {sceneState} from './state.js';
 import {ANATOMY, FISH, FOOD_KIND, GENOME_IMPORT, ROUTE, TOLERANCE} from './schema.js';
@@ -121,7 +122,7 @@ function sortingControls() {
       button.type = 'button';
       button.dataset.key = key;
       button.dataset.scope = scope || '';
-      button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+      button.innerHTML = glyph(path, {paint : linePaint()});
       const name = document.createElement('span');
       name.textContent = label;
       button.append(name);

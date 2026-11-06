@@ -16,7 +16,7 @@ import {
   PAIRINGS,
   ROLE
 } from './organs.js';
-import {centroid, nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
+import {centroid, findSite, nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
@@ -173,6 +173,7 @@ export const contactBundle =
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
+export const findAssembly = (doc, id) => doc.assemblies.find(a => a.id === id) ?? null;
 // A center's place among all the design's centers (-1 for none): its group's in the compiled
 // plan, so in every per-group list of the design view's and the developed fish's reports.
 export function centerIndex(doc, id) {
@@ -202,8 +203,7 @@ function matchingOrgan(doc, type, side, sites) {
     return null;
   return doc.organs.find(
              organ => organ.type === type &&
-                      organ.centers.some(
-                          center => sites.find(site => site.id === center.site)?.side === side)) ??
+                      organ.centers.some(center => findSite(sites, center.site)?.side === side)) ??
          null;
 }
 export const findCenter = (doc, id) => {
@@ -292,8 +292,7 @@ function regenerateFields(draft, sites) {
     organ.centers = centers;
     centers.forEach(c => used.add(c.site));
   }
-  for (const assembly of draft.assemblies)
-    assembly.centerIds = assemblyCenters(draft, assembly);
+  settleAssemblies(draft);
   pruneWires(draft);
   return true;
 }
@@ -304,7 +303,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   const draft = copy(doc), used = usedSites(draft);
   if (paired && definition.scope !== 'single')
     for (const occupied of [...used]) {
-      const mirror = mirroredSite(sites.find(s => s.id === occupied), sites);
+      const mirror = mirroredSite(findSite(sites, occupied), sites);
       if (mirror)
         used.add(mirror.id);
     }
@@ -432,7 +431,7 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
 }
 export function moveCenter(doc, centerId, target, sites) {
   const result = findCenter(doc, centerId);
-  const site = sites.find(s => s.id === target);
+  const site = findSite(sites, target);
   if (!result || result.organ.type !== 'brain' || !site || !eligible(result.center, site))
     return null;
   if (allCenters(doc).some(c => c.id !== centerId && c.site === site.id))
@@ -444,7 +443,7 @@ export function moveCenter(doc, centerId, target, sites) {
 // A nerve center of the brain moved to the left side (-1), the midline (0) or the right side
 // (1): to the free site there nearest to it, in its zone when there is one.
 export function moveCenterToSide(doc, centerId, side, sites) {
-  const found = findCenter(doc, centerId), here = sites.find(s => s.id === found?.center.site);
+  const found = findCenter(doc, centerId), here = findSite(sites, found?.center.site);
   if (!here || found.organ.type !== 'brain')
     return null;
   const used = usedSites(doc);
@@ -465,7 +464,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   if (!original || original.type === 'brain' || !original.centers.length)
     return null;
   if (original.field) {
-    const anchor = pointerOrigin ?? sitePoint(sites.find(s => s.id === original.centers[0].site));
+    const anchor = pointerOrigin ?? sitePoint(findSite(sites, original.centers[0].site));
     const dx = position.x - anchor.x, dy = (position.y - anchor.y) * original.side;
     const requested = (dx + dy) * FIELD_SHIFT;
     const delta = clamp(requested, -original.field.lo, HALF_VIEW - original.field.hi);
@@ -474,7 +473,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   }
   const draft = copy(doc), organ = findOrgan(draft, organId);
   const used = usedSites(draft, c => c.organId !== organId);
-  const currentSites = original.centers.map(center => sites.find(site => site.id === center.site));
+  const currentSites = original.centers.map(center => findSite(sites, center.site));
   if (currentSites.some(site => !site))
     return null;
   const anchor = sitePoint(currentSites[0], organ.type);
@@ -511,7 +510,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     organ.region.site = first.id;
   if (original.linked && original.pair) {
     const other = findOrgan(draft, original.pair);
-    const from = sitePoint(sites.find(s => s.id === other.centers[0].site), other.type);
+    const from = sitePoint(findSite(sites, other.centers[0].site), other.type);
     other.linked = false;
     const moved = moveOrgan(draft, other.id, sites,
                             {x : from.x + fixed.x - anchor.x, y : from.y - fixed.y + anchor.y},
@@ -543,15 +542,15 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
     organ.centers = organ.centers.filter(c => !dropped.has(c.id));
     draft.wires = draft.wires.filter(w => !dropped.has(w.from) && !dropped.has(w.to));
     const own = organ.centers.filter(ofType);
-    const first = own[0], home = sites.find(s => s.id === first.site);
+    const first = own[0], home = findSite(sites, first.site);
     if (!home)
       return null;
     const code = functionFor(first, home);
     while (own.length < wanted) {
       const used = usedSites(draft);
       const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
-      const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
-      const at = own.map(c => sitePoint(sites.find(s => s.id === c.site), organ.type));
+      const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
+      const at = own.map(c => sitePoint(findSite(sites, c.site), organ.type));
       const middle = centroid(at);
       const site = mirror && !used.has(mirror.id)
                        ? mirror
@@ -563,14 +562,13 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
       organ.centers.push(node);
     }
   }
-  for (const assembly of draft.assemblies)
-    assembly.centerIds = assemblyCenters(draft, assembly);
+  settleAssemblies(draft);
   return draft;
 }
 // The muscle nodes of a function (null for none), as the engine sees them.
 const musclesOf = (doc, code, sites) =>
     doc.organs.filter(o => o.type === 'muscle').flatMap(o => o.centers).filter(c => {
-      const site = sites.find(s => s.id === c.site);
+      const site = findSite(sites, c.site);
       return site && functionFor(c, site) === code;
     });
 // A trait of the fish its muscles of a function shape (MUSCLE_TRAITS), as the engine's body plan
@@ -594,7 +592,7 @@ export function setMuscleTrait(doc, code, key, trait, sites) {
 }
 // A node of an organ moved to another free site its organ allows.
 export function placeNode(doc, centerId, siteId, sites) {
-  const found = findCenter(doc, centerId), site = sites.find(s => s.id === siteId);
+  const found = findCenter(doc, centerId), site = findSite(sites, siteId);
   if (!found || !site || !fitsOrgan(found.organ.type, found.center, site) ||
       allCenters(doc).some(c => c.site === siteId))
     return null;
@@ -609,7 +607,7 @@ export function placeNode(doc, centerId, siteId, sites) {
 const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});
 export function nodeSitesNear(doc, centerId, nearId, sites) {
   const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
-  const at = sites.find(s => s.id === near?.center.site);
+  const at = findSite(sites, near?.center.site);
   if (!found || !at)
     return [];
   const used = usedSites(doc);
@@ -708,12 +706,12 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
   const draft = copy(doc), main = findOrgan(draft, organId), id = identifier('profile');
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const organ of [main, twin].filter(Boolean)) {
-    const first = organ.centers[0], home = sites.find(s => s.id === first.site);
+    const first = organ.centers[0], home = findSite(sites, first.site);
     if (!home)
       return null;
     const used = usedSites(draft);
     const partner = organ === twin ? main.centers.at(-1) : null;
-    const mirror = partner ? mirroredSite(sites.find(s => s.id === partner.site), sites) : null;
+    const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
     const site = mirror && !used.has(mirror.id)
                      ? mirror
                      : closestSiteDoing(first, functionFor(first, home), sites, used,
@@ -723,8 +721,7 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
     organ.centers.push(
         {...copy(first), ...tuning, id : identifier('center'), site : site.id, profile : id});
   }
-  for (const assembly of draft.assemblies)
-    assembly.centerIds = assemblyCenters(draft, assembly);
+  settleAssemblies(draft);
   return {document : draft, typeId : id};
 }
 // The organ without a type (and its twin without it); null for its last.
@@ -742,8 +739,7 @@ export function removeOrganType(doc, organId, typeId) {
     organ.centers = organ.centers.filter(c => !dropped.has(c.id));
   }
   draft.wires = draft.wires.filter(w => !dropped.has(w.from) && !dropped.has(w.to));
-  for (const assembly of draft.assemblies)
-    assembly.centerIds = assemblyCenters(draft, assembly);
+  settleAssemblies(draft);
   return draft;
 }
 export function updateCenter(doc, id, patch) {
@@ -991,7 +987,7 @@ export function selectionCenters(doc, item) {
   if (item.kind === 'organ')
     return findOrgan(doc, item.id)?.centers.map(center => center.id) ?? [];
   if (item.kind === 'assembly')
-    return assemblyCenters(doc, doc.assemblies.find(a => a.id === item.id));
+    return assemblyCenters(doc, findAssembly(doc, item.id));
   return [];
 }
 // The endpoints of a choice: an organ chosen as a whole is one, and so is a brain region, which
@@ -1053,13 +1049,13 @@ export function mirrorOrgan(doc, organId, sites) {
     centers : []
   };
   if (organ.region) {
-    const home = mirroredSite(sites.find(s => s.id === organ.region.site), sites);
+    const home = mirroredSite(findSite(sites, organ.region.site), sites);
     if (!home)
       return null;
     mirror.region.site = home.id;
   }
   for (const c of organ.centers) {
-    const site = mirroredSite(sites.find(s => s.id === c.site), sites);
+    const site = mirroredSite(findSite(sites, c.site), sites);
     if (!site || (!organ.field && used.has(site.id)))
       return null;
     mirror.centers.push({
@@ -1077,6 +1073,11 @@ export function mirrorOrgan(doc, organId, sites) {
   if (organ.field && !regenerateFields(draft, sites))
     return null;
   return {document : draft, organId : mirror.id, centerId : mirror.centers[0]?.id};
+}
+// Each assembly takes the centers its organs have now.
+export function settleAssemblies(doc) {
+  for (const assembly of doc.assemblies)
+    assembly.centerIds = assemblyCenters(doc, assembly);
 }
 export function assemblyCenters(doc, assembly) {
   if (!assembly)
@@ -1136,7 +1137,7 @@ export function oneSided(doc, sites, assembly) {
     if (!found)
       return false;
     if (found.organ.type === 'brain') {
-      const site = sites.find(s => s.id === found.center.site), mirror = mirroredSite(site, sites);
+      const site = findSite(sites, found.center.site), mirror = mirroredSite(site, sites);
       return !onMidline(site) &&
              !assemblyCenters(doc, assembly)
                   .some(other => findCenter(doc, other)?.center.site === mirror?.id);
@@ -1150,13 +1151,13 @@ export const modulesOf = (doc, id) => doc.assemblies.filter(
          findOrgan(doc, id)?.centers.some(c => (a.centerIds ?? []).includes(c.id)));
 export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = null,
                              snapDistance = Infinity) {
-  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  const assembly = findAssembly(doc, assemblyId);
   if (!assembly)
     return null;
   const members = assemblyCenters(doc, assembly);
   const points = members.map(id => {
     const c = findCenter(doc, id);
-    return sitePoint(sites.find(s => s.id === c.center.site), c.organ.type);
+    return sitePoint(findSite(sites, c.center.site), c.organ.type);
   });
   if (!points.length)
     return null;
@@ -1168,7 +1169,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
     if (moved.has(id))
       continue;
     const organ = findOrgan(draft, id), c = organ.centers[0];
-    const from = sitePoint(sites.find(s => s.id === c.site), organ.type);
+    const from = sitePoint(findSite(sites, c.site), organ.type);
     draft = moveOrgan(draft, id, sites, {x : from.x + dx, y : from.y + dy}, snapDistance, from);
     if (!draft)
       return null;
@@ -1177,7 +1178,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
       moved.add(organ.pair);
   }
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
-    const c = findCenter(draft, id).center, from = sitePoint(sites.find(s => s.id === c.site));
+    const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site));
     const used = usedSites(draft, c => c.id !== id);
     const site = closestSite(c, sites, used, {x : from.x + dx, y : from.y + dy});
     if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}) > snapDistance)
@@ -1189,7 +1190,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   return draft;
 }
 export function mirrorAssembly(doc, assemblyId, sites) {
-  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  const assembly = findAssembly(doc, assemblyId);
   if (!assembly)
     return null;
   let draft = copy(doc);
@@ -1213,7 +1214,7 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   for (const id of assemblyCenters(doc, assembly)
            .filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
     // A center on the midline serves both sides already.
-    const center = findCenter(doc, id).center, own = sites.find(s => s.id === center.site);
+    const center = findCenter(doc, id).center, own = findSite(sites, center.site);
     if (onMidline(own)) {
       mapping.set(id, id);
       continue;
@@ -1237,18 +1238,18 @@ export function mirrorAssembly(doc, assemblyId, sites) {
   const grown = assemble(draft, [...assembly.organIds, ...organIds ], assembly.name,
                          [...(assembly.centerIds ?? []), ...centerIds ]);
   const joined = grown.assemblies.pop();
-  Object.assign(grown.assemblies.find(a => a.id === assemblyId), {...joined, id : assemblyId});
+  Object.assign(findAssembly(grown, assemblyId), {...joined, id : assemblyId});
   return {document : grown, assemblyId};
 }
 export function renameAssembly(doc, assemblyId, name) {
-  const draft = copy(doc), assembly = draft.assemblies.find(a => a.id === assemblyId);
+  const draft = copy(doc), assembly = findAssembly(draft, assemblyId);
   if (!assembly || !name)
     return null;
   assembly.name = String(name).slice(0, ATELIER_LIMITS.max_name);
   return draft;
 }
 export function removeAssembly(doc, assemblyId) {
-  const assembly = doc.assemblies.find(a => a.id === assemblyId);
+  const assembly = findAssembly(doc, assemblyId);
   if (!assembly)
     return null;
   let draft = copy(doc);
@@ -1268,7 +1269,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
   if (originals.some(o => !ORGAN_BY_KEY[o.type] ||
                           o.centers.some(c => !sites.some(s => s.id === c.site))))
     return null;
-  const points = originals.map(o => sitePoint(sites.find(s => s.id === o.centers[0].site), o.type));
+  const points = originals.map(o => sitePoint(findSite(sites, o.centers[0].site), o.type));
   const source = centroid(points);
   // A module with both sides of a pair keeps its sides where they are and moves along the body;
   // a one-sided one goes to the side it is dropped on.
@@ -1282,7 +1283,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
       return null;
     if (original.type === 'brain') {
       for (const previous of original.centers) {
-        const at = offset(sitePoint(sites.find(s => s.id === previous.site), 'brain'));
+        const at = offset(sitePoint(findSite(sites, previous.site), 'brain'));
         const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
         if (!placed)
           return null;
@@ -1295,7 +1296,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
       organIds.push('brain');
       continue;
     }
-    const at = offset(sitePoint(sites.find(s => s.id === original.centers[0].site), original.type));
+    const at = offset(sitePoint(findSite(sites, original.centers[0].site), original.type));
     const added = addOrgan(draft, original.type, sites, at, snapDistance, false);
     if (!added || doc.organs.some(o => o.id === added.organId))
       return null;
@@ -1431,7 +1432,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
   }
   for (const organ of doc.organs)
     for (const center of organ.centers) {
-      const site = sites.find(s => s.id === center.site);
+      const site = findSite(sites, center.site);
       if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
       const g = {

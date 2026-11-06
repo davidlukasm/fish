@@ -10,7 +10,7 @@ import {
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {functionFor, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
-import {sideIndex, sideOf} from '../model/layout.js';
+import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
@@ -528,7 +528,7 @@ const suctionStrength = (doc, sites) =>
     doc.organs.filter(o => o.type === 'muscle')
         .flatMap(o => o.centers)
         .filter(c => {
-          const site = sites.find(s => s.id === c.site);
+          const site = findSite(sites, c.site);
           return site && functionFor(c, site) === MOTOR_KIND.suction;
         })
         .reduce((sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies, 0);

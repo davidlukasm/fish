@@ -1149,42 +1149,42 @@ const TISSUE = Object.freeze({
 });
 export function brainDrawTissue(g, d, tissue, now) {
   const r = d.r, a = d.a;
-  const {key, side, members} = tissue, k = tissueKind(key),
-                    motorTone = isMotorTissue(key) && k < MOTOR_KIND.eggs ? {
-                      charge : brainDisplayCharge(k, side, now),
-                      contraction : brainCycleContraction(k, side, now)
-                    }
-                                                                          : null,
-                    color = key === SENSE_TISSUE.damage ? rgb([
-                      TISSUE.damage_base + TISSUE.damage_red * (1 - d.p[FISH.health]),
-                      TISSUE.damage_base - TISSUE.damage_fade * (1 - d.p[FISH.health]),
-                      TISSUE.damage_base - TISSUE.damage_fade * (1 - d.p[FISH.health])
-                    ])
-                                                        : tissueColor(key),
-                    closed = (key === SENSE_TISSUE.odor && tissue.variant !== BARBEL) || [
-                      GUT_TISSUE,
-                      RESERVE_TISSUE,
-                      INTERNAL_TISSUE,
-                      SENSE_TISSUE.light,
-                      SENSE_TISSUE.touch,
-                      SENSE_TISSUE.proximity,
-                      SENSE_TISSUE.intake,
-                      SENSE_TISSUE.damage,
-                      SENSE_TISSUE.bladder_pressure,
-                      MOTOR_TISSUE.forward,
-                      MOTOR_TISSUE.turn,
-                      MOTOR_TISSUE.suction,
-                      MOTOR_TISSUE.eggs,
-                      MOTOR_TISSUE.sperm,
-                      MOTOR_TISSUE.aggression,
-                      MOTOR_TISSUE.defense,
-                      MOTOR_TISSUE.pigment,
-                      MOTOR_TISSUE.bladder,
-                      MOTOR_TISSUE.gland,
-                      SENSE_TISSUE.gonad_pressure,
-                      SENSE_TISSUE.inner_pressure,
-                      SENSE_TISSUE.blood
-                    ].includes(key);
+  const {key, side} = tissue, k = tissueKind(key),
+              motorTone = isMotorTissue(key) && k < MOTOR_KIND.eggs ? {
+                charge : brainDisplayCharge(k, side, now),
+                contraction : brainCycleContraction(k, side, now)
+              }
+                                                                    : null,
+              color = key === SENSE_TISSUE.damage ? rgb([
+                TISSUE.damage_base + TISSUE.damage_red * (1 - d.p[FISH.health]),
+                TISSUE.damage_base - TISSUE.damage_fade * (1 - d.p[FISH.health]),
+                TISSUE.damage_base - TISSUE.damage_fade * (1 - d.p[FISH.health])
+              ])
+                                                  : tissueColor(key),
+              closed = (key === SENSE_TISSUE.odor && tissue.variant !== BARBEL) || [
+                GUT_TISSUE,
+                RESERVE_TISSUE,
+                INTERNAL_TISSUE,
+                SENSE_TISSUE.light,
+                SENSE_TISSUE.touch,
+                SENSE_TISSUE.proximity,
+                SENSE_TISSUE.intake,
+                SENSE_TISSUE.damage,
+                SENSE_TISSUE.bladder_pressure,
+                MOTOR_TISSUE.forward,
+                MOTOR_TISSUE.turn,
+                MOTOR_TISSUE.suction,
+                MOTOR_TISSUE.eggs,
+                MOTOR_TISSUE.sperm,
+                MOTOR_TISSUE.aggression,
+                MOTOR_TISSUE.defense,
+                MOTOR_TISSUE.pigment,
+                MOTOR_TISSUE.bladder,
+                MOTOR_TISSUE.gland,
+                SENSE_TISSUE.gonad_pressure,
+                SENSE_TISSUE.inner_pressure,
+                SENSE_TISSUE.blood
+              ].includes(key);
   if (key === MOTOR_TISSUE.suction)
     fishSuctionPath(g, r, a);
   else

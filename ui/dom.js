@@ -1,5 +1,6 @@
 import {CHANNEL_MAX} from './units.js';
 import {t} from './strings.js';
+import {glyph, linePaint} from './glyph.js';
 import {traitEvidence, traitGroup, traitName, traitNote} from './trait_model.js';
 import {displayFaults} from './diagnostics.js';
 import {createTankRenderer} from './renderer.js';
@@ -78,13 +79,17 @@ export function syncChildren(parent, nodes) {
 
 export let uiIconPaths;
 
+// A tool's or a trait's icon; a removing tool's icon is its subject's, struck through.
+const STRUCK = Object.freeze({path : 'M3 21 21 3', colour : '#d99887', width : 2.3});
 export function uiIcon(name) {
   const key = name === 'remove-plants' ? 'grass' : name === 'remove-sediment' ? 'sediment' : name;
-  return '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="' +
-         (uiIconPaths[key] || uiIconPaths.trait) + '"/>' +
-         (name.startsWith('remove-') ? '<path d="M3 21 21 3" stroke="#d99887" stroke-width="2.3"/>'
-                                     : '') +
-         '</svg>';
+  return glyph(uiIconPaths[key] || uiIconPaths.trait, {
+    paint : linePaint(),
+    more : name.startsWith('remove-')
+               ? '<path d="' + STRUCK.path + '"' +
+                     linePaint({width : STRUCK.width, ink : STRUCK.colour}) + '/>'
+               : ''
+  });
 }
 
 function traitIcon(group) {

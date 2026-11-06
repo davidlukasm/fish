@@ -1,14 +1,12 @@
 import {ORGAN_ICONS} from './organ_icons.js';
+import {glyph, linePaint} from './glyph.js';
 import {
   BARBEL,
   GUT_TISSUE,
-  INTERNAL_TISSUE,
-  MOTOR_TISSUE,
   RESERVE_TISSUE,
   SENSE_TISSUE,
   sidedTissue,
   tissueBase,
-  tissueKind,
   tissueSide
 } from './tissue.js';
 import {t, tList} from './strings.js';
@@ -175,18 +173,15 @@ export function renderOrganIcons(d) {
     group.append(label, chips);
     for (const key of shown) {
       const ids = present.get(key).sort(), button = document.createElement('button'),
-            base = key === BARBEL ? SENSE_TISSUE.odor : tissueBase(key), k = tissueKind(base),
-            color = tissueColor(base), name = organName(key);
+            base = key === BARBEL ? SENSE_TISSUE.odor : tissueBase(key), color = tissueColor(base),
+            name = organName(key);
       button.type = 'button';
       button.className = 'organ-icon';
       button.style.setProperty('--organ-color', color);
       button.title = ids.length > 1 ? t('organs.sides', {name, n : ids.length}) : name;
       button.setAttribute('aria-pressed', String(ids.includes(pinned)));
-      button.innerHTML =
-          '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="' +
-          ORGAN_ICONS[key] +
-          '" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>' +
-          name + (ids.length > 1 ? ' ×' + ids.length : '') + '</span>';
+      button.innerHTML = glyph(ORGAN_ICONS[key], {paint : linePaint()}) + '<span>' + name +
+                         (ids.length > 1 ? ' ×' + ids.length : '') + '</span>';
       button.onclick = () => {
         const next = ids.includes(pinned) ? ids[(ids.indexOf(pinned) + 1) % ids.length] : ids[0];
         const member = d.tissues.get(next).members[0];

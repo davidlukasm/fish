@@ -14,8 +14,8 @@ import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
-import {allCenters, findCenter, isChosen, wiredCrossing} from '../model/document.js';
-import {BODY_FRAME, BODY_RADIUS, centroid, onMidline, sideOf} from '../model/layout.js';
+import {allCenters, findAssembly, findCenter, isChosen, wiredCrossing} from '../model/document.js';
+import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
 import {cameraBox, steadyAt, viewBoxOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
@@ -59,9 +59,7 @@ function centersSvg(state) {
   const {document : doc, sites, selected, camera} = state;
   const zoom = camera.zoom ?? 1;
   const roles = hormoneRoles(state), substance = substanceColor(state.focusSubstance);
-  const activeAssembly = selected?.kind === 'assembly'
-                             ? doc.assemblies.find(assembly => assembly.id === selected.id)
-                             : null;
+  const activeAssembly = selected?.kind === 'assembly' ? findAssembly(doc, selected.id) : null;
   const assemblyCenters = new Set(activeAssembly?.centerIds ?? []);
   let result = '';
   for (const organ of doc.organs) {
@@ -181,7 +179,7 @@ const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 
 function reachSvg(state) {
   const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
-  const site = sites.find(s => s.id === found?.center.site);
+  const site = findSite(sites, found?.center.site);
   // A region's nodes stand in the drawn brain, not where their cells lie: they show no reach.
   if (!found || found.center.role !== 'nerve' || isRegion(found.organ) || !(least >= 0) || !site)
     return '';
@@ -192,14 +190,14 @@ function reachSvg(state) {
         other = onMidline(site) ? 1 : clamp(1 + crossing);
   const upper = p.y < BODY_FRAME.middle || onMidline(site) && site.side < 0;
   // The weight falls by e with each reach: drawn out to REACH.span reaches.
-  const fade =
-      '<radialGradient id="aid-reach-fade">' +
-      Array
-          .from({length : REACH.span + 1}, (_, k) => '<stop offset="' + fixed(k / REACH.span) +
-                                                     '" stop-color="' + CATEGORY_TONE.brain + '" stop-opacity="' +
-                                                     fixed(REACH.fill * Math.exp(-k)) + '"/>')
-          .join('') +
-      '</radialGradient>';
+  const fade = '<radialGradient id="aid-reach-fade">' +
+               Array
+                   .from({length : REACH.span + 1},
+                         (_, k) => '<stop offset="' + fixed(k / REACH.span) + '" stop-color="' +
+                                   CATEGORY_TONE.brain + '" stop-opacity="' +
+                                   fixed(REACH.fill * Math.exp(-k)) + '"/>')
+                   .join('') +
+               '</radialGradient>';
   const half = (top, weight) =>
       weight > 0 ? '<circle cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
                        fixed(reach * REACH.span) +

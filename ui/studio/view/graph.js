@@ -2,8 +2,8 @@ import {clamp} from '../../units.js';
 import {CPPN_OUTPUT} from '../../schema.js';
 import {formatNumber, joinParts, linkText, t} from '../../strings.js';
 import {escapeText} from './markup.js';
+import {label} from './kit.js';
 
-const label = key => t('studio.' + key);
 const typeLabels = [
   'bell', 'sine', 'cosine', 'linear', 'sign', 'sigmoid', 'cutoff', 'cubic', 'absolute', 'step',
   'gate'

@@ -1,6 +1,6 @@
 import {degrees, SECOND_MS, wrapAngle} from './units.js';
 import {GUT_TISSUE, INTERNAL_TISSUE, isSenseTissue, RESERVE_TISSUE, tissueKind} from './tissue.js';
-import {BODY_UNIT, FISH, ODOR_KIND, PROBE_KIND} from './schema.js';
+import {BODY_UNIT, FISH, NEURON, ODOR_KIND, PROBE_KIND} from './schema.js';
 import {t, tList, formatNumber} from './strings.js';
 
 import {updateSessionState} from './session.js';
