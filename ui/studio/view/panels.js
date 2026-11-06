@@ -27,6 +27,7 @@ import {
   findCenter,
   findOrgan,
   groupReport,
+  wireContacts,
   wiredCrossing
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
@@ -34,7 +35,7 @@ import {escapeText, fixed, glyph, padPoint, padValues, pointMarks} from './marku
 import {findSite, onMidline, sideIndex} from '../model/layout.js';
 import {formatNumber, formatSigned, linkText, namedText, percent, t, tList} from '../../strings.js';
 import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
-import {pairingButton, regionSettings, slotsSection} from './circuit.js';
+import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
@@ -344,37 +345,69 @@ function developedContactInspector(state) {
   const centers = allCenters(state.document);
   if (!row || !centers[from] || !centers[to])
     return '';
-  const link = contactBundle(row), weight = link.weight;
+  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
+         '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
+         '</header>' + contactResult(contactBundle(row));
+}
+function contactResult(link) {
   const polarities = [
     {count : link.positive, weight : link.positiveWeight, key : 'excitation', tone : 'excite'},
     {count : link.negative, weight : link.negativeWeight, key : 'inhibition', tone : 'inhibit'}
   ];
-  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
-         '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
-         '</header>' +
-         '<div class="aid-contact-summary"><div><strong>' + formatNumber(Number(link.count)) +
-         '</strong><span>' + label('inspector.contactCount') + '</span></div><div><strong>' +
-         formatSigned(weight, 2, true) + '</strong><span>' + label('inspector.meanWeight') +
-         '</span></div></div>' +
-         '<div class="aid-contact-polarities">' +
-         polarities
-             .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
-                          label('inspector.' + item.key) + '</span><strong>' +
-                          formatNumber(item.count) + '</strong><small>' +
-                          formatSigned(item.weight, 2, true) + '</small></div>')
-             .join('') +
-         '</div>';
+  const tone = !link.count ? ' none' : link.negative ? link.positive ? '' : ' inhibit' : ' excite';
+  return '<div class="aid-contact-summary' + tone + '"><div><strong>' +
+         formatNumber(Number(link.count)) + '</strong><span>' + label('inspector.contactCount') +
+         '</span></div>' +
+         (link.count ? '<div><strong>' + formatSigned(link.weight, 2, true) + '</strong><span>' +
+                           label('inspector.meanWeight') + '</span></div>'
+                     : '') +
+         '</div>' +
+         (link.positive && link.negative
+              ? '<div class="aid-contact-polarities">' +
+                    polarities
+                        .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
+                                     label('inspector.' + item.key) + '</span><strong>' +
+                                     formatNumber(item.count) + '</strong><small>' +
+                                     formatSigned(item.weight, 2, true) + '</small></div>')
+                        .join('') +
+                    '</div>'
+              : '');
 }
-const WIRE_PAD = Object.freeze(
-    {size : 150, centre : 75, boundary : 63, least : 8, reach : 55, source : 5, handle : 7});
+const WIRE_PAD = Object.freeze({
+  size : 150,
+  centre : 75,
+  boundary : 63,
+  least : 14,
+  reach : 46,
+  source : 5,
+  handle : 7,
+  others : 11,
+  other : 3.2,
+  turn : 2.39996,
+  dim : .22
+});
 const wireRadius = spread => WIRE_PAD.least + WIRE_PAD.reach * spread;
+const otherSenders = Array.from({length : WIRE_PAD.others}, (_, k) => {
+  const W = WIRE_PAD, distance = W.least + W.reach * (k + .5) / W.others, angle = k * W.turn;
+  return {
+    distance,
+    x : W.centre + distance * Math.cos(angle),
+    y : W.centre + distance * Math.sin(angle)
+  };
+});
+const otherShown = (other, radius) => other.distance < radius ? 1 : WIRE_PAD.dim;
 export function wirePatch(fx, fy) {
   const W = WIRE_PAD, distance = Math.hypot(fx * W.size - W.centre, fy * W.size - W.centre);
   return {spread : clamp((distance - W.least) / W.reach)};
 }
 export function wireMarks(wire) {
   const radius = wireRadius(wire.spread);
-  return {'.aid-wire-halo' : {r : radius}, '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius}};
+  return {
+    '.aid-wire-halo' : {r : radius},
+    '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius},
+    ...Object.fromEntries(otherSenders.map(
+        (other, k) => ['[data-other="' + k + '"]', {'fill-opacity' : otherShown(other, radius)}]))
+  };
 }
 function wireField(wire) {
   const W = WIRE_PAD, radius = wireRadius(wire.spread);
@@ -384,6 +417,11 @@ function wireField(wire) {
          escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
          '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '">' +
          circle('aid-wire-boundary', W.boundary) + circle('aid-wire-halo', radius) +
+         otherSenders
+             .map((other, k) => '<circle class="aid-wire-other" data-other="' + k + '" cx="' +
+                                fixed(other.x) + '" cy="' + fixed(other.y) + '" r="' + W.other +
+                                '" fill-opacity="' + otherShown(other, radius) + '"/>')
+             .join('') +
          circle('aid-wire-source', W.source) +
          circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
          label('sections.spread') + '</span></div>';
@@ -428,11 +466,12 @@ function wireInspector(state, wire) {
   return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
          heading(linkText(endpointTitle(doc, wire.from, state.sites),
                           endpointTitle(doc, wire.to, state.sites))) +
-         '</header>' +
-         (wire.pairing ? '<div class="aid-wire-pairing">' + pairingButton(wire) + '</div>' : '') +
-         '<div class="aid-wire-parameters">' + wireField(wire) +
-         '</div><button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
-         label('inspector.removeWire') + '</button>';
+         '</header>' + (wire.pairing ? pairingChoice(wire) : '') +
+         '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
+         (state.report?.contacts ? contactResult(wireContacts(doc, wire, state.report.contacts))
+                                 : '') +
+         '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-wire="' +
+         escapeText(wire.id) + '">' + label('inspector.removeWire') + '</button></div>';
 }
 function assemblyInspector(state, assembly) {
   const doc = state.document;

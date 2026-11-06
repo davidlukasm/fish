@@ -106,6 +106,10 @@
 .aid-contact-polarities{display:grid;gap:8px}
 .aid-contact-polarity{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 12px;border:1px solid #31565c;border-left:4px solid #9edaca;border-radius:9px;background:#173942}
 .aid-contact-polarity.inhibit{border-left-color:var(--aid-inhibit)}
+.aid-contact-summary.none{grid-template-columns:1fr}
+.aid-contact-summary.excite>div{border-left:4px solid #9edaca}
+.aid-contact-summary.inhibit>div{border-left:4px solid var(--aid-inhibit)}
+.aid-contact-summary.none strong{color:var(--aid-inhibit)}
 .aid-contact-polarity span{font-size:12px;color:#d2e2de}
 .aid-contact-polarity strong{font-size:16px}
 .aid-contact-polarity small{min-width:43px;text-align:right;color:#a7c0be}
@@ -300,6 +304,7 @@
 .aid-wire-boundary{fill:#10323b;stroke:#507b80;stroke-width:1.5}
 .aid-wire-halo{fill:#88c9b248;stroke:#a1d5ba;stroke-width:2;stroke-dasharray:4 3;pointer-events:none}
 .aid-wire-source{fill:#efdda5;pointer-events:none}
+.aid-wire-other{fill:#efdda5;pointer-events:none}
 .aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}
 
 .aid-vision-fan{pointer-events:none}
@@ -372,8 +377,10 @@
 .aid-anatomical-region{fill:#b8c5e11f;stroke:var(--aid-brain);stroke-width:2;stroke-dasharray:6 5}
 .aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:3px 8px;font-size:11px;color:var(--aid-control-text)}
 .aid-pairing svg path{fill:none;stroke:var(--aid-handle);stroke-width:2;stroke-linecap:round}
-.aid-pairing.single{border:0;background:none;padding:0}
-.aid-wire-pairing{margin:10px 0}
+.aid-wire-pairing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:10px 0}
+.aid-wire-pairing .aid-pairing{flex-direction:column;justify-content:center;gap:2px;padding:5px 2px;min-width:0;cursor:pointer}
+.aid-wire-pairing .aid-pairing svg{flex-shrink:0}
+.aid-wire-pairing .aid-pairing[aria-pressed="true"]{border-color:#ecdba8;background:#35504a}
 .aid-region-node{display:grid;gap:6px;margin:8px 0}
 .aid-region-node>button{justify-self:start;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:5px 10px}
 .aid-hint{font-size:12px;color:var(--aid-hint-text);margin:10px 0}

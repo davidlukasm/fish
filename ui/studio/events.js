@@ -260,7 +260,10 @@ export const FISH_CLICKS = Object.freeze([
       const wire = studio.state.document.wires.find(w => w.id === e.dataset.wirePairing);
       if (!wire?.pairing)
         return PASS;
-      const next = PAIRINGS[(PAIRINGS.indexOf(wire.pairing) + 1) % PAIRINGS.length];
+      const next = e.dataset.pairingValue ??
+                   PAIRINGS[(PAIRINGS.indexOf(wire.pairing) + 1) % PAIRINGS.length];
+      if (!PAIRINGS.includes(next) || next === wire.pairing)
+        return PASS;
       keep(studio, updateWire(studio.state.document, wire.id, {pairing : next}));
     }
   ],

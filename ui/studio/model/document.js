@@ -973,6 +973,31 @@ function wireLinks(doc, wire) {
          : wire.pairing === 'crossed' ? crossed
                                       : [...same, ...crossed ];
 }
+export function wireContacts(doc, wire, contacts) {
+  const index = new Map(allCenters(doc).map((c, i) => [c.id, i]));
+  const pairs = new Set(wireLinks(doc, wire).flatMap(
+      link => senderNodes(doc, link.from)
+                  .flatMap(a => hearerNodes(doc, link.to)
+                                    .map(b => index.get(a.id) + ':' + index.get(b.id)))));
+  const sum =
+      {count : 0, weight : 0, positive : 0, negative : 0, positiveWeight : 0, negativeWeight : 0};
+  for (const bundle of contacts.map(contactBundle))
+    if (pairs.has(bundle.from + ':' + bundle.to)) {
+      sum.count += bundle.count;
+      sum.positive += bundle.positive;
+      sum.negative += bundle.negative;
+      sum.weight += bundle.weight * bundle.count;
+      sum.positiveWeight += bundle.positiveWeight * bundle.positive;
+      sum.negativeWeight += bundle.negativeWeight * bundle.negative;
+    }
+  const mean = (total, n) => n ? total / n : 0;
+  return {
+    ...sum,
+    weight : mean(sum.weight, sum.count),
+    positiveWeight : mean(sum.positiveWeight, sum.positive),
+    negativeWeight : mean(sum.negativeWeight, sum.negative)
+  };
+}
 export const expandedWires = doc =>
     doc.wires.flatMap(wire => wireLinks(doc, wire).map(link => ({...link, wire})));
 export function endpointCenters(doc, id) {

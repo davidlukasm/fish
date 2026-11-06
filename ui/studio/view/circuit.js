@@ -1,5 +1,5 @@
 import {substanceColor} from '../../hormones.js';
-import {ORGAN_BY_KEY} from '../model/organs.js';
+import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
 import {findCenter, findOrgan, teachersOf, wholeEndpoint} from '../model/document.js';
 import {centerMarker} from './scene.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
@@ -18,14 +18,16 @@ const PAIRING_GLYPH = Object.freeze({
 });
 const pairingTitle = wire =>
     namedText(label('inspector.pairing.title'), label('inspector.pairing.' + wire.pairing));
-export function pairingButton(wire) {
-  if (!wire.pairing)
-    return '<span class="aid-pairing single"></span>';
-  return '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) + '" title="' +
-         pairingTitle(wire) + '">' +
-         glyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
-         label('inspector.pairing.' + wire.pairing) + '</span></button>';
-}
+export const pairingChoice = wire =>
+    '<div class="aid-wire-pairing" role="group" aria-label="' + label('inspector.pairing.title') +
+    '">' +
+    PAIRINGS
+        .map(p => '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) +
+                  '" data-pairing-value="' + p + '" aria-pressed="' + (wire.pairing === p) + '">' +
+                  glyph(PAIRING_GLYPH[p], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
+                  label('inspector.pairing.' + p) + '</span></button>')
+        .join('') +
+    '</div>';
 const CIRCUIT = Object.freeze({
   width : 300,
   label : 80,

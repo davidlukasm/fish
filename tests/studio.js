@@ -527,6 +527,17 @@ function semanticFingerprint(source) {
                   .filter(l => l.wire.id === across.wireId)
                   .every(l => sideOf(l.from) !== sideOf(l.to)),
               'Optic wires cross whichever twin they were drawn to');
+    {
+      const doc = across.document, wire = doc.wires.find(w => w.id === across.wireId);
+      const link = model.expandedWires(doc).find(l => l.wire === wire);
+      const from = model.centerIndex(doc, model.endpointCenters(doc, link.from)[0].id);
+      const to = model.centerIndex(doc, model.endpointCenters(doc, link.to)[0].id);
+      const rows = [ [ from, to, 4, .5, 3, 1, 1, -1 ], [ to, from, 9, 1, 9, 0, 1, 0 ] ];
+      const formed = model.wireContacts(doc, wire, rows);
+      assert.deepEqual([ formed.count, formed.positive, formed.negative, formed.weight ],
+                       [ 4, 3, 1, .5 ], 'A wire counts only the contacts along its own links');
+      assert.equal(model.wireContacts(doc, wire, []).count, 0);
+    }
     const commissure = model.addWire(wired, tectumLeft.centers[0].id, twin.centers[0].id);
     assert.ok(commissure);
     assert.ok(model.expandedWires(commissure.document).every(l => l.from !== l.to));
