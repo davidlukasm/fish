@@ -85,12 +85,15 @@ export function chemistry(state, organ, center) {
                                                  sub.index) >= NOTICEABLE_AFFINITY)
                     .map(sub => chip(sub.index)),
                 'inspector.releasesNothing');
-  rows += row('inspector.answersTo',
-              doc.substances.flatMap(
-                  sub => boundEffects(center, sub.index, wheel)
-                             .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
-                                            label('effects.' + effect) + '</small>')),
-              'inspector.answersToNothing');
+  rows += row(
+      'inspector.answersTo',
+      doc.substances.flatMap(
+          sub => boundEffects(center, sub.index, wheel)
+                     .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
+                                    effectWords(effect,
+                                                effectDirection(effect, center.receptors[effect])) +
+                                    '</small>')),
+      'inspector.answersToNothing');
   if (center.role === 'nerve')
     rows += row('inspector.learnsFrom',
                 teachersOf(doc, center, wheel)
@@ -418,7 +421,7 @@ function lifePhaseEditor(state, focus) {
            from : formatNumber(0),
            to : formatNumber(1),
            along : label('inspector.maturity'),
-           up : label('effects.' + HORMONE_EFFECT.output)
+           up : label('inspector.cellSignal')
          }) +
          mark('start', phase.start, 0, 'inspector.phaseStart') +
          mark('end', phase.end, 1, 'inspector.phaseEnd') + '</svg>' +
@@ -538,12 +541,13 @@ export function organsOf(doc, centers) {
     return true;
   });
 }
-export const receptorEditor = (state, center, effects, effect, name) =>
+const receptorEditor = (state, center, effects, effect) =>
     '<div class="aid-effect-chips">' +
     effects
         .map(value => '<button data-effect="' + value + '" class="' +
-                      (effect === value ? 'active' : '') + '">' + escapeText(name(value)) +
-                      '</button>')
+                      (effect === value ? 'active' : '') + '">' +
+                      glyph(EFFECT_ICON[value], ICON.mark, {line : true}) +
+                      escapeText(label('effects.' + value)) + '</button>')
         .join('') +
     '</div>' + receptorBody(state, center, effect);
 export function receptorBody(state, center, effect) {
@@ -607,14 +611,15 @@ export function substanceInspector(state) {
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
+// What a substance does to a cell, as the receptor turns it (`direction`, 0 for either way).
+export const effectWords = (effect, direction) =>
+    direction ? tList('studio.' + (direction > 0 ? 'effectsRise' : 'effectsFall'))[effect]
+              : label('effects.' + effect);
+const effectSentence = (effect, direction) =>
+    t('studio.hormoneCard.sentence', {effect : effectWords(effect, direction)});
 export function boundEffect(effect, direction) {
-  const name = label('effects.' + effect), death = effect === HORMONE_EFFECT.death;
-  const words =
-      !direction ? name
-      : death    ? label(direction > 0 ? 'hormoneCard.kills' : 'hormoneCard.needs')
-                 : t('studio.hormoneCard.' + (direction > 0 ? 'rises' : 'falls'), {effect : name});
-  return '<span class="aid-bound-effect" title="' + escapeText(words) + '">' +
-         glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
+  return '<span class="aid-bound-effect" title="' + escapeText(effectSentence(effect, direction)) +
+         '">' + glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
          (direction
               ? '<span class="aid-direction">' +
                     glyph(DIRECTION_ICON[direction > 0 ? 'rises' : 'falls'], ICON.mark) + '</span>'
@@ -630,13 +635,13 @@ function effectGuide(state, index) {
                const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
                const n = bound.length;
                const ends = n ? receptorEnds(bound[0].receptors[effect]) : undefined;
+               const direction = n ? effectDirection(effect, bound[0].receptors[effect]) : 0;
                return '<div class="aid-effect-card' + (n ? '' : ' off') +
                       '" style="--substance:' + colour + '" title="' +
                       escapeText(words('tileTitles')[effect] + ' ' + words('where')[effect]) +
                       '">' + effectScene(effect, colour, ends) + '<div><strong>' +
-                      boundEffect(effect,
-                                  n ? effectDirection(effect, bound[0].receptors[effect]) : 0) +
-                      escapeText(words('tiles')[effect]) +
+                      boundEffect(effect, direction) +
+                      escapeText(effectSentence(effect, direction)) +
                       (n ? '<span class="aid-effect-count" title="' +
                                escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'
                          : '') +
@@ -657,7 +662,6 @@ export function hormoneInspector(state) {
   if (!focus.receptors?.[effect])
     return html;
   html += lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
-          heading(centerTitle(focus)) +
-          receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) + '</div>';
+          heading(centerTitle(focus)) + receptorEditor(state, focus, effects, effect) + '</div>';
   return html;
 }

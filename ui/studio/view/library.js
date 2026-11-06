@@ -22,10 +22,11 @@ function tile({
   off = false,
   act = false,
   drag = !act,
-  armed = false
+  armed = false,
+  wide = false
 }) {
   const v = escapeText(value);
-  return '<button class="aid-palette-tile' + (off ? ' off' : '') +
+  return '<button class="aid-palette-tile' + (off ? ' off' : '') + (wide ? ' wide' : '') +
          (armed ? ' armed ' + armed : '') + '"' +
          (off    ? ' disabled'
           : drag ? ' draggable="true"'
@@ -148,8 +149,7 @@ function wiringLibrary(state) {
          section(label('wiring.shape'), wiring('bend'));
 }
 function hormoneLibrary(state) {
-  const doc = state.document, words = tList('studio.hormoneCard.tiles');
-  const titles = tList('studio.hormoneCard.tileTitles');
+  const doc = state.document, titles = tList('studio.hormoneCard.tileTitles');
   const substances = state.capabilities ? doc.substances : [];
   return substances
              .map(sub => {
@@ -166,10 +166,11 @@ function hormoneLibrary(state) {
                                        .map(effect => tile({
                                               kind : 'effect',
                                               value : index + ':' + effect,
-                                              name : words[effect],
+                                              name : label('effects.' + effect),
                                               path : EFFECT_ICON[effect],
                                               colour,
-                                              title : titles[effect]
+                                              title : titles[effect],
+                                              wide : true
                                             }))
                                        .join(''));
              })
@@ -203,7 +204,7 @@ const LEARNING_TILES = Object.freeze([
   {effect : HORMONE_EFFECT.eligibility, path : EFFECT_ICON[HORMONE_EFFECT.eligibility]}
 ]);
 function learningLibrary(state) {
-  const words = tList('studio.learnCard.tiles'), titles = tList('studio.learnCard.tileTitles');
+  const titles = tList('studio.learnCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
   return section(label('learnCard.cells'), LEARNING_CELLS.map(cellTile).join('')) +
          substances
@@ -221,10 +222,11 @@ function learningLibrary(state) {
                                        .map((t, k) => tile({
                                               kind : 'effect',
                                               value : index + ':' + t.effect,
-                                              name : words[k],
+                                              name : label('effects.' + t.effect),
                                               path : t.path,
                                               colour,
-                                              title : titles[k]
+                                              title : titles[k],
+                                              wide : true
                                             }))
                                        .join(''));
              })

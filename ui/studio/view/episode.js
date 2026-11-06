@@ -9,6 +9,8 @@ const MOMENT = Object.freeze({
   done : .7,
   gone : .94,
   flash : .025,
+  rise : .03,
+  fade : .15,
   cloud : .12,
   edge : .005
 });
@@ -150,13 +152,13 @@ export function episodeSvg(layout, scene) {
   let sent = '';
   rounds.forEach((round, k) => {
     if (own)
-      flashes.push([ at(k, M.own - M.flash), .3 ], [ at(k, M.own), 1 ],
-                   [ at(k, M.own + M.flash), .3 ]);
+      flashes.push([ at(k, M.own - M.rise), .3 ], [ at(k, M.own), 1 ],
+                   [ at(k, M.own + M.fade), .3 ]);
     if (beats)
-      rings.push([ at(k, M.beat - M.edge), 0 ], [ at(k, M.beat), 1 ],
-                 [ at(k, M.beat + M.flash * 3), 0 ]),
-          ringR.push([ at(k, M.beat - M.edge), L.r ], [ at(k, M.beat), L.r ],
-                     [ at(k, M.beat + M.flash * 3), L.r * L.ring ]);
+      rings.push([ at(k, M.beat - M.rise), 0 ], [ at(k, M.beat), 1 ],
+                 [ at(k, M.beat + M.fade), 0 ]),
+          ringR.push([ at(k, M.beat - M.rise), L.r ], [ at(k, M.beat), L.r ],
+                     [ at(k, M.beat + M.fade), L.r * L.ring ]);
     if (own && scene.output)
       sent += travelling(way(L.cx + L.r, L.cy, L.end, L.cy), at(k, M.own), at(k, M.own + M.travel),
                          L.pulse, seconds);
@@ -183,8 +185,8 @@ export function episodeSvg(layout, scene) {
     const node = scene.teacher === 'node', fires = [ [ 0, .3 ] ];
     rounds.forEach((round, k) => {
       if (round.teach)
-        fires.push([ at(k, M.send - M.flash), .3 ], [ at(k, M.send), 1 ],
-                   [ at(k, M.send + M.flash), .3 ]);
+        fires.push([ at(k, M.send - M.rise), .3 ], [ at(k, M.send), 1 ],
+                   [ at(k, M.send + M.fade), .3 ]);
     });
     teaching +=
         '<path class="aid-episode-arrow teach' + (taught ? '' : ' none') + '" d="' + teachWay +

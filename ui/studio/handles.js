@@ -74,7 +74,7 @@ export const HANDLES = Object.freeze({
   bend : {follow : 'bendPointer', keepsClick : true},
   skin : {follow : 'skinPointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
-  graphic : {follow : 'tuneGraphic', done : 'refreshInspector', keepsClick : true}
+  graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true}
 });
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
@@ -239,10 +239,8 @@ export const handleMethods = {
       return;
     if (control.handle) {
       const patch = pad.handle?.(fx, fy, control.element);
-      if (!patch)
-        return;
-      this.tuneDesign(updateCenter(doc, control.id, patch), 'graphic:' + control.id);
-      this.refreshInspector();
+      if (patch)
+        this.draftDesign(updateCenter(doc, control.id, patch), 'graphic:' + control.id);
       return;
     }
     const patch = pad.patch(fx, fy, item, this.state);
@@ -276,9 +274,8 @@ export const handleMethods = {
     const sensitivity = learnResponseOf(fx) - receptor.baseline;
     if (Math.abs(sensitivity - receptor.sensitivity) < PAD_STILL)
       return;
-    this.tuneDesign(updateReceptor(doc, control.id, effect, {sensitivity}),
-                    'learn-receptor:' + control.id);
-    this.refreshInspector();
+    this.draftDesign(updateReceptor(doc, control.id, effect, {sensitivity}),
+                     'learn-receptor:' + control.id);
   },
   pigmentAmountPointer(control, fx) {
     const doc = this.state.document, found = findCenter(doc, control.id);
@@ -498,6 +495,32 @@ export const handleMethods = {
       this.editField(organ.id, patch, false);
   },
   tuneDesign(doc, batch) { return this.changeDocument(doc, this.state.selected, false, batch);},
+  // While a graphic's handle is dragged only the inspector follows, once a frame; the fish, the
+  // library and the design run catch up when it is let go, so dragging stays smooth.
+  draftDesign(doc, batch) {
+    if (!doc)
+      return;
+    if (!this.drafted)
+      this.recordHistory(batch);
+    this.drafted = batch;
+    this.state.document = doc;
+    if (!this.draftFrame)
+      this.draftFrame = requestAnimationFrame(() => {
+        this.draftFrame = null;
+        this.refreshInspector();
+      });
+  },
+  settleGraphic() {
+    if (this.draftFrame)
+      cancelAnimationFrame(this.draftFrame);
+    this.draftFrame = null;
+    const batch = this.drafted;
+    if (!batch)
+      return this.refreshInspector();
+    this.drafted = null;
+    this.historyBatch = batch;
+    this.changeDocument(this.state.document, this.state.selected, true, batch, true);
+  },
   holdHandle(event, held, drag) {
     this.handleDrag = {held, ...drag};
     event.preventDefault();

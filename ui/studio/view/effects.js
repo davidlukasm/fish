@@ -39,6 +39,8 @@ const TIMES = Object.freeze({
   fading : .1,
   cross : [ .2, .3 ],
   flash : .025,
+  rise : .02,
+  fade : .12,
   edge : .005
 });
 const T = TIMES;
@@ -54,7 +56,7 @@ const edge = (x, y) => {
 const flashes = moments => {
   const keys = [ [ 0, .3 ] ];
   for (const t of moments)
-    keys.push([ t - T.flash, .3 ], [ t, 1 ], [ t + T.flash, .3 ]);
+    keys.push([ t - T.rise, .3 ], [ t, 1 ], [ t + T.fade, .3 ]);
   return animate('fill-opacity', keys, P.play);
 };
 const cell = moments => '<circle class="aid-effect-base" cx="' + P.cx + '" cy="' + P.cy + '" r="' +

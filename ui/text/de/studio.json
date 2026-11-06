@@ -244,6 +244,8 @@
     "wide": "Breit",
     "cellType": "Zentrum",
     "organType": "Organ",
+    "regionType": "Region",
+    "cellSignal": "Signal der Zelle",
     "selected": "Ausgewählt",
     "copy": "Duplizieren",
     "receptorEffect": "Wirkung",
@@ -420,14 +422,34 @@
     "removeProfile": "Duftprofil entfernen"
   },
   "effects": [
-    "Erregung",
-    "Lerntempo",
-    "Eingangs-Konkurrenz",
-    "Merkzeitpunkt",
-    "Taktstärke",
-    "Ausgangsstärke",
-    "Absterben",
-    "Lehrsignal"
+    "erregt oder hemmt die Zelle",
+    "lässt die Zelle schneller oder langsamer lernen",
+    "lässt aktive Eingänge stille mehr oder weniger verdrängen",
+    "verschiebt, wann sich die Zelle Eingänge merkt",
+    "macht den Takt der Zelle stärker oder schwächer",
+    "macht das Signal der Zelle lauter oder leiser",
+    "lässt die Zelle absterben",
+    "lehrt die Zelle"
+  ],
+  "effectsRise": [
+    "erregt die Zelle",
+    "lässt die Zelle schneller lernen",
+    "lässt aktive Eingänge stille stärker verdrängen",
+    "lässt die Zelle sich Eingänge eher bei ihrem eigenen Signal merken",
+    "macht den Takt der Zelle stärker",
+    "macht das Signal der Zelle lauter",
+    "lässt die Zelle absterben",
+    "lehrt die Zelle"
+  ],
+  "effectsFall": [
+    "hemmt die Zelle",
+    "lässt die Zelle langsamer lernen",
+    "lässt aktive Eingänge stille schwächer verdrängen",
+    "lässt die Zelle sich Eingänge eher beim Takt merken",
+    "macht den Takt der Zelle schwächer",
+    "macht das Signal der Zelle leiser",
+    "lässt die Zelle ohne ihn absterben",
+    "lehrt die Zelle das Gegenteil"
   ],
   "regionNodes": {
     "families": {
@@ -884,16 +906,6 @@
     "acts": "Wirkt auf",
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
-    "tiles": [
-      "Erregung",
-      "Lerntempo",
-      "Eingangs-Konkurrenz",
-      "Merkzeitpunkt",
-      "Taktstärke",
-      "Ausgangsstärke",
-      "Absterben",
-      "Lehrsignal"
-    ],
     "tileTitles": [
       "Der Stoff erregt die Zelle oder hemmt sie.",
       "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
@@ -914,10 +926,7 @@
       "bei allen Zellen",
       "bei lernenden Nervenzellen"
     ],
-    "rises": "{effect}: mehr Stoff hebt sie",
-    "falls": "{effect}: mehr Stoff senkt sie",
-    "kills": "stirbt mit dem Stoff",
-    "needs": "stirbt ohne den Stoff",
+    "sentence": "Der Stoff {effect}",
     "here": "hier bei {n} {n:Zelle|Zellen}",
     "effectsTitle": "Was der Stoff bewirken kann",
     "growsOn": "lässt den Fisch wachsen",
@@ -965,12 +974,6 @@
   },
   "learnCard": {
     "cells": "Zellen fürs Lernen",
-    "tiles": [
-      "Lehrsignal",
-      "Lerntempo",
-      "Eingangs-Konkurrenz",
-      "Merkzeitpunkt"
-    ],
     "tileTitles": [
       "Unerwartete Änderungen dieses Stoffs verstärken oder schwächen die gemerkten Verbindungen.",
       "Der Stoff ändert, wie stark jede Überraschung die Verbindungen ändert.",
@@ -984,59 +987,59 @@
     "learns": "Dieser Knoten lernt jetzt mit konkurrierenden Eingängen."
   },
   "learnRule": {
-    "teaching": "Lehrsignal",
+    "teaching": "Wer die Zelle lehrt",
     "firing": "feuert mit",
     "inBeat": "im Takt",
     "still": "still",
     "output": "Ausgang",
     "beat": "Takt",
     "expect": "Erwartung",
-    "gain": "Lerntempo {n} %",
+    "gain": "lernt mit {n} % Tempo",
     "untaught": "ohne Lehrer lernt sie nicht",
     "untaughtMode": "ohne Lehrer: nur {mode}",
     "modulator": "Modulator",
     "substance": "Stoff",
     "noTeacher": "Noch kein Lehrer: einen Modulator aus dem Baukasten auf die Zelle ziehen.",
-    "rate": "Lerntempo",
+    "rate": "Wie schnell die Zelle lernt",
     "slow": "lernt nicht",
-    "off": "lernt nicht: Lerntempo null",
+    "off": "lernt nicht",
     "nodes": "Knoten dieser Region",
     "fast": "schnell",
     "mode": "Lernart",
-    "trace": "Merkspur",
+    "trace": "Wann sich die Zelle Eingänge merkt",
     "traceLength": "Wie lange die Merkspur hält",
     "short": "kurz",
     "lasts": "hält etwa {n} Schritte",
     "none": "kein Stoff",
     "by": [
-      "Lehrsignal durch einen Stoff",
-      "Lerntempo durch einen Stoff",
-      "Eingangs-Konkurrenz durch einen Stoff",
-      "Merkzeitpunkt durch einen Stoff"
+      "Ein Stoff lehrt die Zelle",
+      "Ein Stoff lässt die Zelle schneller oder langsamer lernen",
+      "Ein Stoff lässt aktive Eingänge stille mehr oder weniger verdrängen",
+      "Ein Stoff verschiebt, wann sich die Zelle Eingänge merkt"
     ],
     "strength": [
-      "Was ein Anstieg des Stoffs bewirkt",
+      "Was die Zelle mit viel Stoff lernt",
       "Wie schnell die Zelle mit viel Stoff lernt",
       "Wie stark die Eingänge mit viel Stoff konkurrieren",
       "Wann sich die Zelle mit viel Stoff Eingänge merkt"
     ],
     "low": [
-      "Anstieg schwächt",
-      "steht still",
-      "aus",
-      "nur Takt"
+      "lehrt das Gegenteil",
+      "lernt gar nicht",
+      "keine Konkurrenz",
+      "nur beim Takt"
     ],
     "middle": [
-      "wirkungslos",
-      "unverändert",
-      "unverändert",
-      "halb und halb"
+      "lehrt nicht",
+      "wie ohne Stoff",
+      "wie ohne Stoff",
+      "halb Takt, halb eigenes Signal"
     ],
     "high": [
-      "Anstieg stärkt",
-      "doppelt",
-      "doppelt",
-      "nur eigenes Signal"
+      "lehrt",
+      "doppelt so schnell",
+      "doppelt so stark",
+      "nur beim eigenen Signal"
     ]
   },
   "compiler": {

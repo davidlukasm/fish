@@ -30,6 +30,8 @@
 .aid-library-section{border-top:1px solid #294852;padding:7px 0 10px}
 .aid-library-section h4{margin:4px 0 7px;color:#a9c6b9;font-size:12px;letter-spacing:.07em;font-weight:700}
 .aid-palette-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.aid-palette-tile.wide{grid-column:1/-1;flex-direction:row;justify-content:flex-start;min-height:44px;gap:8px;padding:6px 8px;text-align:left}
+.aid-palette-tile.wide .aid-palette-icon{flex-shrink:0}
 .aid-palette-tile{display:flex;align-items:center;flex-direction:column;justify-content:center;min-height:64px;gap:3px;border:1px solid var(--aid-panel-edge);border-radius:8px;background:#183740;padding:6px 3px;color:#d4e5e1;text-align:center;font-size:12px;line-height:1.15;min-width:0;hyphens:manual}
 .aid-palette-tile:hover{border-color:var(--aid-grip);background:#20464b}
 .aid-palette-tile:active{cursor:grabbing}
@@ -133,7 +135,7 @@
 .aid-organ-settings{border-top:1px solid #32505b;padding-top:12px}
 .aid-organ-metric{display:flex;align-items:center;gap:14px;padding:20px 0;color:#bddad1}
 .aid-neuron-kind{display:block;margin:2px 0 6px;font-size:13px;color:#e1d6b7}
-.aid-center-tabs{display:flex;gap:5px;overflow-x:auto;padding-bottom:10px}
+.aid-center-tabs{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
 .aid-center-tabs button.selected,.aid-effect-chips button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
 .aid-dial{display:flex;flex-direction:column;gap:8px;margin:18px 0;color:#c8dbd4;font-size:12px}
@@ -153,7 +155,9 @@
 .aid-inspector-head .aid-substance-swatch{flex:0 0 auto;align-self:center}
 .aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
 .aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
-.aid-effect-chips{display:flex;flex-wrap:wrap;gap:5px}
+.aid-effect-chips{display:grid;gap:4px}
+.aid-effect-chips button{display:flex;align-items:center;gap:8px;text-align:left}
+.aid-effect-chips button svg{flex-shrink:0}
 .aid-response-chart{width:100%;margin-top:12px;background:var(--aid-graphic);border-radius:12px}
 .aid-response-line{stroke:var(--aid-substance);stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
@@ -244,6 +248,7 @@
 .aid-cppn-link-hit{stroke:transparent;stroke-width:17;fill:none;cursor:pointer}
 .aid-cppn-connection{padding:12px;background:#1d4249;border-radius:9px;margin:12px 0}
 .aid-inspector-scroll label{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.aid-inspector-scroll label.aid-checkbox,.aid-inspector-scroll label.aid-compiler-region{flex-direction:row;align-items:center}
 .aid-inspector-scroll input[type=number],.aid-inspector-scroll select{padding:9px;border-radius:9px;background:#102d35;color:#dbe8dc;border:1px solid #55727b;max-width:100%}
 .aid-inspector-scroll button{min-height:34px}
 .aid-cppn-empty{display:grid;place-items:center;flex:1;text-align:center;padding:25px;color:#bdd0c6}
