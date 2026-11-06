@@ -4,6 +4,7 @@ Pflege:
 - Ergebnisse im Chat; nur Programmpaket ausliefern. Notizen außerhalb.
 - Veraltetes ersetzen; keine Release-Chroniken oder parallelen Erklärdateien.
 - Texte kurz und sachlich.
+- Kommentare nur für Gründe, externe Randbedingungen und Zusammenhänge, die aus dem Code nicht ersichtlich sind. Kommentare, die Code nacherzählen, ersatzlos entfernen.
 - GPU-Berechnungen mit OpenCL.
 - package.sh listet alle Lieferdateien; Ergänzungen begründen.
 - Gemessene und verifizierte Beschleunigungen automatisch ausliefern.

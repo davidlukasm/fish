@@ -2,13 +2,8 @@ import {cssPercent, t, textArea, tList} from './strings.js';
 import {HORMONE_CONTEXT, HORMONES, TOLERANCE} from './schema.js';
 // Profiles are measured by the simulation; this module only displays their results.
 export const hormoneColors = [ '#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a' ];
-// A blood substance's colour: a hormone's own, BODY_SIGNAL for the body's signals (maturity and
-// the energy reserve).
 const BODY_SIGNAL_COLOR = '#b7d3c9';
 export const substanceColor = index => hormoneColors[index] ?? BODY_SIGNAL_COLOR;
-// Effect charts: WIDTH wide, a HEAD and one ROW per organ; bars grow from ZERO by up to HALF,
-// one BAR high per arm, the lowering arm at LOWERED opacity. Contexts show after
-// CONTEXT_SAMPLES samples on both sides.
 const HORMONE_CHART = Object.freeze({
   width : 460,
   head : 28,
@@ -29,13 +24,11 @@ const HORMONE_CHART = Object.freeze({
   lowered : .45,
   context_samples : 32
 });
-// The arm of hormone k raising (sign 0) or lowering (sign 1) it.
 const arm = (k, sign) => k * HORMONES.signs + sign;
 const number = v =>
     Number(v || 0).toLocaleString(t('units.locale'), {maximumSignificantDigits : 3});
 const speciesName = (all, id) =>
     all?.find(s => s.id === id)?.name || t('hormones.speciesNumber', {id});
-// What a hormone does, from the suffix of its name ("propulsivum": drives swimming).
 export function hormoneEffect(h, k) {
   return textArea('hormones').effects?.[h?.names?.[k]?.suffix] || '';
 }
@@ -87,7 +80,6 @@ function rows(box, h, state, open, species, all) {
     box.append(row);
   }
 }
-// One compact row: a small level bar per hormone; details open in the species view.
 export function renderIndividualHormones(box, h, open) {
   if (!box)
     return;

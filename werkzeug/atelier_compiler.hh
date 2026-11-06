@@ -51,8 +51,6 @@ void ensure(bool valid, const char *why) {
 bool between(float x, float a, float b) {
   return std::isfinite(x) && x >= a && x <= b;
 }
-// A plan's receptor: the engine's sensitivity span and steepness steps, any substance a receptor
-// binds (hormones and maturity).
 Receptor read_receptor(std::istream &input) {
   Receptor r;
   int active = 0;
@@ -68,7 +66,6 @@ Receptor read_receptor(std::istream &input) {
   return r;
 }
 
-// A plan: its cell groups, then the body's growth receptor.
 struct Connection {
   int from = 0, to = 0, bundle = 0;
   float spread = 0;
@@ -240,8 +237,6 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
   return v;
 }
 
-// The design view: the plan's cells where the plan puts them, made by the engine's own cell,
-// layout, copy and body functions, without a CPPN, development or wiring.
 field::Substrate planned_substrate(const std::vector<Group> &groups) {
   std::vector<field::Neuron> cells;
   const float bias_scale = field::Options{}.bias_scale;
@@ -270,8 +265,6 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
   return s;
 }
 
-// Adjacent sites of one organ with the same traits share a spatial mask. A merged box may
-// contain only sites covered by its two parts, including on the engine's irregular lattice.
 inline std::vector<Group> compact_groups(std::vector<Group> groups) {
   constexpr float TRAIT_EPSILON = 1e-5f;
   auto same = [&](const Group &a, const Group &b) {
@@ -352,8 +345,6 @@ class Builder {
     link(input, id, float(sign));
     return tests[key] = id;
   }
-  // +1 at the receptor query of an effect or of growth (field::receptor_effect_code), else -1.
-  // Cell queries carry 0; the codes lie 1 / RECEPTOR_QUERIES apart.
   int effect_selector(int query) {
     const auto old = selectors.find(query);
     if (old != selectors.end())
@@ -409,8 +400,6 @@ class Builder {
     bounds(cppn::input::w, g.w0, g.w1);
     if (g.side)
       conditions.push_back(test(cppn::input::side, g.side, 0));
-    // The four zones are one-hot inputs (0 or 1). An active zone contributes
-    // twice as much as one signed condition, just as in v019's fischbau.
     const float n = float(conditions.size()) + 2;
     const int gate = node(NodeType::CUTOFF, (n - 1) / n);
     for (int condition : conditions)
@@ -430,7 +419,6 @@ public:
       genes->add_node({i, 1, NodeType::LINEAR});
     base[out::expression] = -1;
   }
-  // The receptor outputs at a query gate; baseline relative to the neutral baseline.
   void receptor(int gate, const Receptor &r, float neutral) {
     const float a = float(2 * fishsim::PI * r.substance / field::BLOOD_SUBSTANCES);
     const float half = float(2 * std::log(r.half / field::HORMONE_HALF_MIN) /
@@ -482,7 +470,6 @@ public:
           assign(gate, k, delta);
         }
     }
-    // The body's growth receptor sits on the head's midline (field::GROWTH_RECEPTOR_SITE).
     if (plan.growth.active) {
       const auto &at = field::GROWTH_RECEPTOR_SITE;
       Group body;
@@ -492,7 +479,6 @@ public:
       body.w0 = body.w1 = at.w;
       receptor(indicator(body, field::GROWTH_RECEPTOR), plan.growth, 0);
     }
-    // Every cell has an output receptor of baseline +1 until its genotype overrides it.
     assign(mask(effect_selector(field::Output)), out::capacity, 1);
     for (int k = 0; k < cppn::OUTPUTS; ++k)
       link(cppn::BIAS, cppn::INPUTS + k, base[k]);

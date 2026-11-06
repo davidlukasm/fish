@@ -7,7 +7,6 @@
 #include <array>
 #include <cmath>
 namespace cppn {
-// One cell network, queried by zone, local position, side and hormone effect.
 namespace output {
 inline constexpr unsigned receptor_mask =
     (1u << capacity) | (1u << field_width) | (1u << time_constant) | (1u << threshold) |
@@ -15,13 +14,10 @@ inline constexpr unsigned receptor_mask =
 inline constexpr unsigned cell_mask = (1u << count) - 1;
 }
 constexpr int INPUTS = 10, BIAS = 9, OUTPUTS = output::count;
-// Query inputs in the order of cell_inputs: the zone as ZONES one-hot inputs, the coordinates,
-// the body side and the receptor effect.
 namespace input {
 constexpr int zone = 0, zones = 4, u = 4, v = 5, w = 6, side = 7, effect = 8;
 }
 constexpr unsigned ALL_OUTPUTS = (1u << OUTPUTS) - 1;
-// Queries are evaluated in batches of at most BATCH points.
 constexpr std::size_t BATCH = 64;
 struct Point {
   int zone = 0;

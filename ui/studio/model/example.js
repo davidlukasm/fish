@@ -15,18 +15,6 @@ import {
   wheelPlace
 } from './document.js';
 
-// The example fish. Its brain is built of regions: the eyes feed the optic tecta across the
-// midline, the noses the olfactory bulbs; both feed the pallium, which learns what to steer the
-// fins and tail by; the spinal cord beats the tail on alternate sides; the lateral line alarms
-// the hindbrain, which turns the fish away. A biting muscle at the snout and a sucking one behind
-// it make the mouth: the tectum snaps at what is seen, the olfactory bulb sucks where food smells,
-// and the pallium learns both. A gland releases the growth substance, and the body grows while it
-// binds its growth receptor. Eating teaches: the gut's food sense drives the hypothalamus, which
-// makes a second gland release the food substance. In the pallium it is the teaching signal
-// (through the excitation receptor, the engine's teacher besides modulating cells) and raises the
-// learning rate, so what led to food is learnt.
-//
-// Where its organs lie in the body frame, by name (the regions in the drawn brain).
 const PLACES = Object.freeze({
   eye : [ 'eye', 360, 300 ],
   nose : [ 'nose', 245, 425 ],
@@ -47,9 +35,6 @@ const PLACES = Object.freeze({
   hypothalamus : [ 'hypothalamus', 336, 365 ],
   reward : [ 'gland', 470, 383 ]
 });
-// Organs and regions are wired as wholes, the gut by its food node alone; the hypothalamus, one
-// for both sides, reaches the reward glands on both (twin: the other side's organ). The growth
-// glands release without a signal, all the time.
 const WIRES = Object.freeze([
   [ 'eye', 'tectum', 'crossed' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ],
   [ 'bulb', 'pallium' ], [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ],
@@ -57,18 +42,11 @@ const WIRES = Object.freeze([
   [ 'pallium', 'bite' ], [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ],
   [ 'hypothalamus', 'reward' ], [ 'hypothalamus', 'reward:twin' ]
 ]);
-// The gonads make GROWTH_CELLS growth cells each, so the ovary holds an egg and the testis what
-// one spawning takes.
 const GROWTH_CELLS = Object.freeze({eggs : 11, sperm : 3});
-// The pallium learns at full rate once the food substance reaches half; food teaches it TEACHING
-// strongly, as the excitation it brings.
 const REWARD = Object.freeze({sensitivity : 1, half : .1, teaching : .5});
 
-// The example document for the body's development sites; names gives the fish's, the growth
-// substance's and the food substance's names.
 export function exampleDocument(names, sites, wheel) {
   let doc = newDocument(names.fish);
-  // Each organ placed: its id, to wire it as a whole, and its first node's.
   const placed = {};
   for (const [key, [ type, x, y ]] of Object.entries(PLACES)) {
     const result = addOrgan(doc, type, sites, {x, y});

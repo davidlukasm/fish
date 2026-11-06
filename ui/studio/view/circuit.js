@@ -223,7 +223,6 @@ const circuitLabel = (y, text) => '<text class="aid-circuit-label" x="' + CIRCUI
                                   escapeText(text) + '</text>';
 const rowLabels = (rows, at) =>
     rows.map(row => circuitLabel(at.get(row.ids[0]).y, endTitle(row.end)));
-// A node that learns from a substance wears a ring in its colour, as on the fish.
 function circuitNode(state, id, m, p) {
   const C = CIRCUIT;
   const teacher =

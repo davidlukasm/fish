@@ -1,12 +1,5 @@
 import {zoomOf} from './frame.js';
 
-// What the scene shows besides the fish and its organs: the wires, the single nodes of the
-// organs, and the marks of what the hormones do to them. Each switch is set to AUTO (as the tool
-// in use and the view's zoom suggest, LAYER_DEFAULTS), on or off, and kept so (STORE, in this
-// browser). Zoomed out below NODES_ZOOM the organs stand as wholes, their wires running organ to
-// organ; while moving things, below MOVE_WIRES_ZOOM the wires stand back too, where wiring,
-// testing a stimulus and the others keep them; the hormones' marks show with the hormone and the
-// learning tool.
 export const LAYER_KEYS = Object.freeze([ 'wires', 'nodes', 'hormones' ]);
 export const AUTO = 'auto';
 const LAYER_MODES = Object.freeze([ AUTO, true, false ]);

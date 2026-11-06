@@ -123,10 +123,6 @@ constexpr Function functions[] = {{D::forward, D::forward, "propulsivum", "frena
                                   {D::pigment, D::bladder_fill - 1, "chromaticum", "chromaticum"},
                                   {D::bladder_fill, D::bladder, "vesicale", "vesicale"},
                                   {D::secretion, D::count - 1, "glandulare", "glandulare"}};
-// A hormone is named from the last NAME_ROUNDS investigation rounds (at least MIN_ROUNDS) with
-// MIN_INDIVIDUALS individuals. An effect counts from MIN_EFFECT, learning from MIN_LEARNING; a
-// direction wins with AGREEMENT of the valid individuals, a hormone varies with VARIED_SHARE
-// in each direction or MIXED_SHARE mixed; a new name holds after NAME_CONFIRMATION rounds.
 constexpr std::size_t NAME_ROUNDS = 4, MIN_ROUNDS = 3, MIN_INDIVIDUALS = 8;
 constexpr unsigned NAME_CONFIRMATION = 3;
 constexpr double MIN_EFFECT = .005, MIN_LEARNING = .00001, AGREEMENT = .75, VARIED_SHARE = .25,

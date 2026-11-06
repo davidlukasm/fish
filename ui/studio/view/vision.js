@@ -139,8 +139,6 @@ function fieldClips(g, id) {
 }
 // A near sense's ray shows at least RAY_FAINTEST, fully where its cell answers fully.
 const RAY_FAINTEST = .15;
-// The cells of a field organ as the engine made them: each light or near-sense receptor of the
-// design view's sight that belongs to one of the organ's centers, with what it answers now.
 function organCells(state, organ) {
   const sight = state.anatomy?.sight;
   if (!sight?.receptors)

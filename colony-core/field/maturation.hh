@@ -41,7 +41,6 @@ public:
   Maturation(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
     costs.validate();
     workload = neurons * c.neuron_work + edges * c.edge_work;
-    // Length costs count a typical connection of TYPICAL_EDGE_LENGTH.
     const double TYPICAL_EDGE_LENGTH = std::sqrt(12.);
     full_construction = construction =
         neurons * c.neuron_build +

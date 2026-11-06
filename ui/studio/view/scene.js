@@ -61,8 +61,6 @@ function markerShape(center) {
 }
 export const centerMarker = (center, radius) =>
     '<g transform="scale(' + fixed(radius / MARKER.size) + ')">' + markerShape(center) + '</g>';
-// A nerve center's glyph is RADIUS wide (CHOSEN when chosen), on a body HALO wider; a hormone's
-// ring RING wider marks what it does with the focused substance.
 const CENTER_GLYPH = Object.freeze({radius : 8.25, chosen : 11, halo : 5, ring : 9});
 function centersSvg(state) {
   const {document : doc, sites, selected} = state;

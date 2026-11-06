@@ -8,9 +8,6 @@
 #include <limits>
 namespace cppn {
 namespace {
-// The fast program is safe while biases and weights stay within MAX_SAFE_WEIGHT, nodes have at
-// most MAX_SAFE_INPUTS inputs and Gaussian biases are not below MIN_GAUSSIAN_BIAS. An effect
-// query counts EFFECT_QUERY_WEIGHT of a cell query as work.
 constexpr float MAX_SAFE_WEIGHT = 64, MIN_GAUSSIAN_BIAS = 1e-12f;
 constexpr std::size_t MAX_SAFE_INPUTS = 16384;
 constexpr double EFFECT_QUERY_WEIGHT = 1. / 7;
@@ -391,8 +388,6 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       const auto *src = state.data() + code.sources[j] * BATCH;
       float weight = code.weights[j];
       auto *accumulator = code.ports[j] ? gate.data() : sum.data();
-      // Independent sample lanes, with an explicit fused add in the same source order as scalar
-      // queries.
 #pragma omp simd
       for (std::size_t p = 0; p < count; ++p)
         accumulator[p] = std::fma(src[p], weight, accumulator[p]);

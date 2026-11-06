@@ -165,8 +165,6 @@ function nerveSection(state, organ, center) {
                    n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
                    {scale : biasScale(state), rhythm}));
 }
-// A modulator's firing reaches the cells it is wired to as their teaching signal: it plays what
-// that does, and names the cells it teaches, each a button choosing it.
 function modulatorSection(state, organ, center) {
   const doc = state.document;
   const taught = [...new Set(routedLinks(doc, state.sites)

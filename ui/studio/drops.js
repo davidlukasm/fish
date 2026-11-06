@@ -37,8 +37,6 @@ import {BODY_MAP, LAYER} from './view/scene.js';
 // Dragging from the library onto the fish: previews, places and hints while dragging, and what a
 // drop adds; a field organ's choices of place; the trash.
 
-// What the hormone tool's library lets you drag: effects and life phases onto organs and nodes,
-// glands and a blood sense into the fish as the organs they are.
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
 // The wiring tile that bends a wire; the sense each test stimulus is for.
 const BEND = 'bend';
@@ -50,8 +48,6 @@ const STIMULUS_ORGAN = Object.freeze({
   touch : 'touch',
   pain : 'pain'
 });
-// With the learning tool, cells dropped onto a nerve center: a learning circuit makes that one
-// node learn as it does; a modulator or pacemaker is placed beside it to teach or beat for it.
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze(
     {gland : {kind : 'organ', value : 'gland'}, reserve : {kind : 'organ', value : 'blood'}});
@@ -187,7 +183,6 @@ export const dropMethods = {
                             this.state.sites, position, SNAP_DISTANCE);
     if (!result)
       return this.notice(label('status.noRoom'));
-    // A cell placed with the learning tool stays there, to be taught or to teach.
     if (this.state.tool !== 'learn')
       this.state.tool = 'select';
     this.changeDocument(result.document, {
@@ -313,9 +308,6 @@ export const dropMethods = {
   ontoNerve(kind, value) {
     return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);
   },
-  // The parts a dragged effect, life phase or teaching cell can act on: the organs and nodes whose
-  // cells the engine lets carry it (with the learning tool nerve centers only); the others fade
-  // while it is dragged.
   dropCenters(kind, value, centers) {
     if (kind === 'neuron')
       return centers.filter(c => c.role === 'nerve');
@@ -352,9 +344,6 @@ export const dropMethods = {
               : [ findCenter(this.state.document, element.dataset.center)?.center ].filter(Boolean);
     return {element, centers : this.dropCenters(this.dragging.kind, this.dragging.value, centers)};
   },
-  // An effect dropped on a part binds the substance with the receptor for it on every cell there
-  // that can carry it, with a starting strength where it had none (bindReceptor); a life
-  // phase starts or ends there at PHASE_DROPPED.
   dropOnPart(kind, value, target) {
     this.dragging = null;
     this.clearPreview();
@@ -399,9 +388,6 @@ export const dropMethods = {
     return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
                     target.paired);
   },
-  // A learning circuit dropped onto a nerve node makes it learn; a modulator or pacemaker dropped
-  // onto a nerve center (or a region) goes to the free place nearest the drop and is wired to it.
-  // The learner stays chosen.
   dropOntoNerve(key, target, position) {
     this.dragging = null;
     this.clearPreview();

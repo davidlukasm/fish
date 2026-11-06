@@ -10,7 +10,6 @@
 #include <stdexcept>
 #include <optional>
 namespace field {
-// Senses only send, effectors only receive: no sensory cell reaches an effector directly.
 int connection_kind(const Neuron &a, const Neuron &b) {
   if (a.role == Role::Effector || b.role == Role::Sensor)
     return -1;
@@ -75,7 +74,6 @@ std::array<ZoneSpan, cppn::input::zones> zone_spans(const std::vector<Neuron> &n
   std::array<double, cppn::input::zones> mass{};
   for (const auto &n : neurons)
     mass[n.location.zone] += n.strength * (1 + n.parameters.capacity);
-  // Geometric zone lengths follow their contents, with a finite anatomical scaffold.
   std::array<double, cppn::input::zones> length{};
   double total = 0;
   for (int z = 0; z < cppn::input::zones; ++z)
@@ -176,11 +174,10 @@ std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t l
   return builder.take(copies);
 }
 namespace {
-// A possible synapse between two groups after the CPPN stages.
 struct Candidate {
   std::uint32_t from, to;
   float p;
-  float drive; // binding strength: how strongly the source group drives the target group
+  float drive;
 };
 // Connection draws and input selection retain independent, inherited hash streams.
 constexpr std::uint64_t CONNECTION_STREAM = 7, SELECTION_STREAM = 8;
@@ -343,7 +340,6 @@ struct Substrate::GridState {
   std::vector<std::pair<std::size_t, int>> receptors;
 };
 namespace {
-// The body's growth receptor carries BODY instead of a cell in the receptor list.
 constexpr std::size_t BODY = std::numeric_limits<std::size_t>::max();
 }
 struct Substrate::GridDevelopment {

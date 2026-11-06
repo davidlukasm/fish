@@ -29,16 +29,6 @@ import {pathTo} from './wires.js';
 import {steadyAt, zoomOf} from './frame.js';
 import {layerShown} from './layers.js';
 
-// Where a substance acts, with the hormone tool: the glands that release it, the cells that bind
-// it and learn from it, and the ways between them; with the learning tool a center's teachers.
-
-// Glands release the substance as a cloud spreading from them (PUFFS rings); receivers carry a
-// ring and above it the symbols of what the substance does to them (EFFECT_ICON); cells whose
-// learning it changes a second ring, and where it excites them the teaching symbol, since their
-// excitation is their teaching signal.
-// A gland's glyph PRODUCER wide, a receiver's RECEIVER; a learner's second ring TEACH times as
-// wide; symbols SYMBOL wide, SYMBOL_GAP apart, ABOVE the glyph; the glyph shows at least
-// FAINTEST, fully where bound fully.
 const HORMONE_GLYPH = Object.freeze({
   producer : 16,
   receiver : 12,
@@ -52,8 +42,6 @@ const HORMONE_GLYPH = Object.freeze({
   above : 1.9,
   faintest : .28
 });
-// Symbols in a row above the glyph, each with an arrow ARROW of its size at its upper corner
-// (CORNER of it along, LIFT up) saying which way more of the substance turns its effect.
 const symbolsAbove = (symbols, r) => {
   const G = HORMONE_GLYPH, step = G.symbol + G.symbol_gap + G.symbol * G.arrow;
   return symbols
@@ -70,8 +58,6 @@ const symbolsAbove = (symbols, r) => {
       })
       .join('');
 };
-// The way from the nearest gland to a receiver bows CURVE more than a wire, at least FAINTEST
-// and up to FAINTEST + SPAN opaque by how strongly it binds.
 const HORMONE_WAY = Object.freeze({curve : 17, faintest : .1, span : .33});
 function hormoneGlyph(item, kind, color, zoom) {
   const G = HORMONE_GLYPH, r = kind === 'producer' ? G.producer : G.receiver;
@@ -90,7 +76,6 @@ function hormoneGlyph(item, kind, color, zoom) {
                                               })),
                                      r)
                       : '';
-  // A receiver plays what its strongest-placed effect does (EFFECT_ORDER), as the guide does.
   const acts = kind === 'receiver'
                    ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.excitation
                                                        : (item.effects ?? []).includes(e))
@@ -105,8 +90,6 @@ function hormoneGlyph(item, kind, color, zoom) {
          fixed(r / 2) + '"/>' +
          (symbols ? '<g class="aid-hormone-symbols">' + symbols + '</g>' : '') + '</g>';
 }
-// Glands close together, as a pair beside the midline, share one cloud, on the topmost: those
-// within WORD_GAP screen pixels below one with a cloud stay quiet.
 const WORD_GAP = 60;
 function worded(items, zoom) {
   const speaking = [];
@@ -118,7 +101,6 @@ function worded(items, zoom) {
     return {...item, quiet};
   });
 }
-// The nearest of `sources` to a position.
 const nearest = (sources, pos) =>
     sources
         .reduce(
@@ -128,13 +110,6 @@ const nearest = (sources, pos) =>
             },
             null)
         ?.item;
-// With the learning tool, where learning is taught: every nerve center with a teacher (a
-// modulator reaching it, or a substance whose rise teaches it) wears a teaching ring TEACH_RING
-// wide; the chosen one's teachers show their ways to it, a pulse PULSE wide running along each
-// in LESSON seconds as its teaching signal, from each modulator in the brain's colour and from
-// the nearest gland of each teaching substance in its colour. A substance changing the chosen
-// one's learning otherwise shows its glands, a fainter way and above it the symbols of what it
-// changes.
 const TEACHING = Object.freeze({ring : 13, pulse : 4, lesson : 1.6});
 function teachingOverlay(state) {
   const {document : doc, sites, capabilities, selected} = state;
@@ -238,7 +213,6 @@ export function hormoneOverlay(state) {
               effects.map(item => effectDirection(item.effect, center.receptors[item.effect]))
         });
     }
-  // A body that grows with the substance carries its colour along its outline.
   const growth = growsWith(doc, substance.index, capabilities)
                      ? '<path class="aid-hormone-body" d="' + fishOutline(state) +
                            '" style="--hormone:' + color + '"/>'
@@ -262,11 +236,6 @@ export function hormoneOverlay(state) {
          targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + marks +
          '</g>';
 }
-// What the hormones do to the cells shows on the fish (the view's hormone switch): below each node
-// a row of marks, one in each substance's colour that it binds, and for a life phase on the
-// body's maturity its symbol in the body signals' colour; while an organ's nodes are not shown,
-// the marks of all of them below the organ. The hormone tool marks the substance it shows in full
-// instead. Marks MARK wide, STEP apart, BELOW the node.
 const MARK = Object.freeze({dot : 4, step : 10, below : 17, symbol : 10});
 function cellMarks(state, centers, skip) {
   const {document : doc, capabilities} = state;
@@ -300,8 +269,6 @@ function hormoneMarks(state, skip = null) {
                    : row(organLocation(organ, sites, doc), cellMarks(state, organ.centers, skip)))
       .join('');
 }
-// With the hormone tool, the focused substance's glands and receiving centers carry its colour;
-// after a measurement, centers whose mean activity changed by more than MEASURED_CHANGE.
 const MEASURED_CHANGE = .01;
 export function hormoneRoles(state) {
   const roles = new Map(), index = state.focusSubstance;
@@ -312,7 +279,6 @@ export function hormoneRoles(state) {
     roles.set(c.id, 'receives');
   for (const c of producers(state.document, index, wheel))
     roles.set(c.id, 'produces');
-  // A measurement marks the centers whose activity the substance raises or lowers.
   const m = state.measurement;
   if (m?.substance === index)
     allCenters(state.document).forEach((c, k) => {

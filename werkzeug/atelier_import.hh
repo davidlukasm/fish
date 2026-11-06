@@ -2,8 +2,6 @@
 #include "atelier_connections.hh"
 
 namespace atelier {
-// Recover the start fish's expressed sites and traits from its developed genome. Neutral
-// receptors need no recipe; active receptors of this fish bind points of the substance wheel.
 inline Receptor import_receptor(const field::HormoneReceptor &r, const cppn::Point &at, int effect,
                                 cppn::CPPN &net) {
   Receptor result;

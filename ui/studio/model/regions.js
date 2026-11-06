@@ -30,8 +30,6 @@ export function initialRegion(type, site) {
   };
 }
 
-// The organs wired into a region, as a whole or at one of its nodes. A modulator does not feed
-// it: it only teaches the nodes it reaches.
 export function fedBy(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
   const teaches = id => {
@@ -171,11 +169,6 @@ function hindbrainPlan(doc, organ) {
     view : null
   };
 }
-// The pallium learns which of what it hears is worth passing on: learning nodes, as fast as
-// asked and balancing (their strongest inputs give way), neutral or selecting (the strongest
-// win), pass to an output node. While it follows its inputs it learns each kind of organ or
-// region wired into it in a node of its own (at most LEARN_STREAMS), so one stream does not drown
-// another. What teaches it is a substance, set where it learns.
 const LEARN_RATE = Object.freeze([ .2, .5, .8 ]), LEARN_STYLE = Object.freeze([ -.6, 0, .6 ]);
 const LEARN_STREAMS = 4;
 function palliumView(doc, organ) {
@@ -369,8 +362,6 @@ export function settleRegions(doc, sites) {
           continue;
         used.add(site.id);
         center = {...defaults(desc, site), id};
-        // A new node takes what was made of its kind's receptors (a teacher, say) from a node
-        // of the same kind it joins or replaces.
         const sibling = [...kept.values() ].find(c => c.key === n.preset);
         if (sibling)
           center.receptors = structuredClone(sibling.receptors);

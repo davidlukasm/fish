@@ -1,6 +1,5 @@
 import {STUDIO_ICON} from '../../organ_icons.js';
 
-// The Atelier's tool symbols (24-unit paths).
 export const TOOL_ICON = Object.freeze({
   undo : 'M10 5 L5 10 L10 15 M5 10 H14 C20 10 21 20 14 20',
   redo : 'M14 5 L19 10 L14 15 M19 10 H10 C4 10 3 20 10 20',
@@ -12,11 +11,6 @@ export const TOOL_ICON = Object.freeze({
   erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
   pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
 });
-// The hormones' effects as symbols naming what they act on, not which way (24-unit paths, by
-// HORMONE_EFFECT): firing a cell sending out rays, the learning rate a dial, competition two
-// arrows against each other, credit a balance between the cell's own firing and its pacemaker's
-// beat, the rhythm a beat, passing on a loudspeaker, dying a cross. DIRECTION_ICON marks which way
-// more of the substance turns it.
 export const EFFECT_ICON = Object.freeze([
   'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M19 19l-2.5-2.5',
   'M4 17a8 8 0 0 1 16 0M12 17l4-6', 'M3 7l7 5-7 5M21 7l-7 5 7 5',
@@ -24,11 +18,8 @@ export const EFFECT_ICON = Object.freeze([
   'M4 9h4l5-4v14l-5-4H4zM16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10', 'M6 6l12 12M18 6L6 18'
 ]);
 export const DIRECTION_ICON = Object.freeze({rises : 'M12 5l6 8H6z', falls : 'M12 19l6-8H6z'});
-// Teaching: a signal coming down onto a cell.
 export const TEACH_ICON =
     'M12 2v8M8.5 6.5L12 10l3.5-3.5M12 21a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z';
-// Maturity: working from it on a shoot rising, dying from it on one falling.
 export const PHASE_ICON =
     Object.freeze({start : 'M4 19h16M12 15V5M8 9l4-4 4 4', end : 'M4 19h16M12 5v10M8 11l4 4 4-4'});
-// The body's own signals' colour (maturity, the energy reserve).
 export const BODY_SIGNAL = '#d7c294';

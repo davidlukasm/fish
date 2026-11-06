@@ -18,18 +18,6 @@ constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 // the head zone, where glands and the blood sense sit.
 inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
-// Cell parameters from the cell query (cppn/output_schema.hh), meaning by role:
-// threshold     sensor: response threshold; nerve, effector: bias (resting activity)
-// capacity      sensory and nerve group: number of cells; effector: organ size
-// quality1/2    sensor: hue / opponency, scent identity; hormone queries: identity coordinates;
-//               organ: colour, gland kind
-// quality_width sensor: tuning width; organ: colour width
-// field_width   sensor: receptive field width
-// time_constant nerve: tau = 4 x 12^t steps (trace tau / 2, pacemaker period max(8, tau));
-//               smell/lateral receptor: adaptation; effector: organ recovery over tau steps;
-//               hormone queries: steepness of the receptor (HormoneReceptor::steepness)
-// dendrites     nerve: input slots 4 x 128^d
-// plasticity    nerve: learning gain (0: does not learn)
 struct CellParameters {
   float threshold = .5f, capacity = 1, quality1 = 0, quality2 = 0, quality_width = .25f,
         field_width = .3f, time_constant = .5f, dendrites = .5f, plasticity = .5f;
@@ -38,13 +26,12 @@ inline double time_constant_steps(const CellParameters &p) {
   return TIME_CONSTANT_MIN *
          std::pow(TIME_CONSTANT_SPAN, std::clamp(double(p.time_constant), 0., 1.));
 }
-// Cells share their fixed zonal site and inherited parameters. IDs retain the site and copy index.
 struct Neuron {
   std::uint64_t id;
   float x, y, bias;
   Role role;
   std::uint32_t group = 0;
-  std::uint16_t slots = 0; // slots: input places (nerve cells and effectors)
+  std::uint16_t slots = 0;
   bool functional = false;
   float z = 0;
   cppn::Point location{};
@@ -58,13 +45,9 @@ struct Neuron {
   std::array<HormoneReceptor, HORMONE_EFFECTS> hormone_receptors{};
   float role_margin = 1, role_gain = 1;
 };
-// How active a cell is at rest, without input: the tanh of its bias, as the substrate's step
-// squashes a cell's sum.
 inline double resting_output(const Neuron &n) {
   return std::tanh(double(n.bias));
 }
-// Which hormone effects a cell has: every cell its output and death, effectors also their
-// excitation, nerve cells all effects.
 inline bool hormone_effect_present(Role role, int effect) {
   return effect == Output || effect == Death || role == Role::Nerve ||
          (role == Role::Effector && effect == Excitation);
@@ -78,20 +61,12 @@ struct Edge {
   NeuronIndex source, target;
   float weight;
 };
-// Permitted connections: 0 sense -> nerve, 1 nerve ->
-// nerve, 2 nerve -> effector; -1: no connection possible (senses only send, effectors only
-// receive).
 constexpr int CONNECTION_KINDS = 3, IDENTITY_SIZE = 5;
 int connection_kind(const Neuron &, const Neuron &);
-// A possible partner group of a group (kept from development for the formation of new synapses):
-// its binding probability p and binding strength.
 struct Partner {
   std::uint32_t source;
   float p, strength;
 };
-// Classes of nerve cells from their identity values 1..4: transmitter sign (Dale), plasticity
-// mode (competition > 0, cancellation < 0), intrinsic rhythm (pacemaker) and modulatory output
-// (teaches its targets instead of driving them).
 struct CellClass {
   float sign = 1, mode = 0, pace = 0, modulator = 0;
 };
@@ -113,12 +88,8 @@ inline CellClass cell_class(const Neuron &n) {
   c.modulator = smooth(q[3], .7f, .9f);
   return c;
 }
-// A brain holds at most MAX_NODES cells (16-bit indices) and MAX_EDGES connections; the bias
-// scale stays within MAX_BIAS_SCALE.
 constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX_EDGES = 1 << 26;
 constexpr float MAX_BIAS_SCALE = 2;
-// A cell grows up to CELL_COPIES copies at full capacity and expression, never more than
-// CELL_COPY_LIMIT; costs count per copy.
 constexpr double CELL_COPIES = 16;
 constexpr int CELL_COPY_LIMIT = 16;
 // Upper bound for checkpoint replay: pair trials plus all preparation, adjacency and layout passes.
@@ -127,15 +98,8 @@ constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
     DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES + MAX_NODES * MAX_NODES +
     DEVELOPMENT_OVERHEAD_PASSES * (MAX_NODES + MAX_EDGES);
 
-// The cell at a development site from the CPPN outputs there (none when they express no cell or
-// no function fits the site). Development and the Atelier's design view share it, as they share
-// lay_out_cells (each zone's length follows the mass of its cells) and cell_copies (a cell's
-// copies by capacity and expression, its strength split among them, within limit; limited
-// reports that groups had to shrink).
 std::optional<Neuron> site_cell(const cppn::Point &, const std::array<float, cppn::OUTPUTS> &,
                                 std::uint64_t id, float bias_scale);
-// Where each zone lies along the body, from its front (1 at the snout) back by its extent (all
-// together 2 long), as lay_out_cells lays its cells out.
 struct ZoneSpan {
   double front, extent;
 };
@@ -174,9 +138,7 @@ public:
   std::size_t recurrent_edges = 0;
   bool resource_limited = false;
   std::string diagnostic;
-  // From the genome: development seeds (structural draws, individual variation).
   std::uint64_t development_seed = 0, variation_seed = 0;
-  // possible partner groups per target group (offsets into partners; groups as Neuron::group)
   std::vector<std::uint32_t> partner_offset;
   std::vector<Partner> partners;
   std::function<void(Substrate &)> geometry_builder;
@@ -186,11 +148,8 @@ public:
   std::array<double, body_metric::count> body_geometry{};
   std::array<std::array<double, 2>, 7> burial_points{};
   std::array<std::array<double, 2>, 2> eye_positions{};
-  // The body's growth receptor: how strongly which hormones let the body grow.
   HormoneReceptor growth_receptor{};
   explicit Substrate(cppn::CPPN &, Options = {});
-  // Planned cells without a CPPN: the Atelier's design view lays them out and builds the body
-  // from them. Such a substrate never develops.
   explicit Substrate(std::vector<Neuron> planned, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
   std::size_t development_work() const { return queries + pair_checks_ + overhead_work_; }
@@ -202,17 +161,11 @@ public:
   bool cell_parameters_complete() const;
   std::size_t remaining_queries(std::size_t estimate) const;
 };
-// The brain at work: activity, learning, rebuilding, development state. Synapses live in slots:
-// the cells that learn (nerve cells, effectors) are laid out in slices of 8 cells (one per vector
-// lane) with as many slots as their largest cell can hold (its input places). Every network owns
-// the source and the strength at formation of each slot: synapses vanish and form during life.
 class Network {
   std::shared_ptr<const Substrate> tissue;
   std::shared_ptr<const NetworkTopology> topology;
   void materialize() const;
   std::size_t cells() const { return state_.size(); }
-  // activity of every cell; the signals of the last step (activity of the step before, sensory
-  // input) with a zero signal at the end; externally held minimum activity per cell
   std::vector<float> state_, next_, signal_, pulse_;
   struct Stimulus {
     std::size_t neuron;
@@ -224,19 +177,11 @@ class Network {
   std::vector<float> synaptic_mean_, adaptation_rate_;
   void remove_dead_connections();
   bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
-  // per slot: source (the zero signal when free), strength at formation, learned change,
-  // eligibility trace and prediction value (valuation)
   std::vector<std::uint16_t> index_;
   std::vector<float> gene_, learned_, trace_, predict_;
-  // usual level of every signal and its current deviation (zero signal at the end)
   std::vector<float> usual_, deviation_, gathered_;
-  // per learning lane (nerve cells): usual action, usual teaching signal, usual own reaction, the
-  // last surprise (valuation) and post deviation, readiness, the pending weight step and the
-  // resource; per effector lane: usual activity and resource; per cell: the surprise of its last
-  // learning step (teaches its synapses onto effectors)
   std::vector<float> lane_action_, lane_teach_, lane_own_, lane_value_, lane_contrast_, lane_ready_,
       lane_step_, lane_pending_, lane_innate_, effector_own_, effector_innate_, cell_surprise_;
-  // occupied slots per lane (learning lanes, then effector lanes)
   std::vector<std::uint16_t> lane_count_;
   std::uint64_t revision_ = 0, turnover_rng_ = 0;
   double maturity_ = 0;
@@ -271,7 +216,6 @@ public:
     std::uint64_t work = 0;
     bool ready = false;
   };
-  // a synapse in its slot: source, target, current strength and strength at formation
   struct Synapse {
     std::uint32_t slot;
     NeuronIndex source, target;
@@ -280,7 +224,6 @@ public:
   ActorPreview actor_preview(const std::vector<float> &, const Hormones &) const;
   std::uint64_t work_bound() const;
   const LearningSummary &learning_summary() const { return learning_summary_; }
-  // the surprise of the cell's last learning step and its post deviation (0 for other cells)
   float surprise(std::size_t cell) const;
   float learning_contrast(std::size_t cell) const;
   explicit Network(std::shared_ptr<const Substrate>);
@@ -298,14 +241,12 @@ public:
   std::size_t dead_count() const { return dead_count_; }
   const std::vector<unsigned char> &dead_cells() const { return dead_; }
   float synaptic_mean(std::size_t i) const { return synaptic_mean_.at(i); }
-  // Diagnostic step with retained hormones (no learning), or explicit concentrations (learning).
   void step(const std::vector<float> &sensor_values);
   void step(const std::vector<float> &sensor_values, const Hormones &modulators,
             std::uint64_t individual);
   const Substrate &blueprint() const { return *tissue; }
   const std::vector<float> &state() const { return state_; }
   float signal(std::size_t i) const { return signal_.at(i); }
-  // the current synapses; the revision changes whenever one vanishes or forms
   std::vector<Synapse> synapses() const;
   std::uint64_t wiring_revision() const { return revision_; }
   std::size_t slot_count() const;
@@ -317,7 +258,6 @@ public:
   std::size_t runtime_bytes() const;
   void write_runtime(std::ostream &) const;
   void read_runtime(std::istream &);
-  // signal x strength of the synapse in a slot in the last observed step
   float contribution(std::size_t slot) const;
   bool has_contributions() const { return !observed_contributions.empty(); }
   void observe_connections(bool value) {

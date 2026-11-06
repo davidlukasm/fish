@@ -55,7 +55,6 @@ inline __attribute__((always_inline)) F8 clamp8(const F8 &input, float lo, float
 inline float sum8(const F8 &v) {
   return ((v[0] + v[1]) + (v[2] + v[3])) + ((v[4] + v[5]) + (v[6] + v[7]));
 }
-// Indices of 8 slots as a vector (16 or 32 bit storage).
 template <class Index> inline I8 load_index8(const Index *p) {
   I8 v;
   for (int l = 0; l < LANES; ++l)
@@ -82,8 +81,6 @@ inline F8 gather8(const float *base, const I8 &index) {
 // tanh8: a rational function (odd 13th / even 6th degree, the approximation Eigen uses),
 // |error| < 4e-7, about 14 times faster than std::tanh.
 inline __attribute__((always_inline)) F8 tanh8(const F8 &a) {
-  // Beyond TANH_LIMIT the approximation is clamped; numerator and denominator coefficients of
-  // x² from the highest power down.
   constexpr float TANH_LIMIT = 7.99881172180175781f;
   constexpr float NUMERATOR[] = {
       -2.76076847742355e-16f, 2.00018790482477e-13f, -8.60467152213735e-11f, 5.12229709037114e-08f,
@@ -100,24 +97,15 @@ inline __attribute__((always_inline)) F8 tanh8(const F8 &a) {
   return x * p / q;
 }
 constexpr double PI_F = 3.14159265358979323846;
-// Incoming edges of a cell are ordered by the kind of their source: sensors and effectors, plain
-// nerve cells, pacers, modulating pacers, modulators.
 namespace source_group {
 constexpr unsigned char outer = 0, nerve = 1, pacer = 2, modulating_pacer = 3, modulator = 4;
 }
-// Pacers beat at least every MIN_PACE_PERIOD steps, their phase drawn from the cell position by
-// PHASE_SALT; adaptation spans ADAPTATION_SPAN time constants; a gene costs GENE_WORK work units.
 constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN, ADAPTATION_SPAN = 10;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
 constexpr std::uint64_t GENE_WORK = 4;
-// Synapse turnover draws from a PCG step (multiplier and increment) and a short mix.
 constexpr std::uint64_t PCG_MULTIPLIER = 6364136223846793005ull,
                         PCG_INCREMENT = 1442695040888963407ull;
 constexpr int MIX_SHIFT1 = 29, MIX_SHIFT2 = 32;
-// learning rates of ordering (competition) and cancelling; rebuilding: a synapse below PRUNE x the
-// mean strength at birth of its cell vanishes, a new synapse starts at NEW_SYNAPSE x that mean
-// strength; BASAL: share of the formation trials that form without the test of the learning rules
-// (basal synapse formation, also for cells whose activity does not vary)
 constexpr float COMPETITION = 1, CANCELLATION = .02f, PRUNE = .05f, NEW_SYNAPSE = .1f,
                 BASAL = 1.f / 50;
 }
@@ -169,13 +157,6 @@ struct Substrate::FinishState {
   bool advance(Substrate &s, std::size_t &budget);
 };
 
-// Layout of a developed brain for the kernel. Learning cells (functional nerve cells) are sorted
-// by their input places and grouped in slices of 8 (one cell per lane); slot j of a slice holds
-// input j of each of its 8 cells. Per cell the driving inputs (sensory and nerve sources) come
-// first, up to its input places (free places read the zero signal with zero strength); pacemaker
-// and modulatory inputs follow in a second section (pacemakers drive and are the cell's play,
-// modulatory cells only teach; both are kept as born). Effectors have one section of driving
-// inputs. The other cells (not functional) keep their synapses as born.
 struct NetworkTopology {
   struct Slice {
     std::uint32_t offset = 0, length = 0, extra_offset = 0, extra_length = 0;
@@ -202,17 +183,11 @@ struct NetworkTopology {
   };
   std::vector<NeuronIndex> sensors;
   std::vector<Slice> slices, effector_slices, other_slices;
-  // slots as born
   std::vector<float> gene;
   std::vector<std::uint16_t> index;
-  // per cell: learning gain of its synapses onto effectors (0 for pacemakers, modulators and cells
-  // that do not learn), its trace constant, transmitter sign, 1 if it is a nerve cell (cancelling
-  // acts only on synapses from nerve cells; with the zero signal at the end), whether it can be a
-  // driving source, and its learning lane (-1: none)
   std::vector<float> cell_gain, cell_fast, cell_sign, nerve_source;
   std::vector<unsigned char> cell_driving;
   std::vector<std::int32_t> cell_lane;
-  // cells of every group (for the formation of synapses)
   std::vector<std::uint32_t> group_offset, group_cells;
   std::uint32_t max_length = 0;
   std::size_t learning_cells = 0;
@@ -278,8 +253,6 @@ struct NetworkTopology {
         index.push_back(zero);
       }
     };
-    // input places for driving inputs: the cell's places less its pacemaker and modulatory inputs,
-    // at least its driving inputs at birth
     auto places = [&](std::uint32_t c, std::uint32_t born, std::uint32_t extra) {
       const std::uint32_t total = s.neurons[c].slots;
       return std::uint16_t(
@@ -679,7 +652,6 @@ bool Substrate::FinishState::advance(Substrate &s, std::size_t &budget) {
       }
       break;
     case Layout:
-      // The layout builder accounts for its own work units.
       ++budget;
       if (!layout->advance(s, budget))
         return false;
@@ -892,13 +864,6 @@ double Network::turnover_unit() {
   z ^= z >> MIX_SHIFT2;
   return unit_center(z);
 }
-// Formation, the reverse of elimination: a cell with a free place examines one possible partner per
-// step (a uniformly drawn partner group, accepted by contact probability, in it a random cell that
-// can drive, taken with the binding probability; no second synapse from the same source). The
-// partner is treated as a synapse of strength 0: if the cell's learning rules would strengthen it
-// in the direction of the source's sign (would(source) x sign > 0), it forms with NEW_SYNAPSE x the
-// cell's mean strength at birth; a share BASAL of the trials forms without this test (basal
-// formation).
 template <class Would>
 bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) {
   const auto &t = *topology;
@@ -942,9 +907,6 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
   ++revision_;
   return true;
 }
-// Synapses onto effectors learn by the valuation of their source: e = rho e + (1 - rho) x~ (y - y~)
-// with rho of the source and y the effector's activity, dw = g delta e / (1 + sum e^2) with the
-// gain and the surprise of the source; Dale; resource fixed; rebuilding as for nerve cells.
 void Network::learn_effectors(float rm) {
   const auto &t = *topology;
   const auto zero = std::uint16_t(cells());
@@ -1015,13 +977,6 @@ void Network::learn_effectors(float rm) {
     }
   }
 }
-// One step. Signals: the activity of the step before and this step's sensory input. Learning
-// cells: two passes over their input slots. Pass A applies the weight step of the previous
-// learning step (with Dale and the resource) and sums the input; the resource factor follows from
-// the summed strength and scales the driving sum (the sum is linear in the weights). Pass B applies
-// the resource factor to the weights, updates eligibility, prediction, ordering and cancelling, and
-// removes synapses that fell below the prune level; the new weight step waits for the next pass A.
-// Effectors: activity, then their learning and rebuilding. Other cells: as born.
 void Network::advance(const std::vector<float> &values, const Hormones *modulation,
                       std::uint64_t individual) {
   materialize();
@@ -1147,8 +1102,6 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       acc += x * (g + w);
     }
     const F8 innate = load8(lane_innate_.data() + lane0);
-    // resource: ordering and neutral cells redistribute a fixed resource; for cancelling cells it
-    // is only an upper bound (unused strength may stay unused)
     const I8 scale = pending & (total > splat8(0)) & (innate > splat8(0)) &
                      ((sl.canc <= splat8(0)) | (total > innate));
     bool any_scale = false;
@@ -1182,7 +1135,7 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     for (int l = 0; l < sl.lanes; ++l)
       next_[sl.cell[l]] = live[l] ? out[l] : 0.f;
     store8(lane_ready_.data() + lane0, live ? splat8(1) : F8{});
-    if (muted_lane) // muted cells keep no eligibility
+    if (muted_lane)
       for (std::uint32_t j = 0; j < L; ++j)
         store8(ST + LANES * j, live ? load8(ST + LANES * j) : F8{});
     const I8 learn = live & (gain > splat8(0));
@@ -1207,7 +1160,6 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     const F8 action = (1 - eligibility) * pace + eligibility * own, teach = drive + modulating;
     const F8 cb2 = rm * cb + (1 - rm) * action, dpost = action - cb2, ddrive = teach - nz,
              nz2 = rm * nz + (1 - rm) * teach, y = own - uo, uo2 = rm * uo + (1 - rm) * own;
-    // lanes that do not learn keep their traces and weights (fast 1, no deviation, no rates)
     const F8 fast = learn ? sl.fast : splat8(1), dp = learn ? dpost : F8{};
     const F8 cy = learn ? sl.comp * gain_factor * competition * y : F8{},
              ky = learn ? sl.canc * gain_factor * y : F8{};
@@ -1235,7 +1187,6 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       if (any_scale || competes)
         store8(SW + slot, w);
     }
-    // valuation: the surprise of the teaching signal against the prediction from the inputs
     const F8 surprise = learn ? ddrive - prediction : F8{},
              vstep = learn ? gain * surprise / (1 + x2) : F8{};
     for (std::uint32_t j = 0; j < L; ++j) {
@@ -1257,7 +1208,6 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       cell_surprise_[sl.cell[l]] = surprise[l];
       ++learning_summary_.cells;
       learning_summary_.work += std::uint64_t(sl.work[l]);
-      // rebuilding: synapses below the prune level vanish; a free place may be filled
       const auto lane = std::size_t(lane0) + std::size_t(l);
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
@@ -1334,8 +1284,6 @@ std::uint64_t Network::work_bound() const {
   materialize();
   return (1 + HORMONE_EFFECTS * HORMONES) * cells() + GENE_WORK * gene_.size();
 }
-// Preview one complete learning step at absolute hormone concentrations, without changing this
-// brain.
 Network::ActorPreview Network::actor_preview(const std::vector<float> &values,
                                              const Hormones &h) const {
   Network probe = *this;
@@ -1641,7 +1589,6 @@ void Network::read_runtime_state(std::istream &in) {
     throw std::runtime_error("invalid neural stimuli terminator");
   next_.assign(cells(), 0.f);
   settled_ready_ = false;
-  // occupied places per lane
   const auto &t = *topology;
   const auto zero = std::uint16_t(cells());
   auto count = [&](const NetworkTopology::Slice &sl, std::size_t lane0) {

@@ -48,8 +48,6 @@ function tile({
 const section = (title, tiles, extra = '') => '<section class="aid-library-section"><h4>' + title +
                                               '</h4><div class="aid-palette-grid">' + tiles +
                                               '</div>' + extra + '</section>';
-// A substance's section: its swatch and name as the title (a click shows it in the hormone
-// tool's inspector) over its tiles.
 const substanceTitle = (state, index, choose) =>
     '<span class="aid-substance-title" style="--substance:' + substanceColor(index) + '">' +
     (choose ? '<button data-select-substance="' + index + '">' : '<span>') +
@@ -163,8 +161,6 @@ function wiringLibrary(state) {
   return section(label('wiring.pairings'), PAIRINGS.map(wiring).join('')) +
          section(label('wiring.shape'), wiring('bend'));
 }
-// Hormones: each substance's gland and effects, the body's own signals (maturity, the energy
-// reserve a blood sense feels), a new substance.
 function hormoneLibrary(state) {
   const doc = state.document, words = tList('studio.hormoneCard.tiles');
   const titles = tList('studio.hormoneCard.tileTitles');
@@ -213,10 +209,6 @@ function hormoneLibrary(state) {
                                             })) +
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
-// Learning: the cells learning needs (a learning circuit, a modulator teaching the cells it
-// reaches, a pacemaker whose beat a learner can credit; dropped onto a nerve node the first makes
-// it learn, the others are wired to it) and per substance a gland and what it can do to
-// learning.
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const LEARNING_TILES = Object.freeze([
   {effect : HORMONE_EFFECT.excitation, path : TEACH_ICON},

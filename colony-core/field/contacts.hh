@@ -15,7 +15,6 @@ inline double search_width(double radius) {
 inline double spread_radius(double spread) {
   return MIN_SEARCH + spread * (MAX_SEARCH - MIN_SEARCH);
 }
-// Effectors have fixed input places; nerve cells encode a geometric span of capacities.
 inline constexpr int EFFECTOR_SLOTS = 32;
 inline constexpr float SLOTS_MIN = 4, SLOTS_RANGE = 128;
 inline int input_slots(Role role, float dendrites) {
@@ -91,8 +90,6 @@ public:
     std::sort(result.begin(), result.end());
   }
 };
-// Shared by development and the Atelier's address planner. Body geometry, side preference and
-// role restrictions retain exactly the same meaning in both.
 inline ContactParameters contact_parameters(const Neuron &a, const Neuron &b, double body_length,
                                             const ContactScale &sender,
                                             const ContactScale &receiver) {

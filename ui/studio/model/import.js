@@ -3,8 +3,6 @@ import {contactTopology, defaults, newDocument, validateDocument} from './docume
 import {ORGAN_BY_KEY, nerve, nerveKind} from './organs.js';
 import {latticeBearing, retinalBins} from './retina.js';
 
-// The start fish is read from its genome by the engine. Only anatomical ownership is assigned
-// here; positions, traits, hormones and contact addresses come from that expressed fish.
 const PRECISION = 1e-5;
 const near = (a, b) => Math.abs(a - b) < PRECISION;
 const traitKey = values => JSON.stringify(values.map(v => Math.round(v / PRECISION)));

@@ -421,8 +421,6 @@ export const FISH_CLICKS = Object.freeze([
         studio.changeDocument(doc, studio.state.selected);
     }
   ],
-  // A substance not yet in the design, clicked on a wheel, is made and opened in the hormone
-  // tool to be set up there.
   [
     '[data-define-substance]',
     (studio, e) => {
@@ -455,7 +453,6 @@ export const FISH_CLICKS = Object.freeze([
            }));
     }
   ],
-  // A part of learning bound to a substance, or to none.
   [
     '[data-learn-substance]',
     (studio, e) => {

@@ -15,20 +15,9 @@ import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {effectScene, teachingScene} from './effects.js';
 import {centerMarker} from './scene.js';
 
-// How a nerve center learns, as the engine's rule runs it (colony-core/field/substrate.cc), drawn
-// as a learning episode (episode.js): the rule as this cell has it on top, then its four parts,
-// each with its own control and with what a substance can do to it, played:
-// - the teaching signal: the modulators reaching the cell and a substance whose rise teaches;
-// - the learning rate (its plasticity), and a substance changing it, up to twice or down to none;
-// - the way it learns without a teacher (its mode: cancelling, neutral, competing), and a
-//   substance changing its competition;
-// - the trace: how long it lasts (the cell's time constant) and what it credits, its own firing
-//   or its pacemaker's beat, a substance shifting that.
-// The tracks run from LEFT to RIGHT of a graphic WIDTH wide and HEIGHT high, at Y.
 const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20});
 export const learnRatePatch = fx => ({qwidth : trackShare(fx * TRACKS.width, TRACKS.range)});
 export const learnModePatch = fx => ({mode : 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1});
-// A substance's track sets the response with plenty of it, from -1 to 1 along the track.
 export const learnResponseOf = fx => 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1;
 function learnTrack(kind, center, share, title, ends, {middle = '', extra = ''} = {}) {
   const T = TRACKS;
@@ -42,7 +31,6 @@ function learnTrack(kind, center, share, title, ends, {middle = '', extra = ''} 
                  : '') +
          '</svg>';
 }
-// What reaches the cell: how many plain inputs, its modulators and pacemakers.
 function sendersOf(state, center) {
   const doc = state.document, organ = findCenter(doc, center.id)?.organ;
   const hears = new Set([ center.id, organ?.id ]);
@@ -54,21 +42,13 @@ function sendersOf(state, center) {
   const pacers = senders.filter(c => c.role === 'nerve' && isPacemaker(c));
   return {modulators, pacers};
 }
-// The substance a receptor of the cell binds, when it is active.
 const boundSubstance = (state, center, effect) => {
   const receptor = center.receptors?.[effect];
   return receptor?.active ? state.document.substances.find(s => s.index === receptor.substance)
                           : null;
 };
-// The response a receptor gives with plenty of its substance.
 const fullResponse = receptor => receptorEnds(receptor).with;
 
-// The rule as the cell has it, in two rounds: TEACH_DELAY steps after its deed the teaching
-// signal comes, when it has a teacher (modulators teach in their colour, a substance in its own);
-// what is left of the trace then follows the trace's time (half the time constant). Lines change
-// by CHANGE at full rate, surprise and trace; competition and cancelling by COMPETE and CANCEL
-// times the rate and the mode's lean; the expectation rises by EXPECT times rate times surprise;
-// a trace glows GLOW at the default credit (half own firing, half beat).
 const RULE = Object.freeze({
   change : 7,
   compete : 3,
@@ -80,7 +60,6 @@ const RULE = Object.freeze({
 });
 const traceSteps = center => timeConstantSteps(center.tau) / 2;
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
-// A learning mode leans to one side beyond a third of its range either way.
 const MODE_THIRD = 1 / 3;
 const modeName = mode => mode > MODE_THIRD    ? 'competing'
                          : mode < -MODE_THIRD ? 'cancelling'
@@ -101,7 +80,6 @@ function learningRule(state, center, teachers, colours) {
     const surprise = teaches ? 1 - expect : 0;
     const reward = R.change * rate * surprise * remnant;
     const own = reward * 2 * R.credit, beat = pacer ? reward * 2 * (1 - R.credit) : 0;
-    // A neutral or competing cell keeps its strength, so the still line gives way.
     const giveWay = mode >= 0 ? -(own + beat) : 0;
     const before = expect;
     if (teaches)
@@ -137,9 +115,6 @@ function learningRule(state, center, teachers, colours) {
     }
   });
 }
-// The trace: a glow fading as the engine's trace does (half the time constant), over the steps
-// up to the longest trace twice (SPAN of the longest time constant); its handle at the trace's
-// time sets it. TRACE lays it out: the plot's left, right, top and bottom, SAMPLES points.
 const TRACE = Object.freeze(
     {width : 300, height : 70, left : 22, right : 280, top : 8, bottom : 46, samples : 48});
 const traceAxis = LONGEST_TIME_CONSTANT;
@@ -170,9 +145,6 @@ function traceGraphic(center) {
          '</text><text x="' + T.right + '" y="' + (T.bottom + TRACK.name) + '" text-anchor="end">' +
          escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';
 }
-// A substance acting on one part of learning: what it does played (in its colour once bound),
-// which substance it is (or none) and, once bound, a track of what plenty of it does, its ends
-// and middle named as that part has them.
 const PART_ICON = Object.freeze({
   [HORMONE_EFFECT.excitation] : TEACH_ICON,
   [HORMONE_EFFECT.learning] : EFFECT_ICON[HORMONE_EFFECT.learning],
@@ -217,8 +189,6 @@ function substancePart(state, center, effect) {
                             bound ? receptorEnds(receptor) : undefined)) +
          choices + strength + '</div>';
 }
-// The cell's teachers: its modulators with their markers, each a button choosing it, and the
-// substance teaching it with its colour.
 function teacherList(state, center, modulators) {
   const taught = boundSubstance(state, center, HORMONE_EFFECT.excitation);
   const items =
@@ -235,15 +205,12 @@ function teacherList(state, center, modulators) {
   return items ? '<div class="aid-teacher-list">' + items + '</div>'
                : '<p class="aid-hint">' + label('learnRule.noTeacher') + '</p>';
 }
-// A node's marker in its button, MARKER wide in a box of BOX.
 const NODE_MARK = Object.freeze({marker : 6, box : 8});
 const nodeMark = c => {
   const B = NODE_MARK.box;
   return '<svg class="aid-node-mark" viewBox="' + -B + ' ' + -B + ' ' + 2 * B + ' ' + 2 * B +
          '" aria-hidden="true">' + centerMarker(c, NODE_MARK.marker) + '</svg>';
 };
-// The nerve nodes of the chosen node's organ (a brain region's), each a button choosing it: any
-// of them can learn.
 function nodeChoice(state, chosen) {
   const organ = findCenter(state.document, chosen.id)?.organ;
   const nodes =

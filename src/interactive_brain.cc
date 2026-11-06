@@ -26,13 +26,11 @@
 #include <poll.h>
 #include <unistd.h>
 namespace fishsim {
-// The schema names the hormones and their effects as the brain field counts them.
 static_assert(hormones::levels == field::HORMONES &&
               hormone_effect::count == field::HORMONE_EFFECTS &&
               hormone_effect::excitation == field::Excitation &&
               hormone_effect::output == field::Output && hormone_effect::death == field::Death);
 namespace {
-// Hormone readings are resent at most every HORMONE_RESEND, changed wiring every WIRING_RESEND.
 constexpr auto HORMONE_RESEND = std::chrono::milliseconds(200);
 constexpr auto WIRING_RESEND = std::chrono::seconds(2);
 }
@@ -56,7 +54,6 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
             port = e.port;
           }
       }
-      // Inner pressure cells report the senses of their receptor.
       auto senses = n.functions.senses;
       if (n.functions.senses[field::InnerPressure] > 0)
         for (const auto &r : b.active_interface(g).sensory)
@@ -102,7 +99,6 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
       const auto activity =
           b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
                     : 0;
-      // State and signal arrive with the neuron state.
       Record(out, N::count)(N::x, n.x)(N::y, n.y)(N::role, int(n.role))(N::activity, activity)(
           N::functional, n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(
           N::ready, !b.development() || b.development()->neuron_ready(n.id) ? 1 : 0)(N::z, n.z)(
@@ -250,8 +246,6 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
   out << "],\"neurons\":[";
   first = true;
   write_brain_neurons(out, chosen);
-  // Synapses: with a brain its current synapses (id: slot), before that the synapses of the
-  // blueprint (id: index), with their strength at formation.
   out << "],\"edges\":[";
   first = true;
   if (brain_detail && chosen->body.brain())
@@ -341,8 +335,6 @@ void InteractiveSession::write_brain_learning(std::ostream &out, const Individua
   out << ",\"learning\":{\"steps\":" << (b.brain() ? b.brain()->learning_steps() : 0)
       << ",\"cells\":" << (b.brain() ? b.brain()->learning_neurons() : 0)
       << ",\"changed\":" << (b.brain() ? b.brain()->learned_connections() : 0) << ",\"weights\":[";
-  // current strength per synapse [slot, weight]; contribution (signal x strength) per slot;
-  // per cell [surprise of its last learning step, post deviation]
   if (brain_detail && b.brain()) {
     bool first = true;
     for (const auto &e : b.brain()->synapses()) {
@@ -371,7 +363,6 @@ void InteractiveSession::write_brain_learning(std::ostream &out, const Individua
 void InteractiveSession::write_brain_senses(std::ostream &out, const Individual *chosen) {
   const auto &b = chosen->body;
   const auto &g = chosen->genome;
-  // Rows in sensory_component order: the neuron, then its share per sense.
   static_assert(sensory_component::neuron == 0 && sensory_component::senses == 1);
   out << ",\"sensory_components\":[";
   if (g.interface)
@@ -401,10 +392,6 @@ void InteractiveSession::write_brain_senses(std::ostream &out, const Individual 
   }
   out << ']';
 }
-// What the chosen fish's senses report this step, for its thoughts: per sense the number of
-// cells and their mean signal on each side (no cells: 0), the scents its smell cells pick up
-// (signal weighed by each cell's tuning), and how busy its processing and pigment cells are.
-// It goes out every step, so its values are rounded to SENSE_REPORT_STEP.
 constexpr double SENSE_REPORT_STEP = .001;
 void InteractiveSession::write_sense_report(std::ostream &out, const Individual *chosen) {
   const auto &g = chosen->genome;
@@ -533,8 +520,6 @@ void InteractiveSession::write_brain(std::ostream &out, const Individual *chosen
     out << "null";
   else {
     const auto &g = chosen->genome;
-    // the layout is sent again when the plan changes, and at most every two seconds when the
-    // brain's synapses have changed (they vanish and form during life)
     const auto now = Clock::now();
     const std::uint64_t wiring =
         chosen->body.brain() ? chosen->body.brain()->wiring_revision() + 1 : 0;

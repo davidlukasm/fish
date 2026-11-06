@@ -332,7 +332,6 @@ bool Genome::duplicate_subgraph(const std::vector<int> &selected, std::vector<in
     if (copies)
       copies->push_back(pair.second);
   }
-  // A copied region receives its inputs, but starts without an outgoing contribution.
   for (const auto &c : links) {
     const bool source = region.count(c.get_source()), target = region.count(c.get_target());
     int from = source ? twins.at(c.get_source()) : c.get_source();
@@ -380,7 +379,6 @@ void Genome::mutate_weights() {
   for (auto &n : node_genes) {
     if (n.get_role() == NodeRole::Input)
       continue;
-    // The expression output remains a step function for new HyperNEAT-LEO genomes.
     if (output_nodes >= 2 && n.get_id() == input_nodes + 1 && n.get_type() == NodeType::SIGN)
       n.Gene::mutate();
     else

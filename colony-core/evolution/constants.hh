@@ -1,7 +1,6 @@
 #pragma once
 namespace evolution {
 constexpr int NODE_TYPES = 11;
-// A Gaussian node computes exp(-GAUSSIAN_SHARPNESS x² / b²).
 constexpr float GAUSSIAN_SHARPNESS = 64.f;
 constexpr float WEIGHT_ABS_RANGE = 3.f, WEIGHT_RANGE = 6.f;
 constexpr float WEIGHT_MIN = -3.f, WEIGHT_MAX = 3.f;

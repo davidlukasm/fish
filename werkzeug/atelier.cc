@@ -28,26 +28,16 @@
 #include <tuple>
 #include <vector>
 
-// Converts a spatial cell-group plan into an ordinary v019 CPPN. It also exposes the
-// developed anatomy and the actual CPPN for the browser's two editing views.
 using evolution::NodeType;
 using fishsim::Genome;
 namespace out = cppn::output;
 namespace {
 using namespace atelier;
 
-// Numbers in the Atelier's answers carry this many significant digits: the measurements and
-// stimulus frames few, the design and the developed fish's report enough to redraw them, the
-// diet's curves in between.
 constexpr int MEASURE_DIGITS = 4, REPORT_DIGITS = 8, DIET_DIGITS = 6;
 // A brain on trial runs as this individual, with its body clock going as in the tank: the clock
 // beats its pacemakers, and it runs only while the brain steps with hormone levels.
 constexpr std::uint64_t TRIAL_INDIVIDUAL = 1;
-// What a substance does in the developed brain: the brain runs `steps` steps without sensory input
-// and without learning, once with no hormone and once with `level` of the substance (or at
-// maturity `level` instead of `maturity` for the maturity substance). Reported: per cell group the
-// mean change of activity and its dead cells, per organ drive (organ_drive order) the change,
-// and the change of the body's growth (occupancy of its growth receptor).
 void measure(const Genome &g, const std::vector<Group> &groups, int substance, float level,
              float maturity, int steps) {
   ensure(substance >= 0 && substance <= field::HORMONES && between(level, 0, 1) &&
@@ -187,21 +177,13 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   }
   std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
 }
-// The Atelier's look through the eyes: the grown fish alone in open water, the Aquarium's sight
-// probe at a bearing (degrees, right positive) and distance (world units) from the view origin of
-// one side, in a fully saturated light of a hue on the interface's hue circle, and what the eyes
-// take of it, sensed and written exactly as the Aquarium does for an inspected fish. No brain is
-// involved.
 struct SightScene {
   int side = 0;
   double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
-// The example a new genome may also be: the Aquarium's hand-built start fish, as its runs begin.
 constexpr const char *START_FISH = "start";
 // The innovation draws of the Atelier's genomes start alike in every run.
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
-// A CPPN edit keeps weights and parameters within ±CPPN_EDIT_LIMIT and the network below
-// CPPN_MOST_NODES nodes.
 constexpr float CPPN_EDIT_LIMIT = 16;
 constexpr int CPPN_MOST_NODES = 1024;
 // The sight tank's seed: any open water serves.
@@ -218,12 +200,6 @@ SightScene read_sight(std::istream &in) {
          "invalid sight scene");
   return scene;
 }
-// The Atelier's probes of the other senses, without a brain: the grown fish resting in open water,
-// as for sight, given one stimulus at a bearing (degrees, towards side +1 positive) from its
-// heading. A scent source of one odor kind (`scent`) `distance` body radii away; a touch of
-// `strength` against the skin; water streaming against the side of the body facing that bearing
-// at `strength` world units a step; or a wound there taking `strength` of the fish's health. Each
-// group's sensory cells answer as the engine senses them.
 struct SenseScene {
   int kind = 0, scent = 0;
   double bearing = 0, distance = 0, strength = 0;
@@ -231,7 +207,6 @@ struct SenseScene {
 namespace sense_scene {
 constexpr int smell = 1, touch = 2, flow = 3, wound = 4;
 }
-// Probes reach at most SENSE_SCENE_REACH body radii and SENSE_SCENE_STRENGTH strong.
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
   SenseScene scene;
@@ -258,10 +233,6 @@ void sense_report(const field::Substrate &t,
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
   if (scene.kind == sense_scene::flow) {
-    // The lateral line's frame with the water streaming from the bearing against the corners
-    // that face it, the more the more they face it and not at all behind the body from it: a
-    // cell sampling the facing corners alone feels it fully, one sampling all four less, one on
-    // the far side not at all.
     fishsim::SensoryFrame frame;
     fishsim::LateralSamples<double> facing{};
     double most = 0;
@@ -301,7 +272,6 @@ void sense_report(const field::Substrate &t,
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
   }
-  // Each group's answer: the mean over its cells of the senses the probe stirs.
   const auto stirred = [&](int sense) {
     return scene.kind == sense_scene::smell   ? sense == field::Odor
            : scene.kind == sense_scene::flow  ? sense == field::Flow
@@ -354,7 +324,6 @@ void sight_report(const field::Substrate &t,
   fishsim::write_sight(std::cout, state);
   std::cout << ",\"samples\":[";
   fishsim::write_visual_samples(std::cout, state);
-  // The light and near-sense cells as the brain layout lists them, and the design group of each.
   std::vector<int> owners;
   std::cout << "],\"receptors\":[";
   for (std::size_t i = 0; i < interface->sensory.size(); ++i) {
@@ -373,30 +342,17 @@ void sight_report(const field::Substrate &t,
     std::cout << (i ? "," : "") << owners[i];
   std::cout << "]}";
 }
-// Light cells show what the engine makes of their tuning: for a full light of each of LIGHT_HUES
-// hues their excitation and opponent inhibition, and for their best hue the response at
-// LIGHT_LEVELS brightnesses, log-spaced from LIGHT_DIMMEST to full light.
 constexpr int LIGHT_HUES = 72, LIGHT_LEVELS = 48;
 constexpr double LIGHT_DIMMEST = 1e-4;
-// Other senses: SENSE_LEVELS stimuli; adaptation to a stimulus ADAPT_HELD times the half answer
-// shown over ADAPT_SPAN time constants.
 constexpr int SENSE_LEVELS = 48;
-// Directions around the body at which the design view gives how the spines shield it.
 constexpr int SPINE_DIRECTIONS = 64;
-// Directions water may stream from against the lateral line.
 constexpr int LATERAL_DIRECTIONS = 48;
-// The fish's colour range is reported at COLOUR_STEPS dispersions of its pigment.
 constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
-// What the engine makes of a substrate's body and where its cells and groups lie. The
-// developed fish and the design view share it; developed adds what only development makes
-// (hormone receptors, nerve classes). Gives each cell's group, -1 outside every group.
 std::vector<int> anatomy_report(const field::Substrate &t,
                                 const std::shared_ptr<const fishsim::BrainInterface> &interface,
                                 const std::vector<Group> &groups, bool developed) {
   const auto &a = *interface;
-  // What each light group answers to, with the same spectrum, opponency and threshold as in
-  // the retina; null for other groups. half: the brightness of half response.
   std::cout << ",\"light\":[";
   const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
   for (std::size_t i = 0; i < groups.size(); ++i) {
@@ -411,8 +367,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << "null";
       continue;
     }
-    // Excitation, and inhibition at full opponency: the balance at the cell's opponency lies
-    // in between, linearly.
     auto opponent_cell = *cell;
     opponent_cell.opponency = 1;
     std::array<double, LIGHT_HUES> excitation{}, inhibition{}, balance{};
@@ -449,11 +403,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << '}';
   }
   std::cout << "],\"lightDimmest\":" << LIGHT_DIMMEST;
-  // What each other sensory group answers, as receptor_response computes it: over the stimulus
-  // (intensity senses on a log axis from LIGHT_DIMMEST, bounded ones from 0 to 1) with the
-  // stimulus of half the answer; for adapting senses also the answer to a stimulus held at
-  // ADAPT_HELD times that half, step by step over ADAPT_SPAN time constants. Null for light cells
-  // and for groups without sensory cells.
   std::cout << ",\"senses\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     const fishsim::BrainInterface::Receptor *cell = nullptr;
@@ -495,9 +444,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << '}';
   }
   std::cout << ']';
-  // What each group's pressure cells measure, as the engine binds them to the nearest organ
-  // (fishsim::PressureSource: the gut, the eggs, the sperm, the bladder or the body's shape); -1
-  // for groups without pressure cells.
   std::cout << ",\"pressure\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     int kind = -1;
@@ -509,10 +455,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << (i ? "," : "") << kind;
   }
   std::cout << ']';
-  // Where each touch, injury and lateral-line cell feels, per group: for each cell its direction
-  // around the body (radians, 0 ahead, positive towards side +1) and the half width of its
-  // angular kernel. Touch and injury cells weigh the body's sectors by the kernel; lateral-line
-  // cells answer to water passing them along their direction.
   std::cout << ",\"felt\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     std::cout << (i ? "," : "") << '[';
@@ -529,8 +471,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << ']';
   }
   std::cout << ']';
-  // Where the engine lays each zone along the body ([front, extent], the body running from 1 at
-  // the snout to -1), so the Atelier can find the engine's directions on its frame.
   std::cout << ",\"zones\":[";
   {
     const auto spans = field::zone_spans(t.neurons);
@@ -538,12 +478,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << (z ? "," : "") << '[' << spans[z].front << ',' << spans[z].extent << ']';
   }
   std::cout << ']';
-  // How well the spines shield the body at SPINE_DIRECTIONS directions around it (the middles of
-  // equal arcs from straight behind, 0 ahead, positive towards side +1), as the engine's local
-  // defence finds it with the spines at rest (as high as the defence capacity holds them) and
-  // fully raised; whose spines stand there: the group spreading the most into the body sector of
-  // each direction, -1 where none does; and the direction each group's spines centre on, null
-  // for groups without spines.
   {
     const auto density = fishsim::spine_density(a, t);
     std::vector<std::array<double, fishsim::BODY_SECTORS>> spread(groups.size());
@@ -591,12 +525,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
     std::cout << ']';
   }
-  // What each lateral-line group feels, null for other groups: how much its cells weigh the
-  // water at the lateral line's four corners (ahead and behind, towards side -1 and +1, in the
-  // engine's order) and how strongly water streaming against the resting fish from each of
-  // LATERAL_DIRECTIONS directions (the middles of equal arcs from straight behind, 0 ahead,
-  // positive towards side +1) stirs them, as the engine's lateral line reckons it, against
-  // the direction that stirs them most.
   std::cout << ",\"lateral\":[";
   {
     const fishsim::Body still;
@@ -639,13 +567,9 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
   }
   std::cout << ']';
-  // The grown fish's radius in world units, and how far it sees in body radii: the Atelier
-  // draws its fields that deep and its sight probe at that scale.
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
   std::cout << ",\"bodyRadius\":" << radius
             << ",\"visionDepth\":" << fishsim::EnvironmentParameters{}.vision_range / radius;
-  // Where each eye looks from, in body radii along the body and across it (null without one):
-  // the design view's fields and its sight probe start there.
   std::cout << ",\"eyePlaces\":[";
   for (int side = 0; side < fishsim::EYES; ++side) {
     const auto place = fishsim::eye_view_place(a, fishsim::EnvironmentParameters{}, side);
@@ -670,8 +594,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
     std::cout << ']';
   }
-  // Developed retinal receptors are attached to their own placed group. An eye with
-  // several centers keeps one physical origin and unions exactly those visual rays.
   std::vector<std::vector<std::pair<float, float>>> eye_groups(groups.size());
   for (const auto &receptor : a.sensory) {
     if (!receptor.visual() || !t.neurons[receptor.neuron].functional)
@@ -722,10 +644,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << growth.affinity[k];
-  // The fish's colour as the engine paints it: its skin without pigment; its colours from the
-  // pigment gathered to spread fully, at COLOUR_STEPS dispersions alike in all channels; its
-  // ground colour, with the pigment as dispersed as its cells' resting activity leaves it, and how
-  // far along that range it lies (weighed by what each channel absorbs).
   std::cout << "]},\"colour\":{";
   {
     const fishsim::PhysiologyParameters physiology{};
@@ -756,16 +674,12 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   }
   std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());
-  // A group's hormone receptors of each effect, summed over its cells: their baseline,
-  // sensitivity, half and affinity to the group's substance.
   struct ReceptorSum {
     double baseline = 0, sensitivity = 0, half = 0, affinity = 0;
   };
   using EffectSummary = std::array<ReceptorSum, field::HORMONE_EFFECTS>;
   std::vector<EffectSummary> receptor_sums(groups.size());
   std::vector<std::array<int, field::HORMONE_EFFECTS>> receptor_counts(groups.size());
-  // The developed class of a group's nerve cells (field::cell_class): sign, learning mode,
-  // rhythm and modulation, summed over its cells.
   struct ClassSum {
     double sign = 0, mode = 0, pace = 0, modulator = 0;
   };
@@ -908,7 +822,6 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
-  // The least yolk an egg needs to hatch; an egg laid with less is food.
   std::cout << ",\"eggMinimum\":"
             << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{});
   const auto group = anatomy_report(t, g.interface, groups, true);
@@ -968,10 +881,6 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   std::cout << "}\n";
 }
 }
-// What the gonads hold and how they fill and spawn, with the engine's usual parameters: room per
-// motor cell (perCell) up to a ceiling (most), the energy a step moves in at full transfer (fill;
-// a gonad's growth cells transfer as their drive A does, A / (1 + A)), when it spawns (eggs at a
-// share of their room, sperm from a portion on) and the drive its release cells need (release).
 std::string gonad_report() {
   const fishsim::EvolutionParameters evolution{};
   const fishsim::PhysiologyParameters physiology{};
@@ -986,13 +895,6 @@ std::string gonad_report() {
   return out.str();
 }
 
-// How the traits the muscles shape serve each kind of food, sampled at DIET_SAMPLES values from
-// 0 to 1 (suction strength from 0 to DIET_SUCTION): the share of plants, of animal food and of
-// sediment a gut of each length takes in and how much longer it holds food than a middle one;
-// how much of a bite teeth of each bluntness bring to hard and to soft prey; how wide a jaw of
-// each length opens against a middle one and how hard it presses; and how much a gulp draws in
-// with suction of each strength against suction of strength 1, one node at full strength (at the
-// standard body size and force scale).
 constexpr int DIET_SAMPLES = 41;
 constexpr double DIET_SUCTION = 4;
 std::string diet_report() {
@@ -1060,22 +962,11 @@ int main(int argc, char **argv) {
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
                 << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
-                << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1)
-                << ']'
+                << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
 
-                // How the gut, the teeth, the jaw and suction serve each kind of food, as the
-                // engine reckons it (diet_report).
-                << ",\"diet\":"
-                << diet_report()
-                // Where the lateral line samples the water, in body radii along and across.
-                << ",\"lateralCorners\":[" << fishsim::LATERAL_ALONG << ','
-                << fishsim::LATERAL_ACROSS
-                << ']'
-                // What the gonads hold and how they fill and spawn (gonad_report).
-                << ",\"gonads\":"
-                << gonad_report()
-                // A planned cell's bias is its threshold times -biasScale; at rest, without
-                // input, it is as active as the tanh of its bias.
+                << ",\"diet\":" << diet_report() << ",\"lateralCorners\":["
+                << fishsim::LATERAL_ALONG << ',' << fishsim::LATERAL_ACROSS << ']'
+                << ",\"gonads\":" << gonad_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
@@ -1097,7 +988,6 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (argc == 2 && std::string(argv[1]) == "design") {
-      // A sight scene (flag 1 and its values) or none (0), a sense scene alike, then the plan.
       int seen = 0;
       ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sight flag");
       std::optional<SightScene> sight;

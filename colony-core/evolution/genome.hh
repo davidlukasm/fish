@@ -16,7 +16,6 @@ class Genome {
     double amplitude = 0, derivative[2]{}, weight = 0;
   };
   mutable std::map<int, Sensitivity> sensitivity;
-  // Edge-local work points until the child is evaluated in its own development.
   mutable std::map<int, std::array<double, 3>> inherited_work;
   mutable std::mutex observation_mutex;
   mutable std::vector<std::size_t> innovation_order;

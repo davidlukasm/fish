@@ -1,23 +1,5 @@
 import {escapeText, fixed} from './markup.js';
 
-// Learning drawn and played as the engine's rule runs it (colony-core/field/substrate.cc): an
-// episode in four beats, played in rounds.
-// 1. Experience: an input fires as the cell acts, by its own firing (the cell flashes) or by its
-//    pacemaker's beat (a ring from the pacemaker below it).
-// 2. Trace: where input and deed meet, the input's line keeps a glowing trace, fading as the trace
-//    lasts.
-// 3. Teaching: the teaching signal comes from above, in its source's colour (a modulator, or a
-//    substance whose rise teaches). What it brings beyond what the cell already expects from its
-//    inputs (a meter's level) surprises the cell.
-// 4. Change: the lines grow by the surprise, times what is left of their trace, times the learning
-//    rate; the cell expects more from then on. A cell's strength stays the same, so others give
-//    way. Without a teacher a competing cell lets a line firing with it grow at once and the
-//    others shrink, a cancelling one weakens the line firing with it.
-
-// Moments of a round, as shares of it: a pulse travels TRAVEL before it reaches the cell at the
-// beat or at the cell's own firing; the teaching signal sets off at SEND and arrives at ARRIVE;
-// the change is done at DONE; the trace is gone at GONE. A flash lasts FLASH either side; the
-// cloud of a substance arrives over the last CLOUD of the round before the first round with it.
 const MOMENT = Object.freeze({
   beat : .12,
   own : .26,
@@ -33,11 +15,6 @@ const MOMENT = Object.freeze({
 // Times are written with TIME_DIGITS digits, so the keys of a loop keep their order.
 const TIME_DIGITS = 4;
 const time = value => Math.min(1, Math.max(0, value)).toFixed(TIME_DIGITS);
-// Layouts: the big one of the learning inspector and the small one of the effect cards. The
-// cell's middle and radius, the inputs' start, the output's end, the teaching signal's start (TOP)
-// and the GAP before the cell, lines THICK wide (at least THINNEST), a trace GLOW wider, pulses
-// PULSE wide, a pacemaker PACER below the cell, a ring RING times the cell, a cloud CLOUD times
-// the cell, the meter (left, top, width, height), labels' LINE height, a round ROUND seconds.
 export const EPISODE_LAYOUT = Object.freeze({
   big : Object.freeze({
     width : 300,
@@ -84,7 +61,6 @@ export const EPISODE_LAYOUT = Object.freeze({
     round : 2.6
   })
 });
-// Keys of a loop: [share of the loop, value] pairs in order, the first at 0 and the last at 1.
 export function animate(attribute, keys, seconds) {
   const sorted = [...keys ].sort((a, b) => a[0] - b[0]);
   if (sorted[0][0] > 0)
@@ -96,7 +72,6 @@ export function animate(attribute, keys, seconds) {
          sorted.map(([ at ]) => time(at)).join(';') + '" dur="' + fixed(seconds) +
          's" repeatCount="indefinite"/>';
 }
-// A pulse running along a way from `from` to `to` (shares of the loop), seen only meanwhile.
 export function travelling(way, from, to, r, seconds, colour = '') {
   const M = MOMENT;
   return '<circle class="aid-episode-pulse" r="' + fixed(r) + '"' +
@@ -110,12 +85,6 @@ export function travelling(way, from, to, r, seconds, colour = '') {
 }
 const way = (x1, y1, x2, y2) =>
     'M' + fixed(x1) + ' ' + fixed(y1) + ' L' + fixed(x2) + ' ' + fixed(y2);
-// An episode: its inputs (each with its y, its deed: 'own', 'beat' or none, and a label), whether
-// a teacher is drawn (as an arrow, or as a modulator node), whether the meter shows, and its
-// rounds. A round has, per input, the trace left by its deed (0 to 1), the change at the deed
-// (`grow`) and at the teaching signal (`gain`), what is left of the trace when that comes, the
-// teaching signal's colour (none: no teaching), the expectation before and after it, and the
-// colour of a substance present (none: none).
 export function episodeSvg(layout, scene) {
   const L = layout, M = MOMENT, rounds = scene.rounds, n = rounds.length;
   const seconds = L.round * n, at = (k, share) => (k + share) / n;
@@ -124,7 +93,6 @@ export function episodeSvg(layout, scene) {
     return {x : L.cx - dx * (L.r + L.gap) / d, y : L.cy - dy * (L.r + L.gap) / d};
   };
   const moment = deed => deed === 'beat' ? M.beat : M.own;
-  // The cloud of a substance: there from the round before the first one with it until the end.
   const firstCloud = rounds.findIndex(r => r.cloud);
   const cloudColour = firstCloud < 0 ? null : rounds[firstCloud].cloud;
   const cloud =
@@ -141,7 +109,6 @@ export function episodeSvg(layout, scene) {
                         seconds) +
                 '</circle>'
           : '';
-  // Each input: its line growing and shrinking, its trace glowing and fading, its pulses.
   const inputs = scene.inputs.map((input, j) => {
     const to = reach(input.y), path = way(L.side, input.y, to.x, to.y);
     let width = L.thick;
@@ -177,7 +144,6 @@ export function episodeSvg(layout, scene) {
            '" stroke-width="' + L.thick + '">' + animate('stroke-width', widths, seconds) +
            '</path>' + pulses + words;
   });
-  // The cell flashes when it fires itself; its pacemaker's beat rings round it.
   const flashes = [ [ 0, .3 ] ], rings = [ [ 0, 0 ] ], ringR = [ [ 0, L.r ] ];
   const own = scene.inputs.some(i => i.deed === 'own');
   const beats = scene.inputs.some(i => i.deed === 'beat');
@@ -210,8 +176,6 @@ export function episodeSvg(layout, scene) {
                          L.r + '" stroke-opacity="0">' + animate('stroke-opacity', rings, seconds) +
                          animate('r', ringR, seconds) + '</circle>'
                    : '';
-  // The teaching signal: an arrow (or a modulator node sending it) from above, a pulse in its
-  // colour each taught round, and the cell's expectation beside it.
   const taught = rounds.some(r => r.teach);
   const into = L.cy - L.r - L.gap, teachWay = way(L.cx, L.top, L.cx, into);
   let teaching = '';

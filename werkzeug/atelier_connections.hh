@@ -23,8 +23,6 @@ struct Wiring {
                         (p.groups[b].open && p.groups[a].organ == p.groups[b].organ);
   }
 };
-// Fit the same addresses used by development. Geometry is computed once from planned cells;
-// candidate evaluation uses expected contacts, input competition and semantic wire bundles.
 struct AddressFit {
   int evaluations = 0, attempts = 0;
   double milliseconds = 0, expectedMissing = 0, leakage = 0;
@@ -36,13 +34,11 @@ namespace fit {
 inline constexpr double budget_ms = 4000, notice_ms = 150;
 inline constexpr int restarts = 64, iterations = 1600, check_period = 32, repair_period = 2;
 inline constexpr std::uint64_t restart_salt = 7919;
-// Keep addresses inside the CPPN output span and seed narrower receivers near wanted senders.
 inline constexpr double initial_extent = .8, address_extent = .95, initial_radius = .12,
                         repair_jitter = .08, clearance_margin = 1.1;
 // The bundle likelihood protects complete paths; the drive term avoids vanishingly weak wires.
 inline constexpr double bundle_weight = 4, drive_weight = .25, missing_goal = .001,
                         leakage_goal = .002;
-// Adam parameters and numerical guards for Poisson likelihoods and moment normalization.
 inline constexpr double first_decay = .9, second_decay = .999, step = .025, moment_epsilon = 1e-8,
                         probability_floor = 1e-12, exponent_limit = 700;
 }
@@ -168,7 +164,6 @@ class AddressFitter {
       }
       x[2 * k + 3 * b + 2] = std::max(std::log(fit::initial_radius), lower[2 * k + 3 * b + 2]);
     }
-    // Local repair restarts begin near the best arrangement as well as independent layouts.
     if (restart && restart % fit::repair_period == 0) {
       x = best;
       for (int i = 0; i < size; ++i)
@@ -221,7 +216,6 @@ class AddressFitter {
         expected += values[i] * thinning[b];
       }
       missing += std::exp(-expected);
-      // -log(P(at least one contact)), with a Poisson approximation for slot competition.
       const double safe = std::max(fit::probability_floor, expected);
       loss -= fit::bundle_weight * std::log(-std::expm1(-safe));
       const double d = -fit::bundle_weight / std::expm1(std::min(fit::exponent_limit, safe));

@@ -208,9 +208,6 @@ function storedOrgans(module, sites) {
                                   o.centers.every(c => sites.some(s => s.id === c.site)));
   return organs.length && known ? organs : null;
 }
-// The brain's nodes of a stored module, each placed anew near where it stood (`offset`) with its
-// settings; `mapping` learns their new ids. The new draft and the ids, or null where one finds
-// no room.
 function placeStoredNeurons(draft, original, sites, offset, snapDistance, mapping) {
   const ids = [];
   for (const previous of original.centers) {

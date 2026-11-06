@@ -140,7 +140,6 @@ export const GRIPS = Object.freeze([
     held : 'sensitivity',
     start : (studio, g) => studio.sensitivityGrip(g)
   },
-  // A receptor's curve and its width on the substance wheel follow their handles.
   {
     graphic : '[data-receptor-curve]',
     handle : '[data-curve-handle]',
@@ -288,9 +287,6 @@ export const handleMethods = {
     this.refreshScene();
     this.refreshHeader();
   },
-  // A kind of pigment cell has as many nodes as the pointer along its amount track asks.
-  // A substance's track in the learning inspector: what plenty of it does to that part of
-  // learning, as the receptor's response with plenty of it.
   learnReceptorPointer(control, fx) {
     const doc = this.state.document, effect = Number(control.element.dataset.learnEffect);
     const receptor = findCenter(doc, control.id)?.center.receptors[effect];
@@ -357,8 +353,6 @@ export const handleMethods = {
                       'threshold:' + drag.block);
     this.refreshSensitivity();
   },
-  // A receptor (or the body's growth receptor) follows its curve's handles and its halo on the
-  // substance wheel.
   receptorPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const growth = drag.target === GROWTH;

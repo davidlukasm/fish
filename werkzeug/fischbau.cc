@@ -15,7 +15,6 @@ namespace out = cppn::output;
 using evolution::NodeType;
 
 namespace {
-// Trial food where the tank has room and energy; carrion has the colour of fresh flesh.
 constexpr std::array<double, 3> TRIAL_CARRION_COLOR{.5, .25, .2};
 bool place_trial_food(Ecosystem &world, double x, double y, double energy,
                       int origin = food_kind::feed) {
@@ -38,14 +37,10 @@ bool place_trial_food(Ecosystem &world, double x, double y, double energy,
 }
 enum class Kind { Sensor, Nerve, Effector };
 using Code = std::array<float, 2>;
-// Kanaele liegen 0.3 auseinander; bei Suchbreite 0 (sigma 0.03) binden nur gleiche Kanaele.
 Code channel(int k) {
   return {-.9f + .3f * float(k % 7), -.9f + .3f * float(k / 7)};
 }
 const Code UNUSED{1, 1};
-// Rotes Futter, Karte von links nach rechts: Auge L, Seite L, Nah L | Nah R, Seite R, Auge R.
-// Empfaenger mit breiterem sigma sammeln Nachbarn: Lenker = Auge + Seite (+ etwas Nah),
-// Maul = beide Nah.
 Code eye_code(bool left) {
   return {left ? -.3f : .3f, .5f};
 }
@@ -75,37 +70,28 @@ struct Cell {
   float threshold = 0, tau = .5f, q1 = 0, q2 = 0, width = 0, field = .5f;
   Code sender = UNUSED, receiver = UNUSED;
   float crossing = 0, range = 1, sign = 1;
-  // Empfangsbreite sigma im Code-Raum (.03 bis 2). Bindung nach field::contact_affinity(d² / (2 sigma²)).
   float sigma = .03f;
-  // Bindungsstaerke mu < 1: Empfangscode senkrecht zur Karte entlang der inversen Bindungskurve versetzt.
-  // Gewicht und Wahrscheinlichkeit jeder Synapse sinken beide auf mu.
   float gain = 1;
-  // Hormonrezeptor einer Wirkung: R = Grund + Empfindlichkeit x c/(c+K), c = Bindung an den Stoff
-  // (ein Hormon oder field::MATURITY_SUBSTANCE fuer die Reife).
   struct Receptor {
     int effect = -1;
     float baseline = 0, sensitivity = 0, half = .05f;
-    int substance = 0, steepness = 0; // Steilheit: Hill-Exponent 2^steepness
+    int substance = 0, steepness = 0;
   };
   std::vector<Receptor> receptors{};
 };
-// Wachstumsrezeptor des Koerpers: wie stark welches Hormon den Koerper wachsen laesst.
 struct Growth {
   float sensitivity = 0, half = .05f;
   int hormone = 0;
 };
-// Halbwert K als Ausgabe der Schwelle: K = HALF_MIN x (HALF_MAX / HALF_MIN)^((v + 1) / 2).
 float half_output(float half) {
   return float(2 * std::log(half / field::HORMONE_HALF_MIN) /
                    std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
                1);
 }
-// Ort eines Stoffs im Stoffraum (field::BLOOD_SUBSTANCES feste Punkte auf dem Einheitskreis).
 std::pair<float, float> hormone_place(int k) {
   const double a = 2 * PI * k / field::BLOOD_SUBSTANCES;
   return {float(std::cos(a)), float(std::sin(a))};
 }
-// Umkehrung von field::function_at (colony-core/field/development.cc): Ecke und Variante.
 std::pair<int, int> corner_of(Kind k, int f) {
   if (k == Kind::Sensor)
     switch (f) {
@@ -145,7 +131,7 @@ std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
   v[out::identity_role] = c.kind == Kind::Sensor ? -1 : c.kind == Kind::Effector ? 1 : 0;
   if (c.kind == Kind::Nerve) {
     v[out::identity1] = c.sign;
-    v[out::identity3] = v[out::identity4] = -1; // kein Schrittmacher, kein Modulator
+    v[out::identity3] = v[out::identity4] = -1;
   } else {
     const auto [corner, variant] = corner_of(c.kind, c.function);
     v[out::identity1] = corner % 2 ? 1 : -1;
@@ -173,9 +159,6 @@ std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
   return v;
 }
 
-// CPPN: je Zelltyp ein UND aus Zone, Seite, u/v/w-Grenzen und Zellabfrage (Effekt 0).
-// Ausgabe = Grundwert + Summe (Wert - Grundwert) x Indikator. Hormonabfragen sehen die
-// Grundwerte (Ausgabe-Rezeptor 1, alle anderen 0), ausser bei eigenen Rezeptoren einer Zellart.
 struct Builder {
   std::shared_ptr<evolution::Genome> g =
       std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
@@ -193,7 +176,6 @@ struct Builder {
     if (w != 0 && !g->connect(a, b, w, port))
       throw std::runtime_error("CPPN-Verbindung abgelehnt");
   }
-  // +1, wenn sign x input > sign x limit, sonst -1.
   int test(int input, int sign, float limit) {
     auto key = std::make_tuple(input, sign, limit);
     auto it = tests.find(key);
@@ -203,8 +185,6 @@ struct Builder {
     link(input, n, float(sign));
     return tests[key] = n;
   }
-  // +1 bei der Rezeptorabfrage einer Wirkung oder des Wachstums (Code field::receptor_effect_code),
-  // sonst -1. Zellabfragen tragen Code 0, die Codes liegen 1 / RECEPTOR_QUERIES auseinander.
   std::map<int, int> selectors;
   int effect_selector(int query) {
     auto it = selectors.find(query);
@@ -237,12 +217,10 @@ struct Builder {
     link(b.zone, a, 2 / n);
     return a;
   }
-  // Ausgang k um d heben, solange Indikator a an ist (a = +1), sonst unveraendert (a = -1).
   void raise(int a, int k, float d) {
     if (d == 0)
       return;
     link(a, cppn::INPUTS + k, d / 2);
-    // Gleiche Bias-Kante wird summiert.
     bool found = false;
     for (const auto &e : g->get_connection_genes())
       if (e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + k) {
@@ -262,7 +240,6 @@ struct Builder {
       const auto v = outputs(c);
       for (int k = 0; k < cppn::OUTPUTS; ++k)
         raise(a, k, v[k] - base[k]);
-      // Eigene Rezeptoren: Abweichung vom neutralen Rezeptor der Wirkung.
       for (const auto &r : c.receptors) {
         const int q = indicator(c.at, r.effect);
         const auto [x, y] = hormone_place(r.substance);
@@ -272,10 +249,9 @@ struct Builder {
         raise(q, out::time_constant, float(r.steepness) / field::HORMONE_STEEPNESS_STEPS);
         raise(q, out::quality1, x);
         raise(q, out::quality2, y);
-        raise(q, out::quality_width, -1); // schmal: nur dieser Stoff
+    raise(q, out::quality_width, -1);
       }
     }
-    // Wachstumsrezeptor an der Mittellinie des Kopfes.
     if (growth.sensitivity != 0) {
       const auto &at = field::GROWTH_RECEPTOR_SITE;
       const int q = indicator({at.zone, at.u, at.u, at.v, at.v, at.w, at.w}, field::GROWTH_RECEPTOR);
@@ -286,7 +262,6 @@ struct Builder {
       raise(q, out::quality2, y);
       raise(q, out::quality_width, -1);
     }
-    // Ausgabe-Rezeptor: Kapazitaet +1 bei seinem Code.
     const int selected = effect_selector(field::Output);
     link(selected, cppn::INPUTS + out::capacity, .5f);
     for (const auto &e : g->get_connection_genes())
@@ -303,19 +278,14 @@ std::string fixed(double x, int digits = 2) {
   return s.str();
 }
 
-// ---------- Bauplan ----------
-// Stellgroessen fuer Versuche: name=wert auf der Kommandozeile.
 std::map<std::string, double> knobs;
 double knob(const std::string &name, double value) {
   auto it = knobs.find(name);
   return it == knobs.end() ? value : it->second;
 }
 enum Channel { Mouth = 3, TurnL, TurnR, WallL, WallR, Brake, Gut, Depth, Hunger };
-// Hormone des Handfischs: die Hirndruese gibt Hungerhormon ab, die Wachstumsdruese Wachstumshormon.
 enum Hormone { HungerHormone = 0, GrowthHormone = 1 };
-// Mittlerer Halbwert (Schwellenausgabe 0).
 const float MIDDLE_HALF = float(std::sqrt(field::HORMONE_HALF_MIN * field::HORMONE_HALF_MAX));
-// Der Koerper waechst, solange Wachstumshormon im Blut ist; ohne waechst er nicht.
 Growth growth() {
   return {float(knob("wachstum", 1)), float(knob("wachstum_halb", .02)), GrowthHormone};
 }
@@ -328,10 +298,10 @@ std::vector<Cell> plan(bool crossed) {
              {1, .3f, 1, 1.f / 3, 1.f / 3, 0, 1, s},
              Kind::Sensor,
              field::Light};
-    eye.copies = 3; // 9 Plaetze je Seite: 0 bis 97 Grad
+    eye.copies = 3;
     eye.threshold = -1;
-    eye.q1 = float(knob("farbe", -1)); // Farbton 180 (q1 + 1): Rot -1, Gruen -1/3
-    eye.q2 = 1;                        // Gegenfarbe
+    eye.q1 = float(knob("farbe", -1));
+    eye.q2 = 1;
     eye.width = .3f;
     eye.field = .2f;
     eye.sender = eye_code(left);
@@ -344,7 +314,6 @@ std::vector<Cell> plan(bool crossed) {
     steer.sender = channel((left != crossed) ? TurnL : TurnR);
     steer.tau = 1; // langsame Anpassung: kein Rueckschlag, wenn das Futter das Feld verlaesst
     p.push_back(steer);
-    // Gegentakt: dasselbe Auge hemmt die eigene Flosse. Die Flossen sehen nur die Differenz.
     Cell inhibit = steer;
     inhibit.name = left ? "HemmerL" : "HemmerR";
     inhibit.at = {2, .6f, .7f, 1.f / 3, 2.f / 3, 1, 1, s};
@@ -358,7 +327,7 @@ std::vector<Cell> plan(bool crossed) {
               field::Proximity};
     wall.copies = 4;
     wall.threshold = 0;
-    wall.q2 = float(knob("wand_weite", -.43));   // -.43: Reichweite 17, -1: 8
+    wall.q2 = float(knob("wand_weite", -.43));
     wall.q1 = float(knob("wand_farbe", 1. / 3)); // Blau: Boden und Wasser, kaum rotes Futter
     wall.width = 0;
     wall.field = .3f;
@@ -402,7 +371,6 @@ std::vector<Cell> plan(bool crossed) {
     reach.sender = channel(left ? WallL : WallR);
     if (knob("nahwand", 1) > 0)
       p.push_back(reach);
-    // Brust aussen, 8 Plaetze je Seite; Kraft 2 je Seite (flosse=16: 8 wie die v018b-Klassen).
     Cell fin{
         left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, .5f, 1, s}, Kind::Effector, field::Turn};
     // Kurze Zeitkonstante: kleine, haeufige Schlaege statt weniger grosser.
@@ -413,25 +381,23 @@ std::vector<Cell> plan(bool crossed) {
     p.push_back(fin);
   }
   for (int s : {-1, 1}) {
-    // Geradeaus 0 bis 10 Grad je Seite: Nahsteuerung und Maul.
     Cell near{s < 0 ? "NahL" : "NahR",
               {1, .9f, 1, 2.f / 3, 2.f / 3, 0, 0, s},
               Kind::Sensor,
               field::Proximity};
     near.copies = int(knob("nah_kopien", 6));
     near.threshold = float(knob("nah_schwelle", .6));
-    near.q2 = -1;                       // kurze Reichweite
+    near.q2 = -1;
     near.q1 = float(knob("farbe", -1)); // schmal: Futter heller als Boden
     near.width = 0;
     near.field = .3f;
     near.sender = near_code(s < 0);
     p.push_back(near);
-    // Seitlich 20 bis 50 Grad, mittlere Reichweite: Futter nahe am Kopf halten.
     Cell side{
         s < 0 ? "SeiteL" : "SeiteR", {1, .6f, 1, 1, 1, 0, .5f, s}, Kind::Sensor, field::Proximity};
     side.copies = 2;
     side.threshold = 0;
-    side.q2 = -.43f; // Reichweite 17
+    side.q2 = -.43f;
     side.q1 = float(knob("farbe", -1));
     side.width = 0;
     side.field = .3f;
@@ -445,18 +411,16 @@ std::vector<Cell> plan(bool crossed) {
   mouth.sender = channel(Mouth);
   mouth.tau = .3f;
   p.push_back(mouth);
-  // Futterstuecke haben Radius 1.5 bis 6: der Kiefer muss abbeissen, die Pumpe schlucken.
   Cell jaw{"Kiefer", {0, float(knob("kiefer_u", .3))}, Kind::Effector, field::Aggression};
   jaw.copies = 16;
   // Biss kostet 2 x 0.03 x Antrieb x Schlagdauer: kurze Schlaege (4 Schritte) lohnen, lange nicht.
   jaw.tau = 0;
-  jaw.q1 = -1; // scharfe Zaehne: volle Kraft auf weiches Futter
+    jaw.q1 = -1;
   jaw.threshold = float(knob("kiefer_schwelle", .5));
   jaw.receiver = channel(Mouth);
   if (knob("kiefer", 1) > 0)
     p.push_back(jaw);
   else if (knob("kiefer_kurz", 0) > 0) {
-    // Ein winziger, stiller Kiefer setzt nur die Kieferlaenge: kurz = Hebel 1.8, Schabekraft x 3.2.
     Cell lever{"Kieferstummel", {0, 1, 1, .5f, .5f, 0, 0, 1}, Kind::Effector, field::Aggression};
     lever.copies = 1;
     lever.q2 = -1;
@@ -475,7 +439,6 @@ std::vector<Cell> plan(bool crossed) {
     p.push_back(more);
   }
   pump.copies = 16;
-  // Darmlaenge: kurz (-1) verdaut Tierisches 1.5 x schneller, lang (+1) erschliesst Pflanzen.
   pump.q1 = float(knob("darm", -1));
   pump.threshold = float(knob("pumpe_schwelle", .5));
   pump.receiver = channel(Mouth);
@@ -486,7 +449,6 @@ std::vector<Cell> plan(bool crossed) {
   Cell tail{"Schwanz", {3, 0, .5f}, Kind::Effector, field::Forward};
   tail.copies = int(knob("schwanz", 4));
   tail.receiver = channel(Brake);
-  // Hungerhormon haelt den Schwanz auf voller Leistung; satt sinkt sie auf die Haelfte.
   tail.receptors = {{field::Output, 0, 1, MIDDLE_HALF, HungerHormone}};
   // Schlaengeln (q1 -1..1 = 0..1): kostet im freien Wasser bis zur Haelfte des Schubs, senkt aber
   // den Widerstand im Sediment. Versuch schlaengeln=0: Arena ein Drittel weniger Futter; aus.
@@ -507,7 +469,6 @@ std::vector<Cell> plan(bool crossed) {
     Cell bladder{"Blase", {2, 1, 1, 1.f / 3, 1.f / 3, 0, 0, 1}, Kind::Effector, field::Bladder};
     bladder.copies = 1;
     p.push_back(bladder);
-    // Hinterkopf, direkt vor der Blase; der Darm beginnt erst weiter hinten.
     Cell depth{"Tiefe", {1, 0, 0, 1.f / 3, 1.f / 3, 0, 0, 1}, Kind::Sensor, field::InnerPressure};
     depth.copies = 16;
     depth.threshold = float(knob("tiefe_schwelle", .4));
@@ -522,7 +483,6 @@ std::vector<Cell> plan(bool crossed) {
     kinesis.sender = channel(TurnL);
     p.push_back(kinesis);
   }
-  // Satt: voller Darm hemmt die Hungerdruese. Verdauung dauert Hunderte Schritte; Schwimmen kostet.
   Cell gut{"Darmdruck",
            {2, 1.f / 3, 1.f / 3, 1.f / 3, 2.f / 3, 0, 0},
            Kind::Sensor,
@@ -538,7 +498,6 @@ std::vector<Cell> plan(bool crossed) {
   full.receiver = channel(Gut);
   full.sender = channel(Hunger);
   p.push_back(full);
-  // Hirndruese: gibt ohne Hemmung dauernd Hungerhormon (Hormon 0) ab; langsamer Spiegel (tau 48).
   Cell gland{"Hirndruese", {1, .3f, .4f, 2.f / 3, 2.f / 3}, Kind::Effector, field::Gland};
   gland.copies = int(knob("druese", 8));
   gland.threshold = -1;
@@ -548,8 +507,6 @@ std::vector<Cell> plan(bool crossed) {
   gland.width = 0;
   gland.receiver = channel(Hunger);
   p.push_back(gland);
-  // Wachstumsdruese hinten oben im Kopf: gibt ohne Eingang dauernd Wachstumshormon ab. Ohne sie
-  // bliebe der Fisch so gross wie beim Schlupf (wachstum_druese=0).
   if (knob("wachstum_druese", 8) > 0) {
     Cell growing{"Wachstumsdruese", {1, 0, 0, 1, 1}, Kind::Effector, field::Gland};
     growing.copies = int(knob("wachstum_druese", 8));
@@ -560,9 +517,6 @@ std::vector<Cell> plan(bool crossed) {
     growing.width = 0;
     p.push_back(growing);
   }
-  // Lebensabschnitte an der Haut des Rumpfs: Die Jugendfarbe (schluckt Rot) stirbt ab Reife
-  // jugend_bis; die Erwachsenenfarbe (schluckt Blau) schaltet mit der Reife ein, halb bei
-  // erwachsen_ab. Beide arbeiten ohne Eingang dauernd.
   if (knob("farben", 1) > 0) {
     Cell young{"Jugendfarbe", {2, 0, .4f, 0, 0}, Kind::Effector, field::Pigment};
     young.copies = int(knob("farbkraft", 8));
@@ -585,8 +539,6 @@ std::vector<Cell> plan(bool crossed) {
   for (int organ : {field::Eggs, field::Sperm}) {
     const float u = organ == field::Eggs ? 1 : .75f;
     const bool eggs = organ == field::Eggs;
-    // Eierstock = Gewebe/40 * min(160, 10 je Eizelle); 8 innen + 4 aussen = 12 Zellen, also 120
-    // bei 40 Gewebe. Ein Ei braucht gut 85: lebensfaehige Eier ab etwa 30 Gewebe.
     Cell inner{eggs ? "EierInnen" : "SpermaInnen",
                {3, u, u, 1.f / 3, 2.f / 3, 0, eggs ? .5f : 0},
                Kind::Effector,
@@ -608,7 +560,6 @@ std::vector<Cell> plan(bool crossed) {
   return p;
 }
 
-// ---------- Pruefung gegen die Engine-Entwicklung ----------
 bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_of) {
   const auto &s = *g.blueprint;
   bool ok = true;
@@ -658,7 +609,6 @@ bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_
       std::cout << c.name << ": falsche Rolle oder Funktion\n";
       ok = false;
     }
-    // Geplante Rezeptoren wie geplant, alle anderen neutral: volle Ausgabe, keine Wirkung.
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
       const auto &r = n.hormone_receptors[effect];
       const Cell::Receptor *own = nullptr;
@@ -728,7 +678,6 @@ bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_
       ok = false;
   }
   std::cout << s.neurons.size() << " Zellen, " << s.edges.size() << " Synapsen\n";
-  // Drucksinne messen, was neben ihnen liegt: 0 Darm, 1 Eier, 2 Sperma, 3 Tiefe (Blase), 4 Muskel.
   std::map<std::string, std::map<int, int>> pressure;
   for (const auto &r : g.interface->sensory)
     if (r.pressure_target != -2 && (r.channel == 7 || r.channel == 8 || r.channel == 9) &&
@@ -770,8 +719,6 @@ void wiring(const Genome &g, const std::vector<Cell> &p, const std::vector<int> 
               << std::setprecision(2) << v.second / v.first << ")\n";
 }
 
-// ---------- Eigene Tests ----------
-// Becken mit den Standardwerten der Simulation. Nur Mutation, Krankheit, Zufuhr und Hilfen aus.
 Ecosystem tank(unsigned seed) {
   Ecosystem w(seed);
   w.resize(615, 410);
@@ -820,7 +767,6 @@ void food_at(Lab &l, double bearing, double distance, double energy = 40) {
   check(place_trial_food(l.w, b.x + distance * std::cos(a), b.y + distance * std::sin(a), energy),
         "Futter platzieren");
 }
-// Staerkstes Signal je Zelltyp.
 std::vector<double> signals(const Body &b, const std::vector<int> &kind_of, std::size_t kinds) {
   std::vector<double> peak(kinds, -1);
   const auto &net = *b.brain();
@@ -836,7 +782,6 @@ int index_of(const std::vector<Cell> &p, const std::string &name) {
       return int(k);
   throw std::runtime_error("Zelltyp fehlt: " + name);
 }
-// 1. Augen: welche Seite meldet Futter unter welchem Winkel?
 void test_eyes(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
   const int L = index_of(p, "AugeL"), R = index_of(p, "AugeR");
   std::cout << "Augen (Winkel L/R):";
@@ -849,7 +794,6 @@ void test_eyes(const Genome &g, const std::vector<Cell> &p, const std::vector<in
   }
   std::cout << "\n";
 }
-// 1a. Szenen: was melden Augen und Naehe-Zellen? Boden liegt bei y 410.
 void test_scenes(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
   struct Scene {
     const char *name;
@@ -872,7 +816,6 @@ void test_scenes(const Genome &g, const std::vector<Cell> &p, const std::vector<
     std::cout << "\n";
   }
 }
-// 1b. Schwimmen ohne Reiz in verschiedener Hoehe: Tempo und Verbrauch.
 void test_swim(const Genome &g) {
   {
     auto l = lab(g);
@@ -929,10 +872,8 @@ bool test_floor(const Genome &g, const std::vector<Cell> &p, const std::vector<i
   }
   return ok;
 }
-// 1d. Abstieg: oben gestartet, findet der Fisch nach unten und bleibt dort?
 const std::vector<int> *trace_kinds = nullptr;
 const std::vector<Cell> *trace_plan = nullptr;
-// Spur: Sinne, Steuerung und Antrieb eines Fisches in einer Zeile.
 void print_signals(const Body &b) {
   if (trace_kinds) {
     const auto sg = signals(b, *trace_kinds, trace_plan->size());
@@ -969,7 +910,6 @@ void test_descent(const Genome &g) {
   }
   std::cout << "\n";
 }
-// 2. Drehung: dreht der Fisch zum Futter? Dazu Spitzen von Lenknerv und Flosse.
 bool test_turn(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
   bool ok = true;
   const int nl = index_of(p, "LenkerL"), nr = index_of(p, "LenkerR"), fl = index_of(p, "FlosseL"),
@@ -1000,7 +940,6 @@ bool test_turn(const Genome &g, const std::vector<Cell> &p, const std::vector<in
   std::cout << (ok ? "Drehung OK\n" : "Drehung FEHLER\n");
   return ok;
 }
-// 3. Biss: Futter geradeaus in wachsendem Abstand.
 bool test_bite(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of,
                bool trace) {
   bool ok = false;
@@ -1042,7 +981,6 @@ bool test_bite(const Genome &g, const std::vector<Cell> &p, const std::vector<in
   std::cout << (ok ? "  OK\n" : "  FEHLER\n");
   return ok;
 }
-// 2b. Anflug: ein Stueck in 50 Abstand; wird es erreicht (Abstand < 15)? Mitte und nahe Boden.
 bool test_approach(const Genome &g) {
   int reached = 0, total = 0;
   std::cout << "Anflug (Hoehe/Winkel: Schritte):";
@@ -1070,7 +1008,6 @@ bool test_approach(const Genome &g) {
   std::cout << (reached == total ? "  OK\n" : "  FEHLER\n");
   return reached == total;
 }
-// 3. Maul festgehalten vor einem Stueck: was bringt ein Biss?
 void test_mouth(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
   auto l = lab(g);
   auto &b0 = l->body();
@@ -1110,7 +1047,6 @@ void test_mouth(const Genome &g, const std::vector<Cell> &p, const std::vector<i
             << fixed(cost, 1) << ", Darm +" << fixed(b.gut_energy - gut + b.digested, 1)
             << ", Futter uebrig " << fixed(left, 0) << " in " << pieces << " Stuecken\n";
 }
-// 3a. Fressbilanz: was kostet eine Mahlzeit, was bringt sie? Kleines und grosses Stueck.
 void test_meal(const Genome &g) {
   for (double size : {50., 150.}) {
     auto l = lab(g);
@@ -1132,7 +1068,6 @@ void test_meal(const Genome &g) {
               << "\n";
   }
 }
-// 3b. Futter am Boden: liegt es, laesst es sich fressen?
 bool test_floor_food(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of,
                      bool trace) {
   bool ok = false;
@@ -1160,7 +1095,6 @@ bool test_floor_food(const Genome &g, const std::vector<Cell> &p, const std::vec
   std::cout << (ok ? "  OK\n" : "  FEHLER\n");
   return ok;
 }
-// 3c. Saugen im eingeschwungenen Standardbecken, festgehalten: Plankton, Boden, Algen.
 void test_suction(const Genome &g) {
   Ecosystem w(3);
   w.resize(615, 410);
@@ -1210,10 +1144,8 @@ void test_suction(const Genome &g) {
   }
   std::cout << "\n";
 }
-// 4. Schlupf aus einem Ei mit Mindestenergie.
 bool test_hatch(const Genome &g) {
   auto w = tank(7);
-  // Natuerliches Ei: voller Eierstock eines ausgewachsenen Fisches.
   const double energy = std::min(
       w.evo.egg_capacity, w.evo.egg_organ_capacity * g.interface->motor_counts[organ_port::eggs]);
   std::cout << "Ei: " << fixed(energy, 0) << " (Minimum "
@@ -1238,7 +1170,6 @@ bool test_hatch(const Genome &g) {
     if (b.hatched) {
       std::cout << "Schlupf: nach " << t << " Schritten, Ei " << fixed(energy, 0) << ", Rest "
                 << fixed(b.energy, 0) << "  OK\n";
-      // spur_schlupf=N: die ersten N Schritte nach dem Schlupf.
       for (int k = 0; k < knob("spur_schlupf", 0); ++k) {
         w.tick(false);
         auto f = std::find_if(w.fish.begin(), w.fish.end(), [&](auto &p) { return p.id == id; });
@@ -1246,7 +1177,6 @@ bool test_hatch(const Genome &g) {
           break;
         std::cout << "    " << k << " v " << fixed(StateAccess::motor(f->body).speed);
         if (trace_kinds) {
-          // Erster Lenker: Ruhewert und angepasster Eingangsmittelwert.
           const auto &net = *f->body.brain();
           const int lenker = index_of(*trace_plan, "LenkerL");
           for (std::size_t i = 0; i < trace_kinds->size(); ++i)
@@ -1264,7 +1194,6 @@ bool test_hatch(const Genome &g) {
   std::cout << "Schlupf: nach 3000 Schritten noch im Ei, Schale " << fixed(shell) << "  FEHLER\n";
   return false;
 }
-// 5. Arena: verstreutes Futter unten im Becken, mehrere Auslegungen. Gemittelt.
 struct Life {
   int steps = 0;
   double energy = 0, tissue = 0;
@@ -1417,8 +1346,6 @@ bool test_arena(const Genome &g, int steps, bool trace, const std::vector<Cell> 
             << "\n";
   return survivors > runs / 2;
 }
-// 6. Zuchtbecken: Becken mit Zufuhr, volle Eier, Fortpflanzung an, ohne Hilfe. gross=1: das
-// Standardbecken des Spiels mit Startlandschaft (3690 x 1640, 12 Futterwolken), sonst 615 x 410.
 void test_breed(const Genome &g, int steps) {
   Ecosystem w(unsigned(knob("saat", 11)));
   const bool large = knob("gross", 0) > 0;
@@ -1442,7 +1369,6 @@ void test_breed(const Genome &g, int steps) {
   const int count = int(knob("eier", 6));
   for (int k = 0; k < count; ++k)
     for (int attempt = 0; attempt < 50; ++attempt)
-      // Wie im Spiel: Startlinien und Hilfseier liegen an den Futterquellen.
       if (const auto at = w.field.food_cloud(k % std::max(1, w.field.source_count()));
           w.spawn(g, std::clamp(at.x + r.uniform(-40, 40), 20., width - 20),
                   std::clamp(at.y + r.uniform(-40, 40), 20., height - 20), 1, 77, 1, energy)) {
@@ -1465,7 +1391,6 @@ void test_breed(const Genome &g, int steps) {
     w.tick(true);
     std::set<std::uint64_t> alive;
     for (const auto &p : w.fish) {
-      // Ohne gemeldete Ursache: Hunger (Reserve fast leer) oder Gesundheit (Alter, Wunden).
       const int known = std::max(p.body.fatal_cause, p.death_cause);
       cause[p.id] = known >= 0 ? known : p.body.energy < 2 ? 90 : p.body.health < .2 ? 91 : -1;
       if (!p.body.alive)
@@ -1479,8 +1404,6 @@ void test_breed(const Genome &g, int steps) {
       if (p.body.hatched) {
         intake += p.body.digestion;
         ++fish_steps;
-        // Suche oder Fang: naechstes Kunstfutter und Kunstfutter vor dem Maul (60, +-90 Grad);
-        // spur_zucht=1 zeigt fuer den ersten Gruender die Lage, wenn ein Stueck nah ist.
         double d = 1e9;
         const Food *best = nullptr;
         bool visible = false;
@@ -1581,9 +1504,6 @@ void test_breed(const Genome &g, int steps) {
     intake = fish_steps = sight = nearest = 0;
   }
 }
-// 7. Lebensabschnitte: ein Fisch vom Ei an im Becken mit Zufuhr, ohne Fortpflanzung. Wachstum,
-// Reife, Hormone, abgestorbene und eingeschaltete Zellen je Abschnitt. wachstum_druese=0: ohne
-// Wachstumshormon.
 constexpr double FEED_REACH = 12;
 void test_phases(const Genome &g, const std::vector<Cell> &p, const std::vector<int> &kind_of) {
   Ecosystem w(unsigned(knob("saat", 11)));
@@ -1614,7 +1534,6 @@ void test_phases(const Genome &g, const std::vector<Cell> &p, const std::vector<
       return;
     }
     const auto &b = it->body;
-    // Gefuettert: alle fuetter_takt Schritte ein Stueck vor das Maul.
     if (b.hatched && t % int(knob("fuetter_takt", 25)) == 0)
       place_trial_food(w, b.x + FEED_REACH * std::cos(b.angle),
                        b.y + FEED_REACH * std::sin(b.angle), knob("fuetter_energie", 30));

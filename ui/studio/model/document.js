@@ -31,15 +31,11 @@ import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
 const NEW_DOCUMENT = 'v019-fish-atelier';
-// A new part's id: its kind, the time and a serial number, written in base ID_RADIX.
 const ID_RADIX = 36;
 export const identifier = (kind = 'part') =>
     `${kind}-${Date.now().toString(ID_RADIX)}-${(++serial).toString(ID_RADIX)}`;
 export const copy = object => structuredClone(object);
 
-// A receptor of no effect: full output, no other effect (the engine's neutral receptor). The
-// growth receptor of a new fish binds no hormone, so it keeps its hatch size until a gland and the
-// growth receptor agree on a substance.
 const neutralReceptor = (effect = null) => ({
   active : 0,
   baseline : effect === HORMONE_EFFECT.output ? 1 : 0,
@@ -92,7 +88,6 @@ export function validateDocument(doc) {
     }
     if (organ.pair && doc.organs.find(o => o.id === organ.pair)?.pair !== organ.id)
       throw new Error('studio.errors.invalidDocument');
-    // A brain region carries its settings, each a whole number in its range, and its home site.
     if (isRegion(organ)) {
       const r = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
       if (!r || ![0, 1].includes(r.follow) || !Number.isInteger(r.site) ||
@@ -120,8 +115,6 @@ export function validateDocument(doc) {
   }
   return doc;
 }
-// A wire may run through up to BENDS_MOST points of the drawing set by hand, in order from its
-// start; they only shape how it is drawn.
 export const BENDS_MOST = 8;
 const validBends = bends => Array.isArray(bends) && bends.length <= BENDS_MOST &&
                             bends.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y));
@@ -139,9 +132,6 @@ export function setBends(doc, wireIds, bends) {
       delete wire.bends;
   return draft;
 }
-// The substance wheel of colony-core/field/hormones.hh (hormone_affinity): substance k sits at
-// angle 2πk/bloodSubstances on the unit circle. A profile at (x, y) with width w binds it with
-// exp(-d²/2σ²), σ rising linearly over sigmaRange with w. `wheel` is the compiler's capabilities.
 export function wheelPlace(wheel, index) {
   const angle = 2 * Math.PI * index / wheel.bloodSubstances;
   return [ Math.cos(angle), Math.sin(angle) ];
@@ -154,38 +144,28 @@ export function wheelAffinity(wheel, x, y, width, index) {
   const [px, py] = wheelPlace(wheel, index), sigma = wheelSigma(wheel, width);
   return Math.exp(-((x - px) ** 2 + (y - py) ** 2) / (2 * sigma * sigma));
 }
-// A receptor's profile sits on the point of its chosen substance.
 export function receptorAffinity(wheel, receptor, index) {
   const [x, y] = wheelPlace(wheel, receptor.substance);
   return wheelAffinity(wheel, x, y, receptor.width, index);
 }
-// Gland centers that release the substance at `index`, and centers with an active receptor that
-// binds it, each with at least NOTICEABLE_AFFINITY.
 export const NOTICEABLE_AFFINITY = .1;
 export const producers = (doc, index, wheel) =>
     doc.organs.filter(o => o.type === 'gland')
         .flatMap(o => o.centers)
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
-// The effects through which a center's active receptors bind the substance at `index`.
 export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
     (r, effect) => r.active && wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
                        : []);
-// What a substance can do to a nerve center's learning: its excitation is the cell's teaching
-// signal (a gland releasing it rewards or punishes what the cell learns), the others change the
-// learning rate, the competition and what the trace credits.
 export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.eligibility
 ]);
-// A cell that learns at all: a nerve cell whose plasticity (its quality width) is above nothing;
-// the change of what excites it is its teaching signal.
 export const learnsAtAll = center => center.role === 'nerve' && center.qwidth > 0;
 export const learners = (doc, index, wheel) => allCenters(doc).filter(
     c => c.role === 'nerve' &&
          boundEffects(c, index, wheel).some(effect => LEARNING_EFFECTS.includes(effect)));
-// The substances teaching a nerve center, each with the glands releasing it.
 export function teachersOf(doc, center, wheel) {
   return doc.substances
       .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.excitation))
@@ -193,19 +173,14 @@ export function teachersOf(doc, center, wheel) {
 }
 export const receivers = (doc, index, wheel) =>
     allCenters(doc).filter(c => boundEffects(c, index, wheel).length);
-// Whether the body's growth receptor binds the substance at `index`.
 export const growsWith = (doc, index, wheel) =>
     doc.growth.active && receptorAffinity(wheel, doc.growth, index) >= NOTICEABLE_AFFINITY;
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
-// A bundle of developed contacts as the engine reports it (werkzeug/atelier.cc): the groups it
-// leads from and to, how many contacts it has and their mean weight, how many of them excite and
-// inhibit and with what mean weight.
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
-// The sites the design's centers hold, of those `holds` keeps.
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
@@ -222,17 +197,12 @@ export function centerIndex(doc, id) {
     }
   return -1;
 }
-// The place of an organ's first cells of a colour type, as centerIndex.
 export function profileIndex(doc, organId, profileId) {
   const organ = findOrgan(doc, organId);
   const center = organ?.centers.find(c => c.profile === profileId);
   return center ? centerIndex(doc, center.id) : -1;
 }
-// What a report (the design view's `anatomy` or the developed fish's `report`) says of a
-// center's group under `key`; null where it says nothing.
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
-// The organ a new one of a type on a side joins: the one of a single organ, the one of its side
-// for an organ of one per side, the muscle of the same work (code) on its side.
 function matchingOrgan(doc, type, side, sites, code = null) {
   const scope = ORGAN_BY_KEY[type]?.scope;
   if (scope === 'single')
@@ -257,14 +227,10 @@ export const findCenter = (doc, id) => {
   }
   return null;
 };
-// The organ an endpoint belongs to: the organ itself, or the one whose node it is.
 export const organOf = (doc, id) => findOrgan(doc, id) ?? findCenter(doc, id)?.organ ?? null;
-// Whether an organ is chosen: itself or one of its nodes.
 export const isChosen = (selected, organ) =>
     !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
-// A new center answers above SENSE_THRESHOLD (a nerve center at 0), with a middling time
-// constant TAU, field FIELD and quality width QWIDTH unless its kind gives one.
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
   const nerve = desc.role === 'nerve', N = NEW_CENTER;
@@ -303,7 +269,6 @@ function candidates(desc, sites, used, position, requiredSide = null, organType 
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)[0]?.site ?? null;
 }
-// The free site nearest to `position` where a center does the work `code` (functionFor) asks.
 export function closestSiteDoing(desc, code, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)
              .map(c => c.site)
@@ -366,7 +331,6 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       centerId : existing.centers[0].id,
       centerIds : existing.centers.map(c => c.id)
     };
-  // A brain region placed alone on a midline place lies on the midline, serving both sides.
   const middle = isRegion({type}) && !paired && onMidline(first);
   const organ = {
     id : identifier('organ'),
@@ -381,7 +345,6 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     if (type === 'proximity')
       organ.field.profiles[0].qwidth = NEW_CENTER.qwidth;
   } else if (definition.settings) {
-    // A region with a plan grows its nodes from its plan, around where it was placed.
     organ.region = initialRegion(type, first);
   } else {
     for (const desc of definition.centers) {
@@ -468,7 +431,6 @@ export function linkPair(doc, id) {
   organ.linked = other.linked = !organ.linked;
   return draft;
 }
-// A single nerve center has NEURON_COPIES cells.
 const NEURON_COPIES = 4;
 export function addNeuron(doc, preset, sites, position, snapDistance = Infinity) {
   const properties = NEURON_BY_KEY[preset];
@@ -485,8 +447,6 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
   draft.organs.find(o => o.id === 'brain').centers.push(center);
   return {document : draft, centerId : center.id, organId : 'brain'};
 }
-// A nerve center made to learn as a learning circuit does, whatever its template: in
-// competition, at least as fast as a new center learns.
 export function makeLearner(doc, id) {
   const center = findCenter(doc, id)?.center;
   if (center?.role !== 'nerve')
@@ -506,8 +466,6 @@ export function moveCenter(doc, centerId, target, sites) {
   findCenter(draft, centerId).center.site = site.id;
   return draft;
 }
-// A nerve center of the brain moved to the left side (-1), the midline (0) or the right side
-// (1): to the free site there nearest to it, in its zone when there is one.
 export function moveCenterToSide(doc, centerId, side, sites) {
   const found = findCenter(doc, centerId), here = findSite(sites, found?.center.site);
   if (!here || found.organ.type !== 'brain')
@@ -522,7 +480,6 @@ export function moveCenterToSide(doc, centerId, side, sites) {
                                      pointDistance(b, sitePoint(here, NERVE_ROLE), NERVE_ROLE))[0];
   return target ? moveCenter(doc, centerId, target.id, sites) : null;
 }
-// A field organ dragged turns its field by FIELD_SHIFT degrees per frame unit along and out.
 const FIELD_SHIFT = .25;
 export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity,
                           pointerOrigin = null) {
@@ -561,7 +518,6 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
       x : fixed.x + current.x - anchor.x,
       y : fixed.y + (current.y - anchor.y) * sideFlip
     };
-    // A muscle's further nodes keep the function of its first one.
     const site = index === 0 ? first
                              : closestSiteDoing(center, functionFor(center, first), sites, used,
                                                 wanted, old.side * sideFlip, organ.type);
@@ -571,7 +527,6 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     used.add(site.id);
   }
   organ.side = first.side;
-  // A region grows new nodes around where it now is.
   if (organ.region)
     organ.region.site = first.id;
   if (original.linked && original.pair) {
@@ -588,14 +543,6 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   }
   return draft;
 }
-// The nodes of an organ that recruits them (ORGANS' `nodes`): the places its cells take, all
-// with the function and on the side of its first one. Each node is a cell of the engine's fin,
-// mouth, spines or colour, so more of them make a fin grow as the Aquarium draws it or colour
-// the fish more deeply. New nodes take the free places nearest to the organ with its settings
-// (on the twin of a linked pair the mirrored places); the last ones go first. In an organ with
-// types, `typeId` names the type whose nodes these are; all types together have `nodes` at most.
-// An organ of several kinds of node (a gonad's growth, release and pressure cells) recruits those
-// of its first kind; the others count towards `nodes`.
 export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   const original = findOrgan(doc, organId), most = nodeLimit(original, sites);
   const kind = original?.centers[0]?.key;
@@ -634,14 +581,11 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   settleAssemblies(draft);
   return draft;
 }
-// The muscle nodes of a function (null for none), as the engine sees them.
 const musclesOf = (doc, code, sites) =>
     doc.organs.filter(o => o.type === 'muscle').flatMap(o => o.centers).filter(c => {
       const site = findSite(sites, c.site);
       return site && functionFor(c, site) === code;
     });
-// A trait of the fish its muscles of a function shape (MUSCLE_TRAITS), as the engine's body plan
-// takes it: the mean over them, weighted by their strength; null without such muscles.
 export function muscleTrait(doc, code, key, sites) {
   const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
   const muscles = quality ? musclesOf(doc, code, sites) : [];
@@ -649,7 +593,6 @@ export function muscleTrait(doc, code, key, sites) {
   return weight ? muscles.reduce((sum, c) => sum + c.copies * unitOfPlan(c[quality]), 0) / weight
                 : null;
 }
-// The trait set for the whole fish: the quality behind it on all its muscles of that function.
 export function setMuscleTrait(doc, code, key, trait, sites) {
   const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
   if (!quality || !musclesOf(doc, code, sites).length)
@@ -659,7 +602,6 @@ export function setMuscleTrait(doc, code, key, trait, sites) {
     center[quality] = planOfUnit(trait);
   return draft;
 }
-// A node of an organ moved to another free site its organ allows.
 export function placeNode(doc, centerId, siteId, sites) {
   const found = findCenter(doc, centerId), site = findSite(sites, siteId);
   if (!found || !site || !fitsOrgan(found.organ.type, found.center, site) ||
@@ -669,10 +611,6 @@ export function placeNode(doc, centerId, siteId, sites) {
   findCenter(draft, centerId).center.site = siteId;
   return draft;
 }
-// Free sites for a node, nearest first to another node of its organ (`near`): by the engine's
-// layout across (w), up and down (v) and along (zone and u), on its side.
-// How far sites lie from a node: along the body (zones and u), across (v), out (w, weighing
-// DEPTH_WEIGHT times less) and OTHER_SIDE more on the other side.
 const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});
 export function nodeSitesNear(doc, centerId, nearId, sites) {
   const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
@@ -735,14 +673,10 @@ function tissueTargets(doc, id) {
   const organs = [ found.organ ];
   if (found.organ.linked)
     organs.push(findOrgan(doc, found.organ.pair));
-  // In an organ with types a type's own centers share their settings, in others all of a kind.
   const same = ORGAN_BY_KEY[found.organ.type]?.types ? c => typeOf(c) === typeOf(found.center)
                                                      : c => c.key === found.center.key;
   return organs.filter(Boolean).flatMap(o => o.centers.filter(same));
 }
-// Organs with types (ORGANS' `types`: a nose's scent profiles, the skin's kinds of pigment cell):
-// a type is the centers of the organ sharing a `profile`, those without one the first; in the
-// order they first appear. The twin of a linked pair has the same types.
 const typeOf = center => center.profile ?? '';
 export function organTypes(organ) {
   const types = new Map();
@@ -755,9 +689,6 @@ export function organTypes(organ) {
 }
 export const typeOfCenter = (organ, centerId) =>
     organTypes(organ).find(type => type.centers.some(c => c.id === centerId)) ?? null;
-// The tuning a new type starts with: a nose's profile tuned to the scent its profiles smell least,
-// as broad as its first; a kind of pigment cell with the first of the pigments it lacks.
-// The substance a blood sense's cells read most (an index on the substance wheel).
 export function substanceRead(wheel, center) {
   const indices = Array.from({length : wheel.bloodSubstances}, (_, i) => i);
   return indices.reduce((best, i) =>
@@ -766,8 +697,6 @@ export function substanceRead(wheel, center) {
                                 ? i
                                 : best);
 }
-// The tuning an organ's next type takes: the pigment it lacks, the scent it smells least, for the
-// blood sense the first substance none of its types reads yet.
 export function nextTypeTuning(organ, wheel) {
   const firsts = organTypes(organ).map(type => type.centers[0]);
   if (organ.type === 'pigment')
@@ -782,9 +711,6 @@ export function nextTypeTuning(organ, wheel) {
       (_, k) => Math.max(...firsts.map(c => scentAffinities(c.q1, c.q2, c.qwidth)[k])));
   return {...scentTuning(smelled.indexOf(Math.min(...smelled))), qwidth : firsts[0].qwidth};
 }
-// A new type: one center with the settings of the organ's first and `tuning` on top, at the free
-// place nearest to the organ that does the same work (on the twin the mirrored place); the
-// document and the type's id, or null where the organ has all its types or no place is free.
 export function addOrganType(doc, organId, sites, tuning = {}) {
   const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.types;
   if (!most || !original.centers.length || organTypes(original).length >= most)
@@ -811,7 +737,6 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
   settleAssemblies(draft);
   return {document : draft, typeId : id};
 }
-// The organ without a type (and its twin without it); null for its last.
 export function removeOrganType(doc, organId, typeId) {
   const original = findOrgan(doc, organId);
   if (!original || organTypes(original).length < 2)
@@ -849,7 +774,6 @@ export function updateCenter(doc, id, patch) {
                 : clamp(value, [ 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1, 1);
       }
   }
-  // Generated visual tissues keep their recipe as the source for future regeneration.
   for (const organ of draft.organs.filter(o => o.field)) {
     for (const profile of organ.field.profiles) {
       const c = organ.centers.find(c => c.profile === profile.id);
@@ -875,9 +799,6 @@ export function updateReceptor(doc, id, effect, patch) {
         center.receptors[effect][key] = patch[key];
   return draft;
 }
-// A cell's life phase on the body's maturity (substance HORMONES.levels): from `start` its output
-// switches on through a steep output receptor, from `end` it dies through its death receptor
-// (response above one half once maturity passes the half value). null leaves a side open.
 export function lifePhase(center) {
   const output = center.receptors[HORMONE_EFFECT.output],
         death = center.receptors[HORMONE_EFFECT.death];
@@ -914,12 +835,7 @@ export function setLifePhase(doc, id, phase, span, steps) {
   }
   return draft;
 }
-// A new growth receptor lets the body grow at full pace once even a little of its hormone is
-// present.
 export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
-// A receptor bound to the substance at `index` starts this strong, binding at this level, unless
-// it was tuned before: most effects rise with the substance, output falls (it starts full),
-// cells die only above half.
 const RECEPTOR_START = Object.freeze({
   [HORMONE_EFFECT.excitation] : {sensitivity : .5, half : .1},
   [HORMONE_EFFECT.learning] : {sensitivity : 1, half : .1},
@@ -929,9 +845,6 @@ const RECEPTOR_START = Object.freeze({
   [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
   [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
 });
-// What each effect makes of a receptor's response R, as the engine's cell step does
-// (colony-core/field/substrate.cc): firing adds R to the cell's input, learning scales its rate by
-// 1 + R, death strikes above DEATH_RESPONSE (1 dead, 0 alive), the others scale by (1 + R) / 2.
 export const DEATH_RESPONSE = .5;
 export function effectLevel(effect, r) {
   if (effect === HORMONE_EFFECT.excitation)
@@ -942,16 +855,12 @@ export function effectLevel(effect, r) {
     return r > DEATH_RESPONSE ? 1 : 0;
   return (1 + r) / 2;
 }
-// A receptor's response without the substance and with plenty of it (bound fully).
 export const receptorEnds = receptor => ({
   without : clamp(receptor.baseline, -1, 1),
   with : clamp(receptor.baseline + receptor.sensitivity, -1, 1)
 });
-// The ends of a receptor as one put down by a tile starts.
 export const startEnds = effect =>
     receptorEnds({...neutralReceptor(effect), ...RECEPTOR_START[effect]});
-// Whether more of the substance raises what an effect does (1), lowers it (-1) or leaves it (0);
-// for death 1 where the substance kills, -1 where the cell dies without it.
 export function effectDirection(effect, receptor) {
   const ends = receptorEnds(receptor);
   return Math.sign(effectLevel(effect, ends.with) - effectLevel(effect, ends.without));
@@ -962,9 +871,6 @@ export function bindReceptor(doc, id, effect, index) {
       doc, id, effect,
       {...(current?.sensitivity ? {} : RECEPTOR_START[effect]), active : 1, substance : index});
 }
-// A receptor switched on or off. One switched on that answered nothing yet answers with
-// RECEPTOR_ONSET: an output receptor rests at full output, so its substance lowers it; the others
-// it raises.
 const RECEPTOR_ONSET = 1;
 export function switchReceptor(doc, id, effect, on) {
   const receptor = findCenter(doc, id)?.center.receptors[effect];
@@ -973,7 +879,6 @@ export function switchReceptor(doc, id, effect, on) {
     patch.sensitivity = receptor?.baseline > 0 ? -RECEPTOR_ONSET : RECEPTOR_ONSET;
   return updateReceptor(doc, id, effect, patch);
 }
-// The body's growth receptor: which substance lets the body grow, how strongly and how steeply.
 export function updateGrowth(doc, patch) {
   const draft = copy(doc);
   for (const key of Object.keys(neutralReceptor()))
@@ -981,7 +886,6 @@ export function updateGrowth(doc, patch) {
       draft.growth[key] = patch[key];
   return draft;
 }
-// A new substance at the first free index of `max`, or at `wanted` where that is free.
 export function addSubstance(doc, max, wanted = null) {
   const active = new Set(doc.substances.map(s => s.index));
   const index = wanted ?? Array.from({length : max}, (_, i) => i).find(i => !active.has(i));
@@ -991,7 +895,6 @@ export function addSubstance(doc, max, wanted = null) {
   draft.substances.push({id : identifier('substance'), index, name : ''});
   return draft;
 }
-// A substance's name is at most SUBSTANCE_NAME_LENGTH long.
 export const SUBSTANCE_NAME_LENGTH = 32;
 export function setSubstance(doc, index, name) {
   const draft = copy(doc), entry = draft.substances.find(s => s.index === index);
@@ -1012,23 +915,16 @@ export function removeSubstance(doc, index) {
   return draft;
 }
 export function addWire(doc, from, to, pairing = null) {
-  // An organ as a whole sends from its nodes that send and is heard by those that hear; a sense
-  // does not drive an effector without a nerve center between them.
   const a = senderNodes(doc, from), b = hearerNodes(doc, to);
   if (!a.length || !b.length || from === to ||
       (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
     return null;
-  // A wire between paired ends joins the sides as drawn (each side its own, or each the other's),
-  // unless a way of pairing is asked for; one between twins joins them alone.
   const twins = pairEndpoint(doc, from) === to;
   const drawn = endpointSide(doc, from) === endpointSide(doc, to) ? 'same' : 'crossed';
   const sides = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
                     ? PAIRINGS.includes(pairing) ? pairing : drawn
                     : null;
   const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing : sides};
-  // A connection covers another that it makes or that its ends' whole organs make: a node's wire
-  // to what its organ already reaches adds nothing and is none; a new wire takes the place of the
-  // wires it covers whole.
   const covers = (a, b) => (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
                            (a.to === b.to || a.to === wholeEndpoint(doc, b.to));
   const made = expandedWires(doc), links = wireLinks(doc, wire);
@@ -1040,33 +936,23 @@ export function addWire(doc, from, to, pairing = null) {
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
-// What a wire attaches to: a sense or effector organ as a whole or one of its nodes (a retinal
-// node, say), a single nerve center of the brain or of a brain region. A new wire reaches exactly
-// what it joins; its spread widens that.
 const WIRE_SPREAD = 0;
 const ownEndpoints = organ => organ.type === 'brain' || isRegion(organ);
 const isNode = (doc, id) => {
   const found = findCenter(doc, id);
   return !!found && !ownEndpoints(found.organ);
 };
-// The organ an endpoint belongs to as a whole: a node of an organ stands for its organ.
 export const wholeEndpoint = (doc, id) => isNode(doc, id) ? findCenter(doc, id).organ.id : id;
-// Wires whose ends are gone, as when an eye's nodes are regenerated, go with them.
 function pruneWires(draft) {
   const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
   draft.wires = draft.wires.filter(w => ids.has(w.from) && ids.has(w.to));
 }
-// The node of `fresh` standing where `centerId` stands in `original`, a twin or a copy: a field
-// organ's node by its colour type and bin, another organ's by its place among the organ's nodes.
-// Null when `fresh` has none there.
 export function matchingNode(original, fresh, centerId) {
   const id = original.field || original.region
                  ? fresh.id + centerId.slice(original.id.length)
                  : fresh.centers[original.centers.findIndex(c => c.id === centerId)]?.id;
   return fresh.centers.some(c => c.id === id) ? id : null;
 }
-// The same endpoint on the other side: a paired organ's twin, or the matching node or center of
-// a paired organ's or region's twin. Null without one.
 export function pairEndpoint(doc, id) {
   const organ = findOrgan(doc, id);
   if (organ)
@@ -1074,9 +960,6 @@ export function pairEndpoint(doc, id) {
   const found = findCenter(doc, id), twin = findOrgan(doc, found?.organ.pair);
   return twin ? matchingNode(found.organ, twin, id) : null;
 }
-// Every connection a wire makes: one, or for a wire between paired organs one on each side, both
-// crossing the midline, or all four. The guidance holds for the body's sides, whichever twin the
-// wire was drawn between.
 const endpointSide = (doc, id) => organOf(doc, id).side < 0;
 function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
@@ -1095,12 +978,9 @@ export const expandedWires = doc =>
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
 }
-// The center a chosen item stands for: a chosen center itself, a chosen organ's first.
 export const chosenCenter = (doc, item) => ['center', 'organ'].includes(item?.kind)
                                                ? endpointCenters(doc, item.id)[0] ?? null
                                                : null;
-// The nodes that send for an endpoint (not its effectors) and that hear a wire to it (not its
-// senses; of an organ with an input slot naming a node, that node alone).
 const senderNodes = (doc, id) => endpointCenters(doc, id).filter(c => c.role !== 'motor');
 function hearerNodes(doc, id) {
   const organ = findOrgan(doc, id);
@@ -1110,8 +990,6 @@ function hearerNodes(doc, id) {
   return endpointCenters(doc, id).filter(c =>
                                              c.role !== 'sensor' && (!slot || c.key === slot.node));
 }
-// Connect physical organs and neural regions through stable semantic endpoints.
-// A contact is drawn for each legal centre pair and remains independently editable.
 export function selectionCenters(doc, item) {
   if (!item)
     return [];
@@ -1123,9 +1001,6 @@ export function selectionCenters(doc, item) {
     return assemblyCenters(doc, findAssembly(doc, item.id));
   return [];
 }
-// The endpoints of a choice: an organ chosen as a whole is one, and so is a brain region, which
-// spreads its wires over its nodes by its plan; a node chosen is itself; a module stands for its
-// organs and nerve centers.
 function choiceEnds(doc, item) {
   const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
   if (organ && organ.type !== 'brain')
@@ -1207,7 +1082,6 @@ export function mirrorOrgan(doc, organId, sites) {
     return null;
   return {document : draft, organId : mirror.id, centerId : mirror.centers[0]?.id};
 }
-// Each assembly takes the centers its organs have now.
 export function settleAssemblies(doc) {
   for (const assembly of doc.assemblies)
     assembly.centerIds = assemblyCenters(doc, assembly);
@@ -1220,11 +1094,8 @@ export function assemblyCenters(doc, assembly) {
                 ? (assembly.centerIds ?? []).filter(c => findCenter(doc, c)?.organ.type === 'brain')
                 : findOrgan(doc, id)?.centers.map(c => c.id) ?? []);
 }
-// Which side a sender's contacts may reach: the side its wires lead to when they all lead to the
-// same or all to the other side (1 across, -1 the same), else its own preference.
 export const wiredCrossing = (doc, center, sites) =>
     senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc));
-// The side of every organ and node of a design, by id.
 function sidesOf(doc) {
   const sides = new Map();
   for (const organ of doc.organs) {

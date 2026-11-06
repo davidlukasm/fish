@@ -16,7 +16,6 @@ inline constexpr std::uint64_t splitmix_finish(std::uint64_t z) {
 inline constexpr std::uint64_t splitmix(std::uint64_t z) {
   return splitmix_finish(z + SPLITMIX_GAMMA);
 }
-// Unit values come from the top UNIT_BITS bits: a value in [0, 1), or the centre of its interval.
 inline constexpr int UNIT_BITS = std::numeric_limits<double>::digits;
 inline constexpr int UNIT_SHIFT = std::numeric_limits<std::uint64_t>::digits - UNIT_BITS;
 inline constexpr double UNIT_STEPS = double(1ULL << UNIT_BITS);

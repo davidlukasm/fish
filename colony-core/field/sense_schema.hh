@@ -33,12 +33,8 @@ constexpr std::size_t eye_width = 2;
 constexpr std::size_t eye_size = 3;
 constexpr std::size_t pupil = 4;
 }
-// A brain develops at most DEVELOPMENT_SITES cells.
 constexpr std::size_t DEVELOPMENT_SITES = 360;
-// Cell time constants run from TIME_CONSTANT_MIN steps over TIME_CONSTANT_SPAN times that.
 constexpr double TIME_CONSTANT_MIN = 4.0, TIME_CONSTANT_SPAN = 12.0;
-// Pacemakers beat at least every TIME_CONSTANT_PACE_MIN steps.
 constexpr double TIME_CONSTANT_PACE_MIN = 8.0;
-// A tank runs on at most MAX_WORKERS threads.
 constexpr int MAX_WORKERS = 64;
 }

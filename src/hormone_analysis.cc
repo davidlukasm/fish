@@ -11,17 +11,10 @@
 #include <ostream>
 namespace fishsim {
 namespace {
-// Each arm changes one hormone by PROBE_CHANGE, lets the brain settle for SETTLE_STEPS and
-// averages the next MEASURE_STEPS - SETTLE_STEPS steps; effects are reported per PROBE_CHANGE.
-// Arm 0 is the baseline, so the analysis ends after LAST_ARM.
 constexpr double PROBE_CHANGE = .01;
 constexpr int SETTLE_STEPS = 16, MEASURE_STEPS = 32, LAST_ARM = int(HORMONE_ARMS);
-// An analysis may spend up to ANALYSIS_WORK work bounds: a preview and MEASURE_STEPS steps for
-// every arm; it is funded with FUNDING_SHARE of the regular brain work and advances at most
-// PACKET_WORK at a time.
 constexpr double ANALYSIS_WORK = (MEASURE_STEPS + 1) * (LAST_ARM + 1), FUNDING_SHARE = .01;
 constexpr std::uint64_t PACKET_WORK = 65536;
-// Rounds start every ROUND_PERIOD steps with up to ROUND_MEMBERS fish per species.
 constexpr std::uint64_t ROUND_PERIOD = 4096;
 constexpr std::size_t ROUND_MEMBERS = 3;
 int arm_hormone(int arm) {
@@ -334,7 +327,6 @@ void Ecosystem::advance_hormone_analysis() {
     auto r = std::move(hormone_analysis_.rounds.front());
     hormone_analysis_.rounds.pop_front();
     r.individuals.pop_front();
-    // An empty round is finalized at the next observation barrier.
     hormone_analysis_.rounds.push_back(std::move(r));
   }
 }

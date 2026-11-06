@@ -33,11 +33,6 @@ import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
 
-// The blood's substances in the inspector: the substance wheel where glands release and senses
-// read them, receptors' response curves and life phases, the hormone inspector and measurements.
-
-// A center's own point on the substance wheel, among the substances it may choose (of which the
-// engine reads the first `reads`, all if not given).
 const centerWheel = (state, center, choices, reads) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
       choices,
@@ -46,7 +41,6 @@ const centerWheel = (state, center, choices, reads) =>
       extra : ' data-center-id="' + escapeText(center.id) + '"',
       pad : center.id
     });
-// Glands release, and the blood sense reads, the substances near a free point on the wheel.
 export function glandProfile(state, center) {
   const substances = state.document.substances;
   if (!substances.length)
@@ -59,8 +53,6 @@ export function glandProfile(state, center) {
          t('studio.marks.more', {name : label('inspector.glandSecretes')}) + '</span><span>' +
          t('studio.marks.less', {name : label('inspector.glandBinds')}) + '</span></div>';
 }
-// The blood sense: a chip for each substance it reads (its type), marked by a dot of RADIUS in
-// the substance's colour, and the chosen one's point on the wheel.
 const CHIP_DOT = Object.freeze({half : 8, radius : 6});
 export function hormonePad(state, organ, center) {
   const wheel = state.capabilities;
@@ -77,9 +69,6 @@ export function hormonePad(state, organ, center) {
   }, {add : label('inspector.addBloodType'), remove : label('inspector.removeBloodType')}) : '';
   return chips + centerWheel(state, center, all);
 }
-// What substances do to the chosen cell group: what a gland releases, what the group's
-// receptors answer to and, for nerve cells, which substances teach them. Each list opens the tool
-// that edits it, with this group chosen.
 export function chemistry(state, organ, center) {
   const wheel = state.capabilities, doc = state.document;
   if (!wheel || !center || isRegion(organ) && state.selected?.kind !== 'center')
@@ -121,18 +110,12 @@ export function chemistry(state, organ, center) {
          (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
          '</div></section>';
 }
-// The engine's binding (colony-core/field/hormones.hh): x^n / (x^n + 1), x = c / K, n =
-// 2^steepness.
 function bound(receptor, c) {
   let x = c / receptor.half;
   for (let k = 0; k < receptor.steepness; ++k)
     x *= x;
   return x / (1 + x);
 }
-// The receptor's response R, and what each effect makes of it (colony-core/field/substrate.cc):
-// output, competition, trace and rhythm scale by (1 + R) / 2, learning by 1 + R, excitation
-// adds R, death strikes above DEATH_RESPONSE (the model's effectLevel). Growth is the bound share
-// without baseline.
 const EFFECT_SCALE = Object.freeze({
   [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r, response : v => v},
   [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r, response : v => v - 1},
@@ -142,8 +125,6 @@ const SHARE_SCALE =
     Object.freeze({low : 0, high : 1, value : r => (1 + r) / 2, response : v => 2 * v - 1});
 const GROWTH_SCALE =
     Object.freeze({low : 0, high : 1, value : r => Math.max(0, r), response : v => v});
-// A receptor's curve as the engine binds: its scale, its concentration axis (log over the
-// engine's half range, or maturity from 0 to 1) and its response at a concentration.
 function receptorCurve(state, receptor, effect) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
@@ -158,9 +139,6 @@ function receptorCurve(state, receptor, effect) {
       CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
   return {maturity, halfMin, halfMax, scale, response, atFraction, fraction, x, y};
 }
-// The receptor's handles: its level without the substance (baseline), with plenty of it
-// (sensitivity), the concentration of half binding, and the binding's steepness one doubling
-// past it.
 const STEEP_PROBE = 2;
 function curveHandles(state, receptor, effect, target) {
   const k = receptorCurve(state, receptor, effect);
@@ -182,7 +160,6 @@ function curveHandles(state, receptor, effect, target) {
                escapeText(label('inspector.curve.' + key)) + '</title></circle>')
       .join('');
 }
-// A pointer at (fx, fy), fractions of the curve graphic, as a change of the receptor.
 export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const k = receptorCurve(state, receptor, effect), span = state.capabilities?.sensitivitySpan ?? 1;
   const px = fx * CURVE.width, py = fy * CURVE.height;
@@ -203,7 +180,6 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const share = receptor.sensitivity ? (r - base) / receptor.sensitivity : 0;
   if (!(share > 0 && share < 1))
     return null;
-  // bound at STEEP_PROBE times the half is p^n / (p^n + 1), n = 2^steepness.
   const n = Math.log(share / (1 - share)) / Math.log(STEEP_PROBE);
   return {
     steepness : Math.max(
@@ -221,9 +197,6 @@ const CURVE = Object.freeze({
   points : 80,
   handle : 6
 });
-// A response chart's axes and their marks: the response's top and bottom (HIGH, LOW) left of
-// its axis, the other axis's ends (FROM, TO) and name (ALONG) below it, what rises (UP) at the
-// top inside it. Marks stand GAP from the axes, the names BELOW under them, UP TITLE down.
 const CURVE_MARKS = Object.freeze({gap : 4, below : 14, title : 10});
 const curveText = (value, x, y, anchor = 'start') => '<text x="' + x + '" y="' + y +
                                                      '" text-anchor="' + anchor + '">' +
@@ -238,9 +211,7 @@ function curveMarks({high, low, from, to, along, up}) {
          curveText(along, (C.left + C.right) / 2, under, 'middle') +
          curveText(up, C.left + M.gap, C.top + M.title);
 }
-// A life phase's marks point onto the axis with a triangle HALF wide each way and HEIGHT high.
 const PHASE_POINTER = Object.freeze({half : 8, height : 14});
-// A chart's numbers show at most CURVE_DIGITS decimals.
 const CURVE_DIGITS = 3;
 export function effectCurve(state, receptor, effect, target = null) {
   const {maturity, halfMin, scale, response, atFraction, x, y} =
@@ -272,21 +243,14 @@ export function effectCurve(state, receptor, effect, target = null) {
          }) +
          (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
-// A cell's life phase on the maturity axis: its output over maturity and, past its end, the
-// permanent death (lifePhase in model/document.js). Two marks on the axis set where it starts
-// working and where it dies; a mark moved within PHASE_OPEN of its end of the axis leaves that
-// side open.
 const PHASE_OPEN = .05;
 export function phasePatch(handle, fx) {
   const m = clamp((fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left));
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
-// How much of a substance a measurement doses: a share from none to all, set in MEASURE_STEP. It
-// measures the fish built as drawn only, so without one its dose and button wait.
 const MEASURE_STEP = .01;
 export const measureReading = level => percent(level);
-// Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 export function measurement(state, index) {
   const waiting = builtAsDrawn(state) ? '' : ' disabled';
@@ -325,7 +289,6 @@ export function measurement(state, index) {
 }
 function lifePhaseEditor(state, focus) {
   const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
-  // Output share over maturity; an output receptor on a hormone shows its share without hormone.
   const onMaturity = output.substance === HORMONES.levels;
   const level = m => {
     if (phase.end !== null && m > phase.end)
@@ -345,7 +308,6 @@ function lifePhaseEditor(state, focus) {
                    : '<rect class="aid-death-zone" x="' + fixed(x(phase.end)) + '" y="' +
                          CURVE.top + '" width="' + fixed(CURVE.right - x(phase.end)) +
                          '" height="' + (CURVE.bottom - CURVE.top) + '"/>';
-  // A mark: a line across the chart to grab, a pointer onto the axis.
   const mark = (handle, value, open, title) => {
     const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
                                                '" y2="' + CURVE.bottom + '"';
@@ -372,13 +334,6 @@ function lifePhaseEditor(state, focus) {
          '<div class="aid-range-hints"><span>' + label('inspector.phaseStart') + '</span><span>' +
          label('inspector.phaseEnd') + '</span></div></section>';
 }
-// The substance wheel shared by glands, the blood sense and receptors (wheelPlace in
-// model/document.js): a profile binds the blood substances near its point with a halo of width
-// sigma, and each substance's fill shows how strongly. Substances in `choices` can be clicked to
-// set `attribute`; with `pad` (a center id) the profile point can be dragged anywhere. A profile
-// reads only the first `reads` substances: growth and glands the hormones, receptors maturity too.
-// Under the wheel a track sets the width, from binding one substance to many, so no handle lies on
-// the substances' marks.
 export const WHEEL = Object.freeze({
   size : 150,
   height : 176,
@@ -389,18 +344,13 @@ export const WHEEL = Object.freeze({
   track : [ 34, 116 ],
   track_y : 162
 });
-// Where a point (x, y from -1 to 1) lies on the wheel. A pad wheel's profile is active, so it
-// always shows its track and is HEIGHT high: the pointer (fractions of the wheel) sets its point.
 const wheelX = x => WHEEL.centre + x * WHEEL.radius, wheelY = y => WHEEL.centre - y * WHEEL.radius;
 export const wheelPatch = (fx, fy) => ({
   q1 : clamp((fx * WHEEL.size - WHEEL.centre) / WHEEL.radius, -1),
   q2 : clamp((WHEEL.centre - fy * WHEEL.height) / WHEEL.radius, -1)
 });
 export const wheelMarks = center => pointMarks({x : wheelX(center.q1), y : wheelY(center.q2)});
-// The width at a fraction of the wheel's width along its track.
 export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
-// The wheel marks a substance with the first letter of its name, maturity and reserve with their
-// own marks.
 function substanceMark(state, index) {
   return index === HORMONES.levels       ? label('inspector.maturityMark')
          : index === HORMONES.levels + 1 ? label('inspector.reserveMark')
@@ -427,9 +377,6 @@ export function substanceWheel(state, profile, {
     return '';
   const px = x => fixed(wheelX(x)), py = y => fixed(wheelY(y));
   const clickable = new Set(choices);
-  // The design's substances and the body's signals the profile can read show as points; a
-  // substance the design has not made yet is an empty point in its colour with a question mark,
-  // which makes it and opens it in the hormone tool.
   const named = new Set(state.document.substances.map(sub => sub.index));
   const points = Array.from({length : wheel.bloodSubstances}, (_, index) => {
     if (index >= reads)
@@ -476,13 +423,10 @@ export function substanceWheel(state, profile, {
          WHEEL.centre + '" cy="' + WHEEL.centre + '" r="' + WHEEL.radius +
          '" class="aid-wheel-ring"/>' + halo + marker + points.join('') + track + '</svg>';
 }
-// A receptor's profile on the wheel: its substance's point and its width.
 export function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
   return {x, y, width : receptor.width, active : receptor.active};
 }
-// The body's growth: how much the fish may grow at each level of the substance it grows with
-// (its card in the library carries the fish mark); nothing while it grows with none.
 function growthEditor(state) {
   const {document : doc} = state, growth = doc.growth;
   if (!growth.active || !doc.substances.some(sub => sub.index === growth.substance))
@@ -492,7 +436,6 @@ function growthEditor(state) {
              t('studio.hormoneCard.growthWith', {name : substanceName(state, growth.substance)})) +
          effectCurve(state, growth, GROWTH, GROWTH) + '</section>';
 }
-// The organs of some centers, a pair of organs once.
 export function organsOf(doc, centers) {
   const seen = new Set();
   return centers.map(c => findCenter(doc, c.id)?.organ).filter(organ => {
@@ -504,8 +447,6 @@ export function organsOf(doc, centers) {
     return true;
   });
 }
-// A center's receptor for one of `effects` (each named by `name`): chips to choose the effect, its
-// response curve, whether it is active and the substance it binds.
 export const receptorEditor = (state, center, effects, effect, name) =>
     '<div class="aid-effect-chips">' +
     effects
@@ -514,8 +455,6 @@ export const receptorEditor = (state, center, effects, effect, name) =>
                       '</button>')
         .join('') +
     '</div>' + receptorBody(state, center, effect);
-// A center's receptor for one effect: its response curve, whether it is active and the substance
-// it binds.
 export function receptorBody(state, center, effect) {
   const receptor = center.receptors[effect], target = center.id + ':' + effect;
   return effectCurve(state, receptor, effect, target) +
@@ -532,9 +471,6 @@ export function receptorBody(state, center, effect) {
            widthTarget : target
          });
 }
-// The substance chosen in the library: its name, whether the fish grows by it (and how), the
-// glands releasing it and what it acts on, its trial dose and the removal; what it does on a
-// cell is set on the cell.
 const GROW_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
 export function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
@@ -580,8 +516,6 @@ export function substanceInspector(state) {
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
-// An effect a substance has on cells, with which way more of it turns it (`direction`,
-// effectDirection) as an arrow, and in words beside.
 export function boundEffect(effect, direction) {
   const name = label('effects.' + effect), death = effect === HORMONE_EFFECT.death;
   const words =
@@ -596,8 +530,6 @@ export function boundEffect(effect, direction) {
               : '') +
          '</span>';
 }
-// What the substance can do, each effect played with where it acts and on how many cells of this
-// fish it does, as the first cell it acts on there answers it (else as a tile puts it down).
 function effectGuide(state, index) {
   const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
   const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
@@ -606,10 +538,7 @@ function effectGuide(state, index) {
              .map(effect => {
                const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
                const n = bound.length;
-               // An effect it has nowhere in this fish yet stands back; its words are there on
-               // pointing.
                const ends = n ? receptorEnds(bound[0].receptors[effect]) : undefined;
-               // Firing a cell that learns teaches it as well: that second part shows beside.
                const teaches = effect === HORMONE_EFFECT.excitation && bound.find(learnsAtAll);
                return '<div class="aid-effect-card' + (n ? '' : ' off') +
                       '" style="--substance:' + colour + '" title="' +
@@ -640,7 +569,6 @@ export function hormoneInspector(state) {
     return substanceInspector(state);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
              heading(label('tools.hormone')) + '</header>';
-  // Only the effects the engine gives this kind of cell.
   const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
   const receptor = focus.receptors?.[effect];

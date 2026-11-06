@@ -18,8 +18,6 @@ export function organTitle(organ, sites = null) {
 export function centerTitle(center) {
   if (!center.node)
     return t('studio.centers.' + center.key);
-  // A pallium's learning node names the kind it learns from: a region by its term, a sense
-  // organ by its name.
   if (center.stream)
     return t('studio.regionNodes.learnFrom', {
       name : t(ORGAN_BY_KEY[center.stream]?.category === 'regions'
@@ -33,9 +31,6 @@ export function centerTitle(center) {
   return center.type === null ? t('studio.regionNodes.map', {from, to})
                               : t('studio.regionNodes.mapType', {from, to, n : center.type + 1});
 }
-// A node's family: a planned region's nodes of one role together (its map's bands, what it learns
-// from), else the nodes of one kind. A family by name, with how many nodes it has when more than
-// one; the nodes of an organ by family, in the order they first come.
 export const nodeFamily = center => center.node ? center.node.replace(/[.\d].*$/, '') : center.key;
 export const nodeFamilies = organ => [...Map.groupBy(organ.centers, nodeFamily).values()];
 export function familyTitle(nodes) {

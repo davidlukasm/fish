@@ -25,9 +25,6 @@ export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [
 const MODULATING = .5;
 export const isModulator = center => center.modulator > MODULATING;
 export const isPacemaker = center => center.pace > MODULATING;
-// What a nerve center is by its traits, whatever its template: a modulator, a pacemaker, an
-// inhibiting center, a learning circuit (made as one, or learning in competition: its mode past
-// MODULATING too) or a relay.
 export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : isPacemaker(center) ? 'pacemaker'
                                    : center.sign < 0     ? 'inhibit'
@@ -259,7 +256,6 @@ export const ORGANS = Object.freeze([
     ],
     settings : {smoothing : setting(0, 2, 1, true), brake : setting(0, 2, 1, true)}
   },
-  // One hypothalamus on the midline turns inner states into hormones and drive.
   {
     key : 'hypothalamus',
     category : 'regions',

@@ -9,15 +9,9 @@ import {
   tissueKind
 } from './tissue.js';
 import {HORMONE_EFFECT, MOTOR_KIND, NEURON, SENSE_KIND, SYNAPSE} from './schema.js';
-// The brain as a network of stations: organ stations (sense and motor cells by organ and side),
-// hubs clustered from the processing cells by whom they listen to and drive, the summed
-// connections between stations and the strongest signal paths as lines. A pure model of the
-// concrete brain without layout; only the station names come from the wording resources. Views
-// and the thought observers build on it.
 import {t, textArea} from './strings.js';
 export const brain_planState = {};
 
-// Organ stations: [organ key, family]
 const ORGAN_KINDS = {
   suck : [ MOTOR_TISSUE.suction, 'eat' ],
   bite : [ MOTOR_TISSUE.aggression, 'eat' ],
@@ -42,7 +36,6 @@ const ORGAN_KINDS = {
   sperm : [ MOTOR_TISSUE.sperm, 'repro' ],
   tail : [ MOTOR_TISSUE.forward, 'move' ]
 };
-// A station gathers processing cells (hub) or the cells of one sense or motor organ.
 export const STATION = Object.freeze({hub : 'h', sense : 's', motor : 'm'});
 const MOTOR_ORGANS = {
   [MOTOR_KIND.forward] : 'tail',
@@ -56,10 +49,6 @@ const MOTOR_ORGANS = {
   [MOTOR_KIND.bladder] : 'bladder',
   [MOTOR_KIND.gland] : 'gland'
 };
-// Neutral line colours, distinguishable on the dark map; lines are numbered by strength.
-// ---------------------------------------------------------------------- stations
-// Sense and motor cells belong to their organ (and side); processing cells form the hubs.
-// The tissue a working cell serves most: a sense, a motor, or processing.
 function cellTissue(n) {
   if (!n[NEURON.functional])
     return '';
@@ -107,7 +96,6 @@ function unit(v) {
   return v;
 }
 
-// Clustering refines its centres over ROUNDS rounds.
 const KMEANS = Object.freeze({rounds : 14});
 function kmeans(points, k) {
   const dist = (a, b) => {
@@ -153,10 +141,6 @@ function kmeans(points, k) {
   return {assign, cost};
 }
 
-// Processing cells are grouped by whom they listen to and whom they drive; the number of hubs
-// follows the brain: more hubs only while they explain clearly more of the wiring.
-// Processing cells cluster by their wiring and place: up to MAX_HUBS hubs, about one per
-// CELLS_PER_HUB squared cells; another hub must cut the cost below GAIN.
 const HUBS =
     Object.freeze({neighbours : .5, place : .35, max_hubs : 10, cells_per_hub : 3, gain : .8});
 function clusterHubs(b, organs) {
@@ -210,12 +194,6 @@ function clusterHubs(b, organs) {
   return new Map(ids.map((id, i) => [id, 'h' + order.indexOf(chosen.assign[i])]));
 }
 
-// Lines follow the signal: from a sense organ through the hubs that pass it on to the organ it
-// drives. Each line starts at the strongest unused connection and grows forward along outgoing
-// and backward along incoming connections while it is inside the hubs; organs are terminals.
-// A brain gets as many lines, and lines as long, as its strong pathways allow.
-// At most MAX_ROUTES routes of up to MAX_LENGTH stations, starting at MIN_START and continuing
-// while links keep MIN_STEP of the strongest; routes from senses count SENSE_BONUS times.
 const ROUTES = Object.freeze(
     {max_routes : 16, sense_bonus : 1.2, min_start : .15, max_length : 12, min_step : .06});
 function extractRoutes(pairs, meta) {
@@ -273,7 +251,6 @@ function extractRoutes(pairs, meta) {
   return routes.sort((p, q) => q.weight - p.weight);
 }
 
-// A hub lies on a side once its cells' mean reaches LATERAL off the midline.
 const HUB_SIDE = Object.freeze({lateral : .25});
 function buildPlanModel(b) {
   const organs = new Map();
@@ -316,8 +293,6 @@ function buildPlanModel(b) {
     if (e[SYNAPSE.strength] >= 0)
       p.plus += e[SYNAPSE.strength];
   });
-  // Hubs take the family of what feeds or drives them most, their side from where their cells
-  // lie, and a rank among hubs of the same family and side.
   const ranks = new Map();
   for (const h of [...meta.values()]
            .filter(m => m.kind === STATION.hub)
@@ -357,7 +332,6 @@ function buildPlanModel(b) {
   };
 }
 
-// The plan of the brain in view, rebuilt only when the brain or its layout changes.
 export function planFor(b) {
   if (!b?.neurons?.length || !b.edges?.length)
     return null;
@@ -367,7 +341,6 @@ export function planFor(b) {
   return brain_planState.plan = buildPlanModel(b);
 }
 
-// Live state: mean activity per station, signal flow and learned change per connection.
 export function updatePlanLive(plan, b) {
   const state = b.neuron_state, act = new Map();
   for (const n of b.neurons)
@@ -392,11 +365,9 @@ export function updatePlanLive(plan, b) {
   }
 }
 
-// ---------------------------------------------------------------------- hormone weather
 export function hormoneEffects(b) {
   const sum = Array(Object.keys(HORMONE_EFFECT).length).fill(0);
   let count = 0;
-  // Without the selected fish's brain detail (only scalar readings) there is nothing to average.
   for (const n of Array.isArray(b?.neurons) ? b.neurons : [])
     if (n[NEURON.functional] && n[NEURON.internal] > 0 && n[NEURON.hormone_response]?.length) {
       n[NEURON.hormone_response].forEach((v, k) => sum[k] += v);
@@ -405,9 +376,6 @@ export function hormoneEffects(b) {
   return count ? sum.map(v => v / count) : sum;
 }
 
-// ---------------------------------------------------------------------- names
-// What a station is called: organs by their own name, hubs by the sense family they serve,
-// with side and rank when one brain has several. `label` is the short form for tight places.
 export function stationNames(m) {
   const ui = textArea('nerve_map');
   if (m.kind !== STATION.hub) {

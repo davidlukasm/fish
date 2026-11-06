@@ -268,8 +268,6 @@ export class OrganStudio {
     if (switches)
       switches.innerHTML = layerSwitches(this.state);
   }
-  // The library offers organs to place, with the hormone tool the substances and what they do,
-  // with the learning tool the cells and substances learning needs.
   refreshLibrary() {
     const scroll = this.root.querySelector('.aid-library-scroll');
     if (!scroll || this.state.mode !== 'fish')
@@ -633,7 +631,6 @@ export class OrganStudio {
     };
     this.changeDocument(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
-  // Life phases use the engine's full sensitivity span and steepest receptors.
   lifePhase(id, phase) {
     const c = this.state.capabilities;
     return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSteps);
