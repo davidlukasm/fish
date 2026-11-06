@@ -114,7 +114,7 @@ void PopulationCheckpoint::restore_development(std::istream &in, Individual &p,
       if (plan_id) {
         do {
           const auto before = p.genome.pending_work();
-          if (p.genome.advance_development(work - before, 0, false) ||
+          if (p.genome.advance_development(work - before, false) ||
               (p.genome.pending_work() == before && before < work))
             throw std::runtime_error("invalid pending brain progress");
         } while (p.genome.pending_work() < work);

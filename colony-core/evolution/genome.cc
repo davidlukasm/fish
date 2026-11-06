@@ -124,19 +124,34 @@ bool Genome::can_enable(int src, int dst) const {
   }
   return true;
 }
+// Work is replayed in different batch sizes. Preserve the serial accumulation order so a
+// budget boundary cannot change mutation scales through reassociated floating-point sums.
+#if defined(__GNUC__) && !defined(__clang__)
+__attribute__((optimize("no-associative-math")))
+#endif
 void Genome::observe_work(int id, const WorkSample *samples, std::size_t count) const {
+#if defined(__clang__)
+#pragma clang fp reassociate(off)
+#endif
   if (!inherited_work.empty()) {
     inherited_work.clear();
     sensitivity.clear();
   }
   auto &s = sensitivity[id];
+  // The four independent totals form SIMD lanes; sample order stays serial within each lane.
+  // Intrinsics stay inlined across the local floating-point option boundary.
+  using Totals = double __attribute__((vector_size(4 * sizeof(double))));
+  Totals sums{s.amplitude, s.derivative[0], s.derivative[1], s.weight};
   for (std::size_t i = 0; i < count; ++i) {
     const auto &v = samples[i];
-    s.amplitude += std::abs(v.amplitude) * v.weight;
-    s.derivative[0] += std::abs(v.derivative) * v.weight;
-    s.derivative[1] += std::abs(v.switch_derivative) * v.weight;
-    s.weight += v.weight;
+    const Totals values{__builtin_fabs(v.amplitude), __builtin_fabs(v.derivative),
+                        __builtin_fabs(v.switch_derivative), 1};
+    sums += values * v.weight;
   }
+  s.amplitude = sums[0];
+  s.derivative[0] = sums[1];
+  s.derivative[1] = sums[2];
+  s.weight = sums[3];
 }
 double Genome::mutation_sigma(int source, int target, int port, double delta) const {
   if (delta <= 0)

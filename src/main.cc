@@ -182,7 +182,6 @@ int main(int argc, char **argv) {
     configure_compute(benchmark && compute == "cpu" ? "opencl-optics" : compute);
     if (benchmark)
       return benchmark_opencl(std::cout, o.threads, o.pop, benchmark_steps);
-    default_development_options.workers = o.threads;
     default_development_options.validate();
     Genome::begin_run(o.seed);
     std::signal(SIGINT, stop);

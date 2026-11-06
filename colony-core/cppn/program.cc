@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <atomic>
 #include <set>
+#include <limits>
 namespace cppn {
 namespace {
 // The fast program is safe while biases and weights stay within MAX_SAFE_WEIGHT, nodes have at
@@ -15,7 +16,42 @@ constexpr std::size_t MAX_SAFE_INPUTS = 16384;
 constexpr double EFFECT_QUERY_WEIGHT = 1. / 7;
 }
 
-Program::Program(const CPPN &p) : code(p.compiled()), genes(p.genome()), aliases(p.aliases()) {
+struct Program::PreparationState {
+  enum Stage {
+    Dependencies,
+    Controls,
+    Weights,
+    Indices,
+    Incoming,
+    Needed,
+    Used,
+    Observed,
+    Selected,
+    Done
+  } stage = Dependencies;
+  std::size_t cursor = 0, mask_index = 0;
+  std::vector<unsigned char> needed;
+  std::vector<std::size_t> stack;
+  std::set<int> used;
+  std::vector<int> work;
+  std::set<int>::const_iterator observed;
+  static constexpr std::array<unsigned, 2> masks{ALL_OUTPUTS, output::receptor_mask};
+  void begin_mask(const ann::Network::Compiled &code) {
+    cursor = 0;
+    needed.assign(code.controls.size(), 0);
+    stack.clear();
+    used.clear();
+    work.clear();
+    for (std::size_t i = 0; i < code.outputs; ++i)
+      if (masks[mask_index] & (1u << i)) {
+        stack.push_back(code.controls.size() - code.outputs + i);
+        work.push_back(INPUTS + int(i));
+      }
+    stage = Needed;
+  }
+};
+Program::Program(const CPPN &p, Preparation mode)
+    : storage(p.compiled()), code(*storage), genes(p.genome()), aliases(p.aliases()) {
   static std::atomic<std::uint64_t> serial{0};
   cache_id = ++serial;
   if (code.inputs != INPUTS - 1 || code.bias != 1 || code.outputs != OUTPUTS) {
@@ -25,65 +61,127 @@ Program::Program(const CPPN &p) : code(p.compiled()), genes(p.genome()), aliases
   dependencies.assign(code.controls.size(), 0);
   for (std::size_t i = 0; i < code.inputs; ++i)
     dependencies[i] = 1u << i;
-  for (auto n : code.order) {
-    const auto &c = code.controls[n];
-    for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
-      dependencies[n] |= dependencies[code.sources[j]];
+  preparation = std::make_unique<PreparationState>();
+  if (mode == Preparation::Immediate) {
+    auto budget = std::numeric_limits<std::size_t>::max();
+    prepare(budget);
   }
-  for (const auto &c : code.controls)
-    if (std::abs(c.bias) > MAX_SAFE_WEIGHT || c.count > MAX_SAFE_INPUTS ||
-        (c.type == int(evolution::NodeType::GAUSSIAN) && c.bias != 0 &&
-         std::abs(c.bias) < MIN_GAUSSIAN_BIAS))
-      safe_ = false;
-  for (float w : code.weights)
-    if (std::abs(w) > MAX_SAFE_WEIGHT)
-      safe_ = false;
-  plan(cppn::ALL_OUTPUTS);
-  plan(output::receptor_mask);
 }
-void Program::plan(unsigned mask) {
-  std::vector<unsigned char> needed(code.controls.size());
-  std::vector<std::size_t> stack;
-  for (std::size_t i = 0; i < code.outputs; ++i)
-    if (mask & (1u << i))
-      stack.push_back(code.controls.size() - code.outputs + i);
-  while (!stack.empty()) {
-    auto n = stack.back();
-    stack.pop_back();
-    if (needed[n])
-      continue;
-    needed[n] = 1;
-    const auto &c = code.controls[n];
-    for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
-      stack.push_back(code.sources[j]);
+Program::~Program() = default;
+bool Program::prepare(std::size_t &budget) {
+  if (!preparation)
+    return true;
+  auto &s = *preparation;
+  while (budget && s.stage != PreparationState::Done) {
+    --budget;
+    switch (s.stage) {
+    case PreparationState::Dependencies:
+      if (s.cursor < code.order.size()) {
+        const auto n = code.order[s.cursor++];
+        const auto &c = code.controls[n];
+        for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
+          dependencies[n] |= dependencies[code.sources[j]];
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Controls;
+      }
+      break;
+    case PreparationState::Controls:
+      if (s.cursor < code.controls.size()) {
+        const auto &c = code.controls[s.cursor++];
+        if (std::abs(c.bias) > MAX_SAFE_WEIGHT || c.count > MAX_SAFE_INPUTS ||
+            (c.type == int(evolution::NodeType::GAUSSIAN) && c.bias != 0 &&
+             std::abs(c.bias) < MIN_GAUSSIAN_BIAS))
+          safe_ = false;
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Weights;
+      }
+      break;
+    case PreparationState::Weights:
+      if (s.cursor < code.weights.size()) {
+        if (std::abs(code.weights[s.cursor++]) > MAX_SAFE_WEIGHT)
+          safe_ = false;
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Indices;
+      }
+      break;
+    case PreparationState::Indices:
+      if (s.cursor < code.ids.size()) {
+        indices[code.ids[s.cursor]] = s.cursor;
+        ++s.cursor;
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Incoming;
+      }
+      break;
+    case PreparationState::Incoming:
+      if (s.cursor < genes->get_connection_genes().size()) {
+        const auto &e = genes->get_connection_genes()[s.cursor++];
+        if (e.get_enabled() && e.get_weight() != 0)
+          incoming[e.get_target()].push_back(e.get_source());
+      } else
+        s.begin_mask(code);
+      break;
+    case PreparationState::Needed:
+      if (!s.stack.empty()) {
+        const auto n = s.stack.back();
+        s.stack.pop_back();
+        if (!s.needed[n]) {
+          s.needed[n] = 1;
+          const auto &c = code.controls[n];
+          for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
+            s.stack.push_back(code.sources[j]);
+        }
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Used;
+      }
+      break;
+    case PreparationState::Used:
+      if (s.cursor < s.work.size()) {
+        const auto id = s.work[s.cursor++];
+        if (s.used.insert(id).second)
+          for (int source : incoming[id])
+            s.work.push_back(source);
+      } else {
+        s.observed = s.used.begin();
+        s.stage = PreparationState::Observed;
+      }
+      break;
+    case PreparationState::Observed:
+      if (s.observed != s.used.end()) {
+        const auto id = *s.observed++;
+        const auto &a = aliases.at(id);
+        observations[s.masks[s.mask_index]].push_back(
+            {id, indices.at(a.source), a.multiplier, a.relay});
+      } else {
+        s.cursor = 0;
+        s.stage = PreparationState::Selected;
+      }
+      break;
+    case PreparationState::Selected:
+      if (s.cursor < code.order.size()) {
+        const auto n = code.order[s.cursor++];
+        if (s.needed[n])
+          plans[s.masks[s.mask_index]].push_back(n);
+      } else if (++s.mask_index < s.masks.size())
+        s.begin_mask(code);
+      else
+        s.stage = PreparationState::Done;
+      break;
+    case PreparationState::Done:
+      break;
+    }
   }
-  std::map<int, std::size_t> at;
-  for (std::size_t i = 0; i < code.ids.size(); ++i)
-    at[code.ids[i]] = i;
-  std::map<int, std::vector<int>> incoming;
-  for (const auto &e : genes->get_connection_genes())
-    if (e.get_enabled() && e.get_weight() != 0)
-      incoming[e.get_target()].push_back(e.get_source());
-  std::set<int> used;
-  std::vector<int> work;
-  for (int i = 0; i < OUTPUTS; ++i)
-    if (mask & (1u << i))
-      work.push_back(INPUTS + i);
-  for (std::size_t i = 0; i < work.size(); ++i)
-    if (used.insert(work[i]).second)
-      for (int source : incoming[work[i]])
-        work.push_back(source);
-  auto &observed = observations[mask];
-  observed.clear();
-  for (int id : used) {
-    const auto &a = aliases.at(id);
-    observed.push_back({id, at.at(a.source), a.multiplier, a.relay});
-  }
-  auto &selected = plans[mask];
-  selected.clear();
-  for (auto n : code.order)
-    if (needed[n])
-      selected.push_back(n);
+  if (s.stage != PreparationState::Done)
+    return false;
+  preparation.reset();
+  aliases.clear();
+  incoming.clear();
+  indices.clear();
+  return true;
 }
 void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
                        std::array<std::array<float, cppn::OUTPUTS>, BATCH> &output,
@@ -100,6 +198,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
   };
   struct Cache {
     std::uint64_t id = 0;
+    bool with_work = false;
     std::vector<unsigned char> ready;
     std::vector<float> values, state, derivative, gate_derivative, ds, dg;
     std::array<float, INPUTS - 1> inputs{};
@@ -112,14 +211,17 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     cache.derivative.resize(code.controls.size());
     cache.gate_derivative.resize(code.controls.size());
   }
-  auto derivatives = [&](const auto &c, float sum, float gate) {
+  // Values cached during a replay have no derivatives. Recompute on the first observed query.
+  if (record_work && !cache.with_work)
+    std::fill(cache.ready.begin(), cache.ready.end(), 0);
+  cache.with_work = record_work;
+  auto derivatives = [&](const auto &c, float sum, float gate, float raw) {
     std::array<float, 2> d{};
     if (c.type == int(evolution::NodeType::TOR)) {
       d[0] = std::abs(sum) < 1 ? std::clamp(gate, -1.f, 1.f) : 0;
       d[1] = std::abs(gate) < 1 ? std::clamp(sum, -1.f, 1.f) : 0;
       return d;
     }
-    const float raw = activation(c.type, sum, c.bias);
     if (std::abs(raw) >= 1)
       return d;
     using evolution::NodeType;
@@ -196,17 +298,21 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       if (!cache.ready[n]) {
         const auto &c = code.controls[n];
         float sum = 0, gate = 0;
-        for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
-          (code.ports[j] ? gate : sum) += cache.values[code.sources[j]] * code.weights[j];
+        for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
+          auto &accumulator = code.ports[j] ? gate : sum;
+          accumulator = std::fma(cache.values[code.sources[j]], code.weights[j], accumulator);
+        }
         float out = c.type == int(evolution::NodeType::TOR)
                         ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
                         : activation(c.type, sum, c.bias);
         if (std::isnan(out))
           throw std::runtime_error("neuron produced NaN");
         cache.values[n] = normalize(n, sum, out);
-        const auto d = derivatives(c, sum, gate);
-        cache.derivative[n] = d[0];
-        cache.gate_derivative[n] = d[1];
+        if (record_work) {
+          const auto d = derivatives(c, sum, gate, out);
+          cache.derivative[n] = d[0];
+          cache.gate_derivative[n] = d[1];
+        }
         cache.ready[n] = 1;
       }
     for (std::size_t i = 0; i < code.outputs; ++i)
@@ -219,8 +325,10 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
   }
   auto &state = cache.state;
   state.resize(code.controls.size() * BATCH);
-  cache.ds.resize(state.size());
-  cache.dg.resize(state.size());
+  if (record_work) {
+    cache.ds.resize(state.size());
+    cache.dg.resize(state.size());
+  }
   unsigned changed = 0, vary = 0;
   for (std::size_t p = 0; p < count; ++p) {
     const auto &q = points[p];
@@ -254,30 +362,40 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     if (!(dependencies[n] & vary)) {
       if (!cache.ready[n]) {
         float sum = 0, gate = 0;
-        for (std::size_t j = c.offset; j < c.offset + c.count; ++j)
-          (code.ports[j] ? gate : sum) += cache.values[code.sources[j]] * code.weights[j];
+        for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
+          auto &accumulator = code.ports[j] ? gate : sum;
+          accumulator = std::fma(cache.values[code.sources[j]], code.weights[j], accumulator);
+        }
         float out = c.type == int(evolution::NodeType::TOR)
                         ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
                         : activation(c.type, sum, c.bias);
         if (std::isnan(out))
           throw std::runtime_error("neuron produced NaN");
         cache.values[n] = normalize(n, sum, out);
-        const auto d = derivatives(c, sum, gate);
-        cache.derivative[n] = d[0];
-        cache.gate_derivative[n] = d[1];
+        if (record_work) {
+          const auto d = derivatives(c, sum, gate, out);
+          cache.derivative[n] = d[0];
+          cache.gate_derivative[n] = d[1];
+        }
         cache.ready[n] = 1;
       }
       std::fill_n(state.data() + n * BATCH, count, cache.values[n]);
-      std::fill_n(cache.ds.data() + n * BATCH, count, cache.derivative[n]);
-      std::fill_n(cache.dg.data() + n * BATCH, count, cache.gate_derivative[n]);
+      if (record_work) {
+        std::fill_n(cache.ds.data() + n * BATCH, count, cache.derivative[n]);
+        std::fill_n(cache.dg.data() + n * BATCH, count, cache.gate_derivative[n]);
+      }
       continue;
     }
-    std::array<float, BATCH> sum{}, gate{};
+    std::array<float, BATCH> sum{}, gate{}, raw{};
     for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
       const auto *src = state.data() + code.sources[j] * BATCH;
       float weight = code.weights[j];
+      auto *accumulator = code.ports[j] ? gate.data() : sum.data();
+      // Independent sample lanes, with an explicit fused add in the same source order as scalar
+      // queries.
+#pragma omp simd
       for (std::size_t p = 0; p < count; ++p)
-        (code.ports[j] ? gate[p] : sum[p]) += src[p] * weight;
+        accumulator[p] = std::fma(src[p], weight, accumulator[p]);
     }
     // Dispatch once for the whole point batch; simple activations can then
     // run over consecutive values without a type switch for every sample.
@@ -288,12 +406,16 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       if (squash)
         for (std::size_t p = 0; p < count; ++p) {
           const float out = function(sum[p]);
+          if (record_work)
+            raw[p] = out;
           invalid |= std::isnan(out);
           state[n * BATCH + p] = std::tanh(sum[p]);
         }
       else
         for (std::size_t p = 0; p < count; ++p) {
           const float out = function(sum[p]);
+          if (record_work)
+            raw[p] = out;
           invalid |= std::isnan(out);
           state[n * BATCH + p] = std::max(-1.f, std::min(1.f, out));
         }
@@ -328,10 +450,29 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
       activate([&](float u) { return activation(c.type, u, c.bias); });
       break;
     }
-    for (std::size_t p = 0; p < count; ++p) {
-      const auto d = derivatives(c, sum[p], gate[p]);
-      cache.ds[n * BATCH + p] = d[0];
-      cache.dg[n * BATCH + p] = d[1];
+    if (record_work) {
+      auto *ds = cache.ds.data() + n * BATCH, *dg = cache.dg.data() + n * BATCH;
+      switch (NodeType(c.type)) {
+      case NodeType::CUTOFF:
+      case NodeType::SIGN:
+      case NodeType::STAIR:
+        std::fill_n(ds, count, 0.f);
+        std::fill_n(dg, count, 0.f);
+        break;
+      case NodeType::LINEAR:
+#pragma omp simd
+        for (std::size_t p = 0; p < count; ++p)
+          ds[p] = std::abs(raw[p]) >= 1 ? 0 : c.bias;
+        std::fill_n(dg, count, 0.f);
+        break;
+      default:
+        for (std::size_t p = 0; p < count; ++p) {
+          const auto d = derivatives(c, sum[p], gate[p], raw[p]);
+          ds[p] = d[0];
+          dg[p] = d[1];
+        }
+        break;
+      }
     }
     cache.ready[n] = 0;
   }

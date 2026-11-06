@@ -126,8 +126,7 @@ const char *role_name(Role r) {
 }
 void Options::validate() const {
   if (!std::isfinite(bias_scale) || bias_scale < 0 || bias_scale > MAX_BIAS_SCALE ||
-      max_nodes < 1 || max_nodes > MAX_NODES || max_edges < 1 || max_edges > MAX_EDGES ||
-      workers < 1 || workers > MAX_WORKERS)
+      max_nodes < 1 || max_nodes > MAX_NODES || max_edges < 1 || max_edges > MAX_EDGES)
     throw std::invalid_argument("invalid brain options");
 }
 Substrate::Substrate(cppn::CPPN &p, Options o) : combined(&p), options(o) {
@@ -144,106 +143,31 @@ void Substrate::limit_development(const char *reason) {
   if (diagnostic.empty())
     diagnostic = reason;
 }
-void Substrate::finish_development() {
-  built_neurons = neurons.size();
-  // Order by source, then target: a counting pass by source, then each (short) row by target.
-  {
-    std::vector<std::uint32_t> start(neurons.size() + 1, 0);
-    bool bounded = true;
-    for (const auto &e : edges) {
-      if (e.source >= neurons.size()) {
-        bounded = false;
-        break;
-      }
-      ++start[e.source + 1];
-    }
-    if (bounded) {
-      std::partial_sum(start.begin(), start.end(), start.begin());
-      std::vector<Edge> sorted(edges.size());
-      auto at = start;
-      for (const auto &e : edges)
-        sorted[at[e.source]++] = e;
-      auto by_target = [](const Edge &a, const Edge &b) { return a.target < b.target; };
-      for (std::size_t i = 0; i < neurons.size(); ++i) {
-        auto first = sorted.begin() + start[i], last = sorted.begin() + start[i + 1];
-        if (!std::is_sorted(first, last, by_target))
-          std::sort(first, last, by_target);
-      }
-      edges = std::move(sorted);
-    } else
-      std::sort(edges.begin(), edges.end(), [](const Edge &a, const Edge &b) {
-        return a.source != b.source ? a.source < b.source : a.target < b.target;
-      });
-  }
-  struct Adjacency {
-    struct Row {
-      std::vector<std::uint32_t>::const_iterator first, last;
-      auto begin() const { return first; }
-      auto end() const { return last; }
-      std::size_t size() const { return last - first; }
-      std::uint32_t operator[](std::size_t i) const { return first[i]; }
-    };
-    std::vector<std::uint32_t> offset, to;
-    Adjacency(std::size_t n, const std::vector<Edge> &edges, bool reverse)
-        : offset(n + 1), to(edges.size()) {
-      for (const auto &e : edges)
-        ++offset[(reverse ? e.target : e.source) + 1];
-      std::partial_sum(offset.begin(), offset.end(), offset.begin());
-      auto at = offset;
-      for (const auto &e : edges)
-        to[at[reverse ? e.target : e.source]++] = reverse ? e.source : e.target;
-    }
-    Row operator[](std::size_t i) const {
-      return {to.begin() + offset[i], to.begin() + offset[i + 1]};
-    }
-  };
-  Adjacency out(neurons.size(), edges, false), in(neurons.size(), edges, true);
-  for (std::size_t i = 0; i < neurons.size(); ++i)
-    neurons[i].functional = !resource_limited;
-  // Iterative strongly connected components, including self-loops.
-  std::vector<unsigned char> visited(neurons.size(), 0);
-  std::vector<std::uint32_t> finished;
-  for (std::uint32_t root = 0; root < neurons.size(); ++root)
-    if (!visited[root]) {
-      std::vector<std::pair<std::uint32_t, std::size_t>> stack{{root, 0}};
-      visited[root] = 1;
-      while (!stack.empty()) {
-        auto &current = stack.back();
-        auto node = current.first;
-        if (current.second < out[node].size()) {
-          auto target = out[node][current.second++];
-          if (!visited[target]) {
-            visited[target] = 1;
-            stack.push_back({target, 0});
-          }
-        } else {
-          finished.push_back(node);
-          stack.pop_back();
-        }
-      }
-    }
-  std::vector<std::uint32_t> component(neurons.size(), UINT32_MAX);
+struct Substrate::FinishState {
+  enum Stage {
+    Count,
+    Prefix,
+    Scatter,
+    Mark,
+    Outward,
+    Inward,
+    Recurrent,
+    Layout,
+    Done
+  } stage = Count;
+  std::size_t cursor = 0, root = 0;
   std::uint32_t group = 0;
-  for (auto i = finished.rbegin(); i != finished.rend(); ++i)
-    if (component[*i] == UINT32_MAX) {
-      std::vector<std::uint32_t> stack{*i};
-      component[*i] = group;
-      while (!stack.empty()) {
-        auto node = stack.back();
-        stack.pop_back();
-        for (auto target : in[node])
-          if (component[target] == UINT32_MAX) {
-            component[target] = group;
-            stack.push_back(target);
-          }
-      }
-      ++group;
-    }
-  recurrent_edges = 0;
-  for (const auto &e : edges)
-    recurrent_edges += component[e.source] == component[e.target];
-  prepare_network();
-}
+  std::vector<std::uint32_t> out_offset, in_offset, out_at, in_at, in_to, finished, component;
+  std::vector<unsigned char> visited;
+  std::vector<std::pair<std::uint32_t, std::size_t>> stack;
+  std::vector<Edge> sorted;
+  std::shared_ptr<NetworkTopology> layout;
+  explicit FinishState(const Substrate &s)
+      : out_offset(s.neurons.size() + 1), in_offset(s.neurons.size() + 1), in_to(s.edges.size()),
+        component(s.neurons.size(), UINT32_MAX), visited(s.neurons.size()), sorted(s.edges.size()) {
+  }
+  bool advance(Substrate &s, std::size_t &budget);
+};
 
 // Layout of a developed brain for the kernel. Learning cells (functional nerve cells) are sorted
 // by their input places and grouped in slices of 8 (one cell per lane); slot j of a slice holds
@@ -292,74 +216,53 @@ struct NetworkTopology {
   std::vector<std::uint32_t> group_offset, group_cells;
   std::uint32_t max_length = 0;
   std::size_t learning_cells = 0;
+  struct BuildState {
+    enum Stage {
+      Counts,
+      Prefix,
+      Edges,
+      Classes,
+      SortInputs,
+      Traits,
+      GroupCounts,
+      GroupPrefix,
+      GroupCells,
+      SortCells,
+      Learners,
+      Effectors,
+      Others,
+      Done
+    } stage = Counts;
+    std::size_t cursor = 0;
+    std::uint32_t groups = 0;
+    std::vector<std::uint32_t> offset, order, at, learners, effectors, others;
+    std::vector<CellClass> classes;
+    std::vector<unsigned char> group;
+    explicit BuildState(const Substrate &s)
+        : offset(s.neurons.size() + 1), order(s.edges.size()), classes(s.neurons.size()),
+          group(s.neurons.size()) {}
+  };
+  std::unique_ptr<BuildState> building;
+  bool ready = false;
+  NetworkTopology() = default;
   explicit NetworkTopology(const Substrate &s) {
+    auto budget = std::numeric_limits<std::size_t>::max();
+    advance(s, budget);
+  }
+  bool advance(const Substrate &s, std::size_t &budget) {
+    if (ready)
+      return true;
     const std::size_t n = s.neurons.size();
     if (n > MAX_NODES)
       throw std::length_error("neuron budget exceeded");
     const auto zero = std::uint16_t(n);
-    std::vector<std::uint32_t> offset(n + 1), order(s.edges.size());
-    for (const auto &e : s.edges) {
-      if (e.source >= n || e.target >= n)
-        throw std::invalid_argument("invalid synapse");
-      ++offset[e.target + 1];
-    }
-    std::partial_sum(offset.begin(), offset.end(), offset.begin());
-    {
-      auto cursor = offset;
-      for (std::size_t i = 0; i < s.edges.size(); ++i)
-        order[cursor[s.edges[i].target]++] = std::uint32_t(i);
-    }
-    std::vector<CellClass> classes(n);
-    std::vector<unsigned char> group(n);
-    for (std::size_t i = 0; i < n; ++i) {
-      classes[i] = cell_class(s.neurons[i]);
-      const bool pacer = classes[i].pace > .5f, mod = classes[i].modulator > .5f;
-      namespace G = source_group;
-      group[i] = s.neurons[i].role != Role::Nerve ? G::outer
-                 : pacer                          ? (mod ? G::modulating_pacer : G::pacer)
-                 : mod                            ? G::modulator
-                                                  : G::nerve;
-    }
-    for (std::size_t t = 0; t < n; ++t)
-      std::stable_sort(
-          order.begin() + offset[t], order.begin() + offset[t + 1],
-          [&](auto a, auto b) { return group[s.edges[a].source] < group[s.edges[b].source]; });
-    cell_gain.assign(n, 0.f);
-    cell_fast.assign(n, 1.f);
-    cell_sign.assign(n, 0.f);
-    nerve_source.assign(n + 1, 0.f);
-    cell_driving.assign(n, 0);
-    cell_lane.assign(n, -1);
-    std::vector<std::uint32_t> learners, effectors, others;
-    for (std::size_t i = 0; i < n; ++i) {
-      const auto &cell = s.neurons[i];
-      cell_sign[i] = cell.role == Role::Sensor  ? 1.f
-                     : cell.role == Role::Nerve ? classes[i].sign
-                                                : 0.f;
-      cell_driving[i] = cell.role == Role::Sensor || (cell.role == Role::Nerve && group[i] == 1);
-      nerve_source[i] = cell.role == Role::Nerve ? 1.f : 0.f;
-      if (cell.functions.sensory() > 0) {
-        sensors.push_back(NeuronIndex(i));
-        continue;
-      }
-      (cell.role == Role::Nerve && cell.functional      ? learners
-       : cell.role == Role::Effector && cell.functional ? effectors
-                                                        : others)
-          .push_back(std::uint32_t(i));
-    }
-    std::uint32_t groups = 0;
-    for (const auto &c : s.neurons)
-      groups = std::max(groups, c.group + 1);
-    group_offset.assign(groups + 1, 0);
-    for (const auto &c : s.neurons)
-      ++group_offset[c.group + 1];
-    std::partial_sum(group_offset.begin(), group_offset.end(), group_offset.begin());
-    group_cells.resize(n);
-    {
-      auto cursor = group_offset;
-      for (std::size_t i = 0; i < n; ++i)
-        group_cells[cursor[s.neurons[i].group]++] = std::uint32_t(i);
-    }
+    if (!building)
+      building = std::make_unique<BuildState>(s);
+    auto &b = *building;
+    auto &offset = b.offset, &order = b.order, &learners = b.learners, &effectors = b.effectors,
+         &others = b.others;
+    auto &classes = b.classes;
+    auto &group = b.group;
     auto first = [&](std::uint32_t cell, int g) {
       auto k = offset[cell];
       while (k < offset[cell + 1] && group[s.edges[order[k]].source] < g)
@@ -387,124 +290,415 @@ struct NetworkTopology {
     auto capacity_of = [&](std::uint32_t c) {
       return places(c, driving(c), offset[c + 1] - first(c, source_group::pacer));
     };
-    std::stable_sort(learners.begin(), learners.end(),
-                     [&](auto x, auto y) { return capacity_of(x) > capacity_of(y); });
-    for (std::size_t start = 0; start < learners.size(); start += LANES) {
-      Slice sl;
-      sl.lanes = int(std::min<std::size_t>(LANES, learners.size() - start));
-      std::array<std::uint32_t, LANES> cell{}, pacer{}, end{};
-      for (int l = 0; l < sl.lanes; ++l) {
-        const auto c = learners[start + std::size_t(l)];
-        const auto &nc = s.neurons[c];
-        const auto &k = classes[c];
-        cell[l] = c;
-        pacer[l] = first(c, source_group::pacer);
-        end[l] = offset[c + 1];
-        sl.cell[l] = NeuronIndex(c);
-        sl.valid[l] = -1;
-        sl.nerve[l] = -1;
-        sl.born[l] = std::uint16_t(pacer[l] - offset[c]);
-        sl.capacity[l] = capacity_of(c);
-        sl.work[l] = std::int32_t(2 * (sl.capacity[l] + end[l] - pacer[l]));
-        sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
-        sl.extra_length = std::max(sl.extra_length, end[l] - pacer[l]);
-        sl.both[l] = std::int32_t(first(c, source_group::modulating_pacer) - pacer[l]);
-        sl.modulator[l] = std::int32_t(first(c, source_group::modulator) - pacer[l]);
-        sl.bias[l] = nc.bias;
-        const float gain = std::clamp(nc.parameters.plasticity, 0.f, 1.f);
-        sl.gain[l] = gain;
-        learning_cells += gain > 0;
-        sl.pace[l] = k.pace;
-        sl.rhythm = sl.rhythm || k.pace > 0;
-        sl.comp[l] = COMPETITION * gain * std::max(0.f, k.mode);
-        sl.canc[l] = CANCELLATION * gain * std::max(0.f, -k.mode);
-        double innate = 0;
-        for (auto e = offset[c]; e < pacer[l]; ++e)
-          innate += std::abs(double(s.edges[order[e]].weight));
-        sl.innate[l] = float(innate);
-        sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
-        const double tau = time_constant_steps(nc.parameters);
-        sl.fast[l] = float(std::exp(-2 / tau));
-        sl.period[l] = std::max(MIN_PACE_PERIOD, tau);
-        sl.phase[l] =
-            (nc.x > 0 ? PI_F : 0.) + 2 * PI_F *
-                                         std::fmod(std::abs(nc.x) * PHASE_SALT[0] +
-                                                       nc.y * PHASE_SALT[1] + nc.z * PHASE_SALT[2],
-                                                   1.);
-        cell_lane[c] = std::int32_t(LANES * slices.size() + std::size_t(l));
-        cell_fast[c] = sl.fast[l];
-        cell_gain[c] = group[c] == 1 ? gain : 0.f;
-      }
-      sl.offset = std::uint32_t(gene.size());
-      for (std::uint32_t j = 0; j < sl.length; ++j)
-        for (int l = 0; l < LANES; ++l)
-          add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
-                   l < sl.lanes && offset[cell[l]] + j < pacer[l]);
-      sl.extra_offset = std::uint32_t(gene.size());
-      for (std::uint32_t j = 0; j < sl.extra_length; ++j)
-        for (int l = 0; l < LANES; ++l)
-          add_slot(l < sl.lanes ? pacer[l] + j : 0, l < sl.lanes && pacer[l] + j < end[l]);
-      max_length = std::max({max_length, sl.length, sl.extra_length});
-      slices.push_back(sl);
-    }
     auto effector_capacity = [&](std::uint32_t c) {
       return places(c, offset[c + 1] - offset[c], 0);
     };
-    std::stable_sort(effectors.begin(), effectors.end(),
-                     [&](auto x, auto y) { return effector_capacity(x) > effector_capacity(y); });
-    for (std::size_t start = 0; start < effectors.size(); start += LANES) {
-      Slice sl;
-      sl.lanes = int(std::min<std::size_t>(LANES, effectors.size() - start));
-      std::array<std::uint32_t, LANES> cell{};
-      for (int l = 0; l < sl.lanes; ++l) {
-        const auto c = effectors[start + std::size_t(l)];
-        cell[l] = c;
-        sl.cell[l] = NeuronIndex(c);
-        sl.valid[l] = -1;
-        sl.bias[l] = s.neurons[c].bias;
-        sl.born[l] = std::uint16_t(offset[c + 1] - offset[c]);
-        sl.capacity[l] = effector_capacity(c);
-        sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
-        double innate = 0;
-        for (auto e = offset[c]; e < offset[c + 1]; ++e)
-          innate += std::abs(double(s.edges[order[e]].weight));
-        sl.innate[l] = float(innate);
-        sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
+
+    while (budget && b.stage != BuildState::Done) {
+      --budget;
+      switch (b.stage) {
+      case BuildState::Counts:
+        if (b.cursor < s.edges.size()) {
+          const auto &e = s.edges[b.cursor++];
+          if (e.source >= n || e.target >= n)
+            throw std::invalid_argument("invalid synapse");
+          ++offset[e.target + 1];
+        } else {
+          b.cursor = 1;
+          b.stage = BuildState::Prefix;
+        }
+        break;
+      case BuildState::Prefix:
+        if (b.cursor < offset.size()) {
+          offset[b.cursor] += offset[b.cursor - 1];
+          ++b.cursor;
+        } else {
+          b.at = offset;
+          b.cursor = 0;
+          b.stage = BuildState::Edges;
+        }
+        break;
+      case BuildState::Edges:
+        if (b.cursor < s.edges.size()) {
+          const auto i = b.cursor++;
+          order[b.at[s.edges[i].target]++] = std::uint32_t(i);
+        } else {
+          b.cursor = 0;
+          b.stage = BuildState::Classes;
+        }
+        break;
+      case BuildState::Classes:
+        if (b.cursor < n) {
+          const auto i = b.cursor++;
+
+          classes[i] = cell_class(s.neurons[i]);
+          const bool pacer = classes[i].pace > .5f, mod = classes[i].modulator > .5f;
+          namespace G = source_group;
+          group[i] = s.neurons[i].role != Role::Nerve ? G::outer
+                     : pacer                          ? (mod ? G::modulating_pacer : G::pacer)
+                     : mod                            ? G::modulator
+                                                      : G::nerve;
+
+        } else {
+          b.cursor = 0;
+          b.stage = BuildState::SortInputs;
+        }
+        break;
+      case BuildState::SortInputs:
+        if (b.cursor < n) {
+          const auto t = b.cursor++;
+          std::stable_sort(
+              order.begin() + offset[t], order.begin() + offset[t + 1],
+              [&](auto a, auto z) { return group[s.edges[a].source] < group[s.edges[z].source]; });
+        } else {
+          cell_gain.assign(n, 0.f);
+          cell_fast.assign(n, 1.f);
+          cell_sign.assign(n, 0.f);
+          nerve_source.assign(n + 1, 0.f);
+          cell_driving.assign(n, 0);
+          cell_lane.assign(n, -1);
+          b.cursor = 0;
+          b.stage = BuildState::Traits;
+        }
+        break;
+      case BuildState::Traits:
+        if (b.cursor < n) {
+          const auto i = b.cursor++;
+          b.groups = std::max(b.groups, s.neurons[i].group + 1);
+
+          const auto &cell = s.neurons[i];
+          cell_sign[i] = cell.role == Role::Sensor  ? 1.f
+                         : cell.role == Role::Nerve ? classes[i].sign
+                                                    : 0.f;
+          cell_driving[i] = cell.role == Role::Sensor ||
+                            (cell.role == Role::Nerve && group[i] == source_group::nerve);
+          nerve_source[i] = cell.role == Role::Nerve ? 1.f : 0.f;
+          if (cell.functions.sensory() > 0) {
+            sensors.push_back(NeuronIndex(i));
+            continue;
+          }
+          (cell.role == Role::Nerve && cell.functional      ? learners
+           : cell.role == Role::Effector && cell.functional ? effectors
+                                                            : others)
+              .push_back(std::uint32_t(i));
+
+        } else {
+          group_offset.assign(b.groups + 1, 0);
+          b.cursor = 0;
+          b.stage = BuildState::GroupCounts;
+        }
+        break;
+      case BuildState::GroupCounts:
+        if (b.cursor < n)
+          ++group_offset[s.neurons[b.cursor++].group + 1];
+        else {
+          b.cursor = 1;
+          b.stage = BuildState::GroupPrefix;
+        }
+        break;
+      case BuildState::GroupPrefix:
+        if (b.cursor < group_offset.size()) {
+          group_offset[b.cursor] += group_offset[b.cursor - 1];
+          ++b.cursor;
+        } else {
+          group_cells.resize(n);
+          b.at = group_offset;
+          b.cursor = 0;
+          b.stage = BuildState::GroupCells;
+        }
+        break;
+      case BuildState::GroupCells:
+        if (b.cursor < n) {
+          const auto i = b.cursor++;
+          group_cells[b.at[s.neurons[i].group]++] = std::uint32_t(i);
+        } else
+          b.stage = BuildState::SortCells;
+        break;
+      case BuildState::SortCells:
+        std::stable_sort(learners.begin(), learners.end(),
+                         [&](auto x, auto y) { return capacity_of(x) > capacity_of(y); });
+        std::stable_sort(effectors.begin(), effectors.end(), [&](auto x, auto y) {
+          return effector_capacity(x) > effector_capacity(y);
+        });
+        std::stable_sort(others.begin(), others.end(), [&](auto x, auto y) {
+          return offset[x + 1] - offset[x] > offset[y + 1] - offset[y];
+        });
+        b.cursor = 0;
+        b.stage = BuildState::Learners;
+        break;
+      case BuildState::Learners:
+        if (b.cursor < learners.size()) {
+          const auto start = b.cursor;
+          b.cursor += LANES;
+
+          Slice sl;
+          sl.lanes = int(std::min<std::size_t>(LANES, learners.size() - start));
+          std::array<std::uint32_t, LANES> cell{}, pacer{}, end{};
+          for (int l = 0; l < sl.lanes; ++l) {
+            const auto c = learners[start + std::size_t(l)];
+            const auto &nc = s.neurons[c];
+            const auto &k = classes[c];
+            cell[l] = c;
+            pacer[l] = first(c, source_group::pacer);
+            end[l] = offset[c + 1];
+            sl.cell[l] = NeuronIndex(c);
+            sl.valid[l] = -1;
+            sl.nerve[l] = -1;
+            sl.born[l] = std::uint16_t(pacer[l] - offset[c]);
+            sl.capacity[l] = capacity_of(c);
+            sl.work[l] = std::int32_t(2 * (sl.capacity[l] + end[l] - pacer[l]));
+            sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
+            sl.extra_length = std::max(sl.extra_length, end[l] - pacer[l]);
+            sl.both[l] = std::int32_t(first(c, source_group::modulating_pacer) - pacer[l]);
+            sl.modulator[l] = std::int32_t(first(c, source_group::modulator) - pacer[l]);
+            sl.bias[l] = nc.bias;
+            const float gain = std::clamp(nc.parameters.plasticity, 0.f, 1.f);
+            sl.gain[l] = gain;
+            learning_cells += gain > 0;
+            sl.pace[l] = k.pace;
+            sl.rhythm = sl.rhythm || k.pace > 0;
+            sl.comp[l] = COMPETITION * gain * std::max(0.f, k.mode);
+            sl.canc[l] = CANCELLATION * gain * std::max(0.f, -k.mode);
+            double innate = 0;
+            for (auto e = offset[c]; e < pacer[l]; ++e)
+              innate += std::abs(double(s.edges[order[e]].weight));
+            sl.innate[l] = float(innate);
+            sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
+            const double tau = time_constant_steps(nc.parameters);
+            sl.fast[l] = float(std::exp(-2 / tau));
+            sl.period[l] = std::max(MIN_PACE_PERIOD, tau);
+            sl.phase[l] = (nc.x > 0 ? PI_F : 0.) +
+                          2 * PI_F *
+                              std::fmod(std::abs(nc.x) * PHASE_SALT[0] + nc.y * PHASE_SALT[1] +
+                                            nc.z * PHASE_SALT[2],
+                                        1.);
+            cell_lane[c] = std::int32_t(LANES * slices.size() + std::size_t(l));
+            cell_fast[c] = sl.fast[l];
+            cell_gain[c] = group[c] == source_group::nerve ? gain : 0.f;
+          }
+          sl.offset = std::uint32_t(gene.size());
+          for (std::uint32_t j = 0; j < sl.length; ++j)
+            for (int l = 0; l < LANES; ++l)
+              add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
+                       l < sl.lanes && offset[cell[l]] + j < pacer[l]);
+          sl.extra_offset = std::uint32_t(gene.size());
+          for (std::uint32_t j = 0; j < sl.extra_length; ++j)
+            for (int l = 0; l < LANES; ++l)
+              add_slot(l < sl.lanes ? pacer[l] + j : 0, l < sl.lanes && pacer[l] + j < end[l]);
+          max_length = std::max({max_length, sl.length, sl.extra_length});
+          slices.push_back(sl);
+
+        } else {
+          b.cursor = 0;
+          b.stage = BuildState::Effectors;
+        }
+        break;
+      case BuildState::Effectors:
+        if (b.cursor < effectors.size()) {
+          const auto start = b.cursor;
+          b.cursor += LANES;
+
+          Slice sl;
+          sl.lanes = int(std::min<std::size_t>(LANES, effectors.size() - start));
+          std::array<std::uint32_t, LANES> cell{};
+          for (int l = 0; l < sl.lanes; ++l) {
+            const auto c = effectors[start + std::size_t(l)];
+            cell[l] = c;
+            sl.cell[l] = NeuronIndex(c);
+            sl.valid[l] = -1;
+            sl.bias[l] = s.neurons[c].bias;
+            sl.born[l] = std::uint16_t(offset[c + 1] - offset[c]);
+            sl.capacity[l] = effector_capacity(c);
+            sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
+            double innate = 0;
+            for (auto e = offset[c]; e < offset[c + 1]; ++e)
+              innate += std::abs(double(s.edges[order[e]].weight));
+            sl.innate[l] = float(innate);
+            sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
+          }
+          sl.offset = std::uint32_t(gene.size());
+          for (std::uint32_t j = 0; j < sl.length; ++j)
+            for (int l = 0; l < LANES; ++l)
+              add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
+                       l < sl.lanes && offset[cell[l]] + j < offset[cell[l] + 1]);
+          max_length = std::max(max_length, sl.length);
+          effector_slices.push_back(sl);
+
+        } else {
+          b.cursor = 0;
+          b.stage = BuildState::Others;
+        }
+        break;
+      case BuildState::Others:
+        if (b.cursor < others.size()) {
+          const auto start = b.cursor;
+          b.cursor += LANES;
+
+          Slice sl;
+          sl.lanes = int(std::min<std::size_t>(LANES, others.size() - start));
+          std::array<std::uint32_t, LANES> cell{};
+          for (int l = 0; l < sl.lanes; ++l) {
+            const auto c = others[start + std::size_t(l)];
+            cell[l] = c;
+            sl.cell[l] = NeuronIndex(c);
+            sl.valid[l] = -1;
+            sl.bias[l] = s.neurons[c].bias;
+            sl.length = std::max(sl.length, offset[c + 1] - offset[c]);
+          }
+          sl.offset = std::uint32_t(gene.size());
+          for (std::uint32_t j = 0; j < sl.length; ++j)
+            for (int l = 0; l < LANES; ++l)
+              add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
+                       l < sl.lanes && offset[cell[l]] + j < offset[cell[l] + 1]);
+          other_slices.push_back(sl);
+
+        } else
+          b.stage = BuildState::Done;
+        break;
+      case BuildState::Done:
+        break;
       }
-      sl.offset = std::uint32_t(gene.size());
-      for (std::uint32_t j = 0; j < sl.length; ++j)
-        for (int l = 0; l < LANES; ++l)
-          add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
-                   l < sl.lanes && offset[cell[l]] + j < offset[cell[l] + 1]);
-      max_length = std::max(max_length, sl.length);
-      effector_slices.push_back(sl);
     }
-    std::stable_sort(others.begin(), others.end(), [&](auto x, auto y) {
-      return offset[x + 1] - offset[x] > offset[y + 1] - offset[y];
-    });
-    for (std::size_t start = 0; start < others.size(); start += LANES) {
-      Slice sl;
-      sl.lanes = int(std::min<std::size_t>(LANES, others.size() - start));
-      std::array<std::uint32_t, LANES> cell{};
-      for (int l = 0; l < sl.lanes; ++l) {
-        const auto c = others[start + std::size_t(l)];
-        cell[l] = c;
-        sl.cell[l] = NeuronIndex(c);
-        sl.valid[l] = -1;
-        sl.bias[l] = s.neurons[c].bias;
-        sl.length = std::max(sl.length, offset[c + 1] - offset[c]);
-      }
-      sl.offset = std::uint32_t(gene.size());
-      for (std::uint32_t j = 0; j < sl.length; ++j)
-        for (int l = 0; l < LANES; ++l)
-          add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
-                   l < sl.lanes && offset[cell[l]] + j < offset[cell[l] + 1]);
-      other_slices.push_back(sl);
-    }
+    if (b.stage != BuildState::Done)
+      return false;
+    building.reset();
+    ready = true;
+    return true;
   }
 };
-void Substrate::prepare_network() {
-  network_layout = std::make_shared<NetworkTopology>(*this);
+bool Substrate::FinishState::advance(Substrate &s, std::size_t &budget) {
+  while (budget && stage != Done) {
+    --budget;
+    switch (stage) {
+    case Count:
+      if (cursor < s.edges.size()) {
+        const auto &e = s.edges[cursor++];
+        if (e.source >= s.neurons.size() || e.target >= s.neurons.size())
+          throw std::invalid_argument("invalid synapse");
+        ++out_offset[e.source + 1];
+        ++in_offset[e.target + 1];
+      } else {
+        cursor = 1;
+        stage = Prefix;
+      }
+      break;
+    case Prefix:
+      if (cursor < out_offset.size()) {
+        out_offset[cursor] += out_offset[cursor - 1];
+        in_offset[cursor] += in_offset[cursor - 1];
+        ++cursor;
+      } else {
+        out_at = out_offset;
+        in_at = in_offset;
+        cursor = 0;
+        stage = Scatter;
+      }
+      break;
+    case Scatter:
+      if (cursor < s.edges.size()) {
+        const auto &e = s.edges[cursor++];
+        sorted[out_at[e.source]++] = e;
+      } else {
+        // CellGrowth emits targets in ascending order. Counting by source preserves that order
+        // inside each row, so the resulting edges already have the canonical (source, target)
+        // order.
+        s.edges = std::move(sorted);
+        cursor = 0;
+        stage = Mark;
+      }
+      break;
+    case Mark:
+      if (cursor < s.edges.size()) {
+        const auto &e = s.edges[cursor++];
+        in_to[in_at[e.target]++] = e.source;
+      } else {
+        cursor = 0;
+        stage = Outward;
+      }
+      break;
+    case Outward:
+      if (!stack.empty()) {
+        auto &frame = stack.back();
+        const auto node = frame.first;
+        if (frame.second < out_offset[node + 1]) {
+          const auto target = s.edges[frame.second++].target;
+          if (!visited[target]) {
+            visited[target] = 1;
+            stack.push_back({target, out_offset[target]});
+          }
+        } else {
+          finished.push_back(node);
+          stack.pop_back();
+        }
+      } else if (root < s.neurons.size()) {
+        const auto node = std::uint32_t(root++);
+        s.neurons[node].functional = !s.resource_limited;
+        if (!visited[node]) {
+          visited[node] = 1;
+          stack.push_back({node, out_offset[node]});
+        }
+      } else {
+        cursor = finished.size();
+        stage = Inward;
+      }
+      break;
+    case Inward:
+      if (!stack.empty()) {
+        auto &frame = stack.back();
+        const auto node = frame.first;
+        if (frame.second < in_offset[node + 1]) {
+          const auto target = in_to[frame.second++];
+          if (component[target] == UINT32_MAX) {
+            component[target] = group;
+            stack.push_back({target, in_offset[target]});
+          }
+        } else {
+          stack.pop_back();
+          if (stack.empty())
+            ++group;
+        }
+      } else if (cursor) {
+        const auto node = finished[--cursor];
+        if (component[node] == UINT32_MAX) {
+          component[node] = group;
+          stack.push_back({node, in_offset[node]});
+        }
+      } else {
+        cursor = 0;
+        s.recurrent_edges = 0;
+        stage = Recurrent;
+      }
+      break;
+    case Recurrent:
+      if (cursor < s.edges.size()) {
+        const auto &e = s.edges[cursor++];
+        s.recurrent_edges += component[e.source] == component[e.target];
+      } else {
+        layout = std::make_shared<NetworkTopology>();
+        stage = Layout;
+      }
+      break;
+    case Layout:
+      // The layout builder accounts for its own work units.
+      ++budget;
+      if (!layout->advance(s, budget))
+        return false;
+      s.network_layout = std::move(layout);
+      stage = Done;
+      break;
+    case Done:
+      break;
+    }
+  }
+  return stage == Done;
+}
+bool Substrate::finish_development(std::size_t &budget) {
+  if (!finish_state)
+    finish_state = std::make_shared<FinishState>(*this);
+  if (!finish_state->advance(*this, budget))
+    return false;
+  finish_state.reset();
+  return true;
 }
 Network::Network(std::shared_ptr<const Substrate> s) : tissue(std::move(s)) {
   const auto n = tissue->neurons.size();

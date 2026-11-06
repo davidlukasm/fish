@@ -22,15 +22,12 @@
 
 namespace fishsim {
 namespace {
-// A brain develops on DEVELOPMENT_WORKERS threads.
-constexpr int DEVELOPMENT_WORKERS = 2;
 // Mutated gene weights stay within MAX_GENE_WEIGHT; gating doubles a boundary weight by GATE_GAIN.
 constexpr double GATE_GAIN = 2;
 }
 std::size_t default_neural_budget = run_limit::default_neural_budget;
 field::Options default_development_options = []() {
   field::Options o;
-  o.workers = DEVELOPMENT_WORKERS;
   o.max_nodes = run_limit::default_brain_nodes;
   o.max_edges = run_limit::default_brain_edges;
   return o;
@@ -41,7 +38,7 @@ constexpr double FOLIAGE_LAYERS = 3;
 // Sediment contact is probed with SEDIMENT_PROBE; the lateral line samples LATERAL_POINTS points.
 constexpr double SEDIMENT_PROBE = .5;
 constexpr int LATERAL_POINTS = 4;
-// Development runs in steps of DEVELOPMENT_STEP queries.
+// Immediate compilation drives the same stages in DEVELOPMENT_STEP work units.
 constexpr std::size_t DEVELOPMENT_STEP = 8192;
 // Mutation: step evolution switch, its spread, the chance of a large step and its size, the
 // rate scale, rewiring trials, gate zones.
@@ -511,19 +508,16 @@ void Genome::compile(bool record_work) {
     throw std::length_error("Technical CPPN genotype budget exceeded");
   blueprint.reset();
   interface.reset();
-  while (!advance_development(DEVELOPMENT_STEP, 0, record_work)) {
+  while (!advance_development(DEVELOPMENT_STEP, record_work)) {
   }
 }
-bool Genome::advance_development(std::size_t budget, int workers, bool record_work) {
+bool Genome::advance_development(std::size_t budget, bool record_work) {
   if (blueprint)
     return true;
   if (!growing) {
     // CPPN construction validates the genotype once before preparing its evaluator.
-    growth_query = std::make_shared<cppn::CPPN>(cppn);
-    auto o = development_options;
-    if (workers > 0)
-      o.workers = workers;
-    growing = std::make_shared<field::Substrate>(*growth_query, o);
+    growth_query = std::make_shared<cppn::CPPN>(cppn, cppn::Preparation::Deferred);
+    growing = std::make_shared<field::Substrate>(*growth_query, development_options);
     growing->development_seed = development_seed;
     growing->variation_seed = variation_seed;
     growing->geometry_builder = prepare_zonal_geometry;

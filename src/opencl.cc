@@ -835,7 +835,6 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
     return BENCHMARK_MISMATCH;
 
   Genome::begin_run(BENCHMARK_SEED);
-  default_development_options.workers = workers;
   std::vector<Genome> examples{Genome::load(HAND_BUILT_GENOME)};
   w.workers = workers;
   w.seed(examples, fish_count, START_FOOD);

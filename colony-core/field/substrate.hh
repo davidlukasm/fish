@@ -18,8 +18,6 @@ constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 // the head zone, where glands and the blood sense sit.
 inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
-constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
-    DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES;
 // Cell parameters from the cell query (cppn/output_schema.hh), meaning by role:
 // threshold     sensor: response threshold; nerve, effector: bias (resting activity)
 // capacity      sensory and nerve group: number of cells; effector: organ size
@@ -123,6 +121,12 @@ constexpr float MAX_BIAS_SCALE = 2;
 // CELL_COPY_LIMIT; costs count per copy.
 constexpr double CELL_COPIES = 16;
 constexpr int CELL_COPY_LIMIT = 16;
+// Upper bound for checkpoint replay: pair trials plus all preparation, adjacency and layout passes.
+constexpr std::size_t DEVELOPMENT_OVERHEAD_PASSES = 32;
+constexpr std::size_t DEVELOPMENT_WORK_LIMIT =
+    DEVELOPMENT_QUERY_LIMIT + DEVELOPMENT_SITES * DEVELOPMENT_SITES + MAX_NODES * MAX_NODES +
+    DEVELOPMENT_OVERHEAD_PASSES * (MAX_NODES + MAX_EDGES);
+
 // The cell at a development site from the CPPN outputs there (none when they express no cell or
 // no function fits the site). Development and the Atelier's design view share it, as they share
 // lay_out_cells (each zone's length follows the mass of its cells) and cell_copies (a cell's
@@ -143,21 +147,21 @@ struct Options {
   float bias_scale = .3f;
   bool reference_development = false, stop_at_resource_limit = false;
   std::size_t max_nodes = 8192, max_edges = 65536;
-  int workers = 1;
   void validate() const;
 };
 struct NetworkTopology;
 class Substrate {
   cppn::CPPN *combined;
-  std::shared_ptr<const cppn::Program> program;
+  std::shared_ptr<cppn::Program> program;
   struct GridState;
   struct GridDevelopment;
   std::shared_ptr<GridState> grid_state;
-  std::size_t pair_checks_ = 0;
+  struct FinishState;
+  std::shared_ptr<FinishState> finish_state;
+  std::size_t pair_checks_ = 0, overhead_work_ = 0;
   bool advance_grid(std::size_t, bool record_work);
   void limit_development(const char *reason);
-  void finish_development();
-  void prepare_network();
+  bool finish_development(std::size_t &budget);
 
 public:
   mutable std::shared_ptr<const NetworkTopology> network_layout;
@@ -189,8 +193,9 @@ public:
   // from them. Such a substrate never develops.
   explicit Substrate(std::vector<Neuron> planned, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
-  std::size_t development_work() const { return queries + pair_checks_; }
+  std::size_t development_work() const { return queries + pair_checks_ + overhead_work_; }
   void abort_development(const std::string &reason);
+  bool pending_preparation() const;
   bool pending_finalization() const;
   bool connections_pending() const;
   bool anatomy_complete() const;

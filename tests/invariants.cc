@@ -190,6 +190,33 @@ void development_queue_is_bounded(const Genome &g) {
   check(immigrant != w.fish.end() && (immigrant->genome.growing || immigrant->genome.blueprint),
         "immigrant preparation keeps its reserved share");
 }
+// Checkpoints inside each newly resumable stage preserve the population's shared plans and work.
+void development_checkpoint_stages(const Genome &g) {
+  constexpr std::size_t SLICE = 37;
+  for (int stage = 0; stage < 3; ++stage) {
+    auto w = closed_tank(g);
+    w.fish.clear();
+    Genome fresh = g;
+    fresh.discard_development();
+    fresh.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    check(w.spawn(fresh, FIRST_X, DEPTH, fish_origin::natural, 0, 0, 300), "development fixture");
+    auto &plan = w.fish.front().genome;
+    plan.advance_development(SLICE);
+    if (stage > 0) {
+      while (!plan.growing->pending_finalization())
+        check(!plan.advance_development(SLICE), "fixture reaches finalization");
+      if (stage > 1)
+        check(!plan.advance_development(SLICE), "fixture pauses within finalization");
+    }
+    auto copy = w.fork();
+    check(saved(w) == saved(copy), "partial development restores exactly");
+    for (int step = 0; step < 8; ++step) {
+      w.tick(false, true);
+      copy.tick(false, true);
+    }
+    check(saved(w) == saved(copy), "partial development continues exactly");
+  }
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -210,6 +237,7 @@ int main() {
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     development_queue_is_bounded(g);
+    development_checkpoint_stages(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     life_phases_follow_maturity(g);

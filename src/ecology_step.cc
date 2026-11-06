@@ -11,6 +11,11 @@ namespace {
 // Query work is shared over about DEVELOPMENT_STEPS steps; preparation and finalization
 // retain their own limits when many eggs arrive together.
 constexpr double DEVELOPMENT_STEPS = 8;
+// Reserve one share for immigrants, including a preparation turn at the same interval.
+constexpr std::size_t IMMIGRANT_SHARES = 8;
+// Preparation visits gene rows/edges; finalization visits candidate copies and topology entries.
+// A costly-operation allowance grants at most this much work before another plan may run.
+constexpr std::size_t PREPARATION_SLICE = 16384, FINALIZATION_SLICE = 8192;
 // A swimming fish stirs the water by WAKE_SHARE of its thrust; impacts fade by IMPACT_KEEP.
 constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
 // Eggs denser than EGG_NEUTRAL_DENSITY of yolk sink, lighter ones rise (rising slower).
@@ -76,6 +81,19 @@ void Ecosystem::develop_population() {
     std::sort(active.begin(), active.end(), [&](auto a, auto b) {
       return fish[a].born != fish[b].born ? fish[a].born < fish[b].born : fish[a].id < fish[b].id;
     });
+    // Only runnable plans share the budget. Including every not-yet-admitted egg would shrink
+    // each preparation slice as the queue grows, despite the single-start limit.
+    bool can_start = !prepared;
+    std::size_t runnable = 0;
+    for (auto i : active) {
+      if (!fish[i].genome.growing) {
+        if (!can_start)
+          continue;
+        can_start = false;
+      }
+      active[runnable++] = i;
+    }
+    active.resize(runnable);
     for (std::size_t at = 0; at < active.size() && remaining; ++at) {
       auto &g = fish[active[at]].genome;
       // Every waiting plan gets a share; unused work passes to the following plans.
@@ -90,17 +108,26 @@ void Ecosystem::develop_population() {
           prepared = true;
           ++operations;
         }
-        if (g.growing && g.growing->pending_finalization()) {
+        const bool preparing = !g.growing || g.growing->pending_preparation();
+        if (g.growing && (preparing || g.growing->pending_finalization())) {
           if (operations >= finalizations)
             break;
           ++operations;
         }
         auto before = g.pending_work();
-        g.advance_development(share, workers);
+        const bool finishing = g.growing && g.growing->pending_finalization();
+        const auto allowance = preparing ? std::min(share, PREPARATION_SLICE)
+                               : g.growing->pending_finalization()
+                                   ? std::min(share, FINALIZATION_SLICE)
+                                   : share;
+        g.advance_development(allowance);
         auto used =
             g.blueprint ? g.blueprint->development_work() - before : g.pending_work() - before;
         remaining -= std::min(remaining, used);
         share -= std::min(share, used);
+        // Give other runnable plans their turn before granting this plan another costly slice.
+        if (active.size() > 1 && (preparing || finishing) && !g.blueprint)
+          break;
         if (!used && !g.blueprint && !(g.growing && g.growing->pending_finalization()))
           break;
       }
@@ -109,11 +136,11 @@ void Ecosystem::develop_population() {
   std::size_t reserved =
       std::any_of(pending.begin(), pending.end(),
                   [&](auto i) { return fish[i].origin == fish_origin::immigrant; })
-          ? query_budget / 8
+          ? query_budget / IMMIGRANT_SHARES
           : 0;
   std::size_t primary = budget - reserved;
   // Let the reserved immigrant share start a CPPN too, even with a continuous natural queue.
-  if (ticks % 8 == 0)
+  if (ticks % IMMIGRANT_SHARES == 0)
     develop_tier(2, reserved);
   develop_tier(0, primary);
   develop_tier(1, primary);
@@ -126,7 +153,7 @@ void Ecosystem::develop_population() {
   for (auto i : pending) {
     auto &g = fish[i].genome;
     if (!g.blueprint && g.growing && !g.growing->pending_finalization())
-      g.advance_development(0, workers);
+      g.advance_development(0);
   }
 }
 void Ecosystem::index_organisms() {

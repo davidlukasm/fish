@@ -43,21 +43,27 @@ struct WorkAlias {
   float multiplier;
   bool relay;
 };
+enum class Preparation { Immediate, Deferred };
 class CPPN {
+  struct PreparationState;
+  std::unique_ptr<PreparationState> preparation;
   std::unique_ptr<ann::Network> net;
   std::shared_ptr<evolution::Genome> genes;
   std::vector<float> input_buffer, output_buffer;
   std::map<int, WorkAlias> work_aliases;
 
 public:
-  explicit CPPN(std::shared_ptr<evolution::Genome>);
+  explicit CPPN(std::shared_ptr<evolution::Genome>, Preparation = Preparation::Immediate);
+  // Consumes deterministic node/edge work; the immediate constructor uses this same path.
+  bool prepare(std::size_t &budget);
+  bool prepared() const { return bool(net); }
   ~CPPN();
   CPPN(const CPPN &) = delete;
   CPPN &operator=(const CPPN &) = delete;
   void reset();
   std::size_t outputs() const { return output_count; }
   std::shared_ptr<evolution::Genome> genome() const { return genes; }
-  ann::Network::Compiled compiled() const { return net->compiled(); }
+  std::shared_ptr<const ann::Network::Compiled> compiled() const { return net->compiled(); }
   const auto &aliases() const { return work_aliases; }
 
 private:

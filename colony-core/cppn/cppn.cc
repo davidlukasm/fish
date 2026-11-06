@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <queue>
+#include <limits>
 #include <sstream>
 #include <cstring>
 #include <unordered_map>
@@ -11,59 +12,47 @@
 #include <stdexcept>
 #include <ostream>
 namespace cppn {
-CPPN::CPPN(std::shared_ptr<evolution::Genome> genome) : genes(genome) {
-  if (!genome || genome->inputs() != INPUTS || genome->outputs() != OUTPUTS)
-    throw std::invalid_argument("current CPPN needs ten inputs and twenty outputs");
-  for (int k = 1; k < 6; ++k) {
-    const auto *n = genome->get_node(INPUTS + k);
-    if (!n || n->get_type() != evolution::NodeType::LINEAR || n->get_weight() != 1)
-      throw std::invalid_argument("identity outputs require linear unit gain");
-  }
-  input_count = genome->inputs();
-  output_count = genome->outputs();
-  input_buffer.resize(input_count - 1);
-  output_buffer.resize(output_count);
-  genome->validate();
-  std::unordered_map<int, const evolution::NodeGene *> nodes;
-  nodes.reserve(genome->nodes());
-  for (const auto &n : genome->get_node_genes())
-    nodes.emplace(n.get_id(), &n);
-  // Genotype copies remain independent; only identical computations are shared.
+struct CPPN::PreparationState {
+  enum Stage {
+    Validate,
+    Nodes,
+    Edges,
+    Roots,
+    Canonical,
+    Aliases,
+    Indices,
+    Rows,
+    Network,
+    Done
+  } stage = Validate;
   struct Term {
     int source;
     float weight;
     int port;
   };
-  std::unordered_map<int, std::vector<Term>> incoming;
+  std::unordered_map<int, const evolution::NodeGene *> nodes;
+  std::unordered_map<int, std::vector<Term>> incoming, rows;
   std::unordered_map<int, std::vector<int>> children;
-  std::unordered_map<int, int> degree;
-  for (auto &n : genome->get_node_genes())
-    degree[n.get_id()] = 0;
-  for (auto &c : genome->get_connection_genes())
-    if (c.get_enabled()) {
-      incoming[c.get_target()].push_back({c.get_source(), c.get_weight(), c.get_port()});
-      children[c.get_source()].push_back(c.get_target());
-      ++degree[c.get_target()];
-    }
-  std::priority_queue<int, std::vector<int>, std::greater<int>> ready;
-  for (auto &n : degree)
-    if (n.second == 0)
-      ready.push(n.first);
-  std::unordered_map<int, int> representative;
+  std::unordered_map<int, int> degree, representative;
   std::unordered_map<int, float> multiplier;
   std::unordered_map<int, bool> relays;
-  std::unordered_map<int, std::vector<Term>> rows;
   std::unordered_map<std::string, int> expressions;
-  for (auto *table : {&incoming, &rows})
-    table->reserve(nodes.size());
-  representative.reserve(nodes.size());
-  multiplier.reserve(nodes.size());
-  relays.reserve(nodes.size());
-  expressions.reserve(nodes.size());
+  std::priority_queue<int, std::vector<int>, std::greater<int>> ready;
   std::vector<int> hidden;
-  while (!ready.empty()) {
-    int id = ready.top();
-    ready.pop();
+  std::unordered_map<int, std::size_t> indices;
+  std::list<evolution::NodeGene>::const_iterator node;
+  std::size_t cursor = 0;
+  ann::Network::Compiled code;
+  explicit PreparationState(const evolution::Genome &g) : node(g.get_node_genes().begin()) {
+    nodes.reserve(g.nodes());
+    incoming.reserve(g.nodes());
+    rows.reserve(g.nodes());
+    representative.reserve(g.nodes());
+    multiplier.reserve(g.nodes());
+    relays.reserve(g.nodes());
+    expressions.reserve(g.nodes());
+  }
+  void canonicalize(int id) {
     const auto *n = nodes.at(id);
     if (n->get_role() == evolution::NodeRole::Input) {
       representative[id] = id;
@@ -126,22 +115,7 @@ CPPN::CPPN(std::shared_ptr<evolution::Genome> genome) : genes(genome) {
       if (--degree[child] == 0)
         ready.push(child);
   }
-  for (const auto &[id, source] : representative)
-    work_aliases[id] = {source, multiplier[id], relays[id]};
-  ann::Network::Compiled code;
-  code.inputs = input_count - 1;
-  code.bias = 1;
-  code.outputs = output_count;
-  code.activation = &activation;
-  for (int id = 0; id < int(input_count); ++id)
-    code.ids.push_back(id);
-  code.ids.insert(code.ids.end(), hidden.begin(), hidden.end());
-  for (int id = int(input_count); id < int(input_count + output_count); ++id)
-    code.ids.push_back(id);
-  std::unordered_map<int, std::size_t> indices;
-  for (std::size_t i = 0; i < code.ids.size(); ++i)
-    indices.emplace(code.ids[i], i);
-  for (std::size_t i = 0; i < code.ids.size(); ++i) {
+  void emit(std::size_t i, std::size_t input_count) {
     const int id = code.ids[i];
     const auto *node = nodes.at(id);
     const auto offset = code.weights.size();
@@ -155,7 +129,122 @@ CPPN::CPPN(std::shared_ptr<evolution::Genome> genome) : genes(genome) {
     if (i >= input_count)
       code.order.push_back(i);
   }
-  net = std::make_unique<ann::Network>(std::move(code));
+};
+CPPN::CPPN(std::shared_ptr<evolution::Genome> genome, Preparation mode) : genes(genome) {
+  if (!genome || genome->inputs() != INPUTS || genome->outputs() != OUTPUTS)
+    throw std::invalid_argument("current CPPN needs ten inputs and twenty outputs");
+  for (int k = int(output::identity_role); k <= int(output::identity4); ++k) {
+    const auto *n = genome->get_node(INPUTS + k);
+    if (!n || n->get_type() != evolution::NodeType::LINEAR || n->get_weight() != 1)
+      throw std::invalid_argument("identity outputs require linear unit gain");
+  }
+  input_count = genome->inputs();
+  output_count = genome->outputs();
+  input_buffer.resize(input_count - 1);
+  output_buffer.resize(output_count);
+  preparation = std::make_unique<PreparationState>(*genome);
+  if (mode == Preparation::Immediate) {
+    auto budget = std::numeric_limits<std::size_t>::max();
+    prepare(budget);
+  }
+}
+bool CPPN::prepare(std::size_t &budget) {
+  if (net)
+    return true;
+  auto &s = *preparation;
+  while (budget && s.stage != PreparationState::Done) {
+    --budget;
+    switch (s.stage) {
+    case PreparationState::Validate:
+      genes->validate();
+      s.stage = PreparationState::Nodes;
+      break;
+    case PreparationState::Nodes:
+      if (s.node != genes->get_node_genes().end()) {
+        const auto &n = *s.node++;
+        s.nodes.emplace(n.get_id(), &n);
+        s.degree[n.get_id()] = 0;
+      } else {
+        s.stage = PreparationState::Edges;
+        s.cursor = 0;
+      }
+      break;
+    case PreparationState::Edges:
+      if (s.cursor < genes->get_connection_genes().size()) {
+        const auto &c = genes->get_connection_genes()[s.cursor++];
+        if (c.get_enabled()) {
+          s.incoming[c.get_target()].push_back({c.get_source(), c.get_weight(), c.get_port()});
+          s.children[c.get_source()].push_back(c.get_target());
+          ++s.degree[c.get_target()];
+        }
+      } else {
+        s.stage = PreparationState::Roots;
+        s.node = genes->get_node_genes().begin();
+      }
+      break;
+    case PreparationState::Roots:
+      if (s.node != genes->get_node_genes().end()) {
+        const auto id = (s.node++)->get_id();
+        if (!s.degree[id])
+          s.ready.push(id);
+      } else
+        s.stage = PreparationState::Canonical;
+      break;
+    case PreparationState::Canonical:
+      if (!s.ready.empty()) {
+        const auto id = s.ready.top();
+        s.ready.pop();
+        s.canonicalize(id);
+      } else {
+        s.stage = PreparationState::Aliases;
+        s.node = genes->get_node_genes().begin();
+      }
+      break;
+    case PreparationState::Aliases:
+      if (s.node != genes->get_node_genes().end()) {
+        const auto id = (s.node++)->get_id();
+        work_aliases[id] = {s.representative.at(id), s.multiplier.at(id), s.relays[id]};
+      } else {
+        auto &code = s.code;
+        code.inputs = input_count - 1;
+        code.bias = 1;
+        code.outputs = output_count;
+        code.activation = &activation;
+        for (int id = 0; id < int(input_count); ++id)
+          code.ids.push_back(id);
+        code.ids.insert(code.ids.end(), s.hidden.begin(), s.hidden.end());
+        for (int id = int(input_count); id < int(input_count + output_count); ++id)
+          code.ids.push_back(id);
+        s.stage = PreparationState::Indices;
+        s.cursor = 0;
+      }
+      break;
+    case PreparationState::Indices:
+      if (s.cursor < s.code.ids.size()) {
+        s.indices.emplace(s.code.ids[s.cursor], s.cursor);
+        ++s.cursor;
+      } else {
+        s.stage = PreparationState::Rows;
+        s.cursor = 0;
+      }
+      break;
+    case PreparationState::Rows:
+      if (s.cursor < s.code.ids.size())
+        s.emit(s.cursor++, input_count);
+      else
+        s.stage = PreparationState::Network;
+      break;
+    case PreparationState::Network:
+      net = std::make_unique<ann::Network>(std::move(s.code));
+      s.stage = PreparationState::Done;
+      break;
+    case PreparationState::Done:
+      break;
+    }
+  }
+  if (net)
+    preparation.reset();
+  return bool(net);
 }
 CPPN::~CPPN() = default;
 const std::vector<float> &CPPN::query_view(const Point &p) {

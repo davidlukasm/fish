@@ -5,11 +5,8 @@
 #include <stdexcept>
 namespace ann {
 struct Network::Impl {
-  std::vector<float> state, weights;
-  std::vector<unsigned char> ports;
-  std::vector<int> ids;
-  std::vector<std::size_t> sources, order;
-  std::vector<Control> controls;
+  std::vector<float> state;
+  std::shared_ptr<const Compiled> code;
 };
 Network::Network(Compiled code)
     : impl(new Impl), activation(code.activation), inputs(code.inputs), bias(code.bias),
@@ -34,29 +31,11 @@ Network::Network(Compiled code)
   if (std::find(ready.begin(), ready.end(), false) != ready.end())
     throw std::invalid_argument("incomplete compiled network");
   impl->state.resize(code.controls.size());
-  impl->controls = std::move(code.controls);
-  impl->weights = std::move(code.weights);
-  impl->ports = std::move(code.ports);
-  impl->ids = std::move(code.ids);
-  impl->sources = std::move(code.sources);
-  impl->order = std::move(code.order);
+  impl->code = std::make_shared<Compiled>(std::move(code));
   reset();
 }
-Network::Compiled Network::compiled() const {
-  Compiled p;
-  p.inputs = inputs;
-  p.bias = bias;
-  p.outputs = outputs;
-  p.activation = activation;
-  p.sources = impl->sources;
-  p.order = impl->order;
-  p.weights = impl->weights;
-  p.ports = impl->ports;
-  p.ids = impl->ids;
-  p.tanh_outputs = tanh_outputs;
-  for (const auto &c : impl->controls)
-    p.controls.push_back({c.offset, c.count, c.type, c.bias});
-  return p;
+std::shared_ptr<const Network::Compiled> Network::compiled() const {
+  return impl->code;
 }
 Network::~Network() = default;
 void Network::set_input(const std::vector<float> &v) {
@@ -69,11 +48,14 @@ void Network::set_input(const std::vector<float> &v) {
   }
 }
 void Network::step() {
-  for (auto n : impl->order) {
-    const auto &c = impl->controls[n];
+  for (auto n : impl->code->order) {
+    const auto &c = impl->code->controls[n];
     float sum = 0, gate = 0;
-    for (std::size_t s = c.offset; s < c.offset + c.count; ++s)
-      (impl->ports[s] ? gate : sum) += impl->state[impl->sources[s]] * impl->weights[s];
+    for (std::size_t s = c.offset; s < c.offset + c.count; ++s) {
+      auto &accumulator = impl->code->ports[s] ? gate : sum;
+      accumulator =
+          std::fma(impl->state[impl->code->sources[s]], impl->code->weights[s], accumulator);
+    }
     float out = c.type == int(evolution::NodeType::TOR)
                     ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
                     : activation(c.type, sum, c.bias);

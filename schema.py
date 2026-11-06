@@ -164,7 +164,7 @@ def outputs():
     field.append(f"constexpr double TIME_CONSTANT_MIN = {span['min_steps']}, TIME_CONSTANT_SPAN = {span['span']};")
     field.append("// Pacemakers beat at least every TIME_CONSTANT_PACE_MIN steps.")
     field.append(f"constexpr double TIME_CONSTANT_PACE_MIN = {span['pace_min_steps']};")
-    field.append("// A brain develops on at most MAX_WORKERS threads, like a tank.")
+    field.append("// A tank runs on at most MAX_WORKERS threads.")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")
     # The hand-drawn plan bridge shares one field order between C++ and Python.

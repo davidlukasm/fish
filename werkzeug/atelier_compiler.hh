@@ -35,7 +35,7 @@ struct Group {
   float threshold = 0, tau = .5f, field = .5f, q1 = 0, q2 = 0, qwidth = .5f;
   float sign = 1, mode = 0, pace = -1, modulator = -1;
   float sender1 = 1, sender2 = 1, receiver1 = -1, receiver2 = -1;
-  float sigma = .03f, crossing = 0, range = 1;
+  float sigma = float(field::MIN_SEARCH), crossing = 0, range = 1;
   std::array<Receptor, field::HORMONE_EFFECTS> receptors{};
   bool contains(const cppn::Point &p) const {
     constexpr float eps = .0001f;
@@ -107,7 +107,8 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
       ensure(between(x, -1, 1), "cell property outside -1..1");
     for (float x : {g.tau, g.field, g.qwidth, g.range})
       ensure(between(x, 0, 1), "cell property outside 0..1");
-    ensure(between(g.sigma, .03f, 2), "invalid contact width");
+    ensure(between(g.sigma, float(field::MIN_SEARCH), float(field::MAX_SEARCH)),
+           "invalid contact width");
     ensure(g.organ >= 0 && g.organ < 1000 && (g.open == 0 || g.open == 1), "invalid group owner");
     for (auto &r : g.receptors)
       r = read_receptor(input);
@@ -216,7 +217,7 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
   v[out::sender2] = g.sender2;
   v[out::receiver1] = g.receiver1;
   v[out::receiver2] = g.receiver2;
-  v[out::search_width] = raw(float(std::log(g.sigma / .03f) / std::log(2 / .03f)));
+  v[out::search_width] = raw(float(field::search_width(g.sigma)));
   v[out::crossing] = g.crossing;
   v[out::range] = raw(g.range);
   return v;

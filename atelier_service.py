@@ -18,6 +18,11 @@ from wording import Refusal, worded
 # The design view and the sites answer within QUICK_SECONDS; an engine error is passed on with at
 # most DETAIL_CHARACTERS of its message.
 QUICK_SECONDS = 8
+# Completed jobs remain available briefly for polling; one compiler runs at a time.
+COMPILE_JOB_TTL_SECONDS = 300
+COMPILE_JOB_RESULTS = 4
+COMPILE_TIMEOUT_SECONDS = 35
+COMPILE_POLL_SECONDS = .1
 DETAIL_CHARACTERS = 500
 
 
@@ -32,12 +37,12 @@ class CompileJobs:
         with self.lock:
             now = time.monotonic()
             self.jobs = {key: job for key, job in self.jobs.items()
-                         if job["status"] == "running" or now - job["updated"] < 300}
+                         if job["status"] == "running" or now - job["updated"] < COMPILE_JOB_TTL_SECONDS}
             if data.get("operation") == "build-start":
                 encode_plan(data.get("plan"))
                 if any(job["status"] == "running" for job in self.jobs.values()):
                     raise Refusal("studio.errors.compilerBusy")
-                while len(self.jobs) >= 4:
+                while len(self.jobs) >= COMPILE_JOB_RESULTS:
                     del self.jobs[next(iter(self.jobs))]
                 key = secrets.token_hex(16)
                 job = {"status": "running", "phase": "search", "started": now,
@@ -90,7 +95,7 @@ def execute(args, body, progress=None, cancel=None):
         process = subprocess.Popen(args, cwd=ROOT, stdin=source, stdout=output, stderr=errors,
                                    text=True)
         details = []
-        deadline = time.monotonic() + 35
+        deadline = time.monotonic() + COMPILE_TIMEOUT_SECONDS
         def consume(reader):
             for line in reader:
                 try:
@@ -111,7 +116,7 @@ def execute(args, body, progress=None, cancel=None):
                         raise Refusal("studio.errors.timeout")
                     consume(reader)
                     try:
-                        process.wait(timeout=.1)
+                        process.wait(timeout=COMPILE_POLL_SECONDS)
                         break
                     except subprocess.TimeoutExpired:
                         pass

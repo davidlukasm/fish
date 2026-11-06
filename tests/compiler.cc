@@ -80,13 +80,26 @@ int main() {
   {
     auto plan = cells(8);
     auto first = Builder().build(plan);
+    const std::array<evolution::NodeType, 7> types{
+        NodeType::LINEAR,  NodeType::SINE, NodeType::COSINE, NodeType::GAUSSIAN,
+        NodeType::SIGMOID, NodeType::ABS,  NodeType::POW};
+    std::size_t changed = 0;
+    for (const auto &node : first->get_node_genes())
+      if (node.get_role() == evolution::NodeRole::Hidden)
+        first->edit_node(node.get_id(), 1.3f, types[changed++ % types.size()]);
     auto second = std::make_shared<evolution::Genome>(*first);
     cppn::CPPN a(first), b(second);
     cppn::Program batch(a), single(b);
     std::array<cppn::Point, cppn::BATCH> points;
     std::array<std::array<float, cppn::OUTPUTS>, cppn::BATCH> values, one;
-    for (std::size_t i = 0; i < points.size(); ++i)
+    for (std::size_t i = 0; i < points.size(); ++i) {
       points[i] = field::development_site(i);
+      if (i % 3)
+        points[i].effect = field::receptor_effect_code(int(i % field::HORMONE_EFFECTS));
+    }
+    // A replay can populate the value cache before work recording resumes.
+    batch.evaluate(points.data(), points.size(), cppn::ALL_OUTPUTS, values, false);
+    single.evaluate(points.data(), 1, cppn::ALL_OUTPUTS, one, false);
     batch.evaluate(points.data(), points.size(), cppn::ALL_OUTPUTS, values, true);
     for (std::size_t i = 0; i < points.size(); ++i) {
       single.evaluate(&points[i], 1, cppn::ALL_OUTPUTS, one, true);
@@ -97,6 +110,32 @@ int main() {
     first->write(left);
     second->write(right);
     assert(left.str() == right.str()); // mutation observations keep their exact query order
+  }
+  // The address index must retain every possible contact across narrow and broad receivers,
+  // including the fallback to a full scan.
+  {
+    constexpr std::size_t COUNT = 257;
+    std::vector<field::Neuron> neurons(COUNT);
+    std::vector<field::ContactScale> scales;
+    field::ContactIndex index;
+    for (std::size_t i = 0; i < COUNT; ++i) {
+      auto &n = neurons[i];
+      n.role = field::Role::Nerve;
+      n.sender = n.receiver = {float(2 * field::unit_center(field::splitmix(i)) - 1),
+                               float(2 * field::unit_center(field::splitmix(i + COUNT)) - 1)};
+      n.search_width = float(i % 9) / 8;
+      scales.emplace_back(n);
+      index.add(n, std::uint32_t(i));
+    }
+    std::vector<std::uint32_t> selected;
+    for (std::size_t target = 0; target < COUNT; ++target) {
+      index.candidates(neurons[target], scales[target], COUNT, selected);
+      for (std::size_t source = 0; source < COUNT; ++source)
+        if (field::contact_parameters(neurons[source], neurons[target], 2, scales[source],
+                                      scales[target])
+                .probability > 0)
+          assert(std::binary_search(selected.begin(), selected.end(), source));
+    }
   }
   auto p = cells(4);
   for (auto &g : p.groups) {
@@ -112,6 +151,58 @@ int main() {
   g.compile(false);
   const auto checked = assess(p, g);
   assert(checked.ok() && checked.additional == 0 && fit.evaluations > 0);
+  // Budget boundaries cross preparation, query batches, copy draws, SCC traversal and SIMD
+  // layout. Every split must keep both the immutable brain and mutation observations identical.
+  auto fresh = [&] {
+    fishsim::Genome result;
+    result.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    result.development_seed = g.development_seed;
+    result.variation_seed = g.variation_seed;
+    return result;
+  };
+  auto whole = fresh();
+  whole.compile(true);
+  for (std::size_t quantum : {1u, 29u, 257u}) {
+    auto split = fresh();
+    std::size_t calls = 0;
+    while (!split.blueprint) {
+      const auto before = split.pending_work();
+      split.advance_development(quantum, true);
+      const auto after =
+          split.blueprint ? split.blueprint->development_work() : split.pending_work();
+      assert(after >= before && after - before <= quantum);
+      assert(++calls <= field::DEVELOPMENT_WORK_LIMIT);
+    }
+    const auto &a = *whole.blueprint, &b = *split.blueprint;
+    assert(a.development_work() == b.development_work() && a.queries == b.queries);
+    assert(a.neurons.size() == b.neurons.size() && a.edges.size() == b.edges.size());
+    assert(a.recurrent_edges == b.recurrent_edges && a.built_length == b.built_length);
+    assert(a.partner_offset == b.partner_offset && a.partners.size() == b.partners.size());
+    for (std::size_t i = 0; i < a.neurons.size(); ++i) {
+      const auto &x = a.neurons[i], &y = b.neurons[i];
+      assert(x.id == y.id && x.group == y.group && x.slots == y.slots && x.identity == y.identity &&
+             x.x == y.x && x.y == y.y && x.z == y.z && x.strength == y.strength);
+    }
+    for (std::size_t i = 0; i < a.edges.size(); ++i)
+      assert(a.edges[i].source == b.edges[i].source && a.edges[i].target == b.edges[i].target &&
+             a.edges[i].weight == b.edges[i].weight);
+    for (std::size_t i = 0; i < a.partners.size(); ++i)
+      assert(a.partners[i].source == b.partners[i].source && a.partners[i].p == b.partners[i].p &&
+             a.partners[i].strength == b.partners[i].strength);
+    std::ostringstream left, right;
+    whole.cppn->write(left);
+    split.cppn->write(right);
+    assert(left.str() == right.str());
+    field::Network first(whole.blueprint), second(split.blueprint);
+    for (int step = 0; step < 12; ++step) {
+      first.step({});
+      second.step({});
+    }
+    std::ostringstream first_runtime, second_runtime;
+    first.write_runtime(first_runtime);
+    second.write_runtime(second_runtime);
+    assert(first_runtime.str() == second_runtime.str());
+  }
   // A valid-looking initial draw cannot mask forbidden candidates in future turnover.
   auto broad = p;
   for (auto &cell : broad.groups) {

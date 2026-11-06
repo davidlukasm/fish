@@ -27,7 +27,7 @@ public:
     std::vector<int> ids;
     unsigned tanh_outputs = 0;
   };
-  Compiled compiled() const;
+  std::shared_ptr<const Compiled> compiled() const;
   explicit Network(Compiled);
   ~Network();
   Network(const Network &) = delete;
