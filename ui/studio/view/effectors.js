@@ -15,6 +15,8 @@ import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
+import {restLevel} from './drive.js';
+import {biasScale} from './panels.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
@@ -274,22 +276,37 @@ const TRAIT_HANDLES = Object.freeze({
   }
 });
 
+// A stretch of skin with one spine per node, spread over it: solid as it stands at rest, dashed
+// as far as it rises when the node fires. Strength lengthens both, the rest drive the solid one.
 const SPINE =
-    Object.freeze({skin : 96, base : 9, least : 10, most : 52, lean : .3, x : 34, step : 32});
+    Object.freeze({skin : 54, arc : 14, base : 10, least : 18, most : 84, lean : .3, samples : 12});
 function defenseGraphic(state, organ, centers) {
-  const S = SPINE;
+  const S = SPINE, W = FRAME.width, scale = biasScale(state);
+  const skinY = x => S.skin + S.arc * (1 - ((2 * x) / W - 1) ** 2);
+  const spine = (x, reach, cls) => {
+    const y = skinY(x);
+    return '<path class="' + cls + '" d="M' + fixed(x - S.base) + ' ' + fixed(y) + ' L' +
+           fixed(x + S.base * S.lean) + ' ' + fixed(y + reach) + ' L' + fixed(x + S.base) + ' ' +
+           fixed(y) + 'Z"/>';
+  };
   const spines =
       centers
           .map((center, index) => {
-            const x = S.x + index * S.step,
-                  reach = S.least + (S.most - S.least) * center.copies / ATELIER_LIMITS.max_copies;
-            return '<path class="aid-muscle-spine" d="M' + fixed(x - S.base) + ' ' + S.skin + ' L' +
-                   fixed(x + S.base * S.lean) + ' ' + fixed(S.skin + reach) + ' L' +
-                   fixed(x + S.base) + ' ' + S.skin + 'Z"/>';
+            const x = W * (index + .5) / centers.length;
+            const strength = center.copies / ATELIER_LIMITS.max_copies;
+            const raised = S.least + (S.most - S.least) * strength;
+            const rest = S.least + (raised - S.least) * Math.max(0, restLevel(center, scale));
+            return spine(x, raised, 'aid-spine-raised') + spine(x, rest, 'aid-muscle-spine');
           })
           .join('');
-  return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
-         spines;
+  const skin = Array
+                   .from({length : S.samples + 1},
+                         (_, k) => {
+                           const x = W * (1 - k / S.samples);
+                           return fixed(x) + ' ' + fixed(skinY(x));
+                         })
+                   .join(' L');
+  return '<path class="aid-muscle-body" d="M0 0 H' + W + ' L' + skin + 'Z"/>' + spines;
 }
 const SPINE_RING =
     Object.freeze({width : 300, height : 170, cx : 150, cy : 85, inner : 30, outer : 80});

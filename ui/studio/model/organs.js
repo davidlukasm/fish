@@ -109,6 +109,7 @@ export const ORGANS = Object.freeze([
   {
     key : 'defense',
     category : 'motor',
+    skin : true,
     nodes : 8,
     centers : [ motor('armor', MOTOR_KIND.defense, 3, 'outer') ]
   },
