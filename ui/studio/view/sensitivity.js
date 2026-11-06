@@ -1,6 +1,8 @@
 import {formatNumber} from '../../strings.js';
 import {clamp, PERCENT} from '../../units.js';
-import {idSafe, rounded} from './markup.js';
+import {idSafe, placedGlyph, rounded} from './markup.js';
+import {linePaint} from '../../glyph.js';
+import {CHANGE_ICON, LEVEL_ICON} from './drive.js';
 import {PICTURE} from './stimuli.js';
 
 // How strongly a sensory cell answers, over the stimulus: for intensity senses (light, scents,
@@ -117,7 +119,9 @@ const ADAPTATION = Object.freeze({
   plot : 66,
   held : 4,
   span : .6,
-  size : 1.8
+  size : 1.8,
+  icon : 14,
+  line : 1.6
 });
 const ADAPT_BASE = ADAPTATION.top + ADAPTATION.plot;
 // The time constant in steps at a fraction of the element's width, for a curve of `count` steps.
@@ -147,6 +151,14 @@ export function adaptationElement(adapt, target, label, stepsLabel, held, stretc
                 },
                                A.size))
           .join('');
+  // The handle's way runs from answering a change (soon used to it) to answering the stimulus.
+  const ends =
+      [ CHANGE_ICON, LEVEL_ICON ]
+          .map((path, k) => placedGlyph(
+                   path, A.icon,
+                   {x : k ? A.right - A.icon / 2 : A.left + A.icon / 2, y : ADAPT_BASE + A.icon},
+                   {paint : linePaint({width : A.line})}))
+          .join('');
   return `<svg class="aid-sensitivity aid-adaptation" viewBox="0 0 ${A.width} ${A.height}"${
       attributes} role="img" aria-label="${label}"><line class="aid-sensitivity-axis" x1="${
       A.left}" y1="${ADAPT_BASE}" x2="${A.right}" y2="${
@@ -154,8 +166,8 @@ export function adaptationElement(adapt, target, label, stepsLabel, held, stretc
       A.top}" x2="${rounded(ax(steps))}" y2="${
       ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
       points.join(' L')}"/><circle class="aid-held-mark" cx="${A.left}" cy="${
-      rounded(ADAPT_BASE - A.plot * adapt.response[0])}" r="${HELD_MARK}"/>${
-      pictures}<circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
+      rounded(ADAPT_BASE - A.plot * adapt.response[0])}" r="${HELD_MARK}"/>${pictures}${
+      ends}<circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
       rounded(ax(
           steps))}" cy="${rounded(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
       A.right}" y="${A.height - SENSITIVITY.tick}" text-anchor="end">${stepsLabel}</text></svg>`;

@@ -8,7 +8,7 @@ import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
-import {driveElement} from './drive.js';
+import {adaptElement, driveElement} from './drive.js';
 import {preferredScent} from '../../tuning.js';
 import {
   functionFor,
@@ -157,13 +157,14 @@ const motorSection = (state, organ, center) =>
                          {scale : biasScale(state), meaning : driveMeaning(state, center)})) +
     (organ.type === 'muscle' ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
-  const rhythm = center.key === 'pacemaker';
-  const title = label(rhythm ? 'inspector.beat' : 'inspector.afterglow');
-  return section(
-      title,
-      driveElement(center, title,
-                   n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
-                   {scale : biasScale(state), rhythm}));
+  if (center.key === 'pacemaker') {
+    const title = label('inspector.beat');
+    return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
+                                       {scale : biasScale(state), rhythm : true}));
+  }
+  const title = label('inspector.stimulusOrChange');
+  return section(title, adaptElement(center, title, n => t('studio.inspector.adapts', {n}),
+                                     {scale : biasScale(state)}));
 }
 function modulatorSection(state, organ, center) {
   const doc = state.document;

@@ -1,7 +1,8 @@
 import {clamp} from '../../units.js';
 import {TIME_CONSTANT} from '../../schema.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {idSafe, rounded} from './markup.js';
+import {idSafe, placedGlyph, rounded} from './markup.js';
+import {linePaint} from '../../glyph.js';
 
 // How an effector or nerve center idles and recovers, on the engine's activity from -1 to 1. At
 // rest, without input, a cell is as active as the tanh of its bias, its threshold times -scale
@@ -45,6 +46,11 @@ const y = level => MIDDLE - HALF * level;
 export const restLevel = (center, scale) => Math.tanh(-scale * center.threshold);
 // A pointer at (fx, fy), fractions of the element, as a change of the center.
 export function drivePatch(handle, fx, fy, scale) {
+  if (handle === 'adapt')
+    return {
+      tau : timeConstantOf(Math.max(
+          TIME_CONSTANT.min_steps, (adaptStepAt(fx) - ADAPT.held[0] * adaptAxis) / ADAPTATION_SPAN))
+    };
   if (handle === 'rest') {
     const most = Math.tanh(scale);
     const level = Math.max(-most, Math.min(most, (MIDDLE - fy * DRIVE.height) / HALF));
@@ -101,4 +107,54 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
       rhythm ? 'beat' : 'tau'}" cx="${rounded(x(knee))}" cy="${rounded(y(level(knee)))}" r="${
       D.handle}"/><text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${
       stepsLabel(Math.round(tc))}</text></svg>`;
+}
+
+// A nerve cell keeps no activity of its own from step to step; it subtracts the running mean of its
+// input, which follows the input over ADAPTATION_SPAN of its time constants (substrate.cc). So a
+// short time constant answers a change and soon forgets a held input, a long one answers the input
+// itself. Shown: an input held from HELD[0] to HELD[1] of the axis and the cell's answer, with the
+// handle one adaptation time after the input starts; below, the two ends of the handle's way.
+const ADAPTATION_SPAN = 10;
+const ICON_LINE = 1.6;
+const ADAPT = Object.freeze({held : [ .1, .55 ], input : .9, samples : 160, icon : 14, below : 9});
+const adaptAxis = ADAPTATION_SPAN * LONGEST_TIME_CONSTANT / (ADAPT.held[1] - ADAPT.held[0]);
+const adaptStepAt = fx => (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * adaptAxis;
+export const CHANGE_ICON = 'M2 18h7l2-13 2 13h9';
+export const LEVEL_ICON = 'M2 18h5V6h11v12h4';
+export function adaptElement(center, label, stepsLabel, {scale}) {
+  const D = DRIVE, A = ADAPT, bias = -scale * center.threshold;
+  const rate = 1 / (ADAPTATION_SPAN * timeConstantSteps(center.tau));
+  const x = step => D.left + (D.right - D.left) * step / adaptAxis;
+  const [on, off] = A.held.map(f => f * adaptAxis);
+  let mean = 0;
+  const answer = [];
+  for (let k = 0; k <= A.samples; ++k) {
+    const step = adaptAxis * k / A.samples, input = step >= on && step < off ? A.input : 0;
+    answer.push([ step, Math.tanh(bias + input - mean) ]);
+    mean += (input - mean) * rate * adaptAxis / A.samples;
+  }
+  const knee = on + ADAPTATION_SPAN * timeConstantSteps(center.tau);
+  const atKnee =
+      answer.reduce((best, p) => Math.abs(p[0] - knee) < Math.abs(best[0] - knee) ? p : best);
+  const ends =
+      [ on + ADAPTATION_SPAN * TIME_CONSTANT.min_steps, on + adaptAxis * (A.held[1] - A.held[0]) ];
+  const icons = [ CHANGE_ICON, LEVEL_ICON ]
+                    .map((path, k) => placedGlyph(path, A.icon,
+                                                  {x : x(ends[k]), y : D.top + D.plot + A.below},
+                                                  {paint : linePaint({width : ICON_LINE})}))
+                    .join('');
+  return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
+      idSafe(center.id)}" role="img" aria-label="${label}"><rect class="aid-drive-command" x="${
+      rounded(x(on))}" y="${D.top}" width="${rounded(x(off) - x(on))}" height="${
+      D.plot}"/><line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${
+      D.right}" y2="${MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${
+      rounded(y(Math.tanh(bias)))}" x2="${D.right}" y2="${
+      rounded(y(Math.tanh(bias)))}"/><path class="aid-sensitivity-curve" d="M${
+      answer.map(([ step, v ]) => rounded(x(step)) + ' ' + rounded(y(v))).join(' L')}"/>${
+      icons}<circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
+      rounded(x(on / 2))}" cy="${rounded(y(Math.tanh(bias)))}" r="${
+      D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="adapt" cx="${
+      rounded(x(knee))}" cy="${rounded(y(atKnee[1]))}" r="${D.handle}"/><text x="${D.right}" y="${
+      D.height - D.tick}" text-anchor="end">${
+      stepsLabel(Math.round(ADAPTATION_SPAN * timeConstantSteps(center.tau)))}</text></svg>`;
 }
