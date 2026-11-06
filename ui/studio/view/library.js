@@ -263,7 +263,7 @@ function learningLibrary(state) {
 const STIMULI = Object.freeze([
   {key : 'light', organ : 'eye'}, {key : 'object', organ : 'proximity'},
   {key : 'scent', organ : 'nose'}, {key : 'flow', organ : 'lateral'},
-  {key : 'touch', organ : 'touch'}, {key : 'pain', organ : 'pain'}
+  {key : 'touch', organ : 'touch'}, {key : 'pain', organ : 'pain'}, {key : 'food', organ : 'gut'}
 ]);
 function stimulusLibrary(state) {
   const has = type => state.document.organs.some(o => o.type === type);

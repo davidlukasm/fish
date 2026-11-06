@@ -43,7 +43,8 @@ const STIMULUS_ORGAN = Object.freeze({
   scent : 'nose',
   flow : 'lateral',
   touch : 'touch',
-  pain : 'pain'
+  pain : 'pain',
+  food : 'gut'
 });
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze({

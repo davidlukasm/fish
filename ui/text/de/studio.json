@@ -991,7 +991,8 @@
     "scent": "Duft",
     "flow": "Strömung",
     "touch": "Berührung",
-    "pain": "Verletzung"
+    "pain": "Verletzung",
+    "food": "Futter im Darm"
   },
   "learnCard": {
     "cells": "Zellen fürs Lernen",
