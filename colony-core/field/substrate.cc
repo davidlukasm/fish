@@ -1066,10 +1066,11 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
         }
     const F8 cb = load8(lane_action_.data() + lane0), nz = load8(lane_teach_.data() + lane0),
              uo = load8(lane_own_.data() + lane0);
-    F8 rs{}, drive{}, rhythm{}, eligibility{}, gain_factor{}, competition{};
+    F8 rs{}, drive{}, teaching{}, rhythm{}, eligibility{}, gain_factor{}, competition{};
     for (int l = 0; l < sl.lanes; ++l) {
       const auto c = sl.cell[l];
       drive[l] = hormone_effect_[Excitation][c];
+      teaching[l] = hormone_effect_[Teaching][c];
       rhythm[l] = .5f * (1 + hormone_effect_[Rhythm][c]);
       eligibility[l] = .5f * (1 + hormone_effect_[Eligibility][c]);
       gain_factor[l] = 1 + hormone_effect_[Learning][c];
@@ -1155,8 +1156,8 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
         }
       continue;
     }
-    const F8 own = tanh8(sum - drive) * output_factor;
-    const F8 action = (1 - eligibility) * pace + eligibility * own, teach = drive + modulating;
+    const F8 own = out;
+    const F8 action = (1 - eligibility) * pace + eligibility * own, teach = teaching + modulating;
     const F8 cb2 = rm * cb + (1 - rm) * action, dpost = action - cb2, ddrive = teach - nz,
              nz2 = rm * nz + (1 - rm) * teach, y = own - uo, uo2 = rm * uo + (1 - rm) * own;
     const F8 fast = learn ? sl.fast : splat8(1), dp = learn ? dpost : F8{};

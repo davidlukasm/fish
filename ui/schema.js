@@ -698,7 +698,8 @@ export const HORMONE_EFFECT = Object.freeze({
   "eligibility" : 3,
   "rhythm" : 4,
   "output" : 5,
-  "death" : 6
+  "death" : 6,
+  "teaching" : 7
 });
 export const HORMONE_CONTEXT =
     Object.freeze({"fed" : 0, "injured" : 1, "fast" : 2, "spawning" : 3});
@@ -1001,7 +1002,7 @@ export const ATELIER_LIMITS = Object.freeze({
   "max_name" : 40,
   "max_groups" : 360,
   "max_group_name" : 60,
-  "receptors" : 7,
+  "receptors" : 8,
   "max_probe_steps" : 32,
   "max_measure_steps" : 64,
   "max_copies" : 16

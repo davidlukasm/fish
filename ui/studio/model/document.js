@@ -159,16 +159,13 @@ export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
                        ? [ effect ]
                        : []);
 export const LEARNING_EFFECTS = Object.freeze([
-  HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
+  HORMONE_EFFECT.teaching, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.eligibility
 ]);
 export const learnsAtAll = center => center.role === 'nerve' && center.qwidth > 0;
-export const learners = (doc, index, wheel) => allCenters(doc).filter(
-    c => c.role === 'nerve' &&
-         boundEffects(c, index, wheel).some(effect => LEARNING_EFFECTS.includes(effect)));
 export function teachersOf(doc, center, wheel) {
   return doc.substances
-      .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.excitation))
+      .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.teaching))
       .map(sub => ({substance : sub, glands : producers(doc, sub.index, wheel)}));
 }
 export const receivers = (doc, index, wheel) =>
@@ -851,6 +848,7 @@ export function setLifePhase(doc, id, phase, span, steps) {
 export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
 const RECEPTOR_START = Object.freeze({
   [HORMONE_EFFECT.excitation] : {sensitivity : .5, half : .1},
+  [HORMONE_EFFECT.teaching] : {sensitivity : .5, half : .1},
   [HORMONE_EFFECT.learning] : {sensitivity : 1, half : .1},
   [HORMONE_EFFECT.competition] : {sensitivity : 1, half : .1},
   [HORMONE_EFFECT.eligibility] : {sensitivity : 1, half : .1},
@@ -860,7 +858,7 @@ const RECEPTOR_START = Object.freeze({
 });
 export const DEATH_RESPONSE = .5;
 export function effectLevel(effect, r) {
-  if (effect === HORMONE_EFFECT.excitation)
+  if (effect === HORMONE_EFFECT.excitation || effect === HORMONE_EFFECT.teaching)
     return r;
   if (effect === HORMONE_EFFECT.learning)
     return 1 + r;

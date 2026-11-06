@@ -1,6 +1,6 @@
 {
   "version": 24,
-  "atelier_plan": {"group":["zone", "side", "u0", "u1", "v0", "v1", "w0", "w1", "role", "function", "copies", "threshold", "tau", "field", "q1", "q2", "qwidth", "sign", "mode", "pace", "modulator", "crossing", "range", "organ", "open"], "receptor":["active", "baseline", "sensitivity", "half", "substance", "width", "steepness"], "limits":{"max_name":40,"max_groups":360,"max_group_name":60,"receptors":7,"max_probe_steps":32,"max_measure_steps":64,"max_copies":16}},
+  "atelier_plan": {"group":["zone", "side", "u0", "u1", "v0", "v1", "w0", "w1", "role", "function", "copies", "threshold", "tau", "field", "q1", "q2", "qwidth", "sign", "mode", "pace", "modulator", "crossing", "range", "organ", "open"], "receptor":["active", "baseline", "sensitivity", "half", "substance", "width", "steepness"], "limits":{"max_name":40,"max_groups":360,"max_group_name":60,"receptors":8,"max_probe_steps":32,"max_measure_steps":64,"max_copies":16}},
   "behavior_scales": {
     "speed": 8.64,
     "turn_degrees": 54,
@@ -211,7 +211,8 @@
       "eligibility": 3,
       "rhythm": 4,
       "output": 5,
-      "death": 6
+      "death": 6,
+      "teaching": 7
     },
     "hormone_context": {
       "fed": 0,

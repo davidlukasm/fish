@@ -5,7 +5,7 @@ namespace studio_plan {
 inline constexpr int max_name = 40;
 inline constexpr int max_groups = 360;
 inline constexpr int max_group_name = 60;
-inline constexpr int receptors = 7;
+inline constexpr int receptors = 8;
 inline constexpr int max_probe_steps = 32;
 inline constexpr int max_measure_steps = 64;
 inline constexpr int max_copies = 16;

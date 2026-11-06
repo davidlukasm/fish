@@ -3,7 +3,18 @@
 #include <algorithm>
 #include <cmath>
 namespace field {
-constexpr int HORMONES = 6, REGULATORS = HORMONES + 1, HORMONE_EFFECTS = 7;
+enum HormoneEffect {
+  Excitation,
+  Learning,
+  Competition,
+  Eligibility,
+  Rhythm,
+  Output,
+  Death,
+  Teaching,
+  HORMONE_EFFECTS
+};
+constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
               BLOOD_SUBSTANCES = HORMONES + 2;
 constexpr int GROWTH_RECEPTOR = HORMONE_EFFECTS, RECEPTOR_QUERIES = HORMONE_EFFECTS + 1;
@@ -15,7 +26,6 @@ double blood_stimulus(const Weights &weights, const Levels &levels, double matur
     stimulus += weights[k] * levels[k];
   return stimulus;
 }
-enum HormoneEffect { Excitation, Learning, Competition, Eligibility, Rhythm, Output, Death };
 inline float receptor_effect_code(int query) {
   return float(1 + query) / RECEPTOR_QUERIES;
 }

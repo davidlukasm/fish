@@ -9,7 +9,6 @@ import {
   effectDirection,
   findCenter,
   growsWith,
-  learnsAtAll,
   lifePhase,
   NOTICEABLE_AFFINITY,
   organTypes,
@@ -27,8 +26,8 @@ import {
 import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
-import {DIRECTION_ICON, EFFECT_ICON, TEACH_ICON} from './icons.js';
-import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene, teachingScene} from './effects.js';
+import {DIRECTION_ICON, EFFECT_ICON} from './icons.js';
+import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
@@ -118,6 +117,7 @@ function bound(receptor, c) {
 }
 const EFFECT_SCALE = Object.freeze({
   [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r, response : v => v},
+  [HORMONE_EFFECT.teaching] : {low : -1, high : 1, value : r => r, response : v => v},
   [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r, response : v => v - 1},
   [HORMONE_EFFECT.death] : {low : -1, high : 1, value : r => r, response : v => v}
 });
@@ -213,7 +213,8 @@ function doseStrip(state, receptor, effect, target) {
       responses
           .map((r, i) => '<svg x="' + cellX(i) + '" y="' + top + '" width="' + EFFECT_PANEL.width +
                          '" height="' + EFFECT_PANEL.height + '" class="aid-dose-cell">' +
-                         effectPanel(effect, r, colour, receptor.active ? i : 0) + '</svg>')
+                         effectPanel(effect, r, colour, receptor.active ? i : 0, responses[0]) +
+                         '</svg>')
           .join('') +
       '<line class="aid-effect-divide" x1="' + cellX(1) + '" y1="' + top + '" x2="' + cellX(1) +
       '" y2="' + height + '"/>';
@@ -629,18 +630,10 @@ function effectGuide(state, index) {
                const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
                const n = bound.length;
                const ends = n ? receptorEnds(bound[0].receptors[effect]) : undefined;
-               const teaches = effect === HORMONE_EFFECT.excitation && bound.find(learnsAtAll);
                return '<div class="aid-effect-card' + (n ? '' : ' off') +
                       '" style="--substance:' + colour + '" title="' +
                       escapeText(words('tileTitles')[effect] + ' ' + words('where')[effect]) +
-                      '">' + effectScene(effect, colour, ends) +
-                      (teaches
-                           ? '<div class="aid-effect-part">' +
-                                 glyph(TEACH_ICON, ICON.mark, {line : true}) +
-                                 teachingScene(colour, receptorEnds(teaches.receptors[effect])) +
-                                 '</div>'
-                           : '') +
-                      '<div><strong>' +
+                      '">' + effectScene(effect, colour, ends) + '<div><strong>' +
                       boundEffect(effect,
                                   n ? effectDirection(effect, bound[0].receptors[effect]) : 0) +
                       escapeText(words('tiles')[effect]) +

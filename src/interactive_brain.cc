@@ -29,6 +29,7 @@ namespace fishsim {
 static_assert(hormones::levels == field::HORMONES &&
               hormone_effect::count == field::HORMONE_EFFECTS &&
               hormone_effect::excitation == field::Excitation &&
+              hormone_effect::teaching == field::Teaching &&
               hormone_effect::output == field::Output && hormone_effect::death == field::Death);
 namespace {
 constexpr auto HORMONE_RESEND = std::chrono::milliseconds(200);

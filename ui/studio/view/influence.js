@@ -2,7 +2,7 @@ import {fishOutline} from './body.js';
 import {nodeLocation, organLocation, showsNodes} from './places.js';
 import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
-import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, PHASE_ICON, TEACH_ICON} from './icons.js';
+import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, PHASE_ICON} from './icons.js';
 import {CATEGORY_TONE} from './names.js';
 import {isModulator} from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
@@ -15,7 +15,6 @@ import {
   endpointCenters,
   findCenter,
   growsWith,
-  learners,
   lifePhase,
   LEARNING_EFFECTS,
   learnsAtAll,
@@ -68,18 +67,16 @@ function hormoneGlyph(item, kind, color, zoom) {
                           Array.from({length : G.puffs}, () => '<circle r="' + r + '"/>').join('') +
                           '</g>'
                     : '';
-  const symbols = kind === 'receiver'
-                      ? symbolsAbove((item.effects ??
-                                      []).map((e, k) => ({
-                                                path : item.teach && e === HORMONE_EFFECT.excitation
-                                                           ? TEACH_ICON
-                                                           : EFFECT_ICON[e],
-                                                direction : item.directions?.[k] ?? 0
-                                              })),
-                                     r)
-                      : '';
+  const symbols =
+      kind === 'receiver'
+          ? symbolsAbove((item.effects ?? []).map((e, k) => ({
+                                                    path : EFFECT_ICON[e],
+                                                    direction : item.directions?.[k] ?? 0
+                                                  })),
+                         r)
+          : '';
   const acts = kind === 'receiver'
-                   ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.excitation
+                   ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.teaching
                                                        : (item.effects ?? []).includes(e))
                    : undefined;
   return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
@@ -152,7 +149,8 @@ function teachingOverlay(state) {
                         .filter(e => LEARNING_EFFECTS.includes(e));
     if (!effects.length)
       continue;
-    const color = substanceColor(substance.index), teaches = effects.includes(EXCITES);
+    const color = substanceColor(substance.index),
+          teaches = effects.includes(HORMONE_EFFECT.teaching);
     const sources = producers(doc, substance.index, capabilities)
                         .map(c => ({pos : located(c.id), affinity : 1}));
     const source = nearest(sources, target.pos);
@@ -173,7 +171,6 @@ function teachingOverlay(state) {
   }
   return '<g class="aid-hormone-overlay" pointer-events="none">' + marks + html + '</g>';
 }
-const EXCITES = HORMONE_EFFECT.excitation;
 export function hormoneOverlay(state) {
   const {document : doc, sites, capabilities} = state;
   const substance =
@@ -188,7 +185,6 @@ export function hormoneOverlay(state) {
   const color = substanceColor(substance.index);
   const zoom = zoomOf(state);
   const sources = [], targets = [];
-  const learning = new Set(learners(doc, substance.index, capabilities).map(c => c.id));
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const pos = nodeLocation(doc, sites, center, organ.type);
@@ -209,7 +205,8 @@ export function hormoneOverlay(state) {
           pos,
           affinity : Math.max(...effects.map(item => item.affinity)),
           focus : effects.some(item => item.effect === state.effect),
-          teach : learning.has(center.id),
+          teach :
+              learnsAtAll(center) && effects.some(item => item.effect === HORMONE_EFFECT.teaching),
           effects : effects.map(item => item.effect),
           directions :
               effects.map(item => effectDirection(item.effect, center.receptors[item.effect]))
@@ -321,15 +318,12 @@ export function hormoneLegs(state) {
           push : firing > 0   ? 'rise'
                  : firing < 0 ? 'fall'
                               : null,
-          mark : '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
-                     symbolsAbove(
-                         effects.map((e, k) => ({
-                                       path : learnsAtAll(cell) && e === EXCITES ? TEACH_ICON
-                                                                                 : EFFECT_ICON[e],
-                                       direction : directions[k]
-                                     })),
-                         HORMONE_GLYPH.receiver) +
-                     '</g>'
+          mark :
+              '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
+                  symbolsAbove(
+                      effects.map((e, k) => ({path : EFFECT_ICON[e], direction : directions[k]})),
+                      HORMONE_GLYPH.receiver) +
+                  '</g>'
         });
       }
   const reach = leg =>

@@ -16,8 +16,8 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development_sites.hh" : "806dd25e151b5b85",
   "colony-core/field/development.cc" : "502b31a06b8f79e6",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
-  "colony-core/field/hormones.hh" : "e0f1f91f7fdfa4b4",
-  "colony-core/field/substrate.cc" : "673a3dfa84a7fc33",
+  "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
+  "colony-core/field/substrate.cc" : "bb1d82d32784a388",
   "src/body_plan.cc" : "e4be3b8341694c77",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
@@ -56,7 +56,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "0f891df62a0bd083",
+  "src/interactive_brain.cc" : "04fa88f245eaffc5",
   "src/material.hh" : "32c33b6291275e33",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
@@ -309,6 +309,23 @@ function semanticFingerprint(source) {
   const vision = await import('../ui/studio/view/vision.js');
   (await import('../ui/brain.js')).initialize([ 'brainClamp' ]);
   const E = HORMONE_EFFECT;
+  assert.equal(sitesResult.effects, Object.keys(E).length);
+  {
+    const {EFFECT_ICON} = await import('../ui/studio/view/icons.js');
+    const {EFFECT_ORDER, effectScene} = await import('../ui/studio/view/effects.js');
+    assert.equal(new Set(EFFECT_ORDER).size, Object.keys(E).length);
+    for (const effect of Object.values(E)) {
+      assert.ok(EFFECT_ICON[effect]);
+      assert.match(effectScene(effect, '#abcdef'), /aid-effect-scene/);
+    }
+    const excited = effectScene(E.excitation, '#abcdef');
+    const taught = effectScene(E.teaching, '#abcdef');
+    assert.doesNotMatch(excited, /aid-effect-line teach/);
+    assert.match(taught, /aid-effect-line teach/);
+    assert.doesNotMatch(taught, /aid-effect-spikes/);
+    const aquarium = JSON.parse(readFileSync(join(root, 'ui/text/de/nerve_map.json'), 'utf8'));
+    assert.equal(aquarium.effects.length, Object.keys(E).length);
+  }
   assert.deepEqual(sitesResult.roleEffects, [
     [ E.output, E.death ], Object.values(E).sort((a, b) => a - b),
     [ E.excitation, E.output, E.death ]
@@ -911,14 +928,14 @@ function semanticFingerprint(source) {
   });
   assert.match(learner, /data-learn-rate/);
   assert.match(learner, /aid-episode-arrow teach none/);
-  for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
+  for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learner,
                  new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
   const learnShelf = panels.libraryOf({...state, tool : 'learn'});
   assert.equal(learnShelf.kind, 'learn');
   for (const key of ['learn', 'modulate', 'pacemaker'])
     assert.match(learnShelf.html, new RegExp('data-drag-kind="neuron" data-drag-value="' + key));
-  for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
+  for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learnShelf.html, new RegExp('data-drag-value="0:' + effect + '"'));
   assert.doesNotMatch(learnShelf.html, new RegExp('data-drag-value="0:' + E.death + '"'));
   assert.equal(panels.libraryOf({...state, tool : 'hormone'}).kind, 'hormone');
@@ -1576,14 +1593,28 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
               1e-2);
     assert.ok(Math.abs(learningView.learnResponseOf(.5)) < 1e-9);
     const taughtDoc =
-        model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.excitation, 0);
+        model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.teaching, 0);
+    const excitationDoc = model.addSubstance(
+        model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.excitation, 0),
+        HORMONES.levels);
+    assert.deepEqual(model.teachersOf(excitationDoc,
+                                      model.findCenter(excitationDoc, learnNode.centerId).center,
+                                      sitesResult),
+                     []);
+    const bothDoc =
+        model.bindReceptor(excitationDoc, learnNode.centerId, HORMONE_EFFECT.teaching, 0);
+    const bothCell = model.findCenter(bothDoc, learnNode.centerId).center;
+    assert.equal(model.teachersOf(bothDoc, bothCell, sitesResult).length, 1);
+    assert.ok(model.boundEffects(bothCell, 0, sitesResult).includes(HORMONE_EFFECT.excitation));
+    assert.ok(model.boundEffects(bothCell, 0, sitesResult).includes(HORMONE_EFFECT.teaching));
     const taughtPanel = learningView.learningInspector({
       document : model.addSubstance(taughtDoc, HORMONES.levels),
       sites,
       capabilities : sitesResult,
       selected : {kind : 'center', id : learnNode.centerId}
     });
-    assert.match(taughtPanel, /data-learn-receptor="[^"]+" data-learn-effect="0"/);
+    assert.match(taughtPanel, new RegExp('data-learn-receptor="[^"]+" data-learn-effect="' +
+                                         HORMONE_EFFECT.teaching + '"'));
     assert.doesNotMatch(taughtPanel, /aid-episode-arrow teach none/);
     const skinView = await import('../ui/studio/view/skin.js');
     const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});

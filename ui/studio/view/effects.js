@@ -204,13 +204,12 @@ function modulating(r, withIt) {
          output([ T.input[0] ]) + cell([ T.input[0] ]);
 }
 export const EFFECT_ORDER = Object.freeze([
-  HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.learning,
-  HORMONE_EFFECT.competition, HORMONE_EFFECT.eligibility, HORMONE_EFFECT.rhythm
+  HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.teaching,
+  HORMONE_EFFECT.learning, HORMONE_EFFECT.competition, HORMONE_EFFECT.eligibility,
+  HORMONE_EFFECT.rhythm
 ]);
-export const effectScene = (effect, colour, ends = startEnds(effect)) =>
-    sideBySide(SCENES[effect], colour, ends);
-export const teachingScene = (colour, ends = startEnds(HORMONE_EFFECT.excitation)) =>
-    sideBySide(taught(colour, ends), colour, ends);
+export const effectScene = (effect, colour, ends = startEnds(effect)) => sideBySide(
+    effect === HORMONE_EFFECT.teaching ? taught(colour, ends) : SCENES[effect], colour, ends);
 export const modulatorScene = colour =>
     sideBySide(modulating, colour, {without : 0, with : 0}, false);
 function sideBySide(draw, colour, ends, cloud = true) {
@@ -229,8 +228,10 @@ function sideBySide(draw, colour, ends, cloud = true) {
          P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
          side(true, P.width) + '</svg>';
 }
-export function effectPanel(effect, r, colour, share) {
-  const draw = SCENES[effect];
+export function effectPanel(effect, r, colour, share, baseline = 0) {
+  const draw = effect === HORMONE_EFFECT.teaching
+                   ? value => taught(colour, {without : baseline, with : value})(value, true)
+                   : SCENES[effect];
   return draw ? (share > 0 ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
                                  '" r="' + P.r * P.cloud + '" fill="' + colour + '" opacity="' +
                                  fixed(share) + '"/>'

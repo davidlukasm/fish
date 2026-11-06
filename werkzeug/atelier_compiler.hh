@@ -20,6 +20,7 @@
 #include <vector>
 
 namespace atelier {
+static_assert(studio_plan::receptors == field::HORMONE_EFFECTS);
 using evolution::NodeType;
 namespace out = cppn::output;
 struct Receptor {

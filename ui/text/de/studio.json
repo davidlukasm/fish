@@ -426,7 +426,8 @@
     "Merkzeitpunkt",
     "Taktstärke",
     "Ausgangsstärke",
-    "Absterben"
+    "Absterben",
+    "Lehrsignal"
   ],
   "regionNodes": {
     "families": {
@@ -890,16 +891,18 @@
       "Merkzeitpunkt",
       "Taktstärke",
       "Ausgangsstärke",
-      "Absterben"
+      "Absterben",
+      "Lehrsignal"
     ],
     "tileTitles": [
-      "Der Stoff erregt die Zelle oder hemmt sie. Bei einer lernenden Nervenzelle ist diese Änderung zugleich ihr Lehrsignal.",
+      "Der Stoff erregt die Zelle oder hemmt sie.",
       "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
       "Der Stoff stellt ein, wie stark Eingänge, die mit der Zelle feuern, die anderen verdrängen.",
       "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder beim eigenen Feuern.",
       "Der Stoff stellt ein, wie stark der Taktgeber schlägt.",
       "Der Stoff stellt ein, wie stark die Zelle ihr Signal ausgibt, von stumm bis voll.",
-      "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn."
+      "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn.",
+      "Der Stoff liefert ein Lehrsignal. Unerwartete Änderungen verstärken oder schwächen die gemerkten Verbindungen."
     ],
     "where": [
       "bei Nervenzellen, Muskeln und Drüsen",
@@ -908,7 +911,8 @@
       "bei Nervenzellen mit Taktgeber",
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
-      "bei allen Zellen"
+      "bei allen Zellen",
+      "bei lernenden Nervenzellen"
     ],
     "rises": "{effect}: mehr Stoff hebt sie",
     "falls": "{effect}: mehr Stoff senkt sie",
@@ -968,7 +972,7 @@
       "Anrechnung"
     ],
     "tileTitles": [
-      "Ein Anstieg dieses Stoffs ist das Lehrsignal der Zelle: er stärkt, was sie sich gemerkt hat.",
+      "Unerwartete Änderungen dieses Stoffs verstärken oder schwächen die gemerkten Verbindungen.",
       "Der Stoff ändert, wie stark jede Überraschung die Verbindungen ändert.",
       "Der Stoff ändert, wie schnell was mitfeuert wächst und der Rest schrumpft.",
       "Der Stoff verschiebt, was die Merkspur markiert: eigenes Feuern oder den Takt."

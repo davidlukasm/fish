@@ -6,6 +6,84 @@ namespace {
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
+void excitation_and_teaching_are_independent() {
+  constexpr field::NeuronIndex FIRST = 0, SECOND = 1, LEARNER = 2, MODULATOR = 3, MOTOR = 4;
+  constexpr int CELLS = 5, WARMUP = 12;
+  constexpr int DRIVE = 0, TEACH = 1, RATE = 2;
+  constexpr float WEIGHT = .5f, INPUT = .8f, HALF = .1f, EPSILON = 1e-6f;
+  const auto brain = [&](float teaching_sign = 1, bool modulator = false) {
+    std::vector<field::Neuron> neurons(CELLS);
+    for (int i = 0; i < CELLS; ++i) {
+      auto &n = neurons[i];
+      n.id = i;
+      n.role = i < LEARNER  ? field::Role::Sensor
+               : i == MOTOR ? field::Role::Effector
+                            : field::Role::Nerve;
+      n.functional = true;
+      if (n.role == field::Role::Sensor) {
+        n.functions.internal = 0;
+        n.functions.senses[field::Touch] = 1;
+      } else if (n.role == field::Role::Effector) {
+        n.functions.internal = 0;
+        n.functions.motors[field::Forward] = 1;
+      }
+      n.identity = {1, 1, 0, -1, -1};
+      n.parameters.plasticity = i == LEARNER ? .5f : 0;
+      n.hormone_receptors[field::Output].baseline = 1;
+    }
+    neurons[MODULATOR].identity.back() = 1;
+    neurons[MODULATOR].bias = modulator ? WEIGHT : 0;
+    const auto receptor = [&](int effect, int substance, float sensitivity) {
+      auto &r = neurons[LEARNER].hormone_receptors[effect];
+      r.affinity[substance] = 1;
+      r.sensitivity = sensitivity;
+      r.half = HALF;
+    };
+    receptor(field::Excitation, DRIVE, 1);
+    receptor(field::Teaching, TEACH, teaching_sign);
+    receptor(field::Learning, RATE, -field::HORMONE_SENSITIVITY_SPAN);
+    auto s = std::make_shared<field::Substrate>(std::move(neurons));
+    s->edges = {{FIRST, LEARNER, WEIGHT}, {SECOND, LEARNER, WEIGHT}, {LEARNER, MOTOR, WEIGHT}};
+    if (modulator)
+      s->edges.push_back({MODULATOR, LEARNER, WEIGHT});
+    return field::Network(s);
+  };
+  auto quiet = brain(), driven = brain(), taught = brain(), punished = brain(-1), stopped = brain();
+  field::Hormones none{}, excite{}, teach{}, pause{};
+  excite[DRIVE] = teach[TEACH] = pause[TEACH] = 1;
+  pause[RATE] = 1;
+  for (int step = 0; step < WARMUP; ++step)
+    for (auto *net : {&quiet, &driven, &taught, &punished, &stopped})
+      net->step({step % 2 ? INPUT : 0, step % 2 ? 0 : INPUT}, none, 0);
+  quiet.step({INPUT, 0}, none, 0);
+  driven.step({INPUT, 0}, excite, 0);
+  taught.step({INPUT, 0}, teach, 0);
+  punished.step({INPUT, 0}, teach, 0);
+  stopped.step({INPUT, 0}, pause, 0);
+  check(driven.state()[LEARNER] > quiet.state()[LEARNER], "excitation changes firing");
+  check(driven.surprise(LEARNER) == 0, "excitation supplies no teaching signal");
+  check(std::abs(driven.learning_contrast(LEARNER) - quiet.learning_contrast(LEARNER)) > EPSILON,
+        "eligibility follows the actual firing, including excitation");
+  check(taught.state() == quiet.state() && punished.state() == quiet.state(),
+        "positive and negative teaching do not drive cells or muscles");
+  check(taught.surprise(LEARNER) > 0 && punished.surprise(LEARNER) < 0,
+        "the teaching receptor supports both learning directions");
+  check(stopped.surprise(LEARNER) == 0, "the learning-rate receptor can stop learning");
+  for (auto *net : {&quiet, &driven, &taught, &punished, &stopped})
+    net->step({INPUT, 0}, none, 0);
+  check(quiet.learned_change() == 0 && driven.learned_change() == 0 &&
+            stopped.learned_change() == 0,
+        "learning requires a teacher in neutral learning mode");
+  check(taught.learned_change() > EPSILON && punished.learned_change() > EPSILON,
+        "signed hormonal teaching changes synapses");
+  auto local = brain(1, true), combined = brain(1, true);
+  local.step({INPUT, 0}, none, 0);
+  combined.step({INPUT, 0}, none, 0);
+  local.step({INPUT, 0}, none, 0);
+  combined.step({INPUT, 0}, teach, 0);
+  check(local.surprise(LEARNER) > 0 && combined.surprise(LEARNER) > local.surprise(LEARNER),
+        "local modulators and hormonal teaching add together");
+}
 Ecosystem closed_tank(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
@@ -261,6 +339,7 @@ void checkpoint_continues_exactly(const Genome &g) {
 int main() {
   try {
     Genome::begin_run(SEED);
+    excitation_and_teaching_are_independent();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);

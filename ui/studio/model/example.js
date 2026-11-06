@@ -82,7 +82,7 @@ export function exampleDocument(names, sites, wheel) {
     release(placed.reward.node, food);
     for (const id of [learner, pairEndpoint(doc, learner)].filter(Boolean))
       for (const [effect, sensitivity] of [[ HORMONE_EFFECT.learning, REWARD.sensitivity ],
-                                           [ HORMONE_EFFECT.excitation, REWARD.teaching ]])
+                                           [ HORMONE_EFFECT.teaching, REWARD.teaching ]])
         doc = updateReceptor(doc, id, effect,
                              {active : 1, substance : food, sensitivity, half : REWARD.half});
   }

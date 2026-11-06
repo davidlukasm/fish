@@ -160,7 +160,7 @@
   ],
   [
    "✎",
-   "Lernen"
+   "Lerntempo"
   ],
   [
    "⚔",
@@ -181,6 +181,10 @@
   [
    "✝",
    "Absterben"
+  ],
+  [
+   "↧",
+   "Lehrsignal"
   ]
  ],
  "line": "Linie {n}",

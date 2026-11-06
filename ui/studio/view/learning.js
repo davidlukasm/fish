@@ -2,7 +2,13 @@ import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp, PERCENT} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {chosenCenter, endpointCenters, findCenter, receptorEnds} from '../model/document.js';
+import {
+  chosenCenter,
+  endpointCenters,
+  findCenter,
+  LEARNING_EFFECTS,
+  receptorEnds
+} from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {t, tList} from '../../strings.js';
@@ -12,7 +18,7 @@ import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker} from '../model/organs.js';
 import {EFFECT_ICON, TEACH_ICON} from './icons.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
-import {effectScene, teachingScene} from './effects.js';
+import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
 
 const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20});
@@ -146,7 +152,7 @@ function traceGraphic(center) {
          escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';
 }
 const PART_ICON = Object.freeze({
-  [HORMONE_EFFECT.excitation] : TEACH_ICON,
+  [HORMONE_EFFECT.teaching] : TEACH_ICON,
   [HORMONE_EFFECT.learning] : EFFECT_ICON[HORMONE_EFFECT.learning],
   [HORMONE_EFFECT.competition] : EFFECT_ICON[HORMONE_EFFECT.competition],
   [HORMONE_EFFECT.eligibility] : EFFECT_ICON[HORMONE_EFFECT.eligibility]
@@ -157,7 +163,7 @@ function substancePart(state, center, effect) {
     return '';
   const doc = state.document, bound = boundSubstance(state, center, effect);
   const colour = bound ? substanceColor(bound.index) : null;
-  const words = key => tList('studio.learnRule.' + key)[effect];
+  const words = key => tList('studio.learnRule.' + key)[LEARNING_EFFECTS.indexOf(effect)];
   const choice = (value, text, on, swatch = '') =>
       '<button class="' + (on ? 'active' : '') + '" data-learn-substance="' + value +
       '" data-center-id="' + escapeText(center.id) + '" data-learn-effect="' + effect + '"' +
@@ -183,14 +189,11 @@ function substancePart(state, center, effect) {
          (colour ? ' style="--substance:' + colour + '"' : '') + '><h5>' +
          glyph(PART_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
          '</span></h5>' +
-         (effect === HORMONE_EFFECT.excitation
-              ? teachingScene(colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined)
-              : effectScene(effect, colour ?? 'currentColor',
-                            bound ? receptorEnds(receptor) : undefined)) +
+         effectScene(effect, colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined) +
          choices + strength + '</div>';
 }
 function teacherList(state, center, modulators) {
-  const taught = boundSubstance(state, center, HORMONE_EFFECT.excitation);
+  const taught = boundSubstance(state, center, HORMONE_EFFECT.teaching);
   const items =
       modulators
           .map(c => '<button data-select-center="' + escapeText(c.id) + '" title="' +
@@ -235,7 +238,7 @@ export function learningInspector(state) {
     return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
-  const taught = boundSubstance(state, chosen, HORMONE_EFFECT.excitation);
+  const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);
   const colours = [
     ...(teachers.modulators.length ? [ tone('brain') ] : []),
     ...(taught ? [ substanceColor(taught.index) ] : [])
@@ -244,7 +247,7 @@ export function learningInspector(state) {
       '<section class="aid-learn-part">' + heading(label('learnRule.' + key)) + body + '</section>';
   return html + heading(centerTitle(chosen)) + learningRule(state, chosen, teachers, colours) +
          section('teaching', teacherList(state, chosen, teachers.modulators) +
-                                 substancePart(state, chosen, HORMONE_EFFECT.excitation)) +
+                                 substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
          section('rate', learnTrack('learn-rate', chosen, chosen.qwidth, label('learnRule.rate'),
                                     [ label('learnRule.slow'), label('learnRule.fast') ]) +
                              substancePart(state, chosen, HORMONE_EFFECT.learning)) +

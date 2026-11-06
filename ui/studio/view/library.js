@@ -198,7 +198,7 @@ function hormoneLibrary(state) {
 }
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const LEARNING_TILES = Object.freeze([
-  {effect : HORMONE_EFFECT.excitation, path : TEACH_ICON},
+  {effect : HORMONE_EFFECT.teaching, path : TEACH_ICON},
   {effect : HORMONE_EFFECT.learning, path : EFFECT_ICON[HORMONE_EFFECT.learning]},
   {effect : HORMONE_EFFECT.competition, path : EFFECT_ICON[HORMONE_EFFECT.competition]},
   {effect : HORMONE_EFFECT.eligibility, path : EFFECT_ICON[HORMONE_EFFECT.eligibility]}

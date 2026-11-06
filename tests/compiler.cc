@@ -23,6 +23,26 @@ Plan cells(int count) {
 int main() {
   fishsim::Genome::begin_run(34981);
   {
+    auto plan = cells(1);
+    auto &r = plan.groups.front().receptors;
+    r[field::Excitation] = {true, -.2f, .4f, .1f, 0, 0, 1};
+    r[field::Teaching] = {true, .1f, -.7f, .2f, 0, 1, 2};
+    r[field::Learning] = {true, .3f, .5f, .4f, 0, 2, 0};
+    fishsim::Genome g;
+    g.cppn = Builder().build(plan);
+    g.compile(false);
+    assert(assess(plan, g).ok());
+    const auto imported = import_plan(g);
+    for (const int effect : {field::Excitation, field::Teaching, field::Learning}) {
+      const auto &before = r[effect], &after = imported.groups.front().receptors[effect];
+      assert(after.active && before.substance == after.substance);
+      assert(std::abs(before.baseline - after.baseline) < 1e-5f);
+      assert(std::abs(before.sensitivity - after.sensitivity) < 1e-5f);
+      assert(std::abs(before.half - after.half) < 1e-5f);
+    }
+    assert(assess(imported, g).ok());
+  }
+  {
     const auto original = fishsim::Genome::load(fishsim::HAND_BUILT_GENOME);
     auto plan = import_plan(original);
     assert(assess(plan, original).ok());
