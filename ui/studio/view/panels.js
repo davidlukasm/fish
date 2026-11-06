@@ -415,8 +415,9 @@ function wireField(wire) {
                                            '" cy="' + W.centre + '" r="' + fixed(r) + '"/>';
   return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
          escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
-         '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '">' +
-         circle('aid-wire-boundary', W.boundary) + circle('aid-wire-halo', radius) +
+         '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '"><title>' +
+         label('inspector.spreadTitle') + '</title>' + circle('aid-wire-boundary', W.boundary) +
+         circle('aid-wire-halo', radius) +
          otherSenders
              .map((other, k) => '<circle class="aid-wire-other" data-other="' + k + '" cx="' +
                                 fixed(other.x) + '" cy="' + fixed(other.y) + '" r="' + W.other +
@@ -470,8 +471,13 @@ function wireInspector(state, wire) {
          '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
          (state.report?.contacts ? contactResult(wireContacts(doc, wire, state.report.contacts))
                                  : '') +
-         '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-wire="' +
-         escapeText(wire.id) + '">' + label('inspector.removeWire') + '</button></div>';
+         '<div class="aid-inspector-actions">' +
+         (wire.bends?.length
+              ? '<button data-unbend-wire="' + escapeText(wire.id) + '">' +
+                    escapeText(t('studio.inspector.unbend', {n : wire.bends.length})) + '</button>'
+              : '') +
+         '<button class="aid-danger" data-remove-wire="' + escapeText(wire.id) + '">' +
+         label('inspector.removeWire') + '</button></div>';
 }
 function assemblyInspector(state, assembly) {
   const doc = state.document;

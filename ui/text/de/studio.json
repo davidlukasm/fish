@@ -239,6 +239,8 @@
     "response": "Antwortkurve",
     "none": "Noch keine Reaktion",
     "removeWire": "Verbindung entfernen",
+    "unbend": "{n} {n:Biegepunkt|Biegepunkte} entfernen",
+    "spreadTitle": "Je größer der Kreis, desto mehr andere Sender in der Nähe darf der Empfänger auch annehmen.",
     "removeSubstance": "Stoff entfernen",
     "narrow": "Gezielt",
     "wide": "Breit",

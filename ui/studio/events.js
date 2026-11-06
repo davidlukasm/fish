@@ -25,6 +25,7 @@ import {
   removeOrganType,
   removeSubstance,
   selectionCenters,
+  setBends,
   setSubstance,
   switchReceptor,
   updateCenter,
@@ -317,6 +318,11 @@ export const FISH_CLICKS = Object.freeze([
       const marked = markedKind(e, REMOVE_KINDS), kind = marked.slice(marked.indexOf('-') + 1);
       studio.removeSelection({kind, id : e.getAttribute('data-' + marked)});
     }
+  ],
+  [
+    '[data-unbend-wire]',
+    (studio, e) => studio.changeDocument(
+        setBends(studio.state.document, [ e.dataset.unbendWire ], []), studio.state.selected)
   ],
   [
     '[data-assemble-selected]',
