@@ -1676,6 +1676,40 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.ok(Math.abs(a.y - b.y) > 0 &&
                 Math.sign(a.y - b.y) === Math.sign(site.side - twin.side));
     }
+    {
+      const layout = await import('../ui/studio/model/layout.js');
+      const REGION_HIDDEN = .25;
+      const regions = [
+        'tectum', 'olfactory', 'hindbrain', 'spinal', 'pallium', 'torus', 'cerebellum',
+        'hypothalamus'
+      ];
+      let full = model.newDocument('Alle Regionen');
+      for (const type of regions) {
+        const placed =
+            sites.filter(s => !s.outer)
+                .map(s => model.addOrgan(full, type, sites, layout.sitePoint(s, 'nerve')))
+                .find(Boolean);
+        assert.ok(placed, type + ' still finds room in a brain with every other region');
+        full = placed.document;
+      }
+      const boxes = full.organs.filter(o => o.region).map(o => {
+        const points = o.centers.map(c => brainPlaces.nodeLocation(full, sites, c, o.type));
+        const xs = points.map(p => p.x), ys = points.map(p => p.y);
+        return {
+          o,
+          x : [ Math.min(...xs), Math.max(...xs) ],
+          y : [ Math.min(...ys), Math.max(...ys) ]
+        };
+      });
+      const overlap = (a, b) => Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
+      const area = box => (box.x[1] - box.x[0]) * (box.y[1] - box.y[0]);
+      for (const a of boxes)
+        for (const b of boxes)
+          if (a.o.id < b.o.id)
+            assert.ok(overlap(a.x, b.x) * overlap(a.y, b.y) <
+                          REGION_HIDDEN * Math.min(area(a), area(b)),
+                      a.o.type + ' and ' + b.o.type + ' do not hide each other');
+    }
     const torus = model.addOrgan(model.newDocument('Torus'), 'torus', sites, onLobe);
     const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
                                               torus.document);

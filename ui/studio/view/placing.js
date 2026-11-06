@@ -65,10 +65,14 @@ function hintPlaces(state, kind, value, moving) {
     sites.set(point.x + ':' + point.y, {point, keys : new Set([ key ])});
   }
   const used = usedSites(state.document, c => c.organId !== moving);
-  for (const {type, center} of centers)
+  const free = (center, site) =>
+      !used.has(site.id) && eligible(center, site) && (center.role !== 'nerve' || nerveZone(site));
+  for (const {type, center : wanted} of centers) {
+    const center = wanted.paired && !state.sites.some(site => free(wanted, site))
+                       ? {...wanted, paired : false}
+                       : wanted;
     for (const site of state.sites) {
-      if (used.has(site.id) || !eligible(center, site) ||
-          (center.role === 'nerve' && !nerveZone(site)))
+      if (!free(center, site))
         continue;
       const muscle = center.functionCode === 'site';
       const index = muscle ? MUSCLE_LABEL_INDEX.get(functionFor(center, site)) : undefined;
@@ -92,6 +96,7 @@ function hintPlaces(state, kind, value, moving) {
         areas.set(key, {from : Math.min(area.from, point.x), to : Math.max(area.to, point.x)});
       }
     }
+  }
   return {labels, sites, areas};
 }
 const MUSCLE_CLIP = 'aid-hint-body';

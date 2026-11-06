@@ -16,7 +16,8 @@ import {
 import {radians} from '../../units.js';
 import {skinAt} from './frame.js';
 import {bearing} from '../model/retina.js';
-import {isRegion, siteRole} from '../model/organs.js';
+import {isRegion, ORGAN_BY_KEY, siteRole} from '../model/organs.js';
+import {regionSlots} from '../model/regions.js';
 import {muscleNode} from './muscles.js';
 import {layerShown} from './layers.js';
 
@@ -50,11 +51,88 @@ const CLUSTER = Object.freeze({
   step : 26
 });
 const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
-function regionPoint(organ, index, sites) {
-  const C = CLUSTER, home = findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
+const regionHome = (organ, sites) => findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
+const clusterRadius = organ => CLUSTER.ring + CLUSTER.grow * organ.centers.length;
+export const REGION_CHIP = Object.freeze({width : 26, height : 20, gap : 5, away : 22});
+const SEPARATE = Object.freeze(
+    {rounds : 120, settle : 30, margin : 3, pull : .04, node : 5, inside : 6, front : .25});
+const anchorCache = new WeakMap();
+// Regions whose engine sites lie close would hide each other's clusters and slot chips; the
+// drawing keeps them apart within their half of the brain, as near their sites as room allows.
+function regionAnchors(doc, sites) {
+  const cached = anchorCache.get(doc);
+  if (cached?.sites === sites)
+    return cached.anchors;
+  const S = SEPARATE, C = CLUSTER, middle = BODY_FRAME.middle;
+  const items = [];
+  for (const organ of doc.organs.filter(o => isRegion(o) && o.centers.length)) {
+    const home = regionHome(organ, sites);
+    if (!home || home.zone === ZONE.tail)
+      continue;
+    const at = sitePoint(home, NERVE_ROLE), r = clusterRadius(organ);
+    const chips =
+        regionSlots(doc, organ).filter(slot => slot.required && !slot.filled.length).length;
+    const R = REGION_CHIP;
+    items.push({
+      id : organ.id,
+      home : at,
+      x : at.x,
+      y : at.y,
+      out : sideOf(organ),
+      side : ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0,
+      wide : Math.max(r * C.aspect[0], chips * (R.width + R.gap) / 2) + S.node,
+      inner : r * C.aspect[1] + S.node,
+      outer : r * C.aspect[1] + (chips ? R.away + R.height / 2 : S.node)
+    });
+  }
+  const span = item => item.out > 0 ? [ item.y - item.inner, item.y + item.outer ]
+                                    : [ item.y - item.outer, item.y + item.inner ];
+  const left = item => BRAIN.cerebrum.from + item.wide * S.front,
+        right = item => BRAIN.cord.to - item.wide / 2;
+  const room = (item, dx) => item.x + dx >= left(item) && item.x + dx <= right(item);
+  for (let round = 0; round < S.rounds; ++round) {
+    for (let i = 0; i < items.length; ++i)
+      for (let j = i + 1; j < items.length; ++j) {
+        const a = items[i], b = items[j];
+        const [aTop, aBottom] = span(a), [ bTop, bBottom ] = span(b);
+        const across = a.wide + b.wide + S.margin - Math.abs(b.x - a.x);
+        const along = Math.min(aBottom, bBottom) - Math.max(aTop, bTop) + S.margin;
+        if (across <= 0 || along <= 0)
+          continue;
+        const sideways = (b.x >= a.x ? 1 : -1) * across / 2;
+        if ((across < along || !a.side && !b.side) && room(a, -sideways) && room(b, sideways)) {
+          a.x -= sideways;
+          b.x += sideways;
+        } else {
+          const away = (bTop + bBottom) >= (aTop + aBottom) ? 1 : -1;
+          const share = a.side && b.side ? .5 : 1;
+          if (a.side)
+            a.y -= away * along * share;
+          if (b.side)
+            b.y += away * along * share;
+        }
+      }
+    for (const item of items) {
+      const pull = round < S.rounds - S.settle ? S.pull : 0;
+      item.x += (item.home.x - item.x) * pull;
+      item.y += (item.home.y - item.y) * pull;
+      item.x = Math.min(Math.max(item.x, left(item)), right(item));
+      item.y = item.side ? middle + item.side *
+                                        Math.min(Math.max(item.side * (item.y - middle), S.inside),
+                                                 BRAIN.cerebrum.half - item.inner)
+                         : item.home.y;
+    }
+  }
+  const anchors = new Map(items.map(item => [item.id, {x : item.x, y : item.y}]));
+  anchorCache.set(doc, {sites, anchors});
+  return anchors;
+}
+function regionPoint(doc, organ, index, sites) {
+  const C = CLUSTER, home = regionHome(organ, sites);
   if (!home)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
-  const at = sitePoint(home, NERVE_ROLE), side = sideOf(organ);
+  const at = regionAnchors(doc, sites).get(organ.id) ?? sitePoint(home, NERVE_ROLE),
+        side = sideOf(organ);
   const center = organ.centers[index], port = center?.port ?? 'none';
   if (home.zone === ZONE.tail) {
     const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
@@ -65,7 +143,7 @@ function regionPoint(organ, index, sites) {
     return at;
   const kin = organ.centers.filter(c => (c.port ?? 'none') === port), rank = kin.indexOf(center);
   const share = kin.length > 1 ? rank / (kin.length - 1) : .5;
-  const r = C.ring + C.grow * organ.centers.length;
+  const r = clusterRadius(organ);
   const angle = port === 'in'    ? Math.PI - side * C.arc * (1 - 2 * share)
                 : port === 'out' ? side * Math.PI / 2 + C.spread * (share - .5) * (kin.length - 1)
                                  : C.spread * (share - .5) * (kin.length - 1) - side * C.spread;
@@ -162,7 +240,7 @@ export function organLocation(organ, sites, doc) {
     return HEAD_SENSES[organ.type](doc, sites, sideOf(organ));
   if (organ.type === 'lateral')
     return lateralAnchor(doc, sites, organ);
-  const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i, sites))
+  const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(doc, organ, i, sites))
                     : organ.type === 'muscle'
                         ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
                         : organ.centers.map(c => centerLocation(c, organ.type, sites));
@@ -228,7 +306,7 @@ export function nodeLocation(doc, sites, center, organType) {
       return organType === 'muscle'   ? musclePoint(organ, index, sites)
              : hasHome(organType)     ? innerPoint(doc, organ, index)
              : HEAD_SENSES[organType] ? headSenseNode(doc, sites, organ, center, index)
-                                      : regionPoint(organ, index, sites);
+                                      : regionPoint(doc, organ, index, sites);
   }
   const at = centerLocation(center, organType, sites);
   return organType === 'brain' ? midlinePair(doc, sites, site, at) : at;

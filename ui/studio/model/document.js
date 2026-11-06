@@ -308,6 +308,17 @@ export function regenerateFields(draft, sites) {
   pruneWires(draft);
   return true;
 }
+function regionHomes(doc, sites) {
+  const homes = new Set();
+  for (const organ of doc.organs.filter(o => o.region)) {
+    const home = findSite(sites, organ.region.site);
+    if (!home)
+      continue;
+    homes.add(home.id);
+    homes.add(mirroredSite(home, sites)?.id);
+  }
+  return homes;
+}
 export function addOrgan(doc, type, sites, position, snapDistance = Infinity, paired = true) {
   const definition = ORGAN_BY_KEY[type];
   if (!definition || definition.fixed)
@@ -319,7 +330,9 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       if (mirror)
         used.add(mirror.id);
     }
-  const first = closestSite(definition.centers[0], sites, new Set(), position, null, type);
+  const first =
+      closestSite(definition.centers[0], sites,
+                  isRegion({type}) ? regionHomes(draft, sites) : new Set(), position, null, type);
   if (!first || pointDistance(first, position, siteRole(type)) > snapDistance)
     return null;
   const existing =

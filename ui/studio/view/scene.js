@@ -1,7 +1,7 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
-import {nodeLocation, organLocation, showsNodes} from './places.js';
+import {nodeLocation, organLocation, REGION_CHIP, showsNodes} from './places.js';
 import {organTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
@@ -128,7 +128,7 @@ function assembliesSvg(state) {
 const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
 export const organLabelPlace = (y, zoom) =>
     ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
-const SLOT = Object.freeze({width : 26, height : 20, round : 6, gap : 5, away : 22, icon : 14});
+const SLOT = Object.freeze({...REGION_CHIP, round : 6, icon : 14});
 function slotsSvg(state) {
   const {document : doc, sites, selected} = state, zoom = zoomOf(state);
   let html = '';

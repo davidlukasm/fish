@@ -308,7 +308,11 @@ export function settleRegions(doc, sites) {
           ...nerve(n.preset, NODE_CELLS, zones),
           paired : ORGAN_BY_KEY[organ.type].scope === 'side'
         };
-        const site = near && closestSite(desc, sites, used, near, organ.side, organ.type);
+        // Paired regions keep off the midline while lateral sites last; the engine's medial
+        // sites still carry a side, so a full brain falls back to them.
+        const site = near && (closestSite(desc, sites, used, near, organ.side, organ.type) ??
+                              closestSite({...desc, paired : false}, sites, used, near, organ.side,
+                                          organ.type));
         if (!site)
           continue;
         used.add(site.id);
