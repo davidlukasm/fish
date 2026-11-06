@@ -1,19 +1,12 @@
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {TOOL_ICON} from './icons.js';
+import {EFFECT_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
 import {MODULES, NEURONS, ORGAN_BY_KEY, ORGANS} from '../model/organs.js';
-import {
-  boundEffects,
-  growsWith,
-  producers,
-  receivers,
-  SUBSTANCE_NAME_LENGTH
-} from '../model/document.js';
 import {escapeText, glyph} from './markup.js';
-import {namedText, t, tList} from '../../strings.js';
+import {namedText, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
-import {measurement, organsOf} from './substances.js';
-import {organTitle} from './names.js';
+import {substanceName} from './substances.js';
 import {tone} from './names.js';
 
 // The library beside the scene: organs, modules and substances to drag onto the fish, and the
@@ -70,79 +63,42 @@ const HORMONE_TILES = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.learning,
   HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition, HORMONE_EFFECT.rhythm
 ]);
-const FISH_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
-function hormoneTile(kind, value, text, title = text) {
+// A tile to drag onto the fish: a symbol and a word, its title saying what it does.
+function hormoneTile(kind, value, text, path, title = text) {
   return '<button class="aid-hormone-tile" draggable="true" data-drag-kind="' + kind +
          '" data-drag-value="' + escapeText(value) + '" title="' + escapeText(title) + '">' +
-         escapeText(text) + '</button>';
+         glyph(path, ICON.mark, {line : true}) + '<span>' + escapeText(text) + '</span></button>';
 }
+// A substance's card: its colour and name (a click shows it in the inspector) and what can be
+// dragged from it onto the fish: a gland that releases it and each of its effects.
 function substanceCard(state, substance) {
-  const {document : doc, capabilities : wheel} = state, index = substance.index;
-  const open = state.focusSubstance === index;
-  const fallback = t('units.numbered', {
-    name : label('inspector.substanceName'),
-    n : tList('studio.inspector.substanceLetters')[index]
-  });
-  const grows = growsWith(doc, index, wheel);
-  const head =
-      '<header><button class="aid-substance-pill" data-select-substance="' + index +
-      '" aria-label="' + escapeText(fallback) + '"><span class="aid-substance-swatch"></span>' +
-      '</button><input class="aid-inline-name" data-substance-name="' + index + '" value="' +
-      escapeText(substance.name) + '" placeholder="' + escapeText(fallback) + '" maxlength="' +
-      SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') + '">' +
-      '<button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
-      (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' title="' +
-      label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '">' +
-      glyph(FISH_MARK, ICON.mark) +
-      '</button><button class="aid-row-menu" data-remove-substance="' + index + '" aria-label="' +
-      label('inspector.removeSubstance') + '">' + t('studio.marks.remove') + '</button></header>';
-  const style = ' style="--substance:' + substanceColor(index) + '"';
-  const releasing = producers(doc, index, wheel), receiving = receivers(doc, index, wheel);
-  if (!open)
-    return '<section class="aid-substance-card"' + style + '>' + head +
-           '<button class="aid-card-summary" data-select-substance="' + index + '">' +
-           escapeText(t('studio.hormoneCard.summary', {
-             glands : organsOf(doc, releasing).length,
-             targets : organsOf(doc, receiving).length
-           })) +
-           '</button></section>';
-  const row = (key, body) => '<div class="aid-card-row"><span>' + label('hormoneCard.' + key) +
-                             '</span><div>' + body + '</div></div>';
-  const glands = organsOf(doc, releasing)
-                     .map(organ => '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                                   icon(organ.type, ICON.list) +
-                                   escapeText(organTitle(organ, state.sites)) + '</button>')
-                     .join('');
-  const tiles = HORMONE_TILES
-                    .map(effect => hormoneTile('effect', index + ':' + effect,
-                                               tList('studio.hormoneCard.tiles')[effect]))
+  const index = substance.index, open = state.focusSubstance === index;
+  const words = tList('studio.hormoneCard.tiles'), titles = tList('studio.hormoneCard.tileTitles');
+  const tiles = hormoneTile('gland', String(index), label('hormoneCard.gland'), STUDIO_ICON.gland,
+                            label('hormoneCard.glandTitle')) +
+                HORMONE_TILES
+                    .map(effect => hormoneTile('effect', index + ':' + effect, words[effect],
+                                               EFFECT_ICON[effect], titles[effect]))
                     .join('');
-  const targets =
-      organsOf(doc, receiving)
-          .map(organ => {
-            const effects = new Set(organ.centers.flatMap(c => boundEffects(c, index, wheel)));
-            return '<button data-select-organ="' + escapeText(organ.id) + '">' +
-                   icon(organ.type, ICON.list) + escapeText(organTitle(organ, state.sites)) +
-                   [...effects ]
-                       .map(e => '<small class="aid-bound-effect">' +
-                                 escapeText(tList('studio.hormoneCard.effects')[e]) + '</small>')
-                       .join('') +
-                   '</button>';
-          })
-          .join('');
-  return '<section class="aid-substance-card open"' + style + '>' + head +
-         row('sources', glands + hormoneTile('gland', String(index), label('hormoneCard.gland'))) +
-         row('can', '<div class="aid-hormone-tiles">' + tiles + '</div>') +
-         (targets ? row('acts', targets) : '') + measurement(state, index) + '</section>';
+  return '<section class="aid-substance-card' + (open ? ' open' : '') +
+         '" style="--substance:' + substanceColor(index) +
+         '"><header><button class="aid-substance-pill" ' +
+         'data-select-substance="' + index + '"><span class="aid-substance-swatch"></span><span>' +
+         escapeText(substanceName(state, index)) + '</span></button></header>' +
+         '<div class="aid-hormone-tiles">' + tiles + '</div></section>';
 }
+// The body's own signals: maturity, to which cells can work or die, and the energy reserve, which
+// a blood sense can feel.
 function bodySignalsCard() {
   const row = (key, body) => '<div class="aid-card-row"><span>' + label('hormoneCard.' + key) +
-                             '</span><div>' + body + '</div></div>';
+                             '</span><div class="aid-hormone-tiles">' + body + '</div></div>';
   return '<section class="aid-substance-card body"><header><strong>' + label('hormoneCard.body') +
          '</strong></header>' +
-         row('maturity', hormoneTile('phase', 'start', label('hormoneCard.phaseStart')) +
-                             hormoneTile('phase', 'end', label('hormoneCard.phaseEnd'))) +
-         row('reserve', hormoneTile('reserve', 'blood', label('hormoneCard.reserveSense'))) +
+         row('maturity',
+             hormoneTile('phase', 'start', label('hormoneCard.phaseStart'), PHASE_ICON.start) +
+                 hormoneTile('phase', 'end', label('hormoneCard.phaseEnd'), PHASE_ICON.end)) +
+         row('reserve', hormoneTile('reserve', 'blood', label('hormoneCard.reserveSense'),
+                                    STUDIO_ICON.blood)) +
          '</section>';
 }
 export function hormoneLibrary(state) {

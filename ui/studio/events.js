@@ -469,6 +469,7 @@ export const FISH_CLICKS = Object.freeze([
     '[data-select-substance]',
     (studio, e) => showChoice(studio, state => {
       state.focusSubstance = Number(e.dataset.selectSubstance);
+      state.selected = null;
     }, true)
   ],
   // A click on nothing on the fish chooses nothing and drops a wire begun.

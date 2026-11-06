@@ -352,8 +352,6 @@
       "half": "halbe Bindung",
       "steepness": "Steilheit"
     },
-    "releases": "gibt ab",
-    "learns": "lernt",
     "teaches": "Lehrt",
     "beat": "Ruhe und Takt",
     "beatSteps": "ein Schlag alle {n} Schritte",
@@ -873,27 +871,37 @@
     "sources": "Quellen",
     "can": "Kann",
     "acts": "Wirkt auf",
-    "gland": "+ Drüse",
+    "gland": "Drüse",
+    "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tiles": [
       "erregen",
-      "Lernen steigern",
-      "Wettbewerb schärfen",
-      "Merkspur setzen",
-      "Rhythmus treiben",
-      "Ausgabe dämpfen",
-      "Zellen sterben lassen"
+      "fördern",
+      "konkurrieren",
+      "merken",
+      "takten",
+      "dämpfen",
+      "töten"
+    ],
+    "tileTitles": [
+      "Die Zelle feuert stärker, solange der Stoff da ist",
+      "Die Zelle lernt schneller, solange der Stoff da ist",
+      "Die Zelle setzt sich gegen ihre Nachbarn durch",
+      "Die Zelle merkt sich, was gerade zusammen feuerte",
+      "Die Zelle schlägt im Takt des Stoffs",
+      "Die Zelle gibt weniger weiter",
+      "Die Zelle stirbt bei viel Stoff"
     ],
     "effects": [
       "erregt",
-      "steigert Lernen",
+      "fördert Lernen",
       "schärft Wettbewerb",
       "setzt Merkspur",
       "treibt Rhythmus",
       "dämpft Ausgabe",
-      "lässt Zellen sterben"
+      "tötet Zellen"
     ],
-    "growsOn": "Dieser Stoff lässt den Fisch wachsen. Klicken: keiner.",
-    "growsOff": "Klicken: Dieser Stoff lässt den Fisch wachsen.",
+    "growsOn": "lässt den Fisch wachsen",
+    "growsOff": "lässt den Fisch nicht wachsen",
     "probe": "Probe",
     "body": "Körpersignale",
     "maturity": "Reife",

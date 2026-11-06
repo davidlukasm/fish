@@ -6,9 +6,13 @@ import {
   boundEffects,
   chosenCenter,
   findCenter,
+  growsWith,
   lifePhase,
   NOTICEABLE_AFFINITY,
   organTypes,
+  producers,
+  receivers,
+  SUBSTANCE_NAME_LENGTH,
   substanceRead,
   teachersOf,
   typeOfCenter,
@@ -16,10 +20,11 @@ import {
   wheelPlace,
   wheelSigma
 } from '../model/document.js';
-import {escapeText, fixed, pointMarks, trackShare, widthTrack} from './markup.js';
+import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
-import {heading, label} from './kit.js';
-import {centerTitle} from './names.js';
+import {heading, icon, ICON, label} from './kit.js';
+import {EFFECT_ICON} from './icons.js';
+import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
 
@@ -518,14 +523,60 @@ export function receptorEditor(state, center, effects, effect, name) {
            widthTarget : target
          });
 }
+// The substance chosen in the library: its name, whether the fish grows by it (and how), the
+// glands releasing it and what it acts on, its trial dose and the removal; what it does on a
+// cell is set on the cell.
+const GROW_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
+export function substanceInspector(state) {
+  const {document : doc, capabilities : wheel} = state;
+  const substance = doc.substances.find(s => s.index === state.focusSubstance);
+  if (!substance || !wheel)
+    return '<header class="aid-inspector-head">' + heading(label('hormoneCard.title')) +
+           '</header>';
+  const index = substance.index, grows = growsWith(doc, index, wheel);
+  const fallback = substanceName(state, index);
+  const list = organs =>
+      organs
+          .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
+                    icon(o.type, ICON.list) + escapeText(organTitle(o, state.sites)) + '</button>')
+          .join('');
+  const acts = organsOf(doc, receivers(doc, index, wheel)).map(o => {
+    const effects = new Set(o.centers.flatMap(c => boundEffects(c, index, wheel)));
+    return '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, ICON.list) +
+           escapeText(organTitle(o, state.sites)) +
+           [...effects ]
+               .map(e => '<span class="aid-bound-effect" title="' +
+                         escapeText(tList('studio.hormoneCard.effects')[e]) + '">' +
+                         glyph(EFFECT_ICON[e], ICON.mark, {line : true}) + '</span>')
+               .join('') +
+           '</button>';
+  });
+  const row = (key, body) => body ? '<div class="aid-card-row"><span>' +
+                                        label('hormoneCard.' + key) + '</span><div>' + body +
+                                        '</div></div>'
+                                  : '';
+  return '<header class="aid-inspector-head" style="--substance:' + substanceColor(index) +
+         '"><span class="aid-substance-swatch"></span><input class="aid-inline-name ' +
+         'aid-inline-title" data-substance-name="' + index + '" value="' +
+         escapeText(substance.name) + '" placeholder="' + escapeText(fallback) + '" maxlength="' +
+         SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') +
+         '"></header><button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
+         (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
+         grows + '">' + glyph(GROW_MARK, ICON.mark, {line : true}) + '<span>' +
+         label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '</span></button>' +
+         (grows ? growthEditor(state) : '') +
+         row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
+         row('acts', acts.join('')) + measurement(state, index) +
+         '<button class="aid-danger" data-remove-substance="' + index + '">' +
+         label('inspector.removeSubstance') + '</button>';
+}
 export function hormoneInspector(state) {
   const {document : doc, selected} = state;
-  let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
-             heading(label('tools.hormone')) + '</header>';
   const focus = chosenCenter(doc, selected);
   if (!focus)
-    return html + growthEditor(state) + '<p class="aid-hint">' + label('hormoneCard.dropHint') +
-           '</p>';
+    return substanceInspector(state);
+  let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
+             heading(label('tools.hormone')) + '</header>';
   // Only the effects the engine gives this kind of cell.
   const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
   const effect = effects.includes(state.effect) ? state.effect : effects[0];

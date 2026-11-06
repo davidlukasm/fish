@@ -1,8 +1,9 @@
 import {fishOutline} from './body.js';
 import {nodeLocation} from './places.js';
-import {escapeText, fixed} from './markup.js';
+import {fixed, placedGlyph} from './markup.js';
+import {HORMONE_EFFECT} from '../../schema.js';
+import {EFFECT_ICON} from './icons.js';
 import {substanceColor} from '../../hormones.js';
-import {t} from '../../strings.js';
 import {
   allCenters,
   boundEffects,
@@ -22,35 +23,55 @@ import {steadyAt, zoomOf} from './frame.js';
 // Where a substance acts, with the hormone tool: the glands that release it, the cells that bind
 // it and learn from it, and the ways between them; with the learning tool a center's teachers.
 
-// Glands release, receivers carry a ring, learning cells a second one and the word: what the
-// substance teaches them.
+// Glands release the substance as a cloud spreading from them (PUFFS rings); receivers carry a
+// ring and above it the symbol of what the substance does to them (EFFECT_ICON), learning cells
+// a second ring and the learning symbol: what the substance teaches them.
 // A gland's glyph PRODUCER wide, a receiver's RECEIVER; a learner's second ring TEACH times as
-// wide, its word WORD above; the glyph shows at least FAINTEST, fully where bound fully.
-const HORMONE_GLYPH =
-    Object.freeze({producer : 16, receiver : 12, teach : 1.5, word : 1.7, faintest : .28});
+// wide; symbols SYMBOL wide, SYMBOL_GAP apart, ABOVE the glyph; the glyph shows at least
+// FAINTEST, fully where bound fully.
+const HORMONE_GLYPH = Object.freeze({
+  producer : 16,
+  receiver : 12,
+  teach : 1.5,
+  puffs : 3,
+  symbol : 11,
+  symbol_gap : 2,
+  above : 1.9,
+  faintest : .28
+});
+const effectSymbols = (effects, r) => {
+  const G = HORMONE_GLYPH, step = G.symbol + G.symbol_gap;
+  return effects
+      .map((effect, k) =>
+               placedGlyph(EFFECT_ICON[effect], G.symbol,
+                           {x : (k - (effects.length - 1) / 2) * step, y : -r * G.above}))
+      .join('');
+};
 // The way from the nearest gland to a receiver bows CURVE more than a wire, at least FAINTEST
 // and up to FAINTEST + SPAN opaque by how strongly it binds.
 const HORMONE_WAY = Object.freeze({curve : 17, faintest : .1, span : .33});
 function hormoneGlyph(item, kind, color, zoom) {
   const G = HORMONE_GLYPH, r = kind === 'producer' ? G.producer : G.receiver;
-  const word = item.quiet            ? ''
-               : kind === 'producer' ? 'studio.inspector.releases'
-               : item.teach          ? 'studio.inspector.learns'
-                                     : '';
+  const cloud = kind === 'producer' && !item.quiet
+                    ? '<g class="aid-hormone-cloud">' +
+                          Array.from({length : G.puffs}, () => '<circle r="' + r + '"/>').join('') +
+                          '</g>'
+                    : '';
+  const symbols =
+      kind === 'receiver'
+          ? effectSymbols(item.teach ? [ HORMONE_EFFECT.learning ] : item.effects ?? [], r)
+          : '';
   return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') + '"' +
          steadyAt(item.pos, zoom) + ' style="--hormone:' + color +
-         ';opacity:' + fixed(G.faintest + (1 - G.faintest) * item.affinity) + '">' +
+         ';opacity:' + fixed(G.faintest + (1 - G.faintest) * item.affinity) + '">' + cloud +
          '<circle class="aid-hormone-aura" r="' + r + '"/>' +
          (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * G.teach) + '"/>' : '') +
          '<circle class="aid-hormone-core' + (item.focus ? ' focused' : '') + '" r="' +
          fixed(r / 2) + '"/>' +
-         (word ? '<text class="aid-hormone-word" y="' + fixed(-r * G.word) +
-                     '" text-anchor="middle">' + escapeText(t(word)) + '</text>'
-               : '') +
-         '</g>';
+         (symbols ? '<g class="aid-hormone-symbols">' + symbols + '</g>' : '') + '</g>';
 }
-// Glands close together, as a pair beside the midline, share one word, on the topmost: those
-// within WORD_GAP screen pixels below a worded one stay quiet.
+// Glands close together, as a pair beside the midline, share one cloud, on the topmost: those
+// within WORD_GAP screen pixels below one with a cloud stay quiet.
 const WORD_GAP = 60;
 function worded(items, zoom) {
   const speaking = [];
@@ -131,7 +152,8 @@ export function hormoneOverlay(state) {
           pos,
           affinity : Math.max(...effects.map(item => item.affinity)),
           focus : effects.some(item => item.effect === state.effect),
-          teach : learning.has(center.id)
+          teach : learning.has(center.id),
+          effects : effects.map(item => item.effect)
         });
     }
   // A body that grows with the substance carries its colour along its outline.
