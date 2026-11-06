@@ -6,6 +6,7 @@ import {escapeText} from './markup.js';
 import {percent, t} from '../../strings.js';
 import {hormoneLibrary, library, toolPalette} from './library.js';
 import {label} from './kit.js';
+import {GENOME_SUFFIX} from '../requests.js';
 
 // The studio's frame: the hub that leads to the aquarium and the atelier, and the atelier's
 // station with its header, library, scene and inspector.
@@ -74,13 +75,16 @@ function stationHeader(s) {
          '<span data-compile-progress role="status">' + compilerProgress(s) + '</span>' +
          '<button data-action="cancel-build"' + (!s.compileProgress ? ' hidden' : '') + '>' +
          label('compiler.cancel') + '</button></div>' +
-         '<input type="file" id="aid-genome-file" accept=".genome,text/plain" hidden/></header>';
+         '<input type="file" id="' + GENOME_FILE_ID + '" accept="' + GENOME_SUFFIX +
+         ',text/plain" hidden/></header>';
 }
+// The file input that opens a genome and the CPPN's scene, by their ids.
+export const GENOME_FILE_ID = 'aid-genome-file', CPPN_SCENE_ID = 'aid-cppn-scene';
 // The scene of the fish with its view options, or the CPPN's graph.
 function stationStage(s, cppn) {
   if (cppn)
     return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
-           '<div id="aid-cppn-scene" class="aid-scene-body">' + cppnGraph(s) + '</div>';
+           '<div id="' + CPPN_SCENE_ID + '" class="aid-scene-body">' + cppnGraph(s) + '</div>';
   return '<div class="aid-scene-top"><span>' + label('app.empty') +
          '</span><div class="aid-view-options">' +
          group(button('data-contacts="design"', label('tools.drawnContacts'),

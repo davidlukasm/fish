@@ -40,24 +40,30 @@ import {nodeLocation} from './view/places.js';
 import {inspector} from './view/panels.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
-import {cellStatus, hubShell, stationShell} from './view/shell.js';
+import {cellStatus, CPPN_SCENE_ID, GENOME_FILE_ID, hubShell, stationShell} from './view/shell.js';
 import {measureReading} from './view/substances.js';
 import {hormoneLibrary, library, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
-import {API, API_WAIT, requestBody} from './requests.js';
+import {API, API_WAIT, GENOME_SUFFIX, requestBody} from './requests.js';
 import {MEASURE_LEVEL, trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 
+// The Atelier's controller: the station's state, its draft and history, and how the views follow
+// them. Its methods for parts of the work live beside it and are mixed in: the engine's view of
+// the draft (design.js), the graphics' handles (handles.js), dropping from the library
+// (drops.js), trials on the developed fish (trials.js) and the pointer on the scene
+// (gestures.js). What clicks and changes do stands in tables (events.js; cppn.js for the genome
+// mode); the model (model/) and the views (view/) know nothing of the controller.
 let instance = null;
 // An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 // The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
 // BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back.
 const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40;
-// A genome file ends in GENOME_SUFFIX; its name keeps letters, digits, umlauts, '-' and spaces.
-const GENOME_SUFFIX = '.genome', FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
+// A genome file's name keeps letters, digits, umlauts, '-' and spaces.
+const FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
 export class OrganStudio {
   constructor(root) {
     this.root = root;
@@ -276,7 +282,7 @@ export class OrganStudio {
     if (this.state.station !== 'studio')
       return;
     const target = this.root.querySelector(this.state.mode === 'fish' ? '.aid-scene-frame'
-                                                                      : '#aid-cppn-scene');
+                                                                      : '#' + CPPN_SCENE_ID);
     if (target)
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();
@@ -639,7 +645,7 @@ export class OrganStudio {
       findOrgan(doc, element.dataset.compilerOpen).openContacts = element.checked;
       return this.changeDocument(doc);
     }
-    if (element.id === 'aid-genome-file') {
+    if (element.id === GENOME_FILE_ID) {
       const file = element.files?.[0];
       if (!file)
         return;

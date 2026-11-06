@@ -39,6 +39,7 @@ import {
 } from './model/assemblies.js';
 import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
+import {GENOME_FILE_ID} from './view/shell.js';
 
 // What a click in the studio does, by what it lands on. Each table lists selectors in the order
 // they are tried; the first one the click's target lies in handles it (studio, the element it
@@ -75,7 +76,7 @@ const ACTIONS = Object.freeze({
   develop : studio => studio.develop(),
   eggs : studio => studio.placeEggs(),
   download : studio => studio.download(),
-  open : studio => studio.root.querySelector('#aid-genome-file')?.click()
+  open : studio => studio.root.querySelector('#' + GENOME_FILE_ID)?.click()
 });
 
 // Anywhere: the header's actions, the compiler's issues and the modes.

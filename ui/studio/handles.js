@@ -230,8 +230,7 @@ export const handleMethods = {
       const patch = pad.handle?.(fx, fy, control.element);
       if (!patch)
         return;
-      this.changeDocument(updateCenter(doc, control.id, patch), this.state.selected, false,
-                          'graphic:' + control.id);
+      this.tuneDesign(updateCenter(doc, control.id, patch), 'graphic:' + control.id);
       this.refreshInspector();
       return;
     }
@@ -270,7 +269,7 @@ export const handleMethods = {
     const changed = setOrganNodes(doc, found.organ.id, count, this.state.sites, type.id);
     if (!changed)
       return this.notice(label('status.noRoom'));
-    this.changeDocument(changed, this.state.selected, false, 'amount:' + control.id);
+    this.tuneDesign(changed, 'amount:' + control.id);
     this.refreshPigment();
   },
   // A sensitivity graphic's owner: a colour type of a field organ, or a sensory center.
@@ -309,8 +308,8 @@ export const handleMethods = {
     if (drag.field)
       this.editField(drag.field, {profile : {id : drag.block, threshold}}, false);
     else
-      this.changeDocument(updateCenter(this.state.document, drag.block, {threshold}),
-                          this.state.selected, false, 'threshold:' + drag.block);
+      this.tuneDesign(updateCenter(this.state.document, drag.block, {threshold}),
+                      'threshold:' + drag.block);
     this.refreshSensitivity();
   },
   // A receptor (or the body's growth receptor) follows its curve's handles and its halo on the
@@ -331,9 +330,9 @@ export const handleMethods = {
       patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
-    this.changeDocument(growth ? updateGrowth(doc, patch)
-                               : updateReceptor(doc, centerId, effect, patch),
-                        this.state.selected, false, 'receptor:' + drag.target);
+    this.tuneDesign(growth ? updateGrowth(doc, patch)
+                           : updateReceptor(doc, centerId, effect, patch),
+                    'receptor:' + drag.target);
     this.refreshInspector();
   },
   // Graphics whose handles change a center: rest activity, recovery and beat on the drive
@@ -350,7 +349,7 @@ export const handleMethods = {
                                        ? stretchPatch(fy)
                                        : drivePatch(drag.handle, fx, fy,
                                                     this.state.capabilities?.biasScale ?? 0));
-    this.changeDocument(doc, this.state.selected, false, 'drive:' + drag.id);
+    this.tuneDesign(doc, 'drive:' + drag.id);
     this.refreshInspector();
   },
   // An effector organ's handles: its nodes, their strength, or a trait its function shapes.
@@ -368,7 +367,7 @@ export const handleMethods = {
             : setMuscleTrait(doc, drag.code, patch.trait, patch.value, this.state.sites);
     if (!changed)
       return;
-    this.changeDocument(changed, this.state.selected, false, 'effector:' + drag.id);
+    this.tuneDesign(changed, 'effector:' + drag.id);
     this.refreshInspector();
   },
   // The time constant follows the handle; the curve stretches with it in time.
@@ -378,8 +377,7 @@ export const handleMethods = {
         adaptationSteps(pointerShare(event, drag.rect).fx, drag.adapt.response.length - 1);
     const tau = timeConstantOf(steps);
     drag.stretch = timeConstantSteps(tau) / drag.adapt.steps;
-    this.changeDocument(updateCenter(this.state.document, drag.id, {tau}), this.state.selected,
-                        false, 'tau:' + drag.id);
+    this.tuneDesign(updateCenter(this.state.document, drag.id, {tau}), 'tau:' + drag.id);
     this.refreshSensitivity();
   },
   spectrumPointer(event) {
@@ -444,6 +442,9 @@ export const handleMethods = {
       this.editField(organ.id, patch, false);
   },
   // The pointer holds a handle: it follows from here until the let-go.
+  // A handle tunes the design as it moves: the selection stays, the inspector keeps its graphics
+  // (the handle redraws what it changes), and one step of history holds the whole drag (`batch`).
+  tuneDesign(doc, batch) { return this.changeDocument(doc, this.state.selected, false, batch);},
   holdHandle(event, held, drag) {
     this.handleDrag = {held, ...drag};
     event.preventDefault();
