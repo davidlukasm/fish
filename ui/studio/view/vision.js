@@ -13,72 +13,122 @@ import {sensitivityElement} from './sensitivity.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
-import {fieldOrigin} from './places.js';
+import {EYE, eyeRadius, fieldOrigin} from './places.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
-import {BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
+import {BODY_MIDDLE, BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
 import {planOfUnit, unitOfPlan} from '../../tuning.js';
-import {steadyAt, zoomOf} from './frame.js';
+import {finSizes, fishPath, steadyAt, zoomOf} from './frame.js';
 
 const label = key => t('studio.vision.' + key);
 // The test light's size knob, in frame units.
 const LIGHT_KNOB = 6;
-// A field reaches as deep as the grown fish sees, like the fans in the Aquarium; its handles stay
-// within HANDLE_RADIUS of the eye, where they can be reached.
-const HANDLE_RADIUS = 235;
-// Field handles: the resolution handle at RESOLUTION_REACH of the handle radius, density rings
-// DENSITY_STEP apart from DENSITY_START.
+// A field reaches as deep as the grown fish sees, like the fans in the Aquarium. Its rays run from
+// where the engine's eye looks from, which lies elsewhere in the fish than the eye drawn at its
+// side, but it shows only outside the fish and outside a circle around the drawn eye, the cut,
+// which reaches CUT.margin past the eye's glyph and past the engine's eye. Its handles lie on
+// rings around the drawn eye, the edges' HANDLE.reach past the cut and at least HANDLE.radius out.
+const HANDLE = Object.freeze({radius : 235, reach : 150});
+const CUT = Object.freeze({margin : 10});
+// Field handles: the resolution handle RESOLUTION_REACH of the way from the cut to the edges'
+// ring, density rings DENSITY_STEP apart from DENSITY_START past the cut.
 const FIELD = Object.freeze(
-    {resolution_reach : .77, density_start : 45, density_step : 7, density_max : 16, mark : 7});
+    {resolution_reach : .77, density_start : 14, density_step : 7, density_max : 16, mark : 7});
+// Where the engine's eye of a side looks from (anatomy.eyePlaces: body radii along the body and
+// across it), in frame units; null before the design view answers.
+function enginePlace(anatomy, side) {
+  const place = anatomy?.eyePlaces?.[sideIndex(side)];
+  return place ? {
+    x : BODY_MIDDLE.x - place[0] * BODY_RADIUS,
+    y : BODY_MIDDLE.y + place[1] * BODY_RADIUS
+  }
+               : null;
+}
+const distance = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 export function visionGeometry(state, organ) {
-  const origin = fieldOrigin(state.document, state.sites, organ);
-  if (!origin)
+  const eye = fieldOrigin(state.document, state.sites, organ);
+  if (!eye)
     return null;
-  const a = state.anatomy;
-  return {
+  const a = state.anatomy, origin = enginePlace(a, sideOf(organ)) ?? eye;
+  const g = {
     origin,
-    radius : a?.visionDepth > 0 ? a.visionDepth * BODY_RADIUS : HANDLE_RADIUS,
-    handle : HANDLE_RADIUS,
+    eye,
+    radius : a?.visionDepth > 0 ? a.visionDepth * BODY_RADIUS : HANDLE.radius,
     // Frame units per world unit.
     world : a?.bodyRadius > 0 ? BODY_RADIUS / a.bodyRadius : null,
-    pointText(angle, radius = HANDLE_RADIUS) {
+    // The point at an angle from the origin and a distance from it.
+    pointText(angle, radius) {
       const r = radians(angle);
       return {x : origin.x - radius * Math.cos(r), y : origin.y + radius * Math.sin(r)};
+    },
+    // The point at an angle from the origin on the ring of a radius around the drawn eye.
+    ring(angle, radius) {
+      const r = radians(angle), ux = -Math.cos(r), uy = Math.sin(r);
+      const ox = origin.x - eye.x, oy = origin.y - eye.y, b = ox * ux + oy * uy;
+      const t = -b + Math.sqrt(Math.max(0, b * b - (ox * ox + oy * oy - radius * radius)));
+      return {x : origin.x + t * ux, y : origin.y + t * uy};
     }
   };
+  g.cut =
+      CUT.margin +
+      Math.max(distance(origin, eye),
+               organ.type === 'eye' ? eyeRadius(state.document, sideOf(organ)) * EYE.aspect : 0);
+  g.handle = Math.max(HANDLE.radius, g.cut + HANDLE.reach);
+  return g;
 }
 // How deep a near sense senses: an object at its depth counts half, one twice as far a quarter
 // (proximity_depth in src/retina.cc); its range moves the depth between the engine's least and
-// most. Depths reach many body lengths, so the fan shows them on a log scale from NEAR.inner of the
-// fan's handle radius at the least depth to its full radius at the most, with rings at whole
-// body lengths doubling outward and the fill fading as the sense does over NEAR.stops.
+// most. Depths reach many body lengths, so the fan shows them on a log scale from its cut at the
+// least depth to its handles' ring at the most, with rings at whole body lengths doubling outward
+// and the fill fading as the sense does over NEAR.stops.
 // Its handle sits NEAR.handle of the way from the fan's start to its end, clear of the density
 // handle in the middle.
-const NEAR = Object.freeze({inner : .25, stops : 12, fill : .5, handle : .25});
+const NEAR = Object.freeze({stops : 12, fill : .5, handle : .25});
 function nearScale(state, profile, g) {
   const [least, most] = state.capabilities?.nearDepth ?? [];
   const body = state.anatomy?.bodyRadius;
   if (!(least > 0) || !(body > 0))
     return null;
   const depth = least * (most / least) ** unitOfPlan(profile.q2);
-  const at = d =>
-      g.handle * (NEAR.inner + (1 - NEAR.inner) * Math.log(d / least) / Math.log(most / least));
-  const depthAt = r => least * (most / least) ** ((r / g.handle - NEAR.inner) / (1 - NEAR.inner));
+  const span = g.handle - g.cut;
+  const at = d => g.cut + span * Math.log(d / least) / Math.log(most / least);
+  const depthAt = r => least * (most / least) ** ((r - g.cut) / span);
   const length = 2 * body, rings = [];
   for (let l = 1; l * length <= most; l *= 2)
     if (l * length >= least)
       rings.push({lengths : l, radius : at(l * length)});
   const stops = Array.from({length : NEAR.stops + 1}, (_, k) => {
-    const f = k / NEAR.stops, d = f < NEAR.inner ? least * f / NEAR.inner : depthAt(f * g.handle);
+    const f = k / NEAR.stops, r = f * g.handle, d = r < g.cut ? least * r / g.cut : depthAt(r);
     return {offset : f, weight : 2 ** (-d / depth)};
   });
   return {depth, least, most, length, radius : at(depth), rings, stops};
 }
+// A field's sector from its origin out to a distance (`sector`) or to a ring around the drawn
+// eye (`ringSector`).
+const arcFlag = (left, right) => right - left > FULL_TURN / 2 ? 1 : 0;
 const sector = (g, left, right, radius) => {
   if (right < left)
     [left, right] = [ right, left ];
   return `M${pointText(g.origin)} L${pointText(g.pointText(left, radius))} A${radius} ${radius} 0 ${
-      right - left > FULL_TURN / 2 ? 1 : 0} 0 ${pointText(g.pointText(right, radius))} Z`;
+      arcFlag(left, right)} 0 ${pointText(g.pointText(right, radius))} Z`;
 };
+const ringSector = (g, left, right, radius) => {
+  if (right < left)
+    [left, right] = [ right, left ];
+  return `M${pointText(g.origin)} L${pointText(g.ring(left, radius))} A${radius} ${radius} 0 ${
+      arcFlag(left, right)} 0 ${pointText(g.ring(right, radius))} Z`;
+};
+// What hides a field: the fish, and the circle of its cut; each clips everything around its origin
+// as far as the field reaches (`id` with -body and -cut).
+function fieldClips(g, id) {
+  const reach = Math.max(g.radius, g.handle * BANDS.reach) + g.cut, side = 2 * reach, c = g.cut;
+  const around = `M${fixed(g.origin.x - reach)} ${fixed(g.origin.y - reach)}h${fixed(side)}v${
+      fixed(side)}h${fixed(-side)}Z `;
+  const clip = (key, d) =>
+      `<clipPath id="${id}-${key}"><path clip-rule="evenodd" d="${around}${d}"/></clipPath>`;
+  return clip('body', fishPath(finSizes(), false)) +
+         clip('cut', `M${fixed(g.eye.x - c)} ${fixed(g.eye.y)}a${fixed(c)} ${fixed(c)} 0 1 0 ${
+                         fixed(2 * c)} 0a${fixed(c)} ${fixed(c)} 0 1 0 ${fixed(-2 * c)} 0Z`);
+}
 // A near sense's ray shows at least RAY_FAINTEST, fully where its cell answers fully.
 const RAY_FAINTEST = .15;
 // The cells of a field organ as the engine made them: each light or near-sense receptor of the
@@ -152,10 +202,10 @@ export function tectumBands(state) {
       continue;
     const side = sideSign(eye.side), reach = g.handle * BANDS.reach;
     for (let k = 0; k <= bands; ++k)
-      html += `<path d="M${pointText(g.origin)} L${
-          pointText(g.pointText(side * (lo + k * step), reach))}"/>`;
+      html += `<path d="M${pointText(g.ring(side * (lo + k * step), g.cut))} L${
+          pointText(g.ring(side * (lo + k * step), reach))}"/>`;
     for (let k = 0; k < bands; ++k) {
-      const p = g.pointText(side * (lo + (k + .5) * step), g.handle * BANDS.label);
+      const p = g.ring(side * (lo + (k + .5) * step), g.handle * BANDS.label);
       html += `<text x="${fixed(p.x)}" y="${fixed(p.y)}" text-anchor="middle">${k + 1}</text>`;
     }
   }
@@ -166,56 +216,57 @@ export function testLightMarkup(state, organ) {
   return g ? testLight(state, organ, g) : '';
 }
 // A near sense's field on its depth scale, shaded by how near things are felt, with rings at
-// lengths of the fish.
-function nearField(organ, g, near, [ lo, hi ], radius) {
+// lengths of the fish, all on rings around the drawn eye.
+function nearField(organ, g, near, [ lo, hi ]) {
   const id = `aid-near-${idSafe(organ.id)}`;
-  return `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${fixed(g.origin.x)}" cy="${
-             fixed(g.origin.y)}" r="${fixed(g.handle)}">${
+  return `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${fixed(g.eye.x)}" cy="${
+             fixed(g.eye.y)}" r="${fixed(g.handle)}">${
              near.stops
                  .map(s => `<stop offset="${
                           fixed(s.offset)}" stop-color="currentColor" stop-opacity="${
                           fixed(NEAR.fill * s.weight)}"/>`)
                  .join('')}</radialGradient>` +
-         `<path d="${sector(g, lo, hi, radius)}" class="aid-vision-union" style="fill:url(#${
+         `<path d="${ringSector(g, lo, hi, g.handle)}" class="aid-vision-union" style="fill:url(#${
              id});fill-opacity:1"/>` +
          near.rings
-             .map(ring => `<path d="M${pointText(g.pointText(lo, ring.radius))} A${
-                      fixed(ring.radius)} ${fixed(ring.radius)} 0 0 0 ${
-                      pointText(g.pointText(hi, ring.radius))}" class="aid-near-ring"/><text x="${
-                      fixed(g.pointText(hi, ring.radius).x)}" y="${
-                      fixed(g.pointText(hi, ring.radius).y)}" class="aid-near-label">${
+             .map(ring => `<path d="M${pointText(g.ring(lo, ring.radius))} A${fixed(ring.radius)} ${
+                      fixed(ring.radius)} 0 0 0 ${
+                      pointText(g.ring(hi, ring.radius))}" class="aid-near-ring"/><text x="${
+                      fixed(g.ring(hi, ring.radius).x)}" y="${
+                      fixed(g.ring(hi, ring.radius).y)}" class="aid-near-label">${
                       ring.lengths}</text>`)
              .join('');
 }
 // Every cell of the organ is one ray along its middle, as bright as it answers; a chosen node's
 // cells also show the whole field each of them sees. Before the engine answers, the design's
-// rays stand in for them.
-function cellRays(state, organ, g, profile, rays, chosenNode, radius) {
+// rays stand in for them. Fields and rays reach as far as `reach` says.
+function cellRays(state, organ, g, profile, rays, chosenNode, reach) {
   const cells = organCells(state, organ);
   let html = '';
   for (const cell of cells.filter(c => c.center.id === chosenNode)) {
     const [from, to] =
         [ RECEPTOR.view_left, RECEPTOR.view_right ].map(k => degrees(cell.receptor[k]));
-    html += `<path d="${sector(g, Math.min(from, to), Math.max(from, to), radius)}" ` +
+    html += `<path d="${reach.outline(Math.min(from, to), Math.max(from, to))}" ` +
             `class="aid-vision-cell-field"/>`;
   }
   for (const cell of cells) {
     const angle = degrees(cell.receptor[RECEPTOR.angle]);
-    html += `<path d="M${pointText(g.origin)} L${
-        pointText(g.pointText(angle, radius))}" class="aid-vision-ray${
-        cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
-        profileColor(
-            organ.field.profiles.find(p => p.id === cell.center.profile) ??
-            profile)};opacity:${fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * cell.answer)}"/>`;
+    html +=
+        `<path d="M${pointText(g.origin)} L${pointText(reach.end(angle))}" class="aid-vision-ray${
+            cell.center.id === chosenNode ? ' chosen' : ''}" style="stroke:${
+            profileColor(
+                organ.field.profiles.find(p => p.id === cell.center.profile) ??
+                profile)};opacity:${fixed(RAY_FAINTEST + (1 - RAY_FAINTEST) * cell.answer)}"/>`;
   }
   if (!cells.length)
     for (const ray of rays)
       html += `<path d="M${pointText(g.origin)} L${
-          pointText(g.pointText(ray.angle, radius))}" class="aid-vision-ray pending"/>`;
+          pointText(reach.end(ray.angle))}" class="aid-vision-ray pending"/>`;
   return html;
 }
 // The field's handles: its edges, its resolution beside the middle ray, its density and a near
-// sense's depth. Handles keep their size on screen at any zoom, as organ stamps do.
+// sense's depth, on rings around the drawn eye. Handles keep their size on screen at any zoom, as
+// organ stamps do.
 function fieldHandles(state, organ, g, near, middle) {
   const zoom = zoomOf(state), f = organ.field;
   const handle = (key, p, value) => `<g class="aid-vision-handle" data-vision-handle="${
@@ -225,18 +276,18 @@ function fieldHandles(state, organ, g, near, middle) {
       Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
       key === 'distance' ? `<title>${label('distanceTitle')}</title>` : ''}</g>`;
   return (near ? handle('distance',
-                        g.pointText(organ.side * (f.lo + NEAR.handle * (f.hi - f.lo)), near.radius),
+                        g.ring(organ.side * (f.lo + NEAR.handle * (f.hi - f.lo)), near.radius),
                         near.depth / near.length)
                : '') +
-         handle('lo', g.pointText(organ.side * f.lo), f.lo) +
-         handle('hi', g.pointText(organ.side * f.hi), f.hi) +
+         handle('lo', g.ring(organ.side * f.lo, g.handle), f.lo) +
+         handle('hi', g.ring(organ.side * f.hi, g.handle), f.hi) +
          handle('resolution',
-                g.pointText(middle.angle + organ.side * receptorWidth(f.resolution),
-                            g.handle * FIELD.resolution_reach),
+                g.ring(middle.angle + organ.side * receptorWidth(f.resolution),
+                       g.cut + (g.handle - g.cut) * FIELD.resolution_reach),
                 2 * receptorWidth(f.resolution)) +
          handle('density',
-                g.pointText(organ.side * (f.lo + f.hi) / 2,
-                            FIELD.density_start + f.density * FIELD.density_step),
+                g.ring(organ.side * (f.lo + f.hi) / 2,
+                       g.cut + FIELD.density_start + f.density * FIELD.density_step),
                 f.density);
 }
 export function visionFan(state, organ) {
@@ -254,24 +305,30 @@ export function visionFan(state, organ) {
   if (!rays.length)
     return '';
   // Only the chosen organ's field reaches as far as the fish sees, a near sense on its depth
-  // scale; the others stay a hint.
+  // scale; the others stay a hint as far as the handles' ring. A field not chosen picks its organ.
   const near = organ.type === 'proximity' ? nearScale(state, profile, g) : null;
-  const radius = selected && !near ? g.radius : Math.min(g.radius, g.handle);
+  const deep = selected && !near, hint = Math.max(g.cut, Math.min(g.radius, g.handle));
+  const reach = {
+    outline : (left, right) =>
+        deep ? sector(g, left, right, g.radius) : ringSector(g, left, right, hint),
+    end : angle => deep ? g.pointText(angle, g.radius) : g.ring(angle, hint)
+  };
   const span = [ Math.min(...rays.map(r => r.left)), Math.max(...rays.map(r => r.right)) ];
+  const id = idSafe(organ.id), clip = `aid-fan-${id}`;
   const open = `<g class="aid-vision-fan${organ.type === 'proximity' ? ' near' : ''}${
-      selected
-          ? ' selected'
-          : ''}" data-vision-organ="${idSafe(organ.id)}" style="color:${profileColor(profile)}">`;
+      selected ? ' selected'
+               : ''}" data-vision-organ="${id}" style="color:${profileColor(profile)}">${
+      fieldClips(g, clip)}<g clip-path="url(#${clip}-body)"><g clip-path="url(#${clip}-cut)">`;
   const field = near && selected
-                    ? nearField(organ, g, near, span, radius)
-                    : `<path d="${sector(g, span[0], span[1], radius)}" class="aid-vision-union"/>`;
+                    ? nearField(organ, g, near, span)
+                    : `<path d="${reach.outline(...span)}" class="aid-vision-union"${
+                          selected ? '' : ` data-select-organ="${escapeText(organ.id)}"`}/>`;
   if (!selected)
-    return open + field + '</g>';
+    return open + field + '</g></g></g>';
   const middle = rays[Math.floor(rays.length / 2)];
   return open + field + seenLight(state, organ, g) +
-         `<path d="${
-             sector(g, middle.left, middle.right, radius)}" class="aid-vision-resolution"/>` +
-         cellRays(state, organ, g, profile, rays, chosenNode, radius) +
+         `<path d="${reach.outline(middle.left, middle.right)}" class="aid-vision-resolution"/>` +
+         cellRays(state, organ, g, profile, rays, chosenNode, reach) + '</g></g>' +
          fieldHandles(state, organ, g, near, middle) + testLight(state, organ, g) + '</g>';
 }
 // The colour of a colour type: its tuning with the engine's balance, the test light's hue.
@@ -369,10 +426,11 @@ export function visionDragPatch(state, organ, key, p) {
   const angle = degrees(Math.atan2(dy, dx));
   if (key === 'lo' || key === 'hi')
     return {[key] : clamp(angle * organ.side, 0, HALF_VIEW)};
+  const ring = distance(p, g.eye);
   if (key === 'density')
     return {
-      density : clamp(Math.round((Math.hypot(dx, dy) - FIELD.density_start) / FIELD.density_step),
-                      1, FIELD.density_max)
+      density : clamp(Math.round((ring - g.cut - FIELD.density_start) / FIELD.density_step), 1,
+                      FIELD.density_max)
     };
   if (key === 'resolution') {
     const rays = retinalRays(organ, state.sites)
@@ -396,7 +454,7 @@ export function visionDragPatch(state, organ, key, p) {
   if (key === 'distance') {
     const profile =
         organ.field.profiles.find(p => p.id === state.visionProfile) ?? organ.field.profiles[0];
-    const unit = (Math.hypot(dx, dy) / g.handle - NEAR.inner) / (1 - NEAR.inner);
+    const unit = (ring - g.cut) / (g.handle - g.cut);
     return {profile : {id : profile.id, q2 : planOfUnit(clamp(unit, 0, 1))}};
   }
   if (key === 'probe')

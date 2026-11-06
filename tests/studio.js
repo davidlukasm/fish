@@ -42,15 +42,15 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "7872c03eef689ac0",
+  "src/retina.cc" : "d0168766edb9ae49",
   "src/observations.cc" : "bf8face7a41ea741",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
-  "src/retina.hh" : "2699500b47122562",
+  "src/retina.hh" : "a3a169f6e8f4cafd",
   "ui/fish_forms.js" : "11f5c7433615e5ae",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
   "ui/fish_fins.js" : "a07179737e1032b5",
-  "ui/fish_organs.js" : "77fe64bdf703f690",
+  "ui/fish_organs.js" : "3c712910190f3cdc",
   "ui/fish_painter.js" : "8a55c784199f5207",
   "src/brain_interface.hh" : "85423d9fc741249f",
   "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
@@ -1060,8 +1060,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(doc.organs.filter(o => o.type === type)
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
               type + ' remains selectable');
-  assert.deepEqual(vision.visionGeometry(rendered, currentEye).origin,
-                   views.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
+  // A field's rays start where the engine's eye looks from; the field shows outside a circle
+  // around the eye as drawn, past where its rays leave the body.
+  const fan = vision.visionGeometry(rendered, currentEye),
+        place = seen.eyePlaces[currentEye.side < 0 ? 0 : 1];
+  assert.deepEqual(fan.eye, views.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
+  assert.ok(
+      Math.abs(fan.origin.x - (geometry.BODY_MIDDLE.x - place[0] * geometry.BODY_RADIUS)) < 1e-9 &&
+      Math.abs(fan.origin.y - (geometry.BODY_MIDDLE.y + place[1] * geometry.BODY_RADIUS)) < 1e-9);
+  assert.ok(fan.cut > Math.hypot(fan.origin.x - fan.eye.x, fan.origin.y - fan.eye.y));
+  const onRing = fan.ring(currentEye.side * 45, fan.handle);
+  assert.ok(Math.abs(Math.hypot(onRing.x - fan.eye.x, onRing.y - fan.eye.y) - fan.handle) < 1e-6);
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
   const withoutOptions = structuredClone(doc);
   delete withoutOptions.compiler;

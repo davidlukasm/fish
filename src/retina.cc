@@ -26,6 +26,26 @@ int proximity_bank(double range) {
 double proximity_depth(double range) {
   return NEAR_RANGE * std::pow(NEAR_SPAN, range);
 }
+std::optional<std::array<double, 2>> eye_view_place(const BrainInterface &binding,
+                                                    const EnvironmentParameters &env, int side) {
+  // Light and near-sense cells of a side measure from the eye's place.
+  const auto &light = binding.forms[BrainInterface::sense_form(field::Light, side)],
+             &near = binding.forms[BrainInterface::sense_form(field::Proximity, side)];
+  const double weight = light.weight + near.weight;
+  if (weight <= 0)
+    return std::nullopt;
+  // The cells' lateral centroid is a distance from the axis; its share of the head's half width
+  // at the seat sets how far out the eye lies.
+  const double centroid = (light.weight * light.x + near.weight * near.x) / weight,
+               half_width = std::abs(binding.eye_positions[side][1]),
+               share = half_width > tolerance::negligible ? centroid / half_width : 0;
+  return std::array<double, 2>{
+      binding.eye_positions[side][0],
+      (side ? 1 : -1) *
+          std::max(binding.eye_clearance / 2,
+                   half_width * std::clamp(env.vision_eye_offset * share / DEFAULT_EYE_OFFSET, 0.,
+                                           EYE_OUTSET))};
+}
 std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &binding,
                                            const Field &world) {
   std::array<VisualEye, EYES> eyes{};
@@ -34,21 +54,10 @@ std::array<VisualEye, EYES> visual_origins(const Body &b, const BrainInterface &
   {
     const double radius = body_radius(b), ca = std::cos(b.angle), sa = std::sin(b.angle);
     for (int side = 0; side < EYES; ++side) {
-      // Light and near-sense cells of a side measure from the eye's place.
-      const auto &light = binding.forms[BrainInterface::sense_form(field::Light, side)],
-                 &near = binding.forms[BrainInterface::sense_form(field::Proximity, side)];
-      BrainInterface::OrganForm form{};
-      form.weight = light.weight + near.weight;
-      if (form.weight <= 0)
+      const auto place = eye_view_place(binding, world.env(), side);
+      if (!place)
         continue;
-      form.x = (light.weight * light.x + near.weight * near.x) / form.weight;
-      const double axial = radius * binding.eye_positions[side][0],
-                   lateral = radius * (side ? 1 : -1) *
-                             std::max(binding.eye_clearance / 2,
-                                      std::abs(binding.eye_positions[side][1]) *
-                                          std::clamp(world.env().vision_eye_offset * form.x /
-                                                         DEFAULT_EYE_OFFSET,
-                                                     0., EYE_OUTSET)),
+      const double axial = radius * (*place)[0], lateral = radius * (*place)[1],
                    dx = axial * ca - lateral * sa, dy = axial * sa + lateral * ca,
                    length = std::hypot(dx, dy);
       // Stop at the first obstacle even when the nominal point lies beyond a thin wall.

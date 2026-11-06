@@ -8,7 +8,8 @@ import {
   FIN_SHAPE,
   MOTOR_KIND,
   ORGAN_FORM,
-  REGION_LAYOUT
+  REGION_LAYOUT,
+  TOLERANCE
 } from './schema.js';
 import {FIN_STROKE, FINS} from './fin_stroke.js';
 import {fishFinShapes, fishRearFinShape} from './fish_fins.js';
@@ -43,13 +44,16 @@ function rawHeadSense(a, key, side) {
   const f = fishForm(a, key, side);
   if (!f.weight)
     return {x : 0, y : 0, r : 0, rx : 0, ry : 0, pupil : 0};
-  // They move out with the vision eye offset like the engine's retina places them.
+  // They lie out as far as their cells' lateral centroid lies within the head's half width,
+  // scaled by the vision eye offset, as the engine's retina places them (eye_view_place).
   const location = a.forms[formIndex(key) + side], rx = a.eyeScale * location[ORGAN_FORM.eye_rx],
-        ry = a.eyeScale * location[ORGAN_FORM.eye_ry];
+        ry = a.eyeScale * location[ORGAN_FORM.eye_ry],
+        halfWidth = Math.abs(location[ORGAN_FORM.eye_across]),
+        share = halfWidth > TOLERANCE.negligible ? f.x / halfWidth : 0;
   return {
     x : (a.origin?.[0] || 0) + a.eyeScale * location[ORGAN_FORM.eye_along],
     y : ((a.origin?.[1] || 0) + a.eyeScale * location[ORGAN_FORM.eye_across]) *
-            Math.max(0, Math.min(EYE_PLACE.outset, a.eyeOffset * f.x / EYE_PLACE.default_offset)),
+            Math.max(0, Math.min(EYE_PLACE.outset, a.eyeOffset * share / EYE_PLACE.default_offset)),
     r : Math.max(rx, ry),
     rx,
     ry,

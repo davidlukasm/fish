@@ -280,6 +280,7 @@
 .aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}
 
 .aid-vision-fan{pointer-events:none}
+.aid-vision-union[data-select-organ]{pointer-events:visiblePainted;cursor:pointer}
 .aid-vision-union{fill:currentColor;fill-opacity:.035;stroke:currentColor;stroke-opacity:.35;stroke-width:1.4}
 .aid-vision-resolution{fill:currentColor;fill-opacity:.15;stroke:currentColor;stroke-width:1}
 .aid-vision-ray{fill:none;stroke:currentColor;stroke-width:.8;opacity:.6}
