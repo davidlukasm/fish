@@ -472,7 +472,8 @@ function muscleHint(code) {
 
 // How a trait the muscles shape serves each kind of food, as the engine reckons it (the
 // capabilities' diet, sampled over the trait from 0 to 1): a curve for each, named at its right
-// end with its value where the fish stands, which a line marks. CHART: the frame, the plot's
+// end with its value where the fish stands, which a line marks; a value of another scale (the
+// gut's room) is told in words below. CHART: the frame, the plot's
 // ends, its top and baseline, the gap before the names and below the axis. Shares show as
 // percent, factors against a middle trait as times.
 const CHART = Object.freeze({
@@ -493,8 +494,8 @@ const DIET_CHARTS = Object.freeze({
     source : 'gut',
     trait : 'gut_length',
     code : MOTOR_KIND.suction,
-    curves :
-        [ [ 'plant', 'share' ], [ 'meat', 'share' ], [ 'sediment', 'share' ], [ 'size', 'factor' ] ]
+    curves : [ [ 'plant', 'share' ], [ 'meat', 'share' ] ],
+    readout : [ 'size', 'factor' ]
   },
   teeth : {
     source : 'teeth',
@@ -572,6 +573,13 @@ function dietChart(state, kind, organ = null) {
                           'class="aid-graphic-handle" cx="' + fixed(x(at)) + '" cy="' + C.top +
                           '" r="' + HANDLE.radius + '"/>'
                     : '';
+  const readout = spec.readout && at !== null
+                      ? '<p class="aid-diet-readout">' + escapeText(t('units.joined', {
+                          a : words(spec.readout[0]),
+                          b : shown(valueAt(data[spec.readout[0]]), spec.readout[1])
+                        })) +
+                            '</p>'
+                      : '';
   return '<section class="aid-eye-section"><h4>' + escapeText(words('title')) + '</h4>' +
          '<svg class="aid-diet-chart' + (held ? ' held' : '') + '" viewBox="0 0 ' + C.width + ' ' +
          C.height + '"' + grip + ' role="img" aria-label="' + escapeText(words('title')) + '">' +
@@ -579,7 +587,8 @@ function dietChart(state, kind, organ = null) {
          '" y2="' + C.base + '"/>' + marker + curves + '<text class="aid-diet-end" x="' + C.left +
          '" y="' + (C.base + C.axis) + '">' + escapeText(words('low')) +
          '</text><text class="aid-diet-end" x="' + C.right + '" y="' + (C.base + C.axis) +
-         '" text-anchor="end">' + escapeText(words('high')) + '</text>' + knob + '</svg></section>';
+         '" text-anchor="end">' + escapeText(words('high')) + '</text>' + knob + '</svg>' +
+         readout + '</section>';
 }
 // The graphic of an organ that recruits nodes, by its function, with its readout; empty for one
 // without a function here.

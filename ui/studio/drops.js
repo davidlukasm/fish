@@ -4,6 +4,7 @@ import {HORMONE_EFFECT, HORMONES} from '../schema.js';
 import {
   addNeuron,
   addOrgan,
+  addOrganType,
   findCenter,
   findOrgan,
   setLifePhase,
@@ -254,19 +255,29 @@ export const dropMethods = {
                     target.paired);
   },
   // A gland dragged from a substance card releases that substance; a blood sense from the body's
-  // signals reads the energy reserve.
+  // signals reads the energy reserve, as the fish's one blood sense, or as a further type of it.
   dropFromCard(kind, value, position) {
     this.dragging = null;
     this.clearPreview();
-    const wheel = this.state.capabilities;
+    const wheel = this.state.capabilities, doc = this.state.document;
     if (!wheel || !nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
+    const index = kind === 'gland' ? Number(value) : HORMONES.levels + 1;
+    const [q1, q2] = wheelPlace(wheel, index), tuning = {q1, q2, qwidth : 0};
+    const sense = kind === 'reserve' && doc.organs.find(o => o.type === 'blood');
+    if (sense) {
+      const added = addOrganType(doc, sense.id, this.state.sites, tuning);
+      if (!added)
+        return this.notice(label('status.noRoom'));
+      const first =
+          findOrgan(added.document, sense.id).centers.find(c => c.profile === added.typeId);
+      this.changeDocument(added.document, {kind : 'center', id : first.id});
+      return this.notice(label('status.placed'));
+    }
     const result = this.placeOrgan(ORGAN_FROM_CARD[kind].value, position);
     if (!result)
       return this.notice(label('status.noRoom'));
-    const index = kind === 'gland' ? Number(value) : HORMONES.levels + 1;
-    const [q1, q2] = wheelPlace(wheel, index);
-    this.changeDocument(updateCenter(result.document, result.centerId, {q1, q2, qwidth : 0}),
+    this.changeDocument(updateCenter(result.document, result.centerId, tuning),
                         {kind : 'organ', id : result.organId});
     this.notice(label('status.placed'));
   },

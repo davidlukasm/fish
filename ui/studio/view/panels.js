@@ -34,7 +34,7 @@ import {
   t,
   tList
 } from '../../strings.js';
-import {heading, icon, ICON, iconCells, label, regionTerm} from './kit.js';
+import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
 import {pairingButton, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -145,7 +145,7 @@ const ORGAN_PANELS = Object.freeze({
   lateral : (state, organ) => lateralField(state, organ) + probeField(state, organ),
   touch : skinPanel,
   pain : skinPanel,
-  blood : (state, organ, center) => hormonePad(state, center),
+  blood : (state, organ, center) => hormonePad(state, organ, center),
   brain : nervePanel
 });
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
@@ -153,16 +153,13 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       escapeText(organTitle(organ)) + '</span></div>';
 const organPanel = (state, organ, center) => (
     ORGAN_PANELS[organ.type] ?? (isRegion(organ) ? nervePanel : organMetric))(state, organ, center);
-// An organ that recruits nodes sets them and their strength on its graphic; a sac sets its
-// growth cells on its own and their strength here; other effectors make no more cells, only
-// stronger ones.
+// How many cells a node makes, or how strong an effector's cells are, on one line; an organ that
+// recruits nodes sets them and their strength on its graphic (a sac its growth cells there and
+// their strength here).
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
-const cellCount = (organ, center) =>
-    ORGAN_BY_KEY[organ.type]?.nodes && !SACS.includes(organ.type)
-        ? ''
-        : '<div class="aid-cell-count-title">' +
-              label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +
-              ' <strong>' + center.copies + '</strong></div>' + iconCells(center.copies, center.id);
+const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes && !SACS.includes(organ.type)
+                                         ? ''
+                                         : cellTrack(center, cellWords(center));
 // What a node answers: a sense cell to its stimulus and as it adapts; an effector's drive (a
 // muscle's also what it does); a nerve center rests, answers and fades, a pacemaker beats.
 const section = (title, body) =>

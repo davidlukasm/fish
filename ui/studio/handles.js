@@ -44,7 +44,7 @@ import {
   wheelTrackWidth
 } from './view/substances.js';
 import {learningMarks, learningPatch} from './view/learning.js';
-import {label} from './view/kit.js';
+import {cellPatch, label} from './view/kit.js';
 
 // The handles on the panels' graphics and the side panels' grips: what a press holds, how the
 // held handle follows the pointer and what its let-go finishes.
@@ -169,6 +169,12 @@ export const GRIPS = Object.freeze([
     handle : '[data-stretch-handle]',
     held : 'drive',
     start : (studio, g) => ({id : g.dataset.stretch, handle : 'stretch'})
+  },
+  {
+    graphic : '[data-cell-track]',
+    handle : '[data-cell-handle]',
+    held : 'drive',
+    start : (studio, g) => ({id : g.dataset.cellTrack, handle : 'copies'})
   },
   {
     graphic : '[data-sac-cells]',
@@ -351,6 +357,11 @@ export const handleMethods = {
       return this.effectorPointer(drag, fx, fy);
     if (drag.handle === 'cells')
       return this.sacCellsPointer(drag, fx, fy);
+    if (drag.handle === 'copies') {
+      this.tuneDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
+                      'cells:' + drag.id);
+      return this.refreshInspector();
+    }
     const doc = drag.handle === 'start' || drag.handle === 'end'
                     ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
                     : updateCenter(this.state.document, drag.id,

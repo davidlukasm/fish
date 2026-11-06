@@ -6,7 +6,7 @@ import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 import {namedText, t, tList} from '../../strings.js';
-import {ICON, icon, iconCells, label} from './kit.js';
+import {cellTrack, cellWords, ICON, icon, label} from './kit.js';
 import {centerTitle} from './names.js';
 import {organTitle} from './names.js';
 
@@ -336,6 +336,6 @@ export function regionSettings(state, organ) {
   for (const center of organ.centers)
     html += '<div class="aid-region-node"><button data-select-center="' + escapeText(center.id) +
             '">' + escapeText(centerTitle(center)) + '</button>' +
-            iconCells(center.copies, center.id) + '</div>';
+            cellTrack(center, cellWords(center)) + '</div>';
   return html + '</section>';
 }

@@ -180,7 +180,12 @@
     "saveModule": "In Bibliothek",
     "ungroup": "Auflösen",
     "repeat": "Weiteres Organ",
-    "count": "Anzahl der Zellen",
+    "senseCells": "{n} Sinneszellen je Knoten",
+    "addBloodType": "Stoff",
+    "undefinedMark": "?",
+    "defineSubstance": "Diesen Stoff anlegen und im Hormonwerkzeug einstellen",
+    "removeBloodType": "Diesen Stoff nicht mehr lesen",
+    "nerveCells": "{n} Nervenzellen",
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
     "adaptation": "Gewöhnung",
@@ -338,7 +343,7 @@
     "removeModule": "Löschen",
     "partOf": "Teil von",
     "moduleHow": "Eigene Baugruppe: Teile mit Umschalt- oder Strg-Klick wählen und im Inspektor verbinden.",
-    "strength": "Kraft",
+    "strength": "Kraft {share}",
     "moduleName": "Name der Baugruppe",
     "measures": [
       "misst die Darmfüllung",
@@ -804,8 +809,7 @@
         "high": "lang",
         "plant": "Pflanzen",
         "meat": "Beute",
-        "sediment": "Sediment",
-        "size": "Fassung"
+        "size": "Fassungsvermögen"
       },
       "teeth": {
         "title": "Biss je Beute",

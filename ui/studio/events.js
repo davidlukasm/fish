@@ -204,7 +204,8 @@ function moveMuscle(studio, element) {
 // the tuning the organ lacks most, chosen at once.
 function addType(studio, element) {
   const doc = studio.state.document, organ = findOrgan(doc, element.dataset.addType);
-  const added = organ && addOrganType(doc, organ.id, studio.state.sites, nextTypeTuning(organ));
+  const added = organ && addOrganType(doc, organ.id, studio.state.sites,
+                                      nextTypeTuning(organ, studio.state.capabilities));
   if (!added)
     return studio.notice(label('status.noRoom'));
   const first = findOrgan(added.document, organ.id).centers.find(c => c.profile === added.typeId);
@@ -397,6 +398,20 @@ export const FISH_CLICKS = Object.freeze([
         studio.changeDocument(doc, studio.state.selected);
     }
   ],
+  // A substance not yet in the design, clicked on a wheel, is made and opened in the hormone
+  // tool to be set up there.
+  [
+    '[data-define-substance]',
+    (studio, e) => {
+      const index = Number(e.dataset.defineSubstance);
+      const doc = addSubstance(studio.state.document, HORMONES.levels, index);
+      if (!doc)
+        return;
+      studio.state.focusSubstance = index;
+      studio.changeDocument(doc, studio.state.selected);
+      studio.setTool('hormone');
+    }
+  ],
   [
     '[data-remove-substance]',
     (studio, e) =>
@@ -432,11 +447,6 @@ export const FISH_CLICKS = Object.freeze([
     (studio, e) => showChoice(studio, state => {
       state.effect = Number(e.dataset.effect);
     })
-  ],
-  [
-    '[data-cell-count]',
-    (studio, e) =>
-        changeCenter(studio, e.dataset.centerId, {copies : Number(e.dataset.cellCount)})
   ],
   [ '[data-save-assembly]', (studio, e) => studio.saveAssembly(e.dataset.saveAssembly) ],
   [

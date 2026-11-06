@@ -8,7 +8,10 @@ import {
   findCenter,
   lifePhase,
   NOTICEABLE_AFFINITY,
+  organTypes,
+  substanceRead,
   teachersOf,
+  typeOfCenter,
   wheelAffinity,
   wheelPlace,
   wheelSigma
@@ -17,6 +20,7 @@ import {escapeText, fixed, pointMarks, trackShare, widthTrack} from './markup.js
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
 import {centerTitle} from './names.js';
+import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
 
 // The blood's substances in the inspector: the substance wheel where glands release and senses
@@ -45,9 +49,23 @@ export function glandProfile(state, center) {
          t('studio.marks.more', {name : label('inspector.glandSecretes')}) + '</span><span>' +
          t('studio.marks.less', {name : label('inspector.glandBinds')}) + '</span></div>';
 }
-export function hormonePad(state, center) {
-  const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
-  return centerWheel(state, center, all);
+// The blood sense: a chip for each substance it reads (its type), marked by a dot of RADIUS in
+// the substance's colour, and the chosen one's point on the wheel.
+const CHIP_DOT = Object.freeze({half : 8, radius : 6});
+export function hormonePad(state, organ, center) {
+  const wheel = state.capabilities;
+  const all = Array.from({length : wheel?.bloodSubstances ?? 0}, (_, i) => i);
+  const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
+  const chips = wheel ? typeChips(organ, chosen, type => {
+    const index = substanceRead(wheel, type.centers[0]);
+    return {
+      icon : '<svg viewBox="' + -CHIP_DOT.half + ' ' + -CHIP_DOT.half + ' ' + 2 * CHIP_DOT.half +
+                 ' ' + 2 * CHIP_DOT.half + '"><circle r="' + CHIP_DOT.radius + '" fill="' +
+                 substanceColor(index) + '"/></svg>',
+      name : substanceName(state, index)
+    };
+  }, {add : label('inspector.addBloodType'), remove : label('inspector.removeBloodType')}) : '';
+  return chips + centerWheel(state, center, all);
 }
 // What substances do to the chosen cell group: what a gland releases, what the group's
 // receptors answer to and, for nerve cells, which substances teach them. Each list opens the tool
@@ -399,13 +417,20 @@ export function substanceWheel(state, profile, {
     return '';
   const px = x => fixed(wheelX(x)), py = y => fixed(wheelY(y));
   const clickable = new Set(choices);
-  // Only the design's substances and the body's signals the profile can read show: an empty
-  // place on the wheel offers nothing.
+  // The design's substances and the body's signals the profile can read show as points; a
+  // substance the design has not made yet is an empty point in its colour with a question mark,
+  // which makes it and opens it in the hormone tool.
   const named = new Set(state.document.substances.map(sub => sub.index));
   const points = Array.from({length : wheel.bloodSubstances}, (_, index) => {
-    if (index >= reads || (index < HORMONES.levels && !named.has(index)))
+    if (index >= reads)
       return '';
     const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
+    if (index < HORMONES.levels && !named.has(index))
+      return '<g class="aid-wheel-point empty" data-define-substance="' + index +
+             '" style="--substance:' + substanceColor(index) + '"><circle cx="' + px(x) + '" cy="' +
+             py(y) + '" r="' + WHEEL.point + '"/><text x="' + px(x) + '" y="' + py(y) +
+             '" dy=".35em" text-anchor="middle">' + label('inspector.undefinedMark') +
+             '</text><title>' + label('inspector.defineSubstance') + '</title></g>';
     const bound = profile.active && index < reads
                       ? wheelAffinity(wheel, profile.x, profile.y, profile.width, index)
                       : 0;

@@ -1289,6 +1289,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});
     const deeper = model.setOrganNodes(pigment.document, pigment.organId, 12, sites);
     assert.equal(model.findOrgan(deeper, pigment.organId).centers.length, 12);
+    // The blood sense is one for both sides; each further type reads another substance.
+    const blood = model.addOrgan(model.newDocument('Blut'), 'blood', sites, {x : 610, y : 405});
+    assert.equal(model.findOrgan(blood.document, blood.organId).pair, null);
+    assert.equal(model.addOrgan(blood.document, 'blood', sites, {x : 610, y : 325}).organId,
+                 blood.organId);
+    const firstRead =
+        model.substanceRead(sitesResult, model.findOrgan(blood.document, blood.organId).centers[0]);
+    const twoTypes = model.addOrganType(
+        blood.document, blood.organId, sites,
+        model.nextTypeTuning(model.findOrgan(blood.document, blood.organId), sitesResult));
+    const reads = model.organTypes(model.findOrgan(twoTypes.document, blood.organId))
+                      .map(type => model.substanceRead(sitesResult, type.centers[0]));
+    assert.equal(reads.length, 2);
+    assert.ok(reads.includes(firstRead) && new Set(reads).size === 2);
     // A gonad recruits growth cells, each with room for eggs; its release and pressure cells
     // stay one each, and all its cells together are its nodes at most.
     const ovary = model.addOrgan(model.newDocument('Eier'), 'eggs', sites, {x : 708, y : 380});

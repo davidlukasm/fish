@@ -710,10 +710,27 @@ export const typeOfCenter = (organ, centerId) =>
     organTypes(organ).find(type => type.centers.some(c => c.id === centerId)) ?? null;
 // The tuning a new type starts with: a nose's profile tuned to the scent its profiles smell least,
 // as broad as its first; a kind of pigment cell with the first of the pigments it lacks.
-export function nextTypeTuning(organ) {
+// The substance a blood sense's cells read most (an index on the substance wheel).
+export function substanceRead(wheel, center) {
+  const indices = Array.from({length : wheel.bloodSubstances}, (_, i) => i);
+  return indices.reduce((best, i) =>
+                            wheelAffinity(wheel, center.q1, center.q2, center.qwidth, i) >
+                                    wheelAffinity(wheel, center.q1, center.q2, center.qwidth, best)
+                                ? i
+                                : best);
+}
+// The tuning an organ's next type takes: the pigment it lacks, the scent it smells least, for the
+// blood sense the first substance none of its types reads yet.
+export function nextTypeTuning(organ, wheel) {
   const firsts = organTypes(organ).map(type => type.centers[0]);
   if (organ.type === 'pigment')
     return nextPigment(firsts);
+  if (organ.type === 'blood') {
+    const read = new Set(firsts.map(c => substanceRead(wheel, c)));
+    const next = Array.from({length : wheel.bloodSubstances}, (_, i) => i).find(i => !read.has(i));
+    const [q1, q2] = wheelPlace(wheel, next ?? 0);
+    return {q1, q2};
+  }
   const smelled = TUNING.scent_latitudes.map(
       (_, k) => Math.max(...firsts.map(c => scentAffinities(c.q1, c.q2, c.qwidth)[k])));
   return {...scentTuning(smelled.indexOf(Math.min(...smelled))), qwidth : firsts[0].qwidth};
@@ -871,10 +888,11 @@ export function updateGrowth(doc, patch) {
       draft.growth[key] = patch[key];
   return draft;
 }
-export function addSubstance(doc, max) {
+// A new substance at the first free index of `max`, or at `wanted` where that is free.
+export function addSubstance(doc, max, wanted = null) {
   const active = new Set(doc.substances.map(s => s.index));
-  const index = Array.from({length : max}, (_, i) => i).find(i => !active.has(i));
-  if (index === undefined)
+  const index = wanted ?? Array.from({length : max}, (_, i) => i).find(i => !active.has(i));
+  if (index === undefined || active.has(index) || index >= max)
     return null;
   const draft = copy(doc);
   draft.substances.push({id : identifier('substance'), index, name : ''});

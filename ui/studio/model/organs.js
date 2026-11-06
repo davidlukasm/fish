@@ -1,4 +1,4 @@
-import {MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
+import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {onMidline, sideSign} from './layout.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
@@ -83,9 +83,13 @@ export const ORGANS = Object.freeze([
     centers : [ sensor('contact', SENSE_KIND.touch, 3, 'outer') ]
   },
   {key : 'pain', category : 'senses', centers : [ sensor('injury', SENSE_KIND.damage, 3) ]},
+  // The blood is the same all through the fish: one blood sense serves both sides, a type for
+  // each substance it reads.
   {
     key : 'blood',
     category : 'internal',
+    scope : 'single',
+    types : HORMONES.levels + HORMONES.signs,
     centers : [ sensor('chemistry', SENSE_KIND.blood, 3, 'inner') ]
   },
   {
@@ -309,9 +313,12 @@ export function nodeLimit(organ, sites) {
              ? musclePlaces(sites, organFunction(organ, sites), organ.side).length
              : most;
 }
-// How many growth nodes a gonad may have: its organ's nodes less its other kinds of node.
-export const growthMost = organ =>
-    (ORGAN_BY_KEY[organ.type]?.nodes ?? 1) - organ.centers.filter(c => c.key !== 'growth').length;
+// The nodes of an organ's first kind (a gonad's growth cells, a muscle's all), and how many of
+// them it may have: its nodes less its other kinds of node.
+export const kindNodes = organ => organ.centers.filter(c => c.key === organ.centers[0]?.key);
+export const kindLimit = (organ, sites) =>
+    nodeLimit(organ, sites) - (organ.centers.length - kindNodes(organ).length);
+export const growthMost = organ => kindLimit(organ, null);
 // What an organ's first node does where it lies (a muscle's function); -1 where it lies nowhere.
 export function organFunction(organ, sites) {
   const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);

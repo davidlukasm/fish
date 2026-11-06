@@ -7,7 +7,8 @@ import {
   sideOf,
   sideSign
 } from '../model/layout.js';
-import {centerIndex, groupReport, isChosen} from '../model/document.js';
+import {centerIndex, groupReport, isChosen, organTypes, substanceRead} from '../model/document.js';
+import {substanceColor} from '../../hormones.js';
 import {wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
@@ -97,9 +98,8 @@ const GLYPH = Object.freeze({
   bladder : [ 39, 24 ],
   gut_wave : 20,
   gut_steps : 96,
-  blood : [ 7, 11 ],
-  blood_drops : 3,
-  blood_step : 13,
+  blood : [ 8, 13 ],
+  blood_step : 15,
   gland : [ 16, 11 ],
   lateral_pore : 3.2
 });
@@ -169,15 +169,16 @@ const ellipseGlyph = (cls, [ rx, ry ]) => (state, organ, pos) =>
     '" ry="' + ry + '"/>';
 // The blood sense: drops of blood where its cells read it.
 function bloodGlyph(state, organ, pos) {
-  const G = GLYPH;
+  const G = GLYPH, types = organTypes(organ), wheel = state.capabilities;
   let html = '';
-  for (let i = 0; i < G.blood_drops; ++i) {
-    const x = pos.x + (i - (G.blood_drops - 1) / 2) * G.blood_step, [ w, h ] = G.blood;
-    html += '<path class="aid-anatomical-blood" d="M' + fixed(x) + ' ' + fixed(pos.y - h) + ' C' +
-            fixed(x + w) + ' ' + fixed(pos.y) + ' ' + fixed(x + w / 2) + ' ' +
-            fixed(pos.y + h / 2) + ' ' + fixed(x) + ' ' + fixed(pos.y + h / 2) + ' C' +
-            fixed(x - w / 2) + ' ' + fixed(pos.y + h / 2) + ' ' + fixed(x - w) + ' ' +
-            fixed(pos.y) + ' ' + fixed(x) + ' ' + fixed(pos.y - h) + 'Z"/>';
+  for (const [i, type] of types.entries()) {
+    const x = pos.x + (i - (types.length - 1) / 2) * G.blood_step, [ w, h ] = G.blood;
+    const colour = wheel ? substanceColor(substanceRead(wheel, type.centers[0])) : null;
+    html += '<path class="aid-anatomical-blood"' + (colour ? ' style="fill:' + colour + '"' : '') +
+            ' d="M' + fixed(x) + ' ' + fixed(pos.y - h) + ' C' + fixed(x + w) + ' ' + fixed(pos.y) +
+            ' ' + fixed(x + w / 2) + ' ' + fixed(pos.y + h / 2) + ' ' + fixed(x) + ' ' +
+            fixed(pos.y + h / 2) + ' C' + fixed(x - w / 2) + ' ' + fixed(pos.y + h / 2) + ' ' +
+            fixed(x - w) + ' ' + fixed(pos.y) + ' ' + fixed(x) + ' ' + fixed(pos.y - h) + 'Z"/>';
   }
   return html;
 }
