@@ -3,6 +3,7 @@ import {nodeLocation} from './places.js';
 import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
 import {EFFECT_ICON} from './icons.js';
+import {EFFECT_ORDER} from './effects.js';
 import {substanceColor} from '../../hormones.js';
 import {
   allCenters,
@@ -61,8 +62,14 @@ function hormoneGlyph(item, kind, color, zoom) {
       kind === 'receiver'
           ? effectSymbols(item.teach ? [ HORMONE_EFFECT.learning ] : item.effects ?? [], r)
           : '';
-  return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') + '"' +
-         steadyAt(item.pos, zoom) + ' style="--hormone:' + color +
+  // A receiver plays what its strongest-placed effect does (EFFECT_ORDER), as the guide does.
+  const acts = kind === 'receiver'
+                   ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.excitation
+                                                       : (item.effects ?? []).includes(e))
+                   : undefined;
+  return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
+         (acts === undefined ? '' : ' acts-' + acts) + '"' + steadyAt(item.pos, zoom) +
+         ' style="--hormone:' + color +
          ';opacity:' + fixed(G.faintest + (1 - G.faintest) * item.affinity) + '">' + cloud +
          '<circle class="aid-hormone-aura" r="' + r + '"/>' +
          (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * G.teach) + '"/>' : '') +

@@ -800,3 +800,30 @@
 .aid-view-options .aid-layer-switches button.active{background:#183940;color:var(--aid-primary);border-color:var(--aid-primary)}
 .aid-layer-switches button::before{content:'';width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}
 .aid-layer-switches button.active::before{background:currentColor}
+.aid-effect-guide{margin:10px 0}
+.aid-effect-card{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}
+.aid-effect-card strong{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--aid-name-text)}
+.aid-effect-card strong svg{color:var(--substance)}
+.aid-effect-card span{display:block;font-size:12px;color:var(--aid-control-text);margin:2px 0}
+.aid-effect-card small{display:block;font-size:11px;color:var(--aid-soft-text)}
+.aid-effect-scene{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
+.aid-effect-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
+.aid-effect-line{stroke:var(--aid-size);stroke-linecap:round}
+.aid-effect-pulse{fill:#f2f6dc}
+.aid-effect-wave{fill:none;stroke:var(--aid-teach);stroke-width:2;stroke-linecap:round}
+.aid-effect-credit{fill:none;stroke:var(--substance,#f2f6dc);stroke-width:2;stroke-dasharray:3 3}
+.aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
+.aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire .5s ease-in-out infinite}
+.aid-hormone-receiver.acts-1 .aid-hormone-aura{animation:aid-acts-grow 2.2s ease-in-out infinite}
+.aid-hormone-receiver.acts-2 .aid-hormone-aura{stroke-dasharray:6 4;animation:aid-acts-push 1.6s linear infinite}
+.aid-hormone-receiver.acts-3 .aid-hormone-aura{stroke-dasharray:2 5;animation:aid-acts-push 3s linear infinite reverse}
+.aid-hormone-receiver.acts-4 .aid-hormone-aura{animation:aid-acts-beat 1.2s cubic-bezier(.3,0,.2,1) infinite}
+.aid-hormone-receiver.acts-5 .aid-hormone-aura{animation:aid-acts-quiet 2.2s ease-in infinite}
+.aid-hormone-receiver.acts-6 .aid-hormone-core{animation:aid-acts-die 2.4s ease-in infinite}
+@keyframes aid-acts-fire{0%,100%{fill-opacity:.25}50%{fill-opacity:1}}
+@keyframes aid-acts-grow{0%{transform:scale(.8)}70%,100%{transform:scale(1.5)}}
+@keyframes aid-acts-push{to{stroke-dashoffset:-20}}
+@keyframes aid-acts-beat{0%,60%,100%{transform:scale(1)}20%{transform:scale(1.45)}}
+@keyframes aid-acts-quiet{0%{transform:scale(1.5);opacity:1}100%{transform:scale(.6);opacity:.2}}
+@keyframes aid-acts-die{0%,40%{fill:var(--hormone);opacity:1}100%{fill:#5b6b6a;opacity:.25}}
+@media (prefers-reduced-motion:reduce){.aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{animation:none}}

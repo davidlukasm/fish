@@ -414,13 +414,13 @@
     "removeProfile": "Duftprofil entfernen"
   },
   "effects": [
-    "Erregung",
-    "Lernen",
-    "Konkurrenz",
-    "Merkspur",
-    "Rhythmus",
-    "Ausgabe",
-    "Zelltod"
+    "Feuern",
+    "Lerntempo",
+    "Wettbewerb",
+    "Anrechnung",
+    "Takt",
+    "Weitergabe",
+    "Absterben"
   ],
   "regionNodes": {
     "families": {
@@ -878,32 +878,44 @@
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tiles": [
-      "erregen",
-      "fördern",
-      "konkurrieren",
-      "merken",
-      "takten",
-      "dämpfen",
-      "töten"
+      "feuern lassen",
+      "schneller lernen",
+      "Wettbewerb schärfen",
+      "eigenes Feuern anrechnen",
+      "Takt verstärken",
+      "leiser stellen",
+      "absterben lassen"
     ],
     "tileTitles": [
-      "Die Zelle feuert stärker, solange der Stoff da ist",
-      "Die Zelle lernt schneller, solange der Stoff da ist",
-      "Die Zelle setzt sich gegen ihre Nachbarn durch",
-      "Die Zelle merkt sich, was gerade zusammen feuerte",
-      "Die Zelle schlägt im Takt des Stoffs",
-      "Die Zelle gibt weniger weiter",
-      "Die Zelle stirbt bei viel Stoff"
+      "Der Stoff kommt zum Eingang der Zelle dazu, sie feuert mehr.",
+      "Die Zelle lernt bis doppelt so schnell.",
+      "Starke Eingänge wachsen, schwache schrumpfen stärker.",
+      "Die Lernzelle rechnet sich ihr eigenes Feuern an statt des Schlags ihres Taktgebers.",
+      "Der Taktgeber schlägt stärker.",
+      "Die Zelle gibt weniger weiter, bis sie verstummt.",
+      "Ab einer Schwelle stirbt die Zelle, ihre Verbindungen verschwinden."
+    ],
+    "where": [
+      "bei Nervenzellen, Muskeln und Drüsen; bei Lernzellen ist es das Lehrsignal",
+      "bei Lernzellen",
+      "bei Lernzellen mit Lernart Wettbewerb",
+      "bei Lernzellen mit Taktgeber",
+      "bei Taktgebern",
+      "bei allen Zellen, auch Sinneszellen",
+      "bei allen Zellen"
     ],
     "effects": [
-      "erregt",
-      "fördert Lernen",
+      "lässt feuern",
+      "beschleunigt Lernen",
       "schärft Wettbewerb",
-      "setzt Merkspur",
-      "treibt Rhythmus",
-      "dämpft Ausgabe",
-      "tötet Zellen"
+      "rechnet eigenes Feuern an",
+      "verstärkt Takt",
+      "stellt leiser",
+      "lässt absterben"
     ],
+    "here": "hier bei {n} {n:Zelle|Zellen}",
+    "nowhere": "hier noch nirgends",
+    "effectsTitle": "Was der Stoff bewirken kann",
     "growsOn": "lässt den Fisch wachsen",
     "growsOff": "lässt den Fisch nicht wachsen",
     "probe": "Probe",
@@ -929,13 +941,13 @@
     "slow": "langsam",
     "fast": "schnell",
     "mode": "Lernart",
-    "trace": "Merkspur",
+    "trace": "Anrechnung: eigenes Feuern oder Takt",
     "none": "aus",
     "parts": [
       "Lehrsignal",
       "Lernfähigkeit",
       "Wettbewerb",
-      "Merkspur"
+      "Anrechnung"
     ],
     "byHormoneOf": "{part} durch Hormon"
   },

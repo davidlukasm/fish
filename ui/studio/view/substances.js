@@ -24,6 +24,7 @@ import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './ma
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
 import {EFFECT_ICON} from './icons.js';
+import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
@@ -570,9 +571,32 @@ export function substanceInspector(state) {
          label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '</span></button>' +
          (grows ? growthEditor(state) : '') +
          row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
-         row('acts', acts.join('')) + measurement(state, index) +
+         row('acts', acts.join('')) + effectGuide(state, index) + measurement(state, index) +
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
+}
+// What the substance can do, each effect played (effects.js) with where it acts and on how many
+// cells of this fish it does.
+function effectGuide(state, index) {
+  const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
+  const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
+  return '<section class="aid-effect-guide">' + heading(label('hormoneCard.effectsTitle')) +
+         EFFECT_ORDER
+             .map(effect => {
+               const n =
+                   receiving.filter(c => boundEffects(c, index, wheel).includes(effect)).length;
+               return '<div class="aid-effect-card" style="--substance:' + colour + '">' +
+                      effectScene(effect, colour) + '<div><strong>' +
+                      glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
+                      escapeText(words('tiles')[effect]) + '</strong><span>' +
+                      escapeText(words('tileTitles')[effect]) + '</span><small>' +
+                      escapeText(words('where')[effect]) + ' · ' +
+                      escapeText(n ? t('studio.hormoneCard.here', {n})
+                                   : label('hormoneCard.nowhere')) +
+                      '</small></div></div>';
+             })
+             .join('') +
+         '</section>';
 }
 export function hormoneInspector(state) {
   const {document : doc, selected} = state;
@@ -587,8 +611,13 @@ export function hormoneInspector(state) {
   const receptor = focus.receptors?.[effect];
   if (!receptor)
     return html;
+  const colour = receptor.active ? substanceColor(receptor.substance) : null;
   html += lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
           heading(centerTitle(focus)) +
-          receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) + '</div>';
+          receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) +
+          '<div class="aid-effect-card"' + (colour ? ' style="--substance:' + colour + '"' : '') +
+          '>' + effectScene(effect, colour ?? 'currentColor') + '<div><span>' +
+          escapeText(tList('studio.hormoneCard.tileTitles')[effect]) + '</span><small>' +
+          escapeText(tList('studio.hormoneCard.where')[effect]) + '</small></div></div></div>';
   return html;
 }

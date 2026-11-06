@@ -1,6 +1,7 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {EFFECT_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {MODULES, NEURONS, ORGAN_BY_KEY, ORGANS} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
@@ -59,10 +60,7 @@ export function library(state) {
 // mark sits on one card) and, as a test, a dose to measure its effect with. The body's signals
 // are not substances: maturity can switch cells on or let them die, the energy reserve can be
 // read by a blood sense.
-const HORMONE_TILES = Object.freeze([
-  HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.learning,
-  HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition, HORMONE_EFFECT.rhythm
-]);
+
 // A tile to drag onto the fish: a symbol and a word, its title saying what it does.
 function hormoneTile(kind, value, text, path, title = text) {
   return '<button class="aid-hormone-tile" draggable="true" data-drag-kind="' + kind +
@@ -76,7 +74,7 @@ function substanceCard(state, substance) {
   const words = tList('studio.hormoneCard.tiles'), titles = tList('studio.hormoneCard.tileTitles');
   const tiles = hormoneTile('gland', String(index), label('hormoneCard.gland'), STUDIO_ICON.gland,
                             label('hormoneCard.glandTitle')) +
-                HORMONE_TILES
+                EFFECT_ORDER
                     .map(effect => hormoneTile('effect', index + ':' + effect, words[effect],
                                                EFFECT_ICON[effect], titles[effect]))
                     .join('');
