@@ -32,7 +32,7 @@ import {
 import {cameraCoordinates} from './view/frame.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {contactPatch, outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
-import {stretchPatch} from './view/sacs.js';
+import {sacCellsPatch, stretchPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
   GROWTH,
@@ -168,6 +168,12 @@ export const GRIPS = Object.freeze([
     handle : '[data-stretch-handle]',
     held : 'drive',
     start : (studio, g) => ({id : g.dataset.stretch, handle : 'stretch'})
+  },
+  {
+    graphic : '[data-sac-cells]',
+    handle : '[data-sac-cells-handle]',
+    held : 'drive',
+    start : (studio, g) => ({id : g.dataset.sacCells, handle : 'cells'})
   },
   {
     graphic : '[data-drive]',
@@ -336,12 +342,14 @@ export const handleMethods = {
     this.refreshInspector();
   },
   // Graphics whose handles change a center: rest activity, recovery and beat on the drive
-  // graphic, the stretch of a sac, the marks of a life phase.
+  // graphic, the stretch of a sac, the marks of a life phase; and the growth cells of a sac.
   drivePointer(event) {
     const drag = this.handleDrag;
     const {fx, fy} = pointerShare(event, drag.rect);
     if (drag.handle === 'effector')
       return this.effectorPointer(drag, fx, fy);
+    if (drag.handle === 'cells')
+      return this.sacCellsPointer(drag, fx, fy);
     const doc = drag.handle === 'start' || drag.handle === 'end'
                     ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
                     : updateCenter(this.state.document, drag.id,
@@ -368,6 +376,19 @@ export const handleMethods = {
     if (!changed)
       return;
     this.tuneDesign(changed, 'effector:' + drag.id);
+    this.refreshInspector();
+  },
+  // A gonad's growth nodes follow the handle along its sac's wall.
+  sacCellsPointer(drag, fx, fy) {
+    const doc = this.state.document, organ = findOrgan(doc, drag.id);
+    if (!organ)
+      return;
+    const {nodes} = sacCellsPatch(organ, fx, fy);
+    const changed = nodes !== organ.centers.filter(c => c.key === organ.centers[0].key).length &&
+                    setOrganNodes(doc, organ.id, nodes, this.state.sites);
+    if (!changed)
+      return;
+    this.tuneDesign(changed, 'cells:' + drag.id);
     this.refreshInspector();
   },
   // The time constant follows the handle; the curve stretches with it in time.

@@ -91,7 +91,7 @@ function semanticFingerprint(source) {
     SENSE_KIND,
     TUNING
   } = await import('../ui/schema.js');
-  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor, organFunction} =
+  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor, growthMost, organFunction} =
       await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
@@ -1266,6 +1266,23 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});
     const deeper = model.setOrganNodes(pigment.document, pigment.organId, 12, sites);
     assert.equal(model.findOrgan(deeper, pigment.organId).centers.length, 12);
+    // A gonad recruits growth cells, each with room for eggs; its release and pressure cells
+    // stay one each, and all its cells together are its nodes at most.
+    const ovary = model.addOrgan(model.newDocument('Eier'), 'eggs', sites, {x : 708, y : 380});
+    const fertile = model.setOrganNodes(ovary.document, ovary.organId, 99, sites);
+    const gonad = model.findOrgan(fertile, ovary.organId), keys = gonad.centers.map(c => c.key);
+    assert.equal(keys.filter(k => k === 'growth').length, growthMost(gonad));
+    assert.equal(keys.length, ORGAN_BY_KEY.eggs.nodes);
+    assert.deepEqual(keys.filter(k => k !== 'growth'), [ 'release', 'pressure' ]);
+    assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
+    const sacs = await import('../ui/studio/view/sacs.js');
+    const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
+    assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
+                     [ 'growth', 'growth', 'pressure', 'release' ]);
+    const sac = sacs.pressureGraphic({document : fewer, sites}, model.findOrgan(fewer, gonad.id));
+    assert.equal(sac.match(/aid-sac-cell"/g).length, 2);
+    assert.ok(sac.includes('data-sac-cells-handle'));
+    assert.equal(sacs.sacCellsPatch(gonad, 0, .5).nodes > 1, true);
     // Names are written in place.
     const group = model.assemble(grown, [ organ.id, twin.id ], '');
     const renamed = model.renameAssembly(group, group.assemblies[0].id, 'Schwanz');

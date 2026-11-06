@@ -153,10 +153,12 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       escapeText(organTitle(organ)) + '</span></div>';
 const organPanel = (state, organ, center) => (
     ORGAN_PANELS[organ.type] ?? (isRegion(organ) ? nervePanel : organMetric))(state, organ, center);
-// An organ that recruits nodes sets them and their strength on its graphic; other effectors make
-// no more cells, only stronger ones.
+// An organ that recruits nodes sets them and their strength on its graphic; a sac sets its
+// growth cells on its own and their strength here; other effectors make no more cells, only
+// stronger ones.
+const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 const cellCount = (organ, center) =>
-    ORGAN_BY_KEY[organ.type]?.nodes
+    ORGAN_BY_KEY[organ.type]?.nodes && !SACS.includes(organ.type)
         ? ''
         : '<div class="aid-cell-count-title">' +
               label(center.role === 'motor' ? 'inspector.strength' : 'inspector.count') +

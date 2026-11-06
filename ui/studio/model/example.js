@@ -7,6 +7,7 @@ import {
   GROWTH_START,
   newDocument,
   pairEndpoint,
+  setOrganNodes,
   setSubstance,
   updateCenter,
   updateGrowth,
@@ -53,6 +54,9 @@ const WIRES = Object.freeze([
   [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ], [ 'pallium', 'bite' ],
   [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ]
 ]);
+// The gonads make GROWTH_CELLS growth cells each, so the ovary holds an egg and the testis what
+// one spawning takes.
+const GROWTH_CELLS = Object.freeze({eggs : 11, sperm : 3});
 // The pallium learns at full rate once the food substance reaches half; food teaches it TEACHING
 // strongly, as the excitation it brings.
 const REWARD = Object.freeze({sensitivity : 1, half : .1, teaching : .5});
@@ -68,6 +72,11 @@ export function exampleDocument(names, sites, wheel) {
     if (result)
       doc = result.document;
     placed[key] = {organ : result?.organId, node : result?.centerId};
+  }
+  for (const [key, count] of Object.entries(GROWTH_CELLS)) {
+    const grown = placed[key].organ && setOrganNodes(doc, placed[key].organ, count, sites);
+    if (grown)
+      doc = grown;
   }
   const substance = name => {
     const next = addSubstance(doc, HORMONES.levels);

@@ -1,7 +1,7 @@
 import {clamp} from '../../units.js';
 import {restLevel} from './drive.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
-import {PRESSURE_OF} from '../model/organs.js';
+import {growthMost, PRESSURE_OF} from '../model/organs.js';
 import {groupReport} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {t, tList} from '../../strings.js';
@@ -12,11 +12,12 @@ import {biasScale} from './panels.js';
 
 // The inner organs that hold something, each drawn as one vessel around its nodes: the egg and
 // sperm sacs, which fill and release, and the swim bladder.
-// The egg or sperm organ as one sac: cells along its wall make the gametes (growth), a stretch
-// line across it marks the filling at which its pressure cells answer half (drag its handle), and
-// a valve lets them out (release), open as far as the release cells rest active. Each part picks
-// its center for the details below. The ovary fills with round eggs, the testis with sperm (a
-// head and a wavy tail, SPERM), each in its own colours.
+// The egg or sperm organ as one sac: cells along its wall make the gametes (growth), as many as
+// its growth nodes (drag the last one's handle for more or fewer), a stretch line across it marks
+// the filling at which its pressure cells answer half (drag its handle), and a valve lets them out
+// (release), open as far as the release cells rest active. Each part picks its center for the
+// details below. The ovary fills with round eggs, the testis with sperm (a head and a wavy tail,
+// SPERM), each in its own colours.
 const SAC = Object.freeze({
   width : 300,
   height : 150,
@@ -65,18 +66,30 @@ function gametes(type, lineY) {
   }
   return html;
 }
-// The growth cells along the sac's wall, one for each.
-function wallCells(growth) {
-  const S = SAC, W = S.wall_cells;
-  return Array
-      .from({length : growth.copies},
-            (_, k) => {
-              const a = Math.PI * (W.from + W.arc * k / Math.max(1, growth.copies - 1));
-              return '<circle class="aid-sac-cell" cx="' +
-                     fixed(S.cx + Math.cos(a) * (S.rx - S.wall)) + '" cy="' +
-                     fixed(S.cy - Math.sin(a) * (S.ry - S.wall)) + '" r="' + W.cell + '"/>';
-            })
-      .join('');
+// The places along the sac's wall for its growth cells, the most it may have spread over the arc;
+// the cells take them from the first on.
+function wallPoint(k, most) {
+  const S = SAC, W = S.wall_cells, a = Math.PI * (W.from + W.arc * k / Math.max(1, most - 1));
+  return {x : S.cx + Math.cos(a) * (S.rx - S.wall), y : S.cy - Math.sin(a) * (S.ry - S.wall)};
+}
+const wallCells = (count, most) => Array
+                                       .from({length : count},
+                                             (_, k) => {
+                                               const p = wallPoint(k, most);
+                                               return '<circle class="aid-sac-cell" cx="' +
+                                                      fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+                                                      SAC.wall_cells.cell + '"/>';
+                                             })
+                                       .join('');
+// The number of growth cells for a pointer on the sac graphic (fractions of it): the wall place
+// nearest to it along the arc.
+export function sacCellsPatch(organ, fx, fy) {
+  const S = SAC, W = S.wall_cells, most = growthMost(organ);
+  const turn = Math.atan2((S.cy - fy * S.height) / (S.ry - S.wall),
+                          (fx * S.width - S.cx) / (S.rx - S.wall)) /
+               Math.PI;
+  const along = clamp(((turn < 0 ? turn + 2 : turn) - W.from) / W.arc);
+  return {nodes : 1 + Math.round(along * (most - 1))};
 }
 // The valve stands as open as the release cells work at rest.
 function valve(state, release) {
@@ -89,6 +102,8 @@ function valve(state, release) {
 export function pressureGraphic(state, organ, selected) {
   const S = SAC, find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
+  const cells = organ.centers.filter(c => c.key === 'growth').length, most = growthMost(organ);
+  const last = wallPoint(cells - 1, most);
   const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : S.unmeasured;
   const lineY = S.cy + S.ry - 2 * S.ry * stretch, vx = S.cx + S.rx;
   const chosen = center => center && selected?.id === center.id ? ' selected' : '';
@@ -99,11 +114,11 @@ export function pressureGraphic(state, organ, selected) {
                                         : '';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '"' + (pressure ? ' data-stretch="' + escapeText(pressure.id) + '"' : '') +
-         ' role="img">' +
+         (growth ? ' data-sac-cells="' + escapeText(organ.id) + '"' : '') + ' role="img">' +
          '<ellipse class="aid-sac-body" cx="' + S.cx + '" cy="' + S.cy + '" rx="' + S.rx +
          '" ry="' + S.ry + '"/>' + gametes(organ.type, lineY) +
-         part(growth, (growth ? wallCells(growth) : '') + '<text x="' + (S.cx - S.rx) + '" y="' +
-                          (S.label) + '">' + label('centers.growth') + '</text>') +
+         part(growth, wallCells(cells, most) + '<text x="' + (S.cx - S.rx) + '" y="' + (S.label) +
+                          '">' + label('centers.growth') + '</text>') +
          part(release, valve(state, release) + '<text x="' + (vx + S.valve) + '" y="' +
                            (S.cy - S.valve - S.label / 2) + '" text-anchor="end">' +
                            label('centers.release') + '</text>') +
@@ -116,6 +131,10 @@ export function pressureGraphic(state, organ, selected) {
                          fixed(S.cx + sacHalf(lineY)) + '" cy="' + fixed(lineY) + '" r="' +
                          S.handle + '"/>'
                    : '') +
+         (growth ? '<circle class="aid-graphic-handle" data-sac-cells-handle cx="' + fixed(last.x) +
+                       '" cy="' + fixed(last.y) + '" r="' + S.handle + '"><title>' +
+                       label('inspector.cellsHandle') + '</title></circle>'
+                 : '') +
          '</svg>';
 }
 // The stretch line's filling at a pointer's height (fraction of the sac graphic).

@@ -529,9 +529,12 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
 // the fish more deeply. New nodes take the free places nearest to the organ with its settings
 // (on the twin of a linked pair the mirrored places); the last ones go first. In an organ with
 // types, `typeId` names the type whose nodes these are; all types together have `nodes` at most.
+// An organ of several kinds of node (a gonad's growth, release and pressure cells) recruits those
+// of its first kind; the others count towards `nodes`.
 export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.nodes;
-  const ofType = c => typeId === null || typeOf(c) === typeId;
+  const kind = original?.centers[0]?.key;
+  const ofType = c => c.key === kind && (typeId === null || typeOf(c) === typeId);
   const others = original ? original.centers.filter(c => !ofType(c)).length : 0;
   if (!most || !original.centers.some(ofType) || others >= most)
     return null;

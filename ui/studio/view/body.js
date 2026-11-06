@@ -26,14 +26,14 @@ import {
   tailFin,
   zoomOf
 } from './frame.js';
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT} from '../../schema.js';
+import {ANATOMY, BODY_UNIT} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
-import {isRegion} from '../model/organs.js';
+import {growthMost, isRegion} from '../model/organs.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
@@ -143,9 +143,9 @@ function noseGlyph(state, organ, pos) {
 // The ovary a sac of round eggs, the more the more its growth cells make; the testis a slimmer
 // pale sac streaked with sperm.
 function ovaryGlyph(state, organ, pos) {
-  const O = GLYPH.ovary, growth = organ.centers.find(c => c.key === 'growth');
-  const count = Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * (growth?.copies ?? 1) /
-                                           ATELIER_LIMITS.max_copies);
+  const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
+  const count =
+      Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * cells / Math.max(1, growthMost(organ)));
   let html = '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
              '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
   for (let i = 0; i < count; ++i) {

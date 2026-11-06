@@ -128,11 +128,14 @@ export const ORGANS = Object.freeze([
   },
   // Gonads, like brain regions, say what can be wired to them: a trigger that reaches their
   // release (they also release from rest when ripe), and the fullness their pressure cells pass
-  // on.
+  // on. They recruit growth nodes: the engine gives a gonad room for ten eggs or sperm portions
+  // per cell, so a gonad of few cells holds too little for an egg; at the engine's usual ceilings
+  // more than `nodes` cells in all add nothing.
   {
     key : 'eggs',
     category : 'reproduction',
     scope : 'single',
+    nodes : 16,
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
@@ -145,6 +148,7 @@ export const ORGANS = Object.freeze([
     key : 'sperm',
     category : 'reproduction',
     scope : 'single',
+    nodes : 16,
     centers : [
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
@@ -291,6 +295,9 @@ export function functionFor(center, site) {
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
 }
+// How many growth nodes a gonad may have: its organ's nodes less its other kinds of node.
+export const growthMost = organ =>
+    (ORGAN_BY_KEY[organ.type]?.nodes ?? 1) - organ.centers.filter(c => c.key !== 'growth').length;
 // What an organ's first node does where it lies (a muscle's function); -1 where it lies nowhere.
 export function organFunction(organ, sites) {
   const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);
