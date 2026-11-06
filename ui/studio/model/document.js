@@ -906,6 +906,9 @@ export function addSubstance(doc, max, wanted = null) {
   draft.substances.push({id : identifier('substance'), index, name : ''});
   return draft;
 }
+// The substance the hormone views show: the one asked for, or else the first there is.
+export const shownSubstance = (doc, index) =>
+    doc.substances.find(s => s.index === index) ?? doc.substances[0] ?? null;
 export const SUBSTANCE_NAME_LENGTH = 32;
 export function setSubstance(doc, index, name) {
   const draft = copy(doc), entry = draft.substances.find(s => s.index === index);

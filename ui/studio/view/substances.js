@@ -21,7 +21,8 @@ import {
   typeOfCenter,
   wheelAffinity,
   wheelPlace,
-  wheelSigma
+  wheelSigma,
+  shownSubstance
 } from '../model/document.js';
 import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
@@ -575,7 +576,7 @@ function receptorBody(state, center, effect) {
 }
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
-  const substance = doc.substances.find(s => s.index === state.focusSubstance);
+  const substance = shownSubstance(doc, state.focusSubstance);
   if (!substance || !wheel)
     return '<header class="aid-inspector-head">' + heading(label('hormoneCard.title')) +
            '</header>';

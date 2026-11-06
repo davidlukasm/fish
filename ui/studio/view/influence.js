@@ -24,7 +24,8 @@ import {
   receptorAffinity,
   teachersOf,
   wheelAffinity,
-  wholeEndpoint
+  wholeEndpoint,
+  shownSubstance
 } from '../model/document.js';
 import {pathTo} from './wires.js';
 import {steadyAt, zoomOf} from './frame.js';
@@ -173,8 +174,7 @@ function teachingOverlay(state) {
 }
 export function hormoneOverlay(state) {
   const {document : doc, sites, capabilities} = state;
-  const substance =
-      state.tool === 'hormone' ? doc.substances.find(s => s.index === state.focusSubstance) : null;
+  const substance = state.tool === 'hormone' ? shownSubstance(doc, state.focusSubstance) : null;
   const marks = layerShown(state, 'hormones') ? hormoneMarks(state, substance?.index ?? null) : '';
   const overlay = html =>
       html ? '<g class="aid-hormone-overlay" pointer-events="none">' + html + '</g>' : '';
@@ -270,9 +270,9 @@ function hormoneMarks(state, skip = null) {
 }
 const MEASURED_CHANGE = .01;
 export function hormoneRoles(state) {
-  const roles = new Map(), index = state.focusSubstance;
+  const roles = new Map(), index = shownSubstance(state.document, state.focusSubstance)?.index;
   const wheel = state.capabilities;
-  if (state.tool !== 'hormone' || !wheel || !state.document.substances.some(s => s.index === index))
+  if (state.tool !== 'hormone' || !wheel || index === undefined)
     return roles;
   for (const c of receivers(state.document, index, wheel))
     roles.set(c.id, 'receives');

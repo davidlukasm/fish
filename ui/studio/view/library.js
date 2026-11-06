@@ -5,7 +5,7 @@ import {SYSTEMS, systemFits} from '../model/systems.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {LEARNING_EFFECTS} from '../model/document.js';
+import {LEARNING_EFFECTS, shownSubstance} from '../model/document.js';
 import {MODULES, NEURON_BY_KEY, NEURONS, ORGAN_BY_KEY, ORGANS, PAIRINGS} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
 import {namedText, tList} from '../../strings.js';
@@ -46,10 +46,8 @@ function tile({
 const section = (title, tiles, extra = '') => '<section class="aid-library-section"><h4>' + title +
                                               '</h4><div class="aid-palette-grid">' + tiles +
                                               '</div>' + extra + '</section>';
-const openSubstance = state => {
-  const subs = state.capabilities ? state.document.substances : [];
-  return subs.some(s => s.index === state.focusSubstance) ? state.focusSubstance : subs[0]?.index;
-};
+const openSubstance = state =>
+    state.capabilities ? shownSubstance(state.document, state.focusSubstance)?.index : undefined;
 const substanceSection = (state, index, tiles) => {
   const open = index === openSubstance(state);
   return '<section class="aid-library-section aid-substance-section' + (open ? ' open' : '') +

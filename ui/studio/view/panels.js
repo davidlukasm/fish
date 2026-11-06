@@ -531,7 +531,10 @@ function multiInspector(state) {
 }
 export function inspector(state) {
   if (state.tool === 'hormone')
-    return hormoneInspector(state);
+    return state.document.substances.length || state.selected
+               ? hormoneInspector(state)
+               : '<header class="aid-inspector-head">' + heading(label('hormoneCard.title')) +
+                     '</header>' + workflow();
   if (state.tool === 'learn')
     return learningInspector(state);
   if (state.multi?.size > 1)
