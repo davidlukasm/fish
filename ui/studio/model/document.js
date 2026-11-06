@@ -886,6 +886,16 @@ export function bindReceptor(doc, id, effect, index) {
       doc, id, effect,
       {...(current?.sensitivity ? {} : RECEPTOR_START[effect]), active : 1, substance : index});
 }
+// Every learner of an organ (and its twin, which follows its pair) taught by one substance, or by
+// none when `index` is null.
+export function teachOrgan(doc, organId, index) {
+  let draft = doc;
+  for (const c of findOrgan(doc, organId)?.centers.filter(isLearner) ?? [])
+    draft = (index === null ? updateReceptor(draft, c.id, HORMONE_EFFECT.teaching, {active : 0})
+                            : bindReceptor(draft, c.id, HORMONE_EFFECT.teaching, index)) ??
+            draft;
+  return draft;
+}
 const RECEPTOR_ONSET = 1;
 export function switchReceptor(doc, id, effect, on) {
   const receptor = findCenter(doc, id)?.center.receptors[effect];

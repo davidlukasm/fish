@@ -28,6 +28,7 @@ import {
   setBends,
   setSubstance,
   switchReceptor,
+  teachOrgan,
   updateCenter,
   updateGrowth,
   updateReceptor,
@@ -445,6 +446,14 @@ export const FISH_CLICKS = Object.freeze([
              active : 1,
              ...(doc.growth.sensitivity ? {} : GROWTH_START)
            }));
+    }
+  ],
+  [
+    '[data-region-teacher]',
+    (studio, e) => {
+      const value = e.dataset.teacherValue;
+      keep(studio, teachOrgan(studio.state.document, e.dataset.regionTeacher,
+                              value === 'off' ? null : Number(value)));
     }
   ],
   [

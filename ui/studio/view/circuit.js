@@ -1,6 +1,9 @@
 import {substanceColor} from '../../hormones.js';
+import {clamp} from '../../units.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
-import {findCenter, findOrgan, teachersOf, wholeEndpoint} from '../model/document.js';
+import {HORMONE_EFFECT} from '../../schema.js';
+import {findCenter, findOrgan, isLearner, teachersOf, wholeEndpoint} from '../model/document.js';
+import {substanceName} from './substances.js';
 import {centerMarker} from './scene.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {sideIndex} from '../model/layout.js';
@@ -114,10 +117,16 @@ function placeRows(doc, rows, top) {
     for (const side of [0, 1, null]) {
       const ids = row.ids.filter(id => sideOf(id) === side);
       const column = side === null ? C.middle : side ? C.right : C.left;
-      const step = side === null ? C.spread : C.fan;
+      // A fan stays inside its half of the plan: squeezed if too wide, else shifted in.
+      const lo = side === 1 ? C.middle + C.organ : C.organ,
+            hi = side === 0 ? C.middle - C.organ : C.width - C.organ;
+      const step =
+          Math.min(side === null ? C.spread : C.fan, (hi - lo) / Math.max(1, ids.length - 1));
+      const half = (ids.length - 1) / 2 * step;
+      const centre = clamp(column, lo + half, hi - half);
       ids.forEach(
           (id, k) => at.set(
-              id, {x : column + (k - (ids.length - 1) / 2) * step, y : top + r * C.row, side}));
+              id, {x : centre + (k - (ids.length - 1) / 2) * step, y : top + r * C.row, side}));
     }
   });
   return at;
@@ -196,8 +205,16 @@ const circuitEnds = (doc, rows, at) => rows.flatMap(row => row.ids.map(id => {
 const circuitLabel = (y, text) => '<text class="aid-circuit-label" x="' + CIRCUIT.label + '" y="' +
                                   (y + CIRCUIT.baseline) + '" text-anchor="end">' +
                                   escapeText(text) + '</text>';
-const rowLabels = (rows, at) =>
-    rows.map(row => circuitLabel(at.get(row.ids[0]).y, endTitle(row.end)));
+// A row fanned out wider than its column leaves no room beside it; its name goes above it.
+function rowLabel(row, at) {
+  const C = CIRCUIT, places = row.ids.map(id => at.get(id));
+  const left = Math.min(...places.map(p => p.x)) - C.organ, y = places[0].y;
+  return left > C.label
+             ? circuitLabel(y, endTitle(row.end))
+             : '<text class="aid-circuit-label" x="' + fixed(left) + '" y="' +
+                   (y - C.organ - C.baseline) + '">' + escapeText(endTitle(row.end)) + '</text>';
+}
+const rowLabels = (rows, at) => rows.map(row => rowLabel(row, at));
 function circuitNode(state, id, m, p) {
   const C = CIRCUIT;
   const teacher =
@@ -276,6 +293,29 @@ export function slotsSection(state, organ) {
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
+// Who teaches the region's learners, set for all of them at once.
+function regionTeacher(state, organ) {
+  const learners = organ.centers.filter(isLearner);
+  if (!learners.length)
+    return '';
+  const taught = new Set(learners.map(c => {
+    const r = c.receptors[HORMONE_EFFECT.teaching];
+    return r?.active ? r.substance : null;
+  }));
+  const one = taught.size === 1 ? [...taught ][0] : undefined;
+  const choice = (value, text, swatch = '') =>
+      '<button class="' + (one === value ? 'active' : '') + '" data-region-teacher="' +
+      escapeText(organ.id) + '" data-teacher-value="' + (value ?? 'off') + '"' +
+      (swatch ? ' style="--substance:' + swatch + '"' : '') + '>' +
+      (swatch ? '<span class="aid-substance-swatch"></span>' : '') + escapeText(text) + '</button>';
+  return '<div class="aid-region-setting"><span>' + label('regions.settings.teacher') +
+         '</span><div class="aid-button-group aid-learn-substances">' +
+         choice(null, label('learnRule.none')) +
+         state.document.substances
+             .map(s => choice(s.index, substanceName(state, s.index), substanceColor(s.index)))
+             .join('') +
+         '</div></div>';
+}
 function regionControls(state, organ) {
   if (!planned(organ))
     return '';
@@ -319,7 +359,8 @@ function regionControls(state, organ) {
                 '</p>'
           : '';
   return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
-         label('regions.settingsTitle') + '</h4>' + choices + crowded + follows + '</section>';
+         label('regions.settingsTitle') + '</h4>' + choices + regionTeacher(state, organ) +
+         crowded + follows + '</section>';
 }
 export function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);
