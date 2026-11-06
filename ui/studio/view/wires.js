@@ -355,7 +355,8 @@ export function wireSvg(state, centers) {
     html += '<g data-wire="' +
             escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
             '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
-            (bundle.mirrored ? ' data-mirrored' : '') + ' class="aid-wire-group' +
+            (bundle.mirrored ? ' data-mirrored' : '') +
+            (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
             (chosen >= 0 ? ' selected' : '') + '">' +
             '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
             '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) +

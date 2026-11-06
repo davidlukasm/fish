@@ -193,7 +193,6 @@ export const ORGANS = Object.freeze([
     category : 'regions',
     scope : 'side',
     centers : [ nerve('relay', 3, [ 1, 2 ]) ],
-    pairing : {from : {eye : 'crossed', proximity : 'crossed'}},
     slots : [
       slot('sight', 'in', [ 'eye' ], true), slot('near', 'in', [ 'proximity' ]),
       slot('onward', 'out', [], true)
@@ -217,7 +216,6 @@ export const ORGANS = Object.freeze([
     category : 'regions',
     scope : 'side',
     centers : [ nerve('relay', 3, [ 2, 3 ]) ],
-    pairing : {to : {muscle : 'crossed'}},
     slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
     settings : {threshold : setting(0, 2, 1, true), tempo : setting(0, 1, 0, true)}
   },
@@ -286,13 +284,6 @@ export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'region
 export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROLE
                                 : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
                                                                      : type;
-// The pairing a new wire between two paired organs takes: as the region on either end prefers
-// for the other end's type, else on each side.
-export function defaultPairing(fromType, toType) {
-  return ORGAN_BY_KEY[toType]?.pairing?.from?.[fromType] ??
-         ORGAN_BY_KEY[fromType]?.pairing?.to?.[toType] ?? 'same';
-}
-
 export const ORGAN_BY_KEY = Object.freeze(Object.fromEntries(ORGANS.map(o => [o.key, o])));
 export const MUSCLES = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
@@ -367,13 +358,14 @@ export function eligible(center, site) {
 }
 
 // Built-in modules: organs and brain regions wired as wholes, from one organ of the list to
-// another; the muscle goes to the zone where it does the module's work.
+// another (with the way the sides pair where they cross); the muscle goes to the zone where it
+// does the module's work.
 export const MODULES = Object.freeze([
   {
     key : 'vision-steering',
     muscleZone : 2,
     organs : [ 'eye', 'tectum', 'muscle' ],
-    connections : [ [ 0, 1 ], [ 1, 2 ] ]
+    connections : [ [ 0, 1, 'crossed' ], [ 1, 2 ] ]
   },
   {
     key : 'scent-suction',
@@ -391,6 +383,6 @@ export const MODULES = Object.freeze([
     key : 'escape',
     muscleZone : 2,
     organs : [ 'lateral', 'hindbrain', 'muscle' ],
-    connections : [ [ 0, 1 ], [ 1, 2 ] ]
+    connections : [ [ 0, 1 ], [ 1, 2, 'crossed' ] ]
   }
 ]);

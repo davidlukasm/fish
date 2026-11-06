@@ -101,6 +101,8 @@ export class OrganStudio {
       // The test stimulus of the selected nose, touch, pain or lateral organ: its organ, kind,
       // side, bearing, distance, strength and scent.
       senseProbe : null,
+      // A library tile held ready to act on what is clicked next: its kind and value.
+      armed : null,
       visionProfile : null,
       panels : storedPanels(),
       layers : storedLayers(),
@@ -236,6 +238,8 @@ export class OrganStudio {
     this.pendingWire = null;
     const entering = tool !== this.state.tool;
     this.state.tool = tool;
+    if (entering)
+      this.state.armed = null;
     if (tool === 'wire') {
       this.clearStimulus();
       this.showDrawnContacts();
@@ -247,7 +251,7 @@ export class OrganStudio {
     }
     this.clearPreview();
     this.refreshTools();
-    this.refreshLibrary();
+    this.showArmed();
     this.refreshViews();
   }
   // The library offers organs to place, with the hormone tool the substances and what they do,
@@ -768,6 +772,8 @@ export class OrganStudio {
     }
     if (event.key === 'Escape') {
       this.pendingWire = null;
+      this.state.armed = null;
+      this.showArmed();
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();

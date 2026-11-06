@@ -44,8 +44,6 @@ function through(points) {
 }
 const cubics = segments =>
     segments.map(([, c1, c2, end ]) => ' C' + xy(c1) + ' ' + xy(c2) + ' ' + xy(end)).join('');
-// A smooth line through points ([x, y] each), from the first to the last.
-export const curveThrough = points => 'M' + xy(points[0]) + cubics(through(points));
 // The tip of the snout, where the outline's head ends.
 export const SNOUT_TIP =
     Object.freeze({x : BODY_KNOTS[0][0] - OUTLINE.nose, y : BODY_FRAME.middle});

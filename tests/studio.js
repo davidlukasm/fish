@@ -299,7 +299,6 @@ function semanticFingerprint(source) {
   // Brain regions sit on both sides with their own circuit: the spinal cord's rhythm cells drive
   // their side's inhibitory cells, which silence the other side's rhythm.
   {
-    const {defaultPairing} = await import('../ui/studio/model/organs.js');
     const site = sites.find(s => s.zone === 2 && !s.outer);
     const spinal =
         model.addOrgan(model.newDocument('Regionen'), 'spinal', sites, geometry.sitePoint(site));
@@ -409,17 +408,26 @@ function semanticFingerprint(source) {
     assert.ok(
         steadyLinks.length &&
         steadyLinks.every(l => model.findCenter(steady.document, l.to).center.node === 'smooth'));
-    assert.equal(defaultPairing('eye', 'tectum'), 'crossed');
-    assert.equal(defaultPairing('eye', 'olfactory'), 'same');
-    // An eye wired to the optic tectum crosses the midline: each eye feeds the far tectum.
+    // An eye wired to the optic tectum joins the sides as drawn: to the tectum on its side each
+    // eye feeds its own, to the far one each eye feeds the far tectum.
     let wired = model.addOrgan(spinal.document, 'eye', sites, {x : 345, y : 290}).document;
     const tectumSite = sites.find(s => s.zone === 1 && !s.outer);
     const tectum = model.addOrgan(wired, 'tectum', sites, geometry.sitePoint(tectumSite));
     assert.ok(tectum, 'The optic tectum can be placed');
     wired = tectum.document;
     const eyeOrgan = wired.organs.find(o => o.type === 'eye');
+    const own = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
+                                        {kind : 'organ', id : tectum.organId});
+    assert.equal(own.document.wires.at(-1).pairing, 'same');
+    assert.ok(model.expandedWires(own.document)
+                  .filter(l => l.wire.id === own.wireId)
+                  .every(l => model.findOrgan(own.document, l.from).side ===
+                              model.findOrgan(own.document, l.to).side),
+              'Drawn on one side, optic wires stay on their sides');
+    const farTectum = model.findOrgan(wired, tectum.organId).pair;
+    assert.ok(farTectum);
     const connected = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
-                                              {kind : 'organ', id : tectum.organId});
+                                              {kind : 'organ', id : farTectum});
     assert.ok(connected);
     assert.equal(connected.document.wires.at(-1).pairing, 'crossed');
     const tectumLeft = model.findOrgan(connected.document, tectum.organId);
@@ -459,7 +467,7 @@ function semanticFingerprint(source) {
                      [ [ 'sight', true ], [ 'near', false ], [ 'onward', false ] ]);
     const plan = model.compileDocument(connected.document, sites);
     assert.equal(plan.groups.length, allCentersOf(connected.document));
-    // Drawn to the far tectum, an optic wire still crosses: the guidance holds for body sides.
+    // Drawn to a node of the far tectum, an optic wire crosses as drawn.
     const twin = model.findOrgan(wired, tectumLeft.pair);
     const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
     assert.equal(across.document.wires.at(-1).pairing, 'crossed');
@@ -1658,8 +1666,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     // Nerve centers stand in the drawn brain: a free node put on the tectum stays there, a region
     // put there clusters around the place it took.
     const brainPlaces = await import('../ui/studio/view/places.js');
-    const lobe = brainPlaces.BRAIN.lobes.find(p => p.key === 'tectum');
-    const onLobe = {x : lobe.x, y : 365 - lobe.d};
+    const cerebrum = brainPlaces.BRAIN.cerebrum;
+    const onLobe = {x : (cerebrum.from + cerebrum.to) / 2, y : 365 - cerebrum.half / 2};
     const node = model.addNeuron(model.newDocument('Knoten'), 'relay', sites, onLobe, 60);
     const nodeAt = brainPlaces.centerLocation(model.findCenter(node.document, node.centerId).center,
                                               'brain', sites);

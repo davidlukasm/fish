@@ -329,8 +329,8 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
     organIds.push(created.organId);
     centerByOrgan.push(created.centerIds);
   }
-  for (const [from, to] of module.connections) {
-    const result = addWire(draft, organIds[from], organIds[to]);
+  for (const [from, to, pairing] of module.connections) {
+    const result = addWire(draft, organIds[from], organIds[to], pairing);
     if (result)
       draft = result.document;
   }

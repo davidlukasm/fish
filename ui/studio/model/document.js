@@ -4,7 +4,6 @@ import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js'
 import {planOfUnit, scentAffinities, scentTuning, unitOfPlan} from '../../tuning.js';
 import {nextPigment} from './pigment.js';
 import {
-  defaultPairing,
   eligible,
   fitsOrgan,
   functionFor,
@@ -970,21 +969,21 @@ export function removeSubstance(doc, index) {
     draft.growth.active = 0;
   return draft;
 }
-export function addWire(doc, from, to) {
+export function addWire(doc, from, to, pairing = null) {
   // An organ as a whole sends from its nodes that send and is heard by those that hear; a sense
   // does not drive an effector without a nerve center between them.
   const a = senderNodes(doc, from), b = hearerNodes(doc, to);
   if (!a.length || !b.length || from === to ||
       (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
     return null;
-  const source = organOf(doc, from), target = organOf(doc, to);
-  // A wire between twins joins the sides as drawn; others between paired ends take the side
-  // guidance their organs prefer.
+  // A wire between paired ends joins the sides as drawn (each side its own, or each the other's),
+  // unless a way of pairing is asked for; one between twins joins them alone.
   const twins = pairEndpoint(doc, from) === to;
-  const pairing = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
-                      ? defaultPairing(source.type, target.type)
-                      : null;
-  const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing};
+  const drawn = endpointSide(doc, from) === endpointSide(doc, to) ? 'same' : 'crossed';
+  const sides = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
+                    ? PAIRINGS.includes(pairing) ? pairing : drawn
+                    : null;
+  const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing : sides};
   // A connection covers another that it makes or that its ends' whole organs make: a node's wire
   // to what its organ already reaches adds nothing and is none; a new wire takes the place of the
   // wires it covers whole.

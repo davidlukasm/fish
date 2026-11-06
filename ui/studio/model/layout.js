@@ -64,7 +64,7 @@ export const SKIN_ROLE = 'skin';
 export const BRAIN_MAP = Object.freeze({
   [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, middle : 10, narrow : 0},
   [ZONE.head] : {front : 262, length : 150, height : 70, out : 44, middle : 12, narrow : 0},
-  [ZONE.trunk] : {front : 440, length : 120, height : 60, out : 42, middle : 12, narrow : .3},
+  [ZONE.trunk] : {front : 455, length : 105, height : 50, out : 36, middle : 10, narrow : .3},
   [ZONE.tail] : {front : 620, length : 220, height : 40, out : 16, middle : 6, narrow : 0}
 });
 const MIDDLE_HEIGHT = .5;

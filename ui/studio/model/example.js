@@ -51,11 +51,11 @@ const PLACES = Object.freeze({
 // for both sides, reaches the reward glands on both (twin: the other side's organ). The growth
 // glands release without a signal, all the time.
 const WIRES = Object.freeze([
-  [ 'eye', 'tectum' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ], [ 'bulb', 'pallium' ],
-  [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ], [ 'lateral', 'hindbrain' ],
-  [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ], [ 'pallium', 'bite' ],
-  [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ],
-  [ 'hypothalamus', 'reward:twin' ]
+  [ 'eye', 'tectum', 'crossed' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ],
+  [ 'bulb', 'pallium' ], [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ],
+  [ 'lateral', 'hindbrain' ], [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ],
+  [ 'pallium', 'bite' ], [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ],
+  [ 'hypothalamus', 'reward' ], [ 'hypothalamus', 'reward:twin' ]
 ]);
 // The gonads make GROWTH_CELLS growth cells each, so the ovary holds an egg and the testis what
 // one spawning takes.
@@ -113,8 +113,8 @@ export function exampleDocument(names, sites, wheel) {
     return part === 'twin' ? findOrgan(doc, placed[name].organ)?.pair
                            : placed[name][part ?? 'organ'];
   };
-  for (const [from, to] of WIRES) {
-    const r = addWire(doc, end(from), end(to));
+  for (const [from, to, pairing] of WIRES) {
+    const r = addWire(doc, end(from), end(to), pairing);
     if (r)
       doc = r.document;
   }

@@ -110,6 +110,9 @@ export const ANYWHERE_CLICKS = Object.freeze([
 // In the studio: its tools, history, zoom and views.
 export const STUDIO_CLICKS = Object.freeze([
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
+  // Library tiles that act when clicked: a wiring tile is held ready, a stimulus appears.
+  [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
+  [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
   [ '[data-history]', (studio, e) => studio.stepHistory(e.dataset.history) ],
   [ '[data-zoom]', (studio, e) => studio.zoom(e.dataset.zoom) ],
   [
@@ -243,6 +246,7 @@ function showChoice(studio, change, library = false) {
 
 // On the fish and in its panels, in the order they are tried.
 export const FISH_CLICKS = Object.freeze([
+  [ '[data-wires]', (studio, e, event) => studio.clickArmedWire(e, event) ? undefined : PASS ],
   [
     '[data-link-pair]',
     (studio, e) => keep(studio, linkPair(studio.state.document, e.dataset.linkPair))

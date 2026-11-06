@@ -10,20 +10,17 @@ import {
   findCenter,
   findOrgan,
   makeLearner,
+  organOf,
   setLifePhase,
   updateCenter,
   updateWire,
   wheelPlace
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
-import {nearFish, pointDistance, sideOf, sitePoint, SNAP_DISTANCE} from './model/layout.js';
+import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
-import {organLocation, placementTarget} from './view/places.js';
-import {visionDragPatch} from './view/vision.js';
-import {probePatch} from './view/probes.js';
-import {probeFor} from './model/probe.js';
-import {defaultSight} from './model/sight.js';
+import {placementTarget} from './view/places.js';
 import {label} from './view/kit.js';
 import {
   assemblyPreview,
@@ -72,8 +69,6 @@ export const dropMethods = {
       this.markDropTargets(kind, value);
     else if (kind === 'wiring')
       this.markWires();
-    else if (kind === 'stimulus')
-      this.bodyMap()?.classList.add('aid-dropping-stimulus');
     else if (this.ontoNerve(kind, value)) {
       this.markDropTargets(kind, value);
       this.showHints(kind, value, kind + ':' + value);
@@ -111,8 +106,6 @@ export const dropMethods = {
       wire?.classList.add('aid-drop-hover');
       return;
     }
-    if (this.dragging.kind === 'stimulus')
-      return;
     const teaching = this.ontoNerve(this.dragging.kind, this.dragging.value);
     if (DROP_ON_PARTS.includes(this.dragging.kind) || teaching) {
       const target = this.dropTarget(event);
@@ -165,8 +158,6 @@ export const dropMethods = {
       return this.dropOnPart(kind, value, this.dropTarget(event));
     if (kind === 'wiring')
       return this.dropWiring(value, event.target.closest?.('[data-wires]'), position);
-    if (kind === 'stimulus')
-      return this.dropStimulus(value, position);
     const learner = this.ontoNerve(kind, value) ? this.dropTarget(event) : null;
     if (learner)
       return this.dropOntoNerve(value, learner, position);
@@ -221,6 +212,9 @@ export const dropMethods = {
   dropWiring(value, element, position) {
     this.dragging = null;
     this.clearPreview();
+    this.wireWith(value, element, position);
+  },
+  wireWith(value, element, position) {
     if (!element)
       return this.notice(label('wiring.noWire'));
     if (value === BEND)
@@ -229,40 +223,45 @@ export const dropMethods = {
     for (const id of element.dataset.wires.split(' '))
       doc = updateWire(doc, id, {pairing : value}) ?? doc;
     this.changeDocument(doc, this.state.selected);
-    this.notice(label('wiring.paired'));
   },
-  // A test stimulus dropped onto the fish comes from there, for the sense of its kind nearest the
-  // drop: a light or an object for an eye or near sense as seen from its side, a scent, a current,
-  // a touch or a bite for a nose, a lateral line, touch or pain cells. The sense is chosen, so its
-  // answer shows, and its signal runs on through the fish.
-  dropStimulus(value, position) {
-    this.dragging = null;
-    this.clearPreview();
+  // A wiring tile clicked is held ready (clicked again it is let go): the wires it can act on
+  // stand out, and a click on one acts on it there, as a drop would.
+  armWiring(value) {
+    const armed = this.state.armed?.value === value ? null : {kind : 'wiring', value};
+    this.state.armed = armed;
+    this.showArmed();
+  },
+  showArmed() {
+    const armed = this.state.armed;
+    if (armed) {
+      this.root.dataset.armed = armed.kind;
+      this.root.dataset.armedValue = armed.value;
+    } else {
+      delete this.root.dataset.armed;
+      delete this.root.dataset.armedValue;
+    }
+    this.refreshLibrary();
+  },
+  clickArmedWire(element, event) {
+    if (this.state.armed?.kind !== 'wiring')
+      return false;
+    const svg = this.bodyMap();
+    this.wireWith(this.state.armed.value, element,
+                  svg && cameraCoordinates(event, svg, this.state.camera));
+    return true;
+  },
+  // A test stimulus tile clicked brings the stimulus to its sense at once: the chosen one of its
+  // kind, else the first; a light or an object for an eye or near sense, a scent, a current, a
+  // touch or a bite for a nose, a lateral line, touch or pain cells. The sense is chosen, so its
+  // stimulus and answer show, and its signal runs on through the fish.
+  placeStimulus(value) {
     const doc = this.state.document, type = STIMULUS_ORGAN[value];
     const organs = doc.organs.filter(o => o.type === type);
     if (!organs.length)
       return this.notice(label('status.noRoom'));
-    const distance = o => {
-      const p = organLocation(o, this.state.sites, doc);
-      return Math.hypot(p.x - position.x, p.y - position.y);
-    };
-    const organ = organs.reduce((best, o) => distance(o) < distance(best) ? o : best);
+    const chosen = organOf(doc, this.state.selected?.id);
+    const organ = organs.find(o => o.id === chosen?.id) ?? organs[0];
     this.state.selected = {kind : 'organ', id : organ.id};
-    if (organ.field) {
-      const side = sideOf(organ), probe = this.state.sightProbe;
-      const base = probe?.side === side
-                       ? probe
-                       : defaultSight(organ, this.state.capabilities, this.state.anatomy);
-      const patch =
-          base && visionDragPatch({...this.state, sightProbe : base}, organ, 'probe', position);
-      if (patch)
-        this.state.sightProbe = {...base, ...patch};
-    } else {
-      const sense = probeFor(organ, this.state.senseProbe),
-            faintest = this.state.anatomy?.lightDimmest;
-      if (sense && faintest > 0)
-        this.state.senseProbe = {...sense, ...probePatch(sense.kind, position, faintest)};
-    }
     this.requestDesign();
     this.refreshViews();
     this.stimulate(organ.centers.map(c => c.id));
@@ -405,7 +404,7 @@ export const dropMethods = {
   clearPreview() {
     for (const element of this.root.querySelectorAll('.aid-drop-target,.aid-drop-hover'))
       element.classList.remove('aid-drop-target', 'aid-drop-hover');
-    this.bodyMap()?.classList.remove('aid-dropping', 'aid-dropping-stimulus');
+    this.bodyMap()?.classList.remove('aid-dropping');
     this.root.querySelector(LAYER.preview)?.replaceChildren();
     const hints = this.root.querySelector(LAYER.hints);
     if (hints) {

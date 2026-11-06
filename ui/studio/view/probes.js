@@ -13,24 +13,37 @@ import {formatNumber, percent, t} from '../../strings.js';
 
 // A sense probe on the fish while its organ is chosen: the stimulus at its bearing around the
 // fish, its handle setting the bearing and how far or strong it is, and beside the organ (and its
-// twin) how strongly it answers. A scent source lies from the skin (the least distance) out to
-// SPAN beyond it at the most, on a log scale: rings round the body mark RINGS body lengths. A
-// touch, a bite or a current comes as an arrow ending GAP off the skin, as much longer up to
+// twin) how strongly it answers. A scent source lies from the skin (the least distance) out, as
+// far as it is (a body radius is the frame's BODY_RADIUS): rings round the body mark RINGS body
+// lengths. A touch or a bite comes as an arrow ending GAP off the skin, as much longer up to
 // REACH as it is strong on a log scale from the faintest stimulus (`faintest`, the design view's
-// dimmest one) to the most; a current as STREAMS arrows ACROSS apart with PARTICLES drifting on
-// LANES between them (SPREAD of ACROSS apart, PER on each, SIZE wide on screen), taking from SLOW
-// seconds for the faintest current to FAST for the strongest to reach the body. Marks keep their
-// size on screen as the view zooms: the handle HANDLE, the source SOURCE wide with its icon ICON
-// large, each answer as a disc ANSWER wide OFF beyond the organ, away from the midline, its share
-// LIT; a scent source's distance in fish lengths stands BELOW it, to DIGITS.
+// dimmest one) to the most. A current is the water streaming round the whole fish: STREAMS arrows
+// ACROSS apart, FAR off the skin, as long as it is strong, and particles drifting along the
+// streamlines round the body (WATER: LANES of them SPACING apart, from UPSTREAM before the fish's
+// middle to as far behind it, STEPS a line, PER particles on each, SIZE wide on screen, the lines
+// LINES opaque), taking from SLOW seconds for the faintest current to FAST for the strongest to
+// pass. Marks keep their size on screen as the view zooms: the handle HANDLE, the source SOURCE
+// wide with its icon ICON large, each answer as a disc ANSWER wide OFF beyond the organ, away from
+// the midline, its share LIT; a scent source's distance in fish lengths stands BELOW it, to
+// DIGITS.
 const PROBE_SCENE = Object.freeze({
-  span : 560,
   rings : [ 1, 2, 5, 10 ],
   gap : 14,
+  far : 150,
   reach : 300,
   streams : 3,
   across : 46,
-  particles : {lanes : 5, spread : .5, per : 3, size : 3.2, slow : 3.4, fast : .7},
+  water : {
+    lanes : 27,
+    spacing : 34,
+    upstream : 760,
+    steps : 90,
+    per : 3,
+    size : 2.6,
+    lines : .1,
+    slow : 9,
+    fast : 2.2
+  },
   skin_step : 6,
   handle : 11,
   source : 16,
@@ -57,11 +70,10 @@ const pointAt = (angle, r) => {
   return {x : BODY_MIDDLE.x + d.x * r, y : BODY_MIDDLE.y + d.y * r};
 };
 // A scent's distance (body radii) as frame units beyond the skin, and back.
-const smellSpan = () => Math.log(PROBE_LIMITS.most.smell / PROBE_LIMITS.least.smell);
-const beyondSkin = distance =>
-    PROBE_SCENE.span * Math.log(distance / PROBE_LIMITS.least.smell) / smellSpan();
+const beyondSkin = distance => (distance - PROBE_LIMITS.least.smell) * BODY_RADIUS;
 const distanceAt = beyond =>
-    PROBE_LIMITS.least.smell * Math.exp(clamp(beyond / PROBE_SCENE.span) * smellSpan());
+    Math.max(PROBE_LIMITS.least.smell,
+             Math.min(PROBE_LIMITS.most.smell, PROBE_LIMITS.least.smell + beyond / BODY_RADIUS));
 // A strength as a share of the arrow's reach, and back.
 const strengthShare = (strength, kind, faintest) =>
     Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
@@ -71,9 +83,9 @@ const shareStrength = (share, kind, faintest) =>
 // How far from the middle the handle of a probe stands.
 function handleRadius(probe, faintest) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
-  return probe.kind === 'smell'
-             ? skin + beyondSkin(probe.distance)
-             : skin + P.gap + P.reach * strengthShare(probe.strength, probe.kind, faintest);
+  return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
+                                : skin + (probe.kind === 'flow' ? P.far : P.gap) +
+                                      P.reach * strengthShare(probe.strength, probe.kind, faintest);
 }
 // Where the probe's handle stands on the scene.
 export const probeHandle = (probe, faintest) =>
@@ -83,9 +95,10 @@ export function probePatch(kind, position, faintest) {
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
   const beyond = r - skinDistance(angle);
+  const from = kind === 'flow' ? PROBE_SCENE.far : PROBE_SCENE.gap;
   return kind === 'smell' ? {bearing, distance : distanceAt(beyond)} : {
     bearing,
-    strength : shareStrength((beyond - PROBE_SCENE.gap) / PROBE_SCENE.reach, kind, faintest)
+    strength : shareStrength((beyond - from) / PROBE_SCENE.reach, kind, faintest)
   };
 }
 // The rings round the body a scent's distance is read on, each named by its body lengths.
@@ -119,34 +132,71 @@ function stimulusSvg(probe, faintest, zoom) {
            escapeText(t('studio.probe.lengths', {n : formatNumber(probe.distance / 2, P.digits)})) +
            '</text></g>';
   }
-  if (probe.kind === 'flow') {
-    const d = bodyDirection(angle), across = {x : -d.y, y : d.x};
-    const move = (p, shift) => ({x : p.x + across.x * shift, y : p.y + across.y * shift});
-    const arrows = Array
-                       .from({length : P.streams},
-                             (_, k) => {
-                               const shift = (k - (P.streams - 1) / 2) * P.across;
-                               return '<path class="aid-probe-arrow flow" d="' +
-                                      arrowPath(move(at, shift), move(onto, shift)) + '"/>';
-                             })
-                       .join('');
-    // Particles drift with the water onto the body, the faster the stronger it streams.
-    const F = P.particles, share = strengthShare(probe.strength, probe.kind, faintest);
-    const seconds = F.slow + (F.fast - F.slow) * share;
-    let particles = '';
-    for (let lane = 0; lane < F.lanes; ++lane) {
-      const shift = (lane - (F.lanes - 1) / 2) * P.across * F.spread;
-      const from = move(at, shift), to = move(onto, shift);
-      for (let k = 0; k < F.per; ++k)
-        particles += '<circle class="aid-probe-particle" r="' + fixed(F.size / zoom) +
-                     '"><animateMotion path="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
-                     fixed(to.x) + ' ' + fixed(to.y) + '" dur="' + fixed(seconds) + 's" begin="-' +
-                     fixed(seconds * (k + lane / F.lanes) / F.per) +
-                     's" repeatCount="indefinite"/></circle>';
-    }
-    return arrows + particles;
-  }
+  if (probe.kind === 'flow')
+    return waterSvg(probe, faintest, zoom) + flowArrows(angle, at, P);
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
+}
+// The arrows of a current, upstream, FAR off the skin.
+function flowArrows(angle, at, P) {
+  const d = bodyDirection(angle), across = {x : -d.y, y : d.x};
+  const onto = pointAt(angle, skinDistance(angle) + P.far);
+  const move = (p, shift) => ({x : p.x + across.x * shift, y : p.y + across.y * shift});
+  return Array
+      .from({length : P.streams},
+            (_, k) => {
+              const shift = (k - (P.streams - 1) / 2) * P.across;
+              return '<path class="aid-probe-arrow flow" d="' +
+                     arrowPath(move(at, shift), move(onto, shift)) + '"/>';
+            })
+      .join('');
+}
+// The water streaming round the fish from the probe's bearing: the body as an ellipse (half its
+// length along, its widest half across), the flow round it as round a circle in the ellipse's
+// own measure (complex potential U(z + 1/z)), each lane's streamline followed from upstream to
+// as far downstream, faint, with particles drifting along it.
+const FISH_ELLIPSE = Object.freeze({along : BODY_RADIUS, across : .38 * BODY_RADIUS});
+function waterVelocity(p, flow) {
+  const E = FISH_ELLIPSE;
+  const x = (p.x - BODY_MIDDLE.x) / E.along, y = (p.y - BODY_MIDDLE.y) / E.across;
+  // In the ellipse's measure the flow runs along u; turn so it runs along the real axis.
+  const ux = flow.x / E.along, uy = flow.y / E.across, ul = Math.hypot(ux, uy) || 1;
+  const c = ux / ul, s = uy / ul, zx = c * x + s * y, zy = -s * x + c * y;
+  const r2 = zx * zx + zy * zy, r4 = r2 * r2 || 1;
+  // F'(z) = 1 - 1/z² is the velocity's conjugate: the velocity (Re F', -Im F').
+  const wx = 1 - (zx * zx - zy * zy) / r4, wy = -2 * zx * zy / r4;
+  const vx = c * wx - s * wy, vy = s * wx + c * wy;
+  return {x : vx * E.along, y : vy * E.across, inside : r2 < 1};
+}
+function waterSvg(probe, faintest, zoom) {
+  const W = PROBE_SCENE.water, angle = radians(probe.bearing);
+  const toward = bodyDirection(angle), flow = {x : -toward.x, y : -toward.y};
+  const across = {x : -flow.y, y : flow.x}, step = 2 * W.upstream / W.steps;
+  const share = strengthShare(probe.strength, probe.kind, faintest);
+  const seconds = W.slow + (W.fast - W.slow) * share;
+  let lines = '', particles = '';
+  for (let lane = 0; lane < W.lanes; ++lane) {
+    const shift = (lane - (W.lanes - 1) / 2) * W.spacing;
+    let p = {
+      x : BODY_MIDDLE.x - flow.x * W.upstream + across.x * shift,
+      y : BODY_MIDDLE.y - flow.y * W.upstream + across.y * shift
+    };
+    const points = [ p ];
+    for (let k = 0; k < W.steps; ++k) {
+      const v = waterVelocity(p, flow), speed = Math.hypot(v.x, v.y) || 1;
+      if (v.inside)
+        break;
+      p = {x : p.x + v.x / speed * step, y : p.y + v.y / speed * step};
+      points.push(p);
+    }
+    const d = 'M' + points.map(q => fixed(q.x) + ' ' + fixed(q.y)).join(' L');
+    lines += '<path class="aid-probe-stream" d="' + d + '"/>';
+    for (let k = 0; k < W.per; ++k)
+      particles += '<circle class="aid-probe-particle" r="' + fixed(W.size / zoom) +
+                   '"><animateMotion path="' + d + '" dur="' + fixed(seconds) + 's" begin="-' +
+                   fixed(seconds * (k + (lane % W.per) / W.per) / W.per) +
+                   's" repeatCount="indefinite"/></circle>';
+  }
+  return '<g class="aid-probe-water" style="--lines:' + W.lines + '">' + lines + particles + '</g>';
 }
 // What the organ and its twin answer to the probe, from the design view: on each side the
 // strongest of its nodes (a nose's by the profile that smells it best, named in its title).
@@ -213,6 +263,3 @@ export function probeScents(state) {
              .join('') +
          '</div>';
 }
-// How far the probe's field reaches from the body's middle (frame units), for fitting the view.
-export const probeReach = kind =>
-    BODY_RADIUS + (kind === 'smell' ? PROBE_SCENE.span : PROBE_SCENE.gap + PROBE_SCENE.reach);

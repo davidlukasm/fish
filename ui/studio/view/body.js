@@ -14,7 +14,6 @@ import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
   bodyDirection,
-  curveThrough,
   finPaths,
   finRays,
   finRoots,
@@ -64,34 +63,89 @@ import {organTitle} from './names.js';
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
 
-// The brain from above, one organ, drawn as a scheme like the other organs: its outline (with the
-// spinal cord) in the brain's colour round all of it, inside the body's own colour, its lobes
-// (each side's mirrored), each over those before it, their edges among them as grooves, the
-// fissures between the halves, and over all of it a tint of the brain's colour.
+// The brain from above, as a brain is pictured, drawn as a scheme like the other organs: the rim
+// of all of it (cerebrum, cerebellum, cord) in the brain's colour, inside the body's own colour;
+// the cerebrum's two hemispheres with their folds, the cerebellum striped across, the cord; over
+// all of it a tint of the brain's colour.
+const BRAIN_STEPS = 72;
+// A hemisphere's half width at a share `u` along it: an egg, narrower at the front.
+function hemisphereWidth(u) {
+  const C = BRAIN.cerebrum;
+  return C.half * Math.sin(Math.PI * u) ** C.full * (C.front + (1 - C.front) * u);
+}
+// A point of a hemisphere (`side` -1 or 1) at shares along and across it from the midline.
+function hemispherePoint(side, [ u, v ]) {
+  const C = BRAIN.cerebrum;
+  return {x : C.from + u * (C.to - C.from), y : BODY_FRAME.middle + side * v * hemisphereWidth(u)};
+}
+// A hemisphere: from the front of the midline round its rim to the back, the rim scalloped into
+// lobes of equal length, each bulging out; closed along the midline.
+function hemisphere(side) {
+  const C = BRAIN.cerebrum;
+  const rim = Array.from({length : BRAIN_STEPS + 1},
+                         (_, k) => hemispherePoint(side, [ k / BRAIN_STEPS, 1 ]));
+  const along = [ 0 ];
+  for (let k = 1; k < rim.length; k++)
+    along.push(along[k - 1] + Math.hypot(rim[k].x - rim[k - 1].x, rim[k].y - rim[k - 1].y));
+  const total = along[along.length - 1];
+  const at = share => rim[along.findIndex(l => l >= share * total - 1e-9)];
+  const ends = Array.from({length : C.lobes + 1}, (_, k) => at(k / C.lobes));
+  let d = 'M' + fixed(ends[0].x) + ' ' + fixed(ends[0].y);
+  for (let k = 1; k < ends.length; k++) {
+    const a = ends[k - 1], b = ends[k], dx = b.x - a.x, dy = b.y - a.y;
+    // Outwards is away from the midline.
+    const turn = Math.sign(side * dx) || side;
+    d += ' Q' + fixed((a.x + b.x) / 2 - turn * dy * C.bulge * 2) + ' ' +
+         fixed((a.y + b.y) / 2 + turn * dx * C.bulge * 2) + ' ' + fixed(b.x) + ' ' + fixed(b.y);
+  }
+  return d + 'Z';
+}
+// A smooth curve through points (Catmull-Rom as cubic pieces).
+function smoothThrough(points) {
+  const n = points.length - 1;
+  let d = 'M' + fixed(points[0].x) + ' ' + fixed(points[0].y);
+  for (let k = 0; k < n; k++) {
+    const p0 = points[Math.max(0, k - 1)], p1 = points[k], p2 = points[k + 1],
+          p3 = points[Math.min(n, k + 2)];
+    d += ' C' + fixed(p1.x + (p2.x - p0.x) / 6) + ' ' + fixed(p1.y + (p2.y - p0.y) / 6) + ' ' +
+         fixed(p2.x - (p3.x - p1.x) / 6) + ' ' + fixed(p2.y - (p3.y - p1.y) / 6) + ' ' +
+         fixed(p2.x) + ' ' + fixed(p2.y);
+  }
+  return d;
+}
 function brainSvg(fill) {
-  const M = BODY_FRAME.middle, B = BRAIN, [ endX, endHalf ] = B.outline.at(-1);
-  // The outline's upper side from the front, round the cord's end, its lower side back.
-  const lower = [...B.outline ].reverse().map(([ x, h ]) => [x, M + h]);
-  const body =
-      curveThrough([ [ B.outline[0][0], M ], ...B.outline.map(([ x, h ]) => [x, M - h]) ]) + ' Q' +
-      (endX + B.end) + ' ' + (M - endHalf) + ' ' + (endX + B.end) + ' ' + M + ' Q' +
-      (endX + B.end) + ' ' + (M + endHalf) + ' ' + endX + ' ' + (M + endHalf) + ' L' +
-      curveThrough([...lower, [ B.outline[0][0], M ] ]).slice(1) + 'Z';
-  const lobe = (p, side, cls) =>
-      '<ellipse class="' + cls + '" cx="' + p.x + '" cy="' + (M + side * p.d) + '" rx="' + p.rx +
-      '" ry="' + p.ry + '"' +
-      (p.turn ? ' transform="rotate(' + side * p.turn + ' ' + p.x + ' ' + (M + side * p.d) + ')"'
-              : '') +
-      '/>';
-  const lobes = cls =>
-      B.lobes.map(p => p.d ? lobe(p, -1, cls) + lobe(p, 1, cls) : lobe(p, 1, cls)).join('');
-  const fissures =
-      B.fissures.map(([ from, to ]) => 'M' + from + ' ' + M + ' L' + to + ' ' + M).join(' ');
+  const M = BODY_FRAME.middle, B = BRAIN, E = B.cerebellum, C = B.cord;
+  const cerebellum =
+      '<ellipse cx="' + E.x + '" cy="' + M + '" rx="' + E.rx + '" ry="' + E.ry + '"/>';
+  const cord = '<path d="M' + C.from + ' ' + (M - C.half[0]) + ' L' + C.to + ' ' + (M - C.half[1]) +
+               ' Q' + (C.to + C.end) + ' ' + (M - C.half[1]) + ' ' + (C.to + C.end) + ' ' + M +
+               ' Q' + (C.to + C.end) + ' ' + (M + C.half[1]) + ' ' + C.to + ' ' + (M + C.half[1]) +
+               ' L' + C.from + ' ' + (M + C.half[0]) + 'Z"/>';
+  const hemispheres = '<path d="' + hemisphere(-1) + '"/><path d="' + hemisphere(1) + '"/>';
+  // The cerebellum's folds run across it from rim to rim, curved like its back edge.
+  const rimAt = x => E.ry * Math.sqrt(Math.max(0, 1 - ((x - E.x) / E.rx) ** 2));
+  const folia = Array
+                    .from({length : E.folia},
+                          (_, k) => {
+                            const x = E.x - E.rx + 2 * E.rx * (k + 1) / (E.folia + 1);
+                            const bow = rimAt(x) * E.bow, end = x - bow, y = rimAt(end);
+                            return 'M' + fixed(end) + ' ' + fixed(M - y) + ' Q' + fixed(x + bow) +
+                                   ' ' + M + ' ' + fixed(end) + ' ' + fixed(M + y);
+                          })
+                    .join(' ');
+  const folds =
+      [ -1, 1 ]
+          .flatMap(side => B.folds.map(f => smoothThrough(f.map(p => hemispherePoint(side, p)))))
+          .join(' ');
+  // Back to front, each part over the one behind it: the cord, the cerebellum and its folds, the
+  // hemispheres and theirs.
+  const part = (shapes, lines) => '<g class="aid-brain-lobe" fill="' + fill + '">' + shapes +
+                                  '</g><path class="aid-brain-fissure" d="' + lines + '"/>';
   return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
-         '</title><g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px"><path d="' +
-         body + '"/>' + lobes('') + '</g><g fill="' + fill + '"><path d="' + body + '"/>' +
-         lobes('aid-brain-lobe') + '</g><path class="aid-brain-fissure" d="' + fissures +
-         '"/><g class="aid-brain-tint"><path d="' + body + '"/>' + lobes('') + '</g></g>';
+         '</title><g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px">' + cord +
+         cerebellum + hemispheres + '</g>' + part(cord, '') + part(cerebellum, folia) +
+         part(hemispheres, folds) + '<g class="aid-brain-tint">' + cord + cerebellum + hemispheres +
+         '</g></g>';
 }
 function retinaNodes(state, organs) {
   const zoom = zoomOf(state);

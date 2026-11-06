@@ -15,10 +15,31 @@ import {tone} from './names.js';
 // (its symbol in a ring of its colour, its name below), in sections; and the tool palette.
 // A tile: what a drop gives (kind and value), its name, its symbol (a path, or markup when
 // MARKUP), the ring's colour, the hover title, and whether it offers nothing here (OFF).
-function tile({kind, value, name, path = null, markup = null, colour, title = name, off = false}) {
-  return '<button class="aid-palette-tile' + (off ? ' off' : '') + '"' +
-         (off ? ' disabled' : ' draggable="true"') + ' data-drag-kind="' + kind +
-         '" data-drag-value="' + escapeText(value) + '" title="' + escapeText(title) +
+// A tile is dragged onto the fish; one that acts (`act`) is clicked, to act at once or, `armed`,
+// held ready (it may be dragged as well, `drag`).
+function tile({
+  kind,
+  value,
+  name,
+  path = null,
+  markup = null,
+  colour,
+  title = name,
+  off = false,
+  act = false,
+  drag = !act,
+  armed = false
+}) {
+  const v = escapeText(value);
+  return '<button class="aid-palette-tile' + (off ? ' off' : '') + (armed ? ' armed' : '') + '"' +
+         (off    ? ' disabled'
+          : drag ? ' draggable="true"'
+                 : '') +
+         (drag ? ' data-drag-kind="' + kind + '" data-drag-value="' + v + '"' : '') +
+         (act ? ' data-act-kind="' + kind + '" data-act-value="' + v + '" aria-pressed="' + armed +
+                    '"'
+              : '') +
+         ' title="' + escapeText(title) +
          '"><span class="aid-palette-icon" style="--organ-color:' + colour + '">' +
          (markup ?? glyph(path, ICON.palette, {line : true})) + '</span><span>' + escapeText(name) +
          '</span></button>';
@@ -99,23 +120,26 @@ function placingLibrary(state) {
                               }))
                          .join(''));
 }
-// Wiring: the ways a wire between paired organs runs, each to drop onto a wire (same side,
-// crossed, both), and a bend to drop into a wire. Their symbols: two organs on each side of the
-// midline (y of SIDES), joined as the way runs; a bend a point a wire bows through.
+// Wiring: the ways a wire between paired organs runs (same side, crossed, both) and a bend, each
+// dropped onto a wire or clicked and then wires clicked with it. Their symbols: two organs on
+// each side of the midline, joined as the way runs; a bend a point a wire bows through.
 const WIRE_SYMBOL = Object.freeze({
   same : 'M5 6h14M5 18h14M5 6h.01M19 6h.01M5 18h.01M19 18h.01',
   crossed : 'M5 6l14 12M5 18l14-12M5 6h.01M19 6h.01M5 18h.01M19 18h.01',
   both : 'M5 6h14M5 18h14M5 6l14 12M5 18l14-12',
   bend : 'M3 18C7 18 8 6 12 6s5 12 9 12M12 6h.01'
 });
-function wiringLibrary() {
+function wiringLibrary(state) {
   const wiring = key => tile({
     kind : 'wiring',
     value : key,
     name : label('wiring.' + key),
     path : WIRE_SYMBOL[key],
     colour : tone('brain'),
-    title : label('wiring.' + key + 'Title')
+    title : label('wiring.' + key + 'Title'),
+    act : true,
+    drag : true,
+    armed : state.armed?.kind === 'wiring' && state.armed.value === key
   });
   return section(label('wiring.pairings'), PAIRINGS.map(wiring).join('')) +
          section(label('wiring.shape'), wiring('bend'));
@@ -212,8 +236,8 @@ function learningLibrary(state) {
              .join('') +
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
-// Stimulating: a test stimulus of each kind a sense feels, to drop onto the fish where it should
-// come from; one whose sense the fish lacks offers nothing.
+// Stimulating: a test stimulus of each kind a sense feels, clicked to appear at its sense at once;
+// one whose sense the fish lacks offers nothing.
 const STIMULI = Object.freeze([
   {key : 'light', organ : 'eye'}, {key : 'object', organ : 'proximity'},
   {key : 'scent', organ : 'nose'}, {key : 'flow', organ : 'lateral'},
@@ -228,7 +252,8 @@ function stimulusLibrary(state) {
                                                           name : label('stimulusCard.' + s.key),
                                                           markup : icon(s.organ),
                                                           colour : tone(s.organ),
-                                                          off : !has(s.organ)
+                                                          off : !has(s.organ),
+                                                          act : true
                                                         }))
                                                    .join(''));
 }
