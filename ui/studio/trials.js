@@ -15,7 +15,7 @@ import {routedLinks} from './model/regions.js';
 import {label} from './view/kit.js';
 import {signalLinks} from './view/wires.js';
 import {API_WAIT, requestBody} from './requests.js';
-import {acceptedGenome} from './view/compiler.js';
+import {builtAsDrawn} from './view/stimulus.js';
 
 // Trials on the developed fish: a stimulus runs through the network the design wires and the
 // engine reports which parts answered; a measurement doses a substance and reports what it changes.
@@ -96,13 +96,16 @@ export const trialMethods = {
     ];
   },
   // A stimulus runs as a preview along the drawn wires; once the fish is built as drawn, through
-  // its developed brain as the engine's probe finds it. Nothing is built for it.
+  // its developed brain as the engine's probe finds it. Nothing is built for it. In the built fish
+  // the stimuli still playing act together with a new one: the probe stimulates them all at once,
+  // and the new one shows what the brain does with all of them.
   async stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
-    if (!acceptedGenome(this.state))
+    if (!builtAsDrawn(this.state))
       return this.playPulse(centerIds, null);
-    const requested = new Set(centerIds);
+    const requested =
+        new Set([...this.playingPulses().flatMap(pulse => pulse.centers), ...centerIds ]);
     const groups = allCenters(this.state.document)
                        .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
     if (!groups.length)
@@ -124,7 +127,7 @@ export const trialMethods = {
   // What the focused substance does in the fish built as drawn: the atelier runs its brain with
   // and without the substance and reports the change per cell group and organ drive.
   async measure() {
-    if (!this.state.sites.length || !acceptedGenome(this.state))
+    if (!this.state.sites.length || !builtAsDrawn(this.state))
       return;
     try {
       this.state.measurement =
@@ -148,7 +151,7 @@ export const trialMethods = {
   // them as the signal reaching it pushes it. Stimuli given while others run play alongside them,
   // each on its own, and their marks join; one given after all have run starts the marks afresh.
   playPulse(centerIds, frames) {
-    this.pulsePlayers = this.pulsePlayers.filter(player => player.running());
+    this.pulsePlayers = this.playingPulses();
     const alongside = this.pulsePlayers.length > 0 && this.state.stimulus;
     this.showDrawnContacts();
     const doc = this.state.document, centers = allCenters(doc);
@@ -178,6 +181,7 @@ export const trialMethods = {
     const stimulus =
         alongside ? this.state.stimulus
                   : {fired : new Set(), quieted : new Set(), wires : new Set(), sent : new Set()};
+    stimulus.real = !!frames?.length;
     for (const part of starts.flatMap(shownAs))
       stimulus.fired.add(part);
     this.state.stimulus = stimulus;
@@ -205,9 +209,11 @@ export const trialMethods = {
         }
       }
     });
-    this.pulsePlayers.push(player);
+    this.pulsePlayers.push({player, centers : centerIds});
     player.start();
   },
+  // The stimuli still playing, each with the centers it stimulated.
+  playingPulses() { return this.pulsePlayers.filter(pulse => pulse.player.running());},
   // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
   // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
   // cheeks and throat, defence raises its spines, pigment cells spread their pigment; every
@@ -248,7 +254,7 @@ export const trialMethods = {
     this.refreshScene();
   },
   stopPulse() {
-    for (const player of this.pulsePlayers)
+    for (const {player} of this.pulsePlayers)
       player.stop();
     this.pulsePlayers = [];
   }

@@ -25,6 +25,19 @@ const footer = (message, brand) => '<footer class="aid-station-footer"><span cla
 // The side panels' widths as the workspace's style.
 export const panelStyle = panels =>
     Object.entries(panels).map(([ key, width ]) => `--aid-${key}:${width}px`).join(';');
+// What the header says of the fish: how far a build has got while it runs, else its cells. While
+// a build runs its button stops it, so the header keeps its width.
+export const headerStatus = state =>
+    state.compileProgress ? compilerProgress(state) : cellStatus(state);
+export function developAction(state) {
+  if (state.compileProgress)
+    return {action : 'cancel-build', text : label('compiler.cancel'), disabled : false};
+  return {
+    action : 'develop',
+    text : label(state.busy ? 'app.developBusy' : 'app.develop'),
+    disabled : state.busy
+  };
+}
 // The scene's zoom as its toolbar shows it.
 export const zoomStamp = camera => percent(camera.zoom);
 // The fish's cells: those it developed with its contacts, or those the engine plans for the
@@ -59,22 +72,21 @@ function stationHeader(s) {
                                           '</span>' + label('app.home')) +
          '<div><small>' + label('app.stationBrand') + '</small><h1>' + label('app.title') +
          '</h1></div></div>' +
-         '<div class="aid-status">' + escapeText(cellStatus(s)) + '</div>' +
+         '<div class="aid-status" role="status">' + escapeText(headerStatus(s)) + '</div>' +
          '<div class="aid-header-actions">' +
          group(
              button('data-action="new"', label('app.newFish')) +
                  button('data-action="example"', label('app.example')) +
+                 button('data-action="start"', label('app.startFish')) +
                  button('data-action="open"', label('app.open')) +
                  button('data-action="download"', label('app.saveGenome'), {disabled : !accepted}),
              label('app.groupPlan')) +
-         group(button('data-action="develop"', label(s.busy ? 'app.developBusy' : 'app.develop'),
-                      {cls : 'primary', disabled : s.busy}) +
+         group(button('data-action="' + developAction(s).action + '"', developAction(s).text,
+                      {cls : 'primary', disabled : developAction(s).disabled}) +
                    button('data-action="eggs"', label('app.placeEggs'),
                           {disabled : !accepted || !s.report?.viable}),
                label('app.groupFish'), 'flow') +
-         '<span data-compile-progress role="status">' + compilerProgress(s) + '</span>' +
-         '<button data-action="cancel-build"' + (!s.compileProgress ? ' hidden' : '') + '>' +
-         label('compiler.cancel') + '</button></div>' +
+         '</div>' +
          '<input type="file" id="' + GENOME_FILE_ID + '" accept="' + GENOME_SUFFIX +
          ',text/plain" hidden/></header>';
 }

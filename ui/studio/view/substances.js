@@ -17,7 +17,7 @@ import {escapeText, fixed, pointMarks, trackShare, widthTrack} from './markup.js
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
 import {centerTitle} from './names.js';
-import {acceptedGenome} from './compiler.js';
+import {builtAsDrawn} from './stimulus.js';
 
 // The blood's substances in the inspector: the substance wheel where glands release and senses
 // read them, receptors' response curves and life phases, the hormone inspector and measurements.
@@ -268,7 +268,7 @@ export function measurement(state, index) {
              '" value="' + fixed(state.measureLevel) + '"/><output>' +
              measureReading(state.measureLevel) + '</output></label>' +
              '<button class="aid-secondary" data-measure' +
-             (acceptedGenome(state) ? '' : ' disabled') + '>' + label('inspector.measure') +
+             (builtAsDrawn(state) ? '' : ' disabled') + '>' + label('inspector.measure') +
              '</button></div>';
   const m = state.measurement;
   if (!m || m.substance !== index)

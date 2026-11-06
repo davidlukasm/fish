@@ -10,7 +10,7 @@ import {exampleDocument} from './model/example.js';
 import {handleMethods, storedPanels} from './handles.js';
 import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
-import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
+import {compilerPanel, acceptedGenome} from './view/compiler.js';
 import {beginEggPlacement} from '../world.js';
 import {HORMONE_EFFECT} from '../schema.js';
 import {postJson, savedGenome, serverText} from '../session.js';
@@ -40,12 +40,20 @@ import {nodeLocation} from './view/places.js';
 import {inspector} from './view/panels.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
-import {cellStatus, CPPN_SCENE_ID, GENOME_FILE_ID, hubShell, stationShell} from './view/shell.js';
+import {
+  CPPN_SCENE_ID,
+  developAction,
+  GENOME_FILE_ID,
+  headerStatus,
+  hubShell,
+  stationShell
+} from './view/shell.js';
 import {measureReading} from './view/substances.js';
 import {hormoneLibrary, library, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
-import {API, API_WAIT, GENOME_SUFFIX, requestBody} from './requests.js';
+import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.js';
+import {builtAsDrawn} from './view/stimulus.js';
 import {MEASURE_LEVEL, trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
@@ -113,7 +121,7 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    // The stimuli playing on the scene.
+    // The stimuli playing on the scene, each with the centers it stimulated.
     this.pulsePlayers = [];
     // A wire begun by a click: from an item to the next one clicked, or from the next one clicked
     // to a region's input slot.
@@ -288,7 +296,7 @@ export class OrganStudio {
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();
     if (svg)
-      for (const player of this.pulsePlayers)
+      for (const {player} of this.pulsePlayers)
         player.attach(svg);
     this.markStimulus();
     this.markFocus();
@@ -330,22 +338,18 @@ export class OrganStudio {
     }
     const status = this.root.querySelector('.aid-status');
     if (status)
-      status.textContent = cellStatus(this.state);
-    const progress = this.root.querySelector('[data-compile-progress]');
-    if (progress)
-      progress.textContent = compilerProgress(state);
-    const cancel = this.root.querySelector('[data-action="cancel-build"]');
-    if (cancel)
-      cancel.hidden = !state.compileProgress;
-    const develop = this.root.querySelector('[data-action="develop"]');
+      status.textContent = headerStatus(state);
+    const develop = this.root.querySelector('[data-action="develop"],[data-action="cancel-build"]');
     if (develop) {
-      develop.disabled = state.busy;
-      develop.textContent = label(state.busy ? 'app.developBusy' : 'app.develop');
+      const {action, text, disabled} = developAction(state);
+      develop.dataset.action = action;
+      develop.textContent = text;
+      develop.disabled = disabled;
     }
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]'))
       button.disabled = state.stale || !state.report?.contacts?.length;
     for (const button of this.root.querySelectorAll('[data-measure]'))
-      button.disabled = !acceptedGenome(state);
+      button.disabled = !builtAsDrawn(state);
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
       download.disabled = !acceptedGenome(state);
@@ -575,6 +579,20 @@ export class OrganStudio {
     a.download = this.genomeFileName();
     a.click();
     URL.revokeObjectURL(url);
+  }
+  // The Aquarium's start fish as its runs begin with it: its genome, opened as a genome file is.
+  async startFish() {
+    if (this.state.busy)
+      return;
+    try {
+      const report = await this.api(requestBody('new', {example : START_FISH}), API_WAIT.long);
+      this.state.genome = report.genome;
+      this.state.report = report;
+      this.state.stale = false;
+      this.setMode('cppn');
+    } catch (error) {
+      this.notice(error.message);
+    }
   }
   example() {
     const names = {

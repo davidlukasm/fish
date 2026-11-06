@@ -17,6 +17,7 @@ import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
 import {ICON} from './kit.js';
+import {stimulusKind} from './stimulus.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
 // with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
@@ -256,7 +257,8 @@ export function fishScene(state) {
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +
-         '</svg>' + trashZone() + '<div class="aid-hint-legend" data-hint-legend hidden></div>';
+         '</svg>' + trashZone() + stimulusKind(state) +
+         '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 // While an organ is dragged, dropping it here removes it.
 function trashZone() {

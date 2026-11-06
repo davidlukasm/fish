@@ -188,6 +188,8 @@ struct SightScene {
   int side = 0;
   double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
+// The example a new genome may also be: the Aquarium's hand-built start fish, as its runs begin.
+constexpr const char *START_FISH = "start";
 // The innovation draws of the Atelier's genomes start alike in every run.
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
 // A CPPN edit keeps weights and parameters within ±CPPN_EDIT_LIMIT and the network below
@@ -1096,20 +1098,27 @@ int main(int argc, char **argv) {
       g.name = name;
     } else if (operation == "new" && argc == 3) {
       std::string example;
-      ensure(bool(std::cin >> example) && (example == "blank" || example == "sum"),
+      ensure(bool(std::cin >> example) &&
+                 (example == "blank" || example == "sum" || example == START_FISH),
              "unknown CPPN example");
-      g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
-      for (int id = 0; id < cppn::INPUTS + cppn::OUTPUTS; ++id)
-        g.cppn->add_node({id, 1, NodeType::LINEAR});
-      if (example == "sum") {
-        ensure(g.cppn->connect(cppn::input::u, cppn::INPUTS + out::expression, 1.f),
-               "cannot connect addition input");
-        ensure(g.cppn->connect(cppn::input::v, cppn::INPUTS + out::expression, 1.f),
-               "cannot connect addition input");
+      if (example == START_FISH) {
+        std::ifstream input(fishsim::HAND_BUILT_GENOME);
+        ensure(bool(input), "start fish not found");
+        g = Genome::read(input, false);
+      } else {
+        g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
+        for (int id = 0; id < cppn::INPUTS + cppn::OUTPUTS; ++id)
+          g.cppn->add_node({id, 1, NodeType::LINEAR});
+        if (example == "sum") {
+          ensure(g.cppn->connect(cppn::input::u, cppn::INPUTS + out::expression, 1.f),
+                 "cannot connect addition input");
+          ensure(g.cppn->connect(cppn::input::v, cppn::INPUTS + out::expression, 1.f),
+                 "cannot connect addition input");
+        }
+        g.development_seed = 1;
+        g.variation_seed = 2;
+        g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
       }
-      g.development_seed = 1;
-      g.variation_seed = 2;
-      g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) || (operation == "edit" && argc == 4) ||
                (operation == "probe" && argc == 3) || (operation == "measure" && argc == 3) ||
                (operation == "check" && argc == 3)) {

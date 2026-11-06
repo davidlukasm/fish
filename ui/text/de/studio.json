@@ -14,6 +14,7 @@
     "newFish": "Neuer Fisch",
     "fileName": "fisch",
     "example": "Beispielfisch",
+    "startFish": "Startfisch",
     "importFish": "Fisch aus dem Aquarium",
     "draft": "Entwurf",
     "ready": "Entwickelt",
@@ -911,6 +912,10 @@
       "encode": "CPPN aufbauen",
       "validate": "Entwicklung prüfen"
     }
+  },
+  "stimulus": {
+    "preview": "Vorschau entlang der Zeichnung",
+    "real": "Echter Reiz im gebauten Fisch"
   },
   "probe": {
     "title": {

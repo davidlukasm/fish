@@ -15,12 +15,12 @@
 #station-root button:focus-visible,#station-root input:focus-visible{outline:2px solid #e3d5a4;outline-offset:2px}
 #station-root button:disabled{opacity:.38;cursor:default}
 .aid-station,.aid-hub{height:100%;min-height:0;display:flex;flex-direction:column}
-.aid-header{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:58px;padding:7px 14px;background:#0d2930;border-bottom:1px solid #2d5159}
+.aid-header{flex:0 0 auto;height:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:58px;padding:7px 14px;background:#0d2930;border-bottom:1px solid #2d5159}
 .aid-header-brand{display:flex;align-items:center;gap:18px}
 .aid-header-brand h1{font:26px Georgia,serif;margin:0;color:#edf1e3}
 .aid-header-brand small{display:block;letter-spacing:.11em;color:#8fb2b7;font-size:10px}
 .aid-header-brand button{border:0;background:transparent;color:#a4d5c9;padding:8px}
-.aid-status{font-size:12px;color:#a5c6c3}
+.aid-status{flex:1 1 auto;min-width:0;font-size:12px;color:#a5c6c3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aid-header-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .aid-header-actions button,.aid-inspector-actions button,.aid-secondary{border:1px solid #42646b;background:#183942;border-radius:10px;padding:9px 12px;transition:background .12s}
 .aid-header-actions button:hover,.aid-inspector-actions button:hover{background:#26525a}
@@ -460,6 +460,9 @@
 .aid-felt.pain>path{stroke:#f1a08a;stroke-width:10}
 .aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:3;stroke-linejoin:round}
 /* What the placement hints' colours stand for, while something is dragged. */
+/* Whether a stimulus is a preview along the drawing or runs through the built fish. */
+.aid-stimulus-kind{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;padding:6px 14px;border-radius:999px;font-size:12.5px;white-space:nowrap;pointer-events:none;background:#0b2229e6;border:1.5px dashed var(--aid-hint-text);color:var(--aid-control-text)}
+.aid-stimulus-kind.real{border-style:solid;border-color:var(--aid-primary);color:var(--aid-primary)}
 .aid-hint-legend{position:absolute;left:76px;bottom:16px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 14px;max-width:calc(100% - 220px);padding:8px 12px;border-radius:12px;background:#0b2229e6;border:1px solid #2c4c55;font-size:12.5px;pointer-events:none}
 .aid-hint-legend span{display:flex;align-items:center;gap:6px}
 .aid-hint-legend i{width:10px;height:10px;border-radius:50%;border:3px solid}

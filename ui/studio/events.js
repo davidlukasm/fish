@@ -71,6 +71,7 @@ const ACTIONS = Object.freeze({
   atelier : studio => studio.navigate('studio'),
   new : studio => studio.changeDocument(newDocument(label('app.newFish'))),
   example : studio => studio.example(),
+  start : studio => studio.startFish(),
   check : studio => studio.checkCompiler(),
   'cancel-build' : studio => { studio.cancelCompile = true; },
   develop : studio => studio.develop(),

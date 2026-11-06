@@ -230,6 +230,18 @@ function semanticFingerprint(source) {
       globalThis.cancelAnimationFrame = oldCancel;
     }
   }
+  // A stimulus runs through the fish only when it is built as drawn; the scene says which.
+  {
+    const {builtAsDrawn, stimulusKind} = await import('../ui/studio/view/stimulus.js');
+    const drawn =
+        {genome : 'g', stale : false, report : {compiler : {ok : true}}, tool : 'stimulate'};
+    assert.ok(builtAsDrawn(drawn));
+    assert.ok(!builtAsDrawn({...drawn, report : {}}),
+              'A genome opened alone is not the fish drawn');
+    assert.match(stimulusKind(drawn), /aid-stimulus-kind real/);
+    assert.doesNotMatch(stimulusKind({...drawn, stale : true}), /real/);
+    assert.equal(stimulusKind({...drawn, tool : 'select'}), '');
+  }
   // Every sense draws its stimulus on its charts, differently as it grows, named in its title.
   {
     const {stimulusPicture} = await import('../ui/studio/view/stimuli.js');
