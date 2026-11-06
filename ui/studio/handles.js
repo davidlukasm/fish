@@ -431,7 +431,7 @@ export const handleMethods = {
     const organ = findOrgan(this.state.document, drag.id);
     if (!organ?.field)
       return;
-    const svg = this.root.querySelector('#aid-body-map');
+    const svg = this.bodyMap();
     const position = cameraCoordinates(event, svg, this.state.camera);
     const patch = visionDragPatch(this.state, organ, drag.key, position);
     if (!patch)
@@ -439,7 +439,7 @@ export const handleMethods = {
     // The test light moves at once; what the eyes see follows when the engine answers.
     if (drag.key === 'probe' || drag.key === 'probe-size') {
       this.state.sightProbe = {...this.state.sightProbe, ...patch};
-      const light = this.root.querySelector('#aid-body-map .aid-sight-light');
+      const light = this.bodyMap()?.querySelector('.aid-sight-light');
       if (light)
         light.outerHTML = testLightMarkup(this.state, organ);
       else

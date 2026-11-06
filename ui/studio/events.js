@@ -35,6 +35,7 @@ import {
   usedSites,
   wheelPlace
 } from './model/document.js';
+import {BODY_MAP} from './view/scene.js';
 
 // What a click in the studio does, by what it lands on. Each table lists selectors in the order
 // they are tried; the first one the click's target lies in handles it (studio, the element it
@@ -457,7 +458,7 @@ export const FISH_CLICKS = Object.freeze([
   ],
   // A click on nothing on the fish chooses nothing and drops a wire begun.
   [
-    '#aid-body-map',
+    BODY_MAP,
     studio => {
       studio.wireStartId = null;
       studio.wireEndId = null;

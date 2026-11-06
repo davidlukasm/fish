@@ -12,19 +12,16 @@ import {DRAG_CLICK, DRAG_START, GRIPS, handleMethods, HANDLES, storedPanels} fro
 import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
-import {organFunction} from './model/organs.js';
 import {fieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND, ROUTE} from '../schema.js';
+import {HORMONE_EFFECT, ROUTE} from '../schema.js';
 import {request as sessionRequest, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
-  allCenters,
   closestSite,
   compileDocument,
   compilerOptions,
   connectSelections,
-  endpointCenters,
   findCenter,
   findOrgan,
   identifier,
@@ -32,7 +29,6 @@ import {
   moveCenter,
   moveOrgan,
   newDocument,
-  organOf,
   removeAssembly,
   removeCenter,
   removeOrgan,
@@ -41,35 +37,26 @@ import {
   setLifePhase,
   updateField,
   usedSites,
-  validateDocument,
-  wholeEndpoint
+  validateDocument
 } from './model/document.js';
-import {centroid, nearFish, pointDistance, sideOf, SNAP_DISTANCE} from './model/layout.js';
+import {centroid, nearFish, pointDistance, SNAP_DISTANCE} from './model/layout.js';
 import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
-import {fishScene, organLabelPlace} from './view/scene.js';
+import {BODY_MAP, fishScene, organLabelPlace} from './view/scene.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {nodeLocation, nodesAtZoom} from './view/body.js';
 import {inspector} from './view/panels.js';
-import {
-  cppnGraph,
-  cppnInspector,
-  DEFAULT_CPPN_NODE_TYPE,
-  findCppnLink,
-  findCppnNode
-} from './view/graph.js';
-import {SIGNAL, createSignalPlayer, signalSchedule} from './view/pulse.js';
-import {routedLinks, settleRegions} from './model/regions.js';
+import {cppnGraph, cppnInspector} from './view/graph.js';
+import {settleRegions} from './model/regions.js';
 import {cellStatus, hubShell, stationShell, zoomStamp} from './view/shell.js';
 import {measureReading} from './view/substances.js';
 import {hormoneLibrary, library, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
-import {arrowSize, signalLinks} from './view/wires.js';
+import {arrowSize} from './view/wires.js';
 import {moduleName} from './view/names.js';
 import {placementPreview} from './view/placing.js';
 import {API, API_WAIT, requestBody} from './requests.js';
-
-// A measurement doses MEASURE_LEVEL of a substance into the grown fish (maturity MEASURE_MATURITY).
-const MEASURE_LEVEL = .5, MEASURE_MATURITY = 1;
+import {MEASURE_LEVEL, trialMethods} from './trials.js';
+import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 
 let instance = null;
 // The items on the fish, by the data attributes that mark them: those a press on the scene takes
@@ -80,8 +67,8 @@ const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']')
 // An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 // The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
-// BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back; a stimulus runs PULSE_STEPS steps.
-const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40, PULSE_STEPS = 24;
+// BUILD_POLL ms; undo reaches HISTORY_DEPTH changes back.
+const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40;
 export class OrganStudio {
   constructor(root) {
     this.root = root;
@@ -309,7 +296,7 @@ export class OrganStudio {
                                                                       : '#aid-cppn-scene');
     if (target)
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
-    const svg = this.root.querySelector('#aid-body-map');
+    const svg = this.bodyMap();
     if (svg)
       this.pulsePlayer?.attach(svg);
     this.markStimulus();
@@ -317,67 +304,8 @@ export class OrganStudio {
   }
   // A chosen organ or nerve center keeps itself, what it is wired with and those wires in full
   // colour; the rest stands back.
-  markFocus() {
-    const svg = this.root.querySelector('#aid-body-map'), {selected, document : doc} = this.state;
-    if (!svg || this.state.stimulus || !['organ', 'center'].includes(selected?.kind))
-      return;
-    const owner = id => {
-      const found = findCenter(doc, id);
-      return found && found.organ.type === 'brain' ? id : found ? found.organ.id : id;
-    };
-    const chosen = owner(selected.id), near = new Set([ chosen ]), wires = new Set();
-    for (const link of routedLinks(doc, this.state.sites)) {
-      const from = owner(link.from), to = owner(link.to);
-      if (from !== chosen && to !== chosen)
-        continue;
-      near.add(from);
-      near.add(to);
-      if (!link.wire.inner)
-        wires.add(link.wire.id);
-    }
-    svg.classList.add('aid-focus-view');
-    for (const key of near)
-      for (const element of this.stimulusMarks(key))
-        element.classList.add('aid-focus-near');
-    for (const key of near) {
-      const organ = findOrgan(doc, key);
-      for (const center of organ?.centers ?? [])
-        for (const element of this.stimulusMarks(center.id))
-          element.classList.add('aid-focus-near');
-    }
-    for (const id of wires)
-      for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
-        element.classList.add('aid-focus-near');
-  }
-  // The network a stimulus reached stays marked, the rest stands back, until the wire tool is
-  // taken or the design changes.
-  markStimulus() {
-    const svg = this.root.querySelector('#aid-body-map'), stimulus = this.state.stimulus;
-    if (!svg || !stimulus)
-      return;
-    svg.classList.add('aid-stimulus-view');
-    for (const key of stimulus.fired)
-      for (const element of this.stimulusMarks(key))
-        element.classList.add('aid-pulse-fired');
-    for (const key of stimulus.quieted)
-      for (const element of this.stimulusMarks(key))
-        element.classList.add('aid-pulse-quieted');
-    for (const id of stimulus.wires)
-      for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
-        element.classList.add('aid-pulse-used');
-  }
-  // What shows a part of the network: an organ's glyph, a nerve center's node.
-  stimulusMarks(key) {
-    const svg = this.root.querySelector('#aid-body-map');
-    if (!svg)
-      return [];
-    const escaped = CSS.escape(key);
-    return [
-      ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
-    ];
-  }
+  // The scene's drawing of the fish, while it stands in the page.
+  bodyMap() { return this.root.querySelector(BODY_MAP); }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
     if (!element)
@@ -624,179 +552,6 @@ export class OrganStudio {
       return this.notice(label('status.noRoom'));
     this.changeDocument(doc, {kind : 'organ', id}, refresh, 'field:' + id);
   }
-  async stimulate(centerIds) {
-    if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
-      return;
-    if (!this.state.genome || this.state.stale)
-      await this.develop();
-    if (!this.state.genome || this.state.stale)
-      return this.notice(label('status.probeNoGenome'));
-    const requested = new Set(centerIds);
-    const groups = allCenters(this.state.document)
-                       .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
-    if (!groups.length)
-      return;
-    try {
-      const result = await this.api(requestBody('probe', {
-                                      genome : this.state.genome,
-                                      plan : compileDocument(this.state.document, this.state.sites),
-                                      groups,
-                                      steps : PULSE_STEPS
-                                    }),
-                                    API_WAIT.long);
-      this.playPulse(centerIds, result.frames);
-      this.notice(label('status.probed'));
-    } catch (error) {
-      this.notice(error.message);
-    }
-  }
-  // What the focused substance does in the developed fish: the atelier runs its brain with and
-  // without the substance and reports the change per cell group and organ drive.
-  async measure() {
-    if (!this.state.sites.length)
-      return;
-    if (!this.state.genome || this.state.stale)
-      await this.develop();
-    if (!this.state.genome || this.state.stale)
-      return this.notice(label('status.probeNoGenome'));
-    try {
-      this.state.measurement =
-          await this.api(requestBody('measure', {
-                           genome : this.state.genome,
-                           plan : compileDocument(this.state.document, this.state.sites),
-                           substance : this.state.focusSubstance,
-                           level : this.state.measureLevel,
-                           maturity : MEASURE_MATURITY,
-                           steps : ATELIER_LIMITS.max_measure_steps
-                         }),
-                         API_WAIT.long);
-      this.refreshLibrary();
-      this.refreshScene();
-      this.refreshInspector();
-    } catch (error) {
-      this.notice(error.message);
-    }
-  }
-  // The stimulus runs through the drawn network: the parts the engine found active fire in turn
-  // along the wires from the stimulated ones.
-  playPulse(centerIds, frames) {
-    this.stopPulse();
-    if (this.state.contactView !== 'design') {
-      this.state.contactView = 'design';
-      for (const button of this.root.querySelectorAll('[data-contacts]'))
-        button.classList.toggle('active', button.dataset.contacts === 'design');
-    }
-    if (!Array.isArray(frames) || !frames.length)
-      return;
-    // How far each part rose above and fell below where it stood at the first step.
-    const doc = this.state.document, centers = allCenters(doc);
-    const swing = (index, sign) =>
-        Math.max(...frames.map(f => sign * ((f[index] ?? 0) - (frames[0][index] ?? 0))));
-    const indexOf = new Map(centers.map((c, index) => [c.id, index]));
-    const response = key => {
-      const indices = endpointCenters(doc, key).map(c => indexOf.get(c.id));
-      return indices.some(i => swing(i, 1) >= SIGNAL.cutoff)    ? 'rise'
-             : indices.some(i => swing(i, -1) >= SIGNAL.cutoff) ? 'fall'
-                                                                : null;
-    };
-    const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
-    const schedule = signalSchedule(starts, signalLinks(this.state), response);
-    this.state.stimulus = {fired : new Set(starts), wires : new Set(), quieted : new Set()};
-    this.refreshScene();
-    const svg = this.root.querySelector('#aid-body-map');
-    if (!svg)
-      return;
-    this.pulsePlayer = createSignalPlayer(svg, schedule, {
-      marks : key => this.stimulusMarks(key),
-      moves : key => this.stimulusMoves(key),
-      reached : (key, link, quieted) => {
-        if (key)
-          this.state.stimulus?.fired.add(key);
-        if (quieted)
-          this.state.stimulus?.quieted.add(quieted);
-        for (const id of link?.wires ?? []) {
-          this.state.stimulus?.wires.add(id);
-          for (const element of svg.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]'))
-            element.classList.add('aid-pulse-used');
-        }
-      }
-    });
-    this.pulsePlayer.start();
-  }
-  // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
-  // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
-  // cheeks and throat, defence raises its spines, pigment cells spread their pigment; every
-  // effector's own glyph twitches.
-  stimulusMoves(key) {
-    const svg = this.root.querySelector('#aid-body-map'), doc = this.state.document;
-    const organ = organOf(doc, key);
-    if (!svg || !organ?.centers.some(c => c.role === 'motor'))
-      return [];
-    const part = (selector, name) => [...svg.querySelectorAll(selector)].map(e => [e, name]);
-    const own = this.stimulusMarks(organ.id).map(e => [e, 'aid-pulse-twitch']);
-    const code = organ.type === 'muscle' ? organFunction(organ, this.state.sites) : -1,
-          side = sideOf(organ);
-    const moved = {
-      [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
-      [MOTOR_KIND.turn] : () => part('[data-part="fin"][data-side="' + side + '"]',
-                                     side < 0 ? 'aid-move-fin-up' : 'aid-move-fin-down'),
-      [MOTOR_KIND.aggression] :
-          () => [...part('[data-part="mouth"]', 'aid-move-bite'),
-                 ...part('[data-part="jaw"][data-side="' + side + '"]', 'aid-move-jaw')],
-      [MOTOR_KIND.suction] : () => [...part('[data-part="mouth"]', 'aid-move-suck'),
-                                    ...part('[data-part="cheek"]', 'aid-move-suck'),
-                                    ...part('[data-part="intake"]', 'aid-move-suck'),
-                                    ...part('[data-part="throat"]', 'aid-move-throat')]
-    }[code];
-    const raise = organ.type === 'defense'
-                      ? part('[data-spines="' + CSS.escape(organ.id) + '"]', 'aid-move-raise')
-                  : organ.type === 'pigment'
-                      ? part('.aid-chromatophores .gathered', 'aid-move-spread')
-                      : [];
-    return [...own, ...(moved ? moved() : []), ...raise ];
-  }
-  clearStimulus() {
-    this.stopPulse();
-    if (!this.state.stimulus)
-      return;
-    this.state.stimulus = null;
-    this.refreshScene();
-  }
-  stopPulse() {
-    this.pulsePlayer?.stop();
-    this.pulsePlayer = null;
-  }
-  async cppnAction(operation, data = {}) {
-    if (this.state.busy)
-      return;
-    const document = this.state.document;
-    this.state.busy = true;
-    try {
-      const result = await this.api(
-          requestBody(operation, {
-            ...data,
-            ...(operation === 'edit' && this.state.report?.compiler
-                    ? {plan : compileDocument(document, this.state.sites)}
-                    : {}),
-            ...(operation === 'edit' || operation === 'inspect' ? {genome : this.state.genome} : {})
-          }),
-          API_WAIT.long);
-      if (this.state.document !== document)
-        return;
-      this.state.report = result;
-      this.state.robustness = null;
-      if (result.genome)
-        this.state.genome = result.genome;
-      this.state.stale = false;
-    } catch (error) {
-      this.notice(error.message);
-    } finally {
-      this.state.busy = false;
-      this.refreshScene();
-      this.refreshInspector();
-      this.refreshHeader();
-    }
-  }
   async placeEggs() {
     if (!acceptedGenome(this.state) || !this.state.report?.viable)
       return;
@@ -858,7 +613,7 @@ export class OrganStudio {
       this.changeDocument(next);
   }
   click(event) {
-    if (performance.now() < this.ignoreClickUntil && event.target.closest?.('#aid-body-map'))
+    if (performance.now() < this.ignoreClickUntil && event.target.closest?.(BODY_MAP))
       return;
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
@@ -866,7 +621,7 @@ export class OrganStudio {
         clickOn(this, event, STUDIO_CLICKS))
       return;
     if (this.state.mode === 'cppn')
-      return this.cppnClick(event);
+      return clickOn(this, event, CPPN_CLICKS);
     clickOn(this, event, FISH_CLICKS);
   }
   async saveAssembly(id) {
@@ -891,48 +646,6 @@ export class OrganStudio {
     } catch (error) {
       this.notice(error.message);
     }
-  }
-  async cppnClick(event) {
-    const scope = event.target.closest?.('[data-cppn-scope]');
-    if (scope) {
-      this.state.cppnScope = scope.dataset.cppnScope;
-      return this.renderShell();
-    }
-    const fresh = event.target.closest?.('[data-cppn-new]');
-    if (fresh)
-      return this.cppnAction('new', {example : fresh.dataset.cppnNew});
-    const node = event.target.closest?.('[data-cppn-node]');
-    if (node) {
-      const id = Number(node.dataset.cppnNode);
-      if (this.state.cppnConnectFrom !== null && this.state.cppnConnectFrom !== id) {
-        const from = this.state.cppnConnectFrom;
-        this.state.cppnConnectFrom = null;
-        return this.cppnAction('edit', {edit : 'connect', from, to : id, weight : 1, port : 0});
-      }
-      this.state.cppnSelection = {kind : 'node', id};
-      this.refreshScene();
-      this.refreshInspector();
-      return;
-    }
-    const link = event.target.closest?.('[data-cppn-link]');
-    if (link) {
-      this.state.cppnSelection = {kind : 'link', id : Number(link.dataset.cppnLink)};
-      this.refreshScene();
-      this.refreshInspector();
-      return;
-    }
-    const start = event.target.closest?.('[data-cppn-connect-from]');
-    if (start) {
-      this.state.cppnConnectFrom = Number(start.dataset.cppnConnectFrom);
-      this.notice(label('cppn.connectFrom'));
-      return;
-    }
-    const split = event.target.closest?.('[data-cppn-split]');
-    if (split)
-      return this.cppnAction('edit', {edit : 'split', id : Number(split.dataset.cppnSplit)});
-    if (event.target.closest?.('[data-cppn-add-node]'))
-      return this.cppnAction('edit',
-                             {edit : 'add-node', type : DEFAULT_CPPN_NODE_TYPE, parameter : 1});
   }
   change(event) {
     const element = event.target;
@@ -962,41 +675,10 @@ export class OrganStudio {
           .catch(error => this.notice(error.message));
       return;
     }
-    if (this.state.mode === 'cppn' && this.cppnChange(event))
+    if (this.state.mode === 'cppn' && changeOn(this, element, CPPN_CHANGES))
       return;
     if (!changeOn(this, element, FISH_CHANGES))
       this.input(event);
-  }
-  cppnChange(event) {
-    const element = event.target;
-    const linkId = element.dataset.cppnWeight ?? element.dataset.cppnEnabled;
-    if (linkId !== undefined) {
-      const link = findCppnLink(this.state.report, Number(linkId));
-      if (!link)
-        return true;
-      this.cppnAction('edit', {
-        edit : 'link',
-        id : link.id,
-        weight : element.dataset.cppnWeight !== undefined ? Number(element.value) : link.weight,
-        enabled : element.dataset.cppnEnabled !== undefined ? Number(element.checked) : link.enabled
-      });
-      return true;
-    }
-    const nodeId = element.dataset.cppnFunction ?? element.dataset.cppnParameter;
-    if (nodeId !== undefined) {
-      const node = findCppnNode(this.state.report, Number(nodeId));
-      if (!node)
-        return true;
-      this.cppnAction('edit', {
-        edit : 'node',
-        id : node.id,
-        type : element.dataset.cppnFunction !== undefined ? Number(element.value) : node.type,
-        parameter : element.dataset.cppnParameter !== undefined ? Number(element.value)
-                                                                : node.parameter
-      });
-      return true;
-    }
-    return false;
   }
   // How much of a substance a measurement doses.
   input(event) {
@@ -1019,7 +701,7 @@ export class OrganStudio {
     }
     if (direction === 'fit')
       Object.assign(c, CAMERA_HOME);
-    const svg = this.root.querySelector('#aid-body-map');
+    const svg = this.bodyMap();
     if (svg) {
       const box = cameraBox(c);
       svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
@@ -1053,7 +735,7 @@ export class OrganStudio {
       stamp.textContent = zoomStamp(c);
   }
   wheel(event) {
-    const svg = event.target.closest?.('#aid-body-map');
+    const svg = event.target.closest?.(BODY_MAP);
     if (!svg || this.state.mode !== 'fish')
       return;
     event.preventDefault();
@@ -1088,7 +770,7 @@ export class OrganStudio {
                                             : {...drag, rect : graphic.getBoundingClientRect()});
       return;
     }
-    const svg = event.target.closest?.('#aid-body-map');
+    const svg = event.target.closest?.(BODY_MAP);
     if (!svg)
       return;
     const item = event.target.closest?.(itemSelector(PRESSED_ITEMS));
@@ -1117,7 +799,7 @@ export class OrganStudio {
       return this[HANDLES[this.handleDrag.held].follow](event);
     const drag = this.pointer;
     if (!drag) {
-      const svg = event.target?.closest?.('#aid-body-map');
+      const svg = event.target?.closest?.(BODY_MAP);
       if (svg && this.wireStartId && this.state.tool === 'wire') {
         const from = this.wirePoint({kind : this.wireStartKind, id : this.wireStartId});
         const line = this.root.querySelector('#aid-connecting-line');
@@ -1136,8 +818,7 @@ export class OrganStudio {
       return;
     const point = cameraCoordinates(event, drag.svg, this.state.camera);
     if (drag.pan) {
-      const rect = this.root.querySelector('#aid-body-map')?.getBoundingClientRect() ||
-                   drag.svg.getBoundingClientRect();
+      const rect = this.bodyMap()?.getBoundingClientRect() || drag.svg.getBoundingClientRect();
       const scale = cameraScale(rect, this.state.camera);
       if (!(scale > 0))
         return;
@@ -1296,7 +977,7 @@ export class OrganStudio {
 }
 // The studio's methods for the design view, held handles and drags from the library live beside
 // it.
-Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods);
+Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods, trialMethods);
 export function initializeStudio() {
   const root = document.getElementById('station-root');
   if (!root)

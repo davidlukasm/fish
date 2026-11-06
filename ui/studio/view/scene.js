@@ -220,6 +220,8 @@ function reachSvg(state) {
          fixed(reach) + '"/></g>';
 }
 const REACH = Object.freeze({fill : .32, span : 2});
+// The scene's drawing of the fish, by its id and as a selector.
+export const BODY_MAP_ID = 'aid-body-map', BODY_MAP = '#' + BODY_MAP_ID;
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -234,7 +236,7 @@ export function fishScene(state) {
   const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
                 tectumBands(state);
   const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
-  return '<svg id="aid-body-map" viewBox="' + box +
+  return '<svg id="' + BODY_MAP_ID + '" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
          '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +

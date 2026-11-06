@@ -26,6 +26,7 @@ import {dataAttribute} from './view/markup.js';
 import {sensorAdaptation, sensorAnswer} from './view/panels.js';
 import {label} from './view/kit.js';
 import {requestBody} from './requests.js';
+import {BODY_MAP} from './view/scene.js';
 
 // The design view: what the engine makes of the draft as it stands (its anatomy, what the eyes
 // and senses take of a test stimulus), asked for after every change, and the panels' graphics
@@ -160,8 +161,7 @@ export const designMethods = {
     }
   },
   refreshVision() {
-    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ),
-                      '#aid-body-map');
+    this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ), BODY_MAP);
   },
   // The inspector's graphics follow the design at once and the engine's curves when they
   // arrive, without rebuilding the inspector around them.

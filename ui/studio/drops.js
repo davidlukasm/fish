@@ -25,6 +25,7 @@ import {
   organPreview,
   placementHints
 } from './view/placing.js';
+import {BODY_MAP} from './view/scene.js';
 
 // Dragging from the library onto the fish: previews, places and hints while dragging, and what a
 // drop adds; a field organ's choices of place; the trash.
@@ -81,7 +82,7 @@ export const dropMethods = {
     return assemblyPreview(this.state, placed);
   },
   dragOver(event) {
-    const svg = event.target.closest?.('#aid-body-map');
+    const svg = event.target.closest?.(BODY_MAP);
     if (!svg || !this.dragging || !this.state.sites.length)
       return;
     event.preventDefault();
@@ -127,7 +128,7 @@ export const dropMethods = {
     }
   },
   drop(event) {
-    const svg = event.target.closest?.('#aid-body-map');
+    const svg = event.target.closest?.(BODY_MAP);
     if (!svg || !this.dragging)
       return;
     event.preventDefault();
@@ -181,7 +182,7 @@ export const dropMethods = {
     return centers.filter(c => effects.every(e => roles[ROLE[c.role]]?.includes(e)));
   },
   markDropTargets(kind, value) {
-    const svg = this.root.querySelector('#aid-body-map');
+    const svg = this.bodyMap();
     if (!svg)
       return;
     svg.classList.add('aid-dropping');
@@ -259,7 +260,7 @@ export const dropMethods = {
   clearPreview() {
     for (const element of this.root.querySelectorAll('.aid-drop-target,.aid-drop-hover'))
       element.classList.remove('aid-drop-target', 'aid-drop-hover');
-    this.root.querySelector('#aid-body-map')?.classList.remove('aid-dropping');
+    this.bodyMap()?.classList.remove('aid-dropping');
     this.root.querySelector('#aid-drag-preview')?.replaceChildren();
     const hints = this.root.querySelector('#aid-placement-hints');
     if (hints) {
@@ -339,8 +340,7 @@ export const dropMethods = {
     return inside;
   },
   outsideFish(event) {
-    const svg = this.root.querySelector('#aid-body-map'),
-          body = svg?.querySelector?.('.aid-fish-body');
+    const svg = this.bodyMap(), body = svg?.querySelector?.('.aid-fish-body');
     if (!body?.isPointInFill)
       return false;
     const p = cameraCoordinates(event, svg, this.state.camera);

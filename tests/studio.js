@@ -1094,7 +1094,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     button : 0,
     clientX : 200,
     clientY : 200,
-    target : {closest : sel => sel === '#aid-body-map' ? svgElement : null}
+    target : {closest : sel => sel === views.BODY_MAP ? svgElement : null}
   });
   assert.ok(pan.pointer.pan, 'Dragging the empty canvas pans without switching tools');
   pan.pointerMove({clientX : 240, clientY : 220});
