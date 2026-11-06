@@ -1,4 +1,4 @@
-#include "../werkzeug/atelier_connections.hh"
+#include "../werkzeug/atelier_import.hh"
 #include <cassert>
 #include <iostream>
 
@@ -22,6 +22,26 @@ Plan cells(int count) {
 }
 int main() {
   fishsim::Genome::begin_run(34981);
+  {
+    const auto original = fishsim::Genome::load(fishsim::HAND_BUILT_GENOME);
+    auto plan = import_plan(original);
+    assert(assess(plan, original).ok());
+    fishsim::Genome rebuilt;
+    rebuilt.cppn = Builder().build(plan);
+    rebuilt.development_seed = plan.development_seed;
+    rebuilt.variation_seed = plan.variation_seed;
+    rebuilt.compile(false);
+    assert(assess(plan, rebuilt).ok());
+    assert(rebuilt.viable() == original.viable());
+    const auto &before = *original.blueprint, &after = *rebuilt.blueprint;
+    assert(before.neurons.size() == after.neurons.size());
+    assert(before.edges.size() == after.edges.size());
+    for (std::size_t i = 0; i < before.edges.size(); ++i) {
+      const auto &a = before.edges[i], &b = after.edges[i];
+      assert(a.source == b.source && a.target == b.target);
+      assert(std::abs(a.weight - b.weight) < 1e-5);
+    }
+  }
   for (int count : {20, 80}) {
     auto p = cells(count);
     fishsim::Genome g;

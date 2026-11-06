@@ -82,6 +82,8 @@ struct Plan {
   Receptor growth;
   CompileOptions options;
   std::vector<Connection> connections;
+  bool fixed_contacts = false;
+  std::uint64_t development_seed = 1, variation_seed = 2;
 };
 // A design may still be empty (allow_empty): its view shows the body without cells.
 Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false) {
@@ -151,6 +153,21 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     auto [it, fresh] = bundleTargets.emplace(c.bundle, c.to);
     ensure(fresh || it->second == c.to, "connection bundle has different targets");
     plan.connections.push_back(c);
+  }
+  int fixed = 0;
+  ensure(bool(input >> fixed) && (fixed == 0 || fixed == 1), "invalid contact map flag");
+  plan.fixed_contacts = fixed;
+  if (fixed) {
+    ensure(bool(input >> plan.development_seed >> plan.variation_seed),
+           "invalid development seeds");
+    for (auto &g : plan.groups) {
+      ensure(bool(input >> g.sender1 >> g.sender2 >> g.receiver1 >> g.receiver2 >> g.sigma),
+             "invalid contact map");
+      for (float address : {g.sender1, g.sender2, g.receiver1, g.receiver2})
+        ensure(between(address, -1, 1), "invalid contact address");
+      ensure(between(g.sigma, float(field::MIN_SEARCH), float(field::MAX_SEARCH)),
+             "invalid contact radius");
+    }
   }
   return plan;
 }
@@ -251,6 +268,62 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
   for (auto &n : s.neurons)
     n.functional = !limited;
   return s;
+}
+
+// Adjacent sites of one organ with the same traits share a spatial mask. A merged box may
+// contain only sites covered by its two parts, including on the engine's irregular lattice.
+inline std::vector<Group> compact_groups(std::vector<Group> groups) {
+  constexpr float TRAIT_EPSILON = 1e-5f;
+  auto same = [&](const Group &a, const Group &b) {
+    if (a.organ != b.organ || a.zone != b.zone || a.side != b.side || a.role != b.role ||
+        a.function != b.function || a.copies != b.copies)
+      return false;
+    const auto av = outputs(a), bv = outputs(b);
+    for (std::size_t i = 0; i < av.size(); ++i)
+      if (std::abs(av[i] - bv[i]) > TRAIT_EPSILON)
+        return false;
+    for (int i = 0; i < field::HORMONE_EFFECTS; ++i) {
+      const auto &x = a.receptors[i], &y = b.receptors[i];
+      if (x.active != y.active || x.substance != y.substance || x.steepness != y.steepness)
+        return false;
+      for (auto pair : {std::pair{x.baseline, y.baseline},
+                        {x.sensitivity, y.sensitivity},
+                        {x.half, y.half},
+                        {x.width, y.width}})
+        if (std::abs(pair.first - pair.second) > TRAIT_EPSILON)
+          return false;
+    }
+    return true;
+  };
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (std::size_t i = 0; i < groups.size(); ++i)
+      for (std::size_t j = i + 1; j < groups.size(); ++j) {
+        const auto &a = groups[i], &b = groups[j];
+        if (!same(a, b))
+          continue;
+        Group merged = a;
+        merged.u0 = std::min(a.u0, b.u0);
+        merged.u1 = std::max(a.u1, b.u1);
+        merged.v0 = std::min(a.v0, b.v0);
+        merged.v1 = std::max(a.v1, b.v1);
+        merged.w0 = std::min(a.w0, b.w0);
+        merged.w1 = std::max(a.w1, b.w1);
+        bool covered = true;
+        for (std::size_t k = 0; k < field::DEVELOPMENT_SITES && covered; ++k) {
+          const auto site = field::development_site(k);
+          covered = !merged.contains(site) || a.contains(site) || b.contains(site);
+        }
+        if (covered) {
+          groups[i] = merged;
+          groups.erase(groups.begin() + j);
+          changed = true;
+          break;
+        }
+      }
+  }
+  return groups;
 }
 
 class Builder {
@@ -372,8 +445,9 @@ public:
     assign(gate, out::quality_width, 2 * r.width - 1);
   }
   std::shared_ptr<evolution::Genome> build(const Plan &plan) {
+    const auto compact = compact_groups(plan.groups);
     std::map<int, std::vector<const Group *>> organs;
-    for (const auto &g : plan.groups)
+    for (const auto &g : compact)
       organs[g.organ].push_back(&g);
     for (const auto &[organ, groups] : organs) {
       tests.clear();

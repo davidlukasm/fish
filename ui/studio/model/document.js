@@ -316,6 +316,10 @@ export function regenerateFields(draft, sites) {
   for (let i = 0; i < fields.length; i++) {
     const organ = fields[i], reserved = new Set(used);
     for (const other of fields.slice(i + 1)) {
+      if (other.field.sampled) {
+        other.centers.forEach(c => reserved.add(c.site));
+        continue;
+      }
       for (const bin of bins.filter(b => b.hi > other.field.lo && b.lo < other.field.hi)) {
         const available = binSites(sites, other.side, bin).filter(s => !reserved.has(s.id));
         const site =
@@ -414,6 +418,8 @@ export function updateField(doc, id, patch, sites) {
   if (organ.linked && organ.pair)
     targets.push(findOrgan(draft, organ.pair));
   for (const target of targets.filter(Boolean)) {
+    if ('lo' in patch || 'hi' in patch || patch.addProfile)
+      delete target.field.sampled;
     for (const key of ['lo', 'hi', 'density', 'resolution']) {
       if (!(key in patch))
         continue;
@@ -424,6 +430,12 @@ export function updateField(doc, id, patch, sites) {
     target.field.hi = clamp(target.field.hi, target.field.lo + 1, HALF_VIEW);
     target.field.density = clamp(Math.round(target.field.density), 1, ATELIER_LIMITS.max_copies);
     target.field.resolution = clamp(target.field.resolution, 0, 1);
+    for (const center of target.centers) {
+      if ('density' in patch)
+        center.copies = target.field.density;
+      if ('resolution' in patch)
+        center.field = target.field.resolution;
+    }
     if (patch.profile) {
       const index = original.field.profiles.findIndex(p => p.id === patch.profile.id);
       const profile = target.field.profiles[index];
@@ -1203,10 +1215,17 @@ function senderCrossing(doc, center, links, sides) {
     return -1;
   return center.crossing;
 }
+// Original contact addresses remain useful while the anatomical endpoints and wiring agree.
+// A structural edit hands the new wiring back to the address fitter.
+export const contactTopology = doc => JSON.stringify({
+  centers : allCenters(doc).map(c => [c.id, c.site]),
+  wires : doc.wires.map(w => [w.from, w.to, w.pairing, w.spread])
+});
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
   const indices = new Map(centers.map((c, i) => [c.id, i]));
+  const fixed = doc.source?.topology === contactTopology(doc) && centers.every(c => c.contact);
   const sides = sidesOf(doc);
   const connections = [];
   const bundles = new Map();
@@ -1214,7 +1233,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     const sources = senderNodes(doc, link.from);
     const targets = hearerNodes(doc, link.to);
     for (const target of targets) {
-      const key = link.wire.id + ':' + link.to + ':' + target.id;
+      const key = fixed ? target.id : link.wire.id + ':' + link.to + ':' + target.id;
       for (const source of sources) {
         const from = indices.get(source.id), to = indices.get(target.id);
         if (from !== undefined && to !== undefined &&
@@ -1257,7 +1276,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         organ : organ.type === 'brain' ? doc.organs.length + indices.get(center.id)
                                        : doc.organs.indexOf(organ),
         open : organ.openContacts ? 1 : 0,
-        crossing : senderCrossing(doc, center, links, sides),
+        crossing : fixed ? center.crossing : senderCrossing(doc, center, links, sides),
         range : center.range,
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };
@@ -1268,6 +1287,14 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     groups,
     connections,
     compiler : compilerOptions(doc),
+    ...(fixed ? {
+      source : {
+        development : doc.source.development,
+        variation : doc.source.variation,
+        addresses : centers.map(c => c.contact)
+      }
+    }
+              : {}),
     growth : {...doc.growth}
   };
 }

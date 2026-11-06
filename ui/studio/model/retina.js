@@ -52,6 +52,14 @@ export const receptorWidth = field =>
 // Centers are compiler output of a whole-organ recipe. They never acquire independent positions.
 export function generateRetina(organ, sites, used, create) {
   const {lo, hi, profiles, density, resolution} = organ.field;
+  // An imported organ may sample different bearings with different receptor types and counts.
+  // Keep that sampling until its field bounds are edited explicitly.
+  if (organ.field.sampled) {
+    const centers = organ.centers.filter(c => profiles.some(p => p.id === c.profile));
+    if (centers.some(c => used.has(c.site)))
+      return null;
+    return centers.map(c => ({...c, ...profiles.find(p => p.id === c.profile), id : c.id}));
+  }
   const bins = retinalBins(sites);
   const chosen = bins.filter(b => b.hi > lo && b.lo < hi);
   const previous = new Map(organ.centers.map(c => [c.id, c]));

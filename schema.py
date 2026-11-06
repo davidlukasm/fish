@@ -179,7 +179,7 @@ def outputs():
     assert all(isinstance(value, int) and value > 0 for value in limits.values())
     python.append("ATELIER_LIMITS = " + repr(limits))
     js.append("export const ATELIER_LIMITS = Object.freeze(" + json.dumps(limits) + ");")
-    plan_header = ["#pragma once", "#include <istream>", "namespace studio_plan {",
+    plan_header = ["#pragma once", "#include <istream>", "#include <ostream>", "namespace studio_plan {",
                    *(f"inline constexpr int {name} = {value};" for name, value in limits.items()),
                    "template <typename Group>",
                    "bool read_group(std::istream &input, Group &g) {",
@@ -190,7 +190,17 @@ def outputs():
                    "  return bool(input " + " ".join(
                        ">> " + ("active" if name == "active" else "r." + name)
                        for name in receptor_fields) + ");",
-                   "}", "}"]
+                   "}"]
+    for kind, names in (("group", group_fields), ("receptor", receptor_fields)):
+        plan_header.extend(["template <typename Value>",
+                            f"void write_{kind}(std::ostream &out, const Value &value) {{",
+                            '  out << "{";'])
+        for i, name in enumerate(names):
+            key = json.dumps(("," if i else "") + '"' + name + '":')
+            value = f"int(value.{name})" if name == "active" else f"value.{name}"
+            plan_header.append(f"  out << {key} << {value};")
+        plan_header.extend(['  out << "}";', "}"])
+    plan_header.append("}")
     result = {
         "colony-core/cppn/output_schema.hh": "\n".join(core) + "\n",
         "colony-core/field/sense_schema.hh": "\n".join(field) + "\n",

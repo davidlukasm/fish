@@ -11,7 +11,7 @@
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
-#include "atelier_connections.hh"
+#include "atelier_import.hh"
 #include "cppn/output_schema.hh"
 #include "evolution/constants.hh"
 #include <algorithm>
@@ -876,7 +876,7 @@ void design_report(const std::vector<Group> &groups, const std::optional<SightSc
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
-            const AddressFit &fit = {}) {
+            const AddressFit &fit = {}, bool import = false) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
@@ -960,7 +960,12 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
               << ',' << e.get_weight() << ',' << (e.get_enabled() ? 1 : 0) << ',' << e.get_port()
               << ']';
   }
-  std::cout << "]}}\n";
+  std::cout << "]}";
+  if (import) {
+    std::cout << ",\"sourcePlan\":";
+    write_import(std::cout, import_plan(g));
+  }
+  std::cout << "}\n";
 }
 }
 // What the gonads hold and how they fill and spawn, with the engine's usual parameters: room per
@@ -1121,6 +1126,7 @@ int main(int argc, char **argv) {
     } measured;
     std::vector<Group> groups;
     std::optional<Plan> compiledPlan;
+    bool import = false;
     AddressFit addressFit;
     if (operation == "build" && argc == 3) {
       std::string name;
@@ -1131,13 +1137,14 @@ int main(int argc, char **argv) {
                   << std::flush;
       };
       progress("search", addressFit);
-      addressFit = plan_addresses(plan, progress);
+      if (!plan.fixed_contacts)
+        addressFit = plan_addresses(plan, progress);
       progress("encode", addressFit);
       g.cppn = Builder().build(plan);
       groups = plan.groups;
+      g.development_seed = plan.development_seed;
+      g.variation_seed = plan.variation_seed;
       compiledPlan = std::move(plan);
-      g.development_seed = 1;
-      g.variation_seed = 2;
       g.name = name;
     } else if (operation == "new" && argc == 3) {
       std::string example;
@@ -1145,6 +1152,7 @@ int main(int argc, char **argv) {
                  (example == "blank" || example == "sum" || example == START_FISH),
              "unknown CPPN example");
       if (example == START_FISH) {
+        import = true;
         std::ifstream input(fishsim::HAND_BUILT_GENOME);
         ensure(bool(input), "start fish not found");
         g = Genome::read(input, false);
@@ -1297,7 +1305,7 @@ int main(int argc, char **argv) {
     }
     if (operation != "inspect")
       g.save(argv[operation == "edit" ? 3 : 2]);
-    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit);
+    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit, import);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

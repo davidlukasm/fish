@@ -134,6 +134,48 @@ function semanticFingerprint(source) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  // The real start fish becomes a document and survives save/load and organ editing. Its
+  // irregular near-sense sampling and inherited contact fields must not be normalized away.
+  {
+    const {startDocument} = await import('../ui/studio/model/import.js');
+    const source = JSON.parse(execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          "import json; from atelier_service import run; print(json.dumps(run({'operation':'new','example':'start'})))"
+        ],
+        {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
+    const doc = startDocument(source.sourcePlan, sitesResult.sites, 'Startfisch');
+    const saved = JSON.parse(JSON.stringify(doc));
+    assert.ok(model.regenerateFields(saved, sitesResult.sites));
+    assert.deepEqual(saved, doc);
+    const plan = model.compileDocument(saved, sitesResult.sites);
+    assert.ok(plan.source);
+    assert.equal(plan.groups.length, source.sourcePlan.groups.length);
+    assert.equal(plan.connections.length, source.sourcePlan.connections.length);
+    assert.ok(doc.wires.length < plan.connections.length);
+    const near = doc.organs.find(o => o.type === 'proximity');
+    assert.ok(new Set(near.centers.map(c => c.copies)).size > 1);
+    const tuned = model.updateField(doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}},
+                                    sitesResult.sites);
+    assert.ok(model.compileDocument(tuned, sitesResult.sites).source);
+    assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
+                     model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
+    const rewired = structuredClone(doc);
+    rewired.wires.pop();
+    assert.equal(model.compileDocument(rewired, sitesResult.sites).source, undefined);
+    const checked = JSON.parse(execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          "import json,sys; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); print(json.dumps({k:r[k] for k in ['neurons','synapses','viable','compiler']}))"
+        ],
+        {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
+    assert.ok(checked.compiler.ok, JSON.stringify(checked.compiler));
+    assert.equal(checked.neurons, source.neurons);
+    assert.equal(checked.synapses, source.synapses);
+    assert.equal(checked.viable, source.viable);
+  }
   // A stimulus runs from its source along the drawn network: a part fires once, at the first
   // signal's arrival, when the engine found it active; a signal to a quiet part fades there.
   {

@@ -7,6 +7,7 @@ import {
   STUDIO_CLICKS
 } from './events.js';
 import {exampleDocument} from './model/example.js';
+import {startDocument} from './model/import.js';
 import {handleMethods, storedPanels} from './handles.js';
 import {storedLayers} from './view/layers.js';
 import {dropMethods} from './drops.js';
@@ -591,18 +592,24 @@ export class OrganStudio {
     a.click();
     URL.revokeObjectURL(url);
   }
-  // The Aquarium's start fish as its runs begin with it: its genome, opened as a genome file is.
+  // Reconstruct the Aquarium's start fish as an editable document, then check its compilation.
   async startFish() {
     if (this.state.busy)
       return;
+    this.state.busy = true;
+    this.refreshHeader();
     try {
       const report = await this.api(requestBody('new', {example : START_FISH}), API_WAIT.long);
-      this.state.genome = report.genome;
-      this.state.report = report;
-      this.state.stale = false;
-      this.setMode('cppn');
+      this.changeDocument(
+          startDocument(report.sourcePlan, this.state.sites, label('app.startFish')));
+      this.setMode('fish');
+      this.state.busy = false;
+      await this.develop();
     } catch (error) {
       this.notice(error.message);
+    } finally {
+      this.state.busy = false;
+      this.refreshHeader();
     }
   }
   example() {
