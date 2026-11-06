@@ -9,7 +9,7 @@ import {
   placementTarget
 } from './body.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
 import {joinParts, tList} from '../../strings.js';
 import {
   eligible,
@@ -228,8 +228,9 @@ export function assemblyPreview(state, placed) {
                                  organLocation(o, state.sites, placed.document)))
       .join('');
 }
-// A dragged organ's preview: its icon ICON wide in INK on a ring RING wide in its colour.
-const PREVIEW = Object.freeze({ring : 26, icon : 28, ink : '#072e34'});
+// A dragged organ's preview: its icon ICON wide, drawn LINE thick in INK, on a ring RING wide in
+// its colour.
+const PREVIEW = Object.freeze({ring : 26, icon : 28, line : 2, ink : '#072e34'});
 export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)
     return '';
@@ -239,8 +240,9 @@ export function placementPreview(state, descriptor, position) {
   const icon = STUDIO_ICON[descriptor.type] ?? STUDIO_ICON.brain;
   return '<g transform="translate(' + fixed(position.x) + ' ' + fixed(position.y) + ') scale(' +
          fixed(1 / zoom) + ')">' +
-         '<circle r="' + P.ring + '" class="aid-preview-ring" fill="' + colour + '"/><svg x="' +
-         -P.icon / 2 + '" y="' + -P.icon / 2 + '" width="' + P.icon + '" height="' + P.icon +
-         '" viewBox="0 0 24 24"><path d="' + escapeText(icon) + '" fill="none" stroke="' + P.ink +
-         '" stroke-width="2"/></svg></g>';
+         '<circle r="' + P.ring + '" class="aid-preview-ring" fill="' + colour + '"/>' +
+         placedGlyph(
+             icon, P.icon, {},
+             {paint : ' fill="none" stroke="' + P.ink + '" stroke-width="' + P.line + '"'}) +
+         '</g>';
 }

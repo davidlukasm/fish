@@ -17,6 +17,20 @@ export const pointText = p => fixed(p.x) + ' ' + fixed(p.y);
 // The attribute behind a dataset key, as data-probe-block for probeBlock.
 export const dataAttribute = key => 'data-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
 
+// A glyph is a path drawn in a square box of GLYPH.box units and shown at a size: a line glyph is
+// an outline in the text colour, any other glyph takes its paint from its style or `paint`. A
+// placed glyph stands centred at a point of a drawing.
+export const GLYPH = Object.freeze({box : 24, line : 1.9});
+const LINE_PAINT = ' fill="none" stroke="currentColor" stroke-width="' + GLYPH.line +
+                   '" stroke-linecap="round" stroke-linejoin="round"';
+const glyphSvg = (place, size, path, {line = false, box = GLYPH.box, paint = ''} = {}) =>
+    '<svg' + place + ' width="' + size + '" height="' + size + '" viewBox="0 0 ' + box + ' ' + box +
+    '" aria-hidden="true"><path d="' + escapeText(path) + '"' + (line ? LINE_PAINT : paint) +
+    '/></svg>';
+export const glyph = (path, size, options) => glyphSvg('', size, path, options);
+export const placedGlyph = (path, size, {x = 0, y = 0} = {}, options) => glyphSvg(
+    ' x="' + fixed(x - size / 2) + '" y="' + fixed(y - size / 2) + '"', size, path, options);
+
 // A track along which a handle sets a share of the way from `left` to `right`, at height y; the
 // whole track takes the pointer with `attributes`, and without a share it shows no handle. A
 // width track runs from narrow (a dot before its start) to wide (a halo after its end); a named

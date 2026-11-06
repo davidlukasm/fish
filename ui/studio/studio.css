@@ -66,6 +66,7 @@
 .aid-move-raise .aid-spines-rest path{opacity:0}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
 .aid-neural-center{cursor:grab}
+.aid-neural-body{opacity:.25}
 .aid-neural-center.aid-pulse-active .aid-neural-body{opacity:.92;stroke:#eff3bc;stroke-width:2}
 .aid-neural-center.selected .aid-neural-body{stroke:#fff2bc;stroke-width:4;opacity:.8}
 .aid-neural-dot{stroke:#0e373c;stroke-width:1.6}

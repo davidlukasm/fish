@@ -12,7 +12,8 @@ import {idSafe, rounded} from './markup.js';
 // less near full activity, with a period of its time constant, at least
 // TIME_CONSTANT.pace_min_steps; the handle on its first crest sets the period. Below zero a
 // muscle does nothing, a bladder empties and a gland binds; above it they work (`meaning` names
-// the halves). The time axis spans SPANS of the longest time constant, or BEATS for a pacemaker.
+// the halves, INSET from the left, LABEL below the top and RISE above the bottom). The time axis
+// spans SPANS of the longest time constant, or BEATS for a pacemaker.
 const DRIVE = Object.freeze({
   width : 360,
   height : 124,
@@ -27,7 +28,9 @@ const DRIVE = Object.freeze({
   spans : 3,
   beats : 2,
   tick : 4,
-  label : 11
+  label : 11,
+  inset : 4,
+  rise : 3
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
 // A rhythm's first crest lies a quarter of its period after its start.
@@ -81,8 +84,9 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';
   const names =
-      meaning ? `<text x="${D.left + 4}" y="${D.top + D.label}">${meaning.above}</text>` +
-                    `<text x="${D.left + 4}" y="${D.top + D.plot - 3}">${meaning.below}</text>`
+      meaning ? `<text x="${D.left + D.inset}" y="${D.top + D.label}">${meaning.above}</text>` +
+                    `<text x="${D.left + D.inset}" y="${D.top + D.plot - D.rise}">${
+                        meaning.below}</text>`
               : '';
   return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
       idSafe(center.id)}" role="img" aria-label="${label}">${idle}${

@@ -150,7 +150,7 @@ function curveHandles(state, receptor, effect, target) {
   return handles
       .map(([ key, [ hx, hy ] ]) =>
                '<circle class="aid-spectrum-handle curve-' + key + '" data-curve-handle="' + key +
-               '" cx="' + fixed(hx) + '" cy="' + fixed(hy) + '" r="6"><title>' +
+               '" cx="' + fixed(hx) + '" cy="' + fixed(hy) + '" r="' + CURVE.handle + '"><title>' +
                escapeText(label('inspector.curve.' + key)) + '</title></circle>')
       .join('');
 }
@@ -183,8 +183,16 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   };
 }
 export const GROWTH = 'growth';
-const CURVE = Object.freeze(
-    {width : 260, height : 150, left : 36, right : 250, top : 14, bottom : 112, points : 80});
+const CURVE = Object.freeze({
+  width : 260,
+  height : 150,
+  left : 36,
+  right : 250,
+  top : 14,
+  bottom : 112,
+  points : 80,
+  handle : 6
+});
 // A response chart's axes and their marks: the response's top and bottom (HIGH, LOW) left of
 // its axis, the other axis's ends (FROM, TO) and name (ALONG) below it, what rises (UP) at the
 // top inside it. Marks stand GAP from the axes, the names BELOW under them, UP TITLE down.
@@ -254,7 +262,8 @@ export function phasePatch(handle, fx) {
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
-// How much of a substance a measurement doses: a share from none to all.
+// How much of a substance a measurement doses: a share from none to all, set in MEASURE_STEP.
+const MEASURE_STEP = .01;
 export const measureReading = level => percent(level);
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
@@ -262,9 +271,9 @@ export function measurement(state, index) {
   let html = '<div class="aid-measure"><span class="aid-measure-title">' +
              label('hormoneCard.probe') + '</span><div class="aid-measure-dose">' +
              '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
-             '</span><input type="range" data-measure-level min="0" max="1" step=".01" value="' +
-             fixed(state.measureLevel) + '"/><output>' + measureReading(state.measureLevel) +
-             '</output></label>' +
+             '</span><input type="range" data-measure-level min="0" max="1" step="' + MEASURE_STEP +
+             '" value="' + fixed(state.measureLevel) + '"/><output>' +
+             measureReading(state.measureLevel) + '</output></label>' +
              '<button class="aid-secondary" data-measure>' + label('inspector.measure') +
              '</button></div>';
   const m = state.measurement;

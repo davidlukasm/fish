@@ -9,7 +9,7 @@ import {
   receivers,
   SUBSTANCE_NAME_LENGTH
 } from '../model/document.js';
-import {escapeText} from './markup.js';
+import {escapeText, glyph} from './markup.js';
 import {namedText, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
 import {measurement, organsOf} from './substances.js';
@@ -92,11 +92,10 @@ function substanceCard(state, substance) {
       SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') + '">' +
       '<button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
       (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' title="' +
-      label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
-      '"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="' + FISH_MARK +
-      '"/></svg></button><button class="aid-row-menu" data-remove-substance="' + index +
-      '" aria-label="' + label('inspector.removeSubstance') + '">' + t('studio.marks.remove') +
-      '</button></header>';
+      label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '">' +
+      glyph(FISH_MARK, ICON.mark) +
+      '</button><button class="aid-row-menu" data-remove-substance="' + index + '" aria-label="' +
+      label('inspector.removeSubstance') + '">' + t('studio.marks.remove') + '</button></header>';
   const style = ' style="--substance:' + substanceColor(index) + '"';
   const releasing = producers(doc, index, wheel), receiving = receivers(doc, index, wheel);
   if (!open)
@@ -162,11 +161,8 @@ export function workflow() {
   return '<ol class="aid-workflow">' +
          WORKFLOW
              .map(key => '<li><button type="button" data-tool="' + key + '" title="' +
-                         label('tools.' + key) +
-                         '"><svg width="20" height="20" viewBox="0 0 24 24" ' +
-                         'aria-hidden="true"><path d="' + TOOL_ICON[key] +
-                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
-                         'stroke-linejoin="round" fill="none"/></svg></button><span>' +
+                         label('tools.' + key) + '">' +
+                         glyph(TOOL_ICON[key], ICON.workflow, {line : true}) + '</button><span>' +
                          label('workflow.' + key) + '</span></li>')
              .join('') +
          '<li><span class="aid-workflow-mark">→</span><span>' + label('workflow.develop') +
@@ -179,20 +175,14 @@ export function toolPalette(state) {
              .map(key => '<button type="button" data-history="' + key + '" title="' +
                          label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '"' +
                          ((key === 'undo' ? !state.canUndo : !state.canRedo) ? ' disabled' : '') +
-                         '><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
-                         '<path d="' + TOOL_ICON[key] +
-                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
-                         'stroke-linejoin="round" fill="none"/></svg></button>')
+                         '>' + glyph(TOOL_ICON[key], ICON.tool, {line : true}) + '</button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          tools
              .map(key => '<button type="button" data-tool="' + key + '" class="' +
                          (state.tool === key ? 'active' : '') + '" title="' +
                          label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '">' +
-                         '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">' +
-                         '<path d="' + TOOL_ICON[key] +
-                         '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
-                         'stroke-linejoin="round" fill="none"/></svg></button>')
+                         glyph(TOOL_ICON[key], ICON.tool, {line : true}) + '</button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          '<button data-zoom="in" title="' + label('tools.zoomIn') + '">＋</button>' +

@@ -33,7 +33,7 @@ import {
   oneSided,
   wiredCrossing
 } from '../model/document.js';
-import {escapeText, fixed, padPoint, padValues, pointMarks, pointText} from './markup.js';
+import {escapeText, fixed, glyph, padPoint, padValues, pointMarks, pointText} from './markup.js';
 import {onMidline, sideIndex} from '../model/layout.js';
 import {
   formatNumber,
@@ -265,8 +265,7 @@ function muscleGraphic(state, center) {
                               escapeText(center.id) + '"'
                     : code === own ? ' aria-current="true"'
                                    : ' disabled') +
-                   '><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
-                   MUSCLE_ICON[code] + '"/></svg><span>' +
+                   '>' + glyph(MUSCLE_ICON[code], ICON.muscle) + '<span>' +
                    escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
           .join('');
   return '<div class="aid-muscle-functions">' + chips + '</div>';

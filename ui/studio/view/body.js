@@ -31,7 +31,7 @@ import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t, tList} from '../../strings.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
 import {bearing} from '../model/retina.js';
@@ -639,9 +639,7 @@ function regionBadge(state, organ, hull = regionHull(state, organ)) {
   const {cx, cy, rx, ry} = hull, zoom = state.camera?.zoom ?? 1;
   return '<g class="aid-region-badge" transform="translate(' + fixed(cx - rx * REGION.corner) +
          ' ' + fixed(cy - ry * REGION.corner) + ') scale(' + fixed(1 / zoom) + ')"><circle r="' +
-         REGION.badge + '"/><svg x="' + -REGION.icon / 2 + '" y="' + -REGION.icon / 2 +
-         '" width="' + REGION.icon + '" height="' + REGION.icon +
-         '" viewBox="0 0 24 24"><path d="' + STUDIO_ICON[organ.type] + '"/></svg></g>';
+         REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) + '</g>';
 }
 // The abstract fish in the colour of its pigment, with its organs.
 // The nodes of an organ with several, each on its site, to choose or wire one of them alone.

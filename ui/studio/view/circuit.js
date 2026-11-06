@@ -2,7 +2,7 @@ import {substanceColor} from '../../hormones.js';
 import {ORGAN_BY_KEY} from '../model/organs.js';
 import {findCenter, findOrgan, teachersOf, wholeEndpoint} from '../model/document.js';
 import {centerMarker} from './scene.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 import {namedText, t, tList} from '../../strings.js';
@@ -13,6 +13,8 @@ import {organTitle} from './body.js';
 // A brain region's wiring in the inspector: its circuit plan, its slots and its settings.
 // A brain region: how it is wired (which organs feed it, where it sends, on which side) and its
 // nodes with their cell counts. Each connection's side guidance is a glyph to click through.
+// Its glyphs are drawn in a PAIRING_BOX square.
+const PAIRING_BOX = 20;
 const PAIRING_GLYPH = Object.freeze({
   same : 'M3 6h14M3 14h14',
   crossed : 'M3 6L17 14M3 14L17 6',
@@ -24,9 +26,8 @@ export function pairingButton(wire) {
   if (!wire.pairing)
     return '<span class="aid-pairing single"></span>';
   return '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) + '" title="' +
-         pairingTitle(wire) +
-         '"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="' +
-         PAIRING_GLYPH[wire.pairing] + '"/></svg><span>' +
+         pairingTitle(wire) + '">' +
+         glyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
          label('inspector.pairing.' + wire.pairing) + '</span></button>';
 }
 // A brain region as a circuit: its nodes on both sides of the midline (the region and its twin),
@@ -47,6 +48,7 @@ const CIRCUIT = Object.freeze({
   node : 13,
   organ : 12,
   glyph : 11,
+  round : 5,
   bend : 20,
   fan : 26,
   marker : 7,
@@ -152,8 +154,8 @@ function regionCircuit(state, organ) {
     return '<g class="aid-circuit-pairing" data-wire-pairing="' + escapeText(wire.id) +
            '" transform="translate(' + x + ' ' + y + ')"><title>' + pairingTitle(wire) +
            '</title><rect x="-' + C.glyph + '" y="-' + C.glyph + '" width="' + 2 * C.glyph +
-           '" height="' + 2 * C.glyph + '" rx="5"/><path transform="translate(-10 -10)" d="' +
-           PAIRING_GLYPH[wire.pairing] + '"/></g>';
+           '" height="' + 2 * C.glyph + '" rx="' + C.round + '"/>' +
+           placedGlyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {}, {box : PAIRING_BOX}) + '</g>';
   });
   // An organ shows as its icon and name; a center of the brain as its own glyph and name.
   const brainCenter = end => end.center && end.organ.type === 'brain';

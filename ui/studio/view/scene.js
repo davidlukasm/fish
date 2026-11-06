@@ -10,7 +10,7 @@ import {
 } from './body.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
@@ -21,6 +21,7 @@ import {cameraBox} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
+import {ICON} from './kit.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
 // with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
@@ -85,8 +86,7 @@ function centersSvg(state) {
           '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
           escapeText(center.id) + '" transform="translate(' + fixed(cp.x) + ' ' + fixed(cp.y) +
           ') scale(' + fixed(1 / zoom) + ')">' +
-          '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color +
-          '" opacity=".25"/>' +
+          '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color + '"/>' +
           (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
                                       '" r="' + fixed(r + G.ring) + '" stroke="' + substance + '"/>'
                                 : '') +
@@ -166,13 +166,11 @@ function slotsSvg(state) {
               escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
               fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
               SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
-              '<svg x="' + fixed(dx - SLOT.icon / 2) + '" y="' + fixed(-SLOT.icon / 2) +
-              '" width="' + SLOT.icon + '" height="' + SLOT.icon +
-              '" viewBox="0 0 24 24"><path d="' +
-              escapeText(shown               ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain
-                         : slot.dir === 'in' ? SLOT_IN
-                                             : SLOT_OUT) +
-              '"/></svg></g>';
+              placedGlyph(shown               ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain
+                          : slot.dir === 'in' ? SLOT_IN
+                                              : SLOT_OUT,
+                          SLOT.icon, {x : dx}) +
+              '</g>';
     });
   }
   return html;
@@ -239,11 +237,9 @@ export function fishScene(state) {
   return '<svg id="aid-body-map" viewBox="' + box +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
-         '<defs>' + wireMarkers(camera.zoom) +
-         '<linearGradient id="aid-fish-light" x1="0" y1="0" x2="0" y2="1">' +
-         '<stop offset="0%" stop-color="#76b7ad"/><stop offset="100%" stop-color="#163c45"/>' +
-         '</linearGradient></defs>' +
-         '<rect x="0" y="0" width="1120" height="740" class="aid-canvas-ground"/>' +
+         '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
+         fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
+         '" class="aid-canvas-ground"/>' +
          '<g class="aid-anatomy">' + anatomy + '</g>' + hormoneOverlay(state) +
          '<g class="aid-wires">' +
          (state.contactView === 'actual' && !state.stale && state.report?.contacts
@@ -263,8 +259,6 @@ export function fishScene(state) {
 // While an organ is dragged, dropping it here removes it.
 function trashZone() {
   return '<div class="aid-trash" data-trash hidden title="' + escapeText(t('studio.tools.trash')) +
-         '"><svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="' +
-         TOOL_ICON.erase + '" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" ' +
-         'stroke-linejoin="round" fill="none"/></svg><span>' + escapeText(t('studio.tools.trash')) +
-         '</span></div>';
+         '">' + glyph(TOOL_ICON.erase, ICON.trash, {line : true}) + '<span>' +
+         escapeText(t('studio.tools.trash')) + '</span></div>';
 }
