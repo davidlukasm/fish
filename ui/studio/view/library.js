@@ -43,11 +43,19 @@ function tile({
 const section = (title, tiles, extra = '') => '<section class="aid-library-section"><h4>' + title +
                                               '</h4><div class="aid-palette-grid">' + tiles +
                                               '</div>' + extra + '</section>';
-const substanceTitle = (state, index, choose) =>
-    '<span class="aid-substance-title" style="--substance:' + substanceColor(index) + '">' +
-    (choose ? '<button data-select-substance="' + index + '">' : '<span>') +
-    '<span class="aid-substance-swatch"></span>' + escapeText(substanceName(state, index)) +
-    (choose ? '</button>' : '</span>') + '</span>';
+const openSubstance = state => {
+  const subs = state.capabilities ? state.document.substances : [];
+  return subs.some(s => s.index === state.focusSubstance) ? state.focusSubstance : subs[0]?.index;
+};
+const substanceSection = (state, index, tiles) => {
+  const open = index === openSubstance(state);
+  return '<section class="aid-library-section aid-substance-section' + (open ? ' open' : '') +
+         '"><h4><button class="aid-substance-title" data-select-substance="' + index +
+         '" aria-expanded="' + open + '" style="--substance:' + substanceColor(index) +
+         '"><span class="aid-substance-swatch"></span>' + escapeText(substanceName(state, index)) +
+         '</button></h4>' + (open ? '<div class="aid-palette-grid">' + tiles + '</div>' : '') +
+         '</section>';
+};
 const addSubstanceTile = state => state.document.substances.length < HORMONES.levels
                                       ? '<button class="aid-palette-tile add" data-add-substance>' +
                                             '<span class="aid-palette-icon">＋</span><span>' +
@@ -154,25 +162,25 @@ function hormoneLibrary(state) {
   return substances
              .map(sub => {
                const index = sub.index, colour = substanceColor(index);
-               return section(substanceTitle(state, index, true),
-                              tile({
-                                kind : 'gland',
-                                value : String(index),
-                                name : label('hormoneCard.gland'),
-                                path : STUDIO_ICON.gland,
-                                colour,
-                                title : label('hormoneCard.glandTitle')
-                              }) + EFFECT_ORDER
-                                       .map(effect => tile({
-                                              kind : 'effect',
-                                              value : index + ':' + effect,
-                                              name : label('effects.' + effect),
-                                              path : EFFECT_ICON[effect],
-                                              colour,
-                                              title : titles[effect],
-                                              wide : true
-                                            }))
-                                       .join(''));
+               return substanceSection(state, index,
+                                       tile({
+                                         kind : 'gland',
+                                         value : String(index),
+                                         name : label('hormoneCard.gland'),
+                                         path : STUDIO_ICON.gland,
+                                         colour,
+                                         title : label('hormoneCard.glandTitle')
+                                       }) + EFFECT_ORDER
+                                                .map(effect => tile({
+                                                       kind : 'effect',
+                                                       value : index + ':' + effect,
+                                                       name : label('effects.' + effect),
+                                                       path : EFFECT_ICON[effect],
+                                                       colour,
+                                                       title : titles[effect],
+                                                       wide : true
+                                                     }))
+                                                .join(''));
              })
              .join('') +
          section(label('hormoneCard.body'), tile({
@@ -210,25 +218,25 @@ function learningLibrary(state) {
          substances
              .map(sub => {
                const index = sub.index, colour = substanceColor(index);
-               return section(substanceTitle(state, index, false),
-                              tile({
-                                kind : 'gland',
-                                value : String(index),
-                                name : label('hormoneCard.gland'),
-                                path : STUDIO_ICON.gland,
-                                colour,
-                                title : label('hormoneCard.glandTitle')
-                              }) + LEARNING_TILES
-                                       .map((t, k) => tile({
-                                              kind : 'effect',
-                                              value : index + ':' + t.effect,
-                                              name : label('effects.' + t.effect),
-                                              path : t.path,
-                                              colour,
-                                              title : titles[k],
-                                              wide : true
-                                            }))
-                                       .join(''));
+               return substanceSection(state, index,
+                                       tile({
+                                         kind : 'gland',
+                                         value : String(index),
+                                         name : label('hormoneCard.gland'),
+                                         path : STUDIO_ICON.gland,
+                                         colour,
+                                         title : label('hormoneCard.glandTitle')
+                                       }) + LEARNING_TILES
+                                                .map((t, k) => tile({
+                                                       kind : 'effect',
+                                                       value : index + ':' + t.effect,
+                                                       name : label('effects.' + t.effect),
+                                                       path : t.path,
+                                                       colour,
+                                                       title : titles[k],
+                                                       wide : true
+                                                     }))
+                                                .join(''));
              })
              .join('') +
          section(label('hormoneCard.more'), addSubstanceTile(state));

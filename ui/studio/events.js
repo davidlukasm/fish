@@ -478,7 +478,8 @@ export const FISH_CLICKS = Object.freeze([
     '[data-select-substance]',
     (studio, e) => showChoice(studio, state => {
       state.focusSubstance = Number(e.dataset.selectSubstance);
-      state.selected = null;
+      if (state.tool === 'hormone')
+        state.selected = null;
     }, true)
   ],
   [

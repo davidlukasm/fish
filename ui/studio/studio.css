@@ -50,8 +50,10 @@
 #station-root[data-armed="wiring"]:not([data-armed-value="bend"]) #aid-body-map .aid-wire-group:not([data-paired]){opacity:.2;pointer-events:none}
 .aid-palette-tile.add{border-style:dashed}
 .aid-palette-tile.add .aid-palette-icon{border-style:dashed;color:var(--aid-soft-text);font-size:18px}
-.aid-substance-title{display:inline-flex;align-items:center}
-.aid-substance-title button,.aid-substance-title>span{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:#dfe9e1;font:inherit;letter-spacing:.02em;cursor:pointer}
+.aid-substance-title{display:flex;align-items:center;gap:6px;width:100%;padding:0;border:0;background:none;color:#dfe9e1;font:inherit;letter-spacing:.02em;cursor:pointer}
+.aid-substance-title::after{content:"";margin-left:auto;width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);opacity:.7}
+.aid-substance-title[aria-expanded="true"]::after{transform:rotate(45deg)}
+.aid-substance-section:not(.open){padding-bottom:4px}
 .aid-stage{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:radial-gradient(circle at 55% 48%,#163b42,#071f27 73%);overflow:hidden}
 .aid-scene-top{display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;padding:10px 18px;gap:10px;background:#102d34;border-bottom:1px solid #274650}
 .aid-scene-top span{font:24px Georgia,serif;color:#e8eee4}
