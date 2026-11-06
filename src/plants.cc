@@ -1114,10 +1114,9 @@ void Field::cut_organ(std::size_t patch, int index, double t) {
       }
       // Bite marks stay where they were: on the stump or on the drifting piece.
       for (auto &n : o.notches)
-        n = n.at < t && t > 0 ? PlantNotch{n.at / t, n.depth, n.width / t, n.time} : PlantNotch{};
+        n = n.at < t && t > 0 ? notch_on_piece(n, 0, t) : PlantNotch{};
       for (auto &n : copy.notches)
-        n = n.at > t && t < 1 ? PlantNotch{(n.at - t) / (1 - t), n.depth, n.width / (1 - t), n.time}
-                              : PlantNotch{};
+        n = n.at > t && t < 1 ? notch_on_piece(n, t, 1) : PlantNotch{};
     } else {
       copy.parent = mapped[o.parent];
       o.energy = 0;

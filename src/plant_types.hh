@@ -74,6 +74,14 @@ struct PlantNotch {
   double at = 0, depth = 0, width = 0;
   std::uint64_t time = 0;
 };
+// A mark spans at most MAX_NOTCH_WIDTH, the whole organ.
+inline constexpr double MAX_NOTCH_WIDTH = 1;
+// A bite mark on the piece from..to of its organ, once the organ is cut there: its place and
+// half-width become shares of the piece; a mark wider than the piece covers it whole.
+inline PlantNotch notch_on_piece(const PlantNotch &n, double from, double to) {
+  const double span = to - from;
+  return {(n.at - from) / span, n.depth, std::min(MAX_NOTCH_WIDTH, n.width / span), n.time};
+}
 struct PlantOrgan {
   int kind = 0, parent = -1;
   double attach = .5, length = 1, width = 1, target = 1, energy = 0, root = -1, hardness = 1,

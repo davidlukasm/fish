@@ -57,7 +57,7 @@ void read_plant_organs(std::istream &in, SurfacePatch &p, double grass_limit) {
       for (auto &n : o.notches) {
         scalar(in, n.at, 0, 1);
         scalar(in, n.depth, -1, 1);
-        scalar(in, n.width, 0, 1);
+        scalar(in, n.width, 0, MAX_NOTCH_WIDTH);
         value(in, n.time);
       }
     p.organs.push_back(o);

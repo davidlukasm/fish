@@ -1,5 +1,6 @@
 // Lasting rules of the simulation, independent of balance values: a closed tank never creates
-// energy, a restored checkpoint continues exactly like the running tank, a starving fish
+// energy, a restored checkpoint continues exactly like the running tank, a cut keeps bite marks
+// within their piece, a starving fish
 // breaks down tissue without losing maturity, a body grows only while a hormone occupies its
 // growth receptor, maturity switches cells for good, and algae do not linger in traces.
 #include "test_support.hh"
@@ -217,6 +218,16 @@ void development_checkpoint_stages(const Genome &g) {
     check(saved(w) == saved(copy), "partial development continues exactly");
   }
 }
+// A bite mark WIDE_MARK wide in the middle of a stump SHORT_STUMP long covers the stump, no more:
+// a saved tank holds only marks within their organ.
+constexpr double WIDE_MARK = .3, SHORT_STUMP = .15, MARK_DEPTH = .5;
+void cut_marks_stay_on_their_piece() {
+  const PlantNotch mark{SHORT_STUMP / 2, MARK_DEPTH, WIDE_MARK, 0},
+      stump = notch_on_piece(mark, 0, SHORT_STUMP);
+  check(stump.width <= MAX_NOTCH_WIDTH, "a bite mark spans at most its whole piece");
+  check(stump.at >= 0 && stump.at <= 1 && stump.depth == mark.depth,
+        "a bite mark keeps its place and depth on the piece");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -236,13 +247,15 @@ int main() {
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
+    cut_marks_stay_on_their_piece();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     life_phases_follow_maturity(g);
     algae_vanish_in_traces(g);
-    std::cout << "Energie, Speicherstand, Reife, Wachstum, Lebensabschnitte und Algen: OK\n";
+    std::cout << "Energie, Speicherstand, Bissspuren, Reife, Wachstum, Lebensabschnitte und Algen: "
+                 "OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;
