@@ -414,7 +414,7 @@ void main(){
 }`;
   },
   "grassFragmentShader" : () => {
-    grassFragmentShader = `
+    grassFragmentShader = `#version 300 es
 precision highp float;
 in vec3 color;
 in vec4 leafSurface;

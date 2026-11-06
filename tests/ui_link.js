@@ -15,7 +15,15 @@ async function evaluate(source) {
   await entry.evaluate();
   return load;
 }
+// GLSL ES 3.00 shaders start with their version line; without it the browser compiles them as
+// ES 1.00 and rejects them.
+function shadersVersioned() {
+  for (const name of fs.readdirSync('ui', {recursive : true}).filter(n => n.endsWith('.js')))
+    if (/`\s*precision\s/.test(fs.readFileSync('ui/' + name, 'utf8')))
+      throw new Error(name + ': Shader ohne #version 300 es');
+}
 (async () => {
+  shadersVersioned();
   const load =
       await evaluate(fs.readdirSync('ui', {recursive : true})
                          .filter(n => n.endsWith('.js') && n !== 'app.js' && !n.includes('_worker'))
