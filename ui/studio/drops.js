@@ -6,13 +6,12 @@ import {
   addOrgan,
   findCenter,
   findOrgan,
-  placeModule,
-  placeStoredModule,
   setLifePhase,
   updateCenter,
   updateReceptor,
   wheelPlace
 } from './model/document.js';
+import {placeModule, placeStoredModule} from './model/assemblies.js';
 import {nearFish, SNAP_DISTANCE} from './model/layout.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';

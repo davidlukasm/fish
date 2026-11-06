@@ -17,10 +17,9 @@ import {
   findCenter,
   findOrgan,
   groupReport,
-  modulesOf,
-  oneSided,
   wiredCrossing
 } from '../model/document.js';
+import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph, padPoint, padValues, pointMarks, pointText} from './markup.js';
 import {findSite, onMidline, sideIndex} from '../model/layout.js';
 import {

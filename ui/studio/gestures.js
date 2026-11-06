@@ -5,11 +5,11 @@ import {
   closestSite,
   findCenter,
   findOrgan,
-  moveAssembly,
   moveCenter,
   moveOrgan,
   usedSites
 } from './model/document.js';
+import {moveAssembly} from './model/assemblies.js';
 import {nearFish, pointDistance, SNAP_DISTANCE} from './model/layout.js';
 import {
   CAMERA_HOME,

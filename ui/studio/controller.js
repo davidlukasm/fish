@@ -24,7 +24,6 @@ import {
   findOrgan,
   identifier,
   newDocument,
-  removeAssembly,
   removeCenter,
   removeOrgan,
   removeWire,
@@ -33,6 +32,7 @@ import {
   updateField,
   validateDocument
 } from './model/document.js';
+import {removeAssembly} from './model/assemblies.js';
 import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME} from './view/frame.js';
 import {BODY_MAP, fishScene} from './view/scene.js';

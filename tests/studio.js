@@ -98,7 +98,11 @@ function semanticFingerprint(source) {
     de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
-  const model = await import('../ui/studio/model/document.js');
+  // The design and its modules, as one model.
+  const model = {
+    ...await import('../ui/studio/model/document.js'),
+    ...await import('../ui/studio/model/assemblies.js')
+  };
   // The scene, the hints while placing, where organs are drawn and their names, as one view of the
   // fish.
   const views = {

@@ -7,7 +7,6 @@ import {
   addOrganType,
   addSubstance,
   allCenters,
-  assembleSelection,
   closestSiteDoing,
   findAssembly,
   findCenter,
@@ -15,7 +14,6 @@ import {
   GROWTH_START,
   identifier,
   linkPair,
-  mirrorAssembly,
   mirrorOrgan,
   moveCenterToSide,
   moveOrgan,
@@ -23,11 +21,9 @@ import {
   nextTypeTuning,
   removeOrganType,
   removeSubstance,
-  renameAssembly,
   selectionCenters,
   setSubstance,
   switchReceptor,
-  ungroupAssembly,
   updateCenter,
   updateGrowth,
   updateReceptor,
@@ -35,6 +31,12 @@ import {
   usedSites,
   wheelPlace
 } from './model/document.js';
+import {
+  assembleSelection,
+  mirrorAssembly,
+  renameAssembly,
+  ungroupAssembly
+} from './model/assemblies.js';
 import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
 
