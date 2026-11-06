@@ -29,15 +29,21 @@ const COLOURS = Object.freeze({
   fade : [ '#8aa0a3', '#c3d1d2' ]
 });
 
+// The way along points to each of them, and its whole length.
+function distances(points) {
+  const along = [ 0 ];
+  for (let k = 1; k < points.length; ++k)
+    along.push(along[k - 1] +
+               Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y));
+  return along;
+}
+const lineLength = points => distances(points).at(-1);
 // The point a fraction of the way along points, by their length, so a signal keeps its pace
 // over short and long stretches alike.
 export function signalPoint(points, fraction) {
   if (!points.length)
     return {x : 0, y : 0};
-  const lengths = [ 0 ];
-  for (let k = 1; k < points.length; ++k)
-    lengths.push(lengths[k - 1] +
-                 Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y));
+  const lengths = distances(points);
   const goal = clamp(fraction) * lengths.at(-1);
   let k = 1;
   while (k < points.length - 1 && lengths[k] < goal)
@@ -46,12 +52,6 @@ export function signalPoint(points, fraction) {
   const a = points[Math.max(0, k - 1)], b = points[Math.min(points.length - 1, k)];
   return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
 }
-const lineLength = points => {
-  let length = 0;
-  for (let k = 1; k < points.length; ++k)
-    length += Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y);
-  return length;
-};
 const duration = length => clamp(SECOND_MS * length / SIGNAL.speed, SIGNAL.least, SIGNAL.most);
 // How long a signal takes along points.
 export const legDuration = points => duration(lineLength(points));

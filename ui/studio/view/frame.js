@@ -219,6 +219,8 @@ export function finPaths(sizes = finSizes()) {
 // Where the camera looks at first and after fitting: a little left of the box's middle, so the
 // snout clears the tool bar floating over the canvas' left edge.
 export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
+// The zoom a view stands at; a camera not yet zoomed stands at 1.
+export const zoomOf = state => state.camera?.zoom ?? 1;
 export function cameraBox(camera) {
   const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));
   const width = FISH_BOX.width / zoom, height = FISH_BOX.height / zoom;

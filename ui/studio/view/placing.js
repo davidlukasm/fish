@@ -15,7 +15,7 @@ import {
 } from '../model/organs.js';
 import {findOrgan, usedSites} from '../model/document.js';
 import {BODY_FRAME, nerveZone, sideOf, sitePoint} from '../model/layout.js';
-import {FISH_BOX, steadyAt} from './frame.js';
+import {FISH_BOX, steadyAt, zoomOf} from './frame.js';
 import {centerTitle, tone} from './names.js';
 
 // While an organ is dragged: where it may go and what the hints' colours mean, its preview, and
@@ -151,7 +151,7 @@ export function placementHints(state, kind, value, moving = null) {
   if (!state.sites.length)
     return {svg : ''};
   const {labels, sites, areas} = hintPlaces(state, kind, value, moving);
-  const zoom = state.camera.zoom ?? 1;
+  const zoom = zoomOf(state);
   return {
     svg : muscleBands(state, areas, labels, zoom) +
               [...sites.values() ].map(site => hintRing(site, labels, zoom)).join(''),
@@ -184,7 +184,7 @@ function movedFieldOrgans(state, choice) {
 // the nearest one the organ itself with its field, exactly where that choice places them.
 const seatOf = (state, choice, organ) => fieldOrigin(choice.document, state.sites, organ);
 export function choicesSvg(state, choices, nearest) {
-  const zoom = state.camera.zoom ?? 1;
+  const zoom = zoomOf(state);
   let html = '';
   for (const choice of choices)
     for (const organ of movedFieldOrgans(state, choice)) {
@@ -241,7 +241,7 @@ export function placementPreview(state, descriptor, position) {
   if (!position || !descriptor)
     return '';
   const P = PREVIEW;
-  const zoom = state.camera.zoom ?? 1;
+  const zoom = zoomOf(state);
   const colour = tone(descriptor.type ?? 'brain');
   const icon = STUDIO_ICON[descriptor.type] ?? STUDIO_ICON.brain;
   return '<g' + steadyAt(position, zoom) + '>' +

@@ -17,7 +17,7 @@ import {
   wheelAffinity
 } from '../model/document.js';
 import {pathTo} from './wires.js';
-import {steadyAt} from './frame.js';
+import {steadyAt, zoomOf} from './frame.js';
 
 // Where a substance acts, with the hormone tool: the glands that release it, the cells that bind
 // it and learn from it, and the ways between them; with the learning tool a center's teachers.
@@ -79,7 +79,7 @@ function teachingOverlay(state) {
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
   if (!capabilities || found?.center.role !== 'nerve')
     return '';
-  const zoom = state.camera.zoom ?? 1;
+  const zoom = zoomOf(state);
   const target = {pos : nodeLocation(doc, sites, found.center, found.organ.type), affinity : 1};
   let html = '';
   for (const {substance, glands} of teachersOf(doc, found.center, capabilities)) {
@@ -108,7 +108,7 @@ export function hormoneOverlay(state) {
   if (!substance)
     return '';
   const color = substanceColor(substance.index);
-  const zoom = state.camera.zoom ?? 1;
+  const zoom = zoomOf(state);
   const sources = [], targets = [];
   const learning = new Set(learners(doc, substance.index, capabilities).map(c => c.id));
   for (const organ of doc.organs)

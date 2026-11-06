@@ -10,7 +10,7 @@ import {
 } from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {radians} from '../../units.js';
-import {FIN_BASE, HEAD, skinAt, SNOUT_TIP} from './frame.js';
+import {FIN_BASE, HEAD, skinAt, SNOUT_TIP, zoomOf} from './frame.js';
 import {MOTOR_KIND} from '../../schema.js';
 import {bearing} from '../model/retina.js';
 import {isRegion, organFunction} from '../model/organs.js';
@@ -240,7 +240,7 @@ const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'era
 export const nodesAtZoom = zoom => zoom >= NODE.zoom;
 export function showsNodes(state, organs) {
   const ids = new Set(organs.flatMap(o => [o.id, ...o.centers.map(c => c.id)]));
-  return nodesAtZoom(state.camera?.zoom ?? 1) || NODE_TOOLS.includes(state.tool) ||
+  return nodesAtZoom(zoomOf(state)) || NODE_TOOLS.includes(state.tool) ||
          ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
 }
 // Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,

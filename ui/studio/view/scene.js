@@ -12,7 +12,7 @@ import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
 import {allCenters, findAssembly, findCenter, isChosen, wiredCrossing} from '../model/document.js';
 import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
-import {cameraBox, steadyAt, viewBoxOf} from './frame.js';
+import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
@@ -51,8 +51,8 @@ export function centerMarker(center, radius) {
 // ring RING wider marks what it does with the focused substance.
 const CENTER_GLYPH = Object.freeze({radius : 5.5, chosen : 7.5, halo : 4, ring : 7});
 function centersSvg(state) {
-  const {document : doc, sites, selected, camera} = state;
-  const zoom = camera.zoom ?? 1;
+  const {document : doc, sites, selected} = state;
+  const zoom = zoomOf(state);
   const roles = hormoneRoles(state), substance = substanceColor(state.focusSubstance);
   const activeAssembly = selected?.kind === 'assembly' ? findAssembly(doc, selected.id) : null;
   const assemblyCenters = new Set(activeAssembly?.centerIds ?? []);
@@ -104,7 +104,7 @@ const STAMP = Object.freeze({
               '<path d="M-8 -2 L-3 -6 L4 -2 L9 -6 M-8 5 L-3 1 L4 5 L9 1" fill="none"/>'
 });
 function assembliesSvg(state) {
-  const {document : doc, sites, selected, camera} = state;
+  const {document : doc, sites, selected} = state, zoom = zoomOf(state);
   return doc.assemblies
       .map(assembly => {
         const included = new Set(assembly.centerIds ?? []);
@@ -115,9 +115,8 @@ function assembliesSvg(state) {
         const {x, y} = centroid(positions);
         const active = isSelected(selected, 'assembly', assembly.id);
         return '<g class="aid-assembly-stamp' + (active ? ' selected' : '') + '" data-assembly="' +
-               escapeText(assembly.id) + '"' + steadyAt({x, y : y - STAMP.above}, camera.zoom) +
-               '>' + STAMP.glyph + '<title>' + escapeText(moduleName(doc, assembly)) +
-               '</title></g>';
+               escapeText(assembly.id) + '"' + steadyAt({x, y : y - STAMP.above}, zoom) + '>' +
+               STAMP.glyph + '<title>' + escapeText(moduleName(doc, assembly)) + '</title></g>';
       })
       .join('');
 }
@@ -130,7 +129,7 @@ export const organLabelPlace = (y, zoom) =>
 // others only the ones they still need. A click on one starts a wire there.
 const SLOT = Object.freeze({width : 26, height : 20, round : 6, gap : 5, away : 22, icon : 14});
 function slotsSvg(state) {
-  const {document : doc, sites, selected} = state, zoom = state.camera?.zoom ?? 1;
+  const {document : doc, sites, selected} = state, zoom = zoomOf(state);
   let html = '';
   for (const organ of doc.organs.filter(o => ORGAN_BY_KEY[o.type].slots)) {
     const chosen = isChosen(selected, organ);

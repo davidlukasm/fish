@@ -23,7 +23,8 @@ import {
   skinPoints,
   SNOUT_TIP,
   steadyAt,
-  tailFin
+  tailFin,
+  zoomOf
 } from './frame.js';
 import {ANATOMY, ATELIER_LIMITS, BODY_UNIT} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
@@ -69,7 +70,7 @@ function brainOutline() {
   return d + 'Z';
 }
 function retinaNodes(state, organs) {
-  const zoom = state.camera?.zoom ?? 1;
+  const zoom = zoomOf(state);
   let html = '';
   for (const organ of organs)
     for (const center of organ.centers) {
@@ -355,7 +356,7 @@ function regionGlyph(state, organ) {
 function regionBadge(state, organ, hull = regionHull(state, organ)) {
   if (!hull)
     return '';
-  const {cx, cy, rx, ry} = hull, zoom = state.camera?.zoom ?? 1;
+  const {cx, cy, rx, ry} = hull, zoom = zoomOf(state);
   return '<g class="aid-region-badge"' +
          steadyAt({x : cx - rx * REGION.corner, y : cy - ry * REGION.corner}, zoom) +
          '><circle r="' + REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) +
@@ -368,7 +369,7 @@ function organNodes(state, organ) {
   if (organ.type === 'eye' || organ.type === 'pigment' || isRegion(organ) ||
       organ.centers.length < 2 || !showsNodes(state, [ organ ]))
     return '';
-  const zoom = state.camera?.zoom ?? 1;
+  const zoom = zoomOf(state);
   return organ.centers
       .map(center => {
         const p = nodeLocation(state.document, state.sites, center, organ.type);
@@ -440,64 +441,88 @@ function feltSvg(state, organ) {
          (organ.type === 'lateral' ? feltFlow(state, organ, cells) : feltSkin(state, cells)) +
          '</g>';
 }
-function headSvg(state) {
-  const columns = state.anatomy?.anatomy;
-  if (!Array.isArray(columns))
+const headTitle = key => '<title>' + escapeText(t(key)) + '</title>';
+// Barbels at the snout on each side where smell cells also feel touch.
+function barbelsSvg(columns) {
+  const tip = SNOUT_TIP, H = HEAD;
+  return [ -1, 1 ]
+      .filter(side => columns[ANATOMY.smell_outer_left + sideIndex(side)] > 0)
+      .map(side => '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
+                   fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
+                   ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' +
+                   fixed(tip.x + H.barbel_end[0]) + ' ' + fixed(tip.y + side * H.barbel_end[1]) +
+                   '">' + headTitle('studio.head.barbels') + '</path>')
+      .join('');
+}
+// The mouth as the jaw shapes it (half width RX, half height RY, its jaws REACH long), and how
+// strongly the fish bites and sucks.
+function mouthShape(columns) {
+  const H = HEAD, middle = BODY_UNIT.trait_middle, jaw = columns[ANATOMY.jaw_length] ?? middle;
+  const reach = jawReach(jaw) / jawReach(middle);
+  return {
+    at : {x : SNOUT_TIP.x + H.mouth_in, y : SNOUT_TIP.y},
+    rx : H.mouth[0] * reach,
+    ry : H.mouth[1] * mouthShare(jaw) / mouthShare(middle),
+    reach : H.jaw_back * reach,
+    bite : organSize(columns[ANATOMY.aggression_strength]),
+    suction : organSize(columns[ANATOMY.suction_strength])
+  };
+}
+// The throat from the back of the mouth to the gut; water drawn into the mouth from ahead, the
+// further the stronger the suction; the cheeks swelling with suction; and the jaws from the
+// corners of the mouth back to their hinges.
+function throatSvg({at, rx, suction}) {
+  return '<path class="aid-head-throat" data-part="throat" d="M' + fixed(at.x + rx) + ' ' +
+         fixed(at.y) + ' L' + HEAD.throat_end + ' ' + fixed(at.y) +
+         '" style="stroke-width:' + fixed(HEAD.throat * (1 + suction)) + '">' +
+         headTitle('studio.head.throat') + '</path>';
+}
+function intakeSvg({at, ry, suction}) {
+  if (!suction)
     return '';
-  const tip = SNOUT_TIP, H = HEAD, title = key => '<title>' + escapeText(t(key)) + '</title>';
+  const I = HEAD.intake, reachOut = I.least + I.span * suction;
   let html = '';
-  for (const side of [-1, 1])
-    if (columns[ANATOMY.smell_outer_left + sideIndex(side)] > 0)
-      html += '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
-              fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
-              ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' + fixed(tip.x + H.barbel_end[0]) +
-              ' ' + fixed(tip.y + side * H.barbel_end[1]) + '">' + title('studio.head.barbels') +
-              '</path>';
-  const middle = BODY_UNIT.trait_middle, jaw = columns[ANATOMY.jaw_length] ?? middle;
-  const rx = H.mouth[0] * jawReach(jaw) / jawReach(middle),
-        ry = H.mouth[1] * mouthShare(jaw) / mouthShare(middle);
-  const mouth = {x : tip.x + H.mouth_in, y : tip.y};
-  const bite = organSize(columns[ANATOMY.aggression_strength]),
-        suction = organSize(columns[ANATOMY.suction_strength]);
-  const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
-               columns[ANATOMY.mouth] > 0;
-  if (eats) {
-    // The throat from the back of the mouth to the gut, the cheeks swelling with suction, and
-    // the jaws from the corners of the mouth back to their hinges.
-    const back = mouth.x + rx, reach = H.jaw_back * jawReach(jaw) / jawReach(middle);
-    html += '<path class="aid-head-throat" data-part="throat" d="M' + fixed(back) + ' ' +
-            fixed(mouth.y) + ' L' + H.throat_end + ' ' + fixed(mouth.y) +
-            '" style="stroke-width:' + fixed(H.throat * (1 + suction)) + '">' +
-            title('studio.head.throat') + '</path>';
-    // Water drawn into the mouth from ahead, the further the stronger the suction.
-    if (suction) {
-      const I = H.intake, reachOut = I.least + I.span * suction;
-      for (let k = 0; k < I.lines; ++k) {
-        const across = (k - (I.lines - 1) / 2) / ((I.lines - 1) / 2 || 1);
-        const from = {x : mouth.x - reachOut, y : mouth.y + across * ry * I.spread};
-        html += '<path class="aid-head-intake" data-part="intake" d="M' + fixed(from.x) + ' ' +
-                fixed(from.y) + ' Q' + fixed(mouth.x - reachOut * I.bend) + ' ' +
-                fixed(mouth.y + across * ry * I.spread * I.bend) + ' ' + fixed(mouth.x - I.gap) +
-                ' ' + fixed(mouth.y + across * ry * I.narrow) + '"/>';
-      }
-    }
-    if (suction)
-      html += '<ellipse class="aid-head-cheek" data-part="cheek" cx="' +
-              fixed(back + H.cheek[0] / 2) + '" cy="' + fixed(mouth.y) + '" rx="' +
-              fixed(H.cheek[0] * (H.cheek_least + (1 - H.cheek_least) * suction)) + '" ry="' +
-              fixed(ry + H.cheek[1] * suction) + '">' + title('studio.head.mouth') + '</ellipse>';
-    for (const side of [-1, 1])
-      html += '<path class="aid-head-jawbone" data-part="jaw" data-side="' + side + '" d="M' +
-              fixed(mouth.x) + ' ' + fixed(mouth.y + side * ry) + ' Q' +
-              fixed(mouth.x + reach / 2) + ' ' +
-              fixed(mouth.y + side * (ry + H.jaw_spread * H.jaw_bow)) + ' ' +
-              fixed(mouth.x + reach) + ' ' + fixed(mouth.y + side * (ry + H.jaw_spread)) +
-              '" style="stroke-width:' + fixed(H.jaw_width[0] + H.jaw_width[1] * bite) + '">' +
-              title('studio.head.jaw') + '</path>';
+  for (let k = 0; k < I.lines; ++k) {
+    const across = (k - (I.lines - 1) / 2) / ((I.lines - 1) / 2 || 1);
+    const from = {x : at.x - reachOut, y : at.y + across * ry * I.spread};
+    html += '<path class="aid-head-intake" data-part="intake" d="M' + fixed(from.x) + ' ' +
+            fixed(from.y) + ' Q' + fixed(at.x - reachOut * I.bend) + ' ' +
+            fixed(at.y + across * ry * I.spread * I.bend) + ' ' + fixed(at.x - I.gap) + ' ' +
+            fixed(at.y + across * ry * I.narrow) + '"/>';
   }
-  // Teeth stand on the rim of the mouth around its front, pointing into it, over the mouth.
-  let teeth = '';
-  const bluntness = columns[ANATOMY.blunt_teeth] ?? middle, full = toothForm(1, bluntness).reach;
+  return html;
+}
+function cheeksSvg({at, rx, ry, suction}) {
+  const H = HEAD;
+  return suction ? '<ellipse class="aid-head-cheek" data-part="cheek" cx="' +
+                       fixed(at.x + rx + H.cheek[0] / 2) + '" cy="' + fixed(at.y) + '" rx="' +
+                       fixed(H.cheek[0] * (H.cheek_least + (1 - H.cheek_least) * suction)) +
+                       '" ry="' + fixed(ry + H.cheek[1] * suction) + '">' +
+                       headTitle('studio.head.mouth') + '</ellipse>'
+                 : '';
+}
+function jawsSvg({at, ry, reach, bite}) {
+  const H = HEAD;
+  return [ -1, 1 ]
+      .map(side => '<path class="aid-head-jawbone" data-part="jaw" data-side="' + side + '" d="M' +
+                   fixed(at.x) + ' ' + fixed(at.y + side * ry) + ' Q' + fixed(at.x + reach / 2) +
+                   ' ' + fixed(at.y + side * (ry + H.jaw_spread * H.jaw_bow)) + ' ' +
+                   fixed(at.x + reach) + ' ' + fixed(at.y + side * (ry + H.jaw_spread)) +
+                   '" style="stroke-width:' + fixed(H.jaw_width[0] + H.jaw_width[1] * bite) + '">' +
+                   headTitle('studio.head.jaw') + '</path>')
+      .join('');
+}
+// The mouth's rim, its lips as thick as they suck.
+const mouthSvg = ({at, rx, ry, suction}) =>
+    '<ellipse class="aid-head-mouth" data-part="mouth" cx="' + fixed(at.x) + '" cy="' +
+    fixed(at.y) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) +
+    '" style="stroke-width:' + fixed(HEAD.lip * lipWidth(suction) / lipWidth(0)) + '">' +
+    headTitle('studio.head.mouth') + '</ellipse>';
+// Teeth stand on the rim of the mouth around its front, pointing into it, over the mouth.
+function teethSvg(columns, {at, rx, ry}) {
+  const H = HEAD, bluntness = columns[ANATOMY.blunt_teeth] ?? BODY_UNIT.trait_middle;
+  const full = toothForm(1, bluntness).reach;
+  let html = '';
   for (const [k, side] of [-1, 1].entries()) {
     const power = organSize(columns[ANATOMY.attack_left + k]);
     if (!power)
@@ -507,23 +532,28 @@ function headSvg(state) {
     for (let i = 0; i < form.count; ++i) {
       const angle = Math.PI - side * H.tooth_arc * (i + .5) / form.count, c = Math.cos(angle),
             s = Math.sin(angle);
-      const base = {x : mouth.x + c * rx, y : mouth.y + s * ry};
-      const at = (along, inward) =>
+      const base = {x : at.x + c * rx, y : at.y + s * ry};
+      const point = (along, inward) =>
           fixed(base.x - s * along - c * inward) + ' ' + fixed(base.y + c * along - s * inward);
-      teeth += '<path class="aid-head-tooth" d="M' + at(-half, 0) + ' L' +
-               at(-half * form.flat, height) + ' L' + at(half * form.flat, height) + ' L' +
-               at(half, 0) + 'Z">' + title('studio.head.jaw') + '</path>';
+      html += '<path class="aid-head-tooth" d="M' + point(-half, 0) + ' L' +
+              point(-half * form.flat, height) + ' L' + point(half * form.flat, height) + ' L' +
+              point(half, 0) + 'Z">' + headTitle('studio.head.jaw') + '</path>';
     }
   }
-  if (eats) {
-    const lips = H.lip * lipWidth(suction) / lipWidth(0);
-    html += '<ellipse class="aid-head-mouth" data-part="mouth" cx="' + fixed(mouth.x) + '" cy="' +
-            fixed(mouth.y) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) +
-            '" style="stroke-width:' + fixed(lips) + '">' + title('studio.head.mouth') +
-            '</ellipse>';
-  }
-  html += teeth;
-  return '<g class="aid-head">' + html + '</g>';
+  return html;
+}
+function headSvg(state) {
+  const columns = state.anatomy?.anatomy;
+  if (!Array.isArray(columns))
+    return '';
+  const mouth = mouthShape(columns);
+  const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
+               columns[ANATOMY.mouth] > 0;
+  return '<g class="aid-head">' + barbelsSvg(columns) +
+         (eats ? throatSvg(mouth) + intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) +
+                     mouthSvg(mouth)
+               : '') +
+         teethSvg(columns, mouth) + '</g>';
 }
 // The outline of the fish with its fins as large as their muscles grow them.
 export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
