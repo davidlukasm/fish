@@ -10,10 +10,10 @@ import {
 } from '../model/layout.js';
 import {allCenters} from '../model/document.js';
 import {radians} from '../../units.js';
-import {FIN_BASE, HEAD, skinAt, SNOUT_TIP, zoomOf} from './frame.js';
-import {MOTOR_KIND} from '../../schema.js';
+import {skinAt, zoomOf} from './frame.js';
 import {bearing} from '../model/retina.js';
-import {isRegion, organFunction} from '../model/organs.js';
+import {isRegion} from '../model/organs.js';
+import {muscleNode} from './muscles.js';
 
 // Where the Atelier draws the organs and their nodes on its fixed fish: senses and nerve centers
 // on their sites, the eyes where the engine seats them, brain regions at their spots in the
@@ -137,32 +137,12 @@ export function placementTarget(doc, type, position) {
   return home ? {position : home, snap : Infinity, paired : side !== 0}
               : {position, snap : SNAP_DISTANCE, paired : true};
 }
-// Muscles stand where they work, whatever sites their cells take (as the eyes and the brain do):
-// a tail muscle along the tail stalk, a steering one along the base of its side's fin, a sucking
-// one around the throat, a biting one along its jaw. Their nodes spread over that stretch, each
-// INSET inside the skin or OFF the throat; STALK is the tail stalk's stretch.
-const MUSCLE_AT = Object.freeze({inset : 30, off : 9, stalk : [ 770, 875 ], jaw : [ .3, .95 ]});
+// Muscles stand where they work, whatever sites their cells take (as the eyes and the brain
+// do): their nodes lie along the muscle's shape.
 export function musclePoint(organ, index, sites) {
-  const first = organ.centers[0], site = findSite(sites, first?.site);
-  const code = organFunction(organ, sites), side = sideOf(organ);
-  const share = (index + .5) / Math.max(1, organ.centers.length), M = MUSCLE_AT, H = HEAD;
-  const along = ([ from, to ]) => from + (to - from) * share;
-  const mouth = {x : SNOUT_TIP.x + H.mouth_in, y : SNOUT_TIP.y};
-  if (code === MOTOR_KIND.forward || code === MOTOR_KIND.turn) {
-    const x =
-        along(code === MOTOR_KIND.turn ? [ FIN_BASE.at, FIN_BASE.at + FIN_BASE.length ] : M.stalk);
-    return {x, y : skinAt(x, side) - side * M.inset};
-  }
-  if (code === MOTOR_KIND.suction) {
-    const x = along([ mouth.x + H.mouth[0] + H.cheek[0] / 2, H.throat_end ]);
-    return {x, y : BODY_FRAME.middle + side * M.off};
-  }
-  if (code === MOTOR_KIND.aggression) {
-    // Along the jaw from the corner of the mouth back to the hinge.
-    const t = along(M.jaw);
-    return {x : mouth.x + H.jaw_back * t, y : mouth.y + side * (H.mouth[1] + H.jaw_spread * t)};
-  }
-  return site ? centerLocation(first, organ.type, sites) : {x : BODY_FRAME.snout, y : mouth.y};
+  const first = organ.centers[0];
+  return muscleNode(organ, index, sites) ?? (first ? centerLocation(first, organ.type, sites)
+                                                   : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
 }
 const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 function regionPoint(organ, index) {

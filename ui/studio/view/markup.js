@@ -47,6 +47,8 @@ export const widthTrack = ([ left, right ], y, width, attributes, title) =>
           '<circle class="narrow" cx="' + (left - TRACK.wide - TRACK.gap) + '" cy="' + y + '" r="' +
               TRACK.narrow + '"/><circle class="wide" cx="' + (right + TRACK.wide + TRACK.gap) +
               '" cy="' + y + '" r="' + TRACK.wide + '"/>');
+export const plainTrack = (range, y, share, attributes, title) =>
+    track(range, y, share, attributes, title, '');
 export const namedTrack = ([ left, right ], y, share, attributes, title, [ from, to ]) => track(
     [ left, right ], y, share, attributes, title,
     '<text x="' + left + '" y="' + (y + TRACK.name) + '">' + escapeText(from) + '</text><text x="' +

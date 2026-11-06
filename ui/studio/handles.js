@@ -4,6 +4,7 @@ import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
+import {nodeLimit} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
@@ -362,13 +363,13 @@ export const handleMethods = {
   },
   // An effector organ's handles: its nodes, their strength, or a trait its function shapes.
   effectorPointer(drag, fx, fy) {
-    const doc = this.state.document, organ = findOrgan(doc, drag.id);
-    const patch = organ && effectorPatch(organ.type, drag.code, drag.side, drag.name, fx, fy);
+    const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
+    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, nodeLimit(organ, sites));
     if (!patch)
       return;
     const changed =
         'nodes' in patch ? patch.nodes !== organ.centers.length &&
-                               setOrganNodes(doc, organ.id, patch.nodes, this.state.sites)
+                               setOrganNodes(doc, organ.id, patch.nodes, sites)
         : 'copies' in patch
             ? patch.copies !== organ.centers[0].copies &&
                   updateCenter(doc, organ.centers[0].id, {copies : patch.copies})

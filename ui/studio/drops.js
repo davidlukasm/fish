@@ -12,7 +12,8 @@ import {
   wheelPlace
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
-import {nearFish, SNAP_DISTANCE} from './model/layout.js';
+import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
+import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
 import {label} from './view/kit.js';
@@ -233,8 +234,21 @@ export const dropMethods = {
       this.state.effect = Number(value.split(':')[1]);
     this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
   },
-  // An organ dropped at a position, where placementTarget puts it.
+  // An organ dropped at a position, where placementTarget puts it; a muscle at the muscle's home
+  // nearest to it, on the free place for its work nearest to the home, or as the muscle there.
   placeOrgan(type, position) {
+    if (type === 'muscle') {
+      const {document : doc, sites} = this.state, home = muscleTarget(doc, sites, position);
+      if (!home)
+        return null;
+      if (home.organ)
+        return {document : doc, organId : home.organ.id, centerId : home.organ.centers[0].id};
+      const site = home.free.reduce((best, s) => pointDistance(s, home.middle, type) <
+                                                         pointDistance(best, home.middle, type)
+                                                     ? s
+                                                     : best);
+      return addOrgan(doc, type, sites, sitePoint(site, type), 0);
+    }
     const target = placementTarget(this.state.document, type, position);
     return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
                     target.paired);

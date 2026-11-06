@@ -17,6 +17,7 @@ import {findOrgan, usedSites} from '../model/document.js';
 import {BODY_FRAME, nerveZone, sideOf, sitePoint} from '../model/layout.js';
 import {FISH_BOX, steadyAt, zoomOf} from './frame.js';
 import {centerTitle, tone} from './names.js';
+import {MUSCLE_TONE, muscleHomes, muscleTarget, WORKS} from './muscles.js';
 
 // While an organ is dragged: where it may go and what the hints' colours mean, its preview, and
 // a field organ's choices of place.
@@ -150,10 +151,29 @@ function hintRing({point, keys}, labels, zoom, near = false) {
                     : '';
   return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + fill + arcs + '</g>';
 }
+// A muscle goes to the home of a work: each home shows the muscle there or one that would come,
+// in its work's colour, dimmed where no place for the work is left; its legend names the works.
+function muscleHints(state) {
+  const homes = muscleHomes(state.document, state.sites);
+  const names = tList('studio.muscleTitles');
+  return {
+    svg : homes
+              .map(h => '<path class="aid-muscle-home' +
+                        (h.organ         ? ' taken'
+                         : h.free.length ? ''
+                                         : ' full') +
+                        '" d="' + h.shape.path + '" style="--muscle:' + MUSCLE_TONE[h.code] + '"/>')
+              .join(''),
+    legend : WORKS.map(
+        code => ({colour : MUSCLE_TONE[code], name : names[MUSCLE_LABEL_INDEX.get(code)]}))
+  };
+}
 // The places an item may go, as rings, and what their colours mean.
 export function placementHints(state, kind, value, moving = null) {
   if (!state.sites.length)
     return {svg : ''};
+  if (kind === 'organ' && value === 'muscle')
+    return muscleHints(state);
   const {labels, sites, areas} = hintPlaces(state, kind, value, moving);
   const zoom = zoomOf(state);
   return {
@@ -232,6 +252,10 @@ const SEAT_MARK = 7;
 // region at its spot on the side it is over, an inner organ at its place in the plan), any other
 // where it is dropped.
 export function organPreview(state, kind, key, position) {
+  if (kind === 'organ' && key === 'muscle') {
+    const home = muscleTarget(state.document, state.sites, position);
+    return home ? placementPreview(state, {type : key}, home.middle) : '';
+  }
   return kind === 'organ'
              ? placementPreview(state, {type : key},
                                 placementTarget(state.document, key, position).position)

@@ -144,7 +144,7 @@
   },
   "modulePurpose": {
     "vision-steering": "Die Augen speisen über Kreuz das Tectum, das die Lenkmuskeln treibt.",
-    "scent-suction": "Die Nase speist den Bulbus, der die Saugmuskeln am Maul treibt.",
+    "scent-suction": "Die Nase speist den Bulbus, der den Schlund saugen lässt.",
     "rhythm-drive": "Das Rückenmark schlägt den Schwanz abwechselnd auf beiden Seiten.",
     "escape": "Die Seitenlinie alarmiert die Medulla, die den Fisch zur Gegenseite dreht."
   },
@@ -747,13 +747,14 @@
   "muscleTitles": [
     "Schwanz­muskel",
     "Flossen­muskel",
-    "Saug­muskel",
-    "Kiefer­muskel"
+    "Schlund",
+    "Kiefer"
   ],
   "muscle": {
     "nodesHandle": "Ziehen: mehr oder weniger Knoten",
     "strengthHandle": "Ziehen: Kraft jedes Knotens",
-    "readout": "{nodes} Knoten · Kraft {strength}",
+    "nodes": "Knoten: {count} von {most} Plätzen",
+    "strength": "Kraft je Knoten: {share}",
     "undulation": {
       "handle": "Ziehen: wie weit der Körper mitschwingt",
       "beat": "Schwanzschlag",
@@ -772,14 +773,14 @@
     "title": {
       "0": "Schwanzflosse",
       "1": "Seitenflosse",
-      "2": "Saugmaul",
+      "2": "Schlund",
       "5": "Kiefer",
       "6": "Stacheln"
     },
     "hint": {
       "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
       "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
-      "2": "Die Saugmuskeln bestimmen auch die Länge des Darms; sie lässt sich am Darm einstellen.",
+      "2": "Der Schlund bestimmt auch die Länge des Darms; sie lässt sich am Darm einstellen.",
       "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen."
     },
     "gut": {
@@ -787,7 +788,7 @@
       "short": "kurz · Fleisch",
       "long": "lang · Pflanzen",
       "handle": "Ziehen: Länge des Darms",
-      "noMuscle": "Die Länge des Darms tragen in der Engine die Saugmuskeln: Mit einem Saugmuskel lässt sie sich hier einstellen."
+      "noMuscle": "Die Länge des Darms trägt in der Engine der Schlund: Mit einem Schlund lässt sie sich hier einstellen."
     },
     "spines": {
       "title": "Schutz rundum",
@@ -798,6 +799,7 @@
     "diet": {
       "gut": {
         "title": "Verwertung",
+        "handle": "Ziehen: Länge des Darms",
         "low": "kurz",
         "high": "lang",
         "plant": "Pflanzen",
@@ -807,6 +809,7 @@
       },
       "teeth": {
         "title": "Biss je Beute",
+        "handle": "Ziehen: spitze oder stumpfe Zähne",
         "low": "spitz",
         "high": "stumpf",
         "hard": "Schalen",
@@ -814,6 +817,7 @@
       },
       "jaw": {
         "title": "Maul",
+        "handle": "Ziehen: Länge des Kiefers",
         "low": "kurz",
         "high": "lang",
         "aperture": "Weite",

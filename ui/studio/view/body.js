@@ -33,7 +33,8 @@ import {t} from '../../strings.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
-import {growthMost, isRegion} from '../model/organs.js';
+import {growthMost, isRegion, organFunction} from '../model/organs.js';
+import {MUSCLE_TONE, muscleShape} from './muscles.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
@@ -45,7 +46,6 @@ import {
   eyeRadius,
   INSIDE,
   lateralLine,
-  musclePoint,
   NODE,
   nodeLocation,
   organLocation,
@@ -101,10 +101,7 @@ const GLYPH = Object.freeze({
   blood_drops : 3,
   blood_step : 13,
   gland : [ 16, 11 ],
-  lateral_pore : 3.2,
-  muscle_lines : 3,
-  muscle_step : 9,
-  muscle_reach : 22
+  lateral_pore : 3.2
 });
 // Each organ's glyph on the fish, drawn at the organ's place `pos`; a pair of eyes shares one
 // glyph per side (drawnEyes holds the sides drawn).
@@ -195,18 +192,14 @@ function lateralGlyph(state, organ) {
                        fixed(p.y) + '" r="' + GLYPH.lateral_pore + '"/>')
              .join('');
 }
-// A bundle of fibres on each node of a muscle.
+// A muscle as one shape where it works, in the colour of its work, its nodes marked across it.
 function muscleGlyph(state, organ) {
-  const G = GLYPH;
-  let html = '';
-  for (const [index] of organ.centers.entries()) {
-    const at = musclePoint(organ, index, state.sites);
-    for (let i = 0; i < G.muscle_lines; ++i)
-      html += '<path class="aid-anatomical-muscle" d="M' + fixed(at.x - G.muscle_reach) + ' ' +
-              fixed(at.y + (i - (G.muscle_lines - 1) / 2) * G.muscle_step) + ' l' +
-              2 * G.muscle_reach + ' 0"/>';
-  }
-  return html;
+  const shape = muscleShape(organ, state.sites);
+  if (!shape)
+    return '';
+  const tone = MUSCLE_TONE[organFunction(organ, state.sites)];
+  return '<path class="aid-anatomical-muscle" d="' + shape.path + '" style="--muscle:' + tone +
+         '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') + '"/>';
 }
 // The skin's pigment cells lie all over the fish, not at their nodes; the skin senses, spines and
 // gut have their own drawings, brain regions theirs.

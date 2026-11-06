@@ -1,5 +1,5 @@
 import {MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
-import {onMidline} from './layout.js';
+import {onMidline, sideSign} from './layout.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
@@ -108,7 +108,10 @@ export const ORGANS = Object.freeze([
   },
   // Organs that recruit nodes: more places of the same kind, as many as `nodes` at most, all
   // with the settings of the first.
-  {key : 'muscle', category : 'motor', nodes : 8, centers : [ motor('muscle', 'site', 4) ]},
+  // A muscle does the work of where it lies (its function: driving the tail, steering with a side
+  // fin, sucking with the throat, biting with the jaw) and is the one muscle of that work on its
+  // side; it recruits as many nodes as its side has places for that work.
+  {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 4) ]},
   {
     key : 'defense',
     category : 'motor',
@@ -294,6 +297,17 @@ export function functionFor(center, site) {
   if (center.functionCode !== 'site')
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
+}
+// The places on a side (-1 or 1) for a muscle's work (its function code).
+export const musclePlaces = (sites, code, side) => sites.filter(
+    s => sideSign(s.side) === sideSign(side) && functionFor({functionCode : 'site'}, s) === code);
+// How many nodes an organ that recruits them may have: a muscle as many as its side has places
+// for its work, any other its kind's `nodes`.
+export function nodeLimit(organ, sites) {
+  const most = ORGAN_BY_KEY[organ?.type]?.nodes ?? 0;
+  return organ?.type === 'muscle' && organ.centers.length
+             ? musclePlaces(sites, organFunction(organ, sites), organ.side).length
+             : most;
 }
 // How many growth nodes a gonad may have: its organ's nodes less its other kinds of node.
 export const growthMost = organ =>

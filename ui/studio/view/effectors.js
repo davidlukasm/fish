@@ -8,80 +8,71 @@ import {
   toothForm
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
-import {functionFor, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
+import {functionFor, nodeLimit, organFunction} from '../model/organs.js';
 import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
 import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
-import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
+import {escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
 // An organ that recruits nodes as what it does: a muscle as the tail fin it beats, the side fin
 // it steers with, the mouth it sucks with or the jaw it bites with, drawn as the Aquarium grows
-// them; spines on the skin. Its nodes lie as bundles on a rail;
-// the handle after the last bundle adds or takes nodes, the one on top of it sets each node's
-// strength. What the muscles of a function shape for the whole fish (how it swims, how long and
-// toothed its jaw is) has a handle of its own.
+// them; spines on the skin. Below the graphic two tracks set how many nodes it takes and how
+// strong each is. What the muscles of a function shape for the whole fish (how it swims, how long
+// and toothed its jaw is) has a handle of its own, on the graphic and on the charts below it.
 const label = (key, values) => t('studio.muscle.' + key, values);
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
-// Each function's rail: first bundle at X, STEP apart, at Y (or OFFSET from the middle towards
-// the muscle's side), LEAST to MOST high at no to full strength.
-const RAIL = Object.freeze({
-  [MOTOR_KIND.forward] : {x : 56, step : 12, offset : 15, least : 3, most : 9},
-  [MOTOR_KIND.turn] : {x : 40, step : 20, y : 38, least : 3, most : 12},
-  [MOTOR_KIND.suction] : {x : 152, step : 17, offset : 30, least : 3, most : 10},
-  [MOTOR_KIND.aggression] : {x : 224, step : 9, y : 118, least : 3, most : 7},
-  [MOTOR_KIND.defense] : {x : 34, step : 32, y : 50, least : 3, most : 11}
-});
-// Handles: their radius, and how far the strength handle stands above its bundle.
-const HANDLE = Object.freeze({radius : 5.5, above : 3});
-const railY = (code, side) => RAIL[code].y ?? FRAME.middle + side * RAIL[code].offset;
-const bundleHeight = (code, copies) =>
-    RAIL[code].least + (RAIL[code].most - RAIL[code].least) * copies / ATELIER_LIMITS.max_copies;
-const bundleX = (code, index) => RAIL[code].x + index * RAIL[code].step;
+// Handles: their radius.
+const HANDLE = Object.freeze({radius : 5.5});
 const handle = (name, x, y, title) =>
     '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replace(':', '-') +
     '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
-// A muscle's nodes as bundles BUNDLE_WIDTH of their step wide, the muscle's own with handles for
-// their number and strength. A fin's ray per node is RAY.least wide, RAY.span more when strongest.
-const BUNDLE_WIDTH = .42, RAY = Object.freeze({least : 1, span : 3});
+// A fin's ray per node is RAY.least wide, RAY.span more when strongest.
+const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
-function rail(code, side, centers, own) {
-  const y = railY(code, side);
-  let html = '';
-  centers.forEach((center, index) => {
-    html += '<ellipse class="aid-muscle-bundle' + (own ? ' own' : '') + '" cx="' +
-            fixed(bundleX(code, index)) + '" cy="' + fixed(y) + '" rx="' +
-            fixed(RAIL[code].step * BUNDLE_WIDTH) + '" ry="' +
-            fixed(bundleHeight(code, center.copies)) + '"/>';
-  });
-  if (!own || !centers.length)
-    return html;
-  const last = centers.length - 1, x = bundleX(code, last);
-  return html + handle('nodes', x + RAIL[code].step * .5 + HANDLE.radius, y, label('nodesHandle')) +
-         handle('strength', x, y - bundleHeight(code, centers[last].copies) - HANDLE.above,
-                label('strengthHandle'));
+// The tracks under the graphic: how many of the places its side has for its work the organ takes
+// (`most`), and how strong each of its nodes is; each named above its track (TITLE higher).
+const CONTROLS =
+    Object.freeze({width : 300, height : 92, track : [ 10, 290 ], rows : [ 34, 78 ], title : 14});
+const countShare = (count, most) => most > 1 ? (count - 1) / (most - 1) : null;
+function nodeControls(organ, code, most) {
+  const C = CONTROLS, count = organ.centers.length, copies = organ.centers[0]?.copies ?? 1;
+  const row = (y, name, share, text, title) =>
+      '<text class="aid-control-title" x="' + C.track[0] + '" y="' + (y - C.title) + '">' +
+      escapeText(text) + '</text>' +
+      plainTrack(C.track, y, share, 'data-effector-handle="' + name + '"', title);
+  return '<svg class="aid-effector-controls" viewBox="0 0 ' + C.width + ' ' + C.height +
+         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
+         '" data-effector-side="' + sideOf(organ) + '">' +
+         row(C.rows[0], 'nodes', countShare(count, most), label('nodes', {count, most}),
+             label('nodesHandle')) +
+         row(C.rows[1], 'strength', copies / ATELIER_LIMITS.max_copies,
+             label('strength', {share : percent(copies / ATELIER_LIMITS.max_copies)}),
+             label('strengthHandle')) +
+         '</svg>';
 }
-// A handle of an organ of a type moved to (fx, fy), fractions of the graphic: the organ's
-// nodes, their strength or a trait of the fish.
-export function effectorPatch(type, code, side, name, fx, fy) {
-  const x = fx * FRAME.width, y = fy * FRAME.height, R = RAIL[code];
-  const most = ORGAN_BY_KEY[type]?.nodes ?? 1;
-  if (name === 'nodes')
-    return {
-      nodes : Math.max(1, Math.min(most, Math.round((x - HANDLE.radius - R.x) / R.step + .5)))
-    };
-  if (name === 'strength') {
-    const share = (Math.abs(y - railY(code, side)) - HANDLE.above - R.least) / (R.most - R.least);
-    return {
-      copies : Math.max(
-          1, Math.min(ATELIER_LIMITS.max_copies, Math.round(share * ATELIER_LIMITS.max_copies)))
-    };
+// A handle of an organ moved to (fx, fy), fractions of its graphic: the organ's nodes (of `most`
+// places) or their strength on the tracks, a trait of the fish on the graphic or on a chart.
+export function effectorPatch(code, name, fx, fy, most) {
+  if (name === 'nodes' || name === 'strength') {
+    const share = trackShare(fx * CONTROLS.width, CONTROLS.track);
+    return name === 'nodes' ? {nodes : 1 + Math.round(share * Math.max(0, most - 1))}
+                            : {copies : Math.max(1, Math.round(share * ATELIER_LIMITS.max_copies))};
+  }
+  if (name.startsWith(CHART_HANDLE)) {
+    const spec = DIET_CHARTS[name.slice(CHART_HANDLE.length)];
+    return spec?.trait ? {
+      trait : spec.trait,
+      value : trackShare(fx * CHART.width, [ CHART.left, CHART.right ])
+    }
+                       : null;
   }
   const trait = TRAIT_HANDLES[code]?.[name];
-  return trait ? {trait : trait.key, value : clamp(trait.at(x, y))} : null;
+  return trait ? {trait : trait.key, value : clamp(trait.at(fx * FRAME.width, fy * FRAME.height))}
+               : null;
 }
 
 // The tail: the body's end to its ROOT, BODY half high at its start and the root, and the tail
@@ -149,8 +140,6 @@ function tailGraphic(state, organ, centers, twin) {
          '<path class="aid-muscle-fin" d="' + lobe(-1) + lobe(1) + '"/>' +
          rays(side, centers, true) + rays(-side, twin, false) +
          '<path class="aid-muscle-wave" d="M' + points.join(' L') + '"/>' +
-         rail(MOTOR_KIND.forward, side, centers, true) +
-         rail(MOTOR_KIND.forward, -side, twin, false) +
          handle('trait:q1', at, handleY, label('undulation.handle')) + '<text x="' +
          TAIL.caption[0] + '" y="' + TAIL.caption[1] + '">' + label('undulation.' + style) +
          '</text>';
@@ -193,8 +182,7 @@ function sideGraphic(state, organ, centers) {
                    })
                    .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
-         '<path class="aid-muscle-fin" d="' + fin + '"/>' + rays +
-         rail(MOTOR_KIND.turn, organ.side, centers, true);
+         '<path class="aid-muscle-fin" d="' + fin + '"/>' + rays;
 }
 
 // The mouth from above: the snout at SNOUT, a mouth as wide and deep as the jaw is long (the
@@ -232,9 +220,7 @@ function suctionGraphic(state, organ, centers, twin) {
   const lips = P.lip * lipWidth(suction) / lipWidth(0);
   return '<path class="aid-muscle-body" d="' + head + '"/>' + flow +
          '<ellipse class="aid-muscle-mouth" cx="' + fixed(mouth) + '" cy="' + M + '" rx="' +
-         fixed(rx) + '" ry="' + fixed(ry) + '" stroke-width="' + fixed(lips) + '"/>' +
-         rail(MOTOR_KIND.suction, organ.side, centers, true) +
-         rail(MOTOR_KIND.suction, -organ.side, twin, false);
+         fixed(rx) + '" ry="' + fixed(ry) + '" stroke-width="' + fixed(lips) + '"/>';
 }
 
 // The jaw from the side: the head cut open by the mouth from the jaw's HINGE to its tip, the jaw
@@ -305,8 +291,7 @@ function jawGraphic(state, organ, centers) {
          '<path class="aid-muscle-tooth sample" d="M' + (T.x - T.base) + ' ' + T.y + ' L' +
          fixed(T.x - T.base * sample.flat) + ' ' + fixed(top) + ' L' +
          fixed(T.x + T.base * sample.flat) + ' ' + fixed(top) + ' L' + (T.x + T.base) + ' ' + T.y +
-         'Z"/>' + rail(MOTOR_KIND.aggression, organ.side, centers, true) +
-         handle('trait:q2', tip, hy - wide, label('jaw.handle')) +
+         'Z"/>' + handle('trait:q2', tip, hy - wide, label('jaw.handle')) +
          handle('trait:q1', T.x, top, label('teeth.handle')) + '<text x="' +
          (T.x + T.base + JAW.caption.gap) + '" y="' + (T.y - JAW.caption.lift) + '">' +
          label('teeth.' + style) + '</text>';
@@ -327,14 +312,16 @@ const TRAIT_HANDLES = Object.freeze({
   }
 });
 
-// Spines out of the skin at SKIN, one at each node, as long as it is strong (LEAST to MOST).
-const SPINE = Object.freeze({skin : 96, base : 9, least : 10, most : 52, lean : .3});
+// Spines out of the skin at SKIN, one at each node from X on, STEP apart, as long as it is strong
+// (LEAST to MOST).
+const SPINE =
+    Object.freeze({skin : 96, base : 9, least : 10, most : 52, lean : .3, x : 34, step : 32});
 function defenseGraphic(state, organ, centers) {
-  const S = SPINE, code = MOTOR_KIND.defense;
+  const S = SPINE;
   const spines =
       centers
           .map((center, index) => {
-            const x = bundleX(code, index),
+            const x = S.x + index * S.step,
                   reach = S.least + (S.most - S.least) * center.copies / ATELIER_LIMITS.max_copies;
             return '<path class="aid-muscle-spine" d="M' + fixed(x - S.base) + ' ' + S.skin + ' L' +
                    fixed(x + S.base * S.lean) + ' ' + fixed(S.skin + reach) + ' L' +
@@ -342,7 +329,7 @@ function defenseGraphic(state, organ, centers) {
           })
           .join('');
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
-         spines + rail(code, organ.side, centers, true);
+         spines;
 }
 // How the spines shield the body all round, as the engine finds it: around a small fish (snout
 // left, side +1 below, as on the canvas) the shield in each direction at rest (filled) and
@@ -466,7 +453,7 @@ export function gutGraphic(state, organ, selected) {
           namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
                      label('gut.handle'), [ label('gut.short'), label('gut.long') ]),
       (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>' : '') +
-          dietChart(state, 'gut'));
+          dietChart(state, 'gut', organ));
 }
 
 // An effector's block: its graphic in the frame, named `title` and drawn for `side`, and what
@@ -477,13 +464,10 @@ const effectorBlock = (organ, code, side, title, graphic, below) =>
     '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
     '" data-effector-side="' + side + '" role="img" aria-label="' + escapeText(title) + '">' +
     graphic + '</svg>' + below + '</div>';
-// The readout under a muscle's graphic: its nodes and strength, and a hint where one helps.
-function readout(state, code, centers) {
-  const strength = centers.reduce((sum, c) => sum + c.copies, 0) / ATELIER_LIMITS.max_copies;
-  const html = label('readout', {nodes : centers.length, strength : formatNumber(strength, 2)});
+// A hint under a muscle's controls where one helps.
+function muscleHint(code) {
   const hint = textArea('studio').muscle?.hint?.[code];
-  return '<p class="aid-muscle-readout">' + escapeText(html) + '</p>' +
-         (hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '');
+  return hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '';
 }
 
 // How a trait the muscles shape serves each kind of food, as the engine reckons it (the
@@ -535,7 +519,10 @@ const suctionStrength = (doc, sites) =>
           return site && functionFor(c, site) === MOTOR_KIND.suction;
         })
         .reduce((sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies, 0);
-function dietChart(state, kind) {
+// A chart of a trait is itself its handle: dragged across, it sets the trait for the organ whose
+// graphic it stands under.
+const CHART_HANDLE = 'chart:';
+function dietChart(state, kind, organ = null) {
   const spec = DIET_CHARTS[kind], data = state.capabilities?.diet?.[spec.source], C = CHART;
   if (!data)
     return '';
@@ -574,14 +561,25 @@ function dietChart(state, kind) {
   const marker = at === null ? ''
                              : '<line class="aid-diet-marker" x1="' + fixed(x(at)) + '" y1="' +
                                    C.top + '" x2="' + fixed(x(at)) + '" y2="' + C.base + '"/>';
+  const held = organ && spec.trait && at !== null;
+  const grip = held ? ' data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
+                          spec.code + '" data-effector-side="' + sideOf(organ) + '"'
+                    : '';
+  const knob = held ? '<rect class="aid-diet-hit" data-effector-handle="' + CHART_HANDLE + kind +
+                          '" x="' + C.left + '" y="' + C.top + '" width="' + (C.right - C.left) +
+                          '" height="' + (C.base - C.top) + '"><title>' +
+                          escapeText(words('handle')) + '</title></rect><circle ' +
+                          'class="aid-graphic-handle" cx="' + fixed(x(at)) + '" cy="' + C.top +
+                          '" r="' + HANDLE.radius + '"/>'
+                    : '';
   return '<section class="aid-eye-section"><h4>' + escapeText(words('title')) + '</h4>' +
-         '<svg class="aid-diet-chart" viewBox="0 0 ' + C.width + ' ' + C.height +
-         '" role="img" aria-label="' + escapeText(words('title')) + '">' +
+         '<svg class="aid-diet-chart' + (held ? ' held' : '') + '" viewBox="0 0 ' + C.width + ' ' +
+         C.height + '"' + grip + ' role="img" aria-label="' + escapeText(words('title')) + '">' +
          '<line class="aid-diet-axis" x1="' + C.left + '" y1="' + C.base + '" x2="' + C.right +
          '" y2="' + C.base + '"/>' + marker + curves + '<text class="aid-diet-end" x="' + C.left +
          '" y="' + (C.base + C.axis) + '">' + escapeText(words('low')) +
          '</text><text class="aid-diet-end" x="' + C.right + '" y="' + (C.base + C.axis) +
-         '" text-anchor="end">' + escapeText(words('high')) + '</text></svg></section>';
+         '" text-anchor="end">' + escapeText(words('high')) + '</text>' + knob + '</svg></section>';
 }
 // The graphic of an organ that recruits nodes, by its function, with its readout; empty for one
 // without a function here.
@@ -598,10 +596,11 @@ export function effectorGraphic(state, organ) {
   }[code];
   if (!draw)
     return '';
-  return effectorBlock(
-      organ, code, sideOf(organ), label('title.' + code), draw(state, organ, organ.centers, twin),
-      readout(state, code, organ.centers) +
-          (code === MOTOR_KIND.aggression ? dietChart(state, 'teeth') + dietChart(state, 'jaw')
-           : code === MOTOR_KIND.suction  ? dietChart(state, 'suction')
-                                          : ''));
+  return effectorBlock(organ, code, sideOf(organ), label('title.' + code),
+                       draw(state, organ, organ.centers, twin),
+                       nodeControls(organ, code, nodeLimit(organ, state.sites)) + muscleHint(code) +
+                           (code === MOTOR_KIND.aggression
+                                ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
+                            : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)
+                                                          : ''));
 }

@@ -11,11 +11,21 @@ import {
   isRegion,
   MUSCLE_TRAITS,
   NEURON_BY_KEY,
+  nodeLimit,
+  organFunction,
   ORGAN_BY_KEY,
   PAIRINGS,
   ROLE
 } from './organs.js';
-import {centroid, findSite, nerveZone, onMidline, pointDistance, sitePoint} from './layout.js';
+import {
+  centroid,
+  findSite,
+  nerveZone,
+  onMidline,
+  pointDistance,
+  sideSign,
+  sitePoint
+} from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
@@ -196,10 +206,17 @@ export function profileIndex(doc, organId, profileId) {
 // What a report (the design view's `anatomy` or the developed fish's `report`) says of a
 // center's group under `key`; null where it says nothing.
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
-function matchingOrgan(doc, type, side, sites) {
+// The organ a new one of a type on a side joins: the one of a single organ, the one of its side
+// for an organ of one per side, the muscle of the same work (code) on its side.
+function matchingOrgan(doc, type, side, sites, code = null) {
   const scope = ORGAN_BY_KEY[type]?.scope;
   if (scope === 'single')
     return doc.organs.find(organ => organ.type === type) ?? null;
+  if (type === 'muscle')
+    return doc.organs.find(organ => organ.type === type &&
+                                    sideSign(organ.side) === sideSign(side) &&
+                                    organFunction(organ, sites) === code) ??
+           null;
   if (scope !== 'side')
     return null;
   return doc.organs.find(
@@ -311,7 +328,8 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   const first = closestSite(definition.centers[0], sites, new Set(), position, null, type);
   if (!first || pointDistance(first, position, type) > snapDistance)
     return null;
-  const existing = matchingOrgan(draft, type, first.side, sites);
+  const existing =
+      matchingOrgan(draft, type, first.side, sites, functionFor(definition.centers[0], first));
   if (existing)
     return {
       document : draft,
@@ -532,7 +550,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
 // An organ of several kinds of node (a gonad's growth, release and pressure cells) recruits those
 // of its first kind; the others count towards `nodes`.
 export function setOrganNodes(doc, organId, count, sites, typeId = null) {
-  const original = findOrgan(doc, organId), most = ORGAN_BY_KEY[original?.type]?.nodes;
+  const original = findOrgan(doc, organId), most = nodeLimit(original, sites);
   const kind = original?.centers[0]?.key;
   const ofType = c => c.key === kind && (typeId === null || typeOf(c) === typeId);
   const others = original ? original.centers.filter(c => !ofType(c)).length : 0;
@@ -1069,7 +1087,7 @@ export function mirrorOrgan(doc, organId, sites) {
       site : site.id
     });
   }
-  if (matchingOrgan(draft, organ.type, -organ.side, sites))
+  if (matchingOrgan(draft, organ.type, -organ.side, sites, organFunction(organ, sites)))
     return null;
   organ.pair = mirror.id;
   organ.linked = true;

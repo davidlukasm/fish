@@ -91,8 +91,17 @@ function semanticFingerprint(source) {
     SENSE_KIND,
     TUNING
   } = await import('../ui/schema.js');
-  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor, growthMost, organFunction} =
-      await import('../ui/studio/model/organs.js');
+  const {
+    ORGANS,
+    ORGAN_BY_KEY,
+    MUSCLES,
+    eligible,
+    functionFor,
+    growthMost,
+    musclePlaces,
+    nodeLimit,
+    organFunction
+  } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
     de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
@@ -756,11 +765,12 @@ function semanticFingerprint(source) {
   // The library names brain regions by their short technical terms and says on hover, in
   // German, what each is for.
   assert.match(panels.library(state), /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
-  // Dragging a muscle shows where it may go and names what it does there.
+  // Dragging a muscle shows the homes of the four works on both sides, named and coloured.
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
-  assert.deepEqual(muscleHints.legend.map(entry => entry.name).sort(),
-                   [ 'Ansaugen', 'Lenken', 'Vortrieb', 'Zubeißen' ]);
+  assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
+                   [ 'Flossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
   assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 4);
+  assert.equal(muscleHints.svg.match(/aid-muscle-home/g).length, 8);
   const eyePanel = panels.inspector(state);
   // An organ's inspector says what substances do to it and opens the tools that change that.
   assert.match(eyePanel, /Hormone und Lernen/);
@@ -1222,7 +1232,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   // Organs that recruit nodes: a tail muscle grows nodes on its side with its function, its
   // linked twin with it; the engine's fins grow with them as the Aquarium draws them.
   {
-    const {MOTOR_KIND : MK} = await import('../ui/schema.js');
+    const {MOTOR_KIND : MK, ATELIER_LIMITS} = await import('../ui/schema.js');
     const {finVolumeOf, tailFinSize} = await import('../ui/fish_organs.js');
     const tail = model.addOrgan(model.newDocument('Knoten'), 'muscle', sites, {x : 870, y : 340});
     assert.ok(tail);
@@ -1239,9 +1249,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         model.findOrgan(model.setOrganNodes(grown, organ.id, 2, sites), organ.id).centers.length, 2,
         'The last nodes go first');
     assert.equal(model.setOrganNodes(grown, 'brain', 3, sites), null);
-    assert.ok(
-        model.findOrgan(model.setOrganNodes(grown, organ.id, 99, sites), organ.id).centers.length <=
-        ORGAN_BY_KEY.muscle.nodes);
+    // A muscle takes at most the places its side has for its work; a second one of that work on
+    // its side is the first one.
+    const most = nodeLimit(organ, sites);
+    assert.equal(most, musclePlaces(sites, MK.forward, organ.side).length);
+    assert.equal(
+        model.findOrgan(model.setOrganNodes(grown, organ.id, 999, sites), organ.id).centers.length,
+        most);
+    const again = model.addOrgan(grown, 'muscle', sites, {x : 870, y : 340});
+    assert.equal(again.organId, organ.id);
+    assert.equal(again.document.organs.length, grown.organs.length);
     assert.ok(tailFinSize(finVolumeOf(8, 1)).length > tailFinSize(finVolumeOf(2, 1)).length,
               'More cells make a longer tail fin');
     // How the fish swims is the trait of all its tail muscles.
@@ -1250,16 +1267,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(model.muscleTrait(waving, MK.forward, 'undulation', sites) - .9) < 1e-9);
     assert.equal(model.setMuscleTrait(grown, MK.aggression, 'jaw_length', .2, sites), null,
                  'Without biting muscles there is no jaw to set');
-    // The graphic's handles say what they set.
+    // The graphic's handles say what they set: the tracks the nodes (of the places there are)
+    // and their strength, the graphic and the charts a trait.
     const effectors = await import('../ui/studio/view/effectors.js');
-    assert.deepEqual(effectors.effectorPatch('muscle', MK.forward, -1, 'nodes', 1, .5),
-                     {nodes : ORGAN_BY_KEY.muscle.nodes});
-    assert.equal(effectors.effectorPatch('muscle', MK.forward, -1, 'nodes', 0, .5).nodes, 1);
-    const patch = effectorPatch => effectorPatch('muscle', MK.aggression, 1, 'trait:q2', 0, .5);
-    assert.deepEqual(patch(effectors.effectorPatch), {trait : 'jaw_length', value : 1});
+    assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
+    assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);
+    assert.deepEqual(effectors.effectorPatch(MK.forward, 'strength', 1, .5, most),
+                     {copies : ATELIER_LIMITS.max_copies});
+    assert.deepEqual(effectors.effectorPatch(MK.aggression, 'trait:q2', 0, .5, most),
+                     {trait : 'jaw_length', value : 1});
+    assert.deepEqual(effectors.effectorPatch(MK.aggression, 'chart:teeth', 1, .5, most),
+                     {trait : 'blunt_teeth', value : 1});
+    assert.equal(effectors.effectorPatch(MK.suction, 'chart:suction', 1, .5, most), null);
     const html = effectors.effectorGraphic({document : grown, sites, anatomy : null}, organ);
     assert.ok(html.includes('data-effector-handle="nodes"') &&
-              html.includes('data-effector-handle="trait:q1"'));
+              html.includes('data-effector-handle="strength"') &&
+              html.includes('data-effector-handle="trait:q1"') && !html.includes('ellipse'));
     assert.match(views.organTitle(organ, sites), /Schwanz/);
     // Pigment recruits nodes too and colours the fish more deeply with them.
     const pigment =
