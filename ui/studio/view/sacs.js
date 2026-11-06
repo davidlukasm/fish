@@ -51,7 +51,7 @@ const STORE = Object.freeze({
   egg : 15,
   least : 4,
   trigger : 14,
-  gap : 3,
+  gap : 6,
   sperm : 3,
   tick : 5,
   handle : 7
