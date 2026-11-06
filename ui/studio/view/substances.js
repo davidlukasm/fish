@@ -17,6 +17,7 @@ import {escapeText, fixed, pointMarks, trackShare, widthTrack} from './markup.js
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
 import {centerTitle} from './names.js';
+import {acceptedGenome} from './compiler.js';
 
 // The blood's substances in the inspector: the substance wheel where glands release and senses
 // read them, receptors' response curves and life phases, the hormone inspector and measurements.
@@ -253,7 +254,8 @@ export function phasePatch(handle, fx) {
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
-// How much of a substance a measurement doses: a share from none to all, set in MEASURE_STEP.
+// How much of a substance a measurement doses: a share from none to all, set in MEASURE_STEP. It
+// measures the fish built as drawn only, so without one its button waits.
 const MEASURE_STEP = .01;
 export const measureReading = level => percent(level);
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
@@ -265,7 +267,8 @@ export function measurement(state, index) {
              '</span><input type="range" data-measure-level min="0" max="1" step="' + MEASURE_STEP +
              '" value="' + fixed(state.measureLevel) + '"/><output>' +
              measureReading(state.measureLevel) + '</output></label>' +
-             '<button class="aid-secondary" data-measure>' + label('inspector.measure') +
+             '<button class="aid-secondary" data-measure' +
+             (acceptedGenome(state) ? '' : ' disabled') + '>' + label('inspector.measure') +
              '</button></div>';
   const m = state.measurement;
   if (!m || m.substance !== index)

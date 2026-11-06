@@ -5,14 +5,16 @@ import {clamp, SECOND_MS} from '../../units.js';
 // a part sends from along their branches, together along the trunk, and apart along the branches
 // to the nodes it reaches. A firing part sends a dot in the colour of what it sends (exciting,
 // inhibiting or modulating); a quieted part withdraws what it sent, a trail in the inhibiting
-// colour along its wires. Where a signal arrives, the part answers as the engine's probe found
-// it, when the signal points that way: it fires when raised (excited, or freed from an
-// inhibition withdrawn), it is quieted when lowered (inhibited, or left without an excitation
-// withdrawn); a modulating signal tunes it either way; any other signal fades there. A part
-// answers once, to the first signal that reaches it. Effectors twitch as they fire, firing parts
-// light up, quieted ones pulse in the inhibiting colour and darken, and all stay marked. The
-// engine decides which parts answer; the drawing paces the way at SPEED frame units a second,
-// each leg LEAST to MOST milliseconds long, a fading signal FADE, a withdrawn one a TRAIL long.
+// colour along its wires. A signal pushes the part it reaches up (excited, or freed from an
+// inhibition withdrawn) or down (inhibited, or left without an excitation withdrawn); a
+// modulating one tunes it. As a preview along the drawn wires the part follows the push: it fires
+// when pushed up, it is quieted when pushed down. Once the fish is built as drawn, the engine's
+// probe decides: the part answers when the signal pushes it the way the probe found it going (a
+// modulating one either way); any other signal fades there. A part answers once, to the first
+// signal that reaches it. Effectors twitch as they fire, firing parts light up, quieted ones
+// pulse in the inhibiting colour and darken, and all stay marked. The drawing paces the way at
+// SPEED frame units a second, each leg LEAST to MOST milliseconds long, a fading signal FADE, a
+// withdrawn one a TRAIL long.
 // A part counts as rising or falling by its first clear swing: the first step its swing reaches
 // CLEAR of its largest, which the CUTOFF must reach at all.
 const NS = 'http://www.w3.org/2000/svg';
@@ -91,7 +93,9 @@ const PUSH = Object.freeze(
     {fire : {excite : 'rise', inhibit : 'fall'}, quiet : {excite : 'fall', inhibit : 'rise'}});
 const ANSWER_MODE = Object.freeze({rise : 'fire', fall : 'quiet'});
 // The way of a stimulus: from the parts `starts`, along `links` ({from, to, kind, points, ...}),
-// with `response(key)` saying how the probe found a part: 'rise', 'fall' or null. Each leg starts
+// with `response(key, push)` saying how a part answers to a signal pushing it ('rise', 'fall', or
+// null for a modulating one): 'rise', 'fall' or null, as the probe found it or, as a preview, as
+// pushed. Each leg starts
 // when its part answers and ends where the next one answers or the signal fades; `parts` holds
 // each part that answers with the time it does and how ('fire' or 'quiet'), each leg what its
 // sender does (`sends`) and how the part it reaches answers to it (`answers`, null where it
@@ -108,9 +112,9 @@ export function signalSchedule(starts, links, response) {
     done.add(key);
     const sends = parts.get(key).mode;
     for (const link of links.filter(l => l.from === key && l.to !== key)) {
-      const end = time + linkDuration(link), answer = response(link.to);
-      const push = link.kind === 'modulate' ? answer : PUSH[sends][link.kind];
-      const answers = answer && answer === push ? ANSWER_MODE[answer] : null;
+      const push = PUSH[sends][link.kind] ?? null, answer = response(link.to, push);
+      const end = time + linkDuration(link),
+            answers = answer && (push === null || answer === push) ? ANSWER_MODE[answer] : null;
       legs.push({link, start : time, end, sends, answers});
       if (answers && !done.has(link.to) && !(parts.get(link.to)?.time <= end)) {
         parts.set(link.to, {time : end, mode : answers});

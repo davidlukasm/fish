@@ -172,6 +172,20 @@ function semanticFingerprint(source) {
                      [ 'quiet', 'quiet', 'quiet' ], 'A quieted part withdraws what it sends');
     assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 3,
                  'A part sends once to each of its targets');
+    // As a preview along the drawn wires every part follows the first signal that reaches it.
+    const preview = pulse.signalSchedule(
+        [ 'eye' ],
+        [
+          ...links, {from : 'quiet', to : 'freed', points : line(300, 350), kind : 'inhibit'},
+          {from : 'quiet', to : 'muted', points : line(300, 360), kind : 'excite'}
+        ],
+        (key, push) => push);
+    const previewed = mode => [...preview.parts]
+                                  .filter(([, part ]) => part.mode === mode)
+                                  .map(([ key ]) => key)
+                                  .sort();
+    assert.deepEqual(previewed('fire'), [ 'eye', 'freed', 'muscle', 'tectum' ]);
+    assert.deepEqual(previewed('quiet'), [ 'muted', 'quiet' ]);
     // A part that is pushed down and swings back past its rest still counts as falling; one whose
     // swing stays below the cutoff does not answer.
     const frames = [ [ 0, 0, 0 ], [ .9, -.8, .01 ], [ .2, -.3, -.02 ], [ -.3, .2, .01 ] ];

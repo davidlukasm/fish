@@ -342,6 +342,8 @@ export class OrganStudio {
     }
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]'))
       button.disabled = state.stale || !state.report?.contacts?.length;
+    for (const button of this.root.querySelectorAll('[data-measure]'))
+      button.disabled = !acceptedGenome(state);
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
       download.disabled = !acceptedGenome(state);

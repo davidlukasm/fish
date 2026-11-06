@@ -15,6 +15,7 @@ import {routedLinks} from './model/regions.js';
 import {label} from './view/kit.js';
 import {signalLinks} from './view/wires.js';
 import {API_WAIT, requestBody} from './requests.js';
+import {acceptedGenome} from './view/compiler.js';
 
 // Trials on the developed fish: a stimulus runs through the network the design wires and the
 // engine reports which parts answered; a measurement doses a substance and reports what it changes.
@@ -93,20 +94,13 @@ export const trialMethods = {
       ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
     ];
   },
-  // Whether the fish as drawn is developed, developing it first if needed; a trial needs it.
-  async developedGenome() {
-    const ready = () => this.state.genome && !this.state.stale;
-    if (!ready())
-      await this.develop();
-    if (!ready())
-      this.notice(label('status.probeNoGenome'));
-    return ready();
-  },
+  // A stimulus runs as a preview along the drawn wires; once the fish is built as drawn, through
+  // its developed brain as the engine's probe finds it. Nothing is built for it.
   async stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
-    if (!await this.developedGenome())
-      return;
+    if (!acceptedGenome(this.state))
+      return this.playPulse(centerIds, null);
     const requested = new Set(centerIds);
     const groups = allCenters(this.state.document)
                        .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
@@ -126,12 +120,10 @@ export const trialMethods = {
       this.notice(error.message);
     }
   },
-  // What the focused substance does in the developed fish: the atelier runs its brain with and
-  // without the substance and reports the change per cell group and organ drive.
+  // What the focused substance does in the fish built as drawn: the atelier runs its brain with
+  // and without the substance and reports the change per cell group and organ drive.
   async measure() {
-    if (!this.state.sites.length)
-      return;
-    if (!await this.developedGenome())
+    if (!this.state.sites.length || !acceptedGenome(this.state))
       return;
     try {
       this.state.measurement =
@@ -150,18 +142,18 @@ export const trialMethods = {
       this.notice(error.message);
     }
   },
-  // The stimulus runs through the drawn network: the parts the engine found active fire in turn
-  // along the wires from the stimulated ones.
+  // The stimulus runs through the drawn network from the stimulated parts: each part answers as
+  // the engine's probe `frames` found it, rising or falling by its first clear swing, or without
+  // them as the signal reaching it pushes it.
   playPulse(centerIds, frames) {
     this.stopPulse();
     this.showDrawnContacts();
-    if (!Array.isArray(frames) || !frames.length)
-      return;
-    // How the engine found each part: rising or falling by its first clear swing.
     const doc = this.state.document, centers = allCenters(doc);
     const indexOf = new Map(centers.map((c, index) => [c.id, index]));
-    const response = key =>
-        signalAnswer(frames, endpointCenters(doc, key).map(c => indexOf.get(c.id)));
+    const response =
+        frames?.length
+            ? key => signalAnswer(frames, endpointCenters(doc, key).map(c => indexOf.get(c.id)))
+            : (key, push) => push;
     const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
     const schedule = signalSchedule(starts, signalLinks(this.state), response);
     // The wires a signal ran along stay marked, those only a quieted part withdrew from apart.
