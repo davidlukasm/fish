@@ -6,7 +6,7 @@ import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {kindNodes, nodeLimit} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
-import {probePatch} from './view/probes.js';
+import {probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
 import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
 import {
@@ -196,9 +196,10 @@ export const GRIPS = Object.freeze([
     start : (studio, g) => studio.adaptationGrip(g)
   },
   {
-    graphic : '[data-probe-pad]',
+    graphic : '[data-sense-handle]',
     held : 'probe',
-    start : (studio, g) => ({id : g.dataset.probePad})
+    rect : false,
+    start : (studio, g) => ({id : g.dataset.senseHandle})
   },
   {
     graphic : '[data-vision-handle]',
@@ -445,11 +446,12 @@ export const handleMethods = {
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe,
           faintest = this.state.anatomy?.lightDimmest;
-    if (probe?.organ !== drag.id || !drag.rect.width || !drag.rect.height || !(faintest > 0))
+    if (probe?.organ !== drag.id || !(faintest > 0))
       return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = probePatch(probe.kind, fx, fy, faintest);
+    const position = cameraCoordinates(event, this.bodyMap(), this.state.camera);
+    const patch = probePatch(probe.kind, position, faintest);
     this.state.senseProbe = {...probe, ...patch};
+    this.keepInView(probeHandle(this.state.senseProbe, faintest));
     this.refreshProbes();
     this.requestDesign();
   },

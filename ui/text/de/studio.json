@@ -968,6 +968,7 @@
       "wound": "Biss testen",
       "flow": "Strömung testen"
     },
+    "lengths": "{n} {n:Fischlänge|Fischlängen}",
     "handle": {
       "smell": "Duftquelle: Richtung und Abstand",
       "touch": "Berührung: Richtung und Stärke",

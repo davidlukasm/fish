@@ -221,8 +221,8 @@ SightScene read_sight(std::istream &in) {
 // The Atelier's probes of the other senses, without a brain: the grown fish resting in open water,
 // as for sight, given one stimulus at a bearing (degrees, towards side +1 positive) from its
 // heading. A scent source of one odor kind (`scent`) `distance` body radii away; a touch of
-// `strength` against the skin; water streaming against the body from that bearing at
-// `strength` world units a step; or a wound there taking `strength` of the fish's health. Each
+// `strength` against the skin; water streaming against the side of the body facing that bearing
+// at `strength` world units a step; or a wound there taking `strength` of the fish's health. Each
 // group's sensory cells answer as the engine senses them.
 struct SenseScene {
   int kind = 0, scent = 0;
@@ -258,10 +258,22 @@ void sense_report(const field::Substrate &t,
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
   if (scene.kind == sense_scene::flow) {
-    // The lateral line's frame with the water streaming alike past all four corners.
+    // The lateral line's frame with the water streaming from the bearing against the corners
+    // that face it, the more the more they face it and not at all behind the body from it: a
+    // cell sampling the facing corners alone feels it fully, one sampling all four less, one on
+    // the far side not at all.
     fishsim::SensoryFrame frame;
-    for (auto &flow : frame.relative)
-      flow = {scene.strength * std::cos(bearing), scene.strength * std::sin(bearing)};
+    fishsim::LateralSamples<double> facing{};
+    double most = 0;
+    for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k) {
+      const double along = k & 1 ? fishsim::LATERAL_ALONG : -fishsim::LATERAL_ALONG,
+                   across = k & 2 ? fishsim::LATERAL_ACROSS : -fishsim::LATERAL_ACROSS;
+      facing[k] = std::max(0., std::cos(std::atan2(across, along) - bearing));
+      most = std::max(most, facing[k]);
+    }
+    for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
+      frame.relative[k] = {scene.strength * std::cos(bearing) * facing[k] / most,
+                           scene.strength * std::sin(bearing) * facing[k] / most};
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
       if (r.dominant_sense() == field::Flow)

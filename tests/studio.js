@@ -1467,6 +1467,31 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const box = /viewBox="0 0 (\S+) (\S+)"/.exec(skinMarkup);
       return skinView.skinPatch(skinState, touchCell, skinAim, name, cx / box[1], cy / box[2], {});
     };
+    // A sense's test stimulus stands on the fish while its organ is chosen, its handle where the
+    // probe's bearing and distance (or strength) put it.
+    const probesView = await import('../ui/studio/view/probes.js');
+    const {probeFor} = await import('../ui/studio/model/probe.js');
+    for (const [type, at] of [[ 'nose', {x : 200, y : 330} ], [ 'touch', {x : 400, y : 265} ]]) {
+      const placed = model.addOrgan(model.newDocument('Reiz'), type, sites, at);
+      const probed = model.findOrgan(placed.document, placed.organId),
+            probe = probeFor(probed, null);
+      const probeState = {
+        document : placed.document,
+        sites,
+        selected : {kind : 'organ', id : probed.id},
+        senseProbe : probe,
+        anatomy : {lightDimmest : 1e-4}
+      };
+      const markup = probesView.senseProbeSvg(probeState);
+      const [, hx, hy] =
+          /data-sense-handle="[^"]+" data-steady transform="translate\(([^ ]+) ([^)]+)\)/.exec(
+              markup);
+      const back = probesView.probePatch(probe.kind, {x : Number(hx), y : Number(hy)}, 1e-4);
+      assert.ok(Math.abs(back.bearing - probe.bearing) < 3, type + ' bearing reads back');
+      const amount = probe.kind === 'smell' ? 'distance' : 'strength';
+      assert.ok(Math.abs(back[amount] - probe[amount]) / probe[amount] < .1, type + ' reads back');
+      assert.equal(probesView.senseProbeSvg({...probeState, selected : null}), '');
+    }
     assert.ok(Math.abs(skinBack('field').field - touchCell.field) < .05);
     assert.ok(Math.abs(skinBack('sensitivity').threshold - touchCell.threshold) < .05);
     const layout = await import('../ui/studio/model/layout.js');

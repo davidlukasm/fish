@@ -1,7 +1,6 @@
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
-import {probeField} from './probes.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
 import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
@@ -95,15 +94,13 @@ function driveMeaning(state, center) {
 // senses what they feel. An organ without graphics of its own shows its icon and name.
 const gonadPanel = (state, organ, center) =>
     gonadGraphic(state, organ, center) + gonadFacts(state, organ) + pressureNote(state, organ);
-const skinPanel = (state, organ, center) =>
-    skinField(state, organ, center) + probeField(state, organ);
+const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const nervePanel = (state, organ, center) => nerveProperties(state, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => {
     const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + sideIndex(organ.side)];
     return scentMap(organ, center) + '<p class="aid-hint">' +
-           label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>' +
-           probeField(state, organ);
+           label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>';
   },
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ),
@@ -113,7 +110,7 @@ const ORGAN_PANELS = Object.freeze({
   gland : (state, organ, center) => glandProfile(state, center),
   eggs : gonadPanel,
   sperm : gonadPanel,
-  lateral : (state, organ) => lateralField(state, organ) + probeField(state, organ),
+  lateral : (state, organ) => lateralField(state, organ),
   touch : skinPanel,
   pain : skinPanel,
   blood : (state, organ, center) => hormonePad(state, organ, center),

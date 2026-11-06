@@ -3,7 +3,7 @@ import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
-import {probeField} from './view/probes.js';
+import {probeScents, senseProbeSvg} from './view/probes.js';
 import {scentMap} from './view/scents.js';
 import {pigmentInspector} from './view/pigments.js';
 import {eyeSight} from '../organ_readout.js';
@@ -26,7 +26,7 @@ import {dataAttribute} from './view/markup.js';
 import {sensorAdaptation, sensorAnswer} from './view/panels.js';
 import {label} from './view/kit.js';
 import {requestBody} from './requests.js';
-import {BODY_MAP} from './view/scene.js';
+import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 
 // The design view: what the engine makes of the draft as it stands (its anatomy, what the eyes
 // and senses take of a test stimulus), asked for after every change, and the panels' graphics
@@ -176,7 +176,12 @@ export const designMethods = {
   // A sense probe follows the design view's answers and its dragged stimulus, a near sense's
   // answers the test object.
   refreshProbes() {
-    this.redrawBlocks('probeBlock', findOrgan, organ => probeField(this.state, organ));
+    const layer = this.bodyMap()?.querySelector('#' + PROBE_LAYER);
+    if (layer)
+      layer.innerHTML = senseProbeSvg(this.state);
+    const scents = this.root.querySelector('[data-probe-scents-layer]');
+    if (scents)
+      scents.innerHTML = probeScents(this.state);
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
   },
   // Both eyes' views, drawn with the Aquarium's eye graphic from the design view's sight.

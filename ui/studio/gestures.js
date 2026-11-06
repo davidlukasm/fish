@@ -14,6 +14,7 @@ import {nearFish, pointDistance, SNAP_DISTANCE} from './model/layout.js';
 import {
   CAMERA_HOME,
   CAMERA_ZOOM,
+  cameraBox,
   cameraCoordinates,
   cameraScale,
   STEADY,
@@ -74,6 +75,17 @@ export const gestureMethods = {
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = zoomStamp(c);
+  },
+  // The view zooms out until a point dragged beyond it is in it again.
+  keepInView(point) {
+    const c = this.state.camera;
+    const inside = () => {
+      const box = cameraBox(c);
+      return point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y &&
+             point.y <= box.y + box.height;
+    };
+    while (!inside() && c.zoom > CAMERA_ZOOM.min)
+      this.zoom('out');
   },
   // The line from where a wire begins to the pointer.
   drawConnectingLine(from, to) {

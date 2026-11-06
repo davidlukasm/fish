@@ -17,6 +17,7 @@ import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
 import {ICON, slotFill, slotShape} from './kit.js';
 import {stimulusKind} from './stimulus.js';
+import {probeScents, senseProbeSvg} from './probes.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
 // with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
@@ -217,6 +218,8 @@ const LAYER_ID = Object.freeze({
   preview : 'aid-drag-preview',
   line : 'aid-connecting-line'
 });
+// The layer of a sense's test stimulus on the fish (probes.js).
+export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
 export function fishScene(state) {
@@ -248,12 +251,14 @@ export function fishScene(state) {
          '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
+         '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.choices + '" pointer-events="none"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +
-         '</svg>' + trashZone() + stimulusKind(state) +
+         '</svg>' + trashZone() + stimulusKind(state) + '<div data-probe-scents-layer>' +
+         probeScents(state) + '</div>' +
          '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 // While an organ is dragged, dropping it here removes it.
