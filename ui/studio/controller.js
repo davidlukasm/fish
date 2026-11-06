@@ -364,12 +364,22 @@ export class OrganStudio {
     if (!source.length)
       return false;
     target.push(this.state.document);
-    this.state.document = validateDocument(source.pop());
+    const doc = validateDocument(source.pop()), chosen = this.state.selected;
+    this.state.document = doc;
     this.historyBatch = null;
     this.state.canUndo = this.undoHistory.length > 0;
     this.state.canRedo = this.redoHistory.length > 0;
-    this.state.selected = null;
-    this.state.multi.clear();
+    // Stepping back a setting keeps its inspector open while the chosen part still exists.
+    const exists = {
+      center : id => findCenter(doc, id),
+      organ : id => findOrgan(doc, id),
+      wire : id => doc.wires.some(w => w.id === id),
+      assembly : id => findAssembly(doc, id)
+    }[chosen?.kind];
+    this.state.selected = exists?.(chosen.id) ? chosen : null;
+    for (const id of [...this.state.multi])
+      if (!findCenter(doc, id) && !findOrgan(doc, id))
+        this.state.multi.delete(id);
     this.designChanged();
     this.refreshScene();
     this.refreshHeader();
