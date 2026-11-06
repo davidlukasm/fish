@@ -205,9 +205,11 @@ function modulating(r, withIt) {
                     P.pulse * 1.2, P.play, 'var(--aid-teach)') +
          output([ T.input[0] ]) + cell([ T.input[0] ]);
 }
+// The learning effects follow the learning inspector: who teaches, when the cell remembers, how
+// fast it learns, what it learns by itself.
 export const EFFECT_ORDER = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.teaching,
-  HORMONE_EFFECT.learning, HORMONE_EFFECT.competition, HORMONE_EFFECT.eligibility,
+  HORMONE_EFFECT.eligibility, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.rhythm
 ]);
 export const effectScene = (effect, colour, ends = startEnds(effect)) => sideBySide(

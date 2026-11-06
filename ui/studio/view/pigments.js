@@ -80,14 +80,14 @@ export const pigmentAmount = (fx, room) =>
     1 + Math.round(trackShare(fx * AMOUNT.width, AMOUNT.track) * Math.max(0, room - 1));
 const RANGE = Object.freeze({
   width : 240,
-  height : 58,
+  height : 62,
   skin : 26,
   gap : 8,
-  top : 16,
+  top : 20,
   band : 22,
   mark : 5,
-  above : 11,
-  label : 54
+  above : 10,
+  label : 58
 });
 function colourRange(state) {
   const colours = fishColours(state.document, state.anatomy);

@@ -37,7 +37,7 @@ import {formatNumber, formatSigned, linkText, namedText, percent, t, tList} from
 import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
-import {learningInspector} from './learning.js';
+import {learningInspector, modeName} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies, tone} from './names.js';
 import {organTitle} from './names.js';
@@ -251,7 +251,7 @@ function developedNerve(state, center) {
   return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
          row(label('inspector.transmitter'),
              label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
-         row(label('inspector.learningMode'), formatNumber(mode, 2, true)) +
+         row(label('inspector.learningMode'), label('inspector.' + modeName(mode))) +
          row(label('inspector.rhythm'), percent(pace)) +
          row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }

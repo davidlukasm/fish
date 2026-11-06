@@ -67,9 +67,9 @@ const RULE = Object.freeze({
 const traceSteps = center => timeConstantSteps(center.tau) / 2;
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
 const MODE_THIRD = 1 / 3;
-const modeName = mode => mode > MODE_THIRD    ? 'competing'
-                         : mode < -MODE_THIRD ? 'cancelling'
-                                              : 'neutral';
+export const modeName = mode => mode > MODE_THIRD    ? 'competing'
+                                : mode < -MODE_THIRD ? 'cancelling'
+                                                     : 'neutral';
 function learningRule(state, center, teachers, colours) {
   const L = EPISODE_LAYOUT.big, R = RULE, words = key => label('learnRule.' + key);
   const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
@@ -102,8 +102,8 @@ function learningRule(state, center, teachers, colours) {
   });
   const lean = label('inspector.' + modeName(mode));
   const caption = !(rate > 0) ? words('off')
-                  : teaches
-                      ? t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}) + ' · ' + lean
+                  : teaches   ? t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}) +
+                                  (Math.abs(mode) > MODE_THIRD ? ' · ' + lean : '')
                   : Math.abs(mode) > MODE_THIRD ? t('studio.learnRule.untaughtMode', {mode : lean})
                                                 : words('untaught');
   return episodeSvg(L, {
@@ -242,6 +242,8 @@ export function learningInspector(state) {
   return html + heading(centerTitle(chosen)) + learningRule(state, chosen, teachers, colours) +
          section('teacher', teacherList(state, chosen, teachers.modulators) +
                                 substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
+         section('traceLength',
+                 traceGraphic(chosen) + substancePart(state, chosen, HORMONE_EFFECT.eligibility)) +
          section('rate', learnTrack('learn-rate', chosen, chosen.qwidth, label('learnRule.rate'),
                                     [ label('learnRule.slow'), label('learnRule.fast') ]) +
                              substancePart(state, chosen, HORMONE_EFFECT.learning)) +
@@ -249,7 +251,5 @@ export function learningInspector(state) {
                  learnTrack('learn-mode', chosen, (chosen.mode + 1) / 2, label('learnRule.mode'),
                             [ label('inspector.cancelling'), label('inspector.competing') ],
                             {middle : label('inspector.neutral')}) +
-                     substancePart(state, chosen, HORMONE_EFFECT.competition)) +
-         section('trace',
-                 traceGraphic(chosen) + substancePart(state, chosen, HORMONE_EFFECT.eligibility));
+                     substancePart(state, chosen, HORMONE_EFFECT.competition));
 }

@@ -30,10 +30,10 @@ export const pairingChoice = wire =>
     '</div>';
 const CIRCUIT = Object.freeze({
   width : 300,
-  label : 80,
-  left : 120,
-  right : 250,
-  middle : 185,
+  label : 98,
+  left : 132,
+  right : 254,
+  middle : 193,
   spread : 46,
   row : 50,
   top : 34,
