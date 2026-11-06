@@ -91,7 +91,7 @@ function semanticFingerprint(source) {
     SENSE_KIND,
     TUNING
   } = await import('../ui/schema.js');
-  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor} =
+  const {ORGANS, ORGAN_BY_KEY, MUSCLES, eligible, functionFor, organFunction} =
       await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
@@ -1012,6 +1012,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
+  // Its mouth is wired: the tectum and the pallium reach the biting muscles, the olfactory bulb
+  // and the pallium the sucking ones, in the drawing and in the built fish.
+  for (const [kind, sources] of [[ MOTOR_KIND.aggression, [ 'pallium', 'tectum' ] ],
+                                 [ MOTOR_KIND.suction, [ 'olfactory', 'pallium' ] ]]) {
+    const muscles =
+        exampleDoc.organs.filter(o => o.type === 'muscle' && organFunction(o, sites) === kind);
+    assert.ok(muscles.length);
+    const feeders = exampleDoc.wires.filter(w => muscles.some(m => m.id === w.to))
+                        .map(w => model.findOrgan(exampleDoc, w.from)?.type)
+                        .sort();
+    assert.deepEqual([...new Set(feeders) ], sources);
+    assert.ok(response.example.contacts.some(([, to ]) => muscles.includes(organOf(to))),
+              'The built fish reaches its mouth muscles of kind ' + kind);
+  }
   // Zoomed out the whole way, the camera shows where an eye's field ends.
   assert.ok(geometry.FISH_BOX.width / geometry.CAMERA_ZOOM.min >=
             response.designed.visionDepth * geometry.BODY_RADIUS);

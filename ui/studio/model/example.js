@@ -18,11 +18,12 @@ import {
 // midline, the noses the olfactory bulbs; both feed the pallium, which learns what to steer the
 // fins and tail by; the spinal cord beats the tail on alternate sides; the lateral line alarms
 // the hindbrain, which turns the fish away. A biting muscle at the snout and a sucking one behind
-// it make the mouth. A gland releases the growth substance, and the body grows while it binds its
-// growth receptor. Eating teaches: the gut's food sense drives the hypothalamus, which makes a
-// second gland release the food substance. In the pallium it is the teaching signal (through the
-// excitation receptor, the engine's teacher besides modulating cells) and raises the learning
-// rate, so what led to food is learnt.
+// it make the mouth: the tectum snaps at what is seen, the olfactory bulb sucks where food smells,
+// and the pallium learns both. A gland releases the growth substance, and the body grows while it
+// binds its growth receptor. Eating teaches: the gut's food sense drives the hypothalamus, which
+// makes a second gland release the food substance. In the pallium it is the teaching signal
+// (through the excitation receptor, the engine's teacher besides modulating cells) and raises the
+// learning rate, so what led to food is learnt.
 //
 // Where its organs lie in the body frame, by name.
 const PLACES = Object.freeze({
@@ -49,7 +50,8 @@ const PLACES = Object.freeze({
 const WIRES = Object.freeze([
   [ 'eye', 'tectum' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ], [ 'bulb', 'pallium' ],
   [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ], [ 'lateral', 'hindbrain' ],
-  [ 'hindbrain', 'fin' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ]
+  [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ], [ 'pallium', 'bite' ],
+  [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ]
 ]);
 // The pallium learns at full rate once the food substance reaches half; food teaches it TEACHING
 // strongly, as the excitation it brings.
