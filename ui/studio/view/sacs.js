@@ -29,9 +29,7 @@ export function gonadStore(state, organ) {
     motors : motors.length,
     room,
     scale : own.perCell * nodeLimit(organ, null),
-    transfer,
     steps : perStep > 0 ? Math.ceil(spawn / perStep) : Infinity,
-    opening : Math.min(1, drive('release') / G.release),
     self : drive('release') >= G.release,
     spawn,
     minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
@@ -50,7 +48,6 @@ const STORE = Object.freeze({
   base : 112,
   cycles : 2.4,
   samples : 18,
-  middle : 163,
   egg : 15,
   least : 4,
   trigger : 14,
@@ -164,7 +161,7 @@ export function gonadGraphic(state, organ, selected) {
          (curve.knee
               ? '<text x="' + fixed(Math.min(curve.knee.x, S.right)) + '" y="' +
                     fixed(curve.knee.y - S.tick) + '" text-anchor="' +
-                    (curve.knee.x > S.middle ? 'end' : 'start') + '">' +
+                    (curve.knee.x > (S.left + S.right) / 2 ? 'end' : 'start') + '">' +
                     escapeText(t('studio.inspector.gonad.fullIn', {n : store.steps})) + '</text>'
               : '') +
          part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +

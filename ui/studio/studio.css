@@ -412,7 +412,6 @@
 .aid-sac-fill{fill:none;stroke:#f1c08c;stroke-width:2.4;stroke-linejoin:round}
 .aid-sac.sperm .aid-sac-fill{stroke:#e6f0f6}
 .aid-sac-fill.idle{stroke-dasharray:3 3;opacity:.6}
-.aid-sac-wait{stroke:var(--aid-motor);stroke-width:3;stroke-dasharray:2 4;stroke-linecap:round}
 .aid-sac-room{stroke:#f1c08c;stroke-width:1.2;stroke-dasharray:5 3;opacity:.8}
 .aid-sac.sperm .aid-sac-room{stroke:#e6f0f6}
 .aid-sac-ceiling{stroke:#e9a07a;stroke-width:1.2}
