@@ -26,3 +26,5 @@ export const TEACH_ICON =
 // Maturity: working from it on a shoot rising, dying from it on one falling.
 export const PHASE_ICON =
     Object.freeze({start : 'M4 19h16M12 15V5M8 9l4-4 4 4', end : 'M4 19h16M12 5v10M8 11l4 4 4-4'});
+// The body's own signals' colour (maturity, the energy reserve).
+export const BODY_SIGNAL = '#d7c294';

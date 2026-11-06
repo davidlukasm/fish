@@ -246,7 +246,6 @@ function showChoice(studio, change, library = false) {
 
 // On the fish and in its panels, in the order they are tried.
 export const FISH_CLICKS = Object.freeze([
-  [ '[data-wires]', (studio, e, event) => studio.clickArmedWire(e, event) ? undefined : PASS ],
   [
     '[data-link-pair]',
     (studio, e) => keep(studio, linkPair(studio.state.document, e.dataset.linkPair))

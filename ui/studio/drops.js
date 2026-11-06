@@ -21,6 +21,8 @@ import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.
 import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
+import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
+import {armedCursor} from './view/library.js';
 import {label} from './view/kit.js';
 import {
   assemblyPreview,
@@ -100,10 +102,7 @@ export const dropMethods = {
     event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
     if (this.dragging.kind === 'wiring') {
-      const wire = event.target.closest?.('[data-wires]');
-      for (const element of svg.querySelectorAll('.aid-drop-hover'))
-        element.classList.toggle('aid-drop-hover', element === wire);
-      wire?.classList.add('aid-drop-hover');
+      this.aimWire(this.dragging.value, event);
       return;
     }
     const teaching = this.ontoNerve(this.dragging.kind, this.dragging.value);
@@ -157,7 +156,7 @@ export const dropMethods = {
     if (DROP_ON_PARTS.includes(kind))
       return this.dropOnPart(kind, value, this.dropTarget(event));
     if (kind === 'wiring')
-      return this.dropWiring(value, event.target.closest?.('[data-wires]'), position);
+      return this.dropWiring(value, this.aimWire(value, event));
     const learner = this.ontoNerve(kind, value) ? this.dropTarget(event) : null;
     if (learner)
       return this.dropOntoNerve(value, learner, position);
@@ -208,46 +207,91 @@ export const dropMethods = {
       element.classList.add('aid-drop-target');
   },
   // A way of pairing dropped on a wire sets it for the wires drawn there; a bend goes into them
-  // where they run nearest the drop.
-  dropWiring(value, element, position) {
+  // at the point of the wire nearest the drop.
+  dropWiring(value, aimed) {
     this.dragging = null;
     this.clearPreview();
-    this.wireWith(value, element, position);
+    this.wireWith(value, aimed);
   },
-  wireWith(value, element, position) {
-    if (!element)
+  wireWith(value, aimed) {
+    if (!aimed)
       return this.notice(label('wiring.noWire'));
     if (value === BEND)
-      return this.bendWire(element, position);
+      return this.bendWire(aimed, aimed.at);
     let doc = this.state.document;
-    for (const id of element.dataset.wires.split(' '))
+    for (const id of aimed.wires)
       doc = updateWire(doc, id, {pairing : value}) ?? doc;
     this.changeDocument(doc, this.state.selected);
   },
-  // A wiring tile clicked is held ready (clicked again it is let go): the wires it can act on
-  // stand out, and a click on one acts on it there, as a drop would.
+  // The drawn bundles a wiring tile can aim at, kept while the design and its view stay.
+  aimBundles() {
+    const s = this.state, key = [ s.document, s.camera?.zoom, s.wireScope, s.selected?.id ];
+    if (!this.aimCache || this.aimCache.key.some((k, i) => k !== key[i]))
+      this.aimCache = {key, bundles : drawnBundles(s)};
+    return this.aimCache.bundles;
+  },
+  // The wire a wiring tile aims at from the pointer (a bend at any wire, a way of pairing at one
+  // between paired ends), shown: the wire stands out, and where a bend would go in its point.
+  aimWire(value, event) {
+    const svg = this.bodyMap();
+    if (!svg)
+      return null;
+    const point = cameraCoordinates(event, svg, this.state.camera);
+    const aimed = aimedWire(this.state, this.aimBundles(), point, value !== BEND);
+    const element = aimed && [...svg.querySelectorAll('.aid-wire-group') ].find(
+                                 e => e.dataset.wires === aimed.wires.join(' ') &&
+                                      e.hasAttribute('data-mirrored') === aimed.mirrored);
+    for (const other of svg.querySelectorAll('.aid-wire-group.aid-drop-hover'))
+      if (other !== element)
+        other.classList.remove('aid-drop-hover');
+    element?.classList.add('aid-drop-hover');
+    const preview = this.root.querySelector(LAYER.preview);
+    if (preview)
+      preview.innerHTML = aimed && value === BEND ? aimMark(this.state, aimed) : '';
+    return aimed;
+  },
+  // A wiring tile clicked is held ready for one wire, clicked again for any number until let go
+  // (clicked a third time, a right click, a click beside the wires, Escape or another tool); the
+  // pointer carries its symbol, the wires it can act on stand out, the one aimed at most.
   armWiring(value) {
-    const armed = this.state.armed?.value === value ? null : {kind : 'wiring', value};
-    this.state.armed = armed;
+    const armed = this.state.armed;
+    this.state.armed = armed?.value !== value ? {kind : 'wiring', value, keep : false}
+                       : armed.keep           ? null
+                                              : {...armed, keep : true};
     this.showArmed();
   },
+  release() {
+    if (!this.state.armed)
+      return false;
+    this.state.armed = null;
+    this.showArmed();
+    this.clearPreview();
+    return true;
+  },
   showArmed() {
-    const armed = this.state.armed;
+    const armed = this.state.armed, root = this.root.dataset;
     if (armed) {
-      this.root.dataset.armed = armed.kind;
-      this.root.dataset.armedValue = armed.value;
+      root.armed = armed.kind;
+      root.armedValue = armed.value;
+      this.root.style.setProperty('--aid-armed-cursor', armedCursor(armed.value));
     } else {
-      delete this.root.dataset.armed;
-      delete this.root.dataset.armedValue;
+      delete root.armed;
+      delete root.armedValue;
+      this.root.style.removeProperty('--aid-armed-cursor');
     }
     this.refreshLibrary();
   },
-  clickArmedWire(element, event) {
-    if (this.state.armed?.kind !== 'wiring')
+  // A click on the fish with a tile held acts on the wire aimed at, or, beside the wires, lets the
+  // tile go.
+  clickArmed(event) {
+    const armed = this.state.armed;
+    if (armed?.kind !== 'wiring' || !event.target.closest?.(BODY_MAP))
       return false;
-    const svg = this.bodyMap();
-    this.wireWith(this.state.armed.value, element,
-                  svg && cameraCoordinates(event, svg, this.state.camera));
+    const aimed = this.aimWire(armed.value, event);
+    if (!aimed || !armed.keep)
+      this.release();
+    if (aimed)
+      this.wireWith(armed.value, aimed);
     return true;
   },
   // A test stimulus tile clicked brings the stimulus to its sense at once: the chosen one of its
@@ -328,9 +372,12 @@ export const dropMethods = {
       const [substance, effect] = value.split(':').map(Number);
       doc = bindReceptor(doc, center.id, effect, substance) ?? doc;
     }
-    // The inspector opens on what was dropped.
-    if (kind === 'effect')
-      this.state.effect = Number(value.split(':')[1]);
+    // The inspector and the fish show what was dropped.
+    if (kind === 'effect') {
+      const [substance, effect] = value.split(':').map(Number);
+      this.state.focusSubstance = substance;
+      this.state.effect = effect;
+    }
     this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
   },
   // An organ dropped at a position, where placementTarget puts it; a muscle at the muscle's home

@@ -45,10 +45,12 @@
 .aid-palette-tile[data-act-kind]{cursor:pointer}
 .aid-palette-tile.armed{border-color:#f1dca0;background:#2a4743;box-shadow:inset 0 0 0 1px #f1dca0}
 .aid-palette-tile.armed .aid-palette-icon{background:#f1dca0;border-color:#f1dca0;color:#113039}
+.aid-palette-tile.armed.keep{background:#3a5a50;box-shadow:inset 0 0 0 2px #f1dca0,0 0 12px #f1dca088}
+#station-root[data-armed] #aid-body-map,#station-root[data-armed] #aid-body-map *{cursor:var(--aid-armed-cursor)}
+.aid-wire-aim{fill:var(--aid-handle-core);stroke:#f1dca0;stroke-width:2.5;vector-effect:non-scaling-stroke}
 #station-root[data-armed="wiring"] #aid-body-map .aid-anatomical-organ,#station-root[data-armed="wiring"] #aid-body-map .aid-neural-center{opacity:.45}
 #station-root[data-armed="wiring"] #aid-body-map .aid-wire-ink{opacity:.95;filter:drop-shadow(0 0 3px #f1dca088)}
-#station-root[data-armed="wiring"] #aid-body-map .aid-wire-hit{cursor:copy}
-#station-root[data-armed="wiring"] #aid-body-map .aid-wire-group:hover .aid-wire-ink{filter:drop-shadow(0 0 7px #f1dca0)}
+#station-root[data-armed="wiring"] #aid-body-map .aid-wire-group.aid-drop-hover .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 7px #f1dca0)}
 #station-root[data-armed="wiring"]:not([data-armed-value="bend"]) #aid-body-map .aid-wire-group:not([data-paired]){opacity:.2;pointer-events:none}
 .aid-palette-tile.add{border-style:dashed}
 .aid-palette-tile.add .aid-palette-icon{border-style:dashed;color:var(--aid-soft-text);font-size:18px}
@@ -435,6 +437,7 @@
 .aid-hormone-cloud circle:nth-child(3){animation-delay:1.6s}
 @keyframes aid-cloud{0%{transform:scale(.5);opacity:.42}100%{transform:scale(3.2);opacity:0}}
 .aid-hormone-symbols svg{color:var(--hormone)}
+.aid-hormone-others circle{stroke:#0d2a31;stroke-width:1.2;vector-effect:non-scaling-stroke}
 .aid-hormone-symbols path{fill:none;stroke:var(--hormone);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke}
 @media (prefers-reduced-motion:reduce){.aid-hormone-cloud circle{animation:none;opacity:.18;transform:scale(1.8)}}
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}

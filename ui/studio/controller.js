@@ -164,6 +164,11 @@ export class OrganStudio {
   }
   initialize() {
     this.root.addEventListener('click', event => this.click(event));
+    // A right click lets a held tile go.
+    this.root.addEventListener('contextmenu', event => {
+      if (this.release())
+        event.preventDefault();
+    });
     this.root.addEventListener('change', event => this.change(event));
     this.root.addEventListener('input', event => this.input(event));
     this.root.addEventListener('dragstart', event => this.dragStart(event));
@@ -661,13 +666,15 @@ export class OrganStudio {
       this.changeDocument(setBends(doc, wires, bends.filter((_, k) => k !== index)),
                           this.state.selected);
     } else
-      this.bendWire(wire, cameraCoordinates(event, this.bodyMap(), this.state.camera));
+      this.bendWire(
+          {wires : wire.dataset.wires.split(' '), mirrored : wire.hasAttribute('data-mirrored')},
+          cameraCoordinates(event, this.bodyMap(), this.state.camera));
     return true;
   }
-  // A bend put into the wires of a drawn bundle where it runs nearest the point.
-  bendWire(element, point) {
-    const wires = element.dataset.wires.split(' ');
-    const bends = bendsWith(this.state, wires, point, element.hasAttribute('data-mirrored'));
+  // A bend put into the wires of a drawn bundle (on the side it is drawn for) where it runs
+  // nearest the point.
+  bendWire({wires, mirrored}, point) {
+    const bends = bendsWith(this.state, wires, point, mirrored);
     const doc = bends && setBends(this.state.document, wires, bends);
     if (!doc)
       return this.notice(label('wiring.noWire'));
@@ -677,7 +684,7 @@ export class OrganStudio {
   click(event) {
     if (performance.now() < this.ignoreClickUntil && event.target.closest?.(BODY_MAP))
       return;
-    if (this.doubleClick(event))
+    if (this.clickArmed(event) || this.doubleClick(event))
       return;
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
@@ -779,8 +786,7 @@ export class OrganStudio {
     }
     if (event.key === 'Escape') {
       this.pendingWire = null;
-      this.state.armed = null;
-      this.showArmed();
+      this.release();
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();

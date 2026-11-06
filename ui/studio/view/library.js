@@ -1,6 +1,6 @@
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {EFFECT_ICON, PHASE_ICON, TEACH_ICON, TOOL_ICON} from './icons.js';
+import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TEACH_ICON, TOOL_ICON} from './icons.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -15,8 +15,8 @@ import {tone} from './names.js';
 // (its symbol in a ring of its colour, its name below), in sections; and the tool palette.
 // A tile: what a drop gives (kind and value), its name, its symbol (a path, or markup when
 // MARKUP), the ring's colour, the hover title, and whether it offers nothing here (OFF).
-// A tile is dragged onto the fish; one that acts (`act`) is clicked, to act at once or, `armed`,
-// held ready (it may be dragged as well, `drag`).
+// A tile is dragged onto the fish; one that acts (`act`) is clicked, to act at once or to be held
+// ready, `armed` 'once' for one use or 'keep' for any number (it may be dragged as well, `drag`).
 function tile({
   kind,
   value,
@@ -31,13 +31,14 @@ function tile({
   armed = false
 }) {
   const v = escapeText(value);
-  return '<button class="aid-palette-tile' + (off ? ' off' : '') + (armed ? ' armed' : '') + '"' +
+  return '<button class="aid-palette-tile' + (off ? ' off' : '') +
+         (armed ? ' armed ' + armed : '') + '"' +
          (off    ? ' disabled'
           : drag ? ' draggable="true"'
                  : '') +
          (drag ? ' data-drag-kind="' + kind + '" data-drag-value="' + v + '"' : '') +
-         (act ? ' data-act-kind="' + kind + '" data-act-value="' + v + '" aria-pressed="' + armed +
-                    '"'
+         (act ? ' data-act-kind="' + kind + '" data-act-value="' + v + '" aria-pressed="' +
+                    !!armed + '"'
               : '') +
          ' title="' + escapeText(title) +
          '"><span class="aid-palette-icon" style="--organ-color:' + colour + '">' +
@@ -129,6 +130,22 @@ const WIRE_SYMBOL = Object.freeze({
   both : 'M5 6h14M5 18h14M5 6l14 12M5 18l14-12',
   bend : 'M3 18C7 18 8 6 12 6s5 12 9 12M12 6h.01'
 });
+// The pointer while a wiring tile is held: its tip at HOT, and below it the tile's symbol in a disc
+// of radius DISC at AT, the symbol (drawn on 24 units) scaled by SCALE, all on a cursor SIZE wide.
+const CURSOR = Object.freeze({size : 32, hot : 2, at : 20, disc : 11, scale : .6, line : 2.6});
+export function armedCursor(value) {
+  const C = CURSOR, corner = C.at - 12 * C.scale;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + C.size + '" height="' + C.size +
+              '"><path d="M' + C.hot + ' ' + C.hot +
+              'l9 3-6 6z" fill="#f1dca0" stroke="#113039"/>' +
+              '<circle cx="' + C.at + '" cy="' + C.at + '" r="' + C.disc +
+              '" fill="#113039" stroke="#f1dca0" stroke-width="1.5"/><path transform="translate(' +
+              corner + ' ' + corner + ') scale(' + C.scale + ')" d="' + WIRE_SYMBOL[value] +
+              '" fill="none" stroke="#f1dca0" stroke-width="' + C.line +
+              '" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + C.hot + ' ' + C.hot +
+         ', copy';
+}
 function wiringLibrary(state) {
   const wiring = key => tile({
     kind : 'wiring',
@@ -140,6 +157,8 @@ function wiringLibrary(state) {
     act : true,
     drag : true,
     armed : state.armed?.kind === 'wiring' && state.armed.value === key
+                ? (state.armed.keep ? 'keep' : 'once')
+                : false
   });
   return section(label('wiring.pairings'), PAIRINGS.map(wiring).join('')) +
          section(label('wiring.shape'), wiring('bend'));
@@ -194,8 +213,6 @@ function hormoneLibrary(state) {
                                             })) +
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
-// The body's own signals' colour.
-const BODY_SIGNAL = '#d7c294';
 // Learning: the cells learning needs (a learning circuit, a modulator teaching the cells it
 // reaches, a pacemaker whose beat a learner can credit; dropped onto a nerve node the first makes
 // it learn, the others are wired to it) and per substance a gland and what it can do to

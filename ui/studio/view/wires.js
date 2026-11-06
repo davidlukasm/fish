@@ -403,6 +403,36 @@ function bendHandles(state, bundles) {
       })
       .join('');
 }
+// The wire a dragged or held wiring tile is aimed at: of the drawn bundles (of those with paired
+// ends alone, `paired`) the one running nearest the point, within AIM.reach screen pixels of it,
+// looked for at AIM.steps points along its trunk: its wires, whether it is drawn for the other
+// side, and the point on it nearest.
+const AIM = Object.freeze({reach : 36, steps : 48});
+export const drawnBundles = state => wireBundles(state, endpointIndex(state.document)).bundles;
+export function aimedWire(state, bundles, point, paired) {
+  const reach = AIM.reach / zoomOf(state);
+  let best = null;
+  for (const b of bundles) {
+    if (paired && !b.ends.some(e => e.link.wire.pairing))
+      continue;
+    for (let k = 0; k <= AIM.steps; ++k) {
+      const at = b.way.at(b.s0 + (b.s1 - b.s0) * k / AIM.steps);
+      const distance = Math.hypot(at.x - point.x, at.y - point.y);
+      if (distance < reach && (!best || distance < best.distance))
+        best = {
+          wires : [...new Set(b.ends.map(e => e.link.wire.id)) ],
+          mirrored : b.mirrored,
+          at,
+          distance
+        };
+    }
+  }
+  return best;
+}
+// The aimed point as it shows: a bend's handle, BEND_HANDLE wide.
+export const aimMark = (state, aimed) => '<circle class="aid-wire-aim" cx="' + fixed(aimed.at.x) +
+                                         '" cy="' + fixed(aimed.at.y) + '" r="' +
+                                         fixed(BEND_HANDLE / zoomOf(state)) + '"/>';
 // The bends of the wires drawn as one bundle with a point put in where the way runs nearest it
 // (where it lengthens the way least), as the wires store them (mirrored back for a bundle drawn
 // for the other side); null where no bundle of those wires is drawn.

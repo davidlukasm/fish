@@ -161,6 +161,9 @@ export const gestureMethods = {
     const drag = this.pointer;
     if (!drag) {
       const svg = event.target?.closest?.(BODY_MAP);
+      // A held wiring tile shows the wire it aims at.
+      if (svg && this.state.armed?.kind === 'wiring')
+        this.aimWire(this.state.armed.value, event);
       if (svg && this.pendingWire?.from && this.state.tool === 'wire') {
         const from = this.wirePoint(this.pendingWire.from);
         if (from)
