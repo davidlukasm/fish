@@ -137,9 +137,10 @@ function regionAnchors(doc, sites) {
       item.x += (item.home.x - item.x) * pull;
       item.y += (item.home.y - item.y) * pull;
       item.x = Math.min(Math.max(item.x, left(item)), right(item));
-      item.y = item.side ? middle + item.side *
-                                        Math.min(Math.max(item.side * (item.y - middle), S.inside),
-                                                 BRAIN.cerebrum.half - item.inner)
+      // Behind the brain the clusters keep to the cord's edge, clear of the organs beside it.
+      const outward = item.x > brainEnd ? BRAIN.cord.half[0] : BRAIN.cerebrum.half - item.inner;
+      item.y = item.side ? middle + item.side * clamp(item.side * (item.y - middle), S.inside,
+                                                      Math.max(S.inside, outward))
                          : item.home.y;
     }
   }
