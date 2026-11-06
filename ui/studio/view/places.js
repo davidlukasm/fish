@@ -13,7 +13,7 @@ import {
   SNAP_DISTANCE,
   ZONE
 } from '../model/layout.js';
-import {radians} from '../../units.js';
+import {clamp, radians} from '../../units.js';
 import {skinAt} from './frame.js';
 import {bearing} from '../model/retina.js';
 import {isRegion, ORGAN_BY_KEY, siteRole} from '../model/organs.js';
@@ -54,8 +54,17 @@ const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 const regionHome = (organ, sites) => findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
 const clusterRadius = organ => CLUSTER.ring + CLUSTER.grow * organ.centers.length;
 export const REGION_CHIP = Object.freeze({width : 26, height : 20, gap : 5, away : 22});
-const SEPARATE = Object.freeze(
-    {rounds : 120, settle : 30, margin : 3, pull : .04, node : 5, inside : 6, front : .25});
+const SEPARATE = Object.freeze({
+  rounds : 120,
+  settle : 30,
+  margin : 3,
+  pull : .04,
+  node : 5,
+  inside : 6,
+  front : .25,
+  rows : 2,
+  least : .6
+});
 const anchorCache = new WeakMap();
 // Regions whose engine sites lie close would hide each other's clusters and slot chips; the
 // drawing keeps them apart within their half of the brain, as near their sites as room allows.
@@ -63,28 +72,39 @@ function regionAnchors(doc, sites) {
   const cached = anchorCache.get(doc);
   if (cached?.sites === sites)
     return cached.anchors;
-  const S = SEPARATE, C = CLUSTER, middle = BODY_FRAME.middle;
-  const items = [];
-  for (const organ of doc.organs.filter(o => isRegion(o) && o.centers.length)) {
+  const S = SEPARATE, C = CLUSTER, R = REGION_CHIP, middle = BODY_FRAME.middle;
+  const placed = doc.organs.filter(o => isRegion(o) && o.centers.length).flatMap(organ => {
     const home = regionHome(organ, sites);
-    if (!home || home.zone === ZONE.tail)
-      continue;
-    const at = sitePoint(home, NERVE_ROLE), r = clusterRadius(organ);
+    return home && home.zone !== ZONE.tail ? [ {organ, home} ] : [];
+  });
+  const sideOfItem = organ => ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0;
+  const brainEnd = BRAIN.cerebellum.x + BRAIN.cerebellum.rx;
+  // A crowded half of the brain draws its clusters smaller, down to SEPARATE.least.
+  const fit = side => {
+    const need =
+        placed.filter(p => !sideOfItem(p.organ) || sideOfItem(p.organ) === side)
+            .reduce((sum, p) => sum + 2 * (clusterRadius(p.organ) * C.aspect[0] + S.node), 0);
+    return need ? clamp(S.rows * (brainEnd - BRAIN.cerebrum.from) / need, S.least, 1) : 1;
+  };
+  const fits = {[-1] : fit(-1), [1] : fit(1)};
+  const items = placed.map(({organ, home}) => {
+    const at = sitePoint(home, NERVE_ROLE), side = sideOfItem(organ);
+    const k = side ? fits[side] : Math.min(fits[-1], fits[1]), r = clusterRadius(organ) * k;
     const chips =
         regionSlots(doc, organ).filter(slot => slot.required && !slot.filled.length).length;
-    const R = REGION_CHIP;
-    items.push({
+    return {
       id : organ.id,
       home : at,
       x : at.x,
       y : at.y,
+      k,
       out : sideOf(organ),
-      side : ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0,
+      side,
       wide : Math.max(r * C.aspect[0], chips * (R.width + R.gap) / 2) + S.node,
       inner : r * C.aspect[1] + S.node,
       outer : r * C.aspect[1] + (chips ? R.away + R.height / 2 : S.node)
-    });
-  }
+    };
+  });
   const span = item => item.out > 0 ? [ item.y - item.inner, item.y + item.outer ]
                                     : [ item.y - item.outer, item.y + item.inner ];
   const left = item => BRAIN.cerebrum.from + item.wide * S.front,
@@ -123,7 +143,7 @@ function regionAnchors(doc, sites) {
                          : item.home.y;
     }
   }
-  const anchors = new Map(items.map(item => [item.id, {x : item.x, y : item.y}]));
+  const anchors = new Map(items.map(item => [item.id, {x : item.x, y : item.y, k : item.k}]));
   anchorCache.set(doc, {sites, anchors});
   return anchors;
 }
@@ -131,8 +151,8 @@ function regionPoint(doc, organ, index, sites) {
   const C = CLUSTER, home = regionHome(organ, sites);
   if (!home)
     return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
-  const at = regionAnchors(doc, sites).get(organ.id) ?? sitePoint(home, NERVE_ROLE),
-        side = sideOf(organ);
+  const anchor = regionAnchors(doc, sites).get(organ.id);
+  const at = anchor ?? sitePoint(home, NERVE_ROLE), side = sideOf(organ);
   const center = organ.centers[index], port = center?.port ?? 'none';
   if (home.zone === ZONE.tail) {
     const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
@@ -143,7 +163,7 @@ function regionPoint(doc, organ, index, sites) {
     return at;
   const kin = organ.centers.filter(c => (c.port ?? 'none') === port), rank = kin.indexOf(center);
   const share = kin.length > 1 ? rank / (kin.length - 1) : .5;
-  const r = clusterRadius(organ);
+  const r = clusterRadius(organ) * (anchor?.k ?? 1);
   const angle = port === 'in'    ? Math.PI - side * C.arc * (1 - 2 * share)
                 : port === 'out' ? side * Math.PI / 2 + C.spread * (share - .5) * (kin.length - 1)
                                  : C.spread * (share - .5) * (kin.length - 1) - side * C.spread;
