@@ -70,13 +70,33 @@ export function visionGeometry(state, organ) {
   g.handle = Math.max(HANDLE.radius, g.cut + HANDLE.reach);
   return g;
 }
-const NEAR = Object.freeze({stops : 12, fill : .5, handle : .25});
+const NEAR = Object.freeze({stops : 12, fill : .5, handle : .25, object : .5});
+const nearDepth = (state, profile) => {
+  const [least, most] = state.capabilities?.nearDepth ?? [];
+  return least > 0 ? least * (most / least) ** unitOfPlan(profile.q2) : null;
+};
+// A test object outside the near sense's field or beyond its reach answers nothing, so choosing
+// the near sense brings it into the middle of the field, within half that reach.
+export function nearObject(state, organ, probe) {
+  const field = organ.field, profile = field?.profiles[0];
+  const depth = profile ? nearDepth(state, profile) : null;
+  if (!probe || !depth)
+    return probe;
+  const turn = Math.abs(probe.bearing), inField = turn >= field.lo && turn <= field.hi;
+  if (inField && probe.distance <= depth)
+    return probe;
+  return {
+    ...probe,
+    bearing : inField ? probe.bearing : sideOf(organ) * (field.lo + field.hi) / 2,
+    distance : Math.min(probe.distance, depth * NEAR.object)
+  };
+}
 function nearScale(state, profile, g) {
   const [least, most] = state.capabilities?.nearDepth ?? [];
   const body = state.anatomy?.bodyRadius;
   if (!(least > 0) || !(body > 0))
     return null;
-  const depth = least * (most / least) ** unitOfPlan(profile.q2);
+  const depth = nearDepth(state, profile);
   const span = g.handle - g.cut;
   const at = d => g.cut + span * Math.log(d / least) / Math.log(most / least);
   const depthAt = r => least * (most / least) ** ((r - g.cut) / span);

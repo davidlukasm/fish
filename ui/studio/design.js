@@ -2,6 +2,7 @@ import {
   beyondHandles,
   clearOfFish,
   nearAnswers,
+  nearObject,
   sensitivityEditor,
   spectrumEditor,
   visionFan
@@ -60,15 +61,16 @@ export const designMethods = {
     if (!organ.field || !this.state.capabilities)
       return;
     const side = sideOf(organ), probe = this.state.sightProbe;
-    const moved =
-        probe ? probe.side !== side &&
-                    clearOfFish(this.state, organ, {...probe, side, bearing : -probe.bearing})
-              : beyondHandles(
-                    this.state, organ,
-                    clearOfFish(this.state, organ,
-                                defaultSight(organ, this.state.capabilities, this.state.anatomy)));
-    if (moved) {
-      this.state.sightProbe = moved;
+    let next = !probe ? defaultSight(organ, this.state.capabilities, this.state.anatomy)
+               : probe.side !== side ? {...probe, side, bearing : -probe.bearing}
+                                     : probe;
+    if (organ.type === 'proximity')
+      next = nearObject(this.state, organ, next);
+    next = clearOfFish(this.state, organ, next);
+    if (!probe && organ.type === 'eye')
+      next = beyondHandles(this.state, organ, next);
+    if (next && next !== probe) {
+      this.state.sightProbe = next;
       this.requestDesign();
     }
   },
