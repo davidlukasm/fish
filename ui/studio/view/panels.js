@@ -4,11 +4,13 @@ import {lateralField} from './lateral.js';
 import {probeField} from './probes.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
 import {clamp, degrees, radians} from '../../units.js';
-import {adaptationElement, sensitivityElement} from './sensitivity.js';
+import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
+import {stimulusPicture} from './stimuli.js';
+import {scentColors} from '../../brain_model.js';
 import {driveElement} from './drive.js';
-import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
+import {contactFieldOf, contactHalfAngle, preferredScent} from '../../tuning.js';
 import {functionFor, isRegion, MUSCLE_LABEL_INDEX, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
@@ -192,35 +194,50 @@ function organSettings(state, organ, center) {
          (center.role === 'nerve' ? outgoingField(state, center) : '') + cellCount(organ, center) +
          (ROLE_SECTIONS[center.role] ?? nerveSection)(state, organ, center);
 }
-// What a sensory center's cells sense, as the stimulus its answer is drawn over.
-function stimulusName(state, center) {
+// What a sensory center's cells sense: the kind of stimulus its answer is drawn over, named.
+function stimulusKind(state, center) {
   const site = findSite(state.sites, center.site);
-  return tList('studio.inspector.stimuli')[site ? functionFor(center, site) : -1] ?? '';
+  return site ? functionFor(center, site) : -1;
 }
+const stimulusName = (state, center) =>
+    tList('studio.inspector.stimuli')[stimulusKind(state, center)] ?? '';
+// How a sensory center's stimulus is drawn at a strength: its kind's picture, a nose's in the
+// colour of the scent it prefers.
+function stimulusDrawing(state, center) {
+  const kind = stimulusKind(state, center);
+  const colour = kind === SENSE_KIND.odor ? scentColors?.[preferredScent(center)] : null;
+  return (share, point, title) => stimulusPicture(kind, share, point, title, colour);
+}
+// The axis a sensory center's stimulus runs on: from the engine's dimmest stimulus for intensity
+// senses, linear for the others.
+const stimulusAxis = (state, sense) => sense?.intensity ? state.anatomy?.lightDimmest : null;
 // What a sensory center answers over its stimulus, drawn from the engine's curve, with the
 // stimulus its adaptation is held at marked on it; while its handle is dragged, from the curve
 // the drag started from.
 export function sensorAnswer(state, center, shift = 1, start = null, dragged = null) {
   const sense = groupReport(state.document, state.anatomy, 'senses', center.id),
         answer = start ?? sense;
-  const graphic =
-      sensitivityElement(answer, answer?.intensity ? state.anatomy?.lightDimmest : null,
-                         {sensitivity : 'center', 'sensitivity-id' : center.id},
-                         label('inspector.sensitivity'), shift, dragged, sense?.adapt?.held);
+  const graphic = sensitivityElement(answer, stimulusAxis(state, answer),
+                                     {sensitivity : 'center', 'sensitivity-id' : center.id},
+                                     label('inspector.sensitivity'), stimulusDrawing(state, center),
+                                     shift, dragged, sense?.adapt?.held);
   return '<div data-sensitivity-block="center" data-sensitivity-id="' + escapeText(center.id) +
          '">' + graphic + '</div>';
 }
 // How a sensory center gets used to its stimulus held from the mark above, over time, for the
-// senses that adapt.
+// senses that adapt; the held stimulus drawn as it stays.
 export function sensorAdaptation(state, center, stretch = 1, start = null) {
-  const adapt = start ?? groupReport(state.document, state.anatomy, 'senses', center.id)?.adapt;
+  const sense = groupReport(state.document, state.anatomy, 'senses', center.id),
+        adapt = start ?? sense?.adapt;
   const steps =
       adapt ? t('studio.inspector.steps', {n : Math.round((adapt.response.length - 1) * stretch)})
             : '';
-  const graphic = adaptationElement(
-      adapt, {adaptation : 'center', 'adaptation-id' : center.id}, label('inspector.adaptation'),
-      steps, stretch,
-      escapeText(t('studio.inspector.held', {stimulus : stimulusName(state, center)})));
+  const draw = stimulusDrawing(state, center),
+        share = stimulusShare(adapt?.held ?? 0, stimulusAxis(state, sense)),
+        title = t('studio.inspector.held', {stimulus : stimulusName(state, center)});
+  const graphic = adaptationElement(adapt, {adaptation : 'center', 'adaptation-id' : center.id},
+                                    label('inspector.adaptation'), steps,
+                                    point => draw(share, point, title), stretch);
   return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
          graphic + '</div>';
 }

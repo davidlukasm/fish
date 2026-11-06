@@ -1,12 +1,14 @@
 import {formatNumber} from '../../strings.js';
 import {clamp, PERCENT} from '../../units.js';
 import {idSafe, rounded} from './markup.js';
+import {PICTURE} from './stimuli.js';
 
 // How strongly a sensory cell answers, over the stimulus: for intensity senses (light, scents,
 // flow, food, injury, blood) on a log axis from the engine's dimmest stimulus to full strength,
 // for bounded ones (touch, pressure) from nothing to full. The handle sits at the stimulus of
 // half the answer: the threshold. On the log axis moving it shifts the curve, as a threshold
-// scales the stimulus the answer depends on.
+// scales the stimulus the answer depends on. Under each of its TICKS the sense's stimulus is
+// drawn as strong as there (its share named in the picture's title), GAP below the tick.
 const SENSITIVITY = Object.freeze({
   width : 360,
   height : 104,
@@ -16,26 +18,34 @@ const SENSITIVITY = Object.freeze({
   plot : 66,
   handle : 7,
   ticks : 5,
-  tick : 4
+  tick : 4,
+  gap : 3
 });
 const BASELINE = SENSITIVITY.top + SENSITIVITY.plot;
+const PICTURE_Y = BASELINE + SENSITIVITY.tick + SENSITIVITY.gap + PICTURE.size / 2;
 // The axis: a log one from `dimmest` to 1, or a linear one from 0 to 1 when there is none.
 const axisFraction = (stimulus, dimmest) =>
     dimmest ? 1 - Math.log(stimulus) / Math.log(dimmest) : stimulus;
 const axisX = (stimulus, dimmest) =>
     SENSITIVITY.left + (SENSITIVITY.right - SENSITIVITY.left) * axisFraction(stimulus, dimmest);
 const stimulusAt = (f, dimmest) => dimmest ? Math.exp(Math.log(dimmest) * (1 - f)) : f;
+// How strong a stimulus looks: its place along the axis, from 0 to 1.
+export const stimulusShare = (stimulus, dimmest) => clamp(axisFraction(stimulus, dimmest));
+// A stimulus's share of full strength as text.
+export const stimulusText = (stimulus, dimmest) =>
+    formatNumber(PERCENT * stimulus, dimmest ? 2 : 0) + ' %';
 // The stimulus at a fraction of the element's width.
 export function sensitivityStimulus(fx, dimmest) {
   const S = SENSITIVITY, x = Math.max(S.left, Math.min(S.right, fx * S.width));
   return stimulusAt((x - S.left) / (S.right - S.left), dimmest);
 }
 // answer: the engine's curve ({response, half}); dimmest: the log axis' start, or null for a
-// linear one; shift: the factor a log threshold is moved by while dragging, before the engine
-// answers; half: where the handle is dragged to on a linear axis.
-// held: the stimulus the adaptation below is held at, marked on the curve.
-export function sensitivityElement(answer, dimmest, target, label, shift = 1, dragged = null,
-                                   held = null) {
+// linear one; picture(share, point, title): the sense's stimulus drawn; shift: the factor a log
+// threshold is moved by while dragging, before the engine answers; half: where the handle is
+// dragged to on a linear axis. held: the stimulus the adaptation below is held at, marked on the
+// curve.
+export function sensitivityElement(answer, dimmest, target, label, picture, shift = 1,
+                                   dragged = null, held = null) {
   if (!answer?.response?.length || !(answer.half > 0))
     return '';
   const S = SENSITIVITY, count = answer.response.length;
@@ -52,11 +62,8 @@ export function sensitivityElement(answer, dimmest, target, label, shift = 1, dr
     const stimulus = stimulusAt(k / (S.ticks - 1), dimmest);
     const tx = rounded(axisX(stimulus, dimmest));
     ticks += `<line class="aid-sensitivity-tick" x1="${tx}" y1="${BASELINE}" x2="${tx}" y2="${
-        BASELINE + S.tick}"/><text x="${tx}" y="${S.height - S.tick}" text-anchor="${
-        k === 0 ? 'start'
-        : k === S.ticks - 1
-            ? 'end'
-            : 'middle'}">${formatNumber(PERCENT * stimulus, dimmest ? 2 : 0)} %</text>`;
+        BASELINE + S.tick}"/>${
+        picture(k / (S.ticks - 1), {x : tx, y : PICTURE_Y}, stimulusText(stimulus, dimmest))}`;
   }
   const clip = 'aid-sensitivity-clip-' + Object.values(target).map(idSafe).join('-');
   return `<svg class="aid-sensitivity" viewBox="0 0 ${S.width} ${S.height}"${
@@ -88,17 +95,18 @@ function heldMark(answer, dimmest, shift, held) {
 const HELD_MARK = 4.5;
 
 // How a sensory cell gets used to a held stimulus: its answer step by step over a few of its time
-// constants. The handle sits at one time constant; moving it stretches the curve in time.
-const ADAPTATION =
-    Object.freeze({width : 360, height : 104, left : 12, right : 348, top : 10, plot : 66});
+// constants, the stimulus drawn HELD times along the first SPAN of the time axis as it stays. The
+// handle sits at one time constant; moving it stretches the curve in time.
+const ADAPTATION = Object.freeze(
+    {width : 360, height : 104, left : 12, right : 348, top : 10, plot : 66, held : 4, span : .6});
 const ADAPT_BASE = ADAPTATION.top + ADAPTATION.plot;
 // The time constant in steps at a fraction of the element's width, for a curve of `count` steps.
 export function adaptationSteps(fx, count) {
   const A = ADAPTATION, x = Math.max(A.left, Math.min(A.right, fx * A.width));
   return Math.max(1, (x - A.left) / (A.right - A.left) * count);
 }
-// caption: what is held, written at the start of the curve.
-export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1, caption = '') {
+// held(point): the held stimulus drawn around a point.
+export function adaptationElement(adapt, target, label, stepsLabel, held, stretch = 1) {
   if (!adapt?.response?.length || !(adapt.steps > 0))
     return '';
   const A = ADAPTATION, count = adapt.response.length - 1;
@@ -109,6 +117,12 @@ export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1,
   const at = adapt.response[Math.min(count, Math.round(adapt.steps))];
   const attributes =
       Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
+  const pictures =
+      Array
+          .from({length : A.held},
+                (_, k) => held(
+                    {x : A.left + (A.right - A.left) * A.span * k / (A.held - 1), y : PICTURE_Y}))
+          .join('');
   return `<svg class="aid-sensitivity aid-adaptation" viewBox="0 0 ${A.width} ${A.height}"${
       attributes} role="img" aria-label="${label}"><line class="aid-sensitivity-axis" x1="${
       A.left}" y1="${ADAPT_BASE}" x2="${A.right}" y2="${
@@ -116,10 +130,8 @@ export function adaptationElement(adapt, target, label, stepsLabel, stretch = 1,
       A.top}" x2="${rounded(ax(steps))}" y2="${
       ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
       points.join(' L')}"/><circle class="aid-held-mark" cx="${A.left}" cy="${
-      rounded(ADAPT_BASE -
-              A.plot * adapt.response[0])}" r="${HELD_MARK}"/><text class="aid-held-caption" x="${
-      A.left + HELD_MARK * 2}" y="${A.top + HELD_MARK}">${
-      caption}</text><circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
+      rounded(ADAPT_BASE - A.plot * adapt.response[0])}" r="${HELD_MARK}"/>${
+      pictures}<circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
       rounded(ax(
           steps))}" cy="${rounded(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
       A.right}" y="${A.height - SENSITIVITY.tick}" text-anchor="end">${stepsLabel}</text></svg>`;

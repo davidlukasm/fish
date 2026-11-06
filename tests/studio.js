@@ -216,6 +216,16 @@ function semanticFingerprint(source) {
       globalThis.cancelAnimationFrame = oldCancel;
     }
   }
+  // Every sense draws its stimulus on its charts, differently as it grows, named in its title.
+  {
+    const {stimulusPicture} = await import('../ui/studio/view/stimuli.js');
+    const {SENSE_KIND} = await import('../ui/schema.js');
+    for (const kind of Object.values(SENSE_KIND)) {
+      const [weak, strong] = [ 0, 1 ].map(s => stimulusPicture(kind, s, {x : 0, y : 0}, 'held'));
+      assert.match(weak, /<title>held<\/title>/);
+      assert.notEqual(weak, strong, 'A stronger stimulus looks stronger');
+    }
+  }
   const geometry = {
     ...await import('../ui/studio/model/layout.js'),
     ...await import('../ui/studio/view/frame.js')

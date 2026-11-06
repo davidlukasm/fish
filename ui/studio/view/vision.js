@@ -1,6 +1,6 @@
 import {labelledText, percent, t} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
-import {RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
+import {RECEPTOR, SENSE_KIND, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
   lightColor,
@@ -10,6 +10,7 @@ import {
   spectrumValues
 } from './spectrum.js';
 import {sensitivityElement} from './sensitivity.js';
+import {stimulusPicture} from './stimuli.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
@@ -354,7 +355,10 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
   const graphic = sensitivityElement(
       light, state.anatomy?.lightDimmest,
       {sensitivity : 'field', 'sensitivity-id' : organ.id, 'profile-id' : profile.id},
-      label('sensitivity'), shift);
+      label('sensitivity'),
+      (share, point, title) =>
+          stimulusPicture(SENSE_KIND.light, share, point, title, profileColor(profile)),
+      shift);
   return `<div data-sensitivity-block="field" data-sensitivity-id="${
       idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}">${graphic}${
       graphic ? `<div class="aid-profile-values"><span>${label('half')}</span><span>${

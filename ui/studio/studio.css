@@ -696,7 +696,22 @@
 .aid-teacher-list button{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
 .aid-held-mark{fill:var(--aid-teach);stroke:var(--aid-node-edge);stroke-width:1.2}
 .aid-held-line{stroke:#e2c48799;stroke-width:1;stroke-dasharray:3 3}
-.aid-held-caption{fill:var(--aid-teach);font-size:11px}
+/* A sense's stimulus drawn on its charts, in its kind's colour unless its own sets one. */
+.aid-stimulus{color:var(--aid-axis-text)}
+.aid-stimulus.k-light{color:#f3e7a1}
+.aid-stimulus.k-odor{color:#c9b5e8}
+.aid-stimulus.k-flow{color:#8fd3e8}
+.aid-stimulus.k-touch{color:#e9c8a8}
+.aid-stimulus.k-proximity{color:#b9d7c9}
+.aid-stimulus.k-intake{color:#d9b26f}
+.aid-stimulus.k-damage{color:#e48a8a}
+.aid-stimulus.k-bladder_pressure{color:#6fb7d9}
+.aid-stimulus.k-gonad_pressure{color:#f0c48a}
+.aid-stimulus.k-inner_pressure{color:#c9a3d9}
+.aid-stimulus.k-blood{color:#d9606a}
+.aid-stimulus .skin{stroke:#cfe3da;stroke-width:1.4}
+.aid-stimulus .surface{stroke:currentColor;stroke-width:1.2}
+.aid-stimulus .fish{fill:#e9f2ee}
 
 .aid-compiler { margin:0 0 0 auto; align-self:center; padding:0; border:0; position:relative; font-size:12px; }
 .aid-compiler summary { cursor:pointer; padding:8px 12px; }
