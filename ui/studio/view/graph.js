@@ -14,24 +14,28 @@ const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + i
                                      : t('units.numbered', {name : label('cppn.hidden'), n : id});
 export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
 const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
-function project(report, scope, shape, selection = null) {
-  const cppn = report.cppn, inputCount = shape.cppnInputs, outputCount = shape.cppnOutputs;
-  const nodes = new Map(cppn.nodes.map(n => [n[0], n]));
-  const requested = Array.from({length : outputCount}, (_, i) => i + inputCount).filter(id => {
-    const output = id - inputCount;
+// The outputs a scope shows: all, the cells' identity, the traits or the addresses.
+function scopeOutputs(scope, shape) {
+  const inputs = shape.cppnInputs;
+  return Array.from({length : shape.cppnOutputs}, (_, i) => i + inputs).filter(id => {
+    const output = id - inputs;
     return scope === 'all' || (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
            (scope === 'traits' && output >= CPPN_OUTPUT.capacity &&
             output <= CPPN_OUTPUT.quality_width) ||
            (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
   });
+}
+// The nodes each node hears through an enabled link.
+function incomingLinks(cppn) {
   const incoming = new Map();
-  for (const link of cppn.links.map(cppnLink)) {
-    if (!link.enabled)
-      continue;
-    const list = incoming.get(link.to) ?? [];
-    list.push(link.from);
-    incoming.set(link.to, list);
-  }
+  for (const link of cppn.links.map(cppnLink))
+    if (link.enabled)
+      incoming.set(link.to, [...(incoming.get(link.to) ?? []), link.from ]);
+  return incoming;
+}
+// What the graph shows: the inputs, the outputs asked for and all they hear from, and a chosen
+// node.
+function shownNodes(requested, incoming, inputCount, selection) {
   const included = new Set([...requested, ...Array.from({length : inputCount}, (_, i) => i) ]);
   if (selection?.kind === 'node')
     included.add(selection.id);
@@ -47,6 +51,10 @@ function project(report, scope, shape, selection = null) {
   };
   for (const id of requested)
     ancestors(id);
+  return included;
+}
+// How many links deep a node lies behind the inputs (a loop counts once).
+function linkDepth(incoming, inputCount) {
   const layer = new Map(), visit = new Set();
   const depth = id => {
     if (layer.has(id))
@@ -59,6 +67,16 @@ function project(report, scope, shape, selection = null) {
     layer.set(id, value);
     return value;
   };
+  return depth;
+}
+// The graph laid out in columns: inputs first, outputs last, every other node by its depth; each
+// column's nodes spread evenly down it.
+function project(report, scope, shape, selection = null) {
+  const cppn = report.cppn, inputCount = shape.cppnInputs;
+  const nodes = new Map(cppn.nodes.map(n => [n[0], n]));
+  const requested = scopeOutputs(scope, shape), incoming = incomingLinks(cppn);
+  const included = shownNodes(requested, incoming, inputCount, selection);
+  const depth = linkDepth(incoming, inputCount);
   for (const id of included)
     depth(id);
   const G = CPPN_GRAPH, last = Math.max(G.columns - 1, ...requested.map(id => depth(id) + 1));
@@ -69,9 +87,7 @@ function project(report, scope, shape, selection = null) {
     const column = id < inputCount          ? 0
                    : requested.includes(id) ? last
                                             : Math.min(last - 1, depth(id));
-    const existing = columns.get(column) ?? [];
-    existing.push(id);
-    columns.set(column, existing);
+    columns.set(column, [...(columns.get(column) ?? []), id ]);
   }
   const height =
       Math.max(G.height, G.row * Math.max(...[...columns.values()].map(ids => ids.length)));
