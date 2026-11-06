@@ -3,7 +3,6 @@ import {substanceColor} from '../../hormones.js';
 import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TEACH_ICON, TOOL_ICON} from './icons.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
-import {howtoScene} from './howto.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {MODULES, NEURON_BY_KEY, NEURONS, ORGAN_BY_KEY, ORGANS, PAIRINGS} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
@@ -272,12 +271,11 @@ export function workflow() {
          WORKFLOW
              .map(key => '<li><button type="button" data-tool="' + key + '" title="' +
                          label('tools.' + key) + '">' +
-                         glyph(TOOL_ICON[key], ICON.workflow, {line : true}) + '</button><div>' +
-                         howtoScene(key) + '<span>' + label('workflow.' + key) +
-                         '</span></div></li>')
+                         glyph(TOOL_ICON[key], ICON.workflow, {line : true}) + '</button><span>' +
+                         label('workflow.' + key) + '</span></li>')
              .join('') +
-         '<li><span class="aid-workflow-mark">→</span><div>' + howtoScene('develop') + '<span>' +
-         label('workflow.develop') + '</span></div></li></ol>';
+         '<li><span class="aid-workflow-mark">→</span><span>' + label('workflow.develop') +
+         '</span></li></ol>';
 }
 export function toolPalette(state) {
   const tools = [ 'select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan' ];
