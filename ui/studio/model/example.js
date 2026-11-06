@@ -40,7 +40,8 @@ const WIRES = Object.freeze([
   [ 'bulb', 'pallium' ], [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ],
   [ 'lateral', 'hindbrain' ], [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ],
   [ 'pallium', 'bite' ], [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ],
-  [ 'hypothalamus', 'reward' ], [ 'hypothalamus', 'reward:twin' ]
+  [ 'hypothalamus', 'reward' ], [ 'hypothalamus', 'reward:twin' ], [ 'hypothalamus', 'growth' ],
+  [ 'hypothalamus', 'growth:twin' ]
 ]);
 const GROWTH_CELLS = Object.freeze({eggs : 11, sperm : 3});
 const REWARD = Object.freeze({sensitivity : 1, half : .1, teaching : .5});
