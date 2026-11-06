@@ -99,6 +99,7 @@ function semanticFingerprint(source) {
     functionFor,
     kindLimit,
     musclePlaces,
+    nerveKind,
     nodeLimit,
     organFunction
   } = await import('../ui/studio/model/organs.js');
@@ -872,9 +873,23 @@ function semanticFingerprint(source) {
     effect : E.learning
   });
   assert.match(learner, /data-learn-rate/);
-  // Without a teacher the rule says the cell learns nothing; its hormone rows offer one.
-  assert.match(learner, /aid-rule-teach none/);
-  assert.match(learner, new RegExp('data-effect="' + E.excitation + '"'));
+  // Without a teacher the episode's teaching arrow stays dashed; each part of learning offers a
+  // substance for it, the teaching signal too.
+  assert.match(learner, /aid-episode-arrow teach none/);
+  for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
+    assert.match(learner,
+                 new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
+  // The learning tool offers its own library: the cells learning needs and, per substance, what
+  // it can do to learning.
+  const learnShelf = panels.libraryOf({...state, tool : 'learn'});
+  assert.equal(learnShelf.kind, 'learning');
+  for (const key of ['learn', 'modulate', 'pacemaker'])
+    assert.match(learnShelf.html, new RegExp('data-drag-kind="neuron" data-drag-value="' + key));
+  for (const effect of [E.excitation, E.learning, E.competition, E.eligibility])
+    assert.match(learnShelf.html, new RegExp('data-drag-value="0:' + effect + '"'));
+  assert.doesNotMatch(learnShelf.html, new RegExp('data-drag-value="0:' + E.death + '"'));
+  assert.equal(panels.libraryOf({...state, tool : 'hormone'}).kind, 'hormones');
+  assert.equal(panels.libraryOf({...state, tool : 'select'}).kind, 'organs');
   // With nothing chosen the inspector shows the way through the Atelier, its steps as tools.
   const guide = panels.inspector({...state, selected : null});
   assert.match(guide, /aid-workflow/);
@@ -993,6 +1008,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const learning = examplePallium.centers.filter(c => c.stream);
   assert.deepEqual(learning.map(c => c.stream), [ 'olfactory', 'tectum' ]);
   assert.ok(learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
+  // A modulator wired onto one of its learners teaches it and opens no stream of its own.
+  const teacherPlaced =
+      model.addNeuron(exampleStudio.state.document, 'modulate', sites,
+                      geometry.sitePoint(sites.find(x => x.id === learning[0].site)));
+  const teacherWired =
+      model.addWire(teacherPlaced.document, teacherPlaced.centerId, learning[0].id);
+  const taughtPallium = regionModel.settleRegions(teacherWired.document, sites)
+                            .organs.find(o => o.id === examplePallium.id);
+  assert.deepEqual(taughtPallium.centers.filter(c => c.stream).map(c => c.stream),
+                   [ 'olfactory', 'tectum' ]);
   assert.match(panels.inspector({
     ...state,
     document : exampleStudio.state.document,
@@ -1223,6 +1248,41 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   chooser.select(null, null);
   assert.equal(chooser.state.selected, null);
   assert.equal(chooser.state.visionProfile, 'extra');
+  // With the learning tool a modulator dropped onto a nerve center is placed and wired to teach
+  // it; the learner stays chosen.
+  const toTeach = model.addNeuron(model.newDocument('Lehrer'), 'learn', sites, {x : 380, y : 325});
+  const teacherStudio = new OrganStudio(emptyRoot);
+  teacherStudio
+      .state = {...teacherStudio.state, ...state, document : toTeach.document, tool : 'learn'};
+  teacherStudio.refreshScene = teacherStudio.refreshInspector = teacherStudio.refreshHeader =
+      () => {};
+  teacherStudio.api = () => new Promise(() => {});
+  assert.ok(teacherStudio.ontoNerve('neuron', 'modulate') &&
+            !teacherStudio.ontoNerve('neuron', 'relay'));
+  const learnerCell = model.findCenter(toTeach.document, toTeach.centerId).center;
+  teacherStudio.dropOntoNerve(
+      'modulate', {element : {dataset : {center : learnerCell.id}}, centers : [ learnerCell ]},
+      {x : 380, y : 325});
+  const teaching = teacherStudio.state.document.wires.filter(w => w.to === learnerCell.id);
+  assert.equal(teaching.length, 1);
+  assert.equal(model.findCenter(teacherStudio.state.document, teaching[0].from).center.key,
+               'modulate');
+  assert.deepEqual(teacherStudio.state.selected, {kind : 'center', id : learnerCell.id});
+  assert.equal(teacherStudio.state.tool, 'learn');
+  // A learning circuit dropped onto a relay makes that node learn in competition; its marker
+  // follows what it is.
+  const relayNode =
+      model.addNeuron(teacherStudio.state.document, 'relay', sites, {x : 420, y : 325});
+  teacherStudio.state.document = relayNode.document;
+  const relayCell = model.findCenter(relayNode.document, relayNode.centerId).center;
+  assert.equal(nerveKind(relayCell), 'relay');
+  teacherStudio.dropOntoNerve(
+      'learn', {element : {dataset : {center : relayCell.id}}, centers : [ relayCell ]},
+      {x : 420, y : 325});
+  const learned = model.findCenter(teacherStudio.state.document, relayCell.id).center;
+  assert.equal(nerveKind(learned), 'learn');
+  assert.equal(learned.key, 'relay');
+  assert.ok(learned.qwidth > 0);
   // Explicit deletion only: a move ending outside the fish is cancelled.
   const movement = new OrganStudio({
     querySelector : () => ({
@@ -1472,9 +1532,35 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       selected : {kind : 'center', id : learnNode.centerId},
       effect : HORMONE_EFFECT.learning
     });
-    assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode'));
-    assert.ok(learnPanel.includes('data-receptor-substance'),
-              'The open hormone row shows its receptor');
+    assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
+              learnPanel.includes('data-learn-trace'));
+    // A competing cell learns without a teacher too: the line firing with it grows, the still one
+    // shrinks.
+    assert.match(learnPanel, /ohne Lehrer: nur Wettbewerb/);
+    const widths = [
+      ...learnPanel.matchAll(
+          /aid-episode-line[^>]*><animate attributeName="stroke-width" values="([^"]+)"/g)
+    ].map(m => m[1].split(';').map(Number));
+    assert.ok(Math.max(...widths[0]) > widths[0][0] && Math.min(...widths[1]) < widths[1][0]);
+    // The trace's handle sits at the trace's time and reads it back.
+    const traceHandle = /data-graphic-handle="learn-trace" cx="([^"]+)"/.exec(learnPanel);
+    const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
+    assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).tau - learnCell.tau) <
+              1e-2);
+    // A substance's track sets what plenty of it does, nothing in its middle.
+    assert.ok(Math.abs(learningView.learnResponseOf(.5)) < 1e-9);
+    // Bound to a substance, a part of learning shows the substance's track and plays in its
+    // colour; the teaching substance teaches in the episode.
+    const taughtDoc =
+        model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.excitation, 0);
+    const taughtPanel = learningView.learningInspector({
+      document : model.addSubstance(taughtDoc, HORMONES.levels),
+      sites,
+      capabilities : sitesResult,
+      selected : {kind : 'center', id : learnNode.centerId}
+    });
+    assert.match(taughtPanel, /data-learn-receptor="[^"]+" data-learn-effect="0"/);
+    assert.doesNotMatch(taughtPanel, /aid-episode-arrow teach none/);
     // A skin sense's handles read back what they show: its field's edge how far round the body
     // the cell feels, its middle hair's tip how sensitive it is.
     const skinView = await import('../ui/studio/view/skin.js');

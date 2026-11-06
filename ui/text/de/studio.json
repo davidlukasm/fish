@@ -222,6 +222,8 @@
     "learning": "Lernregel",
     "rhythm": "Eigenrhythmus",
     "template": "Vorlage",
+    "modulates": "Was er bewirkt",
+    "teachesNobody": "Noch mit keiner Nervenzelle verschaltet.",
     "exciting": "erregend",
     "inhibiting": "hemmend",
     "transmitter": "Überträger",
@@ -265,7 +267,7 @@
     "hormoneProfile": "Stoffprofil",
     "reserve": "Energiereserve",
     "modulation": "Modulationswirkung",
-    "selectLearning": "Wähle ein Nervenzentrum.",
+    "selectLearning": "Wähle einen Nervenknoten, auch in einer Gehirnregion.",
     "stimulusThreshold": "Reizschwelle",
     "restActivity": "Ruheaktivität",
     "restDrive": "Grundaktivität",
@@ -356,7 +358,6 @@
       "half": "halbe Bindung",
       "steepness": "Steilheit"
     },
-    "teaches": "Lehrt",
     "beat": "Ruhe und Takt",
     "beatSteps": "ein Schlag alle {n} Schritte",
     "afterglow": "Ruhe und Nachklingen",
@@ -879,7 +880,7 @@
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tiles": [
       "feuern lassen",
-      "schneller lernen",
+      "Lerntempo ändern",
       "Wettbewerb schärfen",
       "eigenes Feuern anrechnen",
       "Takt verstärken",
@@ -887,26 +888,26 @@
       "absterben lassen"
     ],
     "tileTitles": [
-      "Der Stoff kommt zum Eingang der Zelle dazu, sie feuert mehr.",
-      "Die Zelle lernt bis doppelt so schnell.",
-      "Starke Eingänge wachsen, schwache schrumpfen stärker.",
-      "Die Lernzelle rechnet sich ihr eigenes Feuern an statt des Schlags ihres Taktgebers.",
+      "Der Stoff kommt zum Eingang der Zelle dazu, sie feuert mehr. Bei einer lernenden Zelle ist sein Anstieg das Lehrsignal.",
+      "Jede Überraschung ändert die Verbindungen der Zelle bis doppelt so stark.",
+      "Was mit der Zelle feuert, wächst schneller, der Rest schrumpft schneller.",
+      "Die Merkspur markiert Eingänge beim eigenen Feuern der Zelle statt beim Schlag ihres Taktgebers.",
       "Der Taktgeber schlägt stärker.",
       "Die Zelle gibt weniger weiter, bis sie verstummt.",
       "Ab einer Schwelle stirbt die Zelle, ihre Verbindungen verschwinden."
     ],
     "where": [
-      "bei Nervenzellen, Muskeln und Drüsen; bei Lernzellen ist es das Lehrsignal",
-      "bei Lernzellen",
-      "bei Lernzellen mit Lernart Wettbewerb",
-      "bei Lernzellen mit Taktgeber",
+      "bei Nervenzellen, Muskeln und Drüsen",
+      "bei Nervenzellen",
+      "bei Nervenzellen mit Lernart Wettbewerb",
+      "bei Nervenzellen mit Taktgeber",
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
       "bei allen Zellen"
     ],
     "effects": [
       "lässt feuern",
-      "beschleunigt Lernen",
+      "ändert Lerntempo",
       "schärft Wettbewerb",
       "rechnet eigenes Feuern an",
       "verstärkt Takt",
@@ -929,27 +930,89 @@
     "dropHint": "Wirkungen aus einer Stoffkarte auf ein Organ oder einen Knoten ziehen.",
     "noTarget": "Hier wirkt das nicht."
   },
-  "learnRule": {
-    "teaching": "Lehrsignal",
-    "firing": "feuert",
-    "still": "still",
-    "output": "Ausgang",
-    "gain": "Lernfähigkeit {n} %",
-    "untaught": "ohne Lehrsignal kein Lernen",
-    "modulator": "Modulator",
-    "rate": "Lernfähigkeit",
-    "slow": "langsam",
-    "fast": "schnell",
-    "mode": "Lernart",
-    "trace": "Anrechnung: eigenes Feuern oder Takt",
-    "none": "aus",
-    "parts": [
+  "neuronPurpose": {
+    "relay": "gibt weiter, was ihn erreicht",
+    "inhibit": "hemmt die Zellen, die er erreicht",
+    "learn": "lernt auch ohne Lehrer: was mit ihm feuert, wächst, der Rest schrumpft. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lernt dieser so.",
+    "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich seinen Takt anrechnen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
+    "modulate": "Lehrer: sein Feuern ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
+  },
+  "learnCard": {
+    "cells": "Zellen fürs Lernen",
+    "substances": "Stoffe fürs Lernen",
+    "tiles": [
       "Lehrsignal",
-      "Lernfähigkeit",
+      "Lerntempo",
       "Wettbewerb",
       "Anrechnung"
     ],
-    "byHormoneOf": "{part} durch Hormon"
+    "tileTitles": [
+      "Ein Anstieg dieses Stoffs ist das Lehrsignal der Zelle: er stärkt, was sie sich gemerkt hat.",
+      "Der Stoff ändert, wie stark jede Überraschung die Verbindungen ändert.",
+      "Der Stoff ändert, wie schnell was mitfeuert wächst und der Rest schrumpft.",
+      "Der Stoff verschiebt, was die Merkspur markiert: eigenes Feuern oder den Takt."
+    ],
+    "wired": {
+      "modulate": "Verschaltet: lehrt jetzt diesen Knoten.",
+      "pacemaker": "Verschaltet: gibt diesem Knoten jetzt den Takt."
+    },
+    "learns": "Dieser Knoten lernt jetzt im Wettbewerb."
+  },
+  "learnRule": {
+    "teaching": "Lehrsignal",
+    "firing": "feuert mit",
+    "inBeat": "im Takt",
+    "still": "still",
+    "output": "Ausgang",
+    "beat": "Takt",
+    "expect": "Erwartung",
+    "gain": "Lerntempo {n} %",
+    "untaught": "ohne Lehrer lernt sie nicht",
+    "untaughtMode": "ohne Lehrer: nur {mode}",
+    "modulator": "Modulator",
+    "substance": "Stoff",
+    "noTeacher": "Noch kein Lehrer: einen Modulator aus dem Baukasten auf die Zelle ziehen.",
+    "rate": "Lerntempo",
+    "slow": "lernt nicht",
+    "off": "lernt nicht: Lerntempo null",
+    "nodes": "Knoten dieser Region",
+    "fast": "schnell",
+    "mode": "Lernart",
+    "trace": "Merkspur",
+    "traceLength": "Wie lange die Merkspur hält",
+    "short": "kurz",
+    "lasts": "hält etwa {n} Schritte",
+    "none": "kein Stoff",
+    "by": [
+      "Lehrsignal durch einen Stoff",
+      "Lerntempo durch einen Stoff",
+      "Wettbewerb durch einen Stoff",
+      "Anrechnung durch einen Stoff"
+    ],
+    "strength": [
+      "Was ein Anstieg des Stoffs bewirkt",
+      "Wie schnell die Zelle mit viel Stoff lernt",
+      "Wie stark der Wettbewerb mit viel Stoff ist",
+      "Was die Merkspur mit viel Stoff anrechnet"
+    ],
+    "low": [
+      "Anstieg schwächt",
+      "steht still",
+      "aus",
+      "nur Takt"
+    ],
+    "middle": [
+      "wirkungslos",
+      "unverändert",
+      "unverändert",
+      "halb und halb"
+    ],
+    "high": [
+      "Anstieg stärkt",
+      "doppelt",
+      "doppelt",
+      "nur eigenes Feuern"
+    ]
   },
   "compiler": {
     "title": "Bauprüfung",

@@ -13,7 +13,6 @@ import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
 import {compilerPanel, acceptedGenome} from './view/compiler.js';
 import {beginEggPlacement} from '../world.js';
-import {HORMONE_EFFECT} from '../schema.js';
 import {postJson, savedGenome, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
@@ -50,7 +49,7 @@ import {
   stationShell
 } from './view/shell.js';
 import {measureReading} from './view/substances.js';
-import {hormoneLibrary, library, toolPalette} from './view/library.js';
+import {libraryOf, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
 import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.js';
@@ -242,27 +241,25 @@ export class OrganStudio {
         this.refreshInspector();
       }
     }
-    if (tool === 'learn' && ![HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning,
-                              HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition]
-                                 .includes(this.state.effect))
-      this.state.effect = HORMONE_EFFECT.learning;
     this.clearPreview();
     this.refreshTools();
     this.refreshLibrary();
     this.refreshViews();
   }
-  // The library offers organs to place, or with the hormone tool the substances and what they do.
+  // The library offers organs to place, with the hormone tool the substances and what they do,
+  // with the learning tool the cells and substances learning needs.
   refreshLibrary() {
     const scroll = this.root.querySelector('.aid-library-scroll');
     if (!scroll || this.state.mode !== 'fish')
       return;
-    const hormones = this.state.tool === 'hormone';
+    const offered = libraryOf(this.state);
     // The substance cards need more room than the organ tiles.
-    this.root.querySelector('.aid-workspace-main')?.classList.toggle('hormones', hormones);
-    if (!hormones && scroll.dataset.library !== 'hormones')
+    this.root.querySelector('.aid-workspace-main')
+        ?.classList.toggle('cards', offered.kind !== 'organs');
+    if (offered.kind === 'organs' && scroll.dataset.library === 'organs')
       return;
-    scroll.innerHTML = hormones ? hormoneLibrary(this.state) : library(this.state);
-    scroll.dataset.library = hormones ? 'hormones' : 'organs';
+    scroll.innerHTML = offered.html;
+    scroll.dataset.library = offered.kind;
   }
   wirePoint(selection) {
     const points = selectionCenters(this.state.document, selection)
@@ -418,7 +415,7 @@ export class OrganStudio {
     this.refreshScene();
     this.refreshHeader();
     this.refreshTools();
-    if (this.state.tool === 'hormone')
+    if (this.state.tool === 'hormone' || this.state.tool === 'learn')
       this.refreshLibrary();
     if (updateInspector)
       this.refreshInspector();

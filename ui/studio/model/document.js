@@ -153,19 +153,20 @@ export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
                        : []);
-// A substance teaches a nerve center when it binds its learning rate, its eligibility trace or
-// its excitation: excitation is the teaching signal of learning cells, so a gland releasing it
-// rewards or punishes what they learn.
-const TEACHING_EFFECTS = Object.freeze(
-    [ HORMONE_EFFECT.learning, HORMONE_EFFECT.eligibility, HORMONE_EFFECT.excitation ]);
+// What a substance can do to a nerve center's learning: its excitation is the cell's teaching
+// signal (a gland releasing it rewards or punishes what the cell learns), the others change the
+// learning rate, the competition and what the trace credits.
+export const LEARNING_EFFECTS = Object.freeze([
+  HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
+  HORMONE_EFFECT.eligibility
+]);
 export const learners = (doc, index, wheel) => allCenters(doc).filter(
     c => c.role === 'nerve' &&
-         boundEffects(c, index, wheel).some(effect => TEACHING_EFFECTS.includes(effect)));
-// The substances a nerve center learns from, each with the glands releasing it.
+         boundEffects(c, index, wheel).some(effect => LEARNING_EFFECTS.includes(effect)));
+// The substances teaching a nerve center, each with the glands releasing it.
 export function teachersOf(doc, center, wheel) {
   return doc.substances
-      .filter(sub => boundEffects(center, sub.index, wheel)
-                         .some(effect => TEACHING_EFFECTS.includes(effect)))
+      .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.excitation))
       .map(sub => ({substance : sub, glands : producers(doc, sub.index, wheel)}));
 }
 export const receivers = (doc, index, wheel) =>
@@ -449,6 +450,16 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
   const center = {...defaults(desc, site), ...properties};
   draft.organs.find(o => o.id === 'brain').centers.push(center);
   return {document : draft, centerId : center.id, organId : 'brain'};
+}
+// A nerve center made to learn as a learning circuit does, whatever its template: in
+// competition, at least as fast as a new center learns.
+export function makeLearner(doc, id) {
+  const center = findCenter(doc, id)?.center;
+  if (center?.role !== 'nerve')
+    return null;
+  return updateCenter(
+      doc, id,
+      {mode : NEURON_BY_KEY.learn.mode, qwidth : Math.max(center.qwidth, NEW_CENTER.qwidth)});
 }
 export function moveCenter(doc, centerId, target, sites) {
   const result = findCenter(doc, centerId);
@@ -872,6 +883,24 @@ export function setLifePhase(doc, id, phase, span, steps) {
 // A new growth receptor lets the body grow at full pace once even a little of its hormone is
 // present.
 export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
+// A receptor bound to the substance at `index` starts this strong, binding at this level, unless
+// it was tuned before: most effects rise with the substance, output falls (it starts full),
+// cells die only above half.
+const RECEPTOR_START = Object.freeze({
+  [HORMONE_EFFECT.excitation] : {sensitivity : .5, half : .1},
+  [HORMONE_EFFECT.learning] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.competition] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.eligibility] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.rhythm] : {sensitivity : 1, half : .1},
+  [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
+  [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
+});
+export function bindReceptor(doc, id, effect, index) {
+  const current = findCenter(doc, id)?.center.receptors[effect];
+  return updateReceptor(
+      doc, id, effect,
+      {...(current?.sensitivity ? {} : RECEPTOR_START[effect]), active : 1, substance : index});
+}
 // A receptor switched on or off. One switched on that answered nothing yet answers with
 // RECEPTOR_ONSET: an output receptor rests at full output, so its substance lowers it; the others
 // it raises.

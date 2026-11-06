@@ -1,4 +1,4 @@
-import {NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
+import {isModulator, NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
@@ -30,11 +30,16 @@ export function initialRegion(type, site) {
   };
 }
 
-// The organs wired into a region, as a whole or at one of its nodes.
+// The organs wired into a region, as a whole or at one of its nodes. A modulator does not feed
+// it: it only teaches the nodes it reaches.
 export function fedBy(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
+  const teaches = id => {
+    const center = findCenter(doc, id)?.center;
+    return center?.role === 'nerve' && isModulator(center);
+  };
   return [...new Set(expandedWires(doc)
-                         .filter(link => own.has(link.to))
+                         .filter(link => own.has(link.to) && !teaches(link.from))
                          .map(link => organOf(doc, link.from))
                          .filter(Boolean)) ];
 }

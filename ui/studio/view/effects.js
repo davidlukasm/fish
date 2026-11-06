@@ -1,16 +1,15 @@
 import {HORMONE_EFFECT} from '../../schema.js';
 import {fixed} from './markup.js';
+import {lessonScene} from './episode.js';
 
 // What each of the hormones' effects does to a cell, played in a loop of PLAY seconds: the cell
 // as it is without the substance, then the substance arriving as a cloud in its colour (from
 // ARRIVE to HERE of the loop, CLOUD times the cell wide), then the cell as it is with it, as the
 // engine's cell step has it (colony-core/field/substrate.cc):
-// - firing: the substance adds to what the cell takes in, so it fires more (for a learning cell
-//   this is its teaching signal; a muscle or gland works harder);
-// - learning: the cell's learning rate rises, its input's line grows more with each meeting;
-// - competition: a cell learning in competition lets its strong input grow and its weak one
-//   shrink the more;
-// - eligibility: a learning cell credits its own firing instead of its pacemaker's beat;
+// - firing: the substance adds to what the cell takes in, so it fires more (a muscle or gland
+//   works harder); for a learning cell its rise is the teaching signal (episode.js);
+// - learning, competition, eligibility: what the substance changes in learning, as an episode
+//   (episode.js);
 // - rhythm: a pacemaker beats the stronger;
 // - output: the cell passes less on (what it sends shrinks), down to nothing;
 // - death: past a threshold the cell dies and its connections go.
@@ -78,21 +77,6 @@ function sent(moments, r, r2) {
                 '</circle>')
       .join('');
 }
-// A line's width growing by STEP at each meeting, BIG with the substance.
-function growing(meetings, step, big, shrink = false) {
-  const values = [ S.thick ], times = [ 0 ];
-  let w = S.thick;
-  for (const t of meetings) {
-    values.push(fixed(w));
-    times.push(fixed(t));
-    w = Math.max(1, w + (shrink ? -1 : 1) * (t < S.here ? step : big));
-    values.push(fixed(w));
-    times.push(fixed(t + S.flash * 2));
-  }
-  values.push(fixed(w), S.thick);
-  times.push(.98, 1);
-  return loop('stroke-width', values, times);
-}
 const wave = amplitude => {
   const W = S.wave, points = [];
   for (let k = 0; k <= W.steps; ++k)
@@ -100,21 +84,11 @@ const wave = amplitude => {
                 fixed(W.y + amplitude * Math.sin(2 * Math.PI * W.turns * k / W.steps)));
   return 'M' + points.join(' L');
 };
-const MEETINGS = [ .2, .66, .82 ], BEATS = [ .1, .26 ], FIRING = [ .56, .63, .7, .77, .84, .91 ];
+const BEATS = [ .1, .26 ], FIRING = [ .56, .63, .7, .77, .84, .91 ];
 const SCENES = Object.freeze({
   [HORMONE_EFFECT.excitation] : () => input(S.cy) + output() +
                                       cell(flashes([...BEATS, ...FIRING ])) +
                                       sent(FIRING, S.pulse, S.pulse),
-  [HORMONE_EFFECT.learning] : () =>
-      input(S.cy, growing(MEETINGS, .6, 2.2)) + output() + cell(flashes(MEETINGS)),
-  [HORMONE_EFFECT.competition] : () => input(S.cy - S.r * 1.6, growing(MEETINGS, .4, 1.8)) +
-                                       input(S.cy + S.r * 1.6, growing(MEETINGS, .2, 1.4, true)) +
-                                       output() + cell(flashes(MEETINGS)),
-  [HORMONE_EFFECT.eligibility] : () =>
-      '<path class="aid-effect-wave" d="' + wave(S.wave.low * 2) + '">' +
-      before('stroke-opacity', 1, .3) + '</path>' + input(S.cy) + output() +
-      cell(flashes(MEETINGS)) + '<circle class="aid-effect-credit" cx="' + S.cx + '" cy="' + S.cy +
-      '" r="' + S.r * 1.5 + '">' + before('stroke-opacity', .1, 1) + '</circle>',
   [HORMONE_EFFECT.rhythm] : () => '<path class="aid-effect-wave" d="' + wave(S.wave.low) + '">' +
                                   loop('d',
                                        [
@@ -131,7 +105,15 @@ const SCENES = Object.freeze({
                                  output(before('stroke-opacity', 1, .1)) +
                                  cell(flashes(BEATS) + before('opacity', 1, .2))
 });
+// The effects on learning play as a learning episode (episode.js).
+const LESSONS = Object.freeze({
+  [HORMONE_EFFECT.learning] : 'learning',
+  [HORMONE_EFFECT.competition] : 'competition',
+  [HORMONE_EFFECT.eligibility] : 'eligibility'
+});
 export function effectScene(effect, colour) {
+  if (LESSONS[effect])
+    return lessonScene(LESSONS[effect], colour);
   const draw = SCENES[effect];
   return draw ? '<svg class="aid-effect-scene" viewBox="0 0 ' + S.width + ' ' + S.height +
                     '" aria-hidden="true">' + cloud(colour) + draw() + '</svg>'

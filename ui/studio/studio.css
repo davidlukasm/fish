@@ -2,7 +2,7 @@
 /* Colours: page and panels. */
 #station-root{--aid-ground:#09212a;--aid-graphic:#0c2b33;--aid-control:#17353d;--aid-control-edge:#4a6a6d;--aid-chip:#0f2c34;--aid-panel-edge:#2d5059;--aid-card-edge:#325961;--aid-control-text:#cfe2d8;--aid-soft-text:#9fbcbc;--aid-label-text:#a9c6c2;--aid-hint-text:#9fbab6;--aid-axis-text:#a7c2be;--aid-circuit-text:#c8d8d4;--aid-name-text:#e6efe4;--aid-primary:#d1dfbd;--aid-grip:#9fcebd}
 /* Colours: marks and handles. */
-#station-root{--aid-handle:#f1dda6;--aid-handle-hover:#f5e1ac;--aid-handle-core:#153a40;--aid-chosen:#fffbe5;--aid-chosen-edge:#d6d3a6;--aid-point:#fff;--aid-light:#fff8d8;--aid-teach:#e2c487;--aid-substance:#d7c294;--aid-cell-on:#bee2b7;--aid-hover:#e0ecc5}
+#station-root{--aid-handle:#f1dda6;--aid-handle-hover:#f5e1ac;--aid-handle-core:#153a40;--aid-chosen:#fffbe5;--aid-chosen-edge:#d6d3a6;--aid-point:#fff;--aid-light:#fff8d8;--aid-teach:#e2c487;--aid-trace:#f4e3a0;--aid-substance:#d7c294;--aid-cell-on:#bee2b7;--aid-hover:#e0ecc5}
 /* Colours: organ categories and signals. */
 #station-root{--aid-senses:#79d2be;--aid-brain:#b8c5e1;--aid-motor:#eaa886;--aid-inhibit:#e8a2b5}
 /* Colours: the drawn fish and its organs. */
@@ -205,7 +205,7 @@
 .aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
 .aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
 .aid-substance-pill.active{border-color:var(--aid-chosen-edge);background:#2c5050}
-.aid-workspace-main.hormones{grid-template-columns:max(var(--aid-library,184px),300px) minmax(0,1fr) var(--aid-inspector,320px)}
+.aid-workspace-main.cards{grid-template-columns:max(var(--aid-library,184px),300px) minmax(0,1fr) var(--aid-inspector,320px)}
 @media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-grid{grid-template-columns:1fr}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
@@ -741,27 +741,53 @@
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
 #aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}
-.aid-learning-rule{display:block;width:100%;height:auto;margin:4px 0}
-.aid-rule-input{fill:none;stroke:var(--aid-size);stroke-linecap:round;stroke-linejoin:round}
-.aid-rule-input.still{stroke-opacity:.6}
-.aid-rule-pulse{fill:#f2f6dc}
-.aid-rule-pulse.teach{fill:var(--aid-teach)}
 .aid-learn-part{margin:10px 0 4px}
-.aid-learn-track{display:block;width:100%;height:auto;margin:2px 0 6px;touch-action:none}
-.aid-learn-track text{font-size:12px;fill:#c2d6d2}
-.aid-learn-hormone{display:flex;align-items:center;gap:8px;width:100%;margin:4px 0;padding:6px 10px;border:1px solid var(--aid-card-edge);border-radius:9px;background:#17363c;color:var(--aid-control-text);text-align:left;cursor:pointer}
-.aid-learn-hormone svg{color:var(--substance,var(--aid-soft-text))}
-.aid-learn-hormone span{flex:1}
-.aid-learn-hormone small{color:var(--substance,var(--aid-soft-text))}
-.aid-learn-hormone.open{border-color:var(--aid-chosen-edge);background:#1c4045}
-.aid-rule-arrow{fill:none;stroke:var(--aid-size);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.aid-rule-teach .aid-rule-arrow{stroke:var(--aid-teach)}
-.aid-rule-teach.none .aid-rule-arrow{stroke:#5d7f80;stroke-dasharray:4 4}
-.aid-rule-cell{fill:#2b5157;stroke:var(--aid-name-text);stroke-width:2}
-.aid-learning-rule text{fill:var(--aid-label-text);font-size:11px}
-.aid-rule-teach text{fill:var(--aid-teach)}
+.aid-learn-track,.aid-learn-trace{display:block;width:100%;height:auto;margin:2px 0 6px;touch-action:none}
+.aid-learn-track text,.aid-learn-trace text{font-size:12px;fill:#c2d6d2}
+.aid-learn-glow{fill:var(--aid-trace);fill-opacity:.35}
+.aid-learn-fade{fill:none;stroke:var(--aid-trace);stroke-width:2}
+.aid-learn-substance{margin:8px 0;padding:8px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c;color:var(--substance,var(--aid-soft-text))}
+.aid-learn-substance h5{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:12px;font-weight:600;color:var(--aid-name-text)}
+.aid-learn-substance h5 svg{color:var(--substance,var(--aid-soft-text))}
+.aid-learn-substance:not(.bound) .aid-episode{opacity:.55}
+.aid-learn-substances{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
+.aid-learn-substances button{display:flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid #3a5c66;border-radius:8px;background:#1e4249;color:#dce8e0;font-size:12px}
+.aid-learn-substances button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
+.aid-learn-substances .aid-substance-swatch{background:var(--substance)}
+.aid-learn-nodes{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.aid-learn-nodes button{display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid #3a5c66;border-radius:8px;background:#1e4249;color:#dce8e0;font-size:12px}
+.aid-learn-nodes button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
+.aid-node-mark{width:16px;height:16px;color:#b8c5e1;flex:none}
 .aid-teacher-list{display:flex;flex-wrap:wrap;gap:6px}
-.aid-teacher-list button{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
+.aid-teacher-list button,.aid-teacher-chip{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
+.aid-teacher-list small{color:var(--aid-soft-text)}
+.aid-teacher-dot{width:9px;height:9px;border-radius:50%;background:var(--teacher)}
+/* A learning episode (episode.js): lines, traces glowing on them, pulses, the cell, its
+   pacemaker's beat, the teaching signal from above and the cell's expectation. */
+.aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
+.aid-episode.big{margin:4px 0}
+.aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
+.aid-episode-line.still{stroke-opacity:.6}
+.aid-episode-trace{fill:none;stroke:var(--aid-trace);stroke-linecap:round}
+.aid-episode-pulse{fill:#f2f6dc}
+.aid-episode-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
+.aid-episode-cloud{opacity:.28}
+.aid-episode-arrow{fill:none;stroke:var(--aid-size);stroke-width:2;stroke-linecap:round}
+.aid-episode-arrow.teach{stroke:var(--aid-teach)}
+.aid-episode-arrow.teach.none{stroke:#5d7f80;stroke-dasharray:4 4}
+.aid-episode-pacer{fill:#2b5157;stroke:var(--aid-size);stroke-width:1.5}
+.aid-episode-ring{fill:none;stroke:var(--aid-size);stroke-width:2}
+.aid-episode-teacher{fill:#b8c5e1;stroke:#c9d6cf;stroke-width:1.2}
+.aid-episode-meter{fill:none;stroke:#5d7f80;stroke-width:1.2}
+.aid-episode-expect{fill:var(--aid-teach);fill-opacity:.7}
+.aid-episode text{fill:var(--aid-label-text);font-size:11px}
+.aid-episode-label.teach{fill:var(--aid-teach)}
+.aid-episode-caption{fill:var(--aid-name-text)}
+.aid-effect-pictures{display:grid;gap:6px}
+/* With the learning tool: taught cells' rings, the ways their teachers teach along. */
+.aid-teach-mark{fill:none;stroke:var(--aid-teach);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.aid-teach-way{fill:none;stroke-width:2.5;stroke-opacity:.6;stroke-dasharray:6 5;vector-effect:non-scaling-stroke}
+.aid-teach-pulse{stroke:#0d262c;stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-held-mark{fill:var(--aid-teach);stroke:var(--aid-node-edge);stroke-width:1.2}
 .aid-held-line{stroke:#e2c48799;stroke-width:1;stroke-dasharray:3 3}
 /* A sense's stimulus drawn on its charts, in its kind's colour unless its own sets one. */
@@ -811,7 +837,6 @@
 .aid-effect-line{stroke:var(--aid-size);stroke-linecap:round}
 .aid-effect-pulse{fill:#f2f6dc}
 .aid-effect-wave{fill:none;stroke:var(--aid-teach);stroke-width:2;stroke-linecap:round}
-.aid-effect-credit{fill:none;stroke:var(--substance,#f2f6dc);stroke-width:2;stroke-dasharray:3 3}
 .aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
 .aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire .5s ease-in-out infinite}
 .aid-hormone-receiver.acts-1 .aid-hormone-aura{animation:aid-acts-grow 2.2s ease-in-out infinite}

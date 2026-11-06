@@ -12,14 +12,17 @@ export const TOOL_ICON = Object.freeze({
   erase : 'M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M11 10v7M14 10v7',
   pan : 'M7 13V7M11 12V4M15 12V6M19 13V9M7 13c-2-3-5-1-3 2l4 6h10c2-2 3-5 3-8'
 });
-// The hormones' effects as symbols (24-unit paths, by HORMONE_EFFECT): excite a plus, further
-// learning the learning cap, sharpen competition two arrows against each other, set a trace a
+// The hormones' effects as symbols (24-unit paths, by HORMONE_EFFECT): excite a plus, speed
+// learning up two chevrons, sharpen competition two arrows against each other, credit a trace a
 // rising trail, drive a rhythm a beat, damp the output a minus, kill cells a cross.
 export const EFFECT_ICON = Object.freeze([
-  'M12 5v14M5 12h14', 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.6 2.7 3 6 3s6-1.4 6-3v-5',
-  'M3 7l7 5-7 5M21 7l-7 5 7 5', 'M4 19h.01M8 16h.01M12 13h.01M16 10h.01M20 6l-2 1 1 2',
-  'M2 12h4l2-5 3 10 3-10 2 5h6', 'M5 12h14', 'M6 6l12 12M18 6L6 18'
+  'M12 5v14M5 12h14', 'M4 6l6 6-6 6M12 6l6 6-6 6', 'M3 7l7 5-7 5M21 7l-7 5 7 5',
+  'M4 19h.01M8 16h.01M12 13h.01M16 10h.01M20 6l-2 1 1 2', 'M2 12h4l2-5 3 10 3-10 2 5h6', 'M5 12h14',
+  'M6 6l12 12M18 6L6 18'
 ]);
+// Teaching: a signal coming down onto a cell.
+export const TEACH_ICON =
+    'M12 2v8M8.5 6.5L12 10l3.5-3.5M12 21a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z';
 // Maturity: working from it on a shoot rising, dying from it on one falling.
 export const PHASE_ICON =
     Object.freeze({start : 'M4 19h16M12 15V5M8 9l4-4 4 4', end : 'M4 19h16M12 5v10M8 11l4 4 4-4'});

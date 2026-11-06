@@ -7,7 +7,7 @@ import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, namedText, t} from '../../strings.js';
-import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
+import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
 import {allCenters, findAssembly, findCenter, isChosen, wiredCrossing} from '../model/document.js';
 import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
@@ -21,7 +21,8 @@ import {probeScents, senseProbeSvg} from './probes.js';
 import {layerShown} from './layers.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
-// with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
+// with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of what it is
+// by its traits (nerveKind);
 // the marks in INK on its colour, drawn for a marker SIZE wide and scaled to the one asked.
 const MARKER = Object.freeze({
   size : 5.5,
@@ -47,8 +48,9 @@ function markerShape(center) {
   if (center.role === 'sensor')
     return '<circle class="aid-neural-dot" r="' + r + '" fill="currentColor"/><circle r="' + M.eye +
            '" fill="' + M.ink + '"/>';
-  return '<path class="aid-neural-dot" d="' + (M.shapes[center.key] ?? M.shapes.other) +
-         '" fill="currentColor"/><path d="' + (M.signs[center.key] ?? M.signs.other) + ink;
+  const kind = nerveKind(center);
+  return '<path class="aid-neural-dot" d="' + (M.shapes[kind] ?? M.shapes.other) +
+         '" fill="currentColor"/><path d="' + (M.signs[kind] ?? M.signs.other) + ink;
 }
 export const centerMarker = (center, radius) =>
     '<g transform="scale(' + fixed(radius / MARKER.size) + ')">' + markerShape(center) + '</g>';

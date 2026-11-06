@@ -10,10 +10,19 @@ import {stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
 import {driveElement} from './drive.js';
 import {preferredScent} from '../../tuning.js';
-import {functionFor, isRegion, MUSCLE_LABEL_INDEX, ORGAN_BY_KEY} from '../model/organs.js';
+import {
+  functionFor,
+  isModulator,
+  isRegion,
+  MUSCLE_LABEL_INDEX,
+  ORGAN_BY_KEY
+} from '../model/organs.js';
+import {routedLinks} from '../model/regions.js';
+import {modulatorScene} from './episode.js';
 import {
   allCenters,
   contactBundle,
+  endpointCenters,
   findAssembly,
   findCenter,
   findOrgan,
@@ -29,7 +38,7 @@ import {pairingButton, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
-import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
+import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies, tone} from './names.js';
 import {organTitle} from './names.js';
 import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
 import {skinField} from './skin.js';
@@ -156,6 +165,25 @@ function nerveSection(state, organ, center) {
                    n => t(rhythm ? 'studio.inspector.beatSteps' : 'studio.inspector.fades', {n}),
                    {scale : biasScale(state), rhythm}));
 }
+// A modulator's firing reaches the cells it is wired to as their teaching signal: it plays what
+// that does, and names the cells it teaches, each a button choosing it.
+function modulatorSection(state, organ, center) {
+  const doc = state.document;
+  const taught = [...new Set(routedLinks(doc, state.sites)
+                                 .filter(link => link.from === center.id || link.from === organ.id)
+                                 .flatMap(link => endpointCenters(doc, link.to))
+                                 .filter(c => c.role === 'nerve' && c.id !== center.id)) ];
+  return section(label('inspector.modulates'),
+                 modulatorScene(tone('brain')) +
+                     (taught.length
+                          ? '<div class="aid-teacher-list">' +
+                                taught
+                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
+                                              '">' + escapeText(centerTitle(c)) + '</button>')
+                                    .join('') +
+                                '</div>'
+                          : '<p class="aid-hint">' + label('inspector.teachesNobody') + '</p>'));
+}
 const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)
@@ -165,6 +193,8 @@ function organSettings(state, organ, center) {
   if (isRegion(organ) && state.selected?.kind !== 'center')
     return regionSettings(state, organ);
   return organPanel(state, organ, center) +
+         (center.role === 'nerve' && isModulator(center) ? modulatorSection(state, organ, center)
+                                                         : '') +
          (center.role === 'nerve' ? outgoingField(state, center) : '') + cellCount(organ, center) +
          (ROLE_SECTIONS[center.role] ?? nerveSection)(state, organ, center);
 }

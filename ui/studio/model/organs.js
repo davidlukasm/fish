@@ -21,9 +21,18 @@ export const NEURONS = Object.freeze([
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
 // A center modulates the cells it reaches, rather than driving them, when its modulator trait lies
-// above MODULATING.
+// above MODULATING; it beats as a pacemaker when its rhythm trait does.
 const MODULATING = .5;
 export const isModulator = center => center.modulator > MODULATING;
+export const isPacemaker = center => center.pace > MODULATING;
+// What a nerve center is by its traits, whatever its template: a modulator, a pacemaker, an
+// inhibiting center, a learning circuit (made as one, or learning in competition: its mode past
+// MODULATING too) or a relay.
+export const nerveKind = center => isModulator(center)   ? 'modulate'
+                                   : isPacemaker(center) ? 'pacemaker'
+                                   : center.sign < 0     ? 'inhibit'
+                                   : center.key === 'learn' || center.mode > MODULATING ? 'learn'
+                                                                                        : 'relay';
 // A brain region's nerve centers: a preset cell type, how many cells and the zones they lie in
 // (inner sites only).
 export const nerve = (key, copies, zones) => Object.freeze({

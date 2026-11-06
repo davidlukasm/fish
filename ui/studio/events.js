@@ -9,6 +9,7 @@ import {
   addOrganType,
   addSubstance,
   allCenters,
+  bindReceptor,
   closestSiteDoing,
   findAssembly,
   findCenter,
@@ -449,6 +450,17 @@ export const FISH_CLICKS = Object.freeze([
              active : 1,
              ...(doc.growth.sensitivity ? {} : GROWTH_START)
            }));
+    }
+  ],
+  // A part of learning bound to a substance, or to none.
+  [
+    '[data-learn-substance]',
+    (studio, e) => {
+      const id = e.dataset.centerId, effect = Number(e.dataset.learnEffect);
+      const value = e.dataset.learnSubstance, doc = studio.state.document;
+      studio.changeDocument(value === 'off' ? updateReceptor(doc, id, effect, {active : 0})
+                                            : bindReceptor(doc, id, effect, Number(value)),
+                            {kind : 'center', id});
     }
   ],
   [

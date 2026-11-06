@@ -44,7 +44,7 @@ import {
   wheelPatch,
   wheelTrackWidth
 } from './view/substances.js';
-import {learnModePatch, learnRatePatch} from './view/learning.js';
+import {learnModePatch, learnRatePatch, learnResponseOf, learnTracePatch} from './view/learning.js';
 import {cellPatch, label} from './view/kit.js';
 
 // The handles on the panels' graphics and the side panels' grips: what a press holds, how the
@@ -91,6 +91,8 @@ const PADS = Object.freeze({
   output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
   learnRate : {key : 'learnRate', handle : learnRatePatch},
   learnMode : {key : 'learnMode', handle : learnModePatch},
+  learnTrace : {key : 'learnTrace', handle : learnTracePatch},
+  learnReceptor : {key : 'learnReceptor', follow : 'learnReceptorPointer'},
   vector : {
     key : 'vectorPad',
     patch : wheelPatch,
@@ -274,6 +276,20 @@ export const handleMethods = {
     this.refreshHeader();
   },
   // A kind of pigment cell has as many nodes as the pointer along its amount track asks.
+  // A substance's track in the learning inspector: what plenty of it does to that part of
+  // learning, as the receptor's response with plenty of it.
+  learnReceptorPointer(control, fx) {
+    const doc = this.state.document, effect = Number(control.element.dataset.learnEffect);
+    const receptor = findCenter(doc, control.id)?.center.receptors[effect];
+    if (!receptor)
+      return;
+    const sensitivity = learnResponseOf(fx) - receptor.baseline;
+    if (Math.abs(sensitivity - receptor.sensitivity) < PAD_STILL)
+      return;
+    this.tuneDesign(updateReceptor(doc, control.id, effect, {sensitivity}),
+                    'learn-receptor:' + control.id);
+    this.refreshInspector();
+  },
   pigmentAmountPointer(control, fx) {
     const doc = this.state.document, found = findCenter(doc, control.id);
     const type = found && typeOfCenter(found.organ, control.id);

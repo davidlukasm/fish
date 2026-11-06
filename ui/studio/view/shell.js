@@ -4,7 +4,7 @@ import {inspector} from './panels.js';
 import {fishScene} from './scene.js';
 import {escapeText} from './markup.js';
 import {percent, t} from '../../strings.js';
-import {hormoneLibrary, library, toolPalette} from './library.js';
+import {libraryOf, toolPalette} from './library.js';
 import {label} from './kit.js';
 import {GENOME_SUFFIX} from '../requests.js';
 import {LAYER_KEYS, layerShown} from './layers.js';
@@ -123,17 +123,14 @@ function stationStage(s, cppn) {
 const grip = panel => '<div class="aid-panel-grip" data-panel-grip="' + panel + '" title="' +
                       label('app.panelWidth') + '"></div>';
 export function stationShell(s) {
-  const cppn = s.mode === 'cppn', hormones = s.tool === 'hormone';
+  const cppn = s.mode === 'cppn', offered = libraryOf(s), cards = offered.kind !== 'organs';
   return '<div class="aid-station">' + stationHeader(s) + '<nav class="aid-modes">' +
          button('data-mode="fish"', label('app.modeFish'), {active : !cppn}) +
          button('data-mode="cppn"', label('app.modeCppn'), {active : cppn}) + compilerPanel(s) +
-         '</nav><div class="aid-workspace-main' + (hormones && !cppn ? ' hormones' : '') +
-         '" style="' + panelStyle(s.panels) + '"><div class="aid-library">' + grip('library') +
-         '<div class="aid-library-scroll" data-library="' + (hormones ? 'hormones' : 'organs') +
-         '">' +
-         (cppn       ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s)
-          : hormones ? hormoneLibrary(s)
-                     : library(s)) +
+         '</nav><div class="aid-workspace-main' + (cards && !cppn ? ' cards' : '') + '" style="' +
+         panelStyle(s.panels) + '"><div class="aid-library">' + grip('library') +
+         '<div class="aid-library-scroll" data-library="' + offered.kind + '">' +
+         (cppn ? '<h3>' + label('cppn.graph') + '</h3>' + cppnToolbar(s) : offered.html) +
          '</div></div><section class="aid-stage">' + stationStage(s, cppn) +
          '</section><div class="aid-inspector">' + grip('inspector') +
          '<div class="aid-inspector-scroll">' + (cppn ? cppnInspector(s) : inspector(s)) +

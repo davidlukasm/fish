@@ -25,6 +25,7 @@ import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../st
 import {heading, icon, ICON, label} from './kit.js';
 import {EFFECT_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
+import {lessonScene} from './episode.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
@@ -575,8 +576,12 @@ export function substanceInspector(state) {
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
-// What the substance can do, each effect played (effects.js) with where it acts and on how many
-// cells of this fish it does.
+// An effect played (effects.js); firing also as what its rise teaches a learning cell.
+const effectPictures = (effect, colour) =>
+    '<div class="aid-effect-pictures">' + effectScene(effect, colour) +
+    (effect === HORMONE_EFFECT.excitation ? lessonScene('teaching', colour) : '') + '</div>';
+// What the substance can do, each effect played with where it acts and on how many cells of this
+// fish it does.
 function effectGuide(state, index) {
   const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
   const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
@@ -586,7 +591,7 @@ function effectGuide(state, index) {
                const n =
                    receiving.filter(c => boundEffects(c, index, wheel).includes(effect)).length;
                return '<div class="aid-effect-card" style="--substance:' + colour + '">' +
-                      effectScene(effect, colour) + '<div><strong>' +
+                      effectPictures(effect, colour) + '<div><strong>' +
                       glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
                       escapeText(words('tiles')[effect]) + '</strong><span>' +
                       escapeText(words('tileTitles')[effect]) + '</span><small>' +
@@ -616,7 +621,7 @@ export function hormoneInspector(state) {
           heading(centerTitle(focus)) +
           receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) +
           '<div class="aid-effect-card"' + (colour ? ' style="--substance:' + colour + '"' : '') +
-          '>' + effectScene(effect, colour ?? 'currentColor') + '<div><span>' +
+          '>' + effectPictures(effect, colour ?? 'currentColor') + '<div><span>' +
           escapeText(tList('studio.hormoneCard.tileTitles')[effect]) + '</span><small>' +
           escapeText(tList('studio.hormoneCard.where')[effect]) + '</small></div></div></div>';
   return html;

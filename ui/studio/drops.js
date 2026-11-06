@@ -5,11 +5,13 @@ import {
   addNeuron,
   addOrgan,
   addOrganType,
+  addWire,
+  bindReceptor,
   findCenter,
   findOrgan,
+  makeLearner,
   setLifePhase,
   updateCenter,
-  updateReceptor,
   wheelPlace
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
@@ -34,20 +36,11 @@ import {BODY_MAP, LAYER} from './view/scene.js';
 // What the hormone tool's library lets you drag: effects and life phases onto organs and nodes,
 // glands and a blood sense into the fish as the organs they are.
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
+// With the learning tool, cells dropped onto a nerve center: a learning circuit makes that one
+// node learn as it does; a modulator or pacemaker is placed beside it to teach or beat for it.
+const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze(
     {gland : {kind : 'organ', value : 'gland'}, reserve : {kind : 'organ', value : 'blood'}});
-// A receptor an effect is dropped onto starts this strong, binding at this level, unless it was
-// tuned before: most effects rise with the substance, output falls (it starts full), cells die
-// only above half.
-const DROPPED_RECEPTOR = Object.freeze({
-  [HORMONE_EFFECT.excitation] : {sensitivity : .5, half : .1},
-  [HORMONE_EFFECT.learning] : {sensitivity : 1, half : .1},
-  [HORMONE_EFFECT.competition] : {sensitivity : 1, half : .1},
-  [HORMONE_EFFECT.eligibility] : {sensitivity : 1, half : .1},
-  [HORMONE_EFFECT.rhythm] : {sensitivity : 1, half : .1},
-  [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
-  [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
-});
 // Where a dropped life phase starts or ends on the body's maturity.
 const PHASE_DROPPED = Object.freeze({start : .3, end : .9});
 // The studio's methods for drags from the library (mixed into OrganStudio).
@@ -62,7 +55,10 @@ export const dropMethods = {
     // placements, the free places of everything else.
     if (DROP_ON_PARTS.includes(kind))
       this.markDropTargets(kind, value);
-    else if (kind === 'organ' && hasField(value))
+    else if (this.ontoNerve(kind, value)) {
+      this.markDropTargets(kind, value);
+      this.showHints(kind, value, kind + ':' + value);
+    } else if (kind === 'organ' && hasField(value))
       this.prepareChoices(newFieldPlacements(this.state.document, value, this.state.sites));
     else {
       const placed = ORGAN_FROM_CARD[kind] ?? {kind, value};
@@ -89,12 +85,14 @@ export const dropMethods = {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
-    if (DROP_ON_PARTS.includes(this.dragging.kind)) {
+    const teaching = this.ontoNerve(this.dragging.kind, this.dragging.value);
+    if (DROP_ON_PARTS.includes(this.dragging.kind) || teaching) {
       const target = this.dropTarget(event);
       for (const element of svg.querySelectorAll('.aid-drop-hover'))
         element.classList.toggle('aid-drop-hover', element === target?.element);
       target?.element.classList.add('aid-drop-hover');
-      return;
+      if (target || !teaching)
+        return;
     }
     if (this.dragging.kind === 'organ' && hasField(this.dragging.value)) {
       this.showChoices(position);
@@ -137,6 +135,9 @@ export const dropMethods = {
     const {kind, value} = this.dragging;
     if (DROP_ON_PARTS.includes(kind))
       return this.dropOnPart(kind, value, this.dropTarget(event));
+    const learner = this.ontoNerve(kind, value) ? this.dropTarget(event) : null;
+    if (learner)
+      return this.dropOntoNerve(value, learner, position);
     if (ORGAN_FROM_CARD[kind])
       return this.dropFromCard(kind, value, position);
     this.dragging = null;
@@ -164,7 +165,9 @@ export const dropMethods = {
                             this.state.sites, position, SNAP_DISTANCE);
     if (!result)
       return this.notice(label('status.noRoom'));
-    this.state.tool = 'select';
+    // A cell placed with the learning tool stays there, to be taught or to teach.
+    if (this.state.tool !== 'learn')
+      this.state.tool = 'select';
     this.changeDocument(result.document, {
       kind : result.assemblyId            ? 'assembly'
              : result.organId === 'brain' ? 'center'
@@ -174,20 +177,31 @@ export const dropMethods = {
     this.refreshTools();
     this.notice(label('status.placed'));
   },
-  // The parts a dragged effect or life phase can act on: the organs and nodes whose cells the
-  // engine lets carry it; the others fade while it is dragged.
+  ontoNerve(kind, value) {
+    return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);
+  },
+  // The parts a dragged effect, life phase or teaching cell can act on: the organs and nodes whose
+  // cells the engine lets carry it (with the learning tool nerve centers only); the others fade
+  // while it is dragged.
   dropCenters(kind, value, centers) {
+    if (kind === 'neuron')
+      return centers.filter(c => c.role === 'nerve');
     const effects = kind === 'phase' ? [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]
                                      : [ Number(value.split(':')[1]) ];
     const roles = this.state.capabilities?.roleEffects ?? [];
-    return centers.filter(c => effects.every(e => roles[ROLE[c.role]]?.includes(e)));
+    const learning = this.state.tool === 'learn';
+    return centers.filter(c => effects.every(e => roles[ROLE[c.role]]?.includes(e)) &&
+                               (!learning || c.role === 'nerve'));
   },
   markDropTargets(kind, value) {
     const svg = this.bodyMap();
     if (!svg)
       return;
     svg.classList.add('aid-dropping');
-    for (const element of svg.querySelectorAll('[data-organ],[data-center]')) {
+    // A node is made to learn on its own, a region is taught as a whole.
+    const selector =
+        kind === 'neuron' && value === 'learn' ? '[data-center]' : '[data-organ],[data-center]';
+    for (const element of svg.querySelectorAll(selector)) {
       const organ = findOrgan(this.state.document, element.dataset.organ);
       const center = organ ? null : findCenter(this.state.document, element.dataset.center)?.center;
       if (this.dropCenters(kind, value, organ ? organ.centers : center ? [ center ] : []).length)
@@ -206,7 +220,7 @@ export const dropMethods = {
     return {element, centers : this.dropCenters(this.dragging.kind, this.dragging.value, centers)};
   },
   // An effect dropped on a part binds the substance with the receptor for it on every cell there
-  // that can carry it, with a starting strength (DROPPED_RECEPTOR) where it had none; a life
+  // that can carry it, with a starting strength where it had none (bindReceptor); a life
   // phase starts or ends there at PHASE_DROPPED.
   dropOnPart(kind, value, target) {
     this.dragging = null;
@@ -223,12 +237,7 @@ export const dropMethods = {
         continue;
       }
       const [substance, effect] = value.split(':').map(Number);
-      const current = findCenter(doc, center.id)?.center.receptors[effect];
-      doc =
-          updateReceptor(
-              doc, center.id, effect,
-              {...(current?.sensitivity ? {} : DROPPED_RECEPTOR[effect]), active : 1, substance}) ??
-          doc;
+      doc = bindReceptor(doc, center.id, effect, substance) ?? doc;
     }
     // The inspector opens on what was dropped.
     if (kind === 'effect')
@@ -253,6 +262,28 @@ export const dropMethods = {
     const target = placementTarget(this.state.document, type, position);
     return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
                     target.paired);
+  },
+  // A learning circuit dropped onto a nerve node makes it learn; a modulator or pacemaker dropped
+  // onto a nerve center (or a region) goes to the free place nearest the drop and is wired to it.
+  // The learner stays chosen.
+  dropOntoNerve(key, target, position) {
+    this.dragging = null;
+    this.clearPreview();
+    const {document : doc, sites} = this.state;
+    if (key === 'learn') {
+      const id = target.centers[0].id;
+      this.changeDocument(makeLearner(doc, id), {kind : 'center', id});
+      return this.notice(label('learnCard.learns'));
+    }
+    const placed =
+        addNeuron(doc, key, sites, position, SNAP_DISTANCE) ?? addNeuron(doc, key, sites, position);
+    const element = target.element.dataset;
+    const wired =
+        placed && addWire(placed.document, placed.centerId, element.center ?? element.organ);
+    if (!wired)
+      return this.notice(label('status.noRoom'));
+    this.changeDocument(wired.document, {kind : 'center', id : target.centers[0].id});
+    this.notice(label('learnCard.wired.' + key));
   },
   // A gland dragged from a substance card releases that substance; a blood sense from the body's
   // signals reads the energy reserve, as the fish's one blood sense, or as a further type of it.

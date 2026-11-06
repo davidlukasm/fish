@@ -1,9 +1,10 @@
-import {HORMONES} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {EFFECT_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {EFFECT_ICON, PHASE_ICON, TEACH_ICON, TOOL_ICON} from './icons.js';
+import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {MODULES, NEURONS, ORGAN_BY_KEY, ORGANS} from '../model/organs.js';
+import {MODULES, NEURON_BY_KEY, NEURONS, ORGAN_BY_KEY, ORGANS} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
 import {namedText, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
@@ -17,6 +18,20 @@ function paletteItem(kind, name, type, key, title = name) {
          '" data-drag-value="' + escapeText(key) + '" title="' + escapeText(title) + '">' +
          '<span class="aid-palette-icon" style="--organ-color:' + tone(kind) + '">' + icon(kind) +
          '</span><span>' + escapeText(name) + '</span></button>';
+}
+// A nerve cell to drag onto the fish, with its marker as on the fish (MARKER wide in a box of
+// BOX) and on hover what it does.
+const CELL_MARK = Object.freeze({marker : 7, box : 10});
+function cellTile(key) {
+  const B = CELL_MARK.box, name = label('centers.' + key);
+  return '<button class="aid-palette-tile" draggable="true" data-drag-kind="neuron" ' +
+         'data-drag-value="' + key + '" title="' +
+         escapeText(namedText(name, label('neuronPurpose.' + key))) +
+         '"><span class="aid-palette-icon" style="--organ-color:' + tone('brain') +
+         ';color:' + tone('brain') + '"><svg viewBox="' + -B + ' ' + -B + ' ' + 2 * B + ' ' +
+         2 * B + '" aria-hidden="true">' +
+         centerMarker({role : 'nerve', key, ...NEURON_BY_KEY[key]}, CELL_MARK.marker) +
+         '</svg></span><span>' + escapeText(name) + '</span></button>';
 }
 export function library(state) {
   const categories = [ 'senses', 'regions', 'internal', 'motor', 'reproduction' ];
@@ -36,8 +51,7 @@ export function library(state) {
   }
   html +=
       '<section class="aid-library-section"><h4>' + label('sections.nerves') +
-      '</h4><div class="aid-palette-grid">' +
-      NEURONS.map(n => paletteItem('brain', label('centers.' + n.key), 'neuron', n.key)).join('') +
+      '</h4><div class="aid-palette-grid">' + NEURONS.map(n => cellTile(n.key)).join('') +
       '</div></section><section class="aid-library-section"><h4>' + label('sections.modules') +
       '</h4><div class="aid-palette-grid">' +
       // A built-in module shows its brain region and says on hover what it does.
@@ -99,7 +113,56 @@ function bodySignalsCard() {
                                     STUDIO_ICON.blood)) +
          '</section>';
 }
-export function hormoneLibrary(state) {
+// The learning tool's library: the cells learning needs, each with its marker on the fish (a
+// learning circuit learns by competition even without a teacher, a modulator teaches the cells it
+// reaches, a pacemaker's beat is what a learner can credit; a modulator or pacemaker dropped onto
+// a nerve center is wired to it), and a card for each substance with a gland and what the
+// substance can do to learning, as tiles to drag onto nerve centers.
+const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
+const LEARNING_TILES = Object.freeze([
+  {effect : HORMONE_EFFECT.excitation, path : TEACH_ICON},
+  {effect : HORMONE_EFFECT.learning, path : EFFECT_ICON[HORMONE_EFFECT.learning]},
+  {effect : HORMONE_EFFECT.competition, path : EFFECT_ICON[HORMONE_EFFECT.competition]},
+  {effect : HORMONE_EFFECT.eligibility, path : EFFECT_ICON[HORMONE_EFFECT.eligibility]}
+]);
+function learningCard(state, substance) {
+  const index = substance.index, words = tList('studio.learnCard.tiles');
+  const titles = tList('studio.learnCard.tileTitles');
+  return '<section class="aid-substance-card" style="--substance:' + substanceColor(index) +
+         '"><header><span class="aid-substance-pill"><span class="aid-substance-swatch"></span>' +
+         '<span>' + escapeText(substanceName(state, index)) + '</span></span></header>' +
+         '<div class="aid-hormone-tiles">' +
+         hormoneTile('gland', String(index), label('hormoneCard.gland'), STUDIO_ICON.gland,
+                     label('hormoneCard.glandTitle')) +
+         LEARNING_TILES
+             .map((tile, k) => hormoneTile('effect', index + ':' + tile.effect, words[k], tile.path,
+                                           titles[k]))
+             .join('') +
+         '</div></section>';
+}
+export function learningLibrary(state) {
+  const doc = state.document;
+  return '<div class="aid-library-intro">' + heading(label('tools.learn')) + '</div>' +
+         '<section class="aid-library-section"><h4>' + label('learnCard.cells') +
+         '</h4><div class="aid-palette-grid">' + LEARNING_CELLS.map(cellTile).join('') +
+         '</div></section><section class="aid-library-section"><h4>' +
+         label('learnCard.substances') + '</h4>' +
+         (state.capabilities ? doc.substances.map(sub => learningCard(state, sub)).join('') : '') +
+         (doc.substances.length < HORMONES.levels
+              ? '<button class="aid-secondary" data-add-substance>+ ' +
+                    label('sections.newSubstance') + '</button>'
+              : '') +
+         '</section>';
+}
+// The library a tool offers, and which one it is.
+export function libraryOf(state) {
+  if (state.tool === 'hormone')
+    return {kind : 'hormones', html : hormoneLibrary(state)};
+  if (state.tool === 'learn')
+    return {kind : 'learning', html : learningLibrary(state)};
+  return {kind : 'organs', html : library(state)};
+}
+function hormoneLibrary(state) {
   const doc = state.document;
   return '<div class="aid-library-intro">' + heading(label('hormoneCard.title')) + '</div>' +
          (state.capabilities ? doc.substances.map(sub => substanceCard(state, sub)).join('') : '') +
