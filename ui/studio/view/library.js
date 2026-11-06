@@ -1,12 +1,20 @@
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {BODY_SIGNAL, EFFECT_ICON, GROWTH_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
-import {SYSTEMS, systemFits} from '../model/systems.js';
+import {SYSTEMS, systemMissing} from '../model/systems.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {LEARNING_EFFECTS, shownSubstance} from '../model/document.js';
-import {MODULES, NEURON_BY_KEY, NEURONS, ORGAN_BY_KEY, ORGANS, PAIRINGS} from '../model/organs.js';
+import {
+  MODULES,
+  NEURON_BY_KEY,
+  NEURONS,
+  ORGAN_BY_KEY,
+  ORGANS,
+  PAIRINGS,
+  STIMULUS_ORGAN
+} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
 import {namedText, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
@@ -211,16 +219,21 @@ const SYSTEM_ICON = Object.freeze({
   growth : GROWTH_ICON,
   alarm : STUDIO_ICON.pain
 });
+export const systemNeed = (key, missing) =>
+    missing === 'full' ? 'systems.full' : 'systems.' + key + '.needs';
+// A system that cannot join the fish yet is greyed, its hover saying what it still needs.
 const systemTile = (state, key) => {
-  const fits = state.capabilities && systemFits(state.document, key);
+  const missing = state.capabilities ? systemMissing(state.document, key) : 'needs';
+  const title = label('systems.' + key + '.title');
   return tile({
     kind : 'system',
     value : key,
     name : label('systems.' + key + '.name'),
     path : SYSTEM_ICON[key],
     colour : BODY_SIGNAL,
-    title : label('systems.' + key + '.title') + (fits ? ' ' + label('systems.fits') : ''),
-    suggested : fits
+    title : title + ' ' + label(missing ? systemNeed(key, missing) : 'systems.fits'),
+    off : !!missing,
+    suggested : !missing
   });
 };
 const systemsSection = (state, keys) =>
@@ -258,21 +271,16 @@ function learningLibrary(state) {
              .join('') +
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
-const STIMULI = Object.freeze([
-  {key : 'light', organ : 'eye'}, {key : 'object', organ : 'proximity'},
-  {key : 'scent', organ : 'nose'}, {key : 'flow', organ : 'lateral'},
-  {key : 'touch', organ : 'touch'}, {key : 'pain', organ : 'pain'}, {key : 'food', organ : 'gut'}
-]);
 function stimulusLibrary(state) {
   const has = type => state.document.organs.some(o => o.type === type);
-  return section(label('stimulusCard.senses'), STIMULI
-                                                   .map(s => tile({
+  return section(label('stimulusCard.senses'), Object.entries(STIMULUS_ORGAN)
+                                                   .map(([ key, organ ]) => tile({
                                                           kind : 'stimulus',
-                                                          value : s.key,
-                                                          name : label('stimulusCard.' + s.key),
-                                                          markup : icon(s.organ),
-                                                          colour : tone(s.organ),
-                                                          off : !has(s.organ),
+                                                          value : key,
+                                                          name : label('stimulusCard.' + key),
+                                                          markup : icon(organ),
+                                                          colour : tone(organ),
+                                                          off : !has(organ),
                                                           act : true
                                                         }))
                                                    .join(''));

@@ -303,10 +303,16 @@ export function hormoneLegs(state) {
       for (const cell of receivers(doc, substance.index, capabilities)) {
         const from = wholeEndpoint(doc, gland.id), to = wholeEndpoint(doc, cell.id);
         const key = from + '>' + to + '>' + substance.index;
-        if (from === to || legs.has(key))
-          continue;
         const effects = boundEffects(cell, substance.index, capabilities);
         const directions = effects.map(e => effectDirection(e, cell.receptors[e]));
+        const taught = (directions[effects.indexOf(HORMONE_EFFECT.teaching)] ?? 0) > 0;
+        if (from === to)
+          continue;
+        if (legs.has(key)) {
+          if (taught)
+            legs.get(key).learners.push(cell.id);
+          continue;
+        }
         const firing = directions[effects.indexOf(HORMONE_EFFECT.excitation)] ?? 0;
         const colour = substanceColor(substance.index);
         legs.set(key, {
@@ -318,7 +324,7 @@ export function hormoneLegs(state) {
           push : firing > 0   ? 'rise'
                  : firing < 0 ? 'fall'
                               : null,
-          teach : (directions[effects.indexOf(HORMONE_EFFECT.teaching)] ?? 0) > 0,
+          learners : taught ? [ cell.id ] : [],
           mark :
               '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
                   symbolsAbove(

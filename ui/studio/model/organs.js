@@ -1,7 +1,17 @@
-import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
+// The sense organ each stimulus of the stimulus tool reaches.
+export const STIMULUS_ORGAN = Object.freeze({
+  light : 'eye',
+  object : 'proximity',
+  scent : 'nose',
+  flow : 'lateral',
+  touch : 'touch',
+  pain : 'pain',
+  food : 'gut'
+});
 // zones: where in the body the Atelier offers the organ, when the engine allows more than makes
 // sense to place it (smell cells grow on all the skin, a nose belongs to the head).
 const COPIES = 3;
@@ -21,11 +31,17 @@ export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [
 const MODULATING = .5;
 export const isModulator = center => center.modulator > MODULATING;
 export const isPacemaker = center => center.pace > MODULATING;
+// How a nerve learns by itself: 1 choosing among its inputs, -1 balancing them, 0 not at all.
+const MODE_LEAN = 1 / 3;
+export const modeLean = mode => mode > MODE_LEAN ? 1 : mode < -MODE_LEAN ? -1 : 0;
+// A nerve learns when it is a learning node, learns by itself or has a teacher.
+export const learns = center => center.key === 'learn' || modeLean(center.mode) !== 0 ||
+                                !!center.receptors?.[HORMONE_EFFECT.teaching]?.active;
 export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : isPacemaker(center) ? 'pacemaker'
                                    : center.sign < 0     ? 'inhibit'
-                                   : center.key === 'learn' || center.mode > MODULATING ? 'learn'
-                                                                                        : 'relay';
+                                   : learns(center)      ? 'learn'
+                                                         : 'relay';
 export const nerve = (key, copies, zones) => Object.freeze({
   key,
   role : 'nerve',

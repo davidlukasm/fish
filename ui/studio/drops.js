@@ -1,4 +1,4 @@
-import {ROLE} from './model/organs.js';
+import {ROLE, STIMULUS_ORGAN} from './model/organs.js';
 import {hasField, newFieldPlacements} from './model/placement.js';
 import {HORMONE_EFFECT, HORMONES} from '../schema.js';
 import {
@@ -17,13 +17,13 @@ import {
   wheelPlace
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
-import {placeSystem} from './model/systems.js';
+import {placeSystem, systemMissing} from './model/systems.js';
 import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
 import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
-import {armedCursor} from './view/library.js';
+import {armedCursor, systemNeed} from './view/library.js';
 import {label} from './view/kit.js';
 import {
   assemblyPreview,
@@ -37,15 +37,6 @@ import {BODY_MAP, LAYER} from './view/scene.js';
 
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
 const BEND = 'bend';
-const STIMULUS_ORGAN = Object.freeze({
-  light : 'eye',
-  object : 'proximity',
-  scent : 'nose',
-  flow : 'lateral',
-  touch : 'touch',
-  pain : 'pain',
-  food : 'gut'
-});
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze({
   gland : {kind : 'organ', value : 'gland'},
@@ -388,6 +379,9 @@ export const dropMethods = {
     if (!wheel || !nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     if (kind === 'system') {
+      const missing = systemMissing(doc, value);
+      if (missing)
+        return this.notice(label(systemNeed(value, missing)));
       const placed = placeSystem(doc, value, this.state.sites, wheel, position,
                                  label('systems.' + value + '.substance'));
       if (!placed)

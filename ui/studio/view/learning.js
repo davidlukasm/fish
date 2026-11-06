@@ -18,7 +18,7 @@ import {t, tList} from '../../strings.js';
 import {heading, ICON, label} from './kit.js';
 import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
-import {isModulator, isPacemaker} from '../model/organs.js';
+import {isModulator, isPacemaker, modeLean} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {effectScene} from './effects.js';
@@ -69,10 +69,8 @@ const RULE = Object.freeze({
 });
 const traceSteps = center => timeConstantSteps(center.tau) / 2;
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
-const MODE_THIRD = 1 / 3;
-export const modeName = mode => mode > MODE_THIRD    ? 'competing'
-                                : mode < -MODE_THIRD ? 'cancelling'
-                                                     : 'neutral';
+const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
+export const modeName = mode => MODE_NAME[modeLean(mode)];
 function learningRule(state, center, teachers, colours) {
   const L = EPISODE_LAYOUT.big, R = RULE, words = key => label('learnRule.' + key);
   const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
@@ -106,9 +104,9 @@ function learningRule(state, center, teachers, colours) {
   const lean = label('inspector.' + modeName(mode));
   const caption = !(rate > 0) ? words('off')
                   : teaches   ? t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}) +
-                                  (Math.abs(mode) > MODE_THIRD ? ' · ' + lean : '')
-                  : Math.abs(mode) > MODE_THIRD ? t('studio.learnRule.untaughtMode', {mode : lean})
-                                                : words('untaught');
+                                  (modeLean(mode) !== 0 ? ' · ' + lean : '')
+                  : modeLean(mode) !== 0 ? t('studio.learnRule.untaughtMode', {mode : lean})
+                                         : words('untaught');
   return episodeSvg(L, {
     title : label('inspector.learning'),
     inputs,

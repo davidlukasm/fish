@@ -82,11 +82,13 @@ function chambers(store, from, to, kind) {
 }
 function product(store, type, x, y) {
   const S = STORE;
-  if (type !== 'eggs')
+  if (type !== 'eggs') {
+    const count = Math.max(1, Math.min(S.sperm, store.motors));
     return Array
-        .from({length : Math.max(1, Math.min(S.sperm, store.motors))},
-              (_, k) => sperm(x + SPERM.tail, y + (k - 1) * SPERM.spread))
+        .from({length : count},
+              (_, k) => sperm(x + SPERM.tail, y + (k - (count - 1) / 2) * SPERM.spread))
         .join('');
+  }
   const r = Math.max(S.least, S.egg * Math.sqrt(clamp(store.spawn / topOf(store))));
   const short = store.minimum && store.spawn < store.minimum;
   return egg(x + r, y, r, short ? 'egg food' : 'egg');
@@ -176,13 +178,16 @@ export function gonadGraphic(state, organ, selected) {
                  : '') +
          '</svg>';
 }
-export function sacPatch(state, organ, handle, fx, fy) {
+export function sacPatch(state, organ, handle, fy) {
   const store = gonadStore(state, organ);
   if (!store)
     return null;
   const energy = energyAt(store, fy * STORE.height);
   if (handle === 'stretch')
-    return {threshold : planOfUnit(activationQuality(clamp(energy / Math.max(1e-9, store.room))))};
+    return {
+      threshold :
+          planOfUnit(activationQuality(clamp(energy / Math.max(Number.EPSILON, store.room))))
+    };
   const cells = Math.max(1, Math.round(energy / store.own.perCell));
   return {nodes : clamp(cells - (store.motors - store.growth), 1, kindLimit(organ, null))};
 }

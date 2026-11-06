@@ -251,7 +251,8 @@ function semanticFingerprint(source) {
       const player = pulse.createSignalPlayer(fakeSvg, schedule, {
         marks : () => [element],
         moves : key => key === 'muscle' ? [ [ element, 'aid-move-tail' ] ] : [],
-        reached : ({key, link}) => reached.push(key ?? link?.to)
+        reached : ({key, link}) => reached.push(key ?? link?.to),
+        arrived : link => reached.push('arrived:' + link.to)
       });
       player.start();
       for (const time of [0, 10, 1e6]) {
@@ -260,6 +261,8 @@ function semanticFingerprint(source) {
         frame(time);
       }
       assert.ok(reached.includes('eye') && reached.includes('muscle'));
+      assert.ok(reached.some(r => String(r).startsWith('arrived:')),
+                'A signal tells when it arrives');
       assert.ok(classes.has('aid-pulse-fired') && classes.has('aid-move-tail'),
                 'A firing effector moves what it drives');
       player.stop();
@@ -1446,8 +1449,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const sac = sacs.gonadGraphic(sacState, small);
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
-    assert.ok(sacs.sacPatch(sacState, small, 'cells', .1, .2).nodes > 2);
-    assert.equal(sacs.sacPatch(sacState, small, 'cells', .1, .9).nodes, 1);
+    assert.ok(sacs.sacPatch(sacState, small, 'cells', .2).nodes > 2);
+    assert.equal(sacs.sacPatch(sacState, small, 'cells', .9).nodes, 1);
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
     const testisState = {document : testis.document, sites, capabilities : sitesResult};
@@ -1778,19 +1781,30 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(taught(byGrowth, pallium).length > 0 &&
               taught(byGrowth, pallium).every(r => r.active && r.substance === 0));
     const systems = await import('../ui/studio/model/systems.js');
-    assert.ok(!systems.systemFits(exampleDoc, 'reward') &&
-              !systems.systemFits(exampleDoc, 'growth'));
+    const organsModel = await import('../ui/studio/model/organs.js');
+    assert.equal(systems.systemMissing(exampleDoc, 'reward'), 'needs');
+    assert.equal(systems.systemMissing(exampleDoc, 'growth'), 'needs');
+    assert.equal(
+        systems.placeSystem(exampleDoc, 'reward', sites, sitesResult, {x : 500, y : 400}, 'S'),
+        null, 'A system never takes over cells already answering a substance');
     const bare = model.newDocument('Regelkreis');
     const muscled = model.addOrgan(bare, 'muscle', sites, {x : 890, y : 350}).document;
-    assert.ok(systems.systemFits(muscled, 'alarm'));
+    assert.equal(systems.systemMissing(muscled, 'alarm'), null);
     const alarm =
         systems.placeSystem(muscled, 'alarm', sites, sitesResult, {x : 500, y : 400}, 'S');
     const types = alarm.document.organs.map(o => o.type);
     assert.ok([ 'pain', 'hindbrain', 'gland' ].every(type => types.includes(type)));
     assert.equal(alarm.document.substances.length, 1);
-    assert.ok(!systems.systemFits(alarm.document, 'alarm'));
+    assert.equal(systems.systemMissing(alarm.document, 'alarm'), 'needs');
     const strong = alarm.document.organs.find(o => o.type === 'muscle').centers[0];
-    assert.equal(strong.receptors[HORMONE_EFFECT.output].substance, alarm.substance);
+    const strength = strong.receptors[HORMONE_EFFECT.output];
+    assert.equal(strength.substance, alarm.substance);
+    assert.equal(model.effectDirection(HORMONE_EFFECT.output, strength), 1,
+                 'The alarm substance makes the muscles stronger');
+    const chosen = {key : 'relay', role : 'nerve', sign : 1, mode : .9, receptors : []};
+    assert.ok(model.isLearner(chosen) && organsModel.nerveKind(chosen) === 'learn',
+              'A node counts as a learner wherever it is drawn as one');
+    assert.ok(!model.isLearner({...chosen, mode : 0}));
     assert.ok(alarm.document.wires.some(
         w => w.to === alarm.organId ||
              w.to === model.findOrgan(alarm.document, alarm.organId).pair));
@@ -1801,7 +1815,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(model.chosenCenter(gutDoc.document, {kind : 'organ', id : gutOrgan.id}),
                  gutOrgan.centers[0]);
     assert.equal(model.chosenCenter(gutDoc.document, {kind : 'wire', id : gutOrgan.id}), null);
-    const organsModel = await import('../ui/studio/model/organs.js');
     assert.ok(organsModel.isModulator({modulator : 1}) &&
               !organsModel.isModulator({modulator : -1}));
     const glyphs = await import('../ui/glyph.js');

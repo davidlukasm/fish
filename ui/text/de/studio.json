@@ -32,8 +32,6 @@
     "contactCount": "{n} {n:Synapse|Synapsen}",
     "wireCount": "{n} {n:Verbindung|Verbindungen}",
     "sites": "Entwicklungsorte",
-    "exampleGrowth": "Wachstumshormon",
-    "exampleFood": "Futter",
     "groupPlan": "Bauplan",
     "groupFish": "Vom Bauplan ins Aquarium",
     "panelWidth": "Breite ziehen",
@@ -306,7 +304,7 @@
     "plasticity": "Lernfähigkeit",
     "cancelling": "ausgleichen",
     "competing": "auswählen",
-    "neutral": "nichts",
+    "neutral": "nicht",
     "lifePhase": "Lebensabschnitt",
     "phaseStart": "Arbeitet erst ab einer Reife",
     "phaseEnd": "Stirbt ab einer Reife",
@@ -904,19 +902,23 @@
   "systems": {
     "title": "Regelkreise",
     "fits": "Passt zu deinem Fisch.",
+    "full": "Alle Stoffe sind schon vergeben.",
     "reward": {
       "name": "Belohnung",
       "title": "Futter im Darm lehrt die Lernkreise, was zum Futter geführt hat.",
+      "needs": "Braucht Lernkreise, die noch keinen Lehrer haben.",
       "substance": "Belohnung"
     },
     "growth": {
       "name": "Wachstum",
       "title": "Futter im Darm lässt den Körper wachsen.",
+      "needs": "Der Körper wächst schon mit einem Stoff.",
       "substance": "Wachstumshormon"
     },
     "alarm": {
       "name": "Alarm",
-      "title": "Schmerz macht über das Stammhirn alle Muskeln kräftiger.",
+      "title": "Schmerz meldet sich über das Stammhirn: ohne Schmerz arbeiten die Muskeln mit halber Kraft, bei Schmerz mit voller.",
+      "needs": "Braucht Muskeln, deren Kraft noch kein Stoff steuert.",
       "substance": "Alarmstoff"
     }
   },

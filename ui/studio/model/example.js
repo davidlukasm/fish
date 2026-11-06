@@ -35,17 +35,17 @@ export function exampleDocument(names, sites, wheel) {
     const result = addOrgan(doc, type, sites, {x, y});
     if (result)
       doc = result.document;
-    placed[key] = {organ : result?.organId, node : result?.centerId};
+    placed[key] = result?.organId;
   }
   for (const [key, count] of Object.entries(GROWTH_CELLS)) {
-    const grown = placed[key].organ && setOrganNodes(doc, placed[key].organ, count, sites);
+    const grown = placed[key] && setOrganNodes(doc, placed[key], count, sites);
     if (grown)
       doc = grown;
   }
   for (const [key, x, y] of SYSTEM_GLANDS)
     doc = placeSystem(doc, key, sites, wheel, {x, y}, names[key])?.document ?? doc;
   for (const [from, to, pairing] of WIRES) {
-    const r = addWire(doc, placed[from].organ, placed[to].organ, pairing);
+    const r = addWire(doc, placed[from], placed[to], pairing);
     if (r)
       doc = r.document;
   }

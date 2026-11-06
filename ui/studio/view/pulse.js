@@ -97,7 +97,7 @@ export function signalSchedule(starts, links, response) {
 const ANSWERING = Object.freeze({fire : 'aid-pulse-active', quiet : 'aid-pulse-quieting'});
 const ANSWERED = Object.freeze({fire : 'aid-pulse-fired', quiet : 'aid-pulse-quieted'});
 const MOVES = Object.freeze({fire : true, quiet : false});
-export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
+export function createSignalPlayer(svg, schedule, {marks, moves, reached, arrived}) {
   const document = svg.ownerDocument, overlay = document.createElementNS(NS, 'g');
   overlay.setAttribute('class', 'aid-pulse-overlay');
   const signal = (leg, points) => {
@@ -234,6 +234,7 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
       return;
     if (!item.arrived) {
       item.arrived = true;
+      arrived(leg.link);
       if (leg.link.kind === 'modulate' && leg.sends === 'fire')
         for (const element of marks(leg.link.to))
           element.classList.add('aid-pulse-tuned');

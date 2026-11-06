@@ -4,7 +4,6 @@ import {
   allCenters,
   compileDocument,
   endpointCenters,
-  expandedWires,
   findCenter,
   findOrgan,
   organOf,
@@ -187,14 +186,6 @@ export const trialMethods = {
       reached : ({key, mode, link}) => {
         for (const part of key ? shownAs(key) : [])
           stimulus[mode === 'fire' ? 'fired' : 'quieted'].add(part);
-        const fired = part => stimulus.fired.has(part) || stimulus.earlier?.fired.has(part);
-        if (link?.teach && (fired(link.to) || fired(organOf(doc, link.to)?.id)))
-          for (const id of this.taughtWires(link.to)) {
-            for (const set of [stimulus.wires, stimulus.sent, stimulus.learned])
-              set.add(id);
-            for (const element of this.wireMarks(id))
-              element.classList.add('aid-pulse-used', 'aid-pulse-learned');
-          }
         for (const id of link?.wires ?? []) {
           stimulus.wires.add(id);
           if (mode === 'fire')
@@ -204,19 +195,31 @@ export const trialMethods = {
             element.classList.toggle('aid-pulse-withdrawn', !stimulus.sent.has(id));
           }
         }
+      },
+      arrived : link => {
+        if (!link.learners?.length)
+          return;
+        for (const id of this.taughtWires(link.learners))
+          for (const set of [stimulus.wires, stimulus.sent, stimulus.learned])
+            set.add(id);
+        for (const id of stimulus.learned)
+          for (const element of this.wireMarks(id))
+            element.classList.add('aid-pulse-used', 'aid-pulse-learned');
       }
     });
     this.pulsePlayers.push({player, centers : centerIds});
     player.start();
   },
   playingPulses() { return this.pulsePlayers.filter(pulse => pulse.player.running());},
-  // A teaching substance reaching a cell that has just fired, in this preview or the one still
-  // shown before it: the wires that made it fire are the ones it learns from.
-  taughtWires(key) {
-    const {document : doc, stimulus} = this.state;
-    const cells = new Set(endpointCenters(doc, key).map(c => c.id));
+  // A teaching substance reaching learners that have just fired, in this preview or the one still
+  // shown before it: the wires that made them fire are the ones they learn from.
+  taughtWires(learners) {
+    const {document : doc, sites, stimulus} = this.state;
+    const fired = part => stimulus.fired.has(part) || stimulus.earlier?.fired.has(part);
+    const cells = new Set(
+        learners.filter(id => [id, wholeEndpoint(doc, id), organOf(doc, id)?.id].some(fired)));
     const sent = id => stimulus.sent.has(id) || stimulus.earlier?.sent.has(id);
-    return [...new Set(expandedWires(doc)
+    return [...new Set(routedLinks(doc, sites)
                            .filter(link => sent(link.wire.id) &&
                                            endpointCenters(doc, link.to).some(c => cells.has(c.id)))
                            .map(link => link.wire.id)) ];

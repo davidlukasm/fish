@@ -593,8 +593,8 @@ export class OrganStudio {
   example() {
     const names = {
       fish : label('app.example'),
-      growth : label('app.exampleGrowth'),
-      reward : label('app.exampleFood')
+      growth : label('systems.growth.substance'),
+      reward : label('systems.reward.substance')
     };
     this.changeDocument(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
