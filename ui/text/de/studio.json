@@ -290,7 +290,7 @@
     "learningAbility": "Lernfähigkeit",
     "counterLearning": "Gegenlernen",
     "neutralLearning": "Neutral",
-    "competitiveLearning": "Wettbewerb",
+    "competitiveLearning": "Konkurrenz",
     "concentrationLow": "Wenig",
     "concentrationHigh": "Viel",
     "concentrationScale": "Wirksame Konzentration (logarithmisch)",
@@ -301,7 +301,7 @@
     "concentration": "Konzentration",
     "plasticity": "Lernfähigkeit",
     "cancelling": "Gegenlernen",
-    "competing": "Wettbewerb",
+    "competing": "Konkurrenz",
     "neutral": "neutral",
     "lifePhase": "Lebensabschnitt",
     "phaseStart": "Arbeitet erst ab einer Reife",
@@ -897,8 +897,8 @@
     "tileTitles": [
       "Der Stoff erregt die Zelle oder hemmt sie.",
       "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
-      "Der Stoff stellt ein, wie stark Eingänge, die mit der Zelle feuern, die anderen verdrängen.",
-      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder beim eigenen Feuern.",
+      "Der Stoff stellt ein, wie stark Eingänge, die zugleich mit der Zelle aktiv sind, die anderen verdrängen.",
+      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder bei ihrem eigenen Signal.",
       "Der Stoff stellt ein, wie stark der Taktgeber schlägt.",
       "Der Stoff stellt ein, wie stark die Zelle ihr Signal ausgibt, von stumm bis voll.",
       "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn.",
@@ -907,7 +907,7 @@
     "where": [
       "bei Nervenzellen, Muskeln und Drüsen",
       "bei Nervenzellen",
-      "bei Nervenzellen mit Lernart Wettbewerb",
+      "bei Nervenzellen mit Lernart Konkurrenz",
       "bei Nervenzellen mit Taktgeber",
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
@@ -938,7 +938,7 @@
     "inhibit": "hemmt die Zellen, die er erreicht",
     "learn": "lernt auch ohne Lehrer: was mit ihm feuert, wächst, der Rest schrumpft. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lernt dieser so.",
     "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich seinen Takt anrechnen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
-    "modulate": "Lehrer: sein Feuern ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
+    "modulate": "Lehrer: sein Signal ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },
   "wiring": {
     "pairings": "Seiten",
@@ -968,20 +968,20 @@
     "tiles": [
       "Lehrsignal",
       "Lerntempo",
-      "Wettbewerb",
-      "Anrechnung"
+      "Eingangs-Konkurrenz",
+      "Merkzeitpunkt"
     ],
     "tileTitles": [
       "Unerwartete Änderungen dieses Stoffs verstärken oder schwächen die gemerkten Verbindungen.",
       "Der Stoff ändert, wie stark jede Überraschung die Verbindungen ändert.",
-      "Der Stoff ändert, wie schnell was mitfeuert wächst und der Rest schrumpft.",
-      "Der Stoff verschiebt, was die Merkspur markiert: eigenes Feuern oder den Takt."
+      "Der Stoff ändert, wie stark aktive Eingänge wachsen und stille schrumpfen.",
+      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder bei ihrem eigenen Signal."
     ],
     "wired": {
       "modulate": "Verschaltet: lehrt jetzt diesen Knoten.",
       "pacemaker": "Verschaltet: gibt diesem Knoten jetzt den Takt."
     },
-    "learns": "Dieser Knoten lernt jetzt im Wettbewerb."
+    "learns": "Dieser Knoten lernt jetzt mit konkurrierenden Eingängen."
   },
   "learnRule": {
     "teaching": "Lehrsignal",
@@ -1011,14 +1011,14 @@
     "by": [
       "Lehrsignal durch einen Stoff",
       "Lerntempo durch einen Stoff",
-      "Wettbewerb durch einen Stoff",
-      "Anrechnung durch einen Stoff"
+      "Eingangs-Konkurrenz durch einen Stoff",
+      "Merkzeitpunkt durch einen Stoff"
     ],
     "strength": [
       "Was ein Anstieg des Stoffs bewirkt",
       "Wie schnell die Zelle mit viel Stoff lernt",
-      "Wie stark der Wettbewerb mit viel Stoff ist",
-      "Was die Merkspur mit viel Stoff anrechnet"
+      "Wie stark die Eingänge mit viel Stoff konkurrieren",
+      "Wann sich die Zelle mit viel Stoff Eingänge merkt"
     ],
     "low": [
       "Anstieg schwächt",
@@ -1036,7 +1036,7 @@
       "Anstieg stärkt",
       "doppelt",
       "doppelt",
-      "nur eigenes Feuern"
+      "nur eigenes Signal"
     ]
   },
   "compiler": {

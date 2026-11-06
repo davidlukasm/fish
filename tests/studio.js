@@ -1581,7 +1581,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
               learnPanel.includes('data-learn-trace'));
-    assert.match(learnPanel, /ohne Lehrer: nur Wettbewerb/);
+    assert.match(learnPanel, /ohne Lehrer: nur Konkurrenz/);
     const widths = [
       ...learnPanel.matchAll(
           /aid-episode-line[^>]*><animate attributeName="stroke-width" values="([^"]+)"/g)
