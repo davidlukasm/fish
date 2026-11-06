@@ -169,13 +169,14 @@ const PICTURES = Object.freeze({
 });
 const KIND_NAME =
     Object.freeze(Object.fromEntries(Object.entries(SENSE_KIND).map(([ k, v ]) => [v, k])));
-// A sense's stimulus at strength s around a point, named by `title`; nothing for a sense without
-// a picture.
-export function stimulusPicture(kind, s, {x, y}, title, colour = null) {
+// A sense's stimulus at strength s around a point, named by `title`, `size` times PICTURE.size
+// wide; nothing for a sense without a picture.
+export function stimulusPicture(kind, s, {x, y}, title, colour = null, size = 1) {
   const draw = PICTURES[kind];
   if (!draw)
     return '';
   return '<g class="aid-stimulus k-' + KIND_NAME[kind] + '" transform="translate(' + fixed(x) +
-         ' ' + fixed(y) + ')"' + (colour ? ' style="color:' + colour + '"' : '') + '><title>' +
-         escapeText(title) + '</title>' + draw(s) + '</g>';
+         ' ' + fixed(y) + ')' + (size === 1 ? '' : ' scale(' + fixed(size) + ')') + '"' +
+         (colour ? ' style="color:' + colour + '"' : '') + '><title>' + escapeText(title) +
+         '</title>' + draw(s) + '</g>';
 }

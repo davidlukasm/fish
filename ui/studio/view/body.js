@@ -366,8 +366,10 @@ function organNodes(state, organ) {
 }
 // What touch, injury and lateral-line cells feel, from the engine's design view, while their
 // organ is chosen: the skin touch and injury cells feel on, the brighter the more their angular
-// kernel weighs it; for lateral-line cells the way water passing them makes them answer.
-const FELT = Object.freeze({step : 6, least : .04, arrow : 58, gap : 6, head : 10, corner : 2.2});
+// kernel weighs it (at least BASE, so the whole field stands out); for lateral-line cells the way
+// water passing them makes them answer.
+const FELT = Object.freeze(
+    {step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, corner : 2.2});
 // The engine's cells of each of the organ's groups, with where the group sits on the frame.
 function feltCells(state, organ) {
   return organ.centers.flatMap(
@@ -387,7 +389,8 @@ function feltSkin(state, cells) {
         return weight <= FELT.least
                    ? ''
                    : '<path d="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' + fixed(point.x) +
-                         ' ' + fixed(point.y) + '" stroke-opacity="' + fixed(weight) + '"/>';
+                         ' ' + fixed(point.y) + '" stroke-opacity="' +
+                         fixed(FELT.base + (1 - FELT.base) * weight) + '"/>';
       })
       .join('');
 }

@@ -5,12 +5,12 @@ import {probeField} from './probes.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
 import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
-import {clamp, degrees, radians} from '../../units.js';
+import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
 import {driveElement} from './drive.js';
-import {contactFieldOf, contactHalfAngle, preferredScent} from '../../tuning.js';
+import {preferredScent} from '../../tuning.js';
 import {functionFor, isRegion, MUSCLE_LABEL_INDEX, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
@@ -22,7 +22,7 @@ import {
   wiredCrossing
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
-import {escapeText, fixed, glyph, padPoint, padValues, pointMarks, pointText} from './markup.js';
+import {escapeText, fixed, glyph, padPoint, padValues, pointMarks} from './markup.js';
 import {findSite, onMidline, sideIndex} from '../model/layout.js';
 import {formatNumber, formatSigned, linkText, namedText, percent, t, tList} from '../../strings.js';
 import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
@@ -33,29 +33,8 @@ import {workflow} from './library.js';
 import {centerTitle, endpointTitle, moduleName} from './names.js';
 import {organTitle} from './names.js';
 import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
+import {skinField} from './skin.js';
 
-// A touch or pain cell's field: a sector of its half angle on a ring around the cell, ahead
-// upwards, with a handle on its edge; the pointer's direction from the cell sets the half angle.
-const CONTACT_PAD = Object.freeze({size : 140, centre : 70, radius : 53, cell : 5, handle : 6});
-export function contactPatch(fx, fy) {
-  const P = CONTACT_PAD, half = Math.atan2(fx * P.size - P.centre, P.centre - fy * P.size);
-  return {field : contactFieldOf(degrees(Math.abs(half)))};
-}
-function contactField(center) {
-  const P = CONTACT_PAD, half = radians(contactHalfAngle(center.field));
-  const radial = angle =>
-      ({x : P.centre + P.radius * Math.sin(angle), y : P.centre - P.radius * Math.cos(angle)});
-  const lo = radial(-half), hi = radial(half);
-  return '<svg class="aid-contact-field" data-contact-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 ' + P.size + ' ' + P.size + '" role="img" aria-label="' +
-         label('inspector.contactAngle') + '"><circle cx="' + P.centre + '" cy="' + P.centre +
-         '" r="' + P.radius + '"/><path class="aid-contact-sector" d="M' + P.centre + ' ' +
-         P.centre + ' L' + pointText(lo) + ' A' + P.radius + ' ' + P.radius + ' 0 ' +
-         (half * 2 > Math.PI ? 1 : 0) + ' 1 ' + pointText(hi) + ' Z"/><circle cx="' + P.centre +
-         '" cy="' + P.centre + '" r="' + P.cell +
-         '"/><circle class="aid-graphic-handle" data-graphic-handle="angle" cx="' + fixed(hi.x) +
-         '" cy="' + fixed(hi.y) + '" r="' + P.handle + '"/></svg>';
-}
 // A muscle does what its place makes of it: drive the tail, steer, suck in or bite. The four
 // functions stand side by side, the muscle's own one marked; another one moves the muscle to the
 // nearest places with that function.
@@ -116,7 +95,8 @@ function driveMeaning(state, center) {
 // senses what they feel. An organ without graphics of its own shows its icon and name.
 const gonadPanel = (state, organ, center) =>
     gonadGraphic(state, organ, center) + gonadFacts(state, organ) + pressureNote(state, organ);
-const skinPanel = (state, organ, center) => contactField(center) + probeField(state, organ);
+const skinPanel = (state, organ, center) =>
+    skinField(state, organ, center) + probeField(state, organ);
 const nervePanel = (state, organ, center) => nerveProperties(state, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => {
@@ -155,9 +135,16 @@ const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes && !SACS.in
 // muscle's also what it does); a nerve center rests, answers and fades, a pacemaker beats.
 const section = (title, body) =>
     '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
-const sensorSection = (state, organ, center) =>
-    section(escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})),
-            sensorAnswer(state, center) + sensorAdaptation(state, center));
+// The skin senses show their sensitivity on their skin (skinField), the others on a curve.
+const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
+function sensorSection(state, organ, center) {
+  if (!SKIN_SENSES.includes(organ.type))
+    return section(
+        escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})),
+        sensorAnswer(state, center) + sensorAdaptation(state, center));
+  const adaptation = sensorAdaptation(state, center);
+  return /<svg/.test(adaptation) ? section(label('inspector.adaptation'), adaptation) : '';
+}
 const motorSection = (state, organ, center) =>
     section(label('inspector.drive'),
             driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
@@ -196,7 +183,7 @@ const stimulusName = (state, center) =>
 function stimulusDrawing(state, center) {
   const kind = stimulusKind(state, center);
   const colour = kind === SENSE_KIND.odor ? scentColors?.[preferredScent(center)] : null;
-  return (share, point, title) => stimulusPicture(kind, share, point, title, colour);
+  return (share, point, title, size) => stimulusPicture(kind, share, point, title, colour, size);
 }
 // The axis a sensory center's stimulus runs on: from the engine's dimmest stimulus for intensity
 // senses, linear for the others.
@@ -227,7 +214,7 @@ export function sensorAdaptation(state, center, stretch = 1, start = null) {
         title = t('studio.inspector.held', {stimulus : stimulusName(state, center)});
   const graphic = adaptationElement(adapt, {adaptation : 'center', 'adaptation-id' : center.id},
                                     label('inspector.adaptation'), steps,
-                                    point => draw(share, point, title), stretch);
+                                    (point, size) => draw(share, point, title, size), stretch);
   return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
          graphic + '</div>';
 }

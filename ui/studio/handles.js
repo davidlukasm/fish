@@ -32,7 +32,8 @@ import {
 } from './model/document.js';
 import {cameraCoordinates} from './view/frame.js';
 import {dataAttribute, fixed} from './view/markup.js';
-import {contactPatch, outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
+import {outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
+import {skinPatch} from './view/skin.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
@@ -74,6 +75,7 @@ export const HANDLES = Object.freeze({
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
+  skin : {follow : 'skinPointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'refreshInspector', keepsClick : true}
 });
@@ -102,7 +104,6 @@ const PADS = Object.freeze({
   },
   pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
   amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
-  contact : {key : 'contactPad', handle : contactPatch},
   lateral : {key : 'lateralPad', handle : lateralPatch},
   spines : {
     key : 'spinePad',
@@ -169,6 +170,12 @@ export const GRIPS = Object.freeze([
     handle : '[data-cell-handle]',
     held : 'drive',
     start : (studio, g) => ({id : g.dataset.cellTrack, handle : 'copies'})
+  },
+  {
+    graphic : '[data-skin-field]',
+    handle : '[data-skin-handle]',
+    held : 'skin',
+    start : (studio, g, h) => studio.skinGrip(g, h)
   },
   {
     graphic : '[data-sac]',
@@ -526,6 +533,31 @@ export const handleMethods = {
       dragged : null
     }
                                       : null;
+  },
+  // A skin sense's graphic holds its field's edge or its middle hair: the way the cell faces and,
+  // for the hair, the cell's answer and threshold as the drag starts.
+  skinGrip(graphic, handle) {
+    const found = findCenter(this.state.document, graphic.dataset.skinField);
+    if (!found)
+      return null;
+    const answer = groupReport(this.state.document, this.state.anatomy, 'senses', found.center.id);
+    return {
+      id : found.center.id,
+      name : handle.dataset.skinHandle,
+      aim : Number(graphic.dataset.skinAim),
+      start :
+          {intensity : answer?.intensity, half : answer?.half, threshold : found.center.threshold}
+    };
+  },
+  skinPointer(event) {
+    const drag = this.handleDrag, found = findCenter(this.state.document, drag.id);
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch =
+        found && skinPatch(this.state, found.center, drag.aim, drag.name, fx, fy, drag.start);
+    if (!patch)
+      return;
+    this.tuneDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id);
+    this.refreshInspector();
   },
   // An adaptation graphic holds its time constant, once the engine has answered for it.
   adaptationGrip(graphic) {

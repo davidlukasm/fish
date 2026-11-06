@@ -1439,8 +1439,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const learned = learningView.learningPatch(learningMark.cx / learningView.LEARNING_PAD.width,
                                                learningMark.cy / learningView.LEARNING_PAD.height);
     assert.ok(Math.abs(learned.mode - .2) < 1e-9 && Math.abs(learned.qwidth - .7) < 1e-9);
-    const contact = panels.contactPatch(.5, 0);
-    assert.equal(contact.field, 0, 'Straight ahead the contact field is narrowest');
+    // A skin sense's handles read back what they show: its field's edge how far round the body
+    // the cell feels, its middle hair's tip how sensitive it is.
+    const skinView = await import('../ui/studio/view/skin.js');
+    const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
+    const touchOrgan = model.findOrgan(touched.document, touched.organId),
+          touchCell = touchOrgan.centers[0], skinState = {document : touched.document, sites};
+    const skinMarkup = skinView.skinField(skinState, touchOrgan, touchCell);
+    const skinAim = Number(/data-skin-aim="([^"]+)"/.exec(skinMarkup)[1]);
+    const skinBack = name => {
+      const [, cx, cy] =
+          new RegExp('data-skin-handle="' + name + '" cx="([^"]+)" cy="([^"]+)"').exec(skinMarkup);
+      const box = /viewBox="0 0 (\S+) (\S+)"/.exec(skinMarkup);
+      return skinView.skinPatch(skinState, touchCell, skinAim, name, cx / box[1], cy / box[2], {});
+    };
+    assert.ok(Math.abs(skinBack('field').field - touchCell.field) < .05);
+    assert.ok(Math.abs(skinBack('sensitivity').threshold - touchCell.threshold) < .05);
     const layout = await import('../ui/studio/model/layout.js');
     assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});
     assert.ok(sites.filter(layout.nerveZone)

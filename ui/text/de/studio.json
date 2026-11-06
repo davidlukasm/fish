@@ -257,7 +257,6 @@
     "gutLength": "Darmlänge",
     "tailRhythm": "Schlagrhythmus",
     "distanceRange": "Reichweite",
-    "contactAngle": "Kontaktwinkel",
     "hormoneProfile": "Stoffprofil",
     "reserve": "Energiereserve",
     "modulation": "Modulationswirkung",
@@ -325,6 +324,14 @@
     "kindCount": "{name} ×{n}",
     "stretch": "Dehnung",
     "cellsHandle": "Ziehen: mehr oder weniger Keimzellen",
+    "skin": {
+      "field": "Hautfeld ±{degrees}°",
+      "touch": "Druckempfindlichkeit {share}",
+      "pain": "Schmerzempfindlichkeit {share}",
+      "fieldHandle": "Ziehen: wie weit um den Körper die Zelle fühlt",
+      "touchHandle": "Ziehen: längere Härchen fühlen leichteren Druck",
+      "painHandle": "Ziehen: längere Nervenenden fühlen leichtere Wunden"
+    },
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
       "fullIn": "voll nach {n} {n:Schritt|Schritten}",

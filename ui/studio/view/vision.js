@@ -358,8 +358,8 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
       light, state.anatomy?.lightDimmest,
       {sensitivity : 'field', 'sensitivity-id' : organ.id, 'profile-id' : profile.id},
       label('sensitivity'),
-      (share, point, title) =>
-          stimulusPicture(SENSE_KIND.light, share, point, title, profileColor(profile)),
+      (share, point, title, size) =>
+          stimulusPicture(SENSE_KIND.light, share, point, title, profileColor(profile), size),
       shift);
   return `<div data-sensitivity-block="field" data-sensitivity-id="${
       idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}">${graphic}${

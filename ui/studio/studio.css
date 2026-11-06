@@ -6,7 +6,7 @@
 /* Colours: organ categories and signals. */
 #station-root{--aid-senses:#79d2be;--aid-brain:#b8c5e1;--aid-motor:#eaa886;--aid-inhibit:#e8a2b5}
 /* Colours: the drawn fish and its organs. */
-#station-root{--aid-fish-line:#8ac7bb;--aid-fin-line:#89c9bb;--aid-sketch-line:#84b9b3;--aid-sketch:#2c5a5e;--aid-limit:#3b6a6c;--aid-rim:#8fbea8;--aid-node-edge:#0c2328;--aid-ink:#0d262c;--aid-pupil:#0a232b;--aid-spine:#edc99d;--aid-spine-fill:#a6c3b3;--aid-flow:#bfe3f0;--aid-flow-light:#e9f6fb;--aid-lateral:#83cbd0;--aid-touch:#a3ddcf;--aid-gut:#d2c9a8;--aid-sperm:#f3f8fb;--aid-tooth:#f3eedc;--aid-size:#9fc9d8}
+#station-root{--aid-fish-line:#8ac7bb;--aid-fin-line:#89c9bb;--aid-sketch-line:#84b9b3;--aid-sketch:#2c5a5e;--aid-limit:#3b6a6c;--aid-rim:#8fbea8;--aid-node-edge:#0c2328;--aid-ink:#0d262c;--aid-pupil:#0a232b;--aid-spine:#edc99d;--aid-spine-fill:#a6c3b3;--aid-flow:#bfe3f0;--aid-flow-light:#e9f6fb;--aid-lateral:#83cbd0;--aid-touch:#a3ddcf;--aid-touch-felt:#f2cf7e;--aid-pain-felt:#f1a08a;--aid-gut:#d2c9a8;--aid-sperm:#f3f8fb;--aid-tooth:#f3eedc;--aid-size:#9fc9d8}
 #station-root{position:fixed;inset:0;z-index:100;background:var(--aid-ground);color:#d7e6e3;overflow:hidden;font:14px/1.45 system-ui,sans-serif}
 #station-root[hidden]{display:none}
 #station-root button,#station-root input{font:inherit}
@@ -248,7 +248,6 @@
 .aid-vector-editor svg>path{stroke:#557b7f;stroke-width:1.3;fill:none}
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
 .aid-pad-label{fill:#9fc2bd;font-size:11px;pointer-events:none}
-.aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto;touch-action:none}
 .aid-spine-field{display:block;width:100%;height:auto;margin:6px 0;touch-action:none}
 .aid-spine-limit{fill:none;stroke:var(--aid-limit);stroke-width:1}
 .aid-spine-spread{fill:var(--aid-spine);fill-opacity:.16;stroke:var(--aid-spine);stroke-opacity:.5;stroke-width:1}
@@ -258,8 +257,14 @@
 .aid-spine-node{fill:#f3b48f;stroke:var(--aid-node-edge);stroke-width:1.2}
 .aid-spine-legend{fill:var(--aid-label-text);font-size:11px}
 .aid-spine-swatch.aid-spine-rest{stroke-width:5;stroke:var(--aid-spine-fill)}
-.aid-contact-field>circle{stroke:var(--aid-sketch-line);fill:#1b434b;stroke-width:2}
-.aid-contact-sector{fill:#a0d7b34d;stroke:#b8e3bc;stroke-width:2}
+.aid-skin-field{display:block;width:100%;height:auto;margin:6px 0 2px;touch-action:none}
+.aid-skin-fish{fill:#1b434b;stroke:var(--aid-sketch-line);stroke-width:1.5;vector-effect:non-scaling-stroke}
+.aid-skin-patch path{fill:none;stroke:var(--aid-touch-felt);stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.aid-skin-field.pain .aid-skin-patch path,.aid-skin-field.pain .aid-skin-hairs{stroke:var(--aid-pain-felt)}
+.aid-skin-hairs{fill:none;stroke:var(--aid-touch-felt);stroke-width:1.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.aid-skin-cell{fill:var(--aid-ink);stroke:#e6efe8;stroke-width:1.5}
+.aid-skin-field [data-skin-handle]{cursor:grab}
+.aid-skin-facts{margin:0 0 8px;font-size:12px;color:#c2d6d2}
 .aid-anatomical-lateral{fill:none;stroke:var(--aid-lateral);stroke-width:2.4;stroke-linecap:round;opacity:.85}
 .aid-lateral-pore{fill:var(--aid-ink);stroke:#9fdde0;stroke-width:1.6}
 .aid-lateral-hit{fill:none;stroke:var(--aid-lateral);stroke-width:20;stroke-opacity:0;stroke-linecap:round}
@@ -347,6 +352,7 @@
 .aid-sensitivity text{fill:var(--aid-hint-text);font:13px system-ui}
 .aid-sensitivity-half{stroke:var(--aid-handle);stroke-width:1;stroke-dasharray:3 3}
 .aid-sensitivity-curve{fill:none;stroke:#e8eed8;stroke-width:2}
+.aid-sensitivity-end{opacity:.6}
 .aid-sight-eyes{display:grid;gap:8px}
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
@@ -481,8 +487,8 @@
 .aid-wide{width:100%;margin:4px 0}
 /* What touch, injury and lateral-line cells feel, while their organ is chosen. */
 .aid-felt{pointer-events:none;fill:none;stroke-linecap:round}
-.aid-felt.touch>path{stroke:var(--aid-touch);stroke-width:10}
-.aid-felt.pain>path{stroke:#f1a08a;stroke-width:10}
+.aid-felt.touch>path{stroke:var(--aid-touch-felt);stroke-width:12}
+.aid-felt.pain>path{stroke:var(--aid-pain-felt);stroke-width:12}
 .aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:3;stroke-linejoin:round}
 /* What the placement hints' colours stand for, while something is dragged. */
 /* Whether a stimulus is a preview along the drawing or runs through the built fish. */
