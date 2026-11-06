@@ -23,6 +23,9 @@ const PANEL = Object.freeze({
   glow : 7,
   cloud : 2.8,
   cross : .8,
+  wave : 18,
+  swing : 6,
+  samples : 24,
   play : 3.2,
   travel : .1
 });
@@ -57,10 +60,10 @@ const flashes = moments => {
 const cell = moments => '<circle class="aid-effect-base" cx="' + P.cx + '" cy="' + P.cy + '" r="' +
                         P.r + '"/><circle class="aid-effect-cell" cx="' + P.cx + '" cy="' + P.cy +
                         '" r="' + P.r + '" fill-opacity=".3">' + flashes(moments) + '</circle>';
-function input(y, moments, cls = '', grows = null) {
+function input(y, moments, cls = '', grows = null, from = P.thick) {
   const to = edge(P.side, y), path = way(P.side, y, to.x, to.y);
   return (grows === null ? '' : line(P.side, y, to.x, to.y, 'ghost', grows)) +
-         line(P.side, y, to.x, to.y, cls, P.thick, grows === null ? '' : grown(grows)) +
+         line(P.side, y, to.x, to.y, cls, from, grows === null ? '' : grown(grows, from)) +
          moments.map(t => travelling(path, t - P.travel, t, P.pulse, P.play)).join('');
 }
 const output = (moments, r = P.pulse, width = P.thick) =>
@@ -76,12 +79,10 @@ const spikes = n => '<path class="aid-effect-spikes" d="' +
                                                       ' ' + (P.cy + P.spike) + ' v' + P.spike)
                         .join(' ') +
                     '"/>';
-const grown = to => animate('stroke-width',
-                            [
-                              [ 0, P.thick ], [ T.teach[0], P.thick ], [ T.teach[1], to ],
-                              [ 1 - T.edge, to ], [ 1, P.thick ]
-                            ],
-                            P.play);
+const grown = (to, from = P.thick) => animate(
+    'stroke-width',
+    [ [ 0, from ], [ T.teach[0], from ], [ T.teach[1], to ], [ 1 - T.edge, to ], [ 1, from ] ],
+    P.play);
 function trace(y, from, strength) {
   if (!strength)
     return '';
@@ -94,17 +95,31 @@ function trace(y, from, strength) {
 const teaching = () => line(P.cx, P.top, P.cx, P.cy - P.r, 'teach', 2) +
                        travelling(way(P.cx, P.top, P.cx, P.cy - P.r), T.teach[0] - P.travel,
                                   T.teach[0], P.pulse * 1.2, P.play, 'var(--aid-teach)');
-const pacer = (swing = 1) =>
-    line(P.cx, P.cy + P.below, P.cx, P.cy + P.r, 'pace', 2) +
-    '<circle class="aid-effect-pacer" cx="' + P.cx + '" cy="' + (P.cy + P.below) + '" r="' +
-    fixed(3 + 2 * swing) + '"/><circle class="aid-effect-ring" cx="' + P.cx + '" cy="' + P.cy +
-    '" r="' + P.r + '" stroke-opacity="0">' +
-    animate('stroke-opacity',
-            [ [ 0, 0 ], [ T.beat, 0 ], [ T.beat + T.edge, swing ], [ T.beat + T.flash * 4, 0 ] ],
-            P.play) +
-    animate('r', [ [ 0, P.r ], [ T.beat, P.r ], [ T.beat + T.flash * 4, P.r * (1 + swing) ] ],
-            P.play) +
-    '</circle>';
+// Drawn like the rhythm tile's icon.
+function pacer(swing = 1, beats = [ T.beat ]) {
+  const y = P.cy + P.below, A = P.swing * swing;
+  const wave = Array
+                   .from({length : P.samples + 1},
+                         (_, k) => {
+                           const u = k / P.samples;
+                           return (k ? ' L' : 'M') + fixed(P.cx - P.wave + 2 * P.wave * u) + ' ' +
+                                  fixed(y - A * Math.sin(2 * Math.PI * 2 * u));
+                         })
+                   .join('');
+  const ring = attribute => animate(
+      attribute,
+      [
+        [ 0, attribute === 'r' ? P.r : 0 ],
+        ...beats.flatMap(t => attribute === 'r'
+                                  ? [ [ t, P.r ], [ t + T.flash * 4, P.r * (1 + swing) ],
+                                      [ t + T.flash * 4 + T.edge, P.r ] ]
+                                  : [ [ t, 0 ], [ t + T.edge, swing ], [ t + T.flash * 4, 0 ] ])
+      ],
+      P.play);
+  return line(P.cx, y, P.cx, P.cy + P.r, 'pace', 2) + '<path class="aid-effect-wave" d="' + wave +
+         '"/><circle class="aid-effect-ring" cx="' + P.cx + '" cy="' + P.cy + '" r="' + P.r +
+         '" stroke-opacity="0">' + ring('stroke-opacity') + ring('r') + '</circle>';
+}
 function dying() {
   const C = P.r * P.cross;
   const fade = animate(
@@ -123,8 +138,8 @@ function dying() {
                  P.play) +
          '</path>';
 }
-const CHANGE =
-    Object.freeze({learn : 7, compete : 6, credit : 7, fires : 6, input : 3, louder : .6});
+const CHANGE = Object.freeze(
+    {learn : 7, compete : 5, quiet : 2.8, credit : 7, fires : 6, input : 3, louder : .6});
 function firings(r) {
   const n = Math.round(clamp(CHANGE.input * (1 + r), 0, CHANGE.fires));
   return [...T.input, ...T.extra ].slice(0, n).sort((a, b) => a - b);
@@ -145,17 +160,16 @@ const SCENES = Object.freeze({
                                     : input(P.cy, T.input) + output(T.input) + cell(T.input),
   [HORMONE_EFFECT.rhythm] : r => {
     const swing = effectLevel(HORMONE_EFFECT.rhythm, r);
-    return pacer(swing) + output([ T.beat ], P.loud * swing) + cell(swing ? [ T.beat ] : []);
+    return pacer(swing, T.input) + output(T.input, P.loud * swing) + cell(swing ? T.input : []);
   },
   [HORMONE_EFFECT.learning] : r =>
       input(P.cy, [ T.input[0] ], '',
             P.thick + CHANGE.learn * effectLevel(HORMONE_EFFECT.learning, r) / 2) +
       trace(P.cy, T.input[0], .6) + teaching() + output([ T.input[0] ]) + cell([ T.input[0] ]),
   [HORMONE_EFFECT.competition] : r => {
-    const change = CHANGE.compete * effectLevel(HORMONE_EFFECT.competition, r);
-    return input(P.upper, [ T.input[0] ], '', P.thick + change) +
-           input(P.lower, [], 'still',
-                 P.thick * (1 - effectLevel(HORMONE_EFFECT.competition, r) / 2)) +
+    const level = effectLevel(HORMONE_EFFECT.competition, r), start = 2 * P.thick;
+    return input(P.upper, [ T.input[0] ], '', start + CHANGE.compete * level, start) +
+           input(P.lower, [], 'still', start - CHANGE.quiet * level, start) +
            output([ T.input[0] ]) + cell([ T.input[0] ]);
   },
   [HORMONE_EFFECT.eligibility] : r => {

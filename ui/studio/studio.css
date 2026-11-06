@@ -835,7 +835,8 @@
 .aid-effect-line.teach{stroke:var(--aid-teach)}
 .aid-effect-line.pace{stroke:var(--aid-brain)}
 .aid-effect-pulse,.aid-episode-pulse{fill:#f2f6dc}
-.aid-effect-pacer,.aid-effect-modulator{fill:#2b5157;stroke:var(--aid-brain);stroke-width:1.5}
+.aid-effect-modulator{fill:#2b5157;stroke:var(--aid-brain);stroke-width:1.5}
+.aid-effect-wave{fill:none;stroke:var(--aid-brain);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-effect-ring{fill:none;stroke:var(--aid-brain);stroke-width:1.5}
 .aid-effect-cross{fill:none;stroke:#e5675c;stroke-width:3;stroke-linecap:round}
 .aid-effect-cloud{opacity:.3}
