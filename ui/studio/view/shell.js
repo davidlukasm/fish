@@ -35,7 +35,7 @@ export function developAction(state) {
   };
 }
 export const zoomStamp = camera => percent(camera.zoom);
-export function cellStatus(state) {
+function cellStatus(state) {
   const {report, stale, anatomy} = state;
   if (report && !stale)
     return t('studio.app.developedCount', {cells : report.neurons, contacts : report.synapses});

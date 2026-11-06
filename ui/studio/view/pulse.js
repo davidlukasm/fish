@@ -42,7 +42,6 @@ export function signalPoint(points, fraction) {
   return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
 }
 const duration = length => clamp(SECOND_MS * length / SIGNAL.speed, SIGNAL.least, SIGNAL.most);
-export const legDuration = points => duration(lineLength(points));
 export function legStages(link) {
   return [ link.starts ?? [], [ link.points ], link.arrives ?? [] ]
       .filter(lines => lines.length)

@@ -307,7 +307,7 @@ function curveMarks({high, low, from, to, along, up}) {
 }
 const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 const CURVE_DIGITS = 3;
-export function effectCurve(state, receptor, effect, target = null) {
+function effectCurve(state, receptor, effect, target = null) {
   const {maturity, halfMin, scale, response, atFraction, x, y} =
       receptorCurve(state, receptor, effect);
   const points = Array
@@ -457,7 +457,7 @@ export function substanceName(state, index) {
           : index === HORMONES.levels + 1 ? label('inspector.reserve')
                                           : tList('studio.inspector.substanceLetters')[index]);
 }
-export function substanceWheel(state, profile, {
+function substanceWheel(state, profile, {
   choices = [],
   attribute = '',
   extra = '',
@@ -517,7 +517,7 @@ export function substanceWheel(state, profile, {
          WHEEL.centre + '" cy="' + WHEEL.centre + '" r="' + WHEEL.radius +
          '" class="aid-wheel-ring"/>' + halo + marker + points.join('') + track + '</svg>';
 }
-export function receptorProfile(state, receptor) {
+function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
   return {x, y, width : receptor.width, active : receptor.active};
 }
@@ -530,7 +530,7 @@ function growthEditor(state) {
              t('studio.hormoneCard.growthWith', {name : substanceName(state, growth.substance)})) +
          effectCurve(state, growth, GROWTH, GROWTH) + '</section>';
 }
-export function organsOf(doc, centers) {
+function organsOf(doc, centers) {
   const seen = new Set();
   return centers.map(c => findCenter(doc, c.id)?.organ).filter(organ => {
     if (!organ || seen.has(organ.id))
@@ -550,7 +550,7 @@ const receptorEditor = (state, center, effects, effect) =>
                       escapeText(label('effects.' + value)) + '</button>')
         .join('') +
     '</div>' + receptorBody(state, center, effect);
-export function receptorBody(state, center, effect) {
+function receptorBody(state, center, effect) {
   const receptor = center.receptors[effect], target = center.id + ':' + effect;
   return doseStrip(state, receptor, effect, target) +
          '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
@@ -567,7 +567,7 @@ export function receptorBody(state, center, effect) {
          });
 }
 const GROW_MARK = 'M3 12c3-4 7-5 11-3l5-3v12l-5-3c-4 2-8 1-11-3zM9 11h.01';
-export function substanceInspector(state) {
+function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
   const substance = doc.substances.find(s => s.index === state.focusSubstance);
   if (!substance || !wheel)
@@ -612,7 +612,7 @@ export function substanceInspector(state) {
          label('inspector.removeSubstance') + '</button>';
 }
 // What a substance does to a cell, as the receptor turns it (`direction`, 0 for either way).
-export const effectWords = (effect, direction) =>
+const effectWords = (effect, direction) =>
     direction ? tList('studio.' + (direction > 0 ? 'effectsRise' : 'effectsFall'))[effect]
               : label('effects.' + effect);
 const effectSentence = (effect, direction) =>

@@ -987,7 +987,8 @@
     "learns": "Dieser Knoten lernt jetzt auswählend: aktive Eingänge wachsen, stille schrumpfen."
   },
   "learnRule": {
-    "teaching": "Wer die Zelle lehrt",
+    "teaching": "Lehrsignal",
+    "teacher": "Wer die Zelle lehrt",
     "firing": "zugleich aktiv",
     "inBeat": "im Takt",
     "still": "still",

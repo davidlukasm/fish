@@ -115,7 +115,7 @@ export function validateDocument(doc) {
   }
   return doc;
 }
-export const BENDS_MOST = 8;
+const BENDS_MOST = 8;
 const validBends = bends => Array.isArray(bends) && bends.length <= BENDS_MOST &&
                             bends.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y));
 export function setBends(doc, wireIds, bends) {

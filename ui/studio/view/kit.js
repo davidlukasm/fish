@@ -27,7 +27,7 @@ export function slotShape(slot) {
 export const slotFill = slot => slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
 export const heading = text => '<h3>' + escapeText(text) + '</h3>';
 const CELL_TRACK = Object.freeze({width : 300, height : 28, words : 150, end : 290, line : 15});
-export const cellShare = copies => (copies - 1) / (ATELIER_LIMITS.max_copies - 1);
+const cellShare = copies => (copies - 1) / (ATELIER_LIMITS.max_copies - 1);
 export const cellPatch = fx => ({
   copies : 1 + Math.round(trackShare(fx * CELL_TRACK.width, [ CELL_TRACK.words, CELL_TRACK.end ]) *
                           (ATELIER_LIMITS.max_copies - 1))

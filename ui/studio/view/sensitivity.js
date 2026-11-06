@@ -29,7 +29,7 @@ const axisX = (stimulus, dimmest) =>
 const stimulusAt = (f, dimmest) => dimmest ? Math.exp(Math.log(dimmest) * (1 - f)) : f;
 export const stimulusOfShare = stimulusAt;
 export const stimulusShare = (stimulus, dimmest) => clamp(axisFraction(stimulus, dimmest));
-export const stimulusText = (stimulus, dimmest) =>
+const stimulusText = (stimulus, dimmest) =>
     formatNumber(PERCENT * stimulus, dimmest ? 2 : 0) + ' %';
 export function sensitivityStimulus(fx, dimmest) {
   const S = SENSITIVITY, x = Math.max(S.left, Math.min(S.right, fx * S.width));

@@ -3,7 +3,7 @@ import {zoomOf} from './frame.js';
 export const LAYER_KEYS = Object.freeze([ 'wires', 'nodes', 'hormones' ]);
 export const AUTO = 'auto';
 const LAYER_MODES = Object.freeze([ AUTO, true, false ]);
-export const NODES_ZOOM = 1.35;
+const NODES_ZOOM = 1.35;
 const MOVE_WIRES_ZOOM = 1;
 const HORMONE_TOOLS = Object.freeze([ 'hormone', 'learn' ]);
 const STORE = 'aid.atelier.layer-modes';

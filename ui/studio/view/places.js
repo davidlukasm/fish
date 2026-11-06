@@ -228,7 +228,7 @@ export function placementTarget(doc, type, position) {
   return home ? {position : home, snap : Infinity, paired : side !== 0}
               : {position, snap : SNAP_DISTANCE, paired : true};
 }
-export function musclePoint(organ, index, sites) {
+function musclePoint(organ, index, sites) {
   const first = organ.centers[0];
   return muscleNode(organ, index, sites) ?? (first ? centerLocation(first, organ.type, sites)
                                                    : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
@@ -322,7 +322,7 @@ function midlinePair(doc, sites, site, at) {
 }
 export const NOSE = Object.freeze({ahead : .8, inset : 14, ring : 12});
 const NEAR = Object.freeze({ring : 2.3});
-export function nostril(side) {
+function nostril(side) {
   const x = BODY_MIDDLE.x - NOSE.ahead * BODY_RADIUS;
   return {x, y : skinAt(x, side) - side * NOSE.inset};
 }

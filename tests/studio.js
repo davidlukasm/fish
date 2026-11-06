@@ -174,8 +174,6 @@ function semanticFingerprint(source) {
   {
     const line = (x0, x1) => [{x : x0, y : 0}, {x : x1, y : 0}];
     assert.deepEqual(pulse.signalPoint(line(0, 100), .5), {x : 50, y : 0});
-    assert.equal(pulse.legDuration(line(0, 1)), pulse.SIGNAL.least);
-    assert.equal(pulse.legDuration(line(0, 1e6)), pulse.SIGNAL.most);
     assert.deepEqual(pulse
                          .legStages({
                            points : line(0, 100),

@@ -44,7 +44,7 @@ import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
 import {GENOME_FILE_ID} from './view/shell.js';
 
-export const PASS = Symbol('pass');
+const PASS = Symbol('pass');
 export function clickOn(studio, event, table) {
   for (const [selector, handle] of table) {
     const element = event.target.closest?.(selector);

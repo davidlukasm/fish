@@ -246,8 +246,8 @@ export function learningInspector(state) {
   const section = (key, body) =>
       '<section class="aid-learn-part">' + heading(label('learnRule.' + key)) + body + '</section>';
   return html + heading(centerTitle(chosen)) + learningRule(state, chosen, teachers, colours) +
-         section('teaching', teacherList(state, chosen, teachers.modulators) +
-                                 substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
+         section('teacher', teacherList(state, chosen, teachers.modulators) +
+                                substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
          section('rate', learnTrack('learn-rate', chosen, chosen.qwidth, label('learnRule.rate'),
                                     [ label('learnRule.slow'), label('learnRule.fast') ]) +
                              substancePart(state, chosen, HORMONE_EFFECT.learning)) +

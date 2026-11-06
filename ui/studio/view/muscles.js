@@ -13,7 +13,7 @@ export const MUSCLE_TONE = Object.freeze({
 });
 export const WORKS = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
-export function muscleBuild(organ, sites) {
+function muscleBuild(organ, sites) {
   const most = nodeLimit(organ, sites), count = organ.centers.length;
   const copies = organ.centers.reduce((sum, c) => sum + c.copies, 0) / Math.max(1, count);
   return {fill : most ? count / most : 0, strength : copies / ATELIER_LIMITS.max_copies};
@@ -36,7 +36,7 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-export function workShape(code, side, {fill, strength}, count) {
+function workShape(code, side, {fill, strength}, count) {
   const s = sideSign(side), along = k => (k + .5) / Math.max(1, count);
   if (code === MOTOR_KIND.forward) {
     const T = SHAPE.tail, end = T.stalk[1],

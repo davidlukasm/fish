@@ -73,11 +73,11 @@ export function driveElement(center, label, stepsLabel, {scale, rhythm = false, 
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';
-  const names =
-      meaning ? `<text x="${D.left + D.inset}" y="${D.top + D.label}">${meaning.above}</text>` +
-                    `<text x="${D.left + D.inset}" y="${D.top + D.plot - D.rise}">${
-                        meaning.below}</text>`
-              : '';
+  const names = meaning
+                    ? `<text x="${D.right - D.inset}" y="${D.top + D.label}" text-anchor="end">${
+                          meaning.above}</text><text x="${D.right - D.inset}" y="${
+                          D.top + D.plot - D.rise}" text-anchor="end">${meaning.below}</text>`
+                    : '';
   return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
       idSafe(center.id)}" role="img" aria-label="${label}">${idle}${
       command}<rect class="aid-drive-band" x="${D.left}" y="${rounded(y(band))}" width="${

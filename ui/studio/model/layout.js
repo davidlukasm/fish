@@ -36,7 +36,7 @@ const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75
 const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 30});
 export const NERVE_ROLE = 'nerve';
 export const SKIN_ROLE = 'skin';
-export const BRAIN_MAP = Object.freeze({
+const BRAIN_MAP = Object.freeze({
   [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, narrow : 0},
   [ZONE.head] : {front : 262, length : 150, height : 70, out : 44, narrow : 0},
   [ZONE.trunk] : {front : 455, length : 105, height : 50, out : 36, narrow : .3},

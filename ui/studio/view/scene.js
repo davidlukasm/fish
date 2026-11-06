@@ -198,7 +198,8 @@ function reachSvg(state) {
          fixed(reach) + '"/></g>';
 }
 const REACH = Object.freeze({fill : .32, span : 2});
-export const BODY_MAP_ID = 'aid-body-map', BODY_MAP = '#' + BODY_MAP_ID;
+const BODY_MAP_ID = 'aid-body-map';
+export const BODY_MAP = '#' + BODY_MAP_ID;
 const LAYER_ID = Object.freeze({
   hints : 'aid-placement-hints',
   choices : 'aid-choices',
