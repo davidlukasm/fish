@@ -55,6 +55,9 @@ const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 3
 // little further by its height (v, over HEIGHT); a deep one (w) OUT off the midline, a midline
 // one (one on each side) MIDDLE off it on its side.
 export const NERVE_ROLE = 'nerve';
+// The skin senses feel where their cells face, whatever depth their sites lie at: SKIN_ROLE draws
+// a site at the skin of its side.
+export const SKIN_ROLE = 'skin';
 export const BRAIN_MAP = Object.freeze({
   [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, middle : 10},
   [ZONE.head] : {front : 250, length : 150, height : 70, out : 44, middle : 12},
@@ -74,13 +77,12 @@ export function sitePoint(site, role = '') {
   if (role === NERVE_ROLE && nerveSite(site))
     return brainPoint(site);
   const [start, end] = ZONE_X[site.zone];
-  const roughX = start + (1 - site.u) * (end - start);
-  const x = roughX;
-  const side = sideSign(site.side);
-  const width = halfWidth(x);
+  const x = start + (1 - site.u) * (end - start);
+  const side = sideSign(site.side), width = halfWidth(x), D = SITE_DEPTH;
+  if (role === SKIN_ROLE)
+    return {x, y : CENTRE_Y + side * width * D.skin};
   if (onMidline(site))
     return {x, y : CENTRE_Y};
-  const D = SITE_DEPTH;
   const offset = Math.max(D.least, Math.min(width * D.skin, width * (D.inner + D.span * site.w)));
   // The fin muscle anchors extend through the paired side fins.
   const fin = role === 'muscle' && site.w > FIN_ANCHOR.depth ? FIN_ANCHOR[site.zone] ?? 0 : 0;

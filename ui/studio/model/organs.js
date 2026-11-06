@@ -1,5 +1,5 @@
 import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
-import {NERVE_ROLE, onMidline, sideSign} from './layout.js';
+import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 
 // Structural definitions only. Names, colours and controls live in the view.
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
@@ -80,9 +80,15 @@ export const ORGANS = Object.freeze([
   {
     key : 'touch',
     category : 'senses',
+    skin : true,
     centers : [ sensor('contact', SENSE_KIND.touch, 3, 'outer') ]
   },
-  {key : 'pain', category : 'senses', centers : [ sensor('injury', SENSE_KIND.damage, 3) ]},
+  {
+    key : 'pain',
+    category : 'senses',
+    skin : true,
+    centers : [ sensor('injury', SENSE_KIND.damage, 3) ]
+  },
   // The blood is the same all through the fish: one blood sense serves both sides, a type for
   // each substance it reads.
   {
@@ -267,8 +273,10 @@ export const ORGANS = Object.freeze([
 })));
 export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'regions';
 // The role a site is drawn for an organ type: the brain's and its regions' nerve centers in the
-// brain (NERVE_ROLE), the others as their type.
-export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROLE : type;
+// brain (NERVE_ROLE), the skin senses' at the skin (SKIN_ROLE), the others as their type.
+export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROLE
+                                : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
+                                                                     : type;
 // The pairing a new wire between two paired organs takes: as the region on either end prefers
 // for the other end's type, else on each side.
 export function defaultPairing(fromType, toType) {
