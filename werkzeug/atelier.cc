@@ -40,6 +40,9 @@ using namespace atelier;
 // stimulus frames few, the design and the developed fish's report enough to redraw them, the
 // diet's curves in between.
 constexpr int MEASURE_DIGITS = 4, REPORT_DIGITS = 8, DIET_DIGITS = 6;
+// A brain on trial runs as this individual, with its body clock going as in the tank: the clock
+// beats its pacemakers, and it runs only while the brain steps with hormone levels.
+constexpr std::uint64_t TRIAL_INDIVIDUAL = 1;
 // What a substance does in the developed brain: the brain runs `steps` steps without sensory input
 // and without learning, once with no hormone and once with `level` of the substance (or at
 // maturity `level` instead of `maturity` for the maturity substance). Reported: per cell group the
@@ -72,8 +75,8 @@ void measure(const Genome &g, const std::vector<Group> &groups, int substance, f
   for (auto *n : {&base, &variant})
     n->set_plasticity(false);
   for (int step = 0; step < steps; ++step) {
-    base.step(inputs, none, 1);
-    variant.step(inputs, dosed, 1);
+    base.step(inputs, none, TRIAL_INDIVIDUAL);
+    variant.step(inputs, dosed, TRIAL_INDIVIDUAL);
   }
   std::vector<double> change(groups.size()), members(groups.size());
   std::vector<int> dead(groups.size());
@@ -140,14 +143,19 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
       stimulated.push_back(i);
   }
   ensure(!stimulated.empty(), "selected organ has no developed active cells");
+  // Both brains run as in the tank, with the body clock going but no hormone and no learning, so
+  // the stimulus teaches nothing and the pacemakers beat in both alike.
   field::Network network(g.blueprint), baseline(g.blueprint);
+  for (auto *n : {&network, &baseline})
+    n->set_plasticity(false);
+  const field::Hormones calm{};
   network.stimulate(stimulated, 1.0f, 1);
   std::cout << std::setprecision(MEASURE_DIGITS) << "{\"frames\":[";
   const std::vector<float> inputs(sensorCount, 0.f);
   for (int frame = 0; frame <= steps; ++frame) {
     if (frame) {
-      network.step(inputs);
-      baseline.step(inputs);
+      network.step(inputs, calm, TRIAL_INDIVIDUAL);
+      baseline.step(inputs, calm, TRIAL_INDIVIDUAL);
     }
     if (frame)
       std::cout << ',';
