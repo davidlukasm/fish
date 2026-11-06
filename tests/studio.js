@@ -1768,6 +1768,15 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         exampleModel.exampleDocument({fish : 'B', growth : 'W', reward : 'F'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
     assert.equal(exampleDoc.substances.length, 2);
+    const pallium = exampleDoc.organs.find(o => o.type === 'pallium');
+    const taught = (doc, organ) => model.findOrgan(doc, organ.id)
+                                       .centers.filter(model.isLearner)
+                                       .map(c => c.receptors[HORMONE_EFFECT.teaching]);
+    const untaught = model.teachOrgan(exampleDoc, pallium.id, null);
+    assert.ok(taught(untaught, pallium).every(r => !r.active));
+    const byGrowth = model.teachOrgan(untaught, pallium.id, 0);
+    assert.ok(taught(byGrowth, pallium).length > 0 &&
+              taught(byGrowth, pallium).every(r => r.active && r.substance === 0));
     const systems = await import('../ui/studio/model/systems.js');
     assert.ok(!systems.systemFits(exampleDoc, 'reward') &&
               !systems.systemFits(exampleDoc, 'growth'));
