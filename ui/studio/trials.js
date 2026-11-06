@@ -8,6 +8,7 @@ import {
   findCenter,
   findOrgan,
   organOf,
+  shownSubstance,
   wholeEndpoint
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
@@ -119,16 +120,16 @@ export const trialMethods = {
     if (!this.state.sites.length || !builtAsDrawn(this.state))
       return;
     try {
-      this.state.measurement =
-          await this.api(requestBody('measure', {
-                           genome : this.state.genome,
-                           plan : compileDocument(this.state.document, this.state.sites),
-                           substance : this.state.focusSubstance,
-                           level : this.state.measureLevel,
-                           maturity : MEASURE_MATURITY,
-                           steps : ATELIER_LIMITS.max_measure_steps
-                         }),
-                         API_WAIT.long);
+      this.state.measurement = await this.api(
+          requestBody('measure', {
+            genome : this.state.genome,
+            plan : compileDocument(this.state.document, this.state.sites),
+            substance : shownSubstance(this.state.document, this.state.focusSubstance)?.index,
+            level : this.state.measureLevel,
+            maturity : MEASURE_MATURITY,
+            steps : ATELIER_LIMITS.max_measure_steps
+          }),
+          API_WAIT.long);
       this.refreshLibrary();
       this.refreshViews();
     } catch (error) {
