@@ -325,11 +325,7 @@ const initializers = {
       ],
       'evolution-settings' :
           [ 'mating_distance', 'novelty_strength', 'novelty_neighbors', 'duplicate' ],
-      'computation-settings' : [
-        'development_queries',
-        'development_query_limit',
-        'development_finalizations',
-      ],
+      'computation-settings' : [ 'development_work' ],
       'disease-settings' : [
         'disease_rate', 'disease_duration', 'disease_harm', 'disease_reach', 'disease_spread',
         'disease_food', 'disease_carrion'

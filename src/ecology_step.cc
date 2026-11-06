@@ -4,18 +4,13 @@
 #include "physiology.hh"
 #include "movement.hh"
 #include "stable_hash.hh"
-#include <limits>
 #include <unordered_set>
 namespace fishsim {
 namespace {
-// Query work is shared over about DEVELOPMENT_STEPS steps; preparation and finalization
-// retain their own limits when many eggs arrive together.
-constexpr double DEVELOPMENT_STEPS = 8;
+// Grant older plans useful chunks before opening more plans' temporary structures.
+constexpr std::size_t DEVELOPMENT_WORK_CHUNK = 16384;
 // Reserve one share for immigrants, including a preparation turn at the same interval.
 constexpr std::size_t IMMIGRANT_SHARES = 8;
-// Preparation visits gene rows/edges; finalization visits candidate copies and topology entries.
-// A costly-operation allowance grants at most this much work before another plan may run.
-constexpr std::size_t PREPARATION_SLICE = 16384, FINALIZATION_SLICE = 8192;
 // A swimming fish stirs the water by WAKE_SHARE of its thrust; impacts fade by IMPACT_KEEP.
 constexpr double WAKE_SHARE = .4, IMPACT_KEEP = .8;
 // Eggs denser than EGG_NEUTRAL_DENSITY of yolk sink, lighter ones rise (rising slower).
@@ -40,30 +35,9 @@ void Ecosystem::develop_population() {
   for (std::size_t i = 0; i < fish.size(); ++i)
     if (fish[i].developing() && fish[i].body.alive && !fish[i].genome.blueprint)
       pending.push_back(i);
-  // Query budget follows demand, with shared plans counted once. Preparation starts once per
-  // step; larger queues wait. All limits depend on state, so runs stay reproducible.
-  double need = 0;
-  {
-    // CPPN queries of a whole brain, as measured for large ones; every plan counts at least
-    // MIN_PLAN_QUERIES.
-    constexpr double typical = 40000, MIN_PLAN_QUERIES = 4096;
-    std::vector<const void *> plans;
-    for (auto i : pending) {
-      const auto &g = fish[i].genome;
-      const void *plan =
-          g.growing ? static_cast<const void *>(g.growing.get()) : static_cast<const void *>(&g);
-      if (std::find(plans.begin(), plans.end(), plan) != plans.end())
-        continue;
-      plans.push_back(plan);
-      need += std::max(MIN_PLAN_QUERIES, typical - double(g.pending_work()));
-    }
-  }
-  const auto query_budget =
-      std::size_t(std::clamp(need / DEVELOPMENT_STEPS, evo.development_queries,
-                             std::max(evo.development_queries, evo.development_query_limit)));
-  std::size_t budget = query_budget;
-  const int finalizations = std::max(1, int(evo.development_finalizations));
-  int operations = 0;
+  // All embryos share one fixed work budget, including preparation and finalization.
+  const auto work_budget = std::size_t(evo.development_work);
+  std::size_t budget = work_budget;
   bool prepared = false;
   auto develop_tier = [&](int priority, std::size_t &remaining) {
     std::vector<std::size_t> active;
@@ -96,38 +70,24 @@ void Ecosystem::develop_population() {
     active.resize(runnable);
     for (std::size_t at = 0; at < active.size() && remaining; ++at) {
       auto &g = fish[active[at]].genome;
-      // Every waiting plan gets a share; unused work passes to the following plans.
-      auto share = std::max<std::size_t>(1, remaining / (active.size() - at));
+      // Older plans receive useful chunks; splitting a small budget among hundreds of plans
+      // would open all their temporary structures together. Unused work passes to the next.
+      auto share =
+          std::min(remaining, std::max(DEVELOPMENT_WORK_CHUNK, remaining / (active.size() - at)));
       while (share && !g.blueprint) {
-        // Preparing the evaluator precedes counted queries. Bound starts too, so a queue of
-        // new eggs cannot prepare every genotype in one simulation step. This limit depends
-        // on state, not elapsed time, keeping development reproducible across machines.
+        // Genotype validation precedes the resumable preparation. Admit one new plan per step;
+        // all subsequent work, including preparation and finalization, uses the shared budget.
         if (!g.growing) {
-          if (prepared || operations >= finalizations)
+          if (prepared)
             break;
           prepared = true;
-          ++operations;
-        }
-        const bool preparing = !g.growing || g.growing->pending_preparation();
-        if (g.growing && (preparing || g.growing->pending_finalization())) {
-          if (operations >= finalizations)
-            break;
-          ++operations;
         }
         auto before = g.pending_work();
-        const bool finishing = g.growing && g.growing->pending_finalization();
-        const auto allowance = preparing ? std::min(share, PREPARATION_SLICE)
-                               : g.growing->pending_finalization()
-                                   ? std::min(share, FINALIZATION_SLICE)
-                                   : share;
-        g.advance_development(allowance);
+        g.advance_development(share);
         auto used =
             g.blueprint ? g.blueprint->development_work() - before : g.pending_work() - before;
         remaining -= std::min(remaining, used);
         share -= std::min(share, used);
-        // Give other runnable plans their turn before granting this plan another costly slice.
-        if (active.size() > 1 && (preparing || finishing) && !g.blueprint)
-          break;
         if (!used && !g.blueprint && !(g.growing && g.growing->pending_finalization()))
           break;
       }
@@ -136,7 +96,7 @@ void Ecosystem::develop_population() {
   std::size_t reserved =
       std::any_of(pending.begin(), pending.end(),
                   [&](auto i) { return fish[i].origin == fish_origin::immigrant; })
-          ? query_budget / IMMIGRANT_SHARES
+          ? work_budget / IMMIGRANT_SHARES
           : 0;
   std::size_t primary = budget - reserved;
   // Let the reserved immigrant share start a CPPN too, even with a continuous natural queue.

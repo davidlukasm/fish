@@ -218,6 +218,42 @@ void development_checkpoint_stages(const Genome &g) {
     check(saved(w) == saved(copy), "partial development continues exactly");
   }
 }
+// Resumable finalization shares the work budget across all admitted embryos. A slice quota must
+// neither leave later embryos idle nor strand unused work while finalization is pending.
+void development_finalization_uses_budget(const Genome &g) {
+  constexpr int EMBRYOS = 5;
+  constexpr std::size_t QUERY_SLICE = 64, WORK_BUDGET = 131072;
+  auto w = closed_tank(g);
+  w.fish.clear();
+  w.evo.development_work = WORK_BUDGET;
+  std::vector<std::size_t> before;
+  for (int i = 0; i < EMBRYOS; ++i) {
+    Genome fresh = g;
+    fresh.discard_development();
+    fresh.cppn = std::make_shared<evolution::Genome>(*g.cppn);
+    check(w.spawn(fresh, FIRST_X + i * SPACING, DEPTH, fish_origin::natural, 0, 0, 300),
+          "finalization fixture placement");
+    auto &plan = w.fish.back().genome;
+    while (!plan.growing || !plan.growing->pending_finalization())
+      check(!plan.advance_development(QUERY_SLICE), "fixture pauses before finalization");
+    before.push_back(plan.pending_work());
+  }
+  auto restored = w.fork();
+  w.tick(false, true);
+  restored.tick(false, true);
+  check(saved(w) == saved(restored), "budgeted finalization resumes deterministically");
+  std::size_t used = 0;
+  bool pending = false;
+  for (std::size_t i = 0; i < before.size(); ++i) {
+    const auto &plan = w.fish[i].genome;
+    const auto after = plan.blueprint ? plan.blueprint->development_work() : plan.pending_work();
+    check(after > before[i], "every admitted embryo receives finalization work");
+    used += after - before[i];
+    pending |= !plan.blueprint;
+  }
+  check(used <= WORK_BUDGET, "finalization obeys the population work budget");
+  check(!pending || used == WORK_BUDGET, "pending finalization uses the available budget");
+}
 // A bite mark WIDE_MARK wide in the middle of a stump SHORT_STUMP long covers the stump, no more:
 // a saved tank holds only marks within their organ.
 constexpr double WIDE_MARK = .3, SHORT_STUMP = .15, MARK_DEPTH = .5;
@@ -250,6 +286,7 @@ int main() {
     cut_marks_stay_on_their_piece();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
+    development_finalization_uses_budget(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     life_phases_follow_maturity(g);

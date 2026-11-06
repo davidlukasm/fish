@@ -49,7 +49,7 @@ void WorldViewWriter::header() {
       << ",\"imports\":" << world.metrics().imports
       << ",\"developing_eggs\":" << developing_eggs(world)
       << ",\"planning_brains\":" << planning_brains(world)
-      << ",\"development_query_budget\":" << world.evo.development_queries
+      << ",\"development_work_budget\":" << world.evo.development_work
       << ",\"viable_population\":" << world.viable_population()
       << ",\"breeder_count\":" << world.support().breeders.size()
       << ",\"self_fertilisations\":" << world.support().self_fertilisations
