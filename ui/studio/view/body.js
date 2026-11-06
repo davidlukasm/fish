@@ -68,13 +68,14 @@ import {organTitle} from './names.js';
 // mirrored), each over those before it, its edge among them a groove, and the fissures between
 // the halves; a rim round all of it, the lobes shaded as rounded.
 function brainSvg() {
-  const M = BODY_FRAME.middle, B = BRAIN, back = B.outline.at(-1);
+  const M = BODY_FRAME.middle, B = BRAIN, [ endX, endHalf ] = B.outline.at(-1);
+  // The outline's upper side from the front, round the cord's end, its lower side back.
+  const lower = [...B.outline ].reverse().map(([ x, h ]) => [x, M + h]);
   const body =
-      curveThrough([
-        [ B.outline[0][0], M ], ...B.outline.map(([ x, h ]) => [x, M - h]), [ back[0] + B.end, M ],
-        ...[...B.outline].reverse().map(([ x, h ]) => [x, M + h]), [ B.outline[0][0], M ]
-      ]) +
-      'Z';
+      curveThrough([ [ B.outline[0][0], M ], ...B.outline.map(([ x, h ]) => [x, M - h]) ]) + ' Q' +
+      (endX + B.end) + ' ' + (M - endHalf) + ' ' + (endX + B.end) + ' ' + M + ' Q' +
+      (endX + B.end) + ' ' + (M + endHalf) + ' ' + endX + ' ' + (M + endHalf) + ' L' +
+      curveThrough([...lower, [ B.outline[0][0], M ] ]).slice(1) + 'Z';
   const lobe = (p, side, cls) =>
       '<ellipse class="' + cls + '" cx="' + p.x + '" cy="' + (M + side * p.d) + '" rx="' + p.rx +
       '" ry="' + p.ry + '"' +

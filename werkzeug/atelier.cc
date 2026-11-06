@@ -644,18 +644,6 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
   std::cout << ",\"bodyRadius\":" << radius
             << ",\"visionDepth\":" << fishsim::EnvironmentParameters{}.vision_range / radius;
-  // Where each eye looks from, in body radii along the body and across it (null without one):
-  // the design view's fields and its sight probe start there.
-  std::cout << ",\"eyePlaces\":[";
-  for (int side = 0; side < fishsim::EYES; ++side) {
-    const auto place = fishsim::eye_view_place(a, fishsim::EnvironmentParameters{}, side);
-    std::cout << (side ? "," : "");
-    if (place)
-      std::cout << '[' << (*place)[0] << ',' << (*place)[1] << ']';
-    else
-      std::cout << "null";
-  }
-  std::cout << ']';
   std::cout << ",\"eyeIntervals\":[";
   for (std::size_t side = 0; side < a.eye_intervals.size(); ++side) {
     if (side)
