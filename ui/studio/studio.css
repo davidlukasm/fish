@@ -439,6 +439,8 @@
 .aid-hormone-symbols svg{color:var(--hormone)}
 .aid-hormone-marks circle{stroke:#0d2a31;stroke-width:1.2;vector-effect:non-scaling-stroke}
 .aid-hormone-symbols path{fill:none;stroke:var(--hormone);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke}
+.aid-direction path{fill:currentColor;stroke:none}
+.aid-hormone-symbols .aid-direction path{fill:var(--hormone);stroke:none}
 @media (prefers-reduced-motion:reduce){.aid-hormone-cloud circle{animation:none;opacity:.18;transform:scale(1.8)}}
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
 .aid-hormone-influence.teach{stroke-width:3;stroke-dasharray:8 6;opacity:.8}
@@ -855,7 +857,12 @@
 .aid-effect-card strong svg{color:var(--substance)}
 .aid-effect-card span{display:block;font-size:12px;color:var(--aid-control-text);margin:2px 0}
 .aid-effect-card small{display:block;font-size:11px;color:var(--aid-soft-text)}
+.aid-effect-card.off{opacity:.4}
+.aid-effect-part{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6px;margin-top:4px;color:var(--aid-teach)}
+.aid-effect-card strong .aid-bound-effect{display:inline-flex;margin:0;align-items:center;color:var(--substance)}
+.aid-effect-card .aid-effect-count{display:inline-block;margin:0 0 0 auto;min-width:18px;padding:0 6px;border-radius:9px;background:var(--substance);color:var(--aid-ink);font-size:11px;text-align:center}
 .aid-effect-scene{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
+.aid-effect-base{fill:var(--aid-graphic)}
 .aid-effect-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
 .aid-effect-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
 .aid-effect-line.still{stroke-opacity:.55}

@@ -2,7 +2,7 @@ import {fishOutline} from './body.js';
 import {nodeLocation, organLocation, showsNodes} from './places.js';
 import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
-import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TEACH_ICON} from './icons.js';
+import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, PHASE_ICON, TEACH_ICON} from './icons.js';
 import {CATEGORY_TONE} from './names.js';
 import {isModulator} from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
@@ -11,6 +11,7 @@ import {substanceColor} from '../../hormones.js';
 import {
   allCenters,
   boundEffects,
+  effectDirection,
   endpointCenters,
   findCenter,
   growsWith,
@@ -45,14 +46,28 @@ const HORMONE_GLYPH = Object.freeze({
   puffs : 3,
   symbol : 11,
   symbol_gap : 2,
+  arrow : .6,
+  corner : .7,
+  lift : .3,
   above : 1.9,
   faintest : .28
 });
-const symbolsAbove = (paths, r) => {
-  const G = HORMONE_GLYPH, step = G.symbol + G.symbol_gap;
-  return paths
-      .map((path, k) => placedGlyph(path, G.symbol,
-                                    {x : (k - (paths.length - 1) / 2) * step, y : -r * G.above}))
+// Symbols in a row above the glyph, each with an arrow ARROW of its size at its upper corner
+// (CORNER of it along, LIFT up) saying which way more of the substance turns its effect.
+const symbolsAbove = (symbols, r) => {
+  const G = HORMONE_GLYPH, step = G.symbol + G.symbol_gap + G.symbol * G.arrow;
+  return symbols
+      .map(({path, direction}, k) => {
+        const x = (k - (symbols.length - 1) / 2) * step, y = -r * G.above;
+        return placedGlyph(path, G.symbol, {x, y}) +
+               (direction
+                    ? '<g class="aid-direction">' +
+                          placedGlyph(DIRECTION_ICON[direction > 0 ? 'rises' : 'falls'],
+                                      G.symbol * G.arrow,
+                                      {x : x + G.symbol * G.corner, y : y - G.symbol * G.lift}) +
+                          '</g>'
+                    : '');
+      })
       .join('');
 };
 // The way from the nearest gland to a receiver bows CURVE more than a wire, at least FAINTEST
@@ -66,10 +81,13 @@ function hormoneGlyph(item, kind, color, zoom) {
                           '</g>'
                     : '';
   const symbols = kind === 'receiver'
-                      ? symbolsAbove((item.effects ?? [])
-                                         .map(e => item.teach && e === HORMONE_EFFECT.excitation
-                                                       ? TEACH_ICON
-                                                       : EFFECT_ICON[e]),
+                      ? symbolsAbove((item.effects ??
+                                      []).map((e, k) => ({
+                                                path : item.teach && e === HORMONE_EFFECT.excitation
+                                                           ? TEACH_ICON
+                                                           : EFFECT_ICON[e],
+                                                direction : item.directions?.[k] ?? 0
+                                              })),
                                      r)
                       : '';
   // A receiver plays what its strongest-placed effect does (EFFECT_ORDER), as the guide does.
@@ -168,7 +186,13 @@ function teachingOverlay(state) {
                             color + '" opacity="' + HORMONE_WAY.faintest + '"/>';
     html +=
         worded(sources, zoom).map(item => hormoneGlyph(item, 'producer', color, zoom)).join('') +
-        hormoneGlyph({...target, teach : teaches, effects}, 'receiver', color, zoom);
+        hormoneGlyph({
+          ...target,
+          teach : teaches,
+          effects,
+          directions : effects.map(e => effectDirection(e, found.center.receptors[e]))
+        },
+                     'receiver', color, zoom);
   }
   return '<g class="aid-hormone-overlay" pointer-events="none">' + marks + html + '</g>';
 }
@@ -209,7 +233,9 @@ export function hormoneOverlay(state) {
           affinity : Math.max(...effects.map(item => item.affinity)),
           focus : effects.some(item => item.effect === state.effect),
           teach : learning.has(center.id),
-          effects : effects.map(item => item.effect)
+          effects : effects.map(item => item.effect),
+          directions :
+              effects.map(item => effectDirection(item.effect, center.receptors[item.effect]))
         });
     }
   // A body that grows with the substance carries its colour along its outline.

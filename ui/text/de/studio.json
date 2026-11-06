@@ -884,22 +884,22 @@
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tiles": [
-      "feuern lassen",
-      "Lerntempo ändern",
-      "Wettbewerb schärfen",
-      "eigenes Feuern anrechnen",
-      "Takt verstärken",
-      "leiser stellen",
-      "absterben lassen"
+      "Feuern",
+      "Lerntempo",
+      "Wettbewerb",
+      "Anrechnung",
+      "Takt",
+      "Weitergabe",
+      "Absterben"
     ],
     "tileTitles": [
-      "Der Stoff kommt zum Eingang der Zelle dazu, sie feuert mehr. Bei einer lernenden Zelle ist sein Anstieg das Lehrsignal.",
-      "Jede Überraschung ändert die Verbindungen der Zelle bis doppelt so stark.",
-      "Was mit der Zelle feuert, wächst schneller, der Rest schrumpft schneller.",
-      "Die Merkspur markiert Eingänge beim eigenen Feuern der Zelle statt beim Schlag ihres Taktgebers.",
-      "Der Taktgeber schlägt stärker.",
-      "Die Zelle gibt weniger weiter, bis sie verstummt.",
-      "Ab einer Schwelle stirbt die Zelle, ihre Verbindungen verschwinden."
+      "Der Stoff hebt oder senkt den Eingang der Zelle. Bei einer lernenden Nervenzelle ist diese Änderung zugleich ihr Lehrsignal.",
+      "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
+      "Der Stoff macht den Wettbewerb unter den Eingängen schwächer oder stärker.",
+      "Der Stoff verschiebt, wofür die Merkspur Eingänge markiert: für den Takt oder für das eigene Feuern.",
+      "Der Stoff macht den Taktgeber schwächer oder stärker.",
+      "Der Stoff stellt ein, wie stark die Zelle ihr Signal weitergibt, von stumm bis voll.",
+      "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn."
     ],
     "where": [
       "bei Nervenzellen, Muskeln und Drüsen",
@@ -910,17 +910,11 @@
       "bei allen Zellen, auch Sinneszellen",
       "bei allen Zellen"
     ],
-    "effects": [
-      "lässt feuern",
-      "ändert Lerntempo",
-      "schärft Wettbewerb",
-      "rechnet eigenes Feuern an",
-      "verstärkt Takt",
-      "stellt leiser",
-      "lässt absterben"
-    ],
+    "rises": "{effect}: mehr Stoff hebt es",
+    "falls": "{effect}: mehr Stoff senkt es",
+    "kills": "stirbt mit dem Stoff",
+    "needs": "stirbt ohne den Stoff",
     "here": "hier bei {n} {n:Zelle|Zellen}",
-    "nowhere": "hier noch nirgends",
     "effectsTitle": "Was der Stoff bewirken kann",
     "growsOn": "lässt den Fisch wachsen",
     "growsOff": "lässt den Fisch nicht wachsen",

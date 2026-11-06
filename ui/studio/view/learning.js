@@ -2,7 +2,7 @@ import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp, PERCENT} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {chosenCenter, endpointCenters, findCenter} from '../model/document.js';
+import {chosenCenter, endpointCenters, findCenter, receptorEnds} from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {t, tList} from '../../strings.js';
@@ -61,7 +61,7 @@ const boundSubstance = (state, center, effect) => {
                           : null;
 };
 // The response a receptor gives with plenty of its substance.
-const fullResponse = receptor => clamp(receptor.baseline + receptor.sensitivity, -1);
+const fullResponse = receptor => receptorEnds(receptor).with;
 
 // The rule as the cell has it, in two rounds: TEACH_DELAY steps after its deed the teaching
 // signal comes, when it has a teacher (modulators teach in their colour, a substance in its own);
@@ -211,8 +211,10 @@ function substancePart(state, center, effect) {
          (colour ? ' style="--substance:' + colour + '"' : '') + '><h5>' +
          glyph(PART_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
          '</span></h5>' +
-         (effect === HORMONE_EFFECT.excitation ? teachingScene(colour ?? 'currentColor')
-                                               : effectScene(effect, colour ?? 'currentColor')) +
+         (effect === HORMONE_EFFECT.excitation
+              ? teachingScene(colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined)
+              : effectScene(effect, colour ?? 'currentColor',
+                            bound ? receptorEnds(receptor) : undefined)) +
          choices + strength + '</div>';
 }
 // The cell's teachers: its modulators with their markers, each a button choosing it, and the

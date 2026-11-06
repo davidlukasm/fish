@@ -179,6 +179,9 @@ export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.eligibility
 ]);
+// A cell that learns at all: a nerve cell whose plasticity (its quality width) is above nothing;
+// the change of what excites it is its teaching signal.
+export const learnsAtAll = center => center.role === 'nerve' && center.qwidth > 0;
 export const learners = (doc, index, wheel) => allCenters(doc).filter(
     c => c.role === 'nerve' &&
          boundEffects(c, index, wheel).some(effect => LEARNING_EFFECTS.includes(effect)));
@@ -926,6 +929,33 @@ const RECEPTOR_START = Object.freeze({
   [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
   [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
 });
+// What each effect makes of a receptor's response R, as the engine's cell step does
+// (colony-core/field/substrate.cc): firing adds R to the cell's input, learning scales its rate by
+// 1 + R, death strikes above DEATH_RESPONSE (1 dead, 0 alive), the others scale by (1 + R) / 2.
+export const DEATH_RESPONSE = .5;
+export function effectLevel(effect, r) {
+  if (effect === HORMONE_EFFECT.excitation)
+    return r;
+  if (effect === HORMONE_EFFECT.learning)
+    return 1 + r;
+  if (effect === HORMONE_EFFECT.death)
+    return r > DEATH_RESPONSE ? 1 : 0;
+  return (1 + r) / 2;
+}
+// A receptor's response without the substance and with plenty of it (bound fully).
+export const receptorEnds = receptor => ({
+  without : clamp(receptor.baseline, -1, 1),
+  with : clamp(receptor.baseline + receptor.sensitivity, -1, 1)
+});
+// The ends of a receptor as one put down by a tile starts.
+export const startEnds = effect =>
+    receptorEnds({...neutralReceptor(effect), ...RECEPTOR_START[effect]});
+// Whether more of the substance raises what an effect does (1), lowers it (-1) or leaves it (0);
+// for death 1 where the substance kills, -1 where the cell dies without it.
+export function effectDirection(effect, receptor) {
+  const ends = receptorEnds(receptor);
+  return Math.sign(effectLevel(effect, ends.with) - effectLevel(effect, ends.without));
+}
 export function bindReceptor(doc, id, effect, index) {
   const current = findCenter(doc, id)?.center.receptors[effect];
   return updateReceptor(

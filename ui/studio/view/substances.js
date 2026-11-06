@@ -5,13 +5,17 @@ import {isRegion, ROLE} from '../model/organs.js';
 import {
   boundEffects,
   chosenCenter,
+  DEATH_RESPONSE,
+  effectDirection,
   findCenter,
   growsWith,
+  learnsAtAll,
   lifePhase,
   NOTICEABLE_AFFINITY,
   organTypes,
   producers,
   receivers,
+  receptorEnds,
   SUBSTANCE_NAME_LENGTH,
   substanceRead,
   teachersOf,
@@ -23,8 +27,8 @@ import {
 import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
-import {EFFECT_ICON} from './icons.js';
-import {EFFECT_ORDER, effectScene} from './effects.js';
+import {DIRECTION_ICON, EFFECT_ICON, TEACH_ICON} from './icons.js';
+import {EFFECT_ORDER, effectScene, teachingScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
@@ -127,8 +131,8 @@ function bound(receptor, c) {
 }
 // The receptor's response R, and what each effect makes of it (colony-core/field/substrate.cc):
 // output, competition, trace and rhythm scale by (1 + R) / 2, learning by 1 + R, excitation
-// adds R, death strikes above DEATH_RESPONSE. Growth is the bound share without baseline.
-const DEATH_RESPONSE = .5;
+// adds R, death strikes above DEATH_RESPONSE (the model's effectLevel). Growth is the bound share
+// without baseline.
 const EFFECT_SCALE = Object.freeze({
   [HORMONE_EFFECT.excitation] : {low : -1, high : 1, value : r => r, response : v => v},
   [HORMONE_EFFECT.learning] : {low : 0, high : 2, value : r => 1 + r, response : v => v - 1},
@@ -550,9 +554,10 @@ export function substanceInspector(state) {
     return '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, ICON.list) +
            escapeText(organTitle(o, state.sites)) +
            [...effects ]
-               .map(e => '<span class="aid-bound-effect" title="' +
-                         escapeText(tList('studio.hormoneCard.effects')[e]) + '">' +
-                         glyph(EFFECT_ICON[e], ICON.mark, {line : true}) + '</span>')
+               .map(e => {
+                 const binding = o.centers.find(c => boundEffects(c, index, wheel).includes(e));
+                 return boundEffect(e, effectDirection(e, binding.receptors[e]));
+               })
                .join('') +
            '</button>';
   });
@@ -575,25 +580,55 @@ export function substanceInspector(state) {
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
+// An effect a substance has on cells, with which way more of it turns it (`direction`,
+// effectDirection) as an arrow, and in words beside.
+export function boundEffect(effect, direction) {
+  const name = label('effects.' + effect), death = effect === HORMONE_EFFECT.death;
+  const words =
+      !direction ? name
+      : death    ? label(direction > 0 ? 'hormoneCard.kills' : 'hormoneCard.needs')
+                 : t('studio.hormoneCard.' + (direction > 0 ? 'rises' : 'falls'), {effect : name});
+  return '<span class="aid-bound-effect" title="' + escapeText(words) + '">' +
+         glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
+         (direction
+              ? '<span class="aid-direction">' +
+                    glyph(DIRECTION_ICON[direction > 0 ? 'rises' : 'falls'], ICON.mark) + '</span>'
+              : '') +
+         '</span>';
+}
 // What the substance can do, each effect played with where it acts and on how many cells of this
-// fish it does.
+// fish it does, as the first cell it acts on there answers it (else as a tile puts it down).
 function effectGuide(state, index) {
   const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
   const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
   return '<section class="aid-effect-guide">' + heading(label('hormoneCard.effectsTitle')) +
          EFFECT_ORDER
              .map(effect => {
-               const n =
-                   receiving.filter(c => boundEffects(c, index, wheel).includes(effect)).length;
-               return '<div class="aid-effect-card" style="--substance:' + colour + '">' +
-                      effectScene(effect, colour) + '<div><strong>' +
-                      glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
-                      escapeText(words('tiles')[effect]) + '</strong><span>' +
-                      escapeText(words('tileTitles')[effect]) + '</span><small>' +
-                      escapeText(words('where')[effect]) + ' · ' +
-                      escapeText(n ? t('studio.hormoneCard.here', {n})
-                                   : label('hormoneCard.nowhere')) +
-                      '</small></div></div>';
+               const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
+               const n = bound.length;
+               // An effect it has nowhere in this fish yet stands back; its words are there on
+               // pointing.
+               const ends = n ? receptorEnds(bound[0].receptors[effect]) : undefined;
+               // Firing a cell that learns teaches it as well: that second part shows beside.
+               const teaches = effect === HORMONE_EFFECT.excitation && bound.find(learnsAtAll);
+               return '<div class="aid-effect-card' + (n ? '' : ' off') +
+                      '" style="--substance:' + colour + '" title="' +
+                      escapeText(words('tileTitles')[effect] + ' ' + words('where')[effect]) +
+                      '">' + effectScene(effect, colour, ends) +
+                      (teaches
+                           ? '<div class="aid-effect-part">' +
+                                 glyph(TEACH_ICON, ICON.mark, {line : true}) +
+                                 teachingScene(colour, receptorEnds(teaches.receptors[effect])) +
+                                 '</div>'
+                           : '') +
+                      '<div><strong>' +
+                      boundEffect(effect,
+                                  n ? effectDirection(effect, bound[0].receptors[effect]) : 0) +
+                      escapeText(words('tiles')[effect]) +
+                      (n ? '<span class="aid-effect-count" title="' +
+                               escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'
+                         : '') +
+                      '</strong></div></div>';
              })
              .join('') +
          '</section>';
@@ -616,8 +651,11 @@ export function hormoneInspector(state) {
           heading(centerTitle(focus)) +
           receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) +
           '<div class="aid-effect-card"' + (colour ? ' style="--substance:' + colour + '"' : '') +
-          '>' + effectScene(effect, colour ?? 'currentColor') + '<div><span>' +
-          escapeText(tList('studio.hormoneCard.tileTitles')[effect]) + '</span><small>' +
-          escapeText(tList('studio.hormoneCard.where')[effect]) + '</small></div></div></div>';
+          '>' +
+          effectScene(effect, colour ?? 'currentColor',
+                      receptor.active ? receptorEnds(receptor) : undefined) +
+          '<div><span>' + escapeText(tList('studio.hormoneCard.tileTitles')[effect]) +
+          '</span><small>' + escapeText(tList('studio.hormoneCard.where')[effect]) +
+          '</small></div></div></div>';
   return html;
 }

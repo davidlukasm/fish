@@ -1266,6 +1266,25 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const cleared = vision.clearOfFish(rendered, currentEye, inside);
   const lit = fan.pointText(cleared.bearing, cleared.distance * fan.world);
   assert.ok(cleared.distance > 0 && Math.hypot(lit.x - fan.eye.x, lit.y - fan.eye.y) >= fan.cut);
+  // A hormone turns an effect either way, as its receptor says: passing on rises from half to
+  // full where it starts at nothing and gains (as in the start fish), falls where it starts full;
+  // a cell dies with the substance or, needing it, without it.
+  {
+    const E = HORMONE_EFFECT, r = (baseline, sensitivity) => ({baseline, sensitivity});
+    assert.equal(model.effectLevel(E.output, 0), .5);
+    assert.equal(model.effectDirection(E.output, r(0, 1)), 1);
+    assert.equal(model.effectDirection(E.output, r(1, -2)), -1);
+    assert.equal(model.effectDirection(E.death, r(0, 1)), 1);
+    assert.equal(model.effectDirection(E.death, r(.8, -1)), -1);
+    assert.equal(model.effectDirection(E.learning, r(0, 0)), 0);
+    assert.deepEqual(model.startEnds(E.output), {without : 1, with : -1});
+    const effectsView = await import('../ui/studio/view/effects.js');
+    assert.notEqual(effectsView.effectScene(E.output, '#fff', {without : 0, with : 1}),
+                    effectsView.effectScene(E.output, '#fff', {without : 1, with : 0}),
+                    'Each side plays as the receptor answers there');
+    const substancesView = await import('../ui/studio/view/substances.js');
+    assert.match(substancesView.boundEffect(E.output, 1), /aid-direction/);
+  }
   // A new test light starts beyond the field's handles.
   const started = vision.beyondHandles(rendered, currentEye, cleared);
   const away = fan.pointText(started.bearing, started.distance * fan.world);
