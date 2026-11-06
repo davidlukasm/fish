@@ -1364,6 +1364,24 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(line, /width="16" height="16" viewBox="0 0 24 24"/);
     assert.match(line, /fill="none" stroke="currentColor" stroke-width="1.6"/);
     assert.doesNotMatch(glyphs.glyph('M0 0h24'), /width=/, 'Without a size its style sizes it');
+    // Polygons are cut into triangles by ear clipping; the triangles cover the polygon, a notched
+    // square when corners on an edge count as held, a triangle with a corner on one edge.
+    const polygon = await import('../ui/polygon.js');
+    const areaOf = ps => Math.abs(ps.reduce((v, p, i) => v + p[0] * ps[(i + 1) % ps.length][1] -
+                                                         p[1] * ps[(i + 1) % ps.length][0],
+                                            0)) /
+                         2;
+    const covered = (ps, holds) => {
+      const {ears} = polygon.clipEars(ps, holds, 2);
+      let sum = 0;
+      for (let k = 0; k < ears.length; k += 3)
+        sum += areaOf([ ps[ears[k]], ps[ears[k + 1]], ps[ears[k + 2]] ]);
+      return sum;
+    };
+    const notched = [ [ 0, 0 ], [ 4, 0 ], [ 4, 4 ], [ 2, 2 ], [ 0, 4 ] ];
+    assert.equal(covered(notched, polygon.holdsWithEdges), areaOf(notched));
+    const flat = [ [ 0, 0 ], [ 2, 0 ], [ 4, 0 ], [ 2, 3 ] ];
+    assert.equal(covered(flat, polygon.holdsInside), areaOf(flat));
     // Marks that keep their size on screen scale against the zoom; the view box follows the
     // camera.
     const frame = await import('../ui/studio/view/frame.js');
