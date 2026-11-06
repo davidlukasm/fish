@@ -5,6 +5,7 @@ import {
   centroid,
   findSite,
   NERVE_ROLE,
+  onMidline,
   sideAt,
   sideOf,
   sideSign,
@@ -290,7 +291,19 @@ export function nodeLocation(doc, sites, center, organType) {
              : HEAD_SENSES[organType] ? headSenseNode(doc, sites, organ, center, index)
                                       : regionPoint(organ, index, sites);
   }
-  return centerLocation(center, organType, sites);
+  const at = centerLocation(center, organType, sites);
+  return organType === 'brain' ? midlinePair(doc, sites, site, at) : at;
+}
+// A node on a site of the midline stands on it, unless a node takes the other side's site there
+// too: then each stands PAIR_GAP off it on its own side.
+const PAIR_GAP = 10;
+function midlinePair(doc, sites, site, at) {
+  if (!onMidline(site))
+    return at;
+  const twin = sites.find(s => s !== site && onMidline(s) && s.zone === site.zone &&
+                               s.u === site.u && s.v === site.v);
+  const taken = twin && doc.organs.some(o => o.centers.some(c => c.site === twin.id));
+  return taken ? {x : at.x, y : at.y + sideSign(site.side) * PAIR_GAP} : at;
 }
 // The head's senses stand where the engine senses from, not at their cells' sites: the nostrils
 // NOSE.ahead body radii before the body's middle, NOSE.inset under the skin; the near sense at the

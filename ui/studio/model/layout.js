@@ -55,17 +55,17 @@ const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 3
 // back and on along the spinal cord, each zone over its own stretch. A site stands as far back
 // from the zone's FRONT as its place along the zone (u, front first) puts it within LENGTH, a
 // little further by its height (v, over HEIGHT); a deep one (w) OUT off the midline (NARROW of it
-// less at the zone's back, as the brain narrows there), a midline one (one on each side) MIDDLE
-// off it on its side.
+// less at the zone's back, as the brain narrows there), a midline one (one on each side) on the
+// midline itself (the two share the place; a node on each stands apart, places.js).
 export const NERVE_ROLE = 'nerve';
 // The skin senses feel where their cells face, whatever depth their sites lie at: SKIN_ROLE draws
 // a site at the skin of its side.
 export const SKIN_ROLE = 'skin';
 export const BRAIN_MAP = Object.freeze({
-  [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, middle : 10, narrow : 0},
-  [ZONE.head] : {front : 262, length : 150, height : 70, out : 44, middle : 12, narrow : 0},
-  [ZONE.trunk] : {front : 455, length : 105, height : 50, out : 36, middle : 10, narrow : .3},
-  [ZONE.tail] : {front : 620, length : 220, height : 40, out : 16, middle : 6, narrow : 0}
+  [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, narrow : 0},
+  [ZONE.head] : {front : 262, length : 150, height : 70, out : 44, narrow : 0},
+  [ZONE.trunk] : {front : 455, length : 105, height : 50, out : 36, narrow : .3},
+  [ZONE.tail] : {front : 620, length : 220, height : 40, out : 16, narrow : 0}
 });
 const MIDDLE_HEIGHT = .5;
 const nerveSite = site => !site.outer && BRAIN_MAP[site.zone] !== undefined;
@@ -73,8 +73,8 @@ function brainPoint(site) {
   const M = BRAIN_MAP[site.zone];
   return {
     x : M.front + (1 - site.u) * M.length + (site.v - MIDDLE_HEIGHT) * M.height,
-    y : CENTRE_Y + sideSign(site.side) *
-                       (onMidline(site) ? M.middle : M.out * (1 - M.narrow * (1 - site.u)))
+    y : onMidline(site) ? CENTRE_Y
+                        : CENTRE_Y + sideSign(site.side) * M.out * (1 - M.narrow * (1 - site.u))
   };
 }
 export function sitePoint(site, role = '') {

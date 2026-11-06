@@ -1794,6 +1794,25 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                               'brain', sites);
     assert.ok(Math.hypot(nodeAt.x - onLobe.x, nodeAt.y - onLobe.y) < 60,
               'A node stays in the brain');
+    // A node set on the midline stands on it; with a node on the other side's place there too,
+    // each stands a little off it on its own side.
+    {
+      const layout = await import('../ui/studio/model/layout.js');
+      const middle = model.moveCenterToSide(node.document, node.centerId, 0, sites);
+      const placed = model.findCenter(middle, node.centerId).center;
+      const site = sites.find(s => s.id === placed.site);
+      assert.ok(layout.onMidline(site));
+      const at = brainPlaces.nodeLocation(middle, sites, placed, 'brain');
+      assert.equal(at.y, layout.BODY_FRAME.middle, 'A midline node stands on the midline');
+      const twin = model.mirroredSite(site, sites);
+      const both = model.addNeuron(middle, 'relay', sites, layout.sitePoint(twin, 'nerve'), 1);
+      const other = model.findCenter(both.document, both.centerId).center;
+      assert.equal(other.site, twin.id);
+      const a = brainPlaces.nodeLocation(both.document, sites, placed, 'brain'),
+            b = brainPlaces.nodeLocation(both.document, sites, other, 'brain');
+      assert.ok(Math.abs(a.y - b.y) > 0 &&
+                Math.sign(a.y - b.y) === Math.sign(site.side - twin.side));
+    }
     const torus = model.addOrgan(model.newDocument('Torus'), 'torus', sites, onLobe);
     const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
                                               torus.document);
