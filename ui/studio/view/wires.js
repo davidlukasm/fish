@@ -368,8 +368,12 @@ export function signalLinks(state) {
             sample(curveAt, [ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]));
     way.strength = Math.min(1, way.strength + .5);
   }
-  return [...legs.values() ].map(
-      way => ({...way, starts : [...way.starts.values() ], arrives : [...way.arrives.values() ]}));
+  return [...legs.values() ].map(way => ({
+                                   ...way,
+                                   startNodes : [...way.starts.keys() ],
+                                   starts : [...way.starts.values() ],
+                                   arrives : [...way.arrives.values() ]
+                                 }));
 }
 // The developed contacts drawn: the MOST important (by count and FLOOR plus their mean weights),
 // exciting and inhibiting ones in lanes LANE apart, bowed by STEPS kinds of curve STEP apart; a

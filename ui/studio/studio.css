@@ -567,12 +567,14 @@
 .aid-organ-hit:hover{opacity:.14}
 .aid-organ-hits *{fill:var(--aid-hover);stroke:var(--aid-hover);stroke-width:12px;vector-effect:non-scaling-stroke;cursor:pointer}
 .aid-organ-hits text,.aid-organ-hits title{pointer-events:none}
+/* An eye's cell nodes lie close: each takes clicks on itself alone. */
+.aid-organ-hits .aid-retina-node{stroke-width:2px}
 /* The place in the head where all brain regions lie. */
 .aid-brain-place{fill:#e6efd626;stroke:#d8e6d499;stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
 /* A stimulus: the network it reached stays marked, the rest stands back. */
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
-#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
 /* A chosen part keeps what it is wired with in full colour. */
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
@@ -598,6 +600,9 @@
 /* A quieted part pulses in the inhibiting colour, then stays darkened with a ring in it; the
    signal it withdraws runs as a trail in that colour, and its wires show dashed in it. A tuned
    part shows violet. */
+/* An eye stimulated through some of its cells shows those, the others stand back. */
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted) .aid-retina-node:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.35}
+#aid-body-map .aid-retina-node.aid-pulse-fired{stroke:#fff3b0;stroke-width:2}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit));opacity:.85}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieting{animation:aid-quieting .55s ease-in-out 2}
 @keyframes aid-quieting{50%{filter:brightness(.9) drop-shadow(0 0 13px var(--aid-inhibit))}}

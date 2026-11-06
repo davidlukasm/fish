@@ -128,8 +128,8 @@ export function signalSchedule(starts, links, response) {
 // [element, class] pairs that set what it moves going when it fires (a fin, the jaw),
 // `reached({key, mode, link})` hears each part as it answers (`mode` 'fire' or 'quiet') and each
 // leg as it starts (`link`, `mode` what its sender does). The scene may be drawn anew while it
-// plays: `attach` moves the signals into the new one. A part takes its mark as it answers
-// (ANSWERED) and glows meanwhile (ANSWERING).
+// plays: `attach` moves the signals into the new one; `running` says whether it still plays. A
+// part takes its mark as it answers (ANSWERED) and glows meanwhile (ANSWERING).
 const ANSWERING = Object.freeze({fire : 'aid-pulse-active', quiet : 'aid-pulse-quieting'});
 const ANSWERED = Object.freeze({fire : 'aid-pulse-fired', quiet : 'aid-pulse-quieted'});
 const MOVES = Object.freeze({fire : true, quiet : false});
@@ -301,6 +301,7 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
       if (active)
         svg.appendChild(overlay);
     },
+    running : () => active,
     stop
   };
 }

@@ -113,7 +113,8 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    this.pulsePlayer = null;
+    // The stimuli playing on the scene.
+    this.pulsePlayers = [];
     // A wire begun by a click: from an item to the next one clicked, or from the next one clicked
     // to a region's input slot.
     this.pendingWire = null;
@@ -287,7 +288,8 @@ export class OrganStudio {
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();
     if (svg)
-      this.pulsePlayer?.attach(svg);
+      for (const player of this.pulsePlayers)
+        player.attach(svg);
     this.markStimulus();
     this.markFocus();
   }

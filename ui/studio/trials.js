@@ -90,6 +90,7 @@ export const trialMethods = {
     const escaped = CSS.escape(key);
     return [
       ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
+      ...svg.querySelectorAll('.aid-anatomy [data-center="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
     ];
@@ -144,9 +145,11 @@ export const trialMethods = {
   },
   // The stimulus runs through the drawn network from the stimulated parts: each part answers as
   // the engine's probe `frames` found it, rising or falling by its first clear swing, or without
-  // them as the signal reaching it pushes it.
+  // them as the signal reaching it pushes it. Stimuli given while others run play alongside them,
+  // each on its own, and their marks join; one given after all have run starts the marks afresh.
   playPulse(centerIds, frames) {
-    this.stopPulse();
+    this.pulsePlayers = this.pulsePlayers.filter(player => player.running());
+    const alongside = this.pulsePlayers.length > 0 && this.state.stimulus;
     this.showDrawnContacts();
     const doc = this.state.document, centers = allCenters(doc);
     const indexOf = new Map(centers.map((c, index) => [c.id, index]));
@@ -154,22 +157,43 @@ export const trialMethods = {
         frames?.length
             ? key => signalAnswer(frames, endpointCenters(doc, key).map(c => indexOf.get(c.id)))
             : (key, push) => push;
-    const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ];
-    const schedule = signalSchedule(starts, signalLinks(this.state), response);
+    // The signal runs between the parts as wired; a part stimulated through some of its nodes
+    // shows those alone and sends from their branches only.
+    const starts = [...new Set(centerIds.map(id => wholeEndpoint(doc, id))) ],
+          chosen = new Set(centerIds);
+    const whole = key => chosen.has(key) || endpointCenters(doc, key).every(c => chosen.has(c.id));
+    const shownAs = key =>
+        !starts.includes(key) || whole(key)
+            ? [ key ]
+            : endpointCenters(doc, key).map(c => c.id).filter(id => chosen.has(id));
+    const links = signalLinks(this.state).flatMap(link => {
+      if (!starts.includes(link.from) || whole(link.from) || !link.startNodes.length)
+        return [ link ];
+      const kept = link.startNodes.map(id => chosen.has(id));
+      return kept.some(Boolean) ? [ {...link, starts : link.starts.filter((_, i) => kept[i])} ]
+                                : [];
+    });
+    const schedule = signalSchedule(starts, links, response);
     // The wires a signal ran along stay marked, those only a quieted part withdrew from apart.
     const stimulus =
-        {fired : new Set(starts), quieted : new Set(), wires : new Set(), sent : new Set()};
+        alongside ? this.state.stimulus
+                  : {fired : new Set(), quieted : new Set(), wires : new Set(), sent : new Set()};
+    for (const part of starts.flatMap(shownAs))
+      stimulus.fired.add(part);
     this.state.stimulus = stimulus;
-    this.refreshScene();
+    if (alongside)
+      this.markStimulus();
+    else
+      this.refreshScene();
     const svg = this.bodyMap();
     if (!svg)
       return;
-    this.pulsePlayer = createSignalPlayer(svg, schedule, {
-      marks : key => this.stimulusMarks(key),
+    const player = createSignalPlayer(svg, schedule, {
+      marks : key => shownAs(key).flatMap(part => this.stimulusMarks(part)),
       moves : key => this.stimulusMoves(key),
       reached : ({key, mode, link}) => {
-        if (key)
-          stimulus[mode === 'fire' ? 'fired' : 'quieted'].add(key);
+        for (const part of key ? shownAs(key) : [])
+          stimulus[mode === 'fire' ? 'fired' : 'quieted'].add(part);
         for (const id of link?.wires ?? []) {
           stimulus.wires.add(id);
           if (mode === 'fire')
@@ -181,7 +205,8 @@ export const trialMethods = {
         }
       }
     });
-    this.pulsePlayer.start();
+    this.pulsePlayers.push(player);
+    player.start();
   },
   // What an effector moves as it fires: a tail muscle beats the tail fin, a steering one strokes
   // its side's fin, a biting one opens the mouth and its jaw, a sucking one widens the mouth,
@@ -223,7 +248,8 @@ export const trialMethods = {
     this.refreshScene();
   },
   stopPulse() {
-    this.pulsePlayer?.stop();
-    this.pulsePlayer = null;
+    for (const player of this.pulsePlayers)
+      player.stop();
+    this.pulsePlayers = [];
   }
 };
