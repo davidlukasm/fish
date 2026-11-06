@@ -20,6 +20,17 @@ import {centerTitle} from './names.js';
 
 // The blood's substances in the inspector: the substance wheel where glands release and senses
 // read them, receptors' response curves and life phases, the hormone inspector and measurements.
+
+// A center's own point on the substance wheel, among the substances it may choose (of which the
+// engine reads the first `reads`, all if not given).
+const centerWheel = (state, center, choices, reads) =>
+    substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
+      choices,
+      reads,
+      attribute : 'data-wheel-substance',
+      extra : ' data-center-id="' + escapeText(center.id) + '"',
+      pad : center.id
+    });
 // Glands release, and the blood sense reads, the substances near a free point on the wheel.
 export function glandProfile(state, center) {
   const substances = state.document.substances;
@@ -27,27 +38,15 @@ export function glandProfile(state, center) {
     return '<button class="aid-secondary" data-add-substance>' +
            t('studio.marks.add', {name : label('sections.newSubstance')}) + '</button>';
   return heading(label('inspector.glandOutput')) +
-         substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true},
-                        {
-                          choices : substances.map(sub => sub.index),
-                          reads : state.capabilities?.hormones,
-                          attribute : 'data-wheel-substance',
-                          extra : ' data-center-id="' + escapeText(center.id) + '"',
-                          pad : center.id
-                        }) +
+         centerWheel(state, center, substances.map(sub => sub.index),
+                     state.capabilities?.hormones) +
          '<div class="aid-gland-flow"><span>' +
          t('studio.marks.more', {name : label('inspector.glandSecretes')}) + '</span><span>' +
          t('studio.marks.less', {name : label('inspector.glandBinds')}) + '</span></div>';
 }
 export function hormonePad(state, center) {
   const all = Array.from({length : state.capabilities?.bloodSubstances ?? 0}, (_, i) => i);
-  return substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true},
-                        {
-                          choices : all,
-                          attribute : 'data-wheel-substance',
-                          extra : ' data-center-id="' + escapeText(center.id) + '"',
-                          pad : center.id
-                        });
+  return centerWheel(state, center, all);
 }
 // What substances do to the chosen cell group: what a gland releases, what the group's
 // receptors answer to and, for nerve cells, which substances teach them. Each list opens the tool
@@ -215,20 +214,12 @@ const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 // A chart's numbers show at most CURVE_DIGITS decimals.
 const CURVE_DIGITS = 3;
 export function effectCurve(state, receptor, effect, target = null) {
-  const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
-  const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
-  const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const response = c =>
-      effect === GROWTH ? Math.min(1, receptor.sensitivity * bound(receptor, c))
-                        : clamp(receptor.baseline + receptor.sensitivity * bound(receptor, c), -1);
-  const at = i =>
-      maturity ? i / CURVE.points : halfMin * Math.pow(halfMax / halfMin, i / CURVE.points);
-  const x = i => CURVE.left + (CURVE.right - CURVE.left) * i / CURVE.points;
-  const y = v =>
-      CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
+  const {maturity, halfMin, scale, response, atFraction, x, y} =
+      receptorCurve(state, receptor, effect);
   const points = Array
                      .from({length : CURVE.points + 1},
-                           (_, i) => fixed(x(i)) + ',' + fixed(y(scale.value(response(at(i))))))
+                           (_, i) => fixed(x(i / CURVE.points)) + ',' +
+                                     fixed(y(scale.value(response(atFraction(i / CURVE.points))))))
                      .join(' ');
   let marks = '';
   if (scale.low < 0 && scale.high > 0)
