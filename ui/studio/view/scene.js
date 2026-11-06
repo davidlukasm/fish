@@ -3,7 +3,6 @@ import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
 import {nodeLocation, organLocation, showsNodes} from './places.js';
 import {organTitle} from './names.js';
-import {STUDIO_ICON} from '../../organ_icons.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
@@ -16,7 +15,7 @@ import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
-import {ICON} from './kit.js';
+import {ICON, slotFill, slotShape} from './kit.js';
 import {stimulusKind} from './stimulus.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
@@ -145,8 +144,7 @@ function slotsSvg(state) {
     const x = centroid(points).x;
     const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
     slots.forEach((slot, i) => {
-      const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
-      const fill = slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
+      const fill = slotFill(slot);
       const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
       const need = joinParts([
         t('studio.regions.slots.' + slot.key),
@@ -160,16 +158,11 @@ function slotsSvg(state) {
               '><title>' + escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
               fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
               SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
-              placedGlyph(shown               ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain
-                          : slot.dir === 'in' ? SLOT_IN
-                                              : SLOT_OUT,
-                          SLOT.icon, {x : dx}) +
-              '</g>';
+              placedGlyph(slotShape(slot), SLOT.icon, {x : dx}) + '</g>';
     });
   }
   return html;
 }
-const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
 // How far a chosen nerve center's signals reach, as the engine weighs a contact: falling to 1/e
 // at its reach (from the engine's least reach to the whole body as its range goes from 0 to 1),
 // on its own half of the body as much as it keeps to its side, on the other half as much as it

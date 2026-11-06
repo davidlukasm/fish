@@ -30,7 +30,7 @@ import {pairingButton, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
-import {centerTitle, endpointTitle, moduleName} from './names.js';
+import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
 import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
 import {skinField} from './skin.js';
@@ -263,14 +263,13 @@ function selectedCenter(state, organ) {
     return organ.centers.find(c => c.id === selected.id) ?? organ.centers[0];
   return organ.centers[0] ?? null;
 }
-// An organ's kinds of node as tabs, one for all nodes of a kind (they share their settings), with
-// how many there are; an organ with types (a nose, the skin's pigment cells) chooses them on its
-// own chips instead. The free nerve nodes of the brain each have their own.
+// An organ's families of node as tabs (a gonad's growth cells, a region's map), with how many
+// nodes each has; an organ with types (a nose, the skin's pigment cells) chooses them on its own
+// chips instead. The free nerve nodes of the brain each have their own.
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types)
     return '';
-  const kinds = organ.type === 'brain' ? organ.centers.map(c => [c])
-                                       : [...Map.groupBy(organ.centers, c => c.key).values() ];
+  const kinds = organ.type === 'brain' ? organ.centers.map(c => [c]) : nodeFamilies(organ);
   if (kinds.length < 2 && !isRegion(organ))
     return '';
   const chosen = kind => kind.some(c => c.id === state.selected?.id);
@@ -282,13 +281,9 @@ function centerTabs(state, organ) {
                     : '';
   return '<div class="aid-center-tabs">' + whole +
          kinds
-             .map(kind =>
-                      '<button data-select-center="' + escapeText(kind[0].id) + '" class="' +
-                      (chosen(kind) ? 'selected' : '') + '">' +
-                      escapeText(kind.length > 1 ? t('studio.inspector.kindCount',
-                                                     {name : centerTitle(kind[0]), n : kind.length})
-                                                 : centerTitle(kind[0])) +
-                      '</button>')
+             .map(kind => '<button data-select-center="' + escapeText(kind[0].id) + '" class="' +
+                          (chosen(kind) ? 'selected' : '') + '">' + escapeText(familyTitle(kind)) +
+                          '</button>')
              .join('') +
          '</div>';
 }

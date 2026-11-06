@@ -6,8 +6,8 @@ import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
 import {namedText, t, tList} from '../../strings.js';
-import {cellTrack, cellWords, ICON, icon, label} from './kit.js';
-import {centerTitle} from './names.js';
+import {cellTrack, cellWords, ICON, icon, label, slotFill, slotShape} from './kit.js';
+import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
 import {organTitle} from './names.js';
 
 // A brain region's wiring in the inspector: its circuit plan, its slots and its settings.
@@ -30,10 +30,12 @@ export function pairingButton(wire) {
          glyph(PAIRING_GLYPH[wire.pairing], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
          label('inspector.pairing.' + wire.pairing) + '</span></button>';
 }
-// A brain region as a circuit: its nodes on both sides of the midline (the region and its twin),
-// the organs feeding it above, those it drives below, and every connection as the engine makes
-// it, crossing the midline where it crosses. Each wire's side guidance is a glyph to click
-// through beside the midline; nodes and organs are chosen by a click.
+// A brain region as a circuit: its kinds of node on both sides of the midline (the region and its
+// twin), one row each however many nodes of a kind it has (they share their settings), the
+// organs feeding it above, those it drives below, and every connection as the engine makes it,
+// crossing the midline where it crosses; a connection from an inhibiting node ends in a bar, a
+// kind's connections among themselves in a loop LOOP out. Each wire's side guidance is a glyph to
+// click through beside the midline; nodes and organs are chosen by a click.
 // Names stand right-aligned at LABEL, left of the two columns.
 const CIRCUIT = Object.freeze({
   width : 300,
@@ -54,6 +56,8 @@ const CIRCUIT = Object.freeze({
   marker : 7,
   teach : 4,
   arrow : 8,
+  bar : 6,
+  loop : 26,
   baseline : 4,
   side_y : 14
 });
@@ -61,28 +65,47 @@ const CIRCUIT = Object.freeze({
 // third of the way from each end.
 const ARROW_BOX = 10, BEZIER_THIRD = 3;
 const circuitSide = organ => sideIndex(organ?.side);
-// The region's nodes on both sides by id, each with its side and row.
+// The region's families of node on both sides, each by its first node's id with its side and
+// row; and for every node of the region the first of its family.
 function circuitMembers(doc, organ) {
   const sides = [ organ, findOrgan(doc, organ.pair) ];
   if (circuitSide(organ) === 1)
     sides.reverse();
-  const members = new Map();
-  sides.forEach(o => o?.centers.forEach((center, index) => members.set(
-                                            center.id, {side : circuitSide(o), index, center})));
-  return members;
+  const members = new Map(), kindOf = new Map();
+  const families = nodeFamilies(organ).map(nodes => nodeFamily(nodes[0]));
+  sides.forEach(o => o?.centers.forEach(center => {
+    const first = o.centers.find(c => nodeFamily(c) === nodeFamily(center));
+    kindOf.set(center.id, first.id);
+    if (first === center)
+      members.set(center.id,
+                  {side : circuitSide(o), index : families.indexOf(nodeFamily(center)), center});
+  }));
+  return {members, kindOf};
 }
-// The region's connections; an organ outside stands as a whole, however many of its nodes the
-// region hears.
-function circuitLinks(state, members) {
-  const doc = state.document, seen = new Set();
-  return routedLinks(doc, state.sites, true)
-      .filter(l => members.has(l.from) || members.has(l.to))
-      .map(l => ({
-             ...l,
-             from : members.has(l.from) ? l.from : wholeEndpoint(doc, l.from),
-             to : members.has(l.to) ? l.to : wholeEndpoint(doc, l.to)
-           }))
-      .filter(l => !seen.has(l.from + '>' + l.to) && seen.add(l.from + '>' + l.to));
+// The region's connections, one for each pair of ends; an organ outside stands as a whole,
+// however many of its nodes the region hears. A connection inside the region gathers the plan's
+// links it stands for (keys), cut while all of them are.
+function circuitLinks(state, {members, kindOf}) {
+  const doc = state.document, joined = new Map();
+  for (const l of routedLinks(doc, state.sites, true)) {
+    if (!kindOf.has(l.from) && !kindOf.has(l.to))
+      continue;
+    const from = kindOf.get(l.from) ?? wholeEndpoint(doc, l.from),
+          to = kindOf.get(l.to) ?? wholeEndpoint(doc, l.to), pair = from + '>' + to;
+    const link = joined.get(pair) ?? {
+      ...l,
+      from,
+      to,
+      keys : [],
+      cut : true,
+      inhibits : (findCenter(doc, l.from)?.center.sign ?? 1) < 0
+    };
+    if (l.key)
+      link.keys.push(l.key);
+    link.cut &&= Boolean(l.cut);
+    joined.set(pair, link);
+  }
+  return [...joined.values() ];
 }
 // Organs and centers outside the region, a row for each kind.
 const circuitEnd = (doc, id) =>
@@ -130,7 +153,7 @@ function circuitLayout(doc, organ, members, links) {
       ([
         id, m
       ]) => [id, {x : m.side ? C.right : C.left, y : nodeTop + m.index * C.row, side : m.side}]));
-  const outTop = nodeTop + organ.centers.length * C.row;
+  const outTop = nodeTop + nodeFamilies(organ).length * C.row;
   const outPos = placeRows(doc, outputs, outTop);
   return {
     inputs,
@@ -144,20 +167,26 @@ function circuitLayout(doc, organ, members, links) {
     height : outTop + Math.max(0, outputs.length - 1) * C.row + C.bottom + C.node
   };
 }
-// A connection: a curve from end to end, bowing outward between nodes of one column. A link of
-// the region's own plan can be taken out and put back with a click.
+// A connection: a curve from end to end, bowing outward between nodes of one column, a loop out
+// of a node to itself. A link of the region's own plan can be taken out and put back with a
+// click.
 function circuitLink(organ, l, a, b) {
   const C = CIRCUIT;
   const crossing = a.side !== null && b.side !== null && a.side !== b.side;
-  const bow = a.x === b.x ? (a.x < C.middle ? -C.bend : C.bend) : 0;
-  const own = l.wire.inner ? ' data-inner-link="' + escapeText(l.key) + '" data-organ-id="' +
-                                 escapeText(organ.id) + '"'
-                           : '';
+  const out = a.x < C.middle ? -1 : 1, bow = a.x === b.x ? out * C.bend : 0;
+  const own = l.wire.inner && l.keys.length ? ' data-inner-link="' + escapeText(l.keys.join(' ')) +
+                                                  '" data-organ-id="' + escapeText(organ.id) + '"'
+                                            : '';
+  const d = a === b ? 'M' + a.x + ' ' + (a.y - C.node) + ' C' + (a.x + out * C.loop) + ' ' +
+                          (a.y - C.loop) + ' ' + (a.x + out * C.loop) + ' ' + (a.y + C.loop) + ' ' +
+                          a.x + ' ' + a.y
+                    : 'M' + a.x + ' ' + a.y + ' C' + (a.x + bow) + ' ' +
+                          fixed(a.y + (b.y - a.y) / BEZIER_THIRD) + ' ' + (b.x + bow) + ' ' +
+                          fixed(b.y - (b.y - a.y) / BEZIER_THIRD) + ' ' + b.x + ' ' + b.y;
   return '<path class="aid-circuit-link' + (crossing ? ' crossing' : '') +
-         (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') + '"' + own + ' d="M' + a.x + ' ' +
-         a.y + ' C' + (a.x + bow) + ' ' + fixed(a.y + (b.y - a.y) / BEZIER_THIRD) + ' ' +
-         (b.x + bow) + ' ' + fixed(b.y - (b.y - a.y) / BEZIER_THIRD) + ' ' + b.x + ' ' + b.y +
-         '" marker-end="url(#aid-circuit-arrow)"><title>' +
+         (l.inhibits ? ' inhibits' : '') + (l.wire.inner ? ' inner' : '') + (l.cut ? ' cut' : '') +
+         '"' + own + ' d="' + d + '" marker-end="url(#aid-circuit-' +
+         (l.inhibits ? 'bar' : 'arrow') + ')"><title>' +
          (l.wire.inner ? label(l.cut ? 'inspector.region.restore' : 'inspector.region.cut') : '') +
          '</title></path>';
 }
@@ -207,13 +236,19 @@ function circuitNode(state, id, m, p) {
                   : '') +
          '<circle r="' + C.node + '"/>' + centerMarker(m.center, C.marker) + '</g>';
 }
-// The arrowhead at a connection's end, and the frame: the midline and the sides' names.
+// The ends of connections: an arrowhead where a node excites, a bar across where it inhibits;
+// and the frame: the midline and the sides' names.
 const arrowMarker = () =>
     '<defs><marker id="aid-circuit-arrow" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
     '" refX="' + fixed(ARROW_BOX + CIRCUIT.node * ARROW_BOX / CIRCUIT.arrow) + '" refY="' +
     ARROW_BOX / 2 + '" markerUnits="userSpaceOnUse" markerWidth="' + CIRCUIT.arrow +
     '" markerHeight="' + CIRCUIT.arrow + '" orient="auto"><path d="M0 0 L' + ARROW_BOX + ' ' +
-    ARROW_BOX / 2 + ' L0 ' + ARROW_BOX + ' Z"/></marker></defs>';
+    ARROW_BOX / 2 + ' L0 ' + ARROW_BOX +
+    ' Z"/></marker><marker id="aid-circuit-bar" viewBox="0 0 ' + ARROW_BOX + ' ' + ARROW_BOX +
+    '" refX="' + fixed(ARROW_BOX / 2 + CIRCUIT.node * ARROW_BOX / CIRCUIT.bar) + '" refY="' +
+    ARROW_BOX / 2 + '" markerUnits="userSpaceOnUse" markerWidth="' + CIRCUIT.bar +
+    '" markerHeight="' + CIRCUIT.bar * 2 + '" orient="auto"><path d="M' + ARROW_BOX / 2 + ' 0 V' +
+    ARROW_BOX + '"/></marker></defs>';
 const circuitFrame = height => {
   const C = CIRCUIT;
   return '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
@@ -223,8 +258,8 @@ const circuitFrame = height => {
          '" text-anchor="middle">' + label('inspector.side.right') + '</text>';
 };
 function regionCircuit(state, organ) {
-  const doc = state.document, members = circuitMembers(doc, organ);
-  const links = circuitLinks(state, members);
+  const doc = state.document, region = circuitMembers(doc, organ), members = region.members;
+  const links = circuitLinks(state, region);
   if (!links.length)
     return '';
   const L = circuitLayout(doc, organ, members, links);
@@ -234,8 +269,8 @@ function regionCircuit(state, organ) {
          circuitFrame(L.height) +
          links.map(l => circuitLink(organ, l, L.from(l.from), L.to(l.to))).join('') +
          rowLabels(L.inputs, L.inPos).join('') + rowLabels(L.outputs, L.outPos).join('') +
-         organ.centers
-             .map((center, i) => circuitLabel(L.nodeTop + i * CIRCUIT.row, centerTitle(center)))
+         nodeFamilies(organ)
+             .map((nodes, i) => circuitLabel(L.nodeTop + i * CIRCUIT.row, familyTitle(nodes)))
              .join('') +
          circuitEnds(doc, L.inputs, L.inPos).join('') +
          circuitEnds(doc, L.outputs, L.outPos).join('') +
@@ -249,11 +284,10 @@ export function slotsSection(state, organ) {
     return '';
   const slots =
       regionSlots(state.document, organ)
-          .map(slot => '<li class="' +
-                       (slot.filled.length ? 'filled'
-                        : slot.required    ? 'missing'
-                                           : 'free') +
-                       '"><span>' + label('regions.slots.' + slot.key) + '</span><small>' +
+          .map(slot => '<li class="' + slotFill(slot) + '"><span class="aid-slot-name">' +
+                       '<span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
+                       glyph(slotShape(slot), ICON.slot, {line : true}) + '</span>' +
+                       label('regions.slots.' + slot.key) + '</span><small>' +
                        label(slot.required ? 'regions.required' : 'regions.optional') +
                        '</small><span class="aid-slot-ends">' +
                        (slot.filled.length
@@ -331,11 +365,13 @@ export function regionSettings(state, organ) {
              (circuit ? '<p class="aid-hint">' + label('inspector.region.cutHint') + '</p>' : '') +
              '<div class="aid-circuit-legend"><span class="same">' +
              label('inspector.pairing.same') + '</span><span class="crossing">' +
-             label('inspector.pairing.crossed') + '</span></div></section>';
+             label('inspector.pairing.crossed') + '</span><span class="inhibits">' +
+             label('inspector.region.inhibits') + '</span></div></section>';
   html += '<section class="aid-eye-section"><h4>' + label('inspector.region.nodes') + '</h4>';
-  for (const center of organ.centers)
-    html += '<div class="aid-region-node"><button data-select-center="' + escapeText(center.id) +
-            '">' + escapeText(centerTitle(center)) + '</button>' +
-            cellTrack(center, cellWords(center)) + '</div>';
+  for (const nodes of nodeFamilies(organ)) {
+    html += '<div class="aid-region-node"><button data-select-center="' + escapeText(nodes[0].id) +
+            '">' + escapeText(familyTitle(nodes)) + '</button>' +
+            cellTrack(nodes[0], cellWords(nodes[0])) + '</div>';
+  }
   return html + '</section>';
 }

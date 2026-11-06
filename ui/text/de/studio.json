@@ -310,7 +310,8 @@
       "whole": "Ganze Region",
       "cut": "Klicken nimmt diese Verbindung aus dem Plan.",
       "restore": "Klicken nimmt diese Verbindung wieder in den Plan.",
-      "cutHint": "Ein Klick auf eine Verbindung des Plans nimmt sie heraus oder wieder hinein."
+      "cutHint": "Ein Klick auf eine Verbindung des Plans nimmt sie heraus oder wieder hinein.",
+      "inhibits": "hemmend"
     },
     "pairing": {
       "same": "gleichseitig",
@@ -420,6 +421,10 @@
     "Zelltod"
   ],
   "regionNodes": {
+    "families": {
+      "map": "Karte",
+      "learn": "Lernen"
+    },
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
     "out": "Ausgang",

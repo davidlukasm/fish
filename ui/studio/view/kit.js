@@ -13,6 +13,7 @@ export const ICON = Object.freeze({
   metric : 50,
   circuit : 18,
   list : 16,
+  slot : 18,
   part : 22,
   tool : 22,
   workflow : 20,
@@ -22,6 +23,14 @@ export const ICON = Object.freeze({
 });
 export const icon = (kind, size = ICON.palette) =>
     glyph(STUDIO_ICON[kind] ?? STUDIO_ICON.brain, size, {line : true});
+// A slot's symbol, on the fish and in the inspector alike: the organ that fills it, else the kind
+// that fits, else an arrow in or out; and how it stands (filled, missing where needed, or free).
+const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
+export function slotShape(slot) {
+  const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
+  return shown ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain : slot.dir === 'in' ? SLOT_IN : SLOT_OUT;
+}
+export const slotFill = slot => slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
 export const heading = text => '<h3>' + escapeText(text) + '</h3>';
 // How many cells a node makes, or how strong an effector's cell is, on one line: its word and
 // number at the left, a track to the right of WORDS (WIDTH wide, HEIGHT high).

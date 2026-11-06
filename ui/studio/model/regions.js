@@ -401,15 +401,17 @@ const presetOf = key => {
 // An inner link of a region's plan by its ends, across to the twin or not.
 export const innerKey = (from, to, across = false) => from + (across ? '>>' : '>') + to;
 // A link of a region's plan taken out, or put back, on both sides of a pair.
-export function toggleInnerLink(doc, organId, key) {
+export function toggleInnerLink(doc, organId, keys) {
   const draft = structuredClone(doc), organ = findOrgan(draft, organId);
   if (!planned(organ))
     return null;
-  const cut = new Set(organ.region.cut ?? []);
-  if (cut.has(key))
-    cut.delete(key);
-  else
-    cut.add(key);
+  const cut = new Set(organ.region.cut ?? []), links = keys.split(' ');
+  const restore = links.every(key => cut.has(key));
+  for (const key of links)
+    if (restore)
+      cut.delete(key);
+    else
+      cut.add(key);
   for (const target of [organ, findOrgan(draft, organ.pair)].filter(Boolean))
     target.region.cut = [...cut ];
   return draft;

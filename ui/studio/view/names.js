@@ -33,6 +33,18 @@ export function centerTitle(center) {
   return center.type === null ? t('studio.regionNodes.map', {from, to})
                               : t('studio.regionNodes.mapType', {from, to, n : center.type + 1});
 }
+// A node's family: a planned region's nodes of one role together (its map's bands, what it learns
+// from), else the nodes of one kind. A family by name, with how many nodes it has when more than
+// one; the nodes of an organ by family, in the order they first come.
+export const nodeFamily = center => center.node ? center.node.replace(/[.\d].*$/, '') : center.key;
+export const nodeFamilies = organ => [...Map.groupBy(organ.centers, nodeFamily).values()];
+export function familyTitle(nodes) {
+  if (nodes.length < 2)
+    return centerTitle(nodes[0]);
+  const name = nodes[0].node ? t('studio.regionNodes.families.' + nodeFamily(nodes[0]))
+                             : centerTitle(nodes[0]);
+  return t('studio.inspector.kindCount', {name, n : nodes.length});
+}
 // A module's name: a built-in one's, the one it was saved under, or its number.
 export function moduleName(doc, assembly) {
   const builtIn = t('studio.modules.' + assembly.name);
