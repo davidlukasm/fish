@@ -18,7 +18,7 @@ import {
   ORGAN_BY_KEY
 } from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
-import {modulatorScene} from './episode.js';
+import {modulatorScene} from './effects.js';
 import {
   allCenters,
   contactBundle,

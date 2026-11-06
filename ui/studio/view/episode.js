@@ -13,8 +13,6 @@ import {escapeText, fixed} from './markup.js';
 //    rate; the cell expects more from then on. A cell's strength stays the same, so others give
 //    way. Without a teacher a competing cell lets a line firing with it grow at once and the
 //    others shrink, a cancelling one weakens the line firing with it.
-// The same pictures show what a substance does to learning (effects.js): a round without it, its
-// cloud arriving, a round with it.
 
 // Moments of a round, as shares of it: a pulse travels TRAVEL before it reaches the cell at the
 // beat or at the cell's own firing; the teaching signal sets off at SEND and arrives at ARRIVE;
@@ -87,7 +85,7 @@ export const EPISODE_LAYOUT = Object.freeze({
   })
 });
 // Keys of a loop: [share of the loop, value] pairs in order, the first at 0 and the last at 1.
-function animate(attribute, keys, seconds) {
+export function animate(attribute, keys, seconds) {
   const sorted = [...keys ].sort((a, b) => a[0] - b[0]);
   if (sorted[0][0] > 0)
     sorted.unshift([ 0, sorted[0][1] ]);
@@ -99,7 +97,7 @@ function animate(attribute, keys, seconds) {
          's" repeatCount="indefinite"/>';
 }
 // A pulse running along a way from `from` to `to` (shares of the loop), seen only meanwhile.
-function travelling(way, from, to, r, seconds, colour = '') {
+export function travelling(way, from, to, r, seconds, colour = '') {
   const M = MOMENT;
   return '<circle class="aid-episode-pulse" r="' + fixed(r) + '"' +
          (colour ? ' style="fill:' + colour + '"' : '') + ' opacity="0"><animateMotion path="' +
@@ -278,92 +276,4 @@ export function episodeSvg(layout, scene) {
          '<circle class="aid-episode-cell" cx="' + L.cx + '" cy="' + L.cy + '" r="' + L.r +
          '" fill-opacity=".3">' + animate('fill-opacity', flashes, seconds) + '</circle>' +
          caption + '</svg>';
-}
-
-// What a substance's effect means for learning, as an episode of two rounds, the second with the
-// substance (its cloud in its colour). The cell's own firing meets input A; a still input B gives
-// way; a teacher (NEUTRAL colour, a modulator) teaches unless the substance itself is the teacher.
-// A change at full learning is CHANGE wide, competition's COMPETE.
-const LESSON = Object.freeze({change : 3.2, compete : 1.8, trace : .55, neutral : '#b8c5e1'});
-export const LEARNING_LESSONS =
-    Object.freeze([ 'teaching', 'learning', 'competition', 'eligibility' ]);
-export function lessonScene(lesson, colour) {
-  const L = EPISODE_LAYOUT.small, C = LESSON;
-  const upper = L.cy - L.r * 2.4, lower = L.cy + L.r * 2.4;
-  const ownInput = {y : upper, deed : 'own'}, still = {y : lower, deed : null};
-  const scenes = {
-    // Without the substance nothing teaches; its rise is the teaching signal.
-    teaching : {
-      inputs : [ ownInput, still ],
-      teacher : 'arrow',
-      rounds : [
-        {trace : [ C.trace, 0 ], remnant : .7}, {
-          trace : [ C.trace, 0 ],
-          remnant : .7,
-          teach : colour,
-          gain : [ C.change, 0 ],
-          cloud : colour
-        }
-      ]
-    },
-    // The same teaching changes the line twice as much with the substance.
-    learning : {
-      inputs : [ ownInput, still ],
-      teacher : 'arrow',
-      rounds : [
-        {trace : [ C.trace, 0 ], remnant : .7, teach : C.neutral, gain : [ C.change / 2, 0 ]}, {
-          trace : [ C.trace, 0 ],
-          remnant : .7,
-          teach : C.neutral,
-          gain : [ C.change, 0 ],
-          cloud : colour
-        }
-      ]
-    },
-    // Without a teacher the line firing with the cell grows and the still one shrinks, faster
-    // with the substance.
-    competition : {
-      inputs : [ ownInput, still ],
-      rounds : [
-        {grow : [ C.compete / 2, -C.compete / 2 ]},
-        {grow : [ C.compete, -C.compete ], cloud : colour}
-      ]
-    },
-    // The input meeting the beat and the one meeting the cell's own firing share the credit; with
-    // the substance the own firing takes it all.
-    eligibility : {
-      inputs : [ ownInput, {y : lower, deed : 'beat'} ],
-      teacher : 'arrow',
-      rounds : [
-        {
-          trace : [ C.trace / 2, C.trace / 2 ],
-          remnant : .8,
-          teach : C.neutral,
-          gain : [ C.change / 2, C.change / 2 ]
-        },
-        {
-          trace : [ C.trace, 0 ],
-          remnant : .8,
-          teach : C.neutral,
-          gain : [ C.change, 0 ],
-          cloud : colour
-        }
-      ]
-    }
-  };
-  return scenes[lesson] ? episodeSvg(L, scenes[lesson]) : '';
-}
-// What a modulator does: it fires (a node above the cell) and its firing reaches the cell as the
-// teaching signal, not as a drive: the cell does not fire from it, but the line its own firing
-// met before grows.
-export function modulatorScene(colour) {
-  const L = EPISODE_LAYOUT.small, C = LESSON;
-  return episodeSvg(L, {
-    inputs : [ {y : L.cy - L.r * 2.4, deed : 'own'}, {y : L.cy + L.r * 2.4, deed : null} ],
-    teacher : 'node',
-    rounds : [
-      {trace : [ C.trace, 0 ], remnant : .7, teach : colour, gain : [ C.change / 2, 0 ]},
-      {trace : [ C.trace, 0 ], remnant : .7, teach : colour, gain : [ C.change / 2, 0 ]}
-    ]
-  });
 }

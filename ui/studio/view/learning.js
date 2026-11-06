@@ -11,7 +11,8 @@ import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker} from '../model/organs.js';
 import {EFFECT_ICON, TEACH_ICON} from './icons.js';
-import {EPISODE_LAYOUT, episodeSvg, lessonScene} from './episode.js';
+import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
+import {effectScene, teachingScene} from './effects.js';
 import {centerMarker} from './scene.js';
 
 // How a nerve center learns, as the engine's rule runs it (colony-core/field/substrate.cc), drawn
@@ -172,12 +173,6 @@ function traceGraphic(center) {
 // A substance acting on one part of learning: what it does played (in its colour once bound),
 // which substance it is (or none) and, once bound, a track of what plenty of it does, its ends
 // and middle named as that part has them.
-const LESSON = Object.freeze({
-  [HORMONE_EFFECT.excitation] : 'teaching',
-  [HORMONE_EFFECT.learning] : 'learning',
-  [HORMONE_EFFECT.competition] : 'competition',
-  [HORMONE_EFFECT.eligibility] : 'eligibility'
-});
 const PART_ICON = Object.freeze({
   [HORMONE_EFFECT.excitation] : TEACH_ICON,
   [HORMONE_EFFECT.learning] : EFFECT_ICON[HORMONE_EFFECT.learning],
@@ -215,8 +210,10 @@ function substancePart(state, center, effect) {
   return '<div class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
          (colour ? ' style="--substance:' + colour + '"' : '') + '><h5>' +
          glyph(PART_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
-         '</span></h5>' + lessonScene(LESSON[effect], colour ?? 'currentColor') + choices +
-         strength + '</div>';
+         '</span></h5>' +
+         (effect === HORMONE_EFFECT.excitation ? teachingScene(colour ?? 'currentColor')
+                                               : effectScene(effect, colour ?? 'currentColor')) +
+         choices + strength + '</div>';
 }
 // The cell's teachers: its modulators with their markers, each a button choosing it, and the
 // substance teaching it with its colour.
