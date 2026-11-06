@@ -238,9 +238,7 @@ export class FoodRenderer extends TankBatch {
     }
     if (!this.count)
       return true;
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
+    this.beginOnCanvas(cameraState);
     gl.uniform2f(this.uniforms.offset, c.ox, c.oy);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1f(this.uniforms.blend, blend);

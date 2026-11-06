@@ -367,6 +367,13 @@ function recoverConnection(e, scope) {
     text('tank-status', t('connection.startFehlgeschlagen'));
 }
 
+// What every request for the view names: the brain layout held, the inspection open and the
+// neuron in focus (none: -1).
+const viewKeys = () => ({
+  brain : connectionState.cachedBrainLayout?.layout_id || '',
+  inspection : connectionState.display.inspection?.inspection_id || '',
+  focus : String(brainState.brainHover?.id ?? sessionState.neuronFocus ?? -1)
+});
 async function updateDisplay() {
   const generation = sessionState.generation, sceneGeneration = connectionState.sceneGeneration,
         signal = connectionState.abort.signal, requestAt = performance.now();
@@ -384,9 +391,7 @@ async function updateDisplay() {
             width : String(cameraState.viewportWidth / c.scale),
             height : String(cameraState.viewportHeight / c.scale),
             scale : String(c.scale),
-            brain : connectionState.cachedBrainLayout?.layout_id || '',
-            inspection : connectionState.display.inspection?.inspection_id || '',
-            focus : String(brainState.brainHover?.id ?? sessionState.neuronFocus ?? -1)
+            ...viewKeys()
           }),
           response =
               await request(ROUTE.scene + '?' + query, {signal : connectionState.abort.signal});
@@ -532,9 +537,7 @@ export async function update() {
             profile : connectionState.profileKey,
             species : connectionState.speciesKey || '',
             assets : connectionState.renderAssetsKey,
-            brain : connectionState.cachedBrainLayout?.layout_id || '',
-            inspection : connectionState.display.inspection?.inspection_id || '',
-            focus : String(brainState.brainHover?.id ?? sessionState.neuronFocus ?? -1)
+            ...viewKeys()
           }),
           response = await readStatistics(query, signal), data = response.result;
     if (signal.aborted)

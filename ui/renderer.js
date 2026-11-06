@@ -226,6 +226,16 @@ export class TankBatch {
     this.revision = -1;
     this.capacity = this.count = 0;
   }
+  // Drawing starts with the batch's program in the camera's viewport; on the whole canvas when the
+  // last pass drew elsewhere.
+  begin(camera) {
+    this.gl.useProgram(this.program);
+    this.gl.uniform2f(this.uniforms.viewport, camera.viewportWidth, camera.viewportHeight);
+  }
+  beginOnCanvas(camera) {
+    this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    this.begin(camera);
+  }
   submit(mode, vertices, instances) {
     tankDraw(this.gl, this.renderer.stats, mode, vertices, instances);
   }

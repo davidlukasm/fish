@@ -687,8 +687,7 @@ export class AnimalRenderer extends TankBatch {
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     gl.bufferData(gl.ARRAY_BUFFER, this.instances.subarray(0, at), gl.DYNAMIC_DRAW);
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
+    this.begin(cameraState);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1i(this.uniforms.atlas, 0);
     let first = 0;

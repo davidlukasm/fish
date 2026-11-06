@@ -297,9 +297,7 @@ class GrassRenderer extends TankBatch {
       this.layerCopy = true;
     }
 
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
+    this.beginOnCanvas(cameraState);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1f(this.uniforms.blend, this.poseBlend(f));
     for (const run of runs) {

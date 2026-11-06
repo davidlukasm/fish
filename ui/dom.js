@@ -57,6 +57,14 @@ export function redrawCharts() {
   }
 }
 export function chartSize(canvas) { return chartSizes.get(canvas) || canvas; }
+// Where a pointer event lies on a chart, in the chart's own units.
+export function chartPointer(canvas, event) {
+  const r = canvas.getBoundingClientRect(), size = chartSize(canvas);
+  return {
+    x : (event.clientX - r.left) / r.width * size.width,
+    y : (event.clientY - r.top) / r.height * size.height
+  };
+}
 
 // A chart whose content decides its height keeps its width and logical scale.
 export function setChartHeight(canvas, height) {

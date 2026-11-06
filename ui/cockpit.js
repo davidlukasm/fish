@@ -10,7 +10,7 @@ import {traitExplanation, traitName} from './trait_model.js';
 import {renderIndividualHormones} from './hormones.js';
 import {openSpeciesDetails} from './evolution.js';
 import {openPopulationPicker} from './population_picker.js';
-import {chartContext, chartSize} from './dom.js';
+import {chartContext, chartPointer, chartSize} from './dom.js';
 import {updateEvolutionState} from './evolution.js';
 import {FISH, PROTECTION, RECEPTOR, SENSE_KIND, SPECIES_TRACE, STEP_PHASE} from './schema.js';
 import {brainClamp, brainState, brainStep, closeBrain} from './brain.js';
@@ -835,18 +835,14 @@ const initializers = {
   },
   "behavior_map_onpointermove" : () => {
     el('behavior-map').onpointermove = e => {
-      const c = el('behavior-map'), r = c.getBoundingClientRect(),
-            x = (e.clientX - r.left) / r.width * chartSize(c).width,
-            y = (e.clientY - r.top) / r.height * chartSize(c).height;
+      const c = el('behavior-map'), {x, y} = chartPointer(c, e);
       const point = nichePointAt(x, y);
       text('map-tooltip', point ? point.label : '');
     };
   },
   "behavior_map_onclick" : () => {
     el('behavior-map').onclick = e => {
-      const c = el('behavior-map'), r = c.getBoundingClientRect(),
-            x = (e.clientX - r.left) / r.width * chartSize(c).width,
-            y = (e.clientY - r.top) / r.height * chartSize(c).height;
+      const c = el('behavior-map'), {x, y} = chartPointer(c, e);
       const p = nichePointAt(x, y);
       if (p?.fish)
         selectFish(p.fish);
@@ -854,9 +850,7 @@ const initializers = {
   },
   "chart_onpointermove" : () => {
     el('chart').onpointermove = e => {
-      const c = el('chart'), r = c.getBoundingClientRect(),
-            x = (e.clientX - r.left) / r.width * chartSize(c).width,
-            y = (e.clientY - r.top) / r.height * chartSize(c).height, mark = chartMarkerAt(x, y),
+      const c = el('chart'), {x, y} = chartPointer(c, e), mark = chartMarkerAt(x, y),
             point = chartPointAt(x, y);
       c.title = mark    ? t('cockpit.eventMark',
                             {step : formatNumber(mark.event.step), text : eventText(mark.event)})
@@ -866,9 +860,7 @@ const initializers = {
   },
   "chart_onclick" : () => {
     el('chart').onclick = e => {
-      const c = el('chart'), r = c.getBoundingClientRect(),
-            x = (e.clientX - r.left) / r.width * chartSize(c).width,
-            y = (e.clientY - r.top) / r.height * chartSize(c).height;
+      const c = el('chart'), {x, y} = chartPointer(c, e);
       const hit = chartMarkerAt(x, y);
       if (hit) {
         text('feedback', eventText(hit.event));

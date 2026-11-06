@@ -79,9 +79,7 @@ export class SedimentRenderer extends TankBatch {
       gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.instances.subarray(0, size));
       this.data = grains;
     }
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
+    this.beginOnCanvas(cameraState);
     gl.uniform2f(this.uniforms.offset, c.ox, c.oy);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1f(this.uniforms.step, step);
@@ -175,8 +173,7 @@ class SurfaceRenderer extends TankBatch {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     this.attributes(foreground ? this.algae : 0);
-    gl.useProgram(this.program);
-    gl.uniform2f(this.uniforms.viewport, cameraState.viewportWidth, cameraState.viewportHeight);
+    this.begin(cameraState);
     gl.uniform1f(this.uniforms.scale, c.scale);
     gl.uniform1f(this.uniforms.blend, blend);
     gl.uniform3f(this.uniforms.peek, pointer?.x || 0, pointer?.y || 0,
