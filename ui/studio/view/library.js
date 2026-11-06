@@ -125,7 +125,7 @@ function substanceCard(state, substance) {
                    icon(organ.type, ICON.list) + escapeText(organTitle(organ, state.sites)) +
                    [...effects ]
                        .map(e => '<small class="aid-bound-effect">' +
-                                 escapeText(tList('studio.hormoneCard.tiles')[e]) + '</small>')
+                                 escapeText(tList('studio.hormoneCard.effects')[e]) + '</small>')
                        .join('') +
                    '</button>';
           })

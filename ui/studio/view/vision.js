@@ -28,7 +28,7 @@ const LIGHT_KNOB = 6;
 // side, but it shows only outside the fish and outside a circle around the drawn eye, the cut,
 // which reaches CUT.margin past the eye's glyph and past the engine's eye. Its handles lie on
 // rings around the drawn eye, the edges' HANDLE.reach past the cut and at least HANDLE.radius out.
-const HANDLE = Object.freeze({radius : 235, reach : 150});
+const HANDLE = Object.freeze({radius : 235, reach : 150, hint : 1.7});
 const CUT = Object.freeze({margin : 10});
 // Field handles: the resolution handle RESOLUTION_REACH of the way from the cut to the edges'
 // ring, density rings DENSITY_STEP apart from DENSITY_START past the cut.
@@ -306,9 +306,11 @@ export function visionFan(state, organ) {
   if (!rays.length)
     return '';
   // Only the chosen organ's field reaches as far as the fish sees, a near sense on its depth
-  // scale; the others stay a hint as far as the handles' ring. A field not chosen picks its organ.
+  // scale; the others stay a hint HANDLE.hint times as far as the handles' ring. A field not
+  // chosen picks its organ.
   const near = organ.type === 'proximity' ? nearScale(state, profile, g) : null;
-  const deep = selected && !near, hint = Math.max(g.cut, Math.min(g.radius, g.handle));
+  const deep = selected && !near,
+        hint = Math.max(g.cut, Math.min(g.radius, g.handle * HANDLE.hint));
   const reach = {
     outline : (left, right) =>
         deep ? sector(g, left, right, g.radius) : ringSector(g, left, right, hint),

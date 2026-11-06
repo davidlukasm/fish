@@ -226,13 +226,20 @@ export class OrganStudio {
     for (const button of this.root.querySelectorAll('[data-contacts]'))
       button.classList.toggle('active', button.dataset.contacts === 'design');
   }
+  // Wiring starts from nothing chosen: what was chosen to move or inspect is let go.
   setTool(tool) {
     this.pendingWire = null;
+    const entering = tool !== this.state.tool;
     this.state.tool = tool;
-    if (tool === 'wire')
+    if (tool === 'wire') {
       this.clearStimulus();
-    if (tool === 'wire')
       this.showDrawnContacts();
+      if (entering) {
+        this.state.selected = null;
+        this.state.multi.clear();
+        this.refreshInspector();
+      }
+    }
     if (tool === 'learn' && ![HORMONE_EFFECT.excitation, HORMONE_EFFECT.learning,
                               HORMONE_EFFECT.eligibility, HORMONE_EFFECT.competition]
                                  .includes(this.state.effect))
@@ -348,7 +355,7 @@ export class OrganStudio {
     }
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]'))
       button.disabled = state.stale || !state.report?.contacts?.length;
-    for (const button of this.root.querySelectorAll('[data-measure]'))
+    for (const button of this.root.querySelectorAll('[data-measure], [data-measure-level]'))
       button.disabled = !builtAsDrawn(state);
     const download = this.root.querySelector('[data-action="download"]');
     if (download)

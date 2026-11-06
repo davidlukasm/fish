@@ -44,6 +44,7 @@ import {
   eyeLocation,
   eyeRadius,
   INSIDE,
+  lateralLine,
   musclePoint,
   NODE,
   nodeLocation,
@@ -100,10 +101,6 @@ const GLYPH = Object.freeze({
   blood_drops : 3,
   blood_step : 13,
   gland : [ 16, 11 ],
-  lateral_span : [ 285, 860 ],
-  lateral_inset : 9,
-  lateral_step : 36,
-  lateral_gap : 10,
   lateral_pore : 3.2,
   muscle_lines : 3,
   muscle_step : 9,
@@ -187,23 +184,15 @@ function bloodGlyph(state, organ, pos) {
   }
   return html;
 }
-// The lateral line runs along the flank under the skin, from behind the eye (LATERAL_GAP past it)
-// to the tail, its pores LATERAL_STEP apart; a broad band behind it takes clicks.
+// The lateral line along the flank with its pores; a broad band behind it takes clicks.
 function lateralGlyph(state, organ) {
-  const {document : doc, sites} = state, G = GLYPH;
-  const out = sideOf(organ), eye = eyeLocation(doc, sites, out);
-  const from = Math.max(G.lateral_span[0],
-                        eye ? eye.x + eyeRadius(doc, out) * EYE.aspect + G.lateral_gap : 0),
-        to = G.lateral_span[1];
-  const at = x => ({x, y : skinAt(x, out) - out * G.lateral_inset});
-  const count = Math.round((to - from) / G.lateral_step);
-  const points = Array.from({length : count + 1}, (_, k) => at(from + (to - from) * k / count));
+  const points = lateralLine(state.document, state.sites, organ);
   const line = 'M' + points.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L');
   return '<path class="aid-lateral-hit" d="' + line +
          '"/><path class="aid-anatomical-lateral" d="' + line + '"/>' +
          points
              .map(p => '<circle class="aid-lateral-pore" cx="' + fixed(p.x) + '" cy="' +
-                       fixed(p.y) + '" r="' + G.lateral_pore + '"/>')
+                       fixed(p.y) + '" r="' + GLYPH.lateral_pore + '"/>')
              .join('');
 }
 // A bundle of fibres on each node of a muscle.

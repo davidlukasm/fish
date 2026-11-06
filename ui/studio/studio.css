@@ -14,6 +14,7 @@
 :where(#station-root) button{color:inherit;cursor:pointer}
 #station-root button:focus-visible,#station-root input:focus-visible{outline:2px solid #e3d5a4;outline-offset:2px}
 #station-root button:disabled{opacity:.38;cursor:default}
+.aid-dial:has(input:disabled){opacity:.38}
 .aid-station,.aid-hub{height:100%;min-height:0;display:flex;flex-direction:column}
 .aid-header{flex:0 0 auto;height:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:58px;padding:7px 14px;background:#0d2930;border-bottom:1px solid #2d5159}
 .aid-header-brand{display:flex;align-items:center;gap:18px}
@@ -97,7 +98,7 @@
 .aid-site-hint{pointer-events:none;filter:drop-shadow(0 0 2px #062d32)}
 .aid-site-fill{opacity:.55}
 .aid-preview-ring{stroke:var(--aid-handle-hover);stroke-width:3;stroke-dasharray:8 5;fill-opacity:.45}
-.aid-connecting-line{fill:none;stroke:#c7e6c9;stroke-width:3;stroke-dasharray:8 6}
+.aid-connecting-line{fill:none;stroke:#c7e6c9;stroke-width:3;stroke-dasharray:8 6;vector-effect:non-scaling-stroke}
 .aid-canvas-toolbar{position:absolute;bottom:12px;right:12px;z-index:6;padding:6px 11px;background:#0e2c34da;border:1px solid #31535a;border-radius:9px;color:#c9dbd4;font-size:12px}
 .aid-inspector{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;border-left:1px solid #2d525a;background:#143039}
 .aid-inspector-scroll{overflow:auto;min-height:0;padding:21px 20px 60px}
@@ -245,7 +246,7 @@
 .aid-vector-editor svg>rect{fill:#123942;stroke:#97b9b4;stroke-width:2}
 .aid-vector-editor svg>path{stroke:#557b7f;stroke-width:1.3;fill:none}
 .aid-vector-point{fill:#efd5a1;stroke:#fff4cf;stroke-width:2.4;pointer-events:none}
-.aid-vector-hints{display:grid;gap:7px;color:#9fc2bd;font-size:11px;min-width:0}
+.aid-pad-label{fill:#9fc2bd;font-size:11px;pointer-events:none}
 .aid-contact-field{display:block;width:170px;max-width:100%;height:auto;margin:10px auto;touch-action:none}
 .aid-spine-field{display:block;width:100%;height:auto;margin:6px 0;touch-action:none}
 .aid-spine-limit{fill:none;stroke:var(--aid-limit);stroke-width:1}

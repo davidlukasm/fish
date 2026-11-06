@@ -114,6 +114,15 @@ function endpointAnchor(doc, sites, id, centers) {
                  organ : found.organ
                };
 }
+// A wire drawn from or to one node, while that node shows, runs from or to the node itself, not
+// along its organ's trunk; else its end is the organ's or region's place.
+function wireEnd(state, centers, wireId, linkId) {
+  const found = centers.get(linkId), {document : doc, sites} = state;
+  if (found && found.organ.type !== 'brain' && !findOrgan(doc, wireId) &&
+      showsNodes(state, [ found.organ ]))
+    return {key : linkId, point : nodeLocation(doc, sites, found.center, found.organ.type)};
+  return endpointAnchor(doc, sites, linkId, centers);
+}
 // The nodes a wire branches to at one end, while its organ's nodes show: all of them for the
 // organ as a whole (when it has more than one), the one for a node.
 function branchNodes(state, id, anchor, centers) {
@@ -219,8 +228,8 @@ function wireBundles(state, centers) {
       continue;
     }
     const a = centers.get(link.from);
-    const from = endpointAnchor(doc, sites, link.from, centers),
-          to = endpointAnchor(doc, sites, link.to, centers);
+    const from = wireEnd(state, centers, link.wire.from, link.from),
+          to = wireEnd(state, centers, link.wire.to, link.to);
     if (!a || !centers.get(link.to) || !from || !to)
       continue;
     const kind = signalKind(a.center);

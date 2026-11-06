@@ -422,9 +422,11 @@ function wireField(wire) {
          label('sections.spread') + '</span></div>';
 }
 // The sender's cross-body preference and reach apply to all of its outgoing contacts: across the
-// pad from its own side to the other, up from near to far. When its wires all lead across or all
-// to its own side, they decide the side, and the pad shows it; the pointer sets the reach alone.
-const OUTPUT_PAD = Object.freeze({width : 150, height : 150, inset : 15, round : 12, marker : 8});
+// pad from its own side to the other, up from near to far, each named at its edge (LABEL from
+// it). When its wires all lead across or all to its own side, they decide the side, and the pad
+// shows it; the pointer sets the reach alone.
+const OUTPUT_PAD =
+    Object.freeze({width : 190, height : 190, inset : 28, round : 12, marker : 8, label : 10});
 export function outputPatch(fx, fy, center, state) {
   const {across, up} = padValues(OUTPUT_PAD, fx, fy);
   return wiredCrossing(state.document, center, state.sites) === null
@@ -439,18 +441,22 @@ function outgoingField(state, center) {
   const P = OUTPUT_PAD, wired = wiredCrossing(state.document, center, state.sites);
   const p = outputPoint(state, center), side = P.width - 2 * P.inset;
   const middle = {x : P.width / 2, y : P.height / 2};
+  const edge = (key, x, y, turn) =>
+      '<text class="aid-pad-label" x="' + fixed(x) + '" y="' + fixed(y) + '"' +
+      (turn ? ' transform="rotate(' + turn + ' ' + fixed(x) + ' ' + fixed(y) + ')"' : '') +
+      ' text-anchor="middle" dominant-baseline="middle">' + label('inspector.' + key) + '</text>';
+  const out = P.inset - P.label;
   return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
          '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
          '" viewBox="0 0 ' + P.width + ' ' + P.height + '" tabindex="0" role="img" aria-label="' +
          label('inspector.signalReach') + '"><rect x="' + P.inset + '" y="' + P.inset +
          '" width="' + side + '" height="' + side + '" rx="' + P.round + '"/><path d="M' +
          middle.x + ' ' + P.inset + ' V' + (P.height - P.inset) + ' M' + P.inset + ' ' + middle.y +
-         ' H' + (P.width - P.inset) + '"/><circle class="aid-vector-point" cx="' + fixed(p.x) +
-         '" cy="' + fixed(p.y) + '" r="' + P.marker +
-         '"/></svg><div class="aid-vector-hints"><span>' + label('inspector.sameSide') +
-         '</span><span>' + label('inspector.far') + '</span><span>' +
-         label('inspector.oppositeSide') + '</span><span>' + label('inspector.near') +
-         '</span></div></div>' +
+         ' H' + (P.width - P.inset) + '"/>' + edge('far', middle.x, out) +
+         edge('near', middle.x, P.height - out) + edge('sameSide', out, middle.y, -90) +
+         edge('oppositeSide', P.width - out, middle.y, 90) +
+         '<circle class="aid-vector-point" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+         P.marker + '"/></svg></div>' +
          (wired === null ? '' : '<p class="aid-hint">' + label('inspector.sideByWires') + '</p>') +
          '</div>';
 }

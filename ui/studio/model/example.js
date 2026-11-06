@@ -47,12 +47,15 @@ const PLACES = Object.freeze({
   hypothalamus : [ 'hypothalamus', 420, 365 ],
   reward : [ 'gland', 470, 383 ]
 });
-// Organs and regions are wired as wholes, the gut by its food node alone.
+// Organs and regions are wired as wholes, the gut by its food node alone; the hypothalamus, one
+// for both sides, reaches the reward glands on both (twin: the other side's organ). The growth
+// glands release without a signal, all the time.
 const WIRES = Object.freeze([
   [ 'eye', 'tectum' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ], [ 'bulb', 'pallium' ],
   [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ], [ 'lateral', 'hindbrain' ],
   [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ], [ 'pallium', 'bite' ],
-  [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ]
+  [ 'pallium', 'suck' ], [ 'gut:node', 'hypothalamus' ], [ 'hypothalamus', 'reward' ],
+  [ 'hypothalamus', 'reward:twin' ]
 ]);
 // The gonads make GROWTH_CELLS growth cells each, so the ovary holds an egg and the testis what
 // one spawning takes.
@@ -107,7 +110,8 @@ export function exampleDocument(names, sites, wheel) {
   }
   const end = key => {
     const [name, part] = key.split(':');
-    return placed[name][part ?? 'organ'];
+    return part === 'twin' ? findOrgan(doc, placed[name].organ)?.pair
+                           : placed[name][part ?? 'organ'];
   };
   for (const [from, to] of WIRES) {
     const r = addWire(doc, end(from), end(to));

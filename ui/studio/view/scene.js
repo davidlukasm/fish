@@ -21,8 +21,9 @@ import {stimulusKind} from './stimulus.js';
 
 // A center's marker: a motor center a rounded square ROUND with a cross, a sense center a disc
 // with an eye, a nerve center a diamond (a triangle when it inhibits) with the sign of its kind;
-// the marks in INK on its colour.
+// the marks in INK on its colour, drawn for a marker SIZE wide and scaled to the one asked.
 const MARKER = Object.freeze({
+  size : 5.5,
   ink : '#10292d',
   round : 2,
   motor : 'M-3 -3 L3 3 M-3 3 L3 -3',
@@ -36,11 +37,11 @@ const MARKER = Object.freeze({
     other : 'M-3 0 H3 M0 -3 V3'
   }
 });
-export function centerMarker(center, radius) {
-  const M = MARKER, r = fixed(radius), ink = '" stroke="' + M.ink + '" fill="none"/>';
+function markerShape(center) {
+  const M = MARKER, r = fixed(M.size), ink = '" stroke="' + M.ink + '" fill="none"/>';
   if (center.role === 'motor')
     return '<rect class="aid-neural-dot" x="-' + r + '" y="-' + r + '" width="' +
-           fixed(radius * 2) + '" height="' + fixed(radius * 2) + '" rx="' + M.round +
+           fixed(M.size * 2) + '" height="' + fixed(M.size * 2) + '" rx="' + M.round +
            '" fill="currentColor"/><path d="' + M.motor + ink;
   if (center.role === 'sensor')
     return '<circle class="aid-neural-dot" r="' + r + '" fill="currentColor"/><circle r="' + M.eye +
@@ -48,9 +49,11 @@ export function centerMarker(center, radius) {
   return '<path class="aid-neural-dot" d="' + (M.shapes[center.key] ?? M.shapes.other) +
          '" fill="currentColor"/><path d="' + (M.signs[center.key] ?? M.signs.other) + ink;
 }
+export const centerMarker = (center, radius) =>
+    '<g transform="scale(' + fixed(radius / MARKER.size) + ')">' + markerShape(center) + '</g>';
 // A nerve center's glyph is RADIUS wide (CHOSEN when chosen), on a body HALO wider; a hormone's
 // ring RING wider marks what it does with the focused substance.
-const CENTER_GLYPH = Object.freeze({radius : 5.5, chosen : 7.5, halo : 4, ring : 7});
+const CENTER_GLYPH = Object.freeze({radius : 8.25, chosen : 11, halo : 5, ring : 9});
 function centersSvg(state) {
   const {document : doc, sites, selected} = state;
   const zoom = zoomOf(state);

@@ -255,21 +255,21 @@ export function phasePatch(handle, fx) {
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
 // How much of a substance a measurement doses: a share from none to all, set in MEASURE_STEP. It
-// measures the fish built as drawn only, so without one its button waits.
+// measures the fish built as drawn only, so without one its dose and button wait.
 const MEASURE_STEP = .01;
 export const measureReading = level => percent(level);
 // Measured organ drives that changed by more than MEASURE_SHOWN, at most MEASURE_ROWS of them.
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 export function measurement(state, index) {
+  const waiting = builtAsDrawn(state) ? '' : ' disabled';
   let html = '<div class="aid-measure"><span class="aid-measure-title">' +
              label('hormoneCard.probe') + '</span><div class="aid-measure-dose">' +
              '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
              '</span><input type="range" data-measure-level min="0" max="1" step="' + MEASURE_STEP +
-             '" value="' + fixed(state.measureLevel) + '"/><output>' +
+             '" value="' + fixed(state.measureLevel) + '"' + waiting + '/><output>' +
              measureReading(state.measureLevel) + '</output></label>' +
-             '<button class="aid-secondary" data-measure' +
-             (builtAsDrawn(state) ? '' : ' disabled') + '>' + label('inspector.measure') +
-             '</button></div>';
+             '<button class="aid-secondary" data-measure' + waiting + '>' +
+             label('inspector.measure') + '</button></div>';
   const m = state.measurement;
   if (!m || m.substance !== index)
     return html + '</div>';

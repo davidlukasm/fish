@@ -199,6 +199,8 @@ function regionPoint(organ, index) {
 export function organLocation(organ, sites, doc) {
   if (hasHome(organ.type))
     return innerHome(doc, organ);
+  if (organ.type === 'lateral')
+    return lateralAnchor(doc, sites, organ);
   const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i))
                     : organ.type === 'muscle'
                         ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
@@ -227,6 +229,23 @@ export function eyeLocation(doc, sites, side) {
                                                                       : null;
 }
 export const fieldOrigin = (doc, sites, organ) => viewOrigin(doc, sites, sideOf(organ));
+// The lateral line runs along the flank, INSET under the skin, from behind the eye (GAP past it,
+// at least from SPAN's start) to SPAN's end, its pores STEP apart; its nerve leaves it above the
+// middle of its cells.
+export const LATERAL = Object.freeze({span : [ 285, 860 ], inset : 9, step : 36, gap : 10});
+export function lateralLine(doc, sites, organ) {
+  const L = LATERAL, out = sideOf(organ), eye = eyeLocation(doc, sites, out);
+  const from = Math.max(L.span[0], eye ? eye.x + eyeRadius(doc, out) * EYE.aspect + L.gap : 0);
+  const at = x => ({x, y : skinAt(x, out) - out * L.inset});
+  const count = Math.round((L.span[1] - from) / L.step);
+  return Array.from({length : count + 1}, (_, k) => at(from + (L.span[1] - from) * k / count));
+}
+function lateralAnchor(doc, sites, organ) {
+  const line = lateralLine(doc, sites, organ);
+  const cells = organ.centers.map(c => centerLocation(c, organ.type, sites));
+  const middle = cells.length ? centroid(cells).x : line[0].x;
+  return line.reduce((best, p) => Math.abs(p.x - middle) < Math.abs(best.x - middle) ? p : best);
+}
 // An eye grows with its cells, from EYE.base to EYE.most frame units.
 export const EYE =
     Object.freeze({base : 11, per_center : 2, most : 21, aspect : 1.4, pupil : .44, inset : 4});
