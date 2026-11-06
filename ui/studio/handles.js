@@ -367,7 +367,7 @@ export const handleMethods = {
     if (drag.handle === 'effector')
       return this.effectorPointer(drag, fx, fy);
     if (drag.handle === 'sac')
-      return this.sacPointer(drag, fx);
+      return this.sacPointer(drag, fx, fy);
     if (drag.handle === 'copies') {
       this.tuneDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
                       'cells:' + drag.id);
@@ -398,9 +398,9 @@ export const handleMethods = {
     this.tuneDesign(changed, 'effector:' + drag.id);
     this.refreshInspector();
   },
-  sacPointer(drag, fx) {
+  sacPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);
-    const patch = organ && sacPatch(this.state, organ, drag.name, fx);
+    const patch = organ && sacPatch(this.state, organ, drag.name, fx, fy);
     if (!patch)
       return;
     const pressure = organ.centers.find(c => c.key === 'pressure');

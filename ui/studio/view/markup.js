@@ -16,9 +16,13 @@ export const dataAttribute = key => 'data-' + key.replace(/[A-Z]/g, c => '-' + c
 const GLYPH_LINE = 1.9;
 export const glyph = (path, size, {line = false, box, paint = ''} = {}) => drawGlyph(
     escapeText(path), {size, box, paint : line ? linePaint({width : GLYPH_LINE}) : paint});
-export const placedGlyph = (path, size, {x = 0, y = 0} = {}, {box, paint = ''} = {}) => drawGlyph(
-    escapeText(path),
-    {size, box, paint, place : ' x="' + fixed(x - size / 2) + '" y="' + fixed(y - size / 2) + '"'});
+export const placedGlyph = (path, size, {x = 0, y = 0} = {},
+                            {box, paint = '', line = false} = {}) => drawGlyph(escapeText(path), {
+  size,
+  box,
+  paint : line ? linePaint({width : GLYPH_LINE}) : paint,
+  place : ' x="' + fixed(x - size / 2) + '" y="' + fixed(y - size / 2) + '"'
+});
 
 export const TRACK = Object.freeze({narrow : 2.5, wide : 9, handle : 6, gap : 2, name : 18});
 function track([ left, right ], y, share, attributes, title, ends) {

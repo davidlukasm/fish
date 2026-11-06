@@ -1446,7 +1446,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const sac = sacs.gonadGraphic(sacState, small);
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
-    assert.ok(sacs.sacPatch(sacState, small, 'cells', .6).nodes > 2);
+    assert.ok(sacs.sacPatch(sacState, small, 'cells', .1, .2).nodes > 2);
+    assert.equal(sacs.sacPatch(sacState, small, 'cells', .1, .9).nodes, 1);
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
     const testisState = {document : testis.document, sites, capabilities : sitesResult};

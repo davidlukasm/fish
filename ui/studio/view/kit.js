@@ -19,7 +19,8 @@ export const ICON = Object.freeze({
 });
 export const icon = (kind, size = ICON.palette) =>
     glyph(STUDIO_ICON[kind] ?? STUDIO_ICON.brain, size, {line : true});
-const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14', SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
+export const SLOT_IN = 'M4 12h12M12 7l5 5-5 5M20 5v14';
+const SLOT_OUT = 'M4 5v14M8 12h12M16 7l5 5-5 5';
 export function slotShape(slot) {
   const shown = slot.filled[0]?.type ?? slot.fits[0] ?? null;
   return shown ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain : slot.dir === 'in' ? SLOT_IN : SLOT_OUT;

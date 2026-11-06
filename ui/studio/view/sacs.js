@@ -4,9 +4,9 @@ import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../
 import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS} from '../../schema.js';
 import {groupReport} from '../model/document.js';
-import {escapeText, fixed} from './markup.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';
-import {label} from './kit.js';
+import {label, SLOT_IN} from './kit.js';
 import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 import {biasScale} from './panels.js';
@@ -37,30 +37,34 @@ export function gonadStore(state, organ) {
     minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
   };
 }
+// The organ over time: the store fills from its cells, empties at each release and fills again,
+// or waits full for a trigger. Energy runs on a square-root scale so one cell and the full organ
+// both read.
 const STORE = Object.freeze({
   width : 300,
-  height : 126,
-  left : 36,
-  right : 234,
-  middle : 52,
-  half : 26,
-  round : 9,
-  inflow : 30,
-  flow : [ 1.5, 10 ],
-  head : 7,
-  valve : 14,
-  shut : .2,
-  gap : 6,
-  egg : 22,
-  gamete : 4,
-  axis : 100,
+  height : 150,
+  stack : [ 12, 30 ],
+  left : 42,
+  right : 284,
+  top : 18,
+  base : 112,
+  cycles : 2.4,
+  samples : 18,
+  middle : 163,
+  egg : 15,
+  least : 4,
+  trigger : 14,
+  gap : 3,
+  sperm : 3,
   tick : 5,
-  label : 13,
   handle : 7
 });
-const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4});
-const at = (store, energy) =>
-    STORE.left + (STORE.right - STORE.left) * Math.min(1, energy / store.scale);
+const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4, spread : 5});
+const topOf = store => Math.min(store.own.most, store.scale);
+const levelY = (store, energy) =>
+    STORE.base - (STORE.base - STORE.top) * Math.sqrt(clamp(energy / topOf(store)));
+const energyAt = (store, y) =>
+    topOf(store) * clamp((STORE.base - y) / (STORE.base - STORE.top)) ** 2;
 const sperm = (x, y) => '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '" cy="' + fixed(y) +
                         '" r="' + SPERM.head + '"/><path class="aid-sac-sperm" d="M' +
                         fixed(x - SPERM.head) + ' ' + fixed(y) + ' q' +
@@ -68,46 +72,64 @@ const sperm = (x, y) => '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '
                         ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
 const egg = (x, y, r, kind) => '<circle class="aid-sac-' + kind + '" cx="' + fixed(x) + '" cy="' +
                                fixed(y) + '" r="' + fixed(r) + '"/>';
-function chambers(store, type, from, to, kind) {
-  const S = STORE, width = at(store, store.own.perCell) - S.left;
+function chambers(store, from, to, kind) {
+  const [x0, x1] = STORE.stack;
   let html = '';
   for (let k = from; k < to; ++k) {
-    const x = S.left + k * width, middle = x + width / 2;
-    html += '<rect class="aid-sac-chamber ' + kind + '" x="' + fixed(x) + '" y="' +
-            (S.middle - S.half) + '" width="' + fixed(width) + '" height="' + 2 * S.half + '"/>' +
-            (type === 'eggs' ? egg(middle, S.middle - S.half / 2, S.gamete, 'egg') +
-                                   egg(middle, S.middle + S.half / 2, S.gamete, 'egg')
-                             : sperm(middle + SPERM.tail / 2, S.middle));
+    const low = levelY(store, k * store.own.perCell),
+          high = levelY(store, (k + 1) * store.own.perCell);
+    html += '<rect class="aid-sac-chamber ' + kind + '" x="' + x0 + '" y="' + fixed(high) +
+            '" width="' + (x1 - x0) + '" height="' + fixed(low - high) + '"/>';
   }
   return html;
 }
-function product(store, type, x) {
-  const S = STORE, radius = energy => S.egg * Math.sqrt(Math.min(1, energy / store.scale));
-  if (type !== 'eggs') {
-    const count = Math.floor(Math.min(store.motors, store.room / store.own.perCell));
+function product(store, type, x, y) {
+  const S = STORE;
+  if (type !== 'eggs')
     return Array
-        .from({length : count}, (_, k) => sperm(x + S.gap + SPERM.tail + SPERM.head,
-                                                S.middle + (k - (count - 1) / 2) * SPERM.head * 2))
+        .from({length : Math.max(1, Math.min(S.sperm, store.motors))},
+              (_, k) => sperm(x + SPERM.tail, y + (k - 1) * SPERM.spread))
         .join('');
-  }
-  const r = radius(store.spawn), cx = x + S.gap + S.egg;
+  const r = Math.max(S.least, S.egg * Math.sqrt(clamp(store.spawn / topOf(store))));
   const short = store.minimum && store.spawn < store.minimum;
-  return egg(cx, S.middle, r, short ? 'egg food' : 'egg') +
-         (store.minimum ? '<circle class="aid-sac-least" cx="' + fixed(cx) + '" cy="' + S.middle +
-                              '" r="' + fixed(radius(store.minimum)) + '"/>'
-                        : '');
+  return egg(x + r, y, r, short ? 'egg food' : 'egg');
 }
-function axis(store) {
-  const S = STORE, mark = (energy, kind) => {
-    const x = fixed(at(store, energy));
-    return '<path class="aid-sac-tick ' + kind + '" d="M' + x + ' ' + S.axis + ' v' + S.tick +
-           '"/><text class="' + kind + '" x="' + x + '" y="' + (S.axis + S.tick + S.label) +
-           '" text-anchor="middle">' + Math.round(energy) + '</text>';
+function fillCurve(store, type) {
+  const S = STORE, span = S.right - S.left, below = S.base + S.egg + S.gap;
+  if (!Number.isFinite(store.steps))
+    return {
+      html : '<path class="aid-sac-fill idle" d="M' + S.left + ' ' + S.base + ' H' + S.right + '"/>'
+    };
+  const ramp = (x0, energy, width) =>
+      Array
+          .from({length : S.samples + 1}, (_, k) => fixed(x0 + width * k / S.samples) + ' ' +
+                                                    fixed(levelY(store, energy * k / S.samples)))
+          .join(' L');
+  const cycle = span / S.cycles;
+  if (!store.self) {
+    const fills = cycle * store.room / Math.max(store.spawn, Number.EPSILON);
+    const reach = Math.min(span, fills), x = S.left + reach;
+    return {
+      html : '<path class="aid-sac-fill" d="M' + ramp(S.left, store.room * reach / fills, reach) +
+                 ' H' + S.right + '"/>' +
+                 placedGlyph(SLOT_IN, S.trigger,
+                             {x : S.right - 2 * S.egg - S.gap - S.trigger / 2, y : below},
+                             {line : true}) +
+                 product(store, type, S.right - 2 * S.egg, below),
+      knee : {x, y : levelY(store, store.room)}
+    };
+  }
+  let d = '', drops = '', x0 = S.left;
+  for (; x0 + cycle <= S.right; x0 += cycle) {
+    d += (d ? ' L' : 'M') + ramp(x0, store.spawn, cycle) + ' L' + fixed(x0 + cycle) + ' ' + S.base;
+    drops += product(store, type, x0 + cycle, below);
+  }
+  if (S.right > x0)
+    d += ' L' + ramp(x0, store.spawn * (S.right - x0) / cycle, S.right - x0);
+  return {
+    html : '<path class="aid-sac-fill" d="' + d + '"/>' + drops,
+    knee : {x : S.left + cycle, y : levelY(store, store.spawn)}
   };
-  return '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.axis + ' H' + S.right + '"/>' +
-         mark(0, '') + mark(store.room, 'room') +
-         (store.own.most < store.scale ? mark(store.own.most, 'ceiling') : '') +
-         (store.minimum ? mark(store.minimum, 'least') : '');
 }
 export function gonadGraphic(state, organ, selected) {
   const S = STORE, store = gonadStore(state, organ);
@@ -121,52 +143,50 @@ export function gonadGraphic(state, organ, selected) {
                                               '"><title>' + escapeText(centerTitle(center)) +
                                               '</title>' + body + '</g>'
                                         : '';
-  const end = at(store, store.room), held = Math.round(store.room / store.own.perCell);
-  const kept = Math.min(store.growth, held);
-  const shaft = S.flow[0] + S.flow[1] * store.transfer, tip = S.left - S.tick / 2;
-  const inflow = '<path class="aid-sac-inflow' + (store.transfer ? '' : ' idle') + '" d="M' +
-                 (S.left - S.inflow) + ' ' + S.middle + ' H' + fixed(tip - S.head) +
-                 '" style="stroke-width:' + fixed(shaft) + '"/><path class="aid-sac-head" d="M' +
-                 fixed(tip - S.head) + ' ' + fixed(S.middle - shaft / 2 - S.head) + ' L' +
-                 fixed(tip) + ' ' + S.middle + ' L' + fixed(tip - S.head) + ' ' +
-                 fixed(S.middle + shaft / 2 + S.head) + 'Z"/>';
-  const open = Math.max(S.shut, store.opening);
-  const valve = '<path class="aid-sac-valve' + (store.self ? ' open' : '') + '" d="M' + fixed(end) +
-                ' ' + fixed(S.middle - S.half * open) + ' L' + fixed(end + S.valve) + ' ' +
-                S.middle + ' L' + fixed(end) + ' ' + fixed(S.middle + S.half * open) + '"/>';
+  const held = Math.round(store.room / store.own.perCell), kept = Math.min(store.growth, held);
+  const roomY = levelY(store, store.room), curve = fillCurve(store, organ.type);
   const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : null;
-  const lineX = stretch === null ? 0 : S.left + (end - S.left) * stretch;
-  const cellsX = fixed(at(store, store.motors * store.own.perCell));
+  const stretchY = stretch === null ? 0 : levelY(store, stretch * store.room);
+  const least = store.minimum && store.minimum < topOf(store)
+                    ? '<path class="aid-sac-least" d="M' + S.left + ' ' +
+                          fixed(levelY(store, store.minimum)) + ' H' + S.right + '"/>'
+                    : '';
+  const ceiling = store.own.most < store.scale ? '<path class="aid-sac-ceiling" d="M' + S.stack[0] +
+                                                     ' ' + S.top + ' H' + S.right + '"/>'
+                                               : '';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '" data-sac="' + escapeText(organ.id) + '" role="img">' +
-         '<rect class="aid-sac-body" x="' + S.left + '" y="' + (S.middle - S.half) + '" width="' +
-         fixed(end - S.left) + '" height="' + 2 * S.half + '" rx="' + S.round + '"/>' +
-         part(growth, inflow + chambers(store, organ.type, 0, kept, 'growth')) +
-         part(release, chambers(store, organ.type, kept, held, 'release') + valve) +
-         product(store, organ.type, end + S.valve) + axis(store) +
-         part(pressure, '<path class="aid-sac-line" d="M' + fixed(lineX) + ' ' +
-                            (S.middle - S.half - S.tick) + ' V' + (S.middle + S.half + S.tick) +
-                            '"/>') +
-         (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' +
-                         fixed(lineX) + '" cy="' + (S.middle + S.half + S.tick) + '" r="' +
-                         S.handle + '"><title>' + label('inspector.stretch') + '</title></circle>'
+         '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
+         '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth')) +
+         part(release, chambers(store, kept, held, 'release') + curve.html) +
+         '<path class="aid-sac-room" d="M' + S.stack[0] + ' ' + fixed(roomY) + ' H' + S.right +
+         '"/>' +
+         (curve.knee
+              ? '<text x="' + fixed(Math.min(curve.knee.x, S.right)) + '" y="' +
+                    fixed(curve.knee.y - S.tick) + '" text-anchor="' +
+                    (curve.knee.x > S.middle ? 'end' : 'start') + '">' +
+                    escapeText(t('studio.inspector.gonad.fullIn', {n : store.steps})) + '</text>'
+              : '') +
+         part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +
+                            S.right + '"/>') +
+         (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' + S.left +
+                         '" cy="' + fixed(stretchY) + '" r="' + S.handle + '"><title>' +
+                         label('inspector.stretch') + '</title></circle>'
                    : '') +
-         (growth ? '<circle class="aid-graphic-handle" data-sac-handle="cells" cx="' + cellsX +
-                       '" cy="' + (S.middle - S.half) + '" r="' + S.handle + '"><title>' +
-                       label('inspector.cellsHandle') + '</title></circle>'
+         (growth ? '<circle class="aid-graphic-handle" data-sac-handle="cells" cx="' +
+                       fixed((S.stack[0] + S.stack[1]) / 2) + '" cy="' + fixed(roomY) + '" r="' +
+                       S.handle + '"><title>' + label('inspector.cellsHandle') + '</title></circle>'
                  : '') +
          '</svg>';
 }
-export function sacPatch(state, organ, handle, fx) {
+export function sacPatch(state, organ, handle, fx, fy) {
   const store = gonadStore(state, organ);
   if (!store)
     return null;
-  const x = fx * STORE.width;
-  if (handle === 'stretch') {
-    const level = clamp((x - STORE.left) / Math.max(1, at(store, store.room) - STORE.left));
-    return {threshold : planOfUnit(activationQuality(level))};
-  }
-  const cells = Math.round((x - STORE.left) / (at(store, store.own.perCell) - STORE.left));
+  const energy = energyAt(store, fy * STORE.height);
+  if (handle === 'stretch')
+    return {threshold : planOfUnit(activationQuality(clamp(energy / Math.max(1e-9, store.room))))};
+  const cells = Math.max(1, Math.round(energy / store.own.perCell));
   return {nodes : clamp(cells - (store.motors - store.growth), 1, kindLimit(organ, null))};
 }
 export function gonadFacts(state, organ) {
@@ -191,8 +211,7 @@ export function gonadFacts(state, organ) {
                   : store.spawn < store.minimum ? words('food')
                                                 : words('hatches');
   return '<ul class="aid-gonad-facts">' +
-         row(find('growth'), words('cells'),
-             words(Number.isFinite(store.steps) ? 'fullIn' : 'driven'),
+         row(find('growth'), words('cells'), Number.isFinite(store.steps) ? '' : words('driven'),
              store.motors * store.own.perCell > store.own.most ? words('ceiling') : '') +
          row(find('release'), words(store.self ? 'self' : 'trigger'), product) +
          row(pressure,

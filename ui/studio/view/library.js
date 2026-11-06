@@ -1,9 +1,10 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TEACH_ICON, TOOL_ICON} from './icons.js';
+import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
+import {LEARNING_EFFECTS} from '../model/document.js';
 import {MODULES, NEURON_BY_KEY, NEURONS, ORGAN_BY_KEY, ORGANS, PAIRINGS} from '../model/organs.js';
 import {escapeText, glyph} from './markup.js';
 import {namedText, tList} from '../../strings.js';
@@ -205,12 +206,6 @@ function hormoneLibrary(state) {
          section(label('hormoneCard.more'), addSubstanceTile(state));
 }
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
-const LEARNING_TILES = Object.freeze([
-  {effect : HORMONE_EFFECT.teaching, path : TEACH_ICON},
-  {effect : HORMONE_EFFECT.learning, path : EFFECT_ICON[HORMONE_EFFECT.learning]},
-  {effect : HORMONE_EFFECT.competition, path : EFFECT_ICON[HORMONE_EFFECT.competition]},
-  {effect : HORMONE_EFFECT.eligibility, path : EFFECT_ICON[HORMONE_EFFECT.eligibility]}
-]);
 function learningLibrary(state) {
   const titles = tList('studio.learnCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
@@ -226,12 +221,12 @@ function learningLibrary(state) {
                                          path : STUDIO_ICON.gland,
                                          colour,
                                          title : label('hormoneCard.glandTitle')
-                                       }) + LEARNING_TILES
-                                                .map((t, k) => tile({
+                                       }) + LEARNING_EFFECTS
+                                                .map((effect, k) => tile({
                                                        kind : 'effect',
-                                                       value : index + ':' + t.effect,
-                                                       name : label('effects.' + t.effect),
-                                                       path : t.path,
+                                                       value : index + ':' + effect,
+                                                       name : label('effects.' + effect),
+                                                       path : EFFECT_ICON[effect],
                                                        colour,
                                                        title : titles[k],
                                                        wide : true

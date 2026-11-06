@@ -16,7 +16,7 @@ import {heading, ICON, label} from './kit.js';
 import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker} from '../model/organs.js';
-import {EFFECT_ICON, TEACH_ICON} from './icons.js';
+import {EFFECT_ICON} from './icons.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
@@ -151,12 +151,6 @@ function traceGraphic(center) {
          '</text><text x="' + T.right + '" y="' + (T.bottom + TRACK.name) + '" text-anchor="end">' +
          escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';
 }
-const PART_ICON = Object.freeze({
-  [HORMONE_EFFECT.teaching] : TEACH_ICON,
-  [HORMONE_EFFECT.learning] : EFFECT_ICON[HORMONE_EFFECT.learning],
-  [HORMONE_EFFECT.competition] : EFFECT_ICON[HORMONE_EFFECT.competition],
-  [HORMONE_EFFECT.eligibility] : EFFECT_ICON[HORMONE_EFFECT.eligibility]
-});
 function substancePart(state, center, effect) {
   const receptor = center.receptors?.[effect];
   if (!receptor)
@@ -187,7 +181,7 @@ function substancePart(state, center, effect) {
             : '';
   return '<div class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
          (colour ? ' style="--substance:' + colour + '"' : '') + '><h5>' +
-         glyph(PART_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
+         glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
          '</span></h5>' +
          effectScene(effect, colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined) +
          choices + strength + '</div>';
