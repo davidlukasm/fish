@@ -21,7 +21,7 @@ import {
 } from '../model/organs.js';
 import {findOrgan, usedSites} from '../model/document.js';
 import {BODY_FRAME, nerveZone, sideOf, sitePoint} from '../model/layout.js';
-import {FISH_BOX} from './frame.js';
+import {FISH_BOX, steadyAt} from './frame.js';
 import {centerTitle, tone} from './names.js';
 
 // While an organ is dragged: where it may go and what the hints' colours mean, its preview, and
@@ -145,9 +145,7 @@ export function placementHints(state, kind, value, moving = null) {
                              fixed(-i * span) + '" transform="rotate(-90)"/>';
                     })
                     .join('');
-            return '<g class="aid-site-hint" data-point-x="' + fixed(point.x) + '" data-point-y="' +
-                   fixed(point.y) + '" transform="translate(' + fixed(point.x) + ' ' +
-                   fixed(point.y) + ') scale(' + fixed(1 / zoom) + ')">' + arcs + '</g>';
+            return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + arcs + '</g>';
           })
           .join('');
   return {svg, legend : labels.size > 1 ? [...labels.values() ] : []};
@@ -238,8 +236,7 @@ export function placementPreview(state, descriptor, position) {
   const zoom = state.camera.zoom ?? 1;
   const colour = tone(descriptor.type ?? 'brain');
   const icon = STUDIO_ICON[descriptor.type] ?? STUDIO_ICON.brain;
-  return '<g transform="translate(' + fixed(position.x) + ' ' + fixed(position.y) + ') scale(' +
-         fixed(1 / zoom) + ')">' +
+  return '<g' + steadyAt(position, zoom) + '>' +
          '<circle r="' + P.ring + '" class="aid-preview-ring" fill="' + colour + '"/>' +
          placedGlyph(
              icon, P.icon, {},

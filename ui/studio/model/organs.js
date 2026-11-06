@@ -20,6 +20,10 @@ export const NEURONS = Object.freeze([
   {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
+// A center modulates the cells it reaches, rather than driving them, when its modulator trait lies
+// above MODULATING.
+const MODULATING = .5;
+export const isModulator = center => center.modulator > MODULATING;
 // A brain region's nerve centers: a preset cell type, how many cells and the zones they lie in
 // (inner sites only).
 export const nerve = (key, copies, zones) => Object.freeze({

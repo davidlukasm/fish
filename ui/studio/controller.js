@@ -4,30 +4,24 @@ import {
   clickOn,
   FISH_CHANGES,
   FISH_CLICKS,
-  markedKind,
   STUDIO_CLICKS
 } from './events.js';
 import {exampleDocument} from './model/example.js';
-import {DRAG_CLICK, DRAG_START, GRIPS, handleMethods, HANDLES, storedPanels} from './handles.js';
+import {handleMethods, storedPanels} from './handles.js';
 import {dropMethods} from './drops.js';
 import {designMethods} from './design.js';
 import {compilerPanel, compilerProgress, acceptedGenome} from './view/compiler.js';
-import {fieldPlacements} from './model/placement.js';
 import {beginEggPlacement} from '../world.js';
 import {HORMONE_EFFECT, ROUTE} from '../schema.js';
 import {request as sessionRequest, serverText} from '../session.js';
 import {t} from '../strings.js';
 import {
-  closestSite,
   compileDocument,
   compilerOptions,
   connectSelections,
   findCenter,
   findOrgan,
   identifier,
-  moveAssembly,
-  moveCenter,
-  moveOrgan,
   newDocument,
   removeAssembly,
   removeCenter,
@@ -36,34 +30,26 @@ import {
   selectionCenters,
   setLifePhase,
   updateField,
-  usedSites,
   validateDocument
 } from './model/document.js';
-import {centroid, nearFish, pointDistance, SNAP_DISTANCE} from './model/layout.js';
-import {CAMERA_HOME, CAMERA_ZOOM, cameraBox, cameraCoordinates, cameraScale} from './view/frame.js';
-import {BODY_MAP, fishScene, organLabelPlace} from './view/scene.js';
-import {dataAttribute, fixed} from './view/markup.js';
-import {nodeLocation, nodesAtZoom} from './view/body.js';
+import {centroid} from './model/layout.js';
+import {CAMERA_HOME} from './view/frame.js';
+import {BODY_MAP, fishScene} from './view/scene.js';
+import {nodeLocation} from './view/body.js';
 import {inspector} from './view/panels.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
-import {cellStatus, hubShell, stationShell, zoomStamp} from './view/shell.js';
+import {cellStatus, hubShell, stationShell} from './view/shell.js';
 import {measureReading} from './view/substances.js';
 import {hormoneLibrary, library, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
-import {arrowSize} from './view/wires.js';
 import {moduleName} from './view/names.js';
-import {placementPreview} from './view/placing.js';
 import {API, API_WAIT, requestBody} from './requests.js';
 import {MEASURE_LEVEL, trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
+import {gestureMethods} from './gestures.js';
 
 let instance = null;
-// The items on the fish, by the data attributes that mark them: those a press on the scene takes
-// and those a wire dragged out ends on.
-const PRESSED_ITEMS = Object.freeze([ 'contact', 'center', 'assembly', 'organ', 'wire' ]);
-const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
-const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 // An arrow key moves a field organ's handle by a degree, its resolution by FIELD_KEY_STEP.
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 // The draft is saved SAVE_DELAY ms after its last change; a build is asked how far it got every
@@ -119,9 +105,9 @@ export class OrganStudio {
     this.dragging = null;
     this.persistTimer = null;
     this.pulsePlayer = null;
-    this.wireStartId = null;
-    this.wireEndId = null;
-    this.wireStartKind = 'center';
+    // A wire begun by a click: from an item to the next one clicked, or from the next one clicked
+    // to a region's input slot.
+    this.pendingWire = null;
     this.ignoreClickUntil = 0;
     this.handleDrag = null;
     this.undoHistory = [];
@@ -222,9 +208,7 @@ export class OrganStudio {
     this.renderShell();
   }
   setTool(tool) {
-    this.wireStartId = null;
-    this.wireEndId = null;
-    this.wireStartKind = 'center';
+    this.pendingWire = null;
     this.state.tool = tool;
     if (tool === 'wire')
       this.clearStimulus();
@@ -690,254 +674,6 @@ export class OrganStudio {
     if (output)
       output.textContent = measureReading(this.state.measureLevel);
   }
-  zoom(direction, anchor = null) {
-    const c = this.state.camera, previous = c.zoom;
-    c.zoom = direction === 'in'    ? Math.min(CAMERA_ZOOM.max, c.zoom * CAMERA_ZOOM.step)
-             : direction === 'out' ? Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step)
-                                   : 1;
-    if (anchor && previous !== c.zoom) {
-      c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
-      c.y += (anchor.y - c.y) * (1 - previous / c.zoom);
-    }
-    if (direction === 'fit')
-      Object.assign(c, CAMERA_HOME);
-    const svg = this.bodyMap();
-    if (svg) {
-      const box = cameraBox(c);
-      svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
-      const scale = 1 / c.zoom;
-      const marks = svg.querySelectorAll(
-          '.aid-neural-center,.aid-assembly-stamp,.aid-vision-handle,.aid-slot-chip,' +
-          '.aid-region-badge');
-      for (const glyph of marks) {
-        const transform = glyph.getAttribute('transform');
-        if (transform)
-          glyph.setAttribute('transform',
-                             transform.replace(/scale\([^)]*\)/, 'scale(' + scale + ')'));
-      }
-      for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]'))
-        for (const [name, value] of Object.entries(
-                 organLabelPlace(Number(label.dataset.labelY), c.zoom)))
-          label.setAttribute(name, fixed(value));
-      for (const marker of svg.querySelectorAll('.aid-wire-marker')) {
-        marker.setAttribute('markerWidth', arrowSize(c.zoom));
-        marker.setAttribute('markerHeight', arrowSize(c.zoom));
-      }
-      for (const hint of svg.querySelectorAll('.aid-site-hint'))
-        hint.setAttribute('transform', 'translate(' + hint.dataset.pointX + ' ' +
-                                           hint.dataset.pointY + ') scale(' + scale + ')');
-    } else
-      this.refreshScene();
-    if (nodesAtZoom(previous) !== nodesAtZoom(c.zoom))
-      this.refreshScene();
-    const stamp = this.root.querySelector('.aid-canvas-toolbar');
-    if (stamp)
-      stamp.textContent = zoomStamp(c);
-  }
-  wheel(event) {
-    const svg = event.target.closest?.(BODY_MAP);
-    if (!svg || this.state.mode !== 'fish')
-      return;
-    event.preventDefault();
-    this.zoom(event.deltaY < 0 ? 'in' : 'out', cameraCoordinates(event, svg, this.state.camera));
-  }
-  pointerDown(event) {
-    const grip = event.target.closest?.('[data-panel-grip]');
-    if (grip && event.button === 0) {
-      const panel = grip.dataset.panelGrip;
-      this.holdHandle(event, 'panel', {
-        panel,
-        x : event.clientX,
-        width : grip.parentElement.getBoundingClientRect().width,
-        // The library grows to the right, the inspector to the left.
-        sign : panel === 'library' ? 1 : -1
-      });
-      return;
-    }
-    if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
-        this.state.mode !== 'fish')
-      return;
-    // Graphics move only by their handles.
-    for (const grip of GRIPS) {
-      const graphic = event.target.closest?.(grip.graphic),
-            handle = grip.handle ? event.target.closest?.(grip.handle) : null;
-      if (!graphic || (grip.handle && !handle && !grip.claims))
-        continue;
-      const drag = !grip.handle || handle ? grip.start(this, graphic, handle, event) : null;
-      if (drag)
-        this.holdHandle(event, grip.held,
-                        grip.rect === false ? drag
-                                            : {...drag, rect : graphic.getBoundingClientRect()});
-      return;
-    }
-    const svg = event.target.closest?.(BODY_MAP);
-    if (!svg)
-      return;
-    const item = event.target.closest?.(itemSelector(PRESSED_ITEMS));
-    const kind = markedKind(item, PRESSED_ITEMS);
-    const id = kind ? item.dataset[kind] : null;
-    this.pointer = {
-      id,
-      kind,
-      x : event.clientX,
-      y : event.clientY,
-      moved : false,
-      origin : cameraCoordinates(event, svg, this.state.camera),
-      svg
-    };
-    if (this.state.tool === 'wire' && [ 'center', 'organ', 'assembly' ].includes(kind))
-      this.pointer.wireFrom = {kind, id};
-    else if (kind === 'organ' && this.state.tool === 'select' &&
-             findOrgan(this.state.document, id)?.field)
-      this.prepareChoices(fieldPlacements(this.state.document, id, this.state.sites));
-    // Dragging on nothing moves the view, whatever the tool.
-    if (this.state.tool === 'pan' || !kind || event.button === 1)
-      this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
-  }
-  pointerMove(event) {
-    if (this.handleDrag)
-      return this[HANDLES[this.handleDrag.held].follow](event);
-    const drag = this.pointer;
-    if (!drag) {
-      const svg = event.target?.closest?.(BODY_MAP);
-      if (svg && this.wireStartId && this.state.tool === 'wire') {
-        const from = this.wirePoint({kind : this.wireStartKind, id : this.wireStartId});
-        const line = this.root.querySelector('#aid-connecting-line');
-        if (from && line) {
-          const to = cameraCoordinates(event, svg, this.state.camera);
-          line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
-        }
-      }
-      return;
-    }
-    if (this.state.station !== 'studio')
-      return;
-    if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > DRAG_START)
-      drag.moved = true;
-    if (!drag.moved)
-      return;
-    const point = cameraCoordinates(event, drag.svg, this.state.camera);
-    if (drag.pan) {
-      const rect = this.bodyMap()?.getBoundingClientRect() || drag.svg.getBoundingClientRect();
-      const scale = cameraScale(rect, this.state.camera);
-      if (!(scale > 0))
-        return;
-      this.state.camera.x = drag.pan.x - (event.clientX - drag.x) / scale;
-      this.state.camera.y = drag.pan.y - (event.clientY - drag.y) / scale;
-      const box = cameraBox(this.state.camera);
-      drag.svg.setAttribute('viewBox', [ box.x, box.y, box.width, box.height ].join(' '));
-      return;
-    }
-    if (drag.wireFrom) {
-      const from = this.wirePoint(drag.wireFrom) ?? drag.origin;
-      const line = this.root.querySelector('#aid-connecting-line');
-      if (line)
-        line.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + point.x + ' ' + point.y);
-      return;
-    }
-    if ([ 'organ', 'center', 'assembly' ].includes(drag.kind)) {
-      this.showTrash(true);
-      if (this.overTrash(event)) {
-        this.root.querySelector('#aid-drag-preview')?.replaceChildren();
-        return;
-      }
-      const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
-      if (organ?.field)
-        return this.showChoices(point);
-      if (organ)
-        this.showHints('organ', organ.type, drag.id, organ.id);
-      const preview = this.root.querySelector('#aid-drag-preview');
-      if (preview)
-        preview.innerHTML =
-            nearFish(point, this.state.sites)
-                ? placementPreview(this.state,
-                                   {type : drag.kind === 'organ'
-                                               ? findOrgan(this.state.document, drag.id)?.type
-                                           : drag.kind === 'assembly'
-                                               ? 'brain'
-                                               : findCenter(this.state.document, drag.id)?.organ.type},
-                                   point)
-                : '';
-    }
-  }
-  pointerUp(event) {
-    if (this.handleDrag)
-      return this.releaseHandle(event);
-    const drag = this.pointer;
-    if (!drag)
-      return;
-    this.pointer = null;
-    const trashed = this.overTrash(event);
-    this.showTrash(false);
-    if (!drag.moved)
-      return this.cancelChoices();
-    this.ignoreClickUntil = performance.now() + DRAG_CLICK;
-    event.preventDefault();
-    if (drag.wireFrom) {
-      this.wireStartId = null;
-      this.wireStartKind = 'center';
-      const target = document.elementFromPoint(event.clientX, event.clientY)
-                         ?.closest?.(itemSelector(WIRE_ENDS));
-      const kind = markedKind(target, WIRE_ENDS);
-      if (kind)
-        this.connectSelections(drag.wireFrom, {kind, id : target.dataset[kind]});
-      this.clearPreview();
-      return;
-    }
-    if (drag.pan)
-      return this.cancelChoices();
-    if (!['center', 'organ', 'assembly'].includes(drag.kind))
-      return this.cancelChoices();
-    if (trashed) {
-      this.cancelChoices();
-      this.clearPreview();
-      this.removeSelection({kind : drag.kind, id : drag.id});
-      return this.notice(label('status.removed'));
-    }
-    if (drag.kind === 'organ' && findOrgan(this.state.document, drag.id)?.field) {
-      const point = cameraCoordinates(event, drag.svg, this.state.camera);
-      this.clearPreview();
-      if (!this.commitChoice(point))
-        this.notice(label('status.noRoom'));
-      return;
-    }
-    const bounds = this.root.querySelector('.aid-scene-frame')?.getBoundingClientRect();
-    if (!bounds)
-      return;
-    const inside = event.clientX >= bounds.left && event.clientX <= bounds.right &&
-                   event.clientY >= bounds.top && event.clientY <= bounds.bottom;
-    const point = cameraCoordinates(event, drag.svg, this.state.camera);
-    if (!inside || !nearFish(point, this.state.sites))
-      return this.clearPreview();
-    const used = usedSites(this.state.document, c => c.id !== drag.id);
-    if (drag.kind === 'center') {
-      const center = findCenter(this.state.document, drag.id)?.center;
-      const site = center && closestSite(center, this.state.sites, used, point, null,
-                                         findCenter(this.state.document, drag.id)?.organ.type);
-      if (site &&
-          pointDistance(site, point, findCenter(this.state.document, drag.id)?.organ.type) <=
-              SNAP_DISTANCE)
-        this.changeDocument(moveCenter(this.state.document, drag.id, site.id, this.state.sites),
-                            {kind : 'center', id : drag.id});
-      else
-        this.notice(label('status.noRoom'));
-    } else if (drag.kind === 'organ') {
-      const doc = moveOrgan(this.state.document, drag.id, this.state.sites, point, SNAP_DISTANCE,
-                            drag.origin);
-      if (doc)
-        this.changeDocument(doc, {kind : 'organ', id : drag.id});
-      else
-        this.notice(label('status.noRoom'));
-    } else {
-      const doc = moveAssembly(this.state.document, drag.id, this.state.sites, point, drag.origin,
-                               SNAP_DISTANCE);
-      if (doc)
-        this.changeDocument(doc, {kind : 'assembly', id : drag.id});
-      else
-        this.notice(label('status.noRoom'));
-    }
-    this.clearPreview();
-  }
   keydown(event) {
     const handle = event.target.closest?.('[data-vision-handle]');
     if (handle && [ 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown' ].includes(event.key)) {
@@ -962,9 +698,7 @@ export class OrganStudio {
       return this.stepHistory(event.key.toLowerCase() === 'y' || event.shiftKey ? 'redo' : 'undo');
     }
     if (event.key === 'Escape') {
-      this.wireStartId = null;
-      this.wireEndId = null;
-      this.wireStartKind = 'center';
+      this.pendingWire = null;
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();
@@ -977,7 +711,8 @@ export class OrganStudio {
 }
 // The studio's methods for the design view, held handles and drags from the library live beside
 // it.
-Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods, trialMethods);
+Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods, trialMethods,
+              gestureMethods);
 export function initializeStudio() {
   const root = document.getElementById('station-root');
   if (!root)

@@ -225,6 +225,17 @@ export function cameraBox(camera) {
   const x = (camera.x ?? CAMERA_HOME.x) - width / 2, y = (camera.y ?? CAMERA_HOME.y) - height / 2;
   return {x, y, width, height, zoom};
 }
+// A mark that keeps its size on screen at any zoom: it stands at a point, scaled against the
+// zoom, and zooming rescales every mark so marked (STEADY) in place.
+export const STEADY = 'data-steady';
+export const steadyScale = (zoom = 1) => 'scale(' + fixed(1 / zoom) + ')';
+export const steadyAt = (p, zoom) => ' ' + STEADY + ' transform="translate(' + fixed(p.x) + ' ' +
+                                     fixed(p.y) + ') ' + steadyScale(zoom) + '"';
+// The camera's view as an SVG viewBox.
+export function viewBoxOf(camera) {
+  const box = cameraBox(camera);
+  return [ box.x, box.y, box.width, box.height ].map(fixed).join(' ');
+}
 // Pixels per world unit in the SVG's *actual* letterboxed viewport.
 export function cameraScale(rect, camera) {
   const box = cameraBox(camera);

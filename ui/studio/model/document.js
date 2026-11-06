@@ -966,6 +966,10 @@ export const expandedWires = doc =>
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
 }
+// The center a chosen item stands for: a chosen center itself, a chosen organ's first.
+export const chosenCenter = (doc, item) => ['center', 'organ'].includes(item?.kind)
+                                               ? endpointCenters(doc, item.id)[0] ?? null
+                                               : null;
 // The nodes that send for an endpoint (not its effectors) and that hear a wire to it (not its
 // senses; of an organ with an input slot naming a node, that node alone).
 const senderNodes = (doc, id) => endpointCenters(doc, id).filter(c => c.role !== 'motor');

@@ -16,6 +16,7 @@ import {
   wheelAffinity
 } from '../model/document.js';
 import {pathTo} from './wires.js';
+import {steadyAt} from './frame.js';
 
 // Where a substance acts, with the hormone tool: the glands that release it, the cells that bind
 // it and learn from it, and the ways between them; with the learning tool a center's teachers.
@@ -35,9 +36,8 @@ function hormoneGlyph(item, kind, color, zoom) {
                : kind === 'producer' ? 'studio.inspector.releases'
                : item.teach          ? 'studio.inspector.learns'
                                      : '';
-  return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') +
-         '" transform="translate(' + fixed(item.pos.x) + ' ' + fixed(item.pos.y) + ') scale(' +
-         fixed(1 / zoom) + ')" style="--hormone:' + color +
+  return '<g class="aid-hormone-' + kind + (item.teach ? ' teach' : '') + '"' +
+         steadyAt(item.pos, zoom) + ' style="--hormone:' + color +
          ';opacity:' + fixed(G.faintest + (1 - G.faintest) * item.affinity) + '">' +
          '<circle class="aid-hormone-aura" r="' + r + '"/>' +
          (item.teach ? '<circle class="aid-hormone-teach" r="' + fixed(r * G.teach) + '"/>' : '') +

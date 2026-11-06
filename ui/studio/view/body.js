@@ -15,9 +15,8 @@ import {radians, wrapAngle} from '../../units.js';
 import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
-  FIN_BASE,
-  SNOUT_TIP,
   bodyDirection,
+  FIN_BASE,
   finPaths,
   finRoots,
   finSizes,
@@ -25,6 +24,8 @@ import {
   skinAt,
   skinDirection,
   skinPoints,
+  SNOUT_TIP,
+  steadyAt,
   tailFin
 } from './frame.js';
 import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, MOTOR_KIND} from '../../schema.js';
@@ -637,9 +638,10 @@ function regionBadge(state, organ, hull = regionHull(state, organ)) {
   if (!hull)
     return '';
   const {cx, cy, rx, ry} = hull, zoom = state.camera?.zoom ?? 1;
-  return '<g class="aid-region-badge" transform="translate(' + fixed(cx - rx * REGION.corner) +
-         ' ' + fixed(cy - ry * REGION.corner) + ') scale(' + fixed(1 / zoom) + ')"><circle r="' +
-         REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) + '</g>';
+  return '<g class="aid-region-badge"' +
+         steadyAt({x : cx - rx * REGION.corner, y : cy - ry * REGION.corner}, zoom) +
+         '><circle r="' + REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) +
+         '</g>';
 }
 // The abstract fish in the colour of its pigment, with its organs.
 // The nodes of an organ with several, each on its site, to choose or wire one of them alone.

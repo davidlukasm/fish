@@ -13,6 +13,7 @@ import {sideOf} from '../model/layout.js';
 import {routedLinks} from '../model/regions.js';
 import {cubicWeights} from './frame.js';
 import {centerTitle, endpointTitle, isSelected} from './names.js';
+import {isModulator} from '../model/organs.js';
 
 // The wires on the fish: drawn connections bundled into trunks that branch to their nodes, the
 // signals a stimulus sends along them, the developed contacts, and their arrowheads.
@@ -250,9 +251,9 @@ function wireBundles(state, centers) {
   });
   return {bundles : drawn, inside};
 }
-const signalKind = center => center.modulator > .5 ? 'modulate'
-                             : center.sign < 0     ? 'inhibit'
-                                                   : 'excite';
+const signalKind = center => isModulator(center) ? 'modulate'
+                             : center.sign < 0   ? 'inhibit'
+                                                 : 'excite';
 // Every connection of every wire: a wire between paired organs draws one on each side, or two
 // crossing the midline, or all four. Wires between the same two places with the same kind of
 // signal run as one trunk, as broad as the wires it carries. Once an organ's nodes show, the

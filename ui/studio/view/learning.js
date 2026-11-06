@@ -1,13 +1,14 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {HORMONE_EFFECT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {PERCENT} from '../../units.js';
-import {boundEffects, findCenter, findOrgan} from '../model/document.js';
+import {boundEffects, chosenCenter, endpointCenters, findCenter} from '../model/document.js';
 import {escapeText, fixed, padPoint, padValues, pointMarks} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {joinParts, t, tList} from '../../strings.js';
 import {heading, label} from './kit.js';
-import {effectCurve, receptorProfile, substanceName, substanceWheel} from './substances.js';
+import {receptorEditor, substanceName} from './substances.js';
 import {centerTitle} from './names.js';
+import {isModulator} from '../model/organs.js';
 
 // How a nerve center learns: its learning pad, the rule its teachers drive, its inspector.
 // Every nerve cell learns with its plasticity (quality width); its mode chooses cancelling (< 0),
@@ -66,10 +67,8 @@ function teachersOfCenter(state, center) {
   const doc = state.document, organ = findCenter(doc, center.id)?.organ;
   const hears = new Set([ center.id, organ?.id ]);
   const links = routedLinks(doc, state.sites).filter(link => hears.has(link.to));
-  const senders =
-      links.map(link => findCenter(doc, link.from)?.center ?? findOrgan(doc, link.from)?.centers[0])
-          .filter(Boolean);
-  const modulators = senders.filter(c => c.role === 'nerve' && c.modulator > .5);
+  const senders = links.map(link => endpointCenters(doc, link.from)[0]).filter(Boolean);
+  const modulators = senders.filter(c => c.role === 'nerve' && isModulator(c));
   const hormones = state.capabilities
                        ? doc.substances
                              .map(sub => ({
@@ -137,9 +136,7 @@ function learningRule(state, center) {
 }
 export function learningInspector(state) {
   const selected = state.selected, doc = state.document;
-  const chosen = selected?.kind === 'center'  ? findCenter(doc, selected.id)?.center
-                 : selected?.kind === 'organ' ? findOrgan(doc, selected.id)?.centers[0]
-                                              : null;
+  const chosen = chosenCenter(doc, selected);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
@@ -150,24 +147,7 @@ export function learningInspector(state) {
   const receptor = chosen.receptors?.[effect];
   if (!receptor)
     return html;
-  html += heading(t('studio.learnRule.byHormone')) + '<div class="aid-effect-chips">' +
-          LEARNING_EFFECTS
-              .map(value => '<button data-effect="' + value + '" class="' +
-                            (effect === value ? 'active' : '') + '">' +
-                            escapeText(tList('studio.learnRule.parts')[value]) + '</button>')
-              .join('') +
-          '</div>' + effectCurve(state, receptor, effect, chosen.id + ':' + effect) +
-          '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
-          escapeText(chosen.id) + '" data-receptor-effect="' + effect + '" ' +
-          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
-          '</label>' + substanceWheel(state, receptorProfile(state, receptor), {
-            choices : [...doc.substances.map(sub => sub.index), HORMONES.levels ],
-            attribute : 'data-receptor-substance',
-            reads : state.capabilities?.regulators,
-            extra : ' data-center-id="' + escapeText(chosen.id) + '" data-receptor-effect="' +
-                        effect + '"',
-            selected : receptor.substance,
-            widthTarget : chosen.id + ':' + effect
-          });
-  return html;
+  return html + heading(t('studio.learnRule.byHormone')) +
+         receptorEditor(state, chosen, LEARNING_EFFECTS, effect,
+                        value => tList('studio.learnRule.parts')[value]);
 }

@@ -162,21 +162,17 @@ function clickItem(studio, element, event) {
   studio.select(kind, id, event);
 }
 function wireItem(studio, kind, id) {
-  const source = studio.wireStartId ? {kind : studio.wireStartKind, id : studio.wireStartId} : null;
-  const end = studio.wireEndId;
-  studio.wireStartId = null;
-  studio.wireStartKind = 'center';
-  studio.wireEndId = null;
-  if (end && end !== id) {
-    if (studio.connectSelections({kind, id}, {kind : 'organ', id : end}))
+  const {from, to} = studio.pendingWire ?? {}, item = {kind, id};
+  studio.pendingWire = null;
+  if (to && to.id !== id) {
+    if (studio.connectSelections(item, to))
       return studio.notice(label('status.wired'));
-  } else if (source) {
-    if ((source.kind !== kind || source.id !== id) && studio.connectSelections(source, {kind, id}))
+  } else if (from) {
+    if ((from.kind !== kind || from.id !== id) && studio.connectSelections(from, item))
       return;
-  } else if (selectionCenters(studio.state.document, {kind, id}).length) {
-    studio.wireStartId = id;
-    studio.wireStartKind = kind;
-    studio.state.selected = {kind, id};
+  } else if (selectionCenters(studio.state.document, item).length) {
+    studio.pendingWire = {from : item};
+    studio.state.selected = item;
   }
   studio.refreshScene();
   studio.refreshInspector();
@@ -186,11 +182,8 @@ function wireItem(studio, kind, id) {
 function startSlotWire(studio, element) {
   const region = element.dataset.slotRegion, out = element.dataset.slotDir === 'out';
   studio.setTool('wire');
-  if (out) {
-    studio.wireStartId = region;
-    studio.wireStartKind = 'organ';
-  } else
-    studio.wireEndId = region;
+  const slot = {kind : 'organ', id : region};
+  studio.pendingWire = out ? {from : slot} : {to : slot};
   studio.state.selected = {kind : 'organ', id : region};
   studio.refreshScene();
   studio.notice(label(out ? 'status.slotOut' : 'status.slotIn'));
@@ -460,9 +453,7 @@ export const FISH_CLICKS = Object.freeze([
   [
     BODY_MAP,
     studio => {
-      studio.wireStartId = null;
-      studio.wireEndId = null;
-      studio.wireStartKind = 'center';
+      studio.pendingWire = null;
       studio.select(null, null);
     }
   ]

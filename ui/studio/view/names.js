@@ -57,5 +57,5 @@ export const CATEGORY_TONE = Object.freeze({
   motor : '#eaa886'
 });
 export const tone = kind => CATEGORY_TONE[ORGAN_BY_KEY[kind]?.category] ?? CATEGORY_TONE.motor;
-// The wheel's geometry and response width come from the compiled Engine capabilities.
+// Whether a selection is the item of a kind and id.
 export const isSelected = (selection, kind, id) => selection?.kind === kind && selection?.id === id;

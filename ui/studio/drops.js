@@ -25,7 +25,7 @@ import {
   organPreview,
   placementHints
 } from './view/placing.js';
-import {BODY_MAP} from './view/scene.js';
+import {BODY_MAP, LAYER} from './view/scene.js';
 
 // Dragging from the library onto the fish: previews, places and hints while dragging, and what a
 // drop adds; a field organ's choices of place; the trash.
@@ -101,13 +101,13 @@ export const dropMethods = {
     }
     // Away from the fish only the preview goes; the places stay in sight.
     if (!nearFish(position, this.state.sites)) {
-      this.root.querySelector('#aid-drag-preview')?.replaceChildren();
+      this.root.querySelector(LAYER.preview)?.replaceChildren();
       return;
     }
     // A gland or a blood sense from a substance card is placed as the organ it is.
     const {kind, value} = ORGAN_FROM_CARD[this.dragging.kind] ?? this.dragging;
     const module = kind === 'module' || kind === 'user-module';
-    const preview = this.root.querySelector('#aid-drag-preview');
+    const preview = this.root.querySelector(LAYER.preview);
     if (preview)
       preview.innerHTML = module ? this.previewModule(kind, value, position)
                                  : organPreview(this.state, kind, value, position);
@@ -115,7 +115,7 @@ export const dropMethods = {
   },
   // Where the dragged item may go, and what the hints' colours stand for.
   showHints(kind, value, key, moving = null) {
-    const hints = this.root.querySelector('#aid-placement-hints');
+    const hints = this.root.querySelector(LAYER.hints);
     if (!hints || hints.dataset.active === key)
       return;
     const displayed = placementHints(this.state, kind, value, moving);
@@ -261,8 +261,8 @@ export const dropMethods = {
     for (const element of this.root.querySelectorAll('.aid-drop-target,.aid-drop-hover'))
       element.classList.remove('aid-drop-target', 'aid-drop-hover');
     this.bodyMap()?.classList.remove('aid-dropping');
-    this.root.querySelector('#aid-drag-preview')?.replaceChildren();
-    const hints = this.root.querySelector('#aid-placement-hints');
+    this.root.querySelector(LAYER.preview)?.replaceChildren();
+    const hints = this.root.querySelector(LAYER.hints);
     if (hints) {
       hints.replaceChildren();
       hints.dataset.active = '';
@@ -295,7 +295,7 @@ export const dropMethods = {
       return;
     this.choiceFrame = requestAnimationFrame(() => {
       this.choiceFrame = 0;
-      const layer = this.root.querySelector('#aid-choices');
+      const layer = this.root.querySelector(LAYER.choices);
       if (!layer || !this.state.choices)
         return;
       const nearest = this.choicePoint ? this.nearestChoice(this.choicePoint) : null;
@@ -317,7 +317,7 @@ export const dropMethods = {
     this.state.choices = null;
     this.choicePoint = null;
     this.shownChoice = null;
-    this.root.querySelector('#aid-choices')?.replaceChildren();
+    this.root.querySelector(LAYER.choices)?.replaceChildren();
   },
   // While an organ is dragged, a bin in the frame removes it.
   showTrash(visible) {

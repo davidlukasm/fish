@@ -17,6 +17,7 @@ import {fieldOrigin} from './body.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
 import {BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
 import {planOfUnit, unitOfPlan} from '../../tuning.js';
+import {steadyAt} from './frame.js';
 
 const label = key => t('studio.vision.' + key);
 // The test light's size knob, in frame units.
@@ -238,13 +239,12 @@ export function visionFan(state, organ) {
       html += `<path d="M${pointText(g.origin)} L${
           pointText(g.pointText(ray.angle, radius))}" class="aid-vision-ray pending"/>`;
   // Handles keep their size on screen at any zoom, as organ stamps do.
-  const scale = fixed(1 / (state.camera?.zoom ?? 1));
+  const zoom = state.camera?.zoom;
   const handle = (key, p, value) => `<g class="aid-vision-handle" data-vision-handle="${
       key}" data-vision-id="${idSafe(organ.id)}" tabindex="0" role="slider" aria-label="${
-      label(key)}" aria-valuenow="${fixed(value)}" transform="translate(${fixed(p.x)} ${
-      fixed(p.y)}) scale(${scale})"><circle r="${FIELD.mark}"/><text y="${
-      - 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${Math.round(value)}${
-          ['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
+      label(key)}" aria-valuenow="${fixed(value)}"${steadyAt(p, zoom)}><circle r="${
+      FIELD.mark}"/><text y="${- 2 * FIELD.mark}" text-anchor="middle">${label(key)} ${
+      Math.round(value)}${['lo', 'hi', 'resolution'].includes(key) ? '°' : ''}</text>${
       key === 'distance' ? `<title>${label('distanceTitle')}</title>` : ''}</g>`;
   const f = organ.field;
   if (near)

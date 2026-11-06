@@ -17,9 +17,9 @@ import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
 import {allCenters, findCenter, isChosen, wiredCrossing} from '../model/document.js';
 import {BODY_FRAME, BODY_RADIUS, centroid, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
-import {cameraBox} from './frame.js';
+import {cameraBox, steadyAt, viewBoxOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
-import {isSelected, moduleName, tone} from './names.js';
+import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
 import {developedContactsSvg, wireMarkers, wireSvg} from './wires.js';
 import {ICON} from './kit.js';
 
@@ -84,8 +84,7 @@ function centersSvg(state) {
       const G = CENTER_GLYPH, r = selectedCenter ? G.chosen : G.radius;
       result +=
           '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
-          escapeText(center.id) + '" transform="translate(' + fixed(cp.x) + ' ' + fixed(cp.y) +
-          ') scale(' + fixed(1 / zoom) + ')">' +
+          escapeText(center.id) + '"' + steadyAt(cp, zoom) + '>' +
           '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color + '"/>' +
           (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
                                       '" r="' + fixed(r + G.ring) + '" stroke="' + substance + '"/>'
@@ -123,9 +122,9 @@ function assembliesSvg(state) {
         const {x, y} = centroid(positions);
         const active = isSelected(selected, 'assembly', assembly.id);
         return '<g class="aid-assembly-stamp' + (active ? ' selected' : '') + '" data-assembly="' +
-               escapeText(assembly.id) + '" transform="translate(' + fixed(x) + ' ' +
-               fixed(y - STAMP.above) + ') scale(' + fixed(1 / (camera.zoom ?? 1)) + ')">' +
-               STAMP.glyph + '<title>' + escapeText(moduleName(doc, assembly)) + '</title></g>';
+               escapeText(assembly.id) + '"' + steadyAt({x, y : y - STAMP.above}, camera.zoom) +
+               '>' + STAMP.glyph + '<title>' + escapeText(moduleName(doc, assembly)) +
+               '</title></g>';
       })
       .join('');
 }
@@ -161,9 +160,8 @@ function slotsSvg(state) {
                        ? namedText(need, joinList(slot.filled.map(o => organTitle(o, sites))))
                        : need;
       html += '<g class="aid-slot-chip ' + fill + ' ' + slot.dir + '" data-slot-region="' +
-              escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '" transform="translate(' +
-              fixed(x) + ' ' + fixed(y) + ') scale(' + fixed(1 / zoom) + ')"><title>' +
-              escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
+              escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '"' + steadyAt({x, y}, zoom) +
+              '><title>' + escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
               fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
               SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
               placedGlyph(shown               ? STUDIO_ICON[shown] ?? STUDIO_ICON.brain
@@ -198,7 +196,7 @@ function reachSvg(state) {
       '<radialGradient id="aid-reach-fade">' +
       Array
           .from({length : REACH.span + 1}, (_, k) => '<stop offset="' + fixed(k / REACH.span) +
-                                                     '" stop-color="#b8c5e1" stop-opacity="' +
+                                                     '" stop-color="' + CATEGORY_TONE.brain + '" stop-opacity="' +
                                                      fixed(REACH.fill * Math.exp(-k)) + '"/>')
           .join('') +
       '</radialGradient>';
@@ -220,8 +218,18 @@ function reachSvg(state) {
          fixed(reach) + '"/></g>';
 }
 const REACH = Object.freeze({fill : .32, span : 2});
-// The scene's drawing of the fish, by its id and as a selector.
+// The scene's drawing of the fish, by its id and as a selector, and the layers on it for what
+// follows the pointer: placement hints, the places a field organ can take, a dragged item's preview
+// and the line a wire being drawn follows.
 export const BODY_MAP_ID = 'aid-body-map', BODY_MAP = '#' + BODY_MAP_ID;
+const LAYER_ID = Object.freeze({
+  hints : 'aid-placement-hints',
+  choices : 'aid-choices',
+  preview : 'aid-drag-preview',
+  line : 'aid-connecting-line'
+});
+export const LAYER = Object.freeze(
+    Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = new Map();
@@ -235,8 +243,7 @@ export function fishScene(state) {
   }
   const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
                 tectumBands(state);
-  const box = [ camera.x, camera.y, camera.width, camera.height ].map(fixed).join(' ');
-  return '<svg id="' + BODY_MAP_ID + '" viewBox="' + box +
+  return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
          '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
@@ -252,10 +259,11 @@ export function fishScene(state) {
          '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
-         '<g id="aid-placement-hints"></g>' +
-         '<g id="aid-choices" pointer-events="none"></g>' +
-         '<g id="aid-drag-preview" pointer-events="none"></g>' +
-         '<path id="aid-connecting-line" d="" class="aid-connecting-line" pointer-events="none"/>' +
+         '<g id="' + LAYER_ID.hints + '"></g>' +
+         '<g id="' + LAYER_ID.choices + '" pointer-events="none"></g>' +
+         '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
+         '<path id="' + LAYER_ID.line +
+         '" d="" class="aid-connecting-line" pointer-events="none"/>' +
          '</svg>' + trashZone() + '<div class="aid-hint-legend" data-hint-legend hidden></div>';
 }
 // While an organ is dragged, dropping it here removes it.
