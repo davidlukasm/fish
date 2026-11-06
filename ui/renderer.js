@@ -1,6 +1,7 @@
 import {t} from './strings.js';
 import {TOLERANCE} from './schema.js';
 import {ALPHA, CHANNEL_MAX, cssColor, hexColor, KIB, PIXEL_BYTES} from './units.js';
+import {clipEars, holdsInside} from './polygon.js';
 export const rendererState = {};
 export let tankVertexSource;
 
@@ -441,47 +442,10 @@ export function tankTriangles(input) {
     if (turns.every(v => v >= 0) || turns.every(v => v <= 0))
       return [ points[0], points[1], points[2], points[0], points[2], points[3] ];
   }
-  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]),
-        area = points.reduce(
-            (v, p, i) => v + p[0] * points[(i + 1) % n][1] - p[1] * points[(i + 1) % n][0], 0),
-        sign = area < 0 ? -1 : 1, ring = points.map((_, i) => i), out = [];
-  let tries = n * n;
-  while (ring.length > 3 && tries-- > 0) {
-    let found = false;
-    for (let k = 0; k < ring.length; k++) {
-      const i = ring[(k + ring.length - 1) % ring.length], j = ring[k],
-            l = ring[(k + 1) % ring.length], a = points[i], b = points[j], c = points[l],
-            turn = sign * cross(a, b, c);
-      if (turn < TOLERANCE.negligible) {
-        if (Math.abs(turn) < TOLERANCE.negligible) {
-          ring.splice(k, 1);
-          found = true;
-          break;
-        }
-        continue;
-      }
-      let inside = false;
-      for (const t of ring) {
-        if (t === i || t === j || t === l)
-          continue;
-        const p = points[t];
-        if (sign * cross(a, b, p) > TOLERANCE.negligible &&
-            sign * cross(b, c, p) > TOLERANCE.negligible &&
-            sign * cross(c, a, p) > TOLERANCE.negligible) {
-          inside = true;
-          break;
-        }
-      }
-      if (!inside) {
-        out.push(a, b, c);
-        ring.splice(k, 1);
-        found = true;
-        break;
-      }
-    }
-    if (!found)
-      return null;
-  }
+  const {ears, ring, stuck} = clipEars(points, holdsInside, 3, n * n);
+  if (stuck)
+    return null;
+  const out = ears.map(i => points[i]);
   if (ring.length === 3)
     out.push(...ring.map(i => points[i]));
   return out;

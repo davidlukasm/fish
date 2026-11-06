@@ -150,6 +150,11 @@ const REPORT = Object.freeze({
   slow_ms : 100,
   upload_timeout_ms : 3000
 });
+// How many of each kind of object a frame holds; its gametes are counted as sperm grid cells.
+const COUNTED =
+    Object.freeze([ 'fish', 'food', 'corpses', 'gametes', 'plants', 'surfaces', 'invertebrates' ]);
+const objectCounts = f => Object.fromEntries(
+    COUNTED.map(key => [key === 'gametes' ? 'sperm_grid_cells' : key, f[key]?.length || 0]));
 export class FpsReport {
   constructor(upload = true) {
     this.upload = upload;
@@ -366,9 +371,7 @@ export class FpsReport {
         neuron_detail : brainState.brainDrawing?.cellDetail || 0,
         inspection_mode : brainState.brainView
       },
-      objects : Object.fromEntries([
-        'fish', 'food', 'corpses', 'gametes', 'plants', 'surfaces', 'invertebrates'
-      ].map(key => [key === 'gametes' ? 'sperm_grid_cells' : key, f[key]?.length || 0])),
+      objects : objectCounts(f),
       frames : {
         fps : round(SECOND_MS * w.observed / w.elapsed),
         callbacks : w.count,
@@ -455,9 +458,7 @@ function diagnosticContext() {
     viewport : [ canvas.width, canvas.height, cameraState.pixelRatio ],
     simulation_tick_ms : f.tick_ms,
     simulation_phases_ms : f.step_phases,
-    objects : Object.fromEntries([
-      'fish', 'food', 'corpses', 'gametes', 'plants', 'surfaces', 'invertebrates'
-    ].map(key => [key === 'gametes' ? 'sperm_grid_cells' : key, f[key]?.length || 0])),
+    objects : objectCounts(f),
     textures : ctx.textures.size,
     texture_bytes : ctx.textureBytes,
     animal_atlas_texels : animalsState.gpuAnimals?.cursor || 0,

@@ -1,7 +1,7 @@
 import {FULL_TURN, hueRGB} from './units.js';
 import {FINS} from './fin_stroke.js';
 import {MOTOR_TISSUE} from './tissue.js';
-import {ANATOMY, BODY_UNIT, EYE_PLACE, FIN, FISH, REGION_LAYOUT, TOLERANCE} from './schema.js';
+import {ANATOMY, BODY_UNIT, EYE_PLACE, FIN, FISH, REGION_LAYOUT} from './schema.js';
 import {sceneState} from './state.js';
 import {fishAnatomy, fishForm, fishPoseAnatomy, mouthShare} from './fish_forms.js';
 import {
@@ -15,6 +15,7 @@ import {
   fishTraceCurves
 } from './fish_geometry.js';
 import {finVolume, fishFinDual, fishFinShape, fishGlyphPoints} from './fish_organs.js';
+import {clipEars, holdsWithEdges} from './polygon.js';
 export const fish_finsState = {};
 
 // A side fin shows its second lobe from FIN_LOBE_MIN of a second pair on.
@@ -82,49 +83,10 @@ export function fishFinTriangles(shape, steps = FIN_MESH_STEPS) {
   const key = 'triangles' + steps;
   if (shape[key])
     return shape[key];
-  const points = shape.curves.flatMap(
-            q => Array.from({length : steps}, (_, k) => fishBezier(q, k / steps))),
-        cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]),
-        area = points.reduce((s, p, i) => s + p[0] * points[(i + 1) % points.length][1] -
-                                          p[1] * points[(i + 1) % points.length][0],
-                             0),
-        sign = area < 0 ? -1 : 1, ring = points.map((_, i) => i), triangles = [];
-  while (ring.length > 2) {
-    let ear = false;
-    for (let k = 0; k < ring.length; k++) {
-      const i = ring[(k + ring.length - 1) % ring.length], j = ring[k],
-            l = ring[(k + 1) % ring.length], a = points[i], b = points[j], c = points[l],
-            turn = sign * cross(a, b, c);
-      if (Math.abs(turn) < TOLERANCE.negligible) {
-        ring.splice(k, 1);
-        ear = true;
-        break;
-      }
-      if (turn < 0)
-        continue;
-      let occupied = false;
-      for (const n of ring)
-        if (n !== i && n !== j && n !== l) {
-          const q = points[n];
-          if (sign * cross(a, b, q) >= -TOLERANCE.negligible &&
-              sign * cross(b, c, q) >= -TOLERANCE.negligible &&
-              sign * cross(c, a, q) >= -TOLERANCE.negligible) {
-            occupied = true;
-            break;
-          }
-        }
-      if (occupied)
-        continue;
-      triangles.push(i, j, l);
-      ring.splice(k, 1);
-      ear = true;
-      break;
-    }
-    if (!ear)
-      break;
-  }
-  const complete = ring.length <= 2;
-  const count = (points.length - 2) * 3;
+  const points =
+      shape.curves.flatMap(q => Array.from({length : steps}, (_, k) => fishBezier(q, k / steps)));
+  const {ears, ring} = clipEars(points, holdsWithEdges, 2);
+  const complete = ring.length <= 2, count = (points.length - 2) * 3, triangles = [...ears ];
   while (triangles.length < count)
     triangles.push(0, 0, 0);
   return shape[key] = {points, indices : triangles.slice(0, count), complete};

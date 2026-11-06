@@ -49,7 +49,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/retina.hh" : "2699500b47122562",
   "ui/fish_forms.js" : "11f5c7433615e5ae",
   "ui/fish_geometry.js" : "9e95f7f314d86a90",
-  "ui/fish_fins.js" : "7f0604d4797cdd0f",
+  "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "77fe64bdf703f690",
   "ui/fish_painter.js" : "8a55c784199f5207",
   "src/brain_interface.hh" : "85423d9fc741249f",
