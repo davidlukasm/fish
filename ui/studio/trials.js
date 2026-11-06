@@ -144,8 +144,7 @@ export const trialMethods = {
                          }),
                          API_WAIT.long);
       this.refreshLibrary();
-      this.refreshScene();
-      this.refreshInspector();
+      this.refreshViews();
     } catch (error) {
       this.notice(error.message);
     }

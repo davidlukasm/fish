@@ -130,8 +130,9 @@ function muscleBands(state, areas, labels, zoom) {
              .join('') +
          '</g>';
 }
-// A place's ring, one sector in the colour of each thing that may go there.
-function hintRing({point, keys}, labels, zoom) {
+// A place's ring, one sector in the colour of each thing that may go there; the place nearest the
+// pointer is filled in its first colour.
+function hintRing({point, keys}, labels, zoom, near = false) {
   const entries = [...keys ];
   const H = HINT_RING, length = 2 * Math.PI * H.radius, span = length / entries.length;
   const arcs = entries
@@ -144,7 +145,10 @@ function hintRing({point, keys}, labels, zoom) {
                             fixed(-i * span) + '" transform="rotate(-90)"/>';
                    })
                    .join('');
-  return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + arcs + '</g>';
+  const fill = near ? '<circle class="aid-site-fill" r="' + H.radius + '" fill="' +
+                          labels.get(entries[0]).colour + '"/>'
+                    : '';
+  return '<g class="aid-site-hint"' + steadyAt(point, zoom) + '>' + fill + arcs + '</g>';
 }
 // The places an item may go, as rings, and what their colours mean.
 export function placementHints(state, kind, value, moving = null) {
@@ -180,6 +184,8 @@ function movedFieldOrgans(state, choice) {
                JSON.stringify(organ.centers.map(c => c.site));
   });
 }
+// A field organ's places show as the rings every organ's places show, in the first colour.
+const SEAT = 'seat', SEAT_LABELS = new Map([ [ SEAT, {colour : HINT_SHADES[0]} ] ]);
 // Where field organs can go while one is dragged: a mark at every seat the body offers, and at
 // the nearest one the organ itself with its field, exactly where that choice places them.
 const seatOf = (state, choice, organ) => fieldOrigin(choice.document, state.sites, organ);
@@ -190,9 +196,8 @@ export function choicesSvg(state, choices, nearest) {
     for (const organ of movedFieldOrgans(state, choice)) {
       const seat = seatOf(state, choice, organ);
       if (seat)
-        html += '<circle class="aid-seat-hint' + (choice === nearest ? ' near' : '') + '" cx="' +
-                fixed(seat.x) + '" cy="' + fixed(seat.y) + '" r="' + fixed(SEAT_MARK / zoom) +
-                '"/>';
+        html += hintRing({point : seat, keys : new Set([ SEAT ])}, SEAT_LABELS, zoom,
+                         choice === nearest);
     }
   if (!nearest)
     return html;
@@ -212,7 +217,7 @@ export function choicesSvg(state, choices, nearest) {
 export function choiceSeats(state, choice) {
   return movedFieldOrgans(state, choice).map(organ => seatOf(state, choice, organ)).filter(Boolean);
 }
-// Seat marks are SEAT_MARK frame units across at zoom 1.
+// An eye's ghost at its place is at least SEAT_MARK frame units wide at zoom 1.
 const SEAT_MARK = 7;
 // A cursor marker identifies the organ being placed.
 // A brain region goes to its spot in the brain on the side it is dragged over.

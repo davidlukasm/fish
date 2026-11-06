@@ -37,16 +37,14 @@ async function cppnAction(studio, operation, data = {}) {
     studio.notice(error.message);
   } finally {
     state.busy = false;
-    studio.refreshScene();
-    studio.refreshInspector();
+    studio.refreshViews();
     studio.refreshHeader();
   }
 }
 const edit = (studio, change) => cppnAction(studio, 'edit', change);
 function choose(studio, selection) {
   studio.state.cppnSelection = selection;
-  studio.refreshScene();
-  studio.refreshInspector();
+  studio.refreshViews();
 }
 
 // A click on the graph's scope or an example starts afresh; on a node it chooses the node or ends a

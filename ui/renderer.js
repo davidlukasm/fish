@@ -203,6 +203,15 @@ export function mergeInstanceRanges(ranges) {
   }
   return merged;
 }
+// A vertex array and its buffer, both bound; a program's uniform locations by name.
+function vertexStore(gl) {
+  const vao = gl.createVertexArray(), buffer = gl.createBuffer();
+  gl.bindVertexArray(vao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  return {vao, buffer};
+}
+const uniformLocations = (gl, program, names) =>
+    Object.fromEntries(names.map(name => [name, gl.getUniformLocation(program, name)]));
 // Every world batch uses the same pipeline setup; only its data and shaders differ.
 export class TankBatch {
   constructor(canvas, renderer, vertex, fragment, sizes, uniforms, divisor = 1) {
@@ -210,14 +219,10 @@ export class TankBatch {
     const gl = this.gl = renderer.gl;
     this.renderer = renderer;
     this.program = tankProgram(gl, vertex, fragment);
-    this.vao = gl.createVertexArray();
-    this.buffer = gl.createBuffer();
-    gl.bindVertexArray(this.vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+    Object.assign(this, vertexStore(gl));
     this.sizes = sizes;
     this.attributes(0, divisor);
-    this.uniforms =
-        Object.fromEntries(uniforms.map(k => [k, gl.getUniformLocation(this.program, k)]));
+    this.uniforms = uniformLocations(gl, this.program, uniforms);
     this.revision = -1;
     this.capacity = this.count = 0;
   }
@@ -646,10 +651,7 @@ class TankRenderer extends TankPath {
     }
     const program = tankProgram(gl, tankVertexSource, tankFragmentSource);
     this.program = program;
-    this.vao = gl.createVertexArray();
-    this.buffer = gl.createBuffer();
-    gl.bindVertexArray(this.vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+    Object.assign(this, vertexStore(gl));
     let offset = 0;
     VERTEX_ATTRIBUTES.forEach(([, size ], i) => {
       gl.enableVertexAttribArray(i);
@@ -657,8 +659,7 @@ class TankRenderer extends TankPath {
       gl.vertexAttribDivisor(i, 0);
       offset += size * FLOAT_BYTES;
     });
-    this.uniforms = Object.fromEntries([ 'viewport', 'mode', 'image', 'dashPattern' ].map(
-        k => [k, gl.getUniformLocation(program, k)]));
+    this.uniforms = uniformLocations(gl, program, [ 'viewport', 'mode', 'image', 'dashPattern' ]);
     this.vertices = new Float32Array(RENDER.vertices);
     this.used = 0;
     this.pipeline = {capacity : 0};

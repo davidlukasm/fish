@@ -225,8 +225,7 @@ export class OrganStudio {
     this.clearPreview();
     this.refreshTools();
     this.refreshLibrary();
-    this.refreshScene();
-    this.refreshInspector();
+    this.refreshViews();
   }
   // The library offers organs to place, or with the hormone tool the substances and what they do.
   refreshLibrary() {
@@ -290,6 +289,11 @@ export class OrganStudio {
   // colour; the rest stands back.
   // The scene's drawing of the fish, while it stands in the page.
   bodyMap() { return this.root.querySelector(BODY_MAP); }
+  // The scene and the inspector follow the state.
+  refreshViews() {
+    this.refreshScene();
+    this.refreshInspector();
+  }
   refreshInspector(reset = false) {
     const element = this.root.querySelector('.aid-inspector-scroll');
     if (!element)
@@ -418,8 +422,7 @@ export class OrganStudio {
           (current.kind === 'organ' || current.kind === 'center')) {
         if (current.kind === kind && current.id === id) {
           this.state.selected = null;
-          this.refreshScene();
-          this.refreshInspector();
+          this.refreshViews();
           return;
         }
         this.state.multi.add(current.id);
@@ -496,8 +499,7 @@ export class OrganStudio {
       this.state.robustness = null;
       this.state.genome = result.genome;
       this.state.stale = false;
-      this.refreshScene();
-      this.refreshInspector();
+      this.refreshViews();
     } catch (error) {
       this.notice(error.message);
     } finally {
@@ -695,8 +697,7 @@ export class OrganStudio {
       this.state.selected = null;
       this.state.multi.clear();
       this.clearPreview();
-      this.refreshScene();
-      this.refreshInspector();
+      this.refreshViews();
     }
     if (event.key === 'Delete' || event.key === 'Backspace')
       this.removeSelection(this.state.selected);

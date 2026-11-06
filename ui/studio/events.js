@@ -176,8 +176,7 @@ function wireItem(studio, kind, id) {
     studio.pendingWire = {from : item};
     studio.state.selected = item;
   }
-  studio.refreshScene();
-  studio.refreshInspector();
+  studio.refreshViews();
 }
 // A region's slot starts a wire there: from the region to what is clicked next, or the other
 // way round.
@@ -217,8 +216,7 @@ function showChoice(studio, change, library = false) {
   change(studio.state);
   if (library)
     studio.refreshLibrary();
-  studio.refreshScene();
-  studio.refreshInspector();
+  studio.refreshViews();
 }
 
 // On the fish and in its panels, in the order they are tried.
