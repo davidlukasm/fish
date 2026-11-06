@@ -420,12 +420,12 @@
     "removeProfile": "Duftprofil entfernen"
   },
   "effects": [
-    "Feuern",
+    "Erregung",
     "Lerntempo",
-    "Wettbewerb",
-    "Anrechnung",
-    "Takt",
-    "Weitergabe",
+    "Eingangs-Konkurrenz",
+    "Merkzeitpunkt",
+    "Taktstärke",
+    "Ausgangsstärke",
     "Absterben"
   ],
   "regionNodes": {
@@ -884,21 +884,21 @@
     "gland": "Drüse",
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tiles": [
-      "Feuern",
+      "Erregung",
       "Lerntempo",
-      "Wettbewerb",
-      "Anrechnung",
-      "Takt",
-      "Weitergabe",
+      "Eingangs-Konkurrenz",
+      "Merkzeitpunkt",
+      "Taktstärke",
+      "Ausgangsstärke",
       "Absterben"
     ],
     "tileTitles": [
-      "Der Stoff hebt oder senkt den Eingang der Zelle. Bei einer lernenden Nervenzelle ist diese Änderung zugleich ihr Lehrsignal.",
+      "Der Stoff erregt die Zelle oder hemmt sie. Bei einer lernenden Nervenzelle ist diese Änderung zugleich ihr Lehrsignal.",
       "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
-      "Der Stoff macht den Wettbewerb unter den Eingängen schwächer oder stärker.",
-      "Der Stoff verschiebt, wofür die Merkspur Eingänge markiert: für den Takt oder für das eigene Feuern.",
-      "Der Stoff macht den Taktgeber schwächer oder stärker.",
-      "Der Stoff stellt ein, wie stark die Zelle ihr Signal weitergibt, von stumm bis voll.",
+      "Der Stoff stellt ein, wie stark Eingänge, die mit der Zelle feuern, die anderen verdrängen.",
+      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder beim eigenen Feuern.",
+      "Der Stoff stellt ein, wie stark der Taktgeber schlägt.",
+      "Der Stoff stellt ein, wie stark die Zelle ihr Signal ausgibt, von stumm bis voll.",
       "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn."
     ],
     "where": [
@@ -910,8 +910,8 @@
       "bei allen Zellen, auch Sinneszellen",
       "bei allen Zellen"
     ],
-    "rises": "{effect}: mehr Stoff hebt es",
-    "falls": "{effect}: mehr Stoff senkt es",
+    "rises": "{effect}: mehr Stoff hebt sie",
+    "falls": "{effect}: mehr Stoff senkt sie",
     "kills": "stirbt mit dem Stoff",
     "needs": "stirbt ohne den Stoff",
     "here": "hier bei {n} {n:Zelle|Zellen}",

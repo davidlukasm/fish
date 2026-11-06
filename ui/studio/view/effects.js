@@ -17,6 +17,7 @@ const PANEL = Object.freeze({
   top : 4,
   below : 20,
   thick : 1.6,
+  spike : 6,
   pulse : 3,
   loud : 5.5,
   glow : 7,
@@ -56,18 +57,28 @@ const flashes = moments => {
 const cell = moments => '<circle class="aid-effect-base" cx="' + P.cx + '" cy="' + P.cy + '" r="' +
                         P.r + '"/><circle class="aid-effect-cell" cx="' + P.cx + '" cy="' + P.cy +
                         '" r="' + P.r + '" fill-opacity=".3">' + flashes(moments) + '</circle>';
-function input(y, moments, cls = '', inner = '') {
+// An input line; one growing to `grows` keeps a faint trace of that width, so the change shows when
+// the loop stands still too.
+function input(y, moments, cls = '', grows = null) {
   const to = edge(P.side, y), path = way(P.side, y, to.x, to.y);
-  return line(P.side, y, to.x, to.y, cls, P.thick, inner) +
+  return (grows === null ? '' : line(P.side, y, to.x, to.y, 'ghost', grows)) +
+         line(P.side, y, to.x, to.y, cls, P.thick, grows === null ? '' : grown(grows)) +
          moments.map(t => travelling(path, t - P.travel, t, P.pulse, P.play)).join('');
 }
-const output = (moments, r = P.pulse) =>
-    line(P.cx + P.r, P.cy, P.end, P.cy, '', P.thick) +
+const output = (moments, r = P.pulse, width = P.thick) =>
+    line(P.cx + P.r, P.cy, P.end, P.cy, '', width) +
     (r > 0 ? moments
                  .map(t => travelling(way(P.cx + P.r, P.cy, P.end, P.cy), t, t + P.travel * 1.4, r,
                                       P.play))
                  .join('')
            : '');
+// How often the cell fires, standing still under its output: a tick for each firing.
+const spikes = n => '<path class="aid-effect-spikes" d="' +
+                    Array
+                        .from({length : n}, (_, k) => 'M' + fixed(P.cx + P.r + P.spike * (k + 1)) +
+                                                      ' ' + (P.cy + P.spike) + ' v' + P.spike)
+                        .join(' ') +
+                    '"/>';
 const grown = to => animate('stroke-width',
                             [
                               [ 0, P.thick ], [ T.teach[0], P.thick ], [ T.teach[1], to ],
@@ -125,11 +136,13 @@ const SCENES = Object.freeze({
   [HORMONE_EFFECT.excitation] : r => {
     const level = effectLevel(HORMONE_EFFECT.excitation, r), fires = firings(level);
     return input(P.cy, T.input) + output(fires, P.pulse * (1 + CHANGE.louder * level)) +
-           cell(fires);
+           spikes(fires.length) + cell(fires);
   },
-  [HORMONE_EFFECT.output] : r => input(P.cy, T.input) +
-                                 output(T.input, P.loud * effectLevel(HORMONE_EFFECT.output, r)) +
-                                 cell(T.input),
+  [HORMONE_EFFECT.output] : r => {
+    const level = effectLevel(HORMONE_EFFECT.output, r);
+    return input(P.cy, T.input) + output(T.input, P.loud * level, P.thick + P.loud * level) +
+           cell(T.input);
+  },
   [HORMONE_EFFECT.death] : r => effectLevel(HORMONE_EFFECT.death, r)
                                     ? dying()
                                     : input(P.cy, T.input) + output(T.input) + cell(T.input),
@@ -139,41 +152,40 @@ const SCENES = Object.freeze({
   },
   [HORMONE_EFFECT.learning] : r =>
       input(P.cy, [ T.input[0] ], '',
-            grown(P.thick + CHANGE.learn * effectLevel(HORMONE_EFFECT.learning, r) / 2)) +
+            P.thick + CHANGE.learn * effectLevel(HORMONE_EFFECT.learning, r) / 2) +
       trace(P.cy, T.input[0], .6) + teaching() + output([ T.input[0] ]) + cell([ T.input[0] ]),
   [HORMONE_EFFECT.competition] : r => {
     const change = CHANGE.compete * effectLevel(HORMONE_EFFECT.competition, r);
-    return input(P.upper, [ T.input[0] ], '', grown(P.thick + change)) +
+    return input(P.upper, [ T.input[0] ], '', P.thick + change) +
            input(P.lower, [], 'still',
-                 grown(P.thick * (1 - effectLevel(HORMONE_EFFECT.competition, r) / 2))) +
+                 P.thick * (1 - effectLevel(HORMONE_EFFECT.competition, r) / 2)) +
            output([ T.input[0] ]) + cell([ T.input[0] ]);
   },
   [HORMONE_EFFECT.eligibility] : r => {
     const own = effectLevel(HORMONE_EFFECT.eligibility, r), beat = 1 - own;
-    return input(P.upper, [ T.input[0] ], '', grown(P.thick + CHANGE.credit * own)) +
-           input(P.lower, [ T.beat ], '', grown(P.thick + CHANGE.credit * beat)) +
+    return input(P.upper, [ T.input[0] ], '', P.thick + CHANGE.credit * own) +
+           input(P.lower, [ T.beat ], '', P.thick + CHANGE.credit * beat) +
            trace(P.upper, T.input[0], own * .7) + trace(P.lower, T.beat, beat * .7) + pacer() +
            teaching() + output([ T.input[0] ]) + cell([ T.input[0] ]);
   }
 });
 function taught(colour, ends) {
   const change = CHANGE.learn * (ends.with - ends.without) / 2;
-  return (r, withIt) =>
-             input(P.cy, [ T.input[0] ], '',
-                   withIt && change ? grown(Math.max(P.thick / 2, P.thick + change)) : '') +
-             trace(P.cy, T.input[0], .6) +
-             (withIt && change
-                  ? line(P.cx, P.top, P.cx, P.cy - P.r, 'teach', 2) +
-                        travelling(way(P.cx, P.top, P.cx, P.cy - P.r), T.teach[0] - P.travel,
-                                   T.teach[0], P.pulse * 1.2, P.play, colour)
-                  : '') +
-             output([ T.input[0] ]) + cell([ T.input[0] ]);
+  return (r, withIt) => input(P.cy, [ T.input[0] ], '',
+                              withIt && change ? Math.max(P.thick / 2, P.thick + change) : null) +
+                        trace(P.cy, T.input[0], .6) +
+                        (withIt && change ? line(P.cx, P.top, P.cx, P.cy - P.r, 'teach', 2) +
+                                                travelling(way(P.cx, P.top, P.cx, P.cy - P.r),
+                                                           T.teach[0] - P.travel, T.teach[0],
+                                                           P.pulse * 1.2, P.play, colour)
+                                          : '') +
+                        output([ T.input[0] ]) + cell([ T.input[0] ]);
 }
 function modulating(r, withIt) {
   if (!withIt)
     return input(P.cy, T.input) + output(T.input) + cell(T.input);
-  return input(P.cy, [ T.input[0] ], '', grown(P.thick + CHANGE.learn)) +
-         trace(P.cy, T.input[0], .6) + line(P.cx, P.top + P.r, P.cx, P.cy - P.r, 'teach', 2) +
+  return input(P.cy, [ T.input[0] ], '', P.thick + CHANGE.learn) + trace(P.cy, T.input[0], .6) +
+         line(P.cx, P.top + P.r, P.cx, P.cy - P.r, 'teach', 2) +
          '<circle class="aid-effect-modulator" cx="' + P.cx + '" cy="' + (P.top + P.r / 2) +
          '" r="' + fixed(P.r / 2) + '"/>' +
          travelling(way(P.cx, P.top + P.r, P.cx, P.cy - P.r), T.teach[0] - P.travel, T.teach[0],
@@ -206,3 +218,15 @@ function sideBySide(draw, colour, ends, cloud = true) {
          P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
          side(true, P.width) + '</svg>';
 }
+// One cell as the receptor's response R makes it, in a cloud as dense as the substance bound
+// (`share`), PANEL wide and high.
+export function effectPanel(effect, r, colour, share) {
+  const draw = SCENES[effect];
+  return draw ? (share > 0 ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
+                                 '" r="' + P.r * P.cloud + '" fill="' + colour + '" opacity="' +
+                                 fixed(share) + '"/>'
+                           : '') +
+                    draw(r)
+              : '';
+}
+export const EFFECT_PANEL = Object.freeze({width : P.width, height : P.height});

@@ -404,6 +404,18 @@ export const FISH_CLICKS = Object.freeze([
         {kind : 'organ', id : e.dataset.removeType})
   ],
   [
+    '[data-dose-steepness]',
+    (studio, e) => {
+      const target = e.closest('[data-dose]')?.dataset.dose;
+      if (!target)
+        return PASS;
+      const cut = target.lastIndexOf(':');
+      keep(studio, updateReceptor(studio.state.document, target.slice(0, cut),
+                                  Number(target.slice(cut + 1)),
+                                  {steepness : Number(e.dataset.doseSteepness)}));
+    }
+  ],
+  [
     '[data-probe-scent]',
     (studio, e) => {
       if (!studio.state.senseProbe)

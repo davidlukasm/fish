@@ -28,7 +28,7 @@ import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './ma
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
 import {DIRECTION_ICON, EFFECT_ICON, TEACH_ICON} from './icons.js';
-import {EFFECT_ORDER, effectScene, teachingScene} from './effects.js';
+import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene, teachingScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {builtAsDrawn} from './stimulus.js';
@@ -185,6 +185,100 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
     steepness : Math.max(
         0, Math.min(state.capabilities?.steepnessSteps ?? 0, Math.round(Math.log2(Math.max(1, n)))))
   };
+}
+// The cell without the substance and with plenty of it, side by side, under the amount of substance
+// as a band whose cloud thickens: the levers are gauges in the effect's own measure beside each
+// side, the band's handle where the receptor switches, its pips how sharply.
+const DOSE = Object.freeze({
+  gauge : {width : 10, gap : 4, knob : 6},
+  band : {top : 4, height : 12, handle : 7, gap : 6},
+  pips : {step : 8, r : 2.6, after : 14}
+});
+function doseGeometry(state, receptor, effect) {
+  const k = receptorCurve(state, receptor, effect), D = DOSE, G = D.gauge;
+  const side = G.width + 2 * G.gap, top = D.band.top + D.band.height + D.band.gap;
+  const width = 2 * EFFECT_PANEL.width + 2 * side, height = top + EFFECT_PANEL.height;
+  const cellX = i => side + i * EFFECT_PANEL.width;
+  const gaugeX = i => i ? width - G.gap - G.width : G.gap;
+  const level = v => top + EFFECT_PANEL.height * (k.scale.high - v) / (k.scale.high - k.scale.low);
+  const bandX = f => side + 2 * EFFECT_PANEL.width * f;
+  return {k, side, top, width, height, cellX, gaugeX, level, bandX};
+}
+function doseStrip(state, receptor, effect, target) {
+  const D = DOSE, B = D.band, G = D.gauge;
+  const {k, top, width, height, cellX, gaugeX, level, bandX} =
+      doseGeometry(state, receptor, effect);
+  const colour = receptor.active ? substanceColor(receptor.substance) : 'currentColor';
+  const halfAt = clamp(k.fraction(receptor.half));
+  const responses = [ k.atFraction(0), k.atFraction(1) ].map(
+      c => receptor.active ? k.response(c) : clamp(receptor.baseline, -1));
+  const cells =
+      responses
+          .map((r, i) => '<svg x="' + cellX(i) + '" y="' + top + '" width="' + EFFECT_PANEL.width +
+                         '" height="' + EFFECT_PANEL.height + '" class="aid-dose-cell">' +
+                         effectPanel(effect, r, colour, receptor.active ? i : 0) + '</svg>')
+          .join('') +
+      '<line class="aid-effect-divide" x1="' + cellX(1) + '" y1="' + top + '" x2="' + cellX(1) +
+      '" y2="' + height + '"/>';
+  const gauge = (i, handle) => {
+    const x = gaugeX(i), y = level(k.scale.value(responses[i]));
+    const zero = level(k.scale.value(0));
+    return '<rect class="aid-dose-gauge" x="' + x + '" y="' + top + '" width="' + G.width +
+           '" height="' + EFFECT_PANEL.height + '" rx="' + G.width / 2 + '"/>' +
+           '<rect class="aid-dose-level" x="' + x + '" y="' + fixed(Math.min(y, zero)) +
+           '" width="' + G.width + '" height="' + fixed(Math.abs(zero - y)) + '"/>' +
+           '<path class="aid-dose-zero" d="M' + x + ' ' + fixed(zero) + ' h' + G.width + '"/>' +
+           (effect === HORMONE_EFFECT.death
+                ? '<path class="aid-dose-threshold" d="M' + x + ' ' + fixed(level(DEATH_RESPONSE)) +
+                      ' h' + G.width + '"/>'
+                : '') +
+           '<circle class="aid-graphic-handle" data-dose-handle="' + handle + '" cx="' +
+           (x + G.width / 2) + '" cy="' + fixed(y) + '" r="' + G.knob + '"><title>' +
+           escapeText(label('inspector.curve.' + handle)) + '</title></circle>';
+  };
+  const steps = state.capabilities?.steepnessSteps ?? 0, middle = B.top + B.height / 2;
+  const pips =
+      Array
+          .from({length : steps + 1},
+                (_, s) => '<circle class="aid-dose-pip' +
+                          (s === receptor.steepness ? ' active' : '') + '" data-dose-steepness="' +
+                          s + '" cx="' +
+                          fixed(bandX(1) - D.pips.after - (steps - s) * D.pips.step) + '" cy="' +
+                          middle + '" r="' + D.pips.r + '"><title>' +
+                          escapeText(label('inspector.curve.steepness')) + '</title></circle>')
+          .join('');
+  return '<svg viewBox="0 0 ' + width + ' ' + height + '" class="aid-dose"' +
+         (target ? ' data-dose="' + escapeText(target) + '"' : '') +
+         ' style="--substance:' + colour +
+         '"><defs><linearGradient id="aid-dose-amount"><stop offset="0" ' +
+         'stop-color="currentColor" stop-opacity="0"/><stop offset="1" stop-color="currentColor" ' +
+         'stop-opacity=".8"/></linearGradient></defs><rect class="aid-dose-band" x="' + bandX(0) +
+         '" y="' + B.top + '" width="' + fixed(bandX(1) - bandX(0)) + '" height="' + B.height +
+         '" rx="' + B.height / 2 + '" fill="url(#aid-dose-amount)"/>' + cells +
+         gauge(0, 'baseline') + gauge(1, 'sensitivity') +
+         (receptor.active
+              ? pips + '<circle class="aid-graphic-handle" data-dose-handle="half" ' +
+                    'cx="' + fixed(bandX(halfAt)) + '" cy="' + middle + '" r="' + B.handle +
+                    '"><title>' + escapeText(label('inspector.curve.half')) + '</title></circle>'
+              : '') +
+         '</svg>';
+}
+// A lever of the dose strip moved to the pointer's share of the strip (fx, fy).
+export function dosePatch(state, receptor, effect, handle, fx, fy) {
+  const {k, top, width, height, bandX} = doseGeometry(state, receptor, effect);
+  const px = fx * width, py = fy * height;
+  if (handle === 'half') {
+    const f = clamp((px - bandX(0)) / (bandX(1) - bandX(0)));
+    return {half : Math.max(k.halfMin, Math.min(k.halfMax, k.atFraction(f)))};
+  }
+  const v = k.scale.high - clamp((py - top) / EFFECT_PANEL.height) * (k.scale.high - k.scale.low);
+  const r = clamp(k.scale.response(v), -1);
+  const span = state.capabilities?.sensitivitySpan ?? 1;
+  if (handle === 'baseline')
+    return {baseline : r};
+  const full = bound(receptor, k.atFraction(1));
+  return full > 0 ? {sensitivity : Math.max(-span, Math.min(span, (r - receptor.baseline) / full))}
+                  : null;
 }
 export const GROWTH = 'growth';
 const CURVE = Object.freeze({
@@ -457,7 +551,7 @@ export const receptorEditor = (state, center, effects, effect, name) =>
     '</div>' + receptorBody(state, center, effect);
 export function receptorBody(state, center, effect) {
   const receptor = center.receptors[effect], target = center.id + ':' + effect;
-  return effectCurve(state, receptor, effect, target) +
+  return doseStrip(state, receptor, effect, target) +
          '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
          escapeText(center.id) + '" data-receptor-effect="' + effect + '" ' +
          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
@@ -571,19 +665,10 @@ export function hormoneInspector(state) {
              heading(label('tools.hormone')) + '</header>';
   const effects = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
-  const receptor = focus.receptors?.[effect];
-  if (!receptor)
+  if (!focus.receptors?.[effect])
     return html;
-  const colour = receptor.active ? substanceColor(receptor.substance) : null;
   html += lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
           heading(centerTitle(focus)) +
-          receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) +
-          '<div class="aid-effect-card"' + (colour ? ' style="--substance:' + colour + '"' : '') +
-          '>' +
-          effectScene(effect, colour ?? 'currentColor',
-                      receptor.active ? receptorEnds(receptor) : undefined) +
-          '<div><span>' + escapeText(tList('studio.hormoneCard.tileTitles')[effect]) +
-          '</span><small>' + escapeText(tList('studio.hormoneCard.where')[effect]) +
-          '</small></div></div></div>';
+          receptorEditor(state, focus, effects, effect, i => label('effects.' + i)) + '</div>';
   return html;
 }

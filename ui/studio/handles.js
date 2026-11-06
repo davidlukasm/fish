@@ -41,6 +41,7 @@ import {panelStyle} from './view/shell.js';
 import {
   GROWTH,
   phasePatch,
+  dosePatch,
   receptorCurvePatch,
   wheelMarks,
   wheelPatch,
@@ -72,6 +73,7 @@ export function storedPanels() {
 export const HANDLES = Object.freeze({
   panel : {follow : 'panelPointer', done : 'keepPanels', keepsClick : true},
   receptor : {follow : 'receptorPointer'},
+  dose : {follow : 'dosePointer'},
   drive : {follow : 'drivePointer'},
   adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
@@ -139,6 +141,12 @@ export const GRIPS = Object.freeze([
     handle : '[data-sensitivity-handle]',
     held : 'sensitivity',
     start : (studio, g) => studio.sensitivityGrip(g)
+  },
+  {
+    graphic : '[data-dose]',
+    handle : '[data-dose-handle]',
+    held : 'dose',
+    start : (studio, g, h) => ({target : g.dataset.dose, handle : h.dataset.doseHandle})
   },
   {
     graphic : '[data-receptor-curve]',
@@ -352,6 +360,20 @@ export const handleMethods = {
       this.tuneDesign(updateCenter(this.state.document, drag.block, {threshold}),
                       'threshold:' + drag.block);
     this.refreshSensitivity();
+  },
+  dosePointer(event) {
+    const drag = this.handleDrag, doc = this.state.document;
+    const cut = drag.target.lastIndexOf(':'), centerId = drag.target.slice(0, cut),
+          effect = Number(drag.target.slice(cut + 1));
+    const receptor = findCenter(doc, centerId)?.center.receptors[effect];
+    if (!receptor)
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = dosePatch(this.state, receptor, effect, drag.handle, fx, fy);
+    if (!patch)
+      return;
+    this.tuneDesign(updateReceptor(doc, centerId, effect, patch), 'dose:' + drag.target);
+    this.refreshInspector();
   },
   receptorPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
