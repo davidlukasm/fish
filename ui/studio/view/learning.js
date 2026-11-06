@@ -3,10 +3,13 @@ import {substanceColor} from '../../hormones.js';
 import {clamp, PERCENT} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
 import {
+  allCenters,
   chosenCenter,
   endpointCenters,
   findCenter,
+  isLearner,
   LEARNING_EFFECTS,
+  pairEndpoint,
   receptorEnds
 } from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
@@ -203,6 +206,42 @@ function teacherList(state, center, modulators) {
                : '<p class="aid-hint">' + label('learnRule.noTeacher') + '</p>';
 }
 const NODE_MARK = Object.freeze({marker : 6, box : 8});
+// Every learner of the fish with who teaches it, each a way into its own settings.
+function learnersOverview(state) {
+  const doc = state.document, shown = new Set();
+  const learners = allCenters(doc).filter(c => {
+    if (!isLearner(c) || shown.has(c.id))
+      return false;
+    shown.add(pairEndpoint(doc, c.id));
+    return true;
+  });
+  if (!learners.length)
+    return '';
+  return '<section class="aid-learn-part">' + heading(label('learnRule.overview')) +
+         '<div class="aid-learners">' +
+         learners
+             .map(c => {
+               const {modulators} = sendersOf(state, c);
+               const taught = boundSubstance(state, c, HORMONE_EFFECT.teaching);
+               const teachers =
+                   modulators
+                       .map(m => '<span class="aid-teacher-chip">' + nodeMark(m) +
+                                 escapeText(centerTitle(m)) + '</span>')
+                       .join('') +
+                   (taught ? '<span class="aid-teacher-chip" style="--teacher:' +
+                                 substanceColor(taught.index) +
+                                 '"><span class="aid-teacher-dot"></span>' +
+                                 escapeText(substanceName(state, taught.index)) + '</span>'
+                           : '');
+               return '<button data-select-center="' + escapeText(c.id) + '">' + nodeMark(c) +
+                      '<span>' + escapeText(centerTitle(c)) +
+                      '</span><span class="aid-learner-teachers">' +
+                      (teachers || '<small>' + label('learnRule.untaughtShort') + '</small>') +
+                      '</span></button>';
+             })
+             .join('') +
+         '</div></section>';
+}
 const nodeMark = c => {
   const B = NODE_MARK.box;
   return '<svg class="aid-node-mark" viewBox="' + -B + ' ' + -B + ' ' + 2 * B + ' ' + 2 * B +
@@ -229,7 +268,8 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
+    return html + learnersOverview(state) + '<div class="aid-empty-centre">' +
+           label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);

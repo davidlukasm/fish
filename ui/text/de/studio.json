@@ -1020,6 +1020,8 @@
     "gain": "lernt mit {n} % Tempo",
     "untaught": "ohne Lehrer lernt sie nicht",
     "untaughtMode": "ohne Lehrer: nur {mode}",
+    "overview": "Wer lernt, und von wem",
+    "untaughtShort": "ohne Lehrer",
     "modulator": "Modulator",
     "substance": "Stoff",
     "noTeacher": "Noch kein Lehrer: einen Modulator aus dem Baukasten auf die Zelle ziehen.",

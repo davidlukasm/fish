@@ -5,17 +5,14 @@ import {
   addWire,
   findOrgan,
   GROWTH_START,
+  isLearner,
   setSubstance,
   updateCenter,
   updateGrowth,
   updateReceptor,
   wheelPlace
 } from './document.js';
-import {NEURON_BY_KEY} from './organs.js';
 
-// Learning circuits, learning region nodes and any node made a learner.
-const learner = center => center.key === 'learn' || center.node === 'learn' ||
-                          (center.role === 'nerve' && center.mode >= NEURON_BY_KEY.learn.mode);
 // A hormone system in one piece: a sense reports to a brain region, the region drives a gland,
 // the gland releases a new substance and chosen cells answer it. Missing sense or region organs
 // are added; ones already in the fish are shared.
@@ -25,7 +22,7 @@ export const SYSTEMS = Object.freeze([
     sense : [ 'gut', 'food' ],
     hub : 'hypothalamus',
     answers : [ {
-      holds : learner,
+      holds : isLearner,
       effects : [ [ HORMONE_EFFECT.learning, 1 ], [ HORMONE_EFFECT.teaching, .5 ] ]
     } ]
   },

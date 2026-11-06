@@ -763,6 +763,11 @@
 .aid-teacher-list button,.aid-teacher-chip{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3a5a63;border-radius:8px;background:#1e4148;color:#dce8e0;padding:5px 8px;font-size:12px}
 .aid-teacher-list small{color:var(--aid-soft-text)}
 .aid-teacher-dot{width:9px;height:9px;border-radius:50%;background:var(--teacher)}
+.aid-learners{display:flex;flex-direction:column;gap:6px}
+.aid-learners>button{display:flex;align-items:center;flex-wrap:wrap;gap:6px;text-align:left;border:1px solid #3a5a63;border-radius:8px;background:#173a41;color:#dce8e0;padding:6px 8px;font-size:12px}
+.aid-learners>button>span:first-of-type{flex:1}
+.aid-learner-teachers{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
+.aid-learners small{color:var(--aid-soft-text)}
 .aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
 .aid-episode.big{margin:4px 0}
 .aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}

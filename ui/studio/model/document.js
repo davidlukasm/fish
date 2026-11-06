@@ -163,6 +163,10 @@ export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.eligibility
 ]);
 export const learnsAtAll = center => center.role === 'nerve' && center.qwidth > 0;
+// Learning circuits, learning region nodes and any node made a learner.
+export const isLearner = center =>
+    center.key === 'learn' || center.node === 'learn' ||
+    (center.role === 'nerve' && center.mode >= NEURON_BY_KEY.learn.mode);
 export function teachersOf(doc, center, wheel) {
   return doc.substances
       .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.teaching))
