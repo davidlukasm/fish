@@ -452,6 +452,19 @@ export function clearOfFish(state, organ, probe) {
     d = Math.min(range, d + g.cut * CLEAR.step / g.world);
   return d === probe.distance ? probe : {...probe, distance : d};
 }
+// A new test light starts out beyond the field's handles, BEYOND times as far from the eye as
+// their ring, so it covers none of them.
+const BEYOND = 1.3;
+export function beyondHandles(state, organ, probe) {
+  const g = visionGeometry(state, organ), range = state.capabilities?.visionRange;
+  if (!g || !g.world || !probe || !(range > 0))
+    return probe;
+  const ring = g.handle * BEYOND + probe.radius * g.world;
+  let d = probe.distance;
+  while (distance(g.pointText(probe.bearing, d * g.world), g.eye) < ring && d < range)
+    d = Math.min(range, d + g.cut * CLEAR.step / g.world);
+  return d === probe.distance ? probe : {...probe, distance : d};
+}
 export function visionDragPatch(state, organ, key, p) {
   const g = visionGeometry(state, organ);
   if (!g)

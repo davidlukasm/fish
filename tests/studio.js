@@ -509,6 +509,47 @@ function semanticFingerprint(source) {
                      [ [ 'sight', true ], [ 'near', false ], [ 'onward', false ] ]);
     const plan = model.compileDocument(connected.document, sites);
     assert.equal(plan.groups.length, allCentersOf(connected.document));
+    // Between any two paired organs a wire joins the sides as drawn: drawn on one side each side
+    // keeps to itself, drawn across each crosses.
+    {
+      let tried = 0;
+      const pairedTypes = ORGANS.filter(o => !o.fixed && o.category !== 'internal').map(o => o.key);
+      const role = type => ORGAN_BY_KEY[type].category === 'regions' ? 'nerve' : '';
+      const leftOf = type => {
+        const site = sites.find(s => s.side < 0 && eligible(ORGAN_BY_KEY[type].centers[0], s));
+        return site && model.addOrgan(model.newDocument('Seiten'), type, sites,
+                                      geometry.sitePoint(site, role(type)));
+      };
+      for (const a of pairedTypes)
+        for (const b of pairedTypes) {
+          const first = leftOf(a);
+          const site =
+              first &&
+              sites.find(s => s.side < 0 &&
+                              !model.allCenters(first.document).some(c => c.site === s.id) &&
+                              eligible(ORGAN_BY_KEY[b].centers[0], s));
+          const second =
+              site && model.addOrgan(first.document, b, sites, geometry.sitePoint(site, role(b)));
+          const near = second && model.findOrgan(second.document, second.organId);
+          const from = second && model.findOrgan(second.document, first.organId);
+          if (!near?.pair || !from?.pair || near.side !== from.side || near.id === from.id)
+            continue;
+          for (const [to, same] of [[ near.id, true ], [ near.pair, false ]]) {
+            const wired = model.addWire(second.document, from.id, to);
+            if (!wired)
+              continue;
+            tried++;
+            const sideOf = id => model.organOf(wired.document, id).side;
+            assert.equal(wired.document.wires.at(-1).pairing, same ? 'same' : 'crossed',
+                         a + '>' + b);
+            assert.ok(model.expandedWires(wired.document)
+                          .filter(l => l.wire.id === wired.wireId)
+                          .every(l => (sideOf(l.from) === sideOf(l.to)) === same),
+                      a + '>' + b + ' joins the sides as drawn');
+          }
+        }
+      assert.ok(tried > 40, 'Many pairs of organs tried: ' + tried);
+    }
     // Drawn to a node of the far tectum, an optic wire crosses as drawn.
     const twin = model.findOrgan(wired, tectumLeft.pair);
     const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
@@ -1225,6 +1266,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const cleared = vision.clearOfFish(rendered, currentEye, inside);
   const lit = fan.pointText(cleared.bearing, cleared.distance * fan.world);
   assert.ok(cleared.distance > 0 && Math.hypot(lit.x - fan.eye.x, lit.y - fan.eye.y) >= fan.cut);
+  // A new test light starts beyond the field's handles.
+  const started = vision.beyondHandles(rendered, currentEye, cleared);
+  const away = fan.pointText(started.bearing, started.distance * fan.world);
+  assert.ok(Math.hypot(away.x - fan.eye.x, away.y - fan.eye.y) > fan.handle,
+            'A new test light covers none of the handles');
   const onRing = fan.ring(currentEye.side * 45, fan.handle);
   assert.ok(Math.abs(Math.hypot(onRing.x - fan.eye.x, onRing.y - fan.eye.y) - fan.handle) < 1e-6);
   assert.throws(() => model.validateDocument({...doc, format : 'v019-organ-studio'}));
@@ -1473,6 +1519,12 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
     assert.ok(sacs.sacPatch(sacState, small, 'cells', .6).nodes > 2);
+    // A testis gives sperm as its cells make room for them.
+    const testis =
+        model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
+    const testisState = {document : testis.document, sites, capabilities : sitesResult};
+    assert.match(sacs.gonadGraphic(testisState, model.findOrgan(testis.document, testis.organId)),
+                 /aid-gonad-graphic/);
     const facts = state => sacs.gonadFacts(state, small);
     assert.ok(
         !facts(sacState).includes(t('studio.inspector.gonad.food', {least : 0}).split(':')[0]));

@@ -192,15 +192,26 @@ function eyeGlyph(state, organ, pos, drawnEyes) {
          '" r="' + fixed(r * EYE.pupil) + '"/>' +
          (showsNodes(state, eyes) ? retinaNodes(state, eyes) : '');
 }
-const proximityGlyph = (state, organ, pos) =>
-    '<g class="aid-anatomical-proximity"><circle cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
-    '" r="' + GLYPH.near_dot + '"/><path d="' +
-    GLYPH.near_arcs
-        .map(([ inner, outer, half ]) => 'M' + fixed(pos.x - inner) + ' ' + fixed(pos.y - half) +
-                                         ' Q' + fixed(pos.x - outer) + ' ' + fixed(pos.y) + ' ' +
-                                         fixed(pos.x - inner) + ' ' + fixed(pos.y + half))
-        .join(' ') +
-    '"/></g>';
+// The near sense at the eye's place: a dot with arcs reaching ahead, or beside an eye its arcs
+// alone, NEAR_GAP in front of it.
+const NEAR_GAP = 3;
+function proximityGlyph(state, organ, pos) {
+  const side = sideOf(organ), eye = eyeLocation(state.document, state.sites, side);
+  const ahead =
+      eye ? eyeRadius(state.document, side) * EYE.aspect - GLYPH.near_arcs[0][0] + NEAR_GAP : 0;
+  const c = {x : pos.x - ahead, y : pos.y};
+  return '<g class="aid-anatomical-proximity">' +
+         (eye ? ''
+              : '<circle cx="' + fixed(c.x) + '" cy="' + fixed(c.y) + '" r="' + GLYPH.near_dot +
+                    '"/>') +
+         '<path d="' +
+         GLYPH.near_arcs
+             .map(([ inner, outer, half ]) => 'M' + fixed(c.x - inner) + ' ' + fixed(c.y - half) +
+                                              ' Q' + fixed(c.x - outer) + ' ' + fixed(c.y) + ' ' +
+                                              fixed(c.x - inner) + ' ' + fixed(c.y + half))
+             .join(' ') +
+         '"/></g>';
+}
 // A nose in the colour of the scent it prefers, as the Aquarium colours smell cells.
 function noseGlyph(state, organ, pos) {
   const c = organ.centers[0], colour = c ? scentColors?.[preferredScent(c)] : null;

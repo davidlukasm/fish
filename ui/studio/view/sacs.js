@@ -103,12 +103,13 @@ function chambers(store, type, from, to, kind) {
 // What one spawning gives, after the valve at x.
 function product(store, type, x) {
   const S = STORE, radius = energy => S.egg * Math.sqrt(Math.min(1, energy / store.scale));
-  if (type !== 'eggs')
+  if (type !== 'eggs') {
+    const count = Math.floor(Math.min(store.motors, store.room / store.own.perCell));
     return Array
-        .from({length : Math.min(store.motors, store.room / store.own.perCell)},
-              (_, k, all) => sperm(x + S.gap + SPERM.tail + SPERM.head,
-                                   S.middle + (k - (all.length - 1) / 2) * SPERM.head * 2))
+        .from({length : count}, (_, k) => sperm(x + S.gap + SPERM.tail + SPERM.head,
+                                                S.middle + (k - (count - 1) / 2) * SPERM.head * 2))
         .join('');
+  }
   const r = radius(store.spawn), cx = x + S.gap + S.egg;
   const short = store.minimum && store.spawn < store.minimum;
   return egg(cx, S.middle, r, short ? 'egg food' : 'egg') +

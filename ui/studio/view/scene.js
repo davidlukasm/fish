@@ -8,7 +8,14 @@ import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
 import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
-import {allCenters, findAssembly, findCenter, isChosen, wiredCrossing} from '../model/document.js';
+import {
+  allCenters,
+  findAssembly,
+  findCenter,
+  isChosen,
+  organOf,
+  wiredCrossing
+} from '../model/document.js';
 import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline, sideOf} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
@@ -237,12 +244,21 @@ function wiresShown(state, centers) {
              ? developedContactsSvg(shown, centers)
              : wireSvg(shown, centers);
 }
+// The fields of view stand back while another outer sense is chosen (a nose, the lateral line,
+// touch or pain cells), whose stimulus shows instead.
+function fieldsShown(state) {
+  const organ = organOf(state.document, state.selected?.id);
+  return !organ || !!organ.field || ORGAN_BY_KEY[organ.type]?.category !== 'senses';
+}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
   const anatomy = bodySvg(state);
-  const cones = state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
-                tectumBands(state);
+  const cones =
+      fieldsShown(state)
+          ? state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
+                tectumBands(state)
+          : '';
   return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +

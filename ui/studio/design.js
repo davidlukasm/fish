@@ -1,4 +1,5 @@
 import {
+  beyondHandles,
   clearOfFish,
   nearAnswers,
   sensitivityEditor,
@@ -70,9 +71,12 @@ export const designMethods = {
       return;
     const side = sideOf(organ), probe = this.state.sightProbe;
     const moved =
-        clearOfFish(this.state, organ,
-                    probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
-                          : defaultSight(organ, this.state.capabilities, this.state.anatomy));
+        probe ? probe.side !== side &&
+                    clearOfFish(this.state, organ, {...probe, side, bearing : -probe.bearing})
+              : beyondHandles(
+                    this.state, organ,
+                    clearOfFish(this.state, organ,
+                                defaultSight(organ, this.state.capabilities, this.state.anatomy)));
     if (moved) {
       this.state.sightProbe = moved;
       this.requestDesign();

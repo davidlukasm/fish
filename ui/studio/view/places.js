@@ -1,5 +1,7 @@
 import {
   BODY_FRAME,
+  BODY_MIDDLE,
+  BODY_RADIUS,
   centroid,
   findSite,
   NERVE_ROLE,
@@ -201,6 +203,8 @@ export function musclePoint(organ, index, sites) {
 export function organLocation(organ, sites, doc) {
   if (hasHome(organ.type))
     return innerHome(doc, organ);
+  if (HEAD_SENSES[organ.type])
+    return HEAD_SENSES[organ.type](doc, sites, sideOf(organ));
   if (organ.type === 'lateral')
     return lateralAnchor(doc, sites, organ);
   const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i, sites))
@@ -276,24 +280,50 @@ export function nodeLocation(doc, sites, center, organType) {
       return {x : eye.x + Math.cos(a) * r * EYE.aspect, y : eye.y - Math.sin(a) * r};
     }
   }
-  if (isRegion({type : organType}) || organType === 'muscle' || hasHome(organType)) {
+  if (isRegion({type : organType}) || organType === 'muscle' || hasHome(organType) ||
+      HEAD_SENSES[organType]) {
     const organ = ownerOf(doc, center.id);
     const index = organ?.centers.findIndex(c => c.id === center.id) ?? -1;
     if (index >= 0)
-      return organType === 'muscle' ? musclePoint(organ, index, sites)
-             : hasHome(organType)   ? innerPoint(doc, organ, index)
-                                    : regionPoint(organ, index, sites);
+      return organType === 'muscle'   ? musclePoint(organ, index, sites)
+             : hasHome(organType)     ? innerPoint(doc, organ, index)
+             : HEAD_SENSES[organType] ? headSenseNode(doc, sites, organ, center, index)
+                                      : regionPoint(organ, index, sites);
   }
   return centerLocation(center, organType, sites);
 }
-// The region, muscle or inner organ a node belongs to, looked up once per design.
+// The head's senses stand where the engine senses from, not at their cells' sites: the nostrils
+// NOSE.ahead body radii before the body's middle, NOSE.inset under the skin; the near sense at the
+// eye's place (beside an eye, in front of it). Their nodes lie round them: a nostril's on a half
+// ring NOSE.ring wide towards the midline, a near sense's NEAR.ring times the eye's size out at
+// the bearing each looks to.
+export const NOSE = Object.freeze({ahead : .8, inset : 14, ring : 12});
+const NEAR = Object.freeze({ring : 2.3});
+export function nostril(side) {
+  const x = BODY_MIDDLE.x - NOSE.ahead * BODY_RADIUS;
+  return {x, y : skinAt(x, side) - side * NOSE.inset};
+}
+const nearPlace = (doc, sites, side) => viewOrigin(doc, sites, side) ?? nostril(side);
+const HEAD_SENSES =
+    Object.freeze({nose : (doc, sites, side) => nostril(side), proximity : nearPlace});
+function headSenseNode(doc, sites, organ, center, index) {
+  const side = sideOf(organ), at = HEAD_SENSES[organ.type](doc, sites, side);
+  if (organ.type === 'nose') {
+    const a = Math.PI * (index + 1) / (organ.centers.length + 1);
+    return {x : at.x - Math.cos(a) * NOSE.ring, y : at.y - side * Math.sin(a) * NOSE.ring};
+  }
+  const site = findSite(sites, center.site), r = eyeRadius(doc, side) * NEAR.ring;
+  const a = radians(side * (site ? bearing(site) : 0));
+  return {x : at.x + Math.cos(a) * r * EYE.aspect, y : at.y - Math.sin(a) * r};
+}
+// The region, muscle, inner organ or head sense a node belongs to, looked up once per design.
 const OWNERS = new WeakMap();
 function ownerOf(doc, centerId) {
   let owners = OWNERS.get(doc);
   if (!owners) {
     owners = new Map();
     for (const organ of doc.organs.filter(o => isRegion(o) || o.type === 'muscle' ||
-                                               hasHome(o.type)))
+                                               hasHome(o.type) || HEAD_SENSES[o.type]))
       for (const center of organ.centers)
         owners.set(center.id, organ);
     OWNERS.set(doc, owners);
