@@ -29,7 +29,7 @@
     "hubStatistics": "Aus dem Aquarium",
     "parts": "Organe",
     "partCount": "{n} {n:Organ|Organe}",
-    "contactCount": "{n} {n:Kontakt|Kontakte}",
+    "contactCount": "{n} {n:Synapse|Synapsen}",
     "wireCount": "{n} {n:Verbindung|Verbindungen}",
     "sites": "Entwicklungsorte",
     "exampleGrowth": "Wachstumshormon",
@@ -39,7 +39,7 @@
     "panelWidth": "Breite ziehen",
     "hubFooter": "FISH / AID",
     "stationFooter": "v019 · AID",
-    "developedCount": "{cells} {cells:Zelle|Zellen} · {contacts} {contacts:Kontakt|Kontakte}",
+    "developedCount": "{cells} {cells:Zelle|Zellen} · {contacts} {contacts:Synapse|Synapsen}",
     "plannedCount": "{cells} {cells:Zelle|Zellen} · Entwurf"
   },
   "tools": {
@@ -87,7 +87,7 @@
     "evolution": "Entwicklung",
     "connections": "Verbindungen",
     "layers": "Ansicht",
-    "empty": "Wähle ein Organ oder einen Kontakt",
+    "empty": "Wähle ein Organ oder eine Verbindung",
     "newSubstance": "Stoff hinzufügen",
     "propertiesOf": "Eigenschaften von",
     "network": "Netzwerk",
@@ -185,7 +185,7 @@
       "apart": "getrennt",
       "linkTitle": "Beide Seiten gleich einstellen"
     },
-    "removeCenter": "Zentrum entfernen",
+    "removeCenter": "Knoten entfernen",
     "removeOrgan": "Organ entfernen",
     "mirror": "Gegenseite ergänzen",
     "saveModule": "In Bibliothek",
@@ -242,7 +242,7 @@
     "removeSubstance": "Stoff entfernen",
     "narrow": "Gezielt",
     "wide": "Breit",
-    "cellType": "Zentrum",
+    "cellType": "Knoten",
     "organType": "Organ",
     "regionType": "Region",
     "cellSignal": "Signal der Zelle",
@@ -275,7 +275,7 @@
     "hormoneProfile": "Stoffprofil",
     "reserve": "Energiereserve",
     "modulation": "Modulationswirkung",
-    "selectLearning": "Wähle einen Nervenknoten, auch in einer Gehirnregion.",
+    "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion.",
     "stimulusThreshold": "Reizschwelle",
     "restActivity": "Ruheaktivität",
     "restDrive": "Grundaktivität",
@@ -283,7 +283,7 @@
     "recoveryTime": "Erholungszeit",
     "adaptationTime": "Anpassungszeit",
     "productionBreadth": "Breite der Hormonausschüttung",
-    "developedLink": "Entstandene Verbindung",
+    "developedLink": "Entstandene Synapsen",
     "contactCount": "Synapsen",
     "meanWeight": "Mittlere Stärke",
     "excitation": "Erregend",
@@ -302,8 +302,8 @@
     "steepness": "Steilheit",
     "concentration": "Konzentration",
     "plasticity": "Lernfähigkeit",
-    "cancelling": "Gegenlernen",
-    "competing": "Konkurrenz",
+    "cancelling": "ausgleichen",
+    "competing": "auswählen",
     "neutral": "neutral",
     "lifePhase": "Lebensabschnitt",
     "phaseStart": "Arbeitet erst ab einer Reife",
@@ -543,7 +543,7 @@
       "steering": "Lenkeingang",
       "threshold": "Schwelle",
       "tempo": "Tempo",
-      "rate": "Lernrate",
+      "rate": "Lerntempo",
       "style": "Lernart",
       "smoothing": "Glättung",
       "brake": "Bremse",
@@ -919,7 +919,7 @@
     "where": [
       "bei Nervenzellen, Muskeln und Drüsen",
       "bei Nervenzellen",
-      "bei Nervenzellen mit Lernart Konkurrenz",
+      "bei Nervenzellen, die auswählend lernen",
       "bei Nervenzellen mit Taktgeber",
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
@@ -945,8 +945,8 @@
   "neuronPurpose": {
     "relay": "gibt weiter, was ihn erreicht",
     "inhibit": "hemmt die Zellen, die er erreicht",
-    "learn": "lernt auch ohne Lehrer: was mit ihm feuert, wächst, der Rest schrumpft. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lernt dieser so.",
-    "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich seinen Takt anrechnen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
+    "learn": "lernt auch ohne Lehrer: Eingänge, die zugleich mit ihm aktiv sind, wachsen, stille schrumpfen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lernt dieser so.",
+    "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich Eingänge in seinem Takt merken. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
     "modulate": "Lehrer: sein Signal ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },
   "wiring": {
@@ -984,11 +984,11 @@
       "modulate": "Verschaltet: lehrt jetzt diesen Knoten.",
       "pacemaker": "Verschaltet: gibt diesem Knoten jetzt den Takt."
     },
-    "learns": "Dieser Knoten lernt jetzt mit konkurrierenden Eingängen."
+    "learns": "Dieser Knoten lernt jetzt auswählend: aktive Eingänge wachsen, stille schrumpfen."
   },
   "learnRule": {
     "teaching": "Wer die Zelle lehrt",
-    "firing": "feuert mit",
+    "firing": "zugleich aktiv",
     "inBeat": "im Takt",
     "still": "still",
     "output": "Ausgang",
@@ -1007,7 +1007,7 @@
     "fast": "schnell",
     "mode": "Lernart",
     "trace": "Wann sich die Zelle Eingänge merkt",
-    "traceLength": "Wie lange die Merkspur hält",
+    "traceLength": "Wie lange sich die Zelle Eingänge merkt",
     "short": "kurz",
     "lasts": "hält etwa {n} Schritte",
     "none": "kein Stoff",
@@ -1026,7 +1026,7 @@
     "low": [
       "lehrt das Gegenteil",
       "lernt gar nicht",
-      "keine Konkurrenz",
+      "keine Verdrängung",
       "nur beim Takt"
     ],
     "middle": [
@@ -1056,7 +1056,7 @@
     "development": "Entwicklungsvarianten",
     "mutations": "Mutierte Nachkommen",
     "within": "innerhalb der Vorgaben",
-    "openRegion": "Zusätzliche Kontakte innerhalb dieser Region erlauben",
+    "openRegion": "Zusätzliche Synapsen innerhalb dieser Region erlauben",
     "issues": {
       "identity": "Andere Zellfunktion",
       "cells": "Zusätzliche Zellen außerhalb des Entwurfs",
@@ -1064,7 +1064,7 @@
       "capacity": "Kapazität außerhalb der Toleranz",
       "traits": "Merkmale außerhalb der Toleranz",
       "growth": "Wachstumsrezeptor außerhalb der Toleranz",
-      "contact": "Unerlaubter Kontakt",
+      "contact": "Unerlaubte Synapse",
       "missing": "Geplanter Eingang fehlt",
       "leakage": "Empfangsbereiche überlappen unerlaubte Sender",
       "resources": "Entwicklung durch Ressourcenlimit begrenzt",
