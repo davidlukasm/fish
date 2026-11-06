@@ -175,16 +175,16 @@ function regionPoint(doc, organ, index, sites) {
 }
 export const INSIDE = Object.freeze({
   blood : {x : 548, d : 88},
-  bladder : {x : 610, d : -48},
+  bladder : {x : 648, d : -64},
   gut : {
     throat : 240,
-    stomach : {x : 600, d : 44, rx : 34, ry : 22},
-    coils : {from : 640, to : 790, d : 40, wave : 20},
-    vent : {x : 815, d : 12},
+    stomach : {x : 640, d : 56, rx : 34, ry : 22},
+    coils : {from : 680, to : 820, d : 46, wave : 14},
+    vent : {x : 842, d : 12},
     steps : 96
   },
-  eggs : {x : 690, d : -50},
-  sperm : {x : 752, d : -40},
+  eggs : {x : 722, d : -62},
+  sperm : {x : 784, d : -54},
   glands : {front : 600, step : 46, d : 86, skin : 26},
   stack : 28,
   node : 16
