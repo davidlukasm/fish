@@ -318,6 +318,7 @@ export function hormoneLegs(state) {
           push : firing > 0   ? 'rise'
                  : firing < 0 ? 'fall'
                               : null,
+          teach : (directions[effects.indexOf(HORMONE_EFFECT.teaching)] ?? 0) > 0,
           mark :
               '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
                   symbolsAbove(

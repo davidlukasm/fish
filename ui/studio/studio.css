@@ -626,6 +626,8 @@
 .aid-brain-tint{fill:var(--aid-brain);opacity:.1}
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
+#aid-body-map.aid-stimulus-view .aid-pulse-learned .aid-wire-ink{stroke:var(--aid-teach);stroke-width:4.5px;filter:drop-shadow(0 0 5px var(--aid-teach));animation:aid-learned 1.6s ease-out}
+@keyframes aid-learned{from{filter:drop-shadow(0 0 14px var(--aid-teach))}}
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near):not(.selected),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}

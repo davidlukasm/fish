@@ -4,6 +4,7 @@ import {
   allCenters,
   compileDocument,
   endpointCenters,
+  expandedWires,
   findCenter,
   findOrgan,
   organOf,
@@ -69,7 +70,8 @@ export const trialMethods = {
     for (const id of stimulus.wires)
       for (const element of this.wireMarks(id))
         element.classList.add('aid-pulse-used',
-                              ...stimulus.sent.has(id) ? [] : [ 'aid-pulse-withdrawn' ]);
+                              ...stimulus.sent.has(id) ? [] : [ 'aid-pulse-withdrawn' ],
+                              ...stimulus.learned.has(id) ? [ 'aid-pulse-learned' ] : []);
   },
   wireMarks(id) {
     return [...this.bodyMap()?.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]') ?? [] ];
@@ -158,9 +160,15 @@ export const trialMethods = {
                                 : [];
     });
     const schedule = signalSchedule(starts, [...links, ...hormoneLegs(this.state) ], response);
-    const stimulus =
-        alongside ? this.state.stimulus
-                  : {fired : new Set(), quieted : new Set(), wires : new Set(), sent : new Set()};
+    const before = this.state.stimulus;
+    const stimulus = alongside ? before : {
+      fired : new Set(),
+      quieted : new Set(),
+      wires : new Set(),
+      sent : new Set(),
+      learned : new Set(),
+      earlier : before && { fired: before.fired, sent: before.sent }
+    };
     stimulus.real = !!frames?.length;
     for (const part of starts.flatMap(shownAs))
       stimulus.fired.add(part);
@@ -178,6 +186,14 @@ export const trialMethods = {
       reached : ({key, mode, link}) => {
         for (const part of key ? shownAs(key) : [])
           stimulus[mode === 'fire' ? 'fired' : 'quieted'].add(part);
+        const fired = part => stimulus.fired.has(part) || stimulus.earlier?.fired.has(part);
+        if (link?.teach && (fired(link.to) || fired(organOf(doc, link.to)?.id)))
+          for (const id of this.taughtWires(link.to)) {
+            for (const set of [stimulus.wires, stimulus.sent, stimulus.learned])
+              set.add(id);
+            for (const element of this.wireMarks(id))
+              element.classList.add('aid-pulse-used', 'aid-pulse-learned');
+          }
         for (const id of link?.wires ?? []) {
           stimulus.wires.add(id);
           if (mode === 'fire')
@@ -193,6 +209,18 @@ export const trialMethods = {
     player.start();
   },
   playingPulses() { return this.pulsePlayers.filter(pulse => pulse.player.running());},
+  // A teaching substance reaching a cell that has just fired, in this preview or the one still
+  // shown before it: the wires that made it fire are the ones it learns from.
+  taughtWires(key) {
+    const {document : doc, stimulus} = this.state;
+    const cells = new Set(endpointCenters(doc, key).map(c => c.id));
+    const sent = id => stimulus.sent.has(id) || stimulus.earlier?.sent.has(id);
+    return [...new Set(expandedWires(doc)
+                           .filter(link => sent(link.wire.id) &&
+                                           endpointCenters(doc, link.to).some(c => cells.has(c.id)))
+                           .map(link => link.wire.id)) ];
+  },
+
   stimulusMoves(key) {
     const svg = this.bodyMap(), doc = this.state.document;
     const organ = organOf(doc, key);
