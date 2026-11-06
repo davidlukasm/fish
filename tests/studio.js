@@ -871,9 +871,10 @@ function semanticFingerprint(source) {
     tool : 'learn',
     effect : E.learning
   });
-  assert.match(learner, /data-learning-pad/);
-  // Without a teaching substance the learning tool says how to give the cell one.
-  assert.match(learner, /aid-teachers/);
+  assert.match(learner, /data-learn-rate/);
+  // Without a teacher the rule says the cell learns nothing; its hormone rows offer one.
+  assert.match(learner, /aid-rule-teach none/);
+  assert.match(learner, new RegExp('data-effect="' + E.excitation + '"'));
   // With nothing chosen the inspector shows the way through the Atelier, its steps as tools.
   const guide = panels.inspector({...state, selected : null});
   assert.match(guide, /aid-workflow/);
@@ -1449,10 +1450,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const wheelBack = substancesView.wheelPatch(wheelMark.cx / W.size, wheelMark.cy / W.height);
     assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
     const learningView = await import('../ui/studio/view/learning.js');
-    const learningMark = Object.values(learningView.learningMarks({mode : .2, qwidth : .7}))[0];
-    const learned = learningView.learningPatch(learningMark.cx / learningView.LEARNING_PAD.width,
-                                               learningMark.cy / learningView.LEARNING_PAD.height);
-    assert.ok(Math.abs(learned.mode - .2) < 1e-9 && Math.abs(learned.qwidth - .7) < 1e-9);
+    // A learning cell's rate and way each have a track; the middle of the way is neutral.
+    assert.ok(Math.abs(learningView.learnModePatch(.5).mode) < 1e-9);
+    assert.ok(learningView.learnRatePatch(1).qwidth === 1 &&
+              learningView.learnRatePatch(0).qwidth === 0);
+    const learnNode =
+        model.addNeuron(model.newDocument('Lernen'), 'learn', sites, {x : 380, y : 325});
+    const learnPanel = learningView.learningInspector({
+      document : learnNode.document,
+      sites,
+      capabilities : sitesResult,
+      selected : {kind : 'center', id : learnNode.centerId},
+      effect : HORMONE_EFFECT.learning
+    });
+    assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode'));
+    assert.ok(learnPanel.includes('data-receptor-substance'),
+              'The open hormone row shows its receptor');
     // A skin sense's handles read back what they show: its field's edge how far round the body
     // the cell feels, its middle hair's tip how sensitive it is.
     const skinView = await import('../ui/studio/view/skin.js');

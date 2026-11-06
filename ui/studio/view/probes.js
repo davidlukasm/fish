@@ -17,10 +17,12 @@ import {formatNumber, percent, t} from '../../strings.js';
 // SPAN beyond it at the most, on a log scale: rings round the body mark RINGS body lengths. A
 // touch, a bite or a current comes as an arrow ending GAP off the skin, as much longer up to
 // REACH as it is strong on a log scale from the faintest stimulus (`faintest`, the design view's
-// dimmest one) to the most; a current as STREAMS arrows ACROSS apart. Marks keep their size on
-// screen as the view zooms: the handle HANDLE, the source SOURCE wide with its icon ICON large,
-// each answer as a disc ANSWER wide OFF beyond the organ, away from the midline, its share LIT;
-// a scent source's distance in fish lengths stands BELOW it, to DIGITS.
+// dimmest one) to the most; a current as STREAMS arrows ACROSS apart with PARTICLES drifting on
+// LANES between them (SPREAD of ACROSS apart, PER on each, SIZE wide on screen), taking from SLOW
+// seconds for the faintest current to FAST for the strongest to reach the body. Marks keep their
+// size on screen as the view zooms: the handle HANDLE, the source SOURCE wide with its icon ICON
+// large, each answer as a disc ANSWER wide OFF beyond the organ, away from the midline, its share
+// LIT; a scent source's distance in fish lengths stands BELOW it, to DIGITS.
 const PROBE_SCENE = Object.freeze({
   span : 560,
   rings : [ 1, 2, 5, 10 ],
@@ -28,6 +30,7 @@ const PROBE_SCENE = Object.freeze({
   reach : 300,
   streams : 3,
   across : 46,
+  particles : {lanes : 5, spread : .5, per : 3, size : 3.2, slow : 3.4, fast : .7},
   skin_step : 6,
   handle : 11,
   source : 16,
@@ -118,15 +121,30 @@ function stimulusSvg(probe, faintest, zoom) {
   }
   if (probe.kind === 'flow') {
     const d = bodyDirection(angle), across = {x : -d.y, y : d.x};
-    return Array
-        .from({length : P.streams},
-              (_, k) => {
-                const shift = (k - (P.streams - 1) / 2) * P.across;
-                const move = p => ({x : p.x + across.x * shift, y : p.y + across.y * shift});
-                return '<path class="aid-probe-arrow flow" d="' + arrowPath(move(at), move(onto)) +
-                       '"/>';
-              })
-        .join('');
+    const move = (p, shift) => ({x : p.x + across.x * shift, y : p.y + across.y * shift});
+    const arrows = Array
+                       .from({length : P.streams},
+                             (_, k) => {
+                               const shift = (k - (P.streams - 1) / 2) * P.across;
+                               return '<path class="aid-probe-arrow flow" d="' +
+                                      arrowPath(move(at, shift), move(onto, shift)) + '"/>';
+                             })
+                       .join('');
+    // Particles drift with the water onto the body, the faster the stronger it streams.
+    const F = P.particles, share = strengthShare(probe.strength, probe.kind, faintest);
+    const seconds = F.slow + (F.fast - F.slow) * share;
+    let particles = '';
+    for (let lane = 0; lane < F.lanes; ++lane) {
+      const shift = (lane - (F.lanes - 1) / 2) * P.across * F.spread;
+      const from = move(at, shift), to = move(onto, shift);
+      for (let k = 0; k < F.per; ++k)
+        particles += '<circle class="aid-probe-particle" r="' + fixed(F.size / zoom) +
+                     '"><animateMotion path="M' + fixed(from.x) + ' ' + fixed(from.y) + ' L' +
+                     fixed(to.x) + ' ' + fixed(to.y) + '" dur="' + fixed(seconds) + 's" begin="-' +
+                     fixed(seconds * (k + lane / F.lanes) / F.per) +
+                     's" repeatCount="indefinite"/></circle>';
+    }
+    return arrows + particles;
   }
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
 }

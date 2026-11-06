@@ -273,7 +273,6 @@
     "meanWeight": "Mittlere Stärke",
     "excitation": "Erregend",
     "inhibition": "Hemmend",
-    "learningMap": "Lernart und Lernfähigkeit",
     "learningMode": "Lernart",
     "learningAbility": "Lernfähigkeit",
     "counterLearning": "Gegenlernen",
@@ -915,19 +914,25 @@
   },
   "learnRule": {
     "teaching": "Lehrsignal",
-    "inputs": "Eingänge · {n}",
+    "firing": "feuert",
+    "still": "still",
     "output": "Ausgang",
     "gain": "Lernfähigkeit {n} %",
-    "teachers": "Lehrsignal",
+    "untaught": "ohne Lehrsignal kein Lernen",
     "modulator": "Modulator",
+    "rate": "Lernfähigkeit",
+    "slow": "langsam",
+    "fast": "schnell",
+    "mode": "Lernart",
+    "trace": "Merkspur",
+    "none": "aus",
     "parts": [
       "Lehrsignal",
       "Lernfähigkeit",
       "Wettbewerb",
       "Merkspur"
     ],
-    "byHormone": "Durch Hormone",
-    "noTeacher": "Noch kein Lehrsignal: einen Modulator verbinden oder mit dem Hormon-Werkzeug „erregt“ auf diese Zelle ziehen."
+    "byHormoneOf": "{part} durch Hormon"
   },
   "compiler": {
     "title": "Bauprüfung",

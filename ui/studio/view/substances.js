@@ -501,15 +501,19 @@ export function organsOf(doc, centers) {
 }
 // A center's receptor for one of `effects` (each named by `name`): chips to choose the effect, its
 // response curve, whether it is active and the substance it binds.
-export function receptorEditor(state, center, effects, effect, name) {
+export const receptorEditor = (state, center, effects, effect, name) =>
+    '<div class="aid-effect-chips">' +
+    effects
+        .map(value => '<button data-effect="' + value + '" class="' +
+                      (effect === value ? 'active' : '') + '">' + escapeText(name(value)) +
+                      '</button>')
+        .join('') +
+    '</div>' + receptorBody(state, center, effect);
+// A center's receptor for one effect: its response curve, whether it is active and the substance
+// it binds.
+export function receptorBody(state, center, effect) {
   const receptor = center.receptors[effect], target = center.id + ':' + effect;
-  return '<div class="aid-effect-chips">' +
-         effects
-             .map(value => '<button data-effect="' + value + '" class="' +
-                           (effect === value ? 'active' : '') + '">' + escapeText(name(value)) +
-                           '</button>')
-             .join('') +
-         '</div>' + effectCurve(state, receptor, effect, target) +
+  return effectCurve(state, receptor, effect, target) +
          '<label class="aid-checkbox"><input type="checkbox" data-receptor-active="' +
          escapeText(center.id) + '" data-receptor-effect="' + effect + '" ' +
          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +

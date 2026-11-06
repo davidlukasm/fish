@@ -136,7 +136,6 @@
 .aid-row-menu{background:transparent;border:0;padding:8px;font-size:15px}
 .aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:5px}
-.aid-learning-pad{width:100%;height:auto;display:block;margin:10px 0 8px;cursor:crosshair;touch-action:none;border-radius:12px;background:var(--aid-graphic)}
 .aid-response-chart{width:100%;margin-top:12px;background:var(--aid-graphic);border-radius:12px}
 .aid-response-line{stroke:var(--aid-substance);stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
@@ -145,10 +144,6 @@
 .aid-response-chart text{fill:var(--aid-soft-text);font-size:10px}
 .aid-hormone-ring{fill:none;stroke-width:2.5}
 .aid-hormone-ring.receives{stroke-dasharray:3 3}
-.aid-learning-pad rect{stroke:#3b636c}
-.aid-pad-cancel{fill:#3a2f4a}
-.aid-pad-compete{fill:#2f4a3a}
-.aid-learning-pad path{stroke:#97b9b4;stroke-dasharray:3 3}
 .aid-developed-nerve div{display:flex;justify-content:space-between;font-size:12px;color:var(--aid-soft-text);padding:3px 0;border-bottom:1px solid #ffffff10}
 .aid-developed-nerve output{color:#e9f3ef}
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
@@ -427,7 +422,6 @@
 @media (prefers-reduced-motion:reduce){.aid-hormone-cloud circle{animation:none;opacity:.18;transform:scale(1.8)}}
 .aid-hormone-body{fill:none;stroke:var(--hormone);stroke-width:5;stroke-opacity:.55;stroke-dasharray:10 8}
 .aid-hormone-influence.teach{stroke-width:3;stroke-dasharray:8 6;opacity:.8}
-.aid-teachers{display:grid;gap:6px;margin:6px 0 12px}
 .aid-phase-mark{cursor:ew-resize}
 .aid-phase-mark path{fill:#e9d8a6;stroke:#10292d;stroke-width:1}
 .aid-phase-mark:hover path{fill:#fff3c8}
@@ -710,7 +704,8 @@
 .aid-probe-arrow{fill:none;stroke:var(--aid-flow-light);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .aid-probe-arrow.touch{stroke:var(--aid-touch-felt)}
 .aid-probe-arrow.wound{stroke:var(--aid-pain-felt)}
-.aid-probe-arrow.flow{stroke:var(--aid-flow);stroke-width:2.2}
+.aid-probe-arrow.flow{stroke:var(--aid-flow);stroke-width:1.6;stroke-opacity:.55}
+.aid-probe-particle{fill:var(--aid-flow-light);fill-opacity:.85}
 .aid-probe-source>circle{fill:var(--aid-chip);stroke:var(--aid-rim);stroke-width:1.6}
 .aid-probe-distance{fill:var(--aid-name-text);font:600 12px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-probe-handle{pointer-events:all;cursor:grab}
@@ -747,6 +742,18 @@
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
 #aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}
 .aid-learning-rule{display:block;width:100%;height:auto;margin:4px 0}
+.aid-rule-input{fill:none;stroke:var(--aid-size);stroke-linecap:round;stroke-linejoin:round}
+.aid-rule-input.still{stroke-opacity:.6}
+.aid-rule-pulse{fill:#f2f6dc}
+.aid-rule-pulse.teach{fill:var(--aid-teach)}
+.aid-learn-part{margin:10px 0 4px}
+.aid-learn-track{display:block;width:100%;height:auto;margin:2px 0 6px;touch-action:none}
+.aid-learn-track text{font-size:12px;fill:#c2d6d2}
+.aid-learn-hormone{display:flex;align-items:center;gap:8px;width:100%;margin:4px 0;padding:6px 10px;border:1px solid var(--aid-card-edge);border-radius:9px;background:#17363c;color:var(--aid-control-text);text-align:left;cursor:pointer}
+.aid-learn-hormone svg{color:var(--substance,var(--aid-soft-text))}
+.aid-learn-hormone span{flex:1}
+.aid-learn-hormone small{color:var(--substance,var(--aid-soft-text))}
+.aid-learn-hormone.open{border-color:var(--aid-chosen-edge);background:#1c4045}
 .aid-rule-arrow{fill:none;stroke:var(--aid-size);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-rule-teach .aid-rule-arrow{stroke:var(--aid-teach)}
 .aid-rule-teach.none .aid-rule-arrow{stroke:#5d7f80;stroke-dasharray:4 4}

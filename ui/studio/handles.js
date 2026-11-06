@@ -44,7 +44,7 @@ import {
   wheelPatch,
   wheelTrackWidth
 } from './view/substances.js';
-import {learningMarks, learningPatch} from './view/learning.js';
+import {learnModePatch, learnRatePatch} from './view/learning.js';
 import {cellPatch, label} from './view/kit.js';
 
 // The handles on the panels' graphics and the side panels' grips: what a press holds, how the
@@ -89,7 +89,8 @@ const pointerShare = (event, rect) => (
 const PADS = Object.freeze({
   wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
   output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
-  learning : {key : 'learningPad', patch : learningPatch, marks : learningMarks},
+  learnRate : {key : 'learnRate', handle : learnRatePatch},
+  learnMode : {key : 'learnMode', handle : learnModePatch},
   vector : {
     key : 'vectorPad',
     patch : wheelPatch,
