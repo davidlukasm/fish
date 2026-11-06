@@ -27,23 +27,31 @@ export function centerLocation(center, organType, sites) {
   return site ? sitePoint(site, siteRole(organType))
               : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
-// The brain as the Atelier draws it, seen from above: on each side an olfactory bulb, a
-// telencephalon, an optic tectum and a medulla, on the midline the diencephalon and the
-// cerebellum, each an ellipse (x along the fish, d off the midline towards a side or on it, rx and
-// ry), and the spinal cord running from the medulla back towards the tail (CORD: from, to, its
-// half width at either end). The parts lie over the lattice the engine's nerve sites are drawn on
-// (BRAIN_MAP), so every nerve center stands in the brain or the cord.
+// The brain as the Atelier draws it, seen from above, one organ: its outline (half widths along
+// it, [x, half]) from the front between the olfactory bulbs over the forebrain, the optic tecta
+// (the widest part), the cerebellum's auricles and the medulla into the spinal cord, which runs
+// back towards the tail and ends rounded (END past its last point). On it the lobes, each an
+// ellipse (x along the fish, d off the midline towards a side or on it, rx and ry, its back end
+// turned out by TURN degrees), drawn in this order, each over those before it, its edge among
+// them a groove: the olfactory bulbs close to the midline, the two hemispheres of the
+// telencephalon, the two optic tecta and the cerebellum on the midline. FISSURES run between the
+// halves. The brain lies over the lattice the engine's nerve sites are drawn on (BRAIN_MAP), so
+// every nerve center stands in the brain or the cord. Its rim runs EDGE wide round all of it.
 export const BRAIN = Object.freeze({
-  parts : [
-    {key : 'bulb', x : 205, d : 24, rx : 22, ry : 20},
-    {key : 'telencephalon', x : 287, d : 38, rx : 48, ry : 32},
-    {key : 'diencephalon', x : 336, d : 0, rx : 30, ry : 24},
-    {key : 'tectum', x : 388, d : 40, rx : 50, ry : 38},
-    {key : 'torus', x : 452, d : 46, rx : 24, ry : 20},
-    {key : 'cerebellum', x : 470, d : 0, rx : 42, ry : 30},
-    {key : 'medulla', x : 522, d : 32, rx : 52, ry : 32}
+  outline : [
+    [ 192, 12 ], [ 214, 18 ], [ 236, 18 ], [ 258, 40 ], [ 300, 60 ], [ 340, 58 ], [ 380, 76 ],
+    [ 430, 72 ], [ 466, 62 ], [ 508, 54 ], [ 542, 46 ], [ 576, 37 ], [ 612, 30 ], [ 652, 26 ],
+    [ 868, 19 ]
   ],
-  cord : {from : 560, to : 885, half : [ 26, 18 ]}
+  end : 14,
+  lobes : [
+    {key : 'bulb', x : 207, d : 12, rx : 19, ry : 12},
+    {key : 'telencephalon', x : 288, d : 30, rx : 46, ry : 31},
+    {key : 'tectum', x : 388, d : 40, rx : 54, ry : 39, turn : 8},
+    {key : 'cerebellum', x : 466, d : 0, rx : 38, ry : 30}
+  ],
+  fissures : [ [ 234, 432 ], [ 500, 566 ] ],
+  edge : 2.4
 });
 // A region stands as one cluster where it was put (its home site, drawn in the brain), whatever
 // sites its nodes take near it: its nodes around it on an ellipse RING plus GROW per node wide

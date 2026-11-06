@@ -1636,7 +1636,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     // Nerve centers stand in the drawn brain: a free node put on the tectum stays there, a region
     // put there clusters around the place it took.
     const brainPlaces = await import('../ui/studio/view/places.js');
-    const lobe = brainPlaces.BRAIN.parts.find(p => p.key === 'tectum');
+    const lobe = brainPlaces.BRAIN.lobes.find(p => p.key === 'tectum');
     const onLobe = {x : lobe.x, y : 365 - lobe.d};
     const node = model.addNeuron(model.newDocument('Knoten'), 'relay', sites, onLobe, 60);
     const nodeAt = brainPlaces.centerLocation(model.findCenter(node.document, node.centerId).center,

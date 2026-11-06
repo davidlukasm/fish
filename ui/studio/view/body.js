@@ -14,7 +14,9 @@ import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
   bodyDirection,
+  curveThrough,
   finPaths,
+  finRays,
   finRoots,
   finSizes,
   fishPath,
@@ -62,17 +64,36 @@ import {organTitle} from './names.js';
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
 
-// The brain from above: its parts, each side's mirrored, and the spinal cord tapering back.
+// The brain from above, one organ: its outline with the spinal cord, then its lobes (each side's
+// mirrored), each over those before it, its edge among them a groove, and the fissures between
+// the halves; a rim round all of it, the lobes shaded as rounded.
 function brainSvg() {
-  const M = BODY_FRAME.middle, C = BRAIN.cord;
-  const part = (p, side) => '<ellipse class="aid-brain-part ' + p.key + '" cx="' + p.x + '" cy="' +
-                            (M + side * p.d) + '" rx="' + p.rx + '" ry="' + p.ry + '"/>';
-  const parts = BRAIN.parts.map(p => p.d ? part(p, -1) + part(p, 1) : part(p, 1)).join('');
-  const cord = 'M' + C.from + ' ' + (M - C.half[0]) + ' L' + C.to + ' ' + (M - C.half[1]) + ' Q' +
-               (C.to + C.half[1]) + ' ' + M + ' ' + C.to + ' ' + (M + C.half[1]) + ' L' + C.from +
-               ' ' + (M + C.half[0]) + 'Z';
+  const M = BODY_FRAME.middle, B = BRAIN, back = B.outline.at(-1);
+  const body =
+      curveThrough([
+        [ B.outline[0][0], M ], ...B.outline.map(([ x, h ]) => [x, M - h]), [ back[0] + B.end, M ],
+        ...[...B.outline].reverse().map(([ x, h ]) => [x, M + h]), [ B.outline[0][0], M ]
+      ]) +
+      'Z';
+  const lobe = (p, side, cls) =>
+      '<ellipse class="' + cls + '" cx="' + p.x + '" cy="' + (M + side * p.d) + '" rx="' + p.rx +
+      '" ry="' + p.ry + '"' +
+      (p.turn ? ' transform="rotate(' + side * p.turn + ' ' + p.x + ' ' + (M + side * p.d) + ')"'
+              : '') +
+      '/>';
+  const lobes = cls =>
+      B.lobes.map(p => p.d ? lobe(p, -1, cls) + lobe(p, 1, cls) : lobe(p, 1, cls)).join('');
+  const fissures =
+      B.fissures.map(([ from, to ]) => 'M' + from + ' ' + M + ' L' + to + ' ' + M).join(' ');
   return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
-         '</title><path class="aid-brain-cord" d="' + cord + '"/>' + parts + '</g>';
+         '</title><defs><radialGradient id="aid-brain-lobe" cx=".42" cy=".38" r=".8">' +
+         '<stop offset="0" stop-color="#efe3e2"/><stop offset="1" stop-color="#d6c2c6"/>' +
+         '</radialGradient><linearGradient id="aid-brain-cylinder" x1="0" y1="0" x2="0" ' +
+         'y2="1"><stop offset="0" stop-color="#c9b3b9"/><stop offset=".5" ' +
+         'stop-color="#eadbdb"/><stop offset="1" stop-color="#c9b3b9"/></linearGradient></defs>' +
+         '<g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px"><path d="' + body +
+         '"/>' + lobes('') + '</g><path class="aid-brain-body" d="' + body + '"/>' +
+         lobes('aid-brain-lobe') + '<path class="aid-brain-fissure" d="' + fissures + '"/></g>';
 }
 function retinaNodes(state, organs) {
   const zoom = zoomOf(state);
@@ -573,6 +594,9 @@ export function organHitsSvg(state) {
   }
   return '<g class="aid-organ-hits">' + html + '</g>';
 }
+// The body's shading across it, REACH either way of the midline: lighter at the flanks (FLANK),
+// darker along the back (BACK).
+const BODY_SHADE = Object.freeze({reach : 150, flank : .08, back : .12});
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
@@ -594,17 +618,25 @@ export function bodySvg(state) {
     else
       organs += drawn;
   }
-  // Fins and the tail fin are drawn apart from the body, each to beat about its root.
-  const tail = tailFin(sizes), roots = finRoots(),
+  // Fins and the tail fin are drawn apart from the body, each with its rays, to beat about its
+  // root. The body is shaded darker along its back, as a fish seen from above is.
+  const tail = tailFin(sizes), roots = finRoots(), rays = finRays(sizes),
         origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
+  const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;
   return finPaths(sizes)
-             .map((d, k) => '<path class="aid-fish-fin" data-part="fin" data-side="' +
-                            (k ? 1 : -1) + '" style="transform-origin:' + origin(roots[k]) +
-                            '" d="' + d + '"/>')
+             .map((d, k) => '<g class="aid-fish-fin" data-part="fin" data-side="' + (k ? 1 : -1) +
+                            '" style="transform-origin:' + origin(roots[k]) + '"><path d="' + d +
+                            '"/><path class="aid-fish-ray" d="' + rays[k] + '"/></g>')
              .join('') +
-         '<path class="aid-fish-tailfin" data-part="tail" style="transform-origin:' +
-         origin(tail.root) + '" d="' + tail.d + '" fill="' + fill + '"/>' +
-         '<path class="aid-fish-body" style="stroke:none" d="' + fishPath(sizes, false) +
-         '" fill="' + fill + '"/><path class="aid-fish-skin" d="' + fishPath(sizes, false, true) +
-         '"/>' + gut + brainSvg() + headSvg(state) + felt + organs;
+         '<g class="aid-fish-tailfin" data-part="tail" style="transform-origin:' +
+         origin(tail.root) + '"><path d="' + tail.d + '" fill="' + fill +
+         '"/><path class="aid-fish-ray" d="' + tail.rays + '"/></g>' +
+         '<path class="aid-fish-body" style="stroke:none" d="' + body + '" fill="' + fill +
+         '"/><linearGradient id="aid-fish-shade" gradientUnits="userSpaceOnUse" x1="0" y1="' +
+         (M - S.reach) + '" x2="0" y2="' + (M + S.reach) + '"><stop offset="0" ' +
+         'stop-color="#fff" stop-opacity="' + S.flank + '"/><stop offset=".5" stop-color="#000" ' +
+         'stop-opacity="' + S.back + '"/><stop offset="1" stop-color="#fff" stop-opacity="' +
+         S.flank + '"/></linearGradient><path class="aid-fish-shade" d="' + body +
+         '" fill="url(#aid-fish-shade)"/><path class="aid-fish-skin" d="' +
+         fishPath(sizes, false, true) + '"/>' + gut + brainSvg() + headSvg(state) + felt + organs;
 }

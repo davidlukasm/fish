@@ -56,10 +56,12 @@
 .aid-tools button.active{background:#b6cda9;color:#123039}
 .aid-tools-divider{height:1px;background:#507078;width:26px;margin:5px 0}
 .aid-canvas-ground{fill:transparent}
-.aid-fish-body{stroke:var(--aid-fish-line);stroke-width:3.2;fill-opacity:.9}
+.aid-fish-body{stroke:var(--aid-fish-line);stroke-width:3.2}
 .aid-fish-skin{fill:none;stroke:var(--aid-fish-line);stroke-width:3.2;pointer-events:none}
 .aid-fish-tailfin{stroke:var(--aid-fish-line);stroke-width:3.2;fill-opacity:.82;stroke-linejoin:round}
-.aid-fish-fin{fill:#3a8380aa;stroke:var(--aid-fin-line);stroke-width:3}
+.aid-fish-fin{fill:#3a8380aa;stroke:var(--aid-fin-line);stroke-width:3;stroke-linejoin:round}
+.aid-fish-ray{fill:none;stroke:var(--aid-fin-line);stroke-width:1.2;stroke-opacity:.4;stroke-linecap:round}
+.aid-fish-shade{pointer-events:none}
 .aid-anatomical-eye{fill:#adceb8;stroke:#d6eee0;stroke-width:3}
 .aid-anatomical-pupil{fill:var(--aid-pupil);stroke:#f2f4de;stroke-width:2}
 .aid-anatomical-ovary{fill:#a8683a55;stroke:#f1c08c;stroke-width:2}
@@ -615,10 +617,11 @@
 /* An eye's cell nodes lie close: each takes clicks on itself alone. */
 .aid-organ-hits .aid-retina-node{stroke-width:2px}
 /* The place in the head where all brain regions lie. */
-.aid-brain{pointer-events:none;opacity:.55}
-.aid-brain-part,.aid-brain-cord{fill:#d9c6c9;stroke:#f2e4e4;stroke-width:1.6;vector-effect:non-scaling-stroke}
-.aid-brain-part.tectum{fill:#cdb9c6}
-.aid-brain-part.cerebellum,.aid-brain-part.diencephalon{fill:#e2cfcf}
+.aid-brain{pointer-events:none;opacity:.82}
+.aid-brain-edge{fill:#f3e6e4;stroke:#f3e6e4;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.aid-brain-body{fill:url(#aid-brain-cylinder)}
+.aid-brain-lobe{fill:url(#aid-brain-lobe);stroke:#a3888f;stroke-opacity:.45;stroke-width:1.2;vector-effect:non-scaling-stroke}
+.aid-brain-fissure{fill:none;stroke:#a3888f;stroke-opacity:.5;stroke-width:1.2;stroke-linecap:round;vector-effect:non-scaling-stroke}
 /* A stimulus: the network it reached stays marked, the rest stands back. */
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
