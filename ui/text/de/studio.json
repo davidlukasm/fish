@@ -819,7 +819,7 @@
       "short": "kurz · Fleisch",
       "long": "lang · Pflanzen",
       "handle": "Ziehen: Länge des Darms",
-      "noMuscle": "Die Länge des Darms trägt in der Engine der Schlund: Mit einem Schlund lässt sie sich hier einstellen."
+      "addThroat": "+ Schlund: trägt die Darmlänge"
     },
     "spines": {
       "title": "Schutz rundum",

@@ -1539,6 +1539,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
                                               torus.document);
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
+    // A gut without a throat to carry its length offers one.
+    const effectorsView = await import('../ui/studio/view/effectors.js');
+    const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
+    assert.ok(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone)
+                  .includes('data-add-throat'));
     const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
     const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});

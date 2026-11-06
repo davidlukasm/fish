@@ -45,6 +45,7 @@ import {
   EYE,
   eyeLocation,
   eyeRadius,
+  gutShape,
   INSIDE,
   lateralLine,
   NODE,
@@ -98,8 +99,6 @@ const GLYPH = Object.freeze({
   ovary : {sac : [ 24, 17 ], egg : 4.2, eggs : [ 4, 12 ], turn : 2.4},
   testis : {sac : [ 26, 11 ], streaks : 3, gap : 5, length : 30, wave : 3, quarter : 4},
   bladder : [ 39, 24 ],
-  gut_wave : 20,
-  gut_steps : 96,
   blood : [ 8, 13 ],
   blood_step : 15,
   gland : [ 16, 11 ],
@@ -300,17 +299,25 @@ function skinSenseSvg(organ, sites) {
       })
       .join('');
 }
-// The gut coils back through the belly in as many loops as the engine and the Aquarium give its
-// length.
+// The gut from the throat to the vent (gutShape), its intestine in as many loops as the engine
+// and the Aquarium give its length: the gullet and the intestine as one tube, the stomach as a
+// sac on it.
 function gutPath(state) {
-  const G = GLYPH, [ front, back ] = INSIDE.gut;
   const turns = gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle);
-  const points = Array.from({length : G.gut_steps + 1}, (_, k) => {
-    const t = k / G.gut_steps;
-    return fixed(front + (back - front) * t) + ' ' +
-           fixed(BODY_FRAME.middle + G.gut_wave * Math.sin(2 * Math.PI * turns * t));
-  });
-  return '<path class="aid-anatomical-gut" d="M' + points.join(' L') + '"/>';
+  const G = gutShape(turns), S = INSIDE.gut.stomach;
+  const line = points => 'M' + points.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L');
+  return '<path class="aid-anatomical-gut" d="' + line(G.gullet) + ' ' + line(G.intestine) +
+         '"/><ellipse class="aid-anatomical-stomach" cx="' + S.x + '" cy="' + fixed(G.stomach.y) +
+         '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
+}
+// The gut takes clicks on its stomach and intestine, not on the gullet under the brain.
+function gutHit(state) {
+  const G = gutShape(
+            gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle)),
+        S = INSIDE.gut.stomach;
+  return '<path class="aid-gut-hit" d="M' +
+         G.intestine.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L') + '"/><ellipse cx="' + S.x +
+         '" cy="' + fixed(G.stomach.y) + '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
 }
 // A brain region: a soft hull around its nodes, REGION.pad wider than they lie apart.
 // A region's hull around its nodes, its symbol at the hull's upper left (BADGE: radius, icon
@@ -554,10 +561,12 @@ export function organHitsSvg(state) {
   const drawnEyes = new Set();
   let html = '';
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
-    if (organ.type === 'gut' || organ.type === 'brain')
+    if (organ.type === 'brain')
       continue;
     const glyph = isRegion(organ) ? regionBadge(state, organ)
-                                  : organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
+                  : organ.type === 'gut'
+                      ? gutHit(state)
+                      : organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (glyph)
       html +=
           '<g class="aid-organ-hit" data-organ="' + escapeText(organ.id) + '">' + glyph + '</g>';
@@ -567,19 +576,23 @@ export function organHitsSvg(state) {
 export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
-  let organs = '', felt = '';
-  // The gut and the skin's pigment cells lie under the other organs.
-  const order = [...state.document.organs ].sort(
-      (a, b) => (b.type === 'gut') - (a.type === 'gut') || SKIN_FIRST(a, b));
-  for (const organ of order) {
+  let organs = '', gut = '', felt = '';
+  // The gut lies under the brain, its gullet beneath it; the skin's pigment cells under the other
+  // organs.
+  for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
     felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
-    if (glyph)
-      organs +=
-          '<g class="aid-anatomical-organ' +
-          (state.selected?.kind === 'organ' && state.selected.id === organ.id ? ' selected' : '') +
-          '" data-organ="' + escapeText(organ.id) + '"><title>' +
-          escapeText(organTitle(organ, state.sites)) + '</title>' + glyph + '</g>';
+    if (!glyph)
+      continue;
+    const drawn =
+        '<g class="aid-anatomical-organ' +
+        (state.selected?.kind === 'organ' && state.selected.id === organ.id ? ' selected' : '') +
+        '" data-organ="' + escapeText(organ.id) + '"><title>' +
+        escapeText(organTitle(organ, state.sites)) + '</title>' + glyph + '</g>';
+    if (organ.type === 'gut')
+      gut += drawn;
+    else
+      organs += drawn;
   }
   // Fins and the tail fin are drawn apart from the body, each to beat about its root.
   const tail = tailFin(sizes), roots = finRoots(),
@@ -593,5 +606,5 @@ export function bodySvg(state) {
          origin(tail.root) + '" d="' + tail.d + '" fill="' + fill + '"/>' +
          '<path class="aid-fish-body" style="stroke:none" d="' + fishPath(sizes, false) +
          '" fill="' + fill + '"/><path class="aid-fish-skin" d="' + fishPath(sizes, false, true) +
-         '"/>' + brainSvg() + headSvg(state) + felt + organs;
+         '"/>' + gut + brainSvg() + headSvg(state) + felt + organs;
 }

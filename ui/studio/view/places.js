@@ -88,22 +88,45 @@ function regionPoint(organ, index, sites) {
   };
 }
 // The inside of the body as the Atelier lays it out, a plan rather than where the engine's cells
-// sit (as for the eyes, the brain and the muscles): behind the brain, beside the spinal cord, the
-// heart, where the blood sense reads the blood, and the swim bladder across from it; then the gut
-// coiling back through the belly (GUT, from and to), the eggs on one side of it and the sperm on
-// the other; the glands in a row along both flanks, from FRONT, STEP apart, D off the midline
-// but SKIN inside the skin at least. Further blood senses stand STACK apart behind the first. An
-// organ's nodes stand NODE apart around its place, the gut's along it.
+// sit (as for the eyes, the brain and the muscles): the gut on side +1, from the throat under the
+// brain (THROAT) into the stomach (STOMACH: its middle off the midline, its radii), then the
+// intestine coiling back in as many loops as its length gives (COILS: from, to, off the midline
+// and WAVE either way) to the vent (VENT); beside it the blood sense, where it reads the blood
+// at the heart; across on side -1 the swim bladder, the eggs and the sperm; the glands in a row
+// along both flanks, from FRONT, STEP apart, D off the midline but SKIN inside the skin at least.
+// Further blood senses stand STACK apart behind the first. An organ's nodes stand NODE apart
+// around its place, the gut's on the stomach (its fullness) and along the intestine's middle.
 export const INSIDE = Object.freeze({
-  blood : {x : 610, d : 40},
-  bladder : {x : 650, d : -46},
-  gut : [ 700, 800 ],
-  eggs : {x : 708, d : -50},
-  sperm : {x : 734, d : 50},
+  blood : {x : 548, d : 88},
+  bladder : {x : 610, d : -48},
+  gut : {
+    throat : 240,
+    stomach : {x : 600, d : 44, rx : 34, ry : 22},
+    coils : {from : 640, to : 790, d : 40, wave : 20},
+    vent : {x : 815, d : 12},
+    steps : 96
+  },
+  eggs : {x : 690, d : -50},
+  sperm : {x : 752, d : -40},
   glands : {front : 600, step : 46, d : 86, skin : 26},
   stack : 28,
   node : 16
 });
+// The gut's way from the throat to the vent: the gullet, the stomach, the intestine coiling in
+// `turns` loops; the stomach's middle and a point along the intestine (from 0 to 1).
+export function gutShape(turns) {
+  const G = INSIDE.gut, M = BODY_FRAME.middle, S = G.stomach, C = G.coils;
+  const stomach = {x : S.x, y : M + S.d};
+  const coil = t => (
+      {x : C.from + (C.to - C.from) * t, y : M + C.d + C.wave * Math.sin(2 * Math.PI * turns * t)});
+  const intestine = Array.from({length : G.steps + 1}, (_, k) => coil(k / G.steps));
+  return {
+    gullet : [ {x : G.throat, y : M}, {x : S.x - S.rx, y : stomach.y} ],
+    stomach,
+    intestine : [ {x : S.x + S.rx, y : stomach.y}, ...intestine, {x : G.vent.x, y : M + G.vent.d} ],
+    along : coil
+  };
+}
 const INNER_TYPES = Object.freeze([ 'blood', 'bladder', 'gut', 'eggs', 'sperm', 'gland' ]);
 const hasHome = type => INNER_TYPES.includes(type);
 // Where an inner organ lies in the plan; the k-th gland or blood sense of the design by its
@@ -111,7 +134,7 @@ const hasHome = type => INNER_TYPES.includes(type);
 function innerHome(doc, organ) {
   const I = INSIDE, middle = BODY_FRAME.middle;
   if (organ.type === 'gut')
-    return {x : (I.gut[0] + I.gut[1]) / 2, y : middle};
+    return {x : I.gut.stomach.x, y : middle + I.gut.stomach.d};
   if (organ.type === 'gland') {
     // A gland on a side takes the next place on that side, one on the midline the next free one.
     const glands = doc.organs.filter(o => o.type === 'gland'),
@@ -132,11 +155,12 @@ function innerHome(doc, organ) {
 // Where the index-th node of an inner organ stands: along the gut, around the others' places.
 function innerPoint(doc, organ, index) {
   const home = innerHome(doc, organ), count = organ.centers.length;
-  if (organ.type === 'gut')
-    return {
-      x : INSIDE.gut[0] + (INSIDE.gut[1] - INSIDE.gut[0]) * (index + .5) / Math.max(1, count),
-      y : home.y
-    };
+  if (organ.type === 'gut') {
+    const C = INSIDE.gut.coils, t = (index + .5) / Math.max(1, count);
+    return organ.centers[index]?.key === 'fullness'
+               ? home
+               : {x : C.from + (C.to - C.from) * t, y : BODY_FRAME.middle + C.d};
+  }
   if (count < 2)
     return home;
   const angle = 2 * Math.PI * index / count - Math.PI / 2;

@@ -452,7 +452,9 @@ export function gutGraphic(state, organ, selected) {
           part(food, dots) +
           namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
                      label('gut.handle'), [ label('gut.short'), label('gut.long') ]),
-      (length === null ? '<p class="aid-hint">' + escapeText(label('gut.noMuscle')) + '</p>' : '') +
+      (length === null
+           ? '<button class="aid-add" data-add-throat>' + label('gut.addThroat') + '</button>'
+           : '') +
           dietChart(state, 'gut', organ));
 }
 
