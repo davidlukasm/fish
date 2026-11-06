@@ -7,7 +7,7 @@ import {percent, t} from '../../strings.js';
 import {libraryOf, toolPalette} from './library.js';
 import {label} from './kit.js';
 import {GENOME_SUFFIX} from '../requests.js';
-import {LAYER_KEYS, layerShown} from './layers.js';
+import {LAYER_KEYS, layerMode, layerShown} from './layers.js';
 
 // The studio's frame: the hub that leads to the aquarium and the atelier, and the atelier's
 // station with its header, library, scene and inspector.
@@ -93,6 +93,15 @@ function stationHeader(s) {
 }
 // The file input that opens a genome and the CPPN's scene, by their ids.
 export const GENOME_FILE_ID = 'aid-genome-file', CPPN_SCENE_ID = 'aid-cppn-scene';
+// A view switch: its dot filled while what it switches shows; set to follow the tool, the dot is
+// ringed by a dashed circle and the switch says so.
+function layerSwitch(s, key) {
+  const mode = layerMode(s, key), shown = layerShown(s, key);
+  return button('data-layer="' + key + '" data-layer-mode="' + mode + '" aria-pressed="' + shown +
+                    '" title="' + label('layers.mode.' + mode) + '"',
+                label('layers.' + key), {active : shown});
+}
+export const layerSwitches = s => LAYER_KEYS.map(key => layerSwitch(s, key)).join('');
 // The scene of the fish with its view options, or the CPPN's graph.
 function stationStage(s, cppn) {
   if (cppn)
@@ -110,12 +119,7 @@ function stationStage(s, cppn) {
                       {active : s.wireScope === 'all'}) +
                button('data-network="focus"', label('tools.focusedNetwork'),
                       {active : s.wireScope === 'focus'})) +
-         group(LAYER_KEYS
-                   .map(key => button('data-layer="' + key + '" aria-pressed="' +
-                                          layerShown(s, key) + '"',
-                                      label('layers.' + key), {active : layerShown(s, key)}))
-                   .join(''),
-               label('layers.title'), 'aid-layer-switches') +
+         group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
          '</div></div><div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
          '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' + zoomStamp(s.camera) +
          '</span></div>';

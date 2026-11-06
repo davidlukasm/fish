@@ -1635,14 +1635,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(wheelBack.q1 - .4) < 1e-9 && Math.abs(wheelBack.q2 + .3) < 1e-9);
     const learningView = await import('../ui/studio/view/learning.js');
     // What the scene shows by tool and zoom: zoomed out no single nodes anywhere, wires while
-    // wiring but not while moving things; a switch for a tool stays with that tool.
+    // wiring but not while moving things, the hormones' marks with the hormone tool; a switch
+    // goes from automatic to on, off and back, and holds in every tool.
     const layersView = await import('../ui/studio/view/layers.js');
     const far = {tool : 'wire', camera : {zoom : .5}, layers : {}};
     assert.ok(!layersView.layerShown(far, 'nodes') && layersView.layerShown(far, 'wires'));
     assert.ok(!layersView.layerShown({...far, tool : 'select'}, 'wires'));
-    const kept = {...far, layers : layersView.switchLayer(far, 'nodes')};
-    assert.ok(layersView.layerShown(kept, 'nodes'));
-    assert.ok(!layersView.layerShown({...kept, tool : 'learn'}, 'nodes'));
+    assert.ok(layersView.layerShown({...far, tool : 'hormone'}, 'hormones') &&
+              !layersView.layerShown(far, 'hormones'));
+    const on = {...far, layers : layersView.switchLayer(far, 'nodes')};
+    assert.ok(layersView.layerShown(on, 'nodes') &&
+              layersView.layerShown({...on, tool : 'learn'}, 'nodes'));
+    const off = {...far, layers : layersView.switchLayer(on, 'nodes')};
+    assert.ok(!layersView.layerShown({...off, camera : {zoom : 3}}, 'nodes'));
+    assert.equal(
+        layersView.layerMode({...far, layers : layersView.switchLayer(off, 'nodes')}, 'nodes'),
+        layersView.AUTO);
     // A learning cell's rate and way each have a track; the middle of the way is neutral.
     assert.ok(Math.abs(learningView.learnModePatch(.5).mode) < 1e-9);
     assert.ok(learningView.learnRatePatch(1).qwidth === 1 &&

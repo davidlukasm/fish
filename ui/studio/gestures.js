@@ -73,8 +73,10 @@ export const gestureMethods = {
     // What the scene shows may change with the zoom (layers.js).
     const shown = zoom =>
         LAYER_KEYS.map(key => layerShown({...this.state, camera : {...c, zoom}}, key)).join();
-    if (shown(previous) !== shown(c.zoom))
+    if (shown(previous) !== shown(c.zoom)) {
       this.refreshScene();
+      this.refreshSwitches();
+    }
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = zoomStamp(c);

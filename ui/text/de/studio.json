@@ -67,7 +67,13 @@
   "layers": {
     "title": "Anzeige",
     "wires": "Verbindungen",
-    "nodes": "Knoten"
+    "nodes": "Knoten",
+    "hormones": "Hormone",
+    "mode": {
+      "auto": "Automatisch: je nach Werkzeug",
+      "true": "An",
+      "false": "Aus"
+    }
   },
   "sections": {
     "brain": "Gehirn und Schaltkreise",

@@ -51,6 +51,7 @@ import {
   GENOME_FILE_ID,
   headerStatus,
   hubShell,
+  layerSwitches,
   stationShell
 } from './view/shell.js';
 import {measureReading} from './view/substances.js';
@@ -258,7 +259,14 @@ export class OrganStudio {
     this.clearPreview();
     this.refreshTools();
     this.showArmed();
+    this.refreshSwitches();
     this.refreshViews();
+  }
+  // The view switches follow the tool and the zoom where they are set to.
+  refreshSwitches() {
+    const switches = this.root.querySelector('.aid-layer-switches');
+    if (switches)
+      switches.innerHTML = layerSwitches(this.state);
   }
   // The library offers organs to place, with the hormone tool the substances and what they do,
   // with the learning tool the cells and substances learning needs.

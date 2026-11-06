@@ -1,5 +1,5 @@
 import {fishOutline} from './body.js';
-import {nodeLocation} from './places.js';
+import {nodeLocation, organLocation, showsNodes} from './places.js';
 import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
 import {BODY_SIGNAL, EFFECT_ICON, PHASE_ICON, TEACH_ICON} from './icons.js';
@@ -26,6 +26,7 @@ import {
 } from '../model/document.js';
 import {pathTo} from './wires.js';
 import {steadyAt, zoomOf} from './frame.js';
+import {layerShown} from './layers.js';
 
 // Where a substance acts, with the hormone tool: the glands that release it, the cells that bind
 // it and learn from it, and the ways between them; with the learning tool a center's teachers.
@@ -47,13 +48,11 @@ const HORMONE_GLYPH = Object.freeze({
   above : 1.9,
   faintest : .28
 });
-// Symbols in a row above the glyph (below it, `under`).
-const symbolsAbove = (paths, r, under = false) => {
+const symbolsAbove = (paths, r) => {
   const G = HORMONE_GLYPH, step = G.symbol + G.symbol_gap;
   return paths
-      .map((path, k) => placedGlyph(
-               path, G.symbol,
-               {x : (k - (paths.length - 1) / 2) * step, y : (under ? 1 : -1) * r * G.above}))
+      .map((path, k) => placedGlyph(path, G.symbol,
+                                    {x : (k - (paths.length - 1) / 2) * step, y : -r * G.above}))
       .join('');
 };
 // The way from the nearest gland to a receiver bows CURVE more than a wire, at least FAINTEST
@@ -66,14 +65,13 @@ function hormoneGlyph(item, kind, color, zoom) {
                           Array.from({length : G.puffs}, () => '<circle r="' + r + '"/>').join('') +
                           '</g>'
                     : '';
-  const symbols =
-      kind === 'receiver'
-          ? symbolsAbove(item.icons ?? (item.effects ?? [])
-                                           .map(e => item.teach && e === HORMONE_EFFECT.excitation
-                                                         ? TEACH_ICON
-                                                         : EFFECT_ICON[e]),
-                         r, item.under)
-          : '';
+  const symbols = kind === 'receiver'
+                      ? symbolsAbove((item.effects ?? [])
+                                         .map(e => item.teach && e === HORMONE_EFFECT.excitation
+                                                       ? TEACH_ICON
+                                                       : EFFECT_ICON[e]),
+                                     r)
+                      : '';
   // A receiver plays what its strongest-placed effect does (EFFECT_ORDER), as the guide does.
   const acts = kind === 'receiver'
                    ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.excitation
@@ -176,15 +174,16 @@ function teachingOverlay(state) {
 }
 const EXCITES = HORMONE_EFFECT.excitation;
 export function hormoneOverlay(state) {
-  if (state.tool === 'learn')
-    return teachingOverlay(state);
   const {document : doc, sites, capabilities} = state;
-  if (state.tool !== 'hormone')
-    return '';
-  const substance = doc.substances.find(s => s.index === state.focusSubstance);
+  const substance =
+      state.tool === 'hormone' ? doc.substances.find(s => s.index === state.focusSubstance) : null;
+  const marks = layerShown(state, 'hormones') ? hormoneMarks(state, substance?.index ?? null) : '';
+  const overlay = html =>
+      html ? '<g class="aid-hormone-overlay" pointer-events="none">' + html + '</g>' : '';
+  if (state.tool === 'learn')
+    return teachingOverlay(state) + overlay(marks);
   if (!substance)
-    return '<g class="aid-hormone-overlay" pointer-events="none">' + bodySignals(state) +
-           otherSubstances(state) + '</g>';
+    return overlay(marks);
   const color = substanceColor(substance.index);
   const zoom = zoomOf(state);
   const sources = [], targets = [];
@@ -234,48 +233,46 @@ export function hormoneOverlay(state) {
          worded(sources, zoom)
              .map(source => hormoneGlyph(source, 'producer', color, zoom))
              .join('') +
-         targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') +
-         bodySignals(state) + otherSubstances(state) + '</g>';
+         targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + marks +
+         '</g>';
 }
-// Whatever else a cell answers to shows on it as well: a life phase on the body's maturity as a
-// ring in the body signals' colour with its symbols below; each other substance it binds as a
-// dot in that substance's colour beside it (DOT wide, STEP apart, from AFTER its glyph out).
-const OTHER = Object.freeze({dot : 3.5, step : 8, after : 18});
-function bodySignals(state) {
-  const {document : doc, sites} = state, zoom = zoomOf(state);
+// What the hormones do to the cells shows on the fish (the view's hormone switch): below each node
+// a row of marks, one in each substance's colour that it binds, and for a life phase on the
+// body's maturity its symbol in the body signals' colour; while an organ's nodes are not shown,
+// the marks of all of them below the organ. The hormone tool marks the substance it shows in full
+// instead. Marks MARK wide, STEP apart, BELOW the node.
+const MARK = Object.freeze({dot : 4, step : 10, below : 17, symbol : 10});
+function cellMarks(state, centers, skip) {
+  const {document : doc, capabilities} = state;
+  const substances = doc.substances.filter(
+      s => s.index !== skip && centers.some(c => boundEffects(c, s.index, capabilities).length));
+  const phases = [ 'start', 'end' ].filter(k => centers.some(c => lifePhase(c)[k] !== null));
+  return [
+    ...substances.map(s => ({colour : substanceColor(s.index)})),
+    ...phases.map(k => ({colour : BODY_SIGNAL, icon : PHASE_ICON[k]}))
+  ];
+}
+function hormoneMarks(state, skip = null) {
+  const {document : doc, sites} = state, zoom = zoomOf(state), M = MARK;
+  const mark = (m, x) => m.icon ? '<g style="--hormone:' + m.colour + '">' +
+                                      placedGlyph(m.icon, M.symbol, {x, y : M.below}) + '</g>'
+                                : '<circle cx="' + fixed(x) + '" cy="' + M.below + '" r="' + M.dot +
+                                      '" fill="' + m.colour + '"/>';
+  const row = (pos, marks) =>
+      marks.length
+          ? '<g class="aid-hormone-marks"' + steadyAt(pos, zoom) + '>' +
+                marks.map((m, k) => mark(m, (k - (marks.length - 1) / 2) * M.step)).join('') +
+                '</g>'
+          : '';
   return doc.organs
-      .flatMap(organ => organ.centers.map(center => {
-        const phase = lifePhase(center);
-        const icons = [ 'start', 'end' ].filter(k => phase[k] !== null).map(k => PHASE_ICON[k]);
-        return icons.length ? hormoneGlyph({
-          pos : nodeLocation(doc, sites, center, organ.type),
-          affinity : 1,
-          icons,
-          under : true
-        },
-                                           'receiver', BODY_SIGNAL, zoom)
-                            : '';
-      }))
+      .map(organ =>
+               showsNodes(state, [ organ ])
+                   ? organ.centers
+                         .map(c => row(nodeLocation(doc, sites, c, organ.type),
+                                       cellMarks(state, [ c ], skip)))
+                         .join('')
+                   : row(organLocation(organ, sites, doc), cellMarks(state, organ.centers, skip)))
       .join('');
-}
-function otherSubstances(state) {
-  const {document : doc, sites, capabilities} = state, zoom = zoomOf(state), O = OTHER;
-  const others = doc.substances.filter(s => s.index !== state.focusSubstance);
-  let html = '';
-  for (const organ of doc.organs)
-    for (const center of organ.centers) {
-      const bound = others.filter(s => boundEffects(center, s.index, capabilities).length);
-      if (!bound.length)
-        continue;
-      html += '<g class="aid-hormone-others"' +
-              steadyAt(nodeLocation(doc, sites, center, organ.type), zoom) + '>' +
-              bound
-                  .map((s, k) => '<circle cx="' + (O.after + k * O.step) + '" r="' + O.dot +
-                                 '" fill="' + substanceColor(s.index) + '"/>')
-                  .join('') +
-              '</g>';
-    }
-  return html;
 }
 // With the hormone tool, the focused substance's glands and receiving centers carry its colour;
 // after a measurement, centers whose mean activity changed by more than MEASURED_CHANGE.
