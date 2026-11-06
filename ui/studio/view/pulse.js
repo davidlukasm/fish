@@ -13,12 +13,14 @@ import {clamp, SECOND_MS} from '../../units.js';
 // modulating one either way); any other signal fades there. A part answers once, to the first
 // signal that reaches it. Effectors twitch as they fire, firing parts light up, quieted ones
 // pulse in the inhibiting colour and darken, and all stay marked. The drawing paces the way at
-// SPEED frame units a second, each leg LEAST to MOST milliseconds long, a fading signal FADE, a
-// withdrawn one a TRAIL long.
-// A part counts as rising or falling by its first clear swing: the first step its swing reaches
-// CLEAR of its largest, which the CUTOFF must reach at all.
+// SPEED frame units a second, each leg LEAST to MOST milliseconds long (a hormone's BLOOD times
+// slower, its cloud THINNING as it spreads), a fading signal FADE, a withdrawn one a TRAIL long. A
+// part counts as rising or falling by its first clear swing: the first step its swing reaches CLEAR
+// of its largest, which the CUTOFF must reach at all.
 const NS = 'http://www.w3.org/2000/svg';
 export const SIGNAL = Object.freeze({
+  blood : 1.6,
+  thinning : .7,
   cutoff : .04,
   clear : .5,
   speed : 120,
@@ -71,7 +73,9 @@ export function legStages(link) {
       .map(lines => ({lines, length : Math.max(...lines.map(lineLength))}));
 }
 // How long a signal takes along a link's whole way.
-const linkDuration = link => duration(legStages(link).reduce((sum, s) => sum + s.length, 0));
+const linkDuration = link => duration(legStages(link).reduce((sum, s) => sum + s.length, 0)) *
+                             (link.kind === HORMONE ? SIGNAL.blood : 1);
+const HORMONE = 'hormone';
 // How the probe's `frames` (per step the swing of each part from its rest) found a part made of
 // the probe's parts `indices`: 'rise', 'fall' or null, by the part that swings most. A part
 // pushed down may swing back past its rest afterwards; it still counts as falling.
@@ -111,8 +115,11 @@ export function signalSchedule(starts, links, response) {
       continue;
     done.add(key);
     const sends = parts.get(key).mode;
-    for (const link of links.filter(l => l.from === key && l.to !== key)) {
-      const push = PUSH[sends][link.kind] ?? null, answer = response(link.to, push);
+    // A gland quieted releases nothing.
+    for (const link of links.filter(l => l.from === key && l.to !== key &&
+                                         (l.kind !== HORMONE || sends === 'fire'))) {
+      const push = link.kind === HORMONE ? link.push : PUSH[sends][link.kind] ?? null;
+      const answer = response(link.to, push);
       const end = time + linkDuration(link),
             answers = answer && (push === null || answer === push) ? ANSWER_MODE[answer] : null;
       legs.push({link, start : time, end, sends, answers});
@@ -140,6 +147,19 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   const signal = (leg, points) => {
     const size =
         SIGNAL.radius[0] + (SIGNAL.radius[1] - SIGNAL.radius[0]) * (leg.link.strength ?? 1);
+    if (leg.link.kind === HORMONE) {
+      if (!leg.link.wave)
+        return {points, quiet : true};
+      const wave = document.createElementNS(NS, 'circle');
+      wave.setAttribute('class', 'aid-hormone-wave');
+      wave.setAttribute('cx', String(points[0].x));
+      wave.setAttribute('cy', String(points[0].y));
+      wave.setAttribute('r', '0');
+      wave.setAttribute('opacity', '0');
+      wave.style.setProperty('--hormone', leg.link.colour);
+      overlay.appendChild(wave);
+      return {points, wave, length : lineLength(points)};
+    }
     if (leg.sends === 'fire') {
       const dot = document.createElementNS(NS, 'circle');
       dot.setAttribute('class', 'aid-signal-particle');
@@ -160,7 +180,12 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
   // A dot sits a fraction along its line; a trail runs from before its line's start until its
   // tail has left the line's end.
   const place = (line, along) => {
-    if (line.dot) {
+    if (line.quiet)
+      return;
+    if (line.wave) {
+      line.wave.setAttribute('r', String(clamp(along) * line.length));
+      line.wave.style.opacity = String(1 - SIGNAL.thinning * clamp(along));
+    } else if (line.dot) {
       const at = signalPoint(line.points, clamp(along));
       line.dot.setAttribute('cx', String(at.x));
       line.dot.setAttribute('cy', String(at.y));
@@ -169,7 +194,8 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
                               String(SIGNAL.trail - clamp(along) * (line.length + SIGNAL.trail)));
   };
   const show = (line, visible) =>
-      (line.dot ?? line.trail).setAttribute('opacity', visible ? '1' : '0');
+      line.quiet ||
+      (line.wave ?? line.dot ?? line.trail).setAttribute('opacity', visible ? '1' : '0');
   // Each leg runs its stages one after the other, each over its share of the leg's time by its
   // length.
   const legs = schedule.legs.map(leg => {
@@ -262,7 +288,25 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
       if (leg.link.kind === 'modulate' && leg.sends === 'fire')
         for (const element of marks(leg.link.to))
           element.classList.add('aid-pulse-tuned');
+      if (leg.link.kind === HORMONE) {
+        const end = leg.link.points.at(-1), shown = document.createElementNS(NS, 'g');
+        shown.setAttribute('class', 'aid-hormone-arrival');
+        shown.setAttribute('transform', 'translate(' + end.x + ' ' + end.y + ')');
+        shown.innerHTML = leg.link.mark;
+        overlay.appendChild(shown);
+        item.shown = shown;
+        for (const element of marks(leg.link.to)) {
+          element.classList.add('aid-pulse-hormone');
+          element.style.setProperty('--hormone', leg.link.colour);
+        }
+      }
     }
+    if (item.shown)
+      item.shown.setAttribute('opacity',
+                              String(Math.max(0, 1 - (elapsed - leg.end) / SIGNAL.glow)));
+    for (const {wave} of stages.at(-1)?.lines ?? [])
+      if (wave)
+        wave.setAttribute('opacity', String(Math.max(0, 1 - (elapsed - leg.end) / SIGNAL.fade)));
     const fade = (elapsed - leg.end) / SIGNAL.fade;
     for (const {dot} of stages.at(-1)?.lines ?? [])
       if (dot) {
@@ -270,7 +314,7 @@ export function createSignalPlayer(svg, schedule, {marks, moves, reached}) {
           colour(dot, 'fade');
         dot.setAttribute('opacity', String(Math.max(0, 1 - fade)));
       }
-    if (fade >= 1)
+    if (fade >= 1 && (!item.shown || elapsed - leg.end >= SIGNAL.glow))
       item.state = 'done';
   };
   const draw = now => {

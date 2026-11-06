@@ -16,6 +16,7 @@ import {label} from './view/kit.js';
 import {signalLinks} from './view/wires.js';
 import {API_WAIT, requestBody} from './requests.js';
 import {builtAsDrawn} from './view/stimulus.js';
+import {hormoneLegs} from './view/influence.js';
 
 // Trials on the developed fish: a stimulus runs through the network the design wires and the
 // engine reports which parts answered; a measurement doses a substance and reports what it changes.
@@ -82,18 +83,20 @@ export const trialMethods = {
   wireMarks(id) {
     return [...this.bodyMap()?.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]') ?? [] ];
   },
-  // What shows a part of the network: an organ's glyph, a nerve center's node.
+  // A node not drawn shows through its organ.
   stimulusMarks(key) {
     const svg = this.bodyMap();
     if (!svg)
       return [];
     const escaped = CSS.escape(key);
-    return [
+    const marks = [
       ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-anatomy [data-center="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
     ];
+    const owner = marks.length ? null : findCenter(this.state.document, key)?.organ;
+    return owner && owner.type !== 'brain' ? this.stimulusMarks(owner.id) : marks;
   },
   // A stimulus runs as a preview along the drawn wires; once the fish is built as drawn, through
   // its developed brain as the engine's probe finds it. Nothing is built for it. In the built fish
@@ -176,7 +179,7 @@ export const trialMethods = {
       return kept.some(Boolean) ? [ {...link, starts : link.starts.filter((_, i) => kept[i])} ]
                                 : [];
     });
-    const schedule = signalSchedule(starts, links, response);
+    const schedule = signalSchedule(starts, [...links, ...hormoneLegs(this.state) ], response);
     // The wires a signal ran along stay marked, those only a quieted part withdrew from apart.
     const stimulus =
         alongside ? this.state.stimulus

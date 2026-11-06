@@ -18,12 +18,14 @@ import {
   learners,
   lifePhase,
   LEARNING_EFFECTS,
+  learnsAtAll,
   NOTICEABLE_AFFINITY,
   producers,
   receivers,
   receptorAffinity,
   teachersOf,
-  wheelAffinity
+  wheelAffinity,
+  wholeEndpoint
 } from '../model/document.js';
 import {pathTo} from './wires.js';
 import {steadyAt, zoomOf} from './frame.js';
@@ -288,4 +290,59 @@ export function hormoneRoles(state) {
         roles.set(c.id, 'dies');
     });
   return roles;
+}
+
+// Hormones travel through the blood, not along wires: a leg from each gland to each cell its
+// substance binds on; only an effect on firing pushes the cell, so the signal can run on there.
+export function hormoneLegs(state) {
+  const {document : doc, sites, capabilities} = state;
+  if (!capabilities)
+    return [];
+  const at = center => {
+    const found = findCenter(doc, center.id);
+    return nodeLocation(doc, sites, found.center, found.organ.type);
+  };
+  const legs = new Map();
+  for (const substance of doc.substances)
+    for (const gland of producers(doc, substance.index, capabilities))
+      for (const cell of receivers(doc, substance.index, capabilities)) {
+        const from = wholeEndpoint(doc, gland.id), to = wholeEndpoint(doc, cell.id);
+        const key = from + '>' + to + '>' + substance.index;
+        if (from === to || legs.has(key))
+          continue;
+        const effects = boundEffects(cell, substance.index, capabilities);
+        const directions = effects.map(e => effectDirection(e, cell.receptors[e]));
+        const firing = directions[effects.indexOf(HORMONE_EFFECT.excitation)] ?? 0;
+        const colour = substanceColor(substance.index);
+        legs.set(key, {
+          from,
+          to,
+          kind : 'hormone',
+          colour,
+          points : [ at(gland), at(cell) ],
+          push : firing > 0   ? 'rise'
+                 : firing < 0 ? 'fall'
+                              : null,
+          mark : '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
+                     symbolsAbove(
+                         effects.map((e, k) => ({
+                                       path : learnsAtAll(cell) && e === EXCITES ? TEACH_ICON
+                                                                                 : EFFECT_ICON[e],
+                                       direction : directions[k]
+                                     })),
+                         HORMONE_GLYPH.receiver) +
+                     '</g>'
+        });
+      }
+  // Legs from one gland share one cloud, drawn by the longest.
+  const reach = leg =>
+      Math.hypot(leg.points[1].x - leg.points[0].x, leg.points[1].y - leg.points[0].y);
+  const farthest = new Map();
+  for (const leg of legs.values()) {
+    const key = leg.from + '>' + leg.colour;
+    if (!farthest.has(key) || reach(leg) > reach(farthest.get(key)))
+      farthest.set(key, leg);
+  }
+  return [...legs.values() ].map(
+      leg => ({...leg, wave : farthest.get(leg.from + '>' + leg.colour) === leg}));
 }

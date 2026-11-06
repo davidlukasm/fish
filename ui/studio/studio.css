@@ -680,6 +680,9 @@
 .aid-signal-withdrawn{fill:none;stroke:var(--aid-inhibit);stroke-linecap:round;filter:drop-shadow(0 0 4px var(--aid-inhibit));pointer-events:none}
 #aid-body-map.aid-stimulus-view .aid-pulse-withdrawn .aid-wire-ink{stroke:var(--aid-inhibit);stroke-dasharray:6 5}
 #aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}
+#aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--hormone))}
+.aid-hormone-wave{fill:var(--hormone);fill-opacity:.06;stroke:var(--hormone);stroke-opacity:.6;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
+.aid-hormone-arrival{pointer-events:none}
 /* Effectors move when a stimulus reaches them: the tail fin beats, a side fin strokes, the jaw
    bites, the throat sucks. */
 .aid-move-tail{animation:aid-tail-beat .42s ease-in-out 3}
