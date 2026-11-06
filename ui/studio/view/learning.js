@@ -206,7 +206,6 @@ function teacherList(state, center, modulators) {
                : '<p class="aid-hint">' + label('learnRule.noTeacher') + '</p>';
 }
 const NODE_MARK = Object.freeze({marker : 6, box : 8});
-// Every learner of the fish with who teaches it, each a way into its own settings.
 function learnersOverview(state) {
   const doc = state.document, shown = new Set();
   const learners = allCenters(doc).filter(c => {

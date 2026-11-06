@@ -293,7 +293,6 @@ export function slotsSection(state, organ) {
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
-// Who teaches the region's learners, set for all of them at once.
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);
   if (!learners.length)

@@ -585,7 +585,6 @@ export function organHitsSvg(state) {
   }
   return '<g class="aid-organ-hits">' + html + '</g>';
 }
-// Chosen itself, or one of several organs chosen together or as a module.
 function organChosen(state, organ) {
   const {selected} = state, own = id => id === organ.id || (!!organ.pair && id === organ.pair);
   return selected?.kind === 'organ' && selected.id === organ.id ||
