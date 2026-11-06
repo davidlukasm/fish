@@ -1,4 +1,10 @@
-import {nearAnswers, sensitivityEditor, spectrumEditor, visionFan} from './view/vision.js';
+import {
+  clearOfFish,
+  nearAnswers,
+  sensitivityEditor,
+  spectrumEditor,
+  visionFan
+} from './view/vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
@@ -63,8 +69,10 @@ export const designMethods = {
     if (!organ.field || !this.state.capabilities)
       return;
     const side = sideOf(organ), probe = this.state.sightProbe;
-    const moved = probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
-                        : defaultSight(organ, this.state.capabilities, this.state.anatomy);
+    const moved =
+        clearOfFish(this.state, organ,
+                    probe ? probe.side !== side && {...probe, side, bearing : -probe.bearing}
+                          : defaultSight(organ, this.state.capabilities, this.state.anatomy));
     if (moved) {
       this.state.sightProbe = moved;
       this.requestDesign();

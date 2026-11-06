@@ -16,29 +16,47 @@ import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/d
 import {fedBy, regionPlan} from '../model/regions.js';
 import {EYE, eyeRadius, fieldOrigin} from './places.js';
 import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
-import {BODY_RADIUS, sideIndex, sideOf, sideSign} from '../model/layout.js';
+import {
+  BODY_FRAME,
+  BODY_MIDDLE,
+  BODY_RADIUS,
+  sideIndex,
+  sideOf,
+  sideSign
+} from '../model/layout.js';
 import {planOfUnit, unitOfPlan} from '../../tuning.js';
-import {finSizes, fishPath, steadyAt, zoomOf} from './frame.js';
+import {finSizes, fishPath, skinAt, SNOUT_TIP, steadyAt, zoomOf} from './frame.js';
 
 const label = key => t('studio.vision.' + key);
 // The test light's size knob, in frame units.
 const LIGHT_KNOB = 6;
 // A field reaches as deep as the grown fish sees, like the fans in the Aquarium. Its rays run from
-// the eye drawn at its side, outside the fish and outside a circle around the eye, the cut, which
-// reaches CUT.margin past the eye's glyph. Its handles lie on rings around the eye, the edges'
-// HANDLE.reach past the cut and at least HANDLE.radius out.
+// where the engine's eye looks from, which lies elsewhere in the fish than the eye drawn at its
+// side, but it shows only outside the fish and outside a circle around the drawn eye, the cut,
+// which reaches CUT.margin past the eye's glyph and past the engine's eye. Its handles lie on
+// rings around the drawn eye, the edges' HANDLE.reach past the cut and at least HANDLE.radius out.
 const HANDLE = Object.freeze({radius : 235, reach : 150, hint : 1.7});
 const CUT = Object.freeze({margin : 10});
 // Field handles: the resolution handle RESOLUTION_REACH of the way from the cut to the edges'
 // ring, density rings DENSITY_STEP apart from DENSITY_START past the cut.
 const FIELD = Object.freeze(
     {resolution_reach : .77, density_start : 14, density_step : 7, density_max : 16, mark : 7});
+// Where the engine's eye of a side looks from (anatomy.eyePlaces: body radii along the body and
+// across it), in frame units; null before the design view answers.
+function enginePlace(anatomy, side) {
+  const place = anatomy?.eyePlaces?.[sideIndex(side)];
+  return place ? {
+    x : BODY_MIDDLE.x - place[0] * BODY_RADIUS,
+    y : BODY_MIDDLE.y + place[1] * BODY_RADIUS
+  }
+               : null;
+}
 const distance = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 export function visionGeometry(state, organ) {
   const eye = fieldOrigin(state.document, state.sites, organ);
   if (!eye)
     return null;
-  const a = state.anatomy, origin = eye;
+  const a = state.anatomy, origin = enginePlace(a, sideOf(organ)) ?? eye;
   const g = {
     origin,
     eye,
@@ -413,6 +431,27 @@ export function visionInspector(state, organ) {
          section('spectrum', spectrumEditor(state, organ, p)) +
          section('sensitivity', sensitivityEditor(state, organ, p)) + section('sight', sightEyes());
 }
+// The test light lies where the engine sees it, from where the engine's eye looks; it shows
+// only outside the fish and outside the cut round the drawn eye. A light that would lie within
+// either moves out along its bearing, a STEP of the cut at a time, at most as far as the eye sees.
+const CLEAR = Object.freeze({step : .25});
+export function clearOfFish(state, organ, probe) {
+  const g = visionGeometry(state, organ), range = state.capabilities?.visionRange;
+  if (!g || !g.world || !probe || !(range > 0))
+    return probe;
+  const hidden = d => {
+    const c = g.pointText(probe.bearing, d * g.world), r = probe.radius * g.world;
+    const onSkin =
+        Math.abs(c.y - BODY_FRAME.middle) - r <
+        Math.abs(skinAt(c.x, Math.sign(c.y - BODY_FRAME.middle) || 1) - BODY_FRAME.middle);
+    return distance(c, g.eye) < g.cut + r ||
+           (c.x + r > SNOUT_TIP.x && c.x - r < BODY_FRAME.tail && onSkin);
+  };
+  let d = probe.distance;
+  while (hidden(d) && d < range)
+    d = Math.min(range, d + g.cut * CLEAR.step / g.world);
+  return d === probe.distance ? probe : {...probe, distance : d};
+}
 export function visionDragPatch(state, organ, key, p) {
   const g = visionGeometry(state, organ);
   if (!g)
@@ -452,13 +491,12 @@ export function visionDragPatch(state, organ, key, p) {
     const unit = (ring - g.cut) / (g.handle - g.cut);
     return {profile : {id : profile.id, q2 : planOfUnit(clamp(unit, 0, 1))}};
   }
-  // The test light stays outside the eye's cut.
   if (key === 'probe')
-    return {
+    return clearOfFish(state, organ, {
+      ...state.sightProbe,
       bearing : angle,
-      distance : clamp(Math.hypot(dx, dy) / g.world,
-                       (g.cut + (state.sightProbe?.radius ?? 0) * g.world) / g.world, range)
-    };
+      distance : clamp(Math.hypot(dx, dy) / g.world, 0, range)
+    });
   if (key === 'probe-size' && state.sightProbe) {
     const c = g.pointText(state.sightProbe.bearing, state.sightProbe.distance * g.world);
     return {radius : clamp(Math.hypot(p.x - c.x, p.y - c.y) / g.world, least, most)};

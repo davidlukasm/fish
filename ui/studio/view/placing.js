@@ -217,7 +217,14 @@ export function choicesSvg(state, choices, nearest) {
     }
   if (!nearest)
     return html;
-  const view = {...state, document : nearest.document, selected : null};
+  // Where the engine's eyes look from is known for the design shown only: the field of a moved
+  // organ starts at its drawn place.
+  const view = {
+    ...state,
+    document : nearest.document,
+    selected : null,
+    anatomy : state.anatomy && { ...state.anatomy, eyePlaces: null }
+  };
   for (const organ of movedFieldOrgans(state, nearest)) {
     const seat = seatOf(state, nearest, organ);
     html += visionFan(view, organ);
