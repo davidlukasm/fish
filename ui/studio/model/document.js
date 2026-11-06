@@ -15,11 +15,13 @@ import {
   organFunction,
   ORGAN_BY_KEY,
   PAIRINGS,
-  ROLE
+  ROLE,
+  siteRole
 } from './organs.js';
 import {
   centroid,
   findSite,
+  NERVE_ROLE,
   nerveZone,
   onMidline,
   pointDistance,
@@ -272,7 +274,7 @@ function candidates(desc, sites, used, position, requiredSide = null, organType 
                       (ORGAN_BY_KEY[organType] ? fitsOrgan(organType, desc, site)
                                                : eligible(desc, site)) &&
                       (requiredSide === null || site.side === requiredSide))
-      .map(site => ({site, distance : pointDistance(site, position, organType)}))
+      .map(site => ({site, distance : pointDistance(site, position, siteRole(organType))}))
       .sort((a, b) => a.distance - b.distance);
 }
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
@@ -326,7 +328,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
         used.add(mirror.id);
     }
   const first = closestSite(definition.centers[0], sites, new Set(), position, null, type);
-  if (!first || pointDistance(first, position, type) > snapDistance)
+  if (!first || pointDistance(first, position, siteRole(type)) > snapDistance)
     return null;
   const existing =
       matchingOrgan(draft, type, first.side, sites, functionFor(definition.centers[0], first));
@@ -441,7 +443,7 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
   const desc =
       {key : preset, role : 'nerve', functionCode : -1, copies : NEURON_COPIES, surface : 'any'};
   const site = closestSite(desc, sites.filter(nerveZone), used, position, null, 'brain');
-  if (!site || pointDistance(site, position, 'brain') > snapDistance)
+  if (!site || pointDistance(site, position, NERVE_ROLE) > snapDistance)
     return null;
   const draft = copy(doc);
   const center = {...defaults(desc, site), ...properties};
@@ -470,9 +472,9 @@ export function moveCenterToSide(doc, centerId, side, sites) {
                     (side === 0 ? onMidline(s) : s.side === side && !onMidline(s));
   const candidates = sites.filter(fits);
   const near = candidates.filter(s => s.zone === here.zone);
-  const target =
-      (near.length ? near : candidates)
-          .sort((a, b) => pointDistance(a, sitePoint(here)) - pointDistance(b, sitePoint(here)))[0];
+  const target = (near.length ? near : candidates)
+                     .sort((a, b) => pointDistance(a, sitePoint(here, NERVE_ROLE), NERVE_ROLE) -
+                                     pointDistance(b, sitePoint(here, NERVE_ROLE), NERVE_ROLE))[0];
   return target ? moveCenter(doc, centerId, target.id, sites) : null;
 }
 // A field organ dragged turns its field by FIELD_SHIFT degrees per frame unit along and out.
@@ -495,7 +497,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   const currentSites = original.centers.map(center => findSite(sites, center.site));
   if (currentSites.some(site => !site))
     return null;
-  const anchor = sitePoint(currentSites[0], organ.type);
+  const role = siteRole(organ.type), anchor = sitePoint(currentSites[0], role);
   const target = pointerOrigin ? {
     x : anchor.x + position.x - pointerOrigin.x,
     y : anchor.y + position.y - pointerOrigin.y
@@ -503,13 +505,13 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
                                : position;
   const first = closestSite(organ.centers[0], sites, used, target, organ.pair ? organ.side : null,
                             organ.type);
-  if (!first || pointDistance(first, target, organ.type) > snapDistance)
+  if (!first || pointDistance(first, target, role) > snapDistance)
     return null;
-  const fixed = sitePoint(first, organ.type);
+  const fixed = sitePoint(first, role);
   const sideFlip = currentSites[0].side === first.side ? 1 : -1;
   for (let index = 0; index < organ.centers.length; ++index) {
     const center = organ.centers[index];
-    const old = currentSites[index], current = sitePoint(old, organ.type);
+    const old = currentSites[index], current = sitePoint(old, role);
     const wanted = {
       x : fixed.x + current.x - anchor.x,
       y : fixed.y + (current.y - anchor.y) * sideFlip
@@ -518,7 +520,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     const site = index === 0 ? first
                              : closestSiteDoing(center, functionFor(center, first), sites, used,
                                                 wanted, old.side * sideFlip, organ.type);
-    if (!site || pointDistance(site, wanted, organ.type) > snapDistance)
+    if (!site || pointDistance(site, wanted, role) > snapDistance)
       return null;
     center.site = site.id;
     used.add(site.id);
@@ -529,7 +531,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     organ.region.site = first.id;
   if (original.linked && original.pair) {
     const other = findOrgan(draft, original.pair);
-    const from = sitePoint(findSite(sites, other.centers[0].site), other.type);
+    const from = sitePoint(findSite(sites, other.centers[0].site), siteRole(other.type));
     other.linked = false;
     const moved = moveOrgan(draft, other.id, sites,
                             {x : from.x + fixed.x - anchor.x, y : from.y - fixed.y + anchor.y},
@@ -572,7 +574,7 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
       const used = usedSites(draft);
       const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
       const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
-      const at = own.map(c => sitePoint(findSite(sites, c.site), organ.type));
+      const at = own.map(c => sitePoint(findSite(sites, c.site), siteRole(organ.type)));
       const middle = centroid(at);
       const site = mirror && !used.has(mirror.id)
                        ? mirror
@@ -751,10 +753,11 @@ export function addOrganType(doc, organId, sites, tuning = {}) {
     const used = usedSites(draft);
     const partner = organ === twin ? main.centers.at(-1) : null;
     const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
-    const site = mirror && !used.has(mirror.id)
-                     ? mirror
-                     : closestSiteDoing(first, functionFor(first, home), sites, used,
-                                        sitePoint(home, organ.type), home.side, organ.type);
+    const site =
+        mirror && !used.has(mirror.id)
+            ? mirror
+            : closestSiteDoing(first, functionFor(first, home), sites, used,
+                               sitePoint(home, siteRole(organ.type)), home.side, organ.type);
     if (!site)
       return null;
     organ.centers.push(

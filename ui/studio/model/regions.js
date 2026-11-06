@@ -1,6 +1,6 @@
 import {NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
 import {HALF_VIEW, bearing} from './retina.js';
-import {findSite, sitePoint} from './layout.js';
+import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
   allCenters,
   closestSite,
@@ -346,7 +346,7 @@ export function settleRegions(doc, sites) {
     const wanted = new Set(plan.nodes.map(n => regionNodeId(organ, n.node)));
     const used = usedSites(draft, c => c.organId !== organ.id || wanted.has(c.id));
     const home = findSite(sites, organ.region.site);
-    const near = home ? sitePoint(home) : null;
+    const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
     // Where sites run short, what the region passes on comes first, then what it takes in.
     const rank = n => n.port === 'out' ? 0 : n.port === 'in' ? 1 : 2;

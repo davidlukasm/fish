@@ -611,7 +611,10 @@
 /* An eye's cell nodes lie close: each takes clicks on itself alone. */
 .aid-organ-hits .aid-retina-node{stroke-width:2px}
 /* The place in the head where all brain regions lie. */
-.aid-brain-place{fill:#e6efd626;stroke:#d8e6d499;stroke-width:1.5;stroke-dasharray:5 4;pointer-events:none}
+.aid-brain{pointer-events:none;opacity:.55}
+.aid-brain-part,.aid-brain-cord{fill:#d9c6c9;stroke:#f2e4e4;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.aid-brain-part.tectum{fill:#cdb9c6}
+.aid-brain-part.cerebellum,.aid-brain-part.diencephalon{fill:#e2cfcf}
 /* A stimulus: the network it reached stays marked, the rest stands back. */
 #aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}

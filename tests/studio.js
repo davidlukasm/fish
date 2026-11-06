@@ -1523,7 +1523,24 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(free && !held.has(free.id) && functionFor(muscle, free) === MOTOR_KIND.forward,
               'The nearest free place doing the work asked for');
     const regionTarget = views.placementTarget(model.newDocument(''), 'tectum', {x : 300, y : 330});
-    assert.equal(regionTarget.snap, Infinity, 'A region goes to its home from any distance');
+    assert.deepEqual(regionTarget.position, {x : 300, y : 330},
+                     'A region goes to the free places in the brain nearest to where it is put');
+    // Nerve centers stand in the drawn brain: a free node put on the tectum stays there, a region
+    // put there clusters around the place it took.
+    const brainPlaces = await import('../ui/studio/view/places.js');
+    const lobe = brainPlaces.BRAIN.parts.find(p => p.key === 'tectum');
+    const onLobe = {x : lobe.x, y : 365 - lobe.d};
+    const node = model.addNeuron(model.newDocument('Knoten'), 'relay', sites, onLobe, 60);
+    const nodeAt = brainPlaces.centerLocation(model.findCenter(node.document, node.centerId).center,
+                                              'brain', sites);
+    assert.ok(Math.hypot(nodeAt.x - onLobe.x, nodeAt.y - onLobe.y) < 60,
+              'A node stays in the brain');
+    const torus = model.addOrgan(model.newDocument('Torus'), 'torus', sites, onLobe);
+    const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
+                                              torus.document);
+    assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
+    const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
+    assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
     const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
     assert.deepEqual(freeTarget.position, {x : 300, y : 330});
     // A selection becomes a module; ungrouping keeps its parts.

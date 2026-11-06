@@ -26,16 +26,16 @@ import {
 // (through the excitation receptor, the engine's teacher besides modulating cells) and raises the
 // learning rate, so what led to food is learnt.
 //
-// Where its organs lie in the body frame, by name.
+// Where its organs lie in the body frame, by name (the regions in the drawn brain).
 const PLACES = Object.freeze({
   eye : [ 'eye', 360, 300 ],
   nose : [ 'nose', 245, 425 ],
-  tectum : [ 'tectum', 330, 340 ],
-  bulb : [ 'olfactory', 260, 380 ],
-  pallium : [ 'pallium', 520, 345 ],
-  spinal : [ 'spinal', 870, 365 ],
+  tectum : [ 'tectum', 390, 321 ],
+  bulb : [ 'olfactory', 262, 409 ],
+  pallium : [ 'pallium', 300, 321 ],
+  spinal : [ 'spinal', 700, 381 ],
   lateral : [ 'lateral', 573, 300 ],
-  hindbrain : [ 'hindbrain', 690, 400 ],
+  hindbrain : [ 'hindbrain', 520, 405 ],
   fin : [ 'muscle', 600, 470 ],
   tail : [ 'muscle', 890, 350 ],
   bite : [ 'muscle', 195, 335 ],
@@ -44,7 +44,7 @@ const PLACES = Object.freeze({
   sperm : [ 'sperm', 760, 395 ],
   growth : [ 'gland', 260, 351 ],
   gut : [ 'gut', 780, 357 ],
-  hypothalamus : [ 'hypothalamus', 420, 365 ],
+  hypothalamus : [ 'hypothalamus', 336, 365 ],
   reward : [ 'gland', 470, 383 ]
 });
 // Organs and regions are wired as wholes, the gut by its food node alone; the hypothalamus, one

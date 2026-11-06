@@ -61,15 +61,17 @@ import {organTitle} from './names.js';
 // The engine's fish spans about its body diameter from snout to tail root, so the abstract fish
 // is two body radii long; fields of view and test lights are drawn at that scale.
 
-// The outline runs smoothly through the middles between its points, bending at each.
-function brainOutline() {
-  const M = BODY_FRAME.middle, upper = BRAIN.outline.map(([ x, h ]) => [x, M - h]);
-  const lower = [...BRAIN.outline ].reverse().map(([ x, h ]) => [x, M + h]);
-  const ring = [...upper, ...lower ], mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const at = p => fixed(p[0]) + ' ' + fixed(p[1]);
-  let d = 'M' + at(mid(ring.at(-1), ring[0]));
-  ring.forEach((p, k) => { d += ' Q' + at(p) + ' ' + at(mid(p, ring[(k + 1) % ring.length])); });
-  return d + 'Z';
+// The brain from above: its parts, each side's mirrored, and the spinal cord tapering back.
+function brainSvg() {
+  const M = BODY_FRAME.middle, C = BRAIN.cord;
+  const part = (p, side) => '<ellipse class="aid-brain-part ' + p.key + '" cx="' + p.x + '" cy="' +
+                            (M + side * p.d) + '" rx="' + p.rx + '" ry="' + p.ry + '"/>';
+  const parts = BRAIN.parts.map(p => p.d ? part(p, -1) + part(p, 1) : part(p, 1)).join('');
+  const cord = 'M' + C.from + ' ' + (M - C.half[0]) + ' L' + C.to + ' ' + (M - C.half[1]) + ' Q' +
+               (C.to + C.half[1]) + ' ' + M + ' ' + C.to + ' ' + (M + C.half[1]) + ' L' + C.from +
+               ' ' + (M + C.half[0]) + 'Z';
+  return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
+         '</title><path class="aid-brain-cord" d="' + cord + '"/>' + parts + '</g>';
 }
 function retinaNodes(state, organs) {
   const zoom = zoomOf(state);
@@ -591,7 +593,5 @@ export function bodySvg(state) {
          origin(tail.root) + '" d="' + tail.d + '" fill="' + fill + '"/>' +
          '<path class="aid-fish-body" style="stroke:none" d="' + fishPath(sizes, false) +
          '" fill="' + fill + '"/><path class="aid-fish-skin" d="' + fishPath(sizes, false, true) +
-         '"/>' +
-         '<path class="aid-brain-place" d="' + brainOutline() + '"><title>' +
-         escapeText(t('studio.organs.brain')) + '</title></path>' + headSvg(state) + felt + organs;
+         '"/>' + brainSvg() + headSvg(state) + felt + organs;
 }

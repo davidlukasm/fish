@@ -1,6 +1,7 @@
 import {HALF_VIEW, latticeBearing, retinalBins} from './retina.js';
 import {addOrgan, findOrgan, updateField} from './document.js';
 import {sitePoint, ZONE} from './layout.js';
+import {siteRole} from './organs.js';
 
 // Organs with a field of view (eyes, the near sense) have no place of their own: their field
 // decides which head sites their cells take, and the body seats the organ where those cells lie.
@@ -36,7 +37,7 @@ export function newFieldPlacements(doc, type, sites) {
       anchors.set(latticeBearing(site), site);
   const result = [];
   for (const site of anchors.values()) {
-    const placed = addOrgan(doc, type, sites, sitePoint(site, type));
+    const placed = addOrgan(doc, type, sites, sitePoint(site, siteRole(type)));
     if (placed && findOrgan(placed.document, placed.organId)?.field)
       result.push({document : placed.document, organId : placed.organId});
   }

@@ -1,6 +1,6 @@
 import {ATELIER_LIMITS} from '../../schema.js';
-import {MODULES, ORGAN_BY_KEY} from './organs.js';
-import {centroid, findSite, onMidline, pointDistance, sitePoint} from './layout.js';
+import {MODULES, ORGAN_BY_KEY, siteRole} from './organs.js';
+import {centroid, findSite, NERVE_ROLE, onMidline, pointDistance, sitePoint} from './layout.js';
 import {settleRegions} from './regions.js';
 import {
   addNeuron,
@@ -97,7 +97,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   const members = assemblyCenters(doc, assembly);
   const points = members.map(id => {
     const c = findCenter(doc, id);
-    return sitePoint(findSite(sites, c.center.site), c.organ.type);
+    return sitePoint(findSite(sites, c.center.site), siteRole(c.organ.type));
   });
   if (!points.length)
     return null;
@@ -109,7 +109,7 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
     if (moved.has(id))
       continue;
     const organ = findOrgan(draft, id), c = organ.centers[0];
-    const from = sitePoint(findSite(sites, c.site), organ.type);
+    const from = sitePoint(findSite(sites, c.site), siteRole(organ.type));
     draft = moveOrgan(draft, id, sites, {x : from.x + dx, y : from.y + dy}, snapDistance, from);
     if (!draft)
       return null;
@@ -118,10 +118,10 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
       moved.add(organ.pair);
   }
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
-    const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site));
+    const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site), NERVE_ROLE);
     const used = usedSites(draft, c => c.id !== id);
-    const site = closestSite(c, sites, used, {x : from.x + dx, y : from.y + dy});
-    if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}) > snapDistance)
+    const site = closestSite(c, sites, used, {x : from.x + dx, y : from.y + dy}, null, 'brain');
+    if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}, NERVE_ROLE) > snapDistance)
       return null;
     draft = moveCenter(draft, id, site.id, sites);
     if (!draft)
@@ -214,7 +214,7 @@ function storedOrgans(module, sites) {
 function placeStoredNeurons(draft, original, sites, offset, snapDistance, mapping) {
   const ids = [];
   for (const previous of original.centers) {
-    const at = offset(sitePoint(findSite(sites, previous.site), 'brain'));
+    const at = offset(sitePoint(findSite(sites, previous.site), NERVE_ROLE));
     const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
     if (!placed)
       return null;
@@ -230,7 +230,7 @@ function placeStoredNeurons(draft, original, sites, offset, snapDistance, mappin
 // nodes, a region its plan (its nodes take what was made of them), any other its nodes' settings
 // by kind. The new draft and the placed organ, or null.
 function placeStoredOrgan(doc, draft, original, sites, offset, snapDistance) {
-  const at = offset(sitePoint(findSite(sites, original.centers[0].site), original.type));
+  const at = offset(sitePoint(findSite(sites, original.centers[0].site), siteRole(original.type)));
   const added = addOrgan(draft, original.type, sites, at, snapDistance, false);
   if (!added || doc.organs.some(o => o.id === added.organId))
     return null;
@@ -265,7 +265,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
   if (!originals)
     return null;
   const source =
-      centroid(originals.map(o => sitePoint(findSite(sites, o.centers[0].site), o.type)));
+      centroid(originals.map(o => sitePoint(findSite(sites, o.centers[0].site), siteRole(o.type))));
   const bothSides = originals.some(o => originals.some(other => other.id === o.pair));
   const offset = p =>
       ({x : p.x + position.x - source.x, y : bothSides ? p.y : p.y + position.y - source.y});

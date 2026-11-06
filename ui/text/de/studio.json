@@ -138,9 +138,9 @@
     "secretion": "Ausschüttung",
     "relay": "Schalt­kreis",
     "inhibit": "Hemm­kreis",
-    "learn": "Lern­zentrum",
+    "learn": "Lern­kreis",
     "pacemaker": "Takt­geber",
-    "modulate": "Modulations­kreis"
+    "modulate": "Modulator"
   },
   "modulePurpose": {
     "vision-steering": "Die Augen speisen über Kreuz das Tectum, das die Lenkmuskeln treibt.",
@@ -771,7 +771,7 @@
     "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe verbinden.",
     "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
-    "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrer geben.",
+    "learn": "Lernen: eine Nervenzelle wählen und ihr eine Drüse als Lehrsignal geben.",
     "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",
     "develop": "Fisch entwickeln, das Ergebnis ansehen und die Eier ins Aquarium setzen."
   },
@@ -900,7 +900,7 @@
     "phaseStart": "arbeitet ab Reife",
     "phaseEnd": "stirbt ab Reife",
     "reserve": "Energie",
-    "reserveSense": "+ Blutsinn dafür",
+    "reserveSense": "+ Energie im Blut fühlen",
     "growthWith": "Wachstum des Körpers · {name}",
     "dropHint": "Wirkungen aus einer Stoffkarte auf ein Organ oder einen Knoten ziehen.",
     "noTarget": "Hier wirkt das nicht."
@@ -910,7 +910,7 @@
     "inputs": "Eingänge · {n}",
     "output": "Ausgang",
     "gain": "Lernfähigkeit {n} %",
-    "teachers": "Lehrer",
+    "teachers": "Lehrsignal",
     "modulator": "Modulator",
     "parts": [
       "Lehrsignal",
@@ -919,7 +919,7 @@
       "Merkspur"
     ],
     "byHormone": "Durch Hormone",
-    "noTeacher": "Noch kein Lehrer: einen Modulator verbinden oder mit dem Hormon-Werkzeug „erregt“ auf diese Zelle ziehen."
+    "noTeacher": "Noch kein Lehrsignal: einen Modulator verbinden oder mit dem Hormon-Werkzeug „erregt“ auf diese Zelle ziehen."
   },
   "compiler": {
     "title": "Bauprüfung",

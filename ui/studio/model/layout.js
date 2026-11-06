@@ -48,9 +48,31 @@ export const findSite = (sites, id) => sites.find(s => s.id === id);
 // trunk and the tail anchor the side fins and lie out in them, as far as the zone's entry says.
 const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75});
 const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 30});
+// Nerve centers are drawn in the brain as the Atelier draws it (NERVE_ROLE asks for that): the
+// engine's inner lattice from the snout to the tail laid into the brain from the olfactory bulbs
+// back and on along the spinal cord, each zone over its own stretch. A site stands as far back
+// from the zone's FRONT as its place along the zone (u, front first) puts it within LENGTH, a
+// little further by its height (v, over HEIGHT); a deep one (w) OUT off the midline, a midline
+// one (one on each side) MIDDLE off it on its side.
+export const NERVE_ROLE = 'nerve';
+export const BRAIN_MAP = Object.freeze({
+  [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, middle : 10},
+  [ZONE.head] : {front : 250, length : 150, height : 70, out : 44, middle : 12},
+  [ZONE.trunk] : {front : 440, length : 120, height : 60, out : 40, middle : 12},
+  [ZONE.tail] : {front : 620, length : 220, height : 40, out : 16, middle : 6}
+});
+const MIDDLE_HEIGHT = .5;
+const nerveSite = site => !site.outer && BRAIN_MAP[site.zone] !== undefined;
+function brainPoint(site) {
+  const M = BRAIN_MAP[site.zone];
+  return {
+    x : M.front + (1 - site.u) * M.length + (site.v - MIDDLE_HEIGHT) * M.height,
+    y : CENTRE_Y + sideSign(site.side) * (onMidline(site) ? M.middle : M.out)
+  };
+}
 export function sitePoint(site, role = '') {
-  if (site.point)
-    return site.point;
+  if (role === NERVE_ROLE && nerveSite(site))
+    return brainPoint(site);
   const [start, end] = ZONE_X[site.zone];
   const roughX = start + (1 - site.u) * (end - start);
   const x = roughX;

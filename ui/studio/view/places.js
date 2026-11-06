@@ -2,67 +2,90 @@ import {
   BODY_FRAME,
   centroid,
   findSite,
+  NERVE_ROLE,
   sideAt,
   sideOf,
   sideSign,
   sitePoint,
-  SNAP_DISTANCE
+  SNAP_DISTANCE,
+  ZONE
 } from '../model/layout.js';
-import {allCenters} from '../model/document.js';
 import {radians} from '../../units.js';
 import {skinAt, zoomOf} from './frame.js';
 import {bearing} from '../model/retina.js';
-import {isRegion} from '../model/organs.js';
+import {isRegion, siteRole} from '../model/organs.js';
 import {muscleNode} from './muscles.js';
 
-// Where the Atelier draws the organs and their nodes on its fixed fish: senses and nerve centers
-// on their sites, the eyes where the engine seats them, brain regions at their spots in the
-// drawn brain, muscles where they work and the inner organs in a plan of the belly. A dropped
-// organ goes to its home, if it has one.
+// Where the Atelier draws the organs and their nodes on its fixed fish: senses on their sites,
+// nerve centers (the brain's and its regions') on theirs in the drawn brain, the eyes where the
+// engine seats them, muscles where they work and the inner organs in a plan of the belly. A
+// dropped organ goes to its home, if it has one.
 // Where a center lies: on its site of the abstract frame.
 export function centerLocation(center, organType, sites) {
   const site = findSite(sites, center.site);
-  return site ? sitePoint(site, organType) : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
+  return site ? sitePoint(site, siteRole(organType))
+              : {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
 }
-// The brain as the Atelier draws it: one place in the head where all brain regions lie as in a
-// fish's brain seen from above, whatever sites their cells take in the engine (as the eyes and
-// the nose stand where a fish has them), and the spinal cord running from it along the body to
-// the tail. Each region has its spot (x along the fish, d off the midline towards its side), the
-// olfactory bulbs in front, the hypothalamus between the eyes, the tectum behind them, the
-// hindbrain at the back of the head; the spinal cord's rhythm lies along the cord, where the
-// engine's spinal cells are, its nodes STEP apart, inputs first. The head's spots keep inside of
-// where the eyes and their retinas lie and alternate between two lanes, so neighbouring regions
-// stay apart. Each region's nodes stand around it on an ellipse RING plus GROW per node wide
-// (ASPECT along and across), as a fish's brain runs: those taking its inputs on the front arc
-// (ARC each way from straight ahead), those sending its outputs on the outer side (SPREAD apart;
-// behind it for a region on the midline), the others inside, INNER of the way out, towards the
-// back. OUTLINE is the brain's half width along it, down to the cord.
+// The brain as the Atelier draws it, seen from above: on each side an olfactory bulb, a
+// telencephalon, an optic tectum and a medulla, on the midline the diencephalon and the
+// cerebellum, each an ellipse (x along the fish, d off the midline towards a side or on it, rx and
+// ry), and the spinal cord running from the medulla back towards the tail (CORD: from, to, its
+// half width at either end). The parts lie over the lattice the engine's nerve sites are drawn on
+// (BRAIN_MAP), so every nerve center stands in the brain or the cord.
 export const BRAIN = Object.freeze({
-  spots : {
-    olfactory : {x : 222, d : 20},
-    pallium : {x : 276, d : 54},
-    hypothalamus : {x : 318, d : 0},
-    tectum : {x : 362, d : 30},
-    torus : {x : 414, d : 52},
-    cerebellum : {x : 454, d : 18},
-    hindbrain : {x : 500, d : 48},
-    spinal : {x : 580, d : 9, step : 26}
-  },
+  parts : [
+    {key : 'bulb', x : 205, d : 24, rx : 22, ry : 20},
+    {key : 'telencephalon', x : 287, d : 38, rx : 48, ry : 32},
+    {key : 'diencephalon', x : 336, d : 0, rx : 30, ry : 24},
+    {key : 'tectum', x : 388, d : 40, rx : 50, ry : 38},
+    {key : 'torus', x : 452, d : 46, rx : 24, ry : 20},
+    {key : 'cerebellum', x : 470, d : 0, rx : 42, ry : 30},
+    {key : 'medulla', x : 522, d : 32, rx : 52, ry : 32}
+  ],
+  cord : {from : 560, to : 885, half : [ 26, 18 ]}
+});
+// A region stands as one cluster where it was put (its home site, drawn in the brain), whatever
+// sites its nodes take near it: its nodes around it on an ellipse RING plus GROW per node wide
+// (ASPECT along and across), those taking its inputs on the front arc (ARC each way from straight
+// ahead), those sending its outputs on the outer side (SPREAD apart), the others inside, INNER of
+// the way out, towards the back; in the spinal cord its nodes run along the cord STEP apart,
+// inputs first.
+const CLUSTER = Object.freeze({
   ring : 12,
   grow : 3.5,
   aspect : [ 1.25, .85 ],
   arc : Math.PI / 3,
   spread : Math.PI / 7,
   inner : .45,
-  outline : [
-    [ 186, 6 ], [ 196, 34 ], [ 230, 52 ], [ 276, 96 ], [ 318, 66 ], [ 362, 70 ], [ 414, 94 ],
-    [ 454, 62 ], [ 500, 90 ], [ 538, 52 ], [ 560, 20 ], [ 590, 14 ], [ 870, 11 ], [ 892, 3 ]
-  ]
+  step : 26
 });
-// A region's spot on a side (-1 or 1), where it is placed and drawn.
-function regionSpot(type, side) {
-  const spot = BRAIN.spots[type];
-  return spot ? {x : spot.x, y : BODY_FRAME.middle + side * spot.d} : null;
+const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
+function regionPoint(organ, index, sites) {
+  const C = CLUSTER, home = findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
+  if (!home)
+    return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
+  const at = sitePoint(home, NERVE_ROLE), side = sideOf(organ);
+  const center = organ.centers[index], port = center?.port ?? 'none';
+  if (home.zone === ZONE.tail) {
+    const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
+                                                     PORT_ORDER[b.port ?? 'none']);
+    return {x : at.x + order.indexOf(center) * C.step, y : at.y};
+  }
+  if (organ.centers.length < 2)
+    return at;
+  // Its place among the nodes of the same kind, from the outer end.
+  const kin = organ.centers.filter(c => (c.port ?? 'none') === port), rank = kin.indexOf(center);
+  const share = kin.length > 1 ? rank / (kin.length - 1) : .5;
+  const r = C.ring + C.grow * organ.centers.length;
+  // Angles in the drawing: 0 straight back, PI straight ahead, PI/2 times side out.
+  const angle = port === 'in'    ? Math.PI - side * C.arc * (1 - 2 * share)
+                : port === 'out' ? side * Math.PI / 2 + C.spread * (share - .5) * (kin.length - 1)
+                                 : C.spread * (share - .5) * (kin.length - 1) - side * C.spread;
+  const reach = port === 'none' ? r * C.inner : r;
+  return {
+    x : at.x + Math.cos(angle) * reach * C.aspect[0],
+    y : at.y + Math.sin(angle) * reach * C.aspect[1]
+  };
 }
 // The inside of the body as the Atelier lays it out, a plan rather than where the engine's cells
 // sit (as for the eyes, the brain and the muscles): behind the brain, beside the spinal cord, the
@@ -119,11 +142,9 @@ function innerPoint(doc, organ, index) {
   const angle = 2 * Math.PI * index / count - Math.PI / 2;
   return {x : home.x + Math.cos(angle) * INSIDE.node, y : home.y + Math.sin(angle) * INSIDE.node};
 }
-// The place an organ type takes when placed: a brain region its spot on the side it is placed
-// on, an inner organ the next place of its kind in the plan; none for the others.
-export function organHome(doc, type, side) {
-  if (BRAIN.spots[type])
-    return regionSpot(type, side);
+// The place an organ type takes when placed: an inner organ the next place of its kind in the
+// plan; none for the others.
+export function organHome(doc, type) {
   if (!hasHome(type))
     return null;
   const organ = {type, centers : []};
@@ -133,7 +154,7 @@ export function organHome(doc, type, side) {
 // engine's places nearest to it (a home on the midline serves both sides, so it gets no twin);
 // any other the places nearest to where it was dropped, within SNAP_DISTANCE.
 export function placementTarget(doc, type, position) {
-  const side = sideAt(position), home = organHome(doc, type, side);
+  const side = sideAt(position), home = organHome(doc, type);
   return home ? {position : home, snap : Infinity, paired : side !== 0}
               : {position, snap : SNAP_DISTANCE, paired : true};
 }
@@ -144,44 +165,14 @@ export function musclePoint(organ, index, sites) {
   return muscleNode(organ, index, sites) ?? (first ? centerLocation(first, organ.type, sites)
                                                    : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
 }
-const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
-function regionPoint(organ, index) {
-  const spot = BRAIN.spots[organ.type], B = BRAIN;
-  if (!spot)
-    return {x : BODY_FRAME.snout, y : BODY_FRAME.middle};
-  const middle = !organ.side, side = sideOf(organ), y = BODY_FRAME.middle + side * spot.d;
-  const center = organ.centers[index], port = center?.port ?? 'none';
-  if (spot.step) {
-    const order = [...organ.centers ].sort((a, b) => PORT_ORDER[a.port ?? 'none'] -
-                                                     PORT_ORDER[b.port ?? 'none']);
-    return {x : spot.x + order.indexOf(center) * spot.step, y};
-  }
-  if (organ.centers.length < 2)
-    return {x : spot.x, y};
-  // Its place among the nodes of the same kind, from the outer end.
-  const kin = organ.centers.filter(c => (c.port ?? 'none') === port), rank = kin.indexOf(center);
-  const share = kin.length > 1 ? rank / (kin.length - 1) : .5;
-  const r = B.ring + B.grow * organ.centers.length;
-  // Angles in the drawing: 0 straight back, PI straight ahead, PI/2 times side out.
-  const out = middle ? 0 : side * Math.PI / 2;
-  const angle = port === 'in' ? Math.PI - side * B.arc * (1 - 2 * share)
-                : port === 'out'
-                    ? out + B.spread * (share - .5) * (kin.length - 1)
-                    : B.spread * (share - .5) * (kin.length - 1) - (middle ? 0 : side * B.spread);
-  const reach = port === 'none' ? r * B.inner : r;
-  return {
-    x : spot.x + Math.cos(angle) * reach * B.aspect[0],
-    y : y + Math.sin(angle) * reach * B.aspect[1]
-  };
-}
-// Where an organ lies: amid its centers; a brain region at its place in the brain, an inner
-// organ at its place in the plan of the design `doc`.
+// Where an organ lies: amid its centers; an inner organ at its place in the plan of the design
+// `doc`.
 export function organLocation(organ, sites, doc) {
   if (hasHome(organ.type))
     return innerHome(doc, organ);
   if (organ.type === 'lateral')
     return lateralAnchor(doc, sites, organ);
-  const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i))
+  const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(organ, i, sites))
                     : organ.type === 'muscle'
                         ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
                         : organ.centers.map(c => centerLocation(c, organ.type, sites));
@@ -233,8 +224,7 @@ export const EYE =
 // ahead sits at the back, one looking out at the inner side. Each colour type has its own arc,
 // NODE.ring times the eye's size for the first and NODE.layer more for each further one. Shown
 // while the eye is chosen, a tool works on nodes, or from NODE.zoom on.
-export const NODE =
-    Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35, spread : 13});
+export const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5, zoom : 1.35});
 const NODE_TOOLS = Object.freeze([ 'wire', 'hormone', 'learn', 'stimulate', 'erase' ]);
 export const nodesAtZoom = zoom => zoom >= NODE.zoom;
 export function showsNodes(state, organs) {
@@ -243,9 +233,8 @@ export function showsNodes(state, organs) {
          ids.has(state.selected?.id) || organs.some(o => state.multi?.has(o.id));
 }
 // Where a node of an organ is drawn: an eye's cells on their colour type's arc behind the eye,
-// opposite their bearing; other nodes on their site. Nerve centers whose sites are drawn at the
-// same point (they differ in depth alone) stand NODE.spread around it, each to be seen and
-// chosen.
+// opposite their bearing; a region's in its cluster; other nodes on their site (a nerve
+// center's in the brain).
 export function nodeLocation(doc, sites, center, organType) {
   const site = findSite(sites, center.site);
   if (organType === 'eye' && site) {
@@ -264,16 +253,9 @@ export function nodeLocation(doc, sites, center, organType) {
     if (index >= 0)
       return organType === 'muscle' ? musclePoint(organ, index, sites)
              : hasHome(organType)   ? innerPoint(doc, organ, index)
-                                    : regionPoint(organ, index);
+                                    : regionPoint(organ, index, sites);
   }
-  const p = centerLocation(center, organType, sites);
-  if (center.role !== 'nerve')
-    return p;
-  const together = sharedPoints(doc, sites).get(pointKey(p)) ?? [];
-  if (together.length < 2)
-    return p;
-  const angle = 2 * Math.PI * together.indexOf(center.id) / together.length;
-  return {x : p.x + Math.cos(angle) * NODE.spread, y : p.y + Math.sin(angle) * NODE.spread};
+  return centerLocation(center, organType, sites);
 }
 // The region, muscle or inner organ a node belongs to, looked up once per design.
 const OWNERS = new WeakMap();
@@ -288,22 +270,6 @@ function ownerOf(doc, centerId) {
     OWNERS.set(doc, owners);
   }
   return owners.get(centerId) ?? null;
-}
-// The nerve centers of a design by the point they are drawn at, worked out once per design.
-const pointKey = p => Math.round(p.x) + ':' + Math.round(p.y);
-const SHARED = new WeakMap();
-function sharedPoints(doc, sites) {
-  let points = SHARED.get(doc);
-  if (!points) {
-    points = new Map();
-    for (const c of allCenters(doc))
-      if (c.role === 'nerve' && !isRegion({type : c.organType})) {
-        const key = pointKey(centerLocation(c, c.organType, sites));
-        points.set(key, [...(points.get(key) ?? []), c.id ]);
-      }
-    SHARED.set(doc, points);
-  }
-  return points;
 }
 export function eyeRadius(doc, side) {
   const count = doc.organs.filter(o => o.type === 'eye' && sideOf(o) === side)

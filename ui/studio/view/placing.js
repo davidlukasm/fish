@@ -8,10 +8,10 @@ import {joinParts, tList} from '../../strings.js';
 import {
   eligible,
   functionFor,
-  isRegion,
   MODULES,
   MUSCLE_LABEL_INDEX,
-  ORGAN_BY_KEY
+  ORGAN_BY_KEY,
+  siteRole
 } from '../model/organs.js';
 import {findOrgan, usedSites} from '../model/document.js';
 import {BODY_FRAME, nerveZone, sideOf, sitePoint} from '../model/layout.js';
@@ -28,7 +28,7 @@ const HINT_RING = Object.freeze({radius : 9, width : 3, gap : 1.4});
 const HINT_SHADES = Object.freeze(
     [ '#82d5cb', '#ebbd7a', '#b99ddf', '#7eabe4', '#d4e18a', '#f19fa5', '#a6c5db', '#e0a6d2' ]);
 // An organ type without a home in the drawing looks for engine places of its own.
-const homeless = (doc, type) => !organHome(doc, type, 0);
+const homeless = (doc, type) => !organHome(doc, type);
 // The centers an item brings that look for places of their own: those of an organ without a
 // home, a nerve center, and those of a module's or a stored module's organs without homes.
 function seekingCenters(state, kind, value) {
@@ -59,15 +59,11 @@ function seekingCenters(state, kind, value) {
   }
   return found;
 }
-// An organ with a home in the drawing goes there, whatever engine places it takes: a brain
-// region to its spot on either side or on the midline (on the midline alone for one that serves
-// both sides), an inner organ to the next place of its kind.
+// An inner organ, with a home in the drawing, goes there, whatever engine places it takes: the
+// next place of its kind.
 function organHomes(state, kind, value) {
-  if (kind !== 'organ' || homeless(state.document, value))
-    return [];
-  const sides =
-      isRegion({type : value}) && ORGAN_BY_KEY[value].scope !== 'single' ? [ -1, 0, 1 ] : [ 0 ];
-  return sides.map(side => organHome(state.document, value, side));
+  return kind !== 'organ' || homeless(state.document, value) ? []
+                                                             : [ organHome(state.document, value) ];
 }
 // The places to show, each with the keys of what may go there; each key's colour and name; and
 // for a muscle's works, the stretch of the body its places span. The sites of an organ being
@@ -99,7 +95,7 @@ function hintPlaces(state, kind, value, moving) {
                  : types.size > 1 ? joinParts([ organTitle({type}), centerTitle(center) ])
                                   : centerTitle(center)
         });
-      const point = sitePoint(site, type);
+      const point = sitePoint(site, siteRole(type));
       const location = point.x + ':' + point.y;
       if (!sites.has(location))
         sites.set(location, {point, keys : new Set()});
