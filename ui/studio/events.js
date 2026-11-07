@@ -67,7 +67,7 @@ const ACTIONS = Object.freeze({
   home : studio => studio.navigate('hub'),
   aquarium : studio => studio.navigate('aquarium'),
   atelier : studio => studio.navigate('studio'),
-  new : studio => studio.changeDocument(newDocument(label('app.newFish'))),
+  new : studio => studio.loadFish(newDocument(label('app.newFish'))),
   example : studio => studio.example(),
   start : studio => studio.startFish(),
   check : studio => studio.checkCompiler(),
@@ -174,7 +174,7 @@ function wireItem(studio, kind, id) {
       return studio.notice(label('status.wired'));
   } else if (from) {
     if ((from.kind !== kind || from.id !== id) && studio.connectSelections(from, item))
-      return;
+      return studio.notice(label('status.wired'));
   } else if (selectionCenters(studio.state.document, item).length) {
     studio.pendingWire = {from : item};
     studio.state.selected = item;
@@ -187,7 +187,7 @@ function startSlotWire(studio, element) {
   const slot = {kind : 'organ', id : region};
   studio.pendingWire = out ? {from : slot} : {to : slot};
   studio.state.selected = {kind : 'organ', id : region};
-  studio.refreshScene();
+  studio.refreshViews();
   studio.notice(label(out ? 'status.slotOut' : 'status.slotIn'));
 }
 function moveMuscle(studio, element) {

@@ -382,11 +382,13 @@ export class OrganStudio {
     for (const id of [...this.state.multi])
       if (!findCenter(doc, id) && !findOrgan(doc, id))
         this.state.multi.delete(id);
+    this.pendingWire = null;
     this.designChanged();
     this.refreshScene();
     this.refreshHeader();
     this.refreshInspector();
     this.refreshTools();
+    this.refreshToolLibrary();
     this.requestDesign();
     return true;
   }
@@ -400,22 +402,41 @@ export class OrganStudio {
   changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false) {
     if (!doc)
       return false;
-    this.recordHistory(batch);
+    const next = validateDocument(settleRegions(doc, this.state.sites));
+    // A click that sets what is already set adds no undo step and keeps the developed fish.
+    const unchanged =
+        doc !== this.state.document && JSON.stringify(next) === JSON.stringify(this.state.document);
+    if (!unchanged)
+      this.recordHistory(batch);
     if (finish)
       this.historyBatch = null;
-    this.state.document = validateDocument(settleRegions(doc, this.state.sites));
+    if (!unchanged) {
+      this.state.document = next;
+      this.designChanged();
+    }
     this.state.selected = selected;
     this.state.multi.clear();
-    this.designChanged();
     this.refreshScene();
     this.refreshHeader();
     this.refreshTools();
-    if ([ 'hormone', 'learn', 'stimulate' ].includes(this.state.tool))
-      this.refreshLibrary();
+    this.refreshToolLibrary();
     if (updateInspector)
       this.refreshInspector();
-    this.requestDesign();
+    if (!unchanged)
+      this.requestDesign();
     return true;
+  }
+  refreshToolLibrary() {
+    if ([ 'hormone', 'learn', 'stimulate' ].includes(this.state.tool))
+      this.refreshLibrary();
+  }
+  // Another fish starts afresh: nothing of the last one stays armed, pending or zoomed in on.
+  loadFish(doc) {
+    this.pendingWire = null;
+    this.release();
+    Object.assign(this.state.camera, {zoom : 1, ...CAMERA_HOME});
+    this.setMode('fish');
+    this.changeDocument(doc);
   }
   designChanged() {
     this.stopPulse();
@@ -581,9 +602,7 @@ export class OrganStudio {
     this.refreshHeader();
     try {
       const report = await this.api(requestBody('new', {example : START_FISH}), API_WAIT.long);
-      this.changeDocument(
-          startDocument(report.sourcePlan, this.state.sites, label('app.startFish')));
-      this.setMode('fish');
+      this.loadFish(startDocument(report.sourcePlan, this.state.sites, label('app.startFish')));
       this.state.busy = false;
       await this.develop();
     } catch (error) {
@@ -599,11 +618,21 @@ export class OrganStudio {
       growth : label('systems.growth.substance'),
       reward : label('systems.reward.substance')
     };
-    this.changeDocument(exampleDocument(names, this.state.sites, this.state.capabilities));
+    this.loadFish(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
   lifePhase(id, phase) {
     const c = this.state.capabilities;
     return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSteps);
+  }
+  removeChosen() {
+    const doc = this.state.document;
+    if (this.state.multi.size < 2)
+      return this.removeSelection(this.state.selected);
+    let next = doc;
+    for (const id of this.state.multi)
+      next = (findOrgan(next, id) ? removeOrgan(next, id) : removeCenter(next, id)) ?? next;
+    if (next !== doc)
+      this.changeDocument(next);
   }
   removeSelection(target) {
     if (!target)
@@ -748,7 +777,8 @@ export class OrganStudio {
       }
       return;
     }
-    if (this.state.station !== 'studio' || event.target.closest?.('input,textarea,select'))
+    if (this.state.station !== 'studio' || this.state.mode !== 'fish' ||
+        event.target.closest?.('input,textarea,select'))
       return;
     if ((event.ctrlKey || event.metaKey) && !event.altKey &&
         [ 'z', 'y' ].includes(event.key.toLowerCase())) {
@@ -764,7 +794,7 @@ export class OrganStudio {
       this.refreshViews();
     }
     if (event.key === 'Delete' || event.key === 'Backspace')
-      this.removeSelection(this.state.selected);
+      this.removeChosen();
   }
 }
 Object.assign(OrganStudio.prototype, designMethods, handleMethods, dropMethods, trialMethods,

@@ -464,7 +464,7 @@ function outgoingField(state, center) {
 }
 function wireInspector(state, wire) {
   const doc = state.document;
-  return '<header class="aid-inspector-head"><span>' + label('sections.connections') + '</span>' +
+  return '<header class="aid-inspector-head"><span>' + label('sections.connection') + '</span>' +
          heading(linkText(endpointTitle(doc, wire.from, state.sites),
                           endpointTitle(doc, wire.to, state.sites))) +
          '</header>' + (wire.pairing ? pairingChoice(wire) : '') +
