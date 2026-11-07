@@ -55,15 +55,17 @@ const regionHome = (organ, sites) => findSite(sites, organ.region?.site ?? organ
 const clusterRadius = organ => CLUSTER.ring + CLUSTER.grow * organ.centers.length;
 export const REGION_CHIP = Object.freeze({width : 26, height : 20, gap : 5, away : 22});
 const BRAIN_END = BRAIN.cerebellum.x + BRAIN.cerebellum.rx;
-// Where a region's row of slot chips sits: beyond its outermost node toward the body edge, but
-// behind the brain, where organs line the cord, further back along the cord.
+// Where a region's row of slot chips sits: beyond its outermost node toward the body edge, not
+// past the brain's end, as organs line the cord behind it; a region behind the brain has its row
+// further back along the cord.
 export function slotRow(organ, points, count, zoom) {
   const R = REGION_CHIP, xs = points.map(p => p.x), at = centroid(points);
+  const half = count * (R.width + R.gap) / 2 / zoom;
   if (isRegion(organ) && Math.min(...xs) > BRAIN_END)
-    return {x : Math.max(...xs) + (R.away + count * (R.width + R.gap) / 2) / zoom, y : at.y};
+    return {x : Math.max(...xs) + R.away / zoom + half, y : at.y};
   const out = sideOf(organ);
   return {
-    x : at.x,
+    x : isRegion(organ) ? Math.min(at.x, BRAIN_END - half) : at.x,
     y : (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * R.away / zoom
   };
 }
