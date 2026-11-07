@@ -18,6 +18,7 @@ constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 // the head zone, where glands and the blood sense sit.
 inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
+inline constexpr float MIN_LEARNING_RATE = 1e-5f;
 struct CellParameters {
   float threshold = .5f, capacity = 1, quality1 = 0, quality2 = 0, quality_width = .25f,
         field_width = .3f, time_constant = .5f, dendrites = .5f, plasticity = .5f;
@@ -191,6 +192,7 @@ class Network {
   std::uint64_t learning_seed = 0, learning_ticks = 0;
   void prepare_state();
   void advance(const std::vector<float> &, const Hormones *, std::uint64_t);
+  float effector_learning_rate(std::size_t source) const;
   void learn_effectors(float rm);
   template <class Would> bool form_synapse(std::size_t lane, bool effector, const Would &would);
   double turnover_unit();

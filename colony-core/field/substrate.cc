@@ -424,7 +424,9 @@ struct NetworkTopology {
             sl.both[l] = std::int32_t(first(c, source_group::modulating_pacer) - pacer[l]);
             sl.modulator[l] = std::int32_t(first(c, source_group::modulator) - pacer[l]);
             sl.bias[l] = nc.bias;
-            const float gain = std::clamp(nc.parameters.plasticity, 0.f, 1.f);
+            const float gain = nc.parameters.plasticity < MIN_LEARNING_RATE
+                                   ? 0.f
+                                   : std::clamp(nc.parameters.plasticity, 0.f, 1.f);
             sl.gain[l] = gain;
             learning_cells += gain > 0;
             sl.pace[l] = k.pace;
@@ -886,6 +888,8 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
                                     std::uint32_t(turnover_unit() * members) % members];
   if (source == target || !t.cell_driving[source] || inactive(source) || inactive(target))
     return false;
+  if (effector && effector_learning_rate(source) == 0)
+    return false;
   const auto zero = std::uint16_t(cells());
   std::uint32_t free = UINT32_MAX;
   for (std::uint32_t j = 0; j < s.capacity[l]; ++j) {
@@ -906,6 +910,12 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
   ++revision_;
   return true;
 }
+float Network::effector_learning_rate(std::size_t source) const {
+  if (inactive(source))
+    return 0;
+  const float gain = topology->cell_gain[source] * (1 + hormone_effect_[Learning][source]);
+  return gain >= MIN_LEARNING_RATE ? gain : 0.f;
+}
 void Network::learn_effectors(float rm) {
   const auto &t = *topology;
   const auto zero = std::uint16_t(cells());
@@ -921,12 +931,16 @@ void Network::learn_effectors(float rm) {
       const float own = next_[cell], usual = effector_own_[lane];
       const float dy = own - usual;
       effector_own_[lane] = rm * usual + (1 - rm) * own;
-      double e2 = 0;
+      double e2 = 0, held = 0;
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
         const auto src = index_[slot];
         if (src == zero)
           continue;
+        if (effector_learning_rate(src) == 0) {
+          held += std::abs(double(gene_[slot]) + learned_[slot]);
+          continue;
+        }
         const float fast = t.cell_fast[src];
         trace_[slot] = fast * trace_[slot] + (1 - fast) * deviation_[src] * dy;
         e2 += double(trace_[slot]) * trace_[slot];
@@ -936,31 +950,36 @@ void Network::learn_effectors(float rm) {
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
         const auto src = index_[slot];
-        if (src == zero)
+        if (src == zero || effector_learning_rate(src) == 0)
           continue;
         const float g = gene_[slot];
         float u = learned_[slot];
-        const float gain = t.cell_gain[src] * (1 + hormone_effect_[Learning][src]);
-        if (gain > 0) {
-          u = float(u + gain * cell_surprise_[src] * trace_[slot] / (1 + e2));
-          if (g * (g + u) < 0)
-            u = -g;
-          changed = changed || u != learned_[slot];
-          learned_[slot] = u;
-        }
+        const float gain = effector_learning_rate(src);
+        u = float(u + gain * cell_surprise_[src] * trace_[slot] / (1 + e2));
+        if (g * (g + u) < 0)
+          u = -g;
+        changed = changed || u != learned_[slot];
+        learned_[slot] = u;
         total += std::abs(double(g) + u);
       }
-      const double innate = effector_innate_[lane];
-      if (changed && total > 0 && innate > 0)
-        for (std::uint32_t j = 0; j < L; ++j) {
+      // The inherited total survives turnover. Paused inputs retain their current share.
+      const double available = std::max(0., double(effector_innate_[lane]) - held);
+      const auto normalize = [&](double total) {
+        if (total <= 0)
+          return;
+        const double factor = available / total;
+        const auto length = sl.occupied_length(index_, zero);
+        for (std::uint32_t j = 0; j < length; ++j) {
           const auto slot = base + LANES * j + std::uint32_t(l);
-          if (index_[slot] != zero)
-            learned_[slot] =
-                float((double(gene_[slot]) + learned_[slot]) * (innate / total) - gene_[slot]);
+          if (index_[slot] != zero && effector_learning_rate(index_[slot]) > 0)
+            learned_[slot] = float((double(gene_[slot]) + learned_[slot]) * factor - gene_[slot]);
         }
+      };
+      if (changed || total > available)
+        normalize(total);
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
-        if (index_[slot] != zero &&
+        if (index_[slot] != zero && effector_learning_rate(index_[slot]) > 0 &&
             std::abs(gene_[slot] + learned_[slot]) < prune_share * sl.unit[l]) {
           index_[slot] = zero;
           gene_[slot] = learned_[slot] = trace_[slot] = predict_[slot] = 0;
@@ -968,11 +987,20 @@ void Network::learn_effectors(float rm) {
           ++revision_;
         }
       }
-      if (lane_count_[LANES * t.slices.size() + lane] < sl.capacity[l])
-        form_synapse(lane, true, [&](std::uint32_t src) {
-          return t.cell_gain[src] * (1 + hormone_effect_[Learning][src]) * cell_surprise_[src] *
-                 (1 - t.cell_fast[src]) * deviation_[src] * dy / (1 + e2);
-        });
+      if (available > 0 && lane_count_[LANES * t.slices.size() + lane] < sl.capacity[l] &&
+          form_synapse(lane, true, [&](std::uint32_t src) {
+            return effector_learning_rate(src) * cell_surprise_[src] * (1 - t.cell_fast[src]) *
+                   deviation_[src] * dy / (1 + e2);
+          })) {
+        total = 0;
+        const auto length = sl.occupied_length(index_, zero);
+        for (std::uint32_t j = 0; j < length; ++j) {
+          const auto slot = base + LANES * j + std::uint32_t(l);
+          if (index_[slot] != zero && effector_learning_rate(index_[slot]) > 0)
+            total += std::abs(double(gene_[slot]) + learned_[slot]);
+        }
+        normalize(total);
+      }
     }
   }
 }
@@ -1078,7 +1106,8 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       if (sl.pace[l] > 0)
         rs[l] = float(std::sin(sl.phase[l] + 2 * PI_F * double(learning_ticks) / sl.period[l]));
     }
-    const F8 gain = sl.gain * gain_factor;
+    const F8 modulated_gain = sl.gain * gain_factor;
+    const F8 gain = modulated_gain >= splat8(MIN_LEARNING_RATE) ? modulated_gain : F8{};
     const F8 step0 = load8(lane_step_.data() + lane0);
     const I8 pending = load8(lane_pending_.data() + lane0) > splat8(.5f);
     bool any_pending = false;

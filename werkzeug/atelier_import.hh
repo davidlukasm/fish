@@ -62,6 +62,8 @@ inline Plan import_plan(const fishsim::Genome &genome) {
     g.q2 = p.quality2;
     g.qwidth = p.quality_width;
     if (cell.role == field::Role::Nerve) {
+      if (p.plasticity < field::MIN_LEARNING_RATE)
+        g.qwidth = 0;
       g.sign = cell.identity[1];
       g.mode = cell.identity[2];
       g.pace = cell.identity[3];
