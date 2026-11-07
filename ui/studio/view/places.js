@@ -229,7 +229,7 @@ function innerHome(doc, organ) {
     const side = organ.side ? sideOf(organ) : k % 2 ? -1 : 1;
     const before =
         organ.side ? glands.slice(0, k).filter(o => sideOf(o) === side).length : Math.floor(k / 2);
-    const x = I.glands.front + I.glands.step * before;
+    const x = I.glands.front - I.glands.step * before;
     return {x, y : middle + side * Math.min(I.glands.d, skinAt(x, 1) - middle - I.glands.skin)};
   }
   if (organ.type === 'blood') {
