@@ -2,7 +2,6 @@ import {HORMONE_EFFECT, HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from 
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
-// The sense organ each stimulus of the stimulus tool reaches.
 export const STIMULUS_ORGAN = Object.freeze({
   light : 'eye',
   object : 'proximity',

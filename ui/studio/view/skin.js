@@ -128,7 +128,6 @@ export function skinField(state, organ, center, held = null) {
                                                     {share : percent(sensitive)}))) +
          '</p></div>';
 }
-// How sensitive the skin is made by its handle pulled to the share (fx, fy) of the field.
 export function skinSensitivity(state, aim, fx, fy) {
   const S = SKIN_FIELD, p = toFrame(fx, fy), middle = nearest(skinPoints(S.step), aim, state);
   const out = (p.x - middle.x) * middle.out.x + (p.y - middle.y) * middle.out.y;
