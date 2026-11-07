@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
-const {join, posix} = require('node:path');
+const {join} = require('node:path');
 
 // Semantic guard for engine and aquarium drawing code that the organ editor interprets.
 // Comments and formatting are ignored. A changed signature requires reviewing the
@@ -80,20 +80,10 @@ function semanticFingerprint(source) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {
-    ANATOMY,
-    CPPN_OUTPUT,
-    DEVELOPMENT,
-    HORMONE_EFFECT,
-    HORMONES,
-    MOTOR_KIND,
-    SENSE_KIND,
-    TUNING
-  } = await import('../ui/schema.js');
+  const {HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} = await import('../ui/schema.js');
   const {
     ORGANS,
     ORGAN_BY_KEY,
-    MUSCLES,
     eligible,
     functionFor,
     kindLimit,
@@ -125,7 +115,7 @@ function semanticFingerprint(source) {
   };
   const graph = await import('../ui/studio/view/graph.js');
   const pulse = await import('../ui/studio/view/pulse.js');
-  const {OrganStudio, initializeStudio} = await import('../ui/studio/controller.js');
+  const {OrganStudio} = await import('../ui/studio/controller.js');
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
@@ -811,7 +801,8 @@ function semanticFingerprint(source) {
     doc = r.document;
     return r;
   };
-  const eggs = add('eggs', {x : 820, y : 400}), sperm = add('sperm', {x : 850, y : 330});
+  add('eggs', {x : 820, y : 400});
+  add('sperm', {x : 850, y : 330});
   const gland = add('gland', {x : 550, y : 400});
   add('muscle', {x : 850, y : 400});
   add('muscle', {x : 295, y : 300});
@@ -1104,7 +1095,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     timeout : 60000,
     maxBuffer : 32 * 1024 * 1024
   }));
-  const {built, designed, target : seen, outside, blue} = response;
+  const {built, target : seen, outside, blue} = response;
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
   const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);
   const organOf = index => model.findCenter(exampleDoc, exampleCenters[index].id).organ;

@@ -258,7 +258,7 @@ export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROL
                                 : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
                                                                      : type;
 export const ORGAN_BY_KEY = Object.freeze(Object.fromEntries(ORGANS.map(o => [o.key, o])));
-export const MUSCLES = Object.freeze(
+const MUSCLES = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
 export const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],

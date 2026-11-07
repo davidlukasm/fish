@@ -1,7 +1,7 @@
 import {clamp, SECOND_MS} from '../../units.js';
 
 const NS = 'http://www.w3.org/2000/svg';
-export const SIGNAL = Object.freeze({
+const SIGNAL = Object.freeze({
   blood : 1.6,
   thinning : .7,
   cutoff : .04,
