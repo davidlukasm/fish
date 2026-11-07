@@ -70,7 +70,7 @@ export const STUDIO_ICON = Object.freeze({
   gland : ORGAN_ICONS[MOTOR_TISSUE.gland],
   tectum : 'M4 12c3-5 13-5 16 0-3 5-13 5-16 0zM12 10a2 2 0 1 0 .01 0M12 3v3M12 18v3',
   olfactory : 'M5 9c2-2 4 2 6 0s4 2 6 0M5 14c2-2 4 2 6 0s4 2 6 0M19 7v9',
-  hindbrain : 'M13 3L7 13h5l-1 8 6-10h-5l1-8z',
+  hindbrain : 'M12 21v-6a7 7 0 0 1 7-7M16 5l3 3-3 3M12 15a7 7 0 0 0-7-7M8 5L5 8l3 3',
   spinal : 'M12 3v18M8 6h8M8 10h8M8 14h8M8 18h8',
   pallium : 'M12 4l2.2 4.8 5.3.6-3.9 3.6 1 5.2-4.6-2.6-4.6 2.6 1-5.2-3.9-3.6 5.3-.6z',
   torus : 'M4 10c3-3 5 3 8 0s5 3 8 0M4 16c3-3 5 3 8 0s5 3 8 0M17 3l3 3-3 3',

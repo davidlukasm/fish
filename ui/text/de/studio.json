@@ -262,7 +262,7 @@
     "receives": "Empfängt",
     "glandSecretes": "Ausschüttung bei positiver Aktivität",
     "glandBinds": "Bindung bei negativer Aktivität",
-    "makeModule": "Zu Baugruppe verbinden",
+    "makeModule": "Zu Baugruppe zusammenfassen",
     "cancelSelection": "Auswahl aufheben",
     "organShape": "Form des Organs",
     "sharpTeeth": "Scharfe Zähne",
@@ -800,8 +800,8 @@
     "aside": "seitlich"
   },
   "workflow": {
-    "select": "Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe verbinden.",
-    "wire": "Verbinden: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
+    "select": "Platzieren: Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe zusammenfassen.",
+    "wire": "Verschalten: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Lernen: einen Nervenknoten wählen und ihm einen Lehrer geben, einen Modulator oder einen Stoff.",
     "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",
