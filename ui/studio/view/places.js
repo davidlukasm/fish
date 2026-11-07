@@ -54,6 +54,19 @@ const PORT_ORDER = Object.freeze({in : 0, none : 1, out : 2});
 const regionHome = (organ, sites) => findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
 const clusterRadius = organ => CLUSTER.ring + CLUSTER.grow * organ.centers.length;
 export const REGION_CHIP = Object.freeze({width : 26, height : 20, gap : 5, away : 22});
+const BRAIN_END = BRAIN.cerebellum.x + BRAIN.cerebellum.rx;
+// Where a region's row of slot chips sits: beyond its outermost node toward the body edge, but
+// behind the brain, where organs line the cord, further back along the cord.
+export function slotRow(organ, points, count, zoom) {
+  const R = REGION_CHIP, xs = points.map(p => p.x), at = centroid(points);
+  if (Math.min(...xs) > BRAIN_END)
+    return {x : Math.max(...xs) + (R.away + count * (R.width + R.gap) / 2) / zoom, y : at.y};
+  const out = sideOf(organ);
+  return {
+    x : at.x,
+    y : (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * R.away / zoom
+  };
+}
 const SEPARATE = Object.freeze({
   rounds : 120,
   settle : 30,
@@ -78,13 +91,12 @@ function regionAnchors(doc, sites) {
     return home && home.zone !== ZONE.tail ? [ {organ, home} ] : [];
   });
   const sideOfItem = organ => ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0;
-  const brainEnd = BRAIN.cerebellum.x + BRAIN.cerebellum.rx;
   // A crowded half of the brain draws its clusters smaller, down to SEPARATE.least.
   const fit = side => {
     const need =
         placed.filter(p => !sideOfItem(p.organ) || sideOfItem(p.organ) === side)
             .reduce((sum, p) => sum + 2 * (clusterRadius(p.organ) * C.aspect[0] + S.node), 0);
-    return need ? clamp(S.rows * (brainEnd - BRAIN.cerebrum.from) / need, S.least, 1) : 1;
+    return need ? clamp(S.rows * (BRAIN_END - BRAIN.cerebrum.from) / need, S.least, 1) : 1;
   };
   const fits = {[-1] : fit(-1), [1] : fit(1)};
   const items = placed.map(({organ, home}) => {
@@ -138,7 +150,7 @@ function regionAnchors(doc, sites) {
       item.y += (item.home.y - item.y) * pull;
       item.x = Math.min(Math.max(item.x, left(item)), right(item));
       // Behind the brain the clusters keep to the cord's edge, clear of the organs beside it.
-      const outward = item.x > brainEnd ? BRAIN.cord.half[0] : BRAIN.cerebrum.half - item.inner;
+      const outward = item.x > BRAIN_END ? BRAIN.cord.half[0] : BRAIN.cerebrum.half - item.inner;
       item.y = item.side ? middle + item.side * clamp(item.side * (item.y - middle), S.inside,
                                                       Math.max(S.inside, outward))
                          : item.home.y;

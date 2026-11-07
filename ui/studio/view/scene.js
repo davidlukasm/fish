@@ -1,7 +1,7 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
-import {nodeLocation, organLocation, REGION_CHIP, showsNodes} from './places.js';
+import {nodeLocation, organLocation, REGION_CHIP, showsNodes, slotRow} from './places.js';
 import {organTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
@@ -17,7 +17,7 @@ import {
   wiredCrossing,
   shownSubstance
 } from '../model/document.js';
-import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline, sideOf} from '../model/layout.js';
+import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline} from '../model/layout.js';
 import {regionSlots} from '../model/regions.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
@@ -140,9 +140,7 @@ function slotsSvg(state) {
     const points = organ.centers.map(c => nodeLocation(doc, sites, c, organ.type));
     if (!slots.length || !points.length)
       continue;
-    const out = sideOf(organ);
-    const x = centroid(points).x;
-    const y = (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * SLOT.away / zoom;
+    const {x, y} = slotRow(organ, points, slots.length, zoom);
     slots.forEach((slot, i) => {
       const fill = slotFill(slot);
       const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
