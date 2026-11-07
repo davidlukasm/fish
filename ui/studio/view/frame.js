@@ -6,6 +6,7 @@ import {FIN} from '../../schema.js';
 
 export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
 export const CAMERA_ZOOM = Object.freeze({min : .04, max : 8, step : 1.35});
+export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
 const OUTLINE = Object.freeze({
   margin : 1.08,
   nose : 46,
@@ -39,17 +40,18 @@ const KAPPA = .5523;
 // power FIN_SHOWN, so a fin without muscles still reads as a fin and a strong one stays in the
 // picture.
 const FIN_REFERENCE = 1, FIN_SHOWN = .55;
+// A tail fin too strong for the picture at full size is drawn as large as fits, in its own shape.
+const TAIL_ROOM = (CAMERA_HOME.x + FISH_BOX.width / 2 - BODY_KNOTS.at(-1)[0]) / OUTLINE.tail.reach /
+                  OUTLINE.margin;
 export function finSizes(fins = null) {
   const ratio = (size, index, key) => {
     const fin = fins?.[index];
     const volume = fin ? finVolumeOf(fin.cells, fin.strength) : FIN_REFERENCE;
     return Math.pow(size(volume)[key] / size(FIN_REFERENCE)[key], FIN_SHOWN);
   };
+  const reach = ratio(tailFinSize, FIN.tail, 'length'), keep = Math.min(1, TAIL_ROOM / reach);
   return {
-    tail : {
-      reach : ratio(tailFinSize, FIN.tail, 'length'),
-      spread : ratio(tailFinSize, FIN.tail, 'width')
-    },
+    tail : {reach : reach * keep, spread : ratio(tailFinSize, FIN.tail, 'width') * keep},
     sides : [ FIN.left, FIN.right ].map(index => ({
                                           length : ratio(sideFinSize, index, 'length'),
                                           out : ratio(sideFinSize, index, 'spread')
@@ -211,7 +213,6 @@ function finShape(side, size) {
     rays
   };
 }
-export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
 export const zoomOf = state => state.camera?.zoom ?? 1;
 export function cameraBox(camera) {
   const zoom = Math.max(CAMERA_ZOOM.min, Math.min(CAMERA_ZOOM.max, camera.zoom ?? 1));
