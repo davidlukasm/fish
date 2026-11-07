@@ -919,12 +919,6 @@
   },
   "learnCard": {
     "cells": "Knoten fürs Lernen",
-    "tileTitles": [
-      "Unerwartete Änderungen dieses Stoffs verstärken oder schwächen die gemerkten Verbindungen.",
-      "Der Stoff ändert, wie stark jede Überraschung die Verbindungen ändert.",
-      "Der Stoff ändert, wie stark aktive Eingänge wachsen und stille schrumpfen.",
-      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder bei ihrem eigenen Signal."
-    ],
     "wired": {
       "modulate": "Verschaltet: lehrt jetzt diesen Knoten.",
       "pacemaker": "Verschaltet: gibt diesem Knoten jetzt den Takt."

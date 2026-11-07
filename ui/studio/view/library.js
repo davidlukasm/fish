@@ -241,33 +241,32 @@ const systemsSection = (state, keys) =>
     section(label('systems.title'), keys.map(key => systemTile(state, key)).join(''));
 const LEARNING_CELLS = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 function learningLibrary(state) {
-  const titles = tList('studio.learnCard.tileTitles');
+  const titles = tList('studio.hormoneCard.tileTitles');
   const substances = state.capabilities ? state.document.substances : [];
   return section(label('learnCard.cells'), LEARNING_CELLS.map(cellTile).join('')) +
          systemsSection(state, [ 'reward' ]) +
          substances
              .map(sub => {
                const index = sub.index, colour = substanceColor(index);
-               return substanceSection(
-                   state, index,
-                   tile({
-                     kind : 'gland',
-                     value : String(index),
-                     name : label('hormoneCard.gland'),
-                     path : STUDIO_ICON.gland,
-                     colour,
-                     title : label('hormoneCard.glandTitle')
-                   }) + EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e))
-                            .map(effect => tile({
-                                   kind : 'effect',
-                                   value : index + ':' + effect,
-                                   name : label('effects.' + effect),
-                                   path : EFFECT_ICON[effect],
-                                   colour,
-                                   title : titles[LEARNING_EFFECTS.indexOf(effect)],
-                                   wide : true
-                                 }))
-                            .join(''));
+               return substanceSection(state, index,
+                                       tile({
+                                         kind : 'gland',
+                                         value : String(index),
+                                         name : label('hormoneCard.gland'),
+                                         path : STUDIO_ICON.gland,
+                                         colour,
+                                         title : label('hormoneCard.glandTitle')
+                                       }) + EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e))
+                                                .map(effect => tile({
+                                                       kind : 'effect',
+                                                       value : index + ':' + effect,
+                                                       name : label('effects.' + effect),
+                                                       path : EFFECT_ICON[effect],
+                                                       colour,
+                                                       title : titles[effect],
+                                                       wide : true
+                                                     }))
+                                                .join(''));
              })
              .join('') +
          section(label('hormoneCard.more'), addSubstanceTile(state));
