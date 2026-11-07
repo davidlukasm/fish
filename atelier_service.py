@@ -132,9 +132,9 @@ def number(value):
 
 
 def receptor_row(r):
-    if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS):
+    if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS if not field.startswith("spread_")):
         raise Refusal("studio.errors.invalidReceptors")
-    return " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
+    return " ".join(number(r.get(f, 0)) for f in RECEPTOR_FIELDS)
 
 
 def encode_plan(plan):
@@ -150,10 +150,10 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidGroup")
         if len(group["name"]) > ATELIER_LIMITS["max_group_name"] or any(ord(c) < 32 for c in group["name"]):
             raise Refusal("studio.errors.invalidGroupName")
-        if any(field not in group for field in FIELDS):
+        if any(field not in group for field in FIELDS if not field.startswith("spread_") and field != "initial_strength"):
             raise Refusal("studio.errors.invalidGroup")
         rows.append(json.dumps(group["name"], ensure_ascii=False) + " " +
-                    " ".join(number(group[f]) for f in FIELDS))
+                    " ".join(number(group.get(f, 0)) for f in FIELDS))
         receptors = group.get("receptors", [])
         if not isinstance(receptors, list) or len(receptors) != ATELIER_LIMITS["receptors"]:
             raise Refusal("studio.errors.invalidReceptors")
@@ -181,7 +181,7 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidPlan")
         addresses = source.get("addresses")
         if (not isinstance(addresses, list) or len(addresses) != len(groups)
-                or any(not isinstance(row, list) or len(row) != 5 for row in addresses)):
+                or any(not isinstance(row, list) or len(row) != ATELIER_LIMITS["contact_values"] for row in addresses)):
             raise Refusal("studio.errors.invalidPlan")
         rows.append(" ".join(seeds))
         rows.extend(" ".join(number(value) for value in row) for row in addresses)

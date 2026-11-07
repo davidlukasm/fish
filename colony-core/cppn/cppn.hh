@@ -7,21 +7,29 @@
 #include <array>
 #include <cmath>
 namespace cppn {
+using OutputMask = std::uint64_t;
 namespace output {
-inline constexpr unsigned receptor_mask =
+inline constexpr int mean_count = synapse_strength + 1;
+inline constexpr OutputMask spread_mask(OutputMask mask) {
+  return mask | (mask << mean_count);
+}
+inline constexpr OutputMask receptor_means =
     (1u << capacity) | (1u << field_width) | (1u << time_constant) | (1u << threshold) |
     (1u << quality1) | (1u << quality2) | (1u << quality_width);
-inline constexpr unsigned cell_mask = (1u << count) - 1;
+inline constexpr OutputMask receptor_mask = spread_mask(receptor_means);
+inline constexpr OutputMask contact_mask = spread_mask(
+    (1ull << expression) | (1ull << receiver1) | (1ull << receiver2) | (1ull << search_width));
+inline constexpr OutputMask cell_mask = (1ull << count) - 1;
 }
-constexpr int INPUTS = 10, BIAS = 9, OUTPUTS = output::count;
+constexpr int INPUTS = 11, BIAS = 10, OUTPUTS = output::count;
 namespace input {
-constexpr int zone = 0, zones = 4, u = 4, v = 5, w = 6, side = 7, effect = 8;
+constexpr int zone = 0, zones = 4, u = 4, v = 5, w = 6, side = 7, effect = 8, field = 9;
 }
-constexpr unsigned ALL_OUTPUTS = (1u << OUTPUTS) - 1;
+constexpr OutputMask ALL_OUTPUTS = (1ull << OUTPUTS) - 1;
 constexpr std::size_t BATCH = 64;
 struct Point {
   int zone = 0;
-  float u = 0, v = 0, w = 0, side = -1, effect = 0;
+  float u = 0, v = 0, w = 0, side = -1, effect = 0, field = 0;
 };
 inline std::array<float, INPUTS - 1> cell_inputs(const Point &p) {
   return {float(p.zone == 0),
@@ -32,7 +40,8 @@ inline std::array<float, INPUTS - 1> cell_inputs(const Point &p) {
           p.v,
           p.w,
           p.side,
-          p.effect};
+          p.effect,
+          p.field};
 }
 struct WorkAlias {
   int source;

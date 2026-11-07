@@ -198,6 +198,7 @@ struct Builder {
   int indicator(const Box &b, int query = -1) {
     std::vector<int> t{query < 0 ? test(cppn::input::effect, -1, .5f / field::RECEPTOR_QUERIES)
                                  : effect_selector(query)};
+    if (query < 0) t.push_back(test(cppn::input::field, -1, .5f / (field::CONTACT_FIELDS - 1)));
     auto range = [&](int input, float lo, float hi) {
       if (lo > 0)
         t.push_back(test(input, 1, lo - .05f));

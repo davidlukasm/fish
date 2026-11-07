@@ -84,6 +84,38 @@ void excitation_and_teaching_are_independent() {
   check(local.surprise(LEARNER) > 0 && combined.surprise(LEARNER) > local.surprise(LEARNER),
         "local modulators and hormonal teaching add together");
 }
+
+void all_sources_can_form_first_contacts() {
+  constexpr int SOURCES = 3, TARGET = 3, STEPS = 800;
+  std::vector<field::Neuron> neurons(SOURCES + 1);
+  for (int i = 0; i <= TARGET; ++i) {
+    auto &n = neurons[i];
+    n.id = i + 1;
+    n.group = i;
+    n.role = field::Role::Nerve;
+    n.functional = true;
+    n.slots = SOURCES;
+    n.identity = {0, 1, 0, -1, -1};
+    n.parameters.plasticity = .1f;
+    n.hormone_receptors[field::Output].baseline = 1;
+  }
+  neurons[0].identity[3] = 1;
+  neurons[1].identity[4] = 1;
+  neurons[2].identity[3] = neurons[2].identity[4] = 1;
+  auto tissue = std::make_shared<field::Substrate>(std::move(neurons));
+  tissue->partner_offset = {0, 0, 0, 0, 3};
+  tissue->partners = {{0, 1}, {1, 1}, {2, 1}};
+  field::Network net(tissue);
+  std::array<bool, SOURCES> connected{};
+  for (int step = 0; step < STEPS; ++step) {
+    net.step({}, field::Hormones{}, 19);
+    for (const auto &edge : net.synapses())
+      if (edge.target == TARGET)
+        connected[edge.source] = true;
+  }
+  check(std::all_of(connected.begin(), connected.end(), [](bool b) { return b; }),
+        "pacers, modulators and modulating pacers can form a first contact");
+}
 Ecosystem closed_tank(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
@@ -340,6 +372,7 @@ int main() {
   try {
     Genome::begin_run(SEED);
     excitation_and_teaching_are_independent();
+    all_sources_can_form_first_contacts();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);

@@ -32,7 +32,8 @@ struct Program::PreparationState {
   std::set<int> used;
   std::vector<int> work;
   std::set<int>::const_iterator observed;
-  static constexpr std::array<unsigned, 2> masks{ALL_OUTPUTS, output::receptor_mask};
+  static constexpr std::array<OutputMask, 3> masks{ALL_OUTPUTS, output::receptor_mask,
+                                                   output::contact_mask};
   void begin_mask(const ann::Network::Compiled &code) {
     cursor = 0;
     needed.assign(code.controls.size(), 0);
@@ -40,7 +41,7 @@ struct Program::PreparationState {
     used.clear();
     work.clear();
     for (std::size_t i = 0; i < code.outputs; ++i)
-      if (masks[mask_index] & (1u << i)) {
+      if (masks[mask_index] & (1ull << i)) {
         stack.push_back(code.controls.size() - code.outputs + i);
         work.push_back(INPUTS + int(i));
       }
@@ -174,13 +175,24 @@ bool Program::prepare(std::size_t &budget) {
   }
   if (s.stage != PreparationState::Done)
     return false;
+  constexpr std::size_t OPERATIONS_PER_WORK = 256;
+  for (const auto &[mask, plan] : plans) {
+    std::size_t operations = 0;
+    for (auto n : plan)
+      operations += 1 + code.controls[n].count;
+    costs[mask] =
+        std::max<std::size_t>(1, (operations + OPERATIONS_PER_WORK - 1) / OPERATIONS_PER_WORK);
+  }
   preparation.reset();
   aliases.clear();
   incoming.clear();
   indices.clear();
   return true;
 }
-void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
+std::size_t Program::query_cost(OutputMask mask) const {
+  return costs.at(mask);
+}
+void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
                        std::array<std::array<float, cppn::OUTPUTS>, BATCH> &output,
                        bool record_work) const {
   if (count > BATCH)
@@ -189,7 +201,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     return;
   auto normalize = [&](std::size_t n, float sum, float out) {
     auto first = code.controls.size() - code.outputs;
-    return n >= first && (code.tanh_outputs & (1u << (n - first)))
+    return n >= first && (code.tanh_outputs & (1ull << (n - first)))
                ? std::tanh(sum)
                : std::max(-1.f, std::min(1.f, out));
   };
@@ -313,7 +325,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
         cache.ready[n] = 1;
       }
     for (std::size_t i = 0; i < code.outputs; ++i)
-      if (mask & (1u << i))
+      if (mask & (1ull << i))
         output[0][i] = cache.values[code.controls.size() - code.outputs + i];
     observe([&](auto n, auto) { return cache.values[n]; },
             [&](auto n, auto) { return cache.derivative[n]; },
@@ -395,7 +407,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
     // Dispatch once for the whole point batch; simple activations can then
     // run over consecutive values without a type switch for every sample.
     const auto first = code.controls.size() - code.outputs;
-    const bool squash = n >= first && (code.tanh_outputs & (1u << (n - first)));
+    const bool squash = n >= first && (code.tanh_outputs & (1ull << (n - first)));
     auto activate = [&](auto function) {
       bool invalid = false;
       if (squash)
@@ -476,7 +488,7 @@ void Program::evaluate(const Point *points, std::size_t count, unsigned mask,
           [&](auto n, auto p) { return cache.dg[n * BATCH + p]; });
   for (std::size_t p = 0; p < count; ++p)
     for (std::size_t i = 0; i < code.outputs; ++i)
-      if (mask & (1u << i))
+      if (mask & (1ull << i))
         output[p][i] = state[(code.controls.size() - code.outputs + i) * BATCH + p];
 }
 

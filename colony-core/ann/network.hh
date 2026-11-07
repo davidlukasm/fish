@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cstdint>
 #include <memory>
 #include <initializer_list>
 namespace ann {
@@ -9,7 +10,7 @@ class Network {
   std::unique_ptr<Impl> impl;
   activation_function_t activation;
   std::size_t inputs, bias, outputs;
-  unsigned tanh_outputs = 0;
+  std::uint64_t tanh_outputs = 0;
 
 public:
   struct Control {
@@ -25,7 +26,7 @@ public:
     std::vector<float> weights;
     std::vector<unsigned char> ports;
     std::vector<int> ids;
-    unsigned tanh_outputs = 0;
+    std::uint64_t tanh_outputs = 0;
   };
   std::shared_ptr<const Compiled> compiled() const;
   explicit Network(Compiled);

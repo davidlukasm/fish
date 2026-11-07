@@ -47,10 +47,15 @@ struct ContactParameters {
   double probability = 0, affinity = 0;
 };
 struct ContactScale {
-  double variance, reach;
+  std::array<double, CONTACT_FIELDS> variance{};
+  double reach;
   explicit ContactScale(const Neuron &n) {
     const double sigma = search_radius(n.search_width);
-    variance = 2 * sigma * sigma;
+    variance[0] = 2 * sigma * sigma;
+    for (int k = 1; k < CONTACT_FIELDS; ++k) {
+      const auto radius = search_radius(n.reception[k - 1].width);
+      variance[k] = 2 * radius * radius;
+    }
     reach = MIN_RANGE + (1 - MIN_RANGE) * n.range;
   }
 };
@@ -71,23 +76,34 @@ public:
   }
   void candidates(const Neuron &target, const ContactScale &scale, std::size_t count,
                   std::vector<std::uint32_t> &result) const {
-    const double radius = std::sqrt(CONTACT_SUPPORT * scale.variance);
-    const auto left = bin(target.receiver[0] - radius), right = bin(target.receiver[0] + radius),
-               top = bin(target.receiver[1] - radius), bottom = bin(target.receiver[1] + radius);
     result.clear();
-    if (count < CONTACT_INDEX_MIN_GROUPS ||
-        (right - left + 1) * (bottom - top + 1) >= bins.size() / CONTACT_INDEX_SCAN_DIVISOR) {
+    if (count < CONTACT_INDEX_MIN_GROUPS) {
       for (std::size_t i = 0; i < count; ++i)
         result.push_back(std::uint32_t(i));
       return;
     }
-    for (auto y = top; y <= bottom; ++y)
-      for (auto x = left; x <= right; ++x) {
-        const auto &row = bins[y * CONTACT_INDEX_SIDE + x];
-        result.insert(result.end(), row.begin(), row.end());
+    for (int field = 0; field < CONTACT_FIELDS; ++field) {
+      if (field && target.reception[field - 1].expression <= 0)
+        continue;
+      const auto &address = field ? target.reception[field - 1].address : target.receiver;
+      const double radius = std::sqrt(CONTACT_SUPPORT * scale.variance[field]);
+      const auto left = bin(address[0] - radius), right = bin(address[0] + radius),
+                 top = bin(address[1] - radius), bottom = bin(address[1] + radius);
+      if ((right - left + 1) * (bottom - top + 1) >= bins.size() / CONTACT_INDEX_SCAN_DIVISOR) {
+        result.clear();
+        for (std::size_t i = 0; i < count; ++i)
+          result.push_back(std::uint32_t(i));
+        return;
       }
+      for (auto y = top; y <= bottom; ++y)
+        for (auto x = left; x <= right; ++x) {
+          const auto &row = bins[y * CONTACT_INDEX_SIDE + x];
+          result.insert(result.end(), row.begin(), row.end());
+        }
+    }
     // Input selection hashes depend on cell identities; retain the canonical source order too.
     std::sort(result.begin(), result.end());
+    result.erase(std::unique(result.begin(), result.end()), result.end());
   }
 };
 inline ContactParameters contact_parameters(const Neuron &a, const Neuron &b, double body_length,
@@ -95,8 +111,16 @@ inline ContactParameters contact_parameters(const Neuron &a, const Neuron &b, do
                                             const ContactScale &receiver) {
   if (connection_kind(a, b) < 0)
     return {};
-  const double dx = a.sender[0] - b.receiver[0], dy = a.sender[1] - b.receiver[1],
-               mu = contact_affinity((dx * dx + dy * dy) / receiver.variance);
+  double mu = 0;
+  for (int field = 0; field < CONTACT_FIELDS; ++field) {
+    const float expression = field ? b.reception[field - 1].expression : 1.f;
+    if (expression <= 0)
+      continue;
+    const auto &address = field ? b.reception[field - 1].address : b.receiver;
+    const double dx = a.sender[0] - address[0], dy = a.sender[1] - address[1];
+    mu =
+        std::max(mu, expression * contact_affinity((dx * dx + dy * dy) / receiver.variance[field]));
+  }
   if (mu == 0)
     return {};
   const double side = a.x == 0 || b.x == 0

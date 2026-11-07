@@ -23,6 +23,77 @@ Plan cells(int count) {
 int main() {
   fishsim::Genome::begin_run(34981);
   {
+    auto plan = cells(2);
+    auto &g = plan.groups.front();
+    g.copies = 4;
+    g.spread_threshold = .08f;
+    g.spread_time_constant = .06f;
+    g.spread_quality_width = .04f;
+    g.spread_synapse_strength = .05f;
+    g.receptors[field::Teaching] = {true, 0, 1, .1f, .2f, 0, 1};
+    g.receptors[field::Teaching].spread_capacity = .04f;
+    g.receptors[field::Teaching].spread_field_width = .03f;
+    g.receptors[field::Teaching].spread_quality_width = .02f;
+    g.reception[0] = {{.75f, -.75f}, .2f, 1};
+    g.reception_spread[0][1] = .01f;
+    fishsim::Genome first;
+    first.cppn = Builder().build(plan);
+    first.development_seed = 17;
+    first.variation_seed = 31;
+    first.compile(false);
+    assert(assess(plan, first).ok());
+    auto same = first;
+    same.compile(false);
+    auto other = first;
+    other.variation_seed = 37;
+    other.compile(false);
+    bool different = false, within_centre = false;
+    for (std::size_t i = 0; i < first.blueprint->neurons.size(); ++i) {
+      const auto &a = first.blueprint->neurons[i];
+      assert(a.bias == same.blueprint->neurons[i].bias);
+      assert(a.reception[0].address == same.blueprint->neurons[i].reception[0].address);
+      assert(a.initial_weight >= 0 && a.initial_weight <= field::MAX_INITIAL_WEIGHT);
+      different |= a.bias != other.blueprint->neurons[i].bias;
+      if (i && a.group == first.blueprint->neurons[i - 1].group)
+        within_centre |= a.bias != first.blueprint->neurons[i - 1].bias;
+    }
+    assert(different && within_centre);
+    const auto imported = import_plan(first);
+    fishsim::Genome rebuilt;
+    rebuilt.cppn = Builder().build(imported);
+    rebuilt.development_seed = first.development_seed;
+    rebuilt.variation_seed = first.variation_seed;
+    rebuilt.compile(false);
+    for (std::size_t i = 0; i < first.blueprint->neurons.size(); ++i) {
+      const auto &a = first.blueprint->neurons[i], &b = rebuilt.blueprint->neurons[i];
+      assert(std::abs(a.bias - b.bias) < 1e-6);
+      assert(std::abs(a.hormone_receptors[field::Teaching].baseline -
+                      b.hormone_receptors[field::Teaching].baseline) < 1e-6);
+      assert(std::abs(a.reception[0].address[0] - b.reception[0].address[0]) < 1e-6);
+    }
+    // Small scheduler slices must make the same draw and pay the same graph cost.
+    auto sliced = first;
+    sliced.discard_development();
+    std::size_t steps = 0;
+    while (!sliced.advance_development(1, false))
+      assert(++steps < field::DEVELOPMENT_WORK_LIMIT);
+    assert(sliced.blueprint->development_work() == first.blueprint->development_work());
+  }
+  {
+    field::Neuron a{}, b{};
+    a.role = b.role = field::Role::Nerve;
+    a.sender = {-.8f, 0};
+    b.receiver = {-.8f, 0};
+    b.search_width = 0;
+    b.reception[0] = {{.8f, 0}, 0, 1};
+    const auto first = field::contact_parameters(a, b, 2).probability;
+    a.sender = {.8f, 0};
+    assert(field::contact_parameters(a, b, 2).probability == first);
+    a.sender = {0, 0};
+    assert(field::contact_parameters(a, b, 2).probability == 0);
+  }
+
+  {
     auto plan = cells(1);
     auto &r = plan.groups.front().receptors;
     r[field::Excitation] = {true, -.2f, .4f, .1f, 0, 0, 1};
@@ -149,6 +220,13 @@ int main() {
   {
     auto plan = cells(8);
     auto first = Builder().build(plan);
+    for (int k = out::mean_count; k < cppn::OUTPUTS; ++k) {
+      const auto &edges = first->get_connection_genes();
+      assert(std::any_of(edges.begin(), edges.end(), [&](const auto &e) {
+        return e.get_source() == cppn::BIAS && e.get_target() == cppn::INPUTS + k &&
+               e.get_weight() == 0 && e.get_enabled();
+      }));
+    }
     const std::array<evolution::NodeType, 7> types{
         NodeType::LINEAR,  NodeType::SINE, NodeType::COSINE, NodeType::GAUSSIAN,
         NodeType::SIGMOID, NodeType::ABS,  NodeType::POW};
@@ -254,8 +332,7 @@ int main() {
       assert(a.edges[i].source == b.edges[i].source && a.edges[i].target == b.edges[i].target &&
              a.edges[i].weight == b.edges[i].weight);
     for (std::size_t i = 0; i < a.partners.size(); ++i)
-      assert(a.partners[i].source == b.partners[i].source && a.partners[i].p == b.partners[i].p &&
-             a.partners[i].strength == b.partners[i].strength);
+      assert(a.partners[i].source == b.partners[i].source && a.partners[i].p == b.partners[i].p);
     std::ostringstream left, right;
     whole.cppn->write(left);
     split.cppn->write(right);

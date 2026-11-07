@@ -101,10 +101,17 @@ constexpr unsigned char outer = 0, nerve = 1, pacer = 2, modulating_pacer = 3, m
 }
 constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN, ADAPTATION_SPAN = 10;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
-constexpr std::uint64_t GENE_WORK = 4;
+constexpr std::uint64_t GENE_WORK = 6;
 constexpr std::uint64_t PCG_MULTIPLIER = 6364136223846793005ull,
                         PCG_INCREMENT = 1442695040888963407ull;
 constexpr int MIX_SHIFT1 = 29, MIX_SHIFT2 = 32;
+constexpr double HOMEOSTASIS_SPAN = 10;
+constexpr float HOMEOSTASIS_POWER = .25f;
+float homeostatic_scale(float rate, float power) {
+  return power > HOMEOSTASIS_POWER
+             ? std::exp(-rate / HOMEOSTASIS_SPAN * (power - HOMEOSTASIS_POWER))
+             : 1.f;
+}
 constexpr float COMPETITION = 1, CANCELLATION = .02f, PRUNE = .05f, NEW_SYNAPSE = .1f,
                 BASAL = 1.f / 50;
 }
@@ -158,12 +165,12 @@ struct Substrate::FinishState {
 
 struct NetworkTopology {
   struct Slice {
-    std::uint32_t offset = 0, length = 0, extra_offset = 0, extra_length = 0;
+    std::uint32_t offset = 0, length = 0;
     int lanes = 0;
     bool rhythm = false;
     std::array<NeuronIndex, LANES> cell{};
-    F8 bias{}, gain{}, pace{}, comp{}, canc{}, innate{}, fast{}, unit{};
-    I8 valid{}, work{}, both{}, modulator{}, nerve{};
+    F8 bias{}, gain{}, pace{}, comp{}, canc{}, fast{}, unit{};
+    I8 valid{}, work{}, nerve{};
     std::array<std::uint16_t, LANES> capacity{}, born{};
     std::array<double, LANES> phase{}, period{{1, 1, 1, 1, 1, 1, 1, 1}};
     // Empty tail rows have no weights or traces. Keep their capacity for formation and
@@ -184,7 +191,7 @@ struct NetworkTopology {
   std::vector<Slice> slices, effector_slices, other_slices;
   std::vector<float> gene;
   std::vector<std::uint16_t> index;
-  std::vector<float> cell_gain, cell_fast, cell_sign, nerve_source;
+  std::vector<float> cell_gain, cell_fast, cell_sign, nerve_source, modulator_source;
   std::vector<unsigned char> cell_driving;
   std::vector<std::int32_t> cell_lane;
   std::vector<std::uint32_t> group_offset, group_cells;
@@ -237,12 +244,6 @@ struct NetworkTopology {
          &others = b.others;
     auto &classes = b.classes;
     auto &group = b.group;
-    auto first = [&](std::uint32_t cell, int g) {
-      auto k = offset[cell];
-      while (k < offset[cell + 1] && group[s.edges[order[k]].source] < g)
-        ++k;
-      return k;
-    };
     auto add_slot = [&](std::uint32_t k, bool valid) {
       if (valid) {
         gene.push_back(s.edges[order[k]].weight);
@@ -258,13 +259,8 @@ struct NetworkTopology {
           std::min<std::uint32_t>(std::numeric_limits<std::uint16_t>::max(),
                                   std::max(born, total > extra ? total - extra : 0)));
     };
-    auto driving = [&](std::uint32_t c) { return first(c, source_group::pacer) - offset[c]; };
-    auto capacity_of = [&](std::uint32_t c) {
-      return places(c, driving(c), offset[c + 1] - first(c, source_group::pacer));
-    };
-    auto effector_capacity = [&](std::uint32_t c) {
-      return places(c, offset[c + 1] - offset[c], 0);
-    };
+    auto capacity_of = [&](std::uint32_t c) { return places(c, offset[c + 1] - offset[c], 0); };
+    auto effector_capacity = capacity_of;
 
     while (budget && b.stage != BuildState::Done) {
       --budget;
@@ -325,8 +321,9 @@ struct NetworkTopology {
         } else {
           cell_gain.assign(n, 0.f);
           cell_fast.assign(n, 1.f);
-          cell_sign.assign(n, 0.f);
+          cell_sign.assign(n + 1, 0.f);
           nerve_source.assign(n + 1, 0.f);
+          modulator_source.assign(n + 1, 0.f);
           cell_driving.assign(n, 0);
           cell_lane.assign(n, -1);
           b.cursor = 0;
@@ -342,8 +339,8 @@ struct NetworkTopology {
           cell_sign[i] = cell.role == Role::Sensor  ? 1.f
                          : cell.role == Role::Nerve ? classes[i].sign
                                                     : 0.f;
-          cell_driving[i] = cell.role == Role::Sensor ||
-                            (cell.role == Role::Nerve && group[i] == source_group::nerve);
+          cell_driving[i] = cell.role != Role::Effector;
+          modulator_source[i] = cell.role == Role::Nerve && classes[i].modulator > .5f ? 1.f : 0.f;
           nerve_source[i] = cell.role == Role::Nerve ? 1.f : 0.f;
           if (cell.functions.sensory() > 0) {
             sensors.push_back(NeuronIndex(i));
@@ -405,24 +402,20 @@ struct NetworkTopology {
 
           Slice sl;
           sl.lanes = int(std::min<std::size_t>(LANES, learners.size() - start));
-          std::array<std::uint32_t, LANES> cell{}, pacer{}, end{};
+          std::array<std::uint32_t, LANES> cell{}, end{};
           for (int l = 0; l < sl.lanes; ++l) {
             const auto c = learners[start + std::size_t(l)];
             const auto &nc = s.neurons[c];
             const auto &k = classes[c];
             cell[l] = c;
-            pacer[l] = first(c, source_group::pacer);
             end[l] = offset[c + 1];
             sl.cell[l] = NeuronIndex(c);
             sl.valid[l] = -1;
             sl.nerve[l] = -1;
-            sl.born[l] = std::uint16_t(pacer[l] - offset[c]);
+            sl.born[l] = std::uint16_t(end[l] - offset[c]);
             sl.capacity[l] = capacity_of(c);
-            sl.work[l] = std::int32_t(2 * (sl.capacity[l] + end[l] - pacer[l]));
+            sl.work[l] = std::int32_t(2 * sl.capacity[l]);
             sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
-            sl.extra_length = std::max(sl.extra_length, end[l] - pacer[l]);
-            sl.both[l] = std::int32_t(first(c, source_group::modulating_pacer) - pacer[l]);
-            sl.modulator[l] = std::int32_t(first(c, source_group::modulator) - pacer[l]);
             sl.bias[l] = nc.bias;
             const float gain = nc.parameters.plasticity < MIN_LEARNING_RATE
                                    ? 0.f
@@ -433,11 +426,7 @@ struct NetworkTopology {
             sl.rhythm = sl.rhythm || k.pace > 0;
             sl.comp[l] = COMPETITION * gain * std::max(0.f, k.mode);
             sl.canc[l] = CANCELLATION * gain * std::max(0.f, -k.mode);
-            double innate = 0;
-            for (auto e = offset[c]; e < pacer[l]; ++e)
-              innate += std::abs(double(s.edges[order[e]].weight));
-            sl.innate[l] = float(innate);
-            sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
+            sl.unit[l] = SYNAPSE_UNIT;
             const double tau = time_constant_steps(nc.parameters);
             sl.fast[l] = float(std::exp(-2 / tau));
             sl.period[l] = std::max(MIN_PACE_PERIOD, tau);
@@ -448,18 +437,14 @@ struct NetworkTopology {
                                         1.);
             cell_lane[c] = std::int32_t(LANES * slices.size() + std::size_t(l));
             cell_fast[c] = sl.fast[l];
-            cell_gain[c] = group[c] == source_group::nerve ? gain : 0.f;
+            cell_gain[c] = k.modulator <= .5f ? gain : 0.f;
           }
           sl.offset = std::uint32_t(gene.size());
           for (std::uint32_t j = 0; j < sl.length; ++j)
             for (int l = 0; l < LANES; ++l)
               add_slot(l < sl.lanes ? offset[cell[l]] + j : 0,
-                       l < sl.lanes && offset[cell[l]] + j < pacer[l]);
-          sl.extra_offset = std::uint32_t(gene.size());
-          for (std::uint32_t j = 0; j < sl.extra_length; ++j)
-            for (int l = 0; l < LANES; ++l)
-              add_slot(l < sl.lanes ? pacer[l] + j : 0, l < sl.lanes && pacer[l] + j < end[l]);
-          max_length = std::max({max_length, sl.length, sl.extra_length});
+                       l < sl.lanes && offset[cell[l]] + j < end[l]);
+          max_length = std::max(max_length, sl.length);
           slices.push_back(sl);
 
         } else {
@@ -484,11 +469,7 @@ struct NetworkTopology {
             sl.born[l] = std::uint16_t(offset[c + 1] - offset[c]);
             sl.capacity[l] = effector_capacity(c);
             sl.length = std::max<std::uint32_t>(sl.length, sl.capacity[l]);
-            double innate = 0;
-            for (auto e = offset[c]; e < offset[c + 1]; ++e)
-              innate += std::abs(double(s.edges[order[e]].weight));
-            sl.innate[l] = float(innate);
-            sl.unit[l] = sl.born[l] ? float(innate / sl.born[l]) : 0.f;
+            sl.unit[l] = SYNAPSE_UNIT;
           }
           sl.offset = std::uint32_t(gene.size());
           for (std::uint32_t j = 0; j < sl.length; ++j)
@@ -684,6 +665,7 @@ Network::Network(std::shared_ptr<const Substrate> s) : tissue(std::move(s)) {
   muted_.assign(n, 0);
   dead_.assign(n, 0);
   synaptic_mean_.assign(n, 0);
+  activity_power_.assign(n, 0);
   adaptation_rate_.resize(n);
   for (std::size_t i = 0; i < n; ++i)
     adaptation_rate_[i] =
@@ -713,18 +695,14 @@ void Network::prepare_state() {
   for (auto *v : {&lane_action_, &lane_teach_, &lane_own_, &lane_value_, &lane_contrast_,
                   &lane_ready_, &lane_step_, &lane_pending_})
     v->assign(lanes, 0.f);
-  lane_innate_.assign(lanes, 0.f);
   lane_count_.assign(lanes + effector_lanes, 0);
   for (std::size_t s = 0; s < t.slices.size(); ++s)
     for (int l = 0; l < LANES; ++l) {
-      lane_innate_[LANES * s + std::size_t(l)] = t.slices[s].innate[l];
       lane_count_[LANES * s + std::size_t(l)] = t.slices[s].born[l];
     }
   effector_own_.assign(effector_lanes, 0.f);
-  effector_innate_.assign(effector_lanes, 0.f);
   for (std::size_t s = 0; s < t.effector_slices.size(); ++s)
     for (int l = 0; l < LANES; ++l) {
-      effector_innate_[LANES * s + std::size_t(l)] = t.effector_slices[s].innate[l];
       lane_count_[lanes + LANES * s + std::size_t(l)] = t.effector_slices[s].born[l];
     }
   cell_surprise_.assign(cells() + 1, 0.f);
@@ -801,9 +779,9 @@ void Network::reset() {
   active_hormones_ = {};
   materialize();
   settled_ready_ = false;
-  for (auto *v :
-       {&synaptic_mean_, &state_, &next_, &signal_, &pulse_, &trace_, &lane_teach_, &lane_value_,
-        &lane_contrast_, &lane_ready_, &lane_step_, &lane_pending_, &cell_surprise_})
+  for (auto *v : {&synaptic_mean_, &activity_power_, &state_, &next_, &signal_, &pulse_, &trace_,
+                  &lane_teach_, &lane_value_, &lane_contrast_, &lane_ready_, &lane_step_,
+                  &lane_pending_, &cell_surprise_})
     std::fill(v->begin(), v->end(), 0.f);
   observed_contributions.clear();
 }
@@ -826,7 +804,6 @@ void Network::remove_dead_connections() {
         }
       };
       block(sl.offset, sl.length, true);
-      block(sl.extra_offset, sl.extra_length, false);
       if (counted)
         lane_count_[lane0 + l] = count;
     }
@@ -899,10 +876,11 @@ bool Network::form_synapse(std::size_t lane, bool effector, const Would &would) 
   }
   if (free == UINT32_MAX || s.unit[l] <= 0)
     return false;
-  if (turnover_unit() >= BASAL && would(source) * t.cell_sign[source] <= 0)
+  if (turnover_unit() >= BASAL &&
+      (t.modulator_source[source] > 0 || would(source) * t.cell_sign[source] <= 0))
     return false;
   index_[free] = source;
-  gene_[free] = t.cell_sign[source] * NEW_SYNAPSE * s.unit[l];
+  gene_[free] = t.cell_sign[source] * NEW_SYNAPSE * SYNAPSE_UNIT;
   learned_[free] = trace_[free] = predict_[free] = 0;
   ++lane_count_[effector ? LANES * t.slices.size() + lane : lane];
   ++revision_;
@@ -939,8 +917,7 @@ void Network::learn_effectors(float rm) {
         trace_[slot] = fast * trace_[slot] + (1 - fast) * deviation_[src] * dy;
         e2 += double(trace_[slot]) * trace_[slot];
       }
-      double total = 0;
-      bool changed = false;
+      const float scaling = homeostatic_scale(adaptation_rate_[cell], activity_power_[cell]);
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
         const auto src = index_[slot];
@@ -951,21 +928,13 @@ void Network::learn_effectors(float rm) {
         const float gain = effector_learning_rate(src);
         if (gain > 0) {
           u = float(u + gain * cell_surprise_[src] * trace_[slot] / (1 + e2));
-          if (g * (g + u) < 0)
+          if (t.cell_sign[src] * (g + u) < 0)
             u = -g;
-          changed = changed || u != learned_[slot];
           learned_[slot] = u;
         }
-        total += std::abs(double(g) + u);
+        if (gain > 0)
+          learned_[slot] = (g + learned_[slot]) * scaling - g;
       }
-      const double innate = effector_innate_[lane];
-      if (changed && total > 0 && innate > 0)
-        for (std::uint32_t j = 0; j < L; ++j) {
-          const auto slot = base + LANES * j + std::uint32_t(l);
-          if (index_[slot] != zero)
-            learned_[slot] =
-                float((double(gene_[slot]) + learned_[slot]) * (innate / total) - gene_[slot]);
-        }
       for (std::uint32_t j = 0; j < L; ++j) {
         const auto slot = base + LANES * j + std::uint32_t(l);
         if (index_[slot] != zero &&
@@ -1093,7 +1062,15 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     bool any_pending = false;
     for (int l = 0; l < LANES; ++l)
       any_pending = any_pending || pending[l];
-    F8 sum = sl.bias + drive + sl.pace * rhythm * rs, acc{}, total{}, change{};
+    F8 scaling{};
+    bool any_homeostasis = false;
+    for (int l = 0; l < sl.lanes; ++l) {
+      const auto c = sl.cell[l];
+      scaling[l] =
+          adapt && gain[l] > 0 ? homeostatic_scale(adaptation_rate_[c], activity_power_[c]) : 1.f;
+      any_homeostasis = any_homeostasis || scaling[l] < 1;
+    }
+    F8 sum = sl.bias + drive + sl.pace * rhythm * rs, acc{}, modulating{}, change{};
     for (std::uint32_t j = 0; j < L; ++j) {
       const auto slot = LANES * j;
       const I8 index = load_index8(indices + base + slot);
@@ -1102,37 +1079,24 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       F8 w = load8(SW + slot);
       if (any_pending) {
         F8 u = w + step0 * load8(ST + slot);
-        u = g * (g + u) < splat8(0) ? -g : u; // Dale
+        u = gather8(t.cell_sign.data(), index) * (g + u) < splat8(0) ? -g : u;
         change += abs8(u - w);
-        total += abs8(g + u);
         store8(SW + slot, u);
         w = u;
       }
-      acc += x * (g + w);
-    }
-    const F8 innate = load8(lane_innate_.data() + lane0);
-    const I8 scale = pending & (total > splat8(0)) & (innate > splat8(0)) &
-                     ((sl.canc <= splat8(0)) | (total > innate));
-    bool any_scale = false;
-    for (int l = 0; l < LANES; ++l)
-      any_scale = any_scale || scale[l];
-    const F8 f = scale ? innate / (scale ? total : splat8(1)) : splat8(1);
-    F8 synaptic = f * acc;
-    sum += synaptic;
-    F8 pace{}, modulating{};
-    if (sl.extra_length) {
-      const float *XG = genes + sl.extra_offset, *XW = learned_.data() + sl.extra_offset;
-      for (std::uint32_t j = 0; j < sl.extra_length; ++j) {
-        const auto slot = LANES * j;
-        const F8 v = gather8(emitted, load_index8(indices + sl.extra_offset + slot)) *
-                     (load8(XG + slot) + load8(XW + slot));
-        const I8 at = I8{} + std::int32_t(j);
-        pace += at < sl.modulator ? v : F8{};
-        sum += at < sl.both ? v : F8{};
-        synaptic += at < sl.both ? v : F8{};
-        modulating += at >= sl.both ? v : F8{};
+      const F8 modulation = gather8(t.modulator_source.data(), index);
+      if (any_homeostasis) {
+        const F8 old = w;
+        const I8 scale = (scaling < splat8(1)) & (modulation < splat8(.5f));
+        w = scale ? (g + w) * scaling - g : w;
+        change += abs8(w - old);
+        store8(SW + slot, w);
       }
+      acc += (1 - modulation) * x * (g + w);
+      modulating += modulation * x * (g + w);
     }
+    const F8 synaptic = acc;
+    sum += synaptic;
     F8 output_factor{};
     for (int l = 0; l < sl.lanes; ++l) {
       const auto c = sl.cell[l];
@@ -1141,8 +1105,12 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
       output_factor[l] = .5f * (1 + hormone_effect_[Output][c]);
     }
     const F8 out = tanh8(sum) * output_factor;
-    for (int l = 0; l < sl.lanes; ++l)
+    for (int l = 0; l < sl.lanes; ++l) {
       next_[sl.cell[l]] = live[l] ? out[l] : 0.f;
+      if (adapt && live[l])
+        activity_power_[sl.cell[l]] += adaptation_rate_[sl.cell[l]] / HOMEOSTASIS_SPAN *
+                                       (out[l] * out[l] - activity_power_[sl.cell[l]]);
+    }
     store8(lane_ready_.data() + lane0, live ? splat8(1) : F8{});
     if (muted_lane)
       for (std::uint32_t j = 0; j < L; ++j)
@@ -1157,16 +1125,10 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     for (int l = 0; l < sl.lanes; ++l)
       cell_surprise_[sl.cell[l]] = 0;
     if (!adapt || !any) {
-      if (any_scale) // the resource still applies to the last step
-        for (std::uint32_t j = 0; j < L; ++j) {
-          const auto slot = LANES * j;
-          const F8 w = load8(SW + slot), g = load8(SG + slot);
-          store8(SW + slot, scale ? (g + w) * f - g : w);
-        }
       continue;
     }
     const F8 own = out;
-    const F8 action = (1 - eligibility) * pace + eligibility * own, teach = teaching + modulating;
+    const F8 action = eligibility * own, teach = teaching + modulating;
     const F8 cb2 = rm * cb + (1 - rm) * action, dpost = action - cb2, ddrive = teach - nz,
              nz2 = rm * nz + (1 - rm) * teach, y = own - uo, uo2 = rm * uo + (1 - rm) * own;
     const F8 fast = learn ? sl.fast : splat8(1), dp = learn ? dpost : F8{};
@@ -1178,29 +1140,34 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     F8 prediction{}, x2{}, e2{}, competed{};
     for (std::uint32_t j = 0; j < L; ++j) {
       const auto slot = LANES * j;
-      const F8 xc = load8(xb + slot), g = load8(SG + slot);
+      const F8 modulation = gather8(t.modulator_source.data(), load_index8(indices + base + slot));
+      const F8 xc = (1 - modulation) * load8(xb + slot), g = load8(SG + slot);
       F8 w = load8(SW + slot);
-      if (any_scale)
-        w = scale ? (g + w) * f - g : w;
-      const F8 tr = fast * load8(ST + slot) + (1 - fast) * xc * dp;
+      const F8 tr = (1 - modulation) * (fast * load8(ST + slot) + (1 - fast) * xc * dp);
       store8(ST + slot, tr);
       prediction += load8(SV + slot) * xc;
       x2 += xc * xc;
       e2 += tr * tr;
       if (competes) {
         const F8 kv = ky * gather8(t.nerve_source.data(), load_index8(indices + base + slot));
-        const F8 d = cy * (xc - (g + w) * y) - kv * xc;
+        const F8 d = (1 - modulation) * (cy * (xc - (g + w) * y) - kv * xc);
+        const F8 old = w;
         w = w + d;
-        competed += abs8(d);
+        w = gather8(t.cell_sign.data(), load_index8(indices + base + slot)) * (g + w) < splat8(0)
+                ? -g
+                : w;
+        competed += abs8(w - old);
       }
-      if (any_scale || competes)
+      if (competes)
         store8(SW + slot, w);
     }
     const F8 surprise = learn ? ddrive - prediction : F8{},
              vstep = learn ? gain * surprise / (1 + x2) : F8{};
     for (std::uint32_t j = 0; j < L; ++j) {
       const auto slot = LANES * j;
-      store8(SV + slot, load8(SV + slot) + vstep * load8(xb + slot));
+      const F8 ordinary =
+          1 - gather8(t.modulator_source.data(), load_index8(indices + base + slot));
+      store8(SV + slot, load8(SV + slot) + vstep * ordinary * load8(xb + slot));
     }
     store8(lane_step_.data() + lane0, learn ? gain * surprise / (1 + e2) : F8{});
     store8(lane_pending_.data() + lane0, learn ? splat8(1) : F8{});
@@ -1253,6 +1220,9 @@ void Network::advance(const std::vector<float> &values, const Hormones *modulati
     for (int l = 0; l < sl.lanes; ++l) {
       const auto i = sl.cell[l];
       next_[i] = any_muted && inactive(i) ? 0.f : out[l];
+      if (adapt && !inactive(i))
+        activity_power_[i] +=
+            adaptation_rate_[i] / HOMEOSTASIS_SPAN * (out[l] * out[l] - activity_power_[i]);
     }
   }
   if (adapt)
@@ -1322,23 +1292,14 @@ const std::vector<float> &Network::settled() const {
       const auto lane = LANES * s + std::size_t(l);
       if (lane_pending_[lane] < .5f)
         continue;
-      double total = 0;
       for (std::uint32_t j = 0; j < sl.length; ++j) {
         const auto slot = sl.offset + LANES * j + std::uint32_t(l);
         const float g = gene_[slot];
         float u = settled_[slot] + lane_step_[lane] * trace_[slot];
-        if (g * (g + u) < 0)
+        if (t.cell_sign[index_[slot]] * (g + u) < 0)
           u = -g;
         settled_[slot] = u;
-        total += std::abs(double(g) + u);
       }
-      const double innate = lane_innate_[lane];
-      if (total > 0 && innate > 0 && (sl.canc[l] <= 0 || total > innate))
-        for (std::uint32_t j = 0; j < sl.length; ++j) {
-          const auto slot = sl.offset + LANES * j + std::uint32_t(l);
-          const float g = gene_[slot];
-          settled_[slot] = float((double(g) + settled_[slot]) * (innate / total) - g);
-        }
     }
   }
   settled_ready_ = true;
@@ -1360,7 +1321,6 @@ std::vector<Network::Synapse> Network::synapses() const {
   };
   for (const auto &sl : t.slices) {
     add(sl, sl.offset, sl.length);
-    add(sl, sl.extra_offset, sl.extra_length);
   }
   for (const auto &sl : t.effector_slices)
     add(sl, sl.offset, sl.length);
@@ -1428,11 +1388,10 @@ std::size_t Network::runtime_bytes() const {
                         &lane_ready_,
                         &lane_step_,
                         &lane_pending_,
-                        &lane_innate_,
                         &effector_own_,
-                        &effector_innate_,
                         &cell_surprise_,
                         &synaptic_mean_,
+                        &activity_power_,
                         &adaptation_rate_,
                         &observed_contributions})
     floats += v->capacity();
@@ -1512,11 +1471,10 @@ void Network::write_runtime(std::ostream &out) const {
   out.precision(precision);
   write_values(out, std::vector<float>(index_.begin(), index_.end()));
   for (const auto *v :
-       {&synaptic_mean_, &gene_,         &state_,       &signal_,        &pulse_,
-        &usual_,         &learned_,      &trace_,       &predict_,       &lane_action_,
-        &lane_teach_,    &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,
-        &lane_step_,     &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_,
-        &cell_surprise_})
+       {&synaptic_mean_, &activity_power_, &gene_,         &state_,        &signal_,
+        &pulse_,         &usual_,          &learned_,      &trace_,        &predict_,
+        &lane_action_,   &lane_teach_,     &lane_own_,     &lane_value_,   &lane_contrast_,
+        &lane_ready_,    &lane_step_,      &lane_pending_, &effector_own_, &cell_surprise_})
     write_values(out, *v);
   write_values(out, as_floats(muted_));
   write_values(out, as_floats(dead_));
@@ -1554,14 +1512,11 @@ void Network::read_runtime_state(std::istream &in) {
   }
   constexpr float LIMIT = 1e9f;
   for (auto *v :
-       {&synaptic_mean_, &gene_,         &state_,       &signal_,        &pulse_,
-        &usual_,         &learned_,      &trace_,       &predict_,       &lane_action_,
-        &lane_teach_,    &lane_own_,     &lane_value_,  &lane_contrast_, &lane_ready_,
-        &lane_step_,     &lane_pending_, &lane_innate_, &effector_own_,  &effector_innate_,
-        &cell_surprise_})
+       {&synaptic_mean_, &activity_power_, &gene_,         &state_,        &signal_,
+        &pulse_,         &usual_,          &learned_,      &trace_,        &predict_,
+        &lane_action_,   &lane_teach_,     &lane_own_,     &lane_value_,   &lane_contrast_,
+        &lane_ready_,    &lane_step_,      &lane_pending_, &effector_own_, &cell_surprise_})
     read_values(in, *v, LIMIT);
-  // no separate weight limit: the resource normalisation of the next step bounds the weights as in
-  // the running brain; a loaded state only has to be finite (read_values)
   std::vector<float> flags(cells());
   read_values(in, flags, 1);
   for (std::size_t i = 0; i < cells(); ++i) {

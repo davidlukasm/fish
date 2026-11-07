@@ -74,11 +74,10 @@ const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'compet
 export const modeName = mode => MODE_NAME[modeLean(mode)];
 function learningRule(state, center, teachers, colours) {
   const L = EPISODE_LAYOUT.big, R = RULE, words = key => label('learnRule.' + key);
-  const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
+  const rate = center.qwidth, mode = center.mode;
   const remnant = remnantOf(center), teaches = colours.length > 0;
   const inputs = [
     {y : L.cy - L.r * 2.6, deed : 'own', label : words('firing')},
-    ...(pacer ? [ {y : L.cy, deed : 'beat', label : words('inBeat')} ] : []),
     {y : L.cy + L.r * 2.6, deed : null, label : words('still')}
   ];
   const competing = R.compete * rate * Math.max(0, mode);
@@ -87,18 +86,17 @@ function learningRule(state, center, teachers, colours) {
   const rounds = [ 0, 1 ].map(k => {
     const surprise = teaches ? 1 - expect : 0;
     const reward = R.change * rate * surprise * remnant;
-    const own = reward * 2 * R.credit, beat = pacer ? reward * 2 * (1 - R.credit) : 0;
-    const giveWay = mode >= 0 ? -(own + beat) : 0;
+    const own = reward * 2 * R.credit;
     const before = expect;
     if (teaches)
       expect = before + (1 - before) * Math.min(1, R.expect * rate);
-    const trace = [ 2 * R.credit * R.glow, ...(pacer ? [ 2 * (1 - R.credit) * R.glow ] : []), 0 ];
+    const trace = [ 2 * R.credit * R.glow, 0 ];
     return {
       trace,
       remnant,
       teach : teaches ? colours[k % colours.length] : null,
-      grow : [ competing - cancelling, ...(pacer ? [ -competing ] : []), -competing ],
-      gain : [ own, ...(pacer ? [ beat ] : []), giveWay ],
+      grow : [ competing - cancelling, -competing ],
+      gain : [ own, 0 ],
       expect : [ before, expect ]
     };
   });

@@ -36,8 +36,8 @@ inline constexpr int restarts = 64, iterations = 1600, check_period = 32, repair
 inline constexpr std::uint64_t restart_salt = 7919;
 inline constexpr double initial_extent = .8, address_extent = .95, initial_radius = .12,
                         repair_jitter = .08, clearance_margin = 1.1;
-// The bundle likelihood protects complete paths; the drive term avoids vanishingly weak wires.
-inline constexpr double bundle_weight = 4, drive_weight = .25, missing_goal = .001,
+// Bundles protect complete paths; affinity favours mutation-tolerant binding cores.
+inline constexpr double bundle_weight = 4, binding_weight = .25, missing_goal = .001,
                         leakage_goal = .002;
 inline constexpr double first_decay = .9, second_decay = .999, step = .025, moment_epsilon = 1e-8,
                         probability_floor = 1e-12, exponent_limit = 700;
@@ -51,7 +51,9 @@ class AddressFitter {
     double mass;
     bool wanted, allowed;
   };
-  std::vector<int> classes;
+  std::vector<int> classes, field_count, winning;
+  static int reception(int target, int f) { return target * field::CONTACT_FIELDS + f; }
+  int receiver(int target, int f) const { return 2 * k + 3 * reception(target, f); }
   std::vector<Pair> pairs;
   std::map<int, std::vector<int>> bundles;
   std::vector<double> slots, lower, upper, x, best, gradient, m, v, values, slopes, q, derivative,
@@ -117,19 +119,31 @@ class AddressFitter {
     for (int b = 0; b < n; ++b)
       slots[b] = counts[b] * field::input_slots(field::Role(p.groups[b].role), p.groups[b].field);
 
-    size = 2 * k + 3 * n;
+    field_count.assign(n, 1);
+    for (int b = 0; b < n; ++b) {
+      std::set<int> senders;
+      for (int a = 0; a < n; ++a)
+        if (w.wanted[a][b] && classes[a] >= 0)
+          senders.insert(classes[a]);
+      field_count[b] = std::clamp(int(senders.size()), 1, field::CONTACT_FIELDS);
+    }
+    size = 2 * k + 3 * field::CONTACT_FIELDS * n;
     for (auto buffer : {&x, &best, &gradient, &m, &v})
       buffer->resize(size);
     lower.assign(size, -fit::address_extent);
     upper.assign(size, fit::address_extent);
-    for (int b = 0; b < n; ++b) {
-      lower[2 * k + 3 * b + 2] = std::log(field::spread_radius(w.spread[b]));
-      upper[2 * k + 3 * b + 2] = std::log(field::MAX_SEARCH);
-    }
+    for (int b = 0; b < n; ++b)
+      for (int f = 0; f < field::CONTACT_FIELDS; ++f) {
+        lower[receiver(b, f) + 2] = std::log(field::spread_radius(w.spread[b]));
+        upper[receiver(b, f) + 2] = std::log(field::MAX_SEARCH);
+      }
     for (auto buffer : {&values, &slopes, &q, &derivative})
       buffer->resize(pairs.size());
-    for (auto buffer : {&demand, &demand_gradient, &variance, &squared, &thinning})
+    for (auto buffer : {&demand, &demand_gradient, &thinning})
       buffer->resize(n);
+    variance.resize(n * field::CONTACT_FIELDS);
+    squared.resize(variance.size());
+    winning.resize(pairs.size());
   }
   void clamp() {
     for (int i = 0; i < size; ++i)
@@ -158,12 +172,24 @@ class AddressFitter {
       for (int a = 0; a < n; ++a)
         if (w.wanted[a][b] && classes[a] >= 0)
           senders.insert(classes[a]);
-      for (int c : senders) {
-        x[2 * k + 3 * b] += x[2 * c] / senders.size();
-        x[2 * k + 3 * b + 1] += x[2 * c + 1] / senders.size();
+      for (int f = 0; f < field_count[b]; ++f) {
+        int index = 0, count = 0;
+        const int r = receiver(b, f);
+        for (int c : senders) {
+          if (index++ % field_count[b] != f)
+            continue;
+          x[r] += x[2 * c];
+          x[r + 1] += x[2 * c + 1];
+          ++count;
+        }
+        if (count) {
+          x[r] /= count;
+          x[r + 1] /= count;
+        }
+        x[r + 2] = std::max(std::log(fit::initial_radius), lower[r + 2]);
       }
-      x[2 * k + 3 * b + 2] = std::max(std::log(fit::initial_radius), lower[2 * k + 3 * b + 2]);
     }
+
     if (restart && restart % fit::repair_period == 0) {
       x = best;
       for (int i = 0; i < size; ++i)
@@ -177,25 +203,34 @@ class AddressFitter {
     std::fill(derivative.begin(), derivative.end(), 0);
     std::fill(demand.begin(), demand.end(), 0);
     std::fill(demand_gradient.begin(), demand_gradient.end(), 0);
-    for (int b = 0; b < n; ++b) {
-      const double log_radius = x[2 * k + 3 * b + 2];
-      const double sigma = std::exp(log_radius);
-      variance[b] = 2 * sigma * sigma;
-      squared[b] = std::exp(2 * log_radius);
-    }
+    for (int b = 0; b < n; ++b)
+      for (int f = 0; f < field_count[b]; ++f) {
+        const auto r = reception(b, f);
+        const double sigma = std::exp(x[receiver(b, f) + 2]);
+        variance[r] = 2 * sigma * sigma;
+        squared[r] = sigma * sigma;
+      }
     double loss = 0, leakage = 0, missing = 0;
     for (int i = 0; i < int(pairs.size()); ++i) {
       const auto &pair = pairs[i];
-      const int c = 2 * pair.source, r = 2 * k + 3 * pair.target;
-      const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
-      q[i] = (dx * dx + dy * dy) / variance[pair.target];
+      const int c = 2 * pair.source;
+      q[i] = std::numeric_limits<double>::infinity();
+      for (int f = 0; f < field_count[pair.target]; ++f) {
+        const int r = receiver(pair.target, f);
+        const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
+        const double candidate = (dx * dx + dy * dy) / variance[reception(pair.target, f)];
+        if (candidate < q[i]) {
+          q[i] = candidate;
+          winning[i] = f;
+        }
+      }
       values[i] = pair.mass * field::contact_affinity(q[i]);
       slopes[i] = pair.mass * field::contact_affinity_slope(q[i]);
       demand[pair.target] += values[i];
       if (pair.wanted) {
         // Keep a useful drive even when many copies make a weak wire likely to occur.
-        loss += fit::drive_weight * q[i];
-        derivative[i] += fit::drive_weight;
+        loss += fit::binding_weight * q[i];
+        derivative[i] += fit::binding_weight;
       } else if (!pair.allowed) {
         const double deficit = std::max(0., field::CONTACT_SUPPORT * fit::clearance_margin - q[i]);
         loss += deficit * deficit;
@@ -228,13 +263,14 @@ class AddressFitter {
     }
     for (int i = 0; i < int(pairs.size()); ++i) {
       const auto &pair = pairs[i];
-      const int c = 2 * pair.source, r = 2 * k + 3 * pair.target;
+      const int c = 2 * pair.source, r = receiver(pair.target, winning[i]),
+                rf = reception(pair.target, winning[i]);
       const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
       const double d = derivative[i] + demand_gradient[pair.target] * slopes[i];
-      gradient[c] += d * dx / squared[pair.target];
-      gradient[c + 1] += d * dy / squared[pair.target];
-      gradient[r] -= d * dx / squared[pair.target];
-      gradient[r + 1] -= d * dy / squared[pair.target];
+      gradient[c] += d * dx / squared[rf];
+      gradient[c + 1] += d * dy / squared[rf];
+      gradient[r] -= d * dx / squared[rf];
+      gradient[r + 1] -= d * dy / squared[rf];
       gradient[r + 2] -= 2 * d * q[i];
     }
     stats.evaluations += int(pairs.size());
@@ -261,11 +297,19 @@ class AddressFitter {
   void apply() {
     for (int a = 0; a < n; ++a) {
       auto &g = p.groups[a];
-      const int c = classes[a], r = 2 * k + 3 * a;
+      const int c = classes[a], r = receiver(a, 0);
       g.sender1 = c < 0 ? 1 : float(best[2 * c]);
       g.sender2 = c < 0 ? 1 : float(best[2 * c + 1]);
       g.receiver1 = g.role == 0 ? -1 : float(best[r]);
       g.receiver2 = g.role == 0 ? -1 : float(best[r + 1]);
+      for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
+        auto &extra = g.reception[f - 1];
+        const int r = receiver(a, f);
+        extra.expression = g.role != 0 && f < field_count[a] ? 1.f : -1.f;
+        extra.address = {float(best[r]), float(best[r + 1])};
+        extra.width = float(field::search_width(
+            std::clamp(std::exp(best[r + 2]), field::MIN_SEARCH, field::MAX_SEARCH)));
+      }
       g.sigma = g.role == 0
                     ? float(field::MIN_SEARCH)
                     : float(std::max(std::exp(best[r + 2]), field::spread_radius(w.spread[a])));
@@ -327,36 +371,81 @@ struct Assessment {
 // their baseline and sensitivity; their unused binding profile has no physiological effect.
 inline float receptor_deviation(const Receptor &wanted, const field::HormoneReceptor &actual,
                                 int effect) {
-  float deviation =
-      std::max(std::abs(actual.baseline - (wanted.active             ? wanted.baseline
-                                           : effect == field::Output ? 1.f
-                                                                     : 0.f)) /
-                   2,
-               std::abs(actual.sensitivity - (wanted.active ? wanted.sensitivity : 0.f)) /
-                   (2 * field::HORMONE_SENSITIVITY_SPAN));
+  const auto outside = [](float value, float lower, float upper) {
+    return std::max({0.f, lower - value, value - upper});
+  };
+  const float baseline = wanted.active ? wanted.baseline : effect == field::Output ? 1.f : 0.f;
+  const float sensitivity = wanted.active ? wanted.sensitivity : 0.f;
+  float deviation = std::max(
+      outside(actual.baseline, baseline - 2 * wanted.spread_capacity,
+              baseline + 2 * wanted.spread_capacity) /
+          2,
+      outside(actual.sensitivity,
+              sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_field_width,
+              sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_field_width) /
+          (2 * field::HORMONE_SENSITIVITY_SPAN));
   if (!wanted.active || std::abs(wanted.sensitivity) < 1e-6f)
     return deviation;
-  const float angle = float(2 * fishsim::PI * wanted.substance / field::BLOOD_SUBSTANCES);
-  const auto affinity =
-      field::hormone_affinity<field::REGULATORS>(std::cos(angle), std::sin(angle), wanted.width);
-  for (int k = 0; k < field::REGULATORS; ++k)
-    deviation = std::max(deviation, std::abs(actual.affinity[k] - affinity[k]));
-  deviation =
-      std::max(deviation, float(std::abs(std::log(actual.half / wanted.half)) /
-                                std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN)));
-  return std::max(deviation, float(std::abs(actual.steepness - wanted.steepness)) /
-                                 field::HORMONE_STEEPNESS_STEPS);
+  const double angle = 2 * fishsim::PI * wanted.substance / field::BLOOD_SUBSTANCES;
+  const auto interval = [](double mean, double width) {
+    return std::array<double, 2>{std::clamp(mean - width, -1., 1.),
+                                 std::clamp(mean + width, -1., 1.)};
+  };
+  const auto x = interval(std::cos(angle), 2 * wanted.spread_quality1),
+             y = interval(std::sin(angle), 2 * wanted.spread_quality2);
+  const double sigma_min = field::HORMONE_SIGMA_MIN +
+                           (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
+                               std::clamp(wanted.width - wanted.spread_quality_width, 0.f, 1.f),
+               sigma_max = field::HORMONE_SIGMA_MIN +
+                           (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
+                               std::clamp(wanted.width + wanted.spread_quality_width, 0.f, 1.f);
+  for (int k = 0; k < field::REGULATORS; ++k) {
+    const double a = 2 * fishsim::PI * k / field::BLOOD_SUBSTANCES;
+    const double px = std::cos(a), py = std::sin(a);
+    const double near_x = outside(float(px), float(x[0]), float(x[1])),
+                 near_y = outside(float(py), float(y[0]), float(y[1])),
+                 far_x = std::max(std::abs(px - x[0]), std::abs(px - x[1])),
+                 far_y = std::max(std::abs(py - y[0]), std::abs(py - y[1]));
+    deviation = std::max(
+        deviation,
+        outside(
+            actual.affinity[k],
+            float(std::exp(-(far_x * far_x + far_y * far_y) / (2 * sigma_min * sigma_min))),
+            float(std::exp(-(near_x * near_x + near_y * near_y) / (2 * sigma_max * sigma_max)))));
+  }
+  const float half_difference = float(std::log(actual.half / wanted.half) /
+                                      std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN));
+  deviation = std::max(deviation,
+                       outside(half_difference, -wanted.spread_threshold, wanted.spread_threshold));
+  const auto steepness = [&](float delta) {
+    return float(std::lround(
+        field::HORMONE_STEEPNESS_STEPS *
+        std::clamp(float(wanted.steepness) / field::HORMONE_STEEPNESS_STEPS + delta, 0.f, 1.f)));
+  };
+  return std::max(deviation,
+                  outside(float(actual.steepness), steepness(-2 * wanted.spread_time_constant),
+                          steepness(2 * wanted.spread_time_constant)) /
+                      field::HORMONE_STEEPNESS_STEPS);
 }
 inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
                              const field::Neuron &expected) {
   const auto &a = cell.parameters, &b = expected.parameters;
   float deviation = std::max(
-      {std::abs(a.threshold - b.threshold), std::abs(a.time_constant - b.time_constant),
-       std::abs(a.field_width - b.field_width), std::abs(a.quality1 - b.quality1) / 2,
-       std::abs(a.quality2 - b.quality2) / 2, std::abs(a.quality_width - b.quality_width),
-       std::abs(cell.range - expected.range), std::abs(cell.crossing - expected.crossing) / 2});
+      {std::max(0.f, std::abs(a.threshold - b.threshold) - wanted.spread_threshold),
+       std::max(0.f, std::abs(a.time_constant - b.time_constant) - wanted.spread_time_constant),
+       std::max(0.f, std::abs(a.field_width - b.field_width) - wanted.spread_field_width),
+       std::max(0.f, std::abs(a.quality1 - b.quality1) / 2 - wanted.spread_quality1),
+       std::max(0.f, std::abs(a.quality2 - b.quality2) / 2 - wanted.spread_quality2),
+       std::max(0.f, std::abs(a.quality_width - b.quality_width) - wanted.spread_quality_width),
+       std::max(0.f, std::abs(cell.range - expected.range) - wanted.spread_range),
+       std::max(0.f, std::abs(cell.crossing - expected.crossing) / 2 - wanted.spread_crossing)});
+  const std::array<float, field::IDENTITY_SIZE> identity_spread{
+      wanted.spread_identity_role, wanted.spread_identity1, wanted.spread_identity2,
+      wanted.spread_identity3, wanted.spread_identity4};
   for (std::size_t k = 1; k < cell.identity.size(); ++k)
-    deviation = std::max(deviation, std::abs(cell.identity[k] - expected.identity[k]) / 2);
+    deviation =
+        std::max(deviation, std::max(0.f, std::abs(cell.identity[k] - expected.identity[k]) / 2 -
+                                              identity_spread[k]));
   for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
     if (field::hormone_effect_present(cell.role, effect))
       deviation = std::max(deviation, receptor_deviation(wanted.receptors[effect],
@@ -411,11 +500,14 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
     const int expected = sites * (p.groups[j].role == 2 ? 1 : p.groups[j].copies);
     if (!counts[j])
       result.issues.push_back({"organ", j, j});
-    else if (std::abs(counts[j] - expected) > p.options.capacityTolerance * expected + .001)
+    else if (std::abs(counts[j] - expected) >
+             p.options.capacityTolerance * expected +
+                 sites * field::CELL_COPIES * p.groups[j].spread_capacity + .001)
       result.issues.push_back({"capacity", j, j, double(counts[j]) / expected});
     if (p.groups[j].role == 2) {
       const double capacity = sites * p.groups[j].copies / 16.;
-      if (std::abs(capacities[j] - capacity) > p.options.capacityTolerance * capacity + 1e-4)
+      if (std::abs(capacities[j] - capacity) >
+          p.options.capacityTolerance * capacity + sites * p.groups[j].spread_capacity + 1e-4)
         result.issues.push_back({"capacity", j, j, capacities[j] / capacity});
     }
   }

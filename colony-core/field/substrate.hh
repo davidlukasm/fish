@@ -27,6 +27,16 @@ inline double time_constant_steps(const CellParameters &p) {
   return TIME_CONSTANT_MIN *
          std::pow(TIME_CONSTANT_SPAN, std::clamp(double(p.time_constant), 0., 1.));
 }
+inline constexpr int CONTACT_FIELDS = 4;
+inline constexpr float SYNAPSE_UNIT = .1f, MAX_INITIAL_WEIGHT = .25f;
+struct ReceptionField {
+  std::array<float, 2> address{};
+  float width = 0, expression = 0;
+  bool operator==(const ReceptionField &o) const {
+    return address == o.address && width == o.width && expression == o.expression;
+  }
+  bool operator!=(const ReceptionField &o) const { return !(*this == o); }
+};
 struct Neuron {
   std::uint64_t id;
   float x, y, bias;
@@ -40,6 +50,8 @@ struct Neuron {
   int variant = 0;
   std::array<float, 5> identity{};
   std::array<float, 2> sender{}, receiver{};
+  float initial_weight = MAX_INITIAL_WEIGHT * .5f;
+  std::array<ReceptionField, CONTACT_FIELDS - 1> reception{};
   float strength = 1;
   Functions functions{};
   CellParameters parameters{};
@@ -66,7 +78,7 @@ constexpr int CONNECTION_KINDS = 3, IDENTITY_SIZE = 5;
 int connection_kind(const Neuron &, const Neuron &);
 struct Partner {
   std::uint32_t source;
-  float p, strength;
+  float p;
 };
 struct CellClass {
   float sign = 1, mode = 0, pace = 0, modulator = 0;
@@ -122,7 +134,7 @@ class Substrate {
   std::shared_ptr<GridState> grid_state;
   struct FinishState;
   std::shared_ptr<FinishState> finish_state;
-  std::size_t pair_checks_ = 0, overhead_work_ = 0;
+  std::size_t pair_checks_ = 0, overhead_work_ = 0, query_work_ = 0;
   bool advance_grid(std::size_t, bool record_work);
   void limit_development(const char *reason);
   bool finish_development(std::size_t &budget);
@@ -152,7 +164,7 @@ public:
   explicit Substrate(cppn::CPPN &, Options = {});
   explicit Substrate(std::vector<Neuron> planned, Options = {});
   bool advance_development(std::size_t query_budget, bool record_work = true);
-  std::size_t development_work() const { return queries + pair_checks_ + overhead_work_; }
+  std::size_t development_work() const { return query_work_ + pair_checks_ + overhead_work_; }
   void abort_development(const std::string &reason);
   bool pending_preparation() const;
   bool pending_finalization() const;
@@ -174,14 +186,14 @@ class Network {
   std::vector<Stimulus> stimuli_;
   std::vector<unsigned char> muted_, dead_;
   std::size_t dead_count_ = 0;
-  std::vector<float> synaptic_mean_, adaptation_rate_;
+  std::vector<float> synaptic_mean_, adaptation_rate_, activity_power_;
   void remove_dead_connections();
   bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
   std::vector<std::uint16_t> index_;
   std::vector<float> gene_, learned_, trace_, predict_;
   std::vector<float> usual_, deviation_, gathered_;
   std::vector<float> lane_action_, lane_teach_, lane_own_, lane_value_, lane_contrast_, lane_ready_,
-      lane_step_, lane_pending_, lane_innate_, effector_own_, effector_innate_, cell_surprise_;
+      lane_step_, lane_pending_, effector_own_, cell_surprise_;
   std::vector<std::uint16_t> lane_count_;
   std::uint64_t revision_ = 0, turnover_rng_ = 0;
   double maturity_ = 0;

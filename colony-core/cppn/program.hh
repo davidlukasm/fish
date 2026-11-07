@@ -8,7 +8,8 @@ class Program {
   std::shared_ptr<const ann::Network::Compiled> storage;
   const ann::Network::Compiled &code;
   std::shared_ptr<evolution::Genome> genes;
-  std::map<unsigned, std::vector<std::size_t>> plans;
+  std::map<OutputMask, std::vector<std::size_t>> plans;
+  std::map<OutputMask, std::size_t> costs;
   std::vector<unsigned> dependencies;
   std::map<int, WorkAlias> aliases;
   std::map<int, std::size_t> indices;
@@ -19,7 +20,7 @@ class Program {
     float multiplier;
     bool relay;
   };
-  std::map<unsigned, std::vector<Observation>> observations;
+  std::map<OutputMask, std::vector<Observation>> observations;
   std::uint64_t cache_id;
   bool safe_ = true;
   struct PreparationState;
@@ -29,8 +30,9 @@ public:
   explicit Program(const CPPN &, Preparation = Preparation::Immediate);
   ~Program();
   bool prepare(std::size_t &budget);
+  std::size_t query_cost(OutputMask mask) const;
   bool safe() const { return safe_; }
-  void evaluate(const Point *, std::size_t, unsigned,
+  void evaluate(const Point *, std::size_t, OutputMask,
                 std::array<std::array<float, cppn::OUTPUTS>, BATCH> &,
                 bool record_work = true) const;
 };

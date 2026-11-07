@@ -62,7 +62,7 @@ void Network::step() {
     if (std::isnan(out))
       throw std::runtime_error("neuron produced NaN");
     const auto first = impl->state.size() - outputs;
-    impl->state[n] = n >= first && (tanh_outputs & (1u << (n - first)))
+    impl->state[n] = n >= first && (tanh_outputs & (1ull << (n - first)))
                          ? std::tanh(sum)
                          : std::max(-1.f, std::min(1.f, out));
   }

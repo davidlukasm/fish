@@ -287,7 +287,29 @@ export const CPPN_OUTPUT = Object.freeze({
   search_width : 17,
   crossing : 18,
   range : 19,
-  count : 20
+  synapse_strength : 20,
+  spread_expression : 21,
+  spread_identity_role : 22,
+  spread_identity1 : 23,
+  spread_identity2 : 24,
+  spread_identity3 : 25,
+  spread_identity4 : 26,
+  spread_capacity : 27,
+  spread_threshold : 28,
+  spread_time_constant : 29,
+  spread_field_width : 30,
+  spread_quality1 : 31,
+  spread_quality2 : 32,
+  spread_quality_width : 33,
+  spread_sender1 : 34,
+  spread_sender2 : 35,
+  spread_receiver1 : 36,
+  spread_receiver2 : 37,
+  spread_search_width : 38,
+  spread_crossing : 39,
+  spread_range : 40,
+  spread_synapse_strength : 41,
+  count : 42
 });
 export const PLACEMENT_SURFACE = Object.freeze({
   ax : 0,
@@ -1005,5 +1027,6 @@ export const ATELIER_LIMITS = Object.freeze({
   "receptors" : 8,
   "max_probe_steps" : 32,
   "max_measure_steps" : 64,
-  "max_copies" : 16
+  "max_copies" : 16,
+  "contact_values" : 29
 });

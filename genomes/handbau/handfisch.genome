@@ -1,1707 +1,1749 @@
 FISH_CPPN
 0.30000001192092896 8192 65536 0.029999999999999999
-Genome2 10 20
-History 77d99050-5077ab83-c7bb3998-7c6a5b22 0 850 105
-Binding 0 9 10 0
-Binding 1 8 30 0
-Binding 2 4 31 0
-Binding 3 5 32 0
-Binding 4 5 33 0
-Binding 5 7 34 0
-Binding 6 30 35 0
-Binding 7 31 35 0
-Binding 8 32 35 0
-Binding 9 33 35 0
-Binding 10 34 35 0
-Binding 11 1 35 0
-Binding 12 35 10 0
-Binding 13 35 11 0
-Binding 14 9 11 0
-Binding 15 35 12 0
-Binding 16 9 12 0
-Binding 17 35 13 0
-Binding 18 9 13 0
-Binding 19 35 14 0
-Binding 20 9 14 0
-Binding 21 35 16 0
-Binding 22 9 16 0
-Binding 23 35 17 0
-Binding 24 9 17 0
-Binding 25 35 19 0
-Binding 26 9 19 0
-Binding 27 35 20 0
-Binding 28 9 20 0
-Binding 29 35 21 0
-Binding 30 9 21 0
-Binding 31 35 22 0
-Binding 32 9 22 0
-Binding 33 35 23 0
-Binding 34 9 23 0
-Binding 35 35 24 0
-Binding 36 9 24 0
-Binding 37 35 25 0
-Binding 38 9 25 0
-Binding 39 35 26 0
-Binding 40 9 26 0
-Binding 41 35 27 0
-Binding 42 9 27 0
-Binding 43 35 29 0
-Binding 44 9 29 0
-Binding 45 4 36 0
-Binding 46 4 37 0
-Binding 47 5 38 0
-Binding 48 6 39 0
-Binding 49 6 40 0
-Binding 50 30 41 0
-Binding 51 36 41 0
-Binding 52 37 41 0
-Binding 53 32 41 0
-Binding 54 38 41 0
-Binding 55 39 41 0
-Binding 56 40 41 0
-Binding 57 34 41 0
-Binding 58 2 41 0
-Binding 59 41 10 0
-Binding 60 41 12 0
-Binding 61 41 14 0
-Binding 62 41 15 0
-Binding 63 9 15 0
-Binding 64 41 16 0
-Binding 65 41 18 0
-Binding 66 9 18 0
-Binding 67 41 22 0
-Binding 68 41 23 0
-Binding 69 41 24 0
-Binding 70 41 25 0
-Binding 71 41 26 0
-Binding 72 41 27 0
-Binding 73 41 29 0
-Binding 74 6 42 0
-Binding 75 30 43 0
-Binding 76 36 43 0
-Binding 77 37 43 0
-Binding 78 32 43 0
-Binding 79 38 43 0
-Binding 80 42 43 0
-Binding 81 34 43 0
-Binding 82 2 43 0
-Binding 83 43 10 0
-Binding 84 43 12 0
-Binding 85 43 14 0
-Binding 86 43 15 0
-Binding 87 43 16 0
-Binding 88 43 18 0
-Binding 89 43 22 0
-Binding 90 43 23 0
-Binding 91 43 24 0
-Binding 92 43 25 0
-Binding 93 43 26 0
-Binding 94 43 27 0
-Binding 95 43 29 0
-Binding 96 5 44 0
-Binding 97 30 45 0
-Binding 98 36 45 0
-Binding 99 44 45 0
-Binding 100 38 45 0
-Binding 101 39 45 0
-Binding 102 40 45 0
-Binding 103 34 45 0
-Binding 104 1 45 0
-Binding 105 45 10 0
-Binding 106 45 11 0
-Binding 107 45 12 0
-Binding 108 45 13 0
-Binding 109 45 14 0
-Binding 110 45 16 0
-Binding 111 45 19 0
-Binding 112 45 20 0
-Binding 113 45 21 0
-Binding 114 45 22 0
-Binding 115 45 23 0
-Binding 116 45 24 0
-Binding 117 45 25 0
-Binding 118 45 26 0
-Binding 119 45 27 0
-Binding 120 45 29 0
-Binding 121 4 46 0
-Binding 122 30 47 0
-Binding 123 31 47 0
-Binding 124 46 47 0
-Binding 125 32 47 0
-Binding 126 38 47 0
-Binding 127 39 47 0
-Binding 128 40 47 0
-Binding 129 34 47 0
-Binding 130 2 47 0
-Binding 131 47 10 0
-Binding 132 47 12 0
-Binding 133 47 14 0
-Binding 134 47 15 0
-Binding 135 47 16 0
-Binding 136 47 18 0
-Binding 137 47 22 0
-Binding 138 47 23 0
-Binding 139 47 24 0
-Binding 140 47 25 0
-Binding 141 47 26 0
-Binding 142 47 27 0
-Binding 143 47 29 0
-Binding 144 30 48 0
-Binding 145 31 48 0
-Binding 146 46 48 0
-Binding 147 32 48 0
-Binding 148 38 48 0
-Binding 149 42 48 0
-Binding 150 34 48 0
-Binding 151 2 48 0
-Binding 152 48 10 0
-Binding 153 48 12 0
-Binding 154 48 14 0
-Binding 155 48 15 0
-Binding 156 48 16 0
-Binding 157 48 18 0
-Binding 158 48 22 0
-Binding 159 48 23 0
-Binding 160 48 24 0
-Binding 161 48 25 0
-Binding 162 48 26 0
-Binding 163 48 27 0
-Binding 164 48 29 0
-Binding 165 6 49 0
-Binding 166 30 50 0
-Binding 167 36 50 0
-Binding 168 37 50 0
-Binding 169 32 50 0
-Binding 170 38 50 0
-Binding 171 49 50 0
-Binding 172 34 50 0
-Binding 173 2 50 0
-Binding 174 50 10 0
-Binding 175 50 12 0
-Binding 176 50 14 0
-Binding 177 50 15 0
-Binding 178 50 16 0
-Binding 179 50 18 0
-Binding 180 50 22 0
-Binding 181 50 23 0
-Binding 182 50 24 0
-Binding 183 50 26 0
-Binding 184 50 27 0
-Binding 185 50 29 0
-Binding 186 4 51 0
-Binding 187 30 52 0
-Binding 188 51 52 0
-Binding 189 39 52 0
-Binding 190 34 52 0
-Binding 191 2 52 0
-Binding 192 52 10 0
-Binding 193 52 11 0
-Binding 194 52 12 0
-Binding 195 52 13 0
-Binding 196 52 14 0
-Binding 197 52 16 0
-Binding 198 52 17 0
-Binding 199 52 18 0
-Binding 200 52 22 0
-Binding 201 52 23 0
-Binding 202 52 24 0
-Binding 203 52 25 0
-Binding 204 52 26 0
-Binding 205 52 27 0
-Binding 206 52 29 0
-Binding 207 7 53 0
-Binding 208 30 54 0
-Binding 209 31 54 0
-Binding 210 32 54 0
-Binding 211 33 54 0
-Binding 212 53 54 0
-Binding 213 1 54 0
-Binding 214 54 10 0
-Binding 215 54 11 0
-Binding 216 54 12 0
-Binding 217 54 13 0
-Binding 218 54 14 0
-Binding 219 54 16 0
-Binding 220 54 17 0
-Binding 221 54 19 0
-Binding 222 54 20 0
-Binding 223 54 21 0
-Binding 224 54 22 0
-Binding 225 54 23 0
-Binding 226 54 24 0
-Binding 227 54 25 0
-Binding 228 54 26 0
-Binding 229 54 27 0
-Binding 230 54 29 0
-Binding 231 30 55 0
-Binding 232 36 55 0
-Binding 233 37 55 0
-Binding 234 32 55 0
-Binding 235 38 55 0
-Binding 236 39 55 0
-Binding 237 40 55 0
-Binding 238 53 55 0
-Binding 239 2 55 0
-Binding 240 55 10 0
-Binding 241 55 12 0
-Binding 242 55 14 0
-Binding 243 55 15 0
-Binding 244 55 16 0
-Binding 245 55 18 0
-Binding 246 55 22 0
-Binding 247 55 23 0
-Binding 248 55 24 0
-Binding 249 55 25 0
-Binding 250 55 26 0
-Binding 251 55 27 0
-Binding 252 55 29 0
-Binding 253 30 56 0
-Binding 254 36 56 0
-Binding 255 37 56 0
-Binding 256 32 56 0
-Binding 257 38 56 0
-Binding 258 42 56 0
-Binding 259 53 56 0
-Binding 260 2 56 0
-Binding 261 56 10 0
-Binding 262 56 12 0
-Binding 263 56 14 0
-Binding 264 56 15 0
-Binding 265 56 16 0
-Binding 266 56 18 0
-Binding 267 56 22 0
-Binding 268 56 23 0
-Binding 269 56 24 0
-Binding 270 56 25 0
-Binding 271 56 26 0
-Binding 272 56 27 0
-Binding 273 56 29 0
-Binding 274 30 57 0
-Binding 275 36 57 0
-Binding 276 44 57 0
-Binding 277 38 57 0
-Binding 278 39 57 0
-Binding 279 40 57 0
-Binding 280 53 57 0
-Binding 281 1 57 0
-Binding 282 57 10 0
-Binding 283 57 11 0
-Binding 284 57 12 0
-Binding 285 57 13 0
-Binding 286 57 14 0
-Binding 287 57 16 0
-Binding 288 57 19 0
-Binding 289 57 20 0
-Binding 290 57 21 0
-Binding 291 57 22 0
-Binding 292 57 23 0
-Binding 293 57 24 0
-Binding 294 57 25 0
-Binding 295 57 26 0
-Binding 296 57 27 0
-Binding 297 57 29 0
-Binding 298 30 58 0
-Binding 299 31 58 0
-Binding 300 46 58 0
-Binding 301 32 58 0
-Binding 302 38 58 0
-Binding 303 39 58 0
-Binding 304 40 58 0
-Binding 305 53 58 0
-Binding 306 2 58 0
-Binding 307 58 10 0
-Binding 308 58 12 0
-Binding 309 58 14 0
-Binding 310 58 15 0
-Binding 311 58 16 0
-Binding 312 58 18 0
-Binding 313 58 22 0
-Binding 314 58 23 0
-Binding 315 58 24 0
-Binding 316 58 25 0
-Binding 317 58 26 0
-Binding 318 58 27 0
-Binding 319 58 29 0
-Binding 320 30 59 0
-Binding 321 31 59 0
-Binding 322 46 59 0
-Binding 323 32 59 0
-Binding 324 38 59 0
-Binding 325 42 59 0
-Binding 326 53 59 0
-Binding 327 2 59 0
-Binding 328 59 10 0
-Binding 329 59 12 0
-Binding 330 59 14 0
-Binding 331 59 15 0
-Binding 332 59 16 0
-Binding 333 59 18 0
-Binding 334 59 22 0
-Binding 335 59 23 0
-Binding 336 59 24 0
-Binding 337 59 25 0
-Binding 338 59 26 0
-Binding 339 59 27 0
-Binding 340 59 29 0
-Binding 341 30 60 0
-Binding 342 36 60 0
-Binding 343 37 60 0
-Binding 344 32 60 0
-Binding 345 38 60 0
-Binding 346 49 60 0
-Binding 347 53 60 0
-Binding 348 2 60 0
-Binding 349 60 10 0
-Binding 350 60 12 0
-Binding 351 60 14 0
-Binding 352 60 15 0
-Binding 353 60 16 0
-Binding 354 60 18 0
-Binding 355 60 22 0
-Binding 356 60 23 0
-Binding 357 60 24 0
-Binding 358 60 26 0
-Binding 359 60 27 0
-Binding 360 60 29 0
-Binding 361 30 61 0
-Binding 362 51 61 0
-Binding 363 39 61 0
-Binding 364 53 61 0
-Binding 365 2 61 0
-Binding 366 61 10 0
-Binding 367 61 11 0
-Binding 368 61 12 0
-Binding 369 61 13 0
-Binding 370 61 14 0
-Binding 371 61 16 0
-Binding 372 61 17 0
-Binding 373 61 18 0
-Binding 374 61 22 0
-Binding 375 61 23 0
-Binding 376 61 24 0
-Binding 377 61 25 0
-Binding 378 61 26 0
-Binding 379 61 27 0
-Binding 380 61 29 0
-Binding 381 30 62 0
-Binding 382 51 62 0
-Binding 383 44 62 0
-Binding 384 38 62 0
-Binding 385 49 62 0
-Binding 386 34 62 0
-Binding 387 1 62 0
-Binding 388 62 10 0
-Binding 389 62 11 0
-Binding 390 62 12 0
-Binding 391 62 13 0
-Binding 392 62 14 0
-Binding 393 62 16 0
-Binding 394 62 17 0
-Binding 395 62 19 0
-Binding 396 62 20 0
-Binding 397 62 21 0
-Binding 398 62 22 0
-Binding 399 62 23 0
-Binding 400 62 24 0
-Binding 401 62 25 0
-Binding 402 62 26 0
-Binding 403 62 27 0
-Binding 404 62 29 0
-Binding 405 5 63 0
-Binding 406 30 64 0
-Binding 407 36 64 0
-Binding 408 63 64 0
-Binding 409 40 64 0
-Binding 410 34 64 0
-Binding 411 1 64 0
-Binding 412 64 10 0
-Binding 413 64 11 0
-Binding 414 64 12 0
-Binding 415 64 13 0
-Binding 416 64 14 0
-Binding 417 64 16 0
-Binding 418 64 19 0
-Binding 419 64 20 0
-Binding 420 64 21 0
-Binding 421 64 22 0
-Binding 422 64 23 0
-Binding 423 64 24 0
-Binding 424 64 25 0
-Binding 425 64 26 0
-Binding 426 64 27 0
-Binding 427 64 29 0
-Binding 428 30 65 0
-Binding 429 51 65 0
-Binding 430 44 65 0
-Binding 431 38 65 0
-Binding 432 49 65 0
-Binding 433 53 65 0
-Binding 434 1 65 0
-Binding 435 65 10 0
-Binding 436 65 11 0
-Binding 437 65 12 0
-Binding 438 65 13 0
-Binding 439 65 14 0
-Binding 440 65 16 0
-Binding 441 65 17 0
-Binding 442 65 19 0
-Binding 443 65 20 0
-Binding 444 65 21 0
-Binding 445 65 22 0
-Binding 446 65 23 0
-Binding 447 65 24 0
-Binding 448 65 25 0
-Binding 449 65 26 0
-Binding 450 65 27 0
-Binding 451 65 29 0
-Binding 452 30 66 0
-Binding 453 36 66 0
-Binding 454 63 66 0
-Binding 455 40 66 0
-Binding 456 53 66 0
-Binding 457 1 66 0
-Binding 458 66 10 0
-Binding 459 66 11 0
-Binding 460 66 12 0
-Binding 461 66 13 0
-Binding 462 66 14 0
-Binding 463 66 16 0
-Binding 464 66 19 0
-Binding 465 66 20 0
-Binding 466 66 21 0
-Binding 467 66 22 0
-Binding 468 66 23 0
-Binding 469 66 24 0
-Binding 470 66 25 0
-Binding 471 66 26 0
-Binding 472 66 27 0
-Binding 473 66 29 0
-Binding 474 4 67 0
-Binding 475 30 68 0
-Binding 476 67 68 0
-Binding 477 44 68 0
-Binding 478 38 68 0
-Binding 479 49 68 0
-Binding 480 1 68 0
-Binding 481 68 10 0
-Binding 482 68 12 0
-Binding 483 68 14 0
-Binding 484 68 15 0
-Binding 485 68 16 0
-Binding 486 68 18 0
-Binding 487 68 22 0
-Binding 488 68 23 0
-Binding 489 68 24 0
-Binding 490 68 26 0
-Binding 491 68 27 0
-Binding 492 68 29 0
-Binding 493 30 69 0
-Binding 494 31 69 0
-Binding 495 0 69 0
-Binding 496 69 10 0
-Binding 497 69 11 0
-Binding 498 69 12 0
-Binding 499 69 13 0
-Binding 500 69 14 0
-Binding 501 69 16 0
-Binding 502 69 17 0
-Binding 503 69 18 0
-Binding 504 69 20 0
-Binding 505 69 22 0
-Binding 506 69 23 0
-Binding 507 69 24 0
-Binding 508 69 25 0
-Binding 509 69 26 0
-Binding 510 69 27 0
-Binding 511 69 29 0
-Binding 512 5 70 0
-Binding 513 30 71 0
-Binding 514 70 71 0
-Binding 515 1 71 0
-Binding 516 71 10 0
-Binding 517 71 11 0
-Binding 518 71 12 0
-Binding 519 71 13 0
-Binding 520 71 14 0
-Binding 521 71 16 0
-Binding 522 71 17 0
-Binding 523 71 20 0
-Binding 524 71 22 0
-Binding 525 71 23 0
-Binding 526 71 24 0
-Binding 527 71 25 0
-Binding 528 71 26 0
-Binding 529 71 27 0
-Binding 530 71 29 0
-Binding 531 30 72 0
-Binding 532 67 72 0
-Binding 533 32 72 0
-Binding 534 38 72 0
-Binding 535 49 72 0
-Binding 536 2 72 0
-Binding 537 72 10 0
-Binding 538 72 12 0
-Binding 539 72 14 0
-Binding 540 72 15 0
-Binding 541 72 16 0
-Binding 542 72 18 0
-Binding 543 72 22 0
-Binding 544 72 23 0
-Binding 545 72 24 0
-Binding 546 72 26 0
-Binding 547 72 27 0
-Binding 548 72 29 0
-Binding 549 4 73 0
-Binding 550 4 74 0
-Binding 551 30 75 0
-Binding 552 73 75 0
-Binding 553 74 75 0
-Binding 554 32 75 0
-Binding 555 38 75 0
-Binding 556 49 75 0
-Binding 557 2 75 0
-Binding 558 75 10 0
-Binding 559 75 11 0
-Binding 560 75 12 0
-Binding 561 75 13 0
-Binding 562 75 14 0
-Binding 563 75 16 0
-Binding 564 75 17 0
-Binding 565 75 22 0
-Binding 566 75 23 0
-Binding 567 75 24 0
-Binding 568 75 25 0
-Binding 569 75 26 0
-Binding 570 75 27 0
-Binding 571 75 29 0
-Binding 572 30 76 0
-Binding 573 67 76 0
-Binding 574 32 76 0
-Binding 575 38 76 0
-Binding 576 39 76 0
-Binding 577 40 76 0
-Binding 578 2 76 0
-Binding 579 76 10 0
-Binding 580 76 12 0
-Binding 581 76 14 0
-Binding 582 76 15 0
-Binding 583 76 16 0
-Binding 584 76 18 0
-Binding 585 76 22 0
-Binding 586 76 23 0
-Binding 587 76 24 0
-Binding 588 76 25 0
-Binding 589 76 26 0
-Binding 590 76 27 0
-Binding 591 76 29 0
-Binding 592 30 77 0
-Binding 593 31 77 0
-Binding 594 46 77 0
-Binding 595 44 77 0
-Binding 596 38 77 0
-Binding 597 1 77 0
-Binding 598 77 10 0
-Binding 599 77 11 0
-Binding 600 77 12 0
-Binding 601 77 13 0
-Binding 602 77 14 0
-Binding 603 77 17 0
-Binding 604 77 18 0
-Binding 605 77 20 0
-Binding 606 77 22 0
-Binding 607 77 23 0
-Binding 608 77 24 0
-Binding 609 77 25 0
-Binding 610 77 26 0
-Binding 611 77 27 0
-Binding 612 77 29 0
-Binding 613 30 78 0
-Binding 614 67 78 0
-Binding 615 63 78 0
-Binding 616 1 78 0
-Binding 617 78 10 0
-Binding 618 78 11 0
-Binding 619 78 12 0
-Binding 620 78 13 0
-Binding 621 78 14 0
-Binding 622 78 17 0
-Binding 623 78 18 0
-Binding 624 78 20 0
-Binding 625 78 21 0
-Binding 626 78 22 0
-Binding 627 78 23 0
-Binding 628 78 24 0
-Binding 629 78 25 0
-Binding 630 78 26 0
-Binding 631 78 27 0
-Binding 632 78 29 0
-Binding 633 30 79 0
-Binding 634 46 79 0
-Binding 635 70 79 0
-Binding 636 2 79 0
-Binding 637 79 10 0
-Binding 638 79 11 0
-Binding 639 79 12 0
-Binding 640 79 13 0
-Binding 641 79 14 0
-Binding 642 79 17 0
-Binding 643 79 20 0
-Binding 644 79 22 0
-Binding 645 79 23 0
-Binding 646 79 24 0
-Binding 647 79 25 0
-Binding 648 79 26 0
-Binding 649 79 27 0
-Binding 650 79 29 0
-Binding 651 8 80 0
-Binding 652 80 81 0
-Binding 653 81 82 0
-Binding 654 46 82 0
-Binding 655 70 82 0
-Binding 656 2 82 0
-Binding 657 82 19 0
-Binding 658 82 17 0
-Binding 659 82 20 0
-Binding 660 82 21 0
-Binding 661 82 22 0
-Binding 662 30 83 0
-Binding 663 46 83 0
-Binding 664 63 83 0
-Binding 665 2 83 0
-Binding 666 83 10 0
-Binding 667 83 11 0
-Binding 668 83 12 0
-Binding 669 83 13 0
-Binding 670 83 14 0
-Binding 671 83 17 0
-Binding 672 83 20 0
-Binding 673 83 22 0
-Binding 674 83 23 0
-Binding 675 83 24 0
-Binding 676 83 25 0
-Binding 677 83 26 0
-Binding 678 83 27 0
-Binding 679 83 29 0
-Binding 680 8 84 0
-Binding 681 84 85 0
-Binding 682 85 86 0
-Binding 683 46 86 0
-Binding 684 63 86 0
-Binding 685 2 86 0
-Binding 686 86 16 0
-Binding 687 86 19 0
-Binding 688 86 17 0
-Binding 689 86 18 0
-Binding 690 86 20 0
-Binding 691 86 21 0
-Binding 692 86 22 0
-Binding 693 4 87 0
-Binding 694 30 88 0
-Binding 695 87 88 0
-Binding 696 3 88 0
-Binding 697 88 10 0
-Binding 698 88 11 0
-Binding 699 88 12 0
-Binding 700 88 13 0
-Binding 701 88 14 0
-Binding 702 88 16 0
-Binding 703 88 17 0
-Binding 704 88 20 0
-Binding 705 88 22 0
-Binding 706 88 23 0
-Binding 707 88 24 0
-Binding 708 88 25 0
-Binding 709 88 26 0
-Binding 710 88 27 0
-Binding 711 88 29 0
-Binding 712 85 89 0
-Binding 713 87 89 0
-Binding 714 3 89 0
-Binding 715 89 16 0
-Binding 716 89 19 0
-Binding 717 89 17 0
-Binding 718 89 20 0
-Binding 719 89 22 0
-Binding 720 4 90 0
-Binding 721 30 91 0
-Binding 722 90 91 0
-Binding 723 32 91 0
-Binding 724 38 91 0
-Binding 725 40 91 0
-Binding 726 3 91 0
-Binding 727 91 10 0
-Binding 728 91 11 0
-Binding 729 91 12 0
-Binding 730 91 13 0
-Binding 731 91 14 0
-Binding 732 91 16 0
-Binding 733 91 17 0
-Binding 734 91 22 0
-Binding 735 91 23 0
-Binding 736 91 24 0
-Binding 737 91 25 0
-Binding 738 91 26 0
-Binding 739 91 27 0
-Binding 740 91 29 0
-Binding 741 85 92 0
-Binding 742 90 92 0
-Binding 743 32 92 0
-Binding 744 38 92 0
-Binding 745 40 92 0
-Binding 746 3 92 0
-Binding 747 92 16 0
-Binding 748 92 19 0
-Binding 749 92 17 0
-Binding 750 92 18 0
-Binding 751 92 20 0
-Binding 752 92 21 0
-Binding 753 92 22 0
-Binding 754 30 93 0
-Binding 755 90 93 0
-Binding 756 32 93 0
-Binding 757 38 93 0
-Binding 758 42 93 0
-Binding 759 3 93 0
-Binding 760 93 10 0
-Binding 761 93 11 0
-Binding 762 93 12 0
-Binding 763 93 13 0
-Binding 764 93 14 0
-Binding 765 93 16 0
-Binding 766 93 17 0
-Binding 767 93 22 0
-Binding 768 93 23 0
-Binding 769 93 24 0
-Binding 770 93 25 0
-Binding 771 93 26 0
-Binding 772 93 27 0
-Binding 773 93 29 0
-Binding 774 85 94 0
-Binding 775 90 94 0
-Binding 776 32 94 0
-Binding 777 38 94 0
-Binding 778 42 94 0
-Binding 779 3 94 0
-Binding 780 94 16 0
-Binding 781 94 19 0
-Binding 782 94 17 0
-Binding 783 94 18 0
-Binding 784 94 20 0
-Binding 785 94 21 0
-Binding 786 94 22 0
-Binding 787 4 95 0
-Binding 788 4 96 0
-Binding 789 30 97 0
-Binding 790 95 97 0
-Binding 791 96 97 0
-Binding 792 32 97 0
-Binding 793 38 97 0
-Binding 794 49 97 0
-Binding 795 3 97 0
-Binding 796 97 10 0
-Binding 797 97 11 0
-Binding 798 97 12 0
-Binding 799 97 13 0
-Binding 800 97 14 0
-Binding 801 97 16 0
-Binding 802 97 17 0
-Binding 803 97 22 0
-Binding 804 97 23 0
-Binding 805 97 24 0
-Binding 806 97 25 0
-Binding 807 97 26 0
-Binding 808 97 27 0
-Binding 809 97 29 0
-Binding 810 30 98 0
-Binding 811 95 98 0
-Binding 812 96 98 0
-Binding 813 32 98 0
-Binding 814 38 98 0
-Binding 815 42 98 0
-Binding 816 3 98 0
-Binding 817 98 10 0
-Binding 818 98 11 0
-Binding 819 98 12 0
-Binding 820 98 13 0
-Binding 821 98 14 0
-Binding 822 98 16 0
-Binding 823 98 17 0
-Binding 824 98 22 0
-Binding 825 98 23 0
-Binding 826 98 24 0
-Binding 827 98 25 0
-Binding 828 98 26 0
-Binding 829 98 27 0
-Binding 830 98 29 0
-Binding 831 8 99 0
-Binding 832 99 100 0
-Binding 833 4 101 0
-Binding 834 5 102 0
-Binding 835 5 103 0
-Binding 836 100 104 0
-Binding 837 101 104 0
-Binding 838 87 104 0
-Binding 839 102 104 0
-Binding 840 103 104 0
-Binding 841 39 104 0
-Binding 842 40 104 0
-Binding 843 1 104 0
-Binding 844 104 19 0
-Binding 845 104 17 0
-Binding 846 104 20 0
-Binding 847 104 21 0
-Binding 848 104 22 0
-Binding 849 85 16 0
-Event 0 69 0 495
-Event 1 35 0 11
-Event 1 45 0 104
-Event 1 54 0 213
-Event 1 57 0 281
-Event 1 62 0 387
-Event 1 64 0 411
-Event 1 65 0 434
-Event 1 66 0 457
-Event 1 68 0 480
-Event 1 71 0 515
-Event 1 77 0 597
-Event 1 78 0 616
-Event 1 104 0 843
-Event 2 41 0 58
-Event 2 43 0 82
-Event 2 47 0 130
-Event 2 48 0 151
-Event 2 50 0 173
-Event 2 52 0 191
-Event 2 55 0 239
-Event 2 56 0 260
-Event 2 58 0 306
-Event 2 59 0 327
-Event 2 60 0 348
-Event 2 61 0 365
-Event 2 72 0 536
-Event 2 75 0 557
-Event 2 76 0 578
-Event 2 79 0 636
-Event 2 82 0 656
-Event 2 83 0 665
-Event 2 86 0 685
-Event 3 88 0 696
-Event 3 89 0 714
-Event 3 91 0 726
-Event 3 92 0 746
-Event 3 93 0 759
-Event 3 94 0 779
-Event 3 97 0 795
-Event 3 98 0 816
-Event 4 31 0 2
-Event 4 36 0 45
-Event 4 37 0 46
-Event 4 46 0 121
-Event 4 51 0 186
-Event 4 67 0 474
-Event 4 73 0 549
-Event 4 74 0 550
-Event 4 87 0 693
-Event 4 90 0 720
-Event 4 95 0 787
-Event 4 96 0 788
-Event 4 101 0 833
-Event 5 32 0 3
-Event 5 33 0 4
-Event 5 38 0 47
-Event 5 44 0 96
-Event 5 63 0 405
-Event 5 70 0 512
-Event 5 102 0 834
-Event 5 103 0 835
-Event 6 39 0 48
-Event 6 40 0 49
-Event 6 42 0 74
-Event 6 49 0 165
-Event 7 34 0 5
-Event 7 53 0 207
-Event 8 30 0 1
-Event 8 80 0 651
-Event 8 84 0 680
-Event 8 99 0 831
-Event 9 10 0 0
-Event 9 11 0 14
-Event 9 12 0 16
-Event 9 13 0 18
-Event 9 14 0 20
-Event 9 15 0 63
-Event 9 16 0 22
-Event 9 17 0 24
-Event 9 18 0 66
-Event 9 19 0 26
-Event 9 20 0 28
-Event 9 21 0 30
-Event 9 22 0 32
-Event 9 23 0 34
-Event 9 24 0 36
-Event 9 25 0 38
-Event 9 26 0 40
-Event 9 27 0 42
-Event 9 29 0 44
-Event 30 35 0 6
-Event 30 41 0 50
-Event 30 43 0 75
-Event 30 45 0 97
-Event 30 47 0 122
-Event 30 48 0 144
-Event 30 50 0 166
-Event 30 52 0 187
-Event 30 54 0 208
-Event 30 55 0 231
-Event 30 56 0 253
-Event 30 57 0 274
-Event 30 58 0 298
-Event 30 59 0 320
-Event 30 60 0 341
-Event 30 61 0 361
-Event 30 62 0 381
-Event 30 64 0 406
-Event 30 65 0 428
-Event 30 66 0 452
-Event 30 68 0 475
-Event 30 69 0 493
-Event 30 71 0 513
-Event 30 72 0 531
-Event 30 75 0 551
-Event 30 76 0 572
-Event 30 77 0 592
-Event 30 78 0 613
-Event 30 79 0 633
-Event 30 83 0 662
-Event 30 88 0 694
-Event 30 91 0 721
-Event 30 93 0 754
-Event 30 97 0 789
-Event 30 98 0 810
-Event 31 35 0 7
-Event 31 47 0 123
-Event 31 48 0 145
-Event 31 54 0 209
-Event 31 58 0 299
-Event 31 59 0 321
-Event 31 69 0 494
-Event 31 77 0 593
-Event 32 35 0 8
-Event 32 41 0 53
-Event 32 43 0 78
-Event 32 47 0 125
-Event 32 48 0 147
-Event 32 50 0 169
-Event 32 54 0 210
-Event 32 55 0 234
-Event 32 56 0 256
-Event 32 58 0 301
-Event 32 59 0 323
-Event 32 60 0 344
-Event 32 72 0 533
-Event 32 75 0 554
-Event 32 76 0 574
-Event 32 91 0 723
-Event 32 92 0 743
-Event 32 93 0 756
-Event 32 94 0 776
-Event 32 97 0 792
-Event 32 98 0 813
-Event 33 35 0 9
-Event 33 54 0 211
-Event 34 35 0 10
-Event 34 41 0 57
-Event 34 43 0 81
-Event 34 45 0 103
-Event 34 47 0 129
-Event 34 48 0 150
-Event 34 50 0 172
-Event 34 52 0 190
-Event 34 62 0 386
-Event 34 64 0 410
-Event 35 10 0 12
-Event 35 11 0 13
-Event 35 12 0 15
-Event 35 13 0 17
-Event 35 14 0 19
-Event 35 16 0 21
-Event 35 17 0 23
-Event 35 19 0 25
-Event 35 20 0 27
-Event 35 21 0 29
-Event 35 22 0 31
-Event 35 23 0 33
-Event 35 24 0 35
-Event 35 25 0 37
-Event 35 26 0 39
-Event 35 27 0 41
-Event 35 29 0 43
-Event 36 41 0 51
-Event 36 43 0 76
-Event 36 45 0 98
-Event 36 50 0 167
-Event 36 55 0 232
-Event 36 56 0 254
-Event 36 57 0 275
-Event 36 60 0 342
-Event 36 64 0 407
-Event 36 66 0 453
-Event 37 41 0 52
-Event 37 43 0 77
-Event 37 50 0 168
-Event 37 55 0 233
-Event 37 56 0 255
-Event 37 60 0 343
-Event 38 41 0 54
-Event 38 43 0 79
-Event 38 45 0 100
-Event 38 47 0 126
-Event 38 48 0 148
-Event 38 50 0 170
-Event 38 55 0 235
-Event 38 56 0 257
-Event 38 57 0 277
-Event 38 58 0 302
-Event 38 59 0 324
-Event 38 60 0 345
-Event 38 62 0 384
-Event 38 65 0 431
-Event 38 68 0 478
-Event 38 72 0 534
-Event 38 75 0 555
-Event 38 76 0 575
-Event 38 77 0 596
-Event 38 91 0 724
-Event 38 92 0 744
-Event 38 93 0 757
-Event 38 94 0 777
-Event 38 97 0 793
-Event 38 98 0 814
-Event 39 41 0 55
-Event 39 45 0 101
-Event 39 47 0 127
-Event 39 52 0 189
-Event 39 55 0 236
-Event 39 57 0 278
-Event 39 58 0 303
-Event 39 61 0 363
-Event 39 76 0 576
-Event 39 104 0 841
-Event 40 41 0 56
-Event 40 45 0 102
-Event 40 47 0 128
-Event 40 55 0 237
-Event 40 57 0 279
-Event 40 58 0 304
-Event 40 64 0 409
-Event 40 66 0 455
-Event 40 76 0 577
-Event 40 91 0 725
-Event 40 92 0 745
-Event 40 104 0 842
-Event 41 10 0 59
-Event 41 12 0 60
-Event 41 14 0 61
-Event 41 15 0 62
-Event 41 16 0 64
-Event 41 18 0 65
-Event 41 22 0 67
-Event 41 23 0 68
-Event 41 24 0 69
-Event 41 25 0 70
-Event 41 26 0 71
-Event 41 27 0 72
-Event 41 29 0 73
-Event 42 43 0 80
-Event 42 48 0 149
-Event 42 56 0 258
-Event 42 59 0 325
-Event 42 93 0 758
-Event 42 94 0 778
-Event 42 98 0 815
-Event 43 10 0 83
-Event 43 12 0 84
-Event 43 14 0 85
-Event 43 15 0 86
-Event 43 16 0 87
-Event 43 18 0 88
-Event 43 22 0 89
-Event 43 23 0 90
-Event 43 24 0 91
-Event 43 25 0 92
-Event 43 26 0 93
-Event 43 27 0 94
-Event 43 29 0 95
-Event 44 45 0 99
-Event 44 57 0 276
-Event 44 62 0 383
-Event 44 65 0 430
-Event 44 68 0 477
-Event 44 77 0 595
-Event 45 10 0 105
-Event 45 11 0 106
-Event 45 12 0 107
-Event 45 13 0 108
-Event 45 14 0 109
-Event 45 16 0 110
-Event 45 19 0 111
-Event 45 20 0 112
-Event 45 21 0 113
-Event 45 22 0 114
-Event 45 23 0 115
-Event 45 24 0 116
-Event 45 25 0 117
-Event 45 26 0 118
-Event 45 27 0 119
-Event 45 29 0 120
-Event 46 47 0 124
-Event 46 48 0 146
-Event 46 58 0 300
-Event 46 59 0 322
-Event 46 77 0 594
-Event 46 79 0 634
-Event 46 82 0 654
-Event 46 83 0 663
-Event 46 86 0 683
-Event 47 10 0 131
-Event 47 12 0 132
-Event 47 14 0 133
-Event 47 15 0 134
-Event 47 16 0 135
-Event 47 18 0 136
-Event 47 22 0 137
-Event 47 23 0 138
-Event 47 24 0 139
-Event 47 25 0 140
-Event 47 26 0 141
-Event 47 27 0 142
-Event 47 29 0 143
-Event 48 10 0 152
-Event 48 12 0 153
-Event 48 14 0 154
-Event 48 15 0 155
-Event 48 16 0 156
-Event 48 18 0 157
-Event 48 22 0 158
-Event 48 23 0 159
-Event 48 24 0 160
-Event 48 25 0 161
-Event 48 26 0 162
-Event 48 27 0 163
-Event 48 29 0 164
-Event 49 50 0 171
-Event 49 60 0 346
-Event 49 62 0 385
-Event 49 65 0 432
-Event 49 68 0 479
-Event 49 72 0 535
-Event 49 75 0 556
-Event 49 97 0 794
-Event 50 10 0 174
-Event 50 12 0 175
-Event 50 14 0 176
-Event 50 15 0 177
-Event 50 16 0 178
-Event 50 18 0 179
-Event 50 22 0 180
-Event 50 23 0 181
-Event 50 24 0 182
-Event 50 26 0 183
-Event 50 27 0 184
-Event 50 29 0 185
-Event 51 52 0 188
-Event 51 61 0 362
-Event 51 62 0 382
-Event 51 65 0 429
-Event 52 10 0 192
-Event 52 11 0 193
-Event 52 12 0 194
-Event 52 13 0 195
-Event 52 14 0 196
-Event 52 16 0 197
-Event 52 17 0 198
-Event 52 18 0 199
-Event 52 22 0 200
-Event 52 23 0 201
-Event 52 24 0 202
-Event 52 25 0 203
-Event 52 26 0 204
-Event 52 27 0 205
-Event 52 29 0 206
-Event 53 54 0 212
-Event 53 55 0 238
-Event 53 56 0 259
-Event 53 57 0 280
-Event 53 58 0 305
-Event 53 59 0 326
-Event 53 60 0 347
-Event 53 61 0 364
-Event 53 65 0 433
-Event 53 66 0 456
-Event 54 10 0 214
-Event 54 11 0 215
-Event 54 12 0 216
-Event 54 13 0 217
-Event 54 14 0 218
-Event 54 16 0 219
-Event 54 17 0 220
-Event 54 19 0 221
-Event 54 20 0 222
-Event 54 21 0 223
-Event 54 22 0 224
-Event 54 23 0 225
-Event 54 24 0 226
-Event 54 25 0 227
-Event 54 26 0 228
-Event 54 27 0 229
-Event 54 29 0 230
-Event 55 10 0 240
-Event 55 12 0 241
-Event 55 14 0 242
-Event 55 15 0 243
-Event 55 16 0 244
-Event 55 18 0 245
-Event 55 22 0 246
-Event 55 23 0 247
-Event 55 24 0 248
-Event 55 25 0 249
-Event 55 26 0 250
-Event 55 27 0 251
-Event 55 29 0 252
-Event 56 10 0 261
-Event 56 12 0 262
-Event 56 14 0 263
-Event 56 15 0 264
-Event 56 16 0 265
-Event 56 18 0 266
-Event 56 22 0 267
-Event 56 23 0 268
-Event 56 24 0 269
-Event 56 25 0 270
-Event 56 26 0 271
-Event 56 27 0 272
-Event 56 29 0 273
-Event 57 10 0 282
-Event 57 11 0 283
-Event 57 12 0 284
-Event 57 13 0 285
-Event 57 14 0 286
-Event 57 16 0 287
-Event 57 19 0 288
-Event 57 20 0 289
-Event 57 21 0 290
-Event 57 22 0 291
-Event 57 23 0 292
-Event 57 24 0 293
-Event 57 25 0 294
-Event 57 26 0 295
-Event 57 27 0 296
-Event 57 29 0 297
-Event 58 10 0 307
-Event 58 12 0 308
-Event 58 14 0 309
-Event 58 15 0 310
-Event 58 16 0 311
-Event 58 18 0 312
-Event 58 22 0 313
-Event 58 23 0 314
-Event 58 24 0 315
-Event 58 25 0 316
-Event 58 26 0 317
-Event 58 27 0 318
-Event 58 29 0 319
-Event 59 10 0 328
-Event 59 12 0 329
-Event 59 14 0 330
-Event 59 15 0 331
-Event 59 16 0 332
-Event 59 18 0 333
-Event 59 22 0 334
-Event 59 23 0 335
-Event 59 24 0 336
-Event 59 25 0 337
-Event 59 26 0 338
-Event 59 27 0 339
-Event 59 29 0 340
-Event 60 10 0 349
-Event 60 12 0 350
-Event 60 14 0 351
-Event 60 15 0 352
-Event 60 16 0 353
-Event 60 18 0 354
-Event 60 22 0 355
-Event 60 23 0 356
-Event 60 24 0 357
-Event 60 26 0 358
-Event 60 27 0 359
-Event 60 29 0 360
-Event 61 10 0 366
-Event 61 11 0 367
-Event 61 12 0 368
-Event 61 13 0 369
-Event 61 14 0 370
-Event 61 16 0 371
-Event 61 17 0 372
-Event 61 18 0 373
-Event 61 22 0 374
-Event 61 23 0 375
-Event 61 24 0 376
-Event 61 25 0 377
-Event 61 26 0 378
-Event 61 27 0 379
-Event 61 29 0 380
-Event 62 10 0 388
-Event 62 11 0 389
-Event 62 12 0 390
-Event 62 13 0 391
-Event 62 14 0 392
-Event 62 16 0 393
-Event 62 17 0 394
-Event 62 19 0 395
-Event 62 20 0 396
-Event 62 21 0 397
-Event 62 22 0 398
-Event 62 23 0 399
-Event 62 24 0 400
-Event 62 25 0 401
-Event 62 26 0 402
-Event 62 27 0 403
-Event 62 29 0 404
-Event 63 64 0 408
-Event 63 66 0 454
-Event 63 78 0 615
-Event 63 83 0 664
-Event 63 86 0 684
-Event 64 10 0 412
-Event 64 11 0 413
-Event 64 12 0 414
-Event 64 13 0 415
-Event 64 14 0 416
-Event 64 16 0 417
-Event 64 19 0 418
-Event 64 20 0 419
-Event 64 21 0 420
-Event 64 22 0 421
-Event 64 23 0 422
-Event 64 24 0 423
-Event 64 25 0 424
-Event 64 26 0 425
-Event 64 27 0 426
-Event 64 29 0 427
-Event 65 10 0 435
-Event 65 11 0 436
-Event 65 12 0 437
-Event 65 13 0 438
-Event 65 14 0 439
-Event 65 16 0 440
-Event 65 17 0 441
-Event 65 19 0 442
-Event 65 20 0 443
-Event 65 21 0 444
-Event 65 22 0 445
-Event 65 23 0 446
-Event 65 24 0 447
-Event 65 25 0 448
-Event 65 26 0 449
-Event 65 27 0 450
-Event 65 29 0 451
-Event 66 10 0 458
-Event 66 11 0 459
-Event 66 12 0 460
-Event 66 13 0 461
-Event 66 14 0 462
-Event 66 16 0 463
-Event 66 19 0 464
-Event 66 20 0 465
-Event 66 21 0 466
-Event 66 22 0 467
-Event 66 23 0 468
-Event 66 24 0 469
-Event 66 25 0 470
-Event 66 26 0 471
-Event 66 27 0 472
-Event 66 29 0 473
-Event 67 68 0 476
-Event 67 72 0 532
-Event 67 76 0 573
-Event 67 78 0 614
-Event 68 10 0 481
-Event 68 12 0 482
-Event 68 14 0 483
-Event 68 15 0 484
-Event 68 16 0 485
-Event 68 18 0 486
-Event 68 22 0 487
-Event 68 23 0 488
-Event 68 24 0 489
-Event 68 26 0 490
-Event 68 27 0 491
-Event 68 29 0 492
-Event 69 10 0 496
-Event 69 11 0 497
-Event 69 12 0 498
-Event 69 13 0 499
-Event 69 14 0 500
-Event 69 16 0 501
-Event 69 17 0 502
-Event 69 18 0 503
-Event 69 20 0 504
-Event 69 22 0 505
-Event 69 23 0 506
-Event 69 24 0 507
-Event 69 25 0 508
-Event 69 26 0 509
-Event 69 27 0 510
-Event 69 29 0 511
-Event 70 71 0 514
-Event 70 79 0 635
-Event 70 82 0 655
-Event 71 10 0 516
-Event 71 11 0 517
-Event 71 12 0 518
-Event 71 13 0 519
-Event 71 14 0 520
-Event 71 16 0 521
-Event 71 17 0 522
-Event 71 20 0 523
-Event 71 22 0 524
-Event 71 23 0 525
-Event 71 24 0 526
-Event 71 25 0 527
-Event 71 26 0 528
-Event 71 27 0 529
-Event 71 29 0 530
-Event 72 10 0 537
-Event 72 12 0 538
-Event 72 14 0 539
-Event 72 15 0 540
-Event 72 16 0 541
-Event 72 18 0 542
-Event 72 22 0 543
-Event 72 23 0 544
-Event 72 24 0 545
-Event 72 26 0 546
-Event 72 27 0 547
-Event 72 29 0 548
-Event 73 75 0 552
-Event 74 75 0 553
-Event 75 10 0 558
-Event 75 11 0 559
-Event 75 12 0 560
-Event 75 13 0 561
-Event 75 14 0 562
-Event 75 16 0 563
-Event 75 17 0 564
-Event 75 22 0 565
-Event 75 23 0 566
-Event 75 24 0 567
-Event 75 25 0 568
-Event 75 26 0 569
-Event 75 27 0 570
-Event 75 29 0 571
-Event 76 10 0 579
-Event 76 12 0 580
-Event 76 14 0 581
-Event 76 15 0 582
-Event 76 16 0 583
-Event 76 18 0 584
-Event 76 22 0 585
-Event 76 23 0 586
-Event 76 24 0 587
-Event 76 25 0 588
-Event 76 26 0 589
-Event 76 27 0 590
-Event 76 29 0 591
-Event 77 10 0 598
-Event 77 11 0 599
-Event 77 12 0 600
-Event 77 13 0 601
-Event 77 14 0 602
-Event 77 17 0 603
-Event 77 18 0 604
-Event 77 20 0 605
-Event 77 22 0 606
-Event 77 23 0 607
-Event 77 24 0 608
-Event 77 25 0 609
-Event 77 26 0 610
-Event 77 27 0 611
-Event 77 29 0 612
-Event 78 10 0 617
-Event 78 11 0 618
-Event 78 12 0 619
-Event 78 13 0 620
-Event 78 14 0 621
-Event 78 17 0 622
-Event 78 18 0 623
-Event 78 20 0 624
-Event 78 21 0 625
-Event 78 22 0 626
-Event 78 23 0 627
-Event 78 24 0 628
-Event 78 25 0 629
-Event 78 26 0 630
-Event 78 27 0 631
-Event 78 29 0 632
-Event 79 10 0 637
-Event 79 11 0 638
-Event 79 12 0 639
-Event 79 13 0 640
-Event 79 14 0 641
-Event 79 17 0 642
-Event 79 20 0 643
-Event 79 22 0 644
-Event 79 23 0 645
-Event 79 24 0 646
-Event 79 25 0 647
-Event 79 26 0 648
-Event 79 27 0 649
-Event 79 29 0 650
-Event 80 81 0 652
-Event 81 82 0 653
-Event 82 17 0 658
-Event 82 19 0 657
-Event 82 20 0 659
-Event 82 21 0 660
-Event 82 22 0 661
-Event 83 10 0 666
-Event 83 11 0 667
-Event 83 12 0 668
-Event 83 13 0 669
-Event 83 14 0 670
-Event 83 17 0 671
-Event 83 20 0 672
-Event 83 22 0 673
-Event 83 23 0 674
-Event 83 24 0 675
-Event 83 25 0 676
-Event 83 26 0 677
-Event 83 27 0 678
-Event 83 29 0 679
-Event 84 85 0 681
-Event 85 16 0 849
-Event 85 86 0 682
-Event 85 89 0 712
-Event 85 92 0 741
-Event 85 94 0 774
-Event 86 16 0 686
-Event 86 17 0 688
-Event 86 18 0 689
-Event 86 19 0 687
-Event 86 20 0 690
-Event 86 21 0 691
-Event 86 22 0 692
-Event 87 88 0 695
-Event 87 89 0 713
-Event 87 104 0 838
-Event 88 10 0 697
-Event 88 11 0 698
-Event 88 12 0 699
-Event 88 13 0 700
-Event 88 14 0 701
-Event 88 16 0 702
-Event 88 17 0 703
-Event 88 20 0 704
-Event 88 22 0 705
-Event 88 23 0 706
-Event 88 24 0 707
-Event 88 25 0 708
-Event 88 26 0 709
-Event 88 27 0 710
-Event 88 29 0 711
-Event 89 16 0 715
-Event 89 17 0 717
-Event 89 19 0 716
-Event 89 20 0 718
-Event 89 22 0 719
-Event 90 91 0 722
-Event 90 92 0 742
-Event 90 93 0 755
-Event 90 94 0 775
-Event 91 10 0 727
-Event 91 11 0 728
-Event 91 12 0 729
-Event 91 13 0 730
-Event 91 14 0 731
-Event 91 16 0 732
-Event 91 17 0 733
-Event 91 22 0 734
-Event 91 23 0 735
-Event 91 24 0 736
-Event 91 25 0 737
-Event 91 26 0 738
-Event 91 27 0 739
-Event 91 29 0 740
-Event 92 16 0 747
-Event 92 17 0 749
-Event 92 18 0 750
-Event 92 19 0 748
-Event 92 20 0 751
-Event 92 21 0 752
-Event 92 22 0 753
-Event 93 10 0 760
-Event 93 11 0 761
-Event 93 12 0 762
-Event 93 13 0 763
-Event 93 14 0 764
-Event 93 16 0 765
-Event 93 17 0 766
-Event 93 22 0 767
-Event 93 23 0 768
-Event 93 24 0 769
-Event 93 25 0 770
-Event 93 26 0 771
-Event 93 27 0 772
-Event 93 29 0 773
-Event 94 16 0 780
-Event 94 17 0 782
-Event 94 18 0 783
-Event 94 19 0 781
-Event 94 20 0 784
-Event 94 21 0 785
-Event 94 22 0 786
-Event 95 97 0 790
-Event 95 98 0 811
-Event 96 97 0 791
-Event 96 98 0 812
-Event 97 10 0 796
-Event 97 11 0 797
-Event 97 12 0 798
-Event 97 13 0 799
-Event 97 14 0 800
-Event 97 16 0 801
-Event 97 17 0 802
-Event 97 22 0 803
-Event 97 23 0 804
-Event 97 24 0 805
-Event 97 25 0 806
-Event 97 26 0 807
-Event 97 27 0 808
-Event 97 29 0 809
-Event 98 10 0 817
-Event 98 11 0 818
-Event 98 12 0 819
-Event 98 13 0 820
-Event 98 14 0 821
-Event 98 16 0 822
-Event 98 17 0 823
-Event 98 22 0 824
-Event 98 23 0 825
-Event 98 24 0 826
-Event 98 25 0 827
-Event 98 26 0 828
-Event 98 27 0 829
-Event 98 29 0 830
-Event 99 100 0 832
-Event 100 104 0 836
-Event 101 104 0 837
-Event 102 104 0 839
-Event 103 104 0 840
-Event 104 17 0 845
-Event 104 19 0 844
-Event 104 20 0 846
-Event 104 21 0 847
-Event 104 22 0 848
+Genome2 11 42
+History 77d99050-5077ab83-c7bb3998-7c6a5b22 0 871 128
+Binding 0 10 11 0
+Binding 1 8 53 0
+Binding 2 4 54 0
+Binding 3 5 55 0
+Binding 4 5 56 0
+Binding 5 7 57 0
+Binding 6 53 58 0
+Binding 7 54 58 0
+Binding 8 55 58 0
+Binding 9 56 58 0
+Binding 10 57 58 0
+Binding 11 1 58 0
+Binding 12 58 11 0
+Binding 13 58 12 0
+Binding 14 10 12 0
+Binding 15 58 13 0
+Binding 16 10 13 0
+Binding 17 58 14 0
+Binding 18 10 14 0
+Binding 19 58 15 0
+Binding 20 10 15 0
+Binding 21 58 17 0
+Binding 22 10 17 0
+Binding 23 58 18 0
+Binding 24 10 18 0
+Binding 25 58 20 0
+Binding 26 10 20 0
+Binding 27 58 21 0
+Binding 28 10 21 0
+Binding 29 58 22 0
+Binding 30 10 22 0
+Binding 31 58 23 0
+Binding 32 10 23 0
+Binding 33 58 24 0
+Binding 34 10 24 0
+Binding 35 58 25 0
+Binding 36 10 25 0
+Binding 37 58 26 0
+Binding 38 10 26 0
+Binding 39 58 27 0
+Binding 40 10 27 0
+Binding 41 58 28 0
+Binding 42 10 28 0
+Binding 43 58 30 0
+Binding 44 10 30 0
+Binding 45 4 59 0
+Binding 46 4 60 0
+Binding 47 5 61 0
+Binding 48 6 62 0
+Binding 49 6 63 0
+Binding 50 53 64 0
+Binding 51 59 64 0
+Binding 52 60 64 0
+Binding 53 55 64 0
+Binding 54 61 64 0
+Binding 55 62 64 0
+Binding 56 63 64 0
+Binding 57 57 64 0
+Binding 58 2 64 0
+Binding 59 64 11 0
+Binding 60 64 13 0
+Binding 61 64 15 0
+Binding 62 64 16 0
+Binding 63 10 16 0
+Binding 64 64 17 0
+Binding 65 64 19 0
+Binding 66 10 19 0
+Binding 67 64 23 0
+Binding 68 64 24 0
+Binding 69 64 25 0
+Binding 70 64 26 0
+Binding 71 64 27 0
+Binding 72 64 28 0
+Binding 73 64 30 0
+Binding 74 6 65 0
+Binding 75 53 66 0
+Binding 76 59 66 0
+Binding 77 60 66 0
+Binding 78 55 66 0
+Binding 79 61 66 0
+Binding 80 65 66 0
+Binding 81 57 66 0
+Binding 82 2 66 0
+Binding 83 66 11 0
+Binding 84 66 13 0
+Binding 85 66 15 0
+Binding 86 66 16 0
+Binding 87 66 17 0
+Binding 88 66 19 0
+Binding 89 66 23 0
+Binding 90 66 24 0
+Binding 91 66 25 0
+Binding 92 66 26 0
+Binding 93 66 27 0
+Binding 94 66 28 0
+Binding 95 66 30 0
+Binding 96 5 67 0
+Binding 97 53 68 0
+Binding 98 59 68 0
+Binding 99 67 68 0
+Binding 100 61 68 0
+Binding 101 62 68 0
+Binding 102 63 68 0
+Binding 103 57 68 0
+Binding 104 1 68 0
+Binding 105 68 11 0
+Binding 106 68 12 0
+Binding 107 68 13 0
+Binding 108 68 14 0
+Binding 109 68 15 0
+Binding 110 68 17 0
+Binding 111 68 20 0
+Binding 112 68 21 0
+Binding 113 68 22 0
+Binding 114 68 23 0
+Binding 115 68 24 0
+Binding 116 68 25 0
+Binding 117 68 26 0
+Binding 118 68 27 0
+Binding 119 68 28 0
+Binding 120 68 30 0
+Binding 121 4 69 0
+Binding 122 53 70 0
+Binding 123 54 70 0
+Binding 124 69 70 0
+Binding 125 55 70 0
+Binding 126 61 70 0
+Binding 127 62 70 0
+Binding 128 63 70 0
+Binding 129 57 70 0
+Binding 130 2 70 0
+Binding 131 70 11 0
+Binding 132 70 13 0
+Binding 133 70 15 0
+Binding 134 70 16 0
+Binding 135 70 17 0
+Binding 136 70 19 0
+Binding 137 70 23 0
+Binding 138 70 24 0
+Binding 139 70 25 0
+Binding 140 70 26 0
+Binding 141 70 27 0
+Binding 142 70 28 0
+Binding 143 70 30 0
+Binding 144 53 71 0
+Binding 145 54 71 0
+Binding 146 69 71 0
+Binding 147 55 71 0
+Binding 148 61 71 0
+Binding 149 65 71 0
+Binding 150 57 71 0
+Binding 151 2 71 0
+Binding 152 71 11 0
+Binding 153 71 13 0
+Binding 154 71 15 0
+Binding 155 71 16 0
+Binding 156 71 17 0
+Binding 157 71 19 0
+Binding 158 71 23 0
+Binding 159 71 24 0
+Binding 160 71 25 0
+Binding 161 71 26 0
+Binding 162 71 27 0
+Binding 163 71 28 0
+Binding 164 71 30 0
+Binding 165 6 72 0
+Binding 166 53 73 0
+Binding 167 59 73 0
+Binding 168 60 73 0
+Binding 169 55 73 0
+Binding 170 61 73 0
+Binding 171 72 73 0
+Binding 172 57 73 0
+Binding 173 2 73 0
+Binding 174 73 11 0
+Binding 175 73 13 0
+Binding 176 73 15 0
+Binding 177 73 16 0
+Binding 178 73 17 0
+Binding 179 73 19 0
+Binding 180 73 23 0
+Binding 181 73 24 0
+Binding 182 73 25 0
+Binding 183 73 27 0
+Binding 184 73 28 0
+Binding 185 73 30 0
+Binding 186 4 74 0
+Binding 187 53 75 0
+Binding 188 74 75 0
+Binding 189 62 75 0
+Binding 190 57 75 0
+Binding 191 2 75 0
+Binding 192 75 11 0
+Binding 193 75 12 0
+Binding 194 75 13 0
+Binding 195 75 14 0
+Binding 196 75 15 0
+Binding 197 75 17 0
+Binding 198 75 18 0
+Binding 199 75 19 0
+Binding 200 75 23 0
+Binding 201 75 24 0
+Binding 202 75 25 0
+Binding 203 75 26 0
+Binding 204 75 27 0
+Binding 205 75 28 0
+Binding 206 75 30 0
+Binding 207 7 76 0
+Binding 208 53 77 0
+Binding 209 54 77 0
+Binding 210 55 77 0
+Binding 211 56 77 0
+Binding 212 76 77 0
+Binding 213 1 77 0
+Binding 214 77 11 0
+Binding 215 77 12 0
+Binding 216 77 13 0
+Binding 217 77 14 0
+Binding 218 77 15 0
+Binding 219 77 17 0
+Binding 220 77 18 0
+Binding 221 77 20 0
+Binding 222 77 21 0
+Binding 223 77 22 0
+Binding 224 77 23 0
+Binding 225 77 24 0
+Binding 226 77 25 0
+Binding 227 77 26 0
+Binding 228 77 27 0
+Binding 229 77 28 0
+Binding 230 77 30 0
+Binding 231 53 78 0
+Binding 232 59 78 0
+Binding 233 60 78 0
+Binding 234 55 78 0
+Binding 235 61 78 0
+Binding 236 62 78 0
+Binding 237 63 78 0
+Binding 238 76 78 0
+Binding 239 2 78 0
+Binding 240 78 11 0
+Binding 241 78 13 0
+Binding 242 78 15 0
+Binding 243 78 16 0
+Binding 244 78 17 0
+Binding 245 78 19 0
+Binding 246 78 23 0
+Binding 247 78 24 0
+Binding 248 78 25 0
+Binding 249 78 26 0
+Binding 250 78 27 0
+Binding 251 78 28 0
+Binding 252 78 30 0
+Binding 253 53 79 0
+Binding 254 59 79 0
+Binding 255 60 79 0
+Binding 256 55 79 0
+Binding 257 61 79 0
+Binding 258 65 79 0
+Binding 259 76 79 0
+Binding 260 2 79 0
+Binding 261 79 11 0
+Binding 262 79 13 0
+Binding 263 79 15 0
+Binding 264 79 16 0
+Binding 265 79 17 0
+Binding 266 79 19 0
+Binding 267 79 23 0
+Binding 268 79 24 0
+Binding 269 79 25 0
+Binding 270 79 26 0
+Binding 271 79 27 0
+Binding 272 79 28 0
+Binding 273 79 30 0
+Binding 274 53 80 0
+Binding 275 59 80 0
+Binding 276 67 80 0
+Binding 277 61 80 0
+Binding 278 62 80 0
+Binding 279 63 80 0
+Binding 280 76 80 0
+Binding 281 1 80 0
+Binding 282 80 11 0
+Binding 283 80 12 0
+Binding 284 80 13 0
+Binding 285 80 14 0
+Binding 286 80 15 0
+Binding 287 80 17 0
+Binding 288 80 20 0
+Binding 289 80 21 0
+Binding 290 80 22 0
+Binding 291 80 23 0
+Binding 292 80 24 0
+Binding 293 80 25 0
+Binding 294 80 26 0
+Binding 295 80 27 0
+Binding 296 80 28 0
+Binding 297 80 30 0
+Binding 298 53 81 0
+Binding 299 54 81 0
+Binding 300 69 81 0
+Binding 301 55 81 0
+Binding 302 61 81 0
+Binding 303 62 81 0
+Binding 304 63 81 0
+Binding 305 76 81 0
+Binding 306 2 81 0
+Binding 307 81 11 0
+Binding 308 81 13 0
+Binding 309 81 15 0
+Binding 310 81 16 0
+Binding 311 81 17 0
+Binding 312 81 19 0
+Binding 313 81 23 0
+Binding 314 81 24 0
+Binding 315 81 25 0
+Binding 316 81 26 0
+Binding 317 81 27 0
+Binding 318 81 28 0
+Binding 319 81 30 0
+Binding 320 53 82 0
+Binding 321 54 82 0
+Binding 322 69 82 0
+Binding 323 55 82 0
+Binding 324 61 82 0
+Binding 325 65 82 0
+Binding 326 76 82 0
+Binding 327 2 82 0
+Binding 328 82 11 0
+Binding 329 82 13 0
+Binding 330 82 15 0
+Binding 331 82 16 0
+Binding 332 82 17 0
+Binding 333 82 19 0
+Binding 334 82 23 0
+Binding 335 82 24 0
+Binding 336 82 25 0
+Binding 337 82 26 0
+Binding 338 82 27 0
+Binding 339 82 28 0
+Binding 340 82 30 0
+Binding 341 53 83 0
+Binding 342 59 83 0
+Binding 343 60 83 0
+Binding 344 55 83 0
+Binding 345 61 83 0
+Binding 346 72 83 0
+Binding 347 76 83 0
+Binding 348 2 83 0
+Binding 349 83 11 0
+Binding 350 83 13 0
+Binding 351 83 15 0
+Binding 352 83 16 0
+Binding 353 83 17 0
+Binding 354 83 19 0
+Binding 355 83 23 0
+Binding 356 83 24 0
+Binding 357 83 25 0
+Binding 358 83 27 0
+Binding 359 83 28 0
+Binding 360 83 30 0
+Binding 361 53 84 0
+Binding 362 74 84 0
+Binding 363 62 84 0
+Binding 364 76 84 0
+Binding 365 2 84 0
+Binding 366 84 11 0
+Binding 367 84 12 0
+Binding 368 84 13 0
+Binding 369 84 14 0
+Binding 370 84 15 0
+Binding 371 84 17 0
+Binding 372 84 18 0
+Binding 373 84 19 0
+Binding 374 84 23 0
+Binding 375 84 24 0
+Binding 376 84 25 0
+Binding 377 84 26 0
+Binding 378 84 27 0
+Binding 379 84 28 0
+Binding 380 84 30 0
+Binding 381 53 85 0
+Binding 382 74 85 0
+Binding 383 67 85 0
+Binding 384 61 85 0
+Binding 385 72 85 0
+Binding 386 57 85 0
+Binding 387 1 85 0
+Binding 388 85 11 0
+Binding 389 85 12 0
+Binding 390 85 13 0
+Binding 391 85 14 0
+Binding 392 85 15 0
+Binding 393 85 17 0
+Binding 394 85 18 0
+Binding 395 85 20 0
+Binding 396 85 21 0
+Binding 397 85 22 0
+Binding 398 85 23 0
+Binding 399 85 24 0
+Binding 400 85 25 0
+Binding 401 85 26 0
+Binding 402 85 27 0
+Binding 403 85 28 0
+Binding 404 85 30 0
+Binding 405 5 86 0
+Binding 406 53 87 0
+Binding 407 59 87 0
+Binding 408 86 87 0
+Binding 409 63 87 0
+Binding 410 57 87 0
+Binding 411 1 87 0
+Binding 412 87 11 0
+Binding 413 87 12 0
+Binding 414 87 13 0
+Binding 415 87 14 0
+Binding 416 87 15 0
+Binding 417 87 17 0
+Binding 418 87 20 0
+Binding 419 87 21 0
+Binding 420 87 22 0
+Binding 421 87 23 0
+Binding 422 87 24 0
+Binding 423 87 25 0
+Binding 424 87 26 0
+Binding 425 87 27 0
+Binding 426 87 28 0
+Binding 427 87 30 0
+Binding 428 53 88 0
+Binding 429 74 88 0
+Binding 430 67 88 0
+Binding 431 61 88 0
+Binding 432 72 88 0
+Binding 433 76 88 0
+Binding 434 1 88 0
+Binding 435 88 11 0
+Binding 436 88 12 0
+Binding 437 88 13 0
+Binding 438 88 14 0
+Binding 439 88 15 0
+Binding 440 88 17 0
+Binding 441 88 18 0
+Binding 442 88 20 0
+Binding 443 88 21 0
+Binding 444 88 22 0
+Binding 445 88 23 0
+Binding 446 88 24 0
+Binding 447 88 25 0
+Binding 448 88 26 0
+Binding 449 88 27 0
+Binding 450 88 28 0
+Binding 451 88 30 0
+Binding 452 53 89 0
+Binding 453 59 89 0
+Binding 454 86 89 0
+Binding 455 63 89 0
+Binding 456 76 89 0
+Binding 457 1 89 0
+Binding 458 89 11 0
+Binding 459 89 12 0
+Binding 460 89 13 0
+Binding 461 89 14 0
+Binding 462 89 15 0
+Binding 463 89 17 0
+Binding 464 89 20 0
+Binding 465 89 21 0
+Binding 466 89 22 0
+Binding 467 89 23 0
+Binding 468 89 24 0
+Binding 469 89 25 0
+Binding 470 89 26 0
+Binding 471 89 27 0
+Binding 472 89 28 0
+Binding 473 89 30 0
+Binding 474 4 90 0
+Binding 475 53 91 0
+Binding 476 90 91 0
+Binding 477 67 91 0
+Binding 478 61 91 0
+Binding 479 72 91 0
+Binding 480 1 91 0
+Binding 481 91 11 0
+Binding 482 91 13 0
+Binding 483 91 15 0
+Binding 484 91 16 0
+Binding 485 91 17 0
+Binding 486 91 19 0
+Binding 487 91 23 0
+Binding 488 91 24 0
+Binding 489 91 25 0
+Binding 490 91 27 0
+Binding 491 91 28 0
+Binding 492 91 30 0
+Binding 493 53 92 0
+Binding 494 54 92 0
+Binding 495 0 92 0
+Binding 496 92 11 0
+Binding 497 92 12 0
+Binding 498 92 13 0
+Binding 499 92 14 0
+Binding 500 92 15 0
+Binding 501 92 17 0
+Binding 502 92 18 0
+Binding 503 92 19 0
+Binding 504 92 21 0
+Binding 505 92 23 0
+Binding 506 92 24 0
+Binding 507 92 25 0
+Binding 508 92 26 0
+Binding 509 92 27 0
+Binding 510 92 28 0
+Binding 511 92 30 0
+Binding 512 5 93 0
+Binding 513 53 94 0
+Binding 514 93 94 0
+Binding 515 1 94 0
+Binding 516 94 11 0
+Binding 517 94 12 0
+Binding 518 94 13 0
+Binding 519 94 14 0
+Binding 520 94 15 0
+Binding 521 94 17 0
+Binding 522 94 18 0
+Binding 523 94 21 0
+Binding 524 94 23 0
+Binding 525 94 24 0
+Binding 526 94 25 0
+Binding 527 94 26 0
+Binding 528 94 27 0
+Binding 529 94 28 0
+Binding 530 94 30 0
+Binding 531 53 95 0
+Binding 532 90 95 0
+Binding 533 55 95 0
+Binding 534 61 95 0
+Binding 535 72 95 0
+Binding 536 2 95 0
+Binding 537 95 11 0
+Binding 538 95 13 0
+Binding 539 95 15 0
+Binding 540 95 16 0
+Binding 541 95 17 0
+Binding 542 95 19 0
+Binding 543 95 23 0
+Binding 544 95 24 0
+Binding 545 95 25 0
+Binding 546 95 27 0
+Binding 547 95 28 0
+Binding 548 95 30 0
+Binding 549 4 96 0
+Binding 550 4 97 0
+Binding 551 53 98 0
+Binding 552 96 98 0
+Binding 553 97 98 0
+Binding 554 55 98 0
+Binding 555 61 98 0
+Binding 556 72 98 0
+Binding 557 2 98 0
+Binding 558 98 11 0
+Binding 559 98 12 0
+Binding 560 98 13 0
+Binding 561 98 14 0
+Binding 562 98 15 0
+Binding 563 98 17 0
+Binding 564 98 18 0
+Binding 565 98 23 0
+Binding 566 98 24 0
+Binding 567 98 25 0
+Binding 568 98 26 0
+Binding 569 98 27 0
+Binding 570 98 28 0
+Binding 571 98 30 0
+Binding 572 53 99 0
+Binding 573 90 99 0
+Binding 574 55 99 0
+Binding 575 61 99 0
+Binding 576 62 99 0
+Binding 577 63 99 0
+Binding 578 2 99 0
+Binding 579 99 11 0
+Binding 580 99 13 0
+Binding 581 99 15 0
+Binding 582 99 16 0
+Binding 583 99 17 0
+Binding 584 99 19 0
+Binding 585 99 23 0
+Binding 586 99 24 0
+Binding 587 99 25 0
+Binding 588 99 26 0
+Binding 589 99 27 0
+Binding 590 99 28 0
+Binding 591 99 30 0
+Binding 592 53 100 0
+Binding 593 54 100 0
+Binding 594 69 100 0
+Binding 595 67 100 0
+Binding 596 61 100 0
+Binding 597 1 100 0
+Binding 598 100 11 0
+Binding 599 100 12 0
+Binding 600 100 13 0
+Binding 601 100 14 0
+Binding 602 100 15 0
+Binding 603 100 18 0
+Binding 604 100 19 0
+Binding 605 100 21 0
+Binding 606 100 23 0
+Binding 607 100 24 0
+Binding 608 100 25 0
+Binding 609 100 26 0
+Binding 610 100 27 0
+Binding 611 100 28 0
+Binding 612 100 30 0
+Binding 613 53 101 0
+Binding 614 90 101 0
+Binding 615 86 101 0
+Binding 616 1 101 0
+Binding 617 101 11 0
+Binding 618 101 12 0
+Binding 619 101 13 0
+Binding 620 101 14 0
+Binding 621 101 15 0
+Binding 622 101 18 0
+Binding 623 101 19 0
+Binding 624 101 21 0
+Binding 625 101 22 0
+Binding 626 101 23 0
+Binding 627 101 24 0
+Binding 628 101 25 0
+Binding 629 101 26 0
+Binding 630 101 27 0
+Binding 631 101 28 0
+Binding 632 101 30 0
+Binding 633 53 102 0
+Binding 634 69 102 0
+Binding 635 93 102 0
+Binding 636 2 102 0
+Binding 637 102 11 0
+Binding 638 102 12 0
+Binding 639 102 13 0
+Binding 640 102 14 0
+Binding 641 102 15 0
+Binding 642 102 18 0
+Binding 643 102 21 0
+Binding 644 102 23 0
+Binding 645 102 24 0
+Binding 646 102 25 0
+Binding 647 102 26 0
+Binding 648 102 27 0
+Binding 649 102 28 0
+Binding 650 102 30 0
+Binding 651 8 103 0
+Binding 652 103 104 0
+Binding 653 104 105 0
+Binding 654 69 105 0
+Binding 655 93 105 0
+Binding 656 2 105 0
+Binding 657 105 20 0
+Binding 658 105 18 0
+Binding 659 105 21 0
+Binding 660 105 22 0
+Binding 661 105 23 0
+Binding 662 53 106 0
+Binding 663 69 106 0
+Binding 664 86 106 0
+Binding 665 2 106 0
+Binding 666 106 11 0
+Binding 667 106 12 0
+Binding 668 106 13 0
+Binding 669 106 14 0
+Binding 670 106 15 0
+Binding 671 106 18 0
+Binding 672 106 21 0
+Binding 673 106 23 0
+Binding 674 106 24 0
+Binding 675 106 25 0
+Binding 676 106 26 0
+Binding 677 106 27 0
+Binding 678 106 28 0
+Binding 679 106 30 0
+Binding 680 8 107 0
+Binding 681 107 108 0
+Binding 682 108 109 0
+Binding 683 69 109 0
+Binding 684 86 109 0
+Binding 685 2 109 0
+Binding 686 109 17 0
+Binding 687 109 20 0
+Binding 688 109 18 0
+Binding 689 109 19 0
+Binding 690 109 21 0
+Binding 691 109 22 0
+Binding 692 109 23 0
+Binding 693 4 110 0
+Binding 694 53 111 0
+Binding 695 110 111 0
+Binding 696 3 111 0
+Binding 697 111 11 0
+Binding 698 111 12 0
+Binding 699 111 13 0
+Binding 700 111 14 0
+Binding 701 111 15 0
+Binding 702 111 17 0
+Binding 703 111 18 0
+Binding 704 111 21 0
+Binding 705 111 23 0
+Binding 706 111 24 0
+Binding 707 111 25 0
+Binding 708 111 26 0
+Binding 709 111 27 0
+Binding 710 111 28 0
+Binding 711 111 30 0
+Binding 712 108 112 0
+Binding 713 110 112 0
+Binding 714 3 112 0
+Binding 715 112 17 0
+Binding 716 112 20 0
+Binding 717 112 18 0
+Binding 718 112 21 0
+Binding 719 112 23 0
+Binding 720 4 113 0
+Binding 721 53 114 0
+Binding 722 113 114 0
+Binding 723 55 114 0
+Binding 724 61 114 0
+Binding 725 63 114 0
+Binding 726 3 114 0
+Binding 727 114 11 0
+Binding 728 114 12 0
+Binding 729 114 13 0
+Binding 730 114 14 0
+Binding 731 114 15 0
+Binding 732 114 17 0
+Binding 733 114 18 0
+Binding 734 114 23 0
+Binding 735 114 24 0
+Binding 736 114 25 0
+Binding 737 114 26 0
+Binding 738 114 27 0
+Binding 739 114 28 0
+Binding 740 114 30 0
+Binding 741 108 115 0
+Binding 742 113 115 0
+Binding 743 55 115 0
+Binding 744 61 115 0
+Binding 745 63 115 0
+Binding 746 3 115 0
+Binding 747 115 17 0
+Binding 748 115 20 0
+Binding 749 115 18 0
+Binding 750 115 19 0
+Binding 751 115 21 0
+Binding 752 115 22 0
+Binding 753 115 23 0
+Binding 754 53 116 0
+Binding 755 113 116 0
+Binding 756 55 116 0
+Binding 757 61 116 0
+Binding 758 65 116 0
+Binding 759 3 116 0
+Binding 760 116 11 0
+Binding 761 116 12 0
+Binding 762 116 13 0
+Binding 763 116 14 0
+Binding 764 116 15 0
+Binding 765 116 17 0
+Binding 766 116 18 0
+Binding 767 116 23 0
+Binding 768 116 24 0
+Binding 769 116 25 0
+Binding 770 116 26 0
+Binding 771 116 27 0
+Binding 772 116 28 0
+Binding 773 116 30 0
+Binding 774 108 117 0
+Binding 775 113 117 0
+Binding 776 55 117 0
+Binding 777 61 117 0
+Binding 778 65 117 0
+Binding 779 3 117 0
+Binding 780 117 17 0
+Binding 781 117 20 0
+Binding 782 117 18 0
+Binding 783 117 19 0
+Binding 784 117 21 0
+Binding 785 117 22 0
+Binding 786 117 23 0
+Binding 787 4 118 0
+Binding 788 4 119 0
+Binding 789 53 120 0
+Binding 790 118 120 0
+Binding 791 119 120 0
+Binding 792 55 120 0
+Binding 793 61 120 0
+Binding 794 72 120 0
+Binding 795 3 120 0
+Binding 796 120 11 0
+Binding 797 120 12 0
+Binding 798 120 13 0
+Binding 799 120 14 0
+Binding 800 120 15 0
+Binding 801 120 17 0
+Binding 802 120 18 0
+Binding 803 120 23 0
+Binding 804 120 24 0
+Binding 805 120 25 0
+Binding 806 120 26 0
+Binding 807 120 27 0
+Binding 808 120 28 0
+Binding 809 120 30 0
+Binding 810 53 121 0
+Binding 811 118 121 0
+Binding 812 119 121 0
+Binding 813 55 121 0
+Binding 814 61 121 0
+Binding 815 65 121 0
+Binding 816 3 121 0
+Binding 817 121 11 0
+Binding 818 121 12 0
+Binding 819 121 13 0
+Binding 820 121 14 0
+Binding 821 121 15 0
+Binding 822 121 17 0
+Binding 823 121 18 0
+Binding 824 121 23 0
+Binding 825 121 24 0
+Binding 826 121 25 0
+Binding 827 121 26 0
+Binding 828 121 27 0
+Binding 829 121 28 0
+Binding 830 121 30 0
+Binding 831 8 122 0
+Binding 832 122 123 0
+Binding 833 4 124 0
+Binding 834 5 125 0
+Binding 835 5 126 0
+Binding 836 123 127 0
+Binding 837 124 127 0
+Binding 838 110 127 0
+Binding 839 125 127 0
+Binding 840 126 127 0
+Binding 841 62 127 0
+Binding 842 63 127 0
+Binding 843 1 127 0
+Binding 844 127 20 0
+Binding 845 127 18 0
+Binding 846 127 21 0
+Binding 847 127 22 0
+Binding 848 127 23 0
+Binding 849 108 17 0
+Binding 850 10 32 0
+Binding 851 10 33 0
+Binding 852 10 34 0
+Binding 853 10 35 0
+Binding 854 10 36 0
+Binding 855 10 37 0
+Binding 856 10 38 0
+Binding 857 10 39 0
+Binding 858 10 40 0
+Binding 859 10 41 0
+Binding 860 10 42 0
+Binding 861 10 43 0
+Binding 862 10 44 0
+Binding 863 10 45 0
+Binding 864 10 46 0
+Binding 865 10 47 0
+Binding 866 10 48 0
+Binding 867 10 49 0
+Binding 868 10 50 0
+Binding 869 10 51 0
+Binding 870 10 52 0
+Event 0 92 0 495
+Event 1 58 0 11
+Event 1 68 0 104
+Event 1 77 0 213
+Event 1 80 0 281
+Event 1 85 0 387
+Event 1 87 0 411
+Event 1 88 0 434
+Event 1 89 0 457
+Event 1 91 0 480
+Event 1 94 0 515
+Event 1 100 0 597
+Event 1 101 0 616
+Event 1 127 0 843
+Event 2 64 0 58
+Event 2 66 0 82
+Event 2 70 0 130
+Event 2 71 0 151
+Event 2 73 0 173
+Event 2 75 0 191
+Event 2 78 0 239
+Event 2 79 0 260
+Event 2 81 0 306
+Event 2 82 0 327
+Event 2 83 0 348
+Event 2 84 0 365
+Event 2 95 0 536
+Event 2 98 0 557
+Event 2 99 0 578
+Event 2 102 0 636
+Event 2 105 0 656
+Event 2 106 0 665
+Event 2 109 0 685
+Event 3 111 0 696
+Event 3 112 0 714
+Event 3 114 0 726
+Event 3 115 0 746
+Event 3 116 0 759
+Event 3 117 0 779
+Event 3 120 0 795
+Event 3 121 0 816
+Event 4 54 0 2
+Event 4 59 0 45
+Event 4 60 0 46
+Event 4 69 0 121
+Event 4 74 0 186
+Event 4 90 0 474
+Event 4 96 0 549
+Event 4 97 0 550
+Event 4 110 0 693
+Event 4 113 0 720
+Event 4 118 0 787
+Event 4 119 0 788
+Event 4 124 0 833
+Event 5 55 0 3
+Event 5 56 0 4
+Event 5 61 0 47
+Event 5 67 0 96
+Event 5 86 0 405
+Event 5 93 0 512
+Event 5 125 0 834
+Event 5 126 0 835
+Event 6 62 0 48
+Event 6 63 0 49
+Event 6 65 0 74
+Event 6 72 0 165
+Event 7 57 0 5
+Event 7 76 0 207
+Event 8 53 0 1
+Event 8 103 0 651
+Event 8 107 0 680
+Event 8 122 0 831
+Event 10 11 0 0
+Event 10 12 0 14
+Event 10 13 0 16
+Event 10 14 0 18
+Event 10 15 0 20
+Event 10 16 0 63
+Event 10 17 0 22
+Event 10 18 0 24
+Event 10 19 0 66
+Event 10 20 0 26
+Event 10 21 0 28
+Event 10 22 0 30
+Event 10 23 0 32
+Event 10 24 0 34
+Event 10 25 0 36
+Event 10 26 0 38
+Event 10 27 0 40
+Event 10 28 0 42
+Event 10 30 0 44
+Event 10 32 0 850
+Event 10 33 0 851
+Event 10 34 0 852
+Event 10 35 0 853
+Event 10 36 0 854
+Event 10 37 0 855
+Event 10 38 0 856
+Event 10 39 0 857
+Event 10 40 0 858
+Event 10 41 0 859
+Event 10 42 0 860
+Event 10 43 0 861
+Event 10 44 0 862
+Event 10 45 0 863
+Event 10 46 0 864
+Event 10 47 0 865
+Event 10 48 0 866
+Event 10 49 0 867
+Event 10 50 0 868
+Event 10 51 0 869
+Event 10 52 0 870
+Event 53 58 0 6
+Event 53 64 0 50
+Event 53 66 0 75
+Event 53 68 0 97
+Event 53 70 0 122
+Event 53 71 0 144
+Event 53 73 0 166
+Event 53 75 0 187
+Event 53 77 0 208
+Event 53 78 0 231
+Event 53 79 0 253
+Event 53 80 0 274
+Event 53 81 0 298
+Event 53 82 0 320
+Event 53 83 0 341
+Event 53 84 0 361
+Event 53 85 0 381
+Event 53 87 0 406
+Event 53 88 0 428
+Event 53 89 0 452
+Event 53 91 0 475
+Event 53 92 0 493
+Event 53 94 0 513
+Event 53 95 0 531
+Event 53 98 0 551
+Event 53 99 0 572
+Event 53 100 0 592
+Event 53 101 0 613
+Event 53 102 0 633
+Event 53 106 0 662
+Event 53 111 0 694
+Event 53 114 0 721
+Event 53 116 0 754
+Event 53 120 0 789
+Event 53 121 0 810
+Event 54 58 0 7
+Event 54 70 0 123
+Event 54 71 0 145
+Event 54 77 0 209
+Event 54 81 0 299
+Event 54 82 0 321
+Event 54 92 0 494
+Event 54 100 0 593
+Event 55 58 0 8
+Event 55 64 0 53
+Event 55 66 0 78
+Event 55 70 0 125
+Event 55 71 0 147
+Event 55 73 0 169
+Event 55 77 0 210
+Event 55 78 0 234
+Event 55 79 0 256
+Event 55 81 0 301
+Event 55 82 0 323
+Event 55 83 0 344
+Event 55 95 0 533
+Event 55 98 0 554
+Event 55 99 0 574
+Event 55 114 0 723
+Event 55 115 0 743
+Event 55 116 0 756
+Event 55 117 0 776
+Event 55 120 0 792
+Event 55 121 0 813
+Event 56 58 0 9
+Event 56 77 0 211
+Event 57 58 0 10
+Event 57 64 0 57
+Event 57 66 0 81
+Event 57 68 0 103
+Event 57 70 0 129
+Event 57 71 0 150
+Event 57 73 0 172
+Event 57 75 0 190
+Event 57 85 0 386
+Event 57 87 0 410
+Event 58 11 0 12
+Event 58 12 0 13
+Event 58 13 0 15
+Event 58 14 0 17
+Event 58 15 0 19
+Event 58 17 0 21
+Event 58 18 0 23
+Event 58 20 0 25
+Event 58 21 0 27
+Event 58 22 0 29
+Event 58 23 0 31
+Event 58 24 0 33
+Event 58 25 0 35
+Event 58 26 0 37
+Event 58 27 0 39
+Event 58 28 0 41
+Event 58 30 0 43
+Event 59 64 0 51
+Event 59 66 0 76
+Event 59 68 0 98
+Event 59 73 0 167
+Event 59 78 0 232
+Event 59 79 0 254
+Event 59 80 0 275
+Event 59 83 0 342
+Event 59 87 0 407
+Event 59 89 0 453
+Event 60 64 0 52
+Event 60 66 0 77
+Event 60 73 0 168
+Event 60 78 0 233
+Event 60 79 0 255
+Event 60 83 0 343
+Event 61 64 0 54
+Event 61 66 0 79
+Event 61 68 0 100
+Event 61 70 0 126
+Event 61 71 0 148
+Event 61 73 0 170
+Event 61 78 0 235
+Event 61 79 0 257
+Event 61 80 0 277
+Event 61 81 0 302
+Event 61 82 0 324
+Event 61 83 0 345
+Event 61 85 0 384
+Event 61 88 0 431
+Event 61 91 0 478
+Event 61 95 0 534
+Event 61 98 0 555
+Event 61 99 0 575
+Event 61 100 0 596
+Event 61 114 0 724
+Event 61 115 0 744
+Event 61 116 0 757
+Event 61 117 0 777
+Event 61 120 0 793
+Event 61 121 0 814
+Event 62 64 0 55
+Event 62 68 0 101
+Event 62 70 0 127
+Event 62 75 0 189
+Event 62 78 0 236
+Event 62 80 0 278
+Event 62 81 0 303
+Event 62 84 0 363
+Event 62 99 0 576
+Event 62 127 0 841
+Event 63 64 0 56
+Event 63 68 0 102
+Event 63 70 0 128
+Event 63 78 0 237
+Event 63 80 0 279
+Event 63 81 0 304
+Event 63 87 0 409
+Event 63 89 0 455
+Event 63 99 0 577
+Event 63 114 0 725
+Event 63 115 0 745
+Event 63 127 0 842
+Event 64 11 0 59
+Event 64 13 0 60
+Event 64 15 0 61
+Event 64 16 0 62
+Event 64 17 0 64
+Event 64 19 0 65
+Event 64 23 0 67
+Event 64 24 0 68
+Event 64 25 0 69
+Event 64 26 0 70
+Event 64 27 0 71
+Event 64 28 0 72
+Event 64 30 0 73
+Event 65 66 0 80
+Event 65 71 0 149
+Event 65 79 0 258
+Event 65 82 0 325
+Event 65 116 0 758
+Event 65 117 0 778
+Event 65 121 0 815
+Event 66 11 0 83
+Event 66 13 0 84
+Event 66 15 0 85
+Event 66 16 0 86
+Event 66 17 0 87
+Event 66 19 0 88
+Event 66 23 0 89
+Event 66 24 0 90
+Event 66 25 0 91
+Event 66 26 0 92
+Event 66 27 0 93
+Event 66 28 0 94
+Event 66 30 0 95
+Event 67 68 0 99
+Event 67 80 0 276
+Event 67 85 0 383
+Event 67 88 0 430
+Event 67 91 0 477
+Event 67 100 0 595
+Event 68 11 0 105
+Event 68 12 0 106
+Event 68 13 0 107
+Event 68 14 0 108
+Event 68 15 0 109
+Event 68 17 0 110
+Event 68 20 0 111
+Event 68 21 0 112
+Event 68 22 0 113
+Event 68 23 0 114
+Event 68 24 0 115
+Event 68 25 0 116
+Event 68 26 0 117
+Event 68 27 0 118
+Event 68 28 0 119
+Event 68 30 0 120
+Event 69 70 0 124
+Event 69 71 0 146
+Event 69 81 0 300
+Event 69 82 0 322
+Event 69 100 0 594
+Event 69 102 0 634
+Event 69 105 0 654
+Event 69 106 0 663
+Event 69 109 0 683
+Event 70 11 0 131
+Event 70 13 0 132
+Event 70 15 0 133
+Event 70 16 0 134
+Event 70 17 0 135
+Event 70 19 0 136
+Event 70 23 0 137
+Event 70 24 0 138
+Event 70 25 0 139
+Event 70 26 0 140
+Event 70 27 0 141
+Event 70 28 0 142
+Event 70 30 0 143
+Event 71 11 0 152
+Event 71 13 0 153
+Event 71 15 0 154
+Event 71 16 0 155
+Event 71 17 0 156
+Event 71 19 0 157
+Event 71 23 0 158
+Event 71 24 0 159
+Event 71 25 0 160
+Event 71 26 0 161
+Event 71 27 0 162
+Event 71 28 0 163
+Event 71 30 0 164
+Event 72 73 0 171
+Event 72 83 0 346
+Event 72 85 0 385
+Event 72 88 0 432
+Event 72 91 0 479
+Event 72 95 0 535
+Event 72 98 0 556
+Event 72 120 0 794
+Event 73 11 0 174
+Event 73 13 0 175
+Event 73 15 0 176
+Event 73 16 0 177
+Event 73 17 0 178
+Event 73 19 0 179
+Event 73 23 0 180
+Event 73 24 0 181
+Event 73 25 0 182
+Event 73 27 0 183
+Event 73 28 0 184
+Event 73 30 0 185
+Event 74 75 0 188
+Event 74 84 0 362
+Event 74 85 0 382
+Event 74 88 0 429
+Event 75 11 0 192
+Event 75 12 0 193
+Event 75 13 0 194
+Event 75 14 0 195
+Event 75 15 0 196
+Event 75 17 0 197
+Event 75 18 0 198
+Event 75 19 0 199
+Event 75 23 0 200
+Event 75 24 0 201
+Event 75 25 0 202
+Event 75 26 0 203
+Event 75 27 0 204
+Event 75 28 0 205
+Event 75 30 0 206
+Event 76 77 0 212
+Event 76 78 0 238
+Event 76 79 0 259
+Event 76 80 0 280
+Event 76 81 0 305
+Event 76 82 0 326
+Event 76 83 0 347
+Event 76 84 0 364
+Event 76 88 0 433
+Event 76 89 0 456
+Event 77 11 0 214
+Event 77 12 0 215
+Event 77 13 0 216
+Event 77 14 0 217
+Event 77 15 0 218
+Event 77 17 0 219
+Event 77 18 0 220
+Event 77 20 0 221
+Event 77 21 0 222
+Event 77 22 0 223
+Event 77 23 0 224
+Event 77 24 0 225
+Event 77 25 0 226
+Event 77 26 0 227
+Event 77 27 0 228
+Event 77 28 0 229
+Event 77 30 0 230
+Event 78 11 0 240
+Event 78 13 0 241
+Event 78 15 0 242
+Event 78 16 0 243
+Event 78 17 0 244
+Event 78 19 0 245
+Event 78 23 0 246
+Event 78 24 0 247
+Event 78 25 0 248
+Event 78 26 0 249
+Event 78 27 0 250
+Event 78 28 0 251
+Event 78 30 0 252
+Event 79 11 0 261
+Event 79 13 0 262
+Event 79 15 0 263
+Event 79 16 0 264
+Event 79 17 0 265
+Event 79 19 0 266
+Event 79 23 0 267
+Event 79 24 0 268
+Event 79 25 0 269
+Event 79 26 0 270
+Event 79 27 0 271
+Event 79 28 0 272
+Event 79 30 0 273
+Event 80 11 0 282
+Event 80 12 0 283
+Event 80 13 0 284
+Event 80 14 0 285
+Event 80 15 0 286
+Event 80 17 0 287
+Event 80 20 0 288
+Event 80 21 0 289
+Event 80 22 0 290
+Event 80 23 0 291
+Event 80 24 0 292
+Event 80 25 0 293
+Event 80 26 0 294
+Event 80 27 0 295
+Event 80 28 0 296
+Event 80 30 0 297
+Event 81 11 0 307
+Event 81 13 0 308
+Event 81 15 0 309
+Event 81 16 0 310
+Event 81 17 0 311
+Event 81 19 0 312
+Event 81 23 0 313
+Event 81 24 0 314
+Event 81 25 0 315
+Event 81 26 0 316
+Event 81 27 0 317
+Event 81 28 0 318
+Event 81 30 0 319
+Event 82 11 0 328
+Event 82 13 0 329
+Event 82 15 0 330
+Event 82 16 0 331
+Event 82 17 0 332
+Event 82 19 0 333
+Event 82 23 0 334
+Event 82 24 0 335
+Event 82 25 0 336
+Event 82 26 0 337
+Event 82 27 0 338
+Event 82 28 0 339
+Event 82 30 0 340
+Event 83 11 0 349
+Event 83 13 0 350
+Event 83 15 0 351
+Event 83 16 0 352
+Event 83 17 0 353
+Event 83 19 0 354
+Event 83 23 0 355
+Event 83 24 0 356
+Event 83 25 0 357
+Event 83 27 0 358
+Event 83 28 0 359
+Event 83 30 0 360
+Event 84 11 0 366
+Event 84 12 0 367
+Event 84 13 0 368
+Event 84 14 0 369
+Event 84 15 0 370
+Event 84 17 0 371
+Event 84 18 0 372
+Event 84 19 0 373
+Event 84 23 0 374
+Event 84 24 0 375
+Event 84 25 0 376
+Event 84 26 0 377
+Event 84 27 0 378
+Event 84 28 0 379
+Event 84 30 0 380
+Event 85 11 0 388
+Event 85 12 0 389
+Event 85 13 0 390
+Event 85 14 0 391
+Event 85 15 0 392
+Event 85 17 0 393
+Event 85 18 0 394
+Event 85 20 0 395
+Event 85 21 0 396
+Event 85 22 0 397
+Event 85 23 0 398
+Event 85 24 0 399
+Event 85 25 0 400
+Event 85 26 0 401
+Event 85 27 0 402
+Event 85 28 0 403
+Event 85 30 0 404
+Event 86 87 0 408
+Event 86 89 0 454
+Event 86 101 0 615
+Event 86 106 0 664
+Event 86 109 0 684
+Event 87 11 0 412
+Event 87 12 0 413
+Event 87 13 0 414
+Event 87 14 0 415
+Event 87 15 0 416
+Event 87 17 0 417
+Event 87 20 0 418
+Event 87 21 0 419
+Event 87 22 0 420
+Event 87 23 0 421
+Event 87 24 0 422
+Event 87 25 0 423
+Event 87 26 0 424
+Event 87 27 0 425
+Event 87 28 0 426
+Event 87 30 0 427
+Event 88 11 0 435
+Event 88 12 0 436
+Event 88 13 0 437
+Event 88 14 0 438
+Event 88 15 0 439
+Event 88 17 0 440
+Event 88 18 0 441
+Event 88 20 0 442
+Event 88 21 0 443
+Event 88 22 0 444
+Event 88 23 0 445
+Event 88 24 0 446
+Event 88 25 0 447
+Event 88 26 0 448
+Event 88 27 0 449
+Event 88 28 0 450
+Event 88 30 0 451
+Event 89 11 0 458
+Event 89 12 0 459
+Event 89 13 0 460
+Event 89 14 0 461
+Event 89 15 0 462
+Event 89 17 0 463
+Event 89 20 0 464
+Event 89 21 0 465
+Event 89 22 0 466
+Event 89 23 0 467
+Event 89 24 0 468
+Event 89 25 0 469
+Event 89 26 0 470
+Event 89 27 0 471
+Event 89 28 0 472
+Event 89 30 0 473
+Event 90 91 0 476
+Event 90 95 0 532
+Event 90 99 0 573
+Event 90 101 0 614
+Event 91 11 0 481
+Event 91 13 0 482
+Event 91 15 0 483
+Event 91 16 0 484
+Event 91 17 0 485
+Event 91 19 0 486
+Event 91 23 0 487
+Event 91 24 0 488
+Event 91 25 0 489
+Event 91 27 0 490
+Event 91 28 0 491
+Event 91 30 0 492
+Event 92 11 0 496
+Event 92 12 0 497
+Event 92 13 0 498
+Event 92 14 0 499
+Event 92 15 0 500
+Event 92 17 0 501
+Event 92 18 0 502
+Event 92 19 0 503
+Event 92 21 0 504
+Event 92 23 0 505
+Event 92 24 0 506
+Event 92 25 0 507
+Event 92 26 0 508
+Event 92 27 0 509
+Event 92 28 0 510
+Event 92 30 0 511
+Event 93 94 0 514
+Event 93 102 0 635
+Event 93 105 0 655
+Event 94 11 0 516
+Event 94 12 0 517
+Event 94 13 0 518
+Event 94 14 0 519
+Event 94 15 0 520
+Event 94 17 0 521
+Event 94 18 0 522
+Event 94 21 0 523
+Event 94 23 0 524
+Event 94 24 0 525
+Event 94 25 0 526
+Event 94 26 0 527
+Event 94 27 0 528
+Event 94 28 0 529
+Event 94 30 0 530
+Event 95 11 0 537
+Event 95 13 0 538
+Event 95 15 0 539
+Event 95 16 0 540
+Event 95 17 0 541
+Event 95 19 0 542
+Event 95 23 0 543
+Event 95 24 0 544
+Event 95 25 0 545
+Event 95 27 0 546
+Event 95 28 0 547
+Event 95 30 0 548
+Event 96 98 0 552
+Event 97 98 0 553
+Event 98 11 0 558
+Event 98 12 0 559
+Event 98 13 0 560
+Event 98 14 0 561
+Event 98 15 0 562
+Event 98 17 0 563
+Event 98 18 0 564
+Event 98 23 0 565
+Event 98 24 0 566
+Event 98 25 0 567
+Event 98 26 0 568
+Event 98 27 0 569
+Event 98 28 0 570
+Event 98 30 0 571
+Event 99 11 0 579
+Event 99 13 0 580
+Event 99 15 0 581
+Event 99 16 0 582
+Event 99 17 0 583
+Event 99 19 0 584
+Event 99 23 0 585
+Event 99 24 0 586
+Event 99 25 0 587
+Event 99 26 0 588
+Event 99 27 0 589
+Event 99 28 0 590
+Event 99 30 0 591
+Event 100 11 0 598
+Event 100 12 0 599
+Event 100 13 0 600
+Event 100 14 0 601
+Event 100 15 0 602
+Event 100 18 0 603
+Event 100 19 0 604
+Event 100 21 0 605
+Event 100 23 0 606
+Event 100 24 0 607
+Event 100 25 0 608
+Event 100 26 0 609
+Event 100 27 0 610
+Event 100 28 0 611
+Event 100 30 0 612
+Event 101 11 0 617
+Event 101 12 0 618
+Event 101 13 0 619
+Event 101 14 0 620
+Event 101 15 0 621
+Event 101 18 0 622
+Event 101 19 0 623
+Event 101 21 0 624
+Event 101 22 0 625
+Event 101 23 0 626
+Event 101 24 0 627
+Event 101 25 0 628
+Event 101 26 0 629
+Event 101 27 0 630
+Event 101 28 0 631
+Event 101 30 0 632
+Event 102 11 0 637
+Event 102 12 0 638
+Event 102 13 0 639
+Event 102 14 0 640
+Event 102 15 0 641
+Event 102 18 0 642
+Event 102 21 0 643
+Event 102 23 0 644
+Event 102 24 0 645
+Event 102 25 0 646
+Event 102 26 0 647
+Event 102 27 0 648
+Event 102 28 0 649
+Event 102 30 0 650
+Event 103 104 0 652
+Event 104 105 0 653
+Event 105 18 0 658
+Event 105 20 0 657
+Event 105 21 0 659
+Event 105 22 0 660
+Event 105 23 0 661
+Event 106 11 0 666
+Event 106 12 0 667
+Event 106 13 0 668
+Event 106 14 0 669
+Event 106 15 0 670
+Event 106 18 0 671
+Event 106 21 0 672
+Event 106 23 0 673
+Event 106 24 0 674
+Event 106 25 0 675
+Event 106 26 0 676
+Event 106 27 0 677
+Event 106 28 0 678
+Event 106 30 0 679
+Event 107 108 0 681
+Event 108 17 0 849
+Event 108 109 0 682
+Event 108 112 0 712
+Event 108 115 0 741
+Event 108 117 0 774
+Event 109 17 0 686
+Event 109 18 0 688
+Event 109 19 0 689
+Event 109 20 0 687
+Event 109 21 0 690
+Event 109 22 0 691
+Event 109 23 0 692
+Event 110 111 0 695
+Event 110 112 0 713
+Event 110 127 0 838
+Event 111 11 0 697
+Event 111 12 0 698
+Event 111 13 0 699
+Event 111 14 0 700
+Event 111 15 0 701
+Event 111 17 0 702
+Event 111 18 0 703
+Event 111 21 0 704
+Event 111 23 0 705
+Event 111 24 0 706
+Event 111 25 0 707
+Event 111 26 0 708
+Event 111 27 0 709
+Event 111 28 0 710
+Event 111 30 0 711
+Event 112 17 0 715
+Event 112 18 0 717
+Event 112 20 0 716
+Event 112 21 0 718
+Event 112 23 0 719
+Event 113 114 0 722
+Event 113 115 0 742
+Event 113 116 0 755
+Event 113 117 0 775
+Event 114 11 0 727
+Event 114 12 0 728
+Event 114 13 0 729
+Event 114 14 0 730
+Event 114 15 0 731
+Event 114 17 0 732
+Event 114 18 0 733
+Event 114 23 0 734
+Event 114 24 0 735
+Event 114 25 0 736
+Event 114 26 0 737
+Event 114 27 0 738
+Event 114 28 0 739
+Event 114 30 0 740
+Event 115 17 0 747
+Event 115 18 0 749
+Event 115 19 0 750
+Event 115 20 0 748
+Event 115 21 0 751
+Event 115 22 0 752
+Event 115 23 0 753
+Event 116 11 0 760
+Event 116 12 0 761
+Event 116 13 0 762
+Event 116 14 0 763
+Event 116 15 0 764
+Event 116 17 0 765
+Event 116 18 0 766
+Event 116 23 0 767
+Event 116 24 0 768
+Event 116 25 0 769
+Event 116 26 0 770
+Event 116 27 0 771
+Event 116 28 0 772
+Event 116 30 0 773
+Event 117 17 0 780
+Event 117 18 0 782
+Event 117 19 0 783
+Event 117 20 0 781
+Event 117 21 0 784
+Event 117 22 0 785
+Event 117 23 0 786
+Event 118 120 0 790
+Event 118 121 0 811
+Event 119 120 0 791
+Event 119 121 0 812
+Event 120 11 0 796
+Event 120 12 0 797
+Event 120 13 0 798
+Event 120 14 0 799
+Event 120 15 0 800
+Event 120 17 0 801
+Event 120 18 0 802
+Event 120 23 0 803
+Event 120 24 0 804
+Event 120 25 0 805
+Event 120 26 0 806
+Event 120 27 0 807
+Event 120 28 0 808
+Event 120 30 0 809
+Event 121 11 0 817
+Event 121 12 0 818
+Event 121 13 0 819
+Event 121 14 0 820
+Event 121 15 0 821
+Event 121 17 0 822
+Event 121 18 0 823
+Event 121 23 0 824
+Event 121 24 0 825
+Event 121 25 0 826
+Event 121 26 0 827
+Event 121 27 0 828
+Event 121 28 0 829
+Event 121 30 0 830
+Event 122 123 0 832
+Event 123 127 0 836
+Event 124 127 0 837
+Event 125 127 0 839
+Event 126 127 0 840
+Event 127 18 0 845
+Event 127 20 0 844
+Event 127 21 0 846
+Event 127 22 0 847
+Event 127 23 0 848
 HistoryEnd
 Node 0 1 3 0
 Node 1 1 3 0
@@ -1713,7 +1755,7 @@ Node 6 1 3 0
 Node 7 1 3 0
 Node 8 1 3 0
 Node 9 1 3 0
-Node 10 1 3 2
+Node 10 1 3 0
 Node 11 1 3 2
 Node 12 1 3 2
 Node 13 1 3 2
@@ -1733,931 +1775,975 @@ Node 26 1 3 2
 Node 27 1 3 2
 Node 28 1 3 2
 Node 29 1 3 2
-Node 30 -0.055555556 6 1
-Node 31 0.25 6 1
-Node 32 0.283333331 6 1
-Node 33 -0.383333355 6 1
-Node 34 -0 6 1
-Node 35 0.857142866 6 1
-Node 36 0.550000012 6 1
-Node 37 -0.75 6 1
-Node 38 -0.716666698 6 1
-Node 39 0.449999988 6 1
-Node 40 -0.550000012 6 1
-Node 41 0.899999976 6 1
-Node 42 0.949999988 6 1
-Node 43 0.888888896 6 1
-Node 44 0.616666675 6 1
-Node 45 0.888888896 6 1
-Node 46 -0.450000018 6 1
-Node 47 0.899999976 6 1
-Node 48 0.888888896 6 1
-Node 49 -0.0500000007 6 1
-Node 50 0.888888896 6 1
-Node 51 0.849999964 6 1
-Node 52 0.833333313 6 1
-Node 53 0 6 1
-Node 54 0.857142866 6 1
-Node 55 0.899999976 6 1
-Node 56 0.888888896 6 1
-Node 57 0.888888896 6 1
-Node 58 0.899999976 6 1
-Node 59 0.888888896 6 1
-Node 60 0.888888896 6 1
-Node 61 0.833333313 6 1
-Node 62 0.875 6 1
-Node 63 0.949999988 6 1
-Node 64 0.857142866 6 1
-Node 65 0.875 6 1
-Node 66 0.857142866 6 1
-Node 67 -0.0500000007 6 1
-Node 68 0.857142866 6 1
-Node 69 0.75 6 1
-Node 70 -0.0500000007 6 1
-Node 71 0.75 6 1
-Node 72 0.857142866 6 1
-Node 73 0.283333331 6 1
-Node 74 -0.383333355 6 1
-Node 75 0.875 6 1
-Node 76 0.875 6 1
+Node 30 1 3 2
+Node 31 1 3 2
+Node 32 1 3 2
+Node 33 1 3 2
+Node 34 1 3 2
+Node 35 1 3 2
+Node 36 1 3 2
+Node 37 1 3 2
+Node 38 1 3 2
+Node 39 1 3 2
+Node 40 1 3 2
+Node 41 1 3 2
+Node 42 1 3 2
+Node 43 1 3 2
+Node 44 1 3 2
+Node 45 1 3 2
+Node 46 1 3 2
+Node 47 1 3 2
+Node 48 1 3 2
+Node 49 1 3 2
+Node 50 1 3 2
+Node 51 1 3 2
+Node 52 1 3 2
+Node 53 -0.055555556 6 1
+Node 54 0.25 6 1
+Node 55 0.283333331 6 1
+Node 56 -0.383333355 6 1
+Node 57 -0 6 1
+Node 58 0.857142866 6 1
+Node 59 0.550000012 6 1
+Node 60 -0.75 6 1
+Node 61 -0.716666698 6 1
+Node 62 0.449999988 6 1
+Node 63 -0.550000012 6 1
+Node 64 0.899999976 6 1
+Node 65 0.949999988 6 1
+Node 66 0.888888896 6 1
+Node 67 0.616666675 6 1
+Node 68 0.888888896 6 1
+Node 69 -0.450000018 6 1
+Node 70 0.899999976 6 1
+Node 71 0.888888896 6 1
+Node 72 -0.0500000007 6 1
+Node 73 0.888888896 6 1
+Node 74 0.849999964 6 1
+Node 75 0.833333313 6 1
+Node 76 0 6 1
 Node 77 0.857142866 6 1
-Node 78 0.800000012 6 1
-Node 79 0.800000012 6 1
-Node 80 -0.777777791 8 1
-Node 81 0.027777778 4 1
-Node 82 0.800000012 6 1
-Node 83 0.800000012 6 1
-Node 84 -0.666666687 8 1
-Node 85 0.027777778 4 1
-Node 86 0.800000012 6 1
-Node 87 -0.550000012 6 1
-Node 88 0.75 6 1
-Node 89 0.75 6 1
-Node 90 0.949999988 6 1
+Node 78 0.899999976 6 1
+Node 79 0.888888896 6 1
+Node 80 0.888888896 6 1
+Node 81 0.899999976 6 1
+Node 82 0.888888896 6 1
+Node 83 0.888888896 6 1
+Node 84 0.833333313 6 1
+Node 85 0.875 6 1
+Node 86 0.949999988 6 1
+Node 87 0.857142866 6 1
+Node 88 0.875 6 1
+Node 89 0.857142866 6 1
+Node 90 -0.0500000007 6 1
 Node 91 0.857142866 6 1
-Node 92 0.857142866 6 1
-Node 93 0.857142866 6 1
-Node 94 0.857142866 6 1
-Node 95 0.699999988 6 1
-Node 96 -0.800000012 6 1
-Node 97 0.875 6 1
+Node 92 0.75 6 1
+Node 93 -0.0500000007 6 1
+Node 94 0.75 6 1
+Node 95 0.857142866 6 1
+Node 96 0.283333331 6 1
+Node 97 -0.383333355 6 1
 Node 98 0.875 6 1
-Node 99 -1 8 1
-Node 100 0.027777778 4 1
-Node 101 0.449999988 6 1
-Node 102 0.449999988 6 1
-Node 103 -0.550000012 6 1
-Node 104 0.888888896 6 1
-Conn 1 9 10 34 0 0
-Conn 1 8 30 -1 1 0
-Conn 1 4 31 1 2 0
-Conn 1 5 32 1 3 0
-Conn 1 5 33 -1 4 0
-Conn 1 7 34 -1 5 0
-Conn 1 30 35 0.142857149 6 0
-Conn 1 31 35 0.142857149 7 0
-Conn 1 32 35 0.142857149 8 0
-Conn 1 33 35 0.142857149 9 0
-Conn 1 34 35 0.142857149 10 0
-Conn 1 1 35 0.285714298 11 0
-Conn 1 35 10 1 12 0
-Conn 1 35 11 -0.5 13 0
-Conn 1 9 11 2 14 0
-Conn 1 35 12 -0.5 15 0
-Conn 1 9 12 -9.5 16 0
-Conn 1 35 13 -0.5 17 0
-Conn 1 9 13 -2 18 0
-Conn 1 35 14 -0.5 19 0
-Conn 1 9 14 -9.5 20 0
-Conn 1 35 16 -0.3125 21 0
-Conn 1 9 16 -9.6875 22 0
-Conn 1 35 17 -0.5 23 0
-Conn 1 9 17 -2.56864715 24 0
-Conn 1 35 19 -0.300000012 25 0
-Conn 1 9 19 0.449999809 26 0
-Conn 1 35 20 -0.5 27 0
-Conn 1 9 20 -2.79289317 28 0
-Conn 1 35 21 0.5 29 0
-Conn 1 9 21 -2.15289354 30 0
-Conn 1 35 22 -0.199999988 31 0
-Conn 1 9 22 -19.2999992 32 0
-Conn 1 35 23 -0.150000006 33 0
-Conn 1 9 23 8 34 0
-Conn 1 35 24 0.25 35 0
-Conn 1 9 24 1.54999971 36 0
-Conn 1 35 25 0.5 37 0
-Conn 1 9 25 8.14999962 38 0
-Conn 1 35 26 0.5 39 0
-Conn 1 9 26 5.85153675 40 0
-Conn 1 35 27 -0.5 41 0
-Conn 1 9 27 -15.2257996 42 0
-Conn 1 35 29 0.5 43 0
-Conn 1 9 29 17.5 44 0
-Conn 1 4 36 1 45 0
-Conn 1 4 37 -1 46 0
-Conn 1 5 38 -1 47 0
-Conn 1 6 39 1 48 0
-Conn 1 6 40 -1 49 0
-Conn 1 30 41 0.100000001 50 0
-Conn 1 36 41 0.100000001 51 0
-Conn 1 37 41 0.100000001 52 0
-Conn 1 32 41 0.100000001 53 0
-Conn 1 38 41 0.100000001 54 0
-Conn 1 39 41 0.100000001 55 0
-Conn 1 40 41 0.100000001 56 0
-Conn 1 34 41 0.100000001 57 0
-Conn 1 2 41 0.200000003 58 0
-Conn 1 41 10 1 59 0
-Conn 1 41 12 0.5 60 0
-Conn 1 41 14 -0.5 61 0
-Conn 1 41 15 -0.5 62 0
-Conn 1 9 15 -6.5 63 0
-Conn 1 41 16 -0.25 64 0
-Conn 1 41 18 0.5 65 0
-Conn 1 9 18 2.60000014 66 0
-Conn 1 41 22 -0.5 67 0
-Conn 1 41 23 0.300000012 68 0
-Conn 1 41 24 -0.449999988 69 0
-Conn 1 41 25 -0.150000006 70 0
-Conn 1 41 26 0.25 71 0
-Conn 1 41 27 -0.133201599 72 0
-Conn 1 41 29 0.5 73 0
-Conn 1 6 42 1 74 0
-Conn 1 30 43 0.111111112 75 0
-Conn 1 36 43 0.111111112 76 0
-Conn 1 37 43 0.111111112 77 0
-Conn 1 32 43 0.111111112 78 0
-Conn 1 38 43 0.111111112 79 0
-Conn 1 42 43 0.111111112 80 0
-Conn 1 34 43 0.111111112 81 0
-Conn 1 2 43 0.222222224 82 0
-Conn 1 43 10 1 83 0
-Conn 1 43 12 -0.5 84 0
-Conn 1 43 14 -0.5 85 0
-Conn 1 43 15 -0.5 86 0
-Conn 1 43 16 -0.25 87 0
-Conn 1 43 18 0.5 88 0
-Conn 1 43 22 -0.5 89 0
-Conn 1 43 23 0.150000036 90 0
-Conn 1 43 24 -0.449999988 91 0
-Conn 1 43 25 -0.150000006 92 0
-Conn 1 43 26 0.25 93 0
-Conn 1 43 27 -0.133201599 94 0
-Conn 1 43 29 0.5 95 0
-Conn 1 5 44 1 96 0
-Conn 1 30 45 0.111111112 97 0
-Conn 1 36 45 0.111111112 98 0
-Conn 1 44 45 0.111111112 99 0
-Conn 1 38 45 0.111111112 100 0
-Conn 1 39 45 0.111111112 101 0
-Conn 1 40 45 0.111111112 102 0
-Conn 1 34 45 0.111111112 103 0
-Conn 1 1 45 0.222222224 104 0
-Conn 1 45 10 1 105 0
-Conn 1 45 11 -0.5 106 0
-Conn 1 45 12 -0.5 107 0
-Conn 1 45 13 -0.5 108 0
-Conn 1 45 14 0.5 109 0
-Conn 1 45 16 -0.25 110 0
-Conn 1 45 19 -0.199999988 111 0
-Conn 1 45 20 0.166666672 112 0
-Conn 1 45 21 -0.215000004 113 0
-Conn 1 45 22 -0.5 114 0
-Conn 1 45 23 0.450000048 115 0
-Conn 1 45 24 -0.449999988 116 0
-Conn 1 45 25 0.5 117 0
-Conn 1 45 26 0.5 118 0
-Conn 1 45 27 -0.5 119 0
-Conn 1 45 29 0.5 120 0
-Conn 1 4 46 -1 121 0
-Conn 1 30 47 0.100000001 122 0
-Conn 1 31 47 0.100000001 123 0
-Conn 1 46 47 0.100000001 124 0
-Conn 1 32 47 0.100000001 125 0
-Conn 1 38 47 0.100000001 126 0
-Conn 1 39 47 0.100000001 127 0
-Conn 1 40 47 0.100000001 128 0
-Conn 1 34 47 0.100000001 129 0
-Conn 1 2 47 0.200000003 130 0
-Conn 1 47 10 1 131 0
-Conn 1 47 12 0.5 132 0
-Conn 1 47 14 -0.5 133 0
-Conn 1 47 15 -0.5 134 0
-Conn 1 47 16 -0.25 135 0
-Conn 1 47 18 -0.199999988 136 0
-Conn 1 47 22 -0.5 137 0
-Conn 1 47 23 0.150000036 138 0
-Conn 1 47 24 -0.449999988 139 0
-Conn 1 47 25 0.450000048 140 0
-Conn 1 47 26 -0.449999988 141 0
-Conn 1 47 27 -0.5 142 0
-Conn 1 47 29 0.5 143 0
-Conn 1 30 48 0.111111112 144 0
-Conn 1 31 48 0.111111112 145 0
-Conn 1 46 48 0.111111112 146 0
-Conn 1 32 48 0.111111112 147 0
-Conn 1 38 48 0.111111112 148 0
-Conn 1 42 48 0.111111112 149 0
-Conn 1 34 48 0.111111112 150 0
-Conn 1 2 48 0.222222224 151 0
-Conn 1 48 10 1 152 0
-Conn 1 48 12 -0.5 153 0
-Conn 1 48 14 -0.5 154 0
-Conn 1 48 15 -0.5 155 0
-Conn 1 48 16 -0.25 156 0
-Conn 1 48 18 -0.199999988 157 0
-Conn 1 48 22 -0.5 158 0
-Conn 1 48 23 0.300000012 159 0
-Conn 1 48 24 -0.449999988 160 0
-Conn 1 48 25 0.450000048 161 0
-Conn 1 48 26 -0.449999988 162 0
-Conn 1 48 27 -0.5 163 0
-Conn 1 48 29 0.5 164 0
-Conn 1 6 49 -1 165 0
-Conn 1 30 50 0.111111112 166 0
-Conn 1 36 50 0.111111112 167 0
-Conn 1 37 50 0.111111112 168 0
-Conn 1 32 50 0.111111112 169 0
-Conn 1 38 50 0.111111112 170 0
-Conn 1 49 50 0.111111112 171 0
-Conn 1 34 50 0.111111112 172 0
-Conn 1 2 50 0.222222224 173 0
-Conn 1 50 10 1 174 0
-Conn 1 50 12 -0.5 175 0
-Conn 1 50 14 -0.5 176 0
-Conn 1 50 15 -0.5 177 0
-Conn 1 50 16 -0.375 178 0
-Conn 1 50 18 -0.199999988 179 0
-Conn 1 50 22 -0.5 180 0
-Conn 1 50 23 0.450000048 181 0
-Conn 1 50 24 -0.449999988 182 0
-Conn 1 50 26 0.25 183 0
-Conn 1 50 27 -0.298248231 184 0
-Conn 1 50 29 0.5 185 0
-Conn 1 4 51 1 186 0
-Conn 1 30 52 0.166666672 187 0
-Conn 1 51 52 0.166666672 188 0
-Conn 1 39 52 0.166666672 189 0
-Conn 1 34 52 0.166666672 190 0
-Conn 1 2 52 0.333333343 191 0
-Conn 1 52 10 1 192 0
-Conn 1 52 11 0.5 193 0
-Conn 1 52 12 -0.5 194 0
-Conn 1 52 13 -0.5 195 0
-Conn 1 52 14 -0.5 196 0
-Conn 1 52 16 -0.25 197 0
-Conn 1 52 17 0.150000006 198 0
-Conn 1 52 18 -0.5 199 0
-Conn 1 52 22 -0.5 200 0
-Conn 1 52 23 0.5 201 0
-Conn 1 52 24 0.5 202 0
-Conn 1 52 25 0.150000036 203 0
-Conn 1 52 26 -0.449999988 204 0
-Conn 1 52 27 -0.5 205 0
-Conn 1 52 29 0.5 206 0
-Conn 1 7 53 1 207 0
-Conn 1 30 54 0.142857149 208 0
-Conn 1 31 54 0.142857149 209 0
-Conn 1 32 54 0.142857149 210 0
-Conn 1 33 54 0.142857149 211 0
-Conn 1 53 54 0.142857149 212 0
-Conn 1 1 54 0.285714298 213 0
-Conn 1 54 10 1 214 0
-Conn 1 54 11 -0.5 215 0
-Conn 1 54 12 -0.5 216 0
-Conn 1 54 13 -0.5 217 0
-Conn 1 54 14 -0.5 218 0
-Conn 1 54 16 -0.3125 219 0
-Conn 1 54 17 -0.5 220 0
-Conn 1 54 19 -0.300000012 221 0
-Conn 1 54 20 -0.5 222 0
-Conn 1 54 21 0.5 223 0
-Conn 1 54 22 -0.199999988 224 0
-Conn 1 54 23 0.150000006 225 0
-Conn 1 54 24 0.25 226 0
-Conn 1 54 25 0.5 227 0
-Conn 1 54 26 0.5 228 0
-Conn 1 54 27 -0.5 229 0
-Conn 1 54 29 0.5 230 0
-Conn 1 30 55 0.100000001 231 0
-Conn 1 36 55 0.100000001 232 0
-Conn 1 37 55 0.100000001 233 0
-Conn 1 32 55 0.100000001 234 0
-Conn 1 38 55 0.100000001 235 0
-Conn 1 39 55 0.100000001 236 0
-Conn 1 40 55 0.100000001 237 0
-Conn 1 53 55 0.100000001 238 0
-Conn 1 2 55 0.200000003 239 0
-Conn 1 55 10 1 240 0
-Conn 1 55 12 0.5 241 0
-Conn 1 55 14 -0.5 242 0
-Conn 1 55 15 -0.5 243 0
-Conn 1 55 16 -0.25 244 0
-Conn 1 55 18 0.5 245 0
-Conn 1 55 22 -0.5 246 0
-Conn 1 55 23 0.150000036 247 0
-Conn 1 55 24 -0.449999988 248 0
-Conn 1 55 25 0.150000006 249 0
-Conn 1 55 26 0.25 250 0
-Conn 1 55 27 -0.133201599 251 0
-Conn 1 55 29 0.5 252 0
-Conn 1 30 56 0.111111112 253 0
-Conn 1 36 56 0.111111112 254 0
-Conn 1 37 56 0.111111112 255 0
-Conn 1 32 56 0.111111112 256 0
-Conn 1 38 56 0.111111112 257 0
-Conn 1 42 56 0.111111112 258 0
-Conn 1 53 56 0.111111112 259 0
-Conn 1 2 56 0.222222224 260 0
-Conn 1 56 10 1 261 0
-Conn 1 56 12 -0.5 262 0
-Conn 1 56 14 -0.5 263 0
-Conn 1 56 15 -0.5 264 0
-Conn 1 56 16 -0.25 265 0
-Conn 1 56 18 0.5 266 0
-Conn 1 56 22 -0.5 267 0
-Conn 1 56 23 0.300000012 268 0
-Conn 1 56 24 -0.449999988 269 0
-Conn 1 56 25 0.150000006 270 0
-Conn 1 56 26 0.25 271 0
-Conn 1 56 27 -0.133201599 272 0
-Conn 1 56 29 0.5 273 0
-Conn 1 30 57 0.111111112 274 0
-Conn 1 36 57 0.111111112 275 0
-Conn 1 44 57 0.111111112 276 0
-Conn 1 38 57 0.111111112 277 0
-Conn 1 39 57 0.111111112 278 0
-Conn 1 40 57 0.111111112 279 0
-Conn 1 53 57 0.111111112 280 0
-Conn 1 1 57 0.222222224 281 0
-Conn 1 57 10 1 282 0
-Conn 1 57 11 -0.5 283 0
-Conn 1 57 12 -0.5 284 0
-Conn 1 57 13 -0.5 285 0
-Conn 1 57 14 0.5 286 0
-Conn 1 57 16 -0.25 287 0
-Conn 1 57 19 -0.199999988 288 0
-Conn 1 57 20 0.166666672 289 0
-Conn 1 57 21 -0.215000004 290 0
-Conn 1 57 22 -0.5 291 0
-Conn 1 57 23 -0.449999988 292 0
-Conn 1 57 24 -0.299999982 293 0
-Conn 1 57 25 0.5 294 0
-Conn 1 57 26 0.5 295 0
-Conn 1 57 27 -0.5 296 0
-Conn 1 57 29 0.5 297 0
-Conn 1 30 58 0.100000001 298 0
-Conn 1 31 58 0.100000001 299 0
-Conn 1 46 58 0.100000001 300 0
-Conn 1 32 58 0.100000001 301 0
-Conn 1 38 58 0.100000001 302 0
-Conn 1 39 58 0.100000001 303 0
-Conn 1 40 58 0.100000001 304 0
-Conn 1 53 58 0.100000001 305 0
-Conn 1 2 58 0.200000003 306 0
-Conn 1 58 10 1 307 0
-Conn 1 58 12 0.5 308 0
-Conn 1 58 14 -0.5 309 0
-Conn 1 58 15 -0.5 310 0
-Conn 1 58 16 -0.25 311 0
-Conn 1 58 18 -0.199999988 312 0
-Conn 1 58 22 -0.5 313 0
-Conn 1 58 23 0.300000012 314 0
-Conn 1 58 24 -0.449999988 315 0
-Conn 1 58 25 -0.449999988 316 0
-Conn 1 58 26 -0.299999982 317 0
-Conn 1 58 27 -0.5 318 0
-Conn 1 58 29 0.5 319 0
-Conn 1 30 59 0.111111112 320 0
-Conn 1 31 59 0.111111112 321 0
-Conn 1 46 59 0.111111112 322 0
-Conn 1 32 59 0.111111112 323 0
-Conn 1 38 59 0.111111112 324 0
-Conn 1 42 59 0.111111112 325 0
-Conn 1 53 59 0.111111112 326 0
-Conn 1 2 59 0.222222224 327 0
-Conn 1 59 10 1 328 0
-Conn 1 59 12 -0.5 329 0
-Conn 1 59 14 -0.5 330 0
-Conn 1 59 15 -0.5 331 0
-Conn 1 59 16 -0.25 332 0
-Conn 1 59 18 -0.199999988 333 0
-Conn 1 59 22 -0.5 334 0
-Conn 1 59 23 0.150000036 335 0
-Conn 1 59 24 -0.449999988 336 0
-Conn 1 59 25 -0.449999988 337 0
-Conn 1 59 26 -0.299999982 338 0
-Conn 1 59 27 -0.5 339 0
-Conn 1 59 29 0.5 340 0
-Conn 1 30 60 0.111111112 341 0
-Conn 1 36 60 0.111111112 342 0
-Conn 1 37 60 0.111111112 343 0
-Conn 1 32 60 0.111111112 344 0
-Conn 1 38 60 0.111111112 345 0
-Conn 1 49 60 0.111111112 346 0
-Conn 1 53 60 0.111111112 347 0
-Conn 1 2 60 0.222222224 348 0
-Conn 1 60 10 1 349 0
-Conn 1 60 12 -0.5 350 0
-Conn 1 60 14 -0.5 351 0
-Conn 1 60 15 -0.5 352 0
-Conn 1 60 16 -0.375 353 0
-Conn 1 60 18 -0.199999988 354 0
-Conn 1 60 22 -0.5 355 0
-Conn 1 60 23 -0.449999988 356 0
-Conn 1 60 24 -0.299999982 357 0
-Conn 1 60 26 0.25 358 0
-Conn 1 60 27 -0.298248231 359 0
-Conn 1 60 29 0.5 360 0
-Conn 1 30 61 0.166666672 361 0
-Conn 1 51 61 0.166666672 362 0
-Conn 1 39 61 0.166666672 363 0
-Conn 1 53 61 0.166666672 364 0
-Conn 1 2 61 0.333333343 365 0
-Conn 1 61 10 1 366 0
-Conn 1 61 11 0.5 367 0
-Conn 1 61 12 -0.5 368 0
-Conn 1 61 13 -0.5 369 0
-Conn 1 61 14 -0.5 370 0
-Conn 1 61 16 -0.25 371 0
-Conn 1 61 17 0.150000006 372 0
-Conn 1 61 18 -0.5 373 0
-Conn 1 61 22 -0.5 374 0
-Conn 1 61 23 0.5 375 0
-Conn 1 61 24 0.5 376 0
-Conn 1 61 25 0.300000012 377 0
-Conn 1 61 26 -0.449999988 378 0
-Conn 1 61 27 -0.5 379 0
-Conn 1 61 29 0.5 380 0
-Conn 1 30 62 0.125 381 0
-Conn 1 51 62 0.125 382 0
-Conn 1 44 62 0.125 383 0
-Conn 1 38 62 0.125 384 0
-Conn 1 49 62 0.125 385 0
-Conn 1 34 62 0.125 386 0
-Conn 1 1 62 0.25 387 0
-Conn 1 62 10 1 388 0
-Conn 1 62 11 -0.5 389 0
-Conn 1 62 12 -0.5 390 0
-Conn 1 62 13 -0.5 391 0
-Conn 1 62 14 0.5 392 0
-Conn 1 62 16 -0.125 393 0
-Conn 1 62 17 0.300000012 394 0
-Conn 1 62 19 -0.199999988 395 0
-Conn 1 62 20 -0.5 396 0
-Conn 1 62 21 -0.5 397 0
-Conn 1 62 22 -0.5 398 0
-Conn 1 62 23 -0.0250000004 399 0
-Conn 1 62 24 0.25 400 0
-Conn 1 62 25 0.5 401 0
-Conn 1 62 26 0.5 402 0
-Conn 1 62 27 -0.5 403 0
-Conn 1 62 29 0.5 404 0
-Conn 1 5 63 1 405 0
-Conn 1 30 64 0.142857149 406 0
-Conn 1 36 64 0.142857149 407 0
-Conn 1 63 64 0.142857149 408 0
-Conn 1 40 64 0.142857149 409 0
-Conn 1 34 64 0.142857149 410 0
-Conn 1 1 64 0.285714298 411 0
-Conn 1 64 10 1 412 0
-Conn 1 64 11 -0.5 413 0
-Conn 1 64 12 -0.5 414 0
-Conn 1 64 13 -0.5 415 0
-Conn 1 64 14 0.5 416 0
-Conn 1 64 16 -0.375 417 0
-Conn 1 64 19 -0.199999988 418 0
-Conn 1 64 20 -0.5 419 0
-Conn 1 64 21 -0.215000004 420 0
-Conn 1 64 22 -0.5 421 0
-Conn 1 64 23 -0.100000001 422 0
-Conn 1 64 24 0.25 423 0
-Conn 1 64 25 0.5 424 0
-Conn 1 64 26 0.5 425 0
-Conn 1 64 27 -0.5 426 0
-Conn 1 64 29 0.5 427 0
-Conn 1 30 65 0.125 428 0
-Conn 1 51 65 0.125 429 0
-Conn 1 44 65 0.125 430 0
-Conn 1 38 65 0.125 431 0
-Conn 1 49 65 0.125 432 0
-Conn 1 53 65 0.125 433 0
-Conn 1 1 65 0.25 434 0
-Conn 1 65 10 1 435 0
-Conn 1 65 11 -0.5 436 0
-Conn 1 65 12 -0.5 437 0
-Conn 1 65 13 -0.5 438 0
-Conn 1 65 14 0.5 439 0
-Conn 1 65 16 -0.125 440 0
-Conn 1 65 17 0.300000012 441 0
-Conn 1 65 19 -0.199999988 442 0
-Conn 1 65 20 -0.5 443 0
-Conn 1 65 21 -0.5 444 0
-Conn 1 65 22 -0.5 445 0
-Conn 1 65 23 0.0250000004 446 0
-Conn 1 65 24 0.25 447 0
-Conn 1 65 25 0.5 448 0
-Conn 1 65 26 0.5 449 0
-Conn 1 65 27 -0.5 450 0
-Conn 1 65 29 0.5 451 0
-Conn 1 30 66 0.142857149 452 0
-Conn 1 36 66 0.142857149 453 0
-Conn 1 63 66 0.142857149 454 0
-Conn 1 40 66 0.142857149 455 0
-Conn 1 53 66 0.142857149 456 0
-Conn 1 1 66 0.285714298 457 0
-Conn 1 66 10 1 458 0
-Conn 1 66 11 -0.5 459 0
-Conn 1 66 12 -0.5 460 0
-Conn 1 66 13 -0.5 461 0
-Conn 1 66 14 0.5 462 0
-Conn 1 66 16 -0.375 463 0
-Conn 1 66 19 -0.199999988 464 0
-Conn 1 66 20 -0.5 465 0
-Conn 1 66 21 -0.215000004 466 0
-Conn 1 66 22 -0.5 467 0
-Conn 1 66 23 0.100000001 468 0
-Conn 1 66 24 0.25 469 0
-Conn 1 66 25 0.5 470 0
-Conn 1 66 26 0.5 471 0
-Conn 1 66 27 -0.5 472 0
-Conn 1 66 29 0.5 473 0
-Conn 1 4 67 -1 474 0
-Conn 1 30 68 0.142857149 475 0
-Conn 1 67 68 0.142857149 476 0
-Conn 1 44 68 0.142857149 477 0
-Conn 1 38 68 0.142857149 478 0
-Conn 1 49 68 0.142857149 479 0
-Conn 1 1 68 0.285714298 480 0
-Conn 1 68 10 1 481 0
-Conn 1 68 12 0.5 482 0
-Conn 1 68 14 -0.5 483 0
-Conn 1 68 15 -0.5 484 0
-Conn 1 68 16 -0.375 485 0
-Conn 1 68 18 -0.199999988 486 0
-Conn 1 68 22 -0.5 487 0
-Conn 1 68 23 2.98023224e-08 488 0
-Conn 1 68 24 -0.449999988 489 0
-Conn 1 68 26 0.25 490 0
-Conn 1 68 27 -0.298248231 491 0
-Conn 1 68 29 0.5 492 0
-Conn 1 30 69 0.25 493 0
-Conn 1 31 69 0.25 494 0
-Conn 1 0 69 0.5 495 0
-Conn 1 69 10 1 496 0
-Conn 1 69 11 0.5 497 0
-Conn 1 69 12 -0.5 498 0
-Conn 1 69 13 -0.5 499 0
-Conn 1 69 14 -0.5 500 0
-Conn 1 69 16 0.5 501 0
-Conn 1 69 17 0.25 502 0
-Conn 1 69 18 -0.5 503 0
-Conn 1 69 20 -0.5 504 0
-Conn 1 69 22 -0.5 505 0
-Conn 1 69 23 0.5 506 0
-Conn 1 69 24 0.5 507 0
-Conn 1 69 25 2.98023224e-08 508 0
-Conn 1 69 26 -0.449999988 509 0
-Conn 1 69 27 -0.5 510 0
-Conn 1 69 29 0.5 511 0
-Conn 1 5 70 -1 512 0
-Conn 1 30 71 0.25 513 0
-Conn 1 70 71 0.25 514 0
-Conn 1 1 71 0.5 515 0
-Conn 1 71 10 1 516 0
-Conn 1 71 11 0.5 517 0
-Conn 1 71 12 -0.5 518 0
-Conn 1 71 13 -0.5 519 0
-Conn 1 71 14 -0.5 520 0
-Conn 1 71 16 0.5 521 0
-Conn 1 71 17 0.25 522 0
-Conn 1 71 20 -0.5 523 0
-Conn 1 71 22 -0.5 524 0
-Conn 1 71 23 0.5 525 0
-Conn 1 71 24 0.5 526 0
-Conn 1 71 25 2.98023224e-08 527 0
-Conn 1 71 26 -0.449999988 528 0
-Conn 1 71 27 -0.5 529 0
-Conn 1 71 29 0.5 530 0
-Conn 1 30 72 0.142857149 531 0
-Conn 1 67 72 0.142857149 532 0
-Conn 1 32 72 0.142857149 533 0
-Conn 1 38 72 0.142857149 534 0
-Conn 1 49 72 0.142857149 535 0
-Conn 1 2 72 0.285714298 536 0
-Conn 1 72 10 1 537 0
-Conn 1 72 12 -0.5 538 0
-Conn 1 72 14 -0.5 539 0
-Conn 1 72 15 -0.5 540 0
-Conn 1 72 16 -0.4375 541 0
-Conn 1 72 18 0.5 542 0
-Conn 1 72 22 -0.5 543 0
-Conn 1 72 23 -0.299999982 544 0
-Conn 1 72 24 -0.299999982 545 0
-Conn 1 72 26 0.30153656 546 0
-Conn 1 72 27 -0.298248231 547 0
-Conn 1 72 29 0.5 548 0
-Conn 1 4 73 1 549 0
-Conn 1 4 74 -1 550 0
-Conn 1 30 75 0.125 551 0
-Conn 1 73 75 0.125 552 0
-Conn 1 74 75 0.125 553 0
-Conn 1 32 75 0.125 554 0
-Conn 1 38 75 0.125 555 0
-Conn 1 49 75 0.125 556 0
-Conn 1 2 75 0.25 557 0
-Conn 1 75 10 1 558 0
-Conn 1 75 11 -0.5 559 0
-Conn 1 75 12 0.5 560 0
-Conn 1 75 13 0.5 561 0
-Conn 1 75 14 -0.5 562 0
-Conn 1 75 16 -0.375 563 0
-Conn 1 75 17 -0.300000012 564 0
-Conn 1 75 22 -0.5 565 0
-Conn 1 75 23 -0.149999976 566 0
-Conn 1 75 24 -0.299999982 567 0
-Conn 1 75 25 0.5 568 0
-Conn 1 75 26 0.5 569 0
-Conn 1 75 27 -0.5 570 0
-Conn 1 75 29 0.5 571 0
-Conn 1 30 76 0.125 572 0
-Conn 1 67 76 0.125 573 0
-Conn 1 32 76 0.125 574 0
-Conn 1 38 76 0.125 575 0
-Conn 1 39 76 0.125 576 0
-Conn 1 40 76 0.125 577 0
-Conn 1 2 76 0.25 578 0
-Conn 1 76 10 1 579 0
-Conn 1 76 12 -0.5 580 0
-Conn 1 76 14 -0.5 581 0
-Conn 1 76 15 -0.5 582 0
-Conn 1 76 16 -0.375 583 0
-Conn 1 76 18 0.5 584 0
-Conn 1 76 22 -0.5 585 0
-Conn 1 76 23 0.150000036 586 0
-Conn 1 76 24 -0.299999982 587 0
-Conn 1 76 25 -0.149999976 588 0
-Conn 1 76 26 -0.299999982 589 0
-Conn 1 76 27 -0.5 590 0
-Conn 1 76 29 0.5 591 0
-Conn 1 30 77 0.142857149 592 0
-Conn 1 31 77 0.142857149 593 0
-Conn 1 46 77 0.142857149 594 0
-Conn 1 44 77 0.142857149 595 0
-Conn 1 38 77 0.142857149 596 0
-Conn 1 1 77 0.285714298 597 0
-Conn 1 77 10 1 598 0
-Conn 1 77 11 0.5 599 0
-Conn 1 77 12 -0.5 600 0
-Conn 1 77 13 0.5 601 0
-Conn 1 77 14 -0.5 602 0
-Conn 1 77 17 -0.5 603 0
-Conn 1 77 18 0.5 604 0
-Conn 1 77 20 0.5 605 0
-Conn 1 77 22 -0.5 606 0
-Conn 1 77 23 0.5 607 0
-Conn 1 77 24 0.5 608 0
-Conn 1 77 25 0.150000036 609 0
-Conn 1 77 26 -0.299999982 610 0
-Conn 1 77 27 -0.5 611 0
-Conn 1 77 29 0.5 612 0
-Conn 1 30 78 0.200000003 613 0
-Conn 1 67 78 0.200000003 614 0
-Conn 1 63 78 0.200000003 615 0
-Conn 1 1 78 0.400000006 616 0
-Conn 1 78 10 1 617 0
-Conn 1 78 11 0.5 618 0
-Conn 1 78 12 -0.5 619 0
-Conn 1 78 13 0.5 620 0
-Conn 1 78 14 -0.5 621 0
-Conn 1 78 17 -0.5 622 0
-Conn 1 78 18 0.5 623 0
-Conn 1 78 20 0.353553385 624 0
-Conn 1 78 21 0.353553385 625 0
-Conn 1 78 22 -0.5 626 0
-Conn 1 78 23 0.5 627 0
-Conn 1 78 24 0.5 628 0
-Conn 1 78 25 0.5 629 0
-Conn 1 78 26 0.5 630 0
-Conn 1 78 27 -0.5 631 0
-Conn 1 78 29 0.5 632 0
-Conn 1 30 79 0.200000003 633 0
-Conn 1 46 79 0.200000003 634 0
-Conn 1 70 79 0.200000003 635 0
-Conn 1 2 79 0.400000006 636 0
-Conn 1 79 10 1 637 0
-Conn 1 79 11 0.5 638 0
-Conn 1 79 12 0.5 639 0
-Conn 1 79 13 0.5 640 0
-Conn 1 79 14 -0.5 641 0
-Conn 1 79 17 -0.5 642 0
-Conn 1 79 20 -0.5 643 0
-Conn 1 79 22 -0.199999988 644 0
-Conn 1 79 23 0.5 645 0
-Conn 1 79 24 0.5 646 0
-Conn 1 79 25 0.5 647 0
-Conn 1 79 26 0.5 648 0
-Conn 1 79 27 -0.5 649 0
-Conn 1 79 29 0.5 650 0
-Conn 1 8 80 1 651 0
-Conn 1 80 81 -1 652 0
-Conn 1 81 82 0.200000003 653 0
-Conn 1 46 82 0.200000003 654 0
-Conn 1 70 82 0.200000003 655 0
-Conn 1 2 82 0.400000006 656 0
-Conn 1 82 19 0.25 657 0
-Conn 1 82 17 0.437026292 658 0
-Conn 1 82 20 -9.18485073e-17 659 0
-Conn 1 82 21 -0.5 660 0
-Conn 1 82 22 -0.5 661 0
-Conn 1 30 83 0.200000003 662 0
-Conn 1 46 83 0.200000003 663 0
-Conn 1 63 83 0.200000003 664 0
-Conn 1 2 83 0.400000006 665 0
-Conn 1 83 10 1 666 0
-Conn 1 83 11 0.5 667 0
-Conn 1 83 12 0.5 668 0
-Conn 1 83 13 0.5 669 0
-Conn 1 83 14 -0.5 670 0
-Conn 1 83 17 -0.5 671 0
-Conn 1 83 20 0.166666672 672 0
-Conn 1 83 22 -0.199999988 673 0
-Conn 1 83 23 0.5 674 0
-Conn 1 83 24 0.5 675 0
-Conn 1 83 25 0.5 676 0
-Conn 1 83 26 0.5 677 0
-Conn 1 83 27 -0.5 678 0
-Conn 1 83 29 0.5 679 0
-Conn 1 8 84 1 680 0
-Conn 1 84 85 -1 681 0
-Conn 1 85 86 0.200000003 682 0
-Conn 1 46 86 0.200000003 683 0
-Conn 1 63 86 0.200000003 684 0
-Conn 1 2 86 0.400000006 685 0
-Conn 1 86 16 -1 686 0
-Conn 1 86 19 0.5 687 0
-Conn 1 86 17 0.464535058 688 0
-Conn 1 86 18 0.5 689 0
-Conn 1 86 20 -9.18485073e-17 690 0
-Conn 1 86 21 -0.5 691 0
-Conn 1 86 22 -0.5 692 0
-Conn 1 4 87 -1 693 0
-Conn 1 30 88 0.25 694 0
-Conn 1 87 88 0.25 695 0
-Conn 1 3 88 0.5 696 0
-Conn 1 88 10 1 697 0
-Conn 1 88 11 0.5 698 0
-Conn 1 88 12 -0.5 699 0
-Conn 1 88 13 -0.5 700 0
-Conn 1 88 14 -0.5 701 0
-Conn 1 88 16 -0.25 702 0
-Conn 1 88 17 -0.5 703 0
-Conn 1 88 20 -0.5 704 0
-Conn 1 88 22 -0.5 705 0
-Conn 1 88 23 0.5 706 0
-Conn 1 88 24 0.5 707 0
-Conn 1 88 25 -0.299999982 708 0
-Conn 1 88 26 -0.299999982 709 0
-Conn 1 88 27 -0.5 710 0
-Conn 1 88 29 0.5 711 0
-Conn 1 85 89 0.25 712 0
-Conn 1 87 89 0.25 713 0
-Conn 1 3 89 0.5 714 0
-Conn 1 89 16 -0.5 715 0
-Conn 1 89 19 0.25 716 0
-Conn 1 89 17 4.38838854e-10 717 0
-Conn 1 89 20 0.5 718 0
-Conn 1 89 22 -0.5 719 0
-Conn 1 4 90 1 720 0
-Conn 1 30 91 0.142857149 721 0
-Conn 1 90 91 0.142857149 722 0
-Conn 1 32 91 0.142857149 723 0
-Conn 1 38 91 0.142857149 724 0
-Conn 1 40 91 0.142857149 725 0
-Conn 1 3 91 0.285714298 726 0
-Conn 1 91 10 1 727 0
-Conn 1 91 11 0.5 728 0
-Conn 1 91 12 -0.5 729 0
-Conn 1 91 13 0.5 730 0
-Conn 1 91 14 -0.5 731 0
-Conn 1 91 16 0.25 732 0
-Conn 1 91 17 -0.5 733 0
-Conn 1 91 22 -0.5 734 0
-Conn 1 91 23 0.5 735 0
-Conn 1 91 24 0.5 736 0
-Conn 1 91 25 0.5 737 0
-Conn 1 91 26 0.5 738 0
-Conn 1 91 27 -0.5 739 0
-Conn 1 91 29 0.5 740 0
-Conn 1 85 92 0.142857149 741 0
-Conn 1 90 92 0.142857149 742 0
-Conn 1 32 92 0.142857149 743 0
-Conn 1 38 92 0.142857149 744 0
-Conn 1 40 92 0.142857149 745 0
-Conn 1 3 92 0.285714298 746 0
-Conn 1 92 16 -1 747 0
-Conn 1 92 19 0.5 748 0
-Conn 1 92 17 0.456029713 749 0
-Conn 1 92 18 0.5 750 0
-Conn 1 92 20 -9.18485073e-17 751 0
-Conn 1 92 21 -0.5 752 0
-Conn 1 92 22 -0.5 753 0
-Conn 1 30 93 0.142857149 754 0
-Conn 1 90 93 0.142857149 755 0
-Conn 1 32 93 0.142857149 756 0
-Conn 1 38 93 0.142857149 757 0
-Conn 1 42 93 0.142857149 758 0
-Conn 1 3 93 0.285714298 759 0
-Conn 1 93 10 1 760 0
-Conn 1 93 11 0.5 761 0
-Conn 1 93 12 -0.5 762 0
-Conn 1 93 13 0.5 763 0
-Conn 1 93 14 -0.5 764 0
-Conn 1 93 16 -0.25 765 0
-Conn 1 93 17 -0.5 766 0
-Conn 1 93 22 -0.5 767 0
-Conn 1 93 23 0.5 768 0
-Conn 1 93 24 0.5 769 0
-Conn 1 93 25 0.5 770 0
-Conn 1 93 26 0.5 771 0
-Conn 1 93 27 -0.5 772 0
-Conn 1 93 29 0.5 773 0
-Conn 1 85 94 0.142857149 774 0
-Conn 1 90 94 0.142857149 775 0
-Conn 1 32 94 0.142857149 776 0
-Conn 1 38 94 0.142857149 777 0
-Conn 1 42 94 0.142857149 778 0
-Conn 1 3 94 0.285714298 779 0
-Conn 1 94 16 -1 780 0
-Conn 1 94 19 0.5 781 0
-Conn 1 94 17 0.456029713 782 0
-Conn 1 94 18 0.5 783 0
-Conn 1 94 20 -9.18485073e-17 784 0
-Conn 1 94 21 -0.5 785 0
-Conn 1 94 22 -0.5 786 0
-Conn 1 4 95 1 787 0
-Conn 1 4 96 -1 788 0
-Conn 1 30 97 0.125 789 0
-Conn 1 95 97 0.125 790 0
-Conn 1 96 97 0.125 791 0
-Conn 1 32 97 0.125 792 0
-Conn 1 38 97 0.125 793 0
-Conn 1 49 97 0.125 794 0
-Conn 1 3 97 0.25 795 0
-Conn 1 97 10 1 796 0
-Conn 1 97 11 0.5 797 0
-Conn 1 97 12 -0.5 798 0
-Conn 1 97 13 0.5 799 0
-Conn 1 97 14 0.5 800 0
-Conn 1 97 16 -0.25 801 0
-Conn 1 97 17 -0.5 802 0
-Conn 1 97 22 -0.5 803 0
-Conn 1 97 23 0.5 804 0
-Conn 1 97 24 0.5 805 0
-Conn 1 97 25 0.5 806 0
-Conn 1 97 26 0.5 807 0
-Conn 1 97 27 -0.5 808 0
-Conn 1 97 29 0.5 809 0
-Conn 1 30 98 0.125 810 0
-Conn 1 95 98 0.125 811 0
-Conn 1 96 98 0.125 812 0
-Conn 1 32 98 0.125 813 0
-Conn 1 38 98 0.125 814 0
-Conn 1 42 98 0.125 815 0
-Conn 1 3 98 0.25 816 0
-Conn 1 98 10 1 817 0
-Conn 1 98 11 0.5 818 0
-Conn 1 98 12 -0.5 819 0
-Conn 1 98 13 0.5 820 0
-Conn 1 98 14 0.5 821 0
-Conn 1 98 16 -0.25 822 0
-Conn 1 98 17 -0.5 823 0
-Conn 1 98 22 -0.5 824 0
-Conn 1 98 23 0.5 825 0
-Conn 1 98 24 0.5 826 0
-Conn 1 98 25 0.5 827 0
-Conn 1 98 26 0.5 828 0
-Conn 1 98 27 -0.5 829 0
-Conn 1 98 29 0.5 830 0
-Conn 1 8 99 1 831 0
-Conn 1 99 100 -1 832 0
-Conn 1 4 101 1 833 0
-Conn 1 5 102 1 834 0
-Conn 1 5 103 -1 835 0
-Conn 1 100 104 0.111111112 836 0
-Conn 1 101 104 0.111111112 837 0
-Conn 1 87 104 0.111111112 838 0
-Conn 1 102 104 0.111111112 839 0
-Conn 1 103 104 0.111111112 840 0
-Conn 1 39 104 0.111111112 841 0
-Conn 1 40 104 0.111111112 842 0
-Conn 1 1 104 0.222222224 843 0
-Conn 1 104 19 0.25 844 0
-Conn 1 104 17 0.017732475 845 0
-Conn 1 104 20 0.353553385 846 0
-Conn 1 104 21 0.353553385 847 0
-Conn 1 104 22 -0.5 848 0
-Conn 1 85 16 0.5 849 0
+Node 99 0.875 6 1
+Node 100 0.857142866 6 1
+Node 101 0.800000012 6 1
+Node 102 0.800000012 6 1
+Node 103 -0.777777791 8 1
+Node 104 0.027777778 4 1
+Node 105 0.800000012 6 1
+Node 106 0.800000012 6 1
+Node 107 -0.666666687 8 1
+Node 108 0.027777778 4 1
+Node 109 0.800000012 6 1
+Node 110 -0.550000012 6 1
+Node 111 0.75 6 1
+Node 112 0.75 6 1
+Node 113 0.949999988 6 1
+Node 114 0.857142866 6 1
+Node 115 0.857142866 6 1
+Node 116 0.857142866 6 1
+Node 117 0.857142866 6 1
+Node 118 0.699999988 6 1
+Node 119 -0.800000012 6 1
+Node 120 0.875 6 1
+Node 121 0.875 6 1
+Node 122 -1 8 1
+Node 123 0.027777778 4 1
+Node 124 0.449999988 6 1
+Node 125 0.449999988 6 1
+Node 126 -0.550000012 6 1
+Node 127 0.888888896 6 1
+Conn 1 10 11 34 0 0
+Conn 1 8 53 -1 1 0
+Conn 1 4 54 1 2 0
+Conn 1 5 55 1 3 0
+Conn 1 5 56 -1 4 0
+Conn 1 7 57 -1 5 0
+Conn 1 53 58 0.142857149 6 0
+Conn 1 54 58 0.142857149 7 0
+Conn 1 55 58 0.142857149 8 0
+Conn 1 56 58 0.142857149 9 0
+Conn 1 57 58 0.142857149 10 0
+Conn 1 1 58 0.285714298 11 0
+Conn 1 58 11 1 12 0
+Conn 1 58 12 -0.5 13 0
+Conn 1 10 12 2 14 0
+Conn 1 58 13 -0.5 15 0
+Conn 1 10 13 -9.5 16 0
+Conn 1 58 14 -0.5 17 0
+Conn 1 10 14 -2 18 0
+Conn 1 58 15 -0.5 19 0
+Conn 1 10 15 -9.5 20 0
+Conn 1 58 17 -0.3125 21 0
+Conn 1 10 17 -9.6875 22 0
+Conn 1 58 18 -0.5 23 0
+Conn 1 10 18 -2.56864715 24 0
+Conn 1 58 20 -0.300000012 25 0
+Conn 1 10 20 0.449999809 26 0
+Conn 1 58 21 -0.5 27 0
+Conn 1 10 21 -2.79289317 28 0
+Conn 1 58 22 0.5 29 0
+Conn 1 10 22 -2.15289354 30 0
+Conn 1 58 23 -0.199999988 31 0
+Conn 1 10 23 -19.2999992 32 0
+Conn 1 58 24 -0.150000006 33 0
+Conn 1 10 24 8 34 0
+Conn 1 58 25 0.25 35 0
+Conn 1 10 25 1.54999971 36 0
+Conn 1 58 26 0.5 37 0
+Conn 1 10 26 8.14999962 38 0
+Conn 1 58 27 0.5 39 0
+Conn 1 10 27 5.85153675 40 0
+Conn 1 58 28 -0.5 41 0
+Conn 1 10 28 -15.2257996 42 0
+Conn 1 58 30 0.5 43 0
+Conn 1 10 30 17.5 44 0
+Conn 1 4 59 1 45 0
+Conn 1 4 60 -1 46 0
+Conn 1 5 61 -1 47 0
+Conn 1 6 62 1 48 0
+Conn 1 6 63 -1 49 0
+Conn 1 53 64 0.100000001 50 0
+Conn 1 59 64 0.100000001 51 0
+Conn 1 60 64 0.100000001 52 0
+Conn 1 55 64 0.100000001 53 0
+Conn 1 61 64 0.100000001 54 0
+Conn 1 62 64 0.100000001 55 0
+Conn 1 63 64 0.100000001 56 0
+Conn 1 57 64 0.100000001 57 0
+Conn 1 2 64 0.200000003 58 0
+Conn 1 64 11 1 59 0
+Conn 1 64 13 0.5 60 0
+Conn 1 64 15 -0.5 61 0
+Conn 1 64 16 -0.5 62 0
+Conn 1 10 16 -6.5 63 0
+Conn 1 64 17 -0.25 64 0
+Conn 1 64 19 0.5 65 0
+Conn 1 10 19 2.60000014 66 0
+Conn 1 64 23 -0.5 67 0
+Conn 1 64 24 0.300000012 68 0
+Conn 1 64 25 -0.449999988 69 0
+Conn 1 64 26 -0.150000006 70 0
+Conn 1 64 27 0.25 71 0
+Conn 1 64 28 -0.133201599 72 0
+Conn 1 64 30 0.5 73 0
+Conn 1 6 65 1 74 0
+Conn 1 53 66 0.111111112 75 0
+Conn 1 59 66 0.111111112 76 0
+Conn 1 60 66 0.111111112 77 0
+Conn 1 55 66 0.111111112 78 0
+Conn 1 61 66 0.111111112 79 0
+Conn 1 65 66 0.111111112 80 0
+Conn 1 57 66 0.111111112 81 0
+Conn 1 2 66 0.222222224 82 0
+Conn 1 66 11 1 83 0
+Conn 1 66 13 -0.5 84 0
+Conn 1 66 15 -0.5 85 0
+Conn 1 66 16 -0.5 86 0
+Conn 1 66 17 -0.25 87 0
+Conn 1 66 19 0.5 88 0
+Conn 1 66 23 -0.5 89 0
+Conn 1 66 24 0.150000036 90 0
+Conn 1 66 25 -0.449999988 91 0
+Conn 1 66 26 -0.150000006 92 0
+Conn 1 66 27 0.25 93 0
+Conn 1 66 28 -0.133201599 94 0
+Conn 1 66 30 0.5 95 0
+Conn 1 5 67 1 96 0
+Conn 1 53 68 0.111111112 97 0
+Conn 1 59 68 0.111111112 98 0
+Conn 1 67 68 0.111111112 99 0
+Conn 1 61 68 0.111111112 100 0
+Conn 1 62 68 0.111111112 101 0
+Conn 1 63 68 0.111111112 102 0
+Conn 1 57 68 0.111111112 103 0
+Conn 1 1 68 0.222222224 104 0
+Conn 1 68 11 1 105 0
+Conn 1 68 12 -0.5 106 0
+Conn 1 68 13 -0.5 107 0
+Conn 1 68 14 -0.5 108 0
+Conn 1 68 15 0.5 109 0
+Conn 1 68 17 -0.25 110 0
+Conn 1 68 20 -0.199999988 111 0
+Conn 1 68 21 0.166666672 112 0
+Conn 1 68 22 -0.215000004 113 0
+Conn 1 68 23 -0.5 114 0
+Conn 1 68 24 0.450000048 115 0
+Conn 1 68 25 -0.449999988 116 0
+Conn 1 68 26 0.5 117 0
+Conn 1 68 27 0.5 118 0
+Conn 1 68 28 -0.5 119 0
+Conn 1 68 30 0.5 120 0
+Conn 1 4 69 -1 121 0
+Conn 1 53 70 0.100000001 122 0
+Conn 1 54 70 0.100000001 123 0
+Conn 1 69 70 0.100000001 124 0
+Conn 1 55 70 0.100000001 125 0
+Conn 1 61 70 0.100000001 126 0
+Conn 1 62 70 0.100000001 127 0
+Conn 1 63 70 0.100000001 128 0
+Conn 1 57 70 0.100000001 129 0
+Conn 1 2 70 0.200000003 130 0
+Conn 1 70 11 1 131 0
+Conn 1 70 13 0.5 132 0
+Conn 1 70 15 -0.5 133 0
+Conn 1 70 16 -0.5 134 0
+Conn 1 70 17 -0.25 135 0
+Conn 1 70 19 -0.199999988 136 0
+Conn 1 70 23 -0.5 137 0
+Conn 1 70 24 0.150000036 138 0
+Conn 1 70 25 -0.449999988 139 0
+Conn 1 70 26 0.450000048 140 0
+Conn 1 70 27 -0.449999988 141 0
+Conn 1 70 28 -0.5 142 0
+Conn 1 70 30 0.5 143 0
+Conn 1 53 71 0.111111112 144 0
+Conn 1 54 71 0.111111112 145 0
+Conn 1 69 71 0.111111112 146 0
+Conn 1 55 71 0.111111112 147 0
+Conn 1 61 71 0.111111112 148 0
+Conn 1 65 71 0.111111112 149 0
+Conn 1 57 71 0.111111112 150 0
+Conn 1 2 71 0.222222224 151 0
+Conn 1 71 11 1 152 0
+Conn 1 71 13 -0.5 153 0
+Conn 1 71 15 -0.5 154 0
+Conn 1 71 16 -0.5 155 0
+Conn 1 71 17 -0.25 156 0
+Conn 1 71 19 -0.199999988 157 0
+Conn 1 71 23 -0.5 158 0
+Conn 1 71 24 0.300000012 159 0
+Conn 1 71 25 -0.449999988 160 0
+Conn 1 71 26 0.450000048 161 0
+Conn 1 71 27 -0.449999988 162 0
+Conn 1 71 28 -0.5 163 0
+Conn 1 71 30 0.5 164 0
+Conn 1 6 72 -1 165 0
+Conn 1 53 73 0.111111112 166 0
+Conn 1 59 73 0.111111112 167 0
+Conn 1 60 73 0.111111112 168 0
+Conn 1 55 73 0.111111112 169 0
+Conn 1 61 73 0.111111112 170 0
+Conn 1 72 73 0.111111112 171 0
+Conn 1 57 73 0.111111112 172 0
+Conn 1 2 73 0.222222224 173 0
+Conn 1 73 11 1 174 0
+Conn 1 73 13 -0.5 175 0
+Conn 1 73 15 -0.5 176 0
+Conn 1 73 16 -0.5 177 0
+Conn 1 73 17 -0.375 178 0
+Conn 1 73 19 -0.199999988 179 0
+Conn 1 73 23 -0.5 180 0
+Conn 1 73 24 0.450000048 181 0
+Conn 1 73 25 -0.449999988 182 0
+Conn 1 73 27 0.25 183 0
+Conn 1 73 28 -0.298248231 184 0
+Conn 1 73 30 0.5 185 0
+Conn 1 4 74 1 186 0
+Conn 1 53 75 0.166666672 187 0
+Conn 1 74 75 0.166666672 188 0
+Conn 1 62 75 0.166666672 189 0
+Conn 1 57 75 0.166666672 190 0
+Conn 1 2 75 0.333333343 191 0
+Conn 1 75 11 1 192 0
+Conn 1 75 12 0.5 193 0
+Conn 1 75 13 -0.5 194 0
+Conn 1 75 14 -0.5 195 0
+Conn 1 75 15 -0.5 196 0
+Conn 1 75 17 -0.25 197 0
+Conn 1 75 18 0.150000006 198 0
+Conn 1 75 19 -0.5 199 0
+Conn 1 75 23 -0.5 200 0
+Conn 1 75 24 0.5 201 0
+Conn 1 75 25 0.5 202 0
+Conn 1 75 26 0.150000036 203 0
+Conn 1 75 27 -0.449999988 204 0
+Conn 1 75 28 -0.5 205 0
+Conn 1 75 30 0.5 206 0
+Conn 1 7 76 1 207 0
+Conn 1 53 77 0.142857149 208 0
+Conn 1 54 77 0.142857149 209 0
+Conn 1 55 77 0.142857149 210 0
+Conn 1 56 77 0.142857149 211 0
+Conn 1 76 77 0.142857149 212 0
+Conn 1 1 77 0.285714298 213 0
+Conn 1 77 11 1 214 0
+Conn 1 77 12 -0.5 215 0
+Conn 1 77 13 -0.5 216 0
+Conn 1 77 14 -0.5 217 0
+Conn 1 77 15 -0.5 218 0
+Conn 1 77 17 -0.3125 219 0
+Conn 1 77 18 -0.5 220 0
+Conn 1 77 20 -0.300000012 221 0
+Conn 1 77 21 -0.5 222 0
+Conn 1 77 22 0.5 223 0
+Conn 1 77 23 -0.199999988 224 0
+Conn 1 77 24 0.150000006 225 0
+Conn 1 77 25 0.25 226 0
+Conn 1 77 26 0.5 227 0
+Conn 1 77 27 0.5 228 0
+Conn 1 77 28 -0.5 229 0
+Conn 1 77 30 0.5 230 0
+Conn 1 53 78 0.100000001 231 0
+Conn 1 59 78 0.100000001 232 0
+Conn 1 60 78 0.100000001 233 0
+Conn 1 55 78 0.100000001 234 0
+Conn 1 61 78 0.100000001 235 0
+Conn 1 62 78 0.100000001 236 0
+Conn 1 63 78 0.100000001 237 0
+Conn 1 76 78 0.100000001 238 0
+Conn 1 2 78 0.200000003 239 0
+Conn 1 78 11 1 240 0
+Conn 1 78 13 0.5 241 0
+Conn 1 78 15 -0.5 242 0
+Conn 1 78 16 -0.5 243 0
+Conn 1 78 17 -0.25 244 0
+Conn 1 78 19 0.5 245 0
+Conn 1 78 23 -0.5 246 0
+Conn 1 78 24 0.150000036 247 0
+Conn 1 78 25 -0.449999988 248 0
+Conn 1 78 26 0.150000006 249 0
+Conn 1 78 27 0.25 250 0
+Conn 1 78 28 -0.133201599 251 0
+Conn 1 78 30 0.5 252 0
+Conn 1 53 79 0.111111112 253 0
+Conn 1 59 79 0.111111112 254 0
+Conn 1 60 79 0.111111112 255 0
+Conn 1 55 79 0.111111112 256 0
+Conn 1 61 79 0.111111112 257 0
+Conn 1 65 79 0.111111112 258 0
+Conn 1 76 79 0.111111112 259 0
+Conn 1 2 79 0.222222224 260 0
+Conn 1 79 11 1 261 0
+Conn 1 79 13 -0.5 262 0
+Conn 1 79 15 -0.5 263 0
+Conn 1 79 16 -0.5 264 0
+Conn 1 79 17 -0.25 265 0
+Conn 1 79 19 0.5 266 0
+Conn 1 79 23 -0.5 267 0
+Conn 1 79 24 0.300000012 268 0
+Conn 1 79 25 -0.449999988 269 0
+Conn 1 79 26 0.150000006 270 0
+Conn 1 79 27 0.25 271 0
+Conn 1 79 28 -0.133201599 272 0
+Conn 1 79 30 0.5 273 0
+Conn 1 53 80 0.111111112 274 0
+Conn 1 59 80 0.111111112 275 0
+Conn 1 67 80 0.111111112 276 0
+Conn 1 61 80 0.111111112 277 0
+Conn 1 62 80 0.111111112 278 0
+Conn 1 63 80 0.111111112 279 0
+Conn 1 76 80 0.111111112 280 0
+Conn 1 1 80 0.222222224 281 0
+Conn 1 80 11 1 282 0
+Conn 1 80 12 -0.5 283 0
+Conn 1 80 13 -0.5 284 0
+Conn 1 80 14 -0.5 285 0
+Conn 1 80 15 0.5 286 0
+Conn 1 80 17 -0.25 287 0
+Conn 1 80 20 -0.199999988 288 0
+Conn 1 80 21 0.166666672 289 0
+Conn 1 80 22 -0.215000004 290 0
+Conn 1 80 23 -0.5 291 0
+Conn 1 80 24 -0.449999988 292 0
+Conn 1 80 25 -0.299999982 293 0
+Conn 1 80 26 0.5 294 0
+Conn 1 80 27 0.5 295 0
+Conn 1 80 28 -0.5 296 0
+Conn 1 80 30 0.5 297 0
+Conn 1 53 81 0.100000001 298 0
+Conn 1 54 81 0.100000001 299 0
+Conn 1 69 81 0.100000001 300 0
+Conn 1 55 81 0.100000001 301 0
+Conn 1 61 81 0.100000001 302 0
+Conn 1 62 81 0.100000001 303 0
+Conn 1 63 81 0.100000001 304 0
+Conn 1 76 81 0.100000001 305 0
+Conn 1 2 81 0.200000003 306 0
+Conn 1 81 11 1 307 0
+Conn 1 81 13 0.5 308 0
+Conn 1 81 15 -0.5 309 0
+Conn 1 81 16 -0.5 310 0
+Conn 1 81 17 -0.25 311 0
+Conn 1 81 19 -0.199999988 312 0
+Conn 1 81 23 -0.5 313 0
+Conn 1 81 24 0.300000012 314 0
+Conn 1 81 25 -0.449999988 315 0
+Conn 1 81 26 -0.449999988 316 0
+Conn 1 81 27 -0.299999982 317 0
+Conn 1 81 28 -0.5 318 0
+Conn 1 81 30 0.5 319 0
+Conn 1 53 82 0.111111112 320 0
+Conn 1 54 82 0.111111112 321 0
+Conn 1 69 82 0.111111112 322 0
+Conn 1 55 82 0.111111112 323 0
+Conn 1 61 82 0.111111112 324 0
+Conn 1 65 82 0.111111112 325 0
+Conn 1 76 82 0.111111112 326 0
+Conn 1 2 82 0.222222224 327 0
+Conn 1 82 11 1 328 0
+Conn 1 82 13 -0.5 329 0
+Conn 1 82 15 -0.5 330 0
+Conn 1 82 16 -0.5 331 0
+Conn 1 82 17 -0.25 332 0
+Conn 1 82 19 -0.199999988 333 0
+Conn 1 82 23 -0.5 334 0
+Conn 1 82 24 0.150000036 335 0
+Conn 1 82 25 -0.449999988 336 0
+Conn 1 82 26 -0.449999988 337 0
+Conn 1 82 27 -0.299999982 338 0
+Conn 1 82 28 -0.5 339 0
+Conn 1 82 30 0.5 340 0
+Conn 1 53 83 0.111111112 341 0
+Conn 1 59 83 0.111111112 342 0
+Conn 1 60 83 0.111111112 343 0
+Conn 1 55 83 0.111111112 344 0
+Conn 1 61 83 0.111111112 345 0
+Conn 1 72 83 0.111111112 346 0
+Conn 1 76 83 0.111111112 347 0
+Conn 1 2 83 0.222222224 348 0
+Conn 1 83 11 1 349 0
+Conn 1 83 13 -0.5 350 0
+Conn 1 83 15 -0.5 351 0
+Conn 1 83 16 -0.5 352 0
+Conn 1 83 17 -0.375 353 0
+Conn 1 83 19 -0.199999988 354 0
+Conn 1 83 23 -0.5 355 0
+Conn 1 83 24 -0.449999988 356 0
+Conn 1 83 25 -0.299999982 357 0
+Conn 1 83 27 0.25 358 0
+Conn 1 83 28 -0.298248231 359 0
+Conn 1 83 30 0.5 360 0
+Conn 1 53 84 0.166666672 361 0
+Conn 1 74 84 0.166666672 362 0
+Conn 1 62 84 0.166666672 363 0
+Conn 1 76 84 0.166666672 364 0
+Conn 1 2 84 0.333333343 365 0
+Conn 1 84 11 1 366 0
+Conn 1 84 12 0.5 367 0
+Conn 1 84 13 -0.5 368 0
+Conn 1 84 14 -0.5 369 0
+Conn 1 84 15 -0.5 370 0
+Conn 1 84 17 -0.25 371 0
+Conn 1 84 18 0.150000006 372 0
+Conn 1 84 19 -0.5 373 0
+Conn 1 84 23 -0.5 374 0
+Conn 1 84 24 0.5 375 0
+Conn 1 84 25 0.5 376 0
+Conn 1 84 26 0.300000012 377 0
+Conn 1 84 27 -0.449999988 378 0
+Conn 1 84 28 -0.5 379 0
+Conn 1 84 30 0.5 380 0
+Conn 1 53 85 0.125 381 0
+Conn 1 74 85 0.125 382 0
+Conn 1 67 85 0.125 383 0
+Conn 1 61 85 0.125 384 0
+Conn 1 72 85 0.125 385 0
+Conn 1 57 85 0.125 386 0
+Conn 1 1 85 0.25 387 0
+Conn 1 85 11 1 388 0
+Conn 1 85 12 -0.5 389 0
+Conn 1 85 13 -0.5 390 0
+Conn 1 85 14 -0.5 391 0
+Conn 1 85 15 0.5 392 0
+Conn 1 85 17 -0.125 393 0
+Conn 1 85 18 0.300000012 394 0
+Conn 1 85 20 -0.199999988 395 0
+Conn 1 85 21 -0.5 396 0
+Conn 1 85 22 -0.5 397 0
+Conn 1 85 23 -0.5 398 0
+Conn 1 85 24 -0.0250000004 399 0
+Conn 1 85 25 0.25 400 0
+Conn 1 85 26 0.5 401 0
+Conn 1 85 27 0.5 402 0
+Conn 1 85 28 -0.5 403 0
+Conn 1 85 30 0.5 404 0
+Conn 1 5 86 1 405 0
+Conn 1 53 87 0.142857149 406 0
+Conn 1 59 87 0.142857149 407 0
+Conn 1 86 87 0.142857149 408 0
+Conn 1 63 87 0.142857149 409 0
+Conn 1 57 87 0.142857149 410 0
+Conn 1 1 87 0.285714298 411 0
+Conn 1 87 11 1 412 0
+Conn 1 87 12 -0.5 413 0
+Conn 1 87 13 -0.5 414 0
+Conn 1 87 14 -0.5 415 0
+Conn 1 87 15 0.5 416 0
+Conn 1 87 17 -0.375 417 0
+Conn 1 87 20 -0.199999988 418 0
+Conn 1 87 21 -0.5 419 0
+Conn 1 87 22 -0.215000004 420 0
+Conn 1 87 23 -0.5 421 0
+Conn 1 87 24 -0.100000001 422 0
+Conn 1 87 25 0.25 423 0
+Conn 1 87 26 0.5 424 0
+Conn 1 87 27 0.5 425 0
+Conn 1 87 28 -0.5 426 0
+Conn 1 87 30 0.5 427 0
+Conn 1 53 88 0.125 428 0
+Conn 1 74 88 0.125 429 0
+Conn 1 67 88 0.125 430 0
+Conn 1 61 88 0.125 431 0
+Conn 1 72 88 0.125 432 0
+Conn 1 76 88 0.125 433 0
+Conn 1 1 88 0.25 434 0
+Conn 1 88 11 1 435 0
+Conn 1 88 12 -0.5 436 0
+Conn 1 88 13 -0.5 437 0
+Conn 1 88 14 -0.5 438 0
+Conn 1 88 15 0.5 439 0
+Conn 1 88 17 -0.125 440 0
+Conn 1 88 18 0.300000012 441 0
+Conn 1 88 20 -0.199999988 442 0
+Conn 1 88 21 -0.5 443 0
+Conn 1 88 22 -0.5 444 0
+Conn 1 88 23 -0.5 445 0
+Conn 1 88 24 0.0250000004 446 0
+Conn 1 88 25 0.25 447 0
+Conn 1 88 26 0.5 448 0
+Conn 1 88 27 0.5 449 0
+Conn 1 88 28 -0.5 450 0
+Conn 1 88 30 0.5 451 0
+Conn 1 53 89 0.142857149 452 0
+Conn 1 59 89 0.142857149 453 0
+Conn 1 86 89 0.142857149 454 0
+Conn 1 63 89 0.142857149 455 0
+Conn 1 76 89 0.142857149 456 0
+Conn 1 1 89 0.285714298 457 0
+Conn 1 89 11 1 458 0
+Conn 1 89 12 -0.5 459 0
+Conn 1 89 13 -0.5 460 0
+Conn 1 89 14 -0.5 461 0
+Conn 1 89 15 0.5 462 0
+Conn 1 89 17 -0.375 463 0
+Conn 1 89 20 -0.199999988 464 0
+Conn 1 89 21 -0.5 465 0
+Conn 1 89 22 -0.215000004 466 0
+Conn 1 89 23 -0.5 467 0
+Conn 1 89 24 0.100000001 468 0
+Conn 1 89 25 0.25 469 0
+Conn 1 89 26 0.5 470 0
+Conn 1 89 27 0.5 471 0
+Conn 1 89 28 -0.5 472 0
+Conn 1 89 30 0.5 473 0
+Conn 1 4 90 -1 474 0
+Conn 1 53 91 0.142857149 475 0
+Conn 1 90 91 0.142857149 476 0
+Conn 1 67 91 0.142857149 477 0
+Conn 1 61 91 0.142857149 478 0
+Conn 1 72 91 0.142857149 479 0
+Conn 1 1 91 0.285714298 480 0
+Conn 1 91 11 1 481 0
+Conn 1 91 13 0.5 482 0
+Conn 1 91 15 -0.5 483 0
+Conn 1 91 16 -0.5 484 0
+Conn 1 91 17 -0.375 485 0
+Conn 1 91 19 -0.199999988 486 0
+Conn 1 91 23 -0.5 487 0
+Conn 1 91 24 2.98023224e-08 488 0
+Conn 1 91 25 -0.449999988 489 0
+Conn 1 91 27 0.25 490 0
+Conn 1 91 28 -0.298248231 491 0
+Conn 1 91 30 0.5 492 0
+Conn 1 53 92 0.25 493 0
+Conn 1 54 92 0.25 494 0
+Conn 1 0 92 0.5 495 0
+Conn 1 92 11 1 496 0
+Conn 1 92 12 0.5 497 0
+Conn 1 92 13 -0.5 498 0
+Conn 1 92 14 -0.5 499 0
+Conn 1 92 15 -0.5 500 0
+Conn 1 92 17 0.5 501 0
+Conn 1 92 18 0.25 502 0
+Conn 1 92 19 -0.5 503 0
+Conn 1 92 21 -0.5 504 0
+Conn 1 92 23 -0.5 505 0
+Conn 1 92 24 0.5 506 0
+Conn 1 92 25 0.5 507 0
+Conn 1 92 26 2.98023224e-08 508 0
+Conn 1 92 27 -0.449999988 509 0
+Conn 1 92 28 -0.5 510 0
+Conn 1 92 30 0.5 511 0
+Conn 1 5 93 -1 512 0
+Conn 1 53 94 0.25 513 0
+Conn 1 93 94 0.25 514 0
+Conn 1 1 94 0.5 515 0
+Conn 1 94 11 1 516 0
+Conn 1 94 12 0.5 517 0
+Conn 1 94 13 -0.5 518 0
+Conn 1 94 14 -0.5 519 0
+Conn 1 94 15 -0.5 520 0
+Conn 1 94 17 0.5 521 0
+Conn 1 94 18 0.25 522 0
+Conn 1 94 21 -0.5 523 0
+Conn 1 94 23 -0.5 524 0
+Conn 1 94 24 0.5 525 0
+Conn 1 94 25 0.5 526 0
+Conn 1 94 26 2.98023224e-08 527 0
+Conn 1 94 27 -0.449999988 528 0
+Conn 1 94 28 -0.5 529 0
+Conn 1 94 30 0.5 530 0
+Conn 1 53 95 0.142857149 531 0
+Conn 1 90 95 0.142857149 532 0
+Conn 1 55 95 0.142857149 533 0
+Conn 1 61 95 0.142857149 534 0
+Conn 1 72 95 0.142857149 535 0
+Conn 1 2 95 0.285714298 536 0
+Conn 1 95 11 1 537 0
+Conn 1 95 13 -0.5 538 0
+Conn 1 95 15 -0.5 539 0
+Conn 1 95 16 -0.5 540 0
+Conn 1 95 17 -0.4375 541 0
+Conn 1 95 19 0.5 542 0
+Conn 1 95 23 -0.5 543 0
+Conn 1 95 24 -0.299999982 544 0
+Conn 1 95 25 -0.299999982 545 0
+Conn 1 95 27 0.30153656 546 0
+Conn 1 95 28 -0.298248231 547 0
+Conn 1 95 30 0.5 548 0
+Conn 1 4 96 1 549 0
+Conn 1 4 97 -1 550 0
+Conn 1 53 98 0.125 551 0
+Conn 1 96 98 0.125 552 0
+Conn 1 97 98 0.125 553 0
+Conn 1 55 98 0.125 554 0
+Conn 1 61 98 0.125 555 0
+Conn 1 72 98 0.125 556 0
+Conn 1 2 98 0.25 557 0
+Conn 1 98 11 1 558 0
+Conn 1 98 12 -0.5 559 0
+Conn 1 98 13 0.5 560 0
+Conn 1 98 14 0.5 561 0
+Conn 1 98 15 -0.5 562 0
+Conn 1 98 17 -0.375 563 0
+Conn 1 98 18 -0.300000012 564 0
+Conn 1 98 23 -0.5 565 0
+Conn 1 98 24 -0.149999976 566 0
+Conn 1 98 25 -0.299999982 567 0
+Conn 1 98 26 0.5 568 0
+Conn 1 98 27 0.5 569 0
+Conn 1 98 28 -0.5 570 0
+Conn 1 98 30 0.5 571 0
+Conn 1 53 99 0.125 572 0
+Conn 1 90 99 0.125 573 0
+Conn 1 55 99 0.125 574 0
+Conn 1 61 99 0.125 575 0
+Conn 1 62 99 0.125 576 0
+Conn 1 63 99 0.125 577 0
+Conn 1 2 99 0.25 578 0
+Conn 1 99 11 1 579 0
+Conn 1 99 13 -0.5 580 0
+Conn 1 99 15 -0.5 581 0
+Conn 1 99 16 -0.5 582 0
+Conn 1 99 17 -0.375 583 0
+Conn 1 99 19 0.5 584 0
+Conn 1 99 23 -0.5 585 0
+Conn 1 99 24 0.150000036 586 0
+Conn 1 99 25 -0.299999982 587 0
+Conn 1 99 26 -0.149999976 588 0
+Conn 1 99 27 -0.299999982 589 0
+Conn 1 99 28 -0.5 590 0
+Conn 1 99 30 0.5 591 0
+Conn 1 53 100 0.142857149 592 0
+Conn 1 54 100 0.142857149 593 0
+Conn 1 69 100 0.142857149 594 0
+Conn 1 67 100 0.142857149 595 0
+Conn 1 61 100 0.142857149 596 0
+Conn 1 1 100 0.285714298 597 0
+Conn 1 100 11 1 598 0
+Conn 1 100 12 0.5 599 0
+Conn 1 100 13 -0.5 600 0
+Conn 1 100 14 0.5 601 0
+Conn 1 100 15 -0.5 602 0
+Conn 1 100 18 -0.5 603 0
+Conn 1 100 19 0.5 604 0
+Conn 1 100 21 0.5 605 0
+Conn 1 100 23 -0.5 606 0
+Conn 1 100 24 0.5 607 0
+Conn 1 100 25 0.5 608 0
+Conn 1 100 26 0.150000036 609 0
+Conn 1 100 27 -0.299999982 610 0
+Conn 1 100 28 -0.5 611 0
+Conn 1 100 30 0.5 612 0
+Conn 1 53 101 0.200000003 613 0
+Conn 1 90 101 0.200000003 614 0
+Conn 1 86 101 0.200000003 615 0
+Conn 1 1 101 0.400000006 616 0
+Conn 1 101 11 1 617 0
+Conn 1 101 12 0.5 618 0
+Conn 1 101 13 -0.5 619 0
+Conn 1 101 14 0.5 620 0
+Conn 1 101 15 -0.5 621 0
+Conn 1 101 18 -0.5 622 0
+Conn 1 101 19 0.5 623 0
+Conn 1 101 21 0.353553385 624 0
+Conn 1 101 22 0.353553385 625 0
+Conn 1 101 23 -0.5 626 0
+Conn 1 101 24 0.5 627 0
+Conn 1 101 25 0.5 628 0
+Conn 1 101 26 0.5 629 0
+Conn 1 101 27 0.5 630 0
+Conn 1 101 28 -0.5 631 0
+Conn 1 101 30 0.5 632 0
+Conn 1 53 102 0.200000003 633 0
+Conn 1 69 102 0.200000003 634 0
+Conn 1 93 102 0.200000003 635 0
+Conn 1 2 102 0.400000006 636 0
+Conn 1 102 11 1 637 0
+Conn 1 102 12 0.5 638 0
+Conn 1 102 13 0.5 639 0
+Conn 1 102 14 0.5 640 0
+Conn 1 102 15 -0.5 641 0
+Conn 1 102 18 -0.5 642 0
+Conn 1 102 21 -0.5 643 0
+Conn 1 102 23 -0.199999988 644 0
+Conn 1 102 24 0.5 645 0
+Conn 1 102 25 0.5 646 0
+Conn 1 102 26 0.5 647 0
+Conn 1 102 27 0.5 648 0
+Conn 1 102 28 -0.5 649 0
+Conn 1 102 30 0.5 650 0
+Conn 1 8 103 1 651 0
+Conn 1 103 104 -1 652 0
+Conn 1 104 105 0.200000003 653 0
+Conn 1 69 105 0.200000003 654 0
+Conn 1 93 105 0.200000003 655 0
+Conn 1 2 105 0.400000006 656 0
+Conn 1 105 20 0.25 657 0
+Conn 1 105 18 0.437026292 658 0
+Conn 1 105 21 -9.18485073e-17 659 0
+Conn 1 105 22 -0.5 660 0
+Conn 1 105 23 -0.5 661 0
+Conn 1 53 106 0.200000003 662 0
+Conn 1 69 106 0.200000003 663 0
+Conn 1 86 106 0.200000003 664 0
+Conn 1 2 106 0.400000006 665 0
+Conn 1 106 11 1 666 0
+Conn 1 106 12 0.5 667 0
+Conn 1 106 13 0.5 668 0
+Conn 1 106 14 0.5 669 0
+Conn 1 106 15 -0.5 670 0
+Conn 1 106 18 -0.5 671 0
+Conn 1 106 21 0.166666672 672 0
+Conn 1 106 23 -0.199999988 673 0
+Conn 1 106 24 0.5 674 0
+Conn 1 106 25 0.5 675 0
+Conn 1 106 26 0.5 676 0
+Conn 1 106 27 0.5 677 0
+Conn 1 106 28 -0.5 678 0
+Conn 1 106 30 0.5 679 0
+Conn 1 8 107 1 680 0
+Conn 1 107 108 -1 681 0
+Conn 1 108 109 0.200000003 682 0
+Conn 1 69 109 0.200000003 683 0
+Conn 1 86 109 0.200000003 684 0
+Conn 1 2 109 0.400000006 685 0
+Conn 1 109 17 -1 686 0
+Conn 1 109 20 0.5 687 0
+Conn 1 109 18 0.464535058 688 0
+Conn 1 109 19 0.5 689 0
+Conn 1 109 21 -9.18485073e-17 690 0
+Conn 1 109 22 -0.5 691 0
+Conn 1 109 23 -0.5 692 0
+Conn 1 4 110 -1 693 0
+Conn 1 53 111 0.25 694 0
+Conn 1 110 111 0.25 695 0
+Conn 1 3 111 0.5 696 0
+Conn 1 111 11 1 697 0
+Conn 1 111 12 0.5 698 0
+Conn 1 111 13 -0.5 699 0
+Conn 1 111 14 -0.5 700 0
+Conn 1 111 15 -0.5 701 0
+Conn 1 111 17 -0.25 702 0
+Conn 1 111 18 -0.5 703 0
+Conn 1 111 21 -0.5 704 0
+Conn 1 111 23 -0.5 705 0
+Conn 1 111 24 0.5 706 0
+Conn 1 111 25 0.5 707 0
+Conn 1 111 26 -0.299999982 708 0
+Conn 1 111 27 -0.299999982 709 0
+Conn 1 111 28 -0.5 710 0
+Conn 1 111 30 0.5 711 0
+Conn 1 108 112 0.25 712 0
+Conn 1 110 112 0.25 713 0
+Conn 1 3 112 0.5 714 0
+Conn 1 112 17 -0.5 715 0
+Conn 1 112 20 0.25 716 0
+Conn 1 112 18 4.38838854e-10 717 0
+Conn 1 112 21 0.5 718 0
+Conn 1 112 23 -0.5 719 0
+Conn 1 4 113 1 720 0
+Conn 1 53 114 0.142857149 721 0
+Conn 1 113 114 0.142857149 722 0
+Conn 1 55 114 0.142857149 723 0
+Conn 1 61 114 0.142857149 724 0
+Conn 1 63 114 0.142857149 725 0
+Conn 1 3 114 0.285714298 726 0
+Conn 1 114 11 1 727 0
+Conn 1 114 12 0.5 728 0
+Conn 1 114 13 -0.5 729 0
+Conn 1 114 14 0.5 730 0
+Conn 1 114 15 -0.5 731 0
+Conn 1 114 17 0.25 732 0
+Conn 1 114 18 -0.5 733 0
+Conn 1 114 23 -0.5 734 0
+Conn 1 114 24 0.5 735 0
+Conn 1 114 25 0.5 736 0
+Conn 1 114 26 0.5 737 0
+Conn 1 114 27 0.5 738 0
+Conn 1 114 28 -0.5 739 0
+Conn 1 114 30 0.5 740 0
+Conn 1 108 115 0.142857149 741 0
+Conn 1 113 115 0.142857149 742 0
+Conn 1 55 115 0.142857149 743 0
+Conn 1 61 115 0.142857149 744 0
+Conn 1 63 115 0.142857149 745 0
+Conn 1 3 115 0.285714298 746 0
+Conn 1 115 17 -1 747 0
+Conn 1 115 20 0.5 748 0
+Conn 1 115 18 0.456029713 749 0
+Conn 1 115 19 0.5 750 0
+Conn 1 115 21 -9.18485073e-17 751 0
+Conn 1 115 22 -0.5 752 0
+Conn 1 115 23 -0.5 753 0
+Conn 1 53 116 0.142857149 754 0
+Conn 1 113 116 0.142857149 755 0
+Conn 1 55 116 0.142857149 756 0
+Conn 1 61 116 0.142857149 757 0
+Conn 1 65 116 0.142857149 758 0
+Conn 1 3 116 0.285714298 759 0
+Conn 1 116 11 1 760 0
+Conn 1 116 12 0.5 761 0
+Conn 1 116 13 -0.5 762 0
+Conn 1 116 14 0.5 763 0
+Conn 1 116 15 -0.5 764 0
+Conn 1 116 17 -0.25 765 0
+Conn 1 116 18 -0.5 766 0
+Conn 1 116 23 -0.5 767 0
+Conn 1 116 24 0.5 768 0
+Conn 1 116 25 0.5 769 0
+Conn 1 116 26 0.5 770 0
+Conn 1 116 27 0.5 771 0
+Conn 1 116 28 -0.5 772 0
+Conn 1 116 30 0.5 773 0
+Conn 1 108 117 0.142857149 774 0
+Conn 1 113 117 0.142857149 775 0
+Conn 1 55 117 0.142857149 776 0
+Conn 1 61 117 0.142857149 777 0
+Conn 1 65 117 0.142857149 778 0
+Conn 1 3 117 0.285714298 779 0
+Conn 1 117 17 -1 780 0
+Conn 1 117 20 0.5 781 0
+Conn 1 117 18 0.456029713 782 0
+Conn 1 117 19 0.5 783 0
+Conn 1 117 21 -9.18485073e-17 784 0
+Conn 1 117 22 -0.5 785 0
+Conn 1 117 23 -0.5 786 0
+Conn 1 4 118 1 787 0
+Conn 1 4 119 -1 788 0
+Conn 1 53 120 0.125 789 0
+Conn 1 118 120 0.125 790 0
+Conn 1 119 120 0.125 791 0
+Conn 1 55 120 0.125 792 0
+Conn 1 61 120 0.125 793 0
+Conn 1 72 120 0.125 794 0
+Conn 1 3 120 0.25 795 0
+Conn 1 120 11 1 796 0
+Conn 1 120 12 0.5 797 0
+Conn 1 120 13 -0.5 798 0
+Conn 1 120 14 0.5 799 0
+Conn 1 120 15 0.5 800 0
+Conn 1 120 17 -0.25 801 0
+Conn 1 120 18 -0.5 802 0
+Conn 1 120 23 -0.5 803 0
+Conn 1 120 24 0.5 804 0
+Conn 1 120 25 0.5 805 0
+Conn 1 120 26 0.5 806 0
+Conn 1 120 27 0.5 807 0
+Conn 1 120 28 -0.5 808 0
+Conn 1 120 30 0.5 809 0
+Conn 1 53 121 0.125 810 0
+Conn 1 118 121 0.125 811 0
+Conn 1 119 121 0.125 812 0
+Conn 1 55 121 0.125 813 0
+Conn 1 61 121 0.125 814 0
+Conn 1 65 121 0.125 815 0
+Conn 1 3 121 0.25 816 0
+Conn 1 121 11 1 817 0
+Conn 1 121 12 0.5 818 0
+Conn 1 121 13 -0.5 819 0
+Conn 1 121 14 0.5 820 0
+Conn 1 121 15 0.5 821 0
+Conn 1 121 17 -0.25 822 0
+Conn 1 121 18 -0.5 823 0
+Conn 1 121 23 -0.5 824 0
+Conn 1 121 24 0.5 825 0
+Conn 1 121 25 0.5 826 0
+Conn 1 121 26 0.5 827 0
+Conn 1 121 27 0.5 828 0
+Conn 1 121 28 -0.5 829 0
+Conn 1 121 30 0.5 830 0
+Conn 1 8 122 1 831 0
+Conn 1 122 123 -1 832 0
+Conn 1 4 124 1 833 0
+Conn 1 5 125 1 834 0
+Conn 1 5 126 -1 835 0
+Conn 1 123 127 0.111111112 836 0
+Conn 1 124 127 0.111111112 837 0
+Conn 1 110 127 0.111111112 838 0
+Conn 1 125 127 0.111111112 839 0
+Conn 1 126 127 0.111111112 840 0
+Conn 1 62 127 0.111111112 841 0
+Conn 1 63 127 0.111111112 842 0
+Conn 1 1 127 0.222222224 843 0
+Conn 1 127 20 0.25 844 0
+Conn 1 127 18 0.017732475 845 0
+Conn 1 127 21 0.353553385 846 0
+Conn 1 127 22 0.353553385 847 0
+Conn 1 127 23 -0.5 848 0
+Conn 1 108 17 0.5 849 0
+Conn 1 10 32 0 850 0
+Conn 1 10 33 0 851 0
+Conn 1 10 34 0 852 0
+Conn 1 10 35 0 853 0
+Conn 1 10 36 0 854 0
+Conn 1 10 37 0 855 0
+Conn 1 10 38 0 856 0
+Conn 1 10 39 0 857 0
+Conn 1 10 40 0 858 0
+Conn 1 10 41 0 859 0
+Conn 1 10 42 0 860 0
+Conn 1 10 43 0 861 0
+Conn 1 10 44 0 862 0
+Conn 1 10 45 0 863 0
+Conn 1 10 46 0 864 0
+Conn 1 10 47 0 865 0
+Conn 1 10 48 0 866 0
+Conn 1 10 49 0 867 0
+Conn 1 10 50 0 868 0
+Conn 1 10 51 0 869 0
+Conn 1 10 52 0 870 0
 Observed 0 63.428571428571757 492.14285714287968 0 492.14285714287968
 Observed 1 122.99999999999923 492.14285714287968 0 492.14285714287968
 Observed 2 146.28571428571286 492.14285714287968 0 492.14285714287968
@@ -2667,50 +2753,27 @@ Observed 5 243.59524150405784 492.14285714287968 0 492.14285714287968
 Observed 6 245.21428571428802 492.14285714287968 0 492.14285714287968
 Observed 7 492.00000000002251 492.14285714287968 0 492.14285714287968
 Observed 8 70.047620558313568 492.14285714287968 0 492.14285714287968
-Observed 9 492.14285714287968 492.14285714287968 0 492.14285714287968
-Observed 10 360 0 0 360
-Observed 11 240 120 0 360
-Observed 12 270 90 0 360
-Observed 13 240 120 0 360
-Observed 14 270 90 0 360
-Observed 15 30 330 0 360
-Observed 16 184.03571428571348 403.85714285716057 0 492.14285714287968
-Observed 17 189.05973001729174 346.14285714287132 0 492.14285714287968
-Observed 18 89.028731414246209 460.71428571430766 0 492.14285714287968
-Observed 19 25.900003910064815 488.71428571430766 0 492.14285714287968
-Observed 20 197.96274091516597 320.14285714286615 0 492.14285714287968
-Observed 21 34.646764201776328 485.00000000002166 0 492.14285714287968
-Observed 22 260.37133530207336 492.14285714287968 0 492.14285714287968
-Observed 23 230.29971027374268 360 0 360
-Observed 24 247.40000343322754 156 0 360
-Observed 25 149.00008106231689 360 0 360
-Observed 26 219.01232433319092 360 0 360
-Observed 27 260.09619140625 108 0 360
-Observed 28 0 360 0 360
-Observed 29 270 90 0 360
-Observed 30 492.14285714287968 0 0 492.14285714287968
-Observed 31 492.14285714287968 0 0 492.14285714287968
-Observed 32 492.14285714287968 0 0 492.14285714287968
-Observed 33 492.14285714287968 0 0 492.14285714287968
-Observed 34 492.14285714287968 0 0 492.14285714287968
-Observed 35 492.14285714287968 0 0 492.14285714287968
-Observed 36 492.14285714287968 0 0 492.14285714287968
-Observed 37 492.14285714287968 0 0 492.14285714287968
-Observed 38 492.14285714287968 0 0 492.14285714287968
-Observed 39 492.14285714287968 0 0 492.14285714287968
-Observed 40 492.14285714287968 0 0 492.14285714287968
-Observed 41 492.14285714287968 0 0 492.14285714287968
-Observed 42 492.14285714287968 0 0 492.14285714287968
-Observed 43 492.14285714287968 0 0 492.14285714287968
-Observed 44 492.14285714287968 0 0 492.14285714287968
-Observed 45 492.14285714287968 0 0 492.14285714287968
-Observed 46 492.14285714287968 0 0 492.14285714287968
-Observed 47 492.14285714287968 0 0 492.14285714287968
-Observed 48 492.14285714287968 0 0 492.14285714287968
-Observed 49 492.14285714287968 0 0 492.14285714287968
-Observed 50 492.14285714287968 0 0 492.14285714287968
-Observed 51 492.14285714287968 0 0 492.14285714287968
-Observed 52 492.14285714287968 0 0 492.14285714287968
+Observed 10 492.14285714287968 492.14285714287968 0 492.14285714287968
+Observed 11 360 0 0 360
+Observed 12 240 120 0 360
+Observed 13 270 90 0 360
+Observed 14 240 120 0 360
+Observed 15 270 90 0 360
+Observed 16 30 330 0 360
+Observed 17 184.03571428571348 403.85714285716057 0 492.14285714287968
+Observed 18 189.05973001729174 346.14285714287132 0 492.14285714287968
+Observed 19 89.028731414246209 460.71428571430766 0 492.14285714287968
+Observed 20 25.900003910064815 488.71428571430766 0 492.14285714287968
+Observed 21 197.96274091516597 320.14285714286615 0 492.14285714287968
+Observed 22 34.646764201776328 485.00000000002166 0 492.14285714287968
+Observed 23 260.37133530207336 492.14285714287968 0 492.14285714287968
+Observed 24 230.29971027374268 360 0 360
+Observed 25 247.40000343322754 156 0 360
+Observed 26 149.00008106231689 360 0 360
+Observed 27 219.01232433319092 360 0 360
+Observed 28 260.09619140625 108 0 360
+Observed 29 0 360 0 360
+Observed 30 270 90 0 360
 Observed 53 492.14285714287968 0 0 492.14285714287968
 Observed 54 492.14285714287968 0 0 492.14285714287968
 Observed 55 492.14285714287968 0 0 492.14285714287968
@@ -2738,11 +2801,11 @@ Observed 76 492.14285714287968 0 0 492.14285714287968
 Observed 77 492.14285714287968 0 0 492.14285714287968
 Observed 78 492.14285714287968 0 0 492.14285714287968
 Observed 79 492.14285714287968 0 0 492.14285714287968
-Observed 80 313.74603700638363 492.14285714287968 0 492.14285714287968
+Observed 80 492.14285714287968 0 0 492.14285714287968
 Observed 81 492.14285714287968 0 0 492.14285714287968
 Observed 82 492.14285714287968 0 0 492.14285714287968
 Observed 83 492.14285714287968 0 0 492.14285714287968
-Observed 84 268.61905556917463 492.14285714287968 0 492.14285714287968
+Observed 84 492.14285714287968 0 0 492.14285714287968
 Observed 85 492.14285714287968 0 0 492.14285714287968
 Observed 86 492.14285714287968 0 0 492.14285714287968
 Observed 87 492.14285714287968 0 0 492.14285714287968
@@ -2757,12 +2820,35 @@ Observed 95 492.14285714287968 0 0 492.14285714287968
 Observed 96 492.14285714287968 0 0 492.14285714287968
 Observed 97 492.14285714287968 0 0 492.14285714287968
 Observed 98 492.14285714287968 0 0 492.14285714287968
-Observed 99 422.09523689747573 132.1428571428558 0 492.14285714287968
+Observed 99 492.14285714287968 0 0 492.14285714287968
 Observed 100 492.14285714287968 0 0 492.14285714287968
 Observed 101 492.14285714287968 0 0 492.14285714287968
 Observed 102 492.14285714287968 0 0 492.14285714287968
-Observed 103 492.14285714287968 0 0 492.14285714287968
+Observed 103 313.74603700638363 492.14285714287968 0 492.14285714287968
 Observed 104 492.14285714287968 0 0 492.14285714287968
+Observed 105 492.14285714287968 0 0 492.14285714287968
+Observed 106 492.14285714287968 0 0 492.14285714287968
+Observed 107 268.61905556917463 492.14285714287968 0 492.14285714287968
+Observed 108 492.14285714287968 0 0 492.14285714287968
+Observed 109 492.14285714287968 0 0 492.14285714287968
+Observed 110 492.14285714287968 0 0 492.14285714287968
+Observed 111 492.14285714287968 0 0 492.14285714287968
+Observed 112 492.14285714287968 0 0 492.14285714287968
+Observed 113 492.14285714287968 0 0 492.14285714287968
+Observed 114 492.14285714287968 0 0 492.14285714287968
+Observed 115 492.14285714287968 0 0 492.14285714287968
+Observed 116 492.14285714287968 0 0 492.14285714287968
+Observed 117 492.14285714287968 0 0 492.14285714287968
+Observed 118 492.14285714287968 0 0 492.14285714287968
+Observed 119 492.14285714287968 0 0 492.14285714287968
+Observed 120 492.14285714287968 0 0 492.14285714287968
+Observed 121 492.14285714287968 0 0 492.14285714287968
+Observed 122 422.09523689747573 132.1428571428558 0 492.14285714287968
+Observed 123 492.14285714287968 0 0 492.14285714287968
+Observed 124 492.14285714287968 0 0 492.14285714287968
+Observed 125 492.14285714287968 0 0 492.14285714287968
+Observed 126 492.14285714287968 0 0 492.14285714287968
+Observed 127 492.14285714287968 0 0 492.14285714287968
 End
 SEEDS 1 2
 ~NAME "Handfisch"

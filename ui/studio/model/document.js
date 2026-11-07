@@ -1217,6 +1217,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
       const g = {
+        initial_strength : center.initial_strength ?? 0,
+        ...center.distribution,
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,
         side : site.side,

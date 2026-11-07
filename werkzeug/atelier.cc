@@ -179,8 +179,7 @@ struct SightScene {
 };
 constexpr const char *START_FISH = "start";
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
-constexpr float CPPN_EDIT_LIMIT = 16;
-constexpr int CPPN_MOST_NODES = 1024;
+constexpr float CPPN_EDIT_LIMIT = fishsim::MAX_GENE_WEIGHT;
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
 SightScene read_sight(std::istream &in) {
   SightScene scene;
@@ -1118,7 +1117,7 @@ int main(int argc, char **argv) {
           float param;
           ensure(bool(std::cin >> type >> param) && type >= 0 && type < evolution::NODE_TYPES &&
                      between(param, -CPPN_EDIT_LIMIT, CPPN_EDIT_LIMIT) &&
-                     g.cppn->nodes() < CPPN_MOST_NODES,
+                     g.cppn->nodes() < fishsim::MAX_GENOME_NODES,
                  "invalid new CPPN node");
           int id = cppn::INPUTS + cppn::OUTPUTS;
           for (const auto &n : g.cppn->get_node_genes())

@@ -132,7 +132,7 @@ struct CPPN::PreparationState {
 };
 CPPN::CPPN(std::shared_ptr<evolution::Genome> genome, Preparation mode) : genes(genome) {
   if (!genome || genome->inputs() != INPUTS || genome->outputs() != OUTPUTS)
-    throw std::invalid_argument("current CPPN needs ten inputs and twenty outputs");
+    throw std::invalid_argument("current CPPN interface required");
   for (int k = int(output::identity_role); k <= int(output::identity4); ++k) {
     const auto *n = genome->get_node(INPUTS + k);
     if (!n || n->get_type() != evolution::NodeType::LINEAR || n->get_weight() != 1)

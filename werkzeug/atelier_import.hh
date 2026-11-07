@@ -2,25 +2,38 @@
 #include "atelier_connections.hh"
 
 namespace atelier {
-inline Receptor import_receptor(const field::HormoneReceptor &r, const cppn::Point &at, int effect,
+inline Receptor import_receptor(const field::HormoneReceptor &, const cppn::Point &at, int effect,
                                 cppn::CPPN &net) {
   Receptor result;
   const float neutral = effect == field::Output ? 1.f : 0.f;
   constexpr float EPSILON = 1e-5f;
   result.baseline = neutral;
-  if (std::abs(r.baseline - neutral) < EPSILON && std::abs(r.sensitivity) < EPSILON)
-    return result;
   auto query = at;
   query.effect = field::receptor_effect_code(effect);
   const auto values = net.query_view(query);
+  if (std::abs(values[out::capacity] - neutral) < EPSILON &&
+      std::abs(values[out::field_width]) < EPSILON && values[out::spread_capacity] <= 0 &&
+      values[out::spread_field_width] <= 0)
+    return result;
   result.active = true;
-  result.baseline = r.baseline;
-  result.sensitivity = r.sensitivity;
-  result.half = r.half;
-  result.steepness = r.steepness;
+  result.spread_capacity = std::clamp(values[out::spread_capacity], 0.f, 1.f);
+  result.spread_field_width = std::clamp(values[out::spread_field_width], 0.f, 1.f);
+  result.spread_threshold = std::clamp(values[out::spread_threshold], 0.f, 1.f);
+  result.spread_time_constant = std::clamp(values[out::spread_time_constant], 0.f, 1.f);
+  result.spread_quality1 = std::clamp(values[out::spread_quality1], 0.f, 1.f);
+  result.spread_quality2 = std::clamp(values[out::spread_quality2], 0.f, 1.f);
+  result.spread_quality_width = std::clamp(values[out::spread_quality_width], 0.f, 1.f);
+  result.baseline = values[out::capacity];
+  result.sensitivity = field::HORMONE_SENSITIVITY_SPAN * values[out::field_width];
+  result.half =
+      float(field::HORMONE_HALF_MIN * std::pow(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN,
+                                               (values[out::threshold] + 1) * .5f));
+  result.steepness = int(std::lround(field::HORMONE_STEEPNESS_STEPS *
+                                     std::clamp(values[out::time_constant], 0.f, 1.f)));
   result.width = std::clamp((values[out::quality_width] + 1) * .5f, 0.f, 1.f);
-  result.substance =
-      int(std::max_element(r.affinity.begin(), r.affinity.end()) - r.affinity.begin());
+  const auto affinity = field::hormone_affinity<field::REGULATORS>(
+      values[out::quality1], values[out::quality2], result.width);
+  result.substance = int(std::max_element(affinity.begin(), affinity.end()) - affinity.begin());
   return result;
 }
 inline Plan import_plan(const fishsim::Genome &genome) {
@@ -52,7 +65,11 @@ inline Plan import_plan(const fishsim::Genome &genome) {
     for (int k = 0; k < field::MOTOR_COUNT; ++k)
       if (cell.functions.motors[k] > 0)
         g.function = k;
-    const auto &p = cell.parameters;
+    std::array<float, cppn::OUTPUTS> values{};
+    const auto &raw = net.query_view(at);
+    std::copy(raw.begin(), raw.end(), values.begin());
+    const auto mean = field::site_cell(at, values, cell.id, genome.development_options.bias_scale);
+    const auto &p = mean ? mean->parameters : cell.parameters;
     g.copies =
         std::clamp(int(std::lround(field::CELL_COPIES * p.capacity)), 1, field::CELL_COPY_LIMIT);
     g.threshold = 2 * p.threshold - 1;
@@ -64,18 +81,53 @@ inline Plan import_plan(const fishsim::Genome &genome) {
     if (cell.role == field::Role::Nerve) {
       if (p.plasticity < field::MIN_LEARNING_RATE)
         g.qwidth = 0;
-      g.sign = cell.identity[1];
-      g.mode = cell.identity[2];
-      g.pace = cell.identity[3];
-      g.modulator = cell.identity[4];
+      g.sign = values[out::identity1];
+      g.mode = values[out::identity2];
+      g.pace = values[out::identity3];
+      g.modulator = values[out::identity4];
     }
-    g.sender1 = cell.sender[0];
-    g.sender2 = cell.sender[1];
-    g.receiver1 = cell.receiver[0];
-    g.receiver2 = cell.receiver[1];
-    g.sigma = float(field::search_radius(cell.search_width));
-    g.crossing = cell.crossing;
-    g.range = cell.range;
+    g.initial_strength = values[out::synapse_strength];
+    g.spread_expression = std::clamp(values[out::spread_expression], 0.f, 1.f);
+    g.spread_identity_role = std::clamp(values[out::spread_identity_role], 0.f, 1.f);
+    g.spread_identity1 = std::clamp(values[out::spread_identity1], 0.f, 1.f);
+    g.spread_identity2 = std::clamp(values[out::spread_identity2], 0.f, 1.f);
+    g.spread_identity3 = std::clamp(values[out::spread_identity3], 0.f, 1.f);
+    g.spread_identity4 = std::clamp(values[out::spread_identity4], 0.f, 1.f);
+    g.spread_capacity = std::clamp(values[out::spread_capacity], 0.f, 1.f);
+    g.spread_threshold = std::clamp(values[out::spread_threshold], 0.f, 1.f);
+    g.spread_time_constant = std::clamp(values[out::spread_time_constant], 0.f, 1.f);
+    g.spread_field_width = std::clamp(values[out::spread_field_width], 0.f, 1.f);
+    g.spread_quality1 = std::clamp(values[out::spread_quality1], 0.f, 1.f);
+    g.spread_quality2 = std::clamp(values[out::spread_quality2], 0.f, 1.f);
+    g.spread_quality_width = std::clamp(values[out::spread_quality_width], 0.f, 1.f);
+    g.spread_sender1 = std::clamp(values[out::spread_sender1], 0.f, 1.f);
+    g.spread_sender2 = std::clamp(values[out::spread_sender2], 0.f, 1.f);
+    g.spread_receiver1 = std::clamp(values[out::spread_receiver1], 0.f, 1.f);
+    g.spread_receiver2 = std::clamp(values[out::spread_receiver2], 0.f, 1.f);
+    g.spread_search_width = std::clamp(values[out::spread_search_width], 0.f, 1.f);
+    g.spread_crossing = std::clamp(values[out::spread_crossing], 0.f, 1.f);
+    g.spread_range = std::clamp(values[out::spread_range], 0.f, 1.f);
+    g.spread_synapse_strength = std::clamp(values[out::spread_synapse_strength], 0.f, 1.f);
+    for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
+      auto query = at;
+      query.field = float(f) / (field::CONTACT_FIELDS - 1);
+      const auto &v = net.query_view(query);
+      auto &r = g.reception[f - 1];
+      r.expression = v[out::expression];
+      r.address = {v[out::receiver1], v[out::receiver2]};
+      r.width = (v[out::search_width] + 1) * .5f;
+      g.reception_spread[f - 1] = {std::clamp(v[out::spread_expression], 0.f, 1.f),
+                                   std::clamp(v[out::spread_receiver1], 0.f, 1.f),
+                                   std::clamp(v[out::spread_receiver2], 0.f, 1.f),
+                                   std::clamp(v[out::spread_search_width], 0.f, 1.f)};
+    }
+    g.sender1 = values[out::sender1];
+    g.sender2 = values[out::sender2];
+    g.receiver1 = values[out::receiver1];
+    g.receiver2 = values[out::receiver2];
+    g.sigma = float(field::search_radius((values[out::search_width] + 1) * .5f));
+    g.crossing = values[out::crossing];
+    g.range = (values[out::range] + 1) * .5f;
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
       g.receptors[effect] = import_receptor(cell.hormone_receptors[effect], at, effect, net);
     plan.groups.push_back(std::move(g));
@@ -103,7 +155,14 @@ inline void write_import(std::ostream &out, const Plan &plan) {
     first = false;
     studio_plan::write_group(out, g);
     out << ",\"address\":[" << g.sender1 << ',' << g.sender2 << ',' << g.receiver1 << ','
-        << g.receiver2 << ',' << g.sigma << "],\"receptors\":[";
+        << g.receiver2 << ',' << g.sigma;
+    for (int f = 0; f < field::CONTACT_FIELDS - 1; ++f) {
+      const auto &r = g.reception[f];
+      out << ',' << r.expression << ',' << r.address[0] << ',' << r.address[1] << ',' << r.width;
+      for (float spread : g.reception_spread[f])
+        out << ',' << spread;
+    }
+    out << "],\"receptors\":[";
     for (std::size_t i = 0; i < g.receptors.size(); ++i) {
       out << (i ? "," : "");
       studio_plan::write_receptor(out, g.receptors[i]);
