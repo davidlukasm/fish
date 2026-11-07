@@ -368,6 +368,7 @@ export class OrganStudio {
     this.historyBatch = null;
     // Undo in the middle of a drag ends its draft; what the drag does after is a step of its own.
     this.drafted = null;
+    this.draftStart = null;
     this.state.canUndo = this.undoHistory.length > 0;
     this.state.canRedo = this.redoHistory.length > 0;
     // Stepping back a setting keeps its inspector open while the chosen part still exists.

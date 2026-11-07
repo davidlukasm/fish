@@ -101,14 +101,19 @@ export const trialMethods = {
                        .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
     if (!groups.length)
       return;
+    const {document, genome, tool} = this.state;
     try {
       const result = await this.api(requestBody('probe', {
-                                      genome : this.state.genome,
-                                      plan : compileDocument(this.state.document, this.state.sites),
+                                      genome,
+                                      plan : compileDocument(document, this.state.sites),
                                       groups,
                                       steps : PULSE_STEPS
                                     }),
                                     API_WAIT.long);
+      // The answer is for the fish as it was asked about, in the tool that asked.
+      if (this.state.document !== document || this.state.genome !== genome ||
+          this.state.tool !== tool)
+        return;
       this.playPulse(centerIds, result.frames);
       this.notice(label('status.probed'));
     } catch (error) {

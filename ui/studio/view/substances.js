@@ -167,9 +167,9 @@ function curveHandles(state, receptor, effect, target) {
 export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const k = receptorCurve(state, receptor, effect), span = state.capabilities?.sensitivitySpan ?? 1;
   const px = fx * CURVE.width, py = fy * CURVE.height;
-  const v =
-      k.scale.low + (CURVE.bottom - py) / (CURVE.bottom - CURVE.top) * (k.scale.high - k.scale.low);
-  const r = clamp(k.scale.response(v), -1);
+  const v = k.scale.low +
+            clamp((CURVE.bottom - py) / (CURVE.bottom - CURVE.top)) * (k.scale.high - k.scale.low);
+  const r = clamp(k.scale.response(v), effect === GROWTH ? 0 : -1);
   const clampSpan = value => Math.max(-span, Math.min(span, value));
   if (handle === 'baseline')
     return {baseline : r};
@@ -241,9 +241,11 @@ function doseStrip(state, receptor, effect, target) {
                 ? '<path class="aid-dose-threshold" d="M' + x + ' ' + fixed(level(DEATH_RESPONSE)) +
                       ' h' + G.width + '"/>'
                 : '') +
-           '<circle class="aid-graphic-handle" data-dose-handle="' + handle + '" cx="' +
-           (x + G.width / 2) + '" cy="' + fixed(y) + '" r="' + G.knob + '"><title>' +
-           escapeText(label('inspector.curve.' + handle)) + '</title></circle>';
+           (handle === 'sensitivity' && !receptor.active
+                ? ''
+                : '<circle class="aid-graphic-handle" data-dose-handle="' + handle + '" cx="' +
+                      (x + G.width / 2) + '" cy="' + fixed(y) + '" r="' + G.knob + '"><title>' +
+                      escapeText(label('inspector.curve.' + handle)) + '</title></circle>');
   };
   const steps = state.capabilities?.steepnessSteps ?? 0, middle = B.top + B.height / 2;
   const pips =
@@ -284,7 +286,7 @@ export function dosePatch(state, receptor, effect, handle, fx, fy) {
   const span = state.capabilities?.sensitivitySpan ?? 1;
   if (handle === 'baseline')
     return {baseline : r};
-  const full = bound(receptor, k.atFraction(1));
+  const full = receptor.active ? bound(receptor, k.atFraction(1)) : 0;
   return full > 0 ? {sensitivity : Math.max(-span, Math.min(span, (r - receptor.baseline) / full))}
                   : null;
 }
@@ -456,7 +458,7 @@ export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
 function substanceMark(state, index) {
   return index === HORMONES.levels       ? label('inspector.maturityMark')
          : index === HORMONES.levels + 1 ? label('inspector.reserveMark')
-                                         : substanceName(state, index).slice(0, 1);
+                                         : Array.from(substanceName(state, index))[0];
 }
 export function substanceName(state, index) {
   const named = state.document.substances.find(sub => sub.index === index)?.name;

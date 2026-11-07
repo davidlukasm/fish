@@ -225,6 +225,23 @@ export const GRIPS = Object.freeze([
 ]);
 const PAD_STILL = .001;
 export const DRAG_CLICK = 350, DRAG_START = 5;
+// A knob keeps the spot where it was grabbed, so pressing it leaves its value alone; a press on the
+// track or chart around it still jumps there.
+const KNOB = '.aid-graphic-handle, .aid-spectrum-handle, .aid-vector-point, .aid-phase-mark, ' +
+             '.aid-bend, .aid-sight-light circle, .aid-vision-handle, .aid-probe-handle';
+function knobGrip(event) {
+  const knob = event.target.closest?.(KNOB);
+  const mark = knob?.matches('g') ? knob.querySelector('circle') ?? knob : knob;
+  const box = mark?.getBoundingClientRect();
+  return box ? {
+    x : event.clientX,
+    y : event.clientY,
+    dx : box.left + box.width / 2 - event.clientX,
+    dy : box.top + box.height / 2 - event.clientY,
+    moved : false
+  }
+             : null;
+}
 export const handleMethods = {
   tuneGraphic(event) {
     const control = this.handleDrag, bounds = control.rect;
@@ -484,8 +501,12 @@ export const handleMethods = {
   draftDesign(doc, batch, redraw = 'refreshInspector') {
     if (!doc)
       return;
-    if (!this.drafted)
+    if (!this.drafted) {
+      if (JSON.stringify(doc) === JSON.stringify(this.state.document))
+        return;
+      this.draftStart = this.state.document;
       this.recordHistory(batch);
+    }
     this.drafted = batch;
     this.state.document = doc;
     if (!this.draftFrame)
@@ -502,18 +523,41 @@ export const handleMethods = {
     if (!batch)
       return this.refreshInspector();
     this.drafted = null;
+    const start = this.draftStart;
+    this.draftStart = null;
+    if (JSON.stringify(this.state.document) === JSON.stringify(start)) {
+      // Dragged back to where it began: the developed fish and the undo list stay as they were.
+      this.state.document = start;
+      if (this.undoHistory.at(-1) === start)
+        this.undoHistory.pop();
+      this.historyBatch = null;
+      this.state.canUndo = this.undoHistory.length > 0;
+      this.refreshScene();
+      return this.refreshInspector();
+    }
     this.historyBatch = batch;
     this.changeDocument(this.state.document, this.state.selected, true, batch, true);
   },
   holdHandle(event, held, drag) {
-    this.handleDrag = {held, ...drag};
+    const knob = knobGrip(event);
+    this.handleDrag = {held, ...drag, knob};
     event.preventDefault();
-    this[HANDLES[held].follow](event);
+    if (!knob)
+      this[HANDLES[held].follow](event);
+  },
+  followHandle(event) {
+    const drag = this.handleDrag, knob = drag.knob;
+    if (!knob)
+      return this[HANDLES[drag.held].follow](event);
+    knob.moved ||= event.clientX !== knob.x || event.clientY !== knob.y;
+    if (knob.moved)
+      this[HANDLES[drag.held].follow](
+          {clientX : event.clientX + knob.dx, clientY : event.clientY + knob.dy});
   },
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {
     const how = HANDLES[this.handleDrag.held];
-    this[how.follow](event);
+    this.followHandle(event);
     // A drafted drag settles while still held, so a graphic drawn from the drag keeps the dragged
     // value until the design run answers.
     const drafted = !!this.drafted;

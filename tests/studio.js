@@ -811,6 +811,11 @@ function semanticFingerprint(source) {
       model.updateGrowth(doc, {active : 1, substance : 0, sensitivity : 1, half : .01, width : .3});
   doc = model.updateCenter(doc, gland.centerId, {q1 : 1, q2 : 0, qwidth : 0});
   assert.ok(model.producers(doc, 0, sitesResult).length >= 1);
+  const withoutSubstance = model.removeSubstance(doc, 0, sitesResult);
+  assert.ok(!model.findOrgan(withoutSubstance, gland.organId), 'Its glands go with a substance');
+  assert.equal(
+      model.producers(model.addSubstance(withoutSubstance, HORMONES.levels), 0, sitesResult).length,
+      0, 'A new substance inherits no gland');
   const phased =
       model.setLifePhase(doc, model.findOrgan(doc, id).centers[0].id, {start : .6, end : .9},
                          sitesResult.sensitivitySpan, sitesResult.steepnessSteps);
@@ -1768,6 +1773,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                        .map(c => c.receptors[HORMONE_EFFECT.teaching]);
     const untaught = model.teachOrgan(exampleDoc, pallium.id, null);
     assert.ok(taught(untaught, pallium).every(r => !r.active));
+    const regionModel = await import('../ui/studio/model/regions.js');
+    const settled = regionModel.updateRegion(exampleDoc, pallium.id, {}, sites);
+    const learner = model.findOrgan(settled, pallium.id).centers.find(model.isLearner);
+    const restyled = regionModel.updateRegion(
+        model.updateCenter(settled, learner.id, {qwidth : .7}), pallium.id, {style : 2}, sites);
+    const restyledLearner = model.findCenter(restyled, learner.id).center;
+    assert.equal(restyledLearner.qwidth, .7, 'A new learning style keeps a hand-tuned rate');
+    assert.notEqual(restyledLearner.mode, learner.mode);
     const byGrowth = model.teachOrgan(untaught, pallium.id, 0);
     assert.ok(taught(byGrowth, pallium).length > 0 &&
               taught(byGrowth, pallium).every(r => r.active && r.substance === 0));

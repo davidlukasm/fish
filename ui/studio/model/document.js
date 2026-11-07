@@ -927,8 +927,14 @@ export function setSubstance(doc, index, name) {
   entry.name = String(name).slice(0, SUBSTANCE_NAME_LENGTH);
   return draft;
 }
-export function removeSubstance(doc, index) {
-  const draft = copy(doc);
+export function removeSubstance(doc, index, wheel) {
+  // Its glands go with it: left alone they would go on secreting it, and the next new substance
+  // would take over its place on the wheel and with it the glands.
+  const glands =
+      doc.organs.filter(o => o.type === 'gland' && o.centers.length &&
+                             o.centers.every(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth,
+                                                                index) >= NOTICEABLE_AFFINITY));
+  const draft = copy(glands.reduce((d, o) => removeOrgan(d, o.id) ?? d, doc));
   draft.substances = draft.substances.filter(s => s.index !== index);
   for (const center of allCenters(draft))
     for (const receptor of center.receptors)

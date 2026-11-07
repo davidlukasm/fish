@@ -1,5 +1,5 @@
 import {markedKind} from './events.js';
-import {DRAG_CLICK, DRAG_START, GRIPS, HANDLES} from './handles.js';
+import {DRAG_CLICK, DRAG_START, GRIPS} from './handles.js';
 import {fieldPlacements} from './model/placement.js';
 import {
   closestSite,
@@ -151,7 +151,7 @@ export const gestureMethods = {
   },
   pointerMove(event) {
     if (this.handleDrag)
-      return this[HANDLES[this.handleDrag.held].follow](event);
+      return this.followHandle(event);
     const drag = this.pointer;
     if (!drag) {
       const svg = event.target?.closest?.(BODY_MAP);

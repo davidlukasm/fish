@@ -427,14 +427,15 @@ export const FISH_CLICKS = Object.freeze([
       if (!doc)
         return;
       studio.state.focusSubstance = index;
-      studio.changeDocument(doc, studio.state.selected);
+      studio.changeDocument(doc, null);
       studio.setTool('hormone');
     }
   ],
   [
     '[data-remove-substance]',
     (studio, e) =>
-        keep(studio, removeSubstance(studio.state.document, Number(e.dataset.removeSubstance)))
+        keep(studio, removeSubstance(studio.state.document, Number(e.dataset.removeSubstance),
+                                     studio.state.capabilities))
   ],
   [
     '[data-growth-off]',
@@ -473,10 +474,10 @@ export const FISH_CLICKS = Object.freeze([
     '[data-receptor-substance]',
     (studio, e) => {
       const id = e.dataset.centerId;
-      studio.changeDocument(
-          updateReceptor(studio.state.document, id, Number(e.dataset.receptorEffect),
-                         {substance : Number(e.dataset.receptorSubstance), active : 1}),
-          {kind : 'center', id});
+      studio.changeDocument(bindReceptor(studio.state.document, id,
+                                         Number(e.dataset.receptorEffect),
+                                         Number(e.dataset.receptorSubstance)),
+                            {kind : 'center', id});
     }
   ],
   [

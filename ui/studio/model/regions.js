@@ -326,8 +326,10 @@ export function settleRegions(doc, sites) {
       center.band = n.band ?? null;
       center.type = n.type ?? null;
       center.stream = n.stream ?? null;
-      if (JSON.stringify(center.planned ?? null) !== JSON.stringify(n.set ?? null))
-        Object.assign(center, n.set);
+      // Only a planned value that changed is set again; a hand-tuned one beside it stays.
+      for (const [key, value] of Object.entries(n.set ?? {}))
+        if (center.planned?.[key] !== value)
+          center[key] = value;
       center.planned = n.set ?? null;
       if (center.key !== n.preset)
         Object.assign(center, {key : n.preset, ...presetOf(n.preset)});
