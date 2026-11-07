@@ -361,10 +361,11 @@ export class OrganStudio {
   stepHistory(action) {
     // Undo in the middle of a drag takes back the drag so far, redo drops it; what the drag does
     // after is a step of its own.
-    if (this.drafted && action === 'undo') {
+    const drafting = this.drafted && this.state.document !== this.draftStart;
+    if (drafting && action === 'undo') {
       this.undoHistory.push(this.draftStart);
       this.redoHistory.length = 0;
-    } else if (this.drafted)
+    } else if (drafting)
       this.state.document = this.draftStart;
     const source = action === 'undo' ? this.undoHistory : this.redoHistory;
     const target = action === 'undo' ? this.redoHistory : this.undoHistory;
