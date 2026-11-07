@@ -260,9 +260,11 @@ function regionCircuit(state, organ) {
     return '';
   const L = circuitLayout(doc, organ, members, links);
   const pairings = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
+  const sided = !!findOrgan(doc, organ.pair) ||
+                [...L.inPos.values(), ...L.outPos.values() ].some(p => p.side !== null);
   return '<svg class="aid-circuit" viewBox="0 0 ' + CIRCUIT.width + ' ' + L.height +
          '" role="img" aria-label="' + label('inspector.region.circuit') + '">' + arrowMarker() +
-         circuitFrame(L.height, !!findOrgan(doc, organ.pair)) +
+         circuitFrame(L.height, sided) +
          links.map(l => circuitLink(organ, l, L.from(l.from), L.to(l.to))).join('') +
          rowLabels(L.inputs, L.inPos).join('') + rowLabels(L.outputs, L.outPos).join('') +
          nodeFamilies(organ)

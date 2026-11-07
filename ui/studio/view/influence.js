@@ -15,9 +15,9 @@ import {
   endpointCenters,
   findCenter,
   growsWith,
+  isLearner,
   lifePhase,
   LEARNING_EFFECTS,
-  learnsAtAll,
   NOTICEABLE_AFFINITY,
   producers,
   receivers,
@@ -206,7 +206,7 @@ export function hormoneOverlay(state) {
           affinity : Math.max(...effects.map(item => item.affinity)),
           focus : effects.some(item => item.effect === state.effect),
           teach :
-              learnsAtAll(center) && effects.some(item => item.effect === HORMONE_EFFECT.teaching),
+              isLearner(center) && effects.some(item => item.effect === HORMONE_EFFECT.teaching),
           effects : effects.map(item => item.effect),
           directions :
               effects.map(item => effectDirection(item.effect, center.receptors[item.effect]))

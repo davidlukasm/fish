@@ -907,7 +907,7 @@
     "reward": {
       "name": "Belohnung",
       "title": "Futter im Darm lehrt die Lernkreise, was zum Futter geführt hat.",
-      "needs": "Braucht Lernkreise, die noch keinen Lehrer haben.",
+      "needs": "Braucht Lernkreise, deren Lernen noch kein Stoff steuert.",
       "substance": "Belohnung"
     },
     "growth": {
@@ -919,7 +919,7 @@
     "alarm": {
       "name": "Alarm",
       "title": "Schmerz meldet sich über das Stammhirn: ohne Schmerz ziehen die Muskeln halb so stark, bei Schmerz voll.",
-      "needs": "Braucht Muskeln, deren Signal noch kein Stoff lauter oder leiser macht.",
+      "needs": "Braucht Muskeln, deren Signal noch nichts lauter oder leiser macht.",
       "substance": "Alarmstoff"
     }
   },

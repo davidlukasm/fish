@@ -1801,10 +1801,12 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(strength.substance, alarm.substance);
     assert.equal(model.effectDirection(HORMONE_EFFECT.output, strength), 1,
                  'The alarm substance makes the muscles stronger');
-    const chosen = {key : 'relay', role : 'nerve', sign : 1, mode : .9, receptors : []};
+    const chosen =
+        {key : 'relay', role : 'nerve', sign : 1, mode : .9, qwidth : .35, receptors : []};
     assert.ok(model.isLearner(chosen) && organsModel.nerveKind(chosen) === 'learn',
               'A node counts as a learner wherever it is drawn as one');
-    assert.ok(!model.isLearner({...chosen, mode : 0}));
+    assert.ok(!model.isLearner({...chosen, mode : 0}) && !model.isLearner({...chosen, qwidth : 0}),
+              'A node that neither leans nor has a teacher, or learns at no rate, does not learn');
     assert.ok(alarm.document.wires.some(
         w => w.to === alarm.organId ||
              w.to === model.findOrgan(alarm.document, alarm.organId).pair));

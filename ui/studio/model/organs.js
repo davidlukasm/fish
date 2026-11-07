@@ -34,9 +34,9 @@ export const isPacemaker = center => center.pace > MODULATING;
 // How a nerve learns by itself: 1 choosing among its inputs, -1 balancing them, 0 not at all.
 const MODE_LEAN = 1 / 3;
 export const modeLean = mode => mode > MODE_LEAN ? 1 : mode < -MODE_LEAN ? -1 : 0;
-// A nerve learns when it is a learning node, learns by itself or has a teacher.
-export const learns = center => center.key === 'learn' || modeLean(center.mode) !== 0 ||
-                                !!center.receptors?.[HORMONE_EFFECT.teaching]?.active;
+export const learns = center =>
+    center.qwidth > 0 && (center.key === 'learn' || modeLean(center.mode) !== 0 ||
+                          !!center.receptors?.[HORMONE_EFFECT.teaching]?.active);
 export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : isPacemaker(center) ? 'pacemaker'
                                    : center.sign < 0     ? 'inhibit'

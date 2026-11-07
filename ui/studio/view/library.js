@@ -221,9 +221,8 @@ const SYSTEM_ICON = Object.freeze({
 });
 export const systemNeed = (key, missing) =>
     missing === 'full' ? 'systems.full' : 'systems.' + key + '.needs';
-// A system that cannot join the fish yet is greyed, its hover saying what it still needs.
 const systemTile = (state, key) => {
-  const missing = state.capabilities ? systemMissing(state.document, key) : 'needs';
+  const missing = systemMissing(state.document, key), ready = !missing && !!state.capabilities;
   const title = label('systems.' + key + '.title');
   return tile({
     kind : 'system',
@@ -231,9 +230,11 @@ const systemTile = (state, key) => {
     name : label('systems.' + key + '.name'),
     path : SYSTEM_ICON[key],
     colour : BODY_SIGNAL,
-    title : title + ' ' + label(missing ? systemNeed(key, missing) : 'systems.fits'),
-    off : !!missing,
-    suggested : !missing
+    title : missing ? title + ' ' + label(systemNeed(key, missing))
+            : ready ? title + ' ' + label('systems.fits')
+                    : title,
+    off : !ready,
+    suggested : ready
   });
 };
 const systemsSection = (state, keys) =>

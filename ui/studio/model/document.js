@@ -163,7 +163,6 @@ export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.teaching, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.eligibility
 ]);
-export const learnsAtAll = center => center.role === 'nerve' && center.qwidth > 0;
 export const isLearner = center => center.role === 'nerve' && learns(center);
 export function teachersOf(doc, center, wheel) {
   return doc.substances

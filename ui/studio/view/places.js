@@ -59,7 +59,7 @@ const BRAIN_END = BRAIN.cerebellum.x + BRAIN.cerebellum.rx;
 // behind the brain, where organs line the cord, further back along the cord.
 export function slotRow(organ, points, count, zoom) {
   const R = REGION_CHIP, xs = points.map(p => p.x), at = centroid(points);
-  if (Math.min(...xs) > BRAIN_END)
+  if (isRegion(organ) && Math.min(...xs) > BRAIN_END)
     return {x : Math.max(...xs) + (R.away + count * (R.width + R.gap) / 2) / zoom, y : at.y};
   const out = sideOf(organ);
   return {
