@@ -17,14 +17,14 @@ import {percent, t} from '../../strings.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 
 const SKIN_FIELD = Object.freeze({
-  width : 300,
-  height : 140,
-  cx : 140,
-  cy : 70,
+  width : 334,
+  height : 196,
+  cx : 174,
+  cy : 98,
   scale : .26,
   step : 6,
   hair : 16,
-  length : [ 10, 70 ],
+  length : [ 10, 180 ],
   fork : .3,
   least : .05,
   handle : 7,
@@ -139,8 +139,17 @@ export function skinPatch(state, center, aim, handle, fx, fy, start) {
     return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
   }
   const sensitive = skinSensitivity(state, aim, fx, fy);
-  if (!start?.intensity)
-    return {threshold : planOfUnit(activationQuality(1 - sensitive))};
+  if (!start?.intensity) {
+    // The shown sensitivity comes from the design run's answer, so the drag moves the threshold by
+    // as much as the knob moves from it instead of setting the threshold the knob would read alone.
+    const from = start?.half > 0 ? 1 - stimulusShare(start.half, null) : null;
+    return {
+      threshold : planOfUnit(from === null
+                                 ? activationQuality(1 - sensitive)
+                                 : unitOfPlan(start.threshold) + activationQuality(1 - sensitive) -
+                                       activationQuality(1 - from))
+    };
+  }
   const dimmest = state.anatomy?.lightDimmest;
   if (!(dimmest > 0) || !(start.half > 0))
     return null;
