@@ -505,7 +505,7 @@ function assemblyInspector(state, assembly) {
          '<div class="aid-button-group aid-module-actions"><button data-save-assembly="' +
          escapeText(assembly.id) + '">' + label('inspector.saveModule') + '</button>' +
          '<button data-ungroup-assembly="' + escapeText(assembly.id) + '">' +
-         label('inspector.ungroup') + '</button>' +
+         label('inspector.ungroup') + '</button></div><div class="aid-inspector-actions">' +
          '<button class="aid-danger" data-remove-assembly="' + escapeText(assembly.id) + '">' +
          label('inspector.removeModule') + '</button></div>';
 }

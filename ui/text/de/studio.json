@@ -373,7 +373,7 @@
     "sideByWires": "Die Seite bestimmen hier die Verbindungen (gleichseitig oder gekreuzt); der Punkt stellt nur die Reichweite.",
     "oneSided": "Diese Baugruppe liegt nur auf einer Seite; ihr Spiegelbild ergänzt die andere.",
     "bothSides": "Diese Baugruppe liegt schon auf beiden Seiten.",
-    "removeModule": "Löschen",
+    "removeModule": "Baugruppe entfernen",
     "partOf": "Teil von",
     "strength": "Kraft {share}",
     "moduleName": "Name der Baugruppe",
@@ -917,8 +917,8 @@
     },
     "alarm": {
       "name": "Alarm",
-      "title": "Schmerz meldet sich über das Stammhirn: ohne Schmerz arbeiten die Muskeln mit halber Kraft, bei Schmerz mit voller.",
-      "needs": "Braucht Muskeln, deren Kraft noch kein Stoff steuert.",
+      "title": "Schmerz meldet sich über das Stammhirn: ohne Schmerz ziehen die Muskeln halb so stark, bei Schmerz voll.",
+      "needs": "Braucht Muskeln, deren Signal noch kein Stoff lauter oder leiser macht.",
       "substance": "Alarmstoff"
     }
   },
