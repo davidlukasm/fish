@@ -79,6 +79,21 @@ int main() {
     limited.compile(false);
     assert(!limited.blueprint->resource_limited);
     assert(limited.blueprint->edges.size() == before.edges.size());
+    auto sibling = original;
+    sibling.variation_seed ^= 1;
+    sibling.compile(false);
+    assert(sibling.same_genes(original));
+    assert(sibling.blueprint->neurons.size() == before.neurons.size());
+    const auto edges = [](const auto &g) {
+      std::vector<std::tuple<field::NeuronIndex, field::NeuronIndex, float>> result;
+      for (const auto &e : g.blueprint->edges)
+        result.emplace_back(e.source, e.target, e.weight);
+      return result;
+    };
+    assert(edges(sibling) != edges(original));
+    const auto first_build = edges(sibling);
+    sibling.compile(false);
+    assert(edges(sibling) == first_build);
   }
   for (int count : {20, 80}) {
     auto p = cells(count);

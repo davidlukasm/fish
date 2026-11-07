@@ -368,7 +368,7 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
   const auto &t = *g.blueprint;
   const int n = int(p.groups.size());
   const Wiring w(p);
-  std::vector<int> group(t.neurons.size(), -1), counts(n);
+  std::vector<int> group(t.neurons.size(), -1), counts(n), representatives(n, -1);
   std::vector<double> capacities(n);
   std::vector<float> deviations(n);
   std::vector<bool> identities(n);
@@ -378,6 +378,7 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
     for (int j = 0; j < n; ++j)
       if (p.groups[j].contains(cell.location)) {
         group[i] = j;
+        representatives[j] = int(i);
         ++counts[j];
         capacities[j] += cell.strength * cell.parameters.capacity;
         const auto &want = p.groups[j];
@@ -433,15 +434,23 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
           result.issues.push_back({"contact", a, b, double(contacts[a][b])});
       }
   std::map<int, std::pair<int, Connection>> bundles;
+  std::set<int> possibleBundles;
   for (const auto &c : p.connections) {
     auto &bundle = bundles[c.bundle];
     bundle.first += contacts[c.from][c.to];
+    if (representatives[c.from] >= 0 && representatives[c.to] >= 0 &&
+        (c.from != c.to || counts[c.from] > 1) &&
+        field::contact_parameters(t.neurons[representatives[c.from]],
+                                  t.neurons[representatives[c.to]], t.body_length)
+                .probability > 0)
+      possibleBundles.insert(c.bundle);
     bundle.second = c;
   }
   for (const auto &[id, bundle] : bundles)
     if (!bundle.first) {
       ++result.missing;
-      result.issues.push_back({"missing", bundle.second.from, bundle.second.to});
+      if (!possibleBundles.count(id))
+        result.issues.push_back({"missing", bundle.second.from, bundle.second.to});
     }
   // Expected excluded candidates, before input-slot competition. The same probabilities also
   // govern later synapse formation, so a fortunate initial draw cannot hide a broad receiver.

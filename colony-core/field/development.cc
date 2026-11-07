@@ -200,8 +200,9 @@ class CellGrowth {
   std::vector<Option> accepted;
   std::vector<Edge> edges;
   double length = 0;
+  const std::uint64_t individual_seed;
   std::uint64_t hash(std::uint64_t a, std::uint64_t b, std::uint64_t stream) const {
-    return splitmix(splitmix(owner.development_seed ^ (a * CONNECTION_HASH_PRIME)) ^
+    return splitmix(splitmix(individual_seed ^ (a * CONNECTION_HASH_PRIME)) ^
                     splitmix(b + CONNECTION_HASH_SALT * stream));
   }
   void finish() {
@@ -216,7 +217,8 @@ class CellGrowth {
 public:
   CellGrowth(Substrate &o, const std::vector<Candidate> &c)
       : owner(o), candidates(c), copier(o.neurons, std::min(o.options.max_nodes, MAX_NODES)),
-        usable(o.neurons.size()) {}
+        usable(o.neurons.size()), individual_seed(o.development_seed ^ splitmix(o.variation_seed)) {
+  }
   bool advance(std::size_t &budget) {
     while (budget && stage != Done) {
       --budget;
