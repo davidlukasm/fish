@@ -462,6 +462,7 @@ export class OrganStudio {
       this.state.visionProfile = cell.center.profile;
     this.stopPulse();
     this.bringProbes();
+    this.showTestLight();
     this.refreshScene();
     this.refreshInspector(true);
   }

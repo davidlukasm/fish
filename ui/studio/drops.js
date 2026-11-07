@@ -22,7 +22,6 @@ import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.
 import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
-import {testLightPoint} from './view/vision.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
 import {armedCursor, systemNeed} from './view/library.js';
 import {label} from './view/kit.js';
@@ -274,10 +273,8 @@ export const dropMethods = {
     this.state.selected = {kind : 'organ', id : organ.id};
     this.bringProbes();
     this.requestDesign();
+    this.showTestLight();
     this.refreshViews();
-    const light = testLightPoint(this.state, organ);
-    if (light)
-      this.keepInView(light);
     this.stimulate(organ.centers.map(c => c.id));
   },
   ontoNerve(kind, value) {

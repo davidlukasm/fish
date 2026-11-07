@@ -5,6 +5,7 @@ import {
   nearObject,
   sensitivityEditor,
   spectrumEditor,
+  testLightPoint,
   visionFan
 } from './view/vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
@@ -47,6 +48,14 @@ export const designMethods = {
   },
   refreshScentMaps() {
     this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
+  },
+  // The test light waits beyond the field's handles, at full size often under the tool bar. A view
+  // zoomed in on purpose stays as it is.
+  showTestLight() {
+    const organ = organOf(this.state.document, this.state.selected?.id);
+    const light = organ && testLightPoint(this.state, organ);
+    if (light && this.state.camera.zoom <= 1)
+      this.keepInView(light);
   },
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
