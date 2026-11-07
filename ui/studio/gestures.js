@@ -32,6 +32,9 @@ import {placementPreview} from './view/placing.js';
 const PRESSED_ITEMS = Object.freeze([ 'contact', 'center', 'assembly', 'organ', 'wire' ]);
 const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
 const MOVED_ITEMS = Object.freeze([ 'organ', 'center', 'assembly' ]);
+// Room the floating tool bar takes at the map's left edge, and a little air at the others, in fish
+// units at full size.
+const VIEW_ROOM = Object.freeze({left : 80, edge : 20});
 const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 export const gestureMethods = {
   zoom(direction, anchor = null) {
@@ -73,11 +76,11 @@ export const gestureMethods = {
       stamp.textContent = zoomStamp(c);
   },
   keepInView(point) {
-    const c = this.state.camera;
+    const c = this.state.camera, R = VIEW_ROOM;
     const inside = () => {
-      const box = cameraBox(c);
-      return point.x >= box.x && point.x <= box.x + box.width && point.y >= box.y &&
-             point.y <= box.y + box.height;
+      const box = cameraBox(c), z = c.zoom;
+      return point.x >= box.x + R.left / z && point.x <= box.x + box.width - R.edge / z &&
+             point.y >= box.y + R.edge / z && point.y <= box.y + box.height - R.edge / z;
     };
     while (!inside() && c.zoom > CAMERA_ZOOM.min)
       this.zoom('out');

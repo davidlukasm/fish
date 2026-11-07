@@ -168,11 +168,18 @@ function seenLight(state, organ, g) {
   });
   return html + '</g>';
 }
-function testLight(state, organ, g) {
+const lightAt = (state, organ, g) => {
   const probe = state.sightProbe;
-  if (!probe || !g.world || probe.side !== sideOf(organ))
+  return probe && g?.world && probe.side === sideOf(organ)
+             ? g.pointText(probe.bearing, probe.distance * g.world)
+             : null;
+};
+export const testLightPoint = (state, organ) => lightAt(state, organ, visionGeometry(state, organ));
+function testLight(state, organ, g) {
+  const probe = state.sightProbe, c = lightAt(state, organ, g);
+  if (!c)
     return '';
-  const c = g.pointText(probe.bearing, probe.distance * g.world), r = probe.radius * g.world;
+  const r = probe.radius * g.world;
   const near = organ.type === 'proximity';
   return `<g class="aid-sight-light"><circle data-vision-handle="probe" data-vision-id="${
              idSafe(organ.id)}" cx="${fixed(c.x)}" cy="${fixed(c.y)}" r="${fixed(r)}" fill="${
