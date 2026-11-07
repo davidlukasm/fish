@@ -52,10 +52,14 @@ const pointAt = (angle, r) => {
   const d = bodyDirection(angle);
   return {x : BODY_MIDDLE.x + d.x * r, y : BODY_MIDDLE.y + d.y * r};
 };
-const beyondSkin = distance => (distance - PROBE_LIMITS.least.smell) * BODY_RADIUS;
+// Every distance a scent is tried at lies within one body radius beyond the skin, on a log scale,
+// so the answer changes within reach of the drag instead of only far outside the view.
+const SMELL_SPAN = Math.log(PROBE_LIMITS.most.smell / PROBE_LIMITS.least.smell);
+const beyondSkin = distance =>
+    BODY_RADIUS * Math.log(distance / PROBE_LIMITS.least.smell) / SMELL_SPAN;
 const distanceAt = beyond =>
-    Math.max(PROBE_LIMITS.least.smell,
-             Math.min(PROBE_LIMITS.most.smell, PROBE_LIMITS.least.smell + beyond / BODY_RADIUS));
+    clamp(PROBE_LIMITS.least.smell * Math.exp(SMELL_SPAN * beyond / BODY_RADIUS),
+          PROBE_LIMITS.least.smell, PROBE_LIMITS.most.smell);
 const strengthShare = (strength, kind, faintest) =>
     Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
                     Math.log(PROBE_LIMITS.most[kind] / faintest));

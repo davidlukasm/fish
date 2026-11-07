@@ -2,7 +2,10 @@ export const SNAP_DISTANCE = 95;
 const PLACEMENT_MARGIN = 120;
 export const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], [ 780, 964 ] ]);
 export const ZONE = Object.freeze({snout : 0, head : 1, trunk : 2, tail : 3});
-export const nerveZone = site => site.zone === ZONE.head || site.zone === ZONE.trunk;
+// Single nerve nodes sit inside the brain and the cord, where the regions sit, never out at the
+// body wall.
+export const nerveZone = site =>
+    !site.outer && (site.zone === ZONE.head || site.zone === ZONE.trunk);
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
 export const BODY_MIDDLE =
