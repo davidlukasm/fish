@@ -84,111 +84,6 @@ void excitation_and_teaching_are_independent() {
   check(local.surprise(LEARNER) > 0 && combined.surprise(LEARNER) > local.surprise(LEARNER),
         "local modulators and hormonal teaching add together");
 }
-void motor_learning_respects_fixed_connections_and_budget() {
-  constexpr field::NeuronIndex FIRST = 0, SECOND = 1, FIXED = 2, DUST = 3, LEARNER = 4, OTHER = 5,
-                               NEW_FIXED = 6, NEW_LEARNER = 7, MOTOR = 8;
-  constexpr int CELLS = MOTOR + 1, TICKS = 320, TEACH = 0, PAUSE = 1;
-  constexpr float FIXED_WEIGHT = .8f, SMALL_WEIGHT = .001f, LEARNED_WEIGHT = .5f, INPUT = .8f,
-                  EPSILON = 1e-6f, HALF = .1f;
-  const auto brain = [&](bool allow_learning_source) {
-    std::vector<field::Neuron> neurons(CELLS);
-    for (int i = 0; i < CELLS; ++i) {
-      auto &n = neurons[i];
-      n.id = n.group = i;
-      n.role = i < FIXED    ? field::Role::Sensor
-               : i == MOTOR ? field::Role::Effector
-                            : field::Role::Nerve;
-      n.functional = true;
-      n.slots = CELLS;
-      n.identity = {1, 1, 0, -1, -1};
-      n.parameters.plasticity = i == LEARNER || i == OTHER || i == NEW_LEARNER ? .5f : 0;
-      n.hormone_receptors[field::Output].baseline = 1;
-      if (n.role == field::Role::Sensor) {
-        n.functions.internal = 0;
-        n.functions.senses[field::Touch] = 1;
-      } else if (n.role == field::Role::Effector) {
-        n.functions.internal = 0;
-        n.functions.motors[field::Forward] = 1;
-      } else {
-        auto &r = n.hormone_receptors[field::Teaching];
-        r.affinity[TEACH] = r.sensitivity = 1;
-        r.half = HALF;
-      }
-    }
-    neurons[DUST].parameters.plasticity = field::MIN_LEARNING_RATE / 8;
-    neurons[LEARNER].parameters.time_constant = 0;
-    auto &pause = neurons[LEARNER].hormone_receptors[field::Learning];
-    pause.affinity[PAUSE] = 1;
-    pause.sensitivity = -field::HORMONE_SENSITIVITY_SPAN;
-    pause.half = HALF;
-    auto s = std::make_shared<field::Substrate>(std::move(neurons));
-    for (field::NeuronIndex i = FIXED; i < MOTOR; ++i) {
-      s->edges.push_back({FIRST, i, LEARNED_WEIGHT});
-      s->edges.push_back({SECOND, i, LEARNED_WEIGHT});
-    }
-    s->edges.insert(s->edges.end(), {{FIXED, MOTOR, FIXED_WEIGHT},
-                                     {DUST, MOTOR, SMALL_WEIGHT},
-                                     {LEARNER, MOTOR, LEARNED_WEIGHT},
-                                     {OTHER, MOTOR, LEARNED_WEIGHT}});
-    s->partners = {{allow_learning_source ? NEW_LEARNER : NEW_FIXED, 1, 1}};
-    s->partner_offset.assign(CELLS + 1, 0);
-    s->partner_offset.back() = s->partners.size();
-    return field::Network(s);
-  };
-  const auto weight = [&](const field::Network &net, field::NeuronIndex source) {
-    for (const auto &edge : net.synapses())
-      if (edge.source == source && edge.target == MOTOR)
-        return edge.weight;
-    return -1.f;
-  };
-  const auto saved_brain = [](const field::Network &net) {
-    std::ostringstream out;
-    net.write_runtime(out);
-    return out.str();
-  };
-  for (bool allow_learning_source : {false, true}) {
-    auto net = brain(allow_learning_source);
-    const double budget = FIXED_WEIGHT + SMALL_WEIGHT + 2 * double(LEARNED_WEIGHT);
-    bool changed = false, formed = false;
-    float paused_weight = 0;
-    for (int tick = 0; tick < TICKS; ++tick) {
-      field::Hormones h{};
-      h[TEACH] = tick % 3 == 0;
-      if (tick == TICKS / 2)
-        paused_weight = weight(net, LEARNER);
-      if (tick >= TICKS / 2)
-        h[PAUSE] = 1;
-      net.step({tick % 2 ? INPUT : 0, tick % 2 ? 0 : INPUT}, h, SEED);
-      check(weight(net, FIXED) == FIXED_WEIGHT && weight(net, DUST) == SMALL_WEIGHT,
-            "learning and pruning preserve fixed motor inputs, including tiny learning rates");
-      check(weight(net, NEW_FIXED) < 0, "basal formation cannot bypass a fixed source");
-      if (tick >= TICKS / 2)
-        check(weight(net, LEARNER) == paused_weight, "a hormonally paused motor input stays fixed");
-      double total = 0;
-      for (const auto &edge : net.synapses()) {
-        if (edge.target == MOTOR)
-          total += std::abs(double(edge.weight));
-        if (edge.target == DUST || edge.target == FIXED)
-          check(edge.weight == edge.formed, "a fixed nerve input does not learn");
-      }
-      check(std::abs(total - budget) < EPSILON, "motor turnover preserves the inherited total");
-      changed |= weight(net, OTHER) != LEARNED_WEIGHT;
-      formed |= weight(net, NEW_LEARNER) >= 0;
-    }
-    check(changed, "the protection leaves learning active");
-    check(formed == allow_learning_source, "allowed plastic candidates can form motor inputs");
-    auto restored = brain(allow_learning_source);
-    std::istringstream state(saved_brain(net));
-    restored.read_runtime(state);
-    for (int tick = 0; tick < STEPS; ++tick) {
-      field::Hormones h{};
-      h[TEACH] = tick % 2;
-      net.step({INPUT, 0}, h, SEED);
-      restored.step({INPUT, 0}, h, SEED);
-    }
-    check(saved_brain(net) == saved_brain(restored), "turnover and its budget survive saving");
-  }
-}
 Ecosystem closed_tank(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
@@ -445,7 +340,6 @@ int main() {
   try {
     Genome::begin_run(SEED);
     excitation_and_teaching_are_independent();
-    motor_learning_respects_fixed_connections_and_budget();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
