@@ -247,25 +247,17 @@ export const handleMethods = {
     const patch = pad.patch(fx, fy, item, this.state);
     if (Object.entries(patch).every(([ key, value ]) => Math.abs(value - item[key]) < PAD_STILL))
       return;
-    if (!control.changed) {
-      this.recordHistory('graphic:' + control.id);
-      control.changed = true;
-      this.refreshTools();
-    }
-    this.state.document =
-        pad.wire ? updateWire(doc, control.id, patch) : updateCenter(doc, control.id, patch);
-    this.designChanged();
-    this.requestDesign();
-    if (pad.redraw)
-      this[pad.redraw]();
-    else
+    // A pad that draws itself follows once a frame; one with marks moves them at once and lets the
+    // fish follow once a frame, as a pad like the signal reach is read on the fish.
+    this.draftDesign(pad.wire ? updateWire(doc, control.id, patch)
+                              : updateCenter(doc, control.id, patch),
+                     'graphic:' + control.id, pad.redraw ?? 'refreshScene');
+    if (!pad.redraw)
       for (const [selector, attributes] of Object.entries(
                pad.marks({...item, ...patch}, this.state)))
         for (const mark of control.element.querySelectorAll(selector))
           for (const [name, value] of Object.entries(attributes))
             mark.setAttribute(name, fixed(value));
-    this.refreshScene();
-    this.refreshHeader();
   },
   learnReceptorPointer(control, fx) {
     const doc = this.state.document, effect = Number(control.element.dataset.learnEffect);
@@ -450,7 +442,7 @@ export const handleMethods = {
         (b, k) => k === drag.index
                       ? {x : p.x, y : drag.mirrored ? 2 * BODY_FRAME.middle - p.y : p.y}
                       : b);
-    this.tuneDesign(setBends(doc, drag.wires, bends), 'bend:' + drag.wires[0]);
+    this.draftDesign(setBends(doc, drag.wires, bends), 'bend:' + drag.wires[0], 'refreshScene');
   },
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe,
@@ -486,7 +478,6 @@ export const handleMethods = {
     } else
       this.editField(organ.id, patch, false);
   },
-  tuneDesign(doc, batch) { return this.changeDocument(doc, this.state.selected, false, batch);},
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
   // follows, once a frame; the fish, the library and the design run catch up when it is let go, so
   // dragging stays smooth.
