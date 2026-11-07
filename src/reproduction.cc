@@ -330,10 +330,8 @@ void Ecosystem::reproduction(bool fertile) {
         Genome child;
         try {
           child = Genome::cross(egg.genome, cloud.genome, rng, 1, 1, false);
-          child.development_options.stop_at_resource_limit = true;
           child.mutate(rng, mutation_strength(), false, evo.rates);
           child.begin_individual(rng);
-          child.development_options.stop_at_resource_limit = false;
           if (child.cppn->nodes() > MAX_GENOME_NODES ||
               child.cppn->get_connection_genes().size() > MAX_GENOME_CONNECTIONS)
             throw std::length_error("Technical CPPN genotype budget exceeded");

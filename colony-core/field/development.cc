@@ -204,6 +204,14 @@ class CellGrowth {
     return splitmix(splitmix(owner.development_seed ^ (a * CONNECTION_HASH_PRIME)) ^
                     splitmix(b + CONNECTION_HASH_SALT * stream));
   }
+  void finish() {
+    owner.neurons = std::move(cells);
+    owner.edges = std::move(edges);
+    owner.built_neurons = owner.neurons.size();
+    owner.built_edges = owner.edges.size();
+    owner.built_length = length;
+    stage = Done;
+  }
 
 public:
   CellGrowth(Substrate &o, const std::vector<Candidate> &c)
@@ -222,6 +230,10 @@ public:
           owner.diagnostic = "Technical cell limit";
         }
         cells = copier.take(copies);
+        if (owner.resource_limited) {
+          finish();
+          break;
+        }
         classes.reserve(cells.size());
         stage = Classes;
         break;
@@ -264,12 +276,7 @@ public:
         break;
       case Draw:
         if (cursor == cells.size()) {
-          owner.neurons = std::move(cells);
-          owner.edges = std::move(edges);
-          owner.built_neurons = owner.neurons.size();
-          owner.built_edges = owner.edges.size();
-          owner.built_length = length;
-          stage = Done;
+          finish();
           break;
         }
         {
@@ -298,7 +305,8 @@ public:
             if (edges.size() + accepted.size() > owner.options.max_edges) {
               owner.resource_limited = true;
               owner.diagnostic = "Technical synapse limit";
-              accepted.resize(owner.options.max_edges - edges.size());
+              finish();
+              break;
             }
             copy = 0;
             stage = Commit;
@@ -493,6 +501,11 @@ struct Substrate::GridDevelopment {
           return false;
         s.growth.reset();
         s.candidates.clear();
+        // A technical limit rejects the whole brain; topology construction cannot rescue it.
+        if (owner.resource_limited) {
+          s.stage = GridState::Done;
+          return true;
+        }
         s.stage = GridState::Finish;
       }
       if (!owner.finish_development(budget))

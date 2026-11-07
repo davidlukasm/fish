@@ -109,7 +109,7 @@ std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t l
                                 std::vector<std::vector<NeuronIndex>> &copies, bool &limited);
 struct Options {
   float bias_scale = .3f;
-  bool reference_development = false, stop_at_resource_limit = false;
+  bool reference_development = false;
   std::size_t max_nodes = 8192, max_edges = 65536;
   void validate() const;
 };

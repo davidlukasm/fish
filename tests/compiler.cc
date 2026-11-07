@@ -61,6 +61,24 @@ int main() {
       assert(a.source == b.source && a.target == b.target);
       assert(std::abs(a.weight - b.weight) < 1e-5);
     }
+    auto limited = original;
+    limited.development_options.max_edges = 1;
+    limited.compile(false);
+    assert(limited.blueprint->resource_limited && !limited.viable());
+    assert(limited.blueprint->diagnostic == "Technical synapse limit");
+    assert(!limited.blueprint->network_layout);
+    assert(limited.blueprint->development_work() < before.development_work());
+    limited.development_options = original.development_options;
+    limited.development_options.max_nodes = 1;
+    limited.compile(false);
+    assert(limited.blueprint->resource_limited && !limited.viable());
+    assert(limited.blueprint->diagnostic == "Technical cell limit");
+    assert(!limited.blueprint->network_layout);
+    limited.development_options = original.development_options;
+    limited.development_options.max_edges = before.edges.size();
+    limited.compile(false);
+    assert(!limited.blueprint->resource_limited);
+    assert(limited.blueprint->edges.size() == before.edges.size());
   }
   for (int count : {20, 80}) {
     auto p = cells(count);
