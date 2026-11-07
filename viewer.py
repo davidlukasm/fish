@@ -62,7 +62,7 @@ def arguments(argv=None):
         parser.add_argument("--" + name, type=int, default=default)
     parser.add_argument(
         "--compute",
-        choices=["cpu", "opencl-optics", "opencl-graphics"],
+        choices=["cpu", "opencl-optics"],
         default="cpu",
         help="CPU oder optionale GPU-Sichtdämpfung",
     )
@@ -78,8 +78,6 @@ def arguments(argv=None):
         help=f"Schritte je CPU-/OpenCL-Durchlauf (1–{RunLimit.MAX_BENCHMARK_STEPS:,}; drei Wiederholungen)".replace(",", "."),
     )
     args = parser.parse_args(argv)
-    if args.compute == "opencl-graphics":
-        args.compute = "opencl-optics"
     if args.seed is None:
         args.seed = secrets.randbits(SEED_BITS)
     if args.threads == 0:

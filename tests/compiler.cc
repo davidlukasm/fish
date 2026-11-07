@@ -52,7 +52,7 @@ int main() {
     auto &g = plan.groups.front();
     g.copies = 4;
     g.tau = .1f;
-    g.learning_tau = 5.f / 7;
+    g.learning_tau = field::encode_learning_steps(128);
     g.teaching_strength = .6f;
     g.spread_physiology = .04f;
     g.spread_contacts = .03f;

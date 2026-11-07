@@ -22,7 +22,6 @@ inline constexpr OutputMask contact_mask = spread_mask(
     (1ull << expression) | (1ull << receiver1) | (1ull << receiver2) | (1ull << search_width));
 inline constexpr OutputMask property_mask =
     spread_mask((1ull << time_constant) | (1ull << synapse_strength));
-inline constexpr OutputMask cell_mask = (1ull << count) - 1;
 }
 constexpr int INPUTS = 12, BIAS = 11, OUTPUTS = output::count;
 namespace input {

@@ -201,9 +201,7 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
     return;
   auto normalize = [&](std::size_t n, float sum, float out) {
     auto first = code.controls.size() - code.outputs;
-    return n >= first && (code.tanh_outputs & (1ull << (n - first)))
-               ? std::tanh(sum)
-               : std::max(-1.f, std::min(1.f, out));
+    return output_value(sum, out, n >= first && (code.tanh_outputs & (1ull << (n - first))));
   };
   struct Cache {
     std::uint64_t id = 0;
@@ -269,6 +267,27 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
   std::unique_lock<std::mutex> observation_lock;
   if (record_work)
     observation_lock = genes->lock_observations();
+  const auto evaluate_cached = [&](std::size_t n) {
+    if (cache.ready[n])
+      return;
+    const auto &c = code.controls[n];
+    float sum = 0, gate = 0;
+    for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
+      auto &accumulator = code.ports[j] ? gate : sum;
+      accumulator = std::fma(cache.values[code.sources[j]], code.weights[j], accumulator);
+    }
+    const float out = c.type == int(evolution::NodeType::TOR) ? gated_activation(sum, gate)
+                                                              : activation(c.type, sum, c.bias);
+    if (std::isnan(out))
+      throw std::runtime_error("neuron produced NaN");
+    cache.values[n] = normalize(n, sum, out);
+    if (record_work) {
+      const auto d = derivatives(c, sum, gate, out);
+      cache.derivative[n] = d[0];
+      cache.gate_derivative[n] = d[1];
+    }
+    cache.ready[n] = 1;
+  };
   auto observe = [&](const auto &value, const auto &d, const auto &dg) {
     if (!record_work)
       return;
@@ -304,26 +323,7 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
       if (dependencies[i] & changed)
         cache.ready[i] = 0;
     for (auto n : plans.at(mask))
-      if (!cache.ready[n]) {
-        const auto &c = code.controls[n];
-        float sum = 0, gate = 0;
-        for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
-          auto &accumulator = code.ports[j] ? gate : sum;
-          accumulator = std::fma(cache.values[code.sources[j]], code.weights[j], accumulator);
-        }
-        float out = c.type == int(evolution::NodeType::TOR)
-                        ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
-                        : activation(c.type, sum, c.bias);
-        if (std::isnan(out))
-          throw std::runtime_error("neuron produced NaN");
-        cache.values[n] = normalize(n, sum, out);
-        if (record_work) {
-          const auto d = derivatives(c, sum, gate, out);
-          cache.derivative[n] = d[0];
-          cache.gate_derivative[n] = d[1];
-        }
-        cache.ready[n] = 1;
-      }
+      evaluate_cached(n);
     for (std::size_t i = 0; i < code.outputs; ++i)
       if (mask & (1ull << i))
         output[0][i] = cache.values[code.controls.size() - code.outputs + i];
@@ -369,25 +369,7 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
   for (auto n : plans.at(mask)) {
     const auto &c = code.controls[n];
     if (!(dependencies[n] & vary)) {
-      if (!cache.ready[n]) {
-        float sum = 0, gate = 0;
-        for (std::size_t j = c.offset; j < c.offset + c.count; ++j) {
-          auto &accumulator = code.ports[j] ? gate : sum;
-          accumulator = std::fma(cache.values[code.sources[j]], code.weights[j], accumulator);
-        }
-        float out = c.type == int(evolution::NodeType::TOR)
-                        ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
-                        : activation(c.type, sum, c.bias);
-        if (std::isnan(out))
-          throw std::runtime_error("neuron produced NaN");
-        cache.values[n] = normalize(n, sum, out);
-        if (record_work) {
-          const auto d = derivatives(c, sum, gate, out);
-          cache.derivative[n] = d[0];
-          cache.gate_derivative[n] = d[1];
-        }
-        cache.ready[n] = 1;
-      }
+      evaluate_cached(n);
       std::fill_n(state.data() + n * BATCH, count, cache.values[n]);
       if (record_work) {
         std::fill_n(cache.ds.data() + n * BATCH, count, cache.derivative[n]);
@@ -416,7 +398,7 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
           if (record_work)
             raw[p] = out;
           invalid |= std::isnan(out);
-          state[n * BATCH + p] = std::tanh(sum[p]);
+          state[n * BATCH + p] = output_value(sum[p], out, true);
         }
       else
         for (std::size_t p = 0; p < count; ++p) {
@@ -424,7 +406,7 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
           if (record_work)
             raw[p] = out;
           invalid |= std::isnan(out);
-          state[n * BATCH + p] = std::max(-1.f, std::min(1.f, out));
+          state[n * BATCH + p] = output_value(sum[p], out, false);
         }
       if (invalid)
         throw std::runtime_error("neuron produced NaN");
@@ -433,26 +415,23 @@ void Program::evaluate(const Point *points, std::size_t count, OutputMask mask,
     switch (NodeType(c.type)) {
     case NodeType::TOR:
       for (std::size_t p = 0; p < count; ++p)
-        state[n * BATCH + p] = std::clamp(sum[p], -1.f, 1.f) * std::clamp(gate[p], -1.f, 1.f);
+        state[n * BATCH + p] = gated_activation(sum[p], gate[p]);
       break;
     case NodeType::LINEAR:
-      activate([&](float u) { return u * c.bias; });
+      activate([&](float u) { return activation_value<NodeType::LINEAR>(u, c.bias); });
       break;
     case NodeType::ABS:
-      activate([&](float u) { return std::abs(u + c.bias); });
+      activate([&](float u) { return activation_value<NodeType::ABS>(u, c.bias); });
       break;
     case NodeType::SINE:
-      activate([&](float u) { return std::sin(u * c.bias); });
+      activate([&](float u) { return activation_value<NodeType::SINE>(u, c.bias); });
       break;
     case NodeType::COSINE:
-      activate([&](float u) { return std::cos(u * c.bias); });
+      activate([&](float u) { return activation_value<NodeType::COSINE>(u, c.bias); });
       break;
-    case NodeType::GAUSSIAN: {
-      const float b = c.bias == 0 ? 1.f : c.bias,
-                  denominator = b * b * (1.f / evolution::GAUSSIAN_SHARPNESS);
-      activate([&](float u) { return std::exp(-(u * u) / denominator); });
+    case NodeType::GAUSSIAN:
+      activate([&](float u) { return activation_value<NodeType::GAUSSIAN>(u, c.bias); });
       break;
-    }
     default:
       activate([&](float u) { return activation(c.type, u, c.bias); });
       break;

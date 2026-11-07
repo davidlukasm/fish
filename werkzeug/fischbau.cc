@@ -246,7 +246,7 @@ struct Builder {
         raise(a, k, v[k] - base[k]);
       if (c.kind == Kind::Nerve)
         raise(indicator(c.at, -1, cppn::property::learning), out::time_constant,
-              2 * (5.f / 7 - c.tau));
+              2 * (field::encode_learning_steps(128) - c.tau));
       for (const auto &r : c.receptors) {
         const int q = indicator(c.at, r.effect);
         const auto [x, y] = hormone_place(r.substance);

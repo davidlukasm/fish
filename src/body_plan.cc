@@ -624,8 +624,12 @@ const BrainInterface &Body::active_interface(const Genome &g) const {
 double Body::neural_upkeep() const {
   if (!development_)
     return 0;
-  return active_neural_maintenance_ >= 0 ? active_neural_maintenance_
-                                         : development_->running_cost();
+  if (!brain_)
+    return development_->running_cost();
+  const auto c = field::scaled_costs(brain_->blueprint().options);
+  const auto &w = brain_->wiring();
+  return (brain_->state().size() - brain_->dead_count()) * c.neuron_maintenance +
+         w.contacts * c.edge_maintenance + w.length * c.edge_length_maintenance;
 }
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative) {
@@ -701,23 +705,7 @@ void Body::refresh_organs(const Genome &g) {
   organ_source_ = g.interface;
   known_deaths_ = deaths;
   active_anatomy_.reset();
-  active_neural_maintenance_ = -1;
   if (deaths) {
-    const auto &s = *g.blueprint;
-    const auto costs = field::scaled_costs(s.options);
-    active_neural_maintenance_ = 0;
-    for (std::size_t i = 0; i < s.neurons.size(); ++i)
-      if (!brain_->dead(i))
-        active_neural_maintenance_ += costs.neuron_maintenance;
-    for (const auto &e : s.edges)
-      if (!brain_->dead(e.source) && !brain_->dead(e.target)) {
-        const auto &q = s.neurons[e.source], &r = s.neurons[e.target];
-        active_neural_maintenance_ +=
-            costs.edge_maintenance +
-            costs.edge_length_maintenance *
-                std::sqrt((q.x - r.x) * (q.x - r.x) + (q.y - r.y) * (q.y - r.y) +
-                          (q.z - r.z) * (q.z - r.z));
-      }
     auto a = std::make_shared<BrainInterface>(*g.interface);
     a->effectors.erase(std::remove_if(a->effectors.begin(), a->effectors.end(),
                                       [&](const auto &e) { return brain_->dead(e.neuron); }),

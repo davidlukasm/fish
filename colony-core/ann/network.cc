@@ -1,4 +1,5 @@
 #include "network.hh"
+#include "cppn/activation.hh"
 #include "evolution/node_type.hh"
 #include <algorithm>
 #include <cmath>
@@ -56,15 +57,13 @@ void Network::step() {
       accumulator =
           std::fma(impl->state[impl->code->sources[s]], impl->code->weights[s], accumulator);
     }
-    float out = c.type == int(evolution::NodeType::TOR)
-                    ? std::clamp(sum, -1.f, 1.f) * std::clamp(gate, -1.f, 1.f)
-                    : activation(c.type, sum, c.bias);
+    float out = c.type == int(evolution::NodeType::TOR) ? cppn::gated_activation(sum, gate)
+                                                        : activation(c.type, sum, c.bias);
     if (std::isnan(out))
       throw std::runtime_error("neuron produced NaN");
     const auto first = impl->state.size() - outputs;
-    impl->state[n] = n >= first && (tanh_outputs & (1ull << (n - first)))
-                         ? std::tanh(sum)
-                         : std::max(-1.f, std::min(1.f, out));
+    impl->state[n] =
+        cppn::output_value(sum, out, n >= first && (tanh_outputs & (1ull << (n - first))));
   }
 }
 void Network::reset() {

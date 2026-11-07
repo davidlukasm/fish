@@ -348,7 +348,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   if (g.cppn && !g.blueprint) {
     advance_age();
     ledger_.movement_cost = ledger_.brain_cost = 0;
-    field::DevelopmentCosts costs;
+    const auto costs = field::scaled_costs(g.development_options);
     double built = g.growing ? g.growing->neurons.size() * costs.neuron_build +
                                    g.growing->built_edges * costs.edge_build +
                                    g.growing->built_length * costs.edge_length_build
@@ -387,6 +387,14 @@ void Body::act(const Genome &g, const PhysiologyParameters &physiology, bool pro
   if (!protected_life)
     energy -= ledger_.movement_cost + ledger_.brain_cost;
   cppn_action(*this, g, physiology, protected_life);
+  const auto &built = brain_->formed_wiring();
+  const auto costs = field::scaled_costs(g.development_options);
+  const double construction =
+      (built.contacts * costs.edge_build + built.length * costs.edge_length_build) *
+      physiology.neural_cost;
+  ledger_.brain_cost += construction;
+  if (!protected_life)
+    energy -= construction;
   ledger_.movement_cost += ledger_.muscle_cost + motor_.combat_cost;
   motor_.contact_x = motor_.contact_y = 0;
   perception_.touch_ring.fill(0);

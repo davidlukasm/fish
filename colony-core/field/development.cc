@@ -367,8 +367,7 @@ public:
           const auto &a = accepted[copy++];
           const auto &b = cells[cursor], &q = cells[a.source];
           edges.push_back({a.source, NeuronIndex(cursor), a.weight});
-          length += std::sqrt((q.x - b.x) * (q.x - b.x) + (q.y - b.y) * (q.y - b.y) +
-                              (q.z - b.z) * (q.z - b.z));
+          length += connection_length(q, b);
         } else {
           ++cursor;
           partner = source_copy = 0;

@@ -3,6 +3,7 @@
 #include "cppn/cppn.hh"
 #include "functions.hh"
 #include "hormones.hh"
+#include "dynamics.hh"
 #include "cppn/program.hh"
 #include <array>
 #include <algorithm>
@@ -18,7 +19,6 @@ constexpr int ANATOMICAL_OUTPUTS = cppn::OUTPUTS;
 // the head zone, where glands and the blood sense sit.
 inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
-inline constexpr float MIN_LEARNING_RATE = 1e-5f;
 struct CellParameters {
   float threshold = .5f, capacity = 1, quality1 = 0, quality2 = 0, quality_width = .25f,
         field_width = .3f, time_constant = .5f, learning_time = .5f, dendrites = .5f,
@@ -63,14 +63,15 @@ struct Neuron {
   std::array<HormoneReceptor, HORMONE_EFFECTS> hormone_receptors{};
   float role_margin = 1, role_gain = 1;
 };
+inline double connection_length(const Neuron &a, const Neuron &b) {
+  return std::sqrt(
+      double((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z)));
+}
 inline double resting_output(const Neuron &n) {
   return std::tanh(double(n.bias));
 }
 inline bool hormone_effect_present(Role role, int effect) {
   return effect == Output || effect == Death || role == Role::Nerve || (effect == Excitation);
-}
-inline float expression_strength(float band, float threshold) {
-  return std::clamp((band - threshold) / std::max(.25f * threshold, 1e-9f), 0.f, 1.f);
 }
 using NeuronIndex = std::uint16_t;
 // A synapse acts with one step of delay.
@@ -154,7 +155,6 @@ class Substrate {
   std::shared_ptr<FinishState> finish_state;
   std::size_t pair_checks_ = 0, overhead_work_ = 0, query_work_ = 0;
   bool advance_grid(std::size_t, bool record_work);
-  void limit_development(const char *reason);
   bool finish_development(std::size_t &budget);
 
 public:
@@ -191,6 +191,10 @@ public:
   bool cell_parameters_complete() const;
   std::size_t remaining_queries(std::size_t estimate) const;
 };
+struct WiringAmount {
+  std::size_t contacts = 0;
+  double length = 0;
+};
 class Network {
   std::shared_ptr<const Substrate> tissue;
   std::shared_ptr<const NetworkTopology> topology;
@@ -208,13 +212,16 @@ class Network {
   std::vector<unsigned char> muted_, dead_;
   std::size_t dead_count_ = 0;
   std::vector<float> synaptic_mean_, adaptation_rate_;
+  WiringAmount wiring_, formed_;
+  double contact_length(NeuronIndex source, NeuronIndex target) const;
+  void erase_contact(std::size_t slot, NeuronIndex target);
   void remove_dead_connections();
   bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
   std::vector<std::uint16_t> index_;
   std::vector<float> gene_, learned_, trace_, predict_;
   std::vector<float> usual_, deviation_, gathered_;
-  std::vector<float> lane_action_, lane_teach_, lane_own_, lane_value_, lane_contrast_, lane_ready_,
-      lane_step_, lane_pending_, effector_own_, cell_surprise_;
+  std::vector<float> lane_action_, lane_teach_, lane_own_, lane_contrast_, lane_step_,
+      lane_pending_, effector_own_, cell_surprise_;
   std::vector<std::uint16_t> lane_count_;
   std::uint64_t revision_ = 0, turnover_rng_ = 0;
   double maturity_ = 0;
@@ -224,6 +231,7 @@ class Network {
   bool observe = false, plasticity_enabled = true;
   std::uint64_t learning_seed = 0, learning_ticks = 0;
   void prepare_state();
+  void reset_teacher_traces();
   void advance(const std::vector<float> &, const Hormones *, std::uint64_t);
   float effector_learning_rate(std::size_t source) const;
   void learn_effectors(float rm);
@@ -286,6 +294,11 @@ public:
   std::uint64_t wiring_revision() const { return revision_; }
   std::size_t slot_count() const;
   std::size_t synapse_count() const;
+  const WiringAmount &wiring() const {
+    materialize();
+    return wiring_;
+  }
+  const WiringAmount &formed_wiring() const { return formed_; }
   std::uint64_t learning_steps() const { return learning_ticks; }
   struct RetinalState {
     NeuronIndex neuron;

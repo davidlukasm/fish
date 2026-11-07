@@ -1,4 +1,6 @@
 #include "test_support.hh"
+#include "field/retinal_tissue.hh"
+#include "field/development_sites.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
@@ -182,7 +184,7 @@ std::shared_ptr<field::Substrate> learning_tissue() {
       n.functions.motors[field::Forward] = 1;
     n.hormone_receptors[field::Output].baseline = 1;
     n.parameters.time_constant = 0;
-    n.parameters.learning_time = 5.f / 7;
+    n.parameters.learning_time = field::encode_learning_steps(128);
     n.parameters.plasticity = .5f;
   }
   auto &r = cells[1].hormone_receptors[field::Teaching];
@@ -221,6 +223,98 @@ void delayed_teaching_preserves_credit() {
     check(positive.surprise(1) > .9f && punished.surprise(1) < -.9f,
           "the prediction rule permits delayed signed teaching");
   }
+}
+void ordered_retinal_neighbors_match_geometry() {
+  for (int density : {1, 0, 16}) {
+    std::vector<field::Neuron> groups;
+    for (std::size_t site = 0; site < field::DEVELOPMENT_SITES; ++site) {
+      const auto location = field::development_site(site);
+      if (location.zone != 1)
+        continue;
+      field::Neuron cell{};
+      cell.id = site + 1;
+      cell.location = location;
+      cell.role = field::Role::Sensor;
+      cell.functions.senses[field::Light] = 1;
+      cell.parameters.capacity = (density ? density : 1 + site % 16) / 16.f;
+      groups.push_back(cell);
+    }
+    std::vector<std::vector<field::NeuronIndex>> copies;
+    bool limited = false;
+    const auto cells = field::cell_copies(groups, 8192, copies, limited);
+    const auto retina = field::retinal_tissue(cells);
+    check(!limited, "retinal test stays within the cell budget");
+    for (std::size_t i = 0; i < retina.size(); ++i) {
+      const auto &a = retina[i];
+      std::vector<std::pair<double, std::uint32_t>> expected;
+      for (std::size_t j = 0; j < retina.size(); ++j) {
+        const auto &b = retina[j];
+        if (i == j || cells[a.neuron].location.side != cells[b.neuron].location.side)
+          continue;
+        const double dx = a.position - b.position,
+                     dy = field::retinal_dynamics::transverse_scale * (a.transverse - b.transverse),
+                     distance = dx * dx + dy * dy;
+        if (distance <= field::retinal_dynamics::radius * field::retinal_dynamics::radius)
+          expected.push_back({distance, std::uint32_t(j)});
+      }
+      std::sort(expected.begin(), expected.end(), [&](const auto &x, const auto &y) {
+        return x.first != y.first
+                   ? x.first < y.first
+                   : cells[retina[x.second].neuron].id < cells[retina[y.second].neuron].id;
+      });
+      check(a.count == std::min(expected.size(), a.neighbors.size()),
+            "ordered retina retains neighbor count");
+      for (unsigned j = 0; j < a.count; ++j)
+        check(a.neighbors[j] == expected[j].second,
+              "ordered retina retains spatial and colour-layer neighbors");
+    }
+  }
+}
+void wiring_costs_follow_formation_and_death() {
+  std::vector<field::Neuron> cells(2);
+  for (int i = 0; i < 2; ++i) {
+    auto &n = cells[i];
+    n.id = i + 1;
+    n.group = i;
+    n.x = float(i);
+    n.role = field::Role::Nerve;
+    n.functional = true;
+    n.slots = 1;
+    n.bias = 1;
+    n.identity = {0, 1, 0, -1, i == 0 ? 1.f : -1.f};
+    n.hormone_receptors[field::Output].baseline = 1;
+  }
+  auto &death = cells[0].hormone_receptors[field::Death];
+  death.affinity[0] = 1;
+  death.sensitivity = 2;
+  death.half = .01f;
+  auto tissue = std::make_shared<field::Substrate>(cells);
+  tissue->partner_offset = {0, 0, 1};
+  tissue->partners = {{0, 1}};
+  field::Network net(tissue);
+  check(net.wiring().contacts == 0 && net.wiring().length == 0, "empty tissue has no wire upkeep");
+  bool formed = false;
+  for (int tick = 0; tick < 80 && !formed; ++tick) {
+    net.step({}, field::Hormones{}, 39);
+    formed = net.synapse_count() != 0;
+  }
+  check(formed && net.wiring().contacts == 1 && net.wiring().length == 1,
+        "new contact adds its live count and length");
+  check(net.formed_wiring().contacts == 1 && net.formed_wiring().length == 1,
+        "new contact reports its construction exactly once");
+  std::stringstream saved;
+  net.write_runtime(saved);
+  field::Network restored(tissue);
+  restored.read_runtime(saved);
+  check(restored.wiring().contacts == 1 && restored.wiring().length == 1,
+        "wire upkeep survives loading");
+  net.step({}, field::Hormones{}, 39);
+  check(net.formed_wiring().contacts == 0, "existing contact has no repeated construction charge");
+  field::Hormones h{};
+  h[0] = 1;
+  net.step({}, h, 39);
+  check(net.dead_count() == 1 && net.wiring().contacts == 0 && net.wiring().length == 0,
+        "cell death removes wire upkeep");
 }
 void retinal_development_is_local_and_restorable() {
   std::vector<field::Neuron> cells;
@@ -553,6 +647,8 @@ int main() {
     all_sources_can_form_first_contacts();
     contact_formation_uses_genetic_strength_and_current_experience();
     delayed_teaching_preserves_credit();
+    ordered_retinal_neighbors_match_geometry();
+    wiring_costs_follow_formation_and_death();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);

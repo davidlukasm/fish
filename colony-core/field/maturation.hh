@@ -66,8 +66,7 @@ public:
     for (const auto &e : s.edges) {
       const auto &a = s.neurons[e.source];
       const auto &b = s.neurons[e.target];
-      double length = std::sqrt(double((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) +
-                                       (a.z - b.z) * (a.z - b.z)));
+      const double length = connection_length(a, b);
       maintenance += c.edge_length_maintenance * length;
       if (!s.built_edges)
         construction += c.edge_length_build * length;

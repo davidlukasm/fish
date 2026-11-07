@@ -576,12 +576,11 @@ Color reference(const Field &f, const OpticsQuery &q) {
 }
 }
 void configure_compute(const std::string &mode) {
-  if (mode != "cpu" && mode != "opencl-optics" && mode != "opencl-cpu-optics" &&
-      mode != "opencl-graphics")
+  if (mode != "cpu" && mode != "opencl-optics" && mode != "opencl-cpu-optics")
     throw std::runtime_error("Berechnung: cpu oder opencl-optics erwartet");
   engine.reset();
   status = ComputeStatus{};
-  status.mode = mode == "opencl-graphics" ? "opencl-optics" : mode;
+  status.mode = mode;
   checked = validated = false;
 }
 bool opencl_loader_available() {
