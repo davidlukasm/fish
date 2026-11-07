@@ -64,7 +64,7 @@ import {gestureMethods} from './gestures.js';
 
 let instance = null;
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
-const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40;
+const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40, DELETE_ASKS = 4000;
 const FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
 export class OrganStudio {
   constructor(root) {
@@ -82,6 +82,7 @@ export class OrganStudio {
       multi : new Set(),
       camera : {zoom : 1, ...CAMERA_HOME},
       userModules : [],
+      deletingModule : null,
       effect : 0,
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
@@ -239,12 +240,12 @@ export class OrganStudio {
     if (switches)
       switches.innerHTML = layerSwitches(this.state);
   }
-  refreshLibrary() {
+  refreshLibrary(changed = false) {
     const scroll = this.root.querySelector('.aid-library-scroll');
     if (!scroll || this.state.mode !== 'fish')
       return;
     const offered = libraryOf(this.state);
-    if (offered.kind === 'select' && scroll.dataset.library === 'select')
+    if (!changed && offered.kind === 'select' && scroll.dataset.library === 'select')
       return;
     scroll.innerHTML = offered.html;
     scroll.dataset.library = offered.kind;
@@ -717,6 +718,26 @@ export class OrganStudio {
       this.state.userModules = result.modules;
       this.renderShell();
       this.notice(label('status.moduleSaved'));
+    } catch (error) {
+      this.notice(error.message);
+    }
+  }
+  // A saved group is gone for good, so the first click only asks and the question lapses.
+  async deleteModule(id) {
+    clearTimeout(this.deleteTimer);
+    if (this.state.deletingModule !== id) {
+      this.state.deletingModule = id;
+      this.deleteTimer = setTimeout(() => {
+        this.state.deletingModule = null;
+        this.refreshLibrary(true);
+      }, DELETE_ASKS);
+      return this.refreshLibrary(true);
+    }
+    this.state.deletingModule = null;
+    try {
+      const result = await this.api(requestBody('delete-module', {id}));
+      this.state.userModules = result.modules;
+      this.refreshLibrary(true);
     } catch (error) {
       this.notice(error.message);
     }

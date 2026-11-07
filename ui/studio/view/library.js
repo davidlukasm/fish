@@ -118,15 +118,21 @@ function placingLibrary(state) {
                           });
                         })
                          .join('') +
-                     (state.userModules ?? [])
-                         .map(m => tile({
-                                kind : 'user-module',
-                                value : m.id,
-                                name : m.name,
-                                markup : icon(m.organs[0]?.type ?? 'brain'),
-                                colour : tone(m.organs[0]?.type ?? 'brain')
-                              }))
-                         .join(''));
+                     (state.userModules ?? []).map(m => userModuleTile(state, m)).join(''));
+}
+function userModuleTile(state, module) {
+  const asking = state.deletingModule === module.id;
+  const remove = label(asking ? 'inspector.deleteModuleSure' : 'inspector.deleteModule');
+  return '<span class="aid-user-module">' + tile({
+           kind : 'user-module',
+           value : module.id,
+           name : module.name,
+           markup : icon(module.organs[0]?.type ?? 'brain'),
+           colour : tone(module.organs[0]?.type ?? 'brain')
+         }) +
+         '<button class="aid-tile-remove' + (asking ? ' asking' : '') + '" data-delete-module="' +
+         escapeText(module.id) + '" title="' + escapeText(remove) + '" aria-label="' +
+         escapeText(remove) + '">' + label('marks.remove') + '</button></span>';
 }
 const WIRE_SYMBOL = Object.freeze({
   same : 'M5 6h14M5 18h14M5 6h.01M19 6h.01M5 18h.01M19 18h.01',

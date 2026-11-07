@@ -49,6 +49,11 @@
 #station-root[data-armed="wiring"] #aid-body-map .aid-wire-group.aid-drop-hover .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 7px #f1dca0)}
 #station-root[data-armed="wiring"]:not([data-armed-value="bend"]) #aid-body-map .aid-wire-group:not([data-paired]){opacity:.2;pointer-events:none}
 .aid-palette-tile.add{border-style:dashed}
+.aid-user-module{position:relative;display:grid}
+.aid-tile-remove{position:absolute;top:2px;right:2px;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--aid-soft-text);font-size:15px;line-height:1;opacity:.5;cursor:pointer}
+.aid-user-module:hover .aid-tile-remove,.aid-tile-remove:focus-visible{opacity:1}
+.aid-tile-remove:hover{color:var(--aid-inhibit)}
+.aid-tile-remove.asking{opacity:1;background:var(--aid-inhibit);color:#113039}
 .aid-palette-tile.suggested{border-color:var(--aid-handle);box-shadow:0 0 10px color-mix(in srgb,var(--aid-handle) 45%,transparent)}
 .aid-palette-tile.suggested .aid-palette-icon{border-color:var(--aid-handle)}
 .aid-palette-tile.add .aid-palette-icon{border-style:dashed;color:var(--aid-soft-text);font-size:18px}

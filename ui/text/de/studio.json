@@ -172,6 +172,8 @@
     "removeOrgan": "Organ entfernen",
     "mirror": "Gegenseite ergänzen",
     "saveModule": "In Bibliothek",
+    "deleteModule": "Aus der Bibliothek entfernen",
+    "deleteModuleSure": "Noch einmal klicken: endgültig aus der Bibliothek entfernen",
     "ungroup": "Auflösen",
     "senseCells": "{n} Sinneszellen je Knoten",
     "addBloodType": "Stoff",

@@ -487,6 +487,7 @@ export const FISH_CLICKS = Object.freeze([
     })
   ],
   [ '[data-save-assembly]', (studio, e) => studio.saveAssembly(e.dataset.saveAssembly) ],
+  [ '[data-delete-module]', (studio, e) => studio.deleteModule(e.dataset.deleteModule) ],
   [
     '[data-ungroup-assembly]',
     (studio, e) =>
