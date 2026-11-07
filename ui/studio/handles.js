@@ -230,8 +230,17 @@ export const DRAG_CLICK = 350, DRAG_START = 5;
 // track or chart around it still jumps there.
 const KNOB = '.aid-graphic-handle, .aid-spectrum-handle, .aid-vector-point, .aid-phase-mark, ' +
              '.aid-bend, .aid-sight-light circle, .aid-vision-handle, .aid-probe-handle';
+// A pad's point lets the pointer through to the pad, so it is found by where the press is.
+function padPoint(event) {
+  const point = event.target.closest?.('svg')?.querySelector('.aid-vector-point');
+  const box = point?.getBoundingClientRect();
+  return box && Math.hypot(event.clientX - box.left - box.width / 2,
+                           event.clientY - box.top - box.height / 2) <= box.width / 2
+             ? point
+             : null;
+}
 function knobGrip(event) {
-  const knob = event.target.closest?.(KNOB);
+  const knob = event.target.closest?.(KNOB) ?? padPoint(event);
   const mark = knob?.matches('g') ? knob.querySelector('circle') ?? knob : knob;
   const box = mark?.getBoundingClientRect();
   return box ? {
@@ -405,6 +414,8 @@ export const handleMethods = {
     if (changed || code !== MOTOR_KIND.suction)
       return changed;
     const throat = this.withThroat();
+    if (!throat)
+      this.notice(label('status.noRoom'));
     return throat && setMuscleTrait(throat, code, trait, value, sites);
   },
   sacPointer(drag, fy) {
@@ -536,10 +547,15 @@ export const handleMethods = {
     // The drag becomes one undo step from where it began; one that ends there is no step, and the
     // design run it held back runs now.
     const dragged = this.state.document, start = this.draftStart;
-    this.state.document = start;
     this.drafted = this.draftStart = null;
     this.historyBatch = null;
-    this.changeDocument(dragged, this.state.selected, true, batch, true);
+    if (dragged === start) {
+      this.refreshScene();
+      this.refreshInspector();
+    } else {
+      this.state.document = start;
+      this.changeDocument(dragged, this.state.selected, true, batch, true);
+    }
     if (this.state.document === start && this.designPending)
       this.requestDesign();
   },
@@ -554,10 +570,15 @@ export const handleMethods = {
     const drag = this.handleDrag, knob = drag.knob;
     if (!knob)
       return this[HANDLES[drag.held].follow](event);
-    knob.moved ||= event.clientX !== knob.x || event.clientY !== knob.y;
-    if (knob.moved)
-      this[HANDLES[drag.held].follow](
-          {clientX : event.clientX + knob.dx, clientY : event.clientY + knob.dy});
+    const back = event.clientX === knob.x && event.clientY === knob.y;
+    knob.moved ||= !back;
+    if (!knob.moved)
+      return;
+    this[HANDLES[drag.held].follow](
+        {clientX : event.clientX + knob.dx, clientY : event.clientY + knob.dy});
+    // Back where it was grabbed is the value it had, not one rounded from where its knob is drawn.
+    if (back && this.drafted)
+      this.state.document = this.draftStart;
   },
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {

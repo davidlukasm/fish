@@ -10,7 +10,7 @@ import {
   usedSites
 } from './model/document.js';
 import {moveAssembly} from './model/assemblies.js';
-import {nearFish, pointDistance, SNAP_DISTANCE} from './model/layout.js';
+import {nearFish, nerveZone, pointDistance, SNAP_DISTANCE} from './model/layout.js';
 import {
   CAMERA_HOME,
   CAMERA_ZOOM,
@@ -255,7 +255,7 @@ export const gestureMethods = {
     const moveTo = {
       center : () => {
         const found = findCenter(doc, drag.id), type = found?.organ.type;
-        const site = found && closestSite(found.center, sites,
+        const site = found && closestSite(found.center, sites.filter(nerveZone),
                                           usedSites(doc, c => c.id !== drag.id), point, null, type);
         return site && pointDistance(site, point, type) <= SNAP_DISTANCE
                    ? moveCenter(doc, drag.id, site.id, sites)

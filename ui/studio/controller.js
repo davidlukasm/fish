@@ -359,12 +359,13 @@ export class OrganStudio {
     this.state.canRedo = this.redoHistory.length > 0;
   }
   stepHistory(action) {
-    // Undo in the middle of a drag takes back the drag so far; what the drag does after is a step
-    // of its own.
+    // Undo in the middle of a drag takes back the drag so far, redo drops it; what the drag does
+    // after is a step of its own.
     if (this.drafted && action === 'undo') {
       this.undoHistory.push(this.draftStart);
       this.redoHistory.length = 0;
-    }
+    } else if (this.drafted)
+      this.state.document = this.draftStart;
     const source = action === 'undo' ? this.undoHistory : this.redoHistory;
     const target = action === 'undo' ? this.redoHistory : this.undoHistory;
     if (!source.length)

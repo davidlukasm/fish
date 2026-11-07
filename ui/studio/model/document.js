@@ -478,7 +478,8 @@ export function makeLearner(doc, id) {
 export function moveCenter(doc, centerId, target, sites) {
   const result = findCenter(doc, centerId);
   const site = findSite(sites, target);
-  if (!result || result.organ.type !== 'brain' || !site || !eligible(result.center, site))
+  if (!result || result.organ.type !== 'brain' || !site || !eligible(result.center, site) ||
+      !nerveZone(site))
     return null;
   if (allCenters(doc).some(c => c.id !== centerId && c.site === site.id))
     return null;
@@ -491,7 +492,7 @@ export function moveCenterToSide(doc, centerId, side, sites) {
   if (!here || found.organ.type !== 'brain')
     return null;
   const used = usedSites(doc);
-  const fits = s => !used.has(s.id) && eligible(found.center, s) &&
+  const fits = s => !used.has(s.id) && eligible(found.center, s) && nerveZone(s) &&
                     (side === 0 ? onMidline(s) : s.side === side && !onMidline(s));
   const candidates = sites.filter(fits);
   const near = candidates.filter(s => s.zone === here.zone);
@@ -902,13 +903,11 @@ export function teachOrgan(doc, organId, index) {
             draft;
   return draft;
 }
-const RECEPTOR_ONSET = 1;
 export function switchReceptor(doc, id, effect, on) {
   const receptor = findCenter(doc, id)?.center.receptors[effect];
-  const patch = {active : on ? 1 : 0};
-  if (on && !receptor?.sensitivity)
-    patch.sensitivity = receptor?.baseline > 0 ? -RECEPTOR_ONSET : RECEPTOR_ONSET;
-  return updateReceptor(doc, id, effect, patch);
+  return updateReceptor(
+      doc, id, effect,
+      {...(on && !receptor?.sensitivity ? RECEPTOR_START[effect] : {}), active : on ? 1 : 0});
 }
 export function updateGrowth(doc, patch) {
   const draft = copy(doc);

@@ -1,6 +1,14 @@
 import {ATELIER_LIMITS} from '../../schema.js';
 import {MODULES, ORGAN_BY_KEY, siteRole} from './organs.js';
-import {centroid, findSite, NERVE_ROLE, onMidline, pointDistance, sitePoint} from './layout.js';
+import {
+  centroid,
+  findSite,
+  NERVE_ROLE,
+  nerveZone,
+  onMidline,
+  pointDistance,
+  sitePoint
+} from './layout.js';
 import {settleRegions} from './regions.js';
 import {
   addNeuron,
@@ -113,7 +121,8 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
     const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site), NERVE_ROLE);
     const used = usedSites(draft, c => c.id !== id);
-    const site = closestSite(c, sites, used, {x : from.x + dx, y : from.y + dy}, null, 'brain');
+    const site = closestSite(c, sites.filter(nerveZone), used, {x : from.x + dx, y : from.y + dy},
+                             null, 'brain');
     if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}, NERVE_ROLE) > snapDistance)
       return null;
     draft = moveCenter(draft, id, site.id, sites);
