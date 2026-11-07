@@ -1,5 +1,5 @@
 {
-  "version": 24,
+  "version": 25,
   "atelier_plan": {
     "group": [
       "zone",
@@ -28,27 +28,12 @@
       "organ",
       "open",
       "initial_strength",
-      "spread_expression",
-      "spread_identity_role",
-      "spread_identity1",
-      "spread_identity2",
-      "spread_identity3",
-      "spread_identity4",
-      "spread_capacity",
-      "spread_threshold",
-      "spread_time_constant",
-      "spread_field_width",
-      "spread_quality1",
-      "spread_quality2",
-      "spread_quality_width",
-      "spread_sender1",
-      "spread_sender2",
-      "spread_receiver1",
-      "spread_receiver2",
-      "spread_search_width",
-      "spread_crossing",
-      "spread_range",
-      "spread_synapse_strength"
+      "learning_tau",
+      "teaching_strength",
+      "spread_physiology",
+      "spread_receptors",
+      "spread_development",
+      "spread_contacts"
     ],
     "receptor": [
       "active",
@@ -58,13 +43,7 @@
       "substance",
       "width",
       "steepness",
-      "spread_capacity",
-      "spread_field_width",
-      "spread_threshold",
-      "spread_time_constant",
-      "spread_quality1",
-      "spread_quality2",
-      "spread_quality_width"
+      "spread_receptors"
     ],
     "limits": {
       "max_name": 40,
@@ -74,7 +53,7 @@
       "max_probe_steps": 32,
       "max_measure_steps": 64,
       "max_copies": 16,
-      "contact_values": 29
+      "contact_values": 20
     }
   },
   "behavior_scales": {
@@ -604,27 +583,10 @@
       "crossing",
       "range",
       "synapse_strength",
-      "spread_expression",
-      "spread_identity_role",
-      "spread_identity1",
-      "spread_identity2",
-      "spread_identity3",
-      "spread_identity4",
-      "spread_capacity",
-      "spread_threshold",
-      "spread_time_constant",
-      "spread_field_width",
-      "spread_quality1",
-      "spread_quality2",
-      "spread_quality_width",
-      "spread_sender1",
-      "spread_sender2",
-      "spread_receiver1",
-      "spread_receiver2",
-      "spread_search_width",
-      "spread_crossing",
-      "spread_range",
-      "spread_synapse_strength"
+      "spread_physiology",
+      "spread_receptors",
+      "spread_development",
+      "spread_contacts"
     ],
     "placement_surface": [
       "ax",
@@ -735,7 +697,8 @@
       "field_width",
       "time_constant",
       "dendrites",
-      "plasticity"
+      "plasticity",
+      "learning_time"
     ],
     "neuron_site": [
       "u",
@@ -2020,7 +1983,9 @@
     "time_constant": {
       "min_steps": 4.0,
       "span": 12.0,
-      "pace_min_steps": 8.0
+      "pace_min_steps": 8.0,
+      "learning_min_steps": 4.0,
+      "learning_span": 128.0
     },
     "vision": {
       "pixels": 128,

@@ -14,11 +14,11 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "806dd25e151b5b85",
-  "colony-core/field/development.cc" : "4da3d7f79ed98910",
+  "colony-core/field/development.cc" : "76552c42b9e0f1e2",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
-  "colony-core/field/substrate.cc" : "bcd386e4f56bb86a",
-  "src/body_plan.cc" : "e4be3b8341694c77",
+  "colony-core/field/substrate.cc" : "47aa84bd770586a8",
+  "src/body_plan.cc" : "6cc0a71d42f5fed5",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
   "src/physiology.cc" : "fea2c274a8c6b138",
@@ -29,13 +29,13 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/ann/network.cc" : "635500e2347f6835",
   "src/body_plan.hh" : "b1fb1d3a636c9111",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "b64f5a062f78e717",
-  "colony-core/cppn/output_schema.hh" : "a24da617738f0241",
+  "colony-core/field/substrate.hh" : "04d3bf927fe0c620",
+  "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
   "colony-core/cppn/constants.hh" : "7597f904c57f19ab",
   "colony-core/cppn/activation.hh" : "0293856325cf766b",
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
-  "werkzeug/fischbau.cc" : "5ae01d0a708102f7",
+  "werkzeug/fischbau.cc" : "2ed89c41c2f57a29",
   "ui/tissue.js" : "01cae94d3e8df2d6",
   "src/genome.hh" : "e7bb5c8f277ae2b4",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
@@ -56,11 +56,15 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "04fa88f245eaffc5",
+  "src/interactive_brain.cc" : "b677bc3ae5ee4eb0",
   "src/material.hh" : "32c33b6291275e33",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
-  "src/body_state_limits.hh" : "607381fbc86a14a5"
+  "src/body_state_limits.hh" : "607381fbc86a14a5",
+  "colony-core/cppn/cppn.hh" : "95d89c3a3c8697dd",
+  "colony-core/cppn/program.cc" : "93f3c83aa4e6d83c",
+  "colony-core/field/distribution.hh" : "9128e90facd2ea48",
+  "colony-core/field/retinal_tissue.hh" : "d4c8f4131ffe4320"
 });
 function semanticFingerprint(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');
@@ -318,7 +322,7 @@ function semanticFingerprint(source) {
     assert.equal(aquarium.effects.length, Object.keys(E).length);
   }
   assert.deepEqual(sitesResult.roleEffects, [
-    [ E.output, E.death ], Object.values(E).sort((a, b) => a - b),
+    [ E.excitation, E.output, E.death ], Object.values(E).sort((a, b) => a - b),
     [ E.excitation, E.output, E.death ]
   ]);
   assert.equal(retina.receptorWidth(0), 4);

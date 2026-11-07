@@ -116,6 +116,184 @@ void all_sources_can_form_first_contacts() {
   check(std::all_of(connected.begin(), connected.end(), [](bool b) { return b; }),
         "pacers, modulators and modulating pacers can form a first contact");
 }
+void contact_formation_uses_genetic_strength_and_current_experience() {
+  for (bool teaching : {false, true})
+    for (float sign : {-1.f, 1.f}) {
+      int formed = 0;
+      for (unsigned seed = 11; seed < 35; ++seed) {
+        std::vector<field::Neuron> cells(2);
+        for (int i = 0; i < 2; ++i) {
+          auto &n = cells[i];
+          n.id = i + 1;
+          n.group = i;
+          n.role = field::Role::Nerve;
+          n.functional = true;
+          n.slots = 1;
+          n.identity = {0, i == 0 ? sign : 1, 0, -1, i == 0 && teaching ? 1.f : -1.f};
+          n.bias = 1;
+          n.parameters.plasticity = .5f;
+          n.parameters.learning_time = 1;
+          n.hormone_receptors[field::Output].baseline = 1;
+        }
+        cells[1].initial_weight = .19f;
+        cells[1].initial_teaching = .73f;
+        check(field::initial_contact_weight(cells[0], cells[1]) == sign * (teaching ? .73f : .19f),
+              "contact type selects its genetic strength");
+        auto tissue = std::make_shared<field::Substrate>(cells);
+        tissue->partner_offset = {0, 0, 1};
+        tissue->partners = {{0, 1}};
+        field::Network net(tissue);
+        // Build a teaching history before a connection exists.
+        for (int tick = 0; tick < 12; ++tick) {
+          net.step({}, field::Hormones{}, seed);
+          const auto contacts = net.synapses();
+          if (contacts.empty())
+            continue;
+          const auto &edge = contacts[0];
+          ++formed;
+          check(edge.formed == field::initial_contact_weight(cells[0], cells[1]),
+                "new contacts use the same initial strength as embryonic contacts");
+          check(edge.weight == edge.formed, "new contacts inherit no earlier experience");
+          if (teaching) {
+            for (int i = 0; i < 16; ++i)
+              net.step({}, field::Hormones{}, seed);
+            check(net.synapse_count() == 1 && net.synapses()[0].weight == edge.formed,
+                  "signed teaching contacts survive grace and skip electrical learning");
+          }
+          break;
+        }
+      }
+      check(formed > (teaching ? 18 : 0), "active teachers are not restricted to basal acceptance");
+    }
+}
+std::shared_ptr<field::Substrate> learning_tissue() {
+  std::vector<field::Neuron> cells(3);
+  for (int i = 0; i < 3; ++i) {
+    auto &n = cells[i];
+    n.id = i + 1;
+    n.group = i;
+    n.role = i == 0 ? field::Role::Sensor : i == 2 ? field::Role::Effector : field::Role::Nerve;
+    n.functional = true;
+    n.identity = {0, 1, 0, -1, -1};
+    n.functions.internal = i == 1;
+    if (i == 0)
+      n.functions.senses[field::Touch] = 1;
+    if (i == 2)
+      n.functions.motors[field::Forward] = 1;
+    n.hormone_receptors[field::Output].baseline = 1;
+    n.parameters.time_constant = 0;
+    n.parameters.learning_time = 5.f / 7;
+    n.parameters.plasticity = .5f;
+  }
+  auto &r = cells[1].hormone_receptors[field::Teaching];
+  r.affinity[0] = 1;
+  r.sensitivity = 1;
+  r.half = .001;
+  auto tissue = std::make_shared<field::Substrate>(cells);
+  tissue->edges = {{0, 1, .2f}, {1, 2, .2f}};
+  return tissue;
+}
+void delayed_teaching_preserves_credit() {
+  for (int delay : {100, 200}) {
+    auto tissue = learning_tissue();
+    field::Network n(tissue);
+    for (int i = 0; i < 100; ++i)
+      n.step({0}, field::Hormones{}, 73);
+    n.step({1}, field::Hormones{}, 73);
+    for (int i = 0; i < delay; ++i)
+      n.step({0}, field::Hormones{}, 73);
+    auto positive = n, negative = n;
+    auto punishment = std::make_shared<field::Substrate>(*tissue);
+    punishment->network_layout.reset();
+    punishment->neurons[1].hormone_receptors[field::Teaching].sensitivity = -1;
+    field::Network punished(punishment);
+    std::stringstream saved_state;
+    n.write_runtime(saved_state);
+    punished.read_runtime(saved_state);
+    field::Hormones reward{};
+    reward[0] = 1;
+    positive.step({0}, reward, 73);
+    negative.step({0}, field::Hormones{}, 73);
+    punished.step({0}, reward, 73);
+    const auto p = positive.synapses(), q = negative.synapses(), m = punished.synapses();
+    check(p[0].weight > q[0].weight + 1e-5f, "delayed reward uses the old learning trace");
+    check(m[0].weight < q[0].weight - 1e-5f, "delayed punishment uses the old learning trace");
+    check(positive.surprise(1) > .9f && punished.surprise(1) < -.9f,
+          "the prediction rule permits delayed signed teaching");
+  }
+}
+void retinal_development_is_local_and_restorable() {
+  std::vector<field::Neuron> cells;
+  for (int side : {-1, 1})
+    for (int group = 0; group < 3; ++group)
+      for (int copy = 0; copy < 6; ++copy) {
+        field::Neuron n{};
+        n.id = cells.size() + 1;
+        n.role = field::Role::Sensor;
+        n.group = (side > 0 ? 3 : 0) + group;
+        n.location = {1, 1 - group / 3.f, .5f, 0, float(side)};
+        n.functional = true;
+        n.functions.senses[field::Light] = 1;
+        n.parameters.threshold = .4f;
+        n.parameters.time_constant = 0;
+        n.hormone_receptors[field::Output].baseline = 1;
+        auto &r = n.hormone_receptors[field::Excitation];
+        r.affinity[field::MATURITY_SUBSTANCE] = 1;
+        r.sensitivity = -2;
+        r.half = .01f;
+        cells.push_back(n);
+      }
+  auto tissue = std::make_shared<field::Substrate>(cells);
+  field::Network n(tissue), other(tissue), mature(tissue);
+  mature.set_maturity(1);
+  std::vector<float> dark(cells.size(), 0), light(cells.size(), .7f);
+  bool wave = false, recovery = false, local = false, different = false;
+  for (int tick = 0; tick < 800; ++tick) {
+    const auto before = n.retinal_state();
+    n.step(dark, field::Hormones{}, 185);
+    other.step(dark, field::Hormones{}, 281);
+    mature.step(dark, field::Hormones{}, 185);
+    const auto after = n.retinal_state(), alternate = other.retinal_state(),
+               suppressed = mature.retinal_state();
+    int fresh = 0, nearby = 0;
+    for (std::size_t i = 0; i < after.size(); ++i) {
+      wave |= after[i].activity == 1;
+      recovery |= after[i].recovery > .8f && after[i].activity < .5f;
+      different |= after[i].activity != alternate[i].activity;
+      check(suppressed[i].activity == 0, "maturity can stop intrinsic retinal activity");
+      if (after[i].activity == 1 && before[i].activity < .9f) {
+        ++fresh;
+        for (std::size_t j = 0; j < before.size(); ++j)
+          if (before[j].activity > .8f && cells[i].location.side == cells[j].location.side &&
+              std::abs(after[i].position - before[j].position) < .3f) {
+            ++nearby;
+            break;
+          }
+      }
+    }
+    local |= fresh >= 2 && nearby == fresh;
+  }
+  check(wave && recovery && local && different,
+        "retinal activity propagates locally, recovers and differs between individuals");
+  mature.step(light, field::Hormones{}, 185);
+  for (std::size_t i = 0; i < cells.size(); ++i)
+    check(mature.signal(i) >= .69f, "intrinsic suppression preserves environmental vision");
+  std::stringstream saved_state;
+  n.write_runtime(saved_state);
+  field::Network restored(tissue);
+  restored.read_runtime(saved_state);
+  auto copied = n;
+  for (int i = 0; i < 40; ++i) {
+    n.step(dark, field::Hormones{}, 185);
+    copied.step(dark, field::Hormones{}, 185);
+    restored.step(dark, field::Hormones{}, 185);
+    std::stringstream a, b, c;
+    n.write_runtime(a);
+    copied.write_runtime(b);
+    restored.write_runtime(c);
+    check(a.str() == b.str() && a.str() == c.str(), "retinal and neural clocks resume exactly");
+  }
+}
 Ecosystem closed_tank(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
@@ -373,6 +551,9 @@ int main() {
     Genome::begin_run(SEED);
     excitation_and_teaching_are_independent();
     all_sources_can_form_first_contacts();
+    contact_formation_uses_genetic_strength_and_current_experience();
+    delayed_teaching_preserves_credit();
+    retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);

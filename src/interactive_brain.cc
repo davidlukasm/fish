@@ -85,6 +85,7 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
         parameters[P::quality_width] = q.quality_width;
         parameters[P::field_width] = q.field_width;
         parameters[P::time_constant] = q.time_constant;
+        parameters[P::learning_time] = q.learning_time;
         parameters[P::dendrites] = q.dendrites;
         parameters[P::plasticity] = q.plasticity;
       }
@@ -101,8 +102,8 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
           b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
                     : 0;
       Record(out, N::count)(N::x, n.x)(N::y, n.y)(N::role, int(n.role))(N::activity, activity)(
-          N::functional, n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(
-          N::ready, !b.development() || b.development()->neuron_ready(n.id) ? 1 : 0)(N::z, n.z)(
+          N::functional,
+          n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(N::ready, b.brain() ? 1 : 0)(N::z, n.z)(
           N::port, port)(N::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
           N::strength, n.strength)(N::internal, n.functions.internal)
           .list(N::senses, senses)
@@ -459,9 +460,9 @@ void InteractiveSession::write_brain_probe(std::ostream &out, const Individual *
       namespace S = neuron_state_column;
       Record(out, S::count)(
           S::activity,
-          b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
-                    : 0)(S::ready, !b.development() || b.development()->neuron_ready(n.id) ? 1 : 0)(
-          S::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
+          b.brain()
+              ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
+              : 0)(S::ready, b.brain() ? 1 : 0)(S::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
           S::state, b.brain() ? b.brain()->state()[i] : 0)(S::signal,
                                                            b.brain() ? b.brain()->signal(i) : 0)
           .finish();

@@ -1218,6 +1218,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         throw new Error('studio.errors.invalidSite');
       const g = {
         initial_strength : center.initial_strength ?? 0,
+        learning_tau : center.learning_tau ?? .5,
+        teaching_strength : center.teaching_strength ?? 0,
         ...center.distribution,
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,

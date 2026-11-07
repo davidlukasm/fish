@@ -151,6 +151,7 @@ def outputs():
     field.append(f"constexpr std::size_t DEVELOPMENT_SITES = {schema['constants']['development']['sites']};")
     span = schema["constants"]["time_constant"]
     field.append(f"constexpr double TIME_CONSTANT_MIN = {span['min_steps']}, TIME_CONSTANT_SPAN = {span['span']};")
+    field.append(f"constexpr double LEARNING_TIME_MIN = {span['learning_min_steps']}, LEARNING_TIME_SPAN = {span['learning_span']};")
     field.append(f"constexpr double TIME_CONSTANT_PACE_MIN = {span['pace_min_steps']};")
     field.append(f"constexpr int MAX_WORKERS = {schema['constants']['run_limit']['max_threads']};")
     field.append("}")

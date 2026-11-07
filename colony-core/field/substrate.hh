@@ -21,11 +21,16 @@ constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
 inline constexpr float MIN_LEARNING_RATE = 1e-5f;
 struct CellParameters {
   float threshold = .5f, capacity = 1, quality1 = 0, quality2 = 0, quality_width = .25f,
-        field_width = .3f, time_constant = .5f, dendrites = .5f, plasticity = .5f;
+        field_width = .3f, time_constant = .5f, learning_time = .5f, dendrites = .5f,
+        plasticity = .5f;
 };
 inline double time_constant_steps(const CellParameters &p) {
   return TIME_CONSTANT_MIN *
          std::pow(TIME_CONSTANT_SPAN, std::clamp(double(p.time_constant), 0., 1.));
+}
+inline double learning_time_steps(const CellParameters &p) {
+  return LEARNING_TIME_MIN *
+         std::pow(LEARNING_TIME_SPAN, std::clamp(double(p.learning_time), 0., 1.));
 }
 inline constexpr int CONTACT_FIELDS = 4;
 inline constexpr float SYNAPSE_UNIT = .1f, MAX_INITIAL_WEIGHT = .25f;
@@ -50,7 +55,7 @@ struct Neuron {
   int variant = 0;
   std::array<float, 5> identity{};
   std::array<float, 2> sender{}, receiver{};
-  float initial_weight = MAX_INITIAL_WEIGHT * .5f;
+  float initial_weight = MAX_INITIAL_WEIGHT * .5f, initial_teaching = .5f;
   std::array<ReceptionField, CONTACT_FIELDS - 1> reception{};
   float strength = 1;
   Functions functions{};
@@ -62,8 +67,7 @@ inline double resting_output(const Neuron &n) {
   return std::tanh(double(n.bias));
 }
 inline bool hormone_effect_present(Role role, int effect) {
-  return effect == Output || effect == Death || role == Role::Nerve ||
-         (role == Role::Effector && effect == Excitation);
+  return effect == Output || effect == Death || role == Role::Nerve || (effect == Excitation);
 }
 inline float expression_strength(float band, float threshold) {
   return std::clamp((band - threshold) / std::max(.25f * threshold, 1e-9f), 0.f, 1.f);
@@ -100,6 +104,20 @@ inline CellClass cell_class(const Neuron &n) {
   c.pace = smooth(q[2], .7f, .9f);
   c.modulator = smooth(q[3], .7f, .9f);
   return c;
+}
+enum class ContactEffect { Electrical, Teaching };
+inline bool teaching_source(const Neuron &source) {
+  return source.role == Role::Nerve && cell_class(source).modulator > .5f;
+}
+inline ContactEffect contact_effect(const Neuron &source, const Neuron &target) {
+  return target.role == Role::Nerve && teaching_source(source) ? ContactEffect::Teaching
+                                                               : ContactEffect::Electrical;
+}
+inline float initial_contact_weight(const Neuron &source, const Neuron &target) {
+  const float strength = contact_effect(source, target) == ContactEffect::Teaching
+                             ? target.initial_teaching
+                             : target.initial_weight;
+  return cell_class(source).sign * strength;
 }
 constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX_EDGES = 1 << 26;
 constexpr float MAX_BIAS_SCALE = 2;
@@ -179,6 +197,9 @@ class Network {
   void materialize() const;
   std::size_t cells() const { return state_.size(); }
   std::vector<float> state_, next_, signal_, pulse_;
+  std::vector<float> retinal_activity_, retinal_recovery_, retinal_next_;
+  std::uint64_t neural_ticks_ = 0, retinal_rng_ = 0;
+  bool retinal_seeded_ = false;
   struct Stimulus {
     std::size_t neuron;
     unsigned remaining;
@@ -186,7 +207,7 @@ class Network {
   std::vector<Stimulus> stimuli_;
   std::vector<unsigned char> muted_, dead_;
   std::size_t dead_count_ = 0;
-  std::vector<float> synaptic_mean_, adaptation_rate_, activity_power_;
+  std::vector<float> synaptic_mean_, adaptation_rate_;
   void remove_dead_connections();
   bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
   std::vector<std::uint16_t> index_;
@@ -206,6 +227,7 @@ class Network {
   void advance(const std::vector<float> &, const Hormones *, std::uint64_t);
   float effector_learning_rate(std::size_t source) const;
   void learn_effectors(float rm);
+  void advance_retina(std::uint64_t individual);
   template <class Would> bool form_synapse(std::size_t lane, bool effector, const Would &would);
   double turnover_unit();
   // the learned weights with the pending step of the last learning step applied (the kernel
@@ -265,6 +287,11 @@ public:
   std::size_t slot_count() const;
   std::size_t synapse_count() const;
   std::uint64_t learning_steps() const { return learning_ticks; }
+  struct RetinalState {
+    NeuronIndex neuron;
+    float position, transverse, activity, recovery;
+  };
+  std::vector<RetinalState> retinal_state() const;
   std::size_t learning_neurons() const;
   std::size_t learned_connections() const;
   double learned_change() const;

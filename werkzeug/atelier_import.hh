@@ -12,17 +12,10 @@ inline Receptor import_receptor(const field::HormoneReceptor &, const cppn::Poin
   query.effect = field::receptor_effect_code(effect);
   const auto values = net.query_view(query);
   if (std::abs(values[out::capacity] - neutral) < EPSILON &&
-      std::abs(values[out::field_width]) < EPSILON && values[out::spread_capacity] <= 0 &&
-      values[out::spread_field_width] <= 0)
+      std::abs(values[out::field_width]) < EPSILON && values[out::spread_receptors] <= 0)
     return result;
   result.active = true;
-  result.spread_capacity = std::clamp(values[out::spread_capacity], 0.f, 1.f);
-  result.spread_field_width = std::clamp(values[out::spread_field_width], 0.f, 1.f);
-  result.spread_threshold = std::clamp(values[out::spread_threshold], 0.f, 1.f);
-  result.spread_time_constant = std::clamp(values[out::spread_time_constant], 0.f, 1.f);
-  result.spread_quality1 = std::clamp(values[out::spread_quality1], 0.f, 1.f);
-  result.spread_quality2 = std::clamp(values[out::spread_quality2], 0.f, 1.f);
-  result.spread_quality_width = std::clamp(values[out::spread_quality_width], 0.f, 1.f);
+  result.spread_receptors = std::clamp(values[out::spread_receptors], 0.f, 1.f);
   result.baseline = values[out::capacity];
   result.sensitivity = field::HORMONE_SENSITIVITY_SPAN * values[out::field_width];
   result.half =
@@ -87,27 +80,15 @@ inline Plan import_plan(const fishsim::Genome &genome) {
       g.modulator = values[out::identity4];
     }
     g.initial_strength = values[out::synapse_strength];
-    g.spread_expression = std::clamp(values[out::spread_expression], 0.f, 1.f);
-    g.spread_identity_role = std::clamp(values[out::spread_identity_role], 0.f, 1.f);
-    g.spread_identity1 = std::clamp(values[out::spread_identity1], 0.f, 1.f);
-    g.spread_identity2 = std::clamp(values[out::spread_identity2], 0.f, 1.f);
-    g.spread_identity3 = std::clamp(values[out::spread_identity3], 0.f, 1.f);
-    g.spread_identity4 = std::clamp(values[out::spread_identity4], 0.f, 1.f);
-    g.spread_capacity = std::clamp(values[out::spread_capacity], 0.f, 1.f);
-    g.spread_threshold = std::clamp(values[out::spread_threshold], 0.f, 1.f);
-    g.spread_time_constant = std::clamp(values[out::spread_time_constant], 0.f, 1.f);
-    g.spread_field_width = std::clamp(values[out::spread_field_width], 0.f, 1.f);
-    g.spread_quality1 = std::clamp(values[out::spread_quality1], 0.f, 1.f);
-    g.spread_quality2 = std::clamp(values[out::spread_quality2], 0.f, 1.f);
-    g.spread_quality_width = std::clamp(values[out::spread_quality_width], 0.f, 1.f);
-    g.spread_sender1 = std::clamp(values[out::spread_sender1], 0.f, 1.f);
-    g.spread_sender2 = std::clamp(values[out::spread_sender2], 0.f, 1.f);
-    g.spread_receiver1 = std::clamp(values[out::spread_receiver1], 0.f, 1.f);
-    g.spread_receiver2 = std::clamp(values[out::spread_receiver2], 0.f, 1.f);
-    g.spread_search_width = std::clamp(values[out::spread_search_width], 0.f, 1.f);
-    g.spread_crossing = std::clamp(values[out::spread_crossing], 0.f, 1.f);
-    g.spread_range = std::clamp(values[out::spread_range], 0.f, 1.f);
-    g.spread_synapse_strength = std::clamp(values[out::spread_synapse_strength], 0.f, 1.f);
+    g.spread_physiology = std::clamp(values[out::spread_physiology], 0.f, 1.f);
+    g.spread_receptors = std::clamp(values[out::spread_receptors], 0.f, 1.f);
+    g.spread_development = std::clamp(values[out::spread_development], 0.f, 1.f);
+    g.spread_contacts = std::clamp(values[out::spread_contacts], 0.f, 1.f);
+    auto property_query = at;
+    property_query.property = cppn::property::learning;
+    g.learning_tau = (net.query_view(property_query)[out::time_constant] + 1) * .5f;
+    property_query.property = cppn::property::teaching;
+    g.teaching_strength = net.query_view(property_query)[out::synapse_strength];
     for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
       auto query = at;
       query.field = float(f) / (field::CONTACT_FIELDS - 1);
@@ -116,10 +97,7 @@ inline Plan import_plan(const fishsim::Genome &genome) {
       r.expression = v[out::expression];
       r.address = {v[out::receiver1], v[out::receiver2]};
       r.width = (v[out::search_width] + 1) * .5f;
-      g.reception_spread[f - 1] = {std::clamp(v[out::spread_expression], 0.f, 1.f),
-                                   std::clamp(v[out::spread_receiver1], 0.f, 1.f),
-                                   std::clamp(v[out::spread_receiver2], 0.f, 1.f),
-                                   std::clamp(v[out::spread_search_width], 0.f, 1.f)};
+      g.reception_spread[f - 1] = {std::clamp(v[out::spread_contacts], 0.f, 1.f)};
     }
     g.sender1 = values[out::sender1];
     g.sender2 = values[out::sender2];

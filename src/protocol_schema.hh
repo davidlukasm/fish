@@ -592,28 +592,11 @@ enum class CppnOutputColumn : std::size_t {
   crossing = 18,
   range = 19,
   synapse_strength = 20,
-  spread_expression = 21,
-  spread_identity_role = 22,
-  spread_identity1 = 23,
-  spread_identity2 = 24,
-  spread_identity3 = 25,
-  spread_identity4 = 26,
-  spread_capacity = 27,
-  spread_threshold = 28,
-  spread_time_constant = 29,
-  spread_field_width = 30,
-  spread_quality1 = 31,
-  spread_quality2 = 32,
-  spread_quality_width = 33,
-  spread_sender1 = 34,
-  spread_sender2 = 35,
-  spread_receiver1 = 36,
-  spread_receiver2 = 37,
-  spread_search_width = 38,
-  spread_crossing = 39,
-  spread_range = 40,
-  spread_synapse_strength = 41,
-  count = 42
+  spread_physiology = 21,
+  spread_receptors = 22,
+  spread_development = 23,
+  spread_contacts = 24,
+  count = 25
 };
 namespace cppn_output_column {
 inline constexpr std::size_t expression = 0;
@@ -637,28 +620,11 @@ inline constexpr std::size_t search_width = 17;
 inline constexpr std::size_t crossing = 18;
 inline constexpr std::size_t range = 19;
 inline constexpr std::size_t synapse_strength = 20;
-inline constexpr std::size_t spread_expression = 21;
-inline constexpr std::size_t spread_identity_role = 22;
-inline constexpr std::size_t spread_identity1 = 23;
-inline constexpr std::size_t spread_identity2 = 24;
-inline constexpr std::size_t spread_identity3 = 25;
-inline constexpr std::size_t spread_identity4 = 26;
-inline constexpr std::size_t spread_capacity = 27;
-inline constexpr std::size_t spread_threshold = 28;
-inline constexpr std::size_t spread_time_constant = 29;
-inline constexpr std::size_t spread_field_width = 30;
-inline constexpr std::size_t spread_quality1 = 31;
-inline constexpr std::size_t spread_quality2 = 32;
-inline constexpr std::size_t spread_quality_width = 33;
-inline constexpr std::size_t spread_sender1 = 34;
-inline constexpr std::size_t spread_sender2 = 35;
-inline constexpr std::size_t spread_receiver1 = 36;
-inline constexpr std::size_t spread_receiver2 = 37;
-inline constexpr std::size_t spread_search_width = 38;
-inline constexpr std::size_t spread_crossing = 39;
-inline constexpr std::size_t spread_range = 40;
-inline constexpr std::size_t spread_synapse_strength = 41;
-inline constexpr std::size_t count = 42;
+inline constexpr std::size_t spread_physiology = 21;
+inline constexpr std::size_t spread_receptors = 22;
+inline constexpr std::size_t spread_development = 23;
+inline constexpr std::size_t spread_contacts = 24;
+inline constexpr std::size_t count = 25;
 }
 enum class PlacementSurfaceColumn : std::size_t {
   ax = 0,
@@ -880,7 +846,8 @@ enum class NeuronParameterColumn : std::size_t {
   time_constant = 6,
   dendrites = 7,
   plasticity = 8,
-  count = 9
+  learning_time = 9,
+  count = 10
 };
 namespace neuron_parameter_column {
 inline constexpr std::size_t threshold = 0;
@@ -892,7 +859,8 @@ inline constexpr std::size_t field_width = 5;
 inline constexpr std::size_t time_constant = 6;
 inline constexpr std::size_t dendrites = 7;
 inline constexpr std::size_t plasticity = 8;
-inline constexpr std::size_t count = 9;
+inline constexpr std::size_t learning_time = 9;
+inline constexpr std::size_t count = 10;
 }
 enum class NeuronSiteColumn : std::size_t { u = 0, v = 1, w = 2, side = 3, count = 4 };
 namespace neuron_site_column {
@@ -1808,6 +1776,8 @@ namespace time_constant {
 inline constexpr double min_steps = 4.0;
 inline constexpr double span = 12.0;
 inline constexpr double pace_min_steps = 8.0;
+inline constexpr double learning_min_steps = 4.0;
+inline constexpr double learning_span = 128.0;
 }
 namespace vision {
 inline constexpr int pixels = 128;

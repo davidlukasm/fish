@@ -51,16 +51,15 @@ int main() {
     auto plan = cells(2);
     auto &g = plan.groups.front();
     g.copies = 4;
-    g.spread_threshold = .08f;
-    g.spread_time_constant = .06f;
-    g.spread_quality_width = .04f;
-    g.spread_synapse_strength = .05f;
+    g.tau = .1f;
+    g.learning_tau = 5.f / 7;
+    g.teaching_strength = .6f;
+    g.spread_physiology = .04f;
+    g.spread_contacts = .03f;
     g.receptors[field::Teaching] = {true, 0, 1, .1f, .2f, 0, 1};
-    g.receptors[field::Teaching].spread_capacity = .04f;
-    g.receptors[field::Teaching].spread_field_width = .03f;
-    g.receptors[field::Teaching].spread_quality_width = .02f;
+    g.receptors[field::Teaching].spread_receptors = .02f;
     g.reception[0] = {{.75f, -.75f}, .2f, 1};
-    g.reception_spread[0][1] = .01f;
+    g.reception_spread[0][0] = .01f;
     fishsim::Genome first;
     first.cppn = Builder().build(plan);
     first.development_seed = 17;
@@ -77,6 +76,11 @@ int main() {
       const auto &a = first.blueprint->neurons[i];
       assert(a.bias == same.blueprint->neurons[i].bias);
       assert(a.reception[0].address == same.blueprint->neurons[i].reception[0].address);
+      if (a.group == 0) {
+        assert(std::abs(a.parameters.learning_time - g.learning_tau) <= g.spread_physiology + 1e-6);
+        assert(std::abs(a.initial_teaching - .8f) <= g.spread_contacts + 1e-6);
+        assert(a.parameters.time_constant < .15f);
+      }
       assert(a.initial_weight >= 0 && a.initial_weight <= field::MAX_INITIAL_WEIGHT);
       different |= a.bias != other.blueprint->neurons[i].bias;
       if (i && a.group == first.blueprint->neurons[i - 1].group)

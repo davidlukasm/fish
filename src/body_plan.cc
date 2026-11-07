@@ -5,6 +5,7 @@
 #include "physiology.hh"
 #include "receptor_tuning.hh"
 #include "field/development_sites.hh"
+#include "field/retinal_tissue.hh"
 #include <limits>
 #include <numeric>
 namespace fishsim {
@@ -390,36 +391,10 @@ class AnatomyBuilder {
     }
   }
   void prepare_vision() {
-    std::vector<double> bearings;
-    for (int u = 0; u < 4; ++u)
-      for (int w = 0; w < 3; ++w)
-        bearings.push_back(GENERATED_HALF_VIEW * (.5 * (1 - u / 3.) + .5 * w / 2.));
-    std::sort(bearings.begin(), bearings.end());
-    bearings.erase(
-        std::unique(bearings.begin(), bearings.end(),
-                    [](double a, double b) { return std::abs(a - b) < tolerance::precision; }),
-        bearings.end());
-    std::size_t groups = 0;
-    for (const auto &n : s.neurons)
-      groups = std::max(groups, std::size_t(n.group) + 1);
-    std::vector<int> copies(groups, 0), ordinal(groups, 0);
-    for (const auto &n : s.neurons)
-      ++copies[n.group];
+    const auto angles = field::visual_bearings(s.neurons);
     for (auto &r : result->sensory)
       if (r.visual()) {
-        const auto &n = s.neurons[r.neuron];
-        const double base = std::abs(r.angle);
-        const auto i =
-            std::size_t(std::min_element(bearings.begin(), bearings.end(),
-                                         [&](double a, double b) {
-                                           return std::abs(a - base) < std::abs(b - base);
-                                         }) -
-                        bearings.begin());
-        const double lo = i ? (.5 * (bearings[i - 1] + bearings[i])) : 0,
-                     hi = i + 1 < bearings.size() ? (.5 * (bearings[i + 1] + bearings[i]))
-                                                  : GENERATED_HALF_VIEW;
-        r.angle =
-            float(n.location.side * (lo + (hi - lo) * (ordinal[n.group]++ + .5) / copies[n.group]));
+        r.angle = float(GENERATED_HALF_VIEW * angles[r.neuron]);
         for (int side = 0; side < 2; ++side)
           if (std::abs(r.angle) < DEFAULT_BINOCULAR_ANGLE || (r.lateral >= 0) == (side == 1))
             result->eye_receptors[side].push_back(std::uint32_t(&r - result->sensory.data()));

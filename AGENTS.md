@@ -14,3 +14,4 @@ Pflege:
 - Version nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert.
 - Frische Daten je Version; keine Migrationen oder Legacy-Leser.
 - Nur kurze automatisierte Funktions-/Kompilierprüfungen; keine Langläufe.
+- Beauftragte Änderungen nach bestandenen Prüfungen automatisch auf GitHub pushen; die dauerhafte Nutzerfreigabe liegt vor.

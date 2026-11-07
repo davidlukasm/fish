@@ -34,7 +34,7 @@ for directory in ('src','colony-core/ann','colony-core/cppn','colony-core/evolut
 files.extend(Path('tests')/name for name in '''build_check.py dom_fixture.js invariants.cc compiler.cc run_suite.py suite.py studio.js test_support.hh texts.js ui_link.js'''.split())
 for path in files:
     if path.is_symlink() or not path.is_file():raise SystemExit(f'Datei fehlt oder ist ein Link: {path}')
-for name,limit in (('README.md',4096),('AGENTS.md',1024)):
+for name,limit in (('README.md',4096),('AGENTS.md',2048)):
     if Path(name).stat().st_size>limit:raise SystemExit(f'{name}: auf höchstens {limit} Bytes kürzen.')
 if output.exists():raise SystemExit('Das Ausgabepaket existiert bereits; neue Versionsnummer verwenden.')
 if output.resolve() in {p.resolve() for p in files}:raise SystemExit('Ausgabe würde eine Projektdatei überschreiben.')

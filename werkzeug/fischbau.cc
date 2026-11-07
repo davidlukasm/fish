@@ -195,10 +195,14 @@ struct Builder {
     link(distance, selected, -1);
     return selectors[query] = selected;
   }
-  int indicator(const Box &b, int query = -1) {
+  int indicator(const Box &b, int query = -1, float property = -1) {
     std::vector<int> t{query < 0 ? test(cppn::input::effect, -1, .5f / field::RECEPTOR_QUERIES)
                                  : effect_selector(query)};
     if (query < 0) t.push_back(test(cppn::input::field, -1, .5f / (field::CONTACT_FIELDS - 1)));
+    if (property >= 0) {
+      t.push_back(test(cppn::input::property, -1, property + .2f));
+      t.push_back(test(cppn::input::property, 1, property - .2f));
+    }
     auto range = [&](int input, float lo, float hi) {
       if (lo > 0)
         t.push_back(test(input, 1, lo - .05f));
@@ -240,6 +244,9 @@ struct Builder {
       const auto v = outputs(c);
       for (int k = 0; k < cppn::OUTPUTS; ++k)
         raise(a, k, v[k] - base[k]);
+      if (c.kind == Kind::Nerve)
+        raise(indicator(c.at, -1, cppn::property::learning), out::time_constant,
+              2 * (5.f / 7 - c.tau));
       for (const auto &r : c.receptors) {
         const int q = indicator(c.at, r.effect);
         const auto [x, y] = hormone_place(r.substance);

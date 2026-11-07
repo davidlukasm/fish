@@ -17,8 +17,9 @@ const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function scopeOutputs(scope, shape) {
   const inputs = shape.cppnInputs;
   return Array.from({length : shape.cppnOutputs}, (_, i) => i + inputs).filter(id => {
-    const output = (id - inputs) % CPPN_OUTPUT.spread_expression;
-    return scope === 'all' || (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
+    const output = id - inputs;
+    return scope === 'all' || (scope === 'traits' && output >= CPPN_OUTPUT.spread_physiology) ||
+           (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
            (scope === 'traits' && output >= CPPN_OUTPUT.capacity &&
             output <= CPPN_OUTPUT.quality_width) ||
            (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);

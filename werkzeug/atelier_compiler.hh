@@ -27,39 +27,17 @@ struct Receptor {
   bool active = false;
   float baseline = 0, sensitivity = 0, half = .05f, width = 0;
   int substance = 0, steepness = 0;
-  float spread_capacity = 0;
-  float spread_field_width = 0;
-  float spread_threshold = 0;
-  float spread_time_constant = 0;
-  float spread_quality1 = 0;
-  float spread_quality2 = 0;
-  float spread_quality_width = 0;
+  float spread_receptors = 0;
 };
 struct Group {
   float initial_strength = 0;
-  float spread_expression = 0;
-  float spread_identity_role = 0;
-  float spread_identity1 = 0;
-  float spread_identity2 = 0;
-  float spread_identity3 = 0;
-  float spread_identity4 = 0;
-  float spread_capacity = 0;
-  float spread_threshold = 0;
-  float spread_time_constant = 0;
-  float spread_field_width = 0;
-  float spread_quality1 = 0;
-  float spread_quality2 = 0;
-  float spread_quality_width = 0;
-  float spread_sender1 = 0;
-  float spread_sender2 = 0;
-  float spread_receiver1 = 0;
-  float spread_receiver2 = 0;
-  float spread_search_width = 0;
-  float spread_crossing = 0;
-  float spread_range = 0;
-  float spread_synapse_strength = 0;
+  float learning_tau = .5f, teaching_strength = 0;
+  float spread_physiology = 0;
+  float spread_receptors = 0;
+  float spread_development = 0;
+  float spread_contacts = 0;
   std::array<field::ReceptionField, field::CONTACT_FIELDS - 1> reception{};
-  std::array<std::array<float, 4>, field::CONTACT_FIELDS - 1> reception_spread{};
+  std::array<std::array<float, 1>, field::CONTACT_FIELDS - 1> reception_spread{};
   Group() {
     for (auto &r : reception)
       r.expression = -1;
@@ -99,13 +77,7 @@ Receptor read_receptor(std::istream &input) {
              r.steepness >= 0 && r.steepness <= field::HORMONE_STEEPNESS_STEPS,
          "invalid receptor properties");
   r.active = active != 0;
-  ensure(between(r.spread_capacity, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_field_width, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_threshold, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_time_constant, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_quality1, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_quality2, 0, 1), "invalid receptor spread");
-  ensure(between(r.spread_quality_width, 0, 1), "invalid receptor spread");
+  ensure(between(r.spread_receptors, 0, 1), "invalid receptor spread");
   return r;
 }
 
@@ -155,27 +127,12 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     for (auto &r : g.receptors)
       r = read_receptor(input);
     ensure(between(g.initial_strength, -1, 1), "invalid birth strength");
-    ensure(between(g.spread_expression, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_identity_role, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_identity1, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_identity2, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_identity3, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_identity4, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_capacity, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_threshold, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_time_constant, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_field_width, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_quality1, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_quality2, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_quality_width, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_sender1, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_sender2, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_receiver1, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_receiver2, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_search_width, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_crossing, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_range, 0, 1), "invalid trait spread");
-    ensure(between(g.spread_synapse_strength, 0, 1), "invalid trait spread");
+    ensure(between(g.spread_physiology, 0, 1), "invalid trait spread");
+    ensure(between(g.spread_receptors, 0, 1), "invalid trait spread");
+    ensure(between(g.spread_development, 0, 1), "invalid trait spread");
+    ensure(between(g.spread_contacts, 0, 1), "invalid trait spread");
+    ensure(between(g.learning_tau, 0, 1) && between(g.teaching_strength, -1, 1),
+           "invalid property context");
     groups.push_back(std::move(g));
   }
   std::vector<int> owners(field::DEVELOPMENT_SITES, -1);
@@ -309,27 +266,10 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
   v[out::crossing] = g.crossing;
   v[out::range] = raw(g.range);
   v[out::synapse_strength] = g.initial_strength;
-  v[out::spread_expression] = g.spread_expression;
-  v[out::spread_identity_role] = g.spread_identity_role;
-  v[out::spread_identity1] = g.spread_identity1;
-  v[out::spread_identity2] = g.spread_identity2;
-  v[out::spread_identity3] = g.spread_identity3;
-  v[out::spread_identity4] = g.spread_identity4;
-  v[out::spread_capacity] = g.spread_capacity;
-  v[out::spread_threshold] = g.spread_threshold;
-  v[out::spread_time_constant] = g.spread_time_constant;
-  v[out::spread_field_width] = g.spread_field_width;
-  v[out::spread_quality1] = g.spread_quality1;
-  v[out::spread_quality2] = g.spread_quality2;
-  v[out::spread_quality_width] = g.spread_quality_width;
-  v[out::spread_sender1] = g.spread_sender1;
-  v[out::spread_sender2] = g.spread_sender2;
-  v[out::spread_receiver1] = g.spread_receiver1;
-  v[out::spread_receiver2] = g.spread_receiver2;
-  v[out::spread_search_width] = g.spread_search_width;
-  v[out::spread_crossing] = g.spread_crossing;
-  v[out::spread_range] = g.spread_range;
-  v[out::spread_synapse_strength] = g.spread_synapse_strength;
+  v[out::spread_physiology] = g.spread_physiology;
+  v[out::spread_receptors] = g.spread_receptors;
+  v[out::spread_development] = g.spread_development;
+  v[out::spread_contacts] = g.spread_contacts;
   return v;
 }
 
@@ -345,6 +285,8 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
     auto cell = field::site_cell(p, outputs(*g), i + 1, bias_scale);
     if (!cell)
       continue;
+    cell->parameters.learning_time = g->learning_tau;
+    cell->initial_teaching = (g->teaching_strength + 1) * .5f;
     cell->group = std::uint32_t(cells.size());
     cells.push_back(*cell);
   }
@@ -365,7 +307,8 @@ inline std::vector<Group> compact_groups(std::vector<Group> groups) {
   constexpr float TRAIT_EPSILON = 1e-5f;
   auto same = [&](const Group &a, const Group &b) {
     if (a.organ != b.organ || a.zone != b.zone || a.side != b.side || a.role != b.role ||
-        a.function != b.function || a.copies != b.copies)
+        a.function != b.function || a.copies != b.copies || a.learning_tau != b.learning_tau ||
+        a.teaching_strength != b.teaching_strength)
       return false;
     if (a.reception != b.reception || a.reception_spread != b.reception_spread)
       return false;
@@ -377,11 +320,7 @@ inline std::vector<Group> compact_groups(std::vector<Group> groups) {
       const auto &x = a.receptors[i], &y = b.receptors[i];
       if (x.active != y.active || x.substance != y.substance || x.steepness != y.steepness)
         return false;
-      if (x.spread_capacity != y.spread_capacity || x.spread_field_width != y.spread_field_width ||
-          x.spread_threshold != y.spread_threshold ||
-          x.spread_time_constant != y.spread_time_constant ||
-          x.spread_quality1 != y.spread_quality1 || x.spread_quality2 != y.spread_quality2 ||
-          x.spread_quality_width != y.spread_quality_width)
+      if (x.spread_receptors != y.spread_receptors)
         return false;
       for (auto pair : {std::pair{x.baseline, y.baseline},
                         {x.sensitivity, y.sensitivity},
@@ -468,7 +407,7 @@ class Builder {
     link(cppn::BIAS, id, .5f);
     return masks[signed_gate] = id;
   }
-  int indicator(const Group &g, int effect = -1, int contact_field = 0) {
+  int indicator(const Group &g, int effect = -1, int contact_field = 0, float property = -1) {
     if (effect == field::GROWTH_RECEPTOR)
       return mask(effect_selector(effect));
     std::vector<int> conditions{effect < 0
@@ -480,6 +419,10 @@ class Builder {
       conditions.push_back(test(cppn::input::field, -1, value + half));
       if (contact_field)
         conditions.push_back(test(cppn::input::field, 1, value - half));
+    }
+    if (property >= 0) {
+      conditions.push_back(test(cppn::input::property, -1, property + .2f));
+      conditions.push_back(test(cppn::input::property, 1, property - .2f));
     }
     // Boundaries halfway to the nearest excluded site preserve the exact selected grid cells.
     auto bounds = [&](int input, float lo, float hi) {
@@ -542,13 +485,7 @@ public:
     assign(gate, out::quality1, std::cos(a));
     assign(gate, out::quality2, std::sin(a));
     assign(gate, out::quality_width, 2 * r.width - 1);
-    assign(gate, out::spread_capacity, r.spread_capacity);
-    assign(gate, out::spread_field_width, r.spread_field_width);
-    assign(gate, out::spread_threshold, r.spread_threshold);
-    assign(gate, out::spread_time_constant, r.spread_time_constant);
-    assign(gate, out::spread_quality1, r.spread_quality1);
-    assign(gate, out::spread_quality2, r.spread_quality2);
-    assign(gate, out::spread_quality_width, r.spread_quality_width);
+    assign(gate, out::spread_receptors, r.spread_receptors);
   }
   std::shared_ptr<evolution::Genome> build(const Plan &plan) {
     const auto compact = compact_groups(plan.groups);
@@ -567,6 +504,10 @@ public:
           if (std::abs(delta) >= 1e-7f)
             traits[k][delta].push_back(gate);
         }
+        assign(indicator(g, -1, 0, cppn::property::learning), out::time_constant,
+               2 * (g.learning_tau - g.tau));
+        assign(indicator(g, -1, 0, cppn::property::teaching), out::synapse_strength,
+               g.teaching_strength - g.initial_strength);
         for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
           const auto &r = g.reception[f - 1];
           if (r.expression <= -1 && g.reception_spread[f - 1][0] == 0)
@@ -576,10 +517,7 @@ public:
           assign(gate, out::receiver1, r.address[0]);
           assign(gate, out::receiver2, r.address[1]);
           assign(gate, out::search_width, 2 * r.width - 1);
-          assign(gate, out::spread_expression, g.reception_spread[f - 1][0]);
-          assign(gate, out::spread_receiver1, g.reception_spread[f - 1][1]);
-          assign(gate, out::spread_receiver2, g.reception_spread[f - 1][2]);
-          assign(gate, out::spread_search_width, g.reception_spread[f - 1][3]);
+          assign(gate, out::spread_contacts, g.reception_spread[f - 1][0]);
         }
         for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
           if (g.receptors[effect].active)

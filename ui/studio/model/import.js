@@ -81,6 +81,8 @@ export function startDocument(source, sites, name) {
       center[key] = Math.max([ 'copies', 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1,
                              Math.min(key === 'copies' ? g.copies : 1, g[key]));
     center.initial_strength = g.initial_strength;
+    center.learning_tau = g.learning_tau;
+    center.teaching_strength = g.teaching_strength;
     center.distribution =
         Object.fromEntries(Object.entries(g).filter(([ key ]) => key.startsWith("spread_")));
     center.id = `start-cell-${index}`;

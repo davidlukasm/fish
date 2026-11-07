@@ -377,12 +377,12 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
   const float baseline = wanted.active ? wanted.baseline : effect == field::Output ? 1.f : 0.f;
   const float sensitivity = wanted.active ? wanted.sensitivity : 0.f;
   float deviation = std::max(
-      outside(actual.baseline, baseline - 2 * wanted.spread_capacity,
-              baseline + 2 * wanted.spread_capacity) /
+      outside(actual.baseline, baseline - 2 * wanted.spread_receptors,
+              baseline + 2 * wanted.spread_receptors) /
           2,
       outside(actual.sensitivity,
-              sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_field_width,
-              sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_field_width) /
+              sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_receptors,
+              sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_receptors) /
           (2 * field::HORMONE_SENSITIVITY_SPAN));
   if (!wanted.active || std::abs(wanted.sensitivity) < 1e-6f)
     return deviation;
@@ -391,14 +391,14 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
     return std::array<double, 2>{std::clamp(mean - width, -1., 1.),
                                  std::clamp(mean + width, -1., 1.)};
   };
-  const auto x = interval(std::cos(angle), 2 * wanted.spread_quality1),
-             y = interval(std::sin(angle), 2 * wanted.spread_quality2);
+  const auto x = interval(std::cos(angle), 2 * wanted.spread_receptors),
+             y = interval(std::sin(angle), 2 * wanted.spread_receptors);
   const double sigma_min = field::HORMONE_SIGMA_MIN +
                            (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
-                               std::clamp(wanted.width - wanted.spread_quality_width, 0.f, 1.f),
+                               std::clamp(wanted.width - wanted.spread_receptors, 0.f, 1.f),
                sigma_max = field::HORMONE_SIGMA_MIN +
                            (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
-                               std::clamp(wanted.width + wanted.spread_quality_width, 0.f, 1.f);
+                               std::clamp(wanted.width + wanted.spread_receptors, 0.f, 1.f);
   for (int k = 0; k < field::REGULATORS; ++k) {
     const double a = 2 * fishsim::PI * k / field::BLOOD_SUBSTANCES;
     const double px = std::cos(a), py = std::sin(a);
@@ -416,32 +416,32 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
   const float half_difference = float(std::log(actual.half / wanted.half) /
                                       std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN));
   deviation = std::max(deviation,
-                       outside(half_difference, -wanted.spread_threshold, wanted.spread_threshold));
+                       outside(half_difference, -wanted.spread_receptors, wanted.spread_receptors));
   const auto steepness = [&](float delta) {
     return float(std::lround(
         field::HORMONE_STEEPNESS_STEPS *
         std::clamp(float(wanted.steepness) / field::HORMONE_STEEPNESS_STEPS + delta, 0.f, 1.f)));
   };
   return std::max(deviation,
-                  outside(float(actual.steepness), steepness(-2 * wanted.spread_time_constant),
-                          steepness(2 * wanted.spread_time_constant)) /
+                  outside(float(actual.steepness), steepness(-2 * wanted.spread_receptors),
+                          steepness(2 * wanted.spread_receptors)) /
                       field::HORMONE_STEEPNESS_STEPS);
 }
 inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
                              const field::Neuron &expected) {
   const auto &a = cell.parameters, &b = expected.parameters;
   float deviation = std::max(
-      {std::max(0.f, std::abs(a.threshold - b.threshold) - wanted.spread_threshold),
-       std::max(0.f, std::abs(a.time_constant - b.time_constant) - wanted.spread_time_constant),
-       std::max(0.f, std::abs(a.field_width - b.field_width) - wanted.spread_field_width),
-       std::max(0.f, std::abs(a.quality1 - b.quality1) / 2 - wanted.spread_quality1),
-       std::max(0.f, std::abs(a.quality2 - b.quality2) / 2 - wanted.spread_quality2),
-       std::max(0.f, std::abs(a.quality_width - b.quality_width) - wanted.spread_quality_width),
-       std::max(0.f, std::abs(cell.range - expected.range) - wanted.spread_range),
-       std::max(0.f, std::abs(cell.crossing - expected.crossing) / 2 - wanted.spread_crossing)});
+      {std::max(0.f, std::abs(a.threshold - b.threshold) - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.time_constant - b.time_constant) - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.field_width - b.field_width) - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.quality1 - b.quality1) / 2 - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.quality2 - b.quality2) / 2 - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.quality_width - b.quality_width) - wanted.spread_physiology),
+       std::max(0.f, std::abs(cell.range - expected.range) - wanted.spread_contacts),
+       std::max(0.f, std::abs(cell.crossing - expected.crossing) / 2 - wanted.spread_contacts)});
   const std::array<float, field::IDENTITY_SIZE> identity_spread{
-      wanted.spread_identity_role, wanted.spread_identity1, wanted.spread_identity2,
-      wanted.spread_identity3, wanted.spread_identity4};
+      wanted.spread_development, wanted.spread_development, wanted.spread_development,
+      wanted.spread_development, wanted.spread_development};
   for (std::size_t k = 1; k < cell.identity.size(); ++k)
     deviation =
         std::max(deviation, std::max(0.f, std::abs(cell.identity[k] - expected.identity[k]) / 2 -
@@ -502,12 +502,12 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
       result.issues.push_back({"organ", j, j});
     else if (std::abs(counts[j] - expected) >
              p.options.capacityTolerance * expected +
-                 sites * field::CELL_COPIES * p.groups[j].spread_capacity + .001)
+                 sites * field::CELL_COPIES * p.groups[j].spread_development + .001)
       result.issues.push_back({"capacity", j, j, double(counts[j]) / expected});
     if (p.groups[j].role == 2) {
       const double capacity = sites * p.groups[j].copies / 16.;
       if (std::abs(capacities[j] - capacity) >
-          p.options.capacityTolerance * capacity + sites * p.groups[j].spread_capacity + 1e-4)
+          p.options.capacityTolerance * capacity + sites * p.groups[j].spread_development + 1e-4)
         result.issues.push_back({"capacity", j, j, capacities[j] / capacity});
     }
   }

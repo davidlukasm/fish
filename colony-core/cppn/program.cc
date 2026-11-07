@@ -32,8 +32,8 @@ struct Program::PreparationState {
   std::set<int> used;
   std::vector<int> work;
   std::set<int>::const_iterator observed;
-  static constexpr std::array<OutputMask, 3> masks{ALL_OUTPUTS, output::receptor_mask,
-                                                   output::contact_mask};
+  static constexpr std::array<OutputMask, 4> masks{ALL_OUTPUTS, output::receptor_mask,
+                                                   output::contact_mask, output::property_mask};
   void begin_mask(const ann::Network::Compiled &code) {
     cursor = 0;
     needed.assign(code.controls.size(), 0);

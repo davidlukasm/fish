@@ -39,10 +39,16 @@ std::optional<Neuron> site_cell(const cppn::Point &p, const std::array<float, cp
   if (function < 0) {
     float best = -1;
     for (int k = 0; k < IDENTITY_CORNERS; ++k)
-      if (corners[k] >= .5f && corners[k] > best &&
-          development_function(p, n.role, k, n.variant) >= 0) {
-        function = development_function(p, n.role, k, n.variant);
-        best = corners[k];
+      for (int variant = 0; variant < IDENTITY_VARIANTS; ++variant) {
+        const int candidate = development_function(p, n.role, k, variant);
+        const float score = corners[k] * (variant == n.variant ? 1.f : .5f);
+        const bool variable = v[cppn::output::spread_development] > 0;
+        if (candidate >= 0 && score > best &&
+            (variable || (variant == n.variant && corners[k] >= .5f))) {
+          function = candidate;
+          best = score;
+          corner = k;
+        }
       }
     if (function < 0)
       return std::nullopt;
@@ -101,7 +107,7 @@ void lay_out_cells(std::vector<Neuron> &neurons) {
 namespace {
 class CellCopies {
   const std::vector<Neuron> &groups;
-  const std::vector<TraitValues> *traits;
+  const std::vector<CellTraits> *traits;
   std::uint64_t seed;
   float bias_scale;
   std::size_t limit, total = 0, cursor = 0, copy = 0;
@@ -112,7 +118,7 @@ class CellCopies {
 
 public:
   CellCopies(const std::vector<Neuron> &g, std::size_t maximum,
-             const std::vector<TraitValues> *distributions = nullptr, std::uint64_t individual = 0,
+             const std::vector<CellTraits> *distributions = nullptr, std::uint64_t individual = 0,
              float scale = 0)
       : groups(g), traits(distributions), seed(individual), bias_scale(scale), limit(maximum),
         counts(g.size(), 1), indices(g.size()) {}
@@ -126,8 +132,9 @@ public:
           const auto &n = groups[cursor];
           if (n.role != Role::Effector)
             counts[cursor] =
-                std::clamp(int(std::lround(CELL_COPIES * n.parameters.capacity * n.expression)), 1,
-                           CELL_COPY_LIMIT);
+                std::clamp(stochastic_count(CELL_COPIES * n.parameters.capacity * n.expression,
+                                            seed ^ splitmix(n.id) ^ 0x37fa811cull),
+                           1, CELL_COPY_LIMIT);
           total += std::size_t(counts[cursor++]);
         } else {
           cells.reserve(std::min(total, limit));
@@ -151,14 +158,16 @@ public:
           c.id = c.id * CELL_COPY_LIMIT + copy;
           c.group = std::uint32_t(cursor);
           if (traits) {
-            auto sampled = draw_traits((*traits)[cursor], seed, c.id);
+            auto sampled =
+                draw_traits((*traits)[cursor].cell, seed, splitmix(c.id ^ 0xa7cfbc81ull));
             sampled[cppn::output::expression] = 1;
-            for (int k = 0; k < IDENTITY_SIZE; ++k)
+            for (int k = 0; k < (c.role == Role::Nerve ? 1 : IDENTITY_SIZE); ++k)
               sampled[cppn::output::identity_role + k] = c.identity[k];
             // Anatomy and contact fields are shared by a centre; intrinsic traits vary by cell.
             const auto intrinsic = site_cell(c.location, sampled, c.id, bias_scale);
             if (intrinsic) {
               c.bias = intrinsic->bias;
+              c.identity = intrinsic->identity;
               c.parameters.threshold = intrinsic->parameters.threshold;
               c.parameters.time_constant = intrinsic->parameters.time_constant;
               c.parameters.quality1 = intrinsic->parameters.quality1;
@@ -168,6 +177,17 @@ public:
               c.parameters.field_width = intrinsic->parameters.field_width;
               c.parameters.dendrites = intrinsic->parameters.dendrites;
               c.initial_weight = intrinsic->initial_weight;
+              const auto learning =
+                  draw_traits((*traits)[cursor].learning, seed, splitmix(c.id ^ 0x15b3c201ull));
+              const auto teaching =
+                  draw_traits((*traits)[cursor].teaching, seed, splitmix(c.id ^ 0xf317f331ull));
+              c.parameters.learning_time = (learning[cppn::output::time_constant] + 1) * .5f;
+              c.initial_teaching = (teaching[cppn::output::synapse_strength] + 1) * .5f;
+              for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
+                if (hormone_effect_present(c.role, effect))
+                  c.hormone_receptors[effect] = receptor_parameters(
+                      draw_traits((*traits)[cursor].receptors[effect], seed,
+                                  splitmix(c.id ^ 0xb8624f90ull ^ effect), true));
             }
           }
           indices[cursor].push_back(NeuronIndex(cells.size()));
@@ -213,12 +233,11 @@ constexpr std::uint64_t CONNECTION_HASH_PRIME = 0x100000001b3ull, CONNECTION_HAS
 class CellGrowth {
   Substrate &owner;
   const std::vector<Candidate> &candidates;
-  enum Stage { Copies, Classes, Usable, Partners, Draw, Commit, Done } stage = Copies;
+  enum Stage { Copies, Slots, Usable, Partners, Draw, Commit, Done } stage = Copies;
   std::size_t cursor = 0, copy = 0, partner = 0, source_copy = 0;
   CellCopies copier;
   std::vector<std::vector<NeuronIndex>> copies;
   std::vector<Neuron> cells;
-  std::vector<CellClass> classes;
   std::vector<std::vector<const Candidate *>> usable;
   struct Option {
     double key;
@@ -243,7 +262,7 @@ class CellGrowth {
   }
 
 public:
-  CellGrowth(Substrate &o, const std::vector<Candidate> &c, const std::vector<TraitValues> &traits)
+  CellGrowth(Substrate &o, const std::vector<Candidate> &c, const std::vector<CellTraits> &traits)
       : owner(o), candidates(c),
         copier(o.neurons, std::min(o.options.max_nodes, MAX_NODES), &traits,
                o.development_seed ^ splitmix(o.variation_seed), o.options.bias_scale),
@@ -266,15 +285,13 @@ public:
           finish();
           break;
         }
-        classes.reserve(cells.size());
-        stage = Classes;
+        stage = Slots;
         break;
-      case Classes:
+      case Slots:
         if (cursor < cells.size()) {
           auto &c = cells[cursor++];
           c.slots = std::uint16_t(
               std::min(input_slots(c), int(std::numeric_limits<std::uint16_t>::max())));
-          classes.push_back(cell_class(c));
         } else {
           cursor = 0;
           stage = Usable;
@@ -320,7 +337,7 @@ public:
               const auto source = copies[c.from][source_copy++];
               if (source != cursor &&
                   (c.p >= 1 || unit_center(hash(cells[source].id, b.id, CONNECTION_STREAM)) < c.p))
-                accepted.push_back({0, source, classes[source].sign * b.initial_weight});
+                accepted.push_back({0, source, initial_contact_weight(cells[source], b)});
             } else {
               ++partner;
               source_copy = 0;
@@ -372,6 +389,7 @@ struct Substrate::GridState {
   enum Stage {
     Prepare,
     Cells,
+    Properties,
     Receptors,
     Fields,
     Index,
@@ -381,9 +399,9 @@ struct Substrate::GridState {
     Done
   } stage = Prepare;
   std::unique_ptr<CellGrowth> growth;
-  std::size_t cell = 0, receptor = 0, link = 0, target = 0, field = 0;
+  std::size_t property = 0, cell = 0, receptor = 0, link = 0, target = 0, field = 0;
   std::size_t query_debt = 0;
-  std::vector<TraitValues> traits;
+  std::vector<CellTraits> traits;
   std::vector<std::pair<std::size_t, int>> fields;
   ContactIndex index;
   std::vector<std::uint32_t> sources;
@@ -424,7 +442,7 @@ struct Substrate::GridDevelopment {
     Neuron n = *made;
     n.group = std::uint32_t(owner.neurons.size());
     owner.neurons.push_back(n);
-    s.traits.push_back(v);
+    s.traits.push_back({v, v, v, {}});
     owner.built_neurons = owner.neurons.size();
   }
   void geometry() { lay_out_cells(owner.neurons); }
@@ -457,7 +475,7 @@ struct Substrate::GridDevelopment {
               if (hormone_effect_present(owner.neurons[i].role, effect))
                 s.receptors.push_back({i, effect});
           s.receptors.push_back({BODY, GROWTH_RECEPTOR});
-          s.stage = GridState::Receptors;
+          s.stage = GridState::Properties;
           continue;
         }
         if (!budget)
@@ -474,6 +492,39 @@ struct Substrate::GridDevelopment {
         for (std::size_t k = 0; k < n; ++k)
           cell(points[k], values[k], s.cell + k);
         s.cell += n;
+        continue;
+      }
+      if (s.stage == GridState::Properties) {
+        if (s.property == owner.neurons.size() * 2) {
+          s.stage = GridState::Receptors;
+          continue;
+        }
+        if (!budget)
+          return false;
+        const auto count =
+            std::min({cppn::BATCH,
+                      std::max<std::size_t>(
+                          1, budget / owner.program->query_cost(cppn::output::property_mask)),
+                      owner.neurons.size() * 2 - s.property});
+        for (std::size_t j = 0; j < count; ++j) {
+          const auto index = s.property + j;
+          points[j] = owner.neurons[index / 2].location;
+          points[j].property = index % 2 ? cppn::property::teaching : cppn::property::learning;
+        }
+        evaluate(count, cppn::output::property_mask);
+        for (std::size_t j = 0; j < count; ++j) {
+          const auto index = s.property + j;
+          auto &traits = s.traits[index / 2];
+          auto &cell = owner.neurons[index / 2];
+          if (index % 2) {
+            traits.teaching = values[j];
+            cell.initial_teaching = (values[j][cppn::output::synapse_strength] + 1) * .5f;
+          } else {
+            traits.learning = values[j];
+            cell.parameters.learning_time = (values[j][cppn::output::time_constant] + 1) * .5f;
+          }
+        }
+        s.property += count;
         continue;
       }
       if (s.stage == GridState::Receptors) {
@@ -507,19 +558,14 @@ struct Substrate::GridDevelopment {
                           splitmix((s.receptors[s.receptor + j].first == BODY
                                         ? BODY
                                         : owner.neurons[s.receptors[s.receptor + j].first].id) ^
-                                   RECEPTOR_STREAM ^ s.receptors[s.receptor + j].second));
+                                   RECEPTOR_STREAM ^ s.receptors[s.receptor + j].second),
+                          true);
           const auto [cell, query] = s.receptors[s.receptor + j];
           auto &r =
               cell == BODY ? owner.growth_receptor : owner.neurons[cell].hormone_receptors[query];
-          r.affinity =
-              hormone_affinity<REGULATORS>(v[cppn::output::quality1], v[cppn::output::quality2],
-                                           (v[cppn::output::quality_width] + 1) * .5f);
-          r.baseline = v[cppn::output::capacity];
-          r.sensitivity = HORMONE_SENSITIVITY_SPAN * v[cppn::output::field_width];
-          r.steepness = int(std::lround(HORMONE_STEEPNESS_STEPS *
-                                        std::clamp(v[cppn::output::time_constant], 0.f, 1.f)));
-          r.half = float(HORMONE_HALF_MIN * std::pow(HORMONE_HALF_MAX / HORMONE_HALF_MIN,
-                                                     (v[cppn::output::threshold] + 1) * .5));
+          r = receptor_parameters(v);
+          if (cell != BODY)
+            s.traits[cell].receptors[query] = values[j];
         }
         s.receptor += count;
         continue;
@@ -547,7 +593,7 @@ struct Substrate::GridDevelopment {
           auto [cell, f] = s.fields[s.field + j];
           const auto v =
               draw_traits(values[j], owner.development_seed ^ splitmix(owner.variation_seed),
-                          splitmix(owner.neurons[cell].id ^ CONTACT_FIELD_STREAM ^ f));
+                          splitmix(owner.neurons[cell].id ^ CONTACT_FIELD_STREAM ^ f), false, true);
           auto &r = owner.neurons[cell].reception[f - 1];
           r.expression = std::clamp(v[cppn::output::expression], 0.f, 1.f);
           r.address = {v[cppn::output::receiver1], v[cppn::output::receiver2]};
@@ -636,7 +682,7 @@ bool Substrate::connections_pending() const {
   return grid_state && grid_state->stage == GridState::Links;
 }
 bool Substrate::cell_parameters_complete() const {
-  return grid_state && grid_state->stage >= GridState::Receptors;
+  return grid_state && grid_state->stage >= GridState::Properties;
 }
 bool Substrate::anatomy_complete() const {
   return cell_parameters_complete();
@@ -654,10 +700,11 @@ std::size_t Substrate::remaining_queries(std::size_t estimate) const {
   const auto &s = *grid_state;
   if (s.stage == GridState::Prepare)
     return estimate;
-  return s.stage == GridState::Cells       ? DEVELOPMENT_SITES - s.cell
-         : s.stage == GridState::Receptors ? s.receptors.size() - s.receptor
-         : s.stage == GridState::Fields    ? s.fields.size() - s.field
-                                           : 0;
+  return s.stage == GridState::Cells        ? DEVELOPMENT_SITES - s.cell
+         : s.stage == GridState::Properties ? neurons.size() * 2 - s.property
+         : s.stage == GridState::Receptors  ? s.receptors.size() - s.receptor
+         : s.stage == GridState::Fields     ? s.fields.size() - s.field
+                                            : 0;
 }
 void Substrate::abort_development(const std::string &reason) {
   resource_limited = true;
