@@ -514,13 +514,18 @@ export const handleMethods = {
   releaseHandle(event) {
     const how = HANDLES[this.handleDrag.held];
     this[how.follow](event);
+    // A drafted drag settles while still held, so a graphic drawn from the drag keeps the dragged
+    // value until the design run answers.
+    const drafted = !!this.drafted;
+    if (drafted)
+      this.settleGraphic();
+    if (drafted && how.done && how.done !== 'settleGraphic')
+      this[how.done]();
     this.handleDrag = null;
     this.historyBatch = null;
     if (!how.keepsClick)
       this.ignoreClickUntil = performance.now() + DRAG_CLICK;
-    if (this.drafted)
-      this.settleGraphic();
-    else if (how.done)
+    if (!drafted && how.done)
       this[how.done]();
   },
   keepPanels() {
