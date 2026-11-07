@@ -3,6 +3,30 @@
 #include <iostream>
 
 using namespace atelier;
+void duplication_uses_shared_limits() {
+  constexpr int INPUT = 0, OUTPUT = 1, ROOT = 2;
+  constexpr float INITIAL_WEIGHT = .5f;
+  for (int count : {evolution::MAX_GENOME_NODES / 2, evolution::MAX_GENOME_NODES - 1,
+                    evolution::MAX_GENOME_NODES}) {
+    evolution::Genome net(1, 1);
+    for (int id = 0; id < count; ++id)
+      net.add_node({id, 1, NodeType::LINEAR});
+    assert(net.connect(INPUT, ROOT, 1) && net.connect(ROOT, OUTPUT, INITIAL_WEIGHT));
+    std::vector<int> copies;
+    const bool expected = count < evolution::MAX_GENOME_NODES;
+    assert(net.duplicate_subgraph({ROOT}, &copies, false) == expected);
+    assert(net.nodes() == count + int(expected));
+    if (expected) {
+      assert(copies.size() == 1);
+      float combined = 0;
+      for (const auto &edge : net.get_connection_genes())
+        if (edge.get_target() == OUTPUT)
+          combined += edge.get_weight();
+      assert(combined == INITIAL_WEIGHT);
+    }
+    net.validate();
+  }
+}
 Plan cells(int count) {
   Plan p;
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES && int(p.groups.size()) < count; ++i) {
@@ -22,6 +46,7 @@ Plan cells(int count) {
 }
 int main() {
   fishsim::Genome::begin_run(34981);
+  duplication_uses_shared_limits();
   {
     auto plan = cells(2);
     auto &g = plan.groups.front();

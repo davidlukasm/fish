@@ -16,7 +16,7 @@
 namespace evolution {
 Genome::Genome(int i, int o, std::shared_ptr<History> h)
     : input_nodes(i), output_nodes(o), history_(h ? h : std::make_shared<History>()) {
-  if (i < 1 || o < 1 || i > 100000 || o > 100000)
+  if (i < 1 || o < 1 || i > MAX_ENCODED_GENOME_NODES || o > MAX_ENCODED_GENOME_NODES)
     throw std::invalid_argument("invalid input/output count");
 }
 Genome::Genome(const Genome &g) : input_nodes(g.input_nodes), output_nodes(g.output_nodes) {
@@ -299,7 +299,7 @@ bool Genome::duplicate_subgraph(const std::vector<int> &selected, std::vector<in
   if (copies)
     copies->clear();
   const std::set<int> region(selected.begin(), selected.end());
-  if (region.empty() || nodes() + region.size() > 1024)
+  if (region.empty() || nodes() + region.size() > MAX_GENOME_NODES)
     return false;
   for (int id : region) {
     const auto *node = get_node(id);
@@ -316,7 +316,7 @@ bool Genome::duplicate_subgraph(const std::vector<int> &selected, std::vector<in
       links.push_back(c);
     boundary |= region.count(c.get_source()) && !region.count(c.get_target());
   }
-  if (!boundary || connection_genes.size() + links.size() > 16384)
+  if (!boundary || connection_genes.size() + links.size() > MAX_GENOME_CONNECTIONS)
     return false;
   std::map<int, int> twins;
   for (int id : region) {
@@ -668,7 +668,7 @@ std::istream &Genome::read(std::istream &in, std::shared_ptr<History> shared_his
       ended = true;
       break;
     }
-    if (result.nodes() > 100000 || conns.size() > 1000000)
+    if (result.nodes() > MAX_ENCODED_GENOME_NODES || conns.size() > MAX_ENCODED_GENOME_CONNECTIONS)
       throw std::runtime_error("genome file exceeds resource limits");
     if (word == "Node") {
       int id, type, role = -1;

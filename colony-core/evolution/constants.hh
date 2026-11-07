@@ -1,5 +1,12 @@
 #pragma once
+#include <cstddef>
 namespace evolution {
+constexpr int MAX_GENOME_NODES = 4096;
+constexpr int GENOME_NODE_HEADROOM = 24;
+constexpr int MAX_GROWING_NODES = MAX_GENOME_NODES - GENOME_NODE_HEADROOM;
+constexpr std::size_t MAX_GENOME_CONNECTIONS = 65536;
+constexpr int MAX_ENCODED_GENOME_NODES = 100000;
+constexpr std::size_t MAX_ENCODED_GENOME_CONNECTIONS = 1000000;
 constexpr int NODE_TYPES = 11;
 constexpr float GAUSSIAN_SHARPNESS = 64.f;
 constexpr float WEIGHT_ABS_RANGE = 3.f, WEIGHT_RANGE = 6.f;

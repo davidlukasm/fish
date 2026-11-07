@@ -3,6 +3,7 @@
 #include "simulation_types.hh"
 #include "brain_interface.hh"
 #include "mutation_parameters.hh"
+#include "evolution/constants.hh"
 #include "field/substrate.hh"
 #include <string>
 #include <iosfwd>
@@ -11,8 +12,10 @@ inline constexpr const char *HAND_BUILT_GENOME = "genomes/handbau/handfisch.geno
 extern field::Options default_development_options;
 constexpr std::size_t BRAIN_QUERY_LIMIT = field::DEVELOPMENT_QUERY_LIMIT;
 inline constexpr double MAX_GENE_WEIGHT = 16;
-constexpr int MAX_GENOME_NODES = 4096, MAX_GROWING_NODES = MAX_GENOME_NODES - 24;
-constexpr std::size_t MAX_GENOME_CONNECTIONS = 65536, MAX_GENOME_NAME = 40;
+using evolution::MAX_GENOME_CONNECTIONS;
+using evolution::MAX_GENOME_NODES;
+using evolution::MAX_GROWING_NODES;
+constexpr std::size_t MAX_GENOME_NAME = 40;
 std::shared_ptr<const BrainInterface> body_interface(const field::Substrate &);
 struct Genome {
   std::shared_ptr<evolution::Genome> cppn;
