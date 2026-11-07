@@ -412,8 +412,11 @@ export const FISH_CLICKS = Object.freeze([
     '[data-add-substance]',
     studio => {
       const doc = addSubstance(studio.state.document, HORMONES.levels);
-      if (doc)
-        studio.changeDocument(doc, studio.state.selected);
+      if (!doc)
+        return;
+      // The new substance opens to be named; in the hormone tool its inspector replaces a cell's.
+      studio.state.focusSubstance = doc.substances.at(-1).index;
+      studio.changeDocument(doc, studio.state.tool === 'hormone' ? null : studio.state.selected);
     }
   ],
   [
