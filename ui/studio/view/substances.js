@@ -662,14 +662,14 @@ export function hormoneInspector(state) {
   const focus = chosenCenter(doc, selected);
   if (!focus)
     return substanceInspector(state);
-  let html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') + '</span>' +
-             heading(label('tools.hormone')) + '</header>';
+  const html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') +
+               '</span>' + heading(centerTitle(focus)) + '</header>';
   const own = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
   const effects = EFFECT_ORDER.filter(e => own.includes(e));
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
   if (!focus.receptors?.[effect])
     return html;
-  html += lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
-          heading(centerTitle(focus)) + receptorEditor(state, focus, effects, effect) + '</div>';
-  return html;
+  return html + lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
+         heading(label('inspector.cellEffects')) + receptorEditor(state, focus, effects, effect) +
+         '</div>';
 }
