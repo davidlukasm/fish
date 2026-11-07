@@ -14,11 +14,11 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
 import {routedLinks} from '../model/regions.js';
-import {t, tList} from '../../strings.js';
-import {heading, ICON, label} from './kit.js';
+import {joinParts, t, tList} from '../../strings.js';
+import {heading, ICON, label, regionTerm} from './kit.js';
 import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
-import {isModulator, isPacemaker, modeLean} from '../model/organs.js';
+import {isModulator, isPacemaker, isRegion, modeLean} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {effectScene} from './effects.js';
@@ -230,9 +230,11 @@ function learnersOverview(state) {
                                  '"><span class="aid-teacher-dot"></span>' +
                                  escapeText(substanceName(state, taught.index)) + '</span>'
                            : '');
+               const organ = findCenter(doc, c.id)?.organ;
+               const name =
+                   joinParts([ centerTitle(c), isRegion(organ) ? regionTerm(organ.type) : null ]);
                return '<button data-select-center="' + escapeText(c.id) + '">' + nodeMark(c) +
-                      '<span>' + escapeText(centerTitle(c)) +
-                      '</span><span class="aid-learner-teachers">' +
+                      '<span>' + escapeText(name) + '</span><span class="aid-learner-teachers">' +
                       (teachers || '<small>' + label('learnRule.untaughtShort') + '</small>') +
                       '</span></button>';
              })
