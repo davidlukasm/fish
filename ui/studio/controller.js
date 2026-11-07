@@ -23,7 +23,6 @@ import {
   findAssembly,
   findCenter,
   findOrgan,
-  identifier,
   newDocument,
   removeCenter,
   removeOrgan,
@@ -710,11 +709,13 @@ export class OrganStudio {
                                                 : o.centers
                  }));
     const wires = this.state.document.wires.filter(w => assembly.wireIds.includes(w.id));
-    const module = {id : identifier('module'), name, organs, wires};
+    // Saving the same group again replaces its entry in the library instead of adding one more.
+    const module = {id : assembly.id, name, organs, wires};
     try {
       const result = await this.api(requestBody('save-module', {module}));
       this.state.userModules = result.modules;
       this.renderShell();
+      this.notice(label('status.moduleSaved'));
     } catch (error) {
       this.notice(error.message);
     }
