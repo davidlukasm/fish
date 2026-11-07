@@ -385,7 +385,7 @@
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
 .aid-sight-eyes figcaption{font-size:11px;color:var(--aid-hint-text);margin-top:3px}
-.aid-anatomical-region{fill:#b8c5e11f;stroke:var(--aid-brain);stroke-width:2;stroke-dasharray:6 5}
+.aid-anatomical-region{fill:#b8c5e11f;stroke:var(--aid-brain);stroke-width:2.5;stroke-dasharray:7 6;vector-effect:non-scaling-stroke}
 .aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:3px 8px;font-size:11px;color:var(--aid-control-text)}
 .aid-pairing svg path{fill:none;stroke:var(--aid-handle);stroke-width:2;stroke-linecap:round}
 .aid-wire-pairing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:10px 0}
