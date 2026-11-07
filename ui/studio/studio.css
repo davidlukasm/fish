@@ -868,14 +868,14 @@
 .aid-effect-mark.with{stroke:none}
 .aid-effect-divide{stroke:#2f5356;stroke-width:1;stroke-dasharray:3 3}
 .aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
-.aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire .5s ease-in-out infinite}
+.aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire 2s ease-in-out infinite}
 .aid-hormone-receiver.acts-1 .aid-hormone-aura{animation:aid-acts-grow 2.2s ease-in-out infinite}
 .aid-hormone-receiver.acts-2 .aid-hormone-aura{stroke-dasharray:6 4;animation:aid-acts-push 1.6s linear infinite}
 .aid-hormone-receiver.acts-3 .aid-hormone-aura{stroke-dasharray:2 5;animation:aid-acts-push 3s linear infinite reverse}
 .aid-hormone-receiver.acts-4 .aid-hormone-aura{animation:aid-acts-beat 1.2s cubic-bezier(.3,0,.2,1) infinite}
 .aid-hormone-receiver.acts-5 .aid-hormone-aura{animation:aid-acts-signal 2.2s ease-in-out infinite}
 .aid-hormone-receiver.acts-6 .aid-hormone-core{animation:aid-acts-die 2.4s ease-in infinite}
-@keyframes aid-acts-fire{0%,100%{fill-opacity:.25}50%{fill-opacity:1}}
+@keyframes aid-acts-fire{0%,100%{fill-opacity:.4}50%{fill-opacity:1}}
 @keyframes aid-acts-grow{0%{transform:scale(.8)}70%,100%{transform:scale(1.5)}}
 @keyframes aid-acts-push{to{stroke-dashoffset:-20}}
 @keyframes aid-acts-beat{0%,60%,100%{transform:scale(1)}20%{transform:scale(1.45)}}

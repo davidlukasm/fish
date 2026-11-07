@@ -36,7 +36,7 @@ import {label} from './view/kit.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 
-const PRESSURE_TRIES = 12;
+const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
 export const designMethods = {
   refreshPigment() {
     const selected = this.state.selected;
@@ -147,7 +147,10 @@ export const designMethods = {
         if (this.state.document !== doc)
           return;
         if (answer?.pressure?.[index] === PRESSURE_OF[center.organType].source) {
-          this.changeDocument(moved, this.state.selected, true, 'pressure:' + center.id);
+          // The move belongs to the change that misplaced the sensor: it joins that undo step, so
+          // undo steps back past both instead of being redone at once.
+          this.historyBatch = PRESSURE_BATCH;
+          this.changeDocument(moved, this.state.selected, true, PRESSURE_BATCH, true);
           return this.notice(label('status.pressureMoved'));
         }
       }

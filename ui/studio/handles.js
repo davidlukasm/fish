@@ -27,6 +27,7 @@ import {
   setOrganNodes,
   typeOfCenter,
   updateCenter,
+  updateField,
   updateGrowth,
   updateReceptor,
   updateWire
@@ -288,8 +289,7 @@ export const handleMethods = {
     const changed = setOrganNodes(doc, found.organ.id, count, this.state.sites, type.id);
     if (!changed)
       return this.notice(label('status.noRoom'));
-    this.tuneDesign(changed, 'amount:' + control.id);
-    this.refreshPigment();
+    this.draftDesign(changed, 'amount:' + control.id, 'refreshPigment');
   },
   sensitivityTarget(block) {
     if (block.dataset.sensitivityBlock === 'field')
@@ -319,12 +319,10 @@ export const handleMethods = {
       drag.dragged = stimulus;
       threshold = planOfUnit(activationQuality(stimulus));
     }
-    if (drag.field)
-      this.editField(drag.field, {profile : {id : drag.block, threshold}}, false);
-    else
-      this.tuneDesign(updateCenter(this.state.document, drag.block, {threshold}),
-                      'threshold:' + drag.block);
-    this.refreshSensitivity();
+    const doc = drag.field ? updateField(this.state.document, drag.field,
+                                         {profile : {id : drag.block, threshold}}, this.state.sites)
+                           : updateCenter(this.state.document, drag.block, {threshold});
+    this.draftDesign(doc, 'threshold:' + drag.block, 'refreshSensitivity');
   },
   dosePointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -337,8 +335,7 @@ export const handleMethods = {
     const patch = dosePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
-    this.tuneDesign(updateReceptor(doc, centerId, effect, patch), 'dose:' + drag.target);
-    this.refreshInspector();
+    this.draftDesign(updateReceptor(doc, centerId, effect, patch), 'dose:' + drag.target);
   },
   receptorPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -356,10 +353,9 @@ export const handleMethods = {
       patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
-    this.tuneDesign(growth ? updateGrowth(doc, patch)
-                           : updateReceptor(doc, centerId, effect, patch),
-                    'receptor:' + drag.target);
-    this.refreshInspector();
+    this.draftDesign(growth ? updateGrowth(doc, patch)
+                            : updateReceptor(doc, centerId, effect, patch),
+                     'receptor:' + drag.target);
   },
   drivePointer(event) {
     const drag = this.handleDrag;
@@ -368,18 +364,15 @@ export const handleMethods = {
       return this.effectorPointer(drag, fx, fy);
     if (drag.handle === 'sac')
       return this.sacPointer(drag, fy);
-    if (drag.handle === 'copies') {
-      this.tuneDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
-                      'cells:' + drag.id);
-      return this.refreshInspector();
-    }
+    if (drag.handle === 'copies')
+      return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
+                              'cells:' + drag.id);
     const doc = drag.handle === 'start' || drag.handle === 'end'
                     ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
                     : updateCenter(
                           this.state.document, drag.id,
                           drivePatch(drag.handle, fx, fy, this.state.capabilities?.biasScale ?? 0));
-    this.tuneDesign(doc, 'drive:' + drag.id);
-    this.refreshInspector();
+    this.draftDesign(doc, 'drive:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
@@ -395,8 +388,7 @@ export const handleMethods = {
             : setMuscleTrait(doc, drag.code, patch.trait, patch.value, this.state.sites);
     if (!changed)
       return;
-    this.tuneDesign(changed, 'effector:' + drag.id);
-    this.refreshInspector();
+    this.draftDesign(changed, 'effector:' + drag.id);
   },
   sacPointer(drag, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);
@@ -410,8 +402,7 @@ export const handleMethods = {
                         : pressure && updateCenter(doc, pressure.id, patch);
     if (!changed)
       return;
-    this.tuneDesign(changed, 'sac:' + drag.id);
-    this.refreshInspector();
+    this.draftDesign(changed, 'sac:' + drag.id);
   },
   adaptationPointer(event) {
     const drag = this.handleDrag;
@@ -419,8 +410,8 @@ export const handleMethods = {
         adaptationSteps(pointerShare(event, drag.rect).fx, drag.adapt.response.length - 1);
     const tau = timeConstantOf(steps);
     drag.stretch = timeConstantSteps(tau) / drag.adapt.steps;
-    this.tuneDesign(updateCenter(this.state.document, drag.id, {tau}), 'tau:' + drag.id);
-    this.refreshSensitivity();
+    this.draftDesign(updateCenter(this.state.document, drag.id, {tau}), 'tau:' + drag.id,
+                     'refreshSensitivity');
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
@@ -445,8 +436,9 @@ export const handleMethods = {
                                         Math.abs(value - target.tuning[key]) < PAD_STILL))
       return;
     const {spectrumId : id, profileId} = drag.target;
-    this.editField(id, {profile : {id : profileId, ...patch}}, false);
-    this.refreshSpectrum();
+    this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, ...patch}},
+                                 this.state.sites),
+                     'field:' + id, 'refreshSpectrum');
   },
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -495,9 +487,10 @@ export const handleMethods = {
       this.editField(organ.id, patch, false);
   },
   tuneDesign(doc, batch) { return this.changeDocument(doc, this.state.selected, false, batch);},
-  // While a graphic's handle is dragged only the inspector follows, once a frame; the fish, the
-  // library and the design run catch up when it is let go, so dragging stays smooth.
-  draftDesign(doc, batch) {
+  // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
+  // follows, once a frame; the fish, the library and the design run catch up when it is let go, so
+  // dragging stays smooth.
+  draftDesign(doc, batch, redraw = 'refreshInspector') {
     if (!doc)
       return;
     if (!this.drafted)
@@ -507,7 +500,7 @@ export const handleMethods = {
     if (!this.draftFrame)
       this.draftFrame = requestAnimationFrame(() => {
         this.draftFrame = null;
-        this.refreshInspector();
+        this[redraw]();
       });
   },
   settleGraphic() {
@@ -534,7 +527,9 @@ export const handleMethods = {
     this.historyBatch = null;
     if (!how.keepsClick)
       this.ignoreClickUntil = performance.now() + DRAG_CLICK;
-    if (how.done)
+    if (this.drafted)
+      this.settleGraphic();
+    else if (how.done)
       this[how.done]();
   },
   keepPanels() {
@@ -590,8 +585,7 @@ export const handleMethods = {
         found && skinPatch(this.state, found.center, drag.aim, drag.name, fx, fy, drag.start);
     if (!patch)
       return;
-    this.tuneDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id);
-    this.refreshInspector();
+    this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id);
   },
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;
