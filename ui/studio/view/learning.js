@@ -67,7 +67,8 @@ const RULE = Object.freeze({
   credit : .5,
   delay : TIME_CONSTANT.min_steps
 });
-const traceSteps = center => timeConstantSteps(center.tau) / 2;
+const TRACE_OF_TAU = .5;
+const traceSteps = center => timeConstantSteps(center.tau) * TRACE_OF_TAU;
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
 const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
 export const modeName = mode => MODE_NAME[modeLean(mode)];
@@ -127,7 +128,7 @@ const TRACE = Object.freeze(
 const traceAxis = LONGEST_TIME_CONSTANT;
 export const learnTracePatch = fx => {
   const T = TRACE, steps = clamp((fx * T.width - T.left) / (T.right - T.left)) * traceAxis;
-  return {tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, 2 * steps))};
+  return {tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, steps / TRACE_OF_TAU))};
 };
 function traceGraphic(center) {
   const T = TRACE, lasts = traceSteps(center);
@@ -137,17 +138,21 @@ function traceGraphic(center) {
     const steps = traceAxis * k / T.samples;
     return fixed(x(steps)) + ' ' + fixed(y(Math.exp(-steps / lasts)));
   });
-  const title = label('learnRule.traceLength');
+  const title = label('learnRule.traceLength'), knobY = fixed(y(Math.exp(-1)));
+  // The knob runs on a rail from the shortest to the longest trace a cell can keep.
+  const rail = [ TIME_CONSTANT.min_steps, LONGEST_TIME_CONSTANT ].map(
+      steps => fixed(x(steps * TRACE_OF_TAU)));
   return '<svg class="aid-learn-trace" viewBox="0 0 ' + T.width + ' ' + T.height +
          '" data-learn-trace="' + escapeText(center.id) + '" role="img" aria-label="' +
          escapeText(title) + '"><path class="aid-learn-glow" d="M' + T.left + ' ' + T.bottom +
          ' L' + points.join(' L') + ' L' + T.right + ' ' + T.bottom + ' Z"/><path ' +
          'class="aid-learn-fade" d="M' + points.join(' L') +
          '"/><line class="aid-chart-axis" x1="' + T.left + '" y1="' + T.bottom + '" x2="' +
-         T.right + '" y2="' + T.bottom +
+         T.right + '" y2="' + T.bottom + '"/><line class="aid-learn-rail" x1="' + rail[0] +
+         '" y1="' + knobY + '" x2="' + rail[1] + '" y2="' + knobY +
          '"/><circle class="aid-graphic-handle" data-graphic-handle="learn-trace" cx="' +
-         fixed(x(lasts)) + '" cy="' + fixed(y(Math.exp(-1))) + '" r="' + TRACK.handle +
-         '"><title>' + escapeText(title) + '</title></circle><text x="' + T.left + '" y="' +
+         fixed(x(lasts)) + '" cy="' + knobY + '" r="' + TRACK.handle + '"><title>' +
+         escapeText(title) + '</title></circle><text x="' + T.left + '" y="' +
          (T.bottom + TRACK.name) + '">' + escapeText(label('learnRule.short')) +
          '</text><text x="' + T.right + '" y="' + (T.bottom + TRACK.name) + '" text-anchor="end">' +
          escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';

@@ -63,7 +63,7 @@ export function storedPanels() {
     return {};
   }
 }
-export const HANDLES = Object.freeze({
+const HANDLES = Object.freeze({
   panel : {follow : 'panelPointer', done : 'keepPanels', keepsClick : true},
   receptor : {follow : 'receptorPointer'},
   dose : {follow : 'dosePointer'},
@@ -492,8 +492,12 @@ export const handleMethods = {
         this.refreshScene();
       this.refreshSpectrum();
       this.requestDesign();
-    } else
-      this.editField(organ.id, patch, false);
+      return;
+    }
+    const doc = updateField(this.state.document, organ.id, patch, this.state.sites);
+    if (!doc)
+      return this.notice(label('status.noRoom'));
+    this.draftDesign(doc, 'field:' + organ.id, 'refreshScene');
   },
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
   // follows, once a frame; the fish, the library and the design run catch up when it is let go, so
@@ -505,7 +509,6 @@ export const handleMethods = {
       if (JSON.stringify(doc) === JSON.stringify(this.state.document))
         return;
       this.draftStart = this.state.document;
-      this.recordHistory(batch);
     }
     this.drafted = batch;
     this.state.document = doc;
@@ -522,21 +525,15 @@ export const handleMethods = {
     const batch = this.drafted;
     if (!batch)
       return this.refreshInspector();
-    this.drafted = null;
-    const start = this.draftStart;
-    this.draftStart = null;
-    if (JSON.stringify(this.state.document) === JSON.stringify(start)) {
-      // Dragged back to where it began: the developed fish and the undo list stay as they were.
-      this.state.document = start;
-      if (this.undoHistory.at(-1) === start)
-        this.undoHistory.pop();
-      this.historyBatch = null;
-      this.state.canUndo = this.undoHistory.length > 0;
-      this.refreshScene();
-      return this.refreshInspector();
-    }
-    this.historyBatch = batch;
-    this.changeDocument(this.state.document, this.state.selected, true, batch, true);
+    // The drag becomes one undo step from where it began; one that ends there is no step, and the
+    // design run it held back runs now.
+    const dragged = this.state.document, start = this.draftStart;
+    this.state.document = start;
+    this.drafted = this.draftStart = null;
+    this.historyBatch = null;
+    this.changeDocument(dragged, this.state.selected, true, batch, true);
+    if (this.state.document === start && this.designPending)
+      this.requestDesign();
   },
   holdHandle(event, held, drag) {
     const knob = knobGrip(event);

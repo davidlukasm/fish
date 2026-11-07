@@ -9,6 +9,7 @@ import {
   addOrganType,
   addSubstance,
   allCenters,
+  bentTogether,
   bindReceptor,
   closestSiteDoing,
   findAssembly,
@@ -323,7 +324,9 @@ export const FISH_CLICKS = Object.freeze([
   [
     '[data-unbend-wire]',
     (studio, e) => studio.changeDocument(
-        setBends(studio.state.document, [ e.dataset.unbendWire ], []), studio.state.selected)
+        setBends(studio.state.document, bentTogether(studio.state.document, e.dataset.unbendWire),
+                 []),
+        studio.state.selected)
   ],
   [
     '[data-assemble-selected]',

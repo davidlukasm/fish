@@ -359,6 +359,12 @@ export class OrganStudio {
     this.state.canRedo = this.redoHistory.length > 0;
   }
   stepHistory(action) {
+    // Undo in the middle of a drag takes back the drag so far; what the drag does after is a step
+    // of its own.
+    if (this.drafted && action === 'undo') {
+      this.undoHistory.push(this.draftStart);
+      this.redoHistory.length = 0;
+    }
     const source = action === 'undo' ? this.undoHistory : this.redoHistory;
     const target = action === 'undo' ? this.redoHistory : this.undoHistory;
     if (!source.length)
@@ -367,7 +373,6 @@ export class OrganStudio {
     const doc = validateDocument(source.pop()), chosen = this.state.selected;
     this.state.document = doc;
     this.historyBatch = null;
-    // Undo in the middle of a drag ends its draft; what the drag does after is a step of its own.
     this.drafted = null;
     this.draftStart = null;
     this.state.canUndo = this.undoHistory.length > 0;
@@ -435,8 +440,8 @@ export class OrganStudio {
   loadFish(doc) {
     this.pendingWire = null;
     this.release();
-    Object.assign(this.state.camera, {zoom : 1, ...CAMERA_HOME});
     this.setMode('fish');
+    this.zoom('fit');
     this.changeDocument(doc);
   }
   designChanged() {

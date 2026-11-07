@@ -119,6 +119,11 @@ export function validateDocument(doc) {
 const BENDS_MOST = 8;
 const validBends = bends => Array.isArray(bends) && bends.length <= BENDS_MOST &&
                             bends.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y));
+// Wires bent together in one drawn bundle share their bends, so they straighten together too.
+export function bentTogether(doc, id) {
+  const bends = JSON.stringify(doc.wires.find(w => w.id === id)?.bends ?? null);
+  return doc.wires.filter(w => w.bends && JSON.stringify(w.bends) === bends).map(w => w.id);
+}
 export function setBends(doc, wireIds, bends) {
   if (!validBends(bends))
     return null;
@@ -928,12 +933,14 @@ export function setSubstance(doc, index, name) {
   return draft;
 }
 export function removeSubstance(doc, index, wheel) {
-  // Its glands go with it: left alone they would go on secreting it, and the next new substance
-  // would take over its place on the wheel and with it the glands.
-  const glands =
-      doc.organs.filter(o => o.type === 'gland' && o.centers.length &&
-                             o.centers.every(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth,
-                                                                index) >= NOTICEABLE_AFFINITY));
+  // Its own glands go with it: left alone they would go on secreting it, and the next new
+  // substance would take over its place on the wheel and with it the glands. A gland that also
+  // feeds a substance that stays is kept.
+  const feeds = (c, i) => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, i) >= NOTICEABLE_AFFINITY;
+  const others = doc.substances.map(s => s.index).filter(i => i !== index);
+  const glands = doc.organs.filter(
+      o => o.type === 'gland' && o.centers.length &&
+           o.centers.every(c => feeds(c, index) && !others.some(i => feeds(c, i))));
   const draft = copy(glands.reduce((d, o) => removeOrgan(d, o.id) ?? d, doc));
   draft.substances = draft.substances.filter(s => s.index !== index);
   for (const center of allCenters(draft))

@@ -832,8 +832,8 @@
     "full": "Alle Stoffe sind schon vergeben.",
     "reward": {
       "name": "Belohnung",
-      "title": "Futter im Darm lehrt die Lernkreise, was zum Futter geführt hat.",
-      "needs": "Braucht Lernkreise, deren Lernen noch kein Stoff steuert.",
+      "title": "Futter im Darm lehrt die lernenden Knoten, was zum Futter geführt hat.",
+      "needs": "Braucht lernende Knoten, deren Lernen noch kein Stoff steuert.",
       "substance": "Belohnung"
     },
     "growth": {

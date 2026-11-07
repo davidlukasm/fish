@@ -816,6 +816,11 @@ function semanticFingerprint(source) {
   assert.equal(
       model.producers(model.addSubstance(withoutSubstance, HORMONES.levels), 0, sitesResult).length,
       0, 'A new substance inherits no gland');
+  const wideGland =
+      model.updateCenter(model.addSubstance(doc, HORMONES.levels), gland.centerId, {qwidth : 1});
+  assert.ok(model.producers(wideGland, 1, sitesResult).length >= 1);
+  assert.ok(model.findOrgan(model.removeSubstance(wideGland, 0, sitesResult), gland.organId),
+            'A gland that also feeds a substance that stays is kept');
   const phased =
       model.setLifePhase(doc, model.findOrgan(doc, id).centers[0].id, {start : .6, end : .9},
                          sitesResult.sensitivitySpan, sitesResult.steepnessSteps);

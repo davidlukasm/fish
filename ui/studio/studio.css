@@ -739,6 +739,7 @@
 .aid-learn-track text,.aid-learn-trace text{font-size:12px;fill:#c2d6d2}
 .aid-learn-glow{fill:var(--aid-trace);fill-opacity:.35}
 .aid-learn-fade{fill:none;stroke:var(--aid-trace);stroke-width:2}
+.aid-learn-rail{stroke:var(--aid-trace);stroke-width:5;stroke-opacity:.3;stroke-linecap:round}
 .aid-learn-substance{margin:8px 0;padding:8px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c;color:var(--substance,var(--aid-soft-text))}
 .aid-learn-substance h5{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:12px;font-weight:600;color:var(--aid-name-text)}
 .aid-learn-substance h5 svg{color:var(--substance,var(--aid-soft-text))}
