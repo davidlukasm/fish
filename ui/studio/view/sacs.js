@@ -69,14 +69,20 @@ const sperm = (x, y) => '<circle class="aid-sac-sperm-head" cx="' + fixed(x) + '
                         ' 0 t' + -SPERM.tail / 2 + ' 0"/>';
 const egg = (x, y, r, kind) => '<circle class="aid-sac-' + kind + '" cx="' + fixed(x) + '" cy="' +
                                fixed(y) + '" r="' + fixed(r) + '"/>';
-function chambers(store, from, to, kind) {
-  const [x0, x1] = STORE.stack;
+// Each cell's chamber shows what it makes, an egg or a sperm, where it is tall enough to hold it.
+const CHAMBER = Object.freeze({mark : 7, inset : 2});
+function chambers(store, from, to, kind, type) {
+  const [x0, x1] = STORE.stack, middle = (x0 + x1) / 2;
   let html = '';
   for (let k = from; k < to; ++k) {
     const low = levelY(store, k * store.own.perCell),
-          high = levelY(store, (k + 1) * store.own.perCell);
+          high = levelY(store, (k + 1) * store.own.perCell), y = (low + high) / 2;
     html += '<rect class="aid-sac-chamber ' + kind + '" x="' + x0 + '" y="' + fixed(high) +
             '" width="' + (x1 - x0) + '" height="' + fixed(low - high) + '"/>';
+    if (low - high >= CHAMBER.mark)
+      html += type === 'eggs'
+                  ? egg(middle, y, Math.min(x1 - x0, low - high) / 2 - CHAMBER.inset, 'egg')
+                  : sperm(middle + SPERM.tail / 2, y);
   }
   return html;
 }
@@ -156,8 +162,8 @@ export function gonadGraphic(state, organ, selected) {
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '" data-sac="' + escapeText(organ.id) + '" role="img">' +
          '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
-         '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth')) +
-         part(release, chambers(store, kept, held, 'release') + curve.html) +
+         '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth', organ.type)) +
+         part(release, chambers(store, kept, held, 'release', organ.type) + curve.html) +
          '<path class="aid-sac-room" d="M' + S.stack[0] + ' ' + fixed(roomY) + ' H' + S.right +
          '"/>' +
          (curve.knee
