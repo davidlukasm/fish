@@ -1750,8 +1750,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
     const effectorsView = await import('../ui/studio/view/effectors.js');
     const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
-    assert.ok(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone)
-                  .includes('data-add-throat'));
+    assert.match(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone),
+                 /data-effector-handle="trait:q1"><line[^]*aid-graphic-handle/,
+                 'A gut without its throat still offers its length');
     const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
     const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});

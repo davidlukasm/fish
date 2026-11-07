@@ -322,8 +322,13 @@ function regionHomes(doc, sites) {
   }
   return homes;
 }
-export function addOrgan(doc, type, sites, position, snapDistance = Infinity, paired = true) {
+// `code` asks for a muscle doing that work: muscle sites of different work can lie on one spot.
+export function addOrgan(doc, type, sites, position, snapDistance = Infinity, paired = true,
+                         code = null) {
   const definition = ORGAN_BY_KEY[type];
+  const pick = (desc, used, side) =>
+      code === null ? closestSite(desc, sites, used, position, side, type)
+                    : closestSiteDoing(desc, code, sites, used, position, side, type);
   if (!definition || definition.fixed)
     return null;
   const draft = copy(doc), used = usedSites(draft);
@@ -334,8 +339,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
         used.add(mirror.id);
     }
   const first =
-      closestSite(definition.centers[0], sites,
-                  isRegion({type}) ? regionHomes(draft, sites) : new Set(), position, null, type);
+      pick(definition.centers[0], isRegion({type}) ? regionHomes(draft, sites) : new Set(), null);
   if (!first || pointDistance(first, position, siteRole(type)) > snapDistance)
     return null;
   const existing =
@@ -364,7 +368,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     organ.region = initialRegion(type, first);
   } else {
     for (const desc of definition.centers) {
-      const site = closestSite(desc, sites, used, position, first.side, type);
+      const site = pick(desc, used, first.side);
       if (!site)
         return null;
       used.add(site.id);

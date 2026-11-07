@@ -1,6 +1,6 @@
 import {ROLE, STIMULUS_ORGAN} from './model/organs.js';
 import {hasField, newFieldPlacements} from './model/placement.js';
-import {HORMONE_EFFECT, HORMONES} from '../schema.js';
+import {HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../schema.js';
 import {
   addNeuron,
   addOrgan,
@@ -19,7 +19,7 @@ import {
 import {placeModule, placeStoredModule} from './model/assemblies.js';
 import {placeSystem, systemMissing} from './model/systems.js';
 import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
-import {muscleTarget} from './view/muscles.js';
+import {muscleHomes, muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
@@ -340,20 +340,28 @@ export const dropMethods = {
   },
   placeOrgan(type, position) {
     if (type === 'muscle') {
-      const {document : doc, sites} = this.state, home = muscleTarget(doc, sites, position);
-      if (!home)
-        return null;
-      if (home.organ)
-        return {document : doc, organId : home.organ.id, centerId : home.organ.centers[0].id};
-      const site = home.free.reduce((best, s) => pointDistance(s, home.middle, type) <
-                                                         pointDistance(best, home.middle, type)
-                                                     ? s
-                                                     : best);
-      return addOrgan(doc, type, sites, sitePoint(site, type), 0);
+      const home = muscleTarget(this.state.document, this.state.sites, position);
+      return home && this.muscleIn(home);
     }
     const target = placementTarget(this.state.document, type, position);
     return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
                     target.paired);
+  },
+  muscleIn(home) {
+    const {document : doc, sites} = this.state;
+    if (home.organ)
+      return {document : doc, organId : home.organ.id, centerId : home.organ.centers[0].id};
+    const site = home.free.reduce((best, s) => pointDistance(s, home.middle, 'muscle') <
+                                                       pointDistance(best, home.middle, 'muscle')
+                                                   ? s
+                                                   : best);
+    return addOrgan(doc, 'muscle', sites, sitePoint(site, 'muscle'), 0, true, home.code);
+  },
+  // The throat carries the gut's length, so a gut set longer or shorter brings its throat along.
+  withThroat() {
+    const home = muscleHomes(this.state.document, this.state.sites)
+                     .find(h => h.code === MOTOR_KIND.suction && h.side > 0 && h.free.length);
+    return home ? this.muscleIn(home)?.document ?? null : null;
   },
   dropOntoNerve(key, target, position) {
     this.dragging = null;

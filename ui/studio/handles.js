@@ -4,6 +4,7 @@ import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
+import {MOTOR_KIND} from '../schema.js';
 import {kindNodes, nodeLimit} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {probeHandle, probePatch} from './view/probes.js';
@@ -388,16 +389,23 @@ export const handleMethods = {
     const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, nodeLimit(organ, sites));
     if (!patch)
       return;
-    const changed =
-        'nodes' in patch ? patch.nodes !== organ.centers.length &&
-                               setOrganNodes(doc, organ.id, patch.nodes, sites)
-        : 'copies' in patch
-            ? patch.copies !== organ.centers[0].copies &&
-                  updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
-            : setMuscleTrait(doc, drag.code, patch.trait, patch.value, this.state.sites);
+    const changed = 'nodes' in patch ? patch.nodes !== organ.centers.length &&
+                                           setOrganNodes(doc, organ.id, patch.nodes, sites)
+                    : 'copies' in patch
+                        ? patch.copies !== organ.centers[0].copies &&
+                              updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
+                        : this.muscleTrait(drag.code, patch.trait, patch.value);
     if (!changed)
       return;
     this.draftDesign(changed, 'effector:' + drag.id);
+  },
+  muscleTrait(code, trait, value) {
+    const sites = this.state.sites, doc = this.state.document;
+    const changed = setMuscleTrait(doc, code, trait, value, sites);
+    if (changed || code !== MOTOR_KIND.suction)
+      return changed;
+    const throat = this.withThroat();
+    return throat && setMuscleTrait(throat, code, trait, value, sites);
   },
   sacPointer(drag, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);

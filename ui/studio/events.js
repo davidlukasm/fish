@@ -1,5 +1,4 @@
-import {HORMONES, MOTOR_KIND} from '../schema.js';
-import {muscleHomes} from './view/muscles.js';
+import {HORMONES} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
 import {PAIRINGS} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
@@ -199,12 +198,6 @@ function moveMuscle(studio, element) {
                                           sites, usedSites(doc), sitePoint(here), here.side);
   keepIfRoom(studio, target && moveOrgan(doc, found.organ.id, sites, sitePoint(target)));
 }
-function addThroat(studio) {
-  const {document : doc, sites} = studio.state;
-  const home = muscleHomes(doc, sites)
-                   .find(h => h.code === MOTOR_KIND.suction && h.side > 0 && h.free.length);
-  keepIfRoom(studio, home && studio.placeOrgan('muscle', home.middle)?.document);
-}
 function addType(studio, element) {
   const doc = studio.state.document, organ = findOrgan(doc, element.dataset.addType);
   const added = organ && addOrganType(doc, organ.id, studio.state.sites,
@@ -286,7 +279,6 @@ export const FISH_CLICKS = Object.freeze([
                                                        studio.state.sites))
   ],
   [ '[data-slot-region]', startSlotWire ],
-  [ '[data-add-throat]', addThroat ],
   [
     '[data-inner-link]',
     (studio, e) => keep(studio, toggleInnerLink(studio.state.document, e.dataset.organId,

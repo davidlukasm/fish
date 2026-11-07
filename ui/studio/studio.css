@@ -440,6 +440,7 @@
 @keyframes aid-cloud{0%{transform:scale(.5);opacity:.42}100%{transform:scale(3.2);opacity:0}}
 .aid-hormone-symbols svg{color:var(--hormone)}
 .aid-hormone-marks circle{stroke:#0d2a31;stroke-width:1.2;vector-effect:non-scaling-stroke}
+.aid-hormone-marks g circle{fill:#0d2a31;stroke:currentColor}
 .aid-hormone-symbols path{fill:none;stroke:var(--hormone);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke}
 .aid-direction path{fill:currentColor;stroke:none}
 .aid-hormone-symbols .aid-direction path{fill:var(--hormone);stroke:none}

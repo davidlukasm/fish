@@ -235,7 +235,7 @@ export function hormoneOverlay(state) {
          targets.map(target => hormoneGlyph(target, 'receiver', color, zoom)).join('') + marks +
          '</g>';
 }
-const MARK = Object.freeze({dot : 4, step : 10, below : 17, symbol : 10});
+const MARK = Object.freeze({dot : 4, step : 17, below : 20, symbol : 13, plate : 8});
 function cellMarks(state, centers, skip) {
   const {document : doc, capabilities} = state;
   const substances = doc.substances.filter(
@@ -248,10 +248,12 @@ function cellMarks(state, centers, skip) {
 }
 function hormoneMarks(state, skip = null) {
   const {document : doc, sites} = state, zoom = zoomOf(state), M = MARK;
-  const mark = (m, x) => m.icon ? '<g style="--hormone:' + m.colour + '">' +
-                                      placedGlyph(m.icon, M.symbol, {x, y : M.below}) + '</g>'
-                                : '<circle cx="' + fixed(x) + '" cy="' + M.below + '" r="' + M.dot +
-                                      '" fill="' + m.colour + '"/>';
+  const mark = (m, x) =>
+      m.icon ? '<g style="color:' + m.colour + '"><circle cx="' + fixed(x) + '" cy="' + M.below +
+                   '" r="' + M.plate + '"/>' +
+                   placedGlyph(m.icon, M.symbol, {x, y : M.below}, {line : true}) + '</g>'
+             : '<circle cx="' + fixed(x) + '" cy="' + M.below + '" r="' + M.dot + '" fill="' +
+                   m.colour + '"/>';
   const row = (pos, marks) =>
       marks.length
           ? '<g class="aid-hormone-marks"' + steadyAt(pos, zoom) + '>' +

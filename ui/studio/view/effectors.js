@@ -413,12 +413,10 @@ export function gutGraphic(state, organ, selected) {
       '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
           part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
           part(food, dots) +
-          namedTrack(G.track, G.track_y, length, 'data-effector-handle="trait:q1"',
-                     label('gut.handle'), [ label('gut.short'), label('gut.long') ]),
-      (length === null
-           ? '<button class="aid-add" data-add-throat>' + label('gut.addThroat') + '</button>'
-           : '') +
-          dietChart(state, 'gut', organ));
+          namedTrack(G.track, G.track_y, length ?? BODY_UNIT.trait_middle,
+                     'data-effector-handle="trait:q1"', label('gut.handle'),
+                     [ label('gut.short'), label('gut.long') ]),
+      dietChart(state, 'gut', organ));
 }
 
 const effectorBlock = (organ, code, side, title, graphic, below) =>

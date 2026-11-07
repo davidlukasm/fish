@@ -553,8 +553,8 @@
         "hoch"
       ],
       "effect": [
-        "anregend",
-        "dämpfend"
+        "erregend",
+        "hemmend"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
@@ -777,8 +777,7 @@
       "title": "Darm",
       "short": "kurz · Fleisch",
       "long": "lang · Pflanzen",
-      "handle": "Ziehen: Länge des Darms",
-      "addThroat": "+ Schlund: trägt die Darmlänge"
+      "handle": "Ziehen: Länge des Darms"
     },
     "spines": {
       "title": "Schutz rundum",
