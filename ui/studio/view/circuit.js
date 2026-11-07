@@ -58,9 +58,11 @@ const CIRCUIT = Object.freeze({
 const ARROW_BOX = 10, BEZIER_THIRD = 3;
 const circuitSide = organ => sideIndex(organ?.side);
 function circuitMembers(doc, organ) {
-  const sides = [ organ, findOrgan(doc, organ.pair) ];
+  const twin = findOrgan(doc, organ.pair), sides = [ organ, twin ];
   if (circuitSide(organ) === 1)
     sides.reverse();
+  // A region without a twin is drawn on the midline, not on the side it happens to grow on.
+  const sideOfMember = o => twin ? circuitSide(o) : null;
   const members = new Map(), kindOf = new Map();
   const families = nodeFamilies(organ).map(nodes => nodeFamily(nodes[0]));
   sides.forEach(o => o?.centers.forEach(center => {
@@ -68,7 +70,7 @@ function circuitMembers(doc, organ) {
     kindOf.set(center.id, first.id);
     if (first === center)
       members.set(center.id,
-                  {side : circuitSide(o), index : families.indexOf(nodeFamily(center)), center});
+                  {side : sideOfMember(o), index : families.indexOf(nodeFamily(center)), center});
   }));
   return {members, kindOf};
 }
@@ -138,10 +140,13 @@ function circuitLayout(doc, organ, members, links) {
   const outputs = endRows(doc, [...new Set(links.filter(l => !members.has(l.to)).map(l => l.to)) ]);
   const inPos = placeRows(doc, inputs, C.top);
   const nodeTop = C.top + inputs.length * C.row;
-  const nodePos = new Map([...members ].map(
-      ([
-        id, m
-      ]) => [id, {x : m.side ? C.right : C.left, y : nodeTop + m.index * C.row, side : m.side}]));
+  const nodePos = new Map([...members ].map(([ id, m ]) => [id, {
+                                              x : m.side === null ? C.middle
+                                                  : m.side        ? C.right
+                                                                  : C.left,
+                                              y : nodeTop + m.index * C.row,
+                                              side : m.side
+                                            }]));
   const outTop = nodeTop + nodeFamilies(organ).length * C.row;
   const outPos = placeRows(doc, outputs, outTop);
   return {
@@ -238,8 +243,10 @@ const arrowMarker = () =>
     ARROW_BOX / 2 + '" markerUnits="userSpaceOnUse" markerWidth="' + CIRCUIT.bar +
     '" markerHeight="' + CIRCUIT.bar * 2 + '" orient="auto"><path d="M' + ARROW_BOX / 2 + ' 0 V' +
     ARROW_BOX + '"/></marker></defs>';
-const circuitFrame = height => {
+const circuitFrame = (height, paired) => {
   const C = CIRCUIT;
+  if (!paired)
+    return '';
   return '<line class="aid-circuit-midline" x1="' + C.middle + '" y1="0" x2="' + C.middle +
          '" y2="' + height + '"/><text class="aid-circuit-side" x="' + C.left + '" y="' + C.side_y +
          '" text-anchor="middle">' + label('inspector.side.left') +
@@ -255,7 +262,7 @@ function regionCircuit(state, organ) {
   const pairings = [...new Set(links.map(l => l.wire)) ].filter(w => w.pairing);
   return '<svg class="aid-circuit" viewBox="0 0 ' + CIRCUIT.width + ' ' + L.height +
          '" role="img" aria-label="' + label('inspector.region.circuit') + '">' + arrowMarker() +
-         circuitFrame(L.height) +
+         circuitFrame(L.height, !!findOrgan(doc, organ.pair)) +
          links.map(l => circuitLink(organ, l, L.from(l.from), L.to(l.to))).join('') +
          rowLabels(L.inputs, L.inPos).join('') + rowLabels(L.outputs, L.outPos).join('') +
          nodeFamilies(organ)

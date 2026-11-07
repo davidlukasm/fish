@@ -4,7 +4,7 @@ import {organTypes, typeOfCenter} from '../model/document.js';
 import {cssColour, fishColours, pigmentColour, pigmentKind} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {skinAt} from './frame.js';
-import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
+import {escapeText, fixed, plainTrack, trackShare} from './markup.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 import {t, tList} from '../../strings.js';
 
@@ -72,7 +72,7 @@ function amountTrack(organ, chosen) {
          escapeText(label('amount', {n : chosen.centers.length})) + '</span><svg viewBox="0 0 ' +
          AMOUNT.width + ' ' + AMOUNT.height + '" data-pigment-amount="' +
          escapeText(chosen.centers[0].id) + '" data-room="' + room + '">' +
-         widthTrack(AMOUNT.track, AMOUNT.y, share, 'data-graphic-handle="amount"',
+         plainTrack(AMOUNT.track, AMOUNT.y, share, 'data-graphic-handle="amount"',
                     label('amount', {n : room})) +
          '</svg></div>';
 }

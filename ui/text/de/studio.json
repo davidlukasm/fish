@@ -194,7 +194,7 @@
     "undefinedMark": "?",
     "defineSubstance": "Diesen Stoff anlegen und im Hormonwerkzeug einstellen",
     "removeBloodType": "Diesen Stoff nicht mehr lesen",
-    "nerveCells": "{n} Nervenzellen",
+    "nerveCells": "{n} Nervenzellen je Knoten",
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
     "adaptation": "Gewöhnung",
@@ -866,7 +866,7 @@
         "low": "kurz",
         "high": "lang",
         "plant": "Pflanzen",
-        "meat": "Beute",
+        "meat": "Fleisch",
         "size": "Fassungsvermögen"
       },
       "teeth": {
