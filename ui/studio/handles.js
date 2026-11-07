@@ -36,7 +36,7 @@ import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
-import {skinPatch} from './view/skin.js';
+import {skinPatch, skinSensitivity} from './view/skin.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
@@ -73,7 +73,7 @@ export const HANDLES = Object.freeze({
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
-  skin : {follow : 'skinPointer', done : 'refreshInspector'},
+  skin : {follow : 'skinPointer', done : 'refreshSkin'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true}
 });
@@ -430,7 +430,7 @@ export const handleMethods = {
     const {spectrumId : id, profileId} = drag.target;
     this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, ...patch}},
                                  this.state.sites),
-                     'field:' + id, 'refreshSpectrum');
+                     'spectrum:' + id, 'refreshSpectrum');
   },
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -576,7 +576,10 @@ export const handleMethods = {
         found && skinPatch(this.state, found.center, drag.aim, drag.name, fx, fy, drag.start);
     if (!patch)
       return;
-    this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id);
+    if (drag.name === 'sensitivity')
+      drag.sensitive = skinSensitivity(this.state, drag.aim, fx, fy);
+    this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id,
+                     'refreshSkin');
   },
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;

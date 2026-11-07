@@ -68,9 +68,11 @@ const nearest = (points, aim, state) => points.reduce(
                      ? p
                      : best);
 const line = (a, b) => 'M' + fixed(a.x) + ' ' + fixed(a.y) + ' L' + fixed(b.x) + ' ' + fixed(b.y);
-export function skinField(state, organ, center) {
+// `held` is the sensitivity a dragged handle sets, shown before the design run answers.
+export function skinField(state, organ, center, held = null) {
   const S = SKIN_FIELD, aim = skinAim(state, organ, center);
-  const width = radians(contactHalfAngle(center.field)), sensitive = sensitivityOf(state, center);
+  const width = radians(contactHalfAngle(center.field)),
+        sensitive = held ?? sensitivityOf(state, center);
   const pieces = weighed(state, aim, width, S.step);
   const patch =
       pieces.slice(1)
@@ -106,8 +108,9 @@ export function skinField(state, organ, center) {
            '</title></circle>';
   };
   const cell = toField(middle);
-  return '<svg class="aid-skin-field ' + organ.type + '" viewBox="0 0 ' + S.width + ' ' + S.height +
-         '" data-skin-field="' + escapeText(center.id) + '" data-skin-aim="' + fixed(aim) +
+  return '<div data-skin-block="' + escapeText(center.id) + '"><svg class="aid-skin-field ' +
+         organ.type + '" viewBox="0 0 ' + S.width + ' ' + S.height + '" data-skin-field="' +
+         escapeText(center.id) + '" data-skin-aim="' + fixed(aim) +
          '" role="img"><g transform="translate(' + fixed(S.cx - BODY_MIDDLE.x * S.scale) + ' ' +
          fixed(S.cy - BODY_MIDDLE.y * S.scale) + ') scale(' + S.scale +
          ')"><path class="aid-skin-fish" d="' + fishPath() + '"/><g class="aid-skin-patch">' +
@@ -123,17 +126,20 @@ export function skinField(state, organ, center) {
          (sensitive === null ? ''
                              : ' · ' + escapeText(t('studio.inspector.skin.' + organ.type,
                                                     {share : percent(sensitive)}))) +
-         '</p>';
+         '</p></div>';
+}
+// How sensitive the skin is made by its handle pulled to the share (fx, fy) of the field.
+export function skinSensitivity(state, aim, fx, fy) {
+  const S = SKIN_FIELD, p = toFrame(fx, fy), middle = nearest(skinPoints(S.step), aim, state);
+  const out = (p.x - middle.x) * middle.out.x + (p.y - middle.y) * middle.out.y;
+  return clamp((out - S.length[0]) / S.length[1]);
 }
 export function skinPatch(state, center, aim, handle, fx, fy, start) {
-  const S = SKIN_FIELD, p = toFrame(fx, fy);
   if (handle === 'field') {
-    const angle = skinDirection(p, state.anatomy?.zones);
+    const angle = skinDirection(toFrame(fx, fy), state.anatomy?.zones);
     return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
   }
-  const middle = nearest(skinPoints(S.step), aim, state);
-  const out = (p.x - middle.x) * middle.out.x + (p.y - middle.y) * middle.out.y;
-  const sensitive = clamp((out - S.length[0]) / S.length[1]);
+  const sensitive = skinSensitivity(state, aim, fx, fy);
   if (!start?.intensity)
     return {threshold : planOfUnit(activationQuality(1 - sensitive))};
   const dimmest = state.anatomy?.lightDimmest;

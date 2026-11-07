@@ -34,7 +34,8 @@ const WIRE_ENDS = Object.freeze([ 'center', 'organ', 'assembly' ]);
 const MOVED_ITEMS = Object.freeze([ 'organ', 'center', 'assembly' ]);
 // Room the floating tool bar takes at the map's left edge, and a little air at the others, in fish
 // units at full size.
-const VIEW_ROOM = Object.freeze({left : 80, edge : 20});
+const VIEW_ROOM = Object.freeze({left : 80, edge : 20}),
+      NO_ROOM = Object.freeze({left : 0, edge : 0});
 const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 export const gestureMethods = {
   zoom(direction, anchor = null) {
@@ -75,8 +76,10 @@ export const gestureMethods = {
     if (stamp)
       stamp.textContent = zoomStamp(c);
   },
-  keepInView(point) {
-    const c = this.state.camera, R = VIEW_ROOM;
+  // With `clearTools` the point also keeps clear of the tool bar; a point that follows the pointer
+  // does not, as it would zoom out with every step it takes along the edge.
+  keepInView(point, clearTools = false) {
+    const c = this.state.camera, R = clearTools ? VIEW_ROOM : NO_ROOM;
     const inside = () => {
       const box = cameraBox(c), z = c.zoom;
       return point.x >= box.x + R.left / z && point.x <= box.x + box.width - R.edge / z &&

@@ -15,6 +15,7 @@ import {probeFor, senseScene} from './model/probe.js';
 import {probeScents, senseProbeSvg} from './view/probes.js';
 import {scentMap} from './view/scents.js';
 import {pigmentInspector} from './view/pigments.js';
+import {skinField} from './view/skin.js';
 import {eyeSight} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
@@ -46,6 +47,12 @@ export const designMethods = {
       return pigmentInspector(this.state, organ, chosen || organ.centers[0]);
     });
   },
+  refreshSkin() {
+    const drag = this.heldHandle('skin');
+    this.redrawBlocks('skinBlock', findCenter,
+                      found => skinField(this.state, found.organ, found.center,
+                                         drag?.id === found.center.id ? drag.sensitive : null));
+  },
   refreshScentMaps() {
     this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
   },
@@ -53,9 +60,9 @@ export const designMethods = {
   // zoomed in on purpose stays as it is.
   showTestLight() {
     const organ = organOf(this.state.document, this.state.selected?.id);
-    const light = organ && testLightPoint(this.state, organ);
+    const light = organ?.field && testLightPoint(this.state, organ);
     if (light && this.state.camera.zoom <= 1)
-      this.keepInView(light);
+      this.keepInView(light, true);
   },
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;
@@ -88,7 +95,8 @@ export const designMethods = {
     return probe && findOrgan(this.state.document, probe.organ) ? senseScene(probe) : null;
   },
   requestDesign() {
-    if (this.designRunning) {
+    // A drag asks for its design run once, when it is let go.
+    if (this.designRunning || this.drafted) {
       this.designPending = true;
       return;
     }
@@ -169,6 +177,7 @@ export const designMethods = {
     this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ), BODY_MAP);
   },
   refreshGraphics() {
+    this.refreshSkin();
     this.refreshSpectrum();
     this.refreshSensitivity();
     this.refreshEffectors();
