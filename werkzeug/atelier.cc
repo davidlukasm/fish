@@ -11,7 +11,7 @@
 #include "field/hormones.hh"
 #include "field/functions.hh"
 #include "field/development_sites.hh"
-#include "atelier_import.hh"
+#include "atelier_connections.hh"
 #include "field/dynamics.hh"
 #include "cppn/output_schema.hh"
 #include "evolution/constants.hh"
@@ -53,7 +53,6 @@ struct SightScene {
   int side = 0;
   double bearing = 0, distance = 0, radius = fishsim::sensory_probe::radius, hue = 0;
 };
-constexpr const char *START_FISH = "start";
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
 constexpr float CPPN_EDIT_LIMIT = fishsim::MAX_GENE_WEIGHT;
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
@@ -683,7 +682,7 @@ void design_report(const std::vector<Group> &groups, const std::optional<SightSc
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
-            const AddressFit &fit = {}, bool import = false) {
+            const AddressFit &fit = {}) {
   const auto &t = *g.blueprint;
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"viable\":" << (g.viable() ? "true" : "false")
@@ -796,10 +795,6 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
               << ']';
   }
   std::cout << "]}";
-  if (import) {
-    std::cout << ",\"sourcePlan\":";
-    write_import(std::cout, import_plan(g));
-  }
   std::cout << "}\n";
 }
 }
@@ -942,7 +937,6 @@ int main(int argc, char **argv) {
     Genome g;
     std::vector<Group> groups;
     std::optional<Plan> compiledPlan;
-    bool import = false;
     AddressFit addressFit;
     if (operation == "build" && argc == 3) {
       std::string name;
@@ -964,28 +958,20 @@ int main(int argc, char **argv) {
       g.name = name;
     } else if (operation == "new" && argc == 3) {
       std::string example;
-      ensure(bool(std::cin >> example) &&
-                 (example == "blank" || example == "sum" || example == START_FISH),
+      ensure(bool(std::cin >> example) && (example == "blank" || example == "sum"),
              "unknown CPPN example");
-      if (example == START_FISH) {
-        import = true;
-        std::ifstream input(fishsim::HAND_BUILT_GENOME);
-        ensure(bool(input), "start fish not found");
-        g = Genome::read(input, false);
-      } else {
-        g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
-        for (int id = 0; id < cppn::INPUTS + cppn::OUTPUTS; ++id)
-          g.cppn->add_node({id, 1, NodeType::LINEAR});
-        if (example == "sum") {
-          ensure(g.cppn->connect(cppn::input::u, cppn::INPUTS + out::expression, 1.f),
-                 "cannot connect addition input");
-          ensure(g.cppn->connect(cppn::input::v, cppn::INPUTS + out::expression, 1.f),
-                 "cannot connect addition input");
-        }
-        g.development_seed = 1;
-        g.variation_seed = 2;
-        g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
+      g.cppn = std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
+      for (int id = 0; id < cppn::INPUTS + cppn::OUTPUTS; ++id)
+        g.cppn->add_node({id, 1, NodeType::LINEAR});
+      if (example == "sum") {
+        ensure(g.cppn->connect(cppn::input::u, cppn::INPUTS + out::expression, 1.f),
+               "cannot connect addition input");
+        ensure(g.cppn->connect(cppn::input::v, cppn::INPUTS + out::expression, 1.f),
+               "cannot connect addition input");
       }
+      g.development_seed = 1;
+      g.variation_seed = 2;
+      g.name = example == "sum" ? "Addition aus zwei Eingängen" : "Neues CPPN";
     } else if ((operation == "inspect" && argc == 3) || (operation == "edit" && argc == 4) ||
                (operation == "check" && argc == 3)) {
       std::ifstream input(argv[2]);
@@ -1094,7 +1080,7 @@ int main(int argc, char **argv) {
     }
     if (operation != "inspect")
       g.save(argv[operation == "edit" ? 3 : 2]);
-    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit, import);
+    report(g, groups, compiledPlan ? &*compiledPlan : nullptr, addressFit);
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

@@ -7,7 +7,6 @@ import {
   STUDIO_CLICKS
 } from './events.js';
 import {exampleDocument} from './model/example.js';
-import {startDocument} from './model/import.js';
 import {handleMethods, storedPanels} from './handles.js';
 import {storedLayers} from './view/layers.js';
 import {dropMethods} from './drops.js';
@@ -611,7 +610,7 @@ export class OrganStudio {
     this.refreshHeader();
     try {
       const report = await this.api(requestBody('new', {example : START_FISH}), API_WAIT.long);
-      this.loadFish(startDocument(report.sourcePlan, this.state.sites, label('app.startFish')));
+      this.loadFish(report.document);
       this.state.busy = false;
       await this.develop();
     } catch (error) {

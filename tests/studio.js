@@ -8,6 +8,7 @@ const {join} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
+  "src/cppn_brain.cc" : "01ba2015b152b02b",
   "colony-core/field/contacts.hh" : "a9bf193b8905f2a5",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
@@ -34,9 +35,9 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/cppn/activation.hh" : "1a716ab9154b8ecc",
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
-  "werkzeug/fischbau.cc" : "e4bfb1b8b73f3332",
+
   "ui/tissue.js" : "01cae94d3e8df2d6",
-  "src/genome.hh" : "e7bb5c8f277ae2b4",
+  "src/genome.hh" : "d976bc48fca24e01",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
@@ -151,15 +152,13 @@ function semanticFingerprint(source) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
-  // The real start fish becomes a document and survives save/load and organ editing. Its
-  // irregular near-sense sampling and inherited contact fields must not be normalized away.
+  // The shipped blueprint remains editable and compiles to the shipped fish.
   {
-    const {startDocument} = await import('../ui/studio/model/import.js');
     const source = JSON.parse(execFileSync(
         'python3',
         [
           '-B', '-c',
-          "import json; from atelier_service import run; print(json.dumps(run({'operation':'new','example':'start'})))"
+          "import json; from atelier_service import run, START_DOCUMENT; d=run({'operation':'new','example':'start'}); r=run({'operation':'inspect','genome':START_DOCUMENT.with_name('kruemelsucher.genome').read_text()}); r.update(d); print(json.dumps(r))"
         ],
         {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
     assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +
@@ -167,25 +166,21 @@ function semanticFingerprint(source) {
                  source.neurons);
     assert.equal(source.contacts.reduce((sum, edge) => sum + edge[2], 0), source.synapses,
                  'Every generated contact appears, including unplanned sites');
-    const doc = startDocument(source.sourcePlan, sitesResult.sites, 'Startfisch');
+    const doc = source.document;
+    model.validateDocument(doc);
     const saved = JSON.parse(JSON.stringify(doc));
     assert.ok(model.regenerateFields(saved, sitesResult.sites));
     assert.deepEqual(saved, doc);
     const plan = model.compileDocument(saved, sitesResult.sites);
-    assert.ok(plan.source);
-    assert.equal(plan.groups.length, source.sourcePlan.groups.length);
-    assert.equal(plan.connections.length, source.sourcePlan.connections.length);
+    assert.equal(plan.source, undefined);
+    assert.equal(plan.groups.length, model.allCenters(doc).length);
     assert.ok(doc.wires.length < plan.connections.length);
     const near = doc.organs.find(o => o.type === 'proximity');
-    assert.ok(new Set(near.centers.map(c => c.copies)).size > 1);
     const tuned = model.updateField(doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}},
                                     sitesResult.sites);
-    assert.ok(model.compileDocument(tuned, sitesResult.sites).source);
+    assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length, plan.groups.length);
     assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
                      model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
-    const rewired = structuredClone(doc);
-    rewired.wires.pop();
-    assert.equal(model.compileDocument(rewired, sitesResult.sites).source, undefined);
     const checked = JSON.parse(execFileSync(
         'python3',
         [

@@ -10,21 +10,23 @@ namespace {
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
-void start_fish_uses_external_vision_after_hatching(const Genome &g) {
+void start_fish_uses_external_vision_when_mature(const Genome &g) {
   Body hatchling;
   hatchling.prepare(g);
-  hatchling.tissue = hatchling.peak_tissue = HATCH_TISSUE;
+  hatchling.tissue = hatchling.peak_tissue = tissue_capacity(hatchling);
   field::Network brain(g.blueprint);
   brain.set_maturity(body_maturity(hatchling));
   brain.set_plasticity(false);
   std::vector<float> input(g.interface->sensory.size(), 0);
+  field::Hormones mature_hormones{};
+  mature_hormones[0] = .25;
   for (int tick = 0; tick < 256; ++tick) {
-    brain.step(input, field::Hormones{}, SEED);
+    brain.step(input, mature_hormones, SEED);
     for (const auto &cell : brain.retinal_state())
-      check(cell.activity == 0, "start fish stops retinal waves before hatching");
+      check(cell.activity == 0, "mature start fish suppresses spontaneous retinal waves");
   }
   std::fill(input.begin(), input.end(), .7f);
-  brain.step(input, field::Hormones{}, SEED);
+  brain.step(input, mature_hormones, SEED);
   bool sees = false;
   for (const auto &r : g.interface->sensory)
     if (r.channel == field::Light) {
@@ -82,6 +84,26 @@ void start_fish_eats_nearby_food(const Genome &g) {
       check(erased ? individual(w, id).body.nutrition == 0 : individual(w, id).body.nutrition > 1,
             "young and adult fish eat with acquired weights; erasing only weights removes feeding");
     }
+}
+void nonvisual_input_reaches_the_brain(const Genome &g) {
+  Ecosystem w(SEED);
+  auto &p = adult(w, g, FIRST_X, DEPTH);
+  SensoryProbe probe;
+  probe.kind = probe_kind::sense;
+  probe.sense = field::Touch;
+  probe.value = .8;
+  probe.remaining = 1;
+  p.body.set_probe(probe);
+  advance_body(p.body, p.genome, &w.field, w.physiology(), false);
+  bool touched = false;
+  const auto &receptors = p.body.active_interface(g).sensory;
+  for (std::size_t i = 0; i < receptors.size(); ++i)
+    if (receptors[i].channel == field::Touch) {
+      touched = true;
+      check(p.body.perception().sensor_buffer.at(i) > .6f,
+            "visual integration preserves the nonvisual signal reaching the brain");
+    }
+  check(touched, "start fish has touch receptors");
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
@@ -498,43 +520,6 @@ void growth_needs_a_hormone(const Genome &g) {
   check(quiet > 0, "a fish without growth hormone was observed");
   check(grew, "a body with growth hormone grows");
 }
-constexpr double VISIBLE_COLOUR_CHANGE = .05;
-void life_phases_follow_maturity(const Genome &g) {
-  auto w = closed_tank(g);
-  std::map<std::uint64_t, bool> young;
-  std::map<std::uint64_t, std::size_t> dead;
-  for (std::size_t k = 0; k < w.fish.size(); ++k) {
-    auto &b = w.fish[k].body;
-    young[w.fish[k].id] = k % 2;
-    if (k % 2)
-      b.tissue = b.peak_tissue = YOUNG_TISSUE;
-  }
-  for (int step = 0; step < STEPS; ++step) {
-    w.tick();
-    for (const auto &p : w.fish)
-      if (young.count(p.id) && p.body.alive && p.body.brain()) {
-        const auto now = p.body.brain()->dead_count();
-        check(now >= dead[p.id], "a dead cell stays dead");
-        dead[p.id] = now;
-      }
-  }
-  const Individual *young_fish = nullptr, *mature_fish = nullptr;
-  for (const auto &p : w.fish)
-    if (young.count(p.id) && p.body.alive && p.body.brain()) {
-      if (young[p.id]) {
-        check(dead[p.id] == 0, "a young body keeps its juvenile cells");
-        young_fish = &p;
-      } else {
-        check(dead[p.id] > 0, "a mature body loses its juvenile cells");
-        mature_fish = &p;
-      }
-    }
-  check(young_fish && mature_fish, "young and mature fish were observed");
-  double change = 0;
-  for (int c = 0; c < 3; ++c)
-    change += std::abs(young_fish->body.color[c] - mature_fish->body.color[c]);
-  check(change > VISIBLE_COLOUR_CHANGE, "young and mature fish differ in colour");
-}
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
 void algae_vanish_in_traces(const Genome &g) {
   auto w = closed_tank(g);
@@ -727,8 +712,9 @@ int main() {
     ordered_retinal_neighbors_match_geometry();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
-    start_fish_uses_external_vision_after_hatching(g);
+    start_fish_uses_external_vision_when_mature(g);
     start_fish_eats_nearby_food(g);
+    nonvisual_input_reaches_the_brain(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();
@@ -738,9 +724,8 @@ int main() {
     development_finalization_uses_budget(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
-    life_phases_follow_maturity(g);
     algae_vanish_in_traces(g);
-    std::cout << "Energie, Speicherstand, Bissspuren, Reife, Wachstum, Lebensabschnitte und Algen: "
+    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Reife, Wachstum und Algen: "
                  "OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

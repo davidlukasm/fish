@@ -19,6 +19,7 @@ COMPILE_JOB_RESULTS = 4
 COMPILE_TIMEOUT_SECONDS = 35
 COMPILE_POLL_SECONDS = .1
 DETAIL_CHARACTERS = 500
+START_DOCUMENT = ROOT / "genomes/handbau/kruemelsucher.fish.json"
 # Genome seeds travel as decimal strings so JavaScript cannot round their 64-bit values.
 SEED_MAX = (1 << 64) - 1
 
@@ -235,6 +236,8 @@ def run(data, data_dir=None, progress=None, cancel=None):
     if not isinstance(data, dict):
         raise Refusal("studio.errors.invalidRequest")
     op = data.get("operation")
+    if op == "new" and data.get("example") == "start":
+        return {"document": json.loads(START_DOCUMENT.read_text(encoding="utf-8"))}
     if op in ("load-draft", "save-draft", "list-modules", "save-module", "delete-module"):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")

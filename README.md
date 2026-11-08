@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/handfisch.genome` ist von Hand entworfen; `make bin/fischbau && bin/fischbau` erzeugt ihn. Ohne Auswahl starten die handgebauten Fische aus genomes/handbau. Gewählte Linien starten an getrennten Futterquellen.
+Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/kruemelsucher.fish.json` ist der Atelier-Bauplan; `make starter` erzeugt das Genom. Der Krümelsucher ist ein Entwurf; eine selbsttragende Linie ist nicht nachgewiesen. Ohne Auswahl startet dieser Fisch. Gewählte Linien beginnen an getrennten Futterquellen.
 
 ## Körper und Evolution
 

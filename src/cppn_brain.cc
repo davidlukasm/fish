@@ -399,7 +399,6 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
         (b.perception_.inspect_vision || b.perception_.inspect_retina) ? &b : nullptr,
         RETINAL_STRIDE, true, &eyes);
   }
-  std::fill(signals.begin(), signals.end(), 0.f);
   for (auto i : binding.active_sensory) {
     const auto &r = binding.sensory[i];
     const double exposure = birth_exposure(b, r.time_steps);

@@ -124,39 +124,4 @@ inline Plan import_plan(const fishsim::Genome &genome) {
                                 field::GROWTH_RECEPTOR, net);
   return plan;
 }
-inline void write_import(std::ostream &out, const Plan &plan) {
-  out << std::setprecision(std::numeric_limits<float>::max_digits10) << "{\"development\":\""
-      << plan.development_seed << "\",\"variation\":\"" << plan.variation_seed << "\",\"growth\":";
-  studio_plan::write_receptor(out, plan.growth);
-  out << ",\"groups\":[";
-  bool first = true;
-  for (const auto &g : plan.groups) {
-    out << (first ? "" : ",") << "{\"cell\":";
-    first = false;
-    studio_plan::write_group(out, g);
-    out << ",\"address\":[" << g.sender1 << ',' << g.sender2 << ',' << g.receiver1 << ','
-        << g.receiver2 << ',' << g.sigma;
-    for (int f = 0; f < field::CONTACT_FIELDS - 1; ++f) {
-      const auto &r = g.reception[f];
-      out << ',' << r.expression << ',' << r.address[0] << ',' << r.address[1] << ',' << r.width;
-      for (float spread : g.reception_spread[f])
-        out << ',' << spread;
-    }
-    out << "],\"growth\":";
-    studio_plan::write_receptor(out, g.growth);
-    out << ",\"receptors\":[";
-    for (std::size_t i = 0; i < g.receptors.size(); ++i) {
-      out << (i ? "," : "");
-      studio_plan::write_receptor(out, g.receptors[i]);
-    }
-    out << "]}";
-  }
-  out << "],\"connections\":[";
-  first = true;
-  for (const auto &c : plan.connections) {
-    out << (first ? "" : ",") << '[' << c.from << ',' << c.to << ']';
-    first = false;
-  }
-  out << "]}";
-}
 }
