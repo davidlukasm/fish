@@ -4,7 +4,6 @@
 #include <stdexcept>
 
 namespace field {
-inline constexpr double EMBRYONIC_STEPS = 100;
 struct DevelopmentCosts {
   double work_per_tick = 10, neuron_work = 1, edge_work = .0002;
   double neuron_build = .02, edge_build = .00002, edge_length_build = .000005, egg_basal = .025;
@@ -28,21 +27,22 @@ inline DevelopmentCosts scaled_costs(const Options &, DevelopmentCosts c = {}) {
   c.neuron_maintenance *= f;
   return c;
 }
-class Maturation {
+class EmbryoConstruction {
   DevelopmentCosts costs;
-  double construction = 0, maintenance = 0, progress_ = 0;
+  double total_work_ = 0, completed_work_ = 0, construction = 0, maintenance = 0;
   bool viable_ = false;
 
 public:
-  Maturation(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
+  EmbryoConstruction(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
     costs.validate();
+    total_work_ = neurons * c.neuron_work + edges * c.edge_work;
     const double length = std::sqrt(12.);
     construction = neurons * c.neuron_build + edges * (c.edge_build + length * c.edge_length_build);
     maintenance = neurons * c.neuron_maintenance +
                   edges * (c.edge_maintenance + length * c.edge_length_maintenance);
   }
-  Maturation(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
-      : Maturation(s.neurons.size(), s.edges.size(), scaled_costs(s.options, given)) {
+  EmbryoConstruction(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
+      : EmbryoConstruction(s.neurons.size(), s.edges.size(), scaled_costs(s.options, given)) {
     construction = s.neurons.size() * costs.neuron_build + s.edges.size() * costs.edge_build;
     maintenance =
         s.neurons.size() * costs.neuron_maintenance + s.edges.size() * costs.edge_maintenance;
@@ -59,28 +59,34 @@ public:
       }
     viable_ = capable && sensor && motor && !s.resource_limited;
   }
-  double advance() {
-    progress_ = std::min(1., progress_ + 1 / EMBRYONIC_STEPS);
-    return 0;
+  void advance() { completed_work_ = std::min(total_work_, completed_work_ + costs.work_per_tick); }
+  double construction_fraction() const {
+    return total_work_ > 0 ? completed_work_ / total_work_ : 1;
   }
-  double progress() const { return progress_; }
-  double completed_work() const { return progress_ * EMBRYONIC_STEPS; }
-  double remaining_construction() const { return construction * (1 - progress_); }
+  double completed_work() const { return completed_work_; }
+  double remaining_construction() const { return construction * (1 - construction_fraction()); }
   double remaining_cost() const {
-    return remaining_construction() +
-           (costs.egg_basal + maintenance * .5) * EMBRYONIC_STEPS * (1 - progress_);
+    if (completed_work_ >= total_work_)
+      return 0;
+    const double steps = std::ceil((total_work_ - completed_work_) / costs.work_per_tick),
+                 rate = costs.work_per_tick / total_work_;
+    return remaining_construction() + costs.egg_basal * steps +
+           maintenance * .5 *
+               ((2 * steps - 1) * construction_fraction() + rate * steps * (steps - 1) + 1);
   }
   double birth_cost() const {
-    return construction + (costs.egg_basal + maintenance * .5) * EMBRYONIC_STEPS;
+    auto start = *this;
+    start.completed_work_ = 0;
+    return start.remaining_cost();
   }
   void restore(double work) {
-    if (!std::isfinite(work) || work < 0 || work > EMBRYONIC_STEPS)
-      throw std::runtime_error("invalid maturation state");
-    progress_ = work / EMBRYONIC_STEPS;
+    if (!std::isfinite(work) || work < 0 || work > total_work_)
+      throw std::runtime_error("invalid embryo construction state");
+    completed_work_ = work;
   }
   bool viable() const { return viable_; }
-  bool ready() const { return viable_ && progress_ >= 1; }
-  int ticks() const { return int(EMBRYONIC_STEPS); }
+  bool complete() const { return viable_ && completed_work_ >= total_work_; }
+  int ticks() const { return int(std::ceil(total_work_ / costs.work_per_tick)); }
   double running_cost() const { return maintenance; }
 };
 }

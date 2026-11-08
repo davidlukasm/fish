@@ -321,10 +321,6 @@ function cellDevelopment(state, center) {
   if (!center)
     return '';
   const id = escapeText(center.id), growth = center.growth;
-  const layer = center.role === 'nerve'
-                    ? '<p>' + label('development.layer') + ' ' +
-                          (findSite(state.sites, center.site).v < .5 ? 'I1' : 'I2') + '</p>'
-                    : '';
   const field = (key, min, max, step) =>
       '<label>' + label('development.' + key) + '<input type="number" min="' + min + '" max="' +
       max + '" step="' + step + '" value="' + growth[key] + '" data-cell-growth="' + id +
@@ -346,7 +342,7 @@ function cellDevelopment(state, center) {
                        '<input type="number" min="0" max="1" step=".05" value="' + center[key] +
                        '" data-cell-limit="' + id + '" data-limit-key="' + key + '"></label>';
   return '<details class="aid-cell-development"><summary>' + label('development.title') +
-         '</summary><p>' + label('development.explanation') + '</p>' + layer +
+         '</summary><p>' + label('development.explanation') + '</p>' +
          field('baseline', -1, 1, .05) + choice + field('sensitivity', -2, 2, .1) +
          field('half', .0003, 1, .001) + field('steepness', 0, 3, 1) + limit('electrical_limit') +
          limit('teaching_limit') + '</details>';

@@ -121,9 +121,8 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
     const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site), NERVE_ROLE);
     const used = usedSites(draft, c => c.id !== id);
-    const site = closestSite(
-        c, sites.filter(s => nerveZone(s) && (s.v < .5) === (findSite(sites, c.site).v < .5)), used,
-        {x : from.x + dx, y : from.y + dy}, null, 'brain');
+    const site = closestSite(c, sites.filter(nerveZone), used, {x : from.x + dx, y : from.y + dy},
+                             null, 'brain');
     if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}, NERVE_ROLE) > snapDistance)
       return null;
     draft = moveCenter(draft, id, site.id, sites);
@@ -211,9 +210,7 @@ function placeStoredNeurons(draft, original, sites, offset, snapDistance, mappin
   const ids = [];
   for (const previous of original.centers) {
     const at = offset(sitePoint(findSite(sites, previous.site), NERVE_ROLE));
-    const originalSite = findSite(sites, previous.site);
-    const layerSites = sites.filter(s => (s.v < .5) === (originalSite.v < .5));
-    const placed = addNeuron(draft, previous.key, layerSites, at, snapDistance);
+    const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
     if (!placed)
       return null;
     draft = placed.document;

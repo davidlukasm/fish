@@ -34,7 +34,7 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
       (anatomy && anatomy->anatomy[anatomy_column::eggs] > 0 ? Flag::egg_organs : 0) |
       (anatomy && anatomy->anatomy[anatomy_column::sperm] > 0 ? Flag::sperm_organs : 0);
   row.set(F::flags, flags);
-  row.set(F::development, b.development() ? b.development()->progress() : 1);
+  row.set(F::development, b.development() ? b.development()->construction_fraction() : 1);
   row.set(F::red, b.color[rgb::red]);
   row.set(F::green, b.color[rgb::green]);
   row.set(F::blue, b.color[rgb::blue]);

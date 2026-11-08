@@ -188,11 +188,11 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"active_defense\":" << b.motor().defense << ",\"defense\":" << b.defense()
       << ",\"combat_cost\":" << b.motor().combat_cost << ",\"color\":[" << b.color[0] << ','
       << b.color[1] << ',' << b.color[2] << "],\"readiness\":" << b.reproduction().readiness
-      << ",\"novelty\":" << chosen->novelty
-      << ",\"progress\":" << (b.development() ? b.development()->progress() : 0)
+      << ",\"novelty\":" << chosen->novelty << ",\"construction_fraction\":"
+      << (b.development() ? b.development()->construction_fraction() : 0)
       << ",\"viable\":" << (!g.blueprint || g.viable() ? "true" : "false")
       << ",\"diagnostic\":" << json_quoted(g.blueprint ? g.blueprint->diagnostic : "")
-      << ",\"maturation_ticks\":" << (b.development() ? b.development()->ticks() : 0)
+      << ",\"construction_ticks\":" << (b.development() ? b.development()->ticks() : 0)
       << ",\"hatch_age\":" << b.hatch_age << ",\"maintenance\":"
       << (b.development() ? b.development()->running_cost() * world.physiology().neural_cost : 0)
       << ",\"movement_cost\":" << b.ledger().movement_cost

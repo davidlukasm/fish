@@ -3,10 +3,11 @@
 #include "field/maturation.hh"
 #include <map>
 namespace fishsim {
-inline const field::Maturation &maturation_template(const Genome &g, bool capable = true) {
+inline const field::EmbryoConstruction &embryo_construction_template(const Genome &g,
+                                                                     bool capable = true) {
   struct Entry {
     std::weak_ptr<const field::Substrate> owner;
-    field::Maturation value;
+    field::EmbryoConstruction value;
   };
   thread_local std::map<std::pair<const field::Substrate *, bool>, Entry> cache;
   auto key = std::make_pair(g.blueprint.get(), capable);
@@ -23,7 +24,7 @@ inline const field::Maturation &maturation_template(const Genome &g, bool capabl
       else
         ++i;
     }
-  field::Maturation value(*g.blueprint, {}, capable);
+  field::EmbryoConstruction value(*g.blueprint, {}, capable);
   auto inserted = cache.emplace(key, Entry{g.blueprint, std::move(value)});
   return inserted.first->second.value;
 }

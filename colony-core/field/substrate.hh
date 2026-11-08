@@ -215,10 +215,10 @@ class Network {
   std::vector<RetinalCell> retina_;
   std::vector<float> synaptic_mean_, usual_, deviation_, own_mean_, action_mean_, teach_mean_,
       contrast_, cell_surprise_, progress_;
-  std::vector<std::uint32_t> age_, disconnected_, kept_in_, kept_out_;
+  std::vector<std::uint32_t> age_;
   std::vector<unsigned char> muted_, dead_, born_;
   std::vector<NeuronIndex> active_, active_nerves_, active_effectors_, active_sensors_;
-  std::vector<std::uint16_t> index_, owner_, probation_;
+  std::vector<std::uint16_t> index_, owner_, trial_steps_left_;
   std::vector<float> weight_, trace_, predict_, usage_;
   std::map<std::size_t, std::vector<std::uint32_t>> free_rows_;
   std::vector<std::uint32_t> proposal_queue_;
@@ -249,7 +249,6 @@ class Network {
   double contact_length(NeuronIndex, NeuronIndex) const;
   void erase_contact(std::size_t);
   bool insert_contact(NeuronIndex, NeuronIndex);
-  void update_kept(std::size_t, bool);
   void advance(const std::vector<float> &, const Hormones &, std::uint64_t);
   void advance_retina(std::uint64_t);
   void form_synapse(NeuronIndex);

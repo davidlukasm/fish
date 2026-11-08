@@ -1205,9 +1205,8 @@ export const contactTopology = doc => JSON.stringify({
 });
 export const validCellLink = (a, sa, b, sb) =>
     !!sa && !!sb &&
-    ((a.role === 'sensor' && b.role === 'nerve' && sb.v < .5) ||
-     (a.role === 'nerve' && b.role === 'nerve' && (sa.v < .5) !== (sb.v < .5)) ||
-     (a.role === 'nerve' && sa.v >= .5 && b.role === 'motor'));
+    ((a.role === 'sensor' && b.role === 'nerve') ||
+     (a.role === 'nerve' && (b.role === 'nerve' || b.role === 'motor')));
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);

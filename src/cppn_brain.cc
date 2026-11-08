@@ -51,7 +51,7 @@ std::shared_ptr<const BrainInterface> body_interface(const field::Substrate &s) 
 }
 bool Genome::viable() const {
   return blueprint && interface &&
-         maturation_template(*this, interface->mobile_reproductive).viable();
+         embryo_construction_template(*this, interface->mobile_reproductive).viable();
 }
 std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const Field &world,
                                          bool filtered, bool deferred,

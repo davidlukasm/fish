@@ -290,7 +290,7 @@ void PopulationSupport::remember_breeder(const Individual &p,
       muscle_upkeep(p.genome.interface ? p.genome.interface->muscle_maintenance : 0, p.body.tissue,
                     physiology) +
       (p.body.development() ? p.body.development()->running_cost()
-                            : maturation_template(p.genome).running_cost()) *
+                            : embryo_construction_template(p.genome).running_cost()) *
           physiology.neural_cost;
   auto old = std::find_if(breeders.begin(), breeders.end(), [&](const Breeder &b) {
     return b.id == p.id || b.genome.same_genes(p.genome);

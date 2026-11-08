@@ -85,7 +85,7 @@ protected:
   EnergyLedger ledger_;
   ReproductionState reproduction_;
   MotorState motor_;
-  std::optional<field::Maturation> development_;
+  std::optional<field::EmbryoConstruction> development_;
 };
 struct Body : BodyState {
 private:
@@ -102,7 +102,7 @@ public:
   const MotorState &motor() const { return motor_; }
   const PerceptionState &perception() const { return perception_; }
   const std::optional<field::Network> &brain() const { return brain_; }
-  const std::optional<field::Maturation> &development() const { return development_; }
+  const std::optional<field::EmbryoConstruction> &development() const { return development_; }
 
   using VisualContribution = PerceptionState::VisualContribution;
   using VisualSample = PerceptionState::VisualSample;

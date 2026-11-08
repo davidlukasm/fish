@@ -12,14 +12,11 @@
 #include <optional>
 namespace field {
 int connection_kind(const Neuron &a, const Neuron &b) {
-  if (a.role == Role::Sensor)
-    return b.role == Role::Nerve && b.location.v < .5f ? 0 : -1;
-  if (a.role != Role::Nerve)
+  if (a.role == Role::Effector || b.role == Role::Sensor)
     return -1;
-  const bool first = a.location.v < .5f;
-  if (b.role == Role::Nerve)
-    return first != (b.location.v < .5f) ? (first ? 1 : 2) : -1;
-  return !first && b.role == Role::Effector ? 3 : -1;
+  if (a.role == Role::Sensor)
+    return b.role == Role::Nerve ? 0 : -1;
+  return b.role == Role::Nerve ? 1 : 2;
 }
 std::optional<Neuron> site_cell(const cppn::Point &p, const std::array<float, cppn::OUTPUTS> &v,
                                 std::uint64_t id, float bias_scale) {

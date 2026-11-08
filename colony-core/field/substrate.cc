@@ -329,7 +329,6 @@ bool Substrate::finish_development(std::size_t &budget) {
   return true;
 }
 namespace {
-constexpr std::uint16_t KEPT = 0x8000, TRIAL = 0x7fff;
 constexpr float PRUNE = plasticity::prune_share * SYNAPSE_UNIT;
 float learning_rate(const Neuron &n, float hormone) {
   return MIN_LEARNING_RATE + (2 - MIN_LEARNING_RATE) *
@@ -370,14 +369,13 @@ void Network::prepare_state() {
   muted_.assign(n, 0);
   dead_ = born_ = muted_;
   age_.assign(n, 0);
-  disconnected_ = kept_in_ = kept_out_ = age_;
   for (auto &v : hormone_effect_)
     v.assign(n, 0);
   for (auto *v : {&weight_, &trace_, &predict_, &usage_})
     v->clear();
   index_.clear();
   owner_.clear();
-  probation_.clear();
+  trial_steps_left_.clear();
   free_rows_.clear();
   proposal_queue_.clear();
   proposal_cursor_ = 0;
@@ -428,7 +426,7 @@ void Network::activate(std::size_t i) {
       r.offset = std::uint32_t(index_.size());
       index_.resize(index_.size() + storage, std::uint16_t(tissue->neurons.size()));
       owner_.resize(index_.size());
-      probation_.resize(index_.size());
+      trial_steps_left_.resize(index_.size());
       for (auto *v : {&weight_, &trace_, &predict_, &usage_})
         v->resize(index_.size(), 0);
     }
@@ -442,28 +440,12 @@ void Network::activate(std::size_t i) {
   ++revision_;
   ++tissue_revision_;
 }
-void Network::update_kept(std::size_t k, bool keep) {
-  const bool was = (probation_[k] & KEPT) != 0;
-  if (was == keep)
-    return;
-  const auto s = index_[k], t = owner_[k];
-  if (keep) {
-    ++kept_out_[s];
-    ++kept_in_[t];
-    probation_[k] |= KEPT;
-  } else {
-    --kept_out_[s];
-    --kept_in_[t];
-    probation_[k] &= TRIAL;
-  }
-}
 double Network::contact_length(NeuronIndex s, NeuronIndex t) const {
   return connection_length(tissue->neurons[s], tissue->neurons[t]);
 }
 void Network::erase_contact(std::size_t k) {
   if (index_[k] == tissue->neurons.size())
     return;
-  update_kept(k, false);
   const auto t = owner_[k];
   wiring_.length = std::max(0., wiring_.length - contact_length(index_[k], t));
   --wiring_.contacts;
@@ -471,7 +453,7 @@ void Network::erase_contact(std::size_t k) {
   --row.count;
   index_[k] = NeuronIndex(tissue->neurons.size());
   weight_[k] = trace_[k] = predict_[k] = usage_[k] = 0;
-  probation_[k] = 0;
+  trial_steps_left_[k] = 0;
   while (row.extent && index_[row.offset + row.extent - 1] == tissue->neurons.size())
     --row.extent;
   ++revision_;
@@ -550,7 +532,8 @@ bool Network::insert_contact(NeuronIndex s, NeuronIndex t) {
   index_[free] = s;
   weight_[free] = trace_[free] = predict_[free] = usage_[free] = 0;
   const auto learner = tissue->neurons[t].role == Role::Effector ? s : t;
-  probation_[free] = std::uint16_t(std::ceil(4 * topology->learning[learner]));
+  trial_steps_left_[free] = std::uint16_t(
+      std::ceil(plasticity::contact_trial_time_constants * topology->learning[learner]));
   ++r.count;
   r.extent = std::max(r.extent, std::uint16_t(free - r.offset + 1));
   ++wiring_.contacts;
@@ -580,9 +563,7 @@ double Network::grow(const Hormones &h, double maturity, double available, doubl
   formed_ = {};
   const auto n = tissue->neurons.size();
   const auto costs = scaled_costs(tissue->options);
-  const double work =
-      std::min(costs.work_per_tick,
-               (n * costs.neuron_work + tissue->edges.size() * costs.edge_work) / EMBRYONIC_STEPS);
+  const double work = costs.work_per_tick;
   growth_credit_ = std::min(std::max(4 * work, costs.neuron_work), growth_credit_ + work);
   ++development_ticks_;
   if (development_ticks_ % 4)
@@ -897,11 +878,9 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       const auto k = r.offset + j;
       if (index_[k] == n)
         continue;
-      auto left = probation_[k] & TRIAL;
+      auto &left = trial_steps_left_[k];
       if (left)
         --left;
-      probation_[k] = std::uint16_t((probation_[k] & KEPT) | left);
-      update_kept(k, !left && std::abs(weight_[k]) >= PRUNE && usage_[k] >= .05f);
       if (!left && std::abs(weight_[k]) < PRUNE)
         erase_contact(k);
     }
@@ -925,18 +904,6 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
                                 [](const auto &s) { return s.remaining == 0; }),
                  stimuli_.end());
   state_.swap(next_);
-  bool died = false;
-  if (developing_)
-    for (auto i : active_nerves_) {
-      if (kept_in_[i] || kept_out_[i])
-        disconnected_[i] = 0;
-      else if (++disconnected_[i] > std::uint32_t(std::ceil(8 * topology->learning[i]))) {
-        die(i);
-        died = true;
-      }
-    }
-  if (died)
-    refresh_active();
   if (observe)
     refresh_observation();
 }
@@ -955,9 +922,6 @@ Network Network::ablated_probe() const {
   auto copy = frozen_probe();
   std::fill(copy.weight_.begin(), copy.weight_.end(), 0);
   std::fill(copy.organ_output_.begin(), copy.organ_output_.end(), 0);
-  for (std::size_t k = 0; k < copy.index_.size(); ++k)
-    if (copy.index_[k] != tissue->neurons.size())
-      copy.update_kept(k, false);
   return copy;
 }
 void Network::reset() {
@@ -975,9 +939,9 @@ void Network::reset_learning() {
     std::fill(v->begin(), v->end(), 0);
   for (std::size_t k = 0; k < index_.size(); ++k)
     if (index_[k] != tissue->neurons.size()) {
-      update_kept(k, false);
       const auto i = tissue->neurons[owner_[k]].role == Role::Effector ? index_[k] : owner_[k];
-      probation_[k] = std::uint16_t(std::ceil(4 * topology->learning[i]));
+      trial_steps_left_[k] = std::uint16_t(
+          std::ceil(plasticity::contact_trial_time_constants * topology->learning[i]));
     }
 }
 void Network::mute(std::size_t i, bool value) {
@@ -1090,10 +1054,9 @@ std::size_t Network::runtime_bytes() const {
   for (const auto &v : hormone_effect_)
     floats += v.capacity();
   return floats * sizeof(float) +
-         (index_.capacity() + owner_.capacity() + probation_.capacity()) * sizeof(std::uint16_t) +
-         (age_.capacity() + disconnected_.capacity() + kept_in_.capacity() + kept_out_.capacity() +
-          proposal_queue_.capacity()) *
-             sizeof(std::uint32_t) +
+         (index_.capacity() + owner_.capacity() + trial_steps_left_.capacity()) *
+             sizeof(std::uint16_t) +
+         (age_.capacity() + proposal_queue_.capacity()) * sizeof(std::uint32_t) +
          rows_.capacity() * sizeof(Row) + born_.capacity() + dead_.capacity() + muted_.capacity() +
          retina_.capacity() * sizeof(RetinalCell) +
          (active_.capacity() + active_sensors_.capacity() + active_nerves_.capacity() +
@@ -1180,7 +1143,7 @@ std::vector<float> as_floats(const std::vector<unsigned char> &v) {
 }
 void Network::write_runtime(std::ostream &out) const {
   const auto precision = out.precision(std::numeric_limits<double>::max_digits10);
-  out << "BRAINDEV " << state_.size() << ' ' << index_.size() << ' ' << learning_seed << ' '
+  out << "BRAINDEV_WORK " << state_.size() << ' ' << index_.size() << ' ' << learning_seed << ' '
       << neural_ticks_ << ' ' << retinal_rng_ << ' ' << turnover_rng_ << ' ' << revision_ << ' '
       << tissue_revision_ << ' ' << development_ticks_ << ' ' << retinal_seeded_ << ' '
       << developing_ << ' ' << diagnostic_ << ' ' << plasticity_enabled << ' ' << maturity_ << ' '
@@ -1202,15 +1165,13 @@ void Network::write_runtime(std::ostream &out) const {
         &synaptic_mean_, &usual_, &deviation_, &own_mean_, &action_mean_, &teach_mean_, &contrast_,
         &cell_surprise_, &progress_, &weight_, &trace_, &predict_, &usage_})
     write_values(out, *v);
-  for (const auto *v : {&index_, &owner_, &probation_})
+  for (const auto *v : {&index_, &owner_, &trial_steps_left_})
     write_values(out, std::vector<float>(v->begin(), v->end()));
   for (const auto *v : {&muted_, &dead_, &born_})
     write_values(out, as_floats(*v));
-  for (const auto *v : {&age_, &disconnected_}) {
-    for (auto x : *v)
-      out << x << ' ';
-    out << '\n';
-  }
+  for (auto age : age_)
+    out << age << ' ';
+  out << '\n';
   out << active_.size();
   for (auto i : active_)
     out << ' ' << i;
@@ -1241,8 +1202,8 @@ void Network::read_runtime_state(std::istream &in) {
         turnover_rng_ >> revision_ >> tissue_revision_ >> development_ticks_ >> retinal_seeded_ >>
         developing_ >> diagnostic_ >> plasticity_enabled >> maturity_ >> growth_credit_ >>
         build_budget_ >> build_scale_ >> wiring_.length >> formed_.contacts >> formed_.length) ||
-      tag != "BRAINDEV" || cells != state_.size() || slots > reserved_slots() || slots % LANES ||
-      !std::isfinite(maturity_) || maturity_ < 0 || maturity_ > 1 ||
+      tag != "BRAINDEV_WORK" || cells != state_.size() || slots > reserved_slots() ||
+      slots % LANES || !std::isfinite(maturity_) || maturity_ < 0 || maturity_ > 1 ||
       !std::isfinite(growth_credit_) || growth_credit_ < 0 || growth_credit_ > 40 ||
       !std::isfinite(build_budget_) || build_budget_ < -1 || !std::isfinite(build_scale_) ||
       build_scale_ < 0 || !std::isfinite(wiring_.length) || wiring_.length < 0 ||
@@ -1266,7 +1227,7 @@ void Network::read_runtime_state(std::istream &in) {
     throw std::runtime_error("invalid brain separator");
   for (auto *v : {&weight_, &trace_, &predict_, &usage_})
     v->resize(slots);
-  for (auto *v : {&index_, &owner_, &probation_})
+  for (auto *v : {&index_, &owner_, &trial_steps_left_})
     v->resize(slots);
   for (auto *v :
        {&state_, &signal_, &pulse_, &organ_output_, &retinal_activity_, &retinal_recovery_,
@@ -1274,7 +1235,7 @@ void Network::read_runtime_state(std::istream &in) {
         &cell_surprise_, &progress_, &weight_, &trace_, &predict_, &usage_})
     read_values(in, *v, 1e9f);
   std::vector<float> integers(slots);
-  for (auto *v : {&index_, &owner_, &probation_}) {
+  for (auto *v : {&index_, &owner_, &trial_steps_left_}) {
     read_values(in, integers, 65535);
     for (std::size_t k = 0; k < slots; ++k) {
       if (integers[k] < 0 || integers[k] != std::floor(integers[k]))
@@ -1291,10 +1252,9 @@ void Network::read_runtime_state(std::istream &in) {
       (*v)[i] = integers[i] != 0;
     }
   }
-  for (auto *v : {&age_, &disconnected_})
-    for (auto &x : *v)
-      if (!(in >> x))
-        throw std::runtime_error("invalid cell age");
+  for (auto &age : age_)
+    if (!(in >> age))
+      throw std::runtime_error("invalid cell age");
   active_.clear();
   active_nerves_.clear();
   active_effectors_.clear();
@@ -1358,8 +1318,6 @@ void Network::read_runtime_state(std::istream &in) {
       throw std::runtime_error("invalid contact proposal");
     proposal_queue_.push_back(e);
   }
-  kept_in_.assign(cells, 0);
-  kept_out_ = kept_in_;
   wiring_.contacts = 0;
   for (std::size_t i = 0; i < cells; ++i) {
     if (seen[i] != bool(born_[i] && !dead_[i]) || ((!born_[i] || dead_[i]) && rows_[i].capacity) ||
@@ -1375,6 +1333,9 @@ void Network::read_runtime_state(std::istream &in) {
         continue;
       if (s >= cells || !born_[s] || connection_kind(tissue->neurons[s], tissue->neurons[i]) < 0 ||
           usage_[k] < 0 || usage_[k] > 1 ||
+          trial_steps_left_[k] >
+              std::ceil(plasticity::contact_trial_time_constants *
+                        topology->learning[tissue->neurons[i].role == Role::Effector ? s : i]) ||
           std::abs(weight_[k]) >
               std::abs(contact_limit(tissue->neurons[s], tissue->neurons[i])) + 1e-6 ||
           topology->sign[s] * weight_[k] < 0 ||
@@ -1384,10 +1345,6 @@ void Network::read_runtime_state(std::istream &in) {
       ++r.count;
       r.extent = std::uint16_t(j + 1);
       ++wiring_.contacts;
-      if (probation_[k] & KEPT) {
-        ++kept_out_[s];
-        ++kept_in_[i];
-      }
     }
   }
   dead_count_ = std::count(dead_.begin(), dead_.end(), 1);

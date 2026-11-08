@@ -48,37 +48,34 @@ double maternal_reserve(const Body &b, double adult_reserve) {
 double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   if (!g.blueprint || !g.interface)
     return 0;
-  auto stage = maturation_template(g);
+  auto stage = embryo_construction_template(g);
   if (!stage.viable())
     return ENERGY_MAX;
   double energy = HATCH_TISSUE +
                   HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
   for (int step = 0, steps = stage.ticks(); step < steps; ++step) {
-    const double tissue = HATCH_TISSUE * stage.progress();
+    const double tissue = HATCH_TISSUE * stage.construction_fraction();
     energy += basal_cost(tissue, p) + muscle_upkeep(g.interface->muscle_maintenance, tissue, p);
     stage.advance();
     energy += stage.running_cost() * p.neural_cost;
   }
-  return energy + maturation_template(g).remaining_construction() * p.neural_cost;
+  return energy + embryo_construction_template(g).remaining_construction() * p.neural_cost;
 }
 double development_energy(const Genome &g, double scale, double yolk) {
   const double upkeep = g.interface ? g.interface->muscle_maintenance : 0;
-  const double steps = g.blueprint ? maturation_template(g).ticks() : 100;
+  const auto estimate = [&] {
+    if (g.blueprint)
+      return embryo_construction_template(g);
+    const auto &o = g.development_options;
+    const auto n = std::min(field::DEVELOPMENT_SITES, o.max_nodes);
+    return field::EmbryoConstruction(n, std::min(o.max_edges, n * n));
+  }();
+  const double steps = estimate.ticks();
   yolk = std::max(yolk, HATCH_TISSUE +
                             HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                             steps * (FOUNDER_UPKEEP_ALLOWANCE + upkeep));
-  double cost;
-  if (g.blueprint) {
-    const auto &m = maturation_template(g);
-    cost = m.birth_cost();
-  } else {
-    const auto &o = g.development_options;
-    auto n = std::min(field::DEVELOPMENT_SITES, o.max_nodes);
-    field::Maturation maximum(n, std::min(o.max_edges, n * n));
-    cost = maximum.birth_cost();
-  }
-  return std::max(yolk, cost * scale + yolk +
+  return std::max(yolk, estimate.birth_cost() * scale + yolk +
                             (g.blueprint ? g.blueprint->queries : BRAIN_QUERY_LIMIT) /
                                 QUERY_ENERGY_DIVISOR);
 }
@@ -129,7 +126,7 @@ double hatch_search_reserve(const Body &b) {
          reserve_capacity_for_tissue(std::max(HATCH_TISSUE, b.embryo.target_tissue));
 }
 void mature_body(Body &b) {
-  if (!b.alive || b.hatched || !b.development_ || !b.development_->ready() ||
+  if (!b.alive || b.hatched || !b.development_ || !b.development_->complete() ||
       b.tissue < HATCH_TISSUE || b.energy < hatch_search_reserve(b))
     return;
   b.birth_tissue = b.tissue;
@@ -142,8 +139,8 @@ void mature_body(Body &b) {
 std::optional<double> predicted_hatch_reserve(const Body &b, const Genome &g, double neural_cost) {
   if (b.hatched || !g.blueprint || !g.interface || !g.viable())
     return std::nullopt;
-  auto stage =
-      b.development() ? *b.development() : maturation_template(g, g.interface->mobile_reproductive);
+  auto stage = b.development() ? *b.development()
+                               : embryo_construction_template(g, g.interface->mobile_reproductive);
   if (!stage.viable())
     return std::nullopt;
   double queries =
@@ -382,9 +379,9 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
           hatch_tissue(energy - development_->remaining_cost() * physiology.neural_cost);
     }
     development_->advance();
-    const double tissue_work =
-        std::min(std::max(0., energy),
-                 std::max(0., embryo.target_tissue * development_->progress() - tissue));
+    const double tissue_work = std::min(
+        std::max(0., energy),
+        std::max(0., embryo.target_tissue * development_->construction_fraction() - tissue));
     if (!protected_life)
       energy -= tissue_work;
     tissue += tissue_work;

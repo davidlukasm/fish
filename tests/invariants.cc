@@ -128,6 +128,8 @@ void zero_start_learning_and_decay() {
   for (auto e : n.synapses())
     check(e.weight == 0, "all contact types start at zero");
   n.step({1}, {}, 17);
+  check(n.signal(0) == 1 && n.state()[1] > 0,
+        "raw sensory activity and intrinsic postsynaptic activity exist with zero initial weights");
   check(n.organ_output()[3] == 0, "bias cannot actuate an unconnected organ");
   for (int t = 0; t < 100; ++t) {
     if (t % 12 < 6) {
@@ -151,6 +153,19 @@ void zero_start_learning_and_decay() {
   n.reset_learning();
   for (auto e : n.synapses())
     check(e.weight == 0, "erasing learning never restores inherited weights");
+  auto silent = learning_tissue();
+  silent->partners.clear();
+  silent->partner_offset.clear();
+  for (auto &c : silent->neurons) {
+    c.bias = 0;
+    c.parameters.learning_time = 0;
+  }
+  field::Network trial(silent);
+  for (int t = 0; t < 15; ++t)
+    trial.step({0}, {}, 19);
+  check(trial.synapses().size() == 3, "zero contacts retain their local consolidation trial");
+  trial.step({0}, {}, 19);
+  check(trial.synapses().empty(), "unused zero contacts are removed after four time constants");
   auto negative = learning_tissue(true);
   field::Network inhibitory(negative);
   for (int t = 0; t < 16; ++t) {
@@ -233,36 +248,58 @@ void development_preserves_identity_and_reserves_capacity() {
         "unfunded planning creates no tissue");
   auto isolated = learning_tissue();
   isolated->edges.clear();
-  for (auto &c : isolated->neurons)
+  for (auto &c : isolated->neurons) {
     c.parameters.learning_time = 0;
+    if (c.role == field::Role::Nerve) {
+      c.hormone_receptors[field::Death].affinity[0] = 1;
+      c.hormone_receptors[field::Death].sensitivity = 1;
+    }
+  }
   field::Network dying(isolated, true);
   for (int t = 0; t < 160; ++t)
     dying.grow({}, 1, 100);
-  for (int t = 0; t < 32; ++t)
+  for (int t = 0; t < 200; ++t)
     dying.step({0}, {}, 1);
-  check(dying.dead_count() == 0, "isolated cells retain their consolidation grace");
-  dying.step({0}, {}, 1);
+  check(dying.dead_count() == 0,
+        "isolated cells may wait for future partners without a death timer");
+  dying.step({0}, dose, 1);
   check(dying.dead(1) && dying.dead(2) && !dying.dead(0) && !dying.dead(3),
-        "trophic death applies to unsupported inner neurons");
+        "the inherited death receptors control permanent cell death");
   const auto dead = dying.dead_count();
   for (int t = 0; t < 100; ++t)
     dying.grow({}, 1, 100);
   check(dying.dead_count() == dead && dying.life(1) == field::Network::CellLife::Dead,
         "a dead cell identity never grows again");
-  field::Maturation stage(*tissue);
-  for (int t = 0; t < 100; ++t)
-    stage.advance();
-  check(stage.progress() == 1, "embryonic clock is independent of latent neural tissue");
+  field::EmbryoConstruction stage(*tissue);
+  stage.advance();
+  check(stage.construction_fraction() == 1 && stage.ticks() == 1,
+        "small construction has no arbitrary minimum duration");
+  field::EmbryoConstruction larger(25, 0);
+  check(larger.ticks() == 3, "construction duration follows workload and work rate");
+  larger.advance();
+  check(larger.completed_work() == 10 && std::abs(larger.construction_fraction() - .4) < 1e-12,
+        "construction progress measures completed work");
+  const auto cost = larger.remaining_cost();
+  field::EmbryoConstruction resumed(25, 0);
+  resumed.restore(larger.completed_work());
+  check(resumed.remaining_cost() == cost, "construction estimates resume from actual work");
 }
-void wiring_uses_two_inner_layers() {
+void wiring_has_no_inner_layers() {
   auto s = learning_tissue();
-  const auto &c = s->neurons;
-  check(field::connection_kind(c[0], c[1]) >= 0 && field::connection_kind(c[1], c[2]) >= 0 &&
-            field::connection_kind(c[2], c[1]) >= 0 && field::connection_kind(c[2], c[3]) >= 0,
-        "two-layer pathways and feedback are available");
-  check(field::connection_kind(c[0], c[2]) < 0 && field::connection_kind(c[0], c[3]) < 0 &&
-            field::connection_kind(c[1], c[3]) < 0 && field::connection_kind(c[1], c[1]) < 0,
-        "bypasses and same-layer contacts are excluded");
+  auto &c = s->neurons;
+  for (float first : {0.f, 1.f / 3, 2.f / 3, 1.f})
+    for (float second : {0.f, 1.f / 3, 2.f / 3, 1.f}) {
+      c[1].location.v = first;
+      c[2].location.v = second;
+      check(field::connection_kind(c[0], c[1]) >= 0 && field::connection_kind(c[0], c[2]) >= 0 &&
+                field::connection_kind(c[1], c[2]) >= 0 &&
+                field::connection_kind(c[2], c[1]) >= 0 &&
+                field::connection_kind(c[1], c[3]) >= 0 && field::connection_kind(c[2], c[3]) >= 0,
+            "cell roles allow free recurrent wiring at every inner depth");
+    }
+  check(field::connection_kind(c[0], c[3]) < 0 && field::connection_kind(c[1], c[0]) < 0 &&
+            field::connection_kind(c[3], c[1]) < 0,
+        "sensors have no inputs, effectors no outputs, and senses cannot bypass nerves");
 }
 void ordered_retinal_neighbors_match_geometry() {
   for (int density : {1, 0, 16}) {
@@ -686,7 +723,7 @@ int main() {
     Genome::begin_run(SEED);
     zero_start_learning_and_decay();
     development_preserves_identity_and_reserves_capacity();
-    wiring_uses_two_inner_layers();
+    wiring_has_no_inner_layers();
     ordered_retinal_neighbors_match_geometry();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);

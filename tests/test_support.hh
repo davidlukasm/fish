@@ -9,7 +9,7 @@ struct StateAccess {
   static MotorState &motor(Body &b) { return b.motor_; }
   static const MotorState &motor(const Body &b) { return b.motor(); }
   static std::optional<field::Network> &brain(Body &b) { return b.brain_; }
-  static std::optional<field::Maturation> &development(Body &b) { return b.development_; }
+  static std::optional<field::EmbryoConstruction> &development(Body &b) { return b.development_; }
 };
 inline void check(bool value, const char *message) {
   if (!value)
@@ -53,7 +53,7 @@ inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
   b.angle = StateAccess::motor(b).vx = StateAccess::motor(b).vy = StateAccess::motor(b).speed = 0;
   p.g = 0;
   p.last_spawn = p.last_sperm = 0;
-  while (!StateAccess::development(b)->ready())
+  while (!StateAccess::development(b)->complete())
     StateAccess::development(b)->advance();
   return p;
 }

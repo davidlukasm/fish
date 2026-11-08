@@ -1087,7 +1087,6 @@
     "precursor": "Vorläufer",
     "active": "Aktiv",
     "dead": "Abgestorben",
-    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn.",
-    "layer": "Innenlage"
+    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn."
   }
 }

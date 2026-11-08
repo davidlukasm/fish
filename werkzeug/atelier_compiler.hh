@@ -167,19 +167,9 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
                c.to >= 0 && c.to < count && between(c.spread, 0, 1) && c.bundle >= 0 &&
                c.bundle < edges,
            "invalid planned connection");
-    const auto allowed = [](const Group &a, const Group &b) {
-      auto kind = [](int ar, float av, int br, float bv) {
-        return (ar == 0 && br == 1 && bv < .5f) ||
-               (ar == 1 && br == 1 && (av < .5f) != (bv < .5f)) ||
-               (ar == 1 && av >= .5f && br == 2);
-      };
-      for (auto av : {a.v0, a.v1})
-        for (auto bv : {b.v0, b.v1})
-          if (kind(a.role, av, b.role, bv))
-            return true;
-      return false;
-    };
-    ensure(allowed(plan.groups[c.from], plan.groups[c.to]), "invalid connection roles");
+    ensure(plan.groups[c.from].role != 2 && plan.groups[c.to].role != 0 &&
+               !(plan.groups[c.from].role == 0 && plan.groups[c.to].role == 2),
+           "invalid connection roles");
     ensure(pairs.emplace(c.from, c.to).second, "duplicate planned connection");
     auto [it, fresh] = bundleTargets.emplace(c.bundle, c.to);
     ensure(fresh || it->second == c.to, "connection bundle has different targets");

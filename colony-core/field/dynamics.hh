@@ -8,6 +8,7 @@ namespace plasticity {
 inline constexpr float competition = 1, cancellation = .02f, prune_share = .05f;
 inline constexpr float basal_formation = 1.f / 50;
 inline constexpr float baseline_steps = 500;
+inline constexpr float contact_trial_time_constants = 4;
 template <class Value>
 inline Value trace_update(Value retention, Value previous, Value fast, Value pre, Value post) {
   return retention * previous + (1 - fast) * pre * post;

@@ -70,9 +70,8 @@ function tectumPlan(doc, organ) {
   const inner = maps.map(map => [map, 'out']);
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
   if (cells) {
-    nodes.push(
-        {node : 'inhibit', preset : 'inhibit', port : 'none', layer : 2, set : {copies : cells}});
-    inner.push(...maps.map(map => [map, 'inhibit']), ...maps.map(map => ['inhibit', map]));
+    nodes.push({node : 'inhibit', preset : 'inhibit', port : 'none', set : {copies : cells}});
+    inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }
   const route = (sites, cell, field) => {
     const site = findSite(sites, cell.site);
@@ -118,10 +117,9 @@ function bulbPlan(doc, organ) {
   const inner = [ [ 'gather', 'out' ] ], cross = [];
   const cells = COMPARE_CELLS[region.compare] ?? 0;
   if (cells) {
-    nodes.push(
-        {node : 'compare', preset : 'inhibit', port : 'none', layer : 2, set : {copies : cells}});
+    nodes.push({node : 'compare', preset : 'inhibit', port : 'none', set : {copies : cells}});
     inner.push([ 'gather', 'compare' ]);
-    cross.push([ 'compare', 'gather' ]);
+    cross.push([ 'compare', 'out' ]);
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
@@ -135,12 +133,12 @@ function hindbrainPlan(doc, organ) {
       port : 'out',
       set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo]}
     },
-    {node : 'cross', preset : 'inhibit', port : 'none', layer : 2}
+    {node : 'cross', preset : 'inhibit', port : 'none'}
   ];
   return {
     nodes,
     inner : [ [ 'alarm', 'command' ], [ 'alarm', 'cross' ] ],
-    cross : [ [ 'cross', 'alarm' ] ],
+    cross : [ [ 'cross', 'command' ] ],
     route : () => null,
     view : null
   };
@@ -182,9 +180,8 @@ function cerebellumPlan(doc, organ) {
   const inner = [ [ 'input', 'smooth' ] ];
   const cells = BRAKE_CELLS[region.brake] ?? 0;
   if (cells) {
-    nodes.push(
-        {node : 'brake', preset : 'inhibit', port : 'none', layer : 2, set : {copies : cells}});
-    inner.push([ 'input', 'brake' ], [ 'brake', 'input' ]);
+    nodes.push({node : 'brake', preset : 'inhibit', port : 'none', set : {copies : cells}});
+    inner.push([ 'input', 'brake' ], [ 'brake', 'smooth' ]);
   }
   return {nodes, inner, cross : [], route : () => null, view : null};
 }
@@ -313,11 +310,9 @@ export function settleRegions(doc, sites) {
         };
         // Paired regions keep off the midline while lateral sites last; the engine's medial
         // sites still carry a side, so a full brain falls back to them.
-        const layerSites =
-            sites.filter(s => (s.v < .5) === ((n.layer ?? (n.port === 'out' ? 2 : 1)) === 1));
-        const site = near && (closestSite(desc, layerSites, used, near, organ.side, organ.type) ??
-                              closestSite({...desc, paired : false}, layerSites, used, near,
-                                          organ.side, organ.type));
+        const site = near && (closestSite(desc, sites, used, near, organ.side, organ.type) ??
+                              closestSite({...desc, paired : false}, sites, used, near, organ.side,
+                                          organ.type));
         if (!site)
           continue;
         used.add(site.id);

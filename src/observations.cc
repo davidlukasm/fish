@@ -194,11 +194,12 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
   const auto &seen = p.observations();
   Record(out, F::count)(F::x, b.x)(F::y, b.y)(F::angle, b.angle)(F::eaten, b.eaten)(F::id, p.id)(
       F::energy, b.energy)(F::age, b.age)(F::niche, p.niche())(F::hatched, b.hatched ? 1 : 0)(
-      F::development, b.development() ? b.development()->progress() : 1)(F::origin, p.origin)(
-      F::offspring, p.offspring)(F::depth, p.depth)(F::fertilised, p.fertilised ? 1 : 0)(
-      F::egg_role, reproduction.egg_role ? 1 : 0)(F::father, p.father)(F::red, b.color[0])(
-      F::green, b.color[1])(F::blue, b.color[2])(F::mouth_pose, motor.mouth_pose)(
-      F::egg_organs, q && q->anatomy[anatomy_column::eggs] > 0 ? 1 : 0)(
+      F::development, b.development() ? b.development()->construction_fraction() : 1)(
+      F::origin, p.origin)(F::offspring, p.offspring)(F::depth, p.depth)(
+      F::fertilised, p.fertilised ? 1 : 0)(F::egg_role, reproduction.egg_role ? 1 : 0)(
+      F::father, p.father)(F::red, b.color[0])(F::green, b.color[1])(F::blue, b.color[2])(
+      F::mouth_pose, motor.mouth_pose)(F::egg_organs,
+                                       q && q->anatomy[anatomy_column::eggs] > 0 ? 1 : 0)(
       F::sperm_organs, q && q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)(F::species, p.species)(
       F::health, b.health)(F::thrust, motor.thrust)(F::torque, motor.torque)(
       F::defense, b.defense())(F::aggression, motor.aggression)(F::window_corpses,
