@@ -1,6 +1,5 @@
 #pragma once
 #include "substrate.hh"
-#include "mix.hh"
 #include <cmath>
 #include <stdexcept>
 
@@ -35,7 +34,6 @@ class Maturation {
   double workload = 0, construction = 0, full_construction = 0, maintenance = 0, progress_ = 0,
          work_done = 0;
   bool viable_ = false;
-  std::uint64_t order_seed = 0;
 
 public:
   Maturation(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
@@ -51,13 +49,11 @@ public:
   Maturation(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
       : costs(scaled_costs(s.options, given)) {
     const DevelopmentCosts c = costs;
-    order_seed = s.development_seed;
     costs.validate();
     workload = s.neurons.size() * c.neuron_work + s.edges.size() * c.edge_work;
-    // a brain needs a developmental phase in the egg, also a very small one (Astra)
-    constexpr double EGG_STEPS = 100;
+    constexpr double MIN_CONSTRUCTION_STEPS = 100;
     if (workload > 0)
-      costs.work_per_tick = std::min(costs.work_per_tick, workload / EGG_STEPS);
+      costs.work_per_tick = std::min(costs.work_per_tick, workload / MIN_CONSTRUCTION_STEPS);
     construction = (s.built_neurons ? s.built_neurons : s.neurons.size()) * c.neuron_build +
                    (s.built_edges ? s.built_edges : s.edges.size()) * c.edge_build;
     if (s.built_edges)
@@ -102,13 +98,6 @@ public:
     if (!std::isfinite(amount) || amount < 0)
       throw std::invalid_argument("invalid prepaid construction");
     construction = std::max(0., full_construction - amount);
-  }
-  // Stable spatial identities define a neutral construction order. No role,
-  // vector index or CPPN age input influences which cell is completed first.
-  bool neuron_ready(std::uint64_t id) const {
-    if (progress_ >= 1)
-      return true;
-    return unit_interval(splitmix(id ^ order_seed)) < progress_;
   }
   double completed_work() const { return work_done; }
   double remaining_cost() const {

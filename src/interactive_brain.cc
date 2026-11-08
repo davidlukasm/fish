@@ -212,13 +212,6 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << (g.blueprint ? std::count_if(g.blueprint->neurons.begin(), g.blueprint->neurons.end(),
                                       [](const auto &n) { return n.role == field::Role::Nerve; })
                       : 0)
-      << ",\"built_neurons\":"
-      << (g.blueprint ? std::count_if(g.blueprint->neurons.begin(), g.blueprint->neurons.end(),
-                                      [&](const auto &n) {
-                                        return b.development() &&
-                                               b.development()->neuron_ready(n.id);
-                                      })
-                      : 0)
       << ",\"node_budget\":" << g.development_options.max_nodes
       << ",\"edge_budget\":" << g.development_options.max_edges
       << ",\"architecture\":{\"sites\":" << field::DEVELOPMENT_SITES

@@ -223,8 +223,6 @@ bool Ecosystem::spawn(const Genome &g, double x, double y, int origin, std::uint
   p.body.energy = energy;
   p.body.prepare(p.genome);
   size_egg(p.body);
-  if (p.body.hatched)
-    mature_body(p.body);
   fish.push_back(std::move(p));
   refresh_food_allowance();
   return true;
