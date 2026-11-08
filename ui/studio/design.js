@@ -33,8 +33,9 @@ import {
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
-import {sensorAdaptation, sensorAnswer} from './view/panels.js';
+import {sensorAdaptation, sensorAnswer, organSettingsBlock} from './view/panels.js';
 import {label} from './view/kit.js';
+import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 
@@ -177,6 +178,10 @@ export const designMethods = {
     this.redrawBlocks('visionOrgan', findOrgan, organ => visionFan(this.state, organ), BODY_MAP);
   },
   refreshGraphics() {
+    this.redrawBlocks('hormoneTime', (doc, id) => ({index : Number(id)}),
+                      item => hormoneTime(this.state, item.index));
+    if (!this.handleDrag)
+      this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
     this.refreshSkin();
     this.refreshSpectrum();
     this.refreshSensitivity();

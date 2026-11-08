@@ -11,6 +11,8 @@ export function organTitle(organ, sites = null) {
 }
 
 export function centerTitle(center) {
+  if (center.generated)
+    return t('studio.compiler.extraPotential', {n : center.index + 1});
   if (!center.node)
     return t('studio.centers.' + center.key);
   if (center.stream)

@@ -1,31 +1,23 @@
-import {ATELIER_LIMITS} from '../schema.js';
-import {
-  allCenters,
-  compileDocument,
-  findCenter,
-  findOrgan,
-  shownSubstance
-} from './model/document.js';
-import {createProbePlayer} from './view/pulse.js';
+import {allCenters, contactCenters, findCenter, findOrgan} from './model/document.js';
+import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
+import {createPlanPlayer} from './view/pulse.js';
+import {nodeLocation} from './view/places.js';
+import {previewContextOf} from './view/development.js';
 import {label} from './view/kit.js';
-import {API_WAIT, requestBody} from './requests.js';
-import {builtAsDrawn} from './view/stimulus.js';
-import {neuralContextOf} from './view/development.js';
+import {acceptedGenome} from './view/compiler.js';
 
-export const MEASURE_LEVEL = .5;
-const PULSE_STEPS = 24;
 export const trialMethods = {
-  setProbeMode(mode) {
-    if (!['senses', 'neural'].includes(mode) || mode === this.state.probeMode)
+  setTraceSource(source) {
+    if (!['plan', 'cppn'].includes(source))
       return;
-    if (mode === 'neural' && !builtAsDrawn(this.state))
-      return this.notice(label('status.needsCompiledProbe'));
+    if (source === 'cppn' && (!acceptedGenome(this.state) || !this.state.report?.compiler))
+      return;
     this.clearStimulus();
-    this.state.runtime = null;
-    this.state.probeMode = mode;
+    this.state.traceSource = source;
+    this.state.contactView = source === 'cppn' ? 'actual' : 'design';
     this.refreshLibrary();
-    this.refreshHeader();
+    this.refreshSwitches();
     this.refreshViews();
   },
   markFocus() {
@@ -72,6 +64,11 @@ export const trialMethods = {
     for (const key of stimulus.quieted)
       for (const element of this.stimulusMarks(key))
         element.classList.add('aid-pulse-quieted');
+    for (const [keys, name] of [[ stimulus.modulated, 'aid-pulse-tuned' ],
+                                [ stimulus.hormones, 'aid-pulse-hormone' ]])
+      for (const key of keys)
+        for (const element of this.stimulusMarks(key))
+          element.classList.add(name);
   },
   wireMarks(id) {
     return [...this.bodyMap()?.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]') ?? [] ];
@@ -85,153 +82,78 @@ export const trialMethods = {
       ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-anatomy [data-center="' + escaped + '"]'),
       ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]')
+      ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]'),
+      ...svg.querySelectorAll('[data-generated="' + escaped + '"]')
     ];
     const owner = marks.length ? null : findCenter(this.state.document, key)?.organ;
     return owner && owner.type !== 'brain' ? this.stimulusMarks(owner.id) : marks;
   },
-  async stimulate(centerIds, pulse = true) {
+  stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
-    if (!builtAsDrawn(this.state))
-      return this.notice(label('status.needsCompiledProbe'));
-    const requested = new Set(centerIds);
-    const groups = allCenters(this.state.document)
-                       .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
-    if (!groups.length)
+    this.clearStimulus();
+    if (this.state.traceSource !== 'cppn')
+      this.showDrawnContacts();
+    const doc = this.state.document,
+          trace = this.state.traceSource === 'cppn'
+                      ? cppnTrace(this.state, centerIds)
+                      : planTrace(doc, this.state.sites, centerIds, this.state.capabilities);
+    if (!trace.starts.length)
+      return this.notice(label('status.noPotential'));
+    const stimulus = {
+      starts : trace.starts,
+      fired : new Set(),
+      quieted : new Set(),
+      modulated : new Set(),
+      hormones : new Set()
+    };
+    this.state.stimulus = stimulus;
+    this.refreshViews();
+    const svg = this.bodyMap();
+    if (!svg)
       return;
-    const request = ++this.neuralRequestSerial;
-    const {document, genome, tool} = this.state;
-    const context = neuralContextOf(this.state);
-    try {
-      const result = await this.api(requestBody('probe', {
-                                      genome,
-                                      plan : compileDocument(document, this.state.sites),
-                                      groups,
-                                      steps : pulse ? PULSE_STEPS : 0,
-                                      pulse,
-                                      context
-                                    }),
-                                    API_WAIT.long);
-      // The answer is for the fish as it was asked about, in the tool that asked.
-      if (this.neuralRequestSerial !== request || this.state.document !== document ||
-          this.state.genome !== genome || this.state.tool !== tool ||
-          neuralContextOf(this.state) !== context)
-        return;
-      this.stopPulse();
-      this.state.stimulus = null;
-      this.state.runtime = result.runtime;
-      this.refreshInspector();
-      this.refreshHeader();
-      if (pulse)
-        this.playPulse(result);
-      else
-        this.refreshScene();
-      this.notice(label(pulse && !result.stimulated ? 'status.noActiveProbe' : 'status.probed'));
-    } catch (error) {
-      this.notice(error.message);
-    }
+    const centers = new Map(contactCenters(this.state).map(center => [center.id, center]));
+    this.pulsePlayer = createPlanPlayer(svg, trace, {
+      marks : id => this.stimulusMarks(id),
+      point : id => {
+        const center = centers.get(id);
+        return center && nodeLocation(doc, this.state.sites, center, center.organType);
+      },
+      reached : part => {
+        const set = part.kind === 'hormone'    ? stimulus.hormones
+                    : part.kind === 'teaching' ? stimulus.modulated
+                    : part.sign < 0            ? stimulus.quieted
+                                               : stimulus.fired;
+        set.add(part.id);
+        const cls = part.kind === 'hormone'    ? 'aid-pulse-hormone'
+                    : part.kind === 'teaching' ? 'aid-pulse-tuned'
+                    : part.sign < 0            ? 'aid-pulse-quieted'
+                                               : 'aid-pulse-fired';
+        for (const element of this.stimulusMarks(part.id))
+          element.classList.add(cls);
+      }
+    });
+    this.pulsePlayer.start();
+    this.notice(label('status.planTraced'));
   },
-  setNeuralContext(key, value) {
-    const previous = neuralContextOf(this.state);
-    const next = {...previous, hormones : [...previous.hormones ]};
+  setPreviewContext(key, value) {
     if (!Number.isFinite(value))
       return;
-    if (key === 'developmentSteps')
-      next.developmentSteps =
-          Math.max(0, Math.min(ATELIER_LIMITS.max_development_steps, Math.round(value)));
-    else if (key === 'maturity')
+    const previous = previewContextOf(this.state),
+          next = {...previous, hormones : [...previous.hormones ]};
+    if (key === 'maturity')
       next.maturity = Math.max(0, Math.min(1, value));
     else if (Number.isInteger(Number(key)) && Number(key) >= 0 &&
              Number(key) < next.hormones.length)
       next.hormones[Number(key)] = Math.max(0, Math.min(1, value));
     else
       return;
-    this.stopPulse();
-    ++this.neuralRequestSerial;
-    this.state.neuralContext = next;
-    this.state.measurement = this.state.runtime = this.state.stimulus = null;
-    this.refreshHeader();
+    this.clearStimulus();
+    this.state.previewContext = next;
     this.refreshViews();
     this.refreshGraphics();
   },
-  async sampleNeuralState() {
-    if (!builtAsDrawn(this.state))
-      return;
-    const centers = allCenters(this.state.document);
-    if (centers.length)
-      await this.stimulate([ centers[0].id ], false);
-  },
-  async measure() {
-    if (!this.state.sites.length || !builtAsDrawn(this.state))
-      return;
-    const request = ++this.neuralRequestSerial;
-    const {document, genome, tool} = this.state, context = neuralContextOf(this.state);
-    const substance = shownSubstance(document, this.state.focusSubstance)?.index,
-          level = this.state.measureLevel;
-    try {
-      const result = await this.api(requestBody('measure', {
-                                      genome,
-                                      plan : compileDocument(document, this.state.sites),
-                                      substance,
-                                      level,
-                                      steps : ATELIER_LIMITS.max_measure_steps,
-                                      context
-                                    }),
-                                    API_WAIT.long);
-      if (this.state.measureLevel !== level ||
-          shownSubstance(this.state.document, this.state.focusSubstance)?.index !== substance ||
-          this.neuralRequestSerial !== request || this.state.tool !== tool ||
-          this.state.document !== document || this.state.genome !== genome ||
-          neuralContextOf(this.state) !== context)
-        return;
-      this.state.measurement = result;
-      this.state.runtime = result.runtime;
-      this.refreshHeader();
-      this.refreshLibrary();
-      this.refreshViews();
-    } catch (error) {
-      this.notice(error.message);
-    }
-  },
-  playPulse({frames, stimulated, sourceLife}) {
-    this.stopPulse();
-    const centers = allCenters(this.state.document);
-    if (!frames?.length)
-      return;
-    const stimulus = {stimulated, sourceLife, fired : new Set(), quieted : new Set()};
-    this.state.stimulus = stimulus;
-    this.refreshScene();
-    if (!stimulated)
-      return;
-    const clear = () => {
-      for (const element of this.bodyMap()?.querySelectorAll(
-               '.aid-pulse-active,.aid-pulse-quieting') ??
-           [])
-        element.classList.remove('aid-pulse-active', 'aid-pulse-quieting');
-    };
-    const show = frame => {
-      clear();
-      // An organ can contain several measured groups; choose its strongest actual answer.
-      const answers = new Map();
-      centers.forEach((center, index) => {
-        const value = frame[index] ?? 0;
-        if (Math.abs(value) < .005)
-          return;
-        for (const element of this.stimulusMarks(center.id))
-          if (!answers.has(element) || Math.abs(value) > Math.abs(answers.get(element)))
-            answers.set(element, value);
-        stimulus[value > 0 ? 'fired' : 'quieted'].add(center.id);
-      });
-      for (const [element, value] of answers)
-        element.classList.add(value > 0 ? 'aid-pulse-active' : 'aid-pulse-quieting');
-    };
-    const player = createProbePlayer(frames, show, clear);
-    this.pulsePlayer = player;
-    player.start();
-  },
   clearStimulus() {
-    ++this.neuralRequestSerial;
     this.stopPulse();
     if (!this.state.stimulus)
       return;

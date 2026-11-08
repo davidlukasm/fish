@@ -6,11 +6,8 @@ inline constexpr int max_name = 40;
 inline constexpr int max_groups = 360;
 inline constexpr int max_group_name = 60;
 inline constexpr int receptors = 8;
-inline constexpr int max_probe_steps = 32;
-inline constexpr int max_measure_steps = 64;
 inline constexpr int max_copies = 16;
 inline constexpr int contact_values = 20;
-inline constexpr int max_development_steps = 4096;
 template <typename Group>
 bool read_group(std::istream &input, Group &g) {
   return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >> g.function >> g.copies >> g.threshold >> g.tau >> g.field >> g.q1 >> g.q2 >> g.qwidth >> g.sign >> g.mode >> g.pace >> g.modulator >> g.crossing >> g.range >> g.organ >> g.open >> g.electrical_limit >> g.learning_tau >> g.teaching_limit >> g.spread_physiology >> g.spread_receptors >> g.spread_development >> g.spread_contacts);

@@ -122,7 +122,8 @@ function semanticFingerprint(source) {
   }
   const model = {
     ...await import('../ui/studio/model/document.js'),
-    ...await import('../ui/studio/model/assemblies.js')
+    ...await import('../ui/studio/model/assemblies.js'),
+    ...await import('../ui/studio/model/trace.js')
   };
   for (const v of [0, 1 / 3, 2 / 3, 1])
     for (const w of [0, 1 / 3, 2 / 3, 1]) {
@@ -146,7 +147,6 @@ function semanticFingerprint(source) {
     ...await import('../ui/studio/view/substances.js')
   };
   const graph = await import('../ui/studio/view/graph.js');
-  const pulse = await import('../ui/studio/view/pulse.js');
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
@@ -162,6 +162,11 @@ function semanticFingerprint(source) {
           "import json; from atelier_service import run; print(json.dumps(run({'operation':'new','example':'start'})))"
         ],
         {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
+    assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +
+                     source.extraNodes.reduce((sum, group) => sum + group.copies, 0),
+                 source.neurons);
+    assert.equal(source.contacts.reduce((sum, edge) => sum + edge[2], 0), source.synapses,
+                 'Every generated contact appears, including unplanned sites');
     const doc = startDocument(source.sourcePlan, sitesResult.sites, 'Startfisch');
     const saved = JSON.parse(JSON.stringify(doc));
     assert.ok(model.regenerateFields(saved, sitesResult.sites));
@@ -194,42 +199,11 @@ function semanticFingerprint(source) {
     assert.equal(checked.viable, source.viable);
   }
   {
-    const oldFrame = globalThis.requestAnimationFrame, oldCancel = globalThis.cancelAnimationFrame;
-    const pending = [], shown = [], frames = [ [ 0, 0 ], [ .4, -.2 ], [ .1, 0 ] ];
-    let cleared = 0;
-    try {
-      globalThis.requestAnimationFrame = callback => pending.push(callback);
-      globalThis.cancelAnimationFrame = () => {};
-      const player = pulse.createProbePlayer(frames, frame => shown.push(frame), () => ++cleared);
-      player.start();
-      for (const time of [0, 100, 200, 300])
-        pending.shift()(time);
-      assert.deepEqual(shown, frames, 'The preview plays measured frames in order');
-      assert.equal(player.running(), false);
-      assert.equal(cleared, 1);
-    } finally {
-      globalThis.requestAnimationFrame = oldFrame;
-      globalThis.cancelAnimationFrame = oldCancel;
-    }
-  }
-  {
-    const {builtAsDrawn, stimulusKind} = await import('../ui/studio/view/stimulus.js');
-    const drawn = {
-      genome : 'g',
-      stale : false,
-      report : {compiler : {ok : true}},
-      tool : 'stimulate',
-      probeMode : 'neural'
-    };
-    assert.ok(builtAsDrawn(drawn));
-    assert.ok(!builtAsDrawn({...drawn, report : {}}),
-              'A genome opened alone is not the fish drawn');
-    assert.doesNotMatch(stimulusKind(drawn), /aid-stimulus-kind real/);
-    assert.match(stimulusKind({...drawn, stimulus : {stimulated : 2, sourceLife : [ 1, 2, 0 ]}}),
-                 /aid-stimulus-kind real/);
-    assert.match(stimulusKind({...drawn, probeMode : 'senses', genome : '', stale : true}),
-                 /Sinnesprobe am Entwurf/);
-    assert.doesNotMatch(stimulusKind({...drawn, stale : true}), /real/);
+    const {stimulusKind} = await import('../ui/studio/view/stimulus.js');
+    const drawn =
+        {genome : 'g', stale : false, report : {compiler : {ok : true}}, tool : 'stimulate'};
+    assert.match(stimulusKind(drawn), /Bauplan-Reiz/);
+    assert.match(stimulusKind({...drawn, genome : '', stale : true}), /Bauplan-Reiz/);
     assert.equal(stimulusKind({...drawn, tool : 'select'}), '');
   }
   {
@@ -283,12 +257,14 @@ function semanticFingerprint(source) {
   assert.equal(retina.receptorWidth(0), 4);
   assert.ok(Math.abs(retina.receptorWidth(1) - 117) < 1e-8);
   assert.deepEqual(ORGANS.filter(o => ['mouth', 'fin', 'tail'].includes(o.key)), []);
+  const organAudits = [];
   for (const definition of ORGANS.filter(o => !o.fixed)) {
     const site = sites.find(s => eligible(definition.centers[0], s));
     const added =
         model.addOrgan(model.newDocument('Organ'), definition.key, sites, geometry.sitePoint(site));
     assert.ok(added, definition.key);
     assert.doesNotThrow(() => model.compileDocument(added.document, sites));
+    organAudits.push({document : added.document, id : added.organId, type : definition.key});
   }
   {
     const site = sites.find(s => s.zone === 2 && !s.outer);
@@ -998,23 +974,16 @@ scene={'side':payload['side'],'bearing':payload['angle'],'distance':32,'radius':
 target=run({'operation':'design','plan':plan,'sight':scene})
 outside=run({'operation':'design','plan':plan,'sight':{**scene,'bearing':180}})
 blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
-context={'developmentSteps':128,'maturity':0,'hormones':[0]*6}
-probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[payload['relay']],'steps':2,'pulse':True,'context':context})
-assert len(probe['frames'])==3
-assert probe['sourceLife'][1]==probe['stimulated']
-assert sum(probe['sourceLife'])==built['groups'][payload['relay']]['cells']
-measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'steps':8,'context':context})
-assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
+audited=[run({'operation':'design','plan':p}) for p in payload['audits']]
 example=run({'operation':'build','plan':payload['example']})
 assert example['compiler']['ok'],example['compiler']
-print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'runtime':probe['runtime'],'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'audited':audited,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
   const stimulusStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(stimulusStudio.state, {document : doc, sites, capabilities : sitesResult});
   let electricalPulses = 0, designRequests = 0;
   stimulusStudio.stimulate = () => ++electricalPulses;
   stimulusStudio.requestDesign = () => ++designRequests;
   stimulusStudio.placeStimulus('light');
-  assert.equal(stimulusStudio.state.probeMode, 'senses');
   assert.equal(electricalPulses, 0, 'A physical design probe must not inject an electrical pulse');
   assert.ok(designRequests > 0);
   const currentEye = model.findOrgan(doc, id);
@@ -1068,10 +1037,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     cwd : root,
     input : JSON.stringify({
       plan,
+      audits : organAudits.map(item => model.compileDocument(item.document, sites)),
       doc,
       side : currentEye.side < 0 ? 0 : 1,
       angle : rayPlan[Math.floor(rayPlan.length / 2)].angle,
-      relay : model.allCenters(doc).findIndex(c => c.id === relay.centerId),
       example : model.compileDocument(exampleStudio.state.document, sites)
     }),
     encoding : 'utf8',
@@ -1079,9 +1048,53 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     maxBuffer : 32 * 1024 * 1024
   }));
   const {built, target : seen, outside, blue} = response;
+  for (const [index, audit] of organAudits.entries()) {
+    const planned = {
+      ...state,
+      document : audit.document,
+      anatomy : response.audited[index],
+      report : null,
+      genome : '',
+      stale : true,
+      sightProbe : null,
+      senseProbe : null
+    };
+    const selections = [
+      {kind : 'organ', id : audit.id},
+      ...model.allCenters(audit.document).map(center => ({kind : 'center', id : center.id}))
+    ];
+    for (const selected of selections)
+      for (const tool of ['select', 'wire', 'hormone', 'learn', 'stimulate', 'erase', 'pan']) {
+        const html = panels.inspector({...planned, selected, tool});
+        assert.doesNotMatch(html, /NaN|undefined|studio\.[a-zA-Z]/,
+                            audit.type + ' ' + tool + ' inspector');
+      }
+    assert.doesNotMatch(views.fishScene({...planned, selected : selections[0]}),
+                        /NaN|undefined|studio\.[a-zA-Z]/, audit.type + ' fish panel');
+  }
+  const traced = model.planTrace(doc, sites, [ relay.centerId ], sitesResult);
+  assert.ok(traced.parts.some(part => part.id === relay.centerId && part.level === 0));
+  assert.ok(traced.legs.length, 'The uncompiled plan exposes its outgoing routes');
+  assert.ok(traced.parts.length <= 4 * model.allCenters(doc).length, 'Recurrent routes terminate');
+  const pulseStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(pulseStudio.state, {document : doc, sites, capabilities : sitesResult});
+  pulseStudio.api = () => { throw Error('A plan impulse must not request a neural simulation'); };
+  pulseStudio.stimulate([ relay.centerId ]);
+  assert.ok(pulseStudio.state.stimulus, 'A plan impulse works without a CPPN');
+  const mixedRelayIndex = model.allCenters(doc).findIndex(center => center.id === relay.centerId);
+  const mixed = model.cppnTrace({
+    ...state,
+    document : doc,
+    sites,
+    stale : false,
+    report : {...built, contacts : [ [ mixedRelayIndex, mixedRelayIndex, 2, 0, 1, 1, .5, -.5 ] ]}
+  },
+                                [ relay.centerId ]);
+  assert.ok(mixed.parts.some(part => part.id === relay.centerId && part.sign < 0),
+            'Mixed CPPN groups expose inhibitory paths as well');
+
   const sampled = {
     ...state,
-    runtime : response.runtime,
     report : built,
     genome : built.genome,
     stale : false,
@@ -1090,17 +1103,15 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   for (const tool of ['select', 'stimulate', 'hormone', 'learn']) {
     const markup = panels.inspector({...sampled, tool});
     assert.doesNotMatch(markup, /NaN|undefined|studio\.[a-zA-Z]/,
-                        tool + ' renders a native development snapshot');
+                        tool + ' renders the same planned fish');
   }
-  assert.doesNotMatch(views.fishScene(sampled), /aid-runtime-cell/);
   assert.equal(model.contactRows({...sampled, tool : 'select'}), built.contacts);
-  const planned =
-      {...sampled, genome : '', report : null, runtime : null, stale : true, tool : 'select'};
+  const planned = {...sampled, genome : '', report : null, stale : true, tool : 'select'};
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
   assert.match(planningInspector, /data-preview-input/);
   assert.match(planningInspector, /data-cell-growth=/);
-  assert.doesNotMatch(planningInspector, /data-run-neural|NaN|undefined|studio\.[a-zA-Z]/);
+  assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
   const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);

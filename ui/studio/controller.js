@@ -52,13 +52,11 @@ import {
   layerSwitches,
   stationShell
 } from './view/shell.js';
-import {measureReading} from './view/substances.js';
 import {libraryOf, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
 import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.js';
-import {builtAsDrawn} from './view/stimulus.js';
-import {MEASURE_LEVEL, trialMethods} from './trials.js';
+import {trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 
@@ -73,7 +71,7 @@ export class OrganStudio {
       station : 'hub',
       mode : 'fish',
       tool : 'select',
-      probeMode : 'senses',
+      traceSource : 'plan',
       wireScope : 'all',
       contactView : 'design',
       contactLimit : 120,
@@ -87,11 +85,8 @@ export class OrganStudio {
       deletingModule : null,
       effect : 0,
       focusSubstance : 0,
-      measureLevel : MEASURE_LEVEL,
       previewInput : 1,
-      measurement : null,
-      neuralContext : {developmentSteps : 256, maturity : 0, hormones : Array(6).fill(0)},
-      runtime : null,
+      previewContext : {maturity : 0, hormones : Array(6).fill(0)},
       sightProbe : null,
       senseProbe : null,
       armed : null,
@@ -121,7 +116,6 @@ export class OrganStudio {
     this.pulsePlayer = null;
     this.pendingWire = null;
     this.ignoreClickUntil = 0;
-    this.neuralRequestSerial = 0;
     this.handleDrag = null;
     this.undoHistory = [];
     this.redoHistory = [];
@@ -154,7 +148,6 @@ export class OrganStudio {
         event.preventDefault();
     });
     this.root.addEventListener('change', event => this.change(event));
-    this.root.addEventListener('input', event => this.input(event));
     this.root.addEventListener('dragstart', event => this.dragStart(event));
     this.root.addEventListener('dragover', event => this.dragOver(event));
     this.root.addEventListener('drop', event => this.drop(event));
@@ -228,7 +221,6 @@ export class OrganStudio {
     if (entering) {
       this.state.armed = null;
       this.clearStimulus();
-      this.state.runtime = this.state.measurement = null;
     }
     if (tool === 'wire') {
       this.showDrawnContacts();
@@ -301,7 +293,7 @@ export class OrganStudio {
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();
     if (svg)
-      this.pulsePlayer?.attach();
+      this.pulsePlayer?.attach(svg);
     this.markStimulus();
     this.markFocus();
   }
@@ -346,14 +338,9 @@ export class OrganStudio {
       develop.disabled = disabled;
     }
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]')) {
-      button.disabled = state.stale || !state.report;
-      button.textContent =
-          label(state.tool === 'stimulate' && state.probeMode === 'neural' && state.runtime
-                    ? 'tools.runtimeContacts'
-                    : 'tools.developedContacts');
+      button.disabled = state.stale || !state.report?.compiler;
+      button.textContent = label('tools.developedContacts');
     }
-    for (const button of this.root.querySelectorAll('[data-measure], [data-measure-level]'))
-      button.disabled = !builtAsDrawn(state);
     const download = this.root.querySelector('[data-action="download"]');
     if (download)
       download.disabled = !acceptedGenome(state);
@@ -464,10 +451,8 @@ export class OrganStudio {
     this.stopPulse();
     this.state.stimulus = null;
     this.state.stale = true;
+    this.state.traceSource = 'plan';
     this.showDrawnContacts();
-    this.state.measurement = null;
-    this.state.runtime = null;
-    this.state.probeMode = 'senses';
     this.state.genome = '';
     this.persist();
   }
@@ -786,7 +771,7 @@ export class OrganStudio {
           .then(async genome => {
             const report = await this.api(requestBody('inspect', {genome}));
             this.stopPulse();
-            this.state.runtime = this.state.measurement = this.state.stimulus = null;
+            this.state.stimulus = null;
             this.state.genome = genome;
             this.state.report = report;
             this.state.stale = false;
@@ -797,17 +782,7 @@ export class OrganStudio {
     }
     if (this.state.mode === 'cppn' && changeOn(this, element, CPPN_CHANGES))
       return;
-    if (!changeOn(this, element, FISH_CHANGES))
-      this.input(event);
-  }
-  input(event) {
-    const dose = event.target.closest?.('[data-measure-level]');
-    if (!dose)
-      return;
-    this.state.measureLevel = Number(dose.value);
-    const output = dose.closest('.aid-dial')?.querySelector('output');
-    if (output)
-      output.textContent = measureReading(this.state.measureLevel);
+    changeOn(this, element, FISH_CHANGES);
   }
   keydown(event) {
     const handle = event.target.closest?.('[data-vision-handle]');

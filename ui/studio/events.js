@@ -105,8 +105,7 @@ export const ANYWHERE_CLICKS = Object.freeze([
 ]);
 
 export const STUDIO_CLICKS = Object.freeze([
-  ['[data-run-neural]', studio => studio.sampleNeuralState()],
-  [ '[data-probe-mode]', (studio, e) => studio.setProbeMode(e.dataset.probeMode) ],
+  ['[data-trace-source]',(studio,e)=>studio.setTraceSource(e.dataset.traceSource)],
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
@@ -148,21 +147,25 @@ function chosenField(studio) {
 }
 const keep = (studio, doc) => studio.changeDocument(doc, studio.state.selected);
 const keepIfRoom = (studio, doc) => doc ? keep(studio, doc) : studio.notice(label('status.noRoom'));
-const ITEM_KINDS = Object.freeze([ 'contact', 'wire', 'center', 'assembly', 'organ' ]);
+const ITEM_KINDS = Object.freeze([ 'contact', 'generated', 'wire', 'center', 'assembly', 'organ' ]);
 const REMOVE_KINDS = Object.freeze([ 'remove-organ', 'remove-center', 'remove-wire' ]);
 
 function clickItem(studio, element, event) {
   const kind = markedKind(element, ITEM_KINDS), id = element.dataset[kind];
   const doc = studio.state.document, tool = studio.state.tool;
+  if (kind === 'generated') {
+    studio.select(kind, id, event, false);
+    if (tool === 'stimulate')
+      studio.stimulate([ id ]);
+    return;
+  }
   if (tool === 'erase')
     return studio.removeSelection({kind, id});
   if (tool === 'wire' && [ 'organ', 'center', 'assembly' ].includes(kind))
     return wireItem(studio, kind, id);
   if (tool === 'stimulate') {
-    if (studio.state.probeMode !== 'neural') {
+    if ([ 'organ', 'center', 'assembly' ].includes(kind))
       studio.select(kind, id, event, false);
-      return;
-    }
     const centers = kind === 'organ'      ? findOrgan(doc, id)?.centers.map(center => center.id)
                     : kind === 'assembly' ? findAssembly(doc, id)?.centerIds
                     : kind === 'center'   ? [ id ]
@@ -497,7 +500,6 @@ export const FISH_CLICKS = Object.freeze([
     (studio, e) =>
         studio.changeDocument(ungroupAssembly(studio.state.document, e.dataset.ungroupAssembly))
   ],
-  [ '[data-measure]', studio => studio.measure() ],
   [
     '[data-select-substance]',
     (studio, e) => showChoice(studio, state => {
@@ -520,7 +522,7 @@ export const FISH_CHANGES = Object.freeze([
     studio.state.contactLimit = Number(e.value);
     studio.refreshScene();
   } ],
-  [ 'neuralContext', (studio, e) => studio.setNeuralContext(e.dataset.neuralContext, Number(e.value)) ],
+  [ 'previewContext', (studio, e) => studio.setPreviewContext(e.dataset.previewContext, Number(e.value)) ],
   [ 'receptorField', (studio, e) => {
     const patch = {};
     patch[e.dataset.receptorKey] = Number(e.value);

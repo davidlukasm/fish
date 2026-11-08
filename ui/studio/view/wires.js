@@ -6,7 +6,7 @@ import {
   allCenters,
   contactBundle,
   contactRows,
-  probeRuntime,
+  contactCenters,
   endpointCenters,
   findAssembly,
   findOrgan,
@@ -25,10 +25,9 @@ export function pathTo(from, to, curve = 0) {
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
-function networkMemberSet(doc, sites, selection, contacts = null) {
+function networkMemberSet(doc, sites, selection, contacts = null, centers = allCenters(doc)) {
   if (!selection)
     return null;
-  const centers = allCenters(doc);
   const active = new Set();
   if (selection.kind === 'contact') {
     const [from, to] = selection.id.split(':').map(Number);
@@ -44,7 +43,7 @@ function networkMemberSet(doc, sites, selection, contacts = null) {
       active.add(wire.to);
     }
   }
-  if (selection.kind === 'center')
+  if (selection.kind === 'center' || selection.kind === 'generated')
     active.add(selection.id);
   if (selection.kind === 'organ') {
     active.add(selection.id);
@@ -233,6 +232,10 @@ const WIRE_KINDS = Object.freeze({
 });
 const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
 const INNER_BOW = -10;
+const signalPairs = (doc, link) =>
+    endpointCenters(doc, link.from)
+        .flatMap(source =>
+                     endpointCenters(doc, link.to).map(target => source.id + '>' + target.id));
 function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
   const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected) : null;
@@ -300,7 +303,8 @@ export function wireSvg(state, centers) {
   for (const link of inside) {
     const a = centers.get(link.from), b = centers.get(link.to);
     if (a && b && showsNodes(state, [ a.organ ]))
-      html += '<path class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
+      html += '<path data-signal-edges="' + escapeText(signalPairs(doc, link).join(' ')) +
+              '" class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
               pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
                      nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
               '"/>';
@@ -313,7 +317,9 @@ export function wireSvg(state, centers) {
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
-    html += '<g data-wire="' +
+    html += '<g data-signal-edges="' +
+            escapeText([...new Set(ends.flatMap(end => signalPairs(doc, end.link))) ].join(' ')) +
+            '" data-wire="' +
             escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
             '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
             (bundle.mirrored ? ' data-mirrored' : '') +
@@ -426,11 +432,15 @@ const CONTACTS = Object.freeze({
   neutral : '#819c9d'
 });
 export function developedContactsSvg(state, centers) {
+  const centerList = contactCenters(state);
+  centers = new Map(centers);
+  for (const center of centerList.filter(center => center.generated))
+    centers.set(center.id, {center, organ : {type : 'brain', id : center.id}});
   const C = CONTACTS;
   const {document : doc, sites, selected, wireScope} = state;
   const contacts = contactRows(state);
-  const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected, contacts) : null;
-  const centerList = allCenters(doc);
+  const members =
+      wireScope === 'focus' ? networkMemberSet(doc, sites, selected, contacts, centerList) : null;
   const importance = ({count, positive, negative, positiveWeight, negativeWeight}) =>
       Math.sqrt(count) *
       (C.floor +
@@ -457,7 +467,9 @@ export function developedContactsSvg(state, centers) {
         if (!channels.length)
           channels.push({kind : 'neutral', count, mean : 0});
         const id = from + ':' + to;
-        return '<g data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
+        return '<g data-signal-edges="' +
+               escapeText(centerList[from].id + '>' + centerList[to].id) + '" data-contact="' + id +
+               '" class="aid-wire-group aid-developed-contact' +
                (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
                channels
                    .map((channel, lane) => {
@@ -478,15 +490,12 @@ export function developedContactsSvg(state, centers) {
                             channel.kind + '" stroke="' +
                             (WIRE_KINDS[channel.kind]?.colour ?? C.neutral) + '" stroke-width="' +
                             fixed(width) + '"' +
-                            (probeRuntime(state) && channel.mean === 0 ? ' stroke-dasharray="3 4"'
-                                                                       : '') +
                             ' marker-end="url(#' + arrow + ')"/>';
                    })
                    .join('') +
                '<title>' + escapeText(joinParts([
                  linkText(centerTitle(a.center), centerTitle(b.center)),
-                 t(probeRuntime(state) ? 'studio.app.contactCount' : 'studio.app.proposalCount',
-                   {n : count})
+                 t('studio.app.proposalCount', {n : count})
                ])) +
                '</title></g>';
       })

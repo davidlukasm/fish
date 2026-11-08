@@ -98,9 +98,10 @@ function stationStage(s, cppn) {
          '</span><div class="aid-view-options">' +
          group(button('data-contacts="design"', label('tools.drawnContacts'),
                       {active : s.contactView === 'design'}) +
-               button('data-contacts="actual"',
-                      label(s.runtime ? 'tools.runtimeContacts' : 'tools.developedContacts'),
-                      {active : s.contactView === 'actual', disabled : s.stale || !s.report})) +
+               button('data-contacts="actual"', label('tools.developedContacts'), {
+                 active : s.contactView === 'actual',
+                 disabled : s.stale || !s.report?.compiler
+               })) +
          group(button('data-network="all"', label('tools.allNetworks'),
                       {active : s.wireScope === 'all'}) +
                button('data-network="focus"', label('tools.focusedNetwork'),

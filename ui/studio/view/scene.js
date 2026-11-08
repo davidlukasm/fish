@@ -2,7 +2,7 @@ import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
 import {nodeLocation, organLocation, REGION_CHIP, showsNodes, slotRow} from './places.js';
-import {organTitle} from './names.js';
+import {organTitle, centerTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
@@ -10,6 +10,7 @@ import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
+  contactCenters,
   findAssembly,
   findCenter,
   isChosen,
@@ -215,13 +216,31 @@ function wiresShown(state, centers) {
                                            : null;
   if (!shown)
     return '';
-  return state.contactView === 'actual' && !state.stale && state.report?.contacts
+  return state.contactView === 'actual' && !state.stale && state.report?.compiler
              ? developedContactsSvg(shown, centers)
              : wireSvg(shown, centers);
 }
 function fieldsShown(state) {
   const organ = organOf(state.document, state.selected?.id);
   return !organ || !!organ.field || ORGAN_BY_KEY[organ.type]?.category !== 'senses';
+}
+function generatedCenters(state) {
+  if (state.stale || !state.report?.compiler || state.contactView !== 'actual')
+    return '';
+  const zoom = zoomOf(state);
+  return '<g class="aid-generated-centers">' +
+         contactCenters(state)
+             .filter(center => center.generated)
+             .map(center => {
+               const at = nodeLocation(state.document, state.sites, center, 'brain');
+               return '<g class="aid-generated-center" data-generated="' + escapeText(center.id) +
+                      '"' + steadyAt(at, zoom) + '><title>' +
+                      escapeText(centerTitle(center) + ' · ' + center.copies) +
+                      '</title><circle r="12" fill="#efc17422" stroke="#efc174"/>' +
+                      centerMarker(center, 7) + '</g>';
+             })
+             .join('') +
+         '</g>';
 }
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
@@ -241,7 +260,7 @@ export function fishScene(state) {
          '<g class="aid-anatomy">' + anatomy + '</g>' + hormoneOverlay(state) +
          '<g class="aid-wires">' + wiresShown(state, centers) + '</g>' + reachSvg(state) +
          organHitsSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
-         '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
+         generatedCenters(state) + '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +

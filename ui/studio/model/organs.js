@@ -28,6 +28,8 @@ export const NEURONS = Object.freeze([
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
 export function nerveClass(center) {
+  if (center.nativeClass)
+    return center.nativeClass;
   const radius = Math.max(...['sign', 'mode', 'pace', 'modulator'].map(k => Math.abs(center[k])));
   if (!radius)
     return {sign : 1, mode : 0, pace : 0, modulator : 0};

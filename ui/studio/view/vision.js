@@ -176,8 +176,6 @@ const lightAt = (state, organ, g) => {
 };
 export const testLightPoint = (state, organ) => lightAt(state, organ, visionGeometry(state, organ));
 function testLight(state, organ, g) {
-  if (state.tool === 'stimulate' && state.probeMode === 'neural')
-    return '';
   const probe = state.sightProbe, c = lightAt(state, organ, g);
   if (!c)
     return '';

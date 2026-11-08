@@ -1291,7 +1291,7 @@ class BehaviorScale:
 
 ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open', 'electrical_limit', 'learning_tau', 'teaching_limit', 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts')
 ATELIER_RECEPTOR_FIELDS = ('active', 'baseline', 'sensitivity', 'half', 'substance', 'width', 'steepness', 'spread_receptors')
-ATELIER_LIMITS = {'max_name': 40, 'max_groups': 360, 'max_group_name': 60, 'receptors': 8, 'max_probe_steps': 32, 'max_measure_steps': 64, 'max_copies': 16, 'contact_values': 20, 'max_development_steps': 4096}
+ATELIER_LIMITS = {'max_name': 40, 'max_groups': 360, 'max_group_name': 60, 'receptors': 8, 'max_copies': 16, 'contact_values': 20}
 
 SCENE_HEADER = {'version': 24, 'magic': 'FSC1', 'bytes': 120, 'coordinate_units': 65536, 'identity_bytes': 8, 'mask_bytes': 8, 'count_bytes': 4, 'max_records': 1000000, 'max_tiles': 1000000, 'flags': {'delta': 1, 'paused': 2, 'done': 4}, 'tiles': {'light': {'type': 'u8', 'scale': 255}, 'sediment': {'type': 'f32', 'scale': 1}, 'plankton': {'type': 'f32', 'scale': 1}}, 'offsets': {'magic': 0, 'version': 4, 'flags': 6, 'sequence': 8, 'base': 12, 'step': 16, 'width': 24, 'height': 28, 'records': 32, 'light_columns': 80, 'light_rows': 82, 'sediment_columns': 84, 'sediment_rows': 86, 'light_changes': 92, 'sediment_changes': 96, 'epoch': 104, 'view_revision': 112, 'reserved': 116, 'plankton_columns': 88, 'plankton_rows': 90, 'plankton_changes': 100}}
 

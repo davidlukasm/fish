@@ -217,9 +217,41 @@ export const allCenters = doc =>
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
-export const probeRuntime = state =>
-    state.tool === 'stimulate' && state.probeMode === 'neural' ? state.runtime : null;
-export const contactRows = state => probeRuntime(state)?.contacts ?? state.report?.contacts ?? [];
+export const contactRows = state =>
+    !state.stale && state.report?.compiler ? state.report.contacts : [];
+export function contactCenters(state) {
+  const centers = allCenters(state.document);
+  if (state.stale || !state.report?.compiler)
+    return centers;
+  const actual = centers.map((center, index) => {
+    const sample = state.report.sites?.find(site => site.group === index),
+          c = state.report.groups[index]?.nerve;
+    return {
+      ...center,
+      role : sample ? [ 'sensor', 'nerve', 'motor' ][sample.role] : center.role,
+      ...(c ? {nativeClass : {sign : c[0], mode : c[1], pace : c[2], modulator : c[3]}} : {})
+    };
+  });
+  return [
+    ...actual, ...(state.report?.extraNodes ?? []).map(node => {
+      const site = state.sites.find(
+          site => site.zone === node.zone && site.side === node.side &&
+                  [ 'u', 'v', 'w' ].every(axis => Math.abs(site[axis] - node[axis]) < .0001));
+      return {
+        ...node,
+        id : '@cppn-' + node.index,
+        site : site?.id,
+        role : [ 'sensor', 'nerve', 'motor' ][node.role],
+        organType : 'brain',
+        organId : null,
+        key : 'generated',
+        sign : node.nativeClass.sign,
+        generated : true
+      };
+    })
+  ];
+}
+
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;

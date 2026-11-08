@@ -206,8 +206,7 @@ function answerSvg(state, organ, zoom) {
 }
 export function gutProbeControls(state, organ) {
   const probe = state.senseProbe;
-  if (state.tool !== 'stimulate' || state.probeMode === 'neural' || probe?.kind !== 'gut' ||
-      probe.organ !== organ.id)
+  if (state.tool !== 'stimulate' || probe?.kind !== 'gut' || probe.organ !== organ.id)
     return '';
   const input = (key, max) => '<label>' + t('studio.probe.' + key) +
                               '<input type="number" data-gut-probe="' + key + '" min="0" max="' +
@@ -228,8 +227,6 @@ export function gutProbeControls(state, organ) {
 export function senseProbeSvg(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
   const organ = probe ? findOrgan(state.document, probe.organ) : null;
-  if (state.tool === 'stimulate' && state.probeMode === 'neural')
-    return '';
   if (!organ || probe.kind === 'gut' || !isChosen(state.selected, organ) || !(faintest > 0))
     return '';
   const zoom = zoomOf(state), at = probeHandle(probe, faintest);
@@ -240,8 +237,6 @@ export function senseProbeSvg(state) {
          (probe.kind === 'smell' ? PROBE_SCENE.source : PROBE_SCENE.handle) + '"/></g></g>';
 }
 export function probeScents(state) {
-  if (state.tool === 'stimulate' && state.probeMode === 'neural')
-    return '';
   const probe = state.senseProbe, organ = probe ? findOrgan(state.document, probe.organ) : null;
   if (probe?.kind !== 'smell' || !organ || !isChosen(state.selected, organ))
     return '';

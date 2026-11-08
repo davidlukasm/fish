@@ -1,17 +1,13 @@
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
-import {probeRuntime, receptorResponse, wiredCrossing} from '../model/document.js';
+import {receptorResponse, wiredCrossing} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
-import {formatNumber, percent} from '../../strings.js';
-import {builtAsDrawn} from './stimulus.js';
+import {percent} from '../../strings.js';
 
-export const DEFAULT_NEURAL_CONTEXT = Object.freeze({
-  developmentSteps : 256,
-  maturity : 0,
-  hormones : Object.freeze(Array(HORMONES.levels).fill(0))
-});
-export const neuralContextOf = state => state.neuralContext ?? DEFAULT_NEURAL_CONTEXT;
+export const DEFAULT_PREVIEW_CONTEXT =
+    Object.freeze({maturity : 0, hormones : Object.freeze(Array(HORMONES.levels).fill(0))});
+export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
 const word = key => label('development.' + key);
 const substanceTitle = (state, index) =>
     index === HORMONES.levels ? word('maturity')
@@ -20,43 +16,11 @@ const substanceTitle = (state, index) =>
 const input = (name, value, min, max, step, attributes) =>
     '<label>' + escapeText(name) + '<input type="number" min="' + min + '" max="' + max +
     '" step="' + step + '" value="' + value + '" ' + attributes + '></label>';
-export function runtimeSummary(state) {
-  if (!probeRuntime(state))
-    return '';
-  const runtime = probeRuntime(state);
-  const life = [ 0, 0, 0 ];
-  for (const group of runtime.groups)
-    group.life.forEach((count, index) => life[index] += count);
-  const row = (key, value) => '<div><dt>' + word(key) + '</dt><dd>' + value + '</dd></div>';
-  const details =
-      row('contacts', formatNumber(runtime.contacts.reduce((sum, edge) => sum + edge[2], 0))) +
-      row('weightChange', fixed(runtime.weightChange, 5)) + row('decay', fixed(runtime.decay, 5));
-  return '<p class="aid-runtime-at">' + word('sampleAt') + ' ' + runtime.context.steps + ' · ' +
-         word('maturity') + ' ' + percent(runtime.context.maturity) + '</p>' +
-         '<p class="aid-runtime-at">' +
-         runtime.context.hormones
-             .map((level, index) =>
-                      escapeText(substanceTitle(state, index)) + ': ' + percent(level))
-             .join(' · ') +
-         '</p>' +
-         '<dl class="aid-parameter-readout">' + row('precursor', formatNumber(life[0])) +
-         row('active', formatNumber(life[1])) + row('dead', formatNumber(life[2])) + details +
-         '</dl>';
-}
-export function neuralContextControls(state) {
-  const context = neuralContextOf(state);
+export function previewControls(state) {
+  const context = previewContextOf(state);
   const control = (key, name, value, min, max, step) =>
-      input(name, value, min, max, step, 'data-neural-context="' + key + '"');
-  const probe = state.tool === 'stimulate' && state.probeMode === 'neural'
-                    ? '<section class="aid-compiled-probe"><h4>' + word('compiledProbe') +
-                          '</h4><p class="aid-hint">' + word('probeMeaning') + '</p>' +
-                          control('developmentSteps', word('steps'), context.developmentSteps, 0,
-                                  ATELIER_LIMITS.max_development_steps, 1) +
-                          '<button class="aid-secondary" data-run-neural' +
-                          (builtAsDrawn(state) ? '' : ' disabled') + '>' + word('calculate') +
-                          '</button>' + runtimeSummary(state) + '</section>'
-                    : '';
-  return '<details class="aid-neural-context"><summary>' + word('preview') +
+      input(name, value, min, max, step, 'data-preview-context="' + key + '"');
+  return '<details class="aid-preview-context"><summary>' + word('preview') +
          '</summary><p class="aid-hint">' + word('previewConditions') +
          '</p><div class="aid-parameter-grid">' +
          control('maturity', word('maturity'), context.maturity, 0, 1, .01) +
@@ -65,12 +29,12 @@ export function neuralContextControls(state) {
                       control(String(index), substanceTitle(state, index), level, 0, 1, .01))
              .join('') +
          input(word('exampleInput'), state.previewInput ?? 1, -1, 1, .01, 'data-preview-input') +
-         '</div></details>' + probe;
+         '</div></details>';
 }
 export function lifecycleGraphic(state, center) {
   if (!state.capabilities)
     return '';
-  const context = neuralContextOf(state), width = 300, height = 105, left = 18, right = 285,
+  const context = previewContextOf(state), width = 300, height = 105, left = 18, right = 285,
         top = 10, bottom = 78;
   const x = maturity => left + (right - left) * maturity,
         y = value => bottom - (bottom - top) * value;

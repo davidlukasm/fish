@@ -33,8 +33,7 @@ export const SYSTEMS = Object.freeze([
     key : 'alarm',
     sense : [ 'pain', 'injury' ],
     hub : 'hindbrain',
-    // Output can only scale a cell down from full strength, so the muscles rest at half strength
-    // and the alarm substance brings them up to full.
+    // The alarm increases the output factor for the same synaptic input.
     answers : [ {
       holds : (center, organ) => organ.type === 'muscle',
       effects : [ [ HORMONE_EFFECT.output, {baseline : 0, sensitivity : 1} ] ]

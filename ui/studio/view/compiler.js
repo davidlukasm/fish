@@ -32,9 +32,9 @@ export function compilerPanel(state) {
   const issues = report?.issues ?? [];
   const name = index =>
       centers[index] ? endpointTitle(state.document, centers[index].id, state.sites) : '';
-  let content = select('capacityTolerance', [ 0, .05, .1, .25 ], '%') +
-                select('traitTolerance', [ 0, .05, .1, .25 ], '%') +
-                select('extraCells', [ 0, 2, 4, 8, 16 ]) +
+  let content = select('capacityTolerance', [ 0, .05, .1, .25, .5 ], '%') +
+                select('traitTolerance', [ 0, .05, .1, .25, .5 ], '%') +
+                select('extraCells', [ 0, 2, 4, 8, 16, 32, 64 ]) +
                 select('reserve', [ 0, 32, 64, 128, 256 ]);
   if (report) {
     content += '<p class="aid-compiler-result">' + label(report.ok ? 'passed' : 'failed') + ' · ' +

@@ -10,7 +10,7 @@ from pathlib import Path
 from build_config import build_directory
 from viewer_paths import ROOT
 from studio_storage import run as store_design
-from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport, Hormones
+from protocol_schema import ATELIER_PLAN_FIELDS as FIELDS, ATELIER_RECEPTOR_FIELDS as RECEPTOR_FIELDS, ATELIER_LIMITS, GenomeImport
 from wording import Refusal, worded
 
 QUICK_SECONDS = 8
@@ -137,19 +137,6 @@ def receptor_row(r):
     return " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
 
 
-def neural_context_line(data):
-    context = data.get("context")
-    if not isinstance(context, dict):
-        raise Refusal("studio.errors.invalidMeasurement")
-    steps, maturity, levels = (context.get(key) for key in ("developmentSteps", "maturity", "hormones"))
-    unit = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and 0 <= x <= 1
-    if (type(steps) is not int or not 0 <= steps <= ATELIER_LIMITS["max_development_steps"]
-            or not unit(maturity) or not isinstance(levels, list) or len(levels) != Hormones.LEVELS
-            or not all(unit(level) for level in levels)):
-        raise Refusal("studio.errors.invalidMeasurement")
-    return f"{steps} {number(maturity)} " + " ".join(number(level) for level in levels) + "\n"
-
-
 def encode_plan(plan):
     if not isinstance(plan, dict) or not isinstance(plan.get("groups"), list):
         raise Refusal("studio.errors.invalidPlan")
@@ -252,7 +239,7 @@ def run(data, data_dir=None, progress=None, cancel=None):
         if data_dir is None:
             raise Refusal("studio.errors.invalidDocument")
         return store_design(data_dir, data)
-    if op not in ("design", "build", "inspect", "edit", "new", "probe", "measure", "check", "sites"):
+    if op not in ("design", "build", "inspect", "edit", "new", "check", "sites"):
         raise Refusal("studio.errors.invalidOperation")
     tool = build_directory(ROOT) / "atelier"
     if not tool.is_file():
@@ -286,7 +273,7 @@ def run(data, data_dir=None, progress=None, cancel=None):
             original.write_text(genome_text(data.get("genome")), encoding="utf-8")
         args = [str(tool), op]
         args += ([str(result)] if op in ("build", "new") else
-                 [str(original)] if op in ("inspect", "probe", "measure", "check") else [str(original), str(result)])
+                 [str(original)] if op in ("inspect", "check") else [str(original), str(result)])
         body = encode_plan(data.get("plan")) if op == "build" else (
             edit_command(data) if op == "edit" else
             data.get("example", "blank") if op == "new" else "")
@@ -295,27 +282,6 @@ def run(data, data_dir=None, progress=None, cancel=None):
             body += "0\n" if plan is None else "1\n" + encode_plan(plan)
         if op == "check":
             body = encode_plan(data.get("plan"))
-        if op == "probe":
-            groups = data.get("groups")
-            steps = data.get("steps", 18)
-            plan = data.get("plan")
-            total = len(plan.get("groups", [])) if isinstance(plan, dict) else 0
-            if (not isinstance(groups, list) or not 0 < len(groups) <= total
-                    or any(type(group) is not int or not 0 <= group < total for group in groups)
-                    or len(set(groups)) != len(groups)
-                    or type(steps) is not int or not 0 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
-                raise Refusal("studio.errors.invalidStimulus")
-            pulse = data.get("pulse")
-            if not isinstance(pulse, bool) or pulse and steps == 0:
-                raise Refusal("studio.errors.invalidStimulus")
-            body = f"{len(groups)} {' '.join(map(str, groups))} {steps} {int(pulse)}\n" + neural_context_line(data) + encode_plan(plan)
-        if op == "measure":
-            substance, level = data.get("substance"), data.get("level")
-            steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
-            unit = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and 0 <= x <= 1
-            if type(substance) is not int or not 0 <= substance <= Hormones.LEVELS or not unit(level) or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_measure_steps"]:
-                raise Refusal("studio.errors.invalidMeasurement")
-            body = f"{substance} {number(level)} {steps}\n" + neural_context_line(data) + encode_plan(data.get("plan"))
         try:
             completed = execute(args, body, progress, cancel)
         except subprocess.TimeoutExpired as error:
@@ -326,6 +292,6 @@ def run(data, data_dir=None, progress=None, cancel=None):
                 raise ValueError(detail[:DETAIL_CHARACTERS])
             raise Refusal("studio.errors.developmentFailed")
         report = json.loads(completed.stdout)
-        if op not in ("inspect", "probe", "measure", "check"):
+        if op not in ("inspect", "check"):
             report["genome"] = genome_text(result.read_text(encoding="utf-8"))
         return report

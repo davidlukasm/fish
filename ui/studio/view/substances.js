@@ -1,4 +1,4 @@
-import {neuralContextControls, neuralContextOf, cellDevelopment} from './development.js';
+import {previewControls, previewContextOf, cellDevelopment} from './development.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
@@ -36,7 +36,6 @@ import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON} from './icons.js';
 import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
-import {builtAsDrawn} from './stimulus.js';
 
 const centerWheel = (state, center, choices, reads) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
@@ -143,7 +142,7 @@ function receptorCurve(state, receptor, effect) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const context = neuralContextOf(state), wheel = state.capabilities;
+  const context = previewContextOf(state), wheel = state.capabilities;
   const concentration = (c, r = receptor) => {
     if (!wheel)
       return c;
@@ -249,6 +248,11 @@ function doseStrip(state, receptor, effect, target) {
   const D = DOSE, B = D.band, G = D.gauge;
   const {k, top, bottom, width, height, cellX, gaugeX, level, bandX} =
       doseGeometry(state, receptor, effect);
+  const context = previewContextOf(state), held = receptor.substance === HORMONES.levels
+                                                      ? context.maturity
+                                                      : context.hormones[receptor.substance];
+  const current = '<p class="aid-hint">' + label('development.currentResponse') + ': ' +
+                  formatSigned(k.response(held), 3, true) + '</p>';
   const colour = receptor.active ? substanceColor(receptor.substance) : 'currentColor';
   const halfAt = clamp(k.fraction(receptor.half));
   const responses = [ k.atFraction(0), k.atFraction(1) ].map(c => k.response(c));
@@ -295,7 +299,7 @@ function doseStrip(state, receptor, effect, target) {
                           middle + '" r="' + D.pips.r + '"><title>' +
                           escapeText(label('inspector.curve.steepness')) + '</title></circle>')
           .join('');
-  return '<svg viewBox="0 0 ' + width + ' ' + height + '" class="aid-dose"' +
+  return current + '<svg viewBox="0 0 ' + width + ' ' + height + '" class="aid-dose"' +
          (target ? ' data-dose="' + escapeText(target) + '"' : '') +
          ' style="--substance:' + colour +
          '"><defs><linearGradient id="aid-dose-amount"><stop offset="0" ' +
@@ -390,49 +394,9 @@ export function phasePatch(handle, fx) {
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
-const MEASURE_STEP = .01;
-export const measureReading = level => percent(level);
-const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
-export function measurement(state, index) {
-  const waiting = builtAsDrawn(state) ? '' : ' disabled';
-  let html = '<details class="aid-measure"><summary>' + label('development.compiledProbe') +
-             '</summary><p class="aid-hint">' + label('development.probeMeaning') +
-             '</p><span class="aid-measure-title">' + label('hormoneCard.probe') +
-             '</span><div class="aid-measure-dose">' +
-             '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
-             '</span><input type="range" data-measure-level min="0" max="1" step="' + MEASURE_STEP +
-             '" value="' + fixed(state.measureLevel) + '"' + waiting + '/><output>' +
-             measureReading(state.measureLevel) + '</output></label>' +
-             '<button class="aid-secondary" data-measure' + waiting + '>' +
-             label('inspector.measure') + '</button></div>';
-  const m = state.measurement;
-  if (!m || m.substance !== index)
-    return html + '</details>';
-  const names = tList('hormones.organNames');
-  const rows = m.organs.map((value, o) => ({name : names[o], value}))
-                   .filter(r => Math.abs(r.value) > MEASURE_SHOWN)
-                   .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-                   .slice(0, MEASURE_ROWS);
-  if (Math.abs(m.growth) > MEASURE_SHOWN)
-    rows.unshift({name : label('inspector.growth'), value : m.growth});
-  const dead = m.dead.reduce((sum, n) => sum + n, 0);
-  html +=
-      heading(label('inspector.measured')) +
-      rows.map(r => '<div class="aid-measure-row"><span>' + escapeText(r.name) +
-                    '</span><span class="aid-measure-bar ' + (r.value > 0 ? 'up' : 'down') +
-                    '" style="--share:' + fixed(Math.min(1, Math.abs(r.value))) + '"></span>' +
-                    '<output>' + formatSigned(r.value, 2, true) + '</output></div>')
-          .join('') +
-      (dead ? '<div class="aid-measure-row"><span>' + label('inspector.cellsDie') +
-                  '</span><output>' + dead + '</output></div>'
-            : '') +
-      (!rows.length && !dead ? '<div class="aid-empty-centre">' + label('inspector.none') + '</div>'
-                             : '');
-  return html + '</details>';
-}
 function lifePhaseEditor(state, focus) {
   const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
-  const context = neuralContextOf(state);
+  const context = previewContextOf(state);
   const level = m => (1 + receptorResponse(state.capabilities, output, context.hormones, m, 1)) / 2;
   const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
         y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
@@ -649,6 +613,14 @@ function receptorBody(state, center, effect) {
              .join('') +
          '</div></details>';
 }
+export function hormoneTime(state, index) {
+  const value = state.anatomy?.hormoneTimes?.[index];
+  return '<p class="aid-hint" data-hormone-time="' + index + '">' +
+         label('hormoneCard.timeConstant') + ': ' +
+         (Number.isFinite(value) ? t('studio.hormoneCard.timeValue', {n : fixed(value, 1)})
+                                 : formatNumber(NaN)) +
+         '</p>';
+}
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
   const substance = shownSubstance(doc, state.focusSubstance);
@@ -691,9 +663,9 @@ function substanceInspector(state) {
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
          grows + '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '<span>' +
          label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '</span></button>' +
-         (grows ? growthEditor(state) : '') +
+         (grows ? growthEditor(state) : '') + hormoneTime(state, index) +
          row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
-         row('acts', acts.join('')) + effectGuide(state, index) + measurement(state, index) +
+         row('acts', acts.join('')) + effectGuide(state, index) +
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
@@ -770,6 +742,4 @@ function hormoneDetails(state) {
          receptorEditor(state, focus, effects, effect) + '</div>';
 }
 
-export function hormoneInspector(state) {
-  return neuralContextControls(state) + hormoneDetails(state);
-}
+export function hormoneInspector(state) { return previewControls(state) + hormoneDetails(state); }

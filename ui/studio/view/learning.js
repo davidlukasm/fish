@@ -21,7 +21,7 @@ import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
-import {cellDevelopment, neuralContextControls, neuralContextOf} from './development.js';
+import {cellDevelopment, previewControls, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
@@ -66,12 +66,18 @@ export const modeName = mode => MODE_NAME[modeLean(mode)];
 function learningRule(state, center) {
   if (!state.capabilities)
     return '';
-  const constants = state.capabilities.neural, context = neuralContextOf(state),
+  const constants = state.capabilities.neural, context = previewContextOf(state),
         cl = nerveClass(center);
   const response = effect => receptorResponse(state.capabilities, center.receptors[effect],
                                               context.hormones, context.maturity);
   const eta = constants.learningFloor + (2 - constants.learningFloor) * center.qwidth *
                                             (1 + response(HORMONE_EFFECT.learning)) / 2;
+  const decayHalf = use => {
+    const d = Math.log(2) / constants.baselineSteps +
+              (1 - use) / (4 * learningTimeSteps(center.learning_tau));
+    const retention = 1 - d + d * d * (.5 - d / 6);
+    return Math.ceil(Math.log(.5) / Math.log(retention));
+  };
   const row = (key, value) =>
       '<div><dt>' + label('learnRule.' + key) + '</dt><dd>' + value + '</dd></div>';
   return '<div class="aid-local-learning"><span>' + label('learnRule.presynaptic') +
@@ -79,12 +85,13 @@ function learningRule(state, center) {
          label('learnRule.traceLength') + '</strong></div>' +
          '<p class="aid-hint">' + label('learnRule.localPrediction') +
          '</p><dl class="aid-parameter-readout">' + row('effectiveRate', fixed(eta, 4)) +
-         row('mode', label('inspector.' + modeName(cl.mode))) +
+         row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' + fixed(cl.mode, 3)) +
          row('probation',
              Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) + ' ' +
                  label('learnRule.steps')) +
          row('prune', fixed(constants.prune, 3)) +
-         row('decayHalf', constants.baselineSteps + ' ' + label('learnRule.steps')) + '</dl>' +
+         row('decayUnused', decayHalf(0) + ' ' + label('learnRule.steps')) +
+         row('decayUsed', decayHalf(1) + ' ' + label('learnRule.steps')) + '</dl>' +
          '<p class="aid-hint">' + label('learnRule.unavoidableDecay') + '</p>';
 }
 const TRACE = Object.freeze(
@@ -240,13 +247,13 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + neuralContextControls(state) + learnersOverview(state) +
+    return html + previewControls(state) + learnersOverview(state) +
            '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   const section = (key, body) =>
       '<section class="aid-learn-part">' + heading(label('learnRule.' + key)) + body + '</section>';
-  return html + heading(centerTitle(chosen)) + neuralContextControls(state) +
+  return html + heading(centerTitle(chosen)) + previewControls(state) +
          learningRule(state, chosen) +
          section('teacher', teacherList(state, chosen, teachers.modulators) +
                                 substancePart(state, chosen, HORMONE_EFFECT.teaching)) +

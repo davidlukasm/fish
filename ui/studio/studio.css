@@ -173,10 +173,6 @@
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
 .aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:var(--aid-soft-text);margin-top:-6px}
 .aid-life-phase{margin:10px 0 14px;padding-bottom:10px;border-bottom:1px solid #ffffff14}
-.aid-measure{margin-top:10px}
-.aid-measure-row{display:grid;grid-template-columns:1fr 70px 44px;gap:6px;align-items:center;font-size:12px;margin:4px 0}
-.aid-measure-bar{height:6px;border-radius:3px;width:calc(var(--share) * 100%);background:var(--aid-substance)}
-.aid-measure-bar.down{background:#86c7df}
 .aid-substance-wheel{width:170px;display:block;margin:10px auto}
 .aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
 .aid-wheel-ring{fill:none;stroke:#ffffff22}
@@ -510,7 +506,6 @@
 .aid-felt.pain>path{stroke:var(--aid-pain-felt);stroke-width:12}
 .aid-felt.lateral>path{stroke:var(--aid-flow);stroke-width:3;stroke-linejoin:round}
 .aid-stimulus-kind{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:8;padding:6px 14px;border-radius:999px;font-size:12.5px;white-space:nowrap;pointer-events:none;background:#0b2229e6;border:1.5px dashed var(--aid-hint-text);color:var(--aid-control-text)}
-.aid-stimulus-kind.real{border-style:solid;border-color:var(--aid-primary);color:var(--aid-primary)}
 .aid-hint-legend{position:absolute;left:76px;bottom:16px;z-index:8;display:flex;flex-wrap:wrap;gap:6px 14px;max-width:calc(100% - 220px);padding:8px 12px;border-radius:12px;background:#0b2229e6;border:1px solid #2c4c55;font-size:12.5px;pointer-events:none}
 .aid-hint-legend span{display:flex;align-items:center;gap:6px}
 .aid-hint-legend i{width:10px;height:10px;border-radius:50%;border:3px solid}
@@ -690,8 +685,6 @@
 .aid-growth-mark path{fill:none;stroke:#6f9597;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
 .aid-growth-mark.on{border-color:var(--aid-substance);background:#3a4a36}
 .aid-growth-mark.on path{stroke:#f1dca0;fill:#d7c29455}
-.aid-measure-title{display:block;color:#a1c3c0;font-size:12px;margin-bottom:4px}
-.aid-measure-dose{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
 #aid-body-map .aid-drop-hover{filter:drop-shadow(0 0 7px #f1dca0)}
@@ -788,8 +781,8 @@
 @keyframes aid-acts-die{0%,40%{fill:var(--hormone);opacity:1}100%{fill:#5b6b6a;opacity:.25}}
 @media (prefers-reduced-motion:reduce){.aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{animation:none}}
 
-.aid-neural-context,.aid-cell-development{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
-.aid-neural-context summary,.aid-cell-development summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-preview-context,.aid-cell-development{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
+.aid-preview-context summary,.aid-cell-development summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
 .aid-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
 .aid-parameter-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--aid-label-text);min-width:0}
 .aid-parameter-grid input,.aid-parameter-grid select{box-sizing:border-box;width:100%;min-width:0;color:var(--aid-control-text);background:var(--aid-control);border:1px solid var(--aid-control-edge);border-radius:5px;padding:5px}
@@ -797,7 +790,6 @@
 .aid-parameter-readout div{background:var(--aid-graphic);border-radius:5px;padding:6px}
 .aid-parameter-readout dt{font-size:10px;color:var(--aid-label-text)}
 .aid-parameter-readout dd{margin:3px 0 0;font-variant-numeric:tabular-nums;color:var(--aid-name-text)}
-.aid-runtime-at{font-size:11px;color:var(--aid-label-text)}
 .aid-lifecycle{width:100%;background:var(--aid-graphic);border-radius:6px}
 .aid-lifecycle path{fill:none;stroke-width:2}
 .aid-life-birth{color:#d8c67e;stroke:#d8c67e}
@@ -830,11 +822,18 @@
 
 .aid-cppn-link.control-port .aid-cppn-link-ink{stroke-dasharray:5 4}
 
-.aid-contact-plan,.aid-compiled-probe{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:7px}
-.aid-contact-plan summary,.aid-measure summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-contact-plan{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:7px}
 .aid-contact-table-scroll{overflow-x:auto}
 .aid-contact-plan-table{width:100%;border-collapse:collapse;font-size:10px;font-variant-numeric:tabular-nums}
 .aid-contact-plan-table th,.aid-contact-plan-table td{padding:4px;text-align:right;border-bottom:1px solid var(--aid-panel-edge)}
 .aid-contact-plan-table th:nth-child(-n+2),.aid-contact-plan-table td:nth-child(-n+2){text-align:left}
 .aid-contact-plan-table button{padding:2px 0;text-align:left;background:none;border:none;color:var(--aid-control-text);font-size:10px}
 .aid-contact-plan-table button:hover{color:var(--aid-handle)}
+
+.aid-plan-pulses circle{stroke:#10292d;stroke-width:1.2}
+.aid-pulse-tuned{filter:drop-shadow(0 0 8px #e2c487)}
+.aid-pulse-hormone{filter:drop-shadow(0 0 8px #d4b7ee)}
+
+.aid-pulse-teaching{filter:drop-shadow(0 0 12px #e2c487)}
+.aid-pulse-binding{filter:drop-shadow(0 0 12px #d4b7ee)}
+.aid-generated-center{cursor:pointer;color:#efc174}

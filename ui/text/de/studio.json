@@ -55,7 +55,6 @@
     "developedContacts": "CPPN-Vorschläge",
     "allNetworks": "Alle Verbindungen",
     "focusedNetwork": "Ausgewähltes Netzwerk",
-    "runtimeContacts": "Vorhandene Synapsen",
     "contactLimit": "Kontaktbündel",
     "allContacts": "alle"
   },
@@ -291,16 +290,16 @@
     },
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
-      "fullIn": "voll nach {n} {n:Schritt|Schritten}",
+      "fullIn": "Freigabefüllung frühestens nach {n} {n:Takt|Takten}",
       "driven": "Füllkommando fehlt",
       "ceiling": "Platz höchstens für {most}",
-      "self": "Auslösekommando liegt an",
       "trigger": "wartet auf Auslösekommando",
       "egg": "Ei mit {energy} Energie",
-      "hatches": "Ei mit {energy} Energie erreicht die Baukostenschwelle",
       "food": "Nährei: Baukostenschwelle {least}",
       "sperm": "{energy} Energie je Abgabe",
-      "stretch": "meldet halb bei {share} Füllung"
+      "stretch": "meldet halb bei {share} Füllung",
+      "developmentEnergy": "Ei mit {energy} Energie erreicht die Baukostenschwelle",
+      "releaseOn": "Auslösekommando liegt an"
     },
     "curve": {
       "baseline": "Grundantwort einstellen",
@@ -590,12 +589,11 @@
     "removed": "Entfernt. Rückgängig holt es zurück.",
     "moduleSaved": "Die Baugruppe steht jetzt in der Bibliothek.",
     "noRoom": "Für dieses Organ sind keine passenden Orte frei.",
-    "probed": "Zustand im Prüfnetz berechnet.",
     "waiting": "Bereit.",
     "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich.",
     "pressureMoved": "Der Druckfühler sitzt jetzt dort, wo er sein eigenes Organ misst.",
-    "needsCompiledProbe": "Zuerst das CPPN für diesen Bauplan erzeugen.",
-    "noActiveProbe": "Unter diesen Bedingungen ist am gewählten Ort noch keine aktive Zelle vorhanden."
+    "planTraced": "Verbindungswege im Bauplan markiert.",
+    "noPotential": "Für diese Auswahl enthält die gewählte Struktur kein Zellpotenzial."
   },
   "errors": {
     "invalidDocument": "Ungültiger Fischbauplan.",
@@ -752,7 +750,7 @@
     "wire": "Verschalten: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Jede Nervenzelle lernt lokal. Hier stellst du Plastizität, Lernspur, Lernmodus und zusätzliche Lehrsignale ein.",
-    "stimulate": "Sinnesproben: ein Organ wählen und den Reiz am Entwurf einstellen. Nach der CPPN-Erzeugung kann separat ein vorbereitetes Gehirn mit einem direkten Zellimpuls geprüft werden.",
+    "stimulate": "Reizen: Einen Knoten oder ein Organ anklicken. Die Markierung verfolgt die Verbindungen im Bauplan; Vorzeichen, Lehrkontakte und Hormonbindungen werden unterschieden.",
     "develop": "CPPN erzeugen, Entwicklungsvorschau ansehen und Eier ins Aquarium setzen."
   },
   "muscleTitles": [
@@ -907,7 +905,9 @@
     "reserveSense": "+ Energie im Blut fühlen",
     "growthWith": "Wachstum des Körpers · {name}",
     "more": "Neu",
-    "noTarget": "Hier wirkt das nicht."
+    "noTarget": "Hier wirkt das nicht.",
+    "timeConstant": "Zeitkonstante des Grundabbaus",
+    "timeValue": "{n} Takte; ergibt sich aus den zugehörigen Drüsenzellen."
   },
   "neuronPurpose": {
     "relay": "Erregende Nervenzelle mit lokalem Lernen.",
@@ -931,7 +931,7 @@
     "noWire": "Hier liegt keine Verbindung."
   },
   "stimulusCard": {
-    "senses": "Sinnesproben",
+    "senses": "Sinnesproben am Entwurf",
     "light": "Licht",
     "object": "Gegenstand",
     "scent": "Duft",
@@ -1004,9 +1004,10 @@
     "steps": "Takte",
     "probation": "Schonfrist neuer Kontakte",
     "prune": "Abbauschwelle nach der Schonfrist",
-    "decayHalf": "Grundzeitskala des Gewichtsabbaus",
     "localPrediction": "Gleichzeitige Änderungen hinterlassen eine lokale Spur. Der Lernmodus verändert elektrische Gewichte; unerwartete Änderungen des Lehrsignals wirken über die Spuren. Kontakte zu Motorzellen verwenden Lernparameter ihrer vorgeschalteten Nervenzellen.",
-    "unavoidableDecay": "Jeder Kontakt verliert laufend Gewicht. Wenig genutzte Kontakte bauen sich schneller ab. Nach vier Lernzeitkonstanten darf ein zu schwacher Kontakt verschwinden; sein Vorzeichen folgt der sendenden Zelle."
+    "unavoidableDecay": "Gewichte bauen sich auch bei voller Nutzung ab. Geringe Nutzung beschleunigt den Abbau abhängig von der Lernzeit. Unterhalb der Löschschwelle wird der Kontakt nach seiner Schonfrist entfernt.",
+    "decayUnused": "Halbwertszeit bei ungenutztem Kontakt",
+    "decayUsed": "Halbwertszeit bei voller Nutzung"
   },
   "compiler": {
     "title": "Bauprüfung",
@@ -1042,16 +1043,17 @@
       "search": "Verschaltung suchen",
       "encode": "CPPN aufbauen",
       "validate": "Entwicklung prüfen"
-    }
+    },
+    "extraPotential": "Zusatzpotenzial {n}",
+    "extraMeaning": "Dieses Zellpotenzial entstand zusätzlich aus dem CPPN. Es gehört zur erzeugten Struktur. Die Werte beschreiben die erste Zelle der Gruppe; bearbeitet wird das CPPN in seiner eigenen Ansicht."
   },
   "stimulus": {
-    "senses": "Sinnesprobe am Entwurf",
-    "sensesMeaning": "Licht, Duft, Berührung und andere Reize prüfen die geplanten Sinnesorgane mit den Sensorfunktionen der Engine. Die Zahlen zeigen die unmittelbare Sensorantwort.",
-    "neural": "Direkter Zellimpuls",
-    "neuralMeaning": "Benötigt ein erzeugtes CPPN. Ein eigenes Gehirn wird unter gewählten Bedingungen vorbereitet. Ein Klick stimuliert seine bereits geborenen Zellen für einen Takt; die Anzeige spielt 24 Takte als Unterschied zum ungestörten Vergleichsnetz ab.",
-    "waiting": "Für einen Zellimpuls zuerst das CPPN erzeugen.",
-    "ready": "Direkter Zellimpuls · Vorlauf einstellen und einen Knoten oder ein Organ anklicken",
-    "result": "Zellimpuls: {active} lebende Zellen stimuliert · {precursor} Vorläufer · {dead} abgestorben · 1 Takt je Bild"
+    "plan": "Bauplan-Reiz · schematische Verbindungswege",
+    "planMeaning": "Ein Klick verfolgt die geplanten Verbindungen. Grün zeigt erregende, Rosa hemmende Wege; Gelb markiert Lehrkontakte und Violett Hormonbindungen. Schwellen, Synapsenstärken und zeitliche Entwicklung werden dabei nicht berechnet. Die Sinnesproben darunter zeigen zusätzlich die unmittelbare Sensorantwort.",
+    "planSource": "Bauplanwege",
+    "cppnSource": "CPPN-Wege",
+    "cppn": "CPPN-Struktur · Kontaktvorschläge",
+    "cppnMeaning": "Verfolgt die Kontaktvorschläge des erzeugten CPPN einschließlich zusätzlicher Zellpotenziale. Die Markierung zeigt strukturelle Wege und Lehrkontakte. Zellbildung, Aktivität und gelernte Gewichte werden damit nicht berechnet. Die Sinnesproben darunter werten die geplanten Organe des Entwurfs aus."
   },
   "probe": {
     "title": {
@@ -1088,7 +1090,8 @@
     "skin": "ohne Pigment",
     "gathered": "geballt",
     "rest": "Anfangsdispersion",
-    "spread": "ausgebreitet"
+    "spread": "ausgebreitet",
+    "times": "Trägheit der Farbkanäle im Bauplan: Rot {red}, Grün {green}, Blau {blue} Takte. Die Zeitkonstanten der Pigmentzellen bestimmen diese Werte."
   },
   "marks": {
     "add": "+ {name}",
@@ -1108,20 +1111,10 @@
     "steepness": "Steilheit",
     "electrical_limit": "Elektrische Höchststärke",
     "teaching_limit": "Lehrende Höchststärke",
-    "precursor": "Vorläufer",
-    "active": "Geboren und lebend",
-    "dead": "Abgestorben",
     "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn.",
     "width": "Stoffbreite",
-    "preview": "Darstellungswerte",
+    "preview": "Beispielwerte",
     "previewConditions": "Die Kennlinien und Organansichten verwenden diese Beispielwerte für eine angenommene Situation im späteren Fisch.",
-    "steps": "Vorbereitung des Prüfnetzes in Takten",
-    "calculate": "Prüfzustand berechnen",
-    "sampleAt": "Zustand nach Takt",
-    "contacts": "Vorhandene Synapsen",
-    "signal": "Mittleres gesendetes Signal",
-    "command": "Mittlerer Organbefehl",
-    "progress": "Mittlerer Geburtsfortschritt",
     "birth": "Geburtsantwort",
     "output": "Ausgabefaktor",
     "death": "Tod ausgelöst",
@@ -1144,11 +1137,9 @@
     "receptorActive": "Rezeptor verwenden",
     "receptorValues": "Rezeptorwerte",
     "netInput": "Summierter Eingang −1 … +1",
-    "gonadConditions": "Planungsbeispiel bei konstantem Beispieleingang und ausreichender Energie. Der Bauplan bestimmt die Speicherkapazität; Ablagemarken zeigen das Erreichen der Freigabeschwelle.",
+    "gonadConditions": "Planungsbeispiel bei konstantem Beispieleingang und ausreichender Energie. Gezeigt wird eine Füllung bis zur Freigabemenge. Der tatsächliche Ablauf hängt von Energieversorgung, Entwicklung und Auslösekommando ab.",
     "bodyGrowth": "Dieser Rezeptor steuert das Gewebewachstum des Körpers über Hormone. Die Körperreife ergibt sich aus der größten erreichten Gewebemasse im Verhältnis zur Zielgröße.",
     "phaseHandles": "Ziehen setzt einfache Reiferezeptoren. Die Marken stehen für deren Halbsättigung; breite Rezeptoren reagieren zusätzlich auf die gehaltenen Hormonspiegel.",
-    "weightChange": "Gewichtsänderungen",
-    "decay": "Abbau",
     "threshold": "Schwelle / Gegenstück zur Eigenaktivität",
     "qwidth": "Grundplastizität",
     "mode": "Lernmodus −1 … +1",
@@ -1156,8 +1147,9 @@
     "range": "Kontaktreichweite in Körperlängen",
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
-    "compiledProbe": "Kompiliertes Gehirn prüfen",
-    "probeMeaning": "Jede Prüfung beginnt mit einem neuen Netz aus Vorläuferzellen. Es entwickelt sich mit lokalem Lernen und spontaner Retinaaktivität für die gewählte Dauer; Körperreife und Hormonspiegel bleiben konstant, Energie und Baustoffe stehen unbegrenzt bereit. Eine Antwort gilt für diese Prüfbedingungen."
+    "currentResponse": "Antwort bei den Beispielwerten",
+    "motorTiming": "Organmittel aus dem Bauplan: Integration {integration} Takte, Erholung nach einem Impuls {recovery} Takte.",
+    "potentialCells": "Potenzielle Zellen"
   },
   "contacts": {
     "title": "Kontakte im Bauplan",

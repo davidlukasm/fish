@@ -116,6 +116,12 @@ export function pigmentInspector(state, organ, center) {
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
   return '<div data-pigment-block="' + escapeText(organ.id) + '">' + kindChips(organ, chosen) +
          pigmentWheel(chosen.centers[0]) + amountTrack(organ, chosen) + colourRange(state) +
+         (state.anatomy?.pigmentTimes ? '<p class="aid-hint">' + label('times', {
+                                          red : fixed(state.anatomy.pigmentTimes[0], 1),
+                                          green : fixed(state.anatomy.pigmentTimes[1], 1),
+                                          blue : fixed(state.anatomy.pigmentTimes[2], 1)
+                                        }) + '</p>'
+                                      : '') +
          '</div>';
 }
 const DOTS = Object.freeze({step : 44, ends : [ 1, 2 ], inset : 16, least : 1.6, most : 8});

@@ -25,7 +25,7 @@ async function cppnAction(studio, operation, data = {}) {
     if (state.document !== document)
       return;
     studio.stopPulse();
-    state.runtime = state.measurement = state.stimulus = null;
+    state.stimulus = null;
     state.report = result;
     state.robustness = null;
     if (result.genome)
