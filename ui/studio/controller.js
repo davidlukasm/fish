@@ -265,7 +265,7 @@ export class OrganStudio {
     return centroid(points);
   }
   connectSelections(source, target) {
-    const result = connectSelections(this.state.document, source, target);
+    const result = connectSelections(this.state.document, source, target, this.state.sites);
     if (result)
       this.changeDocument(result.document, {kind : 'wire', id : result.wireId});
     else

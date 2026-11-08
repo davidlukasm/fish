@@ -121,8 +121,9 @@ export function moveAssembly(doc, assemblyId, sites, position, pointerOrigin = n
   for (const id of members.filter(id => findCenter(doc, id)?.organ.type === 'brain')) {
     const c = findCenter(draft, id).center, from = sitePoint(findSite(sites, c.site), NERVE_ROLE);
     const used = usedSites(draft, c => c.id !== id);
-    const site = closestSite(c, sites.filter(nerveZone), used, {x : from.x + dx, y : from.y + dy},
-                             null, 'brain');
+    const site = closestSite(
+        c, sites.filter(s => nerveZone(s) && (s.v < .5) === (findSite(sites, c.site).v < .5)), used,
+        {x : from.x + dx, y : from.y + dy}, null, 'brain');
     if (!site || pointDistance(site, {x : from.x + dx, y : from.y + dy}, NERVE_ROLE) > snapDistance)
       return null;
     draft = moveCenter(draft, id, site.id, sites);
@@ -171,7 +172,7 @@ export function mirrorAssembly(doc, assemblyId, sites) {
       organIds.push('brain');
   }
   for (const wire of doc.wires.filter(w => assembly.wireIds.includes(w.id))) {
-    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to));
+    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites);
     if (added)
       draft = updateWire(added.document, added.wireId, wire);
   }
@@ -210,7 +211,9 @@ function placeStoredNeurons(draft, original, sites, offset, snapDistance, mappin
   const ids = [];
   for (const previous of original.centers) {
     const at = offset(sitePoint(findSite(sites, previous.site), NERVE_ROLE));
-    const placed = addNeuron(draft, previous.key, sites, at, snapDistance);
+    const originalSite = findSite(sites, previous.site);
+    const layerSites = sites.filter(s => (s.v < .5) === (originalSite.v < .5));
+    const placed = addNeuron(draft, previous.key, layerSites, at, snapDistance);
     if (!placed)
       return null;
     draft = placed.document;
@@ -287,7 +290,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
     fresh.linked = !!fresh.pair && original.linked;
   }
   for (const wire of module.wires) {
-    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to));
+    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites);
     if (!added)
       return null;
     draft = updateWire(added.document, added.wireId, wire);
@@ -318,7 +321,7 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
     centerByOrgan.push(created.centerIds);
   }
   for (const [from, to, pairing] of module.connections) {
-    const result = addWire(draft, organIds[from], organIds[to], pairing);
+    const result = addWire(draft, organIds[from], organIds[to], pairing, sites);
     if (result)
       draft = result.document;
   }

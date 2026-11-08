@@ -397,7 +397,7 @@ export function brainResetSignals() {
 export function brainMotorActivity(n, k, d) {
   const port = MOTOR_PORTS[k],
         e = (d.effectors.get(n[NEURON.index]) || []).find(e => e[EFFECTOR.port] === port),
-        state = n[NEURON.state] ?? n[NEURON.activity];
+        state = n[NEURON.command] ?? 0;
   return e && n[NEURON.functional] && n[NEURON.ready] && !n[NEURON.muted]
              ? brainClamp(k === MOTOR_KIND.bladder || k === MOTOR_KIND.gland ? Math.abs(state)
                                                                              : state)

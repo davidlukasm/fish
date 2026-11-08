@@ -397,20 +397,24 @@ class Neuron:
     SIGNAL = 19
     PARAMETERS = 20
     USABLE = 21
-    ROLE_MARGIN = 22
-    ROLE_GAIN = 23
-    ZONE = 24
-    SENDER = 25
-    RECEIVER = 26
-    HORMONE_RESPONSE = 27
-    SITE = 28
-    DEAD = 29
-    SYNAPTIC_MEAN = 30
-    EXPRESSION = 31
-    SEARCH_WIDTH = 32
-    CROSSING = 33
-    RANGE = 34
-    COUNT = 35
+    ZONE = 22
+    SENDER = 23
+    RECEIVER = 24
+    HORMONE_RESPONSE = 25
+    SITE = 26
+    DEAD = 27
+    SYNAPTIC_MEAN = 28
+    EXPRESSION = 29
+    SEARCH_WIDTH = 30
+    CROSSING = 31
+    RANGE = 32
+    LIFE = 33
+    DEVELOPMENT = 34
+    GROWTH_RESPONSE = 35
+    ELECTRICAL_LIMIT = 36
+    TEACHING_LIMIT = 37
+    COMMAND = 38
+    COUNT = 39
 
 class NeuronState:
     ACTIVITY = 0
@@ -418,7 +422,11 @@ class NeuronState:
     MUTED = 2
     STATE = 3
     SIGNAL = 4
-    COUNT = 5
+    LIFE = 5
+    DEVELOPMENT = 6
+    GROWTH_RESPONSE = 7
+    COMMAND = 8
+    COUNT = 9
 
 class NeuronParameter:
     THRESHOLD = 0
@@ -428,10 +436,9 @@ class NeuronParameter:
     QUALITY_WIDTH = 4
     FIELD_WIDTH = 5
     TIME_CONSTANT = 6
-    DENDRITES = 7
-    PLASTICITY = 8
-    LEARNING_TIME = 9
-    COUNT = 10
+    PLASTICITY = 7
+    LEARNING_TIME = 8
+    COUNT = 9
 
 class NeuronSite:
     U = 0
@@ -483,7 +490,8 @@ class Synapse:
     TARGET = 1
     STRENGTH = 2
     ID = 3
-    COUNT = 4
+    LIMIT = 4
+    COUNT = 5
 
 class Stroke:
     MEAN = 0
@@ -1281,7 +1289,7 @@ class BehaviorScale:
     TURN_DEGREES = 54
     CRUISING_SPEED = 0.75
 
-ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open', 'initial_strength', 'learning_tau', 'teaching_strength', 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts')
+ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open', 'electrical_limit', 'learning_tau', 'teaching_limit', 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts')
 ATELIER_RECEPTOR_FIELDS = ('active', 'baseline', 'sensitivity', 'half', 'substance', 'width', 'steepness', 'spread_receptors')
 ATELIER_LIMITS = {'max_name': 40, 'max_groups': 360, 'max_group_name': 60, 'receptors': 8, 'max_probe_steps': 32, 'max_measure_steps': 64, 'max_copies': 16, 'contact_values': 20}
 

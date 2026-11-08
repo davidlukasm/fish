@@ -150,7 +150,7 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidGroup")
         if len(group["name"]) > ATELIER_LIMITS["max_group_name"] or any(ord(c) < 32 for c in group["name"]):
             raise Refusal("studio.errors.invalidGroupName")
-        if any(field not in group for field in FIELDS if not field.startswith("spread_") and field != "initial_strength"):
+        if any(field not in group for field in FIELDS if not field.startswith("spread_")):
             raise Refusal("studio.errors.invalidGroup")
         rows.append(json.dumps(group["name"], ensure_ascii=False) + " " +
                     " ".join(number(group.get(f, 0)) for f in FIELDS))
@@ -159,6 +159,7 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidReceptors")
         for r in receptors:
             rows.append(receptor_row(r))
+        rows.append(receptor_row(group.get("growth")))
     rows.append(receptor_row(plan.get("growth")))
     options = plan.get("compiler")
     connections = plan.get("connections")

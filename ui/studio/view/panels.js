@@ -137,8 +137,10 @@ function sensorSection(state, organ, center) {
 }
 const motorSection = (state, organ, center) =>
     section(label('inspector.drive'),
-            driveElement(center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
-                         {scale : biasScale(state), meaning : driveMeaning(state, center)})) +
+            driveElement(
+                center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
+                {scale : biasScale(state), meaning : driveMeaning(state, center), organ : true})) +
+    '<p>' + label('development.organRest') + '</p>' +
     (organ.type === 'muscle' ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
   if (center.key === 'pacemaker') {
@@ -315,6 +317,40 @@ function moduleChips(state, id) {
                    '</div>'
              : '';
 }
+function cellDevelopment(state, center) {
+  if (!center)
+    return '';
+  const id = escapeText(center.id), growth = center.growth;
+  const layer = center.role === 'nerve'
+                    ? '<p>' + label('development.layer') + ' ' +
+                          (findSite(state.sites, center.site).v < .5 ? 'I1' : 'I2') + '</p>'
+                    : '';
+  const field = (key, min, max, step) =>
+      '<label>' + label('development.' + key) + '<input type="number" min="' + min + '" max="' +
+      max + '" step="' + step + '" value="' + growth[key] + '" data-cell-growth="' + id +
+      '" data-growth-key="' + key + '"></label>';
+  const substances = [
+    ...Array.from({length : state.capabilities?.hormones ?? 6},
+                  (_, i) => [i, label('development.hormone') + ' ' + (i + 1)]),
+    [ 6, label('development.maturity') ]
+  ];
+  const choice = '<label>' + label('development.substance') + '<select data-cell-growth="' + id +
+                 '" data-growth-key="substance">' +
+                 substances
+                     .map(([ i, name ]) => '<option value="' + i + '"' +
+                                           (i === growth.substance ? ' selected' : '') + '>' +
+                                           escapeText(name) + '</option>')
+                     .join('') +
+                 '</select></label>';
+  const limit = key => '<label>' + label('development.' + key) +
+                       '<input type="number" min="0" max="1" step=".05" value="' + center[key] +
+                       '" data-cell-limit="' + id + '" data-limit-key="' + key + '"></label>';
+  return '<details class="aid-cell-development"><summary>' + label('development.title') +
+         '</summary><p>' + label('development.explanation') + '</p>' + layer +
+         field('baseline', -1, 1, .05) + choice + field('sensitivity', -2, 2, .1) +
+         field('half', .0003, 1, .001) + field('steepness', 0, 3, 1) + limit('electrical_limit') +
+         limit('teaching_limit') + '</details>';
+}
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   const plain = text => text.replace(/\u00ad/g, '');
@@ -326,7 +362,8 @@ function organInspector(state, organ) {
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
   html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
-          (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center);
+          (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center) +
+          cellDevelopment(state, center);
   if (isRegion(organ))
     html += '<label class="aid-compiler-region"><input type="checkbox" data-compiler-open="' +
             escapeText(organ.id) + '"' + (organ.openContacts ? ' checked' : '') + '/>' +

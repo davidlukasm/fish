@@ -376,23 +376,37 @@ export const NEURON = Object.freeze({
   signal : 19,
   parameters : 20,
   usable : 21,
-  role_margin : 22,
-  role_gain : 23,
-  zone : 24,
-  sender : 25,
-  receiver : 26,
-  hormone_response : 27,
-  site : 28,
-  dead : 29,
-  synaptic_mean : 30,
-  expression : 31,
-  search_width : 32,
-  crossing : 33,
-  range : 34,
-  count : 35
+  zone : 22,
+  sender : 23,
+  receiver : 24,
+  hormone_response : 25,
+  site : 26,
+  dead : 27,
+  synaptic_mean : 28,
+  expression : 29,
+  search_width : 30,
+  crossing : 31,
+  range : 32,
+  life : 33,
+  development : 34,
+  growth_response : 35,
+  electrical_limit : 36,
+  teaching_limit : 37,
+  command : 38,
+  count : 39
 });
-export const NEURON_STATE =
-    Object.freeze({activity : 0, ready : 1, muted : 2, state : 3, signal : 4, count : 5});
+export const NEURON_STATE = Object.freeze({
+  activity : 0,
+  ready : 1,
+  muted : 2,
+  state : 3,
+  signal : 4,
+  life : 5,
+  development : 6,
+  growth_response : 7,
+  command : 8,
+  count : 9
+});
 export const NEURON_PARAMETER = Object.freeze({
   threshold : 0,
   capacity : 1,
@@ -401,10 +415,9 @@ export const NEURON_PARAMETER = Object.freeze({
   quality_width : 4,
   field_width : 5,
   time_constant : 6,
-  dendrites : 7,
-  plasticity : 8,
-  learning_time : 9,
-  count : 10
+  plasticity : 7,
+  learning_time : 8,
+  count : 9
 });
 export const NEURON_SITE = Object.freeze({u : 0, v : 1, w : 2, side : 3, count : 4});
 export const RECEPTOR = Object.freeze({
@@ -445,7 +458,8 @@ export const EFFECTOR = Object.freeze({
   outside : 6,
   count : 7
 });
-export const SYNAPSE = Object.freeze({source : 0, target : 1, strength : 2, id : 3, count : 4});
+export const SYNAPSE =
+    Object.freeze({source : 0, target : 1, strength : 2, id : 3, limit : 4, count : 5});
 export const STROKE = Object.freeze({mean : 0, recovery : 1, power : 2, steps : 3, count : 4});
 export const VISUAL_SAMPLE = Object.freeze(
     {neuron : 0, light : 1, stimulus : 2, response : 3, red : 4, green : 5, blue : 6, count : 7});

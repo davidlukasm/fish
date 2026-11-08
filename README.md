@@ -3,7 +3,7 @@
 ## Start
 
 Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhost:8765.
-3.690 × 1.640 px, 800 Tierplätze; Plattformen, Pflanzbecken und Steine. `--empty-world`: freies Becken.
+3.690 × 1.640 px, 800 Tierplätze. `--empty-world`: freies Becken.
 `--fish N`, `--food N`, `--data-dir PFAD`, `--seed N`.
 „Diagnose ↓“ beim FPS-Zähler lädt einen begrenzten Bericht; `--fps-report` ergänzt eine JSONL-Datei.
 
@@ -21,11 +21,11 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/handfisch.genome` ist von Hand entworfen; `werkzeug/fischbau.cc` erzeugt und prüft ihn. Ohne Auswahl starten die handgebauten Fische aus genomes/handbau. Gewählte Linien starten an getrennten Futterquellen.
+Startauswahl: Beispielfische (alle Genome unter genomes/), bewährte Linien und ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/handfisch.genome` ist von Hand entworfen; `make bin/fischbau && bin/fischbau` erzeugt ihn. Ohne Auswahl starten die handgebauten Fische aus genomes/handbau. Gewählte Linien starten an getrennten Futterquellen.
 
 ## Körper und Evolution
 
-v019 verwendet 360 feste Plätze in Gesicht, Kopf, Brust und Hinterteil. Das Zell-CPPN hat zehn Eingänge und zwanzig Ausgänge. Torknoten besitzen getrennte Signal- und Schalterports. Kennungen, Reichweite und Seitenneigung bestimmen Kontakte; das Gehirn lernt nach Modell 19. Regeln und Werte stehen im Code.
+360 feste Plätze tragen bis zu 16 Zellen je Platz. Das CPPN hat 12 Eingänge und 25 Ausgänge. Es legt Zellpotenziale, Kontaktadressen, Rezeptoren und Höchststärken fest. Zellen entstehen im Ei und nach dem Schlupf. Kontakte beginnen bei null; lokale Aktivität verändert ihre Stärke, laufender Abbau entfernt ungenutzte Kontakte. Sinn → Innenlage 1 → Innenlage 2 → Organ; zwischen den Innenlagen gibt es Rückkopplung.
 
 Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
 

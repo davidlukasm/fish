@@ -51,17 +51,20 @@ export function drivePatch(handle, fx, fy, scale) {
         Math.max(TIME_CONSTANT.min_steps, stepAt(fx, false) - DRIVE.command[1] * axisSteps(false)))
   };
 }
-export function driveElement(center, label, stepsLabel, {scale, rhythm = false, meaning = null}) {
+export function driveElement(center, label, stepsLabel,
+                             {scale, rhythm = false, meaning = null, organ = false}) {
   const D = DRIVE, rest = restLevel(center, scale), total = axisSteps(rhythm),
         band = Math.tanh(scale);
   const x = step => D.left + (D.right - D.left) * step / total;
   const tc = rhythm ? period(center.tau) : timeConstantSteps(center.tau);
   const [from, to] = D.command.map(f => f * total);
   const swing = Math.min(D.swing, 1 - Math.abs(rest));
-  const level = rhythm ? step => rest + swing * Math.sin(2 * Math.PI * step / tc)
-                       : step => step < from  ? rest
-                                 : step <= to ? 1
-                                              : rest + (1 - rest) * Math.exp(-(step - to) / tc);
+  const commandRest = organ ? 0 : rest;
+  const level =
+      rhythm ? step => rest + swing * Math.sin(2 * Math.PI * step / tc)
+             : step => step < from  ? commandRest
+                       : step <= to ? 1
+                                    : commandRest + (1 - commandRest) * Math.exp(-(step - to) / tc);
   const points = Array.from({length : D.samples + 1}, (_, k) => {
     const step = total * k / D.samples;
     return rounded(x(step)) + ' ' + rounded(y(level(step)));

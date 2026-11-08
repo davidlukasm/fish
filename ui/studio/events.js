@@ -30,6 +30,7 @@ import {
   switchReceptor,
   teachOrgan,
   updateCenter,
+  updateCellGrowth,
   updateGrowth,
   updateReceptor,
   updateWire,
@@ -507,6 +508,8 @@ export const FISH_CLICKS = Object.freeze([
 ]);
 
 export const FISH_CHANGES = Object.freeze([
+  ['cellGrowth', (studio,e) => keep(studio, updateCellGrowth(studio.state.document,e.dataset.cellGrowth,{[e.dataset.growthKey]:Number(e.value)}))],
+  ['cellLimit', (studio,e) => keep(studio, updateCenter(studio.state.document,e.dataset.cellLimit,{[e.dataset.limitKey]:Number(e.value)}))],
   [
     'substanceName',
     (studio, e) => keep(studio, setSubstance(studio.state.document, Number(e.dataset.substanceName),

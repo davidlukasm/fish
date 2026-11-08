@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 namespace field {
+inline constexpr double EMBRYONIC_STEPS = 100;
 struct DevelopmentCosts {
   double work_per_tick = 10, neuron_work = 1, edge_work = .0002;
   double neuron_build = .02, edge_build = .00002, edge_length_build = .000005, egg_basal = .025;
@@ -27,102 +28,59 @@ inline DevelopmentCosts scaled_costs(const Options &, DevelopmentCosts c = {}) {
   c.neuron_maintenance *= f;
   return c;
 }
-// All tissue matures in parallel. Work, time and costs depend on the complete
-// phenotype, never on traversal order or the CPPN's number of genes.
 class Maturation {
   DevelopmentCosts costs;
-  double workload = 0, construction = 0, full_construction = 0, maintenance = 0, progress_ = 0,
-         work_done = 0;
+  double construction = 0, maintenance = 0, progress_ = 0;
   bool viable_ = false;
 
 public:
   Maturation(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
     costs.validate();
-    workload = neurons * c.neuron_work + edges * c.edge_work;
-    const double TYPICAL_EDGE_LENGTH = std::sqrt(12.);
-    full_construction = construction =
-        neurons * c.neuron_build +
-        edges * (c.edge_build + TYPICAL_EDGE_LENGTH * c.edge_length_build);
+    const double length = std::sqrt(12.);
+    construction = neurons * c.neuron_build + edges * (c.edge_build + length * c.edge_length_build);
     maintenance = neurons * c.neuron_maintenance +
-                  edges * (c.edge_maintenance + TYPICAL_EDGE_LENGTH * c.edge_length_maintenance);
+                  edges * (c.edge_maintenance + length * c.edge_length_maintenance);
   }
   Maturation(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
-      : costs(scaled_costs(s.options, given)) {
-    const DevelopmentCosts c = costs;
-    costs.validate();
-    workload = s.neurons.size() * c.neuron_work + s.edges.size() * c.edge_work;
-    constexpr double MIN_CONSTRUCTION_STEPS = 100;
-    if (workload > 0)
-      costs.work_per_tick = std::min(costs.work_per_tick, workload / MIN_CONSTRUCTION_STEPS);
-    construction = (s.built_neurons ? s.built_neurons : s.neurons.size()) * c.neuron_build +
-                   (s.built_edges ? s.built_edges : s.edges.size()) * c.edge_build;
-    if (s.built_edges)
-      construction += s.built_length * c.edge_length_build;
-    maintenance = s.neurons.size() * c.neuron_maintenance + s.edges.size() * c.edge_maintenance;
+      : Maturation(s.neurons.size(), s.edges.size(), scaled_costs(s.options, given)) {
+    construction = s.neurons.size() * costs.neuron_build + s.edges.size() * costs.edge_build;
+    maintenance =
+        s.neurons.size() * costs.neuron_maintenance + s.edges.size() * costs.edge_maintenance;
     for (const auto &e : s.edges) {
-      const auto &a = s.neurons[e.source];
-      const auto &b = s.neurons[e.target];
-      const double length = connection_length(a, b);
-      maintenance += c.edge_length_maintenance * length;
-      if (!s.built_edges)
-        construction += c.edge_length_build * length;
+      const double length = connection_length(s.neurons[e.source], s.neurons[e.target]);
+      construction += length * costs.edge_length_build;
+      maintenance += length * costs.edge_length_maintenance;
     }
-    full_construction = construction;
     bool sensor = false, motor = false;
     for (const auto &n : s.neurons)
       if (n.functional) {
         sensor |= n.functions.sensory() > 0;
         motor |= n.functions.motor() > 0;
       }
-    viable_ = capable && sensor && motor && workload > 0 && !s.resource_limited;
+    viable_ = capable && sensor && motor && !s.resource_limited;
   }
   double advance() {
-    if (ready())
-      return 0;
-    if (workload == 0)
-      return costs.egg_basal;
-    const double before = progress_;
-    work_done = std::min(workload, work_done + costs.work_per_tick);
-    progress_ = work_done / workload;
-    return construction * (progress_ - before) + costs.egg_basal +
-           maintenance * (before + progress_) * .5;
+    progress_ = std::min(1., progress_ + 1 / EMBRYONIC_STEPS);
+    return 0;
   }
-  double advance_construction() {
-    const double before = progress_;
-    advance();
-    return construction * (progress_ - before);
-  }
-  double remaining_construction() const { return construction * (1 - progress_); }
   double progress() const { return progress_; }
-  void prepaid_construction(double amount) {
-    if (!std::isfinite(amount) || amount < 0)
-      throw std::invalid_argument("invalid prepaid construction");
-    construction = std::max(0., full_construction - amount);
-  }
-  double completed_work() const { return work_done; }
+  double completed_work() const { return progress_ * EMBRYONIC_STEPS; }
+  double remaining_construction() const { return construction * (1 - progress_); }
   double remaining_cost() const {
-    if (workload <= 0 || work_done >= workload)
-      return 0;
-    const double n = std::ceil((workload - work_done) / costs.work_per_tick),
-                 r = costs.work_per_tick / workload;
-    return construction * (1 - progress_) + costs.egg_basal * n +
-           maintenance * .5 * ((2 * n - 1) * progress_ + r * n * (n - 1) + 1);
+    return remaining_construction() +
+           (costs.egg_basal + maintenance * .5) * EMBRYONIC_STEPS * (1 - progress_);
   }
   double birth_cost() const {
-    if (workload <= 0)
-      return 0;
-    const double n = std::ceil(workload / costs.work_per_tick), r = costs.work_per_tick / workload;
-    return construction + costs.egg_basal * n + maintenance * .5 * (r * n * (n - 1) + 1);
+    return construction + (costs.egg_basal + maintenance * .5) * EMBRYONIC_STEPS;
   }
   void restore(double work) {
-    if (!std::isfinite(work) || work < 0 || work > workload)
+    if (!std::isfinite(work) || work < 0 || work > EMBRYONIC_STEPS)
       throw std::runtime_error("invalid maturation state");
-    work_done = work;
-    progress_ = workload > 0 ? work / workload : 0;
+    progress_ = work / EMBRYONIC_STEPS;
   }
   bool viable() const { return viable_; }
   bool ready() const { return viable_ && progress_ >= 1; }
-  int ticks() const { return workload > 0 ? int(std::ceil(workload / costs.work_per_tick)) : 0; }
+  int ticks() const { return int(EMBRYONIC_STEPS); }
   double running_cost() const { return maintenance; }
 };
 }

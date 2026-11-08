@@ -20,11 +20,11 @@ const motor = (key, functionCode, copies = COPIES, surface = 'any') =>
     Object.freeze({key, role : 'motor', functionCode, copies, surface});
 
 export const NEURONS = Object.freeze([
-  {key : 'relay', sign : 1, mode : 0, pace : -1, modulator : -1},
-  {key : 'inhibit', sign : -1, mode : 0, pace : -1, modulator : -1},
-  {key : 'learn', sign : 1, mode : 1, pace : -1, modulator : -1},
-  {key : 'pacemaker', sign : 1, mode : 0, pace : 1, modulator : -1},
-  {key : 'modulate', sign : 1, mode : 0, pace : -1, modulator : 1}
+  {key : 'relay', sign : 1, mode : 1, pace : -1, modulator : -1},
+  {key : 'inhibit', sign : -1, mode : 1, pace : -1, modulator : -1},
+  {key : 'learn', sign : 1, mode : 1, pace : -1, modulator : -1, qwidth : .8},
+  {key : 'pacemaker', sign : 1, mode : 1, pace : 1, modulator : -1},
+  {key : 'modulate', sign : 1, mode : 1, pace : -1, modulator : 1}
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
 const MODULATING = .5;
@@ -33,13 +33,10 @@ export const isPacemaker = center => center.pace > MODULATING;
 // How a nerve learns by itself: 1 choosing among its inputs, -1 balancing them, 0 not at all.
 const MODE_LEAN = 1 / 3;
 export const modeLean = mode => mode > MODE_LEAN ? 1 : mode < -MODE_LEAN ? -1 : 0;
-export const learns = center =>
-    center.qwidth > 0 && (center.key === 'learn' || modeLean(center.mode) !== 0 ||
-                          !!center.receptors?.[HORMONE_EFFECT.teaching]?.active);
 export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : isPacemaker(center) ? 'pacemaker'
                                    : center.sign < 0     ? 'inhibit'
-                                   : learns(center)      ? 'learn'
+                                   : center.qwidth >= .5 ? 'learn'
                                                          : 'relay';
 export const nerve = (key, copies, zones) => Object.freeze({
   key,
@@ -212,7 +209,7 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ nerve('learn', 3, [ 1, 2 ]) ],
     slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
-    settings : {rate : setting(0, 2, 1, true), style : setting(0, 2, 1, true)}
+    settings : {rate : setting(0, 2, 1, true), style : setting(0, 2, 2, true)}
   },
   {
     key : 'torus',

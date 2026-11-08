@@ -56,8 +56,7 @@ void HormoneAnalysis::prepare_variant() {
     levels[k] = std::clamp(levels[k] + (arm_ % 2 ? PROBE_CHANGE : -PROBE_CHANGE), 0., 1.);
     change_ = levels[k] - levels_[k];
   }
-  variant_ = *snapshot_;
-  variant_->set_plasticity(false);
+  variant_ = snapshot_->frozen_probe();
   variant_inputs_ = inputs_;
   for (std::size_t i = 0; i < genome_.interface->sensory.size(); ++i) {
     const auto &r = genome_.interface->sensory[i];
@@ -123,7 +122,7 @@ std::optional<HormoneInvestigation> HormoneAnalysis::advance() {
       variant_->step(variant_inputs_, levels, result_.individual);
       spent = variant_->learning_summary().work;
       if (++step_ > SETTLE_STEPS) {
-        const auto drive = continuous_organs(variant_->state(), *genome_.interface);
+        const auto drive = continuous_organs(variant_->organ_output(), *genome_.interface);
         result_.organs = drive.present;
         for (std::size_t o = 0; o < HORMONE_ORGANS; ++o)
           sum_[o] += drive.values[o] / (MEASURE_STEPS - SETTLE_STEPS);

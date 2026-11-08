@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdlib>
+#include <map>
 #include "cppn/cppn.hh"
 #include "functions.hh"
 #include "hormones.hh"
@@ -21,8 +22,7 @@ inline constexpr cppn::Point GROWTH_RECEPTOR_SITE{1, .5f, .5f, .5f, 0, 0};
 constexpr std::size_t DEVELOPMENT_QUERY_LIMIT = 300000;
 struct CellParameters {
   float threshold = .5f, capacity = 1, quality1 = 0, quality2 = 0, quality_width = .25f,
-        field_width = .3f, time_constant = .5f, learning_time = .5f, dendrites = .5f,
-        plasticity = .5f;
+        field_width = .3f, time_constant = .5f, learning_time = .5f, plasticity = .5f;
 };
 inline double time_constant_steps(const CellParameters &p) {
   return TIME_CONSTANT_MIN *
@@ -33,7 +33,7 @@ inline double learning_time_steps(const CellParameters &p) {
          std::pow(LEARNING_TIME_SPAN, std::clamp(double(p.learning_time), 0., 1.));
 }
 inline constexpr int CONTACT_FIELDS = 4;
-inline constexpr float SYNAPSE_UNIT = .1f, MAX_INITIAL_WEIGHT = .25f;
+inline constexpr float SYNAPSE_UNIT = .1f, MAX_CONTACT_LIMIT = 1;
 struct ReceptionField {
   std::array<float, 2> address{};
   float width = 0, expression = 0;
@@ -55,13 +55,13 @@ struct Neuron {
   int variant = 0;
   std::array<float, 5> identity{};
   std::array<float, 2> sender{}, receiver{};
-  float initial_weight = MAX_INITIAL_WEIGHT * .5f, initial_teaching = .5f;
+  float electrical_limit = .5f, teaching_limit = .5f;
+  HormoneReceptor development_receptor{{}, 1, 0, .05f, 0};
   std::array<ReceptionField, CONTACT_FIELDS - 1> reception{};
   float strength = 1;
   Functions functions{};
   CellParameters parameters{};
   std::array<HormoneReceptor, HORMONE_EFFECTS> hormone_receptors{};
-  float role_margin = 1, role_gain = 1;
 };
 inline double connection_length(const Neuron &a, const Neuron &b) {
   return std::sqrt(
@@ -79,7 +79,7 @@ struct Edge {
   NeuronIndex source, target;
   float weight;
 };
-constexpr int CONNECTION_KINDS = 3, IDENTITY_SIZE = 5;
+constexpr int IDENTITY_SIZE = 5;
 int connection_kind(const Neuron &, const Neuron &);
 struct Partner {
   std::uint32_t source;
@@ -114,10 +114,10 @@ inline ContactEffect contact_effect(const Neuron &source, const Neuron &target) 
   return target.role == Role::Nerve && teaching_source(source) ? ContactEffect::Teaching
                                                                : ContactEffect::Electrical;
 }
-inline float initial_contact_weight(const Neuron &source, const Neuron &target) {
+inline float contact_limit(const Neuron &source, const Neuron &target) {
   const float strength = contact_effect(source, target) == ContactEffect::Teaching
-                             ? target.initial_teaching
-                             : target.initial_weight;
+                             ? target.teaching_limit
+                             : target.electrical_limit;
   return cell_class(source).sign * strength;
 }
 constexpr std::size_t MAX_NODES = std::numeric_limits<std::uint16_t>::max(), MAX_EDGES = 1 << 26;
@@ -195,65 +195,73 @@ struct WiringAmount {
   std::size_t contacts = 0;
   double length = 0;
 };
+struct RetinalCell {
+  NeuronIndex neuron;
+  std::array<std::uint32_t, retinal_dynamics::neighbors> neighbors{};
+  unsigned count = 0;
+  float position = 0, transverse = 0, excitability = 0;
+  double activity_decay = 0, recovery_decay = 0;
+};
 class Network {
   std::shared_ptr<const Substrate> tissue;
   std::shared_ptr<const NetworkTopology> topology;
-  void materialize() const;
-  std::size_t cells() const { return state_.size(); }
-  std::vector<float> state_, next_, signal_, pulse_;
+  struct Row {
+    std::uint32_t offset = 0;
+    std::uint16_t capacity = 0, count = 0, extent = 0;
+  };
+  std::vector<Row> rows_;
+  std::vector<float> state_, next_, signal_, pulse_, organ_output_;
   std::vector<float> retinal_activity_, retinal_recovery_, retinal_next_;
-  std::uint64_t neural_ticks_ = 0, retinal_rng_ = 0;
-  bool retinal_seeded_ = false;
+  std::vector<RetinalCell> retina_;
+  std::vector<float> synaptic_mean_, usual_, deviation_, own_mean_, action_mean_, teach_mean_,
+      contrast_, cell_surprise_, progress_;
+  std::vector<std::uint32_t> age_, disconnected_, kept_in_, kept_out_;
+  std::vector<unsigned char> muted_, dead_, born_;
+  std::vector<NeuronIndex> active_, active_nerves_, active_effectors_, active_sensors_;
+  std::vector<std::uint16_t> index_, owner_, probation_;
+  std::vector<float> weight_, trace_, predict_, usage_;
+  std::map<std::size_t, std::vector<std::uint32_t>> free_rows_;
+  std::vector<std::uint32_t> proposal_queue_;
+  std::size_t proposal_cursor_ = 0;
   struct Stimulus {
     std::size_t neuron;
     unsigned remaining;
   };
   std::vector<Stimulus> stimuli_;
-  std::vector<unsigned char> muted_, dead_;
   std::size_t dead_count_ = 0;
-  std::vector<float> synaptic_mean_, adaptation_rate_;
-  WiringAmount wiring_, formed_;
-  double contact_length(NeuronIndex source, NeuronIndex target) const;
-  void erase_contact(std::size_t slot, NeuronIndex target);
-  void remove_dead_connections();
-  bool inactive(std::size_t i) const { return muted_[i] || dead_[i]; }
-  std::vector<std::uint16_t> index_;
-  std::vector<float> gene_, learned_, trace_, predict_;
-  std::vector<float> usual_, deviation_, gathered_;
-  std::vector<float> lane_action_, lane_teach_, lane_own_, lane_contrast_, lane_step_,
-      lane_pending_, effector_own_, cell_surprise_;
-  std::vector<std::uint16_t> lane_count_;
-  std::uint64_t revision_ = 0, turnover_rng_ = 0;
-  double maturity_ = 0;
+  std::uint64_t neural_ticks_ = 0, retinal_rng_ = 0, turnover_rng_ = 0, revision_ = 0,
+                tissue_revision_ = 0, development_ticks_ = 0, learning_seed = 0;
+  bool retinal_seeded_ = false, developing_ = false, diagnostic_ = false, observe = false,
+       plasticity_enabled = true;
+  double maturity_ = 0, growth_credit_ = 0;
+  double build_budget_ = std::numeric_limits<double>::infinity(), build_scale_ = 1;
   Hormones active_hormones_{};
   std::array<std::vector<float>, HORMONE_EFFECTS> hormone_effect_;
   std::vector<float> observed_contributions;
-  bool observe = false, plasticity_enabled = true;
-  std::uint64_t learning_seed = 0, learning_ticks = 0;
+  WiringAmount wiring_, formed_;
+  bool inactive(std::size_t i) const { return !born_[i] || muted_[i] || dead_[i]; }
+  void materialize() const;
   void prepare_state();
-  void reset_teacher_traces();
-  void advance(const std::vector<float> &, const Hormones *, std::uint64_t);
-  float effector_learning_rate(std::size_t source) const;
-  void learn_effectors(float rm);
-  void advance_retina(std::uint64_t individual);
-  template <class Would> bool form_synapse(std::size_t lane, bool effector, const Would &would);
+  void activate(std::size_t);
+  void die(std::size_t);
+  void refresh_active();
+  void apply_hormones(const Hormones &);
+  double contact_length(NeuronIndex, NeuronIndex) const;
+  void erase_contact(std::size_t);
+  bool insert_contact(NeuronIndex, NeuronIndex);
+  void update_kept(std::size_t, bool);
+  void advance(const std::vector<float> &, const Hormones &, std::uint64_t);
+  void advance_retina(std::uint64_t);
+  void form_synapse(NeuronIndex);
   double turnover_unit();
-  // the learned weights with the pending step of the last learning step applied (the kernel
-  // applies it in the next step's forward pass); computed on demand for readers
-  mutable std::vector<float> settled_;
-  mutable bool settled_ready_ = false;
-  const std::vector<float> &settled() const;
+  void read_runtime_state(std::istream &);
 
 public:
+  enum class CellLife { Precursor, Active, Dead };
   struct LearningSummary {
-    double change = 0, surprise = 0;
+    double change = 0, surprise = 0, decay = 0;
     std::uint64_t work = 0, cells = 0;
   };
-
-private:
-  LearningSummary learning_summary_;
-
-public:
   struct ActorPreview {
     std::vector<float> increments;
     std::uint64_t work = 0;
@@ -262,48 +270,58 @@ public:
   struct Synapse {
     std::uint32_t slot;
     NeuronIndex source, target;
-    float weight, formed;
+    float weight, limit;
   };
-  ActorPreview actor_preview(const std::vector<float> &, const Hormones &) const;
-  std::uint64_t work_bound() const;
-  const LearningSummary &learning_summary() const { return learning_summary_; }
-  float surprise(std::size_t cell) const;
-  float learning_contrast(std::size_t cell) const;
-  explicit Network(std::shared_ptr<const Substrate>);
-  explicit Network(const Substrate &s) : Network(std::make_shared<const Substrate>(s)) {}
-  void reset();
-  void reset_learning();
-  void mute(std::size_t neuron, bool value = true);
-  void refresh_observation();
-  static constexpr unsigned max_stimulus_steps = 10000;
-  void stimulate(std::size_t neuron, float amount, unsigned steps = 1);
-  void stimulate(const std::vector<std::size_t> &neurons, float amount, unsigned steps = 1);
-  void clear_stimuli();
-  bool muted(std::size_t neuron) const { return inactive(neuron); }
-  bool dead(std::size_t neuron) const { return dead_.at(neuron) != 0; }
-  std::size_t dead_count() const { return dead_count_; }
-  const std::vector<unsigned char> &dead_cells() const { return dead_; }
-  float synaptic_mean(std::size_t i) const { return synaptic_mean_.at(i); }
-  void step(const std::vector<float> &sensor_values);
-  void step(const std::vector<float> &sensor_values, const Hormones &modulators,
-            std::uint64_t individual);
-  const Substrate &blueprint() const { return *tissue; }
-  const std::vector<float> &state() const { return state_; }
-  float signal(std::size_t i) const { return signal_.at(i); }
-  std::vector<Synapse> synapses() const;
-  std::uint64_t wiring_revision() const { return revision_; }
-  std::size_t slot_count() const;
-  std::size_t synapse_count() const;
-  const WiringAmount &wiring() const {
-    materialize();
-    return wiring_;
-  }
-  const WiringAmount &formed_wiring() const { return formed_; }
-  std::uint64_t learning_steps() const { return learning_ticks; }
   struct RetinalState {
     NeuronIndex neuron;
     float position, transverse, activity, recovery;
   };
+
+private:
+  LearningSummary learning_summary_;
+
+public:
+  explicit Network(std::shared_ptr<const Substrate>, bool developing = false);
+  explicit Network(const Substrate &s) : Network(std::make_shared<const Substrate>(s)) {}
+  double grow(const Hormones &, double maturity, double available_energy, double cost_scale = 1);
+  void construction_budget(double available, double scale) {
+    build_budget_ = std::max(0., available);
+    build_scale_ = scale;
+  }
+  CellLife life(std::size_t i) const {
+    return dead_.at(i) ? CellLife::Dead : born_.at(i) ? CellLife::Active : CellLife::Precursor;
+  }
+  float development_progress(std::size_t i) const { return progress_.at(i); }
+  std::size_t active_count() const { return active_.size(); }
+  std::uint64_t cell_revision() const { return tissue_revision_; }
+  std::size_t reserved_slots() const;
+  void reset();
+  void reset_learning();
+  void mute(std::size_t, bool value = true);
+  bool muted(std::size_t i) const { return inactive(i); }
+  bool dead(std::size_t i) const { return dead_.at(i) != 0; }
+  std::size_t dead_count() const { return dead_count_; }
+  const std::vector<unsigned char> &dead_cells() const { return dead_; }
+  float synaptic_mean(std::size_t i) const { return synaptic_mean_.at(i); }
+  static constexpr unsigned max_stimulus_steps = 10000;
+  void stimulate(std::size_t, float, unsigned steps = 1);
+  void stimulate(const std::vector<std::size_t> &, float, unsigned steps = 1);
+  void clear_stimuli();
+  void step(const std::vector<float> &values) { advance(values, active_hormones_, learning_seed); }
+  void step(const std::vector<float> &values, const Hormones &h, std::uint64_t individual) {
+    advance(values, h, individual);
+  }
+  const Substrate &blueprint() const { return *tissue; }
+  const std::vector<float> &state() const { return state_; }
+  const std::vector<float> &organ_output() const { return organ_output_; }
+  float signal(std::size_t i) const { return signal_.at(i); }
+  std::vector<Synapse> synapses() const;
+  std::uint64_t wiring_revision() const { return revision_; }
+  std::size_t slot_count() const { return index_.size(); }
+  std::size_t synapse_count() const { return wiring_.contacts; }
+  const WiringAmount &wiring() const { return wiring_; }
+  const WiringAmount &formed_wiring() const { return formed_; }
+  std::uint64_t learning_steps() const { return neural_ticks_; }
   std::vector<RetinalState> retinal_state() const;
   std::size_t learning_neurons() const;
   std::size_t learned_connections() const;
@@ -311,20 +329,27 @@ public:
   std::size_t runtime_bytes() const;
   void write_runtime(std::ostream &) const;
   void read_runtime(std::istream &);
-  float contribution(std::size_t slot) const;
-  bool has_contributions() const { return !observed_contributions.empty(); }
-  void observe_connections(bool value) {
-    observe = value;
-    if (!value && !observed_contributions.empty())
-      std::vector<float>().swap(observed_contributions);
+  const LearningSummary &learning_summary() const { return learning_summary_; }
+  float surprise(std::size_t i) const { return cell_surprise_.at(i); }
+  float learning_contrast(std::size_t i) const { return contrast_.at(i); }
+  float contribution(std::size_t k) const {
+    return k < observed_contributions.size() ? observed_contributions[k] : 0;
   }
+  bool has_contributions() const { return !observed_contributions.empty(); }
+  void observe_connections(bool on) {
+    observe = on;
+    if (!on)
+      observed_contributions.clear();
+  }
+  void refresh_observation();
   void set_maturity(double m) { maturity_ = std::clamp(m, 0., 1.); }
   double maturity() const { return maturity_; }
-  void set_plasticity(bool on) { plasticity_enabled = on; }
+  void set_plasticity(bool on);
   bool plasticity() const { return plasticity_enabled; }
-
-private:
-  void read_runtime_state(std::istream &);
+  Network frozen_probe() const;
+  Network ablated_probe() const;
+  ActorPreview actor_preview(const std::vector<float> &, const Hormones &) const;
+  std::uint64_t work_bound() const;
 };
 const char *role_name(Role);
 }

@@ -48,8 +48,7 @@ bool has_required_organs(const field::Substrate &s) {
          ((eggs[0] > 0 && eggs[1] > 0) || (sperm[0] > 0 && sperm[1] > 0));
 }
 namespace {
-void assign_pressure(BrainInterface &, const field::Substrate &,
-                     const field::Network *net = nullptr);
+void assign_pressure(BrainInterface &, const field::Substrate &);
 void effector_timings(BrainInterface &a, const field::Substrate &s) {
   a.stroke_timing = {};
   std::array<double, STROKE_COUNT> steps{}, weight{};
@@ -427,28 +426,6 @@ class AnatomyBuilder {
       }
       result->visual_coverage[c] = float(std::clamp(coverage / (2 * GENERATED_HALF_VIEW), 0., 1.));
     }
-    auto unite = [](auto &views) {
-      std::sort(views.begin(), views.end());
-      std::size_t spans = 0;
-      for (const auto &v : views) {
-        if (spans && v.first <= views[spans - 1].second)
-          views[spans - 1].second = std::max(views[spans - 1].second, v.second);
-        else
-          views[spans++] = v;
-      }
-      views.resize(spans);
-    };
-    for (const auto &ray : result->visual[0]) {
-      const auto &r = result->sensory[ray.second];
-      const std::pair<double, double> interval{r.view_left, r.view_right};
-      result->visual_intervals.push_back(interval);
-      for (int side = 0; side < 2; ++side)
-        if ((r.lateral >= 0) == (side == 1) || std::abs(r.angle) < DEFAULT_BINOCULAR_ANGLE)
-          result->eye_intervals[side].push_back(interval);
-    }
-    unite(result->visual_intervals);
-    for (auto &views : result->eye_intervals)
-      unite(views);
     prepare_retinal_cache(*result);
   }
 
@@ -564,6 +541,8 @@ public:
           (center + half * (1 - 2 * t) - g[M::center]) / g[M::extent], 0};
     }
     assign_pressure(*result, s);
+    result->active_sensory.resize(result->sensory.size());
+    std::iota(result->active_sensory.begin(), result->active_sensory.end(), 0);
     prepare_vision();
     summarize_senses();
     result->mobile_reproductive = result->sensory_capacity > 0 &&
@@ -579,12 +558,10 @@ std::shared_ptr<const BrainInterface> anatomical_interface(const field::Substrat
   return AnatomyBuilder(s).build();
 }
 namespace {
-void assign_pressure(BrainInterface &a, const field::Substrate &s, const field::Network *net) {
+void assign_pressure(BrainInterface &a, const field::Substrate &s) {
   for (auto &r : a.sensory)
     if (r.channel == field::InnerPressure || r.channel == field::BladderPressure ||
         r.channel == field::GonadPressure) {
-      if (net && (r.pressure_target < 0 || !net->dead(r.pressure_target)))
-        continue;
       const auto &n = s.neurons[r.neuron];
       double nearest = std::numeric_limits<double>::infinity();
       r.pressure_target = -1;
@@ -625,11 +602,11 @@ double Body::neural_upkeep() const {
   if (!development_)
     return 0;
   if (!brain_)
-    return development_->running_cost();
+    return 0;
   const auto c = field::scaled_costs(brain_->blueprint().options);
   const auto &w = brain_->wiring();
-  return (brain_->state().size() - brain_->dead_count()) * c.neuron_maintenance +
-         w.contacts * c.edge_maintenance + w.length * c.edge_length_maintenance;
+  return brain_->active_count() * c.neuron_maintenance + w.contacts * c.edge_maintenance +
+         w.length * c.edge_length_maintenance;
 }
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative) {
@@ -699,17 +676,42 @@ double Body::local_defense(double bearing) const {
 void Body::refresh_organs(const Genome &g) {
   if (!g.interface)
     return;
-  const auto deaths = brain_ ? brain_->dead_count() : 0;
-  if (deaths == known_deaths_ && organ_source_ == g.interface)
+  const auto revision = brain_ ? brain_->cell_revision() : 0;
+  if (revision == known_cells_ && organ_source_ == g.interface)
     return;
   organ_source_ = g.interface;
-  known_deaths_ = deaths;
+  known_cells_ = revision;
   active_anatomy_.reset();
-  if (deaths) {
+  if (brain_ && brain_->active_count() != g.blueprint->neurons.size()) {
     auto a = std::make_shared<BrainInterface>(*g.interface);
     a->effectors.erase(std::remove_if(a->effectors.begin(), a->effectors.end(),
-                                      [&](const auto &e) { return brain_->dead(e.neuron); }),
+                                      [&](const auto &e) {
+                                        return brain_->life(e.neuron) !=
+                                               field::Network::CellLife::Active;
+                                      }),
                        a->effectors.end());
+    a->active_sensory.clear();
+    a->sensory_capacity = 0;
+    for (std::size_t i = 0; i < a->sensory.size(); ++i)
+      if (brain_->life(a->sensory[i].neuron) == field::Network::CellLife::Active) {
+        a->active_sensory.push_back(std::uint32_t(i));
+        a->sensory_capacity += a->sensory[i].gain;
+      }
+    auto inactive = [&](const auto &entry) {
+      return brain_->life(a->sensory[entry.second].neuron) != field::Network::CellLife::Active;
+    };
+    for (auto &v : a->visual)
+      v.erase(std::remove_if(v.begin(), v.end(), inactive), v.end());
+    a->olfactory.erase(std::remove_if(a->olfactory.begin(), a->olfactory.end(), inactive),
+                       a->olfactory.end());
+    for (auto &v : a->eye_receptors)
+      v.erase(std::remove_if(v.begin(), v.end(),
+                             [&](auto i) {
+                               return brain_->life(a->sensory[i].neuron) !=
+                                      field::Network::CellLife::Active;
+                             }),
+              v.end());
+    prepare_retinal_cache(*a);
     a->capacities.fill(0);
     a->motor_counts.fill(0);
     a->egg_parts.fill(0);
@@ -739,7 +741,11 @@ void Body::refresh_organs(const Genome &g) {
     effector_timings(*a, *g.blueprint);
     a->suction_strength = a->capacities[organ_port::suction];
     a->bite_strength = a->capacities[organ_port::jaw];
-    assign_pressure(*a, *g.blueprint, &*brain_);
+    assign_pressure(*a, *g.blueprint);
+    a->sense_counts.fill(0);
+    for (auto i : a->active_sensory)
+      for (int k = 0; k < field::SENSE_COUNT; ++k)
+        a->sense_counts[k] += a->sensory[i].gain * a->sensory[i].senses[k];
     active_anatomy_ = a;
   }
   const auto &a = active_interface(g);
@@ -1086,7 +1092,7 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
 void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyParameters &p,
                        bool protected_life) {
   b.motor_.motor_pulses.fill(0);
-  const auto *signals = &b.brain_->state();
+  const auto *signals = &b.brain_->organ_output();
   std::vector<float> overridden;
   if (b.hatched && b.actuation_probe_) {
     overridden = *signals;

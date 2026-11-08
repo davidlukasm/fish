@@ -61,6 +61,7 @@ struct BrainInterface {
   bool mobile_reproductive = true;
   std::vector<Effector> effectors;
   std::vector<Receptor> sensory;
+  std::vector<std::uint32_t> active_sensory;
   std::array<std::vector<std::pair<float, std::uint32_t>>, 3> visual;
   std::vector<std::pair<double, double>> visual_intervals;
   std::array<std::vector<std::pair<double, double>>, 2> eye_intervals;

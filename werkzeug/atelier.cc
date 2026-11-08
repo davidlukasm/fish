@@ -74,8 +74,8 @@ void measure(const Genome &g, const std::vector<Group> &groups, int substance, f
       ++members[std::size_t(k)];
       dead[std::size_t(k)] += variant.dead(i) && !base.dead(i);
     }
-  const auto before = fishsim::continuous_organs(base.state(), *g.interface),
-             after = fishsim::continuous_organs(variant.state(), *g.interface);
+  const auto before = fishsim::continuous_organs(base.organ_output(), *g.interface),
+             after = fishsim::continuous_organs(variant.organ_output(), *g.interface);
   std::cout << std::setprecision(MEASURE_DIGITS) << "{\"groups\":[";
   for (std::size_t k = 0; k < groups.size(); ++k)
     std::cout << (k ? "," : "") << change[k] / std::max(1., members[k]);

@@ -57,10 +57,11 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
                                          bool filtered, bool deferred,
                                          std::array<VisualEye, EYES> *origins) {
   std::vector<VisualObject> objects;
-  const auto &rays = g.interface->visual[0];
+  const auto &binding = b.active_interface(g);
+  const auto &rays = binding.visual[0];
   if (rays.empty())
     return objects;
-  const auto eyes = visual_origins(b, *g.interface, world);
+  const auto eyes = visual_origins(b, binding, world);
   if (origins)
     *origins = eyes;
   double reach = world.env().vision_range;
@@ -77,8 +78,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
   const bool paired = eyes[0].present && eyes[1].present;
   for (int side = 0; side < EYES; ++side)
     if (eyes[side].present) {
-      const auto &cached =
-          paired ? g.interface->eye_intervals[side] : g.interface->visual_intervals;
+      const auto &cached = paired ? binding.eye_intervals[side] : binding.visual_intervals;
       if (!cached.empty() &&
           (!paired || world.env().vision_binocular_angle == DEFAULT_BINOCULAR_ANGLE)) {
         views[side] = &cached;
@@ -87,7 +87,7 @@ std::vector<VisualObject> visual_objects(const Body &b, const Genome &g, const F
       auto &dynamic = scratch_views[side];
       dynamic.clear();
       for (const auto &ray : rays) {
-        const auto &r = g.interface->sensory[ray.second];
+        const auto &r = binding.sensory[ray.second];
         if (paired && std::abs(r.angle) >= world.env().vision_binocular_angle &&
             (r.lateral >= 0) != (side == 1))
           continue;
@@ -302,8 +302,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   std::array<Point, NOSES> noses{};
   const bool smelling =
       (!b.perception_.disabled_senses[field::Odor] || b.perception_.inspect_vision) &&
-      std::any_of(binding.sensory.begin(), binding.sensory.end(),
-                  [](const auto &r) { return r.dominant_sense() == field::Odor; });
+      !binding.olfactory.empty();
   if (smelling) {
     for (int side = 0; side < NOSES; ++side) {
       noses[side] = olfactory_position(b, binding, side);
@@ -333,9 +332,11 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     }
   thread_local std::unordered_map<float, double> contacts;
   contacts.clear();
-  for (std::size_t i = 0; i < signals.size(); ++i) {
+  std::fill(signals.begin(), signals.end(), 0.f);
+  for (auto i : binding.active_sensory) {
     const auto &r = binding.sensory[i];
-    if (r.shared_receptor < i && !r.visual()) {
+    if (r.shared_receptor < i && !r.visual() &&
+        (!b.brain_ || !b.brain_->muted(binding.sensory[r.shared_receptor].neuron))) {
       signals[i] = signals[r.shared_receptor];
       if (advance_adaptation)
         adapted[i] = adapted[r.shared_receptor];
@@ -398,7 +399,8 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
         (b.perception_.inspect_vision || b.perception_.inspect_retina) ? &b : nullptr,
         RETINAL_STRIDE, true, &eyes);
   }
-  for (std::size_t i = 0; i < signals.size(); ++i) {
+  std::fill(signals.begin(), signals.end(), 0.f);
+  for (auto i : binding.active_sensory) {
     const auto &r = binding.sensory[i];
     const double exposure = birth_exposure(b, r.time_steps);
     // The retina reports contrast; the uniform light inside the egg has none. After hatching the
@@ -837,9 +839,8 @@ void Body::prepare(const Genome &g) {
   suction_strength = g.interface->suction_strength;
   bite_strength = g.interface->bite_strength;
   if (!g.blueprint->resource_limited)
-    brain_.emplace(g.blueprint);
+    brain_.emplace(g.blueprint, true);
   development_.emplace(*g.blueprint, field::DevelopmentCosts{}, g.interface->mobile_reproductive);
-  development_->prepaid_construction(ledger_.construction_paid);
   hatched = false;
   motor_.speed = 0;
   motor_.turn = 0;
@@ -857,7 +858,8 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
       state.adapted.assign(state.sensor_buffer.size(), 0.f);
     const auto frame = prepare_sensory_frame(
         b, binding.sense_counts[field::GonadPressure] > 0 ? gonad_filling(b) : 0);
-    for (std::size_t i = 0; i < binding.sensory.size(); ++i) {
+    std::fill(state.sensor_buffer.begin(), state.sensor_buffer.end(), 0.f);
+    for (auto i : binding.active_sensory) {
       const auto &r = binding.sensory[i];
       state.sensor_buffer[i] =
           adapted_response(state, i, r, anatomical_stimulus(b, r, frame, 0, physiology), true);
@@ -872,7 +874,7 @@ void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiolog
 void Body::activate_brain(const Genome &g) {
   if (!g.blueprint)
     throw std::invalid_argument("brain plan missing");
-  brain_.emplace(g.blueprint);
+  brain_.emplace(g.blueprint, true);
 }
 void Body::reset_brain() {
   if (brain_)
@@ -948,13 +950,10 @@ bool Body::set_inspection(bool vision, bool retina, int neuron) {
   }
   return fresh;
 }
-void Body::evaluate_brain(const std::vector<float> &input, bool learning) {
+void Body::evaluate_brain(const std::vector<float> &input) {
   if (!brain_)
     throw std::logic_error("brain inactive");
-  if (learning)
-    brain_->step(input, hormones_.levels(), identity);
-  else
-    brain_->step(input);
+  brain_->step(input, hormones_.levels(), identity);
 }
 
 }

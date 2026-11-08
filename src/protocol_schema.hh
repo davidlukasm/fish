@@ -767,20 +767,24 @@ enum class NeuronColumn : std::size_t {
   signal = 19,
   parameters = 20,
   usable = 21,
-  role_margin = 22,
-  role_gain = 23,
-  zone = 24,
-  sender = 25,
-  receiver = 26,
-  hormone_response = 27,
-  site = 28,
-  dead = 29,
-  synaptic_mean = 30,
-  expression = 31,
-  search_width = 32,
-  crossing = 33,
-  range = 34,
-  count = 35
+  zone = 22,
+  sender = 23,
+  receiver = 24,
+  hormone_response = 25,
+  site = 26,
+  dead = 27,
+  synaptic_mean = 28,
+  expression = 29,
+  search_width = 30,
+  crossing = 31,
+  range = 32,
+  life = 33,
+  development = 34,
+  growth_response = 35,
+  electrical_limit = 36,
+  teaching_limit = 37,
+  command = 38,
+  count = 39
 };
 namespace neuron_column {
 inline constexpr std::size_t x = 0;
@@ -805,20 +809,24 @@ inline constexpr std::size_t state = 18;
 inline constexpr std::size_t signal = 19;
 inline constexpr std::size_t parameters = 20;
 inline constexpr std::size_t usable = 21;
-inline constexpr std::size_t role_margin = 22;
-inline constexpr std::size_t role_gain = 23;
-inline constexpr std::size_t zone = 24;
-inline constexpr std::size_t sender = 25;
-inline constexpr std::size_t receiver = 26;
-inline constexpr std::size_t hormone_response = 27;
-inline constexpr std::size_t site = 28;
-inline constexpr std::size_t dead = 29;
-inline constexpr std::size_t synaptic_mean = 30;
-inline constexpr std::size_t expression = 31;
-inline constexpr std::size_t search_width = 32;
-inline constexpr std::size_t crossing = 33;
-inline constexpr std::size_t range = 34;
-inline constexpr std::size_t count = 35;
+inline constexpr std::size_t zone = 22;
+inline constexpr std::size_t sender = 23;
+inline constexpr std::size_t receiver = 24;
+inline constexpr std::size_t hormone_response = 25;
+inline constexpr std::size_t site = 26;
+inline constexpr std::size_t dead = 27;
+inline constexpr std::size_t synaptic_mean = 28;
+inline constexpr std::size_t expression = 29;
+inline constexpr std::size_t search_width = 30;
+inline constexpr std::size_t crossing = 31;
+inline constexpr std::size_t range = 32;
+inline constexpr std::size_t life = 33;
+inline constexpr std::size_t development = 34;
+inline constexpr std::size_t growth_response = 35;
+inline constexpr std::size_t electrical_limit = 36;
+inline constexpr std::size_t teaching_limit = 37;
+inline constexpr std::size_t command = 38;
+inline constexpr std::size_t count = 39;
 }
 enum class NeuronStateColumn : std::size_t {
   activity = 0,
@@ -826,7 +834,11 @@ enum class NeuronStateColumn : std::size_t {
   muted = 2,
   state = 3,
   signal = 4,
-  count = 5
+  life = 5,
+  development = 6,
+  growth_response = 7,
+  command = 8,
+  count = 9
 };
 namespace neuron_state_column {
 inline constexpr std::size_t activity = 0;
@@ -834,7 +846,11 @@ inline constexpr std::size_t ready = 1;
 inline constexpr std::size_t muted = 2;
 inline constexpr std::size_t state = 3;
 inline constexpr std::size_t signal = 4;
-inline constexpr std::size_t count = 5;
+inline constexpr std::size_t life = 5;
+inline constexpr std::size_t development = 6;
+inline constexpr std::size_t growth_response = 7;
+inline constexpr std::size_t command = 8;
+inline constexpr std::size_t count = 9;
 }
 enum class NeuronParameterColumn : std::size_t {
   threshold = 0,
@@ -844,10 +860,9 @@ enum class NeuronParameterColumn : std::size_t {
   quality_width = 4,
   field_width = 5,
   time_constant = 6,
-  dendrites = 7,
-  plasticity = 8,
-  learning_time = 9,
-  count = 10
+  plasticity = 7,
+  learning_time = 8,
+  count = 9
 };
 namespace neuron_parameter_column {
 inline constexpr std::size_t threshold = 0;
@@ -857,10 +872,9 @@ inline constexpr std::size_t quality2 = 3;
 inline constexpr std::size_t quality_width = 4;
 inline constexpr std::size_t field_width = 5;
 inline constexpr std::size_t time_constant = 6;
-inline constexpr std::size_t dendrites = 7;
-inline constexpr std::size_t plasticity = 8;
-inline constexpr std::size_t learning_time = 9;
-inline constexpr std::size_t count = 10;
+inline constexpr std::size_t plasticity = 7;
+inline constexpr std::size_t learning_time = 8;
+inline constexpr std::size_t count = 9;
 }
 enum class NeuronSiteColumn : std::size_t { u = 0, v = 1, w = 2, side = 3, count = 4 };
 namespace neuron_site_column {
@@ -946,13 +960,21 @@ inline constexpr std::size_t hue = 5;
 inline constexpr std::size_t outside = 6;
 inline constexpr std::size_t count = 7;
 }
-enum class SynapseColumn : std::size_t { source = 0, target = 1, strength = 2, id = 3, count = 4 };
+enum class SynapseColumn : std::size_t {
+  source = 0,
+  target = 1,
+  strength = 2,
+  id = 3,
+  limit = 4,
+  count = 5
+};
 namespace synapse_column {
 inline constexpr std::size_t source = 0;
 inline constexpr std::size_t target = 1;
 inline constexpr std::size_t strength = 2;
 inline constexpr std::size_t id = 3;
-inline constexpr std::size_t count = 4;
+inline constexpr std::size_t limit = 4;
+inline constexpr std::size_t count = 5;
 }
 enum class StrokeColumn : std::size_t { mean = 0, recovery = 1, power = 2, steps = 3, count = 4 };
 namespace stroke_column {

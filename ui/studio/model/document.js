@@ -8,7 +8,6 @@ import {
   fitsOrgan,
   functionFor,
   isRegion,
-  learns,
   MUSCLE_TRAITS,
   NEURON_BY_KEY,
   nodeLimit,
@@ -168,7 +167,7 @@ export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.teaching, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.eligibility
 ]);
-export const isLearner = center => center.role === 'nerve' && learns(center);
+export const isLearner = center => center.role === 'nerve';
 export function teachersOf(doc, center, wheel) {
   return doc.substances
       .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.teaching))
@@ -245,7 +244,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     surface : desc.surface,
     site : site.id,
     copies : desc.copies,
-    threshold : nerve ? 0 : N.sense_threshold,
+    threshold : desc.role === 'sensor' ? N.sense_threshold : -.2,
     tau : N.tau,
     field : N.field,
     q1 : 0,
@@ -257,6 +256,10 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     modulator : desc.modulator ?? -1,
     crossing : 0,
     range : 1,
+    electrical_limit : .5,
+    teaching_limit : .5,
+    learning_tau : .5,
+    growth : {...neutralReceptor(), active : 1, baseline : 1},
     receptors : Array.from({length : effects}, (_, effect) => neutralReceptor(effect))
   };
 }
@@ -471,9 +474,10 @@ export function makeLearner(doc, id) {
   const center = findCenter(doc, id)?.center;
   if (center?.role !== 'nerve')
     return null;
-  return updateCenter(
-      doc, id,
-      {mode : NEURON_BY_KEY.learn.mode, qwidth : Math.max(center.qwidth, NEW_CENTER.qwidth)});
+  return updateCenter(doc, id, {
+    mode : NEURON_BY_KEY.learn.mode,
+    qwidth : Math.max(center.qwidth, NEURON_BY_KEY.learn.qwidth)
+  });
 }
 export function moveCenter(doc, centerId, target, sites) {
   const result = findCenter(doc, centerId);
@@ -782,17 +786,22 @@ export function updateCenter(doc, id, patch) {
   const draft = copy(doc);
   const keys = [
     'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'crossing', 'range', 'sign',
-    'mode', 'pace', 'modulator'
+    'mode', 'pace', 'modulator', 'electrical_limit', 'teaching_limit', 'learning_tau'
   ];
   for (const c of tissueTargets(draft, id)) {
     for (const key of keys)
       if (Number.isFinite(patch[key])) {
         const paired = findCenter(draft, c.id).organ.id !== found.organ.id;
         const value = paired ? c[key] + patch[key] - found.center[key] : patch[key];
-        c[key] =
-            key === 'copies'
-                ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies)
-                : clamp(value, [ 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1, 1);
+        c[key] = key === 'copies' ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies)
+                                  : clamp(value,
+                                          [
+                                            'tau', 'field', 'qwidth', 'range', 'electrical_limit',
+                                            'teaching_limit', 'learning_tau'
+                                          ].includes(key)
+                                              ? 0
+                                              : -1,
+                                          1);
       }
   }
   for (const organ of draft.organs.filter(o => o.field)) {
@@ -806,6 +815,16 @@ export function updateCenter(doc, id, patch) {
     organ.field.density = organ.centers[0].copies;
     organ.field.resolution = organ.centers[0].field;
   }
+  return draft;
+}
+export function updateCellGrowth(doc, id, patch) {
+  const draft = copy(doc), targets = tissueTargets(draft, id);
+  if (!targets.length)
+    return null;
+  for (const c of targets)
+    for (const key of Object.keys(neutralReceptor()))
+      if (Number.isFinite(patch[key]))
+        c.growth[key] = patch[key];
   return draft;
 }
 export function updateReceptor(doc, id, effect, patch) {
@@ -954,10 +973,14 @@ export function removeSubstance(doc, index, wheel) {
     draft.growth.active = 0;
   return draft;
 }
-export function addWire(doc, from, to, pairing = null) {
+export function addWire(doc, from, to, pairing = null, sites = null) {
   const a = senderNodes(doc, from), b = hearerNodes(doc, to);
   if (!a.length || !b.length || from === to ||
       (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
+    return null;
+  if (sites &&
+      !a.some(source => b.some(target => validCellLink(source, findSite(sites, source.site), target,
+                                                       findSite(sites, target.site)))))
     return null;
   const twins = pairEndpoint(doc, from) === to;
   const drawn = endpointSide(doc, from) === endpointSide(doc, to) ? 'same' : 'crossed';
@@ -1047,14 +1070,7 @@ export const chosenCenter = (doc, item) => ['center', 'organ'].includes(item?.ki
                                                ? endpointCenters(doc, item.id)[0] ?? null
                                                : null;
 const senderNodes = (doc, id) => endpointCenters(doc, id).filter(c => c.role !== 'motor');
-function hearerNodes(doc, id) {
-  const organ = findOrgan(doc, id);
-  const slot = organ && !ownEndpoints(organ)
-                   ? ORGAN_BY_KEY[organ.type]?.slots?.find(s => s.dir === 'in' && s.node)
-                   : null;
-  return endpointCenters(doc, id).filter(c =>
-                                             c.role !== 'sensor' && (!slot || c.key === slot.node));
-}
+function hearerNodes(doc, id) { return endpointCenters(doc, id).filter(c => c.role !== 'sensor'); }
 export function selectionCenters(doc, item) {
   if (!item)
     return [];
@@ -1073,13 +1089,13 @@ function choiceEnds(doc, item) {
   return [...new Set(selectionCenters(doc, item).map(
       id => item.kind === 'center' ? id : wholeEndpoint(doc, id))) ];
 }
-export function connectSelections(doc, source, target) {
+export function connectSelections(doc, source, target, sites = null) {
   const starts = choiceEnds(doc, source), ends = choiceEnds(doc, target);
   let draft = doc;
   const wireIds = [];
   for (const from of starts)
     for (const to of ends) {
-      const added = addWire(draft, from, to);
+      const added = addWire(draft, from, to, null, sites);
       if (added) {
         draft = added.document;
         wireIds.push(added.wireId);
@@ -1187,6 +1203,11 @@ export const contactTopology = doc => JSON.stringify({
   centers : allCenters(doc).map(c => [c.id, c.site]),
   wires : doc.wires.map(w => [w.from, w.to, w.pairing, w.spread])
 });
+export const validCellLink = (a, sa, b, sb) =>
+    !!sa && !!sb &&
+    ((a.role === 'sensor' && b.role === 'nerve' && sb.v < .5) ||
+     (a.role === 'nerve' && b.role === 'nerve' && (sa.v < .5) !== (sb.v < .5)) ||
+     (a.role === 'nerve' && sa.v >= .5 && b.role === 'motor'));
 export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
@@ -1203,6 +1224,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       for (const source of sources) {
         const from = indices.get(source.id), to = indices.get(target.id);
         if (from !== undefined && to !== undefined &&
+            validCellLink(source, findSite(sites, source.site), target,
+                          findSite(sites, target.site)) &&
             !connections.some(c => c.from === from && c.to === to)) {
           if (!bundles.has(key))
             bundles.set(key, bundles.size);
@@ -1217,9 +1240,9 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
       const g = {
-        initial_strength : center.initial_strength ?? 0,
+        electrical_limit : center.electrical_limit ?? .5,
         learning_tau : center.learning_tau ?? .5,
-        teaching_strength : center.teaching_strength ?? 0,
+        teaching_limit : center.teaching_limit ?? .5,
         ...center.distribution,
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,
@@ -1248,6 +1271,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         open : organ.openContacts ? 1 : 0,
         crossing : fixed ? center.crossing : senderCrossing(doc, center, links, sides),
         range : center.range,
+        growth : {...center.growth},
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
       };
       groups.push(g);

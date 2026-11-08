@@ -88,7 +88,7 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
   const from = sense.organ.centers.find(c => c.key === senseKey)?.id ?? sense.organ.id;
   for (const [a, b] of [[ from, hub.organ.id ], [ hub.organ.id, gland.organId ],
                         [ hub.organ.id, findOrgan(draft, gland.organId)?.pair ]])
-    draft = (b && addWire(draft, a, b)?.document) ?? draft;
+    draft = (b && addWire(draft, a, b, null, sites)?.document) ?? draft;
   if (system.growth)
     draft = updateGrowth(draft, {active : 1, substance : index, ...GROWTH_START});
   for (const {center, answer} of answering(draft, system))

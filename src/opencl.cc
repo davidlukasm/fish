@@ -683,7 +683,9 @@ bool prepare_opencl_objects(Ecosystem &world, std::vector<std::vector<VisualObje
   std::vector<std::array<VisualEye, EYES>> origins(objects.size());
   for (std::size_t i = 0; i < objects.size(); ++i)
     if (!objects[i].empty())
-      origins[i] = visual_origins(world.fish[i].body, *world.fish[i].genome.interface, world.field);
+      origins[i] =
+          visual_origins(world.fish[i].body,
+                         world.fish[i].body.active_interface(world.fish[i].genome), world.field);
   std::vector<std::size_t> offsets(objects.size() + 1);
   for (std::size_t i = 0; i < objects.size(); ++i)
     offsets[i + 1] = offsets[i] + objects[i].size();
@@ -864,7 +866,7 @@ int benchmark_opencl(std::ostream &out, int workers, int fish_count, int steps) 
   }
   for (std::size_t i = 0; i < w.fish.size(); ++i)
     if (!cpu_vision[i].empty())
-      for (const auto &ray : w.fish[i].genome.interface->visual[0]) {
+      for (const auto &ray : w.fish[i].body.active_interface(w.fish[i].genome).visual[0]) {
         ++eyes;
         vision_error = std::max(
             vision_error, std::abs(double(cpu_vision[i][ray.second] - prepared[i][ray.second])));

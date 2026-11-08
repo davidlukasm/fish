@@ -12,7 +12,7 @@ inline constexpr int max_copies = 16;
 inline constexpr int contact_values = 20;
 template <typename Group>
 bool read_group(std::istream &input, Group &g) {
-  return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >> g.function >> g.copies >> g.threshold >> g.tau >> g.field >> g.q1 >> g.q2 >> g.qwidth >> g.sign >> g.mode >> g.pace >> g.modulator >> g.crossing >> g.range >> g.organ >> g.open >> g.initial_strength >> g.learning_tau >> g.teaching_strength >> g.spread_physiology >> g.spread_receptors >> g.spread_development >> g.spread_contacts);
+  return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >> g.function >> g.copies >> g.threshold >> g.tau >> g.field >> g.q1 >> g.q2 >> g.qwidth >> g.sign >> g.mode >> g.pace >> g.modulator >> g.crossing >> g.range >> g.organ >> g.open >> g.electrical_limit >> g.learning_tau >> g.teaching_limit >> g.spread_physiology >> g.spread_receptors >> g.spread_development >> g.spread_contacts);
 }
 template <typename Receptor>
 bool read_receptor(std::istream &input, Receptor &r, int &active) {
@@ -46,9 +46,9 @@ void write_group(std::ostream &out, const Value &value) {
   out << ",\"range\":" << value.range;
   out << ",\"organ\":" << value.organ;
   out << ",\"open\":" << value.open;
-  out << ",\"initial_strength\":" << value.initial_strength;
+  out << ",\"electrical_limit\":" << value.electrical_limit;
   out << ",\"learning_tau\":" << value.learning_tau;
-  out << ",\"teaching_strength\":" << value.teaching_strength;
+  out << ",\"teaching_limit\":" << value.teaching_limit;
   out << ",\"spread_physiology\":" << value.spread_physiology;
   out << ",\"spread_receptors\":" << value.spread_receptors;
   out << ",\"spread_development\":" << value.spread_development;

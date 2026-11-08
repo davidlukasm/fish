@@ -375,8 +375,8 @@ export const dropMethods = {
     const placed =
         addNeuron(doc, key, sites, position, SNAP_DISTANCE) ?? addNeuron(doc, key, sites, position);
     const element = target.element.dataset;
-    const wired =
-        placed && addWire(placed.document, placed.centerId, element.center ?? element.organ);
+    const wired = placed && addWire(placed.document, placed.centerId,
+                                    element.center ?? element.organ, null, sites);
     if (!wired)
       return this.notice(label('status.noRoom'));
     this.changeDocument(wired.document, {kind : 'center', id : target.centers[0].id});

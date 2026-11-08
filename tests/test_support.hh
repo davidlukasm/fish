@@ -44,6 +44,12 @@ inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
   b.tissue = b.peak_tissue = ADULT_TISSUE;
   b.hatch_age = 0;
   b.age = ADULT_AGE;
+  std::vector<float> input(g.interface->sensory.size(), 0);
+  for (int tick = 0; tick < 320; ++tick) {
+    StateAccess::brain(b)->grow({}, 0, 1e6);
+    StateAccess::brain(b)->step(input, {}, b.identity);
+  }
+  b.refresh_organs(g);
   b.angle = StateAccess::motor(b).vx = StateAccess::motor(b).vy = StateAccess::motor(b).speed = 0;
   p.g = 0;
   p.last_spawn = p.last_sperm = 0;

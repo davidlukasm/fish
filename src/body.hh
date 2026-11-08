@@ -90,7 +90,9 @@ protected:
 struct Body : BodyState {
 private:
   std::shared_ptr<const BrainInterface> organ_source_, active_anatomy_;
-  std::size_t known_deaths_ = SIZE_MAX;
+  std::uint64_t known_cells_ = UINT64_MAX;
+  bool growth_prepared_ = false;
+  double pending_build_cost_ = 0;
 
 public:
   double defense() const { return std::max(resting_defense, motor_.defense); }
@@ -111,6 +113,7 @@ public:
     return result;
   }
   void prepare(const Genome &);
+  void grow_brain(const Genome &, const PhysiologyParameters &, bool protected_life);
   const BrainInterface &active_interface(const Genome &) const;
   void refresh_organs(const Genome &);
   double neural_upkeep() const;
@@ -118,7 +121,7 @@ public:
   void orient_to(double radians);
   void activate_brain(const Genome &);
   void reset_brain();
-  void evaluate_brain(const std::vector<float> &, bool learning = false);
+  void evaluate_brain(const std::vector<float> &);
   void mute_neuron(std::size_t);
   void stimulate_neuron(std::size_t, float, unsigned steps = 1);
   void stimulate_neurons(const std::vector<std::size_t> &, float, unsigned steps = 1);

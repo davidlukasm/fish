@@ -231,13 +231,9 @@ void PopulationCheckpoint::read_body(std::istream &in, Individual &p,
   state::body_scalar(in, b.ledger_.movement_cost, state::body_limit_ledger_movement_cost(b));
   state::body_scalar(in, b.ledger_.brain_cost, state::body_limit_ledger_brain_cost(b));
   state::body_scalar(in, b.ledger_.development_cost, state::body_limit_ledger_development_cost(b));
-  state::body_scalar(in, b.ledger_.construction_paid,
-                     state::body_limit_ledger_construction_paid(b));
   value(in, b.ledger_.queries_paid);
   if (b.ledger_.queries_paid > BRAIN_QUERY_LIMIT)
     throw std::runtime_error("invalid query payment");
-  if (b.development_)
-    b.development_->prepaid_construction(b.ledger_.construction_paid);
   value(in, b.anchored);
   {
     state::body_scalar(in, b.reproduction_.sperm_signal,

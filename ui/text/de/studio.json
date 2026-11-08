@@ -684,7 +684,7 @@
     "Kontaktstreuung",
     "Seitenkopplung",
     "Kontaktreichweite",
-    "Anfangsstärke",
+    "Kontakthöchststärke",
     "Streuung: Zellphysiologie",
     "Streuung: Rezeptoren",
     "Streuung: Entwicklung",
@@ -932,7 +932,7 @@
       "modulate": "Verschaltet: lehrt jetzt diesen Knoten.",
       "pacemaker": "Verschaltet: gibt diesem Knoten jetzt den Takt."
     },
-    "learns": "Dieser Knoten lernt jetzt auswählend: aktive Eingänge wachsen, stille schrumpfen."
+    "learns": "Dieser Knoten verstärkt jetzt seine Plastizität: aktive Eingänge wachsen, stille schrumpfen."
   },
   "learnRule": {
     "teaching": "Lehrsignal",
@@ -944,7 +944,7 @@
     "beat": "Takt",
     "expect": "Erwartung",
     "gain": "lernt mit {n} % Tempo",
-    "untaught": "ohne Lehrer lernt sie nicht",
+    "untaught": "wartet auf ein Lehrsignal",
     "untaughtMode": "ohne Lehrer: nur {mode}",
     "overview": "Wer lernt, und von wem",
     "untaughtShort": "ohne Lehrer",
@@ -952,8 +952,8 @@
     "substance": "Stoff",
     "noTeacher": "Noch kein Lehrer: einen Modulator aus dem Baukasten auf die Zelle ziehen.",
     "rate": "Wie schnell die Zelle lernt",
-    "slow": "lernt nicht",
-    "off": "lernt nicht",
+    "slow": "sehr langsam",
+    "off": "kleinstes Lerntempo",
     "nodes": "Knoten dieser Region",
     "fast": "schnell",
     "mode": "Was die Zelle von selbst lernt",
@@ -1071,5 +1071,23 @@
     "remove": "×",
     "more": "＋ {name}",
     "less": "− {name}"
+  },
+  "development": {
+    "title": "Zellentwicklung und Kontakte",
+    "explanation": "Zellen entstehen entsprechend ihrer Wachstumsantwort. Kontakte beginnen bei null, lernen lokal und bauen sich laufend ab.",
+    "baseline": "Grundwachstum",
+    "hormone": "Hormon",
+    "maturity": "Körperreife",
+    "substance": "Wachstumssignal",
+    "sensitivity": "Antwortstärke",
+    "half": "Halbe Wirkung",
+    "steepness": "Steilheit",
+    "electrical_limit": "Elektrische Höchststärke",
+    "teaching_limit": "Lehrende Höchststärke",
+    "precursor": "Vorläufer",
+    "active": "Aktiv",
+    "dead": "Abgestorben",
+    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn.",
+    "layer": "Innenlage"
   }
 }

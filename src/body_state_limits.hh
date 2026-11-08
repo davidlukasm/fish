@@ -106,9 +106,6 @@ inline ScalarBounds body_limit_ledger_brain_cost(const Body &) {
 inline ScalarBounds body_limit_ledger_development_cost(const Body &) {
   return {0, PLAUSIBLE_LOCAL, "ledger_development_cost"};
 }
-inline ScalarBounds body_limit_ledger_construction_paid(const Body &) {
-  return {0, PLAUSIBLE_AMOUNT, "ledger_construction_paid"};
-}
 inline ScalarBounds body_limit_reproduction_sperm_signal(const Body &) {
   return {0, MAX_SIGNAL, "reproduction_sperm_signal"};
 }
@@ -196,7 +193,6 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.ledger().movement_cost, body_limit_ledger_movement_cost(b));
   validate_scalar(b.ledger().brain_cost, body_limit_ledger_brain_cost(b));
   validate_scalar(b.ledger().development_cost, body_limit_ledger_development_cost(b));
-  validate_scalar(b.ledger().construction_paid, body_limit_ledger_construction_paid(b));
   validate_scalar(b.reproduction().sperm_signal, body_limit_reproduction_sperm_signal(b));
   validate_scalar(b.eat_signal, body_limit_eat_signal(b));
   validate_scalar(b.reproduction().egg_readiness, body_limit_reproduction_egg_readiness(b));

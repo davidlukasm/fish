@@ -30,8 +30,8 @@ struct Receptor {
   float spread_receptors = 0;
 };
 struct Group {
-  float initial_strength = 0;
-  float learning_tau = .5f, teaching_strength = 0;
+  float electrical_limit = .5f;
+  float learning_tau = .5f, teaching_limit = .5f;
   float spread_physiology = 0;
   float spread_receptors = 0;
   float spread_development = 0;
@@ -51,6 +51,7 @@ struct Group {
   float sender1 = 1, sender2 = 1, receiver1 = -1, receiver2 = -1;
   float sigma = float(field::MIN_SEARCH), crossing = 0, range = 1;
   std::array<Receptor, field::HORMONE_EFFECTS> receptors{};
+  Receptor growth{false, 1, 0};
   bool contains(const cppn::Point &p) const {
     constexpr float eps = .0001f;
     return p.zone == zone && (!side || p.side == side) && p.u >= u0 - eps && p.u <= u1 + eps &&
@@ -126,12 +127,13 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     ensure(g.organ >= 0 && g.organ < 1000 && (g.open == 0 || g.open == 1), "invalid group owner");
     for (auto &r : g.receptors)
       r = read_receptor(input);
-    ensure(between(g.initial_strength, -1, 1), "invalid birth strength");
+    g.growth = read_receptor(input);
+    ensure(between(g.electrical_limit, 0, 1), "invalid electrical limit");
     ensure(between(g.spread_physiology, 0, 1), "invalid trait spread");
     ensure(between(g.spread_receptors, 0, 1), "invalid trait spread");
     ensure(between(g.spread_development, 0, 1), "invalid trait spread");
     ensure(between(g.spread_contacts, 0, 1), "invalid trait spread");
-    ensure(between(g.learning_tau, 0, 1) && between(g.teaching_strength, -1, 1),
+    ensure(between(g.learning_tau, 0, 1) && between(g.teaching_limit, 0, 1),
            "invalid property context");
     groups.push_back(std::move(g));
   }
@@ -165,9 +167,19 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
                c.to >= 0 && c.to < count && between(c.spread, 0, 1) && c.bundle >= 0 &&
                c.bundle < edges,
            "invalid planned connection");
-    ensure(plan.groups[c.from].role != 2 && plan.groups[c.to].role != 0 &&
-               !(plan.groups[c.from].role == 0 && plan.groups[c.to].role == 2),
-           "invalid connection roles");
+    const auto allowed = [](const Group &a, const Group &b) {
+      auto kind = [](int ar, float av, int br, float bv) {
+        return (ar == 0 && br == 1 && bv < .5f) ||
+               (ar == 1 && br == 1 && (av < .5f) != (bv < .5f)) ||
+               (ar == 1 && av >= .5f && br == 2);
+      };
+      for (auto av : {a.v0, a.v1})
+        for (auto bv : {b.v0, b.v1})
+          if (kind(a.role, av, b.role, bv))
+            return true;
+      return false;
+    };
+    ensure(allowed(plan.groups[c.from], plan.groups[c.to]), "invalid connection roles");
     ensure(pairs.emplace(c.from, c.to).second, "duplicate planned connection");
     auto [it, fresh] = bundleTargets.emplace(c.bundle, c.to);
     ensure(fresh || it->second == c.to, "connection bundle has different targets");
@@ -265,7 +277,7 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
   v[out::search_width] = raw(float(field::search_width(g.sigma)));
   v[out::crossing] = g.crossing;
   v[out::range] = raw(g.range);
-  v[out::synapse_strength] = g.initial_strength;
+  v[out::synapse_strength] = 2 * g.electrical_limit - 1;
   v[out::spread_physiology] = g.spread_physiology;
   v[out::spread_receptors] = g.spread_receptors;
   v[out::spread_development] = g.spread_development;
@@ -286,7 +298,7 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
     if (!cell)
       continue;
     cell->parameters.learning_time = g->learning_tau;
-    cell->initial_teaching = (g->teaching_strength + 1) * .5f;
+    cell->teaching_limit = g->teaching_limit;
     cell->group = std::uint32_t(cells.size());
     cells.push_back(*cell);
   }
@@ -308,7 +320,7 @@ inline std::vector<Group> compact_groups(std::vector<Group> groups) {
   auto same = [&](const Group &a, const Group &b) {
     if (a.organ != b.organ || a.zone != b.zone || a.side != b.side || a.role != b.role ||
         a.function != b.function || a.copies != b.copies || a.learning_tau != b.learning_tau ||
-        a.teaching_strength != b.teaching_strength)
+        a.teaching_limit != b.teaching_limit)
       return false;
     if (a.reception != b.reception || a.reception_spread != b.reception_spread)
       return false;
@@ -316,8 +328,9 @@ inline std::vector<Group> compact_groups(std::vector<Group> groups) {
     for (std::size_t i = 0; i < av.size(); ++i)
       if (std::abs(av[i] - bv[i]) > TRAIT_EPSILON)
         return false;
-    for (int i = 0; i < field::HORMONE_EFFECTS; ++i) {
-      const auto &x = a.receptors[i], &y = b.receptors[i];
+    for (int i = 0; i <= field::HORMONE_EFFECTS; ++i) {
+      const auto &x = i == field::HORMONE_EFFECTS ? a.growth : a.receptors[i],
+                 &y = i == field::HORMONE_EFFECTS ? b.growth : b.receptors[i];
       if (x.active != y.active || x.substance != y.substance || x.steepness != y.steepness)
         return false;
       if (x.spread_receptors != y.spread_receptors)
@@ -407,9 +420,8 @@ class Builder {
     link(cppn::BIAS, id, .5f);
     return masks[signed_gate] = id;
   }
-  int indicator(const Group &g, int effect = -1, int contact_field = 0, float property = -1) {
-    if (effect == field::GROWTH_RECEPTOR)
-      return mask(effect_selector(effect));
+  int indicator(const Group &g, int effect = -1, int contact_field = 0, float property = -1,
+                bool body = false) {
     std::vector<int> conditions{effect < 0
                                     ? test(cppn::input::effect, -1, .5f / field::RECEPTOR_QUERIES)
                                     : effect_selector(effect)};
@@ -449,11 +461,21 @@ class Builder {
       if (above <= 1)
         conditions.push_back(test(input, -1, (above + last) / 2));
     };
-    bounds(cppn::input::u, g.u0, g.u1);
-    bounds(cppn::input::v, g.v0, g.v1);
-    bounds(cppn::input::w, g.w0, g.w1);
-    if (g.side)
-      conditions.push_back(test(cppn::input::side, g.side, 0));
+    if (body) {
+      conditions.push_back(test(cppn::input::side, 1, -.5f));
+      conditions.push_back(test(cppn::input::side, -1, .5f));
+    } else {
+      bounds(cppn::input::u, g.u0, g.u1);
+      bounds(cppn::input::v, g.v0, g.v1);
+      bounds(cppn::input::w, g.w0, g.w1);
+      if (g.side)
+        conditions.push_back(test(cppn::input::side, g.side, 0));
+      else if (effect == field::GROWTH_RECEPTOR) {
+        const int magnitude = node(NodeType::ABS, 0);
+        link(cppn::input::side, magnitude, 1);
+        conditions.push_back(test(magnitude, 1, .5f));
+      }
+    }
     const float n = float(conditions.size()) + 2;
     const int gate = node(NodeType::CUTOFF, (n - 1) / n);
     for (int condition : conditions)
@@ -507,7 +529,7 @@ public:
         assign(indicator(g, -1, 0, cppn::property::learning), out::time_constant,
                2 * (g.learning_tau - g.tau));
         assign(indicator(g, -1, 0, cppn::property::teaching), out::synapse_strength,
-               g.teaching_strength - g.initial_strength);
+               2 * (g.teaching_limit - g.electrical_limit));
         for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
           const auto &r = g.reception[f - 1];
           if (r.expression <= -1 && g.reception_spread[f - 1][0] == 0)
@@ -519,6 +541,8 @@ public:
           assign(gate, out::search_width, 2 * r.width - 1);
           assign(gate, out::spread_contacts, g.reception_spread[f - 1][0]);
         }
+        if (g.growth.active)
+          receptor(indicator(g, field::GROWTH_RECEPTOR), g.growth, 1.f);
         for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
           if (g.receptors[effect].active)
             receptor(indicator(g, effect), g.receptors[effect],
@@ -540,16 +564,17 @@ public:
           assign(gate, k, delta);
         }
     }
-    if (plan.growth.active) {
+    {
       const auto &at = field::GROWTH_RECEPTOR_SITE;
       Group body;
       body.zone = at.zone;
       body.u0 = body.u1 = at.u;
       body.v0 = body.v1 = at.v;
       body.w0 = body.w1 = at.w;
-      receptor(indicator(body, field::GROWTH_RECEPTOR), plan.growth, 0);
+      receptor(indicator(body, field::GROWTH_RECEPTOR, 0, -1, true), plan.growth, 1);
     }
     assign(mask(effect_selector(field::Output)), out::capacity, 1);
+    assign(mask(effect_selector(field::GROWTH_RECEPTOR)), out::capacity, 1);
     for (int k = 0; k < cppn::OUTPUTS; ++k)
       link(cppn::BIAS, cppn::INPUTS + k, base[k]);
     // Ordinary weight mutations can activate variance before any structure mutation is needed.

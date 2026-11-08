@@ -2,6 +2,7 @@
 #include "field/retinal_tissue.hh"
 #include "field/development_sites.hh"
 #include "physiology.hh"
+#include "movement.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
@@ -34,259 +35,234 @@ void start_fish_uses_external_vision_after_hatching(const Genome &g) {
 }
 void start_fish_eats_nearby_food(const Genome &g) {
   constexpr double X = 300, Y = 205, DISTANCE = 8, FOOD = 80;
-  constexpr int SETTLE = 200, RESPONSE = 40;
-  for (double tissue : {HATCH_TISSUE, BODY_TISSUE}) {
-    Ecosystem w(SEED);
-    w.resize(615, 410);
-    w.safety = false;
-    w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
-    w.set_parameter("energy_supply", 0);
-    w.food_burst.strength = 0;
-    w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
-    w.field.clear_food();
-    const auto id = adult(w, g, X, Y).id;
-    auto hold = [&] {
-      auto &b = individual(w, id).body;
-      b.x = X;
-      b.y = Y;
-      b.angle = 0;
-      b.tissue = b.peak_tissue = tissue;
-      auto &m = StateAccess::motor(b);
-      m.vx = m.vy = m.speed = m.angular_velocity = 0;
-    };
-    for (int tick = 0; tick < SETTLE; ++tick) {
-      hold();
-      w.tick(false);
-    }
-    check(individual(w, id).body.nutrition == 0, "feeding trial starts without food");
-    Food food{X + DISTANCE, Y, 0, 0, 0, FOOD};
-    food.initial_energy = FOOD;
-    food.color = FEED_COLOR;
-    food.radius = food_radius(FOOD);
-    w.field.append_fragment(food);
-    for (int tick = 0; tick < RESPONSE; ++tick) {
-      hold();
-      w.tick(false);
-    }
-    check(individual(w, id).body.nutrition > 1,
-          "young and adult start fish eat a nearby pellet after settling");
-  }
-}
-void excitation_and_teaching_are_independent() {
-  constexpr field::NeuronIndex FIRST = 0, SECOND = 1, LEARNER = 2, MODULATOR = 3, MOTOR = 4;
-  constexpr int CELLS = 5, WARMUP = 12;
-  constexpr int DRIVE = 0, TEACH = 1, RATE = 2;
-  constexpr float WEIGHT = .5f, INPUT = .8f, HALF = .1f, EPSILON = 1e-6f;
-  const auto brain = [&](float teaching_sign = 1, bool modulator = false) {
-    std::vector<field::Neuron> neurons(CELLS);
-    for (int i = 0; i < CELLS; ++i) {
-      auto &n = neurons[i];
-      n.id = i;
-      n.role = i < LEARNER  ? field::Role::Sensor
-               : i == MOTOR ? field::Role::Effector
-                            : field::Role::Nerve;
-      n.functional = true;
-      if (n.role == field::Role::Sensor) {
-        n.functions.internal = 0;
-        n.functions.senses[field::Touch] = 1;
-      } else if (n.role == field::Role::Effector) {
-        n.functions.internal = 0;
-        n.functions.motors[field::Forward] = 1;
+  constexpr int SETTLE = 200, RESPONSE = 80;
+  for (double tissue : {HATCH_TISSUE, BODY_TISSUE})
+    for (bool erased : {false, true}) {
+      Ecosystem w(SEED);
+      w.resize(615, 410);
+      w.safety = false;
+      w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+      w.set_parameter("energy_supply", 0);
+      w.food_burst.strength = 0;
+      w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+      w.field.clear_food();
+      const auto id = adult(w, g, X, Y).id;
+      auto hold = [&] {
+        auto &b = individual(w, id).body;
+        b.x = X;
+        b.y = Y;
+        b.angle = 0;
+        b.tissue = b.peak_tissue = tissue;
+        auto &m = StateAccess::motor(b);
+        m.vx = m.vy = m.speed = m.angular_velocity = 0;
+      };
+      for (int tick = 0; tick < SETTLE; ++tick) {
+        hold();
+        w.tick(false);
       }
-      n.identity = {1, 1, 0, -1, -1};
-      n.parameters.plasticity = i == LEARNER ? .5f : 0;
-      n.hormone_receptors[field::Output].baseline = 1;
-    }
-    neurons[MODULATOR].identity.back() = 1;
-    neurons[MODULATOR].bias = modulator ? WEIGHT : 0;
-    const auto receptor = [&](int effect, int substance, float sensitivity) {
-      auto &r = neurons[LEARNER].hormone_receptors[effect];
-      r.affinity[substance] = 1;
-      r.sensitivity = sensitivity;
-      r.half = HALF;
-    };
-    receptor(field::Excitation, DRIVE, 1);
-    receptor(field::Teaching, TEACH, teaching_sign);
-    receptor(field::Learning, RATE, -field::HORMONE_SENSITIVITY_SPAN);
-    auto s = std::make_shared<field::Substrate>(std::move(neurons));
-    s->edges = {{FIRST, LEARNER, WEIGHT}, {SECOND, LEARNER, WEIGHT}, {LEARNER, MOTOR, WEIGHT}};
-    if (modulator)
-      s->edges.push_back({MODULATOR, LEARNER, WEIGHT});
-    return field::Network(s);
-  };
-  auto quiet = brain(), driven = brain(), taught = brain(), punished = brain(-1), stopped = brain();
-  field::Hormones none{}, excite{}, teach{}, pause{};
-  excite[DRIVE] = teach[TEACH] = pause[TEACH] = 1;
-  pause[RATE] = 1;
-  for (int step = 0; step < WARMUP; ++step)
-    for (auto *net : {&quiet, &driven, &taught, &punished, &stopped})
-      net->step({step % 2 ? INPUT : 0, step % 2 ? 0 : INPUT}, none, 0);
-  quiet.step({INPUT, 0}, none, 0);
-  driven.step({INPUT, 0}, excite, 0);
-  taught.step({INPUT, 0}, teach, 0);
-  punished.step({INPUT, 0}, teach, 0);
-  stopped.step({INPUT, 0}, pause, 0);
-  check(driven.state()[LEARNER] > quiet.state()[LEARNER], "excitation changes firing");
-  check(driven.surprise(LEARNER) == 0, "excitation supplies no teaching signal");
-  check(std::abs(driven.learning_contrast(LEARNER) - quiet.learning_contrast(LEARNER)) > EPSILON,
-        "eligibility follows the actual firing, including excitation");
-  check(taught.state() == quiet.state() && punished.state() == quiet.state(),
-        "positive and negative teaching do not drive cells or muscles");
-  check(taught.surprise(LEARNER) > 0 && punished.surprise(LEARNER) < 0,
-        "the teaching receptor supports both learning directions");
-  check(stopped.surprise(LEARNER) == 0, "the learning-rate receptor can stop learning");
-  for (auto *net : {&quiet, &driven, &taught, &punished, &stopped})
-    net->step({INPUT, 0}, none, 0);
-  check(quiet.learned_change() == 0 && driven.learned_change() == 0 &&
-            stopped.learned_change() == 0,
-        "learning requires a teacher in neutral learning mode");
-  check(taught.learned_change() > EPSILON && punished.learned_change() > EPSILON,
-        "signed hormonal teaching changes synapses");
-  auto local = brain(1, true), combined = brain(1, true);
-  local.step({INPUT, 0}, none, 0);
-  combined.step({INPUT, 0}, none, 0);
-  local.step({INPUT, 0}, none, 0);
-  combined.step({INPUT, 0}, teach, 0);
-  check(local.surprise(LEARNER) > 0 && combined.surprise(LEARNER) > local.surprise(LEARNER),
-        "local modulators and hormonal teaching add together");
-}
-
-void all_sources_can_form_first_contacts() {
-  constexpr int SOURCES = 3, TARGET = 3, STEPS = 800;
-  std::vector<field::Neuron> neurons(SOURCES + 1);
-  for (int i = 0; i <= TARGET; ++i) {
-    auto &n = neurons[i];
-    n.id = i + 1;
-    n.group = i;
-    n.role = field::Role::Nerve;
-    n.functional = true;
-    n.slots = SOURCES;
-    n.identity = {0, 1, 0, -1, -1};
-    n.parameters.plasticity = .1f;
-    n.hormone_receptors[field::Output].baseline = 1;
-  }
-  neurons[0].identity[3] = 1;
-  neurons[1].identity[4] = 1;
-  neurons[2].identity[3] = neurons[2].identity[4] = 1;
-  auto tissue = std::make_shared<field::Substrate>(std::move(neurons));
-  tissue->partner_offset = {0, 0, 0, 0, 3};
-  tissue->partners = {{0, 1}, {1, 1}, {2, 1}};
-  field::Network net(tissue);
-  std::array<bool, SOURCES> connected{};
-  for (int step = 0; step < STEPS; ++step) {
-    net.step({}, field::Hormones{}, 19);
-    for (const auto &edge : net.synapses())
-      if (edge.target == TARGET)
-        connected[edge.source] = true;
-  }
-  check(std::all_of(connected.begin(), connected.end(), [](bool b) { return b; }),
-        "pacers, modulators and modulating pacers can form a first contact");
-}
-void contact_formation_uses_genetic_strength_and_current_experience() {
-  for (bool teaching : {false, true})
-    for (float sign : {-1.f, 1.f}) {
-      int formed = 0;
-      for (unsigned seed = 11; seed < 35; ++seed) {
-        std::vector<field::Neuron> cells(2);
-        for (int i = 0; i < 2; ++i) {
-          auto &n = cells[i];
-          n.id = i + 1;
-          n.group = i;
-          n.role = field::Role::Nerve;
-          n.functional = true;
-          n.slots = 1;
-          n.identity = {0, i == 0 ? sign : 1, 0, -1, i == 0 && teaching ? 1.f : -1.f};
-          n.bias = 1;
-          n.parameters.plasticity = .5f;
-          n.parameters.learning_time = 1;
-          n.hormone_receptors[field::Output].baseline = 1;
-        }
-        cells[1].initial_weight = .19f;
-        cells[1].initial_teaching = .73f;
-        check(field::initial_contact_weight(cells[0], cells[1]) == sign * (teaching ? .73f : .19f),
-              "contact type selects its genetic strength");
-        auto tissue = std::make_shared<field::Substrate>(cells);
-        tissue->partner_offset = {0, 0, 1};
-        tissue->partners = {{0, 1}};
-        field::Network net(tissue);
-        // Build a teaching history before a connection exists.
-        for (int tick = 0; tick < 12; ++tick) {
-          net.step({}, field::Hormones{}, seed);
-          const auto contacts = net.synapses();
-          if (contacts.empty())
-            continue;
-          const auto &edge = contacts[0];
-          ++formed;
-          check(edge.formed == field::initial_contact_weight(cells[0], cells[1]),
-                "new contacts use the same initial strength as embryonic contacts");
-          check(edge.weight == edge.formed, "new contacts inherit no earlier experience");
-          if (teaching) {
-            for (int i = 0; i < 16; ++i)
-              net.step({}, field::Hormones{}, seed);
-            check(net.synapse_count() == 1 && net.synapses()[0].weight == edge.formed,
-                  "signed teaching contacts survive grace and skip electrical learning");
-          }
-          break;
-        }
+      check(individual(w, id).body.nutrition == 0, "feeding trial starts without food");
+      if (erased)
+        StateAccess::brain(individual(w, id).body) =
+            individual(w, id).body.brain()->ablated_probe();
+      for (int tick = 0; tick < 2 * MAX_STROKE_STEPS; ++tick) {
+        hold();
+        w.tick(false);
       }
-      check(formed > (teaching ? 18 : 0), "active teachers are not restricted to basal acceptance");
+      Food food{X + DISTANCE, Y, 0, 0, 0, FOOD};
+      food.initial_energy = FOOD;
+      food.color = FEED_COLOR;
+      food.radius = food_radius(FOOD);
+      w.field.append_fragment(food);
+      for (int tick = 0; tick < RESPONSE; ++tick) {
+        hold();
+        w.tick(false);
+      }
+      std::cout << "Futter " << tissue << (erased ? " nach Ablation: " : " gelernt: ")
+                << individual(w, id).body.nutrition << "\n";
+      check(erased ? individual(w, id).body.nutrition == 0 : individual(w, id).body.nutrition > 1,
+            "young and adult fish eat with acquired weights; erasing only weights removes feeding");
     }
 }
-std::shared_ptr<field::Substrate> learning_tissue() {
-  std::vector<field::Neuron> cells(3);
-  for (int i = 0; i < 3; ++i) {
-    auto &n = cells[i];
-    n.id = i + 1;
-    n.group = i;
-    n.role = i == 0 ? field::Role::Sensor : i == 2 ? field::Role::Effector : field::Role::Nerve;
-    n.functional = true;
-    n.identity = {0, 1, 0, -1, -1};
-    n.functions.internal = i == 1;
-    if (i == 0)
-      n.functions.senses[field::Touch] = 1;
-    if (i == 2)
-      n.functions.motors[field::Forward] = 1;
-    n.hormone_receptors[field::Output].baseline = 1;
-    n.parameters.time_constant = 0;
-    n.parameters.learning_time = field::encode_learning_steps(128);
-    n.parameters.plasticity = .5f;
+std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
+  std::vector<field::Neuron> cells(teacher ? 5 : 4);
+  for (std::size_t i = 0; i < cells.size(); ++i) {
+    auto &c = cells[i];
+    c.id = i + 1;
+    c.group = i;
+    c.functional = true;
+    c.role = i == 0 ? field::Role::Sensor : i == 3 ? field::Role::Effector : field::Role::Nerve;
+    c.location = {1, 0, i == 2 ? 2.f / 3 : 1.f / 3, 0, 1};
+    c.x = float(i) * .1f;
+    c.y = c.z = 0;
+    c.parameters.time_constant = 0;
+    c.parameters.learning_time = field::encode_learning_steps(32);
+    c.parameters.plasticity = 1;
+    c.electrical_limit = .8f;
+    c.teaching_limit = .7f;
+    c.bias = .3f;
+    c.identity = {0, 1, 1, -1, -1};
+    c.hormone_receptors[field::Output].baseline = 1;
   }
-  auto &r = cells[1].hormone_receptors[field::Teaching];
-  r.affinity[0] = 1;
-  r.sensitivity = 1;
-  r.half = .001;
-  auto tissue = std::make_shared<field::Substrate>(cells);
-  tissue->edges = {{0, 1, .2f}, {1, 2, .2f}};
-  return tissue;
+  if (negative) {
+    cells[1].identity[1] = -1;
+    cells[2].bias = -.3f;
+  }
+  if (teacher) {
+    cells[4].identity[1] = -1;
+    cells[4].identity[4] = 1;
+  }
+  auto s = std::make_shared<field::Substrate>(cells);
+  s->edges = {{0, 1, .8f}, {1, 2, .8f}, {2, 3, .8f}};
+  if (teacher)
+    s->edges.push_back({4, 2, -.7f});
+  return s;
 }
-void delayed_teaching_preserves_credit() {
-  for (int delay : {100, 200}) {
-    auto tissue = learning_tissue();
-    field::Network n(tissue);
-    for (int i = 0; i < 100; ++i)
-      n.step({0}, field::Hormones{}, 73);
-    n.step({1}, field::Hormones{}, 73);
-    for (int i = 0; i < delay; ++i)
-      n.step({0}, field::Hormones{}, 73);
-    auto positive = n, negative = n;
-    auto punishment = std::make_shared<field::Substrate>(*tissue);
-    punishment->network_layout.reset();
-    punishment->neurons[1].hormone_receptors[field::Teaching].sensitivity = -1;
-    field::Network punished(punishment);
-    std::stringstream saved_state;
-    n.write_runtime(saved_state);
-    punished.read_runtime(saved_state);
-    field::Hormones reward{};
-    reward[0] = 1;
-    positive.step({0}, reward, 73);
-    negative.step({0}, field::Hormones{}, 73);
-    punished.step({0}, reward, 73);
-    const auto p = positive.synapses(), q = negative.synapses(), m = punished.synapses();
-    check(p[0].weight > q[0].weight + 1e-5f, "delayed reward uses the old learning trace");
-    check(m[0].weight < q[0].weight - 1e-5f, "delayed punishment uses the old learning trace");
-    check(positive.surprise(1) > .9f && punished.surprise(1) < -.9f,
-          "the prediction rule permits delayed signed teaching");
+std::string brain_saved(const field::Network &n) {
+  std::ostringstream out;
+  n.write_runtime(out);
+  return out.str();
+}
+void zero_start_learning_and_decay() {
+  auto tissue = learning_tissue();
+  field::Network n(tissue);
+  for (auto e : n.synapses())
+    check(e.weight == 0, "all contact types start at zero");
+  n.step({1}, {}, 17);
+  check(n.organ_output()[3] == 0, "bias cannot actuate an unconnected organ");
+  for (int t = 0; t < 100; ++t) {
+    if (t % 12 < 6) {
+      n.stimulate(1, .8f);
+      n.stimulate(2, .8f);
+      n.stimulate(3, .8f);
+    }
+    n.step({float(t % 12 < 6)}, {}, 17);
   }
+  bool motor = false;
+  for (auto e : n.synapses()) {
+    check(e.weight >= 0 && e.weight <= .8f, "learned weight respects genetic limit");
+    motor |= e.target == 3 && e.weight > 0;
+  }
+  check(n.learned_change() > .02 && motor, "inner and motor contacts learn from zero");
+  auto frozen = n.frozen_probe();
+  const auto before = frozen.learned_change();
+  frozen.step({1}, {}, 17);
+  check(frozen.learned_change() < before && frozen.learning_summary().decay > 0,
+        "even used contacts decay in a frozen diagnostic copy");
+  n.reset_learning();
+  for (auto e : n.synapses())
+    check(e.weight == 0, "erasing learning never restores inherited weights");
+  auto negative = learning_tissue(true);
+  field::Network inhibitory(negative);
+  for (int t = 0; t < 16; ++t) {
+    inhibitory.stimulate(1, .8f);
+    inhibitory.step({1}, {}, 2);
+  }
+  bool learned_negative = false;
+  for (auto e : inhibitory.synapses())
+    learned_negative |= e.source == 1 && e.target == 2 && e.weight < 0;
+  check(learned_negative, "an inhibitory contact can acquire negative strength from zero");
+  auto taught = learning_tissue(false, true);
+  field::Network teacher(taught);
+  for (int t = 0; t < 48; ++t) {
+    teacher.stimulate(1, .9f);
+    teacher.stimulate(4, .9f);
+    teacher.step({1}, {}, 3);
+  }
+  bool learned_teacher = false;
+  for (auto e : teacher.synapses())
+    learned_teacher |= e.source == 4 && e.target == 2 && e.weight < -.001f;
+  check(learned_teacher,
+        "teaching contacts consolidate from zero using independent local evidence");
+  field::Network restored(taught);
+  std::istringstream in(brain_saved(teacher));
+  restored.read_runtime(in);
+  for (int t = 0; t < 12; ++t) {
+    teacher.step({float(t % 2)}, {}, 3);
+    restored.step({float(t % 2)}, {}, 3);
+    check(brain_saved(teacher) == brain_saved(restored),
+          "contact traces, weights, clocks and RNG resume exactly");
+  }
+}
+void development_preserves_identity_and_reserves_capacity() {
+  auto tissue = learning_tissue();
+  tissue->neurons[2].development_receptor.baseline = 0;
+  tissue->neurons[2].development_receptor.affinity[0] = 1;
+  tissue->neurons[2].development_receptor.sensitivity = 1;
+  field::Network n(tissue, true);
+  check(n.active_count() == 0 && n.slot_count() == 0 && n.reserved_slots() > 0,
+        "potential cells reserve capacity without allocating contact rows");
+  bool rejected = false;
+  try {
+    n.set_plasticity(false);
+  } catch (const std::logic_error &) {
+    rejected = true;
+  }
+  check(rejected, "living development always learns");
+  double charged = 0;
+  for (int t = 0; t < 160; ++t)
+    charged += n.grow({}, .2, 100);
+  check(n.life(0) == field::Network::CellLife::Active &&
+            n.life(2) == field::Network::CellLife::Precursor,
+        "cell growth is locally gated");
+  n.stimulate(1, .73f, 8);
+  const auto state = n.state();
+  const auto revision = n.cell_revision();
+  field::Hormones dose{};
+  dose[0] = 1;
+  for (int t = 0; t < 40; ++t)
+    charged += n.grow(dose, 1, 100);
+  check(n.life(2) == field::Network::CellLife::Active && n.cell_revision() > revision,
+        "late cells can appear after body maturity");
+  check(n.state()[1] == state[1] && n.slot_count() <= n.reserved_slots(),
+        "growth preserves existing activity and slot reservation");
+  check(charged > 0 && charged < .1, "only actual births and contacts are charged");
+  field::Network restored(tissue, true);
+  std::istringstream in(brain_saved(n));
+  restored.read_runtime(in);
+  for (int t = 0; t < 20; ++t) {
+    n.grow(dose, 1, 100);
+    restored.grow(dose, 1, 100);
+    n.step({float(t % 2)}, dose, 22);
+    restored.step({float(t % 2)}, dose, 22);
+    check(brain_saved(n) == brain_saved(restored), "development and learning resume together");
+  }
+  field::Network unfunded(tissue, true);
+  for (int t = 0; t < 200; ++t)
+    check(unfunded.grow(dose, 1, 0) == 0, "zero budget has no physical construction charge");
+  check(unfunded.active_count() == 0 && unfunded.slot_count() == 0,
+        "unfunded planning creates no tissue");
+  auto isolated = learning_tissue();
+  isolated->edges.clear();
+  for (auto &c : isolated->neurons)
+    c.parameters.learning_time = 0;
+  field::Network dying(isolated, true);
+  for (int t = 0; t < 160; ++t)
+    dying.grow({}, 1, 100);
+  for (int t = 0; t < 32; ++t)
+    dying.step({0}, {}, 1);
+  check(dying.dead_count() == 0, "isolated cells retain their consolidation grace");
+  dying.step({0}, {}, 1);
+  check(dying.dead(1) && dying.dead(2) && !dying.dead(0) && !dying.dead(3),
+        "trophic death applies to unsupported inner neurons");
+  const auto dead = dying.dead_count();
+  for (int t = 0; t < 100; ++t)
+    dying.grow({}, 1, 100);
+  check(dying.dead_count() == dead && dying.life(1) == field::Network::CellLife::Dead,
+        "a dead cell identity never grows again");
+  field::Maturation stage(*tissue);
+  for (int t = 0; t < 100; ++t)
+    stage.advance();
+  check(stage.progress() == 1, "embryonic clock is independent of latent neural tissue");
+}
+void wiring_uses_two_inner_layers() {
+  auto s = learning_tissue();
+  const auto &c = s->neurons;
+  check(field::connection_kind(c[0], c[1]) >= 0 && field::connection_kind(c[1], c[2]) >= 0 &&
+            field::connection_kind(c[2], c[1]) >= 0 && field::connection_kind(c[2], c[3]) >= 0,
+        "two-layer pathways and feedback are available");
+  check(field::connection_kind(c[0], c[2]) < 0 && field::connection_kind(c[0], c[3]) < 0 &&
+            field::connection_kind(c[1], c[3]) < 0 && field::connection_kind(c[1], c[1]) < 0,
+        "bypasses and same-layer contacts are excluded");
 }
 void ordered_retinal_neighbors_match_geometry() {
   for (int density : {1, 0, 16}) {
@@ -333,52 +309,6 @@ void ordered_retinal_neighbors_match_geometry() {
               "ordered retina retains spatial and colour-layer neighbors");
     }
   }
-}
-void wiring_costs_follow_formation_and_death() {
-  std::vector<field::Neuron> cells(2);
-  for (int i = 0; i < 2; ++i) {
-    auto &n = cells[i];
-    n.id = i + 1;
-    n.group = i;
-    n.x = float(i);
-    n.role = field::Role::Nerve;
-    n.functional = true;
-    n.slots = 1;
-    n.bias = 1;
-    n.identity = {0, 1, 0, -1, i == 0 ? 1.f : -1.f};
-    n.hormone_receptors[field::Output].baseline = 1;
-  }
-  auto &death = cells[0].hormone_receptors[field::Death];
-  death.affinity[0] = 1;
-  death.sensitivity = 2;
-  death.half = .01f;
-  auto tissue = std::make_shared<field::Substrate>(cells);
-  tissue->partner_offset = {0, 0, 1};
-  tissue->partners = {{0, 1}};
-  field::Network net(tissue);
-  check(net.wiring().contacts == 0 && net.wiring().length == 0, "empty tissue has no wire upkeep");
-  bool formed = false;
-  for (int tick = 0; tick < 80 && !formed; ++tick) {
-    net.step({}, field::Hormones{}, 39);
-    formed = net.synapse_count() != 0;
-  }
-  check(formed && net.wiring().contacts == 1 && net.wiring().length == 1,
-        "new contact adds its live count and length");
-  check(net.formed_wiring().contacts == 1 && net.formed_wiring().length == 1,
-        "new contact reports its construction exactly once");
-  std::stringstream saved;
-  net.write_runtime(saved);
-  field::Network restored(tissue);
-  restored.read_runtime(saved);
-  check(restored.wiring().contacts == 1 && restored.wiring().length == 1,
-        "wire upkeep survives loading");
-  net.step({}, field::Hormones{}, 39);
-  check(net.formed_wiring().contacts == 0, "existing contact has no repeated construction charge");
-  field::Hormones h{};
-  h[0] = 1;
-  net.step({}, h, 39);
-  check(net.dead_count() == 1 && net.wiring().contacts == 0 && net.wiring().length == 0,
-        "cell death removes wire upkeep");
 }
 void retinal_development_is_local_and_restorable() {
   std::vector<field::Neuron> cells;
@@ -621,6 +551,53 @@ void development_queue_is_bounded(const Genome &g) {
   check(immigrant != w.fish.end() && (immigrant->genome.growing || immigrant->genome.blueprint),
         "immigrant preparation keeps its reserved share");
 }
+void egg_development_checkpoint(const Genome &g) {
+  Ecosystem w(731);
+  w.resize(615, 410);
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  w.food_burst.strength = 0;
+  w.set_parameter("energy_supply", 0);
+  no_mutation(w);
+  const auto id = egg(w, g, 300);
+  w.tick(false);
+  check(
+      !individual(w, id).body.brain(),
+      "an unfertilised egg has no maternal brain; development waits for fertilisation or cloning");
+  for (int tick = 0; tick < 256; ++tick) {
+    w.tick(false);
+    const auto &brain = individual(w, id).body.brain();
+    if (brain && brain->active_count())
+      break;
+  }
+  const auto &brain = individual(w, id).body.brain();
+  check(brain && brain->active_count() > 0 &&
+            brain->active_count() < individual(w, id).genome.blueprint->neurons.size(),
+        "checkpoint fixture has a partially born brain");
+  auto restored = w.fork();
+  check(saved(w) == saved(restored), "an egg with partially formed neural tissue restores exactly");
+  for (int tick = 0; tick < 80; ++tick) {
+    w.tick(false);
+    restored.tick(false);
+  }
+  check(saved(w) == saved(restored),
+        "body growth, neural births and learning continue together after loading");
+  for (int tick = 0; tick < 512 && !individual(w, id).body.hatched; ++tick)
+    w.tick(false);
+  check(individual(w, id).body.hatched,
+        "the untrained genome acquires the motor commands needed to hatch");
+  auto limited = g;
+  limited.development_options.max_nodes = 1;
+  limited.compile(false);
+  Body failed;
+  failed.hatched = false;
+  failed.energy = 300;
+  advance_body(failed, limited, nullptr, {}, false);
+  const double paid = limited.blueprint->queries / QUERY_ENERGY_DIVISOR +
+                      field::DevelopmentCosts{}.egg_basal * PhysiologyParameters{}.neural_cost;
+  check(failed.age == 1 && std::abs(300 - failed.energy - paid) < 1e-9 && !failed.brain(),
+        "a failed plan pays queries and egg metabolism, without phantom construction");
+}
 void development_checkpoint_stages(const Genome &g) {
   constexpr std::size_t SLICE = 37;
   for (int stage = 0; stage < 3; ++stage) {
@@ -707,12 +684,10 @@ void checkpoint_continues_exactly(const Genome &g) {
 int main() {
   try {
     Genome::begin_run(SEED);
-    excitation_and_teaching_are_independent();
-    all_sources_can_form_first_contacts();
-    contact_formation_uses_genetic_strength_and_current_experience();
-    delayed_teaching_preserves_credit();
+    zero_start_learning_and_decay();
+    development_preserves_identity_and_reserves_capacity();
+    wiring_uses_two_inner_layers();
     ordered_retinal_neighbors_match_geometry();
-    wiring_costs_follow_formation_and_death();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     start_fish_uses_external_vision_after_hatching(g);
@@ -722,6 +697,7 @@ int main() {
     cut_marks_stay_on_their_piece();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
+    egg_development_checkpoint(g);
     development_finalization_uses_budget(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);

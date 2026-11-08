@@ -8,20 +8,20 @@ const {join} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "colony-core/field/contacts.hh" : "447d4337411ca283",
+  "colony-core/field/contacts.hh" : "a9bf193b8905f2a5",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "806dd25e151b5b85",
-  "colony-core/field/development.cc" : "d18cda7b54dbdaa5",
+  "colony-core/field/development.cc" : "ffcde0d621a59f05",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
-  "colony-core/field/substrate.cc" : "25dee6389064b7b8",
-  "src/body_plan.cc" : "52b9884578043b56",
+  "colony-core/field/substrate.cc" : "0c81c7512589e980",
+  "src/body_plan.cc" : "fea754ab4a6b866d",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
-  "src/physiology.cc" : "74ddaeb4842faac6",
+  "src/physiology.cc" : "e2cbcd514f6953cb",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
@@ -29,18 +29,18 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/ann/network.cc" : "92da225af4390594",
   "src/body_plan.hh" : "b1fb1d3a636c9111",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "c94c9f71c0f1194d",
+  "colony-core/field/substrate.hh" : "fff9f8b863b095a6",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
   "colony-core/cppn/activation.hh" : "1a716ab9154b8ecc",
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
-  "werkzeug/fischbau.cc" : "5021f793d40969bc",
+  "werkzeug/fischbau.cc" : "e4bfb1b8b73f3332",
   "ui/tissue.js" : "01cae94d3e8df2d6",
   "src/genome.hh" : "e7bb5c8f277ae2b4",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "d0168766edb9ae49",
+  "src/retina.cc" : "52ad87af678bd04f",
   "src/observations.cc" : "bf8face7a41ea741",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
@@ -50,22 +50,22 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "3c712910190f3cdc",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "85423d9fc741249f",
-  "src/hormone_analysis.cc" : "bb5d83c0e5d6ac53",
+  "src/brain_interface.hh" : "e809e3d97620a621",
+  "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "c5f58e8a94f276f0",
+  "src/interactive_brain.cc" : "75e9649b3369eaed",
   "src/material.hh" : "32c33b6291275e33",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
-  "src/body_state_limits.hh" : "607381fbc86a14a5",
+  "src/body_state_limits.hh" : "372294904588c948",
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
   "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
-  "colony-core/field/distribution.hh" : "9128e90facd2ea48",
-  "colony-core/field/retinal_tissue.hh" : "b10cc23891b6f20e",
-  "colony-core/field/dynamics.hh" : "6135673e69200226",
-  "colony-core/field/maturation.hh" : "359d1491732a3f4d"
+  "colony-core/field/distribution.hh" : "7e1ec374fd787792",
+  "colony-core/field/retinal_tissue.hh" : "7fce4ff037f33e69",
+  "colony-core/field/dynamics.hh" : "0d989a31a11f1202",
+  "colony-core/field/maturation.hh" : "2eb870dccc7e142c"
 });
 function semanticFingerprint(source) {
   const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');
@@ -95,13 +95,31 @@ function semanticFingerprint(source) {
     musclePlaces,
     nerveKind,
     nodeLimit,
-    organFunction
+    organFunction,
+    siteRole
   } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
     de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  {
+    const {NEURON, EFFECTOR, ORGAN_PORT} = await import('../ui/schema.js');
+    const {brainMotorActivity} = await import('../ui/brain_signals.js');
+    const {initialize : initializeBrain} = await import('../ui/brain.js');
+    initializeBrain([ 'brainClamp' ]);
+    const n = Array(NEURON.count).fill(0), e = Array(EFFECTOR.count).fill(0);
+    n[NEURON.index] = 0;
+    n[NEURON.state] = n[NEURON.activity] = .9;
+    n[NEURON.ready] = n[NEURON.functional] = 1;
+    e[EFFECTOR.port] = ORGAN_PORT.forward;
+    const d = {effectors : new Map([ [ 0, [ e ] ] ])};
+    assert.equal(brainMotorActivity(n, MOTOR_KIND.forward, d), 0,
+                 'Membrane activity alone never animates an organ');
+    n[NEURON.command] = .7;
+    assert.equal(brainMotorActivity(n, MOTOR_KIND.forward, d), .7,
+                 'The organ view follows its actual command');
+  }
   const model = {
     ...await import('../ui/studio/model/document.js'),
     ...await import('../ui/studio/model/assemblies.js')
@@ -400,7 +418,7 @@ function semanticFingerprint(source) {
     assert.ok(
         smellLinks.some(l => l.from === nosed.organId && l.to === bulbNode(bulbLeft, 'gather')));
     assert.ok(smellLinks.some(l => l.from === bulbNode(bulbLeft, 'compare') &&
-                                   l.to === bulbNode(bulbRight, 'out')));
+                                   l.to === bulbNode(bulbRight, 'gather')));
     const hind = model.addOrgan(model.newDocument('Flucht'), 'hindbrain', sites,
                                 geometry.sitePoint(bulbSite));
     const hindLeft = model.findOrgan(hind.document, hind.organId),
@@ -408,7 +426,7 @@ function semanticFingerprint(source) {
     assert.deepEqual(hindLeft.centers.map(c => c.node), [ 'alarm', 'command', 'cross' ]);
     assert.ok(regions.routedLinks(hind.document, sites)
                   .some(l => l.from === bulbNode(hindLeft, 'cross') &&
-                             l.to === bulbNode(hindRight, 'command')));
+                             l.to === bulbNode(hindRight, 'alarm')));
     const touchy = regions.updateRegion(hind.document, hind.organId, {threshold : 0}, sites);
     assert.ok(bulbNode(hindLeft, 'command') &&
               model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
@@ -621,7 +639,9 @@ function semanticFingerprint(source) {
   const profile = model.findOrgan(doc, id).field.profiles[0].id;
   doc = model.updateField(
       doc, id, {profile : {id : profile, q1 : -1, qwidth : .08, q2 : -1, threshold : -.8}}, sites);
-  const relay = model.addNeuron(doc, 'relay', sites, {x : 500, y : 365});
+  const retinalRelaySite = sites.find(s => s.zone === 2 && !s.outer && s.v < .5 && s.w === 0);
+  const relay = model.addNeuron(doc, 'relay', sites,
+                                geometry.sitePoint(retinalRelaySite, geometry.NERVE_ROLE));
   assert.ok(relay);
   doc = relay.document;
   const muscle = model.addOrgan(doc, 'muscle', sites, {x : 620, y : 450});
@@ -631,11 +651,18 @@ function semanticFingerprint(source) {
       model.connectSelections(doc, {kind : 'organ', id}, {kind : 'center', id : relay.centerId});
   assert.ok(linked);
   doc = linked.document;
-  linked = model.addWire(doc, relay.centerId, muscle.organId);
+  const retinalOutputSite = sites.find(s => s.zone === 2 && !s.outer && s.v >= .5 && s.w === 0);
+  const retinalOutputRelay = model.addNeuron(
+      doc, 'relay', sites, geometry.sitePoint(retinalOutputSite, geometry.NERVE_ROLE));
+  doc = model
+            .addWire(retinalOutputRelay.document, relay.centerId, retinalOutputRelay.centerId, null,
+                     sites)
+            .document;
+  linked = model.addWire(doc, retinalOutputRelay.centerId, muscle.organId, null, sites);
   assert.ok(linked);
   doc = linked.document;
   assert.equal(doc.wires[0].from, id);
-  assert.equal(doc.wires.length, 2, 'One semantic connection per pair of organs');
+  assert.equal(doc.wires.length, 3, 'Two inner layers carry the sensory path');
   assert.equal(model.addWire(doc, id, muscle.organId), null,
                'Sensor-to-motor shortcuts remain forbidden');
   const wires = structuredClone(doc.wires);
@@ -677,7 +704,7 @@ function semanticFingerprint(source) {
   assert.ok(withoutExtra.wires.every(w => w.from !== extraNode),
             'Wires of removed nodes go with them');
   assert.doesNotThrow(() => model.compileDocument(withoutExtra, sites));
-  assert.equal(model.removeOrgan(doc, id).wires.length, 1);
+  assert.equal(model.removeOrgan(doc, id).wires.length, 2);
   assert.equal(model.findOrgan(model.removeOrgan(doc, id), pair).pair, null);
   const baseDoc = doc;
   for (let i = 1; i < 5; i++) {
@@ -699,9 +726,9 @@ function semanticFingerprint(source) {
               p => model.findOrgan(denseNear.document, id).centers.some(c => c.profile === p.id)));
   model.validateDocument(denseNear.document);
   const module = {name : 'Vision', organs : doc.organs, wires : doc.wires};
-  const points =
-      module.organs.filter(o => o.centers.length)
-          .map(o => geometry.sitePoint(sites.find(s => s.id === o.centers[0].site), o.type));
+  const points = module.organs.filter(o => o.centers.length)
+                     .map(o => geometry.sitePoint(sites.find(s => s.id === o.centers[0].site),
+                                                  siteRole(o.type)));
   const position = {
     x : points.reduce((n, p) => n + p.x, 0) / points.length,
     y : points.reduce((n, p) => n + p.y, 0) / points.length
@@ -1475,10 +1502,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   {
     const eggs = model.addOrgan(model.newDocument('Ei'), 'eggs', sites, {x : 850, y : 365});
     assert.ok(eggs);
-    const relay = model.addNeuron(eggs.document, 'relay', sites, {x : 420, y : 340});
+    const gonadIn = sites.find(s => s.zone === 1 && !s.outer && s.v < .5 && s.w > 0);
+    const relay = model.addNeuron(eggs.document, 'relay', sites,
+                                  geometry.sitePoint(gonadIn, geometry.NERVE_ROLE));
     const out = model.addWire(relay.document, eggs.organId, relay.centerId);
     assert.ok(out, 'The fullness of a gonad can be wired on');
-    const trigger = model.addWire(out.document, relay.centerId, eggs.organId);
+    const gonadOut = sites.find(s => s.zone === 1 && !s.outer && s.v >= .5 && s.w > 0);
+    const outputRelay = model.addNeuron(out.document, 'relay', sites,
+                                        geometry.sitePoint(gonadOut, geometry.NERVE_ROLE));
+    const relayPath =
+        model.addWire(outputRelay.document, relay.centerId, outputRelay.centerId, null, sites);
+    const trigger =
+        model.addWire(relayPath.document, outputRelay.centerId, eggs.organId, null, sites);
     assert.ok(trigger);
     const organ = model.findOrgan(trigger.document, eggs.organId);
     const release = organ.centers.find(c => c.key === 'release');
@@ -1487,7 +1522,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const group = key => plan.groups.find(g => g.name === 'eggs:' + key);
     const targetGroups = plan.connections.map(e => plan.groups[e.to]);
     assert.ok(targetGroups.includes(group('release')), 'The trigger reaches the release');
-    assert.ok(!targetGroups.includes(group('growth')), 'The trigger leaves the growth alone');
+    assert.ok(targetGroups.includes(group('growth')), 'Inner secretion also needs a neural input');
     assert.equal(group('release').threshold, .9, 'A gonad keeps the rest set for it');
     const nose = model.addOrgan(model.newDocument('Nase'), 'nose', sites, {x : 150, y : 340});
     assert.ok(nose);
@@ -1788,7 +1823,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const settled = regionModel.updateRegion(exampleDoc, pallium.id, {}, sites);
     const learner = model.findOrgan(settled, pallium.id).centers.find(model.isLearner);
     const restyled = regionModel.updateRegion(
-        model.updateCenter(settled, learner.id, {qwidth : .7}), pallium.id, {style : 2}, sites);
+        model.updateCenter(settled, learner.id, {qwidth : .7}), pallium.id, {style : 0}, sites);
     const restyledLearner = model.findCenter(restyled, learner.id).center;
     assert.equal(restyledLearner.qwidth, .7, 'A new learning style keeps a hand-tuned rate');
     assert.notEqual(restyledLearner.mode, learner.mode);
@@ -1818,10 +1853,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                  'The alarm substance makes the muscles stronger');
     const chosen =
         {key : 'relay', role : 'nerve', sign : 1, mode : .9, qwidth : .35, receptors : []};
-    assert.ok(model.isLearner(chosen) && organsModel.nerveKind(chosen) === 'learn',
-              'A node counts as a learner wherever it is drawn as one');
-    assert.ok(!model.isLearner({...chosen, mode : 0}) && !model.isLearner({...chosen, qwidth : 0}),
-              'A node that neither leans nor has a teacher, or learns at no rate, does not learn');
+    assert.ok(model.isLearner(chosen) && organsModel.nerveKind(chosen) === 'relay',
+              'An adaptive relay participates in learning');
+    assert.ok(model.isLearner({...chosen, mode : 0}) && model.isLearner({...chosen, qwidth : 0}),
+              'Every inner cell participates in development, including the smallest learning rate');
     assert.ok(alarm.document.wires.some(
         w => w.to === alarm.organId ||
              w.to === model.findOrgan(alarm.document, alarm.organId).pair));

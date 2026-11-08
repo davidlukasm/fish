@@ -80,13 +80,14 @@ export function startDocument(source, sites, name) {
                        'pace', 'modulator', 'crossing', 'range'])
       center[key] = Math.max([ 'copies', 'tau', 'field', 'qwidth', 'range' ].includes(key) ? 0 : -1,
                              Math.min(key === 'copies' ? g.copies : 1, g[key]));
-    center.initial_strength = g.initial_strength;
+    center.electrical_limit = g.electrical_limit;
     center.learning_tau = g.learning_tau;
-    center.teaching_strength = g.teaching_strength;
+    center.teaching_limit = g.teaching_limit;
     center.distribution =
         Object.fromEntries(Object.entries(g).filter(([ key ]) => key.startsWith("spread_")));
     center.id = `start-cell-${index}`;
     center.receptors = structuredClone(entry.receptors);
+    center.growth = structuredClone(entry.growth);
     center.contact = [...entry.address ];
     organ.centers.push(center);
     imported.push(center);

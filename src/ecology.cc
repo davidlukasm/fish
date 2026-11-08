@@ -6,6 +6,7 @@
 #include "parallel.hh"
 #include "opencl.hh"
 #include "ecology_internal.hh"
+#include "field/contacts.hh"
 #include <istream>
 #include <ostream>
 #include <iomanip>
@@ -105,9 +106,10 @@ int planning_brains(const Ecosystem &w) {
 }
 std::size_t planned_edges(const Genome &g) {
   if (g.blueprint)
-    return g.blueprint->edges.size();
-  auto n = std::min(field::DEVELOPMENT_SITES, g.development_options.max_nodes);
-  return std::min(g.development_options.max_edges, n * n);
+    return field::connection_reservation(*g.blueprint);
+  auto n =
+      std::min(field::DEVELOPMENT_SITES * field::CELL_COPY_LIMIT, g.development_options.max_nodes);
+  return n * 512;
 }
 std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
   std::set<const field::Substrate *> seen;
@@ -118,13 +120,13 @@ std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
       total += g.blueprint->edges.size();
     else if (g.cppn && !g.blueprint &&
              pending.emplace(g.cppn.get(), g.development_seed, g.variation_seed).second)
-      total += planned_edges(g);
+      total += g.development_options.max_edges;
   };
   for (const auto &p : w.fish) {
     if (p.nutrient_egg)
       continue;
     keep(p.genome);
-    total += p.body.brain() ? p.body.brain()->slot_count() : planned_edges(p.genome);
+    total += p.body.brain() ? p.body.brain()->reserved_slots() : planned_edges(p.genome);
   }
   for (const auto &g : w.recent_deaths)
     if (g.second.blueprint)
@@ -348,6 +350,9 @@ void Ecosystem::tick(bool reproduce, bool protected_life, const Water *replay_wa
   }
   advance_bursts();
   develop_population();
+  for (auto &p : fish)
+    if (p.developing())
+      p.body.grow_brain(p.genome, physiology_, protected_life || p.body.immortal);
   mark(step_phase::development);
   field.motion_workers = workers;
   field.motion(replay_water);
@@ -522,7 +527,7 @@ void Ecosystem::revive_fish(std::uint64_t id) {
   Individual restored = *it;
   restore_life(restored);
   const std::size_t storage = connection_storage(*this, &restored.genome) +
-                              (restored.body.brain() ? restored.body.brain()->slot_count()
+                              (restored.body.brain() ? restored.body.brain()->reserved_slots()
                                                      : planned_edges(restored.genome));
   double reclaimed = 0;
   for (const auto &c : corpses)

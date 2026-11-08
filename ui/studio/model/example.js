@@ -23,7 +23,7 @@ const WIRES = Object.freeze([
   [ 'eye', 'tectum', 'crossed' ], [ 'nose', 'bulb' ], [ 'tectum', 'pallium' ],
   [ 'bulb', 'pallium' ], [ 'pallium', 'fin' ], [ 'pallium', 'tail' ], [ 'spinal', 'tail' ],
   [ 'lateral', 'hindbrain' ], [ 'hindbrain', 'fin' ], [ 'tectum', 'bite' ], [ 'bulb', 'suck' ],
-  [ 'pallium', 'bite' ], [ 'pallium', 'suck' ]
+  [ 'pallium', 'bite' ], [ 'pallium', 'suck' ], [ 'spinal', 'sperm' ], [ 'spinal', 'eggs' ]
 ]);
 const GROWTH_CELLS = Object.freeze({eggs : 11, sperm : 3});
 const SYSTEM_GLANDS = Object.freeze([ [ 'growth', 260, 351 ], [ 'reward', 470, 383 ] ]);
@@ -45,7 +45,7 @@ export function exampleDocument(names, sites, wheel) {
   for (const [key, x, y] of SYSTEM_GLANDS)
     doc = placeSystem(doc, key, sites, wheel, {x, y}, names[key])?.document ?? doc;
   for (const [from, to, pairing] of WIRES) {
-    const r = addWire(doc, placed[from], placed[to], pairing);
+    const r = addWire(doc, placed[from], placed[to], pairing, sites);
     if (r)
       doc = r.document;
   }

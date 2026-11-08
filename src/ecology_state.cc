@@ -136,7 +136,7 @@ void Ecosystem::validate_checkpoint_entities() const {
 }
 void Ecosystem::write(std::ostream &out) const {
   validate_checkpoint_entities();
-  out << std::setprecision(std::numeric_limits<double>::max_digits10) << "FISH_ECOSYSTEM_019\n"
+  out << std::setprecision(std::numeric_limits<double>::max_digits10) << "FISH_ECOSYSTEM_019_DEV\n"
       << ticks << ' ' << next_id << ' ' << metrics_.births << ' ' << metrics_.deaths << ' '
       << metrics_.rescues << ' ' << metrics_.imports << ' ' << observation_interval << ' '
       << population_limit << ' ' << safety << '\n';
@@ -448,7 +448,7 @@ void EnvironmentCheckpoint::read_energy_flow(std::istream &in, Field &field) {
 void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   std::string magic;
   value(in, magic);
-  if (magic != "FISH_ECOSYSTEM_019")
+  if (magic != "FISH_ECOSYSTEM_019_DEV")
     throw std::runtime_error("invalid aquarium checkpoint");
   fish.clear();
   remembered_dead.clear();

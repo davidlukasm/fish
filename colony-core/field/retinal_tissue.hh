@@ -36,18 +36,13 @@ inline std::vector<double> visual_bearings(const std::vector<Neuron> &cells) {
   }
   return angles;
 }
-struct RetinalCell {
-  NeuronIndex neuron;
-  std::array<std::uint32_t, retinal_dynamics::neighbors> neighbors{};
-  unsigned count = 0;
-  float position = 0, transverse = 0, excitability = 0;
-  double activity_decay = 0, recovery_decay = 0;
-};
-inline std::vector<RetinalCell> retinal_tissue(const std::vector<Neuron> &cells) {
+inline std::vector<RetinalCell> retinal_tissue(const std::vector<Neuron> &cells,
+                                               const std::vector<unsigned char> *active = nullptr) {
   const auto angles = visual_bearings(cells);
   std::vector<RetinalCell> retina;
   for (std::size_t i = 0; i < cells.size(); ++i)
-    if (cells[i].role == Role::Sensor && cells[i].functions.senses[Light] > 0) {
+    if ((!active || (*active)[i]) && cells[i].role == Role::Sensor &&
+        cells[i].functions.senses[Light] > 0) {
       const auto &cell = cells[i];
       const double tau = time_constant_steps(cell.parameters);
       retina.push_back({NeuronIndex(i),

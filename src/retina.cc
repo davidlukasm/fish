@@ -295,6 +295,31 @@ void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float>
   }
 }
 void prepare_retinal_cache(BrainInterface &binding) {
+  binding.visual_intervals.clear();
+  for (auto &v : binding.eye_intervals)
+    v.clear();
+  for (const auto &ray : binding.visual[0]) {
+    const auto &r = binding.sensory[ray.second];
+    const std::pair<double, double> interval{r.view_left, r.view_right};
+    binding.visual_intervals.push_back(interval);
+    for (int side = 0; side < 2; ++side)
+      if ((r.lateral >= 0) == (side == 1) || std::abs(r.angle) < DEFAULT_BINOCULAR_ANGLE)
+        binding.eye_intervals[side].push_back(interval);
+  }
+  auto unite = [](auto &views) {
+    std::sort(views.begin(), views.end());
+    std::size_t spans = 0;
+    for (const auto &v : views) {
+      if (spans && v.first <= views[spans - 1].second)
+        views[spans - 1].second = std::max(views[spans - 1].second, v.second);
+      else
+        views[spans++] = v;
+    }
+    views.resize(spans);
+  };
+  unite(binding.visual_intervals);
+  for (auto &v : binding.eye_intervals)
+    unite(v);
   for (auto &cells : binding.retinal_neighbors)
     cells.clear();
   for (const auto &ray : binding.visual[0]) {

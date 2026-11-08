@@ -46,11 +46,10 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
         << b.reproduction().egg_role << ' ' << b.reproduction().spawn_signal << ' '
         << b.reproduction().readiness << ' ' << b.reproduction().contact << ' '
         << b.ledger().movement_cost << ' ' << b.ledger().brain_cost << ' '
-        << b.ledger().development_cost << ' ' << b.ledger().construction_paid << ' '
-        << b.ledger().queries_paid << ' ' << b.anchored << ' ' << b.reproduction().sperm_signal
-        << ' ' << b.eat_signal << ' ' << b.reproduction().egg_readiness << ' '
-        << b.reproduction().sperm_readiness << ' ' << b.eggs_eaten << ' ' << b.color[0] << ' '
-        << b.color[1] << ' ' << b.color[2] << '\n';
+        << b.ledger().development_cost << ' ' << b.ledger().queries_paid << ' ' << b.anchored << ' '
+        << b.reproduction().sperm_signal << ' ' << b.eat_signal << ' '
+        << b.reproduction().egg_readiness << ' ' << b.reproduction().sperm_readiness << ' '
+        << b.eggs_eaten << ' ' << b.color[0] << ' ' << b.color[1] << ' ' << b.color[2] << '\n';
     out << b.fatal_cause << ' ' << b.tissue << ' ' << b.health << ' ' << b.motor().vx << ' '
         << b.motor().vy << ' ' << b.motor().thrust << ' ' << b.motor().torque << ' '
         << b.motor().aggression << ' ' << b.motor().defense << ' ' << b.motor().combat_cost << ' '

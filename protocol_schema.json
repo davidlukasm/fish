@@ -1,5 +1,5 @@
 {
-  "version": 25,
+  "version": 26,
   "atelier_plan": {
     "group": [
       "zone",
@@ -27,9 +27,9 @@
       "range",
       "organ",
       "open",
-      "initial_strength",
+      "electrical_limit",
       "learning_tau",
-      "teaching_strength",
+      "teaching_limit",
       "spread_physiology",
       "spread_receptors",
       "spread_development",
@@ -667,8 +667,6 @@
       "signal",
       "parameters",
       "usable",
-      "role_margin",
-      "role_gain",
       "zone",
       "sender",
       "receiver",
@@ -679,14 +677,24 @@
       "expression",
       "search_width",
       "crossing",
-      "range"
+      "range",
+      "life",
+      "development",
+      "growth_response",
+      "electrical_limit",
+      "teaching_limit",
+      "command"
     ],
     "neuron_state": [
       "activity",
       "ready",
       "muted",
       "state",
-      "signal"
+      "signal",
+      "life",
+      "development",
+      "growth_response",
+      "command"
     ],
     "neuron_parameter": [
       "threshold",
@@ -696,7 +704,6 @@
       "quality_width",
       "field_width",
       "time_constant",
-      "dendrites",
       "plasticity",
       "learning_time"
     ],
@@ -746,7 +753,8 @@
       "source",
       "target",
       "strength",
-      "id"
+      "id",
+      "limit"
     ],
     "stroke": [
       "mean",

@@ -79,7 +79,7 @@ inline Plan import_plan(const fishsim::Genome &genome) {
       g.pace = values[out::identity3];
       g.modulator = values[out::identity4];
     }
-    g.initial_strength = values[out::synapse_strength];
+    g.electrical_limit = (values[out::synapse_strength] + 1) * .5f;
     g.spread_physiology = std::clamp(values[out::spread_physiology], 0.f, 1.f);
     g.spread_receptors = std::clamp(values[out::spread_receptors], 0.f, 1.f);
     g.spread_development = std::clamp(values[out::spread_development], 0.f, 1.f);
@@ -88,7 +88,7 @@ inline Plan import_plan(const fishsim::Genome &genome) {
     property_query.property = cppn::property::learning;
     g.learning_tau = (net.query_view(property_query)[out::time_constant] + 1) * .5f;
     property_query.property = cppn::property::teaching;
-    g.teaching_strength = net.query_view(property_query)[out::synapse_strength];
+    g.teaching_limit = (net.query_view(property_query)[out::synapse_strength] + 1) * .5f;
     for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
       auto query = at;
       query.field = float(f) / (field::CONTACT_FIELDS - 1);
@@ -108,6 +108,8 @@ inline Plan import_plan(const fishsim::Genome &genome) {
     g.range = (values[out::range] + 1) * .5f;
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
       g.receptors[effect] = import_receptor(cell.hormone_receptors[effect], at, effect, net);
+    g.growth = import_receptor(cell.development_receptor, at, field::GROWTH_RECEPTOR, net);
+    g.growth.active = true;
     plan.groups.push_back(std::move(g));
   }
   // A blueprint describes the contact field, including candidates not drawn by this seed.
@@ -140,7 +142,9 @@ inline void write_import(std::ostream &out, const Plan &plan) {
       for (float spread : g.reception_spread[f])
         out << ',' << spread;
     }
-    out << "],\"receptors\":[";
+    out << "],\"growth\":";
+    studio_plan::write_receptor(out, g.growth);
+    out << ",\"receptors\":[";
     for (std::size_t i = 0; i < g.receptors.size(); ++i) {
       out << (i ? "," : "");
       studio_plan::write_receptor(out, g.receptors[i]);

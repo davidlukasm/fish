@@ -53,7 +53,7 @@ int main() {
     g.copies = 4;
     g.tau = .1f;
     g.learning_tau = field::encode_learning_steps(128);
-    g.teaching_strength = .6f;
+    g.teaching_limit = .6f;
     g.spread_physiology = .04f;
     g.spread_contacts = .03f;
     g.receptors[field::Teaching] = {true, 0, 1, .1f, .2f, 0, 1};
@@ -78,10 +78,10 @@ int main() {
       assert(a.reception[0].address == same.blueprint->neurons[i].reception[0].address);
       if (a.group == 0) {
         assert(std::abs(a.parameters.learning_time - g.learning_tau) <= g.spread_physiology + 1e-6);
-        assert(std::abs(a.initial_teaching - .8f) <= g.spread_contacts + 1e-6);
+        assert(std::abs(a.teaching_limit - .6f) <= g.spread_contacts + 1e-6);
         assert(a.parameters.time_constant < .15f);
       }
-      assert(a.initial_weight >= 0 && a.initial_weight <= field::MAX_INITIAL_WEIGHT);
+      assert(a.electrical_limit >= 0 && a.electrical_limit <= field::MAX_CONTACT_LIMIT);
       different |= a.bias != other.blueprint->neurons[i].bias;
       if (i && a.group == first.blueprint->neurons[i - 1].group)
         within_centre |= a.bias != first.blueprint->neurons[i - 1].bias;
@@ -125,6 +125,7 @@ int main() {
   {
     auto plan = cells(1);
     auto &r = plan.groups.front().receptors;
+    plan.groups.front().growth = {true, .1f, .7f, .2f, 0, field::MATURITY_SUBSTANCE, 2};
     r[field::Excitation] = {true, -.2f, .4f, .1f, 0, 0, 1};
     r[field::Teaching] = {true, .1f, -.7f, .2f, 0, 1, 2};
     r[field::Learning] = {true, .3f, .5f, .4f, 0, 2, 0};
@@ -133,6 +134,8 @@ int main() {
     g.compile(false);
     assert(assess(plan, g).ok());
     const auto imported = import_plan(g);
+    assert(std::abs(imported.groups.front().growth.baseline - .1f) < 1e-5);
+    assert(imported.groups.front().growth.substance == field::MATURITY_SUBSTANCE);
     for (const int effect : {field::Excitation, field::Teaching, field::Learning}) {
       const auto &before = r[effect], &after = imported.groups.front().receptors[effect];
       assert(after.active && before.substance == after.substance);
@@ -316,6 +319,7 @@ int main() {
     g.copies = 4;
     g.threshold = 0;
   }
+  p.groups[3].v0 = p.groups[3].v1 = 1;
   p.connections = {{0, 3, 0, 0}, {1, 3, 1, 0}};
   const auto fit = plan_addresses(p);
   fishsim::Genome g;

@@ -7,6 +7,7 @@ namespace field {
 using TraitValues = std::array<float, cppn::OUTPUTS>;
 struct CellTraits {
   TraitValues cell{}, learning{}, teaching{};
+  TraitValues growth{};
   std::array<TraitValues, HORMONE_EFFECTS> receptors{};
 };
 inline constexpr std::uint64_t TRAIT_STREAM = 0x8d58ac26afe12e47ull;
