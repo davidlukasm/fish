@@ -3,6 +3,7 @@ import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../
 import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS} from '../../schema.js';
 import {centerIndex, groupReport} from '../model/document.js';
+import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
@@ -15,10 +16,7 @@ export function gonadStore(state, organ) {
     return null;
   const cells = kind => organ.centers.filter(c => c.key === kind);
   const drive = kind => cells(kind).reduce(
-      (sum, c) =>
-          sum +
-          c.copies / ATELIER_LIMITS.max_copies *
-              Math.max(0, state.runtime?.groups[centerIndex(state.document, c.id)]?.command ?? 0),
+      (sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies * Math.max(0, organCommand(state, c)),
       0);
   const growth = cells('growth').length, motors = organ.centers.filter(c => c.role === 'motor');
   const room = Math.min(own.most, own.perCell * motors.length), fill = drive('growth');

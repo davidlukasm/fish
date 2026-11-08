@@ -83,12 +83,12 @@ export const trialMethods = {
       return;
     if (!builtAsDrawn(this.state))
       return this.notice(label('status.needsCompiledProbe'));
-    const requested =
-        new Set([...this.playingPulses().flatMap(pulse => pulse.centers), ...centerIds ]);
+    const requested = new Set(centerIds);
     const groups = allCenters(this.state.document)
                        .flatMap((center, index) => requested.has(center.id) ? [ index ] : []);
     if (!groups.length)
       return;
+    const request = ++this.neuralRequestSerial;
     const {document, genome, tool} = this.state;
     const context = neuralContextOf(this.state);
     try {
@@ -102,14 +102,15 @@ export const trialMethods = {
                                     }),
                                     API_WAIT.long);
       // The answer is for the fish as it was asked about, in the tool that asked.
-      if (this.state.document !== document || this.state.genome !== genome ||
-          this.state.tool !== tool || neuralContextOf(this.state) !== context)
+      if (this.neuralRequestSerial !== request || this.state.document !== document ||
+          this.state.genome !== genome || this.state.tool !== tool ||
+          neuralContextOf(this.state) !== context)
         return;
       this.state.runtime = result.runtime;
       this.refreshInspector();
       this.refreshHeader();
       if (pulse && result.stimulated)
-        this.playPulse(centerIds, result.frames);
+        this.playPulse(result.frames);
       else
         this.refreshScene();
       this.notice(label(pulse && !result.stimulated ? 'status.noActiveProbe' : 'status.probed'));
@@ -133,9 +134,12 @@ export const trialMethods = {
     else
       return;
     this.stopPulse();
+    ++this.neuralRequestSerial;
     this.state.neuralContext = next;
     this.state.measurement = this.state.runtime = this.state.stimulus = null;
+    this.refreshHeader();
     this.refreshViews();
+    this.refreshGraphics();
   },
   async sampleNeuralState() {
     if (!builtAsDrawn(this.state))
@@ -147,42 +151,48 @@ export const trialMethods = {
   async measure() {
     if (!this.state.sites.length || !builtAsDrawn(this.state))
       return;
-    const {document, genome} = this.state, context = neuralContextOf(this.state);
+    const request = ++this.neuralRequestSerial;
+    const {document, genome, tool} = this.state, context = neuralContextOf(this.state);
+    const substance = shownSubstance(document, this.state.focusSubstance)?.index,
+          level = this.state.measureLevel;
     try {
-      const result =
-          await this.api(requestBody('measure', {
-                           genome,
-                           plan : compileDocument(document, this.state.sites),
-                           substance : shownSubstance(document, this.state.focusSubstance)?.index,
-                           level : this.state.measureLevel,
-                           steps : ATELIER_LIMITS.max_measure_steps,
-                           context
-                         }),
-                         API_WAIT.long);
-      if (this.state.document !== document || this.state.genome !== genome ||
+      const result = await this.api(requestBody('measure', {
+                                      genome,
+                                      plan : compileDocument(document, this.state.sites),
+                                      substance,
+                                      level,
+                                      steps : ATELIER_LIMITS.max_measure_steps,
+                                      context
+                                    }),
+                                    API_WAIT.long);
+      if (this.state.measureLevel !== level ||
+          shownSubstance(this.state.document, this.state.focusSubstance)?.index !== substance ||
+          this.neuralRequestSerial !== request || this.state.tool !== tool ||
+          this.state.document !== document || this.state.genome !== genome ||
           neuralContextOf(this.state) !== context)
         return;
       this.state.measurement = result;
       this.state.runtime = result.runtime;
+      this.refreshHeader();
       this.refreshLibrary();
       this.refreshViews();
     } catch (error) {
       this.notice(error.message);
     }
   },
-  playPulse(centerIds, frames) {
+  playPulse(frames) {
     this.stopPulse();
     const centers = allCenters(this.state.document);
     if (!frames?.length)
       return;
-    const stimulus = {real : true, fired : new Set(), quieted : new Set()};
+    const stimulus = {fired : new Set(), quieted : new Set()};
     this.state.stimulus = stimulus;
     this.refreshScene();
     const clear = () => {
       for (const element of this.bodyMap()?.querySelectorAll(
-               '.aid-pulse-active,.aid-pulse-quieting,.aid-pulse-twitch') ??
+               '.aid-pulse-active,.aid-pulse-quieting') ??
            [])
-        element.classList.remove('aid-pulse-active', 'aid-pulse-quieting', 'aid-pulse-twitch');
+        element.classList.remove('aid-pulse-active', 'aid-pulse-quieting');
     };
     const show = frame => {
       clear();
@@ -201,11 +211,11 @@ export const trialMethods = {
         element.classList.add(value > 0 ? 'aid-pulse-active' : 'aid-pulse-quieting');
     };
     const player = createProbePlayer(frames, show, clear);
-    this.pulsePlayers = [ {player, centers : centerIds} ];
+    this.pulsePlayer = player;
     player.start();
   },
-  playingPulses() { return this.pulsePlayers.filter(pulse => pulse.player.running());},
   clearStimulus() {
+    ++this.neuralRequestSerial;
     this.stopPulse();
     if (!this.state.stimulus)
       return;
@@ -213,8 +223,7 @@ export const trialMethods = {
     this.refreshScene();
   },
   stopPulse() {
-    for (const {player} of this.pulsePlayers)
-      player.stop();
-    this.pulsePlayers = [];
+    this.pulsePlayer?.stop();
+    this.pulsePlayer = null;
   }
 };

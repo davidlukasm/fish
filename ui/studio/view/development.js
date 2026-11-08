@@ -1,6 +1,6 @@
 import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
-import {centerIndex, receptorResponse} from '../model/document.js';
+import {probeRuntime, receptorResponse, wiredCrossing} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
 import {formatNumber, percent} from '../../strings.js';
@@ -20,22 +20,17 @@ const substanceTitle = (state, index) =>
 const input = (name, value, min, max, step, attributes) =>
     '<label>' + escapeText(name) + '<input type="number" min="' + min + '" max="' + max +
     '" step="' + step + '" value="' + value + '" ' + attributes + '></label>';
-export function runtimeSummary(state, center = null) {
-  if (!state.runtime)
+export function runtimeSummary(state) {
+  if (!probeRuntime(state))
     return '';
-  const runtime = state.runtime,
-        own = center && runtime.groups[centerIndex(state.document, center.id)];
+  const runtime = probeRuntime(state);
   const life = [ 0, 0, 0 ];
-  for (const group of own ? [ own ] : runtime.groups)
+  for (const group of runtime.groups)
     group.life.forEach((count, index) => life[index] += count);
   const row = (key, value) => '<div><dt>' + word(key) + '</dt><dd>' + value + '</dd></div>';
   const details =
-      own ? row(center.role === 'motor' ? 'command' : 'signal', fixed(own.signal)) +
-                row('progress', percent(own.development))
-          : row('contacts',
-                formatNumber(runtime.contacts.reduce((sum, edge) => sum + edge[2], 0))) +
-                row('weightChange', fixed(runtime.weightChange, 5)) +
-                row('decay', fixed(runtime.decay, 5));
+      row('contacts', formatNumber(runtime.contacts.reduce((sum, edge) => sum + edge[2], 0))) +
+      row('weightChange', fixed(runtime.weightChange, 5)) + row('decay', fixed(runtime.decay, 5));
   return '<p class="aid-runtime-at">' + word('sampleAt') + ' ' + runtime.context.steps + ' · ' +
          word('maturity') + ' ' + percent(runtime.context.maturity) + '</p>' +
          '<p class="aid-runtime-at">' +
@@ -44,27 +39,33 @@ export function runtimeSummary(state, center = null) {
                       escapeText(substanceTitle(state, index)) + ': ' + percent(level))
              .join(' · ') +
          '</p>' +
-         '<dl class="aid-runtime-summary">' + row('precursor', formatNumber(life[0])) +
+         '<dl class="aid-parameter-readout">' + row('precursor', formatNumber(life[0])) +
          row('active', formatNumber(life[1])) + row('dead', formatNumber(life[2])) + details +
-         '</dl>' + (!own ? '<p class="aid-hint">' + word('snapshotLegend') + '</p>' : '');
+         '</dl>';
 }
 export function neuralContextControls(state) {
   const context = neuralContextOf(state);
   const control = (key, name, value, min, max, step) =>
       input(name, value, min, max, step, 'data-neural-context="' + key + '"');
-  return '<details class="aid-neural-context" open><summary>' + word('preview') + '</summary>' +
-         '<p class="aid-hint">' + word('previewConditions') +
+  const probe = state.tool === 'stimulate'
+                    ? '<section class="aid-compiled-probe"><h4>' + word('compiledProbe') +
+                          '</h4><p class="aid-hint">' + word('probeMeaning') + '</p>' +
+                          control('developmentSteps', word('steps'), context.developmentSteps, 0,
+                                  ATELIER_LIMITS.max_development_steps, 1) +
+                          '<button class="aid-secondary" data-run-neural' +
+                          (builtAsDrawn(state) ? '' : ' disabled') + '>' + word('calculate') +
+                          '</button>' + runtimeSummary(state) + '</section>'
+                    : '';
+  return '<details class="aid-neural-context"><summary>' + word('preview') +
+         '</summary><p class="aid-hint">' + word('previewConditions') +
          '</p><div class="aid-parameter-grid">' +
-         control('developmentSteps', word('steps'), context.developmentSteps, 0,
-                 ATELIER_LIMITS.max_development_steps, 1) +
          control('maturity', word('maturity'), context.maturity, 0, 1, .01) +
          context.hormones
              .map((level, index) =>
                       control(String(index), substanceTitle(state, index), level, 0, 1, .01))
              .join('') +
-         '</div><button class="aid-secondary" data-run-neural' +
-         (builtAsDrawn(state) ? '' : ' disabled') + '>' + word('calculate') + '</button>' +
-         runtimeSummary(state) + '</details>';
+         input(word('exampleInput'), state.previewInput ?? 1, -1, 1, .01, 'data-preview-input') +
+         '</div>' + probe + '</details>';
 }
 export function lifecycleGraphic(state, center) {
   if (!state.capabilities)
@@ -114,9 +115,9 @@ export function cellDevelopment(state, center) {
   const receptor = (key, min, max, step) =>
       input(word(key), growth[key], min, max, step,
             'data-cell-growth="' + id + '" data-growth-key="' + key + '"');
-  const property = (key, value, min, max, step) =>
-      input(word(key), value, min, max, step,
-            'data-cell-trait="' + id + '" data-trait-key="' + key + '"');
+  const property = (key, value, min, max, step, disabled = false) => input(
+      word(key), value, min, max, step,
+      'data-cell-trait="' + id + '" data-trait-key="' + key + '"' + (disabled ? ' disabled' : ''));
   const options = Array
                       .from({length : HORMONES.levels + 1},
                             (_, index) => '<option value="' + index + '"' +
@@ -142,6 +143,14 @@ export function cellDevelopment(state, center) {
                             Math.pow(state.capabilities.neural.slotSpan, center.field)),
                  state.capabilities.neural.slotMin,
                  state.capabilities.neural.slotMin * state.capabilities.neural.slotSpan, 1);
+  if (center.role !== 'motor' && state.capabilities) {
+    const crossing = wiredCrossing(state.document, center, state.sites);
+    parameters +=
+        property('range',
+                 state.capabilities.reachLeast + (1 - state.capabilities.reachLeast) * center.range,
+                 state.capabilities.reachLeast, 1, .01) +
+        property('crossing', crossing ?? center.crossing, -1, 1, .01, crossing !== null);
+  }
   if (center.role !== 'sensor')
     parameters += property('threshold', center.threshold, -1, 1, .01) +
                   property('electrical_limit', center.electrical_limit, 0, 1, .01);
@@ -163,8 +172,8 @@ export function cellDevelopment(state, center) {
           .join('');
   return '<section class="aid-cell-development"><h4>' + word('title') + '</h4>' +
          lifecycleGraphic(state, center) + '<p class="aid-hint">' + word('explanation') + '</p>' +
-         runtimeSummary(state, center) + '<details><summary>' + word('birthReceptor') +
-         '</summary>' + birth + '<p class="aid-hint">' + word('birthDefault') + '</p></details>' +
+         '<details><summary>' + word('birthReceptor') + '</summary>' + birth +
+         '<p class="aid-hint">' + word('birthDefault') + '</p></details>' +
          '<details><summary>' + word('parameters') + '</summary><div class="aid-parameter-grid">' +
          parameters + '</div></details>' +
          '<details><summary>' + word('variation') + '</summary><div class="aid-parameter-grid">' +

@@ -37,11 +37,6 @@ export function developAction(state) {
 export const zoomStamp = camera => percent(camera.zoom);
 function cellStatus(state) {
   const {report, stale, anatomy} = state;
-  if (state.runtime && !stale)
-    return t('studio.app.runtimeCount', {
-      cells : state.runtime.active,
-      contacts : state.runtime.contacts.reduce((sum, row) => sum + row[2], 0)
-    });
   if (report && !stale)
     return t('studio.app.developedCount', {cells : report.neurons, contacts : report.synapses});
   return Number.isFinite(anatomy?.neurons) ? t('studio.app.plannedCount', {cells : anatomy.neurons})

@@ -24,6 +24,7 @@ import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, neuralContextControls, neuralContextOf} from './development.js';
 import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
+import {contactPlan} from './contact_plan.js';
 
 const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20});
 export const learnRatePatch = fx => ({qwidth : trackShare(fx * TRACKS.width, TRACKS.range)});
@@ -77,7 +78,7 @@ function learningRule(state, center) {
          '</span><span>' + label('learnRule.postsynaptic') + '</span><strong>→ ' +
          label('learnRule.traceLength') + '</strong></div>' +
          '<p class="aid-hint">' + label('learnRule.localPrediction') +
-         '</p><dl class="aid-runtime-summary">' + row('effectiveRate', fixed(eta, 4)) +
+         '</p><dl class="aid-parameter-readout">' + row('effectiveRate', fixed(eta, 4)) +
          row('mode', label('inspector.' + modeName(cl.mode))) +
          row('probation',
              Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) + ' ' +
@@ -235,7 +236,7 @@ function nodeChoice(state, chosen) {
 }
 export function learningInspector(state) {
   const selected = state.selected, doc = state.document;
-  const chosen = chosenCenter(doc, selected);
+  const chosen = chosenCenter(doc, selected, state.visionProfile);
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
@@ -259,5 +260,5 @@ export function learningInspector(state) {
                             [ label('inspector.cancelling'), label('inspector.competing') ],
                             {middle : label('inspector.neutral')}) +
                      substancePart(state, chosen, HORMONE_EFFECT.competition)) +
-         cellDevelopment(state, chosen);
+         cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }

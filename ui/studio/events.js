@@ -532,10 +532,17 @@ export const FISH_CHANGES = Object.freeze([
     patch[e.dataset.growthKey] = Number(e.value);
     keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowth, patch));
   } ],
+  [ 'previewInput', (studio, e) => {
+    const value = Number(e.value);
+    if (!Number.isFinite(value)) return;
+    studio.state.previewInput = Math.max(-1, Math.min(1, value));
+    studio.refreshViews();
+    studio.refreshGraphics();
+  } ],
   [ 'cellTrait', (studio, e) => {
     const key = e.dataset.traitKey, entered = Number(e.value), neural = studio.state.capabilities.neural;
     const value = key === 'tau' ? timeConstantOf(entered) : key === 'learning_tau' ? learningTimeOf(entered)
-        : key === 'field' ? Math.log(Math.max(neural.slotMin, entered) / neural.slotMin) / Math.log(neural.slotSpan) : entered;
+        : key === 'field' ? Math.log(Math.max(neural.slotMin, entered) / neural.slotMin) / Math.log(neural.slotSpan) : key === 'range' ? (entered-studio.state.capabilities.reachLeast)/(1-studio.state.capabilities.reachLeast) : entered;
     const patch = {};
     patch[key] = value;
     keep(studio, updateCenter(studio.state.document, e.dataset.cellTrait, patch));

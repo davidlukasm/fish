@@ -9,7 +9,6 @@ import {routedLinks} from '../model/regions.js';
 import {EFFECT_ORDER} from './effects.js';
 import {substanceColor} from '../../hormones.js';
 import {
-  allCenters,
   boundEffects,
   birthAffinity,
   effectDirection,
@@ -285,7 +284,6 @@ function hormoneMarks(state, skip = null) {
                    : row(organLocation(organ, sites, doc), cellMarks(state, organ.centers, skip)))
       .join('');
 }
-const MEASURED_CHANGE = .01;
 export function hormoneRoles(state) {
   const roles = new Map(), index = shownSubstance(state.document, state.focusSubstance)?.index;
   const wheel = state.capabilities;
@@ -295,13 +293,5 @@ export function hormoneRoles(state) {
     roles.set(c.id, 'receives');
   for (const c of producers(state.document, index, wheel))
     roles.set(c.id, 'produces');
-  const m = state.measurement;
-  if (m?.substance === index)
-    allCenters(state.document).forEach((c, k) => {
-      if (Math.abs(m.groups[k]) > MEASURED_CHANGE)
-        roles.set(c.id, m.groups[k] > 0 ? 'raised' : 'lowered');
-      if (m.dead[k])
-        roles.set(c.id, 'dies');
-    });
   return roles;
 }

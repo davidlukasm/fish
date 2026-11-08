@@ -6,6 +6,7 @@ import {
   allCenters,
   contactBundle,
   contactRows,
+  probeRuntime,
   endpointCenters,
   findAssembly,
   findOrgan,
@@ -477,13 +478,14 @@ export function developedContactsSvg(state, centers) {
                             channel.kind + '" stroke="' +
                             (WIRE_KINDS[channel.kind]?.colour ?? C.neutral) + '" stroke-width="' +
                             fixed(width) + '"' +
-                            (state.runtime && channel.mean === 0 ? ' stroke-dasharray="3 4"' : '') +
+                            (probeRuntime(state) && channel.mean === 0 ? ' stroke-dasharray="3 4"'
+                                                                       : '') +
                             ' marker-end="url(#' + arrow + ')"/>';
                    })
                    .join('') +
                '<title>' + escapeText(joinParts([
                  linkText(centerTitle(a.center), centerTitle(b.center)),
-                 t(state.runtime ? 'studio.app.contactCount' : 'studio.app.proposalCount',
+                 t(probeRuntime(state) ? 'studio.app.contactCount' : 'studio.app.proposalCount',
                    {n : count})
                ])) +
                '</title></g>';

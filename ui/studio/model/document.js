@@ -217,7 +217,8 @@ export const allCenters = doc =>
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
-export const contactRows = state => state.runtime?.contacts ?? state.report?.contacts ?? [];
+export const probeRuntime = state => state.tool === 'stimulate' ? state.runtime : null;
+export const contactRows = state => probeRuntime(state)?.contacts ?? state.report?.contacts ?? [];
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
@@ -1101,12 +1102,16 @@ function wireLinks(doc, wire) {
          : wire.pairing === 'crossed' ? crossed
                                       : [...same, ...crossed ];
 }
-export function wireContacts(doc, wire, contacts) {
-  const index = new Map(allCenters(doc).map((c, i) => [c.id, i]));
-  const pairs = new Set(wireLinks(doc, wire).flatMap(
+export function wireContactPairs(doc, wire) {
+  const index = new Map(allCenters(doc).map((center, i) => [center.id, i]));
+  return new Set(wireLinks(doc, wire).flatMap(
       link => senderNodes(doc, link.from)
-                  .flatMap(a => hearerNodes(doc, link.to)
-                                    .map(b => index.get(a.id) + ':' + index.get(b.id)))));
+                  .flatMap(source => hearerNodes(doc, link.to)
+                                         .map(target => index.get(source.id) + ':' +
+                                                        index.get(target.id)))));
+}
+export function wireContacts(doc, wire, contacts) {
+  const pairs = wireContactPairs(doc, wire);
   const sum =
       {count : 0, weight : 0, positive : 0, negative : 0, positiveWeight : 0, negativeWeight : 0};
   for (const bundle of contacts.map(contactBundle))
@@ -1131,9 +1136,12 @@ export const expandedWires = doc =>
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
 }
-export const chosenCenter = (doc, item) => ['center', 'organ'].includes(item?.kind)
-                                               ? endpointCenters(doc, item.id)[0] ?? null
-                                               : null;
+export function chosenCenter(doc, item, profile = null) {
+  if (!['center', 'organ'].includes(item?.kind))
+    return null;
+  const centers = endpointCenters(doc, item.id);
+  return centers.find(center => center.profile === profile) ?? centers[0] ?? null;
+}
 const senderNodes = (doc, id) => endpointCenters(doc, id).filter(c => c.role !== 'motor');
 function hearerNodes(doc, id) { return endpointCenters(doc, id).filter(c => c.role !== 'sensor'); }
 export function selectionCenters(doc, item) {
@@ -1241,7 +1249,9 @@ export function assemblyCenters(doc, assembly) {
                 : findOrgan(doc, id)?.centers.map(c => c.id) ?? []);
 }
 export const wiredCrossing = (doc, center, sites) =>
-    senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc));
+    fixedContactMap(doc)
+        ? null
+        : senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc));
 function sidesOf(doc) {
   const sides = new Map();
   for (const organ of doc.organs) {
@@ -1268,6 +1278,8 @@ export const contactTopology = doc => JSON.stringify({
   centers : allCenters(doc).map(c => [c.id, c.site]),
   wires : doc.wires.map(w => [w.from, w.to, w.pairing, w.spread])
 });
+export const fixedContactMap = doc => doc.source?.topology === contactTopology(doc) &&
+                                      allCenters(doc).every(center => center.contact);
 export const validCellLink = (a, sa, b, sb) =>
     !!sa && !!sb &&
     ((a.role === 'sensor' && b.role === 'nerve') ||
@@ -1276,7 +1288,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
   const indices = new Map(centers.map((c, i) => [c.id, i]));
-  const fixed = doc.source?.topology === contactTopology(doc) && centers.every(c => c.contact);
+  const fixed = fixedContactMap(doc);
   const sides = sidesOf(doc);
   const connections = [];
   const bundles = new Map();

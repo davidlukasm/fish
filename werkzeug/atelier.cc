@@ -803,13 +803,18 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
     if (group[e.source] >= 0 && group[e.target] >= 0) {
       auto &v = contacts[{group[e.source], group[e.target]}];
       ++v.count;
-      v.weight += e.weight;
-      if (e.weight > 0) {
+      const auto &source = t.neurons[e.source], &target = t.neurons[e.target];
+      const auto cl = field::cell_class(source);
+      const float modulation = target.role == field::Role::Nerve ? cl.modulator : 0;
+      const float limit = cl.sign * ((1 - modulation) * target.electrical_limit +
+                                     modulation * target.teaching_limit);
+      v.weight += limit;
+      if (cl.sign > 0) {
         ++v.positive;
-        v.positive_weight += e.weight;
-      } else if (e.weight < 0) {
+        v.positive_weight += limit;
+      } else {
         ++v.negative;
-        v.negative_weight += e.weight;
+        v.negative_weight += limit;
       }
     }
   bool first = true;
@@ -943,6 +948,7 @@ int main(int argc, char **argv) {
                 << ",\"prune\":" << field::plasticity::prune_share * field::SYNAPSE_UNIT
                 << ",\"developmentInterval\":" << field::CELL_DEVELOPMENT_INTERVAL
                 << ",\"slotMin\":" << field::SLOTS_MIN << ",\"slotSpan\":" << field::SLOTS_RANGE
+                << ",\"contactFields\":" << field::CONTACT_FIELDS
                 << ",\"effectorSlots\":" << field::EFFECTOR_SLOTS
                 << ",\"adaptationSpan\":" << field::SYNAPTIC_ADAPTATION_SPAN
                 << ",\"previewStepsMax\":" << studio_plan::max_development_steps << '}'

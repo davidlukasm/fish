@@ -395,8 +395,10 @@ export const measureReading = level => percent(level);
 const MEASURE_SHOWN = .005, MEASURE_ROWS = 6;
 export function measurement(state, index) {
   const waiting = builtAsDrawn(state) ? '' : ' disabled';
-  let html = '<div class="aid-measure"><span class="aid-measure-title">' +
-             label('hormoneCard.probe') + '</span><div class="aid-measure-dose">' +
+  let html = '<details class="aid-measure"><summary>' + label('development.compiledProbe') +
+             '</summary><p class="aid-hint">' + label('development.probeMeaning') +
+             '</p><span class="aid-measure-title">' + label('hormoneCard.probe') +
+             '</span><div class="aid-measure-dose">' +
              '<label class="aid-dial"><span>' + label('inspector.measureLevel') +
              '</span><input type="range" data-measure-level min="0" max="1" step="' + MEASURE_STEP +
              '" value="' + fixed(state.measureLevel) + '"' + waiting + '/><output>' +
@@ -405,7 +407,7 @@ export function measurement(state, index) {
              label('inspector.measure') + '</button></div>';
   const m = state.measurement;
   if (!m || m.substance !== index)
-    return html + '</div>';
+    return html + '</details>';
   const names = tList('hormones.organNames');
   const rows = m.organs.map((value, o) => ({name : names[o], value}))
                    .filter(r => Math.abs(r.value) > MEASURE_SHOWN)
@@ -426,7 +428,7 @@ export function measurement(state, index) {
             : '') +
       (!rows.length && !dead ? '<div class="aid-empty-centre">' + label('inspector.none') + '</div>'
                              : '');
-  return html + '</div>';
+  return html + '</details>';
 }
 function lifePhaseEditor(state, focus) {
   const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
@@ -736,7 +738,7 @@ function effectGuide(state, index) {
 }
 function hormoneDetails(state) {
   const {document : doc, selected} = state;
-  const focus = chosenCenter(doc, selected);
+  const focus = chosenCenter(doc, selected, state.visionProfile);
   if (!focus)
     return substanceInspector(state);
   const html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') +

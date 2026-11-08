@@ -1072,7 +1072,15 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.doesNotMatch(markup, /NaN|undefined|studio\.[a-zA-Z]/,
                         tool + ' renders a native development snapshot');
   }
-  assert.match(views.fishScene(sampled), /aid-runtime-cell/);
+  assert.doesNotMatch(views.fishScene(sampled), /aid-runtime-cell/);
+  assert.equal(model.contactRows({...sampled, tool : 'select'}), built.contacts);
+  const planned =
+      {...sampled, genome : '', report : null, runtime : null, stale : true, tool : 'select'};
+  const planningInspector = panels.inspector(planned);
+  assert.match(planningInspector, /aid-contact-plan/);
+  assert.match(planningInspector, /data-preview-input/);
+  assert.match(planningInspector, /data-cell-growth=/);
+  assert.doesNotMatch(planningInspector, /data-run-neural|NaN|undefined|studio\.[a-zA-Z]/);
 
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
   const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);
@@ -1415,6 +1423,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const sacState = {document : fewer, sites, capabilities : sitesResult};
     const store = sacs.gonadStore(sacState, small);
     assert.equal(store.room, sitesResult.gonads.eggs.perCell * 3);
+    assert.ok(Number.isFinite(store.steps),
+              'The plan shows filling for an assumed input before CPPN compilation');
+    assert.equal(sacs.gonadStore({...sacState, previewInput : 0}, small).steps, Infinity);
     const sac = sacs.gonadGraphic(sacState, small);
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));

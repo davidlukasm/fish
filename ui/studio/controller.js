@@ -87,6 +87,7 @@ export class OrganStudio {
       effect : 0,
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
+      previewInput : 1,
       measurement : null,
       neuralContext : {developmentSteps : 256, maturity : 0, hormones : Array(6).fill(0)},
       runtime : null,
@@ -116,9 +117,10 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
-    this.pulsePlayers = [];
+    this.pulsePlayer = null;
     this.pendingWire = null;
     this.ignoreClickUntil = 0;
+    this.neuralRequestSerial = 0;
     this.handleDrag = null;
     this.undoHistory = [];
     this.redoHistory = [];
@@ -222,10 +224,12 @@ export class OrganStudio {
     this.pendingWire = null;
     const entering = tool !== this.state.tool;
     this.state.tool = tool;
-    if (entering)
+    if (entering) {
       this.state.armed = null;
-    if (tool === 'wire') {
       this.clearStimulus();
+      this.state.runtime = this.state.measurement = null;
+    }
+    if (tool === 'wire') {
       this.showDrawnContacts();
       if (entering) {
         this.state.selected = null;
@@ -237,6 +241,7 @@ export class OrganStudio {
     this.refreshTools();
     this.showArmed();
     this.refreshSwitches();
+    this.refreshHeader();
     this.refreshViews();
   }
   refreshSwitches() {
@@ -295,8 +300,7 @@ export class OrganStudio {
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();
     if (svg)
-      for (const {player} of this.pulsePlayers)
-        player.attach(svg);
+      this.pulsePlayer?.attach();
     this.markStimulus();
     this.markFocus();
   }
@@ -343,7 +347,8 @@ export class OrganStudio {
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]')) {
       button.disabled = state.stale || !state.report;
       button.textContent =
-          label(state.runtime ? 'tools.runtimeContacts' : 'tools.developedContacts');
+          label(state.tool === 'stimulate' && state.runtime ? 'tools.runtimeContacts'
+                                                            : 'tools.developedContacts');
     }
     for (const button of this.root.querySelectorAll('[data-measure], [data-measure-level]'))
       button.disabled = !builtAsDrawn(state);

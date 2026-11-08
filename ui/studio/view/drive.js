@@ -50,6 +50,11 @@ export function drivePatch(handle, fx, fy, {scale, excitation = 0, output = 1}) 
     };
   return {};
 }
+export function motorResponse(center, input, {scale, excitation = 0, output = 1}) {
+  const drive =
+      Math.sign(input) * Math.max(0, Math.abs(input) - Math.max(0, scale * center.threshold));
+  return Math.tanh((1 + excitation) * drive) * output;
+}
 export function driveElement(center, label, stepsLabel, {
   scale,
   rhythm = false,
@@ -63,16 +68,13 @@ export function driveElement(center, label, stepsLabel, {
         total = axisSteps(rhythm);
   const x = step => D.left + (D.right - D.left) * step / total;
   const tc = rhythm ? period(center.tau) : timeConstantSteps(center.tau);
-  const level = rhythm ? step => Math.tanh(-scale * center.threshold + excitation +
-                                           pace * .5 * (1 + rhythmEffect) *
-                                               Math.sin(2 * Math.PI * step / tc)) *output
-                       : step => {
-                           const input = 2 * step / total - 1;
-                           const drive =
-                               Math.sign(input) *
-                               Math.max(0, Math.abs(input) - Math.max(0, scale * center.threshold));
-                           return Math.tanh((1 + excitation) * drive) * output;
-                         };
+  const level =
+      rhythm ? step => Math.tanh(-scale * center.threshold + excitation +
+                                 pace * .5 * (1 + rhythmEffect) *
+                                     Math.sin(2 * Math.PI * step / tc)) *output
+             : step => {
+                 return motorResponse(center, 2 * step / total - 1, {scale, excitation, output});
+               };
   const points = Array.from({length : D.samples + 1}, (_, k) => {
     const step = total * k / D.samples;
     return rounded(x(step)) + ' ' + rounded(y(level(step)));

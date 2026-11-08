@@ -1,10 +1,13 @@
-import {cellDevelopment, neuralContextControls, neuralContextOf} from './development.js';
+import {contactPlan} from './contact_plan.js';
+import {driveContext} from './preview.js';
+export {driveContext} from './preview.js';
+import {cellDevelopment, neuralContextControls} from './development.js';
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {ANATOMY, ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
@@ -24,6 +27,8 @@ import {routedLinks} from '../model/regions.js';
 import {modulatorScene} from './effects.js';
 import {
   allCenters,
+  chosenCenter,
+  probeRuntime,
   contactBundle,
   contactRows,
   endpointCenters,
@@ -32,7 +37,6 @@ import {
   findOrgan,
   groupReport,
   wireContacts,
-  receptorResponse,
   wiredCrossing
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
@@ -140,21 +144,6 @@ function sensorSection(state, organ, center) {
   const adaptation = sensorAdaptation(state, center);
   return /<svg/.test(adaptation) ? section(label('inspector.adaptation'), adaptation) : '';
 }
-export const driveContext = (state, center) => {
-  const context = neuralContextOf(state), wheel = state.capabilities;
-  const response = (effect, baseline = 0) =>
-      wheel ? receptorResponse(wheel, center.receptors[effect], context.hormones, context.maturity,
-                               baseline)
-            : baseline;
-  return {
-    scale : biasScale(state),
-    excitation : response(HORMONE_EFFECT.excitation),
-    output : (1 + response(HORMONE_EFFECT.output, 1)) / 2,
-    pace : nerveClass(center).pace,
-    rhythmEffect : response(HORMONE_EFFECT.rhythm),
-    adaptationSpan : wheel?.neural?.adaptationSpan
-  };
-};
 const motorSection = (state, organ, center) =>
     section(label('inspector.drive'),
             driveElement(center, label('inspector.drive'), () => label('development.netInput'),
@@ -276,12 +265,8 @@ function developedNerve(state, center) {
          row(label('inspector.rhythm'), percent(pace)) +
          row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
-function selectedCenter(state, organ) {
-  const selected = state.selected;
-  if (selected?.kind === 'center')
-    return organ.centers.find(c => c.id === selected.id) ?? organ.centers[0];
-  return organ.centers[0] ?? null;
-}
+const selectedCenter = (state, organ) =>
+    chosenCenter(state.document, state.selected, state.visionProfile) ?? organ.centers[0] ?? null;
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types)
     return '';
@@ -349,7 +334,9 @@ function organInspector(state, organ) {
   html +=
       '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
       (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center) +
-      (isRegion(organ) && state.selected?.kind !== 'center' ? '' : cellDevelopment(state, center));
+      (isRegion(organ) && state.selected?.kind !== 'center' ? '' : cellDevelopment(state, center)) +
+      contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
+                                                                              : [ center ]);
   if (isRegion(organ))
     html += '<label class="aid-compiler-region"><input type="checkbox" data-compiler-open="' +
             escapeText(organ.id) + '"' + (organ.openContacts ? ' checked' : '') + '/>' +
@@ -369,9 +356,10 @@ function developedContactInspector(state) {
   if (!row || !centers[from] || !centers[to])
     return '';
   return '<header class="aid-inspector-head"><span>' +
-         label(state.runtime ? 'inspector.developedLink' : 'inspector.proposedLink') + '</span>' +
-         heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) + '</header>' +
-         contactResult(contactBundle(row), !!state.runtime);
+         label(probeRuntime(state) ? 'inspector.developedLink' : 'inspector.proposedLink') +
+         '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
+         '</header>' + contactResult(contactBundle(row), !!probeRuntime(state)) +
+         contactPlan(state, [ centers[to] ]);
 }
 function contactResult(link, runtime) {
   const polarities = [
@@ -398,41 +386,16 @@ function contactResult(link, runtime) {
                     '</div>'
               : '');
 }
-const WIRE_PAD = Object.freeze({
-  size : 150,
-  centre : 75,
-  boundary : 63,
-  least : 14,
-  reach : 46,
-  source : 5,
-  handle : 7,
-  others : 11,
-  other : 3.2,
-  turn : 2.39996,
-  dim : .22
-});
+const WIRE_PAD = Object.freeze(
+    {size : 150, centre : 75, boundary : 63, least : 14, reach : 46, source : 5, handle : 7});
 const wireRadius = spread => WIRE_PAD.least + WIRE_PAD.reach * spread;
-const otherSenders = Array.from({length : WIRE_PAD.others}, (_, k) => {
-  const W = WIRE_PAD, distance = W.least + W.reach * (k + .5) / W.others, angle = k * W.turn;
-  return {
-    distance,
-    x : W.centre + distance * Math.cos(angle),
-    y : W.centre + distance * Math.sin(angle)
-  };
-});
-const otherShown = (other, radius) => other.distance < radius ? 1 : WIRE_PAD.dim;
 export function wirePatch(fx, fy) {
   const W = WIRE_PAD, distance = Math.hypot(fx * W.size - W.centre, fy * W.size - W.centre);
   return {spread : clamp((distance - W.least) / W.reach)};
 }
 export function wireMarks(wire) {
   const radius = wireRadius(wire.spread);
-  return {
-    '.aid-wire-halo' : {r : radius},
-    '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius},
-    ...Object.fromEntries(otherSenders.map(
-        (other, k) => ['[data-other="' + k + '"]', {'fill-opacity' : otherShown(other, radius)}]))
-  };
+  return {'.aid-wire-halo' : {r : radius}, '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius}};
 }
 function wireField(wire) {
   const W = WIRE_PAD, radius = wireRadius(wire.spread);
@@ -442,13 +405,7 @@ function wireField(wire) {
          escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
          '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '"><title>' +
          label('inspector.spreadTitle') + '</title>' + circle('aid-wire-boundary', W.boundary) +
-         circle('aid-wire-halo', radius) +
-         otherSenders
-             .map((other, k) => '<circle class="aid-wire-other" data-other="' + k + '" cx="' +
-                                fixed(other.x) + '" cy="' + fixed(other.y) + '" r="' + W.other +
-                                '" fill-opacity="' + otherShown(other, radius) + '"/>')
-             .join('') +
-         circle('aid-wire-source', W.source) +
+         circle('aid-wire-halo', radius) + circle('aid-wire-source', W.source) +
          circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
          label('sections.spread') + '</span></div>';
 }
@@ -495,8 +452,9 @@ function wireInspector(state, wire) {
          '</header>' + (wire.pairing ? pairingChoice(wire) : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
          (state.report?.contacts
-              ? contactResult(wireContacts(doc, wire, contactRows(state)), !!state.runtime)
+              ? contactResult(wireContacts(doc, wire, contactRows(state)), !!probeRuntime(state))
               : '') +
+         contactPlan(state, endpointCenters(doc, wire.to), wire) +
          '<div class="aid-inspector-actions">' +
          (wire.bends?.length
               ? '<button data-unbend-wire="' + escapeText(wire.id) + '">' +
@@ -581,6 +539,5 @@ export function inspector(state) {
   }
   const organ = selected.kind === 'organ' ? findOrgan(state.document, selected.id)
                                           : findCenter(state.document, selected.id)?.organ;
-  return (state.tool === 'stimulate' ? neuralContextControls(state) : '') +
-         (organ ? organInspector(state, organ) : '');
+  return neuralContextControls(state) + (organ ? organInspector(state, organ) : '');
 }

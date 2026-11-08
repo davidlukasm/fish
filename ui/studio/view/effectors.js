@@ -16,6 +16,7 @@ import {escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
+import {organCommand} from './preview.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
@@ -293,12 +294,7 @@ function defenseGraphic(state, organ, centers) {
             const x = W * (index + .5) / centers.length;
             const strength = center.copies / ATELIER_LIMITS.max_copies;
             const raised = S.least + (S.most - S.least) * strength;
-            const rest =
-                S.least +
-                (raised - S.least) *
-                    Math.max(
-                        0, state.runtime?.groups[centerIndex(state.document, center.id)]?.command ??
-                               0);
+            const rest = S.least + (raised - S.least) * Math.max(0, organCommand(state, center));
             return spine(x, raised, 'aid-spine-raised') + spine(x, rest, 'aid-muscle-spine');
           })
           .join('');
