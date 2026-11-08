@@ -112,10 +112,14 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   auto baseline = prepare_neural_preview(g, context, TRIAL_INDIVIDUAL);
   auto network = baseline;
   std::vector<std::size_t> stimulated;
+  std::array<int, 3> source_life{};
   for (std::size_t i = 0; i < assignment.size(); ++i)
-    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])] &&
-        network.life(i) == field::Network::CellLife::Active)
-      stimulated.push_back(i);
+    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])]) {
+      const auto life = network.life(i);
+      ++source_life[int(life)];
+      if (life == field::Network::CellLife::Active)
+        stimulated.push_back(i);
+    }
   if (pulse && !stimulated.empty())
     network.stimulate(stimulated, 1.f, 1);
   std::cout << std::setprecision(MEASURE_DIGITS) << "{\"frames\":[";
@@ -144,7 +148,8 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
   std::cout << "],\"sources\":[";
   for (std::size_t i = 0; i < requested.size(); ++i)
     std::cout << (i ? "," : "") << requested[i];
-  std::cout << "],\"stimulated\":" << stimulated.size() << ",\"runtime\":";
+  std::cout << "],\"stimulated\":" << stimulated.size() << ",\"sourceLife\":[" << source_life[0]
+            << ',' << source_life[1] << ',' << source_life[2] << "],\"runtime\":";
   write_neural_runtime(std::cout, network, assignment, groups.size(), context, steps);
   std::cout << "}\n";
 }
@@ -170,21 +175,23 @@ SightScene read_sight(std::istream &in) {
 }
 struct SenseScene {
   int kind = 0, scent = 0;
-  double bearing = 0, distance = 0, strength = 0;
+  double bearing = 0, distance = 0, strength = 0, nutrient = 0;
 };
 namespace sense_scene {
-constexpr int smell = 1, touch = 2, flow = 3, wound = 4;
+constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
   SenseScene scene;
   const double half_turn = fishsim::degrees(fishsim::PI);
   ensure(
-      bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent) &&
-          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::wound &&
+      bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent >>
+           scene.nutrient) &&
+          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::gut &&
           between(scene.bearing, -half_turn, half_turn) &&
           between(scene.distance, 0, SENSE_SCENE_REACH) &&
-          between(scene.strength, 0, SENSE_SCENE_STRENGTH) && scene.scent >= 0 &&
+          between(scene.strength, 0, scene.kind == sense_scene::gut ? 1 : SENSE_SCENE_STRENGTH) &&
+          between(scene.nutrient, 0, SENSE_SCENE_STRENGTH) && scene.scent >= 0 &&
           scene.scent < fishsim::odor_kind::count,
       "invalid sense scene");
   return scene;
@@ -200,7 +207,17 @@ void sense_report(const field::Substrate &t,
   const double bearing = fishsim::radians(scene.bearing), radius = fishsim::body_radius(body);
   const fishsim::PhysiologyParameters physiology{};
   std::vector<float> answers(interface->sensory.size(), 0);
-  if (scene.kind == sense_scene::flow) {
+  if (scene.kind == sense_scene::gut) {
+    fishsim::SensoryFrame frame;
+    frame.satiety = scene.strength;
+    frame.nutrient = scene.nutrient;
+    for (std::size_t i = 0; i < answers.size(); ++i) {
+      const auto &r = interface->sensory[i];
+      if (r.dominant_sense() == field::Intake || r.dominant_sense() == field::InnerPressure)
+        answers[i] = fishsim::receptor_response(
+            r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
+    }
+  } else if (scene.kind == sense_scene::flow) {
     fishsim::SensoryFrame frame;
     fishsim::LateralSamples<double> facing{};
     double most = 0;
@@ -241,7 +258,8 @@ void sense_report(const field::Substrate &t,
       answers[i] = buffer[i];
   }
   const auto stirred = [&](int sense) {
-    return scene.kind == sense_scene::smell   ? sense == field::Odor
+    return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
+           : scene.kind == sense_scene::smell ? sense == field::Odor
            : scene.kind == sense_scene::flow  ? sense == field::Flow
            : scene.kind == sense_scene::touch ? sense == field::Touch
                                               : sense == field::Damage;

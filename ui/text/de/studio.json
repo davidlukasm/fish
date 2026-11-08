@@ -752,7 +752,7 @@
     "wire": "Verschalten: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Jede Nervenzelle lernt lokal. Hier stellst du Plastizität, Lernspur, Lernmodus und zusätzliche Lehrsignale ein.",
-    "stimulate": "Reizen: CPPN erzeugen, Entwicklungsbedingungen einstellen und einen Knoten anklicken. Die Anzeige spielt die gemessene Änderung gegenüber einem ungestörten Vergleichsnetz ab.",
+    "stimulate": "Sinnesproben: ein Organ wählen und den Reiz am Entwurf einstellen. Nach der CPPN-Erzeugung kann separat ein vorbereitetes Gehirn mit einem direkten Zellimpuls geprüft werden.",
     "develop": "CPPN erzeugen, Entwicklungsvorschau ansehen und Eier ins Aquarium setzen."
   },
   "muscleTitles": [
@@ -931,14 +931,14 @@
     "noWire": "Hier liegt keine Verbindung."
   },
   "stimulusCard": {
-    "senses": "Reize",
+    "senses": "Sinnesproben",
     "light": "Licht",
     "object": "Gegenstand",
     "scent": "Duft",
     "flow": "Strömung",
     "touch": "Berührung",
     "pain": "Verletzung",
-    "food": "Futter im Darm"
+    "food": "Darminhalt und Nährstoffzufluss"
   },
   "learnCard": {
     "cells": "Knoten fürs Lernen",
@@ -1045,15 +1045,21 @@
     }
   },
   "stimulus": {
-    "waiting": "Zuerst CPPN erzeugen und Entwicklungsbedingungen einstellen",
-    "real": "Gemessene Reizantwort · 1 Takt je Bild"
+    "senses": "Sinnesprobe am Entwurf",
+    "sensesMeaning": "Licht, Duft, Berührung und andere Reize prüfen die geplanten Sinnesorgane mit den Sensorfunktionen der Engine. Die Zahlen zeigen die unmittelbare Sensorantwort.",
+    "neural": "Direkter Zellimpuls",
+    "neuralMeaning": "Benötigt ein erzeugtes CPPN. Ein eigenes Gehirn wird unter gewählten Bedingungen vorbereitet. Ein Klick stimuliert seine bereits geborenen Zellen für einen Takt; die Anzeige spielt 24 Takte als Unterschied zum ungestörten Vergleichsnetz ab.",
+    "waiting": "Für einen Zellimpuls zuerst das CPPN erzeugen.",
+    "ready": "Direkter Zellimpuls · Vorlauf einstellen und einen Knoten oder ein Organ anklicken",
+    "result": "Zellimpuls: {active} lebende Zellen stimuliert · {precursor} Vorläufer · {dead} abgestorben · 1 Takt je Bild"
   },
   "probe": {
     "title": {
       "smell": "Duft testen",
       "touch": "Berührung testen",
       "wound": "Biss testen",
-      "flow": "Strömung testen"
+      "flow": "Strömung testen",
+      "gut": "Darminhalt und Nährstoffzufluss prüfen"
     },
     "lengths": "{n} {n:Fischlänge|Fischlängen}",
     "handle": {
@@ -1061,7 +1067,9 @@
       "touch": "Berührung: Richtung und Stärke",
       "wound": "Biss: Richtung und Schwere",
       "flow": "Strömung: Richtung und Stärke"
-    }
+    },
+    "strength": "Darmfüllung · Anteil",
+    "nutrient": "Nährstoffzufluss · Signalstärke"
   },
   "pigment": {
     "kinds": [
@@ -1149,7 +1157,7 @@
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
     "compiledProbe": "Kompiliertes Gehirn prüfen",
-    "probeMeaning": "Diese zusätzliche Prüfung berechnet ein eigenes Netz aus dem fertigen CPPN. Es beginnt mit Vorläuferzellen und lernt unter den eingestellten Bedingungen bei unbegrenzter Energie und Baustoffen."
+    "probeMeaning": "Jede Prüfung beginnt mit einem neuen Netz aus Vorläuferzellen. Es entwickelt sich mit lokalem Lernen und spontaner Retinaaktivität für die gewählte Dauer; Körperreife und Hormonspiegel bleiben konstant, Energie und Baustoffe stehen unbegrenzt bereit. Eine Antwort gilt für diese Prüfbedingungen."
   },
   "contacts": {
     "title": "Kontakte im Bauplan",

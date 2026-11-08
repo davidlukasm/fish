@@ -47,7 +47,7 @@ export function neuralContextControls(state) {
   const context = neuralContextOf(state);
   const control = (key, name, value, min, max, step) =>
       input(name, value, min, max, step, 'data-neural-context="' + key + '"');
-  const probe = state.tool === 'stimulate'
+  const probe = state.tool === 'stimulate' && state.probeMode === 'neural'
                     ? '<section class="aid-compiled-probe"><h4>' + word('compiledProbe') +
                           '</h4><p class="aid-hint">' + word('probeMeaning') + '</p>' +
                           control('developmentSteps', word('steps'), context.developmentSteps, 0,
@@ -65,7 +65,7 @@ export function neuralContextControls(state) {
                       control(String(index), substanceTitle(state, index), level, 0, 1, .01))
              .join('') +
          input(word('exampleInput'), state.previewInput ?? 1, -1, 1, .01, 'data-preview-input') +
-         '</div>' + probe + '</details>';
+         '</div></details>' + probe;
 }
 export function lifecycleGraphic(state, center) {
   if (!state.capabilities)

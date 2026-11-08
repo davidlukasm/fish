@@ -20,6 +20,7 @@ import {namedText, tList} from '../../strings.js';
 import {heading, icon, ICON, label, regionTerm} from './kit.js';
 import {substanceName} from './substances.js';
 import {tone} from './names.js';
+import {builtAsDrawn} from './stimulus.js';
 
 function tile({
   kind,
@@ -304,7 +305,19 @@ function learningLibrary(state) {
 }
 function stimulusLibrary(state) {
   const has = type => state.document.organs.some(o => o.type === type);
-  return section(label('stimulusCard.senses'), Object.entries(STIMULUS_ORGAN)
+  const mode = state.probeMode ?? 'senses';
+  const selector = '<div class="aid-button-group aid-probe-modes">' +
+                   [ 'senses', 'neural' ]
+                       .map(key => '<button data-probe-mode="' + key + '" class="' +
+                                   (key === mode ? 'active' : '') + '"' +
+                                   (key === 'neural' && !builtAsDrawn(state) ? ' disabled' : '') +
+                                   '>' + label('stimulus.' + key) + '</button>')
+                       .join('') +
+                   '</div><p class="aid-hint">' + label('stimulus.' + mode + 'Meaning') + '</p>';
+  if (mode === 'neural')
+    return selector;
+  return selector +
+         section(label('stimulusCard.senses'), Object.entries(STIMULUS_ORGAN)
                                                    .map(([ key, organ ]) => tile({
                                                           kind : 'stimulus',
                                                           value : key,

@@ -52,6 +52,7 @@ import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies, tone}
 import {organTitle} from './names.js';
 import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
 import {skinField} from './skin.js';
+import {gutProbeControls} from './probes.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -111,7 +112,8 @@ const ORGAN_PANELS = Object.freeze({
            label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>';
   },
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
-  gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ),
+  gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ) +
+                                  gutProbeControls(state, organ),
   bladder : (state, organ, center) => bladderGraphic(organ, center) + pressureNote(state, organ),
   muscle : (state, organ) => effectorGraphic(state, organ),
   defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),

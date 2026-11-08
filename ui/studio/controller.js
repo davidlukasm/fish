@@ -73,6 +73,7 @@ export class OrganStudio {
       station : 'hub',
       mode : 'fish',
       tool : 'select',
+      probeMode : 'senses',
       wireScope : 'all',
       contactView : 'design',
       contactLimit : 120,
@@ -347,8 +348,9 @@ export class OrganStudio {
     for (const button of this.root.querySelectorAll('[data-contacts="actual"]')) {
       button.disabled = state.stale || !state.report;
       button.textContent =
-          label(state.tool === 'stimulate' && state.runtime ? 'tools.runtimeContacts'
-                                                            : 'tools.developedContacts');
+          label(state.tool === 'stimulate' && state.probeMode === 'neural' && state.runtime
+                    ? 'tools.runtimeContacts'
+                    : 'tools.developedContacts');
     }
     for (const button of this.root.querySelectorAll('[data-measure], [data-measure-level]'))
       button.disabled = !builtAsDrawn(state);
@@ -465,6 +467,7 @@ export class OrganStudio {
     this.showDrawnContacts();
     this.state.measurement = null;
     this.state.runtime = null;
+    this.state.probeMode = 'senses';
     this.state.genome = '';
     this.persist();
   }

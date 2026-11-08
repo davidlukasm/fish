@@ -106,6 +106,7 @@ export const ANYWHERE_CLICKS = Object.freeze([
 
 export const STUDIO_CLICKS = Object.freeze([
   ['[data-run-neural]', studio => studio.sampleNeuralState()],
+  [ '[data-probe-mode]', (studio, e) => studio.setProbeMode(e.dataset.probeMode) ],
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
@@ -158,6 +159,10 @@ function clickItem(studio, element, event) {
   if (tool === 'wire' && [ 'organ', 'center', 'assembly' ].includes(kind))
     return wireItem(studio, kind, id);
   if (tool === 'stimulate') {
+    if (studio.state.probeMode !== 'neural') {
+      studio.select(kind, id, event, false);
+      return;
+    }
     const centers = kind === 'organ'      ? findOrgan(doc, id)?.centers.map(center => center.id)
                     : kind === 'assembly' ? findAssembly(doc, id)?.centerIds
                     : kind === 'center'   ? [ id ]
@@ -531,6 +536,12 @@ export const FISH_CHANGES = Object.freeze([
     const patch = {};
     patch[e.dataset.growthKey] = Number(e.value);
     keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowth, patch));
+  } ],
+  [ 'gutProbe', (studio, e) => {
+    const value = Number(e.value), key = e.dataset.gutProbe;
+    if (!Number.isFinite(value) || !['strength', 'nutrient'].includes(key) || studio.state.senseProbe?.kind !== 'gut') return;
+    studio.state.senseProbe = {...studio.state.senseProbe, [key]: Math.max(0, Math.min(key === 'strength' ? 1 : 20, value))};
+    studio.requestDesign();
   } ],
   [ 'previewInput', (studio, e) => {
     const value = Number(e.value);

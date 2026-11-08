@@ -16,6 +16,18 @@ import {neuralContextOf} from './view/development.js';
 export const MEASURE_LEVEL = .5;
 const PULSE_STEPS = 24;
 export const trialMethods = {
+  setProbeMode(mode) {
+    if (!['senses', 'neural'].includes(mode) || mode === this.state.probeMode)
+      return;
+    if (mode === 'neural' && !builtAsDrawn(this.state))
+      return this.notice(label('status.needsCompiledProbe'));
+    this.clearStimulus();
+    this.state.runtime = null;
+    this.state.probeMode = mode;
+    this.refreshLibrary();
+    this.refreshHeader();
+    this.refreshViews();
+  },
   markFocus() {
     const svg = this.bodyMap(), {selected, document : doc} = this.state;
     if (!svg || this.state.stimulus || !['organ', 'center'].includes(selected?.kind))
@@ -106,11 +118,13 @@ export const trialMethods = {
           this.state.genome !== genome || this.state.tool !== tool ||
           neuralContextOf(this.state) !== context)
         return;
+      this.stopPulse();
+      this.state.stimulus = null;
       this.state.runtime = result.runtime;
       this.refreshInspector();
       this.refreshHeader();
-      if (pulse && result.stimulated)
-        this.playPulse(result.frames);
+      if (pulse)
+        this.playPulse(result);
       else
         this.refreshScene();
       this.notice(label(pulse && !result.stimulated ? 'status.noActiveProbe' : 'status.probed'));
@@ -180,14 +194,16 @@ export const trialMethods = {
       this.notice(error.message);
     }
   },
-  playPulse(frames) {
+  playPulse({frames, stimulated, sourceLife}) {
     this.stopPulse();
     const centers = allCenters(this.state.document);
     if (!frames?.length)
       return;
-    const stimulus = {fired : new Set(), quieted : new Set()};
+    const stimulus = {stimulated, sourceLife, fired : new Set(), quieted : new Set()};
     this.state.stimulus = stimulus;
     this.refreshScene();
+    if (!stimulated)
+      return;
     const clear = () => {
       for (const element of this.bodyMap()?.querySelectorAll(
                '.aid-pulse-active,.aid-pulse-quieting') ??

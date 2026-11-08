@@ -217,7 +217,8 @@ export const allCenters = doc =>
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
-export const probeRuntime = state => state.tool === 'stimulate' ? state.runtime : null;
+export const probeRuntime = state =>
+    state.tool === 'stimulate' && state.probeMode === 'neural' ? state.runtime : null;
 export const contactRows = state => probeRuntime(state)?.contacts ?? state.report?.contacts ?? [];
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));

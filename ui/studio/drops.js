@@ -271,12 +271,12 @@ export const dropMethods = {
       return this.notice(label('status.noRoom'));
     const chosen = organOf(doc, this.state.selected?.id);
     const organ = organs.find(o => o.id === chosen?.id) ?? organs[0];
+    this.setProbeMode('senses');
     this.state.selected = {kind : 'organ', id : organ.id};
     this.bringProbes();
     this.requestDesign();
     this.showTestLight();
     this.refreshViews();
-    this.stimulate(organ.centers.map(c => c.id));
   },
   ontoNerve(kind, value) {
     return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);

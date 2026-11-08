@@ -230,17 +230,17 @@ def sight_line(sight):
     return "1 " + " ".join(number(v) for v in values) + "\n"
 
 
-SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4}
+SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5}
 
 
 def sense_line(sense):
     """The sense scene line of the design operation: 0 without one, else 1, its kind and values
-    (bearing in degrees, distance in body radii, strength, odor kind)."""
+    (bearing in degrees, distance in body radii, strength, odor kind, nutrient signal)."""
     if sense is None:
         return "0\n"
     if not isinstance(sense, dict) or sense.get("kind") not in SENSE_SCENES:
         raise Refusal("studio.errors.invalidProbe")
-    values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent")]
+    values = [sense.get(key, 0) for key in ("bearing", "distance", "strength", "scent", "nutrient")]
     return "1 " + str(SENSE_SCENES[sense["kind"]]) + " " + " ".join(number(v) for v in values) + "\n"
 
 

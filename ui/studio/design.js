@@ -12,7 +12,7 @@ import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
-import {probeScents, senseProbeSvg} from './view/probes.js';
+import {probeScents, senseProbeSvg, gutProbeControls} from './view/probes.js';
 import {scentMap} from './view/scents.js';
 import {pigmentInspector} from './view/pigments.js';
 import {skinField} from './view/skin.js';
@@ -193,6 +193,7 @@ export const designMethods = {
     if (scents)
       scents.innerHTML = probeScents(this.state);
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
+    this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
   },
   drawSight() {
     const sight = this.state.anatomy?.sight;

@@ -214,12 +214,21 @@ function semanticFingerprint(source) {
   }
   {
     const {builtAsDrawn, stimulusKind} = await import('../ui/studio/view/stimulus.js');
-    const drawn =
-        {genome : 'g', stale : false, report : {compiler : {ok : true}}, tool : 'stimulate'};
+    const drawn = {
+      genome : 'g',
+      stale : false,
+      report : {compiler : {ok : true}},
+      tool : 'stimulate',
+      probeMode : 'neural'
+    };
     assert.ok(builtAsDrawn(drawn));
     assert.ok(!builtAsDrawn({...drawn, report : {}}),
               'A genome opened alone is not the fish drawn');
-    assert.match(stimulusKind(drawn), /aid-stimulus-kind real/);
+    assert.doesNotMatch(stimulusKind(drawn), /aid-stimulus-kind real/);
+    assert.match(stimulusKind({...drawn, stimulus : {stimulated : 2, sourceLife : [ 1, 2, 0 ]}}),
+                 /aid-stimulus-kind real/);
+    assert.match(stimulusKind({...drawn, probeMode : 'senses', genome : '', stale : true}),
+                 /Sinnesprobe am Entwurf/);
     assert.doesNotMatch(stimulusKind({...drawn, stale : true}), /real/);
     assert.equal(stimulusKind({...drawn, tool : 'select'}), '');
   }
@@ -952,9 +961,9 @@ assert all(0<=r<=q<=1 for r,q in zip(designed['spinesRest'],designed['spinesRais
 assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<1e-6
 # Sense probes: a scent, a touch, a bite or a current give each group an answer from 0 to 1, or none
 # where no cell of the group senses it.
-for kind in ('smell','touch','wound','flow'):
+for kind in ('smell','touch','wound','flow','gut'):
     probed=run({'operation':'design','plan':plan,'sight':None,
-                'sense':{'kind':kind,'bearing':-60,'distance':3,'strength':.5,'scent':0}})
+                'sense':{'kind':kind,'bearing':-60,'distance':3,'strength':.5,'scent':0,'nutrient':.2}})
     answers=probed['senseProbe']
     assert len(answers)==len(plan['groups'])
     assert all(a is None or 0<=a<=1 for a in answers)
@@ -992,11 +1001,22 @@ blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
 context={'developmentSteps':128,'maturity':0,'hormones':[0]*6}
 probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[payload['relay']],'steps':2,'pulse':True,'context':context})
 assert len(probe['frames'])==3
+assert probe['sourceLife'][1]==probe['stimulated']
+assert sum(probe['sourceLife'])==built['groups'][payload['relay']]['cells']
 measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'steps':8,'context':context})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
 example=run({'operation':'build','plan':payload['example']})
 assert example['compiler']['ok'],example['compiler']
 print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'runtime':probe['runtime'],'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
+  const stimulusStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(stimulusStudio.state, {document : doc, sites, capabilities : sitesResult});
+  let electricalPulses = 0, designRequests = 0;
+  stimulusStudio.stimulate = () => ++electricalPulses;
+  stimulusStudio.requestDesign = () => ++designRequests;
+  stimulusStudio.placeStimulus('light');
+  assert.equal(stimulusStudio.state.probeMode, 'senses');
+  assert.equal(electricalPulses, 0, 'A physical design probe must not inject an electrical pulse');
+  assert.ok(designRequests > 0);
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
   const exampleStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
