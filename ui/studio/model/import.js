@@ -70,11 +70,13 @@ export function startDocument(source, sites, name) {
       organ = {id, type, side : single ? 0 : g.side, centers : [], linked : false};
       doc.organs.push(organ);
     }
-    const desc = type === 'brain' ? {...nerve(nerveKind(g), g.copies, null), surface : 'any'}
-                 : type === 'gut' ? definition.centers.find(c => c.key === 'fullness')
-                 : [ 'eggs', 'sperm' ].includes(type)
-                     ? definition.centers.find(c => c.key === (site.outer ? 'release' : 'growth'))
-                     : definition.centers[0];
+    const desc =
+        type === 'brain'
+            ? {...nerve(nerveKind({...g, role : 'nerve'}), g.copies, null), surface : 'any'}
+        : type === 'gut' ? definition.centers.find(c => c.key === 'fullness')
+        : [ 'eggs', 'sperm' ].includes(type)
+            ? definition.centers.find(c => c.key === (site.outer ? 'release' : 'growth'))
+            : definition.centers[0];
     const center = defaults(desc, site);
     for (const key of ['copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode',
                        'pace', 'modulator', 'crossing', 'range'])
@@ -131,7 +133,7 @@ export function startDocument(source, sites, name) {
       }
     }
   }
-  const substances = new Set([ source.growth, ...imported.flatMap(c => c.receptors) ]
+  const substances = new Set([ source.growth, ...imported.flatMap(c => [c.growth, ...c.receptors]) ]
                                  .filter(r => r.active && r.substance < HORMONES.levels)
                                  .map(r => r.substance));
   doc.substances =

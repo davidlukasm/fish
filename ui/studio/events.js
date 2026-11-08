@@ -31,6 +31,7 @@ import {
   teachOrgan,
   updateCenter,
   updateCellGrowth,
+  updateCellDistribution,
   updateGrowth,
   updateReceptor,
   updateWire,
@@ -46,6 +47,7 @@ import {
 import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
 import {GENOME_FILE_ID} from './view/shell.js';
+import {learningTimeOf, timeConstantOf} from '../tuning.js';
 
 const PASS = Symbol('pass');
 export function clickOn(studio, event, table) {
@@ -103,6 +105,7 @@ export const ANYWHERE_CLICKS = Object.freeze([
 ]);
 
 export const STUDIO_CLICKS = Object.freeze([
+  ['[data-run-neural]', studio => studio.sampleNeuralState()],
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
@@ -112,7 +115,7 @@ export const STUDIO_CLICKS = Object.freeze([
     '[data-contacts]',
     (studio, e) => {
       const state = studio.state;
-      if (e.dataset.contacts === 'actual' && (state.stale || !state.report?.contacts?.length))
+      if (e.dataset.contacts === 'actual' && (state.stale || !state.report))
         return;
       state.contactView = e.dataset.contacts;
       studio.renderShell();
@@ -508,8 +511,36 @@ export const FISH_CLICKS = Object.freeze([
 ]);
 
 export const FISH_CHANGES = Object.freeze([
-  ['cellGrowth', (studio,e) => keep(studio, updateCellGrowth(studio.state.document,e.dataset.cellGrowth,{[e.dataset.growthKey]:Number(e.value)}))],
-  ['cellLimit', (studio,e) => keep(studio, updateCenter(studio.state.document,e.dataset.cellLimit,{[e.dataset.limitKey]:Number(e.value)}))],
+  [ 'contactLimit', (studio, e) => {
+    studio.state.contactLimit = Number(e.value);
+    studio.refreshScene();
+  } ],
+  [ 'neuralContext', (studio, e) => studio.setNeuralContext(e.dataset.neuralContext, Number(e.value)) ],
+  [ 'receptorField', (studio, e) => {
+    const patch = {};
+    patch[e.dataset.receptorKey] = Number(e.value);
+    keep(studio, updateReceptor(studio.state.document, e.dataset.receptorField, Number(e.dataset.receptorEffect), patch));
+  } ],
+  [ 'bodyGrowth', (studio, e) => {
+    const patch = {};
+    patch[e.dataset.bodyGrowth] = Number(e.value);
+    keep(studio, updateGrowth(studio.state.document, patch));
+  } ],
+  [ 'cellGrowthActive', (studio, e) => keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowthActive, {active : e.checked ? 1 : 0})) ],
+  [ 'cellGrowth', (studio, e) => {
+    const patch = {};
+    patch[e.dataset.growthKey] = Number(e.value);
+    keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowth, patch));
+  } ],
+  [ 'cellTrait', (studio, e) => {
+    const key = e.dataset.traitKey, entered = Number(e.value), neural = studio.state.capabilities.neural;
+    const value = key === 'tau' ? timeConstantOf(entered) : key === 'learning_tau' ? learningTimeOf(entered)
+        : key === 'field' ? Math.log(Math.max(neural.slotMin, entered) / neural.slotMin) / Math.log(neural.slotSpan) : entered;
+    const patch = {};
+    patch[key] = value;
+    keep(studio, updateCenter(studio.state.document, e.dataset.cellTrait, patch));
+  } ],
+  [ 'cellDistribution', (studio, e) => keep(studio, updateCellDistribution(studio.state.document, e.dataset.cellDistribution, e.dataset.distributionKey, Number(e.value))) ],
   [
     'substanceName',
     (studio, e) => keep(studio, setSubstance(studio.state.document, Number(e.dataset.substanceName),

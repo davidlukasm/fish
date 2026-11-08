@@ -10,6 +10,7 @@ import {joinList, joinParts, namedText, t} from '../../strings.js';
 import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
+  centerIndex,
   findAssembly,
   findCenter,
   isChosen,
@@ -83,9 +84,11 @@ function centersSvg(state) {
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||
                              assemblyCenters.has(center.id);
       const G = CENTER_GLYPH, r = selectedCenter ? G.chosen : G.radius;
+      const life = state.runtime?.groups[centerIndex(doc, center.id)]?.life;
+      const stage = life ? (life[1] ? ' active' : life[2] ? ' dead' : ' precursor') : '';
       result +=
-          '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
-          escapeText(center.id) + '"' + steadyAt(cp, zoom) + '>' +
+          '<g class="aid-neural-center' + stage + (selectedCenter ? ' selected' : '') +
+          '" data-center="' + escapeText(center.id) + '"' + steadyAt(cp, zoom) + '>' +
           '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color + '"/>' +
           (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
                                       '" r="' + fixed(r + G.ring) + '" stroke="' + substance + '"/>'
@@ -223,6 +226,25 @@ function fieldsShown(state) {
   const organ = organOf(state.document, state.selected?.id);
   return !organ || !!organ.field || ORGAN_BY_KEY[organ.type]?.category !== 'senses';
 }
+function runtimeOverlay(state) {
+  if (!state.runtime)
+    return '';
+  const zoom = zoomOf(state), doc = state.document;
+  return '<g class="aid-runtime-cells" pointer-events="none">' +
+         allCenters(doc)
+             .map((center, index) => {
+               const group = state.runtime.groups[index];
+               if (!group)
+                 return '';
+               const stage = group.life[1] ? 'active' : group.life[2] ? 'dead' : 'precursor';
+               const location = nodeLocation(doc, state.sites, center, center.organType);
+               return '<g class="aid-runtime-cell ' + stage + '"' + steadyAt(location, zoom) +
+                      '><circle r="11"/>' +
+                      (stage === 'dead' ? '<path d="M-5 -5 L5 5 M-5 5 L5 -5"/>' : '') + '</g>';
+             })
+             .join('') +
+         '</g>';
+}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
@@ -241,7 +263,7 @@ export function fishScene(state) {
          '<g class="aid-anatomy">' + anatomy + '</g>' + hormoneOverlay(state) +
          '<g class="aid-wires">' + wiresShown(state, centers) + '</g>' + reachSvg(state) +
          organHitsSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
-         '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
+         runtimeOverlay(state) + '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
          '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields">' + cones + '</g>' +
          '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +

@@ -9,6 +9,11 @@ export const timeConstantSteps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.
 export const timeConstantOf = steps =>
     clamp(Math.log(steps / TIME_CONSTANT.min_steps) / Math.log(TIME_CONSTANT.span));
 export const LONGEST_TIME_CONSTANT = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
+export const learningTimeSteps = tau =>
+    TIME_CONSTANT.learning_min_steps * TIME_CONSTANT.learning_span ** clamp(tau);
+export const learningTimeOf = steps => clamp(Math.log(steps / TIME_CONSTANT.learning_min_steps) /
+                                             Math.log(TIME_CONSTANT.learning_span));
+export const LONGEST_LEARNING_TIME = TIME_CONSTANT.learning_min_steps * TIME_CONSTANT.learning_span;
 
 export const contactHalfAngle = field =>
     TUNING.contact_width_min + TUNING.contact_width_span * clamp(field);

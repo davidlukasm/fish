@@ -1,9 +1,10 @@
+import {cellDevelopment, neuralContextControls, neuralContextOf} from './development.js';
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, HORMONE_EFFECT, MOTOR_KIND, SENSE_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
@@ -13,6 +14,8 @@ import {preferredScent} from '../../tuning.js';
 import {
   functionFor,
   isModulator,
+  isPacemaker,
+  nerveClass,
   isRegion,
   MUSCLE_LABEL_INDEX,
   ORGAN_BY_KEY
@@ -22,12 +25,14 @@ import {modulatorScene} from './effects.js';
 import {
   allCenters,
   contactBundle,
+  contactRows,
   endpointCenters,
   findAssembly,
   findCenter,
   findOrgan,
   groupReport,
   wireContacts,
+  receptorResponse,
   wiredCrossing
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
@@ -135,22 +140,36 @@ function sensorSection(state, organ, center) {
   const adaptation = sensorAdaptation(state, center);
   return /<svg/.test(adaptation) ? section(label('inspector.adaptation'), adaptation) : '';
 }
+export const driveContext = (state, center) => {
+  const context = neuralContextOf(state), wheel = state.capabilities;
+  const response = (effect, baseline = 0) =>
+      wheel ? receptorResponse(wheel, center.receptors[effect], context.hormones, context.maturity,
+                               baseline)
+            : baseline;
+  return {
+    scale : biasScale(state),
+    excitation : response(HORMONE_EFFECT.excitation),
+    output : (1 + response(HORMONE_EFFECT.output, 1)) / 2,
+    pace : nerveClass(center).pace,
+    rhythmEffect : response(HORMONE_EFFECT.rhythm),
+    adaptationSpan : wheel?.neural?.adaptationSpan
+  };
+};
 const motorSection = (state, organ, center) =>
     section(label('inspector.drive'),
-            driveElement(
-                center, label('inspector.drive'), n => t('studio.inspector.recovery', {n}),
-                {scale : biasScale(state), meaning : driveMeaning(state, center), organ : true})) +
+            driveElement(center, label('inspector.drive'), () => label('development.netInput'),
+                         {...driveContext(state, center), meaning : driveMeaning(state, center)})) +
     '<p>' + label('development.organRest') + '</p>' +
     (organ.type === 'muscle' ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
-  if (center.key === 'pacemaker') {
+  if (isPacemaker(center)) {
     const title = label('inspector.beat');
     return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
-                                       {scale : biasScale(state), rhythm : true}));
+                                       {...driveContext(state, center), rhythm : true}));
   }
   const title = label('inspector.stimulusOrChange');
   return section(title, adaptElement(center, title, n => t('studio.inspector.adapts', {n}),
-                                     {scale : biasScale(state)}));
+                                     driveContext(state, center)));
 }
 function modulatorSection(state, organ, center) {
   const doc = state.document;
@@ -269,7 +288,7 @@ function centerTabs(state, organ) {
   const kinds = organ.type === 'brain' ? organ.centers.map(c => [c]) : nodeFamilies(organ);
   if (kinds.length < 2 && !isRegion(organ))
     return '';
-  const chosen = kind => kind.some(c => c.id === state.selected?.id);
+  const chosen = kind => kind.some(c => c.id === selectedCenter(state, organ)?.id);
   const whole = isRegion(organ)
                     ? '<button data-select-organ="' + escapeText(organ.id) + '" class="' +
                           (state.selected?.kind === 'organ' ? 'selected' : '') + '">' +
@@ -317,36 +336,6 @@ function moduleChips(state, id) {
                    '</div>'
              : '';
 }
-function cellDevelopment(state, center) {
-  if (!center)
-    return '';
-  const id = escapeText(center.id), growth = center.growth;
-  const field = (key, min, max, step) =>
-      '<label>' + label('development.' + key) + '<input type="number" min="' + min + '" max="' +
-      max + '" step="' + step + '" value="' + growth[key] + '" data-cell-growth="' + id +
-      '" data-growth-key="' + key + '"></label>';
-  const substances = [
-    ...Array.from({length : state.capabilities?.hormones ?? 6},
-                  (_, i) => [i, label('development.hormone') + ' ' + (i + 1)]),
-    [ 6, label('development.maturity') ]
-  ];
-  const choice = '<label>' + label('development.substance') + '<select data-cell-growth="' + id +
-                 '" data-growth-key="substance">' +
-                 substances
-                     .map(([ i, name ]) => '<option value="' + i + '"' +
-                                           (i === growth.substance ? ' selected' : '') + '>' +
-                                           escapeText(name) + '</option>')
-                     .join('') +
-                 '</select></label>';
-  const limit = key => '<label>' + label('development.' + key) +
-                       '<input type="number" min="0" max="1" step=".05" value="' + center[key] +
-                       '" data-cell-limit="' + id + '" data-limit-key="' + key + '"></label>';
-  return '<details class="aid-cell-development"><summary>' + label('development.title') +
-         '</summary><p>' + label('development.explanation') + '</p>' +
-         field('baseline', -1, 1, .05) + choice + field('sensitivity', -2, 2, .1) +
-         field('half', .0003, 1, .001) + field('steepness', 0, 3, 1) + limit('electrical_limit') +
-         limit('teaching_limit') + '</details>';
-}
 function organInspector(state, organ) {
   const center = selectedCenter(state, organ);
   const plain = text => text.replace(/\u00ad/g, '');
@@ -357,9 +346,10 @@ function organInspector(state, organ) {
              heading(organTitle(organ, state.sites)) + '</header>' +
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
-  html += '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
-          (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center) +
-          cellDevelopment(state, center);
+  html +=
+      '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
+      (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center) +
+      (isRegion(organ) && state.selected?.kind !== 'center' ? '' : cellDevelopment(state, center));
   if (isRegion(organ))
     html += '<label class="aid-compiler-region"><input type="checkbox" data-compiler-open="' +
             escapeText(organ.id) + '"' + (organ.openContacts ? ' checked' : '') + '/>' +
@@ -374,25 +364,27 @@ function organInspector(state, organ) {
 }
 function developedContactInspector(state) {
   const [from, to] = state.selected.id.split(':').map(Number);
-  const row = state.report?.contacts?.find(([ a, b ]) => a === from && b === to);
+  const row = contactRows(state).find(([ a, b ]) => a === from && b === to);
   const centers = allCenters(state.document);
   if (!row || !centers[from] || !centers[to])
     return '';
-  return '<header class="aid-inspector-head"><span>' + label('inspector.developedLink') +
-         '</span>' + heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) +
-         '</header>' + contactResult(contactBundle(row));
+  return '<header class="aid-inspector-head"><span>' +
+         label(state.runtime ? 'inspector.developedLink' : 'inspector.proposedLink') + '</span>' +
+         heading(linkText(centerTitle(centers[from]), centerTitle(centers[to]))) + '</header>' +
+         contactResult(contactBundle(row), !!state.runtime);
 }
-function contactResult(link) {
+function contactResult(link, runtime) {
   const polarities = [
     {count : link.positive, weight : link.positiveWeight, key : 'excitation', tone : 'excite'},
     {count : link.negative, weight : link.negativeWeight, key : 'inhibition', tone : 'inhibit'}
   ];
   const tone = !link.count ? ' none' : link.negative ? link.positive ? '' : ' inhibit' : ' excite';
   return '<div class="aid-contact-summary' + tone + '"><div><strong>' +
-         formatNumber(Number(link.count)) + '</strong><span>' + label('inspector.contactCount') +
-         '</span></div>' +
+         formatNumber(Number(link.count)) + '</strong><span>' +
+         label(runtime ? 'inspector.contactCount' : 'inspector.proposalCount') + '</span></div>' +
          (link.count ? '<div><strong>' + formatSigned(link.weight, 2, true) + '</strong><span>' +
-                           label('inspector.meanWeight') + '</span></div>'
+                           label(runtime ? 'inspector.meanWeight' : 'inspector.meanLimit') +
+                           '</span></div>'
                      : '') +
          '</div>' +
          (link.positive && link.negative
@@ -502,8 +494,9 @@ function wireInspector(state, wire) {
                           endpointTitle(doc, wire.to, state.sites))) +
          '</header>' + (wire.pairing ? pairingChoice(wire) : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
-         (state.report?.contacts ? contactResult(wireContacts(doc, wire, state.report.contacts))
-                                 : '') +
+         (state.report?.contacts
+              ? contactResult(wireContacts(doc, wire, contactRows(state)), !!state.runtime)
+              : '') +
          '<div class="aid-inspector-actions">' +
          (wire.bends?.length
               ? '<button data-unbend-wire="' + escapeText(wire.id) + '">' +
@@ -566,8 +559,8 @@ export function inspector(state) {
   if (state.tool === 'hormone')
     return state.document.substances.length || state.selected
                ? hormoneInspector(state)
-               : '<header class="aid-inspector-head">' + heading(label('hormoneCard.title')) +
-                     '</header>' + workflow();
+               : neuralContextControls(state) + '<header class="aid-inspector-head">' +
+                     heading(label('hormoneCard.title')) + '</header>' + workflow();
   if (state.tool === 'learn')
     return learningInspector(state);
   if (state.multi?.size > 1)
@@ -575,7 +568,7 @@ export function inspector(state) {
   const selected = state.selected;
   if (!selected)
     return '<header class="aid-inspector-head">' + heading(label('sections.empty')) + '</header>' +
-           workflow();
+           (state.tool === 'stimulate' ? neuralContextControls(state) : '') + workflow();
   if (selected.kind === 'wire') {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';
@@ -588,5 +581,6 @@ export function inspector(state) {
   }
   const organ = selected.kind === 'organ' ? findOrgan(state.document, selected.id)
                                           : findCenter(state.document, selected.id)?.organ;
-  return organ ? organInspector(state, organ) : '';
+  return (state.tool === 'stimulate' ? neuralContextControls(state) : '') +
+         (organ ? organInspector(state, organ) : '');
 }

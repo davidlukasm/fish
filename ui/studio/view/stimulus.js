@@ -7,5 +7,5 @@ export function stimulusKind(state) {
     return '';
   const real = state.stimulus ? state.stimulus.real : builtAsDrawn(state);
   return '<div class="aid-stimulus-kind' + (real ? ' real' : '') + '" role="status">' +
-         label(real ? 'stimulus.real' : 'stimulus.preview') + '</div>';
+         label(real ? 'stimulus.real' : 'stimulus.waiting') + '</div>';
 }

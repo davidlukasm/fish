@@ -27,12 +27,24 @@ export const NEURONS = Object.freeze([
   {key : 'modulate', sign : 1, mode : 1, pace : -1, modulator : 1}
 ]);
 export const NEURON_BY_KEY = Object.freeze(Object.fromEntries(NEURONS.map(n => [n.key, n])));
-const MODULATING = .5;
-export const isModulator = center => center.modulator > MODULATING;
-export const isPacemaker = center => center.pace > MODULATING;
-// How a nerve learns by itself: 1 choosing among its inputs, -1 balancing them, 0 not at all.
-const MODE_LEAN = 1 / 3;
-export const modeLean = mode => mode > MODE_LEAN ? 1 : mode < -MODE_LEAN ? -1 : 0;
+export function nerveClass(center) {
+  const radius = Math.max(...['sign', 'mode', 'pace', 'modulator'].map(k => Math.abs(center[k])));
+  if (!radius)
+    return {sign : 1, mode : 0, pace : 0, modulator : 0};
+  const strength = raw => {
+    const x = Math.max(0, Math.min(1, ((raw / radius + 1) / 2 - .7) / .2));
+    return x * x * (3 - 2 * x);
+  };
+  return {
+    sign : center.sign >= 0 ? 1 : -1,
+    mode : center.mode / radius,
+    pace : strength(center.pace),
+    modulator : strength(center.modulator)
+  };
+}
+export const isModulator = center => center.role === 'nerve' && nerveClass(center).modulator > .5;
+export const isPacemaker = center => center.role === 'nerve' && nerveClass(center).pace > 0;
+export const modeLean = mode => Math.sign(mode);
 export const nerveKind = center => isModulator(center)   ? 'modulate'
                                    : isPacemaker(center) ? 'pacemaker'
                                    : center.sign < 0     ? 'inhibit'

@@ -15,8 +15,6 @@ import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
-import {restLevel} from './drive.js';
-import {biasScale} from './panels.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
@@ -281,7 +279,7 @@ const TRAIT_HANDLES = Object.freeze({
 const SPINE =
     Object.freeze({skin : 54, arc : 14, base : 10, least : 18, most : 84, lean : .3, samples : 12});
 function defenseGraphic(state, organ, centers) {
-  const S = SPINE, W = FRAME.width, scale = biasScale(state);
+  const S = SPINE, W = FRAME.width;
   const skinY = x => S.skin + S.arc * (1 - ((2 * x) / W - 1) ** 2);
   const spine = (x, reach, cls) => {
     const y = skinY(x);
@@ -295,7 +293,12 @@ function defenseGraphic(state, organ, centers) {
             const x = W * (index + .5) / centers.length;
             const strength = center.copies / ATELIER_LIMITS.max_copies;
             const raised = S.least + (S.most - S.least) * strength;
-            const rest = S.least + (raised - S.least) * Math.max(0, restLevel(center, scale));
+            const rest =
+                S.least +
+                (raised - S.least) *
+                    Math.max(
+                        0, state.runtime?.groups[centerIndex(state.document, center.id)]?.command ??
+                               0);
             return spine(x, raised, 'aid-spine-raised') + spine(x, rest, 'aid-muscle-spine');
           })
           .join('');

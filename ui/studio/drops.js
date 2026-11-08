@@ -13,6 +13,7 @@ import {
   organOf,
   setLifePhase,
   updateCenter,
+  updateCellGrowth,
   updateWire,
   wheelPlace
 } from './model/document.js';
@@ -35,7 +36,7 @@ import {
 } from './view/placing.js';
 import {BODY_MAP, LAYER} from './view/scene.js';
 
-const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase' ]);
+const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase', 'birth' ]);
 const BEND = 'bend';
 const ONTO_NERVES = Object.freeze([ 'learn', 'modulate', 'pacemaker' ]);
 const ORGAN_FROM_CARD = Object.freeze({
@@ -281,6 +282,8 @@ export const dropMethods = {
     return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);
   },
   dropCenters(kind, value, centers) {
+    if (kind === 'birth')
+      return centers;
     if (kind === 'neuron')
       return centers.filter(c => c.role === 'nerve');
     const effects = kind === 'phase' ? [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]
@@ -321,6 +324,19 @@ export const dropMethods = {
       return this.notice(label('hormoneCard.noTarget'));
     let doc = this.state.document;
     for (const center of target.centers) {
+      if (kind === 'birth') {
+        doc = updateCellGrowth(doc, center.id, {
+                active : 1,
+                baseline : 0,
+                sensitivity : 1,
+                half : .1,
+                substance : Number(value),
+                width : 0,
+                steepness : 0
+              }) ??
+              doc;
+        continue;
+      }
       if (kind === 'phase') {
         const c = this.state.capabilities;
         doc = setLifePhase(doc, center.id, {[value] : PHASE_DROPPED[value]}, c.sensitivitySpan,

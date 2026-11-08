@@ -43,7 +43,8 @@ const neutralReceptor = (effect = null) => ({
   half : .05,
   substance : 0,
   width : 0,
-  steepness : 0
+  steepness : 0,
+  spread_receptors : 0
 });
 export const compilerOptions = doc =>
     ({capacityTolerance : 0, traitTolerance : 0, extraCells : 0, reserve : 64, ...doc.compiler});
@@ -101,6 +102,24 @@ export function validateDocument(doc) {
       if (ids.has(center.id) || !Number.isInteger(center.site) || sites.has(center.site) ||
           (center.profile !== undefined && typeof center.profile !== 'string'))
         throw new Error('studio.errors.invalidDocument');
+      const unit = [
+        'tau', 'field', 'qwidth', 'range', 'electrical_limit', 'teaching_limit', 'learning_tau'
+      ];
+      const signed = [ 'threshold', 'q1', 'q2', 'sign', 'mode', 'pace', 'modulator', 'crossing' ];
+      const receptorValid = r =>
+          r && Object.keys(neutralReceptor())
+                   .every(k => Number.isFinite(r[k]) && receptorPatch(k, r[k]) === r[k]);
+      if (!['sensor', 'nerve', 'motor'].includes(center.role) || !Number.isInteger(center.copies) ||
+          center.copies < 1 || center.copies > ATELIER_LIMITS.max_copies ||
+          unit.some(k => !Number.isFinite(center[k]) || center[k] < 0 || center[k] > 1) ||
+          signed.some(k => !Number.isFinite(center[k]) || Math.abs(center[k]) > 1) ||
+          !receptorValid(center.growth) || !Array.isArray(center.receptors) ||
+          center.receptors.length !== ATELIER_LIMITS.receptors ||
+          !center.receptors.every(receptorValid) || !center.distribution ||
+          [ 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts' ].some(
+              k => !Number.isFinite(center.distribution[k]) || center.distribution[k] < 0 ||
+                   center.distribution[k] > 1))
+        throw new Error('studio.errors.invalidDocument');
       ids.add(center.id);
       sites.add(center.site);
     }
@@ -153,6 +172,16 @@ export function receptorAffinity(wheel, receptor, index) {
   const [x, y] = wheelPlace(wheel, receptor.substance);
   return wheelAffinity(wheel, x, y, receptor.width, index);
 }
+export function receptorResponse(wheel, receptor, levels = [], maturity = 0, inactiveBaseline = 0) {
+  if (!receptor.active)
+    return inactiveBaseline;
+  let concentration = receptorAffinity(wheel, receptor, wheel.hormones) * maturity;
+  for (let index = 0; index < wheel.hormones; ++index)
+    concentration += receptorAffinity(wheel, receptor, index) * (levels[index] ?? 0);
+  const ratio = (concentration / receptor.half) ** (2 ** receptor.steepness);
+  const bound = Number.isFinite(ratio) ? ratio / (1 + ratio) : 1;
+  return clamp(receptor.baseline + receptor.sensitivity * bound, -1, 1);
+}
 export const NOTICEABLE_AFFINITY = .1;
 export const producers = (doc, index, wheel) =>
     doc.organs.filter(o => o.type === 'gland')
@@ -173,8 +202,13 @@ export function teachersOf(doc, center, wheel) {
       .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.teaching))
       .map(sub => ({substance : sub, glands : producers(doc, sub.index, wheel)}));
 }
+export const birthAffinity = (center, index, wheel) =>
+    center.growth.active && center.growth.sensitivity !== 0
+        ? receptorAffinity(wheel, center.growth, index)
+        : 0;
 export const receivers = (doc, index, wheel) =>
-    allCenters(doc).filter(c => boundEffects(c, index, wheel).length);
+    allCenters(doc).filter(c => boundEffects(c, index, wheel).length ||
+                                birthAffinity(c, index, wheel) >= NOTICEABLE_AFFINITY);
 export const growsWith = (doc, index, wheel) =>
     doc.growth.active && receptorAffinity(wheel, doc.growth, index) >= NOTICEABLE_AFFINITY;
 export const allCenters = doc =>
@@ -183,6 +217,7 @@ export const allCenters = doc =>
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});
+export const contactRows = state => state.runtime?.contacts ?? state.report?.contacts ?? [];
 export const usedSites = (doc, holds = () => true) =>
     new Set(allCenters(doc).filter(holds).map(c => c.site));
 export const findOrgan = (doc, id) => doc.organs.find(o => o.id === id) ?? null;
@@ -259,6 +294,8 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     electrical_limit : .5,
     teaching_limit : .5,
     learning_tau : .5,
+    distribution :
+        {spread_physiology : 0, spread_receptors : 0, spread_development : 0, spread_contacts : 0},
     growth : {...neutralReceptor(), active : 1, baseline : 1},
     receptors : Array.from({length : effects}, (_, effect) => neutralReceptor(effect))
   };
@@ -698,8 +735,9 @@ function tissueTargets(doc, id) {
   const organs = [ found.organ ];
   if (found.organ.linked)
     organs.push(findOrgan(doc, found.organ.pair));
-  const same = ORGAN_BY_KEY[found.organ.type]?.types ? c => typeOf(c) === typeOf(found.center)
-                                                     : c => c.key === found.center.key;
+  const same = isRegion(found.organ)                   ? c => c.node === found.center.node
+               : ORGAN_BY_KEY[found.organ.type]?.types ? c => typeOf(c) === typeOf(found.center)
+                                                       : c => c.key === found.center.key;
   return organs.filter(Boolean).flatMap(o => o.centers.filter(same));
 }
 const typeOf = center => center.profile ?? '';
@@ -817,6 +855,23 @@ export function updateCenter(doc, id, patch) {
   }
   return draft;
 }
+function receptorPatch(key, value) {
+  if (!Number.isFinite(value))
+    return null;
+  if (key === 'active')
+    return value ? 1 : 0;
+  if (key === 'substance')
+    return Math.round(clamp(value, 0, HORMONES.levels));
+  if (key === 'steepness')
+    return Math.round(clamp(value, 0, 3));
+  if (key === 'half')
+    return clamp(value, .0003, 1);
+  if (key === 'sensitivity')
+    return clamp(value, -2, 2);
+  if (key === 'width' || key === 'spread_receptors')
+    return clamp(value);
+  return clamp(value, -1, 1);
+}
 export function updateCellGrowth(doc, id, patch) {
   const draft = copy(doc), targets = tissueTargets(draft, id);
   if (!targets.length)
@@ -824,7 +879,17 @@ export function updateCellGrowth(doc, id, patch) {
   for (const c of targets)
     for (const key of Object.keys(neutralReceptor()))
       if (Number.isFinite(patch[key]))
-        c.growth[key] = patch[key];
+        c.growth[key] = receptorPatch(key, patch[key]);
+  return draft;
+}
+export function updateCellDistribution(doc, id, key, value) {
+  const draft = copy(doc);
+  if (!['spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts'].includes(
+          key) ||
+      !Number.isFinite(value))
+    return null;
+  for (const center of tissueTargets(draft, id))
+    center.distribution[key] = clamp(value);
   return draft;
 }
 export function updateReceptor(doc, id, effect, patch) {
@@ -836,7 +901,7 @@ export function updateReceptor(doc, id, effect, patch) {
   for (const center of targets)
     for (const key of Object.keys(neutralReceptor()))
       if (Number.isFinite(patch[key]))
-        center.receptors[effect][key] = patch[key];
+        center.receptors[effect][key] = receptorPatch(key, patch[key]);
   return draft;
 }
 export function lifePhase(center) {
@@ -932,7 +997,7 @@ export function updateGrowth(doc, patch) {
   const draft = copy(doc);
   for (const key of Object.keys(neutralReceptor()))
     if (Number.isFinite(patch[key]))
-      draft.growth[key] = patch[key];
+      draft.growth[key] = receptorPatch(key, patch[key]);
   return draft;
 }
 export function addSubstance(doc, max, wanted = null) {
@@ -1239,9 +1304,9 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
       if (!site || !fitsOrgan(organ.type, center, site))
         throw new Error('studio.errors.invalidSite');
       const g = {
-        electrical_limit : center.electrical_limit ?? .5,
-        learning_tau : center.learning_tau ?? .5,
-        teaching_limit : center.teaching_limit ?? .5,
+        electrical_limit : center.electrical_limit,
+        learning_tau : center.learning_tau,
+        teaching_limit : center.teaching_limit,
         ...center.distribution,
         name : `${organ.type}:${center.key}`.slice(0, ATELIER_LIMITS.max_group_name),
         zone : site.zone,

@@ -82,7 +82,7 @@ inline F8 gather8(const float *base, const I8 &index) {
 #endif
 }
 constexpr double PI_F = 3.14159265358979323846;
-constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN, ADAPTATION_SPAN = 10;
+constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
 constexpr std::uint64_t PCG_MULTIPLIER = 6364136223846793005ull,
                         PCG_INCREMENT = 1442695040888963407ull;
@@ -564,9 +564,10 @@ double Network::grow(const Hormones &h, double maturity, double available, doubl
   const auto n = tissue->neurons.size();
   const auto costs = scaled_costs(tissue->options);
   const double work = costs.work_per_tick;
-  growth_credit_ = std::min(std::max(4 * work, costs.neuron_work), growth_credit_ + work);
+  growth_credit_ = std::min(std::max(CELL_DEVELOPMENT_INTERVAL * work, costs.neuron_work),
+                            growth_credit_ + work);
   ++development_ticks_;
-  if (development_ticks_ % 4)
+  if (development_ticks_ % CELL_DEVELOPMENT_INTERVAL)
     return 0;
   std::vector<std::size_t> ready;
   bool changed = false;
@@ -580,7 +581,8 @@ double Network::grow(const Hormones &h, double maturity, double available, doubl
       }
       const double response =
           std::clamp(double(c.development_receptor.response(h, maturity_)), 0., 1.);
-      progress_[i] = float(std::min(1., progress_[i] + 4 * response / topology->tau[i]));
+      progress_[i] = float(
+          std::min(1., progress_[i] + CELL_DEVELOPMENT_INTERVAL * response / topology->tau[i]));
       if (progress_[i] >= 1 && response > 0)
         ready.push_back(i);
     }
@@ -760,7 +762,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     }
     const float input = sum8(electrical), mod = sum8(modulation);
     const float rm = std::min(mean_decay, float(age_[i]) / float(age_[i] + 1));
-    synaptic_mean_[i] += float((input - synaptic_mean_[i]) / (ADAPTATION_SPAN * topology->tau[i]));
+    synaptic_mean_[i] +=
+        float((input - synaptic_mean_[i]) / (SYNAPTIC_ADAPTATION_SPAN * topology->tau[i]));
     const double phase =
         (c.x > 0 ? PI_F : 0.) +
         2 * PI_F *

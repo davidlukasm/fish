@@ -1,9 +1,9 @@
 import {compileDocument} from './model/document.js';
-import {DEFAULT_CPPN_NODE_TYPE, findCppnLink, findCppnNode} from './view/graph.js';
+import {CPPN_GATE, DEFAULT_CPPN_NODE_TYPE, findCppnLink, findCppnNode} from './view/graph.js';
 import {label} from './view/kit.js';
 import {API_WAIT, requestBody} from './requests.js';
 
-const NEW_LINK = Object.freeze({weight : 1, port : 0});
+const NEW_LINK = Object.freeze({weight : 1});
 const NEW_NODE = Object.freeze({type : DEFAULT_CPPN_NODE_TYPE, parameter : 1});
 
 async function cppnAction(studio, operation, data = {}) {
@@ -24,6 +24,8 @@ async function cppnAction(studio, operation, data = {}) {
         API_WAIT.long);
     if (state.document !== document)
       return;
+    studio.stopPulse();
+    state.runtime = state.measurement = state.stimulus = null;
     state.report = result;
     state.robustness = null;
     if (result.genome)
@@ -58,8 +60,10 @@ export const CPPN_CLICKS = Object.freeze([
       const id = Number(element.dataset.cppnNode), from = studio.state.cppnConnectFrom;
       if (from === null || from === id)
         return choose(studio, {kind : 'node', id});
+      if (studio.state.cppnConnectPort === 1 && findCppnNode(studio.state.report,id)?.type !== CPPN_GATE)
+        return studio.notice(label('cppn.needsGate'));
       studio.state.cppnConnectFrom = null;
-      return edit(studio, {edit : 'connect', from, to : id, ...NEW_LINK});
+      return edit(studio, {edit:'connect',from,to:id,...NEW_LINK,port:studio.state.cppnConnectPort});
     }
   ],
   [ '[data-cppn-link]', (studio, element) => choose(studio, {kind : 'link', id : Number(element.dataset.cppnLink)}) ],
@@ -98,6 +102,7 @@ const nodeChange = (key, field, read) => [key, (studio, element) => {
     });
 }];
 export const CPPN_CHANGES = Object.freeze([
+  [ 'cppnConnectPort', (studio, e) => { studio.state.cppnConnectPort = Number(e.value);} ],
   linkChange('cppnWeight', 'weight', valueOf), linkChange('cppnEnabled', 'enabled', checkedOf),
   nodeChange('cppnFunction', 'type', valueOf), nodeChange('cppnParameter', 'parameter', valueOf)
 ]);

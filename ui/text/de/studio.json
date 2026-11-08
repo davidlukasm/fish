@@ -6,8 +6,8 @@
     "backMark": "← ",
     "modeFish": "Fisch gestalten",
     "modeCppn": "CPPN bearbeiten",
-    "develop": "Fisch entwickeln",
-    "developBusy": "Entwicklung läuft …",
+    "develop": "CPPN erzeugen",
+    "developBusy": "CPPN wird erzeugt …",
     "open": "Genom öffnen",
     "saveGenome": "Genom speichern",
     "placeEggs": "Eier ins Aquarium",
@@ -33,8 +33,10 @@
     "panelWidth": "Breite ziehen",
     "hubFooter": "FISH / AID",
     "stationFooter": "v019 · AID",
-    "developedCount": "{cells} {cells:Zelle|Zellen} · {contacts} {contacts:Synapse|Synapsen}",
-    "plannedCount": "{cells} {cells:Zelle|Zellen} · Entwurf"
+    "developedCount": "{cells} potenzielle Zellen · {contacts} Kontaktvorschläge",
+    "plannedCount": "{cells} potenzielle Zellen · Bauplan",
+    "proposalCount": "{n} Kontaktvorschläge",
+    "runtimeCount": "{cells} aktive Zellen · {contacts} vorhandene Synapsen"
   },
   "tools": {
     "undo": "Rückgängig",
@@ -51,9 +53,12 @@
     "zoomOut": "Verkleinern",
     "fit": "Gesamtansicht",
     "drawnContacts": "Entwurf",
-    "developedContacts": "Ergebnis",
+    "developedContacts": "CPPN-Vorschläge",
     "allNetworks": "Alle Verbindungen",
-    "focusedNetwork": "Ausgewähltes Netzwerk"
+    "focusedNetwork": "Ausgewähltes Netzwerk",
+    "runtimeContacts": "Vorhandene Synapsen",
+    "contactLimit": "Kontaktbündel",
+    "allContacts": "alle"
   },
   "layers": {
     "title": "Anzeige",
@@ -132,7 +137,7 @@
     "secretion": "Ausschüttung",
     "relay": "Schalt­kreis",
     "inhibit": "Hemm­kreis",
-    "learn": "Lern­kreis",
+    "learn": "Stärker plastisch",
     "pacemaker": "Takt­geber",
     "modulate": "Modulator"
   },
@@ -200,7 +205,7 @@
       "K",
       "L"
     ],
-    "maturity": "Reife",
+    "maturity": "Körperreife",
     "learning": "Lernregel",
     "rhythm": "Eigenrhythmus",
     "template": "Vorlage",
@@ -209,7 +214,7 @@
     "exciting": "erregend",
     "inhibiting": "hemmend",
     "transmitter": "Überträger",
-    "developedClass": "Entwickelte Zellen",
+    "developedClass": "Zellklasse aus dem CPPN",
     "none": "Noch keine Reaktion",
     "removeWire": "Verbindung entfernen",
     "unbend": "{n} {n:Biegepunkt|Biegepunkte} entfernen",
@@ -230,22 +235,22 @@
     "modulation": "Modulationswirkung",
     "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion.",
     "developedLink": "Entstandene Synapsen",
-    "contactCount": "Synapsen",
+    "contactCount": "Vorhandene Synapsen",
     "meanWeight": "Mittlere Stärke",
     "excitation": "Erregend",
     "inhibition": "Hemmend",
-    "learningMode": "Lernt von selbst",
+    "learningMode": "Lokaler Lernmodus",
     "maturityMark": "Rf",
     "reserveMark": "En",
     "growth": "Wachstum des Körpers",
     "concentration": "Konzentration",
     "cancelling": "ausgleichen",
     "competing": "auswählen",
-    "neutral": "nicht",
-    "lifePhase": "Lebensabschnitt",
+    "neutral": "nur Lehrfehler und Spuren",
+    "lifePhase": "Einfache Reiferezeptoren",
     "cellEffects": "Was Stoffe an dieser Zelle bewirken",
-    "phaseStart": "arbeitet ab Reife",
-    "phaseEnd": "stirbt ab Reife",
+    "phaseStart": "Ausgabe: halbe Wirkung",
+    "phaseEnd": "Tod: halbe Bindung",
     "measure": "Wirkung messen",
     "measureLevel": "Testdosis",
     "measured": "Gemessene Wirkung",
@@ -272,11 +277,11 @@
       "title": "Seitenführung"
     },
     "steps": "{n} Schritte",
-    "drive": "Ruhe und Erholung",
+    "drive": "Organbefehl aus Eingängen",
     "recovery": "zurück in {n} Schritten",
     "kindCount": "{name} ×{n}",
     "stretch": "Dehnung",
-    "cellsHandle": "Ziehen: mehr oder weniger Keimzellen",
+    "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",
     "skin": {
       "field": "Hautfeld ±{degrees}°",
       "touch": "Druckempfindlichkeit {share}",
@@ -288,23 +293,23 @@
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
       "fullIn": "voll nach {n} {n:Schritt|Schritten}",
-      "driven": "füllt sich nur erregt",
+      "driven": "Füllkommando fehlt",
       "ceiling": "Platz höchstens für {most}",
-      "self": "von selbst",
-      "trigger": "nur auf Auslöser",
+      "self": "Auslösekommando liegt an",
+      "trigger": "wartet auf Auslösekommando",
       "egg": "Ei mit {energy} Energie",
-      "hatches": "Ei mit {energy} Energie schlüpft",
-      "food": "Nährei: schlüpft erst ab {least}",
+      "hatches": "Ei mit {energy} Energie erreicht die Baukostenschwelle",
+      "food": "Nährei: Baukostenschwelle {least}",
       "sperm": "{energy} Energie je Abgabe",
       "stretch": "meldet halb bei {share} Füllung"
     },
     "curve": {
-      "baseline": "ohne Stoff",
-      "sensitivity": "bei viel Stoff",
-      "half": "halbe Bindung",
-      "steepness": "Steilheit"
+      "baseline": "Grundantwort einstellen",
+      "sensitivity": "Antwort bei hoher Dosis einstellen",
+      "half": "Halbsättigung einstellen",
+      "steepness": "Steilheit einstellen"
     },
-    "beat": "Ruhe und Takt",
+    "beat": "Eigenrhythmus · Referenzphase",
     "beatSteps": "ein Schlag alle {n} Schritte",
     "stimulusOrChange": "Reiz oder Veränderung",
     "adapts": "gewöhnt sich in {n} Schritten",
@@ -357,13 +362,16 @@
       "Stoff im Blut"
     ],
     "addProfile": "Duftprofil",
-    "removeProfile": "Duftprofil entfernen"
+    "removeProfile": "Duftprofil entfernen",
+    "meanLimit": "Mittlere genetische Höchststärke",
+    "proposedLink": "CPPN-Kontaktvorschläge",
+    "proposalCount": "Kontaktvorschläge"
   },
   "effects": [
     "erregt oder hemmt die Zelle",
     "lässt die Zelle schneller oder langsamer lernen",
     "lässt aktive Eingänge stille mehr oder weniger verdrängen",
-    "verschiebt, wann sich die Zelle Eingänge merkt",
+    "gewichtet die eigene Aktivität für die Lernspur",
     "macht den Takt der Zelle stärker oder schwächer",
     "macht das Signal der Zelle lauter oder leiser",
     "lässt die Zelle absterben",
@@ -373,7 +381,7 @@
     "erregt die Zelle",
     "lässt die Zelle schneller lernen",
     "lässt aktive Eingänge stille stärker verdrängen",
-    "lässt die Zelle sich Eingänge eher bei ihrem eigenen Signal merken",
+    "verstärkt die eigene Aktivität in der Lernspur",
     "macht den Takt der Zelle stärker",
     "macht das Signal der Zelle lauter",
     "lässt die Zelle absterben",
@@ -383,7 +391,7 @@
     "hemmt die Zelle",
     "lässt die Zelle langsamer lernen",
     "lässt aktive Eingänge stille schwächer verdrängen",
-    "lässt die Zelle sich Eingänge eher beim Takt merken",
+    "verringert die eigene Aktivität in der Lernspur",
     "macht den Takt der Zelle schwächer",
     "macht das Signal der Zelle leiser",
     "lässt die Zelle ohne ihn absterben",
@@ -416,37 +424,37 @@
   "regions": {
     "tectum": {
       "term": "Tectum",
-      "purpose": "Ordnet, was die Augen sehen, nach Richtung und meldet, wo etwas ist.",
+      "purpose": "Vorlage: ordnet Seheingänge nach Sehfeld und verbindet sie mit einem Ausgang.",
       "follows": "Die Karte richtet sich nach dem Sehfeld und den Farbtypen der Augen."
     },
     "olfactory": {
       "term": "Bulbus",
-      "purpose": "Sammelt die Düfte der Nase seiner Seite."
+      "purpose": "Vorlage: bündelt Geruchseingänge und ergänzt wahlweise gegenseitige Hemmung."
     },
     "hindbrain": {
       "term": "Medulla",
-      "purpose": "Löst schnelle Kommandos aus, etwa die Flucht zur Gegenseite."
+      "purpose": "Vorlage: verbindet Alarmeingang, Ausgang und gegenseitige Hemmung."
     },
     "spinal": {
       "term": "Rücken­mark",
-      "purpose": "Gibt den Takt für die Schwimmwelle, die Seiten abwechselnd."
+      "purpose": "Vorlage: verbindet Taktgeber, Hemmung und wahlweise Steuereingänge."
     },
     "pallium": {
       "term": "Pallium",
-      "purpose": "Lernt, welche Wahrnehmungen sich lohnen, und gibt sie weiter.",
+      "purpose": "Vorlage: bündelt Eingangsarten in plastischen Nervenzellen.",
       "follows": "Für jede Art von Eingang lernt ein eigener Knoten."
     },
     "torus": {
       "term": "Torus",
-      "purpose": "Macht aus der Seitenlinie eine Strömungsrichtung."
+      "purpose": "Vorlage: bündelt die Seitenlinie und ergänzt wahlweise gegenseitige Hemmung."
     },
     "cerebellum": {
       "term": "Cere­bellum",
-      "purpose": "Glättet Bewegungen, damit sie sauber beginnen und enden."
+      "purpose": "Vorlage: verbindet Eingänge mit anpassbaren Zellzeiten und hemmenden Kontakten."
     },
     "hypothalamus": {
       "term": "Hypo­thalamus",
-      "purpose": "Übersetzt innere Zustände wie Hunger in Hormone und Antrieb."
+      "purpose": "Vorlage: verbindet innere Sinne mit Drüsen und weiteren Ausgängen."
     },
     "slotsTitle": "Anschlüsse",
     "settingsTitle": "Einstellungen",
@@ -583,10 +591,12 @@
     "removed": "Entfernt. Rückgängig holt es zurück.",
     "moduleSaved": "Die Baugruppe steht jetzt in der Bibliothek.",
     "noRoom": "Für dieses Organ sind keine passenden Orte frei.",
-    "probed": "Reiz durch das entwickelte Gehirn geleitet.",
+    "probed": "Zustand im Prüfnetz berechnet.",
     "waiting": "Bereit.",
     "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich.",
-    "pressureMoved": "Der Druckfühler sitzt jetzt dort, wo er sein eigenes Organ misst."
+    "pressureMoved": "Der Druckfühler sitzt jetzt dort, wo er sein eigenes Organ misst.",
+    "needsCompiledProbe": "Zuerst das CPPN für diesen Bauplan erzeugen.",
+    "noActiveProbe": "Unter diesen Bedingungen ist am gewählten Ort noch keine aktive Zelle vorhanden."
   },
   "errors": {
     "invalidDocument": "Ungültiger Fischbauplan.",
@@ -643,11 +653,16 @@
       "cutoff": "Grenzwert",
       "cubic": "Verschiebung",
       "absolute": "Verschiebung",
-      "step": "Stufenweite",
-      "gate": "Torsteuerung"
+      "step": "Stufenweite"
     },
     "inputMark": "IN",
-    "outputMark": "OUT"
+    "outputMark": "OUT",
+    "inputFixed": "Dieser Eingang hat eine feste Bedeutung. Er kann mit anderen CPPN-Knoten verbunden werden.",
+    "port": "Zieleingang",
+    "signalPort": "Signal",
+    "controlPort": "Torsteuerung",
+    "gateInputs": "Das Tor multipliziert seinen Signaleingang mit dem getrennten Steuereingang. Die Engine verwendet hier keinen Zahlenparameter.",
+    "needsGate": "Der Steuereingang gehört zu einem Tor. Wähle ein Tor als Ziel oder den Signaleingang."
   },
   "cppnInputs": [
     "Zone: Maul",
@@ -737,9 +752,9 @@
     "select": "Platzieren: Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe zusammenfassen.",
     "wire": "Verschalten: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
-    "learn": "Lernen: einen Nervenknoten wählen und ihm einen Lehrer geben, einen Modulator oder einen Stoff.",
-    "stimulate": "Reizen: einen Knoten anklicken und sehen, wohin das Signal läuft.",
-    "develop": "Fisch entwickeln, das Ergebnis ansehen und die Eier ins Aquarium setzen."
+    "learn": "Jede Nervenzelle lernt lokal. Hier stellst du Plastizität, Lernspur, Lernmodus und zusätzliche Lehrsignale ein.",
+    "stimulate": "Reizen: CPPN erzeugen, Entwicklungsbedingungen einstellen und einen Knoten anklicken. Die Anzeige spielt die gemessene Änderung gegenüber einem ungestörten Vergleichsnetz ab.",
+    "develop": "CPPN erzeugen, Entwicklungsvorschau ansehen und Eier ins Aquarium setzen."
   },
   "muscleTitles": [
     "Schwanz­muskel",
@@ -863,9 +878,9 @@
     "glandTitle": "Eine Drüse, die diesen Stoff abgibt",
     "tileTitles": [
       "Der Stoff erregt die Zelle oder hemmt sie.",
-      "Der Stoff macht das Lernen der Zelle langsamer oder schneller, bis doppelt so schnell.",
+      "Der Stoff verändert den hormonellen Faktor der Lernrate. Eine kleine Grundlernrate bleibt erhalten.",
       "Der Stoff stellt ein, wie stark Eingänge, die zugleich mit der Zelle aktiv sind, die anderen verdrängen.",
-      "Der Stoff verschiebt, wann die Zelle sich Eingänge merkt: beim Schlag ihres Taktgebers oder bei ihrem eigenen Signal.",
+      "Der Stoff gewichtet die eigene Aktivität beim Aufbau lokaler Lernspuren.",
       "Der Stoff stellt ein, wie stark der Taktgeber schlägt.",
       "Der Stoff stellt ein, wie stark die Zelle ihr Signal ausgibt, von stumm bis voll.",
       "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn.",
@@ -875,7 +890,7 @@
       "bei Nervenzellen, Muskeln und Drüsen",
       "bei Nervenzellen",
       "bei Nervenzellen, die auswählend lernen",
-      "bei Nervenzellen mit Taktgeber",
+      "bei allen Nervenzellen",
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
       "bei allen Zellen",
@@ -884,22 +899,22 @@
     "sentence": "Der Stoff {effect}",
     "here": "hier bei {n} {n:Zelle|Zellen}",
     "effectsTitle": "Was der Stoff bewirken kann",
-    "growsOn": "lässt den Fisch wachsen",
-    "growsOff": "lässt den Fisch nicht wachsen",
+    "growsOn": "steuert das Körperwachstum",
+    "growsOff": "Körperwachstum zuordnen",
     "probe": "Probe",
     "body": "Körpersignale",
-    "phaseStart": "arbeitet ab Reife",
-    "phaseEnd": "stirbt ab Reife",
+    "phaseStart": "Ausgabe durch Reife",
+    "phaseEnd": "Tod durch Reife",
     "reserveSense": "+ Energie im Blut fühlen",
     "growthWith": "Wachstum des Körpers · {name}",
     "more": "Neu",
     "noTarget": "Hier wirkt das nicht."
   },
   "neuronPurpose": {
-    "relay": "gibt weiter, was ihn erreicht",
+    "relay": "Erregende Nervenzelle mit lokalem Lernen.",
     "inhibit": "hemmt die Zellen, die er erreicht",
-    "learn": "lernt auch ohne Lehrer: Eingänge, die zugleich mit ihm aktiv sind, wachsen, stille schrumpfen. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lernt dieser so.",
-    "pacemaker": "spielt im Takt vor; eine Zelle, die er erreicht, kann sich Eingänge in seinem Takt merken. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, gibt er ihm den Takt.",
+    "learn": "Erregende Nervenzelle mit höherer Grundplastizität. Auf eine Zelle gezogen erhöht diese Vorlage deren Plastizität.",
+    "pacemaker": "Nervenzelle mit Eigenrhythmus. Ihre Aktivität kann Eingänge zum lokalen Lernen anregen. Auf eine Zelle gezogen ergänzt sie einen verbundenen Taktgeber.",
     "modulate": "Lehrer: sein Signal ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },
   "wiring": {
@@ -937,60 +952,62 @@
   "learnRule": {
     "teaching": "Lehrsignal",
     "teacher": "Wer die Zelle lehrt",
-    "firing": "zugleich aktiv",
-    "inBeat": "im Takt",
-    "still": "still",
-    "output": "Ausgang",
-    "beat": "Takt",
-    "expect": "Erwartung",
-    "gain": "lernt mit {n} % Tempo",
-    "untaught": "wartet auf ein Lehrsignal",
-    "untaughtMode": "ohne Lehrer: nur {mode}",
+    "untaught": "lokales Lernen",
+    "untaughtMode": "lokal: {mode}",
     "overview": "Wer lernt, und von wem",
     "untaughtShort": "ohne Lehrer",
     "modulator": "Modulator",
     "substance": "Stoff",
-    "noTeacher": "Noch kein Lehrer: einen Modulator aus dem Baukasten auf die Zelle ziehen.",
+    "noTeacher": "Die Zelle lernt lokal. Modulatoren und Stoffrezeptoren können ihr zusätzlich ein Lehrsignal geben.",
     "rate": "Wie schnell die Zelle lernt",
     "slow": "sehr langsam",
-    "off": "kleinstes Lerntempo",
+    "off": "kleinste Lernrate",
     "nodes": "Knoten dieser Region",
     "fast": "schnell",
-    "mode": "Was die Zelle von selbst lernt",
-    "traceLength": "Wie lange sich die Zelle Eingänge merkt",
-    "short": "kurz",
-    "lasts": "hält etwa {n} Schritte",
+    "mode": "Lokaler Lernmodus",
+    "traceLength": "Zeitkonstante der lokalen Lernspur",
+    "short": "4 Takte",
+    "lasts": "Zeitkonstante {n} Takte",
     "none": "kein Stoff",
     "by": [
       "Ein Stoff lehrt die Zelle",
       "Ein Stoff lässt die Zelle schneller oder langsamer lernen",
       "Ein Stoff lässt aktive Eingänge stille mehr oder weniger verdrängen",
-      "Ein Stoff verschiebt, wann sich die Zelle Eingänge merkt"
+      "Ein Stoff gewichtet die eigene Aktivität für die Lernspur"
     ],
     "strength": [
       "Was die Zelle mit viel Stoff lernt",
       "Wie schnell die Zelle mit viel Stoff lernt",
       "Wie stark aktive Eingänge mit viel Stoff stille verdrängen",
-      "Wann sich die Zelle mit viel Stoff Eingänge merkt"
+      "Gewicht der eigenen Aktivität bei starker Bindung"
     ],
     "low": [
       "lehrt das Gegenteil",
-      "lernt gar nicht",
+      "kleinste Lernrate",
       "keine Verdrängung",
-      "nur beim Takt"
+      "keine neue Spur"
     ],
     "middle": [
       "lehrt nicht",
       "wie ohne Stoff",
       "wie ohne Stoff",
-      "halb Takt, halb eigenes Signal"
+      "halbe Aktivität"
     ],
     "high": [
       "lehrt",
       "doppelt so schnell",
-      "doppelt so stark",
-      "nur beim eigenen Signal"
-    ]
+      "volle Verdrängung",
+      "volle Aktivität"
+    ],
+    "presynaptic": "Änderung am Eingang",
+    "postsynaptic": "Änderung der eigenen Aktivität",
+    "effectiveRate": "Wirksame Lernrate",
+    "steps": "Takte",
+    "probation": "Schonfrist neuer Kontakte",
+    "prune": "Abbauschwelle nach der Schonfrist",
+    "decayHalf": "Grundzeitskala des Gewichtsabbaus",
+    "localPrediction": "Gleichzeitige Änderungen hinterlassen eine lokale Spur. Der Lernmodus verändert elektrische Gewichte; unerwartete Änderungen des Lehrsignals wirken über die Spuren. Kontakte zu Motorzellen verwenden Lernparameter ihrer vorgeschalteten Nervenzellen.",
+    "unavoidableDecay": "Jeder Kontakt verliert laufend Gewicht. Wenig genutzte Kontakte bauen sich schneller ab. Nach vier Lernzeitkonstanten darf ein zu schwacher Kontakt verschwinden; sein Vorzeichen folgt der sendenden Zelle."
   },
   "compiler": {
     "title": "Bauprüfung",
@@ -1029,8 +1046,8 @@
     }
   },
   "stimulus": {
-    "preview": "Vorschau entlang der Zeichnung",
-    "real": "Echter Reiz im gebauten Fisch"
+    "waiting": "Zuerst CPPN erzeugen und Entwicklungsbedingungen einstellen",
+    "real": "Gemessene Reizantwort · 1 Takt je Bild"
   },
   "probe": {
     "title": {
@@ -1063,7 +1080,7 @@
     "range": "Farbe des Fisches von geballtem bis ausgebreitetem Pigment",
     "skin": "ohne Pigment",
     "gathered": "geballt",
-    "rest": "Ruhe",
+    "rest": "Anfangsdispersion",
     "spread": "ausgebreitet"
   },
   "marks": {
@@ -1073,20 +1090,62 @@
     "less": "− {name}"
   },
   "development": {
-    "title": "Zellentwicklung und Kontakte",
-    "explanation": "Zellen entstehen entsprechend ihrer Wachstumsantwort. Kontakte beginnen bei null, lernen lokal und bauen sich laufend ab.",
-    "baseline": "Grundwachstum",
+    "title": "Zellbildung, Aktivität und Tod",
+    "explanation": "Die Geburtsantwort sammelt Entwicklungsfortschritt über die schnelle Zellzeit. Ausgabe und endgültiger Tod haben eigene Rezeptoren. Die Kurven zeigen die Mittelwerte des Bauplans; Streuung erzeugt Unterschiede zwischen Zellen.",
+    "baseline": "Grundantwort",
     "hormone": "Hormon",
     "maturity": "Körperreife",
-    "substance": "Wachstumssignal",
+    "substance": "Bevorzugtes Signal",
     "sensitivity": "Antwortstärke",
-    "half": "Halbe Wirkung",
+    "half": "Halbsättigung des Gesamtsignals",
     "steepness": "Steilheit",
     "electrical_limit": "Elektrische Höchststärke",
     "teaching_limit": "Lehrende Höchststärke",
     "precursor": "Vorläufer",
     "active": "Aktiv",
     "dead": "Abgestorben",
-    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn."
+    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn.",
+    "width": "Stoffbreite",
+    "preview": "Entwicklungsvorschau",
+    "previewConditions": "Eigenes Prüfnetz mit lokalem Lernen und spontaner Retinaaktivität. Körperreife und Blutspiegel bleiben auf den eingestellten Werten; Baustoffe und Energie stehen unbegrenzt bereit. Eine Berechnung beginnt immer mit Vorläuferzellen.",
+    "steps": "Entwicklungsdauer in Takten",
+    "calculate": "Entwicklung berechnen",
+    "sampleAt": "Zustand nach Takt",
+    "contacts": "Vorhandene Synapsen",
+    "signal": "Zellsignal",
+    "command": "Organbefehl",
+    "progress": "Mittlerer Geburtsfortschritt",
+    "birth": "Geburtsantwort",
+    "output": "Ausgabefaktor",
+    "death": "Tod ausgelöst",
+    "lifecycle": "Zellbildung, Ausgabe und Tod über der Körperreife",
+    "birthReceptor": "Geburtsrezeptor",
+    "birthMaturity": "Zellbildung durch Körperreife",
+    "birthEffect": "Legt einen Geburtsrezeptor an. Positive Antwort lässt Vorläufer zu aktiven Zellen werden.",
+    "parameters": "Zell- und Kontaktparameter",
+    "variation": "Streuung zwischen Zellen",
+    "tau": "Schnelle Zellzeit in Takten",
+    "learning_tau": "Lernzeit in Takten",
+    "field": "Maximale Eingänge je Nervenzelle",
+    "sign": "Vorzeichen der Ausgänge",
+    "pace": "Rhythmus-Anlage",
+    "modulator": "Modulator-Anlage",
+    "spread_physiology": "Streuung: Physiologie",
+    "spread_receptors": "Streuung: Rezeptoreigenschaften",
+    "spread_development": "Streuung: Zellbildung",
+    "spread_contacts": "Streuung: Kontakte",
+    "receptorActive": "Rezeptor verwenden",
+    "receptorValues": "Rezeptorwerte",
+    "netInput": "Summierter Eingang −1 … +1",
+    "gonadConditions": "Speichergröße: vollständiger Körperplan. Fülltempo: derzeit gemessener Organbefehl bei ausreichender Energie und konstanten Bedingungen. Die Vorschau berechnet keine Eiablagen.",
+    "bodyGrowth": "Dieser Rezeptor steuert das Gewebewachstum des Körpers über Hormone. Die Körperreife ergibt sich aus der größten erreichten Gewebemasse im Verhältnis zur Zielgröße.",
+    "phaseHandles": "Ziehen setzt einfache Reiferezeptoren. Die Marken stehen für deren Halbsättigung; breite Rezeptoren reagieren zusätzlich auf die gehaltenen Hormonspiegel.",
+    "snapshotLegend": "Im Fisch: durchgezogener Ring = aktiv, gestrichelt = Vorläufer, rotes Kreuz = abgestorben. Der Körperumriss zeigt den vollständigen Bauplan.",
+    "weightChange": "Gewichtsänderung im letzten Takt",
+    "decay": "Abbau im letzten Takt",
+    "threshold": "Schwelle / Gegenstück zur Eigenaktivität",
+    "qwidth": "Grundplastizität",
+    "mode": "Lernmodus −1 … +1",
+    "birthDefault": "Bei ausgeschaltetem Rezeptor verwendet die Zelle die Standardantwort 1."
   }
 }

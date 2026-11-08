@@ -1,13 +1,16 @@
+import {neuralContextControls, neuralContextOf, cellDevelopment} from './development.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {isRegion, ROLE} from '../model/organs.js';
 import {
   boundEffects,
+  birthAffinity,
   chosenCenter,
   DEATH_RESPONSE,
   effectDirection,
   findCenter,
+  organOf,
   growsWith,
   lifePhase,
   NOTICEABLE_AFFINITY,
@@ -15,6 +18,8 @@ import {
   producers,
   receivers,
   receptorEnds,
+  receptorAffinity,
+  receptorResponse,
   SUBSTANCE_NAME_LENGTH,
   substanceRead,
   teachersOf,
@@ -95,6 +100,11 @@ export function chemistry(state, organ, center) {
                                                 effectDirection(effect, center.receptors[effect])) +
                                     '</small>')),
       'inspector.answersToNothing');
+  rows += row(
+      'development.birthReceptor',
+      doc.substances.filter(sub => birthAffinity(center, sub.index, wheel) >= NOTICEABLE_AFFINITY)
+          .map(sub => chip(sub.index)),
+      'inspector.answersToNothing');
   if (center.role === 'nerve')
     rows += row('inspector.learnsFrom',
                 teachersOf(doc, center, wheel)
@@ -133,15 +143,42 @@ function receptorCurve(state, receptor, effect) {
   const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   const scale = effect === GROWTH ? GROWTH_SCALE : EFFECT_SCALE[effect] ?? SHARE_SCALE;
-  const response = (c, r = receptor) => effect === GROWTH
-                                            ? Math.min(1, r.sensitivity * bound(r, c))
-                                            : clamp(r.baseline + r.sensitivity * bound(r, c), -1);
+  const context = neuralContextOf(state), wheel = state.capabilities;
+  const concentration = (c, r = receptor) => {
+    if (!wheel)
+      return c;
+    let sum = 0;
+    for (let i = 0; i < (effect === GROWTH ? HORMONES.levels : wheel.regulators); ++i) {
+      const level = i === r.substance       ? c
+                    : i === HORMONES.levels ? context.maturity
+                                            : context.hormones[i];
+      sum += receptorAffinity(wheel, r, i) * level;
+    }
+    return sum;
+  };
+  const occupancy = (c, r = receptor) => bound(r, concentration(c, r));
+  const response = (c, r = receptor) =>
+      !r.active           ? (effect === HORMONE_EFFECT.output ? 1 : 0)
+      : effect === GROWTH ? clamp(r.sensitivity * occupancy(c, r))
+                          : clamp(r.baseline + r.sensitivity * occupancy(c, r), -1);
   const atFraction = f => maturity ? f : halfMin * Math.pow(halfMax / halfMin, f);
   const fraction = c => maturity ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
   const x = f => CURVE.left + (CURVE.right - CURVE.left) * f;
   const y = v =>
       CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
-  return {maturity, halfMin, halfMax, scale, response, atFraction, fraction, x, y};
+  return {
+    maturity,
+    halfMin,
+    halfMax,
+    scale,
+    concentration,
+    occupancy,
+    response,
+    atFraction,
+    fraction,
+    x,
+    y
+  };
 }
 const STEEP_PROBE = 2;
 function curveHandles(state, receptor, effect, target) {
@@ -172,9 +209,9 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const r = clamp(k.scale.response(v), effect === GROWTH ? 0 : -1);
   const clampSpan = value => Math.max(-span, Math.min(span, value));
   if (handle === 'baseline')
-    return {baseline : r};
+    return {baseline : clamp(r - receptor.sensitivity * k.occupancy(k.atFraction(0)), -1)};
   if (handle === 'sensitivity') {
-    const full = bound(receptor, k.atFraction(1)), base = effect === GROWTH ? 0 : receptor.baseline;
+    const full = k.occupancy(k.atFraction(1)), base = effect === GROWTH ? 0 : receptor.baseline;
     return full > 0 ? {sensitivity : clampSpan((r - base) / full)} : null;
   }
   const f = clamp((px - CURVE.left) / (CURVE.right - CURVE.left));
@@ -184,7 +221,8 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const share = receptor.sensitivity ? (r - base) / receptor.sensitivity : 0;
   if (!(share > 0 && share < 1))
     return null;
-  const n = Math.log(share / (1 - share)) / Math.log(STEEP_PROBE);
+  const n = Math.log(share / (1 - share)) /
+            Math.log(k.concentration(receptor.half * STEEP_PROBE) / receptor.half);
   return {
     steepness : Math.max(
         0, Math.min(state.capabilities?.steepnessSteps ?? 0, Math.round(Math.log2(Math.max(1, n)))))
@@ -213,8 +251,7 @@ function doseStrip(state, receptor, effect, target) {
       doseGeometry(state, receptor, effect);
   const colour = receptor.active ? substanceColor(receptor.substance) : 'currentColor';
   const halfAt = clamp(k.fraction(receptor.half));
-  const responses = [ k.atFraction(0), k.atFraction(1) ].map(
-      c => receptor.active ? k.response(c) : clamp(receptor.baseline, -1));
+  const responses = [ k.atFraction(0), k.atFraction(1) ].map(c => k.response(c));
   const cells =
       responses
           .map((r, i) => '<svg x="' + cellX(i) + '" y="' + top + '" width="' + EFFECT_PANEL.width +
@@ -285,8 +322,8 @@ export function dosePatch(state, receptor, effect, handle, fx, fy) {
   const r = clamp(k.scale.response(v), -1);
   const span = state.capabilities?.sensitivitySpan ?? 1;
   if (handle === 'baseline')
-    return {baseline : r};
-  const full = receptor.active ? bound(receptor, k.atFraction(1)) : 0;
+    return {baseline : clamp(r - receptor.sensitivity * k.occupancy(k.atFraction(0)), -1)};
+  const full = receptor.active ? k.occupancy(k.atFraction(1)) : 0;
   return full > 0 ? {sensitivity : Math.max(-span, Math.min(span, (r - receptor.baseline) / full))}
                   : null;
 }
@@ -393,25 +430,28 @@ export function measurement(state, index) {
 }
 function lifePhaseEditor(state, focus) {
   const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
-  const onMaturity = output.substance === HORMONES.levels;
-  const level = m => {
-    if (phase.end !== null && m > phase.end)
-      return 0;
-    const c = onMaturity ? m : 0;
-    const r =
-        output.active ? clamp(output.baseline + output.sensitivity * bound(output, c), -1) : 1;
-    return (1 + r) / 2;
-  };
+  const context = neuralContextOf(state);
+  const level = m => (1 + receptorResponse(state.capabilities, output, context.hormones, m, 1)) / 2;
   const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
         y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
   const points = Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points)
                      .map(m => fixed(x(m)) + ',' + fixed(y(level(m))))
                      .join(' ');
-  const dead = phase.end === null
-                   ? ''
-                   : '<rect class="aid-death-zone" x="' + fixed(x(phase.end)) + '" y="' +
-                         CURVE.top + '" width="' + fixed(CURVE.right - x(phase.end)) +
-                         '" height="' + (CURVE.bottom - CURVE.top) + '"/>';
+  const death = focus.receptors[HORMONE_EFFECT.death];
+  const dead = Array
+                   .from({length : CURVE.points},
+                         (_, i) => {
+                           const m = (i + .5) / CURVE.points;
+                           return receptorResponse(state.capabilities, death, context.hormones, m) >
+                                          DEATH_RESPONSE
+                                      ? '<rect class="aid-death-zone" x="' +
+                                            fixed(x(i / CURVE.points)) + '" y="' + CURVE.top +
+                                            '" width="' +
+                                            fixed((CURVE.right - CURVE.left) / CURVE.points + .1) +
+                                            '" height="' + (CURVE.bottom - CURVE.top) + '"/>'
+                                      : '';
+                         })
+                   .join('');
   const mark = (handle, value, open, title) => {
     const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
                                                '" y2="' + CURVE.bottom + '"';
@@ -422,6 +462,7 @@ function lifePhaseEditor(state, focus) {
            ' Z"/></g>';
   };
   return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
+         '<p class="aid-hint">' + label('development.phaseHandles') + '</p>' +
          '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
          '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '">' + dead +
          curveAxes() + '<polyline class="aid-response-line" points="' + points + '"/>' +
@@ -486,7 +527,7 @@ function substanceWheel(state, profile, {
     if (index >= reads)
       return '';
     const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
-    if (index < HORMONES.levels && !named.has(index))
+    if (index < HORMONES.levels && !named.has(index) && !clickable.has(index))
       return '<g class="aid-wheel-point empty" data-define-substance="' + index +
              '" style="--substance:' + substanceColor(index) + '"><circle cx="' + px(x) + '" cy="' +
              py(y) + '" r="' + WHEEL.point + '"/><text x="' + px(x) + '" y="' + py(y) +
@@ -538,7 +579,18 @@ function growthEditor(state) {
   return '<section class="aid-growth">' +
          heading(
              t('studio.hormoneCard.growthWith', {name : substanceName(state, growth.substance)})) +
-         effectCurve(state, growth, GROWTH, GROWTH) + '</section>';
+         effectCurve(state, growth, GROWTH, GROWTH) + '<div class="aid-parameter-grid">' +
+         [ 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
+             .map(key => '<label>' + label('development.' + key) +
+                         '<input type="number" data-body-growth="' + key + '" value="' +
+                         growth[key] + '" step="' + (key === 'steepness' ? 1 : .001) + '" min="' +
+                         (key === 'half' ? state.capabilities.halfRange[0] : 0) + '" max="' +
+                         (key === 'sensitivity' ? state.capabilities.sensitivitySpan
+                          : key === 'steepness' ? state.capabilities.steepnessSteps
+                                                : 1) +
+                         '"></label>')
+             .join('') +
+         '</div><p class="aid-hint">' + label('development.bodyGrowth') + '</p></section>';
 }
 function organsOf(doc, centers) {
   const seen = new Set();
@@ -566,7 +618,7 @@ function receptorBody(state, center, effect) {
          escapeText(center.id) + '" data-receptor-effect="' + effect + '" ' +
          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
          '</label>' + substanceWheel(state, receptorProfile(state, receptor), {
-           choices : [...state.document.substances.map(sub => sub.index), HORMONES.levels ],
+           choices : Array.from({length : HORMONES.levels + 1}, (_, i) => i),
            attribute : 'data-receptor-substance',
            reads : state.capabilities?.regulators,
            extra : ' data-center-id="' + escapeText(center.id) + '" data-receptor-effect="' +
@@ -574,7 +626,26 @@ function receptorBody(state, center, effect) {
            selected : receptor.substance,
            widthTarget : target
          }) +
-         doseStrip(state, receptor, effect, target);
+         doseStrip(state, receptor, effect, target) + '<details><summary>' +
+         label('development.receptorValues') + '</summary><div class="aid-parameter-grid">' +
+         [ 'baseline', 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
+             .map(key => {
+               const min = key === 'baseline'      ? -1
+                           : key === 'sensitivity' ? -state.capabilities.sensitivitySpan
+                           : key === 'half'        ? state.capabilities.halfRange[0]
+                                                   : 0;
+               const max = key === 'sensitivity' ? state.capabilities.sensitivitySpan
+                           : key === 'steepness' ? state.capabilities.steepnessSteps
+                                                 : 1;
+               return '<label>' + label('development.' + key) +
+                      '<input type="number" data-receptor-field="' + escapeText(center.id) +
+                      '" data-receptor-effect="' + effect + '" data-receptor-key="' + key +
+                      '" min="' + min + '" max="' + max + '" step="' +
+                      (key === 'steepness' ? 1 : .0001) + '" value="' + receptor[key] +
+                      '"></label>';
+             })
+             .join('') +
+         '</div></details>';
 }
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
@@ -591,8 +662,12 @@ function substanceInspector(state) {
           .join('');
   const acts = organsOf(doc, receivers(doc, index, wheel)).map(o => {
     const effects = new Set(o.centers.flatMap(c => boundEffects(c, index, wheel)));
+    const birth = o.centers.some(c => birthAffinity(c, index, wheel) >= NOTICEABLE_AFFINITY);
     return '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, ICON.list) +
            escapeText(organTitle(o, state.sites)) +
+           (birth ? '<small class="aid-bound-effect">' + label('development.birthReceptor') +
+                        '</small>'
+                  : '') +
            [...effects ]
                .map(e => {
                  const binding = o.centers.find(c => boundEffects(c, index, wheel).includes(e));
@@ -659,7 +734,7 @@ function effectGuide(state, index) {
              .join('') +
          '</section>';
 }
-export function hormoneInspector(state) {
+function hormoneDetails(state) {
   const {document : doc, selected} = state;
   const focus = chosenCenter(doc, selected);
   if (!focus)
@@ -671,7 +746,28 @@ export function hormoneInspector(state) {
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
   if (!focus.receptors?.[effect])
     return html;
-  return html + lifePhaseEditor(state, focus) + '<div class="aid-receptor-editor">' +
-         heading(label('inspector.cellEffects')) + receptorEditor(state, focus, effects, effect) +
-         '</div>';
+  const organ = organOf(doc, focus.id), seen = new Set();
+  const choices = (organ?.centers ?? []).filter(c => {
+    const key = c.node ?? c.profile ?? c.key;
+    if (seen.has(key))
+      return false;
+    seen.add(key);
+    return true;
+  });
+  const choose = choices.length > 1
+                     ? '<div class="aid-center-tabs">' +
+                           choices
+                               .map(c => '<button data-select-center="' + escapeText(c.id) +
+                                         '" class="' + (c.id === focus.id ? 'active' : '') + '">' +
+                                         escapeText(centerTitle(c)) + '</button>')
+                               .join('') +
+                           '</div>'
+                     : '';
+  return html + choose + cellDevelopment(state, focus) + lifePhaseEditor(state, focus) +
+         '<div class="aid-receptor-editor">' + heading(label('inspector.cellEffects')) +
+         receptorEditor(state, focus, effects, effect) + '</div>';
+}
+
+export function hormoneInspector(state) {
+  return neuralContextControls(state) + hormoneDetails(state);
 }

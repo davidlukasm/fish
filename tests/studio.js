@@ -17,7 +17,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development.cc" : "62a62e6f74fe28b8",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
-  "colony-core/field/substrate.cc" : "bbba0090b9dbf418",
+  "colony-core/field/substrate.cc" : "298cba387908c744",
   "src/body_plan.cc" : "fea754ab4a6b866d",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
@@ -64,7 +64,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
   "colony-core/field/distribution.hh" : "7e1ec374fd787792",
   "colony-core/field/retinal_tissue.hh" : "7fce4ff037f33e69",
-  "colony-core/field/dynamics.hh" : "81521f102959c880",
+  "colony-core/field/dynamics.hh" : "c6231ef4339868ab",
   "colony-core/field/maturation.hh" : "baa6619b5c23edb2"
 });
 function semanticFingerprint(source) {
@@ -194,100 +194,19 @@ function semanticFingerprint(source) {
     assert.equal(checked.viable, source.viable);
   }
   {
-    const line = (x0, x1) => [{x : x0, y : 0}, {x : x1, y : 0}];
-    assert.deepEqual(pulse.signalPoint(line(0, 100), .5), {x : 50, y : 0});
-    assert.deepEqual(pulse
-                         .legStages({
-                           points : line(0, 100),
-                           starts : [ line(-50, 0), line(-30, 0) ],
-                           arrives : [ line(100, 140) ]
-                         })
-                         .map(stage => [stage.lines.length, stage.length]),
-                     [ [ 2, 50 ], [ 1, 100 ], [ 1, 40 ] ]);
-    const links = [
-      {from : 'eye', to : 'tectum', points : line(0, 200), kind : 'excite'},
-      {from : 'tectum', to : 'muscle', points : line(200, 400), kind : 'excite'},
-      {from : 'tectum', to : 'quiet', points : line(200, 300), kind : 'inhibit'},
-      {from : 'quiet', to : 'muscle', points : line(300, 400), kind : 'excite'},
-      {from : 'muscle', to : 'tectum', points : line(400, 200), kind : 'excite'}
-    ];
-    const answers = {quiet : 'fall', freed : 'rise', drained : 'fall'};
-    const schedule = pulse.signalSchedule(
-        [ 'eye' ],
-        [
-          ...links, {from : 'quiet', to : 'freed', points : line(300, 350), kind : 'inhibit'},
-          {from : 'quiet', to : 'drained', points : line(300, 360), kind : 'excite'},
-          {from : 'tectum', to : 'drained', points : line(200, 260), kind : 'excite'}
-        ],
-        key => answers[key] ?? 'rise');
-    const modes = mode => [...schedule.parts]
-                              .filter(([, part ]) => part.mode === mode)
-                              .map(([ key ]) => key)
-                              .sort();
-    assert.deepEqual(modes('fire'), [ 'eye', 'freed', 'muscle', 'tectum' ]);
-    assert.deepEqual(
-        modes('quiet'), [ 'drained', 'quiet' ],
-        'An inhibiting signal quiets a part that falls, as does an excitation withdrawn');
-    assert.ok(schedule.parts.get('muscle').time > schedule.parts.get('tectum').time);
-    assert.ok(
-        schedule.legs.every(l => l.link.to !== 'drained' || l.link.from === 'quiet' || !l.answers),
-        'An exciting signal does not quiet the part it reaches');
-    assert.deepEqual(schedule.legs.filter(l => l.link.from === 'quiet').map(l => l.sends),
-                     [ 'quiet', 'quiet', 'quiet' ], 'A quieted part withdraws what it sends');
-    assert.equal(schedule.legs.filter(l => l.link.from === 'tectum').length, 3,
-                 'A part sends once to each of its targets');
-    const preview = pulse.signalSchedule(
-        [ 'eye' ],
-        [
-          ...links, {from : 'quiet', to : 'freed', points : line(300, 350), kind : 'inhibit'},
-          {from : 'quiet', to : 'muted', points : line(300, 360), kind : 'excite'}
-        ],
-        (key, push) => push);
-    const previewed = mode => [...preview.parts]
-                                  .filter(([, part ]) => part.mode === mode)
-                                  .map(([ key ]) => key)
-                                  .sort();
-    assert.deepEqual(previewed('fire'), [ 'eye', 'freed', 'muscle', 'tectum' ]);
-    assert.deepEqual(previewed('quiet'), [ 'muted', 'quiet' ]);
-    const frames = [ [ 0, 0, 0 ], [ .9, -.8, .01 ], [ .2, -.3, -.02 ], [ -.3, .2, .01 ] ];
-    assert.deepEqual([ [ 0 ], [ 1 ], [ 2 ], [ 1, 0 ] ].map(i => pulse.signalAnswer(frames, i)),
-                     [ 'rise', 'fall', null, 'rise' ]);
     const oldFrame = globalThis.requestAnimationFrame, oldCancel = globalThis.cancelAnimationFrame;
-    const scheduled = [], reached = [], classes = new Set();
-    const element = {classList : {add : (...c) => c.forEach(x => classes.add(x)), remove() {}}};
-    const fakeSvg = {
-      ownerDocument : {
-        createElementNS : () => ({
-          isConnected : false,
-          style : {},
-          setAttribute() {},
-          appendChild() {},
-          remove() { this.isConnected = false; }
-        })
-      },
-      appendChild(item) { item.isConnected = true; }
-    };
+    const pending = [], shown = [], frames = [ [ 0, 0 ], [ .4, -.2 ], [ .1, 0 ] ];
+    let cleared = 0;
     try {
-      globalThis.requestAnimationFrame = callback => scheduled.push(callback);
+      globalThis.requestAnimationFrame = callback => pending.push(callback);
       globalThis.cancelAnimationFrame = () => {};
-      const player = pulse.createSignalPlayer(fakeSvg, schedule, {
-        marks : () => [element],
-        moves : key => key === 'muscle' ? [ [ element, 'aid-move-tail' ] ] : [],
-        reached : ({key, link}) => reached.push(key ?? link?.to),
-        arrived : link => reached.push('arrived:' + link.to)
-      });
+      const player = pulse.createProbePlayer(frames, frame => shown.push(frame), () => ++cleared);
       player.start();
-      for (const time of [0, 10, 1e6]) {
-        const frame = scheduled.shift();
-        assert.ok(frame);
-        frame(time);
-      }
-      assert.ok(reached.includes('eye') && reached.includes('muscle'));
-      assert.ok(reached.some(r => String(r).startsWith('arrived:')),
-                'A signal tells when it arrives');
-      assert.ok(classes.has('aid-pulse-fired') && classes.has('aid-move-tail'),
-                'A firing effector moves what it drives');
-      player.stop();
+      for (const time of [0, 100, 200, 300])
+        pending.shift()(time);
+      assert.deepEqual(shown, frames, 'The preview plays measured frames in order');
+      assert.equal(player.running(), false);
+      assert.equal(cleared, 1);
     } finally {
       globalThis.requestAnimationFrame = oldFrame;
       globalThis.cancelAnimationFrame = oldCancel;
@@ -343,9 +262,8 @@ function semanticFingerprint(source) {
     }
     const excited = effectScene(E.excitation, '#abcdef');
     const taught = effectScene(E.teaching, '#abcdef');
-    assert.doesNotMatch(excited, /aid-effect-line teach/);
-    assert.match(taught, /aid-effect-line teach/);
-    assert.doesNotMatch(taught, /aid-effect-spikes/);
+    assert.notEqual(excited, taught);
+    assert.match(taught, /aid-effect-value/);
     const aquarium = JSON.parse(readFileSync(join(root, 'ui/text/de/nerve_map.json'), 'utf8'));
     assert.equal(aquarium.effects.length, Object.keys(E).length);
   }
@@ -963,7 +881,7 @@ function semanticFingerprint(source) {
     effect : E.learning
   });
   assert.match(learner, /data-learn-rate/);
-  assert.match(learner, /aid-episode-arrow teach none/);
+  assert.match(learner, /aid-local-learning/);
   for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learner,
                  new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
@@ -1071,13 +989,14 @@ scene={'side':payload['side'],'bearing':payload['angle'],'distance':32,'radius':
 target=run({'operation':'design','plan':plan,'sight':scene})
 outside=run({'operation':'design','plan':plan,'sight':{**scene,'bearing':180}})
 blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
-probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[payload['relay']],'steps':2})
+context={'developmentSteps':128,'maturity':0,'hormones':[0]*6}
+probe=run({'operation':'probe','genome':built['genome'],'plan':plan,'groups':[payload['relay']],'steps':2,'pulse':True,'context':context})
 assert len(probe['frames'])==3
-measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'maturity':1,'steps':8})
+measure=run({'operation':'measure','genome':built['genome'],'plan':plan,'substance':0,'level':.5,'steps':8,'context':context})
 assert measure['growth']>.5 and len(measure['groups'])==len(plan['groups'])
 example=run({'operation':'build','plan':payload['example']})
 assert example['compiler']['ok'],example['compiler']
-print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'runtime':probe['runtime'],'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
   const currentEye = model.findOrgan(doc, id);
   const rayPlan = retina.retinalRays(currentEye, sites);
   const exampleStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
@@ -1140,6 +1059,21 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     maxBuffer : 32 * 1024 * 1024
   }));
   const {built, target : seen, outside, blue} = response;
+  const sampled = {
+    ...state,
+    runtime : response.runtime,
+    report : built,
+    genome : built.genome,
+    stale : false,
+    selected : {kind : 'center', id : relay.centerId}
+  };
+  for (const tool of ['select', 'stimulate', 'hormone', 'learn']) {
+    const markup = panels.inspector({...sampled, tool});
+    assert.doesNotMatch(markup, /NaN|undefined|studio\.[a-zA-Z]/,
+                        tool + ' renders a native development snapshot');
+  }
+  assert.match(views.fishScene(sampled), /aid-runtime-cell/);
+
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
   const exampleDoc = exampleStudio.state.document, exampleCenters = model.allCenters(exampleDoc);
   const organOf = index => model.findCenter(exampleDoc, exampleCenters[index].id).organ;
@@ -1531,9 +1465,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const drive = await import('../ui/studio/view/drive.js');
     const scale = sitesResult.biasScale;
     assert.ok(scale > 0);
-    assert.ok(Math.abs(drive.restLevel({threshold : -1}, scale) - Math.tanh(scale)) < 1e-12);
-    assert.ok(Math.abs(drive.restLevel({threshold : 0}, scale)) < 1e-12);
-    const back = drive.drivePatch('rest', .1, 0, scale).threshold;
+    const back = drive.drivePatch('rest', .1, 0, {scale}).threshold;
     assert.ok(Math.abs(back + 1) < 1e-9, 'The top of the rest band is the lowest threshold');
   }
   {
@@ -1620,16 +1552,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
               learnPanel.includes('data-learn-trace'));
-    assert.match(learnPanel, /ohne Lehrer: nur auswählen/);
-    const widths = [
-      ...learnPanel.matchAll(
-          /aid-episode-line[^>]*><animate attributeName="stroke-width" values="([^"]+)"/g)
-    ].map(m => m[1].split(';').map(Number));
-    assert.ok(Math.max(...widths[0]) > widths[0][0] && Math.min(...widths[1]) < widths[1][0]);
+    assert.match(learnPanel, /Schonfrist neuer Kontakte/);
     const traceHandle = /data-graphic-handle="learn-trace" cx="([^"]+)"/.exec(learnPanel);
     const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
-    assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).tau - learnCell.tau) <
-              1e-2);
+    assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).learning_tau -
+                       learnCell.learning_tau) < 1e-2);
     assert.ok(Math.abs(learningView.learnResponseOf(.5)) < 1e-9);
     const taughtDoc =
         model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.teaching, 0);
@@ -1654,7 +1581,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.match(taughtPanel, new RegExp('data-learn-receptor="[^"]+" data-learn-effect="' +
                                          HORMONE_EFFECT.teaching + '"'));
-    assert.doesNotMatch(taughtPanel, /aid-episode-arrow teach none/);
+    assert.match(taughtPanel, /aid-local-learning/);
     const skinView = await import('../ui/studio/view/skin.js');
     const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
     const touchOrgan = model.findOrgan(touched.document, touched.organId),
@@ -1863,8 +1790,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(model.chosenCenter(gutDoc.document, {kind : 'organ', id : gutOrgan.id}),
                  gutOrgan.centers[0]);
     assert.equal(model.chosenCenter(gutDoc.document, {kind : 'wire', id : gutOrgan.id}), null);
-    assert.ok(organsModel.isModulator({modulator : 1}) &&
-              !organsModel.isModulator({modulator : -1}));
+    assert.ok(
+        organsModel.isModulator({role : 'nerve', sign : 1, mode : 1, pace : -1, modulator : 1}) &&
+        !organsModel.isModulator({role : 'nerve', sign : 1, mode : 1, pace : -1, modulator : -1}));
     const glyphs = await import('../ui/glyph.js');
     const line = glyphs.glyph('M0 0h24', {size : 16, paint : glyphs.linePaint()});
     assert.match(line, /width="16" height="16" viewBox="0 0 24 24"/);

@@ -12,6 +12,7 @@ const nodeTitle = (id, shape) => id < shape.cppnInputs ? label('cppnInputs.' + i
                                  : id < shape.cppnInputs + shape.cppnOutputs
                                      ? label('cppnOutputs.' + (id - shape.cppnInputs))
                                      : t('units.numbered', {name : label('cppn.hidden'), n : id});
+export const CPPN_GATE = typeLabels.indexOf('gate');
 export const DEFAULT_CPPN_NODE_TYPE = typeLabels.indexOf('linear');
 const nodeTypeLabel = type => label('cppnFunctions.' + typeLabels[type]);
 function scopeOutputs(scope, shape) {
@@ -22,7 +23,8 @@ function scopeOutputs(scope, shape) {
            (scope === 'cells' && output <= CPPN_OUTPUT.identity4) ||
            (scope === 'traits' && output >= CPPN_OUTPUT.capacity &&
             output <= CPPN_OUTPUT.quality_width) ||
-           (scope === 'addresses' && output >= CPPN_OUTPUT.sender1);
+           (scope === 'traits' && output === CPPN_OUTPUT.synapse_strength) ||
+           (scope === 'addresses' && output >= CPPN_OUTPUT.sender1 && output <= CPPN_OUTPUT.range);
   });
 }
 function incomingLinks(cppn) {
@@ -138,12 +140,12 @@ export function cppnGraph(state) {
   const edges =
       state.report.cppn.links.map(cppnLink)
           .filter(e => active.has(e.from) && active.has(e.to))
-          .map(({id, from, to, weight, enabled}) => {
+          .map(({id, from, to, weight, enabled, port}) => {
             const path = edgePath(view.points.get(from), view.points.get(to));
             const selected = selection?.kind === 'link' && selection.id === id;
             return '<g class="aid-cppn-link ' + (selected ? 'selected' : '') +
                    (enabled ? (weight < 0 ? ' inhibitory' : ' excitatory') : ' disabled') +
-                   '" data-cppn-link="' + id + '">' +
+                   (port ? ' control-port' : '') + '" data-cppn-link="' + id + '">' +
                    '<path d="' + path + '" class="aid-cppn-link-ink" stroke-width="' +
                    clamp(Math.abs(weight) * CPPN_GRAPH.ink.per_weight, CPPN_GRAPH.ink.least,
                          CPPN_GRAPH.ink.most) +
@@ -202,8 +204,10 @@ export function cppnInspector(state) {
       return '';
     return '<h3>' + label('cppn.connection') + '</h3><div class="aid-cppn-connection">' +
            escapeText(linkText(nodeTitle(link.from, shape), nodeTitle(link.to, shape))) +
-           '</div><label>' + label('cppn.weight') + '<input type="number" data-cppn-weight="' +
-           link.id + '" ' + limits(shape, CPPN_STEP.weight) + ' value="' + link.weight +
+           '</div><p>' + label('cppn.port') + ': ' +
+           label(link.port ? 'cppn.controlPort' : 'cppn.signalPort') + '</p><label>' +
+           label('cppn.weight') + '<input type="number" data-cppn-weight="' + link.id + '" ' +
+           limits(shape, CPPN_STEP.weight) + ' value="' + link.weight +
            '"/></label><label><input type="checkbox" data-cppn-enabled="' + link.id + '"' +
            (link.enabled ? ' checked' : '') + '/>' + label('cppn.enabled') + '</label>' +
            '<button data-cppn-split="' + link.id + '">' + label('cppn.split') + '</button>';
@@ -211,14 +215,21 @@ export function cppnInspector(state) {
   const node = findCppnNode(state.report, selected.id);
   if (!node)
     return '';
+  if (node.id < shape.cppnInputs)
+    return '<h3>' + escapeText(nodeTitle(node.id, shape)) + '</h3><p>' + label('cppn.inputFixed') +
+           '</p><button data-cppn-connect-from="' + node.id + '">' + label('cppn.connectFrom') +
+           '</button>';
   return '<h3>' + escapeText(nodeTitle(node.id, shape)) + '</h3><p>' +
          escapeText(nodeTypeLabel(node.type)) + '</p>' +
          '<label>' + label('cppn.function') + '<select data-cppn-function="' + node.id + '">' +
          options(typeLabels.map((name, i) => [i, label('cppnFunctions.' + name)]), node.type) +
          '</select></label>' +
-         '<label>' + label('cppn.parameter.' + typeLabels[node.type]) + '<input type="number" ' +
-         limits(shape, CPPN_STEP.parameter) + ' data-cppn-parameter="' + node.id + '" value="' +
-         node.parameter + '" /></label>' +
+         (node.type === CPPN_GATE
+              ? '<p>' + label('cppn.gateInputs') + '</p>'
+              : '<label>' + label('cppn.parameter.' + typeLabels[node.type]) +
+                    '<input type="number" ' + limits(shape, CPPN_STEP.parameter) +
+                    ' data-cppn-parameter="' + node.id + '" value="' + node.parameter +
+                    '" /></label>') +
          '<button data-cppn-connect-from="' + node.id + '">' + label('cppn.connectFrom') +
          '</button><button data-cppn-add-node>' + label('cppn.addNode') + '</button>';
 }
@@ -232,6 +243,10 @@ export function cppnToolbar(state) {
                                      (state.cppnScope === key ? 'active' : '') + '">' +
                                      label('cppn.scope.' + text) + '</button>')
              .join('') +
+         '<label>' + label('cppn.port') + '<select data-cppn-connect-port>' +
+         options([ [ 0, label('cppn.signalPort') ], [ 1, label('cppn.controlPort') ] ],
+                 state.cppnConnectPort) +
+         '</select></label>' +
          '<button data-cppn-new="blank">' + label('cppn.blank') + '</button>' +
          '<button data-cppn-new="sum">' + label('cppn.addition') + '</button></div>';
 }

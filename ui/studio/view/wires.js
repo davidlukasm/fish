@@ -5,6 +5,7 @@ import {joinParts, linkText, t} from '../../strings.js';
 import {
   allCenters,
   contactBundle,
+  contactRows,
   endpointCenters,
   findAssembly,
   findOrgan,
@@ -404,7 +405,6 @@ export function bendsWith(state, wireIds, point, mirrored) {
   bends.splice(best, 0, point);
   return bends.map(p => mirrored ? {x : p.x, y : 2 * BODY_FRAME.middle - p.y} : p);
 }
-const SIGNAL_STEPS = 24;
 export function endpointIndex(doc) {
   const centers = new Map();
   for (const organ of doc.organs) {
@@ -415,60 +415,7 @@ export function endpointIndex(doc) {
   }
   return centers;
 }
-export function signalLinks(state) {
-  const {document : doc, sites} = state, centers = endpointIndex(doc);
-  const sample = (at, curve) =>
-      Array.from({length : SIGNAL_STEPS + 1}, (_, k) => at(curve, k / SIGNAL_STEPS));
-  const legs = new Map();
-  const leg = (from, to, kind, points) => {
-    const key = from + '>' + to + '>' + kind;
-    if (!legs.has(key))
-      legs.set(key, {
-        from,
-        to,
-        kind,
-        points,
-        starts : new Map(),
-        arrives : new Map(),
-        wires : new Set(),
-        strength : 0
-      });
-    return legs.get(key);
-  };
-  const {bundles, inside} = wireBundles(state, centers);
-  for (const {kind, ends, way : course, s0, s1, start, end, startDirection, endDirection} of
-           bundles)
-    for (const {link, starts, arrives} of ends) {
-      const way = leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), kind,
-                      sample((_, s) => course.at(s0 + (s1 - s0) * s), null));
-      for (const node of starts)
-        way.starts.set(node.id, sample(cubicAt, branchCurve(node, start, startDirection, true)));
-      for (const node of arrives)
-        way.arrives.set(node.id, sample(cubicAt, branchCurve(node, end, endDirection, false)));
-      way.wires.add(link.wire.id);
-      way.strength = Math.min(1, way.strength + .5);
-    }
-  for (const link of inside) {
-    const a = centers.get(link.from), b = centers.get(link.to);
-    if (!a || !b)
-      continue;
-    const p = nodeLocation(doc, sites, a.center, a.organ.type),
-          q = nodeLocation(doc, sites, b.center, b.organ.type);
-    const rise = bowRise(p, q) + INNER_BOW;
-    const way =
-        leg(wholeEndpoint(doc, link.from), wholeEndpoint(doc, link.to), signalKind(a.center),
-            sample(curveAt, [ p, {x : (p.x + q.x) / 2, y : (p.y + q.y) / 2 - rise}, q ]));
-    way.strength = Math.min(1, way.strength + .5);
-  }
-  return [...legs.values() ].map(way => ({
-                                   ...way,
-                                   startNodes : [...way.starts.keys() ],
-                                   starts : [...way.starts.values() ],
-                                   arrives : [...way.arrives.values() ]
-                                 }));
-}
 const CONTACTS = Object.freeze({
-  most : 120,
   floor : .1,
   lane : 11,
   steps : 7,
@@ -479,22 +426,21 @@ const CONTACTS = Object.freeze({
 });
 export function developedContactsSvg(state, centers) {
   const C = CONTACTS;
-  const {document : doc, sites, selected, wireScope, report} = state;
-  const members =
-      wireScope === 'focus' ? networkMemberSet(doc, sites, selected, report?.contacts ?? []) : null;
+  const {document : doc, sites, selected, wireScope} = state;
+  const contacts = contactRows(state);
+  const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected, contacts) : null;
   const centerList = allCenters(doc);
   const importance = ({count, positive, negative, positiveWeight, negativeWeight}) =>
       Math.sqrt(count) *
       (C.floor +
        (positive * Math.abs(positiveWeight) + negative * Math.abs(negativeWeight)) / count);
   const entries =
-      (report?.contacts ?? [])
-          .map(contactBundle)
+      contacts.map(contactBundle)
           .filter(({from, to, count}) => count > 0 && centerList[from] && centerList[to] &&
                                          (!members || members.has(centerList[from].id) &&
                                                           members.has(centerList[to].id)))
           .sort((a, b) => importance(b) - importance(a))
-          .slice(0, C.most)
+          .slice(0, (state.contactLimit ?? 120) || Infinity)
           .reverse();
   return entries
       .map(({from, to, count, positive, negative, positiveWeight, negativeWeight}, index) => {
@@ -530,12 +476,15 @@ export function developedContactsSvg(state, centers) {
                             '<path d="' + d + '" class="aid-wire-ink" data-channel="' +
                             channel.kind + '" stroke="' +
                             (WIRE_KINDS[channel.kind]?.colour ?? C.neutral) + '" stroke-width="' +
-                            fixed(width) + '" marker-end="url(#' + arrow + ')"/>';
+                            fixed(width) + '"' +
+                            (state.runtime && channel.mean === 0 ? ' stroke-dasharray="3 4"' : '') +
+                            ' marker-end="url(#' + arrow + ')"/>';
                    })
                    .join('') +
                '<title>' + escapeText(joinParts([
                  linkText(centerTitle(a.center), centerTitle(b.center)),
-                 t('studio.app.contactCount', {n : count})
+                 t(state.runtime ? 'studio.app.contactCount' : 'studio.app.proposalCount',
+                   {n : count})
                ])) +
                '</title></g>';
       })

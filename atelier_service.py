@@ -132,9 +132,22 @@ def number(value):
 
 
 def receptor_row(r):
-    if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS if not field.startswith("spread_")):
+    if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS):
         raise Refusal("studio.errors.invalidReceptors")
-    return " ".join(number(r.get(f, 0)) for f in RECEPTOR_FIELDS)
+    return " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
+
+
+def neural_context_line(data):
+    context = data.get("context")
+    if not isinstance(context, dict):
+        raise Refusal("studio.errors.invalidMeasurement")
+    steps, maturity, levels = (context.get(key) for key in ("developmentSteps", "maturity", "hormones"))
+    unit = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) and 0 <= x <= 1
+    if (type(steps) is not int or not 0 <= steps <= ATELIER_LIMITS["max_development_steps"]
+            or not unit(maturity) or not isinstance(levels, list) or len(levels) != Hormones.LEVELS
+            or not all(unit(level) for level in levels)):
+        raise Refusal("studio.errors.invalidMeasurement")
+    return f"{steps} {number(maturity)} " + " ".join(number(level) for level in levels) + "\n"
 
 
 def encode_plan(plan):
@@ -150,10 +163,10 @@ def encode_plan(plan):
             raise Refusal("studio.errors.invalidGroup")
         if len(group["name"]) > ATELIER_LIMITS["max_group_name"] or any(ord(c) < 32 for c in group["name"]):
             raise Refusal("studio.errors.invalidGroupName")
-        if any(field not in group for field in FIELDS if not field.startswith("spread_")):
+        if any(field not in group for field in FIELDS):
             raise Refusal("studio.errors.invalidGroup")
         rows.append(json.dumps(group["name"], ensure_ascii=False) + " " +
-                    " ".join(number(group.get(f, 0)) for f in FIELDS))
+                    " ".join(number(group[f]) for f in FIELDS))
         receptors = group.get("receptors", [])
         if not isinstance(receptors, list) or len(receptors) != ATELIER_LIMITS["receptors"]:
             raise Refusal("studio.errors.invalidReceptors")
@@ -290,16 +303,19 @@ def run(data, data_dir=None, progress=None, cancel=None):
             if (not isinstance(groups, list) or not 0 < len(groups) <= total
                     or any(type(group) is not int or not 0 <= group < total for group in groups)
                     or len(set(groups)) != len(groups)
-                    or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
+                    or type(steps) is not int or not 0 <= steps <= ATELIER_LIMITS["max_probe_steps"]):
                 raise Refusal("studio.errors.invalidStimulus")
-            body = f"{len(groups)} {' '.join(map(str, groups))} {steps}\n" + encode_plan(plan)
+            pulse = data.get("pulse")
+            if not isinstance(pulse, bool) or pulse and steps == 0:
+                raise Refusal("studio.errors.invalidStimulus")
+            body = f"{len(groups)} {' '.join(map(str, groups))} {steps} {int(pulse)}\n" + neural_context_line(data) + encode_plan(plan)
         if op == "measure":
-            substance, level, maturity = data.get("substance"), data.get("level"), data.get("maturity")
+            substance, level = data.get("substance"), data.get("level")
             steps = data.get("steps", ATELIER_LIMITS["max_measure_steps"])
             unit = lambda x: isinstance(x, (int, float)) and not isinstance(x, bool) and 0 <= x <= 1
-            if type(substance) is not int or not 0 <= substance <= Hormones.LEVELS or not unit(level) or not unit(maturity) or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_measure_steps"]:
+            if type(substance) is not int or not 0 <= substance <= Hormones.LEVELS or not unit(level) or type(steps) is not int or not 1 <= steps <= ATELIER_LIMITS["max_measure_steps"]:
                 raise Refusal("studio.errors.invalidMeasurement")
-            body = f"{substance} {number(level)} {number(maturity)} {steps}\n" + encode_plan(data.get("plan"))
+            body = f"{substance} {number(level)} {steps}\n" + neural_context_line(data) + encode_plan(data.get("plan"))
         try:
             completed = execute(args, body, progress, cancel)
         except subprocess.TimeoutExpired as error:

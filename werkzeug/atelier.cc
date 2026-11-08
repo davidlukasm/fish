@@ -12,6 +12,7 @@
 #include "field/functions.hh"
 #include "field/development_sites.hh"
 #include "atelier_import.hh"
+#include "atelier_runtime.hh"
 #include "cppn/output_schema.hh"
 #include "evolution/constants.hh"
 #include <algorithm>
@@ -37,42 +38,32 @@ using namespace atelier;
 constexpr int MEASURE_DIGITS = 4, REPORT_DIGITS = 8, DIET_DIGITS = 6;
 constexpr std::uint64_t TRIAL_INDIVIDUAL = 1;
 void measure(const Genome &g, const std::vector<Group> &groups, int substance, float level,
-             float maturity, int steps) {
-  ensure(substance >= 0 && substance <= field::HORMONES && between(level, 0, 1) &&
-             between(maturity, 0, 1) && steps > 0 && steps <= studio_plan::max_measure_steps,
+             int steps, const NeuralContext &context) {
+  ensure(substance >= 0 && substance <= field::HORMONES && between(level, 0, 1) && steps > 0 &&
+             steps <= studio_plan::max_measure_steps,
          "invalid measurement request");
-  const auto &t = *g.blueprint;
-  std::vector<int> assignment(t.neurons.size(), -1);
-  std::size_t sensors = 0;
-  for (std::size_t i = 0; i < t.neurons.size(); ++i) {
-    sensors += t.neurons[i].functions.sensory() > 0;
-    for (std::size_t k = 0; k < groups.size(); ++k)
-      if (groups[k].contains(t.neurons[i].location)) {
-        assignment[i] = int(k);
-        break;
-      }
-  }
-  field::Network base(g.blueprint), variant(g.blueprint);
-  field::Hormones none{}, dosed{};
-  const bool maturing = substance == field::HORMONES;
-  if (!maturing)
-    dosed[std::size_t(substance)] = level;
-  base.set_maturity(maturity);
-  variant.set_maturity(maturing ? level : maturity);
-  const std::vector<float> inputs(sensors, 0.f);
-  for (auto *n : {&base, &variant})
-    n->set_plasticity(false);
+  const auto assignment = neural_assignment(*g.blueprint, groups);
+  auto base = prepare_neural_preview(g, context, TRIAL_INDIVIDUAL);
+  auto variant = base;
+  auto changed = context;
+  if (substance == field::HORMONES)
+    changed.maturity = level;
+  else
+    changed.hormones[std::size_t(substance)] = level;
+  const std::vector<float> inputs(g.interface->sensory.size(), 0);
   for (int step = 0; step < steps; ++step) {
-    base.step(inputs, none, TRIAL_INDIVIDUAL);
-    variant.step(inputs, dosed, TRIAL_INDIVIDUAL);
+    base.grow(context.hormones, context.maturity, 1e6);
+    base.step(inputs, context.hormones, TRIAL_INDIVIDUAL);
+    variant.grow(changed.hormones, changed.maturity, 1e6);
+    variant.step(inputs, changed.hormones, TRIAL_INDIVIDUAL);
   }
   std::vector<double> change(groups.size()), members(groups.size());
   std::vector<int> dead(groups.size());
   for (std::size_t i = 0; i < assignment.size(); ++i)
     if (const int k = assignment[i]; k >= 0) {
-      change[std::size_t(k)] += variant.state()[i] - base.state()[i];
-      ++members[std::size_t(k)];
-      dead[std::size_t(k)] += variant.dead(i) && !base.dead(i);
+      change[k] += neural_value(variant, i) - neural_value(base, i);
+      ++members[k];
+      dead[k] += variant.dead(i) && !base.dead(i);
     }
   const auto before = fishsim::continuous_organs(base.organ_output(), *g.interface),
              after = fishsim::continuous_organs(variant.organ_output(), *g.interface);
@@ -86,9 +77,12 @@ void measure(const Genome &g, const std::vector<Group> &groups, int substance, f
   for (std::size_t o = 0; o < before.values.size(); ++o)
     std::cout << (o ? "," : "")
               << ((after.present >> o) & 1 ? after.values[o] - before.values[o] : 0.);
-  const auto &growth = t.growth_receptor;
-  std::cout << "],\"growth\":" << growth.occupancy(dosed) - growth.occupancy(none)
-            << ",\"substance\":" << substance << ",\"level\":" << level << "}\n";
+  const auto &growth = g.blueprint->growth_receptor;
+  std::cout << "],\"growth\":"
+            << growth.occupancy(changed.hormones) - growth.occupancy(context.hormones)
+            << ",\"substance\":" << substance << ",\"level\":" << level << ",\"runtime\":";
+  write_neural_runtime(std::cout, variant, assignment, groups.size(), changed, steps);
+  std::cout << "}\n";
 }
 std::string json(const std::string &s) {
   std::ostringstream out;
@@ -104,9 +98,9 @@ std::string json(const std::string &s) {
   return out.str() + '"';
 }
 void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<int> &requested,
-           int steps) {
-  ensure(!requested.empty() && requested.size() <= groups.size() && steps > 0 &&
-             steps <= studio_plan::max_probe_steps,
+           int steps, bool pulse, const NeuralContext &context) {
+  ensure(!requested.empty() && requested.size() <= groups.size() && steps >= 0 &&
+             (!pulse || steps > 0) && steps <= studio_plan::max_probe_steps,
          "invalid stimulus request");
   std::vector<char> selected(groups.size(), 0);
   for (int group : requested) {
@@ -114,64 +108,45 @@ void probe(const Genome &g, const std::vector<Group> &groups, const std::vector<
            "invalid stimulus group");
     selected[std::size_t(group)] = 1;
   }
-  const auto &t = *g.blueprint;
-  std::vector<int> assignment(t.neurons.size(), -1);
+  const auto assignment = neural_assignment(*g.blueprint, groups);
+  auto baseline = prepare_neural_preview(g, context, TRIAL_INDIVIDUAL);
+  auto network = baseline;
   std::vector<std::size_t> stimulated;
-  std::size_t sensorCount = 0;
-  for (std::size_t i = 0; i < t.neurons.size(); ++i) {
-    const auto &n = t.neurons[i];
-    if (n.functions.sensory() > 0)
-      ++sensorCount;
-    for (std::size_t k = 0; k < groups.size(); ++k)
-      if (groups[k].contains(n.location)) {
-        assignment[i] = int(k);
-        break;
-      }
-    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])] && n.functional)
+  for (std::size_t i = 0; i < assignment.size(); ++i)
+    if (assignment[i] >= 0 && selected[std::size_t(assignment[i])] &&
+        network.life(i) == field::Network::CellLife::Active)
       stimulated.push_back(i);
-  }
-  ensure(!stimulated.empty(), "selected organ has no developed active cells");
-  field::Network network(g.blueprint), baseline(g.blueprint);
-  for (auto *n : {&network, &baseline})
-    n->set_plasticity(false);
-  const field::Hormones calm{};
-  network.stimulate(stimulated, 1.0f, 1);
+  if (pulse && !stimulated.empty())
+    network.stimulate(stimulated, 1.f, 1);
   std::cout << std::setprecision(MEASURE_DIGITS) << "{\"frames\":[";
-  const std::vector<float> inputs(sensorCount, 0.f);
+  const std::vector<float> inputs(g.interface->sensory.size(), 0);
   for (int frame = 0; frame <= steps; ++frame) {
     if (frame) {
-      network.step(inputs, calm, TRIAL_INDIVIDUAL);
-      baseline.step(inputs, calm, TRIAL_INDIVIDUAL);
+      for (auto *n : {&network, &baseline}) {
+        n->grow(context.hormones, context.maturity, 1e6);
+        n->step(inputs, context.hormones, TRIAL_INDIVIDUAL);
+      }
     }
-    if (frame)
-      std::cout << ',';
     std::vector<float> strength(groups.size());
-    const auto &activity = network.state();
-    const auto &unperturbed = baseline.state();
-    for (std::size_t i = 0; i < activity.size(); ++i) {
+    for (std::size_t i = 0; i < assignment.size(); ++i) {
       const int group = assignment[i];
       if (group < 0)
         continue;
-      const float delta = activity[i] - unperturbed[i];
-      float &strongest = strength[std::size_t(group)];
-      if (std::abs(delta) > std::abs(strongest))
-        strongest = delta;
+      const float delta = neural_value(network, i) - neural_value(baseline, i);
+      if (std::abs(delta) > std::abs(strength[std::size_t(group)]))
+        strength[std::size_t(group)] = delta;
     }
-    std::cout << '[';
-    for (std::size_t j = 0; j < strength.size(); ++j) {
-      if (j)
-        std::cout << ',';
-      std::cout << strength[j];
-    }
+    std::cout << (frame ? ",[" : "[");
+    for (std::size_t j = 0; j < strength.size(); ++j)
+      std::cout << (j ? "," : "") << strength[j];
     std::cout << ']';
   }
   std::cout << "],\"sources\":[";
-  for (std::size_t i = 0; i < requested.size(); ++i) {
-    if (i)
-      std::cout << ',';
-    std::cout << requested[i];
-  }
-  std::cout << "],\"stimulated\":" << stimulated.size() << "}\n";
+  for (std::size_t i = 0; i < requested.size(); ++i)
+    std::cout << (i ? "," : "") << requested[i];
+  std::cout << "],\"stimulated\":" << stimulated.size() << ",\"runtime\":";
+  write_neural_runtime(std::cout, network, assignment, groups.size(), context, steps);
+  std::cout << "}\n";
 }
 struct SightScene {
   int side = 0;
@@ -961,6 +936,16 @@ int main(int argc, char **argv) {
                 << fishsim::LATERAL_ALONG << ',' << fishsim::LATERAL_ACROSS << ']'
                 << ",\"gonads\":" << gonad_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
+                << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
+                << ",\"baselineSteps\":" << field::plasticity::baseline_steps
+                << ",\"cancellation\":" << field::plasticity::cancellation
+                << ",\"contactTrial\":" << field::plasticity::contact_trial_time_constants
+                << ",\"prune\":" << field::plasticity::prune_share * field::SYNAPSE_UNIT
+                << ",\"developmentInterval\":" << field::CELL_DEVELOPMENT_INTERVAL
+                << ",\"slotMin\":" << field::SLOTS_MIN << ",\"slotSpan\":" << field::SLOTS_RANGE
+                << ",\"effectorSlots\":" << field::EFFECTOR_SLOTS
+                << ",\"adaptationSpan\":" << field::SYNAPTIC_ADAPTATION_SPAN
+                << ",\"previewStepsMax\":" << studio_plan::max_development_steps << '}'
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
@@ -1002,11 +987,13 @@ int main(int argc, char **argv) {
     const std::string operation = argv[1];
     Genome g;
     int probeSteps = 0;
+    bool probePulse = true;
     std::vector<int> probeGroups;
     struct {
       int substance = 0, steps = 1;
-      float level = 0, maturity = 0;
+      float level = 0;
     } measured;
+    NeuralContext neuralContext;
     std::vector<Group> groups;
     std::optional<Plan> compiledPlan;
     bool import = false;
@@ -1071,14 +1058,15 @@ int main(int argc, char **argv) {
         probeGroups.resize(std::size_t(count));
         for (int &group : probeGroups)
           ensure(bool(std::cin >> group), "missing stimulus source");
-        ensure(bool(std::cin >> probeSteps), "missing stimulus steps");
+        ensure(bool(std::cin >> probeSteps >> probePulse), "missing stimulus steps");
+        neuralContext = read_neural_context(std::cin);
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
       if (operation == "measure") {
-        ensure(bool(std::cin >> measured.substance >> measured.level >> measured.maturity >>
-                    measured.steps),
+        ensure(bool(std::cin >> measured.substance >> measured.level >> measured.steps),
                "missing measurement parameters");
+        neuralContext = read_neural_context(std::cin);
         std::string ignoredName;
         groups = read_plan(std::cin, ignoredName).groups;
       }
@@ -1179,11 +1167,11 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (operation == "probe") {
-      probe(g, groups, probeGroups, probeSteps);
+      probe(g, groups, probeGroups, probeSteps, probePulse, neuralContext);
       return 0;
     }
     if (operation == "measure") {
-      measure(g, groups, measured.substance, measured.level, measured.maturity, measured.steps);
+      measure(g, groups, measured.substance, measured.level, measured.steps, neuralContext);
       return 0;
     }
     if (operation != "inspect")

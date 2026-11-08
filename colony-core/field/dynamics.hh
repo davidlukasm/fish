@@ -4,6 +4,8 @@
 #include "sense_schema.hh"
 namespace field {
 inline constexpr float MIN_LEARNING_RATE = 1e-5f;
+inline constexpr unsigned CELL_DEVELOPMENT_INTERVAL = 4;
+inline constexpr double SYNAPTIC_ADAPTATION_SPAN = 10;
 namespace plasticity {
 inline constexpr float competition = 1, cancellation = .02f, prune_share = .05f;
 inline constexpr float basal_formation = 1.f / 50;

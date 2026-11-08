@@ -11,6 +11,7 @@ import {substanceColor} from '../../hormones.js';
 import {
   allCenters,
   boundEffects,
+  birthAffinity,
   effectDirection,
   endpointCenters,
   findCenter,
@@ -24,7 +25,6 @@ import {
   receptorAffinity,
   teachersOf,
   wheelAffinity,
-  wholeEndpoint,
   shownSubstance
 } from '../model/document.js';
 import {pathTo} from './wires.js';
@@ -70,11 +70,12 @@ function hormoneGlyph(item, kind, color, zoom) {
                     : '';
   const symbols =
       kind === 'receiver'
-          ? symbolsAbove((item.effects ?? []).map((e, k) => ({
-                                                    path : EFFECT_ICON[e],
-                                                    direction : item.directions?.[k] ?? 0
-                                                  })),
-                         r)
+          ? symbolsAbove(
+                (item.effects ?? []).map((e, k) => ({
+                                           path : e === 'birth' ? PHASE_ICON.start : EFFECT_ICON[e],
+                                           direction : item.directions?.[k] ?? 0
+                                         })),
+                r)
           : '';
   const acts = kind === 'receiver'
                    ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.teaching
@@ -200,6 +201,12 @@ export function hormoneOverlay(state) {
                                  affinity : receptorAffinity(capabilities, center.receptors[effect],
                                                              substance.index)
                                }));
+      if (birthAffinity(center, substance.index, capabilities) >= NOTICEABLE_AFFINITY)
+        effects.push({
+          effect : 'birth',
+          affinity : birthAffinity(center, substance.index, capabilities),
+          direction : Math.sign(center.growth.sensitivity)
+        });
       if (effects.length)
         targets.push({
           pos,
@@ -209,7 +216,9 @@ export function hormoneOverlay(state) {
               isLearner(center) && effects.some(item => item.effect === HORMONE_EFFECT.teaching),
           effects : effects.map(item => item.effect),
           directions :
-              effects.map(item => effectDirection(item.effect, center.receptors[item.effect]))
+              effects.map(item => item.effect === 'birth'
+                                      ? item.direction
+                                      : effectDirection(item.effect, center.receptors[item.effect]))
         });
     }
   const growth = growsWith(doc, substance.index, capabilities)
@@ -239,8 +248,14 @@ const MARK = Object.freeze({dot : 4, step : 17, below : 20, symbol : 13, plate :
 function cellMarks(state, centers, skip) {
   const {document : doc, capabilities} = state;
   const substances = doc.substances.filter(
-      s => s.index !== skip && centers.some(c => boundEffects(c, s.index, capabilities).length));
+      s => s.index !== skip &&
+           centers.some(c => boundEffects(c, s.index, capabilities).length ||
+                             birthAffinity(c, s.index, capabilities) >= NOTICEABLE_AFFINITY));
   const phases = [ 'start', 'end' ].filter(k => centers.some(c => lifePhase(c)[k] !== null));
+  if (centers.some(c => birthAffinity(c, capabilities.hormones, capabilities) >=
+                        NOTICEABLE_AFFINITY) &&
+      !phases.includes('start'))
+    phases.push('start');
   return [
     ...substances.map(s => ({colour : substanceColor(s.index)})),
     ...phases.map(k => ({colour : BODY_SIGNAL, icon : PHASE_ICON[k]}))
@@ -289,60 +304,4 @@ export function hormoneRoles(state) {
         roles.set(c.id, 'dies');
     });
   return roles;
-}
-
-export function hormoneLegs(state) {
-  const {document : doc, sites, capabilities} = state;
-  if (!capabilities)
-    return [];
-  const at = center => {
-    const found = findCenter(doc, center.id);
-    return nodeLocation(doc, sites, found.center, found.organ.type);
-  };
-  const legs = new Map();
-  for (const substance of doc.substances)
-    for (const gland of producers(doc, substance.index, capabilities))
-      for (const cell of receivers(doc, substance.index, capabilities)) {
-        const from = wholeEndpoint(doc, gland.id), to = wholeEndpoint(doc, cell.id);
-        const key = from + '>' + to + '>' + substance.index;
-        const effects = boundEffects(cell, substance.index, capabilities);
-        const directions = effects.map(e => effectDirection(e, cell.receptors[e]));
-        const taught = (directions[effects.indexOf(HORMONE_EFFECT.teaching)] ?? 0) > 0;
-        if (from === to)
-          continue;
-        if (legs.has(key)) {
-          if (taught)
-            legs.get(key).learners.push(cell.id);
-          continue;
-        }
-        const firing = directions[effects.indexOf(HORMONE_EFFECT.excitation)] ?? 0;
-        const colour = substanceColor(substance.index);
-        legs.set(key, {
-          from,
-          to,
-          kind : 'hormone',
-          colour,
-          points : [ at(gland), at(cell) ],
-          push : firing > 0   ? 'rise'
-                 : firing < 0 ? 'fall'
-                              : null,
-          learners : taught ? [ cell.id ] : [],
-          mark :
-              '<g class="aid-hormone-symbols" style="--hormone:' + colour + '">' +
-                  symbolsAbove(
-                      effects.map((e, k) => ({path : EFFECT_ICON[e], direction : directions[k]})),
-                      HORMONE_GLYPH.receiver) +
-                  '</g>'
-        });
-      }
-  const reach = leg =>
-      Math.hypot(leg.points[1].x - leg.points[0].x, leg.points[1].y - leg.points[0].y);
-  const farthest = new Map();
-  for (const leg of legs.values()) {
-    const key = leg.from + '>' + leg.colour;
-    if (!farthest.has(key) || reach(leg) > reach(farthest.get(key)))
-      farthest.set(key, leg);
-  }
-  return [...legs.values() ].map(
-      leg => ({...leg, wave : farthest.get(leg.from + '>' + leg.colour) === leg}));
 }

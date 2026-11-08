@@ -1,7 +1,7 @@
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
-import {HORMONE_EFFECT} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {findCenter, findOrgan, isLearner, teachersOf, wholeEndpoint} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {centerMarker} from './scene.js';
@@ -319,7 +319,7 @@ function regionTeacher(state, organ) {
   return '<div class="aid-region-setting"><span>' + label('regions.settings.teacher') +
          '</span><div class="aid-button-group aid-learn-substances">' +
          choice(null, label('learnRule.none')) +
-         state.document.substances
+         [...state.document.substances, {index : HORMONES.levels} ]
              .map(s => choice(s.index, substanceName(state, s.index), substanceColor(s.index)))
              .join('') +
          '</div></div>';

@@ -185,21 +185,37 @@ function hormoneLibrary(state) {
                                          path : STUDIO_ICON.gland,
                                          colour,
                                          title : label('hormoneCard.glandTitle')
-                                       }) + EFFECT_ORDER
-                                                .map(effect => tile({
-                                                       kind : 'effect',
-                                                       value : index + ':' + effect,
-                                                       name : label('effects.' + effect),
-                                                       path : EFFECT_ICON[effect],
-                                                       colour,
-                                                       title : titles[effect],
-                                                       wide : true
-                                                     }))
-                                                .join(''));
+                                       }) + tile({
+                                         kind : 'birth',
+                                         value : String(index),
+                                         name : label('development.birthReceptor'),
+                                         path : PHASE_ICON.start,
+                                         colour,
+                                         title : label('development.birthEffect'),
+                                         wide : true
+                                       }) +
+                                           EFFECT_ORDER
+                                               .map(effect => tile({
+                                                      kind : 'effect',
+                                                      value : index + ':' + effect,
+                                                      name : label('effects.' + effect),
+                                                      path : EFFECT_ICON[effect],
+                                                      colour,
+                                                      title : titles[effect],
+                                                      wide : true
+                                                    }))
+                                               .join(''));
              })
              .join('') +
          systemsSection(state, SYSTEMS.map(s => s.key)) +
          section(label('hormoneCard.body'), tile({
+                                              kind : 'birth',
+                                              value : String(HORMONES.levels),
+                                              name : label('development.birthMaturity'),
+                                              path : PHASE_ICON.start,
+                                              colour : BODY_SIGNAL,
+                                              title : label('development.birthEffect')
+                                            }) + tile({
                                               kind : 'phase',
                                               value : 'start',
                                               name : label('hormoneCard.phaseStart'),
@@ -262,17 +278,26 @@ function learningLibrary(state) {
                                          path : STUDIO_ICON.gland,
                                          colour,
                                          title : label('hormoneCard.glandTitle')
-                                       }) + EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e))
-                                                .map(effect => tile({
-                                                       kind : 'effect',
-                                                       value : index + ':' + effect,
-                                                       name : label('effects.' + effect),
-                                                       path : EFFECT_ICON[effect],
-                                                       colour,
-                                                       title : titles[effect],
-                                                       wide : true
-                                                     }))
-                                                .join(''));
+                                       }) + tile({
+                                         kind : 'birth',
+                                         value : String(index),
+                                         name : label('development.birthReceptor'),
+                                         path : PHASE_ICON.start,
+                                         colour,
+                                         title : label('development.birthEffect'),
+                                         wide : true
+                                       }) +
+                                           EFFECT_ORDER.filter(e => LEARNING_EFFECTS.includes(e))
+                                               .map(effect => tile({
+                                                      kind : 'effect',
+                                                      value : index + ':' + effect,
+                                                      name : label('effects.' + effect),
+                                                      path : EFFECT_ICON[effect],
+                                                      colour,
+                                                      title : titles[effect],
+                                                      wide : true
+                                                    }))
+                                               .join(''));
              })
              .join('') +
          section(label('hormoneCard.more'), addSubstanceTile(state));

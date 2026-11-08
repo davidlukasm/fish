@@ -75,6 +75,7 @@ export class OrganStudio {
       tool : 'select',
       wireScope : 'all',
       contactView : 'design',
+      contactLimit : 120,
       document : newDocument(label('app.newFish')),
       sites : [],
       capabilities : null,
@@ -87,6 +88,8 @@ export class OrganStudio {
       focusSubstance : 0,
       measureLevel : MEASURE_LEVEL,
       measurement : null,
+      neuralContext : {developmentSteps : 256, maturity : 0, hormones : Array(6).fill(0)},
+      runtime : null,
       sightProbe : null,
       senseProbe : null,
       armed : null,
@@ -100,6 +103,7 @@ export class OrganStudio {
       cppnScope : 'all',
       cppnSelection : null,
       cppnConnectFrom : null,
+      cppnConnectPort : 0,
       busy : false,
       compileProgress : null,
       robustness : null,
@@ -336,8 +340,11 @@ export class OrganStudio {
       develop.textContent = text;
       develop.disabled = disabled;
     }
-    for (const button of this.root.querySelectorAll('[data-contacts="actual"]'))
-      button.disabled = state.stale || !state.report?.contacts?.length;
+    for (const button of this.root.querySelectorAll('[data-contacts="actual"]')) {
+      button.disabled = state.stale || !state.report;
+      button.textContent =
+          label(state.runtime ? 'tools.runtimeContacts' : 'tools.developedContacts');
+    }
     for (const button of this.root.querySelectorAll('[data-measure], [data-measure-level]'))
       button.disabled = !builtAsDrawn(state);
     const download = this.root.querySelector('[data-action="download"]');
@@ -452,6 +459,7 @@ export class OrganStudio {
     this.state.stale = true;
     this.showDrawnContacts();
     this.state.measurement = null;
+    this.state.runtime = null;
     this.state.genome = '';
     this.persist();
   }
@@ -769,6 +777,8 @@ export class OrganStudio {
       file.text()
           .then(async genome => {
             const report = await this.api(requestBody('inspect', {genome}));
+            this.stopPulse();
+            this.state.runtime = this.state.measurement = this.state.stimulus = null;
             this.state.genome = genome;
             this.state.report = report;
             this.state.stale = false;

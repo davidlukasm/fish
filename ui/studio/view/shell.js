@@ -37,6 +37,11 @@ export function developAction(state) {
 export const zoomStamp = camera => percent(camera.zoom);
 function cellStatus(state) {
   const {report, stale, anatomy} = state;
+  if (state.runtime && !stale)
+    return t('studio.app.runtimeCount', {
+      cells : state.runtime.active,
+      contacts : state.runtime.contacts.reduce((sum, row) => sum + row[2], 0)
+    });
   if (report && !stale)
     return t('studio.app.developedCount', {cells : report.neurons, contacts : report.synapses});
   return Number.isFinite(anatomy?.neurons) ? t('studio.app.plannedCount', {cells : anatomy.neurons})
@@ -98,15 +103,22 @@ function stationStage(s, cppn) {
          '</span><div class="aid-view-options">' +
          group(button('data-contacts="design"', label('tools.drawnContacts'),
                       {active : s.contactView === 'design'}) +
-               button('data-contacts="actual"', label('tools.developedContacts'), {
-                 active : s.contactView === 'actual',
-                 disabled : s.stale || !s.report?.contacts?.length
-               })) +
+               button('data-contacts="actual"',
+                      label(s.runtime ? 'tools.runtimeContacts' : 'tools.developedContacts'),
+                      {active : s.contactView === 'actual', disabled : s.stale || !s.report})) +
          group(button('data-network="all"', label('tools.allNetworks'),
                       {active : s.wireScope === 'all'}) +
                button('data-network="focus"', label('tools.focusedNetwork'),
                       {active : s.wireScope === 'focus'})) +
          group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
+         '<label class="aid-contact-limit">' + label('tools.contactLimit') +
+         '<select data-contact-limit>' +
+         [ 120, 500, 0 ]
+             .map(n => '<option value="' + n + '"' +
+                       ((s.contactLimit ?? 120) === n ? ' selected' : '') + '>' +
+                       (n || label('tools.allContacts')) + '</option>')
+             .join('') +
+         '</select></label>' +
          '</div></div><div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
          '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' + zoomStamp(s.camera) +
          '</span></div>';

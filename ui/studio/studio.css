@@ -96,8 +96,6 @@
 .aid-spines-rest path{fill:var(--aid-spine-fill);stroke:var(--aid-spine);stroke-width:2.2;stroke-linejoin:round;transition:opacity .25s}
 .aid-spines-raised path{fill:none;stroke:var(--aid-spine);stroke-width:1.4;stroke-dasharray:4 3;stroke-linejoin:round;opacity:0;transition:opacity .25s,fill .25s}
 .aid-anatomical-spines.chosen .aid-spines-raised path{opacity:.75}
-.aid-move-raise .aid-spines-raised path{opacity:1;fill:var(--aid-spine-fill);stroke-dasharray:none}
-.aid-move-raise .aid-spines-rest path{opacity:0}
 .aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
 .aid-neural-center{cursor:grab}
 .aid-neural-body{opacity:.25}
@@ -162,9 +160,6 @@
 .aid-substance-swatch{height:16px;width:16px;border-radius:50%;background:var(--substance);border:2px solid #dfe7dc}
 .aid-inspector-head .aid-substance-swatch{flex:0 0 auto;align-self:center}
 .aid-receptor-editor{margin-top:22px;padding-top:16px;border-top:1px solid #355760}
-.aid-effect-chips{display:grid;gap:4px}
-.aid-effect-chips button{display:flex;align-items:center;gap:8px;text-align:left}
-.aid-effect-chips button svg{flex-shrink:0}
 .aid-response-chart{width:100%;margin-top:12px;background:var(--aid-graphic);border-radius:12px}
 .aid-response-line{stroke:var(--aid-substance);stroke-width:3;fill:none}
 .aid-chart-axis{stroke:#779a99;stroke-width:1;fill:none}
@@ -260,7 +255,6 @@
 .aid-cppn-empty{display:grid;place-items:center;flex:1;text-align:center;padding:25px;color:#bdd0c6}
 
 .aid-pulse-overlay{pointer-events:none}
-.aid-signal-particle{fill:#dceea7;stroke:#fff7ce;stroke-width:1.5;pointer-events:none}
 
 .aid-scent-map{display:block;width:100%;max-width:280px;margin:6px auto;touch-action:none;cursor:crosshair}
 .aid-scent-rim{fill:#143b45;stroke:var(--aid-rim);stroke-width:1.5}
@@ -613,8 +607,6 @@
 .aid-chromatophores .gathered{opacity:.55}
 .aid-chromatophores.chosen .gathered{opacity:.95}
 .aid-chromatophores .spread{opacity:.22;pointer-events:none}
-.aid-move-spread{transform-box:fill-box;transform-origin:center;animation:aid-spread 1.4s ease-in-out}
-@keyframes aid-spread{0%,100%{transform:scale(1)}40%,70%{transform:scale(3.2)}}
 .aid-region-setting button.beyond{opacity:.45}
 .aid-organ-hit{opacity:0}
 .aid-organ-hit:hover{opacity:.14}
@@ -626,10 +618,6 @@
 .aid-brain-lobe{stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;vector-effect:non-scaling-stroke}
 .aid-brain-fissure{fill:none;stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-brain-tint{fill:var(--aid-brain);opacity:.1}
-#aid-body-map.aid-stimulus-view .aid-wire-group:not(.aid-pulse-used){opacity:.14;filter:saturate(.15)}
-#aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
-#aid-body-map.aid-stimulus-view .aid-pulse-learned .aid-wire-ink{stroke:var(--aid-teach);stroke-width:4.5px;filter:drop-shadow(0 0 5px var(--aid-teach));animation:aid-learned 1.6s ease-out}
-@keyframes aid-learned{from{filter:drop-shadow(0 0 14px var(--aid-teach))}}
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near):not(.selected),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
@@ -656,29 +644,7 @@
 #aid-body-map.aid-stimulus-view .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit));opacity:.85}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieting{animation:aid-quieting .55s ease-in-out 2}
 @keyframes aid-quieting{50%{filter:brightness(.9) drop-shadow(0 0 13px var(--aid-inhibit))}}
-.aid-signal-withdrawn{fill:none;stroke:var(--aid-inhibit);stroke-linecap:round;filter:drop-shadow(0 0 4px var(--aid-inhibit));pointer-events:none}
-#aid-body-map.aid-stimulus-view .aid-pulse-withdrawn .aid-wire-ink{stroke:var(--aid-inhibit);stroke-dasharray:6 5}
-#aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}
-#aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--hormone))}
-.aid-hormone-wave{fill:var(--hormone);fill-opacity:.06;stroke:var(--hormone);stroke-opacity:.6;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
-.aid-hormone-arrival{pointer-events:none}
-.aid-move-tail{animation:aid-tail-beat .42s ease-in-out 3}
-@keyframes aid-tail-beat{0%,100%{transform:rotate(0)}25%{transform:rotate(-13deg)}75%{transform:rotate(13deg)}}
-.aid-move-fin-up{animation:aid-fin-up .5s ease-in-out 2}
-.aid-move-fin-down{animation:aid-fin-down .5s ease-in-out 2}
-@keyframes aid-fin-up{0%,100%{transform:rotate(0)}50%{transform:rotate(-24deg)}}
-@keyframes aid-fin-down{0%,100%{transform:rotate(0)}50%{transform:rotate(24deg)}}
-.aid-move-bite{transform-box:fill-box;transform-origin:center;animation:aid-bite .3s ease-in-out 3}
-@keyframes aid-bite{0%,100%{transform:scale(1)}40%{transform:scale(.9,1.55)}}
-.aid-move-jaw{transform-box:fill-box;transform-origin:right center;animation:aid-jaw .3s ease-in-out 3}
-@keyframes aid-jaw{0%,100%{transform:scale(1)}40%{transform:scale(1,1.6)}}
-.aid-move-suck{transform-box:fill-box;transform-origin:center;animation:aid-suck .45s ease-in-out 2}
-@keyframes aid-suck{0%,100%{transform:scale(1)}45%{transform:scale(1.25,1.45)}}
 .aid-head-intake{fill:none;stroke:var(--aid-flow);stroke-width:1.6;stroke-dasharray:5 4;stroke-linecap:round;opacity:.75}
-.aid-head-intake.aid-move-suck{animation:aid-intake .45s linear 4}
-@keyframes aid-intake{to{stroke-dashoffset:-18}}
-.aid-move-throat{animation:aid-throat .45s ease-in-out 2}
-@keyframes aid-throat{0%,100%{stroke-opacity:.5}45%{stroke-opacity:1;stroke-width:26px}}
 .aid-diet-chart{display:block;width:100%;height:auto}
 .aid-diet-hit{fill:transparent;cursor:ew-resize}
 .aid-diet-readout{margin:2px 0 0;font-size:12px;color:#c2d6d2}
@@ -744,7 +710,6 @@
 .aid-learn-substance{margin:8px 0;padding:8px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c;color:var(--substance,var(--aid-soft-text))}
 .aid-learn-substance h5{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:12px;font-weight:600;color:var(--aid-name-text)}
 .aid-learn-substance h5 svg{color:var(--substance,var(--aid-soft-text))}
-.aid-learn-substance:not(.bound) .aid-episode{opacity:.55}
 .aid-learn-substances{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 2px}
 .aid-learn-substances button{display:flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid #3a5c66;border-radius:8px;background:#1e4249;color:#dce8e0;font-size:12px}
 .aid-learn-substances button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
@@ -762,25 +727,6 @@
 .aid-learners>button>span:first-of-type{flex:1}
 .aid-learner-teachers{display:flex;flex-wrap:wrap;gap:6px;flex:1 1 100%}
 .aid-learners small{color:var(--aid-soft-text)}
-.aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
-.aid-episode.big{margin:4px 0}
-.aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
-.aid-episode-line.still{stroke-opacity:.6}
-.aid-episode-trace{fill:none;stroke:var(--aid-trace);stroke-linecap:round}
-.aid-episode-pulse{fill:#f2f6dc}
-.aid-episode-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
-.aid-episode-cloud{opacity:.28}
-.aid-episode-arrow{fill:none;stroke:var(--aid-size);stroke-width:2;stroke-linecap:round}
-.aid-episode-arrow.teach{stroke:var(--aid-teach)}
-.aid-episode-arrow.teach.none{stroke:#5d7f80;stroke-dasharray:4 4}
-.aid-episode-pacer{fill:#2b5157;stroke:var(--aid-size);stroke-width:1.5}
-.aid-episode-ring{fill:none;stroke:var(--aid-size);stroke-width:2}
-.aid-episode-teacher{fill:#b8c5e1;stroke:#c9d6cf;stroke-width:1.2}
-.aid-episode-meter{fill:none;stroke:#5d7f80;stroke-width:1.2}
-.aid-episode-expect{fill:var(--aid-teach);fill-opacity:.7}
-.aid-episode text{fill:var(--aid-label-text);font-size:11px}
-.aid-episode-label.teach{fill:var(--aid-teach)}
-.aid-episode-caption{fill:var(--aid-name-text)}
 .aid-teach-mark{fill:none;stroke:var(--aid-teach);stroke-width:2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
 .aid-teach-way{fill:none;stroke-width:2.5;stroke-opacity:.6;stroke-dasharray:6 5;vector-effect:non-scaling-stroke}
 .aid-teach-pulse{stroke:#0d262c;stroke-width:1;vector-effect:non-scaling-stroke}
@@ -822,32 +768,7 @@
 .aid-layer-switches button::before{content:'';width:10px;height:10px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}
 .aid-layer-switches button.active::before{background:currentColor}
 .aid-layer-switches button[data-layer-mode="auto"]::before{outline:1.5px dashed currentColor;outline-offset:2px}
-.aid-effect-guide{margin:10px 0}
-.aid-effect-card{display:block;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}
-.aid-effect-card>div{margin-top:4px}
-.aid-effect-card strong{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--aid-name-text)}
-.aid-effect-card strong svg{color:var(--substance)}
-.aid-effect-card span{display:block;font-size:12px;color:var(--aid-control-text);margin:2px 0}
-.aid-effect-card small{display:block;font-size:11px;color:var(--aid-soft-text)}
-.aid-effect-card.off{opacity:.4}
-.aid-effect-card strong .aid-bound-effect{display:inline-flex;margin:0;align-items:center;color:var(--substance)}
-.aid-effect-card .aid-effect-count{display:inline-block;margin:0 0 0 auto;min-width:18px;padding:0 6px;border-radius:9px;background:var(--substance);color:var(--aid-ink);font-size:11px;text-align:center}
 .aid-effect-scene{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
-.aid-effect-base{fill:var(--aid-graphic)}
-.aid-effect-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
-.aid-effect-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
-.aid-effect-line.still{stroke-opacity:.55}
-.aid-effect-line.trace{stroke:var(--aid-trace)}
-.aid-effect-line.teach{stroke:var(--aid-teach)}
-.aid-effect-line.pace{stroke:var(--aid-brain)}
-.aid-episode-pulse{fill:#f2f6dc}
-.aid-effect-modulator{fill:#2b5157;stroke:var(--aid-brain);stroke-width:1.5}
-.aid-effect-wave{fill:none;stroke:var(--aid-brain);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.aid-effect-ring{fill:none;stroke:var(--aid-brain);stroke-width:1.5}
-.aid-effect-cross{fill:none;stroke:#e5675c;stroke-width:3;stroke-linecap:round}
-.aid-effect-cloud{opacity:.3}
-.aid-effect-line.ghost{opacity:.22}
-.aid-effect-spikes{stroke:var(--aid-light);stroke-width:1.6;stroke-linecap:round;fill:none}
 .aid-dose{display:block;width:100%;height:auto;margin:6px 0;color:var(--substance);background:var(--aid-graphic);border-radius:8px}
 .aid-dose-band{stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-dose-gauge{fill:var(--aid-chip);stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
@@ -857,9 +778,6 @@
 .aid-dose-pip{fill:var(--aid-chip);stroke:currentColor;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}
 .aid-dose-pip.active{fill:currentColor}
 .aid-dose-end{fill:var(--aid-label-text);font-size:10px}
-.aid-effect-mark{fill:none;stroke:#9fb9b4;stroke-width:1.2}
-.aid-effect-mark.with{stroke:none}
-.aid-effect-divide{stroke:#2f5356;stroke-width:1;stroke-dasharray:3 3}
 .aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
 .aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire 2s ease-in-out infinite}
 .aid-hormone-receiver.acts-1 .aid-hormone-aura{animation:aid-acts-grow 2.2s ease-in-out infinite}
@@ -875,3 +793,51 @@
 @keyframes aid-acts-signal{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.55}}
 @keyframes aid-acts-die{0%,40%{fill:var(--hormone);opacity:1}100%{fill:#5b6b6a;opacity:.25}}
 @media (prefers-reduced-motion:reduce){.aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{animation:none}}
+
+.aid-neural-context,.aid-cell-development{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
+.aid-neural-context summary,.aid-cell-development summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+.aid-parameter-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--aid-label-text);min-width:0}
+.aid-parameter-grid input,.aid-parameter-grid select{box-sizing:border-box;width:100%;min-width:0;color:var(--aid-control-text);background:var(--aid-control);border:1px solid var(--aid-control-edge);border-radius:5px;padding:5px}
+.aid-runtime-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 0}
+.aid-runtime-summary div{background:var(--aid-graphic);border-radius:5px;padding:6px}
+.aid-runtime-summary dt{font-size:10px;color:var(--aid-label-text)}
+.aid-runtime-summary dd{margin:3px 0 0;font-variant-numeric:tabular-nums;color:var(--aid-name-text)}
+.aid-runtime-at{font-size:11px;color:var(--aid-label-text)}
+.aid-lifecycle{width:100%;background:var(--aid-graphic);border-radius:6px}
+.aid-lifecycle path{fill:none;stroke-width:2}
+.aid-life-birth{color:#d8c67e;stroke:#d8c67e}
+.aid-life-output{color:#79d2be;stroke:#79d2be}
+.aid-life-death{color:#e8a2b5;stroke:#e8a2b5}
+.aid-life-current{stroke:var(--aid-label-text);stroke-dasharray:3 3}
+.aid-lifecycle text{font-size:10px;fill:var(--aid-label-text)}
+.aid-life-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:10px;margin:4px 0}
+.aid-local-learning{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--aid-name-text)}
+.aid-local-learning span{padding:7px;background:var(--aid-graphic);border-radius:6px}
+.aid-runtime-cell circle{fill:none;stroke:#79d2be;stroke-width:1.5}
+.aid-runtime-cell.precursor circle{stroke:#d8c67e;stroke-dasharray:3 3}
+.aid-runtime-cell.dead{stroke:#e8a2b5;stroke-width:2;opacity:.7}
+.aid-runtime-cell.dead circle{stroke:#e8a2b5}
+.aid-neural-center.precursor .aid-neural-dot{fill-opacity:.15;stroke:currentColor;stroke-dasharray:2 2}
+.aid-neural-center.dead{opacity:.25}
+.aid-effect-scale{stroke:var(--aid-control-edge);stroke-width:2;fill:none}
+.aid-effect-level{stroke-width:5;fill:none}
+.aid-effect-value text{fill:var(--aid-label-text);font-size:11px}
+.aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
+.aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
+.aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.aid-effect-chips{display:grid;gap:4px}
+.aid-effect-chips button{display:flex;align-items:center;gap:8px;text-align:left}
+.aid-effect-chips button svg{flex-shrink:0}
+.aid-effect-guide{margin:10px 0}
+.aid-effect-card{display:block;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}
+.aid-effect-card>div{margin-top:4px}
+.aid-effect-card strong{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--aid-name-text)}
+.aid-effect-card strong svg{color:var(--substance)}
+.aid-effect-card span{display:block;font-size:12px;color:var(--aid-control-text);margin:2px 0}
+.aid-effect-card small{display:block;font-size:11px;color:var(--aid-soft-text)}
+.aid-effect-card.off{opacity:.4}
+.aid-effect-card strong .aid-bound-effect{display:inline-flex;margin:0;align-items:center;color:var(--substance)}
+.aid-effect-card .aid-effect-count{display:inline-block;margin:0 0 0 auto;min-width:18px;padding:0 6px;border-radius:9px;background:var(--substance);color:var(--aid-ink);font-size:11px;text-align:center}
+
+.aid-cppn-link.control-port .aid-cppn-link-ink{stroke-dasharray:5 4}

@@ -1,23 +1,25 @@
 import {clamp} from '../../units.js';
-import {restLevel} from './drive.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
 import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS} from '../../schema.js';
-import {groupReport} from '../model/document.js';
+import {centerIndex, groupReport} from '../model/document.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
 import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
-import {biasScale} from './panels.js';
 
 export function gonadStore(state, organ) {
   const G = state.capabilities?.gonads, own = G?.[organ.type];
   if (!own)
     return null;
-  const scale = biasScale(state), cells = kind => organ.centers.filter(c => c.key === kind);
+  const cells = kind => organ.centers.filter(c => c.key === kind);
   const drive = kind => cells(kind).reduce(
-      (sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies * Math.max(0, restLevel(c, scale)), 0);
+      (sum, c) =>
+          sum +
+          c.copies / ATELIER_LIMITS.max_copies *
+              Math.max(0, state.runtime?.groups[centerIndex(state.document, c.id)]?.command ?? 0),
+      0);
   const growth = cells('growth').length, motors = organ.centers.filter(c => c.role === 'motor');
   const room = Math.min(own.most, own.perCell * motors.length), fill = drive('growth');
   const transfer = fill / (1 + fill), perStep = transfer * own.fill;
@@ -218,7 +220,8 @@ export function gonadFacts(state, organ) {
                   : !store.minimum              ? words('egg')
                   : store.spawn < store.minimum ? words('food')
                                                 : words('hatches');
-  return '<ul class="aid-gonad-facts">' +
+  return '<p class="aid-hint">' + label('development.gonadConditions') +
+         '</p><ul class="aid-gonad-facts">' +
          row(find('growth'), words('cells'), Number.isFinite(store.steps) ? '' : words('driven'),
              store.motors * store.own.perCell > store.own.most ? words('ceiling') : '') +
          row(find('release'), words(store.self ? 'self' : 'trigger'), product) +

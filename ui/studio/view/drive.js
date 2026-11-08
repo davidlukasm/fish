@@ -12,10 +12,7 @@ const DRIVE = Object.freeze({
   top : 10,
   plot : 92,
   handle : 7,
-  command : [ .08, .22 ],
-  swing : .3,
   samples : 90,
-  spans : 3,
   beats : 2,
   tick : 4,
   label : 11,
@@ -24,55 +21,64 @@ const DRIVE = Object.freeze({
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
 const CREST_QUARTERS = 4;
-const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats
-                                   : LONGEST_TIME_CONSTANT * DRIVE.spans / (1 - DRIVE.command[1]);
+const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats : 2;
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const stepAt = (fx, rhythm) =>
     (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps(rhythm);
 const y = level => MIDDLE - HALF * level;
-export const restLevel = (center, scale) => Math.tanh(-scale * center.threshold);
-export function drivePatch(handle, fx, fy, scale) {
+export function drivePatch(handle, fx, fy, {scale, excitation = 0, output = 1}) {
   if (handle === 'adapt')
     return {
       tau : timeConstantOf(Math.max(
           TIME_CONSTANT.min_steps, (adaptStepAt(fx) - ADAPT.held[0] * adaptAxis) / ADAPTATION_SPAN))
     };
   if (handle === 'rest') {
-    const most = Math.tanh(scale);
-    const level = Math.max(-most, Math.min(most, (MIDDLE - fy * DRIVE.height) / HALF));
-    return {threshold : clamp(-Math.atanh(level) / scale, -1)};
+    if (!(output > 0) || !(scale > 0))
+      return {};
+    const level = clamp((MIDDLE - fy * DRIVE.height) / HALF / output, -1 + Number.EPSILON,
+                        1 - Number.EPSILON);
+    return {threshold : clamp((excitation - Math.atanh(level)) / scale, -1)};
   }
+  if (handle === 'gate')
+    return {
+      threshold :
+          clamp(((fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * 2 - 1) / scale, -1)
+    };
   if (handle === 'beat')
     return {
       tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, CREST_QUARTERS * stepAt(fx, true)))
     };
-  return {
-    tau : timeConstantOf(
-        Math.max(TIME_CONSTANT.min_steps, stepAt(fx, false) - DRIVE.command[1] * axisSteps(false)))
-  };
+  return {};
 }
-export function driveElement(center, label, stepsLabel,
-                             {scale, rhythm = false, meaning = null, organ = false}) {
-  const D = DRIVE, rest = restLevel(center, scale), total = axisSteps(rhythm),
-        band = Math.tanh(scale);
+export function driveElement(center, label, stepsLabel, {
+  scale,
+  rhythm = false,
+  meaning = null,
+  excitation = 0,
+  output = 1,
+  pace = 0,
+  rhythmEffect = 0
+}) {
+  const D = DRIVE, rest = Math.tanh(-scale * center.threshold + excitation) * output,
+        total = axisSteps(rhythm);
   const x = step => D.left + (D.right - D.left) * step / total;
   const tc = rhythm ? period(center.tau) : timeConstantSteps(center.tau);
-  const [from, to] = D.command.map(f => f * total);
-  const swing = Math.min(D.swing, 1 - Math.abs(rest));
-  const commandRest = organ ? 0 : rest;
-  const level =
-      rhythm ? step => rest + swing * Math.sin(2 * Math.PI * step / tc)
-             : step => step < from  ? commandRest
-                       : step <= to ? 1
-                                    : commandRest + (1 - commandRest) * Math.exp(-(step - to) / tc);
+  const level = rhythm ? step => Math.tanh(-scale * center.threshold + excitation +
+                                           pace * .5 * (1 + rhythmEffect) *
+                                               Math.sin(2 * Math.PI * step / tc)) *output
+                       : step => {
+                           const input = 2 * step / total - 1;
+                           const drive =
+                               Math.sign(input) *
+                               Math.max(0, Math.abs(input) - Math.max(0, scale * center.threshold));
+                           return Math.tanh((1 + excitation) * drive) * output;
+                         };
   const points = Array.from({length : D.samples + 1}, (_, k) => {
     const step = total * k / D.samples;
     return rounded(x(step)) + ' ' + rounded(y(level(step)));
   });
-  const knee = rhythm ? tc / CREST_QUARTERS : to + tc;
-  const command = rhythm ? ''
-                         : `<rect class="aid-drive-command" x="${rounded(x(from))}" y="${
-                               D.top}" width="${rounded(x(to) - x(from))}" height="${D.plot}"/>`;
+  const knee =
+      rhythm ? tc / CREST_QUARTERS : total * (1 + Math.max(0, scale * center.threshold)) / 2;
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';
@@ -83,17 +89,19 @@ export function driveElement(center, label, stepsLabel,
                     : '';
   return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
       idSafe(center.id)}" role="img" aria-label="${label}">${idle}${
-      command}<rect class="aid-drive-band" x="${D.left}" y="${rounded(y(band))}" width="${
-      D.right - D.left}" height="${rounded(y(-band) - y(band))}"/>${
       names}<line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${D.right}" y2="${
-      MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${rounded(y(rest))}" x2="${
-      D.right}" y2="${rounded(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
-      points.join(' L')}"/><circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
-      rhythm ? D.right - D.handle : rounded(x(from / 2))}" cy="${rounded(y(rest))}" r="${
-      D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="${
-      rhythm ? 'beat' : 'tau'}" cx="${rounded(x(knee))}" cy="${rounded(y(level(knee)))}" r="${
-      D.handle}"/><text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${
-      stepsLabel(Math.round(tc))}</text></svg>`;
+      MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${
+      rounded(y(rhythm ? rest : 0))}" x2="${D.right}" y2="${
+      rounded(y(rhythm ? rest : 0))}"/><path class="aid-sensitivity-curve" d="M${
+      points.join(' L')}"/><circle class="aid-spectrum-handle" data-drive-handle="${
+      rhythm
+          ? 'rest'
+          : 'gate'}" cx="${rhythm ? D.right - D.handle : rounded(x(Math.min(total, knee)))}" cy="${
+      rounded(y(rhythm ? rest : 0))}" r="${D.handle}"/>${
+      rhythm ? `<circle class="aid-spectrum-handle" data-drive-handle="beat" cx="${
+                   rounded(x(knee))}" cy="${rounded(y(level(knee)))}" r="${D.handle}"/>`
+             : ''}<text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${
+      rhythm ? stepsLabel(Math.round(tc)) : stepsLabel()}</text></svg>`;
 }
 
 const ADAPTATION_SPAN = 10;
@@ -103,17 +111,19 @@ const adaptAxis = ADAPTATION_SPAN * LONGEST_TIME_CONSTANT / (ADAPT.held[1] - ADA
 const adaptStepAt = fx => (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * adaptAxis;
 export const CHANGE_ICON = 'M2 18h7l2-13 2 13h9';
 export const LEVEL_ICON = 'M2 18h5V6h11v12h4';
-export function adaptElement(center, label, stepsLabel, {scale}) {
-  const D = DRIVE, A = ADAPT, bias = -scale * center.threshold;
-  const rate = 1 / (ADAPTATION_SPAN * timeConstantSteps(center.tau));
+export function adaptElement(center, label, stepsLabel,
+                             {scale, excitation = 0, output = 1, adaptationSpan = 10}) {
+  const D = DRIVE, A = ADAPT, bias = -scale * center.threshold + excitation;
+  const rate = 1 / (adaptationSpan * timeConstantSteps(center.tau));
   const x = step => D.left + (D.right - D.left) * step / adaptAxis;
   const [on, off] = A.held.map(f => f * adaptAxis);
   let mean = 0;
-  const answer = [];
-  for (let k = 0; k <= A.samples; ++k) {
-    const step = adaptAxis * k / A.samples, input = step >= on && step < off ? A.input : 0;
-    answer.push([ step, Math.tanh(bias + input - mean) ]);
-    mean += (input - mean) * rate * adaptAxis / A.samples;
+  const answer = [], stride = Math.max(1, Math.round(adaptAxis / A.samples));
+  for (let step = 0; step <= Math.ceil(adaptAxis); ++step) {
+    const input = step >= on && step < off ? A.input : 0;
+    mean += (input - mean) * rate;
+    if (step % stride === 0 || step === Math.ceil(adaptAxis))
+      answer.push([ step, Math.tanh(bias + input - mean) * output ]);
   }
   const knee = on + ADAPTATION_SPAN * timeConstantSteps(center.tau);
   const atKnee =

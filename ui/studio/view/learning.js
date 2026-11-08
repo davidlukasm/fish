@@ -1,7 +1,7 @@
 import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {clamp, PERCENT} from '../../units.js';
-import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
+import {clamp} from '../../units.js';
+import {LONGEST_LEARNING_TIME, learningTimeOf, learningTimeSteps} from '../../tuning.js';
 import {
   allCenters,
   chosenCenter,
@@ -10,6 +10,7 @@ import {
   isLearner,
   LEARNING_EFFECTS,
   pairEndpoint,
+  receptorResponse,
   receptorEnds
 } from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
@@ -18,9 +19,9 @@ import {joinParts, t, tList} from '../../strings.js';
 import {heading, ICON, label, regionTerm} from './kit.js';
 import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
-import {isModulator, isPacemaker, isRegion, modeLean} from '../model/organs.js';
+import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
-import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
+import {cellDevelopment, neuralContextControls, neuralContextOf} from './development.js';
 import {effectScene} from './effects.js';
 import {centerMarker} from './scene.js';
 
@@ -53,80 +54,45 @@ function sendersOf(state, center) {
 }
 const boundSubstance = (state, center, effect) => {
   const receptor = center.receptors?.[effect];
-  return receptor?.active ? state.document.substances.find(s => s.index === receptor.substance)
-                          : null;
+  return receptor?.active
+             ? {index : receptor.substance, name : substanceName(state, receptor.substance)}
+             : null;
 };
 const fullResponse = receptor => receptorEnds(receptor).with;
 
-const RULE = Object.freeze({
-  change : 7,
-  compete : 3,
-  cancel : 2.4,
-  expect : 1.6,
-  glow : .55,
-  credit : .5,
-  delay : TIME_CONSTANT.min_steps
-});
-const TRACE_OF_TAU = .5;
-const traceSteps = center => timeConstantSteps(center.tau) * TRACE_OF_TAU;
-const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
 const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
 export const modeName = mode => MODE_NAME[modeLean(mode)];
-function learningRule(state, center, teachers, colours) {
-  const L = EPISODE_LAYOUT.big, R = RULE, words = key => label('learnRule.' + key);
-  const rate = center.qwidth, mode = center.mode;
-  const remnant = remnantOf(center), teaches = colours.length > 0;
-  const inputs = [
-    {y : L.cy - L.r * 2.6, deed : 'own', label : words('firing')},
-    {y : L.cy + L.r * 2.6, deed : null, label : words('still')}
-  ];
-  const competing = R.compete * rate * Math.max(0, mode);
-  const cancelling = R.cancel * rate * Math.max(0, -mode);
-  let expect = 0;
-  const rounds = [ 0, 1 ].map(k => {
-    const surprise = teaches ? 1 - expect : 0;
-    const reward = R.change * rate * surprise * remnant;
-    const own = reward * 2 * R.credit;
-    const before = expect;
-    if (teaches)
-      expect = before + (1 - before) * Math.min(1, R.expect * rate);
-    const trace = [ 2 * R.credit * R.glow, 0 ];
-    return {
-      trace,
-      remnant,
-      teach : teaches ? colours[k % colours.length] : null,
-      grow : [ competing - cancelling, -competing ],
-      gain : [ own, 0 ],
-      expect : [ before, expect ]
-    };
-  });
-  const lean = label('inspector.' + modeName(mode));
-  const caption = !(rate > 0) ? words('off')
-                  : teaches   ? t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}) +
-                                  (modeLean(mode) !== 0 ? ' · ' + lean : '')
-                  : modeLean(mode) !== 0 ? t('studio.learnRule.untaughtMode', {mode : lean})
-                                         : words('untaught');
-  return episodeSvg(L, {
-    title : label('inspector.learning'),
-    inputs,
-    teacher : 'arrow',
-    output : true,
-    rounds,
-    caption,
-    labels : {
-      teach : words('teaching'),
-      expect : words('expect'),
-      beat : words('beat'),
-      output : words('output')
-    }
-  });
+function learningRule(state, center) {
+  if (!state.capabilities)
+    return '';
+  const constants = state.capabilities.neural, context = neuralContextOf(state),
+        cl = nerveClass(center);
+  const response = effect => receptorResponse(state.capabilities, center.receptors[effect],
+                                              context.hormones, context.maturity);
+  const eta = constants.learningFloor + (2 - constants.learningFloor) * center.qwidth *
+                                            (1 + response(HORMONE_EFFECT.learning)) / 2;
+  const row = (key, value) =>
+      '<div><dt>' + label('learnRule.' + key) + '</dt><dd>' + value + '</dd></div>';
+  return '<div class="aid-local-learning"><span>' + label('learnRule.presynaptic') +
+         '</span><span>' + label('learnRule.postsynaptic') + '</span><strong>→ ' +
+         label('learnRule.traceLength') + '</strong></div>' +
+         '<p class="aid-hint">' + label('learnRule.localPrediction') +
+         '</p><dl class="aid-runtime-summary">' + row('effectiveRate', fixed(eta, 4)) +
+         row('mode', label('inspector.' + modeName(cl.mode))) +
+         row('probation',
+             Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) + ' ' +
+                 label('learnRule.steps')) +
+         row('prune', fixed(constants.prune, 3)) +
+         row('decayHalf', constants.baselineSteps + ' ' + label('learnRule.steps')) + '</dl>' +
+         '<p class="aid-hint">' + label('learnRule.unavoidableDecay') + '</p>';
 }
 const TRACE = Object.freeze(
     {width : 300, height : 70, left : 22, right : 280, top : 8, bottom : 46, samples : 48});
-const traceAxis = LONGEST_TIME_CONSTANT;
+const traceAxis = LONGEST_LEARNING_TIME;
+const traceSteps = center => learningTimeSteps(center.learning_tau);
 export const learnTracePatch = fx => {
   const T = TRACE, steps = clamp((fx * T.width - T.left) / (T.right - T.left)) * traceAxis;
-  return {tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, steps / TRACE_OF_TAU))};
+  return {learning_tau : learningTimeOf(Math.max(TIME_CONSTANT.learning_min_steps, steps))};
 };
 function traceGraphic(center) {
   const T = TRACE, lasts = traceSteps(center);
@@ -138,8 +104,8 @@ function traceGraphic(center) {
   });
   const title = label('learnRule.traceLength'), knobY = fixed(y(Math.exp(-1)));
   // The knob runs on a rail from the shortest to the longest trace a cell can keep.
-  const rail = [ TIME_CONSTANT.min_steps, LONGEST_TIME_CONSTANT ].map(
-      steps => fixed(x(steps * TRACE_OF_TAU)));
+  const rail =
+      [ TIME_CONSTANT.learning_min_steps, LONGEST_LEARNING_TIME ].map(steps => fixed(x(steps)));
   return '<svg class="aid-learn-trace" viewBox="0 0 ' + T.width + ' ' + T.height +
          '" data-learn-trace="' + escapeText(center.id) + '" role="img" aria-label="' +
          escapeText(title) + '"><path class="aid-learn-glow" d="M' + T.left + ' ' + T.bottom +
@@ -170,7 +136,10 @@ function substancePart(state, center, effect) {
   const choices =
       '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(words('by')) +
       '">' + choice('off', label('learnRule.none'), !bound) +
-      doc.substances
+      [
+        ...doc.substances,
+        {index : state.capabilities?.hormones ?? 6, name : label('inspector.maturity')}
+      ]
           .map(sub => choice(String(sub.index), sub.name || substanceName(state, sub.index),
                              bound?.index === sub.index, substanceColor(sub.index)))
           .join('') +
@@ -270,18 +239,14 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + learnersOverview(state) + '<div class="aid-empty-centre">' +
-           label('inspector.selectLearning') + '</div>';
+    return html + neuralContextControls(state) + learnersOverview(state) +
+           '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
-  const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);
-  const colours = [
-    ...(teachers.modulators.length ? [ tone('brain') ] : []),
-    ...(taught ? [ substanceColor(taught.index) ] : [])
-  ];
   const section = (key, body) =>
       '<section class="aid-learn-part">' + heading(label('learnRule.' + key)) + body + '</section>';
-  return html + heading(centerTitle(chosen)) + learningRule(state, chosen, teachers, colours) +
+  return html + heading(centerTitle(chosen)) + neuralContextControls(state) +
+         learningRule(state, chosen) +
          section('teacher', teacherList(state, chosen, teachers.modulators) +
                                 substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
          section('traceLength',
@@ -293,5 +258,6 @@ export function learningInspector(state) {
                  learnTrack('learn-mode', chosen, (chosen.mode + 1) / 2, label('learnRule.mode'),
                             [ label('inspector.cancelling'), label('inspector.competing') ],
                             {middle : label('inspector.neutral')}) +
-                     substancePart(state, chosen, HORMONE_EFFECT.competition));
+                     substancePart(state, chosen, HORMONE_EFFECT.competition)) +
+         cellDevelopment(state, chosen);
 }

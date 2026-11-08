@@ -36,7 +36,7 @@ import {
 import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
-import {outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
+import {driveContext, outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
 import {skinPatch, skinSensitivity} from './view/skin.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
@@ -386,11 +386,14 @@ export const handleMethods = {
     if (drag.handle === 'copies')
       return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
                               'cells:' + drag.id);
-    const doc = drag.handle === 'start' || drag.handle === 'end'
-                    ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
-                    : updateCenter(
-                          this.state.document, drag.id,
-                          drivePatch(drag.handle, fx, fy, this.state.capabilities?.biasScale ?? 0));
+    const doc =
+        drag.handle === 'start' || drag.handle === 'end'
+            ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
+            : updateCenter(
+                  this.state.document, drag.id,
+                  drivePatch(
+                      drag.handle, fx, fy,
+                      driveContext(this.state, findCenter(this.state.document, drag.id).center)));
     this.draftDesign(doc, 'drive:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
