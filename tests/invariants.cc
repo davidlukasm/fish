@@ -1,6 +1,7 @@
 #include "test_support.hh"
 #include "field/retinal_tissue.hh"
 #include "field/development_sites.hh"
+#include "physiology.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
@@ -8,6 +9,69 @@ namespace {
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
+void start_fish_uses_external_vision_after_hatching(const Genome &g) {
+  Body hatchling;
+  hatchling.prepare(g);
+  hatchling.tissue = hatchling.peak_tissue = HATCH_TISSUE;
+  field::Network brain(g.blueprint);
+  brain.set_maturity(body_maturity(hatchling));
+  brain.set_plasticity(false);
+  std::vector<float> input(g.interface->sensory.size(), 0);
+  for (int tick = 0; tick < 256; ++tick) {
+    brain.step(input, field::Hormones{}, SEED);
+    for (const auto &cell : brain.retinal_state())
+      check(cell.activity == 0, "start fish stops retinal waves before hatching");
+  }
+  std::fill(input.begin(), input.end(), .7f);
+  brain.step(input, field::Hormones{}, SEED);
+  bool sees = false;
+  for (const auto &r : g.interface->sensory)
+    if (r.channel == field::Light) {
+      sees = true;
+      check(brain.signal(r.neuron) > .6f, "retinal wave inhibition preserves external vision");
+    }
+  check(sees, "start fish has retinal cells");
+}
+void start_fish_eats_nearby_food(const Genome &g) {
+  constexpr double X = 300, Y = 205, DISTANCE = 8, FOOD = 80;
+  constexpr int SETTLE = 200, RESPONSE = 40;
+  for (double tissue : {HATCH_TISSUE, BODY_TISSUE}) {
+    Ecosystem w(SEED);
+    w.resize(615, 410);
+    w.safety = false;
+    w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
+    w.field.clear_food();
+    const auto id = adult(w, g, X, Y).id;
+    auto hold = [&] {
+      auto &b = individual(w, id).body;
+      b.x = X;
+      b.y = Y;
+      b.angle = 0;
+      b.tissue = b.peak_tissue = tissue;
+      auto &m = StateAccess::motor(b);
+      m.vx = m.vy = m.speed = m.angular_velocity = 0;
+    };
+    for (int tick = 0; tick < SETTLE; ++tick) {
+      hold();
+      w.tick(false);
+    }
+    check(individual(w, id).body.nutrition == 0, "feeding trial starts without food");
+    Food food{X + DISTANCE, Y, 0, 0, 0, FOOD};
+    food.initial_energy = FOOD;
+    food.color = FEED_COLOR;
+    food.radius = food_radius(FOOD);
+    w.field.append_fragment(food);
+    for (int tick = 0; tick < RESPONSE; ++tick) {
+      hold();
+      w.tick(false);
+    }
+    check(individual(w, id).body.nutrition > 1,
+          "young and adult start fish eat a nearby pellet after settling");
+  }
+}
 void excitation_and_teaching_are_independent() {
   constexpr field::NeuronIndex FIRST = 0, SECOND = 1, LEARNER = 2, MODULATOR = 3, MOTOR = 4;
   constexpr int CELLS = 5, WARMUP = 12;
@@ -651,6 +715,8 @@ int main() {
     wiring_costs_follow_formation_and_death();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
+    start_fish_uses_external_vision_after_hatching(g);
+    start_fish_eats_nearby_food(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

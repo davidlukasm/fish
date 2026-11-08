@@ -71,6 +71,7 @@ struct Cell {
   float crossing = 0, range = 1, sign = 1;
   float sigma = .03f;
   float gain = 1;
+  float weight = field::MAX_INITIAL_WEIGHT;
   struct Receptor {
     int effect = -1;
     float baseline = 0, sensitivity = 0, half = .05f;
@@ -149,12 +150,14 @@ std::array<float, cppn::OUTPUTS> outputs(const Cell &c) {
   v[out::sender2] = c.sender[1];
   v[out::receiver1] = c.receiver[0];
   const double fraction = .5 - std::sin(std::asin(2 * c.gain - 1) / 3);
-  const double q = c.gain >= 1 ? 0 : field::CONTACT_CORE +
-                      fraction * (field::CONTACT_SUPPORT - field::CONTACT_CORE);
+  const double q =
+      c.gain >= 1 ? 0
+                  : field::CONTACT_CORE + fraction * (field::CONTACT_SUPPORT - field::CONTACT_CORE);
   v[out::receiver2] = c.receiver[1] + c.sigma * std::sqrt(2 * q);
   v[out::search_width] = raw(float(std::log(c.sigma / .03) / std::log(2 / .03)));
   v[out::crossing] = c.crossing;
   v[out::range] = raw(c.range);
+  v[out::synapse_strength] = raw(c.weight / field::MAX_INITIAL_WEIGHT);
   return v;
 }
 
@@ -312,10 +315,12 @@ std::vector<Cell> plan(bool crossed) {
     eye.width = .3f;
     eye.field = .2f;
     eye.sender = eye_code(left);
+    eye.receptors = {
+        {field::Excitation, 0, -1, .2f, field::MATURITY_SUBSTANCE, field::HORMONE_STEEPNESS_STEPS}};
     p.push_back(eye);
     Cell steer{
         left ? "LenkerL" : "LenkerR", {2, .6f, .7f, 1.f / 3, 2.f / 3, .5f, .5f, s}, Kind::Nerve};
-    steer.copies = 4;
+    steer.copies = 8;
     steer.receiver = eye_code(left);
     steer.sigma = float(knob("lenker_sigma", .14)); // Seite im Bindungskern
     steer.sender = channel((left != crossed) ? TurnL : TurnR);
@@ -369,7 +374,7 @@ std::vector<Cell> plan(bool crossed) {
     // Futter direkt vor dem Maul hemmt das Wandmeiden: Koerner liegen auf Boden und Plattformen.
     Cell reach{
         left ? "NahWandL" : "NahWandR", {2, .6f, .7f, 1.f / 3, 2.f / 3, 0, 0, s}, Kind::Nerve};
-    reach.copies = 2;
+    reach.copies = 4;
     reach.sign = -1;
     reach.tau = .3f;
     reach.receiver = MOUTH_FIELD;
@@ -380,7 +385,7 @@ std::vector<Cell> plan(bool crossed) {
       p.push_back(reach);
     Cell fin{
         left ? "FlosseL" : "FlosseR", {2, .9f, 1, 0, 1, .5f, 1, s}, Kind::Effector, field::Turn};
-    fin.copies = int(knob("flosse", 4));
+    fin.copies = int(knob("flosse", 8));
     fin.tau = 0;
     fin.threshold = .3f;
     fin.receiver = channel(left ? TurnL : TurnR);
@@ -411,7 +416,7 @@ std::vector<Cell> plan(bool crossed) {
     p.push_back(side);
   }
   Cell mouth{"Maulnerv", {1, 0, 0, 2.f / 3, 2.f / 3, 0, 0}, Kind::Nerve};
-  mouth.copies = 2;
+  mouth.copies = 4;
   mouth.receiver = MOUTH_FIELD;
   mouth.sigma = .07f; // beide Nah im Bindungskern
   mouth.sender = channel(Mouth);
@@ -584,6 +589,10 @@ bool verify(const Genome &g, const std::vector<Cell> &p, std::vector<int> &kind_
       continue;
     }
     const auto &c = p[match];
+    if (std::abs(n.initial_weight - c.weight) > 1e-5f) {
+      std::cout << c.name << ": falsche Kontaktstaerke\n";
+      ok = false;
+    }
     ++cells[match];
     if (!seen[n.group]) {
       seen[n.group] = true;
