@@ -19,7 +19,7 @@ COMPILE_JOB_RESULTS = 4
 COMPILE_TIMEOUT_SECONDS = 35
 COMPILE_POLL_SECONDS = .1
 DETAIL_CHARACTERS = 500
-START_DOCUMENT = ROOT / "genomes/handbau/kruemelsucher.fish.json"
+START_DOCUMENT = ROOT / "genomes/handbau/startfisch.fish.json"
 # Genome seeds travel as decimal strings so JavaScript cannot round their 64-bit values.
 SEED_MAX = (1 << 64) - 1
 

@@ -1137,7 +1137,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
           ? egg[0] / (1 + egg[0])
           : 0;
   b.reproduction_.sperm_transfer =
-      !b.reproduction_.sperm_laying && b.energy > b.reproduction_.motor_reserve
+      !b.reproduction_.sperm_laying &&
+              b.energy > (b.hatched ? b.reproduction_.motor_reserve : hatch_search_reserve(b))
           ? sperm[0] / (1 + sperm[0])
           : 0;
   b.reproduction_.egg_release = work[StrokeEgg] > 0;

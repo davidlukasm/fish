@@ -6,11 +6,10 @@ import {compileDocument} from '../ui/studio/model/document.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tool = resolve(root, process.env.BUILD_DIR ?? 'bin', 'atelier');
-const document = JSON.parse(readFileSync(resolve(root, 'genomes/handbau/kruemelsucher.fish.json')));
+const document = JSON.parse(readFileSync(resolve(root, 'genomes/handbau/startfisch.fish.json')));
 const {sites} = JSON.parse(execFileSync(tool, [ 'sites' ], {cwd : root, encoding : 'utf8'}));
 const plan = compileDocument(document, sites);
-const destination =
-    resolve(process.argv[2] ?? resolve(root, 'genomes/handbau/kruemelsucher.genome'));
+const destination = resolve(process.argv[2] ?? resolve(root, 'genomes/handbau/startfisch.genome'));
 const result =
     execFileSync('python3',
                  [

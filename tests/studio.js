@@ -19,7 +19,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "298cba387908c744",
-  "src/body_plan.cc" : "fea754ab4a6b866d",
+  "src/body_plan.cc" : "32bb85925321361d",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
   "src/physiology.cc" : "68b6f859ad3f1ef9",
@@ -37,7 +37,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
 
   "ui/tissue.js" : "01cae94d3e8df2d6",
-  "src/genome.hh" : "d976bc48fca24e01",
+  "src/genome.hh" : "239dc4f734e58ddf",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
@@ -158,7 +158,7 @@ function semanticFingerprint(source) {
         'python3',
         [
           '-B', '-c',
-          "import json; from atelier_service import run, START_DOCUMENT; d=run({'operation':'new','example':'start'}); r=run({'operation':'inspect','genome':START_DOCUMENT.with_name('kruemelsucher.genome').read_text()}); r.update(d); print(json.dumps(r))"
+          "import json; from atelier_service import run, START_DOCUMENT; d=run({'operation':'new','example':'start'}); r=run({'operation':'inspect','genome':START_DOCUMENT.with_name('startfisch.genome').read_text()}); r.update(d); print(json.dumps(r))"
         ],
         {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
     assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +

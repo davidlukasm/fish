@@ -620,6 +620,33 @@ void egg_development_checkpoint(const Genome &g) {
   check(failed.age == 1 && std::abs(300 - failed.energy - paid) < 1e-9 && !failed.brain(),
         "a failed plan pays queries and egg metabolism, without phantom construction");
 }
+void embryo_secretion_keeps_the_hatch_reserve(const Genome &g) {
+  Ecosystem w(59219);
+  w.resize(800, 500);
+  w.safety = false;
+  w.set_parameter("energy_supply", 0);
+  w.food_burst.strength = 0;
+  check(w.spawn(g, 400, 250, fish_origin::founder, 0, 0, 100), "small egg placement");
+  const auto id = w.fish.back().id;
+  w.fish.back().body.set_actuation_probe([](std::uint32_t, float) { return 1.f; });
+  bool secreted = false;
+  for (int tick = 0; tick < 160 && !individual(w, id).body.hatched; ++tick) {
+    w.tick(false);
+    const auto &b = individual(w, id).body;
+    if (b.embryo.shell < 1) {
+      secreted = true;
+      check(b.energy > hatch_search_reserve(b), "shell secretion keeps the search reserve");
+      check(b.energy < b.reproduction().motor_reserve,
+            "shell secretion works below the adult reproductive reserve");
+    }
+  }
+  auto &b = individual(w, id).body;
+  check(secreted && b.hatched, "a small egg can open its shell and hatch");
+  b.energy = 100;
+  w.tick(false);
+  check(individual(w, id).body.reproduction().sperm_transfer == 0,
+        "after hatching sperm production keeps the adult reproductive reserve");
+}
 void development_checkpoint_stages(const Genome &g) {
   constexpr std::size_t SLICE = 37;
   for (int stage = 0; stage < 3; ++stage) {
@@ -721,6 +748,7 @@ int main() {
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
+    embryo_secretion_keeps_the_hatch_reserve(g);
     development_finalization_uses_budget(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);

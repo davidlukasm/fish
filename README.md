@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/kruemelsucher.fish.json` ist der Atelier-Bauplan; `make starter` erzeugt das Genom. Der Krümelsucher ist ein Entwurf; eine selbsttragende Linie ist nicht nachgewiesen. Ohne Auswahl startet dieser Fisch. Gewählte Linien beginnen an getrennten Futterquellen.
+Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/startfisch.fish.json` ist der Atelier-Bauplan; `make starter` erzeugt das Genom. Miro ist ein Entwurf; eine selbsttragende Linie ist nicht nachgewiesen. Ohne Auswahl startet dieser Fisch. Gewählte Linien beginnen an getrennten Futterquellen.
 
 ## Körper und Evolution
 

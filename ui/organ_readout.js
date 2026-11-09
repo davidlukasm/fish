@@ -387,7 +387,9 @@ export function brainOrganReadout(d, tissue) {
                          0);
                      return inside / (1 + inside);
                    })(),
-            portion = params.sperm_portion;
+            portion = params.sperm_portion,
+            reserve = !egg && d.p[FISH.hatched] === 0 ? d.b.embryo.reserve
+                                                      : params.egg_reserve * Math.sqrt(growth);
       info.hero = t('units.energyOf', {n : organNumber(stored), of : organNumber(limit)});
       info.graphic = egg ? 'egg' : 'sperm';
       info.fill = limit > 0 ? stored / limit : 0;
@@ -396,7 +398,7 @@ export function brainOrganReadout(d, tissue) {
           egg ? t('organ_readout.dotterAngefordert') : t('organ_readout.spermaAngefordert'),
           t('units.energyPerStep', {
             n : organNumber(stored >= limit || d.b[egg ? 'egg_laying' : 'sperm_laying'] ||
-                                    d.p[FISH.energy] <= params.egg_reserve * Math.sqrt(growth)
+                                    d.p[FISH.energy] <= reserve
                                 ? 0
                                 : rate,
                             2)
