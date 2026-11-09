@@ -203,7 +203,12 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ nerve('relay', 3, [ 2, 3 ]) ],
     slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
-    settings : {threshold : setting(0, 2, 1, true), tempo : setting(0, 1, 0, true)}
+    settings : {
+      threshold : setting(0, 2, 1, true),
+      tempo : setting(0, 1, 0, true),
+      compare : setting(0, 2, 1, true),
+      rhythm : setting(0, 2, 0, true)
+    }
   },
   {
     key : 'spinal',

@@ -8,6 +8,7 @@ import {
   expandedWires,
   findCenter,
   findOrgan,
+  mirroredSite,
   organOf,
   settleAssemblies,
   usedSites
@@ -123,25 +124,27 @@ function bulbPlan(doc, organ) {
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
-const COMMAND_THRESHOLD = Object.freeze([ .2, .5, .8 ]), COMMAND_TAU = Object.freeze([ .1, .4 ]);
+const COMMAND_THRESHOLD = Object.freeze([ 0, .5, .8 ]), COMMAND_TAU = Object.freeze([ .1, .4 ]);
+const ALARM_COMPARE = Object.freeze([ 0, 3, 5 ]), ALARM_RHYTHM = Object.freeze([ -1, .5, 1 ]);
 function hindbrainPlan(doc, organ) {
   const region = organ.region;
+  const pace = ALARM_RHYTHM[region.rhythm];
   const nodes = [
-    {node : 'alarm', preset : 'relay', port : 'in'}, {
+    {node : 'alarm', preset : 'relay', port : 'in', set : {pace}}, {
       node : 'command',
       preset : 'relay',
       port : 'out',
-      set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo]}
-    },
-    {node : 'cross', preset : 'inhibit', port : 'none'}
+      set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo], pace}
+    }
   ];
-  return {
-    nodes,
-    inner : [ [ 'alarm', 'command' ], [ 'alarm', 'cross' ] ],
-    cross : [ [ 'cross', 'command' ] ],
-    route : () => null,
-    view : null
-  };
+  const inner = [ [ 'alarm', 'command' ] ], cross = [];
+  const copies = ALARM_COMPARE[region.compare];
+  if (copies) {
+    nodes.push({node : 'cross', preset : 'inhibit', port : 'none', set : {copies}});
+    inner.push([ 'alarm', 'cross' ]);
+    cross.push([ 'cross', 'command' ]);
+  }
+  return {nodes, inner, cross, route : () => null, view : null};
 }
 const LEARN_RATE = Object.freeze([ .2, .5, .8 ]), LEARN_STYLE = Object.freeze([ -.6, 0, .6 ]);
 const LEARN_STREAMS = 4;
@@ -277,7 +280,7 @@ const shape = n => [n.node, n.preset, n.port, n.band?.map(Math.round).join('-') 
 const centerShape = c => [c.node, c.key, c.port, c.band?.map(Math.round).join('-') ?? '',
                           c.type ?? '', JSON.stringify(c.planned ?? null)]
                              .join('|');
-export function settleRegions(doc, sites) {
+export function settleRegions(doc, sites, pairedId = null) {
   let draft = doc;
   for (const original of doc.organs.filter(planned)) {
     const plan = regionPlan(draft, findOrgan(draft, original.id));
@@ -295,6 +298,12 @@ export function settleRegions(doc, sites) {
     const kept = new Map(organ.centers.map(c => [c.id, c]));
     const wanted = new Set(plan.nodes.map(n => regionNodeId(organ, n.node)));
     const used = usedSites(draft, c => c.organId !== organ.id || wanted.has(c.id));
+    if (organ.id === pairedId)
+      for (const occupied of [...used]) {
+        const mirror = mirroredSite(findSite(sites, occupied), sites);
+        if (mirror)
+          used.add(mirror.id);
+      }
     const home = findSite(sites, organ.region.site);
     const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;

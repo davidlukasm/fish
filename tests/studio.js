@@ -169,6 +169,46 @@ function semanticFingerprint(source) {
                  'Every generated contact appears, including unplanned sites');
     const doc = source.document;
     model.validateDocument(doc);
+    if (example === 'start') {
+      const {updateRegion} = await import('../ui/studio/model/regions.js');
+      let placed = structuredClone(doc);
+      placed.organs.find(o => o.type === 'brain').centers = [];
+      placed.wires = [];
+      placed.assemblies = [];
+      placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
+      for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2, contrast : 0} ],
+                                            [ 'olfactory', 285, 415, {compare : 1} ],
+                                            [ 'hindbrain', 520, 405, {threshold : 0} ],
+                                            [ 'spinal', 700, 381, {stroke : 2} ]]) {
+        const added = model.addOrgan(placed, type, sitesResult.sites, {x, y});
+        assert.ok(added, type + ' reserves free places for both sides in an occupied body');
+        placed = updateRegion(added.document, added.organId, settings, sitesResult.sites);
+        model.validateDocument(placed);
+      }
+      const spinal = placed.organs.find(o => o.type === 'spinal');
+      const eggWire = model.addWire(placed, spinal.id, 'eiorgan', null, sitesResult.sites);
+      const tailWire =
+          model.addWire(eggWire.document, spinal.id, 'schub--1', 'same', sitesResult.sites);
+      const crossingOf = (d, id) => model.compileDocument(d, sitesResult.sites)
+                                        .groups[model.allCenters(d).findIndex(c => c.id === id)]
+                                        .crossing;
+      const beat = spinal.centers.find(c => c.node === 'beat').id;
+      assert.equal(crossingOf(tailWire.document, beat), 0,
+                   'A single ovary contains targets on both physical sides');
+      const both = model.updateWire(tailWire.document, eggWire.wireId, {pairing : 'both'});
+      const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
+      assert.equal(projections.length, 2, 'Both paired regions can project to one ovary');
+      assert.deepEqual(new Set(projections.map(p => p.from)), new Set([ spinal.id, spinal.pair ]));
+      assert.ok(projections.every(p => p.to === 'eiorgan'));
+      const hub = model.addOrgan(both, 'hypothalamus', sitesResult.sites, {x : 335, y : 365});
+      assert.ok(hub);
+      const broadcast =
+          model.addWire(hub.document, hub.organId, spinal.id, 'both', sitesResult.sites);
+      assert.equal(model.expandedWires(broadcast.document)
+                       .filter(w => w.wire.id === broadcast.wireId)
+                       .length,
+                   2, 'One central region can project to both spinal halves');
+    }
     const saved = JSON.parse(JSON.stringify(doc));
     assert.ok(model.regenerateFields(saved, sitesResult.sites));
     assert.deepEqual(saved, doc);
@@ -339,6 +379,18 @@ function semanticFingerprint(source) {
     assert.ok(bulbNode(hindLeft, 'command') &&
               model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
                   model.findCenter(hind.document, bulbNode(hindLeft, 'command')).center.threshold);
+    const feeding =
+        regions.updateRegion(hind.document, hind.organId, {compare : 0, rhythm : 1}, sites);
+    for (const id of [hindLeft.id, hindRight.id]) {
+      const half = model.findOrgan(feeding, id);
+      assert.deepEqual(half.centers.map(c => c.node), [ 'alarm', 'command' ]);
+      assert.ok(half.centers.every(c => c.pace === .5),
+                'The feeding relay can develop with its own weak rhythm');
+    }
+    const feedingLinks = regions.routedLinks(feeding, sites);
+    assert.equal(feedingLinks.length, 2);
+    assert.ok(feedingLinks.every(l => l.from.endsWith(':alarm') && l.to.endsWith(':command')),
+              'Both feeding sides can relay together without opposing inhibition');
     for (const region of ORGANS.filter(o => o.category === 'regions')) {
       const home = sites.find(s => !s.outer && s.w > 0 && region.centers[0].zones.includes(s.zone));
       const placed = model.addOrgan(model.newDocument(region.key), region.key, sites,

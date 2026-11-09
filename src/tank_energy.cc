@@ -155,22 +155,21 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     const double at = stroke_along(part, s);
     auto &organ = source.organs[part.organ];
     const bool through = organ.kind < plant_organ::leaf || bite > LEAF_THROUGH * width;
-    const double needed =
-        std::clamp(CUT_FORCE * width / std::max(MIN_BITE, bite), CUT_FORCE_MIN, CUT_FORCE);
+    const double needed = std::clamp(CUT_FORCE * width / std::max(MIN_BITE, bite), CUT_FORCE_MIN,
+                                     CUT_FORCE),
+                 depth =
+                     efficiency * std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width));
     double worn = 0;
     for (const auto &n : organ.notches)
       if (n.width > 0 && std::abs(n.at - at) < std::max(n.width, NOTCH_MIN_WIDTH))
         worn = std::max(worn, std::abs(notch_depth(n, time, env_.plant_notch_heal)));
     if (organ.energy < tolerance::negligible ||
-        (((through && efficiency > needed) ||
-          worn + std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width)) >
-              NOTCH_CUT_DEPTH) &&
+        (((through && efficiency > needed) || worn + depth > NOTCH_CUT_DEPTH) &&
          at > NOTCH_MARGIN && at < 1 - NOTCH_MARGIN))
       this->cut_organ(part.patch, part.organ, at);
     else {
       const double length = curve_length(organ.draw_curve);
       const double heal = env_.plant_notch_heal,
-                   depth = std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width)),
                    span = std::clamp(bite / std::max(MIN_MARK_LENGTH, length), NOTCH_MIN_SPAN,
                                      NOTCH_MAX_SPAN);
       auto *slot = &organ.notches[0];

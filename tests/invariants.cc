@@ -763,6 +763,38 @@ void cut_marks_stay_on_their_piece() {
   check(stump.at >= 0 && stump.at <= 1 && stump.depth == mark.depth,
         "a bite mark keeps its place and depth on the piece");
 }
+void plant_notches_follow_the_successful_bite() {
+  Ecosystem weak(SEED);
+  weak.starter_world();
+  const auto &parts = weak.field.vegetation().plants;
+  const auto found = std::find_if(parts.begin(), parts.end(), [](const auto &p) {
+    return p.kind == food_kind::plant && p.organ_kind >= plant_organ::leaf && p.energy > 1 &&
+           p.along > .25 && p.along < .75;
+  });
+  check(found != parts.end(), "plant bite fixture has edible foliage");
+  const auto index = std::size_t(found - parts.begin()), patch = found->patch;
+  const int organ = found->organ;
+  auto strong = weak.fork();
+  const auto damage = [&](Ecosystem &w, double strength) {
+    Body b;
+    b.tissue = HATCH_TISSUE;
+    b.jaw_length = .4;
+    b.blunt_teeth = 0;
+    b.bite_strength = strength;
+    b.bite_signal = 1;
+    const auto cuts = w.field.plant_source(patch).organs[organ].cuts;
+    const auto piece = w.field.bite_plant(b, index);
+    check(piece && piece->energy > 0, "both bites remove a measurable piece");
+    const auto &after = w.field.plant_source(patch).organs[organ];
+    double depth = after.cuts > cuts ? 1 : 0;
+    for (const auto &n : after.notches)
+      depth = std::max(depth, std::abs(n.depth));
+    return depth;
+  };
+  const double shallow = damage(weak, .1), deep = damage(strong, 12);
+  check(shallow < .001 && deep > 100 * shallow,
+        "a barely effective bite cannot leave the same deep notch as a strong bite");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -793,6 +825,7 @@ int main() {
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();
+    plant_notches_follow_the_successful_bite();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);

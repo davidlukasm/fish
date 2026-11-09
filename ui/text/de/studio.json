@@ -433,7 +433,7 @@
     },
     "hindbrain": {
       "term": "Medulla",
-      "purpose": "Vorlage: verbindet Alarmeingang, Ausgang und gegenseitige Hemmung."
+      "purpose": "Vorlage: verbindet Auslöser und Ausgang, wahlweise mit Eigenrhythmus und gegenseitiger Hemmung."
     },
     "spinal": {
       "term": "Rücken­mark",
@@ -489,6 +489,7 @@
       "steering": "Lenkeingang",
       "threshold": "Schwelle",
       "tempo": "Tempo",
+      "rhythm": "Eigenrhythmus",
       "rate": "Lerntempo",
       "style": "Lernt von selbst",
       "teacher": "Lehrer",
@@ -535,6 +536,7 @@
         "schnell",
         "träge"
       ],
+      "rhythm": ["aus", "schwach", "stark"],
       "rate": [
         "langsam",
         "mittel",

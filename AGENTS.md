@@ -13,5 +13,6 @@ Pflege:
 - Modulzustände über ihre APIs ändern; Initialisierungsschritte benennen.
 - Version nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert.
 - Frische Daten je Version; keine Migrationen oder Legacy-Leser.
-- Nur kurze automatisierte Funktions-/Kompilierprüfungen; keine Langläufe.
+- Automatisierte Funktions-/Kompilierprüfungen kurz halten; Startfische zusätzlich über Generationen prüfen.
+- Startfische erst ausliefern, wenn sie ohne Bestandshilfe mehrere fortpflanzungsfähige Folgegenerationen im Aquarium erreicht haben; mit mehreren Startwelten prüfen.
 - Beauftragte Änderungen nach bestandenen Prüfungen automatisch auf GitHub pushen; die dauerhafte Nutzerfreigabe liegt vor.

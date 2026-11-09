@@ -452,7 +452,8 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   draft.organs.push(organ);
   if (organ.field && !regenerateFields(draft, sites))
     return null;
-  let result = settleRegions(draft, sites);
+  let result =
+      settleRegions(draft, sites, paired && definition.scope !== 'single' ? organ.id : null);
   if (organ.region && !findOrgan(result, organ.id).centers.length)
     return null;
   if (paired && definition.scope !== 'single') {
@@ -1083,9 +1084,11 @@ export function addWire(doc, from, to, pairing = null, sites = null) {
     return null;
   const twins = pairEndpoint(doc, from) === to;
   const drawn = endpointSide(doc, from) === endpointSide(doc, to) ? 'same' : 'crossed';
-  const sides = !twins && pairEndpoint(doc, from) && pairEndpoint(doc, to)
-                    ? PAIRINGS.includes(pairing) ? pairing : drawn
-                    : null;
+  const sourcePair = pairEndpoint(doc, from), targetPair = pairEndpoint(doc, to);
+  const sides = !twins && (sourcePair || targetPair) ? PAIRINGS.includes(pairing) ? pairing
+                                                       : sourcePair && targetPair ? drawn
+                                                                                  : 'same'
+                                                     : null;
   const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing : sides};
   const covers = (a, b) => (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
                            (a.to === b.to || a.to === wholeEndpoint(doc, b.to));
@@ -1125,8 +1128,15 @@ export function pairEndpoint(doc, id) {
 const endpointSide = (doc, id) => organOf(doc, id).side < 0;
 function wireLinks(doc, wire) {
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
-  if (!wire.pairing || !from || !to || from === wire.to)
+  if (!wire.pairing || (!from && !to) || from === wire.to)
     return [ {from : wire.from, to : wire.to} ];
+  if (!from || !to) {
+    const selected = {from : wire.from, to : wire.to},
+          other = {from : from ?? wire.from, to : to ?? wire.to};
+    return wire.pairing === 'both'      ? [ selected, other ]
+           : wire.pairing === 'crossed' ? [ other ]
+                                        : [ selected ];
+  }
   const flip = endpointSide(doc, wire.from) !== endpointSide(doc, wire.to);
   const [near, far] = flip ? [ to, wire.to ] : [ wire.to, to ];
   const same = [ {from : wire.from, to : near}, {from, to : far} ],
@@ -1216,7 +1226,8 @@ export function updateWire(doc, id, patch) {
   for (const key of ['spread'])
     if (key in patch)
       wire[key] = clamp(Number(patch[key]), 0, 1);
-  if (PAIRINGS.includes(patch.pairing) && wire.pairing)
+  if (PAIRINGS.includes(patch.pairing) &&
+      (pairEndpoint(draft, wire.from) || pairEndpoint(draft, wire.to)))
     wire.pairing = patch.pairing;
   return draft;
 }
@@ -1282,22 +1293,23 @@ export function assemblyCenters(doc, assembly) {
                 : findOrgan(doc, id)?.centers.map(c => c.id) ?? []);
 }
 export const wiredCrossing = (doc, center, sites) =>
-    fixedContactMap(doc)
-        ? null
-        : senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc));
-function sidesOf(doc) {
+    fixedContactMap(doc) ? null
+                         : senderCrossing(doc, {...center, crossing : null},
+                                          routedLinks(doc, sites), sidesOf(doc, sites));
+function sidesOf(doc, sites) {
   const sides = new Map();
-  for (const organ of doc.organs) {
-    sides.set(organ.id, organ.side ?? 0);
-    for (const c of organ.centers)
-      sides.set(c.id, organ.side ?? 0);
+  for (const center of allCenters(doc)) {
+    const site = findSite(sites, center.site);
+    sides.set(center.id, onMidline(site) ? 0 : site?.side ?? 0);
   }
   return sides;
 }
 function senderCrossing(doc, center, links, sides) {
   const own = sides.get(center.id) ?? 0, whole = wholeEndpoint(doc, center.id);
   const reached = links.filter(l => l.from === center.id || l.from === whole)
-                      .map(l => sides.get(l.to) ?? 0)
+                      .flatMap(l => endpointCenters(doc, l.to))
+                      .filter(target => target.role !== 'sensor')
+                      .map(target => sides.get(target.id) ?? 0)
                       .filter(side => side && own);
   if (reached.length && reached.every(side => side * own < 0))
     return 1;
@@ -1322,7 +1334,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
   const indices = new Map(centers.map((c, i) => [c.id, i]));
   const fixed = fixedContactMap(doc);
-  const sides = sidesOf(doc);
+  const sides = sidesOf(doc, sites);
   const connections = [];
   const bundles = new Map();
   for (const link of links) {

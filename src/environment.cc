@@ -48,7 +48,7 @@ constexpr std::array<double, plant_form::count> CLUMP_CHANCE{.22, .12, .12};
 constexpr std::array<int, plant_form::count> CLUMP_SPAN{3, 2, 2};
 constexpr int SEED_EXTRA_SPAN = 3;
 constexpr double SEED_ALGAE_CHANCE = .3;
-constexpr double INITIAL_PLANT_FILL = .25, INITIAL_PLANT_STRETCH = .75;
+constexpr double INITIAL_PLANT_FILL = .6, INITIAL_PLANT_STRETCH = .75;
 constexpr double ALGAE_LIGHT_LIFT = 2;
 constexpr double FERTILITY_GAIN = 2, SPROUT_BASE = .5, SPROUT_RATE = 1. / 4000,
                  ALGAE_SPROUT = 1. / 800;

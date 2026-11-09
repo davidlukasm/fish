@@ -24,6 +24,7 @@ import {
   ORGAN_BY_KEY
 } from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
+import {pairEndpoint} from '../model/document.js';
 import {modulatorScene} from './effects.js';
 import {
   allCenters,
@@ -467,7 +468,8 @@ function wireInspector(state, wire) {
   return '<header class="aid-inspector-head"><span>' + label('sections.connection') + '</span>' +
          heading(linkText(endpointTitle(doc, wire.from, state.sites),
                           endpointTitle(doc, wire.to, state.sites))) +
-         '</header>' + (wire.pairing ? pairingChoice(wire) : '') +
+         '</header>' +
+         (pairEndpoint(doc, wire.from) || pairEndpoint(doc, wire.to) ? pairingChoice(wire) : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
          (state.report?.contacts ? contactResult(wireContacts(doc, wire, contactRows(state)))
                                  : '') +
