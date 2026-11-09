@@ -29,6 +29,7 @@ import {
   setSubstance,
   switchReceptor,
   teachOrgan,
+  unbindReceptor,
   updateCenter,
   updateCellGrowth,
   updateCellDistribution,
@@ -471,7 +472,7 @@ export const FISH_CLICKS = Object.freeze([
     (studio, e) => {
       const id = e.dataset.centerId, effect = Number(e.dataset.learnEffect);
       const value = e.dataset.learnSubstance, doc = studio.state.document;
-      studio.changeDocument(value === 'off' ? updateReceptor(doc, id, effect, {active : 0})
+      studio.changeDocument(value === 'off' ? unbindReceptor(doc, id, effect)
                                             : bindReceptor(doc, id, effect, Number(value)),
                             {kind : 'center', id});
     }

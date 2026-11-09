@@ -4,6 +4,7 @@
 #include "physiology.hh"
 #include "movement.hh"
 #include "ecology_internal.hh"
+#include "plants.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
@@ -867,6 +868,101 @@ void grass_blades_are_cut_as_leaves() {
             plant_bite_hardness(plant_organ::leaf, .5, materials),
         "a grass blade uses leaf fibre resistance");
 }
+void grazing_preserves_foliage_until_repeated_bites() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  const auto &parts = w.field.vegetation().plants;
+  const auto found = std::find_if(parts.begin(), parts.end(), [](const auto &p) {
+    return p.kind == food_kind::plant && p.organ_kind == plant_organ::blade && p.energy > 10 &&
+           p.along > .25 && p.along < .75;
+  });
+  check(found != parts.end(), "the grazing fixture has a grown grass blade");
+  const auto target = *found;
+  const auto cuts = w.field.plant_source(target.patch).organs[target.organ].cuts;
+  Body b;
+  b.tissue = HATCH_TISSUE;
+  b.jaw_length = .4;
+  b.blunt_teeth = 0;
+  b.bite_strength = 60;
+  b.bite_signal = 1;
+  double eaten = 0;
+  int bites = 0;
+  for (; bites < 24; ++bites) {
+    std::size_t best = w.field.vegetation().plants.size();
+    double nearest = std::numeric_limits<double>::infinity();
+    for (std::size_t i = 0; i < w.field.vegetation().plants.size(); ++i) {
+      const auto &p = w.field.vegetation().plants[i];
+      if (p.patch != target.patch || p.organ != target.organ || p.energy <= 0)
+        continue;
+      const double d = stroke_distance(p, w.field.delta_x(target.x - p.x), target.y - p.y);
+      if (d < nearest) {
+        nearest = d;
+        best = i;
+      }
+    }
+    check(best < w.field.vegetation().plants.size(), "the grazed blade remains indexed");
+    const auto p = w.field.vegetation().plants[best];
+    const double before = w.field.grass_energy();
+    const auto piece = w.field.bite_plant(
+        b, best, stroke_closest(p.hx, p.hy, w.field.delta_x(target.x - p.x), target.y - p.y));
+    check(piece && piece->energy > 0, "each grazing bite supplies food");
+    eaten += piece->energy;
+    check(std::abs(w.field.grass_energy() + piece->energy - before) < 1e-6,
+          "biting and detachment conserve plant energy");
+    const auto now = w.field.plant_source(target.patch).organs[target.organ].cuts;
+    if (bites == 0)
+      check(now == cuts, "a grazing bite does not tear off the blade");
+    if (now > cuts)
+      break;
+    w.field.time += 12;
+    w.field.index_plants();
+  }
+  check(bites >= 3 && bites < 24 && eaten > 0,
+        "successive bites feed repeatedly before severing the blade");
+}
+void healthy_foliage_retains_a_green_signal() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  double foliage = 0, green = 0;
+  for (const auto &part : w.field.vegetation().plants)
+    if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) && part.energy > 0) {
+      const auto color = plant_organ_color(w.field.plant_source(part.patch), part.organ);
+      foliage += part.energy;
+      if (color[rgb::green] > color[rgb::blue])
+        green += part.energy;
+    }
+  check(foliage > 0 && green > .99 * foliage,
+        "living foliage retains a green signal apart from shaded tips");
+}
+void illuminated_leaves_survive_their_own_shade() {
+  Ecosystem w(817233);
+  w.resize(960, 640);
+  w.safety = false;
+  w.field.flow = 0;
+  w.field.seed_plants();
+  std::uint64_t shaded = 0;
+  for (const auto &s : w.field.vegetation().surfaces) {
+    const auto p = surface_midpoint(s);
+    const double height = w.field.soil_depth(s) + PLANT_LIGHT_LIFT;
+    if (s.stump &&
+        plant_light(w.field.light(p.x + s.normal.x * height, p.y + s.normal.y * height)) == 0 &&
+        w.field.plant_illumination(s) > .15) {
+      shaded = s.id;
+      break;
+    }
+  }
+  check(shaded > 0, "the fixture has lit leaves above a shaded crown");
+  for (int tick = 0; tick < 400; ++tick)
+    w.tick();
+  for (const auto &s : w.field.vegetation().surfaces)
+    if (s.id == shaded) {
+      check(s.stump && s.vitality > .95, "lit foliage remains healthy above its own shade");
+      for (const auto &o : s.organs)
+        check(o.cuts == 0, "a shaded crown does not make lit leaves fall off");
+      return;
+    }
+  check(false, "the shaded plant remains in the tank");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -899,6 +995,9 @@ int main() {
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();
     plant_notches_follow_the_successful_bite();
+    grazing_preserves_foliage_until_repeated_bites();
+    healthy_foliage_retains_a_green_signal();
+    illuminated_leaves_survive_their_own_shade();
     grass_blades_are_cut_as_leaves();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);

@@ -220,6 +220,20 @@ Curve constrain(const Field &f, Curve q, double girth, int kind) {
   return q;
 }
 }
+double Field::plant_illumination(const SurfacePatch &s) const {
+  double illuminated = 0, foliage = 0;
+  for (const auto &o : s.organs)
+    if (o.kind != plant_organ::stem && o.energy > 0) {
+      const auto near = curve(o.curve, .25), far = curve(o.curve, .75);
+      illuminated += o.energy * (light(near.x, near.y) + light(far.x, far.y)) / 2;
+      foliage += o.energy;
+    }
+  if (foliage > 0)
+    return illuminated / foliage;
+  const auto p = surface_midpoint(s);
+  const double height = soil_depth(s) + PLANT_LIGHT_LIFT;
+  return light(p.x + s.normal.x * height, p.y + s.normal.y * height);
+}
 Curve lower_curve(Curve q, double t) {
   Curve result{q[0], {}, {}, {}};
   for (int level = CURVE_POINTS - 1; level > 0; --level) {
@@ -1146,10 +1160,7 @@ void Field::advance_anchored_grass() {
         shape_organs(s);
         uproot(s);
       } else {
-        auto center = surface_midpoint(s);
-        bool lit =
-            plant_light(light(center.x + s.normal.x * (soil_depth(s) + PLANT_LIGHT_LIFT),
-                              center.y + s.normal.y * (soil_depth(s) + PLANT_LIGHT_LIFT))) > 0;
+        bool lit = plant_light(plant_illumination(s)) > 0;
         s.vitality = !old && lit ? std::min(1., s.vitality + VITALITY_GAIN)
                                  : s.vitality * std::exp2(-1. / VITALITY_HALF_LIFE);
         if (roots)
@@ -1206,7 +1217,7 @@ void Field::advance_drifting_grass(DriftingGrass &d, std::vector<DriftingGrass> 
   flow.x += wake.x * WAKE_SHARE;
   flow.y += wake.y * WAKE_SHARE;
   bool leaf = std::none_of(p.organs.begin(), p.organs.end(), [](const auto &o) {
-    return o.kind < plant_organ::leaf && o.energy > LIVING_ORGAN;
+    return o.kind == plant_organ::stem && o.energy > LIVING_ORGAN;
   });
   double material = leaf
                         ? LEAF_BUOYANCY + LEAF_SINKING * (1 - std::exp2(-double(d.age) / LEAF_SOAK))

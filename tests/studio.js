@@ -58,6 +58,11 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "f066d47255b298e2",
   "src/material.hh" : "1e223696442cdc9c",
+  "src/tank_energy.cc" : "57acac396dc5d72b",
+  "src/environment.cc" : "cbafd204159640b5",
+  "src/environment.hh" : "b5ffaf59a47df8dd",
+  "src/plants.cc" : "84dd08e1cdc01da4",
+  "src/plant_types.hh" : "1fb032b0ca9f080d",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "372294904588c948",
@@ -1690,6 +1695,44 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
               learnPanel.includes('data-learn-trace'));
     assert.match(learnPanel, /Schonfrist neuer Kontakte/);
+    const automatic =
+        model.addOrgan(model.newDocument('Region'), 'circuit', sites, {x : 380, y : 325});
+    const regionCenter = automatic.centerId;
+    const {FISH_CLICKS} = await import('../ui/studio/events.js');
+    const chooseSubstance =
+        FISH_CLICKS.find(([ selector ]) => selector === '[data-learn-substance]')[1];
+    const control = {
+      state : {document : automatic.document},
+      changeDocument(document) { this.state.document = document; }
+    };
+    const learningState = () => ({
+      document : control.state.document,
+      sites,
+      capabilities : sitesResult,
+      selected : {kind : 'center', id : regionCenter}
+    });
+    assert.doesNotMatch(learningView.learningInspector(learningState()), /data-learn-receptor=/,
+                        'Constant local learning creates no substance binding');
+    for (const effect of [HORMONE_EFFECT.learning, HORMONE_EFFECT.competition]) {
+      const cell = () => model.findCenter(control.state.document, regionCenter).center;
+      const select = value => chooseSubstance(control, {
+        dataset : {centerId : regionCenter, learnEffect : String(effect), learnSubstance : value}
+      });
+      select('0');
+      assert.equal(model.effectDirection(effect, cell().receptors[effect]), 1,
+                   'Binding a substance to a new region changes the effective learning factor');
+      control.state.document =
+          model.updateReceptor(control.state.document, regionCenter, effect, {baseline : 1});
+      assert.ok(!model.boundEffects(cell(), 0, sitesResult).includes(effect),
+                'A saturated response creates no hormone connection');
+      control.state.document =
+          model.updateReceptor(control.state.document, regionCenter, effect, {baseline : .25});
+      select('off');
+      assert.equal(cell().receptors[effect].baseline, .25);
+      assert.equal(
+          model.receptorResponse(sitesResult, cell().receptors[effect], Array(6).fill(0), 0), .25,
+          'Removing the substance preserves the constant local gain');
+    }
     const traceHandle = /data-graphic-handle="learn-trace" cx="([^"]+)"/.exec(learnPanel);
     const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
     assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).learning_tau -

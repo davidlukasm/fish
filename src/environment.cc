@@ -790,8 +790,7 @@ void Field::grow_plants(bool paced) {
     auto &s = vegetation_.surfaces[i];
     auto p = surface_midpoint(s);
     const double depth = soil_depth(s);
-    double illumination = light(p.x + s.normal.x * (depth + PLANT_LIGHT_LIFT),
-                                p.y + s.normal.y * (depth + PLANT_LIGHT_LIFT));
+    const double illumination = plant_illumination(s);
     const double exposed_at = (s.algae_open[0] + s.algae_open[1]) / 2,
                  algae_illumination =
                      s.algae_open[1] > s.algae_open[0]

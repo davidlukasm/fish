@@ -1,0 +1,205 @@
+#include "ecology.hh"
+#include "physiology.hh"
+#include "plants.hh"
+#include "view_cache.hh"
+#include "world_view.hh"
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <set>
+
+using namespace fishsim;
+namespace {
+constexpr std::array<double, 3> RADII{24, 64, 128};
+constexpr int SAMPLE_STEPS = 400;
+
+double nearby_share(const PlantPart &p, const Field &f, const Body &b, double radius) {
+  const double x = f.delta_x(p.x - b.x), y = p.y - b.y,
+               a = p.hx * p.hx + p.hy * p.hy;
+  radius += stroke_width(p);
+  if (a <= tolerance::negligible)
+    return x * x + y * y <= radius * radius ? 1 : 0;
+  const double dot = x * p.hx + y * p.hy,
+               disc = dot * dot - a * (x * x + y * y - radius * radius);
+  if (disc <= 0)
+    return 0;
+  return std::max(0., std::min(1., (-dot + std::sqrt(disc)) / a) -
+                           std::max(-1., (-dot - std::sqrt(disc)) / a)) /
+         2;
+}
+
+void quantiles(std::vector<double> values) {
+  std::sort(values.begin(), values.end());
+  std::cout << '[';
+  if (!values.empty())
+    for (int i = 0; i <= 4; ++i)
+      std::cout << (i ? "," : "") << values[(values.size() - 1) * i / 4];
+  std::cout << ']';
+}
+
+template <class Map> void counts(const Map &values) {
+  std::cout << '[';
+  bool comma = false;
+  for (const auto &[key, value] : values) {
+    std::cout << (comma ? "," : "") << '[' << key << ',' << value << ']';
+    comma = true;
+  }
+  std::cout << ']';
+}
+
+void snapshot(const Ecosystem &w, const std::string &prefix) {
+  if (prefix.empty())
+    return;
+  std::ofstream out(prefix + "-" + std::to_string(w.ticks) + ".json");
+  if (!out)
+    throw std::runtime_error("Bildzustand kann nicht gespeichert werden");
+  JsonViewCache cache(false);
+  SessionView status;
+  status.epoch = "zuchtbecken";
+  status.paused = true;
+  WorldViewWriter view(out, w, status, cache);
+  view.write({true, true, true, true, true}, w.parameters(), {});
+  cache.write_assets(out);
+  out << '}';
+}
+}
+
+int main(int argc, char **argv) {
+  try {
+    if (argc < 6)
+      throw std::invalid_argument(
+          "Aufruf: zuchtbecken GENOM SEED SCHRITTE ANZAHL aquarium|becken "
+          "[Parameter=Wert ...] [snapshot=PFAD]");
+    const auto seed = std::stoull(argv[2]);
+    const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
+    const std::string habitat = argv[5];
+    if (steps < 1 || count < 0 || count > population_limits::max_fish ||
+        (habitat != "aquarium" && habitat != "becken"))
+      throw std::invalid_argument("Ungültige Laufgrenzen oder Beckenart");
+    Genome::begin_run(seed);
+    const auto g = Genome::load(argv[1]);
+    Ecosystem w(seed);
+    w.safety = false;
+    w.workers = 2;
+    if (habitat == "becken") {
+      w.resize(960, 640);
+      w.field.flow = 0;
+    }
+    std::string pictures;
+    for (int i = 6; i < argc; ++i) {
+      const std::string option = argv[i];
+      const auto split = option.find('=');
+      if (split == std::string::npos)
+        throw std::invalid_argument("Parameter=Wert erwartet");
+      const auto key = option.substr(0, split), value = option.substr(split + 1);
+      if (key == "snapshot")
+        pictures = value;
+      else if (!w.set_parameter(key, std::stod(value)))
+        throw std::invalid_argument("Unbekannter Parameter: " + key);
+    }
+    if (habitat == "aquarium")
+      w.starter_world();
+    else
+      w.field.seed_plants();
+    w.seed({g}, count, habitat == "aquarium" ? run_limit::default_food : 0);
+    std::cout << "{\"event\":\"setup\",\"habitat\":\"" << habitat << "\",\"seed\":" << seed
+              << ",\"requested\":" << count << ",\"seeded\":" << w.fish.size()
+              << ",\"assistance\":false,\"mutation\":" << w.evo.mutation
+              << ",\"leafRadii\":[24,64,128],\"quantiles\":[0,0.25,0.5,0.75,1]}\n";
+    std::map<std::uint64_t, std::array<double, DIET_COUNT>> previous;
+    std::array<double, DIET_COUNT> food{};
+    std::set<std::uint64_t> hatched;
+    std::map<unsigned, int> births;
+    std::map<unsigned, std::set<std::uint64_t>> parents;
+    unsigned peak = 0;
+    for (int tick = 0; tick <= steps; ++tick) {
+      for (const auto &p : w.fish) {
+        const auto &b = p.body;
+        for (std::size_t k = 0; k < DIET_COUNT; ++k) {
+          const double raw = p.observations().raw_diet[k];
+          food[k] += std::max(0., raw - previous[p.id][k]);
+          previous[p.id][k] = raw;
+        }
+        if (b.hatched && p.origin == fish_origin::natural && hatched.insert(p.id).second) {
+          ++births[p.g];
+          parents[p.maternal_g].insert(p.parent);
+          peak = std::max(peak, p.g);
+          double nearby = 0;
+          for (const auto &part : w.field.vegetation().plants)
+            if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind))
+              nearby += part.energy * nearby_share(part, w.field, b, RADII[1]);
+          std::cout << "{\"event\":\"hatch\",\"t\":" << tick << ",\"id\":" << p.id
+                    << ",\"parent\":" << p.parent << ",\"generation\":" << p.g
+                    << ",\"energy\":" << b.energy << ",\"nearbyLeaf64\":" << nearby << "}\n";
+        }
+      }
+      const bool last = tick == steps || (count > 0 && w.fish.empty());
+      if (tick % SAMPLE_STEPS == 0 || last) {
+        std::map<unsigned, int> alive, breeders;
+        std::array<std::vector<double>, RADII.size()> nearby;
+        std::vector<double> nearest, reserves;
+        for (const auto &p : w.fish) {
+          if (p.body.hatched)
+            ++alive[p.g];
+          reserves.push_back(p.body.energy);
+          std::array<double, RADII.size()> energy{};
+          double distance = std::numeric_limits<double>::infinity();
+          for (const auto &part : w.field.vegetation().plants)
+            if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) &&
+                part.energy > 0) {
+              distance = std::min(distance, stroke_distance(part,
+                                                           w.field.delta_x(part.x - p.body.x),
+                                                           part.y - p.body.y));
+              for (std::size_t k = 0; k < RADII.size(); ++k)
+                energy[k] += part.energy * nearby_share(part, w.field, p.body, RADII[k]);
+            }
+          nearest.push_back(std::isfinite(distance) ? std::max(0., distance)
+                                                    : w.field.geometry().width);
+          for (std::size_t k = 0; k < RADII.size(); ++k)
+            nearby[k].push_back(energy[k]);
+        }
+        double anchored = 0, drifting = 0, blue = 0, total = 0;
+        for (const auto &part : w.field.vegetation().plants)
+          if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind)) {
+            (part.patch < w.field.vegetation().surfaces.size() ? anchored : drifting) += part.energy;
+            const auto color = plant_organ_color(w.field.plant_source(part.patch), part.organ);
+            if (color[rgb::blue] > color[rgb::green])
+              blue += part.energy;
+          }
+        for (double raw : food)
+          total += raw;
+        for (const auto &[generation, ids] : parents)
+          breeders[generation] = int(ids.size());
+        std::cout << "{\"event\":\"sample\",\"t\":" << tick << ",\"n\":" << w.fish.size()
+                  << ",\"peakGeneration\":" << peak << ",\"swimmers\":";
+        counts(alive);
+        std::cout << ",\"hatches\":";
+        counts(births);
+        std::cout << ",\"parents\":";
+        counts(breeders);
+        std::cout << ",\"reserve\":";
+        quantiles(reserves);
+        std::cout << ",\"nearestLeaf\":";
+        quantiles(nearest);
+        std::cout << ",\"nearbyLeafEstimate\":[";
+        for (std::size_t k = 0; k < RADII.size(); ++k) {
+          std::cout << (k ? "," : "");
+          quantiles(nearby[k]);
+        }
+        std::cout << "],\"anchoredLeaf\":" << anchored << ",\"driftingLeaf\":" << drifting
+                  << ",\"blueLeaf\":" << blue << ",\"rawFood\":" << total
+                  << ",\"plantShare\":"
+                  << (total > 0 ? (food[food_kind::plant] + food[food_kind::algae]) / total : 0)
+                  << "}\n" << std::flush;
+        if (tick == 0 || last || tick % (5 * SAMPLE_STEPS) == 0)
+          snapshot(w, pictures);
+      }
+      if (last)
+        break;
+      w.tick();
+    }
+  } catch (const std::exception &error) {
+    std::cerr << error.what() << '\n';
+    return 1;
+  }
+}

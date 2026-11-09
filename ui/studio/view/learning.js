@@ -6,6 +6,7 @@ import {
   allCenters,
   chosenCenter,
   endpointCenters,
+  effectDirection,
   findCenter,
   isLearner,
   LEARNING_EFFECTS,
@@ -55,7 +56,7 @@ function sendersOf(state, center) {
 }
 const boundSubstance = (state, center, effect) => {
   const receptor = center.receptors?.[effect];
-  return receptor?.active
+  return receptor?.active && effectDirection(effect, receptor) !== 0
              ? {index : receptor.substance, name : substanceName(state, receptor.substance)}
              : null;
 };

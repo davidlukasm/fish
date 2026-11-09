@@ -79,6 +79,9 @@ starter: $(BUILD_DIR)/atelier
 $(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile $(wildcard werkzeug/atelier*.hh)
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
+$(BUILD_DIR)/zuchtbecken: werkzeug/zuchtbecken.cc $(TEST_CORE) Makefile
+	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	mv $@.new $@
 -include $(OBJECTS:.o=.d)
 -include $(wildcard $(BUILD_DIR)/*-tests.d)
 

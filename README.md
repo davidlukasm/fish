@@ -35,4 +35,6 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 
 ## Prüfung
 
-`./build.sh`: Build und Prüfungen. `./test.sh`: dieselben Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Geprüft wird nur Dauerhaftes: ein geschlossenes Becken erzeugt keine Energie, ein Speicherstand läuft genau wie das Original weiter, alle UI-Module verknüpfen sich, alle Texte existieren. `make objects`: nur kompilieren, ohne Linken. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
+`./build.sh`: Build und Prüfungen. `./test.sh`: Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
+
+Zuchtversuche: `make bin/zuchtbecken`; Aufruf ohne Argumente zeigt die Parameter. JSONL-Ausgabe mit Familien und örtlicher Blattenergie.

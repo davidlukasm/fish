@@ -1,7 +1,21 @@
 import {clamp} from '../../units.js';
 import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, SENSE_KIND, TUNING} from '../../schema.js';
-import {planOfUnit, scentAffinities, scentTuning, unitOfPlan} from '../../tuning.js';
+import {
+  ATELIER_LIMITS,
+  HORMONE_EFFECT,
+  HORMONES,
+  MOTOR_KIND,
+  MOUTH_CYCLE,
+  SENSE_KIND,
+  TUNING
+} from '../../schema.js';
+import {
+  planOfUnit,
+  scentAffinities,
+  scentTuning,
+  timeConstantOf,
+  unitOfPlan
+} from '../../tuning.js';
 import {nextPigment} from './pigment.js';
 import {
   eligible,
@@ -188,7 +202,7 @@ export const producers = (doc, index, wheel) =>
         .flatMap(o => o.centers)
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
 export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
-    (r, effect) => r.active && r.sensitivity !== 0 &&
+    (r, effect) => r.active && effectDirection(effect, r) !== 0 &&
                            wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
@@ -309,6 +323,11 @@ export const isChosen = (selected, organ) =>
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
   const N = NEW_CENTER;
+  const cycle = desc.role !== 'motor' ? null
+                : [ MOTOR_KIND.aggression, MOTOR_KIND.suction ].includes(functionFor(desc, site))
+                    ? MOUTH_CYCLE.steps
+                : [ MOTOR_KIND.forward, MOTOR_KIND.turn ].includes(functionFor(desc, site)) ? 12
+                                                                                            : null;
   return {
     id : identifier('center'),
     key : desc.key,
@@ -318,7 +337,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     site : site.id,
     copies : desc.copies,
     threshold : desc.role === 'sensor' ? N.sense_threshold : -.2,
-    tau : N.tau,
+    tau : cycle ? timeConstantOf(cycle) : N.tau,
     field : N.field,
     q1 : 0,
     q2 : 0,
@@ -1044,8 +1063,9 @@ export const receptorEnds = receptor => ({
   without : clamp(receptor.baseline, -1, 1),
   with : clamp(receptor.baseline + receptor.sensitivity, -1, 1)
 });
-export const startEnds = effect =>
-    receptorEnds({...neutralReceptor(effect), ...RECEPTOR_START[effect]});
+const receptorStart = effect =>
+    ({baseline : neutralReceptor(effect).baseline, ...RECEPTOR_START[effect]});
+export const startEnds = effect => receptorEnds(receptorStart(effect));
 export function effectDirection(effect, receptor) {
   const ends = receptorEnds(receptor);
   return Math.sign(effectLevel(effect, ends.with) - effectLevel(effect, ends.without));
@@ -1054,8 +1074,10 @@ export function bindReceptor(doc, id, effect, index) {
   const current = findCenter(doc, id)?.center.receptors[effect];
   return updateReceptor(
       doc, id, effect,
-      {...(current?.sensitivity ? {} : RECEPTOR_START[effect]), active : 1, substance : index});
+      {...(current?.sensitivity ? {} : receptorStart(effect)), active : 1, substance : index});
 }
+export const unbindReceptor = (doc, id, effect) =>
+    updateReceptor(doc, id, effect, {sensitivity : 0});
 // Every learner of an organ (and its twin, which follows its pair) taught by one substance, or by
 // none when `index` is null.
 export function teachOrgan(doc, organId, index) {
@@ -1070,7 +1092,7 @@ export function switchReceptor(doc, id, effect, on) {
   const receptor = findCenter(doc, id)?.center.receptors[effect];
   return updateReceptor(
       doc, id, effect,
-      {...(on && !receptor?.sensitivity ? RECEPTOR_START[effect] : {}), active : on ? 1 : 0});
+      {...(on && !receptor?.sensitivity ? receptorStart(effect) : {}), active : on ? 1 : 0});
 }
 export function updateGrowth(doc, patch) {
   const draft = copy(doc);

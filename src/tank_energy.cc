@@ -7,8 +7,7 @@ namespace fishsim {
 namespace {
 constexpr double MIN_PIECE_RADIUS = .2;
 constexpr double MIN_PART_ENERGY = .01, MIN_BITE = .1, MIN_MARK_LENGTH = 1;
-constexpr double LEAF_THROUGH = 1.6, CUT_FORCE = .35, CUT_FORCE_MIN = .08;
-constexpr double NOTCH_MIN_WIDTH = .04, NOTCH_MAX_DEPTH = .85, NOTCH_CUT_DEPTH = .95,
+constexpr double NOTCH_MIN_WIDTH = .04, NOTCH_MAX_DEPTH = .22, NOTCH_CUT_DEPTH = .95,
                  NOTCH_MARGIN = .12, NOTCH_MIN_SPAN = .03, NOTCH_MAX_SPAN = .3, NOTCH_DEEPEST = .9,
                  NOTCH_DEEPEN = .6, NOTCH_WIDEN = 1.15;
 constexpr double REMAINS_TISSUE_CURVE = .65, BONE_SHADE = .18, BONE_BLUE = .70, BONE_WARM = .82;
@@ -154,18 +153,14 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
     source.organs[part.organ].energy -= amount;
     const double at = stroke_along(part, s);
     auto &organ = source.organs[part.organ];
-    const bool through = organ.kind < plant_organ::leaf || bite > LEAF_THROUGH * width;
-    const double needed = std::clamp(CUT_FORCE * width / std::max(MIN_BITE, bite), CUT_FORCE_MIN,
-                                     CUT_FORCE),
-                 depth =
-                     efficiency * std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width));
+    const double depth =
+        efficiency * std::min(NOTCH_MAX_DEPTH, bite / std::max(MIN_BITE, 2 * width));
     double worn = 0;
     for (const auto &n : organ.notches)
       if (n.width > 0 && std::abs(n.at - at) < std::max(n.width, NOTCH_MIN_WIDTH))
         worn = std::max(worn, std::abs(notch_depth(n, time, env_.plant_notch_heal)));
     if (organ.energy < tolerance::negligible ||
-        (((through && efficiency > needed) || worn + depth > NOTCH_CUT_DEPTH) &&
-         at > NOTCH_MARGIN && at < 1 - NOTCH_MARGIN))
+        (worn + depth > NOTCH_CUT_DEPTH && at > NOTCH_MARGIN && at < 1 - NOTCH_MARGIN))
       this->cut_organ(part.patch, part.organ, at);
     else {
       const double length = curve_length(organ.draw_curve);

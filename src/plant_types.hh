@@ -333,11 +333,12 @@ inline double grass_width(const SurfacePatch &p, double capacity) {
           (1 - WIDTH_FILL_MIN) *
               std::sqrt(std::clamp(p.grass / std::max(tolerance::rounding, capacity), 0., 1.)));
 }
-inline constexpr double GREEN_KEEP = .8, GREEN_RED = .55, GREEN_BLUE = .35;
+inline constexpr double GREEN_KEEP = .8, GREEN_RED = .55, GREEN_BLUE = .35, MAX_LEAF_BLUE = .8;
 inline Color green_tint(Color color) {
   color[rgb::red] = GREEN_KEEP * color[rgb::red] + (1 - GREEN_KEEP) * GREEN_RED * color[rgb::green];
   color[rgb::blue] =
-      GREEN_KEEP * color[rgb::blue] + (1 - GREEN_KEEP) * GREEN_BLUE * color[rgb::green];
+      std::min(MAX_LEAF_BLUE * color[rgb::green],
+               GREEN_KEEP * color[rgb::blue] + (1 - GREEN_KEEP) * GREEN_BLUE * color[rgb::green]);
   return color;
 }
 inline Color grass_color(const SurfacePatch &p) {

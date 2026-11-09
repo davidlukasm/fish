@@ -261,6 +261,7 @@ public:
   Color surface_color(double, double) const;
   double daylight() const;
   double light(double, double) const;
+  double plant_illumination(const SurfacePatch &) const;
   double turbidity(double, double) const;
   double sediment_transmission(double, double, double, double) const;
   Color grass_transmission(double, double, double, double) const;
