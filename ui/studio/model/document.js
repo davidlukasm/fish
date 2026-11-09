@@ -725,7 +725,10 @@ export function placeNode(doc, centerId, siteId, sites) {
       allCenters(doc).some(c => c.site === siteId))
     return null;
   const draft = copy(doc);
-  findCenter(draft, centerId).center.site = siteId;
+  const moved = findCenter(draft, centerId);
+  moved.center.site = siteId;
+  if (moved.organ.region && moved.organ.centers.length === 1)
+    moved.organ.region.site = siteId;
   return draft;
 }
 const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});

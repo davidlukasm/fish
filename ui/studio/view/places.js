@@ -69,17 +69,8 @@ export function slotRow(organ, points, count, zoom) {
     y : (out < 0 ? Math.min : Math.max)(...points.map(p => p.y)) + out * R.away / zoom
   };
 }
-const SEPARATE = Object.freeze({
-  rounds : 120,
-  settle : 30,
-  margin : 3,
-  pull : .04,
-  node : 5,
-  inside : 6,
-  front : .25,
-  rows : 2,
-  least : .6
-});
+const SEPARATE =
+    Object.freeze({margin : 3, node : 5, inside : 6, front : .25, rows : 2, least : .6});
 const anchorCache = new WeakMap();
 // Regions whose engine sites lie close would hide each other's clusters and slot chips; the
 // drawing keeps them apart within their half of the brain, as near their sites as room allows.
@@ -123,40 +114,46 @@ function regionAnchors(doc, sites) {
                                     : [ item.y - item.outer, item.y + item.inner ];
   const left = item => BRAIN.cerebrum.from + item.wide * S.front,
         right = item => BRAIN.cord.to - item.wide / 2;
-  const room = (item, dx) => item.x + dx >= left(item) && item.x + dx <= right(item);
-  for (let round = 0; round < S.rounds; ++round) {
-    for (let i = 0; i < items.length; ++i)
-      for (let j = i + 1; j < items.length; ++j) {
-        const a = items[i], b = items[j];
-        const [aTop, aBottom] = span(a), [ bTop, bBottom ] = span(b);
-        const across = a.wide + b.wide + S.margin - Math.abs(b.x - a.x);
-        const along = Math.min(aBottom, bBottom) - Math.max(aTop, bTop) + S.margin;
-        if (across <= 0 || along <= 0)
-          continue;
-        const sideways = (b.x >= a.x ? 1 : -1) * across / 2;
-        if ((across < along || !a.side && !b.side) && room(a, -sideways) && room(b, sideways)) {
-          a.x -= sideways;
-          b.x += sideways;
-        } else {
-          const away = (bTop + bBottom) >= (aTop + aBottom) ? 1 : -1;
-          const share = a.side && b.side ? .5 : 1;
-          if (a.side)
-            a.y -= away * along * share;
-          if (b.side)
-            b.y += away * along * share;
-        }
-      }
-    for (const item of items) {
-      const pull = round < S.rounds - S.settle ? S.pull : 0;
-      item.x += (item.home.x - item.x) * pull;
-      item.y += (item.home.y - item.y) * pull;
-      item.x = Math.min(Math.max(item.x, left(item)), right(item));
-      // Behind the brain the clusters keep to the cord's edge, clear of the organs beside it.
-      const outward = item.x > BRAIN_END ? BRAIN.cord.half[0] : BRAIN.cerebrum.half - item.inner;
-      item.y = item.side ? middle + item.side * clamp(item.side * (item.y - middle), S.inside,
-                                                      Math.max(S.inside, outward))
-                         : item.home.y;
+  const packed = [];
+  const order = [...items ].sort((a, b) => Number(!!a.side) - Number(!!b.side) ||
+                                           b.wide * b.inner - a.wide * a.inner);
+  for (const item of order) {
+    const top = item.out > 0 ? item.inner : item.outer,
+          bottom = item.out > 0 ? item.outer : item.inner;
+    const xs = [ item.home.x, left(item), right(item) ];
+    const ys = [
+      item.home.y, middle + item.side * S.inside,
+      middle + item.side * (BRAIN.cerebrum.half - item.inner)
+    ];
+    for (const other of packed) {
+      xs.push(other.x - other.wide - item.wide - S.margin,
+              other.x + other.wide + item.wide + S.margin);
+      const [upper, lower] = span(other);
+      ys.push(upper - bottom - S.margin, lower + top + S.margin);
     }
+    let best = null;
+    for (const rawX of new Set(xs)) {
+      const x = clamp(rawX, left(item), right(item));
+      const outward = x > BRAIN_END ? BRAIN.cord.half[0] : BRAIN.cerebrum.half - item.inner;
+      for (const rawY of new Set(ys)) {
+        const y = item.side ? middle + item.side * clamp(item.side * (rawY - middle), S.inside,
+                                                         Math.max(S.inside, outward))
+                            : item.home.y;
+        let overlap = 0;
+        for (const other of packed) {
+          const [upper, lower] = span(other);
+          overlap += Math.max(0, Math.min(x + item.wide, other.x + other.wide) -
+                                     Math.max(x - item.wide, other.x - other.wide) + S.margin) *
+                     Math.max(0, Math.min(y + bottom, lower) - Math.max(y - top, upper) + S.margin);
+        }
+        const distance = (x - item.home.x) ** 2 + (y - item.home.y) ** 2;
+        if (!best || overlap < best.overlap - 1e-6 ||
+            Math.abs(overlap - best.overlap) <= 1e-6 && distance < best.distance)
+          best = {x, y, overlap, distance};
+      }
+    }
+    Object.assign(item, {x : best.x, y : best.y});
+    packed.push(item);
   }
   const anchors = new Map(items.map(item => [item.id, {x : item.x, y : item.y, k : item.k}]));
   anchorCache.set(doc, {sites, anchors});

@@ -187,7 +187,7 @@ export const ORGANS = Object.freeze([
       slot('onward', 'out', [], true)
     ],
     settings : {
-      resolution : setting(2, 6, 3),
+      resolution : setting(1, 6, 3),
       contrast : setting(0, 2, 1, true),
       colours : setting(0, 1, 0, true)
     }
@@ -196,7 +196,7 @@ export const ORGANS = Object.freeze([
     key : 'olfactory',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 0, 1 ]) ],
+    centers : [ nerve('relay', 3, [ 0, 1, 2 ]) ],
     slots : [ slot('smell', 'in', [ 'nose' ], true), slot('onward', 'out', [], true) ],
     settings : {compare : setting(0, 2, 1, true)}
   },
@@ -204,7 +204,7 @@ export const ORGANS = Object.freeze([
     key : 'hindbrain',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 2, 3 ]) ],
+    centers : [ nerve('relay', 3, [ 1, 2, 3 ]) ],
     slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
     settings : {
       threshold : setting(0, 2, 1, true),
@@ -224,6 +224,23 @@ export const ORGANS = Object.freeze([
       stroke : setting(0, 2, 1, true),
       steering : setting(0, 1, 1, true)
     }
+  },
+  {
+    key : 'rhythm',
+    category : 'regions',
+    scope : 'single',
+    centers : [ nerve('pacemaker', 8, [ 1, 2, 3 ]) ],
+    slots : [ slot('steering', 'in'), slot('onward', 'out', [], true) ],
+    settings : {beat : setting(0, 2, 1, true), stroke : setting(0, 2, 2, true)}
+  },
+  {
+    key : 'teaching',
+    category : 'regions',
+    scope : 'single',
+    centers : [ nerve('modulate', 6, [ 1, 2 ]) ],
+    slots :
+        [ slot('inner', 'in', [ 'gut', 'blood', 'pain' ], true), slot('onward', 'out', [], true) ],
+    settings : {}
   },
   {
     key : 'pallium',

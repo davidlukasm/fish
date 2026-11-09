@@ -1,4 +1,5 @@
 import {isModulator, NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
+import {HORMONE_EFFECT} from '../../schema.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
@@ -29,8 +30,8 @@ export function initialRegion(type, site) {
 export function fedBy(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
   const teaches = id => {
-    const center = findCenter(doc, id)?.center;
-    return center?.role === 'nerve' && isModulator(center);
+    const centers = findOrgan(doc, id)?.centers ?? [ findCenter(doc, id)?.center ].filter(Boolean);
+    return centers.length > 0 && centers.every(isModulator);
   };
   return [...new Set(expandedWires(doc)
                          .filter(link => own.has(link.to) && !teaches(link.from))
@@ -67,6 +68,17 @@ function tectumPlan(doc, organ) {
         type : region.colours ? type : null
       });
   const maps = nodes.map(n => n.node);
+  if (nodes.length === 1 && !region.contrast) {
+    nodes[0].port = 'both';
+    return {
+      nodes,
+      inner : [],
+      cross : [],
+      route : () => nodes[0].node,
+      view,
+      most : {resolution : bands}
+    };
+  }
   nodes.push({node : 'out', preset : 'relay', port : 'out'});
   const inner = maps.map(map => [map, 'out']);
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
@@ -112,6 +124,14 @@ function spinalPlan(doc, organ) {
 const COMPARE_CELLS = Object.freeze([ 0, 2, 5 ]);
 function bulbPlan(doc, organ) {
   const region = organ.region;
+  if (!region.compare)
+    return {
+      nodes : [ {node : 'gather', preset : 'relay', port : 'both'} ],
+      inner : [],
+      cross : [],
+      route : () => null,
+      view : null
+    };
   const nodes = [
     {node : 'gather', preset : 'relay', port : 'in'}, {node : 'out', preset : 'relay', port : 'out'}
   ];
@@ -205,6 +225,46 @@ function hypothalamusPlan(doc, organ) {
     view : null
   };
 }
+const RHYTHM_TAU = Object.freeze([ 1, .6, .3 ]), RHYTHM_CELLS = Object.freeze([ 2, 4, 8 ]);
+const ACTIVE_LEARNING =
+    Object.freeze({[HORMONE_EFFECT.learning] : 1, [HORMONE_EFFECT.competition] : 1});
+const CIRCUIT_LEARNING =
+    Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
+function rhythmPlan(doc, organ) {
+  return {
+    nodes : [ {
+      node : 'beat',
+      preset : 'pacemaker',
+      port : 'both',
+      effects : ACTIVE_LEARNING,
+      set : {
+        ...CIRCUIT_LEARNING,
+        copies : RHYTHM_CELLS[organ.region.stroke],
+        tau : RHYTHM_TAU[organ.region.beat],
+        threshold : -.5
+      }
+    } ],
+    inner : [],
+    cross : [],
+    route : () => null,
+    view : null
+  };
+}
+function teachingPlan() {
+  return {
+    nodes : [ {
+      node : 'teach',
+      preset : 'modulate',
+      port : 'both',
+      effects : ACTIVE_LEARNING,
+      set : {...CIRCUIT_LEARNING, copies : 6, threshold : -1, tau : 0}
+    } ],
+    inner : [],
+    cross : [],
+    route : () => null,
+    view : null
+  };
+}
 const PLANS = Object.freeze({
   tectum : tectumPlan,
   spinal : spinalPlan,
@@ -213,7 +273,9 @@ const PLANS = Object.freeze({
   pallium : palliumPlan,
   torus : bulbPlan,
   cerebellum : cerebellumPlan,
-  hypothalamus : hypothalamusPlan
+  hypothalamus : hypothalamusPlan,
+  rhythm : rhythmPlan,
+  teaching : teachingPlan
 });
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
@@ -319,13 +381,16 @@ export function settleRegions(doc, sites, pairedId = null) {
         };
         // Paired regions keep off the midline while lateral sites last; the engine's medial
         // sites still carry a side, so a full brain falls back to them.
-        const site = near && (closestSite(desc, sites, used, near, organ.side, organ.type) ??
-                              closestSite({...desc, paired : false}, sites, used, near, organ.side,
-                                          organ.type));
+        const side = organ.side || null;
+        const site =
+            near && (closestSite(desc, sites, used, near, side, organ.type) ??
+                     closestSite({...desc, paired : false}, sites, used, near, side, organ.type));
         if (!site)
           continue;
         used.add(site.id);
         center = {...defaults(desc, site), id};
+        for (const [effect, baseline] of Object.entries(n.effects ?? {}))
+          Object.assign(center.receptors[effect], {active : 1, baseline});
         const sibling = [...kept.values() ].find(c => c.key === n.preset);
         if (sibling)
           center.receptors = structuredClone(sibling.receptors);

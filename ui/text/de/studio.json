@@ -108,6 +108,8 @@
     "olfactory": "Riech­zentrum",
     "hindbrain": "Stamm­hirn",
     "spinal": "Rücken­mark",
+    "rhythm": "Taktgeber",
+    "teaching": "Lehrsignal",
     "pallium": "Vorder­hirn",
     "torus": "Strömungs­zentrum",
     "cerebellum": "Klein­hirn",
@@ -419,7 +421,8 @@
     "smooth": "Glätten",
     "brake": "Bremse",
     "sense": "Fühlen",
-    "drive": "Antrieb"
+    "drive": "Antrieb",
+    "teach": "Lehrsignal"
   },
   "regions": {
     "tectum": {
@@ -438,6 +441,14 @@
     "spinal": {
       "term": "Rücken­mark",
       "purpose": "Vorlage: verbindet Taktgeber, Hemmung und wahlweise Steuereingänge."
+    },
+    "rhythm": {
+      "term": "Taktgeber",
+      "purpose": "Vorlage: eine rhythmische Zellgruppe mit Ein- und Ausgang."
+    },
+    "teaching": {
+      "term": "Lehrsignal",
+      "purpose": "Vorlage: innere Reize steuern das lokale Lernen der angeschlossenen Nervenzellen."
     },
     "pallium": {
       "term": "Pallium",
