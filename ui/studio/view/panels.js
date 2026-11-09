@@ -18,7 +18,6 @@ import {
   functionFor,
   isModulator,
   isPacemaker,
-  nerveClass,
   isRegion,
   kindLimit,
   kindNodes,
@@ -29,7 +28,6 @@ import {routedLinks} from '../model/regions.js';
 import {pairEndpoint} from '../model/document.js';
 import {modulatorScene} from './effects.js';
 import {
-  allCenters,
   chosenCenter,
   contactBundle,
   contactRows,
@@ -164,7 +162,7 @@ function motorTiming(state, center) {
     return '';
   return '<p class="aid-hint">' +
          t('studio.development.motorTiming',
-           {integration : fixed(timing[1], 1), recovery : timing[2]}) +
+           {integration : formatNumber(timing[1], 1), recovery : timing[2]}) +
          '</p>';
 }
 const motorSection = (state, organ, center) =>
@@ -551,10 +549,10 @@ function generatedInspector(state) {
   return '<header class="aid-inspector-head">' + heading(centerTitle(center)) +
          '</header><p class="aid-hint">' + label('compiler.extraMeaning') +
          '</p><dl class="aid-parameter-readout">' + row('potentialCells', center.copies) +
-         (center.role === 'nerve'
-              ? row('sign', cl.sign) + row('mode', fixed(cl.mode, 3)) +
-                    row('pace', fixed(cl.pace, 3)) + row('modulator', fixed(cl.modulator, 3))
-              : '') +
+         (center.role === 'nerve' ? row('sign', cl.sign) + row('mode', formatSigned(cl.mode, 3)) +
+                                        row('pace', formatNumber(cl.pace, 3)) +
+                                        row('modulator', formatNumber(cl.modulator, 3))
+                                  : '') +
          '</dl>';
 }
 export function inspector(state) {

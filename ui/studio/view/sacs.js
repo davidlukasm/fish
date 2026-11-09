@@ -2,7 +2,7 @@ import {clamp} from '../../units.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
 import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS} from '../../schema.js';
-import {centerIndex, groupReport} from '../model/document.js';
+import {groupReport} from '../model/document.js';
 import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';

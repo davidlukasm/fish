@@ -2,7 +2,14 @@ import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {findCenter, findOrgan, isLearner, teachersOf, wholeEndpoint} from '../model/document.js';
+import {
+  findCenter,
+  findOrgan,
+  isLearner,
+  substanceBound,
+  teachersOf,
+  wholeEndpoint
+} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {centerMarker} from './scene.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
@@ -309,7 +316,7 @@ function regionTeacher(state, organ) {
     return '';
   const taught = new Set(learners.map(c => {
     const r = c.receptors[HORMONE_EFFECT.teaching];
-    return r?.active ? r.substance : null;
+    return substanceBound(HORMONE_EFFECT.teaching, r) ? r.substance : null;
   }));
   const one = taught.size === 1 ? [...taught ][0] : undefined;
   const choice = (value, text, swatch = '') =>

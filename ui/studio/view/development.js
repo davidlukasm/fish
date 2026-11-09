@@ -3,7 +3,6 @@ import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
 import {receptorResponse, wiredCrossing} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
-import {percent} from '../../strings.js';
 
 export const DEFAULT_PREVIEW_CONTEXT =
     Object.freeze({maturity : 0, hormones : Object.freeze(Array(HORMONES.levels).fill(0))});

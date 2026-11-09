@@ -1,4 +1,4 @@
-import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {LONGEST_LEARNING_TIME, learningTimeOf, learningTimeSteps} from '../../tuning.js';
@@ -6,7 +6,7 @@ import {
   allCenters,
   chosenCenter,
   endpointCenters,
-  effectDirection,
+  substanceBound,
   findCenter,
   isLearner,
   LEARNING_EFFECTS,
@@ -16,10 +16,10 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
 import {routedLinks} from '../model/regions.js';
-import {joinParts, t, tList} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, t, tList} from '../../strings.js';
 import {heading, ICON, label, regionTerm} from './kit.js';
 import {substanceName} from './substances.js';
-import {centerTitle, tone} from './names.js';
+import {centerTitle} from './names.js';
 import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, previewControls, previewContextOf} from './development.js';
@@ -56,7 +56,7 @@ function sendersOf(state, center) {
 }
 const boundSubstance = (state, center, effect) => {
   const receptor = center.receptors?.[effect];
-  return receptor?.active && effectDirection(effect, receptor) !== 0
+  return substanceBound(effect, receptor)
              ? {index : receptor.substance, name : substanceName(state, receptor.substance)}
              : null;
 };
@@ -86,12 +86,12 @@ function learningRule(state, center) {
          label('learnRule.traceLength') + '</strong></div>' +
          '<p class="aid-hint">' + label('learnRule.localPrediction') +
          (center.q2 > 0 ? ' ' + label('learnRule.levelLearning') : '') +
-         '</p><dl class="aid-parameter-readout">' + row('effectiveRate', fixed(eta, 4)) +
-         row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' + fixed(cl.mode, 3)) +
+         '</p><dl class="aid-parameter-readout">' + row('effectiveRate', formatNumber(eta, 4)) +
+         row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' + formatSigned(cl.mode, 3)) +
          row('probation',
              Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) + ' ' +
                  label('learnRule.steps')) +
-         row('prune', fixed(constants.prune, 3)) +
+         row('prune', formatNumber(constants.prune, 3)) +
          row('decayUnused', decayHalf(0) + ' ' + label('learnRule.steps')) +
          row('decayUsed', decayHalf(1) + ' ' + label('learnRule.steps')) + '</dl>' +
          '<p class="aid-hint">' + label('learnRule.unavoidableDecay') + '</p>';
@@ -127,7 +127,8 @@ function traceGraphic(center) {
          '"/><circle class="aid-graphic-handle" data-graphic-handle="learn-trace" cx="' +
          fixed(x(lasts)) + '" cy="' + knobY + '" r="' + TRACK.handle + '"><title>' +
          escapeText(title) + '</title></circle><text x="' + T.left + '" y="' +
-         (T.bottom + TRACK.name) + '">' + escapeText(label('learnRule.short')) +
+         (T.bottom + TRACK.name) + '">' +
+         escapeText(t('studio.learnRule.short', {n : TIME_CONSTANT.learning_min_steps})) +
          '</text><text x="' + T.right + '" y="' + (T.bottom + TRACK.name) + '" text-anchor="end">' +
          escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';
 }
@@ -146,10 +147,7 @@ function substancePart(state, center, effect) {
   const choices =
       '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(words('by')) +
       '">' + choice('off', label('learnRule.none'), !bound) +
-      [
-        ...doc.substances,
-        {index : state.capabilities?.hormones ?? 6, name : label('inspector.maturity')}
-      ]
+      [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
           .map(sub => choice(String(sub.index), sub.name || substanceName(state, sub.index),
                              bound?.index === sub.index, substanceColor(sub.index)))
           .join('') +

@@ -368,7 +368,7 @@ export class OrganStudio {
     if (drafting && action === 'undo') {
       this.undoHistory.push(this.draftStart);
       this.redoHistory.length = 0;
-    } else if (drafting)
+    } else if (drafting && this.redoHistory.length)
       this.state.document = this.draftStart;
     const source = action === 'undo' ? this.undoHistory : this.redoHistory;
     const target = action === 'undo' ? this.redoHistory : this.undoHistory;

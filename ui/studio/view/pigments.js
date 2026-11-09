@@ -6,7 +6,7 @@ import {BODY_FRAME} from '../model/layout.js';
 import {skinAt} from './frame.js';
 import {escapeText, fixed, plainTrack, trackShare} from './markup.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
-import {t, tList} from '../../strings.js';
+import {formatNumber, t, tList} from '../../strings.js';
 
 const label = (key, values) => t('studio.pigment.' + key, values);
 const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
@@ -117,9 +117,9 @@ export function pigmentInspector(state, organ, center) {
   return '<div data-pigment-block="' + escapeText(organ.id) + '">' + kindChips(organ, chosen) +
          pigmentWheel(chosen.centers[0]) + amountTrack(organ, chosen) + colourRange(state) +
          (state.anatomy?.pigmentTimes ? '<p class="aid-hint">' + label('times', {
-                                          red : fixed(state.anatomy.pigmentTimes[0], 1),
-                                          green : fixed(state.anatomy.pigmentTimes[1], 1),
-                                          blue : fixed(state.anatomy.pigmentTimes[2], 1)
+                                          red : formatNumber(state.anatomy.pigmentTimes[0], 1),
+                                          green : formatNumber(state.anatomy.pigmentTimes[1], 1),
+                                          blue : formatNumber(state.anatomy.pigmentTimes[2], 1)
                                         }) + '</p>'
                                       : '') +
          '</div>';

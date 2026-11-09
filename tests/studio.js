@@ -847,7 +847,7 @@ function semanticFingerprint(source) {
   const sightTile =
       panels.libraryOf(state).html.split('data-drag-value="tectum"')[1].split('</button>')[0];
   assert.match(sightTile, /title="Sehzentrum:/);
-  assert.doesNotMatch(sightTile, /Tectum/);
+  assert.match(sightTile, /Tectum/, 'A region tile carries its technical term');
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
   assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
                    [ 'Flossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);

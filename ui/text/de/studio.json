@@ -105,9 +105,9 @@
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
     "tectum": "Seh­zentrum",
-    "rhythm": "Taktgeber",
-    "teaching": "Lehrsignal",
-    "circuit": "Schaltzentrum"
+    "rhythm": "Takt­geber",
+    "teaching": "Lehr­signal",
+    "circuit": "Schalt­zentrum"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -286,7 +286,7 @@
     },
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
-      "fullIn": "Freigabefüllung frühestens nach {n} {n:Takt|Takten}",
+      "fullIn": "voll nach {n} {n:Schritt|Schritten}",
       "driven": "Füllkommando fehlt",
       "ceiling": "Platz höchstens für {most}",
       "trigger": "wartet auf Auslösekommando",
@@ -298,10 +298,10 @@
       "releaseOn": "Auslösekommando liegt an"
     },
     "curve": {
-      "baseline": "Grundantwort einstellen",
-      "sensitivity": "Antwort bei hoher Dosis einstellen",
-      "half": "Halbsättigung einstellen",
-      "steepness": "Steilheit einstellen"
+      "baseline": "ohne Stoff",
+      "sensitivity": "bei viel Stoff",
+      "half": "halbe Bindung",
+      "steepness": "Steilheit"
     },
     "beat": "Eigenrhythmus · Referenzphase",
     "beatSteps": "ein Schlag alle {n} Schritte",
@@ -406,16 +406,16 @@
   },
   "regions": {
     "tectum": {
-      "term": "Sehzentrum",
+      "term": "Tectum",
       "purpose": "Vorlage: bündelt Seheingänge oder ordnet sie nach Sehfeld und Farbtyp.",
       "follows": "Die Karte richtet sich nach dem Sehfeld und den Farbtypen der Augen."
     },
     "rhythm": {
-      "term": "Taktgeber",
+      "term": "Muster­generator",
       "purpose": "Vorlage: eine rhythmische Zellgruppe mit Ein- und Ausgang."
     },
     "teaching": {
-      "term": "Lehrsignal",
+      "term": "Modulator­kerne",
       "purpose": "Vorlage: innere Reize steuern das lokale Lernen der angeschlossenen Nervenzellen."
     },
     "slotsTitle": "Anschlüsse",
@@ -490,7 +490,7 @@
     "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben.",
     "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz.",
     "circuit": {
-      "term": "Schaltzentrum",
+      "term": "Formatio reticularis",
       "purpose": "Bündelt Reize erregend oder hemmend: als Veränderung, anhaltenden Pegel oder abklingende Merkspur. Mit Seitenvergleich kombinierbar."
     }
   },
@@ -788,8 +788,8 @@
     },
     "alarm": {
       "name": "Alarm",
-      "title": "Schmerz meldet sich über das Stammhirn: ohne Schmerz ziehen die Muskeln halb so stark, bei Schmerz voll.",
-      "needs": "Braucht Muskeln, deren Signal noch nichts lauter oder leiser macht.",
+      "title": "Schmerz meldet sich über das Schaltzentrum: bei Schmerz sind die Muskeln leichter erregbar.",
+      "needs": "Braucht Muskeln, deren Erregbarkeit noch kein Stoff steuert.",
       "substance": "Alarmstoff"
     }
   },
@@ -833,7 +833,7 @@
     "more": "Neu",
     "noTarget": "Hier wirkt das nicht.",
     "timeConstant": "Zeitkonstante des Grundabbaus",
-    "timeValue": "{n} Takte; ergibt sich aus den zugehörigen Drüsenzellen."
+    "timeValue": "{n} Schritte; ergibt sich aus den zugehörigen Drüsenzellen."
   },
   "neuronPurpose": {
     "relay": "Erregende Nervenzelle mit lokalem Lernen.",
@@ -891,8 +891,8 @@
     "fast": "schnell",
     "mode": "Lokaler Lernmodus",
     "traceLength": "Zeitkonstante der lokalen Lernspur",
-    "short": "4 Takte",
-    "lasts": "Zeitkonstante {n} Takte",
+    "short": "{n} Schritte",
+    "lasts": "Zeitkonstante {n} Schritte",
     "none": "kein Stoff",
     "by": [
       "Ein Stoff lehrt die Zelle",
@@ -927,7 +927,7 @@
     "presynaptic": "Änderung am Eingang",
     "postsynaptic": "Änderung der eigenen Aktivität",
     "effectiveRate": "Wirksame Lernrate",
-    "steps": "Takte",
+    "steps": "Schritte",
     "probation": "Schonfrist neuer Kontakte",
     "prune": "Abbauschwelle nach der Schonfrist",
     "localPrediction": "Gleichzeitige Änderungen hinterlassen eine lokale Spur. Der Lernmodus verändert elektrische Gewichte; unerwartete Änderungen des Lehrsignals wirken über die Spuren. Kontakte zu Motorzellen verwenden Lernparameter ihrer vorgeschalteten Nervenzellen.",
@@ -1018,7 +1018,7 @@
     "gathered": "geballt",
     "rest": "Anfangsdispersion",
     "spread": "ausgebreitet",
-    "times": "Trägheit der Farbkanäle im Bauplan: Rot {red}, Grün {green}, Blau {blue} Takte. Die Zeitkonstanten der Pigmentzellen bestimmen diese Werte."
+    "times": "Trägheit der Farbkanäle im Bauplan: Rot {red}, Grün {green}, Blau {blue} Schritte. Die Zeitkonstanten der Pigmentzellen bestimmen diese Werte."
   },
   "marks": {
     "add": "+ {name}",
@@ -1051,8 +1051,8 @@
     "birthEffect": "Legt einen Geburtsrezeptor an. Positive Antwort lässt Vorläufer zu aktiven Zellen werden.",
     "parameters": "Zell- und Kontaktparameter",
     "variation": "Streuung zwischen Zellen",
-    "tau": "Schnelle Zellzeit in Takten",
-    "learning_tau": "Lernzeit in Takten",
+    "tau": "Schnelle Zellzeit in Schritten",
+    "learning_tau": "Lernzeit in Schritten",
     "field": "Maximale Eingänge je Nervenzelle",
     "sign": "Vorzeichen der Ausgänge",
     "pace": "Rhythmus-Anlage",
@@ -1075,7 +1075,7 @@
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
     "currentResponse": "Antwort bei den Beispielwerten",
-    "motorTiming": "Organmittel aus dem Bauplan: Integration {integration} Takte, Erholung nach einem Impuls {recovery} Takte.",
+    "motorTiming": "Organmittel aus dem Bauplan: Integration {integration} Schritte, Erholung nach einem Impuls {recovery} Schritte.",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",
     "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur"
@@ -1089,7 +1089,7 @@
     "target": "Nach",
     "limit": "Höchststärke",
     "modulation": "Lehranteil",
-    "probation": "Schonfrist · Takte",
+    "probation": "Schonfrist · Schritte",
     "none": "Für diese Auswahl sind noch keine Signalwege geplant.",
     "learningMeaning": "Die Höchststärke berücksichtigt den elektrischen und den lehrenden Anteil des Senders. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
   }

@@ -5,7 +5,7 @@ import {drivePatch} from './view/drive.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
-import {kindLimit, kindNodes, nodeLimit} from './model/organs.js';
+import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
@@ -564,13 +564,14 @@ export const handleMethods = {
   },
   holdHandle(event, held, drag) {
     const knob = knobGrip(event);
-    this.handleDrag = {held, ...drag, knob};
+    this.handleDrag = {held, ...drag, knob, last : {x : event.clientX, y : event.clientY}};
     event.preventDefault();
     if (!knob)
       this[HANDLES[held].follow](event);
   },
   followHandle(event) {
     const drag = this.handleDrag, knob = drag.knob;
+    drag.last = {x : event.clientX, y : event.clientY};
     if (!knob)
       return this[HANDLES[drag.held].follow](event);
     const back = event.clientX === knob.x && event.clientY === knob.y;
@@ -585,8 +586,11 @@ export const handleMethods = {
   },
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {
-    const how = HANDLES[this.handleDrag.held];
-    this.followHandle(event);
+    const how = HANDLES[this.handleDrag.held], last = this.handleDrag.last;
+    // Letting go where the pointer already was adds nothing, and must not bring back a value that
+    // undo or redo took away in the middle of the drag.
+    if (event.clientX !== last.x || event.clientY !== last.y)
+      this.followHandle(event);
     // A drafted drag settles while still held, so a graphic drawn from the drag keeps the dragged
     // value until the design run answers.
     const drafted = !!this.drafted;

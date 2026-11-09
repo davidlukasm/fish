@@ -493,7 +493,7 @@ function substanceWheel(state, profile, {
     if (index >= reads)
       return '';
     const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
-    if (index < HORMONES.levels && !named.has(index) && !clickable.has(index))
+    if (index < HORMONES.levels && !named.has(index))
       return '<g class="aid-wheel-point empty" data-define-substance="' + index +
              '" style="--substance:' + substanceColor(index) + '"><circle cx="' + px(x) + '" cy="' +
              py(y) + '" r="' + WHEEL.point + '"/><text x="' + px(x) + '" y="' + py(y) +
@@ -584,7 +584,7 @@ function receptorBody(state, center, effect) {
          escapeText(center.id) + '" data-receptor-effect="' + effect + '" ' +
          (receptor.active ? 'checked' : '') + '/>' + label('inspector.receptorActive') +
          '</label>' + substanceWheel(state, receptorProfile(state, receptor), {
-           choices : Array.from({length : HORMONES.levels + 1}, (_, i) => i),
+           choices : [...state.document.substances.map(sub => sub.index), HORMONES.levels ],
            attribute : 'data-receptor-substance',
            reads : state.capabilities?.regulators,
            extra : ' data-center-id="' + escapeText(center.id) + '" data-receptor-effect="' +
@@ -617,7 +617,7 @@ export function hormoneTime(state, index) {
   const value = state.anatomy?.hormoneTimes?.[index];
   return '<p class="aid-hint" data-hormone-time="' + index + '">' +
          label('hormoneCard.timeConstant') + ': ' +
-         (Number.isFinite(value) ? t('studio.hormoneCard.timeValue', {n : fixed(value, 1)})
+         (Number.isFinite(value) ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
                                  : formatNumber(NaN)) +
          '</p>';
 }

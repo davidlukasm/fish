@@ -52,7 +52,7 @@ export function cppnTrace(state, requested) {
                                      (center.generated || state.report.groups[index]?.cells > 0))
           .map(center => center.id);
   const links = [];
-  for (const [from, to, count, weight, positive, negative] of contactRows(state)) {
+  for (const [from, to, count, , positive, negative] of contactRows(state)) {
     if (!count || !centers[from] || !centers[to])
       continue;
     const source = centers[from], target = centers[to];

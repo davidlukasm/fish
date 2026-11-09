@@ -123,7 +123,11 @@ export function createPlanPlayer(svg, trace, {marks, point, reached}) {
       attach(svg);
       handle = requestAnimationFrame(draw);
     },
-    attach,
+    // A redrawn scene takes the trace along only while it plays.
+    attach : next => {
+      if (active)
+        attach(next);
+    },
     stop
   };
 }

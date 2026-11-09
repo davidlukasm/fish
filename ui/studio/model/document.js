@@ -1076,14 +1076,18 @@ export function bindReceptor(doc, id, effect, index) {
       doc, id, effect,
       {...(current?.sensitivity ? {} : receptorStart(effect)), active : 1, substance : index});
 }
+// Without a substance a receptor keeps its constant part: a local gain stays, only its dependence
+// on the substance goes.
 export const unbindReceptor = (doc, id, effect) =>
     updateReceptor(doc, id, effect, {sensitivity : 0});
+export const substanceBound = (effect, receptor) =>
+    !!receptor?.active && effectDirection(effect, receptor) !== 0;
 // Every learner of an organ (and its twin, which follows its pair) taught by one substance, or by
 // none when `index` is null.
 export function teachOrgan(doc, organId, index) {
   let draft = doc;
   for (const c of findOrgan(doc, organId)?.centers.filter(isLearner) ?? [])
-    draft = (index === null ? updateReceptor(draft, c.id, HORMONE_EFFECT.teaching, {active : 0})
+    draft = (index === null ? unbindReceptor(draft, c.id, HORMONE_EFFECT.teaching)
                             : bindReceptor(draft, c.id, HORMONE_EFFECT.teaching, index)) ??
             draft;
   return draft;

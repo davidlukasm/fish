@@ -2,6 +2,7 @@ import {HORMONE_EFFECT} from '../../schema.js';
 import {effectLevel, startEnds} from '../model/document.js';
 import {fixed, placedGlyph} from './markup.js';
 import {EFFECT_ICON} from './icons.js';
+import {formatSigned} from '../../strings.js';
 
 export const EFFECT_ORDER = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.teaching,
@@ -19,7 +20,7 @@ export function effectPanel(effect, response, colour, share) {
          '<path class="aid-effect-level" stroke="' + colour + '" d="M' + zero + ' 48 H' +
          fixed(at) + '"/>' +
          '<circle cx="' + fixed(at) + '" cy="48" r="4" fill="' + colour + '"/>' +
-         '<text x="60" y="70" text-anchor="middle">' + fixed(level, 2) + '</text></g>';
+         '<text x="60" y="70" text-anchor="middle">' + formatSigned(level, 2) + '</text></g>';
 }
 export function effectScene(effect, colour, ends = startEnds(effect)) {
   const panel = (value, x) =>

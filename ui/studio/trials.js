@@ -1,4 +1,4 @@
-import {allCenters, contactCenters, findCenter, findOrgan} from './model/document.js';
+import {contactCenters, findCenter, findOrgan} from './model/document.js';
 import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
