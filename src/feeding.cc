@@ -319,8 +319,8 @@ class Ecosystem::FeedingSession {
     } else if (kind == food_kind::algae || kind == food_kind::plant) {
       const auto &part = world.field.vegetation().plants[target];
       const auto &source = world.field.plant_source(part.patch);
-      const bool hard =
-          part.kind == food_kind::plant && (part.organ < 0 || source.organs[part.organ].kind <= 1);
+      const bool hard = part.kind == food_kind::plant && part.organ >= 0 &&
+                        plant_bite_is_hard(source.organs[part.organ].kind);
       const double radius = part.kind == food_kind::plant ? stroke_width(part) : part.radius,
                    s = part.kind == food_kind::plant
                            ? stroke_closest(part.hx, part.hy, world.field.delta_x(mx - part.x),

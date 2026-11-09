@@ -118,11 +118,14 @@ inline double crack_success(double force, double hardness, const FoodWebParamete
     return 1;
   return 1 / (1 + std::pow(hardness / force, p.crack_exponent));
 }
+inline bool plant_bite_is_hard(int organ) {
+  return organ == plant_organ::stem;
+}
 inline double plant_bite_hardness(int organ, double fiber, const FoodWebParameters &p,
                                   double drift_age = -1) {
-  const double hardness = organ >= plant_organ::leaf
-                              ? p.hardness_leaf + p.hardness_leaf_fiber * fiber
-                              : p.hardness_stalk + p.hardness_stalk_fiber * fiber;
+  const double hardness = plant_bite_is_hard(organ)
+                              ? p.hardness_stalk + p.hardness_stalk_fiber * fiber
+                              : p.hardness_leaf + p.hardness_leaf_fiber * fiber;
   return hardness *
          (drift_age >= 0 ? p.drift_softening * std::exp2(-drift_age / p.drift_softening_half) : 1);
 }

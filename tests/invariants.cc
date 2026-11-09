@@ -821,6 +821,39 @@ void plant_notches_follow_the_successful_bite() {
   check(shallow < .001 && deep > 100 * shallow,
         "a barely effective bite cannot leave the same deep notch as a strong bite");
 }
+void grass_blades_are_cut_as_leaves() {
+  Ecosystem source(SEED);
+  source.starter_world();
+  const auto &parts = source.field.vegetation().plants;
+  for (int kind : {plant_organ::blade, plant_organ::stem, plant_organ::leaf}) {
+    const auto found = std::find_if(parts.begin(), parts.end(), [kind](const auto &p) {
+      return p.kind == food_kind::plant && p.organ_kind == kind && p.energy > 10;
+    });
+    check(found != parts.end(), "the bite fixture has each plant tissue");
+    const auto index = std::size_t(found - parts.begin());
+    auto cutting = source.fork(), crushing = source.fork();
+    Body mouth;
+    mouth.tissue = HATCH_TISSUE;
+    mouth.jaw_length = .4;
+    mouth.bite_strength = 12;
+    mouth.bite_signal = 1;
+    mouth.blunt_teeth = 0;
+    const auto sharp = cutting.field.bite_plant(mouth, index);
+    mouth.blunt_teeth = 1;
+    const auto blunt = crushing.field.bite_plant(mouth, index);
+    if (kind == plant_organ::stem) {
+      check(!sharp && blunt && blunt->blunt,
+            "a fibrous stem needs crushing teeth and keeps that material when detached");
+    } else {
+      check(sharp && sharp->energy > .1 && !sharp->blunt && !blunt,
+            "cutting teeth remove leaf tissue from both grass blades and broad leaves");
+    }
+  }
+  const auto &materials = source.field.env();
+  check(plant_bite_hardness(plant_organ::blade, .5, materials) ==
+            plant_bite_hardness(plant_organ::leaf, .5, materials),
+        "a grass blade uses leaf fibre resistance");
+}
 void checkpoint_continues_exactly(const Genome &g) {
   auto w = closed_tank(g);
   for (int step = 0; step < STEPS / 2; ++step)
@@ -852,6 +885,7 @@ int main() {
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();
     plant_notches_follow_the_successful_bite();
+    grass_blades_are_cut_as_leaves();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);

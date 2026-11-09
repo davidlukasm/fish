@@ -57,7 +57,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "f066d47255b298e2",
-  "src/material.hh" : "32c33b6291275e33",
+  "src/material.hh" : "1e223696442cdc9c",
   "src/motor_state.hh" : "6642af5a79a83847",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "372294904588c948",

@@ -95,8 +95,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   auto &source = this->plant_source_mut(part.patch);
   const int kind = part.kind;
   double &store = kind == food_kind::algae ? source.algae : source.grass;
-  const bool hard = kind == food_kind::plant &&
-                    (part.organ < 0 || source.organs[part.organ].kind <= plant_organ::stem);
+  const bool hard = kind == food_kind::plant && part.organ >= 0 &&
+                    plant_bite_is_hard(source.organs[part.organ].kind);
   const double force = bite_force(b, hard);
   const double drift_age =
       kind == food_kind::plant && part.patch >= vegetation_.surfaces.size()
