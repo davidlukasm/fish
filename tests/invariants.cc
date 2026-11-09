@@ -304,7 +304,7 @@ void nerve_levels_and_memory() {
     field::Hormones h{};
     for (int t = 0; t < 2400; ++t) {
       h[0] = t < 800 ? 0 : 1;
-      if (t % 173 < 73)
+      if (response == 0 && t % 173 < 73)
         n.stimulate(1, .8f);
       n.step({t % 173 < 73 ? .8f : 0}, h, 51829);
     }
@@ -333,6 +333,24 @@ void nerve_levels_and_memory() {
         "level cells relay a sustained input and release when it ends");
   check(trace[2] > baseline[2] + .02f && faded[2] < baseline[2] + .01f,
         "memory cells retain a stimulus beyond its end and then let it fade");
+  auto cells = learning_tissue(true)->neurons;
+  for (auto &c : cells) {
+    c.bias = .3f;
+    c.parameters.quality1 = 1;
+    c.parameters.quality2 = .5f;
+    c.parameters.learning_time = 1;
+  }
+  auto tissue = std::make_shared<field::Substrate>(cells);
+  tissue->edges = {{0, 1, .8f}, {1, 2, -.8f}, {2, 3, .8f}};
+  field::Network n(tissue);
+  for (int t = 0; t < 600; ++t)
+    n.step({t % 73 < 23 ? .8f : 0}, {}, 51983);
+  bool inhibition = false, motor = false;
+  for (auto e : n.synapses()) {
+    inhibition |= e.source == 1 && e.target == 2 && e.weight < -.01f;
+    motor |= e.source == 2 && e.target == 3 && e.weight > .01f;
+  }
+  check(inhibition && motor, "level learning consolidates inhibitory and motor contacts from zero");
 }
 void development_preserves_identity_and_reserves_capacity() {
   auto tissue = learning_tissue();

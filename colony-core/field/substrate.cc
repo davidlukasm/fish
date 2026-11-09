@@ -135,12 +135,12 @@ struct NetworkTopology {
   std::vector<NeuronIndex> sensors;
   std::vector<std::uint32_t> sensor_slot;
   std::vector<CellClass> classes;
-  std::vector<float> fast, retention, learning, sign, nerve, modulator;
+  std::vector<float> fast, retention, learning, sign, nerve, modulator, level;
   std::vector<double> tau;
   std::vector<std::vector<NeuronIndex>> groups;
   std::vector<std::vector<std::uint32_t>> proposals;
   std::size_t cursor = 0, edge_cursor = 0, reserved = 0;
-  bool ready = false;
+  bool ready = false, has_level = false;
   bool advance(const Substrate &s, std::size_t &budget) {
     if (ready)
       return true;
@@ -155,6 +155,7 @@ struct NetworkTopology {
       sign.resize(n + 1);
       nerve.resize(n + 1);
       modulator.resize(n + 1);
+      level.resize(n + 1);
       proposals.resize(n);
     }
     while (budget && cursor < n) {
@@ -170,6 +171,8 @@ struct NetworkTopology {
       sign[i] = c.role == Role::Sensor ? 1 : classes[i].sign;
       nerve[i] = c.role == Role::Nerve;
       modulator[i] = teaching_source(c);
+      level[i] = nerve[i] * std::clamp(2 * c.parameters.quality2, 0.f, 1.f);
+      has_level |= level[i] > 0;
       if (c.role == Role::Sensor) {
         sensor_slot[i] = std::uint32_t(sensors.size());
         sensors.push_back(NeuronIndex(i));
@@ -783,6 +786,16 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     const float self = (activation + rectification * (std::max(0.f, activation) - activation)) *
                        (.5f * (1 + hormone_effect_[Output][i]));
     const float own = pulse_[i] > 0 ? std::max(pulse_[i], self) : self;
+    const bool level_learning = effector ? topology->has_level : level > 0;
+    float evoked = 0;
+    if (level_learning) {
+      const float resting = float(std::tanh(c.bias + hormone_effect_[Excitation][i] + rhythm));
+      const float intrinsic = (resting + rectification * (std::max(0.f, resting) - resting)) *
+                              (.5f * (1 + hormone_effect_[Output][i]));
+      // Spontaneous activity can consolidate a coincident input; it must not displace every
+      // silent afferent merely because the postsynaptic cell has a resting bias or pacemaker.
+      evoked = std::max(0.f, own - intrinsic);
+    }
     next_[i] = own;
     if (effector) {
       const float drive = std::copysign(
@@ -819,6 +832,12 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
                     -1, 1) *
              ordinary;
       F8 use = abs8(e);
+      if (level_learning) {
+        const F8 level =
+            effector ? gather8(topology->level.data(), ix) : splat8(topology->level[i]);
+        const F8 coactivity = clamp8(gather8(signal_.data(), ix), 0, 1) * std::max(0.f, own);
+        use = (1 - level) * use + level * coactivity;
+      }
       if (!effector)
         use = ordinary * use +
               (1 - ordinary) * clamp8(abs8(gather8(signal_.data(), ix)) * evidence, 0, 1);
@@ -867,6 +886,18 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
            surprise_value * e / denominator);
       const F8 limit = ordinary * c.electrical_limit + (1 - ordinary) * c.teaching_limit;
       const F8 sign = gather8(topology->sign.data(), ix);
+      if (level_learning) {
+        const F8 level =
+            effector ? gather8(topology->level.data(), ix) : splat8(topology->level[i]);
+        const F8 pre = clamp8(gather8(signal_.data(), ix), 0, 1);
+        const float post = std::max(0.f, own);
+        const F8 sustained =
+            ordinary * gain * sign * post *
+            (positive * comp * (pre - abs8(old) * evoked) -
+             plasticity::cancellation * negative * pre * gather8(topology->nerve.data(), ix));
+        const F8 teaching = ordinary * gain * surprise_value * e / denominator;
+        delta = (1 - level) * delta + level * (sustained + teaching);
+      }
       delta += (1 - ordinary) * sign * target_gain * u * (limit - abs8(old));
       F8 updated = old;
       if (plasticity_enabled) {

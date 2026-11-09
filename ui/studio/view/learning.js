@@ -85,6 +85,7 @@ function learningRule(state, center) {
          '</span><span>' + label('learnRule.postsynaptic') + '</span><strong>→ ' +
          label('learnRule.traceLength') + '</strong></div>' +
          '<p class="aid-hint">' + label('learnRule.localPrediction') +
+         (center.q2 > 0 ? ' ' + label('learnRule.levelLearning') : '') +
          '</p><dl class="aid-parameter-readout">' + row('effectiveRate', fixed(eta, 4)) +
          row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' + fixed(cl.mode, 3)) +
          row('probation',

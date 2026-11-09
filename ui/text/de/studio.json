@@ -933,7 +933,8 @@
     "localPrediction": "Gleichzeitige Änderungen hinterlassen eine lokale Spur. Der Lernmodus verändert elektrische Gewichte; unerwartete Änderungen des Lehrsignals wirken über die Spuren. Kontakte zu Motorzellen verwenden Lernparameter ihrer vorgeschalteten Nervenzellen.",
     "unavoidableDecay": "Gewichte bauen sich auch bei voller Nutzung ab. Geringe Nutzung beschleunigt den Abbau abhängig von der Lernzeit. Unterhalb der Löschschwelle wird der Kontakt nach seiner Schonfrist entfernt.",
     "decayUnused": "Halbwertszeit bei ungenutztem Kontakt",
-    "decayUsed": "Halbwertszeit bei voller Nutzung"
+    "decayUsed": "Halbwertszeit bei voller Nutzung",
+    "levelLearning": "Pegel und Merkspuren festigen Kontakte durch gleichzeitige Aktivität. Änderungssignale lernen gemeinsame Veränderungen."
   },
   "compiler": {
     "title": "Bauprüfung",
