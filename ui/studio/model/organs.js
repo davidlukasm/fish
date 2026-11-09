@@ -151,6 +151,7 @@ export const ORGANS = Object.freeze([
     key : 'eggs',
     category : 'reproduction',
     scope : 'single',
+    bilateral : true,
     nodes : 16,
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
@@ -164,6 +165,7 @@ export const ORGANS = Object.freeze([
     key : 'sperm',
     category : 'reproduction',
     scope : 'single',
+    bilateral : true,
     nodes : 16,
     centers : [
       motor('growth', MOTOR_KIND.sperm, 8, 'inner'), motor('release', MOTOR_KIND.sperm, 4, 'outer'),

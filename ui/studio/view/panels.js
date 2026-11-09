@@ -471,8 +471,9 @@ function wireInspector(state, wire) {
          '</header>' +
          (pairEndpoint(doc, wire.from) || pairEndpoint(doc, wire.to) ? pairingChoice(wire) : '') +
          '<div class="aid-wire-parameters">' + wireField(wire) + '</div>' +
-         (state.report?.contacts ? contactResult(wireContacts(doc, wire, contactRows(state)))
-                                 : '') +
+         (state.report?.contacts
+              ? contactResult(wireContacts(doc, wire, contactRows(state), state.sites))
+              : '') +
          contactPlan(state, endpointCenters(doc, wire.to), wire) +
          '<div class="aid-inspector-actions">' +
          (wire.bends?.length

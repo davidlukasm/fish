@@ -129,19 +129,17 @@ const ALARM_COMPARE = Object.freeze([ 0, 3, 5 ]), ALARM_RHYTHM = Object.freeze([
 function hindbrainPlan(doc, organ) {
   const region = organ.region;
   const pace = ALARM_RHYTHM[region.rhythm];
-  const nodes = [
-    {node : 'alarm', preset : 'relay', port : 'in', set : {pace}}, {
-      node : 'command',
-      preset : 'relay',
-      port : 'out',
-      set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo], pace}
-    }
-  ];
-  const inner = [ [ 'alarm', 'command' ] ], cross = [];
+  const nodes = [ {
+    node : 'command',
+    preset : 'relay',
+    port : 'both',
+    set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo], pace}
+  } ];
+  const inner = [], cross = [];
   const copies = ALARM_COMPARE[region.compare];
   if (copies) {
     nodes.push({node : 'cross', preset : 'inhibit', port : 'none', set : {copies}});
-    inner.push([ 'alarm', 'cross' ]);
+    inner.push([ 'command', 'cross' ]);
     cross.push([ 'cross', 'command' ]);
   }
   return {nodes, inner, cross, route : () => null, view : null};
@@ -222,8 +220,8 @@ export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
 export function routedLinks(doc, sites, withCut = false) {
   const plans = new Map(doc.organs.filter(planned).map(o => [o.id, regionPlan(doc, o)]));
-  const out = (organ, plan) =>
-      plan.nodes.filter(n => n.port === 'out').map(n => regionNodeId(organ, n.node));
+  const out = (organ, plan) => plan.nodes.filter(n => n.port === 'out' || n.port === 'both')
+                                   .map(n => regionNodeId(organ, n.node));
   const links = [];
   for (const link of expandedWires(doc)) {
     const source = findOrgan(doc, link.from), target = findOrgan(doc, link.to);
@@ -246,7 +244,9 @@ export function routedLinks(doc, sites, withCut = false) {
         const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
                                                                 s.fits.includes(type));
         const node = plan.source?.(type) ?? slot?.node;
-        for (const to of node ? [ node ] : plan.nodes.filter(n => n.port === 'in').map(n => n.node))
+        for (const to of node
+                 ? [ node ]
+                 : plan.nodes.filter(n => n.port === 'in' || n.port === 'both').map(n => n.node))
           links.push({...link, from, to : regionNodeId(target, to)});
       }
     }
@@ -307,7 +307,7 @@ export function settleRegions(doc, sites, pairedId = null) {
     const home = findSite(sites, organ.region.site);
     const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
-    const rank = n => n.port === 'out' ? 0 : n.port === 'in' ? 1 : 2;
+    const rank = n => n.port === 'out' || n.port === 'both' ? 0 : n.port === 'in' ? 1 : 2;
     const made = new Map();
     for (const n of [...plan.nodes].sort((a, b) => rank(a) - rank(b))) {
       const id = regionNodeId(organ, n.node);

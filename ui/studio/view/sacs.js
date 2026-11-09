@@ -176,7 +176,10 @@ export function sacPatch(state, organ, handle, fy) {
           planOfUnit(activationQuality(clamp(energy / Math.max(Number.EPSILON, store.room))))
     };
   const cells = Math.max(1, Math.round(energy / store.own.perCell));
-  return {nodes : clamp(cells - (store.motors - store.growth), 1, kindLimit(organ, null))};
+  return {
+    nodes : 2 * clamp(Math.round((cells - (store.motors - store.growth)) / 2), 1,
+                      Math.floor(kindLimit(organ, null) / 2))
+  };
 }
 export function gonadFacts(state, organ) {
   const store = gonadStore(state, organ);

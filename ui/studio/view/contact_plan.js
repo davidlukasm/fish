@@ -13,7 +13,7 @@ export function contactPlan(state, chosen, wire = null) {
     return '';
   const doc = state.document, centers = allCenters(doc), neural = state.capabilities.neural;
   const selected = new Set(chosen.map(center => centers.findIndex(item => item.id === center.id)));
-  const pairs = wire && wireContactPairs(doc, wire);
+  const pairs = wire && wireContactPairs(doc, wire, state.sites);
   const connections =
       compileDocument(doc, state.sites)
           .connections.filter(edge => !pairs || pairs.has(edge.from + ':' + edge.to));

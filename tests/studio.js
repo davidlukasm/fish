@@ -313,6 +313,14 @@ function semanticFingerprint(source) {
     const regions = await import('../ui/studio/model/regions.js');
     assert.deepEqual(left.centers.map(c => c.node), [ 'beat', 'cross', 'steer' ]);
     assert.equal(spinal.document.wires.length, 0, 'The plan needs no wires of its own');
+    const secondSpinal = model.addOrgan(spinal.document, 'spinal', sites, {x : 730, y : 335});
+    assert.ok(secondSpinal && secondSpinal.organId !== spinal.organId,
+              'A second rhythm circuit is a new region');
+    assert.equal(secondSpinal.document.organs.filter(o => o.type === 'spinal').length, 4);
+    const independent = regions.updateRegion(secondSpinal.document, secondSpinal.organId,
+                                             {stroke : 0, steering : 0}, sites);
+    assert.deepEqual(model.findOrgan(independent, spinal.organId).centers, left.centers,
+                     'Tuning the second circuit preserves the first one');
     const node = (organ, key) => organ.centers.find(c => c.node === key).id;
     const inner = regions.routedLinks(spinal.document, sites).map(l => l.from + '>' + l.to);
     for (const a of [left, right])
@@ -371,7 +379,7 @@ function semanticFingerprint(source) {
                                 geometry.sitePoint(bulbSite));
     const hindLeft = model.findOrgan(hind.document, hind.organId),
           hindRight = model.findOrgan(hind.document, hindLeft.pair);
-    assert.deepEqual(hindLeft.centers.map(c => c.node), [ 'alarm', 'command', 'cross' ]);
+    assert.deepEqual(hindLeft.centers.map(c => c.node), [ 'command', 'cross' ]);
     assert.ok(regions.routedLinks(hind.document, sites)
                   .some(l => l.from === bulbNode(hindLeft, 'cross') &&
                              l.to === bulbNode(hindRight, 'command')));
@@ -383,14 +391,26 @@ function semanticFingerprint(source) {
         regions.updateRegion(hind.document, hind.organId, {compare : 0, rhythm : 1}, sites);
     for (const id of [hindLeft.id, hindRight.id]) {
       const half = model.findOrgan(feeding, id);
-      assert.deepEqual(half.centers.map(c => c.node), [ 'alarm', 'command' ]);
+      assert.deepEqual(half.centers.map(c => c.node), [ 'command' ]);
       assert.ok(half.centers.every(c => c.pace === .5),
                 'The feeding relay can develop with its own weak rhythm');
     }
     const feedingLinks = regions.routedLinks(feeding, sites);
-    assert.equal(feedingLinks.length, 2);
-    assert.ok(feedingLinks.every(l => l.from.endsWith(':alarm') && l.to.endsWith(':command')),
-              'Both feeding sides can relay together without opposing inhibition');
+    assert.equal(feedingLinks.length, 0,
+                 'The feeding reflex needs no extra relay or opposing inhibition');
+    const reflexNose = model.addOrgan(feeding, 'nose', sites, {x : 185, y : 318});
+    const feedingNose =
+        model.addWire(reflexNose.document, reflexNose.organId, hind.organId, 'same', sites);
+    const feedingMuscle = model.addOrgan(feedingNose.document, 'muscle', sites, {x : 800, y : 300});
+    assert.ok(feedingMuscle);
+    const feedingMotor =
+        model.addWire(feedingMuscle.document, hind.organId, feedingMuscle.organId, 'same', sites);
+    const reflexLinks = regions.routedLinks(feedingMotor.document, sites);
+    assert.ok(reflexLinks.some(l => l.from === reflexNose.organId &&
+                                    l.to === bulbNode(hindLeft, 'command')));
+    assert.ok(reflexLinks.some(l => l.from === bulbNode(hindLeft, 'command') &&
+                                    l.to === feedingMuscle.organId),
+              'The same reflex population accepts the cue and drives the muscle');
     for (const region of ORGANS.filter(o => o.category === 'regions')) {
       const home = sites.find(s => !s.outer && s.w > 0 && region.centers[0].zones.includes(s.zone));
       const placed = model.addOrgan(model.newDocument(region.key), region.key, sites,
@@ -524,10 +544,10 @@ function semanticFingerprint(source) {
       const from = model.centerIndex(doc, model.endpointCenters(doc, link.from)[0].id);
       const to = model.centerIndex(doc, model.endpointCenters(doc, link.to)[0].id);
       const rows = [ [ from, to, 4, .5, 3, 1, 1, -1 ], [ to, from, 9, 1, 9, 0, 1, 0 ] ];
-      const formed = model.wireContacts(doc, wire, rows);
+      const formed = model.wireContacts(doc, wire, rows, sites);
       assert.deepEqual([ formed.count, formed.positive, formed.negative, formed.weight ],
                        [ 4, 3, 1, .5 ], 'A wire counts only the contacts along its own links');
-      assert.equal(model.wireContacts(doc, wire, []).count, 0);
+      assert.equal(model.wireContacts(doc, wire, [], sites).count, 0);
     }
     const commissure = model.addWire(wired, tectumLeft.centers[0].id, twin.centers[0].id);
     assert.ok(commissure);
@@ -1492,16 +1512,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const gonad = model.findOrgan(fertile, ovary.organId), keys = gonad.centers.map(c => c.key);
     assert.equal(keys.filter(k => k === 'growth').length, kindLimit(gonad, sites));
     assert.equal(keys.length, ORGAN_BY_KEY.eggs.nodes);
-    assert.deepEqual(keys.filter(k => k !== 'growth'), [ 'release', 'pressure' ]);
+    assert.deepEqual(keys.filter(k => k !== 'growth'),
+                     [ 'release', 'release', 'pressure', 'pressure' ]);
     assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
     const sacs = await import('../ui/studio/view/sacs.js');
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
     assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
-                     [ 'growth', 'growth', 'pressure', 'release' ]);
+                     [ 'growth', 'growth', 'pressure', 'pressure', 'release', 'release' ]);
     const small = model.findOrgan(fewer, gonad.id);
     const sacState = {document : fewer, sites, capabilities : sitesResult};
     const store = sacs.gonadStore(sacState, small);
-    assert.equal(store.room, sitesResult.gonads.eggs.perCell * 3);
+    assert.equal(store.room, sitesResult.gonads.eggs.perCell * 4);
     assert.ok(Number.isFinite(store.steps),
               'The plan shows filling for an assumed input before CPPN compilation');
     assert.equal(sacs.gonadStore({...sacState, previewInput : 0}, small).steps, Infinity);
@@ -1509,10 +1530,32 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
     assert.ok(sacs.sacPatch(sacState, small, 'cells', .2).nodes > 2);
-    assert.equal(sacs.sacPatch(sacState, small, 'cells', .9).nodes, 1);
+    assert.equal(sacs.sacPatch(sacState, small, 'cells', .9).nodes, 2);
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
     const testisState = {document : testis.document, sites, capabilities : sitesResult};
+    const testisOrgan = model.findOrgan(testis.document, testis.organId);
+    for (const key of ['growth', 'release', 'pressure'])
+      assert.deepEqual(new Set(testisOrgan.centers.filter(c => c.key === key)
+                                   .map(c => geometry.findSite(sites, c.site).side)),
+                       new Set([ -1, 1 ]), 'Each gonad function starts on both anatomical sides');
+    const gonadRhythm = model.addOrgan(testis.document, 'spinal', sites, {x : 700, y : 330});
+    const gonadWire =
+        model.addWire(gonadRhythm.document, gonadRhythm.organId, testis.organId, 'same', sites);
+    for (const [pairing, sign] of [[ 'same', 1 ], [ 'crossed', -1 ]]) {
+      const wired = model.updateWire(gonadWire.document, gonadWire.wireId, {pairing});
+      const plan = model.compileDocument(wired, sites), centers = model.allCenters(wired);
+      const motorIds = new Set(testisOrgan.centers.filter(c => c.role === 'motor').map(c => c.id));
+      const links = plan.connections.filter(c => motorIds.has(centers[c.to].id));
+      assert.equal(links.length, 4);
+      assert.ok(links.every(c => geometry.findSite(sites, centers[c.from].site).side *
+                                     geometry.findSite(sites, centers[c.to].site).side ===
+                                 sign),
+                'Paired regions project separately to the two sides of one gonad');
+      assert.deepEqual(
+          model.wireContactPairs(wired, wired.wires.find(w => w.id === gonadWire.wireId), sites),
+          new Set(links.map(c => c.from + ':' + c.to)));
+    }
     assert.match(sacs.gonadGraphic(testisState, model.findOrgan(testis.document, testis.organId)),
                  /aid-gonad-graphic/);
     const facts = state => sacs.gonadFacts(state, small);

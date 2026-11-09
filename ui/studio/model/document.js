@@ -275,6 +275,8 @@ export function profileIndex(doc, organId, profileId) {
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
 function matchingOrgan(doc, type, side, sites, code = null) {
+  if (isRegion({type}))
+    return null;
   const scope = ORGAN_BY_KEY[type]?.scope;
   if (scope === 'single')
     return doc.organs.find(organ => organ.type === type) ?? null;
@@ -406,7 +408,7 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   if (!definition || definition.fixed)
     return null;
   const draft = copy(doc), used = usedSites(draft);
-  if (paired && definition.scope !== 'single')
+  if ((paired && definition.scope !== 'single') || definition.bilateral)
     for (const occupied of [...used]) {
       const mirror = mirroredSite(findSite(sites, occupied), sites);
       if (mirror)
@@ -447,6 +449,13 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
         return null;
       used.add(site.id);
       organ.centers.push(defaults(desc, site));
+      if (definition.bilateral) {
+        const mirror = mirroredSite(site, sites);
+        if (!mirror || used.has(mirror.id))
+          return null;
+        used.add(mirror.id);
+        organ.centers.push(defaults(desc, mirror));
+      }
     }
   }
   draft.organs.push(organ);
@@ -647,7 +656,10 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   const others = original ? original.centers.filter(c => !ofType(c)).length : 0;
   if (!most || !original.centers.some(ofType) || others >= most)
     return null;
-  const wanted = clamp(Math.round(count), 1, most - others), draft = copy(doc);
+  const bilateral = !!ORGAN_BY_KEY[original.type].bilateral;
+  const wanted = bilateral ? 2 * clamp(Math.round(count / 2), 1, Math.floor((most - others) / 2))
+                           : clamp(Math.round(count), 1, most - others);
+  const draft = copy(doc);
   const main = findOrgan(draft, organId);
   const twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const organ of [main, twin].filter(Boolean)) {
@@ -661,8 +673,16 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
     const code = functionFor(first, home);
     while (own.length < wanted) {
       const used = usedSites(draft);
-      const partner = organ === twin ? main.centers.filter(ofType)[own.length] : null;
+      const partner = bilateral && own.length % 2 ? own.at(-1)
+                      : organ === twin            ? main.centers.filter(ofType)[own.length]
+                                                  : null;
       const mirror = partner ? mirroredSite(findSite(sites, partner.site), sites) : null;
+      if (bilateral && !partner)
+        for (const occupied of [...used]) {
+          const opposite = mirroredSite(findSite(sites, occupied), sites);
+          if (opposite)
+            used.add(opposite.id);
+        }
       const at = own.map(c => sitePoint(findSite(sites, c.site), siteRole(organ.type)));
       const middle = centroid(at);
       const site = mirror && !used.has(mirror.id)
@@ -1090,7 +1110,8 @@ export function addWire(doc, from, to, pairing = null, sites = null) {
                                                                                   : 'same'
                                                      : null;
   const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing : sides};
-  const covers = (a, b) => (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
+  const covers = (a, b) => (!a.side || a.side === b.side) &&
+                           (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
                            (a.to === b.to || a.to === wholeEndpoint(doc, b.to));
   const made = expandedWires(doc), links = wireLinks(doc, wire);
   if (links.every(link => made.some(old => covers(old, link))))
@@ -1131,6 +1152,11 @@ function wireLinks(doc, wire) {
   if (!wire.pairing || (!from && !to) || from === wire.to)
     return [ {from : wire.from, to : wire.to} ];
   if (!from || !to) {
+    const target = findOrgan(doc, wire.to);
+    if (from && !isRegion(target) && target?.centers.length > 1 && wire.pairing !== 'both') {
+      const side = organOf(doc, wire.from).side * (wire.pairing === 'crossed' ? -1 : 1);
+      return [ {from : wire.from, to : wire.to, side}, {from, to : wire.to, side : -side} ];
+    }
     const selected = {from : wire.from, to : wire.to},
           other = {from : from ?? wire.from, to : to ?? wire.to};
     return wire.pairing === 'both'      ? [ selected, other ]
@@ -1145,16 +1171,26 @@ function wireLinks(doc, wire) {
          : wire.pairing === 'crossed' ? crossed
                                       : [...same, ...crossed ];
 }
-export function wireContactPairs(doc, wire) {
+export function wireContactPairs(doc, wire, sites) {
   const index = new Map(allCenters(doc).map((center, i) => [center.id, i]));
-  return new Set(wireLinks(doc, wire).flatMap(
-      link => senderNodes(doc, link.from)
-                  .flatMap(source => hearerNodes(doc, link.to)
-                                         .map(target => index.get(source.id) + ':' +
-                                                        index.get(target.id)))));
+  return new Set(
+      routedLinks(doc, sites)
+          .filter(link => link.wire.id === wire.id)
+          .flatMap(link =>
+                       senderNodes(doc, link.from)
+                           .flatMap(source =>
+                                        hearerNodes(doc, link.to)
+                                            .filter(target => !link.side ||
+                                                              findSite(sites, target.site)?.side ===
+                                                                  link.side)
+                                            .filter(target => validCellLink(
+                                                        source, findSite(sites, source.site),
+                                                        target, findSite(sites, target.site)))
+                                            .map(target => index.get(source.id) + ':' +
+                                                           index.get(target.id)))));
 }
-export function wireContacts(doc, wire, contacts) {
-  const pairs = wireContactPairs(doc, wire);
+export function wireContacts(doc, wire, contacts, sites) {
+  const pairs = wireContactPairs(doc, wire, sites);
   const sum =
       {count : 0, weight : 0, positive : 0, negative : 0, positiveWeight : 0, negativeWeight : 0};
   for (const bundle of contacts.map(contactBundle))
@@ -1341,6 +1377,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     const sources = senderNodes(doc, link.from);
     const targets = hearerNodes(doc, link.to);
     for (const target of targets) {
+      if (link.side && findSite(sites, target.site)?.side !== link.side)
+        continue;
       const key = fixed ? target.id : link.wire.id + ':' + link.to + ':' + target.id;
       for (const source of sources) {
         const from = indices.get(source.id), to = indices.get(target.id);
