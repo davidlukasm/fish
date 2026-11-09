@@ -332,6 +332,7 @@ function regionControls(state, organ) {
   const most = regionPlan(state.document, organ).most ?? {};
   const choices =
       Object.entries(settings)
+          .filter(([ key ]) => key !== 'compare' || organ.pair)
           .map(([ key, s ]) => {
             const names = s.named ? tList('studio.regions.values.' + key) : null;
             const reached = Math.min(region[key], most[key] ?? region[key]);

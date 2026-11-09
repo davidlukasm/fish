@@ -132,7 +132,7 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },
-  {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 4) ]},
+  {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 16) ]},
   {
     key : 'defense',
     category : 'motor',
@@ -187,42 +187,23 @@ export const ORGANS = Object.freeze([
       slot('onward', 'out', [], true)
     ],
     settings : {
-      resolution : setting(1, 6, 3),
-      contrast : setting(0, 2, 1, true),
+      resolution : setting(1, 6, 1),
+      contrast : setting(0, 2, 0, true),
       colours : setting(0, 1, 0, true)
     }
   },
   {
-    key : 'olfactory',
+    key : 'circuit',
     category : 'regions',
     scope : 'side',
-    centers : [ nerve('relay', 3, [ 0, 1, 2 ]) ],
-    slots : [ slot('smell', 'in', [ 'nose' ], true), slot('onward', 'out', [], true) ],
-    settings : {compare : setting(0, 2, 1, true)}
-  },
-  {
-    key : 'hindbrain',
-    category : 'regions',
-    scope : 'side',
-    centers : [ nerve('relay', 3, [ 1, 2, 3 ]) ],
-    slots : [ slot('alarm', 'in', [], true), slot('muscles', 'out', [ 'muscle' ], true) ],
+    midline : true,
+    centers : [ nerve('relay', 8, [ 1, 2, 3 ]) ],
+    slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
     settings : {
-      threshold : setting(0, 2, 1, true),
-      tempo : setting(0, 1, 0, true),
-      compare : setting(0, 2, 1, true),
-      rhythm : setting(0, 2, 0, true)
-    }
-  },
-  {
-    key : 'spinal',
-    category : 'regions',
-    scope : 'side',
-    centers : [ nerve('pacemaker', 3, [ 2, 3 ]) ],
-    slots : [ slot('steering', 'in'), slot('muscles', 'out', [ 'muscle' ], true) ],
-    settings : {
-      beat : setting(0, 2, 1, true),
-      stroke : setting(0, 2, 1, true),
-      steering : setting(0, 1, 1, true)
+      threshold : setting(0, 2, 0, true),
+      time : setting(0, 2, 1, true),
+      compare : setting(0, 2, 0, true),
+      effect : setting(0, 1, 0, true)
     }
   },
   {
@@ -231,7 +212,7 @@ export const ORGANS = Object.freeze([
     scope : 'single',
     centers : [ nerve('pacemaker', 8, [ 1, 2, 3 ]) ],
     slots : [ slot('steering', 'in'), slot('onward', 'out', [], true) ],
-    settings : {beat : setting(0, 2, 1, true), stroke : setting(0, 2, 2, true)}
+    settings : {beat : setting(0, 2, 1, true)}
   },
   {
     key : 'teaching',
@@ -241,50 +222,11 @@ export const ORGANS = Object.freeze([
     slots :
         [ slot('inner', 'in', [ 'gut', 'blood', 'pain' ], true), slot('onward', 'out', [], true) ],
     settings : {}
-  },
-  {
-    key : 'pallium',
-    category : 'regions',
-    scope : 'side',
-    centers : [ nerve('learn', 3, [ 1, 2 ]) ],
-    slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
-    settings : {rate : setting(0, 2, 1, true), style : setting(0, 2, 2, true)}
-  },
-  {
-    key : 'torus',
-    category : 'regions',
-    scope : 'side',
-    centers : [ nerve('relay', 3, [ 1, 2 ]) ],
-    slots : [ slot('flow', 'in', [ 'lateral' ], true), slot('onward', 'out', [], true) ],
-    settings : {compare : setting(0, 2, 1, true)}
-  },
-  {
-    key : 'cerebellum',
-    category : 'regions',
-    scope : 'side',
-    centers : [ nerve('relay', 3, [ 2 ]) ],
-    slots : [
-      slot('motion', 'in', [], true),
-      slot('balance', 'in', [ 'lateral', 'bladder' ], false, 'smooth'),
-      slot('muscles', 'out', [ 'muscle' ], true)
-    ],
-    settings : {smoothing : setting(0, 2, 1, true), brake : setting(0, 2, 1, true)}
-  },
-  {
-    key : 'hypothalamus',
-    category : 'regions',
-    scope : 'single',
-    centers : [ nerve('relay', 3, [ 1 ]) ],
-    slots : [
-      slot('inner', 'in', [ 'gut', 'bladder', 'blood', 'eggs', 'sperm' ], true),
-      slot('glands', 'out', [ 'gland' ], true), slot('drive', 'out')
-    ],
-    settings : {gain : setting(0, 2, 1, true), effect : setting(0, 1, 0, true)}
   }
 ].map(item => Object.freeze({
   ...item,
   // The centers of an organ that comes in pairs know it, to keep off the midline.
-  centers : Object.freeze(item.scope === 'side'
+  centers : Object.freeze(item.scope === 'side' && !item.midline
                               ? item.centers.map(c => Object.freeze({...c, paired : true}))
                               : item.centers)
 })));
@@ -354,26 +296,20 @@ export function eligible(center, site) {
 export const MODULES = Object.freeze([
   {
     key : 'vision-steering',
-    muscleZone : 2,
+    muscleFunction : MOTOR_KIND.turn,
     organs : [ 'eye', 'tectum', 'muscle' ],
     connections : [ [ 0, 1, 'crossed' ], [ 1, 2 ] ]
   },
   {
     key : 'scent-suction',
-    muscleZone : 1,
-    organs : [ 'nose', 'olfactory', 'muscle' ],
+    muscleFunction : MOTOR_KIND.suction,
+    organs : [ 'nose', 'circuit', 'muscle' ],
     connections : [ [ 0, 1 ], [ 1, 2 ] ]
   },
   {
     key : 'rhythm-drive',
-    muscleZone : 3,
-    organs : [ 'spinal', 'muscle' ],
-    connections : [ [ 0, 1 ] ]
-  },
-  {
-    key : 'escape',
-    muscleZone : 2,
-    organs : [ 'lateral', 'hindbrain', 'muscle' ],
-    connections : [ [ 0, 1 ], [ 1, 2, 'crossed' ] ]
+    muscleFunction : MOTOR_KIND.forward,
+    organs : [ 'rhythm', 'muscle' ],
+    connections : [ [ 0, 1, 'both' ] ]
   }
 ]);

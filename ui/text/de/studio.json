@@ -105,15 +105,9 @@
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
     "tectum": "Seh­zentrum",
-    "olfactory": "Riech­zentrum",
-    "hindbrain": "Stamm­hirn",
-    "spinal": "Rücken­mark",
     "rhythm": "Taktgeber",
     "teaching": "Lehrsignal",
-    "pallium": "Vorder­hirn",
-    "torus": "Strömungs­zentrum",
-    "cerebellum": "Klein­hirn",
-    "hypothalamus": "Antriebs­zentrum"
+    "circuit": "Schaltzentrum"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -139,21 +133,19 @@
     "secretion": "Ausschüttung",
     "relay": "Schalt­kreis",
     "inhibit": "Hemm­kreis",
-    "learn": "Stärker plastisch",
+    "learn": "Starke Plastizität",
     "pacemaker": "Takt­geber",
     "modulate": "Modulator"
   },
   "modulePurpose": {
-    "vision-steering": "Die Augen speisen über Kreuz das Tectum, das die Lenkmuskeln treibt.",
-    "scent-suction": "Die Nase speist den Bulbus, der den Schlund saugen lässt.",
-    "rhythm-drive": "Das Rückenmark schlägt den Schwanz abwechselnd auf beiden Seiten.",
-    "escape": "Die Seitenlinie alarmiert die Medulla, die den Fisch zur Gegenseite dreht."
+    "vision-steering": "Die Augen speisen über Kreuz das Sehzentrum, das die Lenkmuskeln treibt.",
+    "scent-suction": "Die Nase steuert über ein Schaltzentrum die Pumpe.",
+    "rhythm-drive": "Ein gemeinsamer Taktgeber steuert beide Seiten des Schwanzes."
   },
   "modules": {
     "vision-steering": "Sehen und Lenken",
     "scent-suction": "Riechen und Ansaugen",
-    "rhythm-drive": "Rhyth­mischer Vortrieb",
-    "escape": "Flucht"
+    "rhythm-drive": "Rhyth­mischer Vortrieb"
   },
   "inspector": {
     "chemistry": "Hormone und Lernen",
@@ -401,8 +393,7 @@
   ],
   "regionNodes": {
     "families": {
-      "map": "Karte",
-      "learn": "Lernen"
+      "map": "Karte"
     },
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
@@ -410,37 +401,14 @@
     "inhibit": "Kontrastzellen",
     "beat": "Taktgeber",
     "cross": "Hemmung",
-    "steer": "Lenkung",
-    "gather": "Sammeln",
-    "compare": "Vergleich",
-    "alarm": "Alarm",
     "command": "Kommando",
-    "learn": "Lernen",
-    "learnFrom": "Lernt {name}",
-    "input": "Eingang",
-    "smooth": "Glätten",
-    "brake": "Bremse",
-    "sense": "Fühlen",
-    "drive": "Antrieb",
     "teach": "Lehrsignal"
   },
   "regions": {
     "tectum": {
-      "term": "Tectum",
-      "purpose": "Vorlage: ordnet Seheingänge nach Sehfeld und verbindet sie mit einem Ausgang.",
+      "term": "Sehzentrum",
+      "purpose": "Vorlage: bündelt Seheingänge oder ordnet sie nach Sehfeld und Farbtyp.",
       "follows": "Die Karte richtet sich nach dem Sehfeld und den Farbtypen der Augen."
-    },
-    "olfactory": {
-      "term": "Bulbus",
-      "purpose": "Vorlage: bündelt Geruchseingänge und ergänzt wahlweise gegenseitige Hemmung."
-    },
-    "hindbrain": {
-      "term": "Medulla",
-      "purpose": "Vorlage: verbindet Auslöser und Ausgang, wahlweise mit Eigenrhythmus und gegenseitiger Hemmung."
-    },
-    "spinal": {
-      "term": "Rücken­mark",
-      "purpose": "Vorlage: verbindet Taktgeber, Hemmung und wahlweise Steuereingänge."
     },
     "rhythm": {
       "term": "Taktgeber",
@@ -449,23 +417,6 @@
     "teaching": {
       "term": "Lehrsignal",
       "purpose": "Vorlage: innere Reize steuern das lokale Lernen der angeschlossenen Nervenzellen."
-    },
-    "pallium": {
-      "term": "Pallium",
-      "purpose": "Vorlage: bündelt Eingangsarten in plastischen Nervenzellen.",
-      "follows": "Für jede Art von Eingang lernt ein eigener Knoten."
-    },
-    "torus": {
-      "term": "Torus",
-      "purpose": "Vorlage: bündelt die Seitenlinie und ergänzt wahlweise gegenseitige Hemmung."
-    },
-    "cerebellum": {
-      "term": "Cere­bellum",
-      "purpose": "Vorlage: verbindet Eingänge mit anpassbaren Zellzeiten und hemmenden Kontakten."
-    },
-    "hypothalamus": {
-      "term": "Hypo­thalamus",
-      "purpose": "Vorlage: verbindet innere Sinne mit Drüsen und weiteren Ausgängen."
     },
     "slotsTitle": "Anschlüsse",
     "settingsTitle": "Einstellungen",
@@ -476,19 +427,11 @@
       "sight": "Augen",
       "near": "Nahsinn",
       "onward": "Weiter an",
-      "smell": "Nase",
-      "alarm": "Auslöser",
       "senses": "Sinne",
-      "flow": "Seitenlinie",
-      "motion": "Bewegung",
-      "balance": "Gleichgewicht",
       "inner": "Innere Sinne",
-      "glands": "Drüsen",
-      "drive": "Antrieb",
       "trigger": "Auslöser",
       "fullness": "Füllstand",
-      "steering": "Lenkung",
-      "muscles": "Muskeln"
+      "steering": "Eingang"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -496,18 +439,10 @@
       "colours": "Farbtypen",
       "compare": "Seitenvergleich",
       "beat": "Takt",
-      "stroke": "Ausschlag",
-      "steering": "Lenkeingang",
       "threshold": "Schwelle",
-      "tempo": "Tempo",
-      "rhythm": "Eigenrhythmus",
-      "rate": "Lerntempo",
-      "style": "Lernt von selbst",
       "teacher": "Lehrer",
-      "smoothing": "Zellzeit",
-      "brake": "Bremse",
-      "gain": "Empfindlichkeit",
-      "effect": "Wirkung"
+      "effect": "Wirkung",
+      "time": "Zellzeit"
     },
     "values": {
       "contrast": [
@@ -529,46 +464,7 @@
         "mittel",
         "schnell"
       ],
-      "stroke": [
-        "klein",
-        "mittel",
-        "groß"
-      ],
-      "steering": [
-        "aus",
-        "an"
-      ],
       "threshold": [
-        "niedrig",
-        "mittel",
-        "hoch"
-      ],
-      "tempo": [
-        "schnell",
-        "träge"
-      ],
-      "rhythm": ["aus", "schwach", "stark"],
-      "rate": [
-        "langsam",
-        "mittel",
-        "schnell"
-      ],
-      "style": [
-        "ausgleichen",
-        "nicht",
-        "auswählen"
-      ],
-      "smoothing": [
-        "kurz",
-        "mittel",
-        "lang"
-      ],
-      "brake": [
-        "aus",
-        "schwach",
-        "stark"
-      ],
-      "gain": [
         "niedrig",
         "mittel",
         "hoch"
@@ -576,12 +472,21 @@
       "effect": [
         "erregend",
         "hemmend"
+      ],
+      "time": [
+        "kurz",
+        "mittel",
+        "lang"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
     "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben.",
-    "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz."
+    "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz.",
+    "circuit": {
+      "term": "Schaltzentrum",
+      "purpose": "Vorlage: bündelt Reize und leitet sie erregend oder hemmend weiter; wahlweise mit Seitenvergleich."
+    }
   },
   "head": {
     "barbels": "Barteln: Riechen und Tasten zugleich am Kopf",
@@ -927,7 +832,7 @@
   "neuronPurpose": {
     "relay": "Erregende Nervenzelle mit lokalem Lernen.",
     "inhibit": "hemmt die Zellen, die er erreicht",
-    "learn": "Erregende Nervenzelle mit höherer Grundplastizität. Auf eine Zelle gezogen erhöht diese Vorlage deren Plastizität.",
+    "learn": "Erregende Nervenzellen mit schnellerer lokaler Kontaktanpassung.",
     "pacemaker": "Nervenzelle mit Eigenrhythmus. Ihre Aktivität kann Eingänge zum lokalen Lernen anregen. Auf eine Zelle gezogen ergänzt sie einen verbundenen Taktgeber.",
     "modulate": "Lehrer: sein Signal ist das Lehrsignal der Zellen, die er erreicht, er treibt sie nicht an. Mit dem Lernen-Werkzeug auf einen Nervenknoten gezogen, lehrt er ihn."
   },

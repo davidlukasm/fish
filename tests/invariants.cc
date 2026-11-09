@@ -3,6 +3,7 @@
 #include "field/development_sites.hh"
 #include "physiology.hh"
 #include "movement.hh"
+#include "ecology_internal.hh"
 #include <algorithm>
 #include <map>
 using namespace test;
@@ -40,7 +41,7 @@ void herbivores_start_at_reachable_leaves() {
     double nearest = std::numeric_limits<double>::infinity();
     bool facing = false;
     for (const auto &part : w.field.vegetation().plants)
-      if (part.kind == food_kind::plant && part.organ_kind >= plant_organ::leaf &&
+      if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) &&
           part.energy > w.field.env().seed_energy) {
         const double dx = w.field.delta_x(part.x - p.body.x), dy = part.y - p.body.y,
                      distance = stroke_distance(part, dx, dy);
@@ -55,6 +56,18 @@ void herbivores_start_at_reachable_leaves() {
   no_mutation(empty);
   empty.seed({g}, 1, run_limit::default_food);
   check(empty.fish.size() == 1, "an aquarium without plants still accepts herbivore founders");
+}
+void compact_founders_use_their_actual_reservation(const Genome &g) {
+  Ecosystem w(SEED);
+  w.starter_world();
+  w.neural_budget = 1000000;
+  constexpr int COUNT = 24;
+  w.seed({g}, COUNT, run_limit::default_food);
+  check(w.fish.size() == COUNT, "compact founders fit their actual neural budget");
+  check(connection_storage(w) <= w.neural_budget, "the resolved reservation remains bounded");
+  for (const auto &p : w.fish)
+    check(p.genome.blueprint && !p.body.brain() && !p.body.hatched && p.body.age == 0,
+          "startup resolves individual anatomy while neural construction still begins in the egg");
 }
 void start_fish_uses_external_vision_when_mature(const Genome &g) {
   Body hatchling;
@@ -878,6 +891,7 @@ int main() {
     ordered_retinal_neighbors_match_geometry();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
+    compact_founders_use_their_actual_reservation(g);
     start_fish_uses_external_vision_when_mature(g);
     start_fish_eats_nearby_food(g);
     nonvisual_input_reaches_the_brain(g);

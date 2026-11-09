@@ -83,7 +83,8 @@ function regionAnchors(doc, sites) {
     const home = regionHome(organ, sites);
     return home && home.zone !== ZONE.tail ? [ {organ, home} ] : [];
   });
-  const sideOfItem = organ => ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0;
+  const sideOfItem = organ =>
+      organ.side && ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0;
   // A crowded half of the brain draws its clusters smaller, down to SEPARATE.least.
   const fit = side => {
     const need =

@@ -176,38 +176,35 @@ function semanticFingerprint(source) {
       placed.wires = [];
       placed.assemblies = [];
       placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
-      for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2, contrast : 0} ],
-                                            [ 'olfactory', 285, 415, {compare : 1} ],
-                                            [ 'hindbrain', 520, 405, {threshold : 0} ],
-                                            [ 'spinal', 700, 381, {stroke : 2} ]]) {
-        const added = model.addOrgan(placed, type, sitesResult.sites, {x, y});
-        assert.ok(added, type + ' reserves free places for both sides in an occupied body');
-        placed = updateRegion(added.document, added.organId, settings, sitesResult.sites);
+      for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2} ],
+                                            [ 'circuit', 285, 415, {compare : 1} ],
+                                            [ 'rhythm', 700, 365, {beat : 1} ]]) {
+        const r = model.addOrgan(placed, type, sitesResult.sites, {x, y});
+        assert.ok(r, type + ' fits in an occupied body');
+        placed = updateRegion(r.document, r.organId, settings, sitesResult.sites);
         model.validateDocument(placed);
       }
-      const spinal = placed.organs.find(o => o.type === 'spinal');
-      const eggWire = model.addWire(placed, spinal.id, 'eiorgan', null, sitesResult.sites);
+      const paired = placed.organs.find(o => o.type === 'circuit');
+      assert.ok(paired.pair);
+      const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites);
       const tailWire =
-          model.addWire(eggWire.document, spinal.id, 'schub--1', 'same', sitesResult.sites);
-      const crossingOf = (d, id) => model.compileDocument(d, sitesResult.sites)
-                                        .groups[model.allCenters(d).findIndex(c => c.id === id)]
-                                        .crossing;
-      const beat = spinal.centers.find(c => c.node === 'beat').id;
-      assert.equal(crossingOf(tailWire.document, beat), 0,
-                   'A single ovary contains targets on both physical sides');
+          model.addWire(eggWire.document, paired.id, 'schub--1', 'same', sitesResult.sites);
+      const plan = model.compileDocument(tailWire.document, sitesResult.sites);
+      const command = paired.centers.find(c => c.node === 'command').id;
+      assert.equal(plan.groups[model.allCenters(tailWire.document).findIndex(c => c.id === command)]
+                       .crossing,
+                   0, 'One ovary contains targets on both physical sides');
       const both = model.updateWire(tailWire.document, eggWire.wireId, {pairing : 'both'});
       const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
-      assert.equal(projections.length, 2, 'Both paired regions can project to one ovary');
-      assert.deepEqual(new Set(projections.map(p => p.from)), new Set([ spinal.id, spinal.pair ]));
-      assert.ok(projections.every(p => p.to === 'eiorgan'));
-      const hub = model.addOrgan(both, 'hypothalamus', sitesResult.sites, {x : 335, y : 365});
-      assert.ok(hub);
+      assert.equal(projections.length, 2);
+      assert.deepEqual(new Set(projections.map(p => p.from)), new Set([ paired.id, paired.pair ]));
+      const hub = model.addOrgan(both, 'teaching', sitesResult.sites, {x : 335, y : 365});
       const broadcast =
-          model.addWire(hub.document, hub.organId, spinal.id, 'both', sitesResult.sites);
+          model.addWire(hub.document, hub.organId, paired.id, 'both', sitesResult.sites);
       assert.equal(model.expandedWires(broadcast.document)
                        .filter(w => w.wire.id === broadcast.wireId)
                        .length,
-                   2, 'One central region can project to both spinal halves');
+                   2, 'A central teacher can reach both halves');
     }
     const saved = JSON.parse(JSON.stringify(doc));
     assert.ok(model.regenerateFields(saved, sitesResult.sites));
@@ -303,45 +300,32 @@ function semanticFingerprint(source) {
     organAudits.push({document : added.document, id : added.organId, type : definition.key});
   }
   {
-    const site = sites.find(s => s.zone === 2 && !s.outer);
-    const spinal =
-        model.addOrgan(model.newDocument('Regionen'), 'spinal', sites, geometry.sitePoint(site));
-    assert.ok(spinal, 'The spinal cord can be placed');
-    const left = model.findOrgan(spinal.document, spinal.organId),
-          right = model.findOrgan(spinal.document, left.pair);
-    assert.ok(right && right.side === -left.side);
     const regions = await import('../ui/studio/model/regions.js');
-    assert.deepEqual(left.centers.map(c => c.node), [ 'beat', 'cross', 'steer' ]);
-    assert.equal(spinal.document.wires.length, 0, 'The plan needs no wires of its own');
-    const secondSpinal = model.addOrgan(spinal.document, 'spinal', sites, {x : 730, y : 335});
-    assert.ok(secondSpinal && secondSpinal.organId !== spinal.organId,
-              'A second rhythm circuit is a new region');
-    assert.equal(secondSpinal.document.organs.filter(o => o.type === 'spinal').length, 4);
-    const independent = regions.updateRegion(secondSpinal.document, secondSpinal.organId,
-                                             {stroke : 0, steering : 0}, sites);
-    assert.deepEqual(model.findOrgan(independent, spinal.organId).centers, left.centers,
-                     'Tuning the second circuit preserves the first one');
-    const node = (organ, key) => organ.centers.find(c => c.node === key).id;
-    const inner = regions.routedLinks(spinal.document, sites).map(l => l.from + '>' + l.to);
-    for (const a of [left, right])
-      assert.ok(inner.includes(node(a, 'beat') + '>' + node(a, 'cross')) &&
-                inner.includes(node(a, 'steer') + '>' + node(a, 'beat')));
-    assert.ok(inner.includes(node(left, 'cross') + '>' + node(right, 'beat')) &&
-              inner.includes(node(right, 'cross') + '>' + node(left, 'beat')));
-    const crossKey = regions.innerKey('cross', 'beat', true);
-    const loose = regions.toggleInnerLink(spinal.document, spinal.organId, crossKey);
-    model.validateDocument(loose);
-    assert.ok(!regions.routedLinks(loose, sites).some(l => l.key === crossKey));
+    assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key),
+                     [ 'tectum', 'circuit', 'rhythm', 'teaching' ]);
+    const site = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side < 0);
+    const placed = model.addOrgan(model.newDocument('Schaltzentrum'), 'circuit', sites,
+                                  geometry.sitePoint(site, 'nerve'));
+    const left = model.findOrgan(placed.document, placed.organId),
+          right = model.findOrgan(placed.document, left.pair);
+    assert.ok(right && left.side === -right.side);
+    assert.deepEqual(left.centers.map(c => [c.node, c.port]), [ [ 'command', 'both' ] ]);
+    const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
+    const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
+    assert.ok(regions.routedLinks(compared, sites)
+                  .some(l => l.from === node(compared, left.id, 'cross') &&
+                             l.to === node(compared, right.id, 'command')));
+    const crossKey = regions.innerKey('cross', 'command', true);
+    const cut = regions.toggleInnerLink(compared, left.id, crossKey);
+    assert.ok(!regions.routedLinks(cut, sites).some(l => l.key === crossKey));
     assert.equal(
-        regions.routedLinks(loose, sites, true).filter(l => l.key === crossKey && l.cut).length, 2,
-        'Both sides lose the link');
-    assert.ok(regions.routedLinks(regions.toggleInnerLink(loose, left.pair, crossKey), sites)
+        regions.routedLinks(cut, sites, true).filter(l => l.key === crossKey && l.cut).length, 2);
+    assert.ok(regions.routedLinks(regions.toggleInnerLink(cut, right.id, crossKey), sites)
                   .some(l => l.key === crossKey));
-    const spinalPanels = await import('../ui/studio/view/panels.js');
-    const spinalCircuit = spinalPanels.inspector({
-      document : spinal.document,
+    const circuit = panels.inspector({
+      document : compared,
       sites,
-      selected : {kind : 'organ', id : spinal.organId},
+      selected : {kind : 'organ', id : left.id},
       multi : new Set(),
       camera : {zoom : 1, x : 560, y : 365},
       tool : 'select',
@@ -349,109 +333,55 @@ function semanticFingerprint(source) {
       wireScope : 'all',
       contactView : 'design'
     });
-    assert.match(spinalCircuit, /aid-circuit-link crossing inhibits[^>]*url\(#aid-circuit-bar\)/);
-    const movedSpinal = model.moveOrgan(spinal.document, spinal.organId, sites, {x : 700, y : 420});
-    assert.ok(movedSpinal, 'A region can be moved');
-    const movedLeft = model.findOrgan(movedSpinal, spinal.organId);
-    assert.equal(movedLeft.region.site, movedLeft.centers[0].site);
-    model.validateDocument(regions.settleRegions(movedSpinal, sites));
-    const faster = regions.updateRegion(spinal.document, spinal.organId, {beat : 2}, sites);
-    assert.ok(model.findOrgan(faster, spinal.organId).centers[0].tau < left.centers[0].tau,
-              'A faster beat shortens the rhythm');
+    assert.match(circuit, /aid-circuit-link crossing inhibits[^>]*url\(#aid-circuit-bar\)/);
+    const tuned = regions.updateRegion(compared, left.id, {time : 2, effect : 1}, sites);
+    assert.ok(model.findOrgan(tuned, left.id).centers[0].sign < 0);
+    assert.equal(model.findOrgan(tuned, right.id).centers[0].tau, 1);
+    const moved = model.moveOrgan(placed.document, left.id, sites, {x : 700, y : 420});
+    assert.ok(moved);
+    assert.equal(model.findOrgan(moved, left.id).region.site,
+                 model.findOrgan(moved, left.id).centers[0].site);
+    const another = model.addOrgan(placed.document, 'circuit', sites, {x : 730, y : 335});
+    assert.ok(another && another.organId !== left.id);
+    const independent = regions.updateRegion(another.document, another.organId, {time : 0}, sites);
+    assert.deepEqual(model.findOrgan(independent, left.id), left);
+    const middle = sites.find(s => s.zone === 1 && !s.outer && s.w === 0);
+    const central = model.addOrgan(model.newDocument('Mittig'), 'circuit', sites,
+                                   geometry.sitePoint(middle, 'nerve'));
+    assert.equal(model.findOrgan(central.document, central.organId).pair, null);
+    assert.equal(model.findOrgan(central.document, central.organId).side, 0);
+    const noise = model.findOrgan(central.document, central.organId)
+                      .centers[0]
+                      .receptors[HORMONE_EFFECT.rhythm];
+    assert.equal(noise.substance, HORMONES.levels,
+                 'Developmental rhythm responds to bodily maturity');
+    assert.ok(noise.baseline > 0 && noise.sensitivity < 0);
+    const nosed = model.addOrgan(placed.document, 'nose', sites, {x : 185, y : 318});
+    const smelling = model.addWire(nosed.document, nosed.organId, left.id, 'same', sites);
+    const muscle = model.addOrgan(smelling.document, 'muscle', sites, {x : 800, y : 300});
+    const driven = model.addWire(muscle.document, left.id, muscle.organId, 'same', sites);
+    const links = regions.routedLinks(driven.document, sites);
+    assert.ok(links.some(l => l.from === nosed.organId && l.to === left.centers[0].id));
+    assert.ok(links.some(l => l.from === left.centers[0].id && l.to === muscle.organId));
     const allCentersOf = doc => model.allCenters(doc).length;
-    const regionPlan = model.compileDocument(spinal.document, sites);
-    assert.equal(regionPlan.groups.length, 6);
-    const nosed = model.addOrgan(model.newDocument('Riechen'), 'nose', sites, {x : 185, y : 318});
-    const bulbSite = sites.find(s => s.zone === 1 && !s.outer && s.w > 0);
-    const bulb = model.addOrgan(nosed.document, 'olfactory', sites, geometry.sitePoint(bulbSite));
-    assert.ok(bulb, 'The olfactory bulb can be placed');
-    const smelling = model.connectSelections(bulb.document, {kind : 'organ', id : nosed.organId},
-                                             {kind : 'organ', id : bulb.organId});
-    const bulbLeft = model.findOrgan(smelling.document, bulb.organId),
-          bulbRight = model.findOrgan(smelling.document, bulbLeft.pair);
-    const smellLinks = regions.routedLinks(smelling.document, sites);
-    const bulbNode = (organ, key) => organ.centers.find(c => c.node === key).id;
-    assert.ok(
-        smellLinks.some(l => l.from === nosed.organId && l.to === bulbNode(bulbLeft, 'gather')));
-    assert.ok(smellLinks.some(l => l.from === bulbNode(bulbLeft, 'compare') &&
-                                   l.to === bulbNode(bulbRight, 'out')));
-    const directSmell = regions.updateRegion(smelling.document, bulb.organId, {compare : 0}, sites);
-    const directBulb = model.findOrgan(directSmell, bulb.organId);
-    assert.deepEqual(directBulb.centers.map(c => [c.node, c.port]), [ [ 'gather', 'both' ] ]);
-    const smellMuscle = model.addOrgan(directSmell, 'muscle', sites, {x : 800, y : 300});
-    const smellMotor =
-        model.addWire(smellMuscle.document, bulb.organId, smellMuscle.organId, 'same', sites);
-    const directSmellLinks = regions.routedLinks(smellMotor.document, sites);
-    assert.ok(
-        directSmellLinks.some(l => l.from === nosed.organId && l.to === directBulb.centers[0].id));
-    assert.ok(directSmellLinks.some(l => l.from === directBulb.centers[0].id &&
-                                         l.to === smellMuscle.organId));
-    const hind = model.addOrgan(model.newDocument('Flucht'), 'hindbrain', sites,
-                                geometry.sitePoint(bulbSite));
-    const hindLeft = model.findOrgan(hind.document, hind.organId),
-          hindRight = model.findOrgan(hind.document, hindLeft.pair);
-    assert.deepEqual(hindLeft.centers.map(c => c.node), [ 'command', 'cross' ]);
-    assert.ok(regions.routedLinks(hind.document, sites)
-                  .some(l => l.from === bulbNode(hindLeft, 'cross') &&
-                             l.to === bulbNode(hindRight, 'command')));
-    const touchy = regions.updateRegion(hind.document, hind.organId, {threshold : 0}, sites);
-    assert.ok(bulbNode(hindLeft, 'command') &&
-              model.findCenter(touchy, bulbNode(hindLeft, 'command')).center.threshold <
-                  model.findCenter(hind.document, bulbNode(hindLeft, 'command')).center.threshold);
-    const feeding =
-        regions.updateRegion(hind.document, hind.organId, {compare : 0, rhythm : 1}, sites);
-    for (const id of [hindLeft.id, hindRight.id]) {
-      const half = model.findOrgan(feeding, id);
-      assert.deepEqual(half.centers.map(c => c.node), [ 'command' ]);
-      assert.ok(half.centers.every(c => c.pace === .5),
-                'The feeding relay can develop with its own weak rhythm');
+    for (const definition of ORGANS.filter(o => o.category === 'regions')) {
+      const home =
+          sites.find(s => !s.outer && s.w > 0 && definition.centers[0].zones.includes(s.zone));
+      const r = model.addOrgan(model.newDocument(definition.key), definition.key, sites,
+                               geometry.sitePoint(home, 'nerve'));
+      assert.ok(r);
+      const o = model.findOrgan(r.document, r.organId);
+      assert.equal(o.centers.length, 1, 'A default region contains one population');
+      assert.equal(!!o.pair, definition.scope === 'side');
+      model.compileDocument(r.document, sites);
     }
-    const feedingLinks = regions.routedLinks(feeding, sites);
-    assert.equal(feedingLinks.length, 0,
-                 'The feeding reflex needs no extra relay or opposing inhibition');
-    const reflexNose = model.addOrgan(feeding, 'nose', sites, {x : 185, y : 318});
-    const feedingNose =
-        model.addWire(reflexNose.document, reflexNose.organId, hind.organId, 'same', sites);
-    const feedingMuscle = model.addOrgan(feedingNose.document, 'muscle', sites, {x : 800, y : 300});
-    assert.ok(feedingMuscle);
-    const feedingMotor =
-        model.addWire(feedingMuscle.document, hind.organId, feedingMuscle.organId, 'same', sites);
-    const reflexLinks = regions.routedLinks(feedingMotor.document, sites);
-    assert.ok(reflexLinks.some(l => l.from === reflexNose.organId &&
-                                    l.to === bulbNode(hindLeft, 'command')));
-    assert.ok(reflexLinks.some(l => l.from === bulbNode(hindLeft, 'command') &&
-                                    l.to === feedingMuscle.organId),
-              'The same reflex population accepts the cue and drives the muscle');
-    for (const region of ORGANS.filter(o => o.category === 'regions')) {
-      const home = sites.find(s => !s.outer && s.w > 0 && region.centers[0].zones.includes(s.zone));
-      const placed = model.addOrgan(model.newDocument(region.key), region.key, sites,
-                                    geometry.sitePoint(home));
-      assert.ok(placed, region.key + ' can be placed');
-      const organ = model.findOrgan(placed.document, placed.organId);
-      assert.equal(organ.centers.length, regions.regionPlan(placed.document, organ).nodes.length,
-                   region.key + ' places every planned population');
-      assert.ok(organ.centers.length && organ.centers.every(c => c.node), region.key);
-      assert.equal(!!organ.pair, region.scope === 'side', region.key + ' pairs as it should');
-      assert.ok(model.compileDocument(placed.document, sites).groups.length >=
-                organ.centers.length);
-    }
-    const balanced =
-        model.addOrgan(model.newDocument('Gleichgewicht'), 'lateral', sites, {x : 573, y : 300});
-    const cerebellumSite = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side === -1);
-    const cerebellum =
-        model.addOrgan(balanced.document, 'cerebellum', sites, geometry.sitePoint(cerebellumSite));
-    const steady =
-        model.connectSelections(cerebellum.document, {kind : 'organ', id : balanced.organId},
-                                {kind : 'organ', id : cerebellum.organId});
-    const steadyLinks =
-        regions.routedLinks(steady.document, sites).filter(l => l.wire.id === steady.wireId);
-    assert.ok(
-        steadyLinks.length &&
-        steadyLinks.every(l => model.findCenter(steady.document, l.to).center.node === 'smooth'));
-    let wired = model.addOrgan(spinal.document, 'eye', sites, {x : 345, y : 290}).document;
+    let wired =
+        model.addOrgan(model.newDocument('Sehen'), 'eye', sites, {x : 345, y : 290}).document;
     const tectumSite = sites.find(s => s.zone === 1 && !s.outer);
     const tectum = model.addOrgan(wired, 'tectum', sites, geometry.sitePoint(tectumSite));
     assert.ok(tectum, 'The optic tectum can be placed');
+    tectum.document = regions.updateRegion(tectum.document, tectum.organId,
+                                           {resolution : 3, contrast : 1}, sites);
     wired = tectum.document;
     const eyeOrgan = wired.organs.find(o => o.type === 'eye');
     const own = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
@@ -516,11 +446,12 @@ function semanticFingerprint(source) {
     const plan = model.compileDocument(connected.document, sites);
     assert.equal(plan.groups.length, allCentersOf(connected.document));
     {
-      let tried = 0;
+      const projections = new Set();
       const pairedTypes = ORGANS.filter(o => !o.fixed && o.category !== 'internal').map(o => o.key);
       const role = type => ORGAN_BY_KEY[type].category === 'regions' ? 'nerve' : '';
       const leftOf = type => {
-        const site = sites.find(s => s.side < 0 && eligible(ORGAN_BY_KEY[type].centers[0], s));
+        const site = sites.find(s => s.side < 0 && !geometry.onMidline(s) &&
+                                     eligible(ORGAN_BY_KEY[type].centers[0], s));
         return site && model.addOrgan(model.newDocument('Seiten'), type, sites,
                                       geometry.sitePoint(site, role(type)));
       };
@@ -529,7 +460,7 @@ function semanticFingerprint(source) {
           const first = leftOf(a);
           const site =
               first &&
-              sites.find(s => s.side < 0 &&
+              sites.find(s => s.side < 0 && !geometry.onMidline(s) &&
                               !model.allCenters(first.document).some(c => c.site === s.id) &&
                               eligible(ORGAN_BY_KEY[b].centers[0], s));
           const second =
@@ -542,7 +473,7 @@ function semanticFingerprint(source) {
             const wired = model.addWire(second.document, from.id, to);
             if (!wired)
               continue;
-            tried++;
+            projections.add(a + '>' + b);
             const sideOf = id => model.organOf(wired.document, id).side;
             assert.equal(wired.document.wires.at(-1).pairing, same ? 'same' : 'crossed',
                          a + '>' + b);
@@ -552,7 +483,9 @@ function semanticFingerprint(source) {
                       a + '>' + b + ' joins the sides as drawn');
           }
         }
-      assert.ok(tried > 40, 'Many pairs of organs tried: ' + tried);
+      for (const route of ['eye>tectum', 'nose>circuit', 'circuit>muscle', 'tectum>muscle',
+                           'circuit>circuit'])
+        assert.ok(projections.has(route), route + ' exercises both directions across a pair');
     }
     const twin = model.findOrgan(wired, tectumLeft.pair);
     const across = model.addWire(wired, eyeOrgan.id, twin.centers[0].id);
@@ -583,11 +516,18 @@ function semanticFingerprint(source) {
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
-    for (const {key} of (await import('../ui/studio/model/organs.js')).MODULES) {
-      const placed = model.placeModule(model.newDocument(key), key, sites, {x : 345, y : 290});
-      assert.ok(placed, key + ' can be placed');
-      assert.ok(!model.oneSided(placed.document, sites, placed.document.assemblies[0]), key);
-    }
+    for (const [key, motor] of [[ 'vision-steering', MOTOR_KIND.turn ],
+                                [ 'scent-suction', MOTOR_KIND.suction ],
+                                [ 'rhythm-drive', MOTOR_KIND.forward ]])
+      for (const position of [{x : 345, y : 290}, {x : 560, y : 365}, {x : 850, y : 420}]) {
+        const placed = model.placeModule(model.newDocument(key), key, sites, position);
+        assert.ok(placed, key + ' can be placed');
+        assert.ok(!model.oneSided(placed.document, sites, placed.document.assemblies[0]), key);
+        const muscles = placed.document.organs.filter(o => o.type === 'muscle');
+        assert.equal(muscles.length, 2, key + ' has both muscle sides');
+        assert.ok(muscles.every(o => organFunction(o, sites) === motor),
+                  key + ' always drives the intended muscle function');
+      }
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
     assert.equal(steering.document.assemblies.length, 1);
     assert.ok(steering.document.wires.every(w => model.findOrgan(steering.document, w.from) &&
@@ -877,7 +817,10 @@ function semanticFingerprint(source) {
   const hormoneScene = views.fishScene({...state, tool : 'hormone', focusSubstance : 0});
   assert.match(hormoneScene, /aid-hormone-producer/);
   assert.match(hormoneScene, /aid-hormone-body/);
-  assert.match(panels.libraryOf(state).html, /title="Sehzentrum: [^"]+"[^>]*>.*?Tectum/s);
+  const sightTile =
+      panels.libraryOf(state).html.split('data-drag-value="tectum"')[1].split('</button>')[0];
+  assert.match(sightTile, /title="Sehzentrum:/);
+  assert.doesNotMatch(sightTile, /Tectum/);
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
   assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
                    [ 'Flossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
@@ -1088,31 +1031,19 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
-  const examplePallium = exampleStudio.state.document.organs.find(o => o.type === 'pallium');
-  const learning = examplePallium.centers.filter(c => c.stream);
-  assert.deepEqual(learning.map(c => c.stream), [ 'olfactory', 'tectum' ]);
-  assert.ok(learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
-  const teacherPlaced =
-      model.addNeuron(exampleStudio.state.document, 'modulate', sites,
-                      geometry.sitePoint(sites.find(x => x.id === learning[0].site)));
-  const teacherWired =
-      model.addWire(teacherPlaced.document, teacherPlaced.centerId, learning[0].id);
-  const taughtPallium = regionModel.settleRegions(teacherWired.document, sites)
-                            .organs.find(o => o.id === examplePallium.id);
-  assert.deepEqual(taughtPallium.centers.filter(c => c.stream).map(c => c.stream),
-                   [ 'olfactory', 'tectum' ]);
+  const exampleCircuit = exampleStudio.state.document.organs.find(o => o.type === 'circuit');
+  const learning = exampleStudio.state.document.organs.filter(o => o.region)
+                       .flatMap(o => o.centers)
+                       .filter(model.isLearner);
+  assert.ok(learning.length && learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
   const localTeacher =
       model.addOrgan(exampleStudio.state.document, 'teaching', sites, {x : 330, y : 365});
-  assert.ok(localTeacher);
   const taughtByRegion =
-      model.addWire(localTeacher.document, localTeacher.organId, examplePallium.id, 'both', sites);
+      model.addWire(localTeacher.document, localTeacher.organId, exampleCircuit.id, 'both', sites);
   const localTaught = regionModel.settleRegions(taughtByRegion.document, sites);
-  assert.deepEqual(
-      model.findOrgan(localTaught, examplePallium.id)
-          .centers.filter(c => c.stream)
-          .map(c => c.stream),
-      [ 'olfactory', 'tectum' ],
-      'A whole teaching region supplies modulation rather than another sensory stream');
+  assert.ok(!regionModel.fedBy(localTaught, model.findOrgan(localTaught, exampleCircuit.id))
+                 .some(o => o.id === localTeacher.organId),
+            'Local teaching is modulation rather than another sensory input');
   const rhythm = model.addOrgan(localTaught, 'rhythm', sites, {x : 300, y : 390});
   const rhythmOrgan = model.findOrgan(rhythm.document, rhythm.organId);
   assert.deepEqual(rhythmOrgan.centers.map(c => [c.key, c.port, c.copies, c.tau]),
@@ -1144,9 +1075,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.match(panels.inspector({
     ...state,
     document : exampleStudio.state.document,
-    selected : {kind : 'organ', id : examplePallium.id}
+    selected : {kind : 'organ', id : exampleCircuit.id}
   }),
-               /Für jede Art von Eingang/);
+               /data-region-setting="time"/);
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
   const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
                                               {resolution : 6, colours : 1}, sites);
@@ -1166,7 +1097,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       [
         ...new Set(exampleStudio.state.document.organs.filter(o => o.region).map(o => o.type))
       ].sort(),
-      [ 'hindbrain', 'hypothalamus', 'olfactory', 'pallium', 'spinal', 'tectum' ]);
+      [ 'circuit', 'rhythm', 'teaching', 'tectum' ]);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
     cwd : root,
     input : JSON.stringify({
@@ -1253,12 +1184,12 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const optic = response.example.contacts.filter(([ from, to ]) => organOf(from).type === 'eye' &&
                                                                    organOf(to).type === 'tectum');
   assert.ok(optic.length &&
-            optic.every(([ from, to ]) => organOf(from).side * organOf(to).side < 0));
+            optic.every(([ from, to ]) => organOf(from).side * organOf(to).side > 0));
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
-  for (const [kind, sources] of [[ MOTOR_KIND.aggression, [ 'pallium', 'tectum' ] ],
-                                 [ MOTOR_KIND.suction, [ 'olfactory', 'pallium' ] ]]) {
+  for (const [kind, sources] of [[ MOTOR_KIND.aggression, [ 'rhythm' ] ],
+                                 [ MOTOR_KIND.suction, [ 'circuit' ] ]]) {
     const muscles =
         exampleDoc.organs.filter(o => o.type === 'muscle' && organFunction(o, sites) === kind);
     assert.ok(muscles.length);
@@ -1605,9 +1536,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.deepEqual(new Set(testisOrgan.centers.filter(c => c.key === key)
                                    .map(c => geometry.findSite(sites, c.site).side)),
                        new Set([ -1, 1 ]), 'Each gonad function starts on both anatomical sides');
-    const gonadRhythm = model.addOrgan(testis.document, 'spinal', sites, {x : 700, y : 330});
+    const driverSite = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side < 0);
+    const gonadDriver =
+        model.addOrgan(testis.document, 'circuit', sites, geometry.sitePoint(driverSite, 'nerve'));
     const gonadWire =
-        model.addWire(gonadRhythm.document, gonadRhythm.organId, testis.organId, 'same', sites);
+        model.addWire(gonadDriver.document, gonadDriver.organId, testis.organId, 'same', sites);
     for (const [pairing, sign] of [[ 'same', 1 ], [ 'crossed', -1 ]]) {
       const wired = model.updateWire(gonadWire.document, gonadWire.wireId, {pairing});
       const plan = model.compileDocument(wired, sites), centers = model.allCenters(wired);
@@ -1936,9 +1869,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                           REGION_HIDDEN * Math.min(area(a), area(b)),
                       a.type + ' and ' + b.type + ' do not hide each other');
     }
-    const torus = model.addOrgan(model.newDocument('Torus'), 'torus', sites, onLobe);
-    const cluster = brainPlaces.organLocation(model.findOrgan(torus.document, torus.organId), sites,
-                                              torus.document);
+    const circuit = model.addOrgan(model.newDocument('Schaltzentrum'), 'circuit', sites, onLobe);
+    const cluster = brainPlaces.organLocation(model.findOrgan(circuit.document, circuit.organId),
+                                              sites, circuit.document);
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
     const effectorsView = await import('../ui/studio/view/effectors.js');
     const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
@@ -1961,47 +1894,55 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                   .center.receptors[HORMONE_EFFECT.excitation]
                   .sensitivity > 0);
     const exampleModel = await import('../ui/studio/model/example.js');
-    const exampleDoc =
-        exampleModel.exampleDocument({fish : 'B', growth : 'W', reward : 'F'}, sites, sitesResult);
+    const exampleDoc = exampleModel.exampleDocument({fish : 'B', growth : 'W'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
-    assert.equal(exampleDoc.substances.length, 2);
-    const pallium = exampleDoc.organs.find(o => o.type === 'pallium');
+    assert.equal(exampleDoc.substances.length, 1);
+    const relay = exampleDoc.organs.find(o => o.type === 'circuit');
     const taught = (doc, organ) => model.findOrgan(doc, organ.id)
                                        .centers.filter(model.isLearner)
                                        .map(c => c.receptors[HORMONE_EFFECT.teaching]);
-    const untaught = model.teachOrgan(exampleDoc, pallium.id, null);
-    assert.ok(taught(untaught, pallium).every(r => !r.active));
+    const untaught = model.teachOrgan(exampleDoc, relay.id, null);
+    assert.ok(taught(untaught, relay).every(r => !r.active));
     const regionModel = await import('../ui/studio/model/regions.js');
-    const settled = regionModel.updateRegion(exampleDoc, pallium.id, {}, sites);
-    const learner = model.findOrgan(settled, pallium.id).centers.find(model.isLearner);
+    const settled = regionModel.updateRegion(exampleDoc, relay.id, {}, sites);
+    const learner = model.findOrgan(settled, relay.id).centers.find(model.isLearner);
     const restyled = regionModel.updateRegion(
-        model.updateCenter(settled, learner.id, {qwidth : .7}), pallium.id, {style : 0}, sites);
+        model.updateCenter(settled, learner.id, {qwidth : .7}), relay.id, {time : 2}, sites);
     const restyledLearner = model.findCenter(restyled, learner.id).center;
-    assert.equal(restyledLearner.qwidth, .7, 'A new learning style keeps a hand-tuned rate');
-    assert.notEqual(restyledLearner.mode, learner.mode);
-    const byGrowth = model.teachOrgan(untaught, pallium.id, 0);
-    assert.ok(taught(byGrowth, pallium).length > 0 &&
-              taught(byGrowth, pallium).every(r => r.active && r.substance === 0));
+    assert.equal(restyledLearner.qwidth, .7,
+                 'Changing the cell time keeps a hand-tuned learning rate');
+    assert.equal(restyledLearner.tau, 1);
+    const byGrowth = model.teachOrgan(untaught, relay.id, 0);
+    assert.ok(taught(byGrowth, relay).length > 0 &&
+              taught(byGrowth, relay).every(r => r.active && r.substance === 0));
     const systems = await import('../ui/studio/model/systems.js');
     const organsModel = await import('../ui/studio/model/organs.js');
-    assert.equal(systems.systemMissing(exampleDoc, 'reward'), 'needs');
+    assert.equal(systems.systemMissing(exampleDoc, 'reward'), null);
     assert.equal(systems.systemMissing(exampleDoc, 'growth'), 'needs');
-    assert.equal(
-        systems.placeSystem(exampleDoc, 'reward', sites, sitesResult, {x : 500, y : 400}, 'S'),
-        null, 'A system never takes over cells already answering a substance');
+    const rewarded =
+        systems.placeSystem(exampleDoc, 'reward', sites, sitesResult, {x : 500, y : 400}, 'S');
+    assert.ok(rewarded, 'A reward can teach cells whose local learning is already active');
+    assert.deepEqual(rewarded.document.wires.filter(w => w.from === relay.id || w.to === relay.id),
+                     exampleDoc.wires.filter(w => w.from === relay.id || w.to === relay.id),
+                     'A new hormone circuit preserves the existing sensory wiring');
+    assert.deepEqual(
+        model.findOrgan(rewarded.document, relay.id).centers[0].receptors[HORMONE_EFFECT.learning],
+        relay.centers[0].receptors[HORMONE_EFFECT.learning]);
+    const rewardHub = rewarded.document.organs.filter(o => o.type === 'circuit').at(-1);
+    assert.notEqual(rewardHub.id, relay.id);
     const bare = model.newDocument('Regelkreis');
     const muscled = model.addOrgan(bare, 'muscle', sites, {x : 890, y : 350}).document;
     assert.equal(systems.systemMissing(muscled, 'alarm'), null);
     const alarm =
         systems.placeSystem(muscled, 'alarm', sites, sitesResult, {x : 500, y : 400}, 'S');
     const types = alarm.document.organs.map(o => o.type);
-    assert.ok([ 'pain', 'hindbrain', 'gland' ].every(type => types.includes(type)));
+    assert.ok([ 'pain', 'circuit', 'gland' ].every(type => types.includes(type)));
     assert.equal(alarm.document.substances.length, 1);
     assert.equal(systems.systemMissing(alarm.document, 'alarm'), 'needs');
     const strong = alarm.document.organs.find(o => o.type === 'muscle').centers[0];
-    const strength = strong.receptors[HORMONE_EFFECT.output];
+    const strength = strong.receptors[HORMONE_EFFECT.excitation];
     assert.equal(strength.substance, alarm.substance);
-    assert.equal(model.effectDirection(HORMONE_EFFECT.output, strength), 1,
+    assert.equal(model.effectDirection(HORMONE_EFFECT.excitation, strength), 1,
                  'The alarm substance makes the muscles stronger');
     const chosen =
         {key : 'relay', role : 'nerve', sign : 1, mode : .9, qwidth : .35, receptors : []};
@@ -2009,6 +1950,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
               'An adaptive relay participates in learning');
     assert.ok(model.isLearner({...chosen, mode : 0}) && model.isLearner({...chosen, qwidth : 0}),
               'Every inner cell participates in development, including the smallest learning rate');
+    const constant = model.updateReceptor(alarm.document, strong.id, HORMONE_EFFECT.output,
+                                          {active : 1, baseline : 1, sensitivity : 0});
+    assert.ok(!model.boundEffects(model.findCenter(constant, strong.id).center, 0, sitesResult)
+                   .includes(HORMONE_EFFECT.output),
+              'A constant gain creates no hormone connection');
     assert.ok(alarm.document.wires.some(
         w => w.to === alarm.organId ||
              w.to === model.findOrgan(alarm.document, alarm.organId).pair));

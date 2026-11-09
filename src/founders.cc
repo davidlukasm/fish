@@ -57,12 +57,8 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
         chosen = &part;
     }
   std::vector<Point> plant_anchors;
-  const bool leaves = std::any_of(edible_plants.begin(), edible_plants.end(), [](const auto &p) {
-    return p.second->organ_kind >= plant_organ::leaf;
-  });
   for (const auto &[patch, part] : edible_plants)
-    if (!leaves || part->organ_kind >= plant_organ::leaf)
-      plant_anchors.push_back({part->x, part->y});
+    plant_anchors.push_back({part->x, part->y});
   for (std::size_t i = plant_anchors.size(); i > 1; --i)
     std::swap(plant_anchors[i - 1], plant_anchors[rng.index(i)]);
   const auto first_plant = plant_anchors.empty() ? 0 : rng.index(plant_anchors.size());
@@ -149,6 +145,12 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
       if (!spawn(group[line], positions[line].x, positions[line].y, fish_origin::founder, 0, 0,
                  energies[line]))
         throw std::runtime_error("Start-Founder abgewiesen");
+      // Resolve each founder's individual anatomy before reserving the next one. The cells
+      // still develop and learn in the egg; unresolved max_nodes reservations truncated starts.
+      fish.back().genome.compile();
+      if (connection_storage(*this) > neural_budget)
+        throw std::runtime_error(
+            "Startpopulation überschreitet das Speicherbudget für Nervenkontakte.");
       if (headings[line]) {
         fish.back().body.angle = *headings[line];
         plant_starters.insert(fish.back().id);

@@ -69,14 +69,7 @@ export const STUDIO_ICON = Object.freeze({
   sperm : ORGAN_ICONS[MOTOR_TISSUE.sperm],
   gland : ORGAN_ICONS[MOTOR_TISSUE.gland],
   tectum : 'M4 12c3-5 13-5 16 0-3 5-13 5-16 0zM12 10a2 2 0 1 0 .01 0M12 3v3M12 18v3',
-  olfactory : 'M5 9c2-2 4 2 6 0s4 2 6 0M5 14c2-2 4 2 6 0s4 2 6 0M19 7v9',
-  hindbrain : 'M12 21v-6a7 7 0 0 1 7-7M16 5l3 3-3 3M12 15a7 7 0 0 0-7-7M8 5L5 8l3 3',
-  spinal : 'M12 3v18M8 6h8M8 10h8M8 14h8M8 18h8',
+  circuit : 'M4 7h5v10H4zM15 7h5v10h-5zM9 10h6M9 14h6M2 12h2M20 12h2',
   rhythm : 'M3 12h3l3-7 6 14 3-7h3',
-  teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8',
-  pallium : 'M12 4l2.2 4.8 5.3.6-3.9 3.6 1 5.2-4.6-2.6-4.6 2.6 1-5.2-3.9-3.6 5.3-.6z',
-  torus : 'M4 10c3-3 5 3 8 0s5 3 8 0M4 16c3-3 5 3 8 0s5 3 8 0M17 3l3 3-3 3',
-  cerebellum :
-      'M4 16h16M5 16c0-5 3-8 7-8s7 3 7 8M8 16c0-3 2-5 4-5s4 2 4 5M11 16c0-1 .5-2 1-2s1 1 1 2',
-  hypothalamus : 'M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9zM12 10v5M10 13l2 2 2-2'
+  teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8'
 });

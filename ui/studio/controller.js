@@ -624,11 +624,7 @@ export class OrganStudio {
     }
   }
   example() {
-    const names = {
-      fish : label('app.example'),
-      growth : label('systems.growth.substance'),
-      reward : label('systems.reward.substance')
-    };
+    const names = {fish : label('app.example'), growth : label('systems.growth.substance')};
     this.loadFish(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
   lifePhase(id, phase) {

@@ -1,5 +1,5 @@
 import {isModulator, NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
-import {HORMONE_EFFECT} from '../../schema.js';
+import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
@@ -64,6 +64,8 @@ function tectumPlan(doc, organ) {
         node : 'map' + band + (region.colours ? '.' + type : ''),
         preset : 'relay',
         port : 'in',
+        effects : DEVELOPING_RELAY,
+        set : {...CIRCUIT_LEARNING, copies : 8, pace : .6},
         band : [ view.lo + band * step, view.lo + (band + 1) * step ],
         type : region.colours ? type : null
       });
@@ -79,11 +81,23 @@ function tectumPlan(doc, organ) {
       most : {resolution : bands}
     };
   }
-  nodes.push({node : 'out', preset : 'relay', port : 'out'});
+  nodes.push({
+    node : 'out',
+    preset : 'relay',
+    port : 'out',
+    effects : DEVELOPING_RELAY,
+    set : {...CIRCUIT_LEARNING, copies : 8, pace : .6}
+  });
   const inner = maps.map(map => [map, 'out']);
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
   if (cells) {
-    nodes.push({node : 'inhibit', preset : 'inhibit', port : 'none', set : {copies : cells}});
+    nodes.push({
+      node : 'inhibit',
+      preset : 'inhibit',
+      port : 'none',
+      effects : DEVELOPING_RELAY,
+      set : {...CIRCUIT_LEARNING, copies : cells, pace : .6}
+    });
     inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }
   const route = (sites, cell, field) => {
@@ -101,135 +115,56 @@ function tectumPlan(doc, organ) {
   return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
 }
 
-const BEAT_TAU = Object.freeze([ .75, .5, .25 ]), STROKE_CELLS = Object.freeze([ 2, 4, 7 ]);
-function spinalPlan(doc, organ) {
-  const region = organ.region;
-  const nodes = [
-    {
-      node : 'beat',
-      preset : 'pacemaker',
-      port : 'out',
-      set : {copies : STROKE_CELLS[region.stroke], tau : BEAT_TAU[region.beat]}
-    },
-    {node : 'cross', preset : 'inhibit', port : 'none'}
-  ];
-  const inner = [ [ 'beat', 'cross' ] ];
-  if (region.steering) {
-    nodes.push({node : 'steer', preset : 'relay', port : 'in'});
-    inner.push([ 'steer', 'beat' ]);
+const ACTIVE_LEARNING = Object.freeze({
+  [HORMONE_EFFECT.learning] : {active : 1, baseline : 1},
+  [HORMONE_EFFECT.competition] : {active : 1, baseline : 1}
+});
+const DEVELOPING_RELAY = Object.freeze({
+  ...ACTIVE_LEARNING,
+  [HORMONE_EFFECT.rhythm] : {
+    active : 1,
+    baseline : 1,
+    sensitivity : -2,
+    half : .2,
+    substance : HORMONES.levels,
+    steepness : 3
   }
-  return {nodes, inner, cross : [ [ 'cross', 'beat' ] ], route : () => null, view : null};
-}
-
-const COMPARE_CELLS = Object.freeze([ 0, 2, 5 ]);
-function bulbPlan(doc, organ) {
-  const region = organ.region;
-  if (!region.compare)
-    return {
-      nodes : [ {node : 'gather', preset : 'relay', port : 'both'} ],
-      inner : [],
-      cross : [],
-      route : () => null,
-      view : null
-    };
-  const nodes = [
-    {node : 'gather', preset : 'relay', port : 'in'}, {node : 'out', preset : 'relay', port : 'out'}
-  ];
-  const inner = [ [ 'gather', 'out' ] ], cross = [];
-  const cells = COMPARE_CELLS[region.compare] ?? 0;
-  if (cells) {
-    nodes.push({node : 'compare', preset : 'inhibit', port : 'none', set : {copies : cells}});
-    inner.push([ 'gather', 'compare' ]);
-    cross.push([ 'compare', 'out' ]);
-  }
-  return {nodes, inner, cross, route : () => null, view : null};
-}
-const COMMAND_THRESHOLD = Object.freeze([ 0, .5, .8 ]), COMMAND_TAU = Object.freeze([ .1, .4 ]);
-const ALARM_COMPARE = Object.freeze([ 0, 3, 5 ]), ALARM_RHYTHM = Object.freeze([ -1, .5, 1 ]);
-function hindbrainPlan(doc, organ) {
-  const region = organ.region;
-  const pace = ALARM_RHYTHM[region.rhythm];
+});
+const CIRCUIT_LEARNING =
+    Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
+const CIRCUIT_THRESHOLD = Object.freeze([ -.5, 0, .5 ]),
+      CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 3, 6 ]),
+      CIRCUIT_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
+function circuitPlan(doc, organ) {
+  const r = organ.region;
   const nodes = [ {
     node : 'command',
-    preset : 'relay',
+    preset : CIRCUIT_PRESET[r.effect],
     port : 'both',
-    set : {threshold : COMMAND_THRESHOLD[region.threshold], tau : COMMAND_TAU[region.tempo], pace}
+    effects : DEVELOPING_RELAY,
+    set : {
+      ...CIRCUIT_LEARNING,
+      copies : 8,
+      threshold : CIRCUIT_THRESHOLD[r.threshold],
+      tau : CIRCUIT_TIME[r.time],
+      pace : .6
+    }
   } ];
   const inner = [], cross = [];
-  const copies = ALARM_COMPARE[region.compare];
-  if (copies) {
-    nodes.push({node : 'cross', preset : 'inhibit', port : 'none', set : {copies}});
+  if (organ.pair && r.compare) {
+    nodes.push({
+      node : 'cross',
+      preset : 'inhibit',
+      port : 'none',
+      effects : DEVELOPING_RELAY,
+      set : {...CIRCUIT_LEARNING, copies : CIRCUIT_COMPARE[r.compare], pace : .6}
+    });
     inner.push([ 'command', 'cross' ]);
     cross.push([ 'cross', 'command' ]);
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
-const LEARN_RATE = Object.freeze([ .2, .5, .8 ]), LEARN_STYLE = Object.freeze([ -.6, 0, .6 ]);
-const LEARN_STREAMS = 4;
-function palliumView(doc, organ) {
-  if (!organ.region.follow && organ.region.derived)
-    return organ.region.derived;
-  return {
-    streams : [...new Set(fedBy(doc, organ).map(o => o.type)) ].sort().slice(0, LEARN_STREAMS)
-  };
-}
-function palliumPlan(doc, organ) {
-  const region = organ.region, view = palliumView(doc, organ);
-  const set = {qwidth : LEARN_RATE[region.rate], mode : LEARN_STYLE[region.style]};
-  const learners = view.streams.length
-                       ? view.streams.map(stream => ({node : 'learn.' + stream, stream}))
-                       : [ {node : 'learn', stream : null} ];
-  return {
-    nodes : [
-      ...learners.map(l => ({...l, preset : 'learn', port : 'in', set})),
-      {node : 'out', preset : 'relay', port : 'out'}
-    ],
-    inner : learners.map(l => [l.node, 'out']),
-    cross : [],
-    route : () => null,
-    source : type => view.streams.includes(type) ? 'learn.' + type : null,
-    view
-  };
-}
-const SMOOTH_TAU = Object.freeze([ .2, .45, .7 ]), BRAKE_CELLS = Object.freeze([ 0, 2, 5 ]);
-function cerebellumPlan(doc, organ) {
-  const region = organ.region;
-  const nodes = [
-    {node : 'input', preset : 'relay', port : 'in'},
-    {node : 'smooth', preset : 'relay', port : 'out', set : {tau : SMOOTH_TAU[region.smoothing]}}
-  ];
-  const inner = [ [ 'input', 'smooth' ] ];
-  const cells = BRAKE_CELLS[region.brake] ?? 0;
-  if (cells) {
-    nodes.push({node : 'brake', preset : 'inhibit', port : 'none', set : {copies : cells}});
-    inner.push([ 'input', 'brake' ], [ 'brake', 'smooth' ]);
-  }
-  return {nodes, inner, cross : [], route : () => null, view : null};
-}
-const DRIVE_THRESHOLD = Object.freeze([ .6, .2, -.2 ]),
-      DRIVE_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
-function hypothalamusPlan(doc, organ) {
-  const region = organ.region;
-  return {
-    nodes : [
-      {node : 'sense', preset : 'relay', port : 'in'}, {
-        node : 'drive',
-        preset : DRIVE_PRESET[region.effect],
-        port : 'out',
-        set : {threshold : DRIVE_THRESHOLD[region.gain]}
-      }
-    ],
-    inner : [ [ 'sense', 'drive' ] ],
-    cross : [],
-    route : () => null,
-    view : null
-  };
-}
-const RHYTHM_TAU = Object.freeze([ 1, .6, .3 ]), RHYTHM_CELLS = Object.freeze([ 2, 4, 8 ]);
-const ACTIVE_LEARNING =
-    Object.freeze({[HORMONE_EFFECT.learning] : 1, [HORMONE_EFFECT.competition] : 1});
-const CIRCUIT_LEARNING =
-    Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
+const RHYTHM_TAU = Object.freeze([ 1, .6, .3 ]);
 function rhythmPlan(doc, organ) {
   return {
     nodes : [ {
@@ -237,12 +172,7 @@ function rhythmPlan(doc, organ) {
       preset : 'pacemaker',
       port : 'both',
       effects : ACTIVE_LEARNING,
-      set : {
-        ...CIRCUIT_LEARNING,
-        copies : RHYTHM_CELLS[organ.region.stroke],
-        tau : RHYTHM_TAU[organ.region.beat],
-        threshold : -.5
-      }
+      set : {...CIRCUIT_LEARNING, copies : 8, tau : RHYTHM_TAU[organ.region.beat], threshold : -.5}
     } ],
     inner : [],
     cross : [],
@@ -265,18 +195,8 @@ function teachingPlan() {
     view : null
   };
 }
-const PLANS = Object.freeze({
-  tectum : tectumPlan,
-  spinal : spinalPlan,
-  olfactory : bulbPlan,
-  hindbrain : hindbrainPlan,
-  pallium : palliumPlan,
-  torus : bulbPlan,
-  cerebellum : cerebellumPlan,
-  hypothalamus : hypothalamusPlan,
-  rhythm : rhythmPlan,
-  teaching : teachingPlan
-});
+const PLANS = Object.freeze(
+    {tectum : tectumPlan, circuit : circuitPlan, rhythm : rhythmPlan, teaching : teachingPlan});
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
@@ -302,13 +222,8 @@ export function routedLinks(doc, sites, withCut = false) {
         for (const [cell, node] of routed)
           links.push({...link, from : cell, to : regionNodeId(target, node)});
       else {
-        const type = organOf(doc, from)?.type;
-        const slot = ORGAN_BY_KEY[target.type].slots?.find(s => s.dir === 'in' && s.node &&
-                                                                s.fits.includes(type));
-        const node = plan.source?.(type) ?? slot?.node;
-        for (const to of node
-                 ? [ node ]
-                 : plan.nodes.filter(n => n.port === 'in' || n.port === 'both').map(n => n.node))
+        for (const to of plan.nodes.filter(n => n.port === 'in' || n.port === 'both')
+                 .map(n => n.node))
           links.push({...link, from, to : regionNodeId(target, to)});
       }
     }
@@ -377,7 +292,7 @@ export function settleRegions(doc, sites, pairedId = null) {
       if (!center) {
         const desc = {
           ...nerve(n.preset, NODE_CELLS, zones),
-          paired : ORGAN_BY_KEY[organ.type].scope === 'side'
+          paired : ORGAN_BY_KEY[organ.type].scope === 'side' && !ORGAN_BY_KEY[organ.type].midline
         };
         // Paired regions keep off the midline while lateral sites last; the engine's medial
         // sites still carry a side, so a full brain falls back to them.
@@ -389,8 +304,8 @@ export function settleRegions(doc, sites, pairedId = null) {
           continue;
         used.add(site.id);
         center = {...defaults(desc, site), id};
-        for (const [effect, baseline] of Object.entries(n.effects ?? {}))
-          Object.assign(center.receptors[effect], {active : 1, baseline});
+        for (const [effect, patch] of Object.entries(n.effects ?? {}))
+          Object.assign(center.receptors[effect], patch);
         const sibling = [...kept.values() ].find(c => c.key === n.preset);
         if (sibling)
           center.receptors = structuredClone(sibling.receptors);
@@ -399,7 +314,6 @@ export function settleRegions(doc, sites, pairedId = null) {
       center.port = n.port;
       center.band = n.band ?? null;
       center.type = n.type ?? null;
-      center.stream = n.stream ?? null;
       // Only a planned value that changed is set again; a hand-tuned one beside it stays.
       for (const [key, value] of Object.entries(n.set ?? {}))
         if (center.planned?.[key] !== value)

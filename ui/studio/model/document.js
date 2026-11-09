@@ -1,6 +1,6 @@
 import {clamp} from '../../units.js';
 import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
-import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, TUNING} from '../../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES, SENSE_KIND, TUNING} from '../../schema.js';
 import {planOfUnit, scentAffinities, scentTuning, unitOfPlan} from '../../tuning.js';
 import {nextPigment} from './pigment.js';
 import {
@@ -37,7 +37,7 @@ export const identifier = (kind = 'part') =>
 export const copy = object => structuredClone(object);
 
 const neutralReceptor = (effect = null) => ({
-  active : 0,
+  active : effect === HORMONE_EFFECT.output ? 1 : 0,
   baseline : effect === HORMONE_EFFECT.output ? 1 : 0,
   sensitivity : 0,
   half : .05,
@@ -188,7 +188,8 @@ export const producers = (doc, index, wheel) =>
         .flatMap(o => o.centers)
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
 export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
-    (r, effect) => r.active && wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
+    (r, effect) => r.active && r.sensitivity !== 0 &&
+                           wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
                        : []);
@@ -210,7 +211,8 @@ export const receivers = (doc, index, wheel) =>
     allCenters(doc).filter(c => boundEffects(c, index, wheel).length ||
                                 birthAffinity(c, index, wheel) >= NOTICEABLE_AFFINITY);
 export const growsWith = (doc, index, wheel) =>
-    doc.growth.active && receptorAffinity(wheel, doc.growth, index) >= NOTICEABLE_AFFINITY;
+    doc.growth.active && doc.growth.sensitivity !== 0 &&
+    receptorAffinity(wheel, doc.growth, index) >= NOTICEABLE_AFFINITY;
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
@@ -306,7 +308,7 @@ export const isChosen = (selected, organ) =>
 
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
-  const nerve = desc.role === 'nerve', N = NEW_CENTER;
+  const N = NEW_CENTER;
   return {
     id : identifier('center'),
     key : desc.key,
@@ -333,7 +335,21 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     distribution :
         {spread_physiology : 0, spread_receptors : 0, spread_development : 0, spread_contacts : 0},
     growth : {...neutralReceptor(), active : 1, baseline : 1},
-    receptors : Array.from({length : effects}, (_, effect) => neutralReceptor(effect))
+    receptors : Array.from({length : effects},
+                           (_, effect) => {
+                             const receptor = neutralReceptor(effect);
+                             if (desc.role === 'sensor' && desc.functionCode === SENSE_KIND.light &&
+                                 effect === HORMONE_EFFECT.excitation)
+                               Object.assign(receptor, {
+                                 active : 1,
+                                 baseline : 1,
+                                 sensitivity : -2,
+                                 half : .2,
+                                 substance : HORMONES.levels,
+                                 steepness : 3
+                               });
+                             return receptor;
+                           })
   };
 }
 function candidates(desc, sites, used, position, requiredSide = null, organType = '') {
@@ -427,7 +443,8 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       centerId : existing.centers[0].id,
       centerIds : existing.centers.map(c => c.id)
     };
-  const middle = isRegion({type}) && !paired && onMidline(first);
+  const middle = isRegion({type}) && onMidline(first) && (!paired || definition.midline);
+  const makePair = paired && definition.scope !== 'single' && !middle;
   const organ = {
     id : identifier('organ'),
     type,
@@ -461,11 +478,10 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   draft.organs.push(organ);
   if (organ.field && !regenerateFields(draft, sites))
     return null;
-  let result =
-      settleRegions(draft, sites, paired && definition.scope !== 'single' ? organ.id : null);
+  let result = settleRegions(draft, sites, makePair ? organ.id : null);
   if (organ.region && !findOrgan(result, organ.id).centers.length)
     return null;
-  if (paired && definition.scope !== 'single') {
+  if (makePair) {
     const mirrored = mirrorOrgan(result, organ.id, sites);
     if (!mirrored)
       return null;

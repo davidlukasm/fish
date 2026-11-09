@@ -15,13 +15,6 @@ export function centerTitle(center) {
     return t('studio.compiler.extraPotential', {n : center.index + 1});
   if (!center.node)
     return t('studio.centers.' + center.key);
-  if (center.stream)
-    return t('studio.regionNodes.learnFrom', {
-      name : t(ORGAN_BY_KEY[center.stream]?.category === 'regions'
-                   ? 'studio.regions.' + center.stream + '.term'
-                   : 'studio.organs.' + center.stream)
-                 .replace(/\u00ad/g, '')
-    });
   if (!center.band)
     return t('studio.regionNodes.' + center.node);
   const [from, to] = center.band.map(Math.round);
@@ -61,6 +54,7 @@ export const CATEGORY_TONE = Object.freeze({
   internal : '#b29bdc',
   reproduction : '#dfbc87',
   brain : '#b8c5e1',
+  regions : '#b8c5e1',
   motor : '#eaa886'
 });
 export const tone = kind => CATEGORY_TONE[ORGAN_BY_KEY[kind]?.category] ?? CATEGORY_TONE.motor;

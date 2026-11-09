@@ -84,7 +84,8 @@ export function oneSided(doc, sites, assembly) {
              !assemblyCenters(doc, assembly)
                   .some(other => findCenter(doc, other)?.center.site === mirror?.id);
     }
-    return ORGAN_BY_KEY[found.organ.type]?.scope === 'side' && !findOrgan(doc, found.organ.pair);
+    return found.organ.side && ORGAN_BY_KEY[found.organ.type]?.scope === 'side' &&
+           !findOrgan(doc, found.organ.pair);
   });
 }
 export const modulesOf = (doc, id) => doc.assemblies.filter(
@@ -302,15 +303,8 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   let draft = copy(doc);
   const organIds = [], centerByOrgan = [];
   for (const [i, kind] of module.organs.entries()) {
-    const muscleSite = kind === 'muscle'
-                           ? closestSite(ORGAN_BY_KEY.muscle.centers[0],
-                                         sites.filter(s => s.zone === module.muscleZone),
-                                         usedSites(draft), position)
-                           : null;
-    if (kind === 'muscle' && !muscleSite)
-      return null;
-    const target = muscleSite ? sitePoint(muscleSite, kind) : position;
-    const created = addOrgan(draft, kind, sites, target, i === 0 ? snapDistance : Infinity);
+    const created = addOrgan(draft, kind, sites, position, i === 0 ? snapDistance : Infinity, true,
+                             kind === 'muscle' ? module.muscleFunction : null);
     if (!created)
       return null;
     draft = created.document;
