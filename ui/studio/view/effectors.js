@@ -30,7 +30,7 @@ const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_co
 const CONTROLS =
     Object.freeze({width : 300, height : 92, track : [ 10, 290 ], rows : [ 34, 78 ], title : 14});
 const countShare = (count, most) => most > 1 ? (count - 1) / (most - 1) : null;
-function nodeControls(organ, code, most) {
+export function nodeControls(organ, code, most) {
   const C = CONTROLS, count = organ.centers.length, copies = organ.centers[0]?.copies ?? 1;
   const row = (y, name, share, text, title) =>
       '<text class="aid-control-title" x="' + C.track[0] + '" y="' + (y - C.title) + '">' +

@@ -3,7 +3,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, gutGraphic, spineField} from './effectors.js';
+import {effectorGraphic, gutGraphic, nodeControls, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
@@ -20,6 +20,8 @@ import {
   isPacemaker,
   nerveClass,
   isRegion,
+  kindLimit,
+  kindNodes,
   MUSCLE_LABEL_INDEX,
   ORGAN_BY_KEY
 } from '../model/organs.js';
@@ -115,7 +117,11 @@ const ORGAN_PANELS = Object.freeze({
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ) +
                                   gutProbeControls(state, organ),
-  bladder : (state, organ, center) => bladderGraphic(organ, center) + pressureNote(state, organ),
+  bladder : (state, organ, center) =>
+      bladderGraphic(organ, center) +
+      nodeControls({...organ, centers : kindNodes(organ)}, MOTOR_KIND.bladder,
+                   kindLimit(organ, state.sites)) +
+      pressureNote(state, organ),
   muscle : (state, organ) => effectorGraphic(state, organ),
   defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, center),
@@ -133,7 +139,9 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
 const organPanel = (state, organ, center) => (
     ORGAN_PANELS[organ.type] ?? (isRegion(organ) ? nervePanel : organMetric))(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
-const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes && !SACS.includes(organ.type)
+const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes &&
+                                             !SACS.includes(organ.type) &&
+                                             !(organ.type === 'bladder' && center.role === 'sensor')
                                          ? ''
                                          : cellTrack(center, cellWords(center));
 const section = (title, body) =>

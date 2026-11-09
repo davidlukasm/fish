@@ -5,7 +5,7 @@ import {drivePatch} from './view/drive.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
-import {kindNodes, nodeLimit} from './model/organs.js';
+import {kindLimit, kindNodes, nodeLimit} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
@@ -398,10 +398,10 @@ export const handleMethods = {
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
-    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, nodeLimit(organ, sites));
+    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites));
     if (!patch)
       return;
-    const changed = 'nodes' in patch ? patch.nodes !== organ.centers.length &&
+    const changed = 'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
                                            setOrganNodes(doc, organ.id, patch.nodes, sites)
                     : 'copies' in patch
                         ? patch.copies !== organ.centers[0].copies &&
