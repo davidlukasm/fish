@@ -48,6 +48,7 @@ constexpr std::array<double, plant_form::count> CLUMP_CHANCE{.22, .12, .12};
 constexpr std::array<int, plant_form::count> CLUMP_SPAN{3, 2, 2};
 constexpr int SEED_EXTRA_SPAN = 3;
 constexpr double SEED_ALGAE_CHANCE = .3;
+constexpr double INITIAL_PLANT_FILL = .25, INITIAL_PLANT_STRETCH = .75;
 constexpr double ALGAE_LIGHT_LIFT = 2;
 constexpr double FERTILITY_GAIN = 2, SPROUT_BASE = .5, SPROUT_RATE = 1. / 4000,
                  ALGAE_SPROUT = 1. / 800;
@@ -737,7 +738,10 @@ void Field::seed_plants() {
           plant_light(light(p.x + q.normal.x * (soil_depth(q) + PLANT_LIGHT_LIFT),
                             p.y + q.normal.y * (soil_depth(q) + PLANT_LIGHT_LIFT))) <= 0)
         break;
-      desired[j] = std::max(0., std::min(grass_capacity(q) - q.grass, env_.seed_energy));
+      const double capacity = grass_capacity(q);
+      desired[j] =
+          std::max(0., std::min(capacity - q.grass,
+                                std::max(env_.seed_energy, INITIAL_PLANT_FILL * capacity)));
     }
   }
   for (double v : desired)
@@ -752,6 +756,11 @@ void Field::seed_plants() {
       s.root_height = std::max(0., soil_depth(s) - grass_root_depth(s));
       s.grass += desired[i] * fraction;
       energy_available -= desired[i] * fraction;
+      prepare_organs(s);
+      for (auto &organ : s.organs) {
+        organ.elongation = INITIAL_PLANT_STRETCH;
+        organ.ready = time;
+      }
     }
     auto p = surface_midpoint(s);
     if (!s.stump && s.sediment <= 0 && algae_light(light(p.x + s.normal.x, p.y + s.normal.y)) > 0 &&

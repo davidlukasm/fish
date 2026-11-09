@@ -135,7 +135,7 @@ const FEEDING = Object.freeze({
   tail_lane : .4,
   min_grain : .55,
   max_grain : 2.1,
-  grain : .7,
+  grain_size : .7,
   grain_x : .6,
   grain_y : .4,
   gill_min_radius : 12,
@@ -153,7 +153,7 @@ const FEEDING = Object.freeze({
   gill_end_out_per_phase : .14,
   bottom_stream : '#b5a17b99',
   stream : '#a5cccb66',
-  grain : '#b5a17b',
+  grain_colour : '#b5a17b',
   gill : '#abd7d1'
 });
 export function paintFeeding(f, c, blend, only = null) {
@@ -215,8 +215,8 @@ export function paintFeeding(f, c, blend, only = null) {
       ctx.stroke();
       if (bottom && k < preyLanes) {
         const size =
-            Math.max(FEEDING.min_grain, Math.min(FEEDING.max_grain, c.scale * FEEDING.grain));
-        ctx.fillStyle = FEEDING.grain;
+            Math.max(FEEDING.min_grain, Math.min(FEEDING.max_grain, c.scale * FEEDING.grain_size));
+        ctx.fillStyle = FEEDING.grain_colour;
         ctx.beginPath();
         ctx.ellipse(x, y, size * FEEDING.grain_x, size * FEEDING.grain_y, 0, 0, 2 * Math.PI);
         ctx.fill();

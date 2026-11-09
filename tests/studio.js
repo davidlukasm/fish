@@ -152,13 +152,14 @@ function semanticFingerprint(source) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
-  // The shipped blueprint remains editable and compiles to the shipped fish.
-  {
+  // Shipped blueprints remain editable and compile to their shipped fish.
+  for (const example of ['start', 'plants']) {
     const source = JSON.parse(execFileSync(
         'python3',
         [
           '-B', '-c',
-          "import json; from atelier_service import run, START_DOCUMENT; d=run({'operation':'new','example':'start'}); r=run({'operation':'inspect','genome':START_DOCUMENT.with_name('startfisch.genome').read_text()}); r.update(d); print(json.dumps(r))"
+          "import json; from atelier_service import run, START_DOCUMENTS; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':START_DOCUMENTS[example].with_suffix('').with_suffix('.genome').read_text()}); r.update(d); print(json.dumps(r))",
+          example
         ],
         {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
     assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +

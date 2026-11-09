@@ -72,7 +72,6 @@ const ACTIONS = Object.freeze({
   atelier : studio => studio.navigate('studio'),
   new : studio => studio.loadFish(newDocument(label('app.newFish'))),
   example : studio => studio.example(),
-  start : studio => studio.startFish(),
   check : studio => studio.checkCompiler(),
   'cancel-build' : studio => { studio.cancelCompile = true; },
   develop : studio => studio.develop(),
@@ -518,6 +517,11 @@ export const FISH_CLICKS = Object.freeze([
 ]);
 
 export const FISH_CHANGES = Object.freeze([
+  [ 'startFish', (studio, e) => {
+    if (e.value)
+      studio.startFish(e.value);
+    e.value = '';
+  } ],
   [ 'contactLimit', (studio, e) => {
     studio.state.contactLimit = Number(e.value);
     studio.refreshScene();

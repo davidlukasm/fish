@@ -329,6 +329,9 @@ export class OrganStudio {
     const status = this.root.querySelector('.aid-status');
     if (status)
       status.textContent = headerStatus(state);
+    const startFish = this.root.querySelector('[data-start-fish]');
+    if (startFish)
+      startFish.disabled = state.busy;
     const develop = this.root.querySelector('[data-action="develop"],[data-action="cancel-build"]');
     if (develop) {
       const {action, text, disabled} = developAction(state);
@@ -603,13 +606,13 @@ export class OrganStudio {
     a.click();
     URL.revokeObjectURL(url);
   }
-  async startFish() {
+  async startFish(example = START_FISH) {
     if (this.state.busy)
       return;
     this.state.busy = true;
     this.refreshHeader();
     try {
-      const report = await this.api(requestBody('new', {example : START_FISH}), API_WAIT.long);
+      const report = await this.api(requestBody('new', {example}), API_WAIT.long);
       this.loadFish(report.document);
       this.state.busy = false;
       await this.develop();

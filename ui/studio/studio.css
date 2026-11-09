@@ -17,7 +17,8 @@
 .aid-header-brand button{border:0;background:transparent;color:#a4d5c9;padding:8px}
 .aid-status{flex:1 1 auto;min-width:0;font-size:12px;color:#a5c6c3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .aid-header-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-.aid-header-actions button,.aid-inspector-actions button,.aid-secondary{border:1px solid #42646b;background:#183942;border-radius:10px;padding:9px 12px;transition:background .12s}
+.aid-header-actions button,.aid-header-actions select,.aid-inspector-actions button,.aid-secondary{border:1px solid #42646b;background:#183942;border-radius:10px;padding:9px 12px;transition:background .12s}
+.aid-header-actions select{color:inherit;font:inherit}
 .aid-header-actions button:hover,.aid-inspector-actions button:hover{background:#26525a}
 .aid-header-actions .primary{background:var(--aid-primary);color:#18362f;border-color:var(--aid-primary);font-weight:650}
 .aid-modes{flex:0 0 auto;display:flex;gap:1px;justify-content:space-between;background:#0e2d34;border-bottom:1px solid #34505a}
@@ -443,7 +444,7 @@
 .aid-near-ring{fill:none;stroke:currentColor;stroke-opacity:.45;stroke-width:1;stroke-dasharray:2 4}
 .aid-near-label{fill:currentColor;fill-opacity:.8;font:600 10px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-button-group{display:flex;align-items:stretch}
-.aid-header-actions .aid-button-group button{border-radius:0;margin-left:-1px}
+.aid-header-actions .aid-button-group button,.aid-header-actions .aid-button-group select{border-radius:0;margin-left:-1px}
 .aid-header-actions .aid-button-group button:first-child{border-radius:10px 0 0 10px;margin-left:0}
 .aid-header-actions .aid-button-group button:last-child{border-radius:0 10px 10px 0}
 .aid-button-group.flow button+button::before{content:'→ ';opacity:.7}

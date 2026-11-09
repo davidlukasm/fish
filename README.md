@@ -5,7 +5,7 @@
 Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhost:8765.
 3.690 × 1.640 px, 800 Tierplätze. `--empty-world`: freies Becken.
 `--fish N`, `--food N`, `--data-dir PFAD`, `--seed N`.
-„Diagnose ↓“ beim FPS-Zähler lädt einen begrenzten Bericht; `--fps-report` ergänzt eine JSONL-Datei.
+„Diagnose ↓“ beim FPS-Zähler lädt einen Bericht; `--fps-report` ergänzt eine JSONL-Datei.
 
 ## Bedienung
 
@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. `genomes/handbau/startfisch.fish.json` ist der Atelier-Bauplan; `make starter` erzeugt das Genom. Miro ist ein Entwurf; eine selbsttragende Linie ist nicht nachgewiesen. Ohne Auswahl startet dieser Fisch. Gewählte Linien beginnen an getrennten Futterquellen.
+Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. Im Atelier öffnet „Fisch laden …“ Miro oder Alva (Pflanzenfresser). Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Beide sind Entwürfe; Selbsterhalt ist nicht nachgewiesen. Ohne Auswahl startet Miro. Pflanzen beginnen größer; Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
@@ -35,4 +35,4 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 
 ## Prüfung
 
-`./build.sh`: Build und Prüfungen. `./test.sh`: dieselben Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Geprüft wird nur Dauerhaftes: ein geschlossenes Becken erzeugt keine Energie, ein Speicherstand läuft genau wie das Original weiter, alle UI-Module verknüpfen sich, alle Texte existieren. `make objects`: nur kompilieren, ohne Linken. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte. Die Build-Prüfungen starten keine Evolutionsläufe.
+`./build.sh`: Build und Prüfungen. `./test.sh`: dieselben Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Geprüft wird nur Dauerhaftes: ein geschlossenes Becken erzeugt keine Energie, ein Speicherstand läuft genau wie das Original weiter, alle UI-Module verknüpfen sich, alle Texte existieren. `make objects`: nur kompilieren, ohne Linken. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.

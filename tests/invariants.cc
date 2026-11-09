@@ -10,6 +10,52 @@ namespace {
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
+void initial_plants_use_the_available_energy() {
+  for (double budget : {0., 100., 10000.}) {
+    Field f(SEED, 0);
+    f.index_geometry();
+    f.set_energy_headroom(budget);
+    f.seed_plants();
+    const double planted = f.grass_energy() + f.algae_energy();
+    check(planted <= budget + tolerance::precision,
+          "initial plant growth stays inside the available world budget");
+    check(std::abs(planted + f.energy_available - budget) < tolerance::precision,
+          "initial biomass is deducted from the free energy");
+    check(budget == 0 || f.grass_energy() > 0, "funded initial plants exist");
+  }
+}
+void herbivores_start_at_reachable_leaves() {
+  const auto g = Genome::load("genomes/handbau/alva.genome");
+  check(g.viable() && g.interface->gut_length > .99, "Alva has a viable herbivore anatomy");
+  Ecosystem w(SEED);
+  w.starter_world();
+  check(w.field.grass_energy() > 1000, "the aquarium starts with grown plant biomass");
+  no_mutation(w);
+  w.seed({g}, 6, run_limit::default_food);
+  check(w.fish.size() == 6, "herbivore founders can be placed before their brains develop");
+  double distances = 0;
+  for (const auto &p : w.fish) {
+    check(w.field.sediment_immersion(p.body.x, p.body.y, collision_radius(p.body)) == 0,
+          "plant founders start outside sediment");
+    double nearest = std::numeric_limits<double>::infinity();
+    bool facing = false;
+    for (const auto &part : w.field.vegetation().plants)
+      if (part.kind == food_kind::plant && part.organ_kind >= plant_organ::leaf &&
+          part.energy > w.field.env().seed_energy) {
+        const double dx = w.field.delta_x(part.x - p.body.x), dy = part.y - p.body.y,
+                     distance = stroke_distance(part, dx, dy);
+        nearest = std::min(nearest, distance);
+        facing |= distance < 80 && dx * std::cos(p.body.angle) + dy * std::sin(p.body.angle) > 0;
+      }
+    distances += nearest;
+    check(facing, "plant founders face nearby edible foliage");
+  }
+  check(distances / w.fish.size() < 40, "herbivores start near leaves rather than pellet clouds");
+  Ecosystem empty(SEED);
+  no_mutation(empty);
+  empty.seed({g}, 1, run_limit::default_food);
+  check(empty.fish.size() == 1, "an aquarium without plants still accepts herbivore founders");
+}
 void start_fish_uses_external_vision_when_mature(const Genome &g) {
   Body hatchling;
   hatchling.prepare(g);
@@ -733,6 +779,8 @@ void checkpoint_continues_exactly(const Genome &g) {
 int main() {
   try {
     Genome::begin_run(SEED);
+    initial_plants_use_the_available_energy();
+    herbivores_start_at_reachable_leaves();
     zero_start_learning_and_decay();
     development_preserves_identity_and_reserves_capacity();
     wiring_has_no_inner_layers();

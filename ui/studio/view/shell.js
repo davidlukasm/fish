@@ -69,7 +69,10 @@ function stationHeader(s) {
          group(
              button('data-action="new"', label('app.newFish')) +
                  button('data-action="example"', label('app.example')) +
-                 button('data-action="start"', label('app.startFish')) +
+                 '<select data-start-fish aria-label="' + label('app.startFish') + '"' +
+                 (s.busy ? ' disabled' : '') + '><option value="">' + label('app.startFish') +
+                 '</option><option value="start">' + label('app.miro') +
+                 '</option><option value="plants">' + label('app.alva') + '</option></select>' +
                  button('data-action="open"', label('app.open')) +
                  button('data-action="download"', label('app.saveGenome'), {disabled : !accepted}),
              label('app.groupPlan')) +
