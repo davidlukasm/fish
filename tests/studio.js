@@ -18,7 +18,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development.cc" : "62a62e6f74fe28b8",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
-  "colony-core/field/substrate.cc" : "298cba387908c744",
+  "colony-core/field/substrate.cc" : "e56d77e61829957b",
   "src/body_plan.cc" : "32bb85925321361d",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "aec5ae2457d1326b",
@@ -351,6 +351,18 @@ function semanticFingerprint(source) {
     const excitatory = regions.updateRegion(handPaced, left.id, {effect : 0}, sites);
     assert.equal(model.findOrgan(excitatory, left.id).centers[0].pace, .9,
                  'Changing the sign preserves a manually tuned developmental rhythm');
+    for (const response of [0, 1, 2]) {
+      const changed = regions.updateRegion(excitatory, left.id, {response}, sites);
+      for (const id of [left.id, right.id]) {
+        const region = model.findOrgan(changed, id);
+        assert.equal(region.region.response, response);
+        assert.equal(region.centers[0].q2, response / 2);
+        assert.equal(region.centers[0].q1, response ? 1 : 0);
+        assert.equal(region.centers[0].pace, model.findOrgan(excitatory, id).centers[0].pace);
+      }
+      const plan = model.compileDocument(changed, sites);
+      assert.ok(plan.groups.some(g => g.role === 1 && g.q2 === response / 2));
+    }
     const moved = model.moveOrgan(placed.document, left.id, sites, {x : 700, y : 420});
     assert.ok(moved);
     assert.equal(model.findOrgan(moved, left.id).region.site,
@@ -1618,6 +1630,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(scale > 0);
     const back = drive.drivePatch('rest', .1, 0, {scale}).threshold;
     assert.ok(Math.abs(back + 1) < 1e-9, 'The top of the rest band is the lowest threshold');
+    const nerve = {threshold : 0, q1 : 1, q2 : 0};
+    assert.equal(drive.nerveResponse(nerve, .8, .8, {scale}), 0);
+    nerve.q2 = .5;
+    assert.ok(drive.nerveResponse(nerve, .8, .8, {scale}) > .6);
+    assert.equal(drive.nerveResponse(nerve, 0, .8, {scale}), 0);
+    nerve.q2 = 1;
+    assert.ok(drive.nerveResponse(nerve, 0, .8, {scale}) > .6);
+    assert.equal(drive.nerveResponse(nerve, -.8, -.8, {scale}), 0);
   }
   {
     const bladder =

@@ -55,6 +55,13 @@ export function motorResponse(center, input, {scale, excitation = 0, output = 1}
       Math.sign(input) * Math.max(0, Math.abs(input) - Math.max(0, scale * center.threshold));
   return Math.tanh((1 + excitation) * drive) * output;
 }
+export function nerveResponse(center, input, mean, {scale, excitation = 0, output = 1}) {
+  const response = clamp(center.q2), level = Math.min(1, 2 * response),
+        memory = Math.max(0, 2 * response - 1);
+  const drive = (1 - memory) * input + (memory + level - 1) * mean;
+  const value = Math.tanh(-scale * center.threshold + excitation + drive);
+  return (value + clamp(center.q1) * (Math.max(0, value) - value)) * output;
+}
 export function driveElement(center, label, stepsLabel, {
   scale,
   rhythm = false,
@@ -64,14 +71,16 @@ export function driveElement(center, label, stepsLabel, {
   pace = 0,
   rhythmEffect = 0
 }) {
-  const D = DRIVE, rest = Math.tanh(-scale * center.threshold + excitation) * output,
-        total = axisSteps(rhythm);
+  const context = {scale, excitation, output};
+  const D = DRIVE, rest = nerveResponse(center, 0, 0, context), total = axisSteps(rhythm);
   const x = step => D.left + (D.right - D.left) * step / total;
   const tc = rhythm ? period(center.tau) : timeConstantSteps(center.tau);
   const level =
-      rhythm ? step => Math.tanh(-scale * center.threshold + excitation +
-                                 pace * .5 * (1 + rhythmEffect) *
-                                     Math.sin(2 * Math.PI * step / tc)) *output
+      rhythm ? step => nerveResponse(center, 0, 0, {
+                 ...context,
+                 excitation :
+                     excitation + pace * .5 * (1 + rhythmEffect) * Math.sin(2 * Math.PI * step / tc)
+               })
              : step => {
                  return motorResponse(center, 2 * step / total - 1, {scale, excitation, output});
                };
@@ -115,7 +124,8 @@ export const CHANGE_ICON = 'M2 18h7l2-13 2 13h9';
 export const LEVEL_ICON = 'M2 18h5V6h11v12h4';
 export function adaptElement(center, label, stepsLabel,
                              {scale, excitation = 0, output = 1, adaptationSpan = 10}) {
-  const D = DRIVE, A = ADAPT, bias = -scale * center.threshold + excitation;
+  const D = DRIVE, A = ADAPT, context = {scale, excitation, output};
+  const rest = nerveResponse(center, 0, 0, context);
   const rate = 1 / (adaptationSpan * timeConstantSteps(center.tau));
   const x = step => D.left + (D.right - D.left) * step / adaptAxis;
   const [on, off] = A.held.map(f => f * adaptAxis);
@@ -125,7 +135,7 @@ export function adaptElement(center, label, stepsLabel,
     const input = step >= on && step < off ? A.input : 0;
     mean += (input - mean) * rate;
     if (step % stride === 0 || step === Math.ceil(adaptAxis))
-      answer.push([ step, Math.tanh(bias + input - mean) * output ]);
+      answer.push([ step, nerveResponse(center, input, mean, context) ]);
   }
   const knee = on + ADAPTATION_SPAN * timeConstantSteps(center.tau);
   const atKnee =
@@ -142,11 +152,11 @@ export function adaptElement(center, label, stepsLabel,
       rounded(x(on))}" y="${D.top}" width="${rounded(x(off) - x(on))}" height="${
       D.plot}"/><line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${
       D.right}" y2="${MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${
-      rounded(y(Math.tanh(bias)))}" x2="${D.right}" y2="${
-      rounded(y(Math.tanh(bias)))}"/><path class="aid-sensitivity-curve" d="M${
+      rounded(y(rest))}" x2="${D.right}" y2="${
+      rounded(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
       answer.map(([ step, v ]) => rounded(x(step)) + ' ' + rounded(y(v))).join(' L')}"/>${
       icons}<circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
-      rounded(x(on / 2))}" cy="${rounded(y(Math.tanh(bias)))}" r="${
+      rounded(x(on / 2))}" cy="${rounded(y(rest))}" r="${
       D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="adapt" cx="${
       rounded(x(knee))}" cy="${rounded(y(atKnee[1]))}" r="${D.handle}"/><text x="${D.right}" y="${
       D.height - D.tick}" text-anchor="end">${

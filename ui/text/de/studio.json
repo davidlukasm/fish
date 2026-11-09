@@ -305,8 +305,6 @@
     },
     "beat": "Eigenrhythmus · Referenzphase",
     "beatSteps": "ein Schlag alle {n} Schritte",
-    "stimulusOrChange": "Reiz oder Veränderung",
-    "adapts": "gewöhnt sich in {n} Schritten",
     "sideByWires": "Die Seite bestimmen hier die Verbindungen (gleichseitig oder gekreuzt); der Punkt stellt nur die Reichweite.",
     "oneSided": "Diese Baugruppe liegt nur auf einer Seite; ihr Spiegelbild ergänzt die andere.",
     "bothSides": "Diese Baugruppe liegt schon auf beiden Seiten.",
@@ -359,7 +357,9 @@
     "removeProfile": "Duftprofil entfernen",
     "meanLimit": "Mittlere genetische Höchststärke",
     "proposedLink": "CPPN-Kontaktvorschläge",
-    "proposalCount": "Kontaktvorschläge"
+    "proposalCount": "Kontaktvorschläge",
+    "stimulusResponse": "Antwort auf anhaltenden Reiz",
+    "responseSteps": "Zeitfenster {n} Schritte"
   },
   "effects": [
     "erregt oder hemmt die Zelle",
@@ -442,7 +442,8 @@
       "threshold": "Schwelle",
       "teacher": "Lehrer",
       "effect": "Wirkung",
-      "time": "Zellzeit"
+      "time": "Zellzeit",
+      "response": "Zeitantwort"
     },
     "values": {
       "contrast": [
@@ -477,6 +478,11 @@
         "kurz",
         "mittel",
         "lang"
+      ],
+      "response": [
+        "Veränderung",
+        "Pegel",
+        "Merkspur"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
@@ -485,7 +491,7 @@
     "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz.",
     "circuit": {
       "term": "Schaltzentrum",
-      "purpose": "Vorlage: bündelt Reize und leitet sie erregend oder hemmend weiter; wahlweise mit Seitenvergleich."
+      "purpose": "Bündelt Reize erregend oder hemmend: als Veränderung, anhaltenden Pegel oder abklingende Merkspur. Mit Seitenvergleich kombinierbar."
     }
   },
   "head": {
@@ -1069,7 +1075,9 @@
     "exampleInput": "Beispieleingang der Organneuronen",
     "currentResponse": "Antwort bei den Beispielwerten",
     "motorTiming": "Organmittel aus dem Bauplan: Integration {integration} Takte, Erholung nach einem Impuls {recovery} Takte.",
-    "potentialCells": "Potenzielle Zellen"
+    "potentialCells": "Potenzielle Zellen",
+    "rectification": "Gleichrichtung 0 … 1",
+    "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur"
   },
   "contacts": {
     "title": "Kontakte im Bauplan",

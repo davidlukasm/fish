@@ -79,8 +79,8 @@ export function cellDevelopment(state, center) {
   const receptor = (key, min, max, step) =>
       input(word(key), growth[key], min, max, step,
             'data-cell-growth="' + id + '" data-growth-key="' + key + '"');
-  const property = (key, value, min, max, step, disabled = false) => input(
-      word(key), value, min, max, step,
+  const property = (key, value, min, max, step, disabled = false, title = key) => input(
+      word(title), value, min, max, step,
       'data-cell-trait="' + id + '" data-trait-key="' + key + '"' + (disabled ? ' disabled' : ''));
   const options = Array
                       .from({length : HORMONES.levels + 1},
@@ -124,6 +124,8 @@ export function cellDevelopment(state, center) {
                  TIME_CONSTANT.learning_min_steps,
                  TIME_CONSTANT.learning_min_steps * TIME_CONSTANT.learning_span, .1) +
         property('teaching_limit', center.teaching_limit, 0, 1, .01) +
+        property('q1', Math.max(0, center.q1), 0, 1, .01, false, 'rectification') +
+        property('q2', Math.max(0, center.q2), 0, 1, .01, false, 'response') +
         property('qwidth', center.qwidth, 0, 1, .01) + property('mode', center.mode, -1, 1, .01) +
         property('sign', center.sign, -1, 1, .01) + property('pace', center.pace, -1, 1, .05) +
         property('modulator', center.modulator, -1, 1, .05);

@@ -774,8 +774,13 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
                  : cl.pace * .5 * (1 + hormone_effect_[Rhythm][i]) *
                        std::sin(phase + 2 * PI_F * neural_ticks_ /
                                             std::max(MIN_PACE_PERIOD, topology->tau[i]));
-    const float self = float(std::tanh(c.bias + hormone_effect_[Excitation][i] + rhythm + input -
-                                       synaptic_mean_[i])) *
+    const float response = effector ? 0 : std::clamp(c.parameters.quality2, 0.f, 1.f);
+    const float level = std::min(1.f, 2 * response), memory = std::max(0.f, 2 * response - 1);
+    const float drive = (1 - memory) * input + (memory + level - 1) * synaptic_mean_[i];
+    const float activation =
+        float(std::tanh(c.bias + hormone_effect_[Excitation][i] + rhythm + drive));
+    const float rectification = effector ? 0 : std::clamp(c.parameters.quality1, 0.f, 1.f);
+    const float self = (activation + rectification * (std::max(0.f, activation) - activation)) *
                        (.5f * (1 + hormone_effect_[Output][i]));
     const float own = pulse_[i] > 0 ? std::max(pulse_[i], self) : self;
     next_[i] = own;

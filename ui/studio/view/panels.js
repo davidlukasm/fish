@@ -179,8 +179,8 @@ function nerveSection(state, organ, center) {
     return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
                                        {...driveContext(state, center), rhythm : true}));
   }
-  const title = label('inspector.stimulusOrChange');
-  return section(title, adaptElement(center, title, n => t('studio.inspector.adapts', {n}),
+  const title = label('inspector.stimulusResponse');
+  return section(title, adaptElement(center, title, n => t('studio.inspector.responseSteps', {n}),
                                      driveContext(state, center)));
 }
 function modulatorSection(state, organ, center) {

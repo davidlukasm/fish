@@ -281,6 +281,59 @@ void zero_start_learning_and_decay() {
           "contact traces, weights, clocks and RNG resume exactly");
   }
 }
+void nerve_levels_and_memory() {
+  std::array<float, 3> held{}, trace{}, baseline{}, faded{};
+  for (int response = 0; response < 3; ++response) {
+    auto cells = learning_tissue()->neurons;
+    cells.resize(2);
+    auto &c = cells[1];
+    c.bias = .15f;
+    c.parameters.time_constant = response == 2 ? 1 : 0;
+    c.parameters.learning_time = 1;
+    c.parameters.quality1 = response ? 1 : 0;
+    c.parameters.quality2 = .5f * response;
+    c.identity[3] = .6f;
+    c.hormone_receptors[field::Learning].baseline = 1;
+    c.hormone_receptors[field::Competition].baseline = 1;
+    c.hormone_receptors[field::Rhythm].baseline = 1;
+    c.hormone_receptors[field::Rhythm].affinity[0] = 1;
+    c.hormone_receptors[field::Rhythm].sensitivity = -2;
+    auto tissue = std::make_shared<field::Substrate>(cells);
+    tissue->edges = {{0, 1, .8f}};
+    field::Network n(tissue);
+    field::Hormones h{};
+    for (int t = 0; t < 2400; ++t) {
+      h[0] = t < 800 ? 0 : 1;
+      if (t % 173 < 73)
+        n.stimulate(1, .8f);
+      n.step({t % 173 < 73 ? .8f : 0}, h, 51829);
+    }
+    auto probe = n.frozen_probe();
+    for (int t = 0; t < 600; ++t)
+      probe.step({0}, h, 51829);
+    baseline[response] = probe.state()[1];
+    for (int t = 0; t < 300; ++t)
+      probe.step({.8f}, h, 51829);
+    held[response] = probe.state()[1];
+    for (int t = 0; t < 64; ++t)
+      probe.step({0}, h, 51829);
+    trace[response] = probe.state()[1];
+    field::Network restored(tissue);
+    std::istringstream in(brain_saved(probe));
+    restored.read_runtime(in);
+    for (int t = 0; t < 2000; ++t) {
+      probe.step({0}, h, 51829);
+      restored.step({0}, h, 51829);
+    }
+    check(brain_saved(probe) == brain_saved(restored), "a saved nerve trace continues exactly");
+    faded[response] = probe.state()[1];
+  }
+  check(held[0] < baseline[0] + .02f, "change cells adapt to a held input");
+  check(held[1] > baseline[1] + .05f && trace[1] < baseline[1] + .005f,
+        "level cells relay a sustained input and release when it ends");
+  check(trace[2] > baseline[2] + .02f && faded[2] < baseline[2] + .01f,
+        "memory cells retain a stimulus beyond its end and then let it fade");
+}
 void development_preserves_identity_and_reserves_capacity() {
   auto tissue = learning_tissue();
   tissue->neurons[2].development_receptor.baseline = 0;
@@ -1042,6 +1095,7 @@ int main() {
     initial_plants_use_the_available_energy();
     herbivores_start_at_reachable_leaves();
     zero_start_learning_and_decay();
+    nerve_levels_and_memory();
     development_preserves_identity_and_reserves_capacity();
     wiring_has_no_inner_layers();
     ordered_retinal_neighbors_match_geometry();

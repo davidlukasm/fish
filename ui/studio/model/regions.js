@@ -147,6 +147,8 @@ function circuitPlan(doc, organ) {
       copies : 8,
       threshold : CIRCUIT_THRESHOLD[r.threshold],
       tau : CIRCUIT_TIME[r.time],
+      q1 : r.response ? 1 : 0,
+      q2 : r.response / 2,
       pace : .6
     }
   } ];
@@ -157,7 +159,13 @@ function circuitPlan(doc, organ) {
       preset : 'inhibit',
       port : 'none',
       effects : DEVELOPING_RELAY,
-      set : {...CIRCUIT_LEARNING, copies : CIRCUIT_COMPARE[r.compare], pace : .6}
+      set : {
+        ...CIRCUIT_LEARNING,
+        copies : CIRCUIT_COMPARE[r.compare],
+        q1 : r.response ? 1 : 0,
+        q2 : r.response ? .5 : 0,
+        pace : .6
+      }
     });
     inner.push([ 'command', 'cross' ]);
     cross.push([ 'cross', 'command' ]);
