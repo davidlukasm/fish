@@ -693,6 +693,32 @@ void embryo_secretion_keeps_the_hatch_reserve(const Genome &g) {
   check(individual(w, id).body.reproduction().sperm_transfer == 0,
         "after hatching sperm production keeps the adult reproductive reserve");
 }
+void laid_eggs_keep_the_parent_orientation(const Genome &g) {
+  Ecosystem w(71849);
+  w.resize(800, 500);
+  w.safety = false;
+  w.set_parameter("energy_supply", 0);
+  w.food_burst.strength = 0;
+  auto &parent = adult(w, g, 400, 250);
+  const auto id = parent.id;
+  parent.body.orient_to(.73);
+  parent.body.energy = 500;
+  parent.body.set_actuation_probe([](std::uint32_t, float) { return 1.f; });
+  for (int tick = 0; tick < 160; ++tick) {
+    w.tick();
+    const auto egg = std::find_if(w.fish.begin(), w.fish.end(), [](const auto &p) {
+      return p.origin == fish_origin::natural && !p.body.hatched;
+    });
+    if (egg == w.fish.end())
+      continue;
+    const double heading = individual(w, id).body.angle;
+    check(std::abs(heading) > .1 &&
+              std::abs(std::remainder(egg->body.angle - heading, 2 * PI)) < 1e-9,
+          "an extruded egg keeps the parent's body orientation instead of facing east");
+    return;
+  }
+  check(false, "the adult fixture releases an egg");
+}
 void development_checkpoint_stages(const Genome &g) {
   constexpr std::size_t SLICE = 37;
   for (int stage = 0; stage < 3; ++stage) {
@@ -830,6 +856,7 @@ int main() {
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
     embryo_secretion_keeps_the_hatch_reserve(g);
+    laid_eggs_keep_the_parent_orientation(g);
     development_finalization_uses_budget(g);
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);

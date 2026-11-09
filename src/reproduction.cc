@@ -112,6 +112,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
 
     egg.body.x = field.wrap_x(x);
     egg.body.y = y;
+    egg.body.angle = b.angle;
     egg.body.motor_.speed = 0;
     egg.body.hatched = false;
     egg.body.hatch_age = -1;
