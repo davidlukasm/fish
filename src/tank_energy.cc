@@ -85,8 +85,8 @@ int Field::fund_from_sources(double amount) {
 int Ecosystem::fund_from_sources(double amount) {
   return field.fund_from_sources(amount);
 }
-std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_stroke,
-                                      double side) {
+std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_stroke, double side,
+                                      double area_share) {
   if (index >= vegetation_.plants.size() || !b.alive || !b.hatched || b.health <= 0 ||
       b.bite_signal <= 0 || b.bite_strength <= 0)
     return {};
@@ -111,7 +111,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                local = kind == food_kind::plant && part.organ >= 0
                            ? source.organs[part.organ].energy
                            : store,
-               bite = bite_radius(b), width = stroke_width(part), half = stroke_half_length(part),
+               bite = bite_radius(b) * std::sqrt(std::clamp(area_share, 0., 1.)),
+               width = stroke_width(part), half = stroke_half_length(part),
                area = 4 * width * half + PI * width * width,
                covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
                                           std::min(2 * bite, 2 * width) /
@@ -127,8 +128,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   piece.origin = kind;
   piece.radius =
       kind == food_kind::plant
-          ? std::max(MIN_PIECE_RADIUS,
-                     std::min(bite, std::sqrt(amount / std::max(MIN_PART_ENERGY, part.energy) *
+          ? std::min(bite, std::max(MIN_PIECE_RADIUS,
+                                    std::sqrt(amount / std::max(MIN_PART_ENERGY, part.energy) *
                                               area / PI)))
           : std::max(MIN_PIECE_RADIUS,
                      std::min(bite, part.radius * std::sqrt(amount / std::max(MIN_PART_ENERGY,
@@ -191,8 +192,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   return piece;
 }
 std::optional<Food> Ecosystem::bite_plant(Body &b, std::size_t index, double along_stroke,
-                                          double side) {
-  return field.bite_plant(b, index, along_stroke, side);
+                                          double side, double area_share) {
+  return field.bite_plant(b, index, along_stroke, side, area_share);
 }
 double corpse_extent(const Corpse &c) {
   return c.radius > 0 ? c.radius : corpse_radius(c.initial_energy);

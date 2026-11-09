@@ -12,6 +12,11 @@ using namespace fishsim;
 namespace {
 constexpr std::array<double, 3> RADII{24, 64, 128};
 constexpr int SAMPLE_STEPS = 400;
+struct LastSeen {
+  unsigned generation = 0;
+  int age = 0;
+  double energy = 0, health = 0, intake = 0, bladder = 0;
+};
 
 double nearby_share(const PlantPart &p, const Field &f, const Body &b, double radius) {
   const double x = f.delta_x(p.x - b.x), y = p.y - b.y,
@@ -107,14 +112,16 @@ int main(int argc, char **argv) {
               << ",\"assistance\":false,\"mutation\":" << w.evo.mutation
               << ",\"leafRadii\":[24,64,128],\"quantiles\":[0,0.25,0.5,0.75,1]}\n";
     std::map<std::uint64_t, std::array<double, DIET_COUNT>> previous;
+    std::map<std::uint64_t, LastSeen> last_seen;
     std::array<double, DIET_COUNT> food{};
-    std::set<std::uint64_t> hatched;
+    std::set<std::uint64_t> hatched, deaths;
     std::map<unsigned, int> births;
     std::map<unsigned, std::set<std::uint64_t>> parents;
     unsigned peak = 0;
     for (int tick = 0; tick <= steps; ++tick) {
       for (const auto &p : w.fish) {
         const auto &b = p.body;
+        last_seen[p.id] = {p.g, b.age, b.energy, b.health, b.nutrition, b.bladder_fill};
         for (std::size_t k = 0; k < DIET_COUNT; ++k) {
           const double raw = p.observations().raw_diet[k];
           food[k] += std::max(0., raw - previous[p.id][k]);
@@ -133,28 +140,52 @@ int main(int argc, char **argv) {
                     << ",\"energy\":" << b.energy << ",\"nearbyLeaf64\":" << nearby << "}\n";
         }
       }
+      for (const auto &death : w.recent_mortality) {
+        const auto id = death[death_record_column::id];
+        if (!deaths.insert(id).second)
+          continue;
+        const auto found = last_seen.find(id);
+        std::cout << "{\"event\":\"death\",\"t\":" << death[death_record_column::step]
+                  << ",\"id\":" << id << ",\"cause\":" << death[death_record_column::cause];
+        if (found != last_seen.end()) {
+          const auto &v = found->second;
+          std::cout << ",\"generation\":" << v.generation << ",\"previous\":{\"age\":" << v.age
+                    << ",\"energy\":" << v.energy << ",\"health\":" << v.health
+                    << ",\"intake\":" << v.intake << ",\"bladder\":" << v.bladder << '}';
+          last_seen.erase(found);
+        }
+        previous.erase(id);
+        std::cout << "}\n";
+      }
       const bool last = tick == steps || (count > 0 && w.fish.empty());
       if (tick % SAMPLE_STEPS == 0 || last) {
         std::map<unsigned, int> alive, breeders;
         std::array<std::vector<double>, RADII.size()> nearby;
-        std::vector<double> nearest, reserves;
+        std::vector<double> nearest, mouth_nearest, reserves;
         for (const auto &p : w.fish) {
           if (p.body.hatched)
             ++alive[p.g];
           reserves.push_back(p.body.energy);
           std::array<double, RADII.size()> energy{};
-          double distance = std::numeric_limits<double>::infinity();
+          double distance = std::numeric_limits<double>::infinity(), mouth_distance = distance;
+          const double mouth_x = p.body.x + mouth_offset(p.body) * std::cos(p.body.angle),
+                       mouth_y = p.body.y + mouth_offset(p.body) * std::sin(p.body.angle);
           for (const auto &part : w.field.vegetation().plants)
             if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) &&
                 part.energy > 0) {
               distance = std::min(distance, stroke_distance(part,
                                                            w.field.delta_x(part.x - p.body.x),
                                                            part.y - p.body.y));
+              mouth_distance = std::min(mouth_distance,
+                                        stroke_distance(part, w.field.delta_x(part.x - mouth_x),
+                                                        part.y - mouth_y));
               for (std::size_t k = 0; k < RADII.size(); ++k)
                 energy[k] += part.energy * nearby_share(part, w.field, p.body, RADII[k]);
             }
           nearest.push_back(std::isfinite(distance) ? std::max(0., distance)
                                                     : w.field.geometry().width);
+          mouth_nearest.push_back(std::isfinite(mouth_distance) ? std::max(0., mouth_distance)
+                                                               : w.field.geometry().width);
           for (std::size_t k = 0; k < RADII.size(); ++k)
             nearby[k].push_back(energy[k]);
         }
@@ -181,6 +212,8 @@ int main(int argc, char **argv) {
         quantiles(reserves);
         std::cout << ",\"nearestLeaf\":";
         quantiles(nearest);
+        std::cout << ",\"nearestMouthLeaf\":";
+        quantiles(mouth_nearest);
         std::cout << ",\"nearbyLeafEstimate\":[";
         for (std::size_t k = 0; k < RADII.size(); ++k) {
           std::cout << (k ? "," : "");

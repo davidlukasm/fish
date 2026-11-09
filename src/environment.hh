@@ -200,7 +200,8 @@ public:
   std::size_t erase_current(double, double);
   void set_energy_headroom(double);
   int fund_from_sources(double);
-  std::optional<Food> bite_plant(Body &, std::size_t, double along_stroke = 0, double side = 1);
+  std::optional<Food> bite_plant(Body &, std::size_t, double along_stroke = 0, double side = 1,
+                                 double area_share = 1);
   void consume_algae(std::size_t, double);
   void collide_food(Body &, double, double, const PhysiologyParameters &);
   void append_fragment(const Food &);

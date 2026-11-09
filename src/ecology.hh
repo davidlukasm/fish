@@ -49,7 +49,8 @@ public:
   double fish_energy() const;
   double external_food_energy() const;
   int fund_from_sources(double);
-  std::optional<Food> bite_plant(Body &, std::size_t, double along_stroke = 0, double side = 1);
+  std::optional<Food> bite_plant(Body &, std::size_t, double along_stroke = 0, double side = 1,
+                                 double area_share = 1);
 
   EvolutionParameters evo;
   DiseaseParameters disease;

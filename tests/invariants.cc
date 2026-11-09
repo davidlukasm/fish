@@ -7,6 +7,7 @@
 #include "plants.hh"
 #include <algorithm>
 #include <map>
+#include <set>
 using namespace test;
 namespace {
 constexpr unsigned SEED = 4242;
@@ -934,6 +935,65 @@ void healthy_foliage_retains_a_green_signal() {
   check(foliage > 0 && green > .99 * foliage,
         "living foliage retains a green signal apart from shaded tips");
 }
+void one_bite_grazes_the_foliage_inside_the_mouth() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  Body b;
+  b.tissue = HATCH_TISSUE;
+  b.organ_mass = 3;
+  b.jaw_length = .4;
+  b.blunt_teeth = 0;
+  b.gut_length = 1;
+  b.bite_strength = 12;
+  b.bite_signal = 1;
+  b.age = 100;
+  b.hatch_age = 0;
+  b.mouth.opening = 1;
+  b.mouth.closing = b.mouth.biting = true;
+  b.mouth.phase = .5;
+  const double bite = bite_radius(b), offset = mouth_offset(b);
+  bool placed = false;
+  const auto &parts = w.field.vegetation().plants;
+  for (const auto &p : parts) {
+    if (p.kind != food_kind::plant || p.organ_kind != plant_organ::blade || p.energy < 10 ||
+        p.width > bite / 3 || p.along < .3 || p.along > .7)
+      continue;
+    std::set<std::pair<std::size_t, int>> nearby;
+    for (const auto &q : parts)
+      if (q.kind == food_kind::plant && q.organ_kind == plant_organ::blade && q.energy > 0 &&
+          stroke_distance(q, w.field.delta_x(q.x - p.x), q.y - p.y) < bite)
+        nearby.emplace(q.patch, q.organ);
+    if (nearby.size() < 2)
+      continue;
+    b.x = w.field.wrap_x(p.x - offset);
+    b.y = p.y;
+    if ((placed = w.field.free(b.x, b.y, body_radius(b))))
+      break;
+  }
+  check(placed, "the fixture has a reachable tuft of narrow leaves");
+  std::map<std::pair<std::size_t, int>, double> organs;
+  for (const auto &p : parts)
+    if (p.kind == food_kind::plant)
+      organs[{p.patch, p.organ}] = w.field.plant_source(p.patch).organs[p.organ].energy;
+  w.fish.emplace_back();
+  w.fish.back().body = b;
+  const double before = w.field.grass_energy();
+  std::vector<unsigned char> bitten(1);
+  const auto meal = w.feeding(0, b.x, b.y, false, bitten, 0);
+  int grazed = 0;
+  for (const auto &[key, energy] : organs)
+    grazed +=
+        w.field.plant_source(key.first).organs[key.second].energy < energy - tolerance::precision;
+  double area = 0;
+  for (const auto &e : w.combat_effects)
+    area += e.radius * e.radius;
+  check(grazed > 1 && meal.raw[food_kind::plant] > 0,
+        "one bite can take several thin leaves inside the mouth");
+  check(area <= bite * bite + tolerance::precision,
+        "the slices share one mouthful of cross-sectional area");
+  check(std::abs(w.field.grass_energy() + meal.raw[food_kind::plant] - before) < 1e-6,
+        "the whole mouthful is deducted from the plants");
+}
 void illuminated_leaves_survive_their_own_shade() {
   Ecosystem w(817233);
   w.resize(960, 640);
@@ -997,6 +1057,7 @@ int main() {
     plant_notches_follow_the_successful_bite();
     grazing_preserves_foliage_until_repeated_bites();
     healthy_foliage_retains_a_green_signal();
+    one_bite_grazes_the_foliage_inside_the_mouth();
     illuminated_leaves_survive_their_own_shade();
     grass_blades_are_cut_as_leaves();
     development_queue_is_bounded(g);
