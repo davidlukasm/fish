@@ -1014,7 +1014,7 @@ blue=run({'operation':'design','plan':plan,'sight':{**scene,'hue':240}})
 audited=[run({'operation':'design','plan':p}) for p in payload['audits']]
 example=run({'operation':'build','plan':payload['example']})
 assert example['compiler']['ok'],example['compiler']
-print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'audited':audited,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts']}}))`;
+print(json.dumps({'built':built,'designed':designed,'target':target,'outside':outside,'blue':blue,'duration':duration,'audited':audited,'example':{'viable':example['viable'],'checks':example['checks'],'contacts':example['contacts'],'eggMinimum':example['eggMinimum']}}))`;
   const stimulusStudio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
   Object.assign(stimulusStudio.state, {document : doc, sites, capabilities : sitesResult});
   let electricalPulses = 0, designRequests = 0;
@@ -1513,6 +1513,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                      [ 'release', 'release', 'pressure', 'pressure' ]);
     assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
     const sacs = await import('../ui/studio/view/sacs.js');
+    const initial = model.findOrgan(ovary.document, ovary.organId);
+    const initialStore =
+        sacs.gonadStore({document : ovary.document, sites, capabilities : sitesResult}, initial);
+    assert.ok(initialStore.spawn > response.example.eggMinimum,
+              'A newly placed ovary can fund the compiled example egg without adding cells');
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
     assert.deepEqual(model.findOrgan(fewer, gonad.id).centers.map(c => c.key).sort(),
                      [ 'growth', 'growth', 'pressure', 'pressure', 'release', 'release' ]);

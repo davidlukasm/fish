@@ -1,4 +1,4 @@
-import {addOrgan, addWire, newDocument, setOrganNodes} from './document.js';
+import {addOrgan, addWire, newDocument} from './document.js';
 import {placeSystem} from './systems.js';
 
 const PLACES = Object.freeze({
@@ -22,8 +22,6 @@ const WIRES = Object.freeze([
   [ 'rhythm', 'sperm', 'both' ], [ 'rhythm', 'eggs', 'both' ], [ 'gut', 'teacher', 'both' ],
   [ 'teacher', 'sight', 'both' ], [ 'teacher', 'smell', 'both' ]
 ]);
-const GROWTH_CELLS = Object.freeze({eggs : 12, sperm : 4});
-
 export function exampleDocument(names, sites, wheel) {
   let doc = newDocument(names.fish);
   const placed = {};
@@ -32,11 +30,6 @@ export function exampleDocument(names, sites, wheel) {
     if (result)
       doc = result.document;
     placed[key] = result?.organId;
-  }
-  for (const [key, count] of Object.entries(GROWTH_CELLS)) {
-    const grown = placed[key] && setOrganNodes(doc, placed[key], count, sites);
-    if (grown)
-      doc = grown;
   }
   doc = placeSystem(doc, 'growth', sites, wheel, {x : 260, y : 351}, names.growth)?.document ?? doc;
   for (const [from, to, pairing] of WIRES) {

@@ -154,6 +154,7 @@ export const ORGANS = Object.freeze([
     scope : 'single',
     bilateral : true,
     nodes : 16,
+    initialNodes : 12,
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')

@@ -487,6 +487,11 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
       return null;
     result = settleRegions(mirrored.document, sites);
   }
+  if (definition.initialNodes) {
+    result = setOrganNodes(result, organ.id, definition.initialNodes, sites);
+    if (!result)
+      return null;
+  }
   const placed = findOrgan(result, organ.id);
   return {
     document : result,
