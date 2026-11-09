@@ -352,6 +352,43 @@ void nerve_levels_and_memory() {
   }
   check(inhibition && motor, "level learning consolidates inhibitory and motor contacts from zero");
 }
+void developing_gates_learn_after_the_first_external_cue() {
+  for (float half : {.2f, .8f}) {
+    auto cells = learning_tissue()->neurons;
+    cells.resize(3);
+    auto &relay = cells[1];
+    relay.bias = -.15f;
+    relay.identity[3] = .6f;
+    relay.parameters.quality1 = 1;
+    relay.parameters.quality2 = .5f;
+    relay.parameters.learning_time = 1;
+    auto &rhythm = relay.hormone_receptors[field::Rhythm];
+    rhythm.baseline = 1;
+    rhythm.sensitivity = -2;
+    rhythm.affinity[field::MATURITY_SUBSTANCE] = 1;
+    rhythm.half = half;
+    rhythm.steepness = 3;
+    cells[2].role = field::Role::Effector;
+    cells[2].bias = .06f;
+    auto tissue = std::make_shared<field::Substrate>(cells);
+    tissue->edges = {{0, 1, .8f}, {1, 2, .8f}};
+    field::Network n(tissue);
+    for (int t = 0; t < 2400; ++t) {
+      n.set_maturity(std::min(1., .65 + .35 * std::max(0, t - 800) / 800));
+      n.step({t >= 120 && t % 37 < 13 ? .8f : 0}, {}, 71583);
+    }
+    std::array<float, 2> response{};
+    for (int on = 0; on <= 1; ++on) {
+      auto probe = n.frozen_probe();
+      for (int t = 0; t < 48; ++t)
+        probe.step({on * .8f}, {}, 71583);
+      response[on] = probe.organ_output()[2];
+    }
+    check(response[0] == 0, "a mature high-threshold relay stays quiet without its cue");
+    check(half < .5f ? response[1] == 0 : response[1] > .05f,
+          "developmental activity must overlap cues arriving after construction");
+  }
+}
 void development_preserves_identity_and_reserves_capacity() {
   auto tissue = learning_tissue();
   tissue->neurons[2].development_receptor.baseline = 0;
@@ -1114,6 +1151,7 @@ int main() {
     herbivores_start_at_reachable_leaves();
     zero_start_learning_and_decay();
     nerve_levels_and_memory();
+    developing_gates_learn_after_the_first_external_cue();
     development_preserves_identity_and_reserves_capacity();
     wiring_has_no_inner_layers();
     ordered_retinal_neighbors_match_geometry();

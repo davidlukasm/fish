@@ -16,6 +16,8 @@ struct LastSeen {
   unsigned generation = 0;
   int age = 0;
   double energy = 0, health = 0, intake = 0, bladder = 0;
+  bool hatched = false;
+  double tissue = 0, maturity = 0, egg_yolk = 0, sperm_store = 0, shell = 0;
 };
 
 double nearby_share(const PlantPart &p, const Field &f, const Body &b, double radius) {
@@ -121,7 +123,9 @@ int main(int argc, char **argv) {
     for (int tick = 0; tick <= steps; ++tick) {
       for (const auto &p : w.fish) {
         const auto &b = p.body;
-        last_seen[p.id] = {p.g, b.age, b.energy, b.health, b.nutrition, b.bladder_fill};
+        last_seen[p.id] = {p.g, b.age, b.energy, b.health, b.nutrition, b.bladder_fill,
+                          b.hatched, b.tissue, body_maturity(b), b.reproduction().egg_yolk,
+                          b.reproduction().sperm_store, b.embryo.shell};
         for (std::size_t k = 0; k < DIET_COUNT; ++k) {
           const double raw = p.observations().raw_diet[k];
           food[k] += std::max(0., raw - previous[p.id][k]);
@@ -151,7 +155,11 @@ int main(int argc, char **argv) {
           const auto &v = found->second;
           std::cout << ",\"generation\":" << v.generation << ",\"previous\":{\"age\":" << v.age
                     << ",\"energy\":" << v.energy << ",\"health\":" << v.health
-                    << ",\"intake\":" << v.intake << ",\"bladder\":" << v.bladder << '}';
+                    << ",\"intake\":" << v.intake << ",\"bladder\":" << v.bladder
+                    << ",\"hatched\":" << (v.hatched ? "true" : "false")
+                    << ",\"tissue\":" << v.tissue << ",\"maturity\":" << v.maturity
+                    << ",\"eggYolk\":" << v.egg_yolk << ",\"spermStore\":" << v.sperm_store
+                    << ",\"shell\":" << v.shell << '}';
           last_seen.erase(found);
         }
         previous.erase(id);
@@ -161,11 +169,15 @@ int main(int argc, char **argv) {
       if (tick % SAMPLE_STEPS == 0 || last) {
         std::map<unsigned, int> alive, breeders;
         std::array<std::vector<double>, RADII.size()> nearby;
-        std::vector<double> nearest, mouth_nearest, reserves;
+        std::vector<double> nearest, mouth_nearest, reserves, tissue, maturity, egg_yolk, sperm_store;
         for (const auto &p : w.fish) {
           if (p.body.hatched)
             ++alive[p.g];
           reserves.push_back(p.body.energy);
+          tissue.push_back(p.body.tissue);
+          maturity.push_back(body_maturity(p.body));
+          egg_yolk.push_back(p.body.reproduction().egg_yolk);
+          sperm_store.push_back(p.body.reproduction().sperm_store);
           std::array<double, RADII.size()> energy{};
           double distance = std::numeric_limits<double>::infinity(), mouth_distance = distance;
           const double mouth_x = p.body.x + mouth_offset(p.body) * std::cos(p.body.angle),
@@ -210,6 +222,14 @@ int main(int argc, char **argv) {
         counts(breeders);
         std::cout << ",\"reserve\":";
         quantiles(reserves);
+        std::cout << ",\"tissue\":";
+        quantiles(tissue);
+        std::cout << ",\"maturity\":";
+        quantiles(maturity);
+        std::cout << ",\"eggYolk\":";
+        quantiles(egg_yolk);
+        std::cout << ",\"spermStore\":";
+        quantiles(sperm_store);
         std::cout << ",\"nearestLeaf\":";
         quantiles(nearest);
         std::cout << ",\"nearestMouthLeaf\":";

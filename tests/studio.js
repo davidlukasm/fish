@@ -317,6 +317,7 @@ function semanticFingerprint(source) {
           right = model.findOrgan(placed.document, left.pair);
     assert.ok(right && left.side === -right.side);
     assert.deepEqual(left.centers.map(c => [c.node, c.port]), [ [ 'command', 'both' ] ]);
+    assert.equal(left.centers[0].receptors[E.rhythm].half, .8);
     const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
     const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
     assert.ok(regions.routedLinks(compared, sites)
