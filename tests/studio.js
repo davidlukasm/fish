@@ -342,6 +342,13 @@ function semanticFingerprint(source) {
     const tuned = regions.updateRegion(compared, left.id, {time : 2, effect : 1}, sites);
     assert.ok(model.findOrgan(tuned, left.id).centers[0].sign < 0);
     assert.equal(model.findOrgan(tuned, right.id).centers[0].tau, 1);
+    assert.equal(model.findOrgan(tuned, left.id).centers[0].pace, .6,
+                 'An inhibitory region keeps its developmental activity');
+    const handPaced =
+        model.updateCenter(tuned, model.findOrgan(tuned, left.id).centers[0].id, {pace : .9});
+    const excitatory = regions.updateRegion(handPaced, left.id, {effect : 0}, sites);
+    assert.equal(model.findOrgan(excitatory, left.id).centers[0].pace, .9,
+                 'Changing the sign preserves a manually tuned developmental rhythm');
     const moved = model.moveOrgan(placed.document, left.id, sites, {x : 700, y : 420});
     assert.ok(moved);
     assert.equal(model.findOrgan(moved, left.id).region.site,

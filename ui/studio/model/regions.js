@@ -314,13 +314,18 @@ export function settleRegions(doc, sites, pairedId = null) {
       center.port = n.port;
       center.band = n.band ?? null;
       center.type = n.type ?? null;
+      if (center.key !== n.preset) {
+        const before = presetOf(center.key);
+        for (const [key, value] of Object.entries(presetOf(n.preset)))
+          if (before[key] !== value)
+            center[key] = value;
+        center.key = n.preset;
+      }
       // Only a planned value that changed is set again; a hand-tuned one beside it stays.
       for (const [key, value] of Object.entries(n.set ?? {}))
         if (center.planned?.[key] !== value)
           center[key] = value;
       center.planned = n.set ?? null;
-      if (center.key !== n.preset)
-        Object.assign(center, {key : n.preset, ...presetOf(n.preset)});
       made.set(n.node, center);
     }
     organ.centers = plan.nodes.map(n => made.get(n.node)).filter(Boolean);
