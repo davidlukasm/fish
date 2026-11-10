@@ -216,6 +216,31 @@ int main(int argc, char **argv) {
             }
             std::cout << "}}\n";
           }
+          if (std::getenv("LABEYE") && steps % TRACE_EVERY == 0) {
+            const auto &binding = p->body.active_interface(p->genome);
+            const auto &input = p->body.perception().sensor_buffer;
+            double nd = std::numeric_limits<double>::infinity(), nb = 0;
+            for (const auto &f : w.field.feeding().pieces)
+              if (f.energy > 0) {
+                const double d = std::hypot(w.field.delta_x(f.x - p->body.x), f.y - p->body.y);
+                if (d < nd) {
+                  nd = d;
+                  nb = bearing_to(w, p->body, f.x, f.y) * 180 / PI;
+                }
+              }
+            std::cout << "{\"event\":\"eye\",\"bearing\":" << bearing << ",\"step\":" << steps
+                      << ",\"distance\":" << nd << ",\"to\":" << nb
+                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"cells\":[";
+            bool first = true;
+            for (std::size_t i = 0; i < binding.sensory.size() && i < input.size(); ++i)
+              if (binding.sensory[i].visual() && !binding.sensory[i].proximity) {
+                std::cout << (first ? "" : ",") << '[' << binding.sensory[i].angle * 180 / PI << ','
+                          << binding.sensory[i].lateral << ',' << input[i] << ','
+                          << p->body.brain()->signal(binding.sensory[i].neuron) << ']';
+                first = false;
+              }
+            std::cout << "]}\n";
+          }
           const bool closed = p->body.mouth.biting && p->body.mouth.phase >= MOUTH_HALF_CYCLE &&
                               last_phase < MOUTH_HALF_CYCLE;
           last_phase = p->body.mouth.biting ? p->body.mouth.phase : -1;
