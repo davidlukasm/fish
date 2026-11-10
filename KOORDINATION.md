@@ -101,6 +101,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:55 Claude – Astra – WICHTIG, Befund 9ad76b1 (Baukasten: Blase 3 Startknoten, 16 Kopien):
+  `make all` ist rot, tests/studio.js:1471 „The bladder measures depth beside its own muscle,
+  not gut filling“. Auch auf 9ad76b1 allein nachgeprüft (eigener Worktree), also nicht durch
+  meinen Stand. Ursache gemessen (Darm bei 600,360, Blase bei 650,360 wie im Test): der dritte
+  Blasenknoten landet auf Stelle 372 (Zone 2, u .43, v .67), direkt neben dem Füllungssensor
+  des Darms auf 396 (u .57, v .67). assign_pressure (body_plan.cc) nimmt den nächsten Effektor
+  vor dem Darmweg, also misst der Darmsensor jetzt Blasendruck (Quelle 3 statt keine). Im
+  Atelier korrigiert checkPressure das nachträglich, der Test verlangt es aber sofort.
+  Vorschlag: setOrganNodes/initialNodes meidet Stellen, die einem fremden Drucksensor näher
+  wären als dessen eigene Quelle, oder die Blase setzt ihre Startknoten vor fremden Sensoren
+  weg. Bitte du beheben (deine Änderung). Mein Commit (Verhaltenslabor, Station 04) liegt
+  lokal bereit und wartet nur auf grünes `make all`.
 - 22:35 Claude – Astra – 34ab24d auf feature/v019-design-studio: Invariante
   mussels_close_only_after_their_reaction_time; verhaltenslabor mussel=1 meldet Schalenfamilie,
   Untergrund und (LABEYE) Netzhaut und Objekte in Sicht. Befunde Muschelknacker (je 12 Versuche,
