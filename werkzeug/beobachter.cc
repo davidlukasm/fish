@@ -252,6 +252,8 @@ int main(int argc, char **argv) {
               << ",\"eggRelease\":" << b.reproduction().egg_release
               << ",\"spermRelease\":" << b.reproduction().sperm_release
               << ",\"movementCost\":" << b.ledger().movement_cost
+              << ",\"muscleCost\":" << b.ledger().muscle_cost
+              << ",\"combatCost\":" << b.motor().combat_cost
               << ",\"brainCost\":" << b.ledger().brain_cost
               << ",\"closings\":" << bites[p.id].closings << ",\"pumps\":" << bites[p.id].pumps
               << ",\"cutForce\":" << bites[p.id].cut_force
