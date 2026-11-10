@@ -90,6 +90,7 @@
     "brain": "Gehirn",
     "eye": "Auge",
     "nose": "Nase",
+    "barbels": "Barteln",
     "proximity": "Nahsinn",
     "lateral": "Seiten­linie",
     "balance": "Gleich­gewichts­organ",
@@ -112,6 +113,7 @@
   "centers": {
     "retina": "Retinazentrum",
     "scent": "Geruchszentrum",
+    "taste": "Bartelspitzen",
     "distance": "Abstandszentrum",
     "current": "Strömungszentrum",
     "gravity": "Schwerefühler",
@@ -327,8 +329,8 @@
         "below": "bindet"
       }
     },
-    "barbelsHint": "Mit Tastzellen am Kopf auf derselben Seite wachsen der Nase Barteln: Sie riechen und tasten zugleich.",
-    "barbelsGrown": "Mit den Tastzellen am Kopf wachsen auf dieser Seite Barteln.",
+    "barbelsTaste": "Die Barteln wachsen mit ihren Zellen. Ihre Spitzen schmecken nur, was sie berühren – keine Duftwolke –, und tasten Stein, Boden, Körper und Schlamm. Die Abstimmung wählt, welche Sorten sie schmecken.",
+    "barbelFeel": {"label": "Bartelspitze", "taste": "Schmeckt", "both": "Schmeckt und tastet", "touch": "Tastet"},
     "muscleKind": "Muskelart ändern",
     "answerTo": "Antwort auf {stimulus}",
     "held": "{stimulus} gehalten",
@@ -343,7 +345,8 @@
       "Wassertiefe",
       "Füllung der Gonaden",
       "Dehnung",
-      "Stoff im Blut"
+      "Stoff im Blut",
+      "Berührung an der Spitze"
     ],
     "addProfile": "Duftprofil",
     "removeProfile": "Duftprofil entfernen",

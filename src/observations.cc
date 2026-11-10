@@ -299,8 +299,7 @@ void write_body_profile(std::ostream &out, const Individual &p) {
       << ",\"jaw_length\":" << b.jaw_length << ",\"gut_length\":" << b.gut_length
       << ",\"blunt_teeth\":" << b.blunt_teeth << ",\"undulation\":" << b.undulation
       << ",\"bite\":" << b.bite_strength << ",\"barbels\":"
-      << q->anatomy[anatomy_column::smell_outer_left] +
-             q->anatomy[anatomy_column::smell_outer_right]
+      << q->anatomy[anatomy_column::barbel_left] + q->anatomy[anatomy_column::barbel_right]
       << ",\"smell_sites\":" << sites << ",\"hermaphrodites\":"
       << (q->anatomy[anatomy_column::eggs] > 0 && q->anatomy[anatomy_column::sperm] > 0 ? 1 : 0)
       << ",\"head\":" << q->anatomy[anatomy_column::head]
@@ -363,8 +362,8 @@ void accumulate_body_profile(const Individual &p, SpeciesBodyProfile &c) {
       }
       for (std::size_t k = 0; k < odor_kind::count; ++k)
         c.scent_thresholds[k] += binding.scent_counts[k] * binding.scent_thresholds[k];
-      c.barbels += binding.anatomy[anatomy_column::smell_outer_left] +
-                   binding.anatomy[anatomy_column::smell_outer_right];
+      c.barbels += binding.anatomy[anatomy_column::barbel_left] +
+                   binding.anatomy[anatomy_column::barbel_right];
       c.hermaphrodites +=
           binding.anatomy[anatomy_column::eggs] > 0 && binding.anatomy[anatomy_column::sperm] > 0;
       c.head += binding.anatomy[anatomy_column::head];

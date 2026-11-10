@@ -298,7 +298,8 @@
   "Wasserdruck",
   "Gonadendruck",
   "Innendruck",
-  "Blut"
+  "Blut",
+  "Schmecken"
  ],
  "evidence": {
   "vision": "Sehfeld {peakPct} · {directions} Blickrichtungen",

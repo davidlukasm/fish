@@ -228,10 +228,8 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     spermFilled,
     mass : p[FISH.mass] || 1,
     reserve,
-    noseSides :
-        [ 0, 1 ].map(side => size(Math.max(0, (organs[ANATOMY.smell_left + side] || 0) -
-                                                  (organs[ANATOMY.smell_outer_left + side] || 0)))),
-    barbelSides : [ 0, 1 ].map(side => size(organs[ANATOMY.smell_outer_left + side])),
+    noseSides : [ 0, 1 ].map(side => size(organs[ANATOMY.smell_left + side])),
+    barbelSides : [ 0, 1 ].map(side => size(organs[ANATOMY.barbel_left + side])),
     attackSides : [ size(organs[ANATOMY.attack_left]), size(organs[ANATOMY.attack_right]) ],
     defenseSides : [ size(organs[ANATOMY.armor_left]), size(organs[ANATOMY.armor_right]) ],
     defenseActivity : p[FISH.defense] || 0,

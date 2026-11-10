@@ -498,8 +498,8 @@ enum class AnatomyColumn : std::size_t {
   armor_left = 32,
   armor_right = 33,
   head = 34,
-  smell_outer_left = 35,
-  smell_outer_right = 36,
+  barbel_left = 35,
+  barbel_right = 36,
   cord = 37,
   bladder = 38,
   gland = 39,
@@ -548,8 +548,8 @@ inline constexpr std::size_t attack_right = 31;
 inline constexpr std::size_t armor_left = 32;
 inline constexpr std::size_t armor_right = 33;
 inline constexpr std::size_t head = 34;
-inline constexpr std::size_t smell_outer_left = 35;
-inline constexpr std::size_t smell_outer_right = 36;
+inline constexpr std::size_t barbel_left = 35;
+inline constexpr std::size_t barbel_right = 36;
 inline constexpr std::size_t cord = 37;
 inline constexpr std::size_t bladder = 38;
 inline constexpr std::size_t gland = 39;
@@ -1442,7 +1442,8 @@ inline constexpr int bladder_pressure = 7;
 inline constexpr int gonad_pressure = 8;
 inline constexpr int inner_pressure = 9;
 inline constexpr int blood = 10;
-inline constexpr int count = 11;
+inline constexpr int taste = 11;
+inline constexpr int count = 12;
 }
 namespace motor_kind {
 inline constexpr int forward = 0;
@@ -1909,6 +1910,13 @@ inline constexpr double dark_light = 0.2;
 inline constexpr int strong_current = 2;
 inline constexpr double bottom_zone = 0.8;
 inline constexpr double top_zone = 0.2;
+}
+namespace barbel {
+inline constexpr double length = 0.22;
+inline constexpr double length_per_size = 0.35;
+inline constexpr int organ_half = 3;
+inline constexpr double spread = 0.45;
+inline constexpr int reach = 2;
 }
 namespace breeding {
 inline constexpr std::array<double, 3> worlds{2.0, 3.0, 5.0};

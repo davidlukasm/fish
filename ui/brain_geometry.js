@@ -126,11 +126,6 @@ export function brainNervePositions(b, a) {
   return positions;
 }
 
-function brainBarbel(n) {
-  return n[NEURON.senses]?.[SENSE_KIND.odor] > 0 && n[NEURON.senses]?.[SENSE_KIND.touch] > 0 &&
-         n[NEURON.senses].indexOf(Math.max(...n[NEURON.senses])) === SENSE_KIND.odor;
-}
-
 export function brainProject(p, d = brainState.brainDrawing) {
   const c = Math.cos(d.angle), s = Math.sin(d.angle);
   return [ d.cx + d.r * (p[0] * c - p[1] * s), d.cy + d.r * (p[0] * s + p[1] * c) ];
@@ -257,7 +252,7 @@ export function brainOrganKey(key, n, receptor) {
                        receptor?.[RECEPTOR.pressure_kind] === PRESSURE_SOURCE.sperm
                            ? PRESSURE_SOURCE.sperm
                            : PRESSURE_SOURCE.eggs);
-  if (key === SENSE_TISSUE.odor && brainBarbel(n))
+  if (key === SENSE_TISSUE.taste)
     return sidedTissue(BARBEL, cellSide(n));
   const k = tissueKind(key),
         paired = isSenseTissue(key) ? PAIRED_SENSES.includes(k) : PAIRED_MOTORS.includes(k);

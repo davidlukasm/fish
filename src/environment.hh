@@ -380,6 +380,14 @@ public:
   double ray(double, double, double, double, double margin = 0, double reach = RANGE) const;
   double ray_local(double, double, double, double, double, double) const;
   std::array<double, odor_kind::count> odor_field(double x, double y) const;
+  // What a barbel tip touches: by scent kind 1 where a piece, animal, leaf or egg reaches it and
+  // the plankton density relative to its maximum; felt is 1 against stone, the tank or any body,
+  // the sediment's immersion in the mud.
+  struct TipContact {
+    std::array<double, odor_kind::count> taste{};
+    double felt = 0;
+  };
+  TipContact tip_contact(double x, double y, double reach) const;
   void advance_odor();
 
 private:

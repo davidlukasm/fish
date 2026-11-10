@@ -377,6 +377,16 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       concentration = exposure * odor * (1 - world.sediment_immersion(at.x, at.y, SEDIMENT_PROBE)) +
                       (1 - exposure) * uniform;
     }
+    if (sense == field::Taste && !b.perception_.disabled_senses[field::Taste]) {
+      const auto tip = barbel_tip(b, binding, r.lateral >= 0);
+      const auto touched = world.tip_contact(tip.x, tip.y, barbel::reach);
+      double taste = 0;
+      for (int k = 0; k < odor_kind::count; ++k)
+        taste += touched.taste[k] * r.scents[k];
+      // The receptive width, which a taste cell does not need, sets how much it feels instead.
+      concentration =
+          exposure * ((1 - r.spatial_width) * std::min(1., taste) + r.spatial_width * touched.felt);
+    }
     signals[i] = adapted_response(b.perception_, i, r, concentration, advance_adaptation);
     if (b.perception_.inspect_vision)
       b.perception_.sensory_components[i][sense] = signals[i];

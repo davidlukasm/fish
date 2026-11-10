@@ -7,7 +7,7 @@ import {effectorGraphic, gutGraphic, nodeControls, spineField} from './effectors
 import {lateralField} from './lateral.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {ANATOMY, ATELIER_LIMITS, MOTOR_KIND, ORGAN_PORT, SENSE_KIND} from '../../schema.js';
+import {ATELIER_LIMITS, MOTOR_KIND, ORGAN_PORT, SENSE_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
@@ -15,6 +15,7 @@ import {scentColors} from '../../brain_model.js';
 import {adaptElement, driveElement} from './drive.js';
 import {preferredScent} from '../../tuning.js';
 import {
+  BARBEL_FEEL,
   functionFor,
   isModulator,
   isPacemaker,
@@ -42,7 +43,7 @@ import {
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph, padPoint, padValues, pointMarks} from './markup.js';
-import {findSite, onMidline, sideIndex} from '../model/layout.js';
+import {findSite, onMidline} from '../model/layout.js';
 import {
   formatNumber,
   formatSigned,
@@ -116,11 +117,10 @@ const gonadPanel = (state, organ, center) =>
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const nervePanel = (state, organ, center) => nerveProperties(state, center);
 const ORGAN_PANELS = Object.freeze({
-  nose : (state, organ, center) => {
-    const barbels = state.anatomy?.anatomy?.[ANATOMY.smell_outer_left + sideIndex(organ.side)];
-    return scentMap(organ, center) + '<p class="aid-hint">' +
-           label(barbels > 0 ? 'inspector.barbelsGrown' : 'inspector.barbelsHint') + '</p>';
-  },
+  nose : (state, organ, center) => scentMap(organ, center),
+  barbels : (state, organ, center) =>
+      barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center) : '') +
+      '<p class="aid-hint">' + label('inspector.barbelsTaste') + '</p>',
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ) +
                                   gutProbeControls(state, organ),
@@ -269,6 +269,17 @@ function nerveProperties(state, center) {
       '<div class="aid-neuron-kind">' +
       escapeText(namedText(label('inspector.template'), label('centers.' + center.key))) + '</div>';
   return template + centerSide(state, center) + developedNerve(state, center);
+}
+function barbelFeel(center) {
+  return '<div class="aid-button-group aid-barbel-feel" role="group" aria-label="' +
+         label('inspector.barbelFeel.label') + '">' +
+         Object.entries(BARBEL_FEEL)
+             .map(([ key, value ]) => '<button class="' + (center.field === value ? 'active' : '') +
+                                      '" data-set-field="field" data-value="' + value +
+                                      '" data-center-id="' + escapeText(center.id) + '">' +
+                                      label('inspector.barbelFeel.' + key) + '</button>')
+             .join('') +
+         '</div>';
 }
 function centerSide(state, center) {
   const found = findCenter(state.document, center.id);

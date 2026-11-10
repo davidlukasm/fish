@@ -472,7 +472,7 @@ const headTitle = key => '<title>' + escapeText(t(key)) + '</title>';
 function barbelsSvg(columns) {
   const tip = SNOUT_TIP, H = HEAD;
   return [ -1, 1 ]
-      .filter(side => columns[ANATOMY.smell_outer_left + sideIndex(side)] > 0)
+      .filter(side => columns[ANATOMY.barbel_left + sideIndex(side)] > 0)
       .map(side => '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
                    fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
                    ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' +

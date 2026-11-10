@@ -49,7 +49,7 @@ const PLAN_COLUMNS = Object.freeze({
   mouth : [ 'lip', 'hook' ],
   spine : [ 'length', 'lean', 'base', 'curve', 'count', 'start', 'spread' ],
   nose : [ 'place', 'across', 'length', 'height' ],
-  barbel : [ 'length', 'tip_along', 'tip_across', 'root', 'bend' ],
+  barbel : [ 'root', 'bend' ],
   rear : [ 'start', 'end', 'peak', 'height', 'lift' ]
 });
 export function fishPlan(a, name, f) {
@@ -307,10 +307,7 @@ export const FISH_PLANS = Object.freeze({
     [ .48, .91, 1, .75 ], [ .78, .80, .65, 1.35 ], [ .20, .95, 1.5, .45 ], [ .60, .75, 1.3, .65 ],
     [ .32, .98, .65, 1.1 ], [ .87, .92, .95, .85 ]
   ],
-  barbel : [
-    [ 1, .35, .85, .48, .55 ], [ 1.65, .65, .60, .70, .50 ], [ .75, -.65, 1.20, .72, 1.1 ],
-    [ 1.30, 1.05, .45, .25, .25 ], [ 1.65, -.80, .85, .82, .80 ], [ .60, .20, 1.30, .32, 1.20 ]
-  ],
+  barbel : [ [ .48, .55 ], [ .70, .50 ], [ .72, 1.1 ], [ .25, .25 ], [ .82, .80 ], [ .32, 1.20 ] ],
   rear : [
     [ .08, .94, .36, .32, .72 ], [ .025, .96, .34, 1.10, .14 ], [ .32, .97, .60, .10, .90 ],
     [ .12, .96, .25, .62, .48 ], [ .32, .93, .61, .25, 1.10 ], [ .12, .91, .36, .48, .95 ]

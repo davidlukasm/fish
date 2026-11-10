@@ -251,8 +251,8 @@ export const ANATOMY = Object.freeze({
   armor_left : 32,
   armor_right : 33,
   head : 34,
-  smell_outer_left : 35,
-  smell_outer_right : 36,
+  barbel_left : 35,
+  barbel_right : 36,
   cord : 37,
   bladder : 38,
   gland : 39,
@@ -640,7 +640,8 @@ export const SENSE_KIND = Object.freeze({
   "bladder_pressure" : 7,
   "gonad_pressure" : 8,
   "inner_pressure" : 9,
-  "blood" : 10
+  "blood" : 10,
+  "taste" : 11
 });
 export const MOTOR_KIND = Object.freeze({
   "forward" : 0,
@@ -1000,6 +1001,8 @@ export const HABITAT_ZONE = Object.freeze({
   "bottom_zone" : 0.8,
   "top_zone" : 0.2
 });
+export const BARBEL = Object.freeze(
+    {"length" : 0.22, "length_per_size" : 0.35, "organ_half" : 3, "spread" : 0.45, "reach" : 2});
 export const BREEDING = Object.freeze({
   "worlds" : [ 2, 3, 5 ],
   "steps" : [ 4000, 8000, 16000 ],

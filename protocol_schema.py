@@ -266,8 +266,8 @@ class Anatomy:
     ARMOR_LEFT = 32
     ARMOR_RIGHT = 33
     HEAD = 34
-    SMELL_OUTER_LEFT = 35
-    SMELL_OUTER_RIGHT = 36
+    BARBEL_LEFT = 35
+    BARBEL_RIGHT = 36
     CORD = 37
     BLADDER = 38
     GLAND = 39
@@ -807,7 +807,8 @@ class SenseKind:
     GONAD_PRESSURE = 8
     INNER_PRESSURE = 9
     BLOOD = 10
-    COUNT = 11
+    TASTE = 11
+    COUNT = 12
 
 class MotorKind:
     FORWARD = 0
@@ -1272,6 +1273,13 @@ class HabitatZone:
     STRONG_CURRENT = 2
     BOTTOM_ZONE = 0.8
     TOP_ZONE = 0.2
+
+class Barbel:
+    LENGTH = 0.22
+    LENGTH_PER_SIZE = 0.35
+    ORGAN_HALF = 3
+    SPREAD = 0.45
+    REACH = 2
 
 class Breeding:
     WORLDS = (2, 3, 5)

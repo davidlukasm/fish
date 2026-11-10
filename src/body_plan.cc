@@ -93,7 +93,7 @@ class AnatomyBuilder {
     double value() const { return weight > 0 ? sum / weight : .5; }
   };
   std::array<Mean, 4> traits;
-  std::array<double, 2> head_smell{}, head_touch{};
+  std::array<double, 2> taste{};
 
   std::shared_ptr<BrainInterface> result = std::make_shared<BrainInterface>();
   void add_shape(const field::Neuron &n) {
@@ -248,10 +248,7 @@ class AnatomyBuilder {
         for (int k = field::Odor; k <= field::Touch; ++k)
           if (r.channel == k && !(k == field::Flow && r.inner))
             result->anatomy[A::smell_left + 2 * (k - field::Odor) + side] += fn.senses[k];
-        if (n.location.zone == 0) {
-          head_smell[side] += r.channel == field::Odor ? fn.senses[field::Odor] : 0;
-          head_touch[side] += r.channel == field::Touch ? fn.senses[field::Touch] : 0;
-        }
+        taste[side] += r.channel == field::Taste ? fn.senses[field::Taste] : 0;
       }
     }
   }
@@ -434,8 +431,7 @@ class AnatomyBuilder {
 
   void summarize_senses() {
     for (int side = 0; side < 2; ++side)
-      result->anatomy[anatomy_column::smell_outer_left + side] =
-          float(std::min(head_smell[side], head_touch[side]));
+      result->anatomy[anatomy_column::barbel_left + side] = float(taste[side]);
     for (int sense = 0; sense < field::SENSE_COUNT; ++sense) {
       std::vector<float> angles;
       double low = 1, high = 0;
@@ -775,6 +771,15 @@ void record_touch(Body &b, double nx, double ny, double impact) {
   k = std::clamp(k, 0, SECTOR_COUNT - 1);
   b.perception_.touch_ring[k] = 1;
   b.perception_.impact_ring[k] = std::max(b.perception_.impact_ring[k], std::max(0., impact));
+}
+Point barbel_tip(const Body &b, const BrainInterface &binding, int side) {
+  const double r = body_radius(b), cells = binding.anatomy[anatomy_column::barbel_left + side],
+               grown = std::sqrt(std::max(0., cells)),
+               length = r * (barbel::length +
+                             barbel::length_per_size * grown / (grown + barbel::organ_half)),
+               a = b.angle + (side ? 1 : -1) * barbel::spread, snout = mouth_offset(b);
+  return {b.x + snout * std::cos(b.angle) + length * std::cos(a),
+          b.y + snout * std::sin(b.angle) + length * std::sin(a)};
 }
 Point olfactory_position(const Body &b, const BrainInterface &, int side) {
   const double r = body_radius(b),

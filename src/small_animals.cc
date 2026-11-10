@@ -57,6 +57,60 @@ std::array<double, odor_kind::count> Field::odor_field(double x, double y) const
           out[c] += sample.weight[k] * p.odor[sample.index[k] * odor_kind::count + c];
   return out;
 }
+namespace {
+int odor_of(int origin) {
+  return origin == food_kind::feed                                ? odor_kind::food
+         : origin == food_kind::algae                             ? odor_kind::algae
+         : origin == food_kind::plant                             ? odor_kind::plants
+         : origin == food_kind::egg                               ? odor_kind::eggs
+         : origin == food_kind::mussel                            ? odor_kind::mussels
+         : origin == food_kind::worm || origin == food_kind::crab ? odor_kind::benthos
+         : origin == food_kind::plankton                          ? odor_kind::plankton
+                                                                  : odor_kind::carrion;
+}
+}
+Field::TipContact Field::tip_contact(double x, double y, double reach) const {
+  TipContact tip;
+  auto &contact = tip.taste;
+  bool touched = false;
+  x = wrap_x(x);
+  const auto touches = [&](double ox, double oy, double radius) {
+    return std::hypot(delta_x(ox - x), oy - y) - radius <= reach;
+  };
+  feeding_.grid.nearby(x, y, reach + feeding_.indexed_food_radius, [&](std::uint32_t j) {
+    const auto &q = feeding_.pieces[j];
+    if (!feeding_.consumed[j] && q.energy > 0 && touches(q.x, q.y, food_radius(q)))
+      contact[odor_of(q.origin)] = 1, touched = true;
+  });
+  body_grid_.nearby(x, y, reach + indexed_body_radius_, [&](std::uint32_t j) {
+    const auto &o = visible_[j];
+    if (!touches(o.x, o.y, o.radius) || o.hidden)
+      return;
+    touched = true;
+    if (o.odor_channel >= 0)
+      contact[o.odor_channel] = 1;
+    if (o.egg_odor > 0)
+      contact[odor_kind::eggs] = 1;
+    if (o.kind == food_kind::carrion)
+      contact[odor_kind::carrion] = 1;
+  });
+  vegetation_.plant_grid.nearby(
+      x, y, reach + vegetation_.indexed_plant_radius, [&](std::uint32_t j) {
+        const auto &q = vegetation_.plants[j];
+        if (q.energy <= 0)
+          return;
+        const double gap = q.kind == food_kind::plant
+                               ? stroke_distance(q, delta_x(x - q.x), y - q.y)
+                               : std::hypot(delta_x(q.x - x), q.y - y) - q.radius;
+        if (gap <= reach)
+          contact[q.kind == food_kind::algae ? odor_kind::algae : odor_kind::plants] = 1,
+                                                                  touched = true;
+      });
+  contact[odor_kind::plankton] =
+      std::clamp(plankton_density(x, y) / env_.plankton_max_density, 0., 1.);
+  tip.felt = touched || !free(x, y, reach) ? 1 : sediment_immersion(x, y, reach);
+  return tip;
+}
 void Field::advance_odor() {
   SedimentReadScope bed(*this);
   auto &p = food_web_.plankton;
@@ -83,15 +137,7 @@ void Field::advance_odor() {
   };
   for (const auto &q : feeding_.pieces)
     if (q.energy > 0) {
-      int channel = q.origin == food_kind::feed     ? odor_kind::food
-                    : q.origin == food_kind::algae  ? odor_kind::algae
-                    : q.origin == food_kind::plant  ? odor_kind::plants
-                    : q.origin == food_kind::egg    ? odor_kind::eggs
-                    : q.origin == food_kind::mussel ? odor_kind::mussels
-                    : q.origin == food_kind::worm || q.origin == food_kind::crab
-                        ? odor_kind::benthos
-                    : q.origin == food_kind::plankton ? odor_kind::plankton
-                                                      : odor_kind::carrion;
+      const int channel = odor_of(q.origin);
       double fresh = q.origin == food_kind::fish || q.origin == food_kind::egg ||
                              q.origin == food_kind::carrion || q.origin >= food_kind::plankton
                          ? env_.odor_freshness(q.decay_age)

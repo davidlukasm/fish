@@ -133,6 +133,16 @@ const nearObject = s => '<path d="M' + -HALF + ' ' + -NEAR.arc + ' Q' + (NEAR.at
                         'stroke-width="' + NEAR.stroke + '"/>' +
                         circle(NEAR.at, 0, share(...NEAR.object, s), ' fill="currentColor"');
 
+// A barbel tip tastes or feels what it reaches, nothing short of it.
+const TASTE =
+    Object.freeze({root : [ -7, -6 ], bend : [ -2, 4 ], morsel : 2.6, gap : 6, stroke : 1.2});
+function barbelTip(s) {
+  const T = TASTE, x = T.morsel + T.gap * (1 - s);
+  return '<path d="M' + T.root[0] + ' ' + T.root[1] + ' Q' + T.bend[0] + ' ' + T.bend[1] +
+         ' 0 0" ' +
+         'fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="' + T.stroke +
+         '"/>' + circle(fixed(x), 0, T.morsel, ' fill="currentColor"');
+}
 const PICTURES = Object.freeze({
   [SENSE_KIND.light] : lightSource,
   [SENSE_KIND.odor] : scentCloud,
@@ -144,7 +154,8 @@ const PICTURES = Object.freeze({
   [SENSE_KIND.bladder_pressure] : waterDepth,
   [SENSE_KIND.gonad_pressure] : fillingSac,
   [SENSE_KIND.inner_pressure] : stretchedTube,
-  [SENSE_KIND.blood] : bloodDrop
+  [SENSE_KIND.blood] : bloodDrop,
+  [SENSE_KIND.taste] : barbelTip
 });
 const KIND_NAME =
     Object.freeze(Object.fromEntries(Object.entries(SENSE_KIND).map(([ k, v ]) => [v, k])));

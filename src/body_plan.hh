@@ -66,6 +66,9 @@ float sensory_response(double stimulus, double threshold);
 float bounded_response(double stimulus, double threshold);
 void record_touch(Body &, double nx, double ny, double impact = 0);
 Point olfactory_position(const Body &, const BrainInterface &, int side);
+// Barbels hang from the snout and grow with their taste cells; they taste only what their tips
+// touch.
+Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 double stroke_delivery(const StrokeState &, const StrokeTiming &);
 struct EffectorActivity {

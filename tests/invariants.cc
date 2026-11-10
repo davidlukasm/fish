@@ -1153,6 +1153,25 @@ void inner_hair_cells_feel_gravity() {
   check(down > 1 - tolerance::precision && up == 0,
         "an inner hair cell is weighed down when it points to the bottom, not to the surface");
 }
+void barbels_taste_only_what_they_touch() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  w.tick();
+  const auto &g = w.field.geometry();
+  const double x = g.width / 2, y = g.height / 3, energy = 2 * w.field.env().crumb_min;
+  Food piece{x, y, 0, 0, 0, energy};
+  piece.initial_energy = energy;
+  piece.radius = food_radius(energy);
+  w.field.append_fragment(piece);
+  w.field.index(w.field.visible(), {});
+  const double edge = x + food_radius(energy);
+  const auto at = w.field.tip_contact(edge + barbel::reach / 2, y, barbel::reach),
+             beside = w.field.tip_contact(edge + 3 * barbel::reach, y, barbel::reach);
+  check(at.taste[odor_kind::food] == 1 && at.felt == 1,
+        "a barbel tip touching a feed piece tastes and feels it");
+  check(beside.taste[odor_kind::food] == 0, "a tip beside the piece tastes nothing");
+  check(w.field.tip_contact(x, g.height, barbel::reach).felt == 1, "a tip on the floor feels it");
+}
 void mussels_sum_at_most_two_quick_bites() {
   Ecosystem w(SEED);
   w.starter_world();
@@ -1493,6 +1512,7 @@ int main() {
     inner_hair_cells_feel_gravity();
     lateral_cells_read_the_water_beside_them();
     mussels_sum_at_most_two_quick_bites();
+    barbels_taste_only_what_they_touch();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
@@ -1503,7 +1523,8 @@ int main() {
     growth_needs_a_hormone(g);
     algae_vanish_in_traces(g);
     std::cout
-        << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Muscheln, Reife, "
+        << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Muscheln, Barteln, "
+           "Reife, "
            "Wachstum "
            "und Algen: "
            "OK\n";

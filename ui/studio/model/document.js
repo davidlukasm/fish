@@ -354,7 +354,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     copies : desc.copies,
     threshold : desc.role === 'sensor' ? N.sense_threshold : -.2,
     tau : cycle ? timeConstantOf(cycle) : N.tau,
-    field : N.field,
+    field : desc.field ?? N.field,
     q1 : 0,
     q2 : 0,
     qwidth : desc.qwidth ?? N.qwidth,

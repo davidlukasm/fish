@@ -122,8 +122,8 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
            "invalid cell group");
     ensure(!g.name.empty() && g.name.size() <= studio_plan::max_group_name && g.zone >= 0 &&
                g.zone < 4 && g.side >= -1 && g.side <= 1 && g.role >= 0 && g.role <= 2 &&
-               g.function >= -1 && g.function <= 10 && g.copies >= 1 &&
-               g.copies <= studio_plan::max_copies && between(g.u0, 0, 1) &&
+               g.function >= -1 && g.function < std::max(field::SENSE_COUNT, field::MOTOR_COUNT) &&
+               g.copies >= 1 && g.copies <= studio_plan::max_copies && between(g.u0, 0, 1) &&
                between(g.u1, g.u0, 1) && between(g.v0, 0, 1) && between(g.v1, g.v0, 1) &&
                between(g.w0, 0, 1) && between(g.w1, g.w0, 1),
            "invalid cell coordinates");
@@ -201,6 +201,8 @@ std::pair<int, int> corner(int role, int function) {
     case field::Blood:
     case field::Intake:
       return {2, 0};
+    case field::Taste:
+      return {2, 1};
     case field::Damage:
       return {3, 1};
     default:

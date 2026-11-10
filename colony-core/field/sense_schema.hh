@@ -12,9 +12,10 @@ enum Sense {
   BladderPressure,
   GonadPressure,
   InnerPressure,
-  Blood
+  Blood,
+  Taste
 };
-constexpr int SENSE_COUNT = 11;
+constexpr int SENSE_COUNT = 12;
 enum Motor { Forward, Turn, Suction, Eggs, Sperm, Aggression, Defense, Pigment, Bladder, Gland };
 constexpr int MOTOR_COUNT = 10;
 namespace plan_point {

@@ -14,6 +14,8 @@ export const STIMULUS_ORGAN = Object.freeze({
 // zones: where in the body the Atelier offers the organ, when the engine allows more than makes
 // sense to place it (smell cells grow on all the skin, a nose belongs to the head).
 const COPIES = 3;
+// A barbel cell's receptive width is the share it feels by touch instead of tasting.
+export const BARBEL_FEEL = Object.freeze({taste : 0, both : .5, touch : 1});
 const sensor = (key, functionCode, copies = COPIES, surface = 'any', zones = null) =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
 const motor = (key, functionCode, copies = COPIES, surface = 'any') =>
@@ -86,6 +88,15 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     types : 4,
     centers : [ sensor('scent', SENSE_KIND.odor, 4, 'outer', [ 0 ]) ]
+  },
+  // Barbels taste only what their tips touch; a nose smells the water.
+  {
+    key : 'barbels',
+    category : 'senses',
+    scope : 'side',
+    types : 4,
+    centers :
+        [ {...sensor('taste', SENSE_KIND.taste, 3, 'outer', [ 0 ]), field : BARBEL_FEEL.both} ]
   },
   {
     key : 'proximity',

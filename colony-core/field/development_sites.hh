@@ -57,8 +57,12 @@ inline int development_function(const cppn::Point &p, Role role, int corner, int
     // gravity, as statoliths do.
     if (corner == 1)
       return Flow;
+    // On the snout the second variant tastes at the tips of barbels instead of smelling.
     if (corner == 2)
-      return surface ? Odor : p.zone == 0 ? none : p.zone == 1 ? Blood : Intake;
+      return surface       ? (p.zone == 0 && variant ? Taste : Odor)
+             : p.zone == 0 ? none
+             : p.zone == 1 ? Blood
+                           : Intake;
     return variant ? Damage : surface ? Touch : InnerPressure;
   }
   if (corner == 0) {

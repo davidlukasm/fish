@@ -52,6 +52,7 @@ export const STUDIO_ICON = Object.freeze({
   brain : ORGAN_ICONS[INTERNAL_TISSUE],
   eye : ORGAN_ICONS[SENSE_TISSUE.light],
   nose : ORGAN_ICONS[SENSE_TISSUE.odor],
+  barbels : ORGAN_ICONS[BARBEL],
   proximity : ORGAN_ICONS[SENSE_TISSUE.proximity],
   lateral : ORGAN_ICONS[SENSE_TISSUE.flow],
   balance : 'M12 3a8 8 0 1 0 .01 0M12 15a3 3 0 1 0 .01 0M12 7v5',

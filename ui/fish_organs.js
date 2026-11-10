@@ -2,6 +2,7 @@ import {FULL_TURN} from './units.js';
 import {MOTOR_TISSUE, SENSE_TISSUE, motorTissue} from './tissue.js';
 import {
   ANATOMY,
+  BARBEL,
   BODY_SHAPE,
   EYE_PLACE,
   FIN,
@@ -95,22 +96,15 @@ export function fishEye(a, side) {
   return eye;
 }
 
-const BARBEL = Object.freeze({
-  length : .22,
-  length_per_size : .35,
-  length_per_spread : .20,
-  bend_at : .2,
-  bend_per_reach : .45
-});
+const BARBEL_BEND = Object.freeze({at : .2, per_reach : .45});
+// Length and direction are the engine's: the drawn tip is where the barbel tastes.
 export function fishBarbelCurve(a, side) {
   const sign = side ? 1 : -1, f = fishForm(a, SENSE_TISSUE.odor, side),
         plan = fishPlan(a, 'barbel', f), root = fishBezier(fishHeadCurves(a, side)[0], plan.root),
-        length = (BARBEL.length + BARBEL.length_per_size * a.barbelSides[side] +
-                  BARBEL.length_per_spread * f.sy) *
-                 plan.length,
-        tip = [ root[0] + length * plan.tip_along, root[1] + sign * length * plan.tip_across ],
-        control = [
-          root[0] + length * (BARBEL.bend_at + BARBEL.bend_per_reach * plan.tip_along),
+        length = BARBEL.length + BARBEL.length_per_size * a.barbelSides[side],
+        along = Math.cos(BARBEL.spread), across = Math.sin(BARBEL.spread),
+        tip = [ root[0] + length * along, root[1] + sign * length * across ], control = [
+          root[0] + length * (BARBEL_BEND.at + BARBEL_BEND.per_reach * along),
           root[1] + sign * length * plan.bend
         ];
   return [ root, control, tip ];

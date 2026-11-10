@@ -174,7 +174,8 @@
       "bladder_pressure": 7,
       "gonad_pressure": 8,
       "inner_pressure": 9,
-      "blood": 10
+      "blood": 10,
+      "taste": 11
     },
     "motor_kind": {
       "forward": 0,
@@ -539,8 +540,8 @@
       "armor_left",
       "armor_right",
       "head",
-      "smell_outer_left",
-      "smell_outer_right",
+      "barbel_left",
+      "barbel_right",
       "cord",
       "bladder",
       "gland",
@@ -2117,6 +2118,13 @@
       "strong_current": 2,
       "bottom_zone": 0.8,
       "top_zone": 0.2
+    },
+    "barbel": {
+      "length": 0.22,
+      "length_per_size": 0.35,
+      "organ_half": 3,
+      "spread": 0.45,
+      "reach": 2
     },
     "breeding": {
       "worlds": [2, 3, 5],

@@ -8,18 +8,18 @@ const {join} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "src/cppn_brain.cc" : "7f19a134da696602",
+  "src/cppn_brain.cc" : "551c9755c43cac45",
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
-  "ui/brain_geometry.js" : "f26424cb0249af00",
+  "ui/brain_geometry.js" : "240f242ee5b97858",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "ef79deae77da20c5",
+  "colony-core/field/development_sites.hh" : "d5f1149f9f71568f",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "093d95f35ab12b44",
-  "src/body_plan.cc" : "f3f6b4bbbbb9caea",
+  "src/body_plan.cc" : "f4242ea13264ae0d",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "822ca7bbcd32d1d4",
   "src/physiology.cc" : "e98c1c4d7dd25970",
@@ -28,7 +28,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "122649c0c5cf70ad",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "bd9536c156c7d742",
+  "src/body_plan.hh" : "62949e21d135eef7",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -42,14 +42,14 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
   "src/retina.cc" : "52ad87af678bd04f",
-  "src/observations.cc" : "da1f12523f378495",
+  "src/observations.cc" : "9352227738e2c1d5",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
   "src/retina.hh" : "a3a169f6e8f4cafd",
-  "ui/fish_forms.js" : "11f5c7433615e5ae",
-  "ui/fish_geometry.js" : "9e95f7f314d86a90",
+  "ui/fish_forms.js" : "779094f709698fe1",
+  "ui/fish_geometry.js" : "aa899dbb45672f9f",
   "ui/fish_fins.js" : "a07179737e1032b5",
-  "ui/fish_organs.js" : "3c712910190f3cdc",
+  "ui/fish_organs.js" : "c6a63cda4547e83b",
   "ui/fish_painter.js" : "8a55c784199f5207",
   "src/brain_interface.hh" : "3e0c9e25c499fb7f",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
@@ -62,7 +62,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/feeding.cc" : "34e4a3c4117a42b0",
   "src/tank_energy.cc" : "f3b2fddbfce531b3",
   "src/environment.cc" : "62ca92c128e5af24",
-  "src/environment.hh" : "09325a34326fa191",
+  "src/environment.hh" : "34168ee6263f11f4",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
   "src/motor_state.hh" : "6642af5a79a83847",
@@ -1083,6 +1083,20 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
   assert.match(pigmentPanel, /data-pigment-wheel=/);
   assert.match(pigmentPanel, /data-pigment-amount=/);
   assert.match(pigmentPanel, /data-add-type=/);
+  {
+    const barbelSite =
+        sites.find(s => eligible(ORGANS.find(o => o.key === 'barbels').centers[0], s));
+    const barbels = model.addOrgan(doc, 'barbels', sites, geometry.sitePoint(barbelSite));
+    const cell = model.findOrgan(barbels.document, barbels.organId).centers[0];
+    assert.equal(cell.field, .5, 'A new barbel tip both tastes and feels');
+    const barbelPanel = panels.inspector({
+      ...state,
+      document : barbels.document,
+      selected : {kind : 'center', id : cell.id}
+    });
+    assert.equal((barbelPanel.match(/data-set-field="field"/g) ?? []).length, 3);
+    assert.match(barbelPanel, /class="active" data-set-field="field" data-value="0.5"/);
+  }
   const skinOrgan = model.findOrgan(pigment.document, pigment.organId);
   const kinds =
       model.addOrganType(pigment.document, pigment.organId, sites, model.nextTypeTuning(skinOrgan));
