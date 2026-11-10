@@ -1,4 +1,5 @@
 #include "test_support.hh"
+#include "checkpoint.hh"
 #include "field/retinal_tissue.hh"
 #include "field/development_sites.hh"
 #include "physiology.hh"
@@ -1370,10 +1371,16 @@ void illuminated_leaves_survive_their_own_shade() {
   check(false, "the shaded plant remains in the tank");
 }
 void checkpoint_continues_exactly(const Genome &g) {
+  std::map<const evolution::History *, std::shared_ptr<evolution::History>> histories;
+  Genome founder = g;
+  founder.cppn = g.cppn->snapshot(histories);
   auto w = closed_tank(g);
+  w.fish.front().genome.cppn->history()->next_generation();
   for (int step = 0; step < STEPS / 2; ++step)
     w.tick();
-  auto copy = w.fork();
+  std::stringstream state(
+      serialize_checkpoint(capture_checkpoint(w, founder, 0, true, false, 0, w.ticks, 0)));
+  auto copy = std::move(read_checkpoint(state, w.workers).world);
   check(saved(w) == saved(copy), "a checkpoint restores the whole tank");
   for (int step = 0; step < STEPS / 2; ++step) {
     w.tick();
@@ -1381,10 +1388,39 @@ void checkpoint_continues_exactly(const Genome &g) {
   }
   check(saved(w) == saved(copy), "a restored tank continues exactly like the original");
 }
+void ancestral_histories_keep_current_mutations() {
+  evolution::History old("ancestor");
+  const auto connection = old.connection(0, 1);
+  old.split(connection, 0, 1);
+  old.duplicate(1);
+  auto current = old;
+  current.next_generation();
+  const auto newer = current.connection(0, 1), twin = current.duplicate(1);
+  const auto split = current.split(connection, 0, 1);
+  const auto expected = current;
+  for (bool older_first : {false, true}) {
+    auto combined = older_first ? old : current;
+    combined.merge(older_first ? expected : old);
+    check(combined.generation() == expected.generation() && combined.connection(0, 1) == newer &&
+              combined.duplicate(1) == twin && combined.split(connection, 0, 1).node == split.node,
+          "restoring an ancestor preserves current mutation identities in either order");
+  }
+  auto conflicting = old;
+  conflicting.next_generation();
+  conflicting.connection(1, 0);
+  bool rejected = false;
+  try {
+    current.merge(conflicting);
+  } catch (const std::runtime_error &) {
+    rejected = true;
+  }
+  check(rejected, "conflicting innovation endpoints remain invalid");
+}
 }
 int main() {
   try {
     Genome::begin_run(SEED);
+    ancestral_histories_keep_current_mutations();
     initial_plants_use_the_available_energy();
     herbivores_start_at_reachable_leaves();
     zero_start_learning_and_decay();

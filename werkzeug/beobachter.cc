@@ -1,9 +1,11 @@
 #include "ecology.hh"
+#include "checkpoint.hh"
 #include "physiology.hh"
 #include "plants.hh"
 #include "perception.hh"
 #include "field/development_sites.hh"
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <map>
 #include <set>
@@ -21,6 +23,7 @@ double rounded(double value, double per_unit) {
 }
 struct Options {
   int every = 5, detail = 50, tracked = 6;
+  std::string checkpoint, resume;
 };
 int site_of(const cppn::Point &p) {
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
@@ -63,15 +66,15 @@ int main(int argc, char **argv) {
   try {
     if (argc < 5)
       throw std::invalid_argument("Aufruf: beobachter GENOM SEED SCHRITTE ANZAHL [every=N] "
-                                  "[detail=N] [tracked=N] [Parameter=Wert ...]");
+                                  "[detail=N] [tracked=N] [checkpoint=DATEI] [resume=DATEI] "
+                                  "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
     Options o;
     Genome::begin_run(seed);
-    const auto g = Genome::load(argv[1]);
+    Genome g;
     Ecosystem w(seed);
-    w.safety = false;
-    w.workers = WORKERS;
+    std::vector<std::pair<std::string, double>> parameters;
     for (int i = 5; i < argc; ++i) {
       const std::string option = argv[i];
       const auto split = option.find('=');
@@ -84,11 +87,31 @@ int main(int argc, char **argv) {
         o.detail = std::stoi(value);
       else if (key == "tracked")
         o.tracked = std::stoi(value);
-      else if (!w.set_parameter(key, std::stod(value)))
-        throw std::invalid_argument("Unbekannter Parameter: " + key);
+      else if (key == "checkpoint")
+        o.checkpoint = std::filesystem::absolute(value).string();
+      else if (key == "resume")
+        o.resume = value;
+      else
+        parameters.emplace_back(key, std::stod(value));
     }
-    w.starter_world();
-    w.seed({g}, count, run_limit::default_food);
+    if (o.every < 1 || o.detail < 1 || o.tracked < 0 || steps < 0)
+      throw std::invalid_argument("Ungültiges Beobachtungsintervall oder Schrittzahl");
+    if (!o.resume.empty()) {
+      std::ifstream in(o.resume);
+      auto saved = read_checkpoint(in, WORKERS);
+      w = std::move(saved.world);
+      g = std::move(saved.founder);
+    } else
+      g = Genome::load(argv[1]);
+    w.safety = false;
+    w.workers = WORKERS;
+    for (const auto &[key, value] : parameters)
+      if (!w.set_parameter(key, value))
+        throw std::invalid_argument("Unbekannter Parameter: " + key);
+    if (o.resume.empty()) {
+      w.starter_world();
+      w.seed({g}, count, run_limit::default_food);
+    }
     auto &out = std::cout;
     out << "{\"event\":\"setup\",\"width\":" << w.field.geometry().width
         << ",\"height\":" << w.field.geometry().height << ",\"obstacles\":[";
@@ -117,9 +140,10 @@ int main(int argc, char **argv) {
     };
     std::map<std::uint64_t, Bites> bites;
     std::set<std::uint64_t> dropped;
-    for (int tick = 0; tick <= steps; ++tick) {
-      const bool last = tick == steps || w.fish.empty();
-      if (tick % o.every == 0 || last) {
+    for (int advanced = 0; advanced <= steps; ++advanced) {
+      const auto tick = w.ticks;
+      const bool last = advanced == steps || w.fish.empty();
+      if (advanced == 0 || tick % o.every == 0 || last) {
         const bool detail = tick % o.detail == 0 || last;
         // Keep watching the earliest hatched fish; replace those that died.
         std::set<std::uint64_t> alive;
@@ -347,8 +371,15 @@ int main(int argc, char **argv) {
         }
         out << "}\n" << std::flush;
       }
-      if (last)
+      if (last) {
+        if (!o.checkpoint.empty()) {
+          CheckpointWriter writer;
+          writer.save(o.checkpoint,
+                      capture_checkpoint(w, g, 0, true, false, int(w.ticks), w.ticks, 0));
+          writer.finish();
+        }
         break;
+      }
       w.tick();
       for (const auto &p : w.fish) {
         if (!tracked.count(p.id))

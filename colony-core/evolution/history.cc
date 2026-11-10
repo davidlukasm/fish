@@ -79,11 +79,21 @@ void History::next_generation() {
 void History::merge(const History &other) {
   if (lineage_ != other.lineage_)
     throw std::runtime_error("independent evolutionary histories cannot be merged");
-  if (generation_ != other.generation_)
-    throw std::runtime_error("histories are from different generations");
   for (const auto &b : other.bindings_)
     observe(b.first, b.second.first, b.second.second, b.second.port);
   next_node_ = std::max(next_node_, other.next_node_);
+  next_innovation_ = std::max(next_innovation_, other.next_innovation_);
+  // A saved founder can predate its living descendants. Bindings are permanent, while only
+  // the latest generation's events may be reused for new mutations.
+  if (other.generation_ < generation_)
+    return;
+  if (other.generation_ > generation_) {
+    generation_ = other.generation_;
+    connections_ = other.connections_;
+    splits_ = other.splits_;
+    duplicates_ = other.duplicates_;
+    return;
+  }
   for (const auto &e : other.connections_) {
     auto p = connections_.emplace(e);
     if (!p.second && p.first->second != e.second)
