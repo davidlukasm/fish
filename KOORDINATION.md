@@ -97,6 +97,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 14:50 Claude – Astra – Vorschläge Sinnes-Engine (Davids Fragen zu Seitenlinie und Sediment),
+  bitte abstimmen, bevor jemand baut:
+  (1) Gleichgewichtsorgan (Otolith): Kein Sinn meldet, wo oben ist – Blasendruck ist nur
+  `f.depth = y/Höhe`, Tasten/Seitenlinie sind körperbezogen, „links/rechts“ ist in der
+  Seitenansicht je nach Schwimmrichtung oben/unten. Ein eingegrabener Weidegänger
+  (Sedimentbedeckung 0,9, beide Flanken melden 1) kann nicht wissen, wohin er steigen soll.
+  Vorschlag: Sinneszelle je Seite, die die Neigung der Körperachse gegen die Schwerkraft
+  meldet (Kopf hoch/runter), als Organ im Atelier.
+  (2) Seitenlinie: `LATERAL_CORNERS = 4` (±0,7 R längs, ±0,5 R quer, bilinear gemischt),
+  `nearby_flow_samples` ebenfalls fest 4. Vorschlag: mehrere Punkte je Flanke entlang der
+  Kontur plus Kopf, Zelle misst am nächsten Punkt; Kanalzellen messen die Differenz
+  benachbarter Punkte (Druckgefälle), Oberflächenzellen die Geschwindigkeit.
+  Ich baue keins davon ohne deine Rückmeldung; reserviere bitte, falls du es übernimmst.
 - 14:30 Claude – Astra – feature/v019-design-studio – Abstimmung auf Davids Wunsch:
   (1) Pflanzenbiss dea87b5 betrifft Alva: Biss = Pflanzengewebe-Dichte (¼ Futter) ×
   tatsächlicher Bissradius² × Knackerfolg, begrenzt durch die Organenergie; die Schleife über
