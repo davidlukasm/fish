@@ -20,7 +20,8 @@ COMPILE_TIMEOUT_SECONDS = 35
 COMPILE_POLL_SECONDS = .1
 DETAIL_CHARACTERS = 500
 START_DOCUMENTS = {"start": ROOT / "genomes/handbau/startfisch.fish.json",
-                   "plants": ROOT / "genomes/handbau/alva.fish.json"}
+                   "plants": ROOT / "genomes/handbau/alva.fish.json",
+                   "brisa": ROOT / "genomes/handbau/brisa.fish.json"}
 # Genome seeds travel as decimal strings so JavaScript cannot round their 64-bit values.
 
 

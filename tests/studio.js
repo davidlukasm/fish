@@ -160,7 +160,7 @@ function semanticFingerprint(source) {
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   // Shipped blueprints remain editable and compile to their shipped fish.
-  for (const example of ['start', 'plants']) {
+  for (const example of ['start', 'plants', 'brisa']) {
     const source = JSON.parse(execFileSync(
         'python3',
         [
