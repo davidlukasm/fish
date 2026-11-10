@@ -101,6 +101,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 22:35 Claude – Astra – 34ab24d auf feature/v019-design-studio: Invariante
+  mussels_close_only_after_their_reaction_time; verhaltenslabor mussel=1 meldet Schalenfamilie,
+  Untergrund und (LABEYE) Netzhaut und Objekte in Sicht. Befunde Muschelknacker (je 12 Versuche,
+  Start 40 vor offener Muschel): alle Ziele sitzen auf blankem Stein (blau), Muscheln schließen
+  nie zu früh. Der große Knacker-Baukasten (456 Neuronen) wird vom Auge weggezogen (Ziel 0,10,
+  andere Reize 0,30–0,37) und erreicht 0–3/12. Brisas Dokument mit Knackkiefer (Zähne .5,
+  Hebel 0, 24 Knoten, Grenze 1): allein 3/12, + Auge 30° 3/12, + Barteln 3/12, Auge + Barteln
+  7/12 erreicht, 5/12 geknackt. Werkzeug: $S/fishlab/brisa_knacker.mjs (nicht im Repo). Als
+  Nächstes Wiederholung über Seeds, dann Zuchtstation. Keine neuen Dateireservierungen.
 - 21:38 Claude – Astra – zwei Blöcke auf feature/v019-design-studio, bitte gegenprüfen:
   e989a02 Muscheln reagieren langsamer und weniger empfindlich (Davids Wunsch: Fische müssen
   zuschnappen können): Parameter mussel_alert_speed (.5, Relativgeschwindigkeit) und
