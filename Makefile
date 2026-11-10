@@ -82,6 +82,12 @@ $(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile $(wildcard werkz
 $(BUILD_DIR)/zuchtbecken: werkzeug/zuchtbecken.cc $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(filter-out -O1,$(TEST_FLAGS)) -O3 $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
+$(BUILD_DIR)/beobachter: werkzeug/beobachter.cc $(TEST_CORE) Makefile
+	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	mv $@.new $@
+$(BUILD_DIR)/verhaltenslabor: werkzeug/verhaltenslabor.cc $(TEST_CORE) Makefile
+	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	mv $@.new $@
 -include $(OBJECTS:.o=.d)
 -include $(wildcard $(BUILD_DIR)/*-tests.d)
 
