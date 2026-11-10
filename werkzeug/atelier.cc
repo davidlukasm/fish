@@ -874,8 +874,8 @@ std::string diet_report() {
   row("sediment", [](double l) { return gut_utilisation(l, food_kind::benthic); });
   row("size", [](double l) { return gut_size(l); });
   out << "},\"teeth\":{";
-  row("hard", [](double b) { return tooth_grip(b, true); }, true);
-  row("soft", [](double b) { return tooth_grip(b, false); });
+  row("grind", [](double b) { return tooth_grip(b, true); }, true);
+  row("cut", [](double b) { return tooth_grip(b, false); });
   out << "},\"jaw\":{";
   row("aperture", [](double j) { return mouth_share(j) / mouth_share(TRAIT_MIDDLE); }, true);
   row("lever", [](double j) { return jaw_lever(j); });

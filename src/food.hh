@@ -19,8 +19,18 @@ struct Food {
   bool blunt = false, bitten = false;
 };
 inline constexpr double FOOD_DENSITY = 100; // Energy per radius squared, scaled by 16.
+// Plant tissue holds a quarter of the energy feed packs into the same mouthful.
+inline constexpr double PLANT_TISSUE_DENSITY = FOOD_DENSITY / 4;
+inline constexpr double TISSUE_RADIUS_SCALE = 3;
+inline double tissue_radius(double energy, double density) {
+  return TISSUE_RADIUS_SCALE * std::sqrt(std::max(0., energy) / density);
+}
+// Energy of the tissue of this density that just fits a mouth of the given radius.
+inline double mouthful(double radius, double density) {
+  return density * std::pow(std::max(0., radius) / TISSUE_RADIUS_SCALE, 2);
+}
 inline double food_radius(double energy) {
-  return 3 * std::sqrt(std::max(0., energy) / FOOD_DENSITY);
+  return tissue_radius(energy, FOOD_DENSITY);
 }
 inline double food_radius(const Food &f) {
   return f.radius > 0 ? f.radius : food_radius(f.energy);

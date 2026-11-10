@@ -85,8 +85,8 @@ int Field::fund_from_sources(double amount) {
 int Ecosystem::fund_from_sources(double amount) {
   return field.fund_from_sources(amount);
 }
-std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_stroke, double side,
-                                      double area_share) {
+std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_stroke,
+                                      double side) {
   if (index >= vegetation_.plants.size() || !b.alive || !b.hatched || b.health <= 0 ||
       b.bite_signal <= 0 || b.bite_strength <= 0)
     return {};
@@ -94,9 +94,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   auto &source = this->plant_source_mut(part.patch);
   const int kind = part.kind;
   double &store = kind == food_kind::algae ? source.algae : source.grass;
-  const bool hard = kind == food_kind::plant && part.organ >= 0 &&
-                    plant_bite_is_hard(source.organs[part.organ].kind);
-  const double force = bite_force(b, hard);
+  const double force = bite_force(b, true);
   const double drift_age =
       kind == food_kind::plant && part.patch >= vegetation_.surfaces.size()
           ? double(vegetation_.drifting_grass[part.patch - vegetation_.surfaces.size()].age)
@@ -111,16 +109,12 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                local = kind == food_kind::plant && part.organ >= 0
                            ? source.organs[part.organ].energy
                            : store,
-               bite = bite_radius(b) * std::sqrt(std::clamp(area_share, 0., 1.)),
-               width = stroke_width(part), half = stroke_half_length(part),
-               area = 4 * width * half + PI * width * width,
-               covered = std::min(1., std::min(2 * bite, 2 * (half + width)) *
-                                          std::min(2 * bite, 2 * width) /
-                                          std::max(tolerance::precision, area)),
-               amount = kind == food_kind::algae
-                            ? std::min({store, part.energy,
-                                        algae_surface_density(source) * bite * bite * efficiency})
-                            : std::min({store, local, part.energy * covered * efficiency});
+               bite = bite_radius(b), width = stroke_width(part);
+  // A bite takes at most what fits the mouth, whatever size the plant is drawn at.
+  const double amount =
+      kind == food_kind::algae
+          ? std::min({store, part.energy, algae_surface_density(source) * bite * bite * efficiency})
+          : std::min({store, local, mouthful(bite, PLANT_TISSUE_DENSITY) * efficiency});
   if (amount <= 0)
     return {};
   const double s = kind == food_kind::plant ? std::clamp(along_stroke, -1., 1.) : 0.;
@@ -128,15 +122,13 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   piece.origin = kind;
   piece.radius =
       kind == food_kind::plant
-          ? std::min(bite, std::max(MIN_PIECE_RADIUS,
-                                    std::sqrt(amount / std::max(MIN_PART_ENERGY, part.energy) *
-                                              area / PI)))
+          ? std::min(bite, std::max(MIN_PIECE_RADIUS, tissue_radius(amount, PLANT_TISSUE_DENSITY)))
           : std::max(MIN_PIECE_RADIUS,
                      std::min(bite, part.radius * std::sqrt(amount / std::max(MIN_PART_ENERGY,
                                                                               part.energy))));
   piece.initial_energy = amount;
   piece.hardness = hardness;
-  piece.blunt = hard;
+  piece.blunt = true;
   piece.color = kind == food_kind::algae ? ALGAE_COLOR : plant_organ_color(source, part.organ);
   piece.buoyancy = kind == food_kind::algae ? ALGAE_BUOYANCY : PLANT_BUOYANCY;
   piece.drift_plant = part.patch >= vegetation_.surfaces.size();
@@ -192,8 +184,8 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   return piece;
 }
 std::optional<Food> Ecosystem::bite_plant(Body &b, std::size_t index, double along_stroke,
-                                          double side, double area_share) {
-  return field.bite_plant(b, index, along_stroke, side, area_share);
+                                          double side) {
+  return field.bite_plant(b, index, along_stroke, side);
 }
 double corpse_extent(const Corpse &c) {
   return c.radius > 0 ? c.radius : corpse_radius(c.initial_energy);

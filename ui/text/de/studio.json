@@ -733,8 +733,8 @@
         "handle": "Ziehen: spitze oder stumpfe Zähne",
         "low": "spitz",
         "high": "stumpf",
-        "hard": "Schalen",
-        "soft": "Weiches"
+        "grind": "Pflanzen, Schalen",
+        "cut": "Fleisch"
       },
       "jaw": {
         "title": "Maul",

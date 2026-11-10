@@ -640,9 +640,9 @@
 .aid-diet-name,.aid-diet-end{font-size:11px;fill:var(--aid-label-text)}
 .aid-diet-dot{stroke:var(--aid-node-edge);stroke-width:1.2}
 .aid-diet-curve.k-plant{stroke:#8fcf7e}.aid-diet-dot.k-plant{fill:#8fcf7e}.aid-diet-name.k-plant{fill:#a8dd98}
-.aid-diet-curve.k-meat,.aid-diet-curve.k-soft{stroke:#e08a73}.aid-diet-dot.k-meat,.aid-diet-dot.k-soft{fill:#e08a73}.aid-diet-name.k-meat,.aid-diet-name.k-soft{fill:#eba08c}
+.aid-diet-curve.k-meat,.aid-diet-curve.k-cut{stroke:#e08a73}.aid-diet-dot.k-meat,.aid-diet-dot.k-cut{fill:#e08a73}.aid-diet-name.k-meat,.aid-diet-name.k-cut{fill:#eba08c}
 .aid-diet-curve.k-aperture{stroke:var(--aid-size)}.aid-diet-dot.k-aperture{fill:var(--aid-size)}
-.aid-diet-curve.k-hard,.aid-diet-curve.k-lever{stroke:#e5c27a}.aid-diet-dot.k-hard,.aid-diet-dot.k-lever{fill:#e5c27a}.aid-diet-name.k-hard,.aid-diet-name.k-lever{fill:#ecd096}
+.aid-diet-curve.k-grind,.aid-diet-curve.k-lever{stroke:#e5c27a}.aid-diet-dot.k-grind,.aid-diet-dot.k-lever{fill:#e5c27a}.aid-diet-name.k-grind,.aid-diet-name.k-lever{fill:#ecd096}
 .aid-diet-curve.k-gulp{stroke:var(--aid-flow);stroke-dasharray:none}.aid-diet-dot.k-gulp{fill:var(--aid-flow)}
 .aid-lateral-field{display:block;width:100%;height:auto;touch-action:none}
 .aid-lateral-limit{fill:none;stroke:var(--aid-limit);stroke-width:1}

@@ -2,7 +2,6 @@
 #include "physiology.hh"
 #include "perception.hh"
 #include "plants.hh"
-#include <set>
 namespace fishsim {
 namespace {
 constexpr double FLESH_BITE = 3, FLESH_SHARE = .25, FLESH_MIN_MASS_RATIO = .25,
@@ -143,7 +142,7 @@ class Ecosystem::FeedingSession {
       world.field.record_nature(usable);
     return usable;
   }
-  double bite_vegetation(std::size_t target, double area_share = 1) {
+  void bite_vegetation(std::size_t target) {
     const auto &part = world.field.vegetation().plants[target];
     const auto &source = world.field.plant_source(part.patch);
     const bool hard = part.kind == food_kind::plant && part.organ >= 0 &&
@@ -159,16 +158,14 @@ class Ecosystem::FeedingSession {
                                     0
                             ? -1.
                             : 1.;
-    if (auto piece = world.bite_plant(b, target, s, side, area_share)) {
+    if (auto piece = world.bite_plant(b, target, s, side)) {
       fragment(piece->x, piece->y, piece->radius, radius, piece->vx, piece->vy, piece->energy,
                piece->origin, piece->color, 0, piece->buoyancy, piece->drift_plant, -1,
                piece->hardness, piece->blunt);
       result.plants = true;
       effect(hard ? feeding_effect::crack : feeding_effect::bite, piece->x, piece->y, piece->radius,
              piece->energy, 0, piece->color);
-      return piece->radius * piece->radius;
     }
-    return 0;
   }
   void bite() {
     const bool buried =
@@ -176,14 +173,10 @@ class Ecosystem::FeedingSession {
     int kind = -1;
     std::size_t target = 0;
     double best = std::numeric_limits<double>::infinity();
-    std::vector<Target> foliage;
     auto candidate = [&](int k, std::size_t id, double x, double y, double radius) {
       if (!reaches(x, y, radius))
         return;
       double d = std::max(0., std::hypot(world.field.delta_x(x - mx), y - my) - radius);
-      if (k == food_kind::plant &&
-          !plant_bite_is_hard(world.field.vegetation().plants[id].organ_kind))
-        foliage.push_back({k, id, d});
       if (d < best || (d == best && (k < kind || (k == kind && id < target)))) {
         best = d;
         kind = k;
@@ -349,24 +342,8 @@ class Ecosystem::FeedingSession {
                mussel_radius(m.energy, world.field.env(), m.morph), 0);
       }
     } else if (kind == food_kind::algae || kind == food_kind::plant) {
-      if (kind == food_kind::algae ||
-          plant_bite_is_hard(world.field.vegetation().plants[target].organ_kind)) {
-        bite_vegetation(target);
-      } else {
-        std::stable_sort(foliage.begin(), foliage.end(),
-                         [](const auto &a, const auto &c) { return a.distance < c.distance; });
-        std::set<std::pair<std::size_t, int>> grazed;
-        const double area = morsel * morsel;
-        double remaining = area;
-        for (const auto &leaf : foliage) {
-          if (remaining <= tolerance::negligible)
-            break;
-          const auto &part = world.field.vegetation().plants[leaf.id];
-          if (!grazed.emplace(part.patch, part.organ).second)
-            continue;
-          remaining -= bite_vegetation(leaf.id, remaining / area);
-        }
-      }
+      // One bite closes on the nearest plant only.
+      bite_vegetation(target);
     }
   }
   std::vector<Target> candidates(double area) {

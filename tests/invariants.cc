@@ -30,7 +30,8 @@ void initial_plants_use_the_available_energy() {
 }
 void herbivores_start_at_reachable_leaves() {
   const auto g = Genome::load("genomes/handbau/alva.genome");
-  check(g.viable() && g.interface->gut_length > .99, "Alva has a viable herbivore anatomy");
+  check(g.viable() && g.interface->gut_length > .99 && g.interface->blunt_teeth > .99,
+        "Alva has a viable herbivore anatomy with a long gut and grinding teeth");
   Ecosystem w(SEED);
   w.starter_world();
   check(w.field.grass_energy() > 1000, "the aquarium starts with grown plant biomass");
@@ -1117,7 +1118,7 @@ void plant_notches_follow_the_successful_bite() {
     Body b;
     b.tissue = HATCH_TISSUE;
     b.jaw_length = .4;
-    b.blunt_teeth = 0;
+    b.blunt_teeth = 1;
     b.bite_strength = strength;
     b.bite_signal = 1;
     const auto cuts = w.field.plant_source(patch).organs[organ].cuts;
@@ -1133,7 +1134,7 @@ void plant_notches_follow_the_successful_bite() {
   check(shallow < .001 && deep > 100 * shallow,
         "a barely effective bite cannot leave the same deep notch as a strong bite");
 }
-void grass_blades_are_cut_as_leaves() {
+void plant_tissue_needs_grinding_teeth() {
   Ecosystem source(SEED);
   source.starter_world();
   const auto &parts = source.field.vegetation().plants;
@@ -1153,13 +1154,12 @@ void grass_blades_are_cut_as_leaves() {
     const auto sharp = cutting.field.bite_plant(mouth, index);
     mouth.blunt_teeth = 1;
     const auto blunt = crushing.field.bite_plant(mouth, index);
-    if (kind == plant_organ::stem) {
-      check(!sharp && blunt && blunt->blunt,
-            "a fibrous stem needs crushing teeth and keeps that material when detached");
-    } else {
-      check(sharp && sharp->energy > .1 && !sharp->blunt && !blunt,
-            "cutting teeth remove leaf tissue from both grass blades and broad leaves");
-    }
+    check(!sharp && blunt && blunt->energy > .1 && blunt->blunt,
+          "blades, stems and leaves need grinding teeth and keep that material when detached");
+    check(blunt->energy <=
+                  mouthful(bite_radius(mouth), PLANT_TISSUE_DENSITY) + tolerance::precision &&
+              blunt->radius <= maximum_mouth_aperture(mouth) + tolerance::precision,
+          "a bite takes no more plant than fits through the mouth");
   }
   const auto &materials = source.field.env();
   check(plant_bite_hardness(plant_organ::blade, .5, materials) ==
@@ -1180,7 +1180,7 @@ void grazing_preserves_foliage_until_repeated_bites() {
   Body b;
   b.tissue = HATCH_TISSUE;
   b.jaw_length = .4;
-  b.blunt_teeth = 0;
+  b.blunt_teeth = 1;
   b.bite_strength = 60;
   b.bite_signal = 1;
   double eaten = 0;
@@ -1232,14 +1232,14 @@ void healthy_foliage_retains_a_green_signal() {
   check(foliage > 0 && green > .99 * foliage,
         "living foliage retains a green signal apart from shaded tips");
 }
-void one_bite_grazes_the_foliage_inside_the_mouth() {
+void one_bite_takes_one_mouthful_of_one_leaf() {
   Ecosystem w(SEED);
   w.starter_world();
   Body b;
   b.tissue = HATCH_TISSUE;
   b.organ_mass = 3;
   b.jaw_length = .4;
-  b.blunt_teeth = 0;
+  b.blunt_teeth = 1;
   b.gut_length = 1;
   b.bite_strength = 12;
   b.bite_signal = 1;
@@ -1284,10 +1284,11 @@ void one_bite_grazes_the_foliage_inside_the_mouth() {
   double area = 0;
   for (const auto &e : w.combat_effects)
     area += e.radius * e.radius;
-  check(grazed > 1 && meal.raw[food_kind::plant] > 0,
-        "one bite can take several thin leaves inside the mouth");
-  check(area <= bite * bite + tolerance::precision,
-        "the slices share one mouthful of cross-sectional area");
+  check(grazed == 1 && meal.raw[food_kind::plant] > 0,
+        "one bite takes from one leaf even when others lie inside the mouth");
+  check(meal.raw[food_kind::plant] <= mouthful(bite, PLANT_TISSUE_DENSITY) + tolerance::precision &&
+            area <= bite * bite + tolerance::precision,
+        "one bite takes no more than a mouthful");
   check(std::abs(w.field.grass_energy() + meal.raw[food_kind::plant] - before) < 1e-6,
         "the whole mouthful is deducted from the plants");
 }
@@ -1363,9 +1364,9 @@ int main() {
     plant_notches_follow_the_successful_bite();
     grazing_preserves_foliage_until_repeated_bites();
     healthy_foliage_retains_a_green_signal();
-    one_bite_grazes_the_foliage_inside_the_mouth();
+    one_bite_takes_one_mouthful_of_one_leaf();
     illuminated_leaves_survive_their_own_shade();
-    grass_blades_are_cut_as_leaves();
+    plant_tissue_needs_grinding_teeth();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);

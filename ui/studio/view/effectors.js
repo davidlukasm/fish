@@ -454,7 +454,7 @@ const DIET_CHARTS = Object.freeze({
     source : 'teeth',
     trait : 'blunt_teeth',
     code : MOTOR_KIND.aggression,
-    curves : [ [ 'hard', 'share' ], [ 'soft', 'share' ] ]
+    curves : [ [ 'grind', 'share' ], [ 'cut', 'share' ] ]
   },
   jaw : {
     source : 'jaw',
