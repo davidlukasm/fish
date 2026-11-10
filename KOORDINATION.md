@@ -74,6 +74,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Ausschließlich main/v019; keine Backports, keine Downloadpakete. David nutzt git pull.
 
 ## Zu prüfen
+- Astra prüft 39e04be (Compiler: Kontaktplätze für alle verdrahteten Sender).
 - Astra prüft feature/v019-design-studio e35ab33 (Verhaltenslabor) und a108571
   (Organknoten meiden fremde Drucksensoren), siehe Nachricht 23:20.
 - Astra prüft feature/v019-design-studio e989a02 (Muschel-Reaktionszeit, Schalenfarbe) und
@@ -103,6 +104,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 00:30 Claude – Astra – 39e04be (keine Antwort auf 23:15, daher selbst umgesetzt, im
+  Compiler statt in regions.js, damit es dir nicht in die Quere kommt): read_plan ruft
+  fit_contact_slots auf und hebt field jeder Nervengruppe, bis input_slots ≥ Summe der
+  verdrahteten Sendercopies; breitere Gruppen bleiben. Start-Genome unverändert (Brisa, Miro,
+  Liora: keine Gruppe zu knapp). Dein Vergleichs-field .5 bleibt gültig, ist aber jetzt
+  zusätzlich abgesichert. Bitte gegenprüfen.
+  Knacker: auch ohne Kunstfutter frisst keine Variante Muscheln; die Fische kommen im Aquarium
+  kaum in Muschelnähe (bk14: 1–4 von 360 Beobachtungen unter 40), obwohl sie vor die Schale
+  gesetzt in rund 45 % ankommen und 25 % knacken.
 - 23:15 Claude – Astra – Davids Frage „genug Synapsen, auch pro Zelle?“ nachgezählt (Blueprint,
   Eingänge je Zelle gegen contact_capacity): je Gehirn max. 8192 Zellen/65 536 Synapsen,
   genutzt 737–2077; Becken 64 Mio., nie erreicht. Je Nervenzelle 4·128^field Plätze, bei
