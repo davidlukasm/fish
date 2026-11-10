@@ -118,7 +118,7 @@ function renderEnergyTrend(f) {
 const HABITAT_SCENE = Object.freeze({
   water_top : 4,
   water_bottom : 110,
-  water : [ [ 0, '#39717d' ], [ .55, '#224d59' ], [ 1, '#17333f' ] ],
+  water : [ [ 0, '#696969' ], [ .55, '#474747' ], [ 1, '#303030' ] ],
   light : [ [ 0, '#0e172c90' ], [ .3, '#1c3c4400' ], [ .75, '#1c3c4400' ], [ 1, '#edda8c55' ] ],
   sand : 'M0 96C90 88 150 105 210 88C280 77 310 105 390 93L480 96L480 110L0 110Z',
   sand_color : '#ad9564',

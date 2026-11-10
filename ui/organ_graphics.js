@@ -413,7 +413,7 @@ const DEPTH_GRAPHIC = Object.freeze({
   top_label_y : 17,
   bottom_label_x : 61,
   bottom_label_y : 116,
-  water : '#163b4a',
+  water : '#373737',
   surface : '#7ca4b8',
   floor : '#8e8571'
 });
