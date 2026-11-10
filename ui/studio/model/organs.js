@@ -165,8 +165,9 @@ export const ORGANS = Object.freeze([
     category : 'reproduction',
     scope : 'single',
     bilateral : true,
-    nodes : 16,
-    initialNodes : 12,
+    // Sixteen motor chambers reach the engine's storage ceiling; two cells sense their filling.
+    nodes : 18,
+    initialNodes : 14,
     centers : [
       motor('growth', MOTOR_KIND.eggs, 8, 'inner'), motor('release', MOTOR_KIND.eggs, 4, 'outer'),
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')

@@ -1653,6 +1653,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const initial = model.findOrgan(ovary.document, ovary.organId);
     const initialStore =
         sacs.gonadStore({document : ovary.document, sites, capabilities : sitesResult}, initial);
+    assert.equal(initialStore.room, sitesResult.gonads.eggs.most,
+                 'Pressure cells do not subtract chambers from the ovary storage ceiling');
     assert.ok(initialStore.spawn > response.example.eggMinimum,
               'A newly placed ovary can fund the compiled example egg without adding cells');
     const fewer = model.setOrganNodes(fertile, gonad.id, 2, sites);
