@@ -121,10 +121,10 @@ const ACTIVE_LEARNING = Object.freeze({
 });
 const DEVELOPING_RELAY = Object.freeze({
   ...ACTIVE_LEARNING,
-  // Embryos can already carry most of their adult tissue before their first external cues.
+  // Embryos start well developed; the lower baseline still silences the pacer at full maturity.
   [HORMONE_EFFECT.rhythm] : {
     active : 1,
-    baseline : 1,
+    baseline : .5,
     sensitivity : -2,
     half : .8,
     substance : HORMONES.levels,

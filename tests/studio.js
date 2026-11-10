@@ -319,6 +319,14 @@ function semanticFingerprint(source) {
     assert.ok(right && left.side === -right.side);
     assert.deepEqual(left.centers.map(c => [c.node, c.port]), [ [ 'command', 'both' ] ]);
     assert.equal(left.centers[0].receptors[E.rhythm].half, .8);
+    const developmentalDrive = maturity =>
+        .5 * left.centers[0].pace *
+        (1 +
+         model.receptorResponse(sitesResult, left.centers[0].receptors[E.rhythm], [], maturity));
+    assert.ok(developmentalDrive(.65) > .15,
+              'A relay can learn its first cues at the maturity of a real embryo');
+    assert.equal(developmentalDrive(1), 0,
+                 'A grown relay does not invent cues through its developmental pacemaker');
     const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
     const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
     assert.ok(regions.routedLinks(compared, sites)
