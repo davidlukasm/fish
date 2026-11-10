@@ -105,11 +105,8 @@ int planning_brains(const Ecosystem &w) {
   return int(plans.size() + unstarted.size());
 }
 std::size_t planned_edges(const Genome &g) {
-  if (g.blueprint)
-    return field::connection_reservation(*g.blueprint);
-  auto n =
-      std::min(field::DEVELOPMENT_SITES * field::CELL_COPY_LIMIT, g.development_options.max_nodes);
-  return n * 512;
+  // Runtime rows are admitted when the individual anatomy is known, before allocation.
+  return g.blueprint ? field::connection_reservation(*g.blueprint) : 0;
 }
 std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
   std::set<const field::Substrate *> seen;
@@ -126,7 +123,9 @@ std::size_t connection_storage(const Ecosystem &w, const Genome *additional) {
     if (p.nutrient_egg)
       continue;
     keep(p.genome);
-    total += p.body.brain() ? p.body.brain()->reserved_slots() : planned_edges(p.genome);
+    total += p.body.brain() ? p.body.brain()->reserved_slots()
+             : p.body.alive ? planned_edges(p.genome)
+                            : 0;
   }
   for (const auto &g : w.recent_deaths)
     if (g.second.blueprint)

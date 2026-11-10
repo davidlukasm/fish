@@ -22,7 +22,6 @@ DETAIL_CHARACTERS = 500
 START_DOCUMENTS = {"start": ROOT / "genomes/handbau/startfisch.fish.json",
                    "plants": ROOT / "genomes/handbau/alva.fish.json"}
 # Genome seeds travel as decimal strings so JavaScript cannot round their 64-bit values.
-SEED_MAX = (1 << 64) - 1
 
 
 
@@ -173,21 +172,6 @@ def encode_plan(plan):
         if not isinstance(edge, dict):
             raise Refusal("studio.errors.invalidPlan")
         rows.append(" ".join(number(edge.get(k)) for k in ("from", "to", "spread", "bundle")))
-    source = plan.get("source")
-    rows.append("1" if source is not None else "0")
-    if source is not None:
-        if not isinstance(source, dict):
-            raise Refusal("studio.errors.invalidPlan")
-        seeds = [source.get(key) for key in ("development", "variation")]
-        if any(not isinstance(seed, str) or not seed.isascii() or not seed.isdecimal()
-               or len(seed) > len(str(SEED_MAX)) or int(seed) > SEED_MAX for seed in seeds):
-            raise Refusal("studio.errors.invalidPlan")
-        addresses = source.get("addresses")
-        if (not isinstance(addresses, list) or len(addresses) != len(groups)
-                or any(not isinstance(row, list) or len(row) != ATELIER_LIMITS["contact_values"] for row in addresses)):
-            raise Refusal("studio.errors.invalidPlan")
-        rows.append(" ".join(seeds))
-        rows.extend(" ".join(number(value) for value in row) for row in addresses)
     return "\n".join(rows) + "\n"
 
 

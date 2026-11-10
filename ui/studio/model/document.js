@@ -201,9 +201,12 @@ export const producers = (doc, index, wheel) =>
     doc.organs.filter(o => o.type === 'gland')
         .flatMap(o => o.centers)
         .filter(c => wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index) >= NOTICEABLE_AFFINITY);
+export const effectsFor =
+    (center, wheel) => [...(center.key === 'retina' ? wheel?.lightEffects ?? [] : []),
+                        ...(wheel?.roleEffects?.[ROLE[center.role]] ?? [])];
 export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
     (r, effect) => r.active && effectDirection(effect, r) !== 0 &&
-                           wheel.roleEffects[ROLE[center.role]]?.includes(effect) &&
+                           effectsFor(center, wheel).includes(effect) &&
                            receptorAffinity(wheel, r, index) >= NOTICEABLE_AFFINITY
                        ? [ effect ]
                        : []);
@@ -1379,9 +1382,7 @@ export function assemblyCenters(doc, assembly) {
                 : findOrgan(doc, id)?.centers.map(c => c.id) ?? []);
 }
 export const wiredCrossing = (doc, center, sites) =>
-    fixedContactMap(doc) ? null
-                         : senderCrossing(doc, {...center, crossing : null},
-                                          routedLinks(doc, sites), sidesOf(doc, sites));
+    senderCrossing(doc, {...center, crossing : null}, routedLinks(doc, sites), sidesOf(doc, sites));
 function sidesOf(doc, sites) {
   const sides = new Map();
   for (const center of allCenters(doc)) {
@@ -1403,14 +1404,6 @@ function senderCrossing(doc, center, links, sides) {
     return -1;
   return center.crossing;
 }
-// Original contact addresses remain useful while the anatomical endpoints and wiring agree.
-// A structural edit hands the new wiring back to the address fitter.
-export const contactTopology = doc => JSON.stringify({
-  centers : allCenters(doc).map(c => [c.id, c.site]),
-  wires : doc.wires.map(w => [w.from, w.to, w.pairing, w.spread])
-});
-export const fixedContactMap = doc => doc.source?.topology === contactTopology(doc) &&
-                                      allCenters(doc).every(center => center.contact);
 export const validCellLink = (a, sa, b, sb) =>
     !!sa && !!sb &&
     ((a.role === 'sensor' && b.role === 'nerve') ||
@@ -1419,7 +1412,6 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
   validateDocument(doc);
   const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
   const indices = new Map(centers.map((c, i) => [c.id, i]));
-  const fixed = fixedContactMap(doc);
   const sides = sidesOf(doc, sites);
   const connections = [];
   const bundles = new Map();
@@ -1429,7 +1421,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     for (const target of targets) {
       if (link.side && findSite(sites, target.site)?.side !== link.side)
         continue;
-      const key = fixed ? target.id : link.wire.id + ':' + link.to + ':' + target.id;
+      const key = link.wire.id + ':' + link.to + ':' + target.id;
       for (const source of sources) {
         const from = indices.get(source.id), to = indices.get(target.id);
         if (from !== undefined && to !== undefined &&
@@ -1478,7 +1470,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         organ : organ.type === 'brain' ? doc.organs.length + indices.get(center.id)
                                        : doc.organs.indexOf(organ),
         open : organ.openContacts ? 1 : 0,
-        crossing : fixed ? center.crossing : senderCrossing(doc, center, links, sides),
+        crossing : senderCrossing(doc, center, links, sides),
         range : center.range,
         growth : {...center.growth},
         receptors : center.receptors.slice(0, effects).map(r => ({...r}))
@@ -1490,14 +1482,6 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
     groups,
     connections,
     compiler : compilerOptions(doc),
-    ...(fixed ? {
-      source : {
-        development : doc.source.development,
-        variation : doc.source.variation,
-        addresses : centers.map(c => c.contact)
-      }
-    }
-              : {}),
     growth : {...doc.growth}
   };
 }

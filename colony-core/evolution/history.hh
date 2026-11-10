@@ -23,6 +23,7 @@ public:
     int node, incoming, outgoing;
   };
   History();
+  explicit History(std::string lineage);
   const std::string &lineage() const { return lineage_; }
   int connection(int source, int target, int port = 0);
   Split split(int old_innovation, int source, int target, int port = 0);

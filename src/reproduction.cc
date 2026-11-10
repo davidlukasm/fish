@@ -59,8 +59,11 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     b.reproduction_.egg_laying = true;
   if (!b.reproduction_.egg_laying)
     return std::nullopt;
-  const bool nutrient = b.reproduction_.egg_yolk <
-                        evo.nutrient_egg_threshold * minimum_egg_energy(p.genome, physiology_);
+  // The parent's observed incubation includes neural maturation and learning before hatching.
+  // Assembly work alone does not measure how long a living embryo needs yolk.
+  const bool nutrient =
+      b.reproduction_.egg_yolk <
+      evo.nutrient_egg_threshold * minimum_egg_energy(p.genome, physiology_, b.hatch_age);
   if (!nutrient && occupied >= std::size_t(population_limit))
     return std::nullopt;
   std::size_t nearby = 0;
@@ -341,7 +344,8 @@ void Ecosystem::reproduction(bool fertile) {
           continue;
         }
         if ((child.blueprint && child.blueprint->resource_limited) ||
-            connection_storage(*this, &child) + planned_edges(child) > neural_budget) {
+            connection_storage(*this, &child) - planned_edges(egg.genome) + planned_edges(child) >
+                neural_budget) {
           ++metrics_.budget_rejections;
           continue;
         }

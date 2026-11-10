@@ -32,6 +32,7 @@ export function gonadStore(state, organ) {
     steps : perStep > 0 ? Math.ceil(spawn / perStep) : Infinity,
     releaseEnabled : drive('release') >= G.release,
     spawn,
+    incubation : state.report?.eggIncubation,
     minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
   };
 }
@@ -209,7 +210,8 @@ export function gonadFacts(state, organ) {
     cells : store.growth,
     most : store.own.most,
     energy : Math.round(store.spawn),
-    least : Math.round(store.minimum ?? 0)
+    least : Math.round(store.minimum ?? 0),
+    duration : store.incubation ?? 0
   });
   const find = key => organ.centers.find(c => c.key === key), pressure = find('pressure');
   const row = (center, ...facts) =>

@@ -50,8 +50,7 @@
       "max_groups": 360,
       "max_group_name": 60,
       "receptors": 8,
-      "max_copies": 16,
-      "contact_values": 20
+      "max_copies": 16
     }
   },
   "behavior_scales": {
@@ -678,9 +677,6 @@
       "range",
       "life",
       "development",
-      "growth_response",
-      "electrical_limit",
-      "teaching_limit",
       "command"
     ],
     "neuron_state": [
@@ -691,7 +687,6 @@
       "signal",
       "life",
       "development",
-      "growth_response",
       "command"
     ],
     "neuron_parameter": [
@@ -751,8 +746,7 @@
       "source",
       "target",
       "strength",
-      "id",
-      "limit"
+      "id"
     ],
     "stroke": [
       "mean",

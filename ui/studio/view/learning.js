@@ -134,9 +134,6 @@ function learningPicture(center, teachers, colours) {
     }
   });
 }
-// The engine's learning gain tops out at 2 and an unused contact fades over 4 learning times; it
-// does not report either yet.
-const LEARNING_GAIN_MOST = 2, DECAY_SPAN = 4;
 function learningValues(state, center) {
   if (!state.capabilities)
     return '';
@@ -144,12 +141,12 @@ function learningValues(state, center) {
         cl = nerveClass(center);
   const response = effect => receptorResponse(state.capabilities, center.receptors[effect],
                                               context.hormones, context.maturity);
-  const eta = constants.learningFloor + (LEARNING_GAIN_MOST - constants.learningFloor) *
+  const eta = constants.learningFloor + (constants.learningGainMax - constants.learningFloor) *
                                             center.qwidth *
                                             (1 + response(HORMONE_EFFECT.learning)) / 2;
   const decayHalf = use => {
     const d = Math.log(2) / constants.baselineSteps +
-              (1 - use) / (DECAY_SPAN * learningTimeSteps(center.learning_tau));
+              (1 - use) / (constants.unusedDecaySpan * learningTimeSteps(center.learning_tau));
     const retention = 1 - d + d * d * (.5 - d / 6);
     return Math.ceil(Math.log(.5) / Math.log(retention));
   };

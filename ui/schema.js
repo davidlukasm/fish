@@ -389,11 +389,8 @@ export const NEURON = Object.freeze({
   range : 32,
   life : 33,
   development : 34,
-  growth_response : 35,
-  electrical_limit : 36,
-  teaching_limit : 37,
-  command : 38,
-  count : 39
+  command : 35,
+  count : 36
 });
 export const NEURON_STATE = Object.freeze({
   activity : 0,
@@ -403,9 +400,8 @@ export const NEURON_STATE = Object.freeze({
   signal : 4,
   life : 5,
   development : 6,
-  growth_response : 7,
-  command : 8,
-  count : 9
+  command : 7,
+  count : 8
 });
 export const NEURON_PARAMETER = Object.freeze({
   threshold : 0,
@@ -458,8 +454,7 @@ export const EFFECTOR = Object.freeze({
   outside : 6,
   count : 7
 });
-export const SYNAPSE =
-    Object.freeze({source : 0, target : 1, strength : 2, id : 3, limit : 4, count : 5});
+export const SYNAPSE = Object.freeze({source : 0, target : 1, strength : 2, id : 3, count : 4});
 export const STROKE = Object.freeze({mean : 0, recovery : 1, power : 2, steps : 3, count : 4});
 export const VISUAL_SAMPLE = Object.freeze(
     {neuron : 0, light : 1, stimulus : 2, response : 3, red : 4, green : 5, blue : 6, count : 7});
@@ -1028,6 +1023,5 @@ export const ATELIER_LIMITS = Object.freeze({
   "max_groups" : 360,
   "max_group_name" : 60,
   "receptors" : 8,
-  "max_copies" : 16,
-  "contact_values" : 20
+  "max_copies" : 16
 });

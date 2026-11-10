@@ -10,5 +10,5 @@ fi
 mode=(--dry-run --Werror)
 if [[ "${1:-}" == --write ]]; then mode=(-i); elif [[ $# != 0 ]]; then exit 2; fi
 mapfile -d '' sources < <(find src colony-core tests ui -type f \( -name '*.cc' -o -name '*.hh' -o -name '*.js' \) -print0 | sort -z)
-sources+=(werkzeug/fischbau.mjs werkzeug/atelier.cc werkzeug/atelier_compiler.hh werkzeug/atelier_connections.hh werkzeug/atelier_import.hh)
+sources+=(werkzeug/fischbau.mjs werkzeug/atelier.cc werkzeug/atelier_compiler.hh werkzeug/atelier_connections.hh)
 "$formatter" --style=file "${mode[@]}" "${sources[@]}"

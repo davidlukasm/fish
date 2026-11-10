@@ -5,6 +5,7 @@
 #include "movement.hh"
 #include "ecology_internal.hh"
 #include "plants.hh"
+#include "body_plan.hh"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -230,9 +231,24 @@ void zero_start_learning_and_decay() {
   check(n.learned_change() > .02 && motor, "inner and motor contacts learn from zero");
   auto frozen = n.frozen_probe();
   const auto before = frozen.learned_change();
-  frozen.step({1}, {}, 17);
-  check(frozen.learned_change() < before && frozen.learning_summary().decay > 0,
-        "even used contacts decay in a frozen diagnostic copy");
+  const auto contacts = frozen.synapses();
+  const auto revision = frozen.wiring_revision();
+  const auto cells = frozen.cell_revision();
+  for (int t = 0; t < 128; ++t) {
+    check(frozen.grow({}, double(t % 2), 100) == 0, "frozen probes never build tissue");
+    frozen.step({float(t % 2)}, {}, 17);
+    check(frozen.learned_change() == before && frozen.learning_summary().decay == 0 &&
+              frozen.wiring_revision() == revision && frozen.cell_revision() == cells,
+          "frozen probes preserve weights, contact trials, topology and cell identities");
+    const auto now = frozen.synapses();
+    check(now.size() == contacts.size(), "frozen probes preserve every contact");
+    for (std::size_t i = 0; i < now.size(); ++i)
+      check(now[i].source == contacts[i].source && now[i].target == contacts[i].target &&
+                now[i].weight == contacts[i].weight,
+            "frozen contacts retain their exact learned strengths");
+  }
+  check(frozen.learning_steps() == n.learning_steps() + 128,
+        "diagnostic neural activity still responds over time");
   n.reset_learning();
   for (auto e : n.synapses())
     check(e.weight == 0, "erasing learning never restores inherited weights");
@@ -249,6 +265,10 @@ void zero_start_learning_and_decay() {
   check(trial.synapses().size() == 3, "zero contacts retain their local consolidation trial");
   trial.step({0}, {}, 19);
   check(trial.synapses().empty(), "unused zero contacts are removed after four time constants");
+  auto retained = field::Network(silent).frozen_probe();
+  for (int t = 0; t < 80; ++t)
+    retained.step({0}, {}, 19);
+  check(retained.synapse_count() == 3, "frozen zero contacts cannot expire their trial");
   auto negative = learning_tissue(true);
   field::Network inhibitory(negative);
   for (int t = 0; t < 16; ++t) {
@@ -280,6 +300,83 @@ void zero_start_learning_and_decay() {
     check(brain_saved(teacher) == brain_saved(restored),
           "contact traces, weights, clocks and RNG resume exactly");
   }
+}
+void contact_turnover_pays_for_its_construction() {
+  auto s = learning_tissue();
+  s->edges.clear();
+  s->partner_offset = {0, 0, 1, 1, 1};
+  s->partners = {{0, 1}};
+  field::Network blocked(s), live(s);
+  double paid = 0;
+  bool formed = false;
+  const auto costs = field::scaled_costs(s->options);
+  for (int tick = 0; tick < 128; ++tick) {
+    const float cue = tick % 12 < 6 ? 1 : 0;
+    blocked.construction_budget(0, 3);
+    live.construction_budget(1, 3);
+    if (cue) {
+      blocked.stimulate(1, .8f);
+      live.stimulate(1, .8f);
+    }
+    blocked.step({cue}, {}, 91723);
+    live.step({cue}, {}, 91723);
+    const auto &built = live.formed_wiring();
+    paid += 3 * (built.contacts * costs.edge_build + built.length * costs.edge_length_build);
+    formed |= built.contacts > 0;
+    check(blocked.synapse_count() == 0 && blocked.formed_wiring().contacts == 0,
+          "activity cannot create a contact without construction energy");
+  }
+  check(formed && paid > 0 && live.learned_change() > 0,
+        "coincident local activity forms, pays and consolidates a new contact");
+  auto frozen = live.frozen_probe();
+  const auto revision = frozen.wiring_revision();
+  for (int tick = 0; tick < 128; ++tick)
+    frozen.step({float(tick % 2)}, {}, 91723);
+  check(frozen.wiring_revision() == revision, "a frozen probe cannot create replacement contacts");
+}
+void nonvisual_senses_do_not_invent_stimuli() {
+  auto s = learning_tissue();
+  auto &sensor = s->neurons[0];
+  sensor.functions.senses[field::Touch] = 1;
+  sensor.hormone_receptors[field::Excitation].baseline = 1;
+  field::Network n(s);
+  n.step({0}, {}, 81);
+  check(n.signal(0) == 0 && !field::hormone_effect_present(field::Role::Sensor, field::Excitation),
+        "an unexposed nonvisual sense remains silent under an excitatory hormone");
+  n.step({.7f}, {}, 81);
+  check(n.signal(0) == .7f, "real nonvisual stimuli retain their intensity");
+}
+void juvenile_cells_and_colour_follow_maturity() {
+  auto s = learning_tissue();
+  auto &juvenile = s->neurons[1];
+  juvenile.hormone_receptors[field::Death] = {};
+  juvenile.hormone_receptors[field::Death].baseline = -1;
+  juvenile.hormone_receptors[field::Death].sensitivity = 2;
+  juvenile.hormone_receptors[field::Death].affinity[field::MATURITY_SUBSTANCE] = 1;
+  juvenile.hormone_receptors[field::Death].half = .2;
+  auto &colour = s->neurons[3].hormone_receptors[field::Output];
+  colour = juvenile.hormone_receptors[field::Death];
+  colour.baseline = 1;
+  colour.sensitivity = -2;
+  field::Network n(s);
+  n.set_maturity(0);
+  n.stimulate(3, .8f);
+  n.step({0}, {}, 91);
+  const auto young_colour = n.organ_output()[3];
+  check(!n.dead(1), "a juvenile cell survives early development");
+  auto frozen = n.frozen_probe();
+  frozen.grow({}, 1, 100);
+  frozen.step({0}, {}, 91);
+  check(!frozen.dead(1), "diagnostic doses cannot kill a frozen cell");
+  n.set_maturity(1);
+  n.stimulate(3, .8f);
+  n.step({0}, {}, 91);
+  BrainInterface skin;
+  skin.pigment_absorption = {1, 0, 0};
+  const auto young = visible_absorption(skin, {young_colour, 0, 0}, PhysiologyParameters{}),
+             adult = visible_absorption(skin, {n.organ_output()[3], 0, 0}, PhysiologyParameters{});
+  check(young[0] > adult[0], "a maturity receptor changes visible pigment absorption");
+  check(n.dead(1), "maturity removes an inherited juvenile cell permanently");
 }
 void nerve_levels_and_memory() {
   std::array<float, 3> held{}, trace{}, baseline{}, faded{};
@@ -469,12 +566,12 @@ void development_preserves_identity_and_reserves_capacity() {
         "a dead cell identity never grows again");
   field::EmbryoConstruction stage(*tissue);
   stage.advance();
-  check(stage.construction_fraction() == 1 && stage.ticks() == 1,
+  check(stage.work_fraction() == 1 && stage.work_ticks() == 1,
         "small construction has no arbitrary minimum duration");
   field::EmbryoConstruction larger(25, 0);
-  check(larger.ticks() == 3, "construction duration follows workload and work rate");
+  check(larger.work_ticks() == 3, "construction duration follows workload and work rate");
   larger.advance();
-  check(larger.completed_work() == 10 && std::abs(larger.construction_fraction() - .4) < 1e-12,
+  check(larger.completed_work() == 10 && std::abs(larger.work_fraction() - .4) < 1e-12,
         "construction progress measures completed work");
   const auto cost = larger.remaining_cost();
   field::EmbryoConstruction resumed(25, 0);
@@ -497,6 +594,23 @@ void wiring_has_no_inner_layers() {
   check(field::connection_kind(c[0], c[3]) < 0 && field::connection_kind(c[1], c[0]) < 0 &&
             field::connection_kind(c[3], c[1]) < 0,
         "sensors have no inputs, effectors no outputs, and senses cannot bypass nerves");
+}
+void cell_counts_without_dispersion_match_the_plan() {
+  auto groups = learning_tissue()->neurons;
+  groups.resize(64, groups[1]);
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    groups[i].role = field::Role::Nerve;
+    groups[i].id = i + 1;
+    groups[i].parameters.capacity = .43f;
+    groups[i].expression = .83f;
+  }
+  std::vector<std::vector<field::NeuronIndex>> copies;
+  bool limited = false;
+  const auto cells = field::cell_copies(groups, 8192, copies, limited);
+  check(!limited && cells.size() == 64 * 6,
+        "zero dispersion rounds each expressed cell count deterministically");
+  for (const auto &group : copies)
+    check(group.size() == 6, "planned fractional capacities never acquire hidden count noise");
 }
 void ordered_retinal_neighbors_match_geometry() {
   for (int density : {1, 0, 16}) {
@@ -719,18 +833,87 @@ void algae_vanish_in_traces(const Genome &g) {
     if (s.id == id)
       check(s.algae == 0, "algae buried under sediment vanish");
 }
+void worker_counts_preserve_the_simulation(const Genome &g) {
+  Ecosystem serial(83921);
+  serial.safety = false;
+  serial.evo.assist_min_population = serial.evo.assist_species_minimum = 0;
+  serial.seed({g}, 20, run_limit::default_food);
+  auto parallel = serial.fork();
+  check(saved(serial) == saved(parallel),
+        "a just-seeded aquarium restores before private brains are constructed");
+  serial.workers = 1;
+  parallel.workers = 4;
+  for (int step = 0; step < 160; ++step) {
+    serial.tick();
+    parallel.tick();
+  }
+  parallel.workers = serial.workers;
+  check(saved(serial) == saved(parallel),
+        "one and four workers produce exactly the same developmental and aquarium state");
+}
+void completed_anatomy_is_admitted_before_runtime_allocation(const Genome &g) {
+  Ecosystem w(83921);
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  auto pending = g;
+  pending.development_options.max_edges = 4096;
+  pending.discard_development();
+  w.neural_budget = pending.development_options.max_edges;
+  check(w.spawn(pending, 400, 250, fish_origin::natural, 0, 0, 180),
+        "a pending egg initially fits its plan reservation");
+  for (int step = 0; step < 100 && !w.fish.empty(); ++step) {
+    w.tick();
+    check(connection_storage(w) <= w.neural_budget,
+          "actual runtime reservations never exceed the aquarium budget");
+    for (const auto &p : w.fish)
+      check(!p.body.brain(), "an oversized brain is rejected before private rows are allocated");
+  }
+  check(w.metrics().budget_rejections == 1 && w.fish.empty(),
+        "one actual oversized anatomy causes one deterministic rejection");
+}
+void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
+  Ecosystem w(83921);
+  w.safety = false;
+  w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
+  w.seed({g}, 1, run_limit::default_food);
+  auto &initial = w.fish.front();
+  check(embryo_development(initial.body) == 0, "an unbuilt egg has no mature embryo picture");
+  const auto blueprint = initial.genome;
+  const double initial_energy = initial.body.energy;
+  for (int tick = 0; tick < 3; ++tick)
+    w.tick();
+  check(w.fish.size() == 1 && !w.fish.front().body.hatched &&
+            embryo_development(w.fish.front().body) < .5,
+        "finishing two assembly steps does not show a completed neural embryo");
+  for (int tick = 3; tick < 1024 && !w.fish.empty() && !w.fish.front().body.hatched; ++tick)
+    w.tick();
+  check(w.fish.size() == 1 && w.fish.front().body.hatched,
+        "the reference embryo hatches by its own learned motor activity");
+  const auto &parent = w.fish.front().body;
+  const double funded = minimum_egg_energy(blueprint, w.physiology(), parent.hatch_age),
+               assembly_only = minimum_egg_energy(blueprint, w.physiology(), 0);
+  check(parent.hatch_age > 3 && funded > assembly_only + 1,
+        "the energy estimate includes the observed wait for autonomous hatching");
+  const double spent = initial_energy - parent.energy - parent.tissue;
+  check(funded >= HATCH_TISSUE + hatch_search_reserve(parent) + spent,
+        "the incubation estimate covers the measured yolk cost and hatch search reserve");
+  check(embryo_development(parent) == 1, "a hatched fish has its complete outer picture");
+}
 void development_queue_is_bounded(const Genome &g) {
   auto w = closed_tank(g);
   w.fish.clear();
-  for (int i = 0; i < 21; ++i) {
+  constexpr int EGGS = 32;
+  for (int i = 0; i < EGGS; ++i) {
     Genome egg = g;
     egg.blueprint.reset();
     egg.interface.reset();
     egg.cppn = std::make_shared<evolution::Genome>(*g.cppn);
-    check(w.spawn(egg, 400 + i * 10, 250, i == 20 ? fish_origin::immigrant : fish_origin::natural,
-                  0, 0, 300),
+    check(w.spawn(egg, 400 + i * 10, 250,
+                  i == EGGS - 1 ? fish_origin::immigrant : fish_origin::natural, 0, 0, 300),
           "queued embryo placement");
   }
+  check(w.metrics().budget_rejections == 0 && connection_storage(w) < w.neural_budget,
+        "a burst of pending natural eggs reserves plans without fictitious runtime rows");
   w.tick(false, true);
   int started = 0;
   for (const auto &egg : w.fish)
@@ -1156,14 +1339,21 @@ int main() {
     initial_plants_use_the_available_energy();
     herbivores_start_at_reachable_leaves();
     zero_start_learning_and_decay();
+    contact_turnover_pays_for_its_construction();
+    nonvisual_senses_do_not_invent_stimuli();
+    juvenile_cells_and_colour_follow_maturity();
     nerve_levels_and_memory();
     developing_gates_learn_after_the_first_external_cue();
     development_preserves_identity_and_reserves_capacity();
     wiring_has_no_inner_layers();
+    cell_counts_without_dispersion_match_the_plan();
     ordered_retinal_neighbors_match_geometry();
     retinal_development_is_local_and_restorable();
     const auto g = Genome::load(HAND_BUILT_GENOME);
     compact_founders_use_their_actual_reservation(g);
+    worker_counts_preserve_the_simulation(g);
+    completed_anatomy_is_admitted_before_runtime_allocation(g);
+    observed_incubation_funds_waiting_and_drives_the_picture(g);
     start_fish_uses_external_vision_when_mature(g);
     start_fish_eats_nearby_food(g);
     nonvisual_input_reaches_the_brain(g);

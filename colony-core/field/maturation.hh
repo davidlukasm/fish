@@ -27,6 +27,9 @@ inline DevelopmentCosts scaled_costs(const Options &, DevelopmentCosts c = {}) {
   c.neuron_maintenance *= f;
   return c;
 }
+inline double development_credit_limit(const DevelopmentCosts &costs) {
+  return std::max(CELL_DEVELOPMENT_INTERVAL * costs.work_per_tick, costs.neuron_work);
+}
 class EmbryoConstruction {
   DevelopmentCosts costs;
   double total_work_ = 0, completed_work_ = 0, construction = 0, maintenance = 0;
@@ -36,10 +39,11 @@ public:
   EmbryoConstruction(std::size_t neurons, std::size_t edges, DevelopmentCosts c = {}) : costs(c) {
     costs.validate();
     total_work_ = neurons * c.neuron_work + edges * c.edge_work;
-    const double length = std::sqrt(12.);
-    construction = neurons * c.neuron_build + edges * (c.edge_build + length * c.edge_length_build);
+    const double maximum_length = std::sqrt(12.);
+    construction =
+        neurons * c.neuron_build + edges * (c.edge_build + maximum_length * c.edge_length_build);
     maintenance = neurons * c.neuron_maintenance +
-                  edges * (c.edge_maintenance + length * c.edge_length_maintenance);
+                  edges * (c.edge_maintenance + maximum_length * c.edge_length_maintenance);
   }
   EmbryoConstruction(const Substrate &s, DevelopmentCosts given = {}, bool capable = true)
       : EmbryoConstruction(s.neurons.size(), s.edges.size(), scaled_costs(s.options, given)) {
@@ -60,19 +64,16 @@ public:
     viable_ = capable && sensor && motor && !s.resource_limited;
   }
   void advance() { completed_work_ = std::min(total_work_, completed_work_ + costs.work_per_tick); }
-  double construction_fraction() const {
-    return total_work_ > 0 ? completed_work_ / total_work_ : 1;
-  }
+  double work_fraction() const { return total_work_ > 0 ? completed_work_ / total_work_ : 1; }
   double completed_work() const { return completed_work_; }
-  double remaining_construction() const { return construction * (1 - construction_fraction()); }
+  double remaining_construction() const { return construction * (1 - work_fraction()); }
   double remaining_cost() const {
     if (completed_work_ >= total_work_)
       return 0;
     const double steps = std::ceil((total_work_ - completed_work_) / costs.work_per_tick),
                  rate = costs.work_per_tick / total_work_;
     return remaining_construction() + costs.egg_basal * steps +
-           maintenance * .5 *
-               ((2 * steps - 1) * construction_fraction() + rate * steps * (steps - 1) + 1);
+           maintenance * .5 * ((2 * steps - 1) * work_fraction() + rate * steps * (steps - 1) + 1);
   }
   double birth_cost() const {
     auto start = *this;
@@ -86,7 +87,7 @@ public:
   }
   bool viable() const { return viable_; }
   bool complete() const { return viable_ && completed_work_ >= total_work_; }
-  int ticks() const { return int(std::ceil(total_work_ / costs.work_per_tick)); }
+  int work_ticks() const { return int(std::ceil(total_work_ / costs.work_per_tick)); }
   double running_cost() const { return maintenance; }
 };
 }

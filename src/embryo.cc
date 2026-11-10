@@ -4,7 +4,7 @@ namespace fishsim {
 void advance_embryo(Body &b, const Genome &g, const PhysiologyParameters &p, bool protected_life) {
   auto &e = b.embryo;
   auto &m = b.motor_;
-  const double progress = b.development_ ? b.development_->construction_fraction() : 0;
+  const double progress = b.development_ ? b.development_->work_fraction() : 0;
   const double radius = std::max(.001, b.egg_shell_radius);
   const double occupied = p.embryo_fold * body_radius(b) / radius;
   e.pressure = std::max(0., occupied - p.embryo_crowding);

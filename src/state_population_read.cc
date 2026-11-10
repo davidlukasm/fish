@@ -451,14 +451,24 @@ void PopulationCheckpoint::read_runtime(std::istream &in, Body &b) {
       v = float(d);
     }
   }
+  std::string tag;
+  bool construction, brain;
+  value(in, tag);
+  value(in, construction);
   double work;
   scalar(in, work, 0, PLAUSIBLE_AMOUNT);
-  if (b.development_)
+  value(in, brain);
+  if (tag != "CONSTRUCTION" || (construction && !b.development_) || (!construction && work != 0) ||
+      (brain && (!construction || !b.brain_)))
+    throw std::runtime_error("invalid body construction state");
+  if (construction)
     b.development_->restore(work);
-  else if (work != 0)
-    throw std::runtime_error("work stored before brain planning completed");
-  if (b.brain_)
+  else
+    b.development_.reset();
+  if (brain)
     b.brain_->read_runtime(in);
+  else
+    b.brain_.reset();
 }
 void PopulationCheckpoint::read(std::istream &in, std::vector<Individual> &fish,
                                 const PopulationStateContext &context) {

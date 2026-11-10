@@ -36,6 +36,30 @@ namespace {
 using namespace atelier;
 
 constexpr int REPORT_DIGITS = 8, DIET_DIGITS = 6;
+constexpr int INCUBATION_PROBE_STEPS = 1024;
+constexpr std::uint64_t SIGHT_TANK_SEED = 719;
+std::optional<int> incubation_probe(const Genome &g) {
+  if (!g.viable())
+    return std::nullopt;
+  fishsim::Ecosystem tank(SIGHT_TANK_SEED);
+  tank.safety = false;
+  tank.workers = 1;
+  tank.evo.assist_min_population = tank.evo.assist_species_minimum = 0;
+  tank.evo.mutation = 0;
+  tank.food_burst.strength = 0;
+  tank.set_parameter("energy_supply", 0);
+  if (!tank.spawn(g, fishsim::SIZE / 2, fishsim::SIZE / 2, fishsim::fish_origin::founder, 0, 0,
+                  fishsim::development_energy(g, tank.physiology().neural_cost, tank.evo.yolk)))
+    return std::nullopt;
+  tank.fish.back().genome = g;
+  tank.fish.back().body.prepare(g);
+  for (int tick = 0; tick < INCUBATION_PROBE_STEPS && !tank.fish.empty(); ++tick) {
+    tank.tick();
+    if (!tank.fish.empty() && tank.fish.front().body.hatched)
+      return tank.fish.front().body.hatch_age;
+  }
+  return std::nullopt;
+}
 std::string json(const std::string &s) {
   std::ostringstream out;
   out << '"';
@@ -55,7 +79,6 @@ struct SightScene {
 };
 constexpr std::uint64_t ATELIER_RUN_SEED = 42;
 constexpr float CPPN_EDIT_LIMIT = fishsim::MAX_GENE_WEIGHT;
-constexpr std::uint64_t SIGHT_TANK_SEED = 719;
 SightScene read_sight(std::istream &in) {
   SightScene scene;
   const double half_turn = fishsim::degrees(fishsim::PI);
@@ -238,7 +261,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << a.hormone_timing[k].steps;
   std::cout << "],\"pigmentTimes\":[";
-  for (int k = 0; k < 3; ++k)
+  for (int k = 0; k < fishsim::rgb::count; ++k)
     std::cout << (k ? "," : "") << a.pigment_timing[k].steps;
   std::cout << "],\"motorTiming\":[";
   for (int k = 0; k < fishsim::STROKE_COUNT; ++k)
@@ -604,7 +627,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       if (!seen[n.group])
         ++sites[group[i]];
       for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
-        if (!field::hormone_effect_present(n.role, effect))
+        if (!field::hormone_effect_present(n, effect))
           continue;
         const auto &r = n.hormone_receptors[effect];
         auto &v = receptor_sums[group[i]][effect];
@@ -714,8 +737,17 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
             << ",\"sperm\":" << (a.sperm_parts[0] > 0 && a.sperm_parts[1] > 0 ? "true" : "false")
             << ",\"connections\":" << (!t.edges.empty() ? "true" : "false")
             << ",\"resources\":" << (!t.resource_limited ? "true" : "false") << '}';
-  std::cout << ",\"eggMinimum\":"
-            << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{});
+  const auto incubation = incubation_probe(g);
+  std::cout << ",\"eggIncubation\":";
+  if (incubation)
+    std::cout << *incubation;
+  else
+    std::cout << "null";
+  std::cout << ",\"eggMinimum\":";
+  if (incubation)
+    std::cout << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{}, *incubation);
+  else
+    std::cout << "null";
   auto group = anatomy_report(t, g.interface, groups, true);
   std::map<std::uint32_t, int> extra;
   std::map<std::uint32_t, int> members;
@@ -753,9 +785,7 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
       ++v.count;
       const auto &source = t.neurons[e.source], &target = t.neurons[e.target];
       const auto cl = field::cell_class(source);
-      const float modulation = target.role == field::Role::Nerve ? cl.modulator : 0;
-      const float limit = cl.sign * ((1 - modulation) * target.electrical_limit +
-                                     modulation * target.teaching_limit);
+      const float limit = field::contact_limit(source, target);
       v.weight += limit;
       if (cl.sign > 0) {
         ++v.positive;
@@ -886,6 +916,8 @@ int main(int argc, char **argv) {
                 << ",\"gonads\":" << gonad_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
+                << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN
+                << ",\"unusedDecaySpan\":" << field::plasticity::unused_decay_span
                 << ",\"baselineSteps\":" << field::plasticity::baseline_steps
                 << ",\"cancellation\":" << field::plasticity::cancellation
                 << ",\"contactTrial\":" << field::plasticity::contact_trial_time_constants
@@ -895,6 +927,7 @@ int main(int argc, char **argv) {
                 << ",\"contactFields\":" << field::CONTACT_FIELDS
                 << ",\"effectorSlots\":" << field::EFFECTOR_SLOTS
                 << ",\"adaptationSpan\":" << field::SYNAPTIC_ADAPTATION_SPAN << '}'
+                << ",\"lightEffects\":[" << field::Excitation << "]"
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
                 << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
@@ -947,8 +980,7 @@ int main(int argc, char **argv) {
                   << std::flush;
       };
       progress("search", addressFit);
-      if (!plan.fixed_contacts)
-        addressFit = plan_addresses(plan, progress);
+      addressFit = plan_addresses(plan, progress);
       progress("encode", addressFit);
       g.cppn = Builder().build(plan);
       groups = plan.groups;

@@ -3,6 +3,9 @@
 #include "brain_interface.hh"
 #include <stdexcept>
 namespace fishsim {
+namespace {
+constexpr double PROTECTED_CONSTRUCTION_ENERGY = 1e6;
+}
 void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_steps,
                    double bite_steps) {
   auto &m = b.mouth;
@@ -45,7 +48,19 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
 double maternal_reserve(const Body &b, double adult_reserve) {
   return std::max(0., adult_reserve) * std::sqrt(std::max(0., b.tissue) / BODY_TISSUE);
 }
-double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
+double embryo_development(const Body &b) {
+  if (b.hatched)
+    return 1;
+  if (!b.brain() || !b.development())
+    return 0;
+  const auto &brain = *b.brain();
+  const auto cells = brain.blueprint().neurons.size();
+  double progress = 0;
+  for (std::size_t i = 0; i < cells; ++i)
+    progress += brain.dead(i) ? 1 : brain.development_progress(i);
+  return cells ? b.development()->work_fraction() * progress / cells : 0;
+}
+double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p, int incubation_steps) {
   if (!g.blueprint || !g.interface)
     return 0;
   auto stage = embryo_construction_template(g);
@@ -54,8 +69,8 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p) {
   double energy = HATCH_TISSUE +
                   HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                   g.blueprint->queries / QUERY_ENERGY_DIVISOR;
-  for (int step = 0, steps = stage.ticks(); step < steps; ++step) {
-    const double tissue = HATCH_TISSUE * stage.construction_fraction();
+  for (int step = 0, steps = std::max(stage.work_ticks(), incubation_steps); step < steps; ++step) {
+    const double tissue = HATCH_TISSUE * stage.work_fraction();
     energy += basal_cost(tissue, p) + muscle_upkeep(g.interface->muscle_maintenance, tissue, p);
     stage.advance();
     energy += stage.running_cost() * p.neural_cost;
@@ -71,7 +86,7 @@ double development_energy(const Genome &g, double scale, double yolk) {
     const auto n = std::min(field::DEVELOPMENT_SITES, o.max_nodes);
     return field::EmbryoConstruction(n, std::min(o.max_edges, n * n));
   }();
-  const double steps = estimate.ticks();
+  const double steps = estimate.work_ticks();
   yolk = std::max(yolk, HATCH_TISSUE +
                             HATCH_RESERVE_FRACTION * reserve_capacity_for_tissue(HATCH_TISSUE) +
                             steps * (FOUNDER_UPKEEP_ALLOWANCE + upkeep));
@@ -313,8 +328,9 @@ void Body::grow_brain(const Genome &g, const PhysiologyParameters &p, bool prote
   const double queries = g.blueprint->queries > ledger_.queries_paid
                              ? (g.blueprint->queries - ledger_.queries_paid) / QUERY_ENERGY_DIVISOR
                              : 0;
-  const double available =
-      protected_life ? 1e6 : std::max(0., energy - missing - reserve - queries - rest_cost);
+  const double available = protected_life
+                               ? PROTECTED_CONSTRUCTION_ENERGY
+                               : std::max(0., energy - missing - reserve - queries - rest_cost);
   pending_build_cost_ =
       brain_->grow(hormones_.levels(), body_maturity(*this), available, p.neural_cost);
   if (!protected_life)
@@ -379,9 +395,9 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
           hatch_tissue(energy - development_->remaining_cost() * physiology.neural_cost);
     }
     development_->advance();
-    const double tissue_work = std::min(
-        std::max(0., energy),
-        std::max(0., embryo.target_tissue * development_->construction_fraction() - tissue));
+    const double tissue_work =
+        std::min(std::max(0., energy),
+                 std::max(0., embryo.target_tissue * development_->work_fraction() - tissue));
     if (!protected_life)
       energy -= tissue_work;
     tissue += tissue_work;
@@ -400,7 +416,8 @@ void Body::act(const Genome &g, const PhysiologyParameters &physiology, bool pro
   const double reserve =
       hatched ? PhysiologyParameters::growth_reserve * reserve_capacity(*this)
               : hatch_search_reserve(*this) + std::max(0., embryo.target_tissue - tissue);
-  brain_->construction_budget(protected_life ? 1e6 : std::max(0., energy - reserve),
+  brain_->construction_budget(protected_life ? PROTECTED_CONSTRUCTION_ENERGY
+                                             : std::max(0., energy - reserve),
                               physiology.neural_cost);
   cppn_action(*this, g, physiology, protected_life);
   const auto &built = brain_->formed_wiring();

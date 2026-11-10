@@ -2,6 +2,7 @@
 #include "../src/genome.hh"
 #include "../src/body_plan.hh"
 #include "../src/eye_geometry.hh"
+#include "../src/stable_hash.hh"
 #include "field/development_sites.hh"
 #include "field/contacts.hh"
 #include "cppn/program.hh"
@@ -20,6 +21,16 @@
 #include <vector>
 
 namespace atelier {
+inline std::string founder_lineage(const evolution::Genome &genes) {
+  std::ostringstream encoded, name;
+  encoded.imbue(std::locale::classic());
+  genes.write(encoded, false);
+  auto hash = fishsim::FNV_OFFSET;
+  for (unsigned char c : encoded.str())
+    hash = fishsim::fnv_add(hash, std::uint64_t(c));
+  name << "atelier-" << std::hex << hash;
+  return name.str();
+}
 static_assert(studio_plan::receptors == field::HORMONE_EFFECTS);
 using evolution::NodeType;
 namespace out = cppn::output;
@@ -95,7 +106,6 @@ struct Plan {
   Receptor growth;
   CompileOptions options;
   std::vector<Connection> connections;
-  bool fixed_contacts = false;
   std::uint64_t development_seed = 1, variation_seed = 2;
 };
 // A design may still be empty (allow_empty): its view shows the body without cells.
@@ -174,30 +184,6 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     auto [it, fresh] = bundleTargets.emplace(c.bundle, c.to);
     ensure(fresh || it->second == c.to, "connection bundle has different targets");
     plan.connections.push_back(c);
-  }
-  int fixed = 0;
-  ensure(bool(input >> fixed) && (fixed == 0 || fixed == 1), "invalid contact map flag");
-  plan.fixed_contacts = fixed;
-  if (fixed) {
-    ensure(bool(input >> plan.development_seed >> plan.variation_seed),
-           "invalid development seeds");
-    for (auto &g : plan.groups) {
-      ensure(bool(input >> g.sender1 >> g.sender2 >> g.receiver1 >> g.receiver2 >> g.sigma),
-             "invalid contact map");
-      for (int f = 0; f < field::CONTACT_FIELDS - 1; ++f) {
-        auto &r = g.reception[f];
-        ensure(bool(input >> r.expression >> r.address[0] >> r.address[1] >> r.width) &&
-                   between(r.expression, -1, 1) && between(r.address[0], -1, 1) &&
-                   between(r.address[1], -1, 1) && between(r.width, 0, 1),
-               "invalid reception field");
-        for (auto &spread : g.reception_spread[f])
-          ensure(bool(input >> spread) && between(spread, 0, 1), "invalid reception spread");
-      }
-      for (float address : {g.sender1, g.sender2, g.receiver1, g.receiver2})
-        ensure(between(address, -1, 1), "invalid contact address");
-      ensure(between(g.sigma, float(field::MIN_SEARCH), float(field::MAX_SEARCH)),
-             "invalid contact radius");
-    }
   }
   return plan;
 }
@@ -584,7 +570,15 @@ public:
                                " möglich.");
     cppn::CPPN compiled(genes);
     ensure(cppn::Program(compiled).safe(), "compiler exceeds fast CPPN evaluation limits");
-    return genes;
+    // Independently compiled founders cannot share innovation numbers by the tool's RNG seed.
+    auto root = std::make_shared<evolution::Genome>(
+        genes->inputs(), genes->outputs(),
+        std::make_shared<evolution::History>(founder_lineage(*genes)));
+    for (const auto &n : genes->get_node_genes())
+      root->add_node(n);
+    for (const auto &e : genes->get_connection_genes())
+      root->add_connection(e);
+    return root;
   }
 };
 

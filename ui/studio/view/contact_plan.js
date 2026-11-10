@@ -27,7 +27,7 @@ export function contactPlan(state, chosen, wire = null) {
           .map(edge => {
             const source = centers[edge.from], target = centers[edge.to];
             const cl = source.role === 'sensor' ? {sign : 1, modulator : 0} : nerveClass(source);
-            const modulation = target.role === 'motor' ? 0 : cl.modulator;
+            const modulation = target.role !== 'motor' && cl.modulator > .5 ? 1 : 0;
             const limit =
                 (1 - modulation) * target.electrical_limit + modulation * target.teaching_limit;
             const learning =

@@ -780,11 +780,8 @@ enum class NeuronColumn : std::size_t {
   range = 32,
   life = 33,
   development = 34,
-  growth_response = 35,
-  electrical_limit = 36,
-  teaching_limit = 37,
-  command = 38,
-  count = 39
+  command = 35,
+  count = 36
 };
 namespace neuron_column {
 inline constexpr std::size_t x = 0;
@@ -822,11 +819,8 @@ inline constexpr std::size_t crossing = 31;
 inline constexpr std::size_t range = 32;
 inline constexpr std::size_t life = 33;
 inline constexpr std::size_t development = 34;
-inline constexpr std::size_t growth_response = 35;
-inline constexpr std::size_t electrical_limit = 36;
-inline constexpr std::size_t teaching_limit = 37;
-inline constexpr std::size_t command = 38;
-inline constexpr std::size_t count = 39;
+inline constexpr std::size_t command = 35;
+inline constexpr std::size_t count = 36;
 }
 enum class NeuronStateColumn : std::size_t {
   activity = 0,
@@ -836,9 +830,8 @@ enum class NeuronStateColumn : std::size_t {
   signal = 4,
   life = 5,
   development = 6,
-  growth_response = 7,
-  command = 8,
-  count = 9
+  command = 7,
+  count = 8
 };
 namespace neuron_state_column {
 inline constexpr std::size_t activity = 0;
@@ -848,9 +841,8 @@ inline constexpr std::size_t state = 3;
 inline constexpr std::size_t signal = 4;
 inline constexpr std::size_t life = 5;
 inline constexpr std::size_t development = 6;
-inline constexpr std::size_t growth_response = 7;
-inline constexpr std::size_t command = 8;
-inline constexpr std::size_t count = 9;
+inline constexpr std::size_t command = 7;
+inline constexpr std::size_t count = 8;
 }
 enum class NeuronParameterColumn : std::size_t {
   threshold = 0,
@@ -960,21 +952,13 @@ inline constexpr std::size_t hue = 5;
 inline constexpr std::size_t outside = 6;
 inline constexpr std::size_t count = 7;
 }
-enum class SynapseColumn : std::size_t {
-  source = 0,
-  target = 1,
-  strength = 2,
-  id = 3,
-  limit = 4,
-  count = 5
-};
+enum class SynapseColumn : std::size_t { source = 0, target = 1, strength = 2, id = 3, count = 4 };
 namespace synapse_column {
 inline constexpr std::size_t source = 0;
 inline constexpr std::size_t target = 1;
 inline constexpr std::size_t strength = 2;
 inline constexpr std::size_t id = 3;
-inline constexpr std::size_t limit = 4;
-inline constexpr std::size_t count = 5;
+inline constexpr std::size_t count = 4;
 }
 enum class StrokeColumn : std::size_t { mean = 0, recovery = 1, power = 2, steps = 3, count = 4 };
 namespace stroke_column {

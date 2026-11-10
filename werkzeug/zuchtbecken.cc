@@ -11,7 +11,7 @@
 using namespace fishsim;
 namespace {
 constexpr std::array<double, 3> RADII{24, 64, 128};
-constexpr int SAMPLE_STEPS = 400;
+constexpr int SAMPLE_STEPS = 400, OBSERVATION_STEPS = 5, PICTURE_STEPS = 100, QUANTILE_DIVISIONS = 4;
 struct LastSeen {
   unsigned generation = 0;
   int age = 0;
@@ -39,8 +39,8 @@ void quantiles(std::vector<double> values) {
   std::sort(values.begin(), values.end());
   std::cout << '[';
   if (!values.empty())
-    for (int i = 0; i <= 4; ++i)
-      std::cout << (i ? "," : "") << values[(values.size() - 1) * i / 4];
+    for (int i = 0; i <= QUANTILE_DIVISIONS; ++i)
+      std::cout << (i ? "," : "") << values[(values.size() - 1) * i / QUANTILE_DIVISIONS];
   std::cout << ']';
 }
 
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
       observations.open(observed + "-trace.jsonl");
       if (!observations)
         throw std::runtime_error("Beobachtung kann nicht gespeichert werden");
-      observations << "{\"every\":5,\"picturesEvery\":100,\"width\":"
+      observations << "{\"every\":" << OBSERVATION_STEPS << ",\"picturesEvery\":" << PICTURE_STEPS << ",\"width\":"
                    << w.field.geometry().width << ",\"height\":" << w.field.geometry().height
                    << ",\"columns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"angle\","
                       "\"radius\",\"mouthX\",\"mouthY\",\"aperture\",\"nearestMouthLeaf\","
@@ -168,7 +168,13 @@ int main(int argc, char **argv) {
     std::cout << "{\"event\":\"setup\",\"habitat\":\"" << habitat << "\",\"seed\":" << seed
               << ",\"requested\":" << count << ",\"seeded\":" << w.fish.size()
               << ",\"assistance\":false,\"mutation\":" << w.evo.mutation
-              << ",\"leafRadii\":[24,64,128],\"quantiles\":[0,0.25,0.5,0.75,1]}\n";
+              << ",\"leafRadii\":[";
+    for (std::size_t i = 0; i < RADII.size(); ++i)
+      std::cout << (i ? "," : "") << RADII[i];
+    std::cout << "],\"quantiles\":[";
+    for (int i = 0; i <= QUANTILE_DIVISIONS; ++i)
+      std::cout << (i ? "," : "") << double(i) / QUANTILE_DIVISIONS;
+    std::cout << "]}\n";
     std::map<std::uint64_t, std::array<double, DIET_COUNT>> previous;
     std::map<std::uint64_t, LastSeen> last_seen;
     std::array<double, DIET_COUNT> food{};
@@ -223,9 +229,9 @@ int main(int argc, char **argv) {
       }
       const bool last = tick == steps || (count > 0 && w.fish.empty());
       if (observations.is_open()) {
-        if (tick % 5 == 0 || last)
+        if (tick % OBSERVATION_STEPS == 0 || last)
           trace(observations, w);
-        if (tick % 100 == 0 || last)
+        if (tick % PICTURE_STEPS == 0 || last)
           snapshot(w, observed);
       }
       if (tick % SAMPLE_STEPS == 0 || last) {

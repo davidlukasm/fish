@@ -5,14 +5,16 @@
 namespace field {
 // Normalized optical bearings also locate colour layers in the retinal tissue.
 inline std::vector<double> visual_bearings(const std::vector<Neuron> &cells) {
+  constexpr double BEARING_PRECISION = 1e-6;
   std::vector<double> bearings;
   for (int u = 0; u < 4; ++u)
     for (int w = 0; w < 3; ++w)
       bearings.push_back(.5 * (1 - u / 3.) + .5 * w / 2.);
   std::sort(bearings.begin(), bearings.end());
-  bearings.erase(std::unique(bearings.begin(), bearings.end(),
-                             [](double a, double b) { return std::abs(a - b) < 1e-6; }),
-                 bearings.end());
+  bearings.erase(
+      std::unique(bearings.begin(), bearings.end(),
+                  [](double a, double b) { return std::abs(a - b) < BEARING_PRECISION; }),
+      bearings.end());
   std::size_t groups = 0;
   for (const auto &n : cells)
     groups = std::max(groups, std::size_t(n.group) + 1);

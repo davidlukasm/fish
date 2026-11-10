@@ -676,7 +676,7 @@ double Body::local_defense(double bearing) const {
 void Body::refresh_organs(const Genome &g) {
   if (!g.interface)
     return;
-  const auto revision = brain_ ? brain_->cell_revision() : 0;
+  const auto revision = brain_ ? brain_->organ_revision() : 0;
   if (revision == known_cells_ && organ_source_ == g.interface)
     return;
   organ_source_ = g.interface;

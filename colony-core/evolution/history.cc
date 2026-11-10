@@ -11,6 +11,10 @@ History::History() {
   name << std::hex << generator() << '-' << generator() << '-' << generator() << '-' << generator();
   lineage_ = name.str();
 }
+History::History(std::string lineage) : lineage_(std::move(lineage)) {
+  if (lineage_.empty() || lineage_.find_first_of(" \t\r\n") != std::string::npos)
+    throw std::invalid_argument("invalid founder lineage");
+}
 void History::observe_node(int id) {
   if (id < 0 || id == std::numeric_limits<int>::max())
     throw std::runtime_error("invalid node id");

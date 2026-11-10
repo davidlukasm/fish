@@ -105,6 +105,8 @@ void lay_out_cells(std::vector<Neuron> &neurons) {
   }
 }
 namespace {
+constexpr std::uint64_t INTRINSIC_STREAM = 0xa7cfbc81ull, LEARNING_STREAM = 0x15b3c201ull,
+                        TEACHING_STREAM = 0xf317f331ull, RECEPTOR_STREAM = 0xb8624f90ull;
 class CellCopies {
   const std::vector<Neuron> &groups;
   const std::vector<CellTraits> *traits;
@@ -132,9 +134,8 @@ public:
           const auto &n = groups[cursor];
           if (n.role != Role::Effector)
             counts[cursor] =
-                std::clamp(stochastic_count(CELL_COPIES * n.parameters.capacity * n.expression,
-                                            seed ^ splitmix(n.id) ^ 0x37fa811cull),
-                           1, CELL_COPY_LIMIT);
+                std::clamp(int(std::lround(CELL_COPIES * n.parameters.capacity * n.expression)), 1,
+                           CELL_COPY_LIMIT);
           total += std::size_t(counts[cursor++]);
         } else {
           cells.reserve(std::min(total, limit));
@@ -159,7 +160,7 @@ public:
           c.group = std::uint32_t(cursor);
           if (traits) {
             auto sampled =
-                draw_traits((*traits)[cursor].cell, seed, splitmix(c.id ^ 0xa7cfbc81ull));
+                draw_traits((*traits)[cursor].cell, seed, splitmix(c.id ^ INTRINSIC_STREAM));
             sampled[cppn::output::expression] = 1;
             for (int k = 0; k < (c.role == Role::Nerve ? 1 : IDENTITY_SIZE); ++k)
               sampled[cppn::output::identity_role + k] = c.identity[k];
@@ -177,19 +178,19 @@ public:
               c.parameters.field_width = intrinsic->parameters.field_width;
               c.electrical_limit = intrinsic->electrical_limit;
               const auto learning =
-                  draw_traits((*traits)[cursor].learning, seed, splitmix(c.id ^ 0x15b3c201ull));
+                  draw_traits((*traits)[cursor].learning, seed, splitmix(c.id ^ LEARNING_STREAM));
               const auto teaching =
-                  draw_traits((*traits)[cursor].teaching, seed, splitmix(c.id ^ 0xf317f331ull));
+                  draw_traits((*traits)[cursor].teaching, seed, splitmix(c.id ^ TEACHING_STREAM));
               c.parameters.learning_time = (learning[cppn::output::time_constant] + 1) * .5f;
               c.teaching_limit = (teaching[cppn::output::synapse_strength] + 1) * .5f;
               c.development_receptor = receptor_parameters(
                   draw_traits((*traits)[cursor].growth, seed,
-                              splitmix(c.id ^ 0xb8624f90ull ^ GROWTH_RECEPTOR), true));
+                              splitmix(c.id ^ RECEPTOR_STREAM ^ GROWTH_RECEPTOR), true));
               for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
-                if (hormone_effect_present(c.role, effect))
+                if (hormone_effect_present(c, effect))
                   c.hormone_receptors[effect] = receptor_parameters(
                       draw_traits((*traits)[cursor].receptors[effect], seed,
-                                  splitmix(c.id ^ 0xb8624f90ull ^ effect), true));
+                                  splitmix(c.id ^ RECEPTOR_STREAM ^ effect), true));
             }
           }
           indices[cursor].push_back(NeuronIndex(cells.size()));
@@ -230,7 +231,7 @@ struct Candidate {
 };
 // Connection draws and input selection retain independent, inherited hash streams.
 constexpr std::uint64_t CONNECTION_STREAM = 7, SELECTION_STREAM = 8,
-                        RECEPTOR_STREAM = 0xb8624f90ull, CONTACT_FIELD_STREAM = 0x4678ac39ull;
+                        CONTACT_FIELD_STREAM = 0x4678ac39ull;
 constexpr std::uint64_t CONNECTION_HASH_PRIME = 0x100000001b3ull, CONNECTION_HASH_SALT = 0x9e37ull;
 class CellGrowth {
   Substrate &owner;
@@ -257,8 +258,6 @@ class CellGrowth {
   void finish() {
     owner.neurons = std::move(cells);
     owner.edges = std::move(edges);
-    owner.built_neurons = owner.neurons.size();
-    owner.built_edges = owner.edges.size();
     owner.built_length = length;
     stage = Done;
   }
@@ -444,7 +443,6 @@ struct Substrate::GridDevelopment {
     n.group = std::uint32_t(owner.neurons.size());
     owner.neurons.push_back(n);
     s.traits.push_back({v, v, v, {}, {}});
-    owner.built_neurons = owner.neurons.size();
   }
   void geometry() { lay_out_cells(owner.neurons); }
   bool run() {
@@ -473,7 +471,7 @@ struct Substrate::GridDevelopment {
             owner.geometry_builder(owner);
           for (std::size_t i = 0; i < owner.neurons.size(); ++i)
             for (int effect = 0; effect < HORMONE_EFFECTS; ++effect)
-              if (hormone_effect_present(owner.neurons[i].role, effect))
+              if (hormone_effect_present(owner.neurons[i], effect))
                 s.receptors.push_back({i, effect});
           for (std::size_t i = 0; i < owner.neurons.size(); ++i)
             s.receptors.push_back({i, GROWTH_RECEPTOR});
@@ -489,8 +487,6 @@ struct Substrate::GridDevelopment {
              DEVELOPMENT_SITES - s.cell});
         for (std::size_t k = 0; k < n; ++k)
           points[k] = development_site(s.cell + k);
-        if (!n)
-          return false;
         evaluate(n);
         for (std::size_t k = 0; k < n; ++k)
           cell(points[k], values[k], s.cell + k);
@@ -688,12 +684,6 @@ bool Substrate::advance_grid(std::size_t budget, bool record_work) {
 }
 bool Substrate::connections_pending() const {
   return grid_state && grid_state->stage == GridState::Links;
-}
-bool Substrate::cell_parameters_complete() const {
-  return grid_state && grid_state->stage >= GridState::Properties;
-}
-bool Substrate::anatomy_complete() const {
-  return cell_parameters_complete();
 }
 bool Substrate::pending_preparation() const {
   return !grid_state || grid_state->stage == GridState::Prepare;

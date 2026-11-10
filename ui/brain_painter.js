@@ -180,9 +180,10 @@ function brainDrawPart(g, n, part, d, now = displayNow()) {
                       : brainClamp(Math.abs(isSenseTissue(part.key)
                                                 ? (n[NEURON.signal] ?? n[NEURON.activity])
                                                 : (n[NEURON.state] ?? n[NEURON.activity]))),
-        dim = n[NEURON.life] === 2                       ? CELL.dead
-              : n[NEURON.life] === 1 && !n[NEURON.muted] ? 1
-                                                         : CELL.idle,
+        dim = n[NEURON.life] === 2 ? CELL.dead
+              : n[NEURON.life] === 1 && !n[NEURON.muted]
+                  ? 1
+                  : CELL.idle * (.5 + .5 * (n[NEURON.development] ?? 0)),
         radius = Math.max(CELL.min_radius,
                           Math.min(CELL.max_radius,
                                    CELL.min_radius +

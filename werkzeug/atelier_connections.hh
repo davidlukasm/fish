@@ -439,15 +439,12 @@ inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
        std::max(0.f, std::abs(a.quality_width - b.quality_width) - wanted.spread_physiology),
        std::max(0.f, std::abs(cell.range - expected.range) - wanted.spread_contacts),
        std::max(0.f, std::abs(cell.crossing - expected.crossing) / 2 - wanted.spread_contacts)});
-  const std::array<float, field::IDENTITY_SIZE> identity_spread{
-      wanted.spread_development, wanted.spread_development, wanted.spread_development,
-      wanted.spread_development, wanted.spread_development};
   for (std::size_t k = 1; k < cell.identity.size(); ++k)
     deviation =
         std::max(deviation, std::max(0.f, std::abs(cell.identity[k] - expected.identity[k]) / 2 -
-                                              identity_spread[k]));
+                                              wanted.spread_development));
   for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
-    if (field::hormone_effect_present(cell.role, effect))
+    if (field::hormone_effect_present(cell, effect))
       deviation = std::max(deviation, receptor_deviation(wanted.receptors[effect],
                                                          cell.hormone_receptors[effect], effect));
   return deviation;

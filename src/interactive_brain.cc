@@ -101,8 +101,8 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
           b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
                     : 0;
       Record(out, N::count)(N::x, n.x)(N::y, n.y)(N::role, int(n.role))(N::activity, activity)(
-          N::functional,
-          n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(N::ready, b.brain() ? 1 : 0)(N::z, n.z)(
+          N::functional, n.functional ? 1 : 0)(N::index, i)(N::id, n.id)(
+          N::ready, b.brain() && b.brain()->life(i) == field::Network::CellLife::Active)(N::z, n.z)(
           N::port, port)(N::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
           N::strength, n.strength)(N::internal, n.functions.internal)
           .list(N::senses, senses)
@@ -118,9 +118,6 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
               N::crossing, n.crossing)(N::range, n.range)(N::life,
                                                           b.brain() ? int(b.brain()->life(i)) : 0)(
               N::development, b.brain() ? b.brain()->development_progress(i) : 0)(
-              N::growth_response,
-              n.development_receptor.response(b.hormones().levels(), body_maturity(b)))(
-              N::electrical_limit, n.electrical_limit)(N::teaching_limit, n.teaching_limit)(
               N::command, b.brain() ? b.brain()->organ_output()[i] : 0)
           .finish();
     }
@@ -188,11 +185,9 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"active_defense\":" << b.motor().defense << ",\"defense\":" << b.defense()
       << ",\"combat_cost\":" << b.motor().combat_cost << ",\"color\":[" << b.color[0] << ','
       << b.color[1] << ',' << b.color[2] << "],\"readiness\":" << b.reproduction().readiness
-      << ",\"novelty\":" << chosen->novelty << ",\"construction_fraction\":"
-      << (b.development() ? b.development()->construction_fraction() : 0)
+      << ",\"novelty\":" << chosen->novelty
       << ",\"viable\":" << (!g.blueprint || g.viable() ? "true" : "false")
       << ",\"diagnostic\":" << json_quoted(g.blueprint ? g.blueprint->diagnostic : "")
-      << ",\"construction_ticks\":" << (b.development() ? b.development()->ticks() : 0)
       << ",\"hatch_age\":" << b.hatch_age << ",\"maintenance\":"
       << (b.development() ? b.development()->running_cost() * world.physiology().neural_cost : 0)
       << ",\"movement_cost\":" << b.ledger().movement_cost
@@ -253,8 +248,8 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
         out << ',';
       first = false;
       namespace S = synapse_column;
-      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, e.weight)(
-          S::limit, e.limit)(S::id, e.slot)
+      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, e.weight)(S::id,
+                                                                                             e.slot)
           .finish();
     }
   else if (brain_detail && g.blueprint)
@@ -264,8 +259,7 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
       first = false;
       const auto &e = g.blueprint->edges[i];
       namespace S = synapse_column;
-      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, 0)(
-          S::limit, e.weight)(S::id, i)
+      Record(out, S::count)(S::source, e.source)(S::target, e.target)(S::strength, 0)(S::id, i)
           .finish();
     }
   out << "]}";
@@ -462,14 +456,13 @@ void InteractiveSession::write_brain_probe(std::ostream &out, const Individual *
           S::activity,
           b.brain()
               ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
-              : 0)(S::ready, b.brain() ? 1 : 0)(S::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
+              : 0)(S::ready, b.brain() && b.brain()->life(i) == field::Network::CellLife::Active)(
+          S::muted, b.brain() && b.brain()->muted(i) ? 1 : 0)(
           S::state, b.brain() ? b.brain()->state()[i] : 0)(
           S::signal, b.brain() ? b.brain()->signal(i) : 0)(S::life,
                                                            b.brain() ? int(b.brain()->life(i)) : 0)(
-          S::development, b.brain() ? b.brain()->development_progress(i) : 0)(
-          S::growth_response,
-          n.development_receptor.response(b.hormones().levels(), body_maturity(b)))(
-          S::command, b.brain() ? b.brain()->organ_output()[i] : 0)
+          S::development, b.brain() ? b.brain()->development_progress(i)
+                                    : 0)(S::command, b.brain() ? b.brain()->organ_output()[i] : 0)
           .finish();
     }
   out << "],\"stimulus_revision\":" << stimulus_revision

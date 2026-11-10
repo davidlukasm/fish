@@ -141,7 +141,9 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     for (float v : b.perception().adapted)
       out << v << ' ';
     out << '\n';
-    out << (b.development() ? b.development()->completed_work() : 0) << '\n';
+    out << "CONSTRUCTION " << bool(b.development()) << ' '
+        << (b.development() ? b.development()->completed_work() : 0) << ' ' << bool(b.brain())
+        << '\n';
     if (b.brain())
       b.brain()->write_runtime(out);
   }

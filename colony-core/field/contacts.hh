@@ -17,6 +17,11 @@ inline double spread_radius(double spread) {
 }
 inline constexpr int EFFECTOR_SLOTS = 32;
 inline constexpr float SLOTS_MIN = 4, SLOTS_RANGE = 128;
+inline constexpr int MAX_INPUT_SLOTS = std::max(EFFECTOR_SLOTS, int(SLOTS_MIN *SLOTS_RANGE)),
+                     CONTACT_LANES = 8;
+inline constexpr std::size_t contact_storage(std::size_t capacity) {
+  return (capacity + CONTACT_LANES - 1) / CONTACT_LANES * CONTACT_LANES;
+}
 inline int input_slots(Role role, float field_width) {
   return role == Role::Effector ? EFFECTOR_SLOTS
          : role == Role::Nerve
@@ -27,13 +32,16 @@ inline int input_slots(Role role, float field_width) {
 inline int input_slots(const Neuron &cell) {
   return input_slots(cell.role, cell.parameters.field_width);
 }
+inline int contact_capacity(const Neuron &cell) {
+  return std::min(MAX_INPUT_SLOTS, std::max<int>(cell.slots, input_slots(cell)));
+}
 // A stable binding core and a smooth finite falloff. The half-height remains at q = log(2).
 // The flat core tolerates small mutations; zero support excludes distant senders in turnover.
 inline constexpr double CONTACT_CORE = .25, CONTACT_SUPPORT = 1.1362943611198906;
 inline std::size_t connection_reservation(const Substrate &s) {
   std::size_t slots = 0;
   for (const auto &cell : s.neurons)
-    slots += (std::max<int>(cell.slots, input_slots(cell)) + 7) / 8 * 8;
+    slots += contact_storage(contact_capacity(cell));
   return slots;
 }
 inline double contact_affinity(double q) {

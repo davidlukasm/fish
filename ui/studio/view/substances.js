@@ -2,9 +2,10 @@ import {previewControls, previewContextOf, cellDevelopment} from './development.
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
-import {isRegion, ROLE} from '../model/organs.js';
+import {isRegion} from '../model/organs.js';
 import {
   boundEffects,
+  effectsFor,
   birthAffinity,
   chosenCenter,
   DEATH_RESPONSE,
@@ -713,7 +714,7 @@ function hormoneDetails(state) {
     return substanceInspector(state);
   const html = '<header class="aid-inspector-head"><span>' + label('sections.receptors') +
                '</span>' + heading(centerTitle(focus)) + '</header>';
-  const own = state.capabilities?.roleEffects?.[ROLE[focus.role]] ?? [];
+  const own = effectsFor(focus, state.capabilities);
   const effects = EFFECT_ORDER.filter(e => own.includes(e));
   const effect = effects.includes(state.effect) ? state.effect : effects[0];
   if (!focus.receptors?.[effect])

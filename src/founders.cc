@@ -29,10 +29,9 @@ void Ecosystem::seed(const std::vector<Genome> &founders, int count, int food,
     configure();
   refresh_food_allowance();
   field.place_initial_food();
-  std::vector<Genome> roots;
-  for (const auto &founder : founders) {
-    roots.push_back(Genome::immigrants({founder}, rng).front());
-    if (!funded_egg_energy(roots.back(), physiology_.neural_cost, evo.yolk))
+  auto roots = Genome::immigrants(founders, rng);
+  for (const auto &root : roots) {
+    if (!funded_egg_energy(root, physiology_.neural_cost, evo.yolk))
       throw std::runtime_error(
           "Gewählte Startlinie kann mit diesen Einstellungen nicht versorgt werden.");
   }

@@ -135,9 +135,9 @@ void Field::advance_odor() {
   const int nx = p.columns;
   const double dx = p.width / p.columns, dy = p.height / p.rows;
   const std::size_t count = p.energy.size();
-  const std::size_t tiles = std::min<std::size_t>(
-      {std::size_t(std::max(1, motion_workers)), std::max<std::size_t>(1, count / ODOR_TILE_CELLS),
-       std::size_t(p.rows)});
+  // Fixed tiles preserve the accumulation order across worker counts.
+  const std::size_t tiles =
+      std::min<std::size_t>(std::max<std::size_t>(1, count / ODOR_TILE_CELLS), std::size_t(p.rows));
   auto boundary = [&](std::size_t tile) { return p.rows * tile / tiles * nx; };
   auto partition = [&](auto operation) {
     parallel(

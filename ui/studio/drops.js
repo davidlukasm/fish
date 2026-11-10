@@ -1,4 +1,4 @@
-import {ROLE, STIMULUS_ORGAN} from './model/organs.js';
+import {STIMULUS_ORGAN} from './model/organs.js';
 import {hasField, newFieldPlacements} from './model/placement.js';
 import {HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../schema.js';
 import {
@@ -7,6 +7,7 @@ import {
   addOrganType,
   addWire,
   bindReceptor,
+  effectsFor,
   findCenter,
   findOrgan,
   makeLearner,
@@ -290,10 +291,10 @@ export const dropMethods = {
       return centers.filter(c => c.role === 'nerve');
     const effects = kind === 'phase' ? [ HORMONE_EFFECT.output, HORMONE_EFFECT.death ]
                                      : [ Number(value.split(':')[1]) ];
-    const roles = this.state.capabilities?.roleEffects ?? [];
     const learning = this.state.tool === 'learn';
-    return centers.filter(c => effects.every(e => roles[ROLE[c.role]]?.includes(e)) &&
-                               (!learning || c.role === 'nerve'));
+    return centers.filter(
+        c => effects.every(e => effectsFor(c, this.state.capabilities).includes(e)) &&
+             (!learning || c.role === 'nerve'));
   },
   markDropTargets(kind, value) {
     const svg = this.bodyMap();

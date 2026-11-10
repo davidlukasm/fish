@@ -33,10 +33,6 @@ inline TraitValues draw_traits(const TraitValues &mean, std::uint64_t seed, std:
   }
   return drawn;
 }
-inline int stochastic_count(double mean, std::uint64_t key) {
-  const double lo = std::floor(mean);
-  return int(lo) + (unit_center(splitmix(key)) < mean - lo);
-}
 inline HormoneReceptor receptor_parameters(const TraitValues &v) {
   namespace O = cppn::output;
   HormoneReceptor r;

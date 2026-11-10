@@ -102,6 +102,22 @@ void Ecosystem::develop_population() {
     if (!g.blueprint && g.growing && !g.growing->pending_finalization())
       g.advance_development(0);
   }
+  auto storage = connection_storage(*this);
+  for (auto i : pending)
+    if (fish[i].genome.blueprint)
+      storage -= planned_edges(fish[i].genome);
+  for (auto i : pending) {
+    auto &p = fish[i];
+    if (!p.genome.blueprint)
+      continue;
+    const auto rows = planned_edges(p.genome);
+    if (storage > neural_budget || rows > neural_budget - storage) {
+      p.body.alive = false;
+      p.body.fatal_cause = death_reason::brain_budget;
+      ++metrics_.budget_rejections;
+    } else
+      storage += rows;
+  }
 }
 void Ecosystem::index_organisms() {
   std::vector<VisibleBody> visible;

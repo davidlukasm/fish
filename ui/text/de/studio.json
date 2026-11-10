@@ -281,10 +281,10 @@
       "ceiling": "Platz höchstens für {most}",
       "trigger": "wartet auf Auslösekommando",
       "egg": "Ei mit {energy} Energie",
-      "food": "Nährei: Baukostenschwelle {least}",
+      "food": "Schlupfbedarf etwa {least} bei {duration} Schritten",
       "sperm": "{energy} Energie je Abgabe",
       "stretch": "meldet halb bei {share} Füllung",
-      "developmentEnergy": "Ei mit {energy} Energie erreicht die Baukostenschwelle",
+      "developmentEnergy": "Ei mit {energy} Energie; Schlupfbedarf etwa {least} bei {duration} Schritten",
       "releaseOn": "Auslösekommando liegt an"
     },
     "curve": {
@@ -1082,6 +1082,6 @@
     "modulation": "Lehranteil",
     "probation": "Schonfrist · Schritte",
     "none": "Für diese Auswahl sind noch keine Signalwege geplant.",
-    "learningMeaning": "Die Höchststärke berücksichtigt den elektrischen und den lehrenden Anteil des Senders. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
+    "learningMeaning": "Der Sender bildet je nach Zellidentität elektrische oder lehrende Kontakte. Dafür gilt die jeweilige Höchststärke des Empfängers. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
   }
 }

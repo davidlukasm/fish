@@ -1,4 +1,4 @@
-#include "../werkzeug/atelier_import.hh"
+#include "../werkzeug/atelier_connections.hh"
 #include <cassert>
 #include <iostream>
 
@@ -87,19 +87,6 @@ int main() {
         within_centre |= a.bias != first.blueprint->neurons[i - 1].bias;
     }
     assert(different && within_centre);
-    const auto imported = import_plan(first);
-    fishsim::Genome rebuilt;
-    rebuilt.cppn = Builder().build(imported);
-    rebuilt.development_seed = first.development_seed;
-    rebuilt.variation_seed = first.variation_seed;
-    rebuilt.compile(false);
-    for (std::size_t i = 0; i < first.blueprint->neurons.size(); ++i) {
-      const auto &a = first.blueprint->neurons[i], &b = rebuilt.blueprint->neurons[i];
-      assert(std::abs(a.bias - b.bias) < 1e-6);
-      assert(std::abs(a.hormone_receptors[field::Teaching].baseline -
-                      b.hormone_receptors[field::Teaching].baseline) < 1e-6);
-      assert(std::abs(a.reception[0].address[0] - b.reception[0].address[0]) < 1e-6);
-    }
     // Small scheduler slices must make the same draw and pay the same graph cost.
     auto sliced = first;
     sliced.discard_development();
@@ -107,6 +94,20 @@ int main() {
     while (!sliced.advance_development(1, false))
       assert(++steps < field::DEVELOPMENT_WORK_LIMIT);
     assert(sliced.blueprint->development_work() == first.blueprint->development_work());
+  }
+  {
+    field::Neuron source{}, target{};
+    source.role = target.role = field::Role::Nerve;
+    source.identity = {0, 1, 1, -1, .59f};
+    target.electrical_limit = .2f;
+    target.teaching_limit = .9f;
+    assert(!field::teaching_source(source));
+    assert(field::contact_limit(source, target) == .2f);
+    source.identity[4] = .61f;
+    assert(field::teaching_source(source));
+    assert(field::contact_limit(source, target) == .9f);
+    target.role = field::Role::Effector;
+    assert(field::contact_limit(source, target) == .2f);
   }
   {
     field::Neuron a{}, b{};
@@ -133,37 +134,10 @@ int main() {
     g.cppn = Builder().build(plan);
     g.compile(false);
     assert(assess(plan, g).ok());
-    const auto imported = import_plan(g);
-    assert(std::abs(imported.groups.front().growth.baseline - .1f) < 1e-5);
-    assert(imported.groups.front().growth.substance == field::MATURITY_SUBSTANCE);
-    for (const int effect : {field::Excitation, field::Teaching, field::Learning}) {
-      const auto &before = r[effect], &after = imported.groups.front().receptors[effect];
-      assert(after.active && before.substance == after.substance);
-      assert(std::abs(before.baseline - after.baseline) < 1e-5f);
-      assert(std::abs(before.sensitivity - after.sensitivity) < 1e-5f);
-      assert(std::abs(before.half - after.half) < 1e-5f);
-    }
-    assert(assess(imported, g).ok());
   }
   {
     const auto original = fishsim::Genome::load(fishsim::HAND_BUILT_GENOME);
-    auto plan = import_plan(original);
-    assert(assess(plan, original).ok());
-    fishsim::Genome rebuilt;
-    rebuilt.cppn = Builder().build(plan);
-    rebuilt.development_seed = plan.development_seed;
-    rebuilt.variation_seed = plan.variation_seed;
-    rebuilt.compile(false);
-    assert(assess(plan, rebuilt).ok());
-    assert(rebuilt.viable() == original.viable());
-    const auto &before = *original.blueprint, &after = *rebuilt.blueprint;
-    assert(before.neurons.size() == after.neurons.size());
-    assert(before.edges.size() == after.edges.size());
-    for (std::size_t i = 0; i < before.edges.size(); ++i) {
-      const auto &a = before.edges[i], &b = after.edges[i];
-      assert(a.source == b.source && a.target == b.target);
-      assert(std::abs(a.weight - b.weight) < 1e-5);
-    }
+    const auto &before = *original.blueprint;
     auto limited = original;
     limited.development_options.max_edges = 1;
     limited.compile(false);

@@ -71,7 +71,12 @@ inline double resting_output(const Neuron &n) {
   return std::tanh(double(n.bias));
 }
 inline bool hormone_effect_present(Role role, int effect) {
-  return effect == Output || effect == Death || role == Role::Nerve || (effect == Excitation);
+  return effect == Output || effect == Death || role == Role::Nerve ||
+         (role == Role::Effector && effect == Excitation);
+}
+inline bool hormone_effect_present(const Neuron &n, int effect) {
+  return hormone_effect_present(n.role, effect) ||
+         (effect == Excitation && n.role == Role::Sensor && n.functions.senses[Light] > 0);
 }
 using NeuronIndex = std::uint16_t;
 // A synapse acts with one step of delay.
@@ -163,7 +168,6 @@ public:
   std::vector<Neuron> neurons;
   std::vector<Edge> edges;
   std::size_t queries = 0;
-  std::size_t built_neurons = 0, built_edges = 0;
   double built_length = 0;
   std::size_t recurrent_edges = 0;
   bool resource_limited = false;
@@ -187,8 +191,6 @@ public:
   bool pending_preparation() const;
   bool pending_finalization() const;
   bool connections_pending() const;
-  bool anatomy_complete() const;
-  bool cell_parameters_complete() const;
   std::size_t remaining_queries(std::size_t estimate) const;
 };
 struct WiringAmount {
@@ -218,6 +220,7 @@ class Network {
   std::vector<std::uint32_t> age_;
   std::vector<unsigned char> muted_, dead_, born_;
   std::vector<NeuronIndex> active_, active_nerves_, active_effectors_, active_sensors_;
+  std::vector<std::size_t> ready_;
   std::vector<std::uint16_t> index_, owner_, trial_steps_left_;
   std::vector<float> weight_, trace_, predict_, usage_;
   std::map<std::size_t, std::vector<std::uint32_t>> free_rows_;
@@ -230,7 +233,8 @@ class Network {
   std::vector<Stimulus> stimuli_;
   std::size_t dead_count_ = 0;
   std::uint64_t neural_ticks_ = 0, retinal_rng_ = 0, turnover_rng_ = 0, revision_ = 0,
-                tissue_revision_ = 0, development_ticks_ = 0, learning_seed = 0;
+                tissue_revision_ = 0, organ_revision_ = 0, development_ticks_ = 0,
+                learning_seed = 0;
   bool retinal_seeded_ = false, developing_ = false, diagnostic_ = false, observe = false,
        plasticity_enabled = true;
   double maturity_ = 0, growth_credit_ = 0;
@@ -293,6 +297,7 @@ public:
   float development_progress(std::size_t i) const { return progress_.at(i); }
   std::size_t active_count() const { return active_.size(); }
   std::uint64_t cell_revision() const { return tissue_revision_; }
+  std::uint64_t organ_revision() const { return organ_revision_; }
   std::size_t reserved_slots() const;
   void reset();
   void reset_learning();
