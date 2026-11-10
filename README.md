@@ -21,11 +21,11 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. Im Atelier öffnet „Fisch laden …“ Miro oder Alva (Pflanzenfresser). Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Beide sind Entwürfe; Selbsterhalt ist nicht nachgewiesen. Ohne Auswahl startet Miro. Pflanzen beginnen größer; Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
+Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet die generationell geprüfte Brisa. Im Atelier sind zusätzlich die Entwürfe Miro und Alva (Pflanzenfresser) verfügbar. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzen beginnen größer; Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
-360 feste Plätze tragen bis zu 16 Zellen je Platz. Das CPPN hat 12 Eingänge und 25 Ausgänge. Es legt Zellpotenziale, Kontaktadressen, Rezeptoren und Höchststärken fest. Zellen entstehen im Ei und nach dem Schlupf. Kontakte beginnen bei null; lokale Aktivität verändert ihre Stärke, laufender Abbau entfernt ungenutzte Kontakte. Innere Nervenzellen können sich frei verschalten; direkte Sinn-Organ-Kontakte sind gesperrt.
+720 feste Plätze tragen bis zu 16 Zellen je Platz. Das CPPN hat 12 Eingänge und 25 Ausgänge. Es legt Zellpotenziale, Kontaktadressen, Rezeptoren und Höchststärken fest. Zellen entstehen im Ei und nach dem Schlupf. Kontakte beginnen bei null; lokale Aktivität verändert ihre Stärke, laufender Abbau entfernt ungenutzte Kontakte. Innere Nervenzellen können sich frei verschalten; direkte Sinn-Organ-Kontakte sind gesperrt.
 
 Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
 
@@ -35,6 +35,6 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 
 ## Prüfung
 
-`./build.sh`: Build und Prüfungen. `./test.sh`: Prüfungen mit 30-s-Zeitgrenze, `--only invariants` prüft eine. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
+`./build.sh`: Build und Prüfungen. `./test.sh`: Prüfungen mit 60-s-Zeitgrenze, `--only invariants` prüft eine. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
 
 Zuchtversuche: `make bin/zuchtbecken`; Aufruf ohne Argumente zeigt die Parameter. JSONL-Ausgabe mit Familien, Todesursachen und örtlicher Blattenergie.

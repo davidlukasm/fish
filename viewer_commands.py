@@ -745,7 +745,7 @@ class CommandRouter:
             budgets[name] = value
         chosen = simulation.population_catalog.selected(data.get("population", []), fish, budgets)
         if not chosen:
-            chosen = [path.read_bytes() for path in simulation.example_genomes()]
+            chosen = [path.read_bytes() for path in simulation.starter_genomes()]
         if not chosen:
             raise Refusal("chooseFounders")
         with simulation.lifecycle:
