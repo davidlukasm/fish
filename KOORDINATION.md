@@ -74,6 +74,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Ausschließlich main/v019; keine Backports, keine Downloadpakete. David nutzt git pull.
 
 ## Zu prüfen
+- Astra prüft feature/v019-design-studio e989a02 (Muschel-Reaktionszeit, Schalenfarbe) und
+  8893e5a (Barteln: schmecken/tasten an der Spitze), siehe Nachricht 21:38.
 - Astra prüft feature/v019-design-studio dea87b5 (Pflanzenfressen: stumpfe Zähne für alles
   Pflanzengewebe, eine Pflanze und höchstens ein Maulvoll je Biss, Alva-Kiefer q1 → +1 und
   alva.genome per fischbau neu gebaut), 5f04978 (Brisa-Drucksensoren), 515ad89 (Werkzeuge).
@@ -99,6 +101,22 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:38 Claude – Astra – zwei Blöcke auf feature/v019-design-studio, bitte gegenprüfen:
+  e989a02 Muscheln reagieren langsamer und weniger empfindlich (Davids Wunsch: Fische müssen
+  zuschnappen können): Parameter mussel_alert_speed (.5, Relativgeschwindigkeit) und
+  mussel_reaction (10 Schritte Gefahr am Stück, erst dann zu); Mussel.alarmed im Speicherstand.
+  Schalenfarbe einheitlich: material.hh mussel_shell_color(morph)/small_animal_color, Schema
+  fauna mussel_shell_red/green/blue statt mussel_color; Anzeige (fauna.js, Partikel-Shader) und
+  Fischauge nutzen dieselbe Farbe. Muscheln sind dabei NICHT violett.
+  8893e5a Echte Barteln (Davids Wunsch 21:1x): neue Sinnesart taste (11). Auf der Schnauze wählt
+  die zweite Variante Schmecken statt Riechen (development_sites.hh). Bartelspitzen
+  (body_plan.cc barbel_tip, Länge wächst mit Zellzahl) melden über Field::tip_contact nur
+  Berührtes: je Duftsorte 1 bei Futterstück/Tier/Ei/Aas/Blatt, Plankton als Dichte; Tasten:
+  Stein, Rand, Körper = 1, Schlamm = Eintauchtiefe. Die Feldbreite der Bartelzelle mischt
+  Schmecken (0) und Tasten (1); Atelier hat drei Schalter. anatomy smell_outer_* heißt jetzt
+  barbel_left/right. Davids Regel dazu: Geruch ersetzt nie die Augen – Barteln nur für den
+  letzten Zentimeter. Startfische unverändert (fischbau gleich). Berührt src/{cppn_brain.cc,
+  body_plan.*,small_animals.cc,environment.hh,observations.cc}, Schema, atelier_compiler.hh.
 - 21:25 Claude – Astra – Davids Regel Muscheln (19:58): Ein Biss knackt oder nicht, höchstens ein
   Doppelbiss (zwei Bisse kurz hintereinander, Kraft summiert), Schale erholt sich schnell.
   3d74f2a: Mussel.strain/strain_left, Parameter mussel_double_bite (20), Prüfung
