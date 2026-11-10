@@ -150,8 +150,9 @@ export const ORGANS = Object.freeze([
     category : 'internal',
     scope : 'single',
     nodes : 8,
+    initialNodes : 3,
     centers : [
-      motor('float', MOTOR_KIND.bladder, 5, 'inner'),
+      motor('float', MOTOR_KIND.bladder, 16, 'inner'),
       sensor('pressure', SENSE_KIND.inner_pressure, 3, 'inner')
     ]
   },

@@ -270,10 +270,14 @@ int main(int argc, char **argv) {
               << ",\"vy\":" << b.motor().vy << ",\"energy\":" << b.energy
               << ",\"health\":" << b.health << ",\"tissue\":" << b.tissue
               << ",\"maturity\":" << body_maturity(b) << ",\"gutFill\":" << gut_filling(b)
-              << ",\"gutEnergy\":" << b.gut_energy << ",\"forward\":" << b.motor().drive_forward
-              << ",\"left\":" << b.motor().drive_left << ",\"right\":" << b.motor().drive_right
-              << ",\"eat\":" << b.eat_signal << ",\"bite\":" << b.bite_signal
-              << ",\"flow\":" << b.mouth.flow << ",\"eggYolk\":" << b.reproduction().egg_yolk
+              << ",\"gutEnergy\":" << b.gut_energy << ",\"gutDigestible\":" << b.gut_digestible
+              << ",\"digestion\":" << b.digestion << ",\"restCost\":" << b.rest_cost
+              << ",\"reserveCapacity\":" << reserve_capacity(b)
+              << ",\"bladderFill\":" << b.bladder_fill << ",\"buoyancy\":" << b.buoyancy_force
+              << ",\"forward\":" << b.motor().drive_forward << ",\"left\":" << b.motor().drive_left
+              << ",\"right\":" << b.motor().drive_right << ",\"eat\":" << b.eat_signal
+              << ",\"bite\":" << b.bite_signal << ",\"flow\":" << b.mouth.flow
+              << ",\"eggYolk\":" << b.reproduction().egg_yolk
               << ",\"sperm\":" << b.reproduction().sperm_store
               << ",\"eggRelease\":" << b.reproduction().egg_release
               << ",\"spermRelease\":" << b.reproduction().sperm_release

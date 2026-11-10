@@ -178,7 +178,8 @@ async function checkResponseControls(model, capabilities, clicks) {
   const {responseHandle, responsePatch, responseTrace} =
       await import('../ui/studio/view/response.js');
   const {regionSettings} = await import('../ui/studio/view/circuit.js');
-  const {settleRegions} = await import('../ui/studio/model/regions.js');
+  const {settleRegions, updateRegion} = await import('../ui/studio/model/regions.js');
+  const {HORMONE_EFFECT} = await import('../ui/schema.js');
   const {drivePatch} = await import('../ui/studio/view/drive.js');
   const {timeConstantSteps} = await import('../ui/tuning.js');
   const {TIME_CONSTANT} = await import('../ui/schema.js');
@@ -187,6 +188,20 @@ async function checkResponseControls(model, capabilities, clicks) {
       model.addOrgan(model.newDocument('Reizantwort'), 'circuit', sites, {x : 600, y : 300});
   const organ = model.findOrgan(placed.document, placed.organId), center = organ.centers[0];
   assert.equal(center.q2, .5, 'New relays preserve a sustained cue');
+  const resting = Math.tanh(-capabilities.biasScale * center.threshold);
+  assert.ok(resting > 0 && resting < .02,
+            'A new relay can learn late cues with only a small resting signal');
+  const high = updateRegion(placed.document, organ.id, {threshold : 2}, sites);
+  const highCenter = model.findOrgan(high, organ.id).centers[0];
+  assert.deepEqual(highCenter.receptors[HORMONE_EFFECT.rhythm],
+                   center.receptors[HORMONE_EFFECT.rhythm],
+                   'Changing threshold never installs a permanent pacemaker');
+  const bladder = model.addOrgan(placed.document, 'bladder', sites, {x : 650, y : 365});
+  const sac = model.findOrgan(bladder.document, bladder.organId);
+  assert.deepEqual(sac.centers.filter(c => c.key === 'float').map(c => c.copies), [ 16, 16, 16 ]);
+  const reduced = model.setOrganNodes(bladder.document, bladder.organId, 2, sites);
+  assert.equal(model.findOrgan(reduced, bladder.organId).centers.length, 3,
+               'Resizing the bladder retains its depth sensor');
   const context = {
     scale : capabilities.biasScale,
     excitation : 0,
@@ -552,8 +567,7 @@ async function checkResponseControls(model, capabilities, clicks) {
       const c = model.findOrgan(high, id).centers[0];
       const drive = .5 * nerveClass(c).pace *
                     (1 + model.receptorResponse(sitesResult, c.receptors[E.rhythm], [], 1));
-      assert.ok(drive > sitesResult.biasScale * c.threshold,
-                'A high-threshold relay retains activity to learn cues first felt after hatching');
+      assert.equal(drive, 0, 'A high threshold does not invent a rhythmic cue in an adult');
     }
     const lowered = regions.updateRegion(high, left.id, {threshold : 0}, sites);
     assert.deepEqual(model.findOrgan(lowered, left.id).centers[0].receptors,
@@ -1194,11 +1208,8 @@ async function checkResponseControls(model, capabilities, clicks) {
     const barbels = model.addOrgan(doc, 'barbels', sites, geometry.sitePoint(barbelSite));
     const cell = model.findOrgan(barbels.document, barbels.organId).centers[0];
     assert.equal(cell.field, .5, 'A new barbel tip both tastes and feels');
-    const barbelPanel = panels.inspector({
-      ...state,
-      document : barbels.document,
-      selected : {kind : 'center', id : cell.id}
-    });
+    const barbelPanel = panels.inspector(
+        {...state, document : barbels.document, selected : {kind : 'center', id : cell.id}});
     assert.equal((barbelPanel.match(/data-set-field="field"/g) ?? []).length, 3);
     assert.match(barbelPanel, /class="active" data-set-field="field" data-value="0.5"/);
   }
@@ -2212,7 +2223,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                          (10 + 280 / 6) / 300, .5);
       const enlarged = model.findOrgan(editor.state.document, organ.id);
       assert.equal(enlarged.centers.filter(c => c.key === 'float').length, 2,
-                   'The bladder grows from one muscle to two despite its extra pressure sensor');
+                   'The bladder resizes to two muscles despite its extra pressure sensor');
       assert.equal(enlarged.centers.filter(c => c.key === 'pressure').length, 1);
       assert.ok(enlarged.centers.some(c => c.id === pressure));
       assert.equal(model.compileDocument(editor.state.document, sites)

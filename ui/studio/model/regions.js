@@ -126,15 +126,10 @@ const DEVELOPING_RELAY = Object.freeze({
     steepness : 3
   }
 });
-// A high threshold otherwise silences an untrained relay before post-hatch cues arrive.
-const THRESHOLD_RELAY = Object.freeze({
-  ...DEVELOPING_RELAY,
-  [HORMONE_EFFECT.rhythm] :
-      {...DEVELOPING_RELAY[HORMONE_EFFECT.rhythm], baseline : 1, sensitivity : 0}
-});
 const CIRCUIT_LEARNING =
     Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
-const CIRCUIT_THRESHOLD = Object.freeze([ -.5, 0, .5 ]),
+// A small tonic signal permits new afferents to learn without a strong resting command.
+const CIRCUIT_THRESHOLD = Object.freeze([ -.05, 0, .5 ]),
       CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 4, 8 ]),
       CIRCUIT_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
 const COMPARISON_THRESHOLD = Object.freeze([ -.05, -.02, -.005 ]);
@@ -145,9 +140,7 @@ function circuitPlan(doc, organ) {
     node : 'command',
     preset : CIRCUIT_PRESET[r.effect],
     port : comparison ? 'out' : 'both',
-    effects : comparison          ? TONIC_LEARNING
-              : r.threshold === 2 ? THRESHOLD_RELAY
-                                  : DEVELOPING_RELAY,
+    effects : comparison ? TONIC_LEARNING : DEVELOPING_RELAY,
     set : {
       ...CIRCUIT_LEARNING,
       copies : comparison ? CIRCUIT_COMPARE[r.compare] : 8,
