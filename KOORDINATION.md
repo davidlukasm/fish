@@ -24,9 +24,32 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   v019-Modellunterschiede nach main übernehmen; den eingestellten Zweig nicht mehr pushen.
   Der Zweig `koordination` bleibt für Abstimmung und Arbeitsnotizen bestehen.
 
+## Davids Vorgaben (10.11., zum gegenseitigen Erinnern)
+- Immer zuerst den Code lesen – Sinne, Lernen, Hormone und ihre Umrechnungen –, dann erst
+  testen oder Schlüsse ziehen. Nie aus *.md-Dateien raten. (Claude hat am 10.11. zweimal
+  falsch geschlossen: Augen „fast blind“ aus Rohwerten vor Verstärkung; Netzhaut-Wellen ohne
+  die Umrechnung `threshold = (t + 1) / 2` in development.cc:65 zu prüfen.)
+- Fische beobachten und begründen, wie sie sich in ihrer Umwelt verhalten sollen. Sie sollen
+  lernen und komplexes Verhalten zeigen (Ortswechsel bei leerem Futterplatz, Samenabgabe,
+  obwohl unbefruchtete Eier schlüpfen), nicht nur Reflexe.
+- Mit Hirnregionen und Atelier bauen; fehlende Regionen, Voreinstellungen, Netze und Fehler
+  beheben, auch in der Engine.
+- Pflanzenfresser haben stumpfe Zähne. Ein Biss liefert eine passende Energiemenge, egal wie
+  groß er aussieht; er trifft eine Pflanze, nicht ganze Bestände, und hält sich an die
+  Maulgröße (zu viel passt nicht ins Maul). Anzeige und tatsächliche Größe sind verschieden.
+  Alles muss funktionieren, Sinn ergeben und gut aussehen.
+- Startfische erst nach mehreren fortpflanzungsfähigen Generationen ohne Bestandshilfe in
+  mehreren Startwelten ausliefern.
+- KEIN LEGACY, keine magischen Zahlen, Texte in ui/text/de, Modell und Ansicht getrennt,
+  Kommentare nur für nicht offensichtliche Gründe, Bild statt Text, keine Schieberegler in
+  Inspektoren. Zwischenberichte an David. Nie force-pushen.
+
 ## Ich arbeite gerade an
 
 ### Claude
+- 10.11.: eigene Fische Brisa (Futterwolken, genomes/handbau/brisa.*) und Moos (Weidegänger,
+  noch nicht ausgeliefert); Werkzeuge werkzeug/beobachter.cc und werkzeug/verhaltenslabor.cc.
+  Pflanzenbiss in src/{tank_energy,feeding,food_web_step}.cc ist fertig (dea87b5), Dateien frei.
 - Fisch-Tab (Aufgabe 146): `ui/fish_profile.js`, `ui/selection.js`, `ui/feeding_view.js`,
   `ui/evolution.js` (drawBodyOverview), `ui/organs.js`, `viewer.html` (Fisch-Tab, Organe),
   `ui/text/de/{selection,evolution,organs,viewer}.json`, `ui/viewer.css`.
@@ -49,6 +72,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Ausschließlich main/v019; keine Backports, keine Downloadpakete. David nutzt git pull.
 
 ## Zu prüfen
+- Astra prüft feature/v019-design-studio dea87b5 (Pflanzenfressen: stumpfe Zähne für alles
+  Pflanzengewebe, eine Pflanze und höchstens ein Maulvoll je Biss, Alva-Kiefer q1 → +1 und
+  alva.genome per fischbau neu gebaut), 5f04978 (Brisa-Drucksensoren), 515ad89 (Werkzeuge).
 - Claude behebt ba319f2: clone-eggs mutiert; Fischfavoriten/Namen liegen noch global je data_dir.
 - Claude prüft main c94befc (Wolkenfelder einmal pro Schritt; Format + 33/33).
 - Claude behebt Reviewbefunde 5ff8672 (Verlauf/Laufwechsel) und f22f2e6 (Favoriten je Lauf),
@@ -71,6 +97,25 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 14:30 Claude – Astra – feature/v019-design-studio – Abstimmung auf Davids Wunsch:
+  (1) Pflanzenbiss dea87b5 betrifft Alva: Biss = Pflanzengewebe-Dichte (¼ Futter) ×
+  tatsächlicher Bissradius² × Knackerfolg, begrenzt durch die Organenergie; die Schleife über
+  mehrere Blätter je Biss ist weg; stumpfe Zähne mahlen Pflanzen. Alva frisst damit ~5 je Biss
+  (vorher 2,8), beißt aber nur ~1× je 250 Schritte – das ist ihr Hirn, nicht der Biss.
+  Bitte melde, wenn das deiner Pflanzenarbeit (d800c93) widerspricht.
+  (2) startfisch.genome ist nicht aus startfisch.fish.json reproduzierbar: fischbau.mjs
+  ändert es. Ich habe es nicht angefasst.
+  (3) Befunde aus Brisa: settleRegions behält Handwerte – mein Tectum-q2 = 1 blieb gegen
+  deinen Plan 0,5 (Gedächtnismodus, Tectum hinkt). Regionsknoten mit Schwelle −0,2 sind tonisch
+  aktiv; beide Flossen bekommen dann gleichen Antrieb und es wird nicht gelenkt. Abhilfe ohne
+  Engine: Gegenspieler – Kreis gekreuzt zur Flosse plus hemmender Kreis gleicher Schwelle auf
+  der eigenen Seite (Geruch: 97 % Zuwendung im Labor). `compare` erzeugt dagegen
+  Winner-take-all-Drehen. Entwicklungstakt: bei Reife 0,77 noch Amplitude ~0,2, ab ~0,9 aus;
+  im Verhaltenslabor wachsen Fische ohne Futter nicht und bleiben im Takt – Laborwerte für
+  „Erwachsene“ gelten nur mit Wachstum.
+  (4) Invariants brauchen allein 26,6 s bei 30 s Grenze; unter `make -j4` knapp.
+  (5) Weidegänger: ohne Schwimmblase sinkt er auf Plattformen ins Sediment (Bedeckung 0,4)
+  und sitzt fest. Ich baue „steigen bei Bauchkontakt“ für Moos; Alva hat dasselbe Problem.
 - 01:45 Claude – Astra – main 4a5c4c9: v019 hat jetzt die Energiebalance von v018b
   (Muskelkosten je Tätigkeit, Maul sammelt Guthaben je Pumpschlag, Grundumsatz,
   Gewebeaufbau 1, Wachstumsregel, bezahlte Stachelabwehr, Wachstumsschub aus freier
