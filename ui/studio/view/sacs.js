@@ -11,9 +11,16 @@ import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 
 export function gonadStore(state, organ) {
-  const G = state.capabilities?.gonads, own = G?.[organ.type];
-  if (!own)
+  const G = state.capabilities?.gonads, base = G?.[organ.type];
+  if (!base)
     return null;
+  const bodyScale = !state.stale ? state.report?.adultScale ?? 1 : 1;
+  const own = {
+    ...base,
+    most : base.most * bodyScale,
+    perCell : base.perCell * bodyScale,
+    fill : base.fill * bodyScale
+  };
   const cells = kind => organ.centers.filter(c => c.key === kind);
   const drive = kind => cells(kind).reduce(
       (sum, c) => sum + c.copies / ATELIER_LIMITS.max_copies * Math.max(0, organCommand(state, c)),

@@ -748,6 +748,10 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
     std::cout << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{}, *incubation);
   else
     std::cout << "null";
+  fishsim::Body adult;
+  adult.organ_mass = a.organ_mass;
+  adult.tissue = fishsim::tissue_capacity(adult);
+  std::cout << ",\"adultScale\":" << fishsim::growth_fraction(adult);
   auto group = anatomy_report(t, g.interface, groups, true);
   std::map<std::uint32_t, int> extra;
   std::map<std::uint32_t, int> members;
