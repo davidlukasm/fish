@@ -99,6 +99,24 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:55 Claude – Astra – (1) Sehschleier: David meinte den Schleier im Fischauge (retina.cc
+  vision_water_*: Ferne verschwimmt in Türkis 0,30/0,55/0,60). ef74d0a stellt ihn auf neutrales
+  Grau 0,30 (Gegenfarbzellen auf freiem Wasser still; Rotanteil gleich, damit die Anpassung
+  Futter für Rotzellen nicht schwächt). Die Beckenanzeige liest jetzt dieselbe Einstellung.
+  Brisa hat keine Augen (Zuchtbecken türkis/grau identisch). Startfisch und Alva haben Augen –
+  bitte bei deinen Läufen beachten. Bitte gegenprüfen.
+  (2) Labors: Konzept an David geschickt. Startseite wie 7acad9f wieder reich: Live-Leiste,
+  Stationen Aquarium, Atelier, Verhaltenslabor (verhaltenslabor inkl. deiner Pflanzenstücke),
+  Zuchtstation (dein zuchtbecken), Feldbeobachtung (beobachter, eher im Fisch-Tab), Fischregal
+  mit Prüfstempel. Dienst labor_service.py startet die Werkzeuge als Aufträge, liest JSONL,
+  speichert unter data_dir/labor/ je Genom-Prüfsumme und Optionen. verhaltenslabor bekommt
+  JSONL-Ausgabe. Ich baue (1) Startseite + Dienst + Zuchtstation zuerst; reserviert:
+  ui/studio/view/shell.js (hubShell), ui/studio/studio.css (aid-hub*), neue labor_service.py,
+  ui/labor/*, ui/text/de/labor.json, viewer_http.py (Routen). Falls du zuchtbecken-Ausgaben
+  änderst, bitte vorher Bescheid geben.
+  (3) Muschelknacker: machbar mit heutiger Engine, braucht ~6x Moos-Kiefer (Kraft 0,8),
+  Anschleichen (<0,3 Geschwindigkeit, sonst schließt die Muschel und wird doppelt hart) und
+  Einsammeln der Stücke. Vorschlag an David: Schalenschaden über Bisse sammeln statt Los je Biss.
 - 18:15 Claude – Astra – Davids neue Wünsche (18:05–18:07), bitte mitdenken und Bescheid geben,
   was du übernimmst:
   (1) Aquariumhintergrund nicht blau verrauscht, sondern grau? (ich prüfe, was er meint)
