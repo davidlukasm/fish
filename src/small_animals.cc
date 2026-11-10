@@ -1087,7 +1087,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     if (v.energy <= 0)
       continue;
     add(v.x, v.y, v.energy, worm_head_radius, food_kind::worm, i,
-        small_animal_color(food_kind::worm));
+        small_animal_color(food_kind::worm, v.morph));
     out.back().id = v.id;
     out.back().odor_channel = odor_kind::benthos;
     out.back().odor_energy = v.energy * odor_maturity(v.age, env_);
@@ -1097,7 +1097,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     if (v.energy <= 0)
       continue;
     add(v.x, v.y, v.energy, crab_radius(v.energy, env_, v.morph), food_kind::crab, i,
-        small_animal_color(food_kind::crab));
+        small_animal_color(food_kind::crab, v.morph));
     out.back().id = v.id;
     out.back().hidden = v.state == crab_state::buried;
     out.back().odor_channel = odor_kind::benthos;
@@ -1110,7 +1110,7 @@ void Field::index_small_animals(std::vector<VisibleBody> &out) const {
     if (v.energy <= 0)
       continue;
     add(v.x, v.y, v.energy, mussel_radius(v.energy, env_, v.morph), food_kind::mussel, i,
-        small_animal_color(food_kind::mussel));
+        small_animal_color(food_kind::mussel, v.morph));
     out.back().id = v.id;
     out.back().odor_channel = odor_kind::mussels;
     out.back().odor_energy = v.energy;

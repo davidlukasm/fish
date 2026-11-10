@@ -92,7 +92,7 @@ void WorldViewWriter::population(ViewSchedule cadence) {
       row[F::energy] = energy;
       row[F::radius] = radius;
       row[F::kind] = kind;
-      const auto &color = small_animal_color(kind);
+      const auto color = small_animal_color(kind, morph);
       row[F::red] = color[0];
       row[F::green] = color[1];
       row[F::blue] = color[2];

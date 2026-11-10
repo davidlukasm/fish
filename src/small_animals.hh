@@ -97,7 +97,8 @@ inline double crab_display_angle(const Crab &c, double target) {
 struct Mussel {
   std::uint64_t id = 0, patch = 0, age = 0, buried = 0;
   double along = .5, x = 0, y = 0, energy = 0, morph = 2.5;
-  int closed = 0;
+  // Steps a threat has lasted; the shell shuts once they reach its reaction time.
+  int closed = 0, alarmed = 0;
   double filtered = 0, filter_rate = 0;
   // The force of a bite the shell withstood; a second bite before it fades adds to it.
   double strain = 0;

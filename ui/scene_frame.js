@@ -192,7 +192,7 @@ export class DisplayScene {
                  row[INVERTEBRATE.radius] = p.radius;
                  row[INVERTEBRATE.kind] = p.kind;
                  [row[INVERTEBRATE.red], row[INVERTEBRATE.green], row[INVERTEBRATE.blue]] =
-                     smallAnimalColor(p.kind);
+                     smallAnimalColor(p.kind, p.morph);
                  row[INVERTEBRATE.angle] = p.angle;
                  row[INVERTEBRATE.algae] = p.algae;
                  row[INVERTEBRATE.length] = p.length;

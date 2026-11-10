@@ -48,7 +48,8 @@ void FoodWebState::write(std::ostream &out) const {
   for (const auto &v : mussels)
     out << v.id << ' ' << v.patch << ' ' << v.age << ' ' << v.buried << ' ' << v.along << ' ' << v.x
         << ' ' << v.y << ' ' << v.energy << ' ' << v.morph << ' ' << v.closed << ' ' << v.filtered
-        << ' ' << v.filter_rate << ' ' << v.strain << ' ' << v.strain_left << '\n';
+        << ' ' << v.filter_rate << ' ' << v.strain << ' ' << v.strain_left << ' ' << v.alarmed
+        << '\n';
   out << shells.size() << '\n';
   for (const auto &s : shells)
     out << s.id << ' ' << s.x << ' ' << s.y << ' ' << s.radius << ' ' << s.morph << ' ' << s.angle
@@ -181,6 +182,9 @@ void FoodWebState::read(std::istream &in) {
     value(in, v.strain_left);
     if (v.strain_left < 0 || v.strain_left > food_web_range::mussel_double_bite_max)
       throw std::runtime_error("invalid mussel strain");
+    value(in, v.alarmed);
+    if (v.alarmed < 0 || v.alarmed > food_web_range::mussel_reaction_max)
+      throw std::runtime_error("invalid mussel alarm");
     candidate.mussels.push_back(v);
   }
   for (auto n = state::count(in, MAX_EMPTY_SHELLS); n; --n) {

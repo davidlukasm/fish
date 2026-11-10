@@ -11,10 +11,14 @@ export function familyCount(kind) {
                                             : FAUNA.worm_family_length)
       .length;
 }
-export function smallAnimalColor(kind) {
+export const musselShellColor = morph => {
+  const f = familyOf(morph, FAUNA.mussel_shell_red);
+  return [ FAUNA.mussel_shell_red[f], FAUNA.mussel_shell_green[f], FAUNA.mussel_shell_blue[f] ];
+};
+export function smallAnimalColor(kind, morph) {
   return kind === INVERTEBRATE_KIND.worm   ? FAUNA.worm_color
          : kind === INVERTEBRATE_KIND.crab ? FAUNA.crab_color
-                                           : FAUNA.mussel_color;
+                                           : musselShellColor(morph);
 }
 export function crabSize(morph) {
   return FAUNA.crab_family_size[familyOf(morph, FAUNA.crab_family_size)] *

@@ -1290,10 +1290,14 @@ void Field::advance_food_web() {
       continue;
     }
     if (danger_near(m.x, m.y, env_.worm_retreat_radius, env_.worm_retreat_body,
-                    env_.prey_alert_speed))
-      m.closed = int(env_.mussel_close_time);
-    else
+                    env_.mussel_alert_speed)) {
+      m.alarmed = std::min(m.alarmed + 1, int(env_.mussel_reaction));
+      if (m.alarmed == int(env_.mussel_reaction))
+        m.closed = int(env_.mussel_close_time);
+    } else {
+      m.alarmed = 0;
       m.closed = std::max(0, m.closed - 1);
+    }
     if (m.closed)
       continue;
     const double filtered =

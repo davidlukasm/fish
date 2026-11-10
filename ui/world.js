@@ -218,8 +218,8 @@ export function animalPlacement(p, f = sceneState.frame, selectedTool = worldSta
               vertical = worm ? depth * burial / Math.max(SEABED.floor_normal, -s[S.ny]) : 0,
               x = best.x + s[S.nx] * lift,
               y = best.y + s[S.ny] * lift - (worm ? vertical + length : 0),
-              angle = worm ? 0 : Math.atan2(s[S.nx], -s[S.ny]), color = smallAnimalColor(kind),
-              row = new Array(C.count).fill(0);
+              angle = worm ? 0 : Math.atan2(s[S.nx], -s[S.ny]),
+              color = smallAnimalColor(kind, morph), row = new Array(C.count).fill(0);
     row[C.x] = x;
     row[C.y] = y;
     row[C.energy] = energy;

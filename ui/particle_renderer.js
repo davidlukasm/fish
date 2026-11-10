@@ -33,6 +33,14 @@ import {
   INVERTEBRATE_KIND,
   MUSSEL_STATE
 } from './schema.js';
+// The shell colours fish see, as GLSL; one table serves the eye and the aquarium.
+const musselShellColors = () =>
+    `vec3[${FAUNA.mussel_shell_red.length}](` +
+    FAUNA.mussel_shell_red
+        .map((r, f) => `vec3(${glsl(r)},${glsl(FAUNA.mussel_shell_green[f])},${
+                 glsl(FAUNA.mussel_shell_blue[f])})`)
+        .join(',') +
+    ')';
 export const particle_rendererState = {};
 export let foodVertexShader;
 
@@ -608,8 +616,7 @@ void main(){
      }
      if(onShell){
        float edge=shells,t=clamp(valve.y/height,0.,1.),ray=atan(valve.x,valve.y);
-       vec3 colors[7]=vec3[7](vec3(.33,.27,.16),vec3(.10,.17,.23),vec3(.64,.50,.32),vec3(.43,.39,.27),
-                              vec3(.52,.45,.27),vec3(.62,.34,.24),vec3(.70,.62,.45));
+       vec3 colors[${FAUNA.mussel_shell_red.length}]=${musselShellColors()};
        vec3 shellColor=colors[f];
        float relief=family==MUSSEL_FAMILY_WIDE?(.90+.10*cos(ray*32.)):
                     family==MUSSEL_FAMILY_RIBBED?(.93+.07*sin(t*31.+valve.x*18.)):

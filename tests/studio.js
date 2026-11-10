@@ -57,7 +57,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
   "src/interactive_brain.cc" : "23755fae851e4378",
-  "src/material.hh" : "1e223696442cdc9c",
+  "src/material.hh" : "7b513268feed7d77",
   "src/ecology.hh" : "3505e6c40c515977",
   "src/feeding.cc" : "d4ed3378682ab10f",
   "src/tank_energy.cc" : "f3b2fddbfce531b3",

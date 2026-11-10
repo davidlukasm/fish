@@ -74,10 +74,15 @@ inline double mussel_bed_radius(double morph, const FoodWebParameters &p) {
 inline constexpr double mussel_algae_share = .25;
 inline constexpr Color WORM_FLESH_COLOR{.85, .15, .12}, CRAB_FLESH_COLOR{.9, .35, .2},
     MUSSEL_FLESH_COLOR{.75, .25, .6};
-inline const Color &small_animal_color(int kind) {
+// Fish see each mussel family in the shell colour the aquarium shows.
+inline Color mussel_shell_color(double morph) {
+  const int f = mussel_family(morph);
+  return {fauna::mussel_shell_red[f], fauna::mussel_shell_green[f], fauna::mussel_shell_blue[f]};
+}
+inline Color small_animal_color(int kind, double morph) {
   return kind == food_kind::worm   ? fauna::worm_color
          : kind == food_kind::crab ? fauna::crab_color
-                                   : fauna::mussel_color;
+                                   : mussel_shell_color(morph);
 }
 inline constexpr double BARE_FRONT = .5;
 inline double sediment_front(double x, double y, double ax, double ay, double bx, double by,

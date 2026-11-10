@@ -763,7 +763,9 @@ export const FAUNA = Object.freeze({
   "crab_shell_morph" : 8,
   "worm_color" : [ 0.7, 0.15, 0.15 ],
   "crab_color" : [ 0.55, 0.3, 0.2 ],
-  "mussel_color" : [ 0.25, 0.3, 0.35 ]
+  "mussel_shell_red" : [ 0.33, 0.1, 0.64, 0.43, 0.52, 0.62, 0.7 ],
+  "mussel_shell_green" : [ 0.27, 0.17, 0.5, 0.39, 0.45, 0.34, 0.62 ],
+  "mussel_shell_blue" : [ 0.16, 0.23, 0.32, 0.27, 0.27, 0.24, 0.45 ]
 });
 export const PLACEMENT = Object.freeze({
   "golden_angle" : 2.399963229728653,

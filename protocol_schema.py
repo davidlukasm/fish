@@ -968,7 +968,9 @@ class Fauna:
     CRAB_SHELL_MORPH = 8
     WORM_COLOR = (0.7, 0.15, 0.15)
     CRAB_COLOR = (0.55, 0.3, 0.2)
-    MUSSEL_COLOR = (0.25, 0.3, 0.35)
+    MUSSEL_SHELL_RED = (0.33, 0.1, 0.64, 0.43, 0.52, 0.62, 0.7)
+    MUSSEL_SHELL_GREEN = (0.27, 0.17, 0.5, 0.39, 0.45, 0.34, 0.62)
+    MUSSEL_SHELL_BLUE = (0.16, 0.23, 0.32, 0.27, 0.27, 0.24, 0.45)
 
 class Placement:
     GOLDEN_ANGLE = 2.399963229728653
