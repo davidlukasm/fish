@@ -1,5 +1,6 @@
 #pragma once
 #include "substrate.hh"
+#include "development_sites.hh"
 #include <map>
 #include <numeric>
 namespace field {
@@ -7,9 +8,11 @@ namespace field {
 inline std::vector<double> visual_bearings(const std::vector<Neuron> &cells) {
   constexpr double BEARING_PRECISION = 1e-6;
   std::vector<double> bearings;
-  for (int u = 0; u < 4; ++u)
-    for (int w = 0; w < 3; ++w)
-      bearings.push_back(.5 * (1 - u / 3.) + .5 * w / 2.);
+  const auto &lattice = DEVELOPMENT_LATTICE[EYE_ZONE];
+  for (int u = 0; u < lattice[0]; ++u)
+    for (int w = 0; w < lattice[2]; ++w)
+      bearings.push_back(.5 * (1 - double(u) / (lattice[0] - 1)) +
+                         .5 * double(w) / (lattice[2] - 1));
   std::sort(bearings.begin(), bearings.end());
   bearings.erase(
       std::unique(bearings.begin(), bearings.end(),

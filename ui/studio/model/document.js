@@ -45,7 +45,8 @@ import {
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
-const NEW_DOCUMENT = 'v019-fish-atelier';
+// Documents name development sites by index; the 720-site lattice gave every index a new place.
+export const NEW_DOCUMENT = 'v019-fish-atelier-720';
 const ID_RADIX = 36;
 export const identifier = (kind = 'part') =>
     `${kind}-${Date.now().toString(ID_RADIX)}-${(++serial).toString(ID_RADIX)}`;

@@ -47,7 +47,7 @@
     ],
     "limits": {
       "max_name": 40,
-      "max_groups": 360,
+      "max_groups": 720,
       "max_group_name": 60,
       "receptors": 8,
       "max_copies": 16
@@ -2036,7 +2036,7 @@
       "levels": 255
     },
     "development": {
-      "sites": 360
+      "sites": 720
     },
     "body_unit": {
       "radius": 4,

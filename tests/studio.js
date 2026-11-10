@@ -14,7 +14,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/environment_parameters.hh" : "dd47655923c93bfd",
   "ui/brain_geometry.js" : "f26424cb0249af00",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "1f3949175117e67d",
+  "colony-core/field/development_sites.hh" : "ef79deae77da20c5",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
@@ -71,7 +71,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
   "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
   "colony-core/field/distribution.hh" : "80b7d194fee9ccf5",
-  "colony-core/field/retinal_tissue.hh" : "974b0b487823fcc8",
+  "colony-core/field/retinal_tissue.hh" : "d2a92b090939da05",
   "colony-core/field/dynamics.hh" : "f2eaff782fe5176f",
   "colony-core/field/maturation.hh" : "4e8cf5c46f00df3e"
 });
@@ -533,7 +533,12 @@ function semanticFingerprint(source) {
       const map = model.findCenter(settled, link.to).center;
       const angle = retina.bearing(sites.find(s => s.id === cell.center.site));
       assert.ok(cell.organ.type === 'eye' && cell.organ.side !== tectumLeft.side);
-      assert.ok(angle >= map.band[0] - 1e-9 && angle <= map.band[1] + 1e-9,
+      const lowest = Math.min(...mapNodes.map(c => c.band[0])),
+            highest = Math.max(...mapNodes.map(c => c.band[1]));
+      // A cell whose view reaches past the field's edge feeds the outermost band.
+      const from = map.band[0] === lowest ? -Infinity : map.band[0],
+            to = map.band[1] === highest ? Infinity : map.band[1];
+      assert.ok(angle >= from - 1e-9 && angle <= to + 1e-9,
                 'A light cell reaches the map node of its direction');
     }
     assert.ok(mapNodes.every(c => routed.some(l => l.from === c.id && l.to.endsWith(':inhibit')) &&

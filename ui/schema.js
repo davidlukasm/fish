@@ -951,7 +951,7 @@ export const PLAN_POINT = Object.freeze({
   "pupil" : 4
 });
 export const CONTOUR = Object.freeze({"bins" : 8, "levels" : 255});
-export const DEVELOPMENT = Object.freeze({"sites" : 360});
+export const DEVELOPMENT = Object.freeze({"sites" : 720});
 export const BODY_UNIT = Object.freeze({
   "radius" : 4,
   "max_radius" : 32,
@@ -1020,7 +1020,7 @@ export function indexedBy(group, table) {
 export function initialize(indices) {}
 export const ATELIER_LIMITS = Object.freeze({
   "max_name" : 40,
-  "max_groups" : 360,
+  "max_groups" : 720,
   "max_group_name" : 60,
   "receptors" : 8,
   "max_copies" : 16

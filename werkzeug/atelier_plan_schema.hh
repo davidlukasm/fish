@@ -3,7 +3,7 @@
 #include <ostream>
 namespace studio_plan {
 inline constexpr int max_name = 40;
-inline constexpr int max_groups = 360;
+inline constexpr int max_groups = 720;
 inline constexpr int max_group_name = 60;
 inline constexpr int receptors = 8;
 inline constexpr int max_copies = 16;

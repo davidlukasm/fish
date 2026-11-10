@@ -1834,7 +1834,7 @@ inline constexpr int bins = 8;
 inline constexpr int levels = 255;
 }
 namespace development {
-inline constexpr int sites = 360;
+inline constexpr int sites = 720;
 }
 namespace body_unit {
 inline constexpr int radius = 4;

@@ -10,11 +10,21 @@
 namespace field {
 inline constexpr double MIN_RANGE = .1;
 inline constexpr int IDENTITY_CORNERS = 4, IDENTITY_VARIANTS = 2;
+// Sites per zone along the body (u), from back to belly (v) and from the midline out (w).
+inline constexpr std::array<std::array<int, 3>, cppn::input::zones> DEVELOPMENT_LATTICE{
+    {{8, 3, 2}, {8, 4, 3}, {8, 4, 3}, {10, 4, 3}}};
+inline constexpr std::size_t development_lattice_sites() {
+  std::size_t count = 0;
+  for (const auto &n : DEVELOPMENT_LATTICE)
+    count += 2 * std::size_t(n[0] * n[1] * n[2]);
+  return count;
+}
+static_assert(development_lattice_sites() == DEVELOPMENT_SITES, "the lattice fills every site");
+// Light cells grow only in the head zone behind the snout.
+inline constexpr int EYE_ZONE = 1;
 inline cppn::Point development_site(std::size_t index) {
-  constexpr std::array<std::array<int, 3>, cppn::input::zones> sizes{
-      {{4, 3, 2}, {4, 4, 3}, {4, 4, 3}, {5, 4, 3}}};
   for (int zone = 0; zone < cppn::input::zones; ++zone) {
-    const auto &n = sizes[zone];
+    const auto &n = DEVELOPMENT_LATTICE[zone];
     const std::size_t count = 2 * n[0] * n[1] * n[2];
     if (index >= count) {
       index -= count;
@@ -42,7 +52,7 @@ inline int development_function(const cppn::Point &p, Role role, int corner, int
     return 0;
   if (role == Role::Sensor) {
     if (corner == 0)
-      return p.zone == 1 ? (variant ? Proximity : Light) : none;
+      return p.zone == EYE_ZONE ? (variant ? Proximity : Light) : none;
     // Hair cells on the skin feel the water; inside the body they weigh their direction against
     // gravity, as statoliths do.
     if (corner == 1)
