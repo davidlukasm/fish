@@ -493,7 +493,15 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     organ.region = initialRegion(type, first);
   } else {
     for (const desc of definition.centers) {
-      const site = pick(desc, used, first.side);
+      const motor =
+          desc.key === PRESSURE_OF[type]?.key && organ.centers.find(c => c.role === 'motor');
+      const at = motor && findSite(sites, motor.site);
+      // A pressure receptor belongs beside its muscle in the body, including its hidden depth.
+      const site = at ? sites
+                            .filter(s => !used.has(s.id) && s.side === first.side &&
+                                         fitsOrgan(type, desc, s))
+                            .sort((a, b) => siteSeparation(a, at) - siteSeparation(b, at))[0]
+                      : pick(desc, used, first.side);
       if (!site)
         return null;
       used.add(site.id);
@@ -785,17 +793,17 @@ export function placeNode(doc, centerId, siteId, sites) {
   return draft;
 }
 const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});
+const siteSeparation = (site, at) =>
+    (site.zone - at.zone + at.u - site.u) ** 2 + (site.w - at.w) ** 2 / NEAR_SITE.depth_weight +
+    (site.v - at.v) ** 2 + (site.side === at.side ? 0 : NEAR_SITE.other_side);
 export function nodeSitesNear(doc, centerId, nearId, sites) {
   const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
   const at = findSite(sites, near?.center.site);
   if (!found || !at)
     return [];
   const used = usedSites(doc);
-  const distance = s => (s.zone - at.zone + at.u - s.u) ** 2 +
-                        (s.w - at.w) ** 2 / NEAR_SITE.depth_weight + (s.v - at.v) ** 2 +
-                        (s.side === at.side ? 0 : NEAR_SITE.other_side);
   return sites.filter(s => !used.has(s.id) && fitsOrgan(found.organ.type, found.center, s))
-      .sort((a, b) => distance(a) - distance(b));
+      .sort((a, b) => siteSeparation(a, at) - siteSeparation(b, at));
 }
 export function removeOrgan(doc, id) {
   const organ = findOrgan(doc, id);

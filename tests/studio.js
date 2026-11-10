@@ -324,6 +324,12 @@ function semanticFingerprint(source) {
     organAudits.push({document : added.document, id : added.organId, type : definition.key});
   }
   {
+    const gut = model.addOrgan(model.newDocument('Auftrieb'), 'gut', sites, {x : 600, y : 360});
+    const bladder = model.addOrgan(gut.document, 'bladder', sites, {x : 650, y : 360});
+    organAudits.push(
+        {document : bladder.document, id : bladder.organId, type : 'bladder', pressure : true});
+  }
+  {
     const regions = await import('../ui/studio/model/regions.js');
     assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key),
                      [ 'tectum', 'circuit', 'rhythm', 'teaching' ]);
@@ -1232,6 +1238,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }));
   const {built, target : seen, outside, blue} = response;
   for (const [index, audit] of organAudits.entries()) {
+    if (audit.pressure)
+      assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),
+                       [], 'The bladder measures depth beside its own muscle, not gut filling');
     const planned = {
       ...state,
       document : audit.document,
