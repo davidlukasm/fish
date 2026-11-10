@@ -44,9 +44,25 @@ Plan cells(int count) {
   }
   return p;
 }
+void wired_cells_find_contact_places() {
+  auto plan = cells(3);
+  for (auto &g : plan.groups)
+    g.copies = studio_plan::max_copies;
+  auto &target = plan.groups[2];
+  target.field = 0;
+  plan.connections = {{0, 2, 0, 0}, {1, 2, 0, 1}};
+  fit_contact_slots(plan);
+  assert(field::input_slots(field::Role::Nerve, target.field) >= 2 * studio_plan::max_copies);
+  auto roomy = cells(2);
+  roomy.groups[1].field = 1;
+  roomy.connections = {{0, 1, 0, 0}};
+  fit_contact_slots(roomy);
+  assert(roomy.groups[1].field == 1);
+}
 int main() {
   fishsim::Genome::begin_run(34981);
   duplication_uses_shared_limits();
+  wired_cells_find_contact_places();
   {
     auto plan = cells(2);
     auto &g = plan.groups.front();
@@ -382,5 +398,6 @@ int main() {
   assert(assess(hormones, g).ok());
   p.connections.push_back({2, 3, 2, 0});
   assert(!assess(p, g).ok());
-  std::cout << "Compiler: local traits, stable sites, weight bounds and planned contacts passed\n";
+  std::cout << "Compiler: local traits, stable sites, weight bounds, planned contacts and their "
+               "places passed\n";
 }

@@ -108,6 +108,23 @@ struct Plan {
   std::vector<Connection> connections;
   std::uint64_t development_seed = 1, variation_seed = 2;
 };
+// Every cell wired to a nerve group needs a contact place on it; with fewer places the
+// development keeps an arbitrary part of the wiring. Half a place absorbs the compiler's fitting
+// tolerance on the field width.
+inline constexpr float SLOT_ROUNDING = .49f;
+void fit_contact_slots(Plan &plan) {
+  std::vector<int> wired(plan.groups.size());
+  for (const auto &c : plan.connections)
+    wired[c.to] += plan.groups[c.from].copies;
+  for (std::size_t i = 0; i < plan.groups.size(); ++i) {
+    auto &g = plan.groups[i];
+    const float needed = float(wired[i]) + SLOT_ROUNDING;
+    if (g.role != 1 || field::input_slots(field::Role::Nerve, g.field) >= wired[i])
+      continue;
+    g.field = std::clamp(std::log(needed / field::SLOTS_MIN) / std::log(field::SLOTS_RANGE),
+                         g.field, 1.f);
+  }
+}
 // A design may still be empty (allow_empty): its view shows the body without cells.
 Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false) {
   int count = 0;
@@ -185,6 +202,7 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     ensure(fresh || it->second == c.to, "connection bundle has different targets");
     plan.connections.push_back(c);
   }
+  fit_contact_slots(plan);
   return plan;
 }
 
