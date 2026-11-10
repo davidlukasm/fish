@@ -303,22 +303,9 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
   let draft = copy(doc);
   const organIds = [], centerByOrgan = [];
   for (const [i, kind] of module.organs.entries()) {
-    const comparison = module.regionSettings?.[i]?.compare;
-    let at = position;
-    if (comparison) {
-      const used = usedSites(draft);
-      const available = sites.filter(s => !onMidline(s) && !used.has(mirroredSite(s, sites)?.id));
-      const home =
-          closestSite(ORGAN_BY_KEY[kind].centers[0], available, used, position, null, kind);
-      if (!home)
-        return null;
-      at = sitePoint(home, NERVE_ROLE);
-    }
-    const created = addOrgan(draft, kind, sites, at, i === 0 ? snapDistance : Infinity, true,
+    const created = addOrgan(draft, kind, sites, position, i === 0 ? snapDistance : Infinity, true,
                              kind === 'muscle' ? module.muscleFunction : null);
     if (!created)
-      return null;
-    if (comparison && !findOrgan(created.document, created.organId).pair)
       return null;
     draft = created.document;
     if (module.regionSettings?.[i])

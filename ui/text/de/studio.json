@@ -141,13 +141,11 @@
   "modulePurpose": {
     "vision-steering": "Die Augen speisen über Kreuz das Sehzentrum, das die Lenkmuskeln treibt.",
     "scent-suction": "Die Nase steuert über ein Schaltzentrum die Pumpe.",
-    "scent-steering": "Der Seitenvergleich der Gerüche lenkt zur stärkeren Quelle. Sein Kommando lässt sich getrennt hemmen.",
     "rhythm-drive": "Ein gemeinsamer Taktgeber steuert beide Seiten des Schwanzes."
   },
   "modules": {
     "vision-steering": "Sehen und Lenken",
     "scent-suction": "Riechen und Ansaugen",
-    "scent-steering": "Riechen und Lenken",
     "rhythm-drive": "Rhyth­mischer Vortrieb"
   },
   "inspector": {

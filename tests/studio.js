@@ -723,9 +723,9 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
-    for (const [key, motor] of [
-             [ 'vision-steering', MOTOR_KIND.turn ], [ 'scent-steering', MOTOR_KIND.turn ],
-             [ 'scent-suction', MOTOR_KIND.suction ], [ 'rhythm-drive', MOTOR_KIND.forward ]])
+    for (const [key, motor] of [[ 'vision-steering', MOTOR_KIND.turn ],
+                                [ 'scent-suction', MOTOR_KIND.suction ],
+                                [ 'rhythm-drive', MOTOR_KIND.forward ]])
       for (const position of [{x : 345, y : 290}, {x : 560, y : 365}, {x : 850, y : 420}]) {
         const placed = model.placeModule(model.newDocument(key), key, sites, position);
         assert.ok(placed, key + ' can be placed');
@@ -740,19 +740,6 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
           assert.ok(relays.every(o => o.region.response === 1 &&
                                       o.centers.every(c => c.q1 === 1 && c.q2 === .5)),
                     'Suction relays preserve a sustained scent on both sides');
-        }
-        if (key === 'scent-steering') {
-          const relays = placed.document.organs.filter(o => o.type === 'circuit');
-          assert.equal(relays.length, 2,
-                       'Scent comparison keeps both sides even at a central drop');
-          assert.ok(relays.every(o => o.pair && o.region.compare === 1 && o.region.response === 1));
-          const links = regions.routedLinks(placed.document, sites);
-          assert.ok(links.some(l => l.key?.includes('>>')),
-                    'The opposite inhibitory input participates in the comparison');
-          assert.ok(
-              links.filter(l => model.findOrgan(placed.document, l.to)?.type === 'muscle')
-                  .every(l => model.findCenter(placed.document, l.from)?.center.node === 'command'),
-              'Only the compared command reaches the steering muscles');
         }
       }
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
