@@ -40,6 +40,7 @@ export function fedBy(doc, organ) {
 }
 
 const MAP_NODES = 8, CONTRAST_CELLS = Object.freeze([ 0, 2, 5 ]);
+const VISUAL_RESPONSE = Object.freeze({threshold : 0, q1 : 1, q2 : .5});
 function tectumView(doc, organ) {
   const region = organ.region;
   if (!region.follow && region.derived)
@@ -65,7 +66,7 @@ function tectumPlan(doc, organ) {
         preset : 'relay',
         port : 'in',
         effects : DEVELOPING_RELAY,
-        set : {...CIRCUIT_LEARNING, copies : 8, pace : .6, q1 : 1, q2 : .5},
+        set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : 8, pace : .6},
         band : [ view.lo + band * step, view.lo + (band + 1) * step ],
         type : region.colours ? type : null
       });
@@ -86,7 +87,7 @@ function tectumPlan(doc, organ) {
     preset : 'relay',
     port : 'out',
     effects : DEVELOPING_RELAY,
-    set : {...CIRCUIT_LEARNING, copies : 8, pace : .6, q1 : 1, q2 : .5}
+    set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : 8, pace : .6}
   });
   const inner = maps.map(map => [map, 'out']);
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
@@ -96,7 +97,7 @@ function tectumPlan(doc, organ) {
       preset : 'inhibit',
       port : 'none',
       effects : DEVELOPING_RELAY,
-      set : {...CIRCUIT_LEARNING, copies : cells, pace : .6, q1 : 1, q2 : .5}
+      set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : cells, pace : .6}
     });
     inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
   }

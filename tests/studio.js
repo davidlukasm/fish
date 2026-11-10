@@ -437,6 +437,13 @@ function semanticFingerprint(source) {
     assert.ok(tectum, 'The optic tectum can be placed');
     tectum.document = regions.updateRegion(tectum.document, tectum.organId,
                                            {resolution : 3, contrast : 1}, sites);
+    const {nerveResponse} = await import('../ui/studio/view/drive.js');
+    for (const c of model.findOrgan(tectum.document, tectum.organId).centers) {
+      assert.equal(nerveResponse(c, 0, 0, {scale : sitesResult.biasScale}), 0,
+                   'A mature tectum does not send a visual cue in darkness');
+      assert.ok(nerveResponse(c, .2, .2, {scale : sitesResult.biasScale}) > 0,
+                'A sustained visual cue remains available to downstream regions');
+    }
     wired = tectum.document;
     const eyeOrgan = wired.organs.find(o => o.type === 'eye');
     const own = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
