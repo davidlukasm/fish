@@ -250,7 +250,9 @@ int main(int argc, char **argv) {
               }
             std::cout << "{\"event\":\"trace\",\"bearing\":" << bearing << ",\"step\":" << steps
                       << ",\"distance\":" << nd << ",\"to\":" << nb
-                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"sites\":{";
+                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"y\":" << p->body.y
+                      << ",\"sediment\":" << p->body.sediment_coverage
+                      << ",\"bladder\":" << p->body.bladder_fill << ",\"sites\":{";
             bool first = true;
             for (const auto &[site, value] : sensed(p->body)) {
               std::cout << (first ? "" : ",") << '"' << site << "\":" << value;
