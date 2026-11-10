@@ -38,7 +38,11 @@ using namespace atelier;
 constexpr int REPORT_DIGITS = 8, DIET_DIGITS = 6;
 constexpr int INCUBATION_PROBE_STEPS = 1024;
 constexpr std::uint64_t SIGHT_TANK_SEED = 719;
-std::optional<int> incubation_probe(const Genome &g) {
+struct Incubation {
+  int steps;
+  double energy;
+};
+std::optional<Incubation> incubation_probe(const Genome &g) {
   if (!g.viable())
     return std::nullopt;
   fishsim::Ecosystem tank(SIGHT_TANK_SEED);
@@ -48,15 +52,21 @@ std::optional<int> incubation_probe(const Genome &g) {
   tank.evo.mutation = 0;
   tank.food_burst.strength = 0;
   tank.set_parameter("energy_supply", 0);
+  const double yolk = fishsim::development_energy(g, tank.physiology().neural_cost, tank.evo.yolk);
   if (!tank.spawn(g, fishsim::SIZE / 2, fishsim::SIZE / 2, fishsim::fish_origin::founder, 0, 0,
-                  fishsim::development_energy(g, tank.physiology().neural_cost, tank.evo.yolk)))
+                  yolk))
     return std::nullopt;
   tank.fish.back().genome = g;
   tank.fish.back().body.prepare(g);
   for (int tick = 0; tick < INCUBATION_PROBE_STEPS && !tank.fish.empty(); ++tick) {
     tank.tick();
-    if (!tank.fish.empty() && tank.fish.front().body.hatched)
-      return tank.fish.front().body.hatch_age;
+    if (!tank.fish.empty() && tank.fish.front().body.hatched) {
+      const auto &body = tank.fish.front().body;
+      // The probe includes muscular and hormonal work; an unfertilised egg also pays for waiting.
+      return Incubation{body.hatch_age,
+                        yolk - body.energy + fishsim::hatch_search_reserve(body) +
+                            tank.evo.fertilisation_wait * field::DevelopmentCosts{}.egg_basal};
+    }
   }
   return std::nullopt;
 }
@@ -740,12 +750,12 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   const auto incubation = incubation_probe(g);
   std::cout << ",\"eggIncubation\":";
   if (incubation)
-    std::cout << *incubation;
+    std::cout << incubation->steps;
   else
     std::cout << "null";
   std::cout << ",\"eggMinimum\":";
   if (incubation)
-    std::cout << fishsim::minimum_egg_energy(g, fishsim::PhysiologyParameters{}, *incubation);
+    std::cout << incubation->energy;
   else
     std::cout << "null";
   fishsim::Body adult;
