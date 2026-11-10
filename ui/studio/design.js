@@ -22,14 +22,14 @@ import {SENSE_TISSUE} from '../tissue.js';
 import {PRESSURE_OF} from './model/organs.js';
 import {RECEPTOR} from '../schema.js';
 import {
-  allCenters,
   centerIndex,
   compileDocument,
   findCenter,
   findOrgan,
   nodeSitesNear,
   organOf,
-  placeNode
+  placeNode,
+  pressureMismatches
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
@@ -148,11 +148,7 @@ export const designMethods = {
     if (!Array.isArray(pressure) || this.pressureChecked === doc)
       return;
     this.pressureChecked = doc;
-    const centers = allCenters(doc);
-    const wrong = centers.filter((c, index) => {
-      const own = PRESSURE_OF[c.organType];
-      return own?.key === c.key && pressure[index] >= 0 && pressure[index] !== own.source;
-    });
+    const wrong = pressureMismatches(doc, pressure);
     for (const center of wrong) {
       const organ = findOrgan(doc, center.organId);
       const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];

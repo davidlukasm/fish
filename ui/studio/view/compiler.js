@@ -1,11 +1,12 @@
 import {t} from '../../strings.js';
-import {allCenters, compilerOptions} from '../model/document.js';
+import {allCenters, centerIndex, compilerOptions, pressureMismatches} from '../model/document.js';
 import {escapeText} from './markup.js';
 import {endpointTitle} from './names.js';
 
 const label = key => escapeText(t('studio.compiler.' + key));
 export const acceptedGenome = state =>
-    !!state.genome && !state.stale && state.report?.compiler?.ok !== false;
+    !!state.genome && !state.stale && state.report?.compiler?.ok !== false &&
+    !pressureMismatches(state.document, state.report?.pressure).length;
 export function compilerProgress(state) {
   const progress = state.compileProgress;
   if (!progress)
@@ -29,7 +30,13 @@ export function compilerPanel(state) {
                         '</option>')
           .join('') +
       '</select></label>';
-  const issues = report?.issues ?? [];
+  const pressure = state.stale ? [] : pressureMismatches(state.document, state.report?.pressure);
+  const passed = report?.ok && !pressure.length;
+  const issues = [
+    ...(report?.issues ?? []),
+    ...pressure.map(
+        center => ({code : 'pressure', from : centerIndex(state.document, center.id), to : -1}))
+  ];
   const name = index =>
       centers[index] ? endpointTitle(state.document, centers[index].id, state.sites) : '';
   let content = select('capacityTolerance', [ 0, .05, .1, .25, .5 ], '%') +
@@ -37,7 +44,7 @@ export function compilerPanel(state) {
                 select('extraCells', [ 0, 2, 4, 8, 16, 32, 64 ]) +
                 select('reserve', [ 0, 32, 64, 128, 256 ]);
   if (report) {
-    content += '<p class="aid-compiler-result">' + label(report.ok ? 'passed' : 'failed') + ' · ' +
+    content += '<p class="aid-compiler-result">' + label(passed ? 'passed' : 'failed') + ' · ' +
                report.nodes + ' ' + label('nodes') + ' · ' + report.reserve + ' ' + label('free') +
                '</p>';
     content += issues
@@ -61,7 +68,7 @@ export function compilerPanel(state) {
       content += '<p>' + label(key) + ': ' + trials.filter(r => r.ok).length + '/' + trials.length +
                  ' ' + label('within') + '</p>';
     }
-  return '<details class="aid-compiler' + (report && !report.ok ? ' failed' : '') + '"><summary>' +
-         label('title') + (report ? ' · ' + label(report.ok ? 'passed' : 'failed') : '') +
+  return '<details class="aid-compiler' + (report && !passed ? ' failed' : '') + '"><summary>' +
+         label('title') + (report ? ' · ' + label(passed ? 'passed' : 'failed') : '') +
          '</summary><div class="aid-compiler-options">' + content + '</div></details>';
 }

@@ -28,6 +28,7 @@ import {
   organFunction,
   ORGAN_BY_KEY,
   PAIRINGS,
+  PRESSURE_OF,
   ROLE,
   siteRole
 } from './organs.js';
@@ -233,6 +234,12 @@ export const growsWith = (doc, index, wheel) =>
 export const allCenters = doc =>
     doc.organs.flatMap(organ => organ.centers.map(
                            center => ({...center, organId : organ.id, organType : organ.type})));
+export const pressureMismatches = (doc, pressure) =>
+    Array.isArray(pressure) ? allCenters(doc).filter((center, index) => {
+      const own = PRESSURE_OF[center.organType];
+      return own?.key === center.key && pressure[index] >= 0 && pressure[index] !== own.source;
+    })
+                            : [];
 export const contactBundle =
     ([ from, to, count, weight, positive, negative, positiveWeight, negativeWeight ]) =>
         ({from, to, count, weight, positive, negative, positiveWeight, negativeWeight});

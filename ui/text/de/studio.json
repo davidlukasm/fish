@@ -946,6 +946,7 @@
       "organ": "Zellgruppe fehlt",
       "capacity": "Kapazität außerhalb der Toleranz",
       "traits": "Merkmale außerhalb der Toleranz",
+      "pressure": "Druckfühler misst ein anderes Organ",
       "growth": "Wachstumsrezeptor außerhalb der Toleranz",
       "contact": "Unerlaubte Synapse",
       "missing": "Geplanter Eingang fehlt",
