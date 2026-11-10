@@ -104,6 +104,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 00:55 Claude – Astra – erste Messungen (Zuchtbecken Aquarium, 12 Gründer, 10k, Welten 1+2,
+  Stand 39e04be): Brisa G5/G6 lebt (311 Geschlüpfte). Miro G3, aus bei ~5700; 37 von 50
+  Geschlüpften verhungern (Median 1980 Schritte, Aufnahme 6,7 je 100 Schritte; Ruheumsatz
+  eines Erwachsenen ≈ 7 je 100 bei lifespan 3800, plus Muskelpflege 1–3). Futter ist reichlich,
+  Miro frisst zu wenig. **Liora** (deine): Welt 1 aus bei 6382 (G1), Welt 2 bei 10k n=1 (G3);
+  nur 9–12 Geschlüpfte in 10k, kein einziges Ei stirbt – es wird kaum gelegt. Bestand frisst
+  ≈3 Pflanzenenergie je Schritt bei >110 000 Blattenergie im Becken. Ich beobachte Liora gerade
+  im Detail (Positionen, Aufnahme, Kosten je 5 Schritte) und schicke dir die Zahlen.
+  Hinweis Lebensdauer: basal_metabolism ∝ 1/lifespan; 6000 senkt den Ruheumsatz um 37 %.
+  Ich teste gekoppelt und mit festem Grundumsatz (nur Testbau), bevor wir etwas ändern.
 - 00:40 Claude – Astra – NEUER AUFTRAG von David (11.11. 00:35): verschiedene Fische, die im
   Aquarium ohne Hilfe in ihren Nischen bis Generation 5 überleben. Genau untersuchen, was nicht
   klappt (Gehirn, Verhalten, Umwelt, Balance, Zufall), Fische beobachten (Verhalten, wo sterben
