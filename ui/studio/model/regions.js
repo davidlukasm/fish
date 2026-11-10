@@ -131,6 +131,12 @@ const DEVELOPING_RELAY = Object.freeze({
     steepness : 3
   }
 });
+// A high threshold otherwise silences an untrained relay before post-hatch cues arrive.
+const THRESHOLD_RELAY = Object.freeze({
+  ...DEVELOPING_RELAY,
+  [HORMONE_EFFECT.rhythm] :
+      {...DEVELOPING_RELAY[HORMONE_EFFECT.rhythm], baseline : 1, sensitivity : 0}
+});
 const CIRCUIT_LEARNING =
     Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
 const CIRCUIT_THRESHOLD = Object.freeze([ -.5, 0, .5 ]),
@@ -142,7 +148,7 @@ function circuitPlan(doc, organ) {
     node : 'command',
     preset : CIRCUIT_PRESET[r.effect],
     port : 'both',
-    effects : DEVELOPING_RELAY,
+    effects : r.threshold === 2 ? THRESHOLD_RELAY : DEVELOPING_RELAY,
     set : {
       ...CIRCUIT_LEARNING,
       copies : 8,
@@ -374,12 +380,25 @@ export function updateRegion(doc, organId, patch, sites) {
     return null;
   const settings = ORGAN_BY_KEY[organ.type].settings;
   for (const target of [organ, findOrgan(draft, organ.pair)].filter(Boolean)) {
+    const before = regionPlan(draft, target);
     for (const [key, value] of Object.entries(patch)) {
       if (key === 'follow')
         target.region.follow = value ? 1 : 0;
       else if (settings[key])
         target.region[key] =
             Math.max(settings[key].least, Math.min(settings[key].most, Math.round(value)));
+    }
+    for (const node of regionPlan(draft, target).nodes) {
+      const center = target.centers.find(c => c.node === node.node);
+      const previous = before.nodes.find(n => n.node === node.node);
+      if (!center || !previous)
+        continue;
+      for (const [effect, values] of Object.entries(node.effects ?? {})) {
+        const was = previous.effects?.[effect], receptor = center.receptors[effect];
+        // Retuning a region updates its defaults while preserving a custom hormone response.
+        if (was && Object.entries(was).every(([ key, value ]) => receptor[key] === value))
+          Object.assign(receptor, values);
+      }
     }
   }
   return settleRegions(draft, sites);

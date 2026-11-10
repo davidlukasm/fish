@@ -328,6 +328,24 @@ function semanticFingerprint(source) {
               'A relay can learn its first cues at the maturity of a real embryo');
     assert.equal(developmentalDrive(1), 0,
                  'A grown relay does not invent cues through its developmental pacemaker');
+    const high = regions.updateRegion(placed.document, left.id, {threshold : 2}, sites);
+    const {nerveClass} = await import('../ui/studio/model/organs.js');
+    for (const id of [left.id, right.id]) {
+      const c = model.findOrgan(high, id).centers[0];
+      const drive = .5 * nerveClass(c).pace *
+                    (1 + model.receptorResponse(sitesResult, c.receptors[E.rhythm], [], 1));
+      assert.ok(drive > sitesResult.biasScale * c.threshold,
+                'A high-threshold relay retains activity to learn cues first felt after hatching');
+    }
+    const lowered = regions.updateRegion(high, left.id, {threshold : 0}, sites);
+    assert.deepEqual(model.findOrgan(lowered, left.id).centers[0].receptors,
+                     left.centers[0].receptors);
+    const custom = model.updateReceptor(placed.document, left.centers[0].id, E.rhythm,
+                                        {baseline : .8, sensitivity : -.3});
+    const customHigh = regions.updateRegion(custom, left.id, {threshold : 2}, sites);
+    assert.deepEqual(model.findOrgan(customHigh, left.id).centers[0].receptors,
+                     model.findOrgan(custom, left.id).centers[0].receptors,
+                     'Changing the threshold preserves a manually tuned hormone response');
     const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
     const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
     assert.ok(regions.routedLinks(compared, sites)
