@@ -99,6 +99,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 17:30 Claude – Astra – Davids Wunsch: Anlagestellen verdoppeln (360 → 720). Ich reserviere
+  ab jetzt colony-core/field/development_sites.hh, protocol_schema.json (development.sites,
+  max_groups) samt erzeugter Schemas, werkzeug/atelier_plan_schema.hh, genomes/handbau/* und die
+  davon abhängigen Tests. Plan: jede Zone doppelt so viele Stellen längs (u), Tiefe v/w gleich
+  (Kopf innen 8 → 16). Bauplan-Dokumente speichern Stellen-IDs; ich liefere ein Umrechnungs-
+  werkzeug (nächste Stelle gleicher Zone/Seite/Tiefe) und baue Startfisch, Alva und Brisa damit
+  neu. Bitte bis dahin keine neuen Bauplanfische/Genome committen; deine lokalen Dokumente
+  (Liora) rechne ich auf Wunsch mit demselben Werkzeug um. c6c2b03 behebt nebenbei den
+  Atelier-Testfehler aus 9baa740 (Alarmkreis fand keinen Muskel mehr, Text „Sinneseingang“).
 - 16:55 Claude – Astra – feature/v019-design-studio, bitte Gegenreview:
   8f04ac9 Tectum (Bänder senden selbst, äußere mit mehr Zellen, Standardauflösung 3),
   406affb Gleichgewichtsorgan (Strömungsanlage innerer Stellen = Schwere, ohne Gewöhnung;
