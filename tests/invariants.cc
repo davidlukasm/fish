@@ -1211,6 +1211,45 @@ void mussels_sum_at_most_two_quick_bites() {
   check(at().strain == 0 && at().strain_left == 0, "a bitten shell recovers quickly");
   check(bite(std::numeric_limits<double>::infinity()), "a strong enough bite cracks the shell");
 }
+void mussels_close_only_after_their_reaction_time() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  w.refresh_food_allowance();
+  for (const auto &s : w.field.vegetation().surfaces)
+    if (s.algae_open[1] > s.algae_open[0] &&
+        w.field.place_animals(food_kind::mussel, (s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2,
+                              edit_limit::max_brush_radius, 1))
+      break;
+  const auto &mussels = w.field.food_web().mussels;
+  const auto found =
+      std::find_if(mussels.begin(), mussels.end(), [](const Mussel &m) { return m.energy > 0; });
+  check(found != mussels.end(), "a mussel settles for the reaction test");
+  const std::uint64_t id = found->id;
+  const auto shell = [&]() -> const Mussel & {
+    return *std::find_if(mussels.begin(), mussels.end(),
+                         [&](const Mussel &m) { return m.id == id; });
+  };
+  const auto &env = w.field.env();
+  const auto pass = [&](double speed, int steps) {
+    VisibleBody fish{};
+    fish.x = shell().x;
+    fish.y = shell().y;
+    fish.kind = food_kind::fish;
+    fish.radius = BODY_RADIUS;
+    fish.relative_speed = speed;
+    for (int step = 0; step < steps; ++step) {
+      w.field.index({fish}, {});
+      w.field.advance_food_web();
+    }
+  };
+  const int reaction = int(env.mussel_reaction);
+  pass(env.mussel_alert_speed / 2, 2 * reaction);
+  check(!shell().closed && !shell().alarmed, "a slow fish beside a mussel does not alarm it");
+  pass(2 * env.mussel_alert_speed, reaction - 1);
+  check(!shell().closed, "a mussel stays open while a fast fish is only briefly near");
+  pass(2 * env.mussel_alert_speed, 1);
+  check(shell().closed > 0, "a mussel closes once a fast fish stays near for its reaction time");
+}
 void lateral_cells_read_the_water_beside_them() {
   const Body still;
   const PhysiologyParameters physiology{};
@@ -1512,6 +1551,7 @@ int main() {
     inner_hair_cells_feel_gravity();
     lateral_cells_read_the_water_beside_them();
     mussels_sum_at_most_two_quick_bites();
+    mussels_close_only_after_their_reaction_time();
     barbels_taste_only_what_they_touch();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);

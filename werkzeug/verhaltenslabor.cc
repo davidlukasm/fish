@@ -16,7 +16,7 @@
 // keeps it in place during the trials, so its senses see a still scene.
 // LABTRACE=N adds the fish's course every N steps, LABLINKS=1 its learned contacts and
 // LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 (with
-// LABTRACE) the bearing, stimulus and signal of every retinal cell.
+// LABTRACE, also in mussel trials) the bearing, stimulus and signal of every retinal cell.
 // mussel=1 grows the fish up in the aquarium and sets it, facing the shell, at distance from one
 // open mussel after another; each trial reports when the mouth reached the shell, whether the
 // shell closed first, how often the jaw bit and whether and when the shell cracked.
@@ -32,7 +32,7 @@ constexpr int MUSSEL_TRIALS = 6, HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, LINK_
 constexpr std::array<int, 2> SENSE_STEPS{1, 10};
 // A patch is used up once nothing is left within PATCH_REACH spreads of where it was laid out;
 // the fish has moved on once it is LEAVING spreads beyond its starting distance.
-constexpr double PATCH_REACH = 3, LEAVING = 6, NEAR_BODIES = 2;
+constexpr double PATCH_REACH = 3, LEAVING = 6, NEAR_BODIES = 2, NEAR_VIEW = 80;
 double PIECE_ENERGY = 40;
 int site_of(const cppn::Point &p) {
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
@@ -73,6 +73,21 @@ std::map<std::pair<int, int>, std::array<double, 2>> links(const Body &b) {
 }
 double bearing_to(const Ecosystem &w, const Body &b, double x, double y) {
   return std::remainder(std::atan2(y - b.y, w.field.delta_x(x - b.x)) - b.angle, 2 * PI);
+}
+// Bearing, lateral position, stimulus and signal of every retinal cell, as a JSON array.
+void eye_cells(const Individual &p) {
+  const auto &binding = p.body.active_interface(p.genome);
+  const auto &input = p.body.perception().sensor_buffer;
+  std::cout << '[';
+  bool first = true;
+  for (std::size_t i = 0; i < binding.sensory.size() && i < input.size(); ++i)
+    if (binding.sensory[i].visual() && !binding.sensory[i].proximity) {
+      std::cout << (first ? "" : ",") << '[' << binding.sensory[i].angle * 180 / PI << ','
+                << binding.sensory[i].lateral << ',' << input[i] << ','
+                << p.body.brain()->signal(binding.sensory[i].neuron) << ']';
+      first = false;
+    }
+  std::cout << ']';
 }
 }
 
@@ -211,6 +226,10 @@ int main(int argc, char **argv) {
           continue;
         const auto &surface = w.field.vegetation().surfaces[found->second];
         const std::uint64_t id = target->id;
+        const int family = mussel_family(target->morph);
+        // The surface just beside the shell is what the eye sees around it.
+        const auto ground =
+            w.field.surface_color(target->x - surface.normal.x, target->y - surface.normal.y);
         const double energy = target->energy,
                      hardness = w.field.env().hardness_mussel +
                                 w.field.env().hardness_mussel_growth * energy /
@@ -258,13 +277,39 @@ int main(int argc, char **argv) {
               std::cout << (first ? "" : ",") << '"' << site << "\":" << value;
               first = false;
             }
-            std::cout << "}}\n";
+            std::cout << '}';
+            if (std::getenv("LABEYE")) {
+              std::cout << ",\"cells\":";
+              eye_cells(*p);
+              // What lies in view: kind (feed pieces as -1), bearing, distance, radius.
+              std::cout << ",\"near\":[";
+              bool any = false;
+              const auto near = [&](int kind, double x, double y, double radius) {
+                const double d = std::hypot(w.field.delta_x(x - p->body.x), y - p->body.y);
+                if (d > NEAR_VIEW)
+                  return;
+                std::cout << (any ? "," : "") << '[' << kind << ','
+                          << bearing_to(w, p->body, x, y) * 180 / PI << ',' << d << ',' << radius
+                          << ']';
+                any = true;
+              };
+              for (const auto &v : w.field.visible())
+                if (v.x != p->body.x || v.y != p->body.y)
+                  near(v.kind, v.x, v.y, v.radius);
+              for (const auto &f : w.field.feeding().pieces)
+                if (f.energy > 0)
+                  near(-1, f.x, f.y, food_radius(f));
+              std::cout << ']';
+            }
+            std::cout << "}\n";
           }
         }
-        std::cout << "{\"event\":\"mussel\",\"energy\":" << energy << ",\"hardness\":" << hardness
-                  << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
-                  << ",\"nearest\":" << nearest << ",\"closed\":" << closed
-                  << ",\"cracked\":" << cracked << ",\"bites\":" << p->body.mouth.cycle - cycles
+        std::cout << "{\"event\":\"mussel\",\"family\":" << family << ",\"ground\":[" << ground[0]
+                  << ',' << ground[1] << ',' << ground[2] << "],\"energy\":" << energy
+                  << ",\"hardness\":" << hardness << ",\"grind\":" << bite_force(p->body, true)
+                  << ",\"reached\":" << reached << ",\"nearest\":" << nearest
+                  << ",\"closed\":" << closed << ",\"cracked\":" << cracked
+                  << ",\"bites\":" << p->body.mouth.cycle - cycles
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::mussel] - eaten_before
                   << ",\"steps\":" << step << "}\n";
       }
@@ -372,8 +417,6 @@ int main(int argc, char **argv) {
             std::cout << "}}\n";
           }
           if (std::getenv("LABEYE") && trace_every && steps % trace_every == 0) {
-            const auto &binding = p->body.active_interface(p->genome);
-            const auto &input = p->body.perception().sensor_buffer;
             double nd = std::numeric_limits<double>::infinity(), nb = 0;
             for (const auto &f : w.field.feeding().pieces)
               if (f.energy > 0) {
@@ -385,16 +428,9 @@ int main(int argc, char **argv) {
               }
             std::cout << "{\"event\":\"eye\",\"bearing\":" << bearing << ",\"step\":" << steps
                       << ",\"distance\":" << nd << ",\"to\":" << nb
-                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"cells\":[";
-            bool first = true;
-            for (std::size_t i = 0; i < binding.sensory.size() && i < input.size(); ++i)
-              if (binding.sensory[i].visual() && !binding.sensory[i].proximity) {
-                std::cout << (first ? "" : ",") << '[' << binding.sensory[i].angle * 180 / PI << ','
-                          << binding.sensory[i].lateral << ',' << input[i] << ','
-                          << p->body.brain()->signal(binding.sensory[i].neuron) << ']';
-                first = false;
-              }
-            std::cout << "]}\n";
+                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"cells\":";
+            eye_cells(*p);
+            std::cout << "}\n";
           }
           const bool closed = p->body.mouth.biting && p->body.mouth.phase >= MOUTH_HALF_CYCLE &&
                               last_phase < MOUTH_HALF_CYCLE;
