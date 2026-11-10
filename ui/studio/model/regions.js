@@ -144,6 +144,8 @@ function circuitPlan(doc, organ) {
     set : {
       ...CIRCUIT_LEARNING,
       copies : comparison ? CIRCUIT_COMPARE[r.compare] : 8,
+      // Two eight-cell inputs plus control need more than the ordinary relay's 17 contacts.
+      field : comparison ? .5 : .3,
       threshold : comparison ? COMPARISON_THRESHOLD[r.threshold] : CIRCUIT_THRESHOLD[r.threshold],
       tau : CIRCUIT_TIME[r.time],
       q1 : r.response ? 1 : 0,

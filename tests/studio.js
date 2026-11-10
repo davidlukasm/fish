@@ -196,6 +196,20 @@ async function checkResponseControls(model, capabilities, clicks) {
   assert.deepEqual(highCenter.receptors[HORMONE_EFFECT.rhythm],
                    center.receptors[HORMONE_EFFECT.rhythm],
                    'Changing threshold never installs a permanent pacemaker');
+  const compared = updateRegion(placed.document, organ.id, {compare : 1}, sites);
+  const control = model.addOrgan(compared, 'circuit', sites, {x : 520, y : 365});
+  const connected = model.addWire(control.document, control.organId, organ.id, 'both', sites,
+                                  {toPort : 'control'});
+  const comparisonPlan = model.compileDocument(connected.document, sites);
+  const command = model.findOrgan(connected.document, organ.id).centers.find(c => c.port === 'out');
+  const target = model.allCenters(connected.document).findIndex(c => c.id === command.id);
+  const senders = new Set(comparisonPlan.connections.filter(c => c.to === target).map(c => c.from));
+  const incoming = [...senders ].reduce((sum, i) => sum + comparisonPlan.groups[i].copies, 0);
+  const slots = Math.round(capabilities.neural.slotMin * capabilities.neural.slotSpan **
+                           comparisonPlan.groups[target].field);
+  assert.equal(incoming, 24, 'Both comparison inputs and the control population reach the command');
+  assert.ok(slots >= incoming,
+            'A comparison must not discard part of its inhibition to make room for control');
   const bladder = model.addOrgan(placed.document, 'bladder', sites, {x : 650, y : 365});
   const sac = model.findOrgan(bladder.document, bladder.organId);
   assert.deepEqual(sac.centers.filter(c => c.key === 'float').map(c => c.copies), [ 16, 16, 16 ]);
