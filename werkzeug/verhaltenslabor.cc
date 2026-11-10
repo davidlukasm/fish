@@ -559,7 +559,7 @@ int main(int argc, char **argv) {
           }
           if (steps == EARLY_TURN_STEP)
             turned_early = std::remainder(p->body.angle - start_angle, 2 * PI) * 180 / PI;
-          if (reached < 0 && p->observations().raw_diet[food_kind::feed] > eaten_before) {
+          if (reached < 0 && p->observations().raw_diet[food_type] > eaten_before) {
             reached = steps;
             if (!stay)
               break;
