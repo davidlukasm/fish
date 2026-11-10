@@ -183,7 +183,7 @@ const motorSection = (state, organ, center) =>
             '</div>') +
     (organ.type === 'muscle' ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
-  if (isPacemaker(center)) {
+  if (organ.type === 'rhythm' || isPacemaker(center)) {
     const title = label('inspector.beat');
     return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
                                        {...driveContext(state, center), rhythm : true}));

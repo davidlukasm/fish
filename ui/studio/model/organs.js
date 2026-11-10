@@ -235,7 +235,7 @@ export const ORGANS = Object.freeze([
       time : setting(0, 2, 1, true),
       compare : setting(0, 2, 0, true),
       effect : setting(0, 1, 0, true),
-      response : setting(0, 2, 0, true)
+      response : setting(0, 2, 1, true)
     }
   },
   {

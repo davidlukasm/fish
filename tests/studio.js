@@ -174,6 +174,106 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
   model.validateDocument(plain);
 }
 
+async function checkResponseControls(model, capabilities, clicks) {
+  const {responseHandle, responsePatch, responseTrace} =
+      await import('../ui/studio/view/response.js');
+  const {regionSettings} = await import('../ui/studio/view/circuit.js');
+  const {settleRegions} = await import('../ui/studio/model/regions.js');
+  const {drivePatch} = await import('../ui/studio/view/drive.js');
+  const {timeConstantSteps} = await import('../ui/tuning.js');
+  const {TIME_CONSTANT} = await import('../ui/schema.js');
+  const sites = capabilities.sites;
+  const placed =
+      model.addOrgan(model.newDocument('Reizantwort'), 'circuit', sites, {x : 600, y : 300});
+  const organ = model.findOrgan(placed.document, placed.organId), center = organ.centers[0];
+  assert.equal(center.q2, .5, 'New relays preserve a sustained cue');
+  const context = {
+    scale : capabilities.biasScale,
+    excitation : 0,
+    output : 1,
+    adaptationSpan : capabilities.neural.adaptationSpan,
+    pace : 0,
+    rhythmEffect : 0
+  };
+  for (const [q2, tau, sign] of [[ 0, .1, 1 ], [ .5, .5, 1 ], [ 1, 1, -1 ]]) {
+    const cell = {...center, q2, tau, sign};
+    const point = responseHandle(cell, context);
+    const back = responsePatch(cell, point.fx, point.fy, context);
+    assert.ok(Math.abs(back.tau - tau) < 1e-9);
+    assert.ok(Math.abs(back.threshold - cell.threshold) < 1e-9);
+  }
+  const held = responseTrace(center, context);
+  assert.ok(Math.abs(held.points[held.on + 1].value - held.points[held.off - 1].value) < 1e-9);
+  const fading = responseTrace({...center, q2 : 0}, context);
+  assert.ok(fading.points[fading.off - 1].value < fading.points[fading.on + 1].value / 2);
+  const memory = responseTrace({...center, q2 : 1}, context);
+  assert.ok(memory.points[memory.off + 1].value > held.points[held.off + 1].value);
+  const point = responseHandle({...center, q2 : 1}, context);
+  const patch = responsePatch({...center, q2 : 1}, point.fx + .08, point.fy - .025, context);
+  let changed = model.updateCenter(placed.document, center.id, {q2 : 1, ...patch});
+  changed = settleRegions(changed, sites);
+  model.validateDocument(changed);
+  const actual = model.findCenter(changed, center.id).center;
+  assert.ok(actual.tau > center.tau);
+  assert.ok(actual.threshold < center.threshold);
+  assert.deepEqual(actual.receptors, center.receptors,
+                   'Dragging a response must not silently enable a permanent pacer');
+  const twin = model.findOrgan(changed, organ.pair).centers[0];
+  assert.ok(Math.abs(twin.tau - actual.tau) < 1e-9);
+  assert.ok(Math.abs(twin.threshold - actual.threshold) < 1e-9);
+  const editor = {state : {document : changed}, changeDocument(doc) { this.state.document = doc; }};
+  const click = clicks.find(([ selector ]) => selector === '[data-response-cell]')[1];
+  click(editor,
+        {dataset : {responseCell : center.id, responseProperty : 'q2', responseValue : '0'}});
+  assert.equal(model.findCenter(editor.state.document, center.id).center.q1, actual.q1,
+               'Choosing a time response keeps rectification independent');
+  const group =
+      model.compileDocument(changed, sites).groups.find(g => g.threshold === actual.threshold);
+  assert.ok(group && group.tau === actual.tau && group.q2 === 1);
+  const state = {document : changed, sites, capabilities};
+  const html = regionSettings(state, model.findOrgan(changed, organ.id));
+  assert.match(html, /data-response-handle/);
+  assert.doesNotMatch(html, /data-region-setting="(?:time|threshold|response|effect)"/);
+  assert.ok(timeConstantSteps(drivePatch('beat', 0, 0, {scale : context.scale}).tau) >=
+                TIME_CONSTANT.pace_min_steps - 1e-9,
+            'A dragged beat stops at the native minimum period');
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {driveContext} = await import('../ui/studio/view/preview.js');
+  const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(studio.state, state,
+                {station : 'studio', selected : {kind : 'organ', id : organ.id}});
+  let requests = 0;
+  studio.requestDesign = () => ++requests;
+  studio.persist = () => {};
+  const animation = globalThis.requestAnimationFrame, cancel = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = () => 1;
+  globalThis.cancelAnimationFrame = () => {};
+  try {
+    studio.handleDrag = {id : center.id, rect : {left : 0, top : 0, width : 360, height : 220}};
+    const at = responseHandle(actual, driveContext(studio.state, actual));
+    for (const offset of [.015, .03])
+      studio.responsePointer({clientX : (at.fx + offset) * 360, clientY : at.fy * 220 - 1});
+    assert.equal(requests, 0, 'Dragging redraws the curve without rebuilding the fish');
+    studio.settleGraphic();
+    assert.equal(studio.undoHistory.length, 1, 'One drag is one undo step');
+    const dragged = studio.state.document;
+    studio.stepHistory('undo');
+    assert.deepEqual(studio.state.document, changed);
+    studio.stepHistory('redo');
+    assert.deepEqual(studio.state.document, dragged);
+    const graphic = {dataset : {response : center.id}};
+    studio.responseKey({
+      key : 'ArrowDown',
+      preventDefault() {},
+      target : {closest : () => ({closest : () => graphic})}
+    });
+    assert.deepEqual(studio.state.selected, {kind : 'organ', id : organ.id});
+  } finally {
+    globalThis.requestAnimationFrame = animation;
+    globalThis.cancelAnimationFrame = cancel;
+  }
+}
+
 (async () => {
   const root = join(__dirname, '..');
   for (const [path, expected] of Object.entries(ENGINE_REVIEW)) {
@@ -249,6 +349,11 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  await checkResponseControls(model, sitesResult, clicks);
+  if (process.argv.includes('--region-controls')) {
+    console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
+    return;
+  }
   checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
                   clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
   // Shipped blueprints remain editable and compile to their shipped fish.
@@ -1314,7 +1419,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     document : exampleStudio.state.document,
     selected : {kind : 'organ', id : exampleCircuit.id}
   }),
-               /data-region-setting="time"/);
+               /data-response-handle/);
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
   const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
                                               {resolution : 6, colours : 1}, sites);

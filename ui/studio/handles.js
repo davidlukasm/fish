@@ -2,6 +2,7 @@ import {testLightMarkup, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
+import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
@@ -70,6 +71,7 @@ const HANDLES = Object.freeze({
   receptor : {follow : 'receptorPointer'},
   dose : {follow : 'dosePointer'},
   drive : {follow : 'drivePointer'},
+  response : {follow : 'responsePointer'},
   adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
@@ -115,6 +117,12 @@ const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
 export const GRIPS = Object.freeze([
+  {
+    graphic : '[data-response]',
+    handle : '[data-response-handle]',
+    held : 'response',
+    start : (studio, g) => ({id : g.dataset.response})
+  },
   {
     graphic : '[data-gut-bars]',
     handle : '[data-gut-handle]',
@@ -268,6 +276,38 @@ function knobGrip(event) {
              : null;
 }
 export const handleMethods = {
+  responsePointer(event) {
+    const drag = this.handleDrag, doc = this.state.document;
+    const center = findCenter(doc, drag.id)?.center;
+    if (!center)
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = responsePatch(center, fx, fy, driveContext(this.state, center));
+    if (patch)
+      this.draftDesign(updateCenter(doc, drag.id, patch), 'response:' + drag.id);
+  },
+  responseKey(event) {
+    const handle = event.target.closest?.('[data-response-handle]');
+    const graphic = handle?.closest('[data-response]');
+    if (!graphic || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+      return false;
+    const center = findCenter(this.state.document, graphic.dataset.response)?.center;
+    if (!center)
+      return false;
+    event.preventDefault();
+    const context = driveContext(this.state, center), point = responseHandle(center, context);
+    const dx = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    const patch = responsePatch(center, point.fx + dx * 4 / RESPONSE.width,
+                                point.fy + dy * 2 / RESPONSE.height, context);
+    if (patch)
+      this.changeDocument(updateCenter(this.state.document, center.id, patch), this.state.selected);
+    [...this.root.querySelectorAll('[data-response]')]
+        .find(g => g.dataset.response === center.id)
+        ?.querySelector('[data-response-handle]')
+        ?.focus();
+    return true;
+  },
   tuneGraphic(event) {
     const control = this.handleDrag, bounds = control.rect;
     if (!bounds.width || !bounds.height)

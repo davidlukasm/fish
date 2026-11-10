@@ -400,6 +400,14 @@
     "teach": "Lehrsignal"
   },
   "regions": {
+    "response": {
+      "input": "Reiz",
+      "output": "Antwort",
+      "positive": "Nur positive Zellantworten",
+      "drag": "Antwort ziehen: Stärke nach oben oder unten, Nachwirkung nach links oder rechts",
+      "reference": "Zellantwort auf einen gleichbleibenden Beispielreiz; Verbindungen und Lernen verändern den tatsächlichen Eingang.",
+      "rhythm": "Mögliche Zellantworten mit Eigenrhythmus"
+    },
     "tectum": {
       "term": "Tectum",
       "purpose": "Vorlage: bündelt Seheingänge oder ordnet sie nach Sehfeld und Farbtyp.",
@@ -435,12 +443,7 @@
       "contrast": "Kontrast",
       "colours": "Farbtypen",
       "compare": "Seitenvergleich",
-      "beat": "Takt",
-      "threshold": "Schwelle",
-      "teacher": "Lehrer",
-      "effect": "Wirkung",
-      "time": "Zellzeit",
-      "response": "Zeitantwort"
+      "teacher": "Lehrer"
     },
     "values": {
       "contrast": [
@@ -456,25 +459,6 @@
         "aus",
         "schwach",
         "stark"
-      ],
-      "beat": [
-        "langsam",
-        "mittel",
-        "schnell"
-      ],
-      "threshold": [
-        "niedrig",
-        "mittel",
-        "hoch"
-      ],
-      "effect": [
-        "erregend",
-        "hemmend"
-      ],
-      "time": [
-        "kurz",
-        "mittel",
-        "lang"
       ],
       "response": [
         "Veränderung",

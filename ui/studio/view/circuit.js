@@ -19,6 +19,9 @@ import {namedText, t, tList} from '../../strings.js';
 import {cellTrack, cellWords, ICON, icon, label, slotFill, slotShape} from './kit.js';
 import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
 import {organTitle} from './names.js';
+import {responseDiagram} from './response.js';
+import {driveElement} from './drive.js';
+import {driveContext} from './preview.js';
 
 const PAIRING_BOX = 20;
 const PAIRING_GLYPH = Object.freeze({
@@ -338,8 +341,17 @@ function regionControls(state, organ) {
     return '';
   const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
   const most = regionPlan(state.document, organ).most ?? {};
+  const command = organ.centers.find(c => c.node === 'command');
+  const beat = organ.centers.find(c => c.node === 'beat');
+  const response = command ? responseDiagram(state, command)
+                   : beat  ? driveElement(beat, label('inspector.beat'),
+                                          n => t('studio.inspector.beatSteps', {n}),
+                                          {...driveContext(state, beat), rhythm : true})
+                           : '';
   const choices =
       Object.entries(settings)
+          .filter(([ key ]) =>
+                      organ.type === 'circuit' ? key === 'compare' : organ.type !== 'rhythm')
           .filter(([ key ]) => key !== 'compare' || organ.pair)
           .map(([ key, s ]) => {
             const names = s.named ? tList('studio.regions.values.' + key) : null;
@@ -377,8 +389,8 @@ function regionControls(state, organ) {
                 '</p>'
           : '';
   return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
-         label('regions.settingsTitle') + '</h4>' + choices + regionTeacher(state, organ) +
-         crowded + follows + '</section>';
+         label('regions.settingsTitle') + '</h4>' + response + choices +
+         regionTeacher(state, organ) + crowded + follows + '</section>';
 }
 export function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);

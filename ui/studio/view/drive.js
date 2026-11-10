@@ -20,7 +20,7 @@ const DRIVE = Object.freeze({
   rise : 3
 });
 const MIDDLE = DRIVE.top + DRIVE.plot / 2, HALF = DRIVE.plot / 2;
-const CREST_QUARTERS = 4;
+const BEAT_CREST = 1.25;
 const axisSteps = rhythm => rhythm ? LONGEST_TIME_CONSTANT * DRIVE.beats : 2;
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const stepAt = (fx, rhythm) =>
@@ -49,7 +49,7 @@ export function drivePatch(handle, fx, fy,
     };
   if (handle === 'beat')
     return {
-      tau : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, CREST_QUARTERS * stepAt(fx, true)))
+      tau : timeConstantOf(Math.max(TIME_CONSTANT.pace_min_steps, stepAt(fx, true) / BEAT_CREST))
     };
   return {};
 }
@@ -87,12 +87,12 @@ export function driveElement(center, label, stepsLabel, {
              : step => {
                  return motorResponse(center, 2 * step / total - 1, {scale, excitation, output});
                };
-  const points = Array.from({length : D.samples + 1}, (_, k) => {
-    const step = total * k / D.samples;
+  const samples = rhythm ? Math.max(D.samples, Math.ceil(total / tc * 24)) : D.samples;
+  const points = Array.from({length : samples + 1}, (_, k) => {
+    const step = total * k / samples;
     return rounded(x(step)) + ' ' + rounded(y(level(step)));
   });
-  const knee =
-      rhythm ? tc / CREST_QUARTERS : total * (1 + Math.max(0, scale * center.threshold)) / 2;
+  const knee = rhythm ? tc * BEAT_CREST : total * (1 + Math.max(0, scale * center.threshold)) / 2;
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';

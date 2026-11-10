@@ -299,6 +299,15 @@ export const FISH_CLICKS = Object.freeze([
   ],
   [ '[data-slot-region]', startSlotWire ],
   [
+    '[data-response-cell]',
+    (studio, e) => {
+      const key = e.dataset.responseProperty;
+      if (['q1', 'q2', 'sign'].includes(key))
+        keep(studio, updateCenter(studio.state.document, e.dataset.responseCell,
+                                  {[key] : Number(e.dataset.responseValue)}));
+    }
+  ],
+  [
     '[data-inner-link]',
     (studio, e) => keep(studio, toggleInnerLink(studio.state.document, e.dataset.organId,
                                                 e.dataset.innerLink))
