@@ -601,6 +601,12 @@ function semanticFingerprint(source) {
                doc.organs.length);
   assert.equal(model.addOrgan(doc, 'eye', sites, {x : 1400, y : 290}, geometry.SNAP_DISTANCE),
                null);
+  const crowded = model.addOrgan(
+      JSON.parse(readFileSync(join(__dirname, '../genomes/handbau/brisa.fish.json'), 'utf8')),
+      'eye', sites, {x : 320, y : 270});
+  assert.ok(crowded, 'An occupied viewing direction must not block the rest of a new eye');
+  const crowdedSites = model.allCenters(crowded.document).map(c => c.site);
+  assert.equal(new Set(crowdedSites).size, crowdedSites.length);
   const id = left.id, pair = right.id;
   const retinaIds = left.centers.map(c => c.id);
   doc = model.updateField(doc, id, {density : 8}, sites);

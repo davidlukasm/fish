@@ -61,7 +61,7 @@ export function generateRetina(organ, sites, used, create) {
                           .filter(s => !used.has(s.id))
                           .sort((a, b) => a.v - b.v || a.u - b.u || a.id - b.id);
     if (!available.length)
-      return null;
+      continue;
     const local = profiles.length <= available.length
                       ? profiles
                       : Array.from({length : available.length},

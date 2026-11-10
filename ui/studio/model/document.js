@@ -416,9 +416,8 @@ export function regenerateFields(draft, sites) {
         const available = binSites(sites, other.side, bin).filter(s => !reserved.has(s.id));
         const site =
             available.find(s => other.centers.some(c => c.site === s.id)) ?? available.at(-1);
-        if (!site)
-          return false;
-        reserved.add(site.id);
+        if (site)
+          reserved.add(site.id);
       }
     }
     const centers = generateRetina(organ, sites, reserved,
