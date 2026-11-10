@@ -12,7 +12,8 @@
 // appears at set bearings and distances; each trial reports whether and how the fish reached the
 // food and, with stay=1, how much it ate and whether it moved on once the patch was empty.
 // LABTRACE=1 adds the fish's course every five steps, LABLINKS=1 its learned contacts and
-// LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite.
+// LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 the
+// bearing, stimulus and signal of every retinal cell.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -74,10 +75,11 @@ int main(int argc, char **argv) {
     if (argc < 3)
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
-          "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [aquarium=1] [Parameter=Wert "
-          "...]");
+          "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [aquarium=1] "
+          "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
-    int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0;
+    int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
+        hungry = 0;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -109,6 +111,8 @@ int main(int argc, char **argv) {
         spread = value;
       else if (key == "stay")
         stay = int(value);
+      else if (key == "hungry")
+        hungry = int(value);
       else if (!w.set_parameter(key, value))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
@@ -157,6 +161,9 @@ int main(int argc, char **argv) {
         keep();
         w.field.clear_food();
         auto &b = p->body;
+        // A hungry fish starts each trial with an empty gut, as after a long search.
+        if (hungry)
+          b.gut_fill = b.gut_energy = b.gut_digestible = 0;
         const double a = b.angle + bearing * PI / 180;
         double x = w.field.wrap_x(b.x + distance * std::cos(a)),
                y = std::clamp(b.y + distance * std::sin(a), FOOD_MARGIN, TANK_HEIGHT - FOOD_MARGIN);
