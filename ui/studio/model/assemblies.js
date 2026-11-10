@@ -9,7 +9,7 @@ import {
   pointDistance,
   sitePoint
 } from './layout.js';
-import {settleRegions} from './regions.js';
+import {settleRegions, updateRegion} from './regions.js';
 import {
   addNeuron,
   addOrgan,
@@ -308,8 +308,12 @@ export function placeModule(doc, moduleKey, sites, position, snapDistance = Infi
     if (!created)
       return null;
     draft = created.document;
+    if (module.regionSettings?.[i])
+      draft = updateRegion(draft, created.organId, module.regionSettings[i], sites);
+    if (!draft)
+      return null;
     organIds.push(created.organId);
-    centerByOrgan.push(created.centerIds);
+    centerByOrgan.push(findOrgan(draft, created.organId).centers.map(c => c.id));
   }
   for (const [from, to, pairing] of module.connections) {
     const result = addWire(draft, organIds[from], organIds[to], pairing, sites);

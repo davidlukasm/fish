@@ -642,6 +642,13 @@ function semanticFingerprint(source) {
         assert.equal(muscles.length, 2, key + ' has both muscle sides');
         assert.ok(muscles.every(o => organFunction(o, sites) === motor),
                   key + ' always drives the intended muscle function');
+        if (key === 'scent-suction') {
+          const relays = placed.document.organs.filter(o => o.type === 'circuit');
+          assert.ok(relays.length);
+          assert.ok(relays.every(o => o.region.response === 1 &&
+                                      o.centers.every(c => c.q1 === 1 && c.q2 === .5)),
+                    'Suction relays preserve a sustained scent on both sides');
+        }
       }
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
     assert.equal(steering.document.assemblies.length, 1);

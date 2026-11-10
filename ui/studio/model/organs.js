@@ -319,6 +319,7 @@ export const MODULES = Object.freeze([
     key : 'scent-suction',
     muscleFunction : MOTOR_KIND.suction,
     organs : [ 'nose', 'circuit', 'muscle' ],
+    regionSettings : {1 : {response : 1}},
     connections : [ [ 0, 1 ], [ 1, 2 ] ]
   },
   {
