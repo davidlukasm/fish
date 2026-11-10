@@ -1,8 +1,7 @@
 import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
-import {receptorResponse, wiredCrossing} from '../model/document.js';
-import {escapeText, fixed} from './markup.js';
-import {clamp} from '../../units.js';
+import {allCenters, receptorResponse, wiredCrossing} from '../model/document.js';
+import {barShare, dragBar, escapeText, fixed} from './markup.js';
 import {formatNumber, namedText} from '../../strings.js';
 import {substanceMark, substanceName} from './substances.js';
 import {label, numberField} from './kit.js';
@@ -21,18 +20,27 @@ const input = (name, value, min, max, step, attributes) =>
 const PREVIEW_BARS = Object.freeze(
     {width : 300, height : 96, top : 12, bottom : 70, gauge : 12, knob : 7, mark : 88});
 export const PREVIEW_INPUT_LOW = -1;
+// A substance gets an example level once it is named or a cell answers it.
+function previewSubstances(doc) {
+  const used = new Set(doc.substances.map(substance => substance.index));
+  for (const center of allCenters(doc))
+    for (const receptor of [center.growth, ...center.receptors])
+      if (receptor?.active && receptor.substance < HORMONES.levels)
+        used.add(receptor.substance);
+  return [...used ].sort((a, b) => a - b);
+}
 function previewColumns(state) {
   const context = previewContextOf(state);
   return [
     {key : 'maturity', value : context.maturity, low : 0, index : HORMONES.levels},
-    ...context.hormones.map((value, index) => ({key : String(index), value, low : 0, index})),
+    ...previewSubstances(state.document)
+        .map(index => ({key : String(index), value : context.hormones[index], low : 0, index})),
     {key : 'input', value : previewInputOf(state), low : PREVIEW_INPUT_LOW, index : null}
   ];
 }
 export function previewPatch(state, key, fy) {
-  const B = PREVIEW_BARS, column = previewColumns(state).find(c => c.key === key);
-  const share = clamp((B.bottom - fy * B.height) / (B.bottom - B.top));
-  return column ? column.low + (1 - column.low) * share : null;
+  const column = previewColumns(state).find(c => c.key === key);
+  return column ? column.low + (1 - column.low) * barShare(PREVIEW_BARS, fy) : null;
 }
 export function previewControls(state) {
   const B = PREVIEW_BARS, columns = previewColumns(state), step = B.width / columns.length;
@@ -41,21 +49,18 @@ export function previewControls(state) {
     const x = step * (k + .5), base = y(Math.max(c.low, 0), c.low), at = y(c.value, c.low);
     const colour = c.index === null ? 'var(--aid-size)' : substanceColor(c.index);
     const name = c.index === null ? word('exampleInput') : substanceName(state, c.index);
-    return '<rect class="aid-dose-gauge" x="' + fixed(x - B.gauge / 2) + '" y="' + B.top +
-           '" width="' + B.gauge + '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 +
-           '"/><rect class="aid-preview-level" x="' + fixed(x - B.gauge / 2) + '" y="' +
-           fixed(Math.min(base, at)) + '" width="' + B.gauge + '" height="' +
-           fixed(Math.abs(base - at)) + '" fill="' + colour + '"/>' +
+    return dragBar(B, x, {
+             base,
+             at,
+             level : 'class="aid-preview-level" fill="' + colour + '"',
+             handle : 'data-preview-handle="' + c.key + '"',
+             title : namedText(name, formatNumber(c.value, PREVIEW_DIGITS)),
+             mark : c.index === null ? label('development.inputMark')
+                                     : substanceMark(state, c.index)
+           }) +
            (c.low < 0 ? '<path class="aid-dose-zero" d="M' + fixed(x - B.gauge / 2) + ' ' +
                             fixed(base) + ' h' + B.gauge + '"/>'
-                      : '') +
-           '<circle class="aid-graphic-handle" data-preview-handle="' + c.key + '" cx="' +
-           fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' +
-           escapeText(namedText(name, formatNumber(c.value, PREVIEW_DIGITS))) +
-           '</title></circle><text x="' + fixed(x) + '" y="' + B.mark + '" text-anchor="middle">' +
-           escapeText(c.index === null ? label('development.inputMark')
-                                       : substanceMark(state, c.index)) +
-           '</text>';
+                      : '');
   });
   return '<details class="aid-preview-context"><summary title="' +
          escapeText(word('previewConditions')) + '">' + word('preview') +

@@ -47,6 +47,19 @@ export const namedTrack = ([ left, right ], y, share, attributes, title, [ from,
     '<text x="' + left + '" y="' + (y + TRACK.name) + '">' + escapeText(from) + '</text><text x="' +
         right + '" y="' + (y + TRACK.name) + '" text-anchor="end">' + escapeText(to) + '</text>');
 export const trackShare = (x, [ left, right ]) => clamp((x - left) / (right - left));
+// An upright bar to drag: its gauge, the level from base to the knob, and a mark below.
+export const barShare = (bars, fy) =>
+    clamp((bars.bottom - fy * bars.height) / (bars.bottom - bars.top));
+export function dragBar(bars, x, {base, at, level, handle, title, mark}) {
+  const B = bars, left = fixed(x - B.gauge / 2);
+  return '<rect class="aid-dose-gauge" x="' + left + '" y="' + B.top + '" width="' + B.gauge +
+         '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 + '"/><rect ' + level + ' x="' +
+         left + '" y="' + fixed(Math.min(base, at)) + '" width="' + B.gauge + '" height="' +
+         fixed(Math.abs(base - at)) + '"/><circle class="aid-graphic-handle" ' + handle + ' cx="' +
+         fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' + escapeText(title) +
+         '</title></circle><text x="' + fixed(x) + '" y="' + B.mark + '" text-anchor="middle">' +
+         escapeText(mark) + '</text>';
+}
 
 export function padValues(pad, fx, fy) {
   const across = pad.width - 2 * pad.inset, up = pad.height - 2 * pad.inset;

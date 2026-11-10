@@ -5,7 +5,7 @@ import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, skinPoints, steadyAt, zoomOf} from './frame.js';
 import {organLocation} from './places.js';
 import {arrowPath} from './lateral.js';
-import {escapeText, fixed} from './markup.js';
+import {barShare, dragBar, escapeText, fixed} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
@@ -228,7 +228,7 @@ const inflowShare = value =>
 const inflowAt = share =>
     share > 0 ? INFLOW.least * Math.pow(INFLOW.most / INFLOW.least, share) : 0;
 export function gutProbePatch(key, fy) {
-  const B = GUT_BARS, share = clamp((B.bottom - fy * B.height) / (B.bottom - B.top));
+  const share = barShare(GUT_BARS, fy);
   return {[key] : key === 'strength' ? share : inflowAt(share)};
 }
 export function gutProbeControls(state, organ) {
@@ -236,15 +236,14 @@ export function gutProbeControls(state, organ) {
   if (state.tool !== 'stimulate' || probe?.kind !== 'gut' || probe.organ !== organ.id)
     return '';
   const y = share => B.bottom - (B.bottom - B.top) * share;
-  const bar = (key, share, x) =>
-      '<rect class="aid-dose-gauge" x="' + (x - B.gauge / 2) + '" y="' + B.top + '" width="' +
-      B.gauge + '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 +
-      '"/><rect class="aid-gut-level ' + key + '" x="' + (x - B.gauge / 2) + '" y="' +
-      fixed(y(share)) + '" width="' + B.gauge + '" height="' + fixed(B.bottom - y(share)) +
-      '"/><circle class="aid-graphic-handle" data-gut-handle="' + key + '" cx="' + x + '" cy="' +
-      fixed(y(share)) + '" r="' + B.knob + '"><title>' + escapeText(t('studio.probe.' + key)) +
-      '</title></circle><text x="' + x + '" y="' + B.mark + '" text-anchor="middle">' +
-      escapeText(t('studio.probe.' + key + 'Mark')) + '</text>';
+  const bar = (key, share, x) => dragBar(B, x, {
+    base : B.bottom,
+    at : y(share),
+    level : 'class="aid-gut-level ' + key + '"',
+    handle : 'data-gut-handle="' + key + '"',
+    title : t('studio.probe.' + key),
+    mark : t('studio.probe.' + key + 'Mark')
+  });
   const answers =
       organ.centers
           .map((center, k) => {

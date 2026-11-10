@@ -548,13 +548,13 @@ function growthEditor(state) {
          escapeText(label('development.bodyGrowth')) + '">' + label('development.receptorValues') +
          '</summary><div class="aid-parameter-grid">' +
          [ 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
-             .map(key => receptorSlider(state, key, growth[key], 'data-body-growth="' + key + '"',
-                                        GROWTH))
+             .map(key => receptorField(state, key, growth[key], 'data-body-growth="' + key + '"',
+                                       GROWTH))
              .join('') +
          '</div></details></section>';
 }
 const RECEPTOR_STEP = .001;
-function receptorSlider(state, key, value, attributes, effect) {
+function receptorField(state, key, value, attributes, effect) {
   const wheel = state.capabilities;
   const min = key === 'baseline'      ? -1
               : key === 'sensitivity' ? (effect === GROWTH ? 0 : -wheel.sensitivitySpan)
@@ -603,11 +603,11 @@ function receptorBody(state, center, effect) {
          doseStrip(state, receptor, effect, target) + '<details><summary>' +
          label('development.receptorValues') + '</summary><div class="aid-parameter-grid">' +
          [ 'baseline', 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
-             .map(key => receptorSlider(state, key, receptor[key],
-                                        'data-receptor-field="' + escapeText(center.id) +
-                                            '" data-receptor-effect="' + effect +
-                                            '" data-receptor-key="' + key + '"',
-                                        effect))
+             .map(key => receptorField(state, key, receptor[key],
+                                       'data-receptor-field="' + escapeText(center.id) +
+                                           '" data-receptor-effect="' + effect +
+                                           '" data-receptor-key="' + key + '"',
+                                       effect))
              .join('') +
          '</div></details>';
 }
