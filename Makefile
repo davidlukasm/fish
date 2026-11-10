@@ -28,7 +28,8 @@ LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
 .PHONY: all objects FORCE
-all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/build-check
+all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/verhaltenslabor \
+     $(BUILD_DIR)/build-check
 objects: $(OBJECTS)
 NATIVE_TESTS := $(shell python3 -B tests/suite.py native)
 $(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
@@ -86,7 +87,7 @@ $(BUILD_DIR)/beobachter: werkzeug/beobachter.cc $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 $(BUILD_DIR)/verhaltenslabor: werkzeug/verhaltenslabor.cc $(TEST_CORE) Makefile
-	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+	$(CXX) $(CPPFLAGS) $(filter-out -O1,$(TEST_FLAGS)) -O3 $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 -include $(OBJECTS:.o=.d)
 -include $(wildcard $(BUILD_DIR)/*-tests.d)

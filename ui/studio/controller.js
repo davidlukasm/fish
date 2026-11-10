@@ -59,7 +59,7 @@ import {trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 import {StationHub} from './hub.js';
-import {BreedingStation} from '../labor/station.js';
+import {BreedingStation, TrialStation} from '../labor/station.js';
 
 let instance = null;
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
@@ -136,6 +136,7 @@ export class OrganStudio {
     this.pressureChecked = null;
     this.hub = new StationHub(root);
     this.breeding = new BreedingStation(root);
+    this.trials = new TrialStation(root);
   }
   async api(body, timeout = API_WAIT.usual) {
     const response = await postJson(API, body, {timeout});
@@ -206,8 +207,9 @@ export class OrganStudio {
       this.stopPulse();
     if (station !== 'hub')
       this.hub.close();
-    if (station !== 'breeding')
-      this.breeding.close();
+    for (const lab of ['breeding', 'trials'])
+      if (station !== lab)
+        this[lab].close();
     this.state.station = station;
     this.root.hidden = station === 'aquarium';
     document.body.dataset.station = station;
@@ -293,9 +295,9 @@ export class OrganStudio {
       return;
     if (s.station === 'hub')
       return this.hub.open(this.draftLine());
-    if (s.station === 'breeding')
-      return this.breeding.open(acceptedGenome(s) ? {genome : s.genome, name : s.document.name}
-                                                  : null);
+    if (s.station === 'breeding' || s.station === 'trials')
+      return this[s.station].open(acceptedGenome(s) ? {genome : s.genome, name : s.document.name}
+                                                    : null);
     this.root.innerHTML = stationShell(s);
     this.drawSight();
   }
@@ -722,8 +724,8 @@ export class OrganStudio {
       return;
     if (clickOn(this, event, ANYWHERE_CLICKS))
       return;
-    if (this.state.station === 'breeding')
-      return this.breeding.click(event);
+    if (this.state.station === 'breeding' || this.state.station === 'trials')
+      return this[this.state.station].click(event);
     if (this.state.station === 'hub')
       return this.hubClick(event);
     if (this.state.station !== 'studio' || clickOn(this, event, STUDIO_CLICKS))

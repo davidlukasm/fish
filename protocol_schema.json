@@ -163,6 +163,10 @@
       "leaf": 2,
       "round_leaf": 3
     },
+    "trial_kind": {
+      "feed": 0,
+      "mussel": 1
+    },
     "sense_kind": {
       "light": 0,
       "odor": 1,
@@ -2100,7 +2104,8 @@
       "fps_report": "/fps-report",
       "scene": "/scene",
       "atelier": "/atelier",
-      "labor": "/labor"
+      "labor": "/labor",
+      "trials": "/trials"
     },
     "record_sample": {
       "period": 100
@@ -2125,6 +2130,17 @@
       "organ_half": 3,
       "spread": 0.45,
       "reach": 2
+    },
+    "trial_lab": {
+      "seeds": [1, 2, 4],
+      "path_every": 5,
+      "feed_distance": 80,
+      "feed_steps": 300,
+      "feed_cluster": 5,
+      "feed_scent_wait": 100,
+      "feed_near": 10,
+      "mussel_distance": 40,
+      "mussel_steps": 400
     },
     "breeding": {
       "worlds": [2, 3, 5],

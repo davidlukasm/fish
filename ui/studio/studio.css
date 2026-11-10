@@ -273,6 +273,32 @@
 .aid-lab-deaths{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#0b2730}
 .aid-lab-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:11px;color:#9fbcbc}
 .aid-lab-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
+.aid-trial-results{--trial-succeeded:#e8c66f;--trial-reached:#bfe0a8;--trial-missed:#6f8f90}
+.aid-trial-tally{display:flex;gap:12px;margin-bottom:18px}
+.aid-trial-tally>div{display:flex;flex-direction:column;gap:2px;padding:12px 18px;background:#10313a;border:1px solid #2b5058;border-radius:14px}
+.aid-trial-tally small{font-size:11px;color:#9fbcbc;text-transform:uppercase;letter-spacing:.08em}
+.aid-trial-tally strong{font:500 28px Georgia,serif;color:#e3e8d1}
+.aid-trial-view{display:grid;grid-template-columns:minmax(260px,460px) minmax(0,1fr);gap:20px;align-items:start}
+.aid-trial-chart{width:100%;height:auto;background:#0c2930;border:1px solid #2b5058;border-radius:14px}
+.aid-trial-ring{fill:none;stroke:#3a6067;stroke-dasharray:3 4}
+.aid-trial-food{fill:#d79a6c}
+.aid-trial-shell{stroke:#e6efe4;stroke-width:.8}
+.aid-trial-fish{fill:#e6efe4}
+.aid-trial-course polyline{fill:none;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;opacity:.85}
+.aid-trial-course.succeeded polyline{stroke:var(--trial-succeeded)}.aid-trial-course.succeeded circle{fill:var(--trial-succeeded)}
+.aid-trial-course.reached polyline{stroke:var(--trial-reached)}.aid-trial-course.reached circle{fill:var(--trial-reached)}
+.aid-trial-course.missed polyline{stroke:var(--trial-missed);stroke-dasharray:4 3}.aid-trial-course.missed circle{fill:var(--trial-missed)}
+.aid-trial-course:hover polyline{stroke-width:3;opacity:1}
+.aid-trial-strip{display:flex;flex-direction:column;gap:9px}
+.aid-trial-strip>div{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#9fbcbc}
+.aid-trial-strip>div>div{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.aid-trial-strip i{width:22px;height:22px;border-radius:5px;background:var(--trial-missed)}
+.aid-trial-strip i.succeeded,.aid-trial-key.succeeded{background:var(--trial-succeeded)}
+.aid-trial-strip i.reached,.aid-trial-key.reached{background:var(--trial-reached)}
+.aid-trial-key.missed{background:var(--trial-missed)}
+.aid-trial-strip em{font-style:normal;font-size:11px;color:#89a8a6}
+.aid-trial-strip em.died{color:#e0a28f}
+@media(max-width:900px){.aid-trial-view{grid-template-columns:1fr}}
 
 .aid-assembly-stamp{cursor:grab}
 .aid-assembly-stamp rect{fill:#395b67;stroke:#c9d6aa;stroke-width:2}

@@ -1,7 +1,8 @@
-"""Breeding station: a fish lives in several start worlds without help, one world after another.
+"""Stations that test a fish with the native tools, one job at a time.
 
-Each world runs the native breeding tank and is summarised while it runs; finished worlds are
-kept per genome and step count, so the same fish is never bred twice in the same world."""
+The breeding station lets a fish live in several start worlds without help; the trial lab sets it
+before food or an open mussel and records each approach. Finished runs are kept per genome, so the
+same fish is never tested twice in the same world."""
 import hashlib
 import json
 import secrets
@@ -13,7 +14,7 @@ from pathlib import Path
 from atelier_service import START_DOCUMENTS, genome_text
 from build_config import build_directory
 from file_io import atomic_write
-from protocol_schema import Breeding
+from protocol_schema import Breeding, TrialKind, TrialLab
 from viewer_paths import ROOT
 from wording import Refusal, worded
 
@@ -33,6 +34,10 @@ def start_genome(key):
 
 def fingerprint(genome):
     return hashlib.sha256(genome.encode()).hexdigest()[:FINGERPRINT_CHARACTERS]
+
+
+def whole_number(value):
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def parent_generation(sample):
@@ -57,30 +62,51 @@ class World:
             self.summary["deaths"][cause] = self.summary["deaths"].get(cause, 0) + 1
 
 
+class Session:
+    """One trial world: the hatch and every trial the lab reports, path included."""
+    TRIAL_EVENTS = {TrialKind.FEED: "trial", TrialKind.MUSSEL: "mussel"}
+
+    def __init__(self, seed, trial):
+        self.event = self.TRIAL_EVENTS[trial]
+        self.summary = {"seed": seed, "trial": trial, "hatch": None, "trials": [], "died": None,
+                        "done": False}
+
+    def read(self, event):
+        kind = event.get("event")
+        if kind == "hatch":
+            self.summary["hatch"] = event["t"]
+        elif kind == "death":
+            self.summary["died"] = {"egg": bool(event["egg"]), "age": event["age"]}
+        elif kind == self.event:
+            self.summary["trials"].append({k: v for k, v in event.items() if k != "event"})
+
+
 class Results:
-    """Finished worlds per fish and step count under data_dir/labor."""
+    """Finished runs per fish and variant under data_dir/labor; runs are keyed by seed."""
 
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, prefix, variant, runs):
         self.folder = Path(data_dir) / FOLDER
+        self.prefix, self.variant, self.runs = prefix, variant, runs
 
-    def path(self, mark, steps):
-        return self.folder / f"zucht-{mark}-{steps}.json"
+    def path(self, mark, variant):
+        return self.folder / f"{self.prefix}-{mark}-{variant}.json"
 
-    def read(self, mark, steps):
+    def read(self, mark, variant):
         try:
-            return json.loads(self.path(mark, steps).read_text(encoding="utf-8"))
+            return json.loads(self.path(mark, variant).read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
 
-    def keep(self, mark, steps, name, world):
-        entry = self.read(mark, steps) or {"fingerprint": mark, "steps": steps, "worlds": {}}
+    def keep(self, mark, variant, name, run):
+        entry = self.read(mark, variant) or {"fingerprint": mark, self.variant: variant,
+                                             self.runs: {}}
         entry["name"] = name
-        entry["worlds"][str(world["seed"])] = world
-        atomic_write(self.path(mark, steps), json.dumps(entry, separators=(",", ":")))
+        entry[self.runs][str(run["seed"])] = run
+        atomic_write(self.path(mark, variant), json.dumps(entry, separators=(",", ":")))
 
     def all(self):
         entries = []
-        for path in sorted(self.folder.glob("zucht-*.json")):
+        for path in sorted(self.folder.glob(f"{self.prefix}-*.json")):
             try:
                 entries.append(json.loads(path.read_text(encoding="utf-8")))
             except (OSError, ValueError):
@@ -88,11 +114,29 @@ class Results:
         return entries
 
 
-class BreedingJobs:
+class Jobs:
+    """One running job per station, answered by start, status, cancel and overview."""
+    TOOL = ""
+
     def __init__(self, starter_genomes):
         self.starter_genomes = starter_genomes
         self.lock = threading.Lock()
         self.job = None
+
+    def results(self, data_dir):
+        raise NotImplementedError
+
+    def plan(self, data):
+        """The validated settings of a start request: variant, seeds and job fields, among them
+        the count of seeds."""
+        raise NotImplementedError
+
+    def run(self, seed, job):
+        """A fresh summary for one seed and the reader that fills it."""
+        raise NotImplementedError
+
+    def arguments(self, tool, path, seed, job):
+        raise NotImplementedError
 
     def request(self, data, data_dir):
         operation = data.get("operation")
@@ -122,13 +166,10 @@ class BreedingJobs:
                              "released": path.resolve() in released})
         with self.lock:
             job = self.shown(self.job) if self.job else None
-        return {"fish": fish, "results": Results(data_dir).all(), "job": job}
+        return {"fish": fish, "results": self.results(data_dir).all(), "job": job}
 
     def start(self, data, data_dir):
-        steps, worlds = data.get("steps"), data.get("worlds")
-        if (not all(isinstance(v, int) and not isinstance(v, bool) for v in (steps, worlds)) or
-                steps not in Breeding.STEPS or worlds not in Breeding.WORLDS):
-            raise Refusal("labor.errors.invalidRequest")
+        variant, seeds, fields = self.plan(data)
         key = data.get("fish")
         if key == "draft":
             genome = genome_text(data.get("genome"))
@@ -138,43 +179,42 @@ class BreedingJobs:
         else:
             genome = start_genome(key).read_text(encoding="utf-8")
             name = key
-        tool = build_directory(ROOT) / "zuchtbecken"
+        tool = build_directory(ROOT) / self.TOOL
         if not tool.is_file():
             raise Refusal("labor.errors.toolMissing")
         with self.lock:
             if self.job and self.job["status"] == "running":
                 raise Refusal("labor.errors.busy")
-            self.job = {"id": secrets.token_hex(JOB_ID_BYTES),
-                        "status": "running", "fish": key, "name": name,
-                        "fingerprint": fingerprint(genome), "steps": steps,
-                        "worlds": [], "error": None, "cancel": threading.Event(),
+            self.job = {"id": secrets.token_hex(JOB_ID_BYTES), "status": "running", "fish": key,
+                        "name": name, "fingerprint": fingerprint(genome), "variant": variant,
+                        **fields, "runs": [], "error": None, "cancel": threading.Event(),
                         "process": None}
             job = self.job
-            threading.Thread(target=self.work, args=(job, genome, tool, worlds, data_dir),
+            threading.Thread(target=self.work, args=(job, genome, tool, seeds, data_dir),
                              daemon=True).start()
             return self.shown(job)
 
-    def work(self, job, genome, tool, worlds, data_dir):
-        results = Results(data_dir)
-        kept = (results.read(job["fingerprint"], job["steps"]) or {}).get("worlds", {})
+    def work(self, job, genome, tool, seeds, data_dir):
+        results = self.results(data_dir)
+        kept = (results.read(job["fingerprint"], job["variant"]) or {}).get(results.runs, {})
         try:
             with tempfile.TemporaryDirectory(prefix="fish-labor-") as folder:
                 path = Path(folder) / "fish.genome"
                 path.write_text(genome, encoding="utf-8")
-                for seed in range(1, worlds + 1):
+                for seed in seeds:
                     if str(seed) in kept and kept[str(seed)]["done"]:
                         with self.lock:
-                            job["worlds"].append(kept[str(seed)])
+                            job["runs"].append(kept[str(seed)])
                         continue
-                    world = World(seed, job["steps"])
+                    run = self.run(seed, job)
                     with self.lock:
-                        job["worlds"].append(world.summary)
-                    self.breed(job, tool, path, world)
+                        job["runs"].append(run.summary)
+                    self.stream(job, self.arguments(tool, path, seed, job), run)
                     if job["cancel"].is_set():
                         break
                     with self.lock:
-                        world.summary["done"] = True
-                    results.keep(job["fingerprint"], job["steps"], job["name"], world.summary)
+                        run.summary["done"] = True
+                    results.keep(job["fingerprint"], job["variant"], job["name"], run.summary)
             with self.lock:
                 job["status"] = "cancelled" if job["cancel"].is_set() else "done"
         except Exception as error:
@@ -185,24 +225,24 @@ class BreedingJobs:
             with self.lock:
                 job["process"] = None
 
-    def breed(self, job, tool, path, world):
-        args = [str(tool), str(path), str(world.summary["seed"]), str(job["steps"]),
-                str(Breeding.FOUNDERS), HABITAT]
+    def stream(self, job, args, run):
         with tempfile.TemporaryFile(mode="w+") as errors:
-            process = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=errors,
-                                       text=True)
+            process = subprocess.Popen([str(a) for a in args], cwd=ROOT, stdout=subprocess.PIPE,
+                                       stderr=errors, text=True)
             with self.lock:
                 job["process"] = process
                 if job["cancel"].is_set():
                     process.kill()
             for line in process.stdout:
+                if not line.strip():
+                    continue
                 event = json.loads(line)
                 with self.lock:
-                    world.read(event)
+                    run.read(event)
             process.wait()
             if process.returncode and not job["cancel"].is_set():
                 errors.seek(0)
-                raise ValueError(errors.read().strip()[:DETAIL_CHARACTERS] or "zuchtbecken")
+                raise ValueError(errors.read().strip()[:DETAIL_CHARACTERS] or self.TOOL)
 
     @staticmethod
     def shown(job):
@@ -214,3 +254,51 @@ class BreedingJobs:
                 self.job["cancel"].set()
                 if self.job["process"] is not None:
                     self.job["process"].kill()
+
+
+class BreedingJobs(Jobs):
+    TOOL = "zuchtbecken"
+
+    def results(self, data_dir):
+        return Results(data_dir, "zucht", "steps", "worlds")
+
+    def plan(self, data):
+        steps, worlds = data.get("steps"), data.get("worlds")
+        if (not all(whole_number(v) for v in (steps, worlds)) or steps not in Breeding.STEPS or
+                worlds not in Breeding.WORLDS):
+            raise Refusal("labor.errors.invalidRequest")
+        return steps, range(1, worlds + 1), {"steps": steps, "count": worlds}
+
+    def run(self, seed, job):
+        return World(seed, job["steps"])
+
+    def arguments(self, tool, path, seed, job):
+        return [tool, path, seed, job["steps"], Breeding.FOUNDERS, HABITAT]
+
+
+class TrialJobs(Jobs):
+    TOOL = "verhaltenslabor"
+    SETTINGS = {
+        TrialKind.FEED: ["aquarium=1", "supply=0", f"prewait={TrialLab.FEED_SCENT_WAIT}",
+                         f"cluster={TrialLab.FEED_CLUSTER}", f"distance={TrialLab.FEED_DISTANCE}",
+                         f"trial={TrialLab.FEED_STEPS}"],
+        TrialKind.MUSSEL: ["mussel=1", "hungry=1", f"distance={TrialLab.MUSSEL_DISTANCE}",
+                           f"trial={TrialLab.MUSSEL_STEPS}"],
+    }
+
+    def results(self, data_dir):
+        return Results(data_dir, "versuch", "trial", "seeds")
+
+    def plan(self, data):
+        trial, seeds = data.get("trial"), data.get("seeds")
+        if (not all(whole_number(v) for v in (trial, seeds)) or trial not in self.SETTINGS or
+                seeds not in TrialLab.SEEDS):
+            raise Refusal("labor.errors.invalidRequest")
+        return trial, range(1, seeds + 1), {"trial": trial, "count": seeds}
+
+    def run(self, seed, job):
+        return Session(seed, job["trial"])
+
+    def arguments(self, tool, path, seed, job):
+        return [tool, path, seed, "rounds=1", f"path={TrialLab.PATH_EVERY}",
+                *self.SETTINGS[job["trial"]]]

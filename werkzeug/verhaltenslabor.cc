@@ -12,8 +12,11 @@
 // Behaviour trials for one fish in a calm, empty tank: after hatching, a cluster of feed pieces
 // appears at set bearings and distances; each trial reports whether and how the fish reached the
 // food and, with stay=1, how much it ate and whether it moved on once the patch was empty.
-// raised=1 grows the fish up in the aquarium before trials there without further food; hold=1
+// raised=1 grows the fish up in the aquarium before trials there without further food, supply=0
+// stops the aquarium's supply once the trials begin; hold=1
 // keeps it in place during the trials, so its senses see a still scene.
+// path=N adds to every trial the fish's course every N steps and the target, both in the
+// trial's start frame (forward along the start heading, side towards its right).
 // LABTRACE=N adds the fish's course every N steps, LABLINKS=1 its learned contacts and
 // LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 (with
 // LABTRACE, also in mussel trials) the bearing, stimulus and signal of every retinal cell.
@@ -32,7 +35,7 @@ constexpr int MUSSEL_TRIALS = 6, HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, LINK_
 constexpr std::array<int, 2> SENSE_STEPS{1, 10};
 // A patch is used up once nothing is left within PATCH_REACH spreads of where it was laid out;
 // the fish has moved on once it is LEAVING spreads beyond its starting distance.
-constexpr double PATCH_REACH = 3, LEAVING = 6, NEAR_BODIES = 2, NEAR_VIEW = 80;
+constexpr double PATCH_REACH = 3, LEAVING = 6, NEAR_BODIES = 2, NEAR_VIEW = 80, PATH_PRECISION = 10;
 double PIECE_ENERGY = 40;
 int site_of(const cppn::Point &p) {
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
@@ -74,6 +77,43 @@ std::map<std::pair<int, int>, std::array<double, 2>> links(const Body &b) {
 double bearing_to(const Ecosystem &w, const Body &b, double x, double y) {
   return std::remainder(std::atan2(y - b.y, w.field.delta_x(x - b.x)) - b.angle, 2 * PI);
 }
+// The egg or fish died: that ends the trials with a result, not with an error.
+struct Death {
+  bool egg;
+  double health, age;
+};
+// Positions in a trial's start frame, recorded every few steps.
+struct Course {
+  const Ecosystem &world;
+  double x0, y0, angle;
+  int every;
+  std::vector<std::array<double, 2>> points{};
+  std::array<double, 2> local(double x, double y) const {
+    const double dx = world.field.delta_x(x - x0), dy = y - y0;
+    return {dx * std::cos(angle) + dy * std::sin(angle),
+            dy * std::cos(angle) - dx * std::sin(angle)};
+  }
+  void record(int step, const Body &b) {
+    if (every > 0 && step % every == 0)
+      points.push_back(local(b.x, b.y));
+  }
+  void print(double target_x, double target_y) const {
+    if (every <= 0)
+      return;
+    const auto point = [](const std::array<double, 2> &p) {
+      std::cout << '[' << std::round(p[0] * PATH_PRECISION) / PATH_PRECISION << ','
+                << std::round(p[1] * PATH_PRECISION) / PATH_PRECISION << ']';
+    };
+    std::cout << ",\"target\":";
+    point(local(target_x, target_y));
+    std::cout << ",\"path\":[";
+    for (std::size_t k = 0; k < points.size(); ++k) {
+      std::cout << (k ? "," : "");
+      point(points[k]);
+    }
+    std::cout << ']';
+  }
+};
 // Bearing, lateral position, stimulus and signal of every retinal cell, as a JSON array.
 void eye_cells(const Individual &p) {
   const auto &binding = p.body.active_interface(p.genome);
@@ -97,13 +137,13 @@ int main(int argc, char **argv) {
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
           "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [plant=1] [aquarium=1] "
-          "[raised=1] [hold=1] [mussel=1] "
+          "[raised=1] [hold=1] [mussel=1] [path=N] [supply=0] "
           "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int trace_every =
         std::getenv("LABTRACE") ? std::max(1, std::atoi(std::getenv("LABTRACE"))) : 0;
     int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
-        hungry = 0, plant = 0, raised = 0, hold = 0, mussel = 0;
+        hungry = 0, plant = 0, raised = 0, hold = 0, mussel = 0, path = 0, supply = 1;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -145,6 +185,10 @@ int main(int argc, char **argv) {
         plant = int(value);
       else if (key == "mussel")
         mussel = int(value);
+      else if (key == "path")
+        path = int(value);
+      else if (key == "supply")
+        supply = int(value);
       else if (!w.set_parameter(key, value))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
@@ -177,7 +221,7 @@ int main(int argc, char **argv) {
     while (!p->body.hatched && t < HATCH_LIMIT) {
       w.tick(false);
       if (w.fish.empty())
-        throw std::runtime_error("Ei gestorben nach " + std::to_string(t) + " Schritten");
+        throw Death{true, 0, double(t)};
       p = &w.fish.front();
       ++t;
     }
@@ -185,8 +229,7 @@ int main(int argc, char **argv) {
     double last_health = 0, last_age = 0;
     auto keep = [&]() {
       if (w.fish.empty())
-        throw std::runtime_error("Fisch gestorben (Gesundheit " + std::to_string(last_health) +
-                                 ", Alter " + std::to_string(last_age) + ")");
+        throw Death{false, last_health, last_age};
       p = &w.fish.front();
       last_health = p->body.health;
       last_age = p->body.age;
@@ -197,8 +240,8 @@ int main(int argc, char **argv) {
       keep();
     }
     // A fish raised in the aquarium grows up and learns to see; its trials then run without
-    // other food.
-    if (raised)
+    // other food, as do those with supply=0.
+    if (raised || !supply)
       stop_supply();
     if (mussel) {
       const auto &web = w.field.food_web();
@@ -244,9 +287,12 @@ int main(int argc, char **argv) {
         const auto cycles = b.mouth.cycle;
         int reached = -1, closed = -1, cracked = -1, step = 0;
         double nearest = distance;
+        Course course{w, b.x, b.y, b.angle, path};
+        const double shell_x = target->x, shell_y = target->y;
         for (; step < trial; ++step) {
           w.tick(false);
           keep();
+          course.record(step, p->body);
           const Mussel *m = find(id);
           if (!m) {
             cracked = step;
@@ -311,7 +357,9 @@ int main(int argc, char **argv) {
                   << ",\"closed\":" << closed << ",\"cracked\":" << cracked
                   << ",\"bites\":" << p->body.mouth.cycle - cycles
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::mussel] - eaten_before
-                  << ",\"steps\":" << step << "}\n";
+                  << ",\"steps\":" << step;
+        course.print(shell_x, shell_y);
+        std::cout << "}\n";
       }
       return 0;
     }
@@ -360,6 +408,7 @@ int main(int argc, char **argv) {
         }
         const double eaten_before = p->observations().raw_diet[food_type];
         const double start_angle = b.angle;
+        Course course{w, b.x, b.y, b.angle, path};
         double closest = distance, travelled = 0, turned_early = 0, forward = 0, turning = 0,
                pumping = 0, biting = 0;
         int steps = 0, reached = -1, near = 0, depleted = -1, left = -1;
@@ -371,6 +420,7 @@ int main(int argc, char **argv) {
           const double ox = p->body.x, oy = p->body.y;
           w.tick(false);
           keep();
+          course.record(steps, p->body);
           if (hold) {
             p->body.x = hold_x;
             p->body.y = hold_y;
@@ -553,8 +603,13 @@ int main(int argc, char **argv) {
                   << p->body.active_interface(p->genome).capacities[organ_port::forward] << ','
                   << p->body.active_interface(p->genome).capacities[organ_port::turn] << ','
                   << p->body.active_interface(p->genome).capacities[organ_port::suction] << ','
-                  << p->body.active_interface(p->genome).capacities[organ_port::jaw] << "]}\n";
+                  << p->body.active_interface(p->genome).capacities[organ_port::jaw] << ']';
+        course.print(patch_x, patch_y);
+        std::cout << "}\n";
       }
+  } catch (const Death &death) {
+    std::cout << "{\"event\":\"death\",\"egg\":" << death.egg << ",\"health\":" << death.health
+              << ",\"age\":" << death.age << "}\n";
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
     return 1;

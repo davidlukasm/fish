@@ -15,40 +15,55 @@ import {
 export const say = (key, vars) => t('labor.' + key, vars);
 const CHART = Object.freeze({width : 320, height : 112, top : 14, bottom : 18, side : 6, tick : 4});
 
-const choice = (attribute, value, text, chosen, disabled = false) =>
-    '<button type="button" data-' + attribute + '="' + value + '" aria-pressed="' + chosen + '"' +
-    (chosen ? ' class="active"' : '') + (disabled ? ' disabled' : '') + '>' + text + '</button>';
+export const choice = (setting, value, text, chosen, disabled = false) =>
+    '<button type="button" data-lab-setting="' + setting + '" data-lab-value="' + value +
+    '" aria-pressed="' + chosen + '"' + (chosen ? ' class="active"' : '') +
+    (disabled ? ' disabled' : '') + '>' + text + '</button>';
 
 export const fishName = (key, draft) =>
     key === DRAFT ? escapeText(draft?.name || say('fish.draft')) : say('fish.' + key);
 
-function fishChoices(s) {
+export function fishChoices(s) {
   const fish = START_FISH.map(key => ({key, offered : true}));
   fish.push({key : DRAFT, offered : !!s.draft});
   return fish
       .map(({key, offered}) => '<button type="button" class="aid-lab-fish' +
-                               (s.fish === key ? ' active' : '') + '" data-breed-fish="' + key +
-                               '"' + (offered && !s.running ? '' : ' disabled') + '><strong>' +
+                               (s.fish === key ? ' active' : '') + '" data-lab-fish="' + key + '"' +
+                               (offered && !s.running ? '' : ' disabled') + '><strong>' +
                                fishName(key, s.draft) + '</strong><span>' + say('role.' + key) +
                                '</span></button>')
       .join('');
 }
 
-function setup(s) {
+// The fish, the station's own settings, its rule and the start or cancel button.
+export function setupPanel(s, settings, rule, start) {
   return '<div class="aid-lab-setup"><h3>' + say('choose.fish') + '</h3>' +
-         '<div class="aid-lab-fishes">' + fishChoices(s) + '</div><h3>' + say('choose.worlds') +
-         '</h3><div class="aid-button-group">' +
-         BREEDING.worlds.map(n => choice('breed-worlds', n, n, s.worlds === n, s.running))
+         '<div class="aid-lab-fishes">' + fishChoices(s) + '</div>' +
+         settings
+             .map(([ title, buttons ]) =>
+                      '<h3>' + title + '</h3><div class="aid-button-group">' + buttons + '</div>')
              .join('') +
-         '</div><h3>' + say('choose.steps') + '</h3><div class="aid-button-group">' +
-         BREEDING.steps
-             .map(n => choice('breed-steps', n, formatNumber(n), s.steps === n, s.running))
-             .join('') +
-         '</div><p class="aid-lab-rule">' + say('rule', {founders : BREEDING.founders}) +
-         '</p><button type="button" class="primary aid-lab-go" data-breed="' +
-         (s.running ? 'cancel' : 'start') + '"' + (s.fingerprint ? '' : ' disabled') + '>' +
-         say(s.running ? 'cancel' : 'start') + '</button></div>';
+         '<p class="aid-lab-rule">' + rule + '</p><button type="button" ' +
+         'class="primary aid-lab-go" data-lab="' + (s.running ? 'cancel' : 'start') + '"' +
+         (s.fingerprint ? '' : ' disabled') + '>' + (s.running ? say('cancel') : start) +
+         '</button></div>';
 }
+const setup = s =>
+    setupPanel(s,
+               [
+                 [
+                   say('choose.worlds'),
+                   BREEDING.worlds.map(n => choice('worlds', n, n, s.worlds === n, s.running))
+                       .join('')
+                 ],
+                 [
+                   say('choose.steps'),
+                   BREEDING.steps
+                       .map(n => choice('steps', n, formatNumber(n), s.steps === n, s.running))
+                       .join('')
+                 ]
+               ],
+               say('rule', {founders : BREEDING.founders}), say('start'));
 
 function generationMarks(samples, x) {
   const marks = [];
@@ -148,33 +163,33 @@ function results(s) {
     return '<section class="aid-lab-results empty"><p>' + say('nothingYet') + '</p></section>';
   const verdict = breedingVerdict(worlds),
         top = Math.max(1, ...worlds.flatMap(w => (w.samples ?? []).map(x => x[SAMPLE.fish])));
-  const runningSeed = s.running ? s.job?.worlds.find(w => !w.done)?.seed : null;
+  const runningSeed = s.running ? s.job?.runs.find(w => !w.done)?.seed : null;
   return '<section class="aid-lab-results"><div class="aid-lab-verdict">' + verdictStamp(verdict) +
          '<span>' + verdictLine(verdict) + '</span></div>' +
          '<div class="aid-lab-worlds">' + worlds.map(w => worldCard(w, top, runningSeed)).join('') +
          '</div>' + deathLegend(deathTotals(worlds)) + '</section>';
 }
 
-function status(s) {
-  if (s.error)
-    return escapeText(s.error);
-  if (!s.running)
-    return say('ready');
-  const at = s.job.worlds.findIndex(w => !w.done), world = s.job.worlds[at];
+export const runningLine = job => {
+  const at = job.runs.findIndex(w => !w.done), world = job.runs[at];
   return say('running', {
     world : at + 1,
-    worlds : s.worlds,
+    worlds : job.count,
     step : formatNumber(world?.samples?.at(-1)?.[SAMPLE.step] ?? 0)
   });
-}
+};
+const status = s => s.error ? escapeText(s.error) : s.running ? runningLine(s.job) : say('ready');
 
-export function breedingShell(s) {
+// A station page: header with the way home, the setup beside the results.
+export function labShell(s, brand, title, line, setupHtml, resultsHtml) {
   return '<div class="aid-station aid-lab"><header class="aid-header"><div class="aid-header-brand">' +
          '<button type="button" data-action="home"><span aria-hidden="true">' +
          t('studio.app.backMark') + '</span>' + t('studio.app.home') + '</button><div><small>' +
-         say('brand') + '</small><h1>' + say('title') + '</h1></div></div>' +
-         '<div class="aid-status" role="status">' + status(s) + '</div></header>' +
-         '<div class="aid-lab-body">' + setup(s) + results(s) + '</div>' +
+         brand + '</small><h1>' + title + '</h1></div></div>' +
+         '<div class="aid-status" role="status">' + line + '</div></header>' +
+         '<div class="aid-lab-body">' + setupHtml + resultsHtml + '</div>' +
          '<footer class="aid-station-footer"><span class="aid-message"></span><span>' +
          t('studio.app.stationFooter') + '</span></footer></div>';
 }
+export const breedingShell = s =>
+    labShell(s, say('brand'), say('title'), status(s), setup(s), results(s));

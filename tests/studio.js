@@ -2497,7 +2497,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(labor.breedingVerdict([ {...lives, done : false} ]).done, 0,
                  'A running world is not judged');
     const overview = {results : [ {fingerprint : 'f', steps, worlds : {1 : lives}} ]},
-          job = {fingerprint : 'f', steps, worlds : [ {...lives, seed : 2, done : false} ]};
+          job =
+              {fingerprint : 'f', steps, count : 2, runs : [ {...lives, seed : 2, done : false} ]};
     assert.deepEqual(labor.shownWorlds(overview, 'f', steps, job).map(w => w.seed), [ 1, 2 ],
                      'Kept and running worlds are shown together');
     assert.deepEqual(labor.shownWorlds(overview, 'f', BREEDING.steps[1], job), [],
@@ -2515,10 +2516,84 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       draft : null,
       fingerprint : 'f'
     });
-    assert.match(page, /data-breed="start"/, 'The station offers to breed');
+    assert.match(page, /data-lab="start"/, 'The station offers to breed');
     assert.match(page, /aid-lab-chart/, 'A kept world is drawn');
-    assert.match(page, /data-breed-fish="draft" disabled/,
+    assert.match(page, /data-lab-fish="draft" disabled/,
                  'Without an accepted draft it cannot be chosen');
+    assert.match(page, /data-lab-setting="worlds" data-lab-value="/);
+    const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
+    const lab = await import('../ui/labor/trials.js');
+    const {trialShell} = await import('../ui/labor/trial_view.js');
+    const reached = {
+      reached : 40,
+      cracked : -1,
+      family : 2,
+      target : [ 40, 0 ],
+      path : [ [ 0, 0 ], [ 20, 1 ], [ 38, 0 ] ]
+    },
+          cracked = {...reached, cracked : 52}, missed = {...reached, reached : -1};
+    assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.mussel), lab.OUTCOME.succeeded);
+    assert.equal(lab.trialOutcome(reached, TRIAL_KIND.mussel), lab.OUTCOME.reached);
+    assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near * 2}, TRIAL_KIND.feed),
+                 lab.OUTCOME.missed);
+    assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near}, TRIAL_KIND.feed),
+                 lab.OUTCOME.reached, 'Close to the food without eating it is reached');
+    assert.equal(lab.trialOutcome(reached, TRIAL_KIND.feed), lab.OUTCOME.succeeded,
+                 'Eating is a feed trial\'s success');
+    const kept = {seed : 1, trial : TRIAL_KIND.mussel, done : true, trials : [ cracked, missed ]},
+          running = {seed : 2, trial : TRIAL_KIND.mussel, done : false, trials : [ reached ]};
+    const trialOverview = {
+      fish : [ {key : 'brisa', fingerprint : 'f'} ],
+      results : [ {fingerprint : 'f', trial : TRIAL_KIND.mussel, seeds : {1 : kept}} ]
+    };
+    const trialJob = {
+      fingerprint : 'f',
+      trial : TRIAL_KIND.mussel,
+      count : 2,
+      status : 'running',
+      runs : [ kept, running ]
+    };
+    const sessions = lab.shownSessions(trialOverview, 'f', TRIAL_KIND.mussel, trialJob);
+    assert.deepEqual(sessions.map(s => s.seed), [ 1, 2 ], 'Kept and running trial worlds');
+    assert.deepEqual(lab.shownSessions(trialOverview, 'f', TRIAL_KIND.feed, trialJob), [],
+                     'Another kind of trial shows nothing');
+    assert.deepEqual(lab.trialTally(sessions, TRIAL_KIND.mussel),
+                     {trials : 3, reached : 2, succeeded : 1, done : 1});
+    const trialPage = trialShell({
+      overview : trialOverview,
+      fish : 'brisa',
+      trial : TRIAL_KIND.mussel,
+      seeds : TRIAL_LAB.seeds[1],
+      job : trialJob,
+      running : true,
+      error : '',
+      draft : null,
+      fingerprint : 'f'
+    });
+    assert.match(trialPage, /aid-trial-chart/, 'Every course is drawn');
+    assert.equal((trialPage.match(/class="aid-trial-course /g) ?? []).length, 3);
+    assert.match(trialPage, /aid-trial-shell/, 'A mussel target shows its shell');
+    assert.match(trialPage, /data-lab="cancel"/, 'A running trial can be cancelled');
+    assert.match(trialPage, /data-lab-setting="trial" data-lab-value="/);
+    const ended = trialShell({
+      overview : {
+        ...trialOverview,
+        results : [ {
+          fingerprint : 'f',
+          trial : TRIAL_KIND.mussel,
+          seeds : {1 : {...kept, died : {egg : false, age : 900}}}
+        } ]
+      },
+      fish : 'brisa',
+      trial : TRIAL_KIND.mussel,
+      seeds : TRIAL_LAB.seeds[0],
+      job : null,
+      running : false,
+      error : '',
+      draft : null,
+      fingerprint : 'f'
+    });
+    assert.match(ended, /class="died"/, 'A world whose fish died says so');
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

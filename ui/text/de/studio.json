@@ -1105,9 +1105,10 @@
     },
     "go": {
       "aquarium": "Zum Becken",
-      "breeding": "Zur Zucht"
+      "breeding": "Zur Zucht",
+      "trials": "Ins Labor"
     },
-    "behavior": "Verhaltenslabor",
+    "trialsNote": "Futter aus zwölf Richtungen, offene Muscheln",
     "field": "Feldbeobachtung",
     "provenCount": "{n} {n:Startfisch trägt|Startfische tragen} sich",
     "draft": "{name} · {cells} Zellen",

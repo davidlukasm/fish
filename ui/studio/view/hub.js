@@ -1,7 +1,7 @@
 import {formatNumber, t} from '../../strings.js';
 import {escapeText} from './markup.js';
-import {SAMPLE, shelfVerdict, START_FISH} from '../../labor/model.js';
-import {say, verdictLine, verdictStamp} from '../../labor/view.js';
+import {shelfVerdict, START_FISH} from '../../labor/model.js';
+import {runningLine, say, verdictLine, verdictStamp} from '../../labor/view.js';
 
 const hub = (key, vars) => t('studio.hub.' + key, vars);
 const SPARK = Object.freeze({width : 260, height : 64, edge : 4});
@@ -45,15 +45,8 @@ function station({action, index, title, visual, go, future = false, cls = ''}) {
 
 function breedingVisual(h) {
   const job = h.overview?.job;
-  if (job?.status === 'running') {
-    const at = job.worlds.findIndex(w => !w.done), world = job.worlds[at];
-    return '<span class="aid-hub-note">' + say('running', {
-             world : at + 1,
-             worlds : job.worlds.length,
-             step : formatNumber(world?.samples?.at(-1)?.[SAMPLE.step] ?? 0)
-           }) +
-           '</span>';
-  }
+  if (job?.status === 'running')
+    return '<span class="aid-hub-note">' + runningLine(job) + '</span>';
   const proven = START_FISH.filter(key => {
     const fish = h.overview?.fish.find(f => f.key === key);
     return fish && shelfVerdict(h.overview, fish.fingerprint)?.passed;
@@ -115,7 +108,14 @@ export function hubShell(h) {
       go : hub('go.breeding'),
       cls : 'breeding'
     }),
-    station({index : hub('index.behavior'), title : hub('behavior'), visual : '', future : true}),
+    station({
+      action : 'trials',
+      index : hub('index.behavior'),
+      title : say('trials.title'),
+      visual : '<span class="aid-hub-note">' + hub('trialsNote') + '</span>',
+      go : hub('go.trials'),
+      cls : 'trials'
+    }),
     station({index : hub('index.field'), title : hub('field'), visual : '', future : true})
   ].join('');
   return '<div class="aid-hub"><header class="aid-header"><div class="aid-header-brand"><div><small>' +

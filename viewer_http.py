@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter, MAX_ID
 from atelier_service import run as run_atelier, CompileJobs
-from labor_service import BreedingJobs
+from labor_service import BreedingJobs, TrialJobs
 from wording import Refusal, worded, wording
 from protocol_schema import Route
 
@@ -153,7 +153,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.allowed_request():
             return
-        if self.path not in (Route.COMMAND, Route.FPS_REPORT, Route.ATELIER, Route.LABOR) or (
+        if self.path not in (Route.COMMAND, Route.FPS_REPORT, Route.ATELIER, Route.LABOR,
+                             Route.TRIALS) or (
             self.path == Route.FPS_REPORT and self.server.fps_report is None
         ):
             self.send(HTTPStatus.NOT_FOUND, {"error": wording("notFound")})
@@ -186,8 +187,9 @@ class Handler(BaseHTTPRequestHandler):
                           else run_atelier(data, directory))
                 self.send(HTTPStatus.OK, {"ok": True, "result": result})
                 return
-            if self.path == Route.LABOR:
-                result = self.server.breeding.request(data, self.server.simulation.args.data_dir)
+            if self.path in (Route.LABOR, Route.TRIALS):
+                station = self.server.breeding if self.path == Route.LABOR else self.server.trials
+                result = station.request(data, self.server.simulation.args.data_dir)
                 self.send(HTTPStatus.OK, {"ok": True, "result": result})
                 return
             message = self.server.commands.dispatch(data)
@@ -300,10 +302,12 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.commands = CommandRouter(simulation, defaults)
         self.compiler_jobs = CompileJobs()
         self.breeding = BreedingJobs(simulation.starter_genomes)
+        self.trials = TrialJobs(simulation.starter_genomes)
 
     def server_close(self):
         if hasattr(self, "compiler_jobs"):
             self.compiler_jobs.close()
-        if hasattr(self, "breeding"):
-            self.breeding.close()
+        for station in ("breeding", "trials"):
+            if hasattr(self, station):
+                getattr(self, station).close()
         super().server_close()

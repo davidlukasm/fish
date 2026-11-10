@@ -47,5 +47,40 @@
     "busy": "Es läuft schon eine Zucht.",
     "unknownJob": "Dieser Zuchtlauf ist nicht mehr bekannt.",
     "server": "Die Zuchtstation antwortet nicht."
+  },
+  "trials": {
+    "brand": "AID / VERHALTENSLABOR 04",
+    "title": "Verhaltenslabor",
+    "choose": {
+      "trial": "Versuch",
+      "seeds": "Welten"
+    },
+    "kind": {
+      "feed": "Futter",
+      "mussel": "Muscheln"
+    },
+    "rule": {
+      "feed": "Frisch geschlüpft im Startaquarium, das kein weiteres Futter bekommt. {cluster} Futterstücke liegen {distance} entfernt, nacheinander in zwölf Richtungen; je Richtung {steps} Schritte Zeit. Erreicht heißt: bis auf {near} heran.",
+      "mussel": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer offenen Muschel und blickt zu ihr; bis zu sechs Muscheln je Welt, je {steps} Schritte Zeit."
+    },
+    "start": "Versuch starten",
+    "running": "Welt {world} von {worlds} · {n} {n:Versuch|Versuche} fertig",
+    "outcome": {
+      "missed": "verfehlt",
+      "reached": "erreicht",
+      "succeeded": {
+        "feed": "gefressen",
+        "mussel": "geknackt"
+      }
+    },
+    "share": "{n} von {total}",
+    "trialTitle": "Versuch {k}: {outcome}",
+    "after": "nach {steps} Schritten",
+    "chart": "Spuren aller Versuche vom Start aus, Blick nach oben; der Ring zeigt den Abstand zum Ziel",
+    "nothingYet": "Noch kein Versuch dieser Art für diesen Fisch.",
+    "died": {
+      "fish": "Fisch gestorben, {age} Schritte alt",
+      "egg": "Ei gestorben nach {age} Schritten"
+    }
   }
 }

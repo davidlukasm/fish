@@ -629,6 +629,7 @@ export const ODOR_KIND = Object.freeze({
   "mussels" : 7
 });
 export const ORGAN_KIND = Object.freeze({"blade" : 0, "stem" : 1, "leaf" : 2, "round_leaf" : 3});
+export const TRIAL_KIND = Object.freeze({"feed" : 0, "mussel" : 1});
 export const SENSE_KIND = Object.freeze({
   "light" : 0,
   "odor" : 1,
@@ -989,7 +990,8 @@ export const ROUTE = Object.freeze({
   "fps_report" : "/fps-report",
   "scene" : "/scene",
   "atelier" : "/atelier",
-  "labor" : "/labor"
+  "labor" : "/labor",
+  "trials" : "/trials"
 });
 export const RECORD_SAMPLE = Object.freeze({"period" : 100});
 export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
@@ -1003,6 +1005,17 @@ export const HABITAT_ZONE = Object.freeze({
 });
 export const BARBEL = Object.freeze(
     {"length" : 0.22, "length_per_size" : 0.35, "organ_half" : 3, "spread" : 0.45, "reach" : 2});
+export const TRIAL_LAB = Object.freeze({
+  "seeds" : [ 1, 2, 4 ],
+  "path_every" : 5,
+  "feed_distance" : 80,
+  "feed_steps" : 300,
+  "feed_cluster" : 5,
+  "feed_scent_wait" : 100,
+  "feed_near" : 10,
+  "mussel_distance" : 40,
+  "mussel_steps" : 400
+});
 export const BREEDING = Object.freeze({
   "worlds" : [ 2, 3, 5 ],
   "steps" : [ 4000, 8000, 16000 ],

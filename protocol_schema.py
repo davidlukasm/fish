@@ -795,6 +795,11 @@ class OrganKind:
     ROUND_LEAF = 3
     COUNT = 4
 
+class TrialKind:
+    FEED = 0
+    MUSSEL = 1
+    COUNT = 2
+
 class SenseKind:
     LIGHT = 0
     ODOR = 1
@@ -1256,6 +1261,7 @@ class Route:
     SCENE = '/scene'
     ATELIER = '/atelier'
     LABOR = '/labor'
+    TRIALS = '/trials'
 
 class RecordSample:
     PERIOD = 100
@@ -1280,6 +1286,17 @@ class Barbel:
     ORGAN_HALF = 3
     SPREAD = 0.45
     REACH = 2
+
+class TrialLab:
+    SEEDS = (1, 2, 4)
+    PATH_EVERY = 5
+    FEED_DISTANCE = 80
+    FEED_STEPS = 300
+    FEED_CLUSTER = 5
+    FEED_SCENT_WAIT = 100
+    FEED_NEAR = 10
+    MUSSEL_DISTANCE = 40
+    MUSSEL_STEPS = 400
 
 class Breeding:
     WORLDS = (2, 3, 5)

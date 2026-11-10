@@ -38,3 +38,4 @@ Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und
 `./build.sh`: Build und Prüfungen. `./test.sh`: Prüfungen mit 60-s-Zeitgrenze, `--only invariants` prüft eine. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
 
 Zuchtstation (Startseite): ein Fisch lebt ohne Hilfe in mehreren Welten; bewiesen, wenn Beckengenerationen Nachwuchs haben. Werkzeug `bin/zuchtbecken` (JSONL).
+Verhaltenslabor (Startseite): der Fisch wird vor Futter aus zwölf Richtungen oder vor offene Muscheln gesetzt; jede Annäherung erscheint als Spur. Werkzeug `bin/verhaltenslabor` (JSONL, `path=N`).

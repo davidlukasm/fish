@@ -45,7 +45,7 @@ export function shownWorlds(overview, fingerprint, steps, job) {
                {};
   const worlds = new Map(Object.values(kept).map(w => [w.seed, w]));
   if (job && job.fingerprint === fingerprint && job.steps === steps)
-    for (const w of job.worlds)
+    for (const w of job.runs)
       worlds.set(w.seed, w);
   return [...worlds.values() ].sort((a, b) => a.seed - b.seed);
 }

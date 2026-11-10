@@ -1430,6 +1430,11 @@ inline constexpr int leaf = 2;
 inline constexpr int round_leaf = 3;
 inline constexpr int count = 4;
 }
+namespace trial_kind {
+inline constexpr int feed = 0;
+inline constexpr int mussel = 1;
+inline constexpr int count = 2;
+}
 namespace sense_kind {
 inline constexpr int light = 0;
 inline constexpr int odor = 1;
@@ -1893,6 +1898,7 @@ inline constexpr const char *fps_report = "/fps-report";
 inline constexpr const char *scene = "/scene";
 inline constexpr const char *atelier = "/atelier";
 inline constexpr const char *labor = "/labor";
+inline constexpr const char *trials = "/trials";
 }
 namespace record_sample {
 inline constexpr int period = 100;
@@ -1917,6 +1923,17 @@ inline constexpr double length_per_size = 0.35;
 inline constexpr int organ_half = 3;
 inline constexpr double spread = 0.45;
 inline constexpr int reach = 2;
+}
+namespace trial_lab {
+inline constexpr std::array<double, 3> seeds{1.0, 2.0, 4.0};
+inline constexpr int path_every = 5;
+inline constexpr int feed_distance = 80;
+inline constexpr int feed_steps = 300;
+inline constexpr int feed_cluster = 5;
+inline constexpr int feed_scent_wait = 100;
+inline constexpr int feed_near = 10;
+inline constexpr int mussel_distance = 40;
+inline constexpr int mussel_steps = 400;
 }
 namespace breeding {
 inline constexpr std::array<double, 3> worlds{2.0, 3.0, 5.0};
