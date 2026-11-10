@@ -35,6 +35,9 @@ export function gonadStore(state, organ) {
     minimum : Number.isFinite(minimum) && minimum > 0 ? minimum : null
   };
 }
+// The organ over time: the store fills from its cells, empties at each release and fills again,
+// or waits full for a command. Energy runs on a square-root scale so one cell and the full organ
+// both read.
 const STORE = Object.freeze({
   width : 300,
   height : 150,
@@ -43,6 +46,7 @@ const STORE = Object.freeze({
   right : 284,
   top : 18,
   base : 112,
+  cycles : 2.4,
   samples : 18,
   egg : 15,
   least : 4,
@@ -106,15 +110,30 @@ function fillCurve(store, type) {
           .from({length : S.samples + 1}, (_, k) => fixed(x0 + width * k / S.samples) + ' ' +
                                                     fixed(levelY(store, energy * k / S.samples)))
           .join(' L');
-  const reach = span * .72, x = S.left + reach;
+  const cycle = span / S.cycles;
+  if (!store.releaseEnabled) {
+    const fills = cycle * store.room / Math.max(store.spawn, Number.EPSILON);
+    const reach = Math.min(span, fills), x = S.left + reach;
+    return {
+      html : '<path class="aid-sac-fill" d="M' + ramp(S.left, store.room * reach / fills, reach) +
+                 ' H' + S.right + '"/>' +
+                 placedGlyph(SLOT_IN, S.trigger,
+                             {x : S.right - 2 * S.egg - S.gap - S.trigger / 2, y : below},
+                             {line : true}) +
+                 product(store, type, S.right - 2 * S.egg, below),
+      knee : {x, y : levelY(store, store.room)}
+    };
+  }
+  let d = '', drops = '', x0 = S.left;
+  for (; x0 + cycle <= S.right; x0 += cycle) {
+    d += (d ? ' L' : 'M') + ramp(x0, store.spawn, cycle) + ' L' + fixed(x0 + cycle) + ' ' + S.base;
+    drops += product(store, type, x0 + cycle, below);
+  }
+  if (S.right > x0)
+    d += ' L' + ramp(x0, store.spawn * (S.right - x0) / cycle, S.right - x0);
   return {
-    html : '<path class="aid-sac-fill" d="M' + ramp(S.left, store.spawn, reach) + ' H' + S.right +
-               '"/>' +
-               placedGlyph(SLOT_IN, S.trigger,
-                           {x : S.right - 2 * S.egg - S.gap - S.trigger / 2, y : below},
-                           {line : true}) +
-               product(store, type, S.right - 2 * S.egg, below),
-    knee : {x, y : levelY(store, store.spawn)}
+    html : '<path class="aid-sac-fill" d="' + d + '"/>' + drops,
+    knee : {x : S.left + cycle, y : levelY(store, store.spawn)}
   };
 }
 export function gonadGraphic(state, organ, selected) {

@@ -285,8 +285,9 @@ function semanticFingerprint(source) {
     }
     const excited = effectScene(E.excitation, '#abcdef');
     const taught = effectScene(E.teaching, '#abcdef');
-    assert.notEqual(excited, taught);
-    assert.match(taught, /aid-effect-value/);
+    assert.doesNotMatch(excited, /aid-effect-line teach/);
+    assert.match(taught, /aid-effect-line teach/);
+    assert.doesNotMatch(taught, /aid-effect-spikes/);
     const aquarium = JSON.parse(readFileSync(join(root, 'ui/text/de/nerve_map.json'), 'utf8'));
     assert.equal(aquarium.effects.length, Object.keys(E).length);
   }
@@ -930,7 +931,7 @@ function semanticFingerprint(source) {
     effect : E.learning
   });
   assert.match(learner, /data-learn-rate/);
-  assert.match(learner, /aid-local-learning/);
+  assert.match(learner, /aid-episode-arrow teach none/);
   for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learner,
                  new RegExp('data-learn-substance="off"[^>]*data-learn-effect="' + effect + '"'));
@@ -1791,7 +1792,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.match(taughtPanel, new RegExp('data-learn-receptor="[^"]+" data-learn-effect="' +
                                          HORMONE_EFFECT.teaching + '"'));
-    assert.match(taughtPanel, /aid-local-learning/);
+    assert.match(taughtPanel, /aid-episode-arrow teach"/);
     const skinView = await import('../ui/studio/view/skin.js');
     const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
     const touchOrgan = model.findOrgan(touched.document, touched.organId),

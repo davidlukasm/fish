@@ -411,16 +411,42 @@ function contactResult(link) {
                     '</div>'
               : '');
 }
-const WIRE_PAD = Object.freeze(
-    {size : 150, centre : 75, boundary : 63, least : 14, reach : 46, source : 5, handle : 7});
+const WIRE_PAD = Object.freeze({
+  size : 150,
+  centre : 75,
+  boundary : 63,
+  least : 14,
+  reach : 46,
+  source : 5,
+  handle : 7,
+  others : 11,
+  other : 3.2,
+  turn : 2.39996,
+  dim : .22
+});
 const wireRadius = spread => WIRE_PAD.least + WIRE_PAD.reach * spread;
+// Other senders scattered round this one: those inside the spread are the ones it reaches.
+const otherSenders = Array.from({length : WIRE_PAD.others}, (_, k) => {
+  const W = WIRE_PAD, distance = W.least + W.reach * (k + .5) / W.others, angle = k * W.turn;
+  return {
+    distance,
+    x : W.centre + distance * Math.cos(angle),
+    y : W.centre + distance * Math.sin(angle)
+  };
+});
+const otherShown = (other, radius) => other.distance < radius ? 1 : WIRE_PAD.dim;
 export function wirePatch(fx, fy) {
   const W = WIRE_PAD, distance = Math.hypot(fx * W.size - W.centre, fy * W.size - W.centre);
   return {spread : clamp((distance - W.least) / W.reach)};
 }
 export function wireMarks(wire) {
   const radius = wireRadius(wire.spread);
-  return {'.aid-wire-halo' : {r : radius}, '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius}};
+  return {
+    '.aid-wire-halo' : {r : radius},
+    '.aid-wire-handle' : {cx : WIRE_PAD.centre + radius},
+    ...Object.fromEntries(otherSenders.map(
+        (other, k) => ['[data-other="' + k + '"]', {'fill-opacity' : otherShown(other, radius)}]))
+  };
 }
 function wireField(wire) {
   const W = WIRE_PAD, radius = wireRadius(wire.spread);
@@ -430,7 +456,13 @@ function wireField(wire) {
          escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
          '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '"><title>' +
          label('inspector.spreadTitle') + '</title>' + circle('aid-wire-boundary', W.boundary) +
-         circle('aid-wire-halo', radius) + circle('aid-wire-source', W.source) +
+         circle('aid-wire-halo', radius) +
+         otherSenders
+             .map((other, k) => '<circle class="aid-wire-other" data-other="' + k + '" cx="' +
+                                fixed(other.x) + '" cy="' + fixed(other.y) + '" r="' + W.other +
+                                '" fill-opacity="' + otherShown(other, radius) + '"/>')
+             .join('') +
+         circle('aid-wire-source', W.source) +
          circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
          label('sections.spread') + '</span></div>';
 }

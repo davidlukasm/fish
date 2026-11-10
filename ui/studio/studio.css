@@ -302,6 +302,7 @@
 .aid-wire-search{width:185px;max-width:100%;touch-action:none;cursor:crosshair}
 .aid-wire-boundary{fill:#10323b;stroke:#507b80;stroke-width:1.5}
 .aid-wire-halo{fill:#88c9b248;stroke:#a1d5ba;stroke-width:2;stroke-dasharray:4 3;pointer-events:none}
+.aid-wire-other{fill:#efdda5;pointer-events:none}
 .aid-wire-source{fill:#efdda5;pointer-events:none}
 .aid-wire-handle{fill:#a7ebbd;stroke:#fff5ca;stroke-width:2;pointer-events:none}
 
@@ -757,6 +758,42 @@
 .aid-layer-switches button.active::before{background:currentColor}
 .aid-layer-switches button[data-layer-mode="auto"]::before{outline:1.5px dashed currentColor;outline-offset:2px}
 .aid-effect-scene{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
+.aid-learn-substance:not(.bound) .aid-episode{opacity:.55}
+.aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
+.aid-episode.big{margin:4px 0}
+.aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
+.aid-episode-line.still{stroke-opacity:.6}
+.aid-episode-trace{fill:none;stroke:var(--aid-trace);stroke-linecap:round}
+.aid-episode-pulse{fill:#f2f6dc}
+.aid-episode-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
+.aid-episode-cloud{opacity:.28}
+.aid-episode-arrow{fill:none;stroke:var(--aid-size);stroke-width:2;stroke-linecap:round}
+.aid-episode-arrow.teach{stroke:var(--aid-teach)}
+.aid-episode-arrow.teach.none{stroke:#5d7f80;stroke-dasharray:4 4}
+.aid-episode-pacer{fill:#2b5157;stroke:var(--aid-size);stroke-width:1.5}
+.aid-episode-ring{fill:none;stroke:var(--aid-size);stroke-width:2}
+.aid-episode-teacher{fill:#b8c5e1;stroke:#c9d6cf;stroke-width:1.2}
+.aid-episode-meter{fill:none;stroke:#5d7f80;stroke-width:1.2}
+.aid-episode-expect{fill:var(--aid-teach);fill-opacity:.7}
+.aid-episode text{fill:var(--aid-label-text);font-size:11px}
+.aid-episode-label.teach{fill:var(--aid-teach)}
+.aid-episode-caption{fill:var(--aid-name-text)}
+.aid-effect-base{fill:var(--aid-graphic)}
+.aid-effect-cell{fill:#f2f6dc;stroke:#c9d6cf;stroke-width:1.5}
+.aid-effect-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
+.aid-effect-line.still{stroke-opacity:.55}
+.aid-effect-line.trace{stroke:var(--aid-trace)}
+.aid-effect-line.teach{stroke:var(--aid-teach)}
+.aid-effect-line.pace{stroke:var(--aid-brain)}
+.aid-effect-modulator{fill:#2b5157;stroke:var(--aid-brain);stroke-width:1.5}
+.aid-effect-wave{fill:none;stroke:var(--aid-brain);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-effect-ring{fill:none;stroke:var(--aid-brain);stroke-width:1.5}
+.aid-effect-cross{fill:none;stroke:#e5675c;stroke-width:3;stroke-linecap:round}
+.aid-effect-cloud{opacity:.3}
+.aid-effect-line.ghost{opacity:.22}
+.aid-effect-spikes{stroke:var(--aid-light);stroke-width:1.6;stroke-linecap:round;fill:none}
+.aid-effect-mark{fill:none;stroke:#9fb9b4;stroke-width:1.2}
+.aid-effect-mark.with{stroke:none}
 .aid-dose{display:block;width:100%;height:auto;margin:6px 0;color:var(--substance);background:var(--aid-graphic);border-radius:8px}
 .aid-dose-band{stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-dose-gauge{fill:var(--aid-chip);stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
@@ -800,11 +837,6 @@
 .aid-life-current{stroke:var(--aid-label-text);stroke-dasharray:3 3}
 .aid-lifecycle text{font-size:10px;fill:var(--aid-label-text)}
 .aid-life-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:10px;margin:4px 0}
-.aid-local-learning{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--aid-name-text)}
-.aid-local-learning span{padding:7px;background:var(--aid-graphic);border-radius:6px}
-.aid-effect-scale{stroke:var(--aid-control-edge);stroke-width:2;fill:none}
-.aid-effect-level{stroke-width:5;fill:none}
-.aid-effect-value text{fill:var(--aid-label-text);font-size:11px}
 .aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}

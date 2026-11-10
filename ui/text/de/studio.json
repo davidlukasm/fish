@@ -878,6 +878,14 @@
     "teaching": "Lehrsignal",
     "teacher": "Wer die Zelle lehrt",
     "untaught": "lokales Lernen",
+    "gain": "lernt mit {n} % Tempo",
+    "firing": "zugleich aktiv",
+    "inBeat": "im Takt",
+    "still": "still",
+    "expect": "Erwartung",
+    "beat": "Takt",
+    "output": "Ausgang",
+    "values": "Werte der Lernregel",
     "untaughtMode": "lokal: {mode}",
     "overview": "Wer lernt, und von wem",
     "untaughtShort": "ohne Lehrer",
@@ -924,17 +932,12 @@
       "volle Verdrängung",
       "volle Aktivität"
     ],
-    "presynaptic": "Änderung am Eingang",
-    "postsynaptic": "Änderung der eigenen Aktivität",
     "effectiveRate": "Wirksame Lernrate",
     "steps": "Schritte",
     "probation": "Schonfrist neuer Kontakte",
     "prune": "Abbauschwelle nach der Schonfrist",
-    "localPrediction": "Gleichzeitige Änderungen hinterlassen eine lokale Spur. Der Lernmodus verändert elektrische Gewichte; unerwartete Änderungen des Lehrsignals wirken über die Spuren. Kontakte zu Motorzellen verwenden Lernparameter ihrer vorgeschalteten Nervenzellen.",
-    "unavoidableDecay": "Gewichte bauen sich auch bei voller Nutzung ab. Geringe Nutzung beschleunigt den Abbau abhängig von der Lernzeit. Unterhalb der Löschschwelle wird der Kontakt nach seiner Schonfrist entfernt.",
     "decayUnused": "Halbwertszeit bei ungenutztem Kontakt",
-    "decayUsed": "Halbwertszeit bei voller Nutzung",
-    "levelLearning": "Pegel und Merkspuren festigen Kontakte durch gleichzeitige Aktivität. Änderungssignale lernen gemeinsame Veränderungen."
+    "decayUsed": "Halbwertszeit bei voller Nutzung"
   },
   "compiler": {
     "title": "Bauprüfung",
