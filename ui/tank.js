@@ -65,6 +65,7 @@ import {
   sceneEffectsPending
 } from './effects.js';
 import {clipSediment} from './water_view.js';
+import {waterVeil} from './water_display.js';
 import {animateSpecies, deselectSpecies, evolutionState} from './evolution.js';
 import {fishBodyRadius} from './fish_fins.js';
 import {
@@ -549,7 +550,7 @@ function paintTank(f) {
       paintScenery.frame = f;
       updateTankSceneryState({
         sceneSignature : JSON.stringify([
-          f.width, f.height, f.obstacles, f.shapes,
+          f.width, f.height, f.obstacles, f.shapes, waterVeil(f.parameters),
           f.light ? {
             bottom : f.light.bottom,
             shadow : f.light.shadow,

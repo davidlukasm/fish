@@ -4,6 +4,7 @@ import {holdSlider, movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
 import {FULL_TURN, hexColor, hexOf, PERCENT, radians} from './units.js';
 import {RGB} from './schema.js';
+import {waterVeil} from './water_display.js';
 import {command} from './session.js';
 import {toolSettings, worldState} from './world.js';
 import {renderCurrentSources, renderFeeders} from './world_sources.js';
@@ -154,7 +155,7 @@ export function showWorld(f) {
   const color = el('water-color');
   color.disabled = !!f.historical;
   if (document.activeElement !== color)
-    color.value = hexOf(Object.keys(RGB).map(channel => f.parameters['vision_water_' + channel]));
+    color.value = hexOf(waterVeil(f.parameters));
   color.onchange = async () => {
     const channels = hexColor(color.value);
     for (const [channel, i] of Object.entries(RGB))

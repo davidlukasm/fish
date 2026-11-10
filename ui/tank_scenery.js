@@ -1,13 +1,14 @@
 import {PALETTE} from './palette.js';
-import {PIXEL_BYTES, sineHash} from './units.js';
+import {luma, PIXEL_BYTES, sineHash} from './units.js';
 import {cameraState, horizontalShifts, ZOOM} from './camera.js';
 import {ctx, el, rgb} from './dom.js';
 import {evolutionState} from './evolution.js';
 import {TankLayer, TankPixelImage, touchTankImage} from './renderer.js';
-import {CURRENT, FEEDER, PLANKTON_SOURCE, PLANT, PLANT_ROOT} from './schema.js';
+import {CURRENT, FEEDER, PLANKTON_SOURCE, PLANT, PLANT_ROOT, TOLERANCE} from './schema.js';
 import {grassRootPose} from './vegetation.js';
 import {plantRenderParts, plantDepth, bedLayer, bedColor} from './plant_geometry.js';
 import {paintWaterLight, displayLight} from './water_view.js';
+import {waterVeil} from './water_display.js';
 export const tank_sceneryState = {};
 export let scenery;
 
@@ -28,6 +29,8 @@ export function paintScenery(f, c) {
 const STONE = Object.freeze({
   corners : 16,
   water_mid : .55,
+  // The water takes the hue of the fish eyes' veil at a set brightness, darker towards the floor.
+  water_brightness : Object.freeze([ .27, .23, .2 ]),
   floor : 5,
   stone_mid : .55,
   facet_y : .38,
@@ -42,9 +45,6 @@ const STONE = Object.freeze({
   grain_place : Object.freeze({u_grain : 127.1, u_stone : 33.7, v_grain : 269.5, v_stone : 19.3}),
   grain_aspect : 2,
   grain_tilt : .4,
-  water_top : '#4e4e4e',
-  water : '#404040',
-  water_bottom : '#373737',
   rim : '#688995',
   floor_color : '#4e5550',
   stone_light : '#5a6a64',
@@ -63,9 +63,10 @@ export function paintSceneryTile(f, c) {
   ctx.setTransform(cameraState.pixelRatio, 0, 0, cameraState.pixelRatio, 0, 0);
   ctx.globalAlpha = 1;
   const waterColor = ctx.createLinearGradient(0, y(0), 0, y(f.height));
-  waterColor.addColorStop(0, STONE.water_top);
-  waterColor.addColorStop(STONE.water_mid, STONE.water);
-  waterColor.addColorStop(1, STONE.water_bottom);
+  const veil = waterVeil(f.parameters), gain = 1 / Math.max(TOLERANCE.rounding, luma(veil));
+  [0, STONE.water_mid, 1].forEach(
+      (at, k) =>
+          waterColor.addColorStop(at, rgb(veil.map(v => v * gain * STONE.water_brightness[k]))));
   ctx.fillStyle = waterColor;
   ctx.fillRect(x(0), y(0), f.width * c.scale, f.height * c.scale);
   paintWaterLight(f.light?.clear_values

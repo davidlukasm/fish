@@ -21,7 +21,9 @@ struct EnvironmentParameters : FoodWebParameters {
   double vision_opponent = 1;
   double vision_ambient = .6, vision_adaptation = 1,
          vision_adaptation_angle = DEFAULT_ADAPTATION_ANGLE;
-  double vision_water_red = .30, vision_water_green = .55, vision_water_blue = .60;
+  // Neutral water leaves colour-opponent cells silent on open water, so plants and food keep their
+  // hue into the distance; a tinted veil would drive the cells tuned to its colour instead.
+  double vision_water_red = .30, vision_water_green = .30, vision_water_blue = .30;
   double vision_eye_offset = DEFAULT_EYE_OFFSET, vision_binocular_angle = DEFAULT_BINOCULAR_ANGLE;
   double vision_ink_scatter = 1, vision_burial = 1;
   double day_period = 0, night_light = .1;
