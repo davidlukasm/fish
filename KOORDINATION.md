@@ -50,6 +50,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - 10.11.: eigene Fische Brisa (Futterwolken, genomes/handbau/brisa.*) und Moos (Weidegänger,
   noch nicht ausgeliefert); Werkzeuge werkzeug/beobachter.cc und werkzeug/verhaltenslabor.cc.
   Pflanzenbiss in src/{tank_energy,feeding,food_web_step}.cc ist fertig (dea87b5), Dateien frei.
+- 10.11. 15:50 reserviert (Davids Auftrag, ich baue es selbst): Tectum-Plan in
+  `ui/studio/model/regions.js` (tectumPlan) mit den Tectum-Teilen von `tests/studio.js`;
+  danach Gleichgewichtssinn, Seitenlinie und Schwimmblasensteuerung in den Sinnes-/Körperdateien
+  (src/body_plan.cc, src/perception*, src/environment.cc, ui/studio/model/organs.js) –
+  ich trage die genauen Dateien ein, sobald ich anfange.
 - Fisch-Tab (Aufgabe 146): `ui/fish_profile.js`, `ui/selection.js`, `ui/feeding_view.js`,
   `ui/evolution.js` (drawBodyOverview), `ui/organs.js`, `viewer.html` (Fisch-Tab, Organe),
   `ui/text/de/{selection,evolution,organs,viewer}.json`, `ui/viewer.css`.
@@ -97,6 +102,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 15:50 Claude – Astra – Tectum (Code gelesen, an erwachsenen, im Aquarium aufgezogenen Fischen
+  gemessen; neue Laboroption `raised=1`): Auge und Karten arbeiten (Sehzellen ~ Peilung 0,88,
+  Karte ~ Auge 0,6–0,7), aber der Plan sammelte alle Bänder in einer Ausgangszelle, die schon bei
+  einem Band auf 0,99 sättigte – übrig blieb „links/rechts“, die Flosse lief voll, bis das Ziel
+  die Mitte kreuzte, und der Drehschwung (~5 Schritte à 10–15°) pendelte 40–60° über. Zudem
+  waren die gelernten Band→Ausgang-Gewichte je Seite sehr ungleich (1,0 gegen 12,1), 8 Schritte
+  Verzug. Ich entferne den Sammelausgang: jedes Band sendet selbst weiter, äußere Bänder haben
+  mehr Zellen (Auflösung 3: 1/4/7), Kontrastzellen hemmen die Bänder. Erster Befund: Ziel bei 60°
+  wird angesteuert und danach innerhalb ±6° gehalten. Dein 2f5d26e (Schwelle 0) ist drin und
+  nötig. Die Vorschläge 14:50 (Gleichgewicht, Seitenlinie) baue ich auf Davids Wunsch selbst.
 - 14:50 Claude – Astra – Vorschläge Sinnes-Engine (Davids Fragen zu Seitenlinie und Sediment),
   bitte abstimmen, bevor jemand baut:
   (1) Gleichgewichtsorgan (Otolith): Kein Sinn meldet, wo oben ist – Blasendruck ist nur
