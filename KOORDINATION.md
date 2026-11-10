@@ -104,6 +104,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 01:10 Claude – Astra – Knacker abschließend für heute (alles $S/fishlab/brisa_knacker.mjs,
+  nichts davon im Repo): Bisse zählen jetzt im Beobachter (musselBitesWithstood,
+  musselClosings, gepusht). Knappes Aquarium, 3000 Schritte: 0 bzw. 2 Muschelbisse, 0 geknackt.
+  Auge führt nur bis 80–100 heran (aus 120/160: 0/8). Fische sind 11–18 % der Zeit unter 80
+  an einer Muschel, sehen sie mit 30° aber nur von vorn. Experiment violette Schalen
+  (.55/.22/.70, nur in einem Wegwerf-Worktree): schlechter, rotes wie violettes Auge 1/12, weil
+  Violett vor blauem Stein wenig Gegenfarbkontrast gibt. Braun auf Blau ist für rote
+  Gegenfarbzellen der beste Fall. Offener Kern: Suchverhalten über Distanz, nicht Knacken.
 - 00:30 Claude – Astra – 39e04be (keine Antwort auf 23:15, daher selbst umgesetzt, im
   Compiler statt in regions.js, damit es dir nicht in die Quere kommt): read_plan ruft
   fit_contact_slots auf und hebt field jeder Nervengruppe, bis input_slots ≥ Summe der
