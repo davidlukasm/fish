@@ -22,7 +22,7 @@ double rounded(double value, double per_unit) {
   return std::round(value * per_unit) / per_unit;
 }
 struct Options {
-  int every = 5, detail = 50, tracked = 6;
+  int every = 5, detail = 50, tracked = 6, min_generation = 0;
   std::string checkpoint, resume;
 };
 int site_of(const cppn::Point &p) {
@@ -66,7 +66,8 @@ int main(int argc, char **argv) {
   try {
     if (argc < 5)
       throw std::invalid_argument("Aufruf: beobachter GENOM SEED SCHRITTE ANZAHL [every=N] "
-                                  "[detail=N] [tracked=N] [checkpoint=DATEI] [resume=DATEI] "
+                                  "[detail=N] [tracked=N] [min_generation=N] "
+                                  "[checkpoint=DATEI] [resume=DATEI] "
                                   "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
@@ -87,6 +88,8 @@ int main(int argc, char **argv) {
         o.detail = std::stoi(value);
       else if (key == "tracked")
         o.tracked = std::stoi(value);
+      else if (key == "min_generation")
+        o.min_generation = std::stoi(value);
       else if (key == "checkpoint")
         o.checkpoint = std::filesystem::absolute(value).string();
       else if (key == "resume")
@@ -94,7 +97,7 @@ int main(int argc, char **argv) {
       else
         parameters.emplace_back(key, std::stod(value));
     }
-    if (o.every < 1 || o.detail < 1 || o.tracked < 0 || steps < 0)
+    if (o.every < 1 || o.detail < 1 || o.tracked < 0 || o.min_generation < 0 || steps < 0)
       throw std::invalid_argument("Ungültiges Beobachtungsintervall oder Schrittzahl");
     if (!o.resume.empty()) {
       std::ifstream in(o.resume);
@@ -139,7 +142,6 @@ int main(int argc, char **argv) {
       double cut_force = 0, grind_force = 0;
     };
     std::map<std::uint64_t, Bites> bites;
-    std::set<std::uint64_t> dropped;
     for (int advanced = 0; advanced <= steps; ++advanced) {
       const auto tick = w.ticks;
       const bool last = advanced == steps || w.fish.empty();
@@ -153,8 +155,8 @@ int main(int argc, char **argv) {
         for (auto it = tracked.begin(); it != tracked.end();)
           it = alive.count(it->first) ? std::next(it) : tracked.erase(it);
         for (const auto &p : w.fish)
-          if (int(tracked.size()) < o.tracked && p.body.alive && p.body.hatched && p.body.brain() &&
-              !tracked.count(p.id) && !dropped.count(p.id)) {
+          if (int(tracked.size()) < o.tracked && p.g >= o.min_generation && p.body.alive &&
+              p.body.hatched && p.body.brain() && !tracked.count(p.id)) {
             tracked[p.id] = describe(*p.body.brain());
             const auto &t = tracked[p.id];
             out << "{\"event\":\"cells\",\"t\":" << tick << ",\"id\":" << p.id
