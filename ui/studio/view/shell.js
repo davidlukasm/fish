@@ -44,20 +44,6 @@ function cellStatus(state) {
                                            : label('app.draft');
 }
 
-export function hubShell() {
-  const tile = (action, title, text) => '<button class="aid-hub-tile active" data-action="' +
-                                        action + '"><strong>' + label(title) + '</strong><span>' +
-                                        label(text) + '</span></button>';
-  return '<div class="aid-hub"><header class="aid-header"><div class="aid-header-brand"><div><small>' +
-         label('app.hubBrand') + '</small><h1>' + label('app.hubTitle') +
-         '</h1></div></div><div class="aid-status">' + label('app.hubStatistics') +
-         '</div></header><main class="aid-hub-content"><small>' + label('app.hubStation') +
-         '</small><h2>' + label('app.hubTitle') + '</h2><div class="aid-hub-grid">' +
-         tile('aquarium', 'app.hubAquarium', 'app.hubStatistics') +
-         tile('atelier', 'app.hubAtelier', 'app.hubStart') + '</div></main>' +
-         footer(label('status.waiting'), label('app.hubFooter')) + '</div>';
-}
-
 function stationHeader(s) {
   const accepted = acceptedGenome(s);
   return '<header class="aid-header"><div class="aid-header-brand">' +

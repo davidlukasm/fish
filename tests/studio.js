@@ -108,7 +108,7 @@ function semanticFingerprint(source) {
   } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
-    de : Object.fromEntries([ 'studio', 'organ_graphics', 'units' ].map(
+    de : Object.fromEntries([ 'studio', 'organ_graphics', 'units', 'labor' ].map(
         area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   {
@@ -2210,6 +2210,67 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(frame.steadyAt({x : 10, y : 20}, 2),
                  /data-steady transform="translate\(10.00 20.00\) scale\(0.50\)"/);
     assert.equal(frame.viewBoxOf({zoom : 1, ...frame.CAMERA_HOME}).split(' ').length, 4);
+  }
+  {
+    const labor = await import('../ui/labor/model.js');
+    const {BREEDING} = await import('../ui/schema.js');
+    const S = labor.SAMPLE, enough = BREEDING.proven_generations;
+    const sample = (step, fish, parents) => {
+      const row = [];
+      row[S.step] = step;
+      row[S.fish] = fish;
+      row[S.generation] = parents + 1;
+      row[S.parents] = parents;
+      return row;
+    };
+    const steps = BREEDING.steps[0];
+    const lives = {
+      seed : 1,
+      steps,
+      done : true,
+      samples : [ sample(0, 12, -1), sample(steps, 30, enough) ]
+    },
+          dies = {
+            seed : 2,
+            steps,
+            done : true,
+            samples : [ sample(0, 12, -1), sample(steps, 0, enough) ]
+          },
+          young = {seed : 3, steps, done : true, samples : [ sample(steps, 30, enough - 1) ]};
+    assert.equal(labor.worldVerdict(lives).proven, true,
+                 'Tank-born parents and a living stock prove a world');
+    assert.equal(labor.worldVerdict(dies).proven, false, 'A stock that died out proves nothing');
+    assert.equal(labor.worldVerdict(young).proven, false, 'Too few generations with offspring');
+    const worlds =
+        Array.from({length : BREEDING.proven_worlds}, (_, k) => ({...lives, seed : k + 1}));
+    assert.equal(labor.breedingVerdict(worlds).passed, true, 'Enough proving worlds pass');
+    assert.equal(labor.breedingVerdict([...worlds, dies ]).passed, false,
+                 'Every finished world must prove the fish');
+    assert.equal(labor.breedingVerdict([ {...lives, done : false} ]).done, 0,
+                 'A running world is not judged');
+    const overview = {results : [ {fingerprint : 'f', steps, worlds : {1 : lives}} ]},
+          job = {fingerprint : 'f', steps, worlds : [ {...lives, seed : 2, done : false} ]};
+    assert.deepEqual(labor.shownWorlds(overview, 'f', steps, job).map(w => w.seed), [ 1, 2 ],
+                     'Kept and running worlds are shown together');
+    assert.deepEqual(labor.shownWorlds(overview, 'f', BREEDING.steps[1], job), [],
+                     'Another step count shows nothing');
+    assert.equal(labor.shelfVerdict(overview, 'f').done, 1, 'The shelf reads the kept run');
+    const view = await import('../ui/labor/view.js');
+    const page = view.breedingShell({
+      overview : {...overview, fish : [ {key : 'brisa', fingerprint : 'f'} ]},
+      fish : 'brisa',
+      worlds : BREEDING.worlds[0],
+      steps,
+      job : null,
+      running : false,
+      error : '',
+      draft : null,
+      fingerprint : 'f'
+    });
+    assert.match(page, /data-breed="start"/, 'The station offers to breed');
+    assert.match(page, /aid-lab-chart/, 'A kept world is drawn');
+    assert.match(page, /data-breed-fish="draft" disabled/,
+                 'Without an accepted draft it cannot be chosen');
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

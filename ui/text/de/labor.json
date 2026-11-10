@@ -1,0 +1,51 @@
+{
+  "brand": "AID / ZUCHTSTATION 03",
+  "title": "Zuchtstation",
+  "fish": {
+    "brisa": "Brisa",
+    "start": "Miro",
+    "plants": "Alva",
+    "draft": "Atelier-Entwurf"
+  },
+  "role": {
+    "brisa": "Futtersucherin",
+    "start": "Allesfresser · Entwurf",
+    "plants": "Pflanzenfresserin · Entwurf",
+    "draft": "aktueller Bauplan"
+  },
+  "choose": {
+    "fish": "Fisch",
+    "worlds": "Startwelten",
+    "steps": "Schritte je Welt"
+  },
+  "rule": "Ohne Bestandshilfe, {founders} Gründer je Welt. Bewiesen, wenn im Becken geborene Generationen selbst Nachwuchs haben und der Bestand am Ende lebt.",
+  "start": "Züchten",
+  "cancel": "Abbrechen",
+  "ready": "Bereit",
+  "running": "Welt {world} von {worlds} · Schritt {step}",
+  "runningWorld": "läuft · Schritt {step}",
+  "waiting": "wartet",
+  "world": "Welt {seed}",
+  "alive": "lebt · bis {n} Fische",
+  "extinct": "ausgestorben bei Schritt {step}",
+  "chart": "Bestand über die Schritte, Striche: Generation hat Nachwuchs",
+  "parents": "G{g}",
+  "parentsTitle": "Generation {g} hat Nachwuchs",
+  "nothingYet": "Noch keine Zucht für diesen Fisch mit dieser Schrittzahl.",
+  "verdict": {
+    "passed": "trägt sich",
+    "open": "nicht bewiesen",
+    "none": "ungeprüft"
+  },
+  "verdictLine": "{proven} von {done} Welten bewiesen · Nachwuchs bis Generation {g}",
+  "stepsShort": "{steps} Schritte",
+  "released": "freigegeben",
+  "errors": {
+    "unknownFish": "Diesen Fisch kennt die Zuchtstation nicht.",
+    "invalidRequest": "Ungültige Anfrage an die Zuchtstation.",
+    "toolMissing": "Das Zuchtbecken ist nicht gebaut (make).",
+    "busy": "Es läuft schon eine Zucht.",
+    "unknownJob": "Dieser Zuchtlauf ist nicht mehr bekannt.",
+    "server": "Die Zuchtstation antwortet nicht."
+  }
+}

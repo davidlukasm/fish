@@ -71,6 +71,7 @@ const ACTIONS = Object.freeze({
   home : studio => studio.navigate('hub'),
   aquarium : studio => studio.navigate('aquarium'),
   atelier : studio => studio.navigate('studio'),
+  breeding : studio => studio.navigate('breeding'),
   new : studio => studio.loadFish(newDocument(label('app.newFish'))),
   example : studio => studio.example(),
   check : studio => studio.checkCompiler(),

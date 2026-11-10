@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter, MAX_ID
 from atelier_service import run as run_atelier, CompileJobs
+from labor_service import BreedingJobs
 from wording import Refusal, worded, wording
 from protocol_schema import Route
 
@@ -152,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.allowed_request():
             return
-        if self.path not in (Route.COMMAND, Route.FPS_REPORT, Route.ATELIER) or (
+        if self.path not in (Route.COMMAND, Route.FPS_REPORT, Route.ATELIER, Route.LABOR) or (
             self.path == Route.FPS_REPORT and self.server.fps_report is None
         ):
             self.send(HTTPStatus.NOT_FOUND, {"error": wording("notFound")})
@@ -183,6 +184,10 @@ class Handler(BaseHTTPRequestHandler):
                 result = (self.server.compiler_jobs.request(data, directory)
                           if data.get("operation") in ("build-start", "build-status", "build-cancel")
                           else run_atelier(data, directory))
+                self.send(HTTPStatus.OK, {"ok": True, "result": result})
+                return
+            if self.path == Route.LABOR:
+                result = self.server.breeding.request(data, self.server.simulation.args.data_dir)
                 self.send(HTTPStatus.OK, {"ok": True, "result": result})
                 return
             message = self.server.commands.dispatch(data)
@@ -294,8 +299,11 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.fps_report = None
         self.commands = CommandRouter(simulation, defaults)
         self.compiler_jobs = CompileJobs()
+        self.breeding = BreedingJobs(simulation.starter_genomes)
 
     def server_close(self):
         if hasattr(self, "compiler_jobs"):
             self.compiler_jobs.close()
+        if hasattr(self, "breeding"):
+            self.breeding.close()
         super().server_close()

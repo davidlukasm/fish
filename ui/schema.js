@@ -985,7 +985,8 @@ export const ROUTE = Object.freeze({
   "command" : "/command",
   "fps_report" : "/fps-report",
   "scene" : "/scene",
-  "atelier" : "/atelier"
+  "atelier" : "/atelier",
+  "labor" : "/labor"
 });
 export const RECORD_SAMPLE = Object.freeze({"period" : 100});
 export const FRAME_PATCH = Object.freeze({"mask_digit_bits" : 4});
@@ -996,6 +997,13 @@ export const HABITAT_ZONE = Object.freeze({
   "strong_current" : 2,
   "bottom_zone" : 0.8,
   "top_zone" : 0.2
+});
+export const BREEDING = Object.freeze({
+  "worlds" : [ 2, 3, 5 ],
+  "steps" : [ 4000, 8000, 16000 ],
+  "founders" : 12,
+  "proven_generations" : 2,
+  "proven_worlds" : 2
 });
 export const BEHAVIOR_FEATURE_SET = Object.freeze({
   movement : Object.freeze([ 0, 1, 2, 3, 4, 5 ]),

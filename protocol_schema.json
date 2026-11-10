@@ -2100,7 +2100,8 @@
       "command": "/command",
       "fps_report": "/fps-report",
       "scene": "/scene",
-      "atelier": "/atelier"
+      "atelier": "/atelier",
+      "labor": "/labor"
     },
     "record_sample": {
       "period": 100
@@ -2118,6 +2119,13 @@
       "strong_current": 2,
       "bottom_zone": 0.8,
       "top_zone": 0.2
+    },
+    "breeding": {
+      "worlds": [2, 3, 5],
+      "steps": [4000, 8000, 16000],
+      "founders": 12,
+      "proven_generations": 2,
+      "proven_worlds": 2
     }
   },
   "scene_bundle": {

@@ -1252,6 +1252,7 @@ class Route:
     FPS_REPORT = '/fps-report'
     SCENE = '/scene'
     ATELIER = '/atelier'
+    LABOR = '/labor'
 
 class RecordSample:
     PERIOD = 100
@@ -1269,6 +1270,13 @@ class HabitatZone:
     STRONG_CURRENT = 2
     BOTTOM_ZONE = 0.8
     TOP_ZONE = 0.2
+
+class Breeding:
+    WORLDS = (2, 3, 5)
+    STEPS = (4000, 8000, 16000)
+    FOUNDERS = 12
+    PROVEN_GENERATIONS = 2
+    PROVEN_WORLDS = 2
 
 class BehaviorFeatureSet:
     MOVEMENT = (0, 1, 2, 3, 4, 5)

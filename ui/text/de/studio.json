@@ -26,7 +26,6 @@
     "hubAquarium": "Aquarium",
     "hubAtelier": "Atelier",
     "hubStart": "Zum Fischbau",
-    "hubStatistics": "Aus dem Aquarium",
     "parts": "Organe",
     "partCount": "{n} {n:Organ|Organe}",
     "wireCount": "{n} {n:Verbindung|Verbindungen}",
@@ -1087,5 +1086,43 @@
     "probation": "Schonfrist · Schritte",
     "none": "Für diese Auswahl sind noch keine Signalwege geplant.",
     "learningMeaning": "Der Sender bildet je nach Zellidentität elektrische oder lehrende Kontakte. Dafür gilt die jeweilige Höchststärke des Empfängers. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
+  },
+  "hub": {
+    "lead": "Was wächst da eigentlich?",
+    "connecting": "Aquarium verbindet …",
+    "running": "Aquarium läuft",
+    "paused": "Aquarium pausiert",
+    "figuresTitle": "Aus dem Aquarium",
+    "figures": {
+      "fish": "Fische",
+      "eggs": "Eier",
+      "species": "Arten",
+      "generation": "Generation",
+      "step": "Schritt"
+    },
+    "sparkline": "Fische im Aquarium über den ganzen Lauf",
+    "stationsSmall": "STATIONEN",
+    "stations": "Wo soll's hingehen?",
+    "shelfSmall": "STARTFISCHE",
+    "shelf": "Das Fischregal",
+    "open": "offen",
+    "later": "folgt",
+    "index": {
+      "aquarium": "01 / BEOBACHTUNG",
+      "atelier": "02 / ENTWURF",
+      "breeding": "03 / SELEKTION",
+      "behavior": "04 / ERPROBUNG",
+      "field": "05 / FELD"
+    },
+    "go": {
+      "aquarium": "Zum Becken",
+      "breeding": "Zur Zucht"
+    },
+    "behavior": "Verhaltenslabor",
+    "field": "Feldbeobachtung",
+    "provenCount": "{n} {n:Startfisch trägt|Startfische tragen} sich",
+    "draft": "{name} · {cells} Zellen",
+    "breed": "Züchten",
+    "atelier": "Im Atelier"
   }
 }

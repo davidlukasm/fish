@@ -48,7 +48,6 @@ import {
   developAction,
   GENOME_FILE_ID,
   headerStatus,
-  hubShell,
   layerSwitches,
   stationShell
 } from './view/shell.js';
@@ -59,6 +58,8 @@ import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.
 import {trialMethods} from './trials.js';
 import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
+import {StationHub} from './hub.js';
+import {BreedingStation} from '../labor/station.js';
 
 let instance = null;
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
@@ -133,6 +134,8 @@ export class OrganStudio {
     this.cancelCompile = false;
     this.shownDesign = null;
     this.pressureChecked = null;
+    this.hub = new StationHub(root);
+    this.breeding = new BreedingStation(root);
   }
   async api(body, timeout = API_WAIT.usual) {
     const response = await postJson(API, body, {timeout});
@@ -201,6 +204,10 @@ export class OrganStudio {
   navigate(station) {
     if (station !== 'studio')
       this.stopPulse();
+    if (station !== 'hub')
+      this.hub.close();
+    if (station !== 'breeding')
+      this.breeding.close();
     this.state.station = station;
     this.root.hidden = station === 'aquarium';
     document.body.dataset.station = station;
@@ -284,9 +291,13 @@ export class OrganStudio {
     document.body.dataset.station = s.station;
     if (s.station === 'aquarium')
       return;
-    this.root.innerHTML = s.station === 'hub' ? hubShell() : stationShell(s);
-    if (s.station !== 'hub')
-      this.drawSight();
+    if (s.station === 'hub')
+      return this.hub.open(this.draftLine());
+    if (s.station === 'breeding')
+      return this.breeding.open(acceptedGenome(s) ? {genome : s.genome, name : s.document.name}
+                                                  : null);
+    this.root.innerHTML = stationShell(s);
+    this.drawSight();
   }
   refreshScene() {
     if (this.state.station !== 'studio')
@@ -329,6 +340,8 @@ export class OrganStudio {
   }
   refreshHeader() {
     const state = this.state;
+    if (state.station !== 'studio')
+      return;
     const compiler = this.root.querySelector('.aid-compiler');
     if (compiler) {
       const opened = compiler.open;
@@ -707,12 +720,34 @@ export class OrganStudio {
       return;
     if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
       return;
-    if (clickOn(this, event, ANYWHERE_CLICKS) || this.state.station !== 'studio' ||
-        clickOn(this, event, STUDIO_CLICKS))
+    if (clickOn(this, event, ANYWHERE_CLICKS))
+      return;
+    if (this.state.station === 'breeding')
+      return this.breeding.click(event);
+    if (this.state.station === 'hub')
+      return this.hubClick(event);
+    if (this.state.station !== 'studio' || clickOn(this, event, STUDIO_CLICKS))
       return;
     if (this.state.mode === 'cppn')
       return clickOn(this, event, CPPN_CLICKS);
     clickOn(this, event, FISH_CLICKS);
+  }
+  hubClick(event) {
+    const breed = event.target.closest?.('[data-hub-breed]'),
+          atelier = event.target.closest?.('[data-hub-atelier]');
+    if (breed) {
+      this.breeding.state.fish = breed.dataset.hubBreed;
+      this.navigate('breeding');
+    } else if (atelier) {
+      this.navigate('studio');
+      this.startFish(atelier.dataset.hubAtelier);
+    }
+  }
+  draftLine() {
+    const {anatomy, document : doc} = this.state;
+    return Number.isFinite(anatomy?.neurons)
+               ? t('studio.hub.draft', {name : doc.name, cells : anatomy.neurons})
+               : doc.name;
   }
   async saveAssembly(id) {
     const assembly = findAssembly(this.state.document, id);

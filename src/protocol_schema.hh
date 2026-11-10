@@ -1889,6 +1889,7 @@ inline constexpr const char *command = "/command";
 inline constexpr const char *fps_report = "/fps-report";
 inline constexpr const char *scene = "/scene";
 inline constexpr const char *atelier = "/atelier";
+inline constexpr const char *labor = "/labor";
 }
 namespace record_sample {
 inline constexpr int period = 100;
@@ -1906,6 +1907,13 @@ inline constexpr double dark_light = 0.2;
 inline constexpr int strong_current = 2;
 inline constexpr double bottom_zone = 0.8;
 inline constexpr double top_zone = 0.2;
+}
+namespace breeding {
+inline constexpr std::array<double, 3> worlds{2.0, 3.0, 5.0};
+inline constexpr std::array<double, 3> steps{4000.0, 8000.0, 16000.0};
+inline constexpr int founders = 12;
+inline constexpr int proven_generations = 2;
+inline constexpr int proven_worlds = 2;
 }
 namespace behavior_feature_set {
 inline constexpr std::array<std::size_t, 6> movement{0, 1, 2, 3, 4, 5};
