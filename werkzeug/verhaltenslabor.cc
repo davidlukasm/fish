@@ -3,6 +3,7 @@
 #include "perception.hh"
 #include "body_plan.hh"
 #include "field/development_sites.hh"
+#include <algorithm>
 #include <array>
 #include <iostream>
 #include <limits>
@@ -16,6 +17,9 @@
 // LABTRACE=N adds the fish's course every N steps, LABLINKS=1 its learned contacts and
 // LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 (with
 // LABTRACE) the bearing, stimulus and signal of every retinal cell.
+// mussel=1 grows the fish up in the aquarium and sets it, facing the shell, at distance from one
+// open mussel after another; each trial reports when the mouth reached the shell, whether the
+// shell closed first, how often the jaw bit and whether and when the shell cracked.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -24,7 +28,7 @@ constexpr double TANK_WIDTH = 1600, TANK_HEIGHT = 1000;
 // Fish closer than WALL_MARGIN to the surface or floor are moved back to mid-depth between
 // trials; food keeps FOOD_MARGIN from them.
 constexpr double WALL_MARGIN = 150, FOOD_MARGIN = 30;
-constexpr int HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, LINK_STEP = 1;
+constexpr int MUSSEL_TRIALS = 6, HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, LINK_STEP = 1;
 constexpr std::array<int, 2> SENSE_STEPS{1, 10};
 // A patch is used up once nothing is left within PATCH_REACH spreads of where it was laid out;
 // the fish has moved on once it is LEAVING spreads beyond its starting distance.
@@ -78,13 +82,13 @@ int main(int argc, char **argv) {
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
           "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [plant=1] [aquarium=1] "
-          "[raised=1] [hold=1] "
+          "[raised=1] [hold=1] [mussel=1] "
           "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int trace_every =
         std::getenv("LABTRACE") ? std::max(1, std::atoi(std::getenv("LABTRACE"))) : 0;
     int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
-        hungry = 0, plant = 0, raised = 0, hold = 0;
+        hungry = 0, plant = 0, raised = 0, hold = 0, mussel = 0;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -124,6 +128,8 @@ int main(int argc, char **argv) {
         hold = int(value);
       else if (key == "plant")
         plant = int(value);
+      else if (key == "mussel")
+        mussel = int(value);
       else if (!w.set_parameter(key, value))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
@@ -136,6 +142,8 @@ int main(int argc, char **argv) {
            {"food_supply_share", "plankton_supply_share", "benthic_supply_share"})
         w.set_parameter(share, 0);
     };
+    if (mussel)
+      raised = 1;
     if (aquarium || raised) {
       w.starter_world();
       w.seed({g}, 1, run_limit::default_food);
@@ -177,6 +185,80 @@ int main(int argc, char **argv) {
     // other food.
     if (raised)
       stop_supply();
+    if (mussel) {
+      const auto &web = w.field.food_web();
+      const auto find = [&](std::uint64_t id) -> const Mussel * {
+        for (const auto &m : web.mussels)
+          if (m.id == id && m.energy > 0)
+            return &m;
+        return nullptr;
+      };
+      std::vector<std::uint64_t> tried;
+      for (int round = 0; round < rounds * MUSSEL_TRIALS; ++round) {
+        keep();
+        const Mussel *target = nullptr;
+        for (const auto &m : web.mussels)
+          if (m.energy > 0 && !m.closed && !m.buried &&
+              std::find(tried.begin(), tried.end(), m.id) == tried.end()) {
+            target = &m;
+            break;
+          }
+        if (!target)
+          break;
+        tried.push_back(target->id);
+        const auto found = web.patches.find(target->patch);
+        if (found == web.patches.end())
+          continue;
+        const auto &surface = w.field.vegetation().surfaces[found->second];
+        const std::uint64_t id = target->id;
+        const double energy = target->energy,
+                     hardness = w.field.env().hardness_mussel +
+                                w.field.env().hardness_mussel_growth * energy /
+                                    mussel_capacity(target->morph, w.field.env());
+        auto &b = p->body;
+        if (hungry)
+          b.gut_fill = b.gut_energy = b.gut_digestible = 0;
+        b.x = w.field.wrap_x(target->x + surface.normal.x * distance);
+        b.y = target->y + surface.normal.y * distance;
+        b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
+        const double eaten_before = p->observations().raw_diet[food_kind::mussel];
+        const auto cycles = b.mouth.cycle;
+        int reached = -1, closed = -1, cracked = -1, step = 0;
+        double nearest = distance;
+        for (; step < trial; ++step) {
+          w.tick(false);
+          keep();
+          const Mussel *m = find(id);
+          if (!m) {
+            cracked = step;
+            break;
+          }
+          const double mx = w.field.wrap_x(p->body.x +
+                                           mouth_offset(p->body) * std::cos(p->body.angle)),
+                       my = p->body.y + mouth_offset(p->body) * std::sin(p->body.angle),
+                       gap = std::hypot(w.field.delta_x(m->x - mx), m->y - my) -
+                             mussel_radius(m->energy, w.field.env(), m->morph);
+          nearest = std::min(nearest, gap);
+          if (reached < 0 && gap <= mouth_reach(p->body))
+            reached = step;
+          if (closed < 0 && m->closed)
+            closed = step;
+          if (trace_every && step % trace_every == 0)
+            std::cout << "{\"event\":\"approach\",\"step\":" << step << ",\"gap\":" << gap
+                      << ",\"speed\":" << std::hypot(p->body.motor().vx, p->body.motor().vy)
+                      << ",\"forward\":" << p->body.motor().drive_forward
+                      << ",\"bite\":" << p->body.bite_signal << ",\"shut\":" << m->closed
+                      << ",\"angle\":" << bearing_to(w, p->body, m->x, m->y) * 180 / PI << "}\n";
+        }
+        std::cout << "{\"event\":\"mussel\",\"energy\":" << energy << ",\"hardness\":" << hardness
+                  << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
+                  << ",\"nearest\":" << nearest << ",\"closed\":" << closed
+                  << ",\"cracked\":" << cracked << ",\"bites\":" << p->body.mouth.cycle - cycles
+                  << ",\"eaten\":" << p->observations().raw_diet[food_kind::mussel] - eaten_before
+                  << ",\"steps\":" << step << "}\n";
+      }
+      return 0;
+    }
     const std::vector<double> bearings{0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180};
     for (int round = 0; round < rounds; ++round)
       for (double bearing : bearings) {
