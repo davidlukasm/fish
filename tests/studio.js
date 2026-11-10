@@ -220,12 +220,16 @@ function semanticFingerprint(source) {
     assert.equal(plan.source, undefined);
     assert.equal(plan.groups.length, model.allCenters(doc).length);
     assert.ok(doc.wires.length < plan.connections.length);
+    // Brisa forages by smell alone and has no sensory field to retune.
     const near = doc.organs.find(o => o.type === 'proximity');
-    const tuned = model.updateField(doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}},
-                                    sitesResult.sites);
-    assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length, plan.groups.length);
-    assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
-                     model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
+    if (near) {
+      const tuned = model.updateField(
+          doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}}, sitesResult.sites);
+      assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length,
+                   plan.groups.length);
+      assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
+                       model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
+    }
     const checked = JSON.parse(execFileSync(
         'python3',
         [
@@ -426,7 +430,8 @@ function semanticFingerprint(source) {
                                geometry.sitePoint(home, 'nerve'));
       assert.ok(r);
       const o = model.findOrgan(r.document, r.organId);
-      assert.equal(o.centers.length, 1, 'A default region contains one population');
+      assert.equal(o.centers.length, definition.settings.resolution?.initial ?? 1,
+                   'A default region holds one population, a map one per band');
       assert.equal(!!o.pair, definition.scope === 'side');
       model.compileDocument(r.document, sites);
     }
@@ -486,8 +491,11 @@ function semanticFingerprint(source) {
     const mapNodes =
         model.findOrgan(settled, tectum.organId).centers.filter(c => c.node.startsWith('map'));
     assert.equal(mapNodes.length, 3);
-    assert.ok(tectumLeft.centers.some(c => c.node === 'out') &&
-              tectumLeft.centers.some(c => c.node === 'inhibit'));
+    assert.ok(mapNodes.every(c => c.port === 'both') &&
+                  tectumLeft.centers.some(c => c.node === 'inhibit'),
+              'Every map band sends its own command');
+    assert.ok(mapNodes.every((c, i) => i === 0 || c.copies > mapNodes[i - 1].copies),
+              'Bands farther off the midline command larger turns');
     for (const link of routed.filter(l => mapNodes.some(c => c.id === l.to) && !l.wire.inner)) {
       const cell = model.findCenter(settled, link.from);
       const map = model.findCenter(settled, link.to).center;
@@ -496,7 +504,9 @@ function semanticFingerprint(source) {
       assert.ok(angle >= map.band[0] - 1e-9 && angle <= map.band[1] + 1e-9,
                 'A light cell reaches the map node of its direction');
     }
-    assert.ok(mapNodes.every(c => routed.some(l => l.from === c.id && l.to.endsWith(':out'))));
+    assert.ok(mapNodes.every(c => routed.some(l => l.from === c.id && l.to.endsWith(':inhibit')) &&
+                                  routed.some(l => l.to === c.id && l.from.endsWith(':inhibit'))),
+              'Contrast cells inhibit the map bands themselves');
     const finer = regions.updateRegion(connected.document, tectum.organId, {resolution : 5}, sites);
     assert.equal(model.findOrgan(finer, tectum.organId).centers.filter(c => c.band).length, 5);
     assert.equal(model.findOrgan(finer, tectumLeft.pair).centers.filter(c => c.band).length, 5,
@@ -757,7 +767,7 @@ function semanticFingerprint(source) {
   const tectumId = withTectum.organs.find(o => o.type === 'tectum').id;
   withTectum =
       regionsModel.updateRegion(withTectum, tectumId, {resolution : 4, contrast : 2}, sites);
-  const output = model.findOrgan(withTectum, tectumId).centers.find(c => c.node === 'out');
+  const output = model.findOrgan(withTectum, tectumId).centers.find(c => c.node === 'map3');
   withTectum = model.updateCenter(withTectum, output.id, {tau : .9});
   const stored = model.placeStoredModule(
       model.newDocument('Wieder'),
@@ -767,7 +777,7 @@ function semanticFingerprint(source) {
   const again = stored.document.organs.filter(o => o.type === 'tectum');
   assert.equal(again.length, 2);
   assert.ok(again.every(o => o.region.resolution === 4 && o.region.contrast === 2));
-  assert.ok(again.some(o => o.centers.find(c => c.node === 'out').tau === .9));
+  assert.ok(again.some(o => o.centers.find(c => c.node === 'map3').tau === .9));
   model.validateDocument(stored.document);
   const malformed = structuredClone(module);
   malformed.organs.find(o => o.centers.length).centers[0].site = -1;
@@ -1152,8 +1162,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
   const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
                                               {resolution : 6, colours : 1}, sites);
-  assert.ok(model.findOrgan(crowdedDoc, exampleTectum.id).centers.some(c => c.node === 'out'),
-            'A crowded region keeps its output');
+  assert.ok(model.findOrgan(crowdedDoc, exampleTectum.id).centers.some(c => c.port === 'both'),
+            'A crowded region keeps a sending map');
   const crowdedIds = new Set(model.allCenters(crowdedDoc).map(c => c.id));
   assert.ok(regionModel.routedLinks(crowdedDoc, sites)
                 .every(l => crowdedIds.has(l.to) || crowdedDoc.organs.some(o => o.id === l.to)));

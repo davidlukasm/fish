@@ -193,7 +193,7 @@ export const ORGANS = Object.freeze([
       slot('onward', 'out', [], true)
     ],
     settings : {
-      resolution : setting(1, 6, 1),
+      resolution : setting(1, 6, 3),
       contrast : setting(0, 2, 0, true),
       colours : setting(0, 1, 0, true)
     }

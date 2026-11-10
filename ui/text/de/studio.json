@@ -388,7 +388,6 @@
     },
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
-    "out": "Ausgang",
     "inhibit": "Kontrastzellen",
     "beat": "Taktgeber",
     "cross": "Hemmung",

@@ -11,9 +11,11 @@
 // Behaviour trials for one fish in a calm, empty tank: after hatching, a cluster of feed pieces
 // appears at set bearings and distances; each trial reports whether and how the fish reached the
 // food and, with stay=1, how much it ate and whether it moved on once the patch was empty.
-// LABTRACE=1 adds the fish's course every five steps, LABLINKS=1 its learned contacts and
-// LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 the
-// bearing, stimulus and signal of every retinal cell.
+// raised=1 grows the fish up in the aquarium before trials there without further food; hold=1
+// keeps it in place during the trials, so its senses see a still scene.
+// LABTRACE=N adds the fish's course every N steps, LABLINKS=1 its learned contacts and
+// LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 (with
+// LABTRACE) the bearing, stimulus and signal of every retinal cell.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -22,7 +24,7 @@ constexpr double TANK_WIDTH = 1600, TANK_HEIGHT = 1000;
 // Fish closer than WALL_MARGIN to the surface or floor are moved back to mid-depth between
 // trials; food keeps FOOD_MARGIN from them.
 constexpr double WALL_MARGIN = 150, FOOD_MARGIN = 30;
-constexpr int HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, TRACE_EVERY = 5, LINK_STEP = 1;
+constexpr int HATCH_LIMIT = 2000, EARLY_TURN_STEP = 30, LINK_STEP = 1;
 constexpr std::array<int, 2> SENSE_STEPS{1, 10};
 // A patch is used up once nothing is left within PATCH_REACH spreads of where it was laid out;
 // the fish has moved on once it is LEAVING spreads beyond its starting distance.
@@ -76,10 +78,13 @@ int main(int argc, char **argv) {
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
           "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [aquarium=1] "
+          "[raised=1] [hold=1] "
           "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
+    const int trace_every =
+        std::getenv("LABTRACE") ? std::max(1, std::atoi(std::getenv("LABTRACE"))) : 0;
     int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
-        hungry = 0;
+        hungry = 0, raised = 0, hold = 0;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -113,16 +118,23 @@ int main(int argc, char **argv) {
         stay = int(value);
       else if (key == "hungry")
         hungry = int(value);
+      else if (key == "raised")
+        raised = int(value);
+      else if (key == "hold")
+        hold = int(value);
       else if (!w.set_parameter(key, value))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
-    if (aquarium) {
-      w.starter_world();
-      w.seed({g}, 1, run_limit::default_food);
-    } else {
+    const auto stop_supply = [&]() {
       for (const char *share :
            {"food_supply_share", "plankton_supply_share", "benthic_supply_share"})
         w.set_parameter(share, 0);
+    };
+    if (aquarium || raised) {
+      w.starter_world();
+      w.seed({g}, 1, run_limit::default_food);
+    } else {
+      stop_supply();
       w.resize(TANK_WIDTH, TANK_HEIGHT);
       w.field.flow = 0;
       w.seed({g}, 1, 0);
@@ -155,6 +167,10 @@ int main(int argc, char **argv) {
       w.tick(false);
       keep();
     }
+    // A fish raised in the aquarium grows up and learns to see; its trials then run without
+    // other food.
+    if (raised)
+      stop_supply();
     const std::vector<double> bearings{0, 30, -30, 60, -60, 90, -90, 120, -120, 150, -150, 180};
     for (int round = 0; round < rounds; ++round)
       for (double bearing : bearings) {
@@ -199,11 +215,17 @@ int main(int argc, char **argv) {
         const double patch_x = x, patch_y = y;
         const auto bites_before = p->body.mouth.cycle;
         double last_phase = -1;
+        const double hold_x = p->body.x, hold_y = p->body.y, hold_angle = p->body.angle;
         for (; steps < trial; ++steps) {
           const double ox = p->body.x, oy = p->body.y;
           w.tick(false);
           keep();
-          if (std::getenv("LABTRACE") && steps % TRACE_EVERY == 0) {
+          if (hold) {
+            p->body.x = hold_x;
+            p->body.y = hold_y;
+            p->body.angle = hold_angle;
+          }
+          if (trace_every && steps % trace_every == 0) {
             double nd = 1e9, nb = 0;
             for (const auto &f : w.field.feeding().pieces)
               if (f.energy > 0) {
@@ -223,7 +245,7 @@ int main(int argc, char **argv) {
             }
             std::cout << "}}\n";
           }
-          if (std::getenv("LABEYE") && steps % TRACE_EVERY == 0) {
+          if (std::getenv("LABEYE") && trace_every && steps % trace_every == 0) {
             const auto &binding = p->body.active_interface(p->genome);
             const auto &input = p->body.perception().sensor_buffer;
             double nd = std::numeric_limits<double>::infinity(), nb = 0;
@@ -364,7 +386,8 @@ int main(int argc, char **argv) {
                   << ",\"biting\":" << biting / (steps + 1)
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::feed] - eaten_before
                   << ",\"bites\":" << p->body.mouth.cycle - bites_before << ",\"near\":" << near
-                  << ",\"depleted\":" << depleted << ",\"left\":" << left << ",\"capacity\":["
+                  << ",\"maturity\":" << body_maturity(p->body) << ",\"depleted\":" << depleted
+                  << ",\"left\":" << left << ",\"capacity\":["
                   << p->body.active_interface(p->genome).capacities[organ_port::forward] << ','
                   << p->body.active_interface(p->genome).capacities[organ_port::turn] << ','
                   << p->body.active_interface(p->genome).capacities[organ_port::suction] << ','

@@ -39,7 +39,7 @@ export function fedBy(doc, organ) {
                          .filter(Boolean)) ];
 }
 
-const MAP_NODES = 8, CONTRAST_CELLS = Object.freeze([ 0, 2, 5 ]);
+const MAP_NODES = 8, MAP_COPIES = 8, CONTRAST_CELLS = Object.freeze([ 0, 2, 5 ]);
 const VISUAL_RESPONSE = Object.freeze({threshold : 0, q1 : 1, q2 : .5});
 function tectumView(doc, organ) {
   const region = organ.region;
@@ -58,38 +58,24 @@ function tectumPlan(doc, organ) {
   const types = region.colours ? Math.max(1, Math.min(view.types, MAP_NODES)) : 1;
   const bands = Math.max(1, Math.min(region.resolution, Math.floor(MAP_NODES / types)));
   const step = (view.hi - view.lo) / bands;
+  // Each band sends its own command and outer bands hold more cells, so the command grows with
+  // the target's bearing; one collecting cell would only tell on which side the target is.
+  const copies = band =>
+      bands === 1 ? MAP_COPIES
+                  : Math.max(1, Math.round(MAP_COPIES * (view.lo + (band + .5) * step) / view.hi));
   const nodes = [];
   for (let band = 0; band < bands; ++band)
     for (let type = 0; type < types; ++type)
       nodes.push({
         node : 'map' + band + (region.colours ? '.' + type : ''),
         preset : 'relay',
-        port : 'in',
+        port : 'both',
         effects : DEVELOPING_RELAY,
-        set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : 8, pace : .6},
+        set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : copies(band), pace : .6},
         band : [ view.lo + band * step, view.lo + (band + 1) * step ],
         type : region.colours ? type : null
       });
-  const maps = nodes.map(n => n.node);
-  if (nodes.length === 1 && !region.contrast) {
-    nodes[0].port = 'both';
-    return {
-      nodes,
-      inner : [],
-      cross : [],
-      route : () => nodes[0].node,
-      view,
-      most : {resolution : bands}
-    };
-  }
-  nodes.push({
-    node : 'out',
-    preset : 'relay',
-    port : 'out',
-    effects : DEVELOPING_RELAY,
-    set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : 8, pace : .6}
-  });
-  const inner = maps.map(map => [map, 'out']);
+  const maps = nodes.map(n => n.node), inner = [];
   const cells = CONTRAST_CELLS[region.contrast] ?? 0;
   if (cells) {
     nodes.push({
@@ -99,7 +85,7 @@ function tectumPlan(doc, organ) {
       effects : DEVELOPING_RELAY,
       set : {...CIRCUIT_LEARNING, ...VISUAL_RESPONSE, copies : cells, pace : .6}
     });
-    inner.push(...maps.map(map => [map, 'inhibit']), [ 'inhibit', 'out' ]);
+    inner.push(...maps.map(map => [map, 'inhibit']), ...maps.map(map => ['inhibit', map]));
   }
   const route = (sites, cell, field) => {
     const site = findSite(sites, cell.site);
