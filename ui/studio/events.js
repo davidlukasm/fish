@@ -527,7 +527,6 @@ export const FISH_CHANGES = Object.freeze([
     studio.state.contactLimit = Number(e.value);
     studio.refreshScene();
   } ],
-  [ 'previewContext', (studio, e) => studio.setPreviewContext(e.dataset.previewContext, Number(e.value)) ],
   [ 'receptorField', (studio, e) => {
     const patch = {};
     patch[e.dataset.receptorKey] = Number(e.value);
@@ -549,13 +548,6 @@ export const FISH_CHANGES = Object.freeze([
     if (!Number.isFinite(value) || !['strength', 'nutrient'].includes(key) || studio.state.senseProbe?.kind !== 'gut') return;
     studio.state.senseProbe = {...studio.state.senseProbe, [key]: Math.max(0, Math.min(key === 'strength' ? 1 : 20, value))};
     studio.requestDesign();
-  } ],
-  [ 'previewInput', (studio, e) => {
-    const value = Number(e.value);
-    if (!Number.isFinite(value)) return;
-    studio.state.previewInput = Math.max(-1, Math.min(1, value));
-    studio.refreshViews();
-    studio.refreshGraphics();
   } ],
   [ 'cellTrait', (studio, e) => {
     const key = e.dataset.traitKey, entered = Number(e.value), neural = studio.state.capabilities.neural;

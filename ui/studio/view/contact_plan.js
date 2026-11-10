@@ -4,7 +4,7 @@ import {learningTimeSteps} from '../../tuning.js';
 import {centerTitle, organTitle} from './names.js';
 import {escapeText} from './markup.js';
 import {label} from './kit.js';
-import {formatNumber, percent} from '../../strings.js';
+import {formatNumber, joinParts, percent} from '../../strings.js';
 
 const word = key => label('contacts.' + key);
 export function contactPlan(state, chosen, wire = null) {
@@ -48,17 +48,19 @@ export function contactPlan(state, chosen, wire = null) {
                              formatNumber(count) + '</dd></div>';
                     })
                     .join('');
-  return '<details class="aid-contact-plan"><summary>' + word('title') +
-         '</summary><p class="aid-hint">' + word('meaning') + '</p>' +
+  return '<details class="aid-contact-plan"><summary title="' + escapeText(joinParts([
+           word('meaning'), word('fields').replace('{n}', neural.contactFields),
+           word('learningMeaning')
+         ])) +
+         '">' + word('title') + '</summary>' +
          (slots
               ? '<h5>' + word('slots') + '</h5><dl class="aid-parameter-readout">' + slots + '</dl>'
               : '') +
-         '<p class="aid-hint">' + word('fields').replace('{n}', neural.contactFields) + '</p>' +
          (rows
               ? '<div class="aid-contact-table-scroll"><table class="aid-contact-plan-table"><thead><tr><th>' +
                     word('source') + '</th><th>' + word('target') + '</th><th>' + word('limit') +
                     '</th><th>' + word('modulation') + '</th><th>' + word('probation') +
                     '</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
               : '<p class="aid-hint">' + word('none') + '</p>') +
-         '<p class="aid-hint">' + word('learningMeaning') + '</p></details>';
+         '</details>';
 }

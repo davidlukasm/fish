@@ -225,6 +225,8 @@ const cubicAt = (points, s) => {
     y : points.reduce((sum, p, k) => sum + w[k] * p.y, 0)
   };
 };
+// How many contact bundles the fish shows: the most important first, or all.
+export const CONTACT_LIMITS = Object.freeze([ 120, 500, 0 ]);
 const WIRE_KINDS = Object.freeze({
   excite : {colour : '#9edaca', arrow : 'aid-wire-arrow'},
   inhibit : {colour : '#e8a2b5', arrow : 'aid-wire-arrow-inhibit'},
@@ -451,7 +453,7 @@ export function developedContactsSvg(state, centers) {
                                          (!members || members.has(centerList[from].id) &&
                                                           members.has(centerList[to].id)))
           .sort((a, b) => importance(b) - importance(a))
-          .slice(0, (state.contactLimit ?? 120) || Infinity)
+          .slice(0, (state.contactLimit ?? CONTACT_LIMITS[0]) || Infinity)
           .reverse();
   return entries
       .map(({from, to, count, positive, negative, positiveWeight, negativeWeight}, index) => {

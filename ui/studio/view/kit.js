@@ -47,3 +47,6 @@ export function cellTrack(center, words) {
          '</svg>';
 }
 export const regionTerm = key => label('regions.' + key + '.term');
+export const numberField = (name, value, {min, max, step, attributes = ''}) =>
+    '<label>' + escapeText(name) + '<input type="number" min="' + min + '" max="' + max +
+    '" step="' + step + '" value="' + value + '" ' + attributes + '></label>';

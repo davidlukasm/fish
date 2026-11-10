@@ -221,8 +221,8 @@ export function gonadFacts(state, organ) {
                   : !store.minimum              ? words('egg')
                   : store.spawn < store.minimum ? words('food')
                                                 : words('developmentEnergy');
-  return '<p class="aid-hint">' + label('development.gonadConditions') +
-         '</p><ul class="aid-gonad-facts">' +
+  return '<ul class="aid-gonad-facts" title="' + escapeText(label('development.gonadConditions')) +
+         '">' +
          row(find('growth'), words('cells'), Number.isFinite(store.steps) ? '' : words('driven'),
              store.motors * store.own.perCell > store.own.most ? words('ceiling') : '') +
          row(find('release'), words(store.releaseEnabled ? 'releaseOn' : 'trigger'), product) +

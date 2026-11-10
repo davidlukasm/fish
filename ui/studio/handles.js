@@ -50,6 +50,7 @@ import {
   wheelTrackWidth
 } from './view/substances.js';
 import {learnModePatch, learnRatePatch, learnResponseOf, learnTracePatch} from './view/learning.js';
+import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
 
 const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
@@ -76,7 +77,8 @@ const HANDLES = Object.freeze({
   bend : {follow : 'bendPointer', keepsClick : true},
   skin : {follow : 'skinPointer', done : 'refreshSkin'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
-  graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true}
+  graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
+  preview : {follow : 'previewPointer'}
 });
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
@@ -112,6 +114,12 @@ const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
 export const GRIPS = Object.freeze([
+  {
+    graphic : '[data-preview-bars]',
+    handle : '[data-preview-handle]',
+    held : 'preview',
+    start : (studio, g, h) => ({handle : h.dataset.previewHandle})
+  },
   {
     graphic : '[data-spectrum]',
     handle : '[data-spectrum-handle]',
@@ -342,6 +350,12 @@ export const handleMethods = {
                                          {profile : {id : drag.block, threshold}}, this.state.sites)
                            : updateCenter(this.state.document, drag.block, {threshold});
     this.draftDesign(doc, 'threshold:' + drag.block, 'refreshSensitivity');
+  },
+  previewPointer(event) {
+    const drag = this.handleDrag,
+          value = previewPatch(this.state, drag.handle, pointerShare(event, drag.rect).fy);
+    if (value !== null)
+      this.setPreviewContext(drag.handle, value);
   },
   dosePointer(event) {
     const drag = this.handleDrag, doc = this.state.document;

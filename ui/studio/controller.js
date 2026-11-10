@@ -35,7 +35,8 @@ import {
 import {removeAssembly} from './model/assemblies.js';
 import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
-import {bendsWith} from './view/wires.js';
+import {bendsWith, CONTACT_LIMITS} from './view/wires.js';
+import {DEFAULT_PREVIEW_CONTEXT} from './view/development.js';
 const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
@@ -73,7 +74,7 @@ export class OrganStudio {
       traceSource : 'plan',
       wireScope : 'all',
       contactView : 'design',
-      contactLimit : 120,
+      contactLimit : CONTACT_LIMITS[0],
       document : newDocument(label('app.newFish')),
       sites : [],
       capabilities : null,
@@ -85,7 +86,7 @@ export class OrganStudio {
       effect : 0,
       focusSubstance : 0,
       previewInput : 1,
-      previewContext : {maturity : 0, hormones : Array(6).fill(0)},
+      previewContext : DEFAULT_PREVIEW_CONTEXT,
       sightProbe : null,
       senseProbe : null,
       armed : null,
@@ -306,8 +307,14 @@ export class OrganStudio {
     if (!element)
       return;
     const scroll = reset ? 0 : element.scrollTop;
+    // A redrawn inspector keeps open what the user opened.
+    const opened =
+        new Set([...element.querySelectorAll('details[open] > summary') ].map(s => s.textContent));
     element.innerHTML =
         this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
+    for (const summary of element.querySelectorAll('details > summary'))
+      if (opened.has(summary.textContent))
+        summary.parentElement.open = true;
     element.scrollTop = scroll;
     this.drawSight();
   }

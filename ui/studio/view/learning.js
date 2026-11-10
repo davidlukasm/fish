@@ -245,8 +245,7 @@ function teacherList(state, center, modulators) {
                     '"><span class="aid-teacher-dot"></span>' +
                     escapeText(taught.name || substanceName(state, taught.index)) + '</span>'
               : '');
-  return items ? '<div class="aid-teacher-list">' + items + '</div>'
-               : '<p class="aid-hint">' + label('learnRule.noTeacher') + '</p>';
+  return items ? '<div class="aid-teacher-list">' + items + '</div>' : '';
 }
 const NODE_MARK = Object.freeze({marker : 6, box : 8});
 function learnersOverview(state) {

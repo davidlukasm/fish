@@ -31,7 +31,7 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, pointMarks, trackShare, widthTrack} from './markup.js';
 import {formatNumber, formatSigned, joinParts, percent, t, tList} from '../../strings.js';
-import {heading, icon, ICON, label} from './kit.js';
+import {heading, icon, ICON, label, numberField} from './kit.js';
 import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON} from './icons.js';
 import {EFFECT_ORDER, EFFECT_PANEL, effectPanel, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
@@ -428,11 +428,10 @@ function lifePhaseEditor(state, focus) {
            ' Z"/></g>';
   };
   return '<section class="aid-life-phase">' + heading(label('inspector.lifePhase')) +
-         '<p class="aid-hint">' + label('development.phaseHandles') + '</p>' +
          '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
-         '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '">' + dead +
-         curveAxes() + '<polyline class="aid-response-line" points="' + points + '"/>' +
-         curveMarks({
+         '" class="aid-response-chart" data-phase="' + escapeText(focus.id) + '"><title>' +
+         escapeText(label('development.phaseHandles')) + '</title>' + dead + curveAxes() +
+         '<polyline class="aid-response-line" points="' + points + '"/>' + curveMarks({
            high : percent(1),
            low : formatNumber(0),
            from : formatNumber(0),
@@ -462,7 +461,7 @@ export const wheelPatch = (fx, fy) => ({
 });
 export const wheelMarks = center => pointMarks({x : wheelX(center.q1), y : wheelY(center.q2)});
 export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
-function substanceMark(state, index) {
+export function substanceMark(state, index) {
   return index === HORMONES.levels       ? label('inspector.maturityMark')
          : index === HORMONES.levels + 1 ? label('inspector.reserveMark')
                                          : Array.from(substanceName(state, index))[0];
@@ -545,18 +544,27 @@ function growthEditor(state) {
   return '<section class="aid-growth">' +
          heading(
              t('studio.hormoneCard.growthWith', {name : substanceName(state, growth.substance)})) +
-         effectCurve(state, growth, GROWTH, GROWTH) + '<div class="aid-parameter-grid">' +
+         effectCurve(state, growth, GROWTH, GROWTH) + '<details><summary title="' +
+         escapeText(label('development.bodyGrowth')) + '">' + label('development.receptorValues') +
+         '</summary><div class="aid-parameter-grid">' +
          [ 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
-             .map(key => '<label>' + label('development.' + key) +
-                         '<input type="number" data-body-growth="' + key + '" value="' +
-                         growth[key] + '" step="' + (key === 'steepness' ? 1 : .001) + '" min="' +
-                         (key === 'half' ? state.capabilities.halfRange[0] : 0) + '" max="' +
-                         (key === 'sensitivity' ? state.capabilities.sensitivitySpan
-                          : key === 'steepness' ? state.capabilities.steepnessSteps
-                                                : 1) +
-                         '"></label>')
+             .map(key => receptorSlider(state, key, growth[key], 'data-body-growth="' + key + '"',
+                                        GROWTH))
              .join('') +
-         '</div><p class="aid-hint">' + label('development.bodyGrowth') + '</p></section>';
+         '</div></details></section>';
+}
+const RECEPTOR_STEP = .001;
+function receptorSlider(state, key, value, attributes, effect) {
+  const wheel = state.capabilities;
+  const min = key === 'baseline'      ? -1
+              : key === 'sensitivity' ? (effect === GROWTH ? 0 : -wheel.sensitivitySpan)
+              : key === 'half'        ? wheel.halfRange[0]
+                                      : 0;
+  const max = key === 'sensitivity' ? wheel.sensitivitySpan
+              : key === 'steepness' ? wheel.steepnessSteps
+                                    : 1;
+  return numberField(label('development.' + key), value,
+                     {min, max, step : key === 'steepness' ? 1 : RECEPTOR_STEP, attributes});
 }
 function organsOf(doc, centers) {
   const seen = new Set();
@@ -595,21 +603,11 @@ function receptorBody(state, center, effect) {
          doseStrip(state, receptor, effect, target) + '<details><summary>' +
          label('development.receptorValues') + '</summary><div class="aid-parameter-grid">' +
          [ 'baseline', 'sensitivity', 'half', 'width', 'steepness', 'spread_receptors' ]
-             .map(key => {
-               const min = key === 'baseline'      ? -1
-                           : key === 'sensitivity' ? -state.capabilities.sensitivitySpan
-                           : key === 'half'        ? state.capabilities.halfRange[0]
-                                                   : 0;
-               const max = key === 'sensitivity' ? state.capabilities.sensitivitySpan
-                           : key === 'steepness' ? state.capabilities.steepnessSteps
-                                                 : 1;
-               return '<label>' + label('development.' + key) +
-                      '<input type="number" data-receptor-field="' + escapeText(center.id) +
-                      '" data-receptor-effect="' + effect + '" data-receptor-key="' + key +
-                      '" min="' + min + '" max="' + max + '" step="' +
-                      (key === 'steepness' ? 1 : .0001) + '" value="' + receptor[key] +
-                      '"></label>';
-             })
+             .map(key => receptorSlider(state, key, receptor[key],
+                                        'data-receptor-field="' + escapeText(center.id) +
+                                            '" data-receptor-effect="' + effect +
+                                            '" data-receptor-key="' + key + '"',
+                                        effect))
              .join('') +
          '</div></details>';
 }

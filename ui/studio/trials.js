@@ -3,7 +3,8 @@ import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
 import {nodeLocation} from './view/places.js';
-import {previewContextOf} from './view/development.js';
+import {PREVIEW_INPUT_LOW, previewContextOf} from './view/development.js';
+import {clamp} from '../units.js';
 import {label} from './view/kit.js';
 import {acceptedGenome} from './view/compiler.js';
 
@@ -142,16 +143,22 @@ export const trialMethods = {
     const previous = previewContextOf(this.state),
           next = {...previous, hormones : [...previous.hormones ]};
     if (key === 'maturity')
-      next.maturity = Math.max(0, Math.min(1, value));
+      next.maturity = clamp(value);
+    else if (key === 'input')
+      this.state.previewInput = clamp(value, PREVIEW_INPUT_LOW);
     else if (Number.isInteger(Number(key)) && Number(key) >= 0 &&
              Number(key) < next.hormones.length)
-      next.hormones[Number(key)] = Math.max(0, Math.min(1, value));
+      next.hormones[Number(key)] = clamp(value);
     else
       return;
     this.clearStimulus();
     this.state.previewContext = next;
-    this.refreshViews();
-    this.refreshGraphics();
+    // Dragging an example value redraws once a frame.
+    this.previewFrame ??= requestAnimationFrame(() => {
+      this.previewFrame = null;
+      this.refreshViews();
+      this.refreshGraphics();
+    });
   },
   clearStimulus() {
     this.stopPulse();

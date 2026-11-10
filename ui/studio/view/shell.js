@@ -8,6 +8,7 @@ import {libraryOf, toolPalette} from './library.js';
 import {label} from './kit.js';
 import {GENOME_SUFFIX} from '../requests.js';
 import {LAYER_KEYS, layerMode, layerShown} from './layers.js';
+import {CONTACT_LIMITS} from './wires.js';
 
 const button = (attributes, text, {active = false, disabled = false, cls = ''} = {}) =>
     '<button ' + attributes +
@@ -112,9 +113,9 @@ function stationStage(s, cppn) {
          group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
          '<label class="aid-contact-limit">' + label('tools.contactLimit') +
          '<select data-contact-limit>' +
-         [ 120, 500, 0 ]
+         CONTACT_LIMITS
              .map(n => '<option value="' + n + '"' +
-                       ((s.contactLimit ?? 120) === n ? ' selected' : '') + '>' +
+                       ((s.contactLimit ?? CONTACT_LIMITS[0]) === n ? ' selected' : '') + '>' +
                        (n || label('tools.allContacts')) + '</option>')
              .join('') +
          '</select></label>' +

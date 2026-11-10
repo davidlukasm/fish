@@ -803,6 +803,9 @@
 .aid-dose-pip{fill:var(--aid-chip);stroke:currentColor;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}
 .aid-dose-pip.active{fill:currentColor}
 .aid-dose-end{fill:var(--aid-label-text);font-size:10px}
+.aid-preview-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
+.aid-preview-bars text{fill:var(--aid-label-text);font-size:11px}
+.aid-preview-level{opacity:.85}
 .aid-effect-divide{stroke:#2f5356;stroke-width:1;stroke-dasharray:3 3}
 .aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
 .aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire 2s ease-in-out infinite}

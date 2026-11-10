@@ -114,14 +114,16 @@ function colourRange(state) {
 }
 export function pigmentInspector(state, organ, center) {
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
-  return '<div data-pigment-block="' + escapeText(organ.id) + '">' + kindChips(organ, chosen) +
+  const times = state.anatomy?.pigmentTimes;
+  const title = times ? label('times', {
+    red : formatNumber(times[0], 1),
+    green : formatNumber(times[1], 1),
+    blue : formatNumber(times[2], 1)
+  })
+                      : '';
+  return '<div data-pigment-block="' + escapeText(organ.id) + '"' +
+         (title ? ' title="' + escapeText(title) + '"' : '') + '>' + kindChips(organ, chosen) +
          pigmentWheel(chosen.centers[0]) + amountTrack(organ, chosen) + colourRange(state) +
-         (state.anatomy?.pigmentTimes ? '<p class="aid-hint">' + label('times', {
-                                          red : formatNumber(state.anatomy.pigmentTimes[0], 1),
-                                          green : formatNumber(state.anatomy.pigmentTimes[1], 1),
-                                          blue : formatNumber(state.anatomy.pigmentTimes[2], 1)
-                                        }) + '</p>'
-                                      : '') +
          '</div>';
 }
 const DOTS = Object.freeze({step : 44, ends : [ 1, 2 ], inset : 16, least : 1.6, most : 8});

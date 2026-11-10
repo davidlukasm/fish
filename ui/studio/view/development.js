@@ -2,33 +2,64 @@ import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
 import {receptorResponse, wiredCrossing} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
-import {label} from './kit.js';
+import {clamp} from '../../units.js';
+import {formatNumber} from '../../strings.js';
+import {substanceMark, substanceName} from './substances.js';
+import {label, numberField} from './kit.js';
+import {substanceColor} from '../../hormones.js';
 
 export const DEFAULT_PREVIEW_CONTEXT =
     Object.freeze({maturity : 0, hormones : Object.freeze(Array(HORMONES.levels).fill(0))});
 export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
 const word = key => label('development.' + key);
-const substanceTitle = (state, index) =>
-    index === HORMONES.levels ? word('maturity')
-                              : state.document.substances.find(s => s.index === index)?.name ||
-                                    word('hormone') + ' ' + (index + 1);
+const PREVIEW_DIGITS = 2;
 const input = (name, value, min, max, step, attributes) =>
-    '<label>' + escapeText(name) + '<input type="number" min="' + min + '" max="' + max +
-    '" step="' + step + '" value="' + value + '" ' + attributes + '></label>';
-export function previewControls(state) {
+    numberField(name, value, {min, max, step, attributes});
+// The example situation as bars to drag: body maturity, each substance and the example input.
+const PREVIEW_BARS = Object.freeze(
+    {width : 300, height : 96, top : 12, bottom : 70, gauge : 12, knob : 7, mark : 88});
+export const PREVIEW_INPUT_LOW = -1;
+function previewColumns(state) {
   const context = previewContextOf(state);
-  const control = (key, name, value, min, max, step) =>
-      input(name, value, min, max, step, 'data-preview-context="' + key + '"');
-  return '<details class="aid-preview-context"><summary>' + word('preview') +
-         '</summary><p class="aid-hint">' + word('previewConditions') +
-         '</p><div class="aid-parameter-grid">' +
-         control('maturity', word('maturity'), context.maturity, 0, 1, .01) +
-         context.hormones
-             .map((level, index) =>
-                      control(String(index), substanceTitle(state, index), level, 0, 1, .01))
-             .join('') +
-         input(word('exampleInput'), state.previewInput ?? 1, -1, 1, .01, 'data-preview-input') +
-         '</div></details>';
+  return [
+    {key : 'maturity', value : context.maturity, low : 0, index : HORMONES.levels},
+    ...context.hormones.map((value, index) => ({key : String(index), value, low : 0, index})),
+    {key : 'input', value : state.previewInput ?? 1, low : PREVIEW_INPUT_LOW, index : null}
+  ];
+}
+export function previewPatch(state, key, fy) {
+  const B = PREVIEW_BARS, column = previewColumns(state).find(c => c.key === key);
+  const share = clamp((B.bottom - fy * B.height) / (B.bottom - B.top));
+  return column ? column.low + (1 - column.low) * share : null;
+}
+export function previewControls(state) {
+  const B = PREVIEW_BARS, columns = previewColumns(state), step = B.width / columns.length;
+  const y = (value, low) => B.bottom - (B.bottom - B.top) * (value - low) / (1 - low);
+  const bars = columns.map((c, k) => {
+    const x = step * (k + .5), base = y(Math.max(c.low, 0), c.low), at = y(c.value, c.low);
+    const colour = c.index === null ? 'var(--aid-size)' : substanceColor(c.index);
+    const name = c.index === null ? word('exampleInput') : substanceName(state, c.index);
+    return '<rect class="aid-dose-gauge" x="' + fixed(x - B.gauge / 2) + '" y="' + B.top +
+           '" width="' + B.gauge + '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 +
+           '"/><rect class="aid-preview-level" x="' + fixed(x - B.gauge / 2) + '" y="' +
+           fixed(Math.min(base, at)) + '" width="' + B.gauge + '" height="' +
+           fixed(Math.abs(base - at)) + '" fill="' + colour + '"/>' +
+           (c.low < 0 ? '<path class="aid-dose-zero" d="M' + fixed(x - B.gauge / 2) + ' ' +
+                            fixed(base) + ' h' + B.gauge + '"/>'
+                      : '') +
+           '<circle class="aid-graphic-handle" data-preview-handle="' + c.key + '" cx="' +
+           fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' + escapeText(name) +
+           ': ' + formatNumber(c.value, PREVIEW_DIGITS) + '</title></circle><text x="' + fixed(x) +
+           '" y="' + B.mark + '" text-anchor="middle">' +
+           escapeText(c.index === null ? label('development.inputMark')
+                                       : substanceMark(state, c.index)) +
+           '</text>';
+  });
+  return '<details class="aid-preview-context"><summary title="' +
+         escapeText(word('previewConditions')) + '">' + word('preview') +
+         '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + B.width + ' ' + B.height +
+         '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
+         bars.join('') + '</svg></details>';
 }
 export function lifecycleGraphic(state, center) {
   if (!state.capabilities)
@@ -45,7 +76,8 @@ export function lifecycleGraphic(state, center) {
     [ 'death', m => response(center.receptors[HORMONE_EFFECT.death], m, 0) > .5 ? 1 : 0 ]
   ];
   return '<svg class="aid-lifecycle" viewBox="0 0 ' + width + ' ' + height +
-         '" role="img" aria-label="' + word('lifecycle') + '">' +
+         '" role="img" aria-label="' + word('lifecycle') + '"><title>' +
+         escapeText(word('explanation')) + '</title>' +
          curves
              .map(([ key, value ]) => '<path class="aid-life-' + key + '" d="' +
                                       Array
@@ -85,7 +117,7 @@ export function cellDevelopment(state, center) {
                       .from({length : HORMONES.levels + 1},
                             (_, index) => '<option value="' + index + '"' +
                                           (index === growth.substance ? ' selected' : '') + '>' +
-                                          escapeText(substanceTitle(state, index)) + '</option>')
+                                          escapeText(substanceName(state, index)) + '</option>')
                       .join('');
   const birth = '<label class="aid-checkbox"><input type="checkbox" data-cell-growth-active="' +
                 id + '"' + (growth.active ? ' checked' : '') + '>' + word('receptorActive') +
@@ -136,9 +168,9 @@ export function cellDevelopment(state, center) {
                          'data-cell-distribution="' + id + '" data-distribution-key="' + key + '"'))
           .join('');
   return '<section class="aid-cell-development"><h4>' + word('title') + '</h4>' +
-         lifecycleGraphic(state, center) + '<p class="aid-hint">' + word('explanation') + '</p>' +
-         '<details><summary>' + word('birthReceptor') + '</summary>' + birth +
-         '<p class="aid-hint">' + word('birthDefault') + '</p></details>' +
+         lifecycleGraphic(state, center) + '<details><summary title="' +
+         escapeText(word('birthDefault')) + '">' + word('birthReceptor') + '</summary>' + birth +
+         '</details>' +
          '<details><summary>' + word('parameters') + '</summary><div class="aid-parameter-grid">' +
          parameters + '</div></details>' +
          '<details><summary>' + word('variation') + '</summary><div class="aid-parameter-grid">' +

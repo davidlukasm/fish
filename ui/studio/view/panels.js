@@ -43,7 +43,16 @@ import {
 import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph, padPoint, padValues, pointMarks} from './markup.js';
 import {findSite, onMidline, sideIndex} from '../model/layout.js';
-import {formatNumber, formatSigned, linkText, namedText, percent, t, tList} from '../../strings.js';
+import {
+  formatNumber,
+  formatSigned,
+  joinParts,
+  linkText,
+  namedText,
+  percent,
+  t,
+  tList
+} from '../../strings.js';
 import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
@@ -160,16 +169,18 @@ function motorTiming(state, center) {
         timing = state.anatomy?.motorTiming?.find(row => row[0] === port);
   if (!timing)
     return '';
-  return '<p class="aid-hint">' +
-         t('studio.development.motorTiming',
-           {integration : formatNumber(timing[1], 1), recovery : timing[2]}) +
-         '</p>';
+  return t('studio.development.motorTiming',
+           {integration : formatNumber(timing[1], 1), recovery : timing[2]});
 }
 const motorSection = (state, organ, center) =>
-    section(label('inspector.drive'),
+    section(
+        label('inspector.drive'),
+        '<div title="' +
+            escapeText(joinParts([ label('development.organRest'), motorTiming(state, center) ])) +
+            '">' +
             driveElement(center, label('inspector.drive'), () => label('development.netInput'),
-                         {...driveContext(state, center), meaning : driveMeaning(state, center)})) +
-    '<p>' + label('development.organRest') + '</p>' + motorTiming(state, center) +
+                         {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
+            '</div>') +
     (organ.type === 'muscle' ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
   if (isPacemaker(center)) {
@@ -579,8 +590,8 @@ function generatedInspector(state) {
   const row = (key, value) =>
       '<div><dt>' + label('development.' + key) + '</dt><dd>' + value + '</dd></div>';
   return '<header class="aid-inspector-head">' + heading(centerTitle(center)) +
-         '</header><p class="aid-hint">' + label('compiler.extraMeaning') +
-         '</p><dl class="aid-parameter-readout">' + row('potentialCells', center.copies) +
+         '</header><dl class="aid-parameter-readout" title="' +
+         escapeText(label('compiler.extraMeaning')) + '">' + row('potentialCells', center.copies) +
          (center.role === 'nerve' ? row('sign', cl.sign) + row('mode', formatSigned(cl.mode, 3)) +
                                         row('pace', formatNumber(cl.pace, 3)) +
                                         row('modulator', formatNumber(cl.modulator, 3))
