@@ -12,6 +12,7 @@ import {
   updateReceptor,
   wheelPlace
 } from './document.js';
+import {updateRegion} from './regions.js';
 
 // Each system owns its circuit so adding a hormone cannot retune a sensory or motor relay.
 export const SYSTEMS = Object.freeze([
@@ -24,7 +25,7 @@ export const SYSTEMS = Object.freeze([
       effects : [ [ HORMONE_EFFECT.teaching, {baseline : 0, sensitivity : .5} ] ]
     } ]
   },
-  {key : 'growth', sense : [ 'gut', 'food' ], hub : 'rhythm', growth : true, answers : []}, {
+  {key : 'growth', sense : [ 'gut', 'food' ], hub : 'circuit', growth : true, answers : []}, {
     key : 'alarm',
     sense : [ 'pain', 'injury' ],
     hub : 'circuit',
@@ -78,6 +79,8 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
     return null;
   const [q1, q2] = wheelPlace(wheel, index);
   let draft = updateCenter(gland.document, gland.centerId, {q1, q2, qwidth : 0, tau : GLAND_TAU});
+  if (system.growth)
+    draft = updateRegion(draft, hub.organId, {response : 1}, sites);
   const from = sense.organ.centers.find(c => c.key === senseKey)?.id ?? sense.organ.id;
   for (const [a, b] of [[ from, hub.organId ], [ hub.organId, gland.organId ]])
     draft = addWire(draft, a, b, 'both', sites)?.document ?? draft;
