@@ -20,11 +20,10 @@ class PopulationCatalog:
         self.previews = {}
 
 
-    @staticmethod
-    def examples():
+    def examples(self):
         base = ROOT / "genomes"
         rows = []
-        for path in sorted(base.rglob("*.genome")):
+        for path in self.simulation.starter_genomes():
             folder = path.parent.relative_to(base).as_posix()
             label = "" if folder == "." else folder.replace("/", " · ")
             name = path.stem.replace("-", " ").capitalize()
@@ -109,7 +108,7 @@ class PopulationCatalog:
         if identifier.startswith("example:"):
             base = (ROOT / "genomes").resolve()
             path = (base / identifier.removeprefix("example:")).resolve()
-            if path.suffix == ".genome" and base in path.parents and path.is_file():
+            if path in {p.resolve() for p in self.simulation.starter_genomes()} and path.is_file():
                 return path
         elif identifier.startswith("archive:"):
             return self.simulation.journal.resolve(identifier.removeprefix("archive:"))
