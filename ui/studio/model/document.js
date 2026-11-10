@@ -715,6 +715,28 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
   }
   return draft;
 }
+// Sites a new node of this organ must leave free: a pressure sensor reads the nearest organ, so
+// a node closer to another organ's sensor than that organ's own cells would take its reading.
+function pressureGuard(doc, organ, sites) {
+  const guarded = new Set();
+  for (const other of doc.organs.filter(o => o.id !== organ.id)) {
+    const key = PRESSURE_OF[other.type]?.key;
+    for (const sensor of other.centers.filter(c => c.key === key)) {
+      const at = findSite(sites, sensor.site);
+      const own = other.centers.filter(c => c !== sensor)
+                      .map(c => findSite(sites, c.site))
+                      .filter(Boolean)
+                      .map(s => siteSeparation(s, at));
+      if (!at || !own.length)
+        continue;
+      const reach = Math.min(...own);
+      for (const s of sites)
+        if (siteSeparation(s, at) < reach)
+          guarded.add(s.id);
+    }
+  }
+  return guarded;
+}
 export function setOrganNodes(doc, organId, count, sites, typeId = null) {
   const original = findOrgan(doc, organId), most = nodeLimit(original, sites);
   const kind = original?.centers[0]?.key;
@@ -736,9 +758,9 @@ export function setOrganNodes(doc, organId, count, sites, typeId = null) {
     const first = own[0], home = findSite(sites, first.site);
     if (!home)
       return null;
-    const code = functionFor(first, home);
+    const code = functionFor(first, home), guarded = pressureGuard(draft, organ, sites);
     while (own.length < wanted) {
-      const used = usedSites(draft);
+      const used = new Set([...usedSites(draft), ...guarded ]);
       const partner = bilateral && own.length % 2 ? own.at(-1)
                       : organ === twin            ? main.centers.filter(ofType)[own.length]
                                                   : null;
