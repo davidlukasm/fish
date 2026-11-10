@@ -38,7 +38,7 @@ struct BrainInterface {
     std::array<float, BODY_SECTORS> contact_weights{};
     bool contact_kernel = false;
     float opponency = .5f, proximity_range = .5f;
-    bool proximity = false;
+    bool proximity = false, inner = false;
     std::uint32_t shared_receptor = 0;
     int pressure_target = -1, pressure_kind = -1;
     double time_steps = 4;

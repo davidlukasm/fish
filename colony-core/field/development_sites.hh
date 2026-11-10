@@ -43,8 +43,10 @@ inline int development_function(const cppn::Point &p, Role role, int corner, int
   if (role == Role::Sensor) {
     if (corner == 0)
       return p.zone == 1 ? (variant ? Proximity : Light) : none;
+    // Hair cells on the skin feel the water; inside the body they weigh their direction against
+    // gravity, as statoliths do.
     if (corner == 1)
-      return surface ? Flow : none;
+      return Flow;
     if (corner == 2)
       return surface ? Odor : p.zone == 0 ? none : p.zone == 1 ? Blood : Intake;
     return variant ? Damage : surface ? Touch : InnerPressure;

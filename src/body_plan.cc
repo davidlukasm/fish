@@ -189,6 +189,7 @@ class AnatomyBuilder {
                                  share};
       r.longitudinal = n.y;
       r.proximity = fn.senses[field::Proximity] > 0;
+      r.inner = !field::development_surface(n.location);
       r.proximity_range = (p.quality2 + 1) * .5f;
       r.shared_receptor = std::uint32_t(result->sensory.size());
       if (!result->sensory.empty() && s.neurons[result->sensory.back().neuron].group == n.group)
@@ -203,7 +204,8 @@ class AnatomyBuilder {
         r.senses[k] = fn.senses[k] / share;
       r.refresh_modality();
       r.time_steps = field::time_constant_steps(p);
-      if (adapting_sense(r.channel))
+      // Gravity does not fade: a fish lying still must still know which way is down.
+      if (adapting_sense(r.channel) && !(r.inner && r.channel == field::Flow))
         r.adaptation_rate = 1 / field::time_constant_steps(p);
       if (r.visual())
         r.width = float(visual_width(p.field_width));
@@ -242,8 +244,9 @@ class AnatomyBuilder {
         result->anatomy[A::eye_left + side] += fn.senses[field::Light];
         for (int c = 0; c < rgb::count; ++c)
           result->anatomy[eye_color_column(side) + c] += fn.senses[field::Light] * r.spectrum[c];
+        // Gravity cells lie inside; the drawn lateral line shows only the skin's flow cells.
         for (int k = field::Odor; k <= field::Touch; ++k)
-          if (r.channel == k)
+          if (r.channel == k && !(k == field::Flow && r.inner))
             result->anatomy[A::smell_left + 2 * (k - field::Odor) + side] += fn.senses[k];
         if (n.location.zone == 0) {
           head_smell[side] += r.channel == field::Odor ? fn.senses[field::Odor] : 0;
@@ -848,7 +851,10 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   };
   if (r.dominant_sense() == field::Flow || r.dominant_sense() == field::Touch) {
     const double angle = b.angle + r.mechanical_angle, dx = std::cos(angle), dy = std::sin(angle);
-    if (r.dominant_sense() == field::Flow) {
+    // Depth grows with y: an inner hair cell is weighed down as far as it points along +y.
+    if (r.dominant_sense() == field::Flow && r.inner)
+      lateral = std::max(0., dy);
+    else if (r.dominant_sense() == field::Flow) {
       const auto weights = lateral_weights(r);
       for (int k = 0; k < LATERAL_CORNERS; ++k)
         lateral += weights[k] * std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) *
@@ -926,7 +932,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   }
   }
   const double exposure = birth_exposure(b, r.time_steps);
-  if (exposure < 1 && (dominant == field::Flow || dominant == field::Touch)) {
+  if (exposure < 1 && (dominant == field::Flow || dominant == field::Touch) && !r.inner) {
     double own = 0, weight = 0;
     const auto &inner = dominant == field::Flow ? b.embryo.flow : b.embryo.touch;
     for (int k = 0; k < SECTOR_COUNT; ++k) {

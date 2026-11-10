@@ -1134,6 +1134,23 @@ void plant_notches_follow_the_successful_bite() {
   check(shallow < .001 && deep > 100 * shallow,
         "a barely effective bite cannot leave the same deep notch as a strong bite");
 }
+void inner_hair_cells_feel_gravity() {
+  Body still;
+  BrainInterface::Receptor r{};
+  r.senses[field::Flow] = 1;
+  r.refresh_modality();
+  r.mechanical_angle = PI / 2;
+  const SensoryFrame calm;
+  const PhysiologyParameters physiology{};
+  check(anatomical_stimulus(still, r, calm, 0, physiology) == 0,
+        "a skin hair cell feels no current in still water");
+  r.inner = true;
+  const double down = anatomical_stimulus(still, r, calm, 0, physiology);
+  still.angle = PI;
+  const double up = anatomical_stimulus(still, r, calm, 0, physiology);
+  check(down > 1 - tolerance::precision && up == 0,
+        "an inner hair cell is weighed down when it points to the bottom, not to the surface");
+}
 void plant_tissue_needs_grinding_teeth() {
   Ecosystem source(SEED);
   source.starter_world();
@@ -1367,6 +1384,7 @@ int main() {
     one_bite_takes_one_mouthful_of_one_leaf();
     illuminated_leaves_survive_their_own_shade();
     plant_tissue_needs_grinding_teeth();
+    inner_hair_cells_feel_gravity();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
@@ -1376,7 +1394,7 @@ int main() {
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     algae_vanish_in_traces(g);
-    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Reife, Wachstum und Algen: "
+    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Reife, Wachstum und Algen: "
                  "OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

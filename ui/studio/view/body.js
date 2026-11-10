@@ -160,6 +160,7 @@ const GLYPH = Object.freeze({
   blood : [ 8, 13 ],
   blood_step : 15,
   gland : [ 16, 11 ],
+  balance : {sac : [ 13, 10 ], stone : 4.5},
   lateral_pore : 3.2
 });
 function eyeGlyph(state, organ, pos, drawnEyes) {
@@ -228,6 +229,12 @@ function testisGlyph(state, organ, pos) {
 const ellipseGlyph = (cls, [ rx, ry ]) => (state, organ, pos) =>
     '<ellipse class="' + cls + '" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) + '" rx="' + rx +
     '" ry="' + ry + '"/>';
+function balanceGlyph(state, organ, pos) {
+  const {sac : [ rx, ry ], stone} = GLYPH.balance;
+  return '<ellipse class="aid-anatomical-balance" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
+         '" rx="' + rx + '" ry="' + ry + '"/><circle class="aid-anatomical-statolith" cx="' +
+         fixed(pos.x) + '" cy="' + fixed(pos.y) + '" r="' + stone + '"/>';
+}
 function bloodGlyph(state, organ, pos) {
   const G = GLYPH, types = organTypes(organ), wheel = state.capabilities;
   let html = '';
@@ -270,6 +277,7 @@ const ORGAN_GLYPHS = Object.freeze({
   gland : ellipseGlyph('aid-anatomical-gland', GLYPH.gland),
   gut : state => gutPath(state),
   blood : bloodGlyph,
+  balance : balanceGlyph,
   defense : (state, organ) => spinesSvg(state, organ),
   touch : (state, organ) => skinSenseSvg(organ, state.sites),
   pain : (state, organ) => skinSenseSvg(organ, state.sites),

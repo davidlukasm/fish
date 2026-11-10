@@ -99,6 +99,13 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ sensor('current', SENSE_KIND.flow, 4, 'outer') ]
   },
+  // The same hair cells inside the body weigh their direction against gravity.
+  {
+    key : 'balance',
+    category : 'senses',
+    scope : 'side',
+    centers : [ sensor('gravity', SENSE_KIND.flow, 2, 'inner') ]
+  },
   {
     key : 'touch',
     category : 'senses',
