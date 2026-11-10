@@ -34,8 +34,9 @@ Color resting_dispersion(const BrainInterface &, const field::Substrate &);
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative);
 bool has_required_organs(const field::Substrate &);
-inline constexpr int LATERAL_CORNERS = 4;
-template <class T> using LateralSamples = std::array<T, LATERAL_CORNERS>;
+// The lateral line samples the water on a ring around the body outline, one point per skin
+// sector; a cell reads the sectors around its own direction, as a touch cell does.
+template <class T> using LateralSamples = std::array<T, BODY_SECTORS>;
 struct SensoryFrame {
   LateralSamples<Point> positions{}, relative{};
   LateralSamples<double> buried{};
@@ -50,7 +51,8 @@ SensoryFrame prepare_sensory_frame(const Body &, const BrainInterface &, const F
 SensoryFrame prepare_sensory_frame(const Body &, double gonad = 0, double sediment_contact = 0,
                                    Point disturbance = {});
 inline constexpr double LATERAL_ALONG = .7, LATERAL_ACROSS = .5;
-LateralSamples<double> lateral_weights(const BrainInterface::Receptor &);
+// Offset of ring point k from the body centre, forward along x and to the right along y.
+Point lateral_point(int k, double radius);
 double anatomical_stimulus(const Body &, const BrainInterface::Receptor &, const SensoryFrame &,
                            double sediment_contact, const PhysiologyParameters &);
 float receptor_response(const BrainInterface::Receptor &, double stimulus, double mean = 0);

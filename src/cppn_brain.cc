@@ -34,7 +34,6 @@ field::Options default_development_options = []() {
 namespace {
 constexpr double FOLIAGE_LAYERS = 3;
 constexpr double SEDIMENT_PROBE = .5;
-constexpr int LATERAL_POINTS = 4;
 constexpr std::size_t DEVELOPMENT_STEP = 8192;
 constexpr double STEP_SWITCH = .5, STEP_SPREAD = .1, LARGE_STEP_CHANCE = .1, LARGE_STEP = 10,
                  RATE_SCALE = .15, MIN_STEP = 1e-5;
@@ -281,14 +280,14 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   b.perception_.sensory_components.clear();
   if (b.perception_.inspect_vision) {
     b.perception_.sensory_components.resize(binding.sensory.size());
-    for (int side = 0; side < LATERAL_POINTS; ++side) {
+    for (std::size_t k = 0; k < BODY_SECTORS; ++k) {
       namespace L = lateral_sample_column;
-      auto &q = b.perception_.lateral_samples[side];
-      q[L::x] = sensory.positions[side].x;
-      q[L::y] = sensory.positions[side].y;
-      q[L::flow_x] = sensory.relative[side].x;
-      q[L::flow_y] = sensory.relative[side].y;
-      q[L::buried] = sensory.buried[side];
+      auto &q = b.perception_.lateral_samples[k];
+      q[L::x] = sensory.positions[k].x;
+      q[L::y] = sensory.positions[k].y;
+      q[L::flow_x] = sensory.relative[k].x;
+      q[L::flow_y] = sensory.relative[k].y;
+      q[L::buried] = sensory.buried[k];
     }
   }
   auto &signals = b.perception_.sensor_buffer;

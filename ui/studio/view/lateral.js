@@ -14,22 +14,18 @@ export function lateralFeel(state, organ) {
   return {weights : mean('weights'), tuning : mean('tuning')};
 }
 const sampleAngle = (k, count) => -Math.PI + (k + .5) * 2 * Math.PI / count;
-const LATERAL_SAMPLES = 4;
-export function lateralCorners(corners, centre, length, width) {
-  const [along, across] = corners;
-  return Array.from({length : LATERAL_SAMPLES}, (_, k) => ({
-                                                  x : centre.x - (k & 1 ? 1 : -1) * along * length,
-                                                  y : centre.y + (k & 2 ? 1 : -1) * across * width
-                                                }));
-}
-const CORNER = Object.freeze({least : 3, span : 10, field : .8});
-export function cornerDiscs(points, weights, scale = 1) {
+// The engine's sampling ring, forward and rightward in body radii, drawn head to the left.
+export const lateralRing = (ring, centre, length, width) => ring.map(
+    ([ forward, right ]) => ({x : centre.x - forward * length, y : centre.y + right * width}));
+const POINT = Object.freeze({least : 2, span : 6, field : .8});
+export function ringDiscs(points, weights, scale = 1) {
+  const most = Math.max(...weights, Number.EPSILON);
   return points
-      .map((p, k) =>
-               '<circle class="aid-lateral-corner" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
-               '" r="' +
-               fixed(scale * (CORNER.least + CORNER.span * Math.sqrt(Math.max(0, weights[k])))) +
-               '"/>')
+      .map((p, k) => '<circle class="aid-lateral-point" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
+                     '" r="' +
+                     fixed(scale *
+                           (POINT.least + POINT.span * Math.sqrt(Math.max(0, weights[k]) / most))) +
+                     '"/>')
       .join('');
 }
 const ARROW = Object.freeze({head : 9, spread : .45});
@@ -60,9 +56,9 @@ export const lateralPatch = fx =>
     ({field : trackShare(fx * LATERAL_FIELD.width, LATERAL_FIELD.track)});
 export function lateralField(state, organ) {
   const L = LATERAL_FIELD, feel = lateralFeel(state, organ), first = organ.centers[0];
-  const corners = state.capabilities?.lateralCorners;
+  const ring = state.capabilities?.lateralRing;
   const block = '<div data-lateral-block="' + escapeText(organ.id) + '">';
-  if (!feel || !corners || !first)
+  if (!feel || !ring || !first)
     return block + '</div>';
   const length = BODY_RADIUS * L.scale,
         width = (skinAt(BODY_MIDDLE.x, 1) - BODY_MIDDLE.y) * L.scale;
@@ -89,8 +85,7 @@ export function lateralField(state, organ) {
          label('title') + '"><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
          '" r="' + L.inner + '"/><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
          '" r="' + (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' + lobe + '"/>' +
-         fish +
-         cornerDiscs(lateralCorners(corners, centre, length, width), feel.weights, CORNER.field) +
+         fish + ringDiscs(lateralRing(ring, centre, length, width), feel.weights, POINT.field) +
          arrow +
          namedTrack(L.track, L.track_y, first.field ?? 0, 'data-graphic-handle="width"',
                     t('studio.lateral.handle'),

@@ -526,48 +526,31 @@ Point Field::fish_disturbance(const VisibleBody &p, Point q) const {
   const double projection = (dx * p.flow_x + dy * p.flow_y) / distance2;
   return {weight * (2 * dx * projection - p.flow_x), weight * (2 * dy * projection - p.flow_y)};
 }
-std::array<Point, 4> Field::nearby_flow_samples(const Body &b,
-                                                const std::array<Point, 4> &positions) const {
-  std::array<Point, 4> result{};
-  const double spread = std::max(std::hypot(delta_x(positions[0].x - b.x), positions[0].y - b.y),
-                                 std::hypot(delta_x(positions[1].x - b.x), positions[1].y - b.y));
-  std::array<int, 4> same{};
-  for (int k = 0; k < 4; ++k) {
-    same[k] = k;
-    for (int j = 0; j < k; ++j)
-      if (positions[k].x == positions[j].x && positions[k].y == positions[j].y) {
-        same[k] = j;
-        break;
-      }
-  }
+template <std::size_t N>
+std::array<Point, N> Field::nearby_flow_samples(const Body &b,
+                                                const std::array<Point, N> &positions) const {
+  std::array<Point, N> result{};
+  double spread = 0;
+  for (const auto &q : positions)
+    spread = std::max(spread, std::hypot(delta_x(q.x - b.x), q.y - b.y));
   body_grid_.nearby(b.x, b.y, DISTURBANCE_MAX + spread, [&](std::uint32_t i) {
     const auto &p = visible_[i];
     if (p.kind != food_kind::fish || p.hidden || !p.hatched || (b.identity && p.id == b.identity))
       return;
-    const double speed = std::hypot(p.flow_x, p.flow_y);
-    if (speed < STILL_FLOW)
+    if (std::hypot(p.flow_x, p.flow_y) < STILL_FLOW)
       return;
-    const int samples = 4;
-    for (int k = 0; k < samples; ++k) {
-      if (same[k] != k)
-        continue;
-      const auto q = positions[k];
-      const auto v = fish_disturbance(p, q);
+    for (std::size_t k = 0; k < N; ++k) {
+      const auto v = fish_disturbance(p, positions[k]);
       result[k].x += v.x;
       result[k].y += v.y;
     }
   });
-  for (int k = 0; k < 4; ++k)
-    result[k] = result[same[k]];
   return result;
 }
-std::array<Point, 2> Field::nearby_flow_samples(const Body &b,
-                                                const std::array<Point, 2> &p) const {
-  auto a = nearby_flow_samples(b, std::array<Point, 4>{{p[0], p[1], p[0], p[1]}});
-  return {{a[0], a[1]}};
-}
+template std::array<Point, BODY_SECTORS>
+Field::nearby_flow_samples(const Body &, const std::array<Point, BODY_SECTORS> &) const;
 Point Field::nearby_flow(const Body &b) const {
-  return nearby_flow_samples(b, std::array<Point, 2>{{{b.x, b.y}, {b.x, b.y}}})[0];
+  return nearby_flow_samples(b, std::array<Point, 1>{{{b.x, b.y}}})[0];
 }
 Color Field::surface_color(double x, double y) const {
   if (sediment_immersion(x, y, SURFACE_PROBE) > BURIED_SURFACE)

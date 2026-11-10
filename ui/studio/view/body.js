@@ -41,7 +41,7 @@ import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
-import {arrowPath, cornerDiscs, lateralCorners, lateralFeel} from './lateral.js';
+import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {MUSCLE_TONE, muscleShape} from './muscles.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -414,8 +414,8 @@ function organNodes(state, organ) {
       })
       .join('');
 }
-const FELT = Object.freeze(
-    {step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, corner : 2.2});
+const FELT =
+    Object.freeze({step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, point : 2.2});
 function feltCells(state, organ) {
   return organ.centers.flatMap(
       c => (groupReport(state.document, state.anatomy, 'felt', c.id) ??
@@ -438,12 +438,13 @@ function feltSkin(state, cells) {
       .join('');
 }
 function feltFlow(state, organ, cells) {
-  const feel = lateralFeel(state, organ), corners = state.capabilities?.lateralCorners;
+  const feel = lateralFeel(state, organ), ring = state.capabilities?.lateralRing;
   const centre = BODY_MIDDLE;
-  const discs = feel && corners ? cornerDiscs(lateralCorners(corners, centre, BODY_RADIUS,
-                                                             skinAt(centre.x, 1) - centre.y),
-                                              feel.weights, FELT.corner)
-                                : '';
+  const discs =
+      feel && ring
+          ? ringDiscs(lateralRing(ring, centre, BODY_RADIUS, skinAt(centre.x, 1) - centre.y),
+                      feel.weights, FELT.point)
+          : '';
   return discs +
          cells
              .map(({cell : [ angle ], at}) => {

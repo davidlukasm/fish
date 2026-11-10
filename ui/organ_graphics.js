@@ -314,7 +314,7 @@ const DIRECTION_GRAPHIC = Object.freeze({
   ry : 26,
   left_x : 90,
   spacing : 180,
-  arrow : 35,
+  arrow : 16,
   buried_min : .5,
   arrow_width : 2,
   min_speed : .001,
@@ -322,7 +322,7 @@ const DIRECTION_GRAPHIC = Object.freeze({
   head_side : 4,
   dot : 3,
   digits : 2,
-  value_shift : 28,
+  value_x : 152,
   value_y : 118,
   cell_offset : 24,
   cell_alpha : .25,
@@ -348,38 +348,36 @@ function drawDirectionGraphic({g, info, d, color, label}) {
             0, 0, Math.PI * 2);
   g.fill();
   g.stroke();
-  const samples = d.b.lateral_samples || [], ca = Math.cos(d.p[FISH.angle]),
-        sa = Math.sin(d.p[FISH.angle]);
-  for (let k = 0; k < 2; k++) {
-    const q = samples[k], x = DIRECTION_GRAPHIC.left_x + DIRECTION_GRAPHIC.spacing * k;
-    if (!q)
-      continue;
-    const L = LATERAL_SAMPLE, dx = q[L.flow_x] * ca + q[L.flow_y] * sa,
-          dy = -q[L.flow_x] * sa + q[L.flow_y] * ca, m = Math.hypot(dx, dy),
-          scale = DIRECTION_GRAPHIC.arrow / Math.max(1, m), tx = x + dx * scale,
-          ty = DIRECTION_GRAPHIC.cy + dy * scale;
-    g.strokeStyle = q[L.buried] > DIRECTION_GRAPHIC.buried_min ? DIRECTION_GRAPHIC.buried
-                                                               : DIRECTION_GRAPHIC.flow;
-    g.lineWidth = DIRECTION_GRAPHIC.arrow_width;
+  // One arrow per lateral-line ring point: how the body moves through the water there.
+  const D = DIRECTION_GRAPHIC, L = LATERAL_SAMPLE, samples = d.b.lateral_samples || [],
+        ca = Math.cos(d.p[FISH.angle]), sa = Math.sin(d.p[FISH.angle]);
+  let fastest = 0;
+  samples.forEach((q, k) => {
+    const a = -Math.PI + (k + .5) * 2 * Math.PI / samples.length, c = Math.cos(a), s = Math.sin(a),
+          r = 1 / Math.hypot(c / D.rx, s / D.ry), x = D.cx + r * c, y = D.cy + r * s,
+          dx = q[L.flow_x] * ca + q[L.flow_y] * sa, dy = -q[L.flow_x] * sa + q[L.flow_y] * ca,
+          m = Math.hypot(dx, dy), scale = D.arrow / Math.max(1, m), tx = x + dx * scale,
+          ty = y + dy * scale;
+    fastest = Math.max(fastest, m);
+    g.strokeStyle = q[L.buried] > D.buried_min ? D.buried : D.flow;
+    g.lineWidth = D.arrow_width;
     g.beginPath();
-    g.moveTo(x, DIRECTION_GRAPHIC.cy);
+    g.moveTo(x, y);
     g.lineTo(tx, ty);
-    if (m > DIRECTION_GRAPHIC.min_speed) {
+    if (m > D.min_speed) {
       const nx = dx / m, ny = dy / m;
-      g.lineTo(tx - DIRECTION_GRAPHIC.head_back * nx + DIRECTION_GRAPHIC.head_side * ny,
-               ty - DIRECTION_GRAPHIC.head_back * ny - DIRECTION_GRAPHIC.head_side * nx);
+      g.lineTo(tx - D.head_back * nx + D.head_side * ny, ty - D.head_back * ny - D.head_side * nx);
       g.moveTo(tx, ty);
-      g.lineTo(tx - DIRECTION_GRAPHIC.head_back * nx - DIRECTION_GRAPHIC.head_side * ny,
-               ty - DIRECTION_GRAPHIC.head_back * ny + DIRECTION_GRAPHIC.head_side * nx);
+      g.lineTo(tx - D.head_back * nx - D.head_side * ny, ty - D.head_back * ny + D.head_side * nx);
     }
     g.stroke();
     g.fillStyle = color;
     g.beginPath();
-    g.arc(x, DIRECTION_GRAPHIC.cy, DIRECTION_GRAPHIC.dot, 0, Math.PI * 2);
+    g.arc(x, y, D.dot, 0, Math.PI * 2);
     g.fill();
-    label(t('units.pxPerStepShort', {n : organNumber(m, DIRECTION_GRAPHIC.digits)}),
-          x - DIRECTION_GRAPHIC.value_shift, DIRECTION_GRAPHIC.value_y);
-  }
+  });
+  if (samples.length)
+    label(t('units.pxPerStepShort', {n : organNumber(fastest, D.digits)}), D.value_x, D.value_y);
   for (const r of info.receptors) {
     const longitudinal =
               r[RECEPTOR.longitudinal] ?? d.nodes.get(r[RECEPTOR.neuron])?.[NEURON.y] ?? 0,

@@ -368,7 +368,7 @@ void InteractiveSession::write_brain_senses(std::ostream &out, const Individual 
       out << ']';
     }
   out << "],\"lateral_samples\":[";
-  for (int k = 0; k < 4; ++k) {
+  for (std::size_t k = 0; k < BODY_SECTORS; ++k) {
     if (k)
       out << ',';
     out << '[';

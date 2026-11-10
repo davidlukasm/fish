@@ -50,7 +50,7 @@ struct PerceptionState {
   std::array<double, 2> eye_pull{{1, 1}};
   double visual_x = 0, visual_y = 0, visual_angle = 0, visual_range = 128;
   std::vector<std::array<float, field::SENSE_COUNT>> sensory_components;
-  std::array<std::array<double, lateral_sample_column::count>, 4> lateral_samples{};
+  std::array<std::array<double, lateral_sample_column::count>, BODY_SECTORS> lateral_samples{};
   std::array<std::array<double, nose_sample_column::odor + odor_kind::count>, 2> nose_samples{};
   std::vector<VisualContribution> visual_contributions;
   std::vector<VisualSample> visual_samples;

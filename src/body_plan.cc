@@ -782,11 +782,15 @@ Point olfactory_position(const Body &b, const BrainInterface &, int side) {
                c = std::cos(b.angle), s = std::sin(b.angle);
   return {b.x + NOSE_AHEAD * r * c - offset * s, b.y + NOSE_AHEAD * r * s + offset * c};
 }
+Point lateral_point(int k, double radius) {
+  const double a = sector_angle(k), c = std::cos(a), s = std::sin(a),
+               r = radius / std::hypot(c / LATERAL_ALONG, s / LATERAL_ACROSS);
+  return {r * c, r * s};
+}
 static Point lateral_offset(int k, double radius, double angle) {
-  const double along = (k & 1 ? 1 : -1) * LATERAL_ALONG * radius,
-               across = (k & 2 ? 1 : -1) * LATERAL_ACROSS * radius, c = std::cos(angle),
-               s = std::sin(angle);
-  return {along * c - across * s, along * s + across * c};
+  const auto p = lateral_point(k, radius);
+  const double c = std::cos(angle), s = std::sin(angle);
+  return {p.x * c - p.y * s, p.x * s + p.y * c};
 }
 static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   SensoryFrame f;
@@ -810,9 +814,8 @@ SensoryFrame prepare_sensory_frame(const Body &b, const BrainInterface &binding,
   f.depth = std::clamp(b.y / world.geometry().height, 0., 1.);
   if (!b.hatched)
     return f;
-  if (binding.sense_counts[field::Flow] <= 0 &&
-      std::none_of(binding.sensory.begin(), binding.sensory.end(),
-                   [](const auto &r) { return r.dominant_sense() == field::Flow; }))
+  if (std::none_of(binding.sensory.begin(), binding.sensory.end(),
+                   [](const auto &r) { return r.dominant_sense() == field::Flow && !r.inner; }))
     return f;
   for (std::size_t k = 0; k < f.positions.size(); ++k) {
     const auto offset = lateral_offset(int(k), f.radius, b.angle);
@@ -830,15 +833,6 @@ SensoryFrame prepare_sensory_frame(const Body &b, const BrainInterface &binding,
   }
   return f;
 }
-LateralSamples<double> lateral_weights(const BrainInterface::Receptor &r) {
-  const double t = .5 * (std::clamp(double(r.longitudinal), -1., 1.) + 1),
-               side = .5 * (std::clamp(double(r.lateral), -1., 1.) + 1);
-  LateralSamples<double> weights{};
-  for (int k = 0; k < LATERAL_CORNERS; ++k)
-    weights[k] = (1 - r.spatial_width) * (k & 1 ? t : 1 - t) * (k & 2 ? side : 1 - side) +
-                 r.spatial_width / LATERAL_CORNERS;
-  return weights;
-}
 double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,
                            double sediment_contact, const PhysiologyParameters &p) {
   const int dominant = r.dominant_sense();
@@ -854,12 +848,10 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     // Depth grows with y: an inner hair cell is weighed down as far as it points along +y.
     if (r.dominant_sense() == field::Flow && r.inner)
       lateral = std::max(0., dy);
-    else if (r.dominant_sense() == field::Flow) {
-      const auto weights = lateral_weights(r);
-      for (int k = 0; k < LATERAL_CORNERS; ++k)
-        lateral += weights[k] * std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) *
-                   (1 - f.buried[k]);
-    }
+    else if (r.dominant_sense() == field::Flow)
+      for (int k = 0; k < SECTOR_COUNT; ++k)
+        lateral += r.contact_weights[k] *
+                   std::max(0., f.relative[k].x * dx + f.relative[k].y * dy) * (1 - f.buried[k]);
     if (r.dominant_sense() == field::Touch) {
       if (f.contact_ring) {
         if (r.contact_kernel) {

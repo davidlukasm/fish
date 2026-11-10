@@ -6,6 +6,7 @@
 #include "ecology_internal.hh"
 #include "plants.hh"
 #include "body_plan.hh"
+#include "receptor_tuning.hh"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -1151,6 +1152,36 @@ void inner_hair_cells_feel_gravity() {
   check(down > 1 - tolerance::precision && up == 0,
         "an inner hair cell is weighed down when it points to the bottom, not to the surface");
 }
+void lateral_cells_read_the_water_beside_them() {
+  const Body still;
+  const PhysiologyParameters physiology{};
+  const auto receptor = [](double direction) {
+    BrainInterface::Receptor r{};
+    r.senses[field::Flow] = 1;
+    r.refresh_modality();
+    r.mechanical_angle = float(direction);
+    const double width = contact_width(0);
+    double total = 0;
+    for (int k = 0; k < SECTOR_COUNT; ++k)
+      total += r.contact_weights[k] = float(
+          std::max(0., 1 - std::abs(std::remainder(sector_angle(k) - direction, 2 * PI)) / width));
+    for (auto &w : r.contact_weights)
+      w /= float(total);
+    return r;
+  };
+  SensoryFrame frame;
+  const int snout = int(std::lround(sector_position(0)));
+  frame.relative[snout] = {1, 0};
+  check(anatomical_stimulus(still, receptor(0), frame, 0, physiology) > .4 &&
+            anatomical_stimulus(still, receptor(PI), frame, 0, physiology) == 0,
+        "water pressing on the snout reaches the cells there, not those at the tail");
+  for (int k = 0; k < SECTOR_COUNT; ++k) {
+    const auto p = lateral_point(k, 1);
+    check(std::abs(std::pow(p.x / LATERAL_ALONG, 2) + std::pow(p.y / LATERAL_ACROSS, 2) - 1) <
+              tolerance::precision,
+          "the lateral line samples the water on the body outline");
+  }
+}
 void plant_tissue_needs_grinding_teeth() {
   Ecosystem source(SEED);
   source.starter_world();
@@ -1385,6 +1416,7 @@ int main() {
     illuminated_leaves_survive_their_own_shade();
     plant_tissue_needs_grinding_teeth();
     inner_hair_cells_feel_gravity();
+    lateral_cells_read_the_water_beside_them();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
@@ -1394,7 +1426,8 @@ int main() {
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     algae_vanish_in_traces(g);
-    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Reife, Wachstum und Algen: "
+    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Reife, Wachstum "
+                 "und Algen: "
                  "OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';

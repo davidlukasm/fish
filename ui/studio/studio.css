@@ -650,10 +650,10 @@
 .aid-lateral-limit{fill:none;stroke:var(--aid-limit);stroke-width:1}
 .aid-lateral-lobe{fill:#bfe3f033;stroke:var(--aid-flow);stroke-width:1.6;stroke-linejoin:round}
 .aid-lateral-fish{fill:var(--aid-sketch);stroke:var(--aid-sketch-line);stroke-width:20}
-.aid-lateral-corner{fill:#bfe3f04d;stroke:var(--aid-flow);stroke-width:1.2}
+.aid-lateral-point{fill:#bfe3f04d;stroke:var(--aid-flow);stroke-width:1.2}
 .aid-lateral-arrow{fill:none;stroke:var(--aid-flow-light);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-lateral-field text{fill:var(--aid-label-text);font-size:11px}
-.aid-felt.lateral .aid-lateral-corner{stroke-width:2.5}
+.aid-felt.lateral .aid-lateral-point{stroke-width:2.5}
 .aid-sense-probe{pointer-events:none}
 .aid-probe-ring{fill:none;stroke:var(--aid-flow-light);stroke-opacity:.35;stroke-width:1.2;stroke-dasharray:6 6;vector-effect:non-scaling-stroke}
 .aid-probe-ring-label{fill:var(--aid-axis-text);font:12px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}

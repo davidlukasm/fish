@@ -253,8 +253,8 @@ public:
   Point nearby_flow(const Body &) const;
   Point fish_disturbance(const VisibleBody &, Point) const;
   void prepare_plankton_flow();
-  std::array<Point, 2> nearby_flow_samples(const Body &, const std::array<Point, 2> &) const;
-  std::array<Point, 4> nearby_flow_samples(const Body &, const std::array<Point, 4> &) const;
+  template <std::size_t N>
+  std::array<Point, N> nearby_flow_samples(const Body &, const std::array<Point, N> &) const;
   double sediment_cover(double, double) const;
   bool rests_on_sediment(Point, double radius) const;
   bool bed_site_clear(const SurfacePatch &, double along, double height, double headroom) const;

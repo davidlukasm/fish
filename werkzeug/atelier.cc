@@ -147,20 +147,14 @@ void sense_report(const field::Substrate &t,
     }
   } else if (scene.kind == sense_scene::flow) {
     fishsim::SensoryFrame frame;
-    fishsim::LateralSamples<double> facing{};
-    double most = 0;
-    for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k) {
-      const double along = k & 1 ? fishsim::LATERAL_ALONG : -fishsim::LATERAL_ALONG,
-                   across = k & 2 ? fishsim::LATERAL_ACROSS : -fishsim::LATERAL_ACROSS;
-      facing[k] = std::max(0., std::cos(std::atan2(across, along) - bearing));
-      most = std::max(most, facing[k]);
+    for (int k = 0; k < fishsim::SECTOR_COUNT; ++k) {
+      const double facing = std::max(0., std::cos(fishsim::sector_angle(k) - bearing));
+      frame.relative[k] = {scene.strength * std::cos(bearing) * facing,
+                           scene.strength * std::sin(bearing) * facing};
     }
-    for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
-      frame.relative[k] = {scene.strength * std::cos(bearing) * facing[k] / most,
-                           scene.strength * std::sin(bearing) * facing[k] / most};
     for (std::size_t i = 0; i < answers.size(); ++i) {
       const auto &r = interface->sensory[i];
-      if (r.dominant_sense() == field::Flow)
+      if (r.dominant_sense() == field::Flow && !r.inner)
         answers[i] = fishsim::receptor_response(
             r, fishsim::anatomical_stimulus(body, r, frame, 0, physiology));
     }
@@ -459,12 +453,12 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::array<double, LATERAL_DIRECTIONS> tuning{};
       int count = 0;
       for (const auto &r : a.sensory) {
-        if (r.dominant_sense() != field::Flow || !groups[i].contains(t.neurons[r.neuron].location))
+        if (r.dominant_sense() != field::Flow || r.inner ||
+            !groups[i].contains(t.neurons[r.neuron].location))
           continue;
         ++count;
-        const auto w = fishsim::lateral_weights(r);
-        for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
-          weights[k] += w[k];
+        for (int k = 0; k < fishsim::SECTOR_COUNT; ++k)
+          weights[k] += r.contact_weights[k];
         std::array<double, LATERAL_DIRECTIONS> stirred{};
         for (int d = 0; d < LATERAL_DIRECTIONS; ++d) {
           const double from = -fishsim::PI + (d + .5) * 2 * fishsim::PI / LATERAL_DIRECTIONS;
@@ -483,7 +477,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
         continue;
       }
       std::cout << "{\"weights\":[";
-      for (int k = 0; k < fishsim::LATERAL_CORNERS; ++k)
+      for (int k = 0; k < fishsim::SECTOR_COUNT; ++k)
         std::cout << (k ? "," : "") << weights[k] / count;
       std::cout << "],\"tuning\":[";
       for (int d = 0; d < LATERAL_DIRECTIONS; ++d)
@@ -858,6 +852,17 @@ std::string gonad_report() {
 
 constexpr int DIET_SAMPLES = 41;
 constexpr double DIET_SUCTION = 4;
+// Where the lateral line samples the water, in body radii: forward, then to the right.
+std::string lateral_ring_report() {
+  std::ostringstream out;
+  out << '[';
+  for (int k = 0; k < fishsim::SECTOR_COUNT; ++k) {
+    const auto p = fishsim::lateral_point(k, 1);
+    out << (k ? "," : "") << '[' << p.x << ',' << p.y << ']';
+  }
+  out << ']';
+  return out.str();
+}
 std::string diet_report() {
   std::ostringstream out;
   out << std::setprecision(DIET_DIGITS);
@@ -925,8 +930,7 @@ int main(int argc, char **argv) {
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
                 << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
 
-                << ",\"diet\":" << diet_report() << ",\"lateralCorners\":["
-                << fishsim::LATERAL_ALONG << ',' << fishsim::LATERAL_ACROSS << ']'
+                << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
                 << ",\"gonads\":" << gonad_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
