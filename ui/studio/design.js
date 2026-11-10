@@ -103,6 +103,7 @@ export const designMethods = {
     }
     this.designRunning = true;
     this.designPending = false;
+    const request = ++this.designRequest;
     const document = this.state.document, probe = this.state.sightProbe,
           sense = this.state.senseProbe;
     this.api(requestBody('design', {
@@ -115,7 +116,7 @@ export const designMethods = {
         // rest.
         .then(anatomy => {
           if (this.state.document === document)
-            this.showAnatomy(anatomy);
+            this.showAnatomy(anatomy, request);
         })
         .catch(error => this.notice(error.message))
         .finally(() => {
@@ -125,7 +126,7 @@ export const designMethods = {
             this.requestDesign();
         });
   },
-  showAnatomy(anatomy) {
+  showAnatomy(anatomy, request) {
     const probesOnly = this.shownDesign === this.state.document;
     this.shownDesign = this.state.document;
     this.state.anatomy = anatomy;
@@ -134,13 +135,13 @@ export const designMethods = {
       this.refreshVision();
       this.drawSight();
       this.refreshProbes();
-      return this.traceAnswered();
+      return this.traceAnswered(request);
     }
     this.refreshHeader();
     this.refreshScene();
     this.refreshGraphics();
     this.checkPressure();
-    this.traceAnswered();
+    this.traceAnswered(request);
   },
   async checkPressure() {
     const doc = this.state.document, pressure = this.state.anatomy?.pressure;

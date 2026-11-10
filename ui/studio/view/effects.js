@@ -240,20 +240,19 @@ function sideBySide(draw, colour, ends, cloud = true) {
                        : '') +
       draw(withIt ? ends.with : ends.without, withIt) + '<circle class="aid-effect-mark' +
       (withIt ? ' with' : '') + '" cx="' + (P.width - P.markAt) + '" cy="' + P.markAt + '" r="' +
-      P.mark + '"' + (withIt ? ' fill="' + colour + '"' : '') + '/></g>';
+      P.mark + '"' + (withIt ? ' style="fill:' + colour + '"' : '') + '/></g>';
   return '<svg class="aid-effect-scene" viewBox="0 0 ' + 2 * P.width + ' ' + P.height +
          '" aria-hidden="true">' + side(false, 0) + '<line class="aid-effect-divide" x1="' +
          P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
          side(true, P.width) + '</svg>';
 }
-export function effectPanel(effect, r, colour, share, baseline = 0) {
+export function effectPanel(effect, r, colour, withIt, baseline = 0) {
   const draw = effect === HORMONE_EFFECT.teaching
                    ? value => taught(colour, {without : baseline, with : value})(value, true)
                    : SCENES[effect];
-  return draw ? (share > 0 ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
-                                 '" r="' + P.r * P.cloud + '" fill="' + colour + '" opacity="' +
-                                 fixed(share) + '"/>'
-                           : '') +
+  return draw ? (withIt ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
+                              '" r="' + P.r * P.cloud + '" fill="' + colour + '"/>'
+                        : '') +
                     draw(r)
               : '';
 }

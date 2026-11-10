@@ -260,7 +260,7 @@ function doseStrip(state, receptor, effect, target) {
       responses
           .map((r, i) => '<svg x="' + cellX(i) + '" y="' + top + '" width="' + EFFECT_PANEL.width +
                          '" height="' + EFFECT_PANEL.height + '" class="aid-dose-cell">' +
-                         effectPanel(effect, r, colour, receptor.active ? i : 0, responses[0]) +
+                         effectPanel(effect, r, colour, receptor.active && i > 0, responses[0]) +
                          '</svg>')
           .join('') +
       '<line class="aid-effect-divide" x1="' + cellX(1) + '" y1="' + top + '" x2="' + cellX(1) +

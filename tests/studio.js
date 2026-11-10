@@ -1174,6 +1174,30 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   pulseStudio.api = () => { throw Error('A plan impulse must not request a neural simulation'); };
   pulseStudio.stimulate([ relay.centerId ]);
   assert.ok(pulseStudio.state.stimulus, 'A plan impulse works without a CPPN');
+  {
+    const target = {id : relay.centerId};
+    const learner = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+    learner.state.document = model.bindReceptor(doc, target.id, HORMONE_EFFECT.teaching, 0);
+    const leg = {from : 'sender', to : target.id, kind : 'electrical', sign : 1, level : 1};
+    const learned = parts => {
+      const stimulus = {fired : new Set(), sent : [ leg ], learned : [], taught : new Map()};
+      for (const part of parts) {
+        if (part.kind === 'electrical')
+          stimulus.fired.add(part.id);
+        learner.learnedPaths(part, stimulus);
+      }
+      return stimulus.learned.length;
+    };
+    const fires = {id : target.id, kind : 'electrical', sign : 1, level : 2};
+    const held = {id : target.id, kind : 'hormone', sign : 0, level : 2, substance : 0};
+    const node = {id : target.id, kind : 'teaching', sign : 0, level : 2};
+    assert.equal(learned([ fires, {...held, substance : 1} ]), 0,
+                 'Another substance does not teach');
+    assert.equal(learned([ fires, held ]), 1, 'The substance its teaching receptor holds teaches');
+    assert.equal(learned([ node, fires ]), 1, 'A teacher in the step of the firing teaches');
+    assert.equal(learned([ {...node, level : 1}, fires ]), 0,
+                 'A teacher before the firing does not');
+  }
   const mixedRelayIndex = model.allCenters(doc).findIndex(center => center.id === relay.centerId);
   const mixed = model.cppnTrace({
     ...state,

@@ -129,7 +129,8 @@ export const trialMethods = {
       modulated : new Set(),
       hormones : new Set(),
       sent : [],
-      learned : []
+      learned : [],
+      taught : new Map()
     };
     this.state.stimulus = stimulus;
     this.refreshViews();
@@ -158,8 +159,7 @@ export const trialMethods = {
         if (part.kind === 'electrical' && part.sign > 0)
           for (const [element, move] of this.stimulusMoves(part.id))
             element.classList.add(move);
-        if (part.kind !== 'electrical')
-          this.learnedPaths(part, stimulus);
+        this.learnedPaths(part, stimulus);
       },
       sent : leg => {
         if (leg.kind === 'hormone')
@@ -177,9 +177,12 @@ export const trialMethods = {
   },
   // A physical stimulus is no impulse of its own: its trace starts at the sense cells that answer
   // it, once the design run has measured them.
-  traceAnswered() {
-    const organ = this.pendingTrace && findOrgan(this.state.document, this.pendingTrace);
+  traceAnswered(request) {
+    const pending = this.pendingTrace;
+    if (!pending || !(request > pending.after))
+      return;
     this.pendingTrace = null;
+    const organ = findOrgan(this.state.document, pending.organ);
     if (!organ || !this.state.anatomy)
       return;
     const answers = new Map();
@@ -210,30 +213,51 @@ export const trialMethods = {
       return;
     this.clearStimulus();
     this.state.previewContext = next;
-    // Dragging an example value redraws once a frame.
+    // Only the inspector shows example values; the fish does not depend on them.
     this.previewFrame ??= requestAnimationFrame(() => {
       this.previewFrame = null;
-      this.refreshViews();
-      this.refreshGraphics();
+      this.refreshInspector();
     });
   },
   legWires(leg) {
-    const pair = leg.from + '>' + leg.to;
-    return [
-      ...this.bodyMap()?.querySelectorAll('.aid-wire-group[data-signal-edges]') ?? []
-    ].filter(element => element.dataset.signalEdges.split(' ').includes(pair));
+    const svg = this.bodyMap();
+    if (!svg)
+      return [];
+    if (this.wireIndex?.svg !== svg) {
+      const pairs = new Map();
+      for (const element of svg.querySelectorAll('.aid-wire-group[data-signal-edges]'))
+        for (const pair of element.dataset.signalEdges.split(' ')) {
+          if (!pairs.has(pair))
+            pairs.set(pair, []);
+          pairs.get(pair).push(element);
+        }
+      this.wireIndex = {svg, pairs};
+    }
+    return this.wireIndex.pairs.get(leg.from + '>' + leg.to) ?? [];
   },
-  // A teacher reaching a cell that has fired: the inputs that made it fire are what it learns,
-  // and those paths glow golden. A substance teaches only cells whose teaching receptor holds it.
+  // A substance teaches only cells whose teaching receptor holds that very substance.
+  teaches(part) {
+    if (part.kind === 'teaching')
+      return true;
+    const receptor =
+        findCenter(this.state.document, part.id)?.center?.receptors[HORMONE_EFFECT.teaching];
+    return part.kind === 'hormone' && substanceBound(HORMONE_EFFECT.teaching, receptor) &&
+           receptor.substance === part.substance;
+  },
+  // A teacher reaching a cell that has fired, by then or in the same step: the inputs that made
+  // it fire are what it learns, and those paths glow golden.
   learnedPaths(part, stimulus) {
-    if (!stimulus.fired.has(part.id))
+    if (this.teaches(part) && !stimulus.taught.has(part.id))
+      stimulus.taught.set(part.id, part.level);
+    const taughtAt = stimulus.taught.get(part.id);
+    const firing = part.kind === 'electrical' && part.sign > 0;
+    if (!stimulus.fired.has(part.id) || taughtAt === undefined ||
+        (firing && taughtAt !== part.level))
       return;
-    const center = findCenter(this.state.document, part.id)?.center;
-    if (part.kind === 'hormone' &&
-        !substanceBound(HORMONE_EFFECT.teaching, center?.receptors[HORMONE_EFFECT.teaching]))
-      return;
-    for (const leg of stimulus.sent.filter(leg => leg.to === part.id && leg.kind === 'electrical' &&
-                                                  leg.sign > 0)) {
+    for (const leg of stimulus.sent) {
+      if (leg.to !== part.id || leg.kind !== 'electrical' || !(leg.sign > 0) ||
+          stimulus.learned.includes(leg))
+        continue;
       stimulus.learned.push(leg);
       for (const element of this.legWires(leg))
         element.classList.add('aid-pulse-learned');
@@ -270,6 +294,7 @@ export const trialMethods = {
     return [...own, ...(moved ? moved() : []), ...raise ];
   },
   clearStimulus() {
+    this.pendingTrace = null;
     this.stopPulse();
     if (!this.state.stimulus)
       return;

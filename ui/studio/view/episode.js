@@ -24,50 +24,26 @@ export const TEACH_PULSE = 1.25;
 const CENTRED_TEXT = 1 / 3;
 const time = value => Math.min(1, Math.max(0, value)).toFixed(TIME_DIGITS);
 export const EPISODE_LAYOUT = Object.freeze({
-  big : Object.freeze({
-    width : 300,
-    height : 214,
-    cx : 166,
-    cy : 112,
-    r : 21,
-    side : 18,
-    end : 284,
-    top : 26,
-    gap : 7,
-    thick : 3,
-    thinnest : 1,
-    glow : 9,
-    pulse : 4.5,
-    pacer : 50,
-    pacerR : 7,
-    ring : 1.7,
-    cloud : 2.6,
-    meter : [ 214, 30, 9, 46 ],
-    line : 13,
-    round : 3.4
-  }),
-  small : Object.freeze({
-    width : 170,
-    height : 76,
-    cx : 98,
-    cy : 42,
-    r : 10,
-    side : 10,
-    end : 164,
-    top : 4,
-    gap : 4,
-    thick : 3,
-    thinnest : 1,
-    glow : 7,
-    pulse : 3,
-    pacer : 22,
-    pacerR : 4,
-    ring : 1.8,
-    cloud : 2.6,
-    meter : null,
-    line : 10,
-    round : 2.6
-  })
+  width : 300,
+  height : 214,
+  cx : 166,
+  cy : 112,
+  r : 21,
+  side : 18,
+  end : 284,
+  top : 26,
+  gap : 7,
+  thick : 3,
+  thinnest : 1,
+  glow : 9,
+  pulse : 4.5,
+  pacer : 50,
+  pacerR : 7,
+  ring : 1.7,
+  cloud : 2.6,
+  meter : [ 214, 30, 9, 46 ],
+  line : 13,
+  round : 3.4
 });
 export function animate(attribute, keys, seconds) {
   const sorted = [...keys ].sort((a, b) => a[0] - b[0]);
@@ -93,8 +69,8 @@ export function travelling(way, from, to, r, seconds, colour = '') {
 }
 const way = (x1, y1, x2, y2) =>
     'M' + fixed(x1) + ' ' + fixed(y1) + ' L' + fixed(x2) + ' ' + fixed(y2);
-export function episodeSvg(layout, scene) {
-  const L = layout, M = MOMENT, rounds = scene.rounds, n = rounds.length;
+export function episodeSvg(scene) {
+  const L = EPISODE_LAYOUT, M = MOMENT, rounds = scene.rounds, n = rounds.length;
   const seconds = L.round * n, at = (k, share) => (k + share) / n;
   const reach = y => {
     const dx = L.cx - L.side, dy = L.cy - y, d = Math.hypot(dx, dy) || 1;
@@ -124,7 +100,7 @@ export function episodeSvg(layout, scene) {
     let pulses = '';
     rounds.forEach((round, k) => {
       const deed = moment(input.deed);
-      if (input.deed && round.fire?.[j] !== false)
+      if (input.deed)
         pulses += travelling(path, at(k, deed - M.travel), at(k, deed), L.pulse, seconds);
       const grow = round.grow?.[j] ?? 0, gain = round.gain?.[j] ?? 0, trace = round.trace?.[j] ?? 0;
       if (grow) {
@@ -186,33 +162,20 @@ export function episodeSvg(layout, scene) {
                    : '';
   const taught = rounds.some(r => r.teach);
   const into = L.cy - L.r - L.gap, teachWay = way(L.cx, L.top, L.cx, into);
-  let teaching = '';
-  if (scene.teacher) {
-    const node = scene.teacher === 'node', fires = [ [ 0, RESTING_GLOW ] ];
-    rounds.forEach((round, k) => {
-      if (round.teach)
-        fires.push([ at(k, M.send - M.rise), RESTING_GLOW ], [ at(k, M.send), 1 ],
-                   [ at(k, M.send + M.fade), RESTING_GLOW ]);
-    });
-    teaching += '<path class="aid-episode-arrow teach' + (taught ? '' : ' none') + '" d="' +
-                teachWay + '"/>' +
-                (node ? '<circle class="aid-episode-teacher" cx="' + L.cx + '" cy="' + L.top +
-                            '" r="' + L.pacerR + '" fill-opacity="' + RESTING_GLOW + '">' +
-                            animate('fill-opacity', fires, seconds) + '</circle>'
-                      : '') +
-                (scene.labels?.teach
-                     ? '<text class="aid-episode-label teach" x="' + (L.cx - L.pacerR * 2) +
-                           '" y="' + fixed(L.top + L.line * CENTRED_TEXT) + '" text-anchor="end">' +
-                           escapeText(scene.labels.teach) + '</text>'
-                     : '');
-    rounds.forEach((round, k) => {
-      if (round.teach)
-        teaching += travelling(teachWay, at(k, M.send), at(k, M.arrive), L.pulse * TEACH_PULSE,
-                               seconds, round.teach);
-    });
-  }
+  let teaching =
+      '<path class="aid-episode-arrow teach' + (taught ? '' : ' none') + '" d="' + teachWay +
+      '"/>' +
+      (scene.labels?.teach ? '<text class="aid-episode-label teach" x="' + (L.cx - L.pacerR * 2) +
+                                 '" y="' + fixed(L.top + L.line * CENTRED_TEXT) +
+                                 '" text-anchor="end">' + escapeText(scene.labels.teach) + '</text>'
+                           : '');
+  rounds.forEach((round, k) => {
+    if (round.teach)
+      teaching += travelling(teachWay, at(k, M.send), at(k, M.arrive), L.pulse * TEACH_PULSE,
+                             seconds, round.teach);
+  });
   let meter = '';
-  if (L.meter && taught && rounds.some(r => r.expect)) {
+  if (taught && rounds.some(r => r.expect)) {
     const [x, y, w, h] = L.meter, level = [];
     rounds.forEach((round, k) => {
       const [before, after] = round.expect ?? [ 0, 0 ];
@@ -241,8 +204,7 @@ export function episodeSvg(layout, scene) {
                                       (L.height - L.line / 2) + '" text-anchor="middle">' +
                                       escapeText(scene.caption) + '</text>'
                                 : '';
-  return '<svg class="aid-episode ' + (L === EPISODE_LAYOUT.big ? 'big' : 'small') +
-         '" viewBox="0 0 ' + L.width + ' ' + L.height + '" role="img"' +
+  return '<svg class="aid-episode" viewBox="0 0 ' + L.width + ' ' + L.height + '" role="img"' +
          (scene.title ? ' aria-label="' + escapeText(scene.title) + '"' : ' aria-hidden="true"') +
          '>' + cloud + teaching + meter + pacer + inputs.join('') + output + ring +
          '<circle class="aid-episode-cell" cx="' + L.cx + '" cy="' + L.cy + '" r="' + L.r +

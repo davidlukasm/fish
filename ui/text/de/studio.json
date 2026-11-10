@@ -567,6 +567,7 @@
       "step": "Stufenweite"
     },
     "inputMark": "IN",
+    "outputMark": "OUT",
     "inputFixed": "Dieser Eingang hat eine feste Bedeutung. Er kann mit anderen CPPN-Knoten verbunden werden.",
     "port": "Zieleingang",
     "signalPort": "Signal",
@@ -1020,7 +1021,6 @@
     "title": "Zellbildung, Aktivität und Tod",
     "explanation": "Die Geburtsantwort sammelt Entwicklungsfortschritt über die schnelle Zellzeit. Ausgabe und endgültiger Tod haben eigene Rezeptoren. Die Kurven zeigen die Mittelwerte des Bauplans; Streuung erzeugt Unterschiede zwischen Zellen.",
     "baseline": "Grundantwort",
-    "hormone": "Hormon",
     "maturity": "Reife",
     "substance": "Bevorzugtes Signal",
     "sensitivity": "Antwortstärke",

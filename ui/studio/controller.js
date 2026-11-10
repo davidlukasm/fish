@@ -122,6 +122,10 @@ export class OrganStudio {
     this.historyBatch = null;
     this.designRunning = false;
     this.designPending = false;
+    this.designRequest = 0;
+    this.pendingTrace = null;
+    this.wireIndex = null;
+    this.previewFrame = null;
     this.choiceFrame = 0;
     this.choicePoint = null;
     this.shownChoice = null;

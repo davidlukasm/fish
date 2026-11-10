@@ -274,10 +274,11 @@ export const dropMethods = {
     this.clearStimulus();
     this.state.selected = {kind : 'organ', id : organ.id};
     this.bringProbes();
+    // Only an answer requested after the stimulus was placed has measured it.
+    this.pendingTrace = {organ : organ.id, after : this.designRequest};
     this.requestDesign();
     this.showTestLight();
     this.refreshViews();
-    this.pendingTrace = organ.id;
   },
   ontoNerve(kind, value) {
     return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);

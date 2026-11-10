@@ -12,6 +12,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
   const levels = Math.max(1, ...trace.parts.map(part => part.level)) + 1;
   const interval = Math.min(PLAY.interval, PLAY.whole / levels), linger = PLAY.linger;
   let overlay, paths = [], parts = [], waves = [], handle = null, started = null, active = false;
+  let nextLeg = 0;
   const shown = new Set(), sentLegs = new Set();
   const attach = next => {
     overlay?.remove();
@@ -119,7 +120,8 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       started = now;
     const elapsed = now - started;
     for (const item of parts) {
-      const {part, cls, elements} = item, key = part.id + ':' + part.kind + ':' + part.sign;
+      const {part, cls, elements} = item;
+      const key = part.id + ':' + part.kind + ':' + part.sign + ':' + (part.substance ?? '');
       if (elapsed >= part.level * interval && !shown.has(key)) {
         shown.add(key);
         reached(part);
@@ -131,9 +133,12 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
           element.classList.toggle(cls, on);
       }
     }
-    for (const leg of trace.legs) {
-      const key = leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign;
-      if (elapsed >= leg.level * interval && !sentLegs.has(key)) {
+    // The trace lists its legs level by level, so the legs now due are always the next ones.
+    while (nextLeg < trace.legs.length && elapsed >= trace.legs[nextLeg].level * interval) {
+      const leg = trace.legs[nextLeg++];
+      const key =
+          leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign + ':' + (leg.substance ?? '');
+      if (!sentLegs.has(key)) {
         sentLegs.add(key);
         sent(leg);
       }

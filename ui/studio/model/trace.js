@@ -91,10 +91,18 @@ function traceLinks(starts, links) {
       seenLegs.add(key);
       const sign = link.kind === 'electrical' ? part.sign * link.sign : 0;
       legs.push({...link, sign, level : part.level});
-      const visit = link.to + ':' + sign + (link.kind === 'electrical' ? '' : ':' + link.kind);
+      const visit =
+          link.to + ':' + sign +
+          (link.kind === 'electrical' ? '' : ':' + link.kind + ':' + (link.substance ?? ''));
       if (!visited.has(visit)) {
         visited.add(visit);
-        parts.push({id : link.to, sign, kind : link.kind, level : part.level + 1});
+        parts.push({
+          id : link.to,
+          sign,
+          kind : link.kind,
+          level : part.level + 1,
+          substance : link.substance
+        });
       }
     }
   }

@@ -1,5 +1,5 @@
 #station-root{--aid-ground:#09212a;--aid-graphic:#0c2b33;--aid-control:#17353d;--aid-control-edge:#4a6a6d;--aid-chip:#0f2c34;--aid-panel-edge:#2d5059;--aid-card-edge:#325961;--aid-control-text:#cfe2d8;--aid-soft-text:#9fbcbc;--aid-label-text:#a9c6c2;--aid-hint-text:#9fbab6;--aid-axis-text:#a7c2be;--aid-circuit-text:#c8d8d4;--aid-name-text:#e6efe4;--aid-primary:#d1dfbd;--aid-grip:#9fcebd}
-#station-root{--aid-handle:#f1dda6;--aid-handle-hover:#f5e1ac;--aid-handle-core:#153a40;--aid-chosen:#fffbe5;--aid-chosen-edge:#d6d3a6;--aid-point:#fff;--aid-light:#fff8d8;--aid-teach:#e2c487;--aid-trace:#f4e3a0;--aid-substance:#d7c294;--aid-cell-on:#bee2b7;--aid-hover:#e0ecc5}
+#station-root{--aid-handle:#f1dda6;--aid-handle-hover:#f5e1ac;--aid-handle-core:#153a40;--aid-chosen:#fffbe5;--aid-chosen-edge:#d6d3a6;--aid-point:#fff;--aid-light:#fff8d8;--aid-teach:#e2c487;--aid-hormone:#d4b7ee;--aid-trace:#f4e3a0;--aid-substance:#d7c294;--aid-cell-on:#bee2b7;--aid-hover:#e0ecc5}
 #station-root{--aid-senses:#79d2be;--aid-brain:#b8c5e1;--aid-motor:#eaa886;--aid-inhibit:#e8a2b5}
 #station-root{--aid-fish-line:#8ac7bb;--aid-fin-line:#89c9bb;--aid-sketch-line:#84b9b3;--aid-sketch:#2c5a5e;--aid-limit:#3b6a6c;--aid-rim:#8fbea8;--aid-node-edge:#0c2328;--aid-ink:#0d262c;--aid-pupil:#0a232b;--aid-spine:#edc99d;--aid-spine-fill:#a6c3b3;--aid-flow:#bfe3f0;--aid-flow-light:#e9f6fb;--aid-lateral:#83cbd0;--aid-touch:#a3ddcf;--aid-touch-felt:#f2cf7e;--aid-pain-felt:#f1a08a;--aid-gut:#d2c9a8;--aid-sperm:#f3f8fb;--aid-tooth:#f3eedc;--aid-size:#9fc9d8}
 #station-root{position:fixed;inset:0;z-index:100;background:var(--aid-ground);color:#d7e6e3;overflow:hidden;font:14px/1.45 system-ui,sans-serif}
@@ -606,7 +606,7 @@
 .aid-brain-lobe{stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;vector-effect:non-scaling-stroke}
 .aid-brain-fissure{fill:none;stroke:var(--aid-brain);stroke-opacity:.55;stroke-width:1.3;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-brain-tint{fill:var(--aid-brain);opacity:.1}
-#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.4;filter:saturate(.15)}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(.aid-pulse-tuned):not(.aid-pulse-hormone):not(:has(.aid-pulse-fired)),#aid-body-map.aid-stimulus-view .aid-centers>g:not(.aid-pulse-fired):not(.aid-pulse-quieted):not(.aid-pulse-tuned):not(.aid-pulse-hormone){opacity:.4;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-wire-group:not(.aid-focus-near){opacity:.14;filter:saturate(.15)}
 #aid-body-map.aid-focus-view .aid-anatomical-organ:not(.aid-focus-near):not(.selected),#aid-body-map.aid-focus-view .aid-centers>g:not(.aid-focus-near){opacity:.4;filter:saturate(.15)}
 .aid-pulse-fired{filter:drop-shadow(0 0 5px #f1e7a8aa)}
@@ -752,9 +752,8 @@
 .aid-layer-switches button.active::before{background:currentColor}
 .aid-layer-switches button[data-layer-mode="auto"]::before{outline:1.5px dashed currentColor;outline-offset:2px}
 .aid-effect-scene{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
-.aid-learn-substance:not(.bound) .aid-episode{opacity:.55}
-.aid-episode{display:block;width:100%;height:auto;border-radius:8px;background:var(--aid-graphic)}
-.aid-episode.big{margin:4px 0}
+.aid-learn-substance:not(.bound) .aid-effect-scene{opacity:.55}
+.aid-episode{display:block;width:100%;height:auto;margin:4px 0;border-radius:8px;background:var(--aid-graphic)}
 .aid-episode-line{fill:none;stroke:var(--aid-size);stroke-linecap:round}
 .aid-episode-line.still{stroke-opacity:.6}
 .aid-episode-trace{fill:none;stroke:var(--aid-trace);stroke-linecap:round}
@@ -766,7 +765,6 @@
 .aid-episode-arrow.teach.none{stroke:#5d7f80;stroke-dasharray:4 4}
 .aid-episode-pacer{fill:#2b5157;stroke:var(--aid-size);stroke-width:1.5}
 .aid-episode-ring{fill:none;stroke:var(--aid-size);stroke-width:2}
-.aid-episode-teacher{fill:#b8c5e1;stroke:#c9d6cf;stroke-width:1.2}
 .aid-episode-meter{fill:none;stroke:#5d7f80;stroke-width:1.2}
 .aid-episode-expect{fill:var(--aid-teach);fill-opacity:.7}
 .aid-episode text{fill:var(--aid-label-text);font-size:11px}
@@ -868,11 +866,9 @@
 .aid-contact-plan-table button:hover{color:var(--aid-handle)}
 
 .aid-plan-pulses circle{stroke:#10292d;stroke-width:1.2}
-.aid-pulse-tuned{filter:drop-shadow(0 0 8px #e2c487)}
-.aid-pulse-hormone{filter:drop-shadow(0 0 8px #d4b7ee)}
 
-.aid-pulse-teaching{filter:drop-shadow(0 0 12px #e2c487)}
-.aid-pulse-binding{filter:drop-shadow(0 0 12px #d4b7ee)}
+.aid-pulse-teaching{filter:drop-shadow(0 0 12px var(--aid-teach))}
+.aid-pulse-binding{filter:drop-shadow(0 0 12px var(--aid-hormone))}
 .aid-generated-center{cursor:pointer;color:#efc174}
 .aid-move-raise .aid-spines-raised path{opacity:1;fill:var(--aid-spine-fill);stroke-dasharray:none}
 .aid-move-raise .aid-spines-rest path{opacity:0}
@@ -885,8 +881,8 @@
 .aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}
 @keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(1.22,.82)}}
 #aid-body-map.aid-stimulus-view .aid-pulse-withdrawn .aid-wire-ink{stroke:var(--aid-inhibit);stroke-dasharray:6 5}
-#aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 6px #c7b3ec)}
-#aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--hormone))}
+#aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 7px var(--aid-teach))}
+#aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--aid-hormone))}
 .aid-hormone-wave{fill:var(--hormone);fill-opacity:.06;stroke:var(--hormone);stroke-opacity:.6;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
 .aid-move-tail{animation:aid-tail-beat .42s ease-in-out 3}
 @keyframes aid-tail-beat{0%,100%{transform:rotate(0)}25%{transform:rotate(-13deg)}75%{transform:rotate(13deg)}}

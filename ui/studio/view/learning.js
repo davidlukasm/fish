@@ -83,7 +83,7 @@ const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
 // Two rounds of the cell's learning: what fires with it grows, a still input fades and, when
 // the cell competes, gives way; a teacher's surprise grows what its trace still holds.
 function learningPicture(center, teachers, colours) {
-  const L = EPISODE_LAYOUT.big, R = RULE, words = key => label('learnRule.' + key);
+  const L = EPISODE_LAYOUT, R = RULE, words = key => label('learnRule.' + key);
   const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
   const remnant = remnantOf(center), teaches = colours.length > 0;
   const inputs = [
@@ -98,7 +98,7 @@ function learningPicture(center, teachers, colours) {
     const surprise = teaches ? 1 - expect : 0;
     const reward = R.change * rate * surprise * remnant;
     const own = reward * 2 * R.credit, beat = pacer ? reward * 2 * (1 - R.credit) : 0;
-    const giveWay = mode >= 0 ? -(own + beat) : 0;
+    const giveWay = modeLean(mode) > 0 ? -(own + beat) : 0;
     const before = expect;
     if (teaches)
       expect = before + (1 - before) * Math.min(1, R.expect * rate);
@@ -113,15 +113,16 @@ function learningPicture(center, teachers, colours) {
     };
   });
   const lean = label('inspector.' + modeName(mode));
-  const caption = !(rate > 0) ? words('off')
-                  : teaches   ? t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}) +
-                                  (modeLean(mode) !== 0 ? ' · ' + lean : '')
+  const caption = !(rate > 0)            ? words('off')
+                  : teaches              ? joinParts([
+                      t('studio.learnRule.gain', {n : Math.round(rate * PERCENT)}),
+                      modeLean(mode) !== 0 ? lean : ''
+                    ])
                   : modeLean(mode) !== 0 ? t('studio.learnRule.untaughtMode', {mode : lean})
                                          : words('untaught');
-  return episodeSvg(L, {
+  return episodeSvg({
     title : label('inspector.learning'),
     inputs,
-    teacher : 'arrow',
     output : true,
     rounds,
     caption,

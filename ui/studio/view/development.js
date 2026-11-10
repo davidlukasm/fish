@@ -3,7 +3,7 @@ import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
 import {receptorResponse, wiredCrossing} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {clamp} from '../../units.js';
-import {formatNumber} from '../../strings.js';
+import {formatNumber, namedText} from '../../strings.js';
 import {substanceMark, substanceName} from './substances.js';
 import {label, numberField} from './kit.js';
 import {substanceColor} from '../../hormones.js';
@@ -50,9 +50,9 @@ export function previewControls(state) {
                             fixed(base) + ' h' + B.gauge + '"/>'
                       : '') +
            '<circle class="aid-graphic-handle" data-preview-handle="' + c.key + '" cx="' +
-           fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' + escapeText(name) +
-           ': ' + formatNumber(c.value, PREVIEW_DIGITS) + '</title></circle><text x="' + fixed(x) +
-           '" y="' + B.mark + '" text-anchor="middle">' +
+           fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' +
+           escapeText(namedText(name, formatNumber(c.value, PREVIEW_DIGITS))) +
+           '</title></circle><text x="' + fixed(x) + '" y="' + B.mark + '" text-anchor="middle">' +
            escapeText(c.index === null ? label('development.inputMark')
                                        : substanceMark(state, c.index)) +
            '</text>';
