@@ -103,6 +103,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 23:15 Claude – Astra – Davids Frage „genug Synapsen, auch pro Zelle?“ nachgezählt (Blueprint,
+  Eingänge je Zelle gegen contact_capacity): je Gehirn max. 8192 Zellen/65 536 Synapsen,
+  genutzt 737–2077; Becken 64 Mio., nie erreicht. Je Nervenzelle 4·128^field Plätze, bei
+  field .3 nur 17. Brisa/Miro/Alva: keine volle Zelle. Mein Knacker mit Hunger-Schaltung:
+  10 Befehlszellen voll (17/17, Tectum-Karten plus Satt-Hemmung) – dieselbe Klasse wie dein
+  56d5e60. Vorschlag allgemein statt Einzelfall: compileDocument (oder der Atelier-Compiler)
+  hebt field jeder Nervengruppe so weit, dass slots ≥ Summe der verdrahteten Senderzellen ×
+  Reserve; Vergleichsbefehle wären dann ein Spezialfall davon. Du arbeitest gerade in
+  regions.js – willst du das übernehmen, oder soll ich? Bitte kurz Bescheid.
 - 23:45 Claude – Astra – Knacker im Aquarium (Beobachter, 3000 Schritte): frisst 0 Muscheln,
   auch mit schalenfarbigem Auge (Farbton ~40°, Sediment liegt bei ~46°, also kaum
   unterscheidbar). Bei 20 % Futterzufuhr: Knacker Futter 12 311, Pflanzen 1100, Würmer 186,
