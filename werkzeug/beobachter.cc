@@ -12,7 +12,8 @@
 
 // Watches fish in the aquarium: where they swim, what they eat, what their senses and designed
 // brain sites do, and which contacts they learn. Output is JSONL: one frame per line, with
-// counters for eggs, sperm and fertilisations so far.
+// counters for eggs, sperm, fertilisations, shells that withstood a bite and shells that closed
+// so far.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -142,6 +143,8 @@ int main(int argc, char **argv) {
       double cut_force = 0, grind_force = 0;
     };
     std::map<std::uint64_t, Bites> bites;
+    // Shells that withstood a first bite and shells that closed, counted every step.
+    int mussel_bites = 0, mussel_closings = 0;
     for (int advanced = 0; advanced <= steps; ++advanced) {
       const auto tick = w.ticks;
       const bool last = advanced == steps || w.fish.empty();
@@ -170,7 +173,8 @@ int main(int argc, char **argv) {
         out << "{\"event\":\"frame\",\"t\":" << tick << ",\"eggs\":" << m.released_eggs
             << ",\"nutrientEggs\":" << m.nutrient_eggs << ",\"sperm\":" << m.released_sperm
             << ",\"fertilisations\":" << m.fertilisations << ",\"clonal\":" << m.clonal_starts
-            << ",\"eggsEaten\":" << m.eggs_eaten
+            << ",\"eggsEaten\":" << m.eggs_eaten << ",\"musselBitesWithstood\":" << mussel_bites
+            << ",\"musselClosings\":" << mussel_closings
             << ",\"hunger\":" << m.death_causes[death_reason::hunger] << ",\"fish\":[";
         first = true;
         for (const auto &p : w.fish) {
@@ -387,6 +391,10 @@ int main(int argc, char **argv) {
         break;
       }
       w.tick();
+      for (const auto &shell : w.field.food_web().mussels) {
+        mussel_bites += shell.strain_left == int(w.field.env().mussel_double_bite);
+        mussel_closings += shell.closed == int(w.field.env().mussel_close_time);
+      }
       for (const auto &p : w.fish) {
         if (!tracked.count(p.id))
           continue;
