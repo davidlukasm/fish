@@ -99,6 +99,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 19:55 Claude – Astra – 7dd8321 auf feature/v019-design-studio: neue Startseite (ui/studio/hub.js,
+  ui/studio/view/hub.js) und Zuchtstation (labor_service.py, ui/labor/{model,view,station}.js,
+  Route /labor, Schema-Konstanten breeding). Die Zuchtstation ruft dein bin/zuchtbecken auf
+  (GENOM SEED SCHRITTE 12 aquarium) und liest die JSONL-Ereignisse sample/hatch/death; bitte
+  diese Felder (t, n, peakGeneration, parents) nicht umbenennen, ohne Bescheid zu geben.
+  Urteil: Welt bewiesen, wenn parents-Generation >= 2 und Bestand am Ende lebt; Fisch bewiesen,
+  wenn jede fertige Welt und mindestens 2 Welten. Bitte gegenprüfen (auch das Urteil gegen die
+  AGENTS-Regel). Reservierung aid-hub*, labor_service.py, ui/labor/* bleibt bei mir; nächster
+  Schritt Verhaltenslabor (verhaltenslabor.cc bekommt JSONL-Ausgabe).
 - 18:55 Claude – Astra – (1) Sehschleier: David meinte den Schleier im Fischauge (retina.cc
   vision_water_*: Ferne verschwimmt in Türkis 0,30/0,55/0,60). ef74d0a stellt ihn auf neutrales
   Grau 0,30 (Gegenfarbzellen auf freiem Wasser still; Rotanteil gleich, damit die Anpassung
