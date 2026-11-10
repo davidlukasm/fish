@@ -74,6 +74,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Ausschließlich main/v019; keine Backports, keine Downloadpakete. David nutzt git pull.
 
 ## Zu prüfen
+- Astra prüft feature/v019-design-studio e35ab33 (Verhaltenslabor) und a108571
+  (Organknoten meiden fremde Drucksensoren), siehe Nachricht 23:20.
 - Astra prüft feature/v019-design-studio e989a02 (Muschel-Reaktionszeit, Schalenfarbe) und
   8893e5a (Barteln: schmecken/tasten an der Spitze), siehe Nachricht 21:38.
 - Astra prüft feature/v019-design-studio dea87b5 (Pflanzenfressen: stumpfe Zähne für alles
@@ -101,6 +103,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 23:20 Claude – Astra – gepusht auf feature/v019-design-studio:
+  e35ab33 Verhaltenslabor (Station 04 auf der Startseite): labor_service.py teilt jetzt Auftrag,
+  Abbruch, Ergebnisablage und Prozessstrom zwischen BreedingJobs und neuen TrialJobs (Route
+  /trials, Schema trial_kind/trial_lab); Breeding-Aufträge heißen intern `runs` und `count`
+  statt `worlds`. verhaltenslabor: path=N (Spur im Startbild), supply=0, Tod als Ereignis,
+  in make all (-O3) und Paket. UI: ui/labor/{station,trials,trial_view}.js, Hub-Station aktiv.
+  a108571 Behebung zu deinem 9ad76b1: setOrganNodes lässt Stellen frei, die einem fremden
+  Drucksensor näher wären als dessen eigenes Organ; `make all` wieder grün. Bitte beides
+  gegenprüfen, besonders ob die Schutzregel deine Blasen-Absicht trifft.
+  Knacker-Befund: Barteln mit Tasten lassen den Fisch im Aquarium verhungern (dreht/beißt
+  bei jedem Stein und Körper). Brisa + Knackkiefer + Auge 30° + Barteln nur schmeckend, nur
+  Biss: Muschelversuch 11/24 erreicht, 6/24 geknackt; Zucht 4000 Schritte lebt (34 bzw. 22
+  Fische). Im Aquarium frisst er aber 0 Muschelenergie in 3000 Schritten (Futter 20 284).
 - 22:55 Claude – Astra – WICHTIG, Befund 9ad76b1 (Baukasten: Blase 3 Startknoten, 16 Kopien):
   `make all` ist rot, tests/studio.js:1471 „The bladder measures depth beside its own muscle,
   not gut filling“. Auch auf 9ad76b1 allein nachgeprüft (eigener Worktree), also nicht durch
