@@ -17,7 +17,7 @@ import {
 import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {formatNumber, formatSigned, joinParts, t, tList} from '../../strings.js';
-import {heading, ICON, label, regionTerm} from './kit.js';
+import {heading, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
 import {substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
@@ -28,7 +28,9 @@ import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
 
-const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20});
+const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20, lift : 4});
+// The learning rate is small, so it keeps one digit more.
+const RATE_DIGITS = VALUE_DIGITS + 1;
 export const learnRatePatch = fx => ({qwidth : trackShare(fx * TRACKS.width, TRACKS.range)});
 export const learnModePatch = fx => ({mode : 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1});
 export const learnResponseOf = fx => 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1;
@@ -39,7 +41,7 @@ function learnTrack(kind, center, share, title, ends, {middle = '', extra = ''} 
          escapeText(title) + '">' +
          namedTrack(T.range, T.y, share, 'data-graphic-handle="' + kind + '"', title, ends) +
          (middle ? '<text class="aid-learn-middle" x="' + T.width / 2 + '" y="' +
-                       (T.y - TRACK.gap * 4) + '" text-anchor="middle">' + escapeText(middle) +
+                       (T.y - TRACK.gap * T.lift) + '" text-anchor="middle">' + escapeText(middle) +
                        '</text>'
                  : '') +
          '</svg>';
@@ -74,6 +76,7 @@ const RULE = Object.freeze({
   glow : .55,
   credit : .5,
   unused : .8,
+  apart : 2.6,
   delay : TIME_CONSTANT.learning_min_steps
 });
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
@@ -84,9 +87,9 @@ function learningPicture(center, teachers, colours) {
   const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
   const remnant = remnantOf(center), teaches = colours.length > 0;
   const inputs = [
-    {y : L.cy - L.r * 2.6, deed : 'own', label : words('firing')},
+    {y : L.cy - L.r * R.apart, deed : 'own', label : words('firing')},
     ...(pacer ? [ {y : L.cy, deed : 'beat', label : words('inBeat')} ] : []),
-    {y : L.cy + L.r * 2.6, deed : null, label : words('still')}
+    {y : L.cy + L.r * R.apart, deed : null, label : words('still')}
   ];
   const competing = R.compete * rate * Math.max(0, mode);
   const cancelling = R.cancel * rate * Math.max(0, -mode);
@@ -153,12 +156,13 @@ function learningValues(state, center) {
       '<div><dt>' + label('learnRule.' + key) + '</dt><dd>' + value + '</dd></div>';
   return '<details class="aid-learn-values"><summary>' + label('learnRule.values') +
          '</summary><dl class="aid-parameter-readout">' +
-         row('effectiveRate', formatNumber(eta, 4)) +
-         row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' + formatSigned(cl.mode, 3)) +
+         row('effectiveRate', formatNumber(eta, RATE_DIGITS)) +
+         row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' +
+                         formatSigned(cl.mode, VALUE_DIGITS)) +
          row('probation',
              Math.ceil(constants.contactTrial * learningTimeSteps(center.learning_tau)) + ' ' +
                  label('learnRule.steps')) +
-         row('prune', formatNumber(constants.prune, 3)) +
+         row('prune', formatNumber(constants.prune, VALUE_DIGITS)) +
          row('decayUnused', decayHalf(0) + ' ' + label('learnRule.steps')) +
          row('decayUsed', decayHalf(1) + ' ' + label('learnRule.steps')) + '</dl></details>';
 }

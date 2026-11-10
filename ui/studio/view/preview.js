@@ -1,10 +1,9 @@
 import {HORMONE_EFFECT} from '../../schema.js';
 import {receptorResponse} from '../model/document.js';
 import {nerveClass} from '../model/organs.js';
-import {previewContextOf} from './development.js';
+import {previewContextOf, previewInputOf} from './development.js';
 import {motorResponse} from './drive.js';
 
-export const previewInputOf = state => state.previewInput ?? 1;
 export function driveContext(state, center) {
   const context = previewContextOf(state), wheel = state.capabilities;
   const response = (effect, baseline = 0) =>

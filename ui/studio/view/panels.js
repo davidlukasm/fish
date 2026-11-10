@@ -53,7 +53,7 @@ import {
   t,
   tList
 } from '../../strings.js';
-import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm} from './kit.js';
+import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector, modeName} from './learning.js';
@@ -592,10 +592,11 @@ function generatedInspector(state) {
   return '<header class="aid-inspector-head">' + heading(centerTitle(center)) +
          '</header><dl class="aid-parameter-readout" title="' +
          escapeText(label('compiler.extraMeaning')) + '">' + row('potentialCells', center.copies) +
-         (center.role === 'nerve' ? row('sign', cl.sign) + row('mode', formatSigned(cl.mode, 3)) +
-                                        row('pace', formatNumber(cl.pace, 3)) +
-                                        row('modulator', formatNumber(cl.modulator, 3))
-                                  : '') +
+         (center.role === 'nerve'
+              ? row('sign', cl.sign) + row('mode', formatSigned(cl.mode, VALUE_DIGITS)) +
+                    row('pace', formatNumber(cl.pace, VALUE_DIGITS)) +
+                    row('modulator', formatNumber(cl.modulator, VALUE_DIGITS))
+              : '') +
          '</dl>';
 }
 export function inspector(state) {

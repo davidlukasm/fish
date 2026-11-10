@@ -16,6 +16,12 @@ const MOMENT = Object.freeze({
 });
 // Times are written with TIME_DIGITS digits, so the keys of a loop keep their order.
 const TIME_DIGITS = 4;
+// A cell glows faintly at rest and fully when it fires.
+export const RESTING_GLOW = .3;
+// Teaching pulses are drawn larger than the input pulses they meet.
+export const TEACH_PULSE = 1.25;
+// A label's baseline drops by this share of a line so the text centres on its anchor.
+const CENTRED_TEXT = 1 / 3;
 const time = value => Math.min(1, Math.max(0, value)).toFixed(TIME_DIGITS);
 export const EPISODE_LAYOUT = Object.freeze({
   big : Object.freeze({
@@ -146,14 +152,14 @@ export function episodeSvg(layout, scene) {
            '" stroke-width="' + L.thick + '">' + animate('stroke-width', widths, seconds) +
            '</path>' + pulses + words;
   });
-  const flashes = [ [ 0, .3 ] ], rings = [ [ 0, 0 ] ], ringR = [ [ 0, L.r ] ];
+  const flashes = [ [ 0, RESTING_GLOW ] ], rings = [ [ 0, 0 ] ], ringR = [ [ 0, L.r ] ];
   const own = scene.inputs.some(i => i.deed === 'own');
   const beats = scene.inputs.some(i => i.deed === 'beat');
   let sent = '';
   rounds.forEach((round, k) => {
     if (own)
-      flashes.push([ at(k, M.own - M.rise), .3 ], [ at(k, M.own), 1 ],
-                   [ at(k, M.own + M.fade), .3 ]);
+      flashes.push([ at(k, M.own - M.rise), RESTING_GLOW ], [ at(k, M.own), 1 ],
+                   [ at(k, M.own + M.fade), RESTING_GLOW ]);
     if (beats)
       rings.push([ at(k, M.beat - M.rise), 0 ], [ at(k, M.beat), 1 ],
                  [ at(k, M.beat + M.fade), 0 ]),
@@ -169,8 +175,8 @@ export function episodeSvg(layout, scene) {
                             (L.cy + L.pacer) + '" r="' + L.pacerR + '"/>' +
                             (scene.labels?.beat
                                  ? '<text class="aid-episode-label" x="' + (L.cx + L.pacerR * 2) +
-                                       '" y="' + fixed(L.cy + L.pacer + L.line / 3) + '">' +
-                                       escapeText(scene.labels.beat) + '</text>'
+                                       '" y="' + fixed(L.cy + L.pacer + L.line * CENTRED_TEXT) +
+                                       '">' + escapeText(scene.labels.beat) + '</text>'
                                  : '')
                       : '';
   const ring = beats
@@ -182,27 +188,27 @@ export function episodeSvg(layout, scene) {
   const into = L.cy - L.r - L.gap, teachWay = way(L.cx, L.top, L.cx, into);
   let teaching = '';
   if (scene.teacher) {
-    const node = scene.teacher === 'node', fires = [ [ 0, .3 ] ];
+    const node = scene.teacher === 'node', fires = [ [ 0, RESTING_GLOW ] ];
     rounds.forEach((round, k) => {
       if (round.teach)
-        fires.push([ at(k, M.send - M.rise), .3 ], [ at(k, M.send), 1 ],
-                   [ at(k, M.send + M.fade), .3 ]);
+        fires.push([ at(k, M.send - M.rise), RESTING_GLOW ], [ at(k, M.send), 1 ],
+                   [ at(k, M.send + M.fade), RESTING_GLOW ]);
     });
-    teaching +=
-        '<path class="aid-episode-arrow teach' + (taught ? '' : ' none') + '" d="' + teachWay +
-        '"/>' +
-        (node ? '<circle class="aid-episode-teacher" cx="' + L.cx + '" cy="' + L.top + '" r="' +
-                    L.pacerR + '" fill-opacity=".3">' + animate('fill-opacity', fires, seconds) +
-                    '</circle>'
-              : '') +
-        (scene.labels?.teach ? '<text class="aid-episode-label teach" x="' + (L.cx - L.pacerR * 2) +
-                                   '" y="' + fixed(L.top + L.line / 3) + '" text-anchor="end">' +
-                                   escapeText(scene.labels.teach) + '</text>'
-                             : '');
+    teaching += '<path class="aid-episode-arrow teach' + (taught ? '' : ' none') + '" d="' +
+                teachWay + '"/>' +
+                (node ? '<circle class="aid-episode-teacher" cx="' + L.cx + '" cy="' + L.top +
+                            '" r="' + L.pacerR + '" fill-opacity="' + RESTING_GLOW + '">' +
+                            animate('fill-opacity', fires, seconds) + '</circle>'
+                      : '') +
+                (scene.labels?.teach
+                     ? '<text class="aid-episode-label teach" x="' + (L.cx - L.pacerR * 2) +
+                           '" y="' + fixed(L.top + L.line * CENTRED_TEXT) + '" text-anchor="end">' +
+                           escapeText(scene.labels.teach) + '</text>'
+                     : '');
     rounds.forEach((round, k) => {
       if (round.teach)
-        teaching += travelling(teachWay, at(k, M.send), at(k, M.arrive), L.pulse * 1.3, seconds,
-                               round.teach);
+        teaching += travelling(teachWay, at(k, M.send), at(k, M.arrive), L.pulse * TEACH_PULSE,
+                               seconds, round.teach);
     });
   }
   let meter = '';
@@ -218,7 +224,7 @@ export function episodeSvg(layout, scene) {
             w + '" rx="2">' + animate('y', level.map(([ t, v ]) => [t, y + h * (1 - v)]), seconds) +
             animate('height', level.map(([ t, v ]) => [t, h * v]), seconds) + '</rect>' +
             (scene.labels?.expect ? '<text class="aid-episode-label" x="' + (x + w + L.gap) +
-                                        '" y="' + fixed(y + h / 2 + L.line / 3) + '">' +
+                                        '" y="' + fixed(y + h / 2 + L.line * CENTRED_TEXT) + '">' +
                                         escapeText(scene.labels.expect) + '</text>'
                                   : '');
   }
@@ -240,6 +246,6 @@ export function episodeSvg(layout, scene) {
          (scene.title ? ' aria-label="' + escapeText(scene.title) + '"' : ' aria-hidden="true"') +
          '>' + cloud + teaching + meter + pacer + inputs.join('') + output + ring +
          '<circle class="aid-episode-cell" cx="' + L.cx + '" cy="' + L.cy + '" r="' + L.r +
-         '" fill-opacity=".3">' + animate('fill-opacity', flashes, seconds) + '</circle>' +
-         caption + '</svg>';
+         '" fill-opacity="' + RESTING_GLOW + '">' + animate('fill-opacity', flashes, seconds) +
+         '</circle>' + caption + '</svg>';
 }

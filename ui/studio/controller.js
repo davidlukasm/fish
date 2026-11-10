@@ -36,7 +36,7 @@ import {removeAssembly} from './model/assemblies.js';
 import {centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
 import {bendsWith, CONTACT_LIMITS} from './view/wires.js';
-import {DEFAULT_PREVIEW_CONTEXT} from './view/development.js';
+import {DEFAULT_PREVIEW_CONTEXT, DEFAULT_PREVIEW_INPUT} from './view/development.js';
 const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
@@ -85,7 +85,7 @@ export class OrganStudio {
       deletingModule : null,
       effect : 0,
       focusSubstance : 0,
-      previewInput : 1,
+      previewInput : DEFAULT_PREVIEW_INPUT,
       previewContext : DEFAULT_PREVIEW_CONTEXT,
       sightProbe : null,
       senseProbe : null,

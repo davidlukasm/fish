@@ -3,7 +3,7 @@ import {nerveClass} from '../model/organs.js';
 import {learningTimeSteps} from '../../tuning.js';
 import {centerTitle, organTitle} from './names.js';
 import {escapeText} from './markup.js';
-import {label} from './kit.js';
+import {label, VALUE_DIGITS} from './kit.js';
 import {formatNumber, joinParts, percent} from '../../strings.js';
 
 const word = key => label('contacts.' + key);
@@ -33,7 +33,7 @@ export function contactPlan(state, chosen, wire = null) {
             const learning =
                 learningTimeSteps((target.role === 'motor' ? source : target).learning_tau);
             return '<tr><td>' + link(source) + '</td><td>' + link(target) + '</td><td>' +
-                   (cl.sign < 0 ? '−' : '+') + formatNumber(limit, 3) + '</td><td>' +
+                   (cl.sign < 0 ? '−' : '+') + formatNumber(limit, VALUE_DIGITS) + '</td><td>' +
                    percent(modulation) + '</td><td>' + Math.ceil(neural.contactTrial * learning) +
                    '</td></tr>';
           })

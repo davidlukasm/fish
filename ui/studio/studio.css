@@ -8,7 +8,6 @@
 :where(#station-root) button{color:inherit;cursor:pointer}
 #station-root button:focus-visible,#station-root input:focus-visible{outline:2px solid #e3d5a4;outline-offset:2px}
 #station-root button:disabled{opacity:.38;cursor:default}
-.aid-dial:has(input:disabled){opacity:.38}
 .aid-station,.aid-hub{height:100%;min-height:0;display:flex;flex-direction:column}
 .aid-header{flex:0 0 auto;height:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:58px;padding:7px 14px;background:#0d2930;border-bottom:1px solid #2d5159}
 .aid-header-brand{display:flex;align-items:center;gap:18px}
@@ -146,9 +145,6 @@
 .aid-center-tabs{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
 .aid-center-tabs button.selected,.aid-effect-chips button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
-.aid-dial{display:flex;flex-direction:column;gap:8px;margin:18px 0;color:#c8dbd4;font-size:12px}
-.aid-dial input{width:100%;accent-color:#b5d9bd;cursor:ew-resize}
-.aid-dial output{align-self:flex-end;color:#aed2bc;font-size:12px}
 .aid-cell-track{display:block;width:100%;height:auto;margin:10px 0 4px}
 .aid-cell-track text{font-size:12px;fill:#c2d6d2}
 .aid-gonad-graphic{width:100%;color:#13333b}
@@ -248,7 +244,6 @@
 .aid-inspector-scroll button{min-height:34px}
 .aid-cppn-empty{display:grid;place-items:center;flex:1;text-align:center;padding:25px;color:#bdd0c6}
 
-.aid-pulse-overlay{pointer-events:none}
 
 .aid-scent-map{display:block;width:100%;max-width:280px;margin:6px auto;touch-action:none;cursor:crosshair}
 .aid-scent-rim{fill:#143b45;stroke:var(--aid-rim);stroke-width:1.5}
@@ -624,7 +619,6 @@
 .aid-gut-cell{fill:var(--aid-senses);stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
 .aid-sac-part.selected .aid-gut-stretch{stroke:var(--aid-handle)}
 .aid-sac-part.selected .aid-gut-cell{fill:var(--aid-handle)}
-.aid-drive .aid-drive-band{fill:#f1dda61a}
 .aid-drive .aid-drive-idle{fill:#0d262c66}
 .aid-drive text{font-size:10px;fill:#a9c2bb}
 .aid-muscle-areas rect{opacity:.16}

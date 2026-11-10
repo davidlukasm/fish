@@ -11,6 +11,8 @@ import {substanceColor} from '../../hormones.js';
 export const DEFAULT_PREVIEW_CONTEXT =
     Object.freeze({maturity : 0, hormones : Object.freeze(Array(HORMONES.levels).fill(0))});
 export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
+export const DEFAULT_PREVIEW_INPUT = 1;
+export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
 const word = key => label('development.' + key);
 const PREVIEW_DIGITS = 2;
 const input = (name, value, min, max, step, attributes) =>
@@ -24,7 +26,7 @@ function previewColumns(state) {
   return [
     {key : 'maturity', value : context.maturity, low : 0, index : HORMONES.levels},
     ...context.hormones.map((value, index) => ({key : String(index), value, low : 0, index})),
-    {key : 'input', value : state.previewInput ?? 1, low : PREVIEW_INPUT_LOW, index : null}
+    {key : 'input', value : previewInputOf(state), low : PREVIEW_INPUT_LOW, index : null}
   ];
 }
 export function previewPatch(state, key, fy) {
@@ -61,7 +63,7 @@ export function previewControls(state) {
          '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
          bars.join('') + '</svg></details>';
 }
-export function lifecycleGraphic(state, center) {
+function lifecycleGraphic(state, center) {
   if (!state.capabilities)
     return '';
   const context = previewContextOf(state), width = 300, height = 105, left = 18, right = 285,
