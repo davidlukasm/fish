@@ -1153,6 +1153,45 @@ void inner_hair_cells_feel_gravity() {
   check(down > 1 - tolerance::precision && up == 0,
         "an inner hair cell is weighed down when it points to the bottom, not to the surface");
 }
+void mussels_sum_at_most_two_quick_bites() {
+  Ecosystem w(SEED);
+  w.starter_world();
+  w.refresh_food_allowance();
+  for (const auto &s : w.field.vegetation().surfaces)
+    if (s.algae_open[1] > s.algae_open[0] &&
+        w.field.place_animals(food_kind::mussel, (s.a.x + s.b.x) / 2, (s.a.y + s.b.y) / 2,
+                              edit_limit::max_brush_radius, 1))
+      break;
+  const auto &mussels = w.field.food_web().mussels;
+  const auto shell = [&]() -> const Mussel * {
+    for (const auto &m : mussels)
+      if (m.energy > 0)
+        return &m;
+    return nullptr;
+  };
+  check(shell() != nullptr, "the start world holds a living mussel");
+  const std::uint64_t id = shell()->id;
+  const auto bite = [&](double force) {
+    for (std::size_t k = 0; k < mussels.size(); ++k)
+      if (mussels[k].id == id)
+        return w.field.take_small_animal(food_kind::mussel, k, force, true, false).has_value();
+    return false;
+  };
+  const auto at = [&]() {
+    return *std::find_if(mussels.begin(), mussels.end(),
+                         [&](const Mussel &m) { return m.id == id; });
+  };
+  const double weak = tolerance::precision, window = w.field.env().mussel_double_bite;
+  check(!bite(weak) && at().strain == weak && at().strain_left == int(window),
+        "a shell that withstands a bite keeps its force for a second one");
+  check(!bite(weak) && at().strain == 0 && at().strain_left == 0,
+        "a failed double bite leaves nothing for a third");
+  check(!bite(weak), "a weak bite fails again");
+  for (int step = 0; step < int(window); ++step)
+    w.field.advance_food_web();
+  check(at().strain == 0 && at().strain_left == 0, "a bitten shell recovers quickly");
+  check(bite(std::numeric_limits<double>::infinity()), "a strong enough bite cracks the shell");
+}
 void lateral_cells_read_the_water_beside_them() {
   const Body still;
   const PhysiologyParameters physiology{};
@@ -1453,6 +1492,7 @@ int main() {
     plant_tissue_needs_grinding_teeth();
     inner_hair_cells_feel_gravity();
     lateral_cells_read_the_water_beside_them();
+    mussels_sum_at_most_two_quick_bites();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
@@ -1462,9 +1502,11 @@ int main() {
     maturity_never_decreases(g);
     growth_needs_a_hormone(g);
     algae_vanish_in_traces(g);
-    std::cout << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Reife, Wachstum "
-                 "und Algen: "
-                 "OK\n";
+    std::cout
+        << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Muscheln, Reife, "
+           "Wachstum "
+           "und Algen: "
+           "OK\n";
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
     return 1;

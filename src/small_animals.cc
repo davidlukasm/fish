@@ -1206,9 +1206,21 @@ std::optional<SmallAnimalMeal> Field::take_small_animal(int kind, std::size_t in
       meal.hardness *= CLOSED_SHELL_HARDNESS;
     meal.color = MUSSEL_FLESH_COLOR;
   }
-  if (!energy || *energy <= 0 ||
-      (kind != food_kind::worm && rng.uniform() >= crack_success(force, meal.hardness, env_)))
+  if (!energy || *energy <= 0)
     return {};
+  if (kind != food_kind::worm) {
+    Mussel *shell = kind == food_kind::mussel ? &food_web_.mussels[index] : nullptr;
+    const bool second = shell && shell->strain_left > 0;
+    const double total = force + (second ? shell->strain : 0);
+    if (rng.uniform() >= crack_success(total, meal.hardness, env_)) {
+      // A shell sums at most two bites: after a failed second bite it starts over.
+      if (shell) {
+        shell->strain = second ? 0 : force;
+        shell->strain_left = second ? 0 : int(env_.mussel_double_bite);
+      }
+      return {};
+    }
+  }
   meal.energy = kind == food_kind::worm ? std::min(*energy, portion) : *energy;
   *energy -= meal.energy;
   if (kind == food_kind::worm && *energy > 0)

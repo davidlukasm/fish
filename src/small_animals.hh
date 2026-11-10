@@ -99,6 +99,9 @@ struct Mussel {
   double along = .5, x = 0, y = 0, energy = 0, morph = 2.5;
   int closed = 0;
   double filtered = 0, filter_rate = 0;
+  // The force of a bite the shell withstood; a second bite before it fades adds to it.
+  double strain = 0;
+  int strain_left = 0;
 };
 struct EmptyShell {
   std::uint64_t id = 0;

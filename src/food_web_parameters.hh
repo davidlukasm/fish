@@ -44,6 +44,7 @@ namespace fishsim {
   X(crab_flee_speed, 1, 0, 10)                                                                     \
   X(crab_pinch, .05, 0, 1)                                                                         \
   X(mussel_close_time, 40, 1, 10000)                                                               \
+  X(mussel_double_bite, 20, 1, 1000)                                                               \
   X(corpse_sink_time, 300, 1, 100000)                                                              \
   X(bone_time, 1000, 1, 100000)                                                                    \
   X(plankton_limit, .0025, 0, 1)                                                                   \

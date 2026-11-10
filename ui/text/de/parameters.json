@@ -180,6 +180,7 @@
   "crab_flee_speed": "Krabbenflucht",
   "crab_pinch": "Krabben: Kneifschaden",
   "mussel_close_time": "Muscheln: Schließdauer",
+  "mussel_double_bite": "Muscheln: Doppelbiss-Fenster",
   "corpse_sink_time": "Kadaver: Sinkübergang",
   "bone_time": "Skelettdauer",
   "plankton_limit": "Krebschenbudget je Fläche",

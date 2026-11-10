@@ -1253,6 +1253,8 @@ void Field::advance_food_web() {
   };
   for (auto &m : web.mussels) {
     m.filter_rate *= MUSSEL_FILTER_KEEP;
+    if (m.strain_left > 0 && --m.strain_left == 0)
+      m.strain = 0;
     if (m.energy <= 0)
       continue;
     const auto found = ids.find(m.patch);
