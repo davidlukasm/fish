@@ -79,8 +79,15 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
     return null;
   const [q1, q2] = wheelPlace(wheel, index);
   let draft = updateCenter(gland.document, gland.centerId, {q1, q2, qwidth : 0, tau : GLAND_TAU});
-  if (system.growth)
+  if (system.growth) {
     draft = updateRegion(draft, hub.organId, {response : 1}, sites);
+    // Resting activity starts local learning; the gland threshold keeps it out of the blood.
+    for (const center of findOrgan(draft, hub.organId).centers)
+      draft = updateCenter(draft, center.id, {threshold : -.15, pace : -1});
+    draft = updateCenter(draft, gland.centerId, {threshold : 1, electrical_limit : .5});
+    draft = updateReceptor(draft, gland.centerId, HORMONE_EFFECT.excitation,
+                           {active : 1, baseline : .5, sensitivity : 0});
+  }
   const from = sense.organ.centers.find(c => c.key === senseKey)?.id ?? sense.organ.id;
   for (const [a, b] of [[ from, hub.organId ], [ hub.organId, gland.organId ]])
     draft = addWire(draft, a, b, 'both', sites)?.document ?? draft;
