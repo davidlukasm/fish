@@ -37,7 +37,7 @@ const MARKER = Object.freeze({
   eye : 2.3,
   shapes : {inhibit : 'M0 -7 L6.5 5.5 H-6.5 Z', other : 'M0 -7 L7 0 L0 7 L-7 0 Z'},
   signs : {
-    pacemaker : 'M0 -4 V0 L3 2',
+    pacemaker : 'M-5 0 H-3 L-1.5 -3 L1.5 3 L3 0 H5',
     learn : 'M-4 0 H4 M0 -4 V4 M-2.5 -2.5 L2.5 2.5 M-2.5 2.5 L2.5 -2.5',
     modulate : 'M-3 -3 V3 M0 -4 V4 M3 -3 V3',
     inhibit : 'M-3 2 H3',

@@ -2,7 +2,7 @@ import {fishOutline} from './body.js';
 import {nodeLocation, organLocation, showsNodes} from './places.js';
 import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
-import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, PHASE_ICON} from './icons.js';
+import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, BIRTH_ICON, PHASE_ICON} from './icons.js';
 import {CATEGORY_TONE} from './names.js';
 import {isModulator} from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
@@ -67,15 +67,14 @@ function hormoneGlyph(item, kind, color, zoom) {
                           Array.from({length : G.puffs}, () => '<circle r="' + r + '"/>').join('') +
                           '</g>'
                     : '';
-  const symbols =
-      kind === 'receiver'
-          ? symbolsAbove(
-                (item.effects ?? []).map((e, k) => ({
-                                           path : e === 'birth' ? PHASE_ICON.start : EFFECT_ICON[e],
-                                           direction : item.directions?.[k] ?? 0
-                                         })),
-                r)
-          : '';
+  const symbols = kind === 'receiver'
+                      ? symbolsAbove((item.effects ??
+                                      []).map((e, k) => ({
+                                                path : e === 'birth' ? BIRTH_ICON : EFFECT_ICON[e],
+                                                direction : item.directions?.[k] ?? 0
+                                              })),
+                                     r)
+                      : '';
   const acts = kind === 'receiver'
                    ? EFFECT_ORDER.find(e => item.teach ? e === HORMONE_EFFECT.teaching
                                                        : (item.effects ?? []).includes(e))

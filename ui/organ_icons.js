@@ -70,6 +70,6 @@ export const STUDIO_ICON = Object.freeze({
   gland : ORGAN_ICONS[MOTOR_TISSUE.gland],
   tectum : 'M4 12c3-5 13-5 16 0-3 5-13 5-16 0zM12 10a2 2 0 1 0 .01 0M12 3v3M12 18v3',
   circuit : 'M4 7h5v10H4zM15 7h5v10h-5zM9 10h6M9 14h6M2 12h2M20 12h2',
-  rhythm : 'M3 12h3l3-7 6 14 3-7h3',
+  rhythm : 'M2 12h4l2-5 3 10 3-10 2 5h6',
   teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8'
 });

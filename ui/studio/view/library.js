@@ -1,6 +1,6 @@
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
-import {BODY_SIGNAL, EFFECT_ICON, GROWTH_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
+import {BODY_SIGNAL, EFFECT_ICON, GROWTH_ICON, BIRTH_ICON, PHASE_ICON, TOOL_ICON} from './icons.js';
 import {SYSTEMS, systemMissing} from '../model/systems.js';
 import {centerMarker} from './scene.js';
 import {EFFECT_ORDER} from './effects.js';
@@ -190,7 +190,7 @@ function hormoneLibrary(state) {
                                          kind : 'birth',
                                          value : String(index),
                                          name : label('development.birthReceptor'),
-                                         path : PHASE_ICON.start,
+                                         path : BIRTH_ICON,
                                          colour,
                                          title : label('development.birthEffect'),
                                          wide : true
@@ -213,7 +213,7 @@ function hormoneLibrary(state) {
                                               kind : 'birth',
                                               value : String(HORMONES.levels),
                                               name : label('development.birthMaturity'),
-                                              path : PHASE_ICON.start,
+                                              path : BIRTH_ICON,
                                               colour : BODY_SIGNAL,
                                               title : label('development.birthEffect')
                                             }) + tile({
@@ -283,7 +283,7 @@ function learningLibrary(state) {
                                          kind : 'birth',
                                          value : String(index),
                                          name : label('development.birthReceptor'),
-                                         path : PHASE_ICON.start,
+                                         path : BIRTH_ICON,
                                          colour,
                                          title : label('development.birthEffect'),
                                          wide : true
