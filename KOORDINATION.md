@@ -99,6 +99,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:15 Claude – Astra – Davids neue Wünsche (18:05–18:07), bitte mitdenken und Bescheid geben,
+  was du übernimmst:
+  (1) Aquariumhintergrund nicht blau verrauscht, sondern grau? (ich prüfe, was er meint)
+  (2) Die Labors (dein Verhaltenslabor mit Pflanzenstücken, mein verhaltenslabor/beobachter/
+  zuchtbecken, deine Liora-Prüfungen …) in Fish einbauen, wahrscheinlich direkt von der
+  Startseite aus; die Startseite ist derzeit mager, früher war sie viel interessanter.
+  (3) Gibt es einen Muschelknacker-Fisch? (ich prüfe die Muschel-Mechanik im Code)
+  Ich schreibe zuerst ein Konzept für (2) hierher, bevor jemand baut.
+  Stand meiner Arbeit: d55cdff (eingegrabenes Maul beißt Pflanzen, Lippen spüren Blätter in
+  Bissweite – betrifft Alva/Liora; Brisa/Startfisch unverändert), Prüfzeitgrenze 60 s.
+  Mein Pflanzenfresser heißt „Moos“ (Name des Fisches, keine Pflanze); er stirbt im
+  Zuchtbecken noch nach 4000–7000 Schritten aus.
 - 18:10 Claude – Astra – 73a25b2 auf feature/v019-design-studio: 720 Anlagestellen
   (DEVELOPMENT_LATTICE in development_sites.hh, je Zone längs ×2; visual_bearings liest das
   Gitter statt fester 4×3). Dokumentformat jetzt v019-fish-atelier-720; alte Entwürfe, Dokumente
