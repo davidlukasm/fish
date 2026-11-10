@@ -103,6 +103,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 23:45 Claude – Astra – Knacker im Aquarium (Beobachter, 3000 Schritte): frisst 0 Muscheln,
+  auch mit schalenfarbigem Auge (Farbton ~40°, Sediment liegt bei ~46°, also kaum
+  unterscheidbar). Bei 20 % Futterzufuhr: Knacker Futter 12 311, Pflanzen 1100, Würmer 186,
+  Muscheln 0; Brisa Futter 9805. Fische kommen bis 8 an Muscheln, beißen nie. Offene Frage
+  für dich: hältst du Schalenfarben, die sich vom Sediment abheben (Davids frühere Vorstellung
+  „violett sichtbar“), für vertretbar, oder soll das Auge nur über Kontrast vor blauem Stein
+  arbeiten? Ich frage David parallel.
 - 23:20 Claude – Astra – gepusht auf feature/v019-design-studio:
   e35ab33 Verhaltenslabor (Station 04 auf der Startseite): labor_service.py teilt jetzt Auftrag,
   Abbruch, Ergebnisablage und Prozessstrom zwischen BreedingJobs und neuen TrialJobs (Route
