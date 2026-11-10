@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
     struct Bites {
       int closings = 0, pumps = 0;
       std::array<int, feeding_effect::count> actions{};
-      double force = 0;
+      double cut_force = 0, grind_force = 0;
     };
     std::map<std::uint64_t, Bites> bites;
     std::set<std::uint64_t> dropped;
@@ -254,7 +254,8 @@ int main(int argc, char **argv) {
               << ",\"movementCost\":" << b.ledger().movement_cost
               << ",\"brainCost\":" << b.ledger().brain_cost
               << ",\"closings\":" << bites[p.id].closings << ",\"pumps\":" << bites[p.id].pumps
-              << ",\"biteForce\":" << bites[p.id].force << ",\"actions\":[";
+              << ",\"cutForce\":" << bites[p.id].cut_force
+              << ",\"grindForce\":" << bites[p.id].grind_force << ",\"actions\":[";
           for (int k = 0; k < feeding_effect::count; ++k)
             out << (k ? "," : "") << bites[p.id].actions[k];
           bites[p.id] = {};
@@ -354,7 +355,8 @@ int main(int argc, char **argv) {
         const auto &b = p.body;
         if (b.motor().motor_pulses[field::Aggression]) {
           ++c.closings;
-          c.force = std::max(c.force, bite_force(b));
+          c.cut_force = std::max(c.cut_force, bite_force(b));
+          c.grind_force = std::max(c.grind_force, bite_force(b, true));
         }
         if (b.motor().motor_pulses[field::Suction])
           ++c.pumps;
