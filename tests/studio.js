@@ -59,7 +59,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/interactive_brain.cc" : "23755fae851e4378",
   "src/material.hh" : "7b513268feed7d77",
   "src/ecology.hh" : "3505e6c40c515977",
-  "src/feeding.cc" : "d4ed3378682ab10f",
+  "src/feeding.cc" : "34e4a3c4117a42b0",
   "src/tank_energy.cc" : "f3b2fddbfce531b3",
   "src/environment.cc" : "62ca92c128e5af24",
   "src/environment.hh" : "09325a34326fa191",

@@ -174,6 +174,8 @@ class Ecosystem::FeedingSession {
     std::size_t target = 0;
     double best = std::numeric_limits<double>::infinity();
     auto candidate = [&](int k, std::size_t id, double x, double y, double radius) {
+      if (buried && k != food_kind::plant && k != food_kind::crab)
+        return;
       if (!reaches(x, y, radius))
         return;
       double d = std::max(0., std::hypot(world.field.delta_x(x - mx), y - my) - radius);
