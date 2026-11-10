@@ -69,6 +69,39 @@ void snapshot(const Ecosystem &w, const std::string &prefix) {
   cache.write_assets(out);
   out << '}';
 }
+void trace(std::ostream &out, const Ecosystem &w) {
+  out << "{\"t\":" << w.ticks << ",\"fish\":[";
+  bool first = true;
+  for (const auto &p : w.fish) {
+    const auto &b = p.body;
+    const double mx = w.field.wrap_x(b.x + mouth_offset(b) * std::cos(b.angle)),
+                 my = b.y + mouth_offset(b) * std::sin(b.angle);
+    double nearest = w.field.geometry().width, raw = 0;
+    for (const auto &part : w.field.vegetation().plants)
+      if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) && part.energy > 0)
+        nearest = std::min(nearest, std::max(0., stroke_distance(part, w.field.delta_x(part.x - mx),
+                                                               part.y - my)));
+    for (double amount : p.observations().raw_diet)
+      raw += amount;
+    out << (first ? "[" : ",[") << p.id << ',' << p.g << ',' << b.hatched << ',' << b.x << ','
+        << b.y << ',' << b.angle << ',' << body_radius(b) << ',' << mx << ',' << my << ','
+        << mouth_aperture(b) << ',' << nearest << ',' << b.energy << ',' << b.health << ','
+        << b.tissue << ',' << body_maturity(b) << ',' << raw << ',' << b.gut_energy << ','
+        << gut_filling(b) << ',' << b.digestion << ',' << b.bite_signal << ',' << b.eat_signal
+        << ',' << b.mouth.flow << ',' << b.mouth.cycle << ',' << b.mouth.phase << ','
+        << b.motor().drive_forward << ',' << b.motor().drive_left << ',' << b.motor().drive_right
+        << ',' << b.ledger().movement_cost << ',' << b.ledger().brain_cost << ','
+        << b.reproduction().egg_yolk << ',' << b.reproduction().sperm_store << ','
+        << b.motor().vx << ',' << b.motor().vy << ',' << b.motor().thrust << ','
+        << b.sediment_coverage << ',' << b.bladder_fill << ',' << b.buoyancy_force << ','
+        << body_mass(b) << ',' << b.undulation;
+    for (double hormone : b.hormones().levels())
+      out << ',' << hormone;
+    out << ']';
+    first = false;
+  }
+  out << "]}\n";
+}
 }
 
 int main(int argc, char **argv) {
@@ -76,7 +109,7 @@ int main(int argc, char **argv) {
     if (argc < 6)
       throw std::invalid_argument(
           "Aufruf: zuchtbecken GENOM SEED SCHRITTE ANZAHL aquarium|becken "
-          "[Parameter=Wert ...] [snapshot=PFAD]");
+          "[Parameter=Wert ...] [snapshot=PFAD] [observe=PFAD]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
     const std::string habitat = argv[5];
@@ -92,7 +125,7 @@ int main(int argc, char **argv) {
       w.resize(960, 640);
       w.field.flow = 0;
     }
-    std::string pictures;
+    std::string pictures, observed;
     for (int i = 6; i < argc; ++i) {
       const std::string option = argv[i];
       const auto split = option.find('=');
@@ -101,6 +134,8 @@ int main(int argc, char **argv) {
       const auto key = option.substr(0, split), value = option.substr(split + 1);
       if (key == "snapshot")
         pictures = value;
+      else if (key == "observe")
+        observed = value;
       else if (!w.set_parameter(key, std::stod(value)))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
@@ -109,6 +144,24 @@ int main(int argc, char **argv) {
     else
       w.field.seed_plants();
     w.seed({g}, count, habitat == "aquarium" ? run_limit::default_food : 0);
+    std::ofstream observations;
+    if (!observed.empty()) {
+      observations.open(observed + "-trace.jsonl");
+      if (!observations)
+        throw std::runtime_error("Beobachtung kann nicht gespeichert werden");
+      observations << "{\"every\":5,\"picturesEvery\":100,\"width\":"
+                   << w.field.geometry().width << ",\"height\":" << w.field.geometry().height
+                   << ",\"columns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"angle\","
+                      "\"radius\",\"mouthX\",\"mouthY\",\"aperture\",\"nearestMouthLeaf\","
+                      "\"energy\",\"health\",\"tissue\",\"maturity\",\"rawFood\",\"gutEnergy\","
+                      "\"gutFill\",\"digestion\",\"bite\",\"suction\",\"flow\",\"mouthCycle\","
+                      "\"mouthPhase\",\"forward\",\"left\",\"right\",\"movementCost\",\"brainCost\","
+                      "\"eggYolk\",\"spermStore\",\"vx\",\"vy\",\"thrust\",\"sediment\","
+                      "\"bladder\",\"buoyancy\",\"mass\",\"undulation\"";
+      for (int i = 0; i < field::HORMONES; ++i)
+        observations << ",\"H" << i << '"';
+      observations << "]}\n";
+    }
     std::cout << "{\"event\":\"setup\",\"habitat\":\"" << habitat << "\",\"seed\":" << seed
               << ",\"requested\":" << count << ",\"seeded\":" << w.fish.size()
               << ",\"assistance\":false,\"mutation\":" << w.evo.mutation
@@ -166,6 +219,12 @@ int main(int argc, char **argv) {
         std::cout << "}\n";
       }
       const bool last = tick == steps || (count > 0 && w.fish.empty());
+      if (observations.is_open()) {
+        if (tick % 5 == 0 || last)
+          trace(observations, w);
+        if (tick % 100 == 0 || last)
+          snapshot(w, observed);
+      }
       if (tick % SAMPLE_STEPS == 0 || last) {
         std::map<unsigned, int> alive, breeders;
         std::array<std::vector<double>, RADII.size()> nearby;
