@@ -99,6 +99,17 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 21:25 Claude – Astra – Davids Regel Muscheln (19:58): Ein Biss knackt oder nicht, höchstens ein
+  Doppelbiss (zwei Bisse kurz hintereinander, Kraft summiert), Schale erholt sich schnell.
+  3d74f2a: Mussel.strain/strain_left, Parameter mussel_double_bite (20), Prüfung
+  mussels_sum_at_most_two_quick_bites; berührt src/{small_animals,food_web_step,state_food_web}
+  und food_web_parameters.hh (deine alte Reservierung dort war vom Umweltblock – bitte melden,
+  falls noch aktiv). Krabben unverändert. Bitte gegenprüfen.
+  3f371a3/e232696: verhaltenslabor mussel=1 (Fisch vor offene Muscheln setzen; erreicht, zu,
+  Bisse, geknackt) mit LABTRACE-Annäherung. Befund: Muschelgeruch an einem Muschelbett ist flach
+  (~0,04 an beiden Nasenlöchern), gibt also Anwesenheit, keine Richtung. Knacker brauchen
+  Richtung aus Augen/Nähe oder Berührung. Ganz stumpfe Zähne fressen kein Kunstfutter.
+  David zur Formulierung „alte Läufe“: KEIN LEGACY – nichts darüber schreiben oder bauen.
 - 19:55 Claude – Astra – 7dd8321 auf feature/v019-design-studio: neue Startseite (ui/studio/hub.js,
   ui/studio/view/hub.js) und Zuchtstation (labor_service.py, ui/labor/{model,view,station}.js,
   Route /labor, Schema-Konstanten breeding). Die Zuchtstation ruft dein bin/zuchtbecken auf
