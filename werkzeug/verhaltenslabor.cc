@@ -248,11 +248,29 @@ int main(int argc, char **argv) {
                   nb = bearing_to(w, p->body, f.x, f.y) * 180 / PI;
                 }
               }
+            // Gap between mouth and the nearest soft leaf, as a bite measures it.
+            const double mx = w.field.wrap_x(p->body.x +
+                                             mouth_offset(p->body) * std::cos(p->body.angle)),
+                         my = p->body.y + mouth_offset(p->body) * std::sin(p->body.angle);
+            double leaf = std::numeric_limits<double>::infinity();
+            for (const auto &part : w.field.vegetation().plants)
+              if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) &&
+                  part.energy > 0)
+                leaf = std::min(
+                    leaf,
+                    std::max(0., stroke_distance(part, w.field.delta_x(part.x - mx), part.y - my)));
             std::cout << "{\"event\":\"trace\",\"bearing\":" << bearing << ",\"step\":" << steps
-                      << ",\"distance\":" << nd << ",\"to\":" << nb
+                      << ",\"distance\":" << nd << ",\"to\":" << nb << ",\"leaf\":" << leaf
+                      << ",\"reach\":" << mouth_reach(p->body)
+                      << ",\"biteSignal\":" << p->body.bite_signal
+                      << ",\"grind\":" << bite_force(p->body, true)
+                      << ",\"plant\":" << p->observations().raw_diet[food_kind::plant]
+                      << ",\"cycle\":" << p->body.mouth.cycle << ",\"gut\":" << gut_filling(p->body)
                       << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"y\":" << p->body.y
                       << ",\"sediment\":" << p->body.sediment_coverage
-                      << ",\"bladder\":" << p->body.bladder_fill << ",\"sites\":{";
+                      << ",\"bladder\":" << p->body.bladder_fill << ",\"vy\":" << p->body.motor().vy
+                      << ",\"angle\":" << p->body.angle * 180 / PI
+                      << ",\"buoyancy\":" << p->body.buoyancy_force << ",\"sites\":{";
             bool first = true;
             for (const auto &[site, value] : sensed(p->body)) {
               std::cout << (first ? "" : ",") << '"' << site << "\":" << value;

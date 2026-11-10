@@ -224,7 +224,9 @@ class Ecosystem::FeedingSession {
             candidate(food_kind::carrion, o.source, q.x, q.y, corpse_extent(q));
           }
         });
-    if (buried) {
+    // A buried mouth digs for crabs and worms, unless a rooted plant rising from the mud lies
+    // within reach: grazers bite the shoots at the ground.
+    if (buried && kind != food_kind::plant) {
       for (std::size_t j = 0; j < world.field.food_web().crabs.size(); ++j) {
         const auto &c = world.field.food_web().crabs[j];
         if (c.state == crab_state::buried && c.energy > 0 &&

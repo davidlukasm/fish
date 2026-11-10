@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--no-build", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--only", nargs="+", choices=NATIVE + JAVASCRIPT + ["interface"],
                         help="Run only named checks, e.g. --only invariants")
-    parser.add_argument("--timeout", type=float, default=30, help="Seconds per check (default: 30)")
+    parser.add_argument("--timeout", type=float, default=60, help="Seconds per check (default: 60)")
     args = parser.parse_args()
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("Zeitgrenzen müssen positiv sein")

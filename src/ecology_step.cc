@@ -415,6 +415,12 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
         record_touch(b, leaves.toward.x, leaves.toward.y, 0);
       }
     }
+    // The lips feel a leaf within biting reach, so a grazer can tell when a bite will close on
+    // a plant.
+    const double lip_x = field.wrap_x(b.x + mouth_offset(b) * std::cos(b.angle)),
+                 lip_y = b.y + mouth_offset(b) * std::sin(b.angle);
+    if (field.foliage_contact(lip_x, lip_y, mouth_reach(b)).cover > 0)
+      record_touch(b, std::cos(b.angle), std::sin(b.angle), 0);
     collide_food(b, old[i][0], old[i][1]);
     metrics_.performance_total.food += food_nutrition;
     metrics_.performance_total.nutrition += b.nutrition - nutrition_before;
