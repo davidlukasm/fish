@@ -37,13 +37,14 @@ export const SYSTEMS = Object.freeze([
 ]);
 const SYSTEM_BY_KEY = Object.freeze(Object.fromEntries(SYSTEMS.map(s => [s.key, s])));
 const ANSWER_HALF = .1, GLAND_TAU = 1;
-// The cells that would answer the system's substance and answer none of those effects yet; cells
-// already set keep their settings.
+// The cells that would answer the system's substance and read no substance with those effects
+// yet; cells already tuned to one keep their settings.
+const reads = receptor => receptor?.active && receptor.sensitivity;
 const answering = (doc, system) => system.answers.flatMap(
     answer => doc.organs.flatMap(
         organ => organ.centers
                      .filter(c => answer.holds(c, organ) &&
-                                  answer.effects.every(([ e ]) => !c.receptors[e]?.active))
+                                  answer.effects.every(([ e ]) => !reads(c.receptors[e])))
                      .map(c => ({center : c, answer}))));
 function shared(doc, type, sites, position) {
   const found = doc.organs.find(o => o.type === type);
@@ -94,9 +95,13 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
   if (system.growth)
     draft = updateGrowth(draft, {active : 1, substance : index, ...GROWTH_START});
   for (const {center, answer} of answering(draft, system))
-    for (const [effect, ends] of answer.effects)
-      draft = updateReceptor(draft, center.id, effect,
-                             {...ends, active : 1, substance : index, half : ANSWER_HALF}) ??
+    for (const [effect, ends] of answer.effects) {
+      // A resting tone, such as a muscle's open learning gate, stays under the new answer.
+      const own = center.receptors[effect], resting = own?.active ? {baseline : own.baseline} : {};
+      draft = updateReceptor(
+                  draft, center.id, effect,
+                  {...ends, ...resting, active : 1, substance : index, half : ANSWER_HALF}) ??
               draft;
+    }
   return {document : draft, organId : gland.organId, substance : index};
 }

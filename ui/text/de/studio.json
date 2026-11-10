@@ -391,6 +391,7 @@
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
     "inhibit": "Kontrastzellen",
+    "sense": "Sinneseingang",
     "beat": "Taktgeber",
     "cross": "Hemmung",
     "command": "Kommando",
