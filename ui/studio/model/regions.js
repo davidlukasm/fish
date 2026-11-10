@@ -127,41 +127,44 @@ const THRESHOLD_RELAY = Object.freeze({
 const CIRCUIT_LEARNING =
     Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
 const CIRCUIT_THRESHOLD = Object.freeze([ -.5, 0, .5 ]),
-      CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 3, 6 ]),
+      CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 4, 8 ]),
       CIRCUIT_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
+const COMPARISON_THRESHOLD = Object.freeze([ -.05, -.02, -.005 ]);
+const TONIC_LEARNING = Object.freeze({...ACTIVE_LEARNING, [HORMONE_EFFECT.rhythm] : {active : 0}});
 function circuitPlan(doc, organ) {
-  const r = organ.region;
+  const r = organ.region, comparison = !!(organ.pair && r.compare);
   const nodes = [ {
     node : 'command',
     preset : CIRCUIT_PRESET[r.effect],
-    port : 'both',
-    effects : r.threshold === 2 ? THRESHOLD_RELAY : DEVELOPING_RELAY,
+    port : comparison ? 'out' : 'both',
+    effects : comparison          ? TONIC_LEARNING
+              : r.threshold === 2 ? THRESHOLD_RELAY
+                                  : DEVELOPING_RELAY,
     set : {
       ...CIRCUIT_LEARNING,
-      copies : 8,
-      threshold : CIRCUIT_THRESHOLD[r.threshold],
+      copies : comparison ? CIRCUIT_COMPARE[r.compare] : 8,
+      threshold : comparison ? COMPARISON_THRESHOLD[r.threshold] : CIRCUIT_THRESHOLD[r.threshold],
       tau : CIRCUIT_TIME[r.time],
       q1 : r.response ? 1 : 0,
       q2 : r.response / 2,
-      pace : .6
+      pace : comparison ? -1 : .6
     }
   } ];
   const inner = [], cross = [];
-  if (organ.pair && r.compare) {
-    nodes.push({
-      node : 'cross',
-      preset : 'inhibit',
-      port : 'none',
-      effects : DEVELOPING_RELAY,
-      set : {
-        ...CIRCUIT_LEARNING,
-        copies : CIRCUIT_COMPARE[r.compare],
-        q1 : r.response ? 1 : 0,
-        q2 : r.response ? .5 : 0,
-        pace : .6
-      }
-    });
-    inner.push([ 'command', 'cross' ]);
+  if (comparison) {
+    // Matched input populations cancel a shared cue before the output amplifies its difference.
+    const input = {
+      ...CIRCUIT_LEARNING,
+      copies : 8,
+      threshold : -.5,
+      tau : CIRCUIT_TIME[r.time],
+      q1 : 1,
+      q2 : .5,
+      pace : -1
+    };
+    for (const [node, preset] of [[ 'sense', 'relay' ], [ 'cross', 'inhibit' ]])
+      nodes.push({node, preset, port : 'in', effects : TONIC_LEARNING, set : input});
+    inner.push([ 'sense', 'command' ]);
     cross.push([ 'cross', 'command' ]);
   }
   return {nodes, inner, cross, route : () => null, view : null};

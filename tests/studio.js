@@ -280,6 +280,17 @@ function semanticFingerprint(source) {
   const E = HORMONE_EFFECT;
   assert.equal(sitesResult.effects, Object.keys(E).length);
   {
+    const {motorResponse} = await import('../ui/studio/view/drive.js');
+    const motor = model.defaults(
+        {key : 'muscle', role : 'motor', functionCode : MOTOR_KIND.turn, copies : 3}, sites[0]);
+    motor.threshold = 1;
+    const excitation = model.receptorResponse(sitesResult, motor.receptors[E.excitation], [], 1);
+    assert.ok(excitation > sitesResult.biasScale * motor.threshold,
+              'A motor with a closed action gate can still learn its first input');
+    assert.equal(motorResponse(motor, 0, {scale : sitesResult.biasScale, excitation}), 0,
+                 'The motor learning baseline alone produces no muscle command');
+  }
+  {
     const {EFFECT_ICON} = await import('../ui/studio/view/icons.js');
     const {EFFECT_ORDER, effectScene} = await import('../ui/studio/view/effects.js');
     assert.equal(new Set(EFFECT_ORDER).size, Object.keys(E).length);
@@ -352,6 +363,27 @@ function semanticFingerprint(source) {
                      'Changing the threshold preserves a manually tuned hormone response');
     const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
     const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
+    const populations = model.findOrgan(compared, left.id).centers;
+    const inputs = populations.filter(c => c.port === 'in');
+    assert.equal(inputs.length, 2, 'Both comparison paths receive the same sensory input');
+    for (const key of ['copies', 'threshold', 'tau', 'q1', 'q2', 'pace'])
+      assert.deepEqual(inputs[0][key], inputs[1][key],
+                       'Equal left/right cues cancel through matched input responses');
+    for (const [effect, receptor] of inputs[0].receptors.entries()) {
+      assert.equal(receptor.active, inputs[1].receptors[effect].active);
+      if (receptor.active)
+        assert.deepEqual(receptor, inputs[1].receptors[effect]);
+    }
+    const comparisonOutput = populations.find(c => c.node === 'command');
+    assert.equal(comparisonOutput.pace, -1,
+                 'The comparison does not amplify a developmental rhythm');
+    assert.ok(comparisonOutput.copies *
+                      Math.tanh(-sitesResult.biasScale * comparisonOutput.threshold) <
+                  sitesResult.biasScale,
+              'The learning baseline stays below a muscle gate set to one');
+    assert.ok(regions.routedLinks(compared, sites)
+                  .some(l => l.from === node(compared, left.id, 'sense') &&
+                             l.to === node(compared, left.id, 'command')));
     assert.ok(regions.routedLinks(compared, sites)
                   .some(l => l.from === node(compared, left.id, 'cross') &&
                              l.to === node(compared, right.id, 'command')));
@@ -377,8 +409,8 @@ function semanticFingerprint(source) {
     const tuned = regions.updateRegion(compared, left.id, {time : 2, effect : 1}, sites);
     assert.ok(model.findOrgan(tuned, left.id).centers[0].sign < 0);
     assert.equal(model.findOrgan(tuned, right.id).centers[0].tau, 1);
-    assert.equal(model.findOrgan(tuned, left.id).centers[0].pace, .6,
-                 'An inhibitory region keeps its developmental activity');
+    assert.equal(model.findOrgan(tuned, left.id).centers[0].pace, comparisonOutput.pace,
+                 'Changing the sign preserves the comparison learning mechanism');
     const handPaced =
         model.updateCenter(tuned, model.findOrgan(tuned, left.id).centers[0].id, {pace : .9});
     const excitatory = regions.updateRegion(handPaced, left.id, {effect : 0}, sites);

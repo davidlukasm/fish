@@ -367,6 +367,9 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     receptors : Array.from({length : effects},
                            (_, effect) => {
                              const receptor = neutralReceptor(effect);
+                             // Motor membranes must learn even when their action gate is closed.
+                             if (desc.role === 'motor' && effect === HORMONE_EFFECT.excitation)
+                               Object.assign(receptor, {active : 1, baseline : .5});
                              if (desc.role === 'sensor' && desc.functionCode === SENSE_KIND.light &&
                                  effect === HORMONE_EFFECT.excitation)
                                Object.assign(receptor, {

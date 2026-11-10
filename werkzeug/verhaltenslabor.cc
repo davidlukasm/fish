@@ -77,14 +77,14 @@ int main(int argc, char **argv) {
     if (argc < 3)
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
-          "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [aquarium=1] "
+          "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [plant=1] [aquarium=1] "
           "[raised=1] [hold=1] "
           "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int trace_every =
         std::getenv("LABTRACE") ? std::max(1, std::atoi(std::getenv("LABTRACE"))) : 0;
     int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
-        hungry = 0, raised = 0, hold = 0;
+        hungry = 0, plant = 0, raised = 0, hold = 0;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -122,9 +122,15 @@ int main(int argc, char **argv) {
         raised = int(value);
       else if (key == "hold")
         hold = int(value);
+      else if (key == "plant")
+        plant = int(value);
       else if (!w.set_parameter(key, value))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
+    const int food_type = plant ? food_kind::plant : food_kind::feed,
+              odor_type = plant ? odor_kind::plants : odor_kind::food;
+    if (cluster < 1 || !std::isfinite(PIECE_ENERGY) || PIECE_ENERGY < w.field.env().crumb_min)
+      throw std::invalid_argument("Futterstücke müssen die Zerfallsgrenze erreichen");
     const auto stop_supply = [&]() {
       for (const char *share :
            {"food_supply_share", "plankton_supply_share", "benthic_supply_share"})
@@ -195,6 +201,13 @@ int main(int argc, char **argv) {
               w.field.wrap_x(x + r * std::cos(phi)), y + r * std::sin(phi), 0, 0, 0, PIECE_ENERGY};
           piece.initial_energy = PIECE_ENERGY;
           piece.radius = food_radius(PIECE_ENERGY);
+          if (plant) {
+            piece.origin = food_type;
+            piece.color = ALGAE_COLOR;
+            piece.buoyancy = PLANT_BUOYANCY;
+            piece.blunt = true;
+            piece.radius = tissue_radius(PIECE_ENERGY, PLANT_TISSUE_DENSITY);
+          }
           w.field.append_fragment(piece);
         }
         {
@@ -207,7 +220,7 @@ int main(int argc, char **argv) {
             p->body.angle = ha;
           }
         }
-        const double eaten_before = p->observations().raw_diet[food_kind::feed];
+        const double eaten_before = p->observations().raw_diet[food_type];
         const double start_angle = b.angle;
         double closest = distance, travelled = 0, turned_early = 0, forward = 0, turning = 0,
                pumping = 0, biting = 0;
@@ -287,10 +300,10 @@ int main(int argc, char **argv) {
               }
             std::cerr << "bite step " << steps << " gap " << nd << " pieceRadius " << nr
                       << " energy " << ne << " reach " << mouth_reach(bb) << " aperture "
-                      << maximum_mouth_aperture(bb) << " force " << bite_force(bb) << " signal "
-                      << bb.bite_signal << " eaten "
-                      << p->observations().raw_diet[food_kind::feed] - eaten_before << " speed "
-                      << std::hypot(bb.motor().vx, bb.motor().vy) << "\n";
+                      << maximum_mouth_aperture(bb) << " cutForce " << bite_force(bb)
+                      << " grindForce " << bite_force(bb, true) << " signal " << bb.bite_signal
+                      << " eaten " << p->observations().raw_diet[food_type] - eaten_before
+                      << " speed " << std::hypot(bb.motor().vx, bb.motor().vy) << "\n";
           }
           forward += p->body.motor().drive_forward;
           turning += p->body.motor().drive_left - p->body.motor().drive_right;
@@ -313,13 +326,13 @@ int main(int argc, char **argv) {
               const auto left = olfactory_position(p->body, binding, 0),
                          right = olfactory_position(p->body, binding, 1);
               std::cout << "{\"event\":\"smell\",\"step\":" << steps << ",\"bearing\":" << bearing
-                        << ",\"left\":" << w.field.odor_field(left.x, left.y)[odor_kind::food]
-                        << ",\"right\":" << w.field.odor_field(right.x, right.y)[odor_kind::food]
+                        << ",\"left\":" << w.field.odor_field(left.x, left.y)[odor_type]
+                        << ",\"right\":" << w.field.odor_field(right.x, right.y)[odor_type]
                         << ",\"nostrils\":" << std::hypot(left.x - right.x, left.y - right.y)
                         << ",\"profile\":[";
               for (double r : {0., 10., 20., 40., 80., 160.})
                 std::cout << (r > 0 ? "," : "")
-                          << w.field.odor_field(w.field.wrap_x(x + r), y)[odor_kind::food];
+                          << w.field.odor_field(w.field.wrap_x(x + r), y)[odor_type];
               std::cout << "]}\n";
             }
             std::cout << "{\"event\":\"vision\",\"bearing\":" << bearing
@@ -384,7 +397,7 @@ int main(int argc, char **argv) {
                   << ",\"turning\":" << turning / (steps + 1)
                   << ",\"pumping\":" << pumping / (steps + 1)
                   << ",\"biting\":" << biting / (steps + 1)
-                  << ",\"eaten\":" << p->observations().raw_diet[food_kind::feed] - eaten_before
+                  << ",\"eaten\":" << p->observations().raw_diet[food_type] - eaten_before
                   << ",\"bites\":" << p->body.mouth.cycle - bites_before << ",\"near\":" << near
                   << ",\"maturity\":" << body_maturity(p->body) << ",\"depleted\":" << depleted
                   << ",\"left\":" << left << ",\"capacity\":["
