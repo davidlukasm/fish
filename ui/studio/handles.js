@@ -7,7 +7,7 @@ import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
-import {probeHandle, probePatch} from './view/probes.js';
+import {gutProbePatch, probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
 import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
 import {
@@ -78,7 +78,8 @@ const HANDLES = Object.freeze({
   skin : {follow : 'skinPointer', done : 'refreshSkin'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
-  preview : {follow : 'previewPointer'}
+  preview : {follow : 'previewPointer'},
+  gutProbe : {follow : 'gutProbePointer'}
 });
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
@@ -114,6 +115,12 @@ const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
 export const GRIPS = Object.freeze([
+  {
+    graphic : '[data-gut-bars]',
+    handle : '[data-gut-handle]',
+    held : 'gutProbe',
+    start : (studio, g, h) => ({handle : h.dataset.gutHandle})
+  },
   {
     graphic : '[data-preview-bars]',
     handle : '[data-preview-handle]',
@@ -496,6 +503,17 @@ export const handleMethods = {
                       ? {x : p.x, y : drag.mirrored ? 2 * BODY_FRAME.middle - p.y : p.y}
                       : b);
     this.draftDesign(setBends(doc, drag.wires, bends), 'bend:' + drag.wires[0], 'refreshScene');
+  },
+  gutProbePointer(event) {
+    const probe = this.state.senseProbe;
+    if (probe?.kind !== 'gut')
+      return;
+    this.state.senseProbe = {
+      ...probe,
+      ...gutProbePatch(this.handleDrag.handle, pointerShare(event, this.handleDrag.rect).fy)
+    };
+    this.refreshProbes();
+    this.requestDesign();
   },
   probePointer(event) {
     const drag = this.handleDrag, probe = this.state.senseProbe,

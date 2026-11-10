@@ -313,10 +313,10 @@ function stimulusLibrary(state) {
                       (source === 'cppn' && (!acceptedGenome(state) || !state.report?.compiler)
                            ? ' disabled'
                            : '') +
-                      '>' + label('stimulus.' + source + 'Source') + '</button>')
+                      ' title="' + escapeText(label('stimulus.' + source + 'Meaning')) + '">' +
+                      label('stimulus.' + source + 'Source') + '</button>')
              .join('') +
-         '</div><p class="aid-hint">' +
-         label('stimulus.' + (state.traceSource ?? 'plan') + 'Meaning') + '</p>' +
+         '</div>' +
          section(label('stimulusCard.senses'), Object.entries(STIMULUS_ORGAN)
                                                    .map(([ key, organ ]) => tile({
                                                           kind : 'stimulus',

@@ -1,4 +1,15 @@
-import {contactCenters, findCenter, findOrgan} from './model/document.js';
+import {
+  contactCenters,
+  findCenter,
+  findOrgan,
+  groupReport,
+  organOf,
+  substanceBound
+} from './model/document.js';
+import {organCells} from './view/vision.js';
+import {organFunction} from './model/organs.js';
+import {sideOf} from './model/layout.js';
+import {HORMONE_EFFECT, MOTOR_KIND} from '../schema.js';
 import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
@@ -8,6 +19,8 @@ import {clamp} from '../units.js';
 import {label} from './view/kit.js';
 import {acceptedGenome} from './view/compiler.js';
 
+// A sense cell answering less than this does not start a trace.
+const ANSWERS = .05;
 export const trialMethods = {
   setTraceSource(source) {
     if (!['plan', 'cppn'].includes(source))
@@ -70,6 +83,14 @@ export const trialMethods = {
       for (const key of keys)
         for (const element of this.stimulusMarks(key))
           element.classList.add(name);
+    for (const leg of stimulus.sent)
+      for (const element of this.legWires(leg)) {
+        element.classList.add('aid-pulse-used');
+        element.classList.toggle('aid-pulse-withdrawn', leg.kind === 'electrical' && leg.sign < 0);
+      }
+    for (const leg of stimulus.learned)
+      for (const element of this.legWires(leg))
+        element.classList.add('aid-pulse-learned');
   },
   wireMarks(id) {
     return [...this.bodyMap()?.querySelectorAll('[data-wires~="' + CSS.escape(id) + '"]') ?? [] ];
@@ -103,10 +124,12 @@ export const trialMethods = {
       return this.notice(label('status.noPotential'));
     const stimulus = {
       starts : trace.starts,
-      fired : new Set(),
+      fired : new Set(trace.starts),
       quieted : new Set(),
       modulated : new Set(),
-      hormones : new Set()
+      hormones : new Set(),
+      sent : [],
+      learned : []
     };
     this.state.stimulus = stimulus;
     this.refreshViews();
@@ -132,10 +155,44 @@ export const trialMethods = {
                                                : 'aid-pulse-fired';
         for (const element of this.stimulusMarks(part.id))
           element.classList.add(cls);
+        if (part.kind === 'electrical' && part.sign > 0)
+          for (const [element, move] of this.stimulusMoves(part.id))
+            element.classList.add(move);
+        if (part.kind !== 'electrical')
+          this.learnedPaths(part, stimulus);
+      },
+      sent : leg => {
+        if (leg.kind === 'hormone')
+          return;
+        stimulus.sent.push(leg);
+        for (const element of this.legWires(leg)) {
+          element.classList.add('aid-pulse-used');
+          element.classList.toggle('aid-pulse-withdrawn',
+                                   leg.kind === 'electrical' && leg.sign < 0);
+        }
       }
     });
     this.pulsePlayer.start();
     this.notice(label('status.planTraced'));
+  },
+  // A physical stimulus is no impulse of its own: its trace starts at the sense cells that answer
+  // it, once the design run has measured them.
+  traceAnswered() {
+    const organ = this.pendingTrace && findOrgan(this.state.document, this.pendingTrace);
+    this.pendingTrace = null;
+    if (!organ || !this.state.anatomy)
+      return;
+    const answers = new Map();
+    for (const {center, answer} of organCells(this.state, organ))
+      answers.set(center.id, Math.max(answers.get(center.id) ?? 0, answer));
+    for (const center of organ.centers)
+      if (!answers.has(center.id))
+        answers.set(center.id,
+                    groupReport(this.state.document, this.state.anatomy, 'senseProbe', center.id) ??
+                        0);
+    const answering = [...answers ].filter(([, answer ]) => answer > ANSWERS).map(([ id ]) => id);
+    if (answering.length)
+      this.stimulate(answering);
   },
   setPreviewContext(key, value) {
     if (!Number.isFinite(value))
@@ -159,6 +216,58 @@ export const trialMethods = {
       this.refreshViews();
       this.refreshGraphics();
     });
+  },
+  legWires(leg) {
+    const pair = leg.from + '>' + leg.to;
+    return [
+      ...this.bodyMap()?.querySelectorAll('.aid-wire-group[data-signal-edges]') ?? []
+    ].filter(element => element.dataset.signalEdges.split(' ').includes(pair));
+  },
+  // A teacher reaching a cell that has fired: the inputs that made it fire are what it learns,
+  // and those paths glow golden. A substance teaches only cells whose teaching receptor holds it.
+  learnedPaths(part, stimulus) {
+    if (!stimulus.fired.has(part.id))
+      return;
+    const center = findCenter(this.state.document, part.id)?.center;
+    if (part.kind === 'hormone' &&
+        !substanceBound(HORMONE_EFFECT.teaching, center?.receptors[HORMONE_EFFECT.teaching]))
+      return;
+    for (const leg of stimulus.sent.filter(leg => leg.to === part.id && leg.kind === 'electrical' &&
+                                                  leg.sign > 0)) {
+      stimulus.learned.push(leg);
+      for (const element of this.legWires(leg))
+        element.classList.add('aid-pulse-learned');
+    }
+  },
+  // How a reached organ shows that it acts: the tail beats, a fin turns, the mouth bites or sucks,
+  // spines rise, pigment spreads.
+  stimulusMoves(key) {
+    const svg = this.bodyMap(), doc = this.state.document;
+    const organ = organOf(doc, key);
+    if (!svg || !organ?.centers.some(c => c.role === 'motor'))
+      return [];
+    const part = (selector, name) => [...svg.querySelectorAll(selector)].map(e => [e, name]);
+    const own = this.stimulusMarks(organ.id).map(e => [e, 'aid-pulse-twitch']);
+    const code = organ.type === 'muscle' ? organFunction(organ, this.state.sites) : -1,
+          side = sideOf(organ);
+    const moved = {
+      [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
+      [MOTOR_KIND.turn] : () => part('[data-part="fin"][data-side="' + side + '"]',
+                                     side < 0 ? 'aid-move-fin-up' : 'aid-move-fin-down'),
+      [MOTOR_KIND.aggression] :
+          () => [...part('[data-part="mouth"]', 'aid-move-bite'),
+                 ...part('[data-part="jaw"][data-side="' + side + '"]', 'aid-move-jaw')],
+      [MOTOR_KIND.suction] : () => [...part('[data-part="mouth"]', 'aid-move-suck'),
+                                    ...part('[data-part="cheek"]', 'aid-move-suck'),
+                                    ...part('[data-part="intake"]', 'aid-move-suck'),
+                                    ...part('[data-part="throat"]', 'aid-move-throat')]
+    }[code];
+    const raise = organ.type === 'defense'
+                      ? part('[data-spines="' + CSS.escape(organ.id) + '"]', 'aid-move-raise')
+                  : organ.type === 'pigment'
+                      ? part('.aid-chromatophores .gathered', 'aid-move-spread')
+                      : [];
+    return [...own, ...(moved ? moved() : []), ...raise ];
   },
   clearStimulus() {
     this.stopPulse();

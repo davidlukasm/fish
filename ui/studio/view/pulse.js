@@ -1,13 +1,18 @@
+import {substanceColor} from '../../hormones.js';
+
 const NS = 'http://www.w3.org/2000/svg';
-const colour = leg => leg.kind === 'hormone'    ? '#d4b7ee'
-                      : leg.kind === 'teaching' ? '#e2c487'
-                      : leg.sign < 0            ? '#f0adbd'
-                                                : '#e3efad';
-export function createPlanPlayer(svg, trace, {marks, point, reached}) {
+const colour = leg => leg.kind === 'hormone'    ? substanceColor(leg.substance)
+                      : leg.kind === 'teaching' ? 'var(--aid-teach)'
+                      : leg.sign < 0            ? 'var(--aid-inhibit)'
+                                                : 'var(--aid-light)';
+// A level of the trace takes one interval, shorter when the trace is deep; reached parts glow a
+// little longer. A wave fades as it spreads.
+const PLAY = Object.freeze({interval : 420, whole : 8000, linger : 800, dot : 5, thinning : .7});
+export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
   const levels = Math.max(1, ...trace.parts.map(part => part.level)) + 1;
-  const interval = Math.min(420, 8000 / levels), linger = 800;
-  let overlay, paths = [], parts = [], handle = null, started = null, active = false;
-  const shown = new Set();
+  const interval = Math.min(PLAY.interval, PLAY.whole / levels), linger = PLAY.linger;
+  let overlay, paths = [], parts = [], waves = [], handle = null, started = null, active = false;
+  const shown = new Set(), sentLegs = new Set();
   const attach = next => {
     overlay?.remove();
     svg = next;
@@ -26,7 +31,32 @@ export function createPlanPlayer(svg, trace, {marks, point, reached}) {
       }
     }
     paths = [];
+    // A substance spreads from its gland as a wave reaching every cell that answers it.
+    const spread = new Map();
+    for (const leg of trace.legs.filter(leg => leg.kind === 'hormone')) {
+      const from = point(leg.from), to = point(leg.to);
+      if (!from || !to)
+        continue;
+      const key = leg.from + ':' + leg.substance + ':' + leg.level;
+      const reach = Math.hypot(to.x - from.x, to.y - from.y);
+      const wave = spread.get(key) ?? {leg, from, reach : 0};
+      wave.reach = Math.max(wave.reach, reach);
+      spread.set(key, wave);
+    }
+    waves = [...spread.values() ].map(wave => {
+      const circle = svg.ownerDocument.createElementNS(NS, 'circle');
+      circle.setAttribute('class', 'aid-hormone-wave');
+      circle.setAttribute('cx', String(wave.from.x));
+      circle.setAttribute('cy', String(wave.from.y));
+      circle.setAttribute('r', '0');
+      circle.setAttribute('opacity', '0');
+      circle.style.setProperty('--hormone', colour(wave.leg));
+      overlay.appendChild(circle);
+      return {...wave, circle};
+    });
     for (const leg of trace.legs) {
+      if (leg.kind === 'hormone')
+        continue;
       const pair = leg.from + '>' + leg.to;
       let found = routes.get(pair);
       if (!found) {
@@ -36,7 +66,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached}) {
         const path = svg.ownerDocument.createElementNS(NS, 'path');
         path.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', colour(leg));
+        path.style.stroke = colour(leg);
         path.setAttribute('stroke-opacity', leg.kind === 'electrical' ? '.15' : '.45');
         path.setAttribute('stroke-dasharray', '4 5');
         overlay.appendChild(path);
@@ -51,8 +81,8 @@ export function createPlanPlayer(svg, trace, {marks, point, reached}) {
           continue;
         joined.get(path).add(key);
         const dot = svg.ownerDocument.createElementNS(NS, 'circle');
-        dot.setAttribute('r', '5');
-        dot.setAttribute('fill', colour(leg));
+        dot.setAttribute('r', String(PLAY.dot));
+        dot.style.fill = colour(leg);
         dot.setAttribute('opacity', '0');
         overlay.appendChild(dot);
         paths.push({leg, path, dot});
@@ -100,6 +130,20 @@ export function createPlanPlayer(svg, trace, {marks, point, reached}) {
         for (const element of elements)
           element.classList.toggle(cls, on);
       }
+    }
+    for (const leg of trace.legs) {
+      const key = leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign;
+      if (elapsed >= leg.level * interval && !sentLegs.has(key)) {
+        sentLegs.add(key);
+        sent(leg);
+      }
+    }
+    for (const {leg, circle, reach} of waves) {
+      const fraction = elapsed / interval - leg.level;
+      const spreading = fraction >= 0 && fraction < 1;
+      circle.setAttribute('opacity', spreading ? String(1 - PLAY.thinning * fraction) : '0');
+      if (spreading)
+        circle.setAttribute('r', String(fraction * reach));
     }
     for (const {leg, path, dot, length} of paths) {
       const fraction = elapsed / interval - leg.level;

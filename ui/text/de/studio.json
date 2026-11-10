@@ -857,14 +857,14 @@
     "noWire": "Hier liegt keine Verbindung."
   },
   "stimulusCard": {
-    "senses": "Sinnesproben am Entwurf",
+    "senses": "Reize",
     "light": "Licht",
     "object": "Gegenstand",
     "scent": "Duft",
     "flow": "Strömung",
     "touch": "Berührung",
     "pain": "Verletzung",
-    "food": "Darminhalt und Nährstoffzufluss"
+    "food": "Futter im Darm"
   },
   "learnCard": {
     "cells": "Knoten fürs Lernen",
@@ -990,7 +990,7 @@
       "touch": "Berührung testen",
       "wound": "Biss testen",
       "flow": "Strömung testen",
-      "gut": "Darminhalt und Nährstoffzufluss prüfen"
+      "gut": "Futter im Darm"
     },
     "lengths": "{n} {n:Fischlänge|Fischlängen}",
     "handle": {
@@ -1000,7 +1000,9 @@
       "flow": "Strömung: Richtung und Stärke"
     },
     "strength": "Darmfüllung · Anteil",
-    "nutrient": "Nährstoffzufluss · Signalstärke"
+    "nutrient": "Nährstoffzufluss · Signalstärke",
+    "strengthMark": "Füllung",
+    "nutrientMark": "Zufluss"
   },
   "pigment": {
     "kinds": [

@@ -277,6 +277,7 @@ export const dropMethods = {
     this.requestDesign();
     this.showTestLight();
     this.refreshViews();
+    this.pendingTrace = organ.id;
   },
   ontoNerve(kind, value) {
     return this.state.tool === 'learn' && kind === 'neuron' && ONTO_NERVES.includes(value);

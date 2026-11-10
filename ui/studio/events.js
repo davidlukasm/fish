@@ -543,12 +543,6 @@ export const FISH_CHANGES = Object.freeze([
     patch[e.dataset.growthKey] = Number(e.value);
     keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowth, patch));
   } ],
-  [ 'gutProbe', (studio, e) => {
-    const value = Number(e.value), key = e.dataset.gutProbe;
-    if (!Number.isFinite(value) || !['strength', 'nutrient'].includes(key) || studio.state.senseProbe?.kind !== 'gut') return;
-    studio.state.senseProbe = {...studio.state.senseProbe, [key]: Math.max(0, Math.min(key === 'strength' ? 1 : 20, value))};
-    studio.requestDesign();
-  } ],
   [ 'cellTrait', (studio, e) => {
     const key = e.dataset.traitKey, entered = Number(e.value), neural = studio.state.capabilities.neural;
     const value = key === 'tau' ? timeConstantOf(entered) : key === 'learning_tau' ? learningTimeOf(entered)

@@ -204,25 +204,69 @@ function answerSvg(state, organ, zoom) {
       })
       .join('');
 }
+// Food in the gut as two bars to drag, how full it is and how much nutrient flows in, beside how
+// each gut cell answers. Inflow runs on a log scale, as signals of very different size matter.
+const GUT_BARS = Object.freeze({
+  width : 300,
+  height : 104,
+  top : 10,
+  bottom : 74,
+  gauge : 14,
+  knob : 8,
+  mark : 92,
+  columns : [ 34, 92 ],
+  answers : 140,
+  row : 20,
+  bar : 8,
+  right : 290
+});
+const INFLOW = Object.freeze({least : .01, most : 20});
+const inflowShare = value =>
+    value > INFLOW.least
+        ? clamp(Math.log(value / INFLOW.least) / Math.log(INFLOW.most / INFLOW.least))
+        : 0;
+const inflowAt = share =>
+    share > 0 ? INFLOW.least * Math.pow(INFLOW.most / INFLOW.least, share) : 0;
+export function gutProbePatch(key, fy) {
+  const B = GUT_BARS, share = clamp((B.bottom - fy * B.height) / (B.bottom - B.top));
+  return {[key] : key === 'strength' ? share : inflowAt(share)};
+}
 export function gutProbeControls(state, organ) {
-  const probe = state.senseProbe;
+  const probe = state.senseProbe, B = GUT_BARS;
   if (state.tool !== 'stimulate' || probe?.kind !== 'gut' || probe.organ !== organ.id)
     return '';
-  const input = (key, max) => '<label>' + t('studio.probe.' + key) +
-                              '<input type="number" data-gut-probe="' + key + '" min="0" max="' +
-                              max + '" step=".01" value="' + probe[key] + '"></label>';
+  const y = share => B.bottom - (B.bottom - B.top) * share;
+  const bar = (key, share, x) =>
+      '<rect class="aid-dose-gauge" x="' + (x - B.gauge / 2) + '" y="' + B.top + '" width="' +
+      B.gauge + '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 +
+      '"/><rect class="aid-gut-level ' + key + '" x="' + (x - B.gauge / 2) + '" y="' +
+      fixed(y(share)) + '" width="' + B.gauge + '" height="' + fixed(B.bottom - y(share)) +
+      '"/><circle class="aid-graphic-handle" data-gut-handle="' + key + '" cx="' + x + '" cy="' +
+      fixed(y(share)) + '" r="' + B.knob + '"><title>' + escapeText(t('studio.probe.' + key)) +
+      '</title></circle><text x="' + x + '" y="' + B.mark + '" text-anchor="middle">' +
+      escapeText(t('studio.probe.' + key + 'Mark')) + '</text>';
   const answers =
       organ.centers
-          .map(center => {
+          .map((center, k) => {
             const answer = groupReport(state.document, state.anatomy, 'senseProbe', center.id);
-            return '<div><dt>' + escapeText(centerTitle(center)) + '</dt><dd>' +
-                   (Number.isFinite(answer) ? percent(answer) : formatNumber(NaN)) + '</dd></div>';
+            const top = B.top + k * B.row, known = Number.isFinite(answer);
+            return '<text x="' + B.answers + '" y="' + (top + B.bar) + '">' +
+                   escapeText(centerTitle(center)) +
+                   '</text><rect class="aid-gut-answer-track" x="' + B.answers + '" y="' +
+                   (top + B.bar + B.bar / 2) + '" width="' + (B.right - B.answers) + '" height="' +
+                   B.bar / 2 + '"/><rect class="aid-gut-answer" x="' + B.answers + '" y="' +
+                   (top + B.bar + B.bar / 2) + '" width="' +
+                   fixed((B.right - B.answers) * (known ? clamp(answer) : 0)) + '" height="' +
+                   B.bar / 2 + '"><title>' + (known ? percent(answer) : formatNumber(NaN)) +
+                   '</title></rect>';
           })
           .join('');
   return '<section data-gut-probe-controls="' + escapeText(organ.id) + '"><h4>' +
-         t('studio.probe.title.gut') + '</h4><div class="aid-parameter-grid">' +
-         input('strength', 1) + input('nutrient', 20) + '</div><dl class="aid-parameter-readout">' +
-         answers + '</dl></section>';
+         t('studio.probe.title.gut') + '</h4><svg class="aid-gut-bars" viewBox="0 0 ' + B.width +
+         ' ' + B.height + '" data-gut-bars role="img" aria-label="' +
+         escapeText(t('studio.probe.title.gut')) + '">' +
+         bar('strength', clamp(probe.strength), B.columns[0]) +
+         bar('nutrient', inflowShare(probe.nutrient), B.columns[1]) + answers + '</svg></section>';
 }
 export function senseProbeSvg(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;

@@ -134,12 +134,13 @@ export const designMethods = {
       this.refreshVision();
       this.drawSight();
       this.refreshProbes();
-      return;
+      return this.traceAnswered();
     }
     this.refreshHeader();
     this.refreshScene();
     this.refreshGraphics();
     this.checkPressure();
+    this.traceAnswered();
   },
   async checkPressure() {
     const doc = this.state.document, pressure = this.state.anatomy?.pressure;

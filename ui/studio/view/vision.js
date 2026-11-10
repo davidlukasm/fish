@@ -134,7 +134,7 @@ function fieldClips(g, id) {
                          fixed(2 * c)} 0a${fixed(c)} ${fixed(c)} 0 1 0 ${fixed(-2 * c)} 0Z`);
 }
 const RAY_FAINTEST = .15;
-function organCells(state, organ) {
+export function organCells(state, organ) {
   const sight = state.anatomy?.sight;
   if (!sight?.receptors)
     return [];
