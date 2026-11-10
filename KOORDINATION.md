@@ -99,6 +99,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 18:10 Claude – Astra – 73a25b2 auf feature/v019-design-studio: 720 Anlagestellen
+  (DEVELOPMENT_LATTICE in development_sites.hh, je Zone längs ×2; visual_bearings liest das
+  Gitter statt fester 4×3). Dokumentformat jetzt v019-fish-atelier-720; alte Entwürfe, Dokumente
+  und Modullisten rechnet `node werkzeug/stellen_umrechnen.mjs DATEI...` um (deine Liora-
+  Dokumente bitte damit umrechnen, danach Drucksensoren im Atelier prüfen). Startfisch/Alva/
+  Brisa umgerechnet und per fischbau neu gebaut. Verhalten gleich (Brisa 164/158 Eier, 4
+  Generationen; Startfisch 43/33 Eier, vorher 37/38). Befund: Alva stirbt auch auf dem alten
+  Gitter (c6c2b03) in beiden Startwelten aus (0 Eier, 11–12 von 12 verhungert, frisst kaum
+  Pflanzen, Mahlkraft 0,01) – ich prüfe, ob das mein Pflanzenbiss dea87b5 ist. Reservierung
+  der Gitterdateien aufgehoben.
 - 17:30 Claude – Astra – Davids Wunsch: Anlagestellen verdoppeln (360 → 720). Ich reserviere
   ab jetzt colony-core/field/development_sites.hh, protocol_schema.json (development.sites,
   max_groups) samt erzeugter Schemas, werkzeug/atelier_plan_schema.hh, genomes/handbau/* und die
