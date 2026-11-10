@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Startauswahl: Genome, Linien, ★ Favoriten oder „Genom öffnen …“. Ohne Auswahl startet die generationell geprüfte Brisa. Im Atelier sind zusätzlich die Entwürfe Miro und Alva (Pflanzenfresser) verfügbar. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzen beginnen größer; Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
+Ohne Auswahl startet die generationell geprüfte Brisa. Miro und Liora 32 (Pflanzenfresser) sind Atelier-Entwürfe. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
@@ -31,7 +31,7 @@ Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührun
 
 Die Pumpe bestimmt die erbliche Darmlänge. Tier- und Pflanzenspezialisten erreichen 100 % Verwertung ihrer passenden Nahrung und 10 % der Gegenquelle; der mittlere Allesfresser jeweils 65 %. Kunstfutter liefert unabhängig davon 80 %. Darmenergie, verdaulicher Anteil, Füllung und Reserve sind getrennt.
 
-Die Zufuhr folgt der freien Wasserfläche. Kunstfutter, Plankton, Bodentiere und Pflanzen teilen das Budget; geförderte Pflanzen wachsen nur aus freier Energie; tatsächliche Importe und interne Transfers werden getrennt gebucht. Mutterreserve und Gonadenfüllschwelle wachsen mit √(Gewebe/40).
+Kunstfutter, Plankton, Bodentiere und Pflanzen teilen das Budget der freien Wasserfläche. Importe und interne Transfers werden getrennt gebucht. Mutterreserve und Gonadenfüllschwelle wachsen mit √(Gewebe/40).
 
 ## Prüfung
 

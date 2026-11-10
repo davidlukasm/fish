@@ -59,7 +59,7 @@ function stationHeader(s) {
                  '<select data-start-fish aria-label="' + label('app.startFish') + '"' +
                  (s.busy ? ' disabled' : '') + '><option value="">' + label('app.startFish') +
                  '</option><option value="start">' + label('app.miro') +
-                 '</option><option value="plants">' + label('app.alva') +
+                 '</option><option value="plants">' + label('app.liora') +
                  '</option><option value="brisa">' + label('app.brisa') + '</option></select>' +
                  button('data-action="open"', label('app.open')) +
                  button('data-action="download"', label('app.saveGenome'), {disabled : !accepted}),

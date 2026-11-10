@@ -31,9 +31,9 @@ void initial_plants_use_the_available_energy() {
   }
 }
 void herbivores_start_at_reachable_leaves() {
-  const auto g = Genome::load("genomes/handbau/alva.genome");
+  const auto g = Genome::load("genomes/handbau/liora.genome");
   check(g.viable() && g.interface->gut_length > .99 && g.interface->blunt_teeth > .99,
-        "Alva has a viable herbivore anatomy with a long gut and grinding teeth");
+        "Liora has a viable herbivore anatomy with a long gut and grinding teeth");
   Ecosystem w(SEED);
   w.starter_world();
   check(w.field.grass_energy() > 1000, "the aquarium starts with grown plant biomass");
