@@ -1,4 +1,11 @@
-import {isModulator, NEURON_BY_KEY, ORGAN_BY_KEY, nerve} from './organs.js';
+import {
+  isModulator,
+  NEURON_BY_KEY,
+  ORGAN_BY_KEY,
+  nerve,
+  organSlots,
+  slotCenters
+} from './organs.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
@@ -12,7 +19,8 @@ import {
   mirroredSite,
   organOf,
   settleAssemblies,
-  usedSites
+  usedSites,
+  wireEndpointCenters
 } from './document.js';
 
 export const planned = organ => !!PLANS[organ?.type];
@@ -212,8 +220,19 @@ export function routedLinks(doc, sites, withCut = false) {
   const links = [];
   for (const link of expandedWires(doc)) {
     const source = findOrgan(doc, link.from), target = findOrgan(doc, link.to);
-    const froms = plans.has(source?.id) ? out(source, plans.get(source.id)) : [ link.from ];
+    const froms = link.wire.fromPort != null
+                      ? slotCenters(source, link.wire.fromPort, 'out').map(c => c.id)
+                  : plans.has(source?.id) ? out(source, plans.get(source.id))
+                                          : [ link.from ];
     for (const from of froms) {
+      if (link.wire.toPort != null) {
+        const slot = organSlots(target).find(s => s.key === link.wire.toPort && s.dir === 'in');
+        if (slot?.node || !plans.has(target?.id)) {
+          for (const to of slotCenters(target, link.wire.toPort, 'in'))
+            links.push({...link, from, to : to.id});
+          continue;
+        }
+      }
       if (!plans.has(target?.id)) {
         links.push({...link, from});
         continue;
@@ -338,7 +357,11 @@ export function settleRegions(doc, sites, pairedId = null) {
   if (draft === doc)
     return doc;
   const ids = new Set([...draft.organs.map(o => o.id), ...allCenters(draft).map(c => c.id) ]);
-  draft.wires = draft.wires.filter(w => ids.has(w.from) && ids.has(w.to));
+  draft.wires = draft.wires.filter(
+      w =>
+          ids.has(w.from) && ids.has(w.to) &&
+          (w.fromPort == null || slotCenters(findOrgan(draft, w.from), w.fromPort, 'out').length) &&
+          (w.toPort == null || slotCenters(findOrgan(draft, w.to), w.toPort, 'in').length));
   settleAssemblies(draft);
   return draft;
 }
@@ -397,14 +420,20 @@ export function updateRegion(doc, organId, patch, sites) {
 export function regionSlots(doc, organ) {
   const own = new Set([ organ.id, ...organ.centers.map(c => c.id) ]);
   const links = expandedWires(doc);
-  const ends = (dir) => links.filter(l => own.has(dir === 'in' ? l.to : l.from))
-                            .map(l => dir === 'in' ? l.from : l.to)
-                            .filter(id => !own.has(id))
-                            .map(id => organOf(doc, id))
-                            .filter(Boolean);
-  const inputs = ends('in'), outputs = ends('out');
-  return (ORGAN_BY_KEY[organ.type].slots ?? []).map(slot => {
-    const candidates = slot.dir === 'in' ? inputs : outputs;
+  return organSlots(organ).map(slot => {
+    const members = new Set(slotCenters(organ, slot.key, slot.dir).map(c => c.id));
+    const candidates =
+        links
+            .filter(l => {
+              const incoming = slot.dir === 'in', id = incoming ? l.to : l.from;
+              const port = incoming ? l.wire.toPort : l.wire.fromPort;
+              return own.has(id) &&
+                     wireEndpointCenters(doc, id, port, slot.dir).some(c => members.has(c.id));
+            })
+            .map(l => slot.dir === 'in' ? l.from : l.to)
+            .filter(id => !own.has(id))
+            .map(id => organOf(doc, id))
+            .filter(Boolean);
     const filled = [...new Set(slot.fits.length ? candidates.filter(o => slot.fits.includes(o.type))
                                                 : candidates) ];
     return {...slot, filled};

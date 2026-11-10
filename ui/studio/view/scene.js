@@ -153,8 +153,9 @@ function slotsSvg(state) {
                        ? namedText(need, joinList(slot.filled.map(o => organTitle(o, sites))))
                        : need;
       html += '<g class="aid-slot-chip ' + fill + ' ' + slot.dir + '" data-slot-region="' +
-              escapeText(organ.id) + '" data-slot-dir="' + slot.dir + '"' + steadyAt({x, y}, zoom) +
-              '><title>' + escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
+              escapeText(organ.id) + '" data-slot-key="' + escapeText(slot.key) +
+              '" data-slot-dir="' + slot.dir + '"' + steadyAt({x, y}, zoom) + '><title>' +
+              escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
               fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
               SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
               placedGlyph(slotShape(slot), SLOT.icon, {x : dx}) + '</g>';

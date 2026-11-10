@@ -38,10 +38,11 @@ export function moduleName(doc, assembly) {
              : t('units.numbered',
                  {name : t('studio.sections.module'), n : doc.assemblies.indexOf(assembly) + 1});
 }
-export function endpointTitle(doc, id, sites = null) {
+export function endpointTitle(doc, id, sites = null, port = null) {
   const organ = findOrgan(doc, id);
   if (organ)
-    return organTitle(organ, sites);
+    return port ? joinParts([ organTitle(organ, sites), t('studio.regions.slots.' + port) ])
+                : organTitle(organ, sites);
   const found = findCenter(doc, id);
   if (!found)
     return '';

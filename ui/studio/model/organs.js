@@ -173,7 +173,8 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
     slots : [
-      slot('trigger', 'in', [], false, 'release'), slot('fullness', 'out', [], false, 'pressure')
+      slot('storage', 'in', [], false, 'growth'), slot('trigger', 'in', [], false, 'release'),
+      slot('fullness', 'out', [], false, 'pressure')
     ]
   },
   {
@@ -187,7 +188,8 @@ export const ORGANS = Object.freeze([
       sensor('pressure', SENSE_KIND.inner_pressure, 2, 'inner')
     ],
     slots : [
-      slot('trigger', 'in', [], false, 'release'), slot('fullness', 'out', [], false, 'pressure')
+      slot('storage', 'in', [], false, 'growth'), slot('trigger', 'in', [], false, 'release'),
+      slot('fullness', 'out', [], false, 'pressure')
     ]
   },
   {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
@@ -212,7 +214,11 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     midline : true,
     centers : [ nerve('relay', 8, [ 1, 2, 3 ]) ],
-    slots : [ slot('senses', 'in', [], true), slot('onward', 'out', [], true) ],
+    slots : organ => [slot('senses', 'in', [], true),
+                      ...(organ.pair && organ.region.compare
+                              ? [ slot('control', 'in', [], false, 'command') ]
+                              : []),
+                      slot('onward', 'out', [], true)],
     settings : {
       threshold : setting(0, 2, 0, true),
       time : setting(0, 2, 1, true),
@@ -246,6 +252,19 @@ export const ORGANS = Object.freeze([
                               : item.centers)
 })));
 export const isRegion = organ => ORGAN_BY_KEY[organ?.type]?.category === 'regions';
+export const organSlots = organ => {
+  const slots = ORGAN_BY_KEY[organ?.type]?.slots;
+  return typeof slots === 'function' ? slots(organ) : slots ?? [];
+};
+export function slotCenters(organ, key, dir) {
+  const slot = organSlots(organ).find(s => s.key === key && s.dir === dir);
+  if (!slot)
+    return [];
+  return organ.centers.filter(c => (dir === 'in' ? c.role !== 'sensor' : c.role !== 'motor') &&
+                                   (slot.node
+                                        ? (c.node ?? c.key) === slot.node
+                                        : !isRegion(organ) || c.port === 'both' || c.port === dir));
+}
 export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROLE
                                 : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
                                                                      : type;

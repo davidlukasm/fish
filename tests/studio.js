@@ -85,6 +85,95 @@ function semanticFingerprint(source) {
   return hash.toString(16).padStart(16, '0');
 }
 
+function checkSlotWiring(model, regions, sites, clickSlot) {
+  const organ = id => ({kind : 'organ', id});
+  const port = (id, slot) => ({kind : 'slot', id, slot});
+  for (const type of ['eggs', 'sperm']) {
+    const relay = model.addOrgan(model.newDocument('Anschlüsse'), 'circuit', sites,
+                                 {x : 550, y : 365}, Infinity, false);
+    const added = model.addOrgan(relay.document, type, sites, {x : 700, y : 365});
+    const editor = {
+      state : {document : added.document},
+      setTool() { this.pendingWire = null; },
+      refreshViews() {},
+      notice() {},
+      connectSelections(from, to) {
+        const wired = model.connectSelections(this.state.document, from, to, sites);
+        if (wired)
+          this.state.document = wired.document;
+        return !!wired;
+      }
+    };
+    clickSlot(editor,
+              {dataset : {slotRegion : relay.organId, slotKey : 'onward', slotDir : 'out'}});
+    clickSlot(editor,
+              {dataset : {slotRegion : added.organId, slotKey : 'trigger', slotDir : 'in'}});
+    let doc = editor.state.document;
+    assert.equal(doc.wires[0].fromPort, 'onward');
+    assert.equal(doc.wires[0].toPort, 'trigger');
+    const compiledTargets = (doc, key) => {
+      const plan = model.compileDocument(doc, sites);
+      const wire = doc.wires.find(w => w.toPort === key);
+      const ids = new Set(
+          regions.routedLinks(doc, sites).filter(l => l.wire.id === wire.id).map(l => l.to));
+      const centers = model.allCenters(doc);
+      return plan.connections.filter(c => ids.has(centers[c.to].id))
+          .map(c => plan.groups[c.to].name);
+    };
+    assert.ok(compiledTargets(doc, 'trigger').length);
+    assert.ok(compiledTargets(doc, 'trigger').every(name => name === type + ':release'),
+              'The release port never fills the gonad');
+    const slots = regions.regionSlots(doc, model.findOrgan(doc, added.organId));
+    assert.equal(slots.find(s => s.key === 'storage').filled.length, 0);
+    assert.equal(slots.find(s => s.key === 'trigger').filled.length, 1);
+    doc = model.connectSelections(doc, organ(relay.organId), port(added.organId, 'storage'), sites)
+              .document;
+    assert.equal(doc.wires.length, 2, 'Storage and release retain separate wires');
+    doc = model.setOrganNodes(doc, added.organId, type === 'eggs' ? 18 : 16, sites);
+    assert.ok(compiledTargets(doc, 'storage').every(name => name === type + ':growth'));
+    const releaseNodes =
+        model.findOrgan(doc, added.organId).centers.filter(c => c.key === 'release');
+    const reached = new Set(
+        regions.routedLinks(doc, sites).filter(l => l.wire.toPort === 'trigger').map(l => l.to));
+    assert.ok(releaseNodes.every(c => reached.has(c.id)),
+              'A named port includes chambers added after wiring');
+    doc = model.connectSelections(doc, port(added.organId, 'fullness'), organ(relay.organId), sites)
+              .document;
+    const feedback = regions.routedLinks(doc, sites).filter(l => l.wire.fromPort === 'fullness');
+    assert.ok(feedback.length &&
+              feedback.every(l => model.findCenter(doc, l.from).center.key === 'pressure'));
+    model.validateDocument(JSON.parse(JSON.stringify(doc)));
+    const stored = model.placeStoredModule(model.newDocument('Kopie'),
+                                           {name : type, organs : doc.organs, wires : doc.wires},
+                                           sites, {x : 550, y : 365});
+    assert.ok(stored);
+    assert.deepEqual(stored.document.wires.map(w => [w.fromPort, w.toPort]),
+                     doc.wires.map(w => [w.fromPort, w.toPort]));
+  }
+  const paired =
+      model.addOrgan(model.newDocument('Vergleich'), 'circuit', sites, {x : 700, y : 300});
+  const compared = regions.updateRegion(paired.document, paired.organId, {compare : 1}, sites);
+  const gate = model.addOrgan(compared, 'circuit', sites, {x : 500, y : 365}, Infinity, false);
+  const sensed =
+      model.connectSelections(gate.document, organ(gate.organId), organ(paired.organId), sites);
+  assert.ok(model.connectSelections(sensed.document, organ(gate.organId),
+                                    port(paired.organId, 'control'), sites),
+            'Sensory and command inputs of a comparison remain separate');
+  const wired = model.connectSelections(gate.document, organ(gate.organId),
+                                        port(paired.organId, 'control'), sites);
+  const both = model.updateWire(wired.document, wired.wireId, {pairing : 'both'});
+  const links = regions.routedLinks(both, sites).filter(l => l.wire.id === wired.wireId);
+  assert.equal(links.length, 2);
+  assert.ok(links.every(l => model.findCenter(both, l.to).center.node === 'command'),
+            'Command control bypasses the matched sensory comparison paths');
+  const slots = regions.regionSlots(both, model.findOrgan(both, paired.organId));
+  assert.equal(slots.find(s => s.key === 'control').filled.length, 1);
+  assert.equal(slots.find(s => s.key === 'senses').filled.length, 0);
+  const plain = regions.updateRegion(both, paired.organId, {compare : 0}, sites);
+  assert.ok(!plain.wires.some(w => w.id === wired.wireId));
+  model.validateDocument(plain);
+}
+
 (async () => {
   const root = join(__dirname, '..');
   for (const [path, expected] of Object.entries(ENGINE_REVIEW)) {
@@ -159,6 +248,9 @@ function semanticFingerprint(source) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
+                  clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
   // Shipped blueprints remain editable and compile to their shipped fish.
   for (const example of ['start', 'plants', 'brisa']) {
     const source = JSON.parse(execFileSync(
@@ -2150,6 +2242,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(systems.systemMissing(muscled, 'alarm'), null);
     const alarm =
         systems.placeSystem(muscled, 'alarm', sites, sitesResult, {x : 500, y : 400}, 'S');
+    for (const system of [rewarded, alarm]) {
+      const gland = model.findOrgan(system.document, system.organId).centers[0];
+      const hubId = system.document.wires.find(w => w.to === system.organId).from;
+      const cells = model.findOrgan(system.document, hubId).centers;
+      const rest = cells.reduce(
+          (sum, c) => sum + c.copies * Math.tanh(-sitesResult.biasScale * c.threshold) *
+                                gland.electrical_limit,
+          0);
+      assert.ok(cells.every(c => organsModel.nerveClass(c).pace === 0 && c.q2 === .5));
+      assert.ok(rest < sitesResult.biasScale * gland.threshold,
+                'Even fully learned resting activity cannot secrete reward or alarm');
+    }
     const types = alarm.document.organs.map(o => o.type);
     assert.ok([ 'pain', 'circuit', 'gland' ].every(type => types.includes(type)));
     assert.equal(alarm.document.substances.length, 1);

@@ -302,9 +302,10 @@ export function slotsSection(state, organ) {
                                   .join('')
                             : '') +
                        '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
-                       '" data-slot-dir="' + slot.dir + '" title="' +
-                       label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') + '">' +
-                       (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
+                       '" data-slot-key="' + escapeText(slot.key) + '" data-slot-dir="' + slot.dir +
+                       '" title="' + label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') +
+                       '">' + (slot.filled.length ? '+' : label('regions.free') + ' +') +
+                       '</button>' +
                        '</span></li>')
           .join('');
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +

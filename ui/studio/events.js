@@ -196,8 +196,14 @@ function wireItem(studio, kind, id) {
 }
 function startSlotWire(studio, element) {
   const region = element.dataset.slotRegion, out = element.dataset.slotDir === 'out';
+  const slot = {kind : 'slot', id : region, slot : element.dataset.slotKey};
+  if (!selectionCenters(studio.state.document, slot).length)
+    return;
+  const other = out ? studio.pendingWire?.to : studio.pendingWire?.from;
   studio.setTool('wire');
-  const slot = {kind : 'organ', id : region};
+  if (other && other.id !== region &&
+      studio.connectSelections(out ? slot : other, out ? other : slot))
+    return studio.notice(label('status.wired'));
   studio.pendingWire = out ? {from : slot} : {to : slot};
   studio.state.selected = {kind : 'organ', id : region};
   studio.refreshViews();

@@ -319,23 +319,24 @@ export function wireSvg(state, centers) {
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
-    html += '<g data-signal-edges="' +
-            escapeText([...new Set(ends.flatMap(end => signalPairs(doc, end.link))) ].join(' ')) +
-            '" data-wire="' +
-            escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
-            '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
-            (bundle.mirrored ? ' data-mirrored' : '') +
-            (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
-            (chosen >= 0 ? ' selected' : '') + '">' +
-            '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
-            '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) +
-            '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
-            escapeText(joinParts([
-              linkText(endpointTitle(doc, ends[0].link.from, state.sites),
-                       endpointTitle(doc, ends[0].link.to, state.sites)),
-              wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
-            ])) +
-            '</title></g>';
+    html +=
+        '<g data-signal-edges="' +
+        escapeText([...new Set(ends.flatMap(end => signalPairs(doc, end.link))) ].join(' ')) +
+        '" data-wire="' +
+        escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
+        '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
+        (bundle.mirrored ? ' data-mirrored' : '') +
+        (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
+        (chosen >= 0 ? ' selected' : '') + '">' +
+        '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
+        '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) + '"' +
+        (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
+        escapeText(joinParts([
+          linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
+                   endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
+          wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
+        ])) +
+        '</title></g>';
     const branches =
         ends.flatMap(e => {
               const branch = (nodes, inward) => nodes.map(

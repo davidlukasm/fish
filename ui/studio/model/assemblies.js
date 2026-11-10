@@ -172,7 +172,7 @@ export function mirrorAssembly(doc, assemblyId, sites) {
       organIds.push('brain');
   }
   for (const wire of doc.wires.filter(w => assembly.wireIds.includes(w.id))) {
-    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites);
+    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites, wire);
     if (added)
       draft = updateWire(added.document, added.wireId, wire);
   }
@@ -288,7 +288,7 @@ export function placeStoredModule(doc, module, sites, position, snapDistance = I
     fresh.linked = !!fresh.pair && original.linked;
   }
   for (const wire of module.wires) {
-    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites);
+    const added = addWire(draft, mapping.get(wire.from), mapping.get(wire.to), null, sites, wire);
     if (!added)
       return null;
     draft = updateWire(added.document, added.wireId, wire);

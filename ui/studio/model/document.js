@@ -27,10 +27,12 @@ import {
   nodeLimit,
   organFunction,
   ORGAN_BY_KEY,
+  organSlots,
   PAIRINGS,
   PRESSURE_OF,
   ROLE,
-  siteRole
+  siteRole,
+  slotCenters
 } from './organs.js';
 import {
   centroid,
@@ -144,6 +146,9 @@ export function validateDocument(doc) {
     throw new Error('studio.errors.invalidDocument');
   for (const wire of doc.wires) {
     if (!ids.has(wire.from) || !ids.has(wire.to) ||
+        (wire.fromPort != null &&
+         !slotCenters(findOrgan(doc, wire.from), wire.fromPort, 'out').length) ||
+        (wire.toPort != null && !slotCenters(findOrgan(doc, wire.to), wire.toPort, 'in').length) ||
         (wire.pairing != null && !PAIRINGS.includes(wire.pairing)) ||
         (wire.bends !== undefined && !validBends(wire.bends)))
       throw new Error('studio.errors.invalidDocument');
@@ -1164,8 +1169,9 @@ export function removeSubstance(doc, index, wheel) {
     draft.growth.active = 0;
   return draft;
 }
-export function addWire(doc, from, to, pairing = null, sites = null) {
-  const a = senderNodes(doc, from), b = hearerNodes(doc, to);
+export function addWire(doc, from, to, pairing = null, sites = null, ports = {}) {
+  const a = wireEndpointCenters(doc, from, ports.fromPort, 'out'),
+        b = wireEndpointCenters(doc, to, ports.toPort, 'in');
   if (!a.length || !b.length || from === to ||
       (a.every(c => c.role === 'sensor') && b.every(c => c.role === 'motor')))
     return null;
@@ -1181,15 +1187,25 @@ export function addWire(doc, from, to, pairing = null, sites = null) {
                                                                                   : 'same'
                                                      : null;
   const wire = {id : identifier('wire'), from, to, spread : WIRE_SPREAD, pairing : sides};
-  const covers = (a, b) => (!a.side || a.side === b.side) &&
-                           (a.from === b.from || a.from === wholeEndpoint(doc, b.from)) &&
-                           (a.to === b.to || a.to === wholeEndpoint(doc, b.to));
-  const made = expandedWires(doc), links = wireLinks(doc, wire);
+  for (const key of ['fromPort', 'toPort'])
+    if (ports[key] != null)
+      wire[key] = ports[key];
+  const endpointCovers = (a, ap, b, bp, dir) => {
+    const own = new Set(wireEndpointCenters(doc, a, ap, dir).map(c => c.id));
+    const other = wireEndpointCenters(doc, b, bp, dir);
+    return other.length && other.every(c => own.has(c.id));
+  };
+  const covers = (a, b) =>
+      (!a.side || a.side === b.side) &&
+      endpointCovers(a.from, a.wire.fromPort, b.from, b.wire.fromPort, 'out') &&
+      endpointCovers(a.to, a.wire.toPort, b.to, b.wire.toPort, 'in');
+  const made = expandedWires(doc), links = wireLinks(doc, wire).map(l => ({...l, wire}));
   if (links.every(link => made.some(old => covers(old, link))))
     return null;
   const draft = copy(doc);
-  draft.wires = draft.wires.filter(
-      old => !wireLinks(doc, old).every(link => links.some(added => covers(added, link))));
+  draft.wires =
+      draft.wires.filter(old => !wireLinks(doc, old).every(
+                             link => links.some(added => covers(added, {...link, wire : old}))));
   draft.wires.push(wire);
   return {document : draft, wireId : wire.id};
 }
@@ -1286,6 +1302,14 @@ export const expandedWires = doc =>
 export function endpointCenters(doc, id) {
   return findOrgan(doc, id)?.centers ?? (findCenter(doc, id) ? [ findCenter(doc, id).center ] : []);
 }
+export function wireEndpointCenters(doc, id, port, dir) {
+  const organ = findOrgan(doc, id);
+  if (port != null)
+    return slotCenters(organ, port, dir);
+  return endpointCenters(doc, id).filter(
+      c => (dir === 'in' ? c.role !== 'sensor' : c.role !== 'motor') &&
+           (!isRegion(organ) || c.port === 'both' || c.port === dir));
+}
 export function chosenCenter(doc, item, profile = null) {
   if (!['center', 'organ'].includes(item?.kind))
     return null;
@@ -1301,16 +1325,24 @@ export function selectionCenters(doc, item) {
     return findCenter(doc, item.id) ? [ item.id ] : [];
   if (item.kind === 'organ')
     return findOrgan(doc, item.id)?.centers.map(center => center.id) ?? [];
+  if (item.kind === 'slot') {
+    const organ = findOrgan(doc, item.id), slot = organSlots(organ).find(s => s.key === item.slot);
+    return slot ? slotCenters(organ, slot.key, slot.dir).map(c => c.id) : [];
+  }
   if (item.kind === 'assembly')
     return assemblyCenters(doc, findAssembly(doc, item.id));
   return [];
 }
 function choiceEnds(doc, item) {
+  if (item?.kind === 'slot')
+    return selectionCenters(doc, item).length ? [ {id : item.id, port : item.slot} ] : [];
   const organ = item?.kind === 'organ' ? findOrgan(doc, item.id) : null;
   if (organ && organ.type !== 'brain')
-    return [ organ.id ];
-  return [...new Set(selectionCenters(doc, item).map(
-      id => item.kind === 'center' ? id : wholeEndpoint(doc, id))) ];
+    return [ {id : organ.id} ];
+  return [
+    ...new Set(
+        selectionCenters(doc, item).map(id => item.kind === 'center' ? id : wholeEndpoint(doc, id)))
+  ].map(id => ({id}));
 }
 export function connectSelections(doc, source, target, sites = null) {
   const starts = choiceEnds(doc, source), ends = choiceEnds(doc, target);
@@ -1318,7 +1350,8 @@ export function connectSelections(doc, source, target, sites = null) {
   const wireIds = [];
   for (const from of starts)
     for (const to of ends) {
-      const added = addWire(draft, from, to, null, sites);
+      const added =
+          addWire(draft, from.id, to.id, null, sites, {fromPort : from.port, toPort : to.port});
       if (added) {
         draft = added.document;
         wireIds.push(added.wireId);
