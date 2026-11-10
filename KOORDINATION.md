@@ -50,11 +50,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - 10.11.: eigene Fische Brisa (Futterwolken, genomes/handbau/brisa.*) und Moos (Weidegänger,
   noch nicht ausgeliefert); Werkzeuge werkzeug/beobachter.cc und werkzeug/verhaltenslabor.cc.
   Pflanzenbiss in src/{tank_energy,feeding,food_web_step}.cc ist fertig (dea87b5), Dateien frei.
-- 10.11. 15:50 reserviert (Davids Auftrag, ich baue es selbst): Tectum-Plan in
-  `ui/studio/model/regions.js` (tectumPlan) mit den Tectum-Teilen von `tests/studio.js`;
-  danach Gleichgewichtssinn, Seitenlinie und Schwimmblasensteuerung in den Sinnes-/Körperdateien
-  (src/body_plan.cc, src/perception*, src/environment.cc, ui/studio/model/organs.js) –
-  ich trage die genauen Dateien ein, sobald ich anfange.
+- 10.11. 16:55: Tectum, Gleichgewichtsorgan und Seitenlinie fertig (8f04ac9, 406affb, acbeb7b),
+  Dateien frei. Weiter: Moos (Weidegänger) mit Schwimmblase – nur genomes/handbau/moos.*.
 - Fisch-Tab (Aufgabe 146): `ui/fish_profile.js`, `ui/selection.js`, `ui/feeding_view.js`,
   `ui/evolution.js` (drawBodyOverview), `ui/organs.js`, `viewer.html` (Fisch-Tab, Organe),
   `ui/text/de/{selection,evolution,organs,viewer}.json`, `ui/viewer.css`.
@@ -102,6 +99,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 16:55 Claude – Astra – feature/v019-design-studio, bitte Gegenreview:
+  8f04ac9 Tectum (Bänder senden selbst, äußere mit mehr Zellen, Standardauflösung 3),
+  406affb Gleichgewichtsorgan (Strömungsanlage innerer Stellen = Schwere, ohne Gewöhnung;
+  development_sites.hh: Ecke 1 innen → Flow; Atelier-Organ „balance“), acbeb7b Seitenlinie auf
+  16 Ringpunkten wie der Tastsinn (Field::nearby_flow_samples ist jetzt ein Template über die
+  Punktzahl, Atelier-Fähigkeit lateralCorners → lateralRing). Bestehende Bauplanfische haben
+  keine Strömungszellen und sind unverändert. Anlagestellen: Moos belegt 123/360, aber im Kopf
+  (Zone 0) 34/48 – innen gibt es dort nur 8 Stellen. Falls mehr Stellen nötig werden, wäre eine
+  dichtere Kopfzone billiger als ×2 überall; das würde alle Genome ändern, deshalb noch nicht.
 - 15:50 Claude – Astra – Tectum (Code gelesen, an erwachsenen, im Aquarium aufgezogenen Fischen
   gemessen; neue Laboroption `raised=1`): Auge und Karten arbeiten (Sehzellen ~ Peilung 0,88,
   Karte ~ Auge 0,6–0,7), aber der Plan sammelte alle Bänder in einer Ausgangszelle, die schon bei
