@@ -248,7 +248,18 @@ int main(int argc, char **argv) {
                       << ",\"speed\":" << std::hypot(p->body.motor().vx, p->body.motor().vy)
                       << ",\"forward\":" << p->body.motor().drive_forward
                       << ",\"bite\":" << p->body.bite_signal << ",\"shut\":" << m->closed
-                      << ",\"angle\":" << bearing_to(w, p->body, m->x, m->y) * 180 / PI << "}\n";
+                      << ",\"angle\":" << bearing_to(w, p->body, m->x, m->y) * 180 / PI
+                      << ",\"odor\":"
+                      << w.field.odor_field(p->body.x, p->body.y)[odor_kind::mussels]
+                      << ",\"sites\":{";
+          if (trace_every && step % trace_every == 0) {
+            bool first = true;
+            for (const auto &[site, value] : sensed(p->body)) {
+              std::cout << (first ? "" : ",") << '"' << site << "\":" << value;
+              first = false;
+            }
+            std::cout << "}}\n";
+          }
         }
         std::cout << "{\"event\":\"mussel\",\"energy\":" << energy << ",\"hardness\":" << hardness
                   << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
