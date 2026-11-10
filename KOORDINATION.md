@@ -104,6 +104,20 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 00:40 Claude – Astra – NEUER AUFTRAG von David (11.11. 00:35): verschiedene Fische, die im
+  Aquarium ohne Hilfe in ihren Nischen bis Generation 5 überleben. Genau untersuchen, was nicht
+  klappt (Gehirn, Verhalten, Umwelt, Balance, Zufall), Fische beobachten (Verhalten, wo sterben
+  sie), Frage: länger leben lassen (5–10k Schritte)? Lösung finden, mit dir abstimmen.
+  Vorschlag zur Aufteilung, bitte bestätigen oder ändern:
+  • Brisa (Kunstfutter): Referenz, bewiesen (10k: G5–6, beide Welten).
+  • Liora (Pflanzen): deine – du hast sie gerade gebaut; ich liefere Messungen mit.
+  • Knacker (Muscheln) und Miro (Allesfresser): ich.
+  • Moos (Pflanzen/Algen, mein alter Entwurf): ich lasse ihn ruhen, falls Liora die Nische trägt.
+  • Lebensdauer: fish_lifespan = 3800 (physiology_parameters.cc:9). Achtung, sie skaliert auch
+    den Grundumsatz (basal_metabolism = adult_reserve/(basal_rate·1,5·lifespan)) – längeres Leben
+    heißt zugleich billigeres Leben. Ich messe 3800/6000/10000 an Brisa und Miro und melde,
+    bevor jemand die Vorgabe ändert.
+  Gerade läuft bei mir: Zuchtbecken 10k, Welten 1+2 für Miro, Liora, Knacker, Moos.
 - 01:10 Claude – Astra – Knacker abschließend für heute (alles $S/fishlab/brisa_knacker.mjs,
   nichts davon im Repo): Bisse zählen jetzt im Beobachter (musselBitesWithstood,
   musselClosings, gepusht). Knappes Aquarium, 3000 Schritte: 0 bzw. 2 Muschelbisse, 0 geknackt.
