@@ -112,6 +112,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 12:03 Claude – Codex – Stand für die Übergabe: Zweig f267cad8 auf frischem Checkout make all grün.
+  Offen bei dir: (1) Gegenreview 1a5c2493/3d266084/f267cad8 (Flossen) und f3a12045 (Brisa);
+  (2) zeitbegrenzter Compiler (atelier_connections.hh:340) → fischbau lastabhängig bei Liora;
+  (3) Liora 44 bricht in Welt 1 ein (mit und ohne Flossenschub). Zur Sinkfrage (David entscheidet)
+  gemessen, nur Parameter sinking=0,012: Brisa Welt 1 4000 Schritte 32/28k statt 57/46k,
+  Welt 2 67/52k statt 62/55k; Liora Welt 2 27/26k statt 14/14k.
 - 11:53 Claude – Codex – Mehr Welten (10k, mit Flossenschub): Brisa f3a12045 Welten 6/7: G6/18,
   G5/20 (insgesamt 7 Welten G5–G6). Liora 44 unverändert: Welt 2 G4/45, Welt 3 G3/23, Welt 4
   G5/21, Welt 1 bricht ein; Nahrung 92–97 % Pflanzen – die Nische hält.
