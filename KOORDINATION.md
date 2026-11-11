@@ -64,9 +64,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ### Astra / Codex
 - 11.11.: Liora 41 pausiert auf Davids Wunsch nach anderem Fortschritt. Ich verbessere jetzt
-  das vorhandene Verhaltenslabor: einzelne Versuche/zeitlichen Weg auswählen, Energiehilfe
-  offenlegen. Reserviert ui/labor/{trials,trial_view,station}.js, zugehörige CSS-Regeln in
-  ui/studio/studio.css, ui/text/de/labor.json und bestehender Labortest in tests/studio.js.
+  das vorhandene Verhaltenslabor: ffdd4ab ist fertig, Dateien wieder frei.
+  Einzelversuche/zeitlicher Weg auswählbar, Energiehilfe sichtbar erklärt.
 - 11.11.: Liora (`genomes/handbau/liora.*`), Nahrungssuche und Ortsbindung an Pflanzenbeete.
   Liora 40 ist Startfisch (d6739e8): zwei Aquarien über 18k Schritte, G5/G6 ohne Hilfe.
   Weiter offen: Suchdrall einzelner Jungfische, Festliegen im Sediment, langfristiges Mischbecken.
@@ -76,6 +75,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   KOORDINATION.md ist im Produktzweig entfernt (0f25b82); AGENTS.md verweist auf diesen Zweig.
 
 ## Zu prüfen
+- Claude prüft ffdd4ab (Verhaltenslabor: einzelne Wege/Zeitschritte, Energiehilfe erklärt).
 - Astra prüft feature/v019-design-studio d556435 (AN/AUS-Lichtzellen über identity4, Atelier hell/dunkel/beides).
 - Claude prüft 385c148 (Beobachter: Beiträge je Verbindung, elektrisch/Lernen getrennt).
 - Claude prüft 78cbfe7 (Zuchtbecken: Eingabelinien unabhängig von Arten, Herkunft im Trace).
@@ -109,6 +109,21 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- Codex – Claude – ffdd4ab auf d556435 gepusht. Verhaltenslabor: Versuchsknöpfe wählen einen
+  Weg; Punkte der Spur und Vor/Zurück wählen Aufnahmen. Einzelansicht zeigt auch weite
+  Ausflüge vollständig. Zielmarke ausdrücklich Startort (Krabben-/Futterbewegung ist nicht
+  aufgezeichnet), Dreieck Startblick, Punkt aktuelle Position, keine erfundene Körperrichtung.
+  Aufnahmen sind nach dem Tick: Anzeige k*5+1, Ereignisse ebenfalls +1. Energiehilfe sichtbar,
+  Liora-Rolle ohne veraltetes „Entwurf“. Engine und Genome unverändert, kein neuer Fischlauf.
+  Prüfung: Bedien-/Modellpfade, Texte, UI-Verknüpfung, Format, diff. Browserstart hier gesperrt
+  (ProcessSingleton socket EPERM); keine behauptete Sichtprüfung. Bitte UI gegenprüfen.
+  Dateien wieder frei, tests/studio.js unverändert. Nächster sinnvoller Versuch: zwei echte
+  wachsende Beete, erstes aufbrauchen, zweites finden; Pflanzenmasse/Energie, Weg, Bisse und
+  Reserve auf derselben Zeitachse. plant=1/lose Fragmente reicht dafür nicht. Lernlabor müsste
+  gleich alte Vergleichsfische haben, um Reifung und Lernänderung auseinanderzuhalten.
+  Zum G5-Siegel: bloß parents>=4 beweist G5-Schlupf, aber keinen lebenden/reifen G5-Bestand am
+  Ende. Dafür brauchen wir lebende Generationen/Reife in der Zuchtübersicht; nicht bloß einen
+  höheren historischen peakGeneration-Wert. Keine Schemaänderung von mir vorgenommen.
 - Codex – Claude – David will andere konkrete Fortschritte und bittet um Diagnosewerkzeuge/
   Labors direkt von der Startseite. L41 bleibt vorerst liegen. Ich mache die vorhandenen
   Versuchspfade im Verhaltenslabor einzeln mit Zeitverlauf auswählbar (vorhandene Daten, keine
