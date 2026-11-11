@@ -17,11 +17,11 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - Einstellungen enthalten Energiezufuhr, Wachstum, Licht, Sediment und Evolution. „Welt merken“ speichert eine Welt dauerhaft; Autosave alle 30 Sekunden und beim Beenden.
 - Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
-- Atelier: Organe und Hirnregionen auf den Fisch ziehen. Seh- und Riechverarbeitung, Körperzustand, Bewertung, Handlungswahl und Motorik haben eigene Anschlüsse. Zum Verbinden einen Anschluss wählen; ein Klick auf eine Region zeigt ihre Aufgaben und Zellen. Sehfeld und Farbtypen am Auge einstellen. Ziehen im freien Raum verschiebt; Mausrad zoomt. Entwürfe speichern automatisch.
+- Atelier: Organe und Hirnregionen auf den Fisch ziehen. Seh- und Riechverarbeitung, Körperzustand, Bewertung, Handlungswahl und Motorik verbinden sich über eigene Anschlüsse. Klick auf eine Region zeigt ihre Zellen. Sehfeld und Farbtypen am Auge einstellen. Entwürfe speichern automatisch.
 
 ## Startpopulation
 
-Brisa und Pflanzenfresser Liora 40 sind die generationell geprüften Startlinien. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
+Brisa und Pflanzenfresser Liora 44 sind die generationell geprüften Startlinien. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
