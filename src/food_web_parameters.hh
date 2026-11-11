@@ -25,7 +25,7 @@ namespace fishsim {
   X(egg_half_life, 1200, 1, 100000)                                                                \
   X(cloud_density, 1. / 504166.6666666667, 0, .0001)                                               \
   X(energy_supply, 95. / 5933055.733418587, 0, .01)                                                \
-  X(food_supply_share, .5, 0, 1)                                                                   \
+  X(food_supply_share, .35, 0, 1)                                                                  \
   X(plankton_supply_share, .12, 0, 1)                                                              \
   X(benthic_supply_share, .18, 0, 1)                                                               \
   X(plant_lifespan, 48000, 1000, 1000000)                                                          \

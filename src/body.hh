@@ -29,7 +29,8 @@ struct MouthState {
   double opening = 0, budget = 0, credit = 0, flow = 0, swallowed = 0, filtered = 0;
 };
 struct EmbryoState {
-  double target_tissue = 0, shell = 1, secretion = 0, pending = 0, pressure = 0;
+  // spent: energy used up before hatching (upkeep, brain, construction, motor work), not tissue.
+  double target_tissue = 0, shell = 1, secretion = 0, pending = 0, pressure = 0, spent = 0;
   std::array<double, BODY_SECTORS> touch{}, flow{};
 };
 struct BodyState {

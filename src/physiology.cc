@@ -77,6 +77,12 @@ double minimum_egg_energy(const Genome &g, const PhysiologyParameters &p, int in
   }
   return energy + embryo_construction_template(g).remaining_construction() * p.neural_cost;
 }
+double egg_energy_needed(const Body &parent, const Genome &g, const PhysiologyParameters &p) {
+  // Embryos also move and learn before they hatch; the parent's own incubation shows that cost.
+  const double observed =
+      parent.hatch_age > 0 ? HATCH_TISSUE + hatch_search_reserve(parent) + parent.embryo.spent : 0;
+  return std::max(minimum_egg_energy(g, p, parent.hatch_age), observed);
+}
 double development_energy(const Genome &g, double scale, double yolk) {
   const double upkeep = g.interface ? g.interface->muscle_maintenance : 0;
   const auto estimate = [&] {
@@ -429,6 +435,8 @@ void Body::act(const Genome &g, const PhysiologyParameters &physiology, bool pro
   if (!protected_life)
     energy -= construction;
   ledger_.movement_cost += ledger_.muscle_cost + motor_.combat_cost;
+  if (!hatched)
+    embryo.spent += ledger_.movement_cost + ledger_.brain_cost + ledger_.development_cost;
   motor_.contact_x = motor_.contact_y = 0;
   perception_.touch_ring.fill(0);
   perception_.impact_ring.fill(0);

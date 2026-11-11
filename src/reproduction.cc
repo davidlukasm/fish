@@ -63,7 +63,7 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
   // Assembly work alone does not measure how long a living embryo needs yolk.
   const bool nutrient =
       b.reproduction_.egg_yolk <
-      evo.nutrient_egg_threshold * minimum_egg_energy(p.genome, physiology_, b.hatch_age);
+      evo.nutrient_egg_threshold * egg_energy_needed(b, p.genome, physiology_);
   if (!nutrient && occupied >= std::size_t(population_limit))
     return std::nullopt;
   std::size_t nearby = 0;
@@ -265,6 +265,7 @@ void Ecosystem::reproduction(bool fertile) {
            std::max(0., capacity - e.secretion), std::max(0., b.energy - hatch_search_reserve(b))});
       b.energy -= amount;
       e.secretion += amount;
+      e.spent += amount;
       if (b.reproduction_.sperm_release && e.secretion > 0) {
         e.shell = std::max(0., e.shell - e.secretion / std::max(1., b.egg_shell_radius));
         e.pending += e.secretion;

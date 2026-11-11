@@ -874,6 +874,8 @@ void completed_anatomy_is_admitted_before_runtime_allocation(const Genome &g) {
   check(w.metrics().budget_rejections == 1 && w.fish.empty(),
         "one actual oversized anatomy causes one deterministic rejection");
 }
+// Recorded incubation cost and measured loss may differ only by floating-point rounding.
+constexpr double RECORD_TOLERANCE = 1e-9;
 void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
   Ecosystem w(83921);
   w.safety = false;
@@ -888,8 +890,19 @@ void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
   check(w.fish.size() == 1 && !w.fish.front().body.hatched &&
             embryo_development(w.fish.front().body) < .5,
         "finishing two assembly steps does not show a completed neural embryo");
-  for (int tick = 3; tick < 1024 && !w.fish.empty() && !w.fish.front().body.hatched; ++tick)
+  double unrecorded = 0;
+  for (int tick = 3; tick < 1024 && !w.fish.empty() && !w.fish.front().body.hatched; ++tick) {
     w.tick();
+    const auto &embryo = w.fish.front().body;
+    // Secretion for dissolving the shell is spent as soon as it is made.
+    const double kept =
+        stored_energy(embryo) - embryo.embryo.secretion - embryo.embryo.pending;
+    if (!embryo.hatched)
+      unrecorded =
+          std::max(unrecorded, std::abs(initial_energy - kept - embryo.embryo.spent));
+  }
+  check(unrecorded <= RECORD_TOLERANCE * initial_energy,
+        "the embryo records the energy its incubation used up");
   check(w.fish.size() == 1 && w.fish.front().body.hatched,
         "the reference embryo hatches by its own learned motor activity");
   const auto &parent = w.fish.front().body;
@@ -897,9 +910,9 @@ void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
                assembly_only = minimum_egg_energy(blueprint, w.physiology(), 0);
   check(parent.hatch_age > 3 && funded > assembly_only + 1,
         "the energy estimate includes the observed wait for autonomous hatching");
-  const double spent = initial_energy - parent.energy - parent.tissue;
-  check(funded >= HATCH_TISSUE + hatch_search_reserve(parent) + spent,
-        "the incubation estimate covers the measured yolk cost and hatch search reserve");
+  check(egg_energy_needed(parent, blueprint, w.physiology()) >=
+            std::max(funded, HATCH_TISSUE + hatch_search_reserve(parent) + parent.embryo.spent),
+        "the egg estimate covers the observed incubation and the hatch search reserve");
   check(embryo_development(parent) == 1, "a hatched fish has its complete outer picture");
 }
 void development_queue_is_bounded(const Genome &g) {

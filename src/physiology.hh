@@ -37,6 +37,7 @@ inline double senescence_loss(const Body &b, const PhysiologyParameters &p) {
 }
 Color corpse_color(const Color &, double age, double energy, double food_bright, double half_life);
 double minimum_egg_energy(const Genome &, const PhysiologyParameters &, int incubation_steps);
+double egg_energy_needed(const Body &parent, const Genome &, const PhysiologyParameters &);
 double embryo_development(const Body &);
 inline double basal_cost(double tissue, const PhysiologyParameters &p) {
   using P = PhysiologyParameters;
