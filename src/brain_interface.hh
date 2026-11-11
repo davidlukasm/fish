@@ -16,11 +16,12 @@ enum PressureSource {
   PressureShape = pressure_source::shape
 };
 inline bool adapting_sense(int s) {
-  return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage ||
-         s == field::Blood;
+  return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage;
 }
 inline bool intensity_sense(int s) {
-  return s <= field::Flow || s == field::Intake || s == field::Damage || s == field::Blood;
+  // Blood carries bounded internal levels. Dividing by their recent mean would hide a
+  // sustained shortage of energy or hormones from the brain.
+  return s <= field::Flow || s == field::Intake || s == field::Damage;
 }
 struct BrainInterface {
   struct Receptor {

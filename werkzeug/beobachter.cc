@@ -24,6 +24,7 @@ double rounded(double value, double per_unit) {
 }
 struct Options {
   int every = 5, detail = 50, tracked = 6, min_generation = 0;
+  bool embryos = false;
   std::string checkpoint, resume;
 };
 struct ContactSnapshot {
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
   try {
     if (argc < 5)
       throw std::invalid_argument("Aufruf: beobachter GENOM SEED SCHRITTE ANZAHL [every=N] "
-                                  "[detail=N] [tracked=N] [min_generation=N] "
+                                  "[detail=N] [tracked=N] [min_generation=N] [embryos=0|1] "
                                   "[checkpoint=DATEI] [resume=DATEI] "
                                   "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
@@ -95,7 +96,11 @@ int main(int argc, char **argv) {
         o.tracked = std::stoi(value);
       else if (key == "min_generation")
         o.min_generation = std::stoi(value);
-      else if (key == "checkpoint")
+      else if (key == "embryos") {
+        if (value != "0" && value != "1")
+          throw std::invalid_argument("embryos erwartet 0 oder 1");
+        o.embryos = value == "1";
+      } else if (key == "checkpoint")
         o.checkpoint = std::filesystem::absolute(value).string();
       else if (key == "resume")
         o.resume = value;
@@ -156,7 +161,7 @@ int main(int argc, char **argv) {
       const bool last = advanced == steps || w.fish.empty();
       if (advanced == 0 || tick % o.every == 0 || last) {
         const bool detail = tick % o.detail == 0 || last;
-        // Keep watching the earliest hatched fish; replace those that died.
+        // Keep watching the earliest fish; replace those that died.
         std::set<std::uint64_t> alive;
         for (const auto &p : w.fish)
           if (p.body.alive)
@@ -164,8 +169,13 @@ int main(int argc, char **argv) {
         for (auto it = tracked.begin(); it != tracked.end();)
           it = alive.count(it->first) ? std::next(it) : tracked.erase(it);
         for (const auto &p : w.fish)
-          if (int(tracked.size()) < o.tracked && p.g >= o.min_generation && p.body.alive &&
-              p.body.hatched && p.body.brain() && !tracked.count(p.id)) {
+          if (p.g >= o.min_generation && p.body.alive && (o.embryos || p.body.hatched) &&
+              p.body.brain()) {
+            const auto found = tracked.find(p.id);
+            if (found == tracked.end()
+                    ? int(tracked.size()) >= o.tracked
+                    : found->second.sites.size() == p.body.brain()->blueprint().neurons.size())
+              continue;
             tracked[p.id] = describe(*p.body.brain());
             const auto &t = tracked[p.id];
             out << "{\"event\":\"cells\",\"t\":" << tick << ",\"id\":" << p.id
@@ -262,7 +272,9 @@ int main(int argc, char **argv) {
                 std::abs(std::hypot(w.field.delta_x(f.x - mx), f.y - my) - near_feed) < 1e-9)
               feed_dy = f.y - my;
           out << (first ? "{" : ",{") << "\"id\":" << p.id << ",\"generation\":" << p.g
-              << ",\"age\":" << b.age << ",\"sediment\":" << b.sediment_coverage
+              << ",\"age\":" << b.age << ",\"hatched\":" << int(b.hatched)
+              << ",\"shell\":" << b.embryo.shell << ",\"embryoPressure\":" << b.embryo.pressure
+              << ",\"secretion\":" << b.embryo.secretion << ",\"sediment\":" << b.sediment_coverage
               << ",\"feedDy\":" << feed_dy << ",\"rawVision\":[" << raw[0] << ',' << raw[1] << ','
               << raw[2] << ',' << raw[3] << "],\"nearFeed\":" << near_feed
               << ",\"nearWorm\":" << near_worm << ",\"nearLeaf\":" << near_leaf

@@ -1231,6 +1231,27 @@ void plant_notches_follow_the_successful_bite() {
   check(shallow < .001 && deep > 100 * shallow,
         "a barely effective bite cannot leave the same deep notch as a strong bite");
 }
+void blood_reports_sustained_reserves() {
+  Body b;
+  b.tissue = 40;
+  b.hatched = true;
+  BrainInterface::Receptor r{};
+  r.senses[field::Blood] = 1;
+  r.refresh_modality();
+  r.hormones[field::RESERVE_SUBSTANCE] = 1;
+  r.threshold = .5f;
+  r.response_threshold = .005f;
+  const PhysiologyParameters physiology{};
+  for (const double reserve : {.03, .35, .8}) {
+    b.energy = reserve * reserve_capacity(b);
+    const auto frame = prepare_sensory_frame(b, 0, 0, {});
+    const double stimulus = anatomical_stimulus(b, r, frame, 0, physiology);
+    check(std::abs(receptor_response(r, stimulus, reserve) - reserve) < tolerance::precision,
+          "blood preserves low and high reserves even after a sustained internal level");
+    check(std::abs(anatomical_sensor(b, r, 0, {}, 0) - reserve) < tolerance::precision,
+          "the reserve sensor reports the fraction of the fish's energy capacity");
+  }
+}
 void inner_hair_cells_feel_gravity() {
   Body still;
   BrainInterface::Receptor r{};
@@ -1673,6 +1694,7 @@ int main() {
     one_bite_takes_one_mouthful_of_one_leaf();
     illuminated_leaves_survive_their_own_shade();
     plant_tissue_needs_grinding_teeth();
+    blood_reports_sustained_reserves();
     inner_hair_cells_feel_gravity();
     lateral_cells_read_the_water_beside_them();
     mussels_sum_at_most_two_quick_bites();
