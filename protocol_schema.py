@@ -1242,7 +1242,7 @@ class RateWindow:
     DISPLAY_STEPS = 100
 
 class GenomeImport:
-    MAX_BYTES = 1000000
+    MAX_BYTES = 4194304
     TIMEOUT_MS = 30000
     DEVELOP_MS = 25000
 

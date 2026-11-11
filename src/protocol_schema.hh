@@ -1881,7 +1881,7 @@ inline constexpr int steps = 1000;
 inline constexpr int display_steps = 100;
 }
 namespace genome_import {
-inline constexpr int max_bytes = 1000000;
+inline constexpr int max_bytes = 4194304;
 inline constexpr int timeout_ms = 30000;
 inline constexpr int develop_ms = 25000;
 }

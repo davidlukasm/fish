@@ -2087,7 +2087,7 @@
       "display_steps": 100
     },
     "genome_import": {
-      "max_bytes": 1000000,
+      "max_bytes": 4194304,
       "timeout_ms": 30000,
       "develop_ms": 25000
     },
