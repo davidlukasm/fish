@@ -21,7 +21,8 @@ export function centerTitle(center) {
   return center.type === null ? t('studio.regionNodes.map', {from, to})
                               : t('studio.regionNodes.mapType', {from, to, n : center.type + 1});
 }
-export const nodeFamily = center => center.node ? center.node.replace(/[.\d].*$/, '') : center.key;
+export const nodeFamily = center =>
+    center.band ? center.node.replace(/[.\d].*$/, '') : center.node ?? center.key;
 export const nodeFamilies = organ => [...Map.groupBy(organ.centers, nodeFamily).values()];
 export function familyTitle(nodes) {
   if (nodes.length < 2)

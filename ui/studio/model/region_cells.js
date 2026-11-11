@@ -31,7 +31,7 @@ export function regionCell(node, preset, port, set = {}, effects = {}) {
     set : {
       ...CIRCUIT_LEARNING,
       copies : REGION_CELLS,
-      // One fully active input population contributes at most one unit of electrical drive.
+      // Four fully active presynaptic cells contribute at most one unit of electrical drive.
       electrical_limit : 1 / REGION_CELLS,
       field : .5,
       threshold : 0,

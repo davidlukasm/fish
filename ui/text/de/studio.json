@@ -111,7 +111,8 @@
     "circuit": "Schalt­zentrum",
     "state": "Körperzustand",
     "choice": "Handlungswahl",
-    "value": "Bewertung"
+    "value": "Bewertung",
+    "olfaction": "Riechverarbeitung"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -395,8 +396,7 @@
   ],
   "regionNodes": {
     "families": {
-      "map": "Karte",
-      "feature": "Merkmale"
+      "map": "Karte"
     },
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
@@ -424,7 +424,10 @@
     "feature1": "Merkmal 1",
     "feature2": "Merkmal 2",
     "feature3": "Merkmal 3",
-    "feature4": "Merkmal 4"
+    "feature4": "Merkmal 4",
+    "concentration": "Geruchsstärke",
+    "opposite": "Gegenseite hemmen",
+    "gradient": "Geruchsrichtung"
   },
   "regions": {
     "response": {
@@ -483,7 +486,9 @@
       "feature1": "Merkmal 1",
       "feature2": "Merkmal 2",
       "feature3": "Merkmal 3",
-      "feature4": "Merkmal 4"
+      "feature4": "Merkmal 4",
+      "scent": "Geruch",
+      "presence": "Geruchsstärke"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -533,6 +538,10 @@
     "value": {
       "term": "Bewertung",
       "purpose": "Verknüpft getrennte Sinnesmerkmale mit Nahrungserfolg und Schaden."
+    },
+    "olfaction": {
+      "term": "Riechverarbeitung",
+      "purpose": "Vergleicht beide Nasen vor der Verstärkung. Gibt Geruchsstärke und Richtung getrennt weiter."
     }
   },
   "head": {

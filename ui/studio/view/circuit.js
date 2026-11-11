@@ -341,8 +341,8 @@ function regionControls(state, organ) {
     return '';
   const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
   const most = regionPlan(state.document, organ).most ?? {};
-  const command =
-      organ.centers.find(c => ['command', 'target', 'feature1', 'pause'].includes(c.node));
+  const command = organ.centers.find(
+      c => ['command', 'target', 'gradient', 'feature1', 'pause'].includes(c.node));
   const beat = organ.centers.find(c => c.node === 'beat' || c.node === 'search');
   const response = command ? responseDiagram(state, command)
                    : beat  ? driveElement(beat, label('inspector.beat'),

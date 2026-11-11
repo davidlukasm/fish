@@ -14,6 +14,15 @@ const home = Object.freeze({
 
 export const REGION_TYPES = Object.freeze([
   {
+    key : 'olfaction',
+    scope : 'side',
+    slots : [
+      port('scent', 'in', null, [ 'nose' ], true), port('target', 'out', 'gradient'),
+      port('presence', 'out', 'concentration')
+    ],
+    settings : {}
+  },
+  {
     key : 'state',
     scope : 'single',
     slots : [
