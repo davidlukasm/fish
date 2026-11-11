@@ -8,9 +8,11 @@ void advance_embryo(Body &b, const Genome &g, const PhysiologyParameters &p, boo
   const double radius = std::max(.001, b.egg_shell_radius);
   const double occupied = p.embryo_fold * body_radius(b) / radius;
   e.pressure = std::max(0., occupied - p.embryo_crowding);
-  const double force = progress * m.motor_factor;
-  const double tail_left = m.impulse_tail_left * force, tail_right = m.impulse_tail_right * force,
-               left = m.impulse_left * force, right = m.impulse_right * force;
+  // A twitch can lose its drive after any step; only force already delivered presses the shell.
+  const auto force = [&](int stroke) { return m.strokes[stroke].force * progress; };
+  const double tail_left = force(StrokeTailLeft), tail_right = force(StrokeTailRight),
+               left = force(StrokeTurnLeft) + force(StrokeReverseLeft),
+               right = force(StrokeTurnRight) + force(StrokeReverseRight);
   const double mouth = (b.mouth.flow + (b.mouth.closing ? b.bite_signal : 0)) * progress;
   for (int k = 0; k < SECTOR_COUNT; ++k) {
     const double a = sector_angle(k);

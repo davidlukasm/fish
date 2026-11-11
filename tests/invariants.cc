@@ -2068,6 +2068,36 @@ void organ_muscles_survive_checkpoint(const Genome &g) {
     check(saved(w) == saved(copy), "digestion and motion continue identically after loading");
   }
 }
+void embryo_uses_delivered_muscle_force(const Genome &g) {
+  Ecosystem w(SEED);
+  w.resize(800, 500);
+  auto &b = adult(w, g, 400, 250).body;
+  std::set<std::uint32_t> tail;
+  for (const auto &e : g.interface->effectors)
+    if (e.port == organ_port::forward && e.lever < 0)
+      tail.insert(e.neuron);
+  check(!tail.empty(), "the embryo force fixture has a left tail muscle");
+  b.set_actuation_probe(
+      [&tail](std::uint32_t cell, float) { return tail.count(cell) ? 1.f : 0.f; });
+  anatomical_action(b, *g.interface, w.physiology(), false);
+  const double delivered = b.motor().strokes[StrokeTailLeft].force,
+               planned = b.motor().impulse_tail_left * b.motor().motor_factor,
+               progress = b.development()->work_fraction();
+  check(delivered > 0 && planned > delivered && progress > 0,
+        "a new twitch has delivered only its first step, not its planned whole impulse");
+  auto physiology = w.physiology();
+  physiology.hatch_force_base =
+      (delivered + planned) * progress / (2 * std::max(physiology.hatch_mass_floor, body_mass(b)));
+  physiology.hatch_force_shell = 0;
+  b.hatched = false;
+  b.embryo.shell = 0;
+  advance_embryo(b, g, physiology, true);
+  check(!b.hatched, "unpaid future muscle work cannot break the eggshell");
+  const double flow = *std::max_element(b.embryo.flow.begin(), b.embryo.flow.end());
+  check(flow > 0 &&
+            flow <= physiology.embryo_flow_gain * delivered * progress + tolerance::precision,
+        "embryonic water movement is bounded by the muscle force already paid for");
+}
 void ancestral_histories_keep_current_mutations() {
   evolution::History old("ancestor");
   const auto connection = old.connection(0, 1);
@@ -2132,6 +2162,7 @@ int main() {
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     organ_muscles_survive_checkpoint(g);
+    embryo_uses_delivered_muscle_force(g);
     cut_marks_stay_on_their_piece();
     plant_notches_follow_the_successful_bite();
     grazing_preserves_foliage_until_repeated_bites();
