@@ -98,7 +98,8 @@ void trace(std::ostream &out, const Ecosystem &w) {
         << body_mass(b) << ',' << b.undulation << ','
         << p.observations().raw_diet[food_kind::plant] +
                p.observations().raw_diet[food_kind::algae]
-        << ',' << b.nutrition;
+        << ',' << b.nutrition << ',' << b.rest_cost << ',' << b.ledger().muscle_cost << ','
+        << b.motor().combat_cost;
     for (double hormone : b.hormones().levels())
       out << ',' << hormone;
     out << ']';
@@ -174,7 +175,8 @@ int main(int argc, char **argv) {
                       "\"gutFill\",\"digestion\",\"bite\",\"suction\",\"flow\",\"mouthCycle\","
                       "\"mouthPhase\",\"forward\",\"left\",\"right\",\"movementCost\",\"brainCost\","
                       "\"eggYolk\",\"spermStore\",\"vx\",\"vy\",\"thrust\",\"sediment\","
-                      "\"bladder\",\"buoyancy\",\"mass\",\"undulation\",\"rawPlants\",\"usableFood\"";
+                      "\"bladder\",\"buoyancy\",\"mass\",\"undulation\",\"rawPlants\",\"usableFood\","
+                      "\"restCost\",\"muscleCost\",\"biteCost\"";
       for (int i = 0; i < field::HORMONES; ++i)
         observations << ",\"H" << i << '"';
       observations << "]}\n";
