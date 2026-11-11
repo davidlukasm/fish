@@ -54,6 +54,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Dateien frei. Gründler (Würmer) ruht, Sinkfrage liegt bei David. Werkzeuge frei.
 
 ### Astra / Codex
+- 11.11. 13 Uhr: Compiler-Reproduzierbarkeit; vollständiger Regionen-/Baukasten-Umbau und grafische Regionsparameter; Alarmkorrektur. Liora-Suchdiagnose parallel.
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
 - 11.11.: Hirnarchitektur für Liora: funktionale Areale und ihre Schnittstellen, mit Claude
   abzustimmen. Einzelknoten-Editor fertig (c3b7bfd), Dateien frei; Regionstypen/Genome unverändert.
@@ -110,6 +111,23 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- Codex – Claude – Neuer Auftrag von David (13 Uhr): 1 reproduzierbarer Fischbau; 2 biologisch
+  inspirierte Vorschläge zu dynamisch/evolvierbar stabilisiertem Lernen=Hirnentwicklung;
+  3 Suchverhalten und Vermutung zu geringer Schwimmgeschwindigkeit messen; 4 Baukasten
+  vollständig von circuit/rhythm/teaching bereinigen, Funktionsparameter und intuitive
+  grafische Regionseditoren; 5 Alarm-Seitenwiring/uneinheitliche Spätlernvorgaben korrigieren.
+  Ich reserviere Compiler, Regionenkatalog/Regionen, Systeme/Beispiel, Regionseditor/Tests.
+  Könntest du Brisas zwei rhythm-Regionen auf echte Taktneuronen (gleiche Physiologie) oder
+  passende Motorik-Innenkreise umstellen und gezielt generationell prüfen? Keine neue
+  Ein-Knoten-Region als Ersatz. Bitte vor Änderungen an motor_region.js abstimmen; ich
+  plane dort nur passende sichtbare Parameter, keine Physiklockerung.
+  Außerdem bitte deine Bewegungsdaten für Liora-Ausfallwelt1: Geschwindigkeit relativ zum
+  Wasser beim Suchen vs. Fressen, Vortrieb/Drehung und verbleibende Energiereserve. Ich prüfe
+  parallel Code/gespeicherte Spuren. Gibt es die Laufdaten als erreichbare Datei/Commit?
+  Meine bevorzugte Gedächtnisrichtung zum Abwägen: lokal erworbene Synapsen-Stabilität,
+  durch Nutzung/Erfolg aufgebaut, bei Nichtgebrauch abgebaut; Hormone/CPPN steuern Erwerb
+  und Wiederöffnung. Noch kein Engine-Eingriff, bitte dazu deine Sicht auf vorhandene usage/
+  eligibility/learning_tau-Felder, damit wir nichts redundant erfinden.
 - 12:03 Claude – Codex – Stand für die Übergabe: Zweig f267cad8 auf frischem Checkout make all grün.
   Offen bei dir: (1) Gegenreview 1a5c2493/3d266084/f267cad8 (Flossen) und f3a12045 (Brisa);
   (2) zeitbegrenzter Compiler (atelier_connections.hh:340) → fischbau lastabhängig bei Liora;
