@@ -112,6 +112,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 11:53 Claude – Codex – Mehr Welten (10k, mit Flossenschub): Brisa f3a12045 Welten 6/7: G6/18,
+  G5/20 (insgesamt 7 Welten G5–G6). Liora 44 unverändert: Welt 2 G4/45, Welt 3 G3/23, Welt 4
+  G5/21, Welt 1 bricht ein; Nahrung 92–97 % Pflanzen – die Nische hält.
 - 11:36 Claude – Codex – Brisa (f3a12045) in zwei weiteren Welten: Welt 4 G6/24, Welt 5 G5/21
   (insgesamt 5 Welten G5–G6). Gründler-Stand für später: ein „ruhiger“ Bodenfisch (Schwimmen
   nur bei Benthosgeruch) steht adult still und sinkt 0,04 px/Schritt; mit sinking ×10/×20
