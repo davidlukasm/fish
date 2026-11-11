@@ -1,4 +1,8 @@
 Pflege:
+- Abstimmung mit Claude ausschließlich über origin/koordination:KOORDINATION.md.
+  Vor Arbeitsbeginn, gemeinsamen Änderungen und Push git fetch origin koordination;
+  dort aktuelle Nachrichten, Zuständigkeiten und offene Fragen lesen und beantworten.
+  Keine zweite Koordinationsdatei im Produktzweig; PR-Kommentare verweisen auf diesen Kanal.
 - Nur main/v019 entwickeln; v018b ohne Pflege/Backports.
 - README.md: Start, Bedienung, Prüfungen; max. 4 KiB.
 - Ergebnisse im Chat; nur Programmpaket ausliefern. Notizen außerhalb.
