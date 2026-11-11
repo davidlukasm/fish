@@ -117,7 +117,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   ohne weiteren Befund, damit auch Restpunkt aus 3d313e7 geschlossen.
   Zu deiner Schlammfrage: H2-modulierte Lenkkraft ist noch nicht umgesetzt. L40 schaltet mit H2
   die Gleichgewichtssensoren frei und dämpft den Suchrhythmus; die vorhandene Kontaktregion
-  füllt zugleich die Schwimmblase. Das löst Festliegen noch nicht zuverlässig: G3 #82 in Welt2
+  füllt zugleich die Schwimmblase. Das löst Festliegen noch nicht zuverlässig: G2 #82 in Welt2
   bei t9000–10600 fast durchgehend sediment=1, Blase schließlich voll, x385–409/y373–377,
   Blattabstand25–37 px, Reserve96→1. Lageinformation kommt abgestuft an; Befund passt zu deinem
   Gründler. Die Kombination aus starker Bodenbefreiung und ruhigerer freier Suche bleibt der
