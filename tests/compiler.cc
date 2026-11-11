@@ -185,7 +185,7 @@ void property_overrides_reach_outputs() {
           assert(reachable.count(node.get_id()));
     }
 }
-int choice_trace(bool late, bool pulsed) {
+int choice_trace(bool late, bool pulsed, bool fed_start) {
   std::string name;
   auto plan = read_plan(std::cin, name);
   plan_addresses(plan);
@@ -215,7 +215,7 @@ int choice_trace(bool late, bool pulsed) {
     brain.set_maturity(std::min(1., .65 + .35 * step / 800));
     const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
     const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
-    const float food = step < 2000 ? (!late && step % 200 < 40 ? .6f : 0)
+    const float food = step < 2000 ? (fed_start || (!late && step % 200 < 40) ? .6f : 0)
                        : feeding && (!pulsed || step % 80 < 20) ? .6f
                                                                 : 0;
     std::vector<float> input;
@@ -244,7 +244,8 @@ int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
   if (argc == 2 && std::string(argv[1]).find("choice") == 0)
     return choice_trace(std::string(argv[1]).find("late") != std::string::npos,
-                        std::string(argv[1]).find("pulsed") != std::string::npos);
+                        std::string(argv[1]).find("pulsed") != std::string::npos,
+                        std::string(argv[1]).find("fed-start") != std::string::npos);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
   shared_addresses_preserve_each_wire();

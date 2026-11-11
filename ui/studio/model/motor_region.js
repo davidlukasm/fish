@@ -19,7 +19,8 @@ export function motorPlan(doc, organ) {
   const r = organ.region;
   const nodes = [
     regionCell('turn', 'relay', 'out', DRIVER),
-    regionCell('swim', 'relay', 'both', {...DRIVER, threshold : SWIM_TONE[r.tone]}),
+    // Successful early feeding can postpone the first search input until after maturity.
+    regionCell('swim', 'relay', 'both', {...DRIVER, threshold : SWIM_TONE[r.tone]}, TONIC_LEARNING),
     regionCell('mouth', 'relay', 'both', DRIVER), regionCell('bite', 'relay', 'both', DRIVER),
     // The bladder empties only on a negative command, so lift answers with both signs.
     regionCell('lift', 'relay', 'both', {...DRIVER, q1 : 0}),

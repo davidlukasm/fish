@@ -172,7 +172,7 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
   model.validateDocument(both);
 }
 
-function checkForagingChoice(model, sites, root) {
+async function checkForagingChoice(model, sites, root) {
   let doc = model.newDocument('Suchwechsel');
   const ids = {};
   for (const [type, x, y] of [[ 'choice', 600, 300 ], [ 'state', 550, 365 ], [ 'gut', 680, 365 ],
@@ -194,12 +194,12 @@ function checkForagingChoice(model, sites, root) {
   link({kind : 'organ', id : ids.nose}, port(ids.choice, 'target'));
   link({kind : 'organ', id : ids.nose}, port(ids.choice, 'strength'));
   link({kind : 'organ', id : ids.pain}, port(ids.choice, 'threat'));
-  const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
-  plan.groups.forEach((g, i) => {
-    const c = centers[i];
-    g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
-  });
-  for (const mode of ['choice', 'choice-late', 'choice-pulsed', 'choice-late-pulsed']) {
+  const measure = mode => {
+    const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
+    plan.groups.forEach((g, i) => {
+      const c = centers[i];
+      g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
+    });
     const output = execFileSync(
         'python3',
         [
@@ -210,14 +210,17 @@ function checkForagingChoice(model, sites, root) {
         {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000});
     const [header, ...lines] = output.trim().split('\n').map(line => line.split(','));
     const rows = lines.map(row => row.map(Number));
-    const mean = (node, from, to) => {
+    return (node, from, to, region = 'choice') => {
       const columns =
-          header.flatMap((key, i) => key.startsWith('choice:' + node + ':') ? [ i ] : []);
+          header.flatMap((key, i) => key.startsWith(region + ':' + node + ':') ? [ i ] : []);
       const samples = rows.filter(row => row[0] > from && row[0] <= to)
                           .flatMap(row => columns.map(i => row[i]));
       assert.ok(samples.length);
       return samples.reduce((sum, x) => sum + x, 0) / samples.length;
     };
+  };
+  for (const mode of ['choice', 'choice-late', 'choice-pulsed', 'choice-late-pulsed']) {
+    const mean = measure(mode);
     const feeding = mean('search', 2500, 2800), roaming = mean('search', 3500, 4000);
     assert.ok(roaming > 3 * feeding + .03,
               mode + ': unsuccessful feeding releases search despite the held target');
@@ -231,6 +234,18 @@ function checkForagingChoice(model, sites, root) {
     assert.ok(mean('threat', 6000, 6200) > mean('threat', 3500, 4000) * 3,
               'Threat responses remain available during search');
   }
+  const motor = model.addOrgan(doc, 'motor', sites, {x : 600, y : 500}, Infinity, true);
+  assert.ok(motor);
+  const {updateRegion} = await import('../ui/studio/model/regions.js');
+  doc = updateRegion(motor.document, motor.organId, {tone : 0, beat : 0}, sites);
+  link(port(ids.choice, 'search'), port(motor.organId, 'urge'));
+  link(port(ids.gut, 'intake'), port(motor.organId, 'brake'));
+  const mean = measure('choice-fed-start');
+  assert.ok(mean('search', 3500, 4000) > .05, 'Search starts after a well-fed childhood');
+  const travel = mean('swim', 3500, 4000, 'motor');
+  assert.ok(travel > .15, 'The mature motor circuit can learn its first search input');
+  assert.ok(mean('swim', 5500, 5800, 'motor') < travel * .5,
+            'A new meal still stops the learned search movement');
 }
 
 async function checkResponseControls(model, capabilities, clicks) {
@@ -721,7 +736,7 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
-  checkForagingChoice(model, sitesResult.sites, root);
+  await checkForagingChoice(model, sitesResult.sites, root);
   await checkResponseControls(model, sitesResult, clicks);
   await checkFunctionalRegions(model, sitesResult);
   checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
