@@ -32,7 +32,7 @@ export const REGION_TYPES = Object.freeze([
       port('spermFullness', 'in', 'spermReady', [ 'sperm' ]), port('intake', 'out', 'intake'),
       port('satiety', 'out', 'satiety'), port('pause', 'out', 'pause'),
       port('investment', 'out', 'investment'), port('lay', 'out', 'eggReady'),
-      port('spermRelease', 'out', 'spermReady')
+      port('spermRelease', 'out', 'spermReady'), port('hatch', 'out', 'hatch')
     ],
     settings : {}
   },
@@ -40,8 +40,9 @@ export const REGION_TYPES = Object.freeze([
     key : 'choice',
     scope : 'side',
     slots : [
-      port('target', 'in', 'target', [], true), port('threat', 'in', 'threat'),
-      port('pause', 'in', 'pause', [ 'state' ]), port('approach', 'out', 'target'),
+      port('target', 'in', 'target', [], true), port('strength', 'in', 'advance'),
+      port('threat', 'in', 'threat'), port('pause', 'in', 'pause', [ 'state' ]),
+      port('approach', 'out', 'target'), port('advance', 'out', 'advance'),
       port('avoid', 'out', 'threat'), port('search', 'out', 'search')
     ],
     settings : {}

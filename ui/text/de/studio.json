@@ -438,7 +438,9 @@
     "sated": "Satt hemmt Maul",
     "hold": "Fressen hält unten",
     "flee": "Wegdrehen",
-    "oppose": "Hemmt Gegenseite"
+    "oppose": "Hemmt Gegenseite",
+    "advance": "Ziel erreichen",
+    "hatch": "Schlupfantrieb"
   },
   "regions": {
     "response": {
@@ -473,7 +475,7 @@
     "free": "frei",
     "slots": {
       "sight": "Augen",
-      "near": "Nahsinn",
+      "near": "Nah am Maul",
       "onward": "Weiter an",
       "senses": "Sinne",
       "inner": "Innere Sinne",
@@ -491,9 +493,9 @@
       "investment": "Vorräte bilden",
       "lay": "Ei abgeben",
       "spermRelease": "Sperma abgeben",
-      "target": "Ziel",
+      "target": "Zielrichtung",
       "threat": "Gefahr",
-      "approach": "Annähern",
+      "approach": "Zum Ziel lenken",
       "avoid": "Ausweichen",
       "search": "Erkunden",
       "reward": "Erfolg",
@@ -508,7 +510,6 @@
       "away": "Weg von der Reizseite",
       "urge": "Drang",
       "brake": "Bremse",
-      "near": "Nah am Maul",
       "feel": "Lage und Berührung",
       "grip": "Zubeißen",
       "full": "Satt",
@@ -517,7 +518,10 @@
       "lift": "Auftrieb",
       "tail": "Schwanz",
       "fins": "Flossen",
-      "mouth": "Maul"
+      "mouth": "Maul",
+      "strength": "Zielstärke",
+      "advance": "Zum Ziel schwimmen",
+      "hatch": "Schlüpfen"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -569,7 +573,7 @@
     },
     "state": {
       "term": "Körperzustand",
-      "purpose": "Verbindet Nahrungsaufnahme, Sättigung und Reserve mit Verweilen und Fortpflanzung."
+      "purpose": "Stimmt Schlüpfen, Verweilen und Fortpflanzung mit Reife, Nahrung und Reserve ab."
     },
     "choice": {
       "term": "Handlungswahl",
