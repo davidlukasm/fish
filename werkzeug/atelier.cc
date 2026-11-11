@@ -397,6 +397,22 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << (z ? "," : "") << '[' << spans[z].front << ',' << spans[z].extent << ']';
   }
   std::cout << ']';
+  // Where a cell of every development site would lie in this body, and the gut, as pressure
+  // cells measure them.
+  std::cout << ",\"gutPath\":[";
+  for (std::size_t k = 0; k < a.gut_path.size(); ++k)
+    std::cout << (k ? "," : "") << '[' << a.gut_path[k][0] << ',' << a.gut_path[k][1] << ','
+              << a.gut_path[k][2] << ']';
+  std::cout << "],\"sitePlaces\":[";
+  {
+    const fishsim::ZonalFrame frame(a);
+    for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+      const auto at = frame.place(field::development_site(i));
+      std::cout << (i ? "," : "") << '[' << float(at.x) << ',' << float(at.y) << ',' << float(at.z)
+                << ']';
+    }
+  }
+  std::cout << ']';
   {
     const auto density = fishsim::spine_density(a, t);
     std::vector<std::array<double, fishsim::BODY_SECTORS>> spread(groups.size());

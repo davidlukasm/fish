@@ -190,7 +190,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     const double surround = radians(world.env().vision_adaptation_angle);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
-    Color channels{}, darkening{}, received{};
+    Color channels{}, darkening{}, received{}, surrounding{};
     for (int c = 0; c < rgb::count; ++c) {
       double integrated = 0;
       if (field.angle > field.left)
@@ -214,7 +214,8 @@ void integrate_retinal_receptors(const BrainInterface &binding,
       }
       double m = std::max(0., integrated / width);
       if (!r.proximity && world.env().vision_adaptation > 0 && sr > sl) {
-        const double baseline = (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]),
+        const double baseline = surrounding[c] =
+                         (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]),
                      adapted = r.response_threshold * std::max(0., m - baseline) /
                                (baseline + r.response_threshold),
                      blend = world.env().vision_adaptation;
@@ -246,19 +247,26 @@ void integrate_retinal_receptors(const BrainInterface &binding,
           {r.neuron, field.mix * r.visual_gain() * total, 0, 0, received});
       if (int(r.neuron) != inspected->inspection_neuron)
         continue;
+      // A bright share answers the light an object sends; a dark share answers how much darker
+      // than its surround the object leaves the field, as the cell itself does.
+      const double shading = world.env().vision_adaptation * r.response_threshold;
       std::vector<double> light(objects.size());
       for (const auto &v : cache.visible) {
         const double area = retinal_area(field, knots[v.band], knots[v.band + 1]) / width;
         if (area <= 0)
           continue;
         const auto &o = objects[v.object];
-        double spectral = 0;
-        for (int c = 0; c < rgb::count; ++c)
-          spectral += r.spectrum[c] * object_color(v.object)[c];
+        const double reach =
+            o.attenuation >= 0 ? o.attenuation : std::exp2(-o.distance / world.water_clarity);
+        double spectral = 0, shade = 0;
+        for (int c = 0; c < rgb::count; ++c) {
+          const double sent = object_color(v.object)[c] * reach;
+          spectral += r.spectrum[c] * sent;
+          shade += r.spectrum[c] * shading * std::max(0., surrounding[c] - sent) /
+                   (surrounding[c] + r.response_threshold);
+        }
         light[v.object] +=
-            field.mix * area * spectral *
-            (o.attenuation >= 0 ? o.attenuation : std::exp2(-o.distance / world.water_clarity)) *
-            r.visual_gain();
+            field.mix * area * ((1 - dark) * spectral + dark * shade) * r.visual_gain();
       }
       std::vector<std::size_t> order(objects.size());
       std::iota(order.begin(), order.end(), 0);

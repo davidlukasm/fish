@@ -23,9 +23,11 @@
 // retinal cell.
 // mussel=1 grows the fish up in the aquarium and sets it, facing the shell, at distance from one
 // open mussel after another; each trial reports when the mouth reached the shell, whether the
-// shell closed first, how often the jaw bit and whether and when the shell cracked.
+// shell closed first, how often the jaw bit and when its bite cracked the shell, or when the
+// shell vanished for another reason.
 // crab=1 does the same with crabs walking in the open: when the mouth reached the crab, when the
-// crab fled or buried itself, how much the fish lost to pinches and when the shell cracked.
+// crab fled or buried itself, how much the fish lost to pinches and when the shell cracked or
+// the crab vanished.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -295,6 +297,18 @@ int main(int argc, char **argv) {
       }
       std::cout << "}\n";
     };
+    // A target counts as cracked only when this fish's bite broke it where it last was; shells
+    // also vanish when their time is up, their ground is gone or mud buries them.
+    std::uint64_t seen_effect = w.next_combat_effect;
+    const auto newly_cracked = [&](double x, double y, double radius) {
+      bool hit = false;
+      for (const auto &e : w.combat_effects)
+        if (e.id >= seen_effect && e.kind == feeding_effect::crack && e.source == p->id &&
+            std::hypot(w.field.delta_x(e.x - x), e.y - y) <= radius)
+          hit = true;
+      seen_effect = w.next_combat_effect;
+      return hit;
+    };
     if (mussel) {
       const auto &web = w.field.food_web();
       const auto find = [&](std::uint64_t id) -> const Mussel * {
@@ -337,19 +351,23 @@ int main(int argc, char **argv) {
         b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
         const double eaten_before = p->observations().raw_diet[food_kind::mussel];
         const auto cycles = b.mouth.cycle;
-        int reached = -1, closed = -1, cracked = -1, step = 0;
+        int reached = -1, closed = -1, cracked = -1, vanished = -1, step = 0;
         double nearest = distance;
         Course course{w, b.x, b.y, b.angle, path};
         const double shell_x = target->x, shell_y = target->y;
+        double shell_radius = mussel_radius(target->energy, w.field.env(), target->morph);
+        seen_effect = w.next_combat_effect;
         for (; step < trial; ++step) {
           w.tick(false);
           keep();
           course.record(step, p->body);
+          const bool broken = newly_cracked(shell_x, shell_y, shell_radius);
           const Mussel *m = find(id);
           if (!m) {
-            cracked = step;
+            (broken ? cracked : vanished) = step;
             break;
           }
+          shell_radius = mussel_radius(m->energy, w.field.env(), m->morph);
           const double mx = w.field.wrap_x(p->body.x +
                                            mouth_offset(p->body) * std::cos(p->body.angle)),
                        my = p->body.y + mouth_offset(p->body) * std::sin(p->body.angle),
@@ -369,7 +387,7 @@ int main(int argc, char **argv) {
                   << ",\"grind\":" << bite_force(p->body, BiteKind::grinding)
                   << ",\"reached\":" << reached << ",\"nearest\":" << nearest
                   << ",\"closed\":" << closed << ",\"cracked\":" << cracked
-                  << ",\"bites\":" << p->body.mouth.cycle - cycles
+                  << ",\"vanished\":" << vanished << ",\"bites\":" << p->body.mouth.cycle - cycles
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::mussel] - eaten_before
                   << ",\"steps\":" << step;
         course.print(shell_x, shell_y);
@@ -415,21 +433,28 @@ int main(int argc, char **argv) {
         b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
         const double eaten_before = p->observations().raw_diet[food_kind::crab];
         const auto cycles = b.mouth.cycle;
-        int reached = -1, fled = -1, buried = -1, cracked = -1, step = 0;
+        int reached = -1, fled = -1, buried = -1, cracked = -1, vanished = -1, step = 0;
         double nearest = distance, pinched = 0, health = b.health;
         Course course{w, b.x, b.y, b.angle, path};
         const double crab_x = target->x, crab_y = target->y;
+        double last_x = crab_x, last_y = crab_y,
+               last_radius = crab_radius(target->energy, w.field.env(), target->morph);
+        seen_effect = w.next_combat_effect;
         for (; step < trial; ++step) {
           w.tick(false);
           keep();
           course.record(step, p->body);
           pinched += std::max(0., health - p->body.health);
           health = p->body.health;
+          const bool broken = newly_cracked(last_x, last_y, last_radius);
           const Crab *c = find(id);
           if (!c) {
-            cracked = step;
+            (broken ? cracked : vanished) = step;
             break;
           }
+          last_x = c->x;
+          last_y = c->y;
+          last_radius = crab_radius(c->energy, w.field.env(), c->morph);
           const double mx = w.field.wrap_x(p->body.x +
                                            mouth_offset(p->body) * std::cos(p->body.angle)),
                        my = p->body.y + mouth_offset(p->body) * std::sin(p->body.angle),
@@ -449,7 +474,8 @@ int main(int argc, char **argv) {
                   << ",\"grind\":" << bite_force(p->body, BiteKind::grinding)
                   << ",\"reached\":" << reached << ",\"nearest\":" << nearest
                   << ",\"fled\":" << fled << ",\"buried\":" << buried << ",\"cracked\":" << cracked
-                  << ",\"pinched\":" << pinched << ",\"bites\":" << p->body.mouth.cycle - cycles
+                  << ",\"vanished\":" << vanished << ",\"pinched\":" << pinched
+                  << ",\"bites\":" << p->body.mouth.cycle - cycles
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::crab] - eaten_before
                   << ",\"steps\":" << step;
         course.print(crab_x, crab_y);

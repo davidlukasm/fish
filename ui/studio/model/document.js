@@ -8,6 +8,7 @@ import {
   HORMONES,
   MOTOR_KIND,
   MOUTH_CYCLE,
+  PRESSURE_SOURCE,
   SENSE_KIND,
   TUNING
 } from '../../schema.js';
@@ -933,6 +934,63 @@ const NEAR_SITE = Object.freeze({depth_weight : 4, other_side : 1});
 const siteSeparation = (site, at) =>
     (site.zone - at.zone + at.u - site.u) ** 2 + (site.w - at.w) ** 2 / NEAR_SITE.depth_weight +
     (site.v - at.v) ** 2 + (site.side === at.side ? 0 : NEAR_SITE.other_side);
+// A pressure cell reads the gut or the nearest inner effector cell (body_plan assign_pressure),
+// at the places the last design gave every site in its body.
+const PRESSURE_READ = Object.freeze({
+  bladder : PRESSURE_SOURCE.bladder,
+  eggs : PRESSURE_SOURCE.eggs,
+  sperm : PRESSURE_SOURCE.sperm,
+  muscle : PRESSURE_SOURCE.shape
+});
+const GONADS = Object.freeze([ 'eggs', 'sperm' ]);
+const cellPosition = (site, layout) => layout.sitePlaces[site.id];
+const squared = (a, b) => a.reduce((sum, value, k) => sum + (value - b[k]) ** 2, 0);
+const knowsLayout = layout => Array.isArray(layout?.sitePlaces) && Array.isArray(layout?.gutPath) &&
+                              layout.gutPath.length > 0;
+export function pressureReading(doc, site, sites, layout) {
+  const at = cellPosition(site, layout);
+  let nearest = Math.min(...layout.gutPath.map(q => squared(at, q))), read = PRESSURE_SOURCE.none;
+  for (const organ of doc.organs) {
+    const kind = PRESSURE_READ[organ.type];
+    if (kind === undefined)
+      continue;
+    for (const center of organ.centers.filter(c => c.role === 'motor')) {
+      const s = findSite(sites, center.site);
+      if (!s || (GONADS.includes(organ.type) && s.outer))
+        continue;
+      const d = squared(at, cellPosition(s, layout));
+      if (d < nearest) {
+        nearest = d;
+        read = kind;
+      }
+    }
+  }
+  return read;
+}
+// Free places for a pressure cell where it reads its own organ, closest to that organ first:
+// the gut path for a gut, the organ's inner cells otherwise.
+export function pressureSites(doc, centerId, sites, layout) {
+  const found = findCenter(doc, centerId), own = PRESSURE_OF[found?.organ.type];
+  if (!found || !own || !knowsLayout(layout))
+    return [];
+  const used = usedSites(doc);
+  const homes = own.source === PRESSURE_SOURCE.none
+                    ? layout.gutPath
+                    : found.organ.centers.filter(c => c.role === 'motor')
+                          .map(c => findSite(sites, c.site))
+                          .filter(s => s && !(GONADS.includes(found.organ.type) && s.outer))
+                          .map(s => cellPosition(s, layout));
+  const reach = site => {
+    const at = cellPosition(site, layout);
+    return Math.min(...homes.map(q => squared(at, q)));
+  };
+  return sites
+      .filter(s => !used.has(s.id) && fitsOrgan(found.organ.type, found.center, s) &&
+                   pressureReading(doc, s, sites, layout) === own.source)
+      .map(s => ({site : s, reach : reach(s)}))
+      .sort((a, b) => a.reach - b.reach)
+      .map(entry => entry.site);
+}
 export function nodeSitesNear(doc, centerId, nearId, sites) {
   const found = findCenter(doc, centerId), near = findCenter(doc, nearId);
   const at = findSite(sites, near?.center.site);

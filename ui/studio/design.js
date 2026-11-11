@@ -26,7 +26,7 @@ import {
   compileDocument,
   findCenter,
   findOrgan,
-  nodeSitesNear,
+  pressureSites,
   organOf,
   placeNode,
   pressureMismatches
@@ -150,10 +150,8 @@ export const designMethods = {
     this.pressureChecked = doc;
     const wrong = pressureMismatches(doc, pressure);
     for (const center of wrong) {
-      const organ = findOrgan(doc, center.organId);
-      const motor = organ.centers.find(c => c.role === 'motor') ?? organ.centers[0];
       const index = centerIndex(doc, center.id);
-      for (const site of nodeSitesNear(doc, center.id, motor.id, this.state.sites)
+      for (const site of pressureSites(doc, center.id, this.state.sites, this.state.anatomy)
                .slice(0, PRESSURE_TRIES)) {
         const moved = placeNode(doc, center.id, site.id, this.state.sites);
         const answer =

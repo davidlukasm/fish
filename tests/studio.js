@@ -10,7 +10,7 @@ const {join} = require('node:path');
 const ENGINE_REVIEW = Object.freeze({
   "src/cppn_brain.cc" : "a73d53c5ad5781d1",
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
-  "src/eye_geometry.cc" : "553a32ad6e39ab09",
+  "src/eye_geometry.cc" : "0331842d148c18c4",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
   "ui/brain_geometry.js" : "8dfa1e7c052fc7f1",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
@@ -41,10 +41,10 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "5f40a5d46c7c62e6",
+  "src/retina.cc" : "a14c24e09bb2ee39",
   "src/observations.cc" : "0842c1e7c0e30e29",
   "src/observations.hh" : "f6f4936f693e510e",
-  "src/eye_geometry.hh" : "651dfb791f0d8f1c",
+  "src/eye_geometry.hh" : "3c65ed324049ca17",
   "src/retina.hh" : "a3a169f6e8f4cafd",
   "ui/fish_forms.js" : "779094f709698fe1",
   "ui/fish_geometry.js" : "aa899dbb45672f9f",
@@ -505,6 +505,7 @@ async function checkHormoneSystems(model, capabilities) {
     nerveKind,
     nodeLimit,
     organFunction,
+    PRESSURE_OF,
     siteRole
   } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
@@ -826,6 +827,13 @@ async function checkHormoneSystems(model, capabilities) {
     const bladder = model.addOrgan(gut.document, 'bladder', sites, {x : 650, y : 360});
     organAudits.push(
         {document : bladder.document, id : bladder.organId, type : 'bladder', pressure : true});
+  }
+  {
+    // Organs added near each other take over the readings of earlier pressure cells.
+    let crowded = model.newDocument('Gedränge');
+    for (const type of ['bladder', 'gut', 'eggs'])
+      crowded = model.addOrgan(crowded, type, sites, {x : 720, y : 330}).document;
+    organAudits.push({document : crowded, type : 'eggs', crowded : true});
   }
   {
     const regions = await import('../ui/studio/model/regions.js');
@@ -1664,6 +1672,35 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     if (audit.pressure)
       assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),
                        [], 'The bladder measures depth beside its own muscle, not gut filling');
+    if (audit.crowded) {
+      const layout = response.audited[index], doc = audit.document;
+      const sensors = model.allCenters(doc).filter(c => PRESSURE_OF[c.organType]?.key === c.key);
+      assert.deepEqual(sensors.map(c => model.pressureReading(doc, sites.find(s => s.id === c.site),
+                                                              sites, layout)),
+                       sensors.map(c => layout.pressure[model.centerIndex(doc, c.id)]),
+                       'The Atelier predicts what every pressure cell reads, as the body does');
+      const wrong = model.pressureMismatches(doc, layout.pressure);
+      assert.ok(wrong.length, 'Crowded organs misplace pressure cells');
+      for (const center of wrong) {
+        const site = model.pressureSites(doc, center.id, sites, layout)[0];
+        const moved = model.placeNode(doc, center.id, site.id, sites);
+        const answer = JSON.parse(execFileSync(
+            'python3',
+            [
+              '-B', '-c',
+              "import json,sys; from atelier_service import run; print(json.dumps(run({'operation':'design','plan':json.load(sys.stdin)})['pressure']))"
+            ],
+            {
+              cwd : root,
+              input : JSON.stringify(model.compileDocument(moved, sites)),
+              encoding : 'utf8',
+              timeout : 30000
+            }));
+        assert.equal(answer[model.centerIndex(moved, center.id)],
+                     PRESSURE_OF[center.organType].source,
+                     'The first offered place lets the pressure cell read its own organ');
+      }
+    }
     const planned = {
       ...state,
       document : audit.document,

@@ -213,6 +213,31 @@ void dark_cells_report_what_is_darker_than_the_surround(const Genome &g) {
         "bright cells answer a white object more than a black one");
   check(dark_black[centre] > dark_white[centre],
         "dark cells answer a black object more than a white one");
+  // The source lines of a dark cell lead to the dark object that drives it.
+  const auto sources = [&](const Color &color) {
+    auto &b = p.body;
+    SensoryProbe object;
+    object.kind = probe_kind::sight;
+    object.remaining = 1;
+    object.x = b.x + AHEAD * std::cos(bearing);
+    object.y = b.y + AHEAD * std::sin(bearing);
+    object.radius = SIZE;
+    object.color = color;
+    b.set_probe(object);
+    b.set_inspection(true, false, int(dark.sensory[centre].neuron));
+    retinal_vision(b, dark, w.field, visual_objects(b, g, w.field), &b);
+    double strength = 0;
+    for (const auto &h : b.perception().visual_contributions)
+      if (int(h.neuron) == int(dark.sensory[centre].neuron))
+        strength += h.light;
+    b.set_inspection(false, false, -1);
+    return strength;
+  };
+  const double from_black = sources(BLACK), from_white = sources(WHITE);
+  std::cout << "Quelllinien der dunklen Zelle: schwarz " << from_black << ", weiß " << from_white
+            << "\n";
+  check(from_black > 0 && from_white == 0,
+        "a dark cell's source lines lead to the black object, not to the white one");
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);

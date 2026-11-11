@@ -357,80 +357,93 @@ void prepare_eye_shape(BrainInterface &b) {
         S::eye_clearance * (b.eye_shape[0][1] + b.eye_shape[1][1]) +
         std::max({b.eye_shape[0][0], b.eye_shape[0][1], b.eye_shape[1][0], b.eye_shape[1][1]});
 }
+ZonalFrame::ZonalFrame(const BrainInterface &a)
+    : geometry(a.body_geometry), plans(a.body_plans), tail_fin(a.fins[fin::tail].strength) {
+  const auto &g = geometry;
+  origin = g[M::center];
+  scale = g[M::extent];
+  boundary = {g[M::head_back] + g[M::head_length] + g[M::face_length],
+              g[M::head_back] + g[M::head_length], g[M::head_back],
+              g[M::head_back] - g[M::chest_length],
+              g[M::head_back] - g[M::chest_length] - g[M::base_hind_length]};
+}
+// Where a cell of this development site lies in the body: along its zone, across the body's
+// width at that point, high or low by its depth.
+ZonalFrame::Place ZonalFrame::place(const cppn::Point &p) const {
+  namespace P = field::body_plan_part;
+  const auto &g = geometry;
+  const double cw = chest_width(g[M::trunk], g[M::rest_shoulder], plans[P::chest]),
+               hw = hind_width(g[M::trunk], plans[P::torso]);
+  const int zone = p.zone;
+  const double y = boundary[zone + 1] + p.u * (boundary[zone] - boundary[zone + 1]);
+  double width = 0;
+  if (zone == 0)
+    width = g[M::face_width] * (1 - p.u + p.u * plans[P::face][Q::snout_width]);
+  else if (zone == 1) {
+    const auto &h = plans[P::head];
+    XYCurve skull{{{boundary[1], g[M::face_width]},
+                   {boundary[1] - g[M::head_length] * h[Q::head_handle],
+                    g[M::rest_shoulder] * h[Q::head_front_lift]},
+                   {boundary[2] + g[M::head_length] * S::skull_handle,
+                    g[M::rest_shoulder] * h[Q::head_back_lift]},
+                   {boundary[2], g[M::neck_width]}}};
+    double lo = 0, hi = 1;
+    for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
+      const double m = (lo + hi) / 2;
+      if (bezier(skull, m)[0] > y)
+        lo = m;
+      else
+        hi = m;
+    }
+    width = bezier(skull, (lo + hi) / 2)[1];
+  } else {
+    const auto &plan = plans[zone - 1];
+    const double center = section_center(plan), front = boundary[zone], back = boundary[zone + 1],
+                 peak = front - (front - back) * center, reach = (front - back) * S::reach,
+                 fw = zone == 2 ? g[M::neck_width] : join_width(cw, hw),
+                 bw = zone == 2 ? join_width(cw, hw) : S::tail_base + S::tail_fin * size(tail_fin),
+                 wide = zone == 2 ? cw : hw;
+    XYCurve curve =
+        y >= peak
+            ? XYCurve{{{front, fw},
+                       {front - reach * S::handle, fw},
+                       {peak + std::min(reach * plan[Q::front_reach], (front - peak) * S::limit),
+                        wide},
+                       {peak, wide}}}
+            : XYCurve{
+                  {{peak, wide},
+                   {peak - std::min(reach * plan[Q::back_reach], (peak - back) * S::limit), wide},
+                   {back + reach * S::handle, bw},
+                   {back, bw}}};
+    double lo = 0, hi = 1;
+    for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
+      double m = (lo + hi) / 2;
+      if (bezier(curve, m)[0] > y)
+        lo = m;
+      else
+        hi = m;
+    }
+    width = bezier(curve, (lo + hi) / 2)[1];
+  }
+  return {p.side * p.w * width / scale, (y - origin) / scale, (2 * p.v - 1) * width / scale,
+          width / scale};
+}
 void prepare_zonal_geometry(field::Substrate &s) {
   const auto a = anatomical_interface(s);
   s.body_geometry = a->body_geometry;
   s.body_plans = a->body_plans;
   s.burial_points = a->burial_points;
   const auto &g = s.body_geometry;
-  namespace P = field::body_plan_part;
-  const double origin = g[M::center], scale = g[M::extent];
-  const std::array<double, 5> boundary{
-      g[M::head_back] + g[M::head_length] + g[M::face_length], g[M::head_back] + g[M::head_length],
-      g[M::head_back], g[M::head_back] - g[M::chest_length],
-      g[M::head_back] - g[M::chest_length] - g[M::base_hind_length]};
-  const double cw = chest_width(g[M::trunk], g[M::rest_shoulder], s.body_plans[P::chest]),
-               hw = hind_width(g[M::trunk], s.body_plans[P::torso]);
-  s.body_length = (boundary[0] - boundary[4]) / scale;
+  const ZonalFrame frame(*a);
+  s.body_length = (frame.boundary[0] - frame.boundary[4]) / g[M::extent];
   std::array<std::array<double, 2>, 2> weight{};
   std::array<std::array<std::array<double, 2>, 2>, 2> place{};
   for (auto &n : s.neurons) {
     const auto &p = n.location;
-    const int zone = p.zone;
-    const double y = boundary[zone + 1] + p.u * (boundary[zone] - boundary[zone + 1]);
-    double width = 0;
-    if (zone == 0)
-      width = g[M::face_width] * (1 - p.u + p.u * s.body_plans[P::face][Q::snout_width]);
-    else if (zone == 1) {
-      const auto &h = s.body_plans[P::head];
-      XYCurve skull{{{boundary[1], g[M::face_width]},
-                     {boundary[1] - g[M::head_length] * h[Q::head_handle],
-                      g[M::rest_shoulder] * h[Q::head_front_lift]},
-                     {boundary[2] + g[M::head_length] * S::skull_handle,
-                      g[M::rest_shoulder] * h[Q::head_back_lift]},
-                     {boundary[2], g[M::neck_width]}}};
-      double lo = 0, hi = 1;
-      for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
-        const double m = (lo + hi) / 2;
-        if (bezier(skull, m)[0] > y)
-          lo = m;
-        else
-          hi = m;
-      }
-      width = bezier(skull, (lo + hi) / 2)[1];
-    } else {
-      const auto &plan = s.body_plans[zone - 1];
-      const double center = section_center(plan), front = boundary[zone], back = boundary[zone + 1],
-                   peak = front - (front - back) * center, reach = (front - back) * S::reach,
-                   fw = zone == 2 ? g[M::neck_width] : join_width(cw, hw),
-                   bw = zone == 2 ? join_width(cw, hw)
-                                  : S::tail_base + S::tail_fin * size(a->fins[fin::tail].strength),
-                   wide = zone == 2 ? cw : hw;
-      XYCurve curve =
-          y >= peak
-              ? XYCurve{{{front, fw},
-                         {front - reach * S::handle, fw},
-                         {peak + std::min(reach * plan[Q::front_reach], (front - peak) * S::limit),
-                          wide},
-                         {peak, wide}}}
-              : XYCurve{
-                    {{peak, wide},
-                     {peak - std::min(reach * plan[Q::back_reach], (peak - back) * S::limit), wide},
-                     {back + reach * S::handle, bw},
-                     {back, bw}}};
-      double lo = 0, hi = 1;
-      for (int k = 0; k < WIDTH_BISECTIONS; ++k) {
-        double m = (lo + hi) / 2;
-        if (bezier(curve, m)[0] > y)
-          lo = m;
-        else
-          hi = m;
-      }
-      width = bezier(curve, (lo + hi) / 2)[1];
-    }
-    n.x = float(p.side * p.w * width / scale);
-    n.y = float((y - origin) / scale);
-    n.z = float((2 * p.v - 1) * width / scale);
+    const auto at = frame.place(p);
+    n.x = float(at.x);
+    n.y = float(at.y);
+    n.z = float(at.z);
     const int kind = n.functions.senses[field::Light] > 0       ? 0
                      : n.functions.senses[field::Proximity] > 0 ? 1
                                                                 : -1;
@@ -438,7 +451,7 @@ void prepare_zonal_geometry(field::Substrate &s) {
       const int side = p.side < 0 ? 0 : 1;
       weight[side][kind] += n.strength;
       place[side][kind][0] += n.strength * n.y;
-      place[side][kind][1] += n.strength * p.side * width / scale;
+      place[side][kind][1] += n.strength * p.side * at.width;
     }
   }
   for (int side = 0; side < 2; ++side) {
