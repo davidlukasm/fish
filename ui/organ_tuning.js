@@ -19,7 +19,6 @@ import {
   MOTOR_PORTS,
   NEURON,
   RECEPTOR,
-  SENSE_KIND,
   SENSORY_COMPONENT,
   TIME_CONSTANT,
   TOLERANCE
@@ -27,10 +26,6 @@ import {
 export const organ_tuningState = {};
 const CURVES = 48, CURVE_POINTS = 48, DECADES = 4;
 
-const INTENSITY_SENSES = Object.freeze([
-  SENSE_KIND.light, SENSE_KIND.odor, SENSE_KIND.flow, SENSE_KIND.intake, SENSE_KIND.damage,
-  SENSE_KIND.blood
-]);
 const TUNING_GRAPHIC = Object.freeze({
   font : '10px system-ui',
   width : 360,
@@ -81,7 +76,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
         sense = isSenseTissue(tissue.key), motor = isMotorTissue(tissue.key),
         k = tissueKind(tissue.key),
         signed = motor && (k === MOTOR_KIND.bladder || k === MOTOR_KIND.gland),
-        intensity = sense && INTENSITY_SENSES.includes(k), color = tissueColor(tissue.key);
+        intensity =
+            sense && nodes.some(n => d.receptors.get(n[NEURON.index])?.[RECEPTOR.intensity]),
+        color = tissueColor(tissue.key);
   g.clearRect(0, 0, TUNING_GRAPHIC.width, TUNING_GRAPHIC.height);
   g.font = TUNING_GRAPHIC.font;
   g.textAlign = 'left';
@@ -95,11 +92,17 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   const x0 = TUNING_GRAPHIC.left, y0 = TUNING_GRAPHIC.bottom, w = TUNING_GRAPHIC.plot_width,
         h = TUNING_GRAPHIC.plot_height,
         map = value =>
-            x0 + w * brainClamp((Math.log10(Math.max(10 ** -DECADES, value)) + DECADES) / DECADES),
-        response = (raw, tau) => raw <= 0 ? 0
-                                 : intensity
-                                     ? raw / (raw + tau)
-                                     : raw * (1 - tau) / (raw * (1 - tau) + (1 - raw) * tau);
+            x0 +
+            w * brainClamp(intensity
+                               ? (Math.log10(Math.max(10 ** -DECADES, value)) + DECADES) / DECADES
+                               : value),
+        response = (raw, r) => {
+          const logarithmic = r[RECEPTOR.intensity],
+                tau = r[logarithmic ? RECEPTOR.response_threshold : RECEPTOR.threshold];
+          return raw <= 0      ? 0
+                 : logarithmic ? raw / (raw + tau)
+                               : raw * (1 - tau) / (raw * (1 - tau) + (1 - raw) * tau);
+        };
   g.beginPath();
   g.moveTo(x0, TUNING_GRAPHIC.top);
   g.lineTo(x0, y0);
@@ -116,17 +119,15 @@ export function drawOrganTuning(canvas, info, d, tissue) {
               (d.b.sensory_components || []).map(row => [row[SENSORY_COMPONENT.neuron], row]));
     const stride = Math.max(1, Math.ceil(records.length / CURVES));
     for (let j = 0; j < records.length; j += stride) {
-      const r = records[j],
-            tau = sense ? r[intensity ? RECEPTOR.response_threshold : RECEPTOR.threshold]
-                        : r[EFFECTOR.threshold];
+      const r = records[j];
       g.strokeStyle = color;
       g.globalAlpha = TUNING_GRAPHIC.curve_alpha;
       g.beginPath();
       for (let i = 0; i <= CURVE_POINTS; i++) {
-        const raw = sense    ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
-                    : signed ? 2 * i / CURVE_POINTS - 1
-                             : i / CURVE_POINTS,
-              v = sense    ? response(raw, tau)
+        const raw = intensity ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
+                    : signed  ? 2 * i / CURVE_POINTS - 1
+                              : i / CURVE_POINTS,
+              v = sense    ? response(raw, r)
                   : signed ? Math.abs(raw)
                            : brainClamp(raw),
               x = x0 + w * i / CURVE_POINTS, y = y0 - h * v;
@@ -142,15 +143,12 @@ export function drawOrganTuning(canvas, info, d, tissue) {
     g.lineWidth = 2;
     g.beginPath();
     for (let i = 0; i <= CURVE_POINTS; i++) {
-      const raw = sense    ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
-                  : signed ? 2 * i / CURVE_POINTS - 1
-                           : i / CURVE_POINTS,
-            v = records.reduce((sum, r) =>
-                                   sum +
-                                   (sense ? response(raw, r[intensity ? RECEPTOR.response_threshold
-                                                                      : RECEPTOR.threshold])
-                                    : signed ? Math.abs(raw)
-                                             : brainClamp(raw)),
+      const raw = intensity ? 10 ** (DECADES * (i / CURVE_POINTS - 1))
+                  : signed  ? 2 * i / CURVE_POINTS - 1
+                            : i / CURVE_POINTS,
+            v = records.reduce((sum, r) => sum + (sense    ? response(raw, r)
+                                                  : signed ? Math.abs(raw)
+                                                           : brainClamp(raw)),
                                0) /
                 Math.max(1, records.length),
             x = x0 + w * i / CURVE_POINTS, y = y0 - h * v;
@@ -172,8 +170,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
                     : brainClamp(n?.[NEURON.state] ?? n?.[NEURON.activity] ?? 0);
       if (v === null)
         continue;
-      const tau = r[intensity ? RECEPTOR.response_threshold : RECEPTOR.threshold],
-            raw = sense    ? (intensity
+      const logarithmic = r[RECEPTOR.intensity],
+            tau = r[logarithmic ? RECEPTOR.response_threshold : RECEPTOR.threshold],
+            raw = sense    ? (logarithmic
                                   ? tau * v / Math.max(TOLERANCE.negligible, 1 - v)
                                   : v * tau /
                                      Math.max(TOLERANCE.negligible, (1 - v) * (1 - tau) + v * tau))
@@ -186,9 +185,9 @@ export function drawOrganTuning(canvas, info, d, tissue) {
       g.fill();
     }
     const [low, middle, high] =
-        sense    ? [ 10 ** -DECADES, 10 ** (-DECADES / 2), 1 ].map(v => percent(v, DECADES))
-        : signed ? tList('units.signedAxis')
-                 : [ 0, 1 / 2, 1 ].map(v => percent(v));
+        intensity ? [ 10 ** -DECADES, 10 ** (-DECADES / 2), 1 ].map(v => percent(v, DECADES))
+        : signed  ? tList('units.signedAxis')
+                  : [ 0, 1 / 2, 1 ].map(v => percent(v));
     g.fillStyle = TUNING_GRAPHIC.label;
     g.fillText(low, x0, TUNING_GRAPHIC.axis_y);
     g.fillText(middle, x0 + TUNING_GRAPHIC.middle_x, TUNING_GRAPHIC.axis_y);

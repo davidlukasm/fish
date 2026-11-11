@@ -902,7 +902,8 @@ enum class ReceptorColumn : std::size_t {
   pressure_kind = 22,
   pressure_target = 23,
   proximity = 24,
-  count = 25
+  intensity = 25,
+  count = 26
 };
 namespace receptor_column {
 inline constexpr std::size_t neuron = 0;
@@ -930,7 +931,8 @@ inline constexpr std::size_t hormones = 21;
 inline constexpr std::size_t pressure_kind = 22;
 inline constexpr std::size_t pressure_target = 23;
 inline constexpr std::size_t proximity = 24;
-inline constexpr std::size_t count = 25;
+inline constexpr std::size_t intensity = 25;
+inline constexpr std::size_t count = 26;
 }
 enum class EffectorColumn : std::size_t {
   neuron = 0,

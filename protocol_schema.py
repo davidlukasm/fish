@@ -469,7 +469,8 @@ class Receptor:
     PRESSURE_KIND = 22
     PRESSURE_TARGET = 23
     PROXIMITY = 24
-    COUNT = 25
+    INTENSITY = 25
+    COUNT = 26
 
 class Effector:
     NEURON = 0

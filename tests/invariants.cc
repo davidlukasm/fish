@@ -895,11 +895,9 @@ void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
     w.tick();
     const auto &embryo = w.fish.front().body;
     // Secretion for dissolving the shell is spent as soon as it is made.
-    const double kept =
-        stored_energy(embryo) - embryo.embryo.secretion - embryo.embryo.pending;
+    const double kept = stored_energy(embryo) - embryo.embryo.secretion - embryo.embryo.pending;
     if (!embryo.hatched)
-      unrecorded =
-          std::max(unrecorded, std::abs(initial_energy - kept - embryo.embryo.spent));
+      unrecorded = std::max(unrecorded, std::abs(initial_energy - kept - embryo.embryo.spent));
   }
   check(unrecorded <= RECORD_TOLERANCE * initial_energy,
         "the embryo records the energy its incubation used up");
@@ -1165,6 +1163,17 @@ void inner_hair_cells_feel_gravity() {
   const double up = anatomical_stimulus(still, r, calm, 0, physiology);
   check(down > 1 - tolerance::precision && up == 0,
         "an inner hair cell is weighed down when it points to the bottom, not to the surface");
+  r.threshold = .5f;
+  r.response_threshold = .001f;
+  for (const double tilt : {.2, .5, .8}) {
+    still.angle = std::asin(tilt) - r.mechanical_angle;
+    const double stimulus = anatomical_stimulus(still, r, calm, 0, physiology);
+    check(std::abs(receptor_response(r, stimulus) - tilt) < tolerance::precision,
+          "gravity preserves intermediate tilts instead of saturating like water flow");
+  }
+  r.inner = false;
+  check(receptor_response(r, .2) > .99,
+        "outer hair cells retain their sensitivity to weak water flow");
 }
 void barbels_taste_only_what_they_touch() {
   Ecosystem w(SEED);

@@ -44,6 +44,9 @@ struct BrainInterface {
     double time_steps = 4;
     double adaptation_rate = 0;
     bool visual() const { return channel == field::Light || channel == field::Proximity; }
+    bool intensity() const {
+      return intensity_sense(channel) && !(channel == field::Flow && inner);
+    }
     float visual_gain() const { return senses[field::Light] + senses[field::Proximity]; }
     int dominant_sense() const { return channel; }
     void refresh_modality() {

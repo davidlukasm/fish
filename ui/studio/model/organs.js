@@ -115,7 +115,7 @@ export const ORGANS = Object.freeze([
     key : 'balance',
     category : 'senses',
     scope : 'side',
-    centers : [ sensor('gravity', SENSE_KIND.flow, 2, 'inner') ]
+    centers : [ {...sensor('gravity', SENSE_KIND.flow, 2, 'inner'), threshold : 0} ]
   },
   {
     key : 'touch',

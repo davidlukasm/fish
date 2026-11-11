@@ -336,7 +336,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       continue;
     }
     const int sense = cell->dominant_sense();
-    const bool intensity = fishsim::intensity_sense(sense);
+    const bool intensity = cell->intensity();
     const auto stimulus = [&](int k) {
       const double f = double(k) / (SENSE_LEVELS - 1);
       return intensity ? std::pow(LIGHT_DIMMEST, 1 - f) : f;

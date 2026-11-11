@@ -19,7 +19,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "093d95f35ab12b44",
-  "src/body_plan.cc" : "f4242ea13264ae0d",
+  "src/body_plan.cc" : "07a7ccccc0ecfcc4",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "fa45cdf473acbba0",
   "src/physiology.cc" : "c8c14f031f1d59bf",
@@ -42,7 +42,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
   "src/retina.cc" : "52ad87af678bd04f",
-  "src/observations.cc" : "9352227738e2c1d5",
+  "src/observations.cc" : "e55fbd53754a3887",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
   "src/retina.hh" : "a3a169f6e8f4cafd",
@@ -51,7 +51,7 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "c6a63cda4547e83b",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "3e0c9e25c499fb7f",
+  "src/brain_interface.hh" : "fbbfa3e4137673e8",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
@@ -1481,6 +1481,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }));
   const {built, target : seen, outside, blue} = response;
   for (const [index, audit] of organAudits.entries()) {
+    if (audit.type === 'balance')
+      for (const center of model.allCenters(audit.document)) {
+        const sensed = response.audited[index].senses[model.centerIndex(audit.document, center.id)];
+        assert.equal(center.threshold, 0);
+        assert.equal(sensed.intensity, false);
+        assert.equal(sensed.adapt, null);
+        assert.ok(sensed.response.every((value, step, samples) =>
+                                            Math.abs(value - step / (samples.length - 1)) < 1e-6),
+                  'The balance editor preserves tilt on a linear stimulus axis');
+      }
     if (audit.pressure)
       assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),
                        [], 'The bladder measures depth beside its own muscle, not gut filling');

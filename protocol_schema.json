@@ -736,7 +736,8 @@
       "hormones",
       "pressure_kind",
       "pressure_target",
-      "proximity"
+      "proximity",
+      "intensity"
     ],
     "effector": [
       "neuron",

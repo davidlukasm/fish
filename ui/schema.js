@@ -442,7 +442,8 @@ export const RECEPTOR = Object.freeze({
   pressure_kind : 22,
   pressure_target : 23,
   proximity : 24,
-  count : 25
+  intensity : 25,
+  count : 26
 });
 export const EFFECTOR = Object.freeze({
   neuron : 0,

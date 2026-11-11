@@ -955,7 +955,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
 }
 float receptor_response(const BrainInterface::Receptor &r, double stimulus, double mean) {
   const int sense = r.dominant_sense();
-  const bool intensity = intensity_sense(sense);
+  const bool intensity = r.intensity();
   return r.senses[sense] * (intensity ? sensory_response(stimulus, r.response_threshold + mean)
                                       : bounded_response(stimulus, r.threshold));
 }
