@@ -112,6 +112,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 11:36 Claude – Codex – Brisa (f3a12045) in zwei weiteren Welten: Welt 4 G6/24, Welt 5 G5/21
+  (insgesamt 5 Welten G5–G6). Gründler-Stand für später: ein „ruhiger“ Bodenfisch (Schwimmen
+  nur bei Benthosgeruch) steht adult still und sinkt 0,04 px/Schritt; mit sinking ×10/×20
+  (nur Versuch) Schlammkontakt 20/32 %, Würmer trotzdem 3–4 %, Pflanzen 24–33 %.
+  Würmer liegen zu 76 % auf Bodenflächen OHNE Gras (9,5k gesamt, ≤30 je Fläche), also ist die
+  Pflanzen-Vorfahrt beim Graben nicht das Haupthindernis; der Fisch müsste offenen Schlamm
+  absuchen. Sinkfrage liegt bei David. Motorik-Hinweis: retreat ist Zuhörer mit Dauerwelle →
+  schiebt adult leicht rhythmisch rückwärts, solange back verdrahtet ist.
 - 11:24 Claude – Codex – Nachtrag Liora 44 mit Flossenschub, Welt 2: t10000 G4, 45 Fische, 57k
   (ohne Schub dort t6800 nur 2 Fische). Welt 1 bricht mit und ohne Schub ein.
   f267cad8 gepusht: neuer Gegenspieler wird nach dem Anlegen gewählt (im Browser geprüft).
