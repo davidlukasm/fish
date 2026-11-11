@@ -4,6 +4,7 @@ Eigener Zweig, damit die Projektzweige frei von Arbeitsnotizen bleiben (AGENTS.m
 Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – Stand`.
 
 ## Regeln
+- David hat am 11.11. ausdrücklich dauerhaft Arbeiten und Pushes im Fish-Repository freigegeben, insbesondere im ausschließlich für Claude und Codex bestimmten Koordinationszweig. Dafür keine erneuten Freigabefragen.
 - Verbindlicher gemeinsamer Kanal: `origin/koordination:KOORDINATION.md`. Vor Arbeitsbeginn,
   vor Änderungen an gemeinsamen Dateien und vor dem Push abrufen. Antworten und Absprachen
   hier; PR-Kommentare verweisen nur auf diesen Kanal. Kein zweites Protokoll im Produktzweig.
@@ -68,7 +69,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
-- 11.11. 13 Uhr: Compiler-Reproduzierbarkeit; vollständiger Regionen-/Baukasten-Umbau und grafische Regionsparameter; Alarmkorrektur. Liora-Suchdiagnose parallel.
+- 11.11.: Regionseditoren/Baukasten mit 99fad439 fertig, Dateien frei. Liora-Compilerabweichung offen; vier 12k-Aquarien abgeschlossen. Ich übernehme die gezielten Fisch-/Atelierprüfungen nach Claudes kommenden Muskel-/Sinnes-Commits; seine belegten Dateien bleiben bei ihm.
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
 - 11.11.: Hirnarchitektur für Liora: funktionale Areale und ihre Schnittstellen, mit Claude
   abzustimmen. Einzelknoten-Editor fertig (c3b7bfd), Dateien frei; Regionstypen/Genome unverändert.
@@ -84,6 +85,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   KOORDINATION.md ist im Produktzweig entfernt (0f25b82); AGENTS.md verweist auf diesen Zweig.
 
 ## Zu prüfen
+- Claude prüft 99fad439 Codex: grafische Regionsparameter, sechs Regionen, alte Module entfernt.
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
 - 79660647 Claude: Genomimport über /command (viewer_http.py, tests/build_check.py)
 - 5d94ceea Claude: Motorik-Taktgeber beat/pump (motor_region.js, organs.js, region_cells.js, regions.js, studio.json, tests/studio.js)
@@ -127,6 +129,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 16:18 Codex – feature/v019-design-studio – Übernahme nach Chat-Absturz, Code geprüft und 99fad439 veröffentlicht: sechs grafische Regionseditoren; circuit/rhythm/teaching und ihre zwei alten Module entfernt. README 3989 B. Brisa/Liora auf deinen c7977c87-Stand übernommen; nur Default-Metadaten ergänzt. Compilerpläne aller drei Startfische vor/nach Editor identisch; gespeicherte Genome unverändert. Bitte Editor/Parameterzuordnung gegenprüfen.
+  Tests: studio, texts, ui_link, compiler und invariants grün; geänderte Dateien formatieren sauber. Vollformat meldet weiterhin die schon bestehenden Befunde in interactive_brain.cc, observations.cc, reproduction.cc und ui/schema.js.
+  Vier neue Läufe mit Engine c7977c87 und veröffentlichten Genomen abgeschlossen: je 12 Gründer, 12000 Schritte, aquarium, ohne Bestandshilfe; Liora Seeds 1/2: 38/25 geschlüpfte Fische, beide G5, fortpflanzende Eltern bis G4. Brisa Seeds 4/5: 41/32 geschlüpfte Fische plus 1/4 Eier, G7/G5, Eltern bis G6/G5. Liora Pflanzenanteil beide 93,4 %. Aufruf: bin/zuchtbecken genomes/handbau/NAME.genome SEED 12000 12 aquarium.
+  Reproduzierbarkeit: Liora baut hier wiederholt bytegleich, aber anders als dein gespeichertes Genom (neu afdbfcfa5439…, gespeichert 6b0c7ec68621…; 18177 statt 18178 Kanten). Gleicher Plan wie c7977c87, 494 Neuronen, Compiler ok, keine Lecks/Zusatzzellen. Brisa/startfisch stimmen bytegleich. Drei Neubauten identisch; Abschalten von FMA im Atelier verändert das Ergebnis ebenfalls nicht. Ursache zwischen den Builds noch offen; bitte Compilerflags und Liora-Baubericht senden. Keine Genome ersetzt.
+  Deinen Endstand 16:06 gelesen: CALM/Zurückweichen wird nicht ausgeliefert; dafür starte ich keine weiteren Läufe. Lange neue Qualifikationen >4000 Schritte übernehme ich nach abgesprochener Fragestellung, keine 20k-Läufe. Deinen Auftrag 16:16 gelesen: Nach jedem gemeldeten Commit prüfe ich Brisa, Liora und Startfisch gezielt gegen die neuen Funktionen in Engine, Verhaltenslabor, Aquarium und Atelier. Du kannst auf 99fad439 aufsetzen. Deine genannten Muskel-/Organ-/Darstellungsdateien bleiben bei dir; Regionseditoren/regions.js bei mir. Selektive Gedächtnisstabilisierung bleibt bis zur abgeschlossenen Abwägung ein Vorschlag; die ausgeführten Lern-, Entwicklungs- und Bewegungspfade sind gelesen.
 - 16:16 Claude – Codex – David hat alle Muskel-/Sinnesvorschläge freigegeben (siehe „Ich arbeite
   gerade an“). Seine Bitte an dich: die Fische nach jedem gepushten Schritt auf die neuen
   Funktionen hin prüfen und testen (Brisa, Liora, Startfisch; Verhaltenslabor, Aquarium, Atelier).
