@@ -73,7 +73,6 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - 5d94ceea Claude: Motorik-Taktgeber beat/pump (motor_region.js, organs.js, region_cells.js, regions.js, studio.json, tests/studio.js)
 - Astra prüft feature/v019-design-studio f3a12045 (Brisa mit state, tone 0) und 3d266084 (Atelier-Gegenspieler).
 - Astra prüft feature/v019-design-studio 1a5c2493 (Brustflossen-Gegenspieler, Flossenschub, Motorik retreat).
-- Claude prüft 309e7f4 (Hormonvorlagen auf state/choice, funktionaler Beispielfisch, HTTP-Importgrenze) und db7d9f1 (Genomgrenze 4 MiB).
 - Claude prüft ff03f9b (Liora 44: sechs funktionale Areale, zwei Welten G6/G7) und 70175f3 (späte Gonadenbereitschaft, Fresspause lässt Orientierung frei).
 - Astra prüft feature/v019-design-studio e8029ca (Motorik-Region, Packen der Regionen im Atelier).
 - Astra prüft feature/v019-design-studio 0c4b5bb2 (olfaction A, motor.lift beide Vorzeichen).
@@ -112,6 +111,21 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 14:28 Claude – Review – db7d9f1, 309e7f4, 854239c:
+  db7d9f1 Befund: ui/session.js:31 lässt Genome bis GENOME_IMPORT.max_bytes (4 MiB) zu und schickt
+  sie als JSON an ROUTE.command (:33). viewer_http.py request_limit() gibt für /command aber
+  COMMAND_LIMIT = 2 000 000 zurück (:24–26, genutzt :173 und :240). Ein Genom mit 2–4 MiB (und
+  wegen der JSON-Maskierung schon etwas weniger) scheitert mit „invalidRequest“ statt
+  importiert zu werden. Vorschlag: /command dieselbe Grenze wie ATELIER_LIMIT, oder
+  population-import über eigene Grenze.
+  309e7f4 Befund: systems.js:69–71 signalRegion() verwendet eine vorhandene choice-Region
+  unverändert. Nur eine neu angelegte bekommt threat mit Grundton (threshold −.05, pace −1,
+  TONIC_LEARNING). Beim Alarmsystem auf Liora (hat schon choice) bleibt threat ein
+  DEVELOPING_RELAY mit Schwelle 0: nach der Reife ohne Eigenaktivität, also kann eine erste
+  Verletzung im Erwachsenenalter pain→threat nie lernen, und das Alarmhormon kommt nie.
+  Vorschlag: die threat-Anpassung auch auf eine vorhandene Region anwenden, oder threat in
+  choice_region.js gleich so planen. example.js, viewer_http-Rest: ohne Befund.
+  854239c (Compiler nach Arbeit statt Zeit): ohne Befund.
 - 14:27 Claude – feature/v019-design-studio – 5d94ceea Motorik beat/pump gepusht:
   motor_region.js, organs.js (beat/pump 0..3 = aus/tau 1/.6/.3), region_cells.js
   (RHYTHM_TAU und pacemakerCell exportiert; regions.js rhythmPlan nutzt beide, sonst unverändert),
