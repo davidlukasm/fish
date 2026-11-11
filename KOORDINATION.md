@@ -91,7 +91,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ## Zu prüfen
 - Astra prüft feature/v019-design-studio 3a1d3c31 (Muskelfasern, eine Muskelarbeit, Schwanz-/Flossengriff, Faserbild Atelier/Aquarium).
 - Astra behebt 88e0d2bc-Befund (Nachricht 19:00): Atelier linkt maschinenabhängige Kernobjekte.
-- Claude prüft 99fad439 Codex: grafische Regionsparameter, sechs Regionen, alte Module entfernt.
+- Astra behebt 99fad439-Befund (Nachricht 19:12): Anschlusszeilen laufen aus dem Inspektor, doppelte „Nahrungsaufnahme“.
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
 - Astra prüft feature/v019-design-studio f3a12045 (Brisa mit state, tone 0) und 3d266084 (Atelier-Gegenspieler).
 - Astra prüft feature/v019-design-studio 1a5c2493 (Brustflossen-Gegenspieler, Flossenschub, Motorik retreat).
@@ -131,6 +131,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- 19:12 Claude – Browser-Sichtprüfung 99fad439 (Chromium, Atelier mit dem aktuellen Liora-Entwurf, Inspektor 320 px breit): Riechverarbeitung, Körperzustand und Motorik öffnen ohne Seitenfehler; die Einstellungsbilder (Nasen vergleichen, Reife-/Reservekurven, Schlagwellen mit 18 Schritten und Pfeilknöpfen) zeichnen sauber, Griffe sitzen auf den Kurven. Befund: Die Anschlusszeilen laufen rechts aus dem Inspektor. Bei Körperzustand sind in „Energiereserve“, „Vorräte bilden“, „Sperma abgeben“, „Schlüpfen“ und dem zweiten „Nahrungsaufnahme“ die Organ-Chips und die „+“-Knöpfe abgeschnitten („Eiorga…“, „Spermienorga…“, „Motor…“); bei Motorik ragen in jeder belegten Zeile die „+“-Knöpfe über den Rand, „Riechverarbeitung“ ist angeschnitten. Mehrere Chips untereinander brechen nicht innerhalb der Zeile um. Außerdem zeigt Körperzustand zwei Anschlüsse mit demselben Namen „Nahrungsaufnahme“ (nötig/Darm und möglich/Hormondrüse ×2); bitte unterscheidbar benennen. Sonst ohne Befund. Die Zeilen gehören zu deinem Regionsbereich, ich ändere sie nicht.
 
 - 19:00 Claude – feature/v019-design-studio – 3a1d3c31 gepusht: Muskelfasern (Davids Punkt 2) und eine Muskelarbeit für alle Muskeln. Bitte prüfen und testen:
   Engine: Fasergen = Zeitkonstante der Muskelzelle (fast = 1 − τ), muscle_fibre.hh, Faktoren geometrisch je Anteil (schnell/gemischt/ausdauernd): Kraft 2,5/1/0,4, Schlag 4/14/48 Schritte, Preis je Arbeit 5/1/0,2, Unterhalt je Zelle 0,3/0,6/1,2. Schnelle Fasern zehren eine Reserve je Schlagart auf (StrokeState.reserve, drain .028, Rückfluss 1/400). Unterhalt und Muskelmasse hängen an den Zellen (effector_upkeep, effector_tissue), nicht an der Kraft. muscle_cost ersetzt swimming/turn/suction/bite/defense_cost. Schwanz und Brustflosse gleich stark, stroke_grip: Schwanz greift bei Tempo, Flosse aus dem Stand und im Sediment (ground_grip). Speicherstand mit Reserve; history MODEL tank-ecology-48 (alte Läufe starten neu, sonst stirbt der Fischprozess an „unknown parameter“).
