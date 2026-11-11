@@ -403,7 +403,8 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
       outside(actual.sensitivity, sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * spread,
               sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * spread) /
           (2 * field::HORMONE_SENSITIVITY_SPAN));
-  if (!wanted.active || std::abs(wanted.sensitivity) < 1e-6f)
+  // Receptor variation can make a cell sensitive even when the planned mean is zero.
+  if (!wanted.active || std::abs(actual.sensitivity) < 1e-6f)
     return deviation;
   const double angle = 2 * fishsim::PI * wanted.substance / field::BLOOD_SUBSTANCES;
   const auto interval = [](double mean, double width) {

@@ -123,6 +123,36 @@ void inactive_growth_ignores_saved_settings() {
   assert(genome.blueprint->growth_receptor.occupancy(hormones) == 0);
   assert(genome.blueprint->neurons[0].development_receptor.response(hormones, 1) == 1);
 }
+void receptor_spread_checks_sensitive_cells() {
+  auto plan = cells(1);
+  plan.groups[0].copies = studio_plan::max_copies;
+  plan.groups[0].receptors[field::Learning] = {true, .3f, 0, .01f, .05f, 2, 3, .1f};
+  fishsim::Genome genome;
+  genome.cppn = Builder().build(plan);
+  genome.compile(false);
+  assert(assess(plan, genome).ok());
+  const auto &actual = genome.blueprint->neurons.back().hormone_receptors[field::Learning];
+  assert(std::abs(actual.sensitivity) > .01f);
+  const auto altered = [&](auto change, bool accepted) {
+    auto changed = genome;
+    auto tissue = std::make_shared<field::Substrate>(*genome.blueprint);
+    auto &receptor = tissue->neurons.back().hormone_receptors[field::Learning];
+    change(receptor);
+    changed.blueprint = tissue;
+    assert(assess(plan, changed).ok() == accepted);
+  };
+  altered([](auto &r) { r.half = field::HORMONE_HALF_MAX; }, false);
+  altered([](auto &r) { r.affinity.fill(1); }, false);
+  altered([](auto &r) { r.steepness = 0; }, false);
+  altered(
+      [](auto &r) {
+        r.sensitivity = 0;
+        r.half = field::HORMONE_HALF_MAX;
+        r.affinity.fill(1);
+        r.steepness = 0;
+      },
+      true);
+}
 void property_overrides_reach_outputs() {
   for (bool learning : {false, true})
     for (bool teaching : {false, true}) {
@@ -162,6 +192,7 @@ int main() {
   shared_addresses_preserve_each_wire();
   assessment_checks_learning_and_every_cell();
   inactive_growth_ignores_saved_settings();
+  receptor_spread_checks_sensitive_cells();
   property_overrides_reach_outputs();
   {
     auto plan = cells(2);
