@@ -539,8 +539,6 @@ async function checkHormoneSystems(model, capabilities) {
       return n;
     });
     const stroke = Array(STROKE.count).fill(0), p = Array(FISH.count).fill(0);
-    const fast = MUSCLE_FIBRE.force_fast / (MUSCLE_FIBRE.force_fast + MUSCLE_FIBRE.force_slow);
-    stroke[STROKE.fibre] = fast;
     stroke[STROKE.steps] = 12;
     const strokes = [];
     strokes[STROKE_KIND.tail] = stroke;
@@ -555,6 +553,7 @@ async function checkHormoneSystems(model, capabilities) {
           const e = Array(EFFECTOR.count).fill(0);
           e[EFFECTOR.neuron] = n[NEURON.index];
           e[EFFECTOR.port] = ORGAN_PORT.forward;
+          e[EFFECTOR.fibre] = 1 - i;
           e[EFFECTOR.strength] = i ? MUSCLE_FIBRE.force_slow : MUSCLE_FIBRE.force_fast;
           return e;
         })
@@ -568,12 +567,21 @@ async function checkHormoneSystems(model, capabilities) {
     const before = sceneState.frame;
     updateSceneState({frame : {parameters : {}}});
     try {
-      for (const reserve of [0, .2, 1]) {
-        stroke[STROKE.reserve] = reserve;
-        const actual = readout.brainOrganReadout(d, tissue).fibre;
-        assert.equal(actual.fast, fast, 'The force mix comes from the active engine stroke');
-        assert.ok(Math.abs(actual.available - (1 - fast + fast * reserve)) < 1e-12,
-                  'Mixed cells show the force their fast fibres can still contribute');
+      for (const size of [1, 2]) {
+        d.b.effectors[0][EFFECTOR.strength] = size * MUSCLE_FIBRE.force_fast;
+        const forceMix = size * MUSCLE_FIBRE.force_fast /
+                         (size * MUSCLE_FIBRE.force_fast + MUSCLE_FIBRE.force_slow);
+        stroke[STROKE.fibre] = forceMix;
+        for (const reserve of [0, .2, 1]) {
+          stroke[STROKE.reserve] = reserve;
+          const actual = readout.brainOrganReadout(d, tissue).fibre;
+          assert.equal(actual.fast, size / (size + 1),
+                       'The fibre picture shows the tissue share before its force multiplier');
+          assert.equal(actual.forceMix, forceMix,
+                       'The force mix comes from the active engine stroke');
+          assert.ok(Math.abs(actual.available - (1 - forceMix + forceMix * reserve)) < 1e-12,
+                    'Mixed cells show the force their fast fibres can still contribute');
+        }
       }
     } finally {
       updateSceneState({frame : before});

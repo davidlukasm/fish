@@ -14,7 +14,7 @@ import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
-import {fibreCost} from './fibre.js';
+import {fibreCost, fibreForce} from './fibre.js';
 import {swimmingGrip} from './fin_stroke.js';
 import {
   BEHAVIOR_SCALE,
@@ -202,12 +202,22 @@ function organMotorTiming(d, index, activation, side = 0) {
 const FIBROUS = Object.freeze([
   MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction, MOTOR_KIND.aggression, MOTOR_KIND.defense
 ]);
-function muscleFibres(d, k, side) {
+function muscleFibres(d, k, side, motor) {
   if (!FIBROUS.includes(k))
     return null;
   const stroke = d.b?.strokes?.[organStrokeIndex(k, side)], mix = stroke?.[STROKE.fibre] ?? 0,
         reserve = stroke?.[STROKE.reserve] ?? 1;
-  return {fast : mix, available : 1 - mix + mix * reserve};
+  let tissue = 0, fast = 0;
+  for (const e of motor) {
+    const share = e[EFFECTOR.fibre], size = e[EFFECTOR.strength] / fibreForce(share);
+    tissue += size;
+    fast += size * share;
+  }
+  return {
+    fast : tissue > 0 ? fast / tissue : 0,
+    forceMix : mix,
+    available : 1 - mix + mix * reserve
+  };
 }
 function organReleaseTiming(d, index) {
   const port = index === MOTOR_KIND.eggs ? ORGAN_PORT.eggs : ORGAN_PORT.sperm,
@@ -344,7 +354,7 @@ export function brainOrganReadout(d, tissue) {
     ];
   } else if (isMotorTissue(key)) {
     info.activity = u;
-    const fibre = muscleFibres(d, k, side);
+    const fibre = muscleFibres(d, k, side, motor);
     if (k <= MOTOR_KIND.turn) {
       info.graphic = 'pulse';
       info.period = timing.rhythm;
@@ -361,7 +371,7 @@ export function brainOrganReadout(d, tissue) {
         info.metrics = [
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
           metric(t('organ_readout.energieJeSchlag'),
-                 organNumber(params.muscle_cost * fibreCost(fibre.fast) * impulse, READOUT.digits),
+                 organNumber(params.muscle_cost * fibreCost(fibre.forceMix) * impulse, READOUT.digits),
                  t('organ_readout.beiAusreichenderEnergieVerletzung'))
         ];
       } else {
