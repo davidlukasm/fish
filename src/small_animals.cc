@@ -69,7 +69,7 @@ int odor_of(int origin) {
                                                                   : odor_kind::carrion;
 }
 }
-Field::TipContact Field::tip_contact(double x, double y, double reach) const {
+Field::TipContact Field::tip_contact(double x, double y, double reach, std::uint64_t self) const {
   TipContact tip;
   auto &contact = tip.taste;
   bool touched = false;
@@ -84,7 +84,7 @@ Field::TipContact Field::tip_contact(double x, double y, double reach) const {
   });
   body_grid_.nearby(x, y, reach + indexed_body_radius_, [&](std::uint32_t j) {
     const auto &o = visible_[j];
-    if (!touches(o.x, o.y, o.radius) || o.hidden)
+    if ((o.kind == food_kind::fish && o.id == self) || !touches(o.x, o.y, o.radius) || o.hidden)
       return;
     touched = true;
     if (o.odor_channel >= 0)

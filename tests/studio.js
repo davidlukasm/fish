@@ -8,7 +8,7 @@ const {join} = require('node:path');
 // Comments and formatting are ignored. A changed signature requires reviewing the
 // corresponding Studio organ, control, and verification before updating this record.
 const ENGINE_REVIEW = Object.freeze({
-  "src/cppn_brain.cc" : "551c9755c43cac45",
+  "src/cppn_brain.cc" : "a73d53c5ad5781d1",
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
@@ -62,7 +62,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/feeding.cc" : "34e4a3c4117a42b0",
   "src/tank_energy.cc" : "f3b2fddbfce531b3",
   "src/environment.cc" : "62ca92c128e5af24",
-  "src/environment.hh" : "34168ee6263f11f4",
+  "src/environment.hh" : "6e7f9fa1e8ef9d6e",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
   "src/motor_state.hh" : "6642af5a79a83847",

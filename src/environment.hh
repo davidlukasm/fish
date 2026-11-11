@@ -387,7 +387,8 @@ public:
     std::array<double, odor_kind::count> taste{};
     double felt = 0;
   };
-  TipContact tip_contact(double x, double y, double reach) const;
+  // self: the touching fish, whose own body its barbels do not feel.
+  TipContact tip_contact(double x, double y, double reach, std::uint64_t self) const;
   void advance_odor();
 
 private:

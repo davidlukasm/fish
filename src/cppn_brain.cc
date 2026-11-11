@@ -379,7 +379,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     }
     if (sense == field::Taste && !b.perception_.disabled_senses[field::Taste]) {
       const auto tip = barbel_tip(b, binding, r.lateral >= 0);
-      const auto touched = world.tip_contact(tip.x, tip.y, barbel::reach);
+      const auto touched = world.tip_contact(tip.x, tip.y, barbel::reach, b.identity);
       double taste = 0;
       for (int k = 0; k < odor_kind::count; ++k)
         taste += touched.taste[k] * r.scents[k];

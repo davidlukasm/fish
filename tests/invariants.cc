@@ -1185,14 +1185,23 @@ void barbels_taste_only_what_they_touch() {
   piece.initial_energy = energy;
   piece.radius = food_radius(energy);
   w.field.append_fragment(piece);
-  w.field.index(w.field.visible(), {});
+  constexpr std::uint64_t OWNER = 7, NOBODY = 0;
+  const double fish_x = x - 4 * BODY_RADIUS;
+  auto visible = w.field.visible();
+  visible.push_back({fish_x, y, 0, OWNER});
+  w.field.index(visible, {});
   const double edge = x + food_radius(energy);
-  const auto at = w.field.tip_contact(edge + barbel::reach / 2, y, barbel::reach),
-             beside = w.field.tip_contact(edge + 3 * barbel::reach, y, barbel::reach);
+  const auto at = w.field.tip_contact(edge + barbel::reach / 2, y, barbel::reach, NOBODY),
+             beside = w.field.tip_contact(edge + 3 * barbel::reach, y, barbel::reach, NOBODY);
   check(at.taste[odor_kind::food] == 1 && at.felt == 1,
         "a barbel tip touching a feed piece tastes and feels it");
   check(beside.taste[odor_kind::food] == 0, "a tip beside the piece tastes nothing");
-  check(w.field.tip_contact(x, g.height, barbel::reach).felt == 1, "a tip on the floor feels it");
+  check(w.field.tip_contact(x, g.height, barbel::reach, NOBODY).felt == 1,
+        "a tip on the floor feels it");
+  const double skin = fish_x + BODY_RADIUS + barbel::reach / 2;
+  check(w.field.tip_contact(skin, y, barbel::reach, NOBODY).felt == 1 &&
+            w.field.tip_contact(skin, y, barbel::reach, OWNER).felt == 0,
+        "barbels feel another fish's body but not their own");
 }
 void mussels_sum_at_most_two_quick_bites() {
   Ecosystem w(SEED);
