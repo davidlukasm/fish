@@ -365,7 +365,8 @@ int main(int argc, char **argv) {
         }
         std::cout << "{\"event\":\"mussel\",\"family\":" << family << ",\"ground\":[" << ground[0]
                   << ',' << ground[1] << ',' << ground[2] << "],\"energy\":" << energy
-                  << ",\"hardness\":" << hardness << ",\"grind\":" << bite_force(p->body, true)
+                  << ",\"hardness\":" << hardness
+                  << ",\"grind\":" << bite_force(p->body, BiteKind::grinding)
                   << ",\"reached\":" << reached << ",\"nearest\":" << nearest
                   << ",\"closed\":" << closed << ",\"cracked\":" << cracked
                   << ",\"bites\":" << p->body.mouth.cycle - cycles
@@ -445,10 +446,10 @@ int main(int argc, char **argv) {
             approach(step, gap, c->x, c->y, crab_hidden(*c), odor_kind::benthos);
         }
         std::cout << "{\"event\":\"crab\",\"energy\":" << energy << ",\"hardness\":" << hardness
-                  << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
-                  << ",\"nearest\":" << nearest << ",\"fled\":" << fled << ",\"buried\":" << buried
-                  << ",\"cracked\":" << cracked << ",\"pinched\":" << pinched
-                  << ",\"bites\":" << p->body.mouth.cycle - cycles
+                  << ",\"grind\":" << bite_force(p->body, BiteKind::grinding)
+                  << ",\"reached\":" << reached << ",\"nearest\":" << nearest
+                  << ",\"fled\":" << fled << ",\"buried\":" << buried << ",\"cracked\":" << cracked
+                  << ",\"pinched\":" << pinched << ",\"bites\":" << p->body.mouth.cycle - cycles
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::crab] - eaten_before
                   << ",\"steps\":" << step;
         course.print(crab_x, crab_y);
@@ -484,7 +485,6 @@ int main(int argc, char **argv) {
             piece.origin = food_type;
             piece.color = ALGAE_COLOR;
             piece.buoyancy = PLANT_BUOYANCY;
-            piece.blunt = true;
             piece.radius = tissue_radius(PIECE_ENERGY, PLANT_TISSUE_DENSITY);
           }
           w.field.append_fragment(piece);
@@ -545,7 +545,7 @@ int main(int argc, char **argv) {
             optional_number(leaf);
             std::cout << ",\"reach\":" << mouth_reach(p->body)
                       << ",\"biteSignal\":" << p->body.bite_signal
-                      << ",\"grind\":" << bite_force(p->body, true)
+                      << ",\"grind\":" << bite_force(p->body, BiteKind::grinding)
                       << ",\"plant\":" << p->observations().raw_diet[food_kind::plant]
                       << ",\"cycle\":" << p->body.mouth.cycle << ",\"gut\":" << gut_filling(p->body)
                       << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"y\":" << p->body.y
@@ -596,9 +596,10 @@ int main(int argc, char **argv) {
             std::cerr << "bite step " << steps << " gap " << nd << " pieceRadius " << nr
                       << " energy " << ne << " reach " << mouth_reach(bb) << " aperture "
                       << maximum_mouth_aperture(bb) << " cutForce " << bite_force(bb)
-                      << " grindForce " << bite_force(bb, true) << " signal " << bb.bite_signal
-                      << " eaten " << p->observations().raw_diet[food_type] - eaten_before
-                      << " speed " << std::hypot(bb.motor().vx, bb.motor().vy) << "\n";
+                      << " grindForce " << bite_force(bb, BiteKind::grinding) << " signal "
+                      << bb.bite_signal << " eaten "
+                      << p->observations().raw_diet[food_type] - eaten_before << " speed "
+                      << std::hypot(bb.motor().vx, bb.motor().vy) << "\n";
           }
           forward += p->body.motor().drive_forward;
           turning += p->body.motor().drive_left - p->body.motor().drive_right;

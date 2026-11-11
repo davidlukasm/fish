@@ -80,8 +80,7 @@ class Ecosystem::FeedingSession {
   }
   void fragment(double x, double y, double radius, double source_radius, double vx, double vy,
                 double amount, int origin, Color color, double age, double buoyancy,
-                bool drift = false, double physical_age = -1, double hardness = 0,
-                bool blunt = false) {
+                bool drift = false, double physical_age = -1, double hardness = 0) {
     if (amount <= 0)
       return;
     if (origin != food_kind::crab && origin != food_kind::mussel &&
@@ -119,7 +118,6 @@ class Ecosystem::FeedingSession {
     piece.buoyancy = buoyancy;
     piece.drift_plant = drift;
     piece.hardness = hardness;
-    piece.blunt = blunt;
     piece.bitten = true;
     world.field.append_fragment(piece);
   }
@@ -161,7 +159,7 @@ class Ecosystem::FeedingSession {
     if (auto piece = world.bite_plant(b, target, s, side)) {
       fragment(piece->x, piece->y, piece->radius, radius, piece->vx, piece->vy, piece->energy,
                piece->origin, piece->color, 0, piece->buoyancy, piece->drift_plant, -1,
-               piece->hardness, piece->blunt);
+               piece->hardness);
       result.plants = true;
       effect(hard ? feeding_effect::crack : feeding_effect::bite, piece->x, piece->y, piece->radius,
              piece->energy, 0, piece->color);
@@ -304,7 +302,7 @@ class Ecosystem::FeedingSession {
         effect(feeding_effect::bite, q.x, q.y, morsel, amount);
     } else if (kind == food_kind::feed) {
       auto q = world.field.feeding().pieces[target];
-      const double force = bite_force(b, q.blunt),
+      const double force = bite_force(b, BiteKind::loose),
                    efficiency = crack_success(force, q.hardness, world.field.env()),
                    radius = food_radius(q);
       double amount = q.energy * bite_share(b, radius) * efficiency;
@@ -313,8 +311,8 @@ class Ecosystem::FeedingSession {
         amount = q.energy;
       world.field.bite_food(target, amount, true);
       fragment(q.x, q.y, radius * std::sqrt(amount / q.energy), radius, q.vx, q.vy, amount,
-               q.origin, q.color, q.decay_age, q.buoyancy, q.drift_plant, double(q.age), q.hardness,
-               q.blunt);
+               q.origin, q.color, q.decay_age, q.buoyancy, q.drift_plant, double(q.age),
+               q.hardness);
       if (amount > 0)
         effect(feeding_effect::bite, q.x, q.y, morsel, amount);
     } else if (kind == food_kind::worm) {
@@ -329,7 +327,7 @@ class Ecosystem::FeedingSession {
           effect(feeding_effect::bite, meal->x, meal->y, meal->radius, meal->energy);
         }
     } else if (kind == food_kind::crab || kind == food_kind::mussel) {
-      const double force = bite_force(b, true);
+      const double force = bite_force(b, BiteKind::grinding);
       if (auto meal = world.field.take_small_animal(kind, target, force, true, buried)) {
         world.field.scatter_fragments(*meal, force);
         effect(feeding_effect::crack, meal->x, meal->y, meal->radius, meal->energy);

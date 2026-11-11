@@ -879,6 +879,41 @@ void algae_vanish_in_traces(const Genome &g) {
     if (s.id == id)
       check(s.algae == 0, "algae buried under sediment vanish");
 }
+void wrigglers_lift_their_snout_out_of_mud(const Genome &g) {
+  constexpr double MUD = 60, SPREAD = 60, TURN = .05;
+  Ecosystem w(SEED);
+  w.starter_world();
+  auto &p = adult(w, g, FIRST_X, DEPTH);
+  const auto &surfaces = w.field.vegetation().surfaces;
+  const auto floor = std::find_if(surfaces.begin(), surfaces.end(), [](const SurfacePatch &s) {
+    return s.normal.y <= -seabed::floor_normal;
+  });
+  check(floor != surfaces.end(), "the tank has a floor");
+  const auto mid = surface_midpoint(*floor);
+  const Point buried{mid.x + floor->normal.x * MUD / 2, mid.y + floor->normal.y * MUD / 2};
+  check(w.field.edit_environment("sediment", mid.x, mid.y, SPREAD, -1, MUD),
+        "mud covers the floor");
+  // Facing along +x, a negative turn raises the snout (y grows downwards).
+  const auto turned = [&](double undulation, double turn) {
+    auto &m = StateAccess::motor(p.body);
+    p.body.x = buried.x;
+    p.body.y = buried.y;
+    p.body.angle = m.vx = m.vy = 0;
+    m.angular_velocity = turn;
+    p.body.undulation = undulation;
+    check(w.field.sediment_immersion(p.body.x, p.body.y, body_radius(p.body)) == 1,
+          "the fish lies buried in mud");
+    move_body(p.body, &w.field, w.physiology(), true);
+    return std::abs(m.turn);
+  };
+  const double lift = turned(1, -TURN), lower = turned(1, TURN), stiff = turned(0, TURN);
+  std::cout << "Drehung im Schlamm: Schlängler Kopf hoch/runter " << lift << '/' << lower
+            << ", steif " << stiff << "\n";
+  check(std::abs(lower - TURN / SEDIMENT_DRAG_WRIGGLING) < tolerance::precision &&
+            std::abs(lift - TURN / SEDIMENT_RISE_WRIGGLING) < tolerance::precision,
+        "a wriggler turns in mud like it moves: lifting its snout as easily as rising");
+  check(stiff < lower, "a stiff body turns harder in mud than a wriggler");
+}
 void worker_counts_preserve_the_simulation(const Genome &g) {
   Ecosystem serial(83921);
   serial.safety = false;
@@ -1364,6 +1399,7 @@ void plant_tissue_needs_grinding_teeth() {
   Ecosystem source(SEED);
   source.starter_world();
   const auto &parts = source.field.vegetation().plants;
+  const auto &materials = source.field.env();
   for (int kind : {plant_organ::blade, plant_organ::stem, plant_organ::leaf}) {
     const auto found = std::find_if(parts.begin(), parts.end(), [kind](const auto &p) {
       return p.kind == food_kind::plant && p.organ_kind == kind && p.energy > 10;
@@ -1380,14 +1416,21 @@ void plant_tissue_needs_grinding_teeth() {
     const auto sharp = cutting.field.bite_plant(mouth, index);
     mouth.blunt_teeth = 1;
     const auto blunt = crushing.field.bite_plant(mouth, index);
-    check(!sharp && blunt && blunt->energy > .1 && blunt->blunt,
-          "blades, stems and leaves need grinding teeth and keep that material when detached");
+    check(!sharp && blunt && blunt->energy > .1,
+          "blades, stems and leaves need grinding teeth while they grow");
+    const auto loose = [&] {
+      return crack_success(bite_force(mouth, BiteKind::loose), blunt->hardness, materials);
+    };
+    const double crushed = loose();
+    mouth.blunt_teeth = 0;
+    check(crushed > 0 && loose() == crushed,
+          "a detached piece gives way to sharp and blunt teeth alike");
+    mouth.blunt_teeth = 1;
     check(blunt->energy <=
                   mouthful(bite_radius(mouth), PLANT_TISSUE_DENSITY) + tolerance::precision &&
               blunt->radius <= maximum_mouth_aperture(mouth) + tolerance::precision,
           "a bite takes no more plant than fits through the mouth");
   }
-  const auto &materials = source.field.env();
   check(plant_bite_hardness(plant_organ::blade, .5, materials) ==
             plant_bite_hardness(plant_organ::leaf, .5, materials),
         "a grass blade uses leaf fibre resistance");
@@ -1620,6 +1663,7 @@ int main() {
     start_fish_eats_nearby_food(g);
     nonvisual_input_reaches_the_brain(g);
     dark_cells_report_what_is_darker_than_the_surround(g);
+    wrigglers_lift_their_snout_out_of_mud(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

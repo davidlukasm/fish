@@ -23,7 +23,7 @@ void EnvironmentCheckpoint::write(std::ostream &out, const Field &field,
         << p.radius << ' ' << p.initial_energy << ' ' << p.decay_age << ' ' << p.buoyancy;
     for (auto c : p.color)
       out << ' ' << c;
-    out << ' ' << p.drift_plant << ' ' << p.hardness << ' ' << p.blunt << ' ' << p.bitten << '\n';
+    out << ' ' << p.drift_plant << ' ' << p.hardness << ' ' << p.bitten << '\n';
   }
   out << field.geometry_.obstacles.size() << '\n';
   for (const auto &o : field.geometry_.obstacles) {

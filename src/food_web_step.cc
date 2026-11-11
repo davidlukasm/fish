@@ -855,7 +855,6 @@ void Field::advance_food_web() {
               crumb.origin = food_kind::plant;
               crumb.initial_energy = crumbs;
               crumb.hardness = plant_bite_hardness(o.kind, grass_traits(plant)[0], env_, 0);
-              crumb.blunt = true;
               crumb.radius = tissue_radius(crumbs, PLANT_TISSUE_DENSITY);
               crumb.buoyancy = PLANT_BUOYANCY;
               crumb.color = plant_organ_color(plant, part.organ);

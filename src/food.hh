@@ -16,7 +16,7 @@ struct Food {
   Color color{1, 0, 0};
   bool drift_plant = false;
   double hardness = 0;
-  bool blunt = false, bitten = false;
+  bool bitten = false;
 };
 inline constexpr double FOOD_DENSITY = 100; // Energy per radius squared, scaled by 16.
 // Plant tissue holds a quarter of the energy feed packs into the same mouthful.

@@ -165,7 +165,7 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"bite_strength\":" << b.bite_strength << ",\"jaw_length\":" << b.jaw_length
       << ",\"gut_length\":" << b.gut_length << ",\"blunt_teeth\":" << b.blunt_teeth
       << ",\"undulation\":" << b.undulation << ",\"suction_strength\":" << b.suction_strength
-      << ",\"soft_bite_force\":" << bite_force(b) << ",\"hard_bite_force\":" << bite_force(b, true)
+      << ",\"soft_bite_force\":" << bite_force(b) << ",\"hard_bite_force\":" << bite_force(b, BiteKind::grinding)
       << ",\"scrape_force\":" << scrape_force(b) << ",\"end_tissue\":" << tissue_capacity(b)
       << ",\"gut_energy\":" << b.gut_energy << ",\"gut_digestible\":" << b.gut_digestible
       << ",\"digestion\":" << b.digestion << ",\"digested\":" << b.digested

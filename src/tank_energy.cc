@@ -94,7 +94,7 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
   auto &source = this->plant_source_mut(part.patch);
   const int kind = part.kind;
   double &store = kind == food_kind::algae ? source.algae : source.grass;
-  const double force = bite_force(b, true);
+  const double force = bite_force(b, BiteKind::grinding);
   const double drift_age =
       kind == food_kind::plant && part.patch >= vegetation_.surfaces.size()
           ? double(vegetation_.drifting_grass[part.patch - vegetation_.surfaces.size()].age)
@@ -128,7 +128,6 @@ std::optional<Food> Field::bite_plant(Body &b, std::size_t index, double along_s
                                                                               part.energy))));
   piece.initial_energy = amount;
   piece.hardness = hardness;
-  piece.blunt = true;
   piece.color = kind == food_kind::algae ? ALGAE_COLOR : plant_organ_color(source, part.organ);
   piece.buoyancy = kind == food_kind::algae ? ALGAE_BUOYANCY : PLANT_BUOYANCY;
   piece.drift_plant = part.patch >= vegetation_.surfaces.size();

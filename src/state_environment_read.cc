@@ -168,7 +168,6 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
         scalar(in, c, 0, 1);
       value(in, f.drift_plant);
       scalar(in, f.hardness, 0, MAX_FOOD_HARDNESS);
-      value(in, f.blunt);
       value(in, f.bitten);
     }
     field.feeding_.pieces.push_back(f);

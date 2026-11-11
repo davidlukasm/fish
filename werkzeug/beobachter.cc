@@ -423,7 +423,7 @@ int main(int argc, char **argv) {
         if (b.motor().motor_pulses[field::Aggression]) {
           ++c.closings;
           c.cut_force = std::max(c.cut_force, bite_force(b));
-          c.grind_force = std::max(c.grind_force, bite_force(b, true));
+          c.grind_force = std::max(c.grind_force, bite_force(b, BiteKind::grinding));
         }
         if (b.motor().motor_pulses[field::Suction])
           ++c.pumps;

@@ -178,18 +178,20 @@ inline double jaw_lever(double jaw_length) {
 inline double jaw_leverage(const Body &b) {
   return jaw_lever(b.jaw_length);
 }
-// Sharp teeth cut flesh; blunt teeth grind plant tissue and crack shells.
-inline double tooth_grip(double blunt, bool grinding) {
-  return grinding ? blunt : 1 - blunt;
+// Sharp teeth cut flesh; blunt teeth grind plant tissue and crack shells. A loose piece gives way
+// to either: sharp teeth tear it, blunt ones crush it.
+enum class BiteKind { cutting, grinding, loose };
+inline double tooth_grip(double blunt, BiteKind kind) {
+  return kind == BiteKind::loose ? 1 : kind == BiteKind::grinding ? blunt : 1 - blunt;
 }
 inline double scrape_force(const Body &b) {
   return effective_force(b.suction_strength * b.mouth.flow * body_scale(b) *
                              std::pow(jaw_leverage(b), 2),
                          b.force_scale);
 }
-inline double bite_force(const Body &b, bool grinding = false) {
+inline double bite_force(const Body &b, BiteKind kind = BiteKind::cutting) {
   return effective_force(b.bite_strength * std::clamp(b.bite_signal, 0., 1.) * body_scale(b) *
-                             jaw_leverage(b) * tooth_grip(b.blunt_teeth, grinding),
+                             jaw_leverage(b) * tooth_grip(b.blunt_teeth, kind),
                          b.force_scale);
 }
 inline double mouth_factor(const Body &b) {

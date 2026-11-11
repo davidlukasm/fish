@@ -18,23 +18,36 @@
 #include <string>
 #include <functional>
 namespace fishsim {
-inline constexpr double SEDIMENT_DRAG = 18, SEDIMENT_RISE_DRAG = .25;
+// Resistance of a fully buried body without spines, for a wriggling body (undulation 1) and a
+// stiff one (undulation 0); each step of stiffness raises it by the same factor. Rising only
+// pushes loose sediment aside.
+inline constexpr double SEDIMENT_DRAG_WRIGGLING = 3, SEDIMENT_DRAG_STIFF = 12,
+                        SEDIMENT_RISE_WRIGGLING = 2, SEDIMENT_RISE_STIFF = 8;
+inline double buried_resistance(double wriggling, double stiff, double undulation) {
+  return stiff * std::pow(wriggling / stiff, undulation);
+}
 inline constexpr double ALGAE_CAPACITY_UNIT = seabed::algae_capacity_unit,
                         MUSSEL_ALGAE_TOLERANCE = 2, BITTEN_CRUMB_SHARE = .5;
 inline constexpr double DEFAULT_EDIT_RADIUS = 24, DEFAULT_EDIT_AMOUNT = 8;
-inline double sediment_resistance(double immersion, double defense = 0, double undulation = 0) {
-  return 1 + SEDIMENT_DRAG * immersion * immersion *
-                 (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT)) *
-                 (1 - std::clamp(undulation, 0., 1.));
+struct SedimentResistance {
+  double across = 1, rise = 1;
+  double vertical(double vy) const { return vy < 0 ? rise : across; }
+};
+inline SedimentResistance sediment_resistance(double immersion, double defense = 0,
+                                              double undulation = 0) {
+  const double u = std::clamp(undulation, 0., 1.),
+               buried = immersion * immersion *
+                        (1 + SPINE_DRAG * std::clamp(defense, 0., MAX_SPINE_EXTENT));
+  if (buried <= 0)
+    return {};
+  return {1 + buried * (buried_resistance(SEDIMENT_DRAG_WRIGGLING, SEDIMENT_DRAG_STIFF, u) - 1),
+          1 + buried * (buried_resistance(SEDIMENT_RISE_WRIGGLING, SEDIMENT_RISE_STIFF, u) - 1)};
 }
 inline constexpr double DISTURBANCE_BASE = 8, DISTURBANCE_PER_RADIUS = 6, DISTURBANCE_MAX = 80,
                         STILL_FLOW = .02;
 inline constexpr double SURFACE_SEARCH_MARGIN = 16;
 inline double disturbance_reach(double radius) {
   return std::min(DISTURBANCE_MAX, DISTURBANCE_BASE + DISTURBANCE_PER_RADIUS * radius);
-}
-inline double sediment_vertical_resistance(double resistance, double vy) {
-  return vy < 0 ? 1 + SEDIMENT_RISE_DRAG * (resistance - 1) : resistance;
 }
 
 struct Body;

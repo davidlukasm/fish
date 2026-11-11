@@ -17,10 +17,10 @@ Point sheltered_water(const Field &field, double x, double y, double brake) {
 }
 void limit_swimming(Body &b, const Field &field, const PhysiologyParameters &physiology) {
   auto water = sheltered_water(field, b.x, b.y, foliage_brake(field, b.x, b.y, body_radius(b)));
-  const double immersion = field.sediment_immersion(b.x, b.y, body_radius(b)),
-               resistance = sediment_resistance(immersion, b.defense(), b.undulation);
-  water.x /= resistance;
-  water.y /= sediment_vertical_resistance(resistance, water.y);
+  const auto resistance = sediment_resistance(field.sediment_immersion(b.x, b.y, body_radius(b)),
+                                              b.defense(), b.undulation);
+  water.x /= resistance.across;
+  water.y /= resistance.vertical(water.y);
   b.motor_.water_vx = water.x;
   b.motor_.water_vy = water.y;
   double ux = b.motor_.vx - water.x, uy = b.motor_.vy - water.y, speed = std::hypot(ux, uy),
@@ -71,12 +71,17 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   }
   b.motor_.swimming_pending = false;
   const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,
-               defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense,
-               resistance = sediment_resistance(immersion, defense, b.undulation);
+               defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense;
+  const auto resistance = sediment_resistance(immersion, defense, b.undulation);
   b.motor_.thrust *= 1 - physiology.undulation_loss * b.undulation * (1 - immersion);
   b.sediment_coverage = immersion;
   const double across_drag = physiology.drag_across * drag * spines;
-  b.motor_.angular_velocity /= resistance;
+  if (resistance.across > 1) {
+    // The snout swings across the heading; the rising part of its path is braked like rising.
+    const double c = std::cos(b.angle), s = std::sin(b.angle);
+    b.motor_.angular_velocity *=
+        std::hypot(s / resistance.across, c / resistance.vertical(b.motor_.angular_velocity * c));
+  }
   b.motor_.turn = std::clamp(b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
   b.motor_.angular_velocity *= std::max(0., 1 - across_drag);
   b.angle = std::remainder(b.angle + b.motor_.turn, 2 * PI);
@@ -97,13 +102,12 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
                     bladder_capacity / (1 + bladder_capacity) * b.bladder_fill;
   b.buoyancy_force = (world ? physiology.sinking : 0) * mass - up;
   uy += b.buoyancy_force / mass;
-  const double upward = sediment_vertical_resistance(resistance, uy);
-  ux /= resistance * cloud * brush;
-  uy /= upward * cloud * brush;
+  ux /= resistance.across * cloud * brush;
+  uy /= resistance.vertical(uy) * cloud * brush;
   along = ux * hx + uy * hy;
   across = -ux * hy + uy * hx;
-  water.x /= resistance;
-  water.y /= sediment_vertical_resistance(resistance, water.y);
+  water.x /= resistance.across;
+  water.y /= resistance.vertical(water.y);
   b.motor_.water_vx = water.x;
   b.motor_.water_vy = water.y;
   ux = along * hx - across * hy;

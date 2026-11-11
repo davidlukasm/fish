@@ -1330,10 +1330,9 @@ double Field::sediment_immersion(double x, double y, double radius) const {
 }
 Point Field::sediment_velocity(Point v, double x, double y, double radius) const {
   const double immersion = sediment_immersion(x, y, radius),
-               resistance = sediment_resistance(immersion),
                cloud = turbidity_resistance(turbidity(x, y));
-  return {v.x / (resistance * cloud),
-          v.y / (sediment_vertical_resistance(resistance, v.y) * cloud)};
+  const auto resistance = sediment_resistance(immersion);
+  return {v.x / (resistance.across * cloud), v.y / (resistance.vertical(v.y) * cloud)};
 }
 double Field::sediment_transmission(double x, double y, double tx, double ty) const {
   double dx = delta_x(tx - x), dy = ty - y, d = std::hypot(dx, dy), integral = 0;
