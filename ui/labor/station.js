@@ -1,7 +1,7 @@
 import {BREEDING, ROUTE, TRIAL_KIND, TRIAL_LAB} from '../schema.js';
 import {postJson, serverText} from '../session.js';
 import {t} from '../strings.js';
-import {DRAFT} from './model.js';
+import {BREEDING_METRICS, DRAFT, shownWorlds} from './model.js';
 import {breedingShell, say} from './view.js';
 import {trialShell} from './trial_view.js';
 import {inspectedTrial, shownSessions} from './trials.js';
@@ -60,8 +60,13 @@ class LabStation {
     clearTimeout(this.timer);
   }
   render() {
-    if (this.shown)
+    if (this.shown) {
+      const scroll = this.root.querySelector?.('.aid-lab-results')?.scrollTop ?? 0;
       this.root.innerHTML = this.shell(this.state);
+      const results = this.root.querySelector?.('.aid-lab-results');
+      if (results)
+        results.scrollTop = scroll;
+    }
   }
   async refresh() {
     try {
@@ -153,9 +158,52 @@ class LabStation {
 export class BreedingStation extends LabStation {
   constructor(root) {
     super(root, ROUTE.labor, breedingShell,
-          {worlds : BREEDING.worlds[1], steps : BREEDING.steps[1]});
+          {worlds : BREEDING.worlds[1], steps : BREEDING.steps[1], metric : 'population'});
   }
   settings() { return {worlds : this.state.worlds, steps : this.state.steps}; }
+  render() {
+    const data = this.root.ownerDocument?.activeElement?.dataset;
+    const selector = data?.labSampleStep ? '[data-lab-sample-step="' + data.labSampleStep + '"]'
+                     : data?.labMetric   ? '[data-lab-metric="' + data.labMetric + '"]'
+                     : data?.labWorld    ? '.aid-lab-plot[data-lab-world="' + data.labWorld + '"]'
+                                         : null;
+    super.render();
+    if (this.shown && selector)
+      this.root.querySelector(selector)?.focus({preventScroll : true});
+  }
+  click(event) {
+    const target = event.target.closest?.('[data-lab-metric],[data-lab-sample]');
+    if (!target)
+      return super.click(event);
+    if (target.disabled)
+      return true;
+    const s = this.state, data = target.dataset;
+    if (data.labMetric) {
+      if (!BREEDING_METRICS.includes(data.labMetric))
+        return false;
+      s.metric = data.labMetric;
+    } else {
+      const world = shownWorlds(s.overview, s.fingerprint, s.steps, s.job)
+                        .find(w => w.seed === Number(data.labWorld));
+      if (!world?.samples?.length)
+        return false;
+      const frame = data.labSample === 'latest' ? null : Number(data.labSample);
+      if (frame !== null && !Number.isInteger(frame))
+        return false;
+      s.inspection = {
+        fingerprint : s.fingerprint,
+        steps : s.steps,
+        seed : world.seed,
+        frame : frame === null ? null : Math.max(0, Math.min(world.samples.length - 1, frame))
+      };
+    }
+    this.render();
+    if (data.labSampleStep)
+      this.root.querySelector?.('[data-lab-sample-step="' + data.labSampleStep + '"]')?.focus({
+        preventScroll : true
+      });
+    return true;
+  }
 }
 
 export class TrialStation extends LabStation {

@@ -1,12 +1,15 @@
 import {BREEDING} from '../schema.js';
-import {formatNumber, t} from '../strings.js';
-import {DEATH_COLORS, deathNames} from '../feeding_view.js';
+import {formatNumber, t, tList} from '../strings.js';
+import {DEATH_COLORS, deathNames, FOOD_COLORS} from '../feeding_view.js';
+import {foodDisplayIndex} from '../nutrition_model.js';
 import {escapeText} from '../studio/view/markup.js';
 import {
   breedingVerdict,
+  BREEDING_METRICS,
   deathTotals,
   DRAFT,
-  SAMPLE,
+  inspectedWorld,
+  sampleSeries,
   shownWorlds,
   START_FISH,
   worldVerdict
@@ -69,22 +72,47 @@ function generationMarks(samples, x) {
   const marks = [];
   let reached = -1;
   for (const sample of samples)
-    if (sample[SAMPLE.parents] > reached && sample[SAMPLE.parents] > 0) {
-      reached = sample[SAMPLE.parents];
-      marks.push({x : x(sample[SAMPLE.step]), g : reached});
+    if (sample.parents > reached && sample.parents > 0) {
+      reached = sample.parents;
+      marks.push({x : x(sample.step), g : reached});
     }
   return marks;
 }
 
-function worldChart(world, top) {
+function worldChart(world, top, metric, selected) {
   const C = CHART, samples = world.samples ?? [], floor = C.height - C.bottom;
   const x = step => C.side + (C.width - 2 * C.side) * step / world.steps,
-        y = n => floor - (floor - C.top) * n / Math.max(1, top);
-  const line = samples.map(s => x(s[SAMPLE.step]).toFixed(1) + ',' + y(s[SAMPLE.fish]).toFixed(1));
-  const area = line.length ? 'M' + x(samples[0][SAMPLE.step]).toFixed(1) + ',' + floor + 'L' +
-                                 line.join('L') + 'L' + x(samples.at(-1)[SAMPLE.step]).toFixed(1) +
-                                 ',' + floor + 'Z'
-                           : '';
+        y = n => floor - (floor - C.top) * n / top;
+  const series = sampleSeries(world, metric);
+  const lines = series
+                    .map(({key, values}) => {
+                      let open = false;
+                      const path = values
+                                       .map((value, i) => {
+                                         if (value === null) {
+                                           open = false;
+                                           return '';
+                                         }
+                                         const point = (open ? 'L' : 'M') +
+                                                       x(samples[i].step).toFixed(1) + ',' +
+                                                       y(value).toFixed(1);
+                                         open = true;
+                                         return point;
+                                       })
+                                       .join('');
+                      return '<path class="aid-lab-line ' + key + '" d="' + path + '"/>';
+                    })
+                    .join('');
+  const selection = selected?.world.seed === world.seed ? selected : null;
+  const marker = selection
+                     ? '<line class="aid-lab-cursor" x1="' + x(selection.sample.step) + '" x2="' +
+                           x(selection.sample.step) + '" y1="' + C.top + '" y2="' + floor + '"/>' +
+                           series.filter(s => s.values[selection.frame] !== null)
+                               .map(s => '<circle class="aid-lab-point ' + s.key + '" cx="' +
+                                         x(selection.sample.step) + '" cy="' +
+                                         y(s.values[selection.frame]) + '" r="3"/>')
+                               .join('')
+                     : '';
   const marks =
       generationMarks(samples, x)
           .map(m => '<g class="aid-lab-generation"><title>' + say('parentsTitle', {g : m.g}) +
@@ -92,15 +120,34 @@ function worldChart(world, top) {
                     C.top + '" y2="' + floor + '"/><text x="' + (m.x + C.tick).toFixed(1) +
                     '" y="' + (C.top - C.tick) + '">' + say('parents', {g : m.g}) + '</text></g>')
           .join('');
-  return '<svg class="aid-lab-chart" viewBox="0 0 ' + C.width + ' ' + C.height +
-         '" role="img" aria-label="' + say('chart') + '"><line class="aid-lab-axis" x1="' + C.side +
-         '" x2="' + (C.width - C.side) + '" y1="' + floor + '" y2="' + floor + '"/>' +
-         (area ? '<path class="aid-lab-area" d="' + area + '"/><polyline class="aid-lab-line" ' +
-                     'points="' + line.join(' ') + '"/>'
-               : '') +
-         marks + '<text class="aid-lab-scale" x="' + C.side + '" y="' + (C.height - C.tick) +
+  const hits =
+      samples
+          .map((sample, i) => {
+            const left = i ? (x(samples[i - 1].step) + x(sample.step)) / 2 : 0;
+            const right =
+                i + 1 < samples.length ? (x(sample.step) + x(samples[i + 1].step)) / 2 : C.width;
+            return '<rect class="aid-lab-hit" data-lab-world="' + world.seed +
+                   '" data-lab-sample="' + i + '" x="' + left + '" y="0" width="' + (right - left) +
+                   '" height="' + C.height + '"><title>' +
+                   say('analysis.step', {step : formatNumber(sample.step)}) + '</title></rect>';
+          })
+          .join('');
+  return '<button type="button" class="aid-lab-plot" data-lab-world="' + world.seed +
+         '" data-lab-sample="' + (samples.length - 1) + '" aria-pressed="' + !!selection +
+         '" aria-label="' + say('analysis.inspect', {seed : world.seed}) + '"' +
+         (samples.length ? '' : ' disabled') + '><svg class="aid-lab-chart" viewBox="0 0 ' +
+         C.width + ' ' + C.height + '" role="img" aria-label="' + say('analysis.metric.' + metric) +
+         '"><line class="aid-lab-axis" x1="' + C.side + '" x2="' + (C.width - C.side) + '" y1="' +
+         floor + '" y2="' + floor + '"/>' + lines + marks + marker +
+         '<text class="aid-lab-scale" text-anchor="end" x="' + (C.width - C.side) + '" y="10">' +
+         formatNumber(top, metric === 'population' ? 0
+                           : metric === 'intake'   ? 2
+                                                   : 1) +
+         '</text>' +
+         '<text class="aid-lab-scale" x="' + C.side + '" y="' + (C.height - C.tick) +
          '">0</text><text class="aid-lab-scale" text-anchor="end" x="' + (C.width - C.side) +
-         '" y="' + (C.height - C.tick) + '">' + formatNumber(world.steps) + '</text></svg>';
+         '" y="' + (C.height - C.tick) + '">' + formatNumber(world.steps) + '</text>' + hits +
+         '</svg></button>';
 }
 
 function deathBar(deaths) {
@@ -108,7 +155,7 @@ function deathBar(deaths) {
         total = entries.reduce((sum, [, n ]) => sum + n, 0);
   if (!total)
     return '';
-  return '<div class="aid-lab-deaths">' +
+  return '<div class="aid-lab-deaths" title="' + say('analysis.deaths') + '">' +
          entries
              .map(([ cause, n ]) => '<span style="flex:' + n +
                                     ';background:' + DEATH_COLORS[cause] + '" title="' +
@@ -132,16 +179,82 @@ function worldState(v, running) {
     return say('waiting');
   if (!v.done)
     return say('runningWorld', {step : formatNumber(v.reached)});
-  return v.alive ? say('alive', {n : formatNumber(v.peak)})
-                 : say('extinct', {step : formatNumber(v.reached)});
+  return v.alive ? say('alive') : say('extinct', {step : formatNumber(v.reached)});
 }
 
-function worldCard(world, top, runningSeed) {
+function worldCard(world, top, runningSeed, metric, selected) {
   const v = worldVerdict(world);
   return '<article class="aid-lab-world' + (v.proven ? ' proven' : '') +
+         (selected?.world.seed === world.seed ? ' selected' : '') +
          '"><div class="aid-lab-world-head"><strong>' + say('world', {seed : world.seed}) +
          '</strong><span>' + worldState(v, runningSeed === world.seed) + '</span></div>' +
-         worldChart(world, top) + deathBar(world.deaths ?? {}) + '</article>';
+         worldChart(world, top, metric, selected) + deathBar(world.deaths ?? {}) + '</article>';
+}
+
+function sampleInspection(selected) {
+  if (!selected)
+    return '';
+  const {world, frame, following, sample, intake} = selected, last = world.samples.length - 1;
+  const button = (key, target, glyph, disabled = false) =>
+      '<button type="button" data-lab-sample-step="' + key + '" data-lab-sample="' + target +
+      '" data-lab-world="' + world.seed + '" title="' + say('analysis.' + key) + '" aria-label="' +
+      say('analysis.' + key) + '"' + (disabled ? ' disabled' : '') + '>' + glyph + '</button>';
+  const stat = (key, value) =>
+      '<div><dt>' + say('analysis.' + key) + '</dt><dd>' + value + '</dd></div>';
+  const names = tList('feeding_view.foodShortNames');
+  const food = (intake?.diet ?? [])
+                   .flatMap((amount, kind) => amount > 0 ? [ {
+                              amount,
+                              name : names[foodDisplayIndex(kind)],
+                              color : FOOD_COLORS[foodDisplayIndex(kind)]
+                            } ]
+                                                         : []);
+  const meal =
+      !intake ? '<p>' + say('analysis.noInterval') + '</p>'
+              : '<h4>' + say('analysis.interval', {
+                  from : formatNumber(intake.from),
+                  to : formatNumber(intake.to),
+                  amount : formatNumber(intake.total, 1)
+                }) + '</h4>' +
+                    (food.length
+                         ? '<div class="aid-lab-food-bar">' +
+                               food.map(f => '<span style="flex:' + f.amount +
+                                             ';background:' + f.color + '" title="' +
+                                             escapeText(f.name + ': ' + formatNumber(f.amount, 1)) +
+                                             '"></span>')
+                                   .join('') +
+                               '</div>' +
+                               '<div class="aid-lab-food-key">' +
+                               food.map(f => '<span><i style="background:' + f.color + '"></i>' +
+                                             escapeText(f.name) + ' <b>' +
+                                             formatNumber(f.amount, 1) + '</b></span>')
+                                   .join('') +
+                               '</div>'
+                         : '<p>' + say('analysis.noIntake') + '</p>');
+  return '<section class="aid-lab-inspection"><div class="aid-lab-inspection-head"><h3>' +
+         say('world', {seed : world.seed}) + '</h3><span>' +
+         say(following ? 'analysis.following' : 'analysis.fixed') +
+         '</span></div><div class="aid-lab-time">' + button('first', 0, '↤', frame === 0) +
+         button('previous', frame - 1, '←', frame === 0) + '<output aria-live="polite">' +
+         say('analysis.step', {step : formatNumber(sample.step)}) + '</output>' +
+         button('next', frame + 1, '→', frame === last) +
+         button('latest', 'latest', '↦', following) + '</div>' +
+         '<dl class="aid-lab-values">' + stat('fish', formatNumber(sample.fish)) +
+         stat('eggs', formatNumber(sample.eggs)) +
+         stat('reserve', formatNumber(sample.reserve[2], 1)) +
+         stat('feed', formatNumber(sample.availableFeed, 1)) + '</dl><p class="aid-lab-detail">' +
+         say('analysis.reserveRange', {
+           low : formatNumber(sample.reserve[1], 1),
+           high : formatNumber(sample.reserve[3], 1)
+         }) +
+         ' · ' + say('analysis.leaves', {n : formatNumber(sample.leaves, 1)}) + '</p>' +
+         '<p class="aid-lab-detail">' + say('analysis.generations', {g : sample.generation}) +
+         ' · ' +
+         (sample.parents >= 0 ? say('parentsTitle', {g : sample.parents})
+                              : say('analysis.noParents')) +
+         '</p>' +
+         '<div class="aid-lab-meal">' + meal + '</div><p class="aid-lab-detail">' +
+         say('analysis.raw') + '</p></section>';
 }
 
 export function verdictStamp(verdict, cls = '') {
@@ -161,22 +274,33 @@ function results(s) {
   const worlds = shownWorlds(s.overview, s.fingerprint, s.steps, s.job);
   if (!worlds.length)
     return '<section class="aid-lab-results empty"><p>' + say('nothingYet') + '</p></section>';
-  const verdict = breedingVerdict(worlds),
-        top = Math.max(1, ...worlds.flatMap(w => (w.samples ?? []).map(x => x[SAMPLE.fish])));
+  const verdict = breedingVerdict(worlds), metric = s.metric ?? 'population',
+        selected = inspectedWorld(worlds, s.inspection, s.fingerprint, s.steps),
+        top = Math.max(0, ...worlds.flatMap(w => sampleSeries(w, metric).flatMap(
+                                                s => s.values.filter(v => v !== null)))) ||
+              1;
   const runningSeed = s.running ? s.job?.runs.find(w => !w.done)?.seed : null;
   return '<section class="aid-lab-results"><div class="aid-lab-verdict">' + verdictStamp(verdict) +
          '<span>' + verdictLine(verdict) + '</span></div>' +
-         '<div class="aid-lab-worlds">' + worlds.map(w => worldCard(w, top, runningSeed)).join('') +
-         '</div>' + deathLegend(deathTotals(worlds)) + '</section>';
+         '<div class="aid-lab-metrics" role="group" aria-label="' + say('analysis.choose') + '">' +
+         BREEDING_METRICS
+             .map(key => '<button type="button" data-lab-metric="' + key + '" aria-pressed="' +
+                         (key === metric) + '">' + say('analysis.metric.' + key) + '</button>')
+             .join('') +
+         '</div>' +
+         '<p class="aid-lab-chart-key ' + metric + '">' + say('analysis.unit.' + metric) + '</p>' +
+         '<p class="aid-lab-detail">' + say('analysis.hint') + '</p>' +
+         '<div class="aid-lab-worlds">' +
+         worlds.map(w => worldCard(w, top, runningSeed, metric, selected)).join('') + '</div>' +
+         sampleInspection(selected) + '<p class="aid-lab-detail">' + say('analysis.deaths') +
+         '</p>' + deathLegend(deathTotals(worlds)) + '</section>';
 }
 
 export const runningLine = job => {
   const at = job.runs.findIndex(w => !w.done), world = job.runs[at];
-  return say('running', {
-    world : at + 1,
-    worlds : job.count,
-    step : formatNumber(world?.samples?.at(-1)?.[SAMPLE.step] ?? 0)
-  });
+  return say(
+      'running',
+      {world : at + 1, worlds : job.count, step : formatNumber(world?.samples?.at(-1)?.step ?? 0)});
 };
 const status = s => s.error ? escapeText(s.error) : s.running ? runningLine(s.job) : say('ready');
 

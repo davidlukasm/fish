@@ -1,24 +1,69 @@
 import {BREEDING} from '../schema.js';
 
-// Columns of a world sample as the breeding service sends them.
-export const SAMPLE = Object.freeze({step : 0, fish : 1, generation : 2, parents : 3});
 export const START_FISH = Object.freeze([ 'brisa', 'start', 'plants' ]);
 export const DRAFT = 'draft';
+export const BREEDING_METRICS = Object.freeze([ 'population', 'feed', 'intake', 'reserve' ]);
+const population = sample => sample.fish + sample.eggs;
+
+export function sampleIntake(world, index) {
+  const sample = world.samples[index], before = world.samples[index - 1];
+  if (!before || sample.step <= before.step)
+    return null;
+  const diet = sample.diet.map((amount, kind) => Math.max(0, amount - before.diet[kind]));
+  const total = diet.reduce((sum, amount) => sum + amount, 0);
+  return {
+    from : before.step,
+    to : sample.step,
+    diet,
+    total,
+    rate : total / (sample.step - before.step)
+  };
+}
+
+export function sampleSeries(world, metric) {
+  const samples = world.samples ?? [];
+  if (metric === 'population')
+    return [ 'fish', 'eggs' ].map(key => ({key, values : samples.map(s => s[key])}));
+  const values = metric === 'feed' ? samples.map(s => s.availableFeed)
+                 : metric === 'reserve'
+                     ? samples.map(s => s.reserve[2] ?? null)
+                     : samples.map((_, i) => sampleIntake(world, i)?.rate ?? null);
+  return [ {key : metric, values} ];
+}
+
+export function inspectedWorld(worlds, selection, fingerprint, steps) {
+  const current = selection?.fingerprint === fingerprint && selection.steps === steps;
+  const world = (current && worlds.find(w => w.seed === selection.seed && w.samples?.length)) ||
+                worlds.find(w => !w.done && w.samples?.length) ||
+                worlds.find(w => w.samples?.length);
+  if (!world)
+    return null;
+  const following = !current || world.seed !== selection.seed || selection.frame === null;
+  const frame = following ? world.samples.length - 1
+                          : Math.max(0, Math.min(world.samples.length - 1, selection.frame));
+  return {
+    world,
+    frame,
+    following,
+    sample : world.samples[frame],
+    intake : sampleIntake(world, frame)
+  };
+}
 
 // A world proves the fish once tank-born generations have offspring of their own and the
 // population is still alive when the run ends.
 export function worldVerdict(world) {
   const samples = world.samples ?? [], last = samples.at(-1);
-  const parents = samples.reduce((g, s) => Math.max(g, s[SAMPLE.parents]), -1);
-  const alive = !!last && last[SAMPLE.fish] > 0;
+  const parents = samples.reduce((g, s) => Math.max(g, s.parents), -1);
+  const alive = !!last && population(last) > 0;
   return {
     seed : world.seed,
     done : !!world.done,
     alive,
-    reached : last?.[SAMPLE.step] ?? 0,
+    reached : last?.step ?? 0,
     steps : world.steps,
     parents,
-    peak : samples.reduce((n, s) => Math.max(n, s[SAMPLE.fish]), 0),
+    peak : samples.reduce((n, s) => Math.max(n, population(s)), 0),
     proven : !!world.done && alive && parents >= BREEDING.proven_generations
   };
 }

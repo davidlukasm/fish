@@ -60,8 +60,9 @@ def check_labor_engine():
         program = ('#!' + sys.executable + '\nimport json\n'
                    'print(json.dumps({"event":"sample","t":400,"n":12,'
                    '"peakGeneration":0,"parents":[],"swimmers":[[0,12]],'
+                   '"swimmerReserve":[2,4,6,8,10],"anchoredLeaf":30,"driftingLeaf":20,'
                    '"rawFood":0,"availableFeed":100,"diet":[0]*11}))\n').encode()
-        replacement = program.replace(b'"n":12', b'"n":99')
+        replacement = program.replace(b'"n":12', b'"n":99').replace(b'[0,12]', b'[0,99]')
         tool.write_bytes(program)
         engine = hashlib.sha256(program).hexdigest()
         mark = fingerprint('genome', engine)
@@ -78,7 +79,7 @@ def check_labor_engine():
         with patch.object(jobs, 'stream', replace_after_world):
             jobs.work(job, 'genome', program, [1, 2], folder)
         assert job['status'] == 'done', job
-        assert [w['samples'][0][1] for w in job['runs']] == [12, 12], (
+        assert [w['samples'][0]['fish'] for w in job['runs']] == [12, 12], (
             'A rebuild must not change the engine between worlds of the same job')
         assert len(jobs.results(folder, engine).all()) == 1
         with patch('labor_service.build_directory', return_value=root):
@@ -88,11 +89,27 @@ def check_labor_engine():
         assert fingerprint('genome', overview['engine']) != mark
 
 
+def check_labor_samples():
+    from labor_service import World
+    world = World(1, 4000)
+    world.read({'event': 'sample', 't': 1200, 'n': 9, 'peakGeneration': 3,
+                'swimmers': [[1, 2], [2, 3]], 'parents': [[0, 1], [1, 2]],
+                'reserve': [0, 0, 10, 20, 30], 'swimmerReserve': [10, 12, 15, 20, 30],
+                'diet': [20, 0, 0, 0, 5, 8, 0, 0, 0, 0, 0],
+                'availableFeed': 123, 'anchoredLeaf': 40, 'driftingLeaf': 7})
+    sample = world.summary['samples'][0]
+    assert sample['fish'] == 5 and sample['eggs'] == 4
+    assert sample['reserve'] == [10, 12, 15, 20, 30], 'Egg energy cannot enter the fish reserve display'
+    assert sample['parents'] == 1 and sample['generation'] == 3
+    assert sample['diet'][0] == 20 and sample['availableFeed'] == 123 and sample['leaves'] == 47
+
+
 def main():
     ensure_node()
     check_compiler_build()
     sys.path.insert(0, str(ROOT))
     check_labor_engine()
+    check_labor_samples()
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)
@@ -129,6 +146,11 @@ def main():
             assert state == checkpoint.read_bytes(), 'Foraging observation must leave the world unchanged'
             setup, *events = map(json.loads, first.splitlines())
             assert setup['seeded'] == 3 and not setup['assistance'] and setup['mutation'] > 0
+            from labor_service import World
+            world = World(184371, 6)
+            for event in events:
+                world.read(event)
+            assert world.summary['samples'][-1]['step'] == 6
             header, *samples = map(json.loads, trace.splitlines())
             assert {'rawPlants', 'usableFood', 'line'} <= set(header['columns'])
             assert samples and all(len(fish) == len(header['columns'])
@@ -138,7 +160,12 @@ def main():
                 'Input lines must stay distinct even when their genomes share a species')
             header, *samples = map(json.loads, foraging.read_text().splitlines())
             assert [sample['t'] for sample in samples] == [0, 6]
+            measured = {event['t']: event for event in events if event.get('event') == 'sample'}
             for sample in samples:
+                assert math.isclose(measured[sample['t']]['availableFeed'],
+                                    sum(piece[4] for piece in sample['food']), rel_tol=1e-5)
+                swimmers = sum(n for _, n in measured[sample['t']]['swimmers'])
+                assert bool(measured[sample['t']]['swimmerReserve']) == bool(swimmers)
                 for key in ('cloud', 'food', 'fish'):
                     rows = sample['clouds' if key == 'cloud' else key]
                     assert all(len(row) == len(header[key + 'Columns']) for row in rows)

@@ -112,8 +112,8 @@ void foraging(std::ostream &out, const Ecosystem &w, double eaten) {
     out << ',' << cloud << ',' << nearby << ',' << b.age << ',' << b.health << ',' << b.motor().vx
         << ',' << b.motor().vy << ',' << b.motor().drive_forward << ',' << b.motor().drive_left
         << ',' << b.motor().drive_right << ',' << b.rest_cost << ',' << b.ledger().movement_cost
-        << ',' << b.ledger().brain_cost << ',' << p.parent << ',' << raw << ',' << b.hunger
-        << ',' << nutrient_signal(b) << ']';
+        << ',' << b.ledger().brain_cost << ',' << p.parent << ',' << raw << ',' << b.hunger << ','
+        << nutrient_signal(b) << ']';
     first = false;
   }
   out << "]}\n" << std::flush;
@@ -244,7 +244,8 @@ int main(int argc, char **argv) {
              "\"fishColumns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"energy\","
              "\"gutEnergy\",\"rawFeed\",\"nearestFeed\",\"nearestFeedCloud\",\"nearbyFeed\","
              "\"age\",\"health\",\"vx\",\"vy\",\"forward\",\"left\",\"right\",\"restCost\","
-             "\"movementCost\",\"brainCost\",\"parent\",\"rawFood\",\"hunger\",\"intakeSignal\"]}\n";
+             "\"movementCost\",\"brainCost\",\"parent\",\"rawFood\",\"hunger\",\"intakeSignal\"]}"
+             "\n";
     }
     std::ofstream observations;
     if (!observed.empty()) {
@@ -364,11 +365,13 @@ int main(int argc, char **argv) {
       if (tick % SAMPLE_STEPS == 0 || last) {
         std::map<unsigned, int> alive, breeders;
         std::array<std::vector<double>, RADII.size()> nearby;
-        std::vector<double> nearest, mouth_nearest, reserves, tissue, maturity, egg_yolk,
-            sperm_store;
+        std::vector<double> nearest, mouth_nearest, reserves, swimmer_reserves, tissue, maturity,
+            egg_yolk, sperm_store;
         for (const auto &p : w.fish) {
-          if (p.body.hatched)
+          if (p.body.hatched) {
             ++alive[p.g];
+            swimmer_reserves.push_back(p.body.energy);
+          }
           reserves.push_back(p.body.energy);
           tissue.push_back(p.body.tissue);
           maturity.push_back(body_maturity(p.body));
@@ -397,7 +400,10 @@ int main(int argc, char **argv) {
           for (std::size_t k = 0; k < RADII.size(); ++k)
             nearby[k].push_back(energy[k]);
         }
-        double anchored = 0, drifting = 0, blue = 0, total = 0;
+        double anchored = 0, drifting = 0, blue = 0, total = 0, available_feed = 0;
+        for (const auto &piece : w.field.feeding().pieces)
+          if (piece.origin == food_kind::feed && piece.energy > 0)
+            available_feed += piece.energy;
         for (const auto &part : w.field.vegetation().plants)
           if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind)) {
             (part.patch < w.field.vegetation().surfaces.size() ? anchored : drifting) +=
@@ -419,6 +425,9 @@ int main(int argc, char **argv) {
         counts(breeders);
         std::cout << ",\"reserve\":";
         quantiles(reserves);
+        std::cout << ",\"swimmerReserve\":";
+        quantiles(swimmer_reserves);
+        std::cout << ",\"availableFeed\":" << available_feed;
         std::cout << ",\"tissue\":";
         quantiles(tissue);
         std::cout << ",\"maturity\":";

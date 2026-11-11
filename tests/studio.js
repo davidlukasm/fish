@@ -673,7 +673,7 @@ async function checkHormoneSystems(model, capabilities) {
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
     de : Object.fromEntries([
-      'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor'
+      'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor', 'feeding_view'
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   {
@@ -3020,15 +3020,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   {
     const labor = await import('../ui/labor/model.js');
     const {BREEDING} = await import('../ui/schema.js');
-    const S = labor.SAMPLE, enough = BREEDING.proven_generations;
-    const sample = (step, fish, parents) => {
-      const row = [];
-      row[S.step] = step;
-      row[S.fish] = fish;
-      row[S.generation] = parents + 1;
-      row[S.parents] = parents;
-      return row;
-    };
+    const enough = BREEDING.proven_generations;
+    const sample = (step, fish, parents) => ({
+      step,
+      fish,
+      eggs : 0,
+      generation : parents + 1,
+      parents,
+      reserve : fish ? [ 2, 4, 8, 12, 16 ] : [],
+      diet : Array(11).fill(0),
+      availableFeed : 100,
+      leaves : 200
+    });
     const steps = BREEDING.steps[0];
     const lives = {
       seed : 1,
@@ -3112,6 +3115,80 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(page, /data-lab-fish="draft" disabled/,
                  'Without an accepted draft it cannot be chosen');
     assert.match(page, /data-lab-setting="worlds" data-lab-value="/);
+    const feeding = {
+      ...lives,
+      samples : [
+        {...sample(0, 12, -1), eggs : 3, diet : [ 100, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0 ]},
+        {...sample(400, 20, 1), eggs : 8, diet : [ 140, 0, 0, 0, 0, 60, 0, 0, 0, 0, 0 ]},
+        {...sample(500, 21, 1), eggs : 4, diet : [ 150, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0 ]}
+      ]
+    };
+    assert.equal(labor.sampleIntake(feeding, 0), null,
+                 'A first sample cannot establish an intake interval');
+    assert.equal(labor.sampleIntake(feeding, 1).total, 60,
+                 'Intake is the interval change, not the lifetime total');
+    assert.equal(labor.sampleIntake(feeding, 2).rate, .2,
+                 'A shortened final interval uses its actual duration');
+    assert.deepEqual(labor.sampleSeries(feeding, 'population').map(s => s.values),
+                     [ [ 12, 20, 21 ], [ 3, 8, 4 ] ]);
+    assert.deepEqual(labor.sampleSeries({samples : [ sample(0, 0, -1) ]}, 'reserve')[0].values,
+                     [ null ], 'An empty fish population has no zero-energy median');
+    const selection = {fingerprint : 'f', steps, seed : 1, frame : 1};
+    assert.equal(labor.inspectedWorld([ feeding ], selection, 'f', steps).sample.step, 400);
+    assert.equal(
+        labor.inspectedWorld([ feeding ], {...selection, frame : null}, 'f', steps).sample.step,
+        500);
+    assert.equal(labor.inspectedWorld([ feeding ], selection, 'another-fish', steps).following,
+                 true);
+    const analysis = {
+      overview : {results : [ {fingerprint : 'f', steps, worlds : {1 : feeding}} ]},
+      fingerprint : 'f',
+      fish : 'brisa',
+      steps,
+      worlds : 1,
+      job : null,
+      draft : null,
+      inspection : selection,
+      metric : 'population'
+    };
+    for (const metric of labor.BREEDING_METRICS) {
+      const html = view.breedingShell({...analysis, metric});
+      assert.match(html, /data-lab-sample="1"/);
+      assert.match(html, /Aufnahme von Schritt 0 bis 400: 60 Rohenergie/);
+      assert.doesNotMatch(html, /NaN|undefined/);
+    }
+    let panel = {scrollTop : 117}, focused = 0;
+    const root = {
+      ownerDocument : {activeElement : {dataset : {labSampleStep : 'previous'}}},
+      set innerHTML(html) {
+        this.html = html;
+        panel = {scrollTop : 0};
+      },
+      querySelector(
+          selector) { return selector === '.aid-lab-results' ? panel : {focus() { ++focused; }}; }
+    };
+    const inspecting = new BreedingStation(root);
+    Object.assign(inspecting.state, analysis);
+    inspecting.shown = true;
+    inspecting.render();
+    assert.equal(panel.scrollTop, 117, 'Polling preserves the result scroll position');
+    assert.ok(focused, 'Polling preserves the time control’s keyboard focus');
+    const click = dataset => inspecting.click({target : {closest : () => ({dataset})}});
+    click({labMetric : 'intake'});
+    assert.equal(inspecting.state.metric, 'intake');
+    assert.equal(inspecting.state.inspection.frame, 1,
+                 'Changing the chart keeps the inspected time');
+    click({labWorld : '1', labSample : '0'});
+    assert.equal(inspecting.state.inspection.frame, 0);
+    feeding.samples.push({...sample(900, 22, 2), diet : [ 170, 0, 0, 0, 0, 90, 0, 0, 0, 0, 0 ]});
+    inspecting.render();
+    assert.equal(
+        labor.inspectedWorld([ feeding ], inspecting.state.inspection, 'f', steps).sample.step, 0,
+        'New samples cannot move a pinned historical selection');
+    click({labWorld : '1', labSample : 'latest'});
+    assert.equal(
+        labor.inspectedWorld([ feeding ], inspecting.state.inspection, 'f', steps).sample.step,
+        900);
     const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
     const lab = await import('../ui/labor/trials.js');
     const {trialShell} = await import('../ui/labor/trial_view.js');

@@ -53,8 +53,14 @@ class World:
     def read(self, event):
         kind = event.get("event")
         if kind == "sample":
-            self.summary["samples"].append(
-                [event["t"], event["n"], event["peakGeneration"], parent_generation(event)])
+            fish = sum(count for _, count in event["swimmers"])
+            self.summary["samples"].append({
+                "step": event["t"], "fish": fish, "eggs": event["n"] - fish,
+                "generation": event["peakGeneration"], "parents": parent_generation(event),
+                "reserve": event["swimmerReserve"], "diet": event["diet"],
+                "availableFeed": event["availableFeed"],
+                "leaves": event["anchoredLeaf"] + event["driftingLeaf"],
+            })
         elif kind == "hatch":
             self.summary["hatches"] += 1
         elif kind == "death":

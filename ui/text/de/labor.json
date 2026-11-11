@@ -26,9 +26,8 @@
   "runningWorld": "läuft · Schritt {step}",
   "waiting": "wartet",
   "world": "Welt {seed}",
-  "alive": "lebt · bis {n} Fische",
+  "alive": "lebt",
   "extinct": "ausgestorben bei Schritt {step}",
-  "chart": "Bestand über die Schritte, Striche: Generation hat Nachwuchs",
   "parents": "G{g}",
   "parentsTitle": "Generation {g} hat Nachwuchs",
   "nothingYet": "Noch keine Zucht für diesen Fisch mit dieser Schrittzahl.",
@@ -97,5 +96,42 @@
     "last": "Zur letzten Aufnahme",
     "sampling": "Spur anklicken · Aufnahme alle {steps} Schritte. Die Zielmarke zeigt den Ort beim Start.",
     "detailChart": "Einzelner Schwimmweg: Dreieck am Start, Punkt an der gewählten Position, Zielmarke am ursprünglichen Ort"
+  },
+  "analysis": {
+    "choose": "Messgröße",
+    "metric": {
+      "population": "Bestand",
+      "feed": "Kunstfutter",
+      "intake": "Aufnahme",
+      "reserve": "Reserve"
+    },
+    "unit": {
+      "population": "Fische: durchgezogen · Eier: gestrichelt. Striche oben: Generation hat Nachwuchs.",
+      "feed": "Kunstfutter im Becken · Rohenergie",
+      "intake": "Aufgenommene Rohenergie je Schritt · gesamter Bestand",
+      "reserve": "Energiereserve geschlüpfter Fische · Median"
+    },
+    "hint": "Kurve anklicken, um einen Zeitpunkt zu untersuchen. Alle Welten verwenden dieselbe Skala.",
+    "inspect": "Zeitpunkt in Welt {seed} auswählen",
+    "step": "Schritt {step}",
+    "first": "Zur ersten Aufnahme",
+    "previous": "Eine Aufnahme zurück",
+    "next": "Eine Aufnahme weiter",
+    "latest": "Der neuesten Aufnahme folgen",
+    "following": "Neueste Aufnahme",
+    "fixed": "Gewählter Zeitpunkt",
+    "fish": "Fische",
+    "eggs": "Eier",
+    "reserve": "Reserve · Median",
+    "feed": "Kunstfutter im Becken",
+    "reserveRange": "Mittlere Hälfte der Reserven: {low}–{high}",
+    "leaves": "Blattvorrat: {n}",
+    "generations": "Höchste Generation bisher: G{g}",
+    "noParents": "Noch kein Nachwuchs",
+    "interval": "Aufnahme von Schritt {from} bis {to}: {amount} Rohenergie",
+    "noInterval": "Für die erste Aufnahme liegt noch kein Zeitintervall vor.",
+    "noIntake": "In diesem Zeitintervall wurde keine Nahrung aufgenommen.",
+    "raw": "Nahrungsaufnahme und Vorräte sind Rohenergie vor Verdauungsverlusten. Der Blattvorrat sagt nichts über seine Erreichbarkeit aus.",
+    "deaths": "Sterbefälle im gesamten bisher beobachteten Lauf"
   }
 }
