@@ -10,6 +10,9 @@ export function organTitle(organ, sites = null) {
                              : tList('studio.muscleTitles')[index];
 }
 
+export const slotTitle = slot =>
+    t('studio.regions.slots.' + (slot.key === 'intake' ? 'intake_' + slot.dir : slot.key));
+
 export function centerTitle(center) {
   if (center.generated)
     return t('studio.compiler.extraPotential', {n : center.index + 1});

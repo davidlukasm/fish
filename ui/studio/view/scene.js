@@ -2,7 +2,7 @@ import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
 import {nodeLocation, organLocation, REGION_CHIP, showsNodes, slotRow} from './places.js';
-import {organTitle, centerTitle} from './names.js';
+import {organTitle, centerTitle, slotTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
@@ -146,8 +146,7 @@ function slotsSvg(state) {
       const fill = slotFill(slot);
       const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
       const need = joinParts([
-        t('studio.regions.slots.' + slot.key),
-        t(slot.required ? 'studio.regions.required' : 'studio.regions.optional')
+        slotTitle(slot), t(slot.required ? 'studio.regions.required' : 'studio.regions.optional')
       ]);
       const name = slot.filled.length
                        ? namedText(need, joinList(slot.filled.map(o => organTitle(o, sites))))

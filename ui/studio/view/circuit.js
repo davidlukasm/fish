@@ -18,7 +18,7 @@ import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js
 import {namedText, t} from '../../strings.js';
 import {cellTrack, cellWords, ICON, icon, label, slotFill, slotShape} from './kit.js';
 import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
-import {organTitle} from './names.js';
+import {organTitle, slotTitle} from './names.js';
 import {regionPicture} from './region_controls.js';
 
 const PAIRING_BOX = 20;
@@ -289,25 +289,25 @@ export function slotsSection(state, organ) {
     return '';
   const slots =
       regionSlots(state.document, organ)
-          .map(slot => '<li class="' + slotFill(slot) + '"><span class="aid-slot-name">' +
-                       '<span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
-                       glyph(slotShape(slot), ICON.slot, {line : true}) + '</span>' +
-                       label('regions.slots.' + slot.key) + '</span><small>' +
-                       label(slot.required ? 'regions.required' : 'regions.optional') +
-                       '</small><span class="aid-slot-ends">' +
-                       (slot.filled.length
-                            ? slot.filled
-                                  .map(o => '<button data-select-organ="' + escapeText(o.id) +
-                                            '">' + icon(o.type, ICON.list) +
-                                            escapeText(organTitle(o, state.sites)) + '</button>')
-                                  .join('')
-                            : '') +
-                       '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
-                       '" data-slot-key="' + escapeText(slot.key) + '" data-slot-dir="' + slot.dir +
-                       '" title="' + label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') +
-                       '">' + (slot.filled.length ? '+' : label('regions.free') + ' +') +
-                       '</button>' +
-                       '</span></li>')
+          .map(slot =>
+                   '<li class="' + slotFill(slot) + '"><span class="aid-slot-name">' +
+                   '<span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
+                   glyph(slotShape(slot), ICON.slot, {line : true}) + '</span>' +
+                   '<span>' + slotTitle(slot) + '</span></span><small>' +
+                   label(slot.required ? 'regions.required' : 'regions.optional') +
+                   '</small><span class="aid-slot-ends">' +
+                   (slot.filled.length
+                        ? slot.filled
+                              .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
+                                        icon(o.type, ICON.list) + '<span>' +
+                                        escapeText(organTitle(o, state.sites)) + '</span></button>')
+                              .join('')
+                        : '') +
+                   '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
+                   '" data-slot-key="' + escapeText(slot.key) + '" data-slot-dir="' + slot.dir +
+                   '" title="' + label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') +
+                   '">' + (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
+                   '</span></li>')
           .join('');
   return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
          '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';

@@ -474,6 +474,8 @@
       "fullness": "Füllstand",
       "steering": "Eingang",
       "intake": "Nahrungsaufnahme",
+      "intake_in": "Aufnahme vom Darm",
+      "intake_out": "Aufnahme melden",
       "reserve": "Energiereserve",
       "eggFullness": "Eifüllung",
       "spermFullness": "Spermafüllung",
