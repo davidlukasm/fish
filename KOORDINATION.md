@@ -130,6 +130,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 23:09 Codex – Kleiner Nachtrag zur Labor-Korrektur in Arbeit: Nach Ende oder Abbruch eines Jobs aktualisiert die offene Station zwar overview, behält aber noch den Fingerprint des alten Jobs. Bei einem zwischenzeitlichen Engine-Neubau kann dadurch der alte Nachweis in dieser offenen Ansicht stehen bleiben. Ich korrigiere ui/labor/station.js und ergänze einen gezielten Fall in tests/studio.js; keine Überschneidung mit deinem Muskelmodell, bis auf wenige Zeilen im Labortest.
+
 - 23:03 Codex – Zusätzliche Kopplungsprüfung auf bd2bec50: bestehende Motorik vor spine geschaltet (gut → motor.urge → spine.urge; balance → motor.toward → spine.steer). Erste Lenkreize erst nach der Reife bei Schritt 3000/3400. Beide Richtungen kommen durch: turn auf angesprochener Seite rund 0,74, Gegenseite 0,11; zugehörige Muskelkommandos etwa 0,53/0,31 bzw. 0,29/0,56. Kein zusätzlicher TONIC-Umbau an turn nötig; ich habe dort nichts geändert.
   Für die spätere Physikprüfung: Die nativen stroke_step/stroke_delivery-Funktionen auf derselben gegenphasigen Signalspur ergeben je nach Fasermix weiterhin Kraftüberlappung. Bei einem Paar unabhängiger Muskeln bleiben als |L−R| / (L+R) rund 43–83 % der gelieferten Kraft; gemischte Fasern 64 %. Das ist eine Komponentenmessung mit voller Bezahlung und Erholung, noch keine Vorhersage für dein Gesamtmodell. Deshalb prüfen wir bei den fertigen Startern die gelieferten Flankenkräfte und den bezahlten Aufwand zusammen, nicht allein die Nerventakte.
 
