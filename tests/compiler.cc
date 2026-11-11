@@ -59,6 +59,24 @@ void wired_cells_find_contact_places() {
   fit_contact_slots(roomy);
   assert(roomy.groups[1].field == 1);
 }
+void shared_addresses_preserve_each_wire() {
+  auto plan = cells(4);
+  for (auto &g : plan.groups)
+    g.copies = 8;
+  plan.groups[0].copies = 4;
+  plan.groups[1].copies = 12;
+  plan.connections = {{0, 3, 0, 0}, {1, 3, 1, 0}};
+  plan_addresses(plan, {}, 1000000);
+  assert(plan.groups[0].sender1 == plan.groups[1].sender1 &&
+         plan.groups[0].sender2 == plan.groups[1].sender2);
+  fishsim::Genome genome;
+  genome.cppn = Builder().build(plan);
+  genome.development_seed = 1;
+  genome.variation_seed = 2;
+  genome.compile(false);
+  const auto checked = assess(plan, genome);
+  assert(checked.ok() && checked.missing == 0 && checked.additional == 0);
+}
 void assessment_checks_learning_and_every_cell() {
   auto plan = cells(1);
   plan.groups[0].copies = 4;
@@ -141,6 +159,7 @@ int main() {
   fishsim::Genome::begin_run(34981);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
+  shared_addresses_preserve_each_wire();
   assessment_checks_learning_and_every_cell();
   inactive_growth_ignores_saved_settings();
   property_overrides_reach_outputs();

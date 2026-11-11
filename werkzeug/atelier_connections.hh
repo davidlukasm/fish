@@ -48,16 +48,21 @@ class AddressFitter {
   int n, k = 0, size = 0;
   Wiring w;
   struct Pair {
-    int source, target;
+    int address;
     double mass;
     bool wanted, allowed;
   };
-  std::vector<int> classes, field_count, winning;
+  struct Address {
+    int source, target, field = 0;
+    double q = 0, affinity = 0, slope = 0;
+  };
+  std::vector<int> classes, field_count;
   static int reception(int target, int f) { return target * field::CONTACT_FIELDS + f; }
   int receiver(int target, int f) const { return 2 * k + 3 * reception(target, f); }
   std::vector<Pair> pairs;
+  std::vector<Address> addresses;
   std::map<int, std::vector<int>> bundles;
-  std::vector<double> slots, lower, upper, x, best, gradient, m, v, values, slopes, q, derivative,
+  std::vector<double> slots, lower, upper, x, best, gradient, m, v, values, slopes, derivative,
       demand, demand_gradient, variance, squared, thinning;
   double best_loss = std::numeric_limits<double>::infinity();
   AddressFit stats;
@@ -105,11 +110,17 @@ class AddressFitter {
         mass[ga][gb] += value;
       }
     std::vector<std::vector<int>> pair_index(n, std::vector<int>(n, -1));
+    std::vector<std::vector<int>> address_index(k, std::vector<int>(n, -1));
     for (int a = 0; a < n; ++a)
       for (int b = 0; b < n; ++b)
         if (classes[a] >= 0 && mass[a][b] > 0) {
+          auto &address = address_index[classes[a]][b];
+          if (address < 0) {
+            address = int(addresses.size());
+            addresses.push_back({classes[a], b});
+          }
           pair_index[a][b] = int(pairs.size());
-          pairs.push_back({classes[a], b, mass[a][b], w.wanted[a][b], w.allowed[a][b]});
+          pairs.push_back({address, mass[a][b], w.wanted[a][b], w.allowed[a][b]});
         }
     for (const auto &wire : p.connections) {
       auto &bundle = bundles[wire.bundle];
@@ -138,13 +149,12 @@ class AddressFitter {
         lower[receiver(b, f) + 2] = std::log(field::spread_radius(w.spread[b]));
         upper[receiver(b, f) + 2] = std::log(field::MAX_SEARCH);
       }
-    for (auto buffer : {&values, &slopes, &q, &derivative})
+    for (auto buffer : {&values, &slopes, &derivative})
       buffer->resize(pairs.size());
     for (auto buffer : {&demand, &demand_gradient, &thinning})
       buffer->resize(n);
     variance.resize(n * field::CONTACT_FIELDS);
     squared.resize(variance.size());
-    winning.resize(pairs.size());
   }
   void clamp() {
     for (int i = 0; i < size; ++i)
@@ -211,29 +221,36 @@ class AddressFitter {
         variance[r] = 2 * sigma * sigma;
         squared[r] = sigma * sigma;
       }
+    // Shared sender addresses reuse geometry; group masses and sums keep their original order.
+    for (auto &address : addresses) {
+      const int c = 2 * address.source;
+      address.q = std::numeric_limits<double>::infinity();
+      for (int f = 0; f < field_count[address.target]; ++f) {
+        const int r = receiver(address.target, f);
+        const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
+        const double candidate = (dx * dx + dy * dy) / variance[reception(address.target, f)];
+        if (candidate < address.q) {
+          address.q = candidate;
+          address.field = f;
+        }
+      }
+      address.affinity = field::contact_affinity(address.q);
+      address.slope = field::contact_affinity_slope(address.q);
+    }
     double loss = 0, leakage = 0, missing = 0;
     for (int i = 0; i < int(pairs.size()); ++i) {
       const auto &pair = pairs[i];
-      const int c = 2 * pair.source;
-      q[i] = std::numeric_limits<double>::infinity();
-      for (int f = 0; f < field_count[pair.target]; ++f) {
-        const int r = receiver(pair.target, f);
-        const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
-        const double candidate = (dx * dx + dy * dy) / variance[reception(pair.target, f)];
-        if (candidate < q[i]) {
-          q[i] = candidate;
-          winning[i] = f;
-        }
-      }
-      values[i] = pair.mass * field::contact_affinity(q[i]);
-      slopes[i] = pair.mass * field::contact_affinity_slope(q[i]);
-      demand[pair.target] += values[i];
+      const auto &address = addresses[pair.address];
+      values[i] = pair.mass * address.affinity;
+      slopes[i] = pair.mass * address.slope;
+      demand[address.target] += values[i];
       if (pair.wanted) {
         // Keep a useful drive even when many copies make a weak wire likely to occur.
-        loss += fit::binding_weight * q[i];
+        loss += fit::binding_weight * address.q;
         derivative[i] += fit::binding_weight;
       } else if (!pair.allowed) {
-        const double deficit = std::max(0., field::CONTACT_SUPPORT * fit::clearance_margin - q[i]);
+        const double deficit =
+            std::max(0., field::CONTACT_SUPPORT * fit::clearance_margin - address.q);
         loss += deficit * deficit;
         derivative[i] -= 2 * deficit;
         leakage += values[i];
@@ -248,7 +265,7 @@ class AddressFitter {
       }
       double expected = 0;
       for (int i : bundle) {
-        const int b = pairs[i].target;
+        const int b = addresses[pairs[i].address].target;
         expected += values[i] * thinning[b];
       }
       missing += std::exp(-expected);
@@ -256,25 +273,25 @@ class AddressFitter {
       loss -= fit::bundle_weight * std::log(-std::expm1(-safe));
       const double d = -fit::bundle_weight / std::expm1(std::min(fit::exponent_limit, safe));
       for (int i : bundle) {
-        const int b = pairs[i].target;
+        const int b = addresses[pairs[i].address].target;
         derivative[i] += d * thinning[b] * slopes[i];
         if (demand[b] > slots[b])
           demand_gradient[b] -= d * values[i] * thinning[b] / demand[b];
       }
     }
     for (int i = 0; i < int(pairs.size()); ++i) {
-      const auto &pair = pairs[i];
-      const double d = derivative[i] + demand_gradient[pair.target] * slopes[i];
+      const auto &address = addresses[pairs[i].address];
+      const double d = derivative[i] + demand_gradient[address.target] * slopes[i];
       if (d == 0)
         continue;
-      const int c = 2 * pair.source, r = receiver(pair.target, winning[i]),
-                rf = reception(pair.target, winning[i]);
+      const int c = 2 * address.source, r = receiver(address.target, address.field),
+                rf = reception(address.target, address.field);
       const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
       gradient[c] += d * dx / squared[rf];
       gradient[c + 1] += d * dy / squared[rf];
       gradient[r] -= d * dx / squared[rf];
       gradient[r + 1] -= d * dy / squared[rf];
-      gradient[r + 2] -= 2 * d * q[i];
+      gradient[r + 2] -= 2 * d * address.q;
     }
     stats.evaluations += int(pairs.size());
     if (loss < best_loss) {
