@@ -62,6 +62,8 @@ struct BrainInterface {
     float threshold, strength, lever;
     std::array<float, 3> color{};
     float outside = 0, quality = 0;
+    // Share of a pectoral fin cell that pulls the fin forward: the antagonist of the back stroke.
+    float protraction = 0;
     std::array<float, field::HORMONES> hormones{};
   };
   bool mobile_reproductive = true;
@@ -79,6 +81,8 @@ struct BrainInterface {
   std::array<double, 2> suction_sides{}, bite_sides{};
   std::array<double, ORGAN_PORTS> capacities{};
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
+  // Push along the body per unit of a fin stroke, which counts its force times the lever.
+  std::array<double, STROKE_COUNT> fin_push{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};
   std::array<double, 3> pigment_absorption{};

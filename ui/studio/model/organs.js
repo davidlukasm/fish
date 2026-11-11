@@ -257,17 +257,25 @@ export const ORGANS = Object.freeze([
     namedPorts : true,
     centers : [ nerve('relay', 4, [ 1, 2, 3 ]) ],
     // Inputs name the side of the stimulus; one input may reach several nodes.
-    slots : [
-      slot('toward', 'in', [], false, [ 'turn', 'oppose' ]), slot('away', 'in', [], false, 'flee'),
-      slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
-      slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
-      slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
-      slot('grip', 'in', [], false, 'bite'), slot('full', 'in', [], false, 'sated'),
-      slot('contact', 'in', [], false, 'lift'), slot('fins', 'out', [], true, 'turn'),
-      slot('tail', 'out', [], true, 'swim'), slot('mouth', 'out', [], false, 'mouth'),
-      slot('bite', 'out', [], false, 'bite'), slot('lift', 'out', [], false, 'lift')
-    ],
-    settings : {tone : setting(0, 2, 1, true), compete : setting(0, 1, 1, true)}
+    slots :
+        organ => [slot('toward', 'in', [], false, [ 'turn', 'oppose' ]),
+                  slot('away', 'in', [], false, 'flee'),
+                  slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
+                  slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
+                  slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
+                  slot('grip', 'in', [], false, 'bite'), slot('full', 'in', [], false, 'sated'),
+                  slot('contact', 'in', [], false, 'lift'),
+                  ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
+                  slot('fins', 'out', [], true, 'turn'), slot('tail', 'out', [], true, 'swim'),
+                  slot('mouth', 'out', [], false, 'mouth'), slot('bite', 'out', [], false, 'bite'),
+                  slot('lift', 'out', [], false, 'lift'),
+                  ...(organ.region.retreat ? [ slot('reverse', 'out', [], false, 'reverse') ]
+                                           : [])],
+    settings : {
+      tone : setting(0, 2, 1, true),
+      compete : setting(0, 1, 1, true),
+      retreat : setting(0, 1, 0, true)
+    }
   },
   {
     key : 'teaching',

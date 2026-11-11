@@ -21212,6 +21212,7 @@
         "site": 662,
         "tone": 1,
         "compete": 1,
+        "retreat": 0,
         "derived": null
       }
     },
@@ -22628,6 +22629,7 @@
         "site": 663,
         "tone": 1,
         "compete": 1,
+        "retreat": 0,
         "derived": null
       }
     },

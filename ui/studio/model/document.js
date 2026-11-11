@@ -3,6 +3,7 @@ import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './r
 import {
   ATELIER_LIMITS,
   CONTRAST_POLARITY,
+  FIN_STROKE,
   HORMONE_EFFECT,
   HORMONES,
   MOTOR_KIND,
@@ -315,7 +316,8 @@ export function profileIndex(doc, organId, profileId) {
   return center ? centerIndex(doc, center.id) : -1;
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
-function matchingOrgan(doc, type, side, sites, code = null) {
+// Pectoral fins may hold a second muscle per side: the antagonist with the other stroke.
+function matchingOrgan(doc, type, side, sites, code = null, stroke = FIN_STROKE.back) {
   if (isRegion({type}))
     return null;
   const scope = ORGAN_BY_KEY[type]?.scope;
@@ -324,7 +326,8 @@ function matchingOrgan(doc, type, side, sites, code = null) {
   if (type === 'muscle')
     return doc.organs.find(organ => organ.type === type &&
                                     sideSign(organ.side) === sideSign(side) &&
-                                    organFunction(organ, sites) === code) ??
+                                    organFunction(organ, sites) === code &&
+                                    (code !== MOTOR_KIND.turn || finStroke(organ) === stroke)) ??
            null;
   if (scope !== 'side')
     return null;
@@ -834,6 +837,65 @@ export function setMuscleSprint(doc, organId, share) {
   for (const o of [main, twin].filter(Boolean))
     o.sprint = clamp(share, 0, 1);
   return draft;
+}
+// A pectoral fin muscle strokes the fin back, pushing the fish forward, or forward as the
+// antagonist, pushing it back. Its cells carry the direction in their polarity.
+export const finStroke = organ => organ.centers[0].polarity;
+export const isFinMuscle = (organ, sites) =>
+    organ?.type === 'muscle' && organFunction(organ, sites) === MOTOR_KIND.turn;
+export function setFinStroke(doc, organId, stroke, sites) {
+  const organ = findOrgan(doc, organId);
+  if (!isFinMuscle(organ, sites) || !Object.values(FIN_STROKE).includes(stroke))
+    return null;
+  const draft = copy(doc);
+  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const o of [main, twin].filter(Boolean))
+    for (const c of o.centers)
+      c.polarity = stroke;
+  return draft;
+}
+// The antagonist of a pectoral fin muscle: as many nodes at free fin sites beside it, stroking
+// the other way, on both sides when the muscle has a twin.
+export function addAntagonist(doc, organId, sites) {
+  const original = findOrgan(doc, organId);
+  if (!isFinMuscle(original, sites))
+    return null;
+  const stroke = finStroke(original) === FIN_STROKE.back ? FIN_STROKE.front : FIN_STROKE.back;
+  const code = organFunction(original, sites);
+  if (matchingOrgan(doc, 'muscle', original.side, sites, code, stroke))
+    return null;
+  const draft = copy(doc), used = usedSites(draft);
+  if (original.pair)
+    for (const occupied of [...used]) {
+      const mirror = mirroredSite(findSite(sites, occupied), sites);
+      if (mirror)
+        used.add(mirror.id);
+    }
+  const organ = {
+    id : identifier('organ'),
+    type : 'muscle',
+    side : original.side,
+    centers : [],
+    pair : null,
+    linked : false,
+    sprint : original.sprint
+  };
+  for (const center of original.centers) {
+    const home = findSite(sites, center.site);
+    const site = closestSiteDoing(center, functionFor(center, home), sites, used,
+                                  sitePoint(home, siteRole(organ.type)), home.side, organ.type);
+    if (!site)
+      return null;
+    used.add(site.id);
+    organ.centers.push(
+        {...copy(center), id : identifier('center'), site : site.id, polarity : stroke});
+  }
+  draft.organs.push(organ);
+  const mirrored = original.pair ? mirrorOrgan(draft, organ.id, sites) : {document : draft};
+  if (!mirrored)
+    return null;
+  settleAssemblies(mirrored.document);
+  return {document : mirrored.document, organId : organ.id};
 }
 export function placeNode(doc, centerId, siteId, sites) {
   const found = findCenter(doc, centerId), site = findSite(sites, siteId);
@@ -1463,7 +1525,8 @@ export function mirrorOrgan(doc, organId, sites) {
       site : site.id
     });
   }
-  if (matchingOrgan(draft, organ.type, -organ.side, sites, organFunction(organ, sites)))
+  if (matchingOrgan(draft, organ.type, -organ.side, sites, organFunction(organ, sites),
+                    organ.type === 'muscle' ? finStroke(organ) : FIN_STROKE.back))
     return null;
   organ.pair = mirror.id;
   organ.linked = true;

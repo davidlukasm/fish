@@ -914,6 +914,44 @@ void wrigglers_lift_their_snout_out_of_mud(const Genome &g) {
         "a wriggler turns in mud like it moves: lifting its snout as easily as rising");
   check(stiff < lower, "a stiff body turns harder in mud than a wriggler");
 }
+void pectoral_antagonists_back_the_fish_up(const Genome &g) {
+  // Only the pectoral fins contract, fully. Their back strokes push the fish ahead, the forward
+  // strokes of their antagonists push it back, and both together hold it in place.
+  constexpr int STROKING = 80;
+  constexpr double STILL = .2;
+  const auto travel = [&](float protraction) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    std::set<std::uint32_t> fin_cells;
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::turn) {
+        e.protraction = protraction;
+        fin_cells.insert(e.neuron);
+      }
+    check(!fin_cells.empty(), "the start fish has pectoral fin muscles");
+    fin_pushes(*layout);
+    Genome fins = g;
+    fins.interface = layout;
+    Ecosystem w(SEED);
+    w.resize(800, 500);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, fins, 400, 250);
+    const auto id = p.id;
+    p.body.set_actuation_probe(
+        [fin_cells](std::uint32_t cell, float) { return fin_cells.count(cell) ? 1.f : 0.f; });
+    const double x = p.body.x, y = p.body.y, heading = p.body.angle;
+    for (int tick = 0; tick < STROKING; ++tick)
+      w.tick(false);
+    const auto &b = individual(w, id).body;
+    return w.field.delta_x(b.x - x) * std::cos(heading) + (b.y - y) * std::sin(heading);
+  };
+  const double ahead = travel(0), back = travel(1), held = travel(.5);
+  std::cout << "Brustflossen voll: Rückschlag " << ahead << ", Vorschlag " << back
+            << ", beide Muskeln zugleich " << held << "\n";
+  check(ahead > 0 && back < 0, "back strokes push a fish ahead, the antagonists push it back");
+  check(std::abs(held) < STILL * ahead, "antagonists working together hold the fish in place");
+}
 void worker_counts_preserve_the_simulation(const Genome &g) {
   Ecosystem serial(83921);
   serial.safety = false;
@@ -1685,6 +1723,7 @@ int main() {
     nonvisual_input_reaches_the_brain(g);
     dark_cells_report_what_is_darker_than_the_surround(g);
     wrigglers_lift_their_snout_out_of_mud(g);
+    pectoral_antagonists_back_the_fish_up(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

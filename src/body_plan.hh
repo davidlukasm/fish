@@ -71,12 +71,16 @@ Point olfactory_position(const Body &, const BrainInterface &, int side);
 Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 double stroke_delivery(const StrokeState &, const StrokeTiming &);
+// Push along the body per levered unit of each fin stroke, from the cells' protraction shares.
+void fin_pushes(BrainInterface &);
 struct EffectorActivity {
   std::array<double, ORGAN_PORTS> sum{};
   std::array<double, 2> egg{}, sperm{}, bladder{};
   field::Hormones secretion{}, binding{};
   Color pigment{}, egg_color{}, sperm_color{};
+  // Back strokes per fin times lever; reverse: the forward strokes of the antagonists.
   double left = 0, right = 0;
+  std::array<double, 2> reverse{};
 };
 EffectorActivity effector_activity(const std::vector<float> &, const BrainInterface &);
 struct OrganDrive {

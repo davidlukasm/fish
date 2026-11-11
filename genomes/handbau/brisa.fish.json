@@ -9534,6 +9534,7 @@
     "site": 446,
     "tone": 1,
     "compete": 1,
+    "retreat": 0,
     "derived": null
    }
   },
@@ -10950,6 +10951,7 @@
     "site": 447,
     "tone": 1,
     "compete": 1,
+    "retreat": 0,
     "derived": null
    }
   }

@@ -11,7 +11,9 @@ import {
   centerIndex,
   findAssembly,
   groupReport,
+  finStroke,
   isChosen,
+  isFinMuscle,
   organTypes,
   substanceRead
 } from '../model/document.js';
@@ -35,7 +37,7 @@ import {
   tailFin,
   zoomOf
 } from './frame.js';
-import {ANATOMY, BODY_UNIT} from '../../schema.js';
+import {ANATOMY, BODY_UNIT, FIN_STROKE} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
@@ -264,9 +266,11 @@ function muscleGlyph(state, organ) {
   if (!shape)
     return '';
   const tone = MUSCLE_TONE[organFunction(organ, state.sites)];
-  return '<path class="aid-anatomical-muscle" d="' + shape.path + '" style="--muscle:' + tone +
-         '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') +
-         '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/>';
+  const front = isFinMuscle(organ, state.sites) && finStroke(organ) === FIN_STROKE.front;
+  return '<path class="aid-anatomical-muscle' + (front ? ' front' : '') + '" d="' + shape.path +
+         '" style="--muscle:' + tone + '"/><path class="aid-muscle-marks" d="' +
+         shape.marks.join(' ') + '"/><path class="aid-muscle-marks sprint" d="' +
+         shape.sprint.join(' ') + '"/>';
 }
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,

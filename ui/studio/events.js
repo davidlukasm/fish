@@ -5,6 +5,7 @@ import {nextVisionProfile} from './model/retina.js';
 import {findSite, sitePoint} from './model/layout.js';
 import {toggleInnerLink, updateRegion} from './model/regions.js';
 import {
+  addAntagonist,
   addOrganType,
   addSubstance,
   allCenters,
@@ -26,6 +27,7 @@ import {
   removeSubstance,
   selectionCenters,
   setBends,
+  setFinStroke,
   setSubstance,
   switchReceptor,
   teachOrgan,
@@ -328,6 +330,16 @@ export const FISH_CLICKS = Object.freeze([
     '[data-inner-link]',
     (studio, e) => keep(studio, toggleInnerLink(studio.state.document, e.dataset.organId,
                                                 e.dataset.innerLink))
+  ],
+  [
+    '[data-fin-antagonist]',
+    (studio, e) => keepIfRoom(studio, addAntagonist(studio.state.document, e.dataset.finAntagonist,
+                                                    studio.state.sites)?.document)
+  ],
+  [
+    '[data-fin-stroke]',
+    (studio, e) => keep(studio, setFinStroke(studio.state.document, e.dataset.organId,
+                                             Number(e.dataset.finStroke), studio.state.sites))
   ],
   [
     '[data-region-setting]',

@@ -337,7 +337,9 @@ void PopulationCheckpoint::read_gametes(std::istream &in, Body &b, double energy
 void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
   std::string motor_tag;
   value(in, motor_tag);
-  if (motor_tag != "MOTORS")
+  int strokes = 0;
+  value(in, strokes);
+  if (motor_tag != "MOTORS" || strokes != STROKE_COUNT)
     throw std::runtime_error("invalid motor state");
   for (auto &stroke : b.motor_.strokes) {
     scalar(in, stroke.mean, 0, PLAUSIBLE_LOCAL);

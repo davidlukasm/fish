@@ -19,7 +19,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
-  "src/body_plan.cc" : "1daff4fa9b6650a7",
+  "src/body_plan.cc" : "a539a04fe6bfa844",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "4ce375962b70c1f5",
   "src/physiology.cc" : "091be4e30f65adee",
@@ -28,7 +28,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "89b847d09d35c2ce",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "62949e21d135eef7",
+  "src/body_plan.hh" : "5d5272f9e82b4b36",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -51,7 +51,7 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "c6a63cda4547e83b",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "b8013d63f8a96779",
+  "src/brain_interface.hh" : "17d57a4beb67c1ac",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
@@ -61,11 +61,11 @@ const ENGINE_REVIEW = Object.freeze({
   "src/ecology.hh" : "3505e6c40c515977",
   "src/feeding.cc" : "b9619a71b39a85c3",
   "src/tank_energy.cc" : "766e39c90e2aa020",
-  "src/environment.cc" : "b5871249c92b5f86",
+  "src/environment.cc" : "d14022c739480c9a",
   "src/environment.hh" : "9602fc842620120e",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
-  "src/motor_state.hh" : "6642af5a79a83847",
+  "src/motor_state.hh" : "2d27ede5724fa2b1",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "372294904588c948",
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
@@ -1563,7 +1563,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       [
         ...new Set(exampleStudio.state.document.organs.filter(o => o.region).map(o => o.type))
       ].sort(),
-      [ 'circuit', 'rhythm', 'teaching', 'tectum' ]);
+      [ 'choice', 'motor', 'olfaction', 'state', 'tectum', 'value' ]);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
     cwd : root,
     input : JSON.stringify({
@@ -1691,15 +1691,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
-  for (const [kind, sources] of [[ MOTOR_KIND.aggression, [ 'rhythm' ] ],
-                                 [ MOTOR_KIND.suction, [ 'circuit' ] ]]) {
+  for (const kind of [MOTOR_KIND.aggression, MOTOR_KIND.suction]) {
     const muscles =
         exampleDoc.organs.filter(o => o.type === 'muscle' && organFunction(o, sites) === kind);
     assert.ok(muscles.length);
     const feeders = exampleDoc.wires.filter(w => muscles.some(m => m.id === w.to))
                         .map(w => model.findOrgan(exampleDoc, w.from)?.type)
                         .sort();
-    assert.deepEqual([...new Set(feeders) ], sources);
+    assert.deepEqual([...new Set(feeders) ], [ 'motor' ], 'Motorik drives the mouth muscles');
     assert.ok(response.example.contacts.some(([, to ]) => muscles.includes(organOf(to))),
               'The built fish reaches its mouth muscles of kind ' + kind);
   }
@@ -2005,6 +2004,37 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(!model.findOrgan(quiet, motor.id).centers.some(c => c.node === 'oppose'),
               'Without competition no node inhibits the other side');
     assert.doesNotThrow(() => model.compileDocument(motorDoc, sites));
+    // A fish that can retreat drives the antagonist fin muscles: a second pectoral muscle per
+    // side whose forward stroke pushes it back.
+    const retreating = settleRegions(updateRegion(motorDoc, motor.id, {retreat : 1}, sites), sites);
+    assert.deepEqual(
+        slotCenters(model.findOrgan(retreating, motor.id), 'back', 'in').map(c => c.node),
+        [ 'retreat' ]);
+    const {sitePoint} = await import('../ui/studio/model/layout.js');
+    const {FIN_STROKE} = await import('../ui/schema.js');
+    const finSite = musclePlaces(sites, MK.turn, -1)[0];
+    const finned = model.addOrgan(retreating, 'muscle', sites, sitePoint(finSite, 'motor'));
+    const back = model.findOrgan(finned.document, finned.organId);
+    assert.ok(model.isFinMuscle(back, sites));
+    const antagonist = model.addAntagonist(finned.document, back.id, sites);
+    const both =
+        [ antagonist.organId, model.findOrgan(antagonist.document, antagonist.organId).pair ].map(
+            id => model.findOrgan(antagonist.document, id));
+    assert.ok(both.every(o => o.centers.length === back.centers.length &&
+                              o.centers.every(c => c.polarity === FIN_STROKE.front)),
+              'Each fin gets an antagonist with as many nodes that strokes forward');
+    assert.equal(model.addAntagonist(antagonist.document, back.id, sites), null,
+                 'A fin holds one antagonist per side');
+    const wired = model.addWire(antagonist.document, motor.id, both[0].id, 'both', sites,
+                                {fromPort : 'reverse', toPort : null});
+    assert.ok(wired, 'Motorik drives the forward strokes');
+    const plan = model.compileDocument(wired.document, sites),
+          every = model.allCenters(wired.document);
+    const front = new Set(both.flatMap(o => o.centers.map(c => c.id)));
+    assert.ok(
+        every.every((c, i) => (plan.groups[i].polarity === FIN_STROKE.front) === front.has(c.id) ||
+                              c.role !== 'motor'),
+        'Only the antagonist cells stroke forward in the plan');
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
     assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);

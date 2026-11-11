@@ -236,7 +236,9 @@
       "egg": 4,
       "sperm": 5,
       "bite": 6,
-      "defense": 7
+      "defense": 7,
+      "reverse_left": 8,
+      "reverse_right": 9
     },
     "step_phase": {
       "development": 0,
@@ -2002,6 +2004,10 @@
       "bright": 0,
       "both": 0.5,
       "dark": 1
+    },
+    "fin_stroke": {
+      "back": 0,
+      "front": 1
     },
     "water_grid": {
       "cell": 32.0,

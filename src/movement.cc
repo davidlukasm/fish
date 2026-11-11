@@ -4,6 +4,8 @@
 namespace fishsim {
 namespace {
 constexpr double MIN_THRUST_MASS = .5;
+// Per unit of muscle force a pectoral fin pushes a quarter as hard as the tail.
+constexpr double FIN_PUSH_SHARE = .25;
 }
 namespace {
 double foliage_brake(const Field &field, double x, double y, double radius) {
@@ -66,7 +68,8 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
         std::clamp(b.motor_.angular_velocity +
                        radians(b.motor_.torque * physiology.stroke_turn) * weakness / inertia,
                    -MAX_TURN, MAX_TURN);
-    b.motor_.thrust = physiology.stroke_push * b.motor_.drive_forward * weakness /
+    b.motor_.thrust = physiology.stroke_push *
+                      (b.motor_.drive_forward + FIN_PUSH_SHARE * b.motor_.drive_fins) * weakness /
                       std::max(MIN_THRUST_MASS, mass);
   }
   b.motor_.swimming_pending = false;

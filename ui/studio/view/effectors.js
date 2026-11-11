@@ -1,4 +1,4 @@
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, MOTOR_KIND} from '../../schema.js';
+import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, FIN_STROKE, MOTOR_KIND} from '../../schema.js';
 import {
   finVolumeOf,
   gutTurns,
@@ -9,7 +9,7 @@ import {
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {functionFor, nodeLimit, organFunction} from '../model/organs.js';
-import {centerIndex, findOrgan, muscleTrait, sprintNodes} from '../model/document.js';
+import {centerIndex, findOrgan, finStroke, muscleTrait, sprintNodes} from '../model/document.js';
 import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {bandTrack, escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
@@ -54,6 +54,32 @@ export function nodeControls(organ, code, most) {
                               label('sprintHandle'))
               : '') +
          '</svg>';
+}
+const STROKE_ICON = Object.freeze({width : 30, height : 16, shaft : 10, head : 5});
+// The arrow shows where the fin drives the water: toward the tail on the back stroke.
+function strokeIcon(stroke) {
+  const I = STROKE_ICON, y = I.height / 2, x = I.width / 2;
+  const toTail = stroke === FIN_STROKE.back ? 1 : -1, tip = x + toTail * I.shaft;
+  return '<svg class="aid-stroke" viewBox="0 0 ' + I.width + ' ' + I.height +
+         '" aria-hidden="true"><path d="M' + (x - toTail * I.shaft) + ' ' + y + 'H' + tip + 'M' +
+         (tip - toTail * I.head) + ' ' + (y - I.head) + 'L' + tip + ' ' + y + 'L' +
+         (tip - toTail * I.head) + ' ' + (y + I.head) + '"/></svg>';
+}
+function strokeChooser(organ) {
+  return '<div class="aid-contrast-choices">' +
+         Object.entries(FIN_STROKE)
+             .map(([ key, stroke ]) => {
+               const chosen = finStroke(organ) === stroke;
+               return '<button data-fin-stroke="' + stroke + '" data-organ-id="' +
+                      escapeText(organ.id) + '" class="' + (chosen ? 'active' : '') +
+                      '" aria-pressed="' + chosen + '" title="' +
+                      escapeText(label('stroke.' + key + 'Title')) + '">' + strokeIcon(stroke) +
+                      escapeText(label('stroke.' + key)) + '</button>';
+             })
+             .join('') +
+         '<button data-fin-antagonist="' + escapeText(organ.id) + '" title="' +
+         escapeText(label('stroke.antagonistTitle')) + '">' + strokeIcon(FIN_STROKE.back) +
+         strokeIcon(FIN_STROKE.front) + escapeText(label('stroke.antagonist')) + '</button></div>';
 }
 export function effectorPatch(code, name, fx, fy, most) {
   if (name === 'nodes' || name === 'strength' || name === 'sprint') {
@@ -564,11 +590,12 @@ export function effectorGraphic(state, organ) {
   }[code];
   if (!draw)
     return '';
-  return effectorBlock(organ, code, sideOf(organ), label('title.' + code),
-                       draw(state, organ, organ.centers, twin),
-                       nodeControls(organ, code, nodeLimit(organ, state.sites)) + muscleHint(code) +
-                           (code === MOTOR_KIND.aggression
-                                ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
-                            : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)
-                                                          : ''));
+  return effectorBlock(
+      organ, code, sideOf(organ), label('title.' + code), draw(state, organ, organ.centers, twin),
+      nodeControls(organ, code, nodeLimit(organ, state.sites)) +
+          (code === MOTOR_KIND.turn ? strokeChooser(organ) : '') + muscleHint(code) +
+          (code === MOTOR_KIND.aggression
+               ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
+           : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)
+                                         : ''));
 }

@@ -275,9 +275,9 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
           p.observations_.window_mouth += std::clamp(b.eat_signal, 0., 1.);
           p.observations_.window_bottom += b.y > field.geometry().height * BOTTOM_ZONE;
           p.observations_.window_top += b.y < field.geometry().height * TOP_ZONE;
-          p.observations_.window_pulses += b.motor_.thrust >= MIN_SWIMMING_PULSE;
-          p.observations_.window_glides +=
-              b.motor_.thrust < MIN_SWIMMING_PULSE && b.motor_.relative_speed > MOVING_SPEED;
+          p.observations_.window_pulses += std::abs(b.motor_.thrust) >= MIN_SWIMMING_PULSE;
+          p.observations_.window_glides += std::abs(b.motor_.thrust) < MIN_SWIMMING_PULSE &&
+                                           b.motor_.relative_speed > MOVING_SPEED;
           for (std::size_t k = 0; k < b.color.size(); ++k)
             p.observations_.window_traits[window_trait::color + k] += b.color[k];
           p.observations_.window_traits[window_trait::aggression] += b.motor_.aggression;

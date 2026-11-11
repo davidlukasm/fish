@@ -11,12 +11,19 @@ enum StrokeIndex {
   StrokeSperm = stroke_kind::sperm,
   StrokeBite = stroke_kind::bite,
   StrokeDefense = stroke_kind::defense,
+  StrokeReverseLeft = stroke_kind::reverse_left,
+  StrokeReverseRight = stroke_kind::reverse_right,
   STROKE_COUNT = stroke_kind::count
 };
 inline constexpr int ORGAN_PORTS = organ_port::gland + 1;
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
     organ_port::forward, organ_port::turn,  organ_port::turn, organ_port::suction,
-    organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense};
+    organ_port::eggs,    organ_port::sperm, organ_port::jaw,  organ_port::defense,
+    organ_port::turn,    organ_port::turn};
+// The strokes of each pectoral fin: the back stroke pushes the fish forward, the forward stroke
+// of the antagonist muscles pushes it back.
+constexpr std::array<int, 2> BACK_STROKES{StrokeTurnLeft, StrokeTurnRight},
+    FRONT_STROKES{StrokeReverseLeft, StrokeReverseRight};
 struct StrokeState {
   double mean = 0, power = 0, paid = 0;
   int recovery = 0;
@@ -51,7 +58,9 @@ struct MotorState {
   double impulse_right = 0;
   double tail = 0;
   double impulse_forward = 0;
-  double drive_forward = 0, drive_left = 0, drive_right = 0;
+  // drive_left/right: signed fin force times its lever (turning); drive_fins: the fins' signed
+  // push along the body.
+  double drive_forward = 0, drive_left = 0, drive_right = 0, drive_fins = 0;
   double motor_factor = 1;
   double mouth_pose = 0;
   double suction_pose = 0;

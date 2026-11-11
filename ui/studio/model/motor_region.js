@@ -1,9 +1,10 @@
 // Motor coordination: where a stimulus lies, how urgent swimming is and whether to stop become the
-// commands of fins, tail, mouth, jaw and buoyancy. Inputs name the side of the stimulus: "toward"
-// turns to it, "away" and "feel" turn from it. With competing sides a request on one side also
-// inhibits turning to the other, so two requests compete instead of cancelling at the muscle.
-// Every node answers any input: contacts learn only between cells that both vary, so a cell held
-// silent would never learn its inputs.
+// commands of fins, tail, mouth, jaw and buoyancy. "back" makes the fish retreat: the forward
+// strokes of the pectoral fins push it back while the tail rests. Inputs name the side of the
+// stimulus: "toward" turns to it, "away" and "feel" turn from it. With competing sides a request on
+// one side also inhibits turning to the other, so two requests compete instead of cancelling at the
+// muscle. Every node answers any input: contacts learn only between cells that both vary, so a cell
+// held silent would never learn its inputs.
 import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
 
 // Swim threshold for the resting command: silent, gentle cruising, steady cruising.
@@ -27,6 +28,11 @@ export function motorPlan(doc, organ) {
   ];
   const inner =
       [ [ 'brake', 'swim' ], [ 'sated', 'mouth' ], [ 'sated', 'bite' ], [ 'hold', 'lift' ] ];
+  if (r.retreat) {
+    // Retreating pushes with the antagonist fin muscles and brakes the tail.
+    nodes.push(regionCell('reverse', 'relay', 'out', DRIVER), listener('retreat', 'relay'));
+    inner.push([ 'retreat', 'reverse' ], [ 'retreat', 'brake' ]);
+  }
   const cross = [];
   if (organ.pair) {
     nodes.push(listener('flee', 'relay'));

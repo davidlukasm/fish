@@ -1514,7 +1514,9 @@ inline constexpr int egg = 4;
 inline constexpr int sperm = 5;
 inline constexpr int bite = 6;
 inline constexpr int defense = 7;
-inline constexpr int count = 8;
+inline constexpr int reverse_left = 8;
+inline constexpr int reverse_right = 9;
+inline constexpr int count = 10;
 }
 namespace step_phase {
 inline constexpr int development = 0;
@@ -1806,6 +1808,10 @@ namespace contrast_polarity {
 inline constexpr int bright = 0;
 inline constexpr double both = 0.5;
 inline constexpr int dark = 1;
+}
+namespace fin_stroke {
+inline constexpr int back = 0;
+inline constexpr int front = 1;
 }
 namespace water_grid {
 inline constexpr double cell = 32.0;

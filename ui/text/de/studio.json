@@ -439,6 +439,8 @@
     "hold": "Fressen hält unten",
     "flee": "Wegdrehen",
     "oppose": "Hemmt Gegenseite",
+    "retreat": "Zurückweichen",
+    "reverse": "Rückwärts",
     "advance": "Ziel erreichen",
     "hatch": "Schlupfantrieb"
   },
@@ -514,6 +516,8 @@
       "grip": "Zubeißen",
       "full": "Satt",
       "contact": "Am Grund",
+      "back": "Zurückweichen",
+      "reverse": "Rückwärts (Vorschlag)",
       "bite": "Kiefer",
       "lift": "Auftrieb",
       "tail": "Schwanz",
@@ -531,7 +535,8 @@
       "teacher": "Lehrer",
       "features": "Merkmalswege",
       "tone": "Grundtempo",
-      "compete": "Seiten wetteifern"
+      "compete": "Seiten wetteifern",
+      "retreat": "Zurückweichen"
     },
     "values": {
       "contrast": [
@@ -559,6 +564,10 @@
         "zügig"
       ],
       "compete": [
+        "aus",
+        "an"
+      ],
+      "retreat": [
         "aus",
         "an"
       ]
@@ -796,6 +805,14 @@
     "strength": "Kraft je Knoten: {share}",
     "sprint": "Spurtknoten: {sprint} von {count}",
     "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
+    "stroke": {
+      "back": "Rückschlag",
+      "front": "Vorschlag",
+      "backTitle": "Die Flosse schlägt nach hinten und schiebt den Fisch vorwärts",
+      "frontTitle": "Gegenspieler: Die Flosse schlägt nach vorn und schiebt den Fisch zurück",
+      "antagonist": "Gegenspieler",
+      "antagonistTitle": "Legt je Seite einen zweiten Flossenmuskel an, der in die Gegenrichtung schlägt"
+    },
     "undulation": {
       "handle": "Ziehen: wie weit der Körper mitschwingt",
       "beat": "Schwanzschlag",

@@ -1615,7 +1615,7 @@ void Field::stir_sediment(const Body &b) {
   auto &s = vegetation_.surfaces[nearest];
   double m = body_mass(b), u = std::max(0., 1 - best / env_.sediment_reach) *
                                (STIR_SPEED * m * b.motor_.relative_speed * b.motor_.relative_speed +
-                                STIR_THRUST * m * std::max(0., b.motor_.thrust) +
+                                STIR_THRUST * m * std::abs(b.motor_.thrust) +
                                 STIR_TURN * m * radius * std::abs(b.motor_.turn));
   double amount = std::min(loose_sediment(s), u / root_stability(nearest));
   s.sediment -= amount;

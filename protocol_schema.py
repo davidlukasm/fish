@@ -877,7 +877,9 @@ class StrokeKind:
     SPERM = 5
     BITE = 6
     DEFENSE = 7
-    COUNT = 8
+    REVERSE_LEFT = 8
+    REVERSE_RIGHT = 9
+    COUNT = 10
 
 class StepPhase:
     DEVELOPMENT = 0
@@ -1167,6 +1169,10 @@ class ContrastPolarity:
     BRIGHT = 0
     BOTH = 0.5
     DARK = 1
+
+class FinStroke:
+    BACK = 0
+    FRONT = 1
 
 class WaterGrid:
     CELL = 32.0

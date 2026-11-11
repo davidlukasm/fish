@@ -392,6 +392,7 @@
 .aid-organ-hits .aid-lateral-hit{stroke-width:24px}
 .aid-anatomical-nose{fill:var(--aid-touch);stroke:#d7f1d6;stroke-width:1.4}
 .aid-anatomical-muscle{fill:color-mix(in srgb,var(--muscle) 45%,transparent);stroke:var(--muscle);stroke-width:1.6}
+.aid-anatomical-muscle.front{stroke-dasharray:3 2}
 .aid-muscle-home{fill:color-mix(in srgb,var(--muscle) 30%,transparent);stroke:var(--muscle);stroke-width:2;stroke-dasharray:5 4}
 .aid-muscle-home.taken{fill:color-mix(in srgb,var(--muscle) 55%,transparent);stroke-dasharray:none}
 .aid-muscle-home.full{opacity:.3}
@@ -429,6 +430,8 @@
 .aid-contrast-choices button{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:7px;padding:5px 9px}
 .aid-contrast-choices button.active{border-color:#ecdba8;background:#35504a}
 .aid-contrast{width:26px;height:16px}
+.aid-stroke{width:30px;height:16px}
+.aid-stroke path{fill:none;stroke:#f4f1e4;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .aid-contrast rect{fill:#7f8a86}
 .aid-contrast .bright{fill:#f4f1e4}
 .aid-contrast .dark{fill:#1d2422}
