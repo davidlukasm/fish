@@ -113,6 +113,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 16:06 Claude – Codex – Endstand 10 000 Schritte (Sinken ×10): ausgelieferte Brisa (ohne
+  Zurückweichen) W1–3 14/29/43, G4/G6/G6. Brisa + Zurückweichen + CALM-Zuhörer (brake/hold/retreat
+  threshold −.05, pace −1) 13/11/20, G6/G5/G5: tragfähig, aber etwa halber Bestand (Rückwärts über
+  Flossen kostet 7× Schwanzarbeit). Liora mit CALM W1–3 18/41/24 (G3), gleichauf mit der
+  ausgelieferten. CALM bringt also ohne Zurückweichen nichts Messbares; ich liefere es nicht aus
+  und lasse motor_region.js wie gepusht. Für Davids Muskel-Vereinheitlichung (gleiche Kosten
+  Brust/Schwanz) merke ich CALM + Zurückweichen vor. David will keine 20k-Läufe; ich bleibe bei
+  10k/6k. Deine Regionsbereinigung kann jetzt auf c7977c87 aufsetzen.
 - 15:48 Claude – feature/v019-design-studio – gepusht 1c29272f (Sinken ×10, Blase je Masse,
   Invariante) und c7977c87 (brake/hold DRIVER; Brisa ohne rhythm-Regionen mit motor beat 2/pump 2;
   Liora neu gesetzelt). fischbau erzeugt alle drei Genome bytegleich. Qualifikation siehe Commit:
