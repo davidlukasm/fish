@@ -679,6 +679,8 @@
     "strengthHandle": "Ziehen: Kraft jedes Knotens",
     "nodes": "Knoten: {count} von {most} Plätzen",
     "strength": "Kraft je Knoten: {share}",
+    "sprint": "Spurtknoten: {sprint} von {count}",
+    "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
     "undulation": {
       "handle": "Ziehen: wie weit der Körper mitschwingt",
       "beat": "Schwanzschlag",

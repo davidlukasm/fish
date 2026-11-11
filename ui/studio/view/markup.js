@@ -42,6 +42,15 @@ export const widthTrack = ([ left, right ], y, width, attributes, title) =>
               '" cy="' + y + '" r="' + TRACK.wide + '"/>');
 export const plainTrack = (range, y, share, attributes, title) =>
     track(range, y, share, attributes, title, '');
+// A band split at the knob: the part before it always works, the part after it only on demand.
+export const bandTrack = ([ left, right ], y, share, attributes, title) => {
+  const split = left + (right - left) * clamp(share), top = y - TRACK.wide / 2;
+  return track([ left, right ], y, share, attributes, title,
+               '<rect class="aid-band steady" x="' + left + '" y="' + top + '" width="' +
+                   fixed(split - left) + '" height="' + TRACK.wide + '"/><rect class="aid-band ' +
+                   'reserve" x="' + fixed(split) + '" y="' + top + '" width="' +
+                   fixed(right - split) + '" height="' + TRACK.wide + '"/>');
+};
 export const namedTrack = ([ left, right ], y, share, attributes, title, [ from, to ]) => track(
     [ left, right ], y, share, attributes, title,
     '<text x="' + left + '" y="' + (y + TRACK.name) + '">' + escapeText(from) + '</text><text x="' +

@@ -396,6 +396,10 @@
 .aid-muscle-home.taken{fill:color-mix(in srgb,var(--muscle) 55%,transparent);stroke-dasharray:none}
 .aid-muscle-home.full{opacity:.3}
 .aid-muscle-marks{fill:none;stroke:#10292dcc;stroke-width:1.3;stroke-linecap:round;pointer-events:none}
+.aid-muscle-marks.sprint{stroke:#f4f1e4;stroke-width:1.8}
+.aid-band{pointer-events:none}
+.aid-band.steady{fill:#7eabe455}
+.aid-band.reserve{fill:#f4f1e455}
 
 
 .aid-anatomical-organ{cursor:grab}

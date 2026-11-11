@@ -265,7 +265,8 @@ function muscleGlyph(state, organ) {
     return '';
   const tone = MUSCLE_TONE[organFunction(organ, state.sites)];
   return '<path class="aid-anatomical-muscle" d="' + shape.path + '" style="--muscle:' + tone +
-         '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') + '"/>';
+         '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') +
+         '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/>';
 }
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,

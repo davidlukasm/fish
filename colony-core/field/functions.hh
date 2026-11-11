@@ -20,6 +20,10 @@ inline float smooth(float x, float a, float b) {
   float t = std::clamp((x - a) / (b - a), 0.f, 1.f);
   return t * t * (3 - 2 * t);
 }
+// Muscles pull the body or the mouth; the other motors release or secrete.
+constexpr bool muscle_motor(int motor) {
+  return motor == Forward || motor == Turn || motor == Suction || motor == Aggression;
+}
 struct Functions {
   float internal = 1, usable = 1;
   std::array<float, SENSE_COUNT> senses{};
@@ -37,5 +41,11 @@ struct Functions {
     return s;
   }
   bool pure_sensor() const { return internal == 0 && motor() == 0 && sensory() > 0; }
+  bool muscle() const {
+    for (int k = 0; k < MOTOR_COUNT; ++k)
+      if (motors[k] > 0 && muscle_motor(k))
+        return true;
+    return false;
+  }
 };
 }

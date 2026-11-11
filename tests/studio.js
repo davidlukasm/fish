@@ -16,10 +16,10 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "d5f1149f9f71568f",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
-  "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
+  "colony-core/field/functions.hh" : "f90542aac696f5cc",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
-  "colony-core/field/substrate.cc" : "093d95f35ab12b44",
-  "src/body_plan.cc" : "8159cc60d92078d8",
+  "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
+  "src/body_plan.cc" : "1daff4fa9b6650a7",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "4ce375962b70c1f5",
   "src/physiology.cc" : "091be4e30f65adee",
@@ -1891,6 +1891,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(model.muscleTrait(waving, MK.forward, 'undulation', sites) - .9) < 1e-9);
     assert.equal(model.setMuscleTrait(grown, MK.aggression, 'jaw_length', .2, sites), null,
                  'Without biting muscles there is no jaw to set');
+    assert.equal(organ.sprint, 0, 'A new muscle answers every command with all its nodes');
+    const sprinting = model.setMuscleSprint(grown, organ.id, .5);
+    assert.equal(model.findOrgan(sprinting, organ.pair).sprint, .5,
+                 'The linked twin keeps as many nodes for a sprint');
+    const sprintPlan = model.compileDocument(sprinting, sites),
+          everyCenter = model.allCenters(sprinting);
+    const thresholds =
+        model.findOrgan(sprinting, organ.id)
+            .centers.map(
+                c => sprintPlan.groups[everyCenter.findIndex(e => e.id === c.id)].threshold);
+    assert.deepEqual(thresholds.map(x => x === model.SPRINT_THRESHOLD),
+                     [ false, false, true, true ], 'The last nodes join only a strong command');
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
     assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);

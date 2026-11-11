@@ -26,6 +26,7 @@ import {
   profileIndex,
   setBends,
   setMuscleTrait,
+  setMuscleSprint,
   setOrganNodes,
   typeOfCenter,
   updateCenter,
@@ -462,12 +463,14 @@ export const handleMethods = {
     const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites));
     if (!patch)
       return;
-    const changed = 'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
-                                           setOrganNodes(doc, organ.id, patch.nodes, sites)
-                    : 'copies' in patch
-                        ? patch.copies !== organ.centers[0].copies &&
-                              updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
-                        : this.muscleTrait(drag.code, patch.trait, patch.value);
+    const changed =
+        'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
+                               setOrganNodes(doc, organ.id, patch.nodes, sites)
+        : 'sprint' in patch
+            ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
+        : 'copies' in patch ? patch.copies !== organ.centers[0].copies &&
+                                  updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
+                            : this.muscleTrait(drag.code, patch.trait, patch.value);
     if (!changed)
       return;
     this.draftDesign(changed, 'effector:' + drag.id);

@@ -1,7 +1,7 @@
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
-import {musclePlaces, nodeLimit, organFunction} from '../model/organs.js';
+import {musclePlaces, organFunction} from '../model/organs.js';
 import {BODY_FRAME, halfWidth, sideOf, sideSign} from '../model/layout.js';
-import {usedSites} from '../model/document.js';
+import {sprintNodes, usedSites} from '../model/document.js';
 import {FIN_BASE, HEAD, skinAt, SNOUT_TIP} from './frame.js';
 import {fixed} from './markup.js';
 
@@ -13,10 +13,14 @@ export const MUSCLE_TONE = Object.freeze({
 });
 export const WORKS = Object.freeze(
     [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
-function muscleBuild(organ, sites) {
-  const most = nodeLimit(organ, sites), count = organ.centers.length;
+// A muscle is drawn as one band, not cell by cell: its length grows with the number of nodes and
+// saturates, and a few schematic segments stand for all of them.
+const BAND = Object.freeze({half_fill : 8, segments : 5});
+export const muscleSegments = count => Math.max(1, Math.min(count, BAND.segments));
+function muscleBuild(organ) {
+  const count = organ.centers.length;
   const copies = organ.centers.reduce((sum, c) => sum + c.copies, 0) / Math.max(1, count);
-  return {fill : most ? count / most : 0, strength : copies / ATELIER_LIMITS.max_copies};
+  return {fill : count / (count + BAND.half_fill), strength : copies / ATELIER_LIMITS.max_copies};
 }
 const SHAPE = Object.freeze({
   tail : {
@@ -36,8 +40,8 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-function workShape(code, side, {fill, strength}, count) {
-  const s = sideSign(side), along = k => (k + .5) / Math.max(1, count);
+function workShape(code, side, {fill, strength}, nodes) {
+  const s = sideSign(side), count = muscleSegments(nodes), along = k => (k + .5) / count;
   if (code === MOTOR_KIND.forward) {
     const T = SHAPE.tail, end = T.stalk[1],
           start = Math.max(T.stalk[0], end - grow(T.length, fill));
@@ -117,13 +121,27 @@ function workShape(code, side, {fill, strength}, count) {
   }
   return null;
 }
-export const muscleShape = (organ, sites) => workShape(
-    organFunction(organ, sites), sideOf(organ), muscleBuild(organ, sites), organ.centers.length);
+// The segments at the end of the band stand for the sprint nodes.
+export function muscleShape(organ, sites) {
+  const shape = workShape(organFunction(organ, sites), sideOf(organ), muscleBuild(organ),
+                          organ.centers.length);
+  if (!shape)
+    return null;
+  const sprint = sprintNodes(organ), count = shape.marks.length,
+        reserved = sprint ? Math.max(1, Math.round(count * sprint / organ.centers.length)) : 0;
+  return {
+    ...shape,
+    marks : shape.marks.slice(0, count - reserved),
+    sprint : shape.marks.slice(count - reserved)
+  };
+}
+// Every node sits on the segment that stands for it, so wires split into the segments only.
 export function muscleNode(organ, index, sites) {
   const shape = muscleShape(organ, sites);
   if (!shape)
     return null;
-  const share = (index + .5) / Math.max(1, organ.centers.length);
+  const count = organ.centers.length, segments = muscleSegments(count),
+        share = (Math.floor(index * segments / Math.max(1, count)) + .5) / segments;
   return {
     x : shape.from.x + (shape.to.x - shape.from.x) * share,
     y : shape.from.y + (shape.to.y - shape.from.y) * share

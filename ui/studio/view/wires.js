@@ -120,9 +120,13 @@ function branchNodes(state, id, anchor, centers) {
   const nodes = findOrgan(state.document, id) ? organ.centers : [ centers.get(id).center ];
   if (nodes.length < 2 && findOrgan(state.document, id))
     return [];
-  return nodes.map(
-      center =>
-          ({id : center.id, ...nodeLocation(state.document, state.sites, center, organ.type)}));
+  // Muscle nodes share their schematic segments; one branch reaches each segment.
+  const reached = new Map();
+  for (const center of nodes) {
+    const at = nodeLocation(state.document, state.sites, center, organ.type);
+    reached.set(fixed(at.x) + ' ' + fixed(at.y), {id : center.id, ...at});
+  }
+  return [...reached.values() ];
 }
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19, lane : 9});
 function course(from, to, lane) {

@@ -11,6 +11,9 @@
 namespace fishsim {
 namespace {
 constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
+// A muscle cell stands for a whole muscle segment: it pulls four times as hard as one fibre, and
+// its mass, upkeep and work grow with it.
+constexpr float MUSCLE_CELL_FORCE = 4;
 constexpr double NOSE_AHEAD = .8, NOSE_OFFSET = .6, NOSE_GAP = .2, NOSE_MIN_OFFSET = 3,
                  LATERAL_PROBE = .5;
 constexpr double EARLY_THRESHOLD = .3, LATE_THRESHOLD = .7, SPAN_WEIGHT = .25, DIRECTION_GAP = .08;
@@ -200,8 +203,8 @@ class AnatomyBuilder {
       r.spatial_width = p.field_width;
       r.opponency = std::clamp((p.quality2 + 1) * .5f, 0.f, 1.f);
       // Only nerve cells read identity4 otherwise; for a sensory cell it picks ON or OFF cells.
-      r.dark_share = std::clamp(n.identity[cppn::output::identity4 - cppn::output::identity_role],
-                                0.f, 1.f);
+      r.dark_share =
+          std::clamp(n.identity[cppn::output::identity4 - cppn::output::identity_role], 0.f, 1.f);
       r.response_threshold = float(response_threshold(p.threshold));
       for (int k = 0; k < field::SENSE_COUNT; ++k)
         r.senses[k] = fn.senses[k] / share;
@@ -261,7 +264,8 @@ class AnatomyBuilder {
     for (int j = 0; j < field::MOTOR_COUNT; ++j)
       if (fn.motors[j] > 0) {
         const int port = motor_ports[j];
-        const float capacity = strength * fn.motors[j];
+        const float capacity =
+            strength * fn.motors[j] * (field::muscle_motor(j) ? MUSCLE_CELL_FORCE : 1.f);
         const auto &p = n.parameters;
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
         const double total = j == field::Pigment ? 1 : absorb[0] + absorb[1] + absorb[2];

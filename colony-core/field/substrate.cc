@@ -83,6 +83,9 @@ inline F8 gather8(const float *base, const I8 &index) {
 }
 constexpr double PI_F = 3.14159265358979323846;
 constexpr double MIN_PACE_PERIOD = TIME_CONSTANT_PACE_MIN;
+// A muscle cell with a high threshold is a large motor unit: it joins only once the command is
+// as strong as this, so a weak drive moves only the small units.
+constexpr float MUSCLE_RECRUITMENT = 1;
 constexpr std::array<double, 3> PHASE_SALT{7.31, 3.17, 1.93};
 constexpr std::uint64_t PCG_MULTIPLIER = 6364136223846793005ull,
                         PCG_INCREMENT = 1442695040888963407ull;
@@ -803,8 +806,11 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
     }
     next_[i] = own;
     if (effector) {
-      const float drive = std::copysign(
-          std::max(0.f, std::abs(input + pulse_[i]) - std::max(0.f, -c.bias)), input + pulse_[i]);
+      const float dead = c.functions.muscle()
+                             ? MUSCLE_RECRUITMENT * std::max(0.f, 2 * c.parameters.threshold - 1)
+                             : std::max(0.f, -c.bias);
+      const float drive =
+          std::copysign(std::max(0.f, std::abs(input + pulse_[i]) - dead), input + pulse_[i]);
       organ_output_[i] = float(std::tanh((1 + hormone_effect_[Excitation][i]) * drive)) *
                          (.5f * (1 + hormone_effect_[Output][i]));
     }

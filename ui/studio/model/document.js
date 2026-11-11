@@ -110,6 +110,9 @@ export function validateDocument(doc) {
     }
     if (organ.pair && doc.organs.find(o => o.id === organ.pair)?.pair !== organ.id)
       throw new Error('studio.errors.invalidDocument');
+    if (organ.type === 'muscle' &&
+        !(Number.isFinite(organ.sprint) && organ.sprint >= 0 && organ.sprint <= 1))
+      throw new Error('studio.errors.invalidDocument');
     if (isRegion(organ)) {
       const r = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
       if (!r || ![0, 1].includes(r.follow) || !Number.isInteger(r.site) ||
@@ -495,6 +498,8 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
     pair : null,
     linked : false
   };
+  if (type === 'muscle')
+    organ.sprint = 0;
   if (type === 'eye' || type === 'proximity') {
     organ.field = fieldRecipe(first, identifier('profile'));
     if (type === 'proximity')
@@ -810,6 +815,22 @@ export function setMuscleTrait(doc, code, key, trait, sites) {
   const draft = copy(doc);
   for (const center of musclesOf(draft, code, sites))
     center[quality] = planOfUnit(trait);
+  return draft;
+}
+// The last nodes of a muscle are sprint nodes: they answer only a strong command, so a weak drive
+// moves the muscle gently and a strong one recruits its whole force.
+export const SPRINT_THRESHOLD = 1;
+export const sprintNodes = organ =>
+    organ.type === 'muscle' ? Math.floor(organ.sprint * organ.centers.length + 1e-9) : 0;
+export const isSprintNode = (organ, index) => index >= organ.centers.length - sprintNodes(organ);
+export function setMuscleSprint(doc, organId, share) {
+  const organ = findOrgan(doc, organId);
+  if (organ?.type !== 'muscle' || !Number.isFinite(share))
+    return null;
+  const draft = copy(doc);
+  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const o of [main, twin].filter(Boolean))
+    o.sprint = clamp(share, 0, 1);
   return draft;
 }
 export function placeNode(doc, centerId, siteId, sites) {
@@ -1535,7 +1556,8 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         role : ROLE[center.role],
         function : functionFor(center, site),
         copies : clamp(Math.round(center.copies), 1, ATELIER_LIMITS.max_copies),
-        threshold : center.threshold,
+        threshold : isSprintNode(organ, organ.centers.indexOf(center)) ? SPRINT_THRESHOLD
+                                                                       : center.threshold,
         tau : center.tau,
         field : center.field,
         q1 : center.q1,

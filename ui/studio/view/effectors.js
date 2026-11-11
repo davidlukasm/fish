@@ -9,10 +9,10 @@ import {
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {functionFor, nodeLimit, organFunction} from '../model/organs.js';
-import {centerIndex, findOrgan, muscleTrait} from '../model/document.js';
+import {centerIndex, findOrgan, muscleTrait, sprintNodes} from '../model/document.js';
 import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
-import {escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
+import {bandTrack, escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
@@ -28,7 +28,7 @@ const handle = (name, x, y, title) =>
 const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
 const CONTROLS =
-    Object.freeze({width : 300, height : 92, track : [ 10, 290 ], rows : [ 34, 78 ], title : 14});
+    Object.freeze({width : 300, track : [ 10, 290 ], rows : [ 34, 78, 122 ], title : 14});
 const countShare = (count, most) => most > 1 ? (count - 1) / (most - 1) : null;
 export function nodeControls(organ, code, most) {
   const C = CONTROLS, count = organ.centers.length, copies = organ.centers[0]?.copies ?? 1;
@@ -36,7 +36,9 @@ export function nodeControls(organ, code, most) {
       '<text class="aid-control-title" x="' + C.track[0] + '" y="' + (y - C.title) + '">' +
       escapeText(text) + '</text>' +
       plainTrack(C.track, y, share, 'data-effector-handle="' + name + '"', title);
-  return '<svg class="aid-effector-controls" viewBox="0 0 ' + C.width + ' ' + C.height +
+  // Only muscles hold sprint nodes; other organs with nodes show the first two rows.
+  const muscle = organ.type === 'muscle', height = C.rows[muscle ? 2 : 1] + C.title;
+  return '<svg class="aid-effector-controls" viewBox="0 0 ' + C.width + ' ' + height +
          '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
          '" data-effector-side="' + sideOf(organ) + '">' +
          row(C.rows[0], 'nodes', countShare(count, most), label('nodes', {count, most}),
@@ -44,13 +46,22 @@ export function nodeControls(organ, code, most) {
          row(C.rows[1], 'strength', copies / ATELIER_LIMITS.max_copies,
              label('strength', {share : percent(copies / ATELIER_LIMITS.max_copies)}),
              label('strengthHandle')) +
+         (muscle
+              ? '<text class="aid-control-title" x="' + C.track[0] + '" y="' +
+                    (C.rows[2] - C.title) + '">' +
+                    escapeText(label('sprint', {sprint : sprintNodes(organ), count})) + '</text>' +
+                    bandTrack(C.track, C.rows[2], 1 - organ.sprint, 'data-effector-handle="sprint"',
+                              label('sprintHandle'))
+              : '') +
          '</svg>';
 }
 export function effectorPatch(code, name, fx, fy, most) {
-  if (name === 'nodes' || name === 'strength') {
+  if (name === 'nodes' || name === 'strength' || name === 'sprint') {
     const share = trackShare(fx * CONTROLS.width, CONTROLS.track);
     return name === 'nodes' ? {nodes : 1 + Math.round(share * Math.max(0, most - 1))}
-                            : {copies : Math.max(1, Math.round(share * ATELIER_LIMITS.max_copies))};
+           : name === 'sprint'
+               ? {sprint : 1 - share}
+               : {copies : Math.max(1, Math.round(share * ATELIER_LIMITS.max_copies))};
   }
   if (name.startsWith(CHART_HANDLE)) {
     const spec = DIET_CHARTS[name.slice(CHART_HANDLE.length)];
