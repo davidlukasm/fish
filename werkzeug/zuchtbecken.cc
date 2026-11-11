@@ -14,6 +14,7 @@ namespace {
 constexpr std::array<double, 3> RADII{24, 64, 128};
 constexpr int SAMPLE_STEPS = 400, OBSERVATION_STEPS = 5, PICTURE_STEPS = 100,
               QUANTILE_DIVISIONS = 4;
+constexpr int FORAGING_STEPS = 100;
 struct LastSeen {
   unsigned generation = 0;
   int age = 0;
@@ -52,6 +53,66 @@ template <class Map> void counts(const Map &values) {
     comma = true;
   }
   std::cout << ']';
+}
+
+void foraging(std::ostream &out, const Ecosystem &w, double eaten) {
+  const auto &f = w.field;
+  out << "{\"t\":" << w.ticks << ",\"supplied\":" << f.feeding().food_supplied
+      << ",\"decayed\":" << f.feeding().food_decayed << ",\"eaten\":" << eaten
+      << ",\"foodWebEaten\":" << f.food_web().food_eaten << ",\"supply\":" << f.artificial_supply()
+      << ",\"nature\":" << f.feeding().nature_average << ",\"clouds\":[";
+  for (int i = 0; i < f.source_count(); ++i) {
+    const auto center = f.food_cloud(i);
+    double energy = 0;
+    int pieces = 0;
+    for (const auto &p : f.feeding().pieces)
+      if (p.origin == food_kind::feed && p.cloud == i && p.energy > 0) {
+        energy += p.energy;
+        ++pieces;
+      }
+    out << (i ? ",[" : "[") << center.x << ',' << center.y << ',' << energy << ',' << pieces << ']';
+  }
+  out << "],\"food\":[";
+  bool first = true;
+  for (const auto &p : f.feeding().pieces)
+    if (p.origin == food_kind::feed && p.energy > 0) {
+      out << (first ? "[" : ",[") << p.render_id << ',' << p.cloud << ',' << p.x << ',' << p.y
+          << ',' << p.energy << ']';
+      first = false;
+    }
+  out << "],\"fish\":[";
+  first = true;
+  for (const auto &p : w.fish) {
+    const auto &b = p.body;
+    const double mx = b.x + mouth_offset(b) * std::cos(b.angle),
+                 my = b.y + mouth_offset(b) * std::sin(b.angle);
+    double nearest = std::numeric_limits<double>::infinity(), nearby = 0;
+    int cloud = -1;
+    for (const auto &piece : f.feeding().pieces)
+      if (piece.origin == food_kind::feed && piece.energy > 0) {
+        const double distance =
+            std::max(0., std::hypot(f.delta_x(piece.x - mx), piece.y - my) - food_radius(piece));
+        if (distance < nearest) {
+          nearest = distance;
+          cloud = piece.cloud;
+        }
+        if (distance <= RADII.back())
+          nearby += piece.energy;
+      }
+    out << (first ? "[" : ",[") << p.id << ',' << p.g << ',' << b.hatched << ',' << b.x << ','
+        << b.y << ',' << b.energy << ',' << b.gut_energy << ','
+        << p.observations().raw_diet[food_kind::feed] << ',';
+    if (std::isfinite(nearest))
+      out << nearest;
+    else
+      out << "null";
+    out << ',' << cloud << ',' << nearby << ',' << b.age << ',' << b.health << ',' << b.motor().vx
+        << ',' << b.motor().vy << ',' << b.motor().drive_forward << ',' << b.motor().drive_left
+        << ',' << b.motor().drive_right << ',' << b.rest_cost << ',' << b.ledger().movement_cost
+        << ',' << b.ledger().brain_cost << ',' << p.parent << ']';
+    first = false;
+  }
+  out << "]}\n" << std::flush;
 }
 
 void snapshot(const Ecosystem &w, const std::string &prefix) {
@@ -113,7 +174,8 @@ int main(int argc, char **argv) {
     if (argc < 6)
       throw std::invalid_argument(
           "Aufruf: zuchtbecken GENOM[,GENOM...] SEED SCHRITTE ANZAHL aquarium|becken "
-          "[Parameter=Wert ...] [snapshot=PFAD] [observe=PFAD]");
+          "[Parameter=Wert ...] [snapshot=PFAD] [observe=PFAD] [foraging=DATEI] "
+          "[checkpoint=DATEI] [reproduce=0|1]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
     const std::string habitat = argv[5];
@@ -133,7 +195,8 @@ int main(int argc, char **argv) {
       w.resize(960, 640);
       w.field.flow = 0;
     }
-    std::string pictures, observed;
+    std::string pictures, observed, foraging_path, checkpoint;
+    bool reproduce = true;
     for (int i = 6; i < argc; ++i) {
       const std::string option = argv[i];
       const auto split = option.find('=');
@@ -144,6 +207,12 @@ int main(int argc, char **argv) {
         pictures = value;
       else if (key == "observe")
         observed = value;
+      else if (key == "foraging")
+        foraging_path = value;
+      else if (key == "checkpoint")
+        checkpoint = value;
+      else if (key == "reproduce" && (value == "0" || value == "1"))
+        reproduce = value == "1";
       else if (!w.set_parameter(key, std::stod(value)))
         throw std::invalid_argument("Unbekannter Parameter: " + key);
     }
@@ -157,6 +226,22 @@ int main(int argc, char **argv) {
     for (std::size_t i = 0; i < w.fish.size(); ++i)
       line_of[w.fish[i].id] = int(i % genomes.size());
     const int lines = int(genomes.size());
+    std::ofstream feeding_observations;
+    if (!foraging_path.empty()) {
+      feeding_observations.open(foraging_path);
+      if (!feeding_observations)
+        throw std::runtime_error("Futtersuche kann nicht gespeichert werden");
+      feeding_observations
+          << "{\"every\":" << FORAGING_STEPS << ",\"nearRadius\":" << RADII.back()
+          << ",\"width\":" << w.field.geometry().width
+          << ",\"height\":" << w.field.geometry().height
+          << ",\"cloudColumns\":[\"x\",\"y\",\"energy\",\"pieces\"],"
+             "\"foodColumns\":[\"id\",\"cloud\",\"x\",\"y\",\"energy\"],"
+             "\"fishColumns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"energy\","
+             "\"gutEnergy\",\"rawFeed\",\"nearestFeed\",\"nearestFeedCloud\",\"nearbyFeed\","
+             "\"age\",\"health\",\"vx\",\"vy\",\"forward\",\"left\",\"right\",\"restCost\","
+             "\"movementCost\",\"brainCost\",\"parent\"]}\n";
+    }
     std::ofstream observations;
     if (!observed.empty()) {
       observations.open(observed + "-trace.jsonl");
@@ -180,7 +265,8 @@ int main(int argc, char **argv) {
     }
     std::cout << "{\"event\":\"setup\",\"habitat\":\"" << habitat << "\",\"seed\":" << seed
               << ",\"requested\":" << count << ",\"seeded\":" << w.fish.size()
-              << ",\"assistance\":false,\"mutation\":" << w.evo.mutation << ",\"leafRadii\":[";
+              << ",\"assistance\":false,\"reproduce\":" << (reproduce ? "true" : "false")
+              << ",\"mutation\":" << w.evo.mutation << ",\"leafRadii\":[";
     for (std::size_t i = 0; i < RADII.size(); ++i)
       std::cout << (i ? "," : "") << RADII[i];
     std::cout << "],\"quantiles\":[";
@@ -263,6 +349,8 @@ int main(int argc, char **argv) {
         std::cout << "}\n";
       }
       const bool last = tick == steps || (count > 0 && w.fish.empty());
+      if (feeding_observations.is_open() && (tick % FORAGING_STEPS == 0 || last))
+        foraging(feeding_observations, w, food[food_kind::feed]);
       if (observations.is_open()) {
         if (tick % OBSERVATION_STEPS == 0 || last)
           trace(observations, w, line_of);
@@ -366,9 +454,18 @@ int main(int argc, char **argv) {
         if (tick == 0 || last || tick % (5 * SAMPLE_STEPS) == 0)
           snapshot(w, pictures);
       }
-      if (last)
+      if (last) {
+        if (!checkpoint.empty()) {
+          std::ofstream out(checkpoint);
+          if (!out)
+            throw std::runtime_error("Versuchszustand kann nicht gespeichert werden");
+          w.write(out);
+          if (!out)
+            throw std::runtime_error("Versuchszustand konnte nicht gespeichert werden");
+        }
         break;
-      w.tick();
+      }
+      w.tick(reproduce);
     }
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
