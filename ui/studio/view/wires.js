@@ -10,6 +10,8 @@ import {
   endpointCenters,
   findAssembly,
   findOrgan,
+  pairEndpoint,
+  wireEndpointCenters,
   wholeEndpoint
 } from '../model/document.js';
 import {BODY_FRAME, sideOf} from '../model/layout.js';
@@ -25,7 +27,7 @@ export function pathTo(from, to, curve = 0) {
   return 'M' + fixed(from.x) + ' ' + fixed(from.y) + ' Q' + fixed((from.x + to.x) / 2) + ' ' +
          fixed((from.y + to.y) / 2 - rise) + ' ' + fixed(to.x) + ' ' + fixed(to.y);
 }
-function networkMemberSet(doc, sites, selection, contacts = null, centers = allCenters(doc)) {
+export function networkMemberSet(doc, selection, centers = allCenters(doc)) {
   if (!selection)
     return null;
   const active = new Set();
@@ -39,52 +41,27 @@ function networkMemberSet(doc, sites, selection, contacts = null, centers = allC
   if (selection.kind === 'wire') {
     const wire = doc.wires.find(w => w.id === selection.id);
     if (wire) {
-      active.add(wire.from);
-      active.add(wire.to);
+      for (const [id, port, dir] of [[ wire.from, wire.fromPort, 'out' ],
+                                     [ wire.to, wire.toPort, 'in' ]])
+        for (const endpoint of [id, pairEndpoint(doc, id)].filter(Boolean))
+          for (const c of wireEndpointCenters(doc, endpoint, port, dir))
+            active.add(c.id);
     }
   }
   if (selection.kind === 'center' || selection.kind === 'generated')
     active.add(selection.id);
   if (selection.kind === 'organ') {
-    active.add(selection.id);
-    for (const c of findOrgan(doc, selection.id)?.centers ?? [])
-      active.add(c.id);
+    for (const id of [selection.id, pairEndpoint(doc, selection.id)].filter(Boolean)) {
+      active.add(id);
+      for (const c of findOrgan(doc, id)?.centers ?? [])
+        active.add(c.id);
+    }
   }
   if (selection.kind === 'assembly') {
     const a = findAssembly(doc, selection.id);
     for (const id of a?.centerIds ?? [])
       active.add(id);
   }
-  const adjacency = new Map();
-  const connect = (from, to) => {
-    if (!from || !to)
-      return;
-    if (!adjacency.has(from))
-      adjacency.set(from, new Set());
-    if (!adjacency.has(to))
-      adjacency.set(to, new Set());
-    adjacency.get(from).add(to);
-    adjacency.get(to).add(from);
-  };
-  if (contacts) {
-    for (const {from, to, count} of contacts.map(contactBundle))
-      if (count > 0)
-        connect(centers[from]?.id, centers[to]?.id);
-  } else
-    for (const link of routedLinks(doc, sites)) {
-      connect(link.from, link.to);
-      for (const c of endpointCenters(doc, link.from))
-        connect(link.from, c.id);
-      for (const c of endpointCenters(doc, link.to))
-        connect(link.to, c.id);
-    }
-  const queue = [...active ];
-  for (let index = 0; index < queue.length; ++index)
-    for (const adjacent of adjacency.get(queue[index]) ?? [])
-      if (!active.has(adjacent)) {
-        active.add(adjacent);
-        queue.push(adjacent);
-      }
   return active;
 }
 function organAnchor(doc, sites, organ) {
@@ -244,10 +221,10 @@ const signalPairs = (doc, link) =>
                      endpointCenters(doc, link.to).map(target => source.id + '>' + target.id));
 function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
-  const members = wireScope === 'focus' ? networkMemberSet(doc, sites, selected) : null;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
   const bundles = new Map(), inside = [];
   for (const link of routedLinks(doc, sites)) {
-    if (members && !(members.has(link.from) && members.has(link.to)))
+    if (members && !(members.has(link.from) || members.has(link.to)))
       continue;
     const within = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
                    centers.get(link.from).organ === centers.get(link.to).organ &&
@@ -446,8 +423,7 @@ export function developedContactsSvg(state, centers) {
   const C = CONTACTS;
   const {document : doc, sites, selected, wireScope} = state;
   const contacts = contactRows(state);
-  const members =
-      wireScope === 'focus' ? networkMemberSet(doc, sites, selected, contacts, centerList) : null;
+  const members = wireScope === 'focus' ? networkMemberSet(doc, selected, centerList) : null;
   const importance = ({count, positive, negative, positiveWeight, negativeWeight}) =>
       Math.sqrt(count) *
       (C.floor +
@@ -455,8 +431,8 @@ export function developedContactsSvg(state, centers) {
   const entries =
       contacts.map(contactBundle)
           .filter(({from, to, count}) => count > 0 && centerList[from] && centerList[to] &&
-                                         (!members || members.has(centerList[from].id) &&
-                                                          members.has(centerList[to].id)))
+                                         (!members || members.has(centerList[from].id) ||
+                                          members.has(centerList[to].id)))
           .sort((a, b) => importance(b) - importance(a))
           .slice(0, (state.contactLimit ?? CONTACT_LIMITS[0]) || Infinity)
           .reverse();

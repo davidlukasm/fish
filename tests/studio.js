@@ -560,8 +560,6 @@ async function checkResponseControls(model, capabilities, clicks) {
   }
   {
     const regions = await import('../ui/studio/model/regions.js');
-    assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key),
-                     [ 'tectum', 'circuit', 'rhythm', 'teaching' ]);
     const site = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side < 0);
     const placed = model.addOrgan(model.newDocument('Schaltzentrum'), 'circuit', sites,
                                   geometry.sitePoint(site, 'nerve'));
@@ -696,8 +694,8 @@ async function checkResponseControls(model, capabilities, clicks) {
                                geometry.sitePoint(home, 'nerve'));
       assert.ok(r);
       const o = model.findOrgan(r.document, r.organId);
-      assert.equal(o.centers.length, definition.settings.resolution?.initial ?? 1,
-                   'A default region holds one population, a map one per band');
+      assert.equal(o.centers.length, regions.regionPlan(r.document, o).nodes.length,
+                   'The entire regional circuit fits into its allocated tissue');
       assert.equal(!!o.pair, definition.scope === 'side');
       model.compileDocument(r.document, sites);
     }

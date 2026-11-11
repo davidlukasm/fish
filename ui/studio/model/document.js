@@ -153,6 +153,8 @@ export function validateDocument(doc) {
     throw new Error('studio.errors.invalidDocument');
   for (const wire of doc.wires) {
     if (!ids.has(wire.from) || !ids.has(wire.to) ||
+        (ORGAN_BY_KEY[findOrgan(doc, wire.from)?.type]?.namedPorts && wire.fromPort == null) ||
+        (ORGAN_BY_KEY[findOrgan(doc, wire.to)?.type]?.namedPorts && wire.toPort == null) ||
         (wire.fromPort != null &&
          !slotCenters(findOrgan(doc, wire.from), wire.fromPort, 'out').length) ||
         (wire.toPort != null && !slotCenters(findOrgan(doc, wire.to), wire.toPort, 'in').length) ||
@@ -1354,6 +1356,8 @@ export function wireEndpointCenters(doc, id, port, dir) {
   const organ = findOrgan(doc, id);
   if (port != null)
     return slotCenters(organ, port, dir);
+  if (ORGAN_BY_KEY[organ?.type]?.namedPorts)
+    return [];
   return endpointCenters(doc, id).filter(
       c => (dir === 'in' ? c.role !== 'sensor' : c.role !== 'motor') &&
            (!isRegion(organ) || c.port === 'both' || c.port === dir));

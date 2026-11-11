@@ -1,6 +1,6 @@
 import {HORMONES} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
-import {PAIRINGS} from './model/organs.js';
+import {ORGAN_BY_KEY, PAIRINGS} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
 import {findSite, sitePoint} from './model/layout.js';
 import {toggleInnerLink, updateRegion} from './model/regions.js';
@@ -182,6 +182,12 @@ function clickItem(studio, element, event) {
 }
 function wireItem(studio, kind, id) {
   const {from, to} = studio.pendingWire ?? {}, item = {kind, id};
+  if (kind === 'organ' && ORGAN_BY_KEY[findOrgan(studio.state.document, id)?.type]?.namedPorts) {
+    studio.state.selected = item;
+    studio.refreshViews();
+    studio.notice(label('status.choosePort'));
+    return;
+  }
   studio.pendingWire = null;
   if (to && to.id !== id) {
     if (studio.connectSelections(item, to))

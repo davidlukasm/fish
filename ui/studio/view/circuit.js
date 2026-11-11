@@ -341,8 +341,9 @@ function regionControls(state, organ) {
     return '';
   const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
   const most = regionPlan(state.document, organ).most ?? {};
-  const command = organ.centers.find(c => c.node === 'command');
-  const beat = organ.centers.find(c => c.node === 'beat');
+  const command =
+      organ.centers.find(c => ['command', 'target', 'feature1', 'pause'].includes(c.node));
+  const beat = organ.centers.find(c => c.node === 'beat' || c.node === 'search');
   const response = command ? responseDiagram(state, command)
                    : beat  ? driveElement(beat, label('inspector.beat'),
                                           n => t('studio.inspector.beatSteps', {n}),
@@ -390,7 +391,8 @@ function regionControls(state, organ) {
           : '';
   return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
          label('regions.settingsTitle') + '</h4>' + response + choices +
-         regionTeacher(state, organ) + crowded + follows + '</section>';
+         (organ.type === 'value' ? '' : regionTeacher(state, organ)) + crowded + follows +
+         '</section>';
 }
 export function regionSettings(state, organ) {
   const circuit = regionCircuit(state, organ);

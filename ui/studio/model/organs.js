@@ -1,5 +1,6 @@
 import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
+import {REGION_TYPES} from './region_catalog.js';
 
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
 export const STIMULUS_ORGAN = Object.freeze({
@@ -143,7 +144,9 @@ export const ORGANS = Object.freeze([
     centers : [
       sensor('food', SENSE_KIND.intake, 4, 'inner'),
       sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner')
-    ]
+    ],
+    slots :
+        [ slot('intake', 'out', [], false, 'food'), slot('fullness', 'out', [], false, 'fullness') ]
   },
   {
     key : 'bladder',
@@ -255,7 +258,8 @@ export const ORGANS = Object.freeze([
     slots :
         [ slot('inner', 'in', [ 'gut', 'blood', 'pain' ], true), slot('onward', 'out', [], true) ],
     settings : {}
-  }
+  },
+  ...REGION_TYPES
 ].map(item => Object.freeze({
   ...item,
   // The centers of an organ that comes in pairs know it, to keep off the midline.

@@ -6,7 +6,15 @@ import {
   organSlots,
   slotCenters
 } from './organs.js';
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {
+  ACTIVE_LEARNING,
+  CIRCUIT_LEARNING,
+  DEVELOPING_RELAY,
+  TONIC_LEARNING
+} from './region_cells.js';
+import {statePlan} from './state_region.js';
+import {choicePlan} from './choice_region.js';
+import {valuePlan} from './value_region.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
@@ -110,30 +118,11 @@ function tectumPlan(doc, organ) {
   return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
 }
 
-const ACTIVE_LEARNING = Object.freeze({
-  [HORMONE_EFFECT.learning] : {active : 1, baseline : 1},
-  [HORMONE_EFFECT.competition] : {active : 1, baseline : 1}
-});
-const DEVELOPING_RELAY = Object.freeze({
-  ...ACTIVE_LEARNING,
-  // Embryos start well developed; the lower baseline still silences the pacer at full maturity.
-  [HORMONE_EFFECT.rhythm] : {
-    active : 1,
-    baseline : .5,
-    sensitivity : -2,
-    half : .8,
-    substance : HORMONES.levels,
-    steepness : 3
-  }
-});
-const CIRCUIT_LEARNING =
-    Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
 // A small tonic signal permits new afferents to learn without a strong resting command.
 const CIRCUIT_THRESHOLD = Object.freeze([ -.05, 0, .5 ]),
       CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 4, 8 ]),
       CIRCUIT_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
 const COMPARISON_THRESHOLD = Object.freeze([ -.05, -.02, -.005 ]);
-const TONIC_LEARNING = Object.freeze({...ACTIVE_LEARNING, [HORMONE_EFFECT.rhythm] : {active : 0}});
 function circuitPlan(doc, organ) {
   const r = organ.region, comparison = !!(organ.pair && r.compare);
   const nodes = [ {
@@ -203,8 +192,15 @@ function teachingPlan() {
     view : null
   };
 }
-const PLANS = Object.freeze(
-    {tectum : tectumPlan, circuit : circuitPlan, rhythm : rhythmPlan, teaching : teachingPlan});
+const PLANS = Object.freeze({
+  tectum : tectumPlan,
+  circuit : circuitPlan,
+  rhythm : rhythmPlan,
+  teaching : teachingPlan,
+  state : statePlan,
+  choice : choicePlan,
+  value : valuePlan
+});
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
@@ -215,6 +211,9 @@ export function routedLinks(doc, sites, withCut = false) {
   const links = [];
   for (const link of expandedWires(doc)) {
     const source = findOrgan(doc, link.from), target = findOrgan(doc, link.to);
+    if (ORGAN_BY_KEY[source?.type]?.namedPorts && link.wire.fromPort == null ||
+        ORGAN_BY_KEY[target?.type]?.namedPorts && link.wire.toPort == null)
+      continue;
     const froms = link.wire.fromPort != null
                       ? slotCenters(source, link.wire.fromPort, 'out').map(c => c.id)
                   : plans.has(source?.id) ? out(source, plans.get(source.id))

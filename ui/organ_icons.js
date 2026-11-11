@@ -73,5 +73,8 @@ export const STUDIO_ICON = Object.freeze({
   tectum : 'M4 12c3-5 13-5 16 0-3 5-13 5-16 0zM12 10a2 2 0 1 0 .01 0M12 3v3M12 18v3',
   circuit : 'M4 7h5v10H4zM15 7h5v10h-5zM9 10h6M9 14h6M2 12h2M20 12h2',
   rhythm : 'M2 12h4l2-5 3 10 3-10 2 5h6',
-  teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8'
+  teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8',
+  state : 'M4 6h16v12H4zM8 9v6M12 9v6M16 9v6M8 3v3M16 18v3',
+  choice : 'M3 5h5l8 14h5M3 19h5L16 5h5M12 3v4M12 17v4',
+  value : 'M3 7h6v10H3zM15 7h6v10h-6zM9 10h6M9 14h6M5 3v2M3 3h4M17 3h4'
 });

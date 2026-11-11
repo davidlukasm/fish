@@ -55,7 +55,7 @@
     "drawnContacts": "Entwurf",
     "developedContacts": "CPPN-Vorschläge",
     "allNetworks": "Alle Verbindungen",
-    "focusedNetwork": "Ausgewähltes Netzwerk",
+    "focusedNetwork": "Verbindungen der Auswahl",
     "contactLimit": "Kontaktbündel",
     "allContacts": "alle"
   },
@@ -108,7 +108,10 @@
     "tectum": "Seh­zentrum",
     "rhythm": "Takt­geber",
     "teaching": "Lehr­signal",
-    "circuit": "Schalt­zentrum"
+    "circuit": "Schalt­zentrum",
+    "state": "Körperzustand",
+    "choice": "Handlungswahl",
+    "value": "Bewertung"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -330,7 +333,12 @@
       }
     },
     "barbelsTaste": "Die Barteln wachsen mit ihren Zellen. Ihre Spitzen schmecken nur, was sie berühren – keine Duftwolke –, und tasten Stein, Boden, Körper und Schlamm. Die Abstimmung wählt, welche Sorten sie schmecken.",
-    "barbelFeel": {"label": "Bartelspitze", "taste": "Schmeckt", "both": "Schmeckt und tastet", "touch": "Tastet"},
+    "barbelFeel": {
+      "label": "Bartelspitze",
+      "taste": "Schmeckt",
+      "both": "Schmeckt und tastet",
+      "touch": "Tastet"
+    },
     "muscleKind": "Muskelart ändern",
     "answerTo": "Antwort auf {stimulus}",
     "held": "{stimulus} gehalten",
@@ -387,7 +395,8 @@
   ],
   "regionNodes": {
     "families": {
-      "map": "Karte"
+      "map": "Karte",
+      "feature": "Merkmale"
     },
     "map": "Karte {from}–{to}°",
     "mapType": "Karte {from}–{to}°, Farbtyp {n}",
@@ -396,7 +405,26 @@
     "beat": "Taktgeber",
     "cross": "Hemmung",
     "command": "Kommando",
-    "teach": "Lehrsignal"
+    "teach": "Lehrsignal",
+    "intake": "Nahrungsaufnahme",
+    "satiety": "Sättigung",
+    "reserve": "Reservefühler",
+    "deficit": "Energiemangel",
+    "pause": "Verweilen",
+    "investment": "Fortpflanzungsantrieb",
+    "eggReady": "Ei bereit",
+    "spermReady": "Sperma bereit",
+    "target": "Ziel verfolgen",
+    "threat": "Ausweichen",
+    "search": "Erkunden",
+    "seen": "Ziel hemmt Suche",
+    "alarm": "Gefahr hemmt Annäherung",
+    "reward": "Erfolg lehrt",
+    "harm": "Schaden lehrt",
+    "feature1": "Merkmal 1",
+    "feature2": "Merkmal 2",
+    "feature3": "Merkmal 3",
+    "feature4": "Merkmal 4"
   },
   "regions": {
     "response": {
@@ -435,14 +463,35 @@
       "storage": "Vorrat bilden",
       "control": "Kommando steuern",
       "fullness": "Füllstand",
-      "steering": "Eingang"
+      "steering": "Eingang",
+      "intake": "Nahrungsaufnahme",
+      "reserve": "Energiereserve",
+      "eggFullness": "Eifüllung",
+      "spermFullness": "Spermafüllung",
+      "satiety": "Sättigung",
+      "pause": "Verweilen",
+      "investment": "Vorräte bilden",
+      "lay": "Ei abgeben",
+      "spermRelease": "Sperma abgeben",
+      "target": "Ziel",
+      "threat": "Gefahr",
+      "approach": "Annähern",
+      "avoid": "Ausweichen",
+      "search": "Erkunden",
+      "reward": "Erfolg",
+      "harm": "Schaden",
+      "feature1": "Merkmal 1",
+      "feature2": "Merkmal 2",
+      "feature3": "Merkmal 3",
+      "feature4": "Merkmal 4"
     },
     "settings": {
       "resolution": "Auflösung",
       "contrast": "Kontrast",
       "colours": "Farbtypen",
       "compare": "Seitenvergleich",
-      "teacher": "Lehrer"
+      "teacher": "Lehrer",
+      "features": "Merkmalswege"
     },
     "values": {
       "contrast": [
@@ -472,6 +521,18 @@
     "circuit": {
       "term": "Formatio reticularis",
       "purpose": "Bündelt Reize erregend oder hemmend: als Veränderung, anhaltenden Pegel oder abklingende Merkspur. Mit Seitenvergleich kombinierbar."
+    },
+    "state": {
+      "term": "Körperzustand",
+      "purpose": "Verbindet Nahrungsaufnahme, Sättigung und Reserve mit Verweilen und Fortpflanzung."
+    },
+    "choice": {
+      "term": "Handlungswahl",
+      "purpose": "Stimmt Zielverfolgung, Ausweichen und Erkunden beider Seiten aufeinander ab."
+    },
+    "value": {
+      "term": "Bewertung",
+      "purpose": "Verknüpft getrennte Sinnesmerkmale mit Nahrungserfolg und Schaden."
     }
   },
   "head": {
@@ -499,7 +560,8 @@
     "wireCovered": "Diese Verbindung besteht schon, über das ganze Organ oder genau so, oder sie ist hier nicht möglich.",
     "pressureMoved": "Der Druckfühler sitzt jetzt dort, wo er sein eigenes Organ misst.",
     "planTraced": "Verbindungswege im Bauplan markiert.",
-    "noPotential": "Für diese Auswahl enthält die gewählte Struktur kein Zellpotenzial."
+    "noPotential": "Für diese Auswahl enthält die gewählte Struktur kein Zellpotenzial.",
+    "choosePort": "Anschluss der Hirnregion wählen"
   },
   "errors": {
     "invalidDocument": "Ungültiger Fischbauplan.",
