@@ -185,8 +185,66 @@ void property_overrides_reach_outputs() {
           assert(reachable.count(node.get_id()));
     }
 }
-int main() {
+int choice_trace(bool late, bool pulsed) {
+  std::string name;
+  auto plan = read_plan(std::cin, name);
+  plan_addresses(plan);
+  fishsim::Genome genome;
+  genome.cppn = Builder().build(plan);
+  genome.compile(false);
+  assert(assess(plan, genome).ok());
+  field::Network brain(genome.blueprint);
+  std::vector<int> groups, sensors, count(plan.groups.size());
+  for (const auto &cell : genome.blueprint->neurons) {
+    int group = -1;
+    for (std::size_t i = 0; i < plan.groups.size(); ++i)
+      if (plan.groups[i].contains(cell.location))
+        group = int(i);
+    assert(group >= 0);
+    groups.push_back(group);
+    ++count[group];
+    if (cell.role == field::Role::Sensor)
+      sensors.push_back(group);
+  }
+  std::cout << "t";
+  for (const auto &g : plan.groups)
+    std::cout << ',' << g.name;
+  std::cout << '\n';
+  std::vector<double> total(plan.groups.size());
+  for (int step = 0; step < 6200; ++step) {
+    brain.set_maturity(std::min(1., .65 + .35 * step / 800));
+    const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
+    const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
+    const float food = step < 2000 ? (!late && step % 200 < 40 ? .6f : 0)
+                       : feeding && (!pulsed || step % 80 < 20) ? .6f
+                                                                : 0;
+    std::vector<float> input;
+    for (int i : sensors) {
+      const auto &s = plan.groups[i].name;
+      input.push_back(s.find("nose:") == 0                   ? cue
+                      : s.find("gut:food") == 0              ? food
+                      : s.find("pain:") == 0 && step >= 5800 ? .8f
+                                                             : 0);
+    }
+    brain.step(input, {}, 27139);
+    for (std::size_t i = 0; i < groups.size(); ++i)
+      total[groups[i]] += brain.signal(i) / count[groups[i]];
+    if (step % 50 == 49) {
+      std::cout << step + 1;
+      for (auto &value : total) {
+        std::cout << ',' << value / 50;
+        value = 0;
+      }
+      std::cout << '\n';
+    }
+  }
+  return 0;
+}
+int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
+  if (argc == 2 && std::string(argv[1]).find("choice") == 0)
+    return choice_trace(std::string(argv[1]).find("late") != std::string::npos,
+                        std::string(argv[1]).find("pulsed") != std::string::npos);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
   shared_addresses_preserve_each_wire();

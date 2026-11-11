@@ -50,7 +50,7 @@ const scentValue = smoothing => Math.tanh(smoothing > 0 ? 1 - Math.exp(-1) : 1);
 export function regionHandle(organ, key) {
   const r = organ.region;
   if (key === 'search')
-    return point(x(1.25 * period(r.searchTime) / (2 * LONGEST_TIME_CONSTANT)),
+    return point(x(timeConstantSteps(r.searchTime) / LONGEST_TIME_CONSTANT),
                  SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive);
   if (key === 'scent')
     return point(x(r.smoothing > 0
@@ -83,8 +83,7 @@ export function regionPatch(organ, key, fx, fy) {
   const px = fx * P.width, py = fy * P.height, f = clamp((px - P.left) / WIDTH);
   if (key === 'search')
     return {
-      searchTime : timeConstantOf(
-          Math.max(TIME_CONSTANT.pace_min_steps, f * 2 * LONGEST_TIME_CONSTANT / 1.25)),
+      searchTime : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, f * LONGEST_TIME_CONSTANT)),
       searchDrive : clamp((SEARCH_BASE - py) / SEARCH_HEIGHT)
     };
   if (key === 'scent') {
@@ -142,19 +141,19 @@ function button(organ, key, value, x, y, graphic, title, selected = organ.region
       escapeText(
           title)}</title><rect x="-17" y="-17" width="34" height="34" rx="9"/>${graphic}</g>`;
 }
-function searchPicture(organ) {
-  const r = organ.region, cycle = period(r.searchTime), duration = 2 * LONGEST_TIME_CONSTANT;
-  const signal = (f, side) =>
-      Math.max(0, Math.tanh(.5 * Math.sin(2 * Math.PI * duration * f / cycle + side))) /
-      Math.tanh(.5);
+function searchPicture(state, organ) {
+  const r = organ.region, duration = LONGEST_TIME_CONSTANT;
+  const memory = f => Math.exp(-f * duration / timeConstantSteps(r.searchTime));
   return icon('choice', 25, 28) + text(48, 32, words('search')) +
          axis(P.left, P.right, SEARCH_BASE) +
-         curve(f => SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive * signal(f, 0), undefined,
-               undefined, 240) +
-         curve(f => SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive * signal(f, Math.PI), undefined,
-               undefined, 240, 'other') +
+         curve(f => SEARCH_BASE - SEARCH_HEIGHT * memory(f), undefined, undefined, 160, 'other') +
+         text(P.left, 65, words('searchMemory')) +
+         text(P.right, 222, words('searchStrength'), 'end') +
          handle(organ, 'search', words('searchDrag')) +
-         text(P.right, 242, cycleSteps(cycle), 'end');
+         text(P.right, 242,
+              steps(timeConstantSteps(r.searchTime) *
+                    (state.capabilities?.neural?.adaptationSpan ?? 10)),
+              'end');
 }
 function scentPicture(state, organ) {
   const r = organ.region, duration = TAU_SPAN * LONGEST_TIME_CONSTANT;
@@ -290,7 +289,7 @@ function tectumPicture(state, organ) {
          handle(organ, 'contrast', words('contrastDrag'));
 }
 const PICTURES = {
-  choice : (s, o) => searchPicture(o),
+  choice : searchPicture,
   olfaction : scentPicture,
   state : statePicture,
   value : (s, o) => valuePicture(o),

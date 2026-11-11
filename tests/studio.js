@@ -172,6 +172,67 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
   model.validateDocument(both);
 }
 
+function checkForagingChoice(model, sites, root) {
+  let doc = model.newDocument('Suchwechsel');
+  const ids = {};
+  for (const [type, x, y] of [[ 'choice', 600, 300 ], [ 'state', 550, 365 ], [ 'gut', 680, 365 ],
+                              [ 'nose', 330, 260 ], [ 'pain', 400, 500 ]]) {
+    const made =
+        model.addOrgan(doc, type, sites, {x, y}, Infinity, type === 'choice' || type === 'nose');
+    assert.ok(made);
+    doc = made.document;
+    ids[type] = made.organId;
+  }
+  const port = (id, slot) => ({kind : 'slot', id, slot});
+  const link = (from, to) => {
+    const wired = model.connectSelections(doc, from, to, sites);
+    assert.ok(wired);
+    doc = wired.document;
+  };
+  link(port(ids.gut, 'intake'), port(ids.state, 'intake'));
+  link(port(ids.gut, 'intake'), port(ids.choice, 'pause'));
+  link({kind : 'organ', id : ids.nose}, port(ids.choice, 'target'));
+  link({kind : 'organ', id : ids.nose}, port(ids.choice, 'strength'));
+  link({kind : 'organ', id : ids.pain}, port(ids.choice, 'threat'));
+  const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
+  plan.groups.forEach((g, i) => {
+    const c = centers[i];
+    g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
+  });
+  for (const mode of ['choice', 'choice-late', 'choice-pulsed', 'choice-late-pulsed']) {
+    const output = execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
+        ],
+        {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000});
+    const [header, ...lines] = output.trim().split('\n').map(line => line.split(','));
+    const rows = lines.map(row => row.map(Number));
+    const mean = (node, from, to) => {
+      const columns =
+          header.flatMap((key, i) => key.startsWith('choice:' + node + ':') ? [ i ] : []);
+      const samples = rows.filter(row => row[0] > from && row[0] <= to)
+                          .flatMap(row => columns.map(i => row[i]));
+      assert.ok(samples.length);
+      return samples.reduce((sum, x) => sum + x, 0) / samples.length;
+    };
+    const feeding = mean('search', 2500, 2800), roaming = mean('search', 3500, 4000);
+    assert.ok(roaming > 3 * feeding + .03,
+              mode + ': unsuccessful feeding releases search despite the held target');
+    assert.ok(mean('search', 2800, 2900) < roaming * .7,
+              'The previous meal still delays departure');
+    assert.ok(mean('target', 3500, 4000) < mean('target', 2500, 2800) * .8,
+              'Search reduces fixation on the unrewarding target');
+    assert.ok(mean('target', 4400, 4500) > mean('target', 4700, 5000) * 1.05,
+              'A new target gets a fresh approach');
+    assert.ok(mean('search', 5500, 5800) < roaming * .5, 'A later meal can still suppress search');
+    assert.ok(mean('threat', 6000, 6200) > mean('threat', 3500, 4000) * 3,
+              'Threat responses remain available during search');
+  }
+}
+
 async function checkResponseControls(model, capabilities, clicks) {
   const {responseHandle, responsePatch, responseTrace} =
       await import('../ui/studio/view/response.js');
@@ -348,7 +409,10 @@ async function checkFunctionalRegions(model, capabilities) {
         assert.ok(Math.abs(node(key).receptors[E.output].half - (.67)) < 1e-8);
     }
     if (type === 'choice') {
-      assert.ok(Math.abs(group('search').tau - (.61)) < 1e-8);
+      assert.ok(Math.abs(group('seen').tau - (.61)) < 1e-8);
+      assert.ok(Math.abs(group('pause').tau - (.61)) < 1e-8);
+      assert.equal(group('seen').q2, 0);
+      assert.equal(group('pause').q2, 1);
       assert.ok(Math.abs(node('search').receptors[E.output].baseline - .46) < 1e-8);
       const {OrganStudio} = await import('../ui/studio/controller.js');
       const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
@@ -657,6 +721,7 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  checkForagingChoice(model, sitesResult.sites, root);
   await checkResponseControls(model, sitesResult, clicks);
   await checkFunctionalRegions(model, sitesResult);
   checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,

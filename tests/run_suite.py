@@ -57,6 +57,8 @@ def main():
         targets = [binary(), *(binary(n + "-tests") for n in natives)]
         if not selected or {"studio", "interface"} & selected:
             targets.extend([binary("atelier"), binary("zuchtbecken")])
+        if "studio" in selected:
+            targets.append(binary("compiler-tests"))
         command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
                    "BUILD_DIR=" + str(BUILD), *targets]
         if not run("Kompilieren", command, None, show_output=True):

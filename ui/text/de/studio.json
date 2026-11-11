@@ -412,7 +412,8 @@
     "target": "Ziel verfolgen",
     "threat": "Ausweichen",
     "search": "Erkunden",
-    "seen": "Ziel hemmt Suche",
+    "seen": "Neuer Zielreiz",
+    "roam": "Zielbindung lösen",
     "alarm": "Gefahr hemmt Annäherung",
     "reward": "Erfolg lehrt",
     "harm": "Schaden lehrt",
@@ -527,7 +528,7 @@
       "retreat": "Zurückweichen",
       "beat": "Schwimmtakt",
       "pump": "Maultakt",
-      "searchTime": "Suchdauer",
+      "searchTime": "Nachwirkung",
       "searchDrive": "Suchdrang",
       "smoothing": "Glättung",
       "reserve": "Reservebedarf",
@@ -546,7 +547,7 @@
     },
     "choice": {
       "term": "Handlungswahl",
-      "purpose": "Stimmt Zielverfolgung, Ausweichen und Erkunden beider Seiten aufeinander ab."
+      "purpose": "Wechselt nach ausbleibendem Fressen zur Ortssuche. Neuer Zielreiz unterbricht die Suche, Fresserfolg verlängert das Verweilen. Darmaufnahme an Verweilen anschließen."
     },
     "value": {
       "term": "Bewertung",
@@ -558,7 +559,9 @@
     },
     "graphics": {
       "search": "Erkunden",
-      "searchDrag": "Suchwelle ziehen: Wechsel langsamer nach rechts, stärker nach oben",
+      "searchDrag": "Suchwechsel ziehen: länger verweilen nach rechts, stärker suchen nach oben",
+      "searchMemory": "Nachwirkung von Reiz und Fressen",
+      "searchStrength": "Suchdrang am Griff",
       "scent": "Nasen vergleichen",
       "scentDrag": "Gekreuzte Antwort ziehen: länger glätten nach rechts, stärker abziehen nach oben",
       "direct": "unmittelbar",
@@ -575,7 +578,7 @@
       "resolutionDrag": "Sehband verbreitern oder aufteilen",
       "contrastDrag": "Gemeinsame Hemmung: keine, zwei oder fünf Zellen",
       "hormones": "Hormonsteuerung",
-      "choiceReference": "Eine Suchwelle pro Seite. Ziehen ändert Dauer und Stärke; Ziel und Pause hemmen die Suche.",
+      "choiceReference": "Die Kurve zeigt, wie ein früherer Reiz oder Fresserfolg nachwirkt. Der Griff bestimmt Nachwirkung und Suchdrang. Der tatsächliche Wechsel hängt von den gelernten Kontakten ab.",
       "olfactionReference": "Gleicher Beispielreiz an beiden Nasen. Türkis: eigene Antwort. Gold: Abzug der Gegenseite.",
       "stateReference": "Oben: Fortpflanzungsfreigabe über die Reife. Unten: Mangelantwort auf Reserveeingang und abklingende Fresspause.",
       "valueReference": "Die Spur verbindet ein Merkmal mit späterem Erfolg oder Schaden. Ziehen ändert Zuordnungsdauer und Lehrstärke.",

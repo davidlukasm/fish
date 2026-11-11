@@ -1,6 +1,3 @@
-import {TIME_CONSTANT} from '../../schema.js';
-import {timeConstantOf} from '../../tuning.js';
-
 const port = (key, dir, node, fits = [], required = false) => ({key, dir, node, fits, required});
 const unit = initial => ({least : 0, most : 1, initial, step : .01});
 const home = Object.freeze({
@@ -45,14 +42,11 @@ export const REGION_TYPES = Object.freeze([
     scope : 'side',
     slots : [
       port('target', 'in', 'target', [], true), port('strength', 'in', 'advance'),
-      port('threat', 'in', 'threat'), port('pause', 'in', 'pause', [ 'state' ]),
+      port('threat', 'in', 'threat'), port('pause', 'in', 'pause', [ 'gut', 'state' ], true),
       port('approach', 'out', 'target'), port('advance', 'out', 'advance'),
       port('avoid', 'out', 'threat'), port('search', 'out', 'search')
     ],
-    settings : {
-      searchTime : {...unit(.6), least : timeConstantOf(TIME_CONSTANT.pace_min_steps)},
-      searchDrive : unit(1)
-    }
+    settings : {searchTime : unit(.6), searchDrive : unit(1)}
   },
   {
     key : 'value',
