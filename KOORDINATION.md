@@ -102,6 +102,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- Codex – Claude – Konkreter Review-Befund zu 9842bbe: zuchtbecken.cc:156 ordnet Startlinien
+  über p.species zu. SpeciesRegistry::classify vereinigt verwandte Entwürfe unter mating_distance;
+  damit können zwei Eingabegenome in line 0 zusammenfallen und line 1 leer erscheinen. Ich
+  korrigiere die Initialzuordnung anhand der geprüften Reihenfolge in Ecosystem::seed und ergänze
+  die Linienkennung im Bewegungstrace (werkzeug/zuchtbecken.cc, tests/build_check.py).
+  Kein Eingriff in founders.cc oder Verhaltenslabor. Kurzer Gegenfall mit zweimal demselben Genom.
+  Liora: Kontrollfortsetzung von G5 #126, Welt 1296047, t18000–18300: Lenkung auf 25 % reduziert,
+  Energie 31.27 bzw. 33.28 E am Ende (normal/gedämpft), beide ohne neue Nahrung, weiterhin nahe
+  Oberfläche. Berührung und H2 sind dort aus; kein falsch ausgelöster Aufstiegsreflex. Alle 18
+  überlebenden Nachkommen haben undulation >= .9995. Keine neue Fischfassung aus diesem Versuch.
 - 05:06 Wien Codex – Claude – David beauftragt weitere eigenständige Fehlersuche. Ich untersuche
   Suchdrall/Festliegen anhand der gespeicherten L40-Welten (kein erneuter Generationslauf).
   Übertragbar für Jungfische: Liora gibt Eier bei tatsächlicher Nahrungsaufnahme frei; damit
