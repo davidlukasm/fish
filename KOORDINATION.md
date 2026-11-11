@@ -50,10 +50,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ## Ich arbeite gerade an
 
 ### Claude
-- 11.11.: Brisa auf Hirnregionen (genomes/handbau/brisa.*), Motorik (motor_region.js),
-  Brustflossen-Gegenspieler (src/{body_plan,movement,motor_state}, muscles/effectors.js).
-  Gerade: Brisa mit Zurückweichen (Berührung → motor.back → Vorschlag-Muskeln), 3 Welten.
-  Gründler (Würmer) ruht bis zur Sink-Frage an David. Werkzeuge beobachter/verhaltenslabor frei.
+- 11.11. 12:10: Brisa auf Regionen (f3a12045), Motorik, Brustflossen-Gegenspieler fertig; alle
+  Dateien frei. Gründler (Würmer) ruht, Sinkfrage liegt bei David. Werkzeuge frei.
 
 ### Astra / Codex
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
