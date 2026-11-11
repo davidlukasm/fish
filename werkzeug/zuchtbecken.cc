@@ -12,7 +12,8 @@
 using namespace fishsim;
 namespace {
 constexpr std::array<double, 3> RADII{24, 64, 128};
-constexpr int SAMPLE_STEPS = 400, OBSERVATION_STEPS = 5, PICTURE_STEPS = 100, QUANTILE_DIVISIONS = 4;
+constexpr int SAMPLE_STEPS = 400, OBSERVATION_STEPS = 5, PICTURE_STEPS = 100,
+              QUANTILE_DIVISIONS = 4;
 struct LastSeen {
   unsigned generation = 0;
   int age = 0;
@@ -22,17 +23,15 @@ struct LastSeen {
 };
 
 double nearby_share(const PlantPart &p, const Field &f, const Body &b, double radius) {
-  const double x = f.delta_x(p.x - b.x), y = p.y - b.y,
-               a = p.hx * p.hx + p.hy * p.hy;
+  const double x = f.delta_x(p.x - b.x), y = p.y - b.y, a = p.hx * p.hx + p.hy * p.hy;
   radius += stroke_width(p);
   if (a <= tolerance::negligible)
     return x * x + y * y <= radius * radius ? 1 : 0;
-  const double dot = x * p.hx + y * p.hy,
-               disc = dot * dot - a * (x * x + y * y - radius * radius);
+  const double dot = x * p.hx + y * p.hy, disc = dot * dot - a * (x * x + y * y - radius * radius);
   if (disc <= 0)
     return 0;
   return std::max(0., std::min(1., (-dot + std::sqrt(disc)) / a) -
-                           std::max(-1., (-dot - std::sqrt(disc)) / a)) /
+                          std::max(-1., (-dot - std::sqrt(disc)) / a)) /
          2;
 }
 
@@ -70,7 +69,7 @@ void snapshot(const Ecosystem &w, const std::string &prefix) {
   cache.write_assets(out);
   out << '}';
 }
-void trace(std::ostream &out, const Ecosystem &w) {
+void trace(std::ostream &out, const Ecosystem &w, const std::map<std::uint64_t, int> &line_of) {
   out << "{\"t\":" << w.ticks << ",\"fish\":[";
   bool first = true;
   for (const auto &p : w.fish) {
@@ -81,7 +80,7 @@ void trace(std::ostream &out, const Ecosystem &w) {
     for (const auto &part : w.field.vegetation().plants)
       if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) && part.energy > 0)
         nearest = std::min(nearest, std::max(0., stroke_distance(part, w.field.delta_x(part.x - mx),
-                                                               part.y - my)));
+                                                                 part.y - my)));
     for (double amount : p.observations().raw_diet)
       raw += amount;
     out << (first ? "[" : ",[") << p.id << ',' << p.g << ',' << b.hatched << ',' << b.x << ','
@@ -92,16 +91,16 @@ void trace(std::ostream &out, const Ecosystem &w) {
         << ',' << b.mouth.flow << ',' << b.mouth.cycle << ',' << b.mouth.phase << ','
         << b.motor().drive_forward << ',' << b.motor().drive_left << ',' << b.motor().drive_right
         << ',' << b.ledger().movement_cost << ',' << b.ledger().brain_cost << ','
-        << b.reproduction().egg_yolk << ',' << b.reproduction().sperm_store << ','
-        << b.motor().vx << ',' << b.motor().vy << ',' << b.motor().thrust << ','
-        << b.sediment_coverage << ',' << b.bladder_fill << ',' << b.buoyancy_force << ','
-        << body_mass(b) << ',' << b.undulation << ','
-        << p.observations().raw_diet[food_kind::plant] +
-               p.observations().raw_diet[food_kind::algae]
+        << b.reproduction().egg_yolk << ',' << b.reproduction().sperm_store << ',' << b.motor().vx
+        << ',' << b.motor().vy << ',' << b.motor().thrust << ',' << b.sediment_coverage << ','
+        << b.bladder_fill << ',' << b.buoyancy_force << ',' << body_mass(b) << ',' << b.undulation
+        << ','
+        << p.observations().raw_diet[food_kind::plant] + p.observations().raw_diet[food_kind::algae]
         << ',' << b.nutrition << ',' << b.rest_cost << ',' << b.ledger().muscle_cost << ','
         << b.motor().combat_cost;
     for (double hormone : b.hormones().levels())
       out << ',' << hormone;
+    out << ',' << line_of.at(p.id);
     out << ']';
     first = false;
   }
@@ -153,38 +152,35 @@ int main(int argc, char **argv) {
     else
       w.field.seed_plants();
     w.seed(genomes, count, habitat == "aquarium" ? run_limit::default_food : 0);
-    std::map<std::uint64_t, int> species_line, line_of;
-    for (const auto &p : w.fish)
-      if (!species_line.count(p.species)) {
-        const int line = int(species_line.size());
-        species_line[p.species] = line;
-      }
-    for (const auto &p : w.fish)
-      line_of[p.id] = species_line[p.species];
+    std::map<std::uint64_t, int> line_of;
+    // seed places one founder per input in each round. Related inputs can share a species.
+    for (std::size_t i = 0; i < w.fish.size(); ++i)
+      line_of[w.fish[i].id] = int(i % genomes.size());
     const int lines = int(genomes.size());
     std::ofstream observations;
     if (!observed.empty()) {
       observations.open(observed + "-trace.jsonl");
       if (!observations)
         throw std::runtime_error("Beobachtung kann nicht gespeichert werden");
-      observations << "{\"every\":" << OBSERVATION_STEPS << ",\"picturesEvery\":" << PICTURE_STEPS << ",\"width\":"
-                   << w.field.geometry().width << ",\"height\":" << w.field.geometry().height
-                   << ",\"columns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"angle\","
-                      "\"radius\",\"mouthX\",\"mouthY\",\"aperture\",\"nearestMouthLeaf\","
-                      "\"energy\",\"health\",\"tissue\",\"maturity\",\"rawFood\",\"gutEnergy\","
-                      "\"gutFill\",\"digestion\",\"bite\",\"suction\",\"flow\",\"mouthCycle\","
-                      "\"mouthPhase\",\"forward\",\"left\",\"right\",\"movementCost\",\"brainCost\","
-                      "\"eggYolk\",\"spermStore\",\"vx\",\"vy\",\"thrust\",\"sediment\","
-                      "\"bladder\",\"buoyancy\",\"mass\",\"undulation\",\"rawPlants\",\"usableFood\","
-                      "\"restCost\",\"muscleCost\",\"biteCost\"";
+      observations
+          << "{\"every\":" << OBSERVATION_STEPS << ",\"picturesEvery\":" << PICTURE_STEPS
+          << ",\"width\":" << w.field.geometry().width
+          << ",\"height\":" << w.field.geometry().height
+          << ",\"columns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"angle\","
+             "\"radius\",\"mouthX\",\"mouthY\",\"aperture\",\"nearestMouthLeaf\","
+             "\"energy\",\"health\",\"tissue\",\"maturity\",\"rawFood\",\"gutEnergy\","
+             "\"gutFill\",\"digestion\",\"bite\",\"suction\",\"flow\",\"mouthCycle\","
+             "\"mouthPhase\",\"forward\",\"left\",\"right\",\"movementCost\",\"brainCost\","
+             "\"eggYolk\",\"spermStore\",\"vx\",\"vy\",\"thrust\",\"sediment\","
+             "\"bladder\",\"buoyancy\",\"mass\",\"undulation\",\"rawPlants\",\"usableFood\","
+             "\"restCost\",\"muscleCost\",\"biteCost\"";
       for (int i = 0; i < field::HORMONES; ++i)
         observations << ",\"H" << i << '"';
-      observations << "]}\n";
+      observations << ",\"line\"]}\n";
     }
     std::cout << "{\"event\":\"setup\",\"habitat\":\"" << habitat << "\",\"seed\":" << seed
               << ",\"requested\":" << count << ",\"seeded\":" << w.fish.size()
-              << ",\"assistance\":false,\"mutation\":" << w.evo.mutation
-              << ",\"leafRadii\":[";
+              << ",\"assistance\":false,\"mutation\":" << w.evo.mutation << ",\"leafRadii\":[";
     for (std::size_t i = 0; i < RADII.size(); ++i)
       std::cout << (i ? "," : "") << RADII[i];
     std::cout << "],\"quantiles\":[";
@@ -208,11 +204,21 @@ int main(int argc, char **argv) {
         }
       for (const auto &p : w.fish) {
         const auto &b = p.body;
-        last_seen[p.id] = {p.g, b.age, b.energy, b.health, b.nutrition, b.bladder_fill,
-                          b.hatched, b.tissue, body_maturity(b), b.reproduction().egg_yolk,
-                          b.reproduction().sperm_store, b.embryo.shell};
+        last_seen[p.id] = {p.g,
+                           b.age,
+                           b.energy,
+                           b.health,
+                           b.nutrition,
+                           b.bladder_fill,
+                           b.hatched,
+                           b.tissue,
+                           body_maturity(b),
+                           b.reproduction().egg_yolk,
+                           b.reproduction().sperm_store,
+                           b.embryo.shell};
         for (std::size_t k = 0; k < DIET_COUNT; ++k) {
-          const double raw = p.observations().raw_diet[k], eaten = std::max(0., raw - previous[p.id][k]);
+          const double raw = p.observations().raw_diet[k],
+                       eaten = std::max(0., raw - previous[p.id][k]);
           food[k] += eaten;
           if (line_of[p.id] >= 0)
             line_food[line_of[p.id]][k] += eaten;
@@ -229,8 +235,7 @@ int main(int argc, char **argv) {
             if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind))
               nearby += part.energy * nearby_share(part, w.field, b, RADII[1]);
           std::cout << "{\"event\":\"hatch\",\"t\":" << tick << ",\"line\":" << line_of[p.id]
-                    << ",\"id\":" << p.id
-                    << ",\"parent\":" << p.parent << ",\"generation\":" << p.g
+                    << ",\"id\":" << p.id << ",\"parent\":" << p.parent << ",\"generation\":" << p.g
                     << ",\"energy\":" << b.energy << ",\"nearbyLeaf64\":" << nearby << "}\n";
         }
       }
@@ -260,14 +265,15 @@ int main(int argc, char **argv) {
       const bool last = tick == steps || (count > 0 && w.fish.empty());
       if (observations.is_open()) {
         if (tick % OBSERVATION_STEPS == 0 || last)
-          trace(observations, w);
+          trace(observations, w, line_of);
         if (tick % PICTURE_STEPS == 0 || last)
           snapshot(w, observed);
       }
       if (tick % SAMPLE_STEPS == 0 || last) {
         std::map<unsigned, int> alive, breeders;
         std::array<std::vector<double>, RADII.size()> nearby;
-        std::vector<double> nearest, mouth_nearest, reserves, tissue, maturity, egg_yolk, sperm_store;
+        std::vector<double> nearest, mouth_nearest, reserves, tissue, maturity, egg_yolk,
+            sperm_store;
         for (const auto &p : w.fish) {
           if (p.body.hatched)
             ++alive[p.g];
@@ -283,26 +289,27 @@ int main(int argc, char **argv) {
           for (const auto &part : w.field.vegetation().plants)
             if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind) &&
                 part.energy > 0) {
-              distance = std::min(distance, stroke_distance(part,
-                                                           w.field.delta_x(part.x - p.body.x),
-                                                           part.y - p.body.y));
-              mouth_distance = std::min(mouth_distance,
-                                        stroke_distance(part, w.field.delta_x(part.x - mouth_x),
-                                                        part.y - mouth_y));
+              distance =
+                  std::min(distance, stroke_distance(part, w.field.delta_x(part.x - p.body.x),
+                                                     part.y - p.body.y));
+              mouth_distance =
+                  std::min(mouth_distance, stroke_distance(part, w.field.delta_x(part.x - mouth_x),
+                                                           part.y - mouth_y));
               for (std::size_t k = 0; k < RADII.size(); ++k)
                 energy[k] += part.energy * nearby_share(part, w.field, p.body, RADII[k]);
             }
           nearest.push_back(std::isfinite(distance) ? std::max(0., distance)
                                                     : w.field.geometry().width);
           mouth_nearest.push_back(std::isfinite(mouth_distance) ? std::max(0., mouth_distance)
-                                                               : w.field.geometry().width);
+                                                                : w.field.geometry().width);
           for (std::size_t k = 0; k < RADII.size(); ++k)
             nearby[k].push_back(energy[k]);
         }
         double anchored = 0, drifting = 0, blue = 0, total = 0;
         for (const auto &part : w.field.vegetation().plants)
           if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind)) {
-            (part.patch < w.field.vegetation().surfaces.size() ? anchored : drifting) += part.energy;
+            (part.patch < w.field.vegetation().surfaces.size() ? anchored : drifting) +=
+                part.energy;
             const auto color = plant_organ_color(w.field.plant_source(part.patch), part.organ);
             if (color[rgb::blue] > color[rgb::green])
               blue += part.energy;
@@ -338,8 +345,7 @@ int main(int argc, char **argv) {
           quantiles(nearby[k]);
         }
         std::cout << "],\"anchoredLeaf\":" << anchored << ",\"driftingLeaf\":" << drifting
-                  << ",\"blueLeaf\":" << blue << ",\"rawFood\":" << total
-                  << ",\"plantShare\":"
+                  << ",\"blueLeaf\":" << blue << ",\"rawFood\":" << total << ",\"plantShare\":"
                   << (total > 0 ? (food[food_kind::plant] + food[food_kind::algae]) / total : 0)
                   << ",\"diet\":[";
         for (std::size_t k = 0; k < DIET_COUNT; ++k)

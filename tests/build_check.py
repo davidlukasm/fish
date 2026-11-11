@@ -42,18 +42,22 @@ def main():
     for habitat in ('aquarium', 'becken'):
         with tempfile.TemporaryDirectory() as folder:
             observed = str(Path(folder) / 'fish')
-            command = [binary('zuchtbecken'), 'genomes/handbau/startfisch.genome',
-                       '184371', '6', '2', habitat, 'observe=' + observed]
+            genomes = ','.join(['genomes/handbau/startfisch.genome'] * 2)
+            command = [binary('zuchtbecken'), genomes,
+                       '184371', '6', '3', habitat, 'observe=' + observed]
             first = subprocess.check_output(command, cwd=ROOT, text=True, timeout=10)
             trace = Path(observed + '-trace.jsonl').read_text()
             second = subprocess.check_output(command, cwd=ROOT, text=True, timeout=10)
             assert first == second and trace == Path(observed + '-trace.jsonl').read_text()
             setup, *events = map(json.loads, first.splitlines())
-            assert setup['seeded'] == 2 and not setup['assistance'] and setup['mutation'] > 0
+            assert setup['seeded'] == 3 and not setup['assistance'] and setup['mutation'] > 0
             header, *samples = map(json.loads, trace.splitlines())
-            assert {'rawPlants', 'usableFood'} <= set(header['columns'])
+            assert {'rawPlants', 'usableFood', 'line'} <= set(header['columns'])
             assert samples and all(len(fish) == len(header['columns'])
                                    for sample in samples for fish in sample['fish'])
+            line = header['columns'].index('line')
+            assert [fish[line] for fish in samples[0]['fish']] == [0, 1, 0], (
+                'Input lines must stay distinct even when their genomes share a species')
     print('Python, Schema und UI-Module: OK')
 
 
