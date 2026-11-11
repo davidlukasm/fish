@@ -952,6 +952,49 @@ void pectoral_antagonists_back_the_fish_up(const Genome &g) {
   check(ahead > 0 && back < 0, "back strokes push a fish ahead, the antagonists push it back");
   check(std::abs(held) < STILL * ahead, "antagonists working together hold the fish in place");
 }
+void resting_fish_sink_unless_their_bladder_carries_them(const Genome &g) {
+  // No muscle works: weight and the bladder alone move the fish, at two body masses.
+  constexpr int RESTING = 200;
+  constexpr double CAPACITY = 3, HEAVY = 3;
+  auto layout = std::make_shared<BrainInterface>(*g.interface);
+  layout->capacities[organ_port::bladder] = CAPACITY;
+  Genome floating = g;
+  floating.interface = layout;
+  const auto drift = [&](double fill, double extra_energy) {
+    Ecosystem w(SEED);
+    w.resize(800, 500);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, floating, 400, 250);
+    const auto id = p.id;
+    p.body.set_actuation_probe([](std::uint32_t, float) { return 0.f; });
+    p.body.energy += extra_energy;
+    const double y = p.body.y;
+    for (int tick = 0; tick < RESTING; ++tick) {
+      individual(w, id).body.bladder_fill = fill;
+      w.tick(false);
+    }
+    const auto &b = individual(w, id).body;
+    return std::pair{b.y - y, b.buoyancy_force / body_mass(b)};
+  };
+  const PhysiologyParameters physiology{};
+  const double hover = physiology.sinking * (1 + CAPACITY) / CAPACITY / physiology.bladder_strength;
+  const auto [empty, empty_force] = drift(0, 0);
+  const auto [full, full_force] = drift(1, 0);
+  const auto [hovering, hover_force] = drift(hover, 0);
+  const auto [heavy, heavy_force] = drift(hover, HEAVY * RESERVE_ENERGY_PER_MASS);
+  std::cout << "Ruhend nach " << RESTING << " Schritten: leere Blase " << empty << ", volle "
+            << full << ", Schwebefüllung " << hover << ": " << hovering << ", schwerer " << heavy
+            << "\n";
+  check(empty > 0 && full < 0,
+        "a resting fish sinks with an empty bladder and rises with a full one");
+  check(std::abs(hover_force) < tolerance::precision &&
+            std::abs(heavy_force) < tolerance::precision,
+        "the fill at which a fish hovers does not depend on its mass");
+  check(std::abs(hovering) < .1 * empty && std::abs(heavy) < .1 * empty,
+        "a hovering fish stays at its depth");
+}
 void worker_counts_preserve_the_simulation(const Genome &g) {
   Ecosystem serial(83921);
   serial.safety = false;
@@ -1724,6 +1767,7 @@ int main() {
     dark_cells_report_what_is_darker_than_the_surround(g);
     wrigglers_lift_their_snout_out_of_mud(g);
     pectoral_antagonists_back_the_fish_up(g);
+    resting_fish_sink_unless_their_bladder_carries_them(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

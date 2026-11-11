@@ -25,7 +25,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology.cc" : "091be4e30f65adee",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
-  "src/physiology_parameters.cc" : "89b847d09d35c2ce",
+  "src/physiology_parameters.cc" : "3cdc43b5cf758d75",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
   "src/body_plan.hh" : "5d5272f9e82b4b36",
@@ -362,7 +362,7 @@ async function checkHormoneSystems(model, capabilities) {
   assert.ok(idle > 0 && idle < capabilities.biasScale * gland.threshold,
             'Late pain can learn without resting activity secreting an alarm');
   assert.equal(systemMissing(fresh.document, 'alarm'), 'needs');
-  for (const result of [ alarm, fresh ]) {
+  for (const result of [alarm, fresh]) {
     const painLinks = routedLinks(result.document, sites).filter(l => l.wire.toPort === 'threat');
     assert.ok(painLinks.length);
     for (const link of painLinks)
@@ -2058,7 +2058,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         settleRegions(updateRegion(motorDoc, motor.id, {beat : 2, pump : 1}, sites), sites);
     const halves = [ motor.id, motor.pair ].map(id => model.findOrgan(paced, id));
     const pool = node => halves.flatMap(h => h.centers.filter(c => c.node === node));
-    for (const node of [ 'beat', 'pump' ]) {
+    for (const node of ['beat', 'pump']) {
       assert.equal(pool(node).length, 1, 'One ' + node + ' pacemaker for both halves');
       assert.equal(model.organOf(paced, pool(node)[0].id).side, -1);
     }
@@ -2071,7 +2071,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(driven('pump'), [ 'bite', 'bite', 'mouth', 'mouth' ],
                      'The pump opens and closes the whole mouth');
     const beat = pool('beat')[0];
-    assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) > -1,
+    assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) >
+                  -1,
               'The pacemaker keeps beating in the adult');
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});

@@ -100,10 +100,12 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1;
   ux = (along + b.motor_.thrust) * hx - across * hy;
   uy = (along + b.motor_.thrust) * hy + across * hx;
+  // Weight and the bladder's lift both grow with the body, so a full bladder carries a fish of
+  // any size and the fill at which it hovers depends only on the bladder's capacity.
   const double bladder_capacity = b.bladder_capacity,
-               up = (world ? physiology.bladder_strength : 0) * growth_fraction(b) *
-                    bladder_capacity / (1 + bladder_capacity) * b.bladder_fill;
-  b.buoyancy_force = (world ? physiology.sinking : 0) * mass - up;
+               lift = (world ? physiology.bladder_strength : 0) * bladder_capacity /
+                      (1 + bladder_capacity) * b.bladder_fill;
+  b.buoyancy_force = ((world ? physiology.sinking : 0) - lift) * mass;
   uy += b.buoyancy_force / mass;
   ux /= resistance.across * cloud * brush;
   uy /= resistance.vertical(uy) * cloud * brush;
