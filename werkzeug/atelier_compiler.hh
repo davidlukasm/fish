@@ -57,7 +57,8 @@ struct Group {
   int organ = 0, open = 0;
   int zone = 0, side = 0, role = 1, function = -1, copies = 1;
   float u0 = 0, u1 = 1, v0 = 0, v1 = 1, w0 = 0, w1 = 1;
-  float threshold = 0, tau = .5f, field = .5f, q1 = 0, q2 = 0, qwidth = .5f;
+  float threshold = 0, tau = .5f, field = .5f, q1 = 0, q2 = 0, qwidth = .5f,
+        polarity = float(fishsim::contrast_polarity::bright);
   float sign = 1, mode = 0, pace = -1, modulator = -1;
   float sender1 = 1, sender2 = 1, receiver1 = -1, receiver2 = -1;
   float sigma = float(field::MIN_SEARCH), crossing = 0, range = 1;
@@ -147,7 +148,7 @@ Plan read_plan(std::istream &input, std::string &name, bool allow_empty = false)
     for (float x : {g.threshold, g.q1, g.q2, g.sign, g.mode, g.pace, g.modulator, g.sender1,
                     g.sender2, g.receiver1, g.receiver2, g.crossing})
       ensure(between(x, -1, 1), "cell property outside -1..1");
-    for (float x : {g.tau, g.field, g.qwidth, g.range})
+    for (float x : {g.tau, g.field, g.qwidth, g.range, g.polarity})
       ensure(between(x, 0, 1), "cell property outside 0..1");
     ensure(between(g.sigma, float(field::MIN_SEARCH), float(field::MAX_SEARCH)),
            "invalid contact width");
@@ -258,6 +259,7 @@ std::array<float, cppn::OUTPUTS> outputs(const Group &g) {
     v[out::identity1] = c % 2 ? 1 : -1;
     v[out::identity2] = c / 2 ? 1 : -1;
     v[out::identity3] = variant ? 1 : -1;
+    v[out::identity4] = g.polarity;
   }
   v[out::capacity] = raw(g.copies / 16.f);
   v[out::threshold] = g.threshold;

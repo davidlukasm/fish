@@ -720,7 +720,8 @@ void write_receptor(std::ostream &out, const BrainInterface::Receptor &r, const 
           R::mechanical_angle, r.mechanical_angle)
       .list(R::hormones, r.hormones)(R::pressure_kind, r.pressure_kind)(R::pressure_target,
                                                                         r.pressure_target)(
-          R::proximity, r.proximity ? 1 : 0)(R::intensity, r.intensity() ? 1 : 0)
+          R::proximity, r.proximity ? 1 : 0)(R::intensity, r.intensity() ? 1 : 0)(R::dark_share,
+                                                                                r.dark_share)
       .finish();
 }
 }

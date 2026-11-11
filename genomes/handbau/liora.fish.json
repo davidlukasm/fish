@@ -132,7 +132,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznpq-4",
@@ -254,7 +255,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -402,7 +404,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -543,7 +546,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznpt-9",
@@ -674,7 +678,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznpt-7",
@@ -805,7 +810,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznpz-f",
@@ -936,7 +942,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznpy-d",
@@ -1067,7 +1074,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq0-j",
@@ -1189,7 +1197,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq0-k",
@@ -1311,7 +1320,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq0-l",
@@ -1433,7 +1443,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq1-m",
@@ -1555,7 +1566,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq1-n",
@@ -1677,7 +1689,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq3-o",
@@ -1799,7 +1812,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq3-p",
@@ -1921,7 +1935,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq3-q",
@@ -2043,7 +2058,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq4-r",
@@ -2165,7 +2181,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq4-s",
@@ -2287,7 +2304,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq4-t",
@@ -2409,7 +2427,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq4-u",
@@ -2531,7 +2550,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq4-v",
@@ -2653,7 +2673,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq5-w",
@@ -2775,7 +2796,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq5-x",
@@ -2897,7 +2919,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwaurj50-1",
@@ -3019,7 +3042,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwaurj51-2",
@@ -3141,7 +3165,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -3272,7 +3297,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq7-10",
@@ -3394,7 +3420,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq7-11",
@@ -3516,7 +3543,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq7-12",
@@ -3638,7 +3666,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq7-13",
@@ -3760,7 +3789,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznq7-14",
@@ -3882,7 +3912,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -4013,7 +4044,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqm-1l",
@@ -4135,7 +4167,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqm-1m",
@@ -4257,7 +4290,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqn-1n",
@@ -4379,7 +4413,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqb-17",
@@ -4510,7 +4545,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqn-1o",
@@ -4632,7 +4668,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqn-1p",
@@ -4754,7 +4791,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqn-1q",
@@ -4876,7 +4914,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznq9-15",
@@ -5007,7 +5046,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqo-1r",
@@ -5129,7 +5169,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqp-1s",
@@ -5251,7 +5292,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqp-1t",
@@ -5373,7 +5415,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqd-1b",
@@ -5504,7 +5547,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqp-1u",
@@ -5626,7 +5670,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqp-1v",
@@ -5748,7 +5793,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqp-1w",
@@ -5870,7 +5916,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqc-19",
@@ -6001,7 +6048,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqq-1x",
@@ -6123,7 +6171,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqr-1y",
@@ -6245,7 +6294,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-1z",
@@ -6367,7 +6417,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-20",
@@ -6489,7 +6540,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-21",
@@ -6611,7 +6663,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqg-1f",
@@ -6742,7 +6795,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-22",
@@ -6864,7 +6918,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-23",
@@ -6986,7 +7041,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-24",
@@ -7108,7 +7164,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-25",
@@ -7230,7 +7287,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqs-26",
@@ -7352,7 +7410,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqf-1d",
@@ -7483,7 +7542,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqt-27",
@@ -7605,7 +7665,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqu-28",
@@ -7727,7 +7788,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqv-29",
@@ -7849,7 +7911,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqv-2a",
@@ -7971,7 +8034,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqv-2b",
@@ -8093,7 +8157,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqv-2c",
@@ -8215,7 +8280,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqw-2d",
@@ -8337,7 +8403,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqw-2e",
@@ -8459,7 +8526,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqw-2f",
@@ -8581,7 +8649,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqw-2g",
@@ -8703,7 +8772,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2h",
@@ -8825,7 +8895,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqk-1j",
@@ -8956,7 +9027,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2i",
@@ -9078,7 +9150,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2j",
@@ -9200,7 +9273,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2k",
@@ -9322,7 +9396,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2l",
@@ -9444,7 +9519,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2m",
@@ -9566,7 +9642,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2n",
@@ -9688,7 +9765,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2o",
@@ -9810,7 +9888,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2p",
@@ -9932,7 +10011,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqx-2q",
@@ -10054,7 +10134,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqy-2r",
@@ -10176,7 +10257,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwakznqy-2s",
@@ -10298,7 +10380,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznqj-1h",
@@ -10442,7 +10525,8 @@
             "copies": 8,
             "tau": 0.6,
             "threshold": -0.5
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -10596,7 +10680,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwakznt4-32:sense",
@@ -10734,7 +10819,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwakznt4-32:cross",
@@ -10872,7 +10958,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznt6-34",
@@ -11030,7 +11117,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwakznt6-34:sense",
@@ -11168,7 +11256,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwakznt6-34:cross",
@@ -11306,7 +11395,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznt4-32",
@@ -11464,7 +11554,8 @@
             "q1": 1,
             "q2": 1,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakznto-3f",
@@ -11622,7 +11713,8 @@
             "q1": 1,
             "q2": 1,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwakzntm-3d",
@@ -11764,7 +11856,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:1",
@@ -11887,7 +11980,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:2",
@@ -12010,7 +12104,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:3",
@@ -12133,7 +12228,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:4",
@@ -12256,7 +12352,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:5",
@@ -12379,7 +12476,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:6",
@@ -12502,7 +12600,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:7",
@@ -12625,7 +12724,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:9",
@@ -12748,7 +12848,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:10",
@@ -12871,7 +12972,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:11",
@@ -12994,7 +13096,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:12",
@@ -13117,7 +13220,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:13",
@@ -13240,7 +13344,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:14",
@@ -13363,7 +13468,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:15",
@@ -13486,7 +13592,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:16",
@@ -13609,7 +13716,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:17",
@@ -13732,7 +13840,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:18",
@@ -13855,7 +13964,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:19",
@@ -13978,7 +14088,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:20",
@@ -14101,7 +14212,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbh-1:profile-mwaovmbh-2:21",
@@ -14224,7 +14336,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaovmbq-9",
@@ -14240,7 +14353,8 @@
             "q1": -0.3333333333333333,
             "q2": 1,
             "qwidth": 0.3,
-            "threshold": -0.6
+            "threshold": -0.6,
+            "polarity": 0
           }
         ]
       }
@@ -14371,7 +14485,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:1",
@@ -14494,7 +14609,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:2",
@@ -14617,7 +14733,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:3",
@@ -14740,7 +14857,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:4",
@@ -14863,7 +14981,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:5",
@@ -14986,7 +15105,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:6",
@@ -15109,7 +15229,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:7",
@@ -15232,7 +15353,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:9",
@@ -15355,7 +15477,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:10",
@@ -15478,7 +15601,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:11",
@@ -15601,7 +15725,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:12",
@@ -15724,7 +15849,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:13",
@@ -15847,7 +15973,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:14",
@@ -15970,7 +16097,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:15",
@@ -16093,7 +16221,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:16",
@@ -16216,7 +16345,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:17",
@@ -16339,7 +16469,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:18",
@@ -16462,7 +16593,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:19",
@@ -16585,7 +16717,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:20",
@@ -16708,7 +16841,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmbq-9:profile-mwaovmbh-2:21",
@@ -16831,7 +16965,8 @@
               "spread_receptors": 0
             }
           ],
-          "profile": "profile-mwaovmbh-2"
+          "profile": "profile-mwaovmbh-2",
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaovmbh-1",
@@ -16847,7 +16982,8 @@
             "q1": -0.3333333333333333,
             "q2": 1,
             "qwidth": 0.30000000000000004,
-            "threshold": -0.6
+            "threshold": -0.6,
+            "polarity": 0
           }
         ]
       }
@@ -16995,7 +17131,8 @@
             "q2": 0.5,
             "copies": 1,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmby-a:map1",
@@ -17135,7 +17272,8 @@
             "q2": 0.5,
             "copies": 4,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmby-a:map2",
@@ -17275,7 +17413,8 @@
             "q2": 0.5,
             "copies": 7,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaovmc8-c",
@@ -17436,7 +17575,8 @@
             "q2": 0.5,
             "copies": 1,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmc8-c:map1",
@@ -17576,7 +17716,8 @@
             "q2": 0.5,
             "copies": 4,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaovmc8-c:map2",
@@ -17716,7 +17857,8 @@
             "q2": 0.5,
             "copies": 7,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaovmby-a",
@@ -17876,7 +18018,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -18034,7 +18177,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -18175,7 +18319,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwavmc60-3",
@@ -18306,7 +18451,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwavmc5s-1",
@@ -18454,7 +18600,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaw87uj-1:sense",
@@ -18592,7 +18739,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaw87uj-1:cross",
@@ -18730,7 +18878,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaw87uz-3",
@@ -18888,7 +19037,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaw87uz-3:sense",
@@ -19026,7 +19176,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         },
         {
           "id": "organ-mwaw87uz-3:cross",
@@ -19164,7 +19315,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": -1
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwaw87uj-1",
@@ -19322,7 +19474,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -19480,7 +19633,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -19621,7 +19775,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb2qi5q-6",
@@ -19752,7 +19907,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb2qi5k-4",
@@ -19896,7 +20052,8 @@
             "copies": 8,
             "tau": 0.6,
             "threshold": -0.5
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb4bfyj-8",
@@ -20046,7 +20203,8 @@
             "copies": 8,
             "tau": 0.6,
             "threshold": -0.5
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb4bfyb-6",
@@ -20183,7 +20341,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb7n4p1-3",
@@ -20314,7 +20473,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwb7n4oo-1",
@@ -20462,7 +20622,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -20603,7 +20764,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwb7n4r5-g",
@@ -20725,7 +20887,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwb7n4rb-h",
@@ -20847,7 +21010,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         },
         {
           "id": "center-mwb7n4rc-i",
@@ -20969,7 +21133,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -21117,7 +21282,8 @@
             "q1": 1,
             "q2": 0.5,
             "pace": 0.6
-          }
+          },
+          "polarity": 0
         }
       ],
       "pair": null,
@@ -21258,7 +21424,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwbgfrgm-3",
@@ -21389,7 +21556,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwbgfrg0-1",
@@ -21520,7 +21688,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwbgfrhp-b",
@@ -21651,7 +21820,8 @@
               "steepness": 0,
               "spread_receptors": 0
             }
-          ]
+          ],
+          "polarity": 0
         }
       ],
       "pair": "organ-mwbgfrhk-9",

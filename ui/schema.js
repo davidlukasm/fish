@@ -469,7 +469,8 @@ export const RECEPTOR = Object.freeze({
   pressure_target: 23,
   proximity: 24,
   intensity: 25,
-  count: 26
+  dark_share: 26,
+  count: 27
 });
 export const EFFECTOR = Object.freeze({
   neuron: 0,
@@ -727,6 +728,7 @@ export const EDIT_LIMIT = Object.freeze({"max_brush_radius": 120, "brush_amount"
 export const GENERATION = Object.freeze({"natural": 1, "support": 2, "max": 2000000});
 export const TIME_CONSTANT = Object.freeze({"min_steps": 4.0, "span": 12.0, "pace_min_steps": 8.0, "learning_min_steps": 4.0, "learning_span": 128.0});
 export const VISION = Object.freeze({"pixels": 128, "half_view": 0.65});
+export const CONTRAST_POLARITY = Object.freeze({"bright": 0, "both": 0.5, "dark": 1});
 export const WATER_GRID = Object.freeze({"cell": 32.0, "view_stride": 3});
 export const JOURNAL = Object.freeze({"max_pedigree": 5000});
 export const FORM_LAYOUT = Object.freeze({"internal": 0, "first_sense": 1, "early_organs": 8, "absent_place": 0.5, "absent_spread": 0.18});

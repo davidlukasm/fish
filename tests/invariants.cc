@@ -8,6 +8,7 @@
 #include "plants.hh"
 #include "body_plan.hh"
 #include "receptor_tuning.hh"
+#include "retina.hh"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -169,6 +170,48 @@ void nonvisual_input_reaches_the_brain(const Genome &g) {
             "visual integration preserves the nonvisual signal reaching the brain");
     }
   check(touched, "start fish has touch receptors");
+}
+void dark_cells_report_what_is_darker_than_the_surround(const Genome &g) {
+  constexpr double AHEAD = 30, SIZE = 6;
+  constexpr Color BLACK{0, 0, 0}, WHITE{1, 1, 1};
+  Ecosystem w(SEED);
+  auto &p = adult(w, g, FIRST_X, DEPTH);
+  const auto &bright = p.body.active_interface(g);
+  auto dark = bright;
+  for (auto &r : dark.sensory)
+    r.dark_share = 1;
+  const auto looked = std::find_if(bright.sensory.begin(), bright.sensory.end(),
+                                   [](const auto &r) { return r.visual() && !r.proximity; });
+  check(looked != bright.sensory.end(), "start fish has light cells");
+  const double bearing = p.body.angle + looked->angle;
+  const auto seen = [&](const BrainInterface &b, const Color &color) {
+    SensoryProbe object;
+    object.kind = probe_kind::sight;
+    object.remaining = 1;
+    object.x = p.body.x + AHEAD * std::cos(bearing);
+    object.y = p.body.y + AHEAD * std::sin(bearing);
+    object.radius = SIZE;
+    object.color = color;
+    p.body.set_probe(object);
+    auto v = retinal_vision(p.body, b, w.field, visual_objects(p.body, g, w.field));
+    for (std::size_t i = 0; i < v.size(); ++i)
+      if (!b.sensory[i].visual() || b.sensory[i].proximity)
+        v[i] = 0;
+    return v;
+  };
+  const auto dark_black = seen(dark, BLACK), dark_white = seen(dark, WHITE),
+             bright_black = seen(bright, BLACK), bright_white = seen(bright, WHITE);
+  // The cell that sees the white object best has it in the middle of its field; its neighbours
+  // see it only in their surround, which turns brighter for them.
+  const auto centre = std::size_t(std::max_element(bright_white.begin(), bright_white.end()) -
+                                  bright_white.begin());
+  std::cout << "Zelle mit dem Ding in der Mitte: dunkel schwarz/weiß " << dark_black[centre] << '/'
+            << dark_white[centre] << ", hell " << bright_black[centre] << '/'
+            << bright_white[centre] << "\n";
+  check(bright_white[centre] > bright_black[centre],
+        "bright cells answer a white object more than a black one");
+  check(dark_black[centre] > dark_white[centre],
+        "dark cells answer a black object more than a white one");
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
@@ -1576,6 +1619,7 @@ int main() {
     start_fish_uses_external_vision_when_mature(g);
     start_fish_eats_nearby_food(g);
     nonvisual_input_reaches_the_brain(g);
+    dark_cells_report_what_is_darker_than_the_surround(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

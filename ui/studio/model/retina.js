@@ -1,6 +1,6 @@
 import {degrees} from '../../units.js';
 import {hueQuality} from '../../tuning.js';
-import {VISION, TUNING} from '../../schema.js';
+import {CONTRAST_POLARITY, VISION, TUNING} from '../../schema.js';
 import {findSite, ZONE} from './layout.js';
 
 export const HALF_VIEW = degrees(Math.PI * VISION.half_view);
@@ -20,7 +20,13 @@ export function retinalBins(sites) {
                     }));
 }
 const NEW_EYE = Object.freeze({reach : 32, density : 3, resolution : .2});
-const NEW_PROFILE = Object.freeze({q2 : -1, threshold : -.6, first_width : 1, next_width : .15});
+const NEW_PROFILE = Object.freeze({
+  q2 : -1,
+  threshold : -.6,
+  first_width : 1,
+  next_width : .15,
+  polarity : CONTRAST_POLARITY.bright
+});
 const GOLDEN_ANGLE = 137.508;
 export function fieldRecipe(site, profileId) {
   const angle = bearing(site), P = NEW_PROFILE;
@@ -29,14 +35,27 @@ export function fieldRecipe(site, profileId) {
     hi : Math.min(HALF_VIEW, angle + NEW_EYE.reach),
     density : NEW_EYE.density,
     resolution : NEW_EYE.resolution,
-    profiles :
-        [ {id : profileId, q1 : 0, q2 : P.q2, qwidth : P.first_width, threshold : P.threshold} ]
+    profiles : [ {
+      id : profileId,
+      q1 : 0,
+      q2 : P.q2,
+      qwidth : P.first_width,
+      threshold : P.threshold,
+      polarity : P.polarity
+    } ]
   };
 }
 export function nextVisionProfile(field, id) {
   const P = NEW_PROFILE,
         hue = (field.profiles.length * GOLDEN_ANGLE) % (2 * TUNING.hue_half_circle);
-  return {id, q1 : hueQuality(hue), q2 : P.q2, qwidth : P.next_width, threshold : P.threshold};
+  return {
+    id,
+    q1 : hueQuality(hue),
+    q2 : P.q2,
+    qwidth : P.next_width,
+    threshold : P.threshold,
+    polarity : P.polarity
+  };
 }
 export const receptorWidth = field =>
     TUNING.visual_width_min * (TUNING.visual_width_max / TUNING.visual_width_min) ** field;

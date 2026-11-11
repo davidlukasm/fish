@@ -635,6 +635,17 @@
     "centre": "Mitte",
     "width": "Breite",
     "opponent": "Gegenfarbe hemmt",
+    "contrast": "Meldet",
+    "contrastChoice": {
+      "bright": "hell",
+      "dark": "dunkel",
+      "both": "beides"
+    },
+    "contrastTitle": {
+      "bright": "Zellen melden, was heller ist als die Umgebung",
+      "dark": "Zellen melden, was dunkler ist als die Umgebung, etwa eine Krabbe auf Schlamm",
+      "both": "Je die Hälfte der Antwort für Helleres und für Dunkleres"
+    },
     "sensitivity": "Empfindlichkeit",
     "half": "Halbe Antwort bei",
     "sight": "Sehbild",

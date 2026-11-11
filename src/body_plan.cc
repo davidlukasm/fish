@@ -199,6 +199,9 @@ class AnatomyBuilder {
       r.qualitative_width = p.quality_width;
       r.spatial_width = p.field_width;
       r.opponency = std::clamp((p.quality2 + 1) * .5f, 0.f, 1.f);
+      // Only nerve cells read identity4 otherwise; for a sensory cell it picks ON or OFF cells.
+      r.dark_share = std::clamp(n.identity[cppn::output::identity4 - cppn::output::identity_role],
+                                0.f, 1.f);
       r.response_threshold = float(response_threshold(p.threshold));
       for (int k = 0; k < field::SENSE_COUNT; ++k)
         r.senses[k] = fn.senses[k] / share;

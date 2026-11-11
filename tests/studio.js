@@ -19,7 +19,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "b9a98de1ad2b767c",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "093d95f35ab12b44",
-  "src/body_plan.cc" : "d8d97c42a7405278",
+  "src/body_plan.cc" : "8159cc60d92078d8",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "fa45cdf473acbba0",
   "src/physiology.cc" : "091be4e30f65adee",
@@ -41,8 +41,8 @@ const ENGINE_REVIEW = Object.freeze({
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
-  "src/retina.cc" : "52ad87af678bd04f",
-  "src/observations.cc" : "e55fbd53754a3887",
+  "src/retina.cc" : "5f40a5d46c7c62e6",
+  "src/observations.cc" : "d90d105d5809a176",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
   "src/retina.hh" : "a3a169f6e8f4cafd",
@@ -51,7 +51,7 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "c6a63cda4547e83b",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "fbbfa3e4137673e8",
+  "src/brain_interface.hh" : "525f1ca7ae1ca2b3",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
@@ -311,7 +311,10 @@ async function checkResponseControls(model, capabilities, clicks) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} = await import('../ui/schema.js');
+  const {CONTRAST_POLARITY, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} =
+      await import('../ui/schema.js');
+  const colourType = (id, q1, qwidth) =>
+      ({id, q1, q2 : -1, qwidth, threshold : -.6, polarity : CONTRAST_POLARITY.bright});
   const {
     ORGANS,
     ORGAN_BY_KEY,
@@ -938,6 +941,22 @@ async function checkResponseControls(model, capabilities, clicks) {
   const profile = model.findOrgan(doc, id).field.profiles[0].id;
   doc = model.updateField(
       doc, id, {profile : {id : profile, q1 : -1, qwidth : .08, q2 : -1, threshold : -.8}}, sites);
+  {
+    let edited = null;
+    const studio = {
+      state : {document : doc, selected : {id}, visionProfile : profile},
+      editField : (organ, patch) => { edited = model.updateField(doc, organ, patch, sites); }
+    };
+    const choose = clicks.find(([ selector ]) => selector === '[data-vision-polarity]')[1];
+    choose(studio, {dataset : {visionPolarity : String(CONTRAST_POLARITY.dark)}});
+    const groups =
+        model.compileDocument(edited, sites).groups.filter(g => g.name.startsWith('eye:'));
+    assert.ok(groups.length && groups.every(g => g.polarity === CONTRAST_POLARITY.dark),
+              'The dark button makes both eyes report what is darker than its surround');
+    assert.ok(model.compileDocument(doc, sites)
+                  .groups.every(g => g.polarity === CONTRAST_POLARITY.bright),
+              'New cells report what is brighter than their surround');
+  }
   const retinalRelaySite = sites.find(s => s.zone === 2 && !s.outer && s.v >= .5 && s.w === 0);
   const relay = model.addNeuron(doc, 'relay', sites,
                                 geometry.sitePoint(retinalRelaySite, geometry.NERVE_ROLE));
@@ -985,9 +1004,8 @@ async function checkResponseControls(model, capabilities, clicks) {
   const relayIndex = model.allCenters(fromNode.document).findIndex(c => c.id === relay.centerId);
   assert.deepEqual(nodePlan.connections.filter(e => e.to === relayIndex).map(e => e.from),
                    [ nodeIndex ]);
-  const twoTypes = model.updateField(
-      fromNode.document, id,
-      {addProfile : {id : 'extra', q1 : .4, q2 : -1, qwidth : .2, threshold : -.6}}, sites);
+  const twoTypes =
+      model.updateField(fromNode.document, id, {addProfile : colourType('extra', .4, .2)}, sites);
   const extraNode = model.findOrgan(twoTypes, id).centers.find(c => c.profile === 'extra').id;
   const extraWired = model.addWire(twoTypes, extraNode, relay.centerId).document;
   const extraIndex =
@@ -1000,9 +1018,7 @@ async function checkResponseControls(model, capabilities, clicks) {
   assert.equal(model.findOrgan(model.removeOrgan(doc, id), pair).pair, null);
   const baseDoc = doc;
   for (let i = 1; i < 5; i++) {
-    doc = model.updateField(doc, id, {
-      addProfile : {id : 'colour-' + i, q1 : i * .35 - 1, q2 : -1, qwidth : .1, threshold : -.6}
-    },
+    doc = model.updateField(doc, id, {addProfile : colourType('colour-' + i, i * .35 - 1, .1)},
                             sites);
     assert.ok(doc, 'Five colour types can share a retina');
   }
@@ -1150,9 +1166,8 @@ async function checkResponseControls(model, capabilities, clicks) {
                          sitesResult.sensitivitySpan, sitesResult.steepnessSteps);
   assert.deepEqual(model.lifePhase(model.findOrgan(phased, id).centers[0]), {start : .6, end : .9});
   assert.ok(model.growsWith(doc, 0, sitesResult));
-  const phaseWithColor = model.updateField(
-      phased, id,
-      {addProfile : {id : 'phase-color', q1 : .4, q2 : -1, qwidth : .2, threshold : -.6}}, sites);
+  const phaseWithColor =
+      model.updateField(phased, id, {addProfile : colourType('phase-color', .4, .2)}, sites);
   assert.ok(model.findOrgan(phaseWithColor, id).centers.every(c => model.lifePhase(c).end === .9),
             'New retinal colour cells inherit the organ life phase');
   const state = {

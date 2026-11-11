@@ -190,7 +190,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
     const double surround = radians(world.env().vision_adaptation_angle);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
-    Color channels{}, received{};
+    Color channels{}, darkening{}, received{};
     for (int c = 0; c < rgb::count; ++c) {
       double integrated = 0;
       if (field.angle > field.left)
@@ -218,11 +218,22 @@ void integrate_retinal_receptors(const BrainInterface &binding,
                      adapted = r.response_threshold * std::max(0., m - baseline) /
                                (baseline + r.response_threshold),
                      blend = world.env().vision_adaptation;
+        // Unadapted light only ever brightens, so darkening is seen only through adaptation.
+        darkening[c] = blend * r.response_threshold * std::max(0., baseline - m) /
+                       (baseline + r.response_threshold);
         m = (1 - blend) * m + blend * adapted;
       }
       channels[c] = m;
     }
-    const double total = spectral_drive(r, channels, world.env().vision_opponent);
+    const double dark = r.proximity ? 0. : r.dark_share,
+                 brightening = spectral_drive(r, channels, world.env().vision_opponent),
+                 total = dark > 0
+                             ? (1 - dark) * brightening +
+                                   dark * spectral_drive(r, darkening, world.env().vision_opponent)
+                             : brightening;
+    if (dark > 0)
+      for (int c = 0; c < rgb::count; ++c)
+        channels[c] = (1 - dark) * channels[c] + dark * darkening[c];
     values[field.index] += float(total * field.mix);
     if (inspected) {
       double excitation = 0;

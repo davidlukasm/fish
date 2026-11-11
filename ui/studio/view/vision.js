@@ -1,6 +1,6 @@
 import {labelledText, percent, t} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
-import {RECEPTOR, SENSE_KIND, VISION, VISUAL_SAMPLE} from '../../schema.js';
+import {CONTRAST_POLARITY, RECEPTOR, SENSE_KIND, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
   lightColor,
@@ -379,6 +379,32 @@ const sightEyes = () => `<div class="aid-sight-eyes">${
             .join('')}</div>`;
 const section = (key, body) =>
     `<section class="aid-eye-section"><h4>${label(key)}</h4>${body}</section>`;
+const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
+const CONTRAST_ICON =
+    Object.freeze({width : 26, height : 16, corner : 3, radius : 5, pair : 4, apart : 5});
+function contrastIcon(key) {
+  const I = CONTRAST_ICON, x = I.width / 2, y = I.height / 2;
+  const dot = (tone, cx, r) => `<circle class="${tone}" cx="${cx}" cy="${y}" r="${r}"/>`;
+  const dots = key === 'both'
+                   ? dot('bright', x - I.apart, I.pair) + dot('dark', x + I.apart, I.pair)
+                   : dot(key, x, I.radius);
+  const box = `width="${I.width}" height="${I.height}"`;
+  return `<svg class="aid-contrast" viewBox="0 0 ${I.width} ${I.height}" aria-hidden="true">` +
+         `<rect ${box} rx="${I.corner}"/>${dots}</svg>`;
+}
+// Whether the cells of a colour type report what is lighter or darker than its surround.
+function contrastChooser(profile) {
+  return `<div class="aid-contrast-choices">${
+      CONTRAST_CHOICES
+          .map(key => {
+            const chosen = profile.polarity === CONTRAST_POLARITY[key];
+            return `<button data-vision-polarity="${CONTRAST_POLARITY[key]}" class="${
+                chosen ? 'active'
+                       : ''}" aria-pressed="${chosen}" title="${label('contrastTitle.' + key)}">${
+                contrastIcon(key)}${label('contrastChoice.' + key)}</button>`;
+          })
+          .join('')}</div>`;
+}
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
@@ -401,6 +427,7 @@ export function visionInspector(state, organ) {
                                                idSafe(p.id)}">${label('remove')}</button>`
                                          : ''}</div>`) +
          section('spectrum', spectrumEditor(state, organ, p)) +
+         section('contrast', contrastChooser(p)) +
          section('sensitivity', sensitivityEditor(state, organ, p)) + section('sight', sightEyes());
 }
 const CLEAR = Object.freeze({step : .25});

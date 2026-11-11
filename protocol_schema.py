@@ -470,7 +470,8 @@ class Receptor:
     PRESSURE_TARGET = 23
     PROXIMITY = 24
     INTENSITY = 25
-    COUNT = 26
+    DARK_SHARE = 26
+    COUNT = 27
 
 class Effector:
     NEURON = 0
@@ -1162,6 +1163,11 @@ class Vision:
     PIXELS = 128
     HALF_VIEW = 0.65
 
+class ContrastPolarity:
+    BRIGHT = 0
+    BOTH = 0.5
+    DARK = 1
+
 class WaterGrid:
     CELL = 32.0
     VIEW_STRIDE = 3
@@ -1323,7 +1329,7 @@ class BehaviorScale:
     TURN_DEGREES = 54
     CRUISING_SPEED = 0.75
 
-ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open', 'electrical_limit', 'learning_tau', 'teaching_limit', 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts')
+ATELIER_PLAN_FIELDS = ('zone', 'side', 'u0', 'u1', 'v0', 'v1', 'w0', 'w1', 'role', 'function', 'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'sign', 'mode', 'pace', 'modulator', 'crossing', 'range', 'organ', 'open', 'electrical_limit', 'learning_tau', 'teaching_limit', 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts', 'polarity')
 ATELIER_RECEPTOR_FIELDS = ('active', 'baseline', 'sensitivity', 'half', 'substance', 'width', 'steepness', 'spread_receptors')
 ATELIER_LIMITS = {'max_name': 40, 'max_groups': 720, 'max_group_name': 60, 'receptors': 8, 'max_copies': 16}
 

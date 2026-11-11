@@ -2,6 +2,7 @@ import {clamp} from '../../units.js';
 import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
 import {
   ATELIER_LIMITS,
+  CONTRAST_POLARITY,
   HORMONE_EFFECT,
   HORMONES,
   MOTOR_KIND,
@@ -101,8 +102,10 @@ export function validateDocument(doc) {
           f.hi > HALF_VIEW || f.lo >= f.hi || f.density < 1 ||
           f.density > ATELIER_LIMITS.max_copies || !Array.isArray(f.profiles) ||
           !f.profiles.length ||
-          !f.profiles.every(p => typeof p.id === 'string' &&
-                                 [ p.q1, p.q2, p.qwidth, p.threshold ].every(Number.isFinite)))
+          !f.profiles.every(
+              p => typeof p.id === 'string' &&
+                   [ p.q1, p.q2, p.qwidth, p.threshold, p.polarity ].every(Number.isFinite) &&
+                   p.polarity >= 0 && p.polarity <= 1))
         throw new Error('studio.errors.invalidDocument');
     }
     if (organ.pair && doc.organs.find(o => o.id === organ.pair)?.pair !== organ.id)
@@ -121,7 +124,8 @@ export function validateDocument(doc) {
           (center.profile !== undefined && typeof center.profile !== 'string'))
         throw new Error('studio.errors.invalidDocument');
       const unit = [
-        'tau', 'field', 'qwidth', 'range', 'electrical_limit', 'teaching_limit', 'learning_tau'
+        'tau', 'field', 'qwidth', 'polarity', 'range', 'electrical_limit', 'teaching_limit',
+        'learning_tau'
       ];
       const signed = [ 'threshold', 'q1', 'q2', 'sign', 'mode', 'pace', 'modulator', 'crossing' ];
       const receptorValid = r =>
@@ -357,6 +361,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     field : desc.field ?? N.field,
     q1 : 0,
     q2 : 0,
+    polarity : CONTRAST_POLARITY.bright,
     qwidth : desc.qwidth ?? N.qwidth,
     sign : desc.sign ?? 1,
     mode : desc.mode ?? 0,
@@ -576,12 +581,12 @@ export function updateField(doc, id, patch, sites) {
       const index = original.field.profiles.findIndex(p => p.id === patch.profile.id);
       const profile = target.field.profiles[index];
       if (profile)
-        for (const key of ['q1', 'q2', 'qwidth', 'threshold'])
+        for (const key of ['q1', 'q2', 'qwidth', 'threshold', 'polarity'])
           if (key in patch.profile) {
             const value = target === organ ? patch.profile[key]
                                            : profile[key] + patch.profile[key] -
                                                  original.field.profiles[index][key];
-            profile[key] = clamp(value, key === 'qwidth' ? 0 : -1, 1);
+            profile[key] = clamp(value, [ 'qwidth', 'polarity' ].includes(key) ? 0 : -1, 1);
           }
     }
     if (patch.addProfile)
@@ -969,8 +974,8 @@ export function updateCenter(doc, id, patch) {
     return null;
   const draft = copy(doc);
   const keys = [
-    'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'qwidth', 'crossing', 'range', 'sign',
-    'mode', 'pace', 'modulator', 'electrical_limit', 'teaching_limit', 'learning_tau'
+    'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'polarity', 'qwidth', 'crossing', 'range',
+    'sign', 'mode', 'pace', 'modulator', 'electrical_limit', 'teaching_limit', 'learning_tau'
   ];
   for (const c of tissueTargets(draft, id)) {
     for (const key of keys)
@@ -980,8 +985,8 @@ export function updateCenter(doc, id, patch) {
         c[key] = key === 'copies' ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies)
                                   : clamp(value,
                                           [
-                                            'tau', 'field', 'qwidth', 'range', 'electrical_limit',
-                                            'teaching_limit', 'learning_tau'
+                                            'tau', 'field', 'qwidth', 'polarity', 'range',
+                                            'electrical_limit', 'teaching_limit', 'learning_tau'
                                           ].includes(key)
                                               ? 0
                                               : -1,
@@ -993,7 +998,7 @@ export function updateCenter(doc, id, patch) {
       const c = organ.centers.find(c => c.profile === profile.id);
       if (!c)
         continue;
-      for (const key of ['q1', 'q2', 'qwidth', 'threshold'])
+      for (const key of ['q1', 'q2', 'qwidth', 'threshold', 'polarity'])
         profile[key] = c[key];
     }
     organ.field.density = organ.centers[0].copies;
@@ -1536,6 +1541,7 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         q1 : center.q1,
         q2 : center.q2,
         qwidth : center.qwidth,
+        polarity : center.polarity,
         sign : center.sign,
         mode : center.mode,
         pace : center.pace,

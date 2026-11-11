@@ -7,16 +7,19 @@ inline constexpr int max_groups = 720;
 inline constexpr int max_group_name = 60;
 inline constexpr int receptors = 8;
 inline constexpr int max_copies = 16;
-template <typename Group>
-bool read_group(std::istream &input, Group &g) {
-  return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >> g.function >> g.copies >> g.threshold >> g.tau >> g.field >> g.q1 >> g.q2 >> g.qwidth >> g.sign >> g.mode >> g.pace >> g.modulator >> g.crossing >> g.range >> g.organ >> g.open >> g.electrical_limit >> g.learning_tau >> g.teaching_limit >> g.spread_physiology >> g.spread_receptors >> g.spread_development >> g.spread_contacts);
+template <typename Group> bool read_group(std::istream &input, Group &g) {
+  return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >>
+              g.function >> g.copies >> g.threshold >> g.tau >> g.field >> g.q1 >> g.q2 >>
+              g.qwidth >> g.sign >> g.mode >> g.pace >> g.modulator >> g.crossing >> g.range >>
+              g.organ >> g.open >> g.electrical_limit >> g.learning_tau >> g.teaching_limit >>
+              g.spread_physiology >> g.spread_receptors >> g.spread_development >>
+              g.spread_contacts >> g.polarity);
 }
-template <typename Receptor>
-bool read_receptor(std::istream &input, Receptor &r, int &active) {
-  return bool(input >> active >> r.baseline >> r.sensitivity >> r.half >> r.substance >> r.width >> r.steepness >> r.spread_receptors);
+template <typename Receptor> bool read_receptor(std::istream &input, Receptor &r, int &active) {
+  return bool(input >> active >> r.baseline >> r.sensitivity >> r.half >> r.substance >> r.width >>
+              r.steepness >> r.spread_receptors);
 }
-template <typename Value>
-void write_group(std::ostream &out, const Value &value) {
+template <typename Value> void write_group(std::ostream &out, const Value &value) {
   out << "{";
   out << "\"zone\":" << value.zone;
   out << ",\"side\":" << value.side;
@@ -50,10 +53,10 @@ void write_group(std::ostream &out, const Value &value) {
   out << ",\"spread_receptors\":" << value.spread_receptors;
   out << ",\"spread_development\":" << value.spread_development;
   out << ",\"spread_contacts\":" << value.spread_contacts;
+  out << ",\"polarity\":" << value.polarity;
   out << "}";
 }
-template <typename Value>
-void write_receptor(std::ostream &out, const Value &value) {
+template <typename Value> void write_receptor(std::ostream &out, const Value &value) {
   out << "{";
   out << "\"active\":" << int(value.active);
   out << ",\"baseline\":" << value.baseline;

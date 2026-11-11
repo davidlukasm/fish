@@ -37,7 +37,9 @@ struct BrainInterface {
           qualitative_width = .25f, spatial_width = .3f, mechanical_angle = 0;
     std::array<float, BODY_SECTORS> contact_weights{};
     bool contact_kernel = false;
-    float opponency = .5f, proximity_range = .5f;
+    // dark_share: the part of a light cell's response that reports darkening against its
+    // surround; the rest reports brightening.
+    float opponency = .5f, proximity_range = .5f, dark_share = 0;
     bool proximity = false, inner = false;
     std::uint32_t shared_receptor = 0;
     int pressure_target = -1, pressure_kind = -1;
