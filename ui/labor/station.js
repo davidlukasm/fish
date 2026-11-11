@@ -88,8 +88,9 @@ class LabStation {
       const finished = job.status !== 'running';
       this.follow(job);
       if (finished)
-        this.state.overview = await this.request({operation : 'overview'});
-      this.render();
+        await this.refresh();
+      else
+        this.render();
     } catch (error) {
       this.fail(error);
     }
@@ -122,12 +123,10 @@ class LabStation {
   async cancel() {
     try {
       this.follow(await this.request({operation : 'cancel', job : this.state.job.id}));
-      this.state.overview = await this.request({operation : 'overview'});
+      await this.refresh();
     } catch (error) {
       this.fail(error);
-      return;
     }
-    this.render();
   }
   fail(error) {
     this.state.error = error.message || say('errors.server');

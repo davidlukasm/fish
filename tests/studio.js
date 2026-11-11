@@ -2999,6 +2999,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     await station.choose(labor.DRAFT);
     assert.notEqual(station.state.fingerprint, mark,
                     'A changed engine cannot reuse the draft’s old qualification');
+    const rebuilt = station.state.fingerprint;
+    for (const status of ['done', 'cancelled']) {
+      const oldJob = {id : 'old-engine', fingerprint : mark, status, steps, runs : worlds};
+      const current = {engine : 'engine-b', fish : [], results : [], job : oldJob};
+      station.state.fingerprint = mark;
+      station.state.overview = {engine : 'engine-a'};
+      station.state.job = {...oldJob, status : 'running'};
+      station.request = async ({operation}) => operation === 'overview' ? current : oldJob;
+      await (status === 'done' ? station.poll() : station.cancel());
+      assert.equal(station.state.fingerprint, rebuilt,
+                   'Finishing or cancelling resolves the selected fish against the current engine');
+      assert.deepEqual(
+          labor.shownWorlds(station.state.overview, station.state.fingerprint, steps,
+                            station.state.job),
+          [], 'An open station cannot present an old-engine job as a current qualification');
+    }
     const view = await import('../ui/labor/view.js');
     const page = view.breedingShell({
       overview : {...overview, fish : [ {key : 'brisa', fingerprint : 'f'} ]},
