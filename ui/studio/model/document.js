@@ -854,16 +854,18 @@ export function setFinStroke(doc, organId, stroke, sites) {
       c.polarity = stroke;
   return draft;
 }
+const opposite = stroke => stroke === FIN_STROKE.back ? FIN_STROKE.front : FIN_STROKE.back;
+export const antagonistOf = (doc, organ, sites) =>
+    isFinMuscle(organ, sites) ? matchingOrgan(doc, 'muscle', organ.side, sites, MOTOR_KIND.turn,
+                                              opposite(finStroke(organ)))
+                              : null;
 // The antagonist of a pectoral fin muscle: as many nodes at free fin sites beside it, stroking
 // the other way, on both sides when the muscle has a twin.
 export function addAntagonist(doc, organId, sites) {
   const original = findOrgan(doc, organId);
-  if (!isFinMuscle(original, sites))
+  if (!isFinMuscle(original, sites) || antagonistOf(doc, original, sites))
     return null;
-  const stroke = finStroke(original) === FIN_STROKE.back ? FIN_STROKE.front : FIN_STROKE.back;
-  const code = organFunction(original, sites);
-  if (matchingOrgan(doc, 'muscle', original.side, sites, code, stroke))
-    return null;
+  const stroke = opposite(finStroke(original));
   const draft = copy(doc), used = usedSites(draft);
   if (original.pair)
     for (const occupied of [...used]) {

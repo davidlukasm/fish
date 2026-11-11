@@ -1,7 +1,7 @@
-import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
+import {ATELIER_LIMITS, FIN_STROKE, MOTOR_KIND} from '../../schema.js';
 import {musclePlaces, organFunction} from '../model/organs.js';
 import {BODY_FRAME, halfWidth, sideOf, sideSign} from '../model/layout.js';
-import {sprintNodes, usedSites} from '../model/document.js';
+import {finStroke, sprintNodes, usedSites} from '../model/document.js';
 import {FIN_BASE, HEAD, skinAt, SNOUT_TIP} from './frame.js';
 import {fixed} from './markup.js';
 
@@ -32,7 +32,8 @@ const SHAPE = Object.freeze({
     mark : .8,
     lean : .5
   },
-  fin : {inset : 6, reach : [ 22, 18 ]},
+  // The forward-stroking antagonist leans its fan toward the head.
+  fin : {inset : 6, reach : [ 22, 18 ], lean : .7},
   jaw : {at : .82, size : [ [ 16, 10 ], [ 8, 5 ] ], spread : .8, tilt : .6, fibre : .7},
   throat :
       {after : 4, length : [ 40, 50 ], off : 20, width : [ 12, 10 ], out : 2.2, in : .4, ring : 1.2}
@@ -40,7 +41,7 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-function workShape(code, side, {fill, strength}, nodes) {
+function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back) {
   const s = sideSign(side), count = muscleSegments(nodes), along = k => (k + .5) / count;
   if (code === MOTOR_KIND.forward) {
     const T = SHAPE.tail, end = T.stalk[1],
@@ -69,14 +70,16 @@ function workShape(code, side, {fill, strength}, nodes) {
   if (code === MOTOR_KIND.turn) {
     const F = SHAPE.fin, a = FIN_BASE.at, b = FIN_BASE.at + FIN_BASE.length, middle = (a + b) / 2;
     const base = x => skinAt(x, s) - s * F.inset, reach = grow(F.reach, (fill + strength) / 2);
-    const root = {x : middle, y : base(middle) - s * reach};
+    const lean = stroke === FIN_STROKE.front ? F.lean * (b - a) / 2 : 0;
+    const root = {x : middle - lean, y : base(middle) - s * reach};
     const marks = Array.from({length : count}, (_, k) => {
       const x = a + (b - a) * along(k);
       return 'M' + point(root.x, root.y) + ' L' + point(x, base(x));
     });
     return {
-      path : 'M' + point(a, base(a)) + ' Q' + point(middle, base(middle) - 2 * s * reach) + ' ' +
-                 point(b, base(b)) + 'Z',
+      path : 'M' + point(a, base(a)) + ' Q' +
+                 point(middle - 2 * lean, base(middle) - 2 * s * reach) + ' ' + point(b, base(b)) +
+                 'Z',
       from : {x : a, y : base(a)},
       to : {x : b, y : base(b)},
       marks
@@ -123,8 +126,9 @@ function workShape(code, side, {fill, strength}, nodes) {
 }
 // The segments at the end of the band stand for the sprint nodes.
 export function muscleShape(organ, sites) {
-  const shape = workShape(organFunction(organ, sites), sideOf(organ), muscleBuild(organ),
-                          organ.centers.length);
+  const code = organFunction(organ, sites);
+  const shape = workShape(code, sideOf(organ), muscleBuild(organ), organ.centers.length,
+                          code === MOTOR_KIND.turn ? finStroke(organ) : FIN_STROKE.back);
   if (!shape)
     return null;
   const sprint = sprintNodes(organ), count = shape.marks.length,

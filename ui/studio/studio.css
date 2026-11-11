@@ -430,6 +430,7 @@
 .aid-contrast-choices button{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:7px;padding:5px 9px}
 .aid-contrast-choices button.active{border-color:#ecdba8;background:#35504a}
 .aid-contrast{width:26px;height:16px}
+.aid-stroke-choices{flex-wrap:wrap}
 .aid-stroke{width:30px;height:16px}
 .aid-stroke path{fill:none;stroke:#f4f1e4;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .aid-contrast rect{fill:#7f8a86}
