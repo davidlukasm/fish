@@ -11,6 +11,7 @@ import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
+import {hairPatch} from './view/balance.js';
 import {gutProbePatch, probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
 import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
@@ -112,6 +113,7 @@ const PADS = Object.freeze({
   pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
   amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
   lateral : {key : 'lateralPad', handle : lateralPatch},
+  hair : {key : 'hairPad', handle : hairPatch},
   spines : {
     key : 'spinePad',
     handle : (fx, fy, element) => spinePatch(fx, fy, Number(element.dataset.spineAim))

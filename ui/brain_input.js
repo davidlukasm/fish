@@ -1,5 +1,5 @@
 import {BRAIN_SPACE} from './brain_layout.js';
-import {BARBEL, MOTOR_TISSUE, SENSE_TISSUE, sidedTissue} from './tissue.js';
+import {BARBEL, GRAVITY, MOTOR_TISSUE, SENSE_TISSUE, sidedTissue} from './tissue.js';
 import {NEURON} from './schema.js';
 import {t} from './strings.js';
 import {updateBrainProbeState} from './brain_probe.js';
@@ -126,7 +126,8 @@ function brainOrganHit(p, d = brainState.brainDrawing) {
       if (g.isPointInPath?.(...local) || g.isPointInStroke?.(...local))
         score = Math.min(score, 1);
     }
-    const open = tissue.key === SENSE_TISSUE.flow || tissue.variant === BARBEL;
+    const open =
+        tissue.key === SENSE_TISSUE.flow && tissue.variant !== GRAVITY || tissue.variant === BARBEL;
     if (!open && g.isPointInPath?.(...local) === true)
       score = Math.min(score, ORGAN_HIT.inside_score);
     g.restore();

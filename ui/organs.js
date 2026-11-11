@@ -2,12 +2,14 @@ import {ORGAN_ICONS} from './organ_icons.js';
 import {glyph, linePaint} from './glyph.js';
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   RESERVE_TISSUE,
   SENSE_TISSUE,
   sidedTissue,
   tissueBase,
-  tissueSide
+  tissueSide,
+  VARIANT_SENSE
 } from './tissue.js';
 import {t, tList} from './strings.js';
 import {setBrainTool} from './brain_probe.js';
@@ -91,7 +93,7 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
 }
 
 function organIconKey(tissue) {
-  return tissue.variant === BARBEL                    ? BARBEL
+  return VARIANT_SENSE[tissue.variant]                ? tissue.variant
          : tissue.key === SENSE_TISSUE.gonad_pressure ? sidedTissue(tissue.key, tissue.side)
                                                       : tissue.key;
 }
@@ -99,6 +101,7 @@ function organIconKey(tissue) {
 function organName(key) {
   const base = tissueBase(key), side = tissueSide(key);
   return key === BARBEL                         ? t('organs.barteln')
+         : key === GRAVITY                      ? t('organs.gleichgewicht')
          : base === SENSE_TISSUE.gonad_pressure ? tList('body_model.fillingNames')[Number(side)]
                                                 : brainTissueName(base);
 }
@@ -164,7 +167,7 @@ export function renderOrganIcons(d) {
     group.append(label, chips);
     for (const key of shown) {
       const ids = present.get(key).sort(), button = document.createElement('button'),
-            base = key === BARBEL ? SENSE_TISSUE.odor : tissueBase(key), color = tissueColor(base),
+            base = VARIANT_SENSE[key] ?? tissueBase(key), color = tissueColor(base),
             name = organName(key);
       button.type = 'button';
       button.className = 'organ-icon';

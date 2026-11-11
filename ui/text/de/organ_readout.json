@@ -120,5 +120,17 @@
  "reserve": "Reserve",
  "blut": "Blut",
  "hormoneReifeUndReserve": "Hormone, Reife und Reserve · erbliche Abstimmung",
- "proximity": "{share} Nähe"
+ "proximity": "{share} Nähe",
+ "gleichgewicht": "Gleichgewichtsorgan",
+ "gravityReports": {
+  "head": "meldet: Kopf runter",
+  "flank": "meldet: rechte Seite unten",
+  "tail": "meldet: Kopf hoch",
+  "headOther": "meldet: Kopf runter",
+  "flankOther": "meldet: linke Seite unten",
+  "tailOther": "meldet: Kopf hoch"
+ },
+ "haarzellenWiegenDieSchwerkraft": "Haarzellen im Körper wiegen die Schwerkraft. Ihre Richtung ist erblich.",
+ "koerperlage": "Körperlage",
+ "koerperlageHint": "Winkel der Körperachse zur Waagrechten; positiv: Kopf runter."
 }

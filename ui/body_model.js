@@ -1,5 +1,6 @@
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isSenseTissue,
@@ -26,7 +27,7 @@ export const ORGAN_GROUPS = [
   [
     'body_model.innensinne',
     [
-      SENSE_TISSUE.bladder_pressure, ...GONAD_TISSUES, SENSE_TISSUE.inner_pressure,
+      GRAVITY, SENSE_TISSUE.bladder_pressure, ...GONAD_TISSUES, SENSE_TISSUE.inner_pressure,
       SENSE_TISSUE.blood
     ]
   ],

@@ -1,6 +1,7 @@
 import {ANATOMY, BODY_SHAPE} from './schema.js';
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   MOTOR_TISSUE,
@@ -22,7 +23,7 @@ const TISSUE_LAYERS = Object.freeze([
   [ SENSE_TISSUE.intake ], [ INTERNAL_TISSUE ],
   [
     RESERVE_TISSUE, SENSE_TISSUE.inner_pressure, SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure,
-    MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland
+    MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland, GRAVITY
   ],
   [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ], [ SENSE_TISSUE.gonad_pressure, GUT_TISSUE ],
   [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression ], [ SENSE_TISSUE.odor ],
@@ -32,7 +33,8 @@ const UNLISTED_LAYER = .5;
 export function brainOrganLayer(tissue) {
   if (brainBehindSkin(tissue.key, tissue.variant))
     return 0;
-  const layer = TISSUE_LAYERS.findIndex(keys => keys.includes(tissue.key));
+  const key = tissue.variant === GRAVITY ? GRAVITY : tissue.key,
+        layer = TISSUE_LAYERS.findIndex(keys => keys.includes(key));
   return layer < 0 ? UNLISTED_LAYER : layer + 1;
 }
 

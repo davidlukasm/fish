@@ -226,6 +226,8 @@ class AnatomyBuilder {
       for (int k = 0; k < field::SENSE_COUNT; ++k)
         r.senses[k] = fn.senses[k] / share;
       r.refresh_modality();
+      if (r.inner && r.channel == field::Flow)
+        r.mechanical_angle = hair_direction(p.quality1, r.lateral);
       r.time_steps = field::time_constant_steps(p);
       // Gravity does not fade: a fish lying still must still know which way is down.
       if (adapting_sense(r.channel) && !(r.inner && r.channel == field::Flow))

@@ -742,7 +742,8 @@
       "pressure_target",
       "proximity",
       "intensity",
-      "dark_share"
+      "dark_share",
+      "inner"
     ],
     "effector": [
       "neuron",

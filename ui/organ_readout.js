@@ -1,5 +1,6 @@
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -40,6 +41,8 @@ import {
 import {degrees, radians} from './units.js';
 import {typeColour, typeNameIndex} from './tuning.js';
 export const organ_readoutState = {};
+// Postures a gravity hair reports, from the head over the flank to the tail.
+const GRAVITY_POSTURES = Object.freeze([ 'head', 'flank', 'tail' ]);
 export let organHistory;
 
 export let organNumber;
@@ -230,35 +233,36 @@ const READOUT = Object.freeze({
   force_digits : 4
 });
 export function brainOrganReadout(d, tissue) {
-  const {key,
-         side,
-         members} = tissue,
-         k = tissueKind(key),
-         nodes = [...new Map(members.map(m => [m.n[NEURON.index], m.n])).values() ],
-         weight = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength], 0),
-         activity = members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength] *
-                                                             (n[NEURON.ready] && !n[NEURON.muted]
-                                                                  ? Math.abs(n[NEURON.activity])
-                                                                  : 0),
-                                   0) /
-                    Math.max(TOLERANCE.negligible, weight),
-         rec = nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean),
-         params = sceneState.frame.parameters || {},
-         metric = (label, value, hint = '') => ({label, value, hint}),
-         response = metric(t('organ_readout.zellaktivitaet'), organPercent(activity),
-                           t('organ_readout.sinneszellenErhaltenDasSignal')),
-         info = {
-           key,
-           side,
-           title : tissue.variant === BARBEL ? t('organ_readout.bartel') : brainTissueName(key),
-           cells : nodes.length,
-           activity,
-           metrics : [],
-           graphic : 'signal',
-           hero : '',
-           caption : '',
-           series : activity
-         };
+  const {key, side, members} = tissue, k = tissueKind(key),
+                    nodes = [...new Map(members.map(m => [m.n[NEURON.index], m.n])).values() ],
+                    weight =
+                        members.reduce((s, {n, part}) => s + part.share * n[NEURON.strength], 0),
+                    activity = members.reduce((s, {n, part}) =>
+                                                  s + part.share * n[NEURON.strength] *
+                                                          (n[NEURON.ready] && !n[NEURON.muted]
+                                                               ? Math.abs(n[NEURON.activity])
+                                                               : 0),
+                                              0) /
+                               Math.max(TOLERANCE.negligible, weight),
+                    rec = nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean),
+                    params = sceneState.frame.parameters || {},
+                    metric = (label, value, hint = '') => ({label, value, hint}),
+                    response = metric(t('organ_readout.zellaktivitaet'), organPercent(activity),
+                                      t('organ_readout.sinneszellenErhaltenDasSignal')),
+                    info = {
+                      key,
+                      side,
+                      title : tissue.variant === BARBEL    ? t('organ_readout.bartel')
+                              : tissue.variant === GRAVITY ? t('organ_readout.gleichgewicht')
+                                                           : brainTissueName(key),
+                      cells : nodes.length,
+                      activity,
+                      metrics : [],
+                      graphic : 'signal',
+                      hero : '',
+                      caption : '',
+                      series : activity
+                    };
   if (key === GUT_TISSUE || key === RESERVE_TISSUE) {
     info.hero = organPercent(key === GUT_TISSUE
                                  ? d.b.satiety
@@ -537,6 +541,25 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [
         metric(t('organ_readout.empfindlichkeitDafuer'), organPercent(values[best]),
                t('organ_readout.hoheWerteBedeutenDass')),
+        response
+      ];
+    } else if (tissue.variant === GRAVITY) {
+      // Which posture weighs the hairs down most: head, flank or tail direction of the mean hair.
+      const hair = rec.reduce((sum, r) => sum + Math.abs(r[RECEPTOR.mechanical_angle] || 0), 0) /
+                   Math.max(1, rec.length);
+      info.hero =
+          t('organ_readout.gravityReports.' +
+            GRAVITY_POSTURES[Math.min(GRAVITY_POSTURES.length - 1,
+                                      Math.floor(hair / Math.PI * GRAVITY_POSTURES.length))] +
+            (side ? '' : 'Other'));
+      info.caption = t('organ_readout.haarzellenWiegenDieSchwerkraft');
+      info.graphic = 'gravity';
+      info.receptors = rec;
+      info.metrics = [
+        metric(
+            t('organ_readout.koerperlage'),
+            t('units.degrees', {n : organNumber(degrees(Math.asin(Math.sin(d.p[FISH.angle]))), 0)}),
+            t('organ_readout.koerperlageHint')),
         response
       ];
     } else if (k === SENSE_KIND.flow) {

@@ -6,5 +6,6 @@
  "sides": "{name} · {n} Seiten",
  "angleLeft": "{n}° links",
  "angleRight": "{n}° rechts",
- "noProximityCells": "Nähezellen fehlen"
+ "noProximityCells": "Nähezellen fehlen",
+ "gleichgewicht": "Gleichgewichtsorgan"
 }

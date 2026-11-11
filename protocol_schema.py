@@ -471,7 +471,8 @@ class Receptor:
     PROXIMITY = 24
     INTENSITY = 25
     DARK_SHARE = 26
-    COUNT = 27
+    INNER = 27
+    COUNT = 28
 
 class Effector:
     NEURON = 0

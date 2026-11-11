@@ -337,6 +337,7 @@
     "muscleKind": "Muskelart ändern",
     "answerTo": "Antwort auf {stimulus}",
     "held": "{stimulus} gehalten",
+    "gravityStimulus": "Neigung",
     "stimuli": [
       "Licht",
       "Duft",
@@ -877,6 +878,18 @@
         "high": "stark",
         "gulp": "Schluck je Zug"
       }
+    }
+  },
+  "balance": {
+    "title": "Haarrichtung",
+    "handle": "Ziehen: wohin die Haare zeigen, vom Kopf über die Flanke zum Schwanz; die andere Seite spiegelt",
+    "reports": {
+      "head": "Kopf runter",
+      "flank": "rechte Seite unten",
+      "tail": "Kopf hoch",
+      "headOther": "Kopf runter",
+      "flankOther": "linke Seite unten",
+      "tailOther": "Kopf hoch"
     }
   },
   "lateral": {

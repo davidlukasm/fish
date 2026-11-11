@@ -1,6 +1,7 @@
 import {PRESSURE_SOURCE} from './schema.js';
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   MOTOR_TISSUE,
@@ -16,6 +17,7 @@ export const ORGAN_ICONS = {
       'M8 15a3 3 0 1 0 .01 0M16 15a3 3 0 1 0 .01 0M6 8c2-2 4-2 6 0s4 2 6 0M6 4c2-2 4-2 6 0s4 2 6 0',
   [BARBEL] : 'M12 6v4M12 10c-2 3-5 4-8 9M12 10c2 3 5 4 8 9',
   [SENSE_TISSUE.flow] : 'M2 12h3M7 12h3M12 12h3M17 12h3M4 8c5-3 11-3 16 0M4 16c5 3 11 3 16 0',
+  [GRAVITY] : 'M12 3a8 8 0 1 0 .01 0M12 15a3 3 0 1 0 .01 0M12 7v5',
   [SENSE_TISSUE.touch] : 'M5 5h14v14H5zM9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01',
   [SENSE_TISSUE.proximity] :
       'M12 13h.01M8.5 9.5a5 5 0 0 1 7 0M5.5 6.5a9 9 0 0 1 13 0M8.5 16.5a5 5 0 0 0 7 0',
@@ -55,7 +57,7 @@ export const STUDIO_ICON = Object.freeze({
   barbels : ORGAN_ICONS[BARBEL],
   proximity : ORGAN_ICONS[SENSE_TISSUE.proximity],
   lateral : ORGAN_ICONS[SENSE_TISSUE.flow],
-  balance : 'M12 3a8 8 0 1 0 .01 0M12 15a3 3 0 1 0 .01 0M12 7v5',
+  balance : ORGAN_ICONS[GRAVITY],
   touch : ORGAN_ICONS[SENSE_TISSUE.touch],
   pain : ORGAN_ICONS[SENSE_TISSUE.damage],
   blood : ORGAN_ICONS[SENSE_TISSUE.blood],

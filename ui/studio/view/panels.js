@@ -5,12 +5,13 @@ import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
 import {effectorGraphic, gutGraphic, nodeControls, spineField} from './effectors.js';
 import {lateralField} from './lateral.js';
+import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
 import {ATELIER_LIMITS, MOTOR_KIND, ORGAN_PORT, SENSE_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
-import {stimulusPicture} from './stimuli.js';
+import {GRAVITY_STIMULUS, stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
 import {driveElement} from './drive.js';
 import {responseDiagram} from './response.js';
@@ -136,6 +137,7 @@ const ORGAN_PANELS = Object.freeze({
   eggs : gonadPanel,
   sperm : gonadPanel,
   lateral : (state, organ) => lateralField(state, organ),
+  balance : (state, organ, center) => hairField(state, organ, center),
   touch : skinPanel,
   pain : skinPanel,
   blood : (state, organ, center) => hormonePad(state, organ, center),
@@ -230,10 +232,15 @@ function stimulusKind(state, center) {
   const site = findSite(state.sites, center.site);
   return site ? functionFor(center, site) : -1;
 }
+// Flow cells inside the body are the balance organ's gravity cells: their stimulus is the tilt.
+const gravityCell = (state, center) =>
+    findCenter(state.document, center.id)?.organ.type === 'balance';
 const stimulusName = (state, center) =>
-    tList('studio.inspector.stimuli')[stimulusKind(state, center)] ?? '';
+    gravityCell(state, center)
+        ? label('inspector.gravityStimulus')
+        : tList('studio.inspector.stimuli')[stimulusKind(state, center)] ?? '';
 function stimulusDrawing(state, center) {
-  const kind = stimulusKind(state, center);
+  const kind = gravityCell(state, center) ? GRAVITY_STIMULUS : stimulusKind(state, center);
   const colour = kind === SENSE_KIND.odor ? scentColors?.[preferredScent(center)] : null;
   return (share, point, title, size) => stimulusPicture(kind, share, point, title, colour, size);
 }

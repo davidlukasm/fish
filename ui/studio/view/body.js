@@ -44,6 +44,7 @@ import {t} from '../../strings.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
+import {hairVector} from './balance.js';
 import {isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {MUSCLE_TONE, muscleShape} from './muscles.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -162,7 +163,7 @@ const GLYPH = Object.freeze({
   blood : [ 8, 13 ],
   blood_step : 15,
   gland : [ 16, 11 ],
-  balance : {sac : [ 13, 10 ], stone : 4.5},
+  balance : {sac : [ 13, 10 ], stone : 4.5, hair : 15},
   lateral_pore : 3.2
 });
 function eyeGlyph(state, organ, pos, drawnEyes) {
@@ -232,10 +233,14 @@ const ellipseGlyph = (cls, [ rx, ry ]) => (state, organ, pos) =>
     '<ellipse class="' + cls + '" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) + '" rx="' + rx +
     '" ry="' + ry + '"/>';
 function balanceGlyph(state, organ, pos) {
-  const {sac : [ rx, ry ], stone} = GLYPH.balance;
+  const {sac : [ rx, ry ], stone, hair} = GLYPH.balance;
+  const v = hairVector(organ.centers[0]?.q1 ?? 0, sideOf(organ)),
+        tip = {x : pos.x + v.x * hair, y : pos.y + v.y * hair};
   return '<ellipse class="aid-anatomical-balance" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
-         '" rx="' + rx + '" ry="' + ry + '"/><circle class="aid-anatomical-statolith" cx="' +
-         fixed(pos.x) + '" cy="' + fixed(pos.y) + '" r="' + stone + '"/>';
+         '" rx="' + rx + '" ry="' + ry + '"/><path class="aid-hair" d="M' + fixed(pos.x) + ' ' +
+         fixed(pos.y) + ' L' + fixed(tip.x) + ' ' + fixed(tip.y) +
+         '"/><circle class="aid-anatomical-statolith" cx="' + fixed(tip.x) + '" cy="' +
+         fixed(tip.y) + '" r="' + stone + '"/>';
 }
 function bloodGlyph(state, organ, pos) {
   const G = GLYPH, types = organTypes(organ), wheel = state.capabilities;

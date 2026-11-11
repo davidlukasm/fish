@@ -1357,6 +1357,20 @@ void inner_hair_cells_feel_gravity() {
     check(std::abs(receptor_response(r, stimulus) - tilt) < tolerance::precision,
           "gravity preserves intermediate tilts instead of saturating like water flow");
   }
+  // The hair direction is a gene: it picks the posture a gravity cell reports.
+  constexpr double HEAD_DOWN = PI / 3;
+  const auto weighed = [&](float quality, double pitch) {
+    r.mechanical_angle = hair_direction(quality, 1);
+    still.angle = pitch;
+    return anatomical_stimulus(still, r, calm, 0, physiology);
+  };
+  check(weighed(-1, HEAD_DOWN) > 0 && weighed(-1, -HEAD_DOWN) == 0,
+        "a hair toward the head reports a lowered head");
+  check(weighed(1, -HEAD_DOWN) > 0 && weighed(1, HEAD_DOWN) == 0,
+        "a hair toward the tail reports a raised head");
+  check(weighed(0, 0) > 1 - tolerance::precision && weighed(0, PI) == 0,
+        "a hair toward the flank reports which side is down");
+  check(hair_direction(.3f, -1) == -hair_direction(.3f, 1), "the other side mirrors the hair");
   r.inner = false;
   check(receptor_response(r, .2) > .99,
         "outer hair cells retain their sensitivity to weak water flow");

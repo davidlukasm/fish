@@ -1,6 +1,7 @@
 import {UINT32_RANGE} from './units.js';
 import {
   BARBEL,
+  GRAVITY,
   INTERNAL_TISSUE,
   isSenseTissue,
   SENSE_TISSUE,
@@ -254,6 +255,8 @@ export function brainOrganKey(key, n, receptor) {
                            : PRESSURE_SOURCE.eggs);
   if (key === SENSE_TISSUE.taste)
     return sidedTissue(BARBEL, cellSide(n));
+  if (key === SENSE_TISSUE.flow && receptor?.[RECEPTOR.inner])
+    return sidedTissue(GRAVITY, cellSide(n));
   const k = tissueKind(key),
         paired = isSenseTissue(key) ? PAIRED_SENSES.includes(k) : PAIRED_MOTORS.includes(k);
   return sidedTissue(key, paired ? cellSide(n) : 0);

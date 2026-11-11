@@ -12,14 +12,14 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
   "src/eye_geometry.cc" : "553a32ad6e39ab09",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
-  "ui/brain_geometry.js" : "240f242ee5b97858",
+  "ui/brain_geometry.js" : "8dfa1e7c052fc7f1",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "d5f1149f9f71568f",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
-  "src/body_plan.cc" : "a539a04fe6bfa844",
+  "src/body_plan.cc" : "0c84fe821f934d9a",
   "src/physiology_parameters.hh" : "617a49a1bf091d4a",
   "src/physiology.hh" : "4ce375962b70c1f5",
   "src/physiology.cc" : "091be4e30f65adee",
@@ -28,7 +28,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/physiology_parameters.cc" : "3cdc43b5cf758d75",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "5d5272f9e82b4b36",
+  "src/body_plan.hh" : "8404414851a0edf1",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -36,13 +36,13 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
 
-  "ui/tissue.js" : "01cae94d3e8df2d6",
+  "ui/tissue.js" : "e4d879c0dbbb1971",
   "src/genome.hh" : "239dc4f734e58ddf",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "b19320e4446f4b42",
   "src/retina.cc" : "5f40a5d46c7c62e6",
-  "src/observations.cc" : "d90d105d5809a176",
+  "src/observations.cc" : "0842c1e7c0e30e29",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "651dfb791f0d8f1c",
   "src/retina.hh" : "a3a169f6e8f4cafd",
@@ -2041,6 +2041,27 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(driven('beat'), [ 'swim', 'swim' ], 'The beat reaches the tail of both sides');
     assert.deepEqual(driven('pump'), [ 'bite', 'bite', 'mouth', 'mouth' ],
                      'The pump opens and closes the whole mouth');
+    // The balance organ's hair direction is dragged in a picture: toward the head, the flank or
+    // the tail; both sides take it, and the plan carries it to the engine as quality 1.
+    const {hairPatch, hairVector} = await import('../ui/studio/view/balance.js');
+    const near = (a, b) => Math.abs(a - b) < 1e-9;
+    assert.ok(near(hairPatch(0, .5).q1, -1) && near(hairPatch(104 / 300, 1).q1, 0) &&
+                  near(hairPatch(1, .5).q1, 1),
+              'The hair follows the pointer from the head over the flank to the tail');
+    assert.ok(near(hairVector(0, 1).y, 1) && near(hairVector(0, -1).y, -1),
+              'A flank hair points to its own side');
+    const balanced =
+        model.addOrgan(model.newDocument('Lage'), 'balance', sites, {x : 300, y : 300});
+    const sides = [ balanced.organId, model.findOrgan(balanced.document, balanced.organId).pair ];
+    const tilted = model.updateCenter(
+        balanced.document, model.findOrgan(balanced.document, sides[0]).centers[0].id, {q1 : .4});
+    const balancePlan = model.compileDocument(tilted, sites);
+    assert.ok(
+        sides.every(
+            id => model.findOrgan(tilted, id)
+                      .centers.every(
+                          c => near(balancePlan.groups[model.centerIndex(tilted, c.id)].q1, .4))),
+        'Both balance organs carry the same hair direction into the plan');
     const beat = pool('beat')[0];
     assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) >
                   -1,

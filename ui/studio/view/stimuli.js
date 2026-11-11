@@ -143,7 +143,18 @@ function barbelTip(s) {
          'fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="' + T.stroke +
          '"/>' + circle(fixed(x), 0, T.morsel, ' fill="currentColor"');
 }
+const HANGING = Object.freeze({length : 12, stone : 2.4, width : 1.4});
+// A gravity hair, from level (0) to hanging straight down (1).
+function hangingHair(s) {
+  const H = HANGING, a = Math.asin(Math.min(1, Math.max(0, s))), x = -H.length / 2;
+  const tip = [ x + Math.cos(a) * H.length, -H.length / 4 + Math.sin(a) * H.length ];
+  return '<path d="M' + fixed(x) + ' ' + fixed(-H.length / 4) + ' L' + fixed(tip[0]) + ' ' +
+         fixed(tip[1]) + '" stroke="currentColor" stroke-width="' + H.width +
+         '" stroke-linecap="round"/>' + circle(tip[0], tip[1], H.stone, ' fill="currentColor"');
+}
+export const GRAVITY_STIMULUS = 'gravity';
 const PICTURES = Object.freeze({
+  [GRAVITY_STIMULUS] : hangingHair,
   [SENSE_KIND.light] : lightSource,
   [SENSE_KIND.odor] : scentCloud,
   [SENSE_KIND.flow] : streamlines,
@@ -157,8 +168,10 @@ const PICTURES = Object.freeze({
   [SENSE_KIND.blood] : bloodDrop,
   [SENSE_KIND.taste] : barbelTip
 });
-const KIND_NAME =
-    Object.freeze(Object.fromEntries(Object.entries(SENSE_KIND).map(([ k, v ]) => [v, k])));
+const KIND_NAME = Object.freeze({
+  ...Object.fromEntries(Object.entries(SENSE_KIND).map(([ k, v ]) => [v, k])),
+  [GRAVITY_STIMULUS] : GRAVITY_STIMULUS
+});
 export function stimulusPicture(kind, s, {x, y}, title, colour = null, size = 1) {
   const draw = PICTURES[kind];
   if (!draw)

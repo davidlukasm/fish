@@ -904,7 +904,8 @@ enum class ReceptorColumn : std::size_t {
   proximity = 24,
   intensity = 25,
   dark_share = 26,
-  count = 27
+  inner = 27,
+  count = 28
 };
 namespace receptor_column {
 inline constexpr std::size_t neuron = 0;
@@ -934,7 +935,8 @@ inline constexpr std::size_t pressure_target = 23;
 inline constexpr std::size_t proximity = 24;
 inline constexpr std::size_t intensity = 25;
 inline constexpr std::size_t dark_share = 26;
-inline constexpr std::size_t count = 27;
+inline constexpr std::size_t inner = 27;
+inline constexpr std::size_t count = 28;
 }
 enum class EffectorColumn : std::size_t {
   neuron = 0,

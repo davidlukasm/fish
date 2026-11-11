@@ -23,6 +23,11 @@ inline double visual_area(const BrainInterface::Receptor &r, double left, double
   return .5 * ((middle - left) * (visual_weight(r, left) + visual_weight(r, middle)) +
                (right - middle) * (visual_weight(r, middle) + visual_weight(r, right)));
 }
+// A gravity cell's hair points from the head (quality -1) over the flank (0) to the tail (1);
+// cells on the other side mirror it. The hair is weighed down as far as it points to the bottom.
+inline float hair_direction(float quality, float lateral) {
+  return std::copysign(float(PI) * .5f * (1 + std::clamp(quality, -1.f, 1.f)), lateral);
+}
 std::shared_ptr<const BrainInterface> anatomical_interface(const field::Substrate &);
 double spine_aim(const BrainInterface::Effector &, const field::Substrate &);
 void spread_spines(std::array<double, BODY_SECTORS> &, const BrainInterface::Effector &,

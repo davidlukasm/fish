@@ -1,15 +1,14 @@
 import {CELL_DETAIL} from './brain_tissue.js';
 import {
-  BARBEL,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   motorTissue,
   RESERVE_TISSUE,
-  SENSE_TISSUE,
   senseTissue,
   sidedTissue,
   tissueBase,
-  tissueSide
+  tissueSide,
+  VARIANT_SENSE
 } from './tissue.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState} from './session.js';
@@ -141,8 +140,8 @@ export function brainBuild(f, c = camera(f)) {
       part.tissue = tissueId;
       if (!d.tissues.has(tissueId))
         d.tissues.set(tissueId, {
-          key : tissueBase(tissueId) === BARBEL ? SENSE_TISSUE.odor : part.key,
-          variant : tissueBase(tissueId) === BARBEL ? BARBEL : '',
+          key : VARIANT_SENSE[tissueBase(tissueId)] ?? part.key,
+          variant : VARIANT_SENSE[tissueBase(tissueId)] ? tissueBase(tissueId) : '',
           side : Number(tissueSide(tissueId)),
           members : []
         });

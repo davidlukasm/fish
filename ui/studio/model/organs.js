@@ -112,7 +112,8 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ sensor('current', SENSE_KIND.flow, 4, 'outer') ]
   },
-  // The same hair cells inside the body weigh their direction against gravity.
+  // The same hair cells inside the body weigh their direction against gravity. q1 is the hair
+  // direction, from the head (-1) over the flank (0) to the tail (1); the other side mirrors it.
   {
     key : 'balance',
     category : 'senses',

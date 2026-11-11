@@ -2,6 +2,7 @@ import {FULL_TURN, hueRGB} from './units.js';
 import {hormoneColors} from './hormones.js';
 import {
   BARBEL,
+  GRAVITY,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -9,6 +10,7 @@ import {
   MOTOR_TISSUE,
   RESERVE_TISSUE,
   SENSE_TISSUE,
+  sidedTissue,
   tissueKind
 } from './tissue.js';
 import {brainClamp} from './brain.js';
@@ -279,8 +281,34 @@ const TISSUE_PATH = Object.freeze({
   blood_length : .6,
   blood_height : .3,
   pore : .014,
-  pore_min : .8
+  pore_min : .8,
+  statocyst : .03,
+  statocyst_pad : .012
 });
+// The balance organ: a sac around its gravity cells, wide enough for their hairs.
+function brainStatocyst(d, side) {
+  const members = d.tissues.get(sidedTissue(GRAVITY, side))?.members ?? [];
+  let x = 0, y = 0, total = 0;
+  for (const {part} of members) {
+    x += part.p[0] * part.share;
+    y += part.p[1] * part.share;
+    total += part.share;
+  }
+  x /= total || 1;
+  y /= total || 1;
+  let rx = 0, ry = 0;
+  for (const {part} of members) {
+    rx = Math.max(rx, Math.abs(part.p[0] - x));
+    ry = Math.max(ry, Math.abs(part.p[1] - y));
+  }
+  const reach = SENSE_CELLS.hair + SENSE_CELLS.statolith + TISSUE_PATH.statocyst_pad;
+  return {
+    x,
+    y,
+    rx : Math.max(TISSUE_PATH.statocyst, rx + reach),
+    ry : Math.max(TISSUE_PATH.statocyst, ry + reach)
+  };
+}
 export function brainTissuePath(g, d, key, side, variant = '') {
   const a = d.a, r = d.r;
   g.beginPath();
@@ -317,6 +345,9 @@ export function brainTissuePath(g, d, key, side, variant = '') {
       else
         g.moveTo(p[0] * r, p[1] * r);
     }
+  } else if (key === SENSE_TISSUE.flow && variant === GRAVITY) {
+    const q = brainStatocyst(d, side);
+    g.ellipse(q.x * r, q.y * r, q.rx * r, q.ry * r, 0, 0, Math.PI * 2);
   } else if (key === SENSE_TISSUE.flow) {
     for (let i = 0; i <= TISSUE_PATH.lateral_steps; i++) {
       const p = fishLateralPoint(a, side, i / TISSUE_PATH.lateral_steps);
@@ -939,7 +970,10 @@ const SENSE_CELLS = Object.freeze({
   barbel_last : .97,
   nose_bend : .025,
   nose_lift : .22,
-  nose_length : .04
+  nose_length : .04,
+  hair : .035,
+  statolith : .009,
+  statolith_min : 1
 });
 function brainSenseCells(g, d, tissue, now, color, closed) {
   const r = d.r, a = d.a;
@@ -1017,6 +1051,20 @@ function brainSenseCells(g, d, tissue, now, color, closed) {
                          SENSE_CELLS.touch_half * r);
       g.stroke();
       g.restore();
+    } else if (key === SENSE_TISSUE.flow && tissue.variant === GRAVITY) {
+      // The hair points the way its gene sets; it is weighed down as far as it points down.
+      const angle = d.receptors.get(cell.n[NEURON.index])?.[RECEPTOR.mechanical_angle] ?? 0,
+            tip =
+                [ x + Math.cos(angle) * SENSE_CELLS.hair, y + Math.sin(angle) * SENSE_CELLS.hair ];
+      g.lineWidth = Math.max(SENSE_CELLS.flow_min_width, r * SENSE_CELLS.flow_width);
+      g.beginPath();
+      g.moveTo(x * r, y * r);
+      g.lineTo(tip[0] * r, tip[1] * r);
+      g.stroke();
+      g.beginPath();
+      g.arc(tip[0] * r, tip[1] * r, Math.max(SENSE_CELLS.statolith_min, r * SENSE_CELLS.statolith),
+            0, Math.PI * 2);
+      g.fill();
     } else if (key === SENSE_TISSUE.flow) {
       g.lineWidth = Math.max(SENSE_CELLS.flow_min_width, r * SENSE_CELLS.flow_width);
       g.beginPath();
@@ -1134,30 +1182,31 @@ export function brainDrawTissue(g, d, tissue, now) {
                 TISSUE.damage_base - TISSUE.damage_fade * (1 - d.p[FISH.health])
               ])
                                                   : tissueColor(key),
-              closed = (key === SENSE_TISSUE.odor && tissue.variant !== BARBEL) || [
-                GUT_TISSUE,
-                RESERVE_TISSUE,
-                INTERNAL_TISSUE,
-                SENSE_TISSUE.light,
-                SENSE_TISSUE.touch,
-                SENSE_TISSUE.proximity,
-                SENSE_TISSUE.intake,
-                SENSE_TISSUE.damage,
-                SENSE_TISSUE.bladder_pressure,
-                MOTOR_TISSUE.forward,
-                MOTOR_TISSUE.turn,
-                MOTOR_TISSUE.suction,
-                MOTOR_TISSUE.eggs,
-                MOTOR_TISSUE.sperm,
-                MOTOR_TISSUE.aggression,
-                MOTOR_TISSUE.defense,
-                MOTOR_TISSUE.pigment,
-                MOTOR_TISSUE.bladder,
-                MOTOR_TISSUE.gland,
-                SENSE_TISSUE.gonad_pressure,
-                SENSE_TISSUE.inner_pressure,
-                SENSE_TISSUE.blood
-              ].includes(key);
+              closed = (key === SENSE_TISSUE.odor && tissue.variant !== BARBEL) ||
+                       tissue.variant === GRAVITY || [
+                         GUT_TISSUE,
+                         RESERVE_TISSUE,
+                         INTERNAL_TISSUE,
+                         SENSE_TISSUE.light,
+                         SENSE_TISSUE.touch,
+                         SENSE_TISSUE.proximity,
+                         SENSE_TISSUE.intake,
+                         SENSE_TISSUE.damage,
+                         SENSE_TISSUE.bladder_pressure,
+                         MOTOR_TISSUE.forward,
+                         MOTOR_TISSUE.turn,
+                         MOTOR_TISSUE.suction,
+                         MOTOR_TISSUE.eggs,
+                         MOTOR_TISSUE.sperm,
+                         MOTOR_TISSUE.aggression,
+                         MOTOR_TISSUE.defense,
+                         MOTOR_TISSUE.pigment,
+                         MOTOR_TISSUE.bladder,
+                         MOTOR_TISSUE.gland,
+                         SENSE_TISSUE.gonad_pressure,
+                         SENSE_TISSUE.inner_pressure,
+                         SENSE_TISSUE.blood
+                       ].includes(key);
   if (key === MOTOR_TISSUE.suction)
     fishSuctionPath(g, r, a);
   else

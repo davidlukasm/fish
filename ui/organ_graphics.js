@@ -399,6 +399,71 @@ function drawDirectionGraphic({g, info, d, color, label}) {
         DIRECTION_GRAPHIC.note_y);
 }
 
+const GRAVITY_GRAPHIC = Object.freeze({
+  cx : 120,
+  cy : 64,
+  rx : 46,
+  ry : 15,
+  tail : 22,
+  hair : 40,
+  stone : 5,
+  stone_alpha : .35,
+  stone_alpha_per_value : .65,
+  arrow_x : 240,
+  arrow_top : 28,
+  arrow_bottom : 92,
+  head : 6,
+  line_width : 2,
+  body : '#1b3641',
+  rim : '#6f9aa3',
+  note_x : 205,
+  note_y : 118
+});
+// The fish as it lies in the water now, its gravity hairs and the downward pull: a hair hanging
+// down answers most.
+function drawGravityGraphic({g, info, d, color, label}) {
+  const G = GRAVITY_GRAPHIC, heading = d.p[FISH.angle];
+  g.save();
+  g.translate(G.cx, G.cy);
+  g.rotate(heading);
+  g.fillStyle = G.body;
+  g.strokeStyle = G.rim;
+  g.lineWidth = G.line_width;
+  g.beginPath();
+  g.ellipse(0, 0, G.rx, G.ry, 0, 0, Math.PI * 2);
+  g.moveTo(-G.rx, 0);
+  g.lineTo(-G.rx - G.tail, -G.ry);
+  g.lineTo(-G.rx - G.tail, G.ry);
+  g.closePath();
+  g.fill();
+  g.stroke();
+  g.restore();
+  for (const r of info.receptors) {
+    const a = heading + (r[RECEPTOR.mechanical_angle] || 0), v = brainClamp(r[RECEPTOR.value]),
+          x = G.cx + Math.cos(a) * G.hair, y = G.cy + Math.sin(a) * G.hair;
+    g.strokeStyle = g.fillStyle = color;
+    g.lineWidth = G.line_width;
+    g.globalAlpha = G.stone_alpha + G.stone_alpha_per_value * v;
+    g.beginPath();
+    g.moveTo(G.cx, G.cy);
+    g.lineTo(x, y);
+    g.stroke();
+    g.beginPath();
+    g.arc(x, y, G.stone, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+  g.strokeStyle = G.rim;
+  g.beginPath();
+  g.moveTo(G.arrow_x, G.arrow_top);
+  g.lineTo(G.arrow_x, G.arrow_bottom);
+  g.lineTo(G.arrow_x - G.head, G.arrow_bottom - G.head);
+  g.moveTo(G.arrow_x, G.arrow_bottom);
+  g.lineTo(G.arrow_x + G.head, G.arrow_bottom - G.head);
+  g.stroke();
+  label(t('organ_graphics.schwerkraft'), G.note_x, G.note_y);
+}
+
 const DEPTH_GRAPHIC = Object.freeze({
   top : 12,
   height : 100,
@@ -760,6 +825,7 @@ const GRAPHICS = Object.freeze({
   scent : drawScentGraphic,
   eye : drawEyeGraphic,
   direction : drawDirectionGraphic,
+  gravity : drawGravityGraphic,
   depth : drawDepthGraphic,
   pulse : drawPulseGraphic,
   reserve : drawReserveGraphic,
