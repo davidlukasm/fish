@@ -57,6 +57,13 @@ $(BUILD_DIR)/test-core.o: $(CORE_OBJECTS)
 endif
 endif
 
+# Reassociation changes the address search and therefore the compiled genome.
+ATELIER_FLAGS := $(filter-out -O%,$(TEST_FLAGS)) -O3 -fno-fast-math -ffp-contract=off
+ifeq ($(SANITIZE),1)
+ATELIER_FLAGS := $(filter-out -O%,$(ATELIER_FLAGS)) -O1
+endif
+$(BUILD_DIR)/atelier $(BUILD_DIR)/compiler-tests: TEST_FLAGS := $(ATELIER_FLAGS)
+
 FORCE:
 $(BUILD_DIR)/build-flags: FORCE build_config.py
 	@mkdir -p $(dir $@)

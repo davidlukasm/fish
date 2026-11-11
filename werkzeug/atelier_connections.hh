@@ -264,10 +264,12 @@ class AddressFitter {
     }
     for (int i = 0; i < int(pairs.size()); ++i) {
       const auto &pair = pairs[i];
+      const double d = derivative[i] + demand_gradient[pair.target] * slopes[i];
+      if (d == 0)
+        continue;
       const int c = 2 * pair.source, r = receiver(pair.target, winning[i]),
                 rf = reception(pair.target, winning[i]);
       const double dx = x[c] - x[r], dy = x[c + 1] - x[r + 1];
-      const double d = derivative[i] + demand_gradient[pair.target] * slopes[i];
       gradient[c] += d * dx / squared[rf];
       gradient[c + 1] += d * dy / squared[rf];
       gradient[r] -= d * dx / squared[rf];
