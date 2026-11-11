@@ -123,12 +123,9 @@ struct NamingBody {
         if (n.functional && n.functions.internal > 0)
           internal += n.functions.internal;
   }
+  // Threshold position 0..1, averaged over the sense cells.
   double threshold(int k) const {
-    return senses[k] ? std::clamp(intensity_sense(k)
-                                      ? response_threshold_quality(thresholds[k] / senses[k])
-                                      : activation_level_quality(thresholds[k] / senses[k]),
-                                  0., 1.)
-                     : 1;
+    return senses[k] ? std::clamp(thresholds[k] / senses[k], 0., 1.) : 1;
   }
 };
 struct NameChoice {

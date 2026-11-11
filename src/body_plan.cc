@@ -437,8 +437,13 @@ class AnatomyBuilder {
       double low = 1, high = 0;
       for (const auto &r : result->sensory)
         if (s.neurons[r.neuron].functional && r.dominant_sense() == sense) {
-          double weight = r.senses[sense] * r.gain,
-                 threshold = double(intensity_sense(sense) ? r.response_threshold : r.threshold);
+          // One sense may mix open intensity curves and bounded level curves (balance and lateral
+          // line); the summary therefore averages each cell's threshold position from 0 to 1.
+          const double weight = r.senses[sense] * r.gain,
+                       threshold = std::clamp(r.intensity()
+                                                  ? response_threshold_quality(r.response_threshold)
+                                                  : activation_level_quality(r.threshold),
+                                              0., 1.);
           result->sense_counts[sense] += weight;
           result->sense_thresholds[sense] += weight * threshold;
           result->sense_early[sense] +=

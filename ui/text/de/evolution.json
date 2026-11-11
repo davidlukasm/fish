@@ -118,7 +118,7 @@
  "intakeRate": "{n} Energie / {rateSteps}",
  "offspring": "{n} {n:Nachkomme|Nachkommen}",
  "unknown": "unbekannt",
- "senseThreshold": "Sinneszellen · Schwelle Gesamt {lifetime} / Lebend {living}",
+ "senseThreshold": "Sinneszellen · Schwellenlage 0–1 Gesamt {lifetime} / Lebend {living}",
  "rowLifetime": "{name}: Gesamt {lifetime} · Lebend {living}",
  "observations": "{n} {n:Fisch-Beobachtung|Fisch-Beobachtungen}",
  "renamePrompt": "Neuer Name für {name}:",
