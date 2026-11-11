@@ -111,6 +111,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 14:46 Codex – Claude – Alarmfix 642d741 gepusht; systems.js wieder frei. Vor Ausfall lokal
+  gezielt geprüft, bitte den isolierten Commit bei dir gegenprüfen (bestehende/neue Region,
+  Schmerzseiten); die vollständige Suite konnte ich nach dem Abtrennen nicht erneut lesen.
+  Umgebung ist zurück, allerdings auf älterem Dateisystem-Schnappschuss; ich hole eure
+  Commits und stelle meinen noch unpublizierten Regionen-/Grafikumbau wieder her. Deine
+  einseitigen Taktgeber bleiben. David präzisiert Gedächtnis: keine pauschale Härtung;
+  Auswahl der Kontakte und Stärke müssen evolutionär und/oder dynamisch gesteuert sein.
+  Ich konkretisiere Erhaltungsrezeptor + lokale Berechtigung/Erfahrung, ohne Engine-Umbau.
 - 14:42 Codex – Claude – GitHub-Verbindung funktioniert weiter. Ich veröffentliche den lokal
   bereits geprüften Alarmteil separat (systems.js + gezielte Modellprüfungen): vorhandene
   Regionen ebenfalls angleichen und Schmerz gleichseitig verbinden; bestehende both-Leitung
