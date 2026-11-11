@@ -21,6 +21,32 @@ export function trialOutcome(trial, kind) {
 // When the trial succeeded, in steps.
 export const successStep = (trial, kind) => cracking(kind) ? trial.cracked : trial.reached;
 
+// Native events use a zero-based loop index, recorded after the tick.
+export const sampleStep = frame => frame * TRIAL_LAB.path_every + 1;
+
+export const trialPath = (trial, kind) =>
+    trialOutcome(trial, kind) === OUTCOME.succeeded
+        ? (trial.path ??
+           []).slice(0, Math.floor(successStep(trial, kind) / TRIAL_LAB.path_every) + 1)
+        : trial.path ?? [];
+
+export function inspectedTrial(sessions, selection, fingerprint, kind) {
+  if (!selection || selection.fingerprint !== fingerprint || selection.kind !== kind)
+    return null;
+  const trial = sessions.find(s => s.seed === selection.seed)?.trials?.[selection.index];
+  if (!trial)
+    return null;
+  const path = trialPath(trial, kind);
+  if (!path.length)
+    return null;
+  return {
+    ...selection,
+    trial,
+    path,
+    frame : Math.max(0, Math.min(path.length - 1, selection.frame))
+  };
+}
+
 // Kept trial worlds of one fish and kind, overlaid by the running job when it tests the same.
 export function shownSessions(overview, fingerprint, kind, job) {
   const kept = (overview?.results ?? [])

@@ -4,6 +4,7 @@ import {t} from '../strings.js';
 import {DRAFT} from './model.js';
 import {breedingShell, say} from './view.js';
 import {trialShell} from './trial_view.js';
+import {inspectedTrial, shownSessions} from './trials.js';
 
 const POLL_MS = 1000, FINGERPRINT_HEX = 16, HEX = 16, BYTE_DIGITS = 2;
 
@@ -161,4 +162,44 @@ export class TrialStation extends LabStation {
     super(root, ROUTE.trials, trialShell, {trial : TRIAL_KIND.mussel, seeds : TRIAL_LAB.seeds[1]});
   }
   settings() { return {trial : this.state.trial, seeds : this.state.seeds}; }
+  render() {
+    const step = this.root.ownerDocument?.activeElement?.dataset?.labStep;
+    super.render();
+    // Polling may add another finished trial while a keyboard user follows this one's path.
+    if (this.shown && step)
+      this.root.querySelector('[data-lab-step="' + step + '"]')?.focus();
+  }
+  click(event) {
+    const target = event.target.closest?.('[data-lab-trial],[data-lab-frame],[data-lab-overview]');
+    if (!target)
+      return super.click(event);
+    if (target.disabled)
+      return true;
+    const s = this.state, data = target.dataset;
+    if (data.labTrial !== undefined)
+      s.inspection = {
+        fingerprint : s.fingerprint,
+        kind : s.trial,
+        seed : Number(data.labSeed),
+        index : Number(data.labTrial),
+        frame : 0
+      };
+    else if (data.labOverview !== undefined)
+      s.inspection = null;
+    else {
+      const selected = inspectedTrial(shownSessions(s.overview, s.fingerprint, s.trial, s.job),
+                                      s.inspection, s.fingerprint, s.trial);
+      if (selected)
+        s.inspection = {
+          ...s.inspection,
+          frame : Math.max(0, Math.min(selected.path.length - 1, Number(data.labFrame)))
+        };
+    }
+    this.render();
+    if (data.labStep)
+      this.root.querySelector('[data-lab-step="' + data.labStep + '"]')?.focus();
+    else if (data.labTrial !== undefined)
+      this.root.querySelector('[data-lab-step="next"]')?.focus();
+    return true;
+  }
 }

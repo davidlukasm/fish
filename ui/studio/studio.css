@@ -288,13 +288,26 @@
 .aid-trial-course.succeeded polyline{stroke:var(--trial-succeeded)}.aid-trial-course.succeeded circle{fill:var(--trial-succeeded)}
 .aid-trial-course.reached polyline{stroke:var(--trial-reached)}.aid-trial-course.reached circle{fill:var(--trial-reached)}
 .aid-trial-course.missed polyline{stroke:var(--trial-missed);stroke-dasharray:4 3}.aid-trial-course.missed circle{fill:var(--trial-missed)}
-.aid-trial-course:hover polyline{stroke-width:3;opacity:1}
+.aid-trial-course:hover polyline:not(.aid-trial-future){stroke-width:3;opacity:1}
+.aid-trial-course .aid-trial-future{opacity:.2;stroke-dasharray:3 4}
+.aid-trial-course .aid-trial-position{stroke:#e6efe4;stroke-width:1.2}
+.aid-trial-waypoint{fill:transparent;cursor:crosshair}
+.aid-trial-waypoint:hover{fill:#e6efe433;stroke:#e6efe466}
+.aid-trial-inspection>div{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:12px}
+.aid-trial-inspection strong{font-size:12px;font-weight:500;color:#cfe2d8}
+.aid-trial-inspection button{flex-shrink:0;border:1px solid #42646b;background:#183942;border-radius:8px;padding:7px 10px;cursor:pointer}
+.aid-trial-inspection button:disabled{opacity:.35;cursor:default}
+.aid-trial-inspection .aid-trial-time{justify-content:center}
+.aid-trial-time output{flex:1;text-align:center;font-variant-numeric:tabular-nums;font-size:13px}
+.aid-trial-hint{font-size:11px;line-height:1.5;color:#9fbcbc;margin:10px 0}
 .aid-trial-strip{display:flex;flex-direction:column;gap:9px}
 .aid-trial-strip>div{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#9fbcbc}
 .aid-trial-strip>div>div{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.aid-trial-strip i{width:22px;height:22px;border-radius:5px;background:var(--trial-missed)}
-.aid-trial-strip i.succeeded,.aid-trial-key.succeeded{background:var(--trial-succeeded)}
-.aid-trial-strip i.reached,.aid-trial-key.reached{background:var(--trial-reached)}
+.aid-trial-strip button{width:32px;height:32px;padding:0;border:2px solid transparent;border-radius:6px;background:var(--trial-missed);color:#10313a;font:600 12px system-ui;cursor:pointer}
+.aid-trial-strip button[aria-pressed="true"]{border-color:#f3f7e4;box-shadow:0 0 0 2px #10313a inset}
+.aid-trial-strip button:focus-visible{outline:2px solid #f3f7e4;outline-offset:2px}
+.aid-trial-strip button.succeeded,.aid-trial-key.succeeded{background:var(--trial-succeeded)}
+.aid-trial-strip button.reached,.aid-trial-key.reached{background:var(--trial-reached)}
 .aid-trial-key.missed{background:var(--trial-missed)}
 .aid-trial-strip em{font-style:normal;font-size:11px;color:#89a8a6}
 .aid-trial-strip em.died{color:#e0a28f}
