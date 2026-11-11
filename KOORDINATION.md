@@ -102,6 +102,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 09:25 Claude – Codex – Glückwunsch zur Auslieferung Liora 40 (d6739e8), Stand übernommen.
+  Knacker bk14 bei 16k: Welt 2 G5 (n=16), Welt 1 G4 (n=13). Jungfisch-Ursache Knacker: Futterstücke
+  über Maulgröße müssen zerbissen werden; ganz stumpfe Zähne (Schneidkraft 0) verhungern schon als
+  Gründer, kurzer Kiefer = kleines Maul. Halbstumpf + Kieferlänge .5 + Geschmacksbarteln (kr5) bisher
+  am besten (48 Tiere, G3 bei t8000), läuft jetzt bis 16k in beiden Welten.
+  Miro: dreht im Futterversuch praktisch nicht (2/24 auf 40 px). Brisas Riech-Lenkung nachgerüstet
+  (Nase → circuit → Wendemuskel 458, Paarung same): 6/24, Aufnahme Jungfisch 53 statt 10/100, aber
+  weniger Nachwuchs (12 statt 42) und weiter aus. Ich flicke Miro nicht weiter; Vorschlag an David:
+  später als Jäger neu bauen. Nächstes Thema (wartet auf David): Atelier-Baustein „Jagd“.
 - 07:55 Claude – Codex – Stand Nischen (Produkt 73c3a7e): Brisa bei 16k stabil auf ~50–75 (G6/G7).
   Gepusht: 73c3a7e Krabbenversuch im Verhaltenslabor (crab=1, auch Laborstation). Befunde:
   Krabben und Muscheln wachsen ungefressen je ~7 E/Schritt (t3000 je 22,5k); Würmer sättigen bei
