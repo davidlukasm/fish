@@ -509,9 +509,75 @@ async function checkHormoneSystems(model, capabilities) {
   } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
   useTexts({default : 'de'}, {
-    de : Object.fromEntries([ 'studio', 'organ_graphics', 'units', 'labor' ].map(
-        area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
+    de : Object.fromEntries([
+      'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor'
+    ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  {
+    const {
+      NEURON,
+      NEURON_PARAMETER,
+      EFFECTOR,
+      ORGAN_PORT,
+      STROKE,
+      STROKE_KIND,
+      FISH,
+      MUSCLE_FIBRE
+    } = await import('../ui/schema.js');
+    const readout = await import('../ui/organ_readout.js');
+    const {sceneState, updateSceneState} = await import('../ui/state.js');
+    const {motorTissue} = await import('../ui/tissue.js');
+    (await import('../ui/brain.js')).initialize([ 'brainClamp' ]);
+    readout.initialize([ 'organNumber', 'organPercent' ]);
+    const nodes = [ 0, 1 ].map((tau, i) => {
+      const n = Array(NEURON.count).fill(0);
+      n[NEURON.index] = i;
+      n[NEURON.strength] = n[NEURON.ready] = n[NEURON.functional] = 1;
+      n[NEURON.parameters] = [];
+      n[NEURON.parameters][NEURON_PARAMETER.time_constant] = tau;
+      return n;
+    });
+    const stroke = Array(STROKE.count).fill(0), p = Array(FISH.count).fill(0);
+    const fast = MUSCLE_FIBRE.force_fast / (MUSCLE_FIBRE.force_fast + MUSCLE_FIBRE.force_slow);
+    stroke[STROKE.fibre] = fast;
+    stroke[STROKE.steps] = 12;
+    const strokes = [];
+    strokes[STROKE_KIND.tail] = stroke;
+    const d = {
+      p,
+      nodes : new Map(nodes.map(n => [n[NEURON.index], n])),
+      receptors : new Map(),
+      b : {
+        strokes,
+        stroke_threshold : .2,
+        effectors : nodes.map((n, i) => {
+          const e = Array(EFFECTOR.count).fill(0);
+          e[EFFECTOR.neuron] = n[NEURON.index];
+          e[EFFECTOR.port] = ORGAN_PORT.forward;
+          e[EFFECTOR.strength] = i ? MUSCLE_FIBRE.force_slow : MUSCLE_FIBRE.force_fast;
+          return e;
+        })
+      }
+    };
+    const tissue = {
+      key : motorTissue(MOTOR_KIND.forward),
+      side : 0,
+      members : nodes.map(n => ({n, part : {share : 1}}))
+    };
+    const before = sceneState.frame;
+    updateSceneState({frame : {parameters : {}}});
+    try {
+      for (const reserve of [0, .2, 1]) {
+        stroke[STROKE.reserve] = reserve;
+        const actual = readout.brainOrganReadout(d, tissue).fibre;
+        assert.equal(actual.fast, fast, 'The force mix comes from the active engine stroke');
+        assert.ok(Math.abs(actual.available - (1 - fast + fast * reserve)) < 1e-12,
+                  'Mixed cells show the force their fast fibres can still contribute');
+      }
+    } finally {
+      updateSceneState({frame : before});
+    }
+  }
   {
     const {NEURON, EFFECTOR, ORGAN_PORT} = await import('../ui/schema.js');
     const {brainMotorActivity} = await import('../ui/brain_signals.js');

@@ -14,7 +14,7 @@ import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
-import {fastShare, fibreCost} from './fibre.js';
+import {fibreCost} from './fibre.js';
 import {swimmingGrip} from './fin_stroke.js';
 import {
   BEHAVIOR_SCALE,
@@ -27,7 +27,6 @@ import {
   MOTOR_PORTS,
   MOUTH_CYCLE,
   NEURON,
-  NEURON_PARAMETER,
   NOSE_SAMPLE,
   ORGAN_PORT,
   RECEPTOR,
@@ -203,18 +202,11 @@ function organMotorTiming(d, index, activation, side = 0) {
 const FIBROUS = Object.freeze([
   MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction, MOTOR_KIND.aggression, MOTOR_KIND.defense
 ]);
-// The fibre mix of a muscle's cells and the share of its force its tired fast fibres still give.
-function muscleFibres(d, members, k, side) {
+function muscleFibres(d, k, side) {
   if (!FIBROUS.includes(k))
     return null;
-  let weight = 0, fast = 0;
-  for (const {n, part} of members) {
-    const w = part.share * n[NEURON.strength];
-    weight += w;
-    fast += w * fastShare(n[NEURON.parameters]?.[NEURON_PARAMETER.time_constant]);
-  }
-  const mix = weight > 0 ? fast / weight : 0;
-  const reserve = d.b?.strokes?.[organStrokeIndex(k, side)]?.[STROKE.reserve] ?? 1;
+  const stroke = d.b?.strokes?.[organStrokeIndex(k, side)], mix = stroke?.[STROKE.fibre] ?? 0,
+        reserve = stroke?.[STROKE.reserve] ?? 1;
   return {fast : mix, available : 1 - mix + mix * reserve};
 }
 function organReleaseTiming(d, index) {
@@ -352,7 +344,7 @@ export function brainOrganReadout(d, tissue) {
     ];
   } else if (isMotorTissue(key)) {
     info.activity = u;
-    const fibre = muscleFibres(d, members, k, side);
+    const fibre = muscleFibres(d, k, side);
     if (k <= MOTOR_KIND.turn) {
       info.graphic = 'pulse';
       info.period = timing.rhythm;
