@@ -1,13 +1,17 @@
-import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
+import {neuralPlan, regionCell} from './region_cells.js';
 
+// Both input groups match the relays the noses have always fed: four cells capped at a quarter
+// of a contact learn their nose input too weakly to steer.
+const INPUT = Object.freeze({copies : 8, electrical_limit : 1});
 export function olfactionPlan() {
   return neuralPlan(
       [
-        regionCell('concentration', 'relay', 'both'), regionCell('opposite', 'inhibit', 'in'),
-        // Subtract the two sides before amplifying their difference. The small resting tone
-        // lets both initially weightless afferents learn even while the cues cancel.
-        regionCell('gradient', 'relay', 'out', {threshold : -.005, pace : -1, electrical_limit : 1},
-                   TONIC_LEARNING)
+        regionCell('concentration', 'relay', 'both', INPUT),
+        regionCell('opposite', 'inhibit', 'in', INPUT),
+        // Subtract the two sides before amplifying their difference. A contact grows only while
+        // its target cell is active, so the developmental rhythm lets the weightless afferents
+        // grow while the cues still cancel; it ends at maturity.
+        regionCell('gradient', 'relay', 'out', {electrical_limit : 1})
       ],
       [ [ 'concentration', 'gradient' ] ], [ [ 'opposite', 'gradient' ] ]);
 }

@@ -10,6 +10,8 @@ import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
 const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
 // The output nodes drive muscles directly, like motor neurons: more cells and full contacts.
 const DRIVER = Object.freeze({copies : 8, electrical_limit : 1});
+// Listeners keep their resting rhythm for life: a meal or a second smell first arrives after
+// hatching, and a contact grows only while its target cell is active.
 const listener = (node, preset) => regionCell(node, preset, 'in', {}, TONIC_LEARNING);
 export function motorPlan(doc, organ) {
   const r = organ.region;
@@ -17,7 +19,8 @@ export function motorPlan(doc, organ) {
     regionCell('turn', 'relay', 'out', DRIVER),
     regionCell('swim', 'relay', 'both', {...DRIVER, threshold : SWIM_TONE[r.tone]}),
     regionCell('mouth', 'relay', 'both', DRIVER), regionCell('bite', 'relay', 'both', DRIVER),
-    regionCell('lift', 'relay', 'both', DRIVER),
+    // The bladder empties only on a negative command, so lift answers with both signs.
+    regionCell('lift', 'relay', 'both', {...DRIVER, q1 : 0}),
     // Stop signals: brake slows swimming; a full gut silences mouth and jaw; food at the mouth
     // holds the fish down while it eats.
     listener('brake', 'inhibit'), listener('sated', 'inhibit'), listener('hold', 'inhibit')
