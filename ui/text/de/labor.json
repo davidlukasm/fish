@@ -68,6 +68,7 @@
     "start": "Versuch starten",
     "running": "Welt {world} von {worlds} · {n} {n:Versuch|Versuche} fertig",
     "outcome": {
+      "vanished": "Ziel verschwunden",
       "missed": "verfehlt",
       "reached": "erreicht",
       "succeeded": {
@@ -77,6 +78,7 @@
       }
     },
     "share": "{n} von {total}",
+    "omitted": "Auswertung: {total} {total:Versuch|Versuche}; Ziel verschwunden: {n}.",
     "trialTitle": "Versuch {k}: {outcome}",
     "after": "nach {steps} Schritten",
     "chart": "Spuren aller Versuche vom Start aus, Blick nach oben; der Ring zeigt den Abstand zum Ziel",

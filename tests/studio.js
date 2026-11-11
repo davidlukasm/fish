@@ -2840,6 +2840,18 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.crab), lab.OUTCOME.succeeded,
                  'A crab trial succeeds when the shell cracks');
     assert.equal(lab.successStep(cracked, TRIAL_KIND.crab), cracked.cracked);
+    const vanished = {...missed, vanished : 61};
+    for (const kind of [TRIAL_KIND.mussel, TRIAL_KIND.crab]) {
+      assert.equal(lab.trialOutcome(vanished, kind), lab.OUTCOME.vanished);
+      assert.equal(lab.trialOutcome({...vanished, reached : 40}, kind), lab.OUTCOME.vanished,
+                   'A target lost before the trial ends has a separate outcome');
+      assert.deepEqual(
+          lab.trialTally([ {done : true, trials : [ cracked, reached, missed, vanished ]} ], kind),
+          {trials : 4, evaluated : 3, vanished : 1, reached : 2, succeeded : 1, done : 1},
+          'Disappearing targets do not lower the success rate');
+      assert.deepEqual(lab.trialPath(vanished, kind), vanished.path,
+                       'A discontinued trial keeps its path for inspection');
+    }
     assert.equal(lab.trialDistance(TRIAL_KIND.crab), TRIAL_LAB.crab_distance);
     assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near * 2}, TRIAL_KIND.feed),
                  lab.OUTCOME.missed);
@@ -2864,8 +2876,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(sessions.map(s => s.seed), [ 1, 2 ], 'Kept and running trial worlds');
     assert.deepEqual(lab.shownSessions(trialOverview, 'f', TRIAL_KIND.feed, trialJob), [],
                      'Another kind of trial shows nothing');
-    assert.deepEqual(lab.trialTally(sessions, TRIAL_KIND.mussel),
-                     {trials : 3, reached : 2, succeeded : 1, done : 1});
+    assert.deepEqual(
+        lab.trialTally(sessions, TRIAL_KIND.mussel),
+        {trials : 3, evaluated : 3, vanished : 0, reached : 2, succeeded : 1, done : 1});
     const trialPage = trialShell({
       overview : trialOverview,
       fish : 'brisa',
@@ -2921,6 +2934,28 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       fingerprint : 'f'
     });
     assert.match(ended, /class="died"/, 'A world whose fish died says so');
+    const vanishedPage = trialShell({
+      overview : {
+        fish : trialOverview.fish,
+        results : [ {
+          fingerprint : 'f',
+          trial : TRIAL_KIND.mussel,
+          seeds : {1 : {...kept, trials : [ vanished ]}}
+        } ]
+      },
+      fish : 'brisa',
+      trial : TRIAL_KIND.mussel,
+      seeds : TRIAL_LAB.seeds[0],
+      job : null,
+      running : false,
+      error : '',
+      draft : null,
+      fingerprint : 'f'
+    });
+    assert.match(vanishedPage, /aid-trial-course vanished/);
+    assert.match(vanishedPage, /Ziel verschwunden.*nach 62 Schritten/);
+    assert.match(vanishedPage, /Auswertung: 0 Versuche; Ziel verschwunden: 1/);
+    assert.doesNotMatch(vanishedPage, /NaN|undefined|0 von 0/);
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');

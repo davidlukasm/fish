@@ -1,6 +1,6 @@
 import {TRIAL_KIND, TRIAL_LAB} from '../schema.js';
 
-export const OUTCOME = Object.freeze({missed : 0, reached : 1, succeeded : 2});
+export const OUTCOME = Object.freeze({vanished : -1, missed : 0, reached : 1, succeeded : 2});
 export const trialKey = kind => Object.keys(TRIAL_KIND).find(key => TRIAL_KIND[key] === kind);
 export const trialDistance = kind => TRIAL_LAB[trialKey(kind) + '_distance'];
 export const trialSteps = kind => TRIAL_LAB[trialKey(kind) + '_steps'];
@@ -11,9 +11,10 @@ const cracking = kind => kind === TRIAL_KIND.mussel || kind === TRIAL_KIND.crab;
 // Reaching is the step before: close to the food, or the mouth at the shell.
 export function trialOutcome(trial, kind) {
   if (cracking(kind))
-    return trial.cracked >= 0   ? OUTCOME.succeeded
-           : trial.reached >= 0 ? OUTCOME.reached
-                                : OUTCOME.missed;
+    return trial.cracked >= 0    ? OUTCOME.succeeded
+           : trial.vanished >= 0 ? OUTCOME.vanished
+           : trial.reached >= 0  ? OUTCOME.reached
+                                 : OUTCOME.missed;
   return trial.reached >= 0                     ? OUTCOME.succeeded
          : trial.closest <= TRIAL_LAB.feed_near ? OUTCOME.reached
                                                 : OUTCOME.missed;
@@ -62,9 +63,12 @@ export function shownSessions(overview, fingerprint, kind, job) {
 
 export function trialTally(sessions, kind) {
   const trials = sessions.flatMap(s => s.trials ?? []),
-        outcomes = trials.map(trial => trialOutcome(trial, kind));
+        outcomes = trials.map(trial => trialOutcome(trial, kind)),
+        vanished = outcomes.filter(o => o === OUTCOME.vanished).length;
   return {
     trials : trials.length,
+    evaluated : trials.length - vanished,
+    vanished,
     reached : outcomes.filter(o => o >= OUTCOME.reached).length,
     succeeded : outcomes.filter(o => o === OUTCOME.succeeded).length,
     done : sessions.filter(s => s.done).length

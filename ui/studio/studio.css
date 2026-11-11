@@ -280,7 +280,7 @@
 .aid-lab-deaths{display:flex;height:7px;border-radius:4px;overflow:hidden;background:#0b2730}
 .aid-lab-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:11px;color:#9fbcbc}
 .aid-lab-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}
-.aid-trial-results{--trial-succeeded:#e8c66f;--trial-reached:#bfe0a8;--trial-missed:#6f8f90}
+.aid-trial-results{--trial-succeeded:#e8c66f;--trial-reached:#bfe0a8;--trial-missed:#6f8f90;--trial-vanished:#b4aec2}
 .aid-trial-tally{display:flex;gap:12px;margin-bottom:18px}
 .aid-trial-tally>div{display:flex;flex-direction:column;gap:2px;padding:12px 18px;background:#10313a;border:1px solid #2b5058;border-radius:14px}
 .aid-trial-tally small{font-size:11px;color:#9fbcbc;text-transform:uppercase;letter-spacing:.08em}
@@ -295,6 +295,7 @@
 .aid-trial-course.succeeded polyline{stroke:var(--trial-succeeded)}.aid-trial-course.succeeded circle{fill:var(--trial-succeeded)}
 .aid-trial-course.reached polyline{stroke:var(--trial-reached)}.aid-trial-course.reached circle{fill:var(--trial-reached)}
 .aid-trial-course.missed polyline{stroke:var(--trial-missed);stroke-dasharray:4 3}.aid-trial-course.missed circle{fill:var(--trial-missed)}
+.aid-trial-course.vanished polyline{stroke:var(--trial-vanished);stroke-dasharray:1 5}.aid-trial-course.vanished circle{fill:var(--trial-vanished)}
 .aid-trial-course:hover polyline:not(.aid-trial-future){stroke-width:3;opacity:1}
 .aid-trial-course .aid-trial-future{opacity:.2;stroke-dasharray:3 4}
 .aid-trial-course .aid-trial-position{stroke:#e6efe4;stroke-width:1.2}
@@ -316,6 +317,7 @@
 .aid-trial-strip button.succeeded,.aid-trial-key.succeeded{background:var(--trial-succeeded)}
 .aid-trial-strip button.reached,.aid-trial-key.reached{background:var(--trial-reached)}
 .aid-trial-key.missed{background:var(--trial-missed)}
+.aid-trial-strip button.vanished,.aid-trial-key.vanished{background:var(--trial-vanished)}
 .aid-trial-strip em{font-style:normal;font-size:11px;color:#89a8a6}
 .aid-trial-strip em.died{color:#e0a28f}
 @media(max-width:900px){.aid-trial-view{grid-template-columns:1fr}}

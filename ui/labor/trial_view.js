@@ -47,6 +47,8 @@ function trialTitle(trial, kind, k) {
   return trials('trialTitle', {k : k + 1, outcome : outcomeName(outcome, kind)}) +
          (outcome === OUTCOME.succeeded
               ? ' · ' + trials('after', {steps : formatNumber(successStep(trial, kind) + 1)})
+          : outcome === OUTCOME.vanished
+              ? ' · ' + trials('after', {steps : formatNumber(trial.vanished + 1)})
               : '');
 }
 
@@ -158,14 +160,22 @@ function tallyCards(tally, kind) {
          [ [ OUTCOME.reached, tally.reached ], [ OUTCOME.succeeded, tally.succeeded ] ]
              .map(([ outcome, n ]) =>
                       '<div><small>' + outcomeName(outcome, kind) + '</small><strong>' +
-                      trials('share', {n, total : tally.trials}) + '</strong></div>')
+                      (tally.evaluated ? trials('share', {n, total : tally.evaluated}) : '—') +
+                      '</strong></div>')
              .join('') +
-         '</div>';
+         '</div>' +
+         (tally.vanished
+              ? '<p class="aid-trial-hint">' +
+                    trials('omitted', {n : tally.vanished, total : tally.evaluated}) + '</p>'
+              : '');
 }
 
 function legend(kind) {
   return '<div class="aid-lab-legend">' +
-         [ OUTCOME.succeeded, OUTCOME.reached, OUTCOME.missed ]
+         [
+           OUTCOME.succeeded, OUTCOME.reached, OUTCOME.missed,
+           ...(kind === TRIAL_KIND.feed ? [] : [ OUTCOME.vanished ])
+         ]
              .map(o => '<span><i class="aid-trial-key ' + OUTCOME_KEY[o] + '"></i>' +
                        outcomeName(o, kind) + '</span>')
              .join('') +
