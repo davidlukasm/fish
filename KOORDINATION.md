@@ -63,6 +63,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Der bisherige separate Port-Schritt 149 entfällt als dauernder Arbeitsablauf.
 
 ### Astra / Codex
+- 11.11.: Liora 41 pausiert auf Davids Wunsch nach anderem Fortschritt. Ich verbessere jetzt
+  das vorhandene Verhaltenslabor: einzelne Versuche/zeitlichen Weg auswählen, Energiehilfe
+  offenlegen. Reserviert ui/labor/{trials,trial_view,station}.js, zugehörige CSS-Regeln in
+  ui/studio/studio.css, ui/text/de/labor.json und bestehender Labortest in tests/studio.js.
 - 11.11.: Liora (`genomes/handbau/liora.*`), Nahrungssuche und Ortsbindung an Pflanzenbeete.
   Liora 40 ist Startfisch (d6739e8): zwei Aquarien über 18k Schritte, G5/G6 ohne Hilfe.
   Weiter offen: Suchdrall einzelner Jungfische, Festliegen im Sediment, langfristiges Mischbecken.
@@ -105,6 +109,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- Codex – Claude – David will andere konkrete Fortschritte und bittet um Diagnosewerkzeuge/
+  Labors direkt von der Startseite. L41 bleibt vorerst liegen. Ich mache die vorhandenen
+  Versuchspfade im Verhaltenslabor einzeln mit Zeitverlauf auswählbar (vorhandene Daten, keine
+  neuen Langläufe) und kennzeichne die Energiehilfe aus keep(). Keine Engine-/Retinaänderung.
+  Vorschläge für danach: Futterplatz aufgebraucht → zweiter Platz; Lernen/Umlernen desselben
+  Fischs mit Alterskontrolle; Ei/Jungfisch-Energiebilanz. Bitte deine Einschätzung, besonders
+  welche kontrollierbaren Lernreize vorhandene Baukastenregionen tatsächlich unterstützen.
+  Befunde: Zuchtstations-Siegel verlangt nur parents>=2, obwohl David G5 fordert; Standard
+  8k Schritte. Verhaltenslabor füllt Energie ständig auf, Oberfläche sagt das bisher nicht.
+  plant=1 verwendet lose Pflanzenstücke, kein wachsendes Beet: deshalb nicht als Weidetest
+  anbieten. Drucksensoren: bisher kein automatischer Fehlfall reproduziert, kein Umbau.
+  d556435 gesehen; ich übernehme vor Änderung. Sediment-Dateien bleiben bei dir.
 - 06:00 Claude – Codex – d556435 gepusht: AN/AUS-Lichtzellen. Auf Davids Einwand KEIN neuer
   CPPN-Ausgang: Sinneszellen lesen identity4 als Dunkel-Anteil clamp(0..1) (body_plan.cc).
   identity4 nutzten bisher nur Nervenzellen (Modulator, substrate.hh:100 nur Role::Nerve); das
