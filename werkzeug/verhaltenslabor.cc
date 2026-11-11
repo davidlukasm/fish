@@ -17,9 +17,10 @@
 // keeps it in place during the trials, so its senses see a still scene.
 // path=N adds to every trial the fish's course every N steps and the target, both in the
 // trial's start frame (forward along the start heading, side towards its right).
-// LABTRACE=N adds the fish's course every N steps, LABLINKS=1 its learned contacts and
-// LABBITE=1 (on stderr) the gap between mouth and nearest piece at every bite, LABEYE=1 (with
-// LABTRACE, also in mussel trials) the bearing, stimulus and signal of every retinal cell.
+// LABTRACE=N adds the fish's course every N steps (in shell trials its approach), LABLINKS=1 its
+// learned contacts and LABBITE=1 (on stderr) the gap between mouth and nearest piece at every
+// bite, LABEYE=1 (with LABTRACE, also in shell trials) the bearing, stimulus and signal of every
+// retinal cell.
 // mussel=1 grows the fish up in the aquarium and sets it, facing the shell, at distance from one
 // open mussel after another; each trial reports when the mouth reached the shell, whether the
 // shell closed first, how often the jaw bit and whether and when the shell cracked.
@@ -253,6 +254,47 @@ int main(int argc, char **argv) {
     // other food, as do those with supply=0.
     if (raised || !supply)
       stop_supply();
+    // Every LABTRACE steps of a shell trial: gap to the target, motion, bite, whether the target
+    // shut or hid itself, its bearing, the smell of its kind, the signals by site and, with
+    // LABEYE, every retinal cell and what lies in view (kind, feed pieces as -1).
+    const auto approach = [&](int step, double gap, double x, double y, bool shut, int scent) {
+      std::cout << "{\"event\":\"approach\",\"step\":" << step << ",\"gap\":" << gap
+                << ",\"speed\":" << std::hypot(p->body.motor().vx, p->body.motor().vy)
+                << ",\"forward\":" << p->body.motor().drive_forward
+                << ",\"bite\":" << p->body.bite_signal << ",\"shut\":" << shut
+                << ",\"angle\":" << bearing_to(w, p->body, x, y) * 180 / PI
+                << ",\"odor\":" << w.field.odor_field(p->body.x, p->body.y)[scent]
+                << ",\"sites\":{";
+      bool first = true;
+      for (const auto &[site, value] : sensed(p->body)) {
+        std::cout << (first ? "" : ",") << '"' << site << "\":" << value;
+        first = false;
+      }
+      std::cout << '}';
+      if (std::getenv("LABEYE")) {
+        std::cout << ",\"cells\":";
+        eye_cells(*p);
+        std::cout << ",\"near\":[";
+        bool any = false;
+        const auto near = [&](int kind, double nx, double ny, double radius) {
+          const double d = std::hypot(w.field.delta_x(nx - p->body.x), ny - p->body.y);
+          if (d > NEAR_VIEW)
+            return;
+          std::cout << (any ? "," : "") << '[' << kind << ','
+                    << bearing_to(w, p->body, nx, ny) * 180 / PI << ',' << d << ',' << radius
+                    << ']';
+          any = true;
+        };
+        for (const auto &v : w.field.visible())
+          if (v.x != p->body.x || v.y != p->body.y)
+            near(v.kind, v.x, v.y, v.radius);
+        for (const auto &f : w.field.feeding().pieces)
+          if (f.energy > 0)
+            near(-1, f.x, f.y, food_radius(f));
+        std::cout << ']';
+      }
+      std::cout << "}\n";
+    };
     if (mussel) {
       const auto &web = w.field.food_web();
       const auto find = [&](std::uint64_t id) -> const Mussel * {
@@ -319,46 +361,7 @@ int main(int argc, char **argv) {
           if (closed < 0 && m->closed)
             closed = step;
           if (trace_every && step % trace_every == 0)
-            std::cout << "{\"event\":\"approach\",\"step\":" << step << ",\"gap\":" << gap
-                      << ",\"speed\":" << std::hypot(p->body.motor().vx, p->body.motor().vy)
-                      << ",\"forward\":" << p->body.motor().drive_forward
-                      << ",\"bite\":" << p->body.bite_signal << ",\"shut\":" << m->closed
-                      << ",\"angle\":" << bearing_to(w, p->body, m->x, m->y) * 180 / PI
-                      << ",\"odor\":"
-                      << w.field.odor_field(p->body.x, p->body.y)[odor_kind::mussels]
-                      << ",\"sites\":{";
-          if (trace_every && step % trace_every == 0) {
-            bool first = true;
-            for (const auto &[site, value] : sensed(p->body)) {
-              std::cout << (first ? "" : ",") << '"' << site << "\":" << value;
-              first = false;
-            }
-            std::cout << '}';
-            if (std::getenv("LABEYE")) {
-              std::cout << ",\"cells\":";
-              eye_cells(*p);
-              // What lies in view: kind (feed pieces as -1), bearing, distance, radius.
-              std::cout << ",\"near\":[";
-              bool any = false;
-              const auto near = [&](int kind, double x, double y, double radius) {
-                const double d = std::hypot(w.field.delta_x(x - p->body.x), y - p->body.y);
-                if (d > NEAR_VIEW)
-                  return;
-                std::cout << (any ? "," : "") << '[' << kind << ','
-                          << bearing_to(w, p->body, x, y) * 180 / PI << ',' << d << ',' << radius
-                          << ']';
-                any = true;
-              };
-              for (const auto &v : w.field.visible())
-                if (v.x != p->body.x || v.y != p->body.y)
-                  near(v.kind, v.x, v.y, v.radius);
-              for (const auto &f : w.field.feeding().pieces)
-                if (f.energy > 0)
-                  near(-1, f.x, f.y, food_radius(f));
-              std::cout << ']';
-            }
-            std::cout << "}\n";
-          }
+            approach(step, gap, m->x, m->y, m->closed, odor_kind::mussels);
         }
         std::cout << "{\"event\":\"mussel\",\"family\":" << family << ",\"ground\":[" << ground[0]
                   << ',' << ground[1] << ',' << ground[2] << "],\"energy\":" << energy
@@ -438,6 +441,8 @@ int main(int argc, char **argv) {
             fled = step;
           if (buried < 0 && crab_hidden(*c))
             buried = step;
+          if (trace_every && step % trace_every == 0)
+            approach(step, gap, c->x, c->y, crab_hidden(*c), odor_kind::benthos);
         }
         std::cout << "{\"event\":\"crab\",\"energy\":" << energy << ",\"hardness\":" << hardness
                   << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
