@@ -6,44 +6,58 @@ namespace fishsim {
 namespace {
 constexpr double PROTECTED_CONSTRUCTION_ENERGY = 1e6;
 }
+// The jaw has two antagonists that work like every other muscle: a twitch pulls with its present
+// drive under its rise and fall. The opener (suction) pulls the mouth open as its twitch rises and
+// lets it spring back as it fades; the water it draws follows the same curve and its drive, so
+// slow and fast openers draw alike over time while fast ones gulp hard and short. The closer (bite)
+// gathers force over the first half of its stroke while the opener may still hold the jaw open, and
+// snaps it shut when its pull peaks; the bite takes no more than the widest gape before the snap
+// lets through. Without an opener the jaw opens only slowly to rest; without a closer it shuts
+// without a bite. The gill covers draw water on through the open mouth; they filter it themselves
+// (feeding.cc), so it carries nothing into the mouth.
 void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_steps,
                    double bite_steps) {
   auto &m = b.mouth;
   m.closing = false;
   m.swallowed = m.filtered = 0;
-  const double suction = std::clamp(b.eat_signal, 0., 1.);
-  if (m.biting) {
-    const double previous = m.phase;
-    m.phase += MOUTH_CYCLE_STEPS / m.duration;
-    m.closing = previous < MOUTH_HALF_CYCLE && m.phase >= MOUTH_HALF_CYCLE && b.bite_signal > 0;
-    if (m.phase >= MOUTH_CYCLE_STEPS) {
-      m.biting = false;
-      m.phase = -1;
-    }
+  const double suction = std::clamp(b.eat_signal, 0., 1.),
+               stroke = std::max(1., std::round(pump_steps));
+  if (m.biting && ++m.phase >= m.duration) {
+    m.biting = false;
+    m.phase = -1;
   }
   if (bite_started && !m.biting) {
     ++m.cycle;
     m.biting = true;
     m.phase = 0;
-    m.duration = std::min(MOUTH_CYCLE_STEPS, std::max(MOUTH_HALF_CYCLE, std::floor(bite_steps)));
+    m.duration = std::max(1., std::floor(bite_steps));
+    m.gape = std::max(MOUTH_REST, m.opening);
   }
   if (pump_started) {
-    m.budget = swallow_area(b) * suction * pump_steps * MOUTH_TRANSPORT_RATE;
     m.credit = 0;
-  }
-  if (m.biting) {
-    constexpr auto &opening = mouth_cycle::opening;
-    static_assert(opening.size() == mouth_cycle::steps + 1);
-    const int step = int(m.phase);
-    m.opening = opening[step] + (opening[step + 1] - opening[step]) * (m.phase - step);
-  } else {
-    m.opening = std::clamp(m.opening + (suction > 0 ? 1 / MOUTH_HALF_CYCLE : -1 / MOUTH_HALF_CYCLE),
-                           0., 1.);
-  }
-  m.flow = suction * m.opening;
-  if (m.biting && m.phase >= MOUTH_HALF_CYCLE)
-    m.flow = 0;
-  m.credit = std::min(m.budget, m.credit + swallow_area(b) * m.flow * MOUTH_TRANSPORT_RATE);
+    m.twitch = 0;
+  } else if (m.twitch >= 0 && ++m.twitch >= stroke)
+    m.twitch = -1;
+  // The twitch as stroke_delivery shapes it: pull rises to 1 and falls, its shares sum to 1.
+  const double rise = std::sin(PI * (m.twitch + .5) / stroke),
+               pull = m.twitch >= 0 ? rise * rise : 0,
+               target = MOUTH_REST + (1 - MOUTH_REST) * pull;
+  const double snap = jaw_snap(m);
+  m.closing = m.biting && m.phase == snap;
+  if (jaw_shutting(m))
+    m.opening = m.gape * (1 - (m.phase - snap + 1) / (m.duration - snap));
+  else if (pull > 0)
+    m.opening = std::min(target, m.opening + (1 - MOUTH_REST) * PI / stroke);
+  else
+    m.opening += std::clamp(MOUTH_REST - m.opening, -MOUTH_DRIFT, MOUTH_DRIFT);
+  if (m.biting && m.phase < snap)
+    m.gape = std::max(m.gape, m.opening);
+  const bool open = !jaw_shutting(m);
+  const double drawn = open ? std::clamp(b.gill_signal, 0., 1.) * m.opening : 0;
+  m.flow = open ? std::min(1., suction * pull + drawn) : 0;
+  // The twitch's shares 2 * pull average one over its length, like the force of every twitch.
+  if (open)
+    m.credit += swallow_area(b) * suction * 2 * pull * MOUTH_TRANSPORT_RATE;
 }
 double maternal_reserve(const Body &b, double adult_reserve) {
   return std::max(0., adult_reserve) * std::sqrt(std::max(0., b.tissue) / BODY_TISSUE);
@@ -197,16 +211,26 @@ double take_nutrition(Body &b, double amount, int source, const PhysiologyParame
     b.hunger = 0;
   return accepted;
 }
+// The gut muscle hurries food along: it makes room sooner, even in a fish that is full, but the
+// food it hurries through is used less, the more so the harder it hurries.
 double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.digestion = 0;
-  if (!b.alive || !b.hatched || b.energy >= reserve_capacity(b) || b.gut_energy <= 0)
+  if (!b.alive || !b.hatched || b.gut_energy <= 0)
     return 0;
-  double fraction = std::min(1., 1 / gut_transit(b, p));
-  if (b.gut_digestible > 0)
+  const double hurried = std::clamp(b.gut_motility, 0., 1.),
+               passage = std::min(1., (1 + gut_motility::speedup * hurried) / gut_transit(b, p)),
+               used = 1 - gut_motility::loss * hurried * hurried;
+  const bool full = b.energy >= reserve_capacity(b);
+  if (full && hurried <= 0)
+    return 0;
+  double fraction = passage;
+  if (!full && b.gut_digestible > 0)
     fraction = std::min(fraction, std::max(0., reserve_capacity(b) - b.energy) /
-                                      ((1 - p.digestion_cost) * b.gut_digestible));
+                                      ((1 - p.digestion_cost) * used * b.gut_digestible));
+  if (full)
+    fraction = std::min(passage, hurried / gut_transit(b, p));
   const double raw = b.gut_energy * fraction;
-  b.digestion = b.gut_digestible * fraction;
+  b.digestion = full ? 0 : b.gut_digestible * fraction * used;
   b.gut_energy *= 1 - fraction;
   b.gut_digestible *= 1 - fraction;
   b.gut_fill *= 1 - fraction;

@@ -58,49 +58,50 @@ enum class FishColumn : std::size_t {
   disease = 52,
   reserve_capacity = 53,
   adult_age = 54,
-  impulse_forward = 55,
-  motor_factor = 56,
-  fin_pose = 57,
-  fins = 58,
-  forms = 59,
-  mean_aggression = 60,
-  neuron_budget = 61,
-  eat_signal = 62,
-  mouth_aperture = 63,
-  bite_pose = 64,
-  suction_pose = 65,
-  contour = 66,
-  egg_capacity = 67,
-  sperm_capacity = 68,
-  tissue = 69,
-  regions = 70,
-  bladder_fill = 71,
-  satiety = 72,
-  damage = 73,
-  hatch_shape = 74,
-  body_geometry = 75,
-  morphology_asset = 76,
-  gut_fill = 77,
-  gut_energy = 78,
-  gut_digestible = 79,
-  digestion = 80,
-  digested = 81,
-  feeding_action = 82,
-  feeding_action_age = 83,
-  mouth_phase = 84,
-  mouth_budget = 85,
-  swallowed = 86,
-  mouth_offset = 87,
-  mouth_biting = 88,
-  filtered = 89,
-  mouth_cycle = 90,
-  eye_pull_left = 91,
-  eye_pull_right = 92,
-  immortal = 93,
-  assisted = 94,
-  remembered = 95,
-  eggs_laid = 96,
-  count = 97
+  impulse_tail_left = 55,
+  impulse_tail_right = 56,
+  motor_factor = 57,
+  fin_pose = 58,
+  fins = 59,
+  forms = 60,
+  mean_aggression = 61,
+  neuron_budget = 62,
+  eat_signal = 63,
+  mouth_aperture = 64,
+  bite_pose = 65,
+  suction_pose = 66,
+  gill_pose = 67,
+  contour = 68,
+  egg_capacity = 69,
+  sperm_capacity = 70,
+  tissue = 71,
+  regions = 72,
+  bladder_fill = 73,
+  satiety = 74,
+  damage = 75,
+  hatch_shape = 76,
+  body_geometry = 77,
+  morphology_asset = 78,
+  gut_fill = 79,
+  gut_energy = 80,
+  gut_digestible = 81,
+  digestion = 82,
+  digested = 83,
+  feeding_action = 84,
+  feeding_action_age = 85,
+  mouth_phase = 86,
+  swallowed = 87,
+  mouth_offset = 88,
+  mouth_biting = 89,
+  filtered = 90,
+  mouth_cycle = 91,
+  eye_pull_left = 92,
+  eye_pull_right = 93,
+  immortal = 94,
+  assisted = 95,
+  remembered = 96,
+  eggs_laid = 97,
+  count = 98
 };
 namespace fish_column {
 inline constexpr std::size_t x = 0;
@@ -158,49 +159,50 @@ inline constexpr std::size_t radius = 51;
 inline constexpr std::size_t disease = 52;
 inline constexpr std::size_t reserve_capacity = 53;
 inline constexpr std::size_t adult_age = 54;
-inline constexpr std::size_t impulse_forward = 55;
-inline constexpr std::size_t motor_factor = 56;
-inline constexpr std::size_t fin_pose = 57;
-inline constexpr std::size_t fins = 58;
-inline constexpr std::size_t forms = 59;
-inline constexpr std::size_t mean_aggression = 60;
-inline constexpr std::size_t neuron_budget = 61;
-inline constexpr std::size_t eat_signal = 62;
-inline constexpr std::size_t mouth_aperture = 63;
-inline constexpr std::size_t bite_pose = 64;
-inline constexpr std::size_t suction_pose = 65;
-inline constexpr std::size_t contour = 66;
-inline constexpr std::size_t egg_capacity = 67;
-inline constexpr std::size_t sperm_capacity = 68;
-inline constexpr std::size_t tissue = 69;
-inline constexpr std::size_t regions = 70;
-inline constexpr std::size_t bladder_fill = 71;
-inline constexpr std::size_t satiety = 72;
-inline constexpr std::size_t damage = 73;
-inline constexpr std::size_t hatch_shape = 74;
-inline constexpr std::size_t body_geometry = 75;
-inline constexpr std::size_t morphology_asset = 76;
-inline constexpr std::size_t gut_fill = 77;
-inline constexpr std::size_t gut_energy = 78;
-inline constexpr std::size_t gut_digestible = 79;
-inline constexpr std::size_t digestion = 80;
-inline constexpr std::size_t digested = 81;
-inline constexpr std::size_t feeding_action = 82;
-inline constexpr std::size_t feeding_action_age = 83;
-inline constexpr std::size_t mouth_phase = 84;
-inline constexpr std::size_t mouth_budget = 85;
-inline constexpr std::size_t swallowed = 86;
-inline constexpr std::size_t mouth_offset = 87;
-inline constexpr std::size_t mouth_biting = 88;
-inline constexpr std::size_t filtered = 89;
-inline constexpr std::size_t mouth_cycle = 90;
-inline constexpr std::size_t eye_pull_left = 91;
-inline constexpr std::size_t eye_pull_right = 92;
-inline constexpr std::size_t immortal = 93;
-inline constexpr std::size_t assisted = 94;
-inline constexpr std::size_t remembered = 95;
-inline constexpr std::size_t eggs_laid = 96;
-inline constexpr std::size_t count = 97;
+inline constexpr std::size_t impulse_tail_left = 55;
+inline constexpr std::size_t impulse_tail_right = 56;
+inline constexpr std::size_t motor_factor = 57;
+inline constexpr std::size_t fin_pose = 58;
+inline constexpr std::size_t fins = 59;
+inline constexpr std::size_t forms = 60;
+inline constexpr std::size_t mean_aggression = 61;
+inline constexpr std::size_t neuron_budget = 62;
+inline constexpr std::size_t eat_signal = 63;
+inline constexpr std::size_t mouth_aperture = 64;
+inline constexpr std::size_t bite_pose = 65;
+inline constexpr std::size_t suction_pose = 66;
+inline constexpr std::size_t gill_pose = 67;
+inline constexpr std::size_t contour = 68;
+inline constexpr std::size_t egg_capacity = 69;
+inline constexpr std::size_t sperm_capacity = 70;
+inline constexpr std::size_t tissue = 71;
+inline constexpr std::size_t regions = 72;
+inline constexpr std::size_t bladder_fill = 73;
+inline constexpr std::size_t satiety = 74;
+inline constexpr std::size_t damage = 75;
+inline constexpr std::size_t hatch_shape = 76;
+inline constexpr std::size_t body_geometry = 77;
+inline constexpr std::size_t morphology_asset = 78;
+inline constexpr std::size_t gut_fill = 79;
+inline constexpr std::size_t gut_energy = 80;
+inline constexpr std::size_t gut_digestible = 81;
+inline constexpr std::size_t digestion = 82;
+inline constexpr std::size_t digested = 83;
+inline constexpr std::size_t feeding_action = 84;
+inline constexpr std::size_t feeding_action_age = 85;
+inline constexpr std::size_t mouth_phase = 86;
+inline constexpr std::size_t swallowed = 87;
+inline constexpr std::size_t mouth_offset = 88;
+inline constexpr std::size_t mouth_biting = 89;
+inline constexpr std::size_t filtered = 90;
+inline constexpr std::size_t mouth_cycle = 91;
+inline constexpr std::size_t eye_pull_left = 92;
+inline constexpr std::size_t eye_pull_right = 93;
+inline constexpr std::size_t immortal = 94;
+inline constexpr std::size_t assisted = 95;
+inline constexpr std::size_t remembered = 96;
+inline constexpr std::size_t eggs_laid = 97;
+inline constexpr std::size_t count = 98;
 }
 enum class FoodColumn : std::size_t {
   x = 0,
@@ -510,7 +512,11 @@ enum class AnatomyColumn : std::size_t {
   gut_length = 44,
   blunt_teeth = 45,
   undulation = 46,
-  count = 47
+  gills = 47,
+  gill_strength = 48,
+  gill_rakers = 49,
+  gut_muscle = 50,
+  count = 51
 };
 namespace anatomy_column {
 inline constexpr std::size_t mouth = 0;
@@ -560,7 +566,11 @@ inline constexpr std::size_t jaw_length = 43;
 inline constexpr std::size_t gut_length = 44;
 inline constexpr std::size_t blunt_teeth = 45;
 inline constexpr std::size_t undulation = 46;
-inline constexpr std::size_t count = 47;
+inline constexpr std::size_t gills = 47;
+inline constexpr std::size_t gill_strength = 48;
+inline constexpr std::size_t gill_rakers = 49;
+inline constexpr std::size_t gut_muscle = 50;
+inline constexpr std::size_t count = 51;
 }
 enum class NoseSampleColumn : std::size_t {
   x = 0,
@@ -989,18 +999,18 @@ inline constexpr std::size_t id = 3;
 inline constexpr std::size_t count = 4;
 }
 enum class StrokeColumn : std::size_t {
-  mean = 0,
+  drive = 0,
   recovery = 1,
-  power = 2,
+  force = 2,
   steps = 3,
   fibre = 4,
   reserve = 5,
   count = 6
 };
 namespace stroke_column {
-inline constexpr std::size_t mean = 0;
+inline constexpr std::size_t drive = 0;
 inline constexpr std::size_t recovery = 1;
-inline constexpr std::size_t power = 2;
+inline constexpr std::size_t force = 2;
 inline constexpr std::size_t steps = 3;
 inline constexpr std::size_t fibre = 4;
 inline constexpr std::size_t reserve = 5;
@@ -1269,18 +1279,19 @@ enum class CorpseStateColumn : std::size_t {
   mouth_pose = 11,
   bite_pose = 12,
   suction_pose = 13,
-  defense = 14,
-  health = 15,
-  aggression = 16,
-  mean_aggression = 17,
-  shell_radius = 18,
-  birth_tissue = 19,
-  mouth_aperture = 20,
-  gut_fill = 21,
-  gut_energy = 22,
-  gut_length = 23,
-  undulation = 24,
-  count = 25
+  gill_pose = 14,
+  defense = 15,
+  health = 16,
+  aggression = 17,
+  mean_aggression = 18,
+  shell_radius = 19,
+  birth_tissue = 20,
+  mouth_aperture = 21,
+  gut_fill = 22,
+  gut_energy = 23,
+  gut_length = 24,
+  undulation = 25,
+  count = 26
 };
 namespace corpse_state_column {
 inline constexpr std::size_t energy = 0;
@@ -1297,18 +1308,19 @@ inline constexpr std::size_t fin_right = 10;
 inline constexpr std::size_t mouth_pose = 11;
 inline constexpr std::size_t bite_pose = 12;
 inline constexpr std::size_t suction_pose = 13;
-inline constexpr std::size_t defense = 14;
-inline constexpr std::size_t health = 15;
-inline constexpr std::size_t aggression = 16;
-inline constexpr std::size_t mean_aggression = 17;
-inline constexpr std::size_t shell_radius = 18;
-inline constexpr std::size_t birth_tissue = 19;
-inline constexpr std::size_t mouth_aperture = 20;
-inline constexpr std::size_t gut_fill = 21;
-inline constexpr std::size_t gut_energy = 22;
-inline constexpr std::size_t gut_length = 23;
-inline constexpr std::size_t undulation = 24;
-inline constexpr std::size_t count = 25;
+inline constexpr std::size_t gill_pose = 14;
+inline constexpr std::size_t defense = 15;
+inline constexpr std::size_t health = 16;
+inline constexpr std::size_t aggression = 17;
+inline constexpr std::size_t mean_aggression = 18;
+inline constexpr std::size_t shell_radius = 19;
+inline constexpr std::size_t birth_tissue = 20;
+inline constexpr std::size_t mouth_aperture = 21;
+inline constexpr std::size_t gut_fill = 22;
+inline constexpr std::size_t gut_energy = 23;
+inline constexpr std::size_t gut_length = 24;
+inline constexpr std::size_t undulation = 25;
+inline constexpr std::size_t count = 26;
 }
 enum class CorpseVisualColumn : std::size_t {
   organs = 0,
@@ -1555,6 +1567,8 @@ inline constexpr int jaw = 10;
 inline constexpr int defense = 11;
 inline constexpr int bladder = 12;
 inline constexpr int gland = 13;
+inline constexpr int gills = 14;
+inline constexpr int gut = 15;
 }
 namespace eye {
 inline constexpr int left = 0;
@@ -1562,7 +1576,7 @@ inline constexpr int right = 1;
 inline constexpr int count = 2;
 }
 namespace stroke_kind {
-inline constexpr int tail = 0;
+inline constexpr int tail_left = 0;
 inline constexpr int turn_left = 1;
 inline constexpr int turn_right = 2;
 inline constexpr int suction = 3;
@@ -1572,7 +1586,10 @@ inline constexpr int bite = 6;
 inline constexpr int defense = 7;
 inline constexpr int reverse_left = 8;
 inline constexpr int reverse_right = 9;
-inline constexpr int count = 10;
+inline constexpr int gill = 10;
+inline constexpr int gut = 11;
+inline constexpr int tail_right = 12;
+inline constexpr int count = 13;
 }
 namespace step_phase {
 inline constexpr int development = 0;
@@ -1926,7 +1943,7 @@ inline constexpr double mouth_share_span = 0.44;
 }
 namespace mouth_cycle {
 inline constexpr int steps = 8;
-inline constexpr std::array<double, 9> opening{0.35, 0.8, 1.0, 1.0, 0.65, 0.1, 0.0, 0.15, 0.35};
+inline constexpr double rest = 0.35;
 }
 namespace sensory_component {
 inline constexpr int neuron = 0;
@@ -2004,9 +2021,23 @@ inline constexpr double upkeep_fast = 0.3;
 inline constexpr double drain = 0.028;
 inline constexpr int recovery_steps = 400;
 }
+namespace gut_motility {
+inline constexpr int speedup = 2;
+inline constexpr double loss = 0.5;
+inline constexpr double wall = 0.25;
+inline constexpr int zone = 2;
+}
+namespace gill_filter {
+inline constexpr double rakerless_retention = 0.3;
+inline constexpr double raker_drag = 0.5;
+inline constexpr double flank = 0.75;
+}
 namespace stroke_grip {
 inline constexpr double tail_at_rest = 0.5;
 inline constexpr double fin_at_speed = 0.5;
+}
+namespace tail_stroke {
+inline constexpr double lone_push = 0.3;
 }
 namespace trial_lab {
 inline constexpr std::array<double, 3> seeds{1.0, 2.0, 4.0};

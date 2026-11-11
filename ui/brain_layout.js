@@ -8,7 +8,7 @@ import {
   sidedTissue,
   tissueBase,
   tissueSide,
-  VARIANT_SENSE
+  VARIANT_TISSUE
 } from './tissue.js';
 import {updateBrainState} from './brain.js';
 import {updateSessionState} from './session.js';
@@ -135,13 +135,14 @@ export function brainBuild(f, c = camera(f)) {
     for (const part of parts) {
       part.neuron = n[NEURON.index];
       part.screen = brainProject(part.p, d);
-      const tissueId = part.key === INTERNAL_TISSUE ? sidedTissue(INTERNAL_TISSUE, 0)
-                                                    : brainOrganKey(part.key, n, rec);
+      const tissueId = part.key === INTERNAL_TISSUE
+                           ? sidedTissue(INTERNAL_TISSUE, 0)
+                           : brainOrganKey(part.key, n, rec, d.effectors.get(n[NEURON.index]));
       part.tissue = tissueId;
       if (!d.tissues.has(tissueId))
         d.tissues.set(tissueId, {
-          key : VARIANT_SENSE[tissueBase(tissueId)] ?? part.key,
-          variant : VARIANT_SENSE[tissueBase(tissueId)] ? tissueBase(tissueId) : '',
+          key : VARIANT_TISSUE[tissueBase(tissueId)] ?? part.key,
+          variant : VARIANT_TISSUE[tissueBase(tissueId)] ? tissueBase(tissueId) : '',
           side : Number(tissueSide(tissueId)),
           members : []
         });

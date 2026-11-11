@@ -1,14 +1,9 @@
 #pragma once
 #include <array>
 #include <cstddef>
-namespace fishsim {
-namespace render_wire {
+namespace fishsim { namespace render_wire {
 enum class Type { u8, i8, u16, i16, u32, i32, i64, f32 };
-struct Field {
-  Type type;
-  std::size_t offset, size;
-  double scale;
-};
+struct Field { Type type; std::size_t offset, size; double scale; };
 inline constexpr unsigned version = 24;
 inline constexpr char magic[] = "FSC1";
 inline constexpr std::size_t header_bytes = 120;
@@ -69,15 +64,7 @@ inline constexpr unsigned delta = 1;
 inline constexpr unsigned paused = 2;
 inline constexpr unsigned done = 4;
 }
-enum class Kind {
-  Fish = 0,
-  Food = 1,
-  Corpse = 2,
-  Gamete = 3,
-  Wound = 4,
-  Invertebrate = 5,
-  Count = 6
-};
+enum class Kind { Fish = 0, Food = 1, Corpse = 2, Gamete = 3, Wound = 4, Invertebrate = 5, Count = 6 };
 namespace fish_flag {
 inline constexpr unsigned hatched = 1;
 inline constexpr unsigned fertilised = 2;
@@ -111,72 +98,114 @@ inline constexpr std::size_t mouth_aperture = 19;
 inline constexpr std::size_t mouth_pose = 20;
 inline constexpr std::size_t bite_pose = 21;
 inline constexpr std::size_t suction_pose = 22;
-inline constexpr std::size_t defense = 23;
-inline constexpr std::size_t aggression = 24;
-inline constexpr std::size_t relative_speed = 25;
-inline constexpr std::size_t tail = 26;
-inline constexpr std::size_t impulse_left = 27;
-inline constexpr std::size_t impulse_right = 28;
-inline constexpr std::size_t impulse_forward = 29;
-inline constexpr std::size_t motor_factor = 30;
-inline constexpr std::size_t bladder_fill = 31;
-inline constexpr std::size_t satiety = 32;
-inline constexpr std::size_t damage = 33;
-inline constexpr std::size_t fin_age_tail = 34;
-inline constexpr std::size_t fin_age_left = 35;
-inline constexpr std::size_t fin_age_right = 36;
-inline constexpr std::size_t fin_peak_tail = 37;
-inline constexpr std::size_t fin_peak_left = 38;
-inline constexpr std::size_t fin_peak_right = 39;
-inline constexpr std::size_t fin_steps_tail = 40;
-inline constexpr std::size_t fin_steps_left = 41;
-inline constexpr std::size_t fin_steps_right = 42;
-inline constexpr std::size_t morphology_asset = 43;
-inline constexpr std::size_t hatch_radius = 44;
-inline constexpr std::size_t birth_tissue = 45;
-inline constexpr std::size_t hatch_step = 46;
-inline constexpr std::size_t species = 47;
-inline constexpr std::size_t gut_fill = 48;
-inline constexpr std::size_t gut_energy = 49;
-inline constexpr std::size_t gut_digestible = 50;
-inline constexpr std::size_t digestion = 51;
-inline constexpr std::size_t digested = 52;
-inline constexpr std::size_t feeding_action = 53;
-inline constexpr std::size_t feeding_action_age = 54;
-inline constexpr std::size_t mouth_phase = 55;
-inline constexpr std::size_t mouth_budget = 56;
-inline constexpr std::size_t swallowed = 57;
-inline constexpr std::size_t mouth_offset = 58;
-inline constexpr std::size_t mouth_biting = 59;
-inline constexpr std::size_t filtered = 60;
-inline constexpr std::size_t mouth_cycle = 61;
+inline constexpr std::size_t gill_pose = 23;
+inline constexpr std::size_t defense = 24;
+inline constexpr std::size_t aggression = 25;
+inline constexpr std::size_t relative_speed = 26;
+inline constexpr std::size_t tail = 27;
+inline constexpr std::size_t impulse_left = 28;
+inline constexpr std::size_t impulse_right = 29;
+inline constexpr std::size_t impulse_tail_left = 30;
+inline constexpr std::size_t impulse_tail_right = 31;
+inline constexpr std::size_t motor_factor = 32;
+inline constexpr std::size_t bladder_fill = 33;
+inline constexpr std::size_t satiety = 34;
+inline constexpr std::size_t damage = 35;
+inline constexpr std::size_t fin_age_tail = 36;
+inline constexpr std::size_t fin_age_left = 37;
+inline constexpr std::size_t fin_age_right = 38;
+inline constexpr std::size_t fin_peak_tail = 39;
+inline constexpr std::size_t fin_peak_left = 40;
+inline constexpr std::size_t fin_peak_right = 41;
+inline constexpr std::size_t fin_steps_tail = 42;
+inline constexpr std::size_t fin_steps_left = 43;
+inline constexpr std::size_t fin_steps_right = 44;
+inline constexpr std::size_t morphology_asset = 45;
+inline constexpr std::size_t hatch_radius = 46;
+inline constexpr std::size_t birth_tissue = 47;
+inline constexpr std::size_t hatch_step = 48;
+inline constexpr std::size_t species = 49;
+inline constexpr std::size_t gut_fill = 50;
+inline constexpr std::size_t gut_energy = 51;
+inline constexpr std::size_t gut_digestible = 52;
+inline constexpr std::size_t digestion = 53;
+inline constexpr std::size_t digested = 54;
+inline constexpr std::size_t feeding_action = 55;
+inline constexpr std::size_t feeding_action_age = 56;
+inline constexpr std::size_t mouth_phase = 57;
+inline constexpr std::size_t swallowed = 58;
+inline constexpr std::size_t mouth_offset = 59;
+inline constexpr std::size_t mouth_biting = 60;
+inline constexpr std::size_t filtered = 61;
 inline constexpr std::size_t eye_pull_left = 62;
 inline constexpr std::size_t eye_pull_right = 63;
 inline constexpr std::array<Field, 64> fields = {{
-    {Type::i32, 0, 4, 65536.0}, {Type::i32, 4, 4, 65536.0}, {Type::i16, 8, 2, 8192.0},
-    {Type::i64, 10, 8, 1},      {Type::u8, 18, 1, 1},       {Type::u8, 19, 1, 255.0},
-    {Type::u8, 20, 1, 255.0},   {Type::u8, 21, 1, 255.0},   {Type::u8, 22, 1, 255.0},
-    {Type::u8, 23, 1, 255.0},   {Type::f32, 24, 4, 1},      {Type::f32, 28, 4, 1},
-    {Type::u16, 32, 2, 65535},  {Type::f32, 34, 4, 1},      {Type::u16, 38, 2, 65535},
-    {Type::f32, 40, 4, 1},      {Type::u16, 44, 2, 65535},  {Type::f32, 46, 4, 1},
-    {Type::u16, 50, 2, 16.0},   {Type::f32, 52, 4, 1},      {Type::u16, 56, 2, 4096},
-    {Type::u16, 58, 2, 4096},   {Type::u16, 60, 2, 4096},   {Type::u16, 62, 2, 4096},
-    {Type::u16, 64, 2, 4096},   {Type::u8, 66, 1, 8.0},     {Type::i16, 67, 2, 8192},
-    {Type::i16, 69, 2, 1024.0}, {Type::i16, 71, 2, 1024.0}, {Type::i16, 73, 2, 1024.0},
-    {Type::u16, 75, 2, 4096},   {Type::u16, 77, 2, 4096},   {Type::u16, 79, 2, 4096},
-    {Type::u16, 81, 2, 4096},   {Type::i32, 83, 4, 1},      {Type::i32, 87, 4, 1},
-    {Type::i32, 91, 4, 1},      {Type::f32, 95, 4, 1},      {Type::f32, 99, 4, 1},
-    {Type::f32, 103, 4, 1},     {Type::u8, 107, 1, 1},      {Type::u8, 108, 1, 1},
-    {Type::u8, 109, 1, 1},      {Type::u32, 110, 4, 1},     {Type::f32, 114, 4, 1},
-    {Type::u16, 118, 2, 16.0},  {Type::i64, 120, 8, 1},     {Type::u32, 128, 4, 1},
-    {Type::f32, 132, 4, 1},     {Type::f32, 136, 4, 1},     {Type::f32, 140, 4, 1},
-    {Type::f32, 144, 4, 1},     {Type::f32, 148, 4, 1},     {Type::u8, 152, 1, 1},
-    {Type::u8, 153, 1, 1},      {Type::f32, 154, 4, 1},     {Type::f32, 158, 4, 1},
-    {Type::f32, 162, 4, 1},     {Type::f32, 166, 4, 1},     {Type::u8, 170, 1, 1},
-    {Type::f32, 171, 4, 1},     {Type::u32, 175, 4, 1},     {Type::u16, 179, 2, 65535},
-    {Type::u16, 181, 2, 65535},
+{Type::i32, 0, 4, 65536.0},
+{Type::i32, 4, 4, 65536.0},
+{Type::i16, 8, 2, 8192.0},
+{Type::i64, 10, 8, 1},
+{Type::u8, 18, 1, 1},
+{Type::u8, 19, 1, 255.0},
+{Type::u8, 20, 1, 255.0},
+{Type::u8, 21, 1, 255.0},
+{Type::u8, 22, 1, 255.0},
+{Type::u8, 23, 1, 255.0},
+{Type::f32, 24, 4, 1},
+{Type::f32, 28, 4, 1},
+{Type::u16, 32, 2, 65535},
+{Type::f32, 34, 4, 1},
+{Type::u16, 38, 2, 65535},
+{Type::f32, 40, 4, 1},
+{Type::u16, 44, 2, 65535},
+{Type::f32, 46, 4, 1},
+{Type::u16, 50, 2, 16.0},
+{Type::f32, 52, 4, 1},
+{Type::u16, 56, 2, 4096},
+{Type::u16, 58, 2, 4096},
+{Type::u16, 60, 2, 4096},
+{Type::u16, 62, 2, 4096},
+{Type::u16, 64, 2, 4096},
+{Type::u16, 66, 2, 4096},
+{Type::u8, 68, 1, 8.0},
+{Type::i16, 69, 2, 8192},
+{Type::i16, 71, 2, 1024.0},
+{Type::i16, 73, 2, 1024.0},
+{Type::i16, 75, 2, 1024.0},
+{Type::i16, 77, 2, 1024.0},
+{Type::u16, 79, 2, 4096},
+{Type::u16, 81, 2, 4096},
+{Type::u16, 83, 2, 4096},
+{Type::u16, 85, 2, 4096},
+{Type::i32, 87, 4, 1},
+{Type::i32, 91, 4, 1},
+{Type::i32, 95, 4, 1},
+{Type::f32, 99, 4, 1},
+{Type::f32, 103, 4, 1},
+{Type::f32, 107, 4, 1},
+{Type::u8, 111, 1, 1},
+{Type::u8, 112, 1, 1},
+{Type::u8, 113, 1, 1},
+{Type::u32, 114, 4, 1},
+{Type::f32, 118, 4, 1},
+{Type::u16, 122, 2, 16.0},
+{Type::i64, 124, 8, 1},
+{Type::u32, 132, 4, 1},
+{Type::f32, 136, 4, 1},
+{Type::f32, 140, 4, 1},
+{Type::f32, 144, 4, 1},
+{Type::f32, 148, 4, 1},
+{Type::f32, 152, 4, 1},
+{Type::u8, 156, 1, 1},
+{Type::u8, 157, 1, 1},
+{Type::f32, 158, 4, 1},
+{Type::f32, 162, 4, 1},
+{Type::f32, 166, 4, 1},
+{Type::u8, 170, 1, 1},
+{Type::f32, 171, 4, 1},
+{Type::u16, 175, 2, 65535},
+{Type::u16, 177, 2, 65535},
 }};
-inline constexpr std::size_t bytes = 183;
+inline constexpr std::size_t bytes = 179;
 }
 namespace food {
 inline constexpr std::size_t x = 0;
@@ -190,16 +219,16 @@ inline constexpr std::size_t red = 7;
 inline constexpr std::size_t green = 8;
 inline constexpr std::size_t blue = 9;
 inline constexpr std::array<Field, 10> fields = {{
-    {Type::i32, 0, 4, 65536.0},
-    {Type::i32, 4, 4, 65536.0},
-    {Type::f32, 8, 4, 1},
-    {Type::i64, 12, 8, 1},
-    {Type::i64, 20, 8, 1},
-    {Type::f32, 28, 4, 1},
-    {Type::u8, 32, 1, 1},
-    {Type::u8, 33, 1, 255.0},
-    {Type::u8, 34, 1, 255.0},
-    {Type::u8, 35, 1, 255.0},
+{Type::i32, 0, 4, 65536.0},
+{Type::i32, 4, 4, 65536.0},
+{Type::f32, 8, 4, 1},
+{Type::i64, 12, 8, 1},
+{Type::i64, 20, 8, 1},
+{Type::f32, 28, 4, 1},
+{Type::u8, 32, 1, 1},
+{Type::u8, 33, 1, 255.0},
+{Type::u8, 34, 1, 255.0},
+{Type::u8, 35, 1, 255.0},
 }};
 inline constexpr std::size_t bytes = 36;
 }
@@ -224,13 +253,25 @@ inline constexpr std::size_t bone_time = 16;
 inline constexpr std::size_t resting = 17;
 inline constexpr std::size_t sink_phase = 18;
 inline constexpr std::array<Field, 19> fields = {{
-    {Type::i32, 0, 4, 65536.0}, {Type::i32, 4, 4, 65536.0}, {Type::f32, 8, 4, 1},
-    {Type::i64, 12, 8, 1},      {Type::u8, 20, 1, 255.0},   {Type::u8, 21, 1, 255.0},
-    {Type::u8, 22, 1, 255.0},   {Type::i16, 23, 2, 8192.0}, {Type::f32, 25, 4, 1},
-    {Type::f32, 29, 4, 1},      {Type::u8, 33, 1, 1},       {Type::u32, 34, 4, 1},
-    {Type::u32, 38, 4, 1},      {Type::i64, 42, 8, 1},      {Type::i64, 50, 8, 1},
-    {Type::u8, 58, 1, 1},       {Type::f32, 59, 4, 1},      {Type::f32, 63, 4, 1},
-    {Type::f32, 67, 4, 1},
+{Type::i32, 0, 4, 65536.0},
+{Type::i32, 4, 4, 65536.0},
+{Type::f32, 8, 4, 1},
+{Type::i64, 12, 8, 1},
+{Type::u8, 20, 1, 255.0},
+{Type::u8, 21, 1, 255.0},
+{Type::u8, 22, 1, 255.0},
+{Type::i16, 23, 2, 8192.0},
+{Type::f32, 25, 4, 1},
+{Type::f32, 29, 4, 1},
+{Type::u8, 33, 1, 1},
+{Type::u32, 34, 4, 1},
+{Type::u32, 38, 4, 1},
+{Type::i64, 42, 8, 1},
+{Type::i64, 50, 8, 1},
+{Type::u8, 58, 1, 1},
+{Type::f32, 59, 4, 1},
+{Type::f32, 63, 4, 1},
+{Type::f32, 67, 4, 1},
 }};
 inline constexpr std::size_t bytes = 71;
 }
@@ -242,12 +283,12 @@ inline constexpr std::size_t red = 3;
 inline constexpr std::size_t green = 4;
 inline constexpr std::size_t blue = 5;
 inline constexpr std::array<Field, 6> fields = {{
-    {Type::i32, 0, 4, 65536.0},
-    {Type::i32, 4, 4, 65536.0},
-    {Type::f32, 8, 4, 1},
-    {Type::u8, 12, 1, 255.0},
-    {Type::u8, 13, 1, 255.0},
-    {Type::u8, 14, 1, 255.0},
+{Type::i32, 0, 4, 65536.0},
+{Type::i32, 4, 4, 65536.0},
+{Type::f32, 8, 4, 1},
+{Type::u8, 12, 1, 255.0},
+{Type::u8, 13, 1, 255.0},
+{Type::u8, 14, 1, 255.0},
 }};
 inline constexpr std::size_t bytes = 15;
 }
@@ -261,14 +302,14 @@ inline constexpr std::size_t radius = 5;
 inline constexpr std::size_t vx = 6;
 inline constexpr std::size_t vy = 7;
 inline constexpr std::array<Field, 8> fields = {{
-    {Type::f32, 0, 4, 1},
-    {Type::i32, 4, 4, 65536.0},
-    {Type::i32, 8, 4, 65536.0},
-    {Type::f32, 12, 4, 1},
-    {Type::f32, 16, 4, 1},
-    {Type::f32, 20, 4, 1},
-    {Type::f32, 24, 4, 1},
-    {Type::f32, 28, 4, 1},
+{Type::f32, 0, 4, 1},
+{Type::i32, 4, 4, 65536.0},
+{Type::i32, 8, 4, 65536.0},
+{Type::f32, 12, 4, 1},
+{Type::f32, 16, 4, 1},
+{Type::f32, 20, 4, 1},
+{Type::f32, 24, 4, 1},
+{Type::f32, 28, 4, 1},
 }};
 inline constexpr std::size_t bytes = 32;
 }
@@ -294,15 +335,27 @@ inline constexpr std::size_t food_y = 17;
 inline constexpr std::size_t food_kind = 18;
 inline constexpr std::size_t filtered = 19;
 inline constexpr std::array<Field, 20> fields = {{
-    {Type::i32, 0, 4, 65536}, {Type::i32, 4, 4, 65536},  {Type::f32, 8, 4, 1},
-    {Type::f32, 12, 4, 1},    {Type::u8, 16, 1, 1},      {Type::f32, 17, 4, 1},
-    {Type::f32, 21, 4, 1},    {Type::f32, 25, 4, 1},     {Type::f32, 29, 4, 1},
-    {Type::f32, 33, 4, 1},    {Type::f32, 37, 4, 1},     {Type::f32, 41, 4, 1},
-    {Type::f32, 45, 4, 1},    {Type::u16, 49, 2, 65535}, {Type::f32, 51, 4, 1},
-    {Type::f32, 55, 4, 1},    {Type::f32, 59, 4, 1},     {Type::f32, 63, 4, 1},
-    {Type::u8, 67, 1, 1},     {Type::f32, 68, 4, 1},
+{Type::i32, 0, 4, 65536},
+{Type::i32, 4, 4, 65536},
+{Type::f32, 8, 4, 1},
+{Type::f32, 12, 4, 1},
+{Type::u8, 16, 1, 1},
+{Type::f32, 17, 4, 1},
+{Type::f32, 21, 4, 1},
+{Type::f32, 25, 4, 1},
+{Type::f32, 29, 4, 1},
+{Type::f32, 33, 4, 1},
+{Type::f32, 37, 4, 1},
+{Type::f32, 41, 4, 1},
+{Type::f32, 45, 4, 1},
+{Type::u16, 49, 2, 65535},
+{Type::f32, 51, 4, 1},
+{Type::f32, 55, 4, 1},
+{Type::f32, 59, 4, 1},
+{Type::f32, 63, 4, 1},
+{Type::u8, 67, 1, 1},
+{Type::f32, 68, 4, 1},
 }};
 inline constexpr std::size_t bytes = 72;
 }
-}
-}
+}}

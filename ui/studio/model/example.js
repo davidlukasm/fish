@@ -11,6 +11,7 @@ const PLACES = Object.freeze({
   value : [ 'value', 370, 310 ],
   state : [ 'state', 570, 365 ],
   motor : [ 'motor', 680, 310 ],
+  spine : [ 'spine', 780, 300 ],
   fin : [ 'muscle', 600, 470 ],
   tail : [ 'muscle', 890, 350 ],
   bite : [ 'muscle', 195, 335 ],
@@ -56,7 +57,10 @@ const WIRES = Object.freeze([
   [ 'barbels', 'motor', null, 'near' ],
   [ 'barbels', 'motor', null, 'grip' ],
   [ 'motor', 'fin', 'fins', null, 'crossed' ],
-  [ 'motor', 'tail', 'tail' ],
+  [ 'motor', 'spine', 'tail', 'urge' ],
+  [ 'motor', 'spine', 'fins', 'steer' ],
+  [ 'motor', 'spine', 'escape', 'escape' ],
+  [ 'spine', 'tail', 'stroke' ],
   [ 'motor', 'suck', 'mouth' ],
   [ 'motor', 'bite', 'bite' ]
 ]);

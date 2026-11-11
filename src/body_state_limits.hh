@@ -73,6 +73,9 @@ inline ScalarBounds body_limit_egg_shell_radius(const Body &) {
 inline ScalarBounds body_limit_motor_suction_pose(const Body &) {
   return {0, 1, "motor_suction_pose"};
 }
+inline ScalarBounds body_limit_motor_gill_pose(const Body &) {
+  return {0, 1, "motor_gill_pose"};
+}
 inline ScalarBounds body_limit_motor_bite_pose(const Body &) {
   return {0, 1, "motor_bite_pose"};
 }
@@ -139,8 +142,8 @@ inline ScalarBounds body_limit_motor_impulse_right(const Body &) {
 inline ScalarBounds body_limit_motor_tail(const Body &) {
   return {-1, 1, "motor_tail"};
 }
-inline ScalarBounds body_limit_motor_impulse_forward(const Body &) {
-  return {0, MAX_SIGNAL, "motor_impulse_forward"};
+inline ScalarBounds body_limit_motor_impulse_tail(const Body &) {
+  return {0, MAX_SIGNAL, "motor_impulse_tail"};
 }
 inline ScalarBounds body_limit_motor_motor_factor(const Body &) {
   return {0, 1, "motor_motor_factor"};
@@ -182,6 +185,7 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.bite_signal, body_limit_bite_signal(b));
   validate_scalar(b.egg_shell_radius, body_limit_egg_shell_radius(b));
   validate_scalar(b.motor().suction_pose, body_limit_motor_suction_pose(b));
+  validate_scalar(b.motor().gill_pose, body_limit_motor_gill_pose(b));
   validate_scalar(b.motor().bite_pose, body_limit_motor_bite_pose(b));
   validate_scalar(b.angle, body_limit_angle(b));
   validate_scalar(b.motor().speed, body_limit_motor_speed(b));
@@ -204,7 +208,8 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.motor().impulse_left, body_limit_motor_impulse_left(b));
   validate_scalar(b.motor().impulse_right, body_limit_motor_impulse_right(b));
   validate_scalar(b.motor().tail, body_limit_motor_tail(b));
-  validate_scalar(b.motor().impulse_forward, body_limit_motor_impulse_forward(b));
+  validate_scalar(b.motor().impulse_tail_left, body_limit_motor_impulse_tail(b));
+  validate_scalar(b.motor().impulse_tail_right, body_limit_motor_impulse_tail(b));
   validate_scalar(b.motor().motor_factor, body_limit_motor_motor_factor(b));
   validate_scalar(b.reproduction().egg_transfer, body_limit_reproduction_egg_transfer(b));
   validate_scalar(b.reproduction().sperm_transfer, body_limit_reproduction_sperm_transfer(b));

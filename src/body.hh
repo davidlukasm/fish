@@ -22,11 +22,14 @@ struct EffectorActivity;
 struct Point;
 struct FleshBite;
 class PopulationCheckpoint;
+// The jaw: opening it sucks, a bite snaps it shut from the gape it closes from (phase counts the
+// steps of that strike, -1 between strikes).
 struct MouthState {
-  double phase = -1, duration = MOUTH_CYCLE_STEPS;
+  // phase: steps into a bite (-1 between bites); twitch: steps into the opener's stroke.
+  double phase = -1, duration = MOUTH_CYCLE_STEPS, twitch = -1;
   std::uint32_t cycle = 0;
   bool biting = false, closing = false;
-  double opening = 0, budget = 0, credit = 0, flow = 0, swallowed = 0, filtered = 0;
+  double opening = 0, gape = MOUTH_REST, credit = 0, flow = 0, swallowed = 0, filtered = 0;
 };
 struct EmbryoState {
   // spent: energy used up before hatching (upkeep, brain, construction, motor work), not tissue.
@@ -54,6 +57,7 @@ struct BodyState {
   std::array<double, BODY_SECTORS> damage_sectors{};
 
   double bladder_capacity = 0;
+  double gill_strength = 0, gill_signal = 0, raker_density = 0, gut_motility = 0;
   double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
          undulation = TRAIT_MIDDLE;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF;

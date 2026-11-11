@@ -368,7 +368,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     site : site.id,
     copies : desc.copies,
     threshold : desc.threshold ?? (desc.role === 'sensor' ? N.sense_threshold : -.2),
-    tau : cycle ? timeConstantOf(cycle) : N.tau,
+    tau : desc.tau ?? (cycle ? timeConstantOf(cycle) : N.tau),
     field : desc.field ?? N.field,
     q1 : 0,
     q2 : 0,
@@ -816,6 +816,39 @@ export function muscleTrait(doc, code, key, sites) {
   return weight ? muscles.reduce((sum, c) => sum + c.copies * unitOfPlan(c[quality]), 0) / weight
                 : null;
 }
+// How densely the gill rakers stand, carried by the gill pump cells' first quality: 0 open, 1
+// dense.
+export const gillRakers = organ =>
+    organ.centers.length
+        ? organ.centers.reduce((sum, c) => sum + unitOfPlan(c.q1), 0) / organ.centers.length
+        : null;
+export function setGillRakers(doc, organId, density) {
+  const organ = findOrgan(doc, organId);
+  if (organ?.type !== 'gills' || !Number.isFinite(density))
+    return null;
+  const draft = copy(doc);
+  for (const center of findOrgan(draft, organId).centers)
+    center.q1 = planOfUnit(clamp(density, 0, 1));
+  return draft;
+}
+// A gut's length is carried by the quality of its intake cells.
+const GUT_LENGTH = Object.freeze({organ : 'gut', center : 'food', quality : 'q1'});
+const gutCells = doc => doc.organs.filter(o => o.type === GUT_LENGTH.organ)
+                            .flatMap(o => o.centers.filter(c => c.key === GUT_LENGTH.center));
+export function gutLength(doc) {
+  const cells = gutCells(doc), weight = cells.reduce((sum, c) => sum + c.copies, 0);
+  return weight ? cells.reduce((sum, c) => sum + c.copies * unitOfPlan(c[GUT_LENGTH.quality]), 0) /
+                      weight
+                : null;
+}
+export function setGutLength(doc, length) {
+  if (!gutCells(doc).length || !Number.isFinite(length))
+    return null;
+  const draft = copy(doc);
+  for (const center of gutCells(draft))
+    center[GUT_LENGTH.quality] = planOfUnit(clamp(length, 0, 1));
+  return draft;
+}
 export function setMuscleTrait(doc, code, key, trait, sites) {
   const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
   if (!quality || !musclesOf(doc, code, sites).length)
@@ -843,7 +876,7 @@ export function setMuscleSprint(doc, organId, share) {
 }
 // A muscle's fibres, carried by its cells' time constant: 1 all fast, 0 all slow. Spine erectors
 // are muscles too.
-const FIBROUS = Object.freeze([ 'muscle', 'defense' ]);
+const FIBROUS = Object.freeze([ 'muscle', 'defense', 'gills', 'gutmuscle' ]);
 export const isFibrous = organ => FIBROUS.includes(organ?.type);
 export const muscleFibre = organ => fastShare(organ.centers[0]?.tau);
 export function setMuscleFibre(doc, organId, fast) {

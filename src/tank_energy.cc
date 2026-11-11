@@ -340,6 +340,7 @@ void Ecosystem::collect_corpses() {
             s[V::mouth_pose] = b.motor_.mouth_pose;
             s[V::bite_pose] = b.motor_.bite_pose;
             s[V::suction_pose] = b.motor_.suction_pose;
+            s[V::gill_pose] = b.motor_.gill_pose;
             s[V::defense] = b.defense();
             s[V::health] = b.health;
             s[V::aggression] = b.motor_.aggression;

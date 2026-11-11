@@ -8,7 +8,6 @@ import {
   FOOD,
   INVERTEBRATE,
   INVERTEBRATE_KIND,
-  MOUTH_CYCLE,
   TOLERANCE
 } from './schema.js';
 import {FINS, blendedFinPose} from './fin_stroke.js';
@@ -147,21 +146,6 @@ function fishStrokePose(p, old, t) {
   return blendedFinPose(p[FISH.fin_pose]?.[FINS], old[FISH.fin_pose]?.[FINS], age);
 }
 
-export function mouthCyclePose(p, old, t) {
-  const dt = Math.max(0, (p[FISH.age] || 0) - (old[FISH.age] || 0));
-  if (!dt || p[FISH.mouth_phase] < 0 || old[FISH.mouth_phase] < 0 || !p[FISH.mouth_biting] ||
-      !old[FISH.mouth_biting])
-    return null;
-  if (p[FISH.mouth_cycle] !== old[FISH.mouth_cycle] || p[FISH.mouth_phase] < old[FISH.mouth_phase])
-    return null;
-  const start = old[FISH.mouth_phase], end = p[FISH.mouth_phase], phase = start + (end - start) * t,
-        opening = MOUTH_CYCLE.opening, at = Math.min(MOUTH_CYCLE.steps, phase),
-        i = Math.min(Math.floor(at), MOUTH_CYCLE.steps - 1), u = at - i,
-        pose = opening[i] + (opening[i + 1] - opening[i]) * u;
-
-  return {phase : at, opening : pose};
-}
-
 let birthPose = p => p;
 export function blendBirthsWith(pose) { birthPose = pose; }
 
@@ -172,19 +156,11 @@ export function blendFish(p, blend = frameBlend()) {
   const v = p.slice();
   for (const i of [FISH.x, FISH.y, FISH.red, FISH.green, FISH.blue, FISH.mouth_pose, FISH.thrust,
                    FISH.defense, FISH.aggression, FISH.impulse_left, FISH.impulse_right, FISH.tail,
-                   FISH.egg_yolk, FISH.mass, FISH.radius, FISH.adult_age, FISH.impulse_forward,
-                   FISH.motor_factor, FISH.bite_pose, FISH.suction_pose, FISH.tissue]) {
+                   FISH.egg_yolk, FISH.mass, FISH.radius, FISH.adult_age, FISH.impulse_tail_left,
+                   FISH.impulse_tail_right, FISH.motor_factor, FISH.bite_pose, FISH.suction_pose,
+                   FISH.tissue]) {
     const end = p[i] ?? 0;
     v[i] = (old[i] ?? end) + (end - (old[i] ?? end)) * blend;
-  }
-  const mouth = mouthCyclePose(p, old, blend);
-  if (mouth) {
-    v[FISH.mouth_phase] = mouth.phase;
-    v[FISH.mouth_pose] = v[FISH.bite_pose] = mouth.opening;
-    v[FISH.suction_pose] = mouth.phase < MOUTH_CYCLE.steps / 2
-                               ? mouth.opening * ((old[FISH.eat_signal] || 0) * (1 - blend) +
-                                                  (p[FISH.eat_signal] || 0) * blend)
-                               : 0;
   }
   const dt = Math.max(0, p[FISH.age] - old[FISH.age]), oldAge = old[FISH.feeding_action_age] || 0,
         newAge = p[FISH.feeding_action_age] || 0,

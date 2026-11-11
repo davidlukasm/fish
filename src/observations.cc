@@ -213,9 +213,10 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
       F::egg_yolk, reproduction.egg_yolk)(F::egg_laying, reproduction.egg_laying ? 1 : 0)(
       F::sperm_store, reproduction.sperm_store)(F::nutrient_egg, p.nutrient_egg ? 1 : 0)(
       F::mass, body_mass(b))(F::radius, collision_radius(b))(F::disease, b.disease)(
-      F::reserve_capacity, reserve_capacity(b))(F::adult_age,
-                                                b.hatched ? std::max(0, b.age - b.hatch_age) : 0)(
-      F::impulse_forward, motor.impulse_forward)(F::motor_factor, motor.motor_factor)
+      F::reserve_capacity, reserve_capacity(b))(
+      F::adult_age, b.hatched ? std::max(0, b.age - b.hatch_age) : 0)(F::impulse_tail_left,
+                                                                      motor.impulse_tail_left)(
+      F::impulse_tail_right, motor.impulse_tail_right)(F::motor_factor, motor.motor_factor)
       .with(F::fin_pose,
             [&](std::ostream &o) {
               static_assert(fin_event_column::age_tail == 0 &&
@@ -236,8 +237,8 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
           F::neuron_budget,
           std::min(field::DEVELOPMENT_SITES, p.genome.development_options.max_nodes))(
           F::eat_signal, b.eat_signal)(F::mouth_aperture, maximum_mouth_aperture(b))(
-          F::bite_pose, motor.bite_pose)(F::suction_pose,
-                                         motor.suction_pose)(F::contour, anatomy(shape.contour))(
+          F::bite_pose, motor.bite_pose)(F::suction_pose, motor.suction_pose)(
+          F::gill_pose, motor.gill_pose)(F::contour, anatomy(shape.contour))(
           F::egg_capacity, reproduction.egg_limit)(F::sperm_capacity, reproduction.sperm_limit)(
           F::tissue, b.tissue)(F::regions, anatomy(shape.regions))(F::bladder_fill, b.bladder_fill)(
           F::satiety, gut_filling(b))(F::damage, 1 - b.health)
@@ -249,10 +250,10 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
           F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(
           F::gut_digestible, b.gut_digestible)(F::digestion, b.digestion)(F::digested, b.digested)(
           F::feeding_action, b.feeding_action)(F::feeding_action_age, b.feeding_action_age)(
-          F::mouth_phase, b.mouth.phase)(F::mouth_budget, b.mouth.budget)(
-          F::swallowed, b.mouth.swallowed)(F::mouth_offset, mouth_offset(b))(
-          F::mouth_biting, b.mouth.biting)(F::filtered, b.mouth.filtered)(
-          F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left, b.perception().eye_pull[0])(
+          F::mouth_phase, b.mouth.phase)(F::swallowed, b.mouth.swallowed)(
+          F::mouth_offset, mouth_offset(b))(F::mouth_biting, b.mouth.biting)(
+          F::filtered, b.mouth.filtered)(F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left,
+                                                                        b.perception().eye_pull[0])(
           F::eye_pull_right, b.perception().eye_pull[1])(F::immortal, b.immortal)(
           F::assisted, p.assisted)(F::remembered, p.remembered)(F::eggs_laid, p.eggs_laid)
       .finish();

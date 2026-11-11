@@ -265,10 +265,11 @@ export function focusTissue(hit) {
 export function brainSelectedTissue(d, hit = brainState.brainHover) {
   const n = d.nodes.get(hit?.id ?? sessionState.neuronFocus),
         key = hit?.part || brainState.brainSelectionPart;
+  const organ = () =>
+      brainOrganKey(key, n, d.receptors.get(n[NEURON.index]), d.effectors.get(n[NEURON.index]));
   const tissue = d.tissues.get(
-      hit?.tissue ||
-      (hit?.id !== undefined && n && key ? brainOrganKey(key, n) : brainState.brainPinnedTissue) ||
-      (n && key ? brainOrganKey(key, n) : ''));
+      hit?.tissue || (hit?.id !== undefined && n && key ? organ() : brainState.brainPinnedTissue) ||
+      (n && key ? organ() : ''));
   return hit?.ids && tissue ? {
     ...tissue,
     group : hit.ids.join(','),

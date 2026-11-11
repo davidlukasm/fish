@@ -65,10 +65,10 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     for (double v : b.embryo.flow)
       out << ' ' << v;
     out << '\n';
-    out << "MOUTH_CYCLE " << b.mouth.phase << ' ' << b.mouth.duration << ' ' << b.mouth.cycle << ' '
-        << b.mouth.biting << ' ' << b.mouth.closing << ' ' << b.mouth.opening << ' '
-        << b.mouth.budget << ' ' << b.mouth.credit << ' ' << b.mouth.flow << ' '
-        << b.mouth.swallowed << ' ' << b.mouth.filtered << '\n';
+    out << "MOUTH_CYCLE " << b.mouth.phase << ' ' << b.mouth.duration << ' ' << b.mouth.twitch
+        << ' ' << b.mouth.cycle << ' ' << b.mouth.biting << ' ' << b.mouth.closing << ' '
+        << b.mouth.opening << ' ' << b.mouth.gape << ' ' << b.mouth.credit << ' ' << b.mouth.flow
+        << ' ' << b.mouth.swallowed << ' ' << b.mouth.filtered << '\n';
     out << "MEASUREMENTS " << b.nutrition << ' ' << b.nutrition_steps << ' '
         << p.observations().window_nutrition << ' ' << p.observations().window_prey_nutrition << ' '
         << p.observations().window_spawn << ' ' << p.observations().window_sperm;
@@ -86,11 +86,15 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
         << p.observations().window_pulses << ' ' << p.observations().window_glides << '\n';
     out << "SWIMMING " << b.motor().water_vx << ' ' << b.motor().water_vy << ' '
         << b.motor().relative_speed << ' ' << b.motor().impulse_left << ' '
-        << b.motor().impulse_right << ' ' << b.motor().tail << ' ' << b.motor().impulse_forward
-        << ' ' << b.motor().motor_factor;
+        << b.motor().impulse_right << ' ' << b.motor().tail << ' ' << b.motor().impulse_tail_left
+        << ' ' << b.motor().impulse_tail_right << ' ' << b.motor().motor_factor;
     for (double tension : b.motor().fin_tension)
       out << ' ' << tension;
-    out << ' ' << b.motor().swimming_pending << ' ' << b.motor().angular_velocity << '\n';
+    out << ' ' << b.motor().swimming_pending << ' ' << b.motor().angular_velocity << ' '
+        << b.motor().tail_side << ' ' << b.motor().tail_rest;
+    for (int side = 0; side < 2; ++side)
+      out << ' ' << b.motor().tail_push[side] << ' ' << b.motor().tail_turn[side];
+    out << '\n';
     out << "GAMETES " << b.reproduction().egg_yolk << ' ' << b.reproduction().egg_laying << ' '
         << b.reproduction().sperm_store;
     for (const auto *colors :
@@ -101,8 +105,8 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     out << '\n';
     out << "MOTORS " << STROKE_COUNT << ' ';
     for (const auto &stroke : b.motor().strokes)
-      out << stroke.mean << ' ' << stroke.power << ' ' << stroke.paid << ' ' << stroke.recovery
-          << ' ' << stroke.reserve << ' ';
+      out << stroke.drive << ' ' << stroke.force << ' ' << stroke.recovery << ' ' << stroke.reserve
+          << ' ';
     for (double x : b.motor().pigment)
       out << x << ' ';
     out << b.reproduction().egg_transfer << ' ' << b.reproduction().sperm_transfer << ' '

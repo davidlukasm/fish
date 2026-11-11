@@ -5,7 +5,8 @@ import {
   isSenseTissue,
   motorTissue,
   senseTissue,
-  tissueKind
+  tissueKind,
+  variantPort
 } from './tissue.js';
 import {formatNumber, percent, t, tList} from './strings.js';
 import {chartContext} from './dom.js';
@@ -111,10 +112,12 @@ export function drawOrganTuning(canvas, info, d, tissue) {
   g.fillText('1', TUNING_GRAPHIC.label_x, TUNING_GRAPHIC.one_y);
   g.fillText('0', TUNING_GRAPHIC.label_x, TUNING_GRAPHIC.zero_y);
   if (sense || motor) {
-    const records = sense ? nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean)
-                          : d.b.effectors.filter(
-                                e => e[EFFECTOR.port] === MOTOR_PORTS[k] &&
-                                     nodes.some(n => n[NEURON.index] === e[EFFECTOR.neuron])),
+    const records =
+              sense
+                  ? nodes.map(n => d.receptors.get(n[NEURON.index])).filter(Boolean)
+                  : d.b.effectors.filter(
+                        e => e[EFFECTOR.port] === (variantPort(tissue.variant) ?? MOTOR_PORTS[k]) &&
+                             nodes.some(n => n[NEURON.index] === e[EFFECTOR.neuron])),
           components = d.components ??= new Map(
               (d.b.sensory_components || []).map(row => [row[SENSORY_COMPONENT.neuron], row]));
     const stride = Math.max(1, Math.ceil(records.length / CURVES));

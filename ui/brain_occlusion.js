@@ -1,7 +1,9 @@
 import {ANATOMY, BODY_SHAPE} from './schema.js';
 import {
   BARBEL,
+  GILL,
   GRAVITY,
+  GUT_MUSCLE,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   MOTOR_TISSUE,
@@ -15,7 +17,8 @@ import {TankPath} from './renderer.js';
 export const brain_occlusionState = {};
 
 function brainBehindSkin(key, variant = '') {
-  return [ MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.defense ].includes(key) ||
+  return !variant &&
+             [ MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.defense ].includes(key) ||
          variant === BARBEL;
 }
 
@@ -25,15 +28,16 @@ const TISSUE_LAYERS = Object.freeze([
     RESERVE_TISSUE, SENSE_TISSUE.inner_pressure, SENSE_TISSUE.blood, SENSE_TISSUE.bladder_pressure,
     MOTOR_TISSUE.bladder, MOTOR_TISSUE.gland, GRAVITY
   ],
-  [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ], [ SENSE_TISSUE.gonad_pressure, GUT_TISSUE ],
-  [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression ], [ SENSE_TISSUE.odor ],
+  [ MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm ],
+  [ SENSE_TISSUE.gonad_pressure, GUT_TISSUE, GUT_MUSCLE ],
+  [ MOTOR_TISSUE.suction, MOTOR_TISSUE.aggression, GILL ], [ SENSE_TISSUE.odor ],
   [ SENSE_TISSUE.light, SENSE_TISSUE.proximity ]
 ]);
 const UNLISTED_LAYER = .5;
 export function brainOrganLayer(tissue) {
   if (brainBehindSkin(tissue.key, tissue.variant))
     return 0;
-  const key = tissue.variant === GRAVITY ? GRAVITY : tissue.key,
+  const key = [ GRAVITY, GILL, GUT_MUSCLE ].includes(tissue.variant) ? tissue.variant : tissue.key,
         layer = TISSUE_LAYERS.findIndex(keys => keys.includes(key));
   return layer < 0 ? UNLISTED_LAYER : layer + 1;
 }

@@ -1,6 +1,8 @@
 import {
   BARBEL,
+  GILL,
   GRAVITY,
+  GUT_MUSCLE,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isSenseTissue,
@@ -35,12 +37,15 @@ export const ORGAN_GROUPS = [
     'body_model.motorik',
     [
       MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.bladder, MOTOR_TISSUE.suction,
-      MOTOR_TISSUE.aggression
+      MOTOR_TISSUE.aggression, GILL
     ]
   ],
   [
     'body_model.organe',
-    [ GUT_TISSUE, RESERVE_TISSUE, MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm, MOTOR_TISSUE.defense ]
+    [
+      GUT_TISSUE, GUT_MUSCLE, RESERVE_TISSUE, MOTOR_TISSUE.eggs, MOTOR_TISSUE.sperm,
+      MOTOR_TISSUE.defense
+    ]
   ],
   [ 'body_model.steuerung', [ MOTOR_TISSUE.pigment, MOTOR_TISSUE.gland, INTERNAL_TISSUE ] ]
 ];

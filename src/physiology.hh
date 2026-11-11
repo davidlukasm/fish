@@ -181,8 +181,13 @@ inline double jaw_leverage(const Body &b) {
 // Sharp teeth cut flesh; blunt teeth grind plant tissue and crack shells. A loose piece gives way
 // to either: sharp teeth tear it, blunt ones crush it.
 enum class BiteKind { cutting, grinding, loose };
+// Mixed teeth do neither well: each grip falls off with a power of the share of its own form.
+constexpr double TOOTH_SPECIALISATION = 2;
 inline double tooth_grip(double blunt, BiteKind kind) {
-  return kind == BiteKind::loose ? 1 : kind == BiteKind::grinding ? blunt : 1 - blunt;
+  blunt = std::clamp(blunt, 0., 1.);
+  return kind == BiteKind::loose      ? 1
+         : kind == BiteKind::grinding ? std::pow(blunt, TOOTH_SPECIALISATION)
+                                      : std::pow(1 - blunt, TOOTH_SPECIALISATION);
 }
 inline double scrape_force(const Body &b) {
   return effective_force(b.suction_strength * b.mouth.flow * body_scale(b) *
@@ -206,8 +211,13 @@ inline double maximum_mouth_aperture(const Body &b) {
 inline double mouth_aperture(const Body &b) {
   return maximum_mouth_aperture(b) * b.mouth.opening;
 }
+// A bite closes from the gape the jaw had when it began: nothing larger than that opening is bitten
+// off or swallowed whole.
+inline double bite_aperture(const Body &b) {
+  return maximum_mouth_aperture(b) * b.mouth.gape;
+}
 inline double bite_radius(const Body &b) {
-  return BITE_REACH * maximum_mouth_aperture(b);
+  return BITE_REACH * bite_aperture(b);
 }
 inline double bite_share(const Body &b, double radius) {
   const double bite = bite_radius(b);
@@ -222,10 +232,42 @@ inline double swallow_area(const Body &b) {
          suction_share(b.suction_strength * body_scale(b), b.force_scale) /
          (1 + SWALLOW_SPEED_LOSS * speed * speed);
 }
+// Water through the gills keeps the plankton the rakers hold: dense rakers nearly all of it, a
+// fish without rakers only what sticks to its gills.
+inline double raker_retention(const Body &b) {
+  namespace G = gill_filter;
+  return G::rakerless_retention + (1 - G::rakerless_retention) * b.raker_density;
+}
+// Share of the water dense rakers still let through.
+inline double raker_passage(const Body &b) {
+  return 1 - gill_filter::raker_drag * b.raker_density;
+}
+// Water the gill covers can draw through a mouth held wide open at full pumping.
+inline double gill_area(const Body &b) {
+  const double widest = maximum_mouth_aperture(b);
+  return SWALLOW_AREA * widest * widest *
+         suction_share(b.gill_strength * body_scale(b), b.force_scale);
+}
+// Water the gill covers pump through the open mouth, and the water a mouth opened wider than at
+// rest meets while the fish swims (ram filtering).
+inline double gill_water(const Body &b) {
+  const double widest = maximum_mouth_aperture(b),
+               pumped = gill_area(b) * b.gill_signal * b.mouth.opening,
+               held = std::max(0., b.mouth.opening - MOUTH_REST) / (1 - MOUTH_REST),
+               ram = 2 * widest * held * std::max(0., b.motor().relative_speed);
+  return (pumped + ram) * raker_passage(b);
+}
 inline bool fits_mouth(const Body &b, double radius) {
   return radius <= mouth_aperture(b) + tolerance::negligible;
 }
 constexpr double MOUTH_TRANSPORT_RATE = 1 / MOUTH_CYCLE_STEPS;
+// The closer's pull peaks halfway through its stroke: that is when the jaw snaps shut.
+inline double jaw_snap(const MouthState &m) {
+  return std::floor(m.duration / 2);
+}
+inline bool jaw_shutting(const MouthState &m) {
+  return m.biting && m.phase >= jaw_snap(m);
+}
 void advance_mouth(Body &, bool pump_started, bool bite_started, double pump_steps,
                    double bite_steps);
 double stored_energy(const Body &);

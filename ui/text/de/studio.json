@@ -98,8 +98,10 @@
     "pain": "Schmerz­sinn",
     "blood": "Blut- und Hormon­sinn",
     "gut": "Darm",
+    "gutmuscle": "Darm­muskel",
     "bladder": "Schwimm­blase",
     "muscle": "Muskel",
+    "gills": "Kiemen",
     "defense": "Abwehr­gewebe",
     "pigment": "Farb­zellen",
     "eggs": "Eiorgan",
@@ -132,6 +134,8 @@
     "steering": "Lenken",
     "propulsion": "Vortrieb",
     "muscle": "Muskel",
+    "pump": "Kiemenpumpe",
+    "motility": "Darmbewegung",
     "armor": "Abwehr",
     "colour": "Farbzellen",
     "growth": "Bildung",
@@ -430,6 +434,8 @@
     "mouth": "Saugen",
     "bite": "Zubeißen",
     "lift": "Auftrieb",
+    "gills": "Kiemen pumpen",
+    "gut": "Darm antreiben",
     "brake": "Bremse",
     "sated": "Satt hemmt Maul",
     "hold": "Fressen hält unten",
@@ -520,6 +526,8 @@
       "tail": "Schwanz",
       "fins": "Flossen",
       "mouth": "Maul",
+      "gills": "Kiemen",
+      "gut": "Darmmuskel",
       "strength": "Zielstärke",
       "advance": "Zum Ziel schwimmen",
       "hatch": "Schlüpfen",
@@ -862,15 +870,29 @@
     "title": {
       "0": "Schwanzflosse",
       "1": "Seitenflosse",
-      "2": "Schlund",
-      "5": "Kiefer",
+      "2": "Maulöffner",
+      "5": "Kieferschließer",
       "6": "Stacheln"
     },
     "hint": {
-      "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
+      "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Die beiden Flanken sind Gegenspieler: im Wechsel schieben sie voll, eine allein biegt den Fisch zu sich, beide zugleich versteifen ihn nur. Den Wechsel gibt die Wirbelsäule vor. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
       "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
-      "2": "Der Schlund bestimmt auch die Länge des Darms; sie lässt sich am Darm einstellen.",
-      "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen."
+      "2": "Jeder Schlag des Öffners zieht das Maul auf, danach federt es zurück. Beim Aufgehen strömt Wasser mit Futter, Plankton und Schlamm hinein. Schnelle Fasern saugen ruckartig, langsame pumpen stetig.",
+      "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
+      "5": "Der Schließer beißt aus der Öffnung zu, die er vorfindet: Aus weit offenem Maul reicht der Biss weiter. Schnelle Fasern schnappen kräftig zu, langsame mahlen ausdauernd."
+    },
+    "gills": {
+      "title": "Kiemen",
+      "handle": "Ziehen: wie dicht die Kiemenreusen stehen",
+      "open": "offen · viel Wasser",
+      "dense": "dicht · Plankton",
+      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}."
+    },
+    "gutmuscle": {
+      "title": "Darmmuskel",
+      "rest": "in Ruhe",
+      "hurried": "angetrieben",
+      "hint": "Das Hirn kann den Darm antreiben: dann leert er sich bis zu {speed}-mal so schnell und verwertet nur {used} der Nahrung. Ein satter Fisch macht so Platz für mehr Futter."
     },
     "gut": {
       "title": "Darm",

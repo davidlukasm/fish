@@ -222,14 +222,16 @@
       "jaw": 10,
       "defense": 11,
       "bladder": 12,
-      "gland": 13
+      "gland": 13,
+      "gills": 14,
+      "gut": 15
     },
     "eye": {
       "left": 0,
       "right": 1
     },
     "stroke_kind": {
-      "tail": 0,
+      "tail_left": 0,
       "turn_left": 1,
       "turn_right": 2,
       "suction": 3,
@@ -238,7 +240,10 @@
       "bite": 6,
       "defense": 7,
       "reverse_left": 8,
-      "reverse_right": 9
+      "reverse_right": 9,
+      "gill": 10,
+      "gut": 11,
+      "tail_right": 12
     },
     "step_phase": {
       "development": 0,
@@ -346,7 +351,8 @@
       "disease",
       "reserve_capacity",
       "adult_age",
-      "impulse_forward",
+      "impulse_tail_left",
+      "impulse_tail_right",
       "motor_factor",
       "fin_pose",
       "fins",
@@ -357,6 +363,7 @@
       "mouth_aperture",
       "bite_pose",
       "suction_pose",
+      "gill_pose",
       "contour",
       "egg_capacity",
       "sperm_capacity",
@@ -376,7 +383,6 @@
       "feeding_action",
       "feeding_action_age",
       "mouth_phase",
-      "mouth_budget",
       "swallowed",
       "mouth_offset",
       "mouth_biting",
@@ -559,7 +565,11 @@
       "jaw_length",
       "gut_length",
       "blunt_teeth",
-      "undulation"
+      "undulation",
+      "gills",
+      "gill_strength",
+      "gill_rakers",
+      "gut_muscle"
     ],
     "nose_sample": [
       "x",
@@ -763,9 +773,9 @@
       "id"
     ],
     "stroke": [
-      "mean",
+      "drive",
       "recovery",
-      "power",
+      "force",
       "steps",
       "fibre",
       "reserve"
@@ -897,6 +907,7 @@
       "mouth_pose",
       "bite_pose",
       "suction_pose",
+      "gill_pose",
       "defense",
       "health",
       "aggression",
@@ -1101,6 +1112,11 @@
         "scale": 4096
       },
       {
+        "name": "gill_pose",
+        "type": "u16",
+        "scale": 4096
+      },
+      {
         "name": "defense",
         "type": "u16",
         "scale": 4096
@@ -1131,7 +1147,12 @@
         "scale": 1024.0
       },
       {
-        "name": "impulse_forward",
+        "name": "impulse_tail_left",
+        "type": "i16",
+        "scale": 1024.0
+      },
+      {
+        "name": "impulse_tail_right",
         "type": "i16",
         "scale": 1024.0
       },
@@ -1266,11 +1287,6 @@
         "scale": 1
       },
       {
-        "name": "mouth_budget",
-        "type": "f32",
-        "scale": 1
-      },
-      {
         "name": "swallowed",
         "type": "f32",
         "scale": 1
@@ -1288,11 +1304,6 @@
       {
         "name": "filtered",
         "type": "f32",
-        "scale": 1
-      },
-      {
-        "name": "mouth_cycle",
-        "type": "u32",
         "scale": 1
       },
       {
@@ -2073,17 +2084,7 @@
     },
     "mouth_cycle": {
       "steps": 8,
-      "opening": [
-        0.35,
-        0.8,
-        1,
-        1,
-        0.65,
-        0.1,
-        0,
-        0.15,
-        0.35
-      ]
+      "rest": 0.35
     },
     "sensory_component": {
       "neuron": 0,
@@ -2161,9 +2162,23 @@
       "drain": 0.028,
       "recovery_steps": 400
     },
+    "gut_motility": {
+      "speedup": 2,
+      "loss": 0.5,
+      "wall": 0.25,
+      "zone": 2
+    },
+    "gill_filter": {
+      "rakerless_retention": 0.3,
+      "raker_drag": 0.5,
+      "flank": 0.75
+    },
     "stroke_grip": {
       "tail_at_rest": 0.5,
       "fin_at_speed": 0.5
+    },
+    "tail_stroke": {
+      "lone_push": 0.3
     },
     "trial_lab": {
       "seeds": [1, 2, 4],

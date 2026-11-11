@@ -20,6 +20,9 @@ import {isRegion, ORGAN_BY_KEY, siteRole} from '../model/organs.js';
 import {regionSlots} from '../model/regions.js';
 import {muscleNode} from './muscles.js';
 import {layerShown} from './layers.js';
+import {gutLength} from '../model/document.js';
+import {gutTurns} from '../../fish_organs.js';
+import {BODY_UNIT} from '../../schema.js';
 
 export function centerLocation(center, organType, sites) {
   const site = findSite(sites, center.site);
@@ -232,12 +235,49 @@ export function gutShape(turns) {
     along : coil
   };
 }
-const INNER_TYPES = Object.freeze([ 'blood', 'bladder', 'gut', 'eggs', 'sperm', 'gland' ]);
+// tube: half the drawn gut's width; ring: how far a muscle ring reaches beyond it; rows: the gap
+// along the body between the two rows of gut wall places.
+export const GUT_WALL = Object.freeze({tube : 4.5, ring : 8, rows : 24});
+// The gut wall at a place along the body, from the gullet over the stomach to the coils: where
+// its line runs, which way is across it and how far its wall lies from the line.
+export function gutWall(doc, x) {
+  const G = gutShape(gutTurns(gutLength(doc) ?? BODY_UNIT.trait_middle)), S = INSIDE.gut.stomach;
+  const line = [...G.gullet, ...G.intestine ];
+  const at = x => {
+    const k = clamp(line.findIndex(p => p.x >= x), 1, line.length - 1);
+    const a = line[k - 1], b = line[k], share = clamp((x - a.x) / (b.x - a.x || 1), 0, 1);
+    return {x : a.x + (b.x - a.x) * share, y : a.y + (b.y - a.y) * share};
+  };
+  // Across the gut's course between both rows, not across each bend of the coils.
+  const before = at(x - GUT_WALL.rows), after = at(x + GUT_WALL.rows);
+  const length = Math.hypot(after.x - before.x, after.y - before.y) || 1, inside = (x - S.x) / S.rx;
+  return {
+    ...at(x),
+    across : {x : -(after.y - before.y) / length, y : (after.x - before.x) / length},
+    half : Math.abs(inside) < 1 ? Math.max(GUT_WALL.tube, S.ry * Math.sqrt(1 - inside * inside))
+                                : GUT_WALL.tube
+  };
+}
+// Gut muscle nodes sit on the gut wall where their places lie along the body, the two sides of
+// the wall on either side of its line.
+export const gutWallAt = (doc, site) =>
+    gutWall(doc, sitePoint(site).x + (2 * site.v - 1) * GUT_WALL.rows / 2);
+export function gutWallPoint(doc, sites, center) {
+  const site = findSite(sites, center.site);
+  if (!site)
+    return gutWall(doc, INSIDE.gut.stomach.x);
+  const wall = gutWallAt(doc, site), reach = sideSign(site.side) * (wall.half + GUT_WALL.ring);
+  return {x : wall.x + wall.across.x * reach, y : wall.y + wall.across.y * reach};
+}
+const INNER_TYPES =
+    Object.freeze([ 'blood', 'bladder', 'gut', 'gutmuscle', 'eggs', 'sperm', 'gland' ]);
 const hasHome = type => INNER_TYPES.includes(type);
 function innerHome(doc, organ) {
   const I = INSIDE, middle = BODY_FRAME.middle;
   if (organ.type === 'gut')
     return {x : I.gut.stomach.x, y : middle + I.gut.stomach.d};
+  if (organ.type === 'gutmuscle')
+    return gutWall(doc, (I.gut.coils.from + I.gut.coils.to) / 2);
   if (organ.type === 'gland') {
     const glands = doc.organs.filter(o => o.type === 'gland'),
           k = Math.max(0, glands.indexOf(organ));
@@ -254,7 +294,9 @@ function innerHome(doc, organ) {
   const home = I[organ.type];
   return {x : home.x, y : middle + home.d};
 }
-function innerPoint(doc, organ, index) {
+function innerPoint(doc, organ, index, sites) {
+  if (organ.type === 'gutmuscle')
+    return gutWallPoint(doc, sites, organ.centers[index]);
   const home = innerHome(doc, organ), count = organ.centers.length;
   if (organ.type === 'gut') {
     const C = INSIDE.gut.coils, t = (index + .5) / Math.max(1, count);
@@ -354,7 +396,7 @@ export function nodeLocation(doc, sites, center, organType) {
     const index = organ?.centers.findIndex(c => c.id === center.id) ?? -1;
     if (index >= 0)
       return organType === 'muscle'   ? musclePoint(organ, index, sites)
-             : hasHome(organType)     ? innerPoint(doc, organ, index)
+             : hasHome(organType)     ? innerPoint(doc, organ, index, sites)
              : HEAD_SENSES[organType] ? headSenseNode(doc, sites, organ, center, index)
                                       : regionPoint(doc, organ, index, sites);
   }

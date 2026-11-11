@@ -54,5 +54,9 @@
     "M",
     "H"
   ],
-  "schwerkraft": "Schwerkraft"
+  "schwerkraft": "Schwerkraft",
+  "pump": "Pumpe {n}",
+  "rakers": "Reusen {n} dicht",
+  "passage": "Durchgang × {n}",
+  "used": "verwertet {n}"
 }

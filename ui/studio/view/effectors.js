@@ -4,6 +4,7 @@ import {
   BODY_UNIT,
   FIN,
   FIN_STROKE,
+  GILL_FILTER,
   MOTOR_KIND,
   MUSCLE_FIBRE
 } from '../../schema.js';
@@ -13,7 +14,9 @@ import {
   jawReach,
   lipWidth,
   tailFinSize,
-  toothForm
+  toothForm,
+  gutPassage,
+  gutUse,
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {functionFor, nodeLimit, organFunction} from '../model/organs.js';
@@ -22,6 +25,8 @@ import {
   centerIndex,
   findOrgan,
   finStroke,
+  gillRakers,
+  gutLength,
   isFibrous,
   muscleFibre,
   muscleTrait,
@@ -45,6 +50,9 @@ import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 import {organCommand} from './preview.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
+// The gut, the gills and the gut muscle are no muscle organs; their handles carry their own codes.
+export const GUT_TRAIT = 'gut_length', GUT_CODE = -1, GILL_TRAIT = 'gill_rakers', GILL_CODE = -2,
+             GUT_MUSCLE_CODE = -3;
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
 const HANDLE = Object.freeze({radius : 5.5});
 const handle = (name, x, y, title) =>
@@ -331,7 +339,8 @@ function jawGraphic(state, organ, centers) {
 }
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
-  [MOTOR_KIND.suction] : {'trait:q1' : {key : 'gut_length', at : x => trackShare(x, GUT.track)}},
+  [GUT_CODE] : {'trait:q1' : {key : GUT_TRAIT, at : x => trackShare(x, GUT.track)}},
+  [GILL_CODE] : {'trait:q1' : {key : GILL_TRAIT, at : x => trackShare(x, GILL.track)}},
   [MOTOR_KIND.aggression] : {
     'trait:q2' : {key : 'jaw_length', at : x => (jawTip(0) - x) / (jawTip(0) - jawTip(1))},
     'trait:q1' : {
@@ -453,8 +462,8 @@ const GUT = Object.freeze({
   cell : 3.2
 });
 export function gutGraphic(state, organ, selected) {
-  const G = GUT, code = MOTOR_KIND.suction;
-  const length = muscleTrait(state.document, code, 'gut_length', state.sites);
+  const G = GUT, code = GUT_CODE;
+  const length = gutLength(state.document);
   const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
   const along = k => G.from + (G.to - G.from) * k / G.steps,
         across = k => G.middle + G.amplitude * Math.sin(2 * Math.PI * turns * k / G.steps);
@@ -514,8 +523,8 @@ const CHART = Object.freeze({
 const DIET_CHARTS = Object.freeze({
   gut : {
     source : 'gut',
-    trait : 'gut_length',
-    code : MOTOR_KIND.suction,
+    trait : GUT_TRAIT,
+    code : GUT_CODE,
     curves : [ [ 'plant', 'share' ], [ 'meat', 'share' ] ],
     readout : [ 'size', 'factor' ]
   },
@@ -546,8 +555,9 @@ function dietChart(state, kind, organ = null) {
   const spec = DIET_CHARTS[kind], data = state.capabilities?.diet?.[spec.source], C = CHART;
   if (!data)
     return '';
-  const at = spec.trait ? muscleTrait(state.document, spec.code, spec.trait, state.sites)
-                        : suctionStrength(state.document, state.sites) / data.most;
+  const at = spec.trait === GUT_TRAIT ? gutLength(state.document)
+             : spec.trait ? muscleTrait(state.document, spec.code, spec.trait, state.sites)
+                          : suctionStrength(state.document, state.sites) / data.most;
   const most = C.room * Math.max(...spec.curves.flatMap(([ key ]) => data[key]));
   const x = share => C.left + (C.right - C.left) * share,
         y = value => C.base - (C.base - C.top) * value / most;
@@ -696,6 +706,140 @@ function fibreSection(organ, code) {
                     words('handle'), [ words('slow'), words('fast') ]) +
          '</svg><div class="aid-contrast-choices aid-fibre-choices">' + choices +
          '</div></section>';
+}
+// A gill arch seen from the side: its rakers comb the water the gill covers pump from the mouth
+// (left) to the gills (right). Dense rakers hold the plankton and let little water through,
+// open ones pass much water and keep only coarse pieces.
+const GILL = Object.freeze({
+  x : 176,
+  top : 18,
+  bottom : 118,
+  bow : 44,
+  rakers : [ 4, 24 ],
+  raker : 24,
+  flows : [ 46, 68, 92 ],
+  flow : [ 22, 270 ],
+  water : 6,
+  head : 6,
+  specks : 9,
+  speck : 2.2,
+  steps : 24,
+  rows : 3,
+  caught : .4,
+  track : [ 40, 260 ],
+  track_y : 148
+});
+function gillArch(t) {
+  const G = GILL, middle = (G.top + G.bottom) / 2, u = 1 - t;
+  return {
+    x : u * u * G.x + 2 * u * t * (G.x - G.bow) + t * t * G.x,
+    y : u * u * G.top + 2 * u * t * middle + t * t * G.bottom
+  };
+}
+export function gillGraphic(state, organ) {
+  const G = GILL, density = gillRakers(organ) ?? BODY_UNIT.trait_middle;
+  const passage = 1 - GILL_FILTER.raker_drag * density,
+        kept = GILL_FILTER.rakerless_retention + (1 - GILL_FILTER.rakerless_retention) * density;
+  const count = Math.round(G.rakers[0] + (G.rakers[1] - G.rakers[0]) * density);
+  const arch = 'M' + Array
+                         .from({length : G.steps + 1},
+                               (_, k) => {
+                                 const p = gillArch(k / G.steps);
+                                 return fixed(p.x) + ' ' + fixed(p.y);
+                               })
+                         .join(' L');
+  const rakers = Array
+                     .from({length : count},
+                           (_, i) => {
+                             const p = gillArch((i + .5) / count);
+                             return 'M' + fixed(p.x) + ' ' + fixed(p.y) + ' h' + -G.raker;
+                           })
+                     .join(' ');
+  const water =
+      G.flows
+          .map(y => '<path class="aid-gill-water" d="M' + G.flow[0] + ' ' + y + ' H' + G.flow[1] +
+                    ' m' + -G.head + ' ' + -G.head + ' l' + G.head + ' ' + G.head + ' l' + -G.head +
+                    ' ' + G.head + '" stroke-width="' + fixed(G.water * passage) + '"/>')
+          .join('');
+  // Plankton: specks held on the rakers, the rest drifts on behind the arch.
+  const held = Math.round(G.specks * kept);
+  const specks = Array
+                     .from({length : G.specks},
+                           (_, i) => {
+                             const y = G.flows[i % G.flows.length] + (i % 2 ? 1 : -1) * G.head;
+                             const row = i % G.rows;
+                             const x = i < held ? G.x - G.bow * G.caught - G.raker * row / G.rows
+                                                : G.flow[1] - G.raker * row - G.head;
+                             return '<circle class="aid-gill-speck' + (i < held ? ' held' : '') +
+                                    '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' + G.speck +
+                                    '"/>';
+                           })
+                     .join('');
+  const graphic = water + '<path class="aid-gill-arch" d="' + arch +
+                  '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks +
+                  namedTrack(G.track, G.track_y, density, 'data-effector-handle="trait:q1"',
+                             label('gills.handle'), [ label('gills.open'), label('gills.dense') ]);
+  return effectorBlock(
+      organ, GILL_CODE, 1, label('gills.title'), graphic,
+      nodeControls(organ, GILL_CODE, nodeLimit(organ, state.sites)) +
+          fibreSection(organ, GILL_CODE) + '<p class="aid-hint">' +
+          escapeText(label('gills.hint', {water : percent(passage), kept : percent(kept)})) +
+          '</p>');
+}
+// The gut wall from the side with one ring of muscle per node, and the same meal twice: at rest
+// it stays until it is used up, hurried along more of it passes and leaves half used.
+const GUT_MUSCLE = Object.freeze({
+  tube : [ 24, 276 ],
+  y : 40,
+  width : 22,
+  ring : [ 3, 7 ],
+  overhang : 5,
+  lanes : [ 96, 136 ],
+  lane : [ 112, 276 ],
+  lift : 4,
+  meal : 3,
+  pellet : 6,
+  least : 1.2
+});
+export function gutMuscleGraphic(state, organ) {
+  const G = GUT_MUSCLE, count = organ.centers.length, copies = organ.centers[0]?.copies ?? 1;
+  const ring = G.ring[0] + (G.ring[1] - G.ring[0]) * copies / ATELIER_LIMITS.max_copies;
+  const rings = Array
+                    .from({length : count},
+                          (_, i) => {
+                            const x = G.tube[0] + (G.tube[1] - G.tube[0]) * (i + .5) / count;
+                            return 'M' + fixed(x) + ' ' + (G.y - G.width / 2 - G.overhang) + ' v' +
+                                   (G.width + 2 * G.overhang);
+                          })
+                    .join(' ');
+  const lane = (y, hurried, key) => {
+    const used = gutUse(hurried), pellets = Math.round(G.meal * gutPassage(hurried));
+    const food =
+        Array
+            .from({length : pellets},
+                  (_, i) => {
+                    const share = (i + .5) / pellets,
+                          x = G.lane[0] + (G.lane[1] - G.lane[0]) * share;
+                    return '<circle class="aid-gut-food" cx="' + fixed(x) + '" cy="' + y + '" r="' +
+                           fixed(Math.max(G.least, G.pellet * Math.sqrt(1 - used * share))) + '"/>';
+                  })
+            .join('');
+    return '<path class="aid-gut-lane" d="M' + G.lane[0] + ' ' + y + ' H' + G.lane[1] + '"/>' +
+           food + '<text x="' + G.tube[0] + '" y="' + (y + G.lift) + '">' +
+           escapeText(label('gutmuscle.' + key)) + '</text>';
+  };
+  const graphic = '<path class="aid-gut-tube" d="M' + G.tube[0] + ' ' + G.y + ' H' + G.tube[1] +
+                  '" stroke-width="' + G.width + '"/><path class="aid-gut-ring" d="' + rings +
+                  '" stroke-width="' + fixed(ring) +
+                  '" style="stroke:' + fibreHex(muscleFibre(organ)) + '"/>' +
+                  lane(G.lanes[0], 0, 'rest') + lane(G.lanes[1], 1, 'hurried');
+  return effectorBlock(
+      organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), graphic,
+      nodeControls(organ, GUT_MUSCLE_CODE, nodeLimit(organ, state.sites)) +
+          fibreSection(organ, GUT_MUSCLE_CODE) + '<p class="aid-hint">' +
+          escapeText(label('gutmuscle.hint',
+                           {speed : formatNumber(gutPassage(1)), used : percent(gutUse(1))})) +
+          '</p>');
 }
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);

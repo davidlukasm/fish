@@ -1,7 +1,15 @@
-import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
+import {
+  GILL_FILTER,
+  GUT_MOTILITY,
+  HORMONES,
+  MOTOR_KIND,
+  PRESSURE_SOURCE,
+  SENSE_KIND
+} from '../../schema.js';
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 import {REGION_TYPES} from './region_catalog.js';
 import {RHYTHM_TAU} from './region_cells.js';
+import {FIBRE_TYPES, fibreTau} from '../../fibre.js';
 
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
 export const STIMULUS_ORGAN = Object.freeze({
@@ -150,6 +158,18 @@ export const ORGANS = Object.freeze([
     slots :
         [ slot('intake', 'out', [], false, 'food'), slot('fullness', 'out', [], false, 'fullness') ]
   },
+  // Smooth muscle in the gut wall moves the food along: a hurried gut empties sooner and keeps
+  // less of what passes. It works for hours, so it starts with enduring fibres.
+  {
+    key : 'gutmuscle',
+    category : 'internal',
+    scope : 'single',
+    bilateral : true,
+    nodes : 8,
+    initialNodes : 2,
+    centers : [ Object.freeze(
+        {...motor('motility', MOTOR_KIND.turn, 4, 'gutwall'), tau : fibreTau(FIBRE_TYPES.slow)}) ]
+  },
   {
     key : 'bladder',
     category : 'internal',
@@ -162,6 +182,18 @@ export const ORGANS = Object.freeze([
     ]
   },
   {key : 'muscle', category : 'motor', nodes : Infinity, centers : [ motor('muscle', 'site', 16) ]},
+  // Gill covers on the flanks of the head pump water through the open mouth; q1 is how densely
+  // their rakers stand. They pump all day, so they start with enduring fibres.
+  {
+    key : 'gills',
+    category : 'motor',
+    scope : 'single',
+    bilateral : true,
+    nodes : 8,
+    initialNodes : 2,
+    centers : [ Object.freeze(
+        {...motor('pump', MOTOR_KIND.suction, 8, 'flank'), tau : fibreTau(FIBRE_TYPES.slow)}) ]
+  },
   {
     key : 'defense',
     category : 'motor',
@@ -232,20 +264,27 @@ export const ORGANS = Object.freeze([
     namedPorts : true,
     centers : [ nerve('relay', 4, [ 1, 2, 3 ]) ],
     // Inputs name the side of the stimulus; one input may reach several nodes.
-    slots :
-        organ => [slot('toward', 'in', [], false, [ 'turn', 'oppose' ]),
-                  slot('away', 'in', [], false, 'flee'),
-                  slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
-                  slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
-                  slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
-                  slot('grip', 'in', [], false, 'bite'), slot('full', 'in', [], false, 'sated'),
-                  slot('contact', 'in', [], false, 'lift'),
-                  ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
-                  slot('fins', 'out', [], true, 'turn'), slot('tail', 'out', [], true, 'swim'),
-                  slot('mouth', 'out', [], false, 'mouth'), slot('bite', 'out', [], false, 'bite'),
-                  slot('lift', 'out', [], false, 'lift'),
-                  ...(organ.region.retreat ? [ slot('reverse', 'out', [], false, 'reverse') ]
-                                           : [])],
+    slots : organ =>
+        [slot('toward', 'in', [], false, [ 'turn', 'oppose' ]),
+         slot('away', 'in', [], false, 'flee'),
+         slot('feel', 'in', [ 'balance', 'touch', 'lateral' ], false, 'flee'),
+         slot('urge', 'in', [], false, 'swim'), slot('brake', 'in', [], false, 'brake'),
+         slot('near', 'in', [], false, [ 'brake', 'mouth', 'hold' ]),
+         slot('grip', 'in', [], false, 'bite'),
+         slot('full', 'in', [], false,
+              organ.centers.some(c => c.node === 'gut') ? [ 'sated', 'gut' ] : 'sated'),
+         slot('contact', 'in', [], false, 'lift'),
+         ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
+         slot('fins', 'out', [], true, 'turn'), slot('tail', 'out', [], true, 'swim'),
+         ...(organ.pair ? [ slot('escape', 'out', [], false, 'escape') ] : []),
+         slot('mouth', 'out', [], false, 'mouth'), slot('bite', 'out', [], false, 'bite'),
+         ...(organ.centers.some(c => c.node === 'gills')
+                 ? [ slot('gills', 'out', [], false, 'gills') ]
+                 : []),
+         ...(organ.centers.some(c => c.node === 'gut') ? [ slot('gut', 'out', [], false, 'gut') ]
+                                                       : []),
+         slot('lift', 'out', [], false, 'lift'),
+         ...(organ.region.retreat ? [ slot('reverse', 'out', [], false, 'reverse') ] : [])],
     settings : {
       tone : setting(0, 2, 1, true),
       compete : setting(0, 1, 1, true),
@@ -295,7 +334,6 @@ export const PRESSURE_OF = Object.freeze({
 });
 export const MUSCLE_TRAITS = Object.freeze({
   [MOTOR_KIND.forward] : Object.freeze({q1 : 'undulation'}),
-  [MOTOR_KIND.suction] : Object.freeze({q1 : 'gut_length'}),
   [MOTOR_KIND.aggression] : Object.freeze({q1 : 'blunt_teeth', q2 : 'jaw_length'})
 });
 
@@ -304,8 +342,10 @@ export function functionFor(center, site) {
     return center.functionCode;
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
 }
-export const musclePlaces = (sites, code, side) => sites.filter(
-    s => sideSign(s.side) === sideSign(side) && functionFor({functionCode : 'site'}, s) === code);
+const MUSCLE_CELL = Object.freeze({role : 'motor', functionCode : 'site', surface : 'any'});
+export const musclePlaces = (sites, code, side) =>
+    sites.filter(s => sideSign(s.side) === sideSign(side) && functionFor(MUSCLE_CELL, s) === code &&
+                      eligible(MUSCLE_CELL, s));
 export function nodeLimit(organ, sites) {
   const most = ORGAN_BY_KEY[organ?.type]?.nodes ?? 0;
   return organ?.type === 'muscle' && organ.centers.length
@@ -333,10 +373,21 @@ export function eligible(center, site) {
            (center.surface === 'outer') === site.outer;
   const code = functionFor(center, site);
   const mask = center.role === 'sensor' ? site.senses : site.motors;
-  const isOuter = site.outer;
+  const outer = center.surface === 'outer' || center.surface === 'flank';
+  // Suction cells on the head's flanks pump the gills and fin cells in the gut wall move the gut,
+  // so only gills and gut muscle may take those places.
+  if (center.role === 'motor' && code === MOTOR_KIND.suction &&
+      isGillFlank(site) !== (center.surface === 'flank'))
+    return false;
+  if (center.role === 'motor' && code === MOTOR_KIND.turn &&
+      isGutWall(site) !== (center.surface === 'gutwall'))
+    return false;
   return code >= 0 && (mask & (1 << code)) !== 0 &&
-         (center.surface === 'any' || (center.surface === 'outer') === isOuter);
+         (center.surface === 'any' || outer === site.outer);
 }
+export const isGillFlank = site => !!site?.outer && site.w > GILL_FILTER.flank;
+export const isGutWall = site =>
+    !!site && !site.outer && site.zone === GUT_MOTILITY.zone && site.w < GUT_MOTILITY.wall;
 
 export const MODULES = Object.freeze([ {
   key : 'vision-steering',

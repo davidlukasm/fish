@@ -533,7 +533,6 @@ int main(int argc, char **argv) {
         int steps = 0, reached = -1, near = 0, depleted = -1, left = -1;
         const double patch_x = x, patch_y = y;
         const auto bites_before = p->body.mouth.cycle;
-        double last_phase = -1;
         const double hold_x = p->body.x, hold_y = p->body.y, hold_angle = p->body.angle;
         for (; steps < trial; ++steps) {
           const double ox = p->body.x, oy = p->body.y;
@@ -604,9 +603,8 @@ int main(int argc, char **argv) {
             eye_cells(*p);
             std::cout << "}\n";
           }
-          const bool closed = p->body.mouth.biting && p->body.mouth.phase >= MOUTH_HALF_CYCLE &&
-                              last_phase < MOUTH_HALF_CYCLE;
-          last_phase = p->body.mouth.biting ? p->body.mouth.phase : -1;
+          // The jaw snaps shut in the step its strike begins.
+          const bool closed = p->body.mouth.closing;
           if (std::getenv("LABBITE") && closed) {
             const auto &bb = p->body;
             const double mx = w.field.wrap_x(bb.x + mouth_offset(bb) * std::cos(bb.angle)),

@@ -6,9 +6,8 @@ import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
-import {effectorPatch, spinePatch} from './view/effectors.js';
+import {effectorPatch, GILL_TRAIT, GUT_TRAIT, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
-import {MOTOR_KIND} from '../schema.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
 import {hairPatch} from './view/balance.js';
@@ -29,6 +28,8 @@ import {
   groupReport,
   profileIndex,
   setBends,
+  setGillRakers,
+  setGutLength,
   setMuscleTrait,
   setMuscleSprint,
   setMuscleFibre,
@@ -543,20 +544,16 @@ export const handleMethods = {
             ? patch.fibre !== muscleFibre(organ) && setMuscleFibre(doc, organ.id, patch.fibre)
         : 'copies' in patch ? patch.copies !== organ.centers[0].copies &&
                                   updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
-                            : this.muscleTrait(drag.code, patch.trait, patch.value);
+                            : this.muscleTrait(drag.code, patch.trait, patch.value, organ.id);
     if (!changed)
       return;
     this.draftDesign(changed, 'effector:' + drag.id);
   },
-  muscleTrait(code, trait, value) {
-    const sites = this.state.sites, doc = this.state.document;
-    const changed = setMuscleTrait(doc, code, trait, value, sites);
-    if (changed || code !== MOTOR_KIND.suction)
-      return changed;
-    const throat = this.withThroat();
-    if (!throat)
-      this.notice(label('status.noRoom'));
-    return throat && setMuscleTrait(throat, code, trait, value, sites);
+  muscleTrait(code, trait, value, organId) {
+    const doc = this.state.document;
+    return trait === GUT_TRAIT    ? setGutLength(doc, value)
+           : trait === GILL_TRAIT ? setGillRakers(doc, organId, value)
+                                  : setMuscleTrait(doc, code, trait, value, this.state.sites);
   },
   sacPointer(drag, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);

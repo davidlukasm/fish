@@ -334,7 +334,7 @@
   "bladder_rate": "Füll- und Entleerungsrate je aktiver Gewebestärke und Schritt.",
   "bladder_cost": "Energie je Füllstandsänderung.",
   "touch_rest": "Grundreiz einer Berührung ohne Stoß.",
-  "stroke_threshold": "Mindestwert der geglätteten Muskelansteuerung für einen Schlag.",
+  "stroke_threshold": "Mindestansteuerung, mit der ein erholter Muskel einen Schlag beginnt; während des Schlags folgt seine Kraft der Ansteuerung.",
   "drag_along": "Wasserwiderstand entlang des Körpers.",
   "drag_across": "Wasserwiderstand quer zum Körper und Dämpfung der Drehgeschwindigkeit.",
   "transfer_cost": "Energieaufwand für den Transport in die Gonaden.",

@@ -2,7 +2,9 @@ import {FULL_TURN, hueRGB} from './units.js';
 import {hormoneColors} from './hormones.js';
 import {
   BARBEL,
+  GILL,
   GRAVITY,
+  GUT_MUSCLE,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -70,6 +72,7 @@ import {
   fishGametePath,
   fishGameteShape,
   fishGillFolds,
+  fishGillShape,
   fishInjuryPath,
   fishInjuryShape,
   fishLateralPoint,
@@ -316,7 +319,13 @@ function brainStatocyst(d, side) {
 export function brainTissuePath(g, d, key, side, variant = '') {
   const a = d.a, r = d.r;
   g.beginPath();
-  if (key === INTERNAL_TISSUE) {
+  if (variant === GILL) {
+    const [p0, p1, p2, p3] = fishGillShape(a, side, 0);
+    g.moveTo(p0[0] * r, p0[1] * r);
+    g.bezierCurveTo(p1[0] * r, p1[1] * r, p2[0] * r, p2[1] * r, p3[0] * r, p3[1] * r);
+  } else if (variant === GUT_MUSCLE)
+    fishGutPath(g, r, a);
+  else if (key === INTERNAL_TISSUE) {
     const q = fishCNSShape(a);
     g.moveTo(q.tail * r, -q.cord * r);
     g.lineTo(q.neck * r, -q.cord * r);

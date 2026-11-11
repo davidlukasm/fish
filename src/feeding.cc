@@ -83,8 +83,7 @@ class Ecosystem::FeedingSession {
                 bool drift = false, double physical_age = -1, double hardness = 0) {
     if (amount <= 0)
       return;
-    if (origin != food_kind::crab && origin != food_kind::mussel &&
-        radius <= maximum_mouth_aperture(b)) {
+    if (origin != food_kind::crab && origin != food_kind::mussel && radius <= bite_aperture(b)) {
       const double eaten = std::min(amount, gut_room(b, origin, world.physiology_));
       if (eaten > 0) {
         ingest(eaten, origin);
@@ -282,7 +281,7 @@ class Ecosystem::FeedingSession {
     } else if (kind == food_kind::egg) {
       auto &q = world.fish[target];
       const double amount = stored_energy(q.body), radius = collision_radius(q.body);
-      if (amount > 0 && radius <= maximum_mouth_aperture(b) &&
+      if (amount > 0 && radius <= bite_aperture(b) &&
           amount <= gut_room(b, food_kind::egg, world.physiology_) + tolerance::negligible) {
         empty_stores(q.body);
         kill_egg(q);
@@ -524,6 +523,21 @@ class Ecosystem::FeedingSession {
     effect(action, x, y, radius, raw);
     world.combat_effects.back().color = color;
   }
+  // The gills strain the water that passes the mouth, pumped or met while swimming.
+  void filter_through_gills() {
+    const double water = gill_water(b);
+    if (water <= 0)
+      return;
+    const double plankton = world.field.consume_plankton(
+        mx, my, water * raker_retention(b), gut_room(b, food_kind::plankton, world.physiology_));
+    if (plankton <= 0)
+      return;
+    ingest(plankton, food_kind::plankton);
+    if (b.feeding_action_age <= feeding_effect_steps::brief) {
+      b.feeding_action = feeding_effect::filter;
+      b.feeding_action_age = feeding_effect_steps::brief;
+    }
+  }
   void trim_effects() {
     while (world.combat_effects.size() > MAX_COMBAT_EFFECTS)
       world.combat_effects.pop_front();
@@ -546,7 +560,8 @@ public:
       b.mouth.closing = false; // Consume the single contact, even if this session is called again.
       bite();
     }
-    if (b.mouth.biting && b.mouth.phase >= MOUTH_HALF_CYCLE) {
+    filter_through_gills();
+    if (jaw_shutting(b.mouth)) {
       trim_effects();
       return result;
     }
@@ -554,21 +569,22 @@ public:
       trim_effects();
       return result;
     }
-    double area = std::min(b.mouth.budget, b.mouth.credit);
+    double area = b.mouth.credit;
     for (const auto &target : candidates(area))
       swallow(target, area);
-    const double density = world.field.plankton_density(mx, my);
+    const double density = world.field.plankton_density(mx, my), kept = raker_retention(b);
     const double plankton = world.field.consume_plankton(
-        mx, my, area, gut_room(b, food_kind::plankton, world.physiology_));
+        mx, my, area * kept, gut_room(b, food_kind::plankton, world.physiology_));
     if (plankton > 0) {
       ingest(plankton, food_kind::plankton);
-      area = std::max(0., area - plankton / std::max(tolerance::rounding, density));
+      area = std::max(0., area - plankton / std::max(tolerance::rounding, density * kept));
       if (b.feeding_action_age <= feeding_effect_steps::brief) {
         b.feeding_action = feeding_effect::filter;
         b.feeding_action_age = feeding_effect_steps::brief;
       }
     }
-    const double bed = world.field.graze_bed(mx, my, gape, area,
+    // Mud clogs dense gill rakers: they let less of the stirred-up sediment through.
+    const double bed = world.field.graze_bed(mx, my, gape, area * raker_passage(b),
                                              gut_room(b, food_kind::benthic, world.physiology_));
     if (bed > 0) {
       ingest(bed, food_kind::benthic);
@@ -578,9 +594,7 @@ public:
         b.feeding_action_age = feeding_effect_steps::brief;
       }
     }
-    const double used = std::max(0., std::min(b.mouth.budget, b.mouth.credit) - area);
-    b.mouth.budget = std::max(0., b.mouth.budget - used);
-    b.mouth.credit = std::max(0., b.mouth.credit - used);
+    b.mouth.credit = std::max(0., area);
     trim_effects();
     return result;
   }

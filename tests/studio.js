@@ -12,23 +12,23 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
   "src/eye_geometry.cc" : "0331842d148c18c4",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
-  "ui/brain_geometry.js" : "8dfa1e7c052fc7f1",
+  "ui/brain_geometry.js" : "051d59c05deb9c42",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
   "colony-core/field/development_sites.hh" : "d5f1149f9f71568f",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
-  "src/body_plan.cc" : "c208115d701e0962",
+  "src/body_plan.cc" : "05c042525fce875a",
   "src/physiology_parameters.hh" : "00df0f1a6b4096e6",
-  "src/physiology.hh" : "4ce375962b70c1f5",
-  "src/physiology.cc" : "091be4e30f65adee",
+  "src/physiology.hh" : "d5af52c4df970676",
+  "src/physiology.cc" : "4f812fb266411105",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
   "src/physiology_parameters.cc" : "d4f67d6d9d287fd7",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "cdb76fe986148771",
+  "src/body_plan.hh" : "ae3a3aa2c8a14656",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -36,38 +36,38 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
 
-  "ui/tissue.js" : "e4d879c0dbbb1971",
+  "ui/tissue.js" : "d2ba421f3a605b5b",
   "src/genome.hh" : "239dc4f734e58ddf",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
-  "src/simulation_types.hh" : "b19320e4446f4b42",
+  "src/simulation_types.hh" : "67b1b6ed62d29d62",
   "src/retina.cc" : "a14c24e09bb2ee39",
-  "src/observations.cc" : "0842c1e7c0e30e29",
+  "src/observations.cc" : "7ef0a35973dc9687",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "3c65ed324049ca17",
   "src/retina.hh" : "a3a169f6e8f4cafd",
-  "ui/fish_forms.js" : "779094f709698fe1",
+  "ui/fish_forms.js" : "47558e25b81939f7",
   "ui/fish_geometry.js" : "aa899dbb45672f9f",
   "ui/fish_fins.js" : "a07179737e1032b5",
-  "ui/fish_organs.js" : "c6a63cda4547e83b",
+  "ui/fish_organs.js" : "634add3c713caddf",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "2c459714965dcb4d",
+  "src/brain_interface.hh" : "55cc3f3eaab3754f",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "d06c57f33521ce80",
+  "src/interactive_brain.cc" : "95e84786371e7b05",
   "src/material.hh" : "7b513268feed7d77",
   "src/ecology.hh" : "3505e6c40c515977",
-  "src/feeding.cc" : "b9619a71b39a85c3",
-  "src/tank_energy.cc" : "766e39c90e2aa020",
+  "src/feeding.cc" : "1f03f759abcba08e",
+  "src/tank_energy.cc" : "c28ecdd21bb06df1",
   "src/environment.cc" : "d14022c739480c9a",
   "src/environment.hh" : "9602fc842620120e",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
-  "src/motor_state.hh" : "03624e65f88442f7",
+  "src/motor_state.hh" : "0319ca65ba4cdeb6",
   "src/visible_body.hh" : "e0b989f5b403d44a",
-  "src/body_state_limits.hh" : "372294904588c948",
+  "src/body_state_limits.hh" : "7a33a86fe74eae10",
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
   "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
   "colony-core/field/distribution.hh" : "80b7d194fee9ccf5",
@@ -650,7 +650,7 @@ async function checkHormoneSystems(model, capabilities) {
                  'Engine/Viewer changed: ' + path +
                      '. Review organ editor and update ENGINE_REVIEW.');
   }
-  const {CONTRAST_POLARITY, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} =
+  const {ANATOMY, CONTRAST_POLARITY, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} =
       await import('../ui/schema.js');
   const colourType = (id, q1, qwidth) =>
       ({id, q1, q2 : -1, qwidth, threshold : -.6, polarity : CONTRAST_POLARITY.bright});
@@ -665,6 +665,9 @@ async function checkHormoneSystems(model, capabilities) {
     nodeLimit,
     organFunction,
     PRESSURE_OF,
+    isGillFlank,
+    isGutWall,
+    organSlots,
     siteRole
   } = await import('../ui/studio/model/organs.js');
   const {t, useTexts} = await import('../ui/strings.js');
@@ -700,7 +703,7 @@ async function checkHormoneSystems(model, capabilities) {
     const stroke = Array(STROKE.count).fill(0), p = Array(FISH.count).fill(0);
     stroke[STROKE.steps] = 12;
     const strokes = [];
-    strokes[STROKE_KIND.tail] = stroke;
+    strokes[STROKE_KIND.tail_left] = stroke;
     const d = {
       p,
       nodes : new Map(nodes.map(n => [n[NEURON.index], n])),
@@ -1002,6 +1005,69 @@ async function checkHormoneSystems(model, capabilities) {
     const bladder = model.addOrgan(gut.document, 'bladder', sites, {x : 650, y : 360});
     organAudits.push(
         {document : bladder.document, id : bladder.organId, type : 'bladder', pressure : true});
+  }
+  {
+    // The gut's own cells carry its length; the throat no longer does.
+    const gut = model.addOrgan(model.newDocument('Darm'), 'gut', sites, {x : 600, y : 360});
+    assert.equal(model.gutLength(gut.document), .5, 'A new gut is of middle length');
+    const long = model.setGutLength(gut.document, 1);
+    assert.equal(model.gutLength(long), 1);
+    assert.equal(model.setGutLength(model.newDocument('Leer'), 1), null,
+                 'Without a gut there is no length to set');
+    organAudits.push({document : long, id : gut.organId, type : 'gut', gutLength : 1});
+  }
+  {
+    // Gill pumps take the head's flanks and nothing else; their rakers are their first quality.
+    const flank = sites.find(s => s.zone === 1 && s.outer && s.w === 1 && s.side < 0);
+    const gills = model.addOrgan(model.newDocument('Kiemen'), 'gills', sites,
+                                 geometry.sitePoint(flank, 'gills'));
+    assert.ok(gills, 'Gills can be placed on the flank of the head');
+    const organ = model.findOrgan(gills.document, gills.organId);
+    assert.ok(organ.centers.length >= 2 && organ.centers.every(c => {
+      const site = sites.find(s => s.id === c.site);
+      return isGillFlank(site);
+    }),
+              'Every gill pump sits on a flank of the head');
+    assert.equal(new Set(organ.centers.map(c => sites.find(s => s.id === c.site).side)).size, 2,
+                 'Gills come in pairs');
+    assert.ok(sites
+                  .filter(s => isGillFlank(s) && functionFor(ORGAN_BY_KEY.muscle.centers[0], s) ===
+                                                     MOTOR_KIND.suction)
+                  .every(s => !eligible(ORGAN_BY_KEY.muscle.centers[0], s)),
+              'No mouth muscle takes the place of a gill');
+    const dense = model.setGillRakers(gills.document, gills.organId, 1);
+    assert.equal(model.gillRakers(model.findOrgan(dense, gills.organId)), 1);
+    assert.ok(model.isFibrous(organ), 'Gill pumps are muscles with fibres');
+    organAudits.push({document : dense, id : gills.organId, type : 'gills', rakers : 1});
+  }
+  {
+    // The gut muscle takes the gut wall in the trunk's midline and nothing else; the motor region
+    // gets a gut output once there is a muscle to drive, fed by fullness.
+    const wall = sites.find(s => isGutWall(s) && s.side < 0);
+    const gut = model.addOrgan(model.newDocument('Darmmuskel'), 'gutmuscle', sites,
+                               geometry.sitePoint(wall, 'gutmuscle'));
+    assert.ok(gut, 'The gut muscle can be placed on the gut wall');
+    const organ = model.findOrgan(gut.document, gut.organId);
+    assert.ok(organ.centers.length >= 2 &&
+                  organ.centers.every(c => isGutWall(sites.find(s => s.id === c.site))),
+              'Every gut muscle node sits in the gut wall');
+    assert.ok(sites
+                  .filter(s => isGutWall(s) &&
+                               functionFor(ORGAN_BY_KEY.muscle.centers[0], s) === MOTOR_KIND.turn)
+                  .every(s => !eligible(ORGAN_BY_KEY.muscle.centers[0], s)),
+              'No fin muscle takes the place of the gut muscle');
+    assert.ok(!musclePlaces(sites, MOTOR_KIND.turn, -1).some(isGutWall),
+              'Fin muscles are not offered the gut wall');
+    assert.ok(model.isFibrous(organ), 'The gut muscle has fibres');
+    const motor = model.addOrgan(gut.document, 'motor', sites, {x : 470, y : 300});
+    const region = motor && model.findOrgan(motor.document, motor.organId);
+    assert.ok(region?.centers.some(c => c.node === 'gut'), 'The motor region drives the gut');
+    const slots = organSlots(region);
+    assert.ok(slots.some(s => s.key === 'gut' && s.dir === 'out') &&
+                  [ slots.find(s => s.key === 'full').node ].flat().includes('gut'),
+              'A full gut reaches the gut driver');
+    organAudits.push(
+        {document : gut.document, id : gut.organId, type : 'gutmuscle', gutMuscle : true});
   }
   {
     // Organs added near each other take over the readings of earlier pressure cells.
@@ -1817,7 +1883,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       [
         ...new Set(exampleStudio.state.document.organs.filter(o => o.region).map(o => o.type))
       ].sort(),
-      [ 'choice', 'motor', 'olfaction', 'state', 'tectum', 'value' ]);
+      [ 'choice', 'motor', 'olfaction', 'spine', 'state', 'tectum', 'value' ]);
   const response = JSON.parse(execFileSync('python3', [ '-B', '-c', python ], {
     cwd : root,
     input : JSON.stringify({
@@ -1847,6 +1913,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     if (audit.pressure)
       assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),
                        [], 'The bladder measures depth beside its own muscle, not gut filling');
+    if (audit.rakers !== undefined) {
+      const anatomy = response.audited[index].anatomy;
+      assert.ok(anatomy[ANATOMY.gills] > 0 && anatomy[ANATOMY.gill_strength] > 0,
+                'The developed fish pumps with its gills');
+      assert.ok(Math.abs(anatomy[ANATOMY.gill_rakers] - audit.rakers) < 1e-6,
+                'The gill rakers stand as densely as planned');
+    }
+    if (audit.gutMuscle)
+      assert.ok(response.audited[index].anatomy[ANATOMY.gut_muscle] > 0,
+                'The developed fish has its gut muscle');
+    if (audit.gutLength !== undefined)
+      assert.ok(Math.abs(response.audited[index].anatomy[ANATOMY.gut_length] - audit.gutLength) <
+                    1e-6,
+                'The developed gut takes the length its cells carry');
     if (audit.crowded) {
       const layout = response.audited[index], doc = audit.document;
       const sensors = model.allCenters(doc).filter(c => PRESSURE_OF[c.organType]?.key === c.key);

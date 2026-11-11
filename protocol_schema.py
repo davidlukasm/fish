@@ -56,49 +56,50 @@ class Fish:
     DISEASE = 52
     RESERVE_CAPACITY = 53
     ADULT_AGE = 54
-    IMPULSE_FORWARD = 55
-    MOTOR_FACTOR = 56
-    FIN_POSE = 57
-    FINS = 58
-    FORMS = 59
-    MEAN_AGGRESSION = 60
-    NEURON_BUDGET = 61
-    EAT_SIGNAL = 62
-    MOUTH_APERTURE = 63
-    BITE_POSE = 64
-    SUCTION_POSE = 65
-    CONTOUR = 66
-    EGG_CAPACITY = 67
-    SPERM_CAPACITY = 68
-    TISSUE = 69
-    REGIONS = 70
-    BLADDER_FILL = 71
-    SATIETY = 72
-    DAMAGE = 73
-    HATCH_SHAPE = 74
-    BODY_GEOMETRY = 75
-    MORPHOLOGY_ASSET = 76
-    GUT_FILL = 77
-    GUT_ENERGY = 78
-    GUT_DIGESTIBLE = 79
-    DIGESTION = 80
-    DIGESTED = 81
-    FEEDING_ACTION = 82
-    FEEDING_ACTION_AGE = 83
-    MOUTH_PHASE = 84
-    MOUTH_BUDGET = 85
-    SWALLOWED = 86
-    MOUTH_OFFSET = 87
-    MOUTH_BITING = 88
-    FILTERED = 89
-    MOUTH_CYCLE = 90
-    EYE_PULL_LEFT = 91
-    EYE_PULL_RIGHT = 92
-    IMMORTAL = 93
-    ASSISTED = 94
-    REMEMBERED = 95
-    EGGS_LAID = 96
-    COUNT = 97
+    IMPULSE_TAIL_LEFT = 55
+    IMPULSE_TAIL_RIGHT = 56
+    MOTOR_FACTOR = 57
+    FIN_POSE = 58
+    FINS = 59
+    FORMS = 60
+    MEAN_AGGRESSION = 61
+    NEURON_BUDGET = 62
+    EAT_SIGNAL = 63
+    MOUTH_APERTURE = 64
+    BITE_POSE = 65
+    SUCTION_POSE = 66
+    GILL_POSE = 67
+    CONTOUR = 68
+    EGG_CAPACITY = 69
+    SPERM_CAPACITY = 70
+    TISSUE = 71
+    REGIONS = 72
+    BLADDER_FILL = 73
+    SATIETY = 74
+    DAMAGE = 75
+    HATCH_SHAPE = 76
+    BODY_GEOMETRY = 77
+    MORPHOLOGY_ASSET = 78
+    GUT_FILL = 79
+    GUT_ENERGY = 80
+    GUT_DIGESTIBLE = 81
+    DIGESTION = 82
+    DIGESTED = 83
+    FEEDING_ACTION = 84
+    FEEDING_ACTION_AGE = 85
+    MOUTH_PHASE = 86
+    SWALLOWED = 87
+    MOUTH_OFFSET = 88
+    MOUTH_BITING = 89
+    FILTERED = 90
+    MOUTH_CYCLE = 91
+    EYE_PULL_LEFT = 92
+    EYE_PULL_RIGHT = 93
+    IMMORTAL = 94
+    ASSISTED = 95
+    REMEMBERED = 96
+    EGGS_LAID = 97
+    COUNT = 98
 
 class Food:
     X = 0
@@ -278,7 +279,11 @@ class Anatomy:
     GUT_LENGTH = 44
     BLUNT_TEETH = 45
     UNDULATION = 46
-    COUNT = 47
+    GILLS = 47
+    GILL_STRENGTH = 48
+    GILL_RAKERS = 49
+    GUT_MUSCLE = 50
+    COUNT = 51
 
 class NoseSample:
     X = 0
@@ -494,9 +499,9 @@ class Synapse:
     COUNT = 4
 
 class Stroke:
-    MEAN = 0
+    DRIVE = 0
     RECOVERY = 1
-    POWER = 2
+    FORCE = 2
     STEPS = 3
     FIBRE = 4
     RESERVE = 5
@@ -641,18 +646,19 @@ class CorpseState:
     MOUTH_POSE = 11
     BITE_POSE = 12
     SUCTION_POSE = 13
-    DEFENSE = 14
-    HEALTH = 15
-    AGGRESSION = 16
-    MEAN_AGGRESSION = 17
-    SHELL_RADIUS = 18
-    BIRTH_TISSUE = 19
-    MOUTH_APERTURE = 20
-    GUT_FILL = 21
-    GUT_ENERGY = 22
-    GUT_LENGTH = 23
-    UNDULATION = 24
-    COUNT = 25
+    GILL_POSE = 14
+    DEFENSE = 15
+    HEALTH = 16
+    AGGRESSION = 17
+    MEAN_AGGRESSION = 18
+    SHELL_RADIUS = 19
+    BIRTH_TISSUE = 20
+    MOUTH_APERTURE = 21
+    GUT_FILL = 22
+    GUT_ENERGY = 23
+    GUT_LENGTH = 24
+    UNDULATION = 25
+    COUNT = 26
 
 class CorpseVisual:
     ORGANS = 0
@@ -867,6 +873,8 @@ class OrganPort:
     DEFENSE = 11
     BLADDER = 12
     GLAND = 13
+    GILLS = 14
+    GUT = 15
 
 class Eye:
     LEFT = 0
@@ -874,7 +882,7 @@ class Eye:
     COUNT = 2
 
 class StrokeKind:
-    TAIL = 0
+    TAIL_LEFT = 0
     TURN_LEFT = 1
     TURN_RIGHT = 2
     SUCTION = 3
@@ -884,7 +892,10 @@ class StrokeKind:
     DEFENSE = 7
     REVERSE_LEFT = 8
     REVERSE_RIGHT = 9
-    COUNT = 10
+    GILL = 10
+    GUT = 11
+    TAIL_RIGHT = 12
+    COUNT = 13
 
 class StepPhase:
     DEVELOPMENT = 0
@@ -1238,7 +1249,7 @@ class BodyUnit:
 
 class MouthCycle:
     STEPS = 8
-    OPENING = (0.35, 0.8, 1, 1, 0.65, 0.1, 0, 0.15, 0.35)
+    REST = 0.35
 
 class SensoryComponent:
     NEURON = 0
@@ -1316,9 +1327,23 @@ class MuscleFibre:
     DRAIN = 0.028
     RECOVERY_STEPS = 400
 
+class GutMotility:
+    SPEEDUP = 2
+    LOSS = 0.5
+    WALL = 0.25
+    ZONE = 2
+
+class GillFilter:
+    RAKERLESS_RETENTION = 0.3
+    RAKER_DRAG = 0.5
+    FLANK = 0.75
+
 class StrokeGrip:
     TAIL_AT_REST = 0.5
     FIN_AT_SPEED = 0.5
+
+class TailStroke:
+    LONE_PUSH = 0.3
 
 class TrialLab:
     SEEDS = (1, 2, 4)

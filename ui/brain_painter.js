@@ -3,6 +3,7 @@ import {hueRGB} from './units.js';
 import {BRAIN_SPACE} from './brain_layout.js';
 import {
   BARBEL,
+  GILL,
   GRAVITY,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -259,8 +260,8 @@ function brainDrawTissueFocus(g, d) {
     brainTissuePath(g, d, tissue.key, tissue.side, tissue.variant);
   g.fillStyle = g.strokeStyle = color;
   g.globalAlpha = FOCUS.alpha;
-  const line =
-      tissue.variant === BARBEL || tissue.key === SENSE_TISSUE.flow && tissue.variant !== GRAVITY;
+  const line = tissue.variant === BARBEL || tissue.variant === GILL ||
+               tissue.key === SENSE_TISSUE.flow && tissue.variant !== GRAVITY;
   if (line) {
     g.lineWidth = Math.max(FOCUS.line_min_width, d.r * FOCUS.line_width);
     g.stroke();
@@ -270,7 +271,7 @@ function brainDrawTissueFocus(g, d) {
     g.lineWidth = Math.max(FOCUS.min_width, d.r * FOCUS.width);
     g.stroke();
   }
-  if (tissue.key === MOTOR_TISSUE.suction) {
+  if (tissue.key === MOTOR_TISSUE.suction && !tissue.variant) {
     fishMouthPath(g, d.r, d.a);
     g.globalAlpha = FOCUS.mouth_alpha;
     g.fill();

@@ -85,12 +85,16 @@ struct BrainInterface {
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   // Force-weighted fast fibre share and summed force of the cells behind each stroke.
   std::array<double, STROKE_COUNT> fibre{}, stroke_capacity{};
-  // Push along the body per unit of a fin stroke, which counts its force times the lever.
+  // Push along the body per unit of a fin stroke, which counts its force times the lever; the
+  // lever with which each tail flank bends the body.
   std::array<double, STROKE_COUNT> fin_push{};
+  std::array<double, 2> tail_lever{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};
   std::array<double, 3> pigment_absorption{};
   double sensory_capacity = 0;
+  // How closely the gill rakers stand: dense ones hold plankton, open ones pass more water.
+  double raker_density = 0;
   double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
          undulation = TRAIT_MIDDLE;
   std::array<float, 3> visual_coverage{};

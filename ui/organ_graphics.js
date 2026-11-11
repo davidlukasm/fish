@@ -1,7 +1,16 @@
 import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
-import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR, TUNING} from './schema.js';
+import {
+  FISH,
+  GILL_FILTER,
+  HORMONES,
+  LATERAL_SAMPLE,
+  MOTOR_KIND,
+  NEURON,
+  RECEPTOR,
+  TUNING
+} from './schema.js';
 import {t, tList, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -21,7 +30,9 @@ import {
   fishMouthShape,
   fishTeeth,
   fishReservePath,
-  fishReserveShape
+  fishReserveShape,
+  gutPassage,
+  gutUse,
 } from './fish_organs.js';
 import {eyeImage, eyeTypeAnswers, organNumber, organPercent} from './organ_readout.js';
 import {organSignalHistory} from './organs.js';
@@ -134,6 +145,128 @@ function drawGutGraphic({g, d, color, label, bar}) {
         GUT_GRAPHIC.column, GUT_GRAPHIC.reserve_y);
   label(t('organ_graphics.transit', {n : organNumber(d.b.gut_transit, 0)}), GUT_GRAPHIC.column,
         GUT_GRAPHIC.transit_y);
+}
+
+// A gill arch from the side, as in the Atelier: the rakers comb the water the covers pump from
+// the mouth (left); the arrows thin as dense rakers hold the water back.
+const GILL_GRAPHIC = Object.freeze({
+  x : 120,
+  top : 14,
+  bottom : 118,
+  bow : 34,
+  rakers : [ 4, 24 ],
+  raker : 18,
+  flows : [ 40, 66, 92 ],
+  flow : [ 16, 196 ],
+  water : 7,
+  head : 5,
+  steps : 24,
+  arch : '#e9c9b4',
+  arch_width : 4,
+  raker_width : 1.5,
+  column : 220,
+  bar_width : 120,
+  pump_y : 26,
+  rakers_y : 74,
+  caption_gap : 6
+});
+function drawGillGraphic({g, info, color, label, bar}) {
+  const G = GILL_GRAPHIC, middle = (G.top + G.bottom) / 2, rakers = brainClamp(info.rakers);
+  const arch = t => {
+    const u = 1 - t;
+    return [
+      u * u * G.x + 2 * u * t * (G.x - G.bow) + t * t * G.x,
+      u * u * G.top + 2 * u * t * middle + t * t * G.bottom
+    ];
+  };
+  const water = G.water * (1 - GILL_FILTER.raker_drag * rakers) * brainClamp(info.fill);
+  if (water > 0) {
+    g.strokeStyle = color;
+    g.lineWidth = water;
+    for (const y of G.flows) {
+      g.beginPath();
+      g.moveTo(G.flow[0], y);
+      g.lineTo(G.flow[1], y);
+      g.moveTo(G.flow[1] - G.head, y - G.head);
+      g.lineTo(G.flow[1], y);
+      g.lineTo(G.flow[1] - G.head, y + G.head);
+      g.stroke();
+    }
+  }
+  g.strokeStyle = G.arch;
+  g.lineWidth = G.arch_width;
+  g.beginPath();
+  for (let k = 0; k <= G.steps; k++)
+    (k ? g.lineTo : g.moveTo).call(g, ...arch(k / G.steps));
+  g.stroke();
+  const count = Math.round(G.rakers[0] + (G.rakers[1] - G.rakers[0]) * rakers);
+  g.lineWidth = G.raker_width;
+  g.beginPath();
+  for (let i = 0; i < count; i++) {
+    const [x, y] = arch((i + .5) / count);
+    g.moveTo(x, y);
+    g.lineTo(x - G.raker, y);
+  }
+  g.stroke();
+  label(t('organ_graphics.pump', {n : organPercent(info.fill)}), G.column,
+        G.pump_y - G.caption_gap);
+  bar(G.column, G.pump_y, G.bar_width, info.fill);
+  label(t('organ_graphics.rakers', {n : organPercent(rakers)}), G.column,
+        G.rakers_y - G.caption_gap);
+  bar(G.column, G.rakers_y, G.bar_width, rakers, G.arch);
+}
+// The gut with one ring of muscle per cell, squeezed as hard as the brain drives it, and the
+// same meal as in the Atelier: hurried along, more of it passes and leaves less used.
+const GUT_MUSCLE_GRAPHIC = Object.freeze({
+  left : 20,
+  right : 196,
+  middle : 66,
+  tube : 22,
+  squeeze : .45,
+  overhang : 6,
+  ring_width : 3,
+  meal : 3,
+  pellet : 6,
+  least : 1.2,
+  column : 220,
+  bar_width : 120,
+  passage_y : 26,
+  used_y : 74,
+  caption_gap : 6
+});
+function drawGutMuscleGraphic({g, info, color, label, bar}) {
+  const G = GUT_MUSCLE_GRAPHIC, hurried = brainClamp(info.fill), used = gutUse(hurried),
+        passage = gutPassage(hurried);
+  g.strokeStyle = GUT_GRAPHIC.tube;
+  g.lineWidth = G.tube * (1 - G.squeeze * hurried);
+  g.beginPath();
+  g.moveTo(G.left, G.middle);
+  g.lineTo(G.right, G.middle);
+  g.stroke();
+  const rings = Math.max(1, info.cells), half = G.tube / 2 + G.overhang;
+  g.strokeStyle = color;
+  g.lineWidth = G.ring_width;
+  g.beginPath();
+  for (let k = 0; k < rings; k++) {
+    const x = G.left + (G.right - G.left) * (k + .5) / rings;
+    g.moveTo(x, G.middle - half);
+    g.lineTo(x, G.middle + half);
+  }
+  g.stroke();
+  const pellets = Math.round(G.meal * passage);
+  g.fillStyle = GUT_GRAPHIC.usable;
+  for (let i = 0; i < pellets; i++) {
+    const share = (i + .5) / pellets;
+    g.beginPath();
+    g.arc(G.left + (G.right - G.left) * share, G.middle,
+          Math.max(G.least, G.pellet * Math.sqrt(1 - used * share)), 0, 2 * Math.PI);
+    g.fill();
+  }
+  label(t('organ_graphics.passage', {n : organNumber(passage, 1)}), G.column,
+        G.passage_y - G.caption_gap);
+  bar(G.column, G.passage_y, G.bar_width, passage / gutPassage(1), color);
+  label(t('organ_graphics.used', {n : organPercent(used)}), G.column, G.used_y - G.caption_gap);
+  bar(G.column, G.used_y, G.bar_width, used, GUT_GRAPHIC.usable);
 }
 
 const HORMONE_GRAPHIC = Object.freeze({
@@ -821,6 +954,8 @@ function drawBodyGraphic({g, info, d, color, label, bar}) {
 
 const GRAPHICS = Object.freeze({
   gut : drawGutGraphic,
+  gills : drawGillGraphic,
+  gutmuscle : drawGutMuscleGraphic,
   hormones : drawHormoneGraphic,
   bladder : drawBladderGraphic,
   scent : drawScentGraphic,

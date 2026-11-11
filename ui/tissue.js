@@ -1,4 +1,4 @@
-import {MOTOR_KIND, SENSE_KIND} from './schema.js';
+import {EFFECTOR, MOTOR_KIND, ORGAN_PORT, SENSE_KIND, STROKE_KIND} from './schema.js';
 const SENSE = 's', MOTOR = 'm', SIDE_MARK = ':';
 export const INTERNAL_TISSUE = 'internal';
 export const GUT_TISSUE = 'gut', RESERVE_TISSUE = 'reserve', BARBEL = 'barbel';
@@ -17,6 +17,26 @@ const named = (kinds, key) => Object.freeze(
     Object.fromEntries(Object.entries(kinds).map(([ name, kind ]) => [name, key(kind)])));
 export const SENSE_TISSUE = named(SENSE_KIND, senseTissue);
 export const MOTOR_TISSUE = named(MOTOR_KIND, motorTissue);
-// Organs drawn apart from the sense they belong to.
-export const VARIANT_SENSE =
-    Object.freeze({[BARBEL] : SENSE_TISSUE.odor, [GRAVITY] : SENSE_TISSUE.flow});
+// Gill pumps are suction cells and the gut muscle fin cells; they act on organs of their own.
+export const GILL = 'gill', GUT_MUSCLE = 'gutmuscle';
+// Organs drawn apart from the sense or muscle they belong to.
+export const VARIANT_TISSUE = Object.freeze({
+  [BARBEL] : SENSE_TISSUE.odor,
+  [GRAVITY] : SENSE_TISSUE.flow,
+  [GILL] : MOTOR_TISSUE.suction,
+  [GUT_MUSCLE] : MOTOR_TISSUE.turn
+});
+const VARIANT_MUSCLES = Object.freeze([
+  {variant : GILL, kind : MOTOR_KIND.suction, port : ORGAN_PORT.gills, stroke : STROKE_KIND.gill},
+  {variant : GUT_MUSCLE, kind : MOTOR_KIND.turn, port : ORGAN_PORT.gut, stroke : STROKE_KIND.gut}
+]);
+export const portVariant = port => VARIANT_MUSCLES.find(m => m.port === port);
+// The organ a muscle cell drives, read from the port its effectors act on.
+export const motorVariant = (key, effectors) =>
+    VARIANT_MUSCLES
+        .find(m => VARIANT_TISSUE[m.variant] === key &&
+                   effectors?.some(e => e[EFFECTOR.port] === m.port))
+        ?.variant ??
+    '';
+export const variantPort = variant => VARIANT_MUSCLES.find(m => m.variant === variant)?.port;
+export const variantStroke = variant => VARIANT_MUSCLES.find(m => m.variant === variant)?.stroke;

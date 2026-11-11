@@ -3,7 +3,14 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, gutGraphic, nodeControls, spineField} from './effectors.js';
+import {
+  effectorGraphic,
+  gillGraphic,
+  gutGraphic,
+  gutMuscleGraphic,
+  nodeControls,
+  spineField
+} from './effectors.js';
 import {lateralField} from './lateral.js';
 import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
@@ -132,6 +139,8 @@ const ORGAN_PANELS = Object.freeze({
                    kindLimit(organ, state.sites)) +
       pressureNote(state, organ),
   muscle : (state, organ) => effectorGraphic(state, organ),
+  gills : (state, organ) => gillGraphic(state, organ),
+  gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
   defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, center),
   eggs : gonadPanel,

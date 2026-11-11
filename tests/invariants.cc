@@ -981,34 +981,123 @@ void pectoral_antagonists_back_the_fish_up(const Genome &g) {
   check(ahead > 0 && back < 0, "back strokes push a fish ahead, the antagonists push it back");
   check(std::abs(held) < STILL * ahead, "antagonists working together hold the fish in place");
 }
+void tail_flanks_take_turns_bend_alone_and_brace_together(const Genome &g) {
+  // Only the tail works, flank by flank: taking turns, one flank alone (gently, or at full force
+  // as an escape), or both at once. A left pectoral back stroke shows which way is left. A gentle
+  // lone flank is driven weakly enough that its turning stays below the fastest turn.
+  constexpr int SWIMMING = 160;
+  constexpr float GENTLE = .05f, FULL = 1;
+  constexpr double STILL = .1, ESCAPE = 2;
+  enum Flanks { Alternating, LeftOnly, RightOnly, Both, LeftFin };
+  struct Path {
+    double ahead = 0, turned = 0;
+  };
+  const auto swim = [&](Flanks flanks, float drive) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    std::map<std::uint32_t, int> cells;
+    for (const auto &e : layout->effectors)
+      if (flanks == LeftFin ? e.port == organ_port::turn && e.lever < 0
+                            : e.port == organ_port::forward && e.lever != 0)
+        cells[e.neuron] = e.lever < 0 ? 0 : 1;
+    check(!cells.empty(), "the start fish has tail and pectoral muscles on both flanks");
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::turn)
+        e.protraction = 0;
+    fin_pushes(*layout);
+    Genome tail = g;
+    tail.interface = layout;
+    Ecosystem w(SEED);
+    w.resize(800, 500);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, tail, 400, 250);
+    const auto id = p.id;
+    const int beat = std::max(1, layout->stroke_timing[StrokeTailLeft].recovery);
+    int tick = 0;
+    p.body.set_actuation_probe([&](std::uint32_t cell, float) {
+      const auto at = cells.find(cell);
+      if (at == cells.end())
+        return 0.f;
+      const int side = at->second;
+      const bool pulls = flanks == Alternating                 ? side == (tick / beat) % 2
+                         : flanks == RightOnly                 ? side == 1
+                         : flanks == Both || flanks == LeftFin ? true
+                                                               : side == 0;
+      return pulls ? drive : 0.f;
+    });
+    // The way along its own heading and the turning, summed step by step.
+    Path path;
+    for (; tick < SWIMMING; ++tick) {
+      const auto &before = individual(w, id).body;
+      const double x = before.x, y = before.y, heading = before.angle;
+      w.tick(false);
+      const auto &b = individual(w, id).body;
+      path.ahead += w.field.delta_x(b.x - x) * std::cos(heading) + (b.y - y) * std::sin(heading);
+      path.turned += std::remainder(b.angle - heading, 2 * PI);
+    }
+    return path;
+  };
+  const auto alternating = swim(Alternating, FULL), left = swim(LeftOnly, GENTLE),
+             right = swim(RightOnly, GENTLE), escape = swim(LeftOnly, FULL),
+             both = swim(Both, FULL), fin = swim(LeftFin, FULL);
+  std::cout << "Schwanzflanken (Strecke/Drehung): im Wechsel " << alternating.ahead << '/'
+            << alternating.turned << ", links allein " << left.ahead << '/' << left.turned
+            << ", rechts allein " << right.ahead << '/' << right.turned << ", Fluchtschlag "
+            << escape.ahead << '/' << escape.turned << ", beide zugleich " << both.ahead << '/'
+            << both.turned << "; linke Brustflosse dreht " << fin.turned << "\n";
+  const auto bend = [](const Path &p) {
+    return std::abs(p.turned) / std::max(tolerance::negligible, std::abs(p.ahead));
+  };
+  check(alternating.ahead > escape.ahead && bend(alternating) < bend(left) &&
+            bend(alternating) < bend(right),
+        "flanks taking turns drive the fish ahead, one flank alone mostly turns it");
+  check(left.turned * right.turned < 0 && left.turned * fin.turned < 0,
+        "a flank alone bends the fish toward itself, against the back stroke of its own fin");
+  check(std::abs(escape.turned) > ESCAPE * std::abs(left.turned),
+        "a full lone stroke is an escape turn");
+  check(std::abs(both.ahead) < STILL * alternating.ahead &&
+            std::abs(both.turned) < STILL * std::abs(left.turned),
+        "both flanks at once only stiffen the body");
+}
 void muscle_fibres_each_have_their_strength(const Genome &g) {
   // Only the tail works, with all its fibres of one kind: fast, mixed or slow.
   // Cruising asks every tail for the same push, nine tenths of what slow fibres can give.
   constexpr int SPRINT = 40, HELD = 900, SETTLED = 450;
+  constexpr double WARM_UP = 1.5;
   constexpr double FAST = 1, MIXED = .5, SLOW = 0, CRUISE = .9 * muscle_fibre::force_slow;
   struct Swim {
     double sprint = 0, held = 0, paid = 0, gentle = 0, rest = 0;
   };
   const auto swim = [&](double fast, float drive, int steps) {
     auto layout = std::make_shared<BrainInterface>(*g.interface);
-    std::set<std::uint32_t> tail;
-    double capacity = 0;
+    // Tail cells by flank (-1 on the midline, pulling both); the flanks take turns, one stroke
+    // each, as a spinal rhythm would drive them. A first stroke of the right flank, barely over
+    // the threshold, bends the body so that the measured strokes all answer one another.
+    std::map<std::uint32_t, int> tail;
+    std::array<double, 2> capacity{};
     for (auto &e : layout->effectors)
       if (e.port == organ_port::forward) {
         e.strength *= float(fibre::force(fast) / fibre::force(e.fibre));
         e.fibre = float(fast);
-        capacity += e.strength;
-        tail.insert(e.neuron);
+        const int side = e.lever == 0 ? -1 : e.lever < 0 ? 0 : 1;
+        for (int s = 0; s < 2; ++s)
+          capacity[s] += side < 0 ? e.strength / 2 : side == s ? e.strength : 0;
+        tail[e.neuron] = side;
       }
     check(!tail.empty(), "the start fish has a tail");
-    layout->capacities[organ_port::forward] = layout->stroke_capacity[StrokeTail] = capacity;
+    layout->capacities[organ_port::forward] = capacity[0] + capacity[1];
     layout->muscle_maintenance = 0;
     for (const auto &e : layout->effectors)
       layout->muscle_maintenance += effector_upkeep(e);
-    layout->fibre[StrokeTail] = fast;
     field::CellParameters timing;
     timing.time_constant = float(1 - fast);
-    layout->stroke_timing[StrokeTail].set(field::time_constant_steps(timing));
+    for (int s = 0; s < 2; ++s) {
+      layout->stroke_capacity[TAIL_STROKES[s]] = capacity[s];
+      layout->fibre[TAIL_STROKES[s]] = fast;
+      layout->stroke_timing[TAIL_STROKES[s]].set(field::time_constant_steps(timing));
+    }
+    const int beat = layout->stroke_timing[StrokeTailLeft].recovery;
     Genome fibres = g;
     fibres.interface = layout;
     Ecosystem w(SEED);
@@ -1017,12 +1106,24 @@ void muscle_fibres_each_have_their_strength(const Genome &g) {
     w.set_parameter("energy_supply", 0);
     w.food_burst.strength = 0;
     auto &p = adult(w, fibres, 400, 300);
+    // Along the tank, so that no fibre swims into its floor.
+    p.body.angle = 0;
     const auto id = p.id;
-    p.body.set_actuation_probe(
-        [tail, drive](std::uint32_t cell, float) { return tail.count(cell) ? drive : 0.f; });
+    const float bend = float(WARM_UP * w.physiology().stroke_threshold /
+                             std::max(tolerance::negligible, capacity[1]));
+    int flank = 1;
+    float pull = bend;
+    p.body.set_actuation_probe([&tail, &flank, &pull](std::uint32_t cell, float) {
+      const auto at = tail.find(cell);
+      return at != tail.end() && (at->second < 0 || at->second == flank) ? pull : 0.f;
+    });
+    for (int tick = 0; tick < beat; ++tick)
+      w.tick(false);
+    pull = drive;
     std::vector<double> along{0};
     double paid = 0, upkeep = 0;
     for (int tick = 0; tick < steps; ++tick) {
+      flank = (tick / std::max(1, beat)) % 2;
       const auto &b = individual(w, id).body;
       const double x = b.x, y = b.y, heading = b.angle;
       w.tick(false);
@@ -1628,6 +1729,110 @@ void lateral_cells_read_the_water_beside_them() {
           "the lateral line samples the water on the body outline");
   }
 }
+void the_jaw_opens_sucking_and_snaps_shut_from_its_gape() {
+  // Opener and closer of one jaw work like every muscle. The opener's stroke pulls the jaw open as
+  // it rises and lets it spring back as it fades, and draws water along the same curve, as much
+  // as its work. The closer snaps the jaw shut from any gape and bites off what that gape lets
+  // through. Without an opener the jaw opens only slowly.
+  constexpr double FAST = 4, SLOW = 48;
+  const auto opened = [](double steps, int held, double gills = 0) {
+    Body b;
+    b.tissue = HATCH_TISSUE;
+    b.suction_strength = b.gill_strength = 8;
+    b.eat_signal = 1;
+    b.gill_signal = gills;
+    b.mouth.opening = MOUTH_REST;
+    for (int k = 0; k < held; ++k)
+      advance_mouth(b, k == 0, false, steps, FAST);
+    return b;
+  };
+  const auto quick = opened(FAST, 2), sluggish = opened(SLOW, 2);
+  check(quick.mouth.opening > sluggish.mouth.opening + (1 - MOUTH_REST) / 2,
+        "a fast opener gapes at once, a slow one takes long");
+  check(quick.mouth.flow > 0 && quick.mouth.credit > 0, "water rushes in while the opener pulls");
+  const auto rested = opened(FAST, int(FAST) + 2), pumped = opened(FAST, int(FAST) + 2, 1);
+  check(std::abs(rested.mouth.opening - MOUTH_REST) < tolerance::precision &&
+            rested.mouth.flow == 0 && pumped.mouth.flow > 0,
+        "the jaw springs back as the stroke fades; then only the gill covers draw water");
+  double slow_take = 0, fast_take = 0;
+  for (const auto &[steps, take] : {std::pair{SLOW, &slow_take}, std::pair{FAST, &fast_take}}) {
+    Body b = opened(steps, 0);
+    for (int k = 0; k < int(SLOW); ++k) {
+      advance_mouth(b, k % int(steps) == 0, false, steps, FAST);
+      *take += b.mouth.credit;
+      b.mouth.credit = 0;
+    }
+  }
+  check(std::abs(slow_take - fast_take) < tolerance::precision * slow_take,
+        "fast gulps and slow pumping draw water at the same pace");
+  auto wide = quick, shut = opened(FAST, 0);
+  const auto bite = [](Body &b) {
+    for (int k = 0; k < int(FAST) && !b.mouth.closing; ++k)
+      advance_mouth(b, false, k == 0, FAST, FAST);
+  };
+  bite(wide);
+  bite(shut);
+  check(wide.mouth.closing && wide.mouth.flow == 0 && shut.mouth.closing,
+        "the closer snaps the jaw at the peak of its pull, from any gape, and stops suction");
+  check(bite_radius(wide) > 2 * bite_radius(shut),
+        "a bite from the opened jaw takes far more than one from a jaw at rest");
+  auto loose = opened(FAST, 0);
+  loose.eat_signal = 0;
+  loose.mouth.opening = 0;
+  for (int k = 0; k < int(FAST); ++k)
+    advance_mouth(loose, false, false, FAST, FAST);
+  check(loose.mouth.opening > 0 && loose.mouth.opening < MOUTH_REST,
+        "without an opener the jaw opens only slowly");
+}
+void a_hurried_gut_makes_room_but_uses_less() {
+  // The same meal with the gut muscle at rest or working: the hurried gut empties sooner and
+  // keeps less of what passes; a full fish makes room only by hurrying its gut.
+  constexpr int STEPS = 20;
+  const PhysiologyParameters p{};
+  struct Outcome {
+    double emptied = 0, gained = 0;
+  };
+  const auto digest = [&](double motility, bool full) {
+    Body b;
+    b.alive = b.hatched = true;
+    b.tissue = BODY_TISSUE;
+    b.gut_motility = motility;
+    b.gut_energy = b.gut_digestible = b.gut_fill = gut_capacity(b);
+    b.energy = full ? reserve_capacity(b) : 0;
+    const double start = b.energy;
+    for (int k = 0; k < STEPS; ++k)
+      digest_nutrition(b, p);
+    return Outcome{gut_capacity(b) - b.gut_fill, b.energy - start};
+  };
+  const Outcome slow = digest(0, false), fast = digest(1, false);
+  check(fast.emptied > slow.emptied, "a hurried gut makes room sooner");
+  check(fast.gained / fast.emptied < slow.gained / slow.emptied,
+        "food hurried through is used less");
+  check(digest(0, true).emptied == 0 && digest(1, true).emptied > 0,
+        "a full fish makes room only by hurrying its gut");
+}
+void gill_rakers_hold_plankton_and_water_flows_by_pump_or_ram() {
+  Body b;
+  b.tissue = HATCH_TISSUE;
+  check(gill_water(b) == 0, "a resting fish strains no water");
+  b.gill_strength = 8;
+  b.gill_signal = 1;
+  b.mouth.opening = 1;
+  const double pumped = gill_water(b), open_kept = pumped * raker_retention(b);
+  check(pumped > 0, "the gill covers pump water through the open mouth");
+  b.raker_density = 1;
+  const double dense_kept = gill_water(b) * raker_retention(b);
+  check(gill_water(b) < pumped && dense_kept > open_kept,
+        "dense rakers pass less water but keep more of its plankton");
+  b.gill_signal = 0;
+  StateAccess::motor(b).relative_speed = behavior_scale::cruising_speed;
+  const double cruising = gill_water(b);
+  StateAccess::motor(b).relative_speed = 2 * behavior_scale::cruising_speed;
+  check(cruising > 0 && gill_water(b) > cruising,
+        "swimming with the mouth held open strains the more water the faster");
+  b.mouth.opening = MOUTH_REST;
+  check(gill_water(b) == 0, "a jaw at rest lets no ram water through");
+}
 void plant_tissue_needs_grinding_teeth() {
   Ecosystem source(SEED);
   source.starter_world();
@@ -1645,6 +1850,7 @@ void plant_tissue_needs_grinding_teeth() {
     mouth.jaw_length = .4;
     mouth.bite_strength = 12;
     mouth.bite_signal = 1;
+    mouth.mouth.gape = 1; // the jaw snaps shut from wide open
     mouth.blunt_teeth = 0;
     const auto sharp = cutting.field.bite_plant(mouth, index);
     mouth.blunt_teeth = 1;
@@ -1898,6 +2104,7 @@ int main() {
     dark_cells_report_what_is_darker_than_the_surround(g);
     wrigglers_lift_their_snout_out_of_mud(g);
     pectoral_antagonists_back_the_fish_up(g);
+    tail_flanks_take_turns_bend_alone_and_brace_together(g);
     resting_fish_sink_unless_their_bladder_carries_them(g);
     muscle_fibres_each_have_their_strength(g);
     tail_and_fins_push_alike_where_each_fits();
@@ -1909,6 +2116,9 @@ int main() {
     healthy_foliage_retains_a_green_signal();
     one_bite_takes_one_mouthful_of_one_leaf();
     illuminated_leaves_survive_their_own_shade();
+    the_jaw_opens_sucking_and_snaps_shut_from_its_gape();
+    gill_rakers_hold_plankton_and_water_flows_by_pump_or_ram();
+    a_hurried_gut_makes_room_but_uses_less();
     plant_tissue_needs_grinding_teeth();
     blood_reports_sustained_reserves();
     inner_hair_cells_feel_gravity();

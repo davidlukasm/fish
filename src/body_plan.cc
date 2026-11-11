@@ -30,7 +30,18 @@ constexpr bool contractile(int motor) {
 }
 constexpr bool contractile_port(int port) {
   return port == organ_port::forward || port == organ_port::turn || port == organ_port::suction ||
-         port == organ_port::jaw || port == organ_port::defense;
+         port == organ_port::jaw || port == organ_port::defense || port == organ_port::gills ||
+         port == organ_port::gut;
+}
+// Pumping cells on the flanks of the head move the gill covers; inside and below they open the
+// mouth.
+bool gill_cell(int motor, const cppn::Point &p) {
+  return motor == field::Suction && field::development_surface(p) && p.w > gill_filter::flank;
+}
+// Fin cells on the midline inside the trunk lie on the gut: they move its contents along.
+bool gut_cell(int motor, const cppn::Point &p) {
+  return motor == field::Turn && !field::development_surface(p) && p.zone == gut_motility::zone &&
+         p.w < gut_motility::wall;
 }
 // Muscle tissue weighs and costs its upkeep by its cells, whatever force their fibres give.
 double effector_tissue(const BrainInterface::Effector &e) {
@@ -69,9 +80,21 @@ bool has_required_organs(const field::Substrate &s) {
   return senses > 0 && forward > 0 && mouth > 0 &&
          ((eggs[0] > 0 && eggs[1] > 0) || (sperm[0] > 0 && sperm[1] > 0));
 }
+namespace {
+// A tail cell on the midline pulls on both flanks alike.
+double flank_share(const BrainInterface::Effector &e, int side) {
+  return e.lever == 0 ? .5 : (e.lever < 0 ? 0 : 1) == side ? 1 : 0;
+}
+}
 void fin_pushes(BrainInterface &a) {
   std::array<double, STROKE_COUNT> force{}, levered{};
-  for (const auto &e : a.effectors)
+  std::array<double, 2> flank{}, bent{};
+  for (const auto &e : a.effectors) {
+    if (e.port == organ_port::forward)
+      for (int side = 0; side < 2; ++side) {
+        flank[side] += e.strength * flank_share(e, side);
+        bent[side] += e.strength * flank_share(e, side) * std::abs(e.lever);
+      }
     if (e.port == organ_port::turn) {
       const int side = e.lever < 0 ? 0 : 1;
       const std::array<std::pair<int, float>, 2> shares{
@@ -82,8 +105,11 @@ void fin_pushes(BrainInterface &a) {
         levered[stroke] += e.strength * share * std::abs(e.lever);
       }
     }
+  }
   for (int j = 0; j < STROKE_COUNT; ++j)
     a.fin_push[j] = levered[j] > 0 ? force[j] / levered[j] : 0;
+  for (int side = 0; side < 2; ++side)
+    a.tail_lever[side] = flank[side] > 0 ? bent[side] / flank[side] : 0;
 }
 namespace {
 // The share of a cell's force that works a stroke: a pectoral cell works the back or front stroke
@@ -92,6 +118,8 @@ double stroke_share(const BrainInterface::Effector &e, int stroke) {
   if (e.port != STROKE_PORTS[stroke])
     return 0;
   for (int side = 0; side < 2; ++side) {
+    if (stroke == TAIL_STROKES[side])
+      return flank_share(e, side);
     const bool own = (e.lever < 0 ? 0 : 1) == side;
     if (stroke == BACK_STROKES[side])
       return own ? 1 - e.protraction : 0;
@@ -149,6 +177,7 @@ class AnatomyBuilder {
     double value() const { return weight > 0 ? sum / weight : .5; }
   };
   std::array<Mean, 4> traits;
+  Mean rakers;
   std::array<double, 2> taste{};
 
   std::shared_ptr<BrainInterface> result = std::make_shared<BrainInterface>();
@@ -294,6 +323,9 @@ class AnatomyBuilder {
             v /= total;
         r.contact_kernel = r.dominant_sense() != field::Flow;
       }
+      // The gut's own cells carry its length: a long gut with many turns digests plant tissue.
+      if (r.dominant_sense() == field::Intake)
+        traits[1].add(p.quality1, n.strength * share);
       result->sensory.push_back(r);
       if (r.dominant_sense() == field::Odor)
         result->olfactory.push_back({0, std::uint32_t(result->sensory.size() - 1)});
@@ -319,7 +351,10 @@ class AnatomyBuilder {
     const double fast = fibre::fast_share(n.parameters);
     for (int j = 0; j < field::MOTOR_COUNT; ++j)
       if (fn.motors[j] > 0) {
-        const int port = motor_ports[j];
+        const bool gill = gill_cell(j, n.location), gut = gut_cell(j, n.location);
+        const int port = gill  ? int(organ_port::gills)
+                         : gut ? int(organ_port::gut)
+                               : motor_ports[j];
         const bool fibrous = contractile(j);
         const float capacity =
             float(strength * fn.motors[j] * (field::muscle_motor(j) ? MUSCLE_CELL_FORCE : 1.f) *
@@ -348,9 +383,6 @@ class AnatomyBuilder {
         if (total_h > 0)
           for (auto &a : effector.hormones)
             a /= float(total_h);
-        if (j == field::Suction) {
-          traits[1].add(p.quality1, capacity);
-        }
         if (j == field::Aggression) {
           traits[2].add(p.quality1, capacity);
           traits[0].add(p.quality2, capacity);
@@ -365,6 +397,16 @@ class AnatomyBuilder {
           for (int c = 0; c < rgb::count; ++c)
             result->pigment_absorption[c] += capacity * (1 - color[c]);
         namespace A = anatomy_column;
+        if (gill) {
+          rakers.add(p.quality1, capacity);
+          result->anatomy[A::gills] += fn.motors[j];
+          result->anatomy[A::gill_strength] += capacity;
+          continue;
+        }
+        if (gut) {
+          result->anatomy[A::gut_muscle] += capacity;
+          continue;
+        }
         const int organ = j == field::Suction ? int(A::mouth)
                           : j == field::Turn
                               ? int(n.location.side < 0 ? A::turn_left : A::turn_right)
@@ -406,6 +448,8 @@ class AnatomyBuilder {
     result->anatomy[anatomy_column::blunt_teeth] = result->blunt_teeth;
     result->undulation = traits[3].value();
     result->anatomy[anatomy_column::undulation] = result->undulation;
+    result->raker_density = rakers.weight > 0 ? rakers.value() : 0;
+    result->anatomy[anatomy_column::gill_rakers] = result->raker_density;
 
     for (auto &v : result->contour)
       v = float(std::round(1000 * (1 - std::exp(-v / 8))) / 1000);
@@ -818,6 +862,8 @@ void Body::refresh_organs(const Genome &g) {
   const auto &a = active_interface(g);
   active_muscle_maintenance = a.muscle_maintenance;
   suction_strength = a.suction_strength;
+  gill_strength = a.capacities[organ_port::gills];
+  raker_density = a.raker_density;
   bite_strength = a.bite_strength;
   bladder_capacity = a.capacities[organ_port::bladder];
   spine_density = fishsim::spine_density(a, *g.blueprint);
@@ -986,11 +1032,12 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
       const int stroke = n.location.zone == 0   ? StrokeBite
                          : n.location.zone == 1 ? StrokeSuction
                          : n.location.zone == 2 ? BACK_STROKES[side]
-                                                : StrokeTail;
+                                                : TAIL_STROKES[side];
       // A fin's stretch receptor feels both of its muscles.
-      const double mean = b.motor().strokes[stroke].mean +
-                          (n.location.zone == 2 ? b.motor().strokes[FRONT_STROKES[side]].mean : 0);
-      stimulus = std::clamp(mean / p.stroke_threshold, 0., 1.);
+      const double force =
+          b.motor().strokes[stroke].force +
+          (n.location.zone == 2 ? b.motor().strokes[FRONT_STROKES[side]].force : 0);
+      stimulus = std::clamp(force / p.stroke_threshold, 0., 1.);
     } else
       stimulus = f.satiety;
     break;
@@ -1058,28 +1105,27 @@ float anatomical_sensor(const Body &b, const BrainInterface::Receptor &r, double
   return anatomical_sensor(b, r, prepare_sensory_frame(b, gonad, sediment_contact, disturbance),
                            sediment_contact);
 }
+// A muscle twitches when it is rested and its drive reaches the threshold. While the twitch lasts
+// its force follows the drive under the twitch's rise and fall, so a muscle pulls only while it is
+// driven: when a rhythm hands over to the antagonist, the muscle goes slack with its drive.
+// Returns the twitch's impulse when it begins, the work it does if its drive holds.
 double stroke_step(StrokeState &stroke, double drive, const StrokeTiming &timing,
                    double threshold) {
-  stroke.mean = timing.keep * stroke.mean + (1 - timing.keep) * std::max(0., drive);
+  stroke.drive = std::max(0., drive);
   if (stroke.recovery > 0)
     --stroke.recovery;
-  if (stroke.recovery > 0)
+  if (stroke.recovery > 0 || stroke.drive < threshold || stroke.drive <= 0)
     return 0;
-  stroke.power = 0;
-  if (stroke.mean < threshold || stroke.mean <= 0)
-    return 0;
-  stroke.power = stroke.mean;
-  const double work = stroke.mean * timing.steps;
-  stroke.mean = 0;
   stroke.recovery = timing.recovery;
-  return work;
+  return stroke.drive * timing.recovery;
 }
-double stroke_delivery(const StrokeState &stroke, const StrokeTiming &timing) {
+// The twitch's share of the drive at its present step: it rises to 2 and falls, one on average.
+double stroke_shape(const StrokeState &stroke, const StrokeTiming &timing) {
   if (stroke.recovery <= 0 || timing.recovery <= 0)
     return 0;
   const int step = timing.recovery - stroke.recovery;
   const double s = std::sin(PI * (step + .5) / timing.recovery);
-  return stroke.paid * 2 * s * s / timing.recovery;
+  return 2 * s * s;
 }
 EffectorActivity effector_activity(const std::vector<float> &state, const BrainInterface &layout) {
   EffectorActivity activity;
@@ -1099,6 +1145,9 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
                          : std::max(0., signal),
                  amount = a * e.strength;
     sum[e.port] += amount;
+    if (e.port == organ_port::forward)
+      for (int side = 0; side < 2; ++side)
+        activity.tail[side] += amount * flank_share(e, side);
     if (e.port == organ_port::turn) {
       const double levered = amount * std::abs(e.lever);
       (e.lever < 0 ? left : right) += levered * (1 - e.protraction);
@@ -1191,7 +1240,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const auto &secretion = activity.secretion;
   const auto &pigment = activity.pigment;
   const double left = activity.left, right = activity.right;
-  const std::array<double, STROKE_COUNT> drive{sum[organ_port::forward],
+  const std::array<double, STROKE_COUNT> drive{activity.tail[0],
                                                left,
                                                right,
                                                sum[organ_port::suction],
@@ -1200,20 +1249,27 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                                                sum[organ_port::jaw],
                                                sum[organ_port::defense],
                                                activity.reverse[0],
-                                               activity.reverse[1]};
-  std::array<double, STROKE_COUNT> work{};
+                                               activity.reverse[1],
+                                               sum[organ_port::gills],
+                                               sum[organ_port::gut],
+                                               activity.tail[1]};
+  // impulse: what a twitch beginning now does at its drive; work: what each muscle does this step.
+  std::array<double, STROKE_COUNT> impulse{}, work{};
   auto &strokes = b.motor_.strokes;
   // Tired fast fibres pull only with what their reserve still holds.
-  for (int j = 0; j < STROKE_COUNT; ++j)
-    work[j] =
+  for (int j = 0; j < STROKE_COUNT; ++j) {
+    impulse[j] =
         stroke_step(strokes[j], drive[j] * fibre::available(layout.fibre[j], strokes[j].reserve),
                     layout.stroke_timing[j], p.stroke_threshold);
-  const double forward = work[StrokeTail], turn = work[StrokeTurnLeft] + work[StrokeTurnRight] +
-                                                  work[StrokeReverseLeft] +
-                                                  work[StrokeReverseRight];
-  b.motor_.impulse_forward = forward;
-  b.motor_.impulse_left = work[StrokeTurnLeft] + work[StrokeReverseLeft];
-  b.motor_.impulse_right = work[StrokeTurnRight] + work[StrokeReverseRight];
+    work[j] = strokes[j].drive * stroke_shape(strokes[j], layout.stroke_timing[j]);
+  }
+  const double forward = impulse[StrokeTailLeft] + impulse[StrokeTailRight],
+               turn = impulse[StrokeTurnLeft] + impulse[StrokeTurnRight] +
+                      impulse[StrokeReverseLeft] + impulse[StrokeReverseRight];
+  b.motor_.impulse_tail_left = impulse[StrokeTailLeft];
+  b.motor_.impulse_tail_right = impulse[StrokeTailRight];
+  b.motor_.impulse_left = impulse[StrokeTurnLeft] + impulse[StrokeReverseLeft];
+  b.motor_.impulse_right = impulse[StrokeTurnRight] + impulse[StrokeReverseRight];
   b.reproduction_.egg_transfer =
       b.hatched && !b.reproduction_.egg_laying && b.energy > b.reproduction_.motor_reserve
           ? egg[0] / (1 + egg[0])
@@ -1223,25 +1279,27 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
               b.energy > (b.hatched ? b.reproduction_.motor_reserve : hatch_search_reserve(b))
           ? sperm[0] / (1 + sperm[0])
           : 0;
-  b.reproduction_.egg_release = work[StrokeEgg] > 0;
-  b.reproduction_.sperm_release = work[StrokeSperm] > 0;
-  b.eat_signal = layout.suction_strength > 0
-                     ? std::clamp(strokes[StrokeSuction].power / layout.suction_strength, 0., 1.)
-                     : 0;
-  b.bite_signal = layout.bite_strength > 0
-                      ? std::clamp(strokes[StrokeBite].power / layout.bite_strength, 0., 1.)
-                      : 0;
+  b.reproduction_.egg_release = impulse[StrokeEgg] > 0;
+  b.reproduction_.sperm_release = impulse[StrokeSperm] > 0;
+  // The jaw, gill and gut muscles act with their present drive while they twitch.
+  const auto share = [&](int j, double capacity) {
+    return capacity > 0 ? std::clamp(stroke_drive(strokes[j]) / capacity, 0., 1.) : 0.;
+  };
+  b.eat_signal = share(StrokeSuction, layout.suction_strength);
+  b.bite_signal = share(StrokeBite, layout.bite_strength);
   b.bite_strength = layout.bite_strength;
+  b.gill_signal = share(StrokeGill, layout.capacities[organ_port::gills]);
+  b.gut_motility = share(StrokeGut, layout.capacities[organ_port::gut]);
   const double old_credit = b.mouth.credit;
-  advance_mouth(b, work[StrokeSuction] > 0, work[StrokeBite] > 0,
+  advance_mouth(b, impulse[StrokeSuction] > 0, impulse[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
   // Every contraction costs the same per unit of work; only its fibres set the price.
   const auto contraction = [&](int j) {
     return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j];
   };
   double moving = 0;
-  for (int j : {StrokeTail, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft, StrokeReverseRight,
-                StrokeSuction})
+  for (int j : {StrokeTailLeft, StrokeTailRight, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft,
+                StrokeReverseRight, StrokeSuction, StrokeGill, StrokeGut})
     moving += contraction(j);
   const double muscle =
       moving + p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
@@ -1255,24 +1313,54 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double cost = muscle + combat + extra,
                f = cost <= 0 ? 1 : pay_activity(b, cost, protected_life) / cost;
   b.motor_.motor_factor = f;
-  constexpr std::array<int, fin::count> SWIMMING{StrokeTail, StrokeTurnLeft, StrokeTurnRight};
-  for (int j : {StrokeTail, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft, StrokeReverseRight})
-    if (work[j] > 0)
-      strokes[j].paid = work[j] * f;
+  constexpr std::array<int, 2> SIDE_FINS{StrokeTurnLeft, StrokeTurnRight};
+  for (int j = 0; j < STROKE_COUNT; ++j)
+    strokes[j].force = work[j] * f;
   for (int j = 0; j < STROKE_COUNT; ++j)
     strokes[j].reserve =
         std::clamp(strokes[j].reserve + fibre::refilled(strokes[j].reserve) -
                        fibre::drained(layout.fibre[j], work[j] * f, layout.stroke_capacity[j]),
                    0., 1.);
-  const auto delivered = [&](int j) {
-    return stroke_delivery(strokes[j], layout.stroke_timing[j]);
-  };
-  b.motor_.drive_forward = delivered(StrokeTail);
-  std::array<double, 2> fin_drive{};
-  b.motor_.drive_fins = 0;
+  const auto delivered = [&](int j) { return strokes[j].force; };
+  // The tail's flanks are antagonists. A stroke that answers the other flank's sweeps the bent
+  // body through and pushes with all its force. A lone stroke, from a straight body or on the same
+  // flank again, bends the fish toward that flank: most of its force turns the fish, with the
+  // flank's lever as a fin's force does, and only a little pushes. A strong lone stroke is so an
+  // escape turn, and the answering stroke after it drives the fish off. Where both flanks pull at
+  // once their forces cancel and only stiffen the body: the muscles pay, but the shared part
+  // neither pushes nor turns.
+  namespace T = tail_stroke;
+  int started = 0;
   for (int side = 0; side < 2; ++side) {
+    const int j = TAIL_STROKES[side];
+    if (impulse[j] <= 0 || f <= 0)
+      continue;
+    const bool answers = b.motor_.tail_side == 1 - side;
+    b.motor_.tail_push[side] = answers ? 1 : T::lone_push;
+    b.motor_.tail_turn[side] = answers ? 0 : 1 - T::lone_push;
+    started += side + 1;
+  }
+  if (started)
+    b.motor_.tail_side = started == 3 ? -1 : started - 1;
+  // A tail that rests as long as its last twitch lasted is straight again: its next stroke
+  // answers nothing.
+  const bool resting =
+      strokes[StrokeTailLeft].recovery <= 0 && strokes[StrokeTailRight].recovery <= 0;
+  b.motor_.tail_rest = resting ? b.motor_.tail_rest + 1 : 0;
+  if (b.motor_.tail_side >= 0 &&
+      b.motor_.tail_rest >= layout.stroke_timing[TAIL_STROKES[b.motor_.tail_side]].recovery)
+    b.motor_.tail_side = -1;
+  const std::array<double, 2> flank{delivered(StrokeTailLeft), delivered(StrokeTailRight)};
+  const double braced = std::min(flank[0], flank[1]);
+  std::array<double, 2> fin_drive{};
+  b.motor_.drive_forward = b.motor_.drive_fins = 0;
+  for (int side = 0; side < 2; ++side) {
+    const double tail = flank[side] - braced;
+    b.motor_.drive_forward += tail * b.motor_.tail_push[side];
+    // A flank that bends the fish turns it like the back stroke of the opposite fin.
+    fin_drive[1 - side] += tail * b.motor_.tail_turn[side] * layout.tail_lever[side];
     const int back = BACK_STROKES[side], front = FRONT_STROKES[side];
-    fin_drive[side] = delivered(back) - delivered(front);
+    fin_drive[side] += delivered(back) - delivered(front);
     b.motor_.drive_fins +=
         layout.fin_push[back] * delivered(back) - layout.fin_push[front] * delivered(front);
   }
@@ -1280,27 +1368,27 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.drive_right = fin_drive[1];
   b.ledger_.muscle_cost = (muscle + extra) * f;
   b.motor_.combat_cost = combat * f;
-  b.motor_.motor_pulses[field::Forward] = work[StrokeTail] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Forward] = forward > 0 && f > 0;
   b.motor_.motor_pulses[field::Turn] = turn > 0 && f > 0;
-  b.motor_.motor_pulses[field::Eggs] = work[StrokeEgg] > 0 && f > 0;
-  b.motor_.motor_pulses[field::Sperm] = work[StrokeSperm] > 0 && f > 0;
-  b.motor_.motor_pulses[field::Defense] = work[StrokeDefense] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Eggs] = impulse[StrokeEgg] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Sperm] = impulse[StrokeSperm] > 0 && f > 0;
+  b.motor_.motor_pulses[field::Defense] = impulse[StrokeDefense] > 0 && f > 0;
   b.motor_.motor_pulses[field::Pigment] = sum[organ_port::pigment] > 0 && f > 0;
   b.motor_.motor_pulses[field::Bladder] = sum[organ_port::bladder] > 0 && f > 0;
   b.motor_.motor_pulses[field::Gland] = sum[organ_port::gland] > 0 && f > 0;
   b.eat_signal *= f;
-  if (work[StrokeBite] > 0) {
-    strokes[StrokeBite].power *= f;
-    b.bite_signal *= f;
-  }
+  b.gill_signal *= f;
+  b.gut_motility *= f;
+  b.bite_signal *= f;
   b.mouth.flow *= f;
-  const double retained = work[StrokeSuction] > 0 ? 0 : std::min(old_credit, b.mouth.budget);
+  const double retained = impulse[StrokeSuction] > 0 ? 0 : old_credit;
   b.mouth.credit = retained + (b.mouth.credit - retained) * f;
   b.mouth.closing &= b.bite_signal > 0;
   b.motor_.motor_pulses[field::Suction] = b.mouth.flow > 0;
   b.motor_.motor_pulses[field::Aggression] = b.mouth.closing;
   b.motor_.suction_pose = b.mouth.flow;
-  b.motor_.bite_pose = b.mouth.biting ? b.mouth.opening : 0;
+  b.motor_.gill_pose = b.gill_signal;
+  b.motor_.bite_pose = jaw_shutting(b.mouth) ? b.mouth.opening : 0;
   b.motor_.mouth_pose = b.mouth.opening;
   b.reproduction_.spawn_signal = egg[0];
   b.reproduction_.sperm_signal = sperm[0];
@@ -1310,7 +1398,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.reproduction_.sperm_release &= f > 0;
   b.motor_.aggression = std::clamp(b.bite_signal, 0., 1.);
   b.motor_.defense = std::clamp(b.motor_.defense * layout.stroke_timing[StrokeDefense].keep +
-                                    p.spine_rate * f * strokes[StrokeDefense].power,
+                                    p.spine_rate * strokes[StrokeDefense].force,
                                 0., p.spine_max);
   for (int c = 0; c < rgb::count; ++c) {
     const double full = layout.pigment_absorption[c],
@@ -1325,36 +1413,41 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   for (int k = 0; k < field::HORMONES; ++k)
     tau[k] = layout.hormone_timing[k].steps;
   b.hormones_.advance(secretion, activity.binding, f, p.hormones, tau);
+  // A stroke's pose: its power against the muscles it moves (each tail flank on its own).
   const auto pose = [&](int j) {
-    return std::clamp(strokes[j].power /
-                          std::max(tolerance::negligible, layout.capacities[STROKE_PORTS[j]]),
+    return std::clamp(strokes[j].drive / std::max(tolerance::negligible, layout.stroke_capacity[j]),
                       0., 1.) *
            f;
   };
   const double relax =
-      layout.stroke_timing[StrokeTail].keep * layout.stroke_timing[StrokeTail].keep;
+      layout.stroke_timing[StrokeTailLeft].keep * layout.stroke_timing[StrokeTailRight].keep;
   b.motor_.tail *= relax;
   for (auto &tension : b.motor_.fin_tension)
     tension *= relax;
-  if (forward > 0) {
-    b.motor_.tail = pose(StrokeTail);
-    b.motor_.fin_tension[fin::tail] = pose(StrokeTail);
+  if (forward > 0 && b.motor_.tail_side >= 0) {
+    b.motor_.tail = pose(TAIL_STROKES[b.motor_.tail_side]);
+    b.motor_.fin_tension[fin::tail] = b.motor_.tail;
   }
   if (turn > 0) {
     b.motor_.fin_tension[fin::left] = pose(StrokeTurnLeft) - pose(StrokeReverseLeft);
     b.motor_.fin_tension[fin::right] = pose(StrokeTurnRight) - pose(StrokeReverseRight);
   }
-  if (forward > 0 && f > 0)
-    b.motor_.fin_stroke_side = !b.motor_.fin_stroke_side;
-  for (std::size_t fin = 0; fin < SWIMMING.size(); ++fin)
-    if ((work[SWIMMING[fin]] > 0 ||
-         (fin != fin::tail && work[FRONT_STROKES[fin - fin::left]] > 0)) &&
-        f > 0) {
+  // The tail sweeps toward the flank that pulled last.
+  if (forward > 0 && f > 0 && b.motor_.tail_side >= 0) {
+    const int j = TAIL_STROKES[b.motor_.tail_side];
+    b.motor_.fin_stroke_age[fin::tail] = b.age;
+    b.motor_.fin_stroke_steps[fin::tail] = layout.stroke_timing[j].recovery;
+    b.motor_.fin_stroke_peak[fin::tail] =
+        b.motor_.fin_tension[fin::tail] * (b.motor_.tail_side == 0 ? -1 : 1);
+  }
+  for (int side = 0; side < 2; ++side) {
+    const int fin = fin::left + side, back = SIDE_FINS[side];
+    if ((impulse[back] > 0 || impulse[FRONT_STROKES[side]] > 0) && f > 0) {
       b.motor_.fin_stroke_age[fin] = b.age;
-      b.motor_.fin_stroke_steps[fin] = layout.stroke_timing[SWIMMING[fin]].recovery;
-      b.motor_.fin_stroke_peak[fin] =
-          b.motor_.fin_tension[fin] * (fin == fin::tail && !b.motor_.fin_stroke_side ? -1 : 1);
+      b.motor_.fin_stroke_steps[fin] = layout.stroke_timing[back].recovery;
+      b.motor_.fin_stroke_peak[fin] = b.motor_.fin_tension[fin];
     }
+  }
   b.motor_.swimming_pending = true;
 }
 }

@@ -48,5 +48,8 @@ inline double sector_angle(int k) {
 inline double sector_position(double angle) {
   return (std::remainder(angle, 2 * PI) + PI) * SECTOR_COUNT / (2 * PI) - .5;
 }
-constexpr double MOUTH_CYCLE_STEPS = mouth_cycle::steps, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2;
+// A mouth muscle's usual stroke; at rest the jaw hangs a little open, and left alone it drifts
+// back there over two strokes.
+constexpr double MOUTH_CYCLE_STEPS = mouth_cycle::steps, MOUTH_HALF_CYCLE = MOUTH_CYCLE_STEPS / 2,
+                 MOUTH_REST = mouth_cycle::rest, MOUTH_DRIFT = 1 / (2 * MOUTH_CYCLE_STEPS);
 }

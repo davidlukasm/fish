@@ -8,7 +8,13 @@ import {
   testLightPoint,
   visionFan
 } from './view/vision.js';
-import {effectorGraphic, gutGraphic, spineField} from './view/effectors.js';
+import {
+  effectorGraphic,
+  gillGraphic,
+  gutGraphic,
+  gutMuscleGraphic,
+  spineField
+} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
@@ -238,7 +244,9 @@ export const designMethods = {
     this.redrawBlocks('effectorBlock', findOrgan,
                       organ => organ.type === 'gut'
                                    ? gutGraphic(this.state, organ, this.state.selected)
-                                   : effectorGraphic(this.state, organ));
+                               : organ.type === 'gills'     ? gillGraphic(this.state, organ)
+                               : organ.type === 'gutmuscle' ? gutMuscleGraphic(this.state, organ)
+                                                            : effectorGraphic(this.state, organ));
     this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
     this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },

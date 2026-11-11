@@ -9,14 +9,14 @@ void advance_embryo(Body &b, const Genome &g, const PhysiologyParameters &p, boo
   const double occupied = p.embryo_fold * body_radius(b) / radius;
   e.pressure = std::max(0., occupied - p.embryo_crowding);
   const double force = progress * m.motor_factor;
-  const double forward = m.impulse_forward * force, left = m.impulse_left * force,
-               right = m.impulse_right * force;
+  const double tail_left = m.impulse_tail_left * force, tail_right = m.impulse_tail_right * force,
+               left = m.impulse_left * force, right = m.impulse_right * force;
   const double mouth = (b.mouth.flow + (b.mouth.closing ? b.bite_signal : 0)) * progress;
   for (int k = 0; k < SECTOR_COUNT; ++k) {
     const double a = sector_angle(k);
     const double front = std::max(0., std::cos(a)), back = std::max(0., -std::cos(a));
     const double side = std::sin(a);
-    const double tail = back * forward * std::max(0., side * (m.fin_stroke_side ? 1 : -1));
+    const double tail = back * (std::max(0., -side) * tail_left + std::max(0., side) * tail_right);
     const double impulse =
         tail + std::max(0., -side) * left + std::max(0., side) * right + front * mouth;
     e.flow[k] = p.embryo_flow_decay * e.flow[k] + p.embryo_flow_gain * impulse;
@@ -33,7 +33,8 @@ void advance_embryo(Body &b, const Genome &g, const PhysiologyParameters &p, boo
                   p.embryo_reserve_damage * std::pow(starvation, p.embryo_damage_power) +
                   p.embryo_defense_damage * e.pressure * m.defense,
               0);
-  const double impulse = (forward + left + right) / std::max(p.hatch_mass_floor, body_mass(b));
+  const double impulse =
+      (tail_left + tail_right + left + right) / std::max(p.hatch_mass_floor, body_mass(b));
   if (e.shell < p.hatch_shell_limit && impulse > p.hatch_force_base + p.hatch_force_shell * e.shell)
     mature_body(b);
   m.swimming_pending = false;

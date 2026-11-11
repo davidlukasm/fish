@@ -1,9 +1,13 @@
 import {UINT32_RANGE} from './units.js';
 import {
   BARBEL,
+  GILL,
   GRAVITY,
+  GUT_MUSCLE,
   INTERNAL_TISSUE,
   isSenseTissue,
+  motorTissue,
+  motorVariant,
   SENSE_TISSUE,
   sidedTissue,
   tissueKind
@@ -29,6 +33,8 @@ import {
   fishEye,
   fishFinDual,
   fishGameteShape,
+  fishGillFiber,
+  fishGutRing,
   fishInjuryShape,
   fishJawFiber,
   fishNoseShape,
@@ -156,7 +162,13 @@ export function brainFinLocation(n, k, a) {
 
 const FIN_FIBER = Object.freeze({start : .30, span : .45, half : .17});
 export function brainFiber(n, k, d) {
-  const a = d.a, depth = brainClamp((n[NEURON.y] + 1) / 2);
+  const a = d.a, depth = brainClamp((n[NEURON.y] + 1) / 2),
+        variant = motorVariant(motorTissue(k), d.effectors?.get(n[NEURON.index]));
+  if (variant === GILL)
+    return fishGillFiber(a, cellSide(n), depth);
+  // Gut wall places run from the tail end (u = 0) to the head end of the trunk.
+  if (variant === GUT_MUSCLE)
+    return fishGutRing(a, 1 - (n[NEURON.site]?.[NEURON_SITE.u] ?? depth), cellSide(n));
   if (k <= MOTOR_KIND.turn) {
     const q = brainFinLocation(n, k, a), t = FIN_FIBER.start + FIN_FIBER.span * q.depth;
     return [
@@ -247,7 +259,10 @@ export function brainPartPosition(n, key, d, r, forcedSide = null) {
   return d.pigments.get(n[NEURON.index]) || fishPigmentPoint(a, side, depth, n[NEURON.z]);
 }
 
-export function brainOrganKey(key, n, receptor) {
+export function brainOrganKey(key, n, receptor, effectors) {
+  const variant = motorVariant(key, effectors);
+  if (variant)
+    return sidedTissue(variant, cellSide(n));
   if (key === SENSE_TISSUE.gonad_pressure)
     return sidedTissue(SENSE_TISSUE.gonad_pressure,
                        receptor?.[RECEPTOR.pressure_kind] === PRESSURE_SOURCE.sperm

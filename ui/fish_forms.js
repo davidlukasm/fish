@@ -162,7 +162,8 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
                                    blend)));
   const eggLimit = p[FISH.egg_capacity], spermLimit = p[FISH.sperm_capacity];
   const jaw = organs[ANATOMY.jaw_length] ?? BODY_UNIT.trait_middle,
-        suction = muscle(ANATOMY.suction_strength), left = size(fin(FIN.left)[FIN_SHAPE.strength]),
+        suction = muscle(ANATOMY.suction_strength), gills = muscle(ANATOMY.gill_strength),
+        left = size(fin(FIN.left)[FIN_SHAPE.strength]),
         right = size(fin(FIN.right)[FIN_SHAPE.strength]), armor = muscle(ANATOMY.defense_strength),
         attack = muscle(ANATOMY.aggression_strength),
         nose = size((organs[ANATOMY.smell_left] || 0) + (organs[ANATOMY.smell_right] || 0)),
@@ -247,6 +248,7 @@ export function fishAnatomy(p, o = null, blend = 1, radius = fishRenderRadius(p)
     aggression : p[FISH.aggression] || 0,
     jaw,
     suction,
+    gills,
     gutLength : organs[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle,
     teeth : organs[ANATOMY.blunt_teeth] ?? BODY_UNIT.trait_middle,
     undulation : organs[ANATOMY.undulation] ?? BODY_UNIT.trait_middle,

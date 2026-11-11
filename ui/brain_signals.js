@@ -1,5 +1,5 @@
 import {FINS} from './fin_stroke.js';
-import {motorTissue, sidedTissue} from './tissue.js';
+import {motorTissue, motorVariant, portVariant, sidedTissue, variantPort} from './tissue.js';
 
 import {
   ANATOMY,
@@ -8,7 +8,6 @@ import {
   FISH,
   MOTOR_KIND,
   MOTOR_PORTS,
-  MOUTH_CYCLE,
   NEURON,
   NEURON_PARAMETER,
   STROKE,
@@ -307,8 +306,8 @@ export function brainCycleContraction(k, side, now) {
       return 0;
     if (k === MOTOR_KIND.suction)
       return p[FISH.suction_pose] || 0;
-    const phase = p[FISH.mouth_phase] ?? -1, closing = MOUTH_CYCLE.steps / 2;
-    return phase >= closing && phase <= closing + BITE_SHOWN
+    const phase = p[FISH.mouth_phase] ?? -1;
+    return phase >= 0 && phase <= BITE_SHOWN
                ? (1 - (p[FISH.mouth_pose] || 0)) * (p[FISH.aggression] || 0)
                : 0;
   }
@@ -356,13 +355,21 @@ function brainDisplayMotorValue(p, k, value, side = 0) {
   return value;
 }
 
+// The tail shows the flank whose stroke began last.
+function brainTailFlank() {
+  const started = side =>
+      brain_signalsState.brainMotorCycles.get(brainCycleKey(MOTOR_KIND.forward, side))?.started ??
+      -Infinity;
+  return started(1) > started(0) ? 1 : 0;
+}
 const DISPLAY_TAIL = Object.freeze({min_pose : .001});
 function brainDisplayTail(p, value) {
   if (!brainState.brainOpen || brainState.brainOpacity < SHOWN_OPACITY ||
       p[FISH.id] !== sceneState.frame?.selected)
     return value;
-  const cycle = brain_signalsState.brainMotorCycles.get(brainCycleKey(MOTOR_KIND.forward));
-  return cycle ? cycle.tail * brainFinRelease(MOTOR_KIND.forward, 0, displayNow()) /
+  const side = brainTailFlank(),
+        cycle = brain_signalsState.brainMotorCycles.get(brainCycleKey(MOTOR_KIND.forward, side));
+  return cycle ? cycle.tail * brainFinRelease(MOTOR_KIND.forward, side, displayNow()) /
                      Math.max(DISPLAY_TAIL.min_pose, cycle.pose)
                : value;
 }
@@ -377,7 +384,7 @@ export function brainPresentationFish(p) {
   out[FISH.fin_pose] = Object.values(FIN).map(
       fin => brainDisplayMotorValue(p, fin === FIN.tail ? MOTOR_KIND.forward : MOTOR_KIND.turn,
                                     p[FISH.fin_pose]?.[fin] || 0,
-                                    fin === FIN.tail ? 0 : fin - FIN.left));
+                                    fin === FIN.tail ? brainTailFlank() : fin - FIN.left));
   out[FISH.fin_pose][FINS] = p[FISH.fin_pose]?.[FINS];
   out[FISH.tail] = brainDisplayTail(p, p[FISH.tail] || 0);
   out[FISH.egg_yolk] = p.birthing
@@ -397,15 +404,20 @@ export function brainResetSignals() {
 }
 
 export function brainMotorActivity(n, k, d) {
-  const port = MOTOR_PORTS[k],
-        e = (d.effectors.get(n[NEURON.index]) || []).find(e => e[EFFECTOR.port] === port),
-        state = n[NEURON.command] ?? 0;
+  const own = d.effectors.get(n[NEURON.index]) || [],
+        port = variantPort(motorVariant(motorTissue(k), own)) ?? MOTOR_PORTS[k],
+        e = own.find(e => e[EFFECTOR.port] === port), state = n[NEURON.command] ?? 0;
   return e && n[NEURON.functional] && n[NEURON.ready] && !n[NEURON.muted]
              ? brainClamp(k === MOTOR_KIND.bladder || k === MOTOR_KIND.gland ? Math.abs(state)
                                                                              : state)
              : 0;
 }
 
+// Each muscle shows its effort against its strongest cell; fins per side, gills and gut muscle
+// apart from the mouth and the fins whose cells they are.
+const effortKey = (k, cell, variant) =>
+    k + ':' + (k === MOTOR_KIND.turn && !variant ? (cell[NEURON.x] < 0 ? 0 : 1) : 0) + ':' +
+    variant;
 function brainMotorEffort(n, k, d) {
   if (!d.motorPeaks) {
     d.motorPeaks = new Map();
@@ -414,15 +426,16 @@ function brainMotorEffort(n, k, d) {
       if (!cell)
         continue;
       for (const e of effectors) {
-        const j = MOTOR_PORTS.indexOf(e[EFFECTOR.port]),
-              key = j + ':' + (j === MOTOR_KIND.turn ? (cell[NEURON.x] < 0 ? 0 : 1) : 0),
+        const own = portVariant(e[EFFECTOR.port]),
+              j = own?.kind ?? MOTOR_PORTS.indexOf(e[EFFECTOR.port]),
+              key = effortKey(j, cell, own?.variant ?? ''),
               activation = brainMotorActivity(cell, j, d);
         d.motorPeaks.set(key, Math.max(d.motorPeaks.get(key) || 0, activation));
       }
     }
   }
-  const peak =
-      d.motorPeaks.get(k + ':' + (k === MOTOR_KIND.turn ? (n[NEURON.x] < 0 ? 0 : 1) : 0)) || 0;
+  const variant = motorVariant(motorTissue(k), d.effectors.get(n[NEURON.index])),
+        peak = d.motorPeaks.get(effortKey(k, n, variant)) || 0;
   return peak > 0 ? brainMotorActivity(n, k, d) / peak : 0;
 }
 
@@ -453,6 +466,9 @@ function brainRememberMotors(d, now) {
         (p[FISH.motor_factor] ?? 1) > 0)
       for (const side of (PAIRED_MOTORS.includes(k) ? [ 0, 1 ] : [ 0 ])) {
         if (k === MOTOR_KIND.turn && !(p[FISH.impulse_left + side] > 0))
+          continue;
+        if (k === MOTOR_KIND.forward &&
+            !(p[side ? FISH.impulse_tail_right : FISH.impulse_tail_left] > 0))
           continue;
         if (k === MOTOR_KIND.defense && !(p[FISH.organs]?.[ANATOMY.armor_left + side] > 0))
           continue;
@@ -573,14 +589,14 @@ function brainMotorReadiness(k, d, side = 0) {
   const index = organStrokeIndex(k, side), threshold = d.b.stroke_threshold;
   if (!(threshold > 0))
     return 0;
-  let mean = d.b.strokes?.[index]?.[STROKE.mean] || 0;
+  let drive = d.b.strokes?.[index]?.[STROKE.drive] || 0;
   const before = sceneState.previous?.selected === d.p[FISH.id] &&
                          sceneState.previous.brain?.layout_id === d.b.layout_id
-                     ? sceneState.previous.brain.strokes?.[index]?.[STROKE.mean]
+                     ? sceneState.previous.brain.strokes?.[index]?.[STROKE.drive]
                      : null;
-  if (!sceneState.frame?.paused && before !== null && before !== undefined && mean >= before)
-    mean = before + (mean - before) * frameBlend();
-  return brainClamp(mean / threshold);
+  if (!sceneState.frame?.paused && before !== null && before !== undefined && drive >= before)
+    drive = before + (drive - before) * frameBlend();
+  return brainClamp(drive / threshold);
 }
 
 const MUSCLE_STATE = Object.freeze({

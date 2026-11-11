@@ -190,6 +190,7 @@ std::string display_fish(Text text, Text previous, Text selected, double coordin
                                                  C::mouth_aperture,
                                                  C::bite_pose,
                                                  C::suction_pose,
+                                                 C::gill_pose,
                                                  C::tissue,
                                                  C::body_geometry,
                                                  C::morphology_asset,
@@ -201,14 +202,14 @@ std::string display_fish(Text text, Text previous, Text selected, double coordin
                                                  C::feeding_action,
                                                  C::feeding_action_age,
                                                  C::mouth_phase,
-                                                 C::mouth_budget,
                                                  C::swallowed,
                                                  C::mouth_offset,
                                                  C::mouth_biting,
                                                  C::filtered,
                                                  C::mouth_cycle};
   static const std::set<std::size_t> poses = {C::mouth_pose, C::defense,   C::aggression,
-                                              C::tail,       C::bite_pose, C::suction_pose};
+                                              C::tail,       C::bite_pose, C::suction_pose,
+                                              C::gill_pose};
   std::string result = "[";
   bool first = true;
   for (auto row : elements(text)) {

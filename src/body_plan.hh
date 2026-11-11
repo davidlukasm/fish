@@ -75,7 +75,11 @@ Point olfactory_position(const Body &, const BrainInterface &, int side);
 // touch.
 Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
-double stroke_delivery(const StrokeState &, const StrokeTiming &);
+double stroke_shape(const StrokeState &, const StrokeTiming &);
+// The drive of a muscle while it twitches, else nothing.
+inline double stroke_drive(const StrokeState &s) {
+  return s.recovery > 0 ? s.drive : 0;
+}
 // Upkeep per step of an effector cell at the basal metabolism of a standard body.
 double effector_upkeep(const BrainInterface::Effector &);
 // Push along the body per levered unit of each fin stroke, from the cells' protraction shares.
@@ -88,6 +92,8 @@ struct EffectorActivity {
   // Back strokes per fin times lever; reverse: the forward strokes of the antagonists.
   double left = 0, right = 0;
   std::array<double, 2> reverse{};
+  // The tail's flanks, left and right.
+  std::array<double, 2> tail{};
 };
 EffectorActivity effector_activity(const std::vector<float> &, const BrainInterface &);
 struct OrganDrive {

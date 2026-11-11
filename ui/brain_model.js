@@ -84,7 +84,8 @@ export function brainOrganRGB(n) {
 const S = SENSE_KIND;
 export const PAIRED_SENSES =
                  Object.freeze([ S.light, S.odor, S.flow, S.touch, S.proximity, S.damage ]),
-             PAIRED_MOTORS = Object.freeze([ MOTOR_KIND.turn, MOTOR_KIND.defense ]),
+             PAIRED_MOTORS =
+                 Object.freeze([ MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.defense ]),
              MIDLINE_MOTORS =
                  Object.freeze([ MOTOR_KIND.forward, MOTOR_KIND.suction, MOTOR_KIND.aggression ]);
 export const CELL_AXES = Object.freeze([ NEURON.x, NEURON.y, NEURON.z ]);

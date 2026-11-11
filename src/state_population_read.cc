@@ -189,21 +189,23 @@ void PopulationCheckpoint::read_mouth(std::istream &in, Body &b) {
     value(in, tag);
     if (tag != "MOUTH_CYCLE")
       throw std::runtime_error("missing mouth cycle");
-    scalar(in, b.mouth.phase, -1, MOUTH_CYCLE_STEPS);
-    scalar(in, b.mouth.duration, MOUTH_HALF_CYCLE, MOUTH_CYCLE_STEPS);
+    constexpr double LONGEST_STRIKE = field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN;
+    scalar(in, b.mouth.phase, -1, LONGEST_STRIKE);
+    scalar(in, b.mouth.duration, 1, LONGEST_STRIKE);
+    scalar(in, b.mouth.twitch, -1, LONGEST_STRIKE);
     value(in, b.mouth.cycle);
     value(in, b.mouth.biting);
     value(in, b.mouth.closing);
     scalar(in, b.mouth.opening, 0, 1);
-    scalar(in, b.mouth.budget, 0, PLAUSIBLE_RUNNING);
+    scalar(in, b.mouth.gape, MOUTH_REST, 1);
     scalar(in, b.mouth.credit, 0, PLAUSIBLE_RUNNING);
     scalar(in, b.mouth.flow, 0, 1);
     scalar(in, b.mouth.swallowed, 0, PLAUSIBLE_RUNNING);
     scalar(in, b.mouth.filtered, 0, b.mouth.swallowed);
-    if (b.mouth.phase < -1 || b.mouth.phase >= MOUTH_CYCLE_STEPS)
+    if (b.mouth.phase >= b.mouth.duration)
       throw std::runtime_error("invalid mouth phase");
     b.motor_.suction_pose = b.mouth.flow;
-    b.motor_.bite_pose = b.mouth.biting ? b.mouth.opening : 0;
+    b.motor_.bite_pose = jaw_shutting(b.mouth) ? b.mouth.opening : 0;
   }
 }
 void PopulationCheckpoint::read_body(std::istream &in, Individual &p,
@@ -311,12 +313,21 @@ void PopulationCheckpoint::read_swimming(std::istream &in, Body &b) {
   state::body_scalar(in, b.motor_.impulse_left, state::body_limit_motor_impulse_left(b));
   state::body_scalar(in, b.motor_.impulse_right, state::body_limit_motor_impulse_right(b));
   state::body_scalar(in, b.motor_.tail, state::body_limit_motor_tail(b));
-  state::body_scalar(in, b.motor_.impulse_forward, state::body_limit_motor_impulse_forward(b));
+  state::body_scalar(in, b.motor_.impulse_tail_left, state::body_limit_motor_impulse_tail(b));
+  state::body_scalar(in, b.motor_.impulse_tail_right, state::body_limit_motor_impulse_tail(b));
   state::body_scalar(in, b.motor_.motor_factor, state::body_limit_motor_motor_factor(b));
   for (auto &tension : b.motor_.fin_tension)
     scalar(in, tension, 0, state::MAX_SIGNAL);
   value(in, b.motor_.swimming_pending);
   scalar(in, b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
+  value(in, b.motor_.tail_side);
+  value(in, b.motor_.tail_rest);
+  if (b.motor_.tail_side < -1 || b.motor_.tail_side > 1 || b.motor_.tail_rest < 0)
+    throw std::runtime_error("invalid tail side");
+  for (int side = 0; side < 2; ++side) {
+    scalar(in, b.motor_.tail_push[side], 0, 1);
+    scalar(in, b.motor_.tail_turn[side], 0, 1);
+  }
 }
 void PopulationCheckpoint::read_gametes(std::istream &in, Body &b, double energy_limit) {
   std::string tag;
@@ -342,9 +353,8 @@ void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
   if (motor_tag != "MOTORS" || strokes != STROKE_COUNT)
     throw std::runtime_error("invalid motor state");
   for (auto &stroke : b.motor_.strokes) {
-    scalar(in, stroke.mean, 0, PLAUSIBLE_LOCAL);
-    scalar(in, stroke.power, 0, PLAUSIBLE_LOCAL);
-    scalar(in, stroke.paid, 0, PLAUSIBLE_LOCAL);
+    scalar(in, stroke.drive, 0, PLAUSIBLE_LOCAL);
+    scalar(in, stroke.force, 0, PLAUSIBLE_LOCAL);
     value(in, stroke.recovery);
     if (stroke.recovery < 0 || stroke.recovery > MAX_STROKE_STEPS)
       throw std::runtime_error("invalid stroke recovery");

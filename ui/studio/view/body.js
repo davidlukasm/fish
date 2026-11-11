@@ -5,13 +5,15 @@ import {
   findSite,
   sideIndex,
   sideOf,
-  sideSign
+  sideSign,
+  sitePoint
 } from '../model/layout.js';
 import {
   centerIndex,
   findAssembly,
   groupReport,
   finStroke,
+  gillRakers,
   muscleFibre,
   isChosen,
   isFinMuscle,
@@ -46,7 +48,7 @@ import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
-import {isRegion, kindLimit, organFunction} from '../model/organs.js';
+import {isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
 import {MUSCLE_TONE, muscleShape} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
@@ -59,6 +61,8 @@ import {
   eyeLocation,
   eyeRadius,
   gutShape,
+  GUT_WALL,
+  gutWallAt,
   INSIDE,
   lateralLine,
   NODE,
@@ -279,6 +283,48 @@ function muscleGlyph(state, organ) {
          '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') +
          '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/>';
 }
+// Gill slits behind the eye: a few arcs on each pumping node, combed as densely as its rakers.
+const GILL_GLYPH = Object.freeze({arcs : 3, gap : 4, height : 14, bow : 5, comb : [ 2, 6 ]});
+function gillGlyph(state, organ) {
+  const G = GILL_GLYPH, density = gillRakers(organ) ?? BODY_UNIT.trait_middle,
+        teeth = Math.round(G.comb[0] + (G.comb[1] - G.comb[0]) * density);
+  return organ.centers
+      .map(center => {
+        const site = findSite(state.sites, center.site);
+        if (!site)
+          return '';
+        const p = sitePoint(site, siteRole(organ.type));
+        const arcs = Array.from({length : G.arcs}, (_, k) => {
+          const x = p.x + (k - (G.arcs - 1) / 2) * G.gap, top = p.y - G.height / 2;
+          const comb =
+              Array
+                  .from({length : teeth},
+                        (_, i) => {
+                          const y = top + G.height * (i + .5) / teeth;
+                          return 'M' + fixed(x - G.bow / 2) + ' ' + fixed(y) + ' h' + -G.bow / 2;
+                        })
+                  .join(' ');
+          return 'M' + fixed(x) + ' ' + fixed(top) + ' q' + -G.bow + ' ' + G.height / 2 + ' 0 ' +
+                 G.height + ' ' + comb;
+        });
+        return '<path class="aid-anatomical-gills" d="' + arcs.join(' ') + '"/>';
+      })
+      .join('');
+}
+// A ring of gut muscle around the gut wall at each node; the nodes sit at its ends.
+function gutMuscleGlyph(state, organ) {
+  const rings = organ.centers.map(center => {
+    const site = findSite(state.sites, center.site);
+    if (!site)
+      return '';
+    const wall = gutWallAt(state.document, site), reach = wall.half + GUT_WALL.ring;
+    return 'M' + fixed(wall.x - wall.across.x * reach) + ' ' +
+           fixed(wall.y - wall.across.y * reach) + ' L' + fixed(wall.x + wall.across.x * reach) +
+           ' ' + fixed(wall.y + wall.across.y * reach);
+  });
+  return '<path class="aid-anatomical-gutmuscle" style="--fibre:' + fibreHex(muscleFibre(organ)) +
+         '" d="' + rings.join(' ') + '"/>';
+}
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,
   proximity : proximityGlyph,
@@ -295,7 +341,9 @@ const ORGAN_GLYPHS = Object.freeze({
   pain : (state, organ) => skinSenseSvg(organ, state.sites),
   pigment : (state, organ) => chromatophoresSvg(state, organ, isChosen(state.selected, organ)),
   lateral : lateralGlyph,
-  muscle : muscleGlyph
+  muscle : muscleGlyph,
+  gills : gillGlyph,
+  gutmuscle : gutMuscleGlyph
 });
 function organGlyph(state, organ, drawnEyes) {
   const draw = ORGAN_GLYPHS[organ.type] ?? (isRegion(organ) ? regionGlyph : null);

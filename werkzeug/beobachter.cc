@@ -296,10 +296,12 @@ int main(int argc, char **argv) {
               << ",\"digestion\":" << b.digestion << ",\"restCost\":" << b.rest_cost
               << ",\"reserveCapacity\":" << reserve_capacity(b)
               << ",\"bladderFill\":" << b.bladder_fill << ",\"buoyancy\":" << b.buoyancy_force
-              << ",\"forward\":" << b.motor().drive_forward << ",\"left\":" << b.motor().drive_left
-              << ",\"right\":" << b.motor().drive_right << ",\"eat\":" << b.eat_signal
-              << ",\"bite\":" << b.bite_signal << ",\"flow\":" << b.mouth.flow
-              << ",\"eggYolk\":" << b.reproduction().egg_yolk
+              << ",\"forward\":" << b.motor().drive_forward
+              << ",\"tailSide\":" << b.motor().tail_side << ",\"turn\":" << b.motor().turn
+              << ",\"left\":" << b.motor().drive_left << ",\"right\":" << b.motor().drive_right
+              << ",\"eat\":" << b.eat_signal << ",\"bite\":" << b.bite_signal
+              << ",\"flow\":" << b.mouth.flow << ",\"opening\":" << b.mouth.opening
+              << ",\"credit\":" << b.mouth.credit << ",\"eggYolk\":" << b.reproduction().egg_yolk
               << ",\"sperm\":" << b.reproduction().sperm_store
               << ",\"eggRelease\":" << b.reproduction().egg_release
               << ",\"spermRelease\":" << b.reproduction().sperm_release

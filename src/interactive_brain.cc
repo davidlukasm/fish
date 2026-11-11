@@ -159,8 +159,7 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
   out << ",\"bite_signal\":" << b.bite_signal << ",\"mouth_aperture\":" << mouth_aperture(b)
       << ",\"maximum_mouth_aperture\":" << maximum_mouth_aperture(b)
       << ",\"mouth_phase\":" << b.mouth.phase << ",\"mouth_opening\":" << b.mouth.opening
-      << ",\"pump_flow\":" << b.mouth.flow << ",\"transport_budget\":" << b.mouth.budget
-      << ",\"transport_credit\":" << b.mouth.credit
+      << ",\"pump_flow\":" << b.mouth.flow << ",\"transport_credit\":" << b.mouth.credit
       << ",\"mouth_reach\":" << mouth_reach(b) * world.physiology().suction_range
       << ",\"bite_strength\":" << b.bite_strength << ",\"jaw_length\":" << b.jaw_length
       << ",\"gut_length\":" << b.gut_length << ",\"blunt_teeth\":" << b.blunt_teeth
@@ -288,8 +287,8 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
       out << ',';
     const auto &stroke = b.motor().strokes[j];
     namespace S = stroke_column;
-    Record(out, S::count)(S::mean, stroke.mean)(S::recovery, stroke.recovery)(
-        S::power, stroke.power)(S::steps, b.active_interface(g).stroke_timing[j].steps)(
+    Record(out, S::count)(S::drive, stroke.drive)(S::recovery, stroke.recovery)(
+        S::force, stroke.force)(S::steps, b.active_interface(g).stroke_timing[j].steps)(
         S::fibre, b.active_interface(g).fibre[j])(S::reserve, stroke.reserve)
         .finish();
   }

@@ -7,6 +7,7 @@ import {
   EYE_PLACE,
   FIN,
   FIN_SHAPE,
+  GUT_MOTILITY,
   MOTOR_KIND,
   ORGAN_FORM,
   REGION_LAYOUT,
@@ -272,6 +273,10 @@ const GUT = Object.freeze({
   lift : .3,
   height : .48
 });
+// The gut muscle as the engine has it (digest_nutrition): hurried food passes sooner and is used
+// less, the more so the harder the gut is driven.
+export const gutPassage = hurried => 1 + GUT_MOTILITY.speedup * hurried;
+export const gutUse = hurried => 1 - GUT_MOTILITY.loss * hurried * hurried;
 export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);
 export function fishSatietyShape(a) {
   const front = a.headBack - GUT.front, back = a.chestBack + GUT.back * a.chestLength,
@@ -954,9 +959,12 @@ const GILL = Object.freeze({
   bend_along : .08,
   bend_out : 1.30,
   end_along : .13,
-  end_out : 1.38
+  end_out : 1.38,
+  flare_per_gills : 1.5
 });
+// Gill covers flare with the water through the mouth, the wider the stronger their pump muscle.
 export function fishGillShape(a, side, pump = 0) {
+  pump *= 1 + GILL.flare_per_gills * (a.gills || 0);
   const sign = side ? 1 : -1, x = a.headBack + GILL.at * a.headLength,
         width = a.neckWidth * (GILL.width + GILL.width_per_pump * pump),
         lift = GILL.lift + GILL.lift_per_pump * pump;
@@ -966,6 +974,21 @@ export function fishGillShape(a, side, pump = 0) {
     [ x - GILL.bend_along * a.headLength - lift, sign * width * GILL.bend_out ],
     [ x + GILL.end_along * a.headLength, sign * width * GILL.end_out ]
   ];
+}
+
+// A gill cover's muscle runs along its rim.
+const GILL_FIBRE = Object.freeze({half : .12});
+export function fishGillFiber(a, side, t) {
+  const rim = fishGillShape(a, side, 0);
+  return [
+    fishBezier(rim, Math.max(0, t - GILL_FIBRE.half)),
+    fishBezier(rim, Math.min(1, t + GILL_FIBRE.half))
+  ];
+}
+// The gut's ring muscle at a share along the gut, one half ring for each side of its wall.
+const GUT_RING = Object.freeze({reach : 1.6});
+export function fishGutRing(a, t, side) {
+  return [ fishGutPoint(a, t, 0), fishGutPoint(a, t, (side ? 1 : -1) * GUT_RING.reach) ];
 }
 
 const SUCTION = Object.freeze({

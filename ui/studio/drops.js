@@ -1,6 +1,6 @@
 import {STIMULUS_ORGAN} from './model/organs.js';
 import {hasField, newFieldPlacements} from './model/placement.js';
-import {HORMONE_EFFECT, HORMONES, MOTOR_KIND} from '../schema.js';
+import {HORMONE_EFFECT, HORMONES} from '../schema.js';
 import {
   addNeuron,
   addOrgan,
@@ -21,7 +21,7 @@ import {
 import {placeModule, placeStoredModule} from './model/assemblies.js';
 import {placeSystem, systemMissing} from './model/systems.js';
 import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
-import {muscleHomes, muscleTarget} from './view/muscles.js';
+import {muscleTarget} from './view/muscles.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
@@ -375,12 +375,6 @@ export const dropMethods = {
                                                    ? s
                                                    : best);
     return addOrgan(doc, 'muscle', sites, sitePoint(site, 'muscle'), 0, true, home.code);
-  },
-  // The throat carries the gut's length, so a gut set longer or shorter brings its throat along.
-  withThroat() {
-    const home = muscleHomes(this.state.document, this.state.sites)
-                     .find(h => h.code === MOTOR_KIND.suction && h.side > 0 && h.free.length);
-    return home ? this.muscleIn(home)?.document ?? null : null;
   },
   dropOntoNerve(key, target, position) {
     this.dragging = null;

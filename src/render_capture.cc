@@ -52,13 +52,15 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::mouth_pose, m.mouth_pose);
   row.set(F::bite_pose, m.bite_pose);
   row.set(F::suction_pose, m.suction_pose);
+  row.set(F::gill_pose, m.gill_pose);
   row.set(F::defense, b.defense());
   row.set(F::aggression, m.aggression);
   row.set(F::relative_speed, m.relative_speed);
   row.set(F::tail, m.tail);
   row.set(F::impulse_left, m.impulse_left);
   row.set(F::impulse_right, m.impulse_right);
-  row.set(F::impulse_forward, m.impulse_forward);
+  row.set(F::impulse_tail_left, m.impulse_tail_left);
+  row.set(F::impulse_tail_right, m.impulse_tail_right);
   row.set(F::motor_factor, m.motor_factor);
   row.set(F::bladder_fill, b.bladder_fill);
   row.set(F::satiety, gut_filling(b));
@@ -85,9 +87,7 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::feeding_action, b.feeding_action);
   row.set(F::feeding_action_age, b.feeding_action_age);
   row.set(F::mouth_phase, b.mouth.phase);
-  row.set(F::mouth_cycle, b.mouth.cycle);
   row.set(F::mouth_biting, b.mouth.biting);
-  row.set(F::mouth_budget, b.mouth.budget);
   row.set(F::swallowed, b.mouth.swallowed);
   row.set(F::filtered, b.mouth.filtered);
   row.set(F::mouth_offset, mouth_offset(b));

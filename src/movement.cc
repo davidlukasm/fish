@@ -112,7 +112,9 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   double hx = std::cos(b.angle), hy = std::sin(b.angle), ux = b.motor_.vx - water.x,
          uy = b.motor_.vy - water.y;
   double along = ux * hx + uy * hy, across = -ux * hy + uy * hx;
-  const double mouth_drag = std::pow(mouth_aperture(b) / std::max(.001, radius), 2);
+  // Water that dense gill rakers hold back piles up in the open mouth.
+  const double mouth_drag = std::pow(mouth_aperture(b) / std::max(.001, radius), 2) *
+                            (1 + gill_filter::raker_drag * b.raker_density);
   along *= std::max(0., 1 - physiology.drag_along * (1 + std::abs(along)) * drag *
                                 (spines + mouth_drag));
   across *= std::max(0., 1 - across_drag);
