@@ -6,13 +6,7 @@
 // muscle. Every node answers any input: contacts learn only between cells that both vary, so a cell
 // held silent would never learn its inputs. "beat" and "pump" add inner pacemakers for swimming
 // bouts and for a rhythmic mouth.
-import {
-  RHYTHM_TAU,
-  TONIC_LEARNING,
-  neuralPlan,
-  pacemakerCell,
-  regionCell
-} from './region_cells.js';
+import {RHYTHM_TAU, TONIC_LEARNING, neuralPlan, pacemakerCell, regionCell} from './region_cells.js';
 
 // Swim threshold for the resting command: silent, gentle cruising, steady cruising.
 const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
@@ -20,7 +14,7 @@ const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
 const DRIVER = Object.freeze({copies : 8, electrical_limit : 1});
 // Listeners keep their resting rhythm for life: a meal or a second smell first arrives after
 // hatching, and a contact grows only while its target cell is active.
-const listener = (node, preset) => regionCell(node, preset, 'in', {}, TONIC_LEARNING);
+const listener = (node, preset, set = {}) => regionCell(node, preset, 'in', set, TONIC_LEARNING);
 export function motorPlan(doc, organ) {
   const r = organ.region;
   const nodes = [
@@ -30,8 +24,10 @@ export function motorPlan(doc, organ) {
     // The bladder empties only on a negative command, so lift answers with both signs.
     regionCell('lift', 'relay', 'both', {...DRIVER, q1 : 0}),
     // Stop signals: brake slows swimming; a full gut silences mouth and jaw; food at the mouth
-    // holds the fish down while it eats.
-    listener('brake', 'inhibit'), listener('sated', 'inhibit'), listener('hold', 'inhibit')
+    // holds the fish down while it eats. Brake and hold are as strong as the drivers, or a touch
+    // could not stop the swimming drive.
+    listener('brake', 'inhibit', DRIVER), listener('sated', 'inhibit'),
+    listener('hold', 'inhibit', DRIVER)
   ];
   const inner =
       [ [ 'brake', 'swim' ], [ 'sated', 'mouth' ], [ 'sated', 'bite' ], [ 'hold', 'lift' ] ];
