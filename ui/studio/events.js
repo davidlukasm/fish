@@ -333,8 +333,13 @@ export const FISH_CLICKS = Object.freeze([
   ],
   [
     '[data-fin-antagonist]',
-    (studio, e) => keepIfRoom(studio, addAntagonist(studio.state.document, e.dataset.finAntagonist,
-                                                    studio.state.sites)?.document)
+    (studio, e) => {
+      // The new antagonist is selected, so its stroke shows at once.
+      const added = addAntagonist(studio.state.document, e.dataset.finAntagonist, studio.state.sites);
+      if (!added)
+        return studio.notice(label('status.noRoom'));
+      studio.changeDocument(added.document, {kind : 'organ', id : added.organId});
+    }
   ],
   [
     '[data-fin-stroke]',

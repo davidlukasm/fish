@@ -27,6 +27,8 @@ Brisa (Futterwolken; Riechverarbeitung, Motorik und Körperzustand) und Pflanzen
 
 720 feste Plätze tragen bis zu 16 Zellen je Platz. Das CPPN hat 12 Eingänge und 25 Ausgänge. Es legt Zellpotenziale, Kontaktadressen, Rezeptoren und Höchststärken fest. Zellen entstehen im Ei und nach dem Schlupf. Kontakte beginnen bei null; lokale Aktivität verändert ihre Stärke, laufender Abbau entfernt ungenutzte Kontakte. Innere Nervenzellen können sich frei verschalten; direkte Sinn-Organ-Kontakte sind gesperrt.
 
+Der Schwanz schiebt, die Brustflossen drehen und schieben mit: Rückschlag vorwärts, der Vorschlag eines Gegenspielermuskels rückwärts, beide zugleich halten still. Je Krafteinheit schiebt eine Brustflosse ein Viertel so stark wie der Schwanz.
+
 Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
 
 Die Pumpe bestimmt die erbliche Darmlänge. Tier- und Pflanzenspezialisten erreichen 100 % Verwertung ihrer passenden Nahrung und 10 % der Gegenquelle; der mittlere Allesfresser jeweils 65 %. Kunstfutter liefert unabhängig davon 80 %. Darmenergie, verdaulicher Anteil, Füllung und Reserve sind getrennt.
