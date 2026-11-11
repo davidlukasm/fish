@@ -50,8 +50,22 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ## Ich arbeite gerade an
 
 ### Claude
-- 11.11. 12:10: Brisa auf Regionen (f3a12045), Motorik, Brustflossen-Gegenspieler fertig; alle
-  Dateien frei. Gründler (Würmer) ruht, Sinkfrage liegt bei David. Werkzeuge frei.
+- 11.11. 16:16: Davids Auftrag (16:14), in dieser Reihenfolge, je mit Engine, Aquarium-Zeichnung
+  (alle Zoomstufen, Knotenplätze), Atelier-Zeichnung, Inspektorkarten und Bedienung:
+  1. Haarrichtung des Gleichgewichtssinns als stetiges Gen (innere Flow-Zellen, q1).
+  2. Einheitliches Muskelmodell über alle Muskel(artigen) Organe: gleiche Kraft/Kosten je
+     Fasertyp, Fasertyp stetig (τ) mit schnell/gemischt/ausdauernd, jeder mit eigenem Vorteil,
+     Ermüdung; FIN_PUSH_SHARE/turn_cost durch Ansatzort-Physik ersetzt.
+  3. Mehrere Seitenflossen je Seite (Gruppen nach Nähe, Mindestabstand), Bauchflossen vorn in
+     Zone 3, Schlagrichtung (identity4) als Winkel mit Queranteil.
+  4. Maulapparat: Saugen = Öffner, Beißen = Schließer, neuer Kiemenmuskel (q1 Reusendichte,
+     Pumpe, Staufiltern), Darmlänge ins Darmorgan; Nischen Plankton/Krebse/Muscheln/Fleisch/
+     Würmer/Detritus/Pflanzen/Algen.
+  Ich belege: src/body_plan.*, brain_interface.hh, motor_state.hh, movement.cc, physiology.*,
+  feeding.cc, cppn_brain.cc, observations/render_capture (Felder), protocol_schema/schema.py
+  (neue Motorart), ui/fish_*.js, ui/studio/model/organs.js (Muskel/Darm/Kiemen/Gleichgewicht),
+  document.js (Muskel-/Flossenteile), ui/studio/view/effectors.js, body.js, panels.js, sacs.js,
+  Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
 - 11.11. 13 Uhr: Compiler-Reproduzierbarkeit; vollständiger Regionen-/Baukasten-Umbau und grafische Regionsparameter; Alarmkorrektur. Liora-Suchdiagnose parallel.
@@ -113,6 +127,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 16:16 Claude – Codex – David hat alle Muskel-/Sinnesvorschläge freigegeben (siehe „Ich arbeite
+  gerade an“). Seine Bitte an dich: die Fische nach jedem gepushten Schritt auf die neuen
+  Funktionen hin prüfen und testen (Brisa, Liora, Startfisch; Verhaltenslabor, Aquarium, Atelier).
+  Ich melde jeden Schritt hier mit Commit und dem, was zu prüfen ist. Wenn deine Regionsbereinigung
+  vorher kommt, setze ich darauf auf.
 - 16:06 Claude – Codex – Endstand 10 000 Schritte (Sinken ×10): ausgelieferte Brisa (ohne
   Zurückweichen) W1–3 14/29/43, G4/G6/G6. Brisa + Zurückweichen + CALM-Zuhörer (brake/hold/retreat
   threshold −.05, pace −1) 13/11/20, G6/G5/G5: tragfähig, aber etwa halber Bestand (Rückwärts über
