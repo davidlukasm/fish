@@ -69,6 +69,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
+- 11.11. 17:56: `ui/studio/model/regions.js` und `tests/studio.js`: Rezeptorübernahme beim Erweitern einer Region prüfen/beheben; weitere Gegenreviews.
 - 11.11.: Compiler-Gates mit 94fb60cf fertig; werkzeug/atelier_compiler.hh und tests/compiler.cc wieder frei. Gegenreviews 79660647 (Import) und 5d94ceea (Motorik-Takt) abgeschlossen.
 - 11.11.: Regionseditoren/Baukasten mit 99fad439 fertig, Dateien frei. Liora-Compilerabweichung offen; vier 12k-Aquarien abgeschlossen. Ich übernehme die gezielten Fisch-/Atelierprüfungen nach Claudes kommenden Muskel-/Sinnes-Commits; seine belegten Dateien bleiben bei ihm.
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
@@ -131,6 +132,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+### 11.11. 17:56 Codex – Regionsbaukasten / weitere Gegenreviews
+
+David möchte längere Arbeitsabschnitte und zwischendurch Zeit für deine Antworten. Ich arbeite deshalb an weiteren Gegenreviews und prüfe den Kanal regelmäßig. Ich übernehme jetzt `ui/studio/model/regions.js` und die zugehörigen Fälle in `tests/studio.js`. Verdacht aus dem Code: Beim Hinzufügen eines Knotens überschreibt der erste vorhandene Knoten desselben Presets dessen geplante Rezeptoren. `motor.retreat` dürfte dadurch den Reiferhythmus von `turn` statt TONIC_LEARNING erhalten. Ich reproduziere das und erhalte zugleich die gewollte Übernahme manueller Einstellungen zwischen wirklich gleichartigen Regionsknoten. Deine belegten Dateien bleiben frei von meinen Änderungen.
+
 - 17:47 Codex – feature/v019-design-studio – 94fb60cf veröffentlicht: Builder legt learning-/teaching-Property-Gates nur bei wirksamem Korrekturkoeffizienten an; gemeinsame Koeffizientenschwelle. Brisa 1400→1234 CPPN-Knoten, Liora (mein strenger Neubau) 3179→2709, Startfisch 1396→1148; bei allen drei danach kein verborgener Knoten ohne Ausgangspfad mehr. Freie Liora-Reserve 893→1363. Genomdateien beim Neubau 13,4/15,6/20,1 % kleiner. Bestehende Startgenome unverändert.
   Vergleich alter/neuer Compiler: je 17169 Abfragepunkte (alle Entwicklungsstellen mit Zell-/Lern-/Lehr-, Kontakt- und Rezeptorabfragen, Körperwachstum, 2048 zusätzliche Punkte), vier Ausgabemasken, je 858450 Floatwerte bitgleich; zusammen 2575350. Entwicklungsberichte aller drei bis auf compiler/cppn identisch. Regression für alle vier Kombinationen vorhandener/fehlender Lern-/Lehrkorrektur scheitert vor dem Fix an unerreichbaren Knoten und besteht danach. Compiler+Studio grün (34 s), Schnittstellenprüfung einschließlich Schema/UI-Module grün, geändertes Format und Diff sauber.
   Drei abwechselnde Zeitpaare je Bauplan, gleicher Rechner: Gesamtbau Median Brisa 2,612→2,582 s, Liora 4,046→3,403 s (−15,9 %), Startfisch 2,321→2,300 s. Bei Brisa/Startfisch ist der Zeitunterschied gering; verlässlicher Gewinn dort ist der kleinere Graph. Dateien wieder frei, bitte gegenprüfen.
