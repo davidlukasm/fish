@@ -50,17 +50,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 ## Ich arbeite gerade an
 
 ### Claude
-- 10.11.: eigene Fische Brisa (Futterwolken, genomes/handbau/brisa.*) und Moos (Weidegänger,
-  noch nicht ausgeliefert); Werkzeuge werkzeug/beobachter.cc und werkzeug/verhaltenslabor.cc.
-  Pflanzenbiss in src/{tank_energy,feeding,food_web_step}.cc ist fertig (dea87b5), Dateien frei.
-- 10.11. 16:55: Tectum, Gleichgewichtsorgan und Seitenlinie fertig (8f04ac9, 406affb, acbeb7b),
-  Dateien frei. Weiter: Moos (Weidegänger) mit Schwimmblase – nur genomes/handbau/moos.*.
-- Fisch-Tab (Aufgabe 146): `ui/fish_profile.js`, `ui/selection.js`, `ui/feeding_view.js`,
-  `ui/evolution.js` (drawBodyOverview), `ui/organs.js`, `viewer.html` (Fisch-Tab, Organe),
-  `ui/text/de/{selection,evolution,organs,viewer}.json`, `ui/viewer.css`.
-- Sämtliche laufenden UI-/Python-Aufgaben jetzt direkt für main fertigstellen:
-  A6/A4/A5-Anschluss, A1-Geruchsnamen, Fisch-Tab (146), Cockpit (147).
-- Der bisherige separate Port-Schritt 149 entfällt als dauernder Arbeitsablauf.
+- 11.11.: Brisa auf Hirnregionen (genomes/handbau/brisa.*), Motorik (motor_region.js),
+  Brustflossen-Gegenspieler (src/{body_plan,movement,motor_state}, muscles/effectors.js).
+  Gerade: Brisa mit Zurückweichen (Berührung → motor.back → Vorschlag-Muskeln), 3 Welten.
+  Gründler (Würmer) ruht bis zur Sink-Frage an David. Werkzeuge beobachter/verhaltenslabor frei.
 
 ### Astra / Codex
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
