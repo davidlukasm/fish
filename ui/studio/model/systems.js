@@ -12,23 +12,35 @@ import {
   updateReceptor,
   wheelPlace
 } from './document.js';
-import {updateRegion} from './regions.js';
+import {TONIC_LEARNING} from './region_cells.js';
 
-// Each system owns its circuit so adding a hormone cannot retune a sensory or motor relay.
 export const SYSTEMS = Object.freeze([
   {
     key : 'reward',
-    sense : [ 'gut', 'food' ],
-    hub : 'circuit',
+    sense : 'gut',
+    hub : 'state',
+    input : 'intake',
+    output : 'intake',
     answers : [ {
       holds : isLearner,
       effects : [ [ HORMONE_EFFECT.teaching, {baseline : 0, sensitivity : .5} ] ]
     } ]
   },
-  {key : 'growth', sense : [ 'gut', 'food' ], hub : 'circuit', growth : true, answers : []}, {
+  {
+    key : 'growth',
+    sense : 'gut',
+    hub : 'state',
+    input : 'intake',
+    output : 'intake',
+    growth : true,
+    answers : []
+  },
+  {
     key : 'alarm',
-    sense : [ 'pain', 'injury' ],
-    hub : 'circuit',
+    sense : 'pain',
+    hub : 'choice',
+    input : 'threat',
+    output : 'avoid',
     answers : [ {
       holds : (center, organ) => organ.type === 'muscle',
       effects : [ [ HORMONE_EFFECT.excitation, {baseline : 0, sensitivity : 1} ] ]
@@ -53,14 +65,31 @@ function shared(doc, type, sites, position) {
   const added = addOrgan(doc, type, sites, position);
   return added && {document : added.document, organ : findOrgan(added.document, added.organId)};
 }
+function signalRegion(doc, system, sites, position) {
+  const existing = doc.organs.find(o => o.type === system.hub);
+  if (existing)
+    return {document : doc, organ : existing};
+  const made = shared(doc, system.hub, sites, position);
+  if (!made || system.key !== 'alarm')
+    return made;
+  let draft = made.document;
+  // Injury can first occur in adulthood, after developmental activity has ended.
+  for (const organ of [made.organ, findOrgan(draft, made.organ.pair)].filter(Boolean)) {
+    const center = organ.centers.find(c => c.node === 'threat');
+    draft = updateCenter(draft, center.id, {threshold : -.05, pace : -1});
+    for (const [effect, patch] of Object.entries(TONIC_LEARNING))
+      draft = updateReceptor(draft, center.id, Number(effect), patch);
+  }
+  return {document : draft, organ : findOrgan(draft, made.organ.id)};
+}
 // Why the system cannot join this fish yet, or null when it can: 'full' when every substance is
 // taken, 'needs' when the body already grows with a substance or no cell is free to answer.
 export function systemMissing(doc, key) {
   const system = SYSTEM_BY_KEY[key];
-  if (doc.substances.length >= HORMONES.levels)
-    return 'full';
   if (!system)
     return 'needs';
+  if (doc.substances.length >= HORMONES.levels)
+    return 'full';
   if (system.growth)
     return doc.growth.active ? 'needs' : null;
   return answering(doc, system).length ? null : 'needs';
@@ -72,25 +101,27 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
     return null;
   const index = added.substances.at(-1).index;
   const named = setSubstance(added, index, name);
-  const [senseType, senseKey] = system.sense;
-  const sense = shared(named, senseType, sites, position);
-  const hub = sense && addOrgan(sense.document, system.hub, sites, position, Infinity, false);
-  const gland = hub && addOrgan(hub.document, 'gland', sites, position);
+  const sense = shared(named, system.sense, sites, position);
+  const hub = sense && signalRegion(sense.document, system, sites, position);
+  const gland = hub && addOrgan(hub.document, 'gland', sites, position, Infinity, false);
   if (!gland)
     return null;
   const [q1, q2] = wheelPlace(wheel, index);
   let draft = updateCenter(gland.document, gland.centerId, {q1, q2, qwidth : 0, tau : GLAND_TAU});
-  draft = updateRegion(draft, hub.organId, {response : 1}, sites);
-  // Resting activity starts local learning; the gland threshold keeps it out of the blood.
-  // Reward and alarm need the same gate as growth, or an idle relay invents food and pain.
-  for (const center of findOrgan(draft, hub.organId).centers)
-    draft = updateCenter(draft, center.id, {threshold : -.15, pace : -1});
   draft = updateCenter(draft, gland.centerId, {threshold : 1, electrical_limit : .5});
   draft = updateReceptor(draft, gland.centerId, HORMONE_EFFECT.excitation,
                          {active : 1, baseline : .5, sensitivity : 0});
-  const from = sense.organ.centers.find(c => c.key === senseKey)?.id ?? sense.organ.id;
-  for (const [a, b] of [[ from, hub.organId ], [ hub.organId, gland.organId ]])
-    draft = addWire(draft, a, b, 'both', sites)?.document ?? draft;
+  // Ports keep developmental rhythms and unrelated commands out of the hormone signal.
+  draft = addWire(draft, sense.organ.id, hub.organ.id, 'both', sites, {
+            fromPort : system.sense === 'gut' ? 'intake' : null,
+            toPort : system.input
+          })?.document ??
+          draft;
+  const output =
+      addWire(draft, hub.organ.id, gland.organId, 'both', sites, {fromPort : system.output});
+  if (!output)
+    return null;
+  draft = output.document;
   if (system.growth)
     draft = updateGrowth(draft, {active : 1, substance : index, ...GROWTH_START});
   for (const {center, answer} of answering(draft, system))

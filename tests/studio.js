@@ -303,6 +303,70 @@ async function checkResponseControls(model, capabilities, clicks) {
   }
 }
 
+async function checkHormoneSystems(model, capabilities) {
+  const {sites} = capabilities;
+  const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const {slotCenters, nerveClass} = await import('../ui/studio/model/organs.js');
+  const {routedLinks} = await import('../ui/studio/model/regions.js');
+  const {placeSystem, systemMissing} = await import('../ui/studio/model/systems.js');
+  const {exampleDocument} = await import('../ui/studio/model/example.js');
+  const example = exampleDocument({fish : 'B', growth : 'W'}, sites, capabilities);
+  model.validateDocument(example);
+  assert.ok(!example.organs.some(o => ['circuit', 'rhythm', 'teaching'].includes(o.type)));
+  for (const type of ['tectum', 'olfaction', 'value', 'choice', 'state', 'motor'])
+    assert.ok(example.organs.some(o => o.type === type), type);
+  const state = example.organs.find(o => o.type === 'state');
+  const choice = example.organs.find(o => o.type === 'choice');
+  assert.equal(example.organs.filter(o => o.type === 'state').length, 1);
+  assert.equal(systemMissing(example, 'growth'), 'needs');
+  assert.equal(systemMissing(example, 'unknown'), 'needs');
+  const bodyWires = example.wires.filter(w => w.from === state.id || w.to === state.id);
+  const reward = placeSystem(example, 'reward', sites, capabilities, {x : 500, y : 400}, 'R');
+  assert.ok(reward);
+  assert.equal(reward.document.organs.length, example.organs.length + 1,
+               'A food hormone reuses the existing body region and adds only its gland');
+  assert.deepEqual(reward.document.wires.filter(w => bodyWires.some(old => old.id === w.id)),
+                   bodyWires);
+  for (const center of state.centers)
+    assert.deepEqual(model.findCenter(reward.document, center.id).center.receptors[E.learning],
+                     center.receptors[E.learning]);
+  const alarm = placeSystem(example, 'alarm', sites, capabilities, {x : 500, y : 400}, 'A');
+  assert.ok(alarm);
+  assert.equal(alarm.document.organs.length, example.organs.length + 1);
+  assert.deepEqual(model.findOrgan(alarm.document, choice.id), choice,
+                   'A hormone keeps a pre-existing choice region and its settings');
+  for (const [added, expected] of [[ reward, 'intake' ], [ alarm, 'threat' ]]) {
+    const gland = model.findOrgan(added.document, added.organId);
+    const targets = new Set([ gland.id, ...gland.centers.map(c => c.id) ]);
+    const incoming = routedLinks(added.document, sites).filter(l => targets.has(l.to));
+    assert.ok(incoming.length);
+    assert.ok(
+        incoming.every(l => model.findCenter(added.document, l.from).center.node === expected),
+        'Only the selected food/threat signal reaches the gland');
+  }
+  const bare =
+      model.addOrgan(model.newDocument('Alarm'), 'muscle', sites, {x : 890, y : 350}).document;
+  const fresh = placeSystem(bare, 'alarm', sites, capabilities, {x : 500, y : 400}, 'A');
+  model.validateDocument(fresh.document);
+  const hubs = fresh.document.organs.filter(o => o.type === 'choice');
+  const gland = model.findOrgan(fresh.document, fresh.organId).centers[0];
+  const sources = hubs.flatMap(o => slotCenters(o, 'avoid', 'out'));
+  assert.equal(hubs.length, 2);
+  assert.ok(sources.every(c => c.threshold < 0 && nerveClass(c).pace === 0));
+  const idle =
+      sources.reduce((sum, c) => sum + c.copies * Math.tanh(-capabilities.biasScale * c.threshold) *
+                                           gland.electrical_limit,
+                     0);
+  assert.ok(idle > 0 && idle < capabilities.biasScale * gland.threshold,
+            'Late pain can learn without resting activity secreting an alarm');
+  assert.equal(systemMissing(fresh.document, 'alarm'), 'needs');
+  const strength =
+      fresh.document.organs.find(o => o.type === 'muscle').centers[0].receptors[E.excitation];
+  assert.equal(strength.substance, fresh.substance);
+  assert.equal(model.effectDirection(E.excitation, strength), 1);
+  return {example, alarm : fresh};
+}
+
 (async () => {
   const root = join(__dirname, '..');
   for (const [path, expected] of Object.entries(ENGINE_REVIEW)) {
@@ -380,6 +444,27 @@ async function checkResponseControls(model, capabilities, clicks) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  const hormoneSystems = await checkHormoneSystems(model, sitesResult);
+  if (process.argv.includes('--hormone-systems')) {
+    const result = JSON.parse(execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          "import json,sys; from atelier_service import run; r=run({'operation':'build','plan':json.load(sys.stdin)}); print(json.dumps({k:r[k] for k in ('compiler','viable','neurons','synapses')}))"
+        ],
+        {
+          cwd : root,
+          input : JSON.stringify(model.compileDocument(hormoneSystems.example, sitesResult.sites)),
+          encoding : 'utf8',
+          timeout : 60000,
+          maxBuffer : 8 * 1024 * 1024
+        }));
+    assert.ok(result.compiler.ok, JSON.stringify(result.compiler));
+    assert.ok(result.viable);
+    console.log('Atelier: Hormonregionen, getrennte Anschlüsse und Beispielfisch: OK',
+                result.neurons, result.synapses);
+    return;
+  }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkResponseControls(model, sitesResult, clicks);
   if (process.argv.includes('--region-controls')) {
@@ -1411,7 +1496,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
   exampleStudio.example();
-  const exampleCircuit = exampleStudio.state.document.organs.find(o => o.type === 'circuit');
+  const exampleCircuit = exampleStudio.state.document.organs.find(o => o.type === 'olfaction');
   const learning = exampleStudio.state.document.organs.filter(o => o.region)
                        .flatMap(o => o.centers)
                        .filter(model.isLearner);
@@ -1419,7 +1504,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const localTeacher =
       model.addOrgan(exampleStudio.state.document, 'teaching', sites, {x : 330, y : 365});
   const taughtByRegion =
-      model.addWire(localTeacher.document, localTeacher.organId, exampleCircuit.id, 'both', sites);
+      model.addWire(localTeacher.document, localTeacher.organId,
+                    exampleCircuit.centers.find(c => c.node === 'concentration').id, 'both', sites);
   const localTaught = regionModel.settleRegions(taughtByRegion.document, sites);
   assert.ok(!regionModel.fedBy(localTaught, model.findOrgan(localTaught, exampleCircuit.id))
                  .some(o => o.id === localTeacher.organId),
@@ -2401,7 +2487,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const exampleDoc = exampleModel.exampleDocument({fish : 'B', growth : 'W'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
     assert.equal(exampleDoc.substances.length, 1);
-    const relay = exampleDoc.organs.find(o => o.type === 'circuit');
+    const relay = exampleDoc.organs.find(o => o.type === 'value');
     const taught = (doc, organ) => model.findOrgan(doc, organ.id)
                                        .centers.filter(model.isLearner)
                                        .map(c => c.receptors[HORMONE_EFFECT.teaching]);
@@ -2411,55 +2497,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const settled = regionModel.updateRegion(exampleDoc, relay.id, {}, sites);
     const learner = model.findOrgan(settled, relay.id).centers.find(model.isLearner);
     const restyled = regionModel.updateRegion(
-        model.updateCenter(settled, learner.id, {qwidth : .7}), relay.id, {time : 2}, sites);
+        model.updateCenter(settled, learner.id, {qwidth : .7}), relay.id, {features : 3}, sites);
     const restyledLearner = model.findCenter(restyled, learner.id).center;
-    assert.equal(restyledLearner.qwidth, .7,
-                 'Changing the cell time keeps a hand-tuned learning rate');
-    assert.equal(restyledLearner.tau, 1);
+    assert.equal(restyledLearner.qwidth, .7, 'Adding a feature keeps a hand-tuned learning rate');
+    assert.equal(restyledLearner.tau, learner.tau);
     const byGrowth = model.teachOrgan(untaught, relay.id, 0);
     assert.ok(taught(byGrowth, relay).length > 0 &&
               taught(byGrowth, relay).every(r => r.active && r.substance === 0));
-    const systems = await import('../ui/studio/model/systems.js');
     const organsModel = await import('../ui/studio/model/organs.js');
-    assert.equal(systems.systemMissing(exampleDoc, 'reward'), null);
-    assert.equal(systems.systemMissing(exampleDoc, 'growth'), 'needs');
-    const rewarded =
-        systems.placeSystem(exampleDoc, 'reward', sites, sitesResult, {x : 500, y : 400}, 'S');
-    assert.ok(rewarded, 'A reward can teach cells whose local learning is already active');
-    assert.deepEqual(rewarded.document.wires.filter(w => w.from === relay.id || w.to === relay.id),
-                     exampleDoc.wires.filter(w => w.from === relay.id || w.to === relay.id),
-                     'A new hormone circuit preserves the existing sensory wiring');
-    assert.deepEqual(
-        model.findOrgan(rewarded.document, relay.id).centers[0].receptors[HORMONE_EFFECT.learning],
-        relay.centers[0].receptors[HORMONE_EFFECT.learning]);
-    const rewardHub = rewarded.document.organs.filter(o => o.type === 'circuit').at(-1);
-    assert.notEqual(rewardHub.id, relay.id);
-    const bare = model.newDocument('Regelkreis');
-    const muscled = model.addOrgan(bare, 'muscle', sites, {x : 890, y : 350}).document;
-    assert.equal(systems.systemMissing(muscled, 'alarm'), null);
-    const alarm =
-        systems.placeSystem(muscled, 'alarm', sites, sitesResult, {x : 500, y : 400}, 'S');
-    for (const system of [rewarded, alarm]) {
-      const gland = model.findOrgan(system.document, system.organId).centers[0];
-      const hubId = system.document.wires.find(w => w.to === system.organId).from;
-      const cells = model.findOrgan(system.document, hubId).centers;
-      const rest = cells.reduce(
-          (sum, c) => sum + c.copies * Math.tanh(-sitesResult.biasScale * c.threshold) *
-                                gland.electrical_limit,
-          0);
-      assert.ok(cells.every(c => organsModel.nerveClass(c).pace === 0 && c.q2 === .5));
-      assert.ok(rest < sitesResult.biasScale * gland.threshold,
-                'Even fully learned resting activity cannot secrete reward or alarm');
-    }
-    const types = alarm.document.organs.map(o => o.type);
-    assert.ok([ 'pain', 'circuit', 'gland' ].every(type => types.includes(type)));
-    assert.equal(alarm.document.substances.length, 1);
-    assert.equal(systems.systemMissing(alarm.document, 'alarm'), 'needs');
+    const alarm = hormoneSystems.alarm;
     const strong = alarm.document.organs.find(o => o.type === 'muscle').centers[0];
-    const strength = strong.receptors[HORMONE_EFFECT.excitation];
-    assert.equal(strength.substance, alarm.substance);
-    assert.equal(model.effectDirection(HORMONE_EFFECT.excitation, strength), 1,
-                 'The alarm substance makes the muscles stronger');
     const chosen =
         {key : 'relay', role : 'nerve', sign : 1, mode : .9, qwidth : .35, receptors : []};
     assert.ok(model.isLearner(chosen) && organsModel.nerveKind(chosen) === 'relay',

@@ -1,12 +1,16 @@
-import {addOrgan, addWire, newDocument} from './document.js';
+import {HORMONES} from '../../schema.js';
+import {addOrgan, addWire, findOrgan, newDocument, updateCenter, wheelPlace} from './document.js';
 import {placeSystem} from './systems.js';
 
 const PLACES = Object.freeze({
   eye : [ 'eye', 360, 300 ],
   nose : [ 'nose', 245, 425 ],
   sight : [ 'tectum', 390, 321 ],
-  smell : [ 'circuit', 300, 409 ],
-  rhythm : [ 'rhythm', 470, 365 ],
+  smell : [ 'olfaction', 300, 409 ],
+  choice : [ 'choice', 480, 310 ],
+  value : [ 'value', 370, 310 ],
+  state : [ 'state', 570, 365 ],
+  motor : [ 'motor', 680, 310 ],
   fin : [ 'muscle', 600, 470 ],
   tail : [ 'muscle', 890, 350 ],
   bite : [ 'muscle', 195, 335 ],
@@ -14,13 +18,49 @@ const PLACES = Object.freeze({
   eggs : [ 'eggs', 848, 330 ],
   sperm : [ 'sperm', 760, 395 ],
   gut : [ 'gut', 780, 357 ],
-  teacher : [ 'teaching', 336, 365 ]
+  reserve : [ 'blood', 530, 365 ],
+  pain : [ 'pain', 450, 225 ],
+  barbels : [ 'barbels', 245, 320 ]
 });
 const WIRES = Object.freeze([
-  [ 'eye', 'sight', 'same' ], [ 'sight', 'fin', 'crossed' ], [ 'nose', 'smell', 'same' ],
-  [ 'smell', 'suck', 'same' ], [ 'rhythm', 'tail', 'both' ], [ 'rhythm', 'bite', 'both' ],
-  [ 'rhythm', 'sperm', 'both' ], [ 'rhythm', 'eggs', 'both' ], [ 'gut', 'teacher', 'both' ],
-  [ 'teacher', 'sight', 'both' ], [ 'teacher', 'smell', 'both' ]
+  [ 'eye', 'sight', null, 'sight' ],
+  [ 'nose', 'smell', null, 'scent' ],
+  [ 'sight', 'choice', 'onward', 'target' ],
+  [ 'smell', 'choice', 'target', 'target' ],
+  [ 'sight', 'value', 'onward', 'feature1' ],
+  [ 'smell', 'value', 'presence', 'feature2' ],
+  [ 'value', 'choice', 'feature1', 'strength' ],
+  [ 'value', 'choice', 'feature2', 'strength' ],
+  [ 'gut', 'value', 'intake', 'reward', 'both' ],
+  [ 'pain', 'value', null, 'harm', 'both' ],
+  [ 'pain', 'choice', null, 'threat', 'both' ],
+  [ 'gut', 'state', 'intake', 'intake' ],
+  [ 'gut', 'state', 'fullness', 'fullness' ],
+  [ 'reserve', 'state', null, 'reserve' ],
+  [ 'eggs', 'state', 'fullness', 'eggFullness' ],
+  [ 'sperm', 'state', 'fullness', 'spermFullness' ],
+  [ 'state', 'eggs', 'investment', 'storage' ],
+  [ 'state', 'eggs', 'lay', 'trigger' ],
+  [ 'state', 'sperm', 'investment', 'storage' ],
+  [ 'state', 'sperm', 'spermRelease', 'trigger' ],
+  [ 'state', 'sperm', 'hatch', 'storage' ],
+  [ 'state', 'sperm', 'hatch', 'trigger' ],
+  [ 'state', 'motor', 'hatch', 'urge', 'both' ],
+  [ 'state', 'choice', 'pause', 'pause', 'both' ],
+  [ 'state', 'choice', 'satiety', 'pause', 'both' ],
+  [ 'state', 'motor', 'pause', 'brake', 'both' ],
+  [ 'state', 'motor', 'satiety', 'full', 'both' ],
+  [ 'choice', 'motor', 'approach', 'toward' ],
+  [ 'choice', 'motor', 'advance', 'urge' ],
+  [ 'choice', 'motor', 'avoid', 'away' ],
+  [ 'choice', 'motor', 'search', 'toward' ],
+  [ 'choice', 'motor', 'search', 'urge' ],
+  [ 'barbels', 'motor', null, 'near' ],
+  [ 'barbels', 'motor', null, 'grip' ],
+  [ 'motor', 'fin', 'fins', null, 'crossed' ],
+  [ 'motor', 'tail', 'tail' ],
+  [ 'motor', 'suck', 'mouth' ],
+  [ 'motor', 'bite', 'bite' ]
 ]);
 export function exampleDocument(names, sites, wheel) {
   let doc = newDocument(names.fish);
@@ -31,15 +71,14 @@ export function exampleDocument(names, sites, wheel) {
       doc = result.document;
     placed[key] = result?.organId;
   }
-  doc = placeSystem(doc, 'growth', sites, wheel, {x : 260, y : 351}, names.growth)?.document ?? doc;
-  for (const [from, to, pairing] of WIRES) {
-    const source =
-        from === 'gut'
-            ? doc.organs.find(o => o.id === placed.gut).centers.find(c => c.key === 'food').id
-            : placed[from];
-    const r = addWire(doc, source, placed[to], pairing, sites);
+  const [q1, q2] = wheelPlace(wheel, HORMONES.levels + 1);
+  for (const center of findOrgan(doc, placed.reserve).centers)
+    doc = updateCenter(doc, center.id, {q1, q2, qwidth : 0, threshold : 0});
+  for (const [from, to, fromPort, toPort, pairing = 'same'] of WIRES) {
+    const r = addWire(doc, placed[from], placed[to], pairing, sites, {fromPort, toPort});
     if (r)
       doc = r.document;
   }
+  doc = placeSystem(doc, 'growth', sites, wheel, {x : 260, y : 351}, names.growth)?.document ?? doc;
   return doc;
 }

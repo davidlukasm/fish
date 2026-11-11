@@ -882,19 +882,19 @@
     "full": "Alle Stoffe sind schon vergeben.",
     "reward": {
       "name": "Belohnung",
-      "title": "Futter im Darm lehrt die lernenden Knoten, was zum Futter geführt hat.",
+      "title": "Die Körperzustandsregion meldet Nahrung über einen Stoff an lernende Nervenzellen.",
       "needs": "Braucht lernende Knoten, deren Lernen noch kein Stoff steuert.",
       "substance": "Belohnung"
     },
     "growth": {
       "name": "Wachstum",
-      "title": "Futter im Darm lässt den Körper wachsen.",
+      "title": "Die Körperzustandsregion steuert mit dem Nahrungssignal eine Wachstumsdrüse.",
       "needs": "Der Körper wächst schon mit einem Stoff.",
       "substance": "Wachstumshormon"
     },
     "alarm": {
       "name": "Alarm",
-      "title": "Schmerz meldet sich über das Schaltzentrum: bei Schmerz sind die Muskeln leichter erregbar.",
+      "title": "Die Handlungswahl meldet Gefahr über einen Stoff, der Muskeln leichter erregbar macht.",
       "needs": "Braucht Muskeln, deren Erregbarkeit noch kein Stoff steuert.",
       "substance": "Alarmstoff"
     }

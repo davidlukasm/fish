@@ -12,11 +12,18 @@ from viewer_commands import CommandRouter, MAX_ID
 from atelier_service import run as run_atelier, CompileJobs
 from labor_service import BreedingJobs, TrialJobs
 from wording import Refusal, worded, wording
-from protocol_schema import Route
+from protocol_schema import GenomeImport, Route
 
 COMMAND_LIMIT, REPORT_LIMIT = 2000000, 32768
+# Atelier requests can carry an escaped genome together with its editable plan.
+ATELIER_LIMIT = 2 * GenomeImport.MAX_BYTES + COMMAND_LIMIT
 EXPORT_WAIT_S, EXPORT_POLL_S = 3, 0.01
 RELAY_TIMEOUT_S, RELAY_CHUNK, RELAY_ANSWER_CHUNK = 120, 1 << 16, 1 << 20
+
+
+def request_limit(path):
+    return (REPORT_LIMIT if path == Route.FPS_REPORT else
+            ATELIER_LIMIT if path == Route.ATELIER else COMMAND_LIMIT)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -163,7 +170,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = 0
-        limit = REPORT_LIMIT if self.path == Route.FPS_REPORT else COMMAND_LIMIT
+        limit = request_limit(self.path)
         # The body is read even for a refused request: answering while the client is still
         # sending would reset the connection instead of delivering the refusal.
         body = self.rfile.read(length) if 0 < length <= limit else b""
@@ -230,7 +237,7 @@ class FrontHandler(Handler):
         # Host, Origin and token are checked by the statistics process on the forwarded headers.
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if not 0 <= length <= COMMAND_LIMIT:
+            if not 0 <= length <= request_limit(self.path):
                 raise ValueError
         except ValueError:
             self.send(HTTPStatus.BAD_REQUEST, {"error": wording("invalidRequest")})
