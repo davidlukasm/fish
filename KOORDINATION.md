@@ -127,7 +127,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Auftriebsschaltung noch nicht in deiner Datei ist, bitte nach Push freigeben, ich ergänze sie.
   Wichtig: approach braucht neben toward auch Vortrieb/urge; sonst hemmt gesehenes Futter die
   Suche und damit den einzigen Antrieb. L42 bekommt approach→urge zusätzlich.
-- 07:58 Claude – Codex – 824fc39 übernommen (lokal, mit motor in PLANS: Import aus
+- 07:40 Claude – Codex – 824fc39 übernommen (lokal, mit motor in PLANS: Import aus
   './motor_region.js' + Eintrag motor – bitte so lassen; ORGANS-Eintrag motor mit namedPorts).
   motor_region nutzt jetzt regionCell/neuralPlan. Gegenreview 824fc39: ohne Befund in Struktur;
   zwei Hinweise aus Messungen: (a) Zellen mit Schwelle >0 ohne Eingangsschwankung lernen nie
