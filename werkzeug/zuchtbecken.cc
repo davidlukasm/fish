@@ -7,6 +7,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <sstream>
 
 using namespace fishsim;
 namespace {
@@ -111,7 +112,7 @@ int main(int argc, char **argv) {
   try {
     if (argc < 6)
       throw std::invalid_argument(
-          "Aufruf: zuchtbecken GENOM SEED SCHRITTE ANZAHL aquarium|becken "
+          "Aufruf: zuchtbecken GENOM[,GENOM...] SEED SCHRITTE ANZAHL aquarium|becken "
           "[Parameter=Wert ...] [snapshot=PFAD] [observe=PFAD]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
@@ -120,7 +121,11 @@ int main(int argc, char **argv) {
         (habitat != "aquarium" && habitat != "becken"))
       throw std::invalid_argument("Ungültige Laufgrenzen oder Beckenart");
     Genome::begin_run(seed);
-    const auto g = Genome::load(argv[1]);
+    // Several genomes share one tank; every fish keeps the line of its mother's founder.
+    std::vector<Genome> genomes;
+    std::stringstream paths(argv[1]);
+    for (std::string path; std::getline(paths, path, ',');)
+      genomes.push_back(Genome::load(path));
     Ecosystem w(seed);
     w.safety = false;
     w.workers = 2;
@@ -146,7 +151,16 @@ int main(int argc, char **argv) {
       w.starter_world();
     else
       w.field.seed_plants();
-    w.seed({g}, count, habitat == "aquarium" ? run_limit::default_food : 0);
+    w.seed(genomes, count, habitat == "aquarium" ? run_limit::default_food : 0);
+    std::map<std::uint64_t, int> species_line, line_of;
+    for (const auto &p : w.fish)
+      if (!species_line.count(p.species)) {
+        const int line = int(species_line.size());
+        species_line[p.species] = line;
+      }
+    for (const auto &p : w.fish)
+      line_of[p.id] = species_line[p.species];
+    const int lines = int(genomes.size());
     std::ofstream observations;
     if (!observed.empty()) {
       observations.open(observed + "-trace.jsonl");
@@ -178,30 +192,42 @@ int main(int argc, char **argv) {
     std::map<std::uint64_t, std::array<double, DIET_COUNT>> previous;
     std::map<std::uint64_t, LastSeen> last_seen;
     std::array<double, DIET_COUNT> food{};
+    std::vector<std::array<double, DIET_COUNT>> line_food(genomes.size());
+    std::vector<unsigned> line_peak(genomes.size());
     std::set<std::uint64_t> hatched, deaths;
     std::map<unsigned, int> births;
     std::map<unsigned, std::set<std::uint64_t>> parents;
     unsigned peak = 0;
     for (int tick = 0; tick <= steps; ++tick) {
+      for (const auto &p : w.fish)
+        if (!line_of.count(p.id)) {
+          const auto mother = line_of.find(p.parent);
+          line_of[p.id] = mother == line_of.end() ? -1 : mother->second;
+        }
       for (const auto &p : w.fish) {
         const auto &b = p.body;
         last_seen[p.id] = {p.g, b.age, b.energy, b.health, b.nutrition, b.bladder_fill,
                           b.hatched, b.tissue, body_maturity(b), b.reproduction().egg_yolk,
                           b.reproduction().sperm_store, b.embryo.shell};
         for (std::size_t k = 0; k < DIET_COUNT; ++k) {
-          const double raw = p.observations().raw_diet[k];
-          food[k] += std::max(0., raw - previous[p.id][k]);
+          const double raw = p.observations().raw_diet[k], eaten = std::max(0., raw - previous[p.id][k]);
+          food[k] += eaten;
+          if (line_of[p.id] >= 0)
+            line_food[line_of[p.id]][k] += eaten;
           previous[p.id][k] = raw;
         }
         if (b.hatched && p.origin == fish_origin::natural && hatched.insert(p.id).second) {
           ++births[p.g];
           parents[p.maternal_g].insert(p.parent);
           peak = std::max(peak, p.g);
+          if (line_of[p.id] >= 0)
+            line_peak[line_of[p.id]] = std::max(line_peak[line_of[p.id]], p.g);
           double nearby = 0;
           for (const auto &part : w.field.vegetation().plants)
             if (part.kind == food_kind::plant && !plant_bite_is_hard(part.organ_kind))
               nearby += part.energy * nearby_share(part, w.field, b, RADII[1]);
-          std::cout << "{\"event\":\"hatch\",\"t\":" << tick << ",\"id\":" << p.id
+          std::cout << "{\"event\":\"hatch\",\"t\":" << tick << ",\"line\":" << line_of[p.id]
+                    << ",\"id\":" << p.id
                     << ",\"parent\":" << p.parent << ",\"generation\":" << p.g
                     << ",\"energy\":" << b.energy << ",\"nearbyLeaf64\":" << nearby << "}\n";
         }
@@ -211,8 +237,10 @@ int main(int argc, char **argv) {
         if (!deaths.insert(id).second)
           continue;
         const auto found = last_seen.find(id);
+        const auto line = line_of.find(id);
         std::cout << "{\"event\":\"death\",\"t\":" << death[death_record_column::step]
-                  << ",\"id\":" << id << ",\"cause\":" << death[death_record_column::cause];
+                  << ",\"id\":" << id << ",\"line\":" << (line == line_of.end() ? -1 : line->second)
+                  << ",\"cause\":" << death[death_record_column::cause];
         if (found != last_seen.end()) {
           const auto &v = found->second;
           std::cout << ",\"generation\":" << v.generation << ",\"previous\":{\"age\":" << v.age
@@ -314,6 +342,18 @@ int main(int argc, char **argv) {
                   << ",\"diet\":[";
         for (std::size_t k = 0; k < DIET_COUNT; ++k)
           std::cout << (k ? "," : "") << food[k];
+        std::vector<int> line_alive(genomes.size());
+        for (const auto &p : w.fish)
+          if (p.body.hatched && line_of[p.id] >= 0)
+            ++line_alive[line_of[p.id]];
+        std::cout << "],\"lines\":[";
+        for (int line = 0; line < lines; ++line) {
+          std::cout << (line ? "," : "") << "{\"n\":" << line_alive[line]
+                    << ",\"peakGeneration\":" << line_peak[line] << ",\"diet\":[";
+          for (std::size_t k = 0; k < DIET_COUNT; ++k)
+            std::cout << (k ? "," : "") << line_food[line][k];
+          std::cout << "]}";
+        }
         std::cout << "]}\n" << std::flush;
         if (tick == 0 || last || tick % (5 * SAMPLE_STEPS) == 0)
           snapshot(w, pictures);
