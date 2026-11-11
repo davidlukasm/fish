@@ -225,6 +225,7 @@ export function settleRegions(doc, sites, pairedId = null) {
     const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
     const rank = n => n.port === 'out' || n.port === 'both' ? 0 : n.port === 'in' ? 1 : 2;
+    const effects = new Map(plan.nodes.map(n => [n.node, JSON.stringify(n.effects ?? {})]));
     const made = new Map();
     for (const n of [...plan.nodes].sort((a, b) => rank(a) - rank(b))) {
       const id = regionNodeId(organ, n.node);
@@ -246,7 +247,9 @@ export function settleRegions(doc, sites, pairedId = null) {
         center = {...defaults(desc, site), id};
         for (const [effect, patch] of Object.entries(n.effects ?? {}))
           Object.assign(center.receptors[effect], patch);
-        const sibling = [...kept.values() ].find(c => c.key === n.preset);
+        // A shared cell preset can still have a different developmental rhythm.
+        const sibling = [...kept.values() ].find(c => c.key === n.preset &&
+                                                      effects.get(c.node) === effects.get(n.node));
         if (sibling)
           center.receptors = structuredClone(sibling.receptors);
       }

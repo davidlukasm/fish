@@ -282,7 +282,7 @@ async function checkResponseControls(model, capabilities, clicks) {
 
 async function checkFunctionalRegions(model, capabilities) {
   const {ORGAN_BY_KEY, ORGANS} = await import('../ui/studio/model/organs.js');
-  const {updateRegion} = await import('../ui/studio/model/regions.js');
+  const {regionPlan, updateRegion} = await import('../ui/studio/model/regions.js');
   const {regionPicture, regionHandle, regionPatch, REGION_PICTURE} =
       await import('../ui/studio/view/region_controls.js');
   const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
@@ -294,12 +294,21 @@ async function checkFunctionalRegions(model, capabilities) {
     [ 'olfaction', {smoothing : .47, contrast : .62}, [ 'scent' ] ],
     [ 'state', {reserve : .42, rest : .37, maturity : .67}, [ 'reserve', 'rest', 'maturity' ] ],
     [ 'value', {features : 3, association : .53, teaching : .8}, [ 'association' ] ],
-    [ 'motor', {beat : 1, pump : 3}, [ 'beat', 'pump' ] ],
+    [ 'motor', {beat : 1, pump : 3, retreat : 1}, [ 'beat', 'pump' ] ],
     [ 'tectum', {resolution : 3, contrast : 2}, [ 'resolution', 'contrast' ] ]
   ];
   for (const [type, patch, handles] of cases) {
     const made = model.addOrgan(model.newDocument(type), type, sites, {x : 610, y : 315});
     const doc = updateRegion(made.document, made.organId, patch, sites);
+    for (const built of [made.document, doc])
+      for (const region of built.organs.filter(o => o.type === type))
+        for (const node of regionPlan(built, region).nodes) {
+          const center = region.centers.find(c => c.node === node.node);
+          for (const [effect, values] of Object.entries(node.effects ?? {}))
+            for (const [key, value] of Object.entries(values))
+              assert.equal(center.receptors[effect][key], value,
+                           `${type}.${node.node}: ${effect}.${key} follows its own role`);
+        }
     model.validateDocument(JSON.parse(JSON.stringify(doc)));
     const organ = model.findOrgan(doc, made.organId), twin = model.findOrgan(doc, organ.pair);
     const html = regionPicture({document : doc, sites, capabilities}, organ);
@@ -381,6 +390,14 @@ async function checkFunctionalRegions(model, capabilities) {
     if (type === 'value') {
       assert.ok(Math.abs(group('feature3').learning_tau - (.53)) < 1e-8);
       assert.ok(Math.abs(group('feature3').teaching_limit - (.8)) < 1e-8);
+      const first = model.findOrgan(made.document, made.organId).centers[0];
+      const tuned = model.updateReceptor(made.document, first.id, E.teaching,
+                                         {active : 1, baseline : .73, sensitivity : .41});
+      const expanded = updateRegion(tuned, made.organId, {features : 3}, sites);
+      const features = model.findOrgan(expanded, made.organId).centers;
+      assert.deepEqual(features.find(c => c.node === 'feature3').receptors,
+                       features.find(c => c.node === 'feature1').receptors,
+                       'New features inherit hormonal tuning from equivalent cells');
     }
   }
 }
