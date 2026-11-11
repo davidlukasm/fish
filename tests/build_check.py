@@ -1,4 +1,5 @@
 import ast
+import hashlib
 import json
 import math
 import tempfile
@@ -9,6 +10,8 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
+from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -49,10 +52,47 @@ def check_compiler_build():
             reference = commands
 
 
+def check_labor_engine():
+    from labor_service import BreedingJobs, fingerprint
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        tool = root / 'zuchtbecken'
+        program = ('#!' + sys.executable + '\nimport json\n'
+                   'print(json.dumps({"event":"sample","t":400,"n":12,'
+                   '"peakGeneration":0,"parents":[],"swimmers":[[0,12]],'
+                   '"rawFood":0,"availableFeed":100,"diet":[0]*11}))\n').encode()
+        replacement = program.replace(b'"n":12', b'"n":99')
+        tool.write_bytes(program)
+        engine = hashlib.sha256(program).hexdigest()
+        mark = fingerprint('genome', engine)
+        jobs = BreedingJobs(lambda: [])
+        job = {'engine': engine, 'fingerprint': mark, 'variant': 400, 'steps': 400,
+               'name': 'test', 'status': 'running', 'runs': [], 'cancel': threading.Event(),
+               'process': None}
+        stream = jobs.stream
+
+        def replace_after_world(job, args, run):
+            stream(job, args, run)
+            tool.write_bytes(replacement)
+
+        with patch.object(jobs, 'stream', replace_after_world):
+            jobs.work(job, 'genome', program, [1, 2], folder)
+        assert job['status'] == 'done', job
+        assert [w['samples'][0][1] for w in job['runs']] == [12, 12], (
+            'A rebuild must not change the engine between worlds of the same job')
+        assert len(jobs.results(folder, engine).all()) == 1
+        with patch('labor_service.build_directory', return_value=root):
+            overview = jobs.overview(folder)
+        assert overview['engine'] == hashlib.sha256(replacement).hexdigest()
+        assert overview['results'] == [], 'Old engine results cannot prove the rebuilt fish'
+        assert fingerprint('genome', overview['engine']) != mark
+
+
 def main():
     ensure_node()
     check_compiler_build()
     sys.path.insert(0, str(ROOT))
+    check_labor_engine()
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)

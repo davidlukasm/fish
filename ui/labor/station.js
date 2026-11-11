@@ -9,8 +9,9 @@ import {inspectedTrial, shownSessions} from './trials.js';
 const POLL_MS = 1000, FINGERPRINT_HEX = 16, HEX = 16, BYTE_DIGITS = 2;
 
 // The same fingerprint the station service keeps results under.
-async function fingerprintOf(genome) {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(genome));
+async function fingerprintOf(genome, engine) {
+  const digest =
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(engine + '\0' + genome));
   return [...new Uint8Array(digest) ]
       .map(b => b.toString(HEX).padStart(BYTE_DIGITS, '0'))
       .join('')
@@ -96,7 +97,7 @@ class LabStation {
   async choose(fish) {
     this.state.fish = fish;
     this.state.fingerprint =
-        fish === DRAFT ? await fingerprintOf(this.state.draft.genome)
+        fish === DRAFT ? await fingerprintOf(this.state.draft.genome, this.state.overview.engine)
                        : this.state.overview?.fish.find(f => f.key === fish)?.fingerprint ?? null;
     this.render();
   }
@@ -111,6 +112,7 @@ class LabStation {
         ...this.settings(),
         ...(draft ? {genome : s.draft.genome, name : s.draft.name} : {})
       }));
+      s.fingerprint = s.job.fingerprint;
     } catch (error) {
       this.fail(error);
       return;

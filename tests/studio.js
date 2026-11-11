@@ -2895,6 +2895,23 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.deepEqual(labor.shownWorlds(overview, 'f', BREEDING.steps[1], job), [],
                      'Another step count shows nothing');
     assert.equal(labor.shelfVerdict(overview, 'f').done, 1, 'The shelf reads the kept run');
+    const {BreedingStation} = await import('../ui/labor/station.js');
+    const station = new BreedingStation({});
+    station.state.draft = {genome : 'genome'};
+    station.state.overview = {engine : 'engine-a'};
+    await station.choose(labor.DRAFT);
+    const mark = station.state.fingerprint;
+    assert.equal(mark,
+                 require('node:crypto')
+                     .createHash('sha256')
+                     .update('engine-a\0genome')
+                     .digest('hex')
+                     .slice(0, 16),
+                 'Draft identity includes the engine, using the service fingerprint');
+    station.state.overview = {engine : 'engine-b'};
+    await station.choose(labor.DRAFT);
+    assert.notEqual(station.state.fingerprint, mark,
+                    'A changed engine cannot reuse the draft’s old qualification');
     const view = await import('../ui/labor/view.js');
     const page = view.breedingShell({
       overview : {...overview, fish : [ {key : 'brisa', fingerprint : 'f'} ]},

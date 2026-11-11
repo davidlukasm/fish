@@ -32,8 +32,8 @@ def start_genome(key):
     return document.with_name(document.name.removesuffix(".fish.json") + ".genome")
 
 
-def fingerprint(genome):
-    return hashlib.sha256(genome.encode()).hexdigest()[:FINGERPRINT_CHARACTERS]
+def fingerprint(genome, engine):
+    return hashlib.sha256((engine + "\0" + genome).encode()).hexdigest()[:FINGERPRINT_CHARACTERS]
 
 
 def whole_number(value):
@@ -84,22 +84,24 @@ class Session:
 class Results:
     """Finished runs per fish and variant under data_dir/labor; runs are keyed by seed."""
 
-    def __init__(self, data_dir, prefix, variant, runs):
+    def __init__(self, data_dir, prefix, variant, runs, engine):
         self.folder = Path(data_dir) / FOLDER
         self.prefix, self.variant, self.runs = prefix, variant, runs
+        self.engine = engine
 
     def path(self, mark, variant):
         return self.folder / f"{self.prefix}-{mark}-{variant}.json"
 
     def read(self, mark, variant):
         try:
-            return json.loads(self.path(mark, variant).read_text(encoding="utf-8"))
+            entry = json.loads(self.path(mark, variant).read_text(encoding="utf-8"))
+            return entry if entry.get("engine") == self.engine else None
         except (OSError, ValueError):
             return None
 
     def keep(self, mark, variant, name, run):
-        entry = self.read(mark, variant) or {"fingerprint": mark, self.variant: variant,
-                                             self.runs: {}}
+        entry = self.read(mark, variant) or {"fingerprint": mark, "engine": self.engine,
+                                             self.variant: variant, self.runs: {}}
         entry["name"] = name
         entry[self.runs][str(run["seed"])] = run
         atomic_write(self.path(mark, variant), json.dumps(entry, separators=(",", ":")))
@@ -108,7 +110,9 @@ class Results:
         entries = []
         for path in sorted(self.folder.glob(f"{self.prefix}-*.json")):
             try:
-                entries.append(json.loads(path.read_text(encoding="utf-8")))
+                entry = json.loads(path.read_text(encoding="utf-8"))
+                if entry.get("engine") == self.engine:
+                    entries.append(entry)
             except (OSError, ValueError):
                 continue
         return entries
@@ -123,8 +127,14 @@ class Jobs:
         self.lock = threading.Lock()
         self.job = None
 
-    def results(self, data_dir):
+    def results(self, data_dir, engine):
         raise NotImplementedError
+
+    def executable(self):
+        try:
+            return (build_directory(ROOT) / self.TOOL).read_bytes()
+        except FileNotFoundError:
+            raise Refusal("labor.errors.toolMissing") from None
 
     def plan(self, data):
         """The validated settings of a start request: variant, seeds and job fields, among them
@@ -157,16 +167,18 @@ class Jobs:
             return self.shown(job)
 
     def overview(self, data_dir):
+        engine = hashlib.sha256(self.executable()).hexdigest()
         released = {path.resolve() for path in self.starter_genomes()}
         fish = []
         for key in START_DOCUMENTS:
             path = start_genome(key)
             if path.is_file():
-                fish.append({"key": key, "fingerprint": fingerprint(path.read_text(encoding="utf-8")),
+                fish.append({"key": key, "fingerprint": fingerprint(path.read_text(encoding="utf-8"), engine),
                              "released": path.resolve() in released})
         with self.lock:
             job = self.shown(self.job) if self.job else None
-        return {"fish": fish, "results": self.results(data_dir).all(), "job": job}
+        return {"engine": engine, "fish": fish, "results": self.results(data_dir, engine).all(),
+                "job": job}
 
     def start(self, data, data_dir):
         variant, seeds, fields = self.plan(data)
@@ -179,26 +191,30 @@ class Jobs:
         else:
             genome = start_genome(key).read_text(encoding="utf-8")
             name = key
-        tool = build_directory(ROOT) / self.TOOL
-        if not tool.is_file():
-            raise Refusal("labor.errors.toolMissing")
+        executable = self.executable()
+        engine = hashlib.sha256(executable).hexdigest()
         with self.lock:
             if self.job and self.job["status"] == "running":
                 raise Refusal("labor.errors.busy")
             self.job = {"id": secrets.token_hex(JOB_ID_BYTES), "status": "running", "fish": key,
-                        "name": name, "fingerprint": fingerprint(genome), "variant": variant,
+                        "name": name, "fingerprint": fingerprint(genome, engine),
+                        "engine": engine, "variant": variant,
                         **fields, "runs": [], "error": None, "cancel": threading.Event(),
                         "process": None}
             job = self.job
-            threading.Thread(target=self.work, args=(job, genome, tool, seeds, data_dir),
+            threading.Thread(target=self.work, args=(job, genome, executable, seeds, data_dir),
                              daemon=True).start()
             return self.shown(job)
 
-    def work(self, job, genome, tool, seeds, data_dir):
-        results = self.results(data_dir)
+    def work(self, job, genome, executable, seeds, data_dir):
+        results = self.results(data_dir, job["engine"])
         kept = (results.read(job["fingerprint"], job["variant"]) or {}).get(results.runs, {})
         try:
             with tempfile.TemporaryDirectory(prefix="fish-labor-") as folder:
+                # Every world in a job uses the same executable, even while a rebuild finishes.
+                tool = Path(folder) / self.TOOL
+                tool.write_bytes(executable)
+                tool.chmod(0o700)
                 path = Path(folder) / "fish.genome"
                 path.write_text(genome, encoding="utf-8")
                 for seed in seeds:
@@ -259,8 +275,8 @@ class Jobs:
 class BreedingJobs(Jobs):
     TOOL = "zuchtbecken"
 
-    def results(self, data_dir):
-        return Results(data_dir, "zucht", "steps", "worlds")
+    def results(self, data_dir, engine):
+        return Results(data_dir, "zucht", "steps", "worlds", engine)
 
     def plan(self, data):
         steps, worlds = data.get("steps"), data.get("worlds")
@@ -288,8 +304,8 @@ class TrialJobs(Jobs):
                          f"trial={TrialLab.CRAB_STEPS}"],
     }
 
-    def results(self, data_dir):
-        return Results(data_dir, "versuch", "trial", "seeds")
+    def results(self, data_dir, engine):
+        return Results(data_dir, "versuch", "trial", "seeds", engine)
 
     def plan(self, data):
         trial, seeds = data.get("trial"), data.get("seeds")
