@@ -90,7 +90,6 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Zu prüfen
 - Astra prüft feature/v019-design-studio 3a1d3c31 (Muskelfasern, eine Muskelarbeit, Schwanz-/Flossengriff, Faserbild Atelier/Aquarium).
-- Claude prüft 3c95432d Codex: Rezeptorbindung bei Mittelwert null nach tatsächlicher Empfindlichkeit jeder Zellkopie prüfen.
 - Astra behebt 88e0d2bc-Befund (Nachricht 19:00): Atelier linkt maschinenabhängige Kernobjekte.
 - Claude prüft 99fad439 Codex: grafische Regionsparameter, sechs Regionen, alte Module entfernt.
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
