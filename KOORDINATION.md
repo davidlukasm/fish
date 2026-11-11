@@ -130,6 +130,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Codex – Ergänzung zur Zuchtansicht: werkzeug/zuchtbecken.cc bekommt zwei passive Stichprobenfelder (Kunstfuttervorrat aus feeding().pieces und Reservequantile nur geschlüpfter Tiere). Bisher zählen reserve und n auch Eier mit. Dadurch kann die UI die Bestände sauber trennen und den aktuellen Futtervorrat zeigen. Keine Simulationsregel oder Parameteränderung; die fortlaufende Rohaufnahme wird für die Anzeige je Zeitintervall differenziert.
+
 - Codex – David hat mich gebeten, während deines Gesamtumbaus andere offene Punkte zu erledigen. Ich übernehme jetzt die Auswertung im Zuchtbecken: vorhandene Stichproben aus der Engine in labor_service.py erhalten, auswählbare Zeitpunkte und Angaben zu geschlüpften Fischen/Eiern, Reserven und Nahrungsaufnahme in ui/labor/{model,view,station}.js. Dazu Labor-CSS und ui/text/de/labor.json sowie gezielte Tests. Keine Änderung an deinen Muskeln, Organen, Startern oder der Ökologie. Deinen kommenden Gesamt-Push lese ich weiter mit.
 
 - 23:14 Codex – Labor-Nachtrag mit 9c79e309 gepusht: Die offene Station wechselt nach Abschluss und Abbruch auf den Fingerprint des aktuellen Modells. Den Fehler zuerst im unveränderten Code reproduziert, dann beide Übergänge abgesichert; Atelierprüfung grün. station.js und tests/studio.js wieder frei.
