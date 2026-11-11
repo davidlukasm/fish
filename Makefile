@@ -57,12 +57,13 @@ $(BUILD_DIR)/test-core.o: $(CORE_OBJECTS)
 endif
 endif
 
-# Reassociation changes the address search and therefore the compiled genome.
-ATELIER_FLAGS := $(filter-out -O%,$(TEST_FLAGS)) -O3 -fno-fast-math -ffp-contract=off
+# Development and CPPN evaluation also influence the address search. Every object linked
+# into the compiler must use the same generic arithmetic, independently of the aquarium.
+ATELIER_FLAGS := $(filter-out -O% -march=% -mtune=% -mcpu=% -flto% -ffat-lto-objects,$(CXXFLAGS) $(LDFLAGS)) -O3 -fno-fast-math -ffp-contract=off
+ATELIER_OBJECTS := $(patsubst $(BUILD_DIR)/obj/%,$(BUILD_DIR)/atelier-obj/%,$(CORE_OBJECTS))
 ifeq ($(SANITIZE),1)
 ATELIER_FLAGS := $(filter-out -O%,$(ATELIER_FLAGS)) -O1
 endif
-$(BUILD_DIR)/atelier $(BUILD_DIR)/compiler-tests: TEST_FLAGS := $(ATELIER_FLAGS)
 
 FORCE:
 $(BUILD_DIR)/build-flags: FORCE build_config.py
@@ -71,6 +72,15 @@ $(BUILD_DIR)/build-flags: FORCE build_config.py
 	@cmp -s $@.new $@ || mv $@.new $@
 	@rm -f $@.new
 $(OBJECTS): $(BUILD_DIR)/build-flags
+$(BUILD_DIR)/atelier-build-flags: FORCE build_config.py
+	@mkdir -p $(dir $@)
+	@{ printf '%s\n' '$(CXX) $(CPPFLAGS) $(ATELIER_FLAGS)'; python3 -B build_config.py signature -- $(CXX) $(CPPFLAGS) $(filter-out -MMD -MP,$(ATELIER_FLAGS)); } > $@.new
+	@cmp -s $@.new $@ || mv $@.new $@
+	@rm -f $@.new
+$(ATELIER_OBJECTS): $(BUILD_DIR)/atelier-build-flags
+$(BUILD_DIR)/atelier-obj/%.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CXX) $(CPPFLAGS) $(ATELIER_FLAGS) -MT '$(abspath $@)' -MT '$(patsubst $(CURDIR)/%,%,$(abspath $@))' -c $< -o $@
 $(BUILD_DIR)/fish: $(OBJECTS)
 	$(CXX) -pthread $(LDFLAGS) $^ $(LDLIBS) -o $@.new
 	mv $@.new $@
@@ -80,12 +90,14 @@ $(BUILD_DIR)/obj/%.o: %.cc
 $(BUILD_DIR)/%-tests: tests/%.cc $(wildcard tests/*.hh) $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
-$(BUILD_DIR)/compiler-tests: $(wildcard werkzeug/atelier*.hh) colony-core/field/contacts.hh
+$(BUILD_DIR)/compiler-tests: tests/compiler.cc $(wildcard tests/*.hh) $(ATELIER_OBJECTS) Makefile $(wildcard werkzeug/atelier*.hh) colony-core/field/contacts.hh
+	$(CXX) $(CPPFLAGS) $(ATELIER_FLAGS) $< $(ATELIER_OBJECTS) $(LDLIBS) -o $@.new
+	mv $@.new $@
 .PHONY: starter
 starter: $(BUILD_DIR)/atelier
 	BUILD_DIR="$(abspath $(BUILD_DIR))" node werkzeug/fischbau.mjs
-$(BUILD_DIR)/atelier: werkzeug/atelier.cc $(TEST_CORE) Makefile $(wildcard werkzeug/atelier*.hh)
-	$(CXX) $(CPPFLAGS) $(TEST_FLAGS) $< $(TEST_CORE) $(LDLIBS) -o $@.new
+$(BUILD_DIR)/atelier: werkzeug/atelier.cc $(ATELIER_OBJECTS) Makefile $(wildcard werkzeug/atelier*.hh)
+	$(CXX) $(CPPFLAGS) $(ATELIER_FLAGS) $< $(ATELIER_OBJECTS) $(LDLIBS) -o $@.new
 	mv $@.new $@
 $(BUILD_DIR)/zuchtbecken: werkzeug/zuchtbecken.cc $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(filter-out -O1,$(TEST_FLAGS)) -O3 $< $(TEST_CORE) $(LDLIBS) -o $@.new
@@ -97,5 +109,6 @@ $(BUILD_DIR)/verhaltenslabor: werkzeug/verhaltenslabor.cc $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(filter-out -O1,$(TEST_FLAGS)) -O3 $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 -include $(OBJECTS:.o=.d)
+-include $(ATELIER_OBJECTS:.o=.d)
 -include $(wildcard $(BUILD_DIR)/*-tests.d)
 

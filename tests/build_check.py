@@ -26,8 +26,31 @@ def ensure_node():
                      'UI-Prüfungen installieren und den Aufruf wiederholen.')
 
 
+def check_compiler_build():
+    with tempfile.TemporaryDirectory() as folder:
+        reference = None
+        for native, lto in ((0, 0), (0, 1), (1, 0), (1, 1)):
+            plan = subprocess.check_output(
+                ['make', '--no-print-directory', '-B', '-n', f'BUILD_DIR={folder}',
+                 f'NATIVE={native}', f'LTO={lto}', 'SANITIZE=0', str(Path(folder) / 'atelier'),
+                 str(Path(folder) / 'compiler-tests')], cwd=ROOT, text=True)
+            commands = [shlex.split(line) for line in plan.splitlines() if ' -o ' in line]
+            assert commands and any('colony-core/field/development.cc' in c for c in commands)
+            assert any('colony-core/cppn/program.cc' in c for c in commands)
+            for command in commands:
+                assert '-fno-fast-math' in command and '-ffp-contract=off' in command
+                assert not any(a.startswith(('-march=', '-mtune=', '-mcpu=', '-flto')) or
+                               a == '-ffat-lto-objects' for a in command), command
+                objects = [a for a in command if a.endswith('.o')]
+                assert objects and all('/atelier-obj/' in a for a in objects), command
+            if reference is not None:
+                assert commands == reference, 'Aquarium flags must not alter the compiler build'
+            reference = commands
+
+
 def main():
     ensure_node()
+    check_compiler_build()
     sys.path.insert(0, str(ROOT))
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
