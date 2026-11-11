@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Ohne Auswahl startet die generationell geprüfte Brisa. Miro und Liora 33 (Pflanzenfresser) sind Atelier-Entwürfe. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
+Brisa und Pflanzenfresser Liora 40 sind die generationell geprüften Startlinien. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
