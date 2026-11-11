@@ -374,19 +374,17 @@ struct Assessment {
 // Deviations are fractions of each gene's full trait span. Inactive receptors only constrain
 // their baseline and sensitivity; their unused binding profile has no physiological effect.
 inline float receptor_deviation(const Receptor &wanted, const field::HormoneReceptor &actual,
-                                int effect) {
+                                float inactive_baseline) {
   const auto outside = [](float value, float lower, float upper) {
     return std::max({0.f, lower - value, value - upper});
   };
-  const float baseline = wanted.active ? wanted.baseline : effect == field::Output ? 1.f : 0.f;
+  const float baseline = wanted.active ? wanted.baseline : inactive_baseline;
   const float sensitivity = wanted.active ? wanted.sensitivity : 0.f;
+  const float spread = wanted.active ? wanted.spread_receptors : 0.f;
   float deviation = std::max(
-      outside(actual.baseline, baseline - 2 * wanted.spread_receptors,
-              baseline + 2 * wanted.spread_receptors) /
-          2,
-      outside(actual.sensitivity,
-              sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_receptors,
-              sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * wanted.spread_receptors) /
+      outside(actual.baseline, baseline - 2 * spread, baseline + 2 * spread) / 2,
+      outside(actual.sensitivity, sensitivity - 2 * field::HORMONE_SENSITIVITY_SPAN * spread,
+              sensitivity + 2 * field::HORMONE_SENSITIVITY_SPAN * spread) /
           (2 * field::HORMONE_SENSITIVITY_SPAN));
   if (!wanted.active || std::abs(wanted.sensitivity) < 1e-6f)
     return deviation;
@@ -441,16 +439,24 @@ inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
        std::max(0.f, std::abs(a.quality1 - b.quality1) / 2 - wanted.spread_physiology),
        std::max(0.f, std::abs(a.quality2 - b.quality2) / 2 - wanted.spread_physiology),
        std::max(0.f, std::abs(a.quality_width - b.quality_width) - wanted.spread_physiology),
+       std::max(0.f, std::abs(a.learning_time - wanted.learning_tau) - wanted.spread_physiology),
+       std::max(0.f,
+                std::abs(cell.electrical_limit - wanted.electrical_limit) - wanted.spread_contacts),
+       std::max(0.f,
+                std::abs(cell.teaching_limit - wanted.teaching_limit) - wanted.spread_contacts),
        std::max(0.f, std::abs(cell.range - expected.range) - wanted.spread_contacts),
        std::max(0.f, std::abs(cell.crossing - expected.crossing) / 2 - wanted.spread_contacts)});
   for (std::size_t k = 1; k < cell.identity.size(); ++k)
     deviation =
         std::max(deviation, std::max(0.f, std::abs(cell.identity[k] - expected.identity[k]) / 2 -
                                               wanted.spread_development));
+  deviation =
+      std::max(deviation, receptor_deviation(wanted.growth, cell.development_receptor, 1.f));
   for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect)
     if (field::hormone_effect_present(cell, effect))
       deviation = std::max(deviation, receptor_deviation(wanted.receptors[effect],
-                                                         cell.hormone_receptors[effect], effect));
+                                                         cell.hormone_receptors[effect],
+                                                         effect == field::Output ? 1.f : 0.f));
   return deviation;
 }
 inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
@@ -462,7 +468,6 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
   std::vector<double> capacities(n);
   std::vector<float> deviations(n);
   std::vector<bool> identities(n);
-  std::set<std::uint32_t> checkedGroups;
   for (std::size_t i = 0; i < t.neurons.size(); ++i) {
     const auto &cell = t.neurons[i];
     for (int j = 0; j < n; ++j)
@@ -478,7 +483,7 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
             cell.functions.senses != expected->functions.senses ||
             cell.functions.motors != expected->functions.motors)
           identities[j] = true;
-        if (expected && checkedGroups.insert(cell.group).second)
+        if (expected)
           deviations[j] = std::max(deviations[j], trait_deviation(want, cell, *expected));
         break;
       }
@@ -487,8 +492,7 @@ inline Assessment assess(const Plan &p, const fishsim::Genome &g) {
   }
   if (result.extraCells > p.options.extraCells)
     result.issues.push_back({"cells", -1, -1, double(result.extraCells)});
-  if (receptor_deviation(p.growth, t.growth_receptor, field::GROWTH_RECEPTOR) >
-      p.options.traitTolerance + 1e-4f)
+  if (receptor_deviation(p.growth, t.growth_receptor, 0.f) > p.options.traitTolerance + 1e-4f)
     result.issues.push_back({"growth"});
   for (int j = 0; j < n; ++j) {
     if (identities[j])

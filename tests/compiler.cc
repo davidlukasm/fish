@@ -59,10 +59,58 @@ void wired_cells_find_contact_places() {
   fit_contact_slots(roomy);
   assert(roomy.groups[1].field == 1);
 }
+void assessment_checks_learning_and_every_cell() {
+  auto plan = cells(1);
+  plan.groups[0].copies = 4;
+  fishsim::Genome genome;
+  genome.cppn = Builder().build(plan);
+  genome.compile(false);
+  assert(assess(plan, genome).ok() && genome.blueprint->neurons.size() == 4);
+  for (float Group::*property :
+       {&Group::learning_tau, &Group::electrical_limit, &Group::teaching_limit}) {
+    auto changed = plan;
+    changed.groups[0].*property = .9f;
+    assert(!assess(changed, genome).ok());
+    changed.options.traitTolerance = .4f;
+    assert(assess(changed, genome).ok());
+  }
+  auto later = plan;
+  later.groups[0].growth = {true, 0, 0};
+  assert(!assess(later, genome).ok());
+  const auto rejects_last_cell = [&](auto change) {
+    auto broken = genome;
+    auto tissue = std::make_shared<field::Substrate>(*genome.blueprint);
+    assert(tissue->neurons.front().group == tissue->neurons.back().group);
+    change(tissue->neurons.back());
+    broken.blueprint = tissue;
+    assert(!assess(plan, broken).ok());
+  };
+  rejects_last_cell([](auto &cell) { cell.parameters.threshold = .9f; });
+  rejects_last_cell([](auto &cell) { cell.parameters.learning_time = .9f; });
+  rejects_last_cell([](auto &cell) { cell.electrical_limit = .9f; });
+  rejects_last_cell([](auto &cell) { cell.teaching_limit = .9f; });
+  rejects_last_cell([](auto &cell) { cell.development_receptor.baseline = 0; });
+  rejects_last_cell([](auto &cell) { cell.hormone_receptors[field::Learning].baseline = 1; });
+}
+void inactive_growth_ignores_saved_settings() {
+  auto plan = cells(1);
+  plan.groups[0].growth = {false, .4f, 1, .1f, .3f, 2, 2, .2f};
+  plan.growth = {false, .4f, 1, .1f, .3f, 2, 2, .2f};
+  fishsim::Genome genome;
+  genome.cppn = Builder().build(plan);
+  genome.compile(false);
+  assert(assess(plan, genome).ok());
+  field::Hormones hormones;
+  hormones.fill(1);
+  assert(genome.blueprint->growth_receptor.occupancy(hormones) == 0);
+  assert(genome.blueprint->neurons[0].development_receptor.response(hormones, 1) == 1);
+}
 int main() {
   fishsim::Genome::begin_run(34981);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
+  assessment_checks_learning_and_every_cell();
+  inactive_growth_ignores_saved_settings();
   {
     auto plan = cells(2);
     auto &g = plan.groups.front();

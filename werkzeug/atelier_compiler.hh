@@ -569,7 +569,8 @@ public:
       body.u0 = body.u1 = at.u;
       body.v0 = body.v1 = at.v;
       body.w0 = body.w1 = at.w;
-      receptor(indicator(body, field::GROWTH_RECEPTOR, 0, -1, true), plan.growth, 1);
+      receptor(indicator(body, field::GROWTH_RECEPTOR, 0, -1, true),
+               plan.growth.active ? plan.growth : Receptor{}, 1);
     }
     assign(mask(effect_selector(field::Output)), out::capacity, 1);
     assign(mask(effect_selector(field::GROWTH_RECEPTOR)), out::capacity, 1);
