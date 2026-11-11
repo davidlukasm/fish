@@ -17,7 +17,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - Einstellungen enthalten Energiezufuhr, Wachstum, Licht, Sediment und Evolution. „Welt merken“ speichert eine Welt dauerhaft; Autosave alle 30 Sekunden und beim Beenden.
 - Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
-- Atelier: Organe und vier Hirnbausteine (Sehzentrum, Schaltzentrum, Taktgeber, Lehrsignal) auf den Fisch ziehen. Anschlüsse zeigen fehlende Verbindungen. Sehfeld und Farbtypen am Auge einstellen. Ziehen im freien Raum verschiebt; Mausrad zoomt. Entwürfe speichern automatisch.
+- Atelier: Organe und Hirnregionen auf den Fisch ziehen. Seh- und Riechverarbeitung, Körperzustand, Bewertung, Handlungswahl und Motorik haben eigene Anschlüsse. Zum Verbinden einen Anschluss wählen; ein Klick auf eine Region zeigt ihre Aufgaben und Zellen. Sehfeld und Farbtypen am Auge einstellen. Ziehen im freien Raum verschiebt; Mausrad zoomt. Entwürfe speichern automatisch.
 
 ## Startpopulation
 

@@ -3,7 +3,8 @@ import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
 export function choicePlan() {
   const stops = [
     [ 'seen', 'search' ], [ 'alarm', 'search' ], [ 'alarm', 'target' ], [ 'alarm', 'advance' ],
-    [ 'pause', 'target' ], [ 'pause', 'advance' ], [ 'pause', 'search' ]
+    // Feeding pauses travel; keeping the target direction lets the mouth stay aligned.
+    [ 'pause', 'advance' ], [ 'pause', 'search' ]
   ];
   return neuralPlan(
       [

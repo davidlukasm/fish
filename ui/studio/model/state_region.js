@@ -1,5 +1,5 @@
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {neuralPlan, regionCell} from './region_cells.js';
+import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
 
 const ADULT_OUTPUT = Object.freeze({
   [HORMONE_EFFECT.output] : {
@@ -11,6 +11,9 @@ const ADULT_OUTPUT = Object.freeze({
     substance : HORMONES.levels
   }
 });
+// Gonads may first fill long after maturation. These cells still need their own activity
+// then to learn the fullness input; the output gate prevents juvenile spawning.
+const LATE_COMMAND = Object.freeze({...TONIC_LEARNING, ...ADULT_OUTPUT});
 
 export function statePlan() {
   return neuralPlan(
@@ -24,8 +27,8 @@ export function statePlan() {
         regionCell('deficit', 'inhibit', 'none', {copies : 8, threshold : -1}),
         regionCell('pause', 'relay', 'out', {copies : 2, q2 : 1, tau : 1}),
         regionCell('investment', 'relay', 'out', {threshold : -.4}, ADULT_OUTPUT),
-        regionCell('eggReady', 'relay', 'both', {threshold : .2}, ADULT_OUTPUT),
-        regionCell('spermReady', 'relay', 'both', {threshold : .2}, ADULT_OUTPUT)
+        regionCell('eggReady', 'relay', 'both', {threshold : .2}, LATE_COMMAND),
+        regionCell('spermReady', 'relay', 'both', {threshold : .2}, LATE_COMMAND)
       ],
       [
         [ 'intake', 'pause' ], [ 'reserve', 'deficit' ], [ 'deficit', 'investment' ],
