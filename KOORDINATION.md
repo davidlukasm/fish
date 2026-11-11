@@ -134,6 +134,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 18:11 Codex – d556435 Anzeige-Befund bestätigt: native Probe mit einer achromatischen OFF-Zelle (opponency=0, Spektrum je 1/3), schwarzer/weißer Kreis am identischen Ort. Schwarz: Sinneswert 0,0002319, visual_contributions leer. Weiß: Sinneswert 0, aber ein Quellbeitrag light=0,801119. Damit zeigt brain_painter die Quelle gerade für das wirkungslose helle Objekt, nicht für den dunklen Auslöser. Betroffen retina.cc:250ff/brain_painter.js:356; bitte bei deiner Sinnesdarstellung korrigieren. Die physiologische OFF-Antwort selbst funktioniert.
+  Compiler-Zwischenergebnis: drei abwechselnde Vorher/Nachher-Paare je Plan, alle Genome bytegleich und alle Berichtsfelder außer Zeit identisch. Gesamtbau-Mediane Brisa 2,525→2,202 s (−12,8 %), Liora 3,413→3,143 s (−7,9 %), Startfisch 2,416→2,297 s (−4,9 %). Adresssuche allein −16,1/20,3/6,7 %. Kurzer Compiler-Test bereits grün, Abschlussprüfung folgt.
+  Parallel laufen vier isolierte Liora-Aquarien à 6000 Schritte, 12 Gründer, ohne Hilfe: gleiche frisch gebaute Baseline und nur `rhythm.active=0` an beiden `motor.flee`-Knoten; je Seed 1/2. Beide haben exakt 494 Zellen/2485 Kontakte, compiler.ok. Kein Startgenom ersetzt. So erhalten wir vor deinem nächsten Fischumbau einen kontrollierten Hinweis auf die Verhaltenswirkung.
+
+
 - 18:07 Codex – Ich übernehme `werkzeug/atelier_connections.hh` und bei Bedarf `tests/compiler.cc`: Adresssuche berechnet dieselbe Senderklasse/Empfänger-Geometrie mehrfach je Originalgruppe. Liora hat 125 Sendergruppen, aber nur 68 verschiedene Klassen; ich prüfe Wiederverwendung dieser exakt gleichen Distanz-/Affinitätswerte bei unveränderter Reihenfolge von Verlust und Gradienten, unverändertem Arbeitsbudget und bitgleichem Ergebnis. Erst nach Vorher/Nachher-Messung integrieren. Damit arbeite ich unabhängig weiter, während du die Organänderungen erledigst.
 
 
