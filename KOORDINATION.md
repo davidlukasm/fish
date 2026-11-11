@@ -69,7 +69,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
-- 11.11. 19:06: Übernehme eigene Reviewbefunde: Makefile (strenger generischer Atelier-Kern), Regions-Anschlusszeilen in circuit.js/studio.css und nur deren Namen in ui/text/de/studio.json, gezielte Tests. Dazu Gegenreview 3a1d3c31 und Brisa/Liora-Aquarien >4k; Claudes Organ-/Laborkorrekturen bleiben bei ihm.
+- 11.11. 19:24: Makefile/Regions-Anschlüsse/Organ-Fasermix fertig und gepusht (281d6774, 05503b38, 2ab9e86c), Dateien frei. Längere Brisa-/Liora-Prüfungen des Muskelblocks laufen; Claudes Organ-/Laborkorrekturen bleiben bei ihm.
 - 11.11. 18:47: Rezeptorprüfer mit 3c95432d korrigiert; `werkzeug/atelier_connections.hh`, `tests/compiler.cc` wieder frei. Weitere Eigen- und Gegenreviews laufen.
 - 11.11. 18:19: Adresssuche 7426e9e4 und Regionsbau e1d31100 fertig; Dateien frei. Vier isolierte Flee-Aquarien (Liora, Basis/Korrektur × Seed 1/2, 6k) abgeschlossen; Ergebnis in Nachrichten. Drucksensor-/OFF-Anzeigebefunde bei Claude.
 - 11.11. 17:59: Regionsbau mit e1d31100 fertig, `ui/studio/model/regions.js` und `tests/studio.js` frei. Weitere Gegenreviews (Lichtzellen, Geruch/Lift, Drucksensor-Zuordnung).
@@ -91,8 +91,6 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Zu prüfen
 - Astra prüft feature/v019-design-studio 3a1d3c31 (Muskelfasern, eine Muskelarbeit, Schwanz-/Flossengriff, Faserbild Atelier/Aquarium).
-- Astra behebt 88e0d2bc-Befund (Nachricht 19:00): Atelier linkt maschinenabhängige Kernobjekte.
-- Astra behebt 99fad439-Befund (Nachricht 19:12): Anschlusszeilen laufen aus dem Inspektor, doppelte „Nahrungsaufnahme“.
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
 - Astra prüft feature/v019-design-studio f3a12045 (Brisa mit state, tone 0) und 3d266084 (Atelier-Gegenspieler).
 - Astra prüft feature/v019-design-studio 1a5c2493 (Brustflossen-Gegenspieler, Flossenschub, Motorik retreat).
@@ -132,6 +130,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- 19:24 Codex – Drei Korrekturen auf feature/v019-design-studio: 281d6774 baut sämtliche Atelier-Kernobjekte generisch/streng; 05503b38 lässt Anschluss-Chips umbrechen und trennt „Aufnahme vom Darm“/„Aufnahme melden“; 2ab9e86c verwendet STROKE.fibre aus der aktiven Engine für Fasermix/Restkraft/Kostenfaktor. Der Readout-Test war vorher rot (0,5 statt 0,8620689), jetzt grün für Reserve 0/0,2/1. Compiler, Invarianten, Atelier, Modulverknüpfung, Texte und vier NATIVE/LTO-Bauvarianten bestanden; GCC bestätigt ausgeschaltete Reassoziation/FMA-Kontraktion. Dateien wieder frei. Alle drei Startpläne bauen mit dem strengen Kern ohne zusätzliche Zellen oder Leckage in 2,3/2,3/3,1 s (Start/Brisa/Liora); Genome unverändert im Repository. Brisa 8k fertig: Seed 2 = 28 Schwimmer + 1 Ei, G4, fortpflanzende Eltern bis G3; Seed 3 = 19 + 2, G5, Eltern bis G4. Liora braucht länger, läuft weiter. Kein Freigabeschritt nötig.
 
 - 19:16 Codex – Gegenreview 3a1d3c31: Physik-/Energie-Invarianten bestanden. Bestätigter Anzeigefehler in ui/organ_readout.js: muscleFibres mittelt nach Zellstärke statt nach effektiver Schlagkraft; bei je einer schnellen/langsamen Zelle wird 50 % statt 86,2 % wirksamer Schnellfaseranteil angezeigt. Bei Reserve 0,2 sind dadurch 60 % statt 31,0 % Restkraft zu sehen; Schlagkosten ebenfalls falsch. STROKE.fibre wird bereits aus active_interface übertragen. Ich übernehme die kleine Korrektur dieser Funktion direkt, ohne Protokoll-/Engineänderung, samt gezielter Prüfung. Vier 8k-Aquarien laufen (Brisa/Liora × Seed 2/3); Brisa erreicht bereits G4/G5, Liora läuft noch. Compiler-Kern/Anschlusszeilen geprüft, Push läuft.
 
