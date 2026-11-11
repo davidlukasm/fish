@@ -1901,6 +1901,24 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                 c => sprintPlan.groups[everyCenter.findIndex(e => e.id === c.id)].threshold);
     assert.deepEqual(thresholds.map(x => x === model.SPRINT_THRESHOLD),
                      [ false, false, true, true ], 'The last nodes join only a strong command');
+    const {settleRegions, updateRegion} = await import('../ui/studio/model/regions.js');
+    const {organSlots, slotCenters} = await import('../ui/studio/model/organs.js');
+    const motorAdded =
+        model.addOrgan(model.newDocument('Motorik'), 'motor', sites, {x : 470, y : 300});
+    const motorDoc = settleRegions(motorAdded.document, sites);
+    const motor = model.findOrgan(motorDoc, motorAdded.organId);
+    assert.ok(motor.pair, 'Motor coordination has a half on each side');
+    const reached = key => slotCenters(motor, key, 'in').map(c => c.node).sort();
+    assert.deepEqual(reached('toward'), [ 'oppose', 'turn' ],
+                     'A stimulus on one side turns towards it and holds back the other side');
+    assert.deepEqual(reached('near'), [ 'brake', 'hold', 'mouth' ],
+                     'Food at the mouth slows the fish, keeps it down and opens the mouth');
+    assert.ok(organSlots(motor).every(s => slotCenters(motor, s.key, s.dir).length),
+              'Every motor port reaches its own node');
+    const quiet = settleRegions(updateRegion(motorDoc, motor.id, {compete : 0}, sites), sites);
+    assert.ok(!model.findOrgan(quiet, motor.id).centers.some(c => c.node === 'oppose'),
+              'Without competition no node inhibits the other side');
+    assert.doesNotThrow(() => model.compileDocument(motorDoc, sites));
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
     assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);

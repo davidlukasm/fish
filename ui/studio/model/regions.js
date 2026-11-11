@@ -16,6 +16,7 @@ import {statePlan} from './state_region.js';
 import {choicePlan} from './choice_region.js';
 import {valuePlan} from './value_region.js';
 import {olfactionPlan} from './olfaction_region.js';
+import {motorPlan} from './motor_region.js';
 import {HALF_VIEW, bearing} from './retina.js';
 import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
 import {
@@ -201,7 +202,8 @@ const PLANS = Object.freeze({
   state : statePlan,
   choice : choicePlan,
   value : valuePlan,
-  olfaction : olfactionPlan
+  olfaction : olfactionPlan,
+  motor : motorPlan
 });
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 

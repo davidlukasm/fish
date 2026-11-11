@@ -1,0 +1,37 @@
+// Motor coordination: where a stimulus lies, how urgent swimming is and whether to stop become the
+// commands of fins, tail, mouth, jaw and buoyancy. Inputs name the side of the stimulus: "toward"
+// turns to it, "away" and "feel" turn from it. With competing sides a request on one side also
+// inhibits turning to the other, so two requests compete instead of cancelling at the muscle.
+// Every node answers any input: contacts learn only between cells that both vary, so a cell held
+// silent would never learn its inputs.
+import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
+
+// Swim threshold for the resting command: silent, gentle cruising, steady cruising.
+const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
+// The output nodes drive muscles directly, like motor neurons: more cells and full contacts.
+const DRIVER = Object.freeze({copies : 8, electrical_limit : 1});
+const listener = (node, preset) => regionCell(node, preset, 'in', {}, TONIC_LEARNING);
+export function motorPlan(doc, organ) {
+  const r = organ.region;
+  const nodes = [
+    regionCell('turn', 'relay', 'out', DRIVER),
+    regionCell('swim', 'relay', 'both', {...DRIVER, threshold : SWIM_TONE[r.tone]}),
+    regionCell('mouth', 'relay', 'both', DRIVER), regionCell('bite', 'relay', 'both', DRIVER),
+    regionCell('lift', 'relay', 'both', DRIVER),
+    // Stop signals: brake slows swimming; a full gut silences mouth and jaw; food at the mouth
+    // holds the fish down while it eats.
+    listener('brake', 'inhibit'), listener('sated', 'inhibit'), listener('hold', 'inhibit')
+  ];
+  const inner =
+      [ [ 'brake', 'swim' ], [ 'sated', 'mouth' ], [ 'sated', 'bite' ], [ 'hold', 'lift' ] ];
+  const cross = [];
+  if (organ.pair) {
+    nodes.push(listener('flee', 'relay'));
+    cross.push([ 'flee', 'turn' ]);
+    if (r.compete) {
+      nodes.push(listener('oppose', 'inhibit'));
+      cross.push([ 'oppose', 'turn' ]);
+    }
+  }
+  return neuralPlan(nodes, inner, cross);
+}

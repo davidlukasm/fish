@@ -112,7 +112,8 @@
     "state": "Körperzustand",
     "choice": "Handlungswahl",
     "value": "Bewertung",
-    "olfaction": "Riechverarbeitung"
+    "olfaction": "Riechverarbeitung",
+    "motor": "Motorik"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -427,7 +428,17 @@
     "feature4": "Merkmal 4",
     "concentration": "Geruchsstärke",
     "opposite": "Gegenseite hemmen",
-    "gradient": "Geruchsrichtung"
+    "gradient": "Geruchsrichtung",
+    "turn": "Drehen",
+    "swim": "Schwimmen",
+    "mouth": "Saugen",
+    "bite": "Zubeißen",
+    "lift": "Auftrieb",
+    "brake": "Bremse",
+    "sated": "Satt hemmt Maul",
+    "hold": "Fressen hält unten",
+    "flee": "Wegdrehen",
+    "oppose": "Hemmt Gegenseite"
   },
   "regions": {
     "response": {
@@ -446,6 +457,10 @@
     "rhythm": {
       "term": "Muster­generator",
       "purpose": "Vorlage: eine rhythmische Zellgruppe mit Ein- und Ausgang."
+    },
+    "motor": {
+      "term": "Motorik",
+      "purpose": "Vorlage: macht aus Reizseite, Drang, Bremse, Nähe, Sättigung, Lage und Grundkontakt die Befehle für Flossen, Schwanz, Maul, Kiefer und Auftrieb; die Wünsche beider Seiten wetteifern, statt sich am Muskel aufzuheben."
     },
     "teaching": {
       "term": "Modulator­kerne",
@@ -488,7 +503,21 @@
       "feature3": "Merkmal 3",
       "feature4": "Merkmal 4",
       "scent": "Geruch",
-      "presence": "Geruchsstärke"
+      "presence": "Geruchsstärke",
+      "toward": "Hin zur Reizseite",
+      "away": "Weg von der Reizseite",
+      "urge": "Drang",
+      "brake": "Bremse",
+      "near": "Nah am Maul",
+      "feel": "Lage und Berührung",
+      "grip": "Zubeißen",
+      "full": "Satt",
+      "contact": "Am Grund",
+      "bite": "Kiefer",
+      "lift": "Auftrieb",
+      "tail": "Schwanz",
+      "fins": "Flossen",
+      "mouth": "Maul"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -496,7 +525,9 @@
       "colours": "Farbtypen",
       "compare": "Seitenvergleich",
       "teacher": "Lehrer",
-      "features": "Merkmalswege"
+      "features": "Merkmalswege",
+      "tone": "Grundtempo",
+      "compete": "Seiten wetteifern"
     },
     "values": {
       "contrast": [
@@ -517,6 +548,15 @@
         "Veränderung",
         "Pegel",
         "Merkspur"
+      ],
+      "tone": [
+        "still",
+        "gemächlich",
+        "zügig"
+      ],
+      "compete": [
+        "aus",
+        "an"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",
