@@ -84,6 +84,9 @@ void foraging(std::ostream &out, const Ecosystem &w, double eaten) {
   first = true;
   for (const auto &p : w.fish) {
     const auto &b = p.body;
+    double raw = 0;
+    for (double amount : p.observations().raw_diet)
+      raw += amount;
     const double mx = b.x + mouth_offset(b) * std::cos(b.angle),
                  my = b.y + mouth_offset(b) * std::sin(b.angle);
     double nearest = std::numeric_limits<double>::infinity(), nearby = 0;
@@ -109,7 +112,8 @@ void foraging(std::ostream &out, const Ecosystem &w, double eaten) {
     out << ',' << cloud << ',' << nearby << ',' << b.age << ',' << b.health << ',' << b.motor().vx
         << ',' << b.motor().vy << ',' << b.motor().drive_forward << ',' << b.motor().drive_left
         << ',' << b.motor().drive_right << ',' << b.rest_cost << ',' << b.ledger().movement_cost
-        << ',' << b.ledger().brain_cost << ',' << p.parent << ']';
+        << ',' << b.ledger().brain_cost << ',' << p.parent << ',' << raw << ',' << b.hunger
+        << ',' << nutrient_signal(b) << ']';
     first = false;
   }
   out << "]}\n" << std::flush;
@@ -240,7 +244,7 @@ int main(int argc, char **argv) {
              "\"fishColumns\":[\"id\",\"generation\",\"hatched\",\"x\",\"y\",\"energy\","
              "\"gutEnergy\",\"rawFeed\",\"nearestFeed\",\"nearestFeedCloud\",\"nearbyFeed\","
              "\"age\",\"health\",\"vx\",\"vy\",\"forward\",\"left\",\"right\",\"restCost\","
-             "\"movementCost\",\"brainCost\",\"parent\"]}\n";
+             "\"movementCost\",\"brainCost\",\"parent\",\"rawFood\",\"hunger\",\"intakeSignal\"]}\n";
     }
     std::ofstream observations;
     if (!observed.empty()) {
