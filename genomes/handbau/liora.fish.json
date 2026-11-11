@@ -1,6 +1,6 @@
 {
   "format": "v019-fish-atelier-720",
-  "name": "Liora 32",
+  "name": "Liora 33",
   "organs": [
     {
       "id": "brain",
@@ -142,7 +142,7 @@
           "surface": "inner",
           "site": 102,
           "copies": 2,
-          "threshold": 0.6382978723404256,
+          "threshold": 0.9361702127659575,
           "tau": 0.5,
           "field": 0.3,
           "q1": 0,
@@ -4897,7 +4897,7 @@
           "threshold": -0.5,
           "tau": 0.2999999999999999,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5019,7 +5019,7 @@
           "threshold": -0.5,
           "tau": 0.2999999999999999,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5141,7 +5141,7 @@
           "threshold": -0.5,
           "tau": 0.2999999999999999,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5263,7 +5263,7 @@
           "threshold": -0.5,
           "tau": 0.2999999999999999,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5394,7 +5394,7 @@
           "threshold": -0.5,
           "tau": 0.3,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5516,7 +5516,7 @@
           "threshold": -0.5,
           "tau": 0.3,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5638,7 +5638,7 @@
           "threshold": -0.5,
           "tau": 0.3,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -5760,7 +5760,7 @@
           "threshold": -0.5,
           "tau": 0.3,
           "field": 0.3,
-          "q1": 0,
+          "q1": 1,
           "q2": 0,
           "qwidth": 0.8,
           "sign": 1,
@@ -21309,14 +21309,6 @@
       "toPort": "storage"
     },
     {
-      "id": "wire-mwb7n4qf-b",
-      "from": "organ-mwakznq0-h",
-      "to": "organ-mwb7n4q1-9",
-      "spread": 0,
-      "pairing": null,
-      "fromPort": "fullness"
-    },
-    {
       "id": "wire-mwb7n4qi-c",
       "from": "organ-mwb7n4q1-9",
       "to": "organ-mwakznq0-h",
@@ -21343,6 +21335,13 @@
       "id": "wire-mwb7n4s9-m",
       "from": "organ-mwb7n4rj-j",
       "to": "organ-mwb7n4r3-e",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mwbc9gqx-1",
+      "from": "center-mwakznpq-3",
+      "to": "organ-mwb7n4q1-9",
       "spread": 0,
       "pairing": null
     }

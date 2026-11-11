@@ -37,6 +37,12 @@ constexpr std::array<int, 2> SENSE_STEPS{1, 10};
 // the fish has moved on once it is LEAVING spreads beyond its starting distance.
 constexpr double PATCH_REACH = 3, LEAVING = 6, NEAR_BODIES = 2, NEAR_VIEW = 80, PATH_PRECISION = 10;
 double PIECE_ENERGY = 40;
+void optional_number(double value) {
+  if (std::isfinite(value))
+    std::cout << value;
+  else
+    std::cout << "null";
+}
 int site_of(const cppn::Point &p) {
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
     const auto s = field::development_site(i);
@@ -448,8 +454,9 @@ int main(int argc, char **argv) {
                     leaf,
                     std::max(0., stroke_distance(part, w.field.delta_x(part.x - mx), part.y - my)));
             std::cout << "{\"event\":\"trace\",\"bearing\":" << bearing << ",\"step\":" << steps
-                      << ",\"distance\":" << nd << ",\"to\":" << nb << ",\"leaf\":" << leaf
-                      << ",\"reach\":" << mouth_reach(p->body)
+                      << ",\"distance\":" << nd << ",\"to\":" << nb << ",\"leaf\":";
+            optional_number(leaf);
+            std::cout << ",\"reach\":" << mouth_reach(p->body)
                       << ",\"biteSignal\":" << p->body.bite_signal
                       << ",\"grind\":" << bite_force(p->body, true)
                       << ",\"plant\":" << p->observations().raw_diet[food_kind::plant]
@@ -477,8 +484,10 @@ int main(int argc, char **argv) {
                 }
               }
             std::cout << "{\"event\":\"eye\",\"bearing\":" << bearing << ",\"step\":" << steps
-                      << ",\"distance\":" << nd << ",\"to\":" << nb
-                      << ",\"turn\":" << p->body.motor().turn * 180 / PI << ",\"cells\":";
+                      << ",\"distance\":";
+            optional_number(nd);
+            std::cout << ",\"to\":" << nb << ",\"turn\":" << p->body.motor().turn * 180 / PI
+                      << ",\"cells\":";
             eye_cells(*p);
             std::cout << "}\n";
           }
