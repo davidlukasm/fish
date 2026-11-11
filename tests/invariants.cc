@@ -885,19 +885,25 @@ void observed_incubation_funds_waiting_and_drives_the_picture(const Genome &g) {
   check(embryo_development(initial.body) == 0, "an unbuilt egg has no mature embryo picture");
   const auto blueprint = initial.genome;
   const double initial_energy = initial.body.energy;
-  for (int tick = 0; tick < 3; ++tick)
-    w.tick();
-  check(w.fish.size() == 1 && !w.fish.front().body.hatched &&
-            embryo_development(w.fish.front().body) < .5,
-        "finishing two assembly steps does not show a completed neural embryo");
   double unrecorded = 0;
-  for (int tick = 3; tick < 1024 && !w.fish.empty() && !w.fish.front().body.hatched; ++tick) {
-    w.tick();
+  // From the first assembly step on, the record matches what the egg no longer holds; secretion
+  // for dissolving the shell counts as soon as it is made.
+  const auto compare = [&] {
     const auto &embryo = w.fish.front().body;
-    // Secretion for dissolving the shell is spent as soon as it is made.
     const double kept = stored_energy(embryo) - embryo.embryo.secretion - embryo.embryo.pending;
     if (!embryo.hatched)
       unrecorded = std::max(unrecorded, std::abs(initial_energy - kept - embryo.embryo.spent));
+  };
+  for (int tick = 0; tick < 3; ++tick) {
+    w.tick();
+    compare();
+  }
+  check(w.fish.size() == 1 && !w.fish.front().body.hatched &&
+            embryo_development(w.fish.front().body) < .5,
+        "finishing two assembly steps does not show a completed neural embryo");
+  for (int tick = 3; tick < 1024 && !w.fish.empty() && !w.fish.front().body.hatched; ++tick) {
+    w.tick();
+    compare();
   }
   check(unrecorded <= RECORD_TOLERANCE * initial_energy,
         "the embryo records the energy its incubation used up");

@@ -115,6 +115,11 @@ public:
   }
   void prepare(const Genome &);
   void grow_brain(const Genome &, const PhysiologyParameters &, bool protected_life);
+  // What an embryo pays from its yolk stays on record: its own eggs must later cover as much.
+  void record_incubation(double cost) {
+    if (!hatched)
+      embryo.spent += cost;
+  }
   const BrainInterface &active_interface(const Genome &) const;
   void refresh_organs(const Genome &);
   double neural_upkeep() const;

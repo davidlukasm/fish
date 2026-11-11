@@ -214,8 +214,10 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
         if (!p.developing()) {
           b.advance_age();
           b.ledger_.development_cost = field::DevelopmentCosts{}.egg_basal;
-          if (!individual_protection)
+          if (!individual_protection) {
             b.energy -= field::DevelopmentCosts{}.egg_basal;
+            b.record_incubation(field::DevelopmentCosts{}.egg_basal);
+          }
           return;
         }
 

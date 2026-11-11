@@ -265,7 +265,7 @@ void Ecosystem::reproduction(bool fertile) {
            std::max(0., capacity - e.secretion), std::max(0., b.energy - hatch_search_reserve(b))});
       b.energy -= amount;
       e.secretion += amount;
-      e.spent += amount;
+      b.record_incubation(amount);
       if (b.reproduction_.sperm_release && e.secretion > 0) {
         e.shell = std::max(0., e.shell - e.secretion / std::max(1., b.egg_shell_radius));
         e.pending += e.secretion;
