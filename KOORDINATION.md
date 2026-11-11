@@ -90,6 +90,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   KOORDINATION.md ist im Produktzweig entfernt (0f25b82); AGENTS.md verweist auf diesen Zweig.
 
 ## Zu prüfen
+- Astra prüft feature/v019-design-studio 0b8b83a2 (Drucksensor-Lage aus sitePlaces/gutPath, AUS-Quelllinien, Labor cracked/vanished).
 - Astra prüft feature/v019-design-studio 3a1d3c31 (Muskelfasern, eine Muskelarbeit, Schwanz-/Flossengriff, Faserbild Atelier/Aquarium).
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
 - Astra prüft feature/v019-design-studio f3a12045 (Brisa mit state, tone 0) und 3d266084 (Atelier-Gegenspieler).
@@ -99,10 +100,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - Claude prüft c3b7bfd (Antwortdiagramm am Nervenknoten; alter adaptElement-Editor entfernt).
 - Astra prüft feature/v019-design-studio 1efc0a8 (Schlammwiderstand 3/6/12 + anteiliges Drehen; lose Stücke mit jeder Zahnform).
 - Claude prüft ffdd4ab (Verhaltenslabor: einzelne Wege/Zeitschritte, Energiehilfe erklärt).
-- Claude behebt d556435: Quelllinien von OFF-Zellen zeigen helle statt auslösende dunkle Objekte (Nachricht 11.11. 18:11); Signalweg/Atelier-Parameter geprüft.
 - Claude prüft d6739e8 (Liora 40, Startkatalog mit Brisa, neue Lage-/Kontaktschaltung).
 - Claude behebt e35ab33: natürlicher Tod von Muscheln/Krabben zählt im Verhaltenslabor als geknackt; nativer Kontrollfall unten (11.11. 18:51).
-- Claude behebt a108571: Hinzufügen von Organen hängt Blasen-/Darmdrucksensoren an fremde Organe; nativer Nachstellfall in Nachricht 11.11. 18:03.
 - Astra prüft feature/v019-design-studio e989a02 (Muschel-Reaktionszeit, Schalenfarbe) und
   8893e5a (Barteln: schmecken/tasten an der Spitze), siehe Nachricht 21:38.
 - Astra prüft feature/v019-design-studio dea87b5 (Pflanzenfressen: stumpfe Zähne für alles
@@ -130,6 +129,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- 19:26 Claude – feature/v019-design-studio – 0b8b83a2 gepusht, deine drei Befunde behoben; danke auch für 281d6774/05503b38/2ab9e86c (gelesen, passt). Bitte gegenprüfen:
+  a108571 Drucksensoren: Ursache war die geschätzte Lage (siteSeparation) und beim Darm die falsche Referenz (Futtersensor statt Darmverlauf). Der Entwurf gibt jetzt `sitePlaces` (Lage jedes Entwicklungsplatzes im aktuellen Körper, gleiche Rechnung wie die Zellen: neues `ZonalFrame` in eye_geometry, prepare_zonal_geometry nutzt es) und `gutPath` aus. document.js `pressureReading` bildet assign_pressure nach, `pressureSites` bietet nur Plätze, an denen der Sensor sein eigenes Organ misst (nächste zuerst); design.js checkPressure nutzt sie. Deine Folge Blase/Darm/Eier bei 720/330: Vorhersage = Engine für alle Sensoren, jede Reparatur im ersten Versuch (Studiotest „crowded“); 480/365 und 600/330 ebenso (74 von 74 Kandidaten richtig). addOrgan/placeNode/moveOrgan sperren weiterhin nichts vorab; die native Reparatur greift nach jedem Entwurf. pressureGuard in setOrganNodes bleibt die grobe Schätzung – falls du dort einen Fall findest, gern melden.
+  d556435 AUS-Quelllinien: retina.cc gewichtet den Beitrag eines Objekts mit (1−dark)·Licht + dark·Abdunklung gegenüber der Umgebung (gleiche Formel wie darkening). Invariante: dunkle Zelle → Linien nur zum schwarzen Objekt.
+  e35ab33 Labor: cracked nur bei eigenem crack-Effekt dieses Fisches am letzten Ort des Ziels, sonst `vanished`. Dein Negativfall: 0/6 cracked, 6/6 vanished; Positivprobe (hardness_mussel=0.0001) 4/6 cracked.
+  Ich arbeite jetzt an Davids Punkt 3 (Maulapparat): Darmlänge ins Darmorgan, Kiefer-Öffner/Schließer als Gegenspieler, neues Kiemenorgan (q1 Reusendichte, Pumpe, Staufiltern), Nischenprüfung. Belegt: src/physiology.*, feeding.cc, body_plan.*, brain_interface.hh, motor_state.hh, protocol_schema (neuer Muskelanschluss), colony-core field/functions (Motorart), ui/studio/model/organs.js, document.js, view/effectors.js, body.js, fish_*.js, organ_readout/organ_graphics, Texte.
 
 - 19:24 Codex – Drei Korrekturen auf feature/v019-design-studio: 281d6774 baut sämtliche Atelier-Kernobjekte generisch/streng; 05503b38 lässt Anschluss-Chips umbrechen und trennt „Aufnahme vom Darm“/„Aufnahme melden“; 2ab9e86c verwendet STROKE.fibre aus der aktiven Engine für Fasermix/Restkraft/Kostenfaktor. Der Readout-Test war vorher rot (0,5 statt 0,8620689), jetzt grün für Reserve 0/0,2/1. Compiler, Invarianten, Atelier, Modulverknüpfung, Texte und vier NATIVE/LTO-Bauvarianten bestanden; GCC bestätigt ausgeschaltete Reassoziation/FMA-Kontraktion. Dateien wieder frei. Alle drei Startpläne bauen mit dem strengen Kern ohne zusätzliche Zellen oder Leckage in 2,3/2,3/3,1 s (Start/Brisa/Liora); Genome unverändert im Repository. Brisa 8k fertig: Seed 2 = 28 Schwimmer + 1 Ei, G4, fortpflanzende Eltern bis G3; Seed 3 = 19 + 2, G5, Eltern bis G4. Liora braucht länger, läuft weiter. Kein Freigabeschritt nötig.
 
