@@ -333,8 +333,10 @@ async function checkHormoneSystems(model, capabilities) {
   const alarm = placeSystem(example, 'alarm', sites, capabilities, {x : 500, y : 400}, 'A');
   assert.ok(alarm);
   assert.equal(alarm.document.organs.length, example.organs.length + 1);
-  assert.deepEqual(model.findOrgan(alarm.document, choice.id), choice,
-                   'A hormone keeps a pre-existing choice region and its settings');
+  assert.deepEqual(
+      model.findOrgan(alarm.document, choice.id).centers.filter(c => c.node !== 'threat'),
+      choice.centers.filter(c => c.node !== 'threat'),
+      'Adding an alarm keeps the unrelated parts of an existing choice region');
   for (const [added, expected] of [[ reward, 'intake' ], [ alarm, 'threat' ]]) {
     const gland = model.findOrgan(added.document, added.organId);
     const targets = new Set([ gland.id, ...gland.centers.map(c => c.id) ]);
@@ -360,6 +362,21 @@ async function checkHormoneSystems(model, capabilities) {
   assert.ok(idle > 0 && idle < capabilities.biasScale * gland.threshold,
             'Late pain can learn without resting activity secreting an alarm');
   assert.equal(systemMissing(fresh.document, 'alarm'), 'needs');
+  for (const result of [ alarm, fresh ]) {
+    const painLinks = routedLinks(result.document, sites).filter(l => l.wire.toPort === 'threat');
+    assert.ok(painLinks.length);
+    for (const link of painLinks)
+      assert.equal(model.organOf(result.document, link.from).side,
+                   model.organOf(result.document, link.to).side,
+                   'Pain keeps its side before hormone pooling');
+    for (const organ of result.document.organs.filter(o => o.type === 'choice')) {
+      const threat = organ.centers.find(c => c.node === 'threat');
+      assert.equal(threat.pace, -1);
+      assert.equal(threat.threshold, -.05);
+      assert.equal(threat.receptors[E.rhythm].active, 0);
+      assert.equal(threat.receptors[E.learning].baseline, 1);
+    }
+  }
   const strength =
       fresh.document.organs.find(o => o.type === 'muscle').centers[0].receptors[E.excitation];
   assert.equal(strength.substance, fresh.substance);

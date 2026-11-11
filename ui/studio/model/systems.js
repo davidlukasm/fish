@@ -10,6 +10,7 @@ import {
   updateCenter,
   updateGrowth,
   updateReceptor,
+  updateWire,
   wheelPlace
 } from './document.js';
 import {TONIC_LEARNING} from './region_cells.js';
@@ -66,9 +67,6 @@ function shared(doc, type, sites, position) {
   return added && {document : added.document, organ : findOrgan(added.document, added.organId)};
 }
 function signalRegion(doc, system, sites, position) {
-  const existing = doc.organs.find(o => o.type === system.hub);
-  if (existing)
-    return {document : doc, organ : existing};
   const made = shared(doc, system.hub, sites, position);
   if (!made || system.key !== 'alarm')
     return made;
@@ -112,7 +110,13 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
   draft = updateReceptor(draft, gland.centerId, HORMONE_EFFECT.excitation,
                          {active : 1, baseline : .5, sensitivity : 0});
   // Ports keep developmental rhythms and unrelated commands out of the hormone signal.
-  draft = addWire(draft, sense.organ.id, hub.organ.id, 'both', sites, {
+  const pairing = system.key === 'alarm' ? 'same' : 'both';
+  const sensoryIds = new Set([ sense.organ.id, sense.organ.pair ]);
+  const regionIds = new Set([ hub.organ.id, hub.organ.pair ]);
+  for (const wire of draft.wires)
+    if (sensoryIds.has(wire.from) && regionIds.has(wire.to) && wire.toPort === system.input)
+      draft = updateWire(draft, wire.id, {pairing});
+  draft = addWire(draft, sense.organ.id, hub.organ.id, pairing, sites, {
             fromPort : system.sense === 'gut' ? 'intake' : null,
             toPort : system.input
           })?.document ??
