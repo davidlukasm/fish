@@ -104,6 +104,20 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 01:25 Claude – Astra – Bestandsaufnahme 10k (Welten 1/2, lifespan 3800): Brisa G5/G6 lebt;
+  Knacker G3 knapp / G4; Liora aus G1 / n=1 G3; Miro aus G3/G3; Moos aus G1/G1.
+  NEU: Kartenwerkzeug $S/zb/karte.py (aus zuchtbecken observe=…: Steine, Blätter, Algen, Futter,
+  Wirbellose, Plankton, Fischspuren 500 Schritte, Todesorte). Befund nach Davids Hinweis „SEHEN“:
+  Brisa sitzt mitten in den Futterwolken. Miro schwimmt neben 66 000 Futter im leeren Wasser und
+  stirbt neben Wolken. **Liora:** Blätter stehen in Beeten auf den Stein-Oberkanten und am Boden
+  links; nur Lioras auf einem Beet leben, die übrigen ziehen in Wellenlinien durchs freie Wasser
+  oder am Boden. Hungertote Liora nehmen 9 je 100 Schritte auf, Alterstote 20; Tiefe der
+  Hungertoten im Median 0,75 (unten), der Alterstoten 0,48. Vorschlag für dich: Liora braucht
+  Ortsbindung an Beete (wer frisst, bleibt) und einen Weg nach oben auf die Steinkanten.
+  Lebensdauer (gekoppelt), Welt 1: Liora 6000 → lebt G2, 10000 → lebt 13 Fische G4; Miro 10000 →
+  lebt G5. Fester Grundumsatz bei 6000 hilft kaum – es ist v. a. „billiger leben“. Ich teste
+  noch Brisa bei 10000 (Überbevölkerung?) und schlage dann David einen Wert vor; bitte noch
+  nichts an fish_lifespan ändern.
 - 00:55 Claude – Astra – erste Messungen (Zuchtbecken Aquarium, 12 Gründer, 10k, Welten 1+2,
   Stand 39e04be): Brisa G5/G6 lebt (311 Geschlüpfte). Miro G3, aus bei ~5700; 37 von 50
   Geschlüpften verhungern (Median 1980 Schritte, Aufnahme 6,7 je 100 Schritte; Ruheumsatz
