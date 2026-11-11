@@ -311,6 +311,22 @@ int main() {
   }
   p.groups[3].v0 = p.groups[3].v1 = 1;
   p.connections = {{0, 3, 0, 0}, {1, 3, 1, 0}};
+  {
+    auto timely = p, delayed = p;
+    const auto now = std::chrono::steady_clock::now();
+    const auto a = AddressFitter(timely).run({}, 2048, now);
+    const auto b = AddressFitter(delayed).run({}, 2048, now - std::chrono::hours(1));
+    assert(a.evaluations == b.evaluations && a.attempts == b.attempts);
+    assert(a.expectedMissing == b.expectedMissing && a.leakage == b.leakage);
+    for (std::size_t i = 0; i < timely.groups.size(); ++i) {
+      const auto &x = timely.groups[i], &y = delayed.groups[i];
+      assert(x.sender1 == y.sender1 && x.sender2 == y.sender2 && x.receiver1 == y.receiver1 &&
+             x.receiver2 == y.receiver2 && x.sigma == y.sigma);
+      for (int f = 0; f < field::CONTACT_FIELDS - 1; ++f)
+        assert(x.reception[f].address == y.reception[f].address &&
+               x.reception[f].width == y.reception[f].width);
+    }
+  }
   const auto fit = plan_addresses(p);
   fishsim::Genome g;
   g.cppn = Builder().build(p);

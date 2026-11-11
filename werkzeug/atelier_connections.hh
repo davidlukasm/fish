@@ -24,14 +24,15 @@ struct Wiring {
   }
 };
 struct AddressFit {
-  int evaluations = 0, attempts = 0;
+  std::uint64_t evaluations = 0;
+  int attempts = 0;
   double milliseconds = 0, expectedMissing = 0, leakage = 0;
 };
 using CompileProgress = std::function<void(const char *, const AddressFit &)>;
 namespace fit {
-// Periodic checks keep progress responsive without reading the clock for every pair.
-// Fixed restarts make short fits repeatable.
-inline constexpr double budget_ms = 4000, notice_ms = 150;
+// Work, rather than elapsed time, limits the search so a blueprint is independent of CPU load.
+inline constexpr std::uint64_t evaluation_budget = 128000000;
+inline constexpr double notice_ms = 150;
 inline constexpr int restarts = 64, iterations = 1600, check_period = 32, repair_period = 2;
 inline constexpr std::uint64_t restart_salt = 7919;
 inline constexpr double initial_extent = .8, address_extent = .95, initial_radius = .12,
@@ -318,14 +319,15 @@ class AddressFitter {
 
 public:
   explicit AddressFitter(Plan &plan) : p(plan), n(int(plan.groups.size())), w(plan) { prepare(); }
-  AddressFit run(const CompileProgress &progress, double budget_ms,
+  AddressFit run(const CompileProgress &progress, std::uint64_t evaluation_budget,
                  std::chrono::steady_clock::time_point started) {
     auto elapsed = [&] {
       return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
           .count();
     };
     double last_notice = -fit::notice_ms;
-    for (int restart = 0; restart < fit::restarts && (restart == 0 || elapsed() < budget_ms);
+    for (int restart = 0;
+         restart < fit::restarts && (restart == 0 || stats.evaluations < evaluation_budget);
          ++restart) {
       ++stats.attempts;
       initialize(restart);
@@ -337,7 +339,7 @@ public:
             progress("search", stats);
             last_notice = stats.milliseconds;
           }
-          if (stats.milliseconds >= budget_ms || sufficient())
+          if (stats.evaluations >= evaluation_budget || sufficient())
             break;
         }
         descend(iteration);
@@ -351,9 +353,9 @@ public:
   }
 };
 inline AddressFit plan_addresses(Plan &p, const CompileProgress &progress = {},
-                                 double budget_ms = fit::budget_ms) {
+                                 std::uint64_t evaluation_budget = fit::evaluation_budget) {
   const auto started = std::chrono::steady_clock::now();
-  return AddressFitter(p).run(progress, budget_ms, started);
+  return AddressFitter(p).run(progress, evaluation_budget, started);
 }
 
 struct Issue {
