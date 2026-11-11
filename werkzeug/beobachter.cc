@@ -26,6 +26,10 @@ struct Options {
   int every = 5, detail = 50, tracked = 6, min_generation = 0;
   std::string checkpoint, resume;
 };
+struct ContactSnapshot {
+  unsigned count = 0;
+  double weights = 0, strongest = 0, electrical = 0, teaching = 0;
+};
 int site_of(const cppn::Point &p) {
   for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
     const auto s = field::development_site(i);
@@ -117,8 +121,10 @@ int main(int argc, char **argv) {
       w.seed({g}, count, run_limit::default_food);
     }
     auto &out = std::cout;
-    out << "{\"event\":\"setup\",\"width\":" << w.field.geometry().width
-        << ",\"height\":" << w.field.geometry().height << ",\"obstacles\":[";
+    out << "{\"event\":\"setup\",\"linkColumns\":[\"source\",\"target\",\"contacts\","
+           "\"weightSum\",\"maxWeight\",\"electricalPerCell\",\"teachingPerCell\"],\"width\":"
+        << w.field.geometry().width << ",\"height\":" << w.field.geometry().height
+        << ",\"obstacles\":[";
     bool first = true;
     for (const auto &ob : w.field.geometry().obstacles) {
       out << (first ? "[" : ",[");
@@ -302,20 +308,34 @@ int main(int argc, char **argv) {
           out << ",\"activity\":";
           values(out, activity);
           if (detail) {
-            std::map<std::pair<std::size_t, std::size_t>, std::array<double, 3>> links;
+            std::map<std::pair<std::size_t, std::size_t>, ContactSnapshot> links;
+            const auto &neurons = brain.blueprint().neurons;
             for (const auto &s : brain.synapses()) {
               auto &l = links[{t.position.at(t.sites[s.source] * ROLES + t.roles[s.source]),
                                t.position.at(t.sites[s.target] * ROLES + t.roles[s.target])}];
-              l[0] += 1;
-              l[1] += s.weight;
-              l[2] = std::max(l[2], double(std::abs(s.weight)));
+              ++l.count;
+              l.weights += s.weight;
+              l.strongest = std::max(l.strongest, double(std::abs(s.weight)));
+              // Snapshot weights may already include this step's learning. Axon signals,
+              // unlike the displayed organ commands, are what recurrent contacts transmit.
+              if (!brain.muted(s.source) && !brain.muted(s.target)) {
+                const double contribution = s.weight * brain.signal(s.source);
+                if (field::contact_effect(neurons[s.source], neurons[s.target]) ==
+                    field::ContactEffect::Teaching)
+                  l.teaching += contribution;
+                else
+                  l.electrical += contribution;
+              }
             }
             out << ",\"links\":[";
             bool comma = false;
             for (const auto &[key, l] : links) {
-              out << (comma ? "," : "") << '[' << key.first << ',' << key.second << ',' << l[0]
-                  << ',' << rounded(l[1], TEN_THOUSANDTHS) << ',' << rounded(l[2], TEN_THOUSANDTHS)
-                  << ']';
+              const double count = cells[key.second];
+              out << (comma ? "," : "") << '[' << key.first << ',' << key.second << ',' << l.count
+                  << ',' << rounded(l.weights, TEN_THOUSANDTHS) << ','
+                  << rounded(l.strongest, TEN_THOUSANDTHS) << ','
+                  << rounded(count > 0 ? l.electrical / count : 0, TEN_THOUSANDTHS) << ','
+                  << rounded(count > 0 ? l.teaching / count : 0, TEN_THOUSANDTHS) << ']';
               comma = true;
             }
             out << ']';
