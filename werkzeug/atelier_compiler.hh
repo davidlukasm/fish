@@ -374,6 +374,7 @@ inline std::vector<Group> compact_groups(std::vector<Group> groups) {
 }
 
 class Builder {
+  static constexpr float MIN_COEFFICIENT = 1e-7f;
   std::shared_ptr<evolution::Genome> genes =
       std::make_shared<evolution::Genome>(cppn::INPUTS, cppn::OUTPUTS);
   std::array<float, cppn::OUTPUTS> base{};
@@ -482,9 +483,13 @@ class Builder {
     return mask(gate);
   }
   void assign(int indicator, int output, float delta) {
-    if (std::abs(delta) < 1e-7f)
+    if (std::abs(delta) < MIN_COEFFICIENT)
       return;
     link(indicator, cppn::INPUTS + output, delta);
+  }
+  void assign_property(const Group &g, float property, int output, float delta) {
+    if (std::abs(delta) >= MIN_COEFFICIENT)
+      assign(indicator(g, -1, 0, property), output, delta);
   }
 
 public:
@@ -521,13 +526,13 @@ public:
         const int gate = indicator(g);
         for (int k = 0; k < cppn::OUTPUTS; ++k) {
           const float delta = values[k] - (k == out::expression ? -1.f : 0.f);
-          if (std::abs(delta) >= 1e-7f)
+          if (std::abs(delta) >= MIN_COEFFICIENT)
             traits[k][delta].push_back(gate);
         }
-        assign(indicator(g, -1, 0, cppn::property::learning), out::time_constant,
-               2 * (g.learning_tau - g.tau));
-        assign(indicator(g, -1, 0, cppn::property::teaching), out::synapse_strength,
-               2 * (g.teaching_limit - g.electrical_limit));
+        assign_property(g, cppn::property::learning, out::time_constant,
+                        2 * (g.learning_tau - g.tau));
+        assign_property(g, cppn::property::teaching, out::synapse_strength,
+                        2 * (g.teaching_limit - g.electrical_limit));
         for (int f = 1; f < field::CONTACT_FIELDS; ++f) {
           const auto &r = g.reception[f - 1];
           if (r.expression <= -1 && g.reception_spread[f - 1][0] == 0)

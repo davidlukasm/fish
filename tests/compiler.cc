@@ -105,12 +105,45 @@ void inactive_growth_ignores_saved_settings() {
   assert(genome.blueprint->growth_receptor.occupancy(hormones) == 0);
   assert(genome.blueprint->neurons[0].development_receptor.response(hormones, 1) == 1);
 }
+void property_overrides_reach_outputs() {
+  for (bool learning : {false, true})
+    for (bool teaching : {false, true}) {
+      auto plan = cells(1);
+      auto &cell = plan.groups.front();
+      cell.tau = .25f;
+      cell.learning_tau = learning ? .75f : cell.tau;
+      cell.electrical_limit = .35f;
+      cell.teaching_limit = teaching ? .8f : cell.electrical_limit;
+      fishsim::Genome genome;
+      genome.cppn = Builder().build(plan);
+      genome.compile(false);
+      assert(assess(plan, genome).ok());
+      std::map<int, std::vector<int>> parents;
+      for (const auto &edge : genome.cppn->get_connection_genes())
+        if (edge.get_enabled())
+          parents[edge.get_target()].push_back(edge.get_source());
+      std::vector<int> pending;
+      for (int i = 0; i < cppn::OUTPUTS; ++i)
+        pending.push_back(cppn::INPUTS + i);
+      std::set<int> reachable;
+      while (!pending.empty()) {
+        const int id = pending.back();
+        pending.pop_back();
+        if (reachable.insert(id).second)
+          pending.insert(pending.end(), parents[id].begin(), parents[id].end());
+      }
+      for (const auto &node : genome.cppn->get_node_genes())
+        if (node.get_role() == evolution::NodeRole::Hidden)
+          assert(reachable.count(node.get_id()));
+    }
+}
 int main() {
   fishsim::Genome::begin_run(34981);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
   assessment_checks_learning_and_every_cell();
   inactive_growth_ignores_saved_settings();
+  property_overrides_reach_outputs();
   {
     auto plan = cells(2);
     auto &g = plan.groups.front();
