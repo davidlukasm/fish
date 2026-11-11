@@ -15,15 +15,15 @@ from wording import Refusal, worded, wording
 from protocol_schema import GenomeImport, Route
 
 COMMAND_LIMIT, REPORT_LIMIT = 2000000, 32768
-# Atelier requests can carry an escaped genome together with its editable plan.
-ATELIER_LIMIT = 2 * GenomeImport.MAX_BYTES + COMMAND_LIMIT
+# Atelier requests and genome imports carry an escaped genome beside a plan or a command.
+GENOME_REQUEST_LIMIT = 2 * GenomeImport.MAX_BYTES + COMMAND_LIMIT
 EXPORT_WAIT_S, EXPORT_POLL_S = 3, 0.01
 RELAY_TIMEOUT_S, RELAY_CHUNK, RELAY_ANSWER_CHUNK = 120, 1 << 16, 1 << 20
 
 
 def request_limit(path):
     return (REPORT_LIMIT if path == Route.FPS_REPORT else
-            ATELIER_LIMIT if path == Route.ATELIER else COMMAND_LIMIT)
+            GENOME_REQUEST_LIMIT if path in (Route.ATELIER, Route.COMMAND) else COMMAND_LIMIT)
 
 
 class Handler(BaseHTTPRequestHandler):

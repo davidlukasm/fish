@@ -38,6 +38,14 @@ def main():
         'ui/palette.js und ui/style.css nennen verschiedene Farben', palette, css)
     subprocess.run(['node', '--experimental-vm-modules', 'tests/ui_link.js'],
                    cwd=ROOT, check=True)
+    # The page imports a genome as a command; one at the size limit must reach the server.
+    from protocol_schema import GenomeImport, Route
+    from viewer_http import request_limit
+    line = '0.123456789 ' * 7 + '\n'
+    genome = 'FISH_CPPN\n' + line * (GenomeImport.MAX_BYTES // len(line))
+    body = json.dumps({'command': 'population-import', 'name': 'x.genome', 'genome': genome})
+    assert len(body.encode()) <= request_limit(Route.COMMAND), (
+        'Ein Genom an der Importgrenze passt nicht durch die Befehlsanfrage')
     from suite import binary
     for habitat in ('aquarium', 'becken'):
         with tempfile.TemporaryDirectory() as folder:
