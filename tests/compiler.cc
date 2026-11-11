@@ -186,7 +186,8 @@ void property_overrides_reach_outputs() {
     }
 }
 int region_trace(const std::string &mode) {
-  const bool spine = mode == "spine", late = mode.find("late") != std::string::npos,
+  const bool fins = mode == "spine-fin", spine = mode == "spine" || fins,
+             late = mode.find("late") != std::string::npos,
              pulsed = mode.find("pulsed") != std::string::npos,
              fed_start = mode.find("fed-start") != std::string::npos;
   std::string name;
@@ -233,6 +234,13 @@ int region_trace(const std::string &mode) {
         const bool swimming = (step >= 800 && step < 2600) || (step >= 3000 && step < 4800);
         const bool steering = left ? step >= 3000 && step < 3400 : step >= 3400 && step < 3800;
         const bool escaping = left ? step >= 3800 && step < 3840 : step >= 4000 && step < 4040;
+        const bool rowing = (step >= 1200 && step < 2600) ||
+                            (left ? step >= 3000 && step < 3400 : step >= 3600 && step < 4000) ||
+                            (step >= 4400 && step < 4800);
+        if (fins) {
+          input.push_back(s.find("balance:") == 0 && rowing ? .6f : 0);
+          continue;
+        }
         input.push_back(s.find("gut:food:") == 0  ? (swimming ? .6f : 0)
                         : s.find("balance:") == 0 ? (steering ? .6f : 0)
                         : s.find("pain:") == 0    ? (escaping ? 1.f : 0)
@@ -265,8 +273,9 @@ int region_trace(const std::string &mode) {
     for (const auto &synapse : brain.synapses()) {
       const auto &source = plan.groups[groups[synapse.source]],
                  &target = plan.groups[groups[synapse.target]];
-      if (source.name.find("spine:opponent:") == 0 && target.name.find("spine:oscillator:") == 0 &&
-          source.side != target.side)
+      if (source.name.find(fins ? "spine:rowOpponent:" : "spine:opponent:") == 0 &&
+          target.name.find(fins ? "recover:muscle:" : "spine:oscillator:") == 0 &&
+          (fins ? source.side == target.side : source.side != target.side))
         inhibition[target.side < 0 ? 0 : 1] -= synapse.weight;
     }
     assert(inhibition[0] > .05 && inhibition[1] > .05);
@@ -275,7 +284,8 @@ int region_trace(const std::string &mode) {
 }
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
-  if (argc == 2 && (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]) == "spine"))
+  if (argc == 2 &&
+      (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]).find("spine") == 0))
     return region_trace(argv[1]);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();

@@ -451,7 +451,14 @@
     "oscillator": "Schwanzrhythmus",
     "opponent": "Hemmt anderen Takt",
     "steer": "Seitenvorspannung",
-    "escape": "Fluchtstoß"
+    "escape": "Fluchtstoß",
+    "fin": "Ruderdrang",
+    "finRest": "Flossen ruhen",
+    "finClock": "Ruderrhythmus",
+    "row": "Rückzieher",
+    "recover": "Vorzieher",
+    "rowOpponent": "Rückzieher hemmt Vorzieher",
+    "recoverOpponent": "Vorzieher hemmt Rückzieher"
   },
   "regions": {
     "response": {
@@ -533,7 +540,10 @@
       "hatch": "Schlüpfen",
       "steer": "Seite vorspannen",
       "escape": "Fluchtstoß",
-      "stroke": "Schwanzschlag"
+      "stroke": "Schwanzschlag",
+      "fin": "Ruderdrang",
+      "row": "Rückzieher",
+      "recover": "Vorzieher"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -554,8 +564,9 @@
       "maturity": "Fortpflanzungsreife",
       "association": "Zuordnungsdauer",
       "teaching": "Lehrstärke",
-      "cycle": "Periodendauer",
-      "alternation": "Gegenhemmung"
+      "cycle": "Schwanzperiode",
+      "alternation": "Gegenhemmung",
+      "finCycle": "Ruderperiode"
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
@@ -606,9 +617,11 @@
       "tectumReference": "Die Sehkarte teilt das Sehfeld. Violette Zellen hemmen die Karte gemeinsam.",
       "customized": "Einzelne Zellen sind eigens eingestellt; die Darstellung zeigt die Regionsvorgaben.",
       "steps": "{n} Schritte",
-      "spine": "Schwanzhälften abwechseln",
+      "spine": "Schwanz",
       "spineDrag": "Längere Periode nach rechts, stärkere Gegenhemmung nach oben",
-      "spineReference": "Oben: gegenphasige Takte als Schaltziel. Der Griff bestimmt Periodendauer und Gegenhemmung. Tatsächliche Aktivität entsteht aus Antrieb und gelernten Kontakten."
+      "spineReference": "Die Kurven zeigen die gegenphasigen Schaltziele. Schwanz und Seitenflossen haben eigene Perioden. Drang und gelernte Kontakte bestimmen die tatsächlichen Muskelbefehle.",
+      "finCycle": "Seitenflossen",
+      "finCycleDrag": "Ruderperiode nach rechts verlängern"
     },
     "values": {
       "response": [
@@ -619,7 +632,7 @@
     },
     "spine": {
       "term": "Wirbelsäule",
-      "purpose": "Stimmt linke und rechte Schwanzhälfte aufeinander ab. Drang setzt den Takt frei; Lenkung und Fluchtstoß bevorzugen die angesteuerte Muskelhälfte."
+      "purpose": "Koordiniert die Schwanzhälften und die Gegenspieler der Seitenflossen. Jede Seite kann getrennt rudern; Lenkung und Fluchtstoß steuern zusätzlich den Schwanz."
     }
   },
   "head": {
