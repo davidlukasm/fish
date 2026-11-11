@@ -23,6 +23,8 @@
 // mussel=1 grows the fish up in the aquarium and sets it, facing the shell, at distance from one
 // open mussel after another; each trial reports when the mouth reached the shell, whether the
 // shell closed first, how often the jaw bit and whether and when the shell cracked.
+// crab=1 does the same with crabs walking in the open: when the mouth reached the crab, when the
+// crab fled or buried itself, how much the fish lost to pinches and when the shell cracked.
 using namespace fishsim;
 namespace {
 // Sites and roles share one key: site * ROLES + role.
@@ -143,13 +145,13 @@ int main(int argc, char **argv) {
       throw std::invalid_argument(
           "Aufruf: verhaltenslabor GENOM SEED [settle=N] [trial=N] [distance=D] [rounds=N] "
           "[cluster=N] [spread=D] [piece=E] [prewait=N] [stay=1] [hungry=1] [plant=1] [aquarium=1] "
-          "[raised=1] [hold=1] [mussel=1] [path=N] [supply=0] "
+          "[raised=1] [hold=1] [mussel=1] [crab=1] [path=N] [supply=0] "
           "[Parameter=Wert ...]");
     const auto seed = std::stoull(argv[2]);
     const int trace_every =
         std::getenv("LABTRACE") ? std::max(1, std::atoi(std::getenv("LABTRACE"))) : 0;
     int settle = 300, trial = 300, rounds = 2, cluster = 1, aquarium = 0, prewait = 0, stay = 0,
-        hungry = 0, plant = 0, raised = 0, hold = 0, mussel = 0, path = 0, supply = 1;
+        hungry = 0, plant = 0, raised = 0, hold = 0, mussel = 0, crab = 0, path = 0, supply = 1;
     double distance = 80, spread = 15;
     Genome::begin_run(seed);
     const auto g = Genome::load(argv[1]);
@@ -191,6 +193,8 @@ int main(int argc, char **argv) {
         plant = int(value);
       else if (key == "mussel")
         mussel = int(value);
+      else if (key == "crab")
+        crab = int(value);
       else if (key == "path")
         path = int(value);
       else if (key == "supply")
@@ -207,7 +211,7 @@ int main(int argc, char **argv) {
            {"food_supply_share", "plankton_supply_share", "benthic_supply_share"})
         w.set_parameter(share, 0);
     };
-    if (mussel)
+    if (mussel || crab)
       raised = 1;
     if (aquarium || raised) {
       w.starter_world();
@@ -365,6 +369,84 @@ int main(int argc, char **argv) {
                   << ",\"eaten\":" << p->observations().raw_diet[food_kind::mussel] - eaten_before
                   << ",\"steps\":" << step;
         course.print(shell_x, shell_y);
+        std::cout << "}\n";
+      }
+      return 0;
+    }
+    if (crab) {
+      const auto &web = w.field.food_web();
+      const auto find = [&](std::uint64_t id) -> const Crab * {
+        for (const auto &c : web.crabs)
+          if (c.id == id && c.energy > 0)
+            return &c;
+        return nullptr;
+      };
+      std::vector<std::uint64_t> tried;
+      for (int round = 0; round < rounds * MUSSEL_TRIALS; ++round) {
+        keep();
+        const Crab *target = nullptr;
+        for (const auto &c : web.crabs)
+          if (c.energy > 0 && c.state == crab_state::foraging && c.crossing <= 0 &&
+              std::find(tried.begin(), tried.end(), c.id) == tried.end()) {
+            target = &c;
+            break;
+          }
+        if (!target)
+          break;
+        tried.push_back(target->id);
+        const auto found = web.patches.find(target->patch);
+        if (found == web.patches.end())
+          continue;
+        const auto &surface = w.field.vegetation().surfaces[found->second];
+        const std::uint64_t id = target->id;
+        const double energy = target->energy,
+                     hardness = w.field.env().hardness_crab +
+                                w.field.env().hardness_crab_growth * energy /
+                                    crab_capacity(target->morph, w.field.env());
+        auto &b = p->body;
+        if (hungry)
+          b.gut_fill = b.gut_energy = b.gut_digestible = 0;
+        b.x = w.field.wrap_x(target->x + surface.normal.x * distance);
+        b.y = target->y + surface.normal.y * distance;
+        b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
+        const double eaten_before = p->observations().raw_diet[food_kind::crab];
+        const auto cycles = b.mouth.cycle;
+        int reached = -1, fled = -1, buried = -1, cracked = -1, step = 0;
+        double nearest = distance, pinched = 0, health = b.health;
+        Course course{w, b.x, b.y, b.angle, path};
+        const double crab_x = target->x, crab_y = target->y;
+        for (; step < trial; ++step) {
+          w.tick(false);
+          keep();
+          course.record(step, p->body);
+          pinched += std::max(0., health - p->body.health);
+          health = p->body.health;
+          const Crab *c = find(id);
+          if (!c) {
+            cracked = step;
+            break;
+          }
+          const double mx = w.field.wrap_x(p->body.x +
+                                           mouth_offset(p->body) * std::cos(p->body.angle)),
+                       my = p->body.y + mouth_offset(p->body) * std::sin(p->body.angle),
+                       gap = std::hypot(w.field.delta_x(c->x - mx), c->y - my) -
+                             crab_radius(c->energy, w.field.env(), c->morph);
+          nearest = std::min(nearest, gap);
+          if (reached < 0 && gap <= mouth_reach(p->body))
+            reached = step;
+          if (fled < 0 && c->state == crab_state::fleeing)
+            fled = step;
+          if (buried < 0 && crab_hidden(*c))
+            buried = step;
+        }
+        std::cout << "{\"event\":\"crab\",\"energy\":" << energy << ",\"hardness\":" << hardness
+                  << ",\"grind\":" << bite_force(p->body, true) << ",\"reached\":" << reached
+                  << ",\"nearest\":" << nearest << ",\"fled\":" << fled << ",\"buried\":" << buried
+                  << ",\"cracked\":" << cracked << ",\"pinched\":" << pinched
+                  << ",\"bites\":" << p->body.mouth.cycle - cycles
+                  << ",\"eaten\":" << p->observations().raw_diet[food_kind::crab] - eaten_before
+                  << ",\"steps\":" << step;
+        course.print(crab_x, crab_y);
         std::cout << "}\n";
       }
       return 0;

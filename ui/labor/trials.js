@@ -2,15 +2,15 @@ import {TRIAL_KIND, TRIAL_LAB} from '../schema.js';
 
 export const OUTCOME = Object.freeze({missed : 0, reached : 1, succeeded : 2});
 export const trialKey = kind => Object.keys(TRIAL_KIND).find(key => TRIAL_KIND[key] === kind);
-export const trialDistance = kind =>
-    kind === TRIAL_KIND.mussel ? TRIAL_LAB.mussel_distance : TRIAL_LAB.feed_distance;
-export const trialSteps = kind =>
-    kind === TRIAL_KIND.mussel ? TRIAL_LAB.mussel_steps : TRIAL_LAB.feed_steps;
+export const trialDistance = kind => TRIAL_LAB[trialKey(kind) + '_distance'];
+export const trialSteps = kind => TRIAL_LAB[trialKey(kind) + '_steps'];
+// Shells must crack; feed only needs eating.
+const cracking = kind => kind === TRIAL_KIND.mussel || kind === TRIAL_KIND.crab;
 
-// A feed trial succeeds when the fish eats, a mussel trial when the shell cracks. Reaching is the
-// step before: close to the food, or the mouth at the shell.
+// A feed trial succeeds when the fish eats, a mussel or crab trial when the shell cracks.
+// Reaching is the step before: close to the food, or the mouth at the shell.
 export function trialOutcome(trial, kind) {
-  if (kind === TRIAL_KIND.mussel)
+  if (cracking(kind))
     return trial.cracked >= 0   ? OUTCOME.succeeded
            : trial.reached >= 0 ? OUTCOME.reached
                                 : OUTCOME.missed;
@@ -19,8 +19,7 @@ export function trialOutcome(trial, kind) {
                                                 : OUTCOME.missed;
 }
 // When the trial succeeded, in steps.
-export const successStep = (trial, kind) =>
-    kind === TRIAL_KIND.mussel ? trial.cracked : trial.reached;
+export const successStep = (trial, kind) => cracking(kind) ? trial.cracked : trial.reached;
 
 // Kept trial worlds of one fish and kind, overlaid by the running job when it tests the same.
 export function shownSessions(overview, fingerprint, kind, job) {

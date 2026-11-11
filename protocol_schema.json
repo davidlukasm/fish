@@ -165,7 +165,8 @@
     },
     "trial_kind": {
       "feed": 0,
-      "mussel": 1
+      "mussel": 1,
+      "crab": 2
     },
     "sense_kind": {
       "light": 0,
@@ -2141,7 +2142,9 @@
       "feed_scent_wait": 100,
       "feed_near": 10,
       "mussel_distance": 40,
-      "mussel_steps": 400
+      "mussel_steps": 400,
+      "crab_distance": 40,
+      "crab_steps": 400
     },
     "breeding": {
       "worlds": [2, 3, 5],

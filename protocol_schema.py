@@ -799,7 +799,8 @@ class OrganKind:
 class TrialKind:
     FEED = 0
     MUSSEL = 1
-    COUNT = 2
+    CRAB = 2
+    COUNT = 3
 
 class SenseKind:
     LIGHT = 0
@@ -1298,6 +1299,8 @@ class TrialLab:
     FEED_NEAR = 10
     MUSSEL_DISTANCE = 40
     MUSSEL_STEPS = 400
+    CRAB_DISTANCE = 40
+    CRAB_STEPS = 400
 
 class Breeding:
     WORLDS = (2, 3, 5)

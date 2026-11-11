@@ -2544,6 +2544,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           cracked = {...reached, cracked : 52}, missed = {...reached, reached : -1};
     assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.mussel), lab.OUTCOME.succeeded);
     assert.equal(lab.trialOutcome(reached, TRIAL_KIND.mussel), lab.OUTCOME.reached);
+    assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.crab), lab.OUTCOME.succeeded,
+                 'A crab trial succeeds when the shell cracks');
+    assert.equal(lab.successStep(cracked, TRIAL_KIND.crab), cracked.cracked);
+    assert.equal(lab.trialDistance(TRIAL_KIND.crab), TRIAL_LAB.crab_distance);
     assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near * 2}, TRIAL_KIND.feed),
                  lab.OUTCOME.missed);
     assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near}, TRIAL_KIND.feed),
@@ -2583,6 +2587,26 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(trialPage, /aid-trial-chart/, 'Every course is drawn');
     assert.equal((trialPage.match(/class="aid-trial-course /g) ?? []).length, 3);
     assert.match(trialPage, /aid-trial-shell/, 'A mussel target shows its shell');
+    const crabPage = trialShell({
+      overview : {
+        fish : trialOverview.fish,
+        results : [ {
+          fingerprint : 'f',
+          trial : TRIAL_KIND.crab,
+          seeds : {1 : {...kept, trial : TRIAL_KIND.crab}}
+        } ]
+      },
+      fish : 'brisa',
+      trial : TRIAL_KIND.crab,
+      seeds : TRIAL_LAB.seeds[1],
+      job : null,
+      running : false,
+      error : '',
+      draft : null,
+      fingerprint : 'f'
+    });
+    assert.equal((crabPage.match(/class="aid-trial-shell"/g) ?? []).length, 2,
+                 'Every crab target is drawn in its colour');
     assert.match(trialPage, /data-lab="cancel"/, 'A running trial can be cancelled');
     assert.match(trialPage, /data-lab-setting="trial" data-lab-value="/);
     const ended = trialShell({

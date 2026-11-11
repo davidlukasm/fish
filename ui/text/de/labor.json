@@ -57,11 +57,13 @@
     },
     "kind": {
       "feed": "Futter",
-      "mussel": "Muscheln"
+      "mussel": "Muscheln",
+      "crab": "Krabben"
     },
     "rule": {
       "feed": "Frisch geschlüpft im Startaquarium, das kein weiteres Futter bekommt. {cluster} Futterstücke liegen {distance} entfernt, nacheinander in zwölf Richtungen; je Richtung {steps} Schritte Zeit. Erreicht heißt: bis auf {near} heran.",
-      "mussel": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer offenen Muschel und blickt zu ihr; bis zu sechs Muscheln je Welt, je {steps} Schritte Zeit."
+      "mussel": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer offenen Muschel und blickt zu ihr; bis zu sechs Muscheln je Welt, je {steps} Schritte Zeit.",
+      "crab": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer Krabbe, die frei umherläuft, und blickt zu ihr; bis zu sechs Krabben je Welt, je {steps} Schritte Zeit. Krabben fliehen und graben sich ein, Fehlbisse zwicken."
     },
     "start": "Versuch starten",
     "running": "Welt {world} von {worlds} · {n} {n:Versuch|Versuche} fertig",
@@ -70,7 +72,8 @@
       "reached": "erreicht",
       "succeeded": {
         "feed": "gefressen",
-        "mussel": "geknackt"
+        "mussel": "geknackt",
+        "crab": "geknackt"
       }
     },
     "share": "{n} von {total}",

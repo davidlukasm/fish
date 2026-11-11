@@ -1,6 +1,6 @@
-import {TRIAL_KIND, TRIAL_LAB} from '../schema.js';
+import {INVERTEBRATE_KIND, TRIAL_KIND, TRIAL_LAB} from '../schema.js';
 import {formatNumber} from '../strings.js';
-import {musselShellColor} from '../fauna.js';
+import {musselShellColor, smallAnimalColor} from '../fauna.js';
 import {escapeText} from '../studio/view/markup.js';
 import {
   OUTCOME,
@@ -34,7 +34,7 @@ const COURSE = Object.freeze({
 const colour = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
 const fixed = v => v.toFixed(COURSE.digits);
 
-// Success is eating for feed and cracking for a mussel.
+// Success is eating for feed and cracking for a mussel or crab.
 const outcomeName = (outcome, kind) =>
     trials('outcome.' +
            (outcome === OUTCOME.succeeded ? 'succeeded.' + trialKey(kind) : OUTCOME_KEY[outcome]));
@@ -48,7 +48,7 @@ function trialTitle(trial, kind, k) {
 }
 
 // The approach only: a fish that ate keeps swimming for the rest of the trial, which would hide
-// where it got to the food. A cracked mussel ends its trial anyway.
+// where it got to the food. A cracked shell ends its trial anyway.
 const approach = (x, kind) =>
     trialOutcome(x, kind) === OUTCOME.succeeded
         ? x.path.slice(0, Math.floor(successStep(x, kind) / TRIAL_LAB.path_every) + 1)
@@ -91,6 +91,11 @@ function courseChart(sessions, kind) {
                                   ? '<ellipse class="aid-trial-shell" cx="' + fixed(tx) + '" cy="' +
                                         fixed(ty) + '" rx="' + C.shell[0] + '" ry="' + C.shell[1] +
                                         '" fill="' + colour(musselShellColor(x.family)) + '"/>'
+                              : kind === TRIAL_KIND.crab
+                                  ? '<ellipse class="aid-trial-shell" cx="' + fixed(tx) + '" cy="' +
+                                        fixed(ty) + '" rx="' + C.shell[0] + '" ry="' + C.shell[1] +
+                                        '" fill="' +
+                                        colour(smallAnimalColor(INVERTEBRATE_KIND.crab)) + '"/>'
                                   : '<circle class="aid-trial-food" cx="' + fixed(tx) + '" cy="' +
                                         fixed(ty) + '" r="' + C.food + '"/>';
                      })

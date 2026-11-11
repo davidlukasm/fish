@@ -64,7 +64,7 @@ class World:
 
 class Session:
     """One trial world: the hatch and every trial the lab reports, path included."""
-    TRIAL_EVENTS = {TrialKind.FEED: "trial", TrialKind.MUSSEL: "mussel"}
+    TRIAL_EVENTS = {TrialKind.FEED: "trial", TrialKind.MUSSEL: "mussel", TrialKind.CRAB: "crab"}
 
     def __init__(self, seed, trial):
         self.event = self.TRIAL_EVENTS[trial]
@@ -284,6 +284,8 @@ class TrialJobs(Jobs):
                          f"trial={TrialLab.FEED_STEPS}"],
         TrialKind.MUSSEL: ["mussel=1", "hungry=1", f"distance={TrialLab.MUSSEL_DISTANCE}",
                            f"trial={TrialLab.MUSSEL_STEPS}"],
+        TrialKind.CRAB: ["crab=1", "hungry=1", f"distance={TrialLab.CRAB_DISTANCE}",
+                         f"trial={TrialLab.CRAB_STEPS}"],
     }
 
     def results(self, data_dir):
