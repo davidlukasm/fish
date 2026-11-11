@@ -311,7 +311,10 @@ int main(int argc, char **argv) {
                   << ",\"blueLeaf\":" << blue << ",\"rawFood\":" << total
                   << ",\"plantShare\":"
                   << (total > 0 ? (food[food_kind::plant] + food[food_kind::algae]) / total : 0)
-                  << "}\n" << std::flush;
+                  << ",\"diet\":[";
+        for (std::size_t k = 0; k < DIET_COUNT; ++k)
+          std::cout << (k ? "," : "") << food[k];
+        std::cout << "]}\n" << std::flush;
         if (tick == 0 || last || tick % (5 * SAMPLE_STEPS) == 0)
           snapshot(w, pictures);
       }
