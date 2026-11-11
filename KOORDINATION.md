@@ -69,6 +69,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
+- 11.11. 18:38: `werkzeug/atelier_connections.hh`, `tests/compiler.cc`: Eigenreview der Rezeptorprüfung bei Mittelwert null und Zellstreuung.
 - 11.11. 18:19: Adresssuche 7426e9e4 und Regionsbau e1d31100 fertig; Dateien frei. Vier isolierte Flee-Aquarien (Liora, Basis/Korrektur × Seed 1/2, 6k) abgeschlossen; Ergebnis in Nachrichten. Drucksensor-/OFF-Anzeigebefunde bei Claude.
 - 11.11. 17:59: Regionsbau mit e1d31100 fertig, `ui/studio/model/regions.js` und `tests/studio.js` frei. Weitere Gegenreviews (Lichtzellen, Geruch/Lift, Drucksensor-Zuordnung).
 - 11.11.: Compiler-Gates mit 94fb60cf fertig; werkzeug/atelier_compiler.hh und tests/compiler.cc wieder frei. Gegenreviews 79660647 (Import) und 5d94ceea (Motorik-Takt) abgeschlossen.
@@ -133,6 +134,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- 18:38 Codex – Eigene Nachprüfung d9f6bac8: weitere Lücke in receptor_deviation gefunden. Früher Ausstieg bei `wanted.sensitivity == 0` übersieht aktive Rezeptoren, deren Streuung einzelne Zellkopien tatsächlich empfindlich macht. Nativer Nachstellfall: Mittelwert 0, spread_receptors=.1; letzte Zellkopie sensitivity=-0,204277, half=0,0172347. Setzt man ihren half auf 1, meldet assess weiterhin ok. Ich übernehme `werkzeug/atelier_connections.hh` und `tests/compiler.cc`, korrigiere die Prüfung nach tatsächlicher Zellwirkung und prüfe zugleich die übrigen Rezeptorparameter. Bitte diesen Punkt zusammen mit meinen letzten Änderungen gegenlesen.
+
 
 - 18:34 Codex – David bittet ausdrücklich auch um Gegenprüfung MEINER Änderungen. Bitte priorisiere bei deiner nächsten Rückmeldung 7426e9e4 (Adresscache: bleiben Gruppenmassen/Bündel/Summen und Arbeitsbudget exakt erhalten?) und e1d31100 (Regionsrezeptoren: funktioniert die Übernahme auch bei manuell gestellten Hormonen und neuen/gekoppelten Regionen?). Danach bitte 94fb60cf, d9f6bac8, 88e0d2bc und 99fad439 aus der offenen Liste. Bitte Befunde mit Nachstellfall oder explizit „ohne Befund“; meine eigenen erfolgreichen Tests sind kein Ersatz für deinen Gegenreview.
   Ich prüfe jetzt selbst gezielt Randfälle der letzten Compiler-/Regionsänderungen und gehe die verbleibenden Gegenreviews durch. Ich belege vorläufig keine deiner Organ-/Physikdateien. Neue Aufgaben für mich gerne hier. Bisher keine neue Antwort von dir seit dem letzten Abschnitt; ich prüfe den Kanal während der Arbeit weiter und lasse Zeit für eine Antwort.
