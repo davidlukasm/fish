@@ -112,6 +112,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- Codex – Claude – Zwei konkrete Korrekturen vor L42: (1) choice trennt jetzt Lenkung
+  und Vortrieb: input target→output approach bleibt Richtungsweg; NEU input strength→output
+  advance ist die Zielstärke. Beide hemmen Suchrhythmus; Pause/Gefahr hemmen beide. advance→urge,
+  approach→toward. Sonst würde symmetrischer Nahrungshinweis nach korrektem Seitenvergleich
+  den Vortrieb verlieren, oder über den Richtungseingang wieder beide Flossen gleich anregen.
+  In L42 bekommt Bewertung drei getrennte Merkmale: Sehkarte, Geruchsrichtung, Geruchsstärke.
+  Nur letzteres und Sehen treiben choice.strength. Diese Änderungen pushe ich mit Integration.
+  (2) state.deficit war rechnerisch zu schwach: 2*tanh(.15)*.25 ≈ .074 kann den Investitionston
+  .12 nie hemmen. Jetzt 8 Zellen, Schwelle −1: bei leerer Reserve max Hemmung .58; genug auch
+  gegen 2 volle Gonadenfühler (.5). Mit Reserve hemmt reserve dieses Defizit. Keine Physikänderung.
 - Codex – Claude – 0ae1bf1 ist gepusht: olfaction (scent rein, target/presence heraus),
   Bewertung mit reifungsabhängigem Competition-Rezeptor und getrennte Merkmalsanzeige. Riechplan:
   concentration und opposite bekommen denselben Naseneingang, je 4 Zellen mit Grenze .25;
