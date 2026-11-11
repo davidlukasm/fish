@@ -76,6 +76,8 @@ Point olfactory_position(const Body &, const BrainInterface &, int side);
 Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
 double stroke_delivery(const StrokeState &, const StrokeTiming &);
+// Upkeep per step of an effector cell at the basal metabolism of a standard body.
+double effector_upkeep(const BrainInterface::Effector &);
 // Push along the body per levered unit of each fin stroke, from the cells' protraction shares.
 void fin_pushes(BrainInterface &);
 struct EffectorActivity {

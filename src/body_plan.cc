@@ -4,6 +4,7 @@
 #include "eye_geometry.hh"
 #include "physiology.hh"
 #include "receptor_tuning.hh"
+#include "muscle_fibre.hh"
 #include "field/development_sites.hh"
 #include "field/retinal_tissue.hh"
 #include <limits>
@@ -23,6 +24,24 @@ constexpr double GUT_FRONT = .025, GUT_BACK = .93, GUT_MIN_HALF = .03, GUT_MIN_B
 constexpr std::size_t eye_color_column(int side) {
   return anatomy_column::red_left + 3 * std::size_t(side);
 }
+// Muscles that do work by contracting, spine erectors included, follow the fibre rules.
+constexpr bool contractile(int motor) {
+  return field::muscle_motor(motor) || motor == field::Defense;
+}
+constexpr bool contractile_port(int port) {
+  return port == organ_port::forward || port == organ_port::turn || port == organ_port::suction ||
+         port == organ_port::jaw || port == organ_port::defense;
+}
+// Muscle tissue weighs and costs its upkeep by its cells, whatever force their fibres give.
+double effector_tissue(const BrainInterface::Effector &e) {
+  return contractile_port(e.port) ? e.strength / fibre::force(e.fibre) : e.strength;
+}
+}
+double effector_upkeep(const BrainInterface::Effector &e) {
+  if (e.port == organ_port::pigment)
+    return BrainInterface::pigment_upkeep_per_capacity * e.strength;
+  return BrainInterface::muscle_upkeep_per_capacity *
+         (contractile_port(e.port) ? fibre::upkeep(e.fibre) : 1.) * effector_tissue(e);
 }
 static void prepare_contacts(const Body &b, SensoryFrame &f) {
   for (int k = 0; k < SECTOR_COUNT; ++k)
@@ -67,10 +86,24 @@ void fin_pushes(BrainInterface &a) {
     a.fin_push[j] = levered[j] > 0 ? force[j] / levered[j] : 0;
 }
 namespace {
+// The share of a cell's force that works a stroke: a pectoral cell works the back or front stroke
+// of its own side, a gonad's outer cells release.
+double stroke_share(const BrainInterface::Effector &e, int stroke) {
+  if (e.port != STROKE_PORTS[stroke])
+    return 0;
+  for (int side = 0; side < 2; ++side) {
+    const bool own = (e.lever < 0 ? 0 : 1) == side;
+    if (stroke == BACK_STROKES[side])
+      return own ? 1 - e.protraction : 0;
+    if (stroke == FRONT_STROKES[side])
+      return own ? e.protraction : 0;
+  }
+  return stroke == StrokeEgg || stroke == StrokeSperm ? e.outside : 1;
+}
 void assign_pressure(BrainInterface &, const field::Substrate &);
 void effector_timings(BrainInterface &a, const field::Substrate &s) {
   a.stroke_timing = {};
-  std::array<double, STROKE_COUNT> steps{}, weight{};
+  std::array<double, STROKE_COUNT> steps{}, weight{}, fast{};
   std::array<double, field::HORMONES + 3> continuous_steps{}, continuous_weight{};
   for (const auto &e : a.effectors) {
     const double tau = field::time_constant_steps(s.neurons[e.neuron].parameters);
@@ -83,16 +116,19 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
       continuous_steps[c] += w * tau;
       continuous_weight[c] += w;
     }
-    for (int j = 0; j < STROKE_COUNT; ++j)
-      if (e.port == STROKE_PORTS[j]) {
-        const double w = e.strength * ((j == StrokeEgg || j == StrokeSperm) ? e.outside : 1);
-        steps[j] += w * tau;
-        weight[j] += w;
-      }
+    for (int j = 0; j < STROKE_COUNT; ++j) {
+      const double w = e.strength * stroke_share(e, j);
+      steps[j] += w * tau;
+      fast[j] += w * e.fibre;
+      weight[j] += w;
+    }
   }
-  for (int j = 0; j < STROKE_COUNT; ++j)
+  for (int j = 0; j < STROKE_COUNT; ++j) {
+    a.stroke_capacity[j] = weight[j];
+    a.fibre[j] = weight[j] > 0 ? fast[j] / weight[j] : 0;
     if (weight[j] > 0)
       a.stroke_timing[j].set(steps[j] / weight[j]);
+  }
   fin_pushes(a);
   for (int c = 0; c < field::HORMONES + 3; ++c) {
     auto &timing =
@@ -280,11 +316,14 @@ class AnatomyBuilder {
   void add_effectors(std::size_t i, const field::Neuron &n) {
     const auto &fn = n.functions;
     const float strength = n.strength * n.parameters.capacity * n.functions.usable;
+    const double fast = fibre::fast_share(n.parameters);
     for (int j = 0; j < field::MOTOR_COUNT; ++j)
       if (fn.motors[j] > 0) {
         const int port = motor_ports[j];
+        const bool fibrous = contractile(j);
         const float capacity =
-            strength * fn.motors[j] * (field::muscle_motor(j) ? MUSCLE_CELL_FORCE : 1.f);
+            float(strength * fn.motors[j] * (field::muscle_motor(j) ? MUSCLE_CELL_FORCE : 1.f) *
+                  (fibrous ? fibre::force(fast) : 1.));
         const auto &p = n.parameters;
         const auto absorb = hue_affinities(tuning_hue(p.quality1), p.quality_width);
         const double total = j == field::Pigment ? 1 : absorb[0] + absorb[1] + absorb[2];
@@ -298,6 +337,7 @@ class AnatomyBuilder {
         result->effectors.push_back(
             {std::uint32_t(i), port, 0, capacity, lever, color, outside, p.quality1});
         auto &effector = result->effectors.back();
+        effector.fibre = fibrous ? float(fast) : 0.f;
         if (port == organ_port::turn)
           effector.protraction = std::clamp(
               n.identity[cppn::output::identity4 - cppn::output::identity_role], 0.f, 1.f);
@@ -319,11 +359,8 @@ class AnatomyBuilder {
           traits[3].add(p.quality1, capacity);
         result->motor_counts[port] += fn.motors[j];
         result->capacities[port] += capacity;
-        result->organ_mass += MUSCLE_MASS * capacity;
-        result->muscle_maintenance +=
-            (j == field::Pigment ? BrainInterface::pigment_upkeep_per_capacity
-                                 : BrainInterface::muscle_upkeep_per_capacity) *
-            capacity;
+        result->organ_mass += MUSCLE_MASS * effector_tissue(effector);
+        result->muscle_maintenance += effector_upkeep(effector);
         if (j == field::Pigment)
           for (int c = 0; c < rgb::count; ++c)
             result->pigment_absorption[c] += capacity * (1 - color[c]);
@@ -758,10 +795,7 @@ void Body::refresh_organs(const Genome &g) {
         for (int c = 0; c < rgb::count; ++c)
           a->pigment_absorption[c] += e.strength * (1 - e.color[c]);
       a->motor_counts[e.port] += 1;
-      a->muscle_maintenance +=
-          (e.port == organ_port::pigment ? BrainInterface::pigment_upkeep_per_capacity
-                                         : BrainInterface::muscle_upkeep_per_capacity) *
-          e.strength;
+      a->muscle_maintenance += effector_upkeep(e);
       auto *parts = e.port == organ_port::eggs      ? &a->egg_parts
                     : e.port == organ_port::sperm   ? &a->sperm_parts
                     : e.port == organ_port::bladder ? &a->bladder_parts
@@ -1169,8 +1203,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                                                activity.reverse[1]};
   std::array<double, STROKE_COUNT> work{};
   auto &strokes = b.motor_.strokes;
+  // Tired fast fibres pull only with what their reserve still holds.
   for (int j = 0; j < STROKE_COUNT; ++j)
-    work[j] = stroke_step(strokes[j], drive[j], layout.stroke_timing[j], p.stroke_threshold);
+    work[j] =
+        stroke_step(strokes[j], drive[j] * fibre::available(layout.fibre[j], strokes[j].reserve),
+                    layout.stroke_timing[j], p.stroke_threshold);
   const double forward = work[StrokeTail], turn = work[StrokeTurnLeft] + work[StrokeTurnRight] +
                                                   work[StrokeReverseLeft] +
                                                   work[StrokeReverseRight];
@@ -1198,14 +1235,18 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double old_credit = b.mouth.credit;
   advance_mouth(b, work[StrokeSuction] > 0, work[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
-  const double pump_work = p.suction_cost * p.suction_range * p.suction_range *
-                           strokes[StrokeSuction].power * (b.mouth.flow > 0 ? b.mouth.opening : 0);
+  // Every contraction costs the same per unit of work; only its fibres set the price.
+  const auto contraction = [&](int j) {
+    return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j];
+  };
+  double moving = 0;
+  for (int j : {StrokeTail, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft, StrokeReverseRight,
+                StrokeSuction})
+    moving += contraction(j);
   const double muscle =
-      p.swimming_cost * forward + p.turn_cost * turn + pump_work +
-      p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
+      moving + p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[organ_port::pigment];
-  const double combat =
-      p.bite_cost * work[StrokeBite] + p.defense_cost * strokes[StrokeDefense].power;
+  const double combat = contraction(StrokeBite) + contraction(StrokeDefense);
   const double bladder_delta =
       std::clamp(b.bladder_fill + p.bladder_rate * (bladder[0] - bladder[1]), 0., 1.) -
       b.bladder_fill;
@@ -1218,6 +1259,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   for (int j : {StrokeTail, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft, StrokeReverseRight})
     if (work[j] > 0)
       strokes[j].paid = work[j] * f;
+  for (int j = 0; j < STROKE_COUNT; ++j)
+    strokes[j].reserve =
+        std::clamp(strokes[j].reserve + fibre::refilled(strokes[j].reserve) -
+                       fibre::drained(layout.fibre[j], work[j] * f, layout.stroke_capacity[j]),
+                   0., 1.);
   const auto delivered = [&](int j) {
     return stroke_delivery(strokes[j], layout.stroke_timing[j]);
   };

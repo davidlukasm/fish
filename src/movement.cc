@@ -4,8 +4,21 @@
 namespace fishsim {
 namespace {
 constexpr double MIN_THRUST_MASS = .5;
-// Per unit of muscle force a pectoral fin pushes a quarter as hard as the tail.
-constexpr double FIN_PUSH_SHARE = .25;
+}
+// A unit of muscle force pushes alike from the tail or a fin; where it attaches decides when it
+// pushes well. The tail drives a wave down the body that grips the better the faster the fish
+// already swims; a fin rows and slips on water that streams past it. At cruising speed both push
+// three quarters of their force.
+SwimmingGrip swimming_grip(double speed) {
+  namespace G = stroke_grip;
+  const double s = std::max(0., speed) / behavior_scale::cruising_speed, fast = s / (1 + s);
+  return {G::tail_at_rest + (1 - G::tail_at_rest) * fast, 1 - (1 - G::fin_at_speed) * fast};
+}
+// A fin half in the mud pushes against the ground and keeps its whole push; deeper it is buried
+// and shallower it touches nothing.
+double ground_grip(double immersion) {
+  const double i = std::clamp(immersion, 0., 1.);
+  return 4 * i * (1 - i);
 }
 namespace {
 double foliage_brake(const Field &field, double x, double y, double radius) {
@@ -62,21 +75,27 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   const double brush = world ? foliage_brake(*world, b.x, b.y, radius) : 1;
   Point water = world ? sheltered_water(*world, b.x, b.y, brush) : Point{};
   b.motor_.thrust = b.motor_.torque = 0;
+  const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,
+               defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense;
+  const auto resistance = sediment_resistance(immersion, defense, b.undulation);
   if (b.motor_.swimming_pending) {
     b.motor_.torque = b.motor_.drive_left - b.motor_.drive_right;
     b.motor_.angular_velocity =
         std::clamp(b.motor_.angular_velocity +
                        radians(b.motor_.torque * physiology.stroke_turn) * weakness / inertia,
                    -MAX_TURN, MAX_TURN);
-    b.motor_.thrust = physiology.stroke_push *
-                      (b.motor_.drive_forward + FIN_PUSH_SHARE * b.motor_.drive_fins) * weakness /
-                      std::max(MIN_THRUST_MASS, mass);
+    const auto grip = swimming_grip(b.motor_.relative_speed);
+    // Waves lose push in open water, which only the tail makes; a fin's push on the ground is not
+    // braked by the mud the body ploughs through.
+    const double tail = grip.tail * b.motor_.drive_forward *
+                        (1 - physiology.undulation_loss * b.undulation * (1 - immersion)),
+                 ground = ground_grip(immersion),
+                 fins = (grip.fins + (1 - grip.fins) * ground) * b.motor_.drive_fins *
+                        (1 + (resistance.across - 1) * ground);
+    b.motor_.thrust =
+        physiology.stroke_push * (tail + fins) * weakness / std::max(MIN_THRUST_MASS, mass);
   }
   b.motor_.swimming_pending = false;
-  const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,
-               defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense;
-  const auto resistance = sediment_resistance(immersion, defense, b.undulation);
-  b.motor_.thrust *= 1 - physiology.undulation_loss * b.undulation * (1 - immersion);
   b.sediment_coverage = immersion;
   const double across_drag = physiology.drag_across * drag * spines;
   if (resistance.across > 1) {

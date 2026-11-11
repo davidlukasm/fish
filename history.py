@@ -4,7 +4,7 @@ import gzip, json, uuid, shutil
 from file_io import atomic_write
 from wording import Refusal
 
-MODEL = "tank-ecology-47"
+MODEL = "tank-ecology-48"
 MAX_POINTS = 600
 MAX_MILESTONES = 10
 MAX_SESSIONS = 6

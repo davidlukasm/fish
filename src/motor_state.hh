@@ -27,6 +27,8 @@ constexpr std::array<int, 2> BACK_STROKES{StrokeTurnLeft, StrokeTurnRight},
 struct StrokeState {
   double mean = 0, power = 0, paid = 0;
   int recovery = 0;
+  // Glycogen of the fast fibres: 1 rested, 0 exhausted.
+  double reserve = 1;
 };
 inline constexpr double MIN_STROKE_STEPS = field::TIME_CONSTANT_MIN,
                         MAX_STROKE_STEPS = field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN;

@@ -17,7 +17,7 @@ import {brainSelectedTissue, brainState, brainTissueName, focusTissue} from './b
 import {tissueColor} from './brain_model.js';
 import {el, text} from './dom.js';
 import {ORGAN_GROUPS} from './body_model.js';
-import {drawOrganGraphic, eyeGraphicAngle} from './organ_graphics.js';
+import {drawOrganFibres, drawOrganGraphic, eyeGraphicAngle} from './organ_graphics.js';
 import {brainOrganReadout, organHistory} from './organ_readout.js';
 import {drawOrganTuning} from './organ_tuning.js';
 import {sceneState} from './state.js';
@@ -78,6 +78,10 @@ export function brainShowOrgan(d, tissue = brainSelectedTissue(d)) {
   const canvas = el('brain-organ-chart');
   canvas.setAttribute('aria-label', info.title + ' · ' + info.caption + ' · ' + info.hero);
   drawOrganGraphic(canvas, info, d, tissue);
+  const fibres = el('brain-organ-fibre');
+  fibres.hidden = !info.fibre;
+  if (info.fibre)
+    drawOrganFibres(fibres, info.fibre);
   drawOrganTuning(el('brain-organ-tuning'), info, d, tissue);
   canvas.onpointermove = e => {
     if (info.graphic !== 'eye') {

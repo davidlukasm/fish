@@ -53,7 +53,8 @@ import {
   brainMotorActivity,
   brainMotorColor,
   brainMuscleShape,
-  brainMuscleState
+  brainMuscleState,
+  isFibrousKind
 } from './brain_signals.js';
 import {rgb} from './dom.js';
 import {displayStep} from './state.js';
@@ -179,6 +180,7 @@ export function brainDrawMuscles(g, d, now, only = null) {
             negative : 0,
             contraction : 0,
             charge : 0,
+            fibre : 0,
             flash : 0,
             elapsed : Infinity,
             arrivalAge : Infinity
@@ -198,6 +200,7 @@ export function brainDrawMuscles(g, d, now, only = null) {
           cell.coordinates[axis] += n[CELL_AXES[axis]] * weight;
         for (const key of ['activation', 'contraction', 'charge'])
           cell[key] += s[key] * weight;
+        cell.fibre += (s.fibre ?? 0) * weight;
         cell.arrivalAge = Math.min(cell.arrivalAge, s.arrivalAge);
         cell.positive = Math.max(cell.positive, s.positive);
         cell.negative = Math.max(cell.negative, s.negative);
@@ -217,6 +220,7 @@ export function brainDrawMuscles(g, d, now, only = null) {
         state.arrivalAge = cell.arrivalAge;
         state.positive = cell.positive;
         state.negative = cell.negative;
+        state.fibre = isFibrousKind(k) ? cell.fibre / cell.weight : null;
         const representative = cell.n.slice();
         for (let axis = 0; axis < CELL_AXES.length; axis++)
           representative[CELL_AXES[axis]] = cell.coordinates[axis] / cell.weight;

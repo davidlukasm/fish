@@ -1,4 +1,12 @@
-import {ANATOMY, ATELIER_LIMITS, BODY_UNIT, FIN, FIN_STROKE, MOTOR_KIND} from '../../schema.js';
+import {
+  ANATOMY,
+  ATELIER_LIMITS,
+  BODY_UNIT,
+  FIN,
+  FIN_STROKE,
+  MOTOR_KIND,
+  MUSCLE_FIBRE
+} from '../../schema.js';
 import {
   finVolumeOf,
   gutTurns,
@@ -14,9 +22,20 @@ import {
   centerIndex,
   findOrgan,
   finStroke,
+  isFibrous,
+  muscleFibre,
   muscleTrait,
   sprintNodes
 } from '../model/document.js';
+import {
+  enduranceCurve,
+  fibreBundle,
+  FIBRE_TYPES,
+  fibreCost,
+  fibreForce,
+  fibreHex,
+  fibreUpkeep
+} from '../../fibre.js';
 import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
 import {bandTrack, escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
@@ -100,6 +119,8 @@ export function effectorPatch(code, name, fx, fy, most) {
                ? {sprint : 1 - share}
                : {copies : Math.max(1, Math.round(share * ATELIER_LIMITS.max_copies))};
   }
+  if (name === FIBRE_HANDLE)
+    return {fibre : trackShare(fx * FIBRES.width, FIBRES.track)};
   if (name.startsWith(CHART_HANDLE)) {
     const spec = DIET_CHARTS[name.slice(CHART_HANDLE.length)];
     return spec?.trait ? {
@@ -588,6 +609,94 @@ function dietChart(state, kind, organ = null) {
          '" text-anchor="end">' + escapeText(words('high')) + '</text>' + knob + '</svg>' +
          readout + '</section>';
 }
+// A muscle's fibres in cross-section, white fast ones among red slow ones; beside it the force
+// the muscle holds under all-out effort as its fast fibres tire, and what its work and its rest
+// cost.
+const FIBRES = Object.freeze({
+  width : 300,
+  height : 188,
+  section : {x : 46, y : 54, radius : 38, rings : 3, pitch : 10.6, cell : 4.7},
+  chart :
+      {left : 100, right : 290, top : 12, base : 92, steps : 400, stride : 8, room : 1.1, name : 3},
+  costs : {label : 14, left : 100, right : 250, value : 290, rows : [ 116, 134 ], bar : 8},
+  track : [ 14, 286 ],
+  track_y : 160,
+  chosen : .01,
+  icon : 18
+});
+const FIBRE_HANDLE = 'fibre';
+function bundleMarkup({x, y, rings, pitch, cell}, fast) {
+  return fibreBundle(rings, fast)
+      .map(c => '<circle class="aid-fibre-cell" cx="' + fixed(x + pitch * c.x) + '" cy="' +
+                fixed(y + pitch * c.y) + '" r="' + cell + '" fill="' +
+                fibreHex(c.fast ? FIBRE_TYPES.fast : FIBRE_TYPES.slow) + '"/>')
+      .join('');
+}
+export function fibreIcon(fast, size) {
+  const S = FIBRES.section;
+  return '<svg class="aid-fibre-icon" viewBox="0 0 ' + 2 * S.radius + ' ' + 2 * S.radius +
+         '" width="' + fixed(size) + '" height="' + fixed(size) + '" aria-hidden="true"><circle ' +
+         'class="aid-fibre-sheath" cx="' + S.radius + '" cy="' + S.radius + '" r="' + S.radius +
+         '"/>' + bundleMarkup({...S, x : S.radius, y : S.radius}, fast) + '</svg>';
+}
+function fibreSection(organ, code) {
+  const F = FIBRES, C = F.chart, fast = muscleFibre(organ);
+  const words = (key, values) => label('fibre.' + key, values);
+  const most = C.room * fibreForce(FIBRE_TYPES.fast);
+  const x = k => C.left + (C.right - C.left) * k / (C.steps - 1),
+        y = force => C.base - (C.base - C.top) * force / most;
+  const curve = (f, cls) => {
+    const values = enduranceCurve(f, C.steps);
+    const shown = values.map((v, k) => [k, v]).filter(([ k ]) => k % C.stride === 0);
+    return '<path class="aid-fibre-curve ' + cls + '" d="M' +
+           shown.map(([ k, v ]) => fixed(x(k)) + ' ' + fixed(y(v))).join(' L') + '"' +
+           (cls === 'chosen' ? ' stroke="' + fibreHex(fast) + '"' : '') + '/>';
+  };
+  const references =
+      Object.entries(FIBRE_TYPES)
+          .map(([ key, f ]) => curve(f, 'reference') + '<text class="aid-fibre-name" x="' +
+                               (C.left + C.name) + '" y="' + fixed(y(fibreForce(f)) - C.name) +
+                               '">' + escapeText(words(key)) + '</text>')
+          .join('');
+  const R = F.costs;
+  const bar = (row, key, value, highest) =>
+      '<text class="aid-fibre-label" x="' + R.label + '" y="' + (R.rows[row] + R.bar / 2) + '">' +
+      escapeText(words(key)) + '</text><rect class="aid-fibre-gauge" x="' + R.left + '" y="' +
+      (R.rows[row] - R.bar / 2) + '" width="' + (R.right - R.left) + '" height="' + R.bar +
+      '" rx="' + R.bar / 2 + '"/><rect class="aid-fibre-bar ' + key + '" x="' + R.left + '" y="' +
+      (R.rows[row] - R.bar / 2) + '" width="' + fixed((R.right - R.left) * value / highest) +
+      '" height="' + R.bar + '" rx="' + R.bar / 2 + '"/><text class="aid-fibre-value" x="' +
+      R.value + '" y="' + (R.rows[row] + R.bar / 2) + '" text-anchor="end">' +
+      escapeText(t('units.times', {n : formatNumber(value, 1)})) + '</text>';
+  const M = MUSCLE_FIBRE;
+  const choices = Object.entries(FIBRE_TYPES)
+                      .map(([ key, f ]) => {
+                        const chosen = Math.abs(fast - f) < F.chosen;
+                        return '<button data-fibre-type="' + f + '" data-organ-id="' +
+                               escapeText(organ.id) + '" class="' + (chosen ? 'active' : '') +
+                               '" aria-pressed="' + chosen + '" title="' +
+                               escapeText(words(key + 'Title')) + '">' + fibreIcon(f, F.icon) +
+                               escapeText(words(key)) + '</button>';
+                      })
+                      .join('');
+  return '<section class="aid-eye-section aid-fibres"><h4>' +
+         escapeText(words('title', {share : percent(fast)})) + '</h4><svg class="aid-fibre-chart"' +
+         ' viewBox="0 0 ' + F.width + ' ' + F.height + '" data-effector-graphic="' +
+         escapeText(organ.id) + '" data-effector-code="' + code + '" data-effector-side="' +
+         sideOf(organ) + '" role="img" aria-label="' + escapeText(words('chart')) + '">' +
+         '<circle class="aid-fibre-sheath" cx="' + F.section.x + '" cy="' + F.section.y + '" r="' +
+         F.section.radius + '"/>' + bundleMarkup(F.section, fast) +
+         '<line class="aid-diet-axis" x1="' + C.left + '" y1="' + C.base + '" x2="' + C.right +
+         '" y2="' + C.base + '"/>' + references + curve(fast, 'chosen') +
+         '<text class="aid-diet-end" x="' + C.right + '" y="' + (C.base + R.bar + R.bar / 2) +
+         '" text-anchor="end">' + escapeText(words('time')) + '</text>' +
+         bar(0, 'work', fibreCost(fast), M.cost_fast) +
+         bar(1, 'rest', fibreUpkeep(fast), M.upkeep_slow) +
+         namedTrack(F.track, F.track_y, fast, 'data-effector-handle="' + FIBRE_HANDLE + '"',
+                    words('handle'), [ words('slow'), words('fast') ]) +
+         '</svg><div class="aid-contrast-choices aid-fibre-choices">' + choices +
+         '</div></section>';
+}
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);
   const twinOrgan = findOrgan(state.document, organ.pair);
@@ -601,12 +710,13 @@ export function effectorGraphic(state, organ) {
   }[code];
   if (!draw)
     return '';
-  return effectorBlock(
-      organ, code, sideOf(organ), label('title.' + code), draw(state, organ, organ.centers, twin),
-      nodeControls(organ, code, nodeLimit(organ, state.sites)) +
-          (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') + muscleHint(code) +
-          (code === MOTOR_KIND.aggression
-               ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
-           : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)
-                                         : ''));
+  return effectorBlock(organ, code, sideOf(organ), label('title.' + code),
+                       draw(state, organ, organ.centers, twin),
+                       nodeControls(organ, code, nodeLimit(organ, state.sites)) +
+                           (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') +
+                           (isFibrous(organ) ? fibreSection(organ, code) : '') + muscleHint(code) +
+                           (code === MOTOR_KIND.aggression
+                                ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
+                            : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)
+                                                          : ''));
 }

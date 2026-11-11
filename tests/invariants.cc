@@ -1,3 +1,4 @@
+#include "muscle_fibre.hh"
 #include "test_support.hh"
 #include "checkpoint.hh"
 #include "field/retinal_tissue.hh"
@@ -824,7 +825,7 @@ void maturity_never_decreases(const Genome &g) {
   }
   check(starved, "a fish without reserve breaks down tissue");
 }
-constexpr double YOUNG_TISSUE = 20, FULL_GUT = 300;
+constexpr double YOUNG_TISSUE = 20, FULL_GUT = 300, ROOM_FOR_A_MEAL = .5;
 void growth_needs_a_hormone(const Genome &g) {
   auto w = closed_tank(g);
   std::map<std::uint64_t, bool> silenced;
@@ -833,6 +834,9 @@ void growth_needs_a_hormone(const Genome &g) {
     auto &b = w.fish[k].body;
     b.tissue = b.peak_tissue = YOUNG_TISSUE;
     b.gut_energy = b.gut_digestible = FULL_GUT;
+    // Full stores stop digestion and with it growth; the fish start with room for a meal.
+    b.energy = PhysiologyParameters::growth_reserve * reserve_capacity(b) +
+               ROOM_FOR_A_MEAL * (1 - PhysiologyParameters::growth_reserve) * reserve_capacity(b);
     silenced[w.fish[k].id] = k % 2;
     tissue[w.fish[k].id] = YOUNG_TISSUE;
     if (k % 2)
@@ -951,6 +955,94 @@ void pectoral_antagonists_back_the_fish_up(const Genome &g) {
             << ", beide Muskeln zugleich " << held << "\n";
   check(ahead > 0 && back < 0, "back strokes push a fish ahead, the antagonists push it back");
   check(std::abs(held) < STILL * ahead, "antagonists working together hold the fish in place");
+}
+void muscle_fibres_each_have_their_strength(const Genome &g) {
+  // Only the tail works, with all its fibres of one kind: fast, mixed or slow.
+  // Cruising asks every tail for the same push, nine tenths of what slow fibres can give.
+  constexpr int SPRINT = 40, HELD = 900, SETTLED = 450;
+  constexpr double FAST = 1, MIXED = .5, SLOW = 0, CRUISE = .9 * muscle_fibre::force_slow;
+  struct Swim {
+    double sprint = 0, held = 0, paid = 0, gentle = 0, rest = 0;
+  };
+  const auto swim = [&](double fast, float drive, int steps) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    std::set<std::uint32_t> tail;
+    double capacity = 0;
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::forward) {
+        e.strength *= float(fibre::force(fast) / fibre::force(e.fibre));
+        e.fibre = float(fast);
+        capacity += e.strength;
+        tail.insert(e.neuron);
+      }
+    check(!tail.empty(), "the start fish has a tail");
+    layout->capacities[organ_port::forward] = layout->stroke_capacity[StrokeTail] = capacity;
+    layout->muscle_maintenance = 0;
+    for (const auto &e : layout->effectors)
+      layout->muscle_maintenance += effector_upkeep(e);
+    layout->fibre[StrokeTail] = fast;
+    field::CellParameters timing;
+    timing.time_constant = float(1 - fast);
+    layout->stroke_timing[StrokeTail].set(field::time_constant_steps(timing));
+    Genome fibres = g;
+    fibres.interface = layout;
+    Ecosystem w(SEED);
+    w.resize(4000, 800);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, fibres, 400, 300);
+    const auto id = p.id;
+    p.body.set_actuation_probe(
+        [tail, drive](std::uint32_t cell, float) { return tail.count(cell) ? drive : 0.f; });
+    std::vector<double> along{0};
+    double paid = 0, upkeep = 0;
+    for (int tick = 0; tick < steps; ++tick) {
+      const auto &b = individual(w, id).body;
+      const double x = b.x, y = b.y, heading = b.angle;
+      w.tick(false);
+      const auto &moved = individual(w, id).body;
+      along.push_back(along.back() + w.field.delta_x(moved.x - x) * std::cos(heading) +
+                      (moved.y - y) * std::sin(heading));
+      paid += moved.ledger().muscle_cost;
+      upkeep += muscle_upkeep(moved.active_muscle_maintenance, moved.tissue, w.physiology());
+    }
+    return std::tuple{along, paid, upkeep / std::max(1, steps)};
+  };
+  const auto measure = [&](double fast) {
+    Swim s;
+    const auto [all_out, paid, held_upkeep] = swim(fast, 1, HELD);
+    s.sprint = all_out[SPRINT];
+    s.held = all_out[HELD] - all_out[SETTLED];
+    const auto [cruise, cruise_paid, cruise_upkeep] =
+        swim(fast, float(CRUISE / fibre::force(fast)), SETTLED);
+    s.gentle =
+        (cruise_paid + cruise_upkeep * SETTLED) / std::max(tolerance::negligible, cruise.back());
+    s.paid = paid;
+    s.rest = std::get<2>(swim(fast, 0, SPRINT));
+    return s;
+  };
+  const auto fast = measure(FAST), mixed = measure(MIXED), slow = measure(SLOW);
+  std::cout << "Fasern schnell/gemischt/ausdauernd: Antritt " << fast.sprint << '/' << mixed.sprint
+            << '/' << slow.sprint << ", Dauerstrecke " << fast.held << '/' << mixed.held << '/'
+            << slow.held << ", Energie je Strecke " << fast.gentle << '/' << mixed.gentle << '/'
+            << slow.gentle << ", Ruhe " << fast.rest << '/' << mixed.rest << '/' << slow.rest
+            << "\n";
+  check(fast.sprint > mixed.sprint && fast.sprint > slow.sprint, "fast fibres start the quickest");
+  check(mixed.held > fast.held && mixed.held > slow.held,
+        "mixed fibres keep the most force over a long effort");
+  check(slow.gentle < mixed.gentle && slow.gentle < fast.gentle,
+        "slow fibres cruise the cheapest way, upkeep included; fast ones cannot cruise gently");
+  check(fast.rest < mixed.rest && mixed.rest < slow.rest, "fast fibres rest the cheapest");
+}
+void tail_and_fins_push_alike_where_each_fits() {
+  const auto still = swimming_grip(0), cruise = swimming_grip(behavior_scale::cruising_speed),
+             fast = swimming_grip(4 * behavior_scale::cruising_speed);
+  check(still.fins > still.tail && fast.tail > fast.fins &&
+            std::abs(cruise.tail - cruise.fins) < tolerance::precision,
+        "fins row best from rest, the tail drives best at speed, both alike at cruising speed");
+  check(ground_grip(.5) > 1 - tolerance::precision && ground_grip(0) == 0 && ground_grip(1) == 0,
+        "a fin half in the mud pushes against the ground, buried or above it has nothing to push");
 }
 void resting_fish_sink_unless_their_bladder_carries_them(const Genome &g) {
   // No muscle works: weight and the bladder alone move the fish, at two body masses.
@@ -1782,6 +1874,8 @@ int main() {
     wrigglers_lift_their_snout_out_of_mud(g);
     pectoral_antagonists_back_the_fish_up(g);
     resting_fish_sink_unless_their_bladder_carries_them(g);
+    muscle_fibres_each_have_their_strength(g);
+    tail_and_fins_push_alike_where_each_fits();
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     cut_marks_stay_on_their_piece();

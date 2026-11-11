@@ -752,7 +752,9 @@
       "strength",
       "lever",
       "hue",
-      "outside"
+      "outside",
+      "fibre",
+      "protraction"
     ],
     "synapse": [
       "source",
@@ -764,7 +766,9 @@
       "mean",
       "recovery",
       "power",
-      "steps"
+      "steps",
+      "fibre",
+      "reserve"
     ],
     "visual_sample": [
       "neuron",
@@ -2146,6 +2150,20 @@
       "organ_half": 3,
       "spread": 0.45,
       "reach": 2
+    },
+    "muscle_fibre": {
+      "force_slow": 0.4,
+      "force_fast": 2.5,
+      "cost_slow": 0.2,
+      "cost_fast": 5,
+      "upkeep_slow": 1.2,
+      "upkeep_fast": 0.3,
+      "drain": 0.028,
+      "recovery_steps": 400
+    },
+    "stroke_grip": {
+      "tail_at_rest": 0.5,
+      "fin_at_speed": 0.5
     },
     "trial_lab": {
       "seeds": [1, 2, 4],

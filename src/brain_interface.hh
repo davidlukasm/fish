@@ -64,6 +64,8 @@ struct BrainInterface {
     float outside = 0, quality = 0;
     // Share of a pectoral fin cell that pulls the fin forward: the antagonist of the back stroke.
     float protraction = 0;
+    // Fast share of a muscle cell's fibres (muscle_fibre.hh).
+    float fibre = 0;
     std::array<float, field::HORMONES> hormones{};
   };
   bool mobile_reproductive = true;
@@ -81,6 +83,8 @@ struct BrainInterface {
   std::array<double, 2> suction_sides{}, bite_sides{};
   std::array<double, ORGAN_PORTS> capacities{};
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
+  // Force-weighted fast fibre share and summed force of the cells behind each stroke.
+  std::array<double, STROKE_COUNT> fibre{}, stroke_capacity{};
   // Push along the body per unit of a fin stroke, which counts its force times the lever.
   std::array<double, STROKE_COUNT> fin_push{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};

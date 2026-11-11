@@ -31,6 +31,8 @@ import {
   setBends,
   setMuscleTrait,
   setMuscleSprint,
+  setMuscleFibre,
+  muscleFibre,
   setOrganNodes,
   typeOfCenter,
   updateCenter,
@@ -537,6 +539,8 @@ export const handleMethods = {
                                setOrganNodes(doc, organ.id, patch.nodes, sites)
         : 'sprint' in patch
             ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
+        : 'fibre' in patch
+            ? patch.fibre !== muscleFibre(organ) && setMuscleFibre(doc, organ.id, patch.fibre)
         : 'copies' in patch ? patch.copies !== organ.centers[0].copies &&
                                   updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
                             : this.muscleTrait(drag.code, patch.trait, patch.value);

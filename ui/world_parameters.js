@@ -309,8 +309,8 @@ const initializers = {
       ],
       'energy-settings' : [
         'fish_lifespan', 'sinking', 'bladder_strength', 'bladder_rate', 'bladder_cost',
-        'swimming_cost', 'suction_cost', 'suction_range', 'stroke_push', 'stroke_turn',
-        'size_physics', 'bite_wound', 'wound_weakness', 'impact_damage'
+        'muscle_cost', 'suction_range', 'stroke_push', 'stroke_turn', 'size_physics', 'bite_wound',
+        'wound_weakness', 'impact_damage'
       ],
       'senses-settings' : [
         'water_clarity', 'ink_density', 'vision_range', 'vision_inhibition', 'odor_emission',

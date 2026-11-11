@@ -19,16 +19,16 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
   "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
-  "src/body_plan.cc" : "0c84fe821f934d9a",
-  "src/physiology_parameters.hh" : "617a49a1bf091d4a",
+  "src/body_plan.cc" : "c208115d701e0962",
+  "src/physiology_parameters.hh" : "00df0f1a6b4096e6",
   "src/physiology.hh" : "4ce375962b70c1f5",
   "src/physiology.cc" : "091be4e30f65adee",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
-  "src/physiology_parameters.cc" : "3cdc43b5cf758d75",
+  "src/physiology_parameters.cc" : "d4f67d6d9d287fd7",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "8404414851a0edf1",
+  "src/body_plan.hh" : "cdb76fe986148771",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -51,12 +51,12 @@ const ENGINE_REVIEW = Object.freeze({
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "c6a63cda4547e83b",
   "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "17d57a4beb67c1ac",
+  "src/brain_interface.hh" : "2c459714965dcb4d",
   "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
   "src/hormone_analysis.hh" : "286fa7455ea124e0",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "0f3d418989993262",
+  "src/interactive_brain.cc" : "d06c57f33521ce80",
   "src/material.hh" : "7b513268feed7d77",
   "src/ecology.hh" : "3505e6c40c515977",
   "src/feeding.cc" : "b9619a71b39a85c3",
@@ -65,7 +65,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/environment.hh" : "9602fc842620120e",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
-  "src/motor_state.hh" : "2d27ede5724fa2b1",
+  "src/motor_state.hh" : "03624e65f88442f7",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "372294904588c948",
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
@@ -1991,6 +1991,19 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                 c => sprintPlan.groups[everyCenter.findIndex(e => e.id === c.id)].threshold);
     assert.deepEqual(thresholds.map(x => x === model.SPRINT_THRESHOLD),
                      [ false, false, true, true ], 'The last nodes join only a strong command');
+    // A muscle's fibres ride on its cells' time constant, alike on the linked twin.
+    assert.ok(model.muscleFibre(organ) > .5 && model.muscleFibre(organ) < 1,
+              'A new swimming muscle mixes its fibres, leaning to fast ones for a quick beat');
+    const whiteFibres = model.setMuscleFibre(grown, organ.id, 1);
+    assert.ok([ organ.id, organ.pair ].every(
+                  id => model.muscleFibre(model.findOrgan(whiteFibres, id)) === 1),
+              'Both halves of the tail turn fast');
+    const whitePlan = model.compileDocument(whiteFibres, sites);
+    assert.ok(
+        model.findOrgan(whiteFibres, organ.id)
+            .centers.every(c => whitePlan.groups[model.centerIndex(whiteFibres, c.id)].tau === 0),
+        'Fast fibres contract in short strokes');
+    assert.equal(model.setMuscleFibre(grown, 'brain', 1), null, 'Only muscles have fibres');
     const {settleRegions, updateRegion} = await import('../ui/studio/model/regions.js');
     const {organSlots, slotCenters} = await import('../ui/studio/model/organs.js');
     const motorAdded =
@@ -2097,6 +2110,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(html.includes('data-effector-handle="nodes"') &&
               html.includes('data-effector-handle="strength"') &&
               html.includes('data-effector-handle="trait:q1"') && !html.includes('ellipse'));
+    assert.deepEqual(effectors.effectorPatch(MK.forward, 'fibre', 1, .5, most), {fibre : 1});
+    assert.equal((html.match(/data-fibre-type=/g) || []).length, 3,
+                 'Fast, mixed and slow fibres are one click away');
+    const mixed = model.setMuscleFibre(grown, organ.id, .5);
+    const mixedHtml = effectors.effectorGraphic({document : mixed, sites, anatomy : null},
+                                                model.findOrgan(mixed, organ.id));
+    assert.match(mixedHtml, /data-fibre-type="0.5" data-organ-id="[^"]*" class="active"/,
+                 'The chosen mix lights its button');
     assert.match(views.organTitle(organ, sites), /Schwanz/);
     const pigment =
         model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});

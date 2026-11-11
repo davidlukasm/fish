@@ -482,7 +482,9 @@ class Effector:
     LEVER = 4
     HUE = 5
     OUTSIDE = 6
-    COUNT = 7
+    FIBRE = 7
+    PROTRACTION = 8
+    COUNT = 9
 
 class Synapse:
     SOURCE = 0
@@ -496,7 +498,9 @@ class Stroke:
     RECOVERY = 1
     POWER = 2
     STEPS = 3
-    COUNT = 4
+    FIBRE = 4
+    RESERVE = 5
+    COUNT = 6
 
 class VisualSample:
     NEURON = 0
@@ -1301,6 +1305,20 @@ class Barbel:
     ORGAN_HALF = 3
     SPREAD = 0.45
     REACH = 2
+
+class MuscleFibre:
+    FORCE_SLOW = 0.4
+    FORCE_FAST = 2.5
+    COST_SLOW = 0.2
+    COST_FAST = 5
+    UPKEEP_SLOW = 1.2
+    UPKEEP_FAST = 0.3
+    DRAIN = 0.028
+    RECOVERY_STEPS = 400
+
+class StrokeGrip:
+    TAIL_AT_REST = 0.5
+    FIN_AT_SPEED = 0.5
 
 class TrialLab:
     SEEDS = (1, 2, 4)

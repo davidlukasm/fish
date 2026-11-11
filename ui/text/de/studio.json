@@ -798,6 +798,20 @@
     "strength": "Kraft je Knoten: {share}",
     "sprint": "Spurtknoten: {sprint} von {count}",
     "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
+    "fibre": {
+      "title": "Muskelfasern: {share} schnell",
+      "chart": "Querschnitt der Fasern und die Kraft, die der Muskel bei voller Anstrengung über die Zeit hält",
+      "handle": "Ziehen: rote, ausdauernde oder weiße, schnelle Fasern",
+      "fast": "schnell",
+      "mixed": "gemischt",
+      "slow": "ausdauernd",
+      "fastTitle": "Weiße Fasern: der stärkste und raschste Schlag, billig in Ruhe; sie ermüden bald und jede Arbeit kostet viel",
+      "mixedTitle": "Gemischte Fasern: die größte Kraft, die sich lange halten lässt",
+      "slowTitle": "Rote Fasern: die billigste Arbeit, sie ermüden nie; schwach, träge und teuer im Unterhalt",
+      "time": "Zeit bei voller Anstrengung",
+      "work": "Arbeit",
+      "rest": "Unterhalt"
+    },
     "stroke": {
       "back": "Rückschlag",
       "front": "Vorschlag",

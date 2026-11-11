@@ -28,6 +28,7 @@ import {
   selectionCenters,
   setBends,
   setFinStroke,
+  setMuscleFibre,
   setSubstance,
   switchReceptor,
   teachOrgan,
@@ -345,6 +346,11 @@ export const FISH_CLICKS = Object.freeze([
     '[data-fin-stroke]',
     (studio, e) => keep(studio, setFinStroke(studio.state.document, e.dataset.organId,
                                              Number(e.dataset.finStroke), studio.state.sites))
+  ],
+  [
+    '[data-fibre-type]',
+    (studio, e) => keep(studio, setMuscleFibre(studio.state.document, e.dataset.organId,
+                                               Number(e.dataset.fibreType)))
   ],
   [
     '[data-region-setting]',

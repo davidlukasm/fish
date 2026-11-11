@@ -12,6 +12,7 @@ import {
   findAssembly,
   groupReport,
   finStroke,
+  muscleFibre,
   isChosen,
   isFinMuscle,
   organTypes,
@@ -47,6 +48,7 @@ import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
 import {isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {MUSCLE_TONE, muscleShape} from './muscles.js';
+import {fibreHex} from '../../fibre.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
@@ -273,9 +275,9 @@ function muscleGlyph(state, organ) {
   const tone = MUSCLE_TONE[organFunction(organ, state.sites)];
   const front = isFinMuscle(organ, state.sites) && finStroke(organ) === FIN_STROKE.front;
   return '<path class="aid-anatomical-muscle' + (front ? ' front' : '') + '" d="' + shape.path +
-         '" style="--muscle:' + tone + '"/><path class="aid-muscle-marks" d="' +
-         shape.marks.join(' ') + '"/><path class="aid-muscle-marks sprint" d="' +
-         shape.sprint.join(' ') + '"/>';
+         '" style="--muscle:' + tone + ';--fibre:' + fibreHex(muscleFibre(organ)) +
+         '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') +
+         '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/>';
 }
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,

@@ -10,9 +10,11 @@ import {
   MOTOR_PORTS,
   MOUTH_CYCLE,
   NEURON,
+  NEURON_PARAMETER,
   STROKE,
   SYNAPSE
 } from './schema.js';
+import {fastShare, fibreColor} from './fibre.js';
 import {updateBrainState} from './brain.js';
 import {brainClamp, brainState} from './brain.js';
 import {brainFiber} from './brain_geometry.js';
@@ -622,9 +624,18 @@ export function brainMuscleState(n, k, d, now) {
     charge : brainDisplayCharge(k, side, now) * effort,
     flash,
     elapsed,
-    contraction : brainClamp(pose * effort)
+    contraction : brainClamp(pose * effort),
+    fibre : isFibrousKind(k) ? fastShare(n[NEURON.parameters]?.[NEURON_PARAMETER.time_constant])
+                             : null
   };
 }
+// Muscles that contract to work carry fibres: their tone pales toward white with fast ones and
+// reddens with slow ones, as fish flesh does.
+const FIBROUS_KINDS = Object.freeze([
+  MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction, MOTOR_KIND.aggression, MOTOR_KIND.defense
+]);
+export const isFibrousKind = k => FIBROUS_KINDS.includes(k);
+const FIBRE_TINT = .45;
 
 const MOTOR_TONE = Object.freeze({
   min_span : .01,
@@ -648,8 +659,10 @@ export function brainMotorColor(k, state) {
                    ? MOTOR_TONE.tone + MOTOR_TONE.tone_per_charge * charge
                    : MOTOR_TONE.pulse_tone +
                          MOTOR_TONE.pulse_tone_per_contraction * (state.contraction || 0),
-        gray = MOTOR_TONE.gray + MOTOR_TONE.gray_per_contraction * (state.contraction || 0);
-  return rgb(base.map(c => gray + (c - gray) * tone));
+        gray = MOTOR_TONE.gray + MOTOR_TONE.gray_per_contraction * (state.contraction || 0),
+        flesh = state.fibre === null || state.fibre === undefined ? null : fibreColor(state.fibre),
+        tinted = flesh ? base.map((c, i) => c + (flesh[i] - c) * FIBRE_TINT) : base;
+  return rgb(tinted.map(c => gray + (c - gray) * tone));
 }
 
 const EFFECTOR_FIBER = Object.freeze({

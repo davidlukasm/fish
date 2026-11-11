@@ -348,6 +348,7 @@ void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
     value(in, stroke.recovery);
     if (stroke.recovery < 0 || stroke.recovery > MAX_STROKE_STEPS)
       throw std::runtime_error("invalid stroke recovery");
+    scalar(in, stroke.reserve, 0, 1);
   }
   for (auto &x : b.motor_.pigment)
     scalar(in, x, 0, 1);

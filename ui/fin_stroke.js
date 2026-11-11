@@ -1,7 +1,16 @@
-import {FIN, FIN_EVENT as E} from './schema.js';
+import {BEHAVIOR_SCALE, FIN, FIN_EVENT as E, STROKE_GRIP as G} from './schema.js';
 
 export const FIN_STROKE = Object.freeze({tail_swing : .8, body_bend : .22});
 export const FINS = Object.keys(FIN).length;
+// Share of a stroke that the tail and the fins turn into push at a speed through the water, as
+// the engine has it (movement.cc).
+export function swimmingGrip(speed) {
+  const s = Math.max(0, speed || 0) / BEHAVIOR_SCALE.cruising_speed, fast = s / (1 + s);
+  return {
+    tail : G.tail_at_rest + (1 - G.tail_at_rest) * fast,
+    fins : 1 - (1 - G.fin_at_speed) * fast
+  };
+}
 
 export function finStrokePose(events, age, fin) {
   const tick = events?.[E.age_tail + fin], steps = events?.[E.steps_tail + fin],

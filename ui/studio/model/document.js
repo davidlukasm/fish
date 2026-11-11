@@ -19,6 +19,7 @@ import {
   unitOfPlan
 } from '../../tuning.js';
 import {nextPigment} from './pigment.js';
+import {fastShare, fibreTau} from '../../fibre.js';
 import {
   eligible,
   fitsOrgan,
@@ -837,6 +838,22 @@ export function setMuscleSprint(doc, organId, share) {
   const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
   for (const o of [main, twin].filter(Boolean))
     o.sprint = clamp(share, 0, 1);
+  return draft;
+}
+// A muscle's fibres, carried by its cells' time constant: 1 all fast, 0 all slow. Spine erectors
+// are muscles too.
+const FIBROUS = Object.freeze([ 'muscle', 'defense' ]);
+export const isFibrous = organ => FIBROUS.includes(organ?.type);
+export const muscleFibre = organ => fastShare(organ.centers[0]?.tau);
+export function setMuscleFibre(doc, organId, fast) {
+  const organ = findOrgan(doc, organId);
+  if (!isFibrous(organ) || !Number.isFinite(fast))
+    return null;
+  const draft = copy(doc);
+  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const o of [main, twin].filter(Boolean))
+    for (const c of o.centers)
+      c.tau = fibreTau(fast);
   return draft;
 }
 // A pectoral fin muscle strokes the fin back, pushing the fish forward, or forward as the

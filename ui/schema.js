@@ -455,10 +455,13 @@ export const EFFECTOR = Object.freeze({
   lever : 4,
   hue : 5,
   outside : 6,
-  count : 7
+  fibre : 7,
+  protraction : 8,
+  count : 9
 });
 export const SYNAPSE = Object.freeze({source : 0, target : 1, strength : 2, id : 3, count : 4});
-export const STROKE = Object.freeze({mean : 0, recovery : 1, power : 2, steps : 3, count : 4});
+export const STROKE = Object.freeze(
+    {mean : 0, recovery : 1, power : 2, steps : 3, fibre : 4, reserve : 5, count : 6});
 export const VISUAL_SAMPLE = Object.freeze(
     {neuron : 0, light : 1, stimulus : 2, response : 3, red : 4, green : 5, blue : 6, count : 7});
 export const VISUAL_CONTRIBUTION = Object.freeze({
@@ -1012,6 +1015,17 @@ export const HABITAT_ZONE = Object.freeze({
 });
 export const BARBEL = Object.freeze(
     {"length" : 0.22, "length_per_size" : 0.35, "organ_half" : 3, "spread" : 0.45, "reach" : 2});
+export const MUSCLE_FIBRE = Object.freeze({
+  "force_slow" : 0.4,
+  "force_fast" : 2.5,
+  "cost_slow" : 0.2,
+  "cost_fast" : 5,
+  "upkeep_slow" : 1.2,
+  "upkeep_fast" : 0.3,
+  "drain" : 0.028,
+  "recovery_steps" : 400
+});
+export const STROKE_GRIP = Object.freeze({"tail_at_rest" : 0.5, "fin_at_speed" : 0.5});
 export const TRIAL_LAB = Object.freeze({
   "seeds" : [ 1, 2, 4 ],
   "path_every" : 5,

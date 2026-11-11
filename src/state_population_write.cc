@@ -102,7 +102,7 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     out << "MOTORS " << STROKE_COUNT << ' ';
     for (const auto &stroke : b.motor().strokes)
       out << stroke.mean << ' ' << stroke.power << ' ' << stroke.paid << ' ' << stroke.recovery
-          << ' ';
+          << ' ' << stroke.reserve << ' ';
     for (double x : b.motor().pigment)
       out << x << ' ';
     out << b.reproduction().egg_transfer << ' ' << b.reproduction().sperm_transfer << ' '

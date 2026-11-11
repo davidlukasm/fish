@@ -14,6 +14,8 @@ import {hormoneName} from './hormones.js';
 import {brainClamp, brainTissueName} from './brain.js';
 import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './brain_model.js';
 import {sceneState} from './state.js';
+import {fastShare, fibreCost} from './fibre.js';
+import {swimmingGrip} from './fin_stroke.js';
 import {
   BEHAVIOR_SCALE,
   BODY_UNIT,
@@ -25,6 +27,7 @@ import {
   MOTOR_PORTS,
   MOUTH_CYCLE,
   NEURON,
+  NEURON_PARAMETER,
   NOSE_SAMPLE,
   ORGAN_PORT,
   RECEPTOR,
@@ -197,6 +200,23 @@ function organMotorTiming(d, index, activation, side = 0) {
   };
 }
 
+const FIBROUS = Object.freeze([
+  MOTOR_KIND.forward, MOTOR_KIND.turn, MOTOR_KIND.suction, MOTOR_KIND.aggression, MOTOR_KIND.defense
+]);
+// The fibre mix of a muscle's cells and the share of its force its tired fast fibres still give.
+function muscleFibres(d, members, k, side) {
+  if (!FIBROUS.includes(k))
+    return null;
+  let weight = 0, fast = 0;
+  for (const {n, part} of members) {
+    const w = part.share * n[NEURON.strength];
+    weight += w;
+    fast += w * fastShare(n[NEURON.parameters]?.[NEURON_PARAMETER.time_constant]);
+  }
+  const mix = weight > 0 ? fast / weight : 0;
+  const reserve = d.b?.strokes?.[organStrokeIndex(k, side)]?.[STROKE.reserve] ?? 1;
+  return {fast : mix, available : 1 - mix + mix * reserve};
+}
 function organReleaseTiming(d, index) {
   const port = index === MOTOR_KIND.eggs ? ORGAN_PORT.eggs : ORGAN_PORT.sperm,
         active = (d.b.effectors || []).filter(e => e[EFFECTOR.port] === port).reduce((sum, e) => {
@@ -332,6 +352,7 @@ export function brainOrganReadout(d, tissue) {
     ];
   } else if (isMotorTissue(key)) {
     info.activity = u;
+    const fibre = muscleFibres(d, members, k, side);
     if (k <= MOTOR_KIND.turn) {
       info.graphic = 'pulse';
       info.period = timing.rhythm;
@@ -341,13 +362,14 @@ export function brainOrganReadout(d, tissue) {
       const impulse = timing.work, weak = 1 - params.wound_weakness * (1 - d.p[FISH.health]),
             mass = Math.max(READOUT.min_mass, d.p[FISH.mass] || 1);
       if (k === MOTOR_KIND.forward) {
-        const speed = params.stroke_push * impulse * weak / Math.max(READOUT.min_push_mass, mass);
+        const speed = params.stroke_push * swimmingGrip(d.p[FISH.relative_speed]).tail * impulse *
+                      weak / Math.max(READOUT.min_push_mass, mass);
         info.hero = t('units.plusPxPerStep', {n : organNumber(speed, 2)});
         info.caption = t('organ_readout.speedGain', {share : organPercent(d.b.undulation)});
         info.metrics = [
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
           metric(t('organ_readout.energieJeSchlag'),
-                 organNumber(params.swimming_cost * impulse, READOUT.digits),
+                 organNumber(params.muscle_cost * fibreCost(fibre.fast) * impulse, READOUT.digits),
                  t('organ_readout.beiAusreichenderEnergieVerletzung'))
         ];
       } else {
@@ -485,6 +507,7 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [ metric(t('organ_readout.pigmentbildung'), organPercent(u),
                               t('organ_readout.dieZellenGebenFarbpigment')) ];
     }
+    info.fibre = fibre;
   } else {
     if (k === SENSE_KIND.light) {
       const points =

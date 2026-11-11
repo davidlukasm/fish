@@ -26,6 +26,7 @@ import {
 import {eyeImage, eyeTypeAnswers, organNumber, organPercent} from './organ_readout.js';
 import {organSignalHistory} from './organs.js';
 import {sceneState} from './state.js';
+import {fibreBundle, fibreHex, FIBRE_TYPES} from './fibre.js';
 export const organ_graphicsState = {};
 
 const SCENT_WHEEL = Object.freeze({
@@ -838,6 +839,55 @@ const GRAPHICS = Object.freeze({
   touch : drawBodyGraphic,
   mouth : drawBodyGraphic
 });
+// A muscle's fibres in cross-section, white fast ones among red slow ones; the ring around them
+// empties as the fast fibres tire.
+const FIBRE_BADGE = Object.freeze({
+  width : 360,
+  height : 34,
+  x : 17,
+  y : 17,
+  rings : 2,
+  pitch : 5,
+  cell : 2.3,
+  ring : 13.5,
+  ring_width : 2.5,
+  text_x : 40,
+  text_y : 21,
+  sheath : '#3a1f22',
+  track : '#304b55'
+});
+export function drawOrganFibres(canvas, fibre) {
+  const B = FIBRE_BADGE, top = -Math.PI / 2,
+        g = chartContext(canvas, () => drawOrganFibres(canvas, fibre));
+  g.clearRect(0, 0, B.width, B.height);
+  g.fillStyle = B.sheath;
+  g.beginPath();
+  g.arc(B.x, B.y, B.ring, 0, 2 * Math.PI);
+  g.fill();
+  for (const c of fibreBundle(B.rings, fibre.fast)) {
+    g.fillStyle = fibreHex(c.fast ? FIBRE_TYPES.fast : FIBRE_TYPES.slow);
+    g.beginPath();
+    g.arc(B.x + B.pitch * c.x, B.y + B.pitch * c.y, B.cell, 0, 2 * Math.PI);
+    g.fill();
+  }
+  g.lineWidth = B.ring_width;
+  g.strokeStyle = B.track;
+  g.beginPath();
+  g.arc(B.x, B.y, B.ring, 0, 2 * Math.PI);
+  g.stroke();
+  g.strokeStyle = fibreHex(fibre.fast);
+  g.beginPath();
+  g.arc(B.x, B.y, B.ring, top, top + 2 * Math.PI * brainClamp(fibre.available));
+  g.stroke();
+  const text =
+      t('organ_graphics.fibres', {share : percent(fibre.fast), reserve : percent(fibre.available)});
+  g.font = ORGAN_GRAPHIC.font;
+  g.textAlign = 'left';
+  g.fillStyle = ORGAN_GRAPHIC.label;
+  g.fillText(text, B.text_x, B.text_y);
+  canvas.setAttribute('aria-label', text);
+  canvas.title = t('organ_graphics.fibresTitle');
+}
 const ORGAN_GRAPHIC = Object.freeze({
   font : '11px system-ui',
   width : 360,

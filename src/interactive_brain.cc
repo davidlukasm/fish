@@ -165,7 +165,8 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"bite_strength\":" << b.bite_strength << ",\"jaw_length\":" << b.jaw_length
       << ",\"gut_length\":" << b.gut_length << ",\"blunt_teeth\":" << b.blunt_teeth
       << ",\"undulation\":" << b.undulation << ",\"suction_strength\":" << b.suction_strength
-      << ",\"soft_bite_force\":" << bite_force(b) << ",\"hard_bite_force\":" << bite_force(b, BiteKind::grinding)
+      << ",\"soft_bite_force\":" << bite_force(b)
+      << ",\"hard_bite_force\":" << bite_force(b, BiteKind::grinding)
       << ",\"scrape_force\":" << scrape_force(b) << ",\"end_tissue\":" << tissue_capacity(b)
       << ",\"gut_energy\":" << b.gut_energy << ",\"gut_digestible\":" << b.gut_digestible
       << ",\"digestion\":" << b.digestion << ",\"digested\":" << b.digested
@@ -230,8 +231,8 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
       const auto &e = g.interface->effectors[i];
       namespace E = effector_column;
       Record(out, E::count)(E::neuron, e.neuron)(E::port, e.port)(E::threshold, e.threshold)(
-          E::strength, e.strength)(E::lever, e.lever)(E::hue, tuning_hue(e.quality))(E::outside,
-                                                                                     e.outside)
+          E::strength, e.strength)(E::lever, e.lever)(E::hue, tuning_hue(e.quality))(
+          E::outside, e.outside)(E::fibre, e.fibre)(E::protraction, e.protraction)
           .finish();
     }
   out << "],\"focus\":" << neuron_focus << ",\"motor_counts\":[";
@@ -288,7 +289,8 @@ void InteractiveSession::write_brain_activity(std::ostream &out, const Individua
     const auto &stroke = b.motor().strokes[j];
     namespace S = stroke_column;
     Record(out, S::count)(S::mean, stroke.mean)(S::recovery, stroke.recovery)(
-        S::power, stroke.power)(S::steps, b.active_interface(g).stroke_timing[j].steps)
+        S::power, stroke.power)(S::steps, b.active_interface(g).stroke_timing[j].steps)(
+        S::fibre, b.active_interface(g).fibre[j])(S::reserve, stroke.reserve)
         .finish();
   }
   out << "],\"velocity\":[" << b.motor().vx << ',' << b.motor().vy << "],\"water_velocity\":["

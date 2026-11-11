@@ -37,8 +37,7 @@ struct PhysiologyParameters {
   double resting_spines = .3, resting_spines_half = 5, pigment_half = .5, pigment_rest = .2;
   double touch_rest = .1, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
-  double turn_cost = .00912, transfer_cost = .004, pigment_cost = .0002, bite_cost = .00633,
-         defense_cost = .012;
+  double transfer_cost = .004, pigment_cost = .0002;
   double spine_rate = .02, spine_max = MAX_SPINE_EXTENT;
   double wall_restitution = .65, spine_abrasion = .003;
   double neural_cost;
@@ -49,8 +48,8 @@ struct PhysiologyParameters {
   double bladder_strength;
   double bladder_rate;
   double bladder_cost;
-  double swimming_cost;
-  double suction_cost;
+  // Energy per unit of muscle work, the same for every contraction; fibres scale it.
+  double muscle_cost;
   double suction_range;
   double bite_wound;
   double wound_weakness;
