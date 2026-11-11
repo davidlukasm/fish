@@ -15,13 +15,11 @@ import {centerMarker} from './scene.js';
 import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
 import {sideIndex} from '../model/layout.js';
 import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
-import {namedText, t, tList} from '../../strings.js';
+import {namedText, t} from '../../strings.js';
 import {cellTrack, cellWords, ICON, icon, label, slotFill, slotShape} from './kit.js';
 import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
 import {organTitle} from './names.js';
-import {responseDiagram} from './response.js';
-import {driveElement} from './drive.js';
-import {driveContext} from './preview.js';
+import {regionPicture} from './region_controls.js';
 
 const PAIRING_BOX = 20;
 const PAIRING_GLYPH = Object.freeze({
@@ -339,39 +337,7 @@ function regionTeacher(state, organ) {
 function regionControls(state, organ) {
   if (!planned(organ))
     return '';
-  const region = organ.region, settings = ORGAN_BY_KEY[organ.type].settings;
-  const most = regionPlan(state.document, organ).most ?? {};
-  const command = organ.centers.find(
-      c => ['command', 'target', 'gradient', 'feature1', 'pause'].includes(c.node));
-  const beat = organ.centers.find(c => c.node === 'beat' || c.node === 'search');
-  const response = command ? responseDiagram(state, command)
-                   : beat  ? driveElement(beat, label('inspector.beat'),
-                                          n => t('studio.inspector.beatSteps', {n}),
-                                          {...driveContext(state, beat), rhythm : true})
-                           : '';
-  const choices =
-      Object.entries(settings)
-          .filter(([ key ]) =>
-                      organ.type === 'circuit' ? key === 'compare' : organ.type !== 'rhythm')
-          .filter(([ key ]) => key !== 'compare' || organ.pair)
-          .map(([ key, s ]) => {
-            const names = s.named ? tList('studio.regions.values.' + key) : null;
-            const reached = Math.min(region[key], most[key] ?? region[key]);
-            let buttons = '';
-            for (let value = s.least; value <= s.most; ++value)
-              buttons += '<button class="' +
-                         (reached === value               ? 'active'
-                          : value > (most[key] ?? s.most) ? 'beyond'
-                                                          : '') +
-                         '" data-region-setting="' + key + '" data-region-value="' + value +
-                         '" data-organ-id="' + escapeText(organ.id) + '"' +
-                         (value > (most[key] ?? s.most) ? ' title="' + label('regions.beyond') + '"'
-                                                        : '') +
-                         '>' + escapeText(names?.[value] ?? String(value)) + '</button>';
-            return '<div class="aid-region-setting"><span>' + label('regions.settings.' + key) +
-                   '</span><div class="aid-button-group">' + buttons + '</div></div>';
-          })
-          .join('');
+  const region = organ.region;
   const follows = regionPlan(state.document, organ).view
                       ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
                             escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
@@ -390,7 +356,7 @@ function regionControls(state, organ) {
                 '</p>'
           : '';
   return slotsSection(state, organ) + '<section class="aid-eye-section"><h4>' +
-         label('regions.settingsTitle') + '</h4>' + response + choices +
+         label('regions.settingsTitle') + '</h4>' + regionPicture(state, organ) +
          (organ.type === 'value' ? '' : regionTeacher(state, organ)) + crowded + follows +
          '</section>';
 }

@@ -5,7 +5,7 @@
 Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhost:8765.
 3.690 × 1.640 px, 800 Tierplätze. `--empty-world`: freies Becken.
 `--fish N`, `--food N`, `--data-dir PFAD`, `--seed N`.
-„Diagnose ↓“ beim FPS-Zähler lädt einen Bericht; `--fps-report` ergänzt eine JSONL-Datei.
+„Diagnose ↓“ am FPS-Zähler lädt einen Bericht; `--fps-report` ergänzt JSONL.
 
 ## Bedienung
 
@@ -17,23 +17,19 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 - Einstellungen enthalten Energiezufuhr, Wachstum, Licht, Sediment und Evolution. „Welt merken“ speichert eine Welt dauerhaft; Autosave alle 30 Sekunden und beim Beenden.
 - Telefon hochkant: eigene Ansicht mit Karten Becken, Fisch, Arten, Chronik; `?mobile=1`/`0` erzwingt bzw. sperrt sie.
 
-- Atelier: Organe und Hirnregionen auf den Fisch ziehen. Seh- und Riechverarbeitung, Körperzustand, Bewertung, Handlungswahl und Motorik verbinden sich über eigene Anschlüsse. Klick auf eine Region zeigt ihre Zellen. Sehfeld und Farbtypen am Auge einstellen. Entwürfe speichern automatisch.
+- Atelier: Organe und Hirnregionen auf den Fisch ziehen. Seh- und Riechverarbeitung, Körperzustand, Bewertung, Handlungswahl und Motorik verbinden sich über eigene Anschlüsse. Die Diagramme einer Region steuern Suchwellen, Seitenvergleich, Pausen, Reife und Lernfenster; ihre Zellen bleiben einzeln bearbeitbar. Sehfeld und Farbtypen am Auge einstellen. Entwürfe speichern automatisch.
 
 ## Startpopulation
 
-Brisa (Futterwolken; Riechverarbeitung, Motorik und Körperzustand) und Pflanzenfresser Liora 44 sind die generationell geprüften Startlinien, beide auf Hirnregionen gebaut. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an ausgewachsenen Blättern, andere Linien an Futterquellen.
+Brisa (Futterwolken; Motorik mit Schwimm- und Maultakt) und Pflanzenfresser Liora 44 sind die generationell geprüften Startlinien, beide auf Hirnregionen gebaut. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
 720 feste Plätze tragen bis zu 16 Zellen je Platz. Das CPPN hat 12 Eingänge und 25 Ausgänge. Es legt Zellpotenziale, Kontaktadressen, Rezeptoren und Höchststärken fest. Zellen entstehen im Ei und nach dem Schlupf. Kontakte beginnen bei null; lokale Aktivität verändert ihre Stärke, laufender Abbau entfernt ungenutzte Kontakte. Innere Nervenzellen können sich frei verschalten; direkte Sinn-Organ-Kontakte sind gesperrt.
 
-Der Schwanz schiebt, die Brustflossen drehen und schieben mit: Rückschlag vorwärts, der Vorschlag eines Gegenspielermuskels rückwärts, beide zugleich halten still. Je Krafteinheit schiebt eine Brustflosse ein Viertel so stark wie der Schwanz.
+Der Schwanz schiebt, die Brustflossen drehen und schieben mit: Rückschlag vorwärts, der Vorschlag eines Gegenspielermuskels rückwärts, beide zugleich halten still. Ohne Schwimmen und ohne gefüllte Blase sinkt der Fisch; der Blasenauftrieb wirkt je Körpermasse.
 
 Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
-
-Die Pumpe bestimmt die erbliche Darmlänge. Tier- und Pflanzenspezialisten erreichen 100 % Verwertung ihrer passenden Nahrung und 10 % der Gegenquelle; der mittlere Allesfresser jeweils 65 %. Kunstfutter liefert unabhängig davon 80 %. Darmenergie, verdaulicher Anteil, Füllung und Reserve sind getrennt.
-
-Kunstfutter, Plankton, Bodentiere und Pflanzen teilen das Budget der freien Wasserfläche. Importe und interne Transfers werden getrennt gebucht. Mutterreserve und Gonadenfüllschwelle wachsen mit √(Gewebe/40).
 
 ## Prüfung
 

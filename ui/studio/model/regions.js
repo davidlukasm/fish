@@ -6,14 +6,7 @@ import {
   organSlots,
   slotCenters
 } from './organs.js';
-import {
-  ACTIVE_LEARNING,
-  CIRCUIT_LEARNING,
-  DEVELOPING_RELAY,
-  pacemakerCell,
-  RHYTHM_TAU,
-  TONIC_LEARNING
-} from './region_cells.js';
+import {CIRCUIT_LEARNING, DEVELOPING_RELAY} from './region_cells.js';
 import {statePlan} from './state_region.js';
 import {choicePlan} from './choice_region.js';
 import {valuePlan} from './value_region.js';
@@ -122,78 +115,8 @@ function tectumPlan(doc, organ) {
   return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
 }
 
-// A small tonic signal permits new afferents to learn without a strong resting command.
-const CIRCUIT_THRESHOLD = Object.freeze([ -.05, 0, .5 ]),
-      CIRCUIT_TIME = Object.freeze([ .1, .5, 1 ]), CIRCUIT_COMPARE = Object.freeze([ 0, 4, 8 ]),
-      CIRCUIT_PRESET = Object.freeze([ 'relay', 'inhibit' ]);
-const COMPARISON_THRESHOLD = Object.freeze([ -.05, -.02, -.005 ]);
-function circuitPlan(doc, organ) {
-  const r = organ.region, comparison = !!(organ.pair && r.compare);
-  const nodes = [ {
-    node : 'command',
-    preset : CIRCUIT_PRESET[r.effect],
-    port : comparison ? 'out' : 'both',
-    effects : comparison ? TONIC_LEARNING : DEVELOPING_RELAY,
-    set : {
-      ...CIRCUIT_LEARNING,
-      copies : comparison ? CIRCUIT_COMPARE[r.compare] : 8,
-      // Two eight-cell inputs plus control need more than the ordinary relay's 17 contacts.
-      field : comparison ? .5 : .3,
-      threshold : comparison ? COMPARISON_THRESHOLD[r.threshold] : CIRCUIT_THRESHOLD[r.threshold],
-      tau : CIRCUIT_TIME[r.time],
-      q1 : r.response ? 1 : 0,
-      q2 : r.response / 2,
-      pace : comparison ? -1 : .6
-    }
-  } ];
-  const inner = [], cross = [];
-  if (comparison) {
-    // Matched input populations cancel a shared cue before the output amplifies its difference.
-    const input = {
-      ...CIRCUIT_LEARNING,
-      copies : 8,
-      threshold : -.5,
-      tau : CIRCUIT_TIME[r.time],
-      q1 : 1,
-      q2 : .5,
-      pace : -1
-    };
-    for (const [node, preset] of [[ 'sense', 'relay' ], [ 'cross', 'inhibit' ]])
-      nodes.push({node, preset, port : 'in', effects : TONIC_LEARNING, set : input});
-    inner.push([ 'sense', 'command' ]);
-    cross.push([ 'cross', 'command' ]);
-  }
-  return {nodes, inner, cross, route : () => null, view : null};
-}
-function rhythmPlan(doc, organ) {
-  return {
-    nodes : [ pacemakerCell('beat', RHYTHM_TAU[organ.region.beat], 'both') ],
-    inner : [],
-    cross : [],
-    route : () => null,
-    view : null
-  };
-}
-function teachingPlan() {
-  return {
-    nodes : [ {
-      node : 'teach',
-      preset : 'modulate',
-      port : 'both',
-      effects : ACTIVE_LEARNING,
-      set : {...CIRCUIT_LEARNING, copies : 6, threshold : -1, tau : 0}
-    } ],
-    inner : [],
-    cross : [],
-    route : () => null,
-    view : null
-  };
-}
 const PLANS = Object.freeze({
   tectum : tectumPlan,
-  circuit : circuitPlan,
-  rhythm : rhythmPlan,
-  teaching : teachingPlan,
   state : statePlan,
   choice : choicePlan,
   value : valuePlan,
@@ -390,9 +313,10 @@ export function updateRegion(doc, organId, patch, sites) {
     for (const [key, value] of Object.entries(patch)) {
       if (key === 'follow')
         target.region.follow = value ? 1 : 0;
-      else if (settings[key])
-        target.region[key] =
-            Math.max(settings[key].least, Math.min(settings[key].most, Math.round(value)));
+      else if (settings[key] && Number.isFinite(value)) {
+        const s = settings[key], step = s.step ?? 1;
+        target.region[key] = Math.max(s.least, Math.min(s.most, Math.round(value / step) * step));
+      }
     }
     for (const node of regionPlan(draft, target).nodes) {
       const center = target.centers.find(c => c.node === node.node);
@@ -401,9 +325,11 @@ export function updateRegion(doc, organId, patch, sites) {
         continue;
       for (const [effect, values] of Object.entries(node.effects ?? {})) {
         const was = previous.effects?.[effect], receptor = center.receptors[effect];
-        // Retuning a region updates its defaults while preserving a custom hormone response.
-        if (was && Object.entries(was).every(([ key, value ]) => receptor[key] === value))
-          Object.assign(receptor, values);
+        // A region control owns the fields it changes; other hormonal tuning stays independent.
+        if (was)
+          for (const [key, value] of Object.entries(values))
+            if (was[key] !== value)
+              receptor[key] = value;
       }
     }
   }

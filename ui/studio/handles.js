@@ -3,6 +3,9 @@ import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
 import {drivePatch} from './view/drive.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
+import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
+import {updateRegion} from './model/regions.js';
+import {RHYTHM_TAU} from './model/region_cells.js';
 import {effectorPatch, spinePatch} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {MOTOR_KIND} from '../schema.js';
@@ -73,6 +76,7 @@ const HANDLES = Object.freeze({
   dose : {follow : 'dosePointer'},
   drive : {follow : 'drivePointer'},
   response : {follow : 'responsePointer'},
+  region : {follow : 'regionPointer'},
   adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
@@ -118,6 +122,12 @@ const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
 export const GRIPS = Object.freeze([
+  {
+    graphic : '[data-region-picture]',
+    handle : '[data-region-handle]',
+    held : 'region',
+    start : (studio, g, h) => ({id : g.dataset.regionPicture, handle : h.dataset.regionHandle})
+  },
   {
     graphic : '[data-response]',
     handle : '[data-response-handle]',
@@ -252,8 +262,9 @@ const PAD_STILL = .001;
 export const DRAG_CLICK = 350, DRAG_START = 5;
 // A knob keeps the spot where it was grabbed, so pressing it leaves its value alone; a press on the
 // track or chart around it still jumps there.
-const KNOB = '.aid-graphic-handle, .aid-spectrum-handle, .aid-vector-point, .aid-phase-mark, ' +
-             '.aid-bend, .aid-sight-light circle, .aid-vision-handle, .aid-probe-handle';
+const KNOB =
+    '.aid-graphic-handle, .aid-spectrum-handle, .aid-vector-point, .aid-phase-mark, ' +
+    '.aid-bend, .aid-sight-light circle, .aid-vision-handle, .aid-probe-handle, .region-handle';
 // A pad's point lets the pointer through to the pad, so it is found by where the press is.
 function padPoint(event) {
   const point = event.target.closest?.('svg')?.querySelector('.aid-vector-point');
@@ -277,6 +288,62 @@ function knobGrip(event) {
              : null;
 }
 export const handleMethods = {
+  regionPointer(event) {
+    const drag = this.handleDrag, doc = this.state.document;
+    const organ = findOrgan(doc, drag.id);
+    if (!organ)
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = regionPatch(organ, drag.handle, fx, fy);
+    if (patch)
+      this.draftDesign(updateRegion(doc, organ.id, patch, this.state.sites), 'region:' + organ.id);
+  },
+  regionKey(event) {
+    const button = event.target.closest?.('[data-region-setting]');
+    if (button && [ 'Enter', ' ' ].includes(event.key)) {
+      event.preventDefault();
+      const d = button.dataset;
+      this.changeDocument(updateRegion(this.state.document, d.organId,
+                                       {[d.regionSetting] : Number(d.regionValue)},
+                                       this.state.sites),
+                          this.state.selected);
+      const selector = '[data-region-picture="' + d.organId + '"] [data-region-setting="' +
+                       d.regionSetting + '"]';
+      (this.root.querySelector(selector + '[data-region-value="' + d.regionValue + '"]') ??
+       this.root.querySelector(selector))
+          ?.focus();
+      return true;
+    }
+    const handle = event.target.closest?.('[data-region-handle]');
+    const graphic = handle?.closest('[data-region-picture]');
+    if (!graphic || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
+      return false;
+    const organ = findOrgan(this.state.document, graphic.dataset.regionPicture);
+    if (!organ)
+      return false;
+    event.preventDefault();
+    const key = handle.dataset.regionHandle, at = regionHandle(organ, key);
+    const dx = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+    let patch;
+    if (key === 'beat' || key === 'pump') {
+      const order = [ 0, ...RHYTHM_TAU.map((_, i) => i + 1).reverse() ];
+      const index = clamp(order.indexOf(organ.region[key]) + (dx || -dy), 0, order.length - 1);
+      patch = {[key] : order[index]};
+    } else if (key === 'resolution' || key === 'contrast')
+      patch = {[key] : organ.region[key] + (key === 'resolution' ? (-dx || -dy) : (dx || dy))};
+    else
+      patch = regionPatch(organ, key, at.fx + dx * 4 / REGION_PICTURE.width,
+                          at.fy + dy * 3 / REGION_PICTURE.height);
+    if (patch)
+      this.changeDocument(updateRegion(this.state.document, organ.id, patch, this.state.sites),
+                          this.state.selected);
+    this.root
+        .querySelector('[data-region-picture="' + organ.id + '"] [data-region-handle="' + key +
+                       '"]')
+        ?.focus();
+    return true;
+  },
   responsePointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const center = findCenter(doc, drag.id)?.center;

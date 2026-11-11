@@ -106,9 +106,6 @@
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
     "tectum": "Seh­zentrum",
-    "rhythm": "Takt­geber",
-    "teaching": "Lehr­signal",
-    "circuit": "Schalt­zentrum",
     "state": "Körperzustand",
     "choice": "Handlungswahl",
     "value": "Bewertung",
@@ -146,14 +143,10 @@
     "modulate": "Modulator"
   },
   "modulePurpose": {
-    "vision-steering": "Die Augen speisen über Kreuz das Sehzentrum, das die Lenkmuskeln treibt.",
-    "scent-suction": "Die Nase steuert über ein Schaltzentrum die Pumpe.",
-    "rhythm-drive": "Ein gemeinsamer Taktgeber steuert beide Seiten des Schwanzes."
+    "vision-steering": "Die Augen speisen über Kreuz das Sehzentrum, das die Lenkmuskeln treibt."
   },
   "modules": {
-    "vision-steering": "Sehen und Lenken",
-    "scent-suction": "Riechen und Ansaugen",
-    "rhythm-drive": "Rhyth­mischer Vortrieb"
+    "vision-steering": "Sehen und Lenken"
   },
   "inspector": {
     "chemistry": "Hormone und Lernen",
@@ -459,17 +452,9 @@
       "purpose": "Vorlage: bündelt Seheingänge oder ordnet sie nach Sehfeld und Farbtyp.",
       "follows": "Die Karte richtet sich nach dem Sehfeld und den Farbtypen der Augen."
     },
-    "rhythm": {
-      "term": "Muster­generator",
-      "purpose": "Vorlage: eine rhythmische Zellgruppe mit Ein- und Ausgang."
-    },
     "motor": {
       "term": "Motorik",
       "purpose": "Vorlage: macht aus Reizseite, Drang, Bremse, Nähe, Sättigung, Lage und Grundkontakt die Befehle für Flossen, Schwanz, Maul, Kiefer und Auftrieb; die Wünsche beider Seiten wetteifern, statt sich am Muskel aufzuheben. Zuschaltbare Taktgeber geben Schwimmen und Maul einen eigenen Rhythmus."
-    },
-    "teaching": {
-      "term": "Modulator­kerne",
-      "purpose": "Vorlage: innere Reize steuern das lokale Lernen der angeschlossenen Nervenzellen."
     },
     "slotsTitle": "Anschlüsse",
     "settingsTitle": "Einstellungen",
@@ -532,69 +517,26 @@
       "resolution": "Auflösung",
       "contrast": "Kontrast",
       "colours": "Farbtypen",
-      "compare": "Seitenvergleich",
       "teacher": "Lehrer",
       "features": "Merkmalswege",
-      "tone": "Grundtempo",
+      "tone": "Grunddrang",
       "compete": "Seiten wetteifern",
       "retreat": "Zurückweichen",
       "beat": "Schwimmtakt",
-      "pump": "Maultakt"
-    },
-    "values": {
-      "contrast": [
-        "aus",
-        "schwach",
-        "stark"
-      ],
-      "colours": [
-        "zusammen",
-        "getrennt"
-      ],
-      "compare": [
-        "aus",
-        "schwach",
-        "stark"
-      ],
-      "response": [
-        "Veränderung",
-        "Pegel",
-        "Merkspur"
-      ],
-      "tone": [
-        "still",
-        "gemächlich",
-        "zügig"
-      ],
-      "compete": [
-        "aus",
-        "an"
-      ],
-      "retreat": [
-        "aus",
-        "an"
-      ],
-      "beat": [
-        "aus",
-        "langsam",
-        "mittel",
-        "schnell"
-      ],
-      "pump": [
-        "aus",
-        "langsam",
-        "mittel",
-        "schnell"
-      ]
+      "pump": "Maultakt",
+      "searchTime": "Suchdauer",
+      "searchDrive": "Suchdrang",
+      "smoothing": "Glättung",
+      "reserve": "Reservebedarf",
+      "rest": "Verweilen",
+      "maturity": "Fortpflanzungsreife",
+      "association": "Zuordnungsdauer",
+      "teaching": "Lehrstärke"
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
     "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben.",
     "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz.",
-    "circuit": {
-      "term": "Formatio reticularis",
-      "purpose": "Bündelt Reize erregend oder hemmend: als Veränderung, anhaltenden Pegel oder abklingende Merkspur. Mit Seitenvergleich kombinierbar."
-    },
     "state": {
       "term": "Körperzustand",
       "purpose": "Stimmt Schlüpfen, Verweilen und Fortpflanzung mit Reife, Nahrung und Reserve ab."
@@ -610,6 +552,41 @@
     "olfaction": {
       "term": "Riechverarbeitung",
       "purpose": "Vergleicht beide Nasen vor der Verstärkung. Gibt Geruchsstärke und Richtung getrennt weiter."
+    },
+    "graphics": {
+      "search": "Erkunden",
+      "searchDrag": "Suchwelle ziehen: Wechsel langsamer nach rechts, stärker nach oben",
+      "scent": "Nasen vergleichen",
+      "scentDrag": "Gekreuzte Antwort ziehen: länger glätten nach rechts, stärker abziehen nach oben",
+      "direct": "unmittelbar",
+      "maturity": "Reife",
+      "reserve": "Reservebedarf",
+      "rest": "Verweilen",
+      "maturityDrag": "Reife bei halber Fortpflanzungsfreigabe",
+      "reserveDrag": "Reservebedarf: nach rechts muss die Reserve den Mangelkreis stärker hemmen",
+      "restDrag": "Abklingende Pause nach einer Mahlzeit verlängern",
+      "associationDrag": "Zuordnungsfenster nach rechts verlängern, Lehrsignal nach oben verstärken",
+      "features": "{n} getrennte Merkmalswege",
+      "tone": "Grunddrang: Stufe {n}",
+      "off": "aus",
+      "resolutionDrag": "Sehband verbreitern oder aufteilen",
+      "contrastDrag": "Gemeinsame Hemmung: keine, zwei oder fünf Zellen",
+      "hormones": "Hormonsteuerung",
+      "choiceReference": "Eine Suchwelle pro Seite. Ziehen ändert Dauer und Stärke; Ziel und Pause hemmen die Suche.",
+      "olfactionReference": "Gleicher Beispielreiz an beiden Nasen. Türkis: eigene Antwort. Gold: Abzug der Gegenseite.",
+      "stateReference": "Oben: Fortpflanzungsfreigabe über die Reife. Unten: Mangelantwort auf Reserveeingang und abklingende Fresspause.",
+      "valueReference": "Die Spur verbindet ein Merkmal mit späterem Erfolg oder Schaden. Ziehen ändert Zuordnungsdauer und Lehrstärke.",
+      "motorReference": "Schwanz und Maul erhalten gemeinsame Takte. Pfeile steuern Grunddrang, Seitenkonkurrenz und Zurückweichen.",
+      "tectumReference": "Die Sehkarte teilt das Sehfeld. Violette Zellen hemmen die Karte gemeinsam.",
+      "customized": "Einzelne Zellen sind eigens eingestellt; die Darstellung zeigt die Regionsvorgaben.",
+      "steps": "{n} Schritte"
+    },
+    "values": {
+      "response": [
+        "Veränderung",
+        "Pegel",
+        "Merkspur"
+      ]
     }
   },
   "head": {

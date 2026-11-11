@@ -225,33 +225,6 @@ export const ORGANS = Object.freeze([
     }
   },
   {
-    key : 'circuit',
-    category : 'regions',
-    scope : 'side',
-    midline : true,
-    centers : [ nerve('relay', 8, [ 1, 2, 3 ]) ],
-    slots : organ => [slot('senses', 'in', [], true),
-                      ...(organ.pair && organ.region.compare
-                              ? [ slot('control', 'in', [], false, 'command') ]
-                              : []),
-                      slot('onward', 'out', [], true)],
-    settings : {
-      threshold : setting(0, 2, 0, true),
-      time : setting(0, 2, 1, true),
-      compare : setting(0, 2, 0, true),
-      effect : setting(0, 1, 0, true),
-      response : setting(0, 2, 1, true)
-    }
-  },
-  {
-    key : 'rhythm',
-    category : 'regions',
-    scope : 'single',
-    centers : [ nerve('pacemaker', 8, [ 1, 2, 3 ]) ],
-    slots : [ slot('steering', 'in'), slot('onward', 'out', [], true) ],
-    settings : {beat : setting(0, 2, 1, true)}
-  },
-  {
     key : 'motor',
     category : 'regions',
     scope : 'side',
@@ -279,15 +252,6 @@ export const ORGANS = Object.freeze([
       beat : setting(0, RHYTHM_TAU.length, 0, true),
       pump : setting(0, RHYTHM_TAU.length, 0, true)
     }
-  },
-  {
-    key : 'teaching',
-    category : 'regions',
-    scope : 'single',
-    centers : [ nerve('modulate', 6, [ 1, 2 ]) ],
-    slots :
-        [ slot('inner', 'in', [ 'gut', 'blood', 'pain' ], true), slot('onward', 'out', [], true) ],
-    settings : {}
   },
   ...REGION_TYPES
 ].map(item => Object.freeze({
@@ -373,24 +337,9 @@ export function eligible(center, site) {
          (center.surface === 'any' || (center.surface === 'outer') === isOuter);
 }
 
-export const MODULES = Object.freeze([
-  {
-    key : 'vision-steering',
-    muscleFunction : MOTOR_KIND.turn,
-    organs : [ 'eye', 'tectum', 'muscle' ],
-    connections : [ [ 0, 1, 'crossed' ], [ 1, 2 ] ]
-  },
-  {
-    key : 'scent-suction',
-    muscleFunction : MOTOR_KIND.suction,
-    organs : [ 'nose', 'circuit', 'muscle' ],
-    regionSettings : {1 : {response : 1}},
-    connections : [ [ 0, 1 ], [ 1, 2 ] ]
-  },
-  {
-    key : 'rhythm-drive',
-    muscleFunction : MOTOR_KIND.forward,
-    organs : [ 'rhythm', 'muscle' ],
-    connections : [ [ 0, 1, 'both' ] ]
-  }
-]);
+export const MODULES = Object.freeze([ {
+  key : 'vision-steering',
+  muscleFunction : MOTOR_KIND.turn,
+  organs : [ 'eye', 'tectum', 'muscle' ],
+  connections : [ [ 0, 1, 'crossed' ], [ 1, 2 ] ]
+} ]);

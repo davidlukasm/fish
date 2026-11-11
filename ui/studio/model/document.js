@@ -119,7 +119,8 @@ export function validateDocument(doc) {
       if (!r || ![0, 1].includes(r.follow) || !Number.isInteger(r.site) ||
           (r.cut !== undefined &&
            !(Array.isArray(r.cut) && r.cut.every(key => typeof key === 'string'))) ||
-          Object.entries(settings).some(([ key, s ]) => !Number.isInteger(r[key]) ||
+          Object.entries(settings).some(([ key, s ]) => !Number.isFinite(r[key]) ||
+                                                        (!s.step && !Number.isInteger(r[key])) ||
                                                         r[key] < s.least || r[key] > s.most))
         throw new Error('studio.errors.invalidDocument');
     }

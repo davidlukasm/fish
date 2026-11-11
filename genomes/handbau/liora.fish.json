@@ -16656,7 +16656,10 @@
    "region": {
     "follow": 1,
     "site": 300,
-    "derived": null
+    "derived": null,
+    "reserve": 1,
+    "rest": 1,
+    "maturity": 0.5
    }
   },
   {
@@ -17650,7 +17653,9 @@
    "region": {
     "follow": 1,
     "site": 446,
-    "derived": null
+    "derived": null,
+    "searchTime": 0.6,
+    "searchDrive": 1
    }
   },
   {
@@ -18644,7 +18649,9 @@
    "region": {
     "follow": 1,
     "site": 447,
-    "derived": null
+    "derived": null,
+    "searchTime": 0.6,
+    "searchDrive": 1
    }
   },
   {
@@ -19220,7 +19227,9 @@
     "follow": 1,
     "site": 128,
     "features": 2,
-    "derived": null
+    "derived": null,
+    "association": 1,
+    "teaching": 1
    }
   },
   {
@@ -19796,7 +19805,9 @@
     "follow": 1,
     "site": 129,
     "features": 2,
-    "derived": null
+    "derived": null,
+    "association": 1,
+    "teaching": 1
    }
   },
   {
@@ -23068,7 +23079,9 @@
    "region": {
     "follow": 1,
     "site": 278,
-    "derived": null
+    "derived": null,
+    "contrast": 1,
+    "smoothing": 0
    }
   },
   {
@@ -23502,7 +23515,9 @@
    "region": {
     "follow": 1,
     "site": 279,
-    "derived": null
+    "derived": null,
+    "contrast": 1,
+    "smoothing": 0
    }
   }
  ],

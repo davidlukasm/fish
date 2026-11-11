@@ -13,9 +13,11 @@ const ADULT_OUTPUT = Object.freeze({
 });
 // Gonads may first fill long after maturation. These cells still need their own activity
 // then to learn the fullness input; the output gate prevents juvenile spawning.
-const LATE_COMMAND = Object.freeze({...TONIC_LEARNING, ...ADULT_OUTPUT});
-
-export function statePlan() {
+export function statePlan(doc, organ) {
+  const {reserve, rest, maturity} = organ.region;
+  const adult =
+      {[HORMONE_EFFECT.output] : {...ADULT_OUTPUT[HORMONE_EFFECT.output], half : maturity}};
+  const late = {...TONIC_LEARNING, ...adult};
   return neuralPlan(
       [
         // Embryos use the sperm organ to soften the shell, before adult gonad fullness exists.
@@ -24,11 +26,11 @@ export function statePlan() {
         regionCell('reserve', 'inhibit', 'in'),
         // At empty reserve this pool must outweigh both full gonad sensors as well as the
         // investment tone. Two weak cells could never stop either command.
-        regionCell('deficit', 'inhibit', 'none', {copies : 8, threshold : -1}),
-        regionCell('pause', 'relay', 'out', {copies : 2, q2 : 1, tau : 1}),
-        regionCell('investment', 'relay', 'out', {threshold : -.4}, ADULT_OUTPUT),
-        regionCell('eggReady', 'relay', 'both', {threshold : .2}, LATE_COMMAND),
-        regionCell('spermReady', 'relay', 'both', {threshold : .2}, LATE_COMMAND)
+        regionCell('deficit', 'inhibit', 'none', {copies : 8, threshold : -reserve}),
+        regionCell('pause', 'relay', 'out', {copies : 2, q2 : 1, tau : rest}),
+        regionCell('investment', 'relay', 'out', {threshold : -.4}, adult),
+        regionCell('eggReady', 'relay', 'both', {threshold : .2}, late),
+        regionCell('spermReady', 'relay', 'both', {threshold : .2}, late)
       ],
       [
         [ 'intake', 'pause' ], [ 'reserve', 'deficit' ], [ 'deficit', 'investment' ],

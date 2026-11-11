@@ -1035,3 +1035,25 @@
 @keyframes aid-intake{to{stroke-dashoffset:-18}}
 .aid-move-throat{animation:aid-throat .45s ease-in-out 2}
 @keyframes aid-throat{0%,100%{stroke-opacity:.5}45%{stroke-opacity:1;stroke-width:26px}}
+.aid-region-picture{--region-primary:#81cdae;--region-other:#edbe77;--region-memory:#bca8db;margin:8px 0 12px}
+.aid-region-picture>svg{display:block;width:100%;height:auto;border-radius:12px;background:var(--aid-graphic);overflow:visible;touch-action:none}
+.aid-region-picture text{fill:var(--aid-axis-text);font:12px system-ui}
+.aid-region-picture .region-line{fill:none;stroke:var(--region-primary);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.aid-region-picture .region-line.other{stroke:var(--region-other)}
+.aid-region-picture .region-line.memory{stroke:var(--region-memory)}
+.aid-region-picture .region-line.axis{stroke:var(--aid-panel-edge);stroke-width:1.3}
+.aid-region-picture .region-symbol{fill:none;stroke:var(--aid-soft-text);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.aid-region-picture .region-handle{cursor:move;outline:none}
+.aid-region-picture .region-handle circle{fill:var(--aid-ground);stroke:var(--region-primary);stroke-width:2.5}
+.aid-region-picture .region-handle .hit{fill:transparent;stroke:none}
+.aid-region-picture .region-handle path{stroke:var(--region-primary);stroke-width:1.5}
+.aid-region-picture .region-handle:hover circle:not(.hit),.aid-region-picture .region-handle:focus-visible circle:not(.hit){fill:var(--region-primary);stroke:#f0f7df;stroke-width:3}
+.aid-region-picture .region-handle:hover path,.aid-region-picture .region-handle:focus-visible path{stroke:var(--aid-ground)}
+.aid-region-picture .region-button{cursor:pointer;outline:none}
+.aid-region-picture .region-button rect{fill:var(--aid-control);stroke:var(--aid-control-edge)}
+.aid-region-picture .region-button path,.aid-region-picture .region-button>circle{fill:none;stroke:var(--aid-soft-text);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-region-picture .region-button.selected rect{fill:#1c4543;stroke:var(--region-primary)}
+.aid-region-picture .region-button.selected path,.aid-region-picture .region-button.selected>circle{stroke:var(--region-primary)}
+.aid-region-picture .region-button:hover rect,.aid-region-picture .region-button:focus-visible rect{stroke:#f0f7df;stroke-width:2}
+.aid-region-picture .region-fan{fill-opacity:.22;stroke:var(--region-primary);stroke-width:1.5}
+.aid-region-picture .region-interneuron{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:2}

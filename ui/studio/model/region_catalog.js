@@ -1,4 +1,8 @@
+import {TIME_CONSTANT} from '../../schema.js';
+import {timeConstantOf} from '../../tuning.js';
+
 const port = (key, dir, node, fits = [], required = false) => ({key, dir, node, fits, required});
+const unit = initial => ({least : 0, most : 1, initial, step : .01});
 const home = Object.freeze({
   key : 'relay',
   role : 'nerve',
@@ -20,7 +24,7 @@ export const REGION_TYPES = Object.freeze([
       port('scent', 'in', null, [ 'nose' ], true), port('target', 'out', 'gradient'),
       port('presence', 'out', 'concentration')
     ],
-    settings : {}
+    settings : {contrast : unit(1), smoothing : unit(0)}
   },
   {
     key : 'state',
@@ -34,7 +38,7 @@ export const REGION_TYPES = Object.freeze([
       port('investment', 'out', 'investment'), port('lay', 'out', 'eggReady'),
       port('spermRelease', 'out', 'spermReady'), port('hatch', 'out', 'hatch')
     ],
-    settings : {}
+    settings : {reserve : unit(1), rest : unit(1), maturity : {...unit(.5), least : .01}}
   },
   {
     key : 'choice',
@@ -45,7 +49,10 @@ export const REGION_TYPES = Object.freeze([
       port('approach', 'out', 'target'), port('advance', 'out', 'advance'),
       port('avoid', 'out', 'threat'), port('search', 'out', 'search')
     ],
-    settings : {}
+    settings : {
+      searchTime : {...unit(.6), least : timeConstantOf(TIME_CONSTANT.pace_min_steps)},
+      searchDrive : unit(1)
+    }
   },
   {
     key : 'value',
@@ -54,7 +61,11 @@ export const REGION_TYPES = Object.freeze([
                           .flatMap(node => [port(node, 'in', node), port(node, 'out', node)]),
                       port('reward', 'in', 'reward', [ 'gut', 'state' ], true),
                       port('harm', 'in', 'harm', [ 'pain' ])],
-    settings : {features : {least : 1, most : 4, initial : 2, named : false}}
+    settings : {
+      features : {least : 1, most : 4, initial : 2, named : false},
+      association : unit(1),
+      teaching : unit(1)
+    }
   }
 ].map(region =>
           Object.freeze({...region, category : 'regions', namedPorts : true, centers : [ home ]})));

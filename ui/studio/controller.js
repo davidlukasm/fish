@@ -831,7 +831,7 @@ export class OrganStudio {
     changeOn(this, element, FISH_CHANGES);
   }
   keydown(event) {
-    if (this.responseKey(event))
+    if (this.regionKey(event) || this.responseKey(event))
       return;
     const handle = event.target.closest?.('[data-vision-handle]');
     if (handle && [ 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown' ].includes(event.key)) {

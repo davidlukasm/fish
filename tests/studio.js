@@ -89,8 +89,10 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
   const organ = id => ({kind : 'organ', id});
   const port = (id, slot) => ({kind : 'slot', id, slot});
   for (const type of ['eggs', 'sperm']) {
-    const relay = model.addOrgan(model.newDocument('Anschlüsse'), 'circuit', sites,
+    const relay = model.addOrgan(model.newDocument('Anschlüsse'), 'state', sites,
                                  {x : 550, y : 365}, Infinity, false);
+    const outlet = type === 'eggs' ? 'lay' : 'spermRelease';
+    const inlet = type === 'eggs' ? 'eggFullness' : 'spermFullness';
     const added = model.addOrgan(relay.document, type, sites, {x : 700, y : 365});
     const editor = {
       state : {document : added.document},
@@ -104,12 +106,11 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
         return !!wired;
       }
     };
-    clickSlot(editor,
-              {dataset : {slotRegion : relay.organId, slotKey : 'onward', slotDir : 'out'}});
+    clickSlot(editor, {dataset : {slotRegion : relay.organId, slotKey : outlet, slotDir : 'out'}});
     clickSlot(editor,
               {dataset : {slotRegion : added.organId, slotKey : 'trigger', slotDir : 'in'}});
     let doc = editor.state.document;
-    assert.equal(doc.wires[0].fromPort, 'onward');
+    assert.equal(doc.wires[0].fromPort, outlet);
     assert.equal(doc.wires[0].toPort, 'trigger');
     const compiledTargets = (doc, key) => {
       const plan = model.compileDocument(doc, sites);
@@ -126,7 +127,9 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
     const slots = regions.regionSlots(doc, model.findOrgan(doc, added.organId));
     assert.equal(slots.find(s => s.key === 'storage').filled.length, 0);
     assert.equal(slots.find(s => s.key === 'trigger').filled.length, 1);
-    doc = model.connectSelections(doc, organ(relay.organId), port(added.organId, 'storage'), sites)
+    doc = model
+              .connectSelections(doc, port(relay.organId, 'investment'),
+                                 port(added.organId, 'storage'), sites)
               .document;
     assert.equal(doc.wires.length, 2, 'Storage and release retain separate wires');
     doc = model.setOrganNodes(doc, added.organId, type === 'eggs' ? 18 : 16, sites);
@@ -137,7 +140,9 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
         regions.routedLinks(doc, sites).filter(l => l.wire.toPort === 'trigger').map(l => l.to));
     assert.ok(releaseNodes.every(c => reached.has(c.id)),
               'A named port includes chambers added after wiring');
-    doc = model.connectSelections(doc, port(added.organId, 'fullness'), organ(relay.organId), sites)
+    doc = model
+              .connectSelections(doc, port(added.organId, 'fullness'), port(relay.organId, inlet),
+                                 sites)
               .document;
     const feedback = regions.routedLinks(doc, sites).filter(l => l.wire.fromPort === 'fullness');
     assert.ok(feedback.length &&
@@ -150,28 +155,21 @@ function checkSlotWiring(model, regions, sites, clickSlot) {
     assert.deepEqual(stored.document.wires.map(w => [w.fromPort, w.toPort]),
                      doc.wires.map(w => [w.fromPort, w.toPort]));
   }
-  const paired =
-      model.addOrgan(model.newDocument('Vergleich'), 'circuit', sites, {x : 700, y : 300});
-  const compared = regions.updateRegion(paired.document, paired.organId, {compare : 1}, sites);
-  const gate = model.addOrgan(compared, 'circuit', sites, {x : 500, y : 365}, Infinity, false);
-  const sensed =
-      model.connectSelections(gate.document, organ(gate.organId), organ(paired.organId), sites);
-  assert.ok(model.connectSelections(sensed.document, organ(gate.organId),
-                                    port(paired.organId, 'control'), sites),
-            'Sensory and command inputs of a comparison remain separate');
-  const wired = model.connectSelections(gate.document, organ(gate.organId),
-                                        port(paired.organId, 'control'), sites);
+  const paired = model.addOrgan(model.newDocument('Wahl'), 'choice', sites, {x : 700, y : 300});
+  const gate = model.addOrgan(paired.document, 'state', sites, {x : 500, y : 365});
+  const sensed = model.connectSelections(gate.document, port(gate.organId, 'intake'),
+                                         port(paired.organId, 'strength'), sites);
+  const wired = model.connectSelections(sensed.document, port(gate.organId, 'pause'),
+                                        port(paired.organId, 'pause'), sites);
+  assert.ok(wired, 'A feeding pause and goal strength retain their separate inputs');
   const both = model.updateWire(wired.document, wired.wireId, {pairing : 'both'});
   const links = regions.routedLinks(both, sites).filter(l => l.wire.id === wired.wireId);
   assert.equal(links.length, 2);
-  assert.ok(links.every(l => model.findCenter(both, l.to).center.node === 'command'),
-            'Command control bypasses the matched sensory comparison paths');
+  assert.ok(links.every(l => model.findCenter(both, l.to).center.node === 'pause'));
   const slots = regions.regionSlots(both, model.findOrgan(both, paired.organId));
-  assert.equal(slots.find(s => s.key === 'control').filled.length, 1);
-  assert.equal(slots.find(s => s.key === 'senses').filled.length, 0);
-  const plain = regions.updateRegion(both, paired.organId, {compare : 0}, sites);
-  assert.ok(!plain.wires.some(w => w.id === wired.wireId));
-  model.validateDocument(plain);
+  assert.equal(slots.find(s => s.key === 'pause').filled.length, 1);
+  assert.equal(slots.find(s => s.key === 'strength').filled.length, 1);
+  model.validateDocument(both);
 }
 
 async function checkResponseControls(model, capabilities, clicks) {
@@ -185,31 +183,10 @@ async function checkResponseControls(model, capabilities, clicks) {
   const {TIME_CONSTANT} = await import('../ui/schema.js');
   const sites = capabilities.sites;
   const placed =
-      model.addOrgan(model.newDocument('Reizantwort'), 'circuit', sites, {x : 600, y : 300});
-  const organ = model.findOrgan(placed.document, placed.organId), center = organ.centers[0];
-  assert.equal(center.q2, .5, 'New relays preserve a sustained cue');
-  const resting = Math.tanh(-capabilities.biasScale * center.threshold);
-  assert.ok(resting > 0 && resting < .02,
-            'A new relay can learn late cues with only a small resting signal');
-  const high = updateRegion(placed.document, organ.id, {threshold : 2}, sites);
-  const highCenter = model.findOrgan(high, organ.id).centers[0];
-  assert.deepEqual(highCenter.receptors[HORMONE_EFFECT.rhythm],
-                   center.receptors[HORMONE_EFFECT.rhythm],
-                   'Changing threshold never installs a permanent pacemaker');
-  const compared = updateRegion(placed.document, organ.id, {compare : 1}, sites);
-  const control = model.addOrgan(compared, 'circuit', sites, {x : 520, y : 365});
-  const connected = model.addWire(control.document, control.organId, organ.id, 'both', sites,
-                                  {toPort : 'control'});
-  const comparisonPlan = model.compileDocument(connected.document, sites);
-  const command = model.findOrgan(connected.document, organ.id).centers.find(c => c.port === 'out');
-  const target = model.allCenters(connected.document).findIndex(c => c.id === command.id);
-  const senders = new Set(comparisonPlan.connections.filter(c => c.to === target).map(c => c.from));
-  const incoming = [...senders ].reduce((sum, i) => sum + comparisonPlan.groups[i].copies, 0);
-  const slots = Math.round(capabilities.neural.slotMin * capabilities.neural.slotSpan **
-                           comparisonPlan.groups[target].field);
-  assert.equal(incoming, 24, 'Both comparison inputs and the control population reach the command');
-  assert.ok(slots >= incoming,
-            'A comparison must not discard part of its inhibition to make room for control');
+      model.addOrgan(model.newDocument('Reizantwort'), 'choice', sites, {x : 600, y : 300});
+  const organ = model.findOrgan(placed.document, placed.organId);
+  const center = organ.centers.find(c => c.node === 'threat');
+  assert.equal(center.q2, .5, 'A choice listener preserves a sustained cue');
   const bladder = model.addOrgan(placed.document, 'bladder', sites, {x : 650, y : 365});
   const sac = model.findOrgan(bladder.document, bladder.organId);
   assert.deepEqual(sac.centers.filter(c => c.key === 'float').map(c => c.copies), [ 16, 16, 16 ]);
@@ -247,7 +224,7 @@ async function checkResponseControls(model, capabilities, clicks) {
   assert.ok(actual.threshold < center.threshold);
   assert.deepEqual(actual.receptors, center.receptors,
                    'Dragging a response must not silently enable a permanent pacer');
-  const twin = model.findOrgan(changed, organ.pair).centers[0];
+  const twin = model.findOrgan(changed, organ.pair).centers.find(c => c.node === center.node);
   assert.ok(Math.abs(twin.tau - actual.tau) < 1e-9);
   assert.ok(Math.abs(twin.threshold - actual.threshold) < 1e-9);
   const editor = {state : {document : changed}, changeDocument(doc) { this.state.document = doc; }};
@@ -261,7 +238,7 @@ async function checkResponseControls(model, capabilities, clicks) {
   assert.ok(group && group.tau === actual.tau && group.q2 === 1);
   const state = {document : changed, sites, capabilities};
   const html = regionSettings(state, model.findOrgan(changed, organ.id));
-  assert.match(html, /data-response-handle/);
+  assert.match(html, /data-region-handle="search"/);
   assert.doesNotMatch(html, /data-region-setting="(?:time|threshold|response|effect)"/);
   assert.ok(timeConstantSteps(drivePatch('beat', 0, 0, {scale : context.scale}).tau) >=
                 TIME_CONSTANT.pace_min_steps - 1e-9,
@@ -300,6 +277,111 @@ async function checkResponseControls(model, capabilities, clicks) {
   } finally {
     globalThis.requestAnimationFrame = animation;
     globalThis.cancelAnimationFrame = cancel;
+  }
+}
+
+async function checkFunctionalRegions(model, capabilities) {
+  const {ORGAN_BY_KEY, ORGANS} = await import('../ui/studio/model/organs.js');
+  const {updateRegion} = await import('../ui/studio/model/regions.js');
+  const {regionPicture, regionHandle, regionPatch, REGION_PICTURE} =
+      await import('../ui/studio/view/region_controls.js');
+  const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const {sites} = capabilities;
+  assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key).sort(),
+                   [ 'choice', 'motor', 'olfaction', 'state', 'tectum', 'value' ]);
+  const cases = [
+    [ 'choice', {searchTime : .61, searchDrive : .73}, [ 'search' ] ],
+    [ 'olfaction', {smoothing : .47, contrast : .62}, [ 'scent' ] ],
+    [ 'state', {reserve : .42, rest : .37, maturity : .67}, [ 'reserve', 'rest', 'maturity' ] ],
+    [ 'value', {features : 3, association : .53, teaching : .8}, [ 'association' ] ],
+    [ 'motor', {beat : 1, pump : 3}, [ 'beat', 'pump' ] ],
+    [ 'tectum', {resolution : 3, contrast : 2}, [ 'resolution', 'contrast' ] ]
+  ];
+  for (const [type, patch, handles] of cases) {
+    const made = model.addOrgan(model.newDocument(type), type, sites, {x : 610, y : 315});
+    const doc = updateRegion(made.document, made.organId, patch, sites);
+    model.validateDocument(JSON.parse(JSON.stringify(doc)));
+    const organ = model.findOrgan(doc, made.organId), twin = model.findOrgan(doc, organ.pair);
+    const html = regionPicture({document : doc, sites, capabilities}, organ);
+    assert.match(html, /data-region-picture/);
+    assert.doesNotMatch(html, /NaN|undefined|Infinity|type="range"/);
+    for (const key of handles) {
+      const point = regionHandle(organ, key), back = regionPatch(organ, key, point.fx, point.fy);
+      for (const [name, value] of Object.entries(back))
+        assert.ok(Math.abs(value - organ.region[name]) < 1e-8, type + ':' + name);
+    }
+    if (twin)
+      for (const key of Object.keys(patch))
+        assert.equal(twin.region[key], organ.region[key]);
+    const plan = model.compileDocument(doc, sites),
+          node = key => organ.centers.find(c => c.node === key);
+    const group = key => plan.groups[model.allCenters(doc).findIndex(c => c.id === node(key).id)];
+    if (type === 'olfaction') {
+      assert.equal(group('concentration').q2, 1);
+      assert.ok(Math.abs(group('concentration').tau - (.47)) < 1e-8);
+      assert.ok(Math.abs(group('opposite').tau - (.47)) < 1e-8);
+      assert.ok(Math.abs(node('opposite').receptors[E.output].baseline - .24) < 1e-8);
+      const custom = model.updateReceptor(doc, node('opposite').id, E.output,
+                                          {baseline : .12, sensitivity : -.4, substance : 2});
+      const adjusted = updateRegion(custom, organ.id, {contrast : .8}, sites);
+      const response = model.findCenter(adjusted, node('opposite').id).center.receptors[E.output];
+      assert.ok(Math.abs(response.baseline - .6) < 1e-8,
+                'The regional control also changes a manually tuned field');
+      assert.equal(response.sensitivity, -.4, 'The separate hormonal tuning survives');
+      assert.equal(response.substance, 2);
+      const direct = updateRegion(doc, organ.id, {smoothing : 0}, sites);
+      assert.equal(model.findOrgan(direct, organ.id).centers[0].q2, .5);
+    }
+    if (type === 'state') {
+      assert.ok(Math.abs(group('pause').tau - (.37)) < 1e-8);
+      assert.ok(Math.abs(group('deficit').threshold - (-.42)) < 1e-8);
+      for (const key of ['investment', 'eggReady', 'spermReady'])
+        assert.ok(Math.abs(node(key).receptors[E.output].half - (.67)) < 1e-8);
+    }
+    if (type === 'choice') {
+      assert.ok(Math.abs(group('search').tau - (.61)) < 1e-8);
+      assert.ok(Math.abs(node('search').receptors[E.output].baseline - .46) < 1e-8);
+      const {OrganStudio} = await import('../ui/studio/controller.js');
+      const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+      Object.assign(studio.state, {
+        document : doc,
+        sites,
+        capabilities,
+        station : 'studio',
+        selected : {kind : 'organ', id : organ.id}
+      });
+      let builds = 0;
+      studio.requestDesign = () => ++builds;
+      studio.persist = () => {};
+      const animation = globalThis.requestAnimationFrame, cancel = globalThis.cancelAnimationFrame;
+      globalThis.requestAnimationFrame = () => 1;
+      globalThis.cancelAnimationFrame = () => {};
+      try {
+        const p = regionHandle(organ, 'search');
+        studio.handleDrag = {
+          id : organ.id,
+          handle : 'search',
+          rect : {left : 0, top : 0, width : REGION_PICTURE.width, height : REGION_PICTURE.height}
+        };
+        studio.regionPointer({
+          clientX : p.fx * REGION_PICTURE.width + 20,
+          clientY : p.fy * REGION_PICTURE.height - 10
+        });
+        assert.equal(builds, 0, 'Region dragging does not rebuild the fish on every move');
+        studio.settleGraphic();
+        assert.equal(studio.undoHistory.length, 1);
+        assert.notEqual(model.findOrgan(studio.state.document, organ.id).region.searchTime, .61);
+        studio.stepHistory('undo');
+        assert.deepEqual(studio.state.document, doc);
+      } finally {
+        globalThis.requestAnimationFrame = animation;
+        globalThis.cancelAnimationFrame = cancel;
+      }
+    }
+    if (type === 'value') {
+      assert.ok(Math.abs(group('feature3').learning_tau - (.53)) < 1e-8);
+      assert.ok(Math.abs(group('feature3').teaching_limit - (.8)) < 1e-8);
+    }
   }
 }
 
@@ -484,12 +566,13 @@ async function checkHormoneSystems(model, capabilities) {
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkResponseControls(model, sitesResult, clicks);
+  await checkFunctionalRegions(model, sitesResult);
+  checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
+                  clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
   if (process.argv.includes('--region-controls')) {
     console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
     return;
   }
-  checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
-                  clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
   // Shipped blueprints remain editable and compile to their shipped fish.
   for (const example of ['start', 'plants', 'brisa']) {
     const source = JSON.parse(execFileSync(
@@ -515,20 +598,21 @@ async function checkHormoneSystems(model, capabilities) {
       placed.assemblies = [];
       placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
       for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2} ],
-                                            [ 'circuit', 285, 415, {compare : 1} ],
-                                            [ 'rhythm', 700, 365, {beat : 1} ]]) {
+                                            [ 'olfaction', 285, 415, {contrast : 1} ],
+                                            [ 'choice', 700, 365, {searchTime : .6} ]]) {
         const r = model.addOrgan(placed, type, sitesResult.sites, {x, y});
         assert.ok(r, type + ' fits in an occupied body');
         placed = updateRegion(r.document, r.organId, settings, sitesResult.sites);
         model.validateDocument(placed);
       }
-      const paired = placed.organs.find(o => o.type === 'circuit');
+      const paired = placed.organs.find(o => o.type === 'olfaction');
       assert.ok(paired.pair);
-      const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites);
-      const tailWire =
-          model.addWire(eggWire.document, paired.id, 'schub--1', 'same', sitesResult.sites);
+      const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites,
+                                    {fromPort : 'presence'});
+      const tailWire = model.addWire(eggWire.document, paired.id, 'schub--1', 'same',
+                                     sitesResult.sites, {fromPort : 'presence'});
       const plan = model.compileDocument(tailWire.document, sitesResult.sites);
-      const command = paired.centers.find(c => c.node === 'command').id;
+      const command = paired.centers.find(c => c.node === 'concentration').id;
       assert.equal(plan.groups[model.allCenters(tailWire.document).findIndex(c => c.id === command)]
                        .crossing,
                    0, 'One ovary contains targets on both physical sides');
@@ -536,9 +620,9 @@ async function checkHormoneSystems(model, capabilities) {
       const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
       assert.equal(projections.length, 2);
       assert.deepEqual(new Set(projections.map(p => p.from)), new Set([ paired.id, paired.pair ]));
-      const hub = model.addOrgan(both, 'teaching', sitesResult.sites, {x : 335, y : 365});
-      const broadcast =
-          model.addWire(hub.document, hub.organId, paired.id, 'both', sitesResult.sites);
+      const hub = model.addNeuron(both, 'modulate', sitesResult.sites, {x : 335, y : 365});
+      const broadcast = model.addWire(hub.document, hub.centerId, paired.id, 'both',
+                                      sitesResult.sites, {toPort : 'scent'});
       assert.equal(model.expandedWires(broadcast.document)
                        .filter(w => w.wire.id === broadcast.wireId)
                        .length,
@@ -663,73 +747,23 @@ async function checkHormoneSystems(model, capabilities) {
   {
     const regions = await import('../ui/studio/model/regions.js');
     const site = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side < 0);
-    const placed = model.addOrgan(model.newDocument('Schaltzentrum'), 'circuit', sites,
+    const placed = model.addOrgan(model.newDocument('Riechverarbeitung'), 'olfaction', sites,
                                   geometry.sitePoint(site, 'nerve'));
     const left = model.findOrgan(placed.document, placed.organId),
           right = model.findOrgan(placed.document, left.pair);
     assert.ok(right && left.side === -right.side);
-    assert.deepEqual(left.centers.map(c => [c.node, c.port]), [ [ 'command', 'both' ] ]);
-    assert.equal(left.centers[0].receptors[E.rhythm].half, .8);
-    const developmentalDrive = maturity =>
-        .5 * left.centers[0].pace *
-        (1 +
-         model.receptorResponse(sitesResult, left.centers[0].receptors[E.rhythm], [], maturity));
-    assert.ok(developmentalDrive(.65) > .15,
-              'A relay can learn its first cues at the maturity of a real embryo');
-    assert.equal(developmentalDrive(1), 0,
-                 'A grown relay does not invent cues through its developmental pacemaker');
-    const high = regions.updateRegion(placed.document, left.id, {threshold : 2}, sites);
-    const {nerveClass} = await import('../ui/studio/model/organs.js');
-    for (const id of [left.id, right.id]) {
-      const c = model.findOrgan(high, id).centers[0];
-      const drive = .5 * nerveClass(c).pace *
-                    (1 + model.receptorResponse(sitesResult, c.receptors[E.rhythm], [], 1));
-      assert.equal(drive, 0, 'A high threshold does not invent a rhythmic cue in an adult');
-    }
-    const lowered = regions.updateRegion(high, left.id, {threshold : 0}, sites);
-    assert.deepEqual(model.findOrgan(lowered, left.id).centers[0].receptors,
-                     left.centers[0].receptors);
-    const custom = model.updateReceptor(placed.document, left.centers[0].id, E.rhythm,
-                                        {baseline : .8, sensitivity : -.3});
-    const customHigh = regions.updateRegion(custom, left.id, {threshold : 2}, sites);
-    assert.deepEqual(model.findOrgan(customHigh, left.id).centers[0].receptors,
-                     model.findOrgan(custom, left.id).centers[0].receptors,
-                     'Changing the threshold preserves a manually tuned hormone response');
-    const compared = regions.updateRegion(placed.document, left.id, {compare : 1}, sites);
-    const node = (doc, id, key) => model.findOrgan(doc, id).centers.find(c => c.node === key).id;
-    const populations = model.findOrgan(compared, left.id).centers;
-    const inputs = populations.filter(c => c.port === 'in');
-    assert.equal(inputs.length, 2, 'Both comparison paths receive the same sensory input');
-    for (const key of ['copies', 'threshold', 'tau', 'q1', 'q2', 'pace'])
-      assert.deepEqual(inputs[0][key], inputs[1][key],
-                       'Equal left/right cues cancel through matched input responses');
-    for (const [effect, receptor] of inputs[0].receptors.entries()) {
-      assert.equal(receptor.active, inputs[1].receptors[effect].active);
-      if (receptor.active)
-        assert.deepEqual(receptor, inputs[1].receptors[effect]);
-    }
-    const comparisonOutput = populations.find(c => c.node === 'command');
-    assert.equal(comparisonOutput.pace, -1,
-                 'The comparison does not amplify a developmental rhythm');
-    assert.ok(comparisonOutput.copies *
-                      Math.tanh(-sitesResult.biasScale * comparisonOutput.threshold) <
-                  sitesResult.biasScale,
-              'The learning baseline stays below a muscle gate set to one');
-    assert.ok(regions.routedLinks(compared, sites)
-                  .some(l => l.from === node(compared, left.id, 'sense') &&
-                             l.to === node(compared, left.id, 'command')));
-    assert.ok(regions.routedLinks(compared, sites)
-                  .some(l => l.from === node(compared, left.id, 'cross') &&
-                             l.to === node(compared, right.id, 'command')));
-    const crossKey = regions.innerKey('cross', 'command', true);
-    const cut = regions.toggleInnerLink(compared, left.id, crossKey);
+    const inputs = left.centers.filter(c => ['concentration', 'opposite'].includes(c.node));
+    for (const key of ['copies', 'threshold', 'tau', 'q1', 'q2', 'pace', 'electrical_limit'])
+      assert.equal(inputs[0][key], inputs[1][key], 'Matched nasal input responses');
+    const crossKey = regions.innerKey('opposite', 'gradient', true);
+    const cut = regions.toggleInnerLink(placed.document, left.id, crossKey);
     assert.ok(!regions.routedLinks(cut, sites).some(l => l.key === crossKey));
     assert.equal(
         regions.routedLinks(cut, sites, true).filter(l => l.key === crossKey && l.cut).length, 2);
     assert.ok(regions.routedLinks(regions.toggleInnerLink(cut, right.id, crossKey), sites)
                   .some(l => l.key === crossKey));
     const circuit = panels.inspector({
-      document : compared,
+      document : placed.document,
       sites,
       selected : {kind : 'organ', id : left.id},
       multi : new Set(),
@@ -740,54 +774,23 @@ async function checkHormoneSystems(model, capabilities) {
       contactView : 'design'
     });
     assert.match(circuit, /aid-circuit-link crossing inhibits[^>]*url\(#aid-circuit-bar\)/);
-    const tuned = regions.updateRegion(compared, left.id, {time : 2, effect : 1}, sites);
-    assert.ok(model.findOrgan(tuned, left.id).centers[0].sign < 0);
-    assert.equal(model.findOrgan(tuned, right.id).centers[0].tau, 1);
-    assert.equal(model.findOrgan(tuned, left.id).centers[0].pace, comparisonOutput.pace,
-                 'Changing the sign preserves the comparison learning mechanism');
-    const handPaced =
-        model.updateCenter(tuned, model.findOrgan(tuned, left.id).centers[0].id, {pace : .9});
-    const excitatory = regions.updateRegion(handPaced, left.id, {effect : 0}, sites);
-    assert.equal(model.findOrgan(excitatory, left.id).centers[0].pace, .9,
-                 'Changing the sign preserves a manually tuned developmental rhythm');
-    for (const response of [0, 1, 2]) {
-      const changed = regions.updateRegion(excitatory, left.id, {response}, sites);
-      for (const id of [left.id, right.id]) {
-        const region = model.findOrgan(changed, id);
-        assert.equal(region.region.response, response);
-        assert.equal(region.centers[0].q2, response / 2);
-        assert.equal(region.centers[0].q1, response ? 1 : 0);
-        assert.equal(region.centers[0].pace, model.findOrgan(excitatory, id).centers[0].pace);
-      }
-      const plan = model.compileDocument(changed, sites);
-      assert.ok(plan.groups.some(g => g.role === 1 && g.q2 === response / 2));
-    }
     const moved = model.moveOrgan(placed.document, left.id, sites, {x : 700, y : 420});
     assert.ok(moved);
-    assert.equal(model.findOrgan(moved, left.id).region.site,
-                 model.findOrgan(moved, left.id).centers[0].site);
-    const another = model.addOrgan(placed.document, 'circuit', sites, {x : 730, y : 335});
+    const another = model.addOrgan(placed.document, 'olfaction', sites, {x : 730, y : 335});
     assert.ok(another && another.organId !== left.id);
-    const independent = regions.updateRegion(another.document, another.organId, {time : 0}, sites);
+    const independent =
+        regions.updateRegion(another.document, another.organId, {smoothing : .5}, sites);
     assert.deepEqual(model.findOrgan(independent, left.id), left);
-    const middle = sites.find(s => s.zone === 1 && !s.outer && s.w === 0);
-    const central = model.addOrgan(model.newDocument('Mittig'), 'circuit', sites,
-                                   geometry.sitePoint(middle, 'nerve'));
-    assert.equal(model.findOrgan(central.document, central.organId).pair, null);
-    assert.equal(model.findOrgan(central.document, central.organId).side, 0);
-    const noise = model.findOrgan(central.document, central.organId)
-                      .centers[0]
-                      .receptors[HORMONE_EFFECT.rhythm];
-    assert.equal(noise.substance, HORMONES.levels,
-                 'Developmental rhythm responds to bodily maturity');
-    assert.ok(noise.baseline > 0 && noise.sensitivity < 0);
     const nosed = model.addOrgan(placed.document, 'nose', sites, {x : 185, y : 318});
-    const smelling = model.addWire(nosed.document, nosed.organId, left.id, 'same', sites);
+    const smelling =
+        model.addWire(nosed.document, nosed.organId, left.id, 'same', sites, {toPort : 'scent'});
     const muscle = model.addOrgan(smelling.document, 'muscle', sites, {x : 800, y : 300});
-    const driven = model.addWire(muscle.document, left.id, muscle.organId, 'same', sites);
+    const driven = model.addWire(muscle.document, left.id, muscle.organId, 'same', sites,
+                                 {fromPort : 'target'});
     const links = regions.routedLinks(driven.document, sites);
     assert.ok(links.some(l => l.from === nosed.organId && l.to === left.centers[0].id));
-    assert.ok(links.some(l => l.from === left.centers[0].id && l.to === muscle.organId));
+    assert.ok(links.some(l => l.from === left.centers.find(c => c.node === 'gradient').id &&
+                              l.to === muscle.organId));
     const allCentersOf = doc => model.allCenters(doc).length;
     for (const definition of ORGANS.filter(o => o.category === 'regions')) {
       const home =
@@ -889,6 +892,7 @@ async function checkHormoneSystems(model, capabilities) {
     const plan = model.compileDocument(connected.document, sites);
     assert.equal(plan.groups.length, allCentersOf(connected.document));
     {
+      const {organSlots} = await import('../ui/studio/model/organs.js');
       const projections = new Set();
       const pairedTypes = ORGANS.filter(o => !o.fixed && o.category !== 'internal').map(o => o.key);
       const role = type => ORGAN_BY_KEY[type].category === 'regions' ? 'nerve' : '';
@@ -912,8 +916,12 @@ async function checkHormoneSystems(model, capabilities) {
           const from = second && model.findOrgan(second.document, first.organId);
           if (!near?.pair || !from?.pair || near.side !== from.side || near.id === from.id)
             continue;
+          const port = (organ, dir) => ORGAN_BY_KEY[organ.type].namedPorts
+                                           ? organSlots(organ).find(s => s.dir === dir)?.key
+                                           : null;
           for (const [to, same] of [[ near.id, true ], [ near.pair, false ]]) {
-            const wired = model.addWire(second.document, from.id, to);
+            const wired = model.addWire(second.document, from.id, to, null, sites,
+                                        {fromPort : port(from, 'out'), toPort : port(near, 'in')});
             if (!wired)
               continue;
             projections.add(a + '>' + b);
@@ -926,8 +934,8 @@ async function checkHormoneSystems(model, capabilities) {
                       a + '>' + b + ' joins the sides as drawn');
           }
         }
-      for (const route of ['eye>tectum', 'nose>circuit', 'circuit>muscle', 'tectum>muscle',
-                           'circuit>circuit'])
+      for (const route of ['eye>tectum', 'nose>olfaction', 'motor>muscle', 'tectum>muscle',
+                           'choice>choice'])
         assert.ok(projections.has(route), route + ' exercises both directions across a pair');
     }
     const twin = model.findOrgan(wired, tectumLeft.pair);
@@ -959,9 +967,7 @@ async function checkHormoneSystems(model, capabilities) {
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
-    for (const [key, motor] of [[ 'vision-steering', MOTOR_KIND.turn ],
-                                [ 'scent-suction', MOTOR_KIND.suction ],
-                                [ 'rhythm-drive', MOTOR_KIND.forward ]])
+    for (const [key, motor] of [[ 'vision-steering', MOTOR_KIND.turn ]])
       for (const position of [{x : 345, y : 290}, {x : 560, y : 365}, {x : 850, y : 420}]) {
         const placed = model.placeModule(model.newDocument(key), key, sites, position);
         assert.ok(placed, key + ' can be placed');
@@ -970,13 +976,6 @@ async function checkHormoneSystems(model, capabilities) {
         assert.equal(muscles.length, 2, key + ' has both muscle sides');
         assert.ok(muscles.every(o => organFunction(o, sites) === motor),
                   key + ' always drives the intended muscle function');
-        if (key === 'scent-suction') {
-          const relays = placed.document.organs.filter(o => o.type === 'circuit');
-          assert.ok(relays.length);
-          assert.ok(relays.every(o => o.region.response === 1 &&
-                                      o.centers.every(c => c.q1 === 1 && c.q2 === .5)),
-                    'Suction relays preserve a sustained scent on both sides');
-        }
       }
     assert.ok(!model.oneSided(steering.document, sites, steering.document.assemblies[0]));
     assert.equal(steering.document.assemblies.length, 1);
@@ -1519,48 +1518,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                        .filter(model.isLearner);
   assert.ok(learning.length && learning.every(c => c.receptors[HORMONE_EFFECT.learning].active));
   const localTeacher =
-      model.addOrgan(exampleStudio.state.document, 'teaching', sites, {x : 330, y : 365});
+      model.addNeuron(exampleStudio.state.document, 'modulate', sites, {x : 330, y : 365});
   const taughtByRegion =
-      model.addWire(localTeacher.document, localTeacher.organId,
+      model.addWire(localTeacher.document, localTeacher.centerId,
                     exampleCircuit.centers.find(c => c.node === 'concentration').id, 'both', sites);
   const localTaught = regionModel.settleRegions(taughtByRegion.document, sites);
   assert.ok(!regionModel.fedBy(localTaught, model.findOrgan(localTaught, exampleCircuit.id))
-                 .some(o => o.id === localTeacher.organId),
+                 .some(o => o.id === model.organOf(localTaught, localTeacher.centerId).id),
             'Local teaching is modulation rather than another sensory input');
-  const rhythm = model.addOrgan(localTaught, 'rhythm', sites, {x : 300, y : 390});
-  const rhythmOrgan = model.findOrgan(rhythm.document, rhythm.organId);
-  assert.deepEqual(rhythmOrgan.centers.map(c => [c.key, c.port, c.copies, c.tau]),
-                   [ [ 'pacemaker', 'both', 8, .6 ] ]);
-  assert.ok(rhythmOrgan.centers[0].receptors[HORMONE_EFFECT.learning].active);
-  assert.equal(rhythmOrgan.centers[0].receptors[HORMONE_EFFECT.competition].baseline, 1);
-  const midlineSite = sites.find(s => s.zone === 1 && !s.outer && s.w === 0);
-  const midlineRhythm = model.addOrgan(model.newDocument('Mittiger Takt'), 'rhythm', sites,
-                                       geometry.sitePoint(midlineSite, 'nerve'));
-  assert.ok(midlineRhythm, 'A single rhythm can occupy the native midline sites');
-  const relocation = model.placeNode(midlineRhythm.document, midlineRhythm.centerId,
-                                     sites.find(s => s.zone === 2 && !s.outer).id, sites);
-  assert.ok(relocation);
-  assert.equal(model.findOrgan(relocation, midlineRhythm.organId).region.site,
-               model.findCenter(relocation, midlineRhythm.centerId).center.site,
-               'Moving a one-population region keeps its anatomical home with it');
-  const nextRhythm = model.addOrgan(rhythm.document, 'rhythm', sites, {x : 390, y : 390});
-  assert.ok(nextRhythm && nextRhythm.organId !== rhythm.organId);
-  const fasterRhythm =
-      regionModel.updateRegion(nextRhythm.document, nextRhythm.organId, {beat : 2}, sites);
-  assert.deepEqual(model.findOrgan(fasterRhythm, rhythm.organId), rhythmOrgan,
-                   'A separate rhythm keeps its own cell parameters');
-  const drivenRhythm = model.addWire(fasterRhythm, rhythm.organId, nextRhythm.organId, null, sites);
-  assert.ok(
-      regionModel.routedLinks(drivenRhythm.document, sites)
-          .some(l => l.from === rhythmOrgan.centers[0].id &&
-                     l.to ===
-                         model.findOrgan(drivenRhythm.document, nextRhythm.organId).centers[0].id));
   assert.match(panels.inspector({
     ...state,
     document : exampleStudio.state.document,
     selected : {kind : 'organ', id : exampleCircuit.id}
   }),
-               /data-response-handle/);
+               /data-region-handle="scent"/);
   const exampleTectum = exampleStudio.state.document.organs.find(o => o.type === 'tectum');
   const crowdedDoc = regionModel.updateRegion(exampleStudio.state.document, exampleTectum.id,
                                               {resolution : 6, colours : 1}, sites);
@@ -2146,10 +2117,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                                    .map(c => geometry.findSite(sites, c.site).side)),
                        new Set([ -1, 1 ]), 'Each gonad function starts on both anatomical sides');
     const driverSite = sites.find(s => s.zone === 2 && !s.outer && s.w > 0 && s.side < 0);
-    const gonadDriver =
-        model.addOrgan(testis.document, 'circuit', sites, geometry.sitePoint(driverSite, 'nerve'));
-    const gonadWire =
-        model.addWire(gonadDriver.document, gonadDriver.organId, testis.organId, 'same', sites);
+    const gonadDriver = model.addOrgan(testis.document, 'olfaction', sites,
+                                       geometry.sitePoint(driverSite, 'nerve'));
+    const gonadWire = model.addWire(gonadDriver.document, gonadDriver.organId, testis.organId,
+                                    'same', sites, {fromPort : 'presence'});
     for (const [pairing, sign] of [[ 'same', 1 ], [ 'crossed', -1 ]]) {
       const wired = model.updateWire(gonadWire.document, gonadWire.wireId, {pairing});
       const plan = model.compileDocument(wired, sites), centers = model.allCenters(wired);
@@ -2307,7 +2278,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
               learnPanel.includes('data-learn-trace'));
     assert.match(learnPanel, /Schonfrist neuer Kontakte/);
     const automatic =
-        model.addOrgan(model.newDocument('Region'), 'circuit', sites, {x : 380, y : 325});
+        model.addOrgan(model.newDocument('Region'), 'olfaction', sites, {x : 380, y : 325});
     const regionCenter = automatic.centerId;
     const {FISH_CLICKS} = await import('../ui/studio/events.js');
     const chooseSubstance =
@@ -2528,7 +2499,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                           REGION_HIDDEN * Math.min(area(a), area(b)),
                       a.type + ' and ' + b.type + ' do not hide each other');
     }
-    const circuit = model.addOrgan(model.newDocument('Schaltzentrum'), 'circuit', sites, onLobe);
+    const circuit =
+        model.addOrgan(model.newDocument('Riechverarbeitung'), 'olfaction', sites, onLobe);
     const cluster = brainPlaces.organLocation(model.findOrgan(circuit.document, circuit.organId),
                                               sites, circuit.document);
     assert.ok(Math.hypot(cluster.x - onLobe.x, cluster.y - onLobe.y) < 60, 'A region stays there');
