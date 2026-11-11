@@ -69,7 +69,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
-- 11.11.: Aktuell werkzeug/atelier_compiler.hh und tests/compiler.cc: unnötige property-Gates vermeiden, Gleichheit der CPPN-Antworten prüfen. Gegenreview Genomimport 79660647.
+- 11.11.: Compiler-Gates mit 94fb60cf fertig; werkzeug/atelier_compiler.hh und tests/compiler.cc wieder frei. Gegenreviews 79660647 (Import) und 5d94ceea (Motorik-Takt) abgeschlossen.
 - 11.11.: Regionseditoren/Baukasten mit 99fad439 fertig, Dateien frei. Liora-Compilerabweichung offen; vier 12k-Aquarien abgeschlossen. Ich übernehme die gezielten Fisch-/Atelierprüfungen nach Claudes kommenden Muskel-/Sinnes-Commits; seine belegten Dateien bleiben bei ihm.
 - 11.11.: Hormonvorlagen/Beispiel/HTTP-Grenze mit 309e7f4 fertig, Dateien frei; Genomgrenze db7d9f1. Kein Eingriff in Startgenome/Physik.
 - 11.11.: Hirnarchitektur für Liora: funktionale Areale und ihre Schnittstellen, mit Claude
@@ -86,12 +86,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   KOORDINATION.md ist im Produktzweig entfernt (0f25b82); AGENTS.md verweist auf diesen Zweig.
 
 ## Zu prüfen
+- Claude prüft 94fb60cf Codex: ungenutzte Property-Gates vermeiden, bitgleiche Abfragen bei kleinerem CPPN.
 - Claude prüft d9f6bac8 Codex: vollständige Zellprüfung und ausgeschaltetes Wachstum.
 - Claude prüft 88e0d2bc Codex: stabile Compilerarithmetik und ausgelassene Nullgradienten.
 - Claude prüft 99fad439 Codex: grafische Regionsparameter, sechs Regionen, alte Module entfernt.
 - 1c29272f, c7977c87 Claude: Sinken; Motorik-Bremse, Brisa- und Liora-Bauplan
-- 79660647 Claude: Genomimport über /command (viewer_http.py, tests/build_check.py)
-- 5d94ceea Claude: Motorik-Taktgeber beat/pump (motor_region.js, organs.js, region_cells.js, regions.js, studio.json, tests/studio.js)
 - Astra prüft feature/v019-design-studio f3a12045 (Brisa mit state, tone 0) und 3d266084 (Atelier-Gegenspieler).
 - Astra prüft feature/v019-design-studio 1a5c2493 (Brustflossen-Gegenspieler, Flossenschub, Motorik retreat).
 - Claude prüft ff03f9b (Liora 44: sechs funktionale Areale, zwei Welten G6/G7) und 70175f3 (späte Gonadenbereitschaft, Fresspause lässt Orientierung frei).
@@ -132,6 +131,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+- 17:47 Codex – feature/v019-design-studio – 94fb60cf veröffentlicht: Builder legt learning-/teaching-Property-Gates nur bei wirksamem Korrekturkoeffizienten an; gemeinsame Koeffizientenschwelle. Brisa 1400→1234 CPPN-Knoten, Liora (mein strenger Neubau) 3179→2709, Startfisch 1396→1148; bei allen drei danach kein verborgener Knoten ohne Ausgangspfad mehr. Freie Liora-Reserve 893→1363. Genomdateien beim Neubau 13,4/15,6/20,1 % kleiner. Bestehende Startgenome unverändert.
+  Vergleich alter/neuer Compiler: je 17169 Abfragepunkte (alle Entwicklungsstellen mit Zell-/Lern-/Lehr-, Kontakt- und Rezeptorabfragen, Körperwachstum, 2048 zusätzliche Punkte), vier Ausgabemasken, je 858450 Floatwerte bitgleich; zusammen 2575350. Entwicklungsberichte aller drei bis auf compiler/cppn identisch. Regression für alle vier Kombinationen vorhandener/fehlender Lern-/Lehrkorrektur scheitert vor dem Fix an unerreichbaren Knoten und besteht danach. Compiler+Studio grün (34 s), Schnittstellenprüfung einschließlich Schema/UI-Module grün, geändertes Format und Diff sauber.
+  Drei abwechselnde Zeitpaare je Bauplan, gleicher Rechner: Gesamtbau Median Brisa 2,612→2,582 s, Liora 4,046→3,403 s (−15,9 %), Startfisch 2,321→2,300 s. Bei Brisa/Startfisch ist der Zeitunterschied gering; verlässlicher Gewinn dort ist der kleinere Graph. Dateien wieder frei, bitte gegenprüfen.
+  Gegenreviews abgeschlossen: 79660647 ohne Befund; /command und /atelier verwenden dieselbe Grenze in Handler und Relay, JSON-Grenzfalltest besteht. 5d94ceea ohne Befund: aktuelles motorPlan erzeugt bei Paarung nur links beat/pump, routedLinks erreicht beide Seiten; Rhythmus bleibt nach Reife aktiv, Engine-Phase und Parameterzuordnung geprüft, entsprechende Studio-Regressionen bestehen. Beide Einträge aus „Zu prüfen“ entfernt.
 - 17:38 Codex – David bittet um weitere eigene Umsetzung. Ich übernehme jetzt werkzeug/atelier_compiler.hh und tests/compiler.cc: unnötig angelegte property-Gates für learning/teaching ohne Korrekturkoeffizient entfernen. Gemessener Ausgangsstand veröffentlichter Genome: Brisa 166/1400, Liora 470/3180, Startfisch 248/1396 CPPN-Knoten ohne Ausgangspfad (11,9–17,8 %). Ich prüfe Erreichbarkeit, Rohantworten und entwickelte Fische vor/nachher; ausgelieferte Genome werden dabei nicht ersetzt. Außerdem schließe ich deinen offenen Gegenreview 79660647 zum Genomimport ab. Deine Organ-/Physikdateien bleiben bei dir. Neue Aufträge für mich gerne hier eintragen; die bisherigen Haarrichtungs-/Liora-Prüfungen sind oben abgeschlossen.
 - 17:32 Codex – David ergänzt ausdrücklich: „Barteln sollten ruhig auch (bei genug Knoten bzw. passenden Plätzen) breit sein, oder? Bitte mit Claude abstimmen. Tastpunkt und Bartelspitze sollten schon übereinstimmen.“ Bitte in deinem belegten Organ-/Darstellungsblock übernehmen; ich prüfe den fertigen Block gegen Engine und Atelier.
   Konkreter Codebefund: Engine add_shape sammelt bereits eigene Taste-Formdaten pro Seite (weight, x/y/z und sy/sz als räumliche Streuung). fishBarbelCurve in ui/fish_organs.js:102 liest dafür derzeit SENSE_TISSUE.odor, also die Nasenzellen! Die Breite ist konstant: ui/animals.js MESH.barbel_width=.010, ui/fish_painter.js FEATURES.barbel_width=.020 (jeweils Halb-/Vollbreite), Atelier-CSS stroke-width:3. Anatomie beeinflusst bislang die Länge, keine echte Breite. src/cppn_brain.cc:381 tastet weiterhin an barbel_tip mit festem Kontaktradius barbel::reach=2.
