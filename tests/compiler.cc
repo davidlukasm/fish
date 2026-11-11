@@ -185,7 +185,10 @@ void property_overrides_reach_outputs() {
           assert(reachable.count(node.get_id()));
     }
 }
-int choice_trace(bool late, bool pulsed, bool fed_start) {
+int region_trace(const std::string &mode) {
+  const bool spine = mode == "spine", late = mode.find("late") != std::string::npos,
+             pulsed = mode.find("pulsed") != std::string::npos,
+             fed_start = mode.find("fed-start") != std::string::npos;
   std::string name;
   auto plan = read_plan(std::cin, name);
   plan_addresses(plan);
@@ -194,6 +197,9 @@ int choice_trace(bool late, bool pulsed, bool fed_start) {
   genome.compile(false);
   assert(assess(plan, genome).ok());
   field::Network brain(genome.blueprint);
+  if (spine)
+    for (const auto &synapse : brain.synapses())
+      assert(synapse.weight == 0);
   std::vector<int> groups, sensors, count(plan.groups.size());
   for (const auto &cell : genome.blueprint->neurons) {
     int group = -1;
@@ -211,7 +217,8 @@ int choice_trace(bool late, bool pulsed, bool fed_start) {
     std::cout << ',' << g.name;
   std::cout << '\n';
   std::vector<double> total(plan.groups.size());
-  for (int step = 0; step < 6200; ++step) {
+  const int every = spine ? 1 : 50;
+  for (int step = 0; step < (spine ? 5200 : 6200); ++step) {
     brain.set_maturity(std::min(1., .65 + .35 * step / 800));
     const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
     const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
@@ -221,31 +228,55 @@ int choice_trace(bool late, bool pulsed, bool fed_start) {
     std::vector<float> input;
     for (int i : sensors) {
       const auto &s = plan.groups[i].name;
+      if (spine) {
+        const bool left = plan.groups[i].side < 0;
+        const bool swimming = (step >= 800 && step < 2600) || (step >= 3000 && step < 4800);
+        const bool steering = left ? step >= 3000 && step < 3400 : step >= 3400 && step < 3800;
+        const bool escaping = left ? step >= 3800 && step < 3840 : step >= 4000 && step < 4040;
+        input.push_back(s.find("gut:food:") == 0  ? (swimming ? .6f : 0)
+                        : s.find("balance:") == 0 ? (steering ? .6f : 0)
+                        : s.find("pain:") == 0    ? (escaping ? 1.f : 0)
+                                                  : 0);
+        continue;
+      }
       input.push_back(s.find("nose:") == 0                   ? cue
                       : s.find("gut:food") == 0              ? food
                       : s.find("pain:") == 0 && step >= 5800 ? .8f
                                                              : 0);
     }
     brain.step(input, {}, 27139);
-    for (std::size_t i = 0; i < groups.size(); ++i)
-      total[groups[i]] += brain.signal(i) / count[groups[i]];
-    if (step % 50 == 49) {
+    for (std::size_t i = 0; i < groups.size(); ++i) {
+      const auto signal = spine && genome.blueprint->neurons[i].role == field::Role::Effector
+                              ? brain.organ_output()[i]
+                              : brain.signal(i);
+      total[groups[i]] += signal / count[groups[i]];
+    }
+    if (step % every == every - 1) {
       std::cout << step + 1;
       for (auto &value : total) {
-        std::cout << ',' << value / 50;
+        std::cout << ',' << value / every;
         value = 0;
       }
       std::cout << '\n';
     }
   }
+  if (spine) {
+    std::array<double, 2> inhibition{};
+    for (const auto &synapse : brain.synapses()) {
+      const auto &source = plan.groups[groups[synapse.source]],
+                 &target = plan.groups[groups[synapse.target]];
+      if (source.name.find("spine:opponent:") == 0 && target.name.find("spine:oscillator:") == 0 &&
+          source.side != target.side)
+        inhibition[target.side < 0 ? 0 : 1] -= synapse.weight;
+    }
+    assert(inhibition[0] > .05 && inhibition[1] > .05);
+  }
   return 0;
 }
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
-  if (argc == 2 && std::string(argv[1]).find("choice") == 0)
-    return choice_trace(std::string(argv[1]).find("late") != std::string::npos,
-                        std::string(argv[1]).find("pulsed") != std::string::npos,
-                        std::string(argv[1]).find("fed-start") != std::string::npos);
+  if (argc == 2 && (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]) == "spine"))
+    return region_trace(argv[1]);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
   shared_addresses_preserve_each_wire();

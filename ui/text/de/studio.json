@@ -110,7 +110,8 @@
     "choice": "Handlungswahl",
     "value": "Bewertung",
     "olfaction": "Riechverarbeitung",
-    "motor": "Motorik"
+    "motor": "Motorik",
+    "spine": "Wirbelsäule"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -438,7 +439,13 @@
     "reverse": "Rückwärts",
     "pump": "Maultakt",
     "advance": "Ziel erreichen",
-    "hatch": "Schlupfantrieb"
+    "hatch": "Schlupfantrieb",
+    "urge": "Schwimmdrang",
+    "rest": "Ruhehemmung",
+    "oscillator": "Schwanzrhythmus",
+    "opponent": "Hemmt anderen Takt",
+    "steer": "Seitenvorspannung",
+    "escape": "Fluchtstoß"
   },
   "regions": {
     "response": {
@@ -515,7 +522,10 @@
       "mouth": "Maul",
       "strength": "Zielstärke",
       "advance": "Zum Ziel schwimmen",
-      "hatch": "Schlüpfen"
+      "hatch": "Schlüpfen",
+      "steer": "Seite vorspannen",
+      "escape": "Fluchtstoß",
+      "stroke": "Schwanzschlag"
     },
     "settings": {
       "resolution": "Auflösung",
@@ -535,7 +545,9 @@
       "rest": "Verweilen",
       "maturity": "Fortpflanzungsreife",
       "association": "Zuordnungsdauer",
-      "teaching": "Lehrstärke"
+      "teaching": "Lehrstärke",
+      "cycle": "Periodendauer",
+      "alternation": "Gegenhemmung"
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
@@ -585,7 +597,10 @@
       "motorReference": "Schwanz und Maul erhalten gemeinsame Takte. Pfeile steuern Grunddrang, Seitenkonkurrenz und Zurückweichen.",
       "tectumReference": "Die Sehkarte teilt das Sehfeld. Violette Zellen hemmen die Karte gemeinsam.",
       "customized": "Einzelne Zellen sind eigens eingestellt; die Darstellung zeigt die Regionsvorgaben.",
-      "steps": "{n} Schritte"
+      "steps": "{n} Schritte",
+      "spine": "Schwanzhälften abwechseln",
+      "spineDrag": "Längere Periode nach rechts, stärkere Gegenhemmung nach oben",
+      "spineReference": "Oben: gegenphasige Takte als Schaltziel. Der Griff bestimmt Periodendauer und Gegenhemmung. Tatsächliche Aktivität entsteht aus Antrieb und gelernten Kontakten."
     },
     "values": {
       "response": [
@@ -593,6 +608,10 @@
         "Pegel",
         "Merkspur"
       ]
+    },
+    "spine": {
+      "term": "Wirbelsäule",
+      "purpose": "Stimmt linke und rechte Schwanzhälfte aufeinander ab. Drang setzt den Takt frei; Lenkung und Fluchtstoß bevorzugen die angesteuerte Muskelhälfte."
     }
   },
   "head": {

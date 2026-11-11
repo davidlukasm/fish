@@ -15,6 +15,16 @@ const home = Object.freeze({
 
 export const REGION_TYPES = Object.freeze([
   {
+    key : 'spine',
+    scope : 'side',
+    slots : [
+      port('urge', 'in', 'urge', [], true), port('steer', 'in', 'steer'),
+      port('escape', 'in', 'escape'),
+      port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true)
+    ],
+    settings : {cycle : unit(.6), alternation : unit(1)}
+  },
+  {
     key : 'olfaction',
     scope : 'side',
     slots : [

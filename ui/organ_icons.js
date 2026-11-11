@@ -78,6 +78,7 @@ export const STUDIO_ICON = Object.freeze({
   teaching : 'M4 12h6M14 5v14M14 5l6 7-6 7M8 8v8',
   state : 'M4 6h16v12H4zM8 9v6M12 9v6M16 9v6M8 3v3M16 18v3',
   olfaction : 'M3 5h5v6H3zM16 5h5v6h-5zM5 11l13 8M19 11L6 19M4 19h4M16 19h4M18 17v4',
+  spine : 'M12 2v20M7 5h10M7 10h10M7 15h10M7 20h10M4 5v5l16 5v5M20 5v5L4 15v5',
   choice : 'M3 5h5l8 14h5M3 19h5L16 5h5M12 3v4M12 17v4',
   value : 'M3 7h6v10H3zM15 7h6v10h-6zM9 10h6M9 14h6M5 3v2M3 3h4M17 3h4'
 });
