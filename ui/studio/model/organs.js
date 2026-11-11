@@ -1,6 +1,7 @@
 import {HORMONES, MOTOR_KIND, PRESSURE_SOURCE, SENSE_KIND} from '../../schema.js';
 import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 import {REGION_TYPES} from './region_catalog.js';
+import {RHYTHM_TAU} from './region_cells.js';
 
 export const ROLE = Object.freeze({sensor : 0, nerve : 1, motor : 2});
 export const STIMULUS_ORGAN = Object.freeze({
@@ -274,7 +275,9 @@ export const ORGANS = Object.freeze([
     settings : {
       tone : setting(0, 2, 1, true),
       compete : setting(0, 1, 1, true),
-      retreat : setting(0, 1, 0, true)
+      retreat : setting(0, 1, 0, true),
+      beat : setting(0, RHYTHM_TAU.length, 0, true),
+      pump : setting(0, RHYTHM_TAU.length, 0, true)
     }
   },
   {

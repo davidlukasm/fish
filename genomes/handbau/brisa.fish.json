@@ -9376,6 +9376,8 @@
     "tone": 0,
     "compete": 1,
     "retreat": 0,
+    "beat": 0,
+    "pump": 0,
     "derived": null
    }
   },
@@ -10793,6 +10795,8 @@
     "tone": 0,
     "compete": 1,
     "retreat": 0,
+    "beat": 0,
+    "pump": 0,
     "derived": null
    }
   },

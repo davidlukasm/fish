@@ -21,6 +21,16 @@ export const CIRCUIT_LEARNING =
 export const TONIC_LEARNING =
     Object.freeze({...ACTIVE_LEARNING, [HORMONE_EFFECT.rhythm] : {active : 0}});
 
+// Pacemaker periods from slow to fast, as cell time constants.
+export const RHYTHM_TAU = Object.freeze([ 1, .6, .3 ]);
+export const pacemakerCell = (node, tau, port = 'none') => ({
+  node,
+  preset : 'pacemaker',
+  port,
+  effects : ACTIVE_LEARNING,
+  set : {...CIRCUIT_LEARNING, copies : 8, tau, threshold : -.5}
+});
+
 const REGION_CELLS = 4;
 export function regionCell(node, preset, port, set = {}, effects = {}) {
   return {

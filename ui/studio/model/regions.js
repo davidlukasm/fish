@@ -10,6 +10,8 @@ import {
   ACTIVE_LEARNING,
   CIRCUIT_LEARNING,
   DEVELOPING_RELAY,
+  pacemakerCell,
+  RHYTHM_TAU,
   TONIC_LEARNING
 } from './region_cells.js';
 import {statePlan} from './state_region.js';
@@ -163,16 +165,9 @@ function circuitPlan(doc, organ) {
   }
   return {nodes, inner, cross, route : () => null, view : null};
 }
-const RHYTHM_TAU = Object.freeze([ 1, .6, .3 ]);
 function rhythmPlan(doc, organ) {
   return {
-    nodes : [ {
-      node : 'beat',
-      preset : 'pacemaker',
-      port : 'both',
-      effects : ACTIVE_LEARNING,
-      set : {...CIRCUIT_LEARNING, copies : 8, tau : RHYTHM_TAU[organ.region.beat], threshold : -.5}
-    } ],
+    nodes : [ pacemakerCell('beat', RHYTHM_TAU[organ.region.beat], 'both') ],
     inner : [],
     cross : [],
     route : () => null,

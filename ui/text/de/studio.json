@@ -441,6 +441,7 @@
     "oppose": "Hemmt Gegenseite",
     "retreat": "Zurückweichen",
     "reverse": "Rückwärts",
+    "pump": "Maultakt",
     "advance": "Ziel erreichen",
     "hatch": "Schlupfantrieb"
   },
@@ -464,7 +465,7 @@
     },
     "motor": {
       "term": "Motorik",
-      "purpose": "Vorlage: macht aus Reizseite, Drang, Bremse, Nähe, Sättigung, Lage und Grundkontakt die Befehle für Flossen, Schwanz, Maul, Kiefer und Auftrieb; die Wünsche beider Seiten wetteifern, statt sich am Muskel aufzuheben."
+      "purpose": "Vorlage: macht aus Reizseite, Drang, Bremse, Nähe, Sättigung, Lage und Grundkontakt die Befehle für Flossen, Schwanz, Maul, Kiefer und Auftrieb; die Wünsche beider Seiten wetteifern, statt sich am Muskel aufzuheben. Zuschaltbare Taktgeber geben Schwimmen und Maul einen eigenen Rhythmus."
     },
     "teaching": {
       "term": "Modulator­kerne",
@@ -536,7 +537,9 @@
       "features": "Merkmalswege",
       "tone": "Grundtempo",
       "compete": "Seiten wetteifern",
-      "retreat": "Zurückweichen"
+      "retreat": "Zurückweichen",
+      "beat": "Schwimmtakt",
+      "pump": "Maultakt"
     },
     "values": {
       "contrast": [
@@ -570,6 +573,18 @@
       "retreat": [
         "aus",
         "an"
+      ],
+      "beat": [
+        "aus",
+        "langsam",
+        "mittel",
+        "schnell"
+      ],
+      "pump": [
+        "aus",
+        "langsam",
+        "mittel",
+        "schnell"
       ]
     },
     "follow": "Folgt den angeschlossenen Organen",

@@ -2035,6 +2035,27 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         every.every((c, i) => (plan.groups[i].polarity === FIN_STROKE.front) === front.has(c.id) ||
                               c.role !== 'motor'),
         'Only the antagonist cells stroke forward in the plan');
+    // Inner pacemakers: one pool beats for both sides, because mirrored pacemakers run in
+    // antiphase and would keep the tail and mouth busy without a pause.
+    const paced =
+        settleRegions(updateRegion(motorDoc, motor.id, {beat : 2, pump : 1}, sites), sites);
+    const halves = [ motor.id, motor.pair ].map(id => model.findOrgan(paced, id));
+    const pool = node => halves.flatMap(h => h.centers.filter(c => c.node === node));
+    for (const node of [ 'beat', 'pump' ]) {
+      assert.equal(pool(node).length, 1, 'One ' + node + ' pacemaker for both halves');
+      assert.equal(model.organOf(paced, pool(node)[0].id).side, -1);
+    }
+    const {routedLinks} = await import('../ui/studio/model/regions.js');
+    const driven = node => routedLinks(paced, sites)
+                               .filter(l => l.from === pool(node)[0].id)
+                               .map(l => model.findCenter(paced, l.to).center.node)
+                               .sort();
+    assert.deepEqual(driven('beat'), [ 'swim', 'swim' ], 'The beat reaches the tail of both sides');
+    assert.deepEqual(driven('pump'), [ 'bite', 'bite', 'mouth', 'mouth' ],
+                     'The pump opens and closes the whole mouth');
+    const beat = pool('beat')[0];
+    assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) > -1,
+              'The pacemaker keeps beating in the adult');
     const effectors = await import('../ui/studio/view/effectors.js');
     assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
     assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);

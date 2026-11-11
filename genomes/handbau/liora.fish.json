@@ -21213,6 +21213,8 @@
         "tone": 1,
         "compete": 1,
         "retreat": 0,
+        "beat": 0,
+        "pump": 0,
         "derived": null
       }
     },
@@ -22630,6 +22632,8 @@
         "tone": 1,
         "compete": 1,
         "retreat": 0,
+        "beat": 0,
+        "pump": 0,
         "derived": null
       }
     },

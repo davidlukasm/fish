@@ -4,8 +4,15 @@
 // stimulus: "toward" turns to it, "away" and "feel" turn from it. With competing sides a request on
 // one side also inhibits turning to the other, so two requests compete instead of cancelling at the
 // muscle. Every node answers any input: contacts learn only between cells that both vary, so a cell
-// held silent would never learn its inputs.
-import {TONIC_LEARNING, neuralPlan, regionCell} from './region_cells.js';
+// held silent would never learn its inputs. "beat" and "pump" add inner pacemakers for swimming
+// bouts and for a rhythmic mouth.
+import {
+  RHYTHM_TAU,
+  TONIC_LEARNING,
+  neuralPlan,
+  pacemakerCell,
+  regionCell
+} from './region_cells.js';
 
 // Swim threshold for the resting command: silent, gentle cruising, steady cruising.
 const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
@@ -34,6 +41,19 @@ export function motorPlan(doc, organ) {
     inner.push([ 'retreat', 'reverse' ], [ 'retreat', 'brake' ]);
   }
   const cross = [];
+  // Mirrored pacemakers beat in antiphase. One pool on the left side drives both sides, so a beat
+  // starts and stops the whole tail or mouth.
+  const pacing = !organ.pair || organ.side < 0;
+  const pacemakers = [ [ 'beat', r.beat, [ 'swim' ] ], [ 'pump', r.pump, [ 'mouth', 'bite' ] ] ];
+  for (const [node, level, targets] of pacemakers)
+    if (level && pacing) {
+      nodes.push(pacemakerCell(node, RHYTHM_TAU[level - 1]));
+      for (const to of targets) {
+        inner.push([ node, to ]);
+        if (organ.pair)
+          cross.push([ node, to ]);
+      }
+    }
   if (organ.pair) {
     nodes.push(listener('flee', 'relay'));
     cross.push([ 'flee', 'turn' ]);
