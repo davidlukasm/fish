@@ -2047,6 +2047,27 @@ void checkpoint_continues_exactly(const Genome &g) {
   }
   check(saved(w) == saved(copy), "a restored tank continues exactly like the original");
 }
+void organ_muscles_survive_checkpoint(const Genome &g) {
+  Ecosystem w(SEED);
+  w.resize(800, 500);
+  w.safety = false;
+  w.set_parameter("energy_supply", 0);
+  auto &b = adult(w, g, 400, 250).body;
+  take_nutrition(b, 20, food_kind::feed, w.physiology());
+  // Digestion uses the previous step's gut drive before the next neural action replaces it.
+  b.gut_motility = .8;
+  b.gill_signal = StateAccess::motor(b).gill_pose = .6;
+  auto copy = w.fork();
+  const auto &restored = copy.fish.front().body;
+  check(restored.gut_motility == b.gut_motility && restored.gill_signal == b.gill_signal &&
+            restored.motor().gill_pose == b.motor().gill_pose,
+        "a checkpoint retains the working gut and gill muscles");
+  for (int step = 0; step < 4; ++step) {
+    w.tick(false);
+    copy.tick(false);
+    check(saved(w) == saved(copy), "digestion and motion continue identically after loading");
+  }
+}
 void ancestral_histories_keep_current_mutations() {
   evolution::History old("ancestor");
   const auto connection = old.connection(0, 1);
@@ -2110,6 +2131,7 @@ int main() {
     tail_and_fins_push_alike_where_each_fits();
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
+    organ_muscles_survive_checkpoint(g);
     cut_marks_stay_on_their_piece();
     plant_notches_follow_the_successful_bite();
     grazing_preserves_foliage_until_repeated_bites();

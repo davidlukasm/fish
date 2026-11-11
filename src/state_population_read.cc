@@ -392,6 +392,9 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   state::body_scalar(in, b.buoyancy_force, state::body_limit_buoyancy_force(b));
   value(in, b.reproduction_.egg_release);
   value(in, b.reproduction_.sperm_release);
+  scalar(in, b.gill_signal, 0, 1);
+  scalar(in, b.gut_motility, 0, 1);
+  b.motor_.gill_pose = b.gill_signal;
   for (auto &v : b.damage_sectors)
     scalar(in, v, 0, 1);
   double damage = 0;

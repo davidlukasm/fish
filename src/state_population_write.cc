@@ -115,7 +115,7 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
         << b.rest_cost << ' ' << b.digested << ' ' << b.feces_pending << ' ' << b.organ_mass_ref
         << ' ' << b.feeding_action << ' ' << b.feeding_action_age << ' ' << b.gut_fill << ' '
         << b.bladder_fill << ' ' << b.buoyancy_force << ' ' << b.reproduction().egg_release << ' '
-        << b.reproduction().sperm_release;
+        << b.reproduction().sperm_release << ' ' << b.gill_signal << ' ' << b.gut_motility;
     out << ' ';
     for (double v : b.damage_sectors)
       out << v << ' ';
