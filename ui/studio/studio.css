@@ -497,7 +497,7 @@
 .aid-drive{cursor:default}
 .aid-drive-command{fill:#f1dda61f}
 .aid-drive [data-drive-handle="rest"]{cursor:ns-resize}
-.aid-drive [data-drive-handle="beat"],.aid-drive [data-drive-handle="adapt"]{cursor:ew-resize}
+.aid-drive [data-drive-handle="beat"]{cursor:ew-resize}
 .aid-response-editor{margin:8px 0;border:1px solid var(--aid-control-edge);border-radius:9px;overflow:hidden;background:var(--aid-graphic)}
 .aid-response-choices{display:flex;align-items:center;gap:5px;padding:8px 8px 0}
 .aid-response-choices>span{flex:1}

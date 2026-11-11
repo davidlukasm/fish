@@ -353,8 +353,7 @@
     "meanLimit": "Mittlere genetische Höchststärke",
     "proposedLink": "CPPN-Kontaktvorschläge",
     "proposalCount": "Kontaktvorschläge",
-    "stimulusResponse": "Antwort auf anhaltenden Reiz",
-    "responseSteps": "Zeitfenster {n} Schritte"
+    "stimulusResponse": "Antwort auf anhaltenden Reiz"
   },
   "effects": [
     "erregt oder hemmt die Zelle",

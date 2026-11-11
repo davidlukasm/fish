@@ -1,8 +1,7 @@
 import {clamp} from '../../units.js';
 import {TIME_CONSTANT} from '../../schema.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {idSafe, placedGlyph, rounded} from './markup.js';
-import {linePaint} from '../../glyph.js';
+import {idSafe, rounded} from './markup.js';
 
 const DRIVE = Object.freeze({
   width : 360,
@@ -26,15 +25,7 @@ const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(t
 const stepAt = (fx, rhythm) =>
     (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axisSteps(rhythm);
 const y = level => MIDDLE - HALF * level;
-export function drivePatch(handle, fx, fy,
-                           {scale, excitation = 0, output = 1, adaptationSpan = ADAPTATION_SPAN}) {
-  if (handle === 'adapt') {
-    const axis = adaptAxis(adaptationSpan);
-    return {
-      tau : timeConstantOf(Math.max(
-          TIME_CONSTANT.min_steps, (adaptStepAt(fx, axis) - ADAPT.held[0] * axis) / adaptationSpan))
-    };
-  }
+export function drivePatch(handle, fx, fy, {scale, excitation = 0, output = 1}) {
   if (handle === 'rest') {
     if (!(output > 0) || !(scale > 0))
       return {};
@@ -118,55 +109,5 @@ export function driveElement(center, label, stepsLabel, {
       rhythm ? stepsLabel(Math.round(tc)) : stepsLabel()}</text></svg>`;
 }
 
-// Mirrors field::SYNAPTIC_ADAPTATION_SPAN until the engine's capabilities arrive.
-const ADAPTATION_SPAN = 10;
-const ICON_LINE = 1.6;
-const ADAPT = Object.freeze({held : [ .1, .55 ], input : .9, samples : 160, icon : 14, below : 9});
-const adaptAxis = span => span * LONGEST_TIME_CONSTANT / (ADAPT.held[1] - ADAPT.held[0]);
-const adaptStepAt = (fx, axis) =>
-    (fx * DRIVE.width - DRIVE.left) / (DRIVE.right - DRIVE.left) * axis;
 export const CHANGE_ICON = 'M2 18h7l2-13 2 13h9';
 export const LEVEL_ICON = 'M2 18h5V6h11v12h4';
-export function adaptElement(
-    center, label, stepsLabel,
-    {scale, excitation = 0, output = 1, adaptationSpan = ADAPTATION_SPAN}) {
-  const D = DRIVE, A = ADAPT, context = {scale, excitation, output};
-  const adaptAxisSteps = adaptAxis(adaptationSpan);
-  const rest = nerveResponse(center, 0, 0, context);
-  const rate = 1 / (adaptationSpan * timeConstantSteps(center.tau));
-  const x = step => D.left + (D.right - D.left) * step / adaptAxisSteps;
-  const [on, off] = A.held.map(f => f * adaptAxisSteps);
-  let mean = 0;
-  const answer = [], stride = Math.max(1, Math.round(adaptAxisSteps / A.samples));
-  for (let step = 0; step <= Math.ceil(adaptAxisSteps); ++step) {
-    const input = step >= on && step < off ? A.input : 0;
-    mean += (input - mean) * rate;
-    if (step % stride === 0 || step === Math.ceil(adaptAxisSteps))
-      answer.push([ step, nerveResponse(center, input, mean, context) ]);
-  }
-  const knee = on + adaptationSpan * timeConstantSteps(center.tau);
-  const atKnee =
-      answer.reduce((best, p) => Math.abs(p[0] - knee) < Math.abs(best[0] - knee) ? p : best);
-  const ends = [
-    on + adaptationSpan * TIME_CONSTANT.min_steps, on + adaptAxisSteps * (A.held[1] - A.held[0])
-  ];
-  const icons = [ CHANGE_ICON, LEVEL_ICON ]
-                    .map((path, k) => placedGlyph(path, A.icon,
-                                                  {x : x(ends[k]), y : D.top + D.plot + A.below},
-                                                  {paint : linePaint({width : ICON_LINE})}))
-                    .join('');
-  return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
-      idSafe(center.id)}" role="img" aria-label="${label}"><rect class="aid-drive-command" x="${
-      rounded(x(on))}" y="${D.top}" width="${rounded(x(off) - x(on))}" height="${
-      D.plot}"/><line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${
-      D.right}" y2="${MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${
-      rounded(y(rest))}" x2="${D.right}" y2="${
-      rounded(y(rest))}"/><path class="aid-sensitivity-curve" d="M${
-      answer.map(([ step, v ]) => rounded(x(step)) + ' ' + rounded(y(v))).join(' L')}"/>${
-      icons}<circle class="aid-spectrum-handle" data-drive-handle="rest" cx="${
-      rounded(x(on / 2))}" cy="${rounded(y(rest))}" r="${
-      D.handle}"/><circle class="aid-spectrum-handle" data-drive-handle="adapt" cx="${
-      rounded(x(knee))}" cy="${rounded(y(atKnee[1]))}" r="${D.handle}"/><text x="${D.right}" y="${
-      D.height - D.tick}" text-anchor="end">${
-      stepsLabel(Math.round(adaptationSpan * timeConstantSteps(center.tau)))}</text></svg>`;
-}

@@ -12,7 +12,8 @@ import {clamp} from '../../units.js';
 import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
 import {stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
-import {adaptElement, driveElement} from './drive.js';
+import {driveElement} from './drive.js';
+import {responseDiagram} from './response.js';
 import {preferredScent} from '../../tuning.js';
 import {
   BARBEL_FEEL,
@@ -188,9 +189,7 @@ function nerveSection(state, organ, center) {
     return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
                                        {...driveContext(state, center), rhythm : true}));
   }
-  const title = label('inspector.stimulusResponse');
-  return section(title, adaptElement(center, title, n => t('studio.inspector.responseSteps', {n}),
-                                     driveContext(state, center)));
+  return section(label('inspector.stimulusResponse'), responseDiagram(state, center));
 }
 function modulatorSection(state, organ, center) {
   const doc = state.document;
