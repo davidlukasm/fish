@@ -6,7 +6,6 @@ import {
   lightColor,
   profileColor,
   profileName,
-  SPECTRUM_CENTRE,
   spectrumElement,
   spectrumValues
 } from './spectrum.js';
@@ -348,16 +347,15 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
     labelledText(label('centre'), centre), labelledText(label('width'), width),
     labelledText(label('opponent'), opponent)
   ].join(' · ');
-  return `<div data-spectrum-block title="${escapeText(values)}">${
-      spectrumElement(profile,
-                      {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
-                      label('spectrum'), {
-                        light,
-                        testHue : state.sightProbe?.hue,
-                        areaTitles : {excite : label('excites'), inhibit : label('inhibits')},
-                        middle : contrastPupil(profile, faint),
-                        others : otherTypes(organ, profile)
-                      })}</div>`;
+  const target = {'spectrum-id' : organ.id, 'profile-id' : profile.id};
+  return `<div data-spectrum-block title="${escapeText(values)}">` +
+         spectrumElement(profile, {spectrum : 'field', ...target}, label('spectrum'), {
+           light,
+           testHue : state.sightProbe?.hue,
+           axis : {excite : label('excites'), inhibit : label('inhibits')},
+           others : otherTypes(organ, profile)
+         }) +
+         contrastScene(profile, faint, target) + '</div>';
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
@@ -380,42 +378,79 @@ export function nearAnswers(state, organ) {
 const SIGHT_CANVAS = Object.freeze({width : 360, height : 132});
 const sightEyes = () => `<div class="aid-sight-eyes">${
         [0, 1]
-            .map(side => `<figure title="${label(side ? 'right' : 'left')}"><canvas ` +
+            .map(side => `<figure><figcaption>${label('sight')} · ${
+                             label(side ? 'right' : 'left')}</figcaption><canvas ` +
                          `data-sight-eye="${side}" width="${SIGHT_CANVAS.width}" height="${
                              SIGHT_CANVAS.height}"></canvas></figure>`)
             .join('')}</div>`;
 const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
-// The pupil in the middle of a colour type's wheel. Its spot shows whether the cells report what is
-// lighter or darker than its surround (a light spot, a dark spot or both; a click turns it to the
-// next); its size shows how faint a light they answer: the wider, the fainter. The handle on its
-// rim sets that.
-const PUPIL =
-    Object.freeze({least : 12, most : 30, spot : 7, pair : 5, apart : 6, grip : Math.PI / 4});
-const pupilRadius = share => PUPIL.least + (PUPIL.most - PUPIL.least) * (1 - clamp(share));
-// How faint a light the cells answer (0 the faintest, 1 the brightest) from a point on the rim.
-export const pupilShare = p =>
-    1 - clamp((Math.hypot(p.x - SPECTRUM_CENTRE, p.y - SPECTRUM_CENTRE) - PUPIL.least) /
-              (PUPIL.most - PUPIL.least));
-function contrastPupil(profile, faint) {
-  const P = PUPIL, at = SPECTRUM_CENTRE;
+// What the cells of a colour type report, as a scene. Above, a light and a dark thing on a grey
+// ground; below, what the cells make of them: a reported thing in the type's colour, an unreported
+// one as a dashed outline, both at half strength when the cells report both. A click turns to the
+// next choice. At the bottom, lights from the faintest to the brightest: the shaded part is too
+// faint for half an answer, the outlined part gets at least half, and the handle between sets that.
+const SCENE = Object.freeze({
+  width : 300,
+  words : 4,
+  left : 92,
+  right : 292,
+  things : [ .3, .7 ],
+  radius : 10,
+  rows : [ 4, 40 ],
+  row : 30,
+  ramp : {top : 80, height : 14},
+  height : 100,
+  handle : 7
+});
+const sceneX = share => SCENE.left + (SCENE.right - SCENE.left) * share;
+// How faint a light the cells answer (0 the faintest, 1 the brightest) from a point on the ramp.
+export const sensitivityShare = p => clamp((p.x - SCENE.left) / (SCENE.right - SCENE.left));
+function contrastScene(profile, faint, target) {
+  const S = SCENE;
   const k =
       Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
   const key = CONTRAST_CHOICES[k], next = CONTRAST_CHOICES[(k + 1) % CONTRAST_CHOICES.length];
-  const spot = (tone, x, r) => `<circle class="${tone}" cx="${x}" cy="0" r="${r}"/>`;
-  const spots = key === 'both' ? spot('bright', -P.apart, P.pair) + spot('dark', P.apart, P.pair)
-                               : spot(key, 0, P.spot);
-  const radius = faint ? pupilRadius(faint.share) : (P.least + P.most) / 2;
-  return `<g class="aid-contrast-pupil" data-vision-polarity="${CONTRAST_POLARITY[next]}" ` +
-         `transform="translate(${at} ${at})" role="button"><title>${
-             label('contrastTitle.' +
-                   key)}</title><circle class="iris" r="${fixed(radius)}"/>${spots}</g>` +
-         (faint
-              ? `<circle class="aid-spectrum-handle sensitivity" data-spectrum-handle="sensitivity" ` +
-                    `cx="${fixed(at + radius * Math.cos(P.grip))}" cy="${
-                        fixed(at + radius * Math.sin(P.grip))}" r="7"><title>${
-                        escapeText(faint.title)}</title></circle>`
-              : '');
+  const xs = S.things.map(sceneX), middle = top => top + S.row / 2;
+  const word = (text, top) => `<text class="aid-scene-word" x="${S.words}" y="${
+      fixed(top)}" dominant-baseline="central">${escapeText(text)}</text>`;
+  const thing = (cls, x, top, style = '') => `<circle class="${cls}" cx="${fixed(x)}" cy="${
+      fixed(middle(top))}" r="${S.radius}"${style}/>`;
+  const reported = tone => key === 'both' || key === tone;
+  const seen = (tone, x) => reported(tone)
+                                ? thing('aid-scene-report' + (key === 'both' ? ' half' : ''), x,
+                                        S.rows[1], ` style="fill:${profileColor(profile)}"`)
+                                : thing('aid-scene-missed', x, S.rows[1]);
+  const id = Object.values(target).map(idSafe).join('-');
+  const attributes =
+      Object.entries(target).map(([ name, value ]) => ` data-${name}="${idSafe(value)}"`).join('');
+  const band = (cls, top) => `<rect class="${cls}" x="${S.left}" y="${top}" width="${
+      S.right - S.left}" height="${S.row}" rx="6"/>`;
+  const R = S.ramp, edge = faint ? sceneX(faint.share) : null;
+  return `<svg class="aid-contrast-scene" data-spectrum="scene"${attributes} viewBox="0 0 ${
+             S.width} ${S.height}" role="img" aria-label="${label('contrast')}">` +
+         `<defs><linearGradient id="aid-light-${id}"><stop offset="0" stop-color="#05080a"/>` +
+         `<stop offset="1" stop-color="#fffdf2"/></linearGradient></defs>` +
+         `<g class="aid-contrast-choice" data-vision-polarity="${
+             CONTRAST_POLARITY[next]}" role="button"><title>${
+             label('contrastTitle.' + key)}</title>` +
+         word(label('scene'), middle(S.rows[0])) + band('aid-scene-ground', S.rows[0]) +
+         thing('aid-scene-thing bright', xs[0], S.rows[0]) +
+         thing('aid-scene-thing dark', xs[1], S.rows[0]) +
+         word(label('contrast'), middle(S.rows[1])) + band('aid-scene-seen', S.rows[1]) +
+         seen('bright', xs[0]) + seen('dark', xs[1]) + '</g>' +
+         word(label('sensitivity'), R.top + R.height / 2) +
+         `<rect x="${S.left}" y="${R.top}" width="${S.right - S.left}" height="${
+             R.height}" rx="4" fill="url(#aid-light-${id})"/>` +
+         (faint ? `<rect class="aid-scene-faint" x="${S.left}" y="${R.top}" width="${
+                      fixed(edge - S.left)}" height="${R.height}" rx="4"/>` +
+                      `<rect class="aid-scene-answered" x="${fixed(edge)}" y="${R.top}" width="${
+                          fixed(S.right - edge)}" height="${R.height}" rx="4"/>` +
+                      `<circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
+                      `"sensitivity" cx="${fixed(edge)}" cy="${R.top + R.height / 2}" r="${
+                          S.handle}"><title>${escapeText(faint.title)}</title></circle>`
+                : '') +
+         '</svg>';
 }
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;

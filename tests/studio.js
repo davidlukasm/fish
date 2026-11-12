@@ -1822,10 +1822,10 @@ async function checkHormoneSystems(model, capabilities) {
       1e-9);
   // The pictures that replaced sliders set their values from where the handle is let go.
   const visionView = await import('../ui/studio/view/vision.js');
-  const centre = spectrum.SPECTRUM_CENTRE;
-  assert.equal(visionView.pupilShare({x : 0, y : 0}), 0, 'A wide pupil answers the faintest light');
-  assert.equal(visionView.pupilShare({x : centre, y : centre}), 1,
-               'A narrow pupil answers only bright light');
+  assert.equal(visionView.sensitivityShare({x : 0, y : 0}), 0,
+               'The left end of the light ramp answers the faintest light');
+  assert.equal(visionView.sensitivityShare({x : 1e3, y : 0}), 1,
+               'The right end answers only bright light');
   const developmentView = await import('../ui/studio/view/development.js');
   assert.deepEqual(developmentView.previewPatch('situation', {x : 0, y : 0}, {}),
                    {maturity : 0, input : 1}, 'The young corner holds the strongest input');

@@ -230,12 +230,12 @@ export const designMethods = {
     const block = this.root.querySelector('[data-spectrum-block]');
     const editor = block?.querySelector('[data-spectrum]');
     const target = editor && this.spectrumTarget(editor.dataset);
-    // A dragged pupil shows its new size before the design run answers.
-    const pupil = this.heldHandle('spectrum');
+    // A dragged sensitivity shows its new edge before the design run answers.
+    const held = this.heldHandle('spectrum');
     if (target)
       block.outerHTML =
-          pupil?.handle === 'sensitivity' && pupil.answer
-              ? spectrumEditor(this.state, target.organ, target.tuning, pupil.shift, pupil.answer)
+          held?.handle === 'sensitivity' && held.answer
+              ? spectrumEditor(this.state, target.organ, target.tuning, held.shift, held.answer)
               : spectrumEditor(this.state, target.organ, target.tuning);
   },
   refreshEffectors() {

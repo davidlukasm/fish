@@ -24,36 +24,37 @@ export const profileName = p => tList('organ_graphics.hues')[typeNameIndex(
 export const lightColor = hue =>
     `hsl(${Number(hue.toFixed(1))} ${SPECTRUM_COLOUR.saturation}% ${SPECTRUM_COLOUR.lightness}%)`;
 
-// The colours a cell type answers, on the colour wheel: hue runs round the ring from the top, the
-// cell's answer to each hue reaches out from the dashed zero circle when the light excites it and
-// in toward the centre where its opposite colour inhibits it. The handles sit where they act: the
-// square at the tuned hue, the circle on the curve's flank for its width, the inner one at the
-// opposite hue for the opponent, the coloured one outside the ring for the test light. The centre
-// holds what the caller puts there (the eye's contrast).
+// The colours a cell type answers, as a strip: hue runs from left to right (the coloured band
+// below), the answer rises above the zero line where the light excites the cells and falls below it
+// where the opposite colour inhibits them. The handles sit where they act: the square at the tuned
+// hue, the circle on the curve's flank for its width, the one below the line at the opposite hue
+// for the opponent, the diamond on the band for the test light. The other cell types of the eye
+// show as dashed curves with a dot at their peak that chooses them.
 const SPECTRUM = Object.freeze({
-  size : 280,
-  centre : 140,
-  zero : 64,
-  scale : 40,
-  ring : 116,
-  band : 10,
-  segments : 36,
+  width : 360,
+  left : 30,
+  top : 12,
+  excite : 50,
+  inhibit : 50,
+  gap : 6,
+  strip : 14,
   handle : 7,
-  marker : 7,
-  light : 130,
-  samples : 90
+  marker : 8,
+  dot : 6,
+  samples : 90,
+  axis : 11
 });
-export const SPECTRUM_CENTRE = SPECTRUM.centre;
-const TURN = 2 * Math.PI;
-const angleOf = hue => hue / HUE_CIRCLE * TURN - Math.PI / 2;
-const reachOf = level => SPECTRUM.zero + SPECTRUM.scale * clamp(level, -1);
-const polar = (hue, radius) => ({
-  x : SPECTRUM.centre + radius * Math.cos(angleOf(hue)),
-  y : SPECTRUM.centre + radius * Math.sin(angleOf(hue))
-});
-const xy = p => rounded(p.x) + ' ' + rounded(p.y);
+const PLOT = SPECTRUM.width - SPECTRUM.left;
+const HUE_STOPS = 12;
+const ZERO = SPECTRUM.top + SPECTRUM.excite;
+const STRIP = ZERO + SPECTRUM.inhibit + SPECTRUM.gap;
+const HEIGHT = STRIP + SPECTRUM.strip;
+const hueX = hue =>
+    SPECTRUM.left + ((hue % HUE_CIRCLE + HUE_CIRCLE) % HUE_CIRCLE) * PLOT / HUE_CIRCLE;
+const levelY = level =>
+    ZERO - SPECTRUM.excite * Math.max(-SPECTRUM.inhibit / SPECTRUM.excite, Math.min(1, level));
 // Where a hue and an answer to it lie in the picture, in its own units.
-export const huePoint = (hue, level) => polar(hue, reachOf(level));
+export const huePoint = (hue, level) => ({x : hueX(hue), y : levelY(level)});
 
 function balance(tuning, light) {
   if (!light?.excitation?.length)
@@ -65,14 +66,12 @@ function balance(tuning, light) {
   return light.excitation.map((e, k) => (e - opponency * light.inhibition[k]) / peak);
 }
 const sampleIndex = (values, hue) =>
-    Math.round(((hue % HUE_CIRCLE + HUE_CIRCLE) % HUE_CIRCLE) / HUE_CIRCLE * values.length) %
-    values.length;
+    Math.round((hueX(hue) - SPECTRUM.left) / PLOT * values.length) % values.length;
 const opposite = tuning => tuningHue(tuning.q1) + HUE_CIRCLE / 2;
 
 // The change a handle makes, from the pointer `p` in the picture's units.
 export function spectrumPatch(tuning, handle, p, light = null) {
-  const S = SPECTRUM, dx = p.x - S.centre, dy = p.y - S.centre;
-  const hue = ((Math.atan2(dy, dx) + Math.PI / 2) / TURN * HUE_CIRCLE + HUE_CIRCLE) % HUE_CIRCLE;
+  const hue = clamp((p.x - SPECTRUM.left) / PLOT) * HUE_CIRCLE;
   if (handle === 'width')
     return {qwidth : tuningWidth(Math.abs(hueOffset(hue, tuningHue(tuning.q1))))};
   if (handle === 'light')
@@ -85,103 +84,94 @@ export function spectrumPatch(tuning, handle, p, light = null) {
     const inhibition = light.inhibition[index];
     if (!(peak > 0) || !(inhibition > 0))
       return null;
-    const level = (Math.hypot(dx, dy) - S.zero) / S.scale;
+    const level = (ZERO - p.y) / SPECTRUM.excite;
     return {q2 : planOfUnit((light.excitation[index] - level * peak) / inhibition)};
   }
   return {q1 : hueQuality(hue)};
 }
 
-// The answers round the wheel, the first again at the end so the curve closes.
-const around = values => [...values, values[0]]
-                             .map((v, k) => xy(polar(HUE_CIRCLE * k / values.length, reachOf(v))))
-                             .join(' L');
-const zeroBack = count =>
-    Array
-        .from({length : count + 1},
-              (_, k) => xy(polar(HUE_CIRCLE * (count - k) / count, SPECTRUM.zero)))
-        .join(' L');
-const area = values => 'M' + around(values) + ' L' + zeroBack(values.length) + 'Z';
-
-// The tuning of a cell type as its curve round the wheel.
+const line = values => [...values, values[0]]
+                           .map((v, k) => rounded(SPECTRUM.left + PLOT * k / values.length) + ' ' +
+                                          rounded(levelY(v)))
+                           .join(' L');
+const area = values => `M${SPECTRUM.left} ${ZERO} L${line(values)} L${SPECTRUM.width} ${ZERO} Z`;
+// The tuning of a cell type as its curve along the strip.
 const tuningCurve = tuning => Array.from(
     {length : SPECTRUM.samples},
     (_, k) => tuningAffinity(hueOffset(HUE_CIRCLE * k / SPECTRUM.samples, tuningHue(tuning.q1)),
                              tuning.qwidth));
-// `light` is the design run's answer, `testHue` the test light; `areaTitles` names the exciting
-// and the inhibiting answer in their tooltips; `middle` is drawn in the centre of the wheel;
-// `others` are the other cell types, drawn faintly with a dot at their peak that chooses them
-// ({tuning, choose : attributes, colour, name}).
+// `light` is the design run's answer, `testHue` the test light; `axis` names the upper and the
+// lower half beside the axis; `others` are the other cell types ({tuning, choose : attributes,
+// colour, name}).
 export function spectrumElement(tuning, target, label, {
   light = null,
   testHue = null,
-  areaTitles = {
+  axis = {
     excite : '',
     inhibit : ''
   },
-  middle = '',
   others = []
 } = {}) {
   const S = SPECTRUM, centre = tuningHue(tuning.q1), sigma = tuningSigma(tuning.qwidth);
-  const gauss = tuningCurve(tuning);
+  const id = Object.values(target).map(idSafe).join('-');
   const attributes =
       Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
-  const step = HUE_CIRCLE / S.segments;
-  const ring = Array
-                   .from({length : S.segments},
-                         (_, k) => {
-                           const from = polar(k * step, S.ring), to = polar((k + 1) * step, S.ring);
-                           return `<path d="M${xy(from)} A${S.ring} ${S.ring} 0 0 1 ${
-                               xy(to)}" stroke="${lightColor((k + .5) * step)}"/>`;
-                         })
-                   .join('');
+  const stops = Array
+                    .from({length : HUE_STOPS + 1},
+                          (_, k) => `<stop offset="${rounded(k / HUE_STOPS)}" stop-color="${
+                              lightColor(HUE_CIRCLE * k / HUE_STOPS)}"/>`)
+                    .join('');
   const values = balance(tuning, light);
+  const word = (text, from, to) =>
+      `<text class="aid-spectrum-axis" transform="translate(${S.axis} ${
+          rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${escapeText(text)}</text>`;
   const titled = text => text ? `<title>${escapeText(text)}</title>` : '';
-  let html = `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.size} ${S.size}"${
-                 attributes} role="img" aria-label="${label}"><g class="aid-spectrum-ring" ` +
-             `stroke-width="${S.band}">${ring}</g>`;
-  // Each answer is a filled band with its edge drawn apart, so the band's seam at the top stays
-  // unseen.
-  const band = (cls, part, title) =>
-      `<path class="${cls}" d="${area(part)}">${titled(title)}</path>` +
-      `<path class="${cls} edge" d="M${around(part)}"/>`;
+  let html =
+      `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT}"${
+          attributes} role="img" aria-label="${label}"><defs><linearGradient id="aid-hue-${id}">${
+          stops}</linearGradient></defs><rect class="aid-spectrum-strip" x="${S.left}" y="${
+          STRIP}" width="${PLOT}" height="${S.strip}" fill="url(#aid-hue-${id})"/>` +
+      `<line class="aid-spectrum-axis-line" x1="${S.left - 2}" y1="${S.top}" x2="${
+          S.left - 2}" y2="${ZERO + S.inhibit}"/>` +
+      word(axis.excite, S.top, ZERO) + word(axis.inhibit, ZERO, ZERO + S.inhibit);
   if (values)
-    html += band('aid-spectrum-excite', values.map(v => Math.max(0, v)), areaTitles.excite) +
-            band('aid-spectrum-inhibit', values.map(v => Math.min(0, v)), areaTitles.inhibit);
+    html += `<path class="aid-spectrum-excite" d="${area(values.map(v => Math.max(0, v)))}">${
+                titled(axis.excite)}</path>` +
+            `<path class="aid-spectrum-inhibit" d="${area(values.map(v => Math.min(0, v)))}">${
+                titled(axis.inhibit)}</path>`;
+  html += others
+              .map(o => {
+                const at = huePoint(tuningHue(o.tuning.q1), 1);
+                return `<g class="aid-spectrum-other" ${o.choose}><title>${
+                           escapeText(o.name)}</title><path d="M${line(tuningCurve(o.tuning))}"/>` +
+                       `<circle cx="${rounded(at.x)}" cy="${rounded(at.y)}" r="${
+                           S.dot}" style="fill:${o.colour}"/></g>`;
+              })
+              .join('');
   html +=
-      others
-          .map(o => {
-            const at = polar(tuningHue(o.tuning.q1), reachOf(1));
-            return `<g class="aid-spectrum-other" ${o.choose}><title>${
-                       escapeText(o.name)}</title><path d="M${around(tuningCurve(o.tuning))}"/>` +
-                   `<circle cx="${rounded(at.x)}" cy="${rounded(at.y)}" r="${
-                       S.marker}" style="fill:${o.colour}"/></g>`;
-          })
-          .join('');
-  html += `<circle class="aid-spectrum-zero" cx="${S.centre}" cy="${S.centre}" r="${S.zero}"/>` +
-          `<path class="aid-spectrum-tuning" d="M${around(gauss)}"/>`;
+      `<line class="aid-spectrum-zero" x1="${S.left}" y1="${ZERO}" x2="${S.width}" y2="${ZERO}"/>` +
+      `<path class="aid-spectrum-tuning" d="M${line(tuningCurve(tuning))}"/>`;
   if (Number.isFinite(testHue)) {
-    const tip = values ? polar(testHue, reachOf(values[sampleIndex(values, testHue)]))
-                       : polar(testHue, S.zero),
-          at = polar(testHue, S.light);
-    html += `<path class="aid-spectrum-test" d="M${xy(polar(testHue, S.ring - S.band / 2))} L${
-        xy(tip)}"/><circle class="aid-spectrum-handle light" data-spectrum-handle="light" cx="${
-        rounded(
-            at.x)}" cy="${rounded(at.y)}" r="${S.marker}" style="fill:${lightColor(testHue)}"/>`;
+    const x = rounded(hueX(testHue)),
+          y = values ? rounded(levelY(values[sampleIndex(values, testHue)])) : ZERO;
+    html += `<line class="aid-spectrum-test" x1="${x}" y1="${STRIP}" x2="${x}" y2="${y}"/>` +
+            `<path class="aid-spectrum-handle light" data-spectrum-handle="light" d="M${x} ${
+                STRIP - S.marker / 2} l${S.marker} ${S.marker} l-${S.marker} ${S.marker} l-${
+                S.marker} -${S.marker} Z" style="fill:${lightColor(testHue)}"/>`;
   }
   if (values) {
-    const hue = opposite(tuning),
-          at = polar(hue, reachOf(Math.min(0, values[sampleIndex(values, hue)])));
+    const hue = opposite(tuning);
     html += `<circle class="aid-spectrum-handle opponent" data-spectrum-handle="opponent" cx="${
-        rounded(at.x)}" cy="${rounded(at.y)}" r="${S.handle}"/>`;
+        rounded(hueX(hue))}" cy="${
+        rounded(levelY(Math.min(0, values[sampleIndex(values, hue)])))}" r="${S.handle}"/>`;
   }
-  const peak = polar(centre, reachOf(1)),
-        flank = polar(centre + sigma, reachOf(tuningAffinity(sigma, tuning.qwidth)));
-  return html + middle +
+  return html +
          `<rect class="aid-spectrum-handle centre" data-spectrum-handle="centre" x="${
-             rounded(peak.x - S.handle)}" y="${rounded(peak.y - S.handle)}" width="${
+             rounded(hueX(centre) - S.handle)}" y="${rounded(levelY(1) - S.handle)}" width="${
              2 * S.handle}" height="${2 * S.handle}" rx="2"/>` +
          `<circle class="aid-spectrum-handle width" data-spectrum-handle="width" cx="${
-             rounded(flank.x)}" cy="${rounded(flank.y)}" r="${S.handle}"/></svg>`;
+             rounded(hueX(centre + sigma))}" cy="${
+             rounded(levelY(tuningAffinity(sigma, tuning.qwidth)))}" r="${S.handle}"/></svg>`;
 }
 
 export const spectrumValues =
