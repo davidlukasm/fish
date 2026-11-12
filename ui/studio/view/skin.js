@@ -13,6 +13,8 @@ import {BODY_MIDDLE, findSite, sideSign} from '../model/layout.js';
 import {fishPath, skinAt, skinDirection, skinPoints} from './frame.js';
 import {centerLocation} from './places.js';
 import {escapeText, fixed} from './markup.js';
+import {adaptationMarks, cellMarks} from './sense_marks.js';
+import {ATELIER_LIMITS} from '../../schema.js';
 import {percent, t} from '../../strings.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 
@@ -28,7 +30,12 @@ const SKIN_FIELD = Object.freeze({
   fork : .3,
   least : .05,
   handle : 7,
-  dot : 6
+  dot : 6,
+  // Cells in a row along the skin, a little inside it, in fish units; the adaptation arc round
+  // the felt spot, in the picture's units.
+  cellStep : 12,
+  inset : 14,
+  clock : 26
 });
 const toFrame = (fx, fy) => ({
   x : BODY_MIDDLE.x + (fx * SKIN_FIELD.width - SKIN_FIELD.cx) / SKIN_FIELD.scale,
@@ -108,25 +115,43 @@ export function skinField(state, organ, center, held = null) {
            '</title></circle>';
   };
   const cell = toField(middle);
+  const facts = t('studio.inspector.skin.field', {degrees : Math.round(degrees(width))}) +
+                (sensitive === null ? ''
+                                    : ' · ' + t('studio.inspector.skin.' + organ.type,
+                                                {share : percent(sensitive)}));
+  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
   return '<div data-skin-block="' + escapeText(center.id) + '"><svg class="aid-skin-field ' +
          organ.type + '" viewBox="0 0 ' + S.width + ' ' + S.height + '" data-skin-field="' +
-         escapeText(center.id) + '" data-skin-aim="' + fixed(aim) +
-         '" role="img"><g transform="translate(' + fixed(S.cx - BODY_MIDDLE.x * S.scale) + ' ' +
-         fixed(S.cy - BODY_MIDDLE.y * S.scale) + ') scale(' + S.scale +
-         ')"><path class="aid-skin-fish" d="' + fishPath() + '"/><g class="aid-skin-patch">' +
-         patch + '</g><path class="aid-skin-hairs" d="' + hairs +
-         '"/></g><circle class="aid-skin-cell" cx="' + fixed(cell.x) + '" cy="' + fixed(cell.y) +
-         '" r="' + S.dot / 2 + '"/>' +
+         escapeText(center.id) + '" data-skin-aim="' + fixed(aim) + '" data-sense-field="' +
+         escapeText(center.id) + '" data-sense-redraw="refreshSkin" role="img"><title>' +
+         escapeText(facts) + '</title><g transform="translate(' +
+         fixed(S.cx - BODY_MIDDLE.x * S.scale) + ' ' + fixed(S.cy - BODY_MIDDLE.y * S.scale) +
+         ') scale(' + S.scale + ')"><path class="aid-skin-fish" d="' + fishPath() +
+         '"/><g class="aid-skin-patch">' + patch + '</g><path class="aid-skin-hairs" d="' + hairs +
+         '"/></g>' +
+         (answer?.adapt?.steps > 0
+              ? adaptationMarks(cell, S.clock, Math.atan2(-middle.out.y, -middle.out.x), center)
+              : '') +
+         cellMarks(cellRow(middle), center) +
          handle(edge, 'field', t('studio.inspector.skin.fieldHandle')) +
          (sensitive === null ? ''
                              : handle(tip(middle, 1), 'sensitivity',
                                       t('studio.inspector.skin.' + organ.type + 'Handle'))) +
-         '</svg><p class="aid-skin-facts">' +
-         escapeText(t('studio.inspector.skin.field', {degrees : Math.round(degrees(width))})) +
-         (sensitive === null ? ''
-                             : ' · ' + escapeText(t('studio.inspector.skin.' + organ.type,
-                                                    {share : percent(sensitive)}))) +
-         '</p></div>';
+         '</svg></div>';
+}
+// The cells sit in a row along the skin from the point they feel, just inside the outline.
+function cellRow(middle) {
+  const S = SKIN_FIELD, points = skinPoints(S.cellStep);
+  const at = points.reduce(
+      (best, p, k) => Math.hypot(p.x - middle.x, p.y - middle.y) <
+                              Math.hypot(points[best].x - middle.x, points[best].y - middle.y)
+                          ? k
+                          : best,
+      0);
+  return Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
+    const p = points[(at + k) % points.length];
+    return toField({x : p.x - p.out.x * S.inset, y : p.y - p.out.y * S.inset});
+  });
 }
 export function skinSensitivity(state, aim, fx, fy) {
   const S = SKIN_FIELD, p = toFrame(fx, fy), middle = nearest(skinPoints(S.step), aim, state);

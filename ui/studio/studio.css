@@ -438,7 +438,6 @@
 .aid-skin-hairs{fill:none;stroke:var(--aid-touch-felt);stroke-width:1.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .aid-skin-cell{fill:var(--aid-ink);stroke:#e6efe8;stroke-width:1.5}
 .aid-skin-field [data-skin-handle]{cursor:grab}
-.aid-skin-facts{margin:0 0 8px;font-size:12px;color:#c2d6d2}
 .aid-anatomical-lateral{fill:none;stroke:var(--aid-lateral);stroke-width:2.4;stroke-linecap:round;opacity:.85}
 .aid-lateral-pore{fill:var(--aid-ink);stroke:#9fdde0;stroke-width:1.6}
 .aid-lateral-hit{fill:none;stroke:var(--aid-lateral);stroke-width:20;stroke-opacity:0;stroke-linecap:round}

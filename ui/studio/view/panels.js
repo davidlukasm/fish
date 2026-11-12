@@ -153,7 +153,7 @@ const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
-const WHOLE_PICTURES = Object.freeze([ 'lateral' ]);
+const WHOLE_PICTURES = Object.freeze([ 'lateral', 'touch', 'pain' ]);
 const cellCount = (organ, center) => WHOLE_PICTURES.includes(organ.type) ? ''
                                      : ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&

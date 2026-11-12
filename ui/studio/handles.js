@@ -106,7 +106,7 @@ const HANDLES = Object.freeze({
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
   skin : {follow : 'skinPointer', done : 'refreshSkin'},
-  sense : {follow : 'sensePointer', done : 'refreshSense'},
+  sense : {follow : 'sensePointer', done : 'refreshInspector'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
   preview : {follow : 'previewPointer'},
@@ -915,7 +915,8 @@ export const handleMethods = {
       marks : {...handle.dataset},
       aim : Number(graphic.dataset.senseAim),
       size : {width : box.width, height : box.height},
-      start : senseStart(this.state, found.center)
+      start : senseStart(this.state, found.center),
+      redraw : graphic.dataset.senseRedraw ?? 'refreshSense'
     };
   },
   sensePointer(event) {
@@ -929,7 +930,7 @@ export const handleMethods = {
                                        {x : fx * drag.size.width, y : fy * drag.size.height});
     if (patch)
       this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'sense:' + drag.id,
-                       'refreshSense');
+                       drag.redraw);
   },
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;
