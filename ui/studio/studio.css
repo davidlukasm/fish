@@ -801,7 +801,8 @@
 .aid-growth-mark.on path{stroke:#f1dca0;fill:#d7c29455}
 .aid-card-marks{display:flex;align-items:center;gap:8px;margin:4px 0 10px}
 .aid-card-marks .aid-growth-mark{margin:0;padding:5px 8px}
-.aid-hormone-time{display:inline-grid;place-items:center;padding:5px;border-radius:999px;border:1px solid #3d6a70;color:#6f9597}
+.aid-hormone-time{display:inline-flex;align-items:center;gap:4px;padding:5px;border-radius:8px;border:1px solid #3d6a70;color:var(--aid-name-text);font-size:11px}
+.aid-card-name{flex-basis:100%;color:var(--aid-name-text)}
 .aid-effect-guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .aid-effect-guide .aid-effect-card{margin:0}
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
@@ -981,6 +982,8 @@
 .aid-plan-picture:not([data-capacity]){touch-action:pan-y}
 .aid-plan-viewport{max-height:420px;overflow:auto;scrollbar-gutter:stable}
 .aid-plan-label{fill:var(--aid-name-text);font:10px sans-serif}
+.aid-curve-label{fill:var(--aid-name-text);font:10px sans-serif;pointer-events:none}
+.aid-probe-values{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--aid-name-text)}
 .aid-plan-count{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:11px;color:var(--aid-name-text)}
 .aid-plan-count button{font:inherit;padding:4px 7px;flex-shrink:0}
 .aid-plan-legend{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;color:var(--aid-name-text);font-size:11px}

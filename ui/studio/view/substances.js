@@ -34,7 +34,7 @@ import {
   shownSubstance
 } from '../model/document.js';
 import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
-import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
+import {formatNumber, joinParts, namedText, percent, t, tList} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, iconSwitch, label, SWITCH_SYMBOL} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
@@ -102,9 +102,10 @@ function glandMarks(state, center) {
 }
 export function glandProfile(state, organ, center) {
   const substances = state.document.substances;
-  const add = substances.length ? ''
-                                : '<button class="aid-add" data-add-substance title="' +
-                                      label('sections.newSubstance') + '">+</button>';
+  const add = substances.length
+                  ? ''
+                  : '<button class="aid-add" data-add-substance title="' +
+                        label('sections.newSubstance') + '">' + label('symbols.add') + '</button>';
   // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close up.
   return '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
          centerWheel(state, center, substances.map(sub => sub.index), state.capabilities?.hormones,
@@ -307,34 +308,54 @@ const CURVE = Object.freeze({
   height : 150,
   left : 36,
   right : 250,
-  top : 14,
+  top : 26,
   bottom : 112,
   points : 80,
   handle : 6
 });
 const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
                         CURVE.bottom + ' H' + CURVE.right + '"/>';
-// What the axes of an answer mean, without words: along the bottom the substance (or the cell's
-// age) grows in its own colour, at the top of the upright axis sits the answer's symbol.
-const CURVE_KEY = Object.freeze({gap : 4, strip : 6, steps : 12, icon : 16});
-function curveKey(colour, path, maturity) {
+const CURVE_KEY =
+    Object.freeze({gap : 4, strip : 6, steps : 12, title : 12, ticks : 22, along : 36});
+function curveKey(colour, maturity) {
   const K = CURVE_KEY, step = (CURVE.right - CURVE.left) / K.steps;
-  return (maturity ? ageKey()
-                   : Array
-                         .from({length : K.steps},
-                               (_, k) => '<rect class="aid-curve-amount" x="' +
-                                         fixed(CURVE.left + k * step) + '" y="' +
-                                         (CURVE.bottom + K.gap) + '" width="' + fixed(step) +
-                                         '" height="' + K.strip + '" fill="' + colour +
-                                         '" fill-opacity="' + fixed((k + 1) / K.steps) + '"/>')
-                         .join('')) +
-         placedGlyph(path, K.icon, {x : CURVE.left / 2, y : CURVE.top + K.icon / 2}, {line : true});
+  return maturity
+             ? ''
+             : Array
+                   .from({length : K.steps},
+                         (_, k) => '<rect class="aid-curve-amount" x="' +
+                                   fixed(CURVE.left + k * step) + '" y="' + (CURVE.bottom + K.gap) +
+                                   '" width="' + fixed(step) + '" height="' + K.strip + '" fill="' +
+                                   colour + '" fill-opacity="' + fixed((k + 1) / K.steps) + '"/>')
+                   .join('');
 }
 const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 const CURVE_DIGITS = 3;
+const curveNumber = value => formatNumber(
+    value, Math.max(CURVE_DIGITS, value ? -Math.floor(Math.log10(Math.abs(value))) : 0));
+function curveLabels({maturity, scale, atFraction, x, y}, effect) {
+  const unit = effect === GROWTH  ? label('axes.growth')
+               : effect === BIRTH ? label('axes.birth')
+                                  : tList('studio.axes.effects')[effect];
+  const text = (value, x, y, anchor = 'start') => '<text class="aid-curve-label" x="' + fixed(x) +
+                                                  '" y="' + fixed(y) + '" text-anchor="' + anchor +
+                                                  '">' + escapeText(value) + '</text>';
+  const levels = [ scale.low, ...(scale.low < 0 && scale.high > 0 ? [ 0 ] : []), scale.high ];
+  return text(unit, CURVE.left, CURVE_KEY.title) +
+         levels
+             .map(v =>
+                      text(curveNumber(v), CURVE.left - CURVE_KEY.gap, y(v) + CURVE_KEY.gap, 'end'))
+             .join('') +
+         [ 0, .5, 1 ]
+             .map((f, i) => text(curveNumber(atFraction(f)), x(f), CURVE.bottom + CURVE_KEY.ticks,
+                                 [ 'start', 'middle', 'end' ][i]))
+             .join('') +
+         text(label(maturity ? 'axes.maturity' : 'axes.concentrationLog'), x(.5),
+              CURVE.bottom + CURVE_KEY.along, 'middle');
+}
 export function effectCurve(state, receptor, effect, target = null) {
-  const {maturity, halfMin, scale, response, atFraction, x, y} =
-      receptorCurve(state, receptor, effect);
+  const curve = receptorCurve(state, receptor, effect);
+  const {maturity, scale, response, atFraction, x, y} = curve;
   const points = Array
                      .from({length : CURVE.points + 1},
                            (_, i) => fixed(x(i / CURVE.points)) + ',' +
@@ -354,16 +375,14 @@ export function effectCurve(state, receptor, effect, target = null) {
   const along = maturity ? label('inspector.maturity') : label('inspector.concentration');
   return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart"' +
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '><title>' +
-         escapeText(unit + ' · ' + along + ' ' +
-                    formatNumber(maturity ? 0 : halfMin, CURVE_DIGITS) + ' … ' + formatNumber(1)) +
-         '</title>' + marks + curveAxes() +
-         curveKey(substanceColor(receptor.substance),
-                  effect === GROWTH  ? GROWTH_ICON
-                  : effect === BIRTH ? BIRTH_ICON
-                                     : EFFECT_ICON[effect],
-                  maturity) +
-         '<polyline class="aid-response-line" points="' + points + '"/>' +
-         (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
+         escapeText(joinParts([
+           unit,
+           namedText(along, t('studio.axes.range',
+                              {from : curveNumber(atFraction(0)), to : curveNumber(atFraction(1))}))
+         ])) +
+         '</title>' + marks + curveAxes() + curveKey(substanceColor(receptor.substance), maturity) +
+         curveLabels(curve, effect) + '<polyline class="aid-response-line" points="' + points +
+         '"/>' + (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
 const PHASE_OPEN = .05;
 export function phasePatch(handle, fx) {
@@ -439,10 +458,10 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
     return '<g class="aid-life-badge ' + lifeKind(effect) + (effect === chosen ? ' chosen' : '') +
            (empty ? ' empty' : '') + '"' + pick(effect) +
            (on ? ' style="--substance:' + substanceColor(receptor.substance) + '"' : '') +
-           '><title>' +
-           escapeText(name(effect) + ' · ' +
-                      (on ? substanceName(state, receptor.substance)
-                          : label('inspector.answersToNothing'))) +
+           '><title>' + escapeText(joinParts([
+             name(effect),
+             (on ? substanceName(state, receptor.substance) : label('inspector.answersToNothing'))
+           ])) +
            '</title><circle cx="' + fixed(at) + '" cy="' + LIFE_BADGE.y + '" r="' +
            LIFE_BADGE.radius + '"/>' +
            (on ? '<text x="' + fixed(at) + '" y="' + LIFE_BADGE.y +
@@ -655,11 +674,16 @@ const CLOCK_ICON = 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18';
 export function hormoneTime(state, index) {
   const value = state.anatomy?.hormoneTimes?.[index];
   return '<span class="aid-hormone-time" data-hormone-time="' + index + '" title="' +
-         escapeText(label('hormoneCard.timeConstant') + ': ' +
-                    (Number.isFinite(value)
-                         ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
-                         : formatNumber(NaN))) +
-         '">' + glyph(CLOCK_ICON, ICON.mark, {line : true}) + '</span>';
+         escapeText(namedText(label('hormoneCard.timeConstant'),
+                              (Number.isFinite(value)
+                                   ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
+                                   : formatNumber(NaN)))) +
+         '">' + glyph(CLOCK_ICON, ICON.mark, {line : true}) + '<span>' +
+         escapeText(namedText(label('hormoneCard.decay'),
+                              Number.isFinite(value)
+                                  ? t('units.steps', {n : formatNumber(value, 1)})
+                                  : formatNumber(NaN))) +
+         '</span></span>';
 }
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
@@ -691,11 +715,12 @@ function substanceInspector(state) {
            '</button>';
   });
   // Where the substance comes from and what it acts on, each row led by its symbol.
-  const row = (key, body) => body ? '<div class="aid-card-row" title="' +
-                                        label('hormoneCard.' + key) + '"><span>' +
-                                        glyph(CARD_ROW_ICON[key], ICON.mark, {line : true}) +
-                                        '</span><div>' + body + '</div></div>'
-                                  : '';
+  const row = (key, body) =>
+      body ? '<div class="aid-card-row" title="' + label('hormoneCard.' + key) + '"><span>' +
+                 glyph(CARD_ROW_ICON[key], ICON.mark, {line : true}) +
+                 '</span><div><span class="aid-card-name">' + label('hormoneCard.' + key) +
+                 '</span>' + body + '</div></div>'
+           : '';
   return '<header class="aid-inspector-head" style="--substance:' + substanceColor(index) +
          '"><span class="aid-substance-swatch"></span><input class="aid-inline-name ' +
          'aid-inline-title" data-substance-name="' + index + '" value="' +

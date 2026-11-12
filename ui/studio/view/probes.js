@@ -9,7 +9,7 @@ import {escapeText, fixed, idSafe} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
-import {formatNumber, percent, t} from '../../strings.js';
+import {formatNumber, namedText, percent, t} from '../../strings.js';
 import {centerTitle} from './names.js';
 
 const PROBE_SCENE = Object.freeze({
@@ -250,17 +250,22 @@ export function gutProbeControls(state, organ) {
             const value = known ? percent(answer) : formatNumber(NaN);
             return '<g class="aid-probe-answer' + (known ? '' : ' unknown') +
                    '" style="--lit:' + fixed(known ? clamp(answer) : 0) + '"><title>' +
-                   escapeText(centerTitle(center) + ' · ' + value) + '</title><circle cx="' + C.x +
-                   '" cy="' + y + '" r="' + C.radius + '"/><text x="' + (C.x + C.value) + '" y="' +
-                   y + '" dominant-baseline="central">' + value + '</text></g>';
+                   escapeText(namedText(centerTitle(center), value)) + '</title><circle cx="' +
+                   C.x + '" cy="' + y + '" r="' + C.radius + '"/><text x="' + (C.x + C.value) +
+                   '" y="' + y + '" dominant-baseline="central">' + value + '</text></g>';
           })
           .join('');
   return '<section data-gut-probe-controls="' + escapeText(organ.id) + '" title="' +
-         escapeText(t('studio.probe.title.gut')) + '"><svg class="aid-gut-bars" viewBox="0 0 ' +
-         G.width + ' ' + G.height + '" data-gut-bars role="img" aria-label="' +
-         escapeText(t('studio.probe.title.gut')) + '"><defs><clipPath id="' + clip + '"><rect x="' +
-         T.left + '" y="' + T.top + '" width="' + (T.right - T.left) + '" height="' +
-         (T.bottom - T.top) + '" rx="' + T.corner + '"/></clipPath></defs>' +
+         escapeText(t('studio.probe.title.gut')) + '"><div class="aid-probe-values">' +
+         '<span>' + escapeText(namedText(t('studio.probe.filling'), percent(full))) + '</span>' +
+         '<span>' +
+         escapeText(namedText(t('studio.probe.inflow'), formatNumber(probe.nutrient, 2))) +
+         '</span></div>' +
+         '<svg class="aid-gut-bars" viewBox="0 0 ' + G.width + ' ' + G.height +
+         '" data-gut-bars role="img" aria-label="' + escapeText(t('studio.probe.title.gut')) +
+         '"><defs><clipPath id="' + clip + '"><rect x="' + T.left + '" y="' + T.top + '" width="' +
+         (T.right - T.left) + '" height="' + (T.bottom - T.top) + '" rx="' + T.corner +
+         '"/></clipPath></defs>' +
          '<path class="aid-gut-stream" d="M' + fixed(F.x - half) + ' ' + F.top + ' H' +
          fixed(F.x + half) + ' L' + fixed(F.x + half) + ' ' + fixed(surface) + ' H' +
          fixed(F.x - half) + ' Z"/><rect class="aid-gut-food" clip-path="url(#' + clip + ')" x="' +
@@ -268,7 +273,9 @@ export function gutProbeControls(state, organ) {
          fixed(T.bottom - surface) + '"/><rect class="aid-gut-tube" x="' + T.left + '" y="' +
          T.top + '" width="' + (T.right - T.left) + '" height="' + (T.bottom - T.top) + '" rx="' +
          T.corner + '"/>' + handle('strength', T.right - T.grip, surface) +
-         handle('nutrient', F.x + half, F.top + G.knob) + cells + '</svg></section>';
+         handle('nutrient', F.x + half, F.top + G.knob) + '<text class="aid-curve-label" x="' +
+         C.x + '" y="' + F.top + '" text-anchor="middle">' +
+         escapeText(t('studio.probe.response')) + '</text>' + cells + '</svg></section>';
 }
 export function senseProbeSvg(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;

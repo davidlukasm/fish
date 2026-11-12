@@ -58,6 +58,40 @@ const WEDGES = Object.freeze({
 const seatCount = (neural, center) =>
     center.role === 'motor' ? neural.effectorSlots
                             : Math.round(neural.slotMin * Math.pow(neural.slotSpan, center.field));
+function compactContacts(planned, own) {
+  const middle =
+      [...own ].filter(i => planned.some(e => e.from === i || e.to === i)).slice(0, PLAN.most);
+  const selected = new Set(middle), senders = new Set(), receivers = new Set(), edges = new Set();
+  const available = planned.filter(e => (!own.has(e.from) || selected.has(e.from)) &&
+                                        (!own.has(e.to) || selected.has(e.to)));
+  const kind = e => !own.has(e.from) ? 0 : own.has(e.to) ? 1 : 2;
+  // Each kind and chosen cell gets a turn before another of its contacts is added.
+  const queues = [ 0, 1, 2 ].flatMap(
+      k => middle.map(i => available.filter(e => kind(e) === k && (e.from === i || e.to === i))));
+  let added = true;
+  while (added && edges.size < PLAN.most * 3) {
+    added = false;
+    for (const queue of queues) {
+      while (queue.length) {
+        const edge = queue.shift();
+        if (edges.has(edge) ||
+            !own.has(edge.from) && !senders.has(edge.from) && senders.size >= PLAN.most ||
+            !own.has(edge.to) && !receivers.has(edge.to) && receivers.size >= PLAN.most)
+          continue;
+        edges.add(edge);
+        if (!own.has(edge.from))
+          senders.add(edge.from);
+        if (!own.has(edge.to))
+          receivers.add(edge.to);
+        added = true;
+        break;
+      }
+      if (edges.size >= PLAN.most * 3)
+        break;
+    }
+  }
+  return [...edges ];
+}
 // The handles' patch, from the pointer in the picture's units and the geometry the handle carries.
 export function contactCapacityPatch(key, p, marks) {
   if (key === 'field') {
@@ -82,13 +116,13 @@ export function contactPlan(state, chosen, wire = null) {
       compileDocument(doc, state.sites)
           .connections.filter(edge => (!pairs || pairs.has(edge.from + ':' + edge.to)) &&
                                       (own.has(edge.to) || own.has(edge.from)));
-  const edges = expanded ? planned : planned.slice(0, P.most * 3);
+  const edges = expanded ? planned : compactContacts(planned, own);
   const visible = list => expanded ? list : list.slice(0, P.most);
   const senders = visible([...new Set(edges.filter(e => !own.has(e.from)).map(e => e.from)) ]);
   const receivers = visible([...new Set(edges.filter(e => !own.has(e.to)).map(e => e.to)) ]);
   // A wire shows only the cells it joins.
-  const middle =
-      visible([...own ].filter(i => !wire || edges.some(e => e.from === i || e.to === i)));
+  const middle = visible([...own ].filter(i => chosen.length === 1 || (expanded && !wire) ||
+                                               edges.some(e => e.from === i || e.to === i)));
   const single = middle.length === 1 && !wire;
   const rows = Math.max(senders.length, middle.length, receivers.length, single ? 3 : 1);
   const span = P.top * 2 + (rows - 1) * P.step;

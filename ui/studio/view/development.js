@@ -1,7 +1,7 @@
 import {HORMONES} from '../../schema.js';
 import {allCenters} from '../model/document.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
-import {formatNumber, joinParts, namedText} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, namedText} from '../../strings.js';
 import {clamp} from '../../units.js';
 import {GROWTH_ICON} from './icons.js';
 import {
@@ -28,10 +28,10 @@ const PREVIEW_DIGITS = 2;
 // that grows with its level; the handle on its top sets it.
 const SITUATION = Object.freeze({
   width : 300,
-  height : 96,
-  pad : {left : 34, top : 10, right : 160, bottom : 74},
+  height : 122,
+  pad : {left : 34, top : 24, right : 160, bottom : 88},
   key : {young : 9, grown : 17, below : 12, sign : 40},
-  drops : {left : 180, right : 292, middle : 42, least : 3, span : 11, most : 30, mark : 11},
+  drops : {left : 180, right : 292, middle : 56, least : 3, span : 11, most : 30, mark : 11},
   knob : 7
 });
 export const PREVIEW_INPUT_LOW = -1;
@@ -100,6 +100,14 @@ export function previewControls(state) {
          escapeText(word('previewConditions')) + '">' + word('preview') +
          '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + S.width + ' ' + S.height +
          '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
+         '<text class="aid-curve-label" x="' + P.left + '" y="' + (P.top - K.below) + '">' +
+         escapeText(word('inputAxis')) + '</text><text class="aid-curve-label" x="' +
+         (P.left + P.right) / 2 + '" y="' + (S.height - 3) + '" text-anchor="middle">' +
+         escapeText(word('maturity')) + '</text>' +
+         (substances.length
+              ? '<text class="aid-curve-label" x="' + D.left + '" y="' + (P.top - K.below) + '">' +
+                    escapeText(word('substanceLevels')) + '</text>'
+              : '') +
          '<g class="aid-preview-pad"><title>' + escapeText(situation) + '</title><rect x="' +
          P.left + '" y="' + P.top + '" width="' + (P.right - P.left) + '" height="' +
          (P.bottom - P.top) + '"/><path class="aid-dose-zero" d="M' + P.left + ' ' + fixed(zero) +
@@ -109,9 +117,9 @@ export function previewControls(state) {
          placedGlyph(GROWTH_ICON, K.grown, {x : P.right - K.grown / 2, y : P.bottom + K.below},
                      {line : true}) +
          '<text class="aid-preview-sign" x="' + (P.left - K.sign / 2) + '" y="' + P.top +
-         '" text-anchor="middle" dominant-baseline="hanging">+</text><text ' +
+         '" text-anchor="middle" dominant-baseline="hanging">' + formatSigned(1) + '</text><text ' +
          'class="aid-preview-sign" x="' + (P.left - K.sign / 2) + '" y="' + P.bottom +
-         '" text-anchor="middle">−</text></g>' +
+         '" text-anchor="middle">' + formatSigned(PREVIEW_INPUT_LOW) + '</text></g>' +
          '<circle class="aid-graphic-handle" data-preview-handle="situation" cx="' + fixed(at.x) +
          '" cy="' + fixed(at.y) + '" r="' + S.knob + '"><title>' + escapeText(situation) +
          '</title></circle>' + drops + '</svg></details>';

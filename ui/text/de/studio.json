@@ -981,6 +981,7 @@
   },
   "hormoneCard": {
     "title": "Stoffe",
+    "decay": "Zeitkonstante",
     "sources": "Quellen",
     "acts": "Wirkt auf",
     "gland": "Drüse",
@@ -1165,6 +1166,9 @@
     "cppnMeaning": "Verfolgt die Kontaktvorschläge des erzeugten CPPN einschließlich zusätzlicher Zellpotenziale. Die Markierung zeigt strukturelle Wege und Lehrkontakte. Zellbildung, Aktivität und gelernte Gewichte werden damit nicht berechnet. Die Sinnesproben darunter werten die geplanten Organe des Entwurfs aus."
   },
   "probe": {
+    "filling": "Füllung",
+    "inflow": "Zufluss",
+    "response": "Antwort",
     "title": {
       "smell": "Duft testen",
       "touch": "Berührung testen",
@@ -1252,10 +1256,33 @@
     "range": "Kontaktreichweite in Körperlängen",
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
+    "inputAxis": "Eingang",
+    "substanceLevels": "Stoffpegel",
     "currentResponse": "Antwort bei den Beispielwerten",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",
     "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur"
+  },
+  "symbols": {
+    "add": "+"
+  },
+  "axes": {
+    "range": "{from} … {to}",
+    "maturity": "Reife",
+    "concentrationLog": "Stoffpegel (log.)",
+    "growth": "Wachstum",
+    "birth": "Geburtsantwort",
+    "effects": [
+      "Erregung",
+      "Lernfaktor",
+      "Verdrängung",
+      "Eigenanteil",
+      "Rhythmus",
+      "Ausgabefaktor",
+      "Todesantwort",
+      "Lehrsignal",
+      "Festigung"
+    ]
   },
   "contacts": {
     "title": "Kontakte im Bauplan",
