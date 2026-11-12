@@ -14,6 +14,7 @@ import {RHYTHM_TAU} from '../model/region_cells.js';
 import {regionPlan} from '../model/regions.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
+import {tectumPictures} from './tectum_map.js';
 
 export const REGION_PICTURE = Object.freeze({width : 360, height : 260, left : 40, right : 320});
 const P = REGION_PICTURE, WIDTH = P.right - P.left, SEARCH_BASE = 194, SEARCH_HEIGHT = 100;
@@ -21,10 +22,7 @@ const SCENT_BASE = 202, SCENT_HEIGHT = 114, VALUE_BASE = 218, VALUE_HEIGHT = 108
 const SPINE_BASE = 76, SPINE_HEIGHT = 55, FIN_BASE = 218;
 const CLOCK_SPAN = 2 * LONGEST_TIME_CONSTANT, CLOCK_CREST = 1.25;
 const OPPONENT = Object.freeze({left : 120, width : 100, y : 127});
-const TAU_SPAN = 4, FACING = .9, FAN_RADIUS = 120, FAN_HOME = {
-  x : 180,
-  y : 160
-};
+const TAU_SPAN = 4;
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const x = fraction => P.left + WIDTH * fraction;
 const point = (x, y) => ({fx : x / P.width, fy : y / P.height});
@@ -46,8 +44,6 @@ const text = (x, y, value, anchor = 'start') =>
 const icon = (key, x, y, size = 24) => `<g class="region-symbol" transform="translate(${
     x - size / 2} ${y - size / 2}) scale(${size / 24})"><path d="${STUDIO_ICON[key]}"/></g>`;
 const axis = (left, right, y) => path(`M${left} ${y}H${right}`, 'axis');
-const fanPoint = angle => (
-    {x : FAN_HOME.x + FAN_RADIUS * Math.sin(angle), y : FAN_HOME.y - FAN_RADIUS * Math.cos(angle)});
 const scentValue = smoothing => Math.tanh(smoothing > 0 ? 1 - Math.exp(-1) : 1);
 
 export function regionHandle(organ, key) {
@@ -77,12 +73,6 @@ export function regionHandle(organ, key) {
     return point(40 + 120 * r.reserve, 222);
   if (key === 'rest')
     return point(210 + 110 * timeConstantSteps(r.rest) / LONGEST_TIME_CONSTANT, 222 - 64 / Math.E);
-  if (key === 'resolution') {
-    const p = fanPoint(-FACING + 2 * FACING / r.resolution);
-    return point(p.x, p.y);
-  }
-  if (key === 'contrast')
-    return point(285, 224 + 10 * r.contrast);
   if (key === 'beat' || key === 'pump')
     return point(
         x(r[key] ? 1.25 * period(RHYTHM_TAU[r[key] - 1]) / (2 * LONGEST_TIME_CONSTANT) : 0),
@@ -132,12 +122,6 @@ export function regionPatch(organ, key, fx, fy) {
       rest : timeConstantOf(
           Math.max(TIME_CONSTANT.min_steps, (px - 210) / 110 * LONGEST_TIME_CONSTANT))
     };
-  if (key === 'resolution') {
-    const angle = Math.atan2(px - FAN_HOME.x, FAN_HOME.y - py);
-    return {resolution : Math.round(2 * FACING / Math.max(.01, angle + FACING))};
-  }
-  if (key === 'contrast')
-    return {contrast : Math.round(clamp((py - 224) / 10, 0, 2))};
   if (key === 'beat' || key === 'pump') {
     const candidates =
         [ 0, ...RHYTHM_TAU.map(tau => 1.25 * period(tau) / (2 * LONGEST_TIME_CONSTANT)) ];
@@ -303,70 +287,35 @@ function spinePicture(organ) {
                   cycleSteps(period(r.finCycle)), words('finCycleDrag')
                 ]));
 }
-function tectumPicture(state, organ) {
-  const r = organ.region, plan = regionPlan(state.document, organ);
-  const bands = plan.most.resolution;
-  let fan = '';
-  for (let i = 0; i < bands; ++i) {
-    const a = fanPoint(-FACING + 2 * FACING * i / bands);
-    const b = fanPoint(-FACING + 2 * FACING * (i + 1) / bands);
-    fan += `<path class="region-fan" fill="#81cdae" d="M${FAN_HOME.x} ${FAN_HOME.y}L${fixed(a.x)} ${
-        fixed(a.y)}A${FAN_RADIUS} ${FAN_RADIUS} 0 0 1 ${fixed(b.x)} ${fixed(b.y)}Z"/>`;
-    if (r.colours) {
-      const colours = [ '#edbe77', '#81cdae', '#bca8db' ];
-      for (let k = 0; k < Math.min(8, plan.view.types); ++k) {
-        const radius = FAN_RADIUS - 8 * (k + 1);
-        const angleA = -FACING + 2 * FACING * i / bands;
-        const angleB = -FACING + 2 * FACING * (i + 1) / bands;
-        fan += `<path fill="none" stroke="${colours[k % colours.length]}" stroke-width="3" d="M${
-            fixed(FAN_HOME.x +
-                  radius * Math.sin(angleA))} ${fixed(FAN_HOME.y - radius * Math.cos(angleA))}A${
-            radius} ${radius} 0 0 1 ${fixed(FAN_HOME.x + radius * Math.sin(angleB))} ${
-            fixed(FAN_HOME.y - radius * Math.cos(angleB))}"/>`;
-      }
-    }
-  }
-  const colours =
-      '<g><circle cx="-7" r="4" fill="#edbe77"/><circle r="4" fill="#81cdae"/><circle cx="7" r="4" fill="#bca8db"/></g>';
-  return fan + icon('eye', FAN_HOME.x, FAN_HOME.y + 12) +
-         handle(organ, 'resolution', words('resolutionDrag')) +
-         button(organ, 'colours', 1 - r.colours, 318, 32, colours,
-                label('regions.settings.colours'), !!r.colours) +
-         path('M70 198H250V224H100V204M130 198V215M180 198V215M230 198V215', 'memory') +
-         Array
-             .from({length : [ 0, 2, 5 ][r.contrast]},
-                   (_, i) =>
-                       `<circle class="region-interneuron" cx="${100 + i * 25}" cy="224" r="6"/>`)
-             .join('') +
-         path('M250 224H285V' + (224 + 10 * r.contrast), 'memory') +
-         handle(organ, 'contrast', words('contrastDrag'));
-}
 const PICTURES = {
   choice : searchPicture,
   olfaction : scentPicture,
   state : statePicture,
   value : (s, o) => valuePicture(o),
   motor : (s, o) => motorPicture(o),
-  spine : (s, o) => spinePicture(o),
-  tectum : tectumPicture
+  spine : (s, o) => spinePicture(o)
 };
 export function regionPicture(state, organ) {
   const draw = PICTURES[organ.type];
-  if (!draw)
+  if (!draw && organ.type !== 'tectum')
     return '';
-  const customized = regionPlan(state.document, organ).nodes.some(n => {
-    const c = organ.centers.find(c => c.node === n.node);
-    return c && (Object.entries(n.set ?? {}).some(([ k, v ]) => c[k] !== v) ||
-                 Object.entries(n.effects ?? {})
-                     .some(([ e, values ]) =>
-                               Object.entries(values).some(([ k, v ]) => c.receptors[e][k] !== v)));
-  });
-  return `<div class="aid-region-picture"><svg viewBox="0 0 ${P.width} ${
-      P.height}" data-region-picture="${escapeText(organ.id)}" role="group" aria-label="${
-      label('regions.' + organ.type + '.term')}"><title>${
-      escapeText(words(organ.type + 'Reference') + (customized
-                                                        ? ' ' + words('customized')
-                                                        : ''))}</title>${draw(state, organ)}</svg>${
+  const customized =
+      !!organ.region.cut?.length || regionPlan(state.document, organ).nodes.some(n => {
+        const c = organ.centers.find(c => c.node === n.node);
+        return c && (Object.entries(n.set ?? {}).some(([ k, v ]) => c[k] !== v) ||
+                     Object.entries(n.effects ?? {})
+                         .some(([ e, values ]) => Object.entries(values).some(
+                                   ([ k, v ]) => c.receptors[e][k] !== v)));
+      });
+  const drawing = organ.type === 'tectum'
+                      ? tectumPictures(state, organ)
+                      : `<svg viewBox="0 0 ${P.width} ${P.height}" data-region-picture="${
+                            escapeText(organ.id)}" role="group" aria-label="${
+                            label('regions.' + organ.type + '.term')}"><title>${
+                            escapeText(words(organ.type + 'Reference') +
+                                       (customized ? ' ' + words('customized')
+                                                   : ''))}</title>${draw(state, organ)}</svg>`;
+  return `<div class="aid-region-picture">${drawing}${
       customized ? '<p class="aid-picture-note">' + escapeText(words('customized')) + '</p>'
                  : ''}</div>`;
 }

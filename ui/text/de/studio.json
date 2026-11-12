@@ -616,6 +616,28 @@
     "spine": {
       "term": "Wirbel­säule",
       "purpose": "Koordiniert die Schwanzhälften und die Gegenspieler der Seitenflossen. Jede Seite kann getrennt rudern; Lenkung und Fluchtstoß steuern zusätzlich den Schwanz."
+    },
+    "tectumMap": {
+      "directionsTitle": "Richtungen im Sehfeld",
+      "directions": "{n} Richtungsbereiche",
+      "field": "Sehfeld: {lo}–{hi}°",
+      "front": "vorn",
+      "left": "links",
+      "right": "rechts",
+      "fromEye": "Sehfeld in Bereiche aufteilen",
+      "noEye": "Ohne Auge: vorläufiges Sehfeld",
+      "channelsTitle": "Sehwege nach Richtung und Farbe",
+      "together": "Farben bündeln",
+      "separate": "Farben trennen",
+      "channel": "Typ {n}",
+      "allColours": "alle",
+      "limit": "{n} {n:Farbtyp|Farbtypen} · bis zu {most} Richtungen",
+      "commonInhibition": "Gemeinsame Hemmung",
+      "inhibition": {
+        "0": "aus",
+        "1": "2 Hemmzellen",
+        "2": "5 Hemmzellen"
+      }
     }
   },
   "head": {

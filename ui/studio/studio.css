@@ -1116,6 +1116,14 @@
 .aid-region-picture .region-button.selected path,.aid-region-picture .region-button.selected>circle{stroke:var(--region-primary)}
 .aid-region-picture .region-button:hover rect,.aid-region-picture .region-button:focus-visible rect{stroke:#f0f7df;stroke-width:2}
 .aid-region-picture .region-fan{fill-opacity:.22;stroke:var(--region-primary);stroke-width:1.5}
+.aid-region-picture>svg+svg{margin-top:10px}
+.aid-region-picture .aid-tectum-map text{font-size:14px}
+.aid-region-picture .aid-tectum-map .tectum-angles text{font-size:11px}
+.aid-region-picture .region-fan{fill:var(--region-primary)}
+.aid-region-picture .region-button .tectum-partition{fill:var(--aid-soft-text);stroke:none}
+.aid-region-picture .region-button.selected .tectum-partition{fill:var(--region-primary)}
+.aid-region-picture .tectum-channel{stroke:var(--aid-graphic);stroke-width:1;rx:3}
+.aid-region-picture .tectum-inhibition{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:1.5}
 .aid-region-picture .region-interneuron{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:2}
 
 .aid-palette-tile[aria-pressed="true"]{background:#31545c;box-shadow:inset 0 0 0 2px #9edaca}

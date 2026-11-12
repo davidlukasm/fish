@@ -399,9 +399,7 @@ export const handleMethods = {
       const order = [ 0, ...RHYTHM_TAU.map((_, i) => i + 1).reverse() ];
       const index = clamp(order.indexOf(organ.region[key]) + (dx || -dy), 0, order.length - 1);
       patch = {[key] : order[index]};
-    } else if (key === 'resolution' || key === 'contrast')
-      patch = {[key] : organ.region[key] + (key === 'resolution' ? (-dx || -dy) : (dx || dy))};
-    else
+    } else
       patch = regionPatch(organ, key, at.fx + dx * 4 / REGION_PICTURE.width,
                           at.fy + dy * 3 / REGION_PICTURE.height);
     if (patch)

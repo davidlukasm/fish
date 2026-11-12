@@ -633,7 +633,7 @@ async function checkFunctionalRegions(model, capabilities) {
     [ 'state', {reserve : .42, rest : .37, maturity : .67}, [ 'reserve', 'rest', 'maturity' ] ],
     [ 'value', {features : 3, association : .53, teaching : .8}, [ 'association' ] ],
     [ 'motor', {beat : 1, pump : 3, retreat : 1}, [ 'beat', 'pump' ] ],
-    [ 'tectum', {resolution : 3, contrast : 2}, [ 'resolution', 'contrast' ] ]
+    [ 'tectum', {resolution : 3, contrast : 2}, [] ]
   ];
   for (const [type, patch, handles] of cases) {
     const made = model.addOrgan(model.newDocument(type), type, sites, {x : 610, y : 315});
@@ -752,6 +752,74 @@ async function checkFunctionalRegions(model, capabilities) {
                        'New features inherit hormonal tuning from equivalent cells');
     }
   }
+}
+
+async function checkTectumPicture(model, capabilities) {
+  const {regionPicture} = await import('../ui/studio/view/region_controls.js');
+  const {regionPlan, updateRegion} = await import('../ui/studio/model/regions.js');
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {sites} = capabilities;
+  const eye = model.addOrgan(model.newDocument('Sehkarte'), 'eye', sites, {x : 345, y : 290});
+  let doc = model.updateField(eye.document, eye.organId, {lo : 20, hi : 105}, sites);
+  for (let i = 0; i < 2; ++i)
+    doc = model.updateField(doc, eye.organId, {
+      addProfile :
+          {id : 'colour-' + i, q1 : .4 * i, q2 : -1, qwidth : .15, threshold : -.6, polarity : 0}
+    },
+                            sites);
+  const added = model.addOrgan(doc, 'tectum', sites, {x : 610, y : 315});
+  const source = model.findOrgan(added.document, eye.organId);
+  const organ = added.document.organs.find(o => o.type === 'tectum' && o.side !== source.side);
+  doc = model
+            .connectSelections(added.document, {kind : 'organ', id : source.id},
+                               {kind : 'organ', id : organ.id})
+            .document;
+  const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(studio.state,
+                {document : doc, sites, capabilities, selected : {kind : 'organ', id : organ.id}});
+  studio.changeDocument = changed => { studio.state.document = changed; };
+  const choose = (key, value) => {
+    let prevented = false;
+    const button = {
+      dataset : {regionSetting : key, regionValue : String(value), organId : organ.id}
+    };
+    assert.equal(studio.regionKey({
+      key : 'Enter',
+      preventDefault() { prevented = true; },
+      target : {closest : () => button}
+    }),
+                 true);
+    assert.ok(prevented);
+  };
+  const current = () => model.findOrgan(studio.state.document, organ.id);
+  const picture = () => regionPicture(studio.state, current());
+  choose('resolution', 6);
+  let html = picture();
+  assert.match(html, /Sehfeld: 20–105°/);
+  assert.match(html, new RegExp('data-tectum-side="' + source.side + '"'));
+  assert.doesNotMatch(html, new RegExp('data-tectum-side="' + organ.side + '"'),
+                      'Crossed nerves display the eye side, not the brain region side');
+  assert.equal((html.match(/data-tectum-band=/g) ?? []).length, 6);
+  assert.match(html, /data-region-setting="resolution" data-region-value="6"/);
+  choose('colours', 1);
+  html = picture();
+  assert.equal((html.match(/data-tectum-channel="2"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /data-region-setting="resolution" data-region-value="3"/,
+                      'Three colour types leave room for two directional bands');
+  const plan = regionPlan(studio.state.document, current());
+  for (const node of plan.nodes.filter(n => n.band))
+    assert.ok(html.includes('data-tectum-band="' + node.band.join(':') + '"'));
+  assert.equal(model.findOrgan(studio.state.document, current().pair).region.colours, 1);
+  choose('contrast', 2);
+  assert.match(picture(), /class="tectum-inhibition"/);
+  choose('contrast', 0);
+  assert.doesNotMatch(picture(), /class="tectum-inhibition"/);
+  assert.doesNotMatch(picture(), /NaN|undefined|Infinity|data-region-handle/);
+  studio.state.document =
+      model.updateField(studio.state.document, source.id, {lo : 30, hi : 90}, sites);
+  assert.match(picture(), /Sehfeld: 30–90°/, 'Moving the eye field moves its regional map');
+  current().region.cut = [ 'map0>map1' ];
+  assert.match(picture(), /aid-picture-note/, 'A changed circuit is identified as a template view');
 }
 
 async function checkHormoneSystems(model, capabilities) {
@@ -1008,9 +1076,11 @@ async function checkHormoneSystems(model, capabilities) {
   if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
     await checkResponseControls(model, sitesResult, clicks);
     await checkFunctionalRegions(model, sitesResult);
+    await checkTectumPicture(model, sitesResult);
     console.log('Atelier: Reizantwort, Regionsbilder, Bedienpunkte und Seitenkopplung: OK');
     return;
   }
+  await checkTectumPicture(model, sitesResult);
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
   if (!process.argv.includes('--ui')) {
     if (process.argv.includes('--hormone-systems')) {
