@@ -118,8 +118,7 @@ const gonadPanel = (state, organ, center) => '<div data-sense-block="' + escapeT
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => scentMap(organ, center, state),
-  barbels : (state, organ, center) =>
-      barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center, state) : ''),
+  barbels : (state, organ, center) => barbelFeel(center) + scentMap(organ, center, state),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + gutProbeControls(state, organ),
   bladder : (state, organ, center) => bladderGraphic(state, organ, center),
@@ -147,11 +146,8 @@ const WHOLE_PICTURES = Object.freeze([
   'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm',
   'gland', 'bladder', 'muscle', 'gills', 'gutmuscle', 'defense', 'pigment'
 ]);
-// Barbels that only touch have no scent map to hold their marks.
-const wholePicture = (organ, center) =>
-    WHOLE_PICTURES.includes(organ.type) &&
-    !(organ.type === 'barbels' && center.field >= BARBEL_FEEL.touch);
-const cellCount = (organ, center) => wholePicture(organ, center) ? ''
+const wholePicture = organ => WHOLE_PICTURES.includes(organ.type);
+const cellCount = (organ, center) => wholePicture(organ) ? ''
                                      : ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&
                                              !(organ.type === 'bladder' && center.role === 'sensor')
@@ -161,7 +157,7 @@ const section = (title, body) =>
     '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
 const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
 function sensorSection(state, organ, center) {
-  if (wholePicture(organ, center))
+  if (wholePicture(organ))
     return '';
   if (!SKIN_SENSES.includes(organ.type))
     return section(
@@ -184,7 +180,7 @@ const muscleChoice = (state, organ, center) =>
     organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '';
 // Organs that hold their gate in their picture show only the choice of what the muscle does.
 const motorSection = (state, organ, center) =>
-    (wholePicture(organ, center)
+    (wholePicture(organ)
          ? ''
          : section(
                label('inspector.drive'),

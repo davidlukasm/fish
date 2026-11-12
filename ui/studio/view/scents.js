@@ -14,6 +14,7 @@ import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from '.
 import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
 import {typeChips} from './types.js';
+import {BARBEL_FEEL} from '../model/organs.js';
 
 export const SCENT_MAP = Object.freeze({
   size : 240,
@@ -121,7 +122,74 @@ function profileChips(organ, chosen) {
 // many cells there are (dots on that ring) and how long a lasting scent takes until they no longer
 // answer it (the fading arc round the map). `held` is a sensitivity dragged ahead of the design
 // run.
+// Barbels that only touch: the chin with its two barbels, the cells along one of them, the hairs
+// at both tips as long as they are sensitive, and round the tip the adaptation arc.
+const BARBEL_TOUCH = Object.freeze({
+  width : 300,
+  height : 160,
+  chin : 'M0 0 H300 V22 Q150 58 0 22 Z',
+  roots : [ [ 118, 40 ], [ 182, 40 ] ],
+  bend : 26,
+  tips : [ [ 92, 122 ], [ 208, 122 ] ],
+  cells : [ .18, .92 ],
+  hairs : 7,
+  fan : 1.2,
+  least : 6,
+  most : 30,
+  clock : 18
+});
+function barbelTouch(organ, center, state, held) {
+  const B = BARBEL_TOUCH, sensitive = held ?? senseSensitivity(state, center) ?? 0;
+  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
+  const curve = k => {
+    const [rx, ry] = B.roots[k], [ tx, ty ] = B.tips[k], side = k ? 1 : -1;
+    const control = {x : (rx + tx) / 2 - side * B.bend, y : (ry + ty) / 2};
+    return {
+      d : 'M' + rx + ' ' + ry + ' Q' + fixed(control.x) + ' ' + fixed(control.y) + ' ' + tx + ' ' +
+              ty,
+      at : u => ({
+        x : (1 - u) * (1 - u) * rx + 2 * u * (1 - u) * control.x + u * u * tx,
+        y : (1 - u) * (1 - u) * ry + 2 * u * (1 - u) * control.y + u * u * ty
+      })
+    };
+  };
+  const barbels = [ 0, 1 ].map(curve);
+  const reach = B.least + (B.most - B.least) * sensitive;
+  const hairs =
+      B.tips
+          .map(([ x, y ]) => Array
+                                 .from({length : B.hairs},
+                                       (_, k) => {
+                                         const a = Math.PI / 2 + B.fan * (k / (B.hairs - 1) - .5);
+                                         return 'M' + x + ' ' + y + ' l' +
+                                                fixed(reach * Math.cos(a)) + ' ' +
+                                                fixed(reach * Math.sin(a));
+                                       })
+                                 .join(' '))
+          .join(' ');
+  const places =
+      Array.from({length : ATELIER_LIMITS.max_copies},
+                 (_, k) => barbels[0].at(B.cells[0] + (B.cells[1] - B.cells[0]) * k /
+                                                          (ATELIER_LIMITS.max_copies - 1)));
+  const [tx, ty] = B.tips[1];
+  return '<div data-scent-block="' + escapeText(center.id) + '"><svg class="aid-barbel-touch" ' +
+         'data-sense-field="' + escapeText(center.id) + '" data-sense-redraw="refreshScentMaps" ' +
+         'viewBox="0 0 ' + B.width + ' ' + B.height + '" role="img"><title>' +
+         escapeText(t('studio.inspector.barbelFeel.touch')) +
+         '</title><path class="aid-skin-fish" d="' + B.chin + '"/>' +
+         barbels.map(b => '<path class="aid-barbel" d="' + b.d + '"/>').join('') +
+         '<path class="aid-skin-hairs" d="' + hairs + '"/>' +
+         (answer?.adapt?.steps > 0
+              ? adaptationMarks({x : tx, y : ty}, B.clock, -Math.PI / 2, center)
+              : '') +
+         cellMarks(places, center) +
+         sensitivityHandle({x : tx, y : ty + B.least}, {x : tx, y : ty + B.most}, sensitive,
+                           t('studio.inspector.skin.touchHandle')) +
+         '</svg></div>';
+}
 export function scentMap(organ, center, state = null, held = null) {
+  if (organ.type === 'barbels' && center.field >= BARBEL_FEEL.touch && state)
+    return barbelTouch(organ, center, state, held);
   const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2), wide = scentWidthHandle(center);
   const sensitive = held ?? (state ? senseSensitivity(state, center) : null);
   const answer = state ? groupReport(state.document, state.anatomy, 'senses', center.id) : null;
