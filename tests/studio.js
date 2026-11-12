@@ -3034,7 +3034,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const [, cx, cy] =
           new RegExp('data-skin-handle="' + name + '" cx="([^"]+)" cy="([^"]+)"').exec(skinMarkup);
       const box = /viewBox="0 0 (\S+) (\S+)"/.exec(skinMarkup);
-      return skinView.skinPatch(skinState, touchCell, skinAim, name, cx / box[1], cy / box[2], {});
+      return skinView.skinPatch(skinState, skinAim, name, cx / box[1], cy / box[2]);
     };
     const probesView = await import('../ui/studio/view/probes.js');
     const {probeFor} = await import('../ui/studio/model/probe.js');
@@ -3060,7 +3060,21 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.equal(probesView.senseProbeSvg({...probeState, selected : null}), '');
     }
     assert.ok(Math.abs(skinBack('field').field - touchCell.field) < .05);
-    assert.ok(Math.abs(skinBack('sensitivity').threshold - touchCell.threshold) < .05);
+    // The touch cells' sensitivity sits on their report curve below the skin and reads back.
+    {
+      const marks = await import('../ui/studio/view/sense_marks.js');
+      const [, least, most, cx, cy] =
+          /data-sense-mark="sensitivity" data-least="([^"]+)" data-most="([^"]+)" cx="([^"]+)" cy="([^"]+)"/
+              .exec(skinMarkup);
+      const read = marks.senseMarkPatch(skinState, {
+        handle : 'sensitivity',
+        marks : {least, most},
+        start : marks.senseStart(skinState, touchCell)
+      },
+                                        {x : Number(cx), y : Number(cy)});
+      assert.ok(Math.abs(read.threshold - touchCell.threshold) < .05,
+                'touch sensitivity reads back');
+    }
     const layout = await import('../ui/studio/model/layout.js');
     assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});
     assert.ok(

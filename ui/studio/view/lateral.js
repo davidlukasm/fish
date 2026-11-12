@@ -1,11 +1,11 @@
-import {ATELIER_LIMITS} from '../../schema.js';
 import {groupReport} from '../model/document.js';
-import {BODY_MIDDLE, BODY_RADIUS} from '../model/layout.js';
-import {fieldFish, fieldPoint, skinAt} from './frame.js';
-import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
+import {fieldFish, fieldPoint} from './frame.js';
+import {senseSensitivity} from './sense_marks.js';
+import {fadeRow, intensityRow, SENSE_PLOT, sensePicture} from './sense_curves.js';
+import {stimulusOfShare} from './sensitivity.js';
 import {escapeText, fixed} from './markup.js';
 import {t} from '../../strings.js';
-import {contactHalfAngle, contactFieldOf} from '../../tuning.js';
+import {contactHalfAngle, contactFieldOf, LONGEST_TIME_CONSTANT} from '../../tuning.js';
 import {degrees, radians, wrapAngle} from '../../units.js';
 
 export function lateralFeel(state, organ) {
@@ -52,31 +52,18 @@ const LATERAL_FIELD = Object.freeze({
   scale : .14,
   inner : 58,
   reach : 34,
-  arc : 100,
-  arrow : 18,
-  // The pores run along the flank, from behind the head to before the tail, inside the outline.
-  pores : [ .22, .86 ],
-  flank : .7
+  arrow : 18
 });
 export const lateralPatch = (fx, fy, direction) => {
   const L = LATERAL_FIELD;
   const angle = Math.atan2(fy * L.height - L.cy, -(fx * L.width - L.cx));
   return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - direction))))};
 };
-// The pores of one side, where the organ's cells sit, drawn to the picture's small fish.
-function porePlaces(side) {
-  const L = LATERAL_FIELD, snout = BODY_MIDDLE.x - BODY_RADIUS;
-  return Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
-    const x =
-        snout + 2 * BODY_RADIUS *
-                    (L.pores[0] + (L.pores[1] - L.pores[0]) * k / (ATELIER_LIMITS.max_copies - 1));
-    const y = BODY_MIDDLE.y + (skinAt(x, side) - BODY_MIDDLE.y) * L.flank;
-    return {x : L.cx + (x - BODY_MIDDLE.x) * L.scale, y : L.cy + (y - BODY_MIDDLE.y) * L.scale};
-  });
-}
-// One picture holds the whole organ: the pores with its cells along the flank, the lobe of where
-// the water it feels comes from, as large as the cells are sensitive, its width, and the arc of how
-// long a steady current takes until the cells no longer answer it.
+// The steady current of the time row, as many times the cells' half answer.
+const LATERAL_HELD = 4;
+// Where the water the cells feel comes from: the lobe round the fish, its width at the handle.
+// Below, what they report (sense_curves.js): over how strong the current is, and how they get used
+// to a steady one, so they report changes: a neighbour starting off, a current setting in.
 export function lateralField(state, organ, held = null) {
   const L = LATERAL_FIELD, feel = lateralFeel(state, organ), first = organ.centers[0];
   const block = '<div data-sense-block="' + escapeText(organ.id) + '">';
@@ -84,8 +71,7 @@ export function lateralField(state, organ, held = null) {
     return block + '</div>';
   const at = (angle, r) => fieldPoint(L, angle, r);
   const count = feel.tuning.length, most = Math.max(...feel.tuning, Number.EPSILON);
-  const sensitive = held ?? senseSensitivity(state, first) ?? 0;
-  const radius = v => L.inner + L.reach * sensitive * v / most;
+  const radius = v => L.inner + L.reach * v / most;
   const lobe = 'M' +
                feel.tuning
                    .map((v, k) => {
@@ -95,15 +81,12 @@ export function lateralField(state, organ, held = null) {
                    .join(' L') +
                'Z';
   const peak = feel.tuning.indexOf(most), angle = sampleAngle(peak, count);
-  const tip = at(angle, radius(most));
   const arrow = '<path class="aid-lateral-arrow" d="' +
                 arrowPath(at(angle, L.inner + L.reach + L.arrow), at(angle, L.inner + L.reach)) +
                 '"/>';
   const half = radians(contactHalfAngle(first.field ?? 0));
   const boundary = at(angle + half, L.inner + L.reach), other = at(angle - half, L.inner + L.reach);
-  const answer = groupReport(state.document, state.anatomy, 'senses', first.id);
-  const word = key => t('studio.lateral.' + key);
-  const side = organ.side < 0 ? -1 : 1;
+  const word = (key, values) => t('studio.lateral.' + key, values);
   return block + '<svg class="aid-lateral-field" viewBox="0 0 ' + L.width + ' ' + L.height +
          '" data-sense-field="' + escapeText(first.id) + '" data-sense-organ="' +
          escapeText(organ.id) + '" data-sense-aim="' + fixed(angle) + '" data-sense-centre="' +
@@ -113,13 +96,31 @@ export function lateralField(state, organ, held = null) {
          escapeText(word('lobe')) + '</title></path>' + fieldFish(L, L.scale, 'aid-lateral-fish') +
          arrow + '<path class="aid-field-boundary" d="M' + fixed(boundary.x) + ' ' +
          fixed(boundary.y) + 'L' + L.cx + ' ' + L.cy + 'L' + fixed(other.x) + ' ' + fixed(other.y) +
-         '"/>' + cellMarks(porePlaces(side), first) +
-         (answer?.adapt?.steps > 0
-              ? adaptationMarks({x : L.cx, y : L.cy}, L.arc, Math.PI - angle, first)
-              : '') +
-         sensitivityHandle(at(angle, L.inner), at(angle, L.inner + L.reach), sensitive,
-                           word('sensitivityHandle')) +
-         '<circle class="aid-graphic-handle" data-sense-mark="width" cx="' + fixed(boundary.x) +
+         '"/><circle class="aid-graphic-handle" data-sense-mark="width" cx="' + fixed(boundary.x) +
          '" cy="' + fixed(boundary.y) + '" r="7"><title>' + escapeText(word('handle')) +
-         '</title></circle></svg></div>';
+         '</title></circle></svg>' + lateralCurves(state, first, held, word) + '</div>';
+}
+function lateralCurves(state, center, held, word) {
+  const sensitive = held ?? senseSensitivity(state, center), dimmest = state.anatomy?.lightDimmest;
+  if (sensitive === null || !(dimmest > 0))
+    return '';
+  const half = stimulusOfShare(1 - sensitive, dimmest);
+  const adapts = groupReport(state.document, state.anatomy, 'senses', center.id)?.adapt?.steps > 0;
+  return sensePicture(center, word('cells'), [
+    intensityRow(sensitive, dimmest, {
+      report : word('report'),
+      from : word('faint'),
+      to : word('strong'),
+      half : word('half'),
+      handle : word('sensitivityHandle')
+    }),
+    ...(adapts ? [ fadeRow(center, LATERAL_HELD * half, half, {
+      report : word('report'),
+      from : word('steady'),
+      to : word('later', {n : SENSE_PLOT.window * LONGEST_TIME_CONSTANT}),
+      half : n => word('fade', {n}),
+      handle : word('fadeHandle')
+    }) ]
+               : [])
+  ]);
 }

@@ -50,7 +50,7 @@ import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
-import {skinPatch, skinSensitivity} from './view/skin.js';
+import {skinPatch} from './view/skin.js';
 import {senseMarkPatch, senseStart} from './view/sense_marks.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
@@ -858,24 +858,18 @@ export const handleMethods = {
     const found = findCenter(this.state.document, graphic.dataset.skinField);
     if (!found)
       return null;
-    const answer = groupReport(this.state.document, this.state.anatomy, 'senses', found.center.id);
     return {
       id : found.center.id,
       name : handle.dataset.skinHandle,
-      aim : Number(graphic.dataset.skinAim),
-      start :
-          {intensity : answer?.intensity, half : answer?.half, threshold : found.center.threshold}
+      aim : Number(graphic.dataset.skinAim)
     };
   },
   skinPointer(event) {
     const drag = this.handleDrag, found = findCenter(this.state.document, drag.id);
     const {fx, fy} = pointerShare(event, drag.rect);
-    const patch =
-        found && skinPatch(this.state, found.center, drag.aim, drag.name, fx, fy, drag.start);
+    const patch = found && skinPatch(this.state, drag.aim, drag.name, fx, fy);
     if (!patch)
       return;
-    if (drag.name === 'sensitivity')
-      drag.sensitive = skinSensitivity(this.state, drag.aim, fx, fy);
     this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id,
                      'refreshSkin');
   },

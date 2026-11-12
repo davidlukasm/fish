@@ -66,7 +66,8 @@ export const designMethods = {
     });
   },
   refreshSkin() {
-    const drag = this.heldHandle('skin');
+    // A dragged sensitivity sits in the report below the skin.
+    const drag = this.heldHandle('sense');
     this.redrawBlocks('skinBlock', findCenter,
                       found => skinField(this.state, found.organ, found.center,
                                          drag?.id === found.center.id ? drag.sensitive : null));

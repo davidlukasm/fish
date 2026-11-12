@@ -266,11 +266,7 @@
     "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",
     "skin": {
       "field": "Hautfeld ±{degrees}°",
-      "touch": "Druckempfindlichkeit {share}",
-      "pain": "Schmerzempfindlichkeit {share}",
-      "fieldHandle": "Ziehen: wie weit um den Körper die Zelle fühlt",
-      "touchHandle": "Ziehen: längere Härchen fühlen leichteren Druck",
-      "painHandle": "Ziehen: längere Nervenenden fühlen leichtere Wunden"
+      "fieldHandle": "Ziehen: wie weit um den Körper die Zelle fühlt"
     },
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
@@ -980,8 +976,17 @@
   "lateral": {
     "title": "Strömung",
     "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper",
-    "lobe": "Woher die Zellen Strömung spüren; je größer, desto schwächere Strömung spüren sie",
-    "sensitivityHandle": "Ziehen: nach außen spüren die Zellen schwächere Strömung"
+    "lobe": "Woher die Zellen Strömung spüren",
+    "sensitivityHandle": "Ziehen: wie schwache Strömung die Zellen schon melden",
+    "cells": "Seitenlinienzellen",
+    "report": "Meldung",
+    "faint": "kaum Strömung",
+    "strong": "starke Strömung",
+    "half": "spürt ab hier",
+    "steady": "gleichmäßige Strömung",
+    "later": "{n} Schritte später",
+    "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
+    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichmäßige Strömung gewöhnen"
   },
   "systems": {
     "title": "Regelkreise",
@@ -1588,5 +1593,28 @@
     "title": "Barteln",
     "length": "{n} {n:Zelle|Zellen} · Barteln {p} der Fischlänge",
     "handle": "Ziehen: mehr Zellen machen die Barteln länger, sie erreichen Futter früher"
+  },
+  "skinSense": {
+    "report": "Meldung",
+    "later": "{n} Schritte später",
+    "touch": {
+      "where": "Wo die Tastzellen fühlen",
+      "title": "Tastzellen",
+      "from": "leichte Berührung",
+      "to": "harter Stoß",
+      "half": "meldet ab {p} Stoßstärke",
+      "handle": "Ziehen: wie leichte Berührungen die Zellen schon melden"
+    },
+    "pain": {
+      "where": "Wo die Schmerzzellen fühlen",
+      "title": "Schmerzzellen",
+      "from": "kleine Wunde",
+      "to": "schwere Wunde",
+      "half": "meldet ab hier",
+      "handle": "Ziehen: wie kleine Wunden die Zellen schon melden",
+      "stays": "Wunde bleibt",
+      "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
+      "fadeHandle": "Ziehen: wie schnell alte Wunden in den Hintergrund treten"
+    }
   }
 }
