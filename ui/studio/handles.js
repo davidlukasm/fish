@@ -196,7 +196,11 @@ export const GRIPS = Object.freeze([
     graphic : '[data-spectrum]',
     handle : '[data-spectrum-handle]',
     held : 'spectrum',
-    start : (studio, g, h) => ({target : {...g.dataset}, handle : h.dataset.spectrumHandle})
+    start : (studio, g, h) => ({
+      target : {...g.dataset},
+      handle : h.dataset.spectrumHandle,
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
+    })
   },
   {
     graphic : '[data-sensitivity]',
@@ -661,7 +665,8 @@ export const handleMethods = {
     const light = this.state.anatomy?.light
                       ?.[profileIndex(this.state.document, target.organ.id, drag.target.profileId)];
     const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = spectrumPatch(target.tuning, drag.handle, fx, fy, light);
+    const patch = spectrumPatch(target.tuning, drag.handle,
+                                {x : fx * drag.size.width, y : fy * drag.size.height}, light);
     if (!patch)
       return;
     if (drag.handle === 'light') {

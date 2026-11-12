@@ -729,7 +729,9 @@ export class OrganStudio {
       return;
     if (this.clickArmed(event) || this.doubleClick(event))
       return;
-    if (event.target.closest?.('[data-vision-handle],[data-spectrum]'))
+    // Clicks on the colour wheel are drags, except on its pupil, which turns the contrast.
+    if (event.target.closest?.('[data-vision-handle],[data-spectrum]') &&
+        !event.target.closest?.('[data-vision-polarity]'))
       return;
     if (clickOn(this, event, ANYWHERE_CLICKS))
       return;

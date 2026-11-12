@@ -1780,13 +1780,12 @@ async function checkHormoneSystems(model, capabilities) {
   const spectrum = await import('../ui/studio/view/spectrum.js');
   const tuning = await import('../ui/tuning.js');
   const tuned = {q1 : -.5, qwidth : .4},
-        sigmaAt =
-            spectrum.hueFraction(tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth));
+        sigmaAt = spectrum.huePoint(
+            tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth), .5);
   assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'width', sigmaAt).qwidth - tuned.qwidth) < 1e-9);
   assert.ok(
-      Math.abs(
-          spectrum.spectrumPatch(tuned, 'centre', spectrum.hueFraction(tuning.HUE_CIRCLE / 2)).q1) <
-      1e-9);
+      Math.abs(spectrum.spectrumPatch(tuned, 'centre', spectrum.huePoint(tuning.HUE_CIRCLE / 2, 1))
+                   .q1) < 1e-9);
   const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
   const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
   for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {

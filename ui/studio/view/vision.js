@@ -6,6 +6,7 @@ import {
   lightColor,
   profileColor,
   profileName,
+  SPECTRUM_CENTRE,
   spectrumElement,
   spectrumValues
 } from './spectrum.js';
@@ -328,10 +329,10 @@ export function spectrumEditor(state, organ, profile) {
     labelledText(label('opponent'), opponent)
   ].join(' · ');
   return `<div data-spectrum-block title="${escapeText(values)}">${
-      spectrumElement(profile,
-                      {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
-                      label('spectrum'), light, state.sightProbe?.hue,
-                      {excite : label('excites'), inhibit : label('inhibits')})}</div>`;
+      spectrumElement(
+          profile, {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
+          label('spectrum'), light, state.sightProbe?.hue,
+          {excite : label('excites'), inhibit : label('inhibits')}, contrastPupil(profile))}</div>`;
 }
 export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
   const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
@@ -374,29 +375,22 @@ const sightEyes = () => `<div class="aid-sight-eyes">${
             .join('')}</div>`;
 const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
-const CONTRAST_ICON =
-    Object.freeze({width : 26, height : 16, corner : 3, radius : 5, pair : 4, apart : 5});
-function contrastIcon(key) {
-  const I = CONTRAST_ICON, x = I.width / 2, y = I.height / 2;
-  const dot = (tone, cx, r) => `<circle class="${tone}" cx="${cx}" cy="${y}" r="${r}"/>`;
-  const dots = key === 'both'
-                   ? dot('bright', x - I.apart, I.pair) + dot('dark', x + I.apart, I.pair)
-                   : dot(key, x, I.radius);
-  const box = `width="${I.width}" height="${I.height}"`;
-  return `<svg class="aid-contrast" viewBox="0 0 ${I.width} ${I.height}" aria-hidden="true">` +
-         `<rect ${box} rx="${I.corner}"/>${dots}</svg>`;
-}
-// Whether the cells of a colour type report what is lighter or darker than its surround.
-function contrastChooser(profile) {
-  return `<div class="aid-contrast-choices">${
-      CONTRAST_CHOICES
-          .map(key => {
-            const chosen = profile.polarity === CONTRAST_POLARITY[key];
-            return `<button data-vision-polarity="${CONTRAST_POLARITY[key]}" class="${
-                chosen ? 'active' : ''}" aria-pressed="${chosen}" title="${
-                label('contrastTitle.' + key)}">${contrastIcon(key)}</button>`;
-          })
-          .join('')}</div>`;
+// Whether the cells of a colour type report what is lighter or darker than its surround, as the
+// pupil in the middle of their colour wheel: a light spot, a dark spot or both. A click turns it to
+// the next.
+const PUPIL = Object.freeze({radius : 17, spot : 7, pair : 5, apart : 6});
+function contrastPupil(profile) {
+  const P = PUPIL, at = SPECTRUM_CENTRE;
+  const k =
+      Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
+  const key = CONTRAST_CHOICES[k], next = CONTRAST_CHOICES[(k + 1) % CONTRAST_CHOICES.length];
+  const spot = (tone, x, r) => `<circle class="${tone}" cx="${x}" cy="0" r="${r}"/>`;
+  const spots = key === 'both' ? spot('bright', -P.apart, P.pair) + spot('dark', P.apart, P.pair)
+                               : spot(key, 0, P.spot);
+  return `<g class="aid-contrast-pupil" data-vision-polarity="${CONTRAST_POLARITY[next]}" ` +
+         `transform="translate(${at} ${at})" role="button"><title>${
+             label('contrastTitle.' +
+                   key)}</title><circle class="iris" r="${P.radius}"/>${spots}</g>`;
 }
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
@@ -418,8 +412,8 @@ export function visionInspector(state, organ) {
              profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
                                        idSafe(p.id)}" title="${label('remove')}">−</button>`
                                  : ''}</div>`) +
-         section(spectrumEditor(state, organ, p)) + section(contrastChooser(p)) +
-         section(sensitivityEditor(state, organ, p)) + section(sightEyes());
+         section(spectrumEditor(state, organ, p)) + section(sensitivityEditor(state, organ, p)) +
+         section(sightEyes());
 }
 const CLEAR = Object.freeze({step : .25});
 export function clearOfFish(state, organ, probe) {
