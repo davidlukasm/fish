@@ -824,7 +824,8 @@
       "slowTitle": "Rote Fasern: die billigste Arbeit, sie ermüden nie; schwach, träge und teuer im Unterhalt",
       "time": "Zeit bei voller Anstrengung",
       "work": "Arbeit",
-      "rest": "Unterhalt"
+      "rest": "Unterhalt",
+      "word": "{share} schnell"
     },
     "stroke": {
       "back": "Rückschlag",
@@ -841,13 +842,15 @@
       "mixed": "halb und halb"
     },
     "jaw": {
-      "handle": "Ziehen: Länge des Kiefers"
+      "handle": "Ziehen: Länge des Kiefers",
+      "word": "Kieferlänge"
     },
     "teeth": {
       "handle": "Ziehen: spitze oder stumpfe Zähne",
       "sharp": "spitz",
       "blunt": "stumpf",
-      "mixed": "mittel"
+      "mixed": "mittel",
+      "word": "Zähne {form}"
     },
     "title": {
       "0": "Schwanzflosse",
@@ -870,7 +873,8 @@
       "handle": "Ziehen: wie dicht die Kiemenreusen stehen",
       "open": "offen · viel Wasser",
       "dense": "dicht · Plankton",
-      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}."
+      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}.",
+      "word": "Reusendichte"
     },
     "gutmuscle": {
       "title": "Darmmuskel",
@@ -931,7 +935,11 @@
       "inward": "Schlägt {degrees}° nach innen",
       "straight": "Schlägt längs ({degrees}° Abweichung)",
       "outward": "Schlägt {degrees}° nach außen"
-    }
+    },
+    "sprintWord": "Reserve",
+    "nodesWord": "{n} Knoten",
+    "strengthWord": "Kraft {share}",
+    "tissue": "Muskel"
   },
   "balance": {
     "title": "Haarrichtung",

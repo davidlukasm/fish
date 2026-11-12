@@ -10,6 +10,7 @@ import {fibreHex} from '../../fibre.js';
 import {isFibrous, muscleFibre} from '../model/document.js';
 import {escapeText, fixed} from './markup.js';
 import {percent, t} from '../../strings.js';
+import {handleWord} from './sense_marks.js';
 
 const SPINDLE = Object.freeze(
     {least : .45, bulge : .75, curl : 2, piece : .35, pie : 11, gap : 3, handle : 5.5, ring : 4});
@@ -30,10 +31,10 @@ const lengthShare = (organ, most) =>
 const thickness = (organ, thin, thick) =>
     thin + (thick - thin) * ((organ.centers[0]?.copies ?? 1) - 1) / (ATELIER_LIMITS.max_copies - 1);
 const xy = p => fixed(p.x) + ' ' + fixed(p.y);
-const grip = (name, p, title, geometry) =>
-    '<circle class="aid-graphic-handle" data-effector-handle="' + name + '" ' + geometry + ' cx="' +
-    fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + SPINDLE.handle + '"><title>' +
-    escapeText(title) + '</title></circle>';
+const grip = (name, p, title, geometry, shown, place, wordAt = p) =>
+    handleWord(wordAt, shown, place) + '<circle class="aid-graphic-handle" data-effector-handle="' +
+    name + '" ' + geometry + ' cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+    SPINDLE.handle + '"><title>' + escapeText(title) + '</title></circle>';
 
 // `spec`: the axis from the anchor to where the longest muscle ends, and its thinnest and thickest
 // half width, all in the picture's own units. A muscle round a tube (`rings`) shows one ring per
@@ -73,10 +74,13 @@ export function muscleSpindle(organ, most, {axis, thin, thick, rings = false}) {
               ? '<path class="aid-tissue-partition" d="M' + xy(f.at(split, -half)) + ' L' +
                     xy(f.at(split, half + S.handle + S.gap)) + '"/>' +
                     grip('sprint', f.at(split, half + S.handle + S.gap), word('sprintHandle'),
-                         geometry)
+                         geometry, word('sprintWord'))
               : '') +
-         grip('nodes', f.at(length, 0), word('nodesHandle'), geometry) +
-         grip('strength', f.at(length / 2, -half * S.bulge), word('strengthHandle'), geometry) +
+         grip('nodes', f.at(length, 0), word('nodesHandle'), geometry,
+              word('nodesWord', {n : count}), 'right') +
+         grip('strength', f.at(length / 2, -half * S.bulge), word('strengthHandle'), geometry,
+              word('strengthWord', {share : percent(copies / ATELIER_LIMITS.max_copies)}),
+              'above') +
          (isFibrous(organ) ? fibrePie(f.at(-S.pie - S.gap, 0), fast) : '') + '</g>';
 }
 // The cross-section at the anchor: the white sector is the share of fast fibres, from the top
@@ -101,7 +105,8 @@ function fibrePie(c, fast) {
          sector(top + TURN * fast, top + TURN, fibreHex(0)) + '<circle class="aid-fibre-rim" cx="' +
          fixed(c.x) + '" cy="' + fixed(c.y) + '" r="' + r + '"/></g>' +
          grip('fibre', edge, word('fibre.handle'),
-              'data-pie="' + fixed(c.x) + ',' + fixed(c.y) + '"');
+              'data-pie="' + fixed(c.x) + ',' + fixed(c.y) + '"',
+              word('fibre.word', {share : percent(fast)}), 'under', {x : c.x, y : c.y + r});
 }
 // The change a spindle handle makes, from the pointer `p` in the picture's units.
 export function muscleTissuePatch(name, p, marks, most, organ) {

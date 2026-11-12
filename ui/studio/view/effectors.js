@@ -43,6 +43,7 @@ import {
   adaptationMarks,
   cellMarks,
   gateHandle,
+  handleWord,
   senseSensitivity,
   sensitivityHandle
 } from './sense_marks.js';
@@ -55,54 +56,36 @@ export const GUT_TRAIT = 'gut_length', GUT_CODE = -1, GILL_TRAIT = 'gill_rakers'
              GUT_MUSCLE_CODE = -3, FIN_ANGLE_TRAIT = 'fin_angle';
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
 const HANDLE = Object.freeze({radius : 5.5});
-const handle = (name, x, y, title) =>
+const handle = (name, x, y, title, shown = '') =>
+    (shown ? handleWord({x, y}, shown) : '') +
     '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replaceAll(':', '-') +
     '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
 const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
-// Where each working organ's muscle lies in its picture (the axis from its anchor to where the
-// longest muscle ends, as for the left side) and where its gate runs, from a strong command needed
-// to a faint one.
-const MUSCLE_PLACE = Object.freeze({
-  [MOTOR_KIND.forward] :
-      {spindle : {axis : [ 34, 50, 146, 70 ], thin : 5, thick : 13}, gate : [ 40, 163, 140, 163 ]},
-  [MOTOR_KIND.turn] :
-      {spindle : {axis : [ 38, 36, 116, 68 ], thin : 5, thick : 13}, gate : [ 290, 160, 290, 86 ]},
-  [MOTOR_KIND.suction] : {
-    spindle : {axis : [ 272, 126, 150, 108 ], thin : 5, thick : 12},
-    gate : [ 14, 162, 14, 126 ]
-  },
-  [MOTOR_KIND.aggression] :
-      {spindle : {axis : [ 272, 74, 214, 98 ], thin : 5, thick : 12}, gate : [ 14, 62, 14, 10 ]},
-  [MOTOR_KIND.defense] :
-      {spindle : {axis : [ 36, 28, 280, 28 ], thin : 5, thick : 11}, gate : [ 290, 164, 290, 98 ]},
-  [GILL_CODE] : {
-    spindle : {axis : [ 40, 142, 240, 142 ], thin : 5, thick : 11},
-    gate : [ 290, 164, 290, 106 ]
-  },
-  [GUT_MUSCLE_CODE] : {
-    spindle : {axis : [ 40, 40, 276, 40 ], thin : 13, thick : 20, rings : true},
-    gate : [ 290, 160, 290, 100 ]
-  }
+// The muscle in a picture of its own, apart from what it moves: its nodes (the spindle's length),
+// the force of each (its thickness), the reserve that works only on a strong command (behind the
+// partition), its fibres (the pie at its anchor) and, below, its gate: how little command opens it.
+const MUSCLE_PICTURE = Object.freeze({
+  width : 300,
+  height : 136,
+  spindle : {axis : [ 64, 52, 240, 52 ], thin : 8, thick : 24},
+  gate : [ 64, 112, 240, 112 ]
 });
-// The tail's own flank is the upper one on the left, the lower one on the right.
-const mirrored = ([ ax, ay, bx, by ], side, code) =>
-    code === MOTOR_KIND.forward && side > 0
-        ? [ ax, 2 * FRAME.middle - ay, bx, 2 * FRAME.middle - by ]
-        : [ ax, ay, bx, by ];
-const muscleMarks = (state, organ, code) =>
-    MUSCLE_PLACE[code] ? placedMuscle(state, organ, MUSCLE_PLACE[code], code) : '';
-function placedMuscle(state, organ, place, code) {
-  const center = organ.centers[0];
-  const [fx, fy, tx, ty] = place.gate;
-  return muscleSpindle(organ, nodeLimit(organ, state.sites),
-                       {...place.spindle, axis : mirrored(place.spindle.axis, organ.side, code)}) +
+function musclePicture(state, organ, code, side) {
+  const P = MUSCLE_PICTURE, center = organ.centers[0], [ fx, fy, tx, ty ] = P.gate;
+  const spindle = {...P.spindle, rings : code === GUT_MUSCLE_CODE};
+  return '<svg class="aid-effector-graphic aid-muscle-picture" viewBox="0 0 ' + P.width + ' ' +
+         P.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
+         code + '" data-effector-side="' + side + '"' + gateField(organ) +
+         ' role="img" aria-label="' + escapeText(label('tissue')) + '">' +
+         muscleSpindle(organ, nodeLimit(organ, state.sites), spindle) +
          (center?.role === 'motor'
               ? '<path class="aid-gate-track" d="M' + fx + ' ' + fy + ' L' + tx + ' ' + ty + '"/>' +
                     gateHandle({x : fx, y : fy}, {x : tx, y : ty}, state, center,
                                t('studio.inspector.motorGate'))
-              : '');
+              : '') +
+         '</svg>';
 }
 // The gate is set like a sense's sensitivity, by the working cells it belongs to.
 const gateField = organ => organ.centers[0]?.role === 'motor'
@@ -140,8 +123,8 @@ function strokeChooser(state, organ) {
 }
 export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
   if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name))
-    return muscleTissuePatch(name, {x : fx * FRAME.width, y : fy * FRAME.height}, marks, most,
-                             organ);
+    return muscleTissuePatch(name, {x : fx * MUSCLE_PICTURE.width, y : fy * MUSCLE_PICTURE.height},
+                             marks, most, organ);
   const trait = TRAIT_HANDLES[code]?.[name];
   return trait ? {trait : trait.key, value : clamp(trait.at(fx * FRAME.width, fy * FRAME.height))}
                : null;
@@ -205,7 +188,8 @@ function tailGraphic(state, organ, centers, twin) {
          rays(side, centers, true) + rays(-side, twin, false) +
          '<path class="aid-muscle-wave" d="M' + points.join(' L') + '"/>' +
          handle('trait:q1', at, handleY,
-                label('undulation.' + style) + ' · ' + label('undulation.handle'));
+                label('undulation.' + style) + ' · ' + label('undulation.handle'),
+                label('undulation.' + style));
 }
 const undulationAt = (x, y) => {
   const along = TAIL.wave.at / TAIL.root, low = swing(0, along), high = swing(1, along);
@@ -279,7 +263,8 @@ function sideGraphic(state, organ, centers) {
          xy(wing(-1)) + ' L' + xy(arrow) + ' L' + xy(wing(1)) + '"/>' +
          handle('trait:q1:' + stroke, arrow.x, arrow.y,
                 label('angle.' + style, {degrees : formatNumber(Math.abs(turned), 0)}) + ' · ' +
-                    label('angle.handle'));
+                    label('angle.handle'),
+                label('angle.' + style, {degrees : formatNumber(Math.abs(turned), 0)}));
 }
 
 const MOUTH = Object.freeze({
@@ -373,8 +358,9 @@ function jawGraphic(state, organ, centers) {
          '<path class="aid-muscle-tooth sample" d="M' + (T.x - T.base) + ' ' + T.y + ' L' +
          fixed(T.x - T.base * sample.flat) + ' ' + fixed(top) + ' L' +
          fixed(T.x + T.base * sample.flat) + ' ' + fixed(top) + ' L' + (T.x + T.base) + ' ' + T.y +
-         'Z"/>' + handle('trait:q2', tip, hy - wide, label('jaw.handle')) +
-         handle('trait:q1', T.x, top, label('teeth.' + style) + ' · ' + label('teeth.handle'));
+         'Z"/>' + handle('trait:q2', tip, hy - wide, label('jaw.handle'), label('jaw.word')) +
+         handle('trait:q1', T.x, top, label('teeth.' + style) + ' · ' + label('teeth.handle'),
+                label('teeth.word', {form : label('teeth.' + style)}));
 }
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
@@ -440,11 +426,8 @@ export function spinePatch(fx, fy, aim) {
   return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
 }
 const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
-// The erector muscle stands beside the ring, its gate at the other side.
-const SPINE_MUSCLE = Object.freeze(
-    {spindle : {axis : [ 26, 132, 26, 22 ], thin : 5, thick : 11}, gate : [ 286, 160, 286, 30 ]});
-// The spines in one picture: how far round the fish they guard at rest (solid) and raised
-// (dashed), where its nodes sit, the spread handle, the muscle that raises them and its gate.
+// The spines: how far round the fish they guard at rest (solid) and raised (dashed), where its
+// nodes sit and the spread handle; the muscle that raises them follows in its own picture.
 // Without a design run's spines the side view of the skin stands in.
 export function spineField(state, organ) {
   const {spinesRest : rest, spinesRaised : raised, spineAims : aims} = state.anatomy ?? {};
@@ -484,7 +467,7 @@ export function spineField(state, organ) {
   return block + '<svg class="aid-spine-field" viewBox="0 0 ' + R.width + ' ' + R.height +
          '" data-spine-pad="' + escapeText(first.id) + '" data-spine-aim="' + aim +
          '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
-         MOTOR_KIND.defense + '" data-effector-side="' + sideOf(organ) + '"' + gateField(organ) +
+         MOTOR_KIND.defense + '" data-effector-side="' + sideOf(organ) + '"' +
          ' role="img" aria-label="' + escapeText(label('spines.title')) + '">' +
          '<circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.outer +
          '"/><circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.inner +
@@ -494,7 +477,7 @@ export function spineField(state, organ) {
          '<circle class="aid-graphic-handle" data-graphic-handle="spread" cx="' + fixed(edge.x) +
          '" cy="' + fixed(edge.y) + '" r="' + HANDLE.radius + '"><title>' +
          escapeText(label('spines.spreadHandle')) + '</title></circle>' +
-         placedMuscle(state, organ, SPINE_MUSCLE, MOTOR_KIND.defense) + '</svg></div>';
+         '</svg>' + musclePicture(state, organ, MOTOR_KIND.defense, sideOf(organ)) + '</div>';
 }
 const GUT = Object.freeze({
   from : 24,
@@ -571,7 +554,7 @@ export function gutGraphic(state, organ, selected, held = null) {
           (chosen ? gutSenseMarks(state, chosen, wall(chosen === food ? -1 : 1),
                                   chosen === food ? -1 : 1, held)
                   : '') +
-          handle('trait:q1', end, across(G.steps), label('gut.handle')),
+          handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.length')),
       gutUseChart(state, organ),
       chosen
           ? ' data-sense-field="' + escapeText(chosen.id) + '" data-sense-redraw="refreshEffectors"'
@@ -746,9 +729,9 @@ export function gillGraphic(state, organ) {
       '</title>' + water + '<path class="aid-gill-arch" d="' + arch +
       '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks +
       handle('trait:q1', gillArch(1 - density).x - G.raker, gillArch(1 - density).y,
-             label('gills.handle')) +
-      muscleMarks(state, organ, GILL_CODE);
-  return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic, '', gateField(organ));
+             label('gills.handle'), label('gills.word'));
+  return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic,
+                       musclePicture(state, organ, GILL_CODE, 1));
 }
 // The gut wall from the side with one ring of muscle per node, and the same meal twice: at rest
 // it stays until it is used up, hurried along more of it passes and leaves half used.
@@ -758,6 +741,8 @@ const GUT_MUSCLE = Object.freeze({
   width : 22,
   lanes : [ 96, 136 ],
   lane : [ 112, 276 ],
+  // Each lane is named at its start: the same meal at rest and hurried along.
+  word : 8,
   lift : 4,
   meal : 3,
   pellet : 6,
@@ -777,9 +762,10 @@ export function gutMuscleGraphic(state, organ) {
                            fixed(Math.max(G.least, G.pellet * Math.sqrt(1 - used * share))) + '"/>';
                   })
             .join('');
-    return '<g><title>' + escapeText(label('gutmuscle.' + key)) + '</title><path ' +
-           'class="aid-gut-lane" d="M' + G.lane[0] + ' ' + y + ' H' + G.lane[1] + '"/>' + food +
-           '</g>';
+    return '<g><text class="aid-handle-word" x="' + (G.lane[0] - G.word) + '" y="' + y +
+           '" dy=".35em" text-anchor="end">' + escapeText(label('gutmuscle.' + key)) +
+           '</text><path class="aid-gut-lane" d="M' + G.lane[0] + ' ' + y + ' H' + G.lane[1] +
+           '"/>' + food + '</g>';
   };
   const graphic =
       '<title>' +
@@ -787,9 +773,9 @@ export function gutMuscleGraphic(state, organ) {
                        {speed : formatNumber(gutPassage(1)), used : percent(gutUse(1))})) +
       '</title><path class="aid-gut-tube" d="M' + G.tube[0] + ' ' + G.y + ' H' + G.tube[1] +
       '" stroke-width="' + G.width + '"/>' + lane(G.lanes[0], 0, 'rest') +
-      lane(G.lanes[1], 1, 'hurried') + muscleMarks(state, organ, GUT_MUSCLE_CODE);
-  return effectorBlock(organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), graphic, '',
-                       gateField(organ));
+      lane(G.lanes[1], 1, 'hurried');
+  return effectorBlock(organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), graphic,
+                       musclePicture(state, organ, GUT_MUSCLE_CODE, 1));
 }
 export function effectorGraphic(state, organ) {
   const code = organFunction(organ, state.sites);
@@ -806,9 +792,9 @@ export function effectorGraphic(state, organ) {
     return '';
   const pelvic = isPelvicMuscle(organ),
         hint = textArea('studio').muscle?.hint?.[pelvic ? 'pelvic' : code];
-  return effectorBlock(
-      organ, code, sideOf(organ), label('title.' + (pelvic ? 'pelvic' : code)),
-      (hint ? '<title>' + escapeText(hint) + '</title>' : '') +
-          draw(state, organ, organ.centers, twin) + muscleMarks(state, organ, code),
-      code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '', gateField(organ));
+  return effectorBlock(organ, code, sideOf(organ), label('title.' + (pelvic ? 'pelvic' : code)),
+                       (hint ? '<title>' + escapeText(hint) + '</title>' : '') +
+                           draw(state, organ, organ.centers, twin),
+                       (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') +
+                           musclePicture(state, organ, code, sideOf(organ)));
 }

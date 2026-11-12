@@ -24,6 +24,7 @@ export const SENSE_MARK = Object.freeze({
   // wide, so it stays inside the picture at either edge.
   word : 17,
   middle : 150,
+  beside : 3,
   // The adaptation arc leaves a gap, so its two ends never meet.
   sweep : 1.7 * Math.PI,
   segments : 28,
@@ -36,12 +37,20 @@ const parsePoint = text => {
   return {x, y};
 };
 // Every handle names what it sets with a word below it, so the picture reads without its tooltip.
+// `place` puts the word below the handle (default, growing towards the picture's middle), above
+// it, centred under it or to its right, away from what the handle sits on.
+export const handleWord = (at, word, place = 'below') => {
+  const M = SENSE_MARK, H = M.handle;
+  const [x, y, anchor] = place === 'right'   ? [ at.x + H + M.beside, at.y + M.beside, 'start' ]
+                         : place === 'above' ? [ at.x, at.y - H - M.beside, 'middle' ]
+                         : place === 'under' ? [ at.x, at.y + M.word, 'middle' ]
+                         : at.x < M.middle   ? [ at.x - H, at.y + M.word, 'start' ]
+                                             : [ at.x + H, at.y + M.word, 'end' ];
+  return '<text class="aid-handle-word" x="' + fixed(x) + '" y="' + fixed(y) + '" text-anchor="' +
+         anchor + '">' + escapeText(word) + '</text>';
+};
 const handleMark = (name, at, title, geometry, word) =>
-    '<text class="aid-handle-word" x="' +
-    fixed(at.x < SENSE_MARK.middle ? at.x - SENSE_MARK.handle : at.x + SENSE_MARK.handle) +
-    '" y="' + fixed(at.y + SENSE_MARK.word) + '" text-anchor="' +
-    (at.x < SENSE_MARK.middle ? 'start' : 'end') + '">' + escapeText(word) +
-    '</text><circle class="aid-graphic-handle" ' +
+    handleWord(at, word) + '<circle class="aid-graphic-handle" ' +
     'data-sense-mark="' + name + '" ' + geometry + ' cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
     '" r="' + SENSE_MARK.handle + '"><title>' + escapeText(title) + '</title></circle>';
 
