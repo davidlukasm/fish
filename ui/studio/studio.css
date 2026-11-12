@@ -1139,3 +1139,10 @@
 .aid-wire-sheath{fill:none;stroke-opacity:.12;stroke-linecap:round;pointer-events:none}
 .aid-band-glyph .field{fill:none;stroke:currentColor;stroke-width:1.2;opacity:.6}
 .aid-band-glyph .band{fill:currentColor;opacity:.8}
+.aid-node-map{display:block;width:100%;height:auto;margin:6px 0;border-radius:12px;background:var(--aid-graphic)}
+.aid-node-map-links path{stroke:var(--aid-brain);stroke-width:1;opacity:.25;pointer-events:none}
+.aid-node-map-node{cursor:pointer;color:var(--aid-brain)}
+.aid-node-map-node circle{fill:#24474f;stroke:var(--aid-brain);stroke-width:1.4}
+.aid-node-map-node:hover circle{stroke:var(--aid-handle-hover)}
+.aid-node-map-node.selected circle{fill:var(--aid-chosen);stroke:var(--aid-chosen-edge);stroke-width:2.4}
+.aid-node-map-node.selected{color:#123432}

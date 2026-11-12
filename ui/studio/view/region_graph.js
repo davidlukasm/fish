@@ -139,3 +139,37 @@ export function regionGraph(state, organ) {
          '"><svg viewBox="0 0 24 24"><circle cx="4" cy="5" r="2"/><circle cx="20" cy="19" r="2"/><path d="M6 5C18 5 6 19 18 19"/></svg></button></div>' +
          html + '</svg>';
 }
+// The region's cells in the places the region's graph gives them, closer together and with their
+// links only hinted, to choose a cell by where it sits instead of by its name (in the tooltip).
+const NODE_MAP = Object.freeze({row : 36, top : 20});
+export function regionNodeMap(state, organ, chosenId) {
+  const own = new Set(organ.centers.map(c => c.id));
+  const links = routedLinks(state.document, state.sites, true)
+                    .filter(l => !l.cut && own.has(l.from) && own.has(l.to));
+  const L = layout(organ, links), M = NODE_MAP;
+  const at = id => {
+    const p = L.points.get(id);
+    return {x : p.x, y : M.top + (p.y - GRAPH.top) / GRAPH.row * M.row};
+  };
+  const rows = Math.round((L.height - 2 * GRAPH.top) / GRAPH.row);
+  const height = 2 * M.top + rows * M.row;
+  const lines = links
+                    .map(l => {
+                      const a = at(l.from), b = at(l.to);
+                      return '<path d="M' + fixed(a.x) + ' ' + fixed(a.y) + ' L' + fixed(b.x) +
+                             ' ' + fixed(b.y) + '"/>';
+                    })
+                    .join('');
+  const nodes =
+      organ.centers
+          .map(c => {
+            const p = at(c.id);
+            return '<g class="aid-node-map-node' + (c.id === chosenId ? ' selected' : '') +
+                   '" data-select-center="' + escapeText(c.id) + '" transform="translate(' +
+                   fixed(p.x) + ' ' + fixed(p.y) + ')"><title>' + escapeText(centerTitle(c)) +
+                   '</title><circle r="' + GRAPH.node + '"/>' + centerMarker(c, 7) + '</g>';
+          })
+          .join('');
+  return '<svg class="aid-node-map" viewBox="0 0 ' + GRAPH.width + ' ' + height +
+         '" role="group"><g class="aid-node-map-links">' + lines + '</g>' + nodes + '</svg>';
+}

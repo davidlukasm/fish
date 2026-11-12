@@ -1,3 +1,4 @@
+import {regionNodeMap} from './region_graph.js';
 import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp, PERCENT} from '../../units.js';
@@ -20,7 +21,7 @@ import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
 import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
-import {isModulator, isPacemaker, modeLean, nerveClass} from '../model/organs.js';
+import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, previewControls, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
@@ -311,6 +312,8 @@ function nodeChoice(state, chosen) {
       organ && organ.type !== 'brain' ? organ.centers.filter(c => c.role === 'nerve') : [];
   if (nodes.length < 2)
     return '';
+  if (isRegion(organ) && !nodes.some(c => c.band))
+    return regionNodeMap(state, organ, chosen.id);
   return '<div class="aid-learn-nodes" role="group" aria-label="' + label('learnRule.nodes') +
          '">' +
          nodes

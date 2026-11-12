@@ -4,6 +4,7 @@ import {ATELIER_LIMITS, BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../s
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {isRegion} from '../model/organs.js';
+import {regionNodeMap} from './region_graph.js';
 import {
   boundEffects,
   effectsFor,
@@ -749,7 +750,9 @@ function hormoneDetails(state) {
     seen.add(key);
     return true;
   });
-  const choose = choices.length > 1
+  const choose = choices.length > 1 && isRegion(organ) && !choices.some(c => c.band)
+                     ? regionNodeMap(state, organ, focus.id)
+                 : choices.length > 1
                      ? '<div class="aid-center-tabs">' +
                            choices
                                .map(c => '<button data-select-center="' + escapeText(c.id) +
