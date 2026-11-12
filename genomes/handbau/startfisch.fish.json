@@ -2045,7 +2045,7 @@
           "functionCode": "site",
           "surface": "any",
           "site": 458,
-          "copies": 12,
+          "copies": 16,
           "threshold": 0,
           "tau": 0.3,
           "field": 0.5,
@@ -2168,7 +2168,253 @@
           "functionCode": "site",
           "surface": "any",
           "site": 464,
-          "copies": 12,
+          "copies": 16,
+          "threshold": 0,
+          "tau": 0.3,
+          "field": 0.5,
+          "q1": 0,
+          "q2": 0,
+          "qwidth": 0.8,
+          "sign": 1,
+          "mode": 0,
+          "pace": -1,
+          "modulator": -1,
+          "crossing": 0,
+          "range": 1,
+          "electrical_limit": 0.1,
+          "teaching_limit": 1,
+          "learning_tau": 0.8571428571428571,
+          "distribution": {
+            "spread_physiology": 0,
+            "spread_receptors": 0,
+            "spread_development": 0,
+            "spread_contacts": 0
+          },
+          "growth": {
+            "active": 1,
+            "baseline": 0.1,
+            "sensitivity": 0,
+            "half": 0.05,
+            "substance": 0,
+            "width": 0,
+            "steepness": 0,
+            "spread_receptors": 0
+          },
+          "receptors": [
+            {
+              "active": 1,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            }
+          ],
+          "polarity": 0
+        },
+        {
+          "id": "flossenzelle-230",
+          "key": "muscle",
+          "role": "motor",
+          "functionCode": "site",
+          "surface": "any",
+          "site": 470,
+          "copies": 16,
+          "threshold": 0,
+          "tau": 0.3,
+          "field": 0.5,
+          "q1": 0,
+          "q2": 0,
+          "qwidth": 0.8,
+          "sign": 1,
+          "mode": 0,
+          "pace": -1,
+          "modulator": -1,
+          "crossing": 0,
+          "range": 1,
+          "electrical_limit": 0.1,
+          "teaching_limit": 1,
+          "learning_tau": 0.8571428571428571,
+          "distribution": {
+            "spread_physiology": 0,
+            "spread_receptors": 0,
+            "spread_development": 0,
+            "spread_contacts": 0
+          },
+          "growth": {
+            "active": 1,
+            "baseline": 0.1,
+            "sensitivity": 0,
+            "half": 0.05,
+            "substance": 0,
+            "width": 0,
+            "steepness": 0,
+            "spread_receptors": 0
+          },
+          "receptors": [
+            {
+              "active": 1,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            }
+          ],
+          "polarity": 0
+        },
+        {
+          "id": "flossenzelle-236",
+          "key": "muscle",
+          "role": "motor",
+          "functionCode": "site",
+          "surface": "any",
+          "site": 476,
+          "copies": 16,
           "threshold": 0,
           "tau": 0.3,
           "field": 0.5,
@@ -2787,7 +3033,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56k-h",
+          "id": "center-mwcwgjo2-1n",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -2910,7 +3156,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56k-i",
+          "id": "center-mwcwgjo3-1o",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -3033,7 +3279,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56o-j",
+          "id": "center-mwcwgjo3-1p",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -3156,7 +3402,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56o-k",
+          "id": "center-mwcwgjo4-1q",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -4223,7 +4469,7 @@
           "functionCode": "site",
           "surface": "any",
           "site": 459,
-          "copies": 12,
+          "copies": 16,
           "threshold": 0,
           "tau": 0.3,
           "field": 0.5,
@@ -4346,7 +4592,253 @@
           "functionCode": "site",
           "surface": "any",
           "site": 465,
-          "copies": 12,
+          "copies": 16,
+          "threshold": 0,
+          "tau": 0.3,
+          "field": 0.5,
+          "q1": 0,
+          "q2": 0,
+          "qwidth": 0.8,
+          "sign": 1,
+          "mode": 0,
+          "pace": -1,
+          "modulator": -1,
+          "crossing": 0,
+          "range": 1,
+          "electrical_limit": 0.1,
+          "teaching_limit": 1,
+          "learning_tau": 0.8571428571428571,
+          "distribution": {
+            "spread_physiology": 0,
+            "spread_receptors": 0,
+            "spread_development": 0,
+            "spread_contacts": 0
+          },
+          "growth": {
+            "active": 1,
+            "baseline": 0.1,
+            "sensitivity": 0,
+            "half": 0.05,
+            "substance": 0,
+            "width": 0,
+            "steepness": 0,
+            "spread_receptors": 0
+          },
+          "receptors": [
+            {
+              "active": 1,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            }
+          ],
+          "polarity": 0
+        },
+        {
+          "id": "flossenzelle-231",
+          "key": "muscle",
+          "role": "motor",
+          "functionCode": "site",
+          "surface": "any",
+          "site": 471,
+          "copies": 16,
+          "threshold": 0,
+          "tau": 0.3,
+          "field": 0.5,
+          "q1": 0,
+          "q2": 0,
+          "qwidth": 0.8,
+          "sign": 1,
+          "mode": 0,
+          "pace": -1,
+          "modulator": -1,
+          "crossing": 0,
+          "range": 1,
+          "electrical_limit": 0.1,
+          "teaching_limit": 1,
+          "learning_tau": 0.8571428571428571,
+          "distribution": {
+            "spread_physiology": 0,
+            "spread_receptors": 0,
+            "spread_development": 0,
+            "spread_contacts": 0
+          },
+          "growth": {
+            "active": 1,
+            "baseline": 0.1,
+            "sensitivity": 0,
+            "half": 0.05,
+            "substance": 0,
+            "width": 0,
+            "steepness": 0,
+            "spread_receptors": 0
+          },
+          "receptors": [
+            {
+              "active": 1,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 1,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            },
+            {
+              "active": 0,
+              "baseline": 0,
+              "sensitivity": 0,
+              "half": 0.05,
+              "substance": 0,
+              "width": 0,
+              "steepness": 0,
+              "spread_receptors": 0
+            }
+          ],
+          "polarity": 0
+        },
+        {
+          "id": "flossenzelle-237",
+          "key": "muscle",
+          "role": "motor",
+          "functionCode": "site",
+          "surface": "any",
+          "site": 477,
+          "copies": 16,
           "threshold": 0,
           "tau": 0.3,
           "field": 0.5,
@@ -4965,7 +5457,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56o-l",
+          "id": "center-mwcwgjo4-1r",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -5088,7 +5580,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56p-m",
+          "id": "center-mwcwgjo4-1s",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -5211,7 +5703,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56p-n",
+          "id": "center-mwcwgjo4-1t",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -5334,7 +5826,7 @@
           "polarity": 0
         },
         {
-          "id": "center-mwctd56p-o",
+          "id": "center-mwcwgjo4-1u",
           "key": "muscle",
           "role": "motor",
           "functionCode": "site",
@@ -16000,6 +16492,62 @@
       "pairing": null
     },
     {
+      "id": "wire-mw89jw8s-1",
+      "from": "sehen-1",
+      "to": "flossenzelle-218",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw8v-2",
+      "from": "sehen-1",
+      "to": "flossenzelle-224",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw8y-3",
+      "from": "riechen-1",
+      "to": "flossenzelle-230",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw8z-4",
+      "from": "ausweichen--1",
+      "to": "flossenzelle-236",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw91-5",
+      "from": "sehen--1",
+      "to": "flossenzelle-219",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw93-6",
+      "from": "sehen--1",
+      "to": "flossenzelle-225",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw95-7",
+      "from": "riechen--1",
+      "to": "flossenzelle-231",
+      "spread": 0,
+      "pairing": null
+    },
+    {
+      "id": "wire-mw89jw97-8",
+      "from": "ausweichen-1",
+      "to": "flossenzelle-237",
+      "spread": 0,
+      "pairing": null
+    },
+    {
       "id": "wire-mw8a3oqt-4",
       "from": "darm-food",
       "to": "nahrungssignal",
@@ -16042,62 +16590,6 @@
       "spread": 0,
       "pairing": "same",
       "fromPort": "stroke"
-    },
-    {
-      "id": "wire-mwcspd4p-1b",
-      "from": "sehen-1",
-      "to": "organ-mwcnt97g-1",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd4t-1d",
-      "from": "riechen-1",
-      "to": "organ-mwcnt97g-1",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd4x-1e",
-      "from": "ausweichen--1",
-      "to": "organ-mwcnt97g-1",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd50-1f",
-      "from": "sehen--1",
-      "to": "organ-mwcnt988-8",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd54-1h",
-      "from": "riechen--1",
-      "to": "organ-mwcnt988-8",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd57-1i",
-      "from": "ausweichen-1",
-      "to": "organ-mwcnt988-8",
-      "spread": 0,
-      "pairing": "same",
-      "toPort": "fin"
-    },
-    {
-      "id": "wire-mwcspd5b-1j",
-      "from": "organ-mwcnt97g-1",
-      "to": "flosse--1",
-      "spread": 0,
-      "pairing": "same",
-      "fromPort": "row"
     }
   ],
   "assemblies": [],
