@@ -71,6 +71,8 @@ export function scentMapWidth(center, fx, fy) {
   return tuningWidth(Math.acos(clamp(cosine, -1)) * 180 / Math.PI);
 }
 const POLE = 1e-9;
+// A scent weighing less than a hundredth adds nothing one could notice.
+const SCENT_LISTED = .01;
 function haloPath(q1, q2, reach) {
   const M = SCENT_MAP, rim = 'M' + (M.centre - M.radius) + ' ' + M.centre + ' a' + M.radius + ' ' +
                              M.radius + ' 0 1 0 ' + 2 * M.radius + ' 0 a' + M.radius + ' ' +
@@ -240,6 +242,16 @@ export function scentMap(organ, center, state = null, held = null) {
                      })
                      .join('');
   const title = t('studio.inspector.scents');
+  // What the cells weigh in, in words under the map (cppn_brain.cc: the scents summed by weight).
+  const weighed = affinity.map((a, k) => [a, k])
+                      .filter(([ a ]) => a >= SCENT_LISTED)
+                      .sort((x, y) => y[0] - x[0])
+                      .map(([ a, k ]) => (scentNames?.[k] ?? '') + ' ' + percent(a))
+                      .join(' · ');
+  const reads = '<p class="aid-scent-reads">' +
+                escapeText(t('studio.inspector.' + (barbels ? 'tastes' : 'smells'),
+                             {list : weighed || t('studio.inspector.smellsNothing')})) +
+                '</p>';
   return '<div data-scent-block="' + escapeText(center.id) + '">' + profileChips(organ, chosen) +
          '<svg class="aid-scent-map" ' +
          'data-compass="' + escapeText(center.id) + '" data-sense-field="' + escapeText(center.id) +
@@ -253,5 +265,5 @@ export function scentMap(organ, center, state = null, held = null) {
          '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(wide.x) +
          '" cy="' + fixed(wide.y) + '" r="7"><title>' + t('studio.inspector.receptorWidth') +
          '</title></circle>' +
-         '</svg>' + below + '</div>';
+         '</svg>' + reads + below + '</div>';
 }

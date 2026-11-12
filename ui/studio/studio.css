@@ -178,6 +178,7 @@
 .aid-wheel-name>span{overflow-wrap:break-word;hyphens:auto}
 .aid-wheel-name small{margin-left:auto;white-space:nowrap}
 .aid-picture-caption{font-size:11px;line-height:1.4;color:var(--aid-name-text);margin:8px 0}
+.aid-scent-reads{margin:2px 0 8px;font-size:11px;color:var(--aid-name-text);text-align:center}
 .aid-wheel-names-title{margin:6px 0 4px;font-size:11px;color:var(--aid-soft-text)}
 .aid-wheel-ring{fill:none;stroke:#ffffff22}
 .aid-wheel-halo{fill:#d7c29418;stroke:#d7c29455;stroke-dasharray:3 3}

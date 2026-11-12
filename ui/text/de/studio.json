@@ -333,7 +333,10 @@
       "fillTime": "bei starkem Befehl voll nach {n} Schritten",
       "cells": "{n} {n:Zelle|Zellen} je Knoten",
       "cellsHandle": "Ziehen: mehr Zellen je Knoten heben stärker und füllen schneller"
-    }
+    },
+    "smells": "riecht {list}",
+    "tastes": "schmeckt {list}",
+    "smellsNothing": "nichts"
   },
   "effects": [
     "erregt oder hemmt die Zelle",
