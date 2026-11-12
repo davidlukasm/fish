@@ -924,7 +924,6 @@
         "high": "lang",
         "plant": "Pflanzen",
         "meat": "Fleisch",
-        "size": "Fassungsvermögen",
         "axis": "Darmlänge"
       },
       "teeth": {
@@ -944,12 +943,6 @@
         "aperture": "Weite",
         "lever": "Bisskraft",
         "axis": "Kieferlänge"
-      },
-      "suction": {
-        "title": "Saugen",
-        "low": "schwach",
-        "high": "stark",
-        "gulp": "Schluck je Zug"
       }
     },
     "angle": {

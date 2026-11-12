@@ -869,7 +869,6 @@ std::string gonad_report() {
 }
 
 constexpr int DIET_SAMPLES = 41;
-constexpr double DIET_SUCTION = 4;
 // Where the lateral line samples the water, in body radii: forward, then to the right.
 std::string lateral_ring_report() {
   std::ostringstream out;
@@ -902,7 +901,6 @@ std::string diet_report() {
   out << "{\"gut\":{";
   row("plant", [](double l) { return gut_utilisation(l, food_kind::plant); }, true);
   row("meat", [](double l) { return gut_utilisation(l, food_kind::worm); });
-  row("sediment", [](double l) { return gut_utilisation(l, food_kind::benthic); });
   row("size", [](double l) { return gut_size(l); });
   out << "},\"teeth\":{";
   row("grind", [](double b) { return tooth_grip(b, BiteKind::grinding); }, true);
@@ -910,14 +908,6 @@ std::string diet_report() {
   out << "},\"jaw\":{";
   row("aperture", [](double j) { return mouth_share(j) / mouth_share(TRAIT_MIDDLE); }, true);
   row("lever", [](double j) { return jaw_lever(j); });
-  out << "},\"suction\":{\"most\":" << DIET_SUCTION << ',';
-  row(
-      "gulp",
-      [](double s) {
-        return suction_share(s * DIET_SUCTION, default_max_bite_force) /
-               suction_share(1, default_max_bite_force);
-      },
-      true);
   out << "}}";
   return out.str();
 }
