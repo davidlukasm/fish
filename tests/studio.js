@@ -1786,6 +1786,26 @@ async function checkHormoneSystems(model, capabilities) {
   assert.ok(
       Math.abs(spectrum.spectrumPatch(tuned, 'centre', spectrum.huePoint(tuning.HUE_CIRCLE / 2, 1))
                    .q1) < 1e-9);
+  // The pictures that replaced sliders set their values from where the handle is let go.
+  const visionView = await import('../ui/studio/view/vision.js');
+  const centre = spectrum.SPECTRUM_CENTRE;
+  assert.equal(visionView.pupilShare({x : 0, y : 0}), 0, 'A wide pupil answers the faintest light');
+  assert.equal(visionView.pupilShare({x : centre, y : centre}), 1,
+               'A narrow pupil answers only bright light');
+  const developmentView = await import('../ui/studio/view/development.js');
+  assert.deepEqual(developmentView.previewPatch('situation', {x : 0, y : 0}, {}),
+                   {maturity : 0, input : 1}, 'The young corner holds the strongest input');
+  assert.deepEqual(developmentView.previewPatch('situation', {x : 1e3, y : 1e3}, {}),
+                   {maturity : 1, input : developmentView.PREVIEW_INPUT_LOW});
+  const probesView = await import('../ui/studio/view/probes.js');
+  assert.equal(probesView.gutProbePatch('strength', {x : 0, y : 0}).strength, 1,
+               'Food up to the top fills the gut');
+  assert.equal(probesView.gutProbePatch('strength', {x : 0, y : 1e3}).strength, 0);
+  const planView = await import('../ui/studio/view/contact_plan.js');
+  assert.equal(planView.contactCapacityPatch('teaching_limit', {x : 1e3, y : 0}, {}).teaching_limit,
+               1, 'The wedge drawn out to its end allows the strongest contact');
+  assert.equal(planView.contactCapacityPatch('electrical_limit', {x : 0, y : 0}, {}).electrical_limit,
+               0);
   const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
   const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
   for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
