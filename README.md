@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Brisa (Futterwolken; Motorik mit Schwimm- und Maultakt) und Pflanzenfresser Liora 44 sind die generationell geprüften Startlinien, beide auf Hirnregionen gebaut. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
+Startlinien: Brisa für Futterwolken und Liora für Pflanzen. Miro bleibt ein Atelier-Entwurf. Baupläne: `genomes/handbau/*.fish.json`; `make starter` erzeugt die Genome. Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 
@@ -35,5 +35,5 @@ Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührun
 
 `./build.sh`: Programme bauen. `./test.sh`: Prüfungen mit 60-s-Zeitgrenze, `--only invariants` prüft eine. Nur die dafür benötigten Programme werden gebaut; `--only texts` braucht keinen C++-Build. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18, unter NixOS holt es nix-shell; fehlt es, überspringt `./test.sh` die Formatprüfung. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
 
-Zuchtstation (Startseite): ein Fisch lebt ohne Hilfe in mehreren Welten; bewiesen, wenn Beckengenerationen Nachwuchs haben. Werkzeug `bin/zuchtbecken` (JSONL).
-Verhaltenslabor (Startseite): der Fisch wird vor Futter aus zwölf Richtungen oder vor offene Muscheln gesetzt; jede Annäherung erscheint als Spur. Werkzeug `bin/verhaltenslabor` (JSONL, `path=N`).
+Zuchtstation: erbliche Varianten in zwei Aquarien beobachten, Nachkommen mit eigener Nahrung bewerten, Eltern auswählen und weiterzüchten.
+Labor: Live-Aquarium mit Pfaden, Lebensläufen und Kontrollkopie; Motorik, Autopilot, Sinne, Energie und Laichabgabe steuern. Pause und Einzelschritte jederzeit. CLI-Diagnosen: `bin/zuchtbecken`, `bin/verhaltenslabor` (JSONL).

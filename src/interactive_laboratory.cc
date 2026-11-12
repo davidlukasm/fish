@@ -109,6 +109,10 @@ void InteractiveSession::prepare_laboratory() {
       if (laboratory_preparing) {
         reference = std::move(result);
         reference->workers = world.workers;
+        for (auto &p : reference->fish)
+          for (int sense : {field::Light, field::Odor, field::Touch, field::Flow})
+            p.body.enable_sense(sense);
+        std::cout << "{\"event\":\"labor-reset\",\"world\":\"control\"}\n";
         laboratory_baseline = std::make_unique<LaboratoryRecording>("control");
         laboratory_baseline->begin(*reference, int(o.start_genomes.size()));
       }
@@ -175,7 +179,7 @@ bool InteractiveSession::emit_laboratory() {
   }
   std::cout << ']';
   const auto now = Clock::now();
-  if (now - laboratory_scene_sent >= std::chrono::seconds(1)) {
+  if (paused || now - laboratory_scene_sent >= std::chrono::seconds(1)) {
     std::cout << ",\"scene\":";
     write_laboratory_scene(std::cout, world);
     laboratory_scene_sent = now;

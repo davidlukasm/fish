@@ -152,6 +152,12 @@ export class LiveStation {
         next.frame = next.scene ? hydrateRender(next.scene, {renderAssets : next.scene.assets})
                                 : previous?.frame;
         for (const event of next.events ?? []) {
+          if (event.event === 'labor-reset') {
+            for (const key of paths.keys())
+              if (key.startsWith(event.world + ':'))
+                paths.delete(key);
+            continue;
+          }
           if (event.kind !== 'point')
             continue;
           const key = event.world + ':' + event.id, points = paths.get(key) ?? [];
@@ -241,12 +247,21 @@ export class LiveStation {
     const world = this.current();
     if (this.selected == null || !world)
       return;
+    const target = {fish : this.selected, world : this.world}, job = this.job?.id;
+    if (axis === 'energy') {
+      const fish = world.state.fish.find(p => p.id === target.fish);
+      if (value && !fish)
+        return;
+      value = value ? Math.max(0, Math.min(1, fish.energy / fish.capacity)) : -2;
+    }
     if (axis !== 'leaves' && !world.state.comparison && !world.state.preparing) {
       this.resumeWhenReady = !world.state.paused;
-      await this.command('compare');
+      await this.command('compare', target);
       world.state.preparing = true;
     }
-    await this.command('control', {axis, value});
+    if (job !== this.job?.id)
+      return;
+    await this.command('control', {...target, axis, value});
   }
   async select(id) {
     this.selected = id;

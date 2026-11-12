@@ -107,11 +107,16 @@ class NativeWorld:
                                                      "intake": sum(p["intake"] for p in event["fish"]),
                                                      "controlReserve": sum(p["energy"] for p in event.get("control", []))})
                         self.ready.set()
-                    elif kind in ("life", "labor-line"):
+                    elif kind in ("life", "labor-line", "labor-reset"):
                         record.write(json.dumps(event, separators=(",", ":")) + "\n")
                         channel = event.get("world", "trial")
                         with self.lock:
-                            if kind == "labor-line":
+                            if kind == "labor-reset":
+                                self.archives[channel] = LifeArchive(self.folder / channel)
+                                self.lines[channel] = {}
+                                self.sequence += 1
+                                self.events.append({**event, "seq": self.sequence})
+                            elif kind == "labor-line":
                                 self.lines[channel][str(event["id"])] = event["line"]
                             else:
                                 self.archives[channel].read(event)
@@ -321,10 +326,6 @@ class LiveStation:
             command = f"delay {value}"
         elif action in ("compare", "end-compare") and not self.breeding:
             command = "lab-" + action
-            if action == "compare":
-                with world.lock:
-                    world.archives["control"] = LifeArchive(world.folder / "control")
-                    world.lines["control"] = {}
         elif action == "clear" and not self.breeding:
             command = f"lab-clear {integer(data.get('fish'), 1, 2**53)}"
         elif action == "control" and not self.breeding:

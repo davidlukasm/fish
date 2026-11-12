@@ -3509,6 +3509,24 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     await away;
     assert.equal(station.trace, null, 'Deselecting invalidates a pending life request');
     assert.equal(station.selected, null, 'The tank allows observation without selection');
+    station.selected = 7;
+    station.worlds =
+        [ {state : {comparison : true, fish : [ {id : 7, energy : 20, capacity : 100} ]}} ];
+    const controls = [];
+    station.command = async (action, values) => controls.push({action, ...values});
+    await station.control('energy', 1);
+    await station.control('energy', 0);
+    assert.deepEqual(
+        controls.map(c => c.value), [ .2, -2 ],
+        'Energy holding preserves the current reserve; switching it off releases the clamp');
+    station.worlds[0].state.comparison = false;
+    station.command = async (action, values) => {
+      controls.push({action, ...values});
+      if (action === 'compare')
+        station.selected = 8;
+    };
+    await station.control('forward', 1);
+    assert.equal(controls.at(-1).fish, 7, 'An async baseline copy cannot redirect an intervention');
     const life = lifeLines([ {
                              id : 1,
                              world : 'trial',
