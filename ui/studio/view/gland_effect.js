@@ -54,10 +54,10 @@ const svg = (frame, organ, label, body) =>
     MOTOR_KIND.gland + '" data-effector-side="' + sideOf(organ) + '" role="img" aria-label="' +
     escapeText(label) + '">' + body + '</svg>';
 
-// How much of each substance the gland pours, as shares of its whole output (hormone_affinity).
-function shares(wheel, center) {
-  const raw = Array.from({length : wheel.hormones},
-                         (_, k) => wheelAffinity(wheel, center.q1, center.q2, center.qwidth, k));
+// How much of each substance a gland at this place of the wheel pours, as shares of its whole
+// output (hormone_affinity, normalised in body_plan.cc).
+export function pouredShares(wheel, {x, y, width}) {
+  const raw = Array.from({length : wheel.hormones}, (_, k) => wheelAffinity(wheel, x, y, width, k));
   const sum = raw.reduce((a, b) => a + b, 0);
   return raw.map(a => sum > 0 ? a / sum : 0);
 }
@@ -68,7 +68,8 @@ const builtUp = (rate, copies, tau) =>
 
 function levelPicture(state, organ, center, nameOf) {
   const L = LEVEL, wheel = state.capabilities, rate = wheel.hormoneRate;
-  const tau = timeConstantSteps(center.tau), part = shares(wheel, center);
+  const tau = timeConstantSteps(center.tau),
+        part = pouredShares(wheel, {x : center.q1, y : center.q2, width : center.qwidth});
   const main = Math.max(...part), mid = (L.left + L.right) / 2;
   // The frame reaches the level this gland's main substance would reach with all cells at its cell
   // time, so its own peak stands at its share of the cells and stays readable at any cell time.

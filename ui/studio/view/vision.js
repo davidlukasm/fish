@@ -426,7 +426,6 @@ function keennessRow(tone, faint) {
     return `<circle cx="${fixed(sceneX(share))}" cy="${fixed(mid)}" r="${R.radius}" fill="rgb(${
         rgb.join(' ')})"/>`;
   };
-  const right = edge > (S.left + S.right) / 2;
   return `<text class="aid-scene-word" x="${S.words}" y="${fixed(mid)}" ` +
          `dominant-baseline="central">${escapeText(label('sensitivity'))}</text>` +
          `<rect class="aid-scene-ground" x="${S.left}" y="${R.top}" width="${
@@ -440,8 +439,9 @@ function keennessRow(tone, faint) {
              escapeText(label('keenFrom.' + tone))}</text>` +
          `<text class="aid-scene-word" x="${S.right}" y="${R.ends}" text-anchor="end">${
              escapeText(label('keenTo.' + tone))}</text>` +
-         `<text class="aid-scene-word" x="${fixed(edge)}" y="${R.mark}" text-anchor="${
-             right ? 'end' : 'start'}">${escapeText(t('studio.vision.keenHalf', {
+         // The half answer is named above the middle of the row, where its words always fit.
+         `<text class="aid-scene-word" x="${fixed((S.left + S.right) / 2)}" y="${
+             R.mark}" text-anchor="middle">${escapeText(t('studio.vision.keenHalf', {
            p : percent(faint.half, faint.half < .1 ? 1 : 0)
          }))}` +
          `</text><circle class="aid-spectrum-handle sensitivity" data-spectrum-handle=` +
@@ -485,10 +485,13 @@ export function visionInspector(state, organ) {
   if (organ.type !== 'eye')
     return section(nearAnswers(state, organ));
   return section(`<div class="aid-vision-profiles"><button class="aid-add" data-vision-add="${
-             idSafe(organ.id)}" title="${label('add')}">＋</button>${
-             profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
-                                       idSafe(p.id)}" title="${label('remove')}">−</button>`
-                                 : ''}</div>`) +
+             idSafe(
+                 organ.id)}">${escapeText(t('studio.marks.add', {name : label('add')}))}</button>${
+             profiles.length > 1
+                 ? `<button class="aid-subtle" data-vision-remove="${idSafe(p.id)}" title="${
+                       label('remove')}">${
+                       escapeText(t('studio.marks.less', {name : label('add')}))}</button>`
+                 : ''}</div>`) +
          section(spectrumEditor(state, organ, p)) + section(sightEyes());
 }
 const CLEAR = Object.freeze({step : .25});

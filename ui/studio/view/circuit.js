@@ -27,8 +27,8 @@ export const pairingChoice = wire =>
                   '">' + glyph(PAIRING_GLYPH[p], PAIRING_BOX, {box : PAIRING_BOX}) + '</button>')
         .join('') +
     '</div>';
-// Each port as its symbol, framed by whether it is filled, missing or free, followed by the organs
-// on it and a button that adds one; names and whether the port is needed are in the tooltips.
+// Each port as its symbol and name, framed by whether it is filled, missing or free, followed by
+// the organs on it and a button that adds one.
 export function slotsSection(state, organ) {
   if (!ORGAN_BY_KEY[organ.type].slots)
     return '';
@@ -39,7 +39,8 @@ export function slotsSection(state, organ) {
                      slotTitle(slot), label(slot.required ? 'regions.required' : 'regions.optional')
                    ])) +
                    '"><span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
-                   glyph(slotShape(slot), ICON.slot, {line : true}) + '</span>' +
+                   glyph(slotShape(slot), ICON.slot, {line : true}) + '</span><small>' +
+                   escapeText(slotTitle(slot)) + '</small>' +
                    slot.filled
                        .map(o => '<button data-select-organ="' + escapeText(o.id) + '" title="' +
                                  escapeText(organTitle(o, state.sites)) + '">' +
@@ -81,11 +82,10 @@ function regionControls(state, organ) {
   const region = organ.region;
   const follows =
       regionPlan(state.document, organ).view
-          ? iconSwitch('chain', region.follow, joinParts([
-                         label('regions.follow'), label('regions.' + organ.type + '.follows'),
-                         label('regions.followHint')
-                       ]),
-                       'data-region-follow="' + escapeText(organ.id) + '"')
+          ? iconSwitch('chain', region.follow, label('regions.follow'),
+                       'data-region-follow="' + escapeText(organ.id) + '"', joinParts([
+                         label('regions.' + organ.type + '.follows'), label('regions.followHint')
+                       ]))
           : '';
   const wanted = regionPlan(state.document, organ).nodes.length;
   const crowded =

@@ -217,7 +217,7 @@
     "cellSignal": "Signal der Zelle",
     "selected": "Ausgewählt",
     "receptorWidth": "Stoffbreite",
-    "receptorActive": "Reagiert",
+    "receptorActive": "antwortet auf einen Stoff",
     "motorGate": "Wie wenig Eingang die Zellen in Gang setzt",
     "makeModule": "Zu Baugruppe zusammenfassen",
     "cancelSelection": "Auswahl aufheben",
@@ -985,7 +985,7 @@
   "lateral": {
     "title": "Strömung",
     "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper",
-    "lobe": "Woher die Zellen Strömung spüren",
+    "lobe": "woher die Zellen Strömung spüren",
     "sensitivityHandle": "Ziehen: wie schwache Strömung die Zellen schon melden",
     "cells": "Seitenlinienzellen",
     "report": "Meldung",
@@ -994,7 +994,8 @@
     "steady": "gleichmäßige Strömung",
     "later": "{n} Schritte später",
     "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
-    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichmäßige Strömung gewöhnen"
+    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichmäßige Strömung gewöhnen",
+    "field": "Wasser aus ±{degrees}°"
   },
   "systems": {
     "title": "Regelkreise",
@@ -1194,7 +1195,7 @@
     "development": "Entwicklungsvarianten",
     "mutations": "Mutierte Nachkommen",
     "within": "innerhalb der Vorgaben",
-    "openRegion": "Zusätzliche Synapsen innerhalb dieser Region erlauben",
+    "openRegion": "eigene Synapsen in der Region",
     "issues": {
       "identity": "Andere Zellfunktion",
       "cells": "Zusätzliche Zellen außerhalb des Entwurfs",
@@ -1379,9 +1380,9 @@
     "add": "+"
   },
   "wheel": {
-    "receptor": "Farbfüllung: Passung zum Rezeptor. Der Hof zeigt, welche weiteren Stoffe er bindet.",
-    "sense": "Farbfüllung: Gewichtung der gelesenen Stoffe. Ein breiter Hof erfasst mehrere Stoffe.",
-    "width": "Hof: Stoffbreite"
+    "receptor": "bindet",
+    "sense": "liest",
+    "gland": "gibt ab"
   },
   "axes": {
     "range": "{from} … {to}",

@@ -42,7 +42,7 @@ import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {senseSensitivity} from './sense_marks.js';
 import {boundedRow, sensePicture} from './sense_curves.js';
-import {glandPictures} from './gland_effect.js';
+import {glandPictures, pouredShares} from './gland_effect.js';
 import {lifeResponses} from '../model/cell_life.js';
 
 const centerWheel = (state, center, choices, reads) =>
@@ -99,7 +99,7 @@ export function hormonePad(state, organ, center, held = null) {
          '</div>';
 }
 // What the cell's substances do, only where it binds or learns from one: the substance chips with
-// what they change, and the hormone and learning tools as symbols. Release and birth stand in the
+// what they change, and buttons to the hormone and learning tools. Release and birth stand in the
 // gland's and the life picture already.
 export function chemistry(state, organ, center) {
   const wheel = state.capabilities, doc = state.document;
@@ -127,9 +127,9 @@ export function chemistry(state, organ, center) {
                                             : '<small class="aid-bound-effect">' +
                                                   label('inspector.noGland') + '</small>')));
   const open = (tool, text) => '<button class="aid-secondary aid-tool-link" data-open-tool="' +
-                               tool + '" data-center-id="' + escapeText(center.id) + '" title="' +
-                               label(text) + '">' +
-                               glyph(TOOL_ICON[tool], ICON.tool, {line : true}) + '</button>';
+                               tool + '" data-center-id="' + escapeText(center.id) + '">' +
+                               glyph(TOOL_ICON[tool], ICON.tool, {line : true}) + label(text) +
+                               '</button>';
   return '<section class="aid-eye-section aid-chemistry">' + (rows ? '<dl>' + rows + '</dl>' : '') +
          '<div class="aid-button-group">' + open('hormone', 'inspector.editHormones') +
          (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
@@ -564,30 +564,28 @@ function substanceWheel(state, profile, {
                          px(mx) + '" y="' + py(my) + '" dy=".35em" text-anchor="middle">' +
                          escapeText(substanceMark(state, selected)) + '</text></g>'
                    : '';
+  // A gland's output is split among the substances it pours; a receptor or sense answers each
+  // substance by its own fit.
+  const poured = role === 'gland' && profile.active ? pouredShares(wheel, profile) : null;
   const names =
       Array
           .from({length : Math.min(reads, wheel.bloodSubstances)},
                 (_, index) => {
                   if (index < HORMONES.levels && !named.has(index))
                     return '';
-                  const affinity = profile.active ? wheelAffinity(wheel, profile.x, profile.y,
-                                                                  profile.width, index)
-                                                  : 0;
+                  const affinity =
+                      !profile.active ? 0
+                      : poured        ? poured[index] ?? 0
+                               : wheelAffinity(wheel, profile.x, profile.y, profile.width, index);
                   return '<span class="aid-wheel-name"><i style="--substance:' +
                          substanceColor(index) + '">' + escapeText(substanceMark(state, index)) +
                          '</i><span>' + escapeText(substanceName(state, index)) + '</span><small>' +
                          percent(affinity) + '</small></span>';
                 })
           .join('');
-  const keys = [ 'width' ];
-  const legend =
-      '<div class="aid-wheel-names">' + names + '</div>' +
-      // What a gland's wheel chooses shows in its pictures below, as the substances that rise.
-      (role === 'gland'
-           ? ''
-           : '<p class="aid-picture-caption">' + escapeText(label('wheel.' + role)) + '</p>') +
-      '<div class="aid-wheel-key">' +
-      keys.map(key => '<span>' + escapeText(label('wheel.' + key)) + '</span>').join('') + '</div>';
+  // The list says what the shares are: what a receptor binds, a sense reads, a gland gives off.
+  const legend = '<p class="aid-wheel-names-title">' + escapeText(label('wheel.' + role)) +
+                 '</p><div class="aid-wheel-names">' + names + '</div>';
   return '<div class="aid-wheel-figure" data-wheel-figure><div class="aid-wheel-map"><svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +

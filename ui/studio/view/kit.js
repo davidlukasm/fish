@@ -61,10 +61,12 @@ export const SWITCH_SYMBOL = Object.freeze({
     on : 'M3 19h18M12 19v-7M12 12L8 8M12 12l4-4M12 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'
   }
 });
-export const iconSwitch = (symbol, on, title, input) =>
-    '<label class="aid-icon-switch" title="' + escapeText(title) + '"><input type="checkbox" ' +
-    input + (on ? ' checked' : '') + '/>' +
-    glyph(SWITCH_SYMBOL[symbol][on ? 'on' : 'off'], ICON.part, {line : true}) + '</label>';
+// A switch shows its symbol and what it switches; `more` says the rest, as a tooltip.
+export const iconSwitch = (symbol, on, word, input, more = '') =>
+    '<label class="aid-icon-switch"' + (more ? ' title="' + escapeText(more) + '"' : '') +
+    '><input type="checkbox" ' + input + (on ? ' checked' : '') + '/>' +
+    glyph(SWITCH_SYMBOL[symbol][on ? 'on' : 'off'], ICON.part, {line : true}) + '<span>' +
+    escapeText(word) + '</span></label>';
 const CELL_GROUP =
     Object.freeze({width : 300, height : 110, left : 24, top : 36, dx : 42, dy : 22, columns : 4});
 export const cellPatch = (fx, fy) => {

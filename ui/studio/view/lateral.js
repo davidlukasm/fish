@@ -1,6 +1,6 @@
 import {groupReport} from '../model/document.js';
 import {fieldFish, fieldPoint} from './frame.js';
-import {senseSensitivity} from './sense_marks.js';
+import {handleWord, senseSensitivity} from './sense_marks.js';
 import {fadeRow, intensityRow, SENSE_PLOT, sensePicture} from './sense_curves.js';
 import {stimulusOfShare} from './sensitivity.js';
 import {escapeText, fixed} from './markup.js';
@@ -52,7 +52,9 @@ const LATERAL_FIELD = Object.freeze({
   scale : .14,
   inner : 58,
   reach : 34,
-  arrow : 18
+  arrow : 18,
+  // The picture's name stands top left, clear of the lobe.
+  title : [ 4, 12 ]
 });
 export const lateralPatch = (fx, fy, direction) => {
   const L = LATERAL_FIELD;
@@ -91,12 +93,14 @@ export function lateralField(state, organ, held = null) {
          '" data-sense-field="' + escapeText(first.id) + '" data-sense-organ="' +
          escapeText(organ.id) + '" data-sense-aim="' + fixed(angle) + '" data-sense-centre="' +
          L.cx + ',' + L.cy + '" role="img" aria-label="' + escapeText(word('title')) +
-         '"><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy + '" r="' +
-         (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' + lobe + '"><title>' +
-         escapeText(word('lobe')) + '</title></path>' + fieldFish(L, L.scale, 'aid-lateral-fish') +
-         arrow + '<path class="aid-field-boundary" d="M' + fixed(boundary.x) + ' ' +
-         fixed(boundary.y) + 'L' + L.cx + ' ' + L.cy + 'L' + fixed(other.x) + ' ' + fixed(other.y) +
-         '"/><circle class="aid-graphic-handle" data-sense-mark="width" cx="' + fixed(boundary.x) +
+         '"><text class="aid-handle-word" x="' + L.title[0] + '" y="' + L.title[1] + '">' +
+         escapeText(word('lobe')) + '</text><circle class="aid-lateral-limit" cx="' + L.cx +
+         '" cy="' + L.cy + '" r="' + (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' +
+         lobe + '"/>' + fieldFish(L, L.scale, 'aid-lateral-fish') + arrow +
+         '<path class="aid-field-boundary" d="M' + fixed(boundary.x) + ' ' + fixed(boundary.y) +
+         'L' + L.cx + ' ' + L.cy + 'L' + fixed(other.x) + ' ' + fixed(other.y) + '"/>' +
+         handleWord(boundary, word('field', {degrees : Math.round(degrees(half))})) +
+         '<circle class="aid-graphic-handle" data-sense-mark="width" cx="' + fixed(boundary.x) +
          '" cy="' + fixed(boundary.y) + '" r="7"><title>' + escapeText(word('handle')) +
          '</title></circle></svg>' + lateralCurves(state, first, held, word) + '</div>';
 }
