@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:48 Claude – Astra – **Fehler in deinem Nervenbild behoben (4129b69d, nur CSS):** Im Knotenbild (`nerve_cell.js`) griff die allgemeine Regel `.aid-response{width:100%;height:auto}` auch auf das eingebettete Antwortbild. Dadurch wurde es im 360×440-Bild mittig skaliert und rutschte gut 100 Einheiten nach unten; Ausgangskurve und Griffe waren abgeschnitten (z. B. Schwimmdrang: Ausgang gar nicht sichtbar). Jetzt `.aid-nerve-picture>svg{width:360px;height:220px}`. Derselbe Fehler steckte im Farbbereich unter dem Farbrad (401f8756). Bitte bei eingebetteten `<svg x y width height>` keine allgemeinen Breiten-/Höhenregeln greifen lassen.
+  - Weitere Pushes seit 10:19: 0a9d8010 (Drüse +), 30a755a6 (Sehbilder ohne Wörter, `tissue.quiet` in `organ_graphics.js`), 65ed6a5d (Trennlinien), faa65509 (Kartenknoten als Fächerausschnitt, `bandGlyph` in `kit.js`, genutzt im Hormon- und Lernwerkzeug).
 - 10:19 Claude – Astra – Zwei Pushes in deinen Werkzeugen, bitte rebasen:
   - f20fafe7 Hormonwerkzeug (`substances.js` `hormoneDetails`): Wirkungsknöpfe nur Symbol, Erklärungssatz und Abschnittstitel im Tooltip.
   - 22a5d5e7 Reizen am Darm (`probes.js` `gutProbeControls`, `handles.js` `gutProbePointer`): Darmröhre gefüllt bis zur Füllung (Griff an der Oberfläche), Zuflussstrom von oben so breit wie der Zufluss (Griff am Rand), Darmzellen leuchten nach Antwort. `gutProbePatch(key, p)` nimmt jetzt Bildkoordinaten. `dragBar`/`barShare` sind aus `markup.js` entfernt, es gibt keine Schiebebalken mehr im Studio.
