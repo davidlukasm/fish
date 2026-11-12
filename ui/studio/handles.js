@@ -177,7 +177,10 @@ export const GRIPS = Object.freeze([
     graphic : '[data-gut-bars]',
     handle : '[data-gut-handle]',
     held : 'gutProbe',
-    start : (studio, g, h) => ({handle : h.dataset.gutHandle})
+    start : (studio, g, h) => ({
+      handle : h.dataset.gutHandle,
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
+    })
   },
   {
     graphic : '[data-preview-bars]',
@@ -691,12 +694,13 @@ export const handleMethods = {
     this.draftDesign(setBends(doc, drag.wires, bends), 'bend:' + drag.wires[0], 'refreshScene');
   },
   gutProbePointer(event) {
-    const probe = this.state.senseProbe;
+    const probe = this.state.senseProbe, drag = this.handleDrag;
     if (probe?.kind !== 'gut')
       return;
+    const {fx, fy} = pointerShare(event, drag.rect);
     this.state.senseProbe = {
       ...probe,
-      ...gutProbePatch(this.handleDrag.handle, pointerShare(event, this.handleDrag.rect).fy)
+      ...gutProbePatch(drag.handle, {x : fx * drag.size.width, y : fy * drag.size.height})
     };
     this.refreshProbes();
     this.requestDesign();

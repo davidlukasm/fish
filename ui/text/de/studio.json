@@ -1179,9 +1179,7 @@
       "flow": "Strömung: Richtung und Stärke"
     },
     "strength": "Darmfüllung · Anteil",
-    "nutrient": "Nährstoffzufluss · Signalstärke",
-    "strengthMark": "Füllung",
-    "nutrientMark": "Zufluss"
+    "nutrient": "Nährstoffzufluss · Signalstärke"
   },
   "pigment": {
     "kinds": [

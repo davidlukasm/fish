@@ -1,4 +1,3 @@
-import {clamp} from '../../units.js';
 import {glyph as drawGlyph, linePaint} from '../../glyph.js';
 
 export const escapeText = value =>
@@ -23,19 +22,5 @@ export const placedGlyph = (path, size, {x = 0, y = 0} = {},
   paint : line ? linePaint({width : GLYPH_LINE}) : paint,
   place : ' x="' + fixed(x - size / 2) + '" y="' + fixed(y - size / 2) + '"'
 });
-
-// An upright bar to drag: its gauge, the level from base to the knob, and a mark below.
-export const barShare = (bars, fy) =>
-    clamp((bars.bottom - fy * bars.height) / (bars.bottom - bars.top));
-export function dragBar(bars, x, {base, at, level, handle, title, mark}) {
-  const B = bars, left = fixed(x - B.gauge / 2);
-  return '<rect class="aid-dose-gauge" x="' + left + '" y="' + B.top + '" width="' + B.gauge +
-         '" height="' + (B.bottom - B.top) + '" rx="' + B.gauge / 2 + '"/><rect ' + level + ' x="' +
-         left + '" y="' + fixed(Math.min(base, at)) + '" width="' + B.gauge + '" height="' +
-         fixed(Math.abs(base - at)) + '"/><circle class="aid-graphic-handle" ' + handle + ' cx="' +
-         fixed(x) + '" cy="' + fixed(at) + '" r="' + B.knob + '"><title>' + escapeText(title) +
-         '</title></circle><text x="' + fixed(x) + '" y="' + B.mark + '" text-anchor="middle">' +
-         escapeText(mark) + '</text>';
-}
 
 export const pointMarks = p => ({'.aid-vector-point,.aid-wheel-halo' : {cx : p.x, cy : p.y}});

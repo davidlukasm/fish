@@ -904,10 +904,9 @@
 .aid-preview-drop text{font-size:11px;font-weight:600;pointer-events:none}
 .aid-gut-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
 .aid-gut-bars text{fill:var(--aid-label-text);font-size:11px}
-.aid-gut-level.strength{fill:var(--aid-gut)}
-.aid-gut-level.nutrient{fill:var(--aid-light)}
-.aid-gut-answer-track{fill:var(--aid-control)}
-.aid-gut-answer{fill:var(--aid-light)}
+.aid-gut-tube{fill:none;stroke:var(--aid-gut);stroke-width:2}
+.aid-gut-food{fill:var(--aid-gut);opacity:.75}
+.aid-gut-stream{fill:var(--aid-light);opacity:.55}
 .aid-effect-divide{stroke:#2f5356;stroke-width:1;stroke-dasharray:3 3}
 .aid-hormone-receiver .aid-hormone-core,.aid-hormone-receiver .aid-hormone-aura{transform-box:fill-box;transform-origin:center}
 .aid-hormone-receiver.acts-0 .aid-hormone-core{animation:aid-acts-fire 2s ease-in-out infinite}

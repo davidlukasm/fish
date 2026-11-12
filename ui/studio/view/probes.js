@@ -5,7 +5,7 @@ import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, skinPoints, steadyAt, zoomOf} from './frame.js';
 import {organLocation} from './places.js';
 import {arrowPath} from './lateral.js';
-import {barShare, dragBar, escapeText, fixed} from './markup.js';
+import {escapeText, fixed, idSafe} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
@@ -204,21 +204,16 @@ function answerSvg(state, organ, zoom) {
       })
       .join('');
 }
-// Food in the gut as two bars to drag, how full it is and how much nutrient flows in, beside how
-// each gut cell answers. Inflow runs on a log scale, as signals of very different size matter.
-const GUT_BARS = Object.freeze({
+// Food in the gut as a picture: the tube filled as high as it is full (drag the food's surface),
+// the stream falling in as wide as the nutrient flowing in (drag its edge; it runs on a log scale,
+// as signals of very different size matter), and beside it every gut cell lit by its answer.
+const GUT_PROBE = Object.freeze({
   width : 300,
   height : 104,
-  top : 10,
-  bottom : 74,
-  gauge : 14,
-  knob : 8,
-  mark : 92,
-  columns : [ 34, 92 ],
-  answers : 140,
-  row : 20,
-  bar : 8,
-  right : 290
+  tube : {left : 16, right : 196, top : 36, bottom : 92, corner : 16, grip : 40},
+  stream : {x : 92, top : 6, least : 1.5, most : 16},
+  cells : {x : 236, top : 24, step : 28, radius : 10, value : 18},
+  knob : 8
 });
 const INFLOW = Object.freeze({least : .01, most : 20});
 const inflowShare = value =>
@@ -227,45 +222,53 @@ const inflowShare = value =>
         : 0;
 const inflowAt = share =>
     share > 0 ? INFLOW.least * Math.pow(INFLOW.most / INFLOW.least, share) : 0;
-export function gutProbePatch(key, fy) {
-  const share = barShare(GUT_BARS, fy);
-  return {[key] : key === 'strength' ? share : inflowAt(share)};
+const streamHalf = share =>
+    GUT_PROBE.stream.least + (GUT_PROBE.stream.most - GUT_PROBE.stream.least) * share;
+// The value a handle sets, from the pointer in the picture's units.
+export function gutProbePatch(key, p) {
+  const T = GUT_PROBE.tube, F = GUT_PROBE.stream;
+  return key === 'strength'
+             ? {strength : clamp((T.bottom - p.y) / (T.bottom - T.top))}
+             : {nutrient : inflowAt(clamp((p.x - F.x - F.least) / (F.most - F.least)))};
 }
 export function gutProbeControls(state, organ) {
-  const probe = state.senseProbe, B = GUT_BARS;
+  const probe = state.senseProbe, G = GUT_PROBE, T = G.tube, F = G.stream, C = G.cells;
   if (state.tool !== 'stimulate' || probe?.kind !== 'gut' || probe.organ !== organ.id)
     return '';
-  const y = share => B.bottom - (B.bottom - B.top) * share;
-  const bar = (key, share, x) => dragBar(B, x, {
-    base : B.bottom,
-    at : y(share),
-    level : 'class="aid-gut-level ' + key + '"',
-    handle : 'data-gut-handle="' + key + '"',
-    title : t('studio.probe.' + key),
-    mark : t('studio.probe.' + key + 'Mark')
-  });
-  const answers =
+  const full = clamp(probe.strength), surface = T.bottom - (T.bottom - T.top) * full;
+  const half = streamHalf(inflowShare(probe.nutrient));
+  const clip = 'aid-gut-clip-' + idSafe(organ.id);
+  const handle = (key, x, y) => '<circle class="aid-graphic-handle" data-gut-handle="' + key +
+                                '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' + G.knob +
+                                '"><title>' + escapeText(t('studio.probe.' + key)) +
+                                '</title></circle>';
+  const cells =
       organ.centers
           .map((center, k) => {
             const answer = groupReport(state.document, state.anatomy, 'senseProbe', center.id);
-            const top = B.top + k * B.row, known = Number.isFinite(answer);
-            return '<text x="' + B.answers + '" y="' + (top + B.bar) + '">' +
-                   escapeText(centerTitle(center)) +
-                   '</text><rect class="aid-gut-answer-track" x="' + B.answers + '" y="' +
-                   (top + B.bar + B.bar / 2) + '" width="' + (B.right - B.answers) + '" height="' +
-                   B.bar / 2 + '"/><rect class="aid-gut-answer" x="' + B.answers + '" y="' +
-                   (top + B.bar + B.bar / 2) + '" width="' +
-                   fixed((B.right - B.answers) * (known ? clamp(answer) : 0)) + '" height="' +
-                   B.bar / 2 + '"><title>' + (known ? percent(answer) : formatNumber(NaN)) +
-                   '</title></rect>';
+            const known = Number.isFinite(answer), y = C.top + k * C.step;
+            const value = known ? percent(answer) : formatNumber(NaN);
+            return '<g class="aid-probe-answer' + (known ? '' : ' unknown') +
+                   '" style="--lit:' + fixed(known ? clamp(answer) : 0) + '"><title>' +
+                   escapeText(centerTitle(center) + ' · ' + value) + '</title><circle cx="' + C.x +
+                   '" cy="' + y + '" r="' + C.radius + '"/><text x="' + (C.x + C.value) + '" y="' +
+                   y + '" dominant-baseline="central">' + value + '</text></g>';
           })
           .join('');
-  return '<section data-gut-probe-controls="' + escapeText(organ.id) + '"><h4>' +
-         t('studio.probe.title.gut') + '</h4><svg class="aid-gut-bars" viewBox="0 0 ' + B.width +
-         ' ' + B.height + '" data-gut-bars role="img" aria-label="' +
-         escapeText(t('studio.probe.title.gut')) + '">' +
-         bar('strength', clamp(probe.strength), B.columns[0]) +
-         bar('nutrient', inflowShare(probe.nutrient), B.columns[1]) + answers + '</svg></section>';
+  return '<section data-gut-probe-controls="' + escapeText(organ.id) + '" title="' +
+         escapeText(t('studio.probe.title.gut')) + '"><svg class="aid-gut-bars" viewBox="0 0 ' +
+         G.width + ' ' + G.height + '" data-gut-bars role="img" aria-label="' +
+         escapeText(t('studio.probe.title.gut')) + '"><defs><clipPath id="' + clip + '"><rect x="' +
+         T.left + '" y="' + T.top + '" width="' + (T.right - T.left) + '" height="' +
+         (T.bottom - T.top) + '" rx="' + T.corner + '"/></clipPath></defs>' +
+         '<path class="aid-gut-stream" d="M' + fixed(F.x - half) + ' ' + F.top + ' H' +
+         fixed(F.x + half) + ' L' + fixed(F.x + half) + ' ' + fixed(surface) + ' H' +
+         fixed(F.x - half) + ' Z"/><rect class="aid-gut-food" clip-path="url(#' + clip + ')" x="' +
+         T.left + '" y="' + fixed(surface) + '" width="' + (T.right - T.left) + '" height="' +
+         fixed(T.bottom - surface) + '"/><rect class="aid-gut-tube" x="' + T.left + '" y="' +
+         T.top + '" width="' + (T.right - T.left) + '" height="' + (T.bottom - T.top) + '" rx="' +
+         T.corner + '"/>' + handle('strength', T.right - T.grip, surface) +
+         handle('nutrient', F.x + half, F.top + G.knob) + cells + '</svg></section>';
 }
 export function senseProbeSvg(state) {
   const probe = state.senseProbe, faintest = state.anatomy?.lightDimmest;
