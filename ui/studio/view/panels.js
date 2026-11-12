@@ -53,6 +53,7 @@ import {
   VALUE_DIGITS
 } from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
+import {strandInspector} from './nerve_inspector.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
@@ -498,6 +499,8 @@ export function inspector(state) {
   }
   if (selected.kind === 'contact')
     return developedContactInspector(state);
+  if (selected.kind === 'bundle' || selected.kind === 'nerve')
+    return strandInspector(state);
   if (selected.kind === 'assembly') {
     const assembly = findAssembly(state.document, selected.id);
     return assembly ? assemblyInspector(state, assembly) : '';

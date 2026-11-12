@@ -34,7 +34,7 @@ import {
   validateDocument
 } from './model/document.js';
 import {removeAssembly} from './model/assemblies.js';
-import {centroid, findSite} from './model/layout.js';
+import {BODY_FRAME, centroid, findSite} from './model/layout.js';
 import {CAMERA_HOME, cameraCoordinates} from './view/frame.js';
 import {bendsWith, CONTACT_LIMITS} from './view/wires.js';
 import {DEFAULT_PREVIEW_CONTEXT, DEFAULT_PREVIEW_INPUT} from './view/development.js';
@@ -182,6 +182,8 @@ export class OrganStudio {
     window.addEventListener('pointermove', event => this.pointerMove(event));
     window.addEventListener('pointerup', event => this.pointerUp(event));
     this.root.addEventListener('wheel', event => this.wheel(event), {passive : false});
+    this.root.addEventListener('pointerover', event => this.pointLinked(event, true));
+    this.root.addEventListener('pointerout', event => this.pointLinked(event, false));
     document.getElementById('open-station-hub')
         ?.addEventListener('click', () => this.navigate('hub'));
     document.addEventListener('keydown', event => this.keydown(event));
@@ -330,6 +332,19 @@ export class OrganStudio {
     this.restorePlacement();
   }
   bodyMap() { return this.root.querySelector(BODY_MAP); }
+  // Pointing at a nerve lights the bundles it gathers, pointing at a bundle its fibres.
+  pointLinked(event, on) {
+    const nerve = event.target.closest?.('.aid-nerve[data-strands]'),
+          bundle = nerve ? null : event.target.closest?.('.aid-wire-group[data-strand]');
+    const ids = nerve ? nerve.dataset.strands.split(' ') : bundle ? [ bundle.dataset.strand ] : [];
+    const map = ids.length && this.bodyMap();
+    if (!map)
+      return;
+    nerve?.classList.toggle('aid-hover', on);
+    for (const id of ids)
+      for (const element of map.querySelectorAll('[data-strand="' + id + '"]'))
+        element.classList.toggle('aid-hover', on);
+  }
   refreshViews() {
     this.refreshScene();
     this.refreshInspector();
@@ -740,11 +755,31 @@ export class OrganStudio {
       const bends = doc.wires.find(w => w.id === wires[0])?.bends ?? [];
       this.changeDocument(setBends(doc, wires, bends.filter((_, k) => k !== index)),
                           this.state.selected);
-    } else
+    } else if (wire.dataset.nerve)
+      this.bendNerve(wire.dataset.nerve,
+                     cameraCoordinates(event, this.bodyMap(), this.state.camera));
+    else
       this.bendWire(
           {wires : wire.dataset.wires.split(' '), mirrored : wire.hasAttribute('data-mirrored')},
           cameraCoordinates(event, this.bodyMap(), this.state.camera));
     return true;
+  }
+  // A bend set on a nerve bends every bundle in it through the same point; a bundle drawn as the
+  // mirror of its wire stores the mirrored point.
+  bendNerve(members, point) {
+    const bundles = members.split(' ').map(member => {
+      const [wires, mirrored] = member.split(':');
+      return {wires : wires.split(','), mirrored : mirrored === '1'};
+    });
+    const first = bundles[0], bends = bendsWith(this.state, first.wires, point, first.mirrored);
+    const mirror = list => list.map(p => ({x : p.x, y : 2 * BODY_FRAME.middle - p.y}));
+    let doc = bends && this.state.document;
+    for (const b of bundles)
+      doc = doc && setBends(doc, b.wires, b.mirrored === first.mirrored ? bends : mirror(bends));
+    if (!doc)
+      return this.notice(label('wiring.noWire'));
+    this.changeDocument(doc, this.state.selected);
+    this.notice(label('wiring.bent'));
   }
   bendWire({wires, mirrored}, point) {
     const bends = bendsWith(this.state, wires, point, mirrored);

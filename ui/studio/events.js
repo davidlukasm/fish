@@ -155,7 +155,8 @@ function chosenField(studio) {
 }
 const keep = (studio, doc) => studio.changeDocument(doc, studio.state.selected);
 const keepIfRoom = (studio, doc) => doc ? keep(studio, doc) : studio.notice(label('status.noRoom'));
-const ITEM_KINDS = Object.freeze([ 'contact', 'generated', 'wire', 'center', 'assembly', 'organ' ]);
+const ITEM_KINDS = Object.freeze(
+    [ 'contact', 'generated', 'nerve', 'bundle', 'wire', 'center', 'assembly', 'organ' ]);
 const REMOVE_KINDS = Object.freeze([ 'remove-organ', 'remove-center', 'remove-wire' ]);
 
 function clickItem(studio, element, event) {
@@ -184,8 +185,8 @@ function clickItem(studio, element, event) {
   }
   if (studio.pointer?.moved)
     return;
-  if (kind === 'wire' && (event.shiftKey || event.ctrlKey || event.metaKey) &&
-      element.dataset.wires) {
+  if ((kind === 'wire' || kind === 'bundle' || kind === 'nerve') &&
+      (event.shiftKey || event.ctrlKey || event.metaKey) && element.dataset.wires) {
     const picked = element.dataset.wires.split(' '), multi = studio.state.multi;
     if (studio.state.selected?.kind !== 'wire')
       multi.clear();
@@ -457,6 +458,12 @@ export const FISH_CLICKS = Object.freeze([
   [
     '[data-unbundle-wires]',
     (studio,e)=>keep(studio,unbundleWires(studio.state.document,e.dataset.unbundleWires))
+  ],
+  [ '[data-select-bundle]', (studio, e) => studio.select('bundle', e.dataset.selectBundle) ],
+  [
+    '[data-unbend-wires]',
+    (studio, e) => studio.changeDocument(
+        setBends(studio.state.document, e.dataset.unbendWires.split(' '), []), studio.state.selected)
   ],
   [
     '[data-unbend-wire]',

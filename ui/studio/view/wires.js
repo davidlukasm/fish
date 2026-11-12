@@ -1,8 +1,9 @@
 import {nodeOpacity} from './layers.js';
-import {nerveRoute, organDock} from './wire_route.js';
+import {nerveRoute, organDock, passable} from './wire_route.js';
+import {inkDashes, nerveBundling, polylineWay} from './nerves.js';
 import {regionDock} from './region_layout.js';
 import {clamp} from '../../units.js';
-import {eyeLocation, nodeLocation, organLocation, showsNodes} from './places.js';
+import {eyeLocation, nodeLocation, organLocation} from './places.js';
 import {escapeText, fixed, pointText} from './markup.js';
 import {joinParts, linkText, t} from '../../strings.js';
 import {
@@ -94,9 +95,10 @@ function dockEnd(state, anchor, direction, towards = null) {
     point : regionDock(state.document, state.sites, anchor.organ, direction, towards)
   };
 }
+// The nodes a bundle reaches in an organ, whether they are shown or not.
 function branchNodes(state, id, anchor, centers) {
   const organ = anchor.organ;
-  if (!organ || !showsNodes(state, [ organ ]))
+  if (!organ)
     return [];
   const nodes = findOrgan(state.document, id) ? organ.centers : [ centers.get(id).center ];
   // Muscle nodes share their schematic segments; one branch reaches each segment.
@@ -107,10 +109,16 @@ function branchNodes(state, id, anchor, centers) {
   }
   return [...reached.values() ];
 }
+// How far an organ's nodes are shown: its fibres fade in with them, and its bundle splits only as
+// far short of it as they are shown.
+const nodeReveal = (state, organ) =>
+    organ ? nodeOpacity(state, organ.id === state.selected?.id ||
+                                   organ.centers.some(c => c.id === state.selected?.id))
+          : 0;
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19});
 // A branch leaves its join along the nerve, but only so far that branches to far nodes of a long
 // organ (a tail band) bend towards their node instead of swinging out of the body.
-const BRANCH = Object.freeze({lead : .3, pull : .5, reach : 14, least_width : 1});
+const BRANCH = Object.freeze({lead : .3, pull : .5, reach : 14});
 // Where a bundle splits into its fibres, as a parameter on its way: as far short of its organ's
 // dock as the organ's nodes lie from it (and a little more, at most `SPLIT.most`), measured along
 // the nerve. Its fibres then run on towards their nodes instead of turning back from the organ's
@@ -251,8 +259,13 @@ const WIRE_KINDS = Object.freeze({
   inhibit : {colour : '#e8a2b5', arrow : 'aid-wire-arrow-inhibit'},
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
-const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
-const BUNDLE = Object.freeze({growth : .25, sheath : 2});
+// Widths in body units, so bundles, nerves and fibres grow with the fish as one zooms in. A fibre
+// of a wider-spreading wire counts thicker. A bundle is as thick as its fibres together, within
+// `least` and `most`; where it splits, its fibres share its width. Bundles drawn together as one
+// nerve make it half as thick as they are together, at most `most`.
+const FIBRE = Object.freeze({width : .7, spread : 1});
+const BUNDLE = Object.freeze({least : .9, most : 2.2});
+const NERVE = Object.freeze({share : .5, most : 3.2, colour : '#b9d8cf'});
 const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
         .flatMap(source =>
@@ -295,7 +308,7 @@ function wireBundles(state, centers) {
     bundles.get(key).links.push(link);
     bundles.get(key).anchors.push({from, to});
   }
-  const drawn = [...bundles.values() ].map(
+  const laid = [...bundles.values() ].map(
       ({from, to, kind, manual, bends, mirrored, links, anchors, opacity}) => {
         const spatial = !manual && !bends.length, a = from.point, b = to.point;
         from = dockEnd(state, from, 'out', spatial ? b : null);
@@ -311,109 +324,221 @@ function wireBundles(state, centers) {
         const way = manual && bends.length > 1 ? bentWay(bends)
                     : bends.length             ? bentWay([ from.point, ...bends, to.point ])
                                                : (route.way ??= bentWay(route.points, route.safe));
-        const ends = links.map((link, k) => {
-          const nodes = (id, anchor) => {
-            const cells = branchNodes(state, id, anchor, centers);
-            return manual && !cells.length ? [ {id, ...anchor.point, overview : true} ] : cells;
-          };
-          return {
-            link,
-            starts : nodes(link.from, sources[k]),
-            arrives : nodes(link.to, targets[k]),
-            width : WIRE_WIDTH.base + WIRE_WIDTH.spread * link.wire.spread
-          };
-        });
-        // A bundle drawn along several bends keeps them to its ends; any other splits into its
-        // fibres just short of its organs.
-        const bent = manual && bends.length > 1;
-        const s0 = bent ? 0 : splitAlong(way, ends.flatMap(e => e.starts), from.point, false),
-              s1 = bent ? 1 : splitAlong(way, ends.flatMap(e => e.arrives), to.point, true);
-        return {from, to, kind, ends, bends, mirrored, manual, opacity, way, s0, s1};
+        const ends = links.map((link, k) => ({
+                                 link,
+                                 starts : branchNodes(state, link.from, sources[k], centers),
+                                 arrives : branchNodes(state, link.to, targets[k], centers),
+                                 fibre : FIBRE.width * (1 + FIBRE.spread * link.wire.spread)
+                               }));
+        // As thick as its fibres together, counted at the end where it splits into more.
+        const count = side =>
+            new Set(ends.flatMap(e => e[side]).map(p => fixed(p.x) + ' ' + fixed(p.y))).size;
+        const width = Math.min(
+            BUNDLE.most, Math.max(BUNDLE.least, Math.max(1, count('starts'), count('arrives')) *
+                                                    Math.max(...ends.map(e => e.fibre))));
+        return {
+          from,
+          to,
+          kind,
+          ends,
+          bends,
+          mirrored,
+          manual,
+          opacity,
+          way,
+          width,
+          // Bundles drawn together keep to the body; a manual bundle keeps the course drawn for
+          // it, a bent one its bends.
+          route : spatial ? route : null,
+          safe : spatial  ? route.safe
+                 : manual ? null
+                          : passable(doc, sites, from, to),
+          pins : manual ? [] : bends
+        };
       });
-  return {bundles : drawn, inside};
+  const joined = nerveTogether(laid);
+  const drawn = laid.map((bundle, index) => {
+    const {from, to, ends, manual, bends} = bundle, way = joined[index].way;
+    // The fibres show with their organ's nodes; until then the bundle runs on to the organ. A
+    // bundle drawn along several bends keeps them to its ends.
+    const shown = (side, anchor) => {
+      const reveal = nodeReveal(state, anchor.organ);
+      if (reveal > 0)
+        return {reveal, nodes : ends.flatMap(e => e[side])};
+      return manual ? {reveal : 1, nodes : [ {...anchor.point, overview : true} ]}
+                    : {reveal : 0, nodes : []};
+    };
+    const bent = manual && bends.length > 1, starts = shown('starts', from),
+          arrives = shown('arrives', to);
+    const s0 = bent ? 0 : starts.reveal * splitAlong(way, starts.nodes, from.point, false),
+          s1 = bent ? 1 : 1 - arrives.reveal * (1 - splitAlong(way, arrives.nodes, to.point, true));
+    return {
+      ...bundle,
+      way,
+      s0,
+      s1,
+      hidden : joined[index].hidden,
+      split : {starts : starts.reveal > 0, arrives : arrives.reveal > 0},
+      id : 'b' + index
+    };
+  });
+  const nerves = joined.flatMap(
+      (line, index) => line.nerves.map(
+          nerve => ({...nerve, members : nerve.members.map(k => drawn[k]), owner : drawn[index]})));
+  return {bundles : drawn, nerves, inside};
 }
 const signalKind = center => isModulator(center) ? 'modulate'
                              : center.sign < 0   ? 'inhibit'
                                                  : 'excite';
+// Bundles drawn together as nerves, worked out once for each set of bundle courses, so an edit
+// that leaves the nerves' courses alone does not work them out again.
+const together = new Map(), TOGETHER_KEPT = 8;
+function nerveTogether(laid) {
+  const course = b => b.route ? b.route.points.map(pointText).join(' ')
+                              : [ b.from.point, ...b.bends, b.to.point ].map(pointText).join(' ');
+  const key = laid.map(b => [b.kind, b.manual ?? '', course(b)].join(':')).join('|');
+  if (!together.has(key)) {
+    together.set(key, nerveBundling(laid.map(b => ({way : b.way, safe : b.safe, pins : b.pins}))));
+    if (together.size > TOGETHER_KEPT)
+      together.delete(together.keys().next().value);
+  }
+  return together.get(key);
+}
+// The fibres at one end of a bundle: one for every node it reaches there, side by side across the
+// bundle where it splits, so that together they are as wide as the bundle.
+function fibresAt(state, bundle, inward, pairs) {
+  const {ends, way, width} = bundle, at = inward ? bundle.s0 : bundle.s1;
+  if (!(inward ? bundle.split.starts : bundle.split.arrives) && !bundle.manual)
+    return [];
+  const join = way.at(at), along = way.direction(at), across = {x : -along.y, y : along.x};
+  const fibres = new Map();
+  for (const [index, e] of ends.entries()) {
+    const reveal = nodeReveal(state, (inward ? bundle.from : bundle.to).organ);
+    const nodes = reveal > 0      ? (inward ? e.starts : e.arrives)
+                  : bundle.manual ? [ {
+                      ...(inward ? bundle.from : bundle.to).point,
+                      id : inward ? e.link.from : e.link.to,
+                      overview : true
+                    } ]
+                                  : [];
+    for (const node of nodes) {
+      const key = fixed(node.x) + ' ' + fixed(node.y);
+      const fibre = fibres.get(key) ?? {node, edges : new Set(), opacity : 0, chosen : false};
+      for (const pair of pairs[index].filter(
+               pair => node.overview ||
+                       (inward ? pair.startsWith(node.id + '>') : pair.endsWith('>' + node.id))))
+        fibre.edges.add(pair);
+      fibre.opacity = Math.max(fibre.opacity, node.overview ? 1 : reveal);
+      fibre.chosen ||=
+          isSelected(state.selected, 'wire', e.link.wire.id) || !!state.multi?.has(e.link.wire.id);
+      fibres.set(key, fibre);
+    }
+  }
+  const list = [...fibres.values() ].sort(
+      (a, b) => (a.node.x - join.x) * across.x + (a.node.y - join.y) * across.y -
+                ((b.node.x - join.x) * across.x + (b.node.y - join.y) * across.y));
+  const share = width / Math.max(1, list.length);
+  const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
+  return list.map((fibre, i) => {
+    const offset = (i + .5 - list.length / 2) * share;
+    const start = {x : join.x + across.x * offset, y : join.y + across.y * offset};
+    return {...fibre, width : share, d : branchPath(fibre.node, start, along, inward, confined)};
+  });
+}
 // The bundles and, apart from them, the fibres they split into, which the scene draws above the
-// organs.
+// organs. Nerves are drawn over the bundles they gather.
 export function wireSvg(state, centers) {
   const {document : doc, selected} = state;
-  const {bundles} = wireBundles(state, centers);
+  const {bundles, nerves} = wireBundles(state, centers);
   let lines = '', fibres = '';
   for (const bundle of bundles) {
-    const {kind, ends, way, s0, s1} = bundle;
-    const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
+    const {kind, ends, way, s0, s1, width} = bundle;
+    const style = WIRE_KINDS[kind], splits = bundle.split.arrives;
     const d = way.path(s0, s1);
-    // A bundle is only a little thicker than its thickest fibre, so the fibres stay visible beside
-    // it.
-    const width =
-        Math.max(...ends.map(e => e.width)) * (1 + BUNDLE.growth * Math.log2(ends.length));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id) ||
                                        state.multi?.has(e.link.wire.id));
-    const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
     const pairs = ends.map(end => signalPairs(doc, end.link));
+    // A bundle of one wire is chosen as that wire; one of several wires has its own inspector.
+    const spec = bundleSpec(bundle), shown = chosen >= 0 || bundleChosen(selected, spec);
     lines +=
         '<g opacity="' + fixed(bundle.opacity) + '" data-signal-opacity="' + fixed(bundle.opacity) +
         '" data-signal-edges="' + escapeText([...new Set(pairs.flat()) ].join(' ')) +
-        '" data-wire="' +
-        escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
+        '" data-strand="' + bundle.id + '" ' +
+        (wireIds.size === 1 ? 'data-wire="' + escapeText(ends[0].link.wire.id)
+                            : 'data-bundle="' + escapeText(spec)) +
         '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
         (bundle.mirrored ? ' data-mirrored' : '') +
         (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
-        (chosen >= 0 ? ' selected' : '') + '">' +
+        (shown ? ' selected' : '') + '">' +
         '<path d="' + d + '" class="aid-wire-hit"/>' +
-        (ends.length > 1 ? '<path class="aid-wire-sheath" d="' + d + '" stroke="' + style.colour +
-                               '" stroke-width="' + fixed(width + BUNDLE.sheath) + '"/>'
-                         : '') +
         '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
-        fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
-        '/><title>' + escapeText(joinParts([
+        fixed(width) + '"' + inkDashes(bundle.hidden, way, s0, s1) +
+        (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
+        escapeText(joinParts([
           linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
                    endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
           wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
         ])) +
         '</title></g>';
-    const branchesByPath = new Map();
-    for (const [index, e] of ends.entries())
-      for (const inward of [true, false]) {
-        const nodes = inward ? e.starts : e.arrives;
-        const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
-        for (const node of nodes) {
-          const at = inward ? s0 : s1;
-          const d = branchPath(node, way.at(at), way.direction(at), inward, confined);
-          const key = Number(inward) + ':' + d, section = inward ? 0 : 2;
-          const branch = branchesByPath.get(key) ??
-                         {d, section, edges : new Set(), width : 0, opacity : 0, chosen : false};
-          for (const pair of pairs[index].filter(pair => node.overview ||
-                                                         (inward ? pair.startsWith(node.id + '>')
-                                                                 : pair.endsWith('>' + node.id))))
-            branch.edges.add(pair);
-          branch.width = Math.max(branch.width,
-                                  Math.max(BRANCH.least_width, e.width / Math.sqrt(nodes.length)));
-          branch.opacity = Math.max(branch.opacity, node.overview ? 1 : nodeOpacity(state, true));
-          branch.chosen ||=
-              isSelected(selected, 'wire', e.link.wire.id) || state.multi?.has(e.link.wire.id);
-          branchesByPath.set(key, branch);
-        }
-      }
     const branches =
-        [...branchesByPath.values() ]
-            .map(b => '<path data-signal-section="' + b.section + '" data-signal-edges="' +
-                      escapeText([...b.edges ].join(' ')) + '" data-signal-opacity="' +
-                      fixed(b.opacity) + '" opacity="' + fixed(b.opacity) +
-                      '" class="aid-wire-branch' + (b.chosen ? ' selected' : '') + '" d="' + b.d +
-                      '" stroke-width="' + fixed(b.width) + '"' +
-                      (b.section === 2 ? ' marker-end="url(#' + style.arrow + ')"' : '') + '/>')
+        [ true, false ]
+            .flatMap(
+                inward =>
+                    fibresAt(state, bundle, inward, pairs)
+                        .map(f => '<path data-signal-section="' + (inward ? 0 : 2) +
+                                  '" data-signal-edges="' + escapeText([...f.edges ].join(' ')) +
+                                  '" data-signal-opacity="' + fixed(f.opacity) + '" data-strand="' +
+                                  bundle.id + '" opacity="' + fixed(f.opacity) +
+                                  '" class="aid-wire-branch' + (f.chosen ? ' selected' : '') +
+                                  '" d="' + f.d + '" stroke-width="' + fixed(f.width) + '"' +
+                                  (inward ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/>'))
             .join('');
     if (branches)
       fibres += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
   }
+  // One layer for all nerves, faded as a whole, so where their pieces meet they do not add up.
+  if (nerves.length)
+    lines +=
+        '<g class="aid-nerves">' + nerves.map(nerve => nerveSvg(state, nerve)).join('') + '</g>';
   return {
     lines : lines + (state.tool === 'wire' ? bendHandles(state, bundles) : ''),
     branches : fibres
   };
+}
+// A bundle is known by its wires and whether it is drawn as their mirror, a nerve by its bundles.
+export const bundleSpec = bundle => [...new Set(bundle.ends.map(e => e.link.wire.id))].join(',') +
+                                    ':' + (bundle.mirrored ? 1 : 0);
+export const nerveSpec = nerve => nerve.members.map(bundleSpec).join(' ');
+// A bundle shows chosen when it is, or when a nerve it runs in is.
+const bundleChosen = (selected, spec) =>
+    selected?.kind === 'bundle' && selected.id === spec ||
+    selected?.kind === 'nerve' && selected.id.split(' ').includes(spec);
+// The drawn bundle or nerve a selection names.
+export function chosenStrand(state) {
+  const {bundles, nerves} = wireBundles(state, endpointIndex(state.document));
+  const id = state.selected?.id;
+  return state.selected?.kind === 'bundle'  ? {bundle : bundles.find(b => bundleSpec(b) === id)}
+         : state.selected?.kind === 'nerve' ? {nerve : nerves.find(n => nerveSpec(n) === id)}
+                                            : {};
+}
+// A nerve: half as thick as its bundles together, in their colour when they share one. It lists
+// its bundles, so that pointing at it shows them all, and their wires, so that a bend set on it
+// bends them all.
+function nerveSvg(state, nerve) {
+  const kinds = new Set(nerve.members.map(b => b.kind));
+  const colour = kinds.size === 1 ? WIRE_KINDS[[...kinds ][0]].colour : NERVE.colour;
+  const width =
+      Math.min(NERVE.most, NERVE.share * nerve.members.reduce((sum, b) => sum + b.width, 0));
+  const wires = nerve.members.flatMap(b => b.ends.map(e => e.link.wire.id));
+  const spec = nerveSpec(nerve),
+        chosen = state.selected?.kind === 'nerve' && state.selected.id === spec;
+  return '<g class="aid-nerve' + (chosen ? ' selected' : '') + '" data-strands="' +
+         nerve.members.map(b => b.id).join(' ') + '" data-nerve="' + escapeText(spec) +
+         '" data-wires="' + escapeText([...new Set(wires) ].join(' ')) + '"><path d="' + nerve.d +
+         '" class="aid-wire-hit"/><path d="' + nerve.d + '" class="aid-nerve-ink" stroke="' +
+         colour + '" stroke-width="' + fixed(width) + '"/><title>' +
+         escapeText(t('studio.app.nerveTitle', {n : nerve.members.length})) + '</title></g>';
 }
 function contactOpacity(state, a, b) {
   const visible = ({organ, center}) =>
@@ -453,18 +578,27 @@ export function regionContactsSvg(state, centers) {
   return html;
 }
 const BEND_HANDLE = 6;
+// One handle for every bend; bundles bent through the same points (a nerve) share their handles,
+// so moving one moves the nerve.
 function bendHandles(state, bundles) {
-  const zoom = zoomOf(state);
-  return bundles.filter(b => b.bends.length)
-      .map(b => {
-        const wires = [...new Set(b.ends.map(e => e.link.wire.id)) ].join(' ');
-        return b.bends
-            .map((p, k) => '<circle class="aid-bend" data-bend-wires="' + escapeText(wires) +
-                           '" data-bend-index="' + k + '"' + (b.mirrored ? ' data-mirrored' : '') +
-                           ' cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-                           fixed(BEND_HANDLE / zoom) + '"/>')
-            .join('');
-      })
+  const zoom = zoomOf(state), shared = new Map();
+  for (const b of bundles.filter(b => b.bends.length)) {
+    const key = bendKey(b.bends) + ':' + b.mirrored, held = shared.get(key);
+    const wires = b.ends.map(e => e.link.wire.id);
+    if (held)
+      wires.forEach(w => held.wires.add(w));
+    else
+      shared.set(key, {bends : b.bends, mirrored : b.mirrored, wires : new Set(wires)});
+  }
+  return [...shared.values() ]
+      .map(({bends, mirrored, wires}) =>
+               bends
+                   .map((p, k) => '<circle class="aid-bend" data-bend-wires="' +
+                                  escapeText([...wires ].join(' ')) + '" data-bend-index="' + k +
+                                  '"' + (mirrored ? ' data-mirrored' : '') + ' cx="' + fixed(p.x) +
+                                  '" cy="' + fixed(p.y) + '" r="' + fixed(BEND_HANDLE / zoom) +
+                                  '"/>')
+                   .join(''))
       .join('');
 }
 const AIM = Object.freeze({reach : 36, steps : 48});

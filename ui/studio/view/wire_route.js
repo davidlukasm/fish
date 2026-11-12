@@ -19,12 +19,14 @@ const SHAPES = Object.freeze({
   sperm : [ 26, 11 ],
   gut : [ 37, 20 ]
 });
+// A bundle ends a little inside the organ's routing outline, which reaches past the drawn organ.
+const DOCK = .8;
 export function organDock(anchor, towards) {
   const shape = SHAPES[anchor.organ?.type], p = anchor.point;
   if (!shape)
     return p;
   const dx = towards.x - p.x, dy = towards.y - p.y,
-        radius = Math.hypot(dx / shape[0], dy / shape[1]);
+        radius = Math.hypot(dx / shape[0], dy / shape[1]) / DOCK;
   return radius > 1 ? {x : p.x + dx / radius, y : p.y + dy / radius} : p;
 }
 // How far a point lies outside a region's drawn outline (negative inside), so nerves keep off the
@@ -158,6 +160,11 @@ function simplified(points) {
   };
   mark(0, points.length - 1);
   return points.filter((_, i) => keep[i]);
+}
+// Where a nerve between these two ends may run: inside the body, off every other organ and region.
+export function passable(doc, sites, from, to) {
+  const F = field(doc, sites);
+  return p => !!F.cells[F.index(p)]?.every(id => id === from.organ?.id || id === to.organ?.id);
 }
 const EXIT = Object.freeze({slope : 1.2});
 export function nerveRoute(doc, sites, from, to, kind) {
