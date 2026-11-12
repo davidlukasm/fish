@@ -69,7 +69,8 @@ const VARIATION =
     Object.freeze({width : 150, height : 98, cx : 48, cy : 48, span : 70, radius : 9});
 export const variationPatch = fx =>
     clamp((fx * VARIATION.width - VARIATION.cx - VARIATION.radius) / VARIATION.span);
-export function variationGraphic(value, target, family) {
+// `at` places the picture inside a larger one.
+export function variationGraphic(value, target, family, at = null) {
   const V = VARIATION, word = key => label('cellPicture.' + key);
   const glyphs = [ -1, -.5, 0, .5, 1 ]
                      .map((q, i) => {
@@ -93,18 +94,32 @@ export function variationGraphic(value, target, family) {
                               '</g>';
                      })
                      .join('');
+  // Inside a larger picture the style overrides the full width the stylesheet gives a lone one;
+  // the empty frame keeps the picture's box, which the drag measures, at its full size.
+  const place = at ? ' x="' + at.x + '" y="' + at.y + '" style="width:' + V.width +
+                         'px;height:' + V.height + 'px"'
+                   : '';
   return '<svg class="aid-variation" data-variation="' + escapeText(target) +
-         '" data-variation-family="' + family + '" viewBox="0 0 ' + V.width + ' ' + V.height +
-         '" role="img" aria-label="' + word(family) + '"><title>' + word('variationDrag') +
-         '</title>' + glyphs + '<circle class="aid-graphic-handle" data-variation-handle cx="' +
+         '" data-variation-family="' + family + '"' + place + ' viewBox="0 0 ' + V.width + ' ' +
+         V.height + '" role="img" aria-label="' + word(family) + '"><title>' +
+         word('variationDrag') + '</title><rect width="' + V.width + '" height="' + V.height +
+         '" fill="none"/>' + glyphs +
+         '<circle class="aid-graphic-handle" data-variation-handle cx="' +
          fixed(V.cx + V.span * value + V.radius) + '" cy="' + (V.cy - 26) + '" r="6"/>' +
          '</svg>';
 }
+// How new cells differ, in one picture: one fan of example cells per kind of difference, side by
+// side; each fan keeps its own handle and geometry.
 export function cellVariation(center) {
+  const V = VARIATION, kinds = Object.entries(center.distribution);
+  const rows = Math.ceil(kinds.length / 2);
   return '<details class="aid-cell-variation"><summary>' + label('cellPicture.variation') +
-         '</summary><div class="aid-variation-grid">' +
-         Object.entries(center.distribution)
-             .map(([ key, value ]) => variationGraphic(value, center.id, key))
+         '</summary><svg class="aid-variation-sheet" viewBox="0 0 ' + 2 * V.width + ' ' +
+         rows * V.height + '" role="img" aria-label="' + label('cellPicture.variation') + '">' +
+         kinds
+             .map(([ key, value ], k) =>
+                      variationGraphic(value, center.id, key,
+                                       {x : (k % 2) * V.width, y : Math.floor(k / 2) * V.height}))
              .join('') +
-         '</div></details>';
+         '</svg></details>';
 }

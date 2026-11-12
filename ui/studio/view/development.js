@@ -1,8 +1,14 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {HORMONES} from '../../schema.js';
 import {allCenters} from '../model/document.js';
 import {barShare, dragBar, escapeText, fixed} from './markup.js';
 import {formatNumber, namedText} from '../../strings.js';
-import {BIRTH, lifePhaseEditor, receptorBody, substanceMark, substanceName} from './substances.js';
+import {
+  LIFE_EFFECTS,
+  lifePhaseEditor,
+  receptorBody,
+  substanceMark,
+  substanceName
+} from './substances.js';
 import {cellVariation, contactCapacity} from './cell_tissue.js';
 import {label} from './kit.js';
 import {substanceColor} from '../../hormones.js';
@@ -69,19 +75,9 @@ export function previewControls(state) {
 export function cellDevelopment(state, center) {
   if (!center || !state.capabilities)
     return '';
-  const effects = [ BIRTH, HORMONE_EFFECT.output, HORMONE_EFFECT.death ];
-  const chosen = effects.includes(state.developmentEffect) ? state.developmentEffect : BIRTH;
-  const title = effect => word(effect === BIRTH                   ? 'birth'
-                               : effect === HORMONE_EFFECT.output ? 'output'
-                                                                  : 'death');
-  const tabs =
-      '<div class="aid-effect-chips">' +
-      effects
-          .map(effect => '<button data-development-effect="' + effect + '" aria-pressed="' +
-                         (chosen === effect) + '">' + title(effect) + '</button>')
-          .join('') +
-      '</div>';
+  const chosen =
+      LIFE_EFFECTS.includes(state.developmentEffect) ? state.developmentEffect : LIFE_EFFECTS[0];
   return '<details class="aid-cell-development"><summary>' + word('title') + '</summary>' +
-         lifePhaseEditor(state, center) + tabs + receptorBody(state, center, chosen) +
+         lifePhaseEditor(state, center, chosen) + receptorBody(state, center, chosen) +
          '</details>' + contactCapacity(state, center) + cellVariation(center);
 }

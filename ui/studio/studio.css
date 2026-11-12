@@ -175,8 +175,6 @@
 .aid-developed-nerve div{display:flex;justify-content:space-between;font-size:12px;color:var(--aid-soft-text);padding:3px 0;border-bottom:1px solid #ffffff10}
 .aid-developed-nerve output{color:#e9f3ef}
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
-.aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:var(--aid-soft-text);margin-top:-6px}
-.aid-life-phase{margin:10px 0 14px;padding-bottom:10px;border-bottom:1px solid #ffffff14}
 .aid-substance-wheel{width:240px;max-width:100%;display:block;margin:10px auto}
 .aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
 .aid-wheel-close{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;height:250px}
@@ -1041,10 +1039,17 @@
 .aid-lifecycle path{fill:none;stroke-width:2}
 .aid-life-birth{color:#d8c67e;stroke:#d8c67e}
 .aid-life-output{color:#79d2be;stroke:#79d2be}
+.aid-life-line{cursor:pointer}
+.aid-life-hit{fill:none;stroke:transparent;stroke-width:12}
+.aid-life-line[aria-pressed=true] polyline:not(.aid-life-hit){stroke-width:3.4}
+.aid-life-badge{cursor:pointer}
+.aid-life-badge circle{fill:var(--aid-graphic);stroke-width:2}
+.aid-life-badge.birth circle{stroke:var(--aid-senses)}.aid-life-badge.output circle{stroke:#79d2be}.aid-life-badge.death circle{stroke:#e8a2b5}
+.aid-life-badge.chosen circle{stroke-width:4}
+.aid-life-badge text{fill:#10292d;font-size:8px;font-weight:700;pointer-events:none}
 .aid-life-death{color:#e8a2b5;stroke:#e8a2b5}
 .aid-life-current{stroke:var(--aid-label-text);stroke-dasharray:3 3}
 .aid-lifecycle text{font-size:10px;fill:var(--aid-label-text)}
-.aid-life-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:10px;margin:4px 0}
 .aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}
@@ -1162,7 +1167,8 @@
 .aid-contact-seat{fill:var(--aid-light)}
 .aid-contact-fibre{fill:none;stroke:var(--aid-light);stroke-linecap:round;stroke-linejoin:round}
 .aid-capacity .teaching .aid-contact-fibre{stroke:var(--aid-teach)}
-.aid-variation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.aid-variation-sheet{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-variation-sheet .aid-variation{background:none}
 .aid-variation{color:var(--aid-brain)}
 .aid-variation g path,.aid-variation g circle:not(.aid-tissue-cell){stroke:currentColor;stroke-width:1.2;fill:none}
 .aid-variation-branch{fill:none;stroke:var(--aid-light);stroke-width:1;opacity:.4}
@@ -1171,7 +1177,7 @@
 .aid-learning-modes button[aria-pressed=true],.aid-effect-chips button[aria-pressed=true]{border-color:var(--aid-chosen-edge);background:var(--aid-limit)}
 .aid-learning-modes svg{display:block;width:100%;height:auto;color:var(--aid-light)}
 .aid-learn-substance summary{display:flex;gap:6px;align-items:center}
-.aid-life-phase .aid-life-birth{fill:none;stroke:var(--aid-senses);stroke-width:2;stroke-dasharray:4 3}
+.aid-life-picture .aid-life-birth{fill:none;stroke:var(--aid-senses);stroke-width:2;stroke-dasharray:4 3}
 
 .aid-cell-group{width:100%;height:auto;display:block;touch-action:none}
 .aid-cell-group text{fill:var(--aid-label-text);font-size:12px}
