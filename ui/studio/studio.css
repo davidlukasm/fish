@@ -352,6 +352,9 @@
 .aid-gland-drops{fill:#e8c46a;stroke:none}
 .aid-gate-track{stroke:#5d8790;stroke-width:2;stroke-dasharray:3 4;fill:none}
 .aid-sense-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
+.aid-bladder-lift{display:block;width:100%;height:auto;margin:6px 0;background:var(--aid-graphic);border-radius:8px}
+.aid-lift-sink{stroke:#e5929699;stroke-width:1.5;stroke-dasharray:4 3;fill:none}
+.aid-lift-line{stroke:#8fc7e8;stroke-width:2.5;fill:none}
 .aid-pull-bar{fill:#c98a7c;stroke:#e6b2a6;stroke-width:1}
 .aid-pull-bar.reserve{fill:none;stroke-dasharray:3 2}
 .aid-pull-free{fill:none;stroke:#5d8790;stroke-width:1;stroke-dasharray:2 3}

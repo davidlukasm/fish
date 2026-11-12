@@ -560,7 +560,8 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
     std::cout << ']';
   }
-  std::cout << "],\"fins\":[";
+  std::cout << "],\"bladder\":" << a.capacities[fishsim::organ_port::bladder];
+  std::cout << ",\"fins\":[";
   for (std::size_t i = 0; i < a.fins.size(); ++i) {
     if (i)
       std::cout << ',';
@@ -860,6 +861,15 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   std::cout << "}\n";
 }
 }
+// The swim bladder's lift at full fill per share of capacity, and the sinking it works against
+// (movement.cc): lift = strength * capacity / (1 + capacity) * fill.
+std::string buoyancy_report() {
+  const fishsim::PhysiologyParameters physiology{};
+  std::ostringstream out;
+  out << "{\"sinking\":" << physiology.sinking << ",\"strength\":" << physiology.bladder_strength
+      << '}';
+  return out.str();
+}
 std::string gonad_report() {
   const fishsim::EvolutionParameters evolution{};
   const fishsim::PhysiologyParameters physiology{};
@@ -966,7 +976,7 @@ int main(int argc, char **argv) {
                 << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
 
                 << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
-                << ",\"gonads\":" << gonad_report()
+                << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
                 << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN

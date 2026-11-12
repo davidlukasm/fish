@@ -356,7 +356,58 @@ export function bladderGraphic(state, organ, selected, held = null) {
                               B.roof[1] + ' ' + fixed(roof(B.roof[1])) + '"/>' + pressureDots,
                           centerTitle(pressure) + ' · ' + pressureText(state, organ))
                    : '') +
-         marks + '</svg></div>';
+         marks + '</svg>' + bladderLift(state) + '</div>';
+}
+// What the glands' capacity does: the lift a bladder gives at each fill (movement.cc: strength ·
+// capacity / (1 + capacity) · fill) against the fish's sinking. Where the lift line crosses the
+// sinking line the fish hovers; below that fill it sinks, above it rises. A bladder too small never
+// reaches the sinking line and the fish sinks at any fill. The capacity is the design run's.
+const LIFT = Object.freeze({
+  width : 300,
+  height : 108,
+  left : 40,
+  right : 284,
+  top : 12,
+  base : 76,
+  room : 1.6,
+  title : 12,
+  axis : 90,
+  dot : 3.5,
+  word : 4
+});
+function bladderLift(state) {
+  const L = LIFT, physics = state.capabilities?.buoyancy, capacity = state.anatomy?.bladder;
+  if (!physics || !(capacity >= 0))
+    return '';
+  const full = physics.strength * capacity / (1 + capacity), most = L.room * physics.sinking;
+  const x = fill => L.left + (L.right - L.left) * fill,
+        y = force => L.base - (L.base - L.top) * Math.min(1, force / most);
+  const hover = full > 0 ? physics.sinking / full : Infinity;
+  const word = (key, px, py, anchor = 'start', values) =>
+      '<text class="aid-handle-word" x="' + fixed(px) + '" y="' + fixed(py) + '" text-anchor="' +
+      anchor + '">' + escapeText(t('studio.inspector.lift.' + key, values)) + '</text>';
+  const sink = y(physics.sinking);
+  const marks = hover <= 1
+                    ? '<line class="aid-use-marker" x1="' + fixed(x(hover)) + '" y1="' + L.top +
+                          '" x2="' + fixed(x(hover)) + '" y2="' + L.base + '"/><circle ' +
+                          'class="aid-use-dot" cx="' + fixed(x(hover)) + '" cy="' + fixed(sink) +
+                          '" r="' + L.dot + '" fill="#e5f4dc"/>' +
+                          word('hovers', x(hover), L.top, hover < .5 ? 'start' : 'end',
+                               {n : percent(hover)}) +
+                          word('sinks', L.left + L.word, sink - L.word) +
+                          word('rises', L.right, sink - L.word, 'end')
+                    : word('tooSmall', (L.left + L.right) / 2, L.top + L.title, 'middle');
+  return '<svg class="aid-bladder-lift" viewBox="0 0 ' + L.width + ' ' + L.height +
+         '" role="img" aria-label="' + escapeText(t('studio.inspector.lift.title')) + '">' +
+         '<path class="aid-sense-axis" d="M' + L.left + ' ' + L.top + ' V' + L.base + ' H' +
+         L.right + '"/><path class="aid-lift-sink" d="M' + L.left + ' ' + fixed(sink) + ' H' +
+         L.right + '"/><path class="aid-lift-line" d="M' + L.left + ' ' + L.base + ' L' + L.right +
+         ' ' + fixed(y(full)) + '"/>' + marks +
+         '<text class="aid-handle-word" transform="translate(' + L.title + ' ' +
+         fixed((L.top + L.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
+         escapeText(t('studio.inspector.lift.title')) + '</text>' + word('empty', L.left, L.axis) +
+         word('fill', (L.left + L.right) / 2, L.axis, 'middle') +
+         word('full', L.right, L.axis, 'end') + '</svg>';
 }
 // How many glands: a dot at each place one could grow, the handle at the last one grown.
 function nodeMarks(places, count, title) {

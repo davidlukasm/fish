@@ -330,7 +330,17 @@
     "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft",
     "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff",
     "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg",
-    "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion."
+    "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion.",
+    "lift": {
+      "title": "Auftrieb",
+      "hovers": "schwebt bei {n} Füllung",
+      "sinks": "sinkt",
+      "rises": "steigt",
+      "tooSmall": "Blase zu klein: der Fisch sinkt bei jeder Füllung",
+      "empty": "leer",
+      "fill": "Füllung",
+      "full": "voll"
+    }
   },
   "effects": [
     "erregt oder hemmt die Zelle",
