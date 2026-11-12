@@ -87,14 +87,9 @@ export function driveElement(center, label, stepsLabel, {
   const idle = meaning?.idle ? `<rect class="aid-drive-idle" x="${D.left}" y="${MIDDLE}" width="${
                                    D.right - D.left}" height="${HALF}"/>`
                              : '';
-  const names = meaning
-                    ? `<text x="${D.right - D.inset}" y="${D.top + D.label}" text-anchor="end">${
-                          meaning.above}</text><text x="${D.right - D.inset}" y="${
-                          D.top + D.plot - D.rise}" text-anchor="end">${meaning.below}</text>`
-                    : '';
   return `<svg class="aid-sensitivity aid-drive" viewBox="0 0 ${D.width} ${D.height}" data-drive="${
-      idSafe(center.id)}" role="img" aria-label="${label}">${idle}${
-      names}<line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${D.right}" y2="${
+      idSafe(center.id)}" role="img" aria-label="${label}">${
+      idle}<line class="aid-sensitivity-axis" x1="${D.left}" y1="${MIDDLE}" x2="${D.right}" y2="${
       MIDDLE}"/><line class="aid-sensitivity-half" x1="${D.left}" y1="${
       rounded(y(rhythm ? rest : 0))}" x2="${D.right}" y2="${
       rounded(y(rhythm ? rest : 0))}"/><path class="aid-sensitivity-curve" d="M${
@@ -105,8 +100,9 @@ export function driveElement(center, label, stepsLabel, {
       rounded(y(rhythm ? rest : 0))}" r="${D.handle}"/>${
       rhythm ? `<circle class="aid-spectrum-handle" data-drive-handle="beat" cx="${
                    rounded(x(knee))}" cy="${rounded(y(level(knee)))}" r="${D.handle}"/>`
-             : ''}<text x="${D.right}" y="${D.height - D.tick}" text-anchor="end">${
-      rhythm ? stepsLabel(Math.round(tc)) : stepsLabel()}</text></svg>`;
+             : ''}<g class="aid-response-symbol" transform="translate(337 112)"><title>${
+      rhythm ? stepsLabel(Math.round(tc))
+             : stepsLabel()}</title><circle r="6"/><path d="M0-4v4l3 2"/></g></svg>`;
 }
 
 export const CHANGE_ICON = 'M2 18h7l2-13 2 13h9';

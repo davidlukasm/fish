@@ -1210,6 +1210,16 @@
 .aid-anatomy-handles .hit{fill:transparent;stroke:none}
 .aid-anatomy-handles path{fill:none;stroke:#e9dba7;stroke-width:1;pointer-events:none}
 .aid-region-graph{width:100%;display:block;overflow:visible;--circuit:#9dccbf;color:var(--circuit)}
+.aid-nerve-editor{background:var(--aid-graphic);border-radius:10px;padding:8px;color:var(--aid-brain)}
+.aid-nerve-picture{display:block;width:100%;height:auto;touch-action:none}
+.aid-nerve-picture .aid-response,.aid-nerve-picture .aid-drive{border:0;border-radius:0;background:none}
+.aid-nerve-axons{fill:none;stroke:currentColor;stroke-width:1.3}
+.aid-nerve-target{opacity:.18;fill:var(--aid-ground)}
+.aid-nerve-envelope{fill:var(--aid-brain);fill-opacity:.08;stroke:currentColor;stroke-width:1.2}
+.aid-nerve-midline{stroke:var(--aid-light);stroke-dasharray:3 5;opacity:.35}
+.aid-nerve-reach{stroke:var(--aid-handle);stroke-dasharray:2 4;opacity:.4}
+.aid-nerve-locked,.aid-response-symbol{stroke:var(--aid-soft-text);stroke-width:1.3;fill:none}
+.aid-nerve-to-trace{fill:none;stroke:var(--aid-light);stroke-width:1;stroke-dasharray:3 4;opacity:.3}
 .aid-region-edge-ink{fill:none;stroke:var(--circuit);stroke-width:1.6}.aid-region-edge.inhibits{--circuit:#e6a890}.aid-region-edge.cut{opacity:.3}.aid-region-edge.cut .aid-region-edge-ink{stroke-dasharray:4 4}
 .aid-region-edge-hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}.aid-region-edge:hover .aid-region-edge-ink{stroke-width:3}
 .aid-region-graph marker path{fill:var(--circuit)}.aid-region-graph-node{cursor:pointer}.aid-region-graph-node>circle,.aid-region-port rect{fill:var(--aid-ground);stroke:var(--circuit);stroke-width:1.6}.aid-region-graph-node.pending>circle{fill:#866549;stroke:#efd89d;stroke-width:3}.aid-region-graph-node.mirrored{opacity:.6}.aid-region-graph-node.mirrored>circle{stroke-dasharray:2 2}

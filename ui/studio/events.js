@@ -185,6 +185,24 @@ function clickItem(studio, element, event) {
   }
   if (studio.pointer?.moved)
     return;
+  if (kind === 'wire' && (event.shiftKey || event.ctrlKey || event.metaKey) &&
+      element.dataset.wires) {
+    const picked = element.dataset.wires.split(' '), multi = studio.state.multi;
+    if (studio.state.selected?.kind !== 'wire')
+      multi.clear();
+    else if (!multi.size)
+      multi.add(studio.state.selected.id);
+    const remove = picked.every(id => multi.has(id));
+    for (const id of picked)
+      if (remove)
+        multi.delete(id);
+      else
+        multi.add(id);
+    const last = [...multi ].at(-1);
+    studio.state.selected = last ? {kind : 'wire', id : last} : null;
+    studio.refreshViews();
+    return;
+  }
   studio.select(kind, id, event);
 }
 function wireItem(studio, kind, id) {

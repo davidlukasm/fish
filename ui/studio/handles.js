@@ -56,7 +56,7 @@ import {
 import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
-import {driveContext, outputMarks, outputPatch, wireMarks, wirePatch} from './view/panels.js';
+import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {skinPatch, skinSensitivity} from './view/skin.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
@@ -70,6 +70,7 @@ import {
   wheelWidthPatch
 } from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
+import {nerveTissuePatch} from './view/nerve_cell.js';
 import {contactCapacityPatch, variationPatch} from './view/cell_tissue.js';
 import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
@@ -96,6 +97,7 @@ const HANDLES = Object.freeze({
   memory : {follow : 'memoryPointer'},
   drive : {follow : 'drivePointer'},
   response : {follow : 'responsePointer'},
+  nerve : {follow : 'nervePointer'},
   region : {follow : 'regionPointer'},
   adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
@@ -113,7 +115,6 @@ const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
 const PADS = Object.freeze({
   wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
-  output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
   vector : {
     key : 'vectorPad',
     patch : wheelPatch,
@@ -167,6 +168,12 @@ export const GRIPS = Object.freeze([
     handle : '[data-region-handle]',
     held : 'region',
     start : (studio, g, h) => ({id : g.dataset.regionPicture, handle : h.dataset.regionHandle})
+  },
+  {
+    graphic : '[data-nerve-tissue]',
+    handle : '[data-nerve-handle]',
+    held : 'nerve',
+    start : (studio, g, h) => ({id : g.dataset.nerveTissue, handle : h.dataset.nerveHandle})
   },
   {
     graphic : '[data-response]',
@@ -416,6 +423,14 @@ export const handleMethods = {
     const patch = responsePatch(center, fx, fy, driveContext(this.state, center));
     if (patch)
       this.draftDesign(updateCenter(doc, drag.id, patch), 'response:' + drag.id);
+  },
+  nervePointer(event) {
+    const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);
+    const center = findCenter(this.state.document, drag.id)?.center;
+    if (center)
+      this.draftDesign(updateCenter(this.state.document, drag.id,
+                                    nerveTissuePatch(this.state, center, drag.handle, fx, fy)),
+                       'nerve:' + drag.id);
   },
   responseKey(event) {
     const handle = event.target.closest?.('[data-response-handle]');

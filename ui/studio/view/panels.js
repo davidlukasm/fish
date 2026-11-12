@@ -1,4 +1,5 @@
 import {contactPlan} from './contact_plan.js';
+import {nerveEditor} from './nerve_cell.js';
 import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
@@ -21,23 +22,18 @@ import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivit
 import {GRAVITY_STIMULUS, stimulusPicture} from './stimuli.js';
 import {scentColors} from '../../brain_model.js';
 import {driveElement} from './drive.js';
-import {responseDiagram} from './response.js';
 import {preferredScent} from '../../tuning.js';
 import {
   BARBEL_FEEL,
   functionFor,
   isPelvicMuscle,
-  isModulator,
-  isPacemaker,
   isRegion,
   kindLimit,
   kindNodes,
   MUSCLE_LABEL_INDEX,
   ORGAN_BY_KEY
 } from '../model/organs.js';
-import {routedLinks} from '../model/regions.js';
 import {pairEndpoint} from '../model/document.js';
-import {modulatorScene} from './effects.js';
 import {
   chosenCenter,
   contactBundle,
@@ -49,10 +45,9 @@ import {
   findOrgan,
   groupReport,
   wireContacts,
-  wiredCrossing
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
-import {escapeText, fixed, glyph, padPoint, padValues, pointMarks} from './markup.js';
+import {escapeText, fixed, glyph} from './markup.js';
 import {findSite, onMidline} from '../model/layout.js';
 import {
   formatNumber,
@@ -67,9 +62,9 @@ import {
 import {cellGroup, cellWords, heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
-import {learningInspector, modeName} from './learning.js';
+import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
-import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies, tone} from './names.js';
+import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
 import {bladderGraphic, gonadFacts, gonadGraphic, pressureNote} from './sacs.js';
 import {skinField} from './skin.js';
@@ -125,7 +120,6 @@ function driveMeaning(state, center) {
 const gonadPanel = (state, organ, center) =>
     gonadGraphic(state, organ, center) + gonadFacts(state, organ) + pressureNote(state, organ);
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
-const nervePanel = (state, organ, center) => nerveProperties(state, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => scentMap(organ, center),
   barbels : (state, organ, center) =>
@@ -151,13 +145,12 @@ const ORGAN_PANELS = Object.freeze({
   touch : skinPanel,
   pain : skinPanel,
   blood : (state, organ, center) => hormonePad(state, organ, center),
-  brain : nervePanel
 });
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       icon(organ.type, ICON.metric) + '<span>' +
                                       escapeText(organTitle(organ)) + '</span></div>';
-const organPanel = (state, organ, center) => (
-    ORGAN_PANELS[organ.type] ?? (isRegion(organ) ? nervePanel : organMetric))(state, organ, center);
+const organPanel = (state, organ, center) =>
+    (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&
@@ -195,31 +188,6 @@ const motorSection = (state, organ, center) =>
                          {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
             '</div>') +
     (organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '');
-function nerveSection(state, organ, center) {
-  if (organ.type === 'rhythm' || isPacemaker(center)) {
-    const title = label('inspector.beat');
-    return section(title, driveElement(center, title, n => t('studio.inspector.beatSteps', {n}),
-                                       {...driveContext(state, center), rhythm : true}));
-  }
-  return section(label('inspector.stimulusResponse'), responseDiagram(state, center));
-}
-function modulatorSection(state, organ, center) {
-  const doc = state.document;
-  const taught = [...new Set(routedLinks(doc, state.sites)
-                                 .filter(link => link.from === center.id || link.from === organ.id)
-                                 .flatMap(link => endpointCenters(doc, link.to))
-                                 .filter(c => c.role === 'nerve' && c.id !== center.id)) ];
-  return section(label('inspector.modulates'),
-                 modulatorScene(tone('brain')) +
-                     (taught.length
-                          ? '<div class="aid-teacher-list">' +
-                                taught
-                                    .map(c => '<button data-select-center="' + escapeText(c.id) +
-                                              '">' + escapeText(centerTitle(c)) + '</button>')
-                                    .join('') +
-                                '</div>'
-                          : '<p class="aid-hint">' + label('inspector.teachesNobody') + '</p>'));
-}
 const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)
@@ -228,11 +196,10 @@ function organSettings(state, organ, center) {
     return visionInspector(state, organ);
   if (isRegion(organ) && state.selected?.kind !== 'center')
     return regionSettings(state, organ);
-  return organPanel(state, organ, center) +
-         (center.role === 'nerve' && isModulator(center) ? modulatorSection(state, organ, center)
-                                                         : '') +
-         (center.role === 'nerve' ? outgoingField(state, center) : '') + cellCount(organ, center) +
-         (ROLE_SECTIONS[center.role] ?? nerveSection)(state, organ, center);
+  if (center.role === 'nerve')
+    return centerSide(state, center) + nerveEditor(state, center);
+  return organPanel(state, organ, center) + cellCount(organ, center) +
+         (ROLE_SECTIONS[center.role]?.(state, organ, center) ?? '');
 }
 export function organSettingsBlock(state, organ) {
   return '<div class="aid-organ-settings" data-organ-settings="' + escapeText(organ.id) + '">' +
@@ -280,12 +247,6 @@ export function sensorAdaptation(state, center, stretch = 1, start = null) {
   return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
          graphic + '</div>';
 }
-function nerveProperties(state, center) {
-  const template =
-      '<div class="aid-neuron-kind">' +
-      escapeText(namedText(label('inspector.template'), label('centers.' + center.key))) + '</div>';
-  return template + centerSide(state, center) + developedNerve(state, center);
-}
 function barbelFeel(center) {
   return '<div class="aid-button-group aid-barbel-feel" role="group" aria-label="' +
          label('inspector.barbelFeel.label') + '">' +
@@ -312,21 +273,6 @@ function centerSide(state, center) {
                                      '</button>')
              .join('') +
          '</div>';
-}
-function developedNerve(state, center) {
-  if (state.stale || !Array.isArray(state.report?.groups))
-    return '';
-  const nerve = groupReport(state.document, state.report, 'groups', center.id)?.nerve;
-  if (!nerve)
-    return '';
-  const [sign, mode, pace, modulator] = nerve;
-  const row = (name, value) => '<div><span>' + name + '</span><output>' + value + '</output></div>';
-  return '<section class="aid-developed-nerve">' + heading(label('inspector.developedClass')) +
-         row(label('inspector.transmitter'),
-             label(sign >= 0 ? 'inspector.exciting' : 'inspector.inhibiting')) +
-         row(label('inspector.learningMode'), label('inspector.' + modeName(mode))) +
-         row(label('inspector.rhythm'), percent(pace)) +
-         row(label('inspector.modulation'), percent(modulator)) + '</section>';
 }
 const selectedCenter = (state, organ) =>
     chosenCenter(state.document, state.selected, state.visionProfile) ?? organ.centers[0] ?? null;
@@ -503,41 +449,6 @@ function wireField(wire) {
          circle('aid-wire-source', W.source) +
          circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
          label('sections.spread') + '</span></div>';
-}
-const OUTPUT_PAD =
-    Object.freeze({width : 190, height : 190, inset : 28, round : 12, marker : 8, label : 10});
-export function outputPatch(fx, fy, center, state) {
-  const {across, up} = padValues(OUTPUT_PAD, fx, fy);
-  return wiredCrossing(state.document, center, state.sites) === null
-             ? {range : up, crossing : across}
-             : {range : up};
-}
-const outputPoint = (state, center) =>
-    padPoint(OUTPUT_PAD, wiredCrossing(state.document, center, state.sites) ?? center.crossing,
-             center.range);
-export const outputMarks = (center, state) => pointMarks(outputPoint(state, center));
-function outgoingField(state, center) {
-  const P = OUTPUT_PAD, wired = wiredCrossing(state.document, center, state.sites);
-  const p = outputPoint(state, center), side = P.width - 2 * P.inset;
-  const middle = {x : P.width / 2, y : P.height / 2};
-  const edge = (key, x, y, turn) =>
-      '<text class="aid-pad-label" x="' + fixed(x) + '" y="' + fixed(y) + '"' +
-      (turn ? ' transform="rotate(' + turn + ' ' + fixed(x) + ' ' + fixed(y) + ')"' : '') +
-      ' text-anchor="middle" dominant-baseline="middle">' + label('inspector.' + key) + '</text>';
-  const out = P.inset - P.label;
-  return '<div class="aid-output-field"><h3>' + label('inspector.signalReach') +
-         '</h3><div class="aid-vector-editor"><svg data-output-pad="' + escapeText(center.id) +
-         '" viewBox="0 0 ' + P.width + ' ' + P.height + '" tabindex="0" role="img" aria-label="' +
-         label('inspector.signalReach') + '"><rect x="' + P.inset + '" y="' + P.inset +
-         '" width="' + side + '" height="' + side + '" rx="' + P.round + '"/><path d="M' +
-         middle.x + ' ' + P.inset + ' V' + (P.height - P.inset) + ' M' + P.inset + ' ' + middle.y +
-         ' H' + (P.width - P.inset) + '"/>' + edge('far', middle.x, out) +
-         edge('near', middle.x, P.height - out) + edge('sameSide', out, middle.y, -90) +
-         edge('oppositeSide', P.width - out, middle.y, 90) +
-         '<circle class="aid-vector-point" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-         P.marker + '"/></svg></div>' +
-         (wired === null ? '' : '<p class="aid-hint">' + label('inspector.sideByWires') + '</p>') +
-         '</div>';
 }
 function wireInspector(state, wire) {
   const doc = state.document;

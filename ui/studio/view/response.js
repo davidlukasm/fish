@@ -1,7 +1,7 @@
 import {TIME_CONSTANT} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {t, tList} from '../../strings.js';
+import {tList} from '../../strings.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {label} from './kit.js';
 import {nerveResponse} from './drive.js';
@@ -121,7 +121,7 @@ export function responseChoices(center) {
          '</div>';
 }
 
-export function responseDiagram(state, center) {
+export function responseSvg(state, center) {
   const D = RESPONSE, context = driveContext(state, center);
   const {total, on, off, points, rhythm} = responseTrace(center, context);
   const stride = Math.max(1, Math.floor(total / 240));
@@ -137,8 +137,7 @@ export function responseDiagram(state, center) {
           : '';
   const handle = responseHandle(center, context);
   const inputY = D.inputBase - D.inputScale * D.input;
-  return '<div class="aid-response-editor">' + responseChoices(center) +
-         '<svg class="aid-response" data-response="' + escapeText(center.id) + '" viewBox="0 0 ' +
+  return '<svg class="aid-response" data-response="' + escapeText(center.id) + '" viewBox="0 0 ' +
          D.width + ' ' + D.height + '" role="group" aria-label="' +
          label('inspector.stimulusResponse') + '"><title>' + label('regions.response.reference') +
          '</title><path class="aid-response-input" d="M' + D.left + ' ' + D.inputBase + 'H' +
@@ -152,9 +151,12 @@ export function responseDiagram(state, center) {
          ' aria-label="' + label('regions.response.drag') + '" cx="' + fixed(handle.fx * D.width) +
          '" cy="' + fixed(handle.fy * D.height) + '" r="' + D.knob +
          '" style="cursor:' + (filtered(center) ? 'move' : 'ns-resize') + '"><title>' +
-         label('regions.response.drag') + '</title></circle><text x="' + D.left + '" y="14">' +
-         label('regions.response.input') + '</text><text x="' + D.left + '" y="77">' +
-         label('regions.response.output') + '</text><text x="' + D.right +
-         '" y="213" text-anchor="end">' + t('units.steps', {n : Math.round(total)}) +
-         '</text></svg></div>';
+         label('regions.response.drag') + '</title></circle>' +
+         '<g class="aid-response-symbol"><title>' + label('regions.response.input') +
+         '</title><path d="M8 9h14M17 5l5 4-5 4"/></g>' +
+         '<g class="aid-response-symbol"><title>' + label('regions.response.output') +
+         '</title><path d="M8 72h14M17 68l5 4-5 4"/></g>' +
+         '<g class="aid-response-symbol" transform="translate(330 208)"><title>' +
+         Math.round(total) + ' · ' + label('learnRule.steps') +
+         '</title><circle r="7"/><path d="M0-4v4l3 2"/></g></svg>';
 }
