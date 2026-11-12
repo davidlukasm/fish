@@ -1,4 +1,5 @@
 import {TIME_CONSTANT} from '../../schema.js';
+import {t} from '../../strings.js';
 import {clamp} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
 import {escapeText, fixed} from './markup.js';
@@ -184,10 +185,18 @@ export function responseSvg(state, center) {
           })
           .join('');
   const inputY = D.inputBase - D.inputScale * D.input;
+  const word = (x, y, key, anchor = 'start') =>
+      '<text class="aid-response-word" x="' + fixed(x) + '" y="' + y + '" text-anchor="' + anchor +
+      '">' + escapeText(label('regions.response.' + key)) + '</text>';
   return '<svg class="aid-response" data-response="' + escapeText(center.id) + '" viewBox="0 0 ' +
          D.width + ' ' + D.height + '" role="group" aria-label="' +
          label('inspector.stimulusResponse') + '"><title>' + label('regions.response.reference') +
-         '</title><path class="aid-response-input" d="M' + D.left + ' ' + D.inputBase + 'H' +
+         '</title><rect class="aid-response-held" x="' + fixed(responseX(on, total)) + '" y="' +
+         D.inputBase + '" width="' + fixed(responseX(off - on, total) - D.left) + '" height="' +
+         (D.zero + D.scale - D.inputBase) + '"/>' + word(30, 12, 'input') +
+         word(responseX((on + off) / 2, total), 20, 'held', 'middle') +
+         word(responseX(off, total) + 6, 37, 'ended') + word(35, 80, 'nextCell') +
+         '<path class="aid-response-input" d="M' + D.left + ' ' + D.inputBase + 'H' +
          fixed(responseX(on, total)) + 'V' + inputY + 'H' + fixed(responseX(off, total)) + 'V' +
          D.inputBase + 'H' + D.right + '"/><path class="aid-response-time" d="M' +
          fixed(responseX(on, total)) + ' ' + D.inputBase + 'V' + (D.zero + D.scale) + 'M' +
@@ -209,7 +218,6 @@ export function responseSvg(state, center) {
          label(center.sign < 0 ? 'inspector.inhibiting' : 'inspector.exciting') +
          '</title><circle r="12"/><path d="' +
          (center.sign < 0 ? 'M-6 0H6M6-6V6' : 'M-6 0H6M1-5L6 0L1 5') + '"/></g>' +
-         '<g class="aid-response-symbol" transform="translate(330 208)"><title>' +
-         Math.round(total) + ' · ' + label('learnRule.steps') +
-         '</title><circle r="7"/><path d="M0-4v4l3 2"/></g></svg>';
+         '<text class="aid-response-word" x="' + D.right + '" y="214" text-anchor="end">' +
+         escapeText(t('studio.regions.graphics.steps', {n : Math.round(total)})) + '</text></svg>';
 }

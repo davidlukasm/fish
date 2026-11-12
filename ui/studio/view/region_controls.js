@@ -18,7 +18,9 @@ import {label} from './kit.js';
 export const REGION_PICTURE = Object.freeze({width : 360, height : 260, left : 40, right : 320});
 const P = REGION_PICTURE, WIDTH = P.right - P.left, SEARCH_BASE = 194, SEARCH_HEIGHT = 100;
 const SCENT_BASE = 202, SCENT_HEIGHT = 114, VALUE_BASE = 218, VALUE_HEIGHT = 108;
-const SPINE_BASE = 120, SPINE_HEIGHT = 24, FIN_BASE = 234;
+const SPINE_BASE = 76, SPINE_HEIGHT = 55, FIN_BASE = 218;
+const CLOCK_SPAN = 2 * LONGEST_TIME_CONSTANT, CLOCK_CREST = 1.25;
+const OPPONENT = Object.freeze({left : 120, width : 100, y : 127});
 const TAU_SPAN = 4, FACING = .9, FAN_RADIUS = 120, FAN_HOME = {
   x : 180,
   y : 160
@@ -28,7 +30,7 @@ const x = fraction => P.left + WIDTH * fraction;
 const point = (x, y) => ({fx : x / P.width, fy : y / P.height});
 const words = key => label('regions.graphics.' + key);
 const steps = n => t('studio.regions.graphics.steps', {n : Math.round(n)});
-const cycleSteps = n => t('studio.inspector.beatSteps', {n : Math.round(n)});
+const cycleSteps = n => t('studio.regions.graphics.clockPeriod', {n : Math.round(n)});
 const path = (d, cls = '') => `<path class="region-line ${cls}" d="${d}"/>`;
 const curve = (sample, start = P.left, end = P.right, count = 160, cls = '') => path(
     Array
@@ -51,9 +53,13 @@ const scentValue = smoothing => Math.tanh(smoothing > 0 ? 1 - Math.exp(-1) : 1);
 export function regionHandle(organ, key) {
   const r = organ.region;
   if (key === 'spine')
-    return point(x(r.cycle), SPINE_BASE - SPINE_HEIGHT * r.alternation);
+    return point(x(CLOCK_CREST * period(r.cycle) / CLOCK_SPAN),
+                 SPINE_BASE - SPINE_HEIGHT * Math.tanh(.5));
   if (key === 'finCycle')
-    return point(x(r.finCycle), FIN_BASE);
+    return point(x(CLOCK_CREST * period(r.finCycle) / CLOCK_SPAN),
+                 FIN_BASE - SPINE_HEIGHT * Math.tanh(.5));
+  if (key === 'alternation')
+    return point(OPPONENT.left + OPPONENT.width * r.alternation, OPPONENT.y);
   if (key === 'search')
     return point(x(timeConstantSteps(r.searchTime) / LONGEST_TIME_CONSTANT),
                  SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive);
@@ -87,9 +93,16 @@ export function regionHandle(organ, key) {
 export function regionPatch(organ, key, fx, fy) {
   const px = fx * P.width, py = fy * P.height, f = clamp((px - P.left) / WIDTH);
   if (key === 'spine')
-    return {cycle : f, alternation : clamp((SPINE_BASE - py) / SPINE_HEIGHT)};
+    return {
+      cycle : timeConstantOf(Math.max(TIME_CONSTANT.pace_min_steps, f * CLOCK_SPAN / CLOCK_CREST))
+    };
   if (key === 'finCycle')
-    return {finCycle : f};
+    return {
+      finCycle :
+          timeConstantOf(Math.max(TIME_CONSTANT.pace_min_steps, f * CLOCK_SPAN / CLOCK_CREST))
+    };
+  if (key === 'alternation')
+    return {alternation : clamp((px - OPPONENT.left) / OPPONENT.width)};
   if (key === 'search')
     return {
       searchTime : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, f * LONGEST_TIME_CONSTANT)),
@@ -262,18 +275,28 @@ function motorPicture(organ) {
 }
 function spinePicture(organ) {
   const r = organ.region;
-  const waves = y =>
-      axis(P.left, P.right, y) +
+  const waves = (y, tau, name) =>
+      axis(P.left, P.right, y) + '<g data-clock="' + name + '">' +
       [ 0, Math.PI ]
-          .map((phase, i) => curve(f => y - 15 * Math.max(0, Math.sin(4 * Math.PI * f + phase)),
-                                   undefined, undefined, 160, i ? 'other' : ''))
-          .join('');
-  return icon('spine', 26, 27) + waves(77) + axis(P.left, P.right, SPINE_BASE) +
-         handle(organ, 'spine', joinParts([
-                  words('spine'), cycleSteps(period(r.cycle)),
-                  label('regions.settings.alternation'), words('spineDrag')
-                ])) +
-         waves(211) + axis(P.left, P.right, FIN_BASE) +
+          .map((phase, i) =>
+                   curve(f => y - SPINE_HEIGHT *
+                                      Math.max(0, Math.tanh(.5 * Math.sin(2 * Math.PI * CLOCK_SPAN *
+                                                                              f / period(tau) +
+                                                                          phase))),
+                         undefined, undefined, 240, i ? 'other' : ''))
+          .join('') +
+      '</g>';
+  const stop = OPPONENT.left + OPPONENT.width * r.alternation;
+  return text(P.left, 17, words('tailClock')) + waves(SPINE_BASE, r.cycle, 'tail') +
+         text(P.left, 98, cycleSteps(period(r.cycle))) +
+         handle(organ, 'spine', joinParts([ words('spine'), words('spineDrag') ])) +
+         '<g class="region-opponent" stroke-width="' + fixed(1 + 6 * r.alternation) +
+         '"><path d="M75 127H' + fixed(stop) + 'm0-8v16"/></g>' +
+         text(P.left, 150, words('oppositeInhibition')) +
+         handle(organ, 'alternation', words('oppositeInhibition')) +
+         text(P.left, 173, words('finClock')) + waves(FIN_BASE, r.finCycle, 'fin') +
+         text(P.left, 242, cycleSteps(period(r.finCycle))) +
+         text(P.right, 242, steps(CLOCK_SPAN), 'end') +
          handle(organ, 'finCycle', joinParts([
                   words('finCycle'),
                   label('regions.slots.row') + ' / ' + label('regions.slots.recover'),
@@ -341,7 +364,9 @@ export function regionPicture(state, organ) {
   return `<div class="aid-region-picture"><svg viewBox="0 0 ${P.width} ${
       P.height}" data-region-picture="${escapeText(organ.id)}" role="group" aria-label="${
       label('regions.' + organ.type + '.term')}"><title>${
-      escapeText(
-          words(organ.type + 'Reference') +
-          (customized ? ' ' + words('customized') : ''))}</title>${draw(state, organ)}</svg></div>`;
+      escapeText(words(organ.type + 'Reference') + (customized
+                                                        ? ' ' + words('customized')
+                                                        : ''))}</title>${draw(state, organ)}</svg>${
+      customized ? '<p class="aid-picture-note">' + escapeText(words('customized')) + '</p>'
+                 : ''}</div>`;
 }

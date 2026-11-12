@@ -446,7 +446,10 @@
       "rectify": "Grenze ziehen: negative Zellantworten abschwächen oder durchlassen",
       "drag": "Antwort ziehen: Stärke nach oben oder unten, Nachwirkung nach links oder rechts",
       "reference": "Zellantwort auf einen gleichbleibenden Beispielreiz; Verbindungen und Lernen verändern den tatsächlichen Eingang.",
-      "rhythm": "Mögliche Zellantworten mit Eigenrhythmus"
+      "rhythm": "Mögliche Zellantworten mit Eigenrhythmus",
+      "held": "bleibt gleich",
+      "ended": "endet",
+      "nextCell": "Signal an die nächste Zelle"
     },
     "tectum": {
       "term": "Tectum",
@@ -595,10 +598,14 @@
       "customized": "Einzelne Zellen sind eigens eingestellt; die Darstellung zeigt die Regionsvorgaben.",
       "steps": "{n} Schritte",
       "spine": "Schwanz",
-      "spineDrag": "Längere Periode nach rechts, stärkere Gegenhemmung nach oben",
+      "spineDrag": "Schwanzperiode am Wellenberg verlängern",
       "spineReference": "Die Kurven zeigen die gegenphasigen Schaltziele. Schwanz und Seitenflossen haben eigene Perioden. Drang und gelernte Kontakte bestimmen die tatsächlichen Muskelbefehle.",
       "finCycle": "Seitenflossen",
-      "finCycleDrag": "Ruderperiode nach rechts verlängern"
+      "finCycleDrag": "Ruderperiode am Wellenberg verlängern",
+      "clockPeriod": "Eigenrhythmus: {n} Schritte",
+      "tailClock": "Schwanz: links / rechts",
+      "finClock": "Seitenflossen: rudern / zurückführen",
+      "oppositeInhibition": "Gegenseite hemmen"
     },
     "values": {
       "response": [
@@ -1441,6 +1448,13 @@
     "choice": "Handlungswahl",
     "motor": "Motorik",
     "spine": "Taktgeber"
+  },
+  "nervePicture": {
+    "cells": "{n} {n:Zelle|Zellen}",
+    "separatePaths": "getrennte Wege",
+    "possiblePaths": "heller = Kontakt wahrscheinlicher",
+    "near": "nah",
+    "far": "fern"
   },
   "cellPicture": {
     "electrical_limit": "Signalstärke",

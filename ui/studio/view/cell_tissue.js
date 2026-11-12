@@ -69,6 +69,7 @@ export function cellVariation(center) {
   return '<details class="aid-cell-variation"><summary>' + label('cellPicture.variation') +
          '</summary>' +
          Object.entries(center.distribution)
+             .filter(([ key ]) => key !== 'spread_receptors')
              .map(([ key, value ]) => variationGraphic(value, center.id, key))
              .join('') +
          '</details>';

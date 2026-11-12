@@ -572,7 +572,10 @@ async function checkFunctionalRegions(model, capabilities) {
   assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key).sort(),
                    [ 'choice', 'motor', 'olfaction', 'spine', 'state', 'tectum', 'value' ]);
   const cases = [
-    [ 'spine', {cycle : .41, finCycle : .73, alternation : .83}, [ 'spine', 'finCycle' ] ],
+    [
+      'spine', {cycle : .41, finCycle : .73, alternation : .83},
+      [ 'spine', 'finCycle', 'alternation' ]
+    ],
     [ 'choice', {searchTime : .61, searchDrive : .73}, [ 'search' ] ],
     [ 'olfaction', {smoothing : .47, contrast : .62}, [ 'scent' ] ],
     [ 'state', {reserve : .42, rest : .37, maturity : .67}, [ 'reserve', 'rest', 'maturity' ] ],
@@ -608,6 +611,17 @@ async function checkFunctionalRegions(model, capabilities) {
     const plan = model.compileDocument(doc, sites),
           node = key => organ.centers.find(c => c.node === key);
     const group = key => plan.groups[model.allCenters(doc).findIndex(c => c.id === node(key).id)];
+    if (type === 'spine') {
+      const clock = (html, name) =>
+          html.match(new RegExp('<g data-clock="' + name + '">(.*?)</g>'))[1];
+      const slower = updateRegion(doc, organ.id, {cycle : 1}, sites);
+      const changed = regionPicture({document : slower, sites, capabilities},
+                                    model.findOrgan(slower, organ.id));
+      assert.notEqual(clock(html, 'tail'), clock(changed, 'tail'),
+                      'Changing the tail period changes the drawn clock');
+      assert.equal(clock(html, 'fin'), clock(changed, 'fin'),
+                   'The independent fin period is preserved');
+    }
     if (type === 'olfaction') {
       assert.equal(group('concentration').q2, 1);
       assert.ok(Math.abs(group('concentration').tau - (.47)) < 1e-8);
@@ -938,6 +952,12 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
+    await checkResponseControls(model, sitesResult, clicks);
+    await checkFunctionalRegions(model, sitesResult);
+    console.log('Atelier: Reizantwort, Regionsbilder, Bedienpunkte und Seitenkopplung: OK');
+    return;
+  }
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
   if (!process.argv.includes('--ui')) {
     if (process.argv.includes('--hormone-systems')) {

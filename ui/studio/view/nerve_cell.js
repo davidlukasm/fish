@@ -1,5 +1,6 @@
 import {ATELIER_LIMITS} from '../../schema.js';
 import {clamp} from '../../units.js';
+import {t} from '../../strings.js';
 import {wiredCrossing} from '../model/document.js';
 import {centerMarker} from './scene.js';
 import {responseSvg} from './response.js';
@@ -45,21 +46,18 @@ function tissue(state, center) {
   const grip = (key, x, y, title) => '<circle class="aid-graphic-handle" data-nerve-handle="' +
                                      key + '" cx="' + fixed(x) + '" cy="' + fixed(y) +
                                      '" r="7"><title>' + escapeText(title) + '</title></circle>';
-  let cells = '', fibres = '';
-  for (let i = 0; i < center.copies; i++) {
-    const a = i * 2.39996323,
-          distance = center.copies === 1 ? 0 : (r - 9) * Math.sqrt(i / (center.copies - 1));
-    const x = T.x + distance * Math.cos(a), y = T.y + distance * Math.sin(a);
-    fibres += '<path d="M18 87C41 87 ' + fixed(x - 15) + ' ' + fixed(y) + ' ' + fixed(x) + ' ' +
-              fixed(y) + 'S130 110 148 110"/>';
-    cells += '<g transform="translate(' + fixed(x) + ' ' + fixed(y) + ')">' +
-             centerMarker(center, 5.5) + '</g>';
-  }
-  const boundary = 'M' + (T.x - r) + ' ' + T.y + 'C' + (T.x - r) + ' ' + (T.y - r * .9) + ' ' +
-                   (T.x - r * .4) + ' ' + (T.y - r) + ' ' + T.x + ' ' + (T.y - r) + 'S' +
-                   (T.x + r * 1.16) + ' ' + (T.y - r * .3) + ' ' + (T.x + r) + ' ' + T.y + 'S' +
-                   (T.x + r * .2) + ' ' + (T.y + r) + ' ' + T.x + ' ' + (T.y + r) + 'S' +
-                   (T.x - r) + ' ' + (T.y + r * .3) + ' ' + (T.x - r) + ' ' + T.y + 'Z';
+  const shown = Math.min(4, center.copies);
+  const rows =
+      Array.from({length : shown}, (_, i) => shown === 1 ? T.y : T.y - r / 2 + i * r / (shown - 1));
+  const cells = rows.map(y => '<g transform="translate(' + T.x + ' ' + fixed(y) + ')">' +
+                              centerMarker(center, 5.5) + '</g>')
+                    .join('');
+  const fibres = rows.map(y => '<path d="M18 ' + fixed(y) + 'H' + (T.x - 7) + 'M' + (T.x + 7) +
+                               ' ' + fixed(y) + 'H148"/>')
+                     .join('');
+  const word = (x, y, value, anchor = 'start') => '<text class="aid-nerve-word" x="' + x + '" y="' +
+                                                  y + '" text-anchor="' + anchor + '">' +
+                                                  escapeText(value) + '</text>';
   const ends =
       [ -1, 1 ]
           .map(side => {
@@ -70,8 +68,9 @@ function tissue(state, center) {
               targets += '<path class="aid-nerve-target" d="M' + fixed(x - 6) + ' ' + y +
                          'l6 -6 6 6 -6 6Z"/>';
               const opacity = affinity * Math.exp(-(i + 1) / 4 / Math.max(.001, reach));
-              branches += '<path opacity="' + fixed(opacity) + '" d="M148 110C170 110 ' +
-                          fixed(x - 32) + ' ' + y + ' ' + fixed(x - 7) + ' ' + y + '"/>';
+              branches += '<path opacity="' + fixed(opacity) + '" d="M148 ' +
+                          fixed(rows[i % rows.length]) + 'C170 ' + fixed(rows[i % rows.length]) +
+                          ' ' + fixed(x - 32) + ' ' + y + ' ' + fixed(x - 7) + ' ' + y + '"/>';
             }
             const sign = center.sign < 0
                              ? '<path d="M' + fixed(end) + ' ' + (y - 7) + 'v14"/>'
@@ -83,8 +82,13 @@ function tissue(state, center) {
   return '<svg class="aid-nerve-tissue" data-nerve-tissue="' + escapeText(center.id) +
          '" x="0" y="0" width="360" height="220" viewBox="0 0 360 220">' +
          '<path class="aid-nerve-midline" d="M148 130H345"/>' +
-         '<g class="aid-nerve-axons">' + fibres + ends + '</g>' +
-         '<path class="aid-nerve-envelope" d="' + boundary + '"/>' + cells +
+         '<g class="aid-nerve-axons">' + fibres + ends + '</g>' + cells +
+         word(T.x, 21, t('studio.nervePicture.cells', {n : center.copies}), 'middle') +
+         word(18, 122, label('nervePicture.separatePaths')) +
+         word(T.near, T.own - 16, label('inspector.sameSide')) +
+         word(T.near, T.other - 16, label('inspector.oppositeSide')) +
+         word(T.near, 202, label('nervePicture.near')) +
+         word(T.far, 202, label('nervePicture.far'), 'end') +
          grip('copies', T.x, T.y - r, cellWords(center)) + '<path class="aid-nerve-reach" d="M' +
          fixed(end) + ' ' + T.own + 'V' + T.other + '"/>' +
          grip('reach', end, atY, label('inspector.signalReach')) +
@@ -93,8 +97,7 @@ function tissue(state, center) {
               : '<g class="aid-nerve-locked" transform="translate(' + fixed(end) + ' ' +
                     fixed(atY + 18) + ')"><title>' + label('inspector.sideByWires') +
                     '</title><path d="M-6 0h12M-6-3v6M6-3v6"/></g>') +
-         '<path class="aid-nerve-to-trace" d="M18 87C4 122 8 178 18 220M148 110C108 154 130 193 130 220"/>' +
-         '</svg>';
+         word(18, 218, label('nervePicture.possiblePaths')) + '</svg>';
 }
 export function nerveEditor(state, center) {
   return '<div class="aid-nerve-editor">' +
