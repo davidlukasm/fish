@@ -528,6 +528,7 @@
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes figcaption{font-size:11px;color:var(--aid-axis-text);margin:0 0 3px}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
+.aid-handle-word{fill:var(--aid-axis-text);font:9px system-ui;pointer-events:none;paint-order:stroke;stroke:#0c252b;stroke-width:3px;stroke-linejoin:round}
 .aid-sight-legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0 0;font-size:11px;color:var(--aid-axis-text)}
 .aid-sight-legend span{display:inline-flex;align-items:center;gap:4px}
 .aid-sight-legend b{display:inline-block;min-width:16px;padding:0 3px;border-radius:3px;color:#0a1a20;font:600 10px/16px sans-serif;text-align:center}

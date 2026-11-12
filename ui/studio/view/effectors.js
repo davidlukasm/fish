@@ -586,9 +586,11 @@ function gutSenseMarks(state, center, places, side, held) {
                       .map(p => '<path class="aid-gut-feeler" d="M' + fixed(p.x) + ' ' +
                                 fixed(p.y) + ' v' + fixed(side * G.feeler * sensitive) + '"/>')
                       .join('');
+  // The adaptation arc sits round the middle of the wall, clear of the first cells' handles.
+  const middle = places[Math.floor(places.length / 2)];
   return feelers +
          (answer?.adapt?.steps > 0
-              ? adaptationMarks(first, G.clock, side < 0 ? -Math.PI / 2 : Math.PI / 2, center)
+              ? adaptationMarks(middle, G.clock, side < 0 ? -Math.PI / 2 : Math.PI / 2, center)
               : '') +
          cellMarks(places, center) +
          sensitivityHandle(feeler(G.cell), feeler(G.cell + G.feeler), sensitive,

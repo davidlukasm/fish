@@ -20,6 +20,10 @@ import {t} from '../../strings.js';
 export const SENSE_MARK = Object.freeze({
   cell : 3.4,
   handle : 7,
+  // A handle's word sits this far below its centre and grows towards the middle of a picture this
+  // wide, so it stays inside the picture at either edge.
+  word : 17,
+  middle : 150,
   // The adaptation arc leaves a gap, so its two ends never meet.
   sweep : 1.7 * Math.PI,
   segments : 28,
@@ -31,10 +35,15 @@ const parsePoint = text => {
   const [x, y] = text.split(',').map(Number);
   return {x, y};
 };
-const handleMark = (name, at, title, geometry) =>
-    '<circle class="aid-graphic-handle" data-sense-mark="' + name + '" ' + geometry + ' cx="' +
-    fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' + SENSE_MARK.handle + '"><title>' +
-    escapeText(title) + '</title></circle>';
+// Every handle names what it sets with a word below it, so the picture reads without its tooltip.
+const handleMark = (name, at, title, geometry, word) =>
+    '<text class="aid-handle-word" x="' +
+    fixed(at.x < SENSE_MARK.middle ? at.x - SENSE_MARK.handle : at.x + SENSE_MARK.handle) +
+    '" y="' + fixed(at.y + SENSE_MARK.word) + '" text-anchor="' +
+    (at.x < SENSE_MARK.middle ? 'start' : 'end') + '">' + escapeText(word) +
+    '</text><circle class="aid-graphic-handle" ' +
+    'data-sense-mark="' + name + '" ' + geometry + ' cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
+    '" r="' + SENSE_MARK.handle + '"><title>' + escapeText(title) + '</title></circle>';
 
 // How readily the cells answer, 0 to 1: from the design run's answer, else from the threshold.
 export function senseSensitivity(state, center) {
@@ -82,14 +91,16 @@ export function cellMarks(places, center) {
   return free + dots +
          handleMark('cells', places[copies - 1],
                     t('studio.sense.cellsHandle', {n : copies, most : places.length}),
-                    'data-places="' + places.map(point).join(' ') + '"');
+                    'data-places="' + places.map(point).join(' ') + '"',
+                    t('studio.sense.cellsWord', {n : copies}));
 }
 // Sensitivity as a reach: from `least` (feels only the strongest stimulus) to `most` (the weakest).
 export const reachPoint = (least, most, sensitive) =>
     ({x : least.x + (most.x - least.x) * sensitive, y : least.y + (most.y - least.y) * sensitive});
 export const sensitivityHandle = (least, most, sensitive, title, name = 'sensitivity') =>
     handleMark(name, reachPoint(least, most, sensitive), title,
-               'data-least="' + point(least) + '" data-most="' + point(most) + '"');
+               'data-least="' + point(least) + '" data-most="' + point(most) + '"',
+               t('studio.sense.sensitivityWord'));
 // How little input opens a working organ, 0 to 1: the share of the input range its gate leaves.
 export const motorReadiness = (state, center) =>
     1 - clamp((state.capabilities?.biasScale ?? 0) * center.threshold);
@@ -97,7 +108,8 @@ export const motorReadiness = (state, center) =>
 export const gateHandle = (least, most, state, center, title) =>
     handleMark('gate', reachPoint(least, most, motorReadiness(state, center)), title,
                'data-least="' + point(least) + '" data-most="' + point(most) +
-                   '" data-sense-center="' + escapeText(center.id) + '"');
+                   '" data-sense-center="' + escapeText(center.id) + '"',
+               t('studio.sense.gateWord'));
 
 // Adaptation as an arc round the picture: it starts where the stimulus comes from and fades along
 // the time the cells take to get used to it, longer the slower they adapt.
@@ -115,7 +127,8 @@ export function adaptationMarks(centre, radius, start, center) {
   const steps = Math.round(timeConstantSteps(share));
   return arc +
          handleMark('adaptation', at(start + sweep), t('studio.sense.adaptHandle', {n : steps}),
-                    'data-arc="' + point(centre) + ',' + fixed(radius) + ',' + fixed(start) + '"');
+                    'data-arc="' + point(centre) + ',' + fixed(radius) + ',' + fixed(start) + '"',
+                    t('studio.sense.adaptWord', {n : steps}));
 }
 
 // The change a handle makes, from the pointer in the picture's own units.
