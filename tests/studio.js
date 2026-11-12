@@ -17,7 +17,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development_sites.hh" : "6c0532b3f94c7bb9",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
-  "colony-core/field/hormones.hh" : "b4d2ed4faf0f66a6",
+  "colony-core/field/hormones.hh" : "cc5874a9b7ac8a89",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
   "src/body_plan.cc" : "fa3ff6288de9d472",
   "src/physiology_parameters.hh" : "00df0f1a6b4096e6",
@@ -714,6 +714,21 @@ async function checkFunctionalRegions(model, capabilities) {
   }
 }
 
+// The starters' blood sense reads their energy reserve; it must stay there when the wheel grows.
+async function checkStarterBloodSense(model, wheel, root) {
+  const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
+  for (const name of [ 'brisa', 'liora' ]) {
+    const doc = JSON.parse(
+        readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
+    for (const c of doc.organs.filter(o => o.type === 'blood').flatMap(o => o.centers)) {
+      const reads = Array.from({length : wheel.bloodSubstances},
+                               (_, k) => model.wheelAffinity(wheel, c.q1, c.q2, c.qwidth, k));
+      assert.equal(reads.indexOf(Math.max(...reads)), BLOOD_SUBSTANCE.reserve,
+                   name + ': the blood sense reads the energy reserve');
+    }
+  }
+}
+
 async function checkHormoneSystems(model, capabilities) {
   const {sites} = capabilities;
   const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
@@ -962,6 +977,7 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: angeforderte Bewegungsregionen und ihre Bedienung: OK');
     return;
   }
+  await checkStarterBloodSense(model, sitesResult, root);
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
   if (process.argv.includes('--hormone-systems')) {
     const result = JSON.parse(execFileSync(

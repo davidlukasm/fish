@@ -193,7 +193,7 @@ export function setBends(doc, wireIds, bends) {
   return draft;
 }
 export function wheelPlace(wheel, index) {
-  const angle = 2 * Math.PI * index / wheel.bloodSubstances;
+  const angle = 2 * Math.PI * wheel.substanceTurns[index];
   return [ Math.cos(angle), Math.sin(angle) ];
 }
 export function wheelSigma(wheel, width) {

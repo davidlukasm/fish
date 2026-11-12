@@ -1357,6 +1357,23 @@ void fast_fibres_tire_and_the_blood_tells(const Genome &g) {
         "fast fibres tire as they work and recover at rest, slow fibres do not tire");
   check(read == sprinted, "a blood cell tuned to fatigue reads the fibres' exhaustion");
 }
+void substances_keep_their_places_on_the_wheel() {
+  // Blueprints and genomes tune their receptors to a place on the substance wheel, so a substance
+  // added later must not move the older ones, and a narrow receptor reads only its own.
+  constexpr int EARLIER = 8;
+  constexpr double SAME = 1e-12, ALONE = .1;
+  for (int k = 0; k < EARLIER; ++k)
+    check(std::abs(field::substance_angle(k) - 2 * fishsim::PI * k / EARLIER) < SAME,
+          "the older substances keep their places on the wheel");
+  for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
+    const double a = field::substance_angle(k);
+    const auto affinity =
+        field::hormone_affinity<field::BLOOD_SUBSTANCES>(float(std::cos(a)), float(std::sin(a)), 0);
+    for (int other = 0; other < field::BLOOD_SUBSTANCES; ++other)
+      check(other == k || affinity[std::size_t(other)] < ALONE * affinity[std::size_t(k)],
+            "a narrow receptor reads its own substance alone");
+  }
+}
 void muscle_fibres_each_have_their_strength(const Genome &g) {
   // Only the tail works, with all its fibres of one kind: fast, mixed or slow.
   // Cruising asks every tail for the same push, nine tenths of what slow fibres can give.
@@ -2460,6 +2477,7 @@ int main() {
     resting_fish_sink_unless_their_bladder_carries_them(g);
     muscle_fibres_each_have_their_strength(g);
     fast_fibres_tire_and_the_blood_tells(g);
+    substances_keep_their_places_on_the_wheel();
     tail_and_fins_push_alike_where_each_fits();
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);

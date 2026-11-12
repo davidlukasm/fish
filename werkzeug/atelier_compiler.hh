@@ -502,7 +502,7 @@ public:
     base[out::expression] = -1;
   }
   void receptor(int gate, const Receptor &r, float neutral) {
-    const float a = float(2 * fishsim::PI * r.substance / field::BLOOD_SUBSTANCES);
+    const float a = float(field::substance_angle(r.substance));
     const float half = float(2 * std::log(r.half / field::HORMONE_HALF_MIN) /
                                  std::log(field::HORMONE_HALF_MAX / field::HORMONE_HALF_MIN) -
                              1);

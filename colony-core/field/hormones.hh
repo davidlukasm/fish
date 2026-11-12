@@ -19,6 +19,17 @@ constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;
 // energy reserve and the exhaustion of its fast muscle fibres.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
               FATIGUE_SUBSTANCE = HORMONES + 2, BLOOD_SUBSTANCES = HORMONES + 3;
+// Each substance keeps its place on the wheel for good, since blueprints and genomes tune their
+// receptors to these places: the first eight share the wheel evenly, a later one takes the middle
+// of a gap instead of moving the others.
+constexpr int EVEN_SUBSTANCES = 8;
+constexpr std::array<double, BLOOD_SUBSTANCES> SUBSTANCE_TURNS{
+    0. / EVEN_SUBSTANCES, 1. / EVEN_SUBSTANCES, 2. / EVEN_SUBSTANCES,
+    3. / EVEN_SUBSTANCES, 4. / EVEN_SUBSTANCES, 5. / EVEN_SUBSTANCES,
+    6. / EVEN_SUBSTANCES, 7. / EVEN_SUBSTANCES, 7.5 / EVEN_SUBSTANCES};
+inline double substance_angle(int k) {
+  return 2 * M_PI * SUBSTANCE_TURNS[std::size_t(k)];
+}
 constexpr int GROWTH_RECEPTOR = HORMONE_EFFECTS, RECEPTOR_QUERIES = HORMONE_EFFECTS + 1;
 template <class Weights, class Levels>
 double blood_stimulus(const Weights &weights, const Levels &levels, double maturity, double reserve,
@@ -45,7 +56,7 @@ inline std::array<float, N> hormone_affinity(float x, float y, float width) {
   const double sigma = HORMONE_SIGMA_MIN +
                        (HORMONE_SIGMA_MAX - HORMONE_SIGMA_MIN) * std::clamp(double(width), 0., 1.);
   for (std::size_t k = 0; k < N; ++k) {
-    const double angle = 2 * M_PI * double(k) / BLOOD_SUBSTANCES, dx = x - std::cos(angle),
+    const double angle = substance_angle(int(k)), dx = x - std::cos(angle),
                  dy = y - std::sin(angle);
     a[k] = float(std::exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)));
   }

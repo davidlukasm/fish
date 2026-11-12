@@ -879,6 +879,14 @@ std::string lateral_ring_report() {
   out << ']';
   return out.str();
 }
+std::string substance_turns_report() {
+  std::ostringstream out;
+  out << '[';
+  for (std::size_t k = 0; k < field::SUBSTANCE_TURNS.size(); ++k)
+    out << (k ? "," : "") << field::SUBSTANCE_TURNS[k];
+  out << ']';
+  return out.str();
+}
 std::string diet_report() {
   std::ostringstream out;
   out << std::setprecision(DIET_DIGITS);
@@ -941,6 +949,7 @@ int main(int argc, char **argv) {
                 << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT << ",\"hormones\":" << field::HORMONES
                 << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"substanceTurns\":" << substance_turns_report()
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
                 << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
