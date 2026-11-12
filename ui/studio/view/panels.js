@@ -41,7 +41,16 @@ import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {onMidline} from '../model/layout.js';
 import {formatNumber, formatSigned, linkText, t, tList} from '../../strings.js';
-import {heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
+import {
+  heading,
+  icon,
+  ICON,
+  iconSwitch,
+  label,
+  regionTerm,
+  SWITCH_SYMBOL,
+  VALUE_DIGITS
+} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -189,8 +198,8 @@ function centerTabs(state, organ) {
 const SIDE_SYMBOL = Object.freeze({
   left : 'M15 3v4M15 10v4M15 17v4M7 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
   right : 'M9 3v4M9 10v4M9 17v4M17 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
-  linked : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2M8 12h8',
-  apart : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2',
+  linked : SWITCH_SYMBOL.chain.on,
+  apart : SWITCH_SYMBOL.chain.off,
   add : 'M12 5v14M5 12h14'
 });
 const sideGlyph = key => glyph(SIDE_SYMBOL[key], ICON.list, {line : true});
@@ -246,9 +255,8 @@ function organInspector(state, organ) {
       contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
                                                                               : [ center ]);
   if (isRegion(organ))
-    html += '<label class="aid-compiler-region"><input type="checkbox" data-compiler-open="' +
-            escapeText(organ.id) + '"' + (organ.openContacts ? ' checked' : '') + '/>' +
-            label('compiler.openRegion') + '</label>';
+    html += iconSwitch('inner', organ.openContacts, label('compiler.openRegion'),
+                       'data-compiler-open="' + escapeText(organ.id) + '"');
   if (organ.type !== 'brain')
     html += '<div class="aid-inspector-actions"><button class="aid-danger" data-remove-organ="' +
             escapeText(organ.id) + '">' + label('inspector.removeOrgan') + '</button></div>';

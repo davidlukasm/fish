@@ -1,24 +1,13 @@
 import {regionGraph} from './region_graph.js';
 import {substanceColor} from '../../hormones.js';
-import {clamp} from '../../units.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {
-  findCenter,
-  findOrgan,
-  isLearner,
-  substanceBound,
-  teachersOf,
-  wholeEndpoint
-} from '../model/document.js';
+import {isLearner, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
-import {centerMarker} from './scene.js';
-import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
-import {sideIndex} from '../model/layout.js';
-import {planned, regionPlan, regionSlots, routedLinks} from '../model/regions.js';
-import {namedText, t} from '../../strings.js';
-import {cellGroup, cellWords, ICON, icon, label, slotFill, slotShape} from './kit.js';
-import {centerTitle, familyTitle, nodeFamilies, nodeFamily} from './names.js';
+import {escapeText, glyph} from './markup.js';
+import {planned, regionPlan, regionSlots} from '../model/regions.js';
+import {joinParts, namedText, t} from '../../strings.js';
+import {ICON, icon, iconSwitch, label, slotFill, slotShape} from './kit.js';
 import {organTitle, slotTitle} from './names.js';
 import {regionPicture} from './region_controls.js';
 
@@ -41,33 +30,31 @@ export const pairingChoice = wire =>
                   label('inspector.pairing.' + p) + '</span></button>')
         .join('') +
     '</div>';
+// Each port as its symbol, framed by whether it is filled, missing or free, followed by the organs
+// on it and a button that adds one; names and whether the port is needed are in the tooltips.
 export function slotsSection(state, organ) {
   if (!ORGAN_BY_KEY[organ.type].slots)
     return '';
   const slots =
       regionSlots(state.document, organ)
           .map(slot =>
-                   '<li class="' + slotFill(slot) + '"><span class="aid-slot-name">' +
-                   '<span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
+                   '<li class="' + slotFill(slot) + '" title="' + escapeText(joinParts([
+                     slotTitle(slot), label(slot.required ? 'regions.required' : 'regions.optional')
+                   ])) +
+                   '"><span class="aid-slot-symbol ' + slotFill(slot) + ' ' + slot.dir + '">' +
                    glyph(slotShape(slot), ICON.slot, {line : true}) + '</span>' +
-                   '<span>' + slotTitle(slot) + '</span></span><small>' +
-                   label(slot.required ? 'regions.required' : 'regions.optional') +
-                   '</small><span class="aid-slot-ends">' +
-                   (slot.filled.length
-                        ? slot.filled
-                              .map(o => '<button data-select-organ="' + escapeText(o.id) + '">' +
-                                        icon(o.type, ICON.list) + '<span>' +
-                                        escapeText(organTitle(o, state.sites)) + '</span></button>')
-                              .join('')
-                        : '') +
+                   slot.filled
+                       .map(o => '<button data-select-organ="' + escapeText(o.id) + '" title="' +
+                                 escapeText(organTitle(o, state.sites)) + '">' +
+                                 icon(o.type, ICON.list) + '</button>')
+                       .join('') +
                    '<button class="aid-slot-add" data-slot-region="' + escapeText(organ.id) +
                    '" data-slot-key="' + escapeText(slot.key) + '" data-slot-dir="' + slot.dir +
                    '" title="' + label(slot.dir === 'in' ? 'status.slotIn' : 'status.slotOut') +
-                   '">' + (slot.filled.length ? '+' : label('regions.free') + ' +') + '</button>' +
-                   '</span></li>')
+                   '">+</button></li>')
           .join('');
-  return '<section class="aid-eye-section"><h4>' + label('regions.slotsTitle') +
-         '</h4><ul class="aid-region-slots">' + slots + '</ul></section>';
+  return '<section class="aid-eye-section" title="' + label('regions.slotsTitle') +
+         '"><ul class="aid-region-slots">' + slots + '</ul></section>';
 }
 function regionTeacher(state, organ) {
   const learners = organ.centers.filter(isLearner);
@@ -95,15 +82,14 @@ function regionControls(state, organ) {
   if (!planned(organ))
     return '';
   const region = organ.region;
-  const follows = regionPlan(state.document, organ).view
-                      ? '<label class="aid-checkbox" title="' + escapeText(t('units.joined', {
-                          a : label('regions.' + organ.type + '.follows'),
-                          b : label('regions.followHint')
-                        })) +
-                            '"><input type="checkbox" data-region-follow="' + escapeText(organ.id) +
-                            '"' + (region.follow ? ' checked' : '') + '/>' +
-                            label('regions.follow') + '</label>'
-                      : '';
+  const follows =
+      regionPlan(state.document, organ).view
+          ? iconSwitch('chain', region.follow, joinParts([
+                         label('regions.follow'), label('regions.' + organ.type + '.follows'),
+                         label('regions.followHint')
+                       ]),
+                       'data-region-follow="' + escapeText(organ.id) + '"')
+          : '';
   const wanted = regionPlan(state.document, organ).nodes.length;
   const crowded =
       organ.centers.length < wanted

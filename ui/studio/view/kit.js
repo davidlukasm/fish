@@ -27,6 +27,28 @@ export function slotShape(slot) {
 }
 export const slotFill = slot => slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
 export const heading = text => '<h3>' + escapeText(text) + '</h3>';
+// Switches drawn as what they switch, off and on; the name is the tooltip.
+export const SWITCH_SYMBOL = Object.freeze({
+  // A chain, whole while the two sides or a map and its organs go together.
+  chain : {
+    off : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2',
+    on : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2M8 12h8'
+  },
+  // A region's cells inside its hull, linked among themselves while it may grow extra contacts.
+  inner : {
+    off : 'M3 12a9 7 0 1 0 18 0a9 7 0 1 0-18 0M9 10h.01M15 10h.01M9 14h.01M15 14h.01',
+    on : 'M3 12a9 7 0 1 0 18 0a9 7 0 1 0-18 0M9 10h6v4H9zM9 10l6 4M15 10l-6 4'
+  },
+  // A receptor in the membrane, holding its substance while it answers.
+  receptor : {
+    off : 'M3 19h18M12 19v-7M12 12L8 8M12 12l4-4',
+    on : 'M3 19h18M12 19v-7M12 12L8 8M12 12l4-4M12 7m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0'
+  }
+});
+export const iconSwitch = (symbol, on, title, input) =>
+    '<label class="aid-icon-switch" title="' + escapeText(title) + '"><input type="checkbox" ' +
+    input + (on ? ' checked' : '') + '/>' +
+    glyph(SWITCH_SYMBOL[symbol][on ? 'on' : 'off'], ICON.part, {line : true}) + '</label>';
 const CELL_GROUP =
     Object.freeze({width : 300, height : 110, left : 24, top : 36, dx : 42, dy : 22, columns : 4});
 export const cellPatch = (fx, fy) => {

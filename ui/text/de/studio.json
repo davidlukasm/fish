@@ -455,7 +455,6 @@
     "slotsTitle": "Anschlüsse",
     "required": "nötig",
     "optional": "möglich",
-    "free": "frei",
     "slots": {
       "sight": "Augen",
       "near": "Nah am Maul",

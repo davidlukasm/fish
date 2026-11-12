@@ -34,7 +34,7 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
-import {heading, icon, ICON, label} from './kit.js';
+import {heading, icon, ICON, iconSwitch, label} from './kit.js';
 import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
@@ -594,9 +594,7 @@ export function receptorBody(state, center, effect) {
   const active = birth ? 'data-cell-growth-active="' + escapeText(center.id) + '"'
                        : 'data-receptor-active="' + escapeText(center.id) +
                              '" data-receptor-effect="' + effect + '"';
-  return '<label class="aid-checkbox"><input type="checkbox" ' + active +
-         (receptor.active ? ' checked' : '') + '>' + label('inspector.receptorActive') +
-         '</label>' +
+  return iconSwitch('receptor', receptor.active, label('inspector.receptorActive'), active) +
          '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
          (birth ? ''

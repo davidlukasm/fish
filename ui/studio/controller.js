@@ -816,7 +816,7 @@ export class OrganStudio {
     if (element.dataset.compilerOpen) {
       const doc = structuredClone(this.state.document);
       findOrgan(doc, element.dataset.compilerOpen).openContacts = element.checked;
-      return this.changeDocument(doc);
+      return this.changeDocument(doc, this.state.selected);
     }
     if (element.id === GENOME_FILE_ID) {
       const file = element.files?.[0];
