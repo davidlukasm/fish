@@ -1,9 +1,10 @@
 import {execFileSync} from 'node:child_process';
-import {readFileSync, readdirSync} from 'node:fs';
+import {readFileSync, readdirSync, writeFileSync} from 'node:fs';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {allCenters, compileDocument} from '../ui/studio/model/document.js';
+import {allCenters, compileDocument, validateDocument} from '../ui/studio/model/document.js';
 import {PRESSURE_OF} from '../ui/studio/model/organs.js';
+import {settleRegions} from '../ui/studio/model/regions.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tool = resolve(root, process.env.BUILD_DIR ?? 'bin', 'atelier');
@@ -11,7 +12,15 @@ const {sites, gonads} =
     JSON.parse(execFileSync(tool, [ 'sites' ], {cwd : root, encoding : 'utf8'}));
 const folder = resolve(root, 'genomes/handbau');
 for (const name of readdirSync(folder).filter(name => name.endsWith('.fish.json')).sort()) {
-  const document = JSON.parse(readFileSync(resolve(folder, name)));
+  // The atelier settles a blueprint's regions to the current region plan whenever it opens one;
+  // the shipped fish is built from that settled blueprint, which is written back.
+  const path = resolve(folder, name), text = readFileSync(path, 'utf8'),
+        original = JSON.parse(text);
+  const document = validateDocument(settleRegions(original, sites));
+  // settleRegions hands back the same document when it is settled already; a changed one keeps
+  // the file's indent.
+  if (document !== original)
+    writeFileSync(path, JSON.stringify(document, null, /\n( +)"/.exec(text)[1].length) + '\n');
   const plan = compileDocument(document, sites);
   const chambers = document.organs.filter(o => o.type === 'eggs')
                        .flatMap(o => o.centers)

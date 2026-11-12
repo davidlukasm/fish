@@ -1013,6 +1013,10 @@ async function checkHormoneSystems(model, capabilities) {
                    'Every generated contact appears, including unplanned sites');
       const doc = source.document;
       model.validateDocument(doc);
+      // A shipped blueprint follows the current region plan, as the atelier would settle it.
+      const {settleRegions} = await import('../ui/studio/model/regions.js');
+      assert.deepEqual(settleRegions(doc, sitesResult.sites), doc,
+                       example + ': blueprint settled (make starter)');
       if (example === 'start') {
         const {updateRegion} = await import('../ui/studio/model/regions.js');
         let placed = structuredClone(doc);
@@ -1074,9 +1078,11 @@ async function checkHormoneSystems(model, capabilities) {
           'python3',
           [
             '-B', '-c',
-            "import json,sys; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); print(json.dumps({k:r[k] for k in ['neurons','synapses','viable','compiler']}))"
+            "import json,sys; from atelier_service import run, START_DOCUMENTS; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); shipped=START_DOCUMENTS[sys.argv[1]].with_suffix('').with_suffix('.genome').read_text(); print(json.dumps({**{k:r[k] for k in ['neurons','synapses','viable','compiler']}, 'shipped': r['genome']==shipped}))",
+            example
           ],
           {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
+      assert.ok(checked.shipped, example + ': shipped genome is the build of its blueprint');
       assert.ok(checked.compiler.ok, JSON.stringify(checked.compiler));
       assert.equal(checked.neurons, source.neurons);
       assert.equal(checked.synapses, source.synapses);
