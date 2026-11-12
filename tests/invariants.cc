@@ -125,6 +125,31 @@ void eye_reports_a_morsel_against_open_water(const Genome &g) {
           "a morsel beside the fish is seen clearly, and only by the eye on its side");
   }
 }
+// The fish smells at one point; only oncoming water sets its nostrils apart.
+void nostrils_differ_only_in_oncoming_water() {
+  constexpr double SPEED = .5, CLOSE = 1e-12;
+  Body b{};
+  b.angle = 0;
+  const auto nose = nose_position(b);
+  const auto offset = [&](Point flow, int side) {
+    const auto source = nostril_source(b, nose, flow, side);
+    return Point{source.x - nose.x, source.y - nose.y};
+  };
+  for (int side = 0; side < 2; ++side) {
+    const auto still = offset({}, side);
+    check(still.x == 0 && still.y == 0, "in still water both nostrils smell the nose itself");
+  }
+  // The fish swims ahead: the water meets it head-on and reaches both nostrils alike.
+  const auto ahead_left = offset({-SPEED, 0}, 0), ahead_right = offset({-SPEED, 0}, 1);
+  check(ahead_left.x > 0 && std::abs(ahead_left.x - ahead_right.x) < CLOSE && ahead_left.y == 0 &&
+            ahead_right.y == 0,
+        "water from ahead brings both nostrils the same scent from ahead");
+  // Water streams in from the right (larger y): only the right nostril smells upstream.
+  const auto lee = offset({0, -SPEED}, 0), washed = offset({0, -SPEED}, 1);
+  check(std::abs(lee.x) < CLOSE && std::abs(lee.y) < CLOSE && washed.y > 0 &&
+            std::abs(washed.x) < CLOSE,
+        "the nostril facing the oncoming water smells upstream, the other the nose itself");
+}
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
   for (std::size_t i = 0; i < cells.size(); ++i) {
@@ -650,6 +675,7 @@ int main() {
   try {
     Genome::begin_run(SEED);
     ancestral_histories_keep_current_mutations();
+    nostrils_differ_only_in_oncoming_water();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();

@@ -69,7 +69,9 @@ float anatomical_sensor(const Body &, const BrainInterface::Receptor &, double s
 float sensory_response(double stimulus, double threshold);
 float bounded_response(double stimulus, double threshold);
 void record_touch(Body &, double nx, double ny, double impact = 0);
-Point olfactory_position(const Body &, const BrainInterface &, int side);
+Point nose_position(const Body &);
+// flow: the water relative to the fish at its nose.
+Point nostril_source(const Body &, Point nose, Point flow, int side);
 // Barbels hang from the snout and grow with their taste cells; they taste only what their tips
 // touch.
 Point barbel_tip(const Body &, const BrainInterface &, int side);

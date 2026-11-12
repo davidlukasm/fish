@@ -303,12 +303,18 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       (!b.perception_.disabled_senses[field::Odor] || b.perception_.inspect_vision) &&
       !binding.olfactory.empty();
   if (smelling) {
+    const auto nose = nose_position(b);
+    const auto stream = world.water().velocity(nose.x, nose.y);
+    const double buried = world.sediment_immersion(nose.x, nose.y, SEDIMENT_PROBE);
+    // The nose moves with the body and swings with its turning.
+    const Point flow{stream.x - b.motor_.vx + b.motor_.turn * (nose.y - b.y),
+                     stream.y - b.motor_.vy - b.motor_.turn * (nose.x - b.x)};
     for (int side = 0; side < NOSES; ++side) {
-      noses[side] = olfactory_position(b, binding, side);
-      nose_contact[side] = world.sediment_immersion(noses[side].x, noses[side].y, SEDIMENT_PROBE);
-    }
-    for (int side = 0; side < NOSES; ++side)
+      noses[side] = nostril_source(b, nose, flow, side);
+      noses[side].x = world.wrap_x(noses[side].x);
+      nose_contact[side] = buried;
       odors[side] = world.odor_field(noses[side].x, noses[side].y);
+    }
   }
   if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell && smelling) {
     for (int c = 0; c < odor_kind::count; ++c) {
@@ -359,23 +365,14 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     double concentration = anatomical_stimulus(b, r, sensory, contact, physiology);
     if (r.dominant_sense() == field::Odor && r.senses[field::Odor] > 0 &&
         !b.perception_.disabled_senses[field::Odor]) {
-      const double ca = std::cos(b.angle), sa = std::sin(b.angle);
-      const Point at{world.wrap_x(b.x + radius * (r.longitudinal * ca - r.lateral * sa)),
-                     b.y + radius * (r.longitudinal * sa + r.lateral * ca)};
-      const auto local = world.odor_field(at.x, at.y);
+      // Every smell cell smells through the nostril of its side, wherever on the skin it grew.
+      const int side = r.lateral >= 0;
       double odor = 0, uniform = 0;
       for (int k = 0; k < odor_kind::count; ++k) {
-        odor += local[k] * r.scents[k];
+        odor += odors[side][k] * r.scents[k];
         uniform += (odors[0][k] + odors[1][k]) / 2 * r.scents[k];
       }
-      if (b.perception_.probe.active() && b.perception_.probe.kind == probe_kind::smell)
-        for (int k = 0; k < odor_kind::count; ++k)
-          if (b.perception_.probe.scents[k] > 0) {
-            const auto added = world.odor_probe(b.perception_.probe, {at, at}, k);
-            odor += added[0] * b.perception_.probe.scents[k] * r.scents[k];
-          }
-      concentration = exposure * odor * (1 - world.sediment_immersion(at.x, at.y, SEDIMENT_PROBE)) +
-                      (1 - exposure) * uniform;
+      concentration = exposure * odor * (1 - nose_contact[side]) + (1 - exposure) * uniform;
     }
     if (sense == field::Taste && !b.perception_.disabled_senses[field::Taste]) {
       const auto tip = barbel_tip(b, binding, r.lateral >= 0);

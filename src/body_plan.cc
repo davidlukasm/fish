@@ -16,8 +16,10 @@ constexpr double SENSOR_MASS = .001, MUSCLE_MASS = .007;
 // A muscle cell stands for a whole muscle segment: it pulls four times as hard as one fibre, and
 // its mass, upkeep and work grow with it.
 constexpr float MUSCLE_CELL_FORCE = 4;
-constexpr double NOSE_AHEAD = .8, NOSE_OFFSET = .6, NOSE_GAP = .2, NOSE_MIN_OFFSET = 3,
-                 LATERAL_PROBE = .5;
+constexpr double NOSE_AHEAD = .8, LATERAL_PROBE = .5;
+// Steps the water at a nostril has taken to reach it: it carries the scent of the place it left
+// that long ago.
+constexpr double NOSTRIL_FLUSH_STEPS = 8;
 constexpr double EARLY_THRESHOLD = .3, LATE_THRESHOLD = .7, SPAN_WEIGHT = .25, DIRECTION_GAP = .08;
 constexpr double GUT_FRONT = .025, GUT_BACK = .93, GUT_MIN_HALF = .03, GUT_MIN_BREADTH = .035,
                  GUT_BREADTH = .72, GUT_OFFSET = .3, GUT_SWING = .48, GUT_LOOPS = .5,
@@ -988,11 +990,23 @@ Point barbel_tip(const Body &b, const BrainInterface &binding, int side) {
   return {b.x + snout * std::cos(b.angle) + length * std::cos(a),
           b.y + snout * std::sin(b.angle) + length * std::sin(a)};
 }
-Point olfactory_position(const Body &b, const BrainInterface &, int side) {
-  const double r = body_radius(b),
-               offset = (side ? 1 : -1) * 2 * std::max(NOSE_MIN_OFFSET, NOSE_OFFSET * r + NOSE_GAP),
-               c = std::cos(b.angle), s = std::sin(b.angle);
-  return {b.x + NOSE_AHEAD * r * c - offset * s, b.y + NOSE_AHEAD * r * s + offset * c};
+Point nose_position(const Body &b) {
+  const double reach = NOSE_AHEAD * body_radius(b);
+  return {b.x + reach * std::cos(b.angle), b.y + reach * std::sin(b.angle)};
+}
+// A fish smells at one point. Its two nostrils differ only in the water that reaches them: the
+// one facing the oncoming water draws it from upstream, the one in its lee smells the water at the
+// nose itself, and water from straight ahead reaches both alike. A nostril washed from where the
+// scent grows therefore answers more strongly than the other; in still water both smell the same.
+Point nostril_source(const Body &b, Point nose, Point flow, int side) {
+  const double speed = std::hypot(flow.x, flow.y);
+  if (speed <= 0)
+    return nose;
+  const double outward = side ? 1 : -1,
+               across = outward * (-std::sin(b.angle) * flow.x + std::cos(b.angle) * flow.y),
+               washed = (1 - across / speed) / 2;
+  return {nose.x - washed * NOSTRIL_FLUSH_STEPS * flow.x,
+          nose.y - washed * NOSTRIL_FLUSH_STEPS * flow.y};
 }
 Point lateral_point(int k, double radius) {
   const double a = sector_angle(k), c = std::cos(a), s = std::sin(a),
