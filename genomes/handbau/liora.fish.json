@@ -1,5 +1,5 @@
 {
- "format": "v019-fish-atelier-720",
+ "format": "v019-fish-atelier-720-r9",
  "name": "Liora 44",
  "organs": [
   {
@@ -131,6 +131,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -228,6 +238,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -386,6 +406,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -492,6 +522,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -650,6 +690,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -756,6 +806,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -914,6 +974,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -1011,6 +1081,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -1160,6 +1240,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -1257,6 +1347,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -1406,6 +1506,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -1503,6 +1613,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -1652,6 +1772,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -1749,6 +1879,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -1898,6 +2038,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -1995,6 +2145,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -2144,6 +2304,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -2241,6 +2411,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -2390,6 +2570,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -2487,6 +2677,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -2636,6 +2836,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -2733,6 +2943,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -2882,6 +3102,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -2979,6 +3209,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -3137,6 +3377,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -3234,6 +3484,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -3383,6 +3643,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -3480,6 +3750,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -3629,6 +3909,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -3726,6 +4016,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -3884,6 +4184,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -3981,6 +4291,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -4130,6 +4450,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -4227,6 +4557,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -4386,6 +4726,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -4483,6 +4833,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -4632,6 +4992,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -4729,6 +5099,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -4888,6 +5268,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -4985,6 +5375,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -5134,6 +5534,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -5231,6 +5641,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -5380,6 +5800,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -5477,6 +5907,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -5626,6 +6066,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -5723,6 +6173,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -5882,6 +6342,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -5979,6 +6449,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -6128,6 +6608,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -6225,6 +6715,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -6374,6 +6874,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -6471,6 +6981,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -6620,6 +7140,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -6717,6 +7247,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -6876,6 +7416,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -6973,6 +7523,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -7132,6 +7692,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -7229,6 +7799,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -7388,6 +7968,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -7511,6 +8101,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -7608,6 +8208,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -7767,6 +8377,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -7890,6 +8510,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -7987,6 +8617,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -8146,6 +8786,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -8244,6 +8894,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -8394,6 +9054,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -8492,6 +9162,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -8642,6 +9322,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -8740,6 +9430,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -8890,6 +9590,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -8988,6 +9698,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -9138,6 +9858,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -9236,6 +9966,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -9386,6 +10126,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -9484,6 +10234,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -9634,6 +10394,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -9732,6 +10502,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -9882,6 +10662,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -9980,6 +10770,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -10130,6 +10930,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -10228,6 +11038,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -10378,6 +11198,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -10476,6 +11306,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -10626,6 +11466,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -10724,6 +11574,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -10899,6 +11759,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -10997,6 +11867,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -11147,6 +12027,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -11245,6 +12135,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -11395,6 +12295,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -11493,6 +12403,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -11643,6 +12563,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -11741,6 +12671,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -11891,6 +12831,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -11989,6 +12939,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -12139,6 +13099,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -12237,6 +13207,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -12387,6 +13367,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -12485,6 +13475,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -12635,6 +13635,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -12733,6 +13743,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -12883,6 +13903,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -12981,6 +14011,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -13131,6 +14171,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -13229,6 +14279,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -13379,6 +14439,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "profile": "profile-mwaovmbh-2",
@@ -13477,6 +14547,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -13652,6 +14732,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "map0",
@@ -13793,6 +14883,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "map1",
@@ -13931,6 +15031,16 @@
        "sensitivity": 0.5,
        "half": 0.1,
        "substance": 1,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
@@ -14096,6 +15206,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "map0",
@@ -14237,6 +15357,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "map1",
@@ -14375,6 +15505,16 @@
        "sensitivity": 0.5,
        "half": 0.1,
        "substance": 1,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
@@ -14540,6 +15680,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -14646,6 +15796,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -14804,6 +15964,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -14910,6 +16080,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -15068,6 +16248,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -15165,6 +16355,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -15314,6 +16514,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -15411,6 +16621,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -15569,6 +16789,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -15680,6 +16910,16 @@
        "substance": 2,
        "width": 0,
        "steepness": 2,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
        "spread_receptors": 0
       },
       {
@@ -15833,6 +17073,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "polarity": 0
@@ -15939,6 +17189,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -16098,6 +17358,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ]
     }
@@ -16204,6 +17474,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -16362,6 +17642,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ]
     }
@@ -16468,6 +17758,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -16634,6 +17934,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "intake",
@@ -16748,6 +18058,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -16914,6 +18234,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "reserve",
@@ -17028,6 +18358,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -17194,6 +18534,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "pause",
@@ -17313,6 +18663,16 @@
        "substance": 6,
        "width": 0,
        "steepness": 3,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
        "spread_receptors": 0
       },
       {
@@ -17474,6 +18834,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "eggReady",
@@ -17593,6 +18963,16 @@
        "substance": 6,
        "width": 0,
        "steepness": 3,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
        "spread_receptors": 0
       },
       {
@@ -17771,6 +19151,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "target",
@@ -17885,6 +19275,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -18051,6 +19451,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "threat",
@@ -18165,6 +19575,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -18331,6 +19751,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "seen",
@@ -18445,6 +19875,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -18611,6 +20051,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "pause",
@@ -18725,6 +20175,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -18907,6 +20367,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "target",
@@ -19021,6 +20491,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -19187,6 +20667,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "threat",
@@ -19301,6 +20791,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -19467,6 +20967,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "seen",
@@ -19581,6 +21091,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -19747,6 +21267,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "pause",
@@ -19861,6 +21391,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -20043,6 +21583,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "feature1",
@@ -20157,6 +21707,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -20323,6 +21883,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "reward",
@@ -20437,6 +22007,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -20621,6 +22201,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "feature1",
@@ -20735,6 +22325,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -20901,6 +22501,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "reward",
@@ -21015,6 +22625,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -21199,6 +22819,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "turn",
@@ -21313,6 +22943,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -21479,6 +23119,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "mouth",
@@ -21593,6 +23243,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -21759,6 +23419,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "lift",
@@ -21873,6 +23543,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -22039,6 +23719,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "sated",
@@ -22153,6 +23843,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -22319,6 +24019,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "flee",
@@ -22459,6 +24169,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "escape",
@@ -22573,6 +24293,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -22758,6 +24488,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "turn",
@@ -22872,6 +24612,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -23038,6 +24788,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "mouth",
@@ -23152,6 +24912,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -23318,6 +25088,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "lift",
@@ -23432,6 +25212,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -23598,6 +25388,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "sated",
@@ -23712,6 +25512,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -23878,6 +25688,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "flee",
@@ -24018,6 +25838,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "escape",
@@ -24132,6 +25962,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -24317,6 +26157,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "concentration",
@@ -24457,6 +26307,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "opposite",
@@ -24571,6 +26431,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -24753,6 +26623,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "concentration",
@@ -24893,6 +26773,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "opposite",
@@ -25007,6 +26897,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -25189,6 +27089,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "urge",
@@ -25303,6 +27213,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -25469,6 +27389,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "oscillator",
@@ -25583,6 +27513,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -25749,6 +27689,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "steer",
@@ -25863,6 +27813,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -26029,6 +27989,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "fin",
@@ -26143,6 +28113,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -26309,6 +28289,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "finClock",
@@ -26423,6 +28413,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -26589,6 +28589,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "recover",
@@ -26729,6 +28739,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "rowOpponent",
@@ -26843,6 +28863,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -27026,6 +29056,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "urge",
@@ -27140,6 +29180,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -27306,6 +29356,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "oscillator",
@@ -27420,6 +29480,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -27586,6 +29656,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "steer",
@@ -27700,6 +29780,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -27866,6 +29956,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "fin",
@@ -27980,6 +30080,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -28146,6 +30256,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "finClock",
@@ -28260,6 +30380,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,
@@ -28426,6 +30556,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "recover",
@@ -28566,6 +30706,16 @@
        "width": 0,
        "steepness": 0,
        "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
       }
      ],
      "node": "rowOpponent",
@@ -28680,6 +30830,16 @@
       {
        "active": 1,
        "baseline": 1,
+       "sensitivity": 0,
+       "half": 0.05,
+       "substance": 0,
+       "width": 0,
+       "steepness": 0,
+       "spread_receptors": 0
+      },
+      {
+       "active": 0,
+       "baseline": 0,
        "sensitivity": 0,
        "half": 0.05,
        "substance": 0,

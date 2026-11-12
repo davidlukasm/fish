@@ -187,7 +187,7 @@ void property_overrides_reach_outputs() {
 }
 int region_trace(const std::string &mode) {
   const bool reverse = mode == "motor-reverse", fins = mode == "spine-fin",
-             spine = mode == "spine" || fins || reverse,
+             resting = mode == "spine-rest", spine = mode == "spine" || fins || reverse || resting,
              late = mode.find("late") != std::string::npos,
              pulsed = mode.find("pulsed") != std::string::npos,
              fed_start = mode.find("fed-start") != std::string::npos;
@@ -220,7 +220,8 @@ int region_trace(const std::string &mode) {
   std::cout << '\n';
   std::vector<double> total(plan.groups.size());
   const int every = spine ? 1 : 50;
-  for (int step = 0; step < (spine ? 5200 : 6200); ++step) {
+  // spine-rest: a long swim, a long rest and a new swim.
+  for (int step = 0; step < (resting ? 9000 : spine ? 5200 : 6200); ++step) {
     brain.set_maturity(std::min(1., .65 + .35 * step / 800));
     const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
     const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
@@ -239,9 +240,13 @@ int region_trace(const std::string &mode) {
                                                             : 0);
           continue;
         }
-        const bool swimming = (step >= 800 && step < 2600) || (step >= 3000 && step < 4800);
-        const bool steering = left ? step >= 3000 && step < 3400 : step >= 3400 && step < 3800;
-        const bool escaping = left ? step >= 3800 && step < 3840 : step >= 4000 && step < 4040;
+        const bool swimming = resting
+                                  ? (step >= 800 && step < 4800) || step >= 8000
+                                  : (step >= 800 && step < 2600) || (step >= 3000 && step < 4800);
+        const bool steering =
+            !resting && (left ? step >= 3000 && step < 3400 : step >= 3400 && step < 3800);
+        const bool escaping =
+            !resting && (left ? step >= 3800 && step < 3840 : step >= 4000 && step < 4040);
         const bool rowing = (step >= 1200 && step < 2600) ||
                             (left ? step >= 3000 && step < 3400 : step >= 3600 && step < 4000) ||
                             (step >= 4400 && step < 4800);
@@ -276,7 +281,12 @@ int region_trace(const std::string &mode) {
       std::cout << '\n';
     }
   }
-  if (spine && !reverse) {
+  // Without a consolidation receptor nothing consolidates.
+  if (std::none_of(plan.groups.begin(), plan.groups.end(),
+                   [](const auto &g) { return g.receptors[field::Consolidation].active; }))
+    for (const auto &synapse : brain.synapses())
+      assert(synapse.consolidation == 0);
+  if (spine && !reverse && !resting) {
     std::array<double, 2> inhibition{};
     for (const auto &synapse : brain.synapses()) {
       const auto &source = plan.groups[groups[synapse.source]],

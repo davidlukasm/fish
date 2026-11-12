@@ -12,6 +12,9 @@ enum HormoneEffect {
   Output,
   Death,
   Teaching,
+  // Turns what a contact has just learned into a lasting state that resists competition and
+  // forgetting; a negative level makes consolidated contacts pliable again.
+  Consolidation,
   HORMONE_EFFECTS
 };
 constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;

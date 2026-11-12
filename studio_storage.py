@@ -6,7 +6,7 @@ from wording import Refusal
 
 MAX_DOCUMENT = 1_000_000
 MAX_MODULES = 100
-FORMAT = "v019-fish-atelier-720"
+FORMAT = "v019-fish-atelier-720-r9"
 
 
 def _file(data_dir, key):

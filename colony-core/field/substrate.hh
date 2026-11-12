@@ -222,7 +222,7 @@ class Network {
   std::vector<NeuronIndex> active_, active_nerves_, active_effectors_, active_sensors_;
   std::vector<std::size_t> ready_;
   std::vector<std::uint16_t> index_, owner_, trial_steps_left_;
-  std::vector<float> weight_, trace_, predict_, usage_;
+  std::vector<float> weight_, trace_, predict_, usage_, consolidation_;
   std::map<std::size_t, std::vector<std::uint32_t>> free_rows_;
   std::vector<std::uint32_t> proposal_queue_;
   std::size_t proposal_cursor_ = 0;
@@ -273,7 +273,7 @@ public:
   struct Synapse {
     std::uint32_t slot;
     NeuronIndex source, target;
-    float weight, limit;
+    float weight, limit, consolidation;
   };
   struct RetinalState {
     NeuronIndex neuron;

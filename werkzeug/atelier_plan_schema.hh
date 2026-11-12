@@ -5,7 +5,7 @@ namespace studio_plan {
 inline constexpr int max_name = 40;
 inline constexpr int max_groups = 720;
 inline constexpr int max_group_name = 60;
-inline constexpr int receptors = 8;
+inline constexpr int receptors = 9;
 inline constexpr int max_copies = 16;
 template <typename Group> bool read_group(std::istream &input, Group &g) {
   return bool(input >> g.zone >> g.side >> g.u0 >> g.u1 >> g.v0 >> g.v1 >> g.w0 >> g.w1 >> g.role >>

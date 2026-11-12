@@ -50,7 +50,7 @@
       "max_name": 40,
       "max_groups": 720,
       "max_group_name": 60,
-      "receptors": 8,
+      "receptors": 9,
       "max_copies": 16
     }
   },
@@ -285,7 +285,8 @@
       "rhythm": 4,
       "output": 5,
       "death": 6,
-      "teaching": 7
+      "teaching": 7,
+      "consolidation": 8
     },
     "hormone_context": {
       "fed": 0,

@@ -17,8 +17,8 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/development_sites.hh" : "6c0532b3f94c7bb9",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
-  "colony-core/field/hormones.hh" : "cc5874a9b7ac8a89",
-  "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
+  "colony-core/field/hormones.hh" : "b7f0533d22aa4bf9",
+  "colony-core/field/substrate.cc" : "ab25930215018821",
   "src/body_plan.cc" : "fa3ff6288de9d472",
   "src/physiology_parameters.hh" : "00df0f1a6b4096e6",
   "src/physiology.hh" : "bcd73550f13ffcee",
@@ -30,7 +30,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/ann/network.cc" : "92da225af4390594",
   "src/body_plan.hh" : "dd0be253aaaffc6e",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "692eb245d5a7e328",
+  "colony-core/field/substrate.hh" : "6e50cd0729185749",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
   "colony-core/cppn/activation.hh" : "1a716ab9154b8ecc",
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
@@ -72,7 +72,7 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
   "colony-core/field/distribution.hh" : "80b7d194fee9ccf5",
   "colony-core/field/retinal_tissue.hh" : "d2a92b090939da05",
-  "colony-core/field/dynamics.hh" : "f2eaff782fe5176f",
+  "colony-core/field/dynamics.hh" : "be82802041a9173e",
   "colony-core/field/maturation.hh" : "4e8cf5c46f00df3e"
 });
 function semanticFingerprint(source) {
@@ -248,7 +248,7 @@ async function checkForagingChoice(model, sites, root) {
             'A new meal still stops the learned search movement');
 }
 
-async function checkSpinalPattern(model, sites, root) {
+function spinalDocument(model, sites) {
   let doc = model.newDocument('Wirbelsäule');
   const ids = {};
   for (const [type, x, y, paired] of [[ 'spine', 600, 300, true ], [ 'gut', 720, 365, false ],
@@ -269,39 +269,49 @@ async function checkSpinalPattern(model, sites, root) {
     doc = model.updateWire(wired.document, wired.document.wires.at(-1).id,
                            {pairing : from.id === ids.gut ? 'both' : 'same'});
   }
+  return {doc, ids};
+}
+// The two tail muscle commands of a spinal trace, step by step and clipped at zero.
+function spinalTrace(model, sites, root, doc, mode) {
+  const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
+  plan.groups.forEach((g, i) => {
+    const c = centers[i];
+    g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
+  });
+  const output = execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(plan),
+        encoding : 'utf8',
+        timeout : 20000,
+        maxBuffer : 8 * 1024 * 1024
+      });
+  const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
+  const left = header.indexOf('muscle:muscle:-1'), right = header.indexOf('muscle:muscle:1');
+  assert.ok(left > 0 && right > 0);
+  return lines.map(
+      row => [Number(row[0]), Math.max(0, Number(row[left])), Math.max(0, Number(row[right]))]);
+}
+const meanOf = rows => (side, lo, hi) => {
+  const part = rows.filter(row => row[0] > lo && row[0] <= hi);
+  return part.reduce((sum, row) => sum + row[side], 0) / part.length;
+};
+
+async function checkSpinalPattern(model, sites, root) {
+  let {doc, ids} = spinalDocument(model, sites);
   const {updateRegion} = await import('../ui/studio/model/regions.js');
   const cycles = [];
   for (const cycle of [.6, .3]) {
     doc = updateRegion(doc, ids.spine, {cycle}, sites);
-    const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
-    plan.groups.forEach((g, i) => {
-      const c = centers[i];
-      g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
-    });
-    const output = execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'spine'
-        ],
-        {
-          cwd : root,
-          input : JSON.stringify(plan),
-          encoding : 'utf8',
-          timeout : 10000,
-          maxBuffer : 4 * 1024 * 1024
-        });
-    const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
-    const left = header.indexOf('muscle:muscle:-1'), right = header.indexOf('muscle:muscle:1');
-    assert.ok(left > 0 && right > 0);
-    const rows = lines.map(
-        row => [Number(row[0]), Math.max(0, Number(row[left])), Math.max(0, Number(row[right]))]);
+    const rows = spinalTrace(model, sites, root, doc, 'spine');
     const between = (lo, hi) => rows.filter(row => row[0] > lo && row[0] <= hi);
-    const mean = (side, lo, hi) => {
-      const part = between(lo, hi);
-      return part.reduce((sum, row) => sum + row[side], 0) / part.length;
-    };
+    const mean = meanOf(rows);
     const cruising = between(1600, 2500), drive = (mean(1, 1600, 2500) + mean(2, 1600, 2500)) / 2;
     assert.ok(drive > .2, 'A tonic request develops effective output to both tail muscles');
     const overlap = cruising.reduce((sum, row) => sum + Math.min(row[1], row[2]), 0),
@@ -325,6 +335,19 @@ async function checkSpinalPattern(model, sites, root) {
             .length);
   }
   assert.ok(cycles[1] > cycles[0] * 1.5, 'The period control changes the compiled rhythm');
+}
+
+// After a long swim the tail rests when the request ends, however long the rest lasts, and swims
+// again at once when it returns: the brake the spine learned while it grew up outlasts the swim.
+async function checkSpinalRest(model, sites, root) {
+  const {doc} = spinalDocument(model, sites);
+  const rows = spinalTrace(model, sites, root, doc, 'spine-rest'), mean = meanOf(rows);
+  const drive = (mean(1, 1600, 4700) + mean(2, 1600, 4700)) / 2;
+  assert.ok(drive > .2, 'The long swim drives the tail');
+  for (const side of [1, 2]) {
+    assert.ok(mean(side, 5800, 8000) < .1 * drive, 'A long rest keeps the tail still');
+    assert.ok(mean(side, 8100, 8600) > .5 * drive, 'The tail swims again after the rest');
+  }
 }
 
 async function checkFinPattern(model, sites, root) {
@@ -967,8 +990,10 @@ async function checkHormoneSystems(model, capabilities) {
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   if (process.argv.includes('--spine') || process.argv.includes('--fin') ||
       process.argv.includes('--reverse')) {
-    if (process.argv.includes('--spine'))
+    if (process.argv.includes('--spine')) {
       await checkSpinalPattern(model, sitesResult.sites, root);
+      await checkSpinalRest(model, sitesResult.sites, root);
+    }
     if (!process.argv.includes('--reverse'))
       await checkFinPattern(model, sitesResult.sites, root);
     if (!process.argv.includes('--fin'))
@@ -1001,6 +1026,7 @@ async function checkHormoneSystems(model, capabilities) {
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkSpinalPattern(model, sitesResult.sites, root);
+  await checkSpinalRest(model, sitesResult.sites, root);
   await checkFinPattern(model, sitesResult.sites, root);
   await checkReversePattern(model, sitesResult.sites, root);
   await checkForagingChoice(model, sitesResult.sites, root);

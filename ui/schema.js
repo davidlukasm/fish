@@ -727,7 +727,7 @@ export const EYE = Object.freeze({"left": 0, "right": 1});
 export const STROKE_KIND = Object.freeze({"tail_left": 0, "turn_left": 1, "turn_right": 2, "suction": 3, "egg": 4, "sperm": 5, "bite": 6, "defense": 7, "reverse_left": 8, "reverse_right": 9, "gill": 10, "gut": 11, "tail_right": 12, "pelvic_left": 13, "pelvic_right": 14, "pelvic_reverse_left": 15, "pelvic_reverse_right": 16});
 export const STEP_PHASE = Object.freeze({"development": 0, "motion": 1, "sediment": 2, "plants": 3, "drift": 4, "gpu": 5, "act": 6, "resolve": 7, "settle": 8, "reproduction": 9});
 export const PLAN_ORDER = Object.freeze({"head": 0, "chest": 1, "torso": 2, "face": 3, "tail": 4, "side": 5, "mouth": 6, "spine": 7, "eye": 8, "nose": 9, "barbel": 10});
-export const HORMONE_EFFECT = Object.freeze({"excitation": 0, "learning": 1, "competition": 2, "eligibility": 3, "rhythm": 4, "output": 5, "death": 6, "teaching": 7});
+export const HORMONE_EFFECT = Object.freeze({"excitation": 0, "learning": 1, "competition": 2, "eligibility": 3, "rhythm": 4, "output": 5, "death": 6, "teaching": 7, "consolidation": 8});
 export const HORMONE_CONTEXT = Object.freeze({"fed": 0, "injured": 1, "fast": 2, "spawning": 3});
 export const PATCH_KIND = Object.freeze({"replace": 0, "array": 1, "object": 2, "rows": 3, "mask": 6});
 export const TOLERANCE = Object.freeze({"negligible": 1e-09, "rounding": 1e-12, "precision": 1e-06});
@@ -803,4 +803,4 @@ export function indexedBy(group, table) {
   return Object.freeze(out);
 }
 export function initialize(indices) {}
-export const ATELIER_LIMITS = Object.freeze({"max_name": 40, "max_groups": 720, "max_group_name": 60, "receptors": 8, "max_copies": 16});
+export const ATELIER_LIMITS = Object.freeze({"max_name": 40, "max_groups": 720, "max_group_name": 60, "receptors": 9, "max_copies": 16});

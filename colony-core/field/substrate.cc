@@ -340,9 +340,10 @@ float learning_rate(const Neuron &n, float hormone) {
                                  std::clamp(n.parameters.plasticity, 0.f, 1.f) *
                                  (.5f * (1 + hormone));
 }
-F8 decay8(F8 use, F8 time) {
-  const F8 d = splat8(float(std::log(2.) / plasticity::baseline_steps)) +
-               (1 - use) / (plasticity::unused_decay_span * time);
+F8 decay8(F8 use, F8 time, F8 consolidated) {
+  const F8 d = (splat8(float(std::log(2.) / plasticity::baseline_steps)) +
+                (1 - use) / (plasticity::unused_decay_span * time)) *
+               (1 - consolidated);
   return 1 - d + d * d * (.5f - d / 6);
 }
 }
@@ -377,7 +378,7 @@ void Network::prepare_state() {
   age_.assign(n, 0);
   for (auto &v : hormone_effect_)
     v.assign(n, 0);
-  for (auto *v : {&weight_, &trace_, &predict_, &usage_})
+  for (auto *v : {&weight_, &trace_, &predict_, &usage_, &consolidation_})
     v->clear();
   index_.clear();
   owner_.clear();
@@ -434,7 +435,7 @@ void Network::activate(std::size_t i) {
       index_.resize(index_.size() + storage, std::uint16_t(tissue->neurons.size()));
       owner_.resize(index_.size());
       trial_steps_left_.resize(index_.size());
-      for (auto *v : {&weight_, &trace_, &predict_, &usage_})
+      for (auto *v : {&weight_, &trace_, &predict_, &usage_, &consolidation_})
         v->resize(index_.size(), 0);
     }
     std::fill(owner_.begin() + r.offset, owner_.begin() + r.offset + storage, NeuronIndex(i));
@@ -459,7 +460,7 @@ void Network::erase_contact(std::size_t k) {
   auto &row = rows_[t];
   --row.count;
   index_[k] = NeuronIndex(tissue->neurons.size());
-  weight_[k] = trace_[k] = predict_[k] = usage_[k] = 0;
+  weight_[k] = trace_[k] = predict_[k] = usage_[k] = consolidation_[k] = 0;
   trial_steps_left_[k] = 0;
   while (row.extent && index_[row.offset + row.extent - 1] == tissue->neurons.size())
     --row.extent;
@@ -544,7 +545,7 @@ bool Network::insert_contact(NeuronIndex s, NeuronIndex t) {
     return false;
   build_budget_ -= cost;
   index_[free] = s;
-  weight_[free] = trace_[free] = predict_[free] = usage_[free] = 0;
+  weight_[free] = trace_[free] = predict_[free] = usage_[free] = consolidation_[free] = 0;
   const auto learner = tissue->neurons[t].role == Role::Effector ? s : t;
   trial_steps_left_[free] = std::uint16_t(
       std::ceil(plasticity::contact_trial_time_constants * topology->learning[learner]));
@@ -874,19 +875,21 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       const F8 xc = ordinary * gather8(deviation_.data(), ix), old = load8(weight_.data() + k),
                e = load8(trace_.data() + k), u = load8(usage_.data() + k);
       F8 gain = splat8(target_gain), mode = splat8(cl.mode),
-         comp = splat8(.5f * (1 + hormone_effect_[Competition][i]));
+         comp = splat8(.5f * (1 + hormone_effect_[Competition][i])),
+         consolidating = splat8(hormone_effect_[Consolidation][i]);
       F8 surprise_value = splat8(surprise);
       if (effector) {
         for (int l = 0; l < LANES; ++l) {
           const auto src = index_[k + l];
           if (src == n) {
-            gain[l] = mode[l] = comp[l] = surprise_value[l] = 0;
+            gain[l] = mode[l] = comp[l] = surprise_value[l] = consolidating[l] = 0;
             continue;
           }
           gain[l] = learning_rate(tissue->neurons[src], hormone_effect_[Learning][src]);
           mode[l] = topology->classes[src].mode;
           comp[l] = .5f * (1 + hormone_effect_[Competition][src]);
           surprise_value[l] = cell_surprise_[src];
+          consolidating[l] = hormone_effect_[Consolidation][src];
         }
       }
       F8 positive = mode > splat8(0) ? mode : F8{}, negative = mode < splat8(0) ? -mode : F8{};
@@ -895,6 +898,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
           (positive * comp * y * (xc - old * y) -
            plasticity::cancellation * negative * y * xc * gather8(topology->nerve.data(), ix) +
            surprise_value * e / denominator);
+      // The competing share of the change: an active cell pushes out its silent inputs.
+      F8 competition = -(ordinary * gain * positive * comp * y * y * old);
       const F8 limit = ordinary * c.electrical_limit + (1 - ordinary) * c.teaching_limit;
       const F8 sign = gather8(topology->sign.data(), ix);
       if (level_learning) {
@@ -908,8 +913,14 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
              plasticity::cancellation * negative * pre * gather8(topology->nerve.data(), ix));
         const F8 teaching = ordinary * gain * surprise_value * e / denominator;
         delta = (1 - level) * delta + level * (sustained + teaching);
+        competition = (1 - level) * competition -
+                      level * ordinary * gain * sign * post * positive * comp * abs8(old) * evoked;
       }
       delta += (1 - ordinary) * sign * target_gain * u * (limit - abs8(old));
+      // What the contact learned itself marks it for consolidation; competition and forgetting do
+      // not. A consolidated contact keeps learning but resists being pushed out.
+      const F8 consolidated = load8(consolidation_.data() + k), learned = delta - competition;
+      delta -= consolidated * competition;
       F8 updated = old;
       if (plasticity_enabled) {
         updated = sign * clamp8(sign * (old + delta), 0, 1);
@@ -920,7 +931,20 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       learning_summary_.change += sum8(abs8(updated - old));
       const F8 time =
           effector ? gather8(topology->learning.data(), ix) : splat8(topology->learning[i]);
-      const F8 decayed = plasticity_enabled ? updated * decay8(u, time) : old;
+      F8 lasting = consolidated;
+      if (plasticity_enabled) {
+        // Captured: the share of full strength the contact learned, while the cell consolidates.
+        // Released: learning against the contact's strength, or a cell made pliable again.
+        const F8 share = limit > F8{} ? abs8(learned) / limit : F8{},
+                 against = limit > F8{} && sign * learned < F8{} ? -sign * learned / limit : F8{},
+                 capture = consolidating > F8{} ? consolidating : F8{},
+                 pliable = consolidating < F8{} ? -consolidating / time : F8{};
+        lasting = clamp8(consolidated + capture * share * (1 - consolidated) -
+                             (against + pliable) * consolidated,
+                         0, 1);
+        store8(consolidation_.data() + k, lasting);
+      }
+      const F8 decayed = plasticity_enabled ? updated * decay8(u, time, lasting) : old;
       learning_summary_.decay += sum8(abs8(updated - decayed));
       store8(weight_.data() + k, decayed);
     }
@@ -931,7 +955,8 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
       auto &left = trial_steps_left_[k];
       if (left)
         --left;
-      if (!left && std::abs(weight_[k]) < PRUNE)
+      if (!left && std::abs(weight_[k]) < PRUNE &&
+          consolidation_[k] < plasticity::kept_consolidation)
         erase_contact(k);
     }
     if (plasticity_enabled)
@@ -986,7 +1011,7 @@ void Network::reset() {
 }
 void Network::reset_learning() {
   reset();
-  for (auto *v : {&weight_, &predict_, &usage_})
+  for (auto *v : {&weight_, &predict_, &usage_, &consolidation_})
     std::fill(v->begin(), v->end(), 0);
   for (std::size_t k = 0; k < index_.size(); ++k)
     if (index_[k] != tissue->neurons.size()) {
@@ -1051,7 +1076,8 @@ std::vector<Network::Synapse> Network::synapses() const {
   for (std::size_t k = 0; k < index_.size(); ++k)
     if (index_[k] != tissue->neurons.size())
       out.push_back({std::uint32_t(k), index_[k], owner_[k], weight_[k],
-                     contact_limit(tissue->neurons[index_[k]], tissue->neurons[owner_[k]])});
+                     contact_limit(tissue->neurons[index_[k]], tissue->neurons[owner_[k]]),
+                     consolidation_[k]});
   return out;
 }
 std::vector<Network::RetinalState> Network::retinal_state() const {
@@ -1100,6 +1126,7 @@ std::size_t Network::runtime_bytes() const {
                         &trace_,
                         &predict_,
                         &usage_,
+                        &consolidation_,
                         &observed_contributions})
     floats += v->capacity();
   for (const auto &v : hormone_effect_)
@@ -1211,10 +1238,26 @@ void Network::write_runtime(std::ostream &out) const {
     out << r.offset << ' ' << r.capacity;
   }
   out << '\n';
-  for (const auto *v :
-       {&state_, &signal_, &pulse_, &organ_output_, &retinal_activity_, &retinal_recovery_,
-        &synaptic_mean_, &usual_, &deviation_, &own_mean_, &action_mean_, &teach_mean_, &contrast_,
-        &cell_surprise_, &progress_, &weight_, &trace_, &predict_, &usage_})
+  for (const auto *v : {&state_,
+                        &signal_,
+                        &pulse_,
+                        &organ_output_,
+                        &retinal_activity_,
+                        &retinal_recovery_,
+                        &synaptic_mean_,
+                        &usual_,
+                        &deviation_,
+                        &own_mean_,
+                        &action_mean_,
+                        &teach_mean_,
+                        &contrast_,
+                        &cell_surprise_,
+                        &progress_,
+                        &weight_,
+                        &trace_,
+                        &predict_,
+                        &usage_,
+                        &consolidation_})
     write_values(out, *v);
   for (const auto *v : {&index_, &owner_, &trial_steps_left_})
     write_values(out, std::vector<float>(v->begin(), v->end()));
@@ -1277,14 +1320,30 @@ void Network::read_runtime_state(std::istream &in) {
   }
   if (in.get() != '\n')
     throw std::runtime_error("invalid brain separator");
-  for (auto *v : {&weight_, &trace_, &predict_, &usage_})
+  for (auto *v : {&weight_, &trace_, &predict_, &usage_, &consolidation_})
     v->resize(slots);
   for (auto *v : {&index_, &owner_, &trial_steps_left_})
     v->resize(slots);
-  for (auto *v :
-       {&state_, &signal_, &pulse_, &organ_output_, &retinal_activity_, &retinal_recovery_,
-        &synaptic_mean_, &usual_, &deviation_, &own_mean_, &action_mean_, &teach_mean_, &contrast_,
-        &cell_surprise_, &progress_, &weight_, &trace_, &predict_, &usage_})
+  for (auto *v : {&state_,
+                  &signal_,
+                  &pulse_,
+                  &organ_output_,
+                  &retinal_activity_,
+                  &retinal_recovery_,
+                  &synaptic_mean_,
+                  &usual_,
+                  &deviation_,
+                  &own_mean_,
+                  &action_mean_,
+                  &teach_mean_,
+                  &contrast_,
+                  &cell_surprise_,
+                  &progress_,
+                  &weight_,
+                  &trace_,
+                  &predict_,
+                  &usage_,
+                  &consolidation_})
     read_values(in, *v, 1e9f);
   std::vector<float> integers(slots);
   for (auto *v : {&index_, &owner_, &trial_steps_left_}) {
@@ -1383,7 +1442,7 @@ void Network::read_runtime_state(std::istream &in) {
       if (s == cells)
         continue;
       if (s >= cells || !born_[s] || connection_kind(tissue->neurons[s], tissue->neurons[i]) < 0 ||
-          usage_[k] < 0 || usage_[k] > 1 ||
+          usage_[k] < 0 || usage_[k] > 1 || consolidation_[k] < 0 || consolidation_[k] > 1 ||
           trial_steps_left_[k] >
               std::ceil(plasticity::contact_trial_time_constants *
                         topology->learning[tissue->neurons[i].role == Role::Effector ? s : i]) ||

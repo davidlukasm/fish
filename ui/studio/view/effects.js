@@ -186,6 +186,11 @@ const SCENES = Object.freeze({
            input(P.lower, [], 'still', start - CHANGE.quiet * level, start) +
            output([ T.input[0] ]) + cell([ T.input[0] ]);
   },
+  // A consolidated input keeps what it learned; a pliable one may lose it again.
+  [HORMONE_EFFECT.consolidation] : r =>
+      input(P.cy, [ T.input[0] ], '',
+            P.thick + CHANGE.learn * effectLevel(HORMONE_EFFECT.consolidation, r) / 2) +
+      trace(P.cy, T.input[0], SHADE.trace) + output([ T.input[0] ]) + cell([ T.input[0] ]),
   [HORMONE_EFFECT.eligibility] : r => {
     const own = effectLevel(HORMONE_EFFECT.eligibility, r), beat = 1 - own;
     return input(P.upper, [ T.input[0] ], '', P.thick + CHANGE.credit * own) +
@@ -224,7 +229,7 @@ function modulating(r, withIt) {
 export const EFFECT_ORDER = Object.freeze([
   HORMONE_EFFECT.excitation, HORMONE_EFFECT.output, HORMONE_EFFECT.death, HORMONE_EFFECT.teaching,
   HORMONE_EFFECT.eligibility, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
-  HORMONE_EFFECT.rhythm
+  HORMONE_EFFECT.consolidation, HORMONE_EFFECT.rhythm
 ]);
 export const effectScene = (effect, colour, ends = startEnds(effect)) => sideBySide(
     effect === HORMONE_EFFECT.teaching ? taught(colour, ends) : SCENES[effect], colour, ends);

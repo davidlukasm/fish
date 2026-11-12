@@ -1656,7 +1656,8 @@ inline constexpr int rhythm = 4;
 inline constexpr int output = 5;
 inline constexpr int death = 6;
 inline constexpr int teaching = 7;
-inline constexpr int count = 8;
+inline constexpr int consolidation = 8;
+inline constexpr int count = 9;
 }
 namespace hormone_context {
 inline constexpr int fed = 0;

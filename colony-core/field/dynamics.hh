@@ -12,6 +12,9 @@ inline constexpr float basal_formation = 1.f / 50;
 inline constexpr float baseline_steps = 500;
 inline constexpr float contact_trial_time_constants = 4;
 inline constexpr float unused_decay_span = 4;
+// A contact at least this far consolidated is kept even when small: a learned weak or inhibiting
+// contact may be the lesson itself.
+inline constexpr float kept_consolidation = .5f;
 template <class Value>
 inline Value trace_update(Value retention, Value previous, Value fast, Value pre, Value post) {
   return retention * previous + (1 - fast) * pre * post;

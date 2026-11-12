@@ -16,7 +16,9 @@ export const EFFECT_ICON = Object.freeze([
   'M4 17a8 8 0 0 1 16 0M12 17l4-6', 'M3 7l7 5-7 5M21 7l-7 5 7 5',
   'M12 4v16M7 20h10M4 7h16M4 7l-2.5 6h5zM20 7l-2.5 6h5z', 'M2 12h4l2-5 3 10 3-10 2 5h6',
   'M4 9h4l5-4v14l-5-4H4zM16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10', 'M6 6l12 12M18 6L6 18',
-  'M12 2v8M8.5 6.5L12 10l3.5-3.5M12 21a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z'
+  'M12 2v8M8.5 6.5L12 10l3.5-3.5M12 21a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z',
+  // Consolidation: an anchor.
+  'M12 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 6v15M8 9h8M4 13c0 5 4 8 8 8s8-3 8-8M4 13l-1.5 2.5M20 13l1.5 2.5'
 ]);
 export const DIRECTION_ICON = Object.freeze({rises : 'M12 5l6 8H6z', falls : 'M12 19l6-8H6z'});
 export const PHASE_ICON =

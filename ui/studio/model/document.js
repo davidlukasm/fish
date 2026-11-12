@@ -54,13 +54,13 @@ import {initialRegion, routedLinks, settleRegions} from './regions.js';
 
 let serial = 0;
 // Documents name development sites by index; the 720-site lattice gave every index a new place.
-export const NEW_DOCUMENT = 'v019-fish-atelier-720';
+export const NEW_DOCUMENT = 'v019-fish-atelier-720-r9';
 const ID_RADIX = 36;
 export const identifier = (kind = 'part') =>
     `${kind}-${Date.now().toString(ID_RADIX)}-${(++serial).toString(ID_RADIX)}`;
 export const copy = object => structuredClone(object);
 
-const neutralReceptor = (effect = null) => ({
+export const neutralReceptor = (effect = null) => ({
   active : effect === HORMONE_EFFECT.output ? 1 : 0,
   baseline : effect === HORMONE_EFFECT.output ? 1 : 0,
   sensitivity : 0,
@@ -234,7 +234,7 @@ export const boundEffects = (center, index, wheel) => center.receptors.flatMap(
                        : []);
 export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.teaching, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
-  HORMONE_EFFECT.eligibility
+  HORMONE_EFFECT.eligibility, HORMONE_EFFECT.consolidation
 ]);
 export const isLearner = center => center.role === 'nerve';
 export function teachersOf(doc, center, wheel) {
@@ -1325,11 +1325,13 @@ const RECEPTOR_START = Object.freeze({
   [HORMONE_EFFECT.eligibility] : {sensitivity : 1, half : .1},
   [HORMONE_EFFECT.rhythm] : {sensitivity : 1, half : .1},
   [HORMONE_EFFECT.output] : {baseline : 1, sensitivity : -2, half : .1},
-  [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5}
+  [HORMONE_EFFECT.death] : {sensitivity : 1, half : .5},
+  [HORMONE_EFFECT.consolidation] : {sensitivity : 1, half : .1}
 });
 export const DEATH_RESPONSE = .5;
 export function effectLevel(effect, r) {
-  if (effect === HORMONE_EFFECT.excitation || effect === HORMONE_EFFECT.teaching)
+  if (effect === HORMONE_EFFECT.excitation || effect === HORMONE_EFFECT.teaching ||
+      effect === HORMONE_EFFECT.consolidation)
     return r;
   if (effect === HORMONE_EFFECT.learning)
     return 1 + r;

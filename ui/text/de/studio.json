@@ -374,7 +374,8 @@
     "macht den Takt der Zelle stärker oder schwächer",
     "macht das Signal der Zelle lauter oder leiser",
     "lässt die Zelle absterben",
-    "lehrt die Zelle"
+    "lehrt die Zelle",
+    "festigt, was die Zelle gelernt hat, oder macht es wieder formbar"
   ],
   "effectsRise": [
     "erregt die Zelle",
@@ -384,7 +385,8 @@
     "macht den Takt der Zelle stärker",
     "macht das Signal der Zelle lauter",
     "lässt die Zelle absterben",
-    "lehrt die Zelle"
+    "lehrt die Zelle",
+    "festigt, was die Zelle gelernt hat"
   ],
   "effectsFall": [
     "hemmt die Zelle",
@@ -394,7 +396,8 @@
     "macht den Takt der Zelle schwächer",
     "macht das Signal der Zelle leiser",
     "lässt die Zelle ohne ihn absterben",
-    "lehrt die Zelle das Gegenteil"
+    "lehrt die Zelle das Gegenteil",
+    "macht Gelerntes der Zelle wieder formbar"
   ],
   "regionNodes": {
     "families": {
@@ -1004,6 +1007,12 @@
       "title": "Die Handlungswahl meldet Gefahr über einen Stoff, der Muskeln leichter erregbar macht.",
       "needs": "Braucht Muskeln, deren Erregbarkeit noch kein Stoff steuert.",
       "substance": "Alarmstoff"
+    },
+    "consolidation": {
+      "name": "Festigung",
+      "title": "Die Körperzustandsregion meldet Sättigung über einen Stoff; lernende Nervenzellen festigen dann, was sie gerade gelernt haben.",
+      "needs": "Braucht lernende Knoten, deren Festigung noch kein Stoff steuert.",
+      "substance": "Festigungsstoff"
     }
   },
   "hormoneCard": {
@@ -1020,7 +1029,8 @@
       "Der Stoff stellt ein, wie stark der Taktgeber schlägt.",
       "Der Stoff stellt ein, wie stark die Zelle ihr Signal ausgibt, von stumm bis voll.",
       "Ab einer Schwelle stirbt die Zelle. Je nach Rezeptor stirbt sie mit dem Stoff oder ohne ihn.",
-      "Der Stoff liefert ein Lehrsignal. Unerwartete Änderungen verstärken oder schwächen die gemerkten Verbindungen."
+      "Der Stoff liefert ein Lehrsignal. Unerwartete Änderungen verstärken oder schwächen die gemerkten Verbindungen.",
+      "Der Stoff festigt, was die Verbindungen der Zelle gerade gelernt haben: Gefestigtes hält gegen Verdrängen und Vergessen. Ein negativer Pegel macht es wieder formbar."
     ],
     "where": [
       "bei Nervenzellen, Muskeln und Drüsen",
@@ -1030,6 +1040,7 @@
       "bei Taktgebern",
       "bei allen Zellen, auch Sinneszellen",
       "bei allen Zellen",
+      "bei lernenden Nervenzellen",
       "bei lernenden Nervenzellen"
     ],
     "sentence": "Der Stoff {effect}",

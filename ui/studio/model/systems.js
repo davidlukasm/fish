@@ -37,6 +37,18 @@ export const SYSTEMS = Object.freeze([
     answers : []
   },
   {
+    // Sated, the fish keeps what its learning cells have just learned.
+    key : 'consolidation',
+    sense : 'gut',
+    hub : 'state',
+    input : 'intake',
+    output : 'satiety',
+    answers : [ {
+      holds : isLearner,
+      effects : [ [ HORMONE_EFFECT.consolidation, {baseline : 0, sensitivity : 1} ] ]
+    } ]
+  },
+  {
     key : 'alarm',
     sense : 'pain',
     hub : 'choice',
