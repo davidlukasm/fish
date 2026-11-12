@@ -7,6 +7,7 @@ import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
+import {adaptationMarks, cellMarks} from './sense_marks.js';
 import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 
@@ -62,7 +63,10 @@ const STORE = Object.freeze({
   gap : 6,
   sperm : 3,
   tick : 5,
-  handle : 7
+  handle : 7,
+  // The stretch cells sit along their line from its left end; their adaptation arc round it.
+  cells : 9,
+  clock : 14
 });
 const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4, spread : 5});
 const topOf = store => Math.min(store.own.most, store.scale);
@@ -151,11 +155,13 @@ export function gonadGraphic(state, organ, selected) {
   const find = key => organ.centers.find(c => c.key === key);
   const growth = find('growth'), release = find('release'), pressure = find('pressure');
   const chosen = center => center && selected?.key === center.key ? ' selected' : '';
-  const part = (center, body) => center ? '<g class="aid-sac-part' + chosen(center) +
-                                              '" data-select-center="' + escapeText(center.id) +
-                                              '"><title>' + escapeText(centerTitle(center)) +
-                                              '</title>' + body + '</g>'
-                                        : '';
+  const facts = gonadFacts(state, organ, store);
+  const part = (center, body) =>
+      center ? '<g class="aid-sac-part' + chosen(center) + '" data-select-center="' +
+                   escapeText(center.id) + '"><title>' +
+                   escapeText([ centerTitle(center), ...(facts[center.key] ?? []) ].join(' · ')) +
+                   '</title>' + body + '</g>'
+             : '';
   const held = Math.round(store.room / store.own.perCell), kept = Math.min(store.growth, held);
   const roomY = levelY(store, store.room), curve = fillCurve(store, organ.type);
   const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : null;
@@ -168,20 +174,16 @@ export function gonadGraphic(state, organ, selected) {
                                                      ' ' + S.top + ' H' + S.right + '"/>'
                                                : '';
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
-         organ.type + '" data-sac="' + escapeText(organ.id) + '" role="img">' +
+         organ.type + '" data-sac="' + escapeText(organ.id) + '"' +
+         (pressure ? ' data-sense-field="' + escapeText(pressure.id) + '"' : '') + ' role="img">' +
          '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
          '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth', organ.type)) +
          part(release, chambers(store, kept, held, 'release', organ.type) + curve.html) +
          '<path class="aid-sac-room" d="M' + S.stack[0] + ' ' + fixed(roomY) + ' H' + S.right +
          '"/>' +
-         (curve.knee
-              ? '<text x="' + fixed(Math.min(curve.knee.x, S.right)) + '" y="' +
-                    fixed(curve.knee.y - S.tick) + '" text-anchor="' +
-                    (curve.knee.x > (S.left + S.right) / 2 ? 'end' : 'start') + '">' +
-                    escapeText(t('studio.inspector.gonad.fullIn', {n : store.steps})) + '</text>'
-              : '') +
          part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +
                             S.right + '"/>') +
+         (pressure ? pressureMarks(state, pressure, {x : S.left, y : stretchY}) : '') +
          (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' + S.left +
                          '" cy="' + fixed(stretchY) + '" r="' + S.handle + '"><title>' +
                          label('inspector.stretch') + '</title></circle>'
@@ -208,10 +210,9 @@ export function sacPatch(state, organ, handle, fy) {
                       Math.floor(kindLimit(organ, null) / 2))
   };
 }
-export function gonadFacts(state, organ) {
-  const store = gonadStore(state, organ);
-  if (!store)
-    return '';
+// What each part does, for its tooltip: how many cells fill the store and how fast, when it
+// releases and what, and at what filling the stretch cells answer.
+function gonadFacts(state, organ, store) {
   const words = key => t('studio.inspector.gonad.' + key, {
     n : Number.isFinite(store.steps) ? store.steps : 0,
     cells : store.growth,
@@ -220,25 +221,29 @@ export function gonadFacts(state, organ) {
     least : Math.round(store.minimum ?? 0),
     duration : store.incubation ?? 0
   });
-  const find = key => organ.centers.find(c => c.key === key), pressure = find('pressure');
-  const row = (center, ...facts) =>
-      center ? '<li data-select-center="' + escapeText(center.id) + '"><b>' +
-                   escapeText(centerTitle(center)) + '</b><span>' +
-                   escapeText(facts.filter(Boolean).join(' · ')) + '</span></li>'
-             : '';
+  const pressure = organ.centers.find(c => c.key === 'pressure');
   const product = organ.type !== 'eggs'         ? words('sperm')
                   : !store.minimum              ? words('egg')
                   : store.spawn < store.minimum ? words('food')
                                                 : words('developmentEnergy');
-  return '<ul class="aid-gonad-facts" title="' + escapeText(label('development.gonadConditions')) +
-         '">' +
-         row(find('growth'), words('cells'), Number.isFinite(store.steps) ? '' : words('driven'),
-             store.motors * store.own.perCell > store.own.most ? words('ceiling') : '') +
-         row(find('release'), words(store.releaseEnabled ? 'releaseOn' : 'trigger'), product) +
-         row(pressure,
-             pressure && t('studio.inspector.gonad.stretch',
-                           {share : percent(activationLevel(unitOfPlan(pressure.threshold)))})) +
-         '</ul>';
+  return {
+    growth : [
+      words('cells'), Number.isFinite(store.steps) ? words('fullIn') : words('driven'),
+      store.motors * store.own.perCell > store.own.most ? words('ceiling') : ''
+    ].filter(Boolean),
+    release : [ words(store.releaseEnabled ? 'releaseOn' : 'trigger'), product ],
+    pressure : pressure ? [ t('studio.inspector.gonad.stretch',
+                              {share : percent(activationLevel(unitOfPlan(pressure.threshold)))}) ]
+                        : []
+  };
+}
+// The stretch cells' count and adaptation, at the left end of their line.
+function pressureMarks(state, pressure, at) {
+  const answer = groupReport(state.document, state.anatomy, 'senses', pressure.id);
+  const places = Array.from({length : ATELIER_LIMITS.max_copies},
+                            (_, k) => ({x : at.x + STORE.cells * (k + 1), y : at.y}));
+  return (answer?.adapt?.steps > 0 ? adaptationMarks(at, STORE.clock, Math.PI, pressure) : '') +
+         cellMarks(places, pressure);
 }
 export function pressureNote(state, organ) {
   const own = PRESSURE_OF[organ.type], cell = organ.centers.find(c => c.key === own?.key);

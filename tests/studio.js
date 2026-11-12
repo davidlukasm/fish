@@ -2698,7 +2698,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     }
     assert.match(sacs.gonadGraphic(testisState, model.findOrgan(testis.document, testis.organId)),
                  /aid-gonad-graphic/);
-    const facts = state => sacs.gonadFacts(state, small);
+    // What the store makes is told in the tooltip of its release cells.
+    const facts = state => sacs.gonadGraphic(state, small);
     assert.equal(sacs.gonadStore(sacState, small).minimum, null);
     assert.ok(facts({
                 ...sacState,
