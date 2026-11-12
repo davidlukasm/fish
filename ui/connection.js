@@ -1,4 +1,5 @@
 import {t} from './strings.js';
+import {offerPopulation} from './population_picker.js';
 import {ROUTE} from './schema.js';
 import {updateEventViewState} from './event_view.js';
 import {updateCockpitState} from './cockpit.js';
@@ -227,6 +228,7 @@ export function receiveState(d) {
     connectionState.stateVersion = d.frame_version || '';
   } else if (!d.unchanged)
     text('tank-status', startupStatus(d));
+  offerPopulation(d);
 }
 
 // The statistics worker only sends species fields that changed; whenever this thread forgets its

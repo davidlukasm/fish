@@ -93,6 +93,10 @@ int main(int argc, char **argv) {
         benchmark = true;
         continue;
       }
+      if (flag == "--choose-population") {
+        o.choose_population = true;
+        continue;
+      }
       if (flag == "--empty-world") {
         o.empty_world = true;
         continue;

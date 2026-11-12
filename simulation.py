@@ -47,6 +47,7 @@ class Simulation:
         self.observed_context = None
         self.egg_source = None
         self.initial_energy = {}
+        self.offer_population = None
         self.initial_genomes = []
         self.population_catalog = PopulationCatalog(self)
 
@@ -91,6 +92,8 @@ class Simulation:
             }
             options["energy"] = self.initial_energy.copy()
             checkpoint = self.history.begin(options, resume=resume)
+            if self.offer_population is None:
+                self.offer_population = not checkpoint
             if checkpoint:
                 options = self.history.meta["options"]
                 for name, value in options.items():
@@ -125,13 +128,15 @@ class Simulation:
             if not checkpoint:
                 for name, value in self.initial_energy.items():
                     command.extend(["--param", f"{name}={value}"])
-            if not checkpoint and not self.initial_genomes:
+            if not checkpoint and not self.initial_genomes and not self.offer_population:
                 self.initial_genomes = [path.read_bytes() for path in self.starter_genomes()]
             if not checkpoint:
                 for index, content in enumerate(self.initial_genomes):
                     path = self.history.session / f"start-{index}.genome"
                     path.write_bytes(content)
                     command.extend(["--start-genome", str(path)])
+            if not checkpoint and self.offer_population and not self.initial_genomes:
+                command.append("--choose-population")
             if self.args.empty_world:
                 command.append("--empty-world")
             if checkpoint:
@@ -497,6 +502,7 @@ class Simulation:
         )
         data = {
             "frame_version": version,
+            "offer_population": self.offer_population,
             "session": self.history.meta["id"],
             "exit_code": exit_code,
             "logs": list(self.logs),
