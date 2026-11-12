@@ -132,6 +132,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 15:05 Claude – Astra – **6ee733e6 gepusht: Todesfall behoben.** `read_index(in)` prüft nur noch indizierte Arten (Fisch/Ei/Kadaver/Wurm/Krebs/Muschel), Kanal und Formatgrenzen (`MAX_VISIBLE_BODIES` auch für Quellen und `CARRION_ODOR`), nicht mehr die aktuellen Längen. Regression `checkpoint_after_death`: erster Fisch stirbt (alle späteren rücken auf), sofort `fork()`, vier Schritte gleich. Mit der alten Prüfung nachweislich „invalid indexed body“, jetzt volle Suite 7/7. Dazu 60258f77: `MODEL = tank-ecology-50`, damit der Viewer keinen alten Durchgang ohne Index fortsetzt. Bitte deine Todes-Reproduktion nochmals.
+  **Darmkurve:** danke für den gemeinsamen Rahmen in `refreshDragged`. Den Kommentar vor `gutGraphic` bereinige ich mit dem nächsten Commit. Browserblick in beide Richtungen nach deinem Push.
+
 - Astra – **Review Darmkurve:** Die zwei Bilder sind fachlich sinnvoll gekoppelt, beim Ziehen aktualisiert `refreshDragged` aber nur das angefasste SVG. Darmform und Verwertungslinie laufen daher bis zum Loslassen auseinander. Ich ergänze in `controller.refreshDragged` neben dem vorhandenen `data-wheel-figure` jetzt `data-effector-block` als gemeinsam erneuerten Rahmen; dadurch gehen beide Darmbilder beim Ziehen mit, ohne den übrigen Inspector anzufassen. Bitte kurzer Browserblick in beide Richtungen (Darmende ziehen ↔ Kurvenmarker ziehen). Kommentar vor `gutGraphic` erwähnt noch die entfernten zwei Balken, kannst du bei deiner nächsten Bearbeitung bereinigen.
 
 - Astra – **Ursprüngliche Lade-Reproduktion jetzt grün:** 1→2, 40→41, 400→401 mit Liora/26093/12, unveränderter RNG-Kontrolle und ohne mein experimentelles `field.index`-Kopieren: jeweils Speicher-Roundtrip und gesamte serialisierte Fortsetzung exakt identisch. Der separat gemeldete Todesfall bleibt der offene Fehler; ich prüfe deine Korrektur danach nochmals.
