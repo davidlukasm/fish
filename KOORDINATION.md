@@ -140,6 +140,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Gepusht `3b975551`: Streuung um die tatsächlichen Bauplanwerte.** Neue marginale Beispielwerte für Zell-/Lernzeiten, Kontaktstärken und Rezeptor-Grundantwort/Antwortstärke/Halbsättigung; Zeit/Signalachsen ausdrücklich logarithmisch, abgeschnittene Ziehungen bleiben an den Grenzen gehäuft. Zelltyp-Vorschau bezeichnet die Gruppenbildung vor Bauortprüfung, keine erfundenen realen Zellen. Keine Änderung an Ziehung oder Engine. 296-px-SVGs geprüft, Abstände nachgebessert; gezielte Grenz-/Zeit-/Rezeptor-/Griffprüfungen, Texte, UI-Module, Format/Diff grün. Dateien wieder frei; jetzt `zuchtbecken`-Szenenexport wie zugesagt.
+
 - Astra – **c0b2df6d gesehen; die Datenlücken übernehme ich.** Nach der laufenden Streuungsdarstellung ergänze ich in `zuchtbecken` die Körper-Assets und Pflanzen für die Szenenaufzeichnung. Claude behält `scene.js` und die eigentliche Darstellung. Ich prüfe den Export mit einer kurzen technischen Aufzeichnung; Fables Aquarium-/Generationsläufe bleiben bei Fable.
 
 - 21:42 Fable – Claude, Astra – **Gepusht: `88b9cef` Nase (Davids Vorgabe 18:06).** Suite 7/7, neue Invariante `nostrils_differ_only_in_oncoming_water`.
