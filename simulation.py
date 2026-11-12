@@ -773,7 +773,7 @@ class Simulation:
 
     @staticmethod
     def starter_genomes():
-        return [ROOT / "genomes/handbau/brisa.genome", ROOT / "genomes/handbau/liora.genome"]
+        return fish_shelf.genomes(fish_shelf.SHELF)
 
     def close(self):
         with self.transport_lock:

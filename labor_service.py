@@ -9,7 +9,8 @@ import secrets
 import subprocess
 import threading
 
-from atelier_service import START_DOCUMENTS, genome_text
+import fish_shelf
+from atelier_service import genome_text
 from file_io import atomic_write
 from labor_recording import LifeArchive, read_life
 from viewer_paths import ROOT, command_path, engine_path
@@ -17,10 +18,10 @@ from wording import Refusal
 
 
 def start_genome(key):
-    if not isinstance(key, str) or key not in START_DOCUMENTS:
+    path = fish_shelf.genome(key)
+    if not path:
         raise Refusal("labor.errors.unknownFish")
-    document = START_DOCUMENTS[key]
-    return document.with_name(document.name.removesuffix(".fish.json") + ".genome")
+    return path
 
 
 def integer(value, low, high):
@@ -253,7 +254,7 @@ class LiveStation:
     def overview(self):
         with self.lock:
             job = self.job
-            return {"fish": [{"key": key} for key in ("brisa", "start", "plants")],
+            return {"fish": fish_shelf.offered(),
                     "results": [], "job": self.summary(job) if job else None}
 
     def summary(self, job):
@@ -356,7 +357,7 @@ class LiveStation:
     def start(self, data, data_dir):
         steps = integer(data.get("steps", 8000), 100, 100000)
         scale = decimal(data.get("scale", .3), 0, 1)
-        key = data.get("fish", "plants")
+        key = data.get("fish")
         if key == "draft":
             genome = genome_text(data.get("genome"))
         else:

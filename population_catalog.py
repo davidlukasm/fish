@@ -6,6 +6,7 @@ import subprocess
 import threading
 import tempfile
 from pathlib import Path
+import fish_shelf
 from history import atomic_write
 from protocol_schema import Fish, Anatomy, GenomeImport, RateWindow
 from viewer_paths import ROOT, command_path, engine_path
@@ -23,7 +24,9 @@ class PopulationCatalog:
     def examples(self):
         base = ROOT / "genomes"
         rows = []
-        for path in self.simulation.starter_genomes():
+        offered = [(path, "examples") for path in fish_shelf.genomes(fish_shelf.SHELF)] + [
+            (path, "drafts") for path in fish_shelf.genomes(fish_shelf.DRAFTS)]
+        for path, group in offered:
             name = path.stem.replace("-", " ").capitalize()
             with path.open(encoding="utf-8", errors="replace") as source:
                 for line in source:
@@ -32,7 +35,7 @@ class PopulationCatalog:
                         break
             relative = path.relative_to(base).as_posix()
             rows.append({"id": "example:" + relative, "name": name,
-                         "genus": name.split()[0], "group": "examples",
+                         "genus": name.split()[0], "group": group,
                          "labels": [], "class": path.stem, "value": 0,
                          "session": "", "updated": path.stat().st_mtime})
         return rows
@@ -106,7 +109,8 @@ class PopulationCatalog:
         if identifier.startswith("example:"):
             base = (ROOT / "genomes").resolve()
             path = (base / identifier.removeprefix("example:")).resolve()
-            if path in {p.resolve() for p in self.simulation.starter_genomes()} and path.is_file():
+            offered = fish_shelf.genomes(fish_shelf.SHELF) + fish_shelf.genomes(fish_shelf.DRAFTS)
+            if path in {p.resolve() for p in offered} and path.is_file():
                 return path
         elif identifier.startswith("archive:"):
             return self.simulation.journal.resolve(identifier.removeprefix("archive:"))

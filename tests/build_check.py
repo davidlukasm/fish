@@ -153,7 +153,7 @@ def main():
             observed = str(Path(folder) / 'fish')
             checkpoint = Path(folder) / 'world.state'
             foraging = Path(folder) / 'foraging.jsonl'
-            genomes = ','.join(['genomes/handbau/startfisch.genome'] * 2)
+            genomes = ','.join(['genomes/entwuerfe/liora.genome'] * 2)
             command = [binary('zuchtbecken'), genomes,
                        '184371', '6', '3', habitat, 'observe=' + observed,
                        'checkpoint=' + str(checkpoint)]

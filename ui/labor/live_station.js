@@ -5,6 +5,7 @@ import {escapeText} from '../studio/view/markup.js';
 import {hydrateRender} from '../statistics_frame.js';
 import {horizontalDelta} from '../state.js';
 import {
+  founderOptions,
   liveShell,
   metricCards,
   lifeLines,
@@ -38,7 +39,8 @@ export class LiveStation {
     this.root = root;
     this.breeding = breeding;
     this.route = breeding ? ROUTE.labor : ROUTE.trials;
-    this.state = {fish : 'plants'};
+    this.state = {fish : null};
+    this.offered = [];
     this.worlds = [];
     this.paths = [];
     this.parents = new Set();
@@ -90,7 +92,7 @@ export class LiveStation {
     this.shown = true;
     this.draft = draft;
     const epoch = ++this.epoch;
-    this.root.innerHTML = liveShell(this.breeding, draft, this.state.fish);
+    this.root.innerHTML = liveShell(this.breeding, draft, this.state.fish, this.offered);
     this.root.querySelector('[data-live-setting=steps]').value = this.settings.steps;
     const scale = this.root.querySelector('[data-live-setting=scale]');
     if (scale)
@@ -102,6 +104,10 @@ export class LiveStation {
       const overview = await this.request({operation : 'overview'});
       if (epoch !== this.epoch)
         return;
+      this.offered = overview.fish;
+      const founders = this.root.querySelector('[data-live-setting=fish]');
+      this.state.fish ??= draft ? 'draft' : this.offered[0]?.key ?? null;
+      founders.innerHTML = founderOptions(draft, this.state.fish, this.offered);
       this.job = overview.job;
       if (this.job)
         this.poll();

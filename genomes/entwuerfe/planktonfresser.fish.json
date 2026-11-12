@@ -12805,6 +12805,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -12955,6 +12973,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -13105,6 +13145,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -13271,6 +13329,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -13421,6 +13497,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -13571,6 +13669,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -13737,6 +13853,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -13821,7 +13955,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -13887,6 +14021,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -14037,6 +14184,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -14187,6 +14352,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -14337,6 +14520,24 @@
       "q1": 0,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -14487,6 +14688,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -14637,6 +14851,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -14787,6 +15014,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -14937,6 +15177,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -15083,6 +15341,16 @@
       "copies": 8,
       "tau": 0.6,
       "threshold": -0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -15093,7 +15361,7 @@
      "surface": "inner",
      "site": 464,
      "copies": 4,
-     "threshold": 0,
+     "threshold": 0.25,
      "tau": 0.5,
      "field": 0.5,
      "q1": 1,
@@ -15102,7 +15370,7 @@
      "qwidth": 1,
      "sign": 1,
      "mode": 1,
-     "pace": 0.6,
+     "pace": 0.5,
      "modulator": -1,
      "crossing": 0,
      "range": 1,
@@ -15167,7 +15435,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -15228,11 +15496,24 @@
       "learning_tau": 1,
       "copies": 4,
       "field": 0.5,
-      "threshold": 0,
+      "threshold": 0.25,
       "tau": 0.5,
       "q1": 1,
       "q2": 0.5,
-      "pace": 0.6
+      "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -15383,6 +15664,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -15533,6 +15832,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -15702,6 +16014,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -15786,7 +16116,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -15852,6 +16182,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -16002,6 +16345,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -16152,6 +16513,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -16302,6 +16681,24 @@
       "q1": 0,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -16452,6 +16849,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -16602,6 +17012,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -16752,6 +17175,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -16902,6 +17338,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -16912,7 +17366,7 @@
      "surface": "inner",
      "site": 465,
      "copies": 4,
-     "threshold": 0,
+     "threshold": 0.25,
      "tau": 0.5,
      "field": 0.5,
      "q1": 1,
@@ -16921,7 +17375,7 @@
      "qwidth": 1,
      "sign": 1,
      "mode": 1,
-     "pace": 0.6,
+     "pace": 0.5,
      "modulator": -1,
      "crossing": 0,
      "range": 1,
@@ -16986,7 +17440,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -17047,11 +17501,24 @@
       "learning_tau": 1,
       "copies": 4,
       "field": 0.5,
-      "threshold": 0,
+      "threshold": 0.25,
       "tau": 0.5,
       "q1": 1,
       "q2": 0.5,
-      "pace": 0.6
+      "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -17202,6 +17669,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -17352,6 +17837,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -17663,6 +18161,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -17813,6 +18329,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -17963,6 +18497,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -18113,6 +18665,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -18263,6 +18833,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -18413,6 +19001,24 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -18563,6 +19169,32 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     },
     {
@@ -18713,6 +19345,27 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     },
     {
@@ -18863,6 +19516,27 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     }
    ],
@@ -19030,6 +19704,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -19180,6 +19871,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -19330,6 +20034,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -19480,6 +20197,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -19630,6 +20364,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -0.5
+      }
      }
     },
     {
@@ -19780,6 +20531,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -19930,6 +20698,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -20080,6 +20865,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "0": {
+       "active": 1,
+       "baseline": 1
+      },
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -20230,6 +21032,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -20380,6 +21195,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -20530,6 +21358,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -20680,6 +21521,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -20830,6 +21688,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     }
    ],
@@ -20997,6 +21872,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -21147,6 +22039,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -21297,6 +22202,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -21447,6 +22365,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -21597,6 +22532,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -0.5
+      }
      }
     },
     {
@@ -21747,6 +22699,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -21897,6 +22866,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -22047,6 +23033,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "0": {
+       "active": 1,
+       "baseline": 1
+      },
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -22197,6 +23200,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -22347,6 +23363,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -22497,6 +23526,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -22647,6 +23689,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -22797,6 +23856,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     }
    ],
@@ -23239,6 +24315,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23389,6 +24478,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23539,6 +24641,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23689,6 +24804,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -23839,6 +24971,19 @@
       "q1": 1,
       "q2": 0,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23989,6 +25134,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24139,6 +25297,19 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24289,6 +25460,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -24455,6 +25639,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24605,6 +25802,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24755,6 +25965,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24905,6 +26128,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -25055,6 +26295,19 @@
       "q1": 1,
       "q2": 0,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25205,6 +26458,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25355,6 +26621,19 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25505,6 +26784,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],

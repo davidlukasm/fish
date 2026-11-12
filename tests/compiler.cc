@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
     assert(assess(plan, g).ok());
   }
   {
-    const auto original = fishsim::Genome::load(fishsim::HAND_BUILT_GENOME);
+    const auto original = fishsim::Genome::load(fishsim::EXAMPLE_GENOME);
     const auto &before = *original.blueprint;
     auto limited = original;
     limited.development_options.max_edges = 1;

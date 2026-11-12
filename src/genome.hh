@@ -8,7 +8,8 @@
 #include <string>
 #include <iosfwd>
 namespace fishsim {
-inline constexpr const char *HAND_BUILT_GENOME = "genomes/handbau/startfisch.genome";
+// A fish built from a blueprint, for benchmarks and tests.
+inline constexpr const char *EXAMPLE_GENOME = "genomes/entwuerfe/liora.genome";
 extern field::Options default_development_options;
 constexpr std::size_t BRAIN_QUERY_LIMIT = field::DEVELOPMENT_QUERY_LIMIT;
 inline constexpr double MAX_GENE_WEIGHT = 16;

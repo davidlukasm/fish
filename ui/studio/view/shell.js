@@ -44,6 +44,16 @@ function cellStatus(state) {
                                            : label('app.draft');
 }
 
+// The fish the game offers for loading, one category as a group of the menu.
+function offeredFish(s, category) {
+  const fish = (s.capabilities?.fish ?? []).filter(f => f.category === category);
+  return fish.length ? '<optgroup label="' + label('app.' + category) + '">' +
+                           fish.map(f => '<option value="' + escapeText(f.key) + '">' +
+                                         escapeText(f.name) + '</option>')
+                               .join('') +
+                           '</optgroup>'
+                     : '';
+}
 function stationHeader(s) {
   const accepted = acceptedGenome(s);
   return '<header class="aid-header"><div class="aid-header-brand">' +
@@ -58,9 +68,7 @@ function stationHeader(s) {
                  button('data-action="example"', label('app.example')) +
                  '<select data-start-fish aria-label="' + label('app.startFish') + '"' +
                  (s.busy ? ' disabled' : '') + '><option value="">' + label('app.startFish') +
-                 '</option><option value="start">' + label('app.miro') +
-                 '</option><option value="plants">' + label('app.liora') +
-                 '</option><option value="brisa">' + label('app.brisa') + '</option></select>' +
+                 '</option>' + offeredFish(s, 'shelf') + offeredFish(s, 'drafts') + '</select>' +
                  button('data-action="open"', label('app.open')) +
                  button('data-action="download"', label('app.saveGenome'), {disabled : !accepted}),
              label('app.groupPlan')) +

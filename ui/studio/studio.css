@@ -235,6 +235,8 @@
 .aid-hub-spark polyline{fill:none;stroke:#8fd8c3;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .aid-hub-go{display:flex;justify-content:space-between;width:100%;padding-top:10px;border-top:1px solid #3a6067;font-size:12px;color:#cfe2d8}
 .aid-hub-shelf{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.aid-hub-empty{margin:0;padding:18px 20px;border:1px dashed #2b5058;border-radius:16px;color:#9fbcbc;font-size:13px}
+.aid-hub-fish.drafts{border-style:dashed}
 .aid-hub-fish{display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:#10313a;border:1px solid #2b5058;border-radius:16px}
 .aid-hub-fish-head{display:flex;flex-direction:column}
 .aid-hub-fish strong{font:500 24px Georgia,serif;color:#e6efe4}

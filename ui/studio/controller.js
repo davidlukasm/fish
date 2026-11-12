@@ -55,7 +55,7 @@ import {
 import {libraryOf, toolPalette} from './view/library.js';
 import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
-import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.js';
+import {API, API_WAIT, GENOME_SUFFIX, requestBody} from './requests.js';
 import {trialMethods} from './trials.js';
 import {CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
@@ -687,7 +687,7 @@ export class OrganStudio {
     a.click();
     URL.revokeObjectURL(url);
   }
-  async startFish(example = START_FISH) {
+  async startFish(example) {
     if (this.state.busy)
       return;
     this.state.busy = true;

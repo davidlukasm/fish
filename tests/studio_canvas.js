@@ -107,7 +107,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
                    'Region cells follow native topology with a stable tie break');
   for (const name of ['brisa', 'liora']) {
     const fish =
-        JSON.parse(readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
+        JSON.parse(readFileSync(join(root, 'genomes/entwuerfe', name + '.fish.json'), 'utf8'));
     const bundles = drawnBundles(state(fish));
     assert.ok(bundles.length);
     for (const bundle of bundles) {
@@ -426,7 +426,7 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
 async function checkRedraws(model, caps, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const doc = JSON.parse(require('node:fs').readFileSync(
-      require('node:path').join(root, 'genomes/handbau/liora.fish.json')));
+      require('node:path').join(root, 'genomes/entwuerfe/liora.fish.json')));
   const counts = {};
   function make() {
     const studio = new OrganStudio({

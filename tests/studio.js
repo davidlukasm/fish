@@ -1226,13 +1226,20 @@ async function checkHormoneSystems(model, capabilities) {
         return;
       }
     }
-    // Shipped blueprints remain editable and compile to their shipped fish.
-    for (const example of ['start', 'plants', 'brisa']) {
+    // Offered blueprints remain editable and compile to their offered fish.
+    const offeredFish = JSON.parse(execFileSync(
+        'python3',
+        [ '-B', '-c', 'import json, fish_shelf; print(json.dumps(fish_shelf.offered()))' ],
+        {cwd : root, encoding : 'utf8', timeout : 10000}));
+    assert.ok(offeredFish.length &&
+                  offeredFish.every(f => ['shelf', 'drafts'].includes(f.category)),
+              'The game offers fish, each on the shelf or among the drafts');
+    for (const example of offeredFish.map(f => f.key)) {
       const source = JSON.parse(execFileSync(
           'python3',
           [
             '-B', '-c',
-            "import json; from atelier_service import run, START_DOCUMENTS; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':START_DOCUMENTS[example].with_suffix('').with_suffix('.genome').read_text()}); r.update(d); print(json.dumps(r))",
+            "import json, fish_shelf; from atelier_service import run; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':fish_shelf.genome(example).read_text()}); r.update(d); print(json.dumps(r))",
             example
           ],
           {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
@@ -1247,9 +1254,12 @@ async function checkHormoneSystems(model, capabilities) {
       const {settleRegions} = await import('../ui/studio/model/regions.js');
       assert.deepEqual(settleRegions(doc, sitesResult.sites), doc,
                        example + ': blueprint settled (make starter)');
-      if (example === 'start') {
+      if (example === offeredFish[0].key) {
+        // A simple body without regions, kept for this test only; the game does not offer it.
         const {updateRegion} = await import('../ui/studio/model/regions.js');
-        let placed = structuredClone(doc);
+        let placed = settleRegions(
+            JSON.parse(readFileSync(join(__dirname, 'fisch/einfach.fish.json'), 'utf8')),
+            sitesResult.sites);
         placed.organs.find(o => o.type === 'brain').centers = [];
         placed.wires = [];
         placed.assemblies = [];
@@ -1308,7 +1318,7 @@ async function checkHormoneSystems(model, capabilities) {
           'python3',
           [
             '-B', '-c',
-            "import json,sys; from atelier_service import run, START_DOCUMENTS; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); shipped=START_DOCUMENTS[sys.argv[1]].with_suffix('').with_suffix('.genome').read_text(); print(json.dumps({**{k:r[k] for k in ['neurons','synapses','viable','compiler']}, 'shipped': r['genome']==shipped}))",
+            "import json,sys,fish_shelf; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); shipped=fish_shelf.genome(sys.argv[1]).read_text(); print(json.dumps({**{k:r[k] for k in ['neurons','synapses','viable','compiler']}, 'shipped': r['genome']==shipped}))",
             example
           ],
           {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
@@ -1812,7 +1822,7 @@ async function checkHormoneSystems(model, capabilities) {
   assert.equal(model.addOrgan(doc, 'eye', sites, {x : 1400, y : 290}, geometry.SNAP_DISTANCE),
                null);
   const crowded = model.addOrgan(
-      JSON.parse(readFileSync(join(__dirname, '../genomes/handbau/brisa.fish.json'), 'utf8')),
+      JSON.parse(readFileSync(join(__dirname, '../genomes/entwuerfe/brisa.fish.json'), 'utf8')),
       'eye', sites, {x : 320, y : 270});
   assert.ok(crowded, 'An occupied viewing direction must not block the rest of a new eye');
   const crowdedSites = model.allCenters(crowded.document).map(c => c.site);

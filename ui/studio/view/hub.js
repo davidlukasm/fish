@@ -1,6 +1,5 @@
 import {formatNumber, t} from '../../strings.js';
 import {escapeText} from './markup.js';
-const START_FISH = [ 'brisa', 'start', 'plants' ];
 const say = (key, vars) => t('labor.' + key, vars);
 
 const hub = (key, vars) => t('studio.hub.' + key, vars);
@@ -51,15 +50,20 @@ function breedingVisual(h) {
          '</span>';
 }
 
-function shelf() {
-  return START_FISH
-      .map(key => '<article class="aid-hub-fish"><div class="aid-hub-fish-head"><strong>' +
-                  say('fish.' + key) + '</strong><span>' + say('role.' + key) +
-                  '</span></div><div class="aid-hub-fish-actions">' +
-                  '<button type="button" data-hub-breed="' + key + '">' + hub('breed') +
-                  '</button><button type="button" data-hub-atelier="' + key + '">' +
-                  hub('atelier') + '</button></div></article>')
-      .join('');
+// The offered fish of one category: the finished fish of the shelf or, apart from them, drafts.
+function shelf(h, category) {
+  const fish = (h.overview?.fish ?? []).filter(f => f.category === category);
+  if (!fish.length)
+    return '<p class="aid-hub-empty">' + hub(category + 'Empty') + '</p>';
+  return '<div class="aid-hub-shelf">' +
+         fish.map(f => '<article class="aid-hub-fish ' + category +
+                       '"><div class="aid-hub-fish-head"><strong>' + escapeText(f.name) +
+                       '</strong></div><div class="aid-hub-fish-actions">' +
+                       '<button type="button" data-hub-breed="' + escapeText(f.key) + '">' +
+                       hub('breed') + '</button><button type="button" data-hub-atelier="' +
+                       escapeText(f.key) + '">' + hub('atelier') + '</button></div></article>')
+             .join('') +
+         '</div>';
 }
 
 export function hubShell(h) {
@@ -113,7 +117,10 @@ export function hubShell(h) {
          '</section><div class="aid-hub-section"><small>' + hub('stationsSmall') + '</small><h3>' +
          hub('stations') + '</h3></div><div class="aid-hub-stations">' + stations +
          '</div><div class="aid-hub-section"><small>' + hub('shelfSmall') + '</small><h3>' +
-         hub('shelf') + '</h3></div><div class="aid-hub-shelf">' + shelf(h) + '</div></main>' +
+         hub('shelf') + '</h3></div><div data-hub-shelf="shelf">' + shelf(h, 'shelf') +
+         '</div><div class="aid-hub-section"><small>' + hub('draftsSmall') + '</small><h3>' +
+         hub('drafts') + '</h3></div><div data-hub-shelf="drafts">' + shelf(h, 'drafts') +
+         '</div></main>' +
          '<footer class="aid-station-footer"><span class="aid-message"></span><span>' +
          t('studio.app.hubFooter') + '</span></footer></div>';
 }

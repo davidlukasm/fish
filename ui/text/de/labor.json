@@ -1,17 +1,9 @@
 {
   "brand": "AID / ZUCHTSTATION 03",
   "title": "Zuchtstation",
-  "fish": {
-    "brisa": "Brisa",
-    "start": "Miro",
-    "plants": "Liora 44",
-    "draft": "Atelier-Entwurf"
-  },
-  "role": {
-    "brisa": "Futtersucherin",
-    "start": "Allesfresser · Entwurf",
-    "plants": "Pflanzenfresserin",
-    "draft": "aktueller Bauplan"
+  "category": {
+    "shelf": "Fischregal",
+    "drafts": "Entwürfe"
   },
   "choose": {
     "fish": "Fisch",

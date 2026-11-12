@@ -12,6 +12,8 @@ import {paintFishGlyph} from './fish_painter.js';
 
 const chosen = new Set();
 let entries = [], filtered = [], group = 'examples', shown = 0, revision = 0, cards = [], timer = 0;
+// The fish the game brings along: the finished ones of the shelf and, apart from them, drafts.
+const comesAlong = name => name === 'examples' || name === 'drafts';
 let loading = false;
 let restoreRunning = false;
 const batchSize = 6;
@@ -142,10 +144,10 @@ function sortingControls() {
     }
   }
   const [, , , scope] = sortChoices().find(([ key ]) => key === sortKey) || [];
-  if (scope && group === 'examples')
+  if (scope && comesAlong(group))
     sortKey = 'diversity';
   for (const button of box.children) {
-    button.hidden = !!button.dataset.scope && group === 'examples';
+    button.hidden = !!button.dataset.scope && comesAlong(group);
     button.setAttribute('aria-pressed', String(button.dataset.key === sortKey));
   }
   const order = el('population-sort-direction');
@@ -165,7 +167,9 @@ function selectionCount() {
          lines : lineCount(lines),
          range : lower === upper ? lower : t('population_picker.range', {lower, upper})
        })
-                                 : t('population_picker.ohneAuswahl'));
+                           : entries.some(e => e.group === 'examples')
+                               ? t('population_picker.ohneAuswahl')
+                               : t('population_picker.bitteWaehlen'));
   el('new').disabled = lines > count;
   const box = el('population-chosen');
   box.replaceChildren();
@@ -423,6 +427,8 @@ async function render() {
     note.textContent = group === 'favorites' ? t('population_picker.fischeImFischPanel')
                        : group === 'saved'
                            ? t('population_picker.erfolgreicheVertreterWerdenWaehrend')
+                       : group === 'examples' && !el('population-search').value
+                           ? t('population_picker.regalLeer')
                            : t('population_picker.keinePassendenBeispielfische');
     grid.append(note);
   }
@@ -470,7 +476,7 @@ async function loadMore() {
         (e.labels || []).filter(word => !/^(ohne |blind|taub)/i.test(word)).join(' · ') ||
         (e.genus !== e.name ? e.genus : '') || '';
     card.append(label, canvas, subtitle, info);
-    if (e.group !== 'examples') {
+    if (!comesAlong(e.group)) {
       const star = document.createElement('button');
       star.type = 'button';
       star.className = 'population-star';
@@ -567,6 +573,12 @@ export async function openPopulationPicker() {
   text('population-count', t('population_picker.startlinienWerdenGeladen'));
   try {
     entries = await catalogEntries();
+    // An empty shelf opens on the drafts.
+    if (group === 'examples' && !entries.some(e => e.group === group) &&
+        entries.some(e => e.group === 'drafts')) {
+      group = 'drafts';
+      el('population-group').value = group;
+    }
     const available = new Set(entries.map(e => e.id));
     for (const id of chosen)
       if (!available.has(id))

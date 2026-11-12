@@ -1,8 +1,9 @@
 # Entwürfe
 
-Baupläne aus dem Atelier, die (noch) keine Starter sind, je Art die neueste Fassung. Die Starter
-selbst liegen in `genomes/handbau` und werden von `werkzeug/fischbau.mjs` gebaut; diese Entwürfe
-nicht.
+Baupläne aus dem Atelier, die (noch) keine fertigen Fische sind, je Art die neueste Fassung. Das
+Spiel bietet sie als eigene Kategorie „Entwürfe" an, getrennt vom Fischregal (`genomes/regal`), in
+das ein Fisch erst kommt, wenn er sich im Becken über Generationen hält. `werkzeug/fischbau.mjs`
+baut zu jedem Bauplan das Genom daneben.
 
 Alle Entwürfe sind auf den heutigen Starter Brisa portiert: Zustand, Motorik, Wirbelsäule mit
 Flossentakt, Riechverarbeitung und die Schwimmmuskeln kommen von Brisa. Jede Art behält, was sie im

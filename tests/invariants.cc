@@ -10,6 +10,7 @@
 #include <set>
 using namespace test;
 namespace {
+constexpr const char *FORAGER_GENOME = "genomes/entwuerfe/brisa.genome";
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
@@ -118,7 +119,9 @@ void eye_reports_a_morsel_against_open_water(const Genome &g) {
     check(open_water[0] < SILENT && open_water[1] < SILENT, "open water leaves the eyes silent");
     Food food{X + distance * std::cos(BEARING), Y + distance * std::sin(BEARING), 0, 0, 0, FOOD};
     food.initial_energy = FOOD;
-    food.color = FEED_COLOR;
+    // The example fish grazes: its eyes are tuned to the green of plants.
+    food.origin = food_kind::algae;
+    food.color = ALGAE_COLOR;
     food.radius = food_radius(FOOD);
     w.field.append_fragment(food);
     const auto seen = strongest();
@@ -766,11 +769,12 @@ int main() {
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();
-    const auto g = Genome::load(HAND_BUILT_GENOME);
+    const auto g = Genome::load(EXAMPLE_GENOME);
     compact_founders_use_their_actual_reservation(g);
     worker_counts_preserve_the_simulation(g);
     completed_anatomy_is_admitted_before_runtime_allocation(g);
-    start_fish_eats_nearby_food(g);
+    // The example fish grazes; feed is eaten by a forager.
+    start_fish_eats_nearby_food(Genome::load(FORAGER_GENOME));
     eye_reports_a_morsel_against_open_water(g);
     closed_tank_creates_no_energy(g);
     laboratory_energy_is_accounted(g);

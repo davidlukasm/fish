@@ -13,8 +13,20 @@ export const number = (v, digits = 0) => {
 const esc = escapeText;
 const button = (action, text, attributes = '') =>
     `<button type="button" data-live-action="${action}" ${attributes}>${text}</button>`;
-export function liveShell(breeding, draft, fish) {
-  const keys = [ 'brisa', 'start', 'plants', ...(draft ? [ 'draft' ] : []) ];
+// The founders to choose from: the Atelier's draft, the shelf's finished fish and, apart from
+// them, the drafts the game brings along.
+export function founderOptions(draft, fish, offered) {
+  const option = (key, name) =>
+      `<option value="${esc(key)}" ${key === fish ? 'selected' : ''}>${esc(name)}</option>`;
+  const group = category => {
+    const rows = offered.filter(f => f.category === category);
+    return rows.length ? `<optgroup label="${esc(t('labor.category.' + category))}">${
+                             rows.map(f => option(f.key, f.name)).join('')}</optgroup>`
+                       : '';
+  };
+  return (draft ? option('draft', draft.name) : '') + group('shelf') + group('drafts');
+}
+export function liveShell(breeding, draft, fish, offered) {
   return `<div class="fl-station"><header class="fl-header"><button data-action="home">← ${
       t('studio.app.home')}</button><div><small>FISH · ${breeding ? '03' : '04'}</small><h1>${
       word(breeding ? 'breeding' : 'laboratory')}</h1></div><p>${
@@ -22,9 +34,7 @@ export function liveShell(breeding, draft, fish) {
                     : 'laborPurpose')}</p><span data-live-status role="status"></span></header>
     <main class="fl-main"><details class="fl-setup" open><summary>${word('setup')}</summary>
     <div class="fl-row"><label>${word('founder')}<select data-live-setting="fish">${
-      keys.map(key => `<option value="${key}" ${key === fish ? 'selected' : ''}>${
-                   esc(key === 'draft' ? draft.name : t('labor.fish.' + key))}</option>`)
-          .join('')}</select></label>
+      founderOptions(draft, fish, offered)}</select></label>
     <label>${
       word(
           'duration')}<input data-live-setting="steps" type="number" min="100" max="100000" step="100" value="8000"></label>
