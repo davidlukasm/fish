@@ -96,7 +96,8 @@
 .aid-spines-rest path{fill:var(--aid-spine-fill);stroke:var(--aid-spine);stroke-width:2.2;stroke-linejoin:round;transition:opacity .25s}
 .aid-spines-raised path{fill:none;stroke:var(--aid-spine);stroke-width:1.4;stroke-dasharray:4 3;stroke-linejoin:round;opacity:0;transition:opacity .25s,fill .25s}
 .aid-anatomical-spines.chosen .aid-spines-raised path{opacity:.75}
-.aid-anatomical-gland{fill:#c1a0d077;stroke:#ceb8d9;stroke-width:3}
+.aid-anatomical-gland{fill:var(--substance);fill-opacity:.65;stroke:var(--substance);stroke-width:1.5}
+.aid-gland-lobules{fill:none;stroke:#193d3b;stroke-opacity:.45;stroke-width:1}
 .aid-anatomical-balance{fill:#cfe2ea40;stroke:#cfe2ea;stroke-width:2}
 .aid-anatomical-statolith{fill:#f1ecdc;stroke:#bdb6a1;stroke-width:1}
 .aid-hair{fill:none;stroke:#cfe2ea;stroke-width:2;stroke-linecap:round}
@@ -1204,10 +1205,9 @@
 .aid-brainstem{fill:#496366;stroke:#9fb9bc;stroke-width:1.6}
 .aid-anatomical-nose path:not(:first-child){fill:none;stroke:#d4eee1;stroke-width:1.1;opacity:.8}
 .aid-anatomical-nose .aid-nose-lumen{stroke:#183b3b;stroke-width:3}
-.aid-anatomical-gland{stroke-width:1.5}
-.aid-gland-duct{fill:none;stroke:#ecd8ef;stroke-width:2.8}
 .aid-gonad-duct{fill:none;stroke:#d6c1b3;stroke-width:3;stroke-linecap:round;opacity:.75}
-.aid-cloaca{fill:none;stroke:var(--aid-gut);stroke-width:3;stroke-linecap:round}
+.aid-cloaca{fill:var(--aid-ink);stroke:var(--aid-gut);stroke-width:2}
+.aid-hidden-passages path{fill:none;stroke:var(--aid-gut);stroke-width:2;stroke-dasharray:5 5;opacity:.45;pointer-events:none}
 .aid-brain-fissure{stroke-width:1.1;opacity:.6}
 .aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
 .aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round}

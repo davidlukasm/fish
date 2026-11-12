@@ -21,7 +21,8 @@ import {
   isChosen,
   isFinMuscle,
   organTypes,
-  substanceRead
+  substanceRead,
+  wheelAffinity
 } from '../model/document.js';
 import {substanceColor} from '../../hormones.js';
 import {wrapAngle} from '../../units.js';
@@ -136,7 +137,8 @@ function brainSvg(fill, state) {
           .join(' ');
   const part = (shapes, lines) => '<g class="aid-brain-lobe" fill="' + fill + '">' + shapes +
                                   '</g><path class="aid-brain-fissure" d="' + lines + '"/>';
-  return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
+  return '<defs><clipPath id="aid-cns-cover">' + cord + cerebellum + hemispheres + stem +
+         '</clipPath></defs><g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
          '</title><g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px">' + cord +
          cerebellum + hemispheres + '</g>' + stem + part(cord, segments) + part(cerebellum, folia) +
          part(hemispheres, '') + '<g class="aid-brain-tint">' + cord + cerebellum + hemispheres +
@@ -217,20 +219,24 @@ function noseGlyph(state, organ, pos) {
          '<path class="aid-nose-lumen" d="M-19 0 Q0-4 22 0"/></g>';
 }
 function glandGlyph(state, organ, pos) {
-  let lobes = '';
-  for (let i = 0; i < 6; i++) {
-    const a = i * Math.PI / 3, x = pos.x + Math.cos(a) * 11, y = pos.y + Math.sin(a) * 9;
-    lobes += '<circle cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="9"/>';
-  }
-  return '<g class="aid-anatomical-gland">' + lobes + '<path class="aid-gland-duct" d="M' +
-         fixed(pos.x - 12) + ' ' + fixed(pos.y - 8) + ' Q' + fixed(pos.x + 2) + ' ' + fixed(pos.y) +
-         ' ' + fixed(pos.x + 23) + ' ' + fixed(pos.y + 5) + '"/></g>';
+  const wheel = state.capabilities;
+  const amount = index => organ.centers.reduce(
+      (sum, c) => sum + (c.copies ?? 1) * wheelAffinity(wheel, c.q1, c.q2, c.qwidth, index), 0);
+  const indices = Array.from({length : wheel?.hormones ?? 0}, (_, i) => i);
+  const hormone = indices.length ? indices.reduce((a, b) => amount(a) >= amount(b) ? a : b) : 0;
+  return '<g class="aid-anatomical-gland" style="--substance:' + substanceColor(hormone) +
+         '" transform="translate(' + fixed(pos.x) + ' ' + fixed(pos.y) + ')">' +
+         '<path d="M-17 0 C-23-8-15-16-8-12 C-2-19 10-16 11-10 C21-12 25-1 17 5 ' +
+         'C21 13 9 18 3 11 C-7 18-21 12-16 5 C-20 4-20 1-17 0Z"/>' +
+         '<path class="aid-gland-lobules" d="M-8-12 Q-12-5-5-1 M11-10 Q3-6 7 0 ' +
+         'M17 5 Q7 3 3 11 M-16 5 Q-6 2-4 9"/></g>';
 }
 function gonadDuct(pos) {
   const {x, y} = cloacaPoint();
+  const side = Math.sign(pos.y - y) || -1;
   return '<path class="aid-gonad-duct" d="M' + fixed(pos.x + 25) + ' ' + fixed(pos.y) + ' C' +
-         fixed(pos.x + 100) + ' ' + fixed(pos.y - 5) + ' ' + fixed(x - 45) + ' ' + fixed(y - 58) +
-         ' ' + x + ' ' + y + '"/>';
+         fixed(Math.min(pos.x + 100, x - 40)) + ' ' + fixed(pos.y + side * 6) + ' ' +
+         fixed(x - 45) + ' ' + fixed(y + side * 8) + ' ' + x + ' ' + y + '"/>';
 }
 function ovaryGlyph(state, organ, pos) {
   const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
@@ -722,6 +728,10 @@ export function bodySvg(state) {
   const tail = tailFin(sizes), origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
   const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;
   const vent = cloacaPoint();
+  const G = shownGut(state),
+        hidden = '<g class="aid-hidden-passages" clip-path="url(#aid-cns-cover)">' +
+                 '<path d="' + smoothLine(G.gullet) + ' ' + smoothLine(G.intestine) + '"/>' +
+                 ducts + '</g>';
   return sideFins(sizes)
              .map(fin => '<g class="aid-fish-fin" data-part="fin" data-fin="' +
                          (fin.pelvic ? 'pelvic' : 'pectoral') + '" data-side="' + fin.side +
@@ -740,9 +750,8 @@ export function bodySvg(state) {
          '" fill="url(#aid-fish-shade)"/><path class="aid-fish-skin" d="' +
          fishPath(sizes, false, true) + '"/>' +
          '<path class="aid-symmetry-line" d="M130 365 H905"/>' + (gut || gutPath(state)) + ducts +
-         brainSvg(fill, state) +
+         brainSvg(fill, state) + hidden +
          '<path class="aid-operculum" d="M435 264 Q487 300 448 335 M435 466 Q487 430 448 395"/>' +
-         headSvg(state) + felt + organs + '<path class="aid-cloaca" d="M' + fixed(vent.x - 5) +
-         ' ' + fixed(vent.y - 4) + ' Q' + fixed(vent.x) + ' ' + fixed(vent.y + 3) + ' ' +
-         fixed(vent.x + 5) + ' ' + fixed(vent.y - 4) + '"/>';
+         headSvg(state) + felt + organs + '<ellipse class="aid-cloaca" cx="' + fixed(vent.x) +
+         '" cy="' + fixed(vent.y) + '" rx="5" ry="3"/>';
 }

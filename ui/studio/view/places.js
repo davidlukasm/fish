@@ -3,6 +3,7 @@ import {
   BODY_FRAME,
   BODY_MIDDLE,
   BODY_RADIUS,
+  halfWidth,
   centroid,
   findSite,
   onMidline,
@@ -30,7 +31,7 @@ export function centerLocation(center, organType, sites) {
 export {BRAIN, brainHalfWidth, regionAnchors, regionGeometry} from './region_layout.js';
 import {regionAnchors, regionCell as regionPoint} from './region_layout.js';
 export const INSIDE = Object.freeze({
-  blood : {x : 625, d : -62},
+  blood : {x : 610, d : -38},
   bladder : {x : 560, d : -35},
   gut : {
     throat : 190,
@@ -41,11 +42,11 @@ export const INSIDE = Object.freeze({
   },
   eggs : {x : 650, d : -33},
   sperm : {x : 720, d : -24},
-  glands : {front : 495, step : 64, d : 85, skin : 22},
+  glands : {front : 485, step : 55, d : 55, skin : 22},
   stack : 28,
   node : 11
 });
-export const cloacaPoint = () => ({x : INSIDE.gut.vent.x, y : skinAt(INSIDE.gut.vent.x, 1) - 1});
+export const cloacaPoint = () => ({x : INSIDE.gut.vent.x, y : BODY_FRAME.middle});
 export function gutShape(turns, doc = null) {
   const G = INSIDE.gut, M = BODY_FRAME.middle, S = G.stomach, C = G.coils;
   const stomach = doc?.organs.find(o => o.type === 'gut')?.position ?? {x : S.x, y : M + S.d};
@@ -53,10 +54,11 @@ export function gutShape(turns, doc = null) {
         pitch = (to - from) / Math.max(1, turns);
   const coil = t => {
     const angle = 2 * Math.PI * turns * t, taper = Math.sin(Math.PI * t) ** .6;
-    return {
-      x : from + (to - from) * t + pitch * .13 * Math.sin(angle),
-      y : stomach.y * (1 - t) + (vent.y - 15) * t + C.wave * taper * Math.sin(angle)
-    };
+    const x = from + (to - from) * t + pitch * .13 * Math.sin(angle);
+    const base = (stomach.y - M) * (1 - t) ** 2 + 10 * t,
+          room = Math.max(0, halfWidth(x) * .62 - 8 - Math.abs(base)),
+          wave = Math.min(C.wave * taper, room);
+    return {x, y : M + base + wave * Math.sin(angle)};
   };
   const bend = Math.min(420, stomach.x - S.rx - 45);
   const gullet = Array.from({length : 33}, (_, k) => {
@@ -127,8 +129,11 @@ function innerHome(doc, organ) {
     const side = organ.side ? sideOf(organ) : k % 2 ? -1 : 1;
     const before =
         organ.side ? glands.slice(0, k).filter(o => sideOf(o) === side).length : Math.floor(k / 2);
-    const x = I.glands.front + I.glands.step * before;
-    return {x, y : middle + side * Math.min(I.glands.d, skinAt(x, 1) - middle - I.glands.skin)};
+    const x = I.glands.front - I.glands.step * before;
+    return {
+      x,
+      y : middle + side * Math.min(I.glands.d + before * 10, skinAt(x, 1) - middle - I.glands.skin)
+    };
   }
   if (organ.type === 'blood') {
     const k = Math.max(0, doc.organs.filter(o => o.type === 'blood').indexOf(organ));
