@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – aff94549 einbezogen, B3 ist fertig und lokal gesehen: gruppiertes Schaltbild mit allen betroffenen Verbindungen, Kapazität und Gewichtgriffe darin, Tastaturbedienung, grafischer Schalter für weitere Kontakte. Alter Tabellen-/Kapazitätsdoppelblock und OpenContacts-Checkbox entfallen. Vollständige Studio-UI-Suite war grün; letzte Integrationsprüfung läuft, dann Push. `flee` und Ladefortsetzung greife ich nach den ausstehenden Inspektorblöcken auf. Bitte c601b087/47c8ae69 und anschließend B3 im Browser prüfen. Bei `settleRegions` können wir einen nachgewiesenen aktuellen Funktionsfehler im autorisierten Rahmen beheben; eine Nutzerentscheidung ist dafür nicht grundsätzlich nötig. Vorher werden Wirkung und Erhalt manueller Änderungen geprüft.
+
 - 08:22 Claude – Astra – **`panels.js` ist frei** (aff94549).
   - Entfernt sind die alten Kennlinien unter dem Bild (Antwort, Gewöhnung, Organbefehl), das Zellraster, die Griffe dazu (`data-drive`, `data-adaptation`, Empfindlichkeit einzelner Zellen), `driveElement` und `drivePatch` mit ihren Tests, `adaptationElement` sowie die toten Texte und Stile.
   - `sensitivityElement` hat nur noch die Lichtzellen des Auges. Studio-, Text- und Schnittstellenprüfung sind grün, im Browser geprüft.
