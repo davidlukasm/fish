@@ -117,6 +117,48 @@ function heapPop(heap) {
   }
   return first;
 }
+// The grid walk is relaxed like a smooth string: each point moves towards the middle of its
+// neighbours while it stays clear of other regions, so a turn spreads into a gentle S-curve instead
+// of a corner. A point already close to a region may not come closer.
+const RELAX = Object.freeze({rounds : 40, pull : .5, room : 4, tolerance : .5});
+function relaxed(walk, safe, room) {
+  const p = walk.map(q => ({x : q.x, y : q.y}));
+  for (let round = 0; round < RELAX.rounds; round++)
+    for (let i = 1; i < p.length - 1; i++) {
+      const next = {
+        x : p[i].x + ((p[i - 1].x + p[i + 1].x) / 2 - p[i].x) * RELAX.pull,
+        y : p[i].y + ((p[i - 1].y + p[i + 1].y) / 2 - p[i].y) * RELAX.pull
+      };
+      if (safe(next) && room(next) >= Math.min(room(p[i]), RELAX.room))
+        p[i] = next;
+    }
+  return p;
+}
+// Only the points that shape the relaxed walk are kept (Douglas–Peucker): the curve through them
+// stays within a fraction of a unit of it.
+function simplified(points) {
+  const keep = new Uint8Array(points.length);
+  keep[0] = keep[points.length - 1] = 1;
+  const mark = (lo, hi) => {
+    const a = points[lo], b = points[hi], dx = b.x - a.x, dy = b.y - a.y,
+          length = Math.hypot(dx, dy) || 1;
+    let far = -1, most = RELAX.tolerance;
+    for (let i = lo + 1; i < hi; i++) {
+      const off = Math.abs((points[i].x - a.x) * dy - (points[i].y - a.y) * dx) / length;
+      if (off > most) {
+        most = off;
+        far = i;
+      }
+    }
+    if (far < 0)
+      return;
+    keep[far] = 1;
+    mark(lo, far);
+    mark(far, hi);
+  };
+  mark(0, points.length - 1);
+  return points.filter((_, i) => keep[i]);
+}
 export function nerveRoute(doc, sites, from, to, kind) {
   const F = field(doc, sites), a = from.point, b = to.point;
   const key = [ from.key, to.key, kind, a.x, a.y, b.x, b.y ].join(':');
@@ -147,17 +189,6 @@ export function nerveRoute(doc, sites, from, to, kind) {
                          : Math.max(most, 1 - Math.max(0, s.distance) / GRID.clearance),
         0);
     return 1 + Math.min(3, Math.abs(p.y - lane) / 18) * 2 + GRID.proximity * proximity ** 2;
-  };
-  const visible = (a, b, budget = Infinity) => {
-    const count = Math.ceil(Math.hypot(a.x - b.x, a.y - b.y) / (GRID.step / 2));
-    let total = 0;
-    for (let k = 1; k < count; k++) {
-      const p = {x : a.x + (b.x - a.x) * k / count, y : a.y + (b.y - a.y) * k / count};
-      if (!safe(p))
-        return false;
-      total += weight(p);
-    }
-    return Math.hypot(a.x - b.x, a.y - b.y) * (total / Math.max(1, count - 1)) <= budget;
   };
   const between = (a, b) => {
     const start = nearest(a), end = nearest(b);
@@ -193,39 +224,27 @@ export function nerveRoute(doc, sites, from, to, kind) {
               {i : next, cost : candidate, score : candidate + Math.hypot(p.x - q.x, p.y - q.y)});
         }
     }
-    const walk = [], budgets = [];
+    const walk = [];
     if (end >= 0 && Number.isFinite(cost[end]))
-      for (let i = end; i >= 0; i = parent[i]) {
+      for (let i = end; i >= 0; i = parent[i])
         walk.unshift(F.point(i));
-        budgets.unshift(cost[i]);
-      }
-    const points = [ a ];
-    if (walk.length) {
-      walk[0] = a;
-      walk[walk.length - 1] = b;
-      for (let i = 0; i < walk.length - 1;) {
-        let next = i + 1;
-        while (next + 1 < walk.length &&
-               visible(walk[i], walk[next + 1], (budgets[next + 1] - budgets[i]) * 1.12))
-          next++;
-        points.push(walk[next]);
-        i = next;
-      }
-    } else
-      points.push(b);
-    if (points.length === 1)
-      points.push(b);
-    return points;
+    return walk.length > 1 ? [ a, ...walk.slice(1, -1), b ] : [ a, b ];
   };
   const neural = endpoint => !endpoint.organ || neuralOrgan(endpoint.organ.type);
   const peripheral = neural(from) && !neural(to) ? to : neural(to) && !neural(from) ? from : null;
   const junction = peripheral && peripheral.point.x > BRAIN.cerebrum.to
                        ? nearest({x : peripheral.point.x, y : lane})
                        : -1;
-  const points =
-      junction >= 0 ? [...between(a, F.point(junction)), ...between(F.point(junction), b).slice(1) ]
-                    : between(a, b);
-  const result = {points, safe};
+  const walk = junction >= 0
+                   ? [...between(a, F.point(junction)), ...between(F.point(junction), b).slice(1) ]
+                   : between(a, b);
+  const room = p =>
+      F.nearby[F.index(p)]?.reduce((least, s) => s.id === from.organ?.id || s.id === to.organ?.id
+                                                     ? least
+                                                     : Math.min(least, s.distance),
+                                   Infinity) ??
+      Infinity;
+  const result = {points : simplified(relaxed(walk, safe, room)), safe};
   F.paths.set(key, result);
   return result;
 }
