@@ -493,7 +493,8 @@ export function inspector(state) {
     return multiInspector(state);
   const selected = state.selected;
   if (!selected)
-    return (state.tool === 'stimulate' ? previewControls(state) : '') + workflow();
+    return '<header class="aid-inspector-head">' + heading(label('sections.empty')) + '</header>' +
+           (state.tool === 'stimulate' ? previewControls(state) : '') + workflow();
   if (selected.kind === 'wire') {
     const wire = state.document.wires.find(w => w.id === selected.id);
     return wire ? wireInspector(state, wire) : '';

@@ -600,7 +600,7 @@
 .aid-organ-node.motor{fill:var(--aid-motor)}
 .aid-organ-node.nerve{fill:var(--aid-brain)}
 .aid-workflow{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px;counter-reset:step}
-.aid-workflow li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;font-size:13px;line-height:1.4;color:var(--aid-circuit-text)}
+.aid-workflow li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;font-size:13px;line-height:1.4;color:var(--aid-circuit-text)}
 .aid-workflow button{width:34px;height:34px;display:grid;place-items:center;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;color:#e6efe8;padding:0}
 .aid-workflow button:hover{background:#26525a}
 .aid-workflow-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--aid-primary);color:#18362f;font-weight:700}

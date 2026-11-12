@@ -329,7 +329,8 @@
     "stimulusResponse": "Antwort auf anhaltenden Reiz",
     "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft",
     "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff",
-    "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg"
+    "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg",
+    "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion."
   },
   "effects": [
     "erregt oder hemmt die Zelle",

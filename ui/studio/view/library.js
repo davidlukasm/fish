@@ -381,13 +381,12 @@ const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulat
 export function workflow() {
   return '<ol class="aid-workflow">' +
          WORKFLOW
-             .map(key => '<li title="' + label('workflow.' + key) +
-                         '"><button type="button" data-tool="' + key + '">' +
+             .map(key => '<li><button type="button" data-tool="' + key + '" title="' +
+                         label('tools.' + key) + '">' +
                          glyph(TOOL_ICON[key], ICON.workflow, {line : true}) + '</button><span>' +
-                         label('tools.' + key) + '</span></li>')
+                         label('workflow.' + key) + '</span></li>')
              .join('') +
-         '<li title="' + label('workflow.develop') +
-         '"><span class="aid-workflow-mark">→</span><span>' + label('app.develop') +
+         '<li><span class="aid-workflow-mark">→</span><span>' + label('workflow.develop') +
          '</span></li></ol>';
 }
 export function toolPalette(state) {
