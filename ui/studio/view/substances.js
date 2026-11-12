@@ -597,7 +597,8 @@ export function receptorBody(state, center, effect) {
   return '<label class="aid-checkbox"><input type="checkbox" ' + active +
          (receptor.active ? ' checked' : '') + '>' + label('inspector.receptorActive') +
          '</label>' +
-         '<div class="aid-receptor-picture">' + receptorWheel(state, receptor, target) +
+         '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
+         receptorWheel(state, receptor, target) + '</div>' +
          (birth ? ''
                 : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor))) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors') + '</div>' +

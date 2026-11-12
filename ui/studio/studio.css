@@ -177,7 +177,7 @@
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
 .aid-substance-wheel{width:240px;max-width:100%;display:block;margin:10px auto}
 .aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
-.aid-wheel-close{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;height:250px}
+.aid-wheel-close{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;height:250px;width:100%}
 .aid-wheel-close .aid-substance-wheel{flex:none;width:410px;height:410px;max-width:none;max-height:none;margin:-80px 0 0}
 .aid-wheel-ring{fill:none;stroke:#ffffff22}
 .aid-wheel-halo{fill:#d7c29418;stroke:#d7c29455;stroke-dasharray:3 3}
@@ -1156,6 +1156,7 @@
 
 .aid-receptor-picture{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .aid-receptor-picture .aid-effect-scene{max-width:100%}
+.aid-receptor-picture .aid-variation{width:50%}
 .aid-cell-capacity,.aid-cell-variation{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:8px}
 .aid-cell-capacity summary,.aid-cell-variation summary,.aid-learn-substance summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
 .aid-capacity,.aid-variation{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
