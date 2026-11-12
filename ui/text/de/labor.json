@@ -133,5 +133,50 @@
     "noIntake": "In diesem Zeitintervall wurde keine Nahrung aufgenommen.",
     "raw": "Nahrungsaufnahme und Vorräte sind Rohenergie vor Verdauungsverlusten. Der Blattvorrat sagt nichts über seine Erreichbarkeit aus.",
     "deaths": "Sterbefälle im gesamten bisher beobachteten Lauf"
+  },
+  "life": {
+    "fish": "Fisch {id}",
+    "generation": "Generation {g}",
+    "parent": "Mutter: Fisch {id}",
+    "worlds": "Aufgezeichnete Welten",
+    "lives": "Lebensläufe",
+    "lifelineKey": "Kreis: Schlupf · Grün: erstes Fressen · Kreuz: Tod",
+    "loading": "Lebenslauf wird geladen …",
+    "signals": "Darmfüllung, Energiereserve und Futteraufnahme im Leben dieses Fisches",
+    "gut": "Darmfüllung",
+    "reserve": "Energiereserve",
+    "intake": "Aufgenommenes Futter",
+    "raw": "{amount} Rohenergie",
+    "step": "Schritt {step}",
+    "first": "Zum Beginn",
+    "previous": "Zum vorigen aufgezeichneten Zeitpunkt",
+    "next": "Zum nächsten aufgezeichneten Zeitpunkt",
+    "last": "Zum letzten aufgezeichneten Zeitpunkt",
+    "phase": {
+      "feeding": "Frisst erstmals",
+      "full": "Darm mindestens halb voll",
+      "emptying": "Wieder unter halb voll"
+    },
+    "state": "Darm {gut} % gefüllt · Reserve {reserve} % · Körper {maturity} % ausgewachsen",
+    "measured": "gemessen bei Schritt {step}",
+    "whole": "Ganzes Leben",
+    "window": "Um diesen Zeitpunkt",
+    "closing": "Kiefer geschlossen",
+    "emptyClosing": "ohne Blattnähe und ohne Aufnahme",
+    "sampling": "Kurve anklicken · Messung alle {steps} Schritte, zusätzlich bei Ereignissen. Striche: tatsächliche Futteraufnahme vor der Verdauung. Gestrichelt: Darm halb voll.",
+    "summary": "Bei {near} der regelmäßigen Messungen am Blatt. {empty} von {total} Kieferschlüssen ohne Blattnähe und ohne Aufnahme. Insgesamt {intake} Rohenergie gefressen.",
+    "events": "Ereignisse und längste Fresspause",
+    "death": "Gestorben: {cause}",
+    "laid": "Ei gelegt: Fisch {id}",
+    "nutrient": "Nährei gelegt: {id}",
+    "gap": "{steps} Schritte ohne Futteraufnahme, seit Schritt {from}",
+    "event": {
+      "hatch": "Geschlüpft",
+      "firstIntake": "Erstmals gefressen",
+      "full": "Darm mindestens halb voll",
+      "emptying": "Darm wieder unter halb voll",
+      "ripe": "Körper ausgewachsen"
+    },
+    "population": "Bestand und Generationen"
   }
 }

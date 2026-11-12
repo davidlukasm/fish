@@ -3481,6 +3481,87 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(
         labor.inspectedWorld([ feeding ], inspecting.state.inspection, 'f', steps).sample.step,
         900);
+    const lifeModel = await import('../ui/labor/life.js');
+    const life = {
+      id : 7,
+      parent : 3,
+      generation : 2,
+      start : 0,
+      hatch : 4,
+      last : 30,
+      firstIntake : 10,
+      death : 30,
+      regularSamples : 2,
+      nearSamples : 1,
+      emptyClosings : 1,
+      closings : 5,
+      intake : 12,
+      longestNoFood : {from : 10, to : 30},
+      phases : {feeding : 10, full : 10, emptying : 22},
+      events : [
+        {kind : 'hatch', t : 4}, {kind : 'firstIntake', t : 10}, {kind : 'death', t : 30, cause : 1}
+      ]
+    };
+    const lifeRun = {fingerprint : 'f', steps, seed : 1};
+    const trace = {
+      summary : life,
+      observation : {every : 5},
+      scenes : [ 0, 20 ],
+      points : [ 5, 10, 15, 20, 25 ].map(
+          t => ({t, gut : t === 10 ? .6 : .2, energy : 20, reserveCapacity : 40, maturity : .3})),
+      events : [
+        {kind : 'intake', t : 10, diet : [ 0, 12 ]}, {kind : 'emptying', t : 22},
+        {kind : 'close', t : 23, empty : true}
+      ]
+    };
+    const individual = {
+      ...analysis,
+      job : null,
+      overview : {
+        results : [ {
+          fingerprint : 'f',
+          steps,
+          worlds : {1 : {...feeding, lives : {7 : life}, scenes : [ 0, 20 ]}}
+        } ]
+      },
+      lifeSelection : {run : lifeRun, fishId : 7, step : 22},
+      lifeDetail : {key : lifeModel.lifeKey({run : lifeRun, fishId : 7}), data : trace}
+    };
+    let chosen = lifeModel.selectedLife(individual);
+    assert.equal(chosen.step, 22);
+    assert.equal(chosen.point.t, 20, 'An exact event keeps the actual preceding measurement time');
+    assert.equal(chosen.sceneStep, 20, 'Do not show a future scene for an earlier event');
+    assert.equal(lifeModel.atOrBefore([ 10 ], 5, n => n), null);
+    assert.equal(lifeModel.selectedLife({...individual, fingerprint : 'new-run'}), null,
+                 'Fish identifiers cannot cross runs');
+    const longLife = {...chosen, summary : {...life, last : 900}, step : 800};
+    assert.deepEqual(lifeModel.lifeWindow(longLife, true), {from : 500, to : 900});
+    const lifeHtml = view.breedingShell(individual);
+    assert.match(lifeHtml, /data-lab-life-time="22"/);
+    assert.match(lifeHtml, /gemessen bei Schritt 20/);
+    assert.match(lifeHtml, /Bei 50 % der regelmäßigen Messungen/);
+    assert.match(lifeHtml, /data-lab-scene/);
+    assert.doesNotMatch(lifeHtml, /NaN|undefined/);
+    Object.assign(inspecting.state, individual);
+    click({labLifeTime : '10', labLifePhase : 'feeding'});
+    assert.equal(inspecting.state.lifeSelection.step, 10);
+    assert.equal(inspecting.state.lifeFocused, true);
+    click({labLifeTime : '22', labLifePhase : 'emptying'});
+    assert.equal(lifeModel.selectedLife(inspecting.state).fishId, 7);
+    inspecting.render();
+    assert.equal(inspecting.state.lifeSelection.step, 22, 'Polling preserves an individual event');
+    const pendingRoot = {querySelector() { return null; }};
+    const pendingStation = new BreedingStation(pendingRoot);
+    Object.assign(pendingStation.state, individual);
+    let complete;
+    pendingStation.request = () => new Promise(resolve => { complete = resolve; });
+    const loading = pendingStation.loadLife(chosen);
+    pendingStation.state.fingerprint = 'another-run';
+    pendingStation.state.lifeDetail = null;
+    complete(trace);
+    await loading;
+    assert.equal(pendingStation.state.lifeDetail, null,
+                 'A late response cannot populate another run');
     const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
     const lab = await import('../ui/labor/trials.js');
     const {trialShell} = await import('../ui/labor/trial_view.js');

@@ -3,9 +3,12 @@
 The breeding station lets a fish live in several start worlds without help; the trial lab sets it
 before food or an open mussel and records each approach. Finished runs are kept per genome, so the
 same fish is never tested twice in the same world."""
+import gzip
 import hashlib
 import json
 import secrets
+import re
+import shutil
 import subprocess
 import tempfile
 import threading
@@ -17,6 +20,7 @@ from file_io import atomic_write
 from protocol_schema import Breeding, TrialKind, TrialLab
 from viewer_paths import ROOT
 from wording import Refusal, worded
+from labor_recording import LifeArchive, read_life
 
 FOLDER = "labor"
 FINGERPRINT_CHARACTERS = 16
@@ -46,13 +50,31 @@ def parent_generation(sample):
 
 
 class World:
-    def __init__(self, seed, steps):
+    def __init__(self, seed, steps, folder=None):
+        self.detail_folder = folder
+        self.archive = LifeArchive(folder)
         self.summary = {"seed": seed, "steps": steps, "samples": [], "deaths": {},
-                        "hatches": 0, "done": False}
+                        "hatches": 0, "done": False, "lives": self.archive.lives, "scenes": []}
 
     def read(self, event):
         kind = event.get("event")
-        if kind == "sample":
+        if kind == "life":
+            self.archive.read(event)
+        elif kind == "setup":
+            self.summary["setup"] = {k: v for k, v in event.items() if k != "event"}
+        elif kind == "recording":
+            self.summary["observation"] = {k: v for k, v in event.items() if k != "event"}
+        elif kind == "scene":
+            if self.detail_folder is not None:
+                path = self.detail_folder / f"scene-{event['t']}.json"
+                with path.open("rb") as source, gzip.open(str(path) + ".gz", "wb", compresslevel=1) as target:
+                    shutil.copyfileobj(source, target)
+                path.unlink()
+            self.summary["scenes"].append(event["t"])
+        elif kind == "sample":
+            for life in self.archive.lives.values():
+                if life["hatch"] is None and life["death"] is None:
+                    life["last"] = event["t"]
             fish = sum(count for _, count in event["swimmers"])
             self.summary["samples"].append({
                 "step": event["t"], "fish": fish, "eggs": event["n"] - fish,
@@ -94,6 +116,9 @@ class Results:
         self.folder = Path(data_dir) / FOLDER
         self.prefix, self.variant, self.runs = prefix, variant, runs
         self.engine = engine
+
+    def detail_folder(self, mark, variant, seed):
+        return self.folder / f"{self.prefix}-{mark}-{variant}" / str(seed)
 
     def path(self, mark, variant):
         return self.folder / f"{self.prefix}-{mark}-{variant}.json"
@@ -147,11 +172,11 @@ class Jobs:
         the count of seeds."""
         raise NotImplementedError
 
-    def run(self, seed, job):
+    def run(self, seed, job, folder=None):
         """A fresh summary for one seed and the reader that fills it."""
         raise NotImplementedError
 
-    def arguments(self, tool, path, seed, job):
+    def arguments(self, tool, path, seed, job, run=None):
         raise NotImplementedError
 
     def request(self, data, data_dir):
@@ -228,10 +253,11 @@ class Jobs:
                         with self.lock:
                             job["runs"].append(kept[str(seed)])
                         continue
-                    run = self.run(seed, job)
+                    detail_folder = results.detail_folder(job["fingerprint"], job["variant"], seed)
+                    run = self.run(seed, job, detail_folder)
                     with self.lock:
                         job["runs"].append(run.summary)
-                    self.stream(job, self.arguments(tool, path, seed, job), run)
+                    self.stream(job, self.arguments(tool, path, seed, job, run), run)
                     if job["cancel"].is_set():
                         break
                     with self.lock:
@@ -281,6 +307,39 @@ class Jobs:
 class BreedingJobs(Jobs):
     TOOL = "zuchtbecken"
 
+    def request(self, data, data_dir):
+        if data.get("operation") not in ("life", "scene"):
+            return super().request(data, data_dir)
+        mark, steps, seed = data.get("fingerprint"), data.get("steps"), data.get("seed")
+        if (not isinstance(mark, str) or not re.fullmatch(r"[0-9a-f]{16}", mark) or
+                not whole_number(steps) or steps not in Breeding.STEPS or
+                not whole_number(seed) or seed < 0):
+            raise Refusal("labor.errors.invalidRequest")
+        with self.lock:
+            job = self.job
+            active = job and job["fingerprint"] == mark and job["steps"] == steps
+            engine = job["engine"] if active else hashlib.sha256(self.executable()).hexdigest()
+            results = self.results(data_dir, engine)
+            world = next((r for r in job["runs"] if r["seed"] == seed), None) if active else None
+            if world is None:
+                world = (results.read(mark, steps) or {}).get("worlds", {}).get(str(seed))
+            if world is None:
+                raise Refusal("labor.errors.unknownJob")
+            folder = results.detail_folder(mark, steps, seed)
+            if data["operation"] == "scene":
+                step = data.get("step")
+                if not whole_number(step) or step not in world.get("scenes", []):
+                    raise Refusal("labor.errors.invalidRequest")
+                with gzip.open(folder / f"scene-{step}.json.gz", "rt", encoding="utf-8") as source:
+                    return {"step": step, "frame": json.load(source)}
+            identity = data.get("id")
+            if not whole_number(identity) or str(identity) not in world.get("lives", {}):
+                raise Refusal("labor.errors.invalidRequest")
+            return json.loads(json.dumps({
+                "id": identity, "seed": seed, "summary": world["lives"][str(identity)],
+                "observation": world.get("observation"), "scenes": world.get("scenes", []),
+                **read_life(folder, identity)}))
+
     def results(self, data_dir, engine):
         return Results(data_dir, "zucht", "steps", "worlds", engine)
 
@@ -291,11 +350,12 @@ class BreedingJobs(Jobs):
             raise Refusal("labor.errors.invalidRequest")
         return steps, range(1, worlds + 1), {"steps": steps, "count": worlds}
 
-    def run(self, seed, job):
-        return World(seed, job["steps"])
+    def run(self, seed, job, folder=None):
+        return World(seed, job["steps"], folder)
 
-    def arguments(self, tool, path, seed, job):
-        return [tool, path, seed, job["steps"], Breeding.FOUNDERS, HABITAT]
+    def arguments(self, tool, path, seed, job, run=None):
+        return [tool, path, seed, job["steps"], Breeding.FOUNDERS, HABITAT, "record=1",
+                "scenes=" + str(run.detail_folder / "scene")]
 
 
 class TrialJobs(Jobs):
@@ -320,9 +380,9 @@ class TrialJobs(Jobs):
             raise Refusal("labor.errors.invalidRequest")
         return trial, range(1, seeds + 1), {"trial": trial, "count": seeds}
 
-    def run(self, seed, job):
+    def run(self, seed, job, folder=None):
         return Session(seed, job["trial"])
 
-    def arguments(self, tool, path, seed, job):
+    def arguments(self, tool, path, seed, job, run=None):
         return [tool, path, seed, "rounds=1", f"path={TrialLab.PATH_EVERY}",
                 *self.SETTINGS[job["trial"]]]

@@ -5,6 +5,7 @@ import {BREEDING_METRICS, DRAFT, shownWorlds} from './model.js';
 import {breedingShell, say} from './view.js';
 import {trialShell} from './trial_view.js';
 import {inspectedTrial, shownSessions} from './trials.js';
+import {lifeKey, lifeWindow, lifeWorlds, nearestLifeTime, selectedLife} from './life.js';
 
 const POLL_MS = 1000, FINGERPRINT_HEX = 16, HEX = 16, BYTE_DIGITS = 2;
 
@@ -161,17 +162,52 @@ export class BreedingStation extends LabStation {
           {worlds : BREEDING.worlds[1], steps : BREEDING.steps[1], metric : 'population'});
   }
   settings() { return {worlds : this.state.worlds, steps : this.state.steps}; }
+  async loadLife(selected) {
+    const key = lifeKey(selected), version = key + ':' + selected.summary.last;
+    if (this.lifePending === version || this.lifeFailed === version)
+      return;
+    this.lifePending = version;
+    const token = this.lifeToken = (this.lifeToken ?? 0) + 1;
+    try {
+      const data = await this.request({operation : 'life', ...selected.run, id : selected.fishId});
+      const current = selectedLife(this.state);
+      if (token !== this.lifeToken || !current || lifeKey(current) !== key)
+        return;
+      this.state.lifeDetail = {key, data};
+      this.state.lifeError = '';
+    } catch (error) {
+      if (token !== this.lifeToken)
+        return;
+      this.lifeFailed = version;
+      this.state.lifeError = error.message;
+    } finally {
+      if (token === this.lifeToken) {
+        this.lifePending = null;
+        this.render();
+      }
+    }
+  }
   render() {
     const data = this.root.ownerDocument?.activeElement?.dataset;
-    const selector = data?.labSampleStep ? '[data-lab-sample-step="' + data.labSampleStep + '"]'
-                     : data?.labMetric   ? '[data-lab-metric="' + data.labMetric + '"]'
-                     : data?.labWorld    ? '.aid-lab-plot[data-lab-world="' + data.labWorld + '"]'
-                                         : null;
+    const selector = data?.labLifeTime     ? '[data-lab-life-time="' + data.labLifeTime + '"]'
+                     : data?.labLife       ? '[data-lab-life="' + data.labLife + '"]'
+                     : data?.labSampleStep ? '[data-lab-sample-step="' + data.labSampleStep + '"]'
+                     : data?.labMetric     ? '[data-lab-metric="' + data.labMetric + '"]'
+                     : data?.labWorld      ? '.aid-lab-plot[data-lab-world="' + data.labWorld + '"]'
+                                           : null;
     super.render();
     if (this.shown && selector)
       this.root.querySelector(selector)?.focus({preventScroll : true});
+    const selected = selectedLife(this.state);
+    if (this.shown && selected &&
+        (!selected.detail || selected.detail.summary.last < selected.summary.last))
+      this.loadLife(selected);
   }
   click(event) {
+    const lifeTarget = event.target.closest?.(
+        '[data-lab-life],[data-lab-life-world],[data-lab-life-time],[data-lab-life-plane],[data-lab-life-focus]');
+    if (lifeTarget && Object.keys(lifeTarget.dataset).some(k => k.startsWith('labLife')))
+      return this.clickLife(event, lifeTarget);
     const target = event.target.closest?.('[data-lab-metric],[data-lab-sample]');
     if (!target)
       return super.click(event);
@@ -202,6 +238,39 @@ export class BreedingStation extends LabStation {
       this.root.querySelector?.('[data-lab-sample-step="' + data.labSampleStep + '"]')?.focus({
         preventScroll : true
       });
+    return true;
+  }
+  clickLife(event, target) {
+    if (target.disabled)
+      return true;
+    const s = this.state, data = target.dataset, selected = selectedLife(s);
+    if (!selected)
+      return false;
+    if (data.labLifeWorld !== undefined) {
+      const world = lifeWorlds(s).find(w => w.seed === Number(data.labLifeWorld));
+      const id = data.labLife === undefined ? Number(Object.keys(world?.lives ?? {})[0])
+                                            : Number(data.labLife);
+      if (!world?.lives[id])
+        return false;
+      s.lifeSelection = {run : {...selected.run, seed : world.seed}, fishId : id, step : null};
+      s.lifeError = '';
+      this.lifeFailed = null;
+    } else if (data.labLifeFocus !== undefined)
+      s.lifeFocused = data.labLifeFocus === '1';
+    else {
+      let step = Number(data.labLifeTime);
+      if (data.labLifePlane !== undefined) {
+        const box = target.getBoundingClientRect(), window = lifeWindow(selected, s.lifeFocused);
+        step = nearestLifeTime(selected, window.from + (event.clientX - box.left) / box.width *
+                                                           (window.to - window.from));
+      }
+      if (!Number.isFinite(step))
+        return false;
+      s.lifeSelection = {run : selected.run, fishId : selected.fishId, step};
+      if (data.labLifePhase !== undefined)
+        s.lifeFocused = true;
+    }
+    this.render();
     return true;
   }
 }

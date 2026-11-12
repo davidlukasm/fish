@@ -3,6 +3,7 @@ import {formatNumber, t, tList} from '../strings.js';
 import {DEATH_COLORS, deathNames, FOOD_COLORS} from '../feeding_view.js';
 import {foodDisplayIndex} from '../nutrition_model.js';
 import {escapeText} from '../studio/view/markup.js';
+import {lifeView} from './life_view.js';
 import {
   breedingVerdict,
   BREEDING_METRICS,
@@ -279,9 +280,12 @@ function results(s) {
         top = Math.max(0, ...worlds.flatMap(w => sampleSeries(w, metric).flatMap(
                                                 s => s.values.filter(v => v !== null)))) ||
               1;
-  const runningSeed = s.running ? s.job?.runs.find(w => !w.done)?.seed : null;
+  const runningSeed = s.running ? s.job?.runs.find(w => !w.done)?.seed : null, life = lifeView(s);
   return '<section class="aid-lab-results"><div class="aid-lab-verdict">' + verdictStamp(verdict) +
-         '<span>' + verdictLine(verdict) + '</span></div>' +
+         '<span>' + verdictLine(verdict) + '</span></div>' + life +
+         (life ? '<details class="aid-life-population"><summary>' + say('life.population') +
+                     '</summary>'
+               : '') +
          '<div class="aid-lab-metrics" role="group" aria-label="' + say('analysis.choose') + '">' +
          BREEDING_METRICS
              .map(key => '<button type="button" data-lab-metric="' + key + '" aria-pressed="' +
@@ -293,7 +297,7 @@ function results(s) {
          '<div class="aid-lab-worlds">' +
          worlds.map(w => worldCard(w, top, runningSeed, metric, selected)).join('') + '</div>' +
          sampleInspection(selected) + '<p class="aid-lab-detail">' + say('analysis.deaths') +
-         '</p>' + deathLegend(deathTotals(worlds)) + '</section>';
+         '</p>' + deathLegend(deathTotals(worlds)) + (life ? '</details>' : '') + '</section>';
 }
 
 export const runningLine = job => {

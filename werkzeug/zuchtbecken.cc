@@ -1,4 +1,5 @@
 #include "ecology.hh"
+#include "life_recorder.hh"
 #include "physiology.hh"
 #include "plants.hh"
 #include "view_cache.hh"
@@ -179,7 +180,7 @@ int main(int argc, char **argv) {
       throw std::invalid_argument(
           "Aufruf: zuchtbecken GENOM[,GENOM...] SEED SCHRITTE ANZAHL aquarium|becken "
           "[Parameter=Wert ...] [snapshot=PFAD] [observe=PFAD] [foraging=DATEI] "
-          "[checkpoint=DATEI] [reproduce=0|1]");
+          "[checkpoint=DATEI] [reproduce=0|1] [record=0|1] [scenes=PFAD]");
     const auto seed = std::stoull(argv[2]);
     const int steps = std::stoi(argv[3]), count = std::stoi(argv[4]);
     const std::string habitat = argv[5];
@@ -199,8 +200,8 @@ int main(int argc, char **argv) {
       w.resize(960, 640);
       w.field.flow = 0;
     }
-    std::string pictures, observed, foraging_path, checkpoint;
-    bool reproduce = true;
+    std::string pictures, observed, foraging_path, checkpoint, scenes;
+    bool reproduce = true, record = false;
     for (int i = 6; i < argc; ++i) {
       const std::string option = argv[i];
       const auto split = option.find('=');
@@ -211,6 +212,10 @@ int main(int argc, char **argv) {
         pictures = value;
       else if (key == "observe")
         observed = value;
+      else if (key == "scenes")
+        scenes = value;
+      else if (key == "record" && (value == "0" || value == "1"))
+        record = value == "1";
       else if (key == "foraging")
         foraging_path = value;
       else if (key == "checkpoint")
@@ -278,6 +283,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i <= QUANTILE_DIVISIONS; ++i)
       std::cout << (i ? "," : "") << double(i) / QUANTILE_DIVISIONS;
     std::cout << "]}\n";
+    LifeRecorder recorder(std::cout);
+    if (record)
+      recorder.setup(w, PICTURE_STEPS);
     std::map<std::uint64_t, std::array<double, DIET_COUNT>> previous;
     std::map<std::uint64_t, LastSeen> last_seen;
     std::array<double, DIET_COUNT> food{};
@@ -288,6 +296,9 @@ int main(int argc, char **argv) {
     std::map<unsigned, std::set<std::uint64_t>> parents;
     unsigned peak = 0;
     for (int tick = 0; tick <= steps; ++tick) {
+      const bool last = tick == steps || (count > 0 && w.fish.empty());
+      if (record)
+        recorder.observe(w, last);
       for (const auto &p : w.fish)
         if (!line_of.count(p.id)) {
           const auto mother = line_of.find(p.parent);
@@ -334,6 +345,8 @@ int main(int argc, char **argv) {
         const auto id = death[death_record_column::id];
         if (!deaths.insert(id).second)
           continue;
+        if (record)
+          recorder.death(id, death[death_record_column::step], death[death_record_column::cause]);
         const auto found = last_seen.find(id);
         const auto line = line_of.find(id);
         std::cout << "{\"event\":\"death\",\"t\":" << death[death_record_column::step]
@@ -353,7 +366,10 @@ int main(int argc, char **argv) {
         previous.erase(id);
         std::cout << "}\n";
       }
-      const bool last = tick == steps || (count > 0 && w.fish.empty());
+      if (!scenes.empty() && (tick % PICTURE_STEPS == 0 || last)) {
+        snapshot(w, scenes);
+        std::cout << "{\"event\":\"scene\",\"t\":" << w.ticks << "}\n";
+      }
       if (feeding_observations.is_open() && (tick % FORAGING_STEPS == 0 || last))
         foraging(feeding_observations, w, food[food_kind::feed]);
       if (observations.is_open()) {

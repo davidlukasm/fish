@@ -108,12 +108,75 @@ def check_labor_samples():
     assert sample['diet'][0] == 20 and sample['availableFeed'] == 123 and sample['leaves'] == 47
 
 
+def check_labor_lives():
+    from labor_service import BreedingJobs, World
+    from labor_recording import LifeArchive, read_life
+    from protocol_schema import Breeding
+    from wording import Refusal
+    with tempfile.TemporaryDirectory() as folder:
+        jobs = BreedingJobs(lambda: [])
+        mark, steps, engine = '0123456789abcdef', Breeding.STEPS[0], 'engine'
+        results = jobs.results(folder, engine)
+        path = results.detail_folder(mark, steps, 1)
+        world = World(1, steps, path)
+        def event(kind, step, **fields):
+            world.read(dict(event='life', id=7, kind=kind, t=step, **fields))
+        def point(step, regular, near):
+            event('point', step, regular=regular, near=near, energy=20, gut=.2, maturity=.3)
+        event('start', 0, parent=3, generation=2, age=0)
+        event('hatch', 4, leaf=12)
+        point(4, False, True)
+        point(5, True, False)
+        for step in (6, 7, 8, 9):
+            point(step, False, True)
+            event('close', step, empty=False)
+        point(10, True, True)
+        event('intake', 10, first=True, diet=[0, 12])
+        event('full', 10)
+        event('emptying', 22)
+        event('close', 23, empty=True)
+        event('death', 30, cause=1)
+        life = world.summary['lives']['7']
+        assert (life['regularSamples'], life['nearSamples']) == (2, 1), 'Event probes cannot weight proximity'
+        assert (life['closings'], life['emptyClosings'], life['intake']) == (5, 1, 12), 'Closure is not food'
+        assert life['phases'] == {'feeding': 10, 'full': 10, 'emptying': 22}
+        assert life['longestNoFood'] == {'from': 10, 'to': 30}, 'Include the final interval before death'
+        assert life['hatchLeaf'] == 12 and life['parent'] == 3 and life['generation'] == 2
+        (path / 'scene-10.json').write_text('{"ticks":10,"fish":[]}')
+        world.read({'event': 'scene', 't': 10})
+        assert not (path / 'scene-10.json').exists()
+        assert (path / 'scene-10.json.gz').exists()
+        jobs.job = {'engine': engine, 'fingerprint': mark, 'steps': steps, 'runs': [world.summary]}
+        request = {'fingerprint': mark, 'steps': steps, 'seed': 1}
+        detail = jobs.request(dict(request, operation='life', id=7), folder)
+        assert [p['t'] for p in detail['points']] == [4, 5, 6, 7, 8, 9, 10]
+        assert detail['scenes'] == [10]
+        life['last'] = 100
+        assert detail['summary']['last'] == 30, 'Concurrent polling cannot mutate an issued response'
+        scene = jobs.request(dict(request, operation='scene', step=10), folder)
+        assert scene == {'step': 10, 'frame': {'ticks': 10, 'fish': []}}
+        for fields in ({'id': 8}, {'id': '../7'}, {'id': True}, {'operation': 'scene', 'step': 11},
+                       {'fingerprint': '../outside'}, {'seed': 2}):
+            try:
+                jobs.request({**request, 'operation': 'life', 'id': 7, **fields}, folder)
+            except Refusal:
+                pass
+            else:
+                raise AssertionError(fields)
+        (path / 'unrelated.json').write_text('{}')
+        LifeArchive(path)
+        assert read_life(path, 7) == {'points': [], 'events': []}
+        assert not (path / 'scene-10.json.gz').exists(), 'A rerun discards its own old frames'
+        assert (path / 'unrelated.json').exists()
+
+
 def main():
     ensure_node()
     check_compiler_build()
     sys.path.insert(0, str(ROOT))
     check_labor_engine()
     check_labor_samples()
+    check_labor_lives()
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)
