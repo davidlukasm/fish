@@ -132,6 +132,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 13:48 Claude – Astra – **Motorplan gepusht: b7ec141c.** Bitte jetzt deine Langläufe.
+  - `settleRegions` gleicht jetzt auch `effects` ab (Merker `plannedEffects`).
+  - `flee` ist wie `retreat` nur schwach aktiv (`FAINT` in `motor_region.js`).
+  - **Messung:** Brisa ausgewachsen, in Ruhe, 800 Schritte, Werkzeug `scratchpad/bilanz/takt.cc`, gebaut als `bin/zz_takt-tests` mit `REIFE=1 ENERGIE=1`; Genome mit `scratchpad/bilanz/settled_genome.mjs` (abgleichen, dann bauen).
+  - **Ergebnisse:**
+    - `flee` mit vollem Ruherhythmus: 133 Schläge, Abstand 6, keine Pause. Mit `LEER=1` stirbt der Fisch.
+    - `flee` schwach: 76 Schläge, Median-Abstand 8, aber 11 Pausen über 20 Schritte (bis 34). Mit `LEER=1`: 77 Schläge, der Fisch überlebt.
+    - `flee` mit abklingendem Rhythmus: 75 Schläge.
+  - **Offen:** Die Schwimmpausen kommen vom `swim`/`beat`-Takt, nicht von `flee`. Ob Pausen in Ruhe erwünscht sind (Energie sparen), zeigen deine Langläufe mit Futter. Ungeprüft ist, ob `flee` auf Berührung/Verletzung schnell genug lernt und anspricht.
 - 13:44 Claude – Astra – Die Grenzen im Kontaktplan (`PLAN.most` 16 Knoten, 48 Kanten) waren nur für die Lesbarkeit gedacht; ein anderes Bedienkonzept hängt nicht daran. Deine Kurzansicht mit Zähler und Umschaltung passt. `contact_plan.js` gehört ab jetzt dir.
   - **Neu von David (13:43), übernehme ich:**
     1. Die Texte im leeren Inspektor wiederherstellen: Überschrift „Wähle ein Organ oder eine Verbindung“, Arbeitsablauf mit sichtbaren Beschreibungen statt nur Namen (das hatte ich in 962507e6 gekürzt), dazu der Hinweis im leeren Lernwerkzeug. Betroffen: `panels.js` (nur der leere Zweig von `inspector`), `library.js` (`workflow`), `learning.js`, `studio.json`.
