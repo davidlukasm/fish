@@ -3635,6 +3635,41 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     await loading;
     assert.equal(pendingStation.state.lifeDetail, null,
                  'A late response cannot populate another run');
+    {
+      const {FISH, PLANT, PLANT_ORGAN} = await import('../ui/schema.js');
+      (await import('../ui/transport.js')).initialize([ 'lightCache' ]);
+      const sourceFish = Array(FISH.count).fill(null);
+      sourceFish[FISH.id] = 7;
+      sourceFish[FISH.morphology_asset] = 1;
+      const organ = Array(PLANT_ORGAN.count).fill(0), plant = Array(PLANT.count).fill(0);
+      organ[PLANT_ORGAN.curve] = [ 10, 20, 30, 40 ];
+      plant[PLANT.organs] = [ organ ];
+      const shapes = [ [], [], [], [], [], {trunk : [ 1, 2 ]} ];
+      const frame = {
+        fish : [ sourceFish ],
+        assets : {1 : shapes, 2 : [ 255, 255 ]},
+        plants : [ plant ],
+        light : {bytes : [ 255, 128 ], clear_asset : 2}
+      };
+      const sceneStation = new BreedingStation(pendingRoot);
+      sceneStation.render = () => {};
+      sceneStation.request = async () => ({step : 20, frame});
+      await sceneStation.showScene(chosen);
+      const first = sceneStation.state.labScene.data.frame;
+      assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
+      assert.deepEqual(first.plants[0][PLANT.organs][0][PLANT_ORGAN.curve], [ 10, 20, 30, 40 ]);
+      assert.equal(first.light.values[0], 1);
+      assert.equal(sourceFish[FISH.body_geometry], null, 'The recorded frame stays untouched');
+      const other = [ [], [], [], [], [], {trunk : [ 3, 4 ]} ];
+      sceneStation.request = async () => ({
+        step : 20,
+        frame : {...frame, light : {...frame.light}, assets : {1 : other, 2 : [ 128, 128 ]}}
+      });
+      await sceneStation.showScene({...chosen, run : {...chosen.run, seed : 999}});
+      assert.deepEqual(sceneStation.state.labScene.data.frame.fish[0][FISH.body_geometry], other[5],
+                       'The same asset number in another world resolves to that world’s shape');
+      assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
+    }
     const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
     const lab = await import('../ui/labor/trials.js');
     const {trialShell} = await import('../ui/labor/trial_view.js');

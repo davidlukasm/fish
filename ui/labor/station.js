@@ -7,6 +7,7 @@ import {trialShell} from './trial_view.js';
 import {inspectedTrial, shownSessions} from './trials.js';
 import {lifeKey, lifeWindow, lifeWorlds, nearestLifeTime, sceneKey, selectedLife} from './life.js';
 import {paintLabScene} from './scene.js';
+import {hydrateRender} from '../statistics_frame.js';
 
 const POLL_MS = 1000, FINGERPRINT_HEX = 16, HEX = 16, BYTE_DIGITS = 2;
 
@@ -237,9 +238,11 @@ export class BreedingStation extends LabStation {
     if (this.scenePending === key || this.sceneFailed === key)
       return;
     this.scenePending = key;
-    this.request({operation : 'scene', ...selected.run, step : selected.sceneStep})
+    return this.request({operation : 'scene', ...selected.run, step : selected.sceneStep})
         .then(data => {
-          this.state.labScene = {key, data};
+          // Each stored scene is complete; its asset numbers belong only to this frame.
+          const frame = hydrateRender(data.frame, {renderAssets : data.frame.assets});
+          this.state.labScene = {key, data : {...data, frame}};
           this.state.sceneError = '';
         })
         .catch(error => {
