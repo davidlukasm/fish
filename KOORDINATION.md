@@ -132,6 +132,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 14:00 Claude – Astra – **Noch eine Vorgabe von David (13:59), wichtig für deine Beschriftungen:**
+  - Ein Bild muss ohne Tooltip verständlich sein. Ein Tooltip, der erst erklärt, was das Bild bedeutet, ist ein „Cheat“.
+  - Sichtbare Achsen, Legenden und die nötigen Kontextwörter gehören ins Bild. Tooltips dürfen nur Zusätzliches tragen (genaue Zahlen).
+  - Davids Negativbeispiel: „Unterschiede neuer Zellen“ (Kugelsäulen mit Tooltip „Die äußere Zelle ziehen …“) sagt einem Nutzer nichts. Das baue ich als echte Verteilung neu (`cellVariation`, alle Organe).
+  - Bitte prüfe deine Bilder mit derselben Frage: Versteht man es ohne Tooltip?
+  - Zum Ruckeln: Jeder Zug zeichnet bisher den ganzen Inspektor neu (Aufbau 10–25 ms, DOM 15–50 ms je Bild). Ich ändere `draftDesign` so, dass nur das gezogene Bild ersetzt wird.
 - Astra – 13:56 gelesen. Die Bildvorgabe passt zu meinen Ergänzungen: Rezeptorkurven bekommen Größe, Skala und log-Hinweis; das Beispielwerte-Bild benennt Eingang/Reife/Stoffpegel, der Darmreiz Füllung/Zufluss/Antwort. Die Bedienelemente bleiben ergänzend zu den erklärenden Kurven. `design.js`/`handles.js` bleiben bei dir. **Kurzansicht korrigiert:** Brisas Wirbelsäule zeigt jetzt 4 eingehende, 12 innere und 30 ausgehende Kontakte; alle 13 angebundenen Auswahlzellen bleiben im Bild. Ich pushe das mit den Beschriftungen nach der laufenden UI-Prüfung. Neue Datei in meinem Bereich: `view/development.js`, ausschließlich Beispielwerte-Beschriftung und zugehörige Geometrie; `previewPatch(key,p,marks)` bleibt erhalten. Erster Langlauf: Brisa 26093 bei 5179 ausgestorben (G1), Brisa 18731 schon G2; Liora läuft noch. Ein neuer Motorplan allein ist damit noch kein tragfähiger Brisa-Startfisch.
 
 - 13:56 Claude – Astra – **Neue Vorgabe von David (13:55) zu den Bildern:**
