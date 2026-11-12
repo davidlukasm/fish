@@ -8,7 +8,7 @@ import {
   timeConstantOf,
   timeConstantSteps
 } from '../../tuning.js';
-import {t} from '../../strings.js';
+import {joinParts, t} from '../../strings.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {RHYTHM_TAU} from '../model/region_cells.js';
 import {regionPlan} from '../model/regions.js';
@@ -153,51 +153,50 @@ function button(organ, key, value, x, y, graphic, title, selected = organ.region
 function searchPicture(state, organ) {
   const r = organ.region, duration = LONGEST_TIME_CONSTANT;
   const memory = f => Math.exp(-f * duration / timeConstantSteps(r.searchTime));
-  return icon('choice', 25, 28) + text(48, 32, words('search')) +
-         axis(P.left, P.right, SEARCH_BASE) +
+  return icon('choice', 25, 28) + axis(P.left, P.right, SEARCH_BASE) +
          curve(f => SEARCH_BASE - SEARCH_HEIGHT * memory(f), undefined, undefined, 160, 'other') +
-         text(P.left, 65, words('searchMemory')) +
-         text(P.right, 222, words('searchStrength'), 'end') +
-         handle(organ, 'search', words('searchDrag')) +
-         text(P.right, 242,
-              steps(timeConstantSteps(r.searchTime) *
-                    (state.capabilities?.neural?.adaptationSpan ?? 10)),
-              'end');
+         handle(organ, 'search', joinParts([
+                  words('search'), words('searchMemory'), words('searchStrength'),
+                  steps(timeConstantSteps(r.searchTime) *
+                        (state.capabilities?.neural?.adaptationSpan ?? 10)),
+                  words('searchDrag')
+                ]));
 }
 function scentPicture(state, organ) {
   const r = organ.region, duration = TAU_SPAN * LONGEST_TIME_CONSTANT;
   const response = f =>
       Math.tanh(r.smoothing > 0 ? 1 - Math.exp(-f * duration / timeConstantSteps(r.smoothing)) : 1);
-  return icon('nose', 32, 32) + text(55, 36, words('scent')) +
-         path('M40 58H110M40 58V78M250 58H320M320 58V78', 'axis') +
+  return icon('nose', 32, 32) + path('M40 58H110M40 58V78M250 58H320M320 58V78', 'axis') +
          path('M110 58L250 78M250 58L110 78', 'other') + axis(P.left, P.right, SCENT_BASE) +
          curve(f => SCENT_BASE - SCENT_HEIGHT * response(f)) +
          curve(f => SCENT_BASE - SCENT_HEIGHT * r.contrast * response(f), undefined, undefined, 160,
                'other') +
-         handle(organ, 'scent', words('scentDrag')) +
-         text(P.right, 242,
-              r.smoothing > 0 ? steps(timeConstantSteps(r.smoothing) *
-                                      (state.capabilities?.neural?.adaptationSpan ?? 10))
-                              : words('direct'),
-              'end');
+         handle(organ, 'scent', joinParts([
+                  words('scent'),
+                  r.smoothing > 0 ? steps(timeConstantSteps(r.smoothing) *
+                                          (state.capabilities?.neural?.adaptationSpan ?? 10))
+                                  : words('direct'),
+                  words('scentDrag')
+                ]));
 }
 function statePicture(state, organ) {
   const r = organ.region, scale = state.capabilities?.biasScale ?? .3;
   const hill = f => f ** 8 / (f ** 8 + r.maturity ** 8);
   return icon('eggs', 20, 60) + axis(P.left, P.right, 100) + curve(f => 100 - 70 * hill(f)) +
-         handle(organ, 'maturity', words('maturityDrag')) +
-         text(P.right, 124, words('maturity'), 'end') + icon('blood', 25, 157) +
-         text(45, 161, words('reserve')) + axis(40, 160, 222) +
+         handle(organ, 'maturity', joinParts([ words('maturity'), words('maturityDrag') ])) +
+         icon('blood', 25, 157) + axis(40, 160, 222) +
          curve(f => 222 - 180 * Math.max(0, Math.tanh(scale * (r.reserve - f))), 40, 160, 80,
                'other') +
-         handle(organ, 'reserve', words('reserveDrag')) + icon('gut', 212, 157) +
-         text(232, 161, words('rest')) + axis(210, 320, 222) +
+         handle(organ, 'reserve', joinParts([ words('reserve'), words('reserveDrag') ])) +
+         icon('gut', 212, 157) + axis(210, 320, 222) +
          curve(f => 222 - 64 * Math.exp(-f * LONGEST_TIME_CONSTANT / timeConstantSteps(r.rest)),
                210, 320, 80, 'memory') +
-         handle(organ, 'rest', words('restDrag')) +
-         text(P.right, 248,
-              steps(timeConstantSteps(r.rest) * (state.capabilities?.neural?.adaptationSpan ?? 10)),
-              'end');
+         handle(organ, 'rest', joinParts([
+                  words('rest'),
+                  steps(timeConstantSteps(r.rest) *
+                        (state.capabilities?.neural?.adaptationSpan ?? 10)),
+                  words('restDrag')
+                ]));
 }
 function valuePicture(organ) {
   const r = organ.region;
@@ -217,8 +216,8 @@ function valuePicture(organ) {
                     VALUE_HEIGHT * r.teaching *
                         Math.exp(-f * LONGEST_LEARNING_TIME / learningTimeSteps(r.association)),
                undefined, undefined, 160, 'memory') +
-         handle(organ, 'association', words('associationDrag')) +
-         text(P.right, 247, steps(learningTimeSteps(r.association)), 'end');
+         handle(organ, 'association',
+                joinParts([ steps(learningTimeSteps(r.association)), words('associationDrag') ]));
 }
 function motorPicture(organ) {
   const r = organ.region;
@@ -247,8 +246,10 @@ function motorPicture(organ) {
                                                                           f / cycle))
                                      : 0),
                          undefined, undefined, 240, key === 'pump' ? 'other' : '') +
-                   handle(organ, key, label('regions.settings.' + key)) +
-                   text(P.right, base + 28, cycle ? cycleSteps(cycle) : words('off'), 'end');
+                   handle(
+                       organ, key, joinParts([
+                         label('regions.settings.' + key), cycle ? cycleSteps(cycle) : words('off')
+                       ]));
           })
           .join('');
   return fish + tones +
@@ -267,16 +268,17 @@ function spinePicture(organ) {
           .map((phase, i) => curve(f => y - 15 * Math.max(0, Math.sin(4 * Math.PI * f + phase)),
                                    undefined, undefined, 160, i ? 'other' : ''))
           .join('');
-  return icon('spine', 26, 27) + text(47, 31, words('spine')) +
-         text(P.left, 52, label('inspector.side.left')) +
-         text(P.right, 52, label('inspector.side.right'), 'end') + waves(77) +
-         axis(P.left, P.right, SPINE_BASE) + handle(organ, 'spine', words('spineDrag')) +
-         text(P.left, 142, cycleSteps(period(r.cycle))) +
-         text(P.right, 142, label('regions.settings.alternation'), 'end') +
-         text(P.left, 165, words('finCycle')) + text(P.left, 185, label('regions.slots.row')) +
-         text(P.right, 185, label('regions.slots.recover'), 'end') + waves(211) +
-         axis(P.left, P.right, FIN_BASE) + handle(organ, 'finCycle', words('finCycleDrag')) +
-         text(P.left, 254, cycleSteps(period(r.finCycle)));
+  return icon('spine', 26, 27) + waves(77) + axis(P.left, P.right, SPINE_BASE) +
+         handle(organ, 'spine', joinParts([
+                  words('spine'), cycleSteps(period(r.cycle)),
+                  label('regions.settings.alternation'), words('spineDrag')
+                ])) +
+         waves(211) + axis(P.left, P.right, FIN_BASE) +
+         handle(organ, 'finCycle', joinParts([
+                  words('finCycle'),
+                  label('regions.slots.row') + ' / ' + label('regions.slots.recover'),
+                  cycleSteps(period(r.finCycle)), words('finCycleDrag')
+                ]));
 }
 function tectumPicture(state, organ) {
   const r = organ.region, plan = regionPlan(state.document, organ);
@@ -338,6 +340,8 @@ export function regionPicture(state, organ) {
   });
   return `<div class="aid-region-picture"><svg viewBox="0 0 ${P.width} ${
       P.height}" data-region-picture="${escapeText(organ.id)}" role="group" aria-label="${
-      label('regions.' + organ.type + '.term')}">${draw(state, organ)}</svg><p class="aid-hint">${
-      words(organ.type + 'Reference')}${customized ? ' ' + words('customized') : ''}</p></div>`;
+      label('regions.' + organ.type + '.term')}"><title>${
+      escapeText(
+          words(organ.type + 'Reference') +
+          (customized ? ' ' + words('customized') : ''))}</title>${draw(state, organ)}</svg></div>`;
 }

@@ -81,10 +81,10 @@ function regionTeacher(state, organ) {
   const choice = (value, text, swatch = '') =>
       '<button class="' + (one === value ? 'active' : '') + '" data-region-teacher="' +
       escapeText(organ.id) + '" data-teacher-value="' + (value ?? 'off') + '"' +
-      (swatch ? ' style="--substance:' + swatch + '"' : '') + '>' +
-      (swatch ? '<span class="aid-substance-swatch"></span>' : '') + escapeText(text) + '</button>';
-  return '<div class="aid-region-setting"><span>' + label('regions.settings.teacher') +
-         '</span><div class="aid-button-group aid-learn-substances">' +
+      (swatch ? ' style="--substance:' + swatch + '"' : '') + ' title="' + escapeText(text) +
+      '"><span class="aid-substance-swatch' + (swatch ? '' : ' none') + '"></span></button>';
+  return '<div class="aid-region-setting" title="' + label('regions.settings.teacher') +
+         '"><div class="aid-button-group aid-learn-substances">' +
          choice(null, label('learnRule.none')) +
          [...state.document.substances, {index : HORMONES.levels} ]
              .map(s => choice(s.index, substanceName(state, s.index), substanceColor(s.index)))
@@ -96,14 +96,13 @@ function regionControls(state, organ) {
     return '';
   const region = organ.region;
   const follows = regionPlan(state.document, organ).view
-                      ? '<label class="aid-checkbox"><input type="checkbox" data-region-follow="' +
-                            escapeText(organ.id) + '"' + (region.follow ? ' checked' : '') + '/>' +
-                            label('regions.follow') + '</label><p class="aid-hint">' +
-                            t('units.joined', {
-                              a : label('regions.' + organ.type + '.follows'),
-                              b : label('regions.followHint')
-                            }) +
-                            '</p>'
+                      ? '<label class="aid-checkbox" title="' + escapeText(t('units.joined', {
+                          a : label('regions.' + organ.type + '.follows'),
+                          b : label('regions.followHint')
+                        })) +
+                            '"><input type="checkbox" data-region-follow="' + escapeText(organ.id) +
+                            '"' + (region.follow ? ' checked' : '') + '/>' +
+                            label('regions.follow') + '</label>'
                       : '';
   const wanted = regionPlan(state.document, organ).nodes.length;
   const crowded =
@@ -112,9 +111,9 @@ function regionControls(state, organ) {
                 escapeText(t('studio.regions.crowded', {n : organ.centers.length, of : wanted})) +
                 '</p>'
           : '';
-  return '<section class="aid-eye-section"><h4>' + label('regions.settingsTitle') + '</h4>' +
-         regionPicture(state, organ) + (organ.type === 'value' ? '' : regionTeacher(state, organ)) +
-         crowded + follows + '</section>';
+  return '<section class="aid-eye-section">' + regionPicture(state, organ) +
+         (organ.type === 'value' ? '' : regionTeacher(state, organ)) + crowded + follows +
+         '</section>';
 }
 export function regionSettings(state, organ) {
   return '<section class="aid-eye-section">' + regionGraph(state, organ) + '</section>' +
