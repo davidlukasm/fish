@@ -690,6 +690,7 @@
 .aid-chemistry dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 10px;font-size:13px}
 .aid-chemistry dt{color:var(--aid-soft-text)}
 .aid-chemistry dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.aid-chemistry .aid-tool-link{flex:0 0 auto;width:42px;padding:6px;display:grid;place-items:center}
 .aid-substance-chip{display:inline-flex;align-items:center;gap:5px}
 .aid-substance-chip .aid-substance-swatch{height:11px;width:11px;border-width:1.5px}
 .aid-head-barbel{fill:none;stroke:#d9c99a;stroke-width:3;stroke-linecap:round}

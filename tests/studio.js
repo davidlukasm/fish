@@ -1779,7 +1779,6 @@ async function checkHormoneSystems(model, capabilities) {
   assert.match(sightTile, /title="Sehzentrum:/);
   assert.match(sightTile, /Tectum/, 'A region tile carries its technical term');
   const eyePanel = panels.inspector(state);
-  assert.match(eyePanel, /Hormone und Lernen/);
   assert.match(eyePanel, /data-open-tool="hormone"/);
   assert.match(eyePanel, /data-spectrum="field"/);
   assert.match(eyePanel, /data-sight-eye="0"/);

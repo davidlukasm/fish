@@ -35,7 +35,7 @@ import {
 import {escapeText, fixed, glyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, label} from './kit.js';
-import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON} from './icons.js';
+import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
@@ -153,6 +153,9 @@ export function hormonePad(state, organ, center, held = null) {
   return '<div data-sense-block="' + escapeText(organ.id) + '">' + chips +
          centerWheel(state, center, all, Infinity, bloodMarks(state, center, held)) + '</div>';
 }
+// What the cell's substances do, only where it binds or learns from one: the substance chips with
+// what they change, and the hormone and learning tools as symbols. Release and birth stand in the
+// gland's and the life picture already.
 export function chemistry(state, organ, center) {
   const wheel = state.capabilities, doc = state.document;
   if (!wheel || !center || isRegion(organ) && state.selected?.kind !== 'center')
@@ -160,30 +163,16 @@ export function chemistry(state, organ, center) {
   const chip = index => '<span class="aid-substance-chip"><span class="aid-substance-swatch" ' +
                         'style="--substance:' + substanceColor(index) + '"></span>' +
                         escapeText(substanceName(state, index)) + '</span>';
-  const row = (title, items, none) =>
-      '<dt>' + label(title) + '</dt><dd>' + (items.length ? items.join('') : label(none)) + '</dd>';
-  let rows = '';
-  if (organ.type === 'gland')
-    rows += row('inspector.releasesSubstances',
-                doc.substances
-                    .filter(sub => wheelAffinity(wheel, center.q1, center.q2, center.qwidth,
-                                                 sub.index) >= NOTICEABLE_AFFINITY)
-                    .map(sub => chip(sub.index)),
-                'inspector.releasesNothing');
-  rows += row(
+  const row = (title, items) =>
+      items.length ? '<dt>' + label(title) + '</dt><dd>' + items.join('') + '</dd>' : '';
+  let rows = row(
       'inspector.answersTo',
       doc.substances.flatMap(
           sub => boundEffects(center, sub.index, wheel)
                      .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
                                     effectWords(effect,
                                                 effectDirection(effect, center.receptors[effect])) +
-                                    '</small>')),
-      'inspector.answersToNothing');
-  rows += row(
-      'development.birthReceptor',
-      doc.substances.filter(sub => birthAffinity(center, sub.index, wheel) >= NOTICEABLE_AFFINITY)
-          .map(sub => chip(sub.index)),
-      'inspector.answersToNothing');
+                                    '</small>')));
   if (center.role === 'nerve')
     rows += row('inspector.learnsFrom',
                 teachersOf(doc, center, wheel)
@@ -191,14 +180,13 @@ export function chemistry(state, organ, center) {
                              chip(substance.index) +
                              (glands.length ? ''
                                             : '<small class="aid-bound-effect">' +
-                                                  label('inspector.noGland') + '</small>')),
-                'inspector.learnsNothing');
-  const open = (tool, text) => '<button class="aid-secondary" data-open-tool="' + tool +
-                               '" data-center-id="' + escapeText(center.id) + '">' + label(text) +
-                               '</button>';
-  return '<section class="aid-eye-section aid-chemistry"><h4>' + label('inspector.chemistry') +
-         '</h4><dl>' + rows + '</dl><div class="aid-button-group">' +
-         open('hormone', 'inspector.editHormones') +
+                                                  label('inspector.noGland') + '</small>')));
+  const open = (tool, text) => '<button class="aid-secondary aid-tool-link" data-open-tool="' +
+                               tool + '" data-center-id="' + escapeText(center.id) + '" title="' +
+                               label(text) + '">' +
+                               glyph(TOOL_ICON[tool], ICON.tool, {line : true}) + '</button>';
+  return '<section class="aid-eye-section aid-chemistry">' + (rows ? '<dl>' + rows + '</dl>' : '') +
+         '<div class="aid-button-group">' + open('hormone', 'inspector.editHormones') +
          (center.role === 'nerve' ? open('learn', 'inspector.editLearning') : '') +
          '</div></section>';
 }
