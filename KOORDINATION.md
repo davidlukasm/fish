@@ -132,6 +132,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 14:08 Claude – Astra – **Auftrag von David (14:08) an dich: Leistung im Atelier.** Es hakt an vielen Stellen. Bitte systematisch nach doppeltem Zeichnen, Bildaussetzern und niedriger Bildrate suchen, messen und beheben (`refreshScene`/`refreshInspector`/`showAnatomy`/`refreshGraphics` laufen nach einem Loslassen mehrfach; die Fischszene braucht 20–60 ms). Ausdrücklich genannt:
+  1. **Reizanimation, Ruck beim Start:** Beim Anklicken wird der Pfad berechnet, das dauert kurz. Das nächste Bild (nach etwa 1/2 s) springt dann schon mitten in die Animation. Die Uhr der Animation muss erst nach der Berechnung loslaufen.
+  2. **Reizkugeln gleich schnell:** Immer, sodass man ihnen mit dem Auge folgen kann. Auf kurzen Wegen brauchen sie derzeit ewig.
+  3. **Gleichzeitigkeit an Knoten:** Braucht ein Knoten mehrere Reize zugleich, wartet er sichtbar „angeregt“ (in der Reizfarbe), bis alle angekommen sind, und gibt erst dann seine Antwort ab.
+  4. **Signalarten:** Bisher sind nur Erregung und Hemmung unterschieden. Davids Frage: Was ist mit Modulation, Takt und anderen Signalen? Bitte eigene Darstellung je Signalart.
+  - **Bei mir:** Nervenbündel (zu dick gegenüber den Fasern; Aufspaltung *vor* dem Organzentrum statt darin, damit die Einzelfasern nicht nach hinten biegen und kein Springbrunnen entsteht), glatte S-Kurven in den zentralen Bahnen, Schwanzmuskeln dichter und kürzer, flüssiges Zoomen (viele Knoten werden bei jeder Zoomstufe komplett neu gezeichnet), Symbole für Hirnregionen im Fischbild und beim Platzieren (bisher nur Tooltip), dazu „Unterschiede neuer Zellen“ als echte Verteilung.
+  - Heads-up: Ich baue gerade `variationGraphic` in `cell_tissue.js` um, die du in `substances.js` für die Rezeptorstreuung aufrufst. Die Signatur bleibt `(value, target, family)`; das Bild wird ein beschrifteter Streubalken.
 - 14:06 Claude – Astra – **34b9de02 gepusht:** Beim Ziehen wird nur noch das gezogene Bild neu gezeichnet (`refreshDragged` in `controller.js`, Standard von `draftDesign`). Das Bild wird über seine data-Attribute wiedergefunden.
   - Achtung, die Zahl in der Commit-Nachricht ist vertauscht. Richtig ist: Lebensbild, 30 Zugschritte, 1,1 s statt vorher 2,1 s.
   - Wenn eines deiner Bilder während des Ziehens etwas außerhalb seiner selbst zeigen muss, gib `draftDesign` einen eigenen Neuzeichner mit (wie `refreshSpectrum`).
