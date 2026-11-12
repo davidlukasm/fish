@@ -1,116 +1,128 @@
+// The muscle itself, drawn where it works in its organ's picture: a spindle along an axis, as long
+// as it has nodes and as thick as each node is strong, its fibres white (fast) or red (lasting),
+// the reserve that only joins strong commands behind a dashed partition, and at its anchor its
+// cross-section as a pie of fast and lasting fibres just before it. Every handle carries the
+// geometry it is dragged along, so one patch serves every picture.
 import {ATELIER_LIMITS} from '../../schema.js';
 import {clamp} from '../../units.js';
-import {enduranceCurve, fibreHex, fibreForce} from '../../fibre.js';
+import {fibreHex} from '../../fibre.js';
 import {isFibrous, muscleFibre} from '../model/document.js';
-import {sideOf} from '../model/layout.js';
 import {escapeText, fixed} from './markup.js';
-import {t} from '../../strings.js';
+import {percent, t} from '../../strings.js';
 
-const T = Object.freeze({
-  width : 300,
-  height : 232,
-  left : 26,
-  span : 248,
-  least : 64,
-  middle : 66,
-  thin : 12,
-  thick : 42,
-  curveTop : 142,
-  curveBase : 218,
-  steps : 360
-});
-const dimensions = (organ, most) => ({
-  length : T.least + (T.span - T.least) * (organ.centers.length - 1) / Math.max(1, most - 1),
-  half : T.thin + (T.thick - T.thin) * ((organ.centers[0]?.copies ?? 1) - 1) /
-                      (ATELIER_LIMITS.max_copies - 1)
-});
-const curveY = force => T.curveBase - (T.curveBase - T.curveTop) * force / fibreForce(1);
-export function muscleTissuePatch(name, fx, fy, most, organ) {
-  const x = fx * T.width, y = fy * T.height;
-  if (name === 'nodes')
-    return {
-      nodes : 1 + Math.round(clamp((x - T.left - T.least) / (T.span - T.least)) * (most - 1))
-    };
-  if (name === 'strength')
-    return {
-      copies : 1 + Math.round(clamp(((T.middle - y) / .75 - T.thin) / (T.thick - T.thin)) *
-                              (ATELIER_LIMITS.max_copies - 1))
-    };
-  if (name === 'sprint')
-    return {sprint : 1 - clamp((x - T.left) / dimensions(organ, most).length)};
-  if (name !== 'fibre')
-    return null;
-  const step = Math.round(clamp((x - T.left) / T.span) * (T.steps - 1));
-  let best = 0, error = Infinity;
-  for (let i = 0; i <= 100; i++) {
-    const distance = Math.abs(curveY(enduranceCurve(i / 100, step + 1)[step]) - y);
-    if (distance < error) {
-      error = distance;
-      best = i / 100;
-    }
-  }
-  return {fibre : best};
+const SPINDLE = Object.freeze(
+    {least : .45, bulge : .75, curl : 2, piece : .35, pie : 11, gap : 3, handle : 5.5, ring : 4});
+const TURN = 2 * Math.PI;
+const word = (key, values) => t('studio.muscle.' + key, values);
+const parse = text => text.split(',').map(Number);
+function frame([ ax, ay, bx, by ]) {
+  const full = Math.hypot(bx - ax, by - ay) || 1, u = {x : (bx - ax) / full, y : (by - ay) / full};
+  return {
+    full,
+    at : (s, n) => ({x : ax + u.x * s - u.y * n, y : ay + u.y * s + u.x * n}),
+    along : p => (p.x - ax) * u.x + (p.y - ay) * u.y,
+    across : p => (p.y - ay) * u.x - (p.x - ax) * u.y
+  };
 }
-export function muscleTissue(organ, code, most) {
-  const {length, half} = dimensions(organ, most), count = organ.centers.length;
-  const copies = organ.centers[0]?.copies ?? 1, fast = muscleFibre(organ),
-        fibrous = isFibrous(organ);
-  const x1 = T.left, x2 = x1 + length, mid = (x1 + x2) / 2,
-        split = x1 + length * (1 - (organ.sprint ?? 0));
-  const word = (key, values) => t('studio.muscle.' + key, values);
-  const grip = (name, x, y, title) => '<circle class="aid-graphic-handle" data-effector-handle="' +
-                                      name + '" cx="' + fixed(x) + '" cy="' + fixed(y) +
-                                      '" r="5.5"><title>' + escapeText(title) + '</title></circle>';
-  const shell = 'M' + x1 + ' ' + T.middle + ' C' + x1 + ' ' + (T.middle - half) + ' ' + x2 + ' ' +
-                (T.middle - half) + ' ' + x2 + ' ' + T.middle + ' C' + x2 + ' ' +
-                (T.middle + half) + ' ' + x1 + ' ' + (T.middle + half) + ' ' + x1 + ' ' + T.middle +
-                'Z';
+const lengthShare = (organ, most) =>
+    SPINDLE.least + (1 - SPINDLE.least) * (organ.centers.length - 1) / Math.max(1, most - 1);
+const thickness = (organ, thin, thick) =>
+    thin + (thick - thin) * ((organ.centers[0]?.copies ?? 1) - 1) / (ATELIER_LIMITS.max_copies - 1);
+const xy = p => fixed(p.x) + ' ' + fixed(p.y);
+const grip = (name, p, title, geometry) =>
+    '<circle class="aid-graphic-handle" data-effector-handle="' + name + '" ' + geometry + ' cx="' +
+    fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + SPINDLE.handle + '"><title>' +
+    escapeText(title) + '</title></circle>';
+
+// `spec`: the axis from the anchor to where the longest muscle ends, and its thinnest and thickest
+// half width, all in the picture's own units. A muscle round a tube (`rings`) shows one ring per
+// node across it instead of a spindle.
+export function muscleSpindle(organ, most, {axis, thin, thick, rings = false}) {
+  const S = SPINDLE, f = frame(axis), length = f.full * lengthShare(organ, most);
+  const half = thickness(organ, thin, thick), count = organ.centers.length;
+  const copies = organ.centers[0]?.copies ?? 1, fast = muscleFibre(organ);
+  const split = organ.type === 'muscle' ? length * (1 - (organ.sprint ?? 0)) : length;
+  const geometry =
+      'data-axis="' + axis.map(fixed).join(',') + '" data-spindle="' + thin + ',' + thick + '"';
+  const shell = 'M' + xy(f.at(0, 0)) + ' C' + xy(f.at(0, -half)) + ' ' + xy(f.at(length, -half)) +
+                ' ' + xy(f.at(length, 0)) + ' C' + xy(f.at(length, half)) + ' ' +
+                xy(f.at(0, half)) + ' ' + xy(f.at(0, 0)) + 'Z';
   let fibres = '';
-  for (let k = 0; k < count; k++) {
-    const x = x1 + length * (k + .5) / count,
-          spread = Math.sin(Math.PI * (k + .5) / count) * half * .75;
+  for (let k = 0; rings && k < count; k++) {
+    const s = length * (k + .5) / count;
+    fibres += '<path class="aid-gut-ring" d="M' + xy(f.at(s, -half)) + ' L' + xy(f.at(s, half)) +
+              '" stroke-width="' + SPINDLE.ring + '" style="stroke:' + fibreHex(fast) + '"/>';
+  }
+  for (let k = 0; !rings && k < count; k++) {
+    const s = length * (k + .5) / count, piece = length / count * S.piece,
+          spread = Math.sin(Math.PI * (k + .5) / count) * half * S.bulge;
     for (let j = 0; j < copies; j++) {
-      const y = T.middle + spread * (2 * (j + .5) / copies - 1);
-      fibres += '<path class="aid-tissue-fibre' + (x >= split ? ' reserve' : '') + '" d="M' +
-                fixed(x - length / count * .35) + ' ' + fixed(y) + 'q' +
-                fixed(length / count * .35) + ' -2 ' + fixed(length / count * .7) + ' 0" stroke="' +
+      const n = spread * (2 * (j + .5) / copies - 1);
+      fibres += '<path class="aid-tissue-fibre' + (s >= split ? ' reserve' : '') + '" d="M' +
+                xy(f.at(s - piece, n)) + ' Q' + xy(f.at(s, n - S.curl)) + ' ' +
+                xy(f.at(s + piece, n)) + '" stroke="' +
                 fibreHex(((k * copies + j) * .618) % 1 < fast ? 1 : 0) + '"/>';
     }
   }
-  const curve = value => {
-    const values = enduranceCurve(value, T.steps);
-    return 'M' + values.filter((_, k) => k % 6 === 0 || k === T.steps - 1)
-                     .map((v, k, a) =>
-                              fixed(T.left + T.span * k / (a.length - 1)) + ' ' + fixed(curveY(v)))
-                     .join(' L');
-  };
-  const tip =
-      word('nodes', {count, most}) + ' · ' +
-      word('strength', {share : Math.round(copies / ATELIER_LIMITS.max_copies * 100) + '%'});
-  return '<svg class="aid-muscle-tissue" viewBox="0 0 ' + T.width + ' ' + T.height +
-         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-         '" data-effector-side="' + sideOf(organ) + '"><title>' + escapeText(tip) + '</title>' +
-         '<path class="aid-tissue-sheath" d="' + shell + '"/>' + fibres +
-         grip('nodes', x2, T.middle, word('nodesHandle')) +
-         grip('strength', mid, T.middle - half * .75, word('strengthHandle')) +
-         (organ.type === 'muscle' ? '<path class="aid-tissue-partition" d="M' + fixed(split) + ' ' +
-                                        (T.middle - half) + 'V' + (T.middle + half) + '"/>' +
-                                        grip('sprint', split, T.middle + half, word('sprintHandle'))
-                                  : '') +
-         (fibrous
-              ? '<path class="aid-tissue-projection" d="M' + mid + ' ' + (T.middle + half + 6) +
-                    ' Q' + mid + ' 132 ' + T.left + ' ' + T.curveTop + '"/>' +
-                    '<path class="aid-chart-axis" d="M' + T.left + ' ' + T.curveTop + 'V' +
-                    T.curveBase + 'H' + (T.left + T.span) + '"/>' +
-                    [ 0, 1 ]
-                        .map(f => '<path class="aid-fibre-curve reference" d="' + curve(f) + '"/>')
-                        .join('') +
-                    '<path class="aid-fibre-curve chosen" stroke="' + fibreHex(fast) + '" d="' +
-                    curve(fast) + '"/>' +
-                    '<path class="aid-tissue-curve-hit" data-effector-handle="fibre" d="' +
-                    curve(fast) + '"><title>' + escapeText(word('fibre.handle')) +
-                    '</title></path>' +
-                    '<g class="aid-tissue-clock" transform="translate(278 204)"><circle r="7"/><path d="M0-4V0L3 2"/></g>'
+  const tip = word('nodes', {count, most}) + ' · ' +
+              word('strength', {share : percent(copies / ATELIER_LIMITS.max_copies)});
+  return '<g class="aid-muscle-spindle"><title>' + escapeText(tip) + '</title>' +
+         (rings ? '' : '<path class="aid-tissue-sheath" d="' + shell + '"/>') + fibres +
+         (organ.type === 'muscle'
+              ? '<path class="aid-tissue-partition" d="M' + xy(f.at(split, -half)) + ' L' +
+                    xy(f.at(split, half)) + '"/>' +
+                    grip('sprint', f.at(split, half), word('sprintHandle'), geometry)
               : '') +
-         '</svg>';
+         grip('nodes', f.at(length, 0), word('nodesHandle'), geometry) +
+         grip('strength', f.at(length / 2, -half * S.bulge), word('strengthHandle'), geometry) +
+         (isFibrous(organ) ? fibrePie(f.at(-S.pie - S.gap, 0), fast) : '') + '</g>';
+}
+// The cross-section at the anchor: the white sector is the share of fast fibres, from the top
+// clockwise; its edge is the handle.
+function fibrePie(c, fast) {
+  const r = SPINDLE.pie, a = -Math.PI / 2 + TURN * clamp(fast, 0, 1 - Number.EPSILON);
+  const edge = {x : c.x + r * Math.cos(a), y : c.y + r * Math.sin(a)};
+  const sector = (from, to, colour) => {
+    if (to - from <= 0)
+      return '';
+    if (to - from >= TURN - 1e-6)
+      return '<circle cx="' + fixed(c.x) + '" cy="' + fixed(c.y) + '" r="' + r + '" fill="' +
+             colour + '"/>';
+    const p = angle => xy({x : c.x + r * Math.cos(angle), y : c.y + r * Math.sin(angle)});
+    return '<path d="M' + xy(c) + ' L' + p(from) + ' A' + r + ' ' + r + ' 0 ' +
+           (to - from > Math.PI ? 1 : 0) + ' 1 ' + p(to) + 'Z" fill="' + colour + '"/>';
+  };
+  const top = -Math.PI / 2;
+  return '<g class="aid-fibre-pie"><title>' +
+         escapeText(word('fibre.title', {share : percent(fast)})) + '</title>' +
+         sector(top, top + TURN * fast, fibreHex(1)) +
+         sector(top + TURN * fast, top + TURN, fibreHex(0)) + '<circle class="aid-fibre-rim" cx="' +
+         fixed(c.x) + '" cy="' + fixed(c.y) + '" r="' + r + '"/></g>' +
+         grip('fibre', edge, word('fibre.handle'),
+              'data-pie="' + fixed(c.x) + ',' + fixed(c.y) + '"');
+}
+// The change a spindle handle makes, from the pointer `p` in the picture's units.
+export function muscleTissuePatch(name, p, marks, most, organ) {
+  if (name === 'fibre') {
+    const [cx, cy] = parse(marks.pie);
+    const turned = ((Math.atan2(p.y - cy, p.x - cx) + Math.PI / 2) % TURN + TURN) % TURN;
+    return {fibre : turned / TURN};
+  }
+  if (!marks.axis)
+    return null;
+  const f = frame(parse(marks.axis)), [ thin, thick ] = parse(marks.spindle);
+  if (name === 'nodes')
+    return {
+      nodes : 1 + Math.round(clamp((f.along(p) / f.full - SPINDLE.least) / (1 - SPINDLE.least)) *
+                             (most - 1))
+    };
+  if (name === 'strength')
+    return {
+      copies :
+          1 + Math.round(clamp((Math.abs(f.across(p)) / SPINDLE.bulge - thin) / (thick - thin)) *
+                         (ATELIER_LIMITS.max_copies - 1))
+    };
+  if (name === 'sprint')
+    return {sprint : 1 - clamp(f.along(p) / (f.full * lengthShare(organ, most)))};
+  return null;
 }

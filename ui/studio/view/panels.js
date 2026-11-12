@@ -84,22 +84,21 @@ function muscleGraphic(state, center) {
                   .map(s => functionFor(center, s)));
   const chips =
       [...MUSCLE_LABEL_INDEX.entries() ]
-          .map(([ code, index ]) =>
-                   '<button class="aid-muscle-function' + (code === own ? ' current' : '') + '"' +
-                   (code !== own && reachable.has(code)
-                        ? ' data-muscle-function="' + code + '" data-center-id="' +
-                              escapeText(center.id) + '"'
-                    : code === own ? ' aria-current="true"'
-                                   : ' disabled') +
-                   '>' + glyph(MUSCLE_ICON[code], ICON.muscle) + '<span>' +
-                   escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
+          .map(([ code, index ]) => '<button class="aid-muscle-function' +
+                                    (code === own ? ' current' : '') + '"' +
+                                    (code !== own && reachable.has(code)
+                                         ? ' data-muscle-function="' + code + '" data-center-id="' +
+                                               escapeText(center.id) + '"'
+                                     : code === own ? ' aria-current="true"'
+                                                    : ' disabled') +
+                                    ' title="' + escapeText(tList('studio.muscles')[index] ?? '') +
+                                    '">' + glyph(MUSCLE_ICON[code], ICON.muscle) + '</button>')
           .join('');
   return '<div class="aid-muscle-functions">' + chips + '</div>';
 }
-function muscleKind(state, center) {
-  return '<details class="aid-muscle-kind"><summary>' + label('inspector.muscleKind') +
-         '</summary>' + muscleGraphic(state, center) + '</details>';
-}
+const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
+                                      label('inspector.muscleKind') + '">' +
+                                      muscleGraphic(state, center) + '</div>';
 
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
 function driveMeaning(state, center) {
@@ -127,7 +126,7 @@ const ORGAN_PANELS = Object.freeze({
   muscle : (state, organ) => effectorGraphic(state, organ),
   gills : (state, organ) => gillGraphic(state, organ),
   gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
-  defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
+  defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : gonadPanel,
   sperm : gonadPanel,
@@ -146,7 +145,7 @@ const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
 const WHOLE_PICTURES = Object.freeze([
   'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm',
-  'gland', 'bladder'
+  'gland', 'bladder', 'muscle', 'gills', 'gutmuscle', 'defense'
 ]);
 // Barbels that only touch have no scent map to hold their marks.
 const wholePicture = (organ, center) =>
@@ -181,19 +180,23 @@ function motorTiming(state, center) {
   return t('studio.development.motorTiming',
            {integration : formatNumber(timing[1], 1), recovery : timing[2]});
 }
+const muscleChoice = (state, organ, center) =>
+    organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '';
+// Organs that hold their gate in their picture show only the choice of what the muscle does.
 const motorSection = (state, organ, center) =>
-    wholePicture(organ, center)
-        ? ''
-        : section(label('inspector.drive'),
-                  '<div title="' +
-                      escapeText(joinParts(
-                          [ label('development.organRest'), motorTiming(state, center) ])) +
-                      '">' +
-                      driveElement(
-                          center, label('inspector.drive'), () => label('development.netInput'),
-                          {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
-                      '</div>') +
-              (organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '');
+    (wholePicture(organ, center)
+         ? ''
+         : section(
+               label('inspector.drive'),
+               '<div title="' +
+                   escapeText(
+                       joinParts([ label('development.organRest'), motorTiming(state, center) ])) +
+                   '">' +
+                   driveElement(
+                       center, label('inspector.drive'), () => label('development.netInput'),
+                       {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
+                   '</div>')) +
+    muscleChoice(state, organ, center);
 const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)

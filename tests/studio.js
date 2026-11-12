@@ -2967,13 +2967,20 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const organ = model.findOrgan(bladder.document, bladder.organId);
       const pressure = organ.centers.find(c => c.key === 'pressure').id;
       const {handleMethods} = await import('../ui/studio/handles.js');
+      // The gland handle in the bladder picture, dragged to the second of three gland places.
+      const span = {width : 30, height : 10};
       const editor = {
         state : {document : bladder.document, sites},
+        handleDrag : {
+          id : organ.centers.find(c => c.key === 'float').id,
+          handle : 'nodes',
+          marks : {places : '0,0 10,0 20,0'},
+          size : span,
+          rect : {left : 0, top : 0, ...span}
+        },
         draftDesign(document) { this.state.document = document; }
       };
-      handleMethods.effectorPointer.call(editor,
-                                         {id : organ.id, code : MOTOR_KIND.bladder, name : 'nodes'},
-                                         (10 + 280 / 6) / 300, .5);
+      handleMethods.sensePointer.call(editor, {clientX : 10, clientY : 0});
       const enlarged = model.findOrgan(editor.state.document, organ.id);
       assert.equal(enlarged.centers.filter(c => c.key === 'float').length, 2,
                    'The bladder resizes to two muscles despite its extra pressure sensor');
@@ -2986,7 +2993,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.match(
           panels.organSettingsBlock(
               {...state, ...editor.state, selected : {kind : 'organ', id : organ.id}}, enlarged),
-          /data-effector-handle="nodes"/);
+          /data-sense-mark="nodes"/);
       const smaller = model.setOrganNodes(editor.state.document, organ.id, 1, sites);
       assert.equal(model.findOrgan(smaller, organ.id).centers.length, 2);
       assert.ok(model.findOrgan(smaller, organ.id).centers.some(c => c.id === pressure));
@@ -3067,7 +3074,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const effectorsView = await import('../ui/studio/view/effectors.js');
     const lone = model.findOrgan(gutDoc.document, gutDoc.organId);
     assert.match(effectorsView.gutGraphic({document : gutDoc.document, sites}, lone),
-                 /data-effector-handle="trait:q1"><line[^]*aid-graphic-handle/,
+                 /aid-graphic-handle[^>]*data-effector-handle="trait:q1"/,
                  'A gut without its throat still offers its length');
     const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');

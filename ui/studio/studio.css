@@ -360,6 +360,7 @@
 .aid-assembly-stamp:hover rect,.aid-assembly-stamp.selected rect{fill:#bdcfae;stroke:#fcf0c1}
 .aid-assembly-stamp:hover path,.aid-assembly-stamp.selected path{stroke:#17383b}
 .aid-gland-drops{fill:#e8c46a;stroke:none}
+.aid-fibre-rim{fill:none;stroke:#a78689;stroke-width:1.5}
 .aid-gate-track{stroke:#5d8790;stroke-width:2;stroke-dasharray:3 4;fill:none}
 .aid-hormone-influence{fill:none;stroke-width:1.8;stroke-dasharray:4 8}
 .aid-hormone-producer .aid-hormone-aura{fill:var(--hormone);fill-opacity:.17;stroke:var(--hormone);stroke-width:2.8;stroke-dasharray:3 4}
@@ -431,8 +432,6 @@
 .aid-spine-rest{fill:var(--aid-spine-fill);fill-opacity:.55;stroke:var(--aid-spine);stroke-width:1.6;stroke-linejoin:round}
 .aid-spine-fish{fill:var(--aid-sketch);stroke:var(--aid-sketch-line);stroke-width:22}
 .aid-spine-node{fill:#f3b48f;stroke:var(--aid-node-edge);stroke-width:1.2}
-.aid-spine-legend{fill:var(--aid-label-text);font-size:11px}
-.aid-spine-swatch.aid-spine-rest{stroke-width:5;stroke:var(--aid-spine-fill)}
 .aid-skin-field{display:block;width:100%;height:auto;margin:6px 0 2px;touch-action:none}
 .aid-skin-fish{fill:#1b434b;stroke:var(--aid-sketch-line);stroke-width:1.5;vector-effect:non-scaling-stroke}
 .aid-skin-patch path{fill:none;stroke:var(--aid-touch-felt);stroke-width:5;stroke-linecap:round;vector-effect:non-scaling-stroke}
@@ -601,8 +600,6 @@
 .aid-gonad-facts li{display:contents;cursor:pointer}
 .aid-gonad-facts b{color:#e6efe8;font-weight:600}
 .aid-muscle-kind{margin:10px 0 4px;border-top:1px solid #24484d;padding-top:8px}
-.aid-muscle-kind summary{cursor:pointer;font-size:12px;color:var(--aid-label-text);letter-spacing:.04em}
-.aid-muscle-kind[open] summary{margin-bottom:4px}
 .aid-muscle-functions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .aid-muscle-function{display:grid;justify-items:center;gap:3px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:9px;padding:7px 2px;font-size:11px;color:var(--aid-control-text)}
 .aid-muscle-function svg path{fill:none;stroke:var(--aid-motor);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}

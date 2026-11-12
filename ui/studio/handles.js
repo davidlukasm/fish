@@ -249,6 +249,7 @@ export const GRIPS = Object.freeze([
       id : g.dataset.effectorGraphic,
       handle : 'effector',
       name : h.dataset.effectorHandle,
+      marks : {...h.dataset},
       code : Number(g.dataset.effectorCode),
       side : Number(g.dataset.effectorSide)
     })
@@ -625,8 +626,8 @@ export const handleMethods = {
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
-    const patch =
-        organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites), organ);
+    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites),
+                                         organ, drag.marks);
     if (!patch)
       return;
     const changed =
