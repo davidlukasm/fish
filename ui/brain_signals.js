@@ -1,4 +1,4 @@
-import {FINS} from './fin_stroke.js';
+import {FINS, finSide, isPelvic} from './fin_stroke.js';
 import {motorTissue, motorVariant, portVariant, sidedTissue, variantPort} from './tissue.js';
 
 import {
@@ -381,10 +381,13 @@ export function brainPresentationFish(p) {
   const out = p.slice();
   if (p.birthing)
     Object.assign(out, {birthing : true, birthProgress : p.birthProgress, birthDuct : p.birthDuct});
+  // The pelvic fins keep the pose of their own strokes; the motor cycles follow the pectoral fins.
   out[FISH.fin_pose] = Object.values(FIN).map(
-      fin => brainDisplayMotorValue(p, fin === FIN.tail ? MOTOR_KIND.forward : MOTOR_KIND.turn,
-                                    p[FISH.fin_pose]?.[fin] || 0,
-                                    fin === FIN.tail ? brainTailFlank() : fin - FIN.left));
+      fin => isPelvic(fin) ? p[FISH.fin_pose]?.[fin] || 0
+                           : brainDisplayMotorValue(
+                                 p, fin === FIN.tail ? MOTOR_KIND.forward : MOTOR_KIND.turn,
+                                 p[FISH.fin_pose]?.[fin] || 0,
+                                 fin === FIN.tail ? brainTailFlank() : finSide(fin)));
   out[FISH.fin_pose][FINS] = p[FISH.fin_pose]?.[FINS];
   out[FISH.tail] = brainDisplayTail(p, p[FISH.tail] || 0);
   out[FISH.egg_yolk] = p.birthing

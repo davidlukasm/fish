@@ -5,6 +5,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -325,6 +326,8 @@ export function brainTissuePath(g, d, key, side, variant = '') {
     g.bezierCurveTo(p1[0] * r, p1[1] * r, p2[0] * r, p2[1] * r, p3[0] * r, p3[1] * r);
   } else if (variant === GUT_MUSCLE)
     fishGutPath(g, r, a);
+  else if (variant === PELVIC)
+    fishFinPath(g, r, a, FIN.pelvic_left + side);
   else if (key === INTERNAL_TISSUE) {
     const q = fishCNSShape(a);
     g.moveTo(q.tail * r, -q.cord * r);

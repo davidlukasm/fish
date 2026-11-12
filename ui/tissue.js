@@ -17,18 +17,25 @@ const named = (kinds, key) => Object.freeze(
     Object.fromEntries(Object.entries(kinds).map(([ name, kind ]) => [name, key(kind)])));
 export const SENSE_TISSUE = named(SENSE_KIND, senseTissue);
 export const MOTOR_TISSUE = named(MOTOR_KIND, motorTissue);
-// Gill pumps are suction cells and the gut muscle fin cells; they act on organs of their own.
-export const GILL = 'gill', GUT_MUSCLE = 'gutmuscle';
+// Gill pumps are suction cells and the gut muscle fin cells; they act on organs of their own. A
+// pelvic fin is a fin of its own behind the pectoral fin.
+export const GILL = 'gill', GUT_MUSCLE = 'gutmuscle', PELVIC = 'pelvic';
 // Organs drawn apart from the sense or muscle they belong to.
 export const VARIANT_TISSUE = Object.freeze({
   [BARBEL] : SENSE_TISSUE.odor,
   [GRAVITY] : SENSE_TISSUE.flow,
   [GILL] : MOTOR_TISSUE.suction,
-  [GUT_MUSCLE] : MOTOR_TISSUE.turn
+  [GUT_MUSCLE] : MOTOR_TISSUE.turn,
+  [PELVIC] : MOTOR_TISSUE.turn
 });
 const VARIANT_MUSCLES = Object.freeze([
   {variant : GILL, kind : MOTOR_KIND.suction, port : ORGAN_PORT.gills, stroke : STROKE_KIND.gill},
-  {variant : GUT_MUSCLE, kind : MOTOR_KIND.turn, port : ORGAN_PORT.gut, stroke : STROKE_KIND.gut}
+  {variant : GUT_MUSCLE, kind : MOTOR_KIND.turn, port : ORGAN_PORT.gut, stroke : STROKE_KIND.gut}, {
+    variant : PELVIC,
+    kind : MOTOR_KIND.turn,
+    port : ORGAN_PORT.pelvic,
+    stroke : [ STROKE_KIND.pelvic_left, STROKE_KIND.pelvic_right ]
+  }
 ]);
 export const portVariant = port => VARIANT_MUSCLES.find(m => m.port === port);
 // The organ a muscle cell drives, read from the port its effectors act on.
@@ -39,4 +46,8 @@ export const motorVariant = (key, effectors) =>
         ?.variant ??
     '';
 export const variantPort = variant => VARIANT_MUSCLES.find(m => m.variant === variant)?.port;
-export const variantStroke = variant => VARIANT_MUSCLES.find(m => m.variant === variant)?.stroke;
+// A variant's stroke; a paired fin's of its side.
+export const variantStroke = (variant, side = 0) => {
+  const stroke = VARIANT_MUSCLES.find(m => m.variant === variant)?.stroke;
+  return Array.isArray(stroke) ? stroke[side] : stroke;
+};

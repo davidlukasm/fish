@@ -22,6 +22,10 @@ inline constexpr std::size_t development_lattice_sites() {
 static_assert(development_lattice_sites() == DEVELOPMENT_SITES, "the lattice fills every site");
 // Light cells grow only in the head zone behind the snout.
 inline constexpr int EYE_ZONE = 1;
+// Pelvic fins sit at the front of the tail zone (a zone's front is u = 1): there the second
+// variant of a muscle is a fin.
+inline constexpr int TAIL_ZONE = 3;
+inline constexpr float PELVIC_REACH = .3f;
 inline cppn::Point development_site(std::size_t index) {
   for (int zone = 0; zone < cppn::input::zones; ++zone) {
     const auto &n = DEVELOPMENT_LATTICE[zone];
@@ -67,7 +71,7 @@ inline int development_function(const cppn::Point &p, Role role, int corner, int
   }
   if (corner == 0) {
     constexpr int muscle[cppn::input::zones] = {Aggression, Suction, Turn, Forward};
-    return muscle[p.zone];
+    return p.zone == TAIL_ZONE && variant && p.u >= 1 - PELVIC_REACH ? Turn : muscle[p.zone];
   }
   if (corner == 1)
     return surface ? Defense : none;

@@ -1,5 +1,5 @@
 import {CELL_DETAIL} from './brain_tissue.js';
-import {BARBEL, MOTOR_TISSUE, SENSE_TISSUE, tissueBase, tissueKind} from './tissue.js';
+import {BARBEL, GUT_MUSCLE, MOTOR_TISSUE, SENSE_TISSUE, tissueBase, tissueKind} from './tissue.js';
 import {NEURON} from './schema.js';
 import {brainClamp} from './brain.js';
 import {brainFinLocation, brainLocal, brainProject} from './brain_geometry.js';
@@ -64,13 +64,15 @@ function brainOrganBranch(d, part) {
         center = d.tissues.get(part.tissue).center,
         start = brainLocal(center.map((v, i) => v + (part.screen[i] - v) * detail), d);
   let root = start, curve = start.slice();
-  if (part.key === MOTOR_TISSUE.forward || part.key === MOTOR_TISSUE.turn) {
-    const q = brainFinLocation(n, tissueKind(part.key), a),
+  const variant = tissueBase(part.tissue);
+  if ((part.key === MOTOR_TISSUE.forward || part.key === MOTOR_TISSUE.turn) &&
+      variant !== GUT_MUSCLE) {
+    const q = brainFinLocation(n, tissueKind(part.key), a, variant),
           t = BRANCH.fin_start + BRANCH.fin_span * q.depth;
-    root = fishFinPoint(a, q.index, 0, q.across, q.lobe);
+    root = fishFinPoint(a, q.index, 0, q.across);
     curve = [
-      ...start, ...fishFinPoint(a, q.index, t * BRANCH.fin_handle, q.across, q.lobe),
-      ...fishFinPoint(a, q.index, t * BRANCH.fin_inner, q.across, q.lobe), ...root
+      ...start, ...fishFinPoint(a, q.index, t * BRANCH.fin_handle, q.across),
+      ...fishFinPoint(a, q.index, t * BRANCH.fin_inner, q.across), ...root
     ];
   } else if (tissueBase(part.tissue) === BARBEL) {
     const t = BRANCH.barbel_start + BRANCH.barbel_span * depth,

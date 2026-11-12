@@ -43,7 +43,9 @@ struct BrainInterface {
     float opponency = .5f, proximity_range = .5f, dark_share = 0;
     bool proximity = false, inner = false;
     std::uint32_t shared_receptor = 0;
-    int pressure_target = -1, pressure_kind = -1;
+    // The effector a pressure cell lies nearest to, what kind of pressure it feels and, for a
+    // stretch receptor, the port of the muscle it lies in.
+    int pressure_target = -1, pressure_kind = -1, pressure_port = -1;
     double time_steps = 4;
     double adaptation_rate = 0;
     bool visual() const { return channel == field::Light || channel == field::Proximity; }
@@ -62,8 +64,11 @@ struct BrainInterface {
     float threshold, strength, lever;
     std::array<float, 3> color{};
     float outside = 0, quality = 0;
-    // Share of a pectoral fin cell that pulls the fin forward: the antagonist of the back stroke.
+    // Share of a side fin cell that pulls the fin forward: the antagonist of the back stroke.
     float protraction = 0;
+    // Where a side fin cell sits along the body, ahead of the body's middle (+) or behind it (-),
+    // in half body lengths: the arm with which a push across the body turns it.
+    float arm = 0;
     // Fast share of a muscle cell's fibres (muscle_fibre.hh).
     float fibre = 0;
     std::array<float, field::HORMONES> hormones{};
@@ -85,9 +90,10 @@ struct BrainInterface {
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   // Force-weighted fast fibre share and summed force of the cells behind each stroke.
   std::array<double, STROKE_COUNT> fibre{}, stroke_capacity{};
-  // Push along the body per unit of a fin stroke, which counts its force times the lever; the
-  // lever with which each tail flank bends the body.
-  std::array<double, STROKE_COUNT> fin_push{};
+  // Per unit of force of each side fin stroke: its push along the body, its push across the body
+  // (away from its side) and the turning it gives (toward the other side); the lever with which
+  // each tail flank bends the body.
+  std::array<double, STROKE_COUNT> fin_push{}, fin_across{}, fin_turn{};
   std::array<double, 2> tail_lever{};
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
   std::array<StrokeTiming, 3> pigment_timing{};
@@ -100,8 +106,9 @@ struct BrainInterface {
   std::array<float, 3> visual_coverage{};
   static constexpr std::size_t ANATOMY_FIELDS = anatomy_column::count;
   std::array<float, ANATOMY_FIELDS> anatomy{};
+  // A drawn fin: its cells and force, where they sit, and how long its stroke lasts.
   struct Fin {
-    double cells = 0, strength = 0, x = 0, y = 0, spread = 0;
+    double cells = 0, strength = 0, x = 0, y = 0, spread = 0, steps = 0;
   };
   struct OrganForm {
     double weight = 0, x = 0, y = 0, z = 0, sy = 0, sz = 0;

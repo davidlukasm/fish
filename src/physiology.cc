@@ -217,8 +217,11 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.digestion = 0;
   if (!b.alive || !b.hatched || b.gut_energy <= 0)
     return 0;
+  // The wall moves food on with twice its pose, which averages its drive; how hard it squeezes,
+  // its pose, sets what is lost.
   const double hurried = std::clamp(b.gut_motility, 0., 1.),
-               passage = std::min(1., (1 + gut_motility::speedup * hurried) / gut_transit(b, p)),
+               passage =
+                   std::min(1., (1 + gut_motility::speedup * 2 * hurried) / gut_transit(b, p)),
                used = 1 - gut_motility::loss * hurried * hurried;
   const bool full = b.energy >= reserve_capacity(b);
   if (full && hurried <= 0)

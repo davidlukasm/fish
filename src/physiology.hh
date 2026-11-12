@@ -252,7 +252,7 @@ inline double gill_area(const Body &b) {
 // rest meets while the fish swims (ram filtering).
 inline double gill_water(const Body &b) {
   const double widest = maximum_mouth_aperture(b),
-               pumped = gill_area(b) * b.gill_signal * b.mouth.opening,
+               pumped = gill_area(b) * 2 * b.gill_signal * b.mouth.opening,
                held = std::max(0., b.mouth.opening - MOUTH_REST) / (1 - MOUTH_REST),
                ram = 2 * widest * held * std::max(0., b.motor().relative_speed);
   return (pumped + ram) * raker_passage(b);

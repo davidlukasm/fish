@@ -91,10 +91,13 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     for (double tension : b.motor().fin_tension)
       out << ' ' << tension;
     out << ' ' << b.motor().swimming_pending << ' ' << b.motor().angular_velocity << ' '
-        << b.motor().tail_side << ' ' << b.motor().tail_rest;
-    for (int side = 0; side < 2; ++side)
-      out << ' ' << b.motor().tail_push[side] << ' ' << b.motor().tail_turn[side];
-    out << '\n';
+        << b.motor().tail_pair.last << ' ' << b.motor().tail_pair.rest;
+    for (const auto &fin : b.motor().fin_pairs)
+      for (const auto &pair : fin)
+        out << ' ' << pair.last << ' ' << pair.rest;
+    for (double sweep : b.motor().sweep)
+      out << ' ' << sweep;
+    out << ' ' << b.motor().fatigue << '\n';
     out << "GAMETES " << b.reproduction().egg_yolk << ' ' << b.reproduction().egg_laying << ' '
         << b.reproduction().sperm_store;
     for (const auto *colors :

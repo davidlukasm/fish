@@ -1,4 +1,4 @@
-import {HORMONES} from '../../schema.js';
+import {BLOOD_SUBSTANCE} from '../../schema.js';
 import {addOrgan, addWire, findOrgan, newDocument, updateCenter, wheelPlace} from './document.js';
 import {placeSystem} from './systems.js';
 
@@ -73,7 +73,7 @@ export function exampleDocument(names, sites, wheel) {
       doc = result.document;
     placed[key] = result?.organId;
   }
-  const [q1, q2] = wheelPlace(wheel, HORMONES.levels + 1);
+  const [q1, q2] = wheelPlace(wheel, BLOOD_SUBSTANCE.reserve);
   for (const center of findOrgan(doc, placed.reserve).centers)
     doc = updateCenter(doc, center.id, {q1, q2, qwidth : 0, threshold : 0});
   for (const [from, to, fromPort, toPort, pairing = 'same'] of WIRES) {

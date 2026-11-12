@@ -102,24 +102,24 @@ inline constexpr std::size_t gill_pose = 23;
 inline constexpr std::size_t defense = 24;
 inline constexpr std::size_t aggression = 25;
 inline constexpr std::size_t relative_speed = 26;
-inline constexpr std::size_t tail = 27;
-inline constexpr std::size_t impulse_left = 28;
-inline constexpr std::size_t impulse_right = 29;
-inline constexpr std::size_t impulse_tail_left = 30;
-inline constexpr std::size_t impulse_tail_right = 31;
-inline constexpr std::size_t motor_factor = 32;
-inline constexpr std::size_t bladder_fill = 33;
-inline constexpr std::size_t satiety = 34;
-inline constexpr std::size_t damage = 35;
-inline constexpr std::size_t fin_age_tail = 36;
-inline constexpr std::size_t fin_age_left = 37;
-inline constexpr std::size_t fin_age_right = 38;
-inline constexpr std::size_t fin_peak_tail = 39;
-inline constexpr std::size_t fin_peak_left = 40;
-inline constexpr std::size_t fin_peak_right = 41;
-inline constexpr std::size_t fin_steps_tail = 42;
-inline constexpr std::size_t fin_steps_left = 43;
-inline constexpr std::size_t fin_steps_right = 44;
+inline constexpr std::size_t impulse_left = 27;
+inline constexpr std::size_t impulse_right = 28;
+inline constexpr std::size_t impulse_tail_left = 29;
+inline constexpr std::size_t impulse_tail_right = 30;
+inline constexpr std::size_t motor_factor = 31;
+inline constexpr std::size_t bladder_fill = 32;
+inline constexpr std::size_t satiety = 33;
+inline constexpr std::size_t damage = 34;
+inline constexpr std::size_t fin_age_tail = 35;
+inline constexpr std::size_t fin_age_left = 36;
+inline constexpr std::size_t fin_age_right = 37;
+inline constexpr std::size_t fin_age_pelvic_left = 38;
+inline constexpr std::size_t fin_age_pelvic_right = 39;
+inline constexpr std::size_t fin_peak_tail = 40;
+inline constexpr std::size_t fin_peak_left = 41;
+inline constexpr std::size_t fin_peak_right = 42;
+inline constexpr std::size_t fin_peak_pelvic_left = 43;
+inline constexpr std::size_t fin_peak_pelvic_right = 44;
 inline constexpr std::size_t morphology_asset = 45;
 inline constexpr std::size_t hatch_radius = 46;
 inline constexpr std::size_t birth_tissue = 47;
@@ -167,45 +167,45 @@ inline constexpr std::array<Field, 64> fields = {{
 {Type::u16, 64, 2, 4096},
 {Type::u16, 66, 2, 4096},
 {Type::u8, 68, 1, 8.0},
-{Type::i16, 69, 2, 8192},
+{Type::i16, 69, 2, 1024.0},
 {Type::i16, 71, 2, 1024.0},
 {Type::i16, 73, 2, 1024.0},
 {Type::i16, 75, 2, 1024.0},
-{Type::i16, 77, 2, 1024.0},
+{Type::u16, 77, 2, 4096},
 {Type::u16, 79, 2, 4096},
 {Type::u16, 81, 2, 4096},
 {Type::u16, 83, 2, 4096},
-{Type::u16, 85, 2, 4096},
-{Type::i32, 87, 4, 1},
-{Type::i32, 91, 4, 1},
-{Type::i32, 95, 4, 1},
-{Type::f32, 99, 4, 1},
-{Type::f32, 103, 4, 1},
-{Type::f32, 107, 4, 1},
-{Type::u8, 111, 1, 1},
-{Type::u8, 112, 1, 1},
-{Type::u8, 113, 1, 1},
-{Type::u32, 114, 4, 1},
-{Type::f32, 118, 4, 1},
-{Type::u16, 122, 2, 16.0},
-{Type::i64, 124, 8, 1},
-{Type::u32, 132, 4, 1},
-{Type::f32, 136, 4, 1},
-{Type::f32, 140, 4, 1},
-{Type::f32, 144, 4, 1},
-{Type::f32, 148, 4, 1},
-{Type::f32, 152, 4, 1},
-{Type::u8, 156, 1, 1},
-{Type::u8, 157, 1, 1},
-{Type::f32, 158, 4, 1},
-{Type::f32, 162, 4, 1},
-{Type::f32, 166, 4, 1},
-{Type::u8, 170, 1, 1},
-{Type::f32, 171, 4, 1},
-{Type::u16, 175, 2, 65535},
-{Type::u16, 177, 2, 65535},
+{Type::i32, 85, 4, 1},
+{Type::i32, 89, 4, 1},
+{Type::i32, 93, 4, 1},
+{Type::i32, 97, 4, 1},
+{Type::i32, 101, 4, 1},
+{Type::f32, 105, 4, 1},
+{Type::f32, 109, 4, 1},
+{Type::f32, 113, 4, 1},
+{Type::f32, 117, 4, 1},
+{Type::f32, 121, 4, 1},
+{Type::u32, 125, 4, 1},
+{Type::f32, 129, 4, 1},
+{Type::u16, 133, 2, 16.0},
+{Type::i64, 135, 8, 1},
+{Type::u32, 143, 4, 1},
+{Type::f32, 147, 4, 1},
+{Type::f32, 151, 4, 1},
+{Type::f32, 155, 4, 1},
+{Type::f32, 159, 4, 1},
+{Type::f32, 163, 4, 1},
+{Type::u8, 167, 1, 1},
+{Type::u8, 168, 1, 1},
+{Type::f32, 169, 4, 1},
+{Type::f32, 173, 4, 1},
+{Type::f32, 177, 4, 1},
+{Type::u8, 181, 1, 1},
+{Type::f32, 182, 4, 1},
+{Type::u16, 186, 2, 65535},
+{Type::u16, 188, 2, 65535},
 }};
-inline constexpr std::size_t bytes = 179;
+inline constexpr std::size_t bytes = 190;
 }
 namespace food {
 inline constexpr std::size_t x = 0;

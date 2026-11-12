@@ -4,6 +4,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   MOTOR_TISSUE,
@@ -19,7 +20,7 @@ export const brain_occlusionState = {};
 function brainBehindSkin(key, variant = '') {
   return !variant &&
              [ MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.defense ].includes(key) ||
-         variant === BARBEL;
+         variant === BARBEL || variant === PELVIC;
 }
 
 const TISSUE_LAYERS = Object.freeze([

@@ -337,6 +337,8 @@ void Ecosystem::collect_corpses() {
             s[V::fin_tail] = b.motor_.fin_tension[fin::tail];
             s[V::fin_left] = b.motor_.fin_tension[fin::left];
             s[V::fin_right] = b.motor_.fin_tension[fin::right];
+            s[V::fin_pelvic_left] = b.motor_.fin_tension[fin::pelvic_left];
+            s[V::fin_pelvic_right] = b.motor_.fin_tension[fin::pelvic_right];
             s[V::mouth_pose] = b.motor_.mouth_pose;
             s[V::bite_pose] = b.motor_.bite_pose;
             s[V::suction_pose] = b.motor_.suction_pose;

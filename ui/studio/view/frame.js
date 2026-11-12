@@ -12,9 +12,12 @@ const OUTLINE = Object.freeze({
   nose : 46,
   tail : {reach : 100, spread : 96, fork : 46, bulge : .18, notch : .32},
   fins : {at : 420, length : 92, out : 66, sweep : 78, inset : .9, round : .55, base : .6},
+  // Pelvic fins sit at the front of the tail zone, smaller than the pectoral fins.
+  pelvic : {at : 782, length : 54, out : 40, sweep : 50, inset : .9, round : .55, base : .6},
   rays : 6
 });
 export const FIN_BASE = Object.freeze({at : OUTLINE.fins.at, length : OUTLINE.fins.length});
+export const PELVIC_BASE = Object.freeze({at : OUTLINE.pelvic.at, length : OUTLINE.pelvic.length});
 const f = value => Number(value).toFixed(1);
 const xy = ([ x, y ]) => f(x) + ' ' + f(y);
 function through(points) {
@@ -35,9 +38,9 @@ export const SNOUT_TIP =
     Object.freeze({x : BODY_KNOTS[0][0] - OUTLINE.nose, y : BODY_FRAME.middle});
 const KAPPA = .5523;
 // The fins grow with their muscles as the Aquarium grows them, from the volume of the engine's
-// fins (tail, left, right); the outline's fins are those of a fin of volume FIN_REFERENCE, and
-// of that size while the engine has not answered. They are drawn by their size against it to the
-// power FIN_SHOWN, so a fin without muscles still reads as a fin and a strong one stays in the
+// fins (tail, side and pelvic fins); the outline's fins are those of a fin of volume FIN_REFERENCE,
+// and of that size while the engine has not answered. They are drawn by their size against it to
+// the power FIN_SHOWN, so a fin without muscles still reads as a fin and a strong one stays in the
 // picture.
 const FIN_REFERENCE = 1, FIN_SHOWN = .55;
 // A tail fin too strong for the picture at full size is drawn as large as fits, in its own shape.
@@ -55,7 +58,13 @@ export function finSizes(fins = null) {
     sides : [ FIN.left, FIN.right ].map(index => ({
                                           length : ratio(sideFinSize, index, 'length'),
                                           out : ratio(sideFinSize, index, 'spread')
-                                        }))
+                                        })),
+    // A pelvic fin is drawn only where the engine grew one.
+    pelvic : [ FIN.pelvic_left, FIN.pelvic_right ].map(index => fins?.[index]?.cells > 0 ? {
+      length : ratio(sideFinSize, index, 'length'),
+      out : ratio(sideFinSize, index, 'spread')
+    }
+                                                                                         : null)
   };
 }
 function skinParts() {
@@ -142,10 +151,10 @@ export const fieldFish = (field, scale, cls) =>
     '<path class="' + cls + '" d="' + fishPath() + '" transform="translate(' +
     fixed(field.cx - BODY_MIDDLE.x * scale) + ' ' + fixed(field.cy - BODY_MIDDLE.y * scale) +
     ') scale(' + scale + ')"/>';
-const finBase = (x, side) =>
-    BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * OUTLINE.fins.inset;
+const finBase = (x, side, F = OUTLINE.fins) =>
+    BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * F.inset;
 export const finRoots =
-    () => [-1, 1].map(side => ({x : OUTLINE.fins.at, y : finBase(OUTLINE.fins.at, side)}));
+    (F = OUTLINE.fins) => [-1, 1].map(side => ({x : F.at, y : finBase(F.at, side, F)}));
 export function skinAt(x, side) {
   const W = SKIN_WIDTH;
   let k = 1;
@@ -184,16 +193,30 @@ export function skinPoints(step) {
   }
   return points;
 }
-export function finPaths(sizes = finSizes()) {
-  return [ -1, 1 ].map((side, k) => finShape(side, sizes.sides[k]).d);
+// The side fins to draw: both pectoral fins, and the pelvic fins the fish has.
+export function sideFins(sizes = finSizes()) {
+  const roots = finRoots(), pelvicRoots = finRoots(OUTLINE.pelvic);
+  return [
+    ...[-1, 1].map((side, k) => ({
+                     side,
+                     pelvic : false,
+                     root : roots[k],
+                     ...finShape(side, sizes.sides[k], OUTLINE.fins)
+                   })),
+    ...[-1, 1]
+        .map((side, k) => sizes.pelvic?.[k] && {
+          side,
+          pelvic : true,
+          root : pelvicRoots[k],
+          ...finShape(side, sizes.pelvic[k], OUTLINE.pelvic)
+        })
+        .filter(Boolean)
+  ];
 }
-export function finRays(sizes = finSizes()) {
-  return [ -1, 1 ].map((side, k) => finShape(side, sizes.sides[k]).rays);
-}
-function finShape(side, size) {
-  const F = OUTLINE.fins, sweep = F.sweep * size.length, out = F.out * size.out;
-  const front = [ F.at, finBase(F.at, side) ],
-        back = [ F.at + F.length, finBase(F.at + F.length, side) ];
+function finShape(side, size, F) {
+  const sweep = F.sweep * size.length, out = F.out * size.out;
+  const front = [ F.at, finBase(F.at, side, F) ],
+        back = [ F.at + F.length, finBase(F.at + F.length, side, F) ];
   const tip = [ F.at + F.length / 2 + sweep, front[1] + side * out ];
   const lead = [ F.at + sweep * (1 - F.round), front[1] + side * out * (1 + F.round / 2) ];
   const trail = [ back[0] + sweep / 2, back[1] + side * out / 3 ];

@@ -943,6 +943,30 @@ void wrigglers_lift_their_snout_out_of_mud(const Genome &g) {
         "a wriggler turns in mud like it moves: lifting its snout as easily as rising");
   check(stiff < lower, "a stiff body turns harder in mud than a wriggler");
 }
+// After a test changes which share of the side fin cells protracts, each stroke of a fin takes
+// the cells' force by that share, with the timing and fibres the fin had.
+void resplit_fin_strokes(BrainInterface &a) {
+  for (int f = 0; f < SIDE_FINS; ++f)
+    for (int side = 0; side < 2; ++side) {
+      const int back = BACK_STROKES[f][side], front = FRONT_STROKES[f][side];
+      const auto timing = std::max(a.stroke_timing[back], a.stroke_timing[front],
+                                   [](const auto &x, const auto &y) { return x.steps < y.steps; });
+      const double fibres = std::max(a.fibre[back], a.fibre[front]);
+      std::array<double, 2> force{};
+      for (const auto &e : a.effectors)
+        if (e.port == FIN_PORTS[f] && (e.lever < 0 ? 0 : 1) == side) {
+          force[0] += e.strength * (1 - e.protraction);
+          force[1] += e.strength * e.protraction;
+        }
+      for (const auto &[stroke, share] :
+           std::array<std::pair<int, double>, 2>{{{back, force[0]}, {front, force[1]}}}) {
+        a.stroke_capacity[stroke] = share;
+        a.stroke_timing[stroke] = timing;
+        a.fibre[stroke] = fibres;
+      }
+    }
+  fin_mechanics(a);
+}
 void pectoral_antagonists_back_the_fish_up(const Genome &g) {
   // Only the pectoral fins contract, fully. Their back strokes push the fish ahead, the forward
   // strokes of their antagonists push it back, and both together hold it in place.
@@ -957,7 +981,7 @@ void pectoral_antagonists_back_the_fish_up(const Genome &g) {
         fin_cells.insert(e.neuron);
       }
     check(!fin_cells.empty(), "the start fish has pectoral fin muscles");
-    fin_pushes(*layout);
+    resplit_fin_strokes(*layout);
     Genome fins = g;
     fins.interface = layout;
     Ecosystem w(SEED);
@@ -981,6 +1005,225 @@ void pectoral_antagonists_back_the_fish_up(const Genome &g) {
   check(ahead > 0 && back < 0, "back strokes push a fish ahead, the antagonists push it back");
   check(std::abs(held) < STILL * ahead, "antagonists working together hold the fish in place");
 }
+void pelvic_fins_grow_at_the_front_of_the_tail_zone() {
+  // A muscle's second variant makes a fin at the front of the tail zone, a tail muscle elsewhere.
+  int pelvic = 0;
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    const auto p = field::development_site(i);
+    if (p.zone != field::TAIL_ZONE)
+      continue;
+    const int plain = field::development_function(p, field::Role::Effector, 0, 0),
+              second = field::development_function(p, field::Role::Effector, 0, 1);
+    const bool front = p.u >= 1 - field::PELVIC_REACH;
+    pelvic += second == field::Turn;
+    check(plain == field::Forward && second == (front ? field::Turn : field::Forward),
+          "the tail zone grows pelvic fin cells at its front only, and tail muscle elsewhere");
+  }
+  check(pelvic > 0, "the tail zone has room for pelvic fins");
+}
+void side_fins_stroke_fully_when_let_slack_and_beat_at_their_angle(const Genome &g) {
+  // Both pectoral fins work alike; half of each fin's cells pull it back, the other half forward.
+  // A fin let slack for a stroke's length between its strokes drifts back without pushing and
+  // sweeps fully again: back strokes so drive the fish ahead, forward strokes back it up. The same
+  // muscle striking on and on sweeps the fin only partly, both muscles at once brace it. One fin
+  // let slack between its strokes turns the fish further than one striking on and on. A fin
+  // beating outward pushes the fish away from itself.
+  constexpr int SWIMMING = 100;
+  constexpr double STILL = .1, ALIKE = .25;
+  enum Mode { OnAndOn, Slack, Backing, Together, LeftOnAndOn, LeftSlack, LeftOut, RightOut };
+  struct Path {
+    double ahead = 0, across = 0, turned = 0;
+  };
+  const auto swim = [&](Mode mode) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    const bool out = mode == LeftOut || mode == RightOut,
+               left = mode == LeftOnAndOn || mode == LeftSlack || mode == LeftOut;
+    std::map<std::uint32_t, bool> cells;
+    std::array<int, 2> counted{};
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::turn) {
+        const int side = e.lever < 0 ? 0 : 1;
+        const bool front = !out && counted[side]++ % 2;
+        e.protraction = front ? 1.f : 0.f;
+        e.quality = out ? 1.f : 0.f;
+        if (mode < LeftOnAndOn || (side == 0 ? left : mode == RightOut))
+          cells[e.neuron] = front;
+      }
+    check(counted[0] > 1 || out, "the start fish has pectoral fin cells to split");
+    resplit_fin_strokes(*layout);
+    Genome fins = g;
+    fins.interface = layout;
+    Ecosystem w(SEED);
+    w.resize(800, 500);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, fins, 400, 250);
+    const auto id = p.id;
+    const int beat = std::max(1, layout->stroke_timing[BACK_STROKES[0][0]].recovery);
+    int tick = 0;
+    p.body.set_actuation_probe([&](std::uint32_t cell, float) {
+      const auto at = cells.find(cell);
+      if (at == cells.end())
+        return 0.f;
+      const bool front = at->second, slack_now = (tick / beat) % 2 == 1;
+      const bool pulls = mode == Together                     ? true
+                         : mode == Backing                    ? front && !slack_now
+                         : mode == Slack || mode == LeftSlack ? !front && !slack_now
+                                                              : !front;
+      return pulls ? 1.f : 0.f;
+    });
+    Path path;
+    for (; tick < SWIMMING; ++tick) {
+      const auto &before = individual(w, id).body;
+      const double x = before.x, y = before.y, heading = before.angle;
+      w.tick(false);
+      const auto &b = individual(w, id).body;
+      const double dx = w.field.delta_x(b.x - x), dy = b.y - y;
+      path.ahead += dx * std::cos(heading) + dy * std::sin(heading);
+      path.across += -dx * std::sin(heading) + dy * std::cos(heading);
+      path.turned += std::remainder(b.angle - heading, 2 * PI);
+    }
+    return path;
+  };
+  const auto on = swim(OnAndOn), slack = swim(Slack), backing = swim(Backing),
+             together = swim(Together), left_on = swim(LeftOnAndOn), left_slack = swim(LeftSlack),
+             left = swim(LeftOut), right = swim(RightOut);
+  std::cout << "Seitenflossen (voraus): Rückschlag immer wieder " << on.ahead << ", mit Pausen "
+            << slack.ahead << ", Vorschlag mit Pausen " << backing.ahead << ", beide zugleich "
+            << together.ahead << "; linke Flosse dreht immer wieder " << left_on.turned
+            << ", mit Pausen " << left_slack.turned << "; nach außen (voraus/quer) links "
+            << left.ahead << '/' << left.across << ", rechts " << right.ahead << '/' << right.across
+            << "\n";
+  check(slack.ahead > on.ahead && on.ahead > 0,
+        "a fin let slack between its back strokes drives the fish further than one striking on "
+        "and on");
+  check(backing.ahead < 0 && std::abs(backing.ahead + slack.ahead) < ALIKE * slack.ahead,
+        "forward strokes with slack between back the fish up as far as back strokes drive it");
+  check(std::abs(together.ahead) < STILL * slack.ahead,
+        "a fin's antagonists pulling together only brace it");
+  check(left_slack.turned * left_on.turned > 0 &&
+            std::abs(left_slack.turned) > std::abs(left_on.turned),
+        "one fin let slack between its strokes turns the fish further than one striking on");
+  check(left.across > 0 && right.across < 0 && std::abs(left.ahead) < on.ahead &&
+            std::abs(right.ahead) < on.ahead,
+        "a fin beating outward pushes the fish away from itself, not ahead");
+}
+void fins_back_a_fish_out_of_the_mud(const Genome &g) {
+  // A fish has dug itself into the mud head first, just under its surface. Its pectoral fins'
+  // protractors, let slack between their strokes, pull it back out along its heading; without
+  // them it stays buried.
+  constexpr double MUD = 60, SPREAD = 120, FREED = .5, COVER = 1;
+  constexpr int BACKING = 200;
+  const auto dig = [&](bool backing) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    std::set<std::uint32_t> protractors;
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::turn) {
+        e.protraction = 1;
+        e.quality = 0;
+        protractors.insert(e.neuron);
+      }
+    resplit_fin_strokes(*layout);
+    Genome fins = g;
+    fins.interface = layout;
+    Ecosystem w(SEED);
+    w.starter_world();
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    const auto &surfaces = w.field.vegetation().surfaces;
+    const auto floor = std::find_if(surfaces.begin(), surfaces.end(), [](const SurfacePatch &s) {
+      return s.normal.y <= -seabed::floor_normal;
+    });
+    check(floor != surfaces.end(), "the tank has a floor");
+    const auto mid = surface_midpoint(*floor);
+    check(w.field.edit_environment("sediment", mid.x, mid.y, SPREAD, -1, MUD),
+          "mud covers the floor");
+    // The mud's surface above the middle of the floor, where it already lay before.
+    double surface = 0;
+    while (w.field.sediment_immersion(mid.x + floor->normal.x * surface,
+                                      mid.y + floor->normal.y * surface, COVER) > 0)
+      surface += COVER;
+    auto &p = adult(w, fins, mid.x, mid.y);
+    const auto id = p.id;
+    const double depth = surface - body_radius(p.body) - COVER;
+    p.body.x = mid.x + floor->normal.x * depth;
+    p.body.y = mid.y + floor->normal.y * depth;
+    p.body.angle = std::atan2(-floor->normal.y, -floor->normal.x);
+    check(w.field.sediment_immersion(p.body.x, p.body.y, body_radius(p.body)) == 1,
+          "the fish has dug in");
+    const int beat = std::max(1, layout->stroke_timing[FRONT_STROKES[0][0]].recovery);
+    int tick = 0;
+    p.body.set_actuation_probe([&](std::uint32_t cell, float) {
+      return backing && protractors.count(cell) && (tick / beat) % 2 == 0 ? 1.f : 0.f;
+    });
+    for (; tick < BACKING; ++tick)
+      w.tick(false);
+    const auto &b = individual(w, id).body;
+    return w.field.sediment_immersion(b.x, b.y, body_radius(b));
+  };
+  const double stays = dig(false), backed = dig(true);
+  std::cout << "Im Schlamm eingegraben: ohne Vorzieher " << stays << ", rückwärts rudernd "
+            << backed << "\n";
+  check(stays > FREED && backed < FREED, "fins backing with slack pull a fish out of the mud");
+}
+void side_fins_hold_a_fish_up_on_the_mud(const Genome &g) {
+  // A fish on the mud swims head down into it, the tail's flanks taking turns. Its side fins,
+  // spread on the ground, hold it up: without them it digs in deepest, large ones keep it
+  // highest.
+  constexpr double MUD = 60, SPREAD = 120, STEP = 1;
+  constexpr int DIGGING = 200;
+  constexpr float LARGE = 20;
+  const auto depth = [&](float fins) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    for (int f = 0; f < SIDE_FINS; ++f)
+      for (int side = 0; side < 2; ++side)
+        layout->fins[side_fin_index(f, side)].strength *= fins;
+    std::map<std::uint32_t, int> tail;
+    for (const auto &e : layout->effectors)
+      if (e.port == organ_port::forward)
+        tail[e.neuron] = e.lever == 0 ? -1 : e.lever < 0 ? 0 : 1;
+    Genome g2 = g;
+    g2.interface = layout;
+    Ecosystem w(SEED);
+    w.starter_world();
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    const auto &surfaces = w.field.vegetation().surfaces;
+    const auto floor = std::find_if(surfaces.begin(), surfaces.end(), [](const SurfacePatch &s) {
+      return s.normal.y <= -seabed::floor_normal;
+    });
+    check(floor != surfaces.end(), "the tank has a floor");
+    const auto mid = surface_midpoint(*floor);
+    check(w.field.edit_environment("sediment", mid.x, mid.y, SPREAD, -1, MUD),
+          "mud covers the floor");
+    double surface = 0;
+    while (w.field.sediment_immersion(mid.x + floor->normal.x * surface,
+                                      mid.y + floor->normal.y * surface, STEP) > 0)
+      surface += STEP;
+    auto &p = adult(w, g2, mid.x, mid.y);
+    const auto id = p.id;
+    const double height = surface + body_radius(p.body) / 2;
+    p.body.x = mid.x + floor->normal.x * height;
+    p.body.y = mid.y + floor->normal.y * height;
+    p.body.angle = std::atan2(-floor->normal.y, -floor->normal.x);
+    const int beat = std::max(1, layout->stroke_timing[StrokeTailLeft].recovery);
+    int tick = 0;
+    p.body.set_actuation_probe([&](std::uint32_t cell, float) {
+      const auto at = tail.find(cell);
+      return at != tail.end() && (at->second < 0 || at->second == (tick / beat) % 2) ? 1.f : 0.f;
+    });
+    for (; tick < DIGGING; ++tick)
+      w.tick(false);
+    const auto &b = individual(w, id).body;
+    return surface -
+           (w.field.delta_x(b.x - mid.x) * floor->normal.x + (b.y - mid.y) * floor->normal.y);
+  };
+  const double bare = depth(0), own = depth(1), large = depth(LARGE);
+  std::cout << "Tiefe unter der Schlammoberfläche nach Graben: ohne Seitenflossen " << bare
+            << ", eigene " << own << ", große " << large << "\n";
+  check(bare > own && own > large, "side fins spread on the mud hold a fish up, large ones more");
+}
 void tail_flanks_take_turns_bend_alone_and_brace_together(const Genome &g) {
   // Only the tail works, flank by flank: taking turns, one flank alone (gently, or at full force
   // as an escape), or both at once. A left pectoral back stroke shows which way is left. A gentle
@@ -1003,7 +1246,7 @@ void tail_flanks_take_turns_bend_alone_and_brace_together(const Genome &g) {
     for (auto &e : layout->effectors)
       if (e.port == organ_port::turn)
         e.protraction = 0;
-    fin_pushes(*layout);
+    fin_mechanics(*layout);
     Genome tail = g;
     tail.interface = layout;
     Ecosystem w(SEED);
@@ -1059,6 +1302,60 @@ void tail_flanks_take_turns_bend_alone_and_brace_together(const Genome &g) {
   check(std::abs(both.ahead) < STILL * alternating.ahead &&
             std::abs(both.turned) < STILL * std::abs(left.turned),
         "both flanks at once only stiffen the body");
+}
+void fast_fibres_tire_and_the_blood_tells(const Genome &g) {
+  // The tail sprints with fast fibres, flanks taking turns, then rests. Its fibres' exhaustion
+  // rises while it works and falls while it rests, and a blood cell tuned to it reads it; with
+  // slow fibres nothing tires.
+  constexpr int SPRINT = 300, REST = 600;
+  constexpr double TIRED = .2;
+  const auto run = [&](double fast) {
+    auto layout = std::make_shared<BrainInterface>(*g.interface);
+    std::map<std::uint32_t, int> tail;
+    for (auto &e : layout->effectors)
+      if (e.port == organ_port::forward) {
+        e.fibre = float(fast);
+        tail[e.neuron] = e.lever == 0 ? -1 : e.lever < 0 ? 0 : 1;
+      }
+    for (int s = 0; s < 2; ++s)
+      layout->fibre[TAIL_STROKES[s]] = fast;
+    Genome fibres = g;
+    fibres.interface = layout;
+    Ecosystem w(SEED);
+    w.resize(4000, 800);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.food_burst.strength = 0;
+    auto &p = adult(w, fibres, 400, 300);
+    p.body.angle = 0;
+    const auto id = p.id;
+    const int beat = std::max(1, layout->stroke_timing[StrokeTailLeft].recovery);
+    int tick = 0;
+    bool working = true;
+    p.body.set_actuation_probe([&](std::uint32_t cell, float) {
+      const auto at = tail.find(cell);
+      return working && at != tail.end() && (at->second < 0 || at->second == (tick / beat) % 2)
+                 ? 1.f
+                 : 0.f;
+    });
+    for (; tick < SPRINT; ++tick)
+      w.tick(false);
+    const double tired = individual(w, id).body.motor().fatigue;
+    working = false;
+    for (int k = 0; k < REST; ++k)
+      w.tick(false);
+    return std::pair{tired, individual(w, id).body.motor().fatigue};
+  };
+  const auto [sprinted, rested] = run(1);
+  const auto [slow, slow_rested] = run(0);
+  BrainInterface::Receptor blood;
+  blood.hormones[field::FATIGUE_SUBSTANCE] = 1;
+  const double read = field::blood_stimulus(blood.hormones, field::Hormones{}, 0, 0, sprinted);
+  std::cout << "Erschöpfung schnelle Fasern nach Sprint/Ruhe " << sprinted << '/' << rested
+            << ", langsame " << slow << '/' << slow_rested << "; Blutzelle liest " << read << "\n";
+  check(sprinted > TIRED && rested < sprinted && slow == 0 && slow_rested == 0,
+        "fast fibres tire as they work and recover at rest, slow fibres do not tire");
+  check(read == sprinted, "a blood cell tuned to fatigue reads the fibres' exhaustion");
 }
 void muscle_fibres_each_have_their_strength(const Genome &g) {
   // Only the tail works, with all its fibres of one kind: fast, mixed or slow.
@@ -2155,9 +2452,14 @@ int main() {
     dark_cells_report_what_is_darker_than_the_surround(g);
     wrigglers_lift_their_snout_out_of_mud(g);
     pectoral_antagonists_back_the_fish_up(g);
+    side_fins_stroke_fully_when_let_slack_and_beat_at_their_angle(g);
+    pelvic_fins_grow_at_the_front_of_the_tail_zone();
+    fins_back_a_fish_out_of_the_mud(g);
+    side_fins_hold_a_fish_up_on_the_mud(g);
     tail_flanks_take_turns_bend_alone_and_brace_together(g);
     resting_fish_sink_unless_their_bladder_carries_them(g);
     muscle_fibres_each_have_their_strength(g);
+    fast_fibres_tire_and_the_blood_tells(g);
     tail_and_fins_push_alike_where_each_fits();
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);

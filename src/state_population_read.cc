@@ -320,14 +320,19 @@ void PopulationCheckpoint::read_swimming(std::istream &in, Body &b) {
     scalar(in, tension, 0, state::MAX_SIGNAL);
   value(in, b.motor_.swimming_pending);
   scalar(in, b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
-  value(in, b.motor_.tail_side);
-  value(in, b.motor_.tail_rest);
-  if (b.motor_.tail_side < -1 || b.motor_.tail_side > 1 || b.motor_.tail_rest < 0)
-    throw std::runtime_error("invalid tail side");
-  for (int side = 0; side < 2; ++side) {
-    scalar(in, b.motor_.tail_push[side], 0, 1);
-    scalar(in, b.motor_.tail_turn[side], 0, 1);
-  }
+  const auto read_pair = [&](AntagonistPair &pair) {
+    value(in, pair.last);
+    value(in, pair.rest);
+    if (pair.last < -1 || pair.last > 1 || pair.rest < 0)
+      throw std::runtime_error("invalid antagonist state");
+  };
+  read_pair(b.motor_.tail_pair);
+  for (auto &fin : b.motor_.fin_pairs)
+    for (auto &pair : fin)
+      read_pair(pair);
+  for (auto &sweep : b.motor_.sweep)
+    scalar(in, sweep, 0, 1);
+  scalar(in, b.motor_.fatigue, 0, 1);
 }
 void PopulationCheckpoint::read_gametes(std::istream &in, Body &b, double energy_limit) {
   std::string tag;

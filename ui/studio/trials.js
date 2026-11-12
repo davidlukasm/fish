@@ -7,7 +7,7 @@ import {
   substanceBound
 } from './model/document.js';
 import {organCells} from './view/vision.js';
-import {organFunction} from './model/organs.js';
+import {isPelvicMuscle, organFunction} from './model/organs.js';
 import {sideOf} from './model/layout.js';
 import {HORMONE_EFFECT, MOTOR_KIND} from '../schema.js';
 import {planTrace, cppnTrace} from './model/trace.js';
@@ -276,8 +276,10 @@ export const trialMethods = {
           side = sideOf(organ);
     const moved = {
       [MOTOR_KIND.forward] : () => part('[data-part="tail"]', 'aid-move-tail'),
-      [MOTOR_KIND.turn] : () => part('[data-part="fin"][data-side="' + side + '"]',
-                                     side < 0 ? 'aid-move-fin-up' : 'aid-move-fin-down'),
+      [MOTOR_KIND.turn] : () =>
+          part('[data-part="fin"][data-fin="' + (isPelvicMuscle(organ) ? 'pelvic' : 'pectoral') +
+                   '"][data-side="' + side + '"]',
+               side < 0 ? 'aid-move-fin-up' : 'aid-move-fin-down'),
       [MOTOR_KIND.aggression] :
           () => [...part('[data-part="mouth"]', 'aid-move-bite'),
                  ...part('[data-part="jaw"][data-side="' + side + '"]', 'aid-move-jaw')],

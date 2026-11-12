@@ -1,10 +1,10 @@
 import {joinParts, t, tList} from '../../strings.js';
-import {MUSCLE_LABEL_INDEX, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
+import {isPelvicMuscle, muscleLabelIndex, ORGAN_BY_KEY, organFunction} from '../model/organs.js';
 import {findCenter, findOrgan} from '../model/document.js';
 
 export function organTitle(organ, sites = null) {
   const index = organ.type === 'muscle' && organ.centers
-                    ? MUSCLE_LABEL_INDEX.get(organFunction(organ, sites))
+                    ? muscleLabelIndex(organFunction(organ, sites), isPelvicMuscle(organ))
                     : undefined;
   return index === undefined ? t('studio.organs.' + organ.type)
                              : tList('studio.muscleTitles')[index];

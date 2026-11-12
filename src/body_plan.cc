@@ -8,6 +8,7 @@
 #include "field/development_sites.hh"
 #include "field/retinal_tissue.hh"
 #include <limits>
+#include <map>
 #include <numeric>
 namespace fishsim {
 namespace {
@@ -86,8 +87,13 @@ double flank_share(const BrainInterface::Effector &e, int side) {
   return e.lever == 0 ? .5 : (e.lever < 0 ? 0 : 1) == side ? 1 : 0;
 }
 }
-void fin_pushes(BrainInterface &a) {
-  std::array<double, STROKE_COUNT> force{}, levered{};
+// A side fin cell beats at its angle (its first quality: straight back at 0, outward up to the
+// full angle at 1, inward at -1). Along the body its force pushes the fish and turns it with the
+// cell's lever, as an oar does; across the body it pushes the fish away from the fin's side and
+// turns it with the cell's arm ahead of or behind the body's middle. A tail flank bends the body
+// with the lever of its cells.
+void fin_mechanics(BrainInterface &a) {
+  std::array<double, STROKE_COUNT> force{}, along{}, across{}, turn{};
   std::array<double, 2> flank{}, bent{};
   for (const auto &e : a.effectors) {
     if (e.port == organ_port::forward)
@@ -95,25 +101,35 @@ void fin_pushes(BrainInterface &a) {
         flank[side] += e.strength * flank_share(e, side);
         bent[side] += e.strength * flank_share(e, side) * std::abs(e.lever);
       }
-    if (e.port == organ_port::turn) {
-      const int side = e.lever < 0 ? 0 : 1;
-      const std::array<std::pair<int, float>, 2> shares{
-          std::pair{BACK_STROKES[side], 1 - e.protraction},
-          std::pair{FRONT_STROKES[side], e.protraction}};
-      for (const auto &[stroke, share] : shares) {
-        force[stroke] += e.strength * share;
-        levered[stroke] += e.strength * share * std::abs(e.lever);
+    for (int f = 0; f < SIDE_FINS; ++f)
+      if (e.port == FIN_PORTS[f]) {
+        const int side = e.lever < 0 ? 0 : 1;
+        const double angle = radians(side_fin::angle) * std::clamp(double(e.quality), -1., 1.),
+                     push = std::cos(angle), sideways = std::sin(angle);
+        const std::array<std::pair<int, float>, 2> shares{
+            std::pair{BACK_STROKES[f][side], 1 - e.protraction},
+            std::pair{FRONT_STROKES[f][side], e.protraction}};
+        for (const auto &[stroke, share] : shares) {
+          const double w = e.strength * share;
+          force[stroke] += w;
+          along[stroke] += w * push;
+          across[stroke] += w * sideways;
+          turn[stroke] += w * (push * std::abs(e.lever) + sideways * e.arm);
+        }
       }
-    }
   }
   for (int j = 0; j < STROKE_COUNT; ++j)
-    a.fin_push[j] = levered[j] > 0 ? force[j] / levered[j] : 0;
+    if (force[j] > 0) {
+      a.fin_push[j] = along[j] / force[j];
+      a.fin_across[j] = across[j] / force[j];
+      a.fin_turn[j] = turn[j] / force[j];
+    }
   for (int side = 0; side < 2; ++side)
     a.tail_lever[side] = flank[side] > 0 ? bent[side] / flank[side] : 0;
 }
 namespace {
-// The share of a cell's force that works a stroke: a pectoral cell works the back or front stroke
-// of its own side, a gonad's outer cells release.
+// The share of a cell's force that works a stroke: a side fin cell works the back or front stroke
+// of its own fin, a gonad's outer cells release.
 double stroke_share(const BrainInterface::Effector &e, int stroke) {
   if (e.port != STROKE_PORTS[stroke])
     return 0;
@@ -121,10 +137,12 @@ double stroke_share(const BrainInterface::Effector &e, int stroke) {
     if (stroke == TAIL_STROKES[side])
       return flank_share(e, side);
     const bool own = (e.lever < 0 ? 0 : 1) == side;
-    if (stroke == BACK_STROKES[side])
-      return own ? 1 - e.protraction : 0;
-    if (stroke == FRONT_STROKES[side])
-      return own ? e.protraction : 0;
+    for (int f = 0; f < SIDE_FINS; ++f) {
+      if (stroke == BACK_STROKES[f][side])
+        return own ? 1 - e.protraction : 0;
+      if (stroke == FRONT_STROKES[f][side])
+        return own ? e.protraction : 0;
+    }
   }
   return stroke == StrokeEgg || stroke == StrokeSperm ? e.outside : 1;
 }
@@ -157,7 +175,12 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
     if (weight[j] > 0)
       a.stroke_timing[j].set(steps[j] / weight[j]);
   }
-  fin_pushes(a);
+  fin_mechanics(a);
+  a.fins[fin::tail].steps =
+      std::max(a.stroke_timing[StrokeTailLeft].recovery, a.stroke_timing[StrokeTailRight].recovery);
+  for (int f = 0; f < SIDE_FINS; ++f)
+    for (int side = 0; side < 2; ++side)
+      a.fins[side_fin_index(f, side)].steps = a.stroke_timing[BACK_STROKES[f][side]].recovery;
   for (int c = 0; c < field::HORMONES + 3; ++c) {
     auto &timing =
         c < field::HORMONES ? a.hormone_timing[c] : a.pigment_timing[c - field::HORMONES];
@@ -179,6 +202,14 @@ class AnatomyBuilder {
   std::array<Mean, 4> traits;
   Mean rakers;
   std::array<double, 2> taste{};
+  // A side fin cell: its effector, its zone and how far back it sits along the body (in zones),
+  // its place in the drawn body, and what it adds to its fin and the fin's drawn region.
+  struct FinCell {
+    std::size_t effector;
+    int side, zone;
+    double along, x, y, z, cells, region;
+  };
+  std::vector<FinCell> fin_cells;
 
   std::shared_ptr<BrainInterface> result = std::make_shared<BrainInterface>();
   void add_shape(const field::Neuron &n) {
@@ -239,8 +270,6 @@ class AnatomyBuilder {
       };
       region(n.location.zone <= 1 ? region_layout::head : region_layout::cord,
              n.strength * fn.internal);
-      region(region_layout::turn_fin + region_layout::lobes * side + (n.y < 0),
-             capacity * fn.motors[field::Turn]);
       form(BrainInterface::INTERNAL_FORM,
            n.strength * n.parameters.capacity * n.functions.usable * fn.internal);
       result->organ_mass +=
@@ -373,9 +402,16 @@ class AnatomyBuilder {
             {std::uint32_t(i), port, 0, capacity, lever, color, outside, p.quality1});
         auto &effector = result->effectors.back();
         effector.fibre = fibrous ? float(fast) : 0.f;
-        if (port == organ_port::turn)
+        if (port == organ_port::turn) {
           effector.protraction = std::clamp(
               n.identity[cppn::output::identity4 - cppn::output::identity_role], 0.f, 1.f);
+          // A zone's cells run from its front (u = 1) to its back.
+          const double along = n.location.zone + 1 - n.location.u;
+          effector.arm = n.y;
+          fin_cells.push_back({result->effectors.size() - 1, n.location.side < 0 ? 0 : 1,
+                               n.location.zone, along, n.x, n.y, n.z, fn.motors[j],
+                               n.strength * (.5 + .25 * (n.y + 1)) * fn.motors[j]});
+        }
         effector.hormones = field::hormone_affinity(p.quality1, p.quality2, p.quality_width);
         double total_h = 0;
         for (float a : effector.hormones)
@@ -428,16 +464,82 @@ class AnatomyBuilder {
           result->suction_sides[n.location.side < 0 ? 0 : 1] += capacity;
         if (j == field::Aggression)
           result->bite_sides[n.location.side < 0 ? 0 : 1] += capacity;
-        if (j == field::Forward || j == field::Turn) {
-          const int fin = j == field::Forward ? 0 : n.location.side < 0 ? 1 : 2;
-          auto &shape = result->fins[fin];
-          shape.cells += fn.motors[j];
-          shape.strength += capacity;
-          shape.x += capacity * n.x;
-          shape.y += capacity * (n.y + 1) * .5;
-          shape.spread += capacity * n.x * n.x;
-        }
+        if (j == field::Forward)
+          add_fin(fin::tail, fn.motors[j], capacity, n.x, n.y);
       }
+  }
+  void add_fin(int index, double cells, double capacity, double x, double y) {
+    auto &shape = result->fins[index];
+    shape.cells += cells;
+    shape.strength += capacity;
+    shape.x += capacity * x;
+    shape.y += capacity * (y + 1) * .5;
+    shape.spread += capacity * x * x;
+  }
+  // The side fin cells of each side make up to two fins: cells of one zone that lie closer along
+  // the body than a gap belong to one fin; more groups merge where they lie closest. The front
+  // fin is the pectoral fin, the one behind it the pelvic fin, which works its own muscles.
+  void group_side_fins() {
+    for (int side = 0; side < 2; ++side) {
+      std::vector<std::size_t> cells;
+      for (std::size_t k = 0; k < fin_cells.size(); ++k)
+        if (fin_cells[k].side == side)
+          cells.push_back(k);
+      std::vector<std::size_t> group(cells.size());
+      std::iota(group.begin(), group.end(), 0);
+      const auto root = [&](std::size_t k) {
+        while (group[k] != k)
+          k = group[k] = group[group[k]];
+        return k;
+      };
+      for (std::size_t a = 0; a < cells.size(); ++a)
+        for (std::size_t b = a + 1; b < cells.size(); ++b) {
+          const auto &p = fin_cells[cells[a]], &q = fin_cells[cells[b]];
+          if (p.zone == q.zone && std::abs(p.along - q.along) < side_fin::gap)
+            group[root(a)] = root(b);
+        }
+      std::map<std::size_t, std::pair<double, double>> centre;
+      for (std::size_t a = 0; a < cells.size(); ++a) {
+        auto &c = centre[root(a)];
+        c.first += fin_cells[cells[a]].cells * fin_cells[cells[a]].along;
+        c.second += fin_cells[cells[a]].cells;
+      }
+      std::vector<std::pair<double, std::size_t>> fins;
+      for (const auto &[g, c] : centre)
+        fins.push_back({c.second > 0 ? c.first / c.second : 0, g});
+      std::sort(fins.begin(), fins.end());
+      while (fins.size() > std::size_t(SIDE_FINS)) {
+        std::size_t closest = 0;
+        for (std::size_t k = 1; k + 1 < fins.size(); ++k)
+          if (fins[k + 1].first - fins[k].first < fins[closest + 1].first - fins[closest].first)
+            closest = k;
+        for (std::size_t a = 0; a < cells.size(); ++a)
+          if (root(a) == fins[closest + 1].second)
+            group[root(a)] = fins[closest].second;
+        fins.erase(fins.begin() + std::ptrdiff_t(closest) + 1);
+      }
+      for (std::size_t a = 0; a < cells.size(); ++a) {
+        const auto &c = fin_cells[cells[a]];
+        const int f = root(a) == fins.front().second ? 0 : 1;
+        auto &e = result->effectors[c.effector];
+        if (f) {
+          result->capacities[organ_port::turn] -= e.strength;
+          result->motor_counts[organ_port::turn] -= c.cells;
+          e.port = organ_port::pelvic;
+          result->capacities[organ_port::pelvic] += e.strength;
+          result->motor_counts[organ_port::pelvic] += c.cells;
+        }
+        add_fin(side_fin_index(f, side), c.cells, e.strength, c.x, c.y);
+        auto &r = result->regions[region_layout::turn_fin + region_layout::lobes * side + f];
+        const double y = .5 * (c.y + 1), z = .5 * (c.z + 1);
+        r.weight += c.region;
+        r.x += c.region * std::abs(c.x);
+        r.y += c.region * y;
+        r.z += c.region * z;
+        r.sy += c.region * y * y;
+        r.sz += c.region * z * z;
+      }
+    }
   }
   void normalize_body() {
     result->jaw_length = traits[0].value();
@@ -624,6 +726,7 @@ public:
       add_receptor(i, n, share);
       add_effectors(i, n);
     }
+    group_side_fins();
     effector_timings(*result, s);
     normalize_body();
     if (s.geometry_ready) {
@@ -680,6 +783,7 @@ void assign_pressure(BrainInterface &a, const field::Substrate &s) {
       double nearest = std::numeric_limits<double>::infinity();
       r.pressure_target = -1;
       r.pressure_kind = PressureNone;
+      r.pressure_port = -1;
       for (const auto &q : a.gut_path)
         nearest = std::min(nearest, (n.x - q[0]) * (n.x - q[0]) + (n.y - q[1]) * (n.y - q[1]) +
                                         (n.z - q[2]) * (n.z - q[2]));
@@ -695,6 +799,7 @@ void assign_pressure(BrainInterface &a, const field::Substrate &s) {
           continue;
         nearest = d;
         r.pressure_target = int(e.neuron);
+        r.pressure_port = e.port;
         r.pressure_kind = e.port == organ_port::eggs      ? PressureEggs
                           : e.port == organ_port::sperm   ? PressureSperm
                           : e.port == organ_port::bladder ? PressureBladder
@@ -1028,22 +1133,24 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     else if (r.pressure_kind == PressureShape && b.brain() && r.pressure_target >= 0 &&
              !b.brain()->dead(r.pressure_target)) {
       const auto &n = b.brain()->blueprint().neurons[r.pressure_target];
-      const int side = n.location.side < 0 ? 0 : 1;
-      const int stroke = n.location.zone == 0   ? StrokeBite
-                         : n.location.zone == 1 ? StrokeSuction
-                         : n.location.zone == 2 ? BACK_STROKES[side]
-                                                : TAIL_STROKES[side];
-      // A fin's stretch receptor feels both of its muscles.
-      const double force =
-          b.motor().strokes[stroke].force +
-          (n.location.zone == 2 ? b.motor().strokes[FRONT_STROKES[side]].force : 0);
+      const int side = n.location.side < 0 ? 0 : 1, port = r.pressure_port;
+      // A stretch receptor feels the muscle it lies in; in a fin, both of the fin's muscles.
+      const auto &strokes = b.motor().strokes;
+      double force = 0;
+      for (int fin = 0; fin < SIDE_FINS; ++fin)
+        if (port == FIN_PORTS[fin])
+          force = strokes[BACK_STROKES[fin][side]].force + strokes[FRONT_STROKES[fin][side]].force;
+      for (int j = 0; j < STROKE_COUNT; ++j)
+        if (port == STROKE_PORTS[j] && port != FIN_PORTS[0] && port != FIN_PORTS[1] &&
+            (port != organ_port::forward || j == TAIL_STROKES[side]))
+          force += strokes[j].force;
       stimulus = std::clamp(force / p.stroke_threshold, 0., 1.);
     } else
       stimulus = f.satiety;
     break;
   case field::Blood: {
-    stimulus +=
-        field::blood_stimulus(r.hormones, b.hormones().levels(), body_maturity(b), f.energy);
+    stimulus += field::blood_stimulus(r.hormones, b.hormones().levels(), body_maturity(b), f.energy,
+                                      b.motor().fatigue);
     break;
   }
   }
@@ -1135,9 +1242,6 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
   auto &bladder = activity.bladder;
   auto &secretion = activity.secretion;
   auto &pigment = activity.pigment;
-  auto &left = activity.left;
-  auto &right = activity.right;
-  auto &reverse = activity.reverse;
   for (const auto &e : layout.effectors) {
     const double signal = std::clamp(double(state[e.neuron]), -1., 1.),
                  a = (e.port == organ_port::bladder || e.port == organ_port::gland)
@@ -1148,11 +1252,12 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
     if (e.port == organ_port::forward)
       for (int side = 0; side < 2; ++side)
         activity.tail[side] += amount * flank_share(e, side);
-    if (e.port == organ_port::turn) {
-      const double levered = amount * std::abs(e.lever);
-      (e.lever < 0 ? left : right) += levered * (1 - e.protraction);
-      reverse[e.lever < 0 ? 0 : 1] += levered * e.protraction;
-    }
+    for (int f = 0; f < SIDE_FINS; ++f)
+      if (e.port == FIN_PORTS[f]) {
+        const int side = e.lever < 0 ? 0 : 1;
+        activity.back[f][side] += amount * (1 - e.protraction);
+        activity.front[f][side] += amount * e.protraction;
+      }
     if (e.port == organ_port::eggs || e.port == organ_port::sperm) {
       auto &parts = e.port == organ_port::eggs ? egg : sperm;
       parts[0] += amount * (1 - e.outside);
@@ -1194,9 +1299,19 @@ OrganDrive continuous_organs(const std::vector<float> &state, const BrainInterfa
   };
   namespace D = organ_drive;
   set(D::forward, a.sum[organ_port::forward], organ_port::forward);
-  set(D::turn_left, a.left - a.reverse[0], organ_port::turn);
-  set(D::turn_right, a.right - a.reverse[1], organ_port::turn);
-  set(D::turn, a.left - a.reverse[0] - a.right + a.reverse[1], organ_port::turn);
+  // The side fins of a side together.
+  std::array<double, 2> fins{};
+  for (int f = 0; f < SIDE_FINS; ++f)
+    for (int side = 0; side < 2; ++side)
+      fins[side] += a.back[f][side] - a.front[f][side];
+  const double fin_capacity =
+      layout.capacities[organ_port::turn] + layout.capacities[organ_port::pelvic];
+  if (fin_capacity > 0)
+    for (const auto &[index, value] : std::array<std::pair<int, double>, 3>{
+             {{D::turn_left, fins[0]}, {D::turn_right, fins[1]}, {D::turn, fins[0] - fins[1]}}}) {
+      result.present |= 1u << index;
+      result.values[index] = value / fin_capacity;
+    }
   set(D::suction, a.sum[organ_port::suction], organ_port::suction);
   set(D::jaw, a.sum[organ_port::jaw], organ_port::jaw);
   set(D::defense, a.sum[organ_port::defense], organ_port::defense);
@@ -1239,20 +1354,25 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const auto &bladder = activity.bladder;
   const auto &secretion = activity.secretion;
   const auto &pigment = activity.pigment;
-  const double left = activity.left, right = activity.right;
+  const auto &backs = activity.back, &fronts = activity.front;
   const std::array<double, STROKE_COUNT> drive{activity.tail[0],
-                                               left,
-                                               right,
+                                               backs[0][0],
+                                               backs[0][1],
                                                sum[organ_port::suction],
                                                egg[1],
                                                sperm[1],
                                                sum[organ_port::jaw],
                                                sum[organ_port::defense],
-                                               activity.reverse[0],
-                                               activity.reverse[1],
+                                               fronts[0][0],
+                                               fronts[0][1],
                                                sum[organ_port::gills],
                                                sum[organ_port::gut],
-                                               activity.tail[1]};
+                                               activity.tail[1],
+                                               backs[1][0],
+                                               backs[1][1],
+                                               fronts[1][0],
+                                               fronts[1][1]};
+  static_assert(StrokePelvicReverseRight == STROKE_COUNT - 1);
   // impulse: what a twitch beginning now does at its drive; work: what each muscle does this step.
   std::array<double, STROKE_COUNT> impulse{}, work{};
   auto &strokes = b.motor_.strokes;
@@ -1263,13 +1383,17 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
                     layout.stroke_timing[j], p.stroke_threshold);
     work[j] = strokes[j].drive * stroke_shape(strokes[j], layout.stroke_timing[j]);
   }
+  // The side fins' strokes beginning now, per side.
+  std::array<double, 2> fin_impulse{};
+  for (int fin = 0; fin < SIDE_FINS; ++fin)
+    for (int side = 0; side < 2; ++side)
+      fin_impulse[side] += impulse[BACK_STROKES[fin][side]] + impulse[FRONT_STROKES[fin][side]];
   const double forward = impulse[StrokeTailLeft] + impulse[StrokeTailRight],
-               turn = impulse[StrokeTurnLeft] + impulse[StrokeTurnRight] +
-                      impulse[StrokeReverseLeft] + impulse[StrokeReverseRight];
+               turn = fin_impulse[0] + fin_impulse[1];
   b.motor_.impulse_tail_left = impulse[StrokeTailLeft];
   b.motor_.impulse_tail_right = impulse[StrokeTailRight];
-  b.motor_.impulse_left = impulse[StrokeTurnLeft] + impulse[StrokeReverseLeft];
-  b.motor_.impulse_right = impulse[StrokeTurnRight] + impulse[StrokeReverseRight];
+  b.motor_.impulse_left = fin_impulse[0];
+  b.motor_.impulse_right = fin_impulse[1];
   b.reproduction_.egg_transfer =
       b.hatched && !b.reproduction_.egg_laying && b.energy > b.reproduction_.motor_reserve
           ? egg[0] / (1 + egg[0])
@@ -1281,15 +1405,21 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
           : 0;
   b.reproduction_.egg_release = impulse[StrokeEgg] > 0;
   b.reproduction_.sperm_release = impulse[StrokeSperm] > 0;
-  // The jaw, gill and gut muscles act with their present drive while they twitch.
+  // The jaw muscles act with their present drive while they twitch; the jaw shapes their twitch
+  // itself (advance_mouth).
   const auto share = [&](int j, double capacity) {
     return capacity > 0 ? std::clamp(stroke_drive(strokes[j]) / capacity, 0., 1.) : 0.;
+  };
+  // Gill covers and gut wall take the pose their twitch gives them: it rises to their drive and
+  // falls, so what they move per step, twice their pose, averages their drive like every force.
+  const auto taken = [&](int j, double capacity) {
+    return capacity > 0 ? std::clamp(work[j] / (2 * capacity), 0., 1.) : 0.;
   };
   b.eat_signal = share(StrokeSuction, layout.suction_strength);
   b.bite_signal = share(StrokeBite, layout.bite_strength);
   b.bite_strength = layout.bite_strength;
-  b.gill_signal = share(StrokeGill, layout.capacities[organ_port::gills]);
-  b.gut_motility = share(StrokeGut, layout.capacities[organ_port::gut]);
+  b.gill_signal = taken(StrokeGill, layout.capacities[organ_port::gills]);
+  b.gut_motility = taken(StrokeGut, layout.capacities[organ_port::gut]);
   const double old_credit = b.mouth.credit;
   advance_mouth(b, impulse[StrokeSuction] > 0, impulse[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
@@ -1297,10 +1427,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const auto contraction = [&](int j) {
     return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j];
   };
+  // Gametes are released, not pulled; bites and spines are combat.
   double moving = 0;
-  for (int j : {StrokeTailLeft, StrokeTailRight, StrokeTurnLeft, StrokeTurnRight, StrokeReverseLeft,
-                StrokeReverseRight, StrokeSuction, StrokeGill, StrokeGut})
-    moving += contraction(j);
+  for (int j = 0; j < STROKE_COUNT; ++j)
+    if (j != StrokeEgg && j != StrokeSperm && j != StrokeBite && j != StrokeDefense)
+      moving += contraction(j);
   const double muscle =
       moving + p.transfer_cost * (b.reproduction_.egg_transfer + b.reproduction_.sperm_transfer) +
       p.pigment_cost * sum[organ_port::pigment];
@@ -1313,7 +1444,6 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double cost = muscle + combat + extra,
                f = cost <= 0 ? 1 : pay_activity(b, cost, protected_life) / cost;
   b.motor_.motor_factor = f;
-  constexpr std::array<int, 2> SIDE_FINS{StrokeTurnLeft, StrokeTurnRight};
   for (int j = 0; j < STROKE_COUNT; ++j)
     strokes[j].force = work[j] * f;
   for (int j = 0; j < STROKE_COUNT; ++j)
@@ -1321,48 +1451,79 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
         std::clamp(strokes[j].reserve + fibre::refilled(strokes[j].reserve) -
                        fibre::drained(layout.fibre[j], work[j] * f, layout.stroke_capacity[j]),
                    0., 1.);
-  const auto delivered = [&](int j) { return strokes[j].force; };
-  // The tail's flanks are antagonists. A stroke that answers the other flank's sweeps the bent
-  // body through and pushes with all its force. A lone stroke, from a straight body or on the same
-  // flank again, bends the fish toward that flank: most of its force turns the fish, with the
-  // flank's lever as a fin's force does, and only a little pushes. A strong lone stroke is so an
-  // escape turn, and the answering stroke after it drives the fish off. Where both flanks pull at
-  // once their forces cancel and only stiffen the body: the muscles pay, but the shared part
-  // neither pushes nor turns.
-  namespace T = tail_stroke;
-  int started = 0;
-  for (int side = 0; side < 2; ++side) {
-    const int j = TAIL_STROKES[side];
-    if (impulse[j] <= 0 || f <= 0)
-      continue;
-    const bool answers = b.motor_.tail_side == 1 - side;
-    b.motor_.tail_push[side] = answers ? 1 : T::lone_push;
-    b.motor_.tail_turn[side] = answers ? 0 : 1 - T::lone_push;
-    started += side + 1;
+  static_assert(field::MATURITY_SUBSTANCE == blood_substance::maturity &&
+                    field::RESERVE_SUBSTANCE == blood_substance::reserve &&
+                    field::FATIGUE_SUBSTANCE == blood_substance::fatigue,
+                "the blood substances of the Atelier wheel");
+  double fast = 0, spent = 0;
+  for (int j = 0; j < STROKE_COUNT; ++j) {
+    const double w = layout.stroke_capacity[j] * layout.fibre[j];
+    fast += w;
+    spent += w * (1 - strokes[j].reserve);
   }
-  if (started)
-    b.motor_.tail_side = started == 3 ? -1 : started - 1;
-  // A tail that rests as long as its last twitch lasted is straight again: its next stroke
-  // answers nothing.
-  const bool resting =
-      strokes[StrokeTailLeft].recovery <= 0 && strokes[StrokeTailRight].recovery <= 0;
-  b.motor_.tail_rest = resting ? b.motor_.tail_rest + 1 : 0;
-  if (b.motor_.tail_side >= 0 &&
-      b.motor_.tail_rest >= layout.stroke_timing[TAIL_STROKES[b.motor_.tail_side]].recovery)
-    b.motor_.tail_side = -1;
-  const std::array<double, 2> flank{delivered(StrokeTailLeft), delivered(StrokeTailRight)};
-  const double braced = std::min(flank[0], flank[1]);
+  b.motor_.fatigue = fast > 0 ? spent / fast : 0;
+  // Spread on the ground, the side fins carry the body like snowshoes: the larger they are for
+  // its weight, the more of it.
+  double spread = 0;
+  for (int fin = 0; fin < SIDE_FINS; ++fin)
+    for (int side = 0; side < 2; ++side)
+      spread += layout.fins[side_fin_index(fin, side)].strength;
+  b.motor_.fin_bearing = spread / (spread + side_fin::bearing_half * body_mass(b));
+  const auto delivered = [&](int j) { return strokes[j].force; };
+  // Every pair of antagonists follows one rule. A stroke that answers the other muscle sweeps the
+  // limb through and works with all its force; the same muscle striking again before the limb is
+  // back sweeps it only partly. Where both pull at once their forces cancel and only stiffen the
+  // limb: the muscles pay, but the shared part does nothing. A limb that rests as long as its
+  // last stroke lasted is back at rest, without pushing on the way: a slack fin turns edge-on and
+  // drifts back as the jaw springs back, so from rest either of its muscles sweeps it fully. The
+  // tail rests straight in the middle of its sweep: one flank from there sweeps it half way.
+  const auto antagonists = [&](AntagonistPair &pair, int first, int second, double from_rest) {
+    const std::array<int, 2> muscles{first, second};
+    int started = 0;
+    for (int k = 0; k < 2; ++k) {
+      const int j = muscles[k];
+      if (impulse[j] <= 0 || f <= 0)
+        continue;
+      b.motor_.sweep[j] = pair.last == 1 - k ? 1
+                          : pair.last < 0    ? from_rest
+                                             : antagonist::lone_sweep;
+      started += k + 1;
+    }
+    if (started)
+      pair.last = started == 3 ? -1 : started - 1;
+    const bool resting = strokes[first].recovery <= 0 && strokes[second].recovery <= 0;
+    pair.rest = resting ? pair.rest + 1 : 0;
+    if (pair.last >= 0 && pair.rest >= layout.stroke_timing[muscles[pair.last]].recovery)
+      pair.last = -1;
+  };
+  antagonists(b.motor_.tail_pair, StrokeTailLeft, StrokeTailRight, antagonist::tail_rest_sweep);
+  for (int fin = 0; fin < SIDE_FINS; ++fin)
+    for (int side = 0; side < 2; ++side)
+      antagonists(b.motor_.fin_pairs[fin][side], BACK_STROKES[fin][side], FRONT_STROKES[fin][side],
+                  1);
+  // What a stroke works with: its force beyond what its antagonist cancels, as far as it sweeps.
+  const auto effective = [&](int j, int antagonist) {
+    return (delivered(j) - std::min(delivered(j), delivered(antagonist))) * b.motor_.sweep[j];
+  };
   std::array<double, 2> fin_drive{};
-  b.motor_.drive_forward = b.motor_.drive_fins = 0;
+  b.motor_.drive_forward = b.motor_.drive_fins = b.motor_.drive_across = 0;
   for (int side = 0; side < 2; ++side) {
-    const double tail = flank[side] - braced;
-    b.motor_.drive_forward += tail * b.motor_.tail_push[side];
-    // A flank that bends the fish turns it like the back stroke of the opposite fin.
-    fin_drive[1 - side] += tail * b.motor_.tail_turn[side] * layout.tail_lever[side];
-    const int back = BACK_STROKES[side], front = FRONT_STROKES[side];
-    fin_drive[side] += delivered(back) - delivered(front);
-    b.motor_.drive_fins +=
-        layout.fin_push[back] * delivered(back) - layout.fin_push[front] * delivered(front);
+    // The tail sweeps the water with its swept force; the unswept rest of a lone stroke bends
+    // the body toward its flank, which turns it like the back stroke of the opposite fin.
+    const int flank = TAIL_STROKES[side], other = TAIL_STROKES[1 - side];
+    const double held = delivered(flank) - std::min(delivered(flank), delivered(other));
+    b.motor_.drive_forward += held * b.motor_.sweep[flank];
+    fin_drive[1 - side] += held * (1 - b.motor_.sweep[flank]) * layout.tail_lever[side];
+    // A fin's strokes each work with their own angle.
+    for (int fin = 0; fin < SIDE_FINS; ++fin) {
+      const int back = BACK_STROKES[fin][side], front = FRONT_STROKES[fin][side];
+      const auto net = [&](const std::array<double, STROKE_COUNT> &per_unit) {
+        return per_unit[back] * effective(back, front) - per_unit[front] * effective(front, back);
+      };
+      fin_drive[side] += net(layout.fin_turn);
+      b.motor_.drive_fins += net(layout.fin_push);
+      b.motor_.drive_across += (side ? -1 : 1) * net(layout.fin_across);
+    }
   }
   b.motor_.drive_left = fin_drive[0];
   b.motor_.drive_right = fin_drive[1];
@@ -1424,30 +1585,34 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.tail *= relax;
   for (auto &tension : b.motor_.fin_tension)
     tension *= relax;
-  if (forward > 0 && b.motor_.tail_side >= 0) {
-    b.motor_.tail = pose(TAIL_STROKES[b.motor_.tail_side]);
+  const int tail_side = b.motor_.tail_pair.last;
+  if (forward > 0 && tail_side >= 0) {
+    b.motor_.tail = pose(TAIL_STROKES[tail_side]);
     b.motor_.fin_tension[fin::tail] = b.motor_.tail;
   }
-  if (turn > 0) {
-    b.motor_.fin_tension[fin::left] = pose(StrokeTurnLeft) - pose(StrokeReverseLeft);
-    b.motor_.fin_tension[fin::right] = pose(StrokeTurnRight) - pose(StrokeReverseRight);
-  }
+  for (int fin = 0; fin < SIDE_FINS; ++fin)
+    for (int side = 0; side < 2; ++side) {
+      const int back = BACK_STROKES[fin][side], front = FRONT_STROKES[fin][side];
+      if (impulse[back] > 0 || impulse[front] > 0)
+        b.motor_.fin_tension[side_fin_index(fin, side)] = pose(back) - pose(front);
+    }
   // The tail sweeps toward the flank that pulled last.
-  if (forward > 0 && f > 0 && b.motor_.tail_side >= 0) {
-    const int j = TAIL_STROKES[b.motor_.tail_side];
+  if (forward > 0 && f > 0 && tail_side >= 0) {
+    const int j = TAIL_STROKES[tail_side];
     b.motor_.fin_stroke_age[fin::tail] = b.age;
     b.motor_.fin_stroke_steps[fin::tail] = layout.stroke_timing[j].recovery;
     b.motor_.fin_stroke_peak[fin::tail] =
-        b.motor_.fin_tension[fin::tail] * (b.motor_.tail_side == 0 ? -1 : 1);
+        b.motor_.fin_tension[fin::tail] * (tail_side == 0 ? -1 : 1);
   }
-  for (int side = 0; side < 2; ++side) {
-    const int fin = fin::left + side, back = SIDE_FINS[side];
-    if ((impulse[back] > 0 || impulse[FRONT_STROKES[side]] > 0) && f > 0) {
-      b.motor_.fin_stroke_age[fin] = b.age;
-      b.motor_.fin_stroke_steps[fin] = layout.stroke_timing[back].recovery;
-      b.motor_.fin_stroke_peak[fin] = b.motor_.fin_tension[fin];
+  for (int fin = 0; fin < SIDE_FINS; ++fin)
+    for (int side = 0; side < 2; ++side) {
+      const int drawn = side_fin_index(fin, side), back = BACK_STROKES[fin][side];
+      if ((impulse[back] > 0 || impulse[FRONT_STROKES[fin][side]] > 0) && f > 0) {
+        b.motor_.fin_stroke_age[drawn] = b.age;
+        b.motor_.fin_stroke_steps[drawn] = layout.stroke_timing[back].recovery;
+        b.motor_.fin_stroke_peak[drawn] = b.motor_.fin_tension[drawn];
+      }
     }
-  }
   b.motor_.swimming_pending = true;
 }
 }

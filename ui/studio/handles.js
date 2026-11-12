@@ -6,7 +6,13 @@ import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
-import {effectorPatch, GILL_TRAIT, GUT_TRAIT, spinePatch} from './view/effectors.js';
+import {
+  effectorPatch,
+  FIN_ANGLE_TRAIT,
+  GILL_TRAIT,
+  GUT_TRAIT,
+  spinePatch
+} from './view/effectors.js';
 import {clamp} from '../units.js';
 import {kindLimit, kindNodes} from './model/organs.js';
 import {lateralPatch} from './view/lateral.js';
@@ -28,6 +34,7 @@ import {
   groupReport,
   profileIndex,
   setBends,
+  setFinAngle,
   setGillRakers,
   setGutLength,
   setMuscleTrait,
@@ -551,9 +558,10 @@ export const handleMethods = {
   },
   muscleTrait(code, trait, value, organId) {
     const doc = this.state.document;
-    return trait === GUT_TRAIT    ? setGutLength(doc, value)
-           : trait === GILL_TRAIT ? setGillRakers(doc, organId, value)
-                                  : setMuscleTrait(doc, code, trait, value, this.state.sites);
+    return trait === GUT_TRAIT         ? setGutLength(doc, value)
+           : trait === GILL_TRAIT      ? setGillRakers(doc, organId, value)
+           : trait === FIN_ANGLE_TRAIT ? setFinAngle(doc, organId, value, this.state.sites)
+                                       : setMuscleTrait(doc, code, trait, value, this.state.sites);
   },
   sacPointer(drag, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);

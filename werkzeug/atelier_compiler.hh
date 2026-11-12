@@ -239,6 +239,9 @@ std::pair<int, int> corner(int role, int function) {
     return {2, 0};
   case field::Sperm:
     return {2, 1};
+  // A fin's variant also makes a pelvic fin at the front of the tail zone.
+  case field::Turn:
+    return {0, 1};
   default:
     return {0, 0};
   }

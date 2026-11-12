@@ -26,6 +26,7 @@ import {preferredScent} from '../../tuning.js';
 import {
   BARBEL_FEEL,
   functionFor,
+  isPelvicMuscle,
   isModulator,
   isPacemaker,
   isRegion,
@@ -193,7 +194,7 @@ const motorSection = (state, organ, center) =>
             driveElement(center, label('inspector.drive'), () => label('development.netInput'),
                          {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
             '</div>') +
-    (organ.type === 'muscle' ? muscleKind(state, center) : '');
+    (organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '');
 function nerveSection(state, organ, center) {
   if (organ.type === 'rhythm' || isPacemaker(center)) {
     const title = label('inspector.beat');

@@ -13,8 +13,8 @@ import {
   REGION_LAYOUT,
   TOLERANCE
 } from './schema.js';
-import {FIN_STROKE, FINS} from './fin_stroke.js';
-import {fishFinShapes, fishRearFinShape} from './fish_fins.js';
+import {FIN_STROKE, FINS, finSide, isPelvic} from './fin_stroke.js';
+import {fishRearFinShape} from './fish_fins.js';
 import {
   fishAlong,
   fishAnatomy,
@@ -1065,8 +1065,7 @@ export function fishGlyphPoints(a) {
     curves.push(...fishRearFinShape(a, side));
   for (let i = 0; i < FINS; i++)
     if (a.fin(i)[FIN_SHAPE.strength] > 0)
-      for (const f of fishFinShapes(a, i))
-        curves.push(...f.curves);
+      curves.push(...fishFinShape(a, i).curves);
   const points =
       curves.flatMap(q => Array.from({length : GLYPH_POINTS.curve_steps + 1},
                                      (_, k) => fishBezier(q, k / GLYPH_POINTS.curve_steps)));
@@ -1127,13 +1126,11 @@ export function fishPreviewBounds(a, angle = 0) {
     pose.finPose = () => active;
     for (let i = 0; i < FINS; i++)
       if (a.fin(i)[FIN_SHAPE.strength] > 0)
-        for (const fin of fishFinShapes(pose, i))
-          points.push(...fin.curves.flat());
+        points.push(...fishFinShape(pose, i).curves.flat());
   }
   pose.tailDirection = -1;
   if (a.fin(FIN.tail)[FIN_SHAPE.strength] > 0)
-    for (const fin of fishFinShapes(pose, FIN.tail))
-      points.push(...fin.curves.flat());
+    points.push(...fishFinShape(pose, FIN.tail).curves.flat());
   pose.defenseActivity = 1;
   for (const side of [0, 1])
     points.push(...fishDefenseSpines(pose, side).flat());
@@ -1215,10 +1212,9 @@ export function fishGlyphExtent(a) {
   const maximum = a.finMaximum ??= {...a, finShapeCache : null, finPose : () => 1};
   for (let index = 0; index < FINS; index++)
     if (a.fin(index)[FIN_SHAPE.strength] > 0)
-      for (const f of fishFinShapes(maximum, index))
-        for (const q of f.curves)
-          for (const p of q)
-            extent = Math.max(extent, Math.abs(p[0]) + Math.abs(p[1]));
+      for (const q of fishFinShape(maximum, index).curves)
+        for (const p of q)
+          extent = Math.max(extent, Math.abs(p[0]) + Math.abs(p[1]));
   return a.glyphExtent = extent;
 }
 
@@ -1333,12 +1329,6 @@ export function fishCheekPath(g, r, a, side, append = false) {
   g.closePath();
 }
 
-export function fishFinDual(a, index) {
-  if (index === FIN.tail)
-    return 0;
-  return fishPlan(a, 'side', fishForm(a, MOTOR_TISSUE.turn)).dual;
-}
-
 function fishFinPlan(a, index) {
   const name = index === FIN.tail ? 'tail' : 'side',
         f = fishForm(a, index === FIN.tail ? MOTOR_TISSUE.forward : MOTOR_TISSUE.turn, -1),
@@ -1367,18 +1357,19 @@ const FIN_ATTACHMENT = Object.freeze({
   front_per_plan : .31,
   front_per_place : .16
 });
-function fishFinAttachment(a, index, lobe = 0) {
-  const side = index - 1,
-        f = fishRegion(a, REGION_LAYOUT.turn_fin + REGION_LAYOUT.lobes * side + lobe,
-                       MOTOR_TISSUE.turn, side),
-        plan = fishPlan(a, 'side', fishForm(a, MOTOR_TISSUE.turn));
-  return lobe ? FIN_ATTACHMENT.rear + FIN_ATTACHMENT.rear_per_plan * plan.attachment +
-                    FIN_ATTACHMENT.rear_per_place * (1 - f.y)
-              : Math.max(FIN_ATTACHMENT.first,
-                         Math.min(FIN_ATTACHMENT.last,
-                                  FIN_ATTACHMENT.front +
-                                      FIN_ATTACHMENT.front_per_plan * plan.attachment +
-                                      FIN_ATTACHMENT.front_per_place * (1 - f.y)));
+// A side fin's region: the pectoral fin's or, behind it, the pelvic fin's.
+const sideFinRegion = (a, index) => fishRegion(
+    a, REGION_LAYOUT.turn_fin + REGION_LAYOUT.lobes * finSide(index) + (isPelvic(index) ? 1 : 0),
+    MOTOR_TISSUE.turn, finSide(index));
+function fishFinAttachment(a, index) {
+  const f = sideFinRegion(a, index), plan = fishPlan(a, 'side', fishForm(a, MOTOR_TISSUE.turn));
+  return isPelvic(index) ? FIN_ATTACHMENT.rear + FIN_ATTACHMENT.rear_per_plan * plan.attachment +
+                               FIN_ATTACHMENT.rear_per_place * (1 - f.y)
+                         : Math.max(FIN_ATTACHMENT.first,
+                                    Math.min(FIN_ATTACHMENT.last,
+                                             FIN_ATTACHMENT.front +
+                                                 FIN_ATTACHMENT.front_per_plan * plan.attachment +
+                                                 FIN_ATTACHMENT.front_per_place * (1 - f.y)));
 }
 
 const FIN_SIZE = Object.freeze({min : .01, cells : .6, strength : .4, power : .37});
@@ -1403,24 +1394,23 @@ export const tailFinSize = volume => ({
 });
 const TAIL_KNOT = Object.freeze({lead : 1, lobe : 2, tip : 3, fork : 4});
 export const FIN_TIP = TAIL_KNOT.tip;
+// A side fin stands out from the flank like a hand: at rest it reaches out and back, a stroke
+// swings it out across the body. Its outward reach is a share of its length (span), always clear
+// of the flank behind its root.
 const SIDE_FIN = Object.freeze({
   scale : 1.3,
   length : .16,
   length_per_size : .30,
   max_length : .32,
-  lobe_length : .72,
   flank_samples : 16,
-  swing : .08,
-  swing_per_size : .15,
-  max_swing : .03,
-  max_swing_per_width : .50,
+  clearance : .02,
   spread : .06,
   spread_per_size : .04,
-  swing_rest : .30,
-  swing_per_pose : .70,
-  root_inset : .98,
-  rake : .55,
-  rake_per_pose : .80,
+  span : .45,
+  span_per_pose : .45,
+  root_inset : 1,
+  rake : .45,
+  rake_per_pose : .45,
   root_at : .35
 });
 export const sideFinSize = volume => ({
@@ -1453,10 +1443,10 @@ const SIDE_ROUND = Object.freeze({
   tip : .15,
   tip_per_leading : .60
 });
-export function fishFinShape(a, index, lobe = 0) {
+export function fishFinShape(a, index) {
   const signature = [
-    a.bodyStretch, a.flex, a.shoulder, ...a.flank, a.finPose(FIN.tail), a.finPose(FIN.left),
-    a.finPose(FIN.right), a.tailDirection
+    a.bodyStretch, a.flex, a.shoulder, ...a.flank,
+    ...Array.from({length : FINS}, (_, k) => a.finPose(k)), a.tailDirection
   ].join(':');
   if (!(a.finShapeCache instanceof Map) || a.finShapeCache.forms !== a.forms ||
       a.finShapeCache.signature !== signature) {
@@ -1464,14 +1454,11 @@ export function fishFinShape(a, index, lobe = 0) {
     a.finShapeCache.forms = a.forms;
     a.finShapeCache.signature = signature;
   }
-  const cache = a.finShapeCache, key = index + ':' + lobe;
+  const cache = a.finShapeCache, key = index;
   if (cache.has(key))
     return cache.get(key);
-  const side = index - 1, dual = fishFinDual(a, index),
-        f = index === FIN.tail
-                ? fishForm(a, MOTOR_TISSUE.forward)
-                : fishRegion(a, REGION_LAYOUT.turn_fin + REGION_LAYOUT.lobes * side + lobe,
-                             MOTOR_TISSUE.turn, side),
+  const side = finSide(index),
+        f = index === FIN.tail ? fishForm(a, MOTOR_TISSUE.forward) : sideFinRegion(a, index),
         plan = fishPlan(a, index === FIN.tail ? 'tail' : 'side',
                         index === FIN.tail ? f : fishForm(a, MOTOR_TISSUE.turn)),
         pose = a.finPose(index), volume = finVolume(a, index),
@@ -1510,23 +1497,18 @@ export function fishFinShape(a, index, lobe = 0) {
     shape.y = 0;
     shape.fork = (Math.max(plan.lead_along, plan.tip_along) - plan.fork) * length;
   } else {
-    const sign = side ? 1 : -1, t = fishFinAttachment(a, index, lobe),
-          anchor = fishFlank(a, side, t),
-          length = SIDE_FIN.scale *
-                   Math.min(sideFinSize(volume).length * plan.length,
-                            SIDE_FIN.max_length * (a.chestLength + a.hindLength)) *
-                   (lobe ? SIDE_FIN.lobe_length : 1),
+    const sign = side ? 1 : -1, t = fishFinAttachment(a, index), anchor = fishFlank(a, side, t),
+          length = SIDE_FIN.scale * Math.min(sideFinSize(volume).length * plan.length,
+                                             SIDE_FIN.max_length * (a.chestLength + a.hindLength)),
           widest = Array
                        .from({length : SIDE_FIN.flank_samples},
                              (_, k) => fishFlank(a, side, t + (1 - t) * k / SIDE_FIN.flank_samples))
                        .filter(q => q[0] >= anchor[0] - length && q[0] <= anchor[0])
                        .reduce((m, q) => Math.max(m, Math.abs(q[1])), Math.abs(anchor[1])),
-          swing = SIDE_FIN.scale *
-                  Math.min((SIDE_FIN.swing + SIDE_FIN.swing_per_size * volume) * plan.swing,
-                           SIDE_FIN.max_swing + SIDE_FIN.max_swing_per_width * Math.abs(anchor[1])),
-          spread = (Math.max(0, widest - Math.abs(anchor[1])) + sideFinSize(volume).spread +
-                    swing * (SIDE_FIN.swing_rest + SIDE_FIN.swing_per_pose * pose)) *
-                   (lobe ? dual : 1),
+          spread =
+              Math.max(Math.max(0, widest - Math.abs(anchor[1])) + SIDE_FIN.clearance,
+                       sideFinSize(volume).spread +
+                           length * plan.swing * (SIDE_FIN.span + SIDE_FIN.span_per_pose * pose)),
           root = [ anchor[0], anchor[1] * SIDE_FIN.root_inset ],
           at = (u,
                 v) => [root[0] + length * (u - (SIDE_FIN.rake - SIDE_FIN.rake_per_pose * pose) * v),

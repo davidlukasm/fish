@@ -4,6 +4,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   INTERNAL_TISSUE,
   isSenseTissue,
   motorTissue,
@@ -22,7 +23,7 @@ import {
   PAIRED_SENSES
 } from './brain_model.js';
 import {brainMotorActivity} from './brain_signals.js';
-import {FIN_LOBE_MIN, fishBodyRadius, fishFinPoint} from './fish_fins.js';
+import {fishBodyRadius, fishFinPoint} from './fish_fins.js';
 import {fishAlong} from './fish_forms.js';
 import {fishBezier, fishHeadCurve, fishRegion} from './fish_geometry.js';
 import {
@@ -31,7 +32,6 @@ import {
   fishDefenseSpines,
   fishEggMuscleFiber,
   fishEye,
-  fishFinDual,
   fishGameteShape,
   fishGillFiber,
   fishGutRing,
@@ -145,15 +145,14 @@ export function brainLocal(p, d = brainState.brainDrawing) {
 }
 
 const FIN_LOCATION = Object.freeze({across : .15, across_span : .7});
-export function brainFinLocation(n, k, a) {
-  const index = k === MOTOR_KIND.forward ? FIN.tail : FIN.left + cellSide(n),
-        dual = fishFinDual(a, index), lobe = dual > FIN_LOBE_MIN && n[NEURON.y] < 0 ? 1 : 0,
-        depth =
-            dual > FIN_LOBE_MIN ? (lobe ? n[NEURON.y] + 1 : n[NEURON.y]) : (n[NEURON.y] + 1) / 2;
+// Where a fin cell lies on its fin: the tail, or the pectoral or pelvic fin of its side.
+export function brainFinLocation(n, k, a, variant = '') {
+  const index = k === MOTOR_KIND.forward
+                    ? FIN.tail
+                    : (variant === PELVIC ? FIN.pelvic_left : FIN.left) + cellSide(n);
   return {
     index,
-    lobe,
-    depth : brainClamp(depth),
+    depth : brainClamp((n[NEURON.y] + 1) / 2),
     across : FIN_LOCATION.across +
                  FIN_LOCATION.across_span *
                      brainClamp(((k === MOTOR_KIND.forward ? n[NEURON.x] : n[NEURON.z]) + 1) / 2)
@@ -170,10 +169,10 @@ export function brainFiber(n, k, d) {
   if (variant === GUT_MUSCLE)
     return fishGutRing(a, 1 - (n[NEURON.site]?.[NEURON_SITE.u] ?? depth), cellSide(n));
   if (k <= MOTOR_KIND.turn) {
-    const q = brainFinLocation(n, k, a), t = FIN_FIBER.start + FIN_FIBER.span * q.depth;
+    const q = brainFinLocation(n, k, a, variant), t = FIN_FIBER.start + FIN_FIBER.span * q.depth;
     return [
-      fishFinPoint(a, q.index, t - FIN_FIBER.half, q.across, q.lobe),
-      fishFinPoint(a, q.index, t + FIN_FIBER.half, q.across, q.lobe)
+      fishFinPoint(a, q.index, t - FIN_FIBER.half, q.across),
+      fishFinPoint(a, q.index, t + FIN_FIBER.half, q.across)
     ];
   }
   return fishJawFiber(a, cellSide(n), depth);

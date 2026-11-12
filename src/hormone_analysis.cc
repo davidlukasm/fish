@@ -35,6 +35,7 @@ void HormoneAnalysis::capture(const Individual &p, std::uint64_t tick) {
   inputs_ = p.body.perception().sensor_buffer;
   levels_ = p.body.hormones().levels();
   reserve_ = bounded_filling(p.body.energy, reserve_capacity(p.body));
+  fatigue_ = p.body.motor().fatigue;
   adaptation_ = p.body.perception().adapted;
   adaptation_.resize(inputs_.size(), 0);
   hormone_enabled_ = !p.body.perception().disabled_senses[field::Blood];
@@ -62,7 +63,7 @@ void HormoneAnalysis::prepare_variant() {
     const auto &r = genome_.interface->sensory[i];
     if (hormone_enabled_ && r.dominant_sense() == field::Blood) {
       const double stimulus =
-          field::blood_stimulus(r.hormones, levels, snapshot_->maturity(), reserve_);
+          field::blood_stimulus(r.hormones, levels, snapshot_->maturity(), reserve_, fatigue_);
       variant_inputs_[i] = float(r.senses[field::Blood] *
                                  sensory_response(stimulus, r.response_threshold + adaptation_[i]));
     }
@@ -178,7 +179,7 @@ void HormoneAnalysis::write(std::ostream &out) const {
   variant_->write_runtime(out);
   result_.write(out);
   out << arm_ << ' ' << step_ << ' ' << preview_done_ << ' ' << baseline_ready_ << ' '
-      << hormone_enabled_ << ' ' << change_ << ' ' << reserve_;
+      << hormone_enabled_ << ' ' << change_ << ' ' << reserve_ << ' ' << fatigue_;
   for (auto v : levels_)
     out << ' ' << v;
   out << '\n';
@@ -235,6 +236,7 @@ void HormoneAnalysis::read(std::istream &in) {
   value(in, hormone_enabled_);
   scalar(in, change_, -PROBE_CHANGE - tolerance::precision, PROBE_CHANGE + tolerance::precision);
   scalar(in, reserve_, 0, 1);
+  scalar(in, fatigue_, 0, 1);
   for (auto &v : levels_)
     scalar(in, v, 0, 1);
   if (arm_ < 0 || arm_ > LAST_ARM || step_ < 0 || step_ >= MEASURE_STEPS ||

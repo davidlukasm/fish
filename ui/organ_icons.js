@@ -4,6 +4,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   MOTOR_TISSUE,
@@ -51,6 +52,8 @@ export const ORGAN_ICONS = {
   [GILL] : 'M8 4c-4 5-4 11 0 16M13 4c-4 5-4 11 0 16M18 4c-4 5-4 11 0 16M6 8h-2M6 12h-2M6 16h-2',
   // A stretch of gut with its rings of muscle.
   [GUT_MUSCLE] : 'M3 9h18M3 15h18M7 6v12M12 6v12M17 6v12',
+  // A pelvic fin below the belly line.
+  [PELVIC] : 'M3 8h18M8 8l3 9 4-9',
   [RESERVE_TISSUE] : 'M4 8h14v8H4zM18 11h2v2h-2M7 10v4M10 10v4M13 10v4',
   [INTERNAL_TISSUE] :
       'M6 6a2 2 0 1 0 .01 0M18 6a2 2 0 1 0 .01 0M12 18a2 2 0 1 0 .01 0M6 8l6 8M18 8l-6 8M8 6h8'

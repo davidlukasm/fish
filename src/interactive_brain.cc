@@ -231,7 +231,10 @@ void InteractiveSession::write_brain_layout(std::ostream &out, const Individual 
       namespace E = effector_column;
       Record(out, E::count)(E::neuron, e.neuron)(E::port, e.port)(E::threshold, e.threshold)(
           E::strength, e.strength)(E::lever, e.lever)(E::hue, tuning_hue(e.quality))(
-          E::outside, e.outside)(E::fibre, e.fibre)(E::protraction, e.protraction)
+          E::outside, e.outside)(E::fibre, e.fibre)(E::protraction, e.protraction)(
+          E::angle, e.port == organ_port::turn || e.port == organ_port::pelvic
+                        ? side_fin::angle * std::clamp(double(e.quality), -1., 1.)
+                        : 0.)(E::arm, e.arm)
           .finish();
     }
   out << "],\"focus\":" << neuron_focus << ",\"motor_counts\":[";

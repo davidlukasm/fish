@@ -12,23 +12,23 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
   "src/eye_geometry.cc" : "0331842d148c18c4",
   "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
-  "ui/brain_geometry.js" : "051d59c05deb9c42",
+  "ui/brain_geometry.js" : "f6ac4d582cc7150c",
   "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "d5f1149f9f71568f",
+  "colony-core/field/development_sites.hh" : "6c0532b3f94c7bb9",
   "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
   "colony-core/field/functions.hh" : "f90542aac696f5cc",
-  "colony-core/field/hormones.hh" : "f3defc219c6bfa13",
+  "colony-core/field/hormones.hh" : "b4d2ed4faf0f66a6",
   "colony-core/field/substrate.cc" : "1c66d4a6473cccb7",
-  "src/body_plan.cc" : "05c042525fce875a",
+  "src/body_plan.cc" : "fa3ff6288de9d472",
   "src/physiology_parameters.hh" : "00df0f1a6b4096e6",
-  "src/physiology.hh" : "d5af52c4df970676",
-  "src/physiology.cc" : "4f812fb266411105",
+  "src/physiology.hh" : "bcd73550f13ffcee",
+  "src/physiology.cc" : "58a693610c359611",
   "src/hormone_state.hh" : "48078a32aa49f7d1",
   "src/hormone_state.cc" : "5ce4ffda53f8995f",
   "src/physiology_parameters.cc" : "d4f67d6d9d287fd7",
   "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
   "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "ae3a3aa2c8a14656",
+  "src/body_plan.hh" : "dd0be253aaaffc6e",
   "src/receptor_tuning.hh" : "c77a0a412d814cb7",
   "colony-core/field/substrate.hh" : "692eb245d5a7e328",
   "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
@@ -36,36 +36,36 @@ const ENGINE_REVIEW = Object.freeze({
   "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
   "colony-core/evolution/constants.hh" : "c232ea43b3259223",
 
-  "ui/tissue.js" : "d2ba421f3a605b5b",
+  "ui/tissue.js" : "4243ad30e442c9aa",
   "src/genome.hh" : "239dc4f734e58ddf",
   "src/hormone_view.cc" : "be839e6e115f3ea1",
   "src/hormone_view.hh" : "1515941132943782",
   "src/simulation_types.hh" : "67b1b6ed62d29d62",
   "src/retina.cc" : "a14c24e09bb2ee39",
-  "src/observations.cc" : "7ef0a35973dc9687",
+  "src/observations.cc" : "242f471bbcfddf24",
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "3c65ed324049ca17",
   "src/retina.hh" : "a3a169f6e8f4cafd",
   "ui/fish_forms.js" : "79802adbd0e35783",
-  "ui/fish_geometry.js" : "aa899dbb45672f9f",
-  "ui/fish_fins.js" : "a07179737e1032b5",
-  "ui/fish_organs.js" : "634add3c713caddf",
-  "ui/fish_painter.js" : "8a55c784199f5207",
-  "src/brain_interface.hh" : "55cc3f3eaab3754f",
-  "src/hormone_analysis.cc" : "96ea80e2d8a6237b",
-  "src/hormone_analysis.hh" : "286fa7455ea124e0",
+  "ui/fish_geometry.js" : "9e9071624c167d75",
+  "ui/fish_fins.js" : "4681ff28688f99bf",
+  "ui/fish_organs.js" : "1fc1794411b2ca17",
+  "ui/fish_painter.js" : "68414bf054143267",
+  "src/brain_interface.hh" : "b33638b85ec6d8f7",
+  "src/hormone_analysis.cc" : "ffc00b7501fce7e0",
+  "src/hormone_analysis.hh" : "9c146b48e9c20d11",
   "src/hormone_observations.cc" : "26724d854cb42eae",
   "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "95e84786371e7b05",
+  "src/interactive_brain.cc" : "70cf63ebe3984e70",
   "src/material.hh" : "7b513268feed7d77",
   "src/ecology.hh" : "3505e6c40c515977",
   "src/feeding.cc" : "1f03f759abcba08e",
-  "src/tank_energy.cc" : "c28ecdd21bb06df1",
+  "src/tank_energy.cc" : "6c018ee55c7d69d3",
   "src/environment.cc" : "d14022c739480c9a",
   "src/environment.hh" : "9602fc842620120e",
   "src/plants.cc" : "84dd08e1cdc01da4",
   "src/plant_types.hh" : "1fb032b0ca9f080d",
-  "src/motor_state.hh" : "0319ca65ba4cdeb6",
+  "src/motor_state.hh" : "331771bcd2281ef8",
   "src/visible_body.hh" : "e0b989f5b403d44a",
   "src/body_state_limits.hh" : "7a33a86fe74eae10",
   "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
@@ -1782,10 +1782,11 @@ async function checkHormoneSystems(model, capabilities) {
   assert.match(sightTile, /title="Sehzentrum:/);
   assert.match(sightTile, /Tectum/, 'A region tile carries its technical term');
   const muscleHints = views.placementHints(state, 'organ', 'muscle');
-  assert.deepEqual(muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
-                   [ 'Flossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
-  assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 4);
-  assert.equal(muscleHints.svg.match(/aid-muscle-home/g).length, 8);
+  assert.deepEqual(
+      muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
+      [ 'Bauchflossenmuskel', 'Brustflossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
+  assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 5);
+  assert.equal(muscleHints.svg.match(/aid-muscle-home/g).length, 10);
   const eyePanel = panels.inspector(state);
   assert.match(eyePanel, /Hormone und Lernen/);
   assert.match(eyePanel, /data-open-tool="hormone"/);
@@ -2572,6 +2573,45 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         every.every((c, i) => (plan.groups[i].polarity === FIN_STROKE.front) === front.has(c.id) ||
                               c.role !== 'motor'),
         'Only the antagonist cells stroke forward in the plan');
+    // Behind the pectoral fin a pelvic fin takes the fin sites at the front of the tail zone; a
+    // plain muscle there stays a tail muscle.
+    const organKinds = await import('../ui/studio/model/organs.js');
+    const {isPelvicSite, isPelvicMuscle} = organKinds;
+    const pelvicSites = sites.filter(isPelvicSite);
+    assert.ok(pelvicSites.length && pelvicSites.every(s => s.zone === 3 && s.u >= .7),
+              'Pelvic fin sites lie at the front of the tail zone');
+    assert.ok(
+        pelvicSites.every(s => organKinds.functionFor({functionCode : 'site'}, s) === MK.forward),
+        'A plain muscle at the front of the tail zone works the tail');
+    const pelvicSite = musclePlaces(sites, MK.turn, -1, true)[0];
+    assert.ok(isPelvicSite(pelvicSite));
+    const pelvic = model.addOrgan(wired.document, 'muscle', sites, sitePoint(pelvicSite, 'muscle'),
+                                  Infinity, true, MK.turn, true);
+    const pelvicFin = model.findOrgan(pelvic.document, pelvic.organId);
+    assert.ok(isPelvicMuscle(pelvicFin) && model.isFinMuscle(pelvicFin, sites) &&
+                  pelvicFin.centers.every(c => isPelvicSite(sites.find(s => s.id === c.site))),
+              'A pelvic fin muscle sits on pelvic fin sites only');
+    assert.ok(model.findOrgan(pelvic.document, pelvicFin.pair),
+              'A pelvic fin muscle has a twin on the other side');
+    assert.notEqual(pelvicFin.id, back.id, 'The pelvic fin does not join the pectoral muscle');
+    assert.equal(model.antagonistOf(pelvic.document, pelvicFin, sites), null,
+                 'The pectoral antagonist is not the pelvic fin\'s antagonist');
+    const pelvicPair = model.addAntagonist(pelvic.document, pelvicFin.id, sites);
+    const pelvicFront = model.findOrgan(pelvicPair.document, pelvicPair.organId);
+    assert.ok(isPelvicMuscle(pelvicFront) && model.finStroke(pelvicFront) === FIN_STROKE.front,
+              'A pelvic fin gets its own antagonist on pelvic sites');
+    const angled = model.setFinAngle(pelvicPair.document, pelvicFin.id, 1, sites);
+    assert.equal(model.finAngle(model.findOrgan(angled, pelvicFin.id)), 1);
+    assert.equal(model.finAngle(model.findOrgan(angled, pelvicFin.pair)), 1,
+                 'The fin angle holds for both sides');
+    assert.equal(model.finAngle(model.findOrgan(angled, pelvicFront.id)), .5,
+                 'The antagonist keeps its own angle');
+    const pelvicPlan = model.compileDocument(angled, sites), allPelvic = model.allCenters(angled);
+    assert.ok(
+        allPelvic.some(c => c.pelvic) &&
+            allPelvic.every((c, i) => !c.pelvic || (pelvicPlan.groups[i].function === MK.turn &&
+                                                    pelvicPlan.groups[i].zone === 3)),
+        'Pelvic fin cells compile as fin cells in the tail zone');
     // Inner pacemakers: one pool beats for both sides, because mirrored pacemakers run in
     // antiphase and would keep the tail and mouth busy without a pause.
     const paced =

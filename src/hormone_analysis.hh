@@ -31,7 +31,7 @@ private:
   HormoneInvestigation result_;
   int arm_ = 0, step_ = 0;
   bool preview_done_ = false, baseline_ready_ = false, hormone_enabled_ = true;
-  double change_ = 0, reserve_ = 0;
+  double change_ = 0, reserve_ = 0, fatigue_ = 0;
   void prepare_variant();
 };
 }

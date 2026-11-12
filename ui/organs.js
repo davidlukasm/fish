@@ -5,6 +5,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   RESERVE_TISSUE,
   SENSE_TISSUE,
@@ -110,6 +111,7 @@ function organName(key) {
          : key === GRAVITY                      ? t('organs.gleichgewicht')
          : key === GILL                         ? t('organs.kiemen')
          : key === GUT_MUSCLE                   ? t('organs.darmmuskel')
+         : key === PELVIC                       ? t('organs.bauchflosse')
          : base === SENSE_TISSUE.gonad_pressure ? tList('body_model.fillingNames')[Number(side)]
                                                 : brainTissueName(base);
 }

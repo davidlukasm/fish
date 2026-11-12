@@ -15,13 +15,16 @@ enum HormoneEffect {
   HORMONE_EFFECTS
 };
 constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;
+// Besides the hormones the blood carries what the body reports of itself: its maturity, its
+// energy reserve and the exhaustion of its fast muscle fibres.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
-              BLOOD_SUBSTANCES = HORMONES + 2;
+              FATIGUE_SUBSTANCE = HORMONES + 2, BLOOD_SUBSTANCES = HORMONES + 3;
 constexpr int GROWTH_RECEPTOR = HORMONE_EFFECTS, RECEPTOR_QUERIES = HORMONE_EFFECTS + 1;
 template <class Weights, class Levels>
-double blood_stimulus(const Weights &weights, const Levels &levels, double maturity,
-                      double reserve) {
-  double stimulus = weights[MATURITY_SUBSTANCE] * maturity + weights[RESERVE_SUBSTANCE] * reserve;
+double blood_stimulus(const Weights &weights, const Levels &levels, double maturity, double reserve,
+                      double fatigue) {
+  double stimulus = weights[MATURITY_SUBSTANCE] * maturity + weights[RESERVE_SUBSTANCE] * reserve +
+                    weights[FATIGUE_SUBSTANCE] * fatigue;
   for (int k = 0; k < HORMONES; ++k)
     stimulus += weights[k] * levels[k];
   return stimulus;

@@ -203,7 +203,9 @@
     "fin": {
       "tail": 0,
       "left": 1,
-      "right": 2
+      "right": 2,
+      "pelvic_left": 3,
+      "pelvic_right": 4
     },
     "pressure_source": {
       "none": 0,
@@ -224,7 +226,8 @@
       "bladder": 12,
       "gland": 13,
       "gills": 14,
-      "gut": 15
+      "gut": 15,
+      "pelvic": 16
     },
     "eye": {
       "left": 0,
@@ -243,7 +246,11 @@
       "reverse_right": 9,
       "gill": 10,
       "gut": 11,
-      "tail_right": 12
+      "tail_right": 12,
+      "pelvic_left": 13,
+      "pelvic_right": 14,
+      "pelvic_reverse_left": 15,
+      "pelvic_reverse_right": 16
     },
     "step_phase": {
       "development": 0,
@@ -653,12 +660,18 @@
       "age_tail",
       "age_left",
       "age_right",
+      "age_pelvic_left",
+      "age_pelvic_right",
       "peak_tail",
       "peak_left",
       "peak_right",
+      "peak_pelvic_left",
+      "peak_pelvic_right",
       "steps_tail",
       "steps_left",
-      "steps_right"
+      "steps_right",
+      "steps_pelvic_left",
+      "steps_pelvic_right"
     ],
     "neuron": [
       "x",
@@ -764,7 +777,9 @@
       "hue",
       "outside",
       "fibre",
-      "protraction"
+      "protraction",
+      "angle",
+      "arm"
     ],
     "synapse": [
       "source",
@@ -890,7 +905,8 @@
       "strength",
       "x",
       "y",
-      "spread"
+      "spread",
+      "steps"
     ],
     "corpse_state": [
       "energy",
@@ -904,6 +920,8 @@
       "fin_tail",
       "fin_left",
       "fin_right",
+      "fin_pelvic_left",
+      "fin_pelvic_right",
       "mouth_pose",
       "bite_pose",
       "suction_pose",
@@ -1132,11 +1150,6 @@
         "scale": 8.0
       },
       {
-        "name": "tail",
-        "type": "i16",
-        "scale": 8192
-      },
-      {
         "name": "impulse_left",
         "type": "i16",
         "scale": 1024.0
@@ -1192,6 +1205,16 @@
         "scale": 1
       },
       {
+        "name": "fin_age_pelvic_left",
+        "type": "i32",
+        "scale": 1
+      },
+      {
+        "name": "fin_age_pelvic_right",
+        "type": "i32",
+        "scale": 1
+      },
+      {
         "name": "fin_peak_tail",
         "type": "f32",
         "scale": 1
@@ -1207,18 +1230,13 @@
         "scale": 1
       },
       {
-        "name": "fin_steps_tail",
-        "type": "u8",
+        "name": "fin_peak_pelvic_left",
+        "type": "f32",
         "scale": 1
       },
       {
-        "name": "fin_steps_left",
-        "type": "u8",
-        "scale": 1
-      },
-      {
-        "name": "fin_steps_right",
-        "type": "u8",
+        "name": "fin_peak_pelvic_right",
+        "type": "f32",
         "scale": 1
       },
       {
@@ -2110,6 +2128,11 @@
       "levels": 6,
       "signs": 2
     },
+    "blood_substance": {
+      "maturity": 6,
+      "reserve": 7,
+      "fatigue": 8
+    },
     "route": {
       "page": "/",
       "assets": "/ui/",
@@ -2177,8 +2200,14 @@
       "tail_at_rest": 0.5,
       "fin_at_speed": 0.5
     },
-    "tail_stroke": {
-      "lone_push": 0.3
+    "antagonist": {
+      "lone_sweep": 0.3,
+      "tail_rest_sweep": 0.5
+    },
+    "side_fin": {
+      "gap": 0.3,
+      "angle": 90,
+      "bearing_half": 20
     },
     "trial_lab": {
       "seeds": [1, 2, 4],

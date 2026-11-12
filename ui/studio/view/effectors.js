@@ -6,7 +6,8 @@ import {
   FIN_STROKE,
   GILL_FILTER,
   MOTOR_KIND,
-  MUSCLE_FIBRE
+  MUSCLE_FIBRE,
+  SIDE_FIN
 } from '../../schema.js';
 import {
   finVolumeOf,
@@ -19,11 +20,12 @@ import {
   gutUse,
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
-import {functionFor, nodeLimit, organFunction} from '../model/organs.js';
+import {functionFor, isPelvicMuscle, nodeLimit, organFunction} from '../model/organs.js';
 import {
   antagonistOf,
   centerIndex,
   findOrgan,
+  finAngle,
   finStroke,
   gillRakers,
   gutLength,
@@ -52,11 +54,11 @@ import {organCommand} from './preview.js';
 const label = (key, values) => t('studio.muscle.' + key, values);
 // The gut, the gills and the gut muscle are no muscle organs; their handles carry their own codes.
 export const GUT_TRAIT = 'gut_length', GUT_CODE = -1, GILL_TRAIT = 'gill_rakers', GILL_CODE = -2,
-             GUT_MUSCLE_CODE = -3;
+             GUT_MUSCLE_CODE = -3, FIN_ANGLE_TRAIT = 'fin_angle';
 const FRAME = Object.freeze({width : 300, height : 170, middle : 85});
 const HANDLE = Object.freeze({radius : 5.5});
 const handle = (name, x, y, title) =>
-    '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replace(':', '-') +
+    '<circle class="aid-graphic-handle aid-muscle-handle ' + name.replaceAll(':', '-') +
     '" data-effector-handle="' + name + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
 const RAY = Object.freeze({least : 1, span : 3});
@@ -215,10 +217,32 @@ const SIDE = Object.freeze({
   base : 60,
   sweep : 92,
   out : 62,
-  ray : {foot : .3, sweep : .9, least : .45}
+  ray : {foot : .3, sweep : .9, least : .45},
+  // The dial of the stroke: the line along which the fin beats, through a point in the water
+  // beside the fin, and the arrow of this muscle's stroke along it.
+  dial : {x : 150, y : 112, reach : 44, head : 6, caption : [ 10, 160 ]}
 });
+// The angle of a fin's beat against straight back (or forward), in degrees: outward positive.
+const beatDegrees = angle => SIDE_FIN.angle * (2 * angle - 1);
+// A back stroke drives the water along its beat line; the antagonist drives it the other way.
+const strokeSense = stroke => stroke === FIN_STROKE.front ? -1 : 1;
+function strokeArrow(angle, stroke) {
+  const D = SIDE.dial, a = radians(beatDegrees(angle)), sense = strokeSense(stroke);
+  return {
+    x : D.x + sense * D.reach * Math.cos(a),
+    y : D.y + sense * D.reach * Math.sin(a),
+    a,
+    sense
+  };
+}
+const angleAt = stroke => (x, y) => {
+  const D = SIDE.dial, sense = strokeSense(stroke);
+  const a = Math.atan2(sense * (y - D.y), Math.max(0, sense * (x - D.x)));
+  return (degrees(a) / SIDE_FIN.angle + 1) / 2;
+};
 function sideGraphic(state, organ, centers) {
-  const k = sideIndex(organ.side), size = finSizes(state.anatomy?.fins).sides[k];
+  const k = sideIndex(organ.side), sizes = finSizes(state.anatomy?.fins),
+        size = (isPelvicMuscle(organ) ? sizes.pelvic[k] : null) ?? sizes.sides[k];
   const S = SIDE, sweep = S.sweep * size.length, out = S.out * size.out;
   const tip = [ S.root + S.base / 2 + sweep, S.skin + out ];
   const fin = 'M' + S.root + ' ' + S.skin + ' Q' + fixed(S.root + sweep / 2) + ' ' +
@@ -236,8 +260,26 @@ function sideGraphic(state, organ, centers) {
                             fixed(rayWidth(center.copies)) + '"/>';
                    })
                    .join('');
+  const D = S.dial, angle = finAngle(organ), stroke = finStroke(organ),
+        arrow = strokeArrow(angle, stroke);
+  const back = {x : 2 * D.x - arrow.x, y : 2 * D.y - arrow.y},
+        wing = side => ({
+          x : arrow.x - arrow.sense * D.head * Math.cos(arrow.a + side * Math.PI / 4),
+          y : arrow.y - arrow.sense * D.head * Math.sin(arrow.a + side * Math.PI / 4)
+        });
+  const xy = p => fixed(p.x) + ' ' + fixed(p.y);
+  // The caption names where this stroke drives the water: outward or inward of the fin.
+  const turned = beatDegrees(angle), style = traitStyle((1 + arrow.sense * (2 * angle - 1)) / 2,
+                                                        [ 'inward', 'straight', 'outward' ]);
   return '<path class="aid-muscle-body" d="M0 0 H' + FRAME.width + ' V' + S.skin + ' H0Z"/>' +
-         '<path class="aid-muscle-fin" d="' + fin + '"/>' + rays;
+         '<path class="aid-muscle-fin" d="' + fin + '"/>' + rays +
+         '<path class="aid-muscle-beat" d="M' + xy(back) + ' L' + xy(arrow) + '"/>' +
+         '<path class="aid-muscle-stroke" d="M' + D.x + ' ' + D.y + ' L' + xy(arrow) + ' M' +
+         xy(wing(-1)) + ' L' + xy(arrow) + ' L' + xy(wing(1)) + '"/>' +
+         handle('trait:q1:' + stroke, arrow.x, arrow.y, label('angle.handle')) + '<text x="' +
+         D.caption[0] + '" y="' + D.caption[1] + '">' +
+         escapeText(label('angle.' + style, {degrees : formatNumber(Math.abs(turned), 0)})) +
+         '</text>';
 }
 
 const MOUTH = Object.freeze({
@@ -339,6 +381,9 @@ function jawGraphic(state, organ, centers) {
 }
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
+  [MOTOR_KIND.turn] : Object.fromEntries(
+      Object.values(FIN_STROKE)
+          .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
   [GUT_CODE] : {'trait:q1' : {key : GUT_TRAIT, at : x => trackShare(x, GUT.track)}},
   [GILL_CODE] : {'trait:q1' : {key : GILL_TRAIT, at : x => trackShare(x, GILL.track)}},
   [MOTOR_KIND.aggression] : {
@@ -854,11 +899,13 @@ export function effectorGraphic(state, organ) {
   }[code];
   if (!draw)
     return '';
-  return effectorBlock(organ, code, sideOf(organ), label('title.' + code),
+  const pelvic = isPelvicMuscle(organ);
+  return effectorBlock(organ, code, sideOf(organ), label('title.' + (pelvic ? 'pelvic' : code)),
                        draw(state, organ, organ.centers, twin),
                        nodeControls(organ, code, nodeLimit(organ, state.sites)) +
                            (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') +
-                           (isFibrous(organ) ? fibreSection(organ, code) : '') + muscleHint(code) +
+                           (isFibrous(organ) ? fibreSection(organ, code) : '') +
+                           muscleHint(pelvic ? 'pelvic' : code) +
                            (code === MOTOR_KIND.aggression
                                 ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)
                             : code === MOTOR_KIND.suction ? dietChart(state, 'suction', organ)

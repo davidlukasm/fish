@@ -320,12 +320,18 @@ export const siteRole = type => type === 'brain' || isRegion({type}) ? NERVE_ROL
                                 : ORGAN_BY_KEY[type]?.skin           ? SKIN_ROLE
                                                                      : type;
 export const ORGAN_BY_KEY = Object.freeze(Object.fromEntries(ORGANS.map(o => [o.key, o])));
+// Where a site allows several works, a muscle does the first: at the front of the tail zone the
+// tail, while a pelvic fin muscle takes the fin there.
 const MUSCLES = Object.freeze(
-    [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
+    [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.forward, MOTOR_KIND.turn ]);
 export const MUSCLE_LABEL_INDEX = new Map([
   [ MOTOR_KIND.forward, 0 ], [ MOTOR_KIND.turn, 1 ], [ MOTOR_KIND.suction, 2 ],
   [ MOTOR_KIND.aggression, 3 ]
 ]);
+// The pelvic fin muscle's title follows the four works in the list of muscle titles.
+export const PELVIC_LABEL_INDEX = MUSCLE_LABEL_INDEX.size;
+export const muscleLabelIndex = (code, pelvic = false) =>
+    pelvic && code === MOTOR_KIND.turn ? PELVIC_LABEL_INDEX : MUSCLE_LABEL_INDEX.get(code);
 
 export const PRESSURE_OF = Object.freeze({
   eggs : {key : 'pressure', source : PRESSURE_SOURCE.eggs},
@@ -344,13 +350,23 @@ export function functionFor(center, site) {
   return MUSCLES.find(code => (site.motors & (1 << code)) !== 0) ?? -1;
 }
 const MUSCLE_CELL = Object.freeze({role : 'motor', functionCode : 'site', surface : 'any'});
-export const musclePlaces = (sites, code, side) =>
-    sites.filter(s => sideSign(s.side) === sideSign(side) && functionFor(MUSCLE_CELL, s) === code &&
-                      eligible(MUSCLE_CELL, s));
+// A pelvic fin muscle's cells are fin cells by themselves, at the sites only they may take.
+export const PELVIC_CELL =
+    Object.freeze({role : 'motor', functionCode : MOTOR_KIND.turn, surface : 'any', pelvic : true});
+const bit = code => 1 << code;
+export const isPelvicSite = site => !!site && (site.motors & bit(MOTOR_KIND.turn)) !== 0 &&
+                                    (site.motors & bit(MOTOR_KIND.forward)) !== 0;
+export const isPelvicMuscle = organ => organ?.type === 'muscle' && !!organ.centers[0]?.pelvic;
+export const musclePlaces = (sites, code, side, pelvic = false) => {
+  const cell = pelvic ? PELVIC_CELL : MUSCLE_CELL;
+  return sites.filter(s => sideSign(s.side) === sideSign(side) && functionFor(cell, s) === code &&
+                           eligible(cell, s));
+};
 export function nodeLimit(organ, sites) {
   const most = ORGAN_BY_KEY[organ?.type]?.nodes ?? 0;
   return organ?.type === 'muscle' && organ.centers.length
-             ? musclePlaces(sites, organFunction(organ, sites), organ.side).length
+             ? musclePlaces(sites, organFunction(organ, sites), organ.side, isPelvicMuscle(organ))
+                   .length
              : most;
 }
 export const kindNodes = organ => organ.centers.filter(c => c.key === organ.centers[0]?.key);
@@ -375,13 +391,15 @@ export function eligible(center, site) {
   const code = functionFor(center, site);
   const mask = center.role === 'sensor' ? site.senses : site.motors;
   const outer = center.surface === 'outer' || center.surface === 'flank';
-  // Suction cells on the head's flanks pump the gills and fin cells in the gut wall move the gut,
-  // so only gills and gut muscle may take those places.
+  // Suction cells on the head's flanks pump the gills, fin cells in the gut wall move the gut and
+  // fin cells at the front of the tail zone make pelvic fins, so only gills, gut muscle and pelvic
+  // fin muscles may take those places.
   if (center.role === 'motor' && code === MOTOR_KIND.suction &&
       isGillFlank(site) !== (center.surface === 'flank'))
     return false;
   if (center.role === 'motor' && code === MOTOR_KIND.turn &&
-      isGutWall(site) !== (center.surface === 'gutwall'))
+      (isGutWall(site) !== (center.surface === 'gutwall') ||
+       isPelvicSite(site) !== !!center.pelvic))
     return false;
   return code >= 0 && (mask & (1 << code)) !== 0 &&
          (center.surface === 'any' || outer === site.outer);

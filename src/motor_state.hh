@@ -16,20 +16,34 @@ enum StrokeIndex {
   StrokeGill = stroke_kind::gill,
   StrokeGut = stroke_kind::gut,
   StrokeTailRight = stroke_kind::tail_right,
+  StrokePelvicLeft = stroke_kind::pelvic_left,
+  StrokePelvicRight = stroke_kind::pelvic_right,
+  StrokePelvicReverseLeft = stroke_kind::pelvic_reverse_left,
+  StrokePelvicReverseRight = stroke_kind::pelvic_reverse_right,
   STROKE_COUNT = stroke_kind::count
 };
-inline constexpr int ORGAN_PORTS = organ_port::gut + 1;
+inline constexpr int ORGAN_PORTS = organ_port::pelvic + 1;
 constexpr std::array<int, STROKE_COUNT> STROKE_PORTS{
-    organ_port::forward, organ_port::turn,  organ_port::turn,  organ_port::suction,
-    organ_port::eggs,    organ_port::sperm, organ_port::jaw,   organ_port::defense,
-    organ_port::turn,    organ_port::turn,  organ_port::gills, organ_port::gut,
-    organ_port::forward};
+    organ_port::forward, organ_port::turn,   organ_port::turn,   organ_port::suction,
+    organ_port::eggs,    organ_port::sperm,  organ_port::jaw,    organ_port::defense,
+    organ_port::turn,    organ_port::turn,   organ_port::gills,  organ_port::gut,
+    organ_port::forward, organ_port::pelvic, organ_port::pelvic, organ_port::pelvic,
+    organ_port::pelvic};
 // The tail's antagonists: the muscles of the left and of the right flank.
 constexpr std::array<int, 2> TAIL_STROKES{StrokeTailLeft, StrokeTailRight};
-// The strokes of each pectoral fin: the back stroke pushes the fish forward, the forward stroke
-// of the antagonist muscles pushes it back.
-constexpr std::array<int, 2> BACK_STROKES{StrokeTurnLeft, StrokeTurnRight},
-    FRONT_STROKES{StrokeReverseLeft, StrokeReverseRight};
+// Each side has up to two fins, the pectoral fin in front and the pelvic fin behind it, each
+// with its own muscles: the back stroke pushes the fish forward, the forward stroke of the
+// antagonist muscles pushes it back.
+inline constexpr int SIDE_FINS = 2;
+constexpr std::array<int, SIDE_FINS> FIN_PORTS{organ_port::turn, organ_port::pelvic};
+constexpr std::array<std::array<int, 2>, SIDE_FINS> BACK_STROKES{
+    {{StrokeTurnLeft, StrokeTurnRight}, {StrokePelvicLeft, StrokePelvicRight}}},
+    FRONT_STROKES{{{StrokeReverseLeft, StrokeReverseRight},
+                   {StrokePelvicReverseLeft, StrokePelvicReverseRight}}};
+// The drawn fin of a side fin: the pectoral pair first, then the pelvic pair.
+constexpr int side_fin_index(int fin, int side) {
+  return fin::left + 2 * fin + side;
+}
 // drive: what drives the muscle now; force: what it delivers this step, as paid; recovery: steps
 // left of its twitch.
 struct StrokeState {
@@ -48,6 +62,11 @@ struct StrokeTiming {
     keep = std::exp(-1 / steps);
     recovery = int(std::lround(steps));
   }
+};
+// A pair of antagonist muscles: which of the two pulled last (-1: neither, or the limb is back at
+// rest) and how long both have rested.
+struct AntagonistPair {
+  int last = -1, rest = 0;
 };
 struct MotorState {
   double speed = 2;
@@ -69,9 +88,10 @@ struct MotorState {
   double tail = 0;
   double impulse_tail_left = 0;
   double impulse_tail_right = 0;
-  // drive_left/right: signed fin force times its lever (turning); drive_fins: the fins' signed
-  // push along the body.
-  double drive_forward = 0, drive_left = 0, drive_right = 0, drive_fins = 0;
+  // drive_left/right: the turning each side's strokes give (fins by their levers and angles, a
+  // bending tail flank); drive_fins: the fins' signed push along the body; drive_across: their
+  // push across it, to the right.
+  double drive_forward = 0, drive_left = 0, drive_right = 0, drive_fins = 0, drive_across = 0;
   double motor_factor = 1;
   double mouth_pose = 0;
   double suction_pose = 0, gill_pose = 0;
@@ -80,14 +100,23 @@ struct MotorState {
   std::array<StrokeState, STROKE_COUNT> strokes{};
   Color pigment{};
   std::array<double, fin::count> fin_tension{};
-  // The flank of the last tail stroke (-1: none, or the tail is straight again), the steps both
-  // flanks have rested, and how much of each flank's running stroke pushes and how much it turns
-  // the fish.
-  int tail_side = -1, tail_rest = 0;
-  std::array<double, 2> tail_push{}, tail_turn{};
-  // Presentation history of the tail and the two side fins (fin_event); excluded from saved
-  // physics and evolution.
-  std::array<int, fin::count> fin_stroke_age{-1, -1, -1}, fin_stroke_steps{};
+  // The antagonists of the tail (left and right flank) and of each side fin (back and forward
+  // stroke), and how fully each running stroke sweeps its limb.
+  AntagonistPair tail_pair;
+  std::array<std::array<AntagonistPair, 2>, SIDE_FINS> fin_pairs{};
+  std::array<double, STROKE_COUNT> sweep{};
+  // How exhausted the fast fibres are, weighted by their force: 0 rested, 1 spent.
+  double fatigue = 0;
+  // How much the side fins hold the body up where they lie on the ground: 0 not at all, 1 fully.
+  double fin_bearing = 0;
+  // Presentation history of the tail and the side fins (fin_event); excluded from saved physics
+  // and evolution.
+  std::array<int, fin::count> fin_stroke_age = [] {
+    std::array<int, fin::count> never{};
+    never.fill(-1);
+    return never;
+  }();
+  std::array<int, fin::count> fin_stroke_steps{};
   std::array<double, fin::count> fin_stroke_peak{};
   bool swimming_pending = false;
   double contact_x = 0;

@@ -2,6 +2,11 @@ import {BEHAVIOR_SCALE, FIN, FIN_EVENT as E, STROKE_GRIP as G} from './schema.js
 
 export const FIN_STROKE = Object.freeze({tail_swing : .8, body_bend : .22});
 export const FINS = Object.keys(FIN).length;
+// The side fins: the pectoral pair, then the pelvic pair behind it.
+export const SIDE_FIN_INDICES =
+    Object.freeze([ FIN.left, FIN.right, FIN.pelvic_left, FIN.pelvic_right ]);
+export const finSide = index => (index - FIN.left) % 2;
+export const isPelvic = index => index >= FIN.pelvic_left;
 // Share of a stroke that the tail and the fins turn into push at a speed through the water, as
 // the engine has it (movement.cc).
 export function swimmingGrip(speed) {

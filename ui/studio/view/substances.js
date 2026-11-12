@@ -1,5 +1,5 @@
 import {previewControls, previewContextOf, cellDevelopment} from './development.js';
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {isRegion} from '../model/organs.js';
@@ -463,16 +463,18 @@ export const wheelPatch = (fx, fy) => ({
 export const wheelMarks = center => pointMarks({x : wheelX(center.q1), y : wheelY(center.q2)});
 export const wheelTrackWidth = fx => trackShare(fx * WHEEL.size, WHEEL.track);
 export function substanceMark(state, index) {
-  return index === HORMONES.levels       ? label('inspector.maturityMark')
-         : index === HORMONES.levels + 1 ? label('inspector.reserveMark')
-                                         : Array.from(substanceName(state, index))[0];
+  return index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturityMark')
+         : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserveMark')
+         : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigueMark')
+                                             : Array.from(substanceName(state, index))[0];
 }
 export function substanceName(state, index) {
   const named = state.document.substances.find(sub => sub.index === index)?.name;
   return named ||
-         (index === HORMONES.levels       ? label('inspector.maturity')
-          : index === HORMONES.levels + 1 ? label('inspector.reserve')
-                                          : tList('studio.inspector.substanceLetters')[index]);
+         (index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturity')
+          : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserve')
+          : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigue')
+                                              : tList('studio.inspector.substanceLetters')[index]);
 }
 function substanceWheel(state, profile, {
   choices = [],

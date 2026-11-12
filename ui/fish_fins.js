@@ -14,20 +14,12 @@ import {
   fishRegion,
   fishTraceCurves
 } from './fish_geometry.js';
-import {finVolume, fishFinDual, fishFinShape, fishGlyphPoints} from './fish_organs.js';
+import {finVolume, fishFinShape, fishGlyphPoints} from './fish_organs.js';
 import {clipEars, holdsWithEdges} from './polygon.js';
 export const fish_finsState = {};
 
-export const FIN_LOBE_MIN = .025;
-export function fishFinShapes(a, index) {
-  return index && fishFinDual(a, index) > FIN_LOBE_MIN
-             ? [ fishFinShape(a, index), fishFinShape(a, index, 1) ]
-             : [ fishFinShape(a, index) ];
-}
-
-export function fishFinPoint(a, index, t, across, lobe = 0) {
-  const f = fishFinShape(a, index, lobe),
-        u = f.rimRange[0] + (f.rimRange[1] - f.rimRange[0]) * across,
+export function fishFinPoint(a, index, t, across) {
+  const f = fishFinShape(a, index), u = f.rimRange[0] + (f.rimRange[1] - f.rimRange[0]) * across,
         k = Math.min(f.curves.length - 1, Math.floor(u)), rim = fishBezier(f.curves[k], u - k),
         p = [ f.root[0] + t * (rim[0] - f.root[0]), f.root[1] + t * (rim[1] - f.root[1]) ];
   fishFinContain(f, p);
@@ -117,8 +109,7 @@ function fishFinContain(shape, p) {
 export function fishFinPath(g, r, a, index, append = false) {
   if (!append)
     g.beginPath();
-  for (const f of fishFinShapes(a, index))
-    fishTraceCurves(g, r, f.curves, true);
+  fishTraceCurves(g, r, fishFinShape(a, index).curves, true);
 }
 
 export function fishBodyPath(g, r, a, append = false) {

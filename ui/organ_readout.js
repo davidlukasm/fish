@@ -3,6 +3,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isMotorTissue,
@@ -169,13 +170,27 @@ const MOTOR_STROKES = Object.freeze([
 ]);
 export function organStrokeIndex(index, side = 0, variant = '') {
   const stroke = MOTOR_STROKES[index];
-  return variantStroke(variant) ?? (Array.isArray(stroke) ? stroke[side] : stroke);
+  return variantStroke(variant, side) ?? (Array.isArray(stroke) ? stroke[side] : stroke);
 }
 export function organMotorInterval(index, d = {
   b : sceneState.frame?.brain
 },
                                    side = 0) {
   return d.b?.strokes?.[organStrokeIndex(index, side)]?.[STROKE.steps] || 0;
+}
+// A side fin's back stroke as the engine works it (body_plan.cc fin_mechanics): the drive of its
+// pulling cells, and per unit of force its mean angle and the turning it gives.
+function sideFinMechanics(cells, active) {
+  let drive = 0, force = 0, angle = 0, turn = 0;
+  for (const e of cells) {
+    const share = e[EFFECTOR.strength] * (1 - e[EFFECTOR.protraction]),
+          a = radians(e[EFFECTOR.angle]);
+    drive += share * Math.max(0, active(e));
+    force += share;
+    angle += share * e[EFFECTOR.angle];
+    turn += share * (Math.cos(a) * Math.abs(e[EFFECTOR.lever]) + Math.sin(a) * e[EFFECTOR.arm]);
+  }
+  return force > 0 ? {drive, angle : angle / force, turn : turn / force} : null;
 }
 // A rested muscle twitches as soon as its drive reaches the threshold; under a steady drive it
 // twitches again whenever the last twitch is over.
@@ -250,6 +265,7 @@ const READOUT = Object.freeze({
   digits : 3,
   size_physics : .5,
   straight : .01,
+  angle_straight : .5,
   outside : .5,
   force_digits : 4
 });
@@ -281,6 +297,7 @@ export function brainOrganReadout(d, tissue) {
                              : variant === GRAVITY    ? t('organ_readout.gleichgewicht')
                              : variant === GILL       ? t('organ_readout.kiemen')
                              : variant === GUT_MUSCLE ? t('organ_readout.darmmuskel')
+                             : variant === PELVIC     ? t('organ_readout.bauchflosse')
                                                       : brainTissueName(key),
                      cells : nodes.length,
                      activity,
@@ -320,18 +337,11 @@ export function brainOrganReadout(d, tissue) {
         sum = motor.reduce((s, e) => s + e[EFFECTOR.strength] * active(e), 0),
         total = all.reduce((s, e) => s + e[EFFECTOR.strength] * active(e), 0),
         u = sum / Math.max(TOLERANCE.negligible, capacity),
-        drive = k === MOTOR_KIND.turn && !variant
-                    ? all.reduce(
-                          (s, e) => {
-                            const lever = e[EFFECTOR.lever];
-                            return s + ((lever < 0 ? 0 : 1) === side
-                                            ? e[EFFECTOR.strength] * Math.max(0, active(e)) *
-                                                  Math.abs(lever)
-                                            : 0);
-                          },
-                          0)
-                    : total,
-        timing = organMotorTiming(d, k, drive, side, variant),
+        fin = k === MOTOR_KIND.turn && (!variant || variant === PELVIC)
+                  ? sideFinMechanics(all.filter(e => (e[EFFECTOR.lever] < 0 ? 0 : 1) === side),
+                                     active)
+                  : null,
+        drive = fin ? fin.drive : total, timing = organMotorTiming(d, k, drive, side, variant),
         growth = (d.b.tissue ?? BODY_UNIT.body_tissue) / BODY_UNIT.body_tissue,
         paired = isSenseTissue(key)     ? PAIRED_SENSES.includes(k)
                  : variantPort(variant) ? true
@@ -366,7 +376,7 @@ export function brainOrganReadout(d, tissue) {
     const fibre = muscleFibres(d, k, side, motor, variant);
     // The brain drives the whole organ: its stroke's drive over all its cells while it twitches.
     const whole = all.reduce((s, e) => s + e[EFFECTOR.strength], 0),
-          stroke = d.b?.strokes?.[variantStroke(variant)],
+          stroke = d.b?.strokes?.[variantStroke(variant, side)],
           driven = brainClamp((stroke?.[STROKE.recovery] > 0 ? stroke[STROKE.drive] : 0) /
                               Math.max(TOLERANCE.negligible, whole));
     if (variant === GILL) {
@@ -423,7 +433,8 @@ export function brainOrganReadout(d, tissue) {
         ];
       } else {
         const inertia = params.size_physics >= READOUT.size_physics ? mass : 1,
-              angle = brainClamp(params.stroke_turn * impulse * (side ? -1 : 1) * weak / inertia,
+              angle = brainClamp(params.stroke_turn * impulse * (fin?.turn ?? 0) * (side ? -1 : 1) *
+                                     weak / inertia,
                                  -BEHAVIOR_SCALE.turn_degrees, BEHAVIOR_SCALE.turn_degrees);
         info.hero = total <= 0 ? t('organ_readout.ruht')
                     : Math.abs(angle) < READOUT.straight
@@ -435,7 +446,14 @@ export function brainOrganReadout(d, tissue) {
           {...nextPulse, label : t('organ_readout.naechsterSchlag')},
           metric(t('organ_readout.dieseFlosseTraegtBei'),
                  organPercent(sum / Math.max(TOLERANCE.negligible, total)),
-                 t('organ_readout.koerperseiteUndAnsatzBestimmen'))
+                 t('organ_readout.koerperseiteUndAnsatzBestimmen')),
+          metric(t('organ_readout.schlagwinkel'),
+                 Math.abs(fin?.angle ?? 0) < READOUT.angle_straight
+                     ? t('organ_readout.schlagwinkelLaengs')
+                     : t(fin.angle > 0 ? 'organ_readout.schlagwinkelAussen'
+                                       : 'organ_readout.schlagwinkelInnen',
+                         {n : organNumber(Math.abs(fin.angle), 0)}),
+                 t('organ_readout.schlagwinkelHinweis'))
         ];
       }
     } else if (k === MOTOR_KIND.suction) {

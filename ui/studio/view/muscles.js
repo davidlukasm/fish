@@ -1,18 +1,25 @@
 import {ATELIER_LIMITS, FIN_STROKE, MOTOR_KIND} from '../../schema.js';
-import {musclePlaces, organFunction} from '../model/organs.js';
+import {isPelvicMuscle, musclePlaces, organFunction} from '../model/organs.js';
 import {BODY_FRAME, halfWidth, sideOf, sideSign} from '../model/layout.js';
 import {finStroke, sprintNodes, usedSites} from '../model/document.js';
-import {FIN_BASE, HEAD, skinAt, SNOUT_TIP} from './frame.js';
+import {FIN_BASE, HEAD, PELVIC_BASE, skinAt, SNOUT_TIP} from './frame.js';
 import {fixed} from './markup.js';
 
-export const MUSCLE_TONE = Object.freeze({
+const MUSCLE_TONE = Object.freeze({
   [MOTOR_KIND.forward] : '#7eabe4',
   [MOTOR_KIND.turn] : '#b99ddf',
   [MOTOR_KIND.suction] : '#ebbd7a',
   [MOTOR_KIND.aggression] : '#82d5cb'
 });
-export const WORKS = Object.freeze(
-    [ MOTOR_KIND.aggression, MOTOR_KIND.suction, MOTOR_KIND.turn, MOTOR_KIND.forward ]);
+const PELVIC_TONE = '#df9dc4';
+export const workTone = ({code, pelvic}) => pelvic ? PELVIC_TONE : MUSCLE_TONE[code];
+// The works a muscle can do, each with its own place on each side: the pelvic fins behind the
+// pectoral fins are fins of their own.
+export const WORKS = Object.freeze([
+  {code : MOTOR_KIND.aggression, pelvic : false}, {code : MOTOR_KIND.suction, pelvic : false},
+  {code : MOTOR_KIND.turn, pelvic : false}, {code : MOTOR_KIND.turn, pelvic : true},
+  {code : MOTOR_KIND.forward, pelvic : false}
+].map(Object.freeze));
 // A muscle is drawn as one band, not cell by cell: its length grows with the number of nodes and
 // saturates, and a few schematic segments stand for all of them.
 const BAND = Object.freeze({half_fill : 8, segments : 5});
@@ -34,6 +41,7 @@ const SHAPE = Object.freeze({
   },
   // The forward-stroking antagonist leans its fan toward the head.
   fin : {inset : 6, reach : [ 22, 18 ], lean : .7},
+  pelvic : {inset : 4, reach : [ 14, 12 ], lean : .7},
   jaw : {at : .82, size : [ [ 16, 10 ], [ 8, 5 ] ], spread : .8, tilt : .6, fibre : .7},
   throat :
       {after : 4, length : [ 40, 50 ], off : 20, width : [ 12, 10 ], out : 2.2, in : .4, ring : 1.2}
@@ -41,7 +49,7 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back) {
+function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back, pelvic = false) {
   const s = sideSign(side), count = muscleSegments(nodes), along = k => (k + .5) / count;
   if (code === MOTOR_KIND.forward) {
     const T = SHAPE.tail, end = T.stalk[1],
@@ -68,7 +76,8 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
     };
   }
   if (code === MOTOR_KIND.turn) {
-    const F = SHAPE.fin, a = FIN_BASE.at, b = FIN_BASE.at + FIN_BASE.length, middle = (a + b) / 2;
+    const F = pelvic ? SHAPE.pelvic : SHAPE.fin, B = pelvic ? PELVIC_BASE : FIN_BASE, a = B.at,
+          b = B.at + B.length, middle = (a + b) / 2;
     const base = x => skinAt(x, s) - s * F.inset, reach = grow(F.reach, (fill + strength) / 2);
     const lean = stroke === FIN_STROKE.front ? F.lean * (b - a) / 2 : 0;
     const root = {x : middle - lean, y : base(middle) - s * reach};
@@ -128,7 +137,8 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
 export function muscleShape(organ, sites) {
   const code = organFunction(organ, sites);
   const shape = workShape(code, sideOf(organ), muscleBuild(organ), organ.centers.length,
-                          code === MOTOR_KIND.turn ? finStroke(organ) : FIN_STROKE.back);
+                          code === MOTOR_KIND.turn ? finStroke(organ) : FIN_STROKE.back,
+                          isPelvicMuscle(organ));
   if (!shape)
     return null;
   const sprint = sprintNodes(organ), count = shape.marks.length,
@@ -155,14 +165,16 @@ export function muscleNode(organ, index, sites) {
 const HOME = Object.freeze({fill : .5, strength : .5});
 export function muscleHomes(doc, sites) {
   const used = usedSites(doc);
-  return [ -1, 1 ].flatMap(side => WORKS.map(code => {
-    const organ = doc.organs.find(o => o.type === 'muscle' && sideSign(o.side) === side &&
-                                       organFunction(o, sites) === code) ??
-                  null;
-    const shape = organ ? muscleShape(organ, sites) : workShape(code, side, HOME, 1);
-    const free = musclePlaces(sites, code, side).filter(s => !used.has(s.id));
+  return [ -1, 1 ].flatMap(side => WORKS.map(({code, pelvic}) => {
+    const organ =
+        doc.organs.find(o => o.type === 'muscle' && sideSign(o.side) === side &&
+                             organFunction(o, sites) === code && isPelvicMuscle(o) === pelvic) ??
+        null;
+    const shape =
+        organ ? muscleShape(organ, sites) : workShape(code, side, HOME, 1, FIN_STROKE.back, pelvic);
+    const free = musclePlaces(sites, code, side, pelvic).filter(s => !used.has(s.id));
     const middle = {x : (shape.from.x + shape.to.x) / 2, y : (shape.from.y + shape.to.y) / 2};
-    return {code, side, organ, shape, free, middle};
+    return {code, pelvic, side, organ, shape, free, middle};
   }));
 }
 export function muscleTarget(doc, sites, position) {

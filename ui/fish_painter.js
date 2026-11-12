@@ -1,4 +1,4 @@
-import {FINS} from './fin_stroke.js';
+import {FINS, SIDE_FIN_INDICES} from './fin_stroke.js';
 import {
   ANATOMY,
   BODY_SHAPE,
@@ -20,7 +20,6 @@ import {
   fishBodyPath,
   fishFinPath,
   fishFinPoint,
-  fishFinShapes,
   fishRearFinShape,
   fishRenderRadius,
   fishTint
@@ -757,15 +756,15 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
         }
       }
     }
-    for (let side = 0; side < 2; ++side) {
-      const shape = fin(FIN.left + side);
+    for (const index of SIDE_FIN_INDICES) {
+      const shape = fin(index);
       if (shape[FIN_SHAPE.strength] <= 0)
         continue;
-      ctx.fillStyle = fishFinColor(ctx, r, anatomy, FIN.left + side, tint);
+      ctx.fillStyle = fishFinColor(ctx, r, anatomy, index, tint);
       ctx.strokeStyle = tint(-GLYPH.fin_edge);
       ctx.lineWidth = Math.max(GLYPH.fin_min_width, r * GLYPH.fin_width);
       ctx.globalAlpha = opacity * GLYPH.side_alpha;
-      fishFinPath(ctx, r, anatomy, FIN.left + side);
+      fishFinPath(ctx, r, anatomy, index);
       ctx.fill();
       ctx.stroke();
       if (r > GLYPH.ray_min_radius) {
@@ -774,14 +773,13 @@ export function paintFishGlyph(ctx, p, r, a, swimStep, blend = 1, o = null, sele
                           Math.min(1, (r - GLYPH.ray_min_radius) / GLYPH.ray_fade);
         ctx.lineWidth = Math.max(GLYPH.fin_min_width, r * GLYPH.side_ray_width);
         ctx.beginPath();
-        for (let lobe = 0; lobe < fishFinShapes(anatomy, FIN.left + side).length; lobe++)
-          for (const across of SIDE_RAYS) {
-            const from = fishFinPoint(anatomy, FIN.left + side, GLYPH.side_ray_start, across, lobe),
-                  mid = fishFinPoint(anatomy, FIN.left + side, GLYPH.side_ray_mid, across, lobe),
-                  to = fishFinPoint(anatomy, FIN.left + side, GLYPH.side_ray_end, across, lobe);
-            ctx.moveTo(...from.map(v => v * r));
-            ctx.quadraticCurveTo(...mid.map(v => v * r), ...to.map(v => v * r));
-          }
+        for (const across of SIDE_RAYS) {
+          const from = fishFinPoint(anatomy, index, GLYPH.side_ray_start, across),
+                mid = fishFinPoint(anatomy, index, GLYPH.side_ray_mid, across),
+                to = fishFinPoint(anatomy, index, GLYPH.side_ray_end, across);
+          ctx.moveTo(...from.map(v => v * r));
+          ctx.quadraticCurveTo(...mid.map(v => v * r), ...to.map(v => v * r));
+        }
         ctx.stroke();
       }
     }
@@ -924,18 +922,17 @@ export function fishSkeletonPath(g, r, a) {
     }
   }
   for (let index = 0; index < FINS; index++)
-    if (a.fin(index)[FIN_SHAPE.strength] > 0)
-      for (let lobe = 0; lobe < fishFinShapes(a, index).length; lobe++) {
-        const f = fishFinShape(a, index, lobe);
-        g.moveTo(f.root[0] * r, 0);
-        g.lineTo(...point(f.root));
-        for (const across of (coarse ? [ .5 ] : SIDE_RAYS)) {
-          const u = f.rimRange[0] + (f.rimRange[1] - f.rimRange[0]) * across,
-                end = fishBezier(f.curves[Math.floor(u)], u % 1);
-          g.moveTo(...point(f.root));
-          g.lineTo(...point(end));
-        }
+    if (a.fin(index)[FIN_SHAPE.strength] > 0) {
+      const f = fishFinShape(a, index);
+      g.moveTo(f.root[0] * r, 0);
+      g.lineTo(...point(f.root));
+      for (const across of (coarse ? [ .5 ] : SIDE_RAYS)) {
+        const u = f.rimRange[0] + (f.rimRange[1] - f.rimRange[0]) * across,
+              end = fishBezier(f.curves[Math.floor(u)], u % 1);
+        g.moveTo(...point(f.root));
+        g.lineTo(...point(end));
       }
+    }
   for (const side of [0, 1]) {
     const fin = fishRearFinShape(a, side), root = fin[0][0];
     for (const t of (coarse ? [ 1 ] : [ SKELETON.rear_ray, 1 ])) {

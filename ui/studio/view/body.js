@@ -26,9 +26,7 @@ import {fishBodyColour} from '../model/pigment.js';
 import {chromatophoresSvg} from './pigments.js';
 import {
   bodyDirection,
-  finPaths,
-  finRays,
-  finRoots,
+  sideFins,
   finSizes,
   fishPath,
   HEAD,
@@ -48,8 +46,8 @@ import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
-import {isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
-import {MUSCLE_TONE, muscleShape} from './muscles.js';
+import {isPelvicMuscle, isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
+import {muscleShape, workTone} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
@@ -276,7 +274,7 @@ function muscleGlyph(state, organ) {
   const shape = muscleShape(organ, state.sites);
   if (!shape)
     return '';
-  const tone = MUSCLE_TONE[organFunction(organ, state.sites)];
+  const tone = workTone({code : organFunction(organ, state.sites), pelvic : isPelvicMuscle(organ)});
   const front = isFinMuscle(organ, state.sites) && finStroke(organ) === FIN_STROKE.front;
   return '<path class="aid-anatomical-muscle' + (front ? ' front' : '') + '" d="' + shape.path +
          '" style="--muscle:' + tone + ';--fibre:' + fibreHex(muscleFibre(organ)) +
@@ -680,13 +678,13 @@ export function bodySvg(state) {
     else
       organs += drawn;
   }
-  const tail = tailFin(sizes), roots = finRoots(), rays = finRays(sizes),
-        origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
+  const tail = tailFin(sizes), origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
   const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;
-  return finPaths(sizes)
-             .map((d, k) => '<g class="aid-fish-fin" data-part="fin" data-side="' + (k ? 1 : -1) +
-                            '" style="transform-origin:' + origin(roots[k]) + '"><path d="' + d +
-                            '"/><path class="aid-fish-ray" d="' + rays[k] + '"/></g>')
+  return sideFins(sizes)
+             .map(fin => '<g class="aid-fish-fin" data-part="fin" data-fin="' +
+                         (fin.pelvic ? 'pelvic' : 'pectoral') + '" data-side="' + fin.side +
+                         '" style="transform-origin:' + origin(fin.root) + '"><path d="' + fin.d +
+                         '"/><path class="aid-fish-ray" d="' + fin.rays + '"/></g>')
              .join('') +
          '<g class="aid-fish-tailfin" data-part="tail" style="transform-origin:' +
          origin(tail.root) + '"><path d="' + tail.d + '" fill="' + fill +

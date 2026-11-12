@@ -20,7 +20,6 @@ import {canvas, ctx} from './dom.js';
 import {collectCombat, effectsState} from './effects.js';
 import {
   fishBoundingRadius,
-  fishFinShapes,
   fishFinTriangles,
   fishPattern,
   fishRearFinShape,
@@ -103,11 +102,24 @@ const MATERIAL = Object.freeze({
   cheek : 12,
   gill : 13
 });
-const DRIVE = Object.freeze(
-    {none : 0, tail : 1, left_fin : 2, right_fin : 3, spine : 4, mouth : 5, gill : 6, tooth : 7});
+const DRIVE = Object.freeze({
+  none : 0,
+  tail : 1,
+  left_fin : 2,
+  right_fin : 3,
+  spine : 4,
+  mouth : 5,
+  gill : 6,
+  tooth : 7,
+  pelvic_left : 8,
+  pelvic_right : 9
+});
+// The drive of each fin's mesh, in the order of FIN.
+const FIN_DRIVE = Object.freeze(
+    [ DRIVE.tail, DRIVE.left_fin, DRIVE.right_fin, DRIVE.pelvic_left, DRIVE.pelvic_right ]);
 export const ANIMAL_KIND = Object.freeze({egg : 0, fish : 1, embryo : 1.25, corpse : 2});
 const ANIMAL_ATTRIBUTES =
-    [ 'pose', 'tint', 'muscles', 'state', 'status', 'face', 'extra', 'movement' ].map(
+    [ 'pose', 'tint', 'muscles', 'state', 'status', 'face', 'extra', 'movement', 'fins' ].map(
         name => [name, TEXEL]);
 const ANIMAL_FLOATS = attributeLayout(ANIMAL_ATTRIBUTES).floats;
 const MESH = Object.freeze({
@@ -237,16 +249,16 @@ export function animalMesh(a, level) {
           };
     for (let index = 0; index < FINS; index++)
       if (a.fin(index)[FIN_SHAPE.strength] > 0) {
-        const rest = fishFinShapes(neutral, index), open = fishFinShapes(full, index);
-        for (let lobe = 0; lobe < rest.length; lobe++) {
-          const mesh = fishFinTriangles(rest[lobe], steps),
-                wide = fishFinTriangles(open[lobe], steps), root = rest[lobe].root,
+        const rest = fishFinShape(neutral, index), open = fishFinShape(full, index);
+        {
+          const mesh = fishFinTriangles(rest, steps), wide = fishFinTriangles(open, steps),
+                root = rest.root,
                 reach =
                     Math.max(MESH.min_reach,
                              ...mesh.points.map(q => Math.hypot(q[0] - root[0], q[1] - root[1])));
           for (const k of mesh.indices) {
             const p = mesh.points[k], dx = p[0] - root[0], dy = p[1] - root[1];
-            emit(p, wide.points[k], MATERIAL.fin, DRIVE.tail + index, [ dx / reach, dy / reach ]);
+            emit(p, wide.points[k], MATERIAL.fin, FIN_DRIVE[index], [ dx / reach, dy / reach ]);
           }
         }
       }
@@ -658,7 +670,11 @@ export class AnimalRenderer extends TankBatch {
             p[FISH.feeding_action] || 0,
             v.kind === ANIMAL_KIND.corpse
                 ? (v.collapse || 0)
-                : (p[FISH.feeding_action_age] || 0) / FEEDING_EFFECT_STEPS.full
+                : (p[FISH.feeding_action_age] || 0) / FEEDING_EFFECT_STEPS.full,
+            ...[FIN.pelvic_left, FIN.pelvic_right].map(
+                k => Math.max(0, Math.min(1, p[FISH.fin_pose]?.[k] || 0))),
+            0,
+            0
           ],
           at);
       at += ANIMAL_FLOATS;
@@ -854,7 +870,7 @@ void main(){int id=gl_VertexID;vec2 p;uv=vec2(0);bool visible=true;material=MATE
  vec4 corners[6]=vec4[6](vec4(-1,-1,0,0),vec4(1,-1,0,0),vec4(1,1,0,0),vec4(-1,-1,0,0),vec4(1,1,0,0),vec4(-1,1,0,0));
  if(state.y<EGG_FISH){p=corners[id%QUAD].xy;material=MATERIAL_EGG;visible=id<QUAD;}
  else if(lod==0){vec4 box=read(HEADER_BOUNDS);vec2 q=corners[id%QUAD].xy;p=mix(box.xy,box.zw,(q+1.)*.5);visible=id<QUAD;material=MATERIAL_SILHOUETTE;}
- else{vec4 mesh=read(HEADER_LEVELS);int count=int(lod==1?mesh.y:mesh.w),start=int(lod==1?mesh.x:mesh.z);visible=id<count;vec4 a=read(start+id*VERTEX_TEXELS),b=read(start+id*VERTEX_TEXELS+1),c=read(start+id*VERTEX_TEXELS+2);material=int(b.z+.5);int drive=int(b.w+.5);float t=drive==DRIVE_TAIL?abs(muscles.x):drive==DRIVE_LEFT_FIN?muscles.y:drive==DRIVE_RIGHT_FIN?muscles.z:drive==DRIVE_SPINE?muscles.w:drive==DRIVE_MOUTH?face.y:drive==DRIVE_GILL?face.z:0.;p=mix(a.xy,a.zw,t);if(drive==DRIVE_TAIL)p.y*=extra.z;if(drive==DRIVE_MOUTH){float pump=face.z/(.05+face.y+face.z);p=mix(a.xy,mix(a.zw,c.xy,pump),face.x);}uv=b.xy;if(material==MATERIAL_EYE){float pixels=max(abs(p.x-c.z),abs(p.y-c.w))*pose.w*scale;p=c.zw+(p-c.zw)*max(1.,min(3.,1.8/max(.1,pixels)));}if(drive==DRIVE_TOOTH){float pump=face.z/(.05+face.y+face.z),base=mix(c.z,c.w,pump);vec2 full=mix(a.zw,c.xy,pump);float toothPixels=abs(full.y-base)*pose.w*scale;full.y=base+(full.y-base)*max(1.,min(2.,1.2/max(.1,toothPixels)));p=vec2(mix(a.x,full.x,face.x),base*face.x+(full.y-base)*min(1.,face.x/.22));uv.y=face.x;}}
+ else{vec4 mesh=read(HEADER_LEVELS);int count=int(lod==1?mesh.y:mesh.w),start=int(lod==1?mesh.x:mesh.z);visible=id<count;vec4 a=read(start+id*VERTEX_TEXELS),b=read(start+id*VERTEX_TEXELS+1),c=read(start+id*VERTEX_TEXELS+2);material=int(b.z+.5);int drive=int(b.w+.5);float t=drive==DRIVE_TAIL?abs(muscles.x):drive==DRIVE_LEFT_FIN?muscles.y:drive==DRIVE_RIGHT_FIN?muscles.z:drive==DRIVE_SPINE?muscles.w:drive==DRIVE_PELVIC_LEFT?fins.x:drive==DRIVE_PELVIC_RIGHT?fins.y:drive==DRIVE_MOUTH?face.y:drive==DRIVE_GILL?face.z:0.;p=mix(a.xy,a.zw,t);if(drive==DRIVE_TAIL)p.y*=extra.z;if(drive==DRIVE_MOUTH){float pump=face.z/(.05+face.y+face.z);p=mix(a.xy,mix(a.zw,c.xy,pump),face.x);}uv=b.xy;if(material==MATERIAL_EYE){float pixels=max(abs(p.x-c.z),abs(p.y-c.w))*pose.w*scale;p=c.zw+(p-c.zw)*max(1.,min(3.,1.8/max(.1,pixels)));}if(drive==DRIVE_TOOTH){float pump=face.z/(.05+face.y+face.z),base=mix(c.z,c.w,pump);vec2 full=mix(a.zw,c.xy,pump);float toothPixels=abs(full.y-base)*pose.w*scale;full.y=base+(full.y-base)*max(1.,min(2.,1.2/max(.1,toothPixels)));p=vec2(mix(a.x,full.x,face.x),base*face.x+(full.y-base)*min(1.,face.x/.22));uv.y=face.x;}}
  screenSize=pose.w*scale;anatomy=read(HEADER_MOUTH);hatchClip=vec3(read(HEADER_ORIGIN).xy,extra.w);local=p;profile0=read(HEADER_WIDTHS);profile1=read(HEADER_WIDTHS+1);outline=read(HEADER_OUTLINE);pigment=read(HEADER_PATTERN);accent=read(material==MATERIAL_EYE?(uv.x>${
         glsl(
             SCENE.eye_uv /

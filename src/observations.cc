@@ -66,9 +66,9 @@ const AnatomyText &anatomy_text(std::ostream &out,
     if (fin)
       stream << ',';
     const auto shape = binding ? binding->fins[fin] : BrainInterface::Fin{};
-    static_assert(fin_shape_column::count == 5);
+    static_assert(fin_shape_column::count == 6);
     stream << '[' << shape.cells << ',' << shape.strength << ',' << shape.x << ',' << shape.y << ','
-           << shape.spread << ']';
+           << shape.spread << ',' << shape.steps << ']';
   }
   stream << ']';
   text.fins = stream.str();
@@ -219,9 +219,10 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
       F::impulse_tail_right, motor.impulse_tail_right)(F::motor_factor, motor.motor_factor)
       .with(F::fin_pose,
             [&](std::ostream &o) {
-              static_assert(fin_event_column::age_tail == 0 &&
-                            fin_event_column::peak_tail == fin_event_column::age_tail + 3 &&
-                            fin_event_column::steps_tail == fin_event_column::peak_tail + 3);
+              static_assert(
+                  fin_event_column::age_tail == 0 &&
+                  fin_event_column::peak_tail == fin_event_column::age_tail + fin::count &&
+                  fin_event_column::steps_tail == fin_event_column::peak_tail + fin::count);
               o << '[';
               write_values(o, motor.fin_tension);
               o << ",[";

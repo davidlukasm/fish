@@ -737,6 +737,8 @@
 .aid-muscle-ray{stroke:#b8d9cc;stroke-opacity:.45;stroke-linecap:round}
 .aid-muscle-ray.own{stroke:var(--aid-motor);stroke-opacity:.95}
 .aid-muscle-wave{fill:none;stroke:#f1e4b8;stroke-width:1.6;stroke-dasharray:4 4;opacity:.8}
+.aid-muscle-beat{fill:none;stroke:#f1e4b8;stroke-width:1.2;stroke-dasharray:3 4;opacity:.6}
+.aid-muscle-stroke{fill:none;stroke:#f1e4b8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-muscle-flow{fill:none;stroke:#9fd8e6;stroke-width:1.6;stroke-linecap:round;opacity:.85}
 .aid-muscle-mouth{fill:#0b1d22;stroke:#e9b9a3}
 .aid-muscle-jaw{fill:none;stroke:#e3dcb8;stroke-width:5;stroke-linecap:round}

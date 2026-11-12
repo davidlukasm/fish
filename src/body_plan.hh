@@ -82,16 +82,17 @@ inline double stroke_drive(const StrokeState &s) {
 }
 // Upkeep per step of an effector cell at the basal metabolism of a standard body.
 double effector_upkeep(const BrainInterface::Effector &);
-// Push along the body per levered unit of each fin stroke, from the cells' protraction shares.
-void fin_pushes(BrainInterface &);
+// Push along and across the body and turning per unit of force of each side fin stroke, from
+// the cells' protraction shares, angles, levers and arms; the bending lever of each tail flank.
+void fin_mechanics(BrainInterface &);
 struct EffectorActivity {
   std::array<double, ORGAN_PORTS> sum{};
   std::array<double, 2> egg{}, sperm{}, bladder{};
   field::Hormones secretion{}, binding{};
   Color pigment{}, egg_color{}, sperm_color{};
-  // Back strokes per fin times lever; reverse: the forward strokes of the antagonists.
-  double left = 0, right = 0;
-  std::array<double, 2> reverse{};
+  // The force of each side fin's back strokes and of the forward strokes of their antagonists,
+  // per fin and side.
+  std::array<std::array<double, 2>, SIDE_FINS> back{}, front{};
   // The tail's flanks, left and right.
   std::array<double, 2> tail{};
 };

@@ -78,6 +78,8 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
   const double immersion = world ? world->sediment_immersion(b.x, b.y, radius) : 0,
                defense = b.defense(), spines = 1 + SPINE_DRAG * b.motor_.defense;
   const auto resistance = sediment_resistance(immersion, defense, b.undulation);
+  // Fins beating at an angle push the body across its heading as well.
+  double side_thrust = 0;
   if (b.motor_.swimming_pending) {
     b.motor_.torque = b.motor_.drive_left - b.motor_.drive_right;
     b.motor_.angular_velocity =
@@ -90,10 +92,11 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
     const double tail = grip.tail * b.motor_.drive_forward *
                         (1 - physiology.undulation_loss * b.undulation * (1 - immersion)),
                  ground = ground_grip(immersion),
-                 fins = (grip.fins + (1 - grip.fins) * ground) * b.motor_.drive_fins *
-                        (1 + (resistance.across - 1) * ground);
-    b.motor_.thrust =
-        physiology.stroke_push * (tail + fins) * weakness / std::max(MIN_THRUST_MASS, mass);
+                 fin_grip = (grip.fins + (1 - grip.fins) * ground) *
+                            (1 + (resistance.across - 1) * ground),
+                 push = physiology.stroke_push * weakness / std::max(MIN_THRUST_MASS, mass);
+    b.motor_.thrust = push * (tail + fin_grip * b.motor_.drive_fins);
+    side_thrust = push * fin_grip * b.motor_.drive_across;
   }
   b.motor_.swimming_pending = false;
   b.sediment_coverage = immersion;
@@ -119,8 +122,8 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
                                 (spines + mouth_drag));
   across *= std::max(0., 1 - across_drag);
   const double cloud = world ? turbidity_resistance(world->turbidity(b.x, b.y)) : 1;
-  ux = (along + b.motor_.thrust) * hx - across * hy;
-  uy = (along + b.motor_.thrust) * hy + across * hx;
+  ux = (along + b.motor_.thrust) * hx - (across + side_thrust) * hy;
+  uy = (along + b.motor_.thrust) * hy + (across + side_thrust) * hx;
   // Weight and the bladder's lift both grow with the body, so a full bladder carries a fish of
   // any size and the fill at which it hovers depends only on the bladder's capacity.
   const double bladder_capacity = b.bladder_capacity,
@@ -128,6 +131,10 @@ void move_body(Body &b, const Field *world, const PhysiologyParameters &physiolo
                       (1 + bladder_capacity) * b.bladder_fill;
   b.buoyancy_force = ((world ? physiology.sinking : 0) - lift) * mass;
   uy += b.buoyancy_force / mass;
+  // A fish on the mud stands on its side fins: spread on the ground they hold it up against
+  // sinking or swimming down into it, until it is in so deep that they are buried too.
+  if (immersion > 0 && uy > 0)
+    uy *= 1 - b.motor_.fin_bearing * (1 - immersion);
   ux /= resistance.across * cloud * brush;
   uy /= resistance.vertical(uy) * cloud * brush;
   along = ux * hx + uy * hy;

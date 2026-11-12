@@ -10,6 +10,7 @@ import {
   functionFor,
   MODULES,
   MUSCLE_LABEL_INDEX,
+  muscleLabelIndex,
   ORGAN_BY_KEY,
   siteRole
 } from '../model/organs.js';
@@ -17,7 +18,7 @@ import {findOrgan, usedSites} from '../model/document.js';
 import {BODY_FRAME, nerveZone, sideOf, sitePoint} from '../model/layout.js';
 import {FISH_BOX, steadyAt, zoomOf} from './frame.js';
 import {centerTitle, tone} from './names.js';
-import {MUSCLE_TONE, muscleHomes, muscleTarget, WORKS} from './muscles.js';
+import {muscleHomes, muscleTarget, WORKS, workTone} from './muscles.js';
 
 const HINT_RING = Object.freeze({radius : 9, width : 3, gap : 1.4});
 const HINT_SHADES = Object.freeze(
@@ -145,10 +146,10 @@ function muscleHints(state) {
                         (h.organ         ? ' taken'
                          : h.free.length ? ''
                                          : ' full') +
-                        '" d="' + h.shape.path + '" style="--muscle:' + MUSCLE_TONE[h.code] + '"/>')
+                        '" d="' + h.shape.path + '" style="--muscle:' + workTone(h) + '"/>')
               .join(''),
     legend : WORKS.map(
-        code => ({colour : MUSCLE_TONE[code], name : names[MUSCLE_LABEL_INDEX.get(code)]}))
+        work => ({colour : workTone(work), name : names[muscleLabelIndex(work.code, work.pelvic)]}))
   };
 }
 export function placementHints(state, kind, value, moving = null) {

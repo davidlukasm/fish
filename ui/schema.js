@@ -370,13 +370,19 @@ export const FIN_EVENT = Object.freeze({
   age_tail: 0,
   age_left: 1,
   age_right: 2,
-  peak_tail: 3,
-  peak_left: 4,
-  peak_right: 5,
-  steps_tail: 6,
-  steps_left: 7,
-  steps_right: 8,
-  count: 9
+  age_pelvic_left: 3,
+  age_pelvic_right: 4,
+  peak_tail: 5,
+  peak_left: 6,
+  peak_right: 7,
+  peak_pelvic_left: 8,
+  peak_pelvic_right: 9,
+  steps_tail: 10,
+  steps_left: 11,
+  steps_right: 12,
+  steps_pelvic_left: 13,
+  steps_pelvic_right: 14,
+  count: 15
 });
 export const NEURON = Object.freeze({
   x: 0,
@@ -488,7 +494,9 @@ export const EFFECTOR = Object.freeze({
   outside: 6,
   fibre: 7,
   protraction: 8,
-  count: 9
+  angle: 9,
+  arm: 10,
+  count: 11
 });
 export const SYNAPSE = Object.freeze({
   source: 0,
@@ -628,7 +636,8 @@ export const FIN_SHAPE = Object.freeze({
   x: 2,
   y: 3,
   spread: 4,
-  count: 5
+  steps: 5,
+  count: 6
 });
 export const CORPSE_STATE = Object.freeze({
   energy: 0,
@@ -642,22 +651,24 @@ export const CORPSE_STATE = Object.freeze({
   fin_tail: 8,
   fin_left: 9,
   fin_right: 10,
-  mouth_pose: 11,
-  bite_pose: 12,
-  suction_pose: 13,
-  gill_pose: 14,
-  defense: 15,
-  health: 16,
-  aggression: 17,
-  mean_aggression: 18,
-  shell_radius: 19,
-  birth_tissue: 20,
-  mouth_aperture: 21,
-  gut_fill: 22,
-  gut_energy: 23,
-  gut_length: 24,
-  undulation: 25,
-  count: 26
+  fin_pelvic_left: 11,
+  fin_pelvic_right: 12,
+  mouth_pose: 13,
+  bite_pose: 14,
+  suction_pose: 15,
+  gill_pose: 16,
+  defense: 17,
+  health: 18,
+  aggression: 19,
+  mean_aggression: 20,
+  shell_radius: 21,
+  birth_tissue: 22,
+  mouth_aperture: 23,
+  gut_fill: 24,
+  gut_energy: 25,
+  gut_length: 26,
+  undulation: 27,
+  count: 28
 });
 export const CORPSE_VISUAL = Object.freeze({
   organs: 0,
@@ -709,11 +720,11 @@ export const TRIAL_KIND = Object.freeze({"feed": 0, "mussel": 1, "crab": 2});
 export const SENSE_KIND = Object.freeze({"light": 0, "odor": 1, "flow": 2, "touch": 3, "proximity": 4, "intake": 5, "damage": 6, "bladder_pressure": 7, "gonad_pressure": 8, "inner_pressure": 9, "blood": 10, "taste": 11});
 export const MOTOR_KIND = Object.freeze({"forward": 0, "turn": 1, "suction": 2, "eggs": 3, "sperm": 4, "aggression": 5, "defense": 6, "pigment": 7, "bladder": 8, "gland": 9});
 export const RGB = Object.freeze({"red": 0, "green": 1, "blue": 2});
-export const FIN = Object.freeze({"tail": 0, "left": 1, "right": 2});
+export const FIN = Object.freeze({"tail": 0, "left": 1, "right": 2, "pelvic_left": 3, "pelvic_right": 4});
 export const PRESSURE_SOURCE = Object.freeze({"none": 0, "eggs": 1, "sperm": 2, "bladder": 3, "shape": 4});
-export const ORGAN_PORT = Object.freeze({"forward": 1, "turn": 2, "eggs": 4, "sperm": 5, "suction": 6, "pigment": 7, "jaw": 10, "defense": 11, "bladder": 12, "gland": 13, "gills": 14, "gut": 15});
+export const ORGAN_PORT = Object.freeze({"forward": 1, "turn": 2, "eggs": 4, "sperm": 5, "suction": 6, "pigment": 7, "jaw": 10, "defense": 11, "bladder": 12, "gland": 13, "gills": 14, "gut": 15, "pelvic": 16});
 export const EYE = Object.freeze({"left": 0, "right": 1});
-export const STROKE_KIND = Object.freeze({"tail_left": 0, "turn_left": 1, "turn_right": 2, "suction": 3, "egg": 4, "sperm": 5, "bite": 6, "defense": 7, "reverse_left": 8, "reverse_right": 9, "gill": 10, "gut": 11, "tail_right": 12});
+export const STROKE_KIND = Object.freeze({"tail_left": 0, "turn_left": 1, "turn_right": 2, "suction": 3, "egg": 4, "sperm": 5, "bite": 6, "defense": 7, "reverse_left": 8, "reverse_right": 9, "gill": 10, "gut": 11, "tail_right": 12, "pelvic_left": 13, "pelvic_right": 14, "pelvic_reverse_left": 15, "pelvic_reverse_right": 16});
 export const STEP_PHASE = Object.freeze({"development": 0, "motion": 1, "sediment": 2, "plants": 3, "drift": 4, "gpu": 5, "act": 6, "resolve": 7, "settle": 8, "reproduction": 9});
 export const PLAN_ORDER = Object.freeze({"head": 0, "chest": 1, "torso": 2, "face": 3, "tail": 4, "side": 5, "mouth": 6, "spine": 7, "eye": 8, "nose": 9, "barbel": 10});
 export const HORMONE_EFFECT = Object.freeze({"excitation": 0, "learning": 1, "competition": 2, "eligibility": 3, "rhythm": 4, "output": 5, "death": 6, "teaching": 7});
@@ -757,6 +768,7 @@ export const RATE_WINDOW = Object.freeze({"steps": 1000, "display_steps": 100});
 export const GENOME_IMPORT = Object.freeze({"max_bytes": 4194304, "timeout_ms": 30000, "develop_ms": 25000});
 export const RENDER_GROUP = Object.freeze({"key_bits": 48});
 export const HORMONES = Object.freeze({"levels": 6, "signs": 2});
+export const BLOOD_SUBSTANCE = Object.freeze({"maturity": 6, "reserve": 7, "fatigue": 8});
 export const ROUTE = Object.freeze({"page": "/", "assets": "/ui/", "texts": "/ui/text/", "genome": "/genome", "journal": "/journal", "population": "/population", "population_preview": "/population-preview", "names": "/names", "state": "/state", "history": "/history", "command": "/command", "fps_report": "/fps-report", "scene": "/scene", "atelier": "/atelier", "labor": "/labor", "trials": "/trials"});
 export const RECORD_SAMPLE = Object.freeze({"period": 100});
 export const FRAME_PATCH = Object.freeze({"mask_digit_bits": 4});
@@ -767,7 +779,8 @@ export const MUSCLE_FIBRE = Object.freeze({"force_slow": 0.4, "force_fast": 2.5,
 export const GUT_MOTILITY = Object.freeze({"speedup": 2, "loss": 0.5, "wall": 0.25, "zone": 2});
 export const GILL_FILTER = Object.freeze({"rakerless_retention": 0.3, "raker_drag": 0.5, "flank": 0.75});
 export const STROKE_GRIP = Object.freeze({"tail_at_rest": 0.5, "fin_at_speed": 0.5});
-export const TAIL_STROKE = Object.freeze({"lone_push": 0.3});
+export const ANTAGONIST = Object.freeze({"lone_sweep": 0.3, "tail_rest_sweep": 0.5});
+export const SIDE_FIN = Object.freeze({"gap": 0.3, "angle": 90, "bearing_half": 20});
 export const TRIAL_LAB = Object.freeze({"seeds": [1, 2, 4], "path_every": 5, "feed_distance": 80, "feed_steps": 300, "feed_cluster": 5, "feed_scent_wait": 100, "feed_near": 10, "mussel_distance": 40, "mussel_steps": 400, "crab_distance": 40, "crab_steps": 400});
 export const BREEDING = Object.freeze({"worlds": [2, 3, 5], "steps": [4000, 8000, 16000], "founders": 12, "proven_generations": 2, "proven_worlds": 2});
 export const BEHAVIOR_FEATURE_SET = Object.freeze({

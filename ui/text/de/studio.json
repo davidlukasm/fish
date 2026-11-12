@@ -238,6 +238,8 @@
     "learningMode": "Lernt von selbst",
     "maturityMark": "Rf",
     "reserveMark": "En",
+    "fatigue": "Muskelerschöpfung",
+    "fatigueMark": "Er",
     "growth": "Wachstum des Körpers",
     "concentration": "Konzentration",
     "cancelling": "ausgleichen",
@@ -833,9 +835,10 @@
   },
   "muscleTitles": [
     "Schwanz­muskel",
-    "Flossen­muskel",
+    "Brust­flossen­muskel",
     "Schlund",
-    "Kiefer"
+    "Kiefer",
+    "Bauch­flossen­muskel"
   ],
   "muscle": {
     "nodesHandle": "Ziehen: mehr oder weniger Knoten",
@@ -883,17 +886,19 @@
     },
     "title": {
       "0": "Schwanzflosse",
-      "1": "Seitenflosse",
+      "1": "Brustflosse",
       "2": "Maulöffner",
       "5": "Kieferschließer",
-      "6": "Stacheln"
+      "6": "Stacheln",
+      "pelvic": "Bauchflosse"
     },
     "hint": {
       "0": "Mehr Knoten und Kraft lassen die Schwanzflosse wachsen, wie im Aquarium. Die beiden Flanken sind Gegenspieler: im Wechsel schieben sie voll, eine allein biegt den Fisch zu sich, beide zugleich versteifen ihn nur. Den Wechsel gibt die Wirbelsäule vor. Schlängeln schiebt sich leichter durch Sand, gibt im freien Wasser aber weniger Schub.",
-      "1": "Mehr Knoten und Kraft lassen die Seitenflosse wachsen. Die Flossenmuskeln einer Seite lenken den Fisch.",
+      "1": "Mehr Knoten und Kraft lassen die Brustflosse wachsen. Rückschlag und Vorschlag sind Gegenspieler mit eigenen Nerven: der Rückschlag schiebt den Fisch voran, der Vorschlag zurück. Nach einem Schlag gleitet die lockere Flosse ohne Schub zurück; danach schlägt jeder Muskel wieder voll, ebenso wenn der Gegenspieler antwortet. Schlägt derselbe Muskel gleich wieder, wirkt er nur zum Teil; ziehen beide zugleich, versteifen sie die Flosse nur. Der Schlagwinkel dreht die Linie, auf der die Flosse schlägt: nach außen schiebt sie den Fisch zur Seite und dreht ihn mit, je nachdem, wie weit vorn sie sitzt.",
       "2": "Jeder Schlag des Öffners zieht das Maul auf, danach federt es zurück. Beim Aufgehen strömt Wasser mit Futter, Plankton und Schlamm hinein. Schnelle Fasern saugen ruckartig, langsame pumpen stetig.",
       "6": "Mehr Knoten und Kraft lassen die Stacheln schon in Ruhe höher stehen.",
-      "5": "Der Schließer beißt aus der Öffnung zu, die er vorfindet: Aus weit offenem Maul reicht der Biss weiter. Schnelle Fasern schnappen kräftig zu, langsame mahlen ausdauernd."
+      "5": "Der Schließer beißt aus der Öffnung zu, die er vorfindet: Aus weit offenem Maul reicht der Biss weiter. Schnelle Fasern schnappen kräftig zu, langsame mahlen ausdauernd.",
+      "pelvic": "Die Bauchflosse sitzt vorn am Schwanzteil, hinter der Brustflosse, und hat eigene Muskeln und Gegenspieler wie sie. Weil sie weiter hinten sitzt, dreht ein Schlag nach außen den Fisch weniger, hinter der Körpermitte sogar andersherum."
     },
     "gills": {
       "title": "Kiemen",
@@ -952,6 +957,12 @@
         "high": "stark",
         "gulp": "Schluck je Zug"
       }
+    },
+    "angle": {
+      "handle": "Ziehen: Linie, auf der die Flosse schlägt",
+      "inward": "Schlägt {degrees}° nach innen",
+      "straight": "Schlägt längs ({degrees}° Abweichung)",
+      "outward": "Schlägt {degrees}° nach außen"
     }
   },
   "balance": {

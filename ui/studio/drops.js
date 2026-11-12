@@ -374,7 +374,8 @@ export const dropMethods = {
                                                        pointDistance(best, home.middle, 'muscle')
                                                    ? s
                                                    : best);
-    return addOrgan(doc, 'muscle', sites, sitePoint(site, 'muscle'), 0, true, home.code);
+    return addOrgan(doc, 'muscle', sites, sitePoint(site, 'muscle'), 0, true, home.code,
+                    home.pelvic);
   },
   dropOntoNerve(key, target, position) {
     this.dragging = null;

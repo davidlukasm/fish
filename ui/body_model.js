@@ -3,6 +3,7 @@ import {
   GILL,
   GRAVITY,
   GUT_MUSCLE,
+  PELVIC,
   GUT_TISSUE,
   INTERNAL_TISSUE,
   isSenseTissue,
@@ -36,7 +37,7 @@ export const ORGAN_GROUPS = [
   [
     'body_model.motorik',
     [
-      MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, MOTOR_TISSUE.bladder, MOTOR_TISSUE.suction,
+      MOTOR_TISSUE.forward, MOTOR_TISSUE.turn, PELVIC, MOTOR_TISSUE.bladder, MOTOR_TISSUE.suction,
       MOTOR_TISSUE.aggression, GILL
     ]
   ],

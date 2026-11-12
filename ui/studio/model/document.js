@@ -25,6 +25,7 @@ import {
   eligible,
   fitsOrgan,
   functionFor,
+  isPelvicMuscle,
   isRegion,
   MUSCLE_TRAITS,
   NEURON_BY_KEY,
@@ -33,6 +34,7 @@ import {
   ORGAN_BY_KEY,
   organSlots,
   PAIRINGS,
+  PELVIC_CELL,
   PRESSURE_OF,
   ROLE,
   siteRole,
@@ -319,18 +321,20 @@ export function profileIndex(doc, organId, profileId) {
   return center ? centerIndex(doc, center.id) : -1;
 }
 export const groupReport = (doc, report, key, id) => report?.[key]?.[centerIndex(doc, id)] ?? null;
-// Pectoral fins may hold a second muscle per side: the antagonist with the other stroke.
-function matchingOrgan(doc, type, side, sites, code = null, stroke = FIN_STROKE.back) {
+// Pectoral and pelvic fins may hold a second muscle per side: the antagonist with the other
+// stroke.
+function matchingOrgan(doc, type, side, sites, code = null, stroke = FIN_STROKE.back,
+                       pelvic = false) {
   if (isRegion({type}))
     return null;
   const scope = ORGAN_BY_KEY[type]?.scope;
   if (scope === 'single')
     return doc.organs.find(organ => organ.type === type) ?? null;
   if (type === 'muscle')
-    return doc.organs.find(organ => organ.type === type &&
-                                    sideSign(organ.side) === sideSign(side) &&
-                                    organFunction(organ, sites) === code &&
-                                    (code !== MOTOR_KIND.turn || finStroke(organ) === stroke)) ??
+    return doc.organs.find(
+               organ => organ.type === type && sideSign(organ.side) === sideSign(side) &&
+                        organFunction(organ, sites) === code && isPelvicMuscle(organ) === pelvic &&
+                        (code !== MOTOR_KIND.turn || finStroke(organ) === stroke)) ??
            null;
   if (scope !== 'side')
     return null;
@@ -365,6 +369,7 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
     role : desc.role,
     functionCode : desc.functionCode,
     surface : desc.surface,
+    ...(desc.pelvic ? {pelvic : true} : {}),
     site : site.id,
     copies : desc.copies,
     threshold : desc.threshold ?? (desc.role === 'sensor' ? N.sense_threshold : -.2),
@@ -468,9 +473,15 @@ function regionHomes(doc, sites) {
   return homes;
 }
 // `code` asks for a muscle doing that work: muscle sites of different work can lie on one spot.
+// `pelvic` asks for a pelvic fin muscle.
 export function addOrgan(doc, type, sites, position, snapDistance = Infinity, paired = true,
-                         code = null) {
-  const definition = ORGAN_BY_KEY[type];
+                         code = null, pelvic = false) {
+  const plain = ORGAN_BY_KEY[type];
+  const definition = pelvic && type === 'muscle' ? {
+    ...plain,
+    centers : plain.centers.map(c => Object.freeze({...c, ...PELVIC_CELL, copies : c.copies}))
+  }
+                                                 : plain;
   const pick = (desc, used, side) =>
       code === null ? closestSite(desc, sites, used, position, side, type)
                     : closestSiteDoing(desc, code, sites, used, position, side, type);
@@ -488,7 +499,8 @@ export function addOrgan(doc, type, sites, position, snapDistance = Infinity, pa
   if (!first || pointDistance(first, position, siteRole(type)) > snapDistance)
     return null;
   const existing =
-      matchingOrgan(draft, type, first.side, sites, functionFor(definition.centers[0], first));
+      matchingOrgan(draft, type, first.side, sites, functionFor(definition.centers[0], first),
+                    FIN_STROKE.back, pelvic);
   if (existing)
     return {
       document : draft,
@@ -741,9 +753,11 @@ function pressureGuard(doc, organ, sites) {
     const key = PRESSURE_OF[other.type]?.key;
     for (const sensor of other.centers.filter(c => c.key === key)) {
       const at = findSite(sites, sensor.site);
+      // A gonad's releasing cells on the skin press on nothing (body_plan.cc assign_pressure).
+      const gonad = other.type === 'eggs' || other.type === 'sperm';
       const own = other.centers.filter(c => c !== sensor)
                       .map(c => findSite(sites, c.site))
-                      .filter(Boolean)
+                      .filter(s => s && !(gonad && s.outer))
                       .map(s => siteSeparation(s, at));
       if (!at || !own.length)
         continue;
@@ -909,10 +923,25 @@ export function setFinStroke(doc, organId, stroke, sites) {
 const opposite = stroke => stroke === FIN_STROKE.back ? FIN_STROKE.front : FIN_STROKE.back;
 export const antagonistOf = (doc, organ, sites) =>
     isFinMuscle(organ, sites) ? matchingOrgan(doc, 'muscle', organ.side, sites, MOTOR_KIND.turn,
-                                              opposite(finStroke(organ)))
+                                              opposite(finStroke(organ)), isPelvicMuscle(organ))
                               : null;
-// The antagonist of a pectoral fin muscle: as many nodes at free fin sites beside it, stroking
-// the other way, on both sides when the muscle has a twin.
+// The angle at which a fin muscle strokes, carried by its cells' first quality: 0 inward across
+// the body, one half straight back or forward, 1 outward.
+export const finAngle = organ =>
+    organ.centers.reduce((sum, c) => sum + unitOfPlan(c.q1), 0) / Math.max(1, organ.centers.length);
+export function setFinAngle(doc, organId, angle, sites) {
+  const organ = findOrgan(doc, organId);
+  if (!isFinMuscle(organ, sites) || !Number.isFinite(angle))
+    return null;
+  const draft = copy(doc);
+  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const o of [main, twin].filter(Boolean))
+    for (const c of o.centers)
+      c.q1 = planOfUnit(angle);
+  return draft;
+}
+// The antagonist of a fin muscle: as many nodes at free fin sites beside it, stroking the other
+// way, on both sides when the muscle has a twin.
 export function addAntagonist(doc, organId, sites) {
   const original = findOrgan(doc, organId);
   if (!isFinMuscle(original, sites) || antagonistOf(doc, original, sites))
@@ -1637,7 +1666,8 @@ export function mirrorOrgan(doc, organId, sites) {
     });
   }
   if (matchingOrgan(draft, organ.type, -organ.side, sites, organFunction(organ, sites),
-                    organ.type === 'muscle' ? finStroke(organ) : FIN_STROKE.back))
+                    organ.type === 'muscle' ? finStroke(organ) : FIN_STROKE.back,
+                    isPelvicMuscle(organ)))
     return null;
   organ.pair = mirror.id;
   organ.linked = true;

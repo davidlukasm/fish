@@ -371,13 +371,19 @@ class FinEvent:
     AGE_TAIL = 0
     AGE_LEFT = 1
     AGE_RIGHT = 2
-    PEAK_TAIL = 3
-    PEAK_LEFT = 4
-    PEAK_RIGHT = 5
-    STEPS_TAIL = 6
-    STEPS_LEFT = 7
-    STEPS_RIGHT = 8
-    COUNT = 9
+    AGE_PELVIC_LEFT = 3
+    AGE_PELVIC_RIGHT = 4
+    PEAK_TAIL = 5
+    PEAK_LEFT = 6
+    PEAK_RIGHT = 7
+    PEAK_PELVIC_LEFT = 8
+    PEAK_PELVIC_RIGHT = 9
+    STEPS_TAIL = 10
+    STEPS_LEFT = 11
+    STEPS_RIGHT = 12
+    STEPS_PELVIC_LEFT = 13
+    STEPS_PELVIC_RIGHT = 14
+    COUNT = 15
 
 class Neuron:
     X = 0
@@ -489,7 +495,9 @@ class Effector:
     OUTSIDE = 6
     FIBRE = 7
     PROTRACTION = 8
-    COUNT = 9
+    ANGLE = 9
+    ARM = 10
+    COUNT = 11
 
 class Synapse:
     SOURCE = 0
@@ -629,7 +637,8 @@ class FinShape:
     X = 2
     Y = 3
     SPREAD = 4
-    COUNT = 5
+    STEPS = 5
+    COUNT = 6
 
 class CorpseState:
     ENERGY = 0
@@ -643,22 +652,24 @@ class CorpseState:
     FIN_TAIL = 8
     FIN_LEFT = 9
     FIN_RIGHT = 10
-    MOUTH_POSE = 11
-    BITE_POSE = 12
-    SUCTION_POSE = 13
-    GILL_POSE = 14
-    DEFENSE = 15
-    HEALTH = 16
-    AGGRESSION = 17
-    MEAN_AGGRESSION = 18
-    SHELL_RADIUS = 19
-    BIRTH_TISSUE = 20
-    MOUTH_APERTURE = 21
-    GUT_FILL = 22
-    GUT_ENERGY = 23
-    GUT_LENGTH = 24
-    UNDULATION = 25
-    COUNT = 26
+    FIN_PELVIC_LEFT = 11
+    FIN_PELVIC_RIGHT = 12
+    MOUTH_POSE = 13
+    BITE_POSE = 14
+    SUCTION_POSE = 15
+    GILL_POSE = 16
+    DEFENSE = 17
+    HEALTH = 18
+    AGGRESSION = 19
+    MEAN_AGGRESSION = 20
+    SHELL_RADIUS = 21
+    BIRTH_TISSUE = 22
+    MOUTH_APERTURE = 23
+    GUT_FILL = 24
+    GUT_ENERGY = 25
+    GUT_LENGTH = 26
+    UNDULATION = 27
+    COUNT = 28
 
 class CorpseVisual:
     ORGANS = 0
@@ -852,7 +863,9 @@ class Fin:
     TAIL = 0
     LEFT = 1
     RIGHT = 2
-    COUNT = 3
+    PELVIC_LEFT = 3
+    PELVIC_RIGHT = 4
+    COUNT = 5
 
 class PressureSource:
     NONE = 0
@@ -875,6 +888,7 @@ class OrganPort:
     GLAND = 13
     GILLS = 14
     GUT = 15
+    PELVIC = 16
 
 class Eye:
     LEFT = 0
@@ -895,7 +909,11 @@ class StrokeKind:
     GILL = 10
     GUT = 11
     TAIL_RIGHT = 12
-    COUNT = 13
+    PELVIC_LEFT = 13
+    PELVIC_RIGHT = 14
+    PELVIC_REVERSE_LEFT = 15
+    PELVIC_REVERSE_RIGHT = 16
+    COUNT = 17
 
 class StepPhase:
     DEVELOPMENT = 0
@@ -1275,6 +1293,11 @@ class Hormones:
     LEVELS = 6
     SIGNS = 2
 
+class BloodSubstance:
+    MATURITY = 6
+    RESERVE = 7
+    FATIGUE = 8
+
 class Route:
     PAGE = '/'
     ASSETS = '/ui/'
@@ -1342,8 +1365,14 @@ class StrokeGrip:
     TAIL_AT_REST = 0.5
     FIN_AT_SPEED = 0.5
 
-class TailStroke:
-    LONE_PUSH = 0.3
+class Antagonist:
+    LONE_SWEEP = 0.3
+    TAIL_REST_SWEEP = 0.5
+
+class SideFin:
+    GAP = 0.3
+    ANGLE = 90
+    BEARING_HALF = 20
 
 class TrialLab:
     SEEDS = (1, 2, 4)

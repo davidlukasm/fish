@@ -740,25 +740,37 @@ enum class FinEventColumn : std::size_t {
   age_tail = 0,
   age_left = 1,
   age_right = 2,
-  peak_tail = 3,
-  peak_left = 4,
-  peak_right = 5,
-  steps_tail = 6,
-  steps_left = 7,
-  steps_right = 8,
-  count = 9
+  age_pelvic_left = 3,
+  age_pelvic_right = 4,
+  peak_tail = 5,
+  peak_left = 6,
+  peak_right = 7,
+  peak_pelvic_left = 8,
+  peak_pelvic_right = 9,
+  steps_tail = 10,
+  steps_left = 11,
+  steps_right = 12,
+  steps_pelvic_left = 13,
+  steps_pelvic_right = 14,
+  count = 15
 };
 namespace fin_event_column {
 inline constexpr std::size_t age_tail = 0;
 inline constexpr std::size_t age_left = 1;
 inline constexpr std::size_t age_right = 2;
-inline constexpr std::size_t peak_tail = 3;
-inline constexpr std::size_t peak_left = 4;
-inline constexpr std::size_t peak_right = 5;
-inline constexpr std::size_t steps_tail = 6;
-inline constexpr std::size_t steps_left = 7;
-inline constexpr std::size_t steps_right = 8;
-inline constexpr std::size_t count = 9;
+inline constexpr std::size_t age_pelvic_left = 3;
+inline constexpr std::size_t age_pelvic_right = 4;
+inline constexpr std::size_t peak_tail = 5;
+inline constexpr std::size_t peak_left = 6;
+inline constexpr std::size_t peak_right = 7;
+inline constexpr std::size_t peak_pelvic_left = 8;
+inline constexpr std::size_t peak_pelvic_right = 9;
+inline constexpr std::size_t steps_tail = 10;
+inline constexpr std::size_t steps_left = 11;
+inline constexpr std::size_t steps_right = 12;
+inline constexpr std::size_t steps_pelvic_left = 13;
+inline constexpr std::size_t steps_pelvic_right = 14;
+inline constexpr std::size_t count = 15;
 }
 enum class NeuronColumn : std::size_t {
   x = 0,
@@ -970,7 +982,9 @@ enum class EffectorColumn : std::size_t {
   outside = 6,
   fibre = 7,
   protraction = 8,
-  count = 9
+  angle = 9,
+  arm = 10,
+  count = 11
 };
 namespace effector_column {
 inline constexpr std::size_t neuron = 0;
@@ -982,7 +996,9 @@ inline constexpr std::size_t hue = 5;
 inline constexpr std::size_t outside = 6;
 inline constexpr std::size_t fibre = 7;
 inline constexpr std::size_t protraction = 8;
-inline constexpr std::size_t count = 9;
+inline constexpr std::size_t angle = 9;
+inline constexpr std::size_t arm = 10;
+inline constexpr std::size_t count = 11;
 }
 enum class SynapseColumn : std::size_t {
   source = 0,
@@ -1254,7 +1270,8 @@ enum class FinShapeColumn : std::size_t {
   x = 2,
   y = 3,
   spread = 4,
-  count = 5
+  steps = 5,
+  count = 6
 };
 namespace fin_shape_column {
 inline constexpr std::size_t cells = 0;
@@ -1262,7 +1279,8 @@ inline constexpr std::size_t strength = 1;
 inline constexpr std::size_t x = 2;
 inline constexpr std::size_t y = 3;
 inline constexpr std::size_t spread = 4;
-inline constexpr std::size_t count = 5;
+inline constexpr std::size_t steps = 5;
+inline constexpr std::size_t count = 6;
 }
 enum class CorpseStateColumn : std::size_t {
   energy = 0,
@@ -1276,22 +1294,24 @@ enum class CorpseStateColumn : std::size_t {
   fin_tail = 8,
   fin_left = 9,
   fin_right = 10,
-  mouth_pose = 11,
-  bite_pose = 12,
-  suction_pose = 13,
-  gill_pose = 14,
-  defense = 15,
-  health = 16,
-  aggression = 17,
-  mean_aggression = 18,
-  shell_radius = 19,
-  birth_tissue = 20,
-  mouth_aperture = 21,
-  gut_fill = 22,
-  gut_energy = 23,
-  gut_length = 24,
-  undulation = 25,
-  count = 26
+  fin_pelvic_left = 11,
+  fin_pelvic_right = 12,
+  mouth_pose = 13,
+  bite_pose = 14,
+  suction_pose = 15,
+  gill_pose = 16,
+  defense = 17,
+  health = 18,
+  aggression = 19,
+  mean_aggression = 20,
+  shell_radius = 21,
+  birth_tissue = 22,
+  mouth_aperture = 23,
+  gut_fill = 24,
+  gut_energy = 25,
+  gut_length = 26,
+  undulation = 27,
+  count = 28
 };
 namespace corpse_state_column {
 inline constexpr std::size_t energy = 0;
@@ -1305,22 +1325,24 @@ inline constexpr std::size_t tail = 7;
 inline constexpr std::size_t fin_tail = 8;
 inline constexpr std::size_t fin_left = 9;
 inline constexpr std::size_t fin_right = 10;
-inline constexpr std::size_t mouth_pose = 11;
-inline constexpr std::size_t bite_pose = 12;
-inline constexpr std::size_t suction_pose = 13;
-inline constexpr std::size_t gill_pose = 14;
-inline constexpr std::size_t defense = 15;
-inline constexpr std::size_t health = 16;
-inline constexpr std::size_t aggression = 17;
-inline constexpr std::size_t mean_aggression = 18;
-inline constexpr std::size_t shell_radius = 19;
-inline constexpr std::size_t birth_tissue = 20;
-inline constexpr std::size_t mouth_aperture = 21;
-inline constexpr std::size_t gut_fill = 22;
-inline constexpr std::size_t gut_energy = 23;
-inline constexpr std::size_t gut_length = 24;
-inline constexpr std::size_t undulation = 25;
-inline constexpr std::size_t count = 26;
+inline constexpr std::size_t fin_pelvic_left = 11;
+inline constexpr std::size_t fin_pelvic_right = 12;
+inline constexpr std::size_t mouth_pose = 13;
+inline constexpr std::size_t bite_pose = 14;
+inline constexpr std::size_t suction_pose = 15;
+inline constexpr std::size_t gill_pose = 16;
+inline constexpr std::size_t defense = 17;
+inline constexpr std::size_t health = 18;
+inline constexpr std::size_t aggression = 19;
+inline constexpr std::size_t mean_aggression = 20;
+inline constexpr std::size_t shell_radius = 21;
+inline constexpr std::size_t birth_tissue = 22;
+inline constexpr std::size_t mouth_aperture = 23;
+inline constexpr std::size_t gut_fill = 24;
+inline constexpr std::size_t gut_energy = 25;
+inline constexpr std::size_t gut_length = 26;
+inline constexpr std::size_t undulation = 27;
+inline constexpr std::size_t count = 28;
 }
 enum class CorpseVisualColumn : std::size_t {
   organs = 0,
@@ -1546,7 +1568,9 @@ namespace fin {
 inline constexpr int tail = 0;
 inline constexpr int left = 1;
 inline constexpr int right = 2;
-inline constexpr int count = 3;
+inline constexpr int pelvic_left = 3;
+inline constexpr int pelvic_right = 4;
+inline constexpr int count = 5;
 }
 namespace pressure_source {
 inline constexpr int none = 0;
@@ -1569,6 +1593,7 @@ inline constexpr int bladder = 12;
 inline constexpr int gland = 13;
 inline constexpr int gills = 14;
 inline constexpr int gut = 15;
+inline constexpr int pelvic = 16;
 }
 namespace eye {
 inline constexpr int left = 0;
@@ -1589,7 +1614,11 @@ inline constexpr int reverse_right = 9;
 inline constexpr int gill = 10;
 inline constexpr int gut = 11;
 inline constexpr int tail_right = 12;
-inline constexpr int count = 13;
+inline constexpr int pelvic_left = 13;
+inline constexpr int pelvic_right = 14;
+inline constexpr int pelvic_reverse_left = 15;
+inline constexpr int pelvic_reverse_right = 16;
+inline constexpr int count = 17;
 }
 namespace step_phase {
 inline constexpr int development = 0;
@@ -1969,6 +1998,11 @@ namespace hormones {
 inline constexpr int levels = 6;
 inline constexpr int signs = 2;
 }
+namespace blood_substance {
+inline constexpr int maturity = 6;
+inline constexpr int reserve = 7;
+inline constexpr int fatigue = 8;
+}
 namespace route {
 inline constexpr const char *page = "/";
 inline constexpr const char *assets = "/ui/";
@@ -2036,8 +2070,14 @@ namespace stroke_grip {
 inline constexpr double tail_at_rest = 0.5;
 inline constexpr double fin_at_speed = 0.5;
 }
-namespace tail_stroke {
-inline constexpr double lone_push = 0.3;
+namespace antagonist {
+inline constexpr double lone_sweep = 0.3;
+inline constexpr double tail_rest_sweep = 0.5;
+}
+namespace side_fin {
+inline constexpr double gap = 0.3;
+inline constexpr int angle = 90;
+inline constexpr int bearing_half = 20;
 }
 namespace trial_lab {
 inline constexpr std::array<double, 3> seeds{1.0, 2.0, 4.0};

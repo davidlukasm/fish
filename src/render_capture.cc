@@ -56,7 +56,6 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::defense, b.defense());
   row.set(F::aggression, m.aggression);
   row.set(F::relative_speed, m.relative_speed);
-  row.set(F::tail, m.tail);
   row.set(F::impulse_left, m.impulse_left);
   row.set(F::impulse_right, m.impulse_right);
   row.set(F::impulse_tail_left, m.impulse_tail_left);
@@ -65,15 +64,13 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::bladder_fill, b.bladder_fill);
   row.set(F::satiety, gut_filling(b));
   row.set(F::damage, (1 - b.health));
-  row.set(F::fin_age_tail, m.fin_stroke_age[fin::tail]);
-  row.set(F::fin_age_left, m.fin_stroke_age[fin::left]);
-  row.set(F::fin_age_right, m.fin_stroke_age[fin::right]);
-  row.set(F::fin_peak_tail, m.fin_stroke_peak[fin::tail]);
-  row.set(F::fin_peak_left, m.fin_stroke_peak[fin::left]);
-  row.set(F::fin_peak_right, m.fin_stroke_peak[fin::right]);
-  row.set(F::fin_steps_tail, m.fin_stroke_steps[fin::tail]);
-  row.set(F::fin_steps_left, m.fin_stroke_steps[fin::left]);
-  row.set(F::fin_steps_right, m.fin_stroke_steps[fin::right]);
+  // A fin's stroke length comes with its morphology (fin_shape steps).
+  static_assert(F::fin_age_pelvic_right - F::fin_age_tail == fin::count - 1 &&
+                F::fin_peak_pelvic_right - F::fin_peak_tail == fin::count - 1);
+  for (int k = 0; k < fin::count; ++k) {
+    row.set(F::fin_age_tail + std::size_t(k), m.fin_stroke_age[k]);
+    row.set(F::fin_peak_tail + std::size_t(k), m.fin_stroke_peak[k]);
+  }
   row.set(F::morphology_asset, asset);
   row.set(F::hatch_radius, predicted_hatch_radius(b, p.genome, world.physiology().neural_cost));
   row.set(F::birth_tissue, b.birth_tissue);

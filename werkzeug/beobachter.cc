@@ -297,7 +297,7 @@ int main(int argc, char **argv) {
               << ",\"reserveCapacity\":" << reserve_capacity(b)
               << ",\"bladderFill\":" << b.bladder_fill << ",\"buoyancy\":" << b.buoyancy_force
               << ",\"forward\":" << b.motor().drive_forward
-              << ",\"tailSide\":" << b.motor().tail_side << ",\"turn\":" << b.motor().turn
+              << ",\"tailSide\":" << b.motor().tail_pair.last << ",\"turn\":" << b.motor().turn
               << ",\"left\":" << b.motor().drive_left << ",\"right\":" << b.motor().drive_right
               << ",\"eat\":" << b.eat_signal << ",\"bite\":" << b.bite_signal
               << ",\"flow\":" << b.mouth.flow << ",\"opening\":" << b.mouth.opening
