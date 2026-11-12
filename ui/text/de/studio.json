@@ -1159,7 +1159,15 @@
   },
   "stimulus": {
     "plan": "Bauplan-Reiz · schematische Verbindungswege",
-    "planMeaning": "Ein Klick verfolgt die geplanten Verbindungen. Grün zeigt erregende, Rosa hemmende Wege; Gelb markiert Lehrkontakte und Violett Hormonbindungen. Schwellen, Synapsenstärken und zeitliche Entwicklung werden dabei nicht berechnet. Die Sinnesproben darunter zeigen zusätzlich die unmittelbare Sensorantwort.",
+    "planMeaning": "Ein Klick verfolgt die geplanten Verbindungen. Helle Punkte zeigen Erregung, violette Kreise mit Minus Hemmung, goldene Rauten Lehrsignale. Ein Außenring kennzeichnet Signale aus Zellen mit Eigenrhythmus. Stoffe breiten sich als farbige Wellen aus. Schwellen, Synapsenstärken und zeitliche Entwicklung werden dabei nicht berechnet. Die Sinnesproben darunter zeigen zusätzlich die unmittelbare Sensorantwort.",
+    "signals": {
+      "excitation": "Erregung",
+      "inhibition": "Hemmung",
+      "teaching": "Lehrsignal",
+      "rhythm": "vom Taktgeber",
+      "hormone": "Stoffausbreitung"
+    },
+    "arrivals": "Aufleuchten: erste Wegeankünfte sammeln sich. Die Zellschwelle wird hier nicht ausgewertet.",
     "planSource": "Bauplanwege",
     "cppnSource": "CPPN-Wege",
     "cppn": "CPPN-Struktur · Kontaktvorschläge",

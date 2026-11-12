@@ -27,7 +27,13 @@ export function planTrace(document, sites, requested, capabilities) {
         pairs.add(pair);
         const cl = classes.get(source.id), modulation = target.role === 'motor' ? 0 : cl.modulator;
         if (modulation < 1)
-          links.push({from : source.id, to : target.id, kind : 'electrical', sign : cl.sign});
+          links.push({
+            from : source.id,
+            to : target.id,
+            kind : 'electrical',
+            sign : cl.sign,
+            rhythm : cl.pace > 0
+          });
         if (modulation > 0)
           links.push({from : source.id, to : target.id, kind : 'teaching', sign : 0});
       }
@@ -60,10 +66,13 @@ export function cppnTrace(state, requested) {
                        : source.generated ? source.nativeClass.modulator
                                           : state.report.groups[from]?.nerve?.[3] ?? 0;
     if (modulation < 1) {
+      const rhythm = source.role === 'nerve' &&
+                     (source.generated ? source.nativeClass.pace
+                                       : state.report.groups[from]?.nerve?.[2] ?? 0) > 0;
       if (positive)
-        links.push({from : source.id, to : target.id, kind : 'electrical', sign : 1});
+        links.push({from : source.id, to : target.id, kind : 'electrical', sign : 1, rhythm});
       if (negative)
-        links.push({from : source.id, to : target.id, kind : 'electrical', sign : -1});
+        links.push({from : source.id, to : target.id, kind : 'electrical', sign : -1, rhythm});
     }
     if (modulation > 0)
       links.push({from : source.id, to : target.id, kind : 'teaching', sign : 0});
@@ -90,7 +99,7 @@ function traceLinks(starts, links) {
         continue;
       seenLegs.add(key);
       const sign = link.kind === 'electrical' ? part.sign * link.sign : 0;
-      legs.push({...link, sign, level : part.level});
+      legs.push({...link, sign, sourceSign : part.sign, level : part.level});
       const visit =
           link.to + ':' + sign +
           (link.kind === 'electrical' ? '' : ':' + link.kind + ':' + (link.substance ?? ''));

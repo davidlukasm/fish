@@ -5,7 +5,46 @@ const colour = leg => leg.kind === 'hormone'    ? substanceColor(leg.substance)
                       : leg.kind === 'teaching' ? 'var(--aid-teach)'
                       : leg.sign < 0            ? 'var(--aid-inhibit)'
                                                 : 'var(--aid-light)';
-const PLAY = Object.freeze({interval : 520, speed : 180, linger : 800, dot : 5, thinning : .7});
+const PLAY = Object.freeze({speed : 180, linger : 800, dot : 5, thinning : .7, instant : 1});
+const signalShape = leg => leg.kind === 'teaching' ? 'teaching'
+                           : leg.sign < 0          ? 'inhibition'
+                                                   : 'excitation';
+function pulseMark(svg, leg, scale) {
+  const dot = svg.ownerDocument.createElementNS(NS, 'circle');
+  dot.style.fill = colour(leg);
+  dot.setAttribute('class', 'aid-signal-dot ' + signalShape(leg));
+  dot.setAttribute('opacity', '0');
+  dot.setAttribute('r', String(PLAY.dot / scale));
+  if (leg.kind === 'electrical' && !leg.rhythm && leg.sign >= 0)
+    return {
+      dot,
+      move : p => {
+        dot.setAttribute('cx', String(p.x));
+        dot.setAttribute('cy', String(p.y));
+      }
+    };
+  const group = svg.ownerDocument.createElementNS(NS, 'g');
+  group.setAttribute('class', 'aid-signal-mark ' + signalShape(leg));
+  group.style.setProperty('--signal', colour(leg));
+  group.setAttribute('opacity', '0');
+  dot.setAttribute('opacity', '1');
+  group.appendChild(dot);
+  if (leg.kind === 'teaching' || leg.sign < 0) {
+    const symbol = svg.ownerDocument.createElementNS(NS, 'path');
+    const r = PLAY.dot / scale;
+    symbol.setAttribute('d', leg.kind === 'teaching' ? `M0 ${- r}L${r} 0 0 ${r} ${- r} 0Z`
+                                                     : `M${- r * .6} 0H${r * .6}`);
+    symbol.setAttribute('class', 'aid-signal-symbol');
+    group.appendChild(symbol);
+  }
+  if (leg.rhythm) {
+    const ring = svg.ownerDocument.createElementNS(NS, 'circle');
+    ring.setAttribute('class', 'aid-signal-rhythm');
+    ring.setAttribute('r', String((PLAY.dot + 3) / scale));
+    group.appendChild(ring);
+  }
+  return {dot : group, move : p => group.setAttribute('transform', `translate(${p.x} ${p.y})`)};
+}
 // Geometry is stable for a scene. Reading it while moving the dots forces repeated SVG work.
 function sampledPath(path, scale) {
   const length = path.getTotalLength();
@@ -21,37 +60,83 @@ function sampledPath(path, scale) {
     }
   };
 }
-export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
-  const levels = Math.max(1, ...trace.parts.map(part => part.level)) + 1;
-  const linger = PLAY.linger;
-  let intervals = Array(levels).fill(PLAY.interval), times = [];
-  const timing = () => {
-    times = [ 0 ];
-    for (const interval of intervals)
-      times.push(times.at(-1) + interval);
+const signalKey = part => part.id + ':' + (part.kind ?? 'electrical') + ':' + (part.sign ?? 1) +
+                          ':' + (part.substance ?? '');
+const sourceKey = leg => signalKey({id : leg.from, sign : leg.sourceSign ?? 1});
+// Feedback arriving after a node's first trace visit does not invent a second firing.
+export function pulseSchedule(trace, durations) {
+  const incoming = new Map(), ready = new Map();
+  for (const leg of trace.legs) {
+    const key = signalKey({...leg, id : leg.to});
+    if (!incoming.has(key))
+      incoming.set(key, []);
+    incoming.get(key).push(leg);
+  }
+  const parts = [...trace.parts ].sort((a, b) => a.level - b.level).map(part => {
+    const arrivals = (incoming.get(signalKey(part)) ?? [])
+                         .filter(leg => leg.level < part.level)
+                         .map(leg => (ready.get(sourceKey(leg)) ?? 0) + (durations.get(leg) ?? 0));
+    const at = part.level && arrivals.length ? Math.max(...arrivals) : 0;
+    ready.set(signalKey(part), at);
+    return {part, at, waitingAt : arrivals.length ? Math.min(...arrivals) : at};
+  });
+  const legs =
+      trace.legs
+          .map(leg =>
+                   ({leg, at : ready.get(sourceKey(leg)) ?? 0, duration : durations.get(leg) ?? 0}))
+          .sort((a, b) => a.at - b.at);
+  return {
+    parts,
+    legs,
+    end : legs.reduce((end, l) => Math.max(end, l.at + l.duration),
+                      parts.reduce((end, p) => Math.max(end, p.at), 0))
   };
-  timing();
-  let overlay, paths = [], parts = [], waves = [], handle = null, started = null, active = false;
-  let nextLeg = 0;
+}
+export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
+  let overlay, paths = [], parts = [], waves = [], schedule = {legs : [], end : 0};
+  let handle = null, started = null, active = false, nextLeg = 0, sceneScale = 1;
   const shown = new Set(), sentLegs = new Set();
+  let glowing = new Map();
+  const glow = (item, cls, on) => {
+    for (const element of item.elements) {
+      if (!glowing.has(element))
+        glowing.set(element, new Map());
+      const classes = glowing.get(element);
+      if (!classes.has(cls))
+        classes.set(cls, new Set());
+      const signals = classes.get(cls);
+      if (on)
+        signals.add(item);
+      else
+        signals.delete(item);
+      element.classList.toggle(cls, signals.size > 0);
+      if (cls === 'aid-pulse-waiting' && signals.size)
+        element.style.setProperty('--aid-pulse-colour', colour([...signals ].at(-1).part));
+    }
+  };
+  const cleanMarks = () => {
+    for (const {cls, elements} of parts)
+      for (const element of elements) {
+        element.classList.remove(cls);
+        element.classList.remove('aid-pulse-waiting');
+      }
+    glowing = new Map();
+  };
   const attach = next => {
     const elapsed = started === null ? 0 : performance.now() - started;
-    const nextLevel = times.findIndex((t, i) => i < levels && elapsed < times[i + 1]);
-    const level = nextLevel < 0 ? levels - 1 : nextLevel;
-    const phase = (elapsed - times[level]) / intervals[level];
     overlay?.remove();
-    for (const {cls, elements} of parts)
-      for (const element of elements)
-        element.classList.remove(cls);
+    cleanMarks();
     svg = next;
     overlay = svg.ownerDocument.createElementNS(NS, 'g');
     overlay.setAttribute('class', 'aid-plan-pulses');
     overlay.setAttribute('pointer-events', 'none');
-    const routes = new Map(), joined = new Map();
+    const routes = new Map(), ids = new Map();
     for (const element of svg.querySelectorAll('[data-signal-edges]')) {
       const path = element.matches('path') ? element : element.querySelector('.aid-wire-ink');
       if (!path)
         continue;
+      if (!ids.has(path))
+        ids.set(path, ids.size);
       for (const pair of element.getAttribute('data-signal-edges').split(' ').filter(Boolean)) {
         if (!routes.has(pair))
           routes.set(pair, []);
@@ -62,19 +147,59 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
         });
       }
     }
+    const matrix = svg.getScreenCTM(), scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+    const geometry = new Map(), durations = new Map(), joined = new Set(), spread = new Map();
+    const travel = length => Math.max(PLAY.instant, length * scale / PLAY.speed * 1000);
     paths = [];
-    // A substance spreads from its gland as a wave reaching every cell that answers it.
-    const spread = new Map();
-    for (const leg of trace.legs.filter(leg => leg.kind === 'hormone')) {
+    for (const leg of trace.legs) {
       const from = point(leg.from), to = point(leg.to);
-      if (!from || !to)
+      if (from && to)
+        durations.set(leg, travel(Math.hypot(to.x - from.x, to.y - from.y)));
+      if (leg.kind === 'hormone') {
+        if (!from || !to)
+          continue;
+        const key = leg.from + ':' + leg.substance + ':' + leg.level + ':' + (leg.sourceSign ?? 1);
+        const reach = Math.hypot(to.x - from.x, to.y - from.y),
+              wave = spread.get(key) ?? {leg, from, reach : 0};
+        wave.reach = Math.max(wave.reach, reach);
+        spread.set(key, wave);
         continue;
-      const key = leg.from + ':' + leg.substance + ':' + leg.level;
-      const reach = Math.hypot(to.x - from.x, to.y - from.y);
-      const wave = spread.get(key) ?? {leg, from, reach : 0};
-      wave.reach = Math.max(wave.reach, reach);
-      spread.set(key, wave);
+      }
+      const found = routes.get(leg.from + '>' + leg.to);
+      if (!found?.length)
+        continue;
+      const route = found.sort((a, b) => a.section - b.section).map(entry => entry.path);
+      const key = route.map(path => ids.get(path)).join(',') + ':' + leg.from + ':' + leg.kind +
+                  ':' + leg.sign + ':' + leg.level + ':' + (leg.sourceSign ?? 1);
+      const sampled = route.map(path => {
+        if (!geometry.has(path))
+          geometry.set(path, sampledPath(path, scale));
+        return geometry.get(path);
+      });
+      const lengths = sampled.map(path => path.length),
+            length = lengths.reduce((sum, n) => sum + n, 0), duration = travel(length);
+      durations.set(leg, duration);
+      if (joined.has(key))
+        continue;
+      joined.add(key);
+      const {dot, move} = pulseMark(svg, leg, scale);
+      overlay.appendChild(dot);
+      paths.push({
+        leg,
+        route : sampled,
+        dot,
+        move,
+        length,
+        lengths,
+        duration,
+        opacity : Math.min(...found.map(entry => entry.opacity))
+      });
     }
+    schedule = pulseSchedule(trace, durations);
+    nextLeg = 0;
+    const departures = new Map(schedule.legs.map(entry => [entry.leg, entry.at]));
+    for (const entry of paths)
+      entry.at = departures.get(entry.leg);
     waves = [...spread.values() ].map(wave => {
       const circle = svg.ownerDocument.createElementNS(NS, 'circle');
       circle.setAttribute('class', 'aid-hormone-wave');
@@ -84,59 +209,24 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       circle.setAttribute('opacity', '0');
       circle.style.setProperty('--hormone', colour(wave.leg));
       overlay.appendChild(circle);
-      return {...wave, circle};
+      return {...wave, circle, at : departures.get(wave.leg), duration : travel(wave.reach)};
     });
-    for (const leg of trace.legs) {
-      if (leg.kind === 'hormone')
-        continue;
-      const pair = leg.from + '>' + leg.to;
-      const found = routes.get(pair);
-      if (!found?.length)
-        continue;
-      const route = found.sort((a, b) => a.section - b.section).map(entry => entry.path);
-      const trunk = route.find(path => path.classList.contains('aid-wire-ink')) ?? route[0];
-      if (!joined.has(trunk))
-        joined.set(trunk, new Set());
-      const key = leg.kind + ':' + leg.sign + ':' + leg.level;
-      if (joined.get(trunk).has(key))
-        continue;
-      joined.get(trunk).add(key);
-      const dot = svg.ownerDocument.createElementNS(NS, 'circle');
-      dot.style.fill = colour(leg);
-      dot.setAttribute('opacity', '0');
-      overlay.appendChild(dot);
-      paths.push({leg, route, dot, opacity : Math.min(...found.map(entry => entry.opacity))});
-    }
     svg.appendChild(overlay);
-    const matrix = svg.getScreenCTM();
-    const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
-    intervals = Array(levels).fill(PLAY.interval);
-    const geometry = new Map();
-    for (const entry of paths) {
-      entry.route = entry.route.map(path => {
-        if (!geometry.has(path))
-          geometry.set(path, sampledPath(path, scale));
-        return geometry.get(path);
-      });
-      entry.lengths = entry.route.map(path => path.length);
-      entry.length = entry.lengths.reduce((sum, length) => sum + length, 0);
-      entry.dot.setAttribute('r', String(PLAY.dot / scale));
-      intervals[entry.leg.level] =
-          Math.max(intervals[entry.leg.level], entry.length * scale / PLAY.speed * 1000);
-    }
-    timing();
-    if (started !== null)
-      started = performance.now() - times[level] - phase * intervals[level];
     const cached = new Map();
-    parts = trace.parts.map(part => {
+    parts = schedule.parts.map(entry => {
+      const {part} = entry;
       if (!cached.has(part.id))
         cached.set(part.id, marks(part.id));
       const cls = part.kind === 'teaching'  ? 'aid-pulse-teaching'
                   : part.kind === 'hormone' ? 'aid-pulse-binding'
                   : part.sign < 0           ? 'aid-pulse-quieting'
                                             : 'aid-pulse-active';
-      return {part, cls, elements : cached.get(part.id), on : false};
+      const elements = cached.get(part.id);
+      return {...entry, cls, elements, on : false, waiting : false};
     });
+    if (started !== null)
+      started = performance.now() - elapsed * scale / sceneScale;
+    sceneScale = scale;
   };
   const stop = () => {
     active = false;
@@ -144,33 +234,28 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       cancelAnimationFrame(handle);
     handle = null;
     overlay?.remove();
-    for (const {cls, elements} of parts)
-      for (const element of elements)
-        element.classList.remove(cls);
+    cleanMarks();
   };
-  const draw = now => {
-    if (!active || !svg.isConnected)
-      return stop();
-    if (started === null)
-      started = now;
-    const elapsed = now - started;
+  const paint = elapsed => {
     for (const item of parts) {
-      const {part, cls, elements} = item;
-      const key = part.id + ':' + part.kind + ':' + part.sign + ':' + (part.substance ?? '');
-      if (elapsed >= times[part.level] && !shown.has(key)) {
+      const {part, cls, at, waitingAt} = item, key = signalKey(part);
+      if (elapsed >= at && !shown.has(key)) {
         shown.add(key);
         reached(part);
       }
-      const on = elapsed >= times[part.level] && elapsed < times[part.level] + linger;
+      const on = elapsed >= at && elapsed < at + PLAY.linger;
+      const waiting = elapsed >= waitingAt && elapsed < at;
       if (item.on !== on) {
         item.on = on;
-        for (const element of elements)
-          element.classList.toggle(cls, on);
+        glow(item, cls, on);
+      }
+      if (item.waiting !== waiting) {
+        item.waiting = waiting;
+        glow(item, 'aid-pulse-waiting', waiting);
       }
     }
-    // The trace lists its legs level by level, so the legs now due are always the next ones.
-    while (nextLeg < trace.legs.length && elapsed >= times[trace.legs[nextLeg].level]) {
-      const leg = trace.legs[nextLeg++];
+    while (nextLeg < schedule.legs.length && elapsed >= schedule.legs[nextLeg].at) {
+      const {leg} = schedule.legs[nextLeg++];
       const key =
           leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign + ':' + (leg.substance ?? '');
       if (!sentLegs.has(key)) {
@@ -178,26 +263,31 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
         sent(leg);
       }
     }
-    for (const {leg, circle, reach} of waves) {
-      const fraction = (elapsed - times[leg.level]) / intervals[leg.level];
-      const spreading = fraction >= 0 && fraction < 1;
+    for (const {circle, reach, at, duration} of waves) {
+      const fraction = (elapsed - at) / duration, spreading = fraction >= 0 && fraction < 1;
       circle.setAttribute('opacity', spreading ? String(1 - PLAY.thinning * fraction) : '0');
       if (spreading)
         circle.setAttribute('r', String(fraction * reach));
     }
-    for (const {leg, route, dot, length, lengths, opacity} of paths) {
-      const fraction = (elapsed - times[leg.level]) / intervals[leg.level];
+    for (const {route, dot, move, length, lengths, opacity, at, duration} of paths) {
+      const fraction = (elapsed - at) / duration;
       dot.setAttribute('opacity', fraction >= 0 && fraction < 1 ? String(opacity) : '0');
       if (fraction >= 0 && fraction < 1) {
         let distance = fraction * length, index = 0;
         while (index + 1 < route.length && distance > lengths[index])
           distance -= lengths[index++];
-        const at = route[index].at(distance);
-        dot.setAttribute('cx', String(at.x));
-        dot.setAttribute('cy', String(at.y));
+        move(route[index].at(distance));
       }
     }
-    if (elapsed < times[levels] + linger)
+  };
+  const draw = now => {
+    if (!active || !svg.isConnected)
+      return stop();
+    if (started === null)
+      started = now;
+    const elapsed = now - started;
+    paint(elapsed);
+    if (elapsed < schedule.end + PLAY.linger)
       handle = requestAnimationFrame(draw);
     else
       stop();
@@ -208,9 +298,10 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
         return;
       active = true;
       attach(svg);
+      // Initial callbacks build wire indexes and mark organs before the animation clock starts.
+      paint(0);
       handle = requestAnimationFrame(draw);
     },
-    // A redrawn scene takes the trace along only while it plays.
     attach : next => {
       if (active && next)
         attach(next);

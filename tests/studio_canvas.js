@@ -300,4 +300,111 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     player.stop();
     Object.assign(global, before);
   }
+  checkPulseTiming(createPlanPlayer, (await import('../ui/studio/view/pulse.js')).pulseSchedule);
 };
+
+function checkPulseTiming(createPlanPlayer, pulseSchedule) {
+  let now = 0, next, queries = 0, scale = 1;
+  const saved = {
+    performance : global.performance,
+    requestAnimationFrame : global.requestAnimationFrame,
+    cancelAnimationFrame : global.cancelAnimationFrame
+  };
+  global.performance = {now : () => now};
+  global.requestAnimationFrame = f => (next = f, 1);
+  global.cancelAnimationFrame = () => {};
+  const element = tag => ({
+    tag,
+    attributes : {},
+    children : [],
+    classList : {
+      set : new Set(),
+      contains(k) { return this.set.has(k); },
+      add(k) { this.set.add(k); },
+      remove(k) { this.set.delete(k); },
+      toggle(k, on) { on ? this.set.add(k) : this.set.delete(k); }
+    },
+    style : {setProperty() {}},
+    setAttribute(k, v) { this.attributes[k] = v; },
+    getAttribute(k) { return this.attributes[k] ?? null; },
+    appendChild(c) { this.children.push(c); },
+    remove() {}
+  });
+  const route = (pair, length, y) => ({
+    ...element('path'),
+    attributes : {'data-signal-edges' : pair},
+    matches : () => true,
+    getTotalLength : () => length,
+    getPointAtLength : n => (queries++, {x : n, y})
+  });
+  const routes =
+      [ route('a>b', 90, 0), route('a>d', 180, 10), route('c>d', 360, 20), route('d>e', 180, 30) ];
+  const svg = {
+    ...element('svg'),
+    isConnected : true,
+    ownerDocument : {createElementNS : (_, tag) => element(tag)},
+    querySelectorAll : () => routes,
+    getScreenCTM : () => ({a : scale, b : 0})
+  };
+  const parts = [
+    {id : 'a', level : 0}, {id : 'c', level : 0}, {id : 'b', level : 1}, {id : 'd', level : 1},
+    {id : 'e', level : 2}
+  ].map(p => ({...p, kind : 'electrical', sign : 1}));
+  const legs = [ [ 'a', 'b', 0 ], [ 'a', 'd', 0 ], [ 'c', 'd', 0 ], [ 'd', 'e', 1 ] ].map(
+      ([ from, to, level ]) => ({from, to, level, kind : 'electrical', sign : 1, sourceSign : 1}));
+  const durations = new Map(legs.map((l, i) => [l, [ 500, 1000, 2000, 1000 ][i]]));
+  const times = pulseSchedule({parts, legs}, durations);
+  assert.deepEqual(times.parts.map(p => [p.part.id, p.at, p.waitingAt]), [
+    [ 'a', 0, 0 ], [ 'c', 0, 0 ], [ 'b', 500, 500 ], [ 'd', 2000, 1000 ], [ 'e', 3000, 3000 ]
+  ]);
+  const marks = new Map(parts.map(p => [p.id, element('g')])), reached = [];
+  const player = createPlanPlayer(svg, {parts, legs}, {
+    marks : id => [marks.get(id)],
+    point : () => ({x : 0, y : 0}),
+    reached : p => {
+      reached.push(p.id);
+      if (p.level === 0)
+        now += 300;
+    }
+  });
+  const frame = delta => {
+    now += delta;
+    next(now);
+  };
+  try {
+    player.start();
+    assert.equal(now, 600);
+    assert.deepEqual(reached, [ 'a', 'c' ]);
+    frame(0);
+    const dots = svg.children.at(-1).children;
+    const sampled = queries;
+    frame(100);
+    for (const dot of dots.slice(0, 3))
+      assert.equal(Number(dot.attributes.cx), 18,
+                   'Every signal travels 18 px per 100 ms, after initial work');
+    assert.equal(queries, sampled, 'No geometry reads while animating');
+    frame(400);
+    assert.ok(reached.includes('b'));
+    assert.ok(!reached.includes('d'));
+    assert.equal(dots[0].attributes.opacity, '0');
+    frame(1000);
+    assert.ok(marks.get('d').classList.contains('aid-pulse-waiting'));
+    assert.ok(!reached.includes('d'));
+    assert.equal(Number(dots[2].attributes.cx), 270);
+    frame(500);
+    assert.ok(reached.includes('d'));
+    assert.ok(!marks.get('d').classList.contains('aid-pulse-waiting'));
+    assert.equal(Number(dots[3].attributes.cx), 0);
+    frame(100);
+    assert.equal(Number(dots[3].attributes.cx), 18);
+    scale = 2;
+    player.attach(svg);
+    frame(100);
+    const moved = svg.children.at(-1).children.at(-1);
+    assert.equal(Number(moved.attributes.cx), 27);
+    assert.equal(Number(moved.attributes.r), 2.5);
+  } finally {
+    player.stop();
+    Object.assign(global, saved);
+  }
+}
