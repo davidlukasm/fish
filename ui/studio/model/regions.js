@@ -13,10 +13,11 @@ import {valuePlan} from './value_region.js';
 import {olfactionPlan} from './olfaction_region.js';
 import {motorPlan} from './motor_region.js';
 import {spinePlan} from './spine_region.js';
-import {HALF_VIEW, bearing} from './retina.js';
+import {HALF_VIEW, bearing, midlineCenters, seesAcross} from './retina.js';
 import {findSite} from './layout.js';
 import {
   allCenters,
+  chiasmWire,
   closestNativeSite,
   defaults,
   expandedWires,
@@ -47,10 +48,16 @@ export function fedBy(doc, organ) {
     const centers = findOrgan(doc, id)?.centers ?? [ findCenter(doc, id)?.center ].filter(Boolean);
     return centers.length > 0 && centers.every(isModulator);
   };
-  return [...new Set(expandedWires(doc)
-                         .filter(link => own.has(link.to) && !teaches(link.from))
-                         .map(link => organOf(doc, link.from))
-                         .filter(Boolean)) ];
+  // An eye reaches the tectum of its own side only with cells that see across the midline.
+  const uncrossed = link => {
+    const eye = organOf(doc, link.from);
+    return organ.type === 'tectum' && !!eye?.field && eye.side * organ.side > 0 && !seesAcross(eye);
+  };
+  return [...new Set(
+      expandedWires(doc)
+          .filter(link => own.has(link.to) && !teaches(link.from) && !uncrossed(link))
+          .map(link => organOf(doc, link.from))
+          .filter(Boolean)) ];
 }
 
 const MAP_NODES = 8, MAP_COPIES = 8, CONTRAST_CELLS = Object.freeze([ 0, 2, 5 ]);
@@ -128,12 +135,25 @@ const PLANS = Object.freeze({
 export const regionPlan = (doc, organ) => PLANS[organ.type](doc, organ);
 
 const innerWire = organ => ({id : organ.id + ':inner', spread : 0, pairing : null, inner : true});
+// Sight crosses to the tectum of the other side; into the tectum of its own side go only the cells
+// that also see across the midline, each on its own.
+function crossingSight(doc, sites, link) {
+  if (!chiasmWire(doc, link.wire))
+    return [ link ];
+  const eye = organOf(doc, link.from), tectum = organOf(doc, link.to);
+  if (eye.side * tectum.side <= 0)
+    return [ {...link, chiasm : true} ];
+  const across = midlineCenters(eye, sites);
+  return findOrgan(doc, link.from) ? [...across ].map(id => ({...link, from : id, chiasm : true}))
+         : across.has(link.from)   ? [ {...link, chiasm : true} ]
+                                   : [];
+}
 export function routedLinks(doc, sites, withCut = false) {
   const plans = new Map(doc.organs.filter(planned).map(o => [o.id, regionPlan(doc, o)]));
   const out = (organ, plan) => plan.nodes.filter(n => n.port === 'out' || n.port === 'both')
                                    .map(n => regionNodeId(organ, n.node));
   const links = [];
-  for (const link of expandedWires(doc)) {
+  for (const link of expandedWires(doc).flatMap(link => crossingSight(doc, sites, link))) {
     const source = findOrgan(doc, link.from), target = findOrgan(doc, link.to);
     if (ORGAN_BY_KEY[source?.type]?.namedPorts && link.wire.fromPort == null ||
         ORGAN_BY_KEY[target?.type]?.namedPorts && link.wire.toPort == null)
@@ -160,7 +180,8 @@ export function routedLinks(doc, sites, withCut = false) {
       const cells = !eye?.field ? [] : findOrgan(doc, from) ? eye.centers : [ sender.center ];
       const routed =
           cells.map(cell => [cell.id, plan.route(sites, cell, eye)]).filter(([, node ]) => node);
-      if (routed.length)
+      // Sight goes only where its cells look (crossingSight), never to every band.
+      if (link.chiasm || routed.length)
         for (const [cell, node] of routed)
           links.push({...link, from : cell, to : regionNodeId(target, node)});
       else {

@@ -36691,7 +36691,7 @@
    "from": "organ-mwaovmby-a",
    "to": "organ-mwbt1h3d-q",
    "spread": 0,
-   "pairing": "same",
+   "pairing": "crossed",
    "fromPort": "onward",
    "toPort": "feature1"
   },
@@ -36709,7 +36709,7 @@
    "from": "organ-mwaovmby-a",
    "to": "organ-mwbt1h31-h",
    "spread": 0,
-   "pairing": "same",
+   "pairing": "crossed",
    "fromPort": "onward",
    "toPort": "target"
   },

@@ -1662,7 +1662,12 @@ export function pairEndpoint(doc, id) {
   return twin ? matchingNode(found.organ, twin, id) : null;
 }
 const endpointSide = (doc, id) => organOf(doc, id).side < 0;
-function wireLinks(doc, wire) {
+// Sight into the tectum crosses by the direction the cells look, not by the wire's pairing: every
+// eye reaches both tecta, and regions.js routes each cell to the side of space it sees.
+export const chiasmWire = (doc, wire) =>
+    !!organOf(doc, wire.from)?.field && organOf(doc, wire.to)?.type === 'tectum';
+function wireLinks(doc, original) {
+  const wire = chiasmWire(doc, original) ? {...original, pairing : 'both'} : original;
   const from = pairEndpoint(doc, wire.from), to = pairEndpoint(doc, wire.to);
   if (!wire.pairing || (!from && !to) || from === wire.to)
     return [ {from : wire.from, to : wire.to} ];

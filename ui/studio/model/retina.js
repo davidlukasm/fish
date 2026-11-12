@@ -129,3 +129,11 @@ export function retinalRays(organ, sites) {
     });
   });
 }
+// Whether an eye's field reaches across the midline into the other side's space (body_plan.cc: a
+// cell sees from angle − width to angle + width), and which of its centers have such a cell.
+export const seesAcross = organ =>
+    !!organ.field && organ.field.lo < receptorWidth(organ.field.resolution);
+export const midlineCenters = (organ, sites) => new Set(
+    seesAcross(organ)
+        ? retinalRays(organ, sites).filter(r => r.left < 0 && r.right > 0).map(r => r.center)
+        : []);

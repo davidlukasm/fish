@@ -367,8 +367,8 @@ function wireInspector(state, wire) {
   return '<header class="aid-inspector-head"><span>' + label('sections.connection') + '</span>' +
          heading(linkText(endpointTitle(doc, wire.from, state.sites, wire.fromPort),
                           endpointTitle(doc, wire.to, state.sites, wire.toPort))) +
-         '</header>' + pairingChoice(wire) + '<div class="aid-wire-parameters">' + wireField(wire) +
-         '</div>' +
+         '</header>' + pairingChoice(doc, wire) + '<div class="aid-wire-parameters">' +
+         wireField(wire) + '</div>' +
          (state.report?.contacts
               ? contactResult(wireContacts(doc, wire, contactRows(state), state.sites))
               : '') +

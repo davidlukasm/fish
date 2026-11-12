@@ -263,7 +263,8 @@
       "same": "gleichseitig",
       "crossed": "gekreuzt",
       "both": "beidseitig",
-      "title": "Seitenführung"
+      "title": "Seitenführung",
+      "chiasm": "Sehkreuzung: Jedes Auge meldet an das Tectum der Gegenseite. Zellen, die über die Mitte hinweg sehen, melden auch an das eigene."
     },
     "kindCount": "{name} ×{n}",
     "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",

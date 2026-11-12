@@ -2,7 +2,7 @@ import {regionGraph} from './region_graph.js';
 import {substanceColor} from '../../hormones.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
 import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {isLearner, substanceBound} from '../model/document.js';
+import {chiasmWire, isLearner, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
 import {planned, regionPlan, regionSlots} from '../model/regions.js';
@@ -17,8 +17,13 @@ const PAIRING_GLYPH = Object.freeze({
   crossed : 'M3 6L17 14M3 14L17 6',
   both : 'M3 6h14M3 14h14M3 6L17 14M3 14L17 6'
 });
-export const pairingChoice = wire =>
-    !wire.pairing
+// Sight into the tectum takes no pairing: the cells cross by where they look (regions.js).
+export const pairingChoice = (doc, wire) =>
+    chiasmWire(doc, wire)
+        ? '<p class="aid-wire-chiasm">' +
+              glyph(PAIRING_GLYPH.crossed, PAIRING_BOX, {box : PAIRING_BOX, line : true}) +
+              '<span>' + label('inspector.pairing.chiasm') + '</span></p>'
+    : !wire.pairing
         ? ''
         : '<div class="aid-wire-pairing" role="group" aria-label="' +
               label('inspector.pairing.title') + '">' +

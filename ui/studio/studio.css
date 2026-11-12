@@ -554,6 +554,7 @@
 .aid-anatomical-region{fill:#b8c5e11f;stroke:var(--aid-brain);stroke-width:2.5;stroke-dasharray:7 6;vector-effect:non-scaling-stroke}
 .aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:3px 8px;font-size:11px;color:var(--aid-control-text)}
 .aid-pairing svg path{fill:none;stroke:var(--aid-handle);stroke-width:2;stroke-linecap:round}
+.aid-wire-chiasm{display:flex;gap:8px;align-items:flex-start;margin:10px 0;font-size:12px;color:var(--aid-soft-text)}.aid-wire-chiasm svg{flex-shrink:0}
 .aid-wire-pairing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:10px 0}
 .aid-wire-pairing .aid-pairing{flex-direction:column;justify-content:center;gap:2px;padding:5px 2px;min-width:0;cursor:pointer}
 .aid-wire-pairing .aid-pairing svg{flex-shrink:0}

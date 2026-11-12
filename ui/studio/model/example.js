@@ -26,9 +26,9 @@ const PLACES = Object.freeze({
 const WIRES = Object.freeze([
   [ 'eye', 'sight', null, 'sight' ],
   [ 'nose', 'smell', null, 'scent' ],
-  [ 'sight', 'choice', 'onward', 'target' ],
+  [ 'sight', 'choice', 'onward', 'target', 'crossed' ],
   [ 'smell', 'choice', 'target', 'target' ],
-  [ 'sight', 'value', 'onward', 'feature1' ],
+  [ 'sight', 'value', 'onward', 'feature1', 'crossed' ],
   [ 'smell', 'value', 'presence', 'feature2' ],
   [ 'value', 'choice', 'feature1', 'strength' ],
   [ 'value', 'choice', 'feature2', 'strength' ],

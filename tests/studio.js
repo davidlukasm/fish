@@ -1516,16 +1516,27 @@ async function checkHormoneSystems(model, capabilities) {
     const sightMotor =
         model.addWire(sightMuscle.document, tectum.organId, sightMuscle.organId, 'same', sites);
     const directSightLinks = regions.routedLinks(sightMotor.document, sites);
+    const crossedTectum = model.findOrgan(sightMotor.document, directTectum.pair);
     assert.ok(directSightLinks.some(l => eyeOrgan.centers.some(c => c.id === l.from) &&
-                                         l.to === directTectum.centers[0].id));
+                                         l.to === crossedTectum.centers[0].id),
+              'An eye feeds the tectum of the other side');
     assert.ok(directSightLinks.some(l => l.from === directTectum.centers[0].id &&
                                          l.to === sightMuscle.organId));
     model.validateDocument(sightMotor.document);
-    assert.ok(model.expandedWires(own.document)
-                  .filter(l => l.wire.id === own.wireId)
-                  .every(l => model.findOrgan(own.document, l.from).side ===
-                              model.findOrgan(own.document, l.to).side),
-              'Drawn on one side, optic wires stay on their sides');
+    const retina = await import('../ui/studio/model/retina.js');
+    // Sight crosses whatever side the wire was drawn on; only cells that see across the midline
+    // also reach the tectum of their own side.
+    const crossesOver = (doc, wireId) => {
+      const links = regions.routedLinks(doc, sites).filter(l => l.wire.id === wireId);
+      return links.some(l => model.findCenter(doc, l.from).organ.side !==
+                             model.findCenter(doc, l.to).organ.side) &&
+             links.every(l => {
+               const cell = model.findCenter(doc, l.from), map = model.findCenter(doc, l.to);
+               return cell.organ.side !== map.organ.side ||
+                      retina.midlineCenters(cell.organ, sites).has(cell.center.id);
+             });
+    };
+    assert.ok(crossesOver(own.document, own.wireId), 'Drawn on one side, optic wires still cross');
     const farTectum = model.findOrgan(wired, tectum.organId).pair;
     assert.ok(farTectum);
     const connected = model.connectSelections(wired, {kind : 'organ', id : eyeOrgan.id},
@@ -1533,13 +1544,8 @@ async function checkHormoneSystems(model, capabilities) {
     assert.ok(connected);
     assert.equal(connected.document.wires.at(-1).pairing, 'crossed');
     const tectumLeft = model.findOrgan(connected.document, tectum.organId);
-    const far = model.expandedWires(connected.document).filter(l => l.wire.id === connected.wireId);
-    assert.equal(far.length, 2);
-    assert.ok(far.every(l => model.findOrgan(connected.document, l.from).side !==
-                             model.findOrgan(connected.document, l.to).side),
-              'Optic wires cross');
+    assert.ok(crossesOver(connected.document, connected.wireId), 'Optic wires cross');
     assert.ok(tectumLeft);
-    const retina = await import('../ui/studio/model/retina.js');
     const settled = regions.settleRegions(connected.document, sites);
     const routed = regions.routedLinks(settled, sites);
     const mapNodes =
@@ -1613,9 +1619,11 @@ async function checkHormoneSystems(model, capabilities) {
             const sideOf = id => model.organOf(wired.document, id).side;
             assert.equal(wired.document.wires.at(-1).pairing, same ? 'same' : 'crossed',
                          a + '>' + b);
-            assert.ok(model.expandedWires(wired.document)
-                          .filter(l => l.wire.id === wired.wireId)
-                          .every(l => (sideOf(l.from) === sideOf(l.to)) === same),
+            // Sight into the tectum crosses by where its cells look, whatever the pairing.
+            assert.ok(model.chiasmWire(wired.document, wired.document.wires.at(-1)) ||
+                          model.expandedWires(wired.document)
+                              .filter(l => l.wire.id === wired.wireId)
+                              .every(l => (sideOf(l.from) === sideOf(l.to)) === same),
                       a + '>' + b + ' joins the sides as drawn');
           }
         }
@@ -1629,13 +1637,18 @@ async function checkHormoneSystems(model, capabilities) {
     const sideOf = id =>
         (model.findOrgan(across.document, id) ?? model.findCenter(across.document, id).organ).side <
         0;
-    assert.ok(model.expandedWires(across.document)
-                  .filter(l => l.wire.id === across.wireId)
-                  .every(l => sideOf(l.from) !== sideOf(l.to)),
-              'Optic wires cross whichever twin they were drawn to');
+    const retinaModel = await import('../ui/studio/model/retina.js');
+    assert.ok(
+        regions.routedLinks(across.document, sites)
+            .filter(l => l.wire.id === across.wireId)
+            .every(l => sideOf(l.from) !== sideOf(l.to) ||
+                        retinaModel
+                            .midlineCenters(model.findCenter(across.document, l.from).organ, sites)
+                            .has(l.from)),
+        'Optic wires cross whichever twin they were drawn to');
     {
       const doc = across.document, wire = doc.wires.find(w => w.id === across.wireId);
-      const link = model.expandedWires(doc).find(l => l.wire === wire);
+      const link = regions.routedLinks(doc, sites).find(l => l.wire === wire);
       const from = model.centerIndex(doc, model.endpointCenters(doc, link.from)[0].id);
       const to = model.centerIndex(doc, model.endpointCenters(doc, link.to)[0].id);
       const rows = [ [ from, to, 4, .5, 3, 1, 1, -1 ], [ to, from, 9, 1, 9, 0, 1, 0 ] ];
@@ -1652,14 +1665,20 @@ async function checkHormoneSystems(model, capabilities) {
     assert.doesNotMatch(wirePanel(commissure.document, commissure.wireId), /data-wire-pairing/,
                         'A direct partner connection never offers ineffective side switches');
     const opticPanel = wirePanel(connected.document, connected.wireId);
-    assert.match(opticPanel, /<span>gekreuzt<\/span>/,
-                 'The optic side choices are named without relying on tooltips');
-    assert.match(opticPanel, /data-pairing-value="crossed" aria-pressed="true"/);
+    assert.match(opticPanel, /class="aid-wire-chiasm"/,
+                 'Sight into the tectum names its crossing instead of offering side choices');
+    assert.doesNotMatch(opticPanel, /data-wire-pairing/);
     const opticDoc = connected.document;
     assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.id), null);
     const steering =
         model.placeModule(model.newDocument('Modul'), 'vision-steering', sites, {x : 345, y : 290});
     assert.ok(steering);
+    const steer = steering.document.wires.find(
+        w => model.organOf(steering.document, w.from)?.type === 'tectum' && w.pairing);
+    const steerPanel = wirePanel(steering.document, steer.id);
+    assert.match(steerPanel, /<span>gleichseitig<\/span>/,
+                 'The side choices are named without relying on tooltips');
+    assert.match(steerPanel, /data-pairing-value="same" aria-pressed="true"/);
     for (const [key, motor] of [[ 'vision-steering', MOTOR_KIND.turn ]])
       for (const position of [{x : 345, y : 290}, {x : 560, y : 365}, {x : 850, y : 420}]) {
         const placed = model.placeModule(model.newDocument(key), key, sites, position);
@@ -2458,8 +2477,13 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const organOf = index => model.findCenter(exampleDoc, exampleCenters[index].id).organ;
   const optic = response.example.contacts.filter(([ from, to ]) => organOf(from).type === 'eye' &&
                                                                    organOf(to).type === 'tectum');
+  // Developed sight crosses; only cells that see across the midline also reach their own side.
+  const retinaModel = await import('../ui/studio/model/retina.js');
   assert.ok(optic.length &&
-            optic.every(([ from, to ]) => organOf(from).side * organOf(to).side > 0));
+            optic.every(
+                ([ from, to ]) =>
+                    organOf(from).side * organOf(to).side < 0 ||
+                    retinaModel.midlineCenters(organOf(from), sites).has(exampleCenters[from].id)));
   assert.ok(response.example.contacts.every(([ from, to ]) => organOf(from).type !== 'tectum' ||
                                                               organOf(to).type !== 'tectum' ||
                                                               organOf(from) === organOf(to)));
