@@ -10,7 +10,7 @@ import {
 } from '../../tuning.js';
 import {groupReport} from '../model/document.js';
 import {BODY_MIDDLE, findSite, sideSign} from '../model/layout.js';
-import {fishPath, skinAt, skinDirection, skinPoints} from './frame.js';
+import {fishPath, OUTLINE_STEP, skinAt, skinDirection, skinPoints} from './frame.js';
 import {nodeLocation, organLocation} from './places.js';
 import {escapeText, fixed} from './markup.js';
 import {adaptationMarks, cellMarks} from './sense_marks.js';
@@ -37,7 +37,7 @@ const SKIN_FIELD = Object.freeze({
   inset : 14,
   clock : 26
 });
-const CANVAS_SKIN = Object.freeze({step : 12, length : [ 3, 22 ], hit : 13});
+const CANVAS_SKIN = Object.freeze({length : [ 3, 22 ], hit : 13});
 const toFrame = (fx, fy) => ({
   x : BODY_MIDDLE.x + (fx * SKIN_FIELD.width - SKIN_FIELD.cx) / SKIN_FIELD.scale,
   y : BODY_MIDDLE.y + (fy * SKIN_FIELD.height - SKIN_FIELD.cy) / SKIN_FIELD.scale
@@ -62,13 +62,14 @@ function sensitivityOf(state, center) {
     return 1 - stimulusShare(answer.half, dimmest);
   return answer?.intensity ? null : 1 - activationLevel(unitOfPlan(center.threshold));
 }
-function weighed(state, aim, width, step) {
-  return skinPoints(step).map(
-      point => ({
-        ...point,
-        weight : Math.max(
-            0, 1 - Math.abs(wrapAngle(skinDirection(point, state.anatomy?.zones) - aim)) / width)
-      }));
+function weighed(state, aim, width, step, first) {
+  return skinPoints(step, first)
+      .map(point => ({
+             ...point,
+             weight : Math.max(
+                 0,
+                 1 - Math.abs(wrapAngle(skinDirection(point, state.anatomy?.zones) - aim)) / width)
+           }));
 }
 const nearest = (points, aim, state) => points.reduce(
     (best, p) => Math.abs(wrapAngle(skinDirection(p, state.anatomy?.zones) - aim)) <
@@ -90,7 +91,7 @@ export function skinPatchSvg(state, organ) {
             .join('');
     if (sensitive === null)
       continue;
-    hairs += weighed(state, aim, width, C.step)
+    hairs += weighed(state, aim, width, OUTLINE_STEP, OUTLINE_STEP)
                  .filter((p, k) => p.weight > S.least && k % 2 === (organ.type === 'pain' ? 1 : 0))
                  .map(p => {
                    const reach = (C.length[0] + C.length[1] * sensitive) * p.weight,

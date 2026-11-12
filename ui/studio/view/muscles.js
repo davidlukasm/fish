@@ -40,7 +40,8 @@ function muscleBuild(organ) {
 const SHAPE = Object.freeze({
   tail : {
     stalk : [ 510, 897 ],
-    depth : .84,
+    // The band's outer edge keeps this far inside the skin, also where the stalk narrows.
+    gap : 6,
     length : [ 120, 410 ],
     thick : [ .18, .2 ],
     steps : 32,
@@ -84,12 +85,15 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
   if (code === MOTOR_KIND.forward) {
     const T = SHAPE.tail, end = position ? position.x + grow(T.length, fill) / 2 : T.stalk[1],
           start = Math.max(T.stalk[0], end - grow(T.length, fill));
-    const dy = position
-                   ? position.y - (BODY_FRAME.middle + s * halfWidth((start + end) / 2) * T.depth)
-                   : 0;
-    const at = x => BODY_FRAME.middle + s * halfWidth(x) * T.depth + dy,
-          half = x => halfWidth(x) * grow(T.thick, strength) / 2 *
+    const half = x => halfWidth(x) * grow(T.thick, strength) / 2 *
                       Math.max(0, Math.sin(Math.PI * (x - start) / (end - start))) ** .25;
+    // How far from the midline the band runs; a placed band follows its place but never further
+    // out than the gap inside the skin.
+    const outmost = x => halfWidth(x) - T.gap - half(x);
+    const inward =
+        position ? Math.min(0, s * (position.y - BODY_FRAME.middle) - outmost((start + end) / 2))
+                 : 0;
+    const at = x => BODY_FRAME.middle + s * (outmost(x) + inward);
     const top = [], bottom = [];
     for (let k = 0; k <= T.steps; ++k) {
       const x = start + (end - start) * k / T.steps;

@@ -186,9 +186,12 @@ export function skinDirection(point, zones = null) {
   return Math.atan2(Math.sign(off) * Math.min(1, Math.abs(off) / SKIN_NARROW) / 2,
                     front - extent * (1 - u));
 }
-export function skinPoints(step) {
+// Spines stand on the outline at half steps and the sense hairs at whole steps between them, so
+// the two never share a root.
+export const OUTLINE_STEP = 15;
+export function skinPoints(step, first = step / 2) {
   const points = [];
-  let carried = step / 2;
+  let carried = first;
   for (let k = 1; k < SKIN_POINTS.length; ++k) {
     const [a, b] = [ SKIN_POINTS[k - 1], SKIN_POINTS[k] ];
     const length = Math.hypot(b[0] - a[0], b[1] - a[1]);

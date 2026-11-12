@@ -34,6 +34,7 @@ import {
   finSizes,
   fishPath,
   HEAD,
+  OUTLINE_STEP,
   skinAt,
   skinDirection,
   skinPoints,
@@ -384,7 +385,7 @@ function organGlyph(state, organ, drawnEyes) {
   return draw ? draw(state, organ, organLocation(organ, state.sites, state.document), drawnEyes)
               : '';
 }
-const SPINES = Object.freeze({step : 15, base : 8, length : [ 6, 64 ], lean : .3, least : .03});
+const SPINES = Object.freeze({base : 8, length : [ 6, 64 ], lean : .3, least : .03});
 function aroundAt(samples, angle) {
   const count = samples.length, at = (angle + Math.PI) / (2 * Math.PI) * count - .5;
   const k = Math.floor(at), share = at - k;
@@ -407,7 +408,7 @@ function spinesSvg(state, organ) {
   const own = new Set(organ.centers.map(c => centerIndex(state.document, c.id)));
   const chosen = isChosen(state.selected, organ);
   let resting = '', lifted = '';
-  for (const point of rest?.length && owners ? skinPoints(SPINES.step) : []) {
+  for (const point of rest?.length && owners ? skinPoints(OUTLINE_STEP) : []) {
     const angle = skinDirection(point, state.anatomy?.zones), count = owners.length,
           nearest = Math.floor((angle + Math.PI) / (2 * Math.PI) * count) % count;
     const most = aroundAt(raised, angle);
