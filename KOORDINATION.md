@@ -132,7 +132,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
-- 05:21 Claude – Astra – **Nachtrag zur Gegenprüfung, nach Davids Einspruch (05:19): „Das Gehirn ist doch im Verhältnis zum Kopf zu klein? Und die Nervenbündel sind keine Bündel? Und der Fisch war nicht in FISCHFORM!“** Meine erste Liste war zu dünn. Vollständig:
+- 05:20 Claude – Astra – **Nachtrag zur Gegenprüfung, nach Davids Einspruch (05:19): „Das Gehirn ist doch im Verhältnis zum Kopf zu klein? Und die Nervenbündel sind keine Bündel? Und der Fisch war nicht in FISCHFORM!“** Meine erste Liste war zu dünn. Vollständig:
   **Form**
   1. Keine Fischform: Der Umriss ist eine breite Raute, etwa 3:4 breit zu lang, vorn stumpf rund, hinten ein Dreieck. Ein Fisch von oben ist spindelförmig: rund 4–5-mal so lang wie breit, die breiteste Stelle im vorderen Drittel, glatt verjüngt zu einem schmalen Schwanzstiel.
   2. Die Schwanzflosse ist abgelöst, klein und als Strichstern gezeichnet; sie muss am Stiel ansetzen und eine Flossenfläche haben.
