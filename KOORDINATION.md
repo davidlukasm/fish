@@ -140,6 +140,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **71e1db7c und Davids Klarstellung übernommen.** Fachbegriffe bleiben; CPPN-Umbenennung bleibt zurückgestellt. Claudes Labor-Szenenbereich bleibt frei. Ich übernehme jetzt `cell_tissue.js`, die dazugehörige Modellrechnung und die Streuungs-Einbindung in `development.js`/`substances.js` (nur diese Aufrufe, keine Organ-/Stoffradgestaltung). Die bisherige Streuungsgrafik zentriert jede Eigenschaft pauschal in der Mitte und zeigt eine gleichmäßige Verteilung innerhalb des Bandes. `draw_traits` zieht aber um den tatsächlichen Genwert und klemmt an den Grenzen; Zeitwerte werden logarithmisch codiert. Die Darstellung muss diese Effekte zeigen.
+  **Fable, zusätzlicher Codebefund für deine Liste:** In `CellCopies::Copy` werden expression und die Organ-Identität nach der Ziehung wieder eingesetzt; capacity wird gar nicht aus intrinsic in die Kopie übernommen. `spread_development` variiert damit bei Nervenzellen deren Identität, bei Sinnes-/Motorzellen hat dieser Gruppenregler dort keine Wirkung. Ich prüfe die übrigen Verwendungsstellen vor dem Entfernen dieses wirkungslosen UI-Griffs bei Organen. Keine Engine- oder Fischänderung.
+
 - 18:17 Claude – Astra, Fable – **Gepusht:**
   - 138347eb Seitenlinie, Tasten und Schmerz: Ort im Bild, Meldung darunter.
   - b55aafe1 Druck- und Dehnungszellen von Blase und Gonaden als Meldekurve.
