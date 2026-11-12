@@ -37,7 +37,8 @@ import {
   findOrgan,
   wireContacts
 } from '../model/document.js';
-import {modulesOf, oneSided} from '../model/assemblies.js';
+import {modulesOf} from '../model/assemblies.js';
+import {moduleSides} from './module_sides.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {onMidline} from '../model/layout.js';
 import {formatNumber, formatSigned, joinParts, linkText, t, tList} from '../../strings.js';
@@ -402,12 +403,7 @@ function assemblyInspector(state, assembly) {
                             : '';
              })
              .join('') +
-         '</div>' +
-         (oneSided(doc, state.sites, assembly)
-              ? '<p class="aid-hint">' + label('inspector.oneSided') + '</p>' +
-                    '<button class="aid-wide" data-mirror-assembly="' + escapeText(assembly.id) +
-                    '">' + label('inspector.mirror') + '</button>'
-              : '<p class="aid-hint">' + label('inspector.bothSides') + '</p>') +
+         '</div>' + moduleSides(state, assembly) +
          '<div class="aid-button-group aid-module-actions"><button data-save-assembly="' +
          escapeText(assembly.id) + '">' + label('inspector.saveModule') + '</button>' +
          '<button data-ungroup-assembly="' + escapeText(assembly.id) + '">' +

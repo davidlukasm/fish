@@ -855,6 +855,12 @@
 .aid-compiler-options p { margin:8px 0; }
 .aid-compiler-options .aid-compiler-issue { display:block; width:100%; white-space:normal;
   text-align:left; color:#ffb1a4; margin:4px 0; }
+.aid-module-sides{display:block;width:100%;max-width:280px;height:auto;margin:8px auto}
+.aid-module-body{fill:var(--aid-graphic);stroke:var(--aid-panel-edge);stroke-width:4}
+.aid-module-part circle{fill:var(--aid-handle)}
+.aid-module-mirror{cursor:pointer}
+.aid-module-mirror circle{fill:transparent;stroke:var(--aid-handle);stroke-width:4;stroke-dasharray:10 7}
+.aid-module-mirror:hover circle{stroke-width:7}
 .aid-icon-switch { display:inline-flex; width:max-content; align-items:center; margin:8px 0; padding:4px 6px; border-radius:8px; border:1px dashed var(--aid-panel-edge); cursor:pointer; color:var(--aid-label-text); }
 .aid-icon-switch input { position:absolute; opacity:0; pointer-events:none; }
 .aid-icon-switch:has(input:checked) { color:var(--aid-brain); background:#183940; border-style:solid; }

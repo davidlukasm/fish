@@ -1690,6 +1690,13 @@ async function checkHormoneSystems(model, capabilities) {
   assert.equal(mirrored.document.assemblies.length, 1);
   assert.ok(model.oneSided(circuit, sites, circuit.assemblies[0]));
   assert.ok(!model.oneSided(mirrored.document, sites, mirrored.document.assemblies[0]));
+  // The module's picture offers its missing mirror image only while it lies on one side.
+  const {moduleSides} = await import('../ui/studio/view/module_sides.js');
+  assert.match(moduleSides({document : circuit, sites}, circuit.assemblies[0]),
+               /class="aid-module-mirror" data-mirror-assembly=/);
+  assert.doesNotMatch(
+      moduleSides({document : mirrored.document, sites}, mirrored.document.assemblies[0]),
+      /data-mirror-assembly/);
   const removed = model.removeAssembly(mirrored.document, mirrored.assemblyId);
   assert.equal(model.findOrgan(removed, id), null);
   assert.equal(model.findOrgan(removed, pair), null);
@@ -1780,12 +1787,13 @@ async function checkHormoneSystems(model, capabilities) {
   const spectrum = await import('../ui/studio/view/spectrum.js');
   const tuning = await import('../ui/tuning.js');
   const tuned = {q1 : -.5, qwidth : .4},
-        sigmaAt = spectrum.huePoint(
-            tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth), .5);
+        sigmaAt =
+            spectrum.huePoint(tuning.tuningHue(tuned.q1) + tuning.tuningSigma(tuned.qwidth), .5);
   assert.ok(Math.abs(spectrum.spectrumPatch(tuned, 'width', sigmaAt).qwidth - tuned.qwidth) < 1e-9);
   assert.ok(
-      Math.abs(spectrum.spectrumPatch(tuned, 'centre', spectrum.huePoint(tuning.HUE_CIRCLE / 2, 1))
-                   .q1) < 1e-9);
+      Math.abs(
+          spectrum.spectrumPatch(tuned, 'centre', spectrum.huePoint(tuning.HUE_CIRCLE / 2, 1)).q1) <
+      1e-9);
   // The pictures that replaced sliders set their values from where the handle is let go.
   const visionView = await import('../ui/studio/view/vision.js');
   const centre = spectrum.SPECTRUM_CENTRE;
@@ -1804,8 +1812,8 @@ async function checkHormoneSystems(model, capabilities) {
   const planView = await import('../ui/studio/view/contact_plan.js');
   assert.equal(planView.contactCapacityPatch('teaching_limit', {x : 1e3, y : 0}, {}).teaching_limit,
                1, 'The wedge drawn out to its end allows the strongest contact');
-  assert.equal(planView.contactCapacityPatch('electrical_limit', {x : 0, y : 0}, {}).electrical_limit,
-               0);
+  assert.equal(
+      planView.contactCapacityPatch('electrical_limit', {x : 0, y : 0}, {}).electrical_limit, 0);
   const scents = await import('../ui/studio/view/scents.js'), M = scents.SCENT_MAP;
   const tunedAt = p => scents.scentMapTuning(p.x / M.size, p.y / M.height);
   for (let k = 0; k < TUNING.scent_latitudes.length; ++k) {
