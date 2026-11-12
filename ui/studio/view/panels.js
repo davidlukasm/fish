@@ -121,10 +121,9 @@ const gonadPanel = (state, organ, center) =>
     gonadGraphic(state, organ, center) + gonadFacts(state, organ) + pressureNote(state, organ);
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
-  nose : (state, organ, center) => scentMap(organ, center),
+  nose : (state, organ, center) => scentMap(organ, center, state),
   barbels : (state, organ, center) =>
-      barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center) : '') +
-      '<p class="aid-hint">' + label('inspector.barbelsTaste') + '</p>',
+      barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center, state) : ''),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ) +
                                   gutProbeControls(state, organ),
@@ -153,8 +152,12 @@ const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
-const WHOLE_PICTURES = Object.freeze([ 'lateral', 'touch', 'pain' ]);
-const cellCount = (organ, center) => WHOLE_PICTURES.includes(organ.type) ? ''
+const WHOLE_PICTURES = Object.freeze([ 'lateral', 'touch', 'pain', 'nose', 'barbels' ]);
+// Barbels that only touch have no scent map to hold their marks.
+const wholePicture = (organ, center) =>
+    WHOLE_PICTURES.includes(organ.type) &&
+    !(organ.type === 'barbels' && center.field >= BARBEL_FEEL.touch);
+const cellCount = (organ, center) => wholePicture(organ, center) ? ''
                                      : ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&
                                              !(organ.type === 'bladder' && center.role === 'sensor')
@@ -164,7 +167,7 @@ const section = (title, body) =>
     '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
 const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
 function sensorSection(state, organ, center) {
-  if (WHOLE_PICTURES.includes(organ.type))
+  if (wholePicture(organ, center))
     return '';
   if (!SKIN_SENSES.includes(organ.type))
     return section(
@@ -252,14 +255,20 @@ export function sensorAdaptation(state, center, stretch = 1, start = null) {
   return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
          graphic + '</div>';
 }
+// Taste, touch or both, each as its sense's own mark; the barbels' whole story is the tooltip.
+const BARBEL_ICON =
+    Object.freeze({taste : [ 'nose' ], both : [ 'nose', 'touch' ], touch : [ 'touch' ]});
 function barbelFeel(center) {
   return '<div class="aid-button-group aid-barbel-feel" role="group" aria-label="' +
-         label('inspector.barbelFeel.label') + '">' +
+         label('inspector.barbelFeel.label') + '" title="' + label('inspector.barbelsTaste') +
+         '">' +
          Object.entries(BARBEL_FEEL)
              .map(([ key, value ]) => '<button class="' + (center.field === value ? 'active' : '') +
                                       '" data-set-field="field" data-value="' + value +
-                                      '" data-center-id="' + escapeText(center.id) + '">' +
-                                      label('inspector.barbelFeel.' + key) + '</button>')
+                                      '" data-center-id="' + escapeText(center.id) + '" title="' +
+                                      label('inspector.barbelFeel.' + key) + '">' +
+                                      BARBEL_ICON[key].map(kind => icon(kind, ICON.part)).join('') +
+                                      '</button>')
              .join('') +
          '</div>';
 }

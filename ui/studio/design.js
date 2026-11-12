@@ -69,7 +69,10 @@ export const designMethods = {
     });
   },
   refreshScentMaps() {
-    this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
+    const drag = this.heldHandle('sense');
+    this.redrawBlocks('scentBlock', findCenter,
+                      found => scentMap(found.organ, found.center, this.state,
+                                        drag?.id === found.center.id ? drag.sensitive : null));
   },
   bringProbes() {
     const id = this.state.selected?.id, doc = this.state.document;

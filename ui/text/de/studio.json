@@ -365,7 +365,8 @@
     "meanLimit": "Mittlere genetische Höchststärke",
     "proposedLink": "CPPN-Kontaktvorschläge",
     "proposalCount": "Kontaktvorschläge",
-    "stimulusResponse": "Antwort auf anhaltenden Reiz"
+    "stimulusResponse": "Antwort auf anhaltenden Reiz",
+    "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft"
   },
   "effects": [
     "erregt oder hemmt die Zelle",

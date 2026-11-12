@@ -1,4 +1,4 @@
-import {TUNING} from '../../schema.js';
+import {ATELIER_LIMITS, TUNING} from '../../schema.js';
 import {
   preferredScent,
   scentAffinities,
@@ -9,7 +9,8 @@ import {
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed} from './markup.js';
-import {organTypes, typeOfCenter} from '../model/document.js';
+import {groupReport, organTypes, typeOfCenter} from '../model/document.js';
+import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
 import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
 import {typeChips} from './types.js';
@@ -24,7 +25,14 @@ export const SCENT_MAP = Object.freeze({
   ring : 14,
   snap : 13,
   samples : 128,
+  // The catching ring spans this share of the ring at the least and the most sensitive; the
+  // cells sit just outside it, the adaptation arc just outside the map.
+  least : .5,
+  most : 1.5,
+  cells : 5,
+  arc : 8
 });
+const TURN_QUARTER = Math.PI / 2;
 const turn = 2 * Math.PI;
 const mapPoint = (colatitude, longitude) => {
   const r = SCENT_MAP.radius * Math.sin(colatitude / 2);
@@ -108,8 +116,32 @@ function profileChips(organ, chosen) {
     };
   }, {add : t('studio.inspector.addProfile'), remove : t('studio.inspector.removeProfile')});
 }
-export function scentMap(organ, center) {
+// The map holds the whole profile: which scents (the halo, its width at the handle), how faint a
+// scent the cells notice (the catching ring round the chosen scent, wider the more sensitive), how
+// many cells there are (dots on that ring) and how long a lasting scent takes until they no longer
+// answer it (the fading arc round the map). `held` is a sensitivity dragged ahead of the design
+// run.
+export function scentMap(organ, center, state = null, held = null) {
   const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2), wide = scentWidthHandle(center);
+  const sensitive = held ?? (state ? senseSensitivity(state, center) : null);
+  const answer = state ? groupReport(state.document, state.anatomy, 'senses', center.id) : null;
+  const catching = M.ring * (M.least + (M.most - M.least) * (sensitive ?? 0));
+  const ring = r => Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
+    const a = TURN_QUARTER + turn * k / ATELIER_LIMITS.max_copies;
+    return {x : at.x + r * Math.cos(a), y : at.y + r * Math.sin(a)};
+  });
+  const below = r => ({x : at.x, y : at.y - r});
+  const marks =
+      state ? (answer?.adapt?.steps > 0
+                   ? adaptationMarks({x : M.centre, y : M.centre}, M.radius + M.arc,
+                                     Math.atan2(at.y - M.centre, at.x - M.centre), center)
+                   : '') +
+                  cellMarks(ring(catching + M.cells), center) +
+                  (sensitive === null
+                       ? ''
+                       : sensitivityHandle(below(M.ring * M.least), below(M.ring * M.most),
+                                           sensitive, t('studio.inspector.scentSensitivity')))
+            : '';
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
   const others = organTypes(organ)
                      .filter(type => type.id !== chosen.id)
@@ -134,13 +166,14 @@ export function scentMap(organ, center) {
   const title = t('studio.inspector.scents');
   return '<div data-scent-block="' + escapeText(center.id) + '">' + profileChips(organ, chosen) +
          '<svg class="aid-scent-map" ' +
-         'data-compass="' + escapeText(center.id) + '" viewBox="0 0 ' + M.size + ' ' + M.height +
+         'data-compass="' + escapeText(center.id) + '" data-sense-field="' + escapeText(center.id) +
+         '" data-sense-redraw="refreshScentMaps" viewBox="0 0 ' + M.size + ' ' + M.height +
          '" tabindex="0" role="img" aria-label="' + escapeText(title) +
          '"><circle class="aid-scent-rim" cx="' + M.centre + '" cy="' + M.centre + '" r="' +
          M.radius + '"/><path class="aid-scent-halo" fill-rule="evenodd" d="' +
          haloPath(center.q1, center.q2, radians(tuningSigma(center.qwidth))) + '"/>' + others +
          '<circle class="aid-scent-selector" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
-         '" r="' + M.ring + '"/>' + scents +
+         '" r="' + fixed(state ? catching : M.ring) + '"/>' + scents + marks +
          '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(wide.x) +
          '" cy="' + fixed(wide.y) + '" r="7"><title>' + t('studio.inspector.receptorWidth') +
          '</title></circle>' +
