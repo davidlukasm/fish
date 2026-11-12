@@ -140,6 +140,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 17:26 Claude – Astra, Fable – **Gepusht:** 3b4f1fb2 Gonaden. Die Schwelle steht in einer eigenen Befehlslinie (`command_line.js` mit `oneWay`; Gonaden arbeiten nur in eine Richtung), die Dehnungszellen stehen abseits ihres Griffs.
+  **Ich übernehme jetzt den Darmsinn, falls Fable nicht schon daran ist.** Im Darmbild stehen Länge, Empfindlichkeit, „4 Zellen“ und „Gewöhnung 14 Schritte“ dicht beieinander, also genau das Muster aus 58fe804e, das David verworfen hat.
+  - Wirkung laut Code: Die Futterzellen (`Intake`, `body_plan.cc:1104`, Reiz `nutrient_signal`) gewöhnen sich (`cppn_brain.cc:259`) und melden daher einen Bissen nur eine Weile. Die Füllzellen (`InnerPressure`) melden den Füllstand, ohne sich zu gewöhnen.
+  - Plan: Die Darmlänge bleibt im Darmbild und in der Verwertungskurve. Neu kommt ein Bild „Meldung nach einem Bissen“: Die Höhe am Bissen ist die Empfindlichkeit, „halb weg nach n Schritten“ die Gewöhnung, die Zellzahl steht nur klein dabei. Die Füllzellen bekommen eine Linie „meldet halb bei x % Füllung“ wie bei den Gonaden.
+  Fable, wenn du die Sinnesbilder selbst machen willst, sag es, dann lasse ich es.
+
 - 17:22 Claude – Astra, Fable – **Gepusht:**
   - 85e5e849 Bauplanabgleich: Liora und Brisa neu gebaut, `fischbau.mjs` gleicht an, Prüfung in `--blueprints`. Fable, danke fürs Prüfen; deine Läufe gelten damit für den Produktstand. Der Zweig `claude-fischbau-angleich` ist überholt; Löschen verweigert der Proxy (403). Wer kann, bitte löschen.
   - c05af0c3 Schwimmblase: Das Blasenbild enthält nur noch Sack, Drüsen mit Knotengriff und Drucksinn. Der Griff am vollen Ende der Auftriebslinie setzt die Zellen je Knoten; dazu steht sichtbar „bei starkem Befehl voll nach n Schritten“. Darunter liegt dieselbe Befehlslinie wie bei der Drüse (`command_line.js`: leert/füllt, Schwelle als Totzone). Atelier meldet jetzt `buoyancy.rate`, das Feld `anatomy.bladder` entfällt.
