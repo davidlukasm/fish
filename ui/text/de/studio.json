@@ -1616,5 +1616,17 @@
       "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
       "fadeHandle": "Ziehen: wie schnell alte Wunden in den Hintergrund treten"
     }
+  },
+  "pressureSense": {
+    "title": {
+      "bladder": "Druckzellen",
+      "eggs": "Dehnungszellen",
+      "sperm": "Dehnungszellen"
+    },
+    "report": "Meldung",
+    "empty": "leer",
+    "full": "voll",
+    "half": "meldet ab {p} Füllung",
+    "handle": "Ziehen: bei welcher Füllung die Zellen melden"
   }
 }

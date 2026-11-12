@@ -7,13 +7,8 @@ import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {formatNumber, percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
-import {
-  adaptationMarks,
-  cellMarks,
-  SENSE_MARK,
-  senseSensitivity,
-  sensitivityHandle
-} from './sense_marks.js';
+import {SENSE_MARK, senseSensitivity} from './sense_marks.js';
+import {boundedRow, sensePicture} from './sense_curves.js';
 import {centerTitle} from './names.js';
 import {organTitle} from './names.js';
 import {commandLine} from './command_line.js';
@@ -72,11 +67,6 @@ const STORE = Object.freeze({
   sperm : 3,
   tick : 5,
   handle : 7,
-  // The stretch cells sit along their line, `apart` from the handle at its left end so the two
-  // never crowd; their adaptation arc round the first.
-  cells : 9,
-  apart : 40,
-  clock : 14,
   // Words sit this far below a line, and the store's title this far from the left edge.
   below : 12,
   title : 6
@@ -161,7 +151,7 @@ function fillCurve(store, type) {
     knee : {x : S.left + cycle, y : levelY(store, store.spawn)}
   };
 }
-export function gonadGraphic(state, organ, selected) {
+export function gonadGraphic(state, organ, selected, dragged = null) {
   const S = STORE, store = gonadStore(state, organ);
   if (!store)
     return '';
@@ -188,7 +178,6 @@ export function gonadGraphic(state, organ, selected) {
                                                : '';
   // The chosen working cells' gate, else the releasing ones', sits in the command line below.
   const motor = [ growth, release ].find(c => c && selected?.key === c.key) ?? release ?? growth;
-  const field = pressure ?? motor;
   // What the cells do, written where it shows: how long the store takes to fill, what one release
   // gives, whether it waits for a command, and at which fill the stretch cells report.
   const say = (content, x, y, anchor = 'start') => '<text class="aid-handle-word" x="' + fixed(x) +
@@ -206,7 +195,7 @@ export function gonadGraphic(state, organ, selected) {
                 say(label('inspector.gonad.time'), S.left, S.base + S.below);
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '" data-sac="' + escapeText(organ.id) + '"' +
-         (field ? ' data-sense-field="' + escapeText(field.id) + '"' : '') + ' role="img">' +
+         ' role="img">' +
          '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
          '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth', organ.type)) +
          part(release, chambers(store, kept, held, 'release', organ.type) + curve.html) +
@@ -214,7 +203,6 @@ export function gonadGraphic(state, organ, selected) {
          '"/>' +
          part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +
                             S.right + '"/>') +
-         (pressure ? pressureMarks(state, pressure, {x : S.left + S.apart, y : stretchY}) : '') +
          (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' + S.left +
                          '" cy="' + fixed(stretchY) + '" r="' + S.handle + '"><title>' +
                          label('inspector.stretch') + '</title></circle>'
@@ -225,7 +213,8 @@ export function gonadGraphic(state, organ, selected) {
                  : '') +
          words + '</svg>' +
          commandLine(state, organ, motor,
-                     organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true);
+                     organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true) +
+         (pressure ? pressureCurve(state, organ, pressure, dragged) : '');
 }
 export function sacPatch(state, organ, handle, fy) {
   const store = gonadStore(state, organ);
@@ -270,19 +259,25 @@ function gonadFacts(state, organ, store) {
                         : []
   };
 }
-// The stretch cells' count and adaptation, at the left end of their line.
-function pressureMarks(state, pressure, at) {
-  const answer = groupReport(state.document, state.anatomy, 'senses', pressure.id);
-  const places = Array.from({length : ATELIER_LIMITS.max_copies},
-                            (_, k) => ({x : at.x + STORE.cells * (k + 1), y : at.y}));
-  return (answer?.adapt?.steps > 0 ? adaptationMarks(at, STORE.clock, Math.PI, pressure) : '') +
-         cellMarks(places, pressure);
+// What a sac's pressure cells report, below its pictures: over how full the sac is, half at their
+// threshold (bounded; pressure is no sense that gets used to what it feels, brain_interface.hh).
+function pressureCurve(state, organ, pressure, held) {
+  const sensitive = held ?? senseSensitivity(state, pressure);
+  if (sensitive === null)
+    return '';
+  const words = (key, values) => t('studio.pressureSense.' + key, values);
+  return sensePicture(pressure, words('title.' + organ.type), [ boundedRow(sensitive, {
+                        report : words('report'),
+                        from : words('empty'),
+                        to : words('full'),
+                        half : words('half', {p : percent(1 - sensitive)}),
+                        handle : words('handle')
+                      }) ]);
 }
 // The swim bladder: the gas sac, the gas glands along its floor (one per node, the handle at the
-// last adds or removes glands), and the pressure cells on its roof with their feelers, as long as
-// they are sensitive, and their adaptation arc. A part is chosen by clicking it. Below, what the
-// glands' cells do (the lift) and what a command does (command_line.js). `held` is a dragged
-// sensitivity.
+// last adds or removes glands), and the pressure cells on its roof. A part is chosen by clicking
+// it. Below, what the glands' cells do (the lift), what a command does (command_line.js) and what
+// the pressure cells report. `held` is a dragged sensitivity.
 const BLADDER = Object.freeze({
   width : 300,
   height : 106,
@@ -292,9 +287,7 @@ const BLADDER = Object.freeze({
   ry : 40,
   gland : 13,
   glands : [ 70, 236 ],
-  roof : [ 92, 212 ],
-  feeler : 18,
-  clock : 16
+  roof : [ 92, 212 ]
 });
 export function bladderGraphic(state, organ, selected, held = null) {
   const B = BLADDER, glands = kindNodes(organ), most = kindLimit(organ, state.sites);
@@ -321,31 +314,16 @@ export function bladderGraphic(state, organ, selected, held = null) {
     const x = B.roof[0] + (B.roof[1] - B.roof[0]) * k / (ATELIER_LIMITS.max_copies - 1);
     return {x, y : roof(x) + SENSE_MARK.cell};
   });
-  let marks = '';
-  if (chosen === pressure && pressure) {
-    const sensitive = held ?? senseSensitivity(state, pressure) ?? 0, start = roofCells[0];
-    const answer = groupReport(state.document, state.anatomy, 'senses', pressure.id);
-    marks =
-        roofCells.slice(0, pressure.copies)
-            .map(p => '<path class="aid-gut-feeler" d="M' + fixed(p.x) + ' ' + fixed(p.y) + ' v' +
-                      fixed(B.feeler * sensitive) + '"/>')
-            .join('') +
-        (answer?.adapt?.steps > 0 ? adaptationMarks(start, B.clock, -Math.PI / 2, pressure) : '') +
-        cellMarks(roofCells, pressure) +
-        sensitivityHandle({x : start.x, y : start.y + SENSE_MARK.cell},
-                          {x : start.x, y : start.y + SENSE_MARK.cell + B.feeler}, sensitive,
-                          t('studio.muscle.gut.sensitivityHandle'));
-  } else if (glands.length) {
-    marks = nodeMarks(nodePlaces, glands.length,
-                      t('studio.inspector.bladderGlands', {n : glands.length, most}));
-  }
+  const marks = glands.length
+                    ? nodeMarks(nodePlaces, glands.length,
+                                t('studio.inspector.bladderGlands', {n : glands.length, most}))
+                    : '';
   const pressureDots =
-      pressure && chosen !== pressure
-          ? roofCells.slice(0, pressure.copies)
-                .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
-                          '" r="' + SENSE_MARK.cell + '"/>')
-                .join('')
-          : '';
+      pressure ? roofCells.slice(0, pressure.copies)
+                     .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' +
+                               fixed(p.y) + '" r="' + SENSE_MARK.cell + '"/>')
+                     .join('')
+               : '';
   const own = chosen ?? glands[0];
   return '<div data-sense-block="' + escapeText(organ.id) +
          '"><svg class="aid-bladder" viewBox="0 0 ' + B.width + ' ' + B.height + '"' +
@@ -363,7 +341,8 @@ export function bladderGraphic(state, organ, selected, held = null) {
                           centerTitle(pressure) + ' · ' + pressureText(state, organ))
                    : '') +
          marks + '</svg>' + bladderLift(state, organ, glands) +
-         commandLine(state, organ, glands[0], MOTOR_KIND.bladder, 'bladder') + '</div>';
+         commandLine(state, organ, glands[0], MOTOR_KIND.bladder, 'bladder') +
+         (pressure ? pressureCurve(state, organ, pressure, held) : '') + '</div>';
 }
 // What the glands' cells do: the lift a bladder gives at each fill (movement.cc: strength ·
 // capacity / (1 + capacity) · fill) against the fish's sinking. Where the lift line crosses the
