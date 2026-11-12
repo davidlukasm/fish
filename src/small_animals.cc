@@ -59,14 +59,15 @@ std::array<double, odor_kind::count> Field::odor_field(double x, double y) const
 }
 namespace {
 int odor_of(int origin) {
-  return origin == food_kind::feed                                ? odor_kind::food
-         : origin == food_kind::algae                             ? odor_kind::algae
-         : origin == food_kind::plant                             ? odor_kind::plants
-         : origin == food_kind::egg                               ? odor_kind::eggs
-         : origin == food_kind::mussel                            ? odor_kind::mussels
-         : origin == food_kind::worm || origin == food_kind::crab ? odor_kind::benthos
-         : origin == food_kind::plankton                          ? odor_kind::plankton
-                                                                  : odor_kind::carrion;
+  return origin == food_kind::feed     ? odor_kind::food
+         : origin == food_kind::algae  ? odor_kind::algae
+         : origin == food_kind::plant  ? odor_kind::plants
+         : origin == food_kind::egg    ? odor_kind::eggs
+         : origin == food_kind::mussel ? odor_kind::mussels
+         : origin == food_kind::worm || origin == food_kind::crab || origin == food_kind::benthic
+             ? odor_kind::benthos
+         : origin == food_kind::plankton ? odor_kind::plankton
+                                         : odor_kind::carrion;
 }
 }
 Field::TipContact Field::tip_contact(double x, double y, double reach, std::uint64_t self) const {
@@ -1041,6 +1042,26 @@ void Field::deposit_feces(double x, double y, double energy) {
     vegetation_.surfaces[*at].detritus += energy;
   else
     food_web_.released += energy;
+}
+void Field::release_feces(Body &b) {
+  if (b.feces_pending <= 0 || (b.alive && b.feces_pending < digestion::pellet * gut_capacity(b)))
+    return;
+  const bool plant = 2 * b.feces_plant >= b.feces_pending;
+  const double behind = body_radius(b);
+  Food flock{wrap_x(b.x - behind * std::cos(b.angle)),
+             std::clamp(b.y - behind * std::sin(b.angle), 0., geometry_.height),
+             b.motor().vx,
+             b.motor().vy,
+             0,
+             b.feces_pending};
+  flock.origin = food_kind::benthic;
+  flock.residue = plant ? Residue::plant : Residue::animal;
+  flock.radius = food_radius(flock.energy);
+  flock.initial_energy = flock.energy;
+  flock.color = plant ? PLANT_FLOCK_COLOR : ANIMAL_FLOCK_COLOR;
+  flock.buoyancy = FLOCK_BUOYANCY;
+  append_fragment(flock);
+  b.feces_pending = b.feces_plant = 0;
 }
 double Field::feed_plankton(double x, double y, double available, double radius) {
   auto &p = food_web_.plankton;

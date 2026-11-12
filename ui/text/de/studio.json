@@ -933,14 +933,14 @@
     },
     "gutmuscle": {
       "title": "Darmmuskel",
-      "meal": "eine Mahlzeit über {n} Schritte",
+      "meal": "eine Blattmahlzeit über {n} Schritte",
       "hungryRest": "hungrig, in Ruhe",
       "hungryDriven": "hungrig, voll angetrieben",
       "fullDriven": "satt, voll angetrieben (in Ruhe bliebe sie liegen)",
       "taken": "{p} aufgenommen",
       "lost": "{p} ausgeschieden",
       "empty": "leer nach {n} Schritten",
-      "cells": "mehr Zellen: teurer, nicht schneller"
+      "cells": "mehr Zellen: schneller und teurer"
     },
     "gut": {
       "title": "Darm",

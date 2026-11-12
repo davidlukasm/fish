@@ -150,6 +150,49 @@ void nostrils_differ_only_in_oncoming_water() {
             std::abs(washed.x) < CLOSE,
         "the nostril facing the oncoming water smells upstream, the other the nose itself");
 }
+// A gut full of leaves, emptied by a fish that spends what it gains: what the fish gains, what it
+// passes and whether it hurts.
+struct Digested {
+  double gained = 0, passed = 0, ache = 0;
+  int emptied = 0;
+};
+Digested digest_leaves(double gut_length, double drive, double strength) {
+  constexpr int STEPS = 20000;
+  constexpr double EMPTY = .05;
+  const PhysiologyParameters physiology;
+  Body b{};
+  b.hatched = true;
+  b.tissue = BODY_TISSUE;
+  b.gut_length = gut_length;
+  b.gut_strength = strength;
+  Digested result;
+  const double eaten =
+      take_nutrition(b, gut_room(b, food_kind::plant, physiology), food_kind::plant, physiology);
+  for (int k = 0; k < STEPS && b.gut_energy > 0; ++k) {
+    b.energy = 0;
+    b.gut_motility = drive / 2;
+    result.passed += digest_nutrition(b, physiology);
+    result.ache = std::max(result.ache, b.gut_irritation);
+    if (!result.emptied && b.gut_energy < EMPTY * eaten)
+      result.emptied = k + 1;
+  }
+  result.gained = b.digested / eaten;
+  result.passed /= eaten;
+  return result;
+}
+// The gut takes up what the time allows: a long gut more, a driven gut less but sooner.
+void gut_takes_up_what_time_allows() {
+  constexpr double SHORT = 0, LONG = 1, STRONG = 1e6, CLOSE = 1e-9;
+  const auto brief = digest_leaves(SHORT, 0, 0), thorough = digest_leaves(LONG, 0, 0),
+             hurried = digest_leaves(LONG, 1, STRONG), idle = digest_leaves(LONG, 1, 0);
+  for (const auto &meal : {brief, thorough, hurried})
+    check(std::abs(meal.gained + meal.passed - 1) < CLOSE, "a meal is taken up or passed");
+  check(thorough.gained > 2 * brief.gained, "a long gut takes up far more of a meal of leaves");
+  check(hurried.gained < thorough.gained && hurried.emptied < thorough.emptied / 3,
+        "a driven gut muscle empties the gut sooner and takes up less");
+  check(idle.gained == thorough.gained, "a gut without a muscle cannot be hurried");
+  check(brief.ache > 0 && thorough.ache == 0, "leaves hurt a short gut, not a long one");
+}
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
   for (std::size_t i = 0; i < cells.size(); ++i) {
@@ -676,6 +719,7 @@ int main() {
     Genome::begin_run(SEED);
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
+    gut_takes_up_what_time_allows();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();

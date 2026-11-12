@@ -80,13 +80,14 @@ class Ecosystem::FeedingSession {
   }
   void fragment(double x, double y, double radius, double source_radius, double vx, double vy,
                 double amount, int origin, Color color, double age, double buoyancy,
-                bool drift = false, double physical_age = -1, double hardness = 0) {
+                bool drift = false, double physical_age = -1, double hardness = 0,
+                Residue residue = Residue::none) {
     if (amount <= 0)
       return;
     if (origin != food_kind::crab && origin != food_kind::mussel && radius <= bite_aperture(b)) {
-      const double eaten = std::min(amount, gut_room(b, origin, world.physiology_));
+      const double eaten = std::min(amount, gut_room(b, fodder_of(origin, residue)));
       if (eaten > 0) {
-        ingest(eaten, origin);
+        ingest(eaten, origin, residue);
         radius *= std::sqrt((amount - eaten) / amount);
         amount -= eaten;
       }
@@ -118,6 +119,7 @@ class Ecosystem::FeedingSession {
     piece.drift_plant = drift;
     piece.hardness = hardness;
     piece.bitten = true;
+    piece.residue = residue;
     world.field.append_fragment(piece);
   }
   void effect(int kind, double x, double y, double radius, double amount, std::uint64_t target = 0,
@@ -127,9 +129,14 @@ class Ecosystem::FeedingSession {
     world.combat_effects.push_back({world.next_combat_effect++, world.ticks + 1, p.id, target, kind,
                                     x, y, b.angle, radius, amount, color});
   }
-  double ingest(double raw, int origin) {
-    const double accepted = take_nutrition(b, raw, origin, world.physiology_),
-                 usable = accepted * digestibility(b, origin);
+  Fodder fodder_of(int origin, Residue residue) const {
+    return residue == Residue::none ? fodder(origin, world.physiology_)
+                                    : flock_fodder(residue == Residue::plant);
+  }
+  double ingest(double raw, int origin, Residue residue = Residue::none) {
+    const Fodder f = fodder_of(origin, residue);
+    const double accepted = take_nutrition(b, raw, f, world.physiology_),
+                 usable = accepted * digestibility(b, f, world.physiology_);
     b.mouth.swallowed += accepted;
     if (origin == food_kind::plankton)
       b.mouth.filtered += accepted;
@@ -310,8 +317,8 @@ class Ecosystem::FeedingSession {
         amount = q.energy;
       world.field.bite_food(target, amount, true);
       fragment(q.x, q.y, radius * std::sqrt(amount / q.energy), radius, q.vx, q.vy, amount,
-               q.origin, q.color, q.decay_age, q.buoyancy, q.drift_plant, double(q.age),
-               q.hardness);
+               q.origin, q.color, q.decay_age, q.buoyancy, q.drift_plant, double(q.age), q.hardness,
+               q.residue);
       if (amount > 0)
         effect(feeding_effect::bite, q.x, q.y, morsel, amount);
     } else if (kind == food_kind::worm) {
@@ -393,6 +400,7 @@ class Ecosystem::FeedingSession {
   void swallow(const Target &target, double &area) {
     double raw = 0, radius = 0, age = 0;
     int origin = food_kind::feed;
+    Residue residue = Residue::none;
     bool drift = false;
     Color color{};
     double x = 0, y = 0;
@@ -403,6 +411,7 @@ class Ecosystem::FeedingSession {
       raw = q.energy;
       radius = food_radius(q);
       origin = q.origin;
+      residue = q.residue;
       age = q.decay_age;
       drift = q.drift_plant;
       color = q.color;
@@ -444,7 +453,7 @@ class Ecosystem::FeedingSession {
       x = q.x;
       y = q.y;
     }
-    const double free = gut_room(b, origin, world.physiology_);
+    const double free = gut_room(b, fodder_of(origin, residue));
     if (radius * radius > area + tolerance::negligible || raw > free + tolerance::negligible)
       return;
     if (target.kind == food_kind::fish || target.kind == food_kind::egg ||
@@ -492,7 +501,7 @@ class Ecosystem::FeedingSession {
       result.plants = true;
     } else
       world.corpses[target.id].energy = 0;
-    const double accepted = ingest(raw, origin);
+    const double accepted = ingest(raw, origin, residue);
     area -= radius * radius;
     if (origin == food_kind::feed) {
       ++p.observations_.window_food;

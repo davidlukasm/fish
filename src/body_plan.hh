@@ -46,8 +46,8 @@ struct SensoryFrame {
   LateralSamples<double> buried{};
   std::array<double, BODY_SECTORS> touch{}, impact_ring{};
   bool contact_ring = false;
-  double satiety = 0, radius = 0, energy = 0, nutrient = 0, injury = 0, depth = 0, impact = 0,
-         contact = 0, gonad = 0, sperm = 0;
+  double satiety = 0, radius = 0, energy = 0, nutrient = 0, depth = 0, impact = 0, contact = 0,
+         gonad = 0, sperm = 0;
   Point normal{};
 };
 SensoryFrame prepare_sensory_frame(const Body &, const BrainInterface &, const Field &,

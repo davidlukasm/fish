@@ -381,17 +381,21 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   if (tag != "ORGAN_STATE")
     throw std::runtime_error("invalid organ state");
   scalar(in, b.gut_energy, 0, PLAUSIBLE_RUNNING);
-  scalar(in, b.gut_digestible, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_labile, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_plant, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.digestion, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.rest_cost, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.digested, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.feces_pending, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.feces_plant, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.organ_mass_ref, MIN_SCALE, PLAUSIBLE_RUNNING);
   value(in, b.feeding_action);
   value(in, b.feeding_action_age);
   if (b.feeding_action < 0 || b.feeding_action >= feeding_effect::count ||
       b.feeding_action_age < 0 || b.feeding_action_age > feeding_effect_steps::full ||
-      b.gut_digestible > b.gut_energy + tolerance::precision)
+      b.gut_labile > b.gut_energy + tolerance::precision ||
+      b.gut_plant > b.gut_energy + tolerance::precision ||
+      b.feces_plant > b.feces_pending + tolerance::precision)
     throw std::runtime_error("invalid digestion state");
   state::body_scalar(in, b.gut_fill, state::body_limit_gut_fill(b));
   state::body_scalar(in, b.bladder_fill, state::body_limit_bladder_fill(b));

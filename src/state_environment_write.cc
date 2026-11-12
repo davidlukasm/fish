@@ -20,7 +20,8 @@ void EnvironmentCheckpoint::write(std::ostream &out, const Field &field,
   for (const auto &p : field.feeding_.pieces) {
     out << p.x << ' ' << p.y << ' ' << p.vx << ' ' << p.vy << ' ' << p.bottom_steps << ' '
         << p.energy << ' ' << p.age << ' ' << p.cloud << "\nFRAGMENT " << p.origin << ' '
-        << p.radius << ' ' << p.initial_energy << ' ' << p.decay_age << ' ' << p.buoyancy;
+        << int(p.residue) << ' ' << p.radius << ' ' << p.initial_energy << ' ' << p.decay_age << ' '
+        << p.buoyancy;
     for (auto c : p.color)
       out << ' ' << c;
     out << ' ' << p.drift_plant << ' ' << p.hardness << ' ' << p.bitten << '\n';

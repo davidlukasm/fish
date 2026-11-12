@@ -248,7 +248,7 @@
  },
  "help": {
   "max_bite_force": "Rohkraft für halbe wirksame Kraft von Maul und Biss",
-  "gut_time": "Schritte bei mittlerer Darmlänge",
+  "gut_time": "Schritte je Körperlänge Darm",
   "fill_plant": "Füllung je Energie Pflanzennahrung",
   "fill_sediment": "Füllung je Energie Bodennahrung",
   "organ_mass_ref": "Organmasse für Endgewebe 90",

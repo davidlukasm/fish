@@ -216,7 +216,9 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.motor().mouth_pose, body_limit_motor_mouth_pose(b));
   validate_scalar(b.gut_fill, body_limit_gut_fill(b));
   validate_scalar(b.gut_energy, {0, PLAUSIBLE_RUNNING, "gut_energy"});
-  validate_scalar(b.gut_digestible, {0, PLAUSIBLE_RUNNING, "gut_digestible"});
+  validate_scalar(b.gut_labile, {0, PLAUSIBLE_RUNNING, "gut_labile"});
+  validate_scalar(b.gut_plant, {0, PLAUSIBLE_RUNNING, "gut_plant"});
+  validate_scalar(b.feces_plant, {0, PLAUSIBLE_RUNNING, "feces_plant"});
   validate_scalar(b.digestion, {0, PLAUSIBLE_RUNNING, "digestion"});
   validate_scalar(b.rest_cost, {0, PLAUSIBLE_RUNNING, "rest_cost"});
   validate_scalar(b.digested, {0, PLAUSIBLE_RUNNING, "digested"});

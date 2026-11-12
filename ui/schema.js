@@ -81,7 +81,7 @@ export const FISH = Object.freeze({
   morphology_asset : 78,
   gut_fill : 79,
   gut_energy : 80,
-  gut_digestible : 81,
+  gut_labile : 81,
   digestion : 82,
   digested : 83,
   feeding_action : 84,
@@ -1053,7 +1053,23 @@ export const MUSCLE_FIBRE = Object.freeze({
   "drain" : 0.028,
   "recovery_steps" : 400
 });
-export const GUT_MOTILITY = Object.freeze({"speedup" : 2, "loss" : 0.5, "wall" : 0.25, "zone" : 2});
+export const DIGESTION = Object.freeze({
+  "shortest" : 0.5,
+  "longest" : 4.0,
+  "labile_steps" : 15,
+  "refractory_steps" : 500,
+  "fastest" : 8,
+  "tolerated" : 0.002,
+  "cramp" : 0.004,
+  "diarrhoea" : 4,
+  "harm" : 0.0015,
+  "belly" : 0.6,
+  "wall_mass" : 0.05,
+  "upkeep" : 0.1,
+  "pellet" : 0.02,
+  "wall" : 0.25,
+  "zone" : 2
+});
 export const GILL_FILTER =
     Object.freeze({"rakerless_retention" : 0.3, "raker_drag" : 0.5, "flank" : 0.75});
 export const STROKE_GRIP = Object.freeze({"tail_at_rest" : 0.5, "fin_at_speed" : 0.5});

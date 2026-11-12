@@ -28,7 +28,6 @@ struct PhysiologyParameters {
   static constexpr double growth_reserve = .10, growth_rate = .16;
   static constexpr double heal_reserve = .15, heal_rate = .001, heal_cost = .03;
   static constexpr double catabolism_yield = .8, tissue_floor_share = .5;
-  static constexpr double fixed_utilisation = .8, gut_linear = .5, gut_square = .4;
   static constexpr double nutrient_share = .2, nutrient_keep = .8;
   static constexpr double spine_block_cost = .5;
   static constexpr double senescence_spread = .4;

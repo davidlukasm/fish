@@ -31,8 +31,6 @@ import {
   fishTeeth,
   fishReservePath,
   fishReserveShape,
-  gutPassage,
-  gutUse,
 } from './fish_organs.js';
 import {eyeImage, eyeTypeAnswers, organNumber, organPercent} from './organ_readout.js';
 import {organSignalHistory} from './organs.js';
@@ -116,7 +114,7 @@ const GUT_GRAPHIC = Object.freeze({
 });
 function drawGutGraphic({g, d, color, label, bar}) {
   const length = d.b.gut_length || 0, fill = d.b.satiety || 0, raw = d.b.gut_energy || 0,
-        usable = d.b.gut_digestible || 0;
+        usable = d.b.gut_labile || 0;
   g.strokeStyle = GUT_GRAPHIC.tube;
   g.lineWidth = GUT_GRAPHIC.tube_width;
   g.beginPath();
@@ -235,8 +233,8 @@ const GUT_MUSCLE_GRAPHIC = Object.freeze({
   caption_gap : 6
 });
 function drawGutMuscleGraphic({g, info, color, label, bar}) {
-  const G = GUT_MUSCLE_GRAPHIC, hurried = brainClamp(info.fill), used = gutUse(hurried),
-        passage = gutPassage(hurried);
+  const G = GUT_MUSCLE_GRAPHIC, hurried = brainClamp(info.fill), used = info.used ?? 0,
+        passage = info.passage;
   g.strokeStyle = GUT_GRAPHIC.tube;
   g.lineWidth = G.tube * (1 - G.squeeze * hurried);
   g.beginPath();
@@ -264,7 +262,9 @@ function drawGutMuscleGraphic({g, info, color, label, bar}) {
   }
   label(t('organ_graphics.passage', {n : organNumber(passage, 1)}), G.column,
         G.passage_y - G.caption_gap);
-  bar(G.column, G.passage_y, G.bar_width, passage / gutPassage(1), color);
+  bar(G.column, G.passage_y, G.bar_width, passage / info.fastest, color);
+  if (info.used === null)
+    return;
   label(t('organ_graphics.used', {n : organPercent(used)}), G.column, G.used_y - G.caption_gap);
   bar(G.column, G.used_y, G.bar_width, used, GUT_GRAPHIC.usable);
 }

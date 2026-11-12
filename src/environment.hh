@@ -96,6 +96,8 @@ public:
   double graze_bed(double, double, double, double, double);
   double grip_worm(double, double, double, double);
   void deposit_feces(double, double, double);
+  // Faeces leave behind the fish as a drifting flock once there is enough of them.
+  void release_feces(Body &);
   std::optional<std::size_t> bottom_patch(double, double) const;
   std::optional<SmallAnimalMeal>
   take_small_animal(int, std::size_t, double force, bool biting, bool buried = false,

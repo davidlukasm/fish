@@ -123,14 +123,61 @@ inline double reserve_capacity_for_tissue(double tissue) {
 inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
+// The gut and what it does with a meal. Food is partly quickly digested (cell contents, flesh)
+// and partly slowly (fibre, shell); the gut takes both up at their own pace while it moves its
+// content on. What a meal yields therefore follows from how long it stays: a long gut holds it
+// long, a driven gut muscle hurries it out.
+//
+// The shared constants `digestion::`: `shortest` and `longest` are the gut's length in body
+// lengths; the quickly and the slowly digested part are taken up within `labile_steps` and
+// `refractory_steps`; the largest gut muscle moves the content `fastest` times as fast as a
+// resting gut. The gut bears plant fibre passing per step up to the share `tolerated` of what
+// it holds; `cramp` more hurts as much as it can, empties the gut `diarrhoea` times as fast and
+// costs `harm` of the health per step. A gut of the greatest length leaves the gonads
+// `belly` less room; per body length it weighs `wall_mass` of the tissue and raises the basal
+// metabolism by `upkeep`. Faeces leave as a flock once they amount to `pellet` of what the gut
+// holds.
+namespace digestion {
+inline constexpr double labile_rate = 1. / labile_steps, refractory_rate = 1. / refractory_steps;
+}
+// What a mouthful is to the gut: how much of it is quickly digested, how much room it takes per
+// energy, and whether it is plant matter.
+struct Fodder {
+  double labile, fill;
+  bool plant;
+};
+// Faeces drift as flocks before they settle: fine, half digested matter of plant or animal origin.
+inline Fodder flock_fodder(bool plant) {
+  return {plant ? .1 : .5, 1, plant};
+}
+inline Fodder fodder(int source, const PhysiologyParameters &p) {
+  switch (source) {
+  case food_kind::plant:
+    return {.2, p.fill_plant, true};
+  case food_kind::algae:
+    return {.4, p.fill_plant, true};
+  case food_kind::benthic:
+    return {.2, p.fill_sediment, true};
+  case food_kind::feed:
+    return {.8, 1, false};
+  default:
+    return {.9, 1, false};
+  }
+}
 inline double gut_size(double length) {
-  return (1 + length) / (1 + TRAIT_MIDDLE);
+  return digestion::shortest *
+         std::pow(digestion::longest / digestion::shortest, std::clamp(length, 0., 1.));
 }
 inline double gut_size_factor(const Body &b) {
   return gut_size(b.gut_length);
 }
 inline double gut_capacity(const Body &b) {
   return reserve_capacity_for_tissue(b.tissue) * gut_size_factor(b);
+}
+// Share of the belly the gut leaves the gonads.
+inline double belly_room(const Body &b) {
+  return 1 - digestion::belly * (gut_size_factor(b) - digestion::shortest) /
+                 (digestion::longest - digestion::shortest);
 }
 inline double gut_transit(const Body &b, const PhysiologyParameters &p) {
   return p.gut_time * gut_size_factor(b);
@@ -141,24 +188,20 @@ inline double nutrient_signal(const Body &b) {
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
-inline double gut_utilisation(double length, int source) {
-  using P = PhysiologyParameters;
-  const auto utilisation = [](double l) { return 1 - P::gut_linear * l - P::gut_square * l * l; };
-  length = std::clamp(length, 0., 1.);
-  return source == food_kind::benthic || source == food_kind::feed  ? P::fixed_utilisation
-         : source == food_kind::algae || source == food_kind::plant ? utilisation(1 - length)
-                                                                    : utilisation(length);
+// Share of a mouthful a resting gut of this length takes up before it has passed.
+inline double gut_utilisation(double length, const Fodder &f, const PhysiologyParameters &p) {
+  const double passage = 1 / (p.gut_time * gut_size(length));
+  return f.labile * digestion::labile_rate / (digestion::labile_rate + passage) +
+         (1 - f.labile) * digestion::refractory_rate / (digestion::refractory_rate + passage);
 }
-inline double digestibility(const Body &b, int source) {
-  return gut_utilisation(b.gut_length, source);
+inline double digestibility(const Body &b, const Fodder &f, const PhysiologyParameters &p) {
+  return gut_utilisation(b.gut_length, f, p);
 }
-inline double fill_factor(int source, const PhysiologyParameters &p) {
-  return source == food_kind::algae || source == food_kind::plant ? p.fill_plant
-         : source == food_kind::benthic                           ? p.fill_sediment
-                                                                  : 1.;
+inline double gut_room(const Body &b, const Fodder &f) {
+  return std::max(0., gut_capacity(b) - b.gut_fill) / f.fill;
 }
 inline double gut_room(const Body &b, int source, const PhysiologyParameters &p) {
-  return std::max(0., gut_capacity(b) - b.gut_fill) / fill_factor(source, p);
+  return gut_room(b, fodder(source, p));
 }
 inline double swimming_limit(const Body &b, const PhysiologyParameters &p) {
   return MAX_SPEED * (p.scaled_by_size() ? std::sqrt(body_radius(b) / BODY_RADIUS) : 1.);
@@ -248,6 +291,12 @@ inline double gill_area(const Body &b) {
   return SWALLOW_AREA * widest * widest *
          suction_share(b.gill_strength * body_scale(b), b.force_scale);
 }
+// How fast the gut muscle can move the content, as a multiple of the resting gut: a larger
+// muscle is more than proportionally faster.
+inline double gut_speed(const Body &b) {
+  const double strength = suction_share(b.gut_strength * body_scale(b), b.force_scale);
+  return 1 + (digestion::fastest - 1) * strength * strength;
+}
 // Water the gill covers pump through the open mouth, and the water a mouth opened wider than at
 // rest meets while the fish swims (ram filtering).
 inline double gill_water(const Body &b) {
@@ -288,7 +337,11 @@ void mature_body(Body &);
 std::optional<double> predicted_hatch_reserve(const Body &, const Genome &, double neural_cost = 1);
 double predicted_hatch_radius(const Body &, const Genome &, double neural_cost = 1);
 void maintain_body(Body &, bool protected_life = false);
-double take_nutrition(Body &, double amount, int source = 0, const PhysiologyParameters & = {});
+double take_nutrition(Body &, double amount, const Fodder &, const PhysiologyParameters &);
+inline double take_nutrition(Body &b, double amount, int source = 0,
+                             const PhysiologyParameters &p = {}) {
+  return take_nutrition(b, amount, fodder(source, p), p);
+}
 double digest_nutrition(Body &, const PhysiologyParameters &);
 void injure(Body &, double damage, bool protected_life = false, Point normal = {});
 struct FleshBite {

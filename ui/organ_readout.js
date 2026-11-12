@@ -316,7 +316,7 @@ export function brainOrganReadout(d, tissue) {
                                    : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]);
     info.caption = key === GUT_TISSUE ? t('organ_readout.fuellungVerwertungUndDurchgang')
                                       : t('organ_readout.verfuegbareEnergiereserve');
-    info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_digestible))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
+    info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_labile))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
     return info;
   }
   const ports = MOTOR_PORTS,
@@ -402,11 +402,17 @@ export function brainOrganReadout(d, tissue) {
       info.hero = driven > 0 ? t('organ_readout.treibtAn', {share : organPercent(driven)})
                              : t('organ_readout.ruht');
       info.caption = t('organ_readout.darmmuskelTreibt');
+      // What the gut holds now, at the pace the muscle gives it now.
+      info.passage = gutPassage(driven, d.b.gut_speed);
+      info.fastest = d.b.gut_speed;
+      info.used = d.b.gut_energy > 0
+                      ? gutUse(d.b.gut_labile / d.b.gut_energy, d.b.gut_transit / info.passage)
+                      : null;
       info.metrics = [
-        metric(t('organ_readout.durchgang'),
-               t('units.times', {n : organNumber(gutPassage(driven), 1)}),
+        metric(t('organ_readout.durchgang'), t('units.times', {n : organNumber(info.passage, 1)}),
                t('organ_readout.durchgangHinweis')),
-        metric(t('organ_readout.verwertung'), organPercent(gutUse(driven)),
+        metric(t('organ_readout.verwertung'),
+               info.used === null ? t('organ_readout.darmLeer') : organPercent(info.used),
                t('organ_readout.verwertungHinweis'))
       ];
       info.series = driven;

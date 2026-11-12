@@ -103,7 +103,8 @@
  "fuellungVerwertungUndDurchgang": "Füllung, Verwertung und Durchgang",
  "verfuegbareEnergiereserve": "Verfügbare Energiereserve",
  "darmenergie": "Darmenergie",
- "verdaulich": "Verdaulich",
+ "darmLeer": "Darm leer",
+ "verdaulich": "Schnell verdaulich",
  "energie": "Energie",
  "fassung": "Fassung",
  "koerperseiteUndAnsatzBestimmen": "Körperseite und Ansatz bestimmen den Drehsinn der Flosse.",
@@ -146,9 +147,9 @@
  "reusen": "Reusendichte",
  "reusenHalten": "Dichte Reusen halten {kept} des Planktons, lassen aber nur {water} des Wassers durch und verstopfen mit Schlamm.",
  "treibtAn": "treibt an: {share}",
- "darmmuskelTreibt": "Angetrieben leert sich der Darm schneller und verwertet weniger.",
+ "darmmuskelTreibt": "Angetrieben leert sich der Darm schneller; der Fisch hat weniger Zeit, die Nahrung aufzunehmen.",
  "durchgang": "Durchgang",
  "durchgangHinweis": "So viel schneller verlässt die Nahrung den Darm wie in Ruhe.",
  "verwertung": "Verwertung",
- "verwertungHinweis": "Dieser Anteil der Nahrung wird verwertet, der Rest geht unverdaut ab."
+ "verwertungHinweis": "Dieser Anteil des Darminhalts wird bei diesem Tempo aufgenommen, der Rest geht als Flocke ab."
 }

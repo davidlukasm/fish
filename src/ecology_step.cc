@@ -296,10 +296,8 @@ void Ecosystem::act_population(const std::vector<std::vector<VisualObject>> &opt
 }
 bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old,
                                    const std::vector<unsigned char> &hatched, bool protected_life) {
-  for (auto &p : fish) {
-    field.deposit_feces(p.body.x, p.body.y, p.body.feces_pending);
-    p.body.feces_pending = 0;
-  }
+  for (auto &p : fish)
+    field.release_feces(p.body);
   advance_diseases(protected_life);
   collide_fish(old, protected_life);
   double maximum_displacement = 0;

@@ -125,15 +125,16 @@ double gut_filling(const Body &b) {
   return bounded_filling(b.gut_fill, gut_capacity(b));
 }
 double ovary_capacity(const Body &b, const Genome &g, double ceiling, double per_cell) {
-  return organ_capacity(b, g, organ_port::eggs, ceiling, per_cell);
+  return belly_room(b) * organ_capacity(b, g, organ_port::eggs, ceiling, per_cell);
 }
 
 double body_mass(const Body &b) {
   return std::max(MIN_BODY_MASS,
-                  b.tissue / BODY_TISSUE + (std::max(0., b.energy) + b.reproduction().egg_yolk +
-                                            b.reproduction().sperm_store + b.gut_fill +
-                                            b.embryo.secretion + b.embryo.pending) /
-                                               RESERVE_ENERGY_PER_MASS) +
+                  (1 + digestion::wall_mass * gut_size_factor(b)) * b.tissue / BODY_TISSUE +
+                      (std::max(0., b.energy) + b.reproduction().egg_yolk +
+                       b.reproduction().sperm_store + b.gut_fill + b.embryo.secretion +
+                       b.embryo.pending) /
+                          RESERVE_ENERGY_PER_MASS) +
          b.organ_mass;
 }
 double stored_energy(const Body &b) {
@@ -143,7 +144,8 @@ double stored_energy(const Body &b) {
 }
 void empty_stores(Body &b) {
   b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
-      b.gut_digestible = b.gut_fill = b.feces_pending = b.embryo.secretion = b.embryo.pending = 0;
+      b.gut_labile = b.gut_plant = b.gut_fill = b.feces_pending = b.feces_plant =
+          b.embryo.secretion = b.embryo.pending = 0;
 }
 Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
@@ -199,47 +201,59 @@ double predicted_hatch_radius(const Body &b, const Genome &g, double neural_cost
   return structural_radius(
       b.embryo.target_tissue > 0 ? b.embryo.target_tissue : hatch_tissue(remaining), b.organ_mass);
 }
-double take_nutrition(Body &b, double amount, int source, const PhysiologyParameters &p) {
-  const double accepted = std::clamp(amount, 0., gut_room(b, source, p)),
-               usable = accepted * digestibility(b, source);
+double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyParameters &p) {
+  const double accepted = std::clamp(amount, 0., gut_room(b, f)),
+               usable = accepted * digestibility(b, f, p);
   b.gut_energy += accepted;
-  b.gut_digestible += usable;
-  b.gut_fill += accepted * fill_factor(source, p);
+  b.gut_labile += accepted * f.labile;
+  b.gut_plant += f.plant ? accepted : 0;
+  b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
   b.nutrient_flow += PhysiologyParameters::nutrient_share * usable;
   if (accepted > 0)
     b.hunger = 0;
   return accepted;
 }
-// The gut muscle hurries food along: it makes room sooner, even in a fish that is full, but the
-// food it hurries through is used less, the more so the harder it hurries.
+// The gut takes up what it holds, the quickly digested part fast and the rest slowly, and moves
+// the content on; what leaves undigested is lost. The gut muscle hurries it along and makes room
+// sooner. Plant fibre that passes faster than the gut can bear hurts: the gut empties itself and
+// the body wears down.
 double digest_nutrition(Body &b, const PhysiologyParameters &p) {
-  b.digestion = 0;
+  b.digestion = b.gut_irritation = 0;
   if (!b.alive || !b.hatched || b.gut_energy <= 0)
     return 0;
-  // The wall moves food on with twice its pose, which averages its drive; how hard it squeezes,
-  // its pose, sets what is lost.
+  const double transit = gut_transit(b, p), held = b.gut_energy,
+               fibre = std::max(0., held - b.gut_labile);
+  // The wall moves food on with twice its pose, which averages its drive.
   const double hurried = std::clamp(b.gut_motility, 0., 1.),
-               passage =
-                   std::min(1., (1 + gut_motility::speedup * 2 * hurried) / gut_transit(b, p)),
-               used = 1 - gut_motility::loss * hurried * hurried;
+               pace = (1 + (gut_speed(b) - 1) * 2 * hurried) / transit;
+  b.gut_irritation =
+      std::clamp((fibre * b.gut_plant / held * pace / gut_capacity(b) - digestion::tolerated) /
+                     digestion::cramp,
+                 0., 1.);
+  harm_body(b, digestion::harm * b.gut_irritation, death_reason::hunger);
   const bool full = b.energy >= reserve_capacity(b);
-  if (full && hurried <= 0)
+  if (full && hurried <= 0 && b.gut_irritation <= 0)
     return 0;
-  double fraction = passage;
-  if (!full && b.gut_digestible > 0)
-    fraction = std::min(fraction, std::max(0., reserve_capacity(b) - b.energy) /
-                                      ((1 - p.digestion_cost) * used * b.gut_digestible));
-  if (full)
-    fraction = std::min(passage, hurried / gut_transit(b, p));
-  const double raw = b.gut_energy * fraction;
-  b.digestion = full ? 0 : b.gut_digestible * fraction * used;
-  b.gut_energy *= 1 - fraction;
-  b.gut_digestible *= 1 - fraction;
-  b.gut_fill *= 1 - fraction;
+  double labile = full ? 0 : b.gut_labile * digestion::labile_rate,
+         slow = full ? 0 : fibre * digestion::refractory_rate;
+  const double gain = (1 - p.digestion_cost) * (labile + slow),
+               room = std::max(0., reserve_capacity(b) - b.energy);
+  if (gain > room) {
+    labile *= room / gain;
+    slow *= room / gain;
+  }
+  b.digestion = labile + slow;
+  const double passage = std::min(1., pace * (1 + digestion::diarrhoea * b.gut_irritation)),
+               left = held - b.digestion, lost = left * passage, kept = (left - lost) / held;
+  b.feces_plant += b.gut_plant * lost / held;
+  b.gut_labile = (b.gut_labile - labile) * (1 - passage);
+  b.gut_energy = left - lost;
+  b.gut_plant *= kept;
+  b.gut_fill *= kept;
   b.energy += (1 - p.digestion_cost) * b.digestion;
   b.digested += b.digestion;
-  return std::max(0., raw - b.digestion);
+  return lost;
 }
 void mobilize_tissue(Body &b, double target) {
   if (!b.hatched || !b.alive || b.health <= 0 || b.energy >= target)
@@ -400,7 +414,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   pending_build_cost_ = 0;
   prepare(g);
   refresh_organs(g);
-  rest_cost = basal_cost(tissue, physiology) +
+  rest_cost = (1 + digestion::upkeep * gut_size_factor(*this)) * basal_cost(tissue, physiology) +
               muscle_upkeep(active_muscle_maintenance, tissue, physiology) +
               (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;

@@ -82,7 +82,7 @@ class Fish:
     MORPHOLOGY_ASSET = 78
     GUT_FILL = 79
     GUT_ENERGY = 80
-    GUT_DIGESTIBLE = 81
+    GUT_LABILE = 81
     DIGESTION = 82
     DIGESTED = 83
     FEEDING_ACTION = 84
@@ -1351,9 +1351,20 @@ class MuscleFibre:
     DRAIN = 0.028
     RECOVERY_STEPS = 400
 
-class GutMotility:
-    SPEEDUP = 2
-    LOSS = 0.5
+class Digestion:
+    SHORTEST = 0.5
+    LONGEST = 4.0
+    LABILE_STEPS = 15
+    REFRACTORY_STEPS = 500
+    FASTEST = 8
+    TOLERATED = 0.002
+    CRAMP = 0.004
+    DIARRHOEA = 4
+    HARM = 0.0015
+    BELLY = 0.6
+    WALL_MASS = 0.05
+    UPKEEP = 0.1
+    PELLET = 0.02
     WALL = 0.25
     ZONE = 2
 

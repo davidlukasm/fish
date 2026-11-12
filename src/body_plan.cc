@@ -43,8 +43,8 @@ bool gill_cell(int motor, const cppn::Point &p) {
 }
 // Fin cells on the midline inside the trunk lie on the gut: they move its contents along.
 bool gut_cell(int motor, const cppn::Point &p) {
-  return motor == field::Turn && !field::development_surface(p) && p.zone == gut_motility::zone &&
-         p.w < gut_motility::wall;
+  return motor == field::Turn && !field::development_surface(p) && p.zone == digestion::zone &&
+         p.w < digestion::wall;
 }
 // Muscle tissue weighs and costs its upkeep by its cells, whatever force their fibres give.
 double effector_tissue(const BrainInterface::Effector &e) {
@@ -958,6 +958,7 @@ void Body::refresh_organs(const Genome &g) {
   active_muscle_maintenance = a.muscle_maintenance;
   suction_strength = a.suction_strength;
   gill_strength = a.capacities[organ_port::gills];
+  gut_strength = a.capacities[organ_port::gut];
   raker_density = a.raker_density;
   bite_strength = a.bite_strength;
   bladder_capacity = a.capacities[organ_port::bladder];
@@ -1032,7 +1033,6 @@ static SensoryFrame internal_sensory_frame(const Body &b, double gonad) {
   f.radius = body_radius(b);
   f.energy = std::clamp(b.energy / std::max(tolerance::negligible, reserve_capacity(b)), 0., 1.);
   f.nutrient = nutrient_signal(b);
-  f.injury = 1 - b.health;
   f.satiety = gut_filling(b);
   f.impact = std::max(0., b.motor().impact);
   f.contact = b.reproduction().contact;
@@ -1127,7 +1127,8 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
   case field::Damage:
     for (int k = 0; k < SECTOR_COUNT; ++k)
       stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
-    stimulus = std::clamp(stimulus, 0., 1.);
+    // An aching gut hurts everywhere.
+    stimulus = std::clamp(stimulus + b.gut_irritation, 0., 1.);
     break;
   case field::BladderPressure:
   case field::GonadPressure:

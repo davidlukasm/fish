@@ -1,6 +1,6 @@
 import {
   GILL_FILTER,
-  GUT_MOTILITY,
+  DIGESTION,
   HORMONES,
   MOTOR_KIND,
   PRESSURE_SOURCE,
@@ -414,7 +414,7 @@ export function eligible(center, site) {
 }
 export const isGillFlank = site => !!site?.outer && site.w > GILL_FILTER.flank;
 export const isGutWall = site =>
-    !!site && !site.outer && site.zone === GUT_MOTILITY.zone && site.w < GUT_MOTILITY.wall;
+    !!site && !site.outer && site.zone === DIGESTION.zone && site.w < DIGESTION.wall;
 
 export const MODULES = Object.freeze([ {
   key : 'vision-steering',

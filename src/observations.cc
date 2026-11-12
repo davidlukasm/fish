@@ -248,13 +248,12 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
               o << '[' << predicted_hatch_radius(b, p.genome, neural_cost) << ',' << b.birth_tissue
                 << ']';
             })(F::body_geometry, anatomy(shape.body))(F::morphology_asset, morphology)(
-          F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(
-          F::gut_digestible, b.gut_digestible)(F::digestion, b.digestion)(F::digested, b.digested)(
-          F::feeding_action, b.feeding_action)(F::feeding_action_age, b.feeding_action_age)(
-          F::mouth_phase, b.mouth.phase)(F::swallowed, b.mouth.swallowed)(
-          F::mouth_offset, mouth_offset(b))(F::mouth_biting, b.mouth.biting)(
-          F::filtered, b.mouth.filtered)(F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left,
-                                                                        b.perception().eye_pull[0])(
+          F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(F::gut_labile, b.gut_labile)(
+          F::digestion, b.digestion)(F::digested, b.digested)(F::feeding_action, b.feeding_action)(
+          F::feeding_action_age, b.feeding_action_age)(F::mouth_phase, b.mouth.phase)(
+          F::swallowed, b.mouth.swallowed)(F::mouth_offset, mouth_offset(b))(
+          F::mouth_biting, b.mouth.biting)(F::filtered, b.mouth.filtered)(
+          F::mouth_cycle, b.mouth.cycle)(F::eye_pull_left, b.perception().eye_pull[0])(
           F::eye_pull_right, b.perception().eye_pull[1])(F::immortal, b.immortal)(
           F::assisted, p.assisted)(F::remembered, p.remembered)(F::eggs_laid, p.eggs_laid)
       .finish();

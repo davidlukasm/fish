@@ -385,7 +385,7 @@
       "morphology_asset",
       "gut_fill",
       "gut_energy",
-      "gut_digestible",
+      "gut_labile",
       "digestion",
       "digested",
       "feeding_action",
@@ -1276,7 +1276,7 @@
         "scale": 1
       },
       {
-        "name": "gut_digestible",
+        "name": "gut_labile",
         "type": "f32",
         "scale": 1
       },
@@ -2186,9 +2186,20 @@
       "drain": 0.028,
       "recovery_steps": 400
     },
-    "gut_motility": {
-      "speedup": 2,
-      "loss": 0.5,
+    "digestion": {
+      "shortest": 0.5,
+      "longest": 4.0,
+      "labile_steps": 15,
+      "refractory_steps": 500,
+      "fastest": 8,
+      "tolerated": 0.002,
+      "cramp": 0.004,
+      "diarrhoea": 4,
+      "harm": 0.0015,
+      "belly": 0.6,
+      "wall_mass": 0.05,
+      "upkeep": 0.1,
+      "pellet": 0.02,
       "wall": 0.25,
       "zone": 2
     },

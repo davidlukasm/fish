@@ -4,8 +4,13 @@ namespace fishsim {
 inline constexpr Color ALGAE_COLOR{.25, .65, .20};
 inline constexpr double ALGAE_BUOYANCY = .2, PLANT_BUOYANCY = -.25;
 inline constexpr Color FEED_COLOR{1, .2, .1};
+// Flocks of faeces are fine matter that sinks slowly.
+inline constexpr Color PLANT_FLOCK_COLOR{.38, .42, .22}, ANIMAL_FLOCK_COLOR{.45, .30, .22};
+inline constexpr double FLOCK_BUOYANCY = .4;
 // Transient drawing identities never enter checkpoints, randomness or physics.
 std::uint64_t next_render_id();
+// Faeces that still drift: half digested matter of plant or animal origin.
+enum class Residue { none, plant, animal };
 struct Food {
   double x, y, vx = 0, vy = 0;
   std::uint32_t bottom_steps = 0;
@@ -17,6 +22,7 @@ struct Food {
   bool drift_plant = false;
   double hardness = 0;
   bool bitten = false;
+  Residue residue = Residue::none;
 };
 inline constexpr double FOOD_DENSITY = 100; // Energy per radius squared, scaled by 16.
 // Plant tissue holds a quarter of the energy feed packs into the same mouthful.

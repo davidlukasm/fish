@@ -161,8 +161,13 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
       if (tag != "FRAGMENT")
         throw std::runtime_error("missing food material");
       value(in, f.origin);
-      if (f.origin < 0 || f.origin > food_kind::mussel)
+      int residue = 0;
+      value(in, residue);
+      if (f.origin < 0 || f.origin > food_kind::benthic || residue < int(Residue::none) ||
+          residue > int(Residue::animal) ||
+          (residue != int(Residue::none)) != (f.origin == food_kind::benthic))
         throw std::runtime_error("invalid food origin");
+      f.residue = Residue(residue);
       scalar(in, f.radius, 0, std::max(double(MAX_BODY_RADIUS), food_radius(PLAUSIBLE_AMOUNT)));
       scalar(in, f.initial_energy, 0, PLAUSIBLE_AMOUNT);
       scalar(in, f.decay_age, 0, PLAUSIBLE_RUNNING);

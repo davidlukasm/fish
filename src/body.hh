@@ -57,13 +57,16 @@ struct BodyState {
   std::array<double, BODY_SECTORS> damage_sectors{};
 
   double bladder_capacity = 0;
-  double gill_strength = 0, gill_signal = 0, raker_density = 0, gut_motility = 0;
+  double gill_strength = 0, gill_signal = 0, raker_density = 0, gut_strength = 0, gut_motility = 0;
   double jaw_length = TRAIT_MIDDLE, gut_length = TRAIT_MIDDLE, blunt_teeth = TRAIT_MIDDLE,
          undulation = TRAIT_MIDDLE;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF;
   double snout_position = 1, rest_cost = PhysiologyParameters::basal_rate;
-  double gut_energy = 0, gut_digestible = 0, gut_fill = 0;
-  double digestion = 0, digested = 0, feces_pending = 0;
+  // What the gut holds: all of it, its quickly digested part, its plant matter, and its volume.
+  double gut_energy = 0, gut_labile = 0, gut_plant = 0, gut_fill = 0;
+  // How much the gut hurts, 0 to 1: it holds more fibre than it can pass.
+  double gut_irritation = 0;
+  double digestion = 0, digested = 0, feces_pending = 0, feces_plant = 0;
   int feeding_action = 0, feeding_action_age = 0;
   double bladder_fill = 0, buoyancy_force = 0;
   std::array<double, BODY_SECTORS> spine_density{};
