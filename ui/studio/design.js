@@ -225,7 +225,7 @@ export const designMethods = {
       canvas.closest('figure').hidden = !receptors.length;
       if (receptors.length)
         drawOrganGraphic(canvas, eyeSight(sight.bands, sight.samples, receptors, side), null,
-                         {key : SENSE_TISSUE.light});
+                         {key : SENSE_TISSUE.light, quiet : true});
     }
   },
   refreshSpectrum() {
