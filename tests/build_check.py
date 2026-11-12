@@ -143,6 +143,7 @@ def check_labor_lives():
         assert life['longestNoFood'] == {'from': 10, 'to': 30}, 'Include the final interval before death'
         assert life['hatchLeaf'] == 12 and life['parent'] == 3 and life['generation'] == 2
         (path / 'scene-10.json').write_text('{"ticks":10,"fish":[]}')
+        world.prepare({'event': 'scene', 't': 10})
         world.read({'event': 'scene', 't': 10})
         assert not (path / 'scene-10.json').exists()
         assert (path / 'scene-10.json.gz').exists()
@@ -187,6 +188,56 @@ def check_labor_lives():
         assert (path / 'unrelated.json').exists()
 
 
+def check_labor_scene_cancellation():
+    from labor_service import BreedingJobs, World
+    with tempfile.TemporaryDirectory() as folder:
+        jobs = BreedingJobs(lambda: [])
+        world = World(1, 4000, Path(folder))
+        (Path(folder) / 'scene-100.json').write_text('{"ticks":100,"fish":[]}')
+        job = {'id': 'recording', 'status': 'running', 'runs': [world.summary],
+               'cancel': threading.Event(), 'process': None}
+        jobs.job = job
+        storing, release, answered = threading.Event(), threading.Event(), threading.Event()
+        failures, replies = [], []
+        copy = shutil.copyfileobj
+
+        def slow_archive(source, target):
+            storing.set()
+            assert release.wait(3), 'Archive test was not released'
+            copy(source, target)
+
+        def stream():
+            try:
+                jobs.stream(job, [sys.executable, '-c',
+                                 'import signal; print(\'{"event":"scene","t":100}\', '
+                                 '\'{"event":"scene","t":200}\', sep="\\n", '
+                                 'flush=True); signal.pause()'], world)
+            except Exception as error:
+                failures.append(error)
+
+        def cancel():
+            replies.append(jobs.request({'operation': 'cancel', 'job': job['id']}, folder))
+            answered.set()
+
+        worker, request = threading.Thread(target=stream), threading.Thread(target=cancel)
+        with patch('labor_service.shutil.copyfileobj', side_effect=slow_archive):
+            worker.start()
+            try:
+                assert storing.wait(3), 'No scene reached the archive'
+                request.start()
+                assert answered.wait(1), 'Scene compression blocked cancellation'
+                assert replies[0]['runs'][0]['scenes'] == [], 'A partial archive cannot be published'
+            finally:
+                release.set()
+                if job['process'] is not None:
+                    job['process'].kill()
+                worker.join(3)
+                if request.ident is not None:
+                    request.join(3)
+        assert not worker.is_alive() and not request.is_alive() and not failures, failures
+        assert job['cancel'].is_set() and world.summary['scenes'] == [100]
+
+
 def main():
     ensure_node()
     check_compiler_build()
@@ -194,6 +245,7 @@ def main():
     check_labor_engine()
     check_labor_samples()
     check_labor_lives()
+    check_labor_scene_cancellation()
     for path in [*ROOT.glob('*.py'), *ROOT.glob('tests/*.py')]:
         ast.parse(path.read_text(), filename=str(path))
     subprocess.run([sys.executable, '-B', 'schema.py'], cwd=ROOT, check=True)

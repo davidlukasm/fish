@@ -56,6 +56,13 @@ class World:
         self.summary = {"seed": seed, "steps": steps, "samples": [], "deaths": {},
                         "hatches": 0, "done": False, "lives": self.archive.lives, "scenes": []}
 
+    def prepare(self, event):
+        if event.get("event") == "scene" and self.detail_folder is not None:
+            path = self.detail_folder / f"scene-{event['t']}.json"
+            with path.open("rb") as source, gzip.open(str(path) + ".gz", "wb", compresslevel=1) as target:
+                shutil.copyfileobj(source, target)
+            path.unlink()
+
     def read(self, event):
         kind = event.get("event")
         if kind == "life":
@@ -65,11 +72,6 @@ class World:
         elif kind == "recording":
             self.summary["observation"] = {k: v for k, v in event.items() if k != "event"}
         elif kind == "scene":
-            if self.detail_folder is not None:
-                path = self.detail_folder / f"scene-{event['t']}.json"
-                with path.open("rb") as source, gzip.open(str(path) + ".gz", "wb", compresslevel=1) as target:
-                    shutil.copyfileobj(source, target)
-                path.unlink()
             self.summary["scenes"].append(event["t"])
         elif kind == "sample":
             for life in self.archive.lives.values():
@@ -98,6 +100,9 @@ class Session:
         self.event = self.TRIAL_EVENTS[trial]
         self.summary = {"seed": seed, "trial": trial, "hatch": None, "trials": [], "died": None,
                         "done": False}
+
+    def prepare(self, event):
+        pass
 
     def read(self, event):
         kind = event.get("event")
@@ -282,9 +287,14 @@ class Jobs:
                 if job["cancel"].is_set():
                     process.kill()
             for line in process.stdout:
+                if job["cancel"].is_set():
+                    break
                 if not line.strip():
                     continue
                 event = json.loads(line)
+                # Make the immutable archive readable before publishing it. Compression must
+                # leave the command lock free, including when the native process is cancelled.
+                run.prepare(event)
                 with self.lock:
                     run.read(event)
             process.wait()
