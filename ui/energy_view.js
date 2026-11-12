@@ -573,18 +573,14 @@ function renderSupplyShares(f) {
         names = tList('energy_view.supplyNames');
   if (!legend.children.length)
     names.forEach((name, i) => {
+      // Each share names its food beside its colour; the value follows.
       const item = document.createElement('span'), dot = document.createElement('i'),
             value = document.createElement('b');
       dot.style.background = SUPPLY_COLORS[i];
-      item.title = name;
-      item.append(dot, value);
+      item.append(dot, name, value);
       legend.appendChild(item);
     });
-  parts.forEach((v, i) => {
-    legend.children[i].children[1].textContent = percent(v);
-    legend.children[i].title =
-        t('energy_view.supplyShare', {name : names[i], n : Math.round(PERCENT * v)});
-  });
+  parts.forEach((v, i) => { legend.children[i].querySelector('b').textContent = percent(v); });
   if (track.bound)
     return;
   track.bound = true;
@@ -600,7 +596,7 @@ function renderSupplyShares(f) {
   const show = c => {
     differences([...c, 1 ]).forEach((w, i) => {
       track.children[i].style.width = cssPercent(w);
-      legend.children[i].children[1].textContent = percent(w);
+      legend.children[i].querySelector('b').textContent = percent(w);
     });
   };
   track.onpointerdown = e => {

@@ -165,7 +165,7 @@ function selectionCount() {
          lines : lineCount(lines),
          range : lower === upper ? lower : t('population_picker.range', {lower, upper})
        })
-                                 : t('population_picker.ohneAuswahlDieSieben'));
+                                 : t('population_picker.ohneAuswahl'));
   el('new').disabled = lines > count;
   const box = el('population-chosen');
   box.replaceChildren();
@@ -271,6 +271,11 @@ function nutritionSummary(entry, box) {
   }
   box.append(wrap);
 }
+// A trait is named by where it lies between its two ends: the end it is near, or in between.
+const TRAIT_THIRD = 1 / 3;
+const traitWord = (value, low, high) => value < TRAIT_THIRD       ? low
+                                        : value > 1 - TRAIT_THIRD ? high
+                                                                  : t('population_picker.mittel');
 function anatomySummary(entry, box) {
   const traits = document.createElement('div');
   traits.className = 'population-anatomy';
@@ -294,8 +299,8 @@ function anatomySummary(entry, box) {
     const value = metricValue(entry, key);
     if (!Number.isFinite(value))
       continue;
-    metricRow(traits, label, value, 1, t('units.percent', {n : metricNumber(value * PERCENT)}),
-              '#8faebd', t('population_picker.traitRange', {label, low, high}));
+    metricRow(traits, label, value, 1, traitWord(value, low, high), '#8faebd',
+              t('population_picker.traitRange', {label, low, high}));
   }
   box.append(traits);
 }
@@ -309,7 +314,8 @@ function details(entry, portrait, box) {
                          [ 'nose', t('population_picker.nase'), '#a8b5e4' ],
                          [ 'lateral', t('population_picker.seitenlinie'), '#7dbfc9' ]]) {
     const value = metricValue({...entry, portrait}, key);
-    metricRow(senses, label, value, PICKER.sense_scale, metricNumber(value || 0), color,
+    metricRow(senses, label, value, PICKER.sense_scale,
+              t('population_picker.senseCells', {n : metricNumber(value || 0)}), color,
               t('population_picker.senseScale', {label, max : PICKER.sense_scale}));
   }
   box.append(senses);
@@ -459,9 +465,10 @@ async function loadMore() {
       check.checked = !check.checked;
       check.onchange();
     };
+    // The genus stands under the name only where it says more than the name.
     subtitle.textContent =
         (e.labels || []).filter(word => !/^(ohne |blind|taub)/i.test(word)).join(' · ') ||
-        e.genus || '';
+        (e.genus !== e.name ? e.genus : '') || '';
     card.append(label, canvas, subtitle, info);
     if (e.group !== 'examples') {
       const star = document.createElement('button');

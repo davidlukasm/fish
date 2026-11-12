@@ -24,8 +24,6 @@ class PopulationCatalog:
         base = ROOT / "genomes"
         rows = []
         for path in self.simulation.starter_genomes():
-            folder = path.parent.relative_to(base).as_posix()
-            label = "" if folder == "." else folder.replace("/", " · ")
             name = path.stem.replace("-", " ").capitalize()
             with path.open(encoding="utf-8", errors="replace") as source:
                 for line in source:
@@ -35,8 +33,8 @@ class PopulationCatalog:
             relative = path.relative_to(base).as_posix()
             rows.append({"id": "example:" + relative, "name": name,
                          "genus": name.split()[0], "group": "examples",
-                         "labels": [label] if label else [], "class": path.stem, "value": 0,
-                         "session": label, "updated": path.stat().st_mtime})
+                         "labels": [], "class": path.stem, "value": 0,
+                         "session": "", "updated": path.stat().st_mtime})
         return rows
 
     def entries(self):

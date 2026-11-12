@@ -2294,7 +2294,7 @@ font-variant-numeric:tabular-nums}
 #supply-bars {display:grid;grid-template-columns:48px 1fr;align-items:center;gap:8px;font-size:11px;margin:12px 0}
 .supply-track {display:flex;height:8px;overflow:hidden;border-radius:3px}
 .supply-track i {display:block;height:8px}
-#supply-shares {display:flex;justify-content:space-between;gap:6px;margin:-6px 0 12px 56px;font-size:11px}
+#supply-shares {display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;margin:-6px 0 12px 56px;font-size:11px}
 #supply-shares span {display:flex;align-items:center;gap:4px}
 #supply-shares i {display:inline-block;width:8px;height:8px;border-radius:50%}
 #supply-shares b {font-weight:500;font-variant-numeric:tabular-nums}
@@ -2305,7 +2305,7 @@ font-variant-numeric:tabular-nums}
 .population-diet { display:flex; height:10px; border-radius:4px; overflow:hidden; background:#253c46; margin:4px 0; }
 .population-diet span { height:100%; min-width:1px; }
 .population-anatomy { display:grid; grid-template-columns:1fr 1fr; column-gap:12px; border-bottom:1px solid #ffffff25; padding-bottom:6px; }
-.population-anatomy .population-trait { grid-template-columns:38px minmax(12px,1fr) 32px; gap:4px; }
+.population-anatomy .population-trait { grid-template-columns:38px minmax(12px,1fr) 62px; gap:4px; }
 .population-anatomy .population-trait > span:last-child { min-width:0; }
 .population-measurement { display:block; color:#d5bb8b; margin-bottom:6px; }
 

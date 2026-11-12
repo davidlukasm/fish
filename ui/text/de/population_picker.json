@@ -17,7 +17,7 @@
  "generation": "Generation",
  "absteigendAufsteigendSortieren": "Absteigend; aufsteigend sortieren",
  "aufsteigendAbsteigendSortieren": "Aufsteigend; absteigend sortieren",
- "ohneAuswahlDieSieben": "Ohne Auswahl: die sieben Beispielklassen",
+ "ohneAuswahl": "Ohne Auswahl starten alle Beispielfische",
  "ernaehrungNochUngemessen": "Ernährung · noch ungemessen",
  "koerper": "Körper",
  "schlaengelnd": "schlängelnd",
@@ -45,7 +45,7 @@
  "usable": "Verwertbare Aufnahme: {n} E",
  "raw": "roh geschluckt: {n} E",
  "digested": "tatsächlich verdaut: {n} E",
- "traitRange": "{label}: {low} (0) bis {high} (100). Erbliche Anatomie.",
+ "traitRange": "{label}: von {low} bis {high}, erblich",
  "senseScale": "{label}: Sinneszellen, gemeinsame Skala 0–{max}.",
  "portraitInfo": "{nerves} Nervenzellen · {eggs} Ei-Zellen",
  "run": "Lauf {session} · Schritt {step}",
@@ -68,5 +68,7 @@
   "crab": "Krabben",
   "mussel": "Muscheln",
   "benthic": "Bodennahrung"
- }
+ },
+ "mittel": "mittel",
+ "senseCells": "{n} {n:Zelle|Zellen}"
 }
