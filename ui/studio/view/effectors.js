@@ -342,6 +342,7 @@ function jawGraphic(state, organ, centers) {
          handle('trait:q1', T.x, top, label('teeth.' + style) + ' · ' + label('teeth.handle'),
                 label('teeth.word', {form : label('teeth.' + style)}));
 }
+const chartShare = x => (x - USE_CHART.left) / (USE_CHART.right - USE_CHART.left);
 const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.forward] : {'trait:q1' : {key : 'undulation', at : undulationAt}},
   [MOTOR_KIND.turn] : Object.fromEntries(
@@ -349,13 +350,14 @@ const TRAIT_HANDLES = Object.freeze({
           .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
   [GUT_CODE] : {
     'trait:q1' : {key : GUT_TRAIT, at : x => (x - GUT.from - 110) / (GUT.to - GUT.from - 110)},
-    'trait:q2' :
-        {key : GUT_TRAIT, at : x => (x - USE_CHART.left) / (USE_CHART.right - USE_CHART.left)}
+    'chart:gut' : {key : GUT_TRAIT, at : chartShare}
   },
   [GILL_CODE] : {
     'trait:q1' : {key : GILL_TRAIT, at : (x, y) => (GILL.bottom - y) / (GILL.bottom - GILL.top)}
   },
   [MOTOR_KIND.aggression] : {
+    'chart:jaw' : {key : 'jaw_length', at : chartShare},
+    'chart:teeth' : {key : 'blunt_teeth', at : chartShare},
     'trait:q2' : {key : 'jaw_length', at : x => (jawTip(0) - x) / (jawTip(0) - jawTip(1))},
     'trait:q1' : {
       key : 'blunt_teeth',
@@ -477,7 +479,7 @@ const GUT = Object.freeze({
 // food's icon; the dots and their shares mark the gut's own length, which is dragged here as well.
 const USE_CHART = Object.freeze({
   width : 300,
-  height : 132,
+  height : 144,
   left : 44,
   title : 12,
   right : 252,
@@ -489,7 +491,13 @@ const USE_CHART = Object.freeze({
   gap : 16,
   dot : 3.5,
   share : 8,
-  below : 9
+  below : 9,
+  legend : 134,
+  sample : 14,
+  // The second curve's name starts this far along the axis, clear of a long first name.
+  second : .62,
+  // A factor's plot reaches this much above its largest value.
+  room : 1.15
 });
 // The gut: its length (handle at its end) and its sense cells, the food cells on the inner wall,
 // the stretch cells on the outer wall. The chosen kind shows its feelers, as long as the cells are
@@ -534,8 +542,8 @@ export function gutGraphic(state, organ, selected, held = null) {
           (chosen ? gutSenseMarks(state, chosen, wall(chosen === food ? -1 : 1),
                                   chosen === food ? -1 : 1, held)
                   : '') +
-          handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.length')),
-      gutUseChart(state, organ),
+          handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.axis')),
+      dietCurves(state, organ, 'gut'),
       chosen
           ? ' data-sense-field="' + escapeText(chosen.id) + '" data-sense-redraw="refreshEffectors"'
           : '');
@@ -559,76 +567,119 @@ function gutSenseMarks(state, center, places, side, held) {
          sensitivityHandle(feeler(G.cell), feeler(G.cell + G.feeler), sensitive,
                            label('gut.sensitivityHandle'));
 }
-function gutUseChart(state, organ) {
-  const data = state.capabilities?.diet?.gut, at = gutLength(state.document), C = USE_CHART;
+// What a trait of the mouth or gut does over its whole range, as curves: the gut's length against
+// how much of plants and meat it gets out, the teeth's form against what a bite cuts or grinds, the
+// jaw's length against how wide it opens and how hard it bites. A share runs from 0 to 100 %, a
+// factor from 0 to a little above its largest value with ×1 marked. The organ's own value is the
+// line with a dot and its value on each curve; it is dragged there as well.
+const DIET_CURVES = Object.freeze({
+  gut : {
+    code : GUT_CODE,
+    curves : [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ],
+    at : state => gutLength(state.document)
+  },
+  teeth : {
+    code : MOTOR_KIND.aggression,
+    curves : [ [ 'grind', FOOD_SLOT.plant ], [ 'cut', FOOD_SLOT.fish ] ],
+    at : state => muscleTrait(state.document, MOTOR_KIND.aggression, 'blunt_teeth', state.sites)
+  },
+  jaw : {
+    code : MOTOR_KIND.aggression,
+    factor : true,
+    curves : [ [ 'aperture', null ], [ 'lever', null ] ],
+    at : state => muscleTrait(state.document, MOTOR_KIND.aggression, 'jaw_length', state.sites)
+  }
+});
+// Colours of a factor's two curves, which have no food of their own.
+const FACTOR_COLOURS = Object.freeze([ '#8fc7e8', '#e6a385' ]);
+function dietCurves(state, organ, kind) {
+  const spec = DIET_CURVES[kind], data = state.capabilities?.diet?.[kind], C = USE_CHART;
+  const at = spec.at(state);
   if (!data)
     return '';
+  const most = spec.factor ? C.room * Math.max(...spec.curves.flatMap(([ key ]) => data[key])) : 1;
   const x = share => C.left + (C.right - C.left) * share,
-        y = value => C.base - (C.base - C.top) * value;
+        y = value => C.base - (C.base - C.top) * clamp(value / most);
   const valueAt = values => {
     const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
     return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
   };
-  const words = key => label('diet.gut.' + key);
+  const shown = v => spec.factor ? t('units.times', {n : formatNumber(v, 1)}) : percent(v);
+  const words = key => label('diet.' + kind + '.' + key);
   const text = (cls, px, py, content, anchor = 'start', colour = '') =>
       '<text class="' + cls + '" x="' + fixed(px) + '" y="' + fixed(py) + '" text-anchor="' +
       anchor + '"' + (colour ? ' style="fill:' + colour + '"' : '') + '>' + escapeText(content) +
       '</text>';
-  const foods = [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ];
+  const colourOf = (slot, k) => slot === null ? FACTOR_COLOURS[k] : FOOD_COLORS[slot];
   const curves =
-      foods
-          .map(([ key, slot ]) => {
-            const values = data[key], colour = FOOD_COLORS[slot], end = values.at(-1);
+      spec.curves
+          .map(([ key, slot ], k) => {
+            const values = data[key], colour = colourOf(slot, k), end = values.at(-1);
             const d =
-                'M' +
-                values.map((v, k) => fixed(x(k / (values.length - 1))) + ' ' + fixed(y(clamp(v))))
-                    .join(' L');
+                'M' + values.map((v, i) => fixed(x(i / (values.length - 1))) + ' ' + fixed(y(v)))
+                          .join(' L');
             return '<path class="aid-use-curve" d="' + d + '" stroke="' + colour + '"/>' +
-                   '<g transform="translate(' + fixed(C.right + C.gap) + ' ' +
-                   fixed(y(clamp(end))) + ')">' + ecologyIconSvg(slot, colour, C.icon) + '</g>' +
-                   text('aid-use-food', C.right + C.gap, y(clamp(end)) + C.axis, words(key),
-                        'middle');
+                   (slot === null ? ''
+                                  : '<g transform="translate(' + fixed(C.right + C.gap) + ' ' +
+                                        fixed(y(end)) + ')">' +
+                                        ecologyIconSvg(slot, colour, C.icon) + '</g>') +
+                   '';
           })
           .join('');
-  // The gut's own length: a line across the plot, a dot and the share on each curve.
-  const shares = at === null ? []
-                             : foods.map(([ key, slot ]) => ({slot, v : clamp(valueAt(data[key]))}))
+  // The key below the axis names each curve by its line.
+  const key = spec.curves
+                  .map(([ name, slot ], k) => {
+                    const from = C.left + k * C.second * (C.right - C.left);
+                    return '<path class="aid-use-curve" d="M' + fixed(from) + ' ' + C.legend +
+                           ' h' + C.sample + '" stroke="' + colourOf(slot, k) + '"/>' +
+                           text('aid-use-food', from + C.sample + C.tick, C.legend + C.tick / 2,
+                                words(name));
+                  })
+                  .join('');
+  // The organ's own value: a line across the plot, a dot and the value on each curve; the higher
+  // value is written above its dot, the lower one below, so the two never cover each other.
+  const values = at === null ? []
+                             : spec.curves
+                                   .map(([ key, slot ], k) =>
+                                            ({colour : colourOf(slot, k), v : valueAt(data[key])}))
                                    .sort((a, b) => b.v - a.v);
+  const right = at < .5;
   const mark = at === null
                    ? ''
                    : '<line class="aid-use-marker" x1="' + fixed(x(at)) + '" y1="' + C.top +
                          '" x2="' + fixed(x(at)) + '" y2="' + C.base + '"/>' +
-                         shares
-                             .map(({slot, v}, rank) => {
-                               const right = at < .5;
-                               // The higher share is written above its dot, the lower one below,
-                               // so the two never cover each other where the curves cross.
-                               return '<circle class="aid-use-dot" cx="' + fixed(x(at)) + '" cy="' +
-                                      fixed(y(v)) + '" r="' + C.dot + '" fill="' +
-                                      FOOD_COLORS[slot] + '"/>' +
+                         values
+                             .map(({colour, v}, rank) =>
+                                      '<circle class="aid-use-dot" cx="' + fixed(x(at)) + '" cy="' +
+                                      fixed(y(v)) + '" r="' + C.dot + '" fill="' + colour + '"/>' +
                                       text('aid-use-share', x(at) + (right ? C.share : -C.share),
-                                           rank ? y(v) + C.dot + C.below : y(v) - C.dot, percent(v),
-                                           right ? 'start' : 'end', FOOD_COLORS[slot]);
-                             })
+                                           rank ? y(v) + C.dot + C.below : y(v) - C.dot, shown(v),
+                                           right ? 'start' : 'end', colour))
                              .join('') +
-                         '<rect class="aid-diet-hit" data-effector-handle="trait:q2" x="' + C.left +
-                         '" y="' + C.top + '" width="' + (C.right - C.left) + '" height="' +
-                         (C.base - C.top) + '"/>' +
-                         handle('trait:q2', x(at), C.base, words('handle'));
+                         '<rect class="aid-diet-hit" data-effector-handle="chart:' + kind +
+                         '" x="' + C.left + '" y="' + C.top + '" width="' + (C.right - C.left) +
+                         '" height="' + (C.base - C.top) + '"/>' +
+                         handle('chart:' + kind, x(at), C.base, words('handle'));
+  const one = spec.factor
+                  ? '<path class="aid-use-one" d="M' + C.left + ' ' + fixed(y(1)) + ' H' + C.right +
+                        '"/>' + text('aid-use-scale', C.left - C.tick, y(1), shown(1), 'end')
+                  : '';
   const axes =
       '<path class="aid-use-axis" d="M' + C.left + ' ' + C.top + ' V' + C.base + ' H' + C.right +
-      '"/>' + text('aid-use-scale', C.left - C.tick, C.top + C.tick / 2, percent(1), 'end') +
-      text('aid-use-scale', C.left - C.tick, C.base, percent(0), 'end') +
+      '"/>' +
+      (spec.factor ? one
+                   : text('aid-use-scale', C.left - C.tick, C.top + C.tick / 2, percent(1), 'end') +
+                         text('aid-use-scale', C.left - C.tick, C.base, percent(0), 'end')) +
       text('aid-use-scale', C.left, C.base + C.axis, words('low')) +
       text('aid-use-scale', C.right, C.base + C.axis, words('high'), 'end') +
-      text('aid-use-title', (C.left + C.right) / 2, C.base + C.axis, words('length'), 'middle') +
+      text('aid-use-title', (C.left + C.right) / 2, C.base + C.axis, words('axis'), 'middle') +
       '<text class="aid-use-title" transform="translate(' + C.title + ' ' +
       fixed((C.top + C.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
       escapeText(words('title')) + '</text>';
   return '<svg class="aid-effector-graphic aid-use-chart" viewBox="0 0 ' + C.width + ' ' +
          C.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
-         GUT_CODE + '" data-effector-side="1" role="img" aria-label="' +
-         escapeText(words('title')) + '">' + axes + curves + mark + '</svg>';
+         spec.code + '" data-effector-side="' + sideOf(organ) + '" role="img" aria-label="' +
+         escapeText(words('title')) + '">' + axes + curves + key + mark + '</svg>';
 }
 
 const effectorBlock = (organ, code, side, title, graphic, below, attributes = '') =>
@@ -776,5 +827,8 @@ export function effectorGraphic(state, organ) {
                        (hint ? '<title>' + escapeText(hint) + '</title>' : '') +
                            draw(state, organ, organ.centers, twin),
                        (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') +
+                           (code === MOTOR_KIND.aggression ? dietCurves(state, organ, 'jaw') +
+                                                                 dietCurves(state, organ, 'teeth')
+                                                           : '') +
                            musclePicture(state, organ, code, sideOf(organ)));
 }

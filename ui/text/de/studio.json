@@ -904,7 +904,7 @@
         "plant": "Pflanzen",
         "meat": "Fleisch",
         "size": "Fassungsvermögen",
-        "length": "Darmlänge"
+        "axis": "Darmlänge"
       },
       "teeth": {
         "title": "Biss je Beute",
@@ -912,7 +912,8 @@
         "low": "spitz",
         "high": "stumpf",
         "grind": "Pflanzen, Schalen",
-        "cut": "Fleisch"
+        "cut": "Fleisch",
+        "axis": "Zahnform"
       },
       "jaw": {
         "title": "Maul",
@@ -920,7 +921,8 @@
         "low": "kurz",
         "high": "lang",
         "aperture": "Weite",
-        "lever": "Bisskraft"
+        "lever": "Bisskraft",
+        "axis": "Kieferlänge"
       },
       "suction": {
         "title": "Saugen",
