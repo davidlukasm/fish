@@ -44,7 +44,8 @@ import {ANATOMY, BODY_UNIT, FIN_STROKE} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
-import {escapeText, fixed} from './markup.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
@@ -466,13 +467,25 @@ const smoothRim = points => {
     d += ' Q' + p(points[i]) + ' ' + p(mid(points[i], points[(i + 1) % points.length]));
   return d + 'Z';
 };
+// A region shows its symbol, the same as in the library, until its own nodes take its place; the
+// symbol keeps a readable size on screen (px) but never fills more than a share of the region.
+const REGION_ICON = Object.freeze({screen : 22, share : .6});
 function regionGlyph(state, organ) {
   const G = regionGeometry(state.document, state.sites, organ), mix = detailMix(state);
   if (!G.rows.length)
     return '';
+  const size = Math.min(REGION_ICON.screen / zoomOf(state),
+                        REGION_ICON.share * Math.min(G.width, G.height)),
+        shown = 1 - nodeOpacity(state);
+  const symbol = shown > 0 ? '<g class="aid-region-icon" opacity="' + fixed(shown) + '">' +
+                                 placedGlyph(STUDIO_ICON[organ.type] ?? STUDIO_ICON.brain, size, G,
+                                             {line : true}) +
+                                 '</g>'
+                           : '';
   return '<g class="aid-region-card aid-region-detail ' + organ.type + '" opacity="' +
          fixed(.8 + .2 * mix.regions) + '">' +
-         '<path class="aid-anatomical-region" d="' + smoothRim(regionRim(G)) + '"/></g>';
+         '<path class="aid-anatomical-region" d="' + smoothRim(regionRim(G)) + '"/>' + symbol +
+         '</g>';
 }
 function organNodes(state, organ) {
   if (organ.type === 'eye' || organ.type === 'pigment' || isRegion(organ) ||
