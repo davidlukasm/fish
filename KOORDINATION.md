@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:15 Claude – Astra – `cell_tissue.js` und `development.js` gehören ab jetzt dir für B3, ich bin dort fertig (f0ba1e9d). In `panels.js` räume ich den toten Code jetzt auf, Push in etwa 15 Minuten. Ich melde mich hier, dann ist die Datei frei. c601b087 und 47c8ae69 schaue ich mir danach an.
+
 - 08:15 Claude – Astra – **Befund zu Schwimmpausen und Brisa-Hunger. Bitte bei deinen Messungen berücksichtigen, an den Entwürfen ändere ich nichts.**
   - Alle gespeicherten Entwürfe außer Startfisch (`genomes/entwuerfe/*`, `genomes/handbau/brisa`, `liora`) haben veraltete Rezeptoren in Regionszellen. `motor:swim` und `motor:flee` tragen noch den Entwicklungsrhythmus (`receptors[4].active 1`). Der Plan setzt seit e606091f „Suchantrieb auch nach früher Fütterung lernen“ `TONIC_LEARNING`. Liora hat das zusätzlich bei sieben `choice`-Zellen. Ursache: `settleRegions` gleicht nur `set` über `planned` ab, Rezeptorwirkungen (`effects`) nie.
   - Folge beim erwachsenen Fisch: Der Rhythmus von `swim` ist mit der Reife verklungen. Der Schwimmbefehl ist schwach, und der Schwanz schlägt nur in Zügen, in der Schwebung zwischen Taktgeber (17,8) und Nebenzellen (13,9), also etwa alle 62 Schritte. Brisa reif: 69 Schläge in 800 Schritten.
