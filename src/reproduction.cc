@@ -5,6 +5,8 @@ namespace fishsim {
 namespace {
 constexpr int FERTILITY_CHECK_PERIOD = 100;
 constexpr double RECRUITMENT_STEEPNESS = 4;
+// Verdicts kept before they are forgotten and formed anew.
+constexpr std::size_t MATING_VERDICTS = 1 << 16;
 }
 namespace {
 void mix_gamete(Color &color, double stored, const Color &incoming, double amount) {
@@ -179,6 +181,17 @@ bool Ecosystem::release_sperm(Individual &p, bool manual) {
   }
   return false;
 }
+bool Ecosystem::fits(const Individual &egg, const Sperm &cloud) {
+  if (verdict_distance_ != taxonomy_.mating_distance || mating_verdicts_.size() > MATING_VERDICTS) {
+    mating_verdicts_.clear();
+    verdict_distance_ = taxonomy_.mating_distance;
+  }
+  const auto [verdict, fresh] = mating_verdicts_.try_emplace({egg.id, cloud.render_id});
+  if (fresh)
+    verdict->second =
+        compatible(egg.genome, cloud.genome, taxonomy_.mating_distance, egg.id, cloud.render_id);
+  return verdict->second;
+}
 std::vector<std::size_t> Ecosystem::mating_order(const Individual &egg, int pass) {
   std::vector<std::size_t> order;
   std::vector<std::size_t> pool;
@@ -192,10 +205,8 @@ std::vector<std::size_t> Ecosystem::mating_order(const Individual &egg, int pass
     const bool self = s.parent == egg.parent;
     if ((pass == 0 && self) || (pass == 1 && (!self || egg.body.age < int(evo.selfing_delay))))
       continue;
-    // Few clouds reach an egg. Comparing two genomes is the costly test, so it comes last.
     const double density = local_sperm(s, egg.body.x, egg.body.y);
-    if (density <= 0 ||
-        !compatible(egg.genome, s.genome, taxonomy_.mating_distance, egg.id, s.render_id))
+    if (density <= 0 || !fits(egg, s))
       continue;
     pool.push_back(i);
     weights.push_back(density);

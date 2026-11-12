@@ -194,6 +194,11 @@ private:
   void write_environment_cache_state(std::ostream &) const;
   void read_state(std::istream &, const Ecosystem *);
   std::vector<std::size_t> mating_order(const Individual &, int pass);
+  // Whether an egg and a sperm cloud fit, by their identities: it never changes while both
+  // exist, and comparing their genomes anew every step was most of a busy tank's step.
+  std::map<std::pair<std::uint64_t, std::uint64_t>, bool> mating_verdicts_;
+  double verdict_distance_ = 0;
+  bool fits(const Individual &egg, const Sperm &);
   void reproduction(bool fertile = true);
   void begin_clonal_development();
 

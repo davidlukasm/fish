@@ -460,6 +460,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   corpses.clear();
   metrics_.corpses_eaten = metrics_.collision_deaths = 0;
   sperm.clear();
+  mating_verdicts_.clear();
   recent_deaths.clear();
   support_.archive.clear();
   events.clear();
@@ -806,6 +807,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   if (!next_sperm_id)
     throw std::runtime_error("invalid sperm counter");
   sperm.clear();
+  mating_verdicts_.clear();
   for (auto n = count(MAX_SPERM_RELEASES); n; --n) {
     Sperm s;
     s.genome = genome();
