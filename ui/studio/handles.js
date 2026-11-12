@@ -64,7 +64,8 @@ import {
 } from './view/substances.js';
 import {learnMemoryPatch} from './view/learning.js';
 import {nerveTissuePatch} from './view/nerve_cell.js';
-import {contactCapacityPatch, variationPatch} from './view/cell_tissue.js';
+import {variationPatch} from './view/cell_tissue.js';
+import {contactCapacityPatch} from './view/contact_plan.js';
 import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
 import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
@@ -206,7 +207,12 @@ export const GRIPS = Object.freeze([
     graphic : '[data-capacity]',
     handle : '[data-capacity-handle]',
     held : 'capacity',
-    start : (studio, g, h) => ({id : g.dataset.capacity, handle : h.dataset.capacityHandle})
+    start : (studio, g, h) => ({
+      id : g.dataset.capacity,
+      handle : h.dataset.capacityHandle,
+      marks : {...h.dataset},
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
+    })
   },
   {
     graphic : '[data-variation]',
@@ -539,7 +545,10 @@ export const handleMethods = {
   capacityPointer(event) {
     const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);
     this.draftDesign(
-        updateCenter(this.state.document, drag.id, contactCapacityPatch(drag.handle, fx, fy)),
+        updateCenter(this.state.document, drag.id,
+                     contactCapacityPatch(drag.handle,
+                                          {x : fx * drag.size.width, y : fy * drag.size.height},
+                                          drag.marks)),
         'capacity:' + drag.id);
   },
   variationPointer(event) {

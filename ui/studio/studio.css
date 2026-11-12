@@ -1070,12 +1070,18 @@
 .aid-cppn-link.control-port .aid-cppn-link-ink{stroke-dasharray:5 4}
 
 .aid-contact-plan{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:7px}
-.aid-contact-table-scroll{overflow-x:auto}
-.aid-contact-plan-table{width:100%;border-collapse:collapse;font-size:10px;font-variant-numeric:tabular-nums}
-.aid-contact-plan-table th,.aid-contact-plan-table td{padding:4px;text-align:right;border-bottom:1px solid var(--aid-panel-edge)}
-.aid-contact-plan-table th:nth-child(-n+2),.aid-contact-plan-table td:nth-child(-n+2){text-align:left}
-.aid-contact-plan-table button{padding:2px 0;text-align:left;background:none;border:none;color:var(--aid-control-text);font-size:10px}
-.aid-contact-plan-table button:hover{color:var(--aid-handle)}
+.aid-contact-plan summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-plan-picture{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-plan-edge{fill:none;stroke:#9edaca;stroke-linecap:round;stroke-opacity:.8}
+.aid-plan-edge.inhibit{stroke:var(--aid-inhibit)}
+.aid-plan-edge.teach{stroke-dasharray:4 3}
+.aid-plan-edge:hover{stroke-opacity:1;stroke:var(--aid-hover)}
+.aid-plan-mark{cursor:pointer;color:var(--aid-brain)}
+.aid-plan-mark>circle{fill:#24474f;stroke:var(--aid-brain);stroke-width:1.4}
+.aid-plan-mark:hover>circle{stroke:var(--aid-handle-hover)}
+.aid-plan-wedge{fill:var(--aid-control);opacity:.5}
+.aid-plan-wedge-fill{fill:#9edaca}
+.teaching_limit .aid-plan-wedge-fill{fill:var(--aid-teach)}
 
 .aid-plan-pulses circle{stroke:#10292d;stroke-width:1.2}
 
@@ -1160,14 +1166,13 @@
 .aid-receptor-picture{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .aid-receptor-picture .aid-effect-scene{max-width:100%}
 .aid-receptor-picture .aid-variation{width:50%}
-.aid-cell-capacity,.aid-cell-variation{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:8px}
-.aid-cell-capacity summary,.aid-cell-variation summary,.aid-learn-substance summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
-.aid-capacity,.aid-variation{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
-.aid-capacity text,.aid-variation text{font-size:11px;fill:var(--aid-label-text);pointer-events:none}
+.aid-cell-variation{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:8px}
+.aid-cell-variation summary,.aid-learn-substance summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-variation{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-variation text{font-size:11px;fill:var(--aid-label-text);pointer-events:none}
 .aid-tissue-cell{fill:var(--aid-control);stroke:var(--aid-brain);stroke-width:1.4}
 .aid-contact-seat{fill:var(--aid-light)}
 .aid-contact-fibre{fill:none;stroke:var(--aid-light);stroke-linecap:round;stroke-linejoin:round}
-.aid-capacity .teaching .aid-contact-fibre{stroke:var(--aid-teach)}
 .aid-variation-sheet{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
 .aid-variation-sheet .aid-variation{background:none}
 .aid-variation{color:var(--aid-brain)}

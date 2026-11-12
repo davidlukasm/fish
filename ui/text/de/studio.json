@@ -1265,13 +1265,9 @@
     "title": "Kontakte im Bauplan",
     "meaning": "Die Verbindungen beschreiben gewünschte Signalwege. Konkrete Synapsen entstehen später zwischen geborenen Zellen und beginnen mit Gewicht null.",
     "fields": "Der Compiler verteilt die gewünschten Eingänge automatisch auf bis zu {n} Empfangsfelder und bestimmt ihre Adressen und Breiten.",
-    "slots": "Maximale Eingänge je Zelle",
-    "source": "Von",
-    "target": "Nach",
     "limit": "Höchststärke",
     "modulation": "Lehranteil",
     "probation": "Schonfrist · Schritte",
-    "none": "Für diese Auswahl sind noch keine Signalwege geplant.",
     "learningMeaning": "Der Sender bildet je nach Zellidentität elektrische oder lehrende Kontakte. Dafür gilt die jeweilige Höchststärke des Empfängers. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
   },
   "hub": {
@@ -1330,7 +1326,6 @@
     "spine": "Taktgeber"
   },
   "cellPicture": {
-    "contacts": "Kontakte aufnehmen",
     "electrical_limit": "Signalstärke",
     "teaching_limit": "Lehrwirkung",
     "capacity": "Kontaktplätze",

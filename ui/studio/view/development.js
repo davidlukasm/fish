@@ -9,7 +9,7 @@ import {
   substanceMark,
   substanceName
 } from './substances.js';
-import {cellVariation, contactCapacity} from './cell_tissue.js';
+import {cellVariation} from './cell_tissue.js';
 import {label} from './kit.js';
 import {substanceColor} from '../../hormones.js';
 
@@ -79,5 +79,5 @@ export function cellDevelopment(state, center) {
       LIFE_EFFECTS.includes(state.developmentEffect) ? state.developmentEffect : LIFE_EFFECTS[0];
   return '<details class="aid-cell-development"><summary>' + word('title') + '</summary>' +
          lifePhaseEditor(state, center, chosen) + receptorBody(state, center, chosen) +
-         '</details>' + contactCapacity(state, center) + cellVariation(center);
+         '</details>' + cellVariation(center);
 }
