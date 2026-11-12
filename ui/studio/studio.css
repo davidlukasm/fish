@@ -940,10 +940,11 @@
 .aid-life-hit{fill:none;stroke:transparent;stroke-width:12}
 .aid-life-line[aria-pressed=true] polyline:not(.aid-life-hit){stroke-width:3.4}
 .aid-life-badge{cursor:pointer}
-.aid-life-badge circle{fill:var(--aid-graphic);stroke-width:2}
+.aid-life-badge circle{fill:var(--substance,var(--aid-graphic));stroke-width:2}
 .aid-life-badge.birth circle{stroke:var(--aid-senses)}.aid-life-badge.output circle{stroke:#79d2be}.aid-life-badge.death circle{stroke:#e8a2b5}
 .aid-life-badge.chosen circle{stroke-width:4}
 .aid-life-badge text{fill:#10292d;font-size:8px;font-weight:700;pointer-events:none}
+.aid-life-badge.empty circle{fill:var(--aid-graphic);stroke-dasharray:3 2}.aid-life-badge.empty text{fill:var(--substance)}
 .aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}

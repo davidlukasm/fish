@@ -434,14 +434,17 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
   const badge = (effect, k) => {
     const receptor = lifeReceptor(focus, effect), on = receptor?.active;
     const at = x((k + .5) / LIFE_EFFECTS.length);
+    // A substance no gland makes yet stays an outline, as on the wheel.
+    const empty = on && !substanceDefined(state, receptor.substance);
     return '<g class="aid-life-badge ' + lifeKind(effect) + (effect === chosen ? ' chosen' : '') +
-           '"' + pick(effect) + '><title>' +
+           (empty ? ' empty' : '') + '"' + pick(effect) +
+           (on ? ' style="--substance:' + substanceColor(receptor.substance) + '"' : '') +
+           '><title>' +
            escapeText(name(effect) + ' · ' +
                       (on ? substanceName(state, receptor.substance)
                           : label('inspector.answersToNothing'))) +
            '</title><circle cx="' + fixed(at) + '" cy="' + LIFE_BADGE.y + '" r="' +
-           LIFE_BADGE.radius + '"' +
-           (on ? ' style="fill:' + substanceColor(receptor.substance) + '"' : '') + '/>' +
+           LIFE_BADGE.radius + '"/>' +
            (on ? '<text x="' + fixed(at) + '" y="' + LIFE_BADGE.y +
                      '" dy=".35em" text-anchor="middle">' +
                      escapeText(substanceMark(state, receptor.substance)) + '</text>'
@@ -486,6 +489,8 @@ export function wheelWidthPatch(wheel, profile, fx, fy) {
   const [low, high] = wheel.sigmaRange;
   return clamp((distance / WHEEL.radius - low) / (high - low));
 }
+const substanceDefined = (state, index) =>
+    index >= HORMONES.levels || state.document.substances.some(sub => sub.index === index);
 export function substanceMark(state, index) {
   return index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturityMark')
          : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserveMark')
@@ -524,7 +529,7 @@ function substanceWheel(state, profile, {
       return '<g class="aid-wheel-point empty" data-define-substance="' + index +
              '" style="--substance:' + substanceColor(index) + '"><circle cx="' + px(x) + '" cy="' +
              py(y) + '" r="' + WHEEL.point + '"/><text x="' + px(x) + '" y="' + py(y) +
-             '" dy=".35em" text-anchor="middle">' + label('inspector.undefinedMark') +
+             '" dy=".35em" text-anchor="middle">' + escapeText(substanceMark(state, index)) +
              '</text><title>' + label('inspector.defineSubstance') + '</title></g>';
     const bound = profile.active && index < reads
                       ? wheelAffinity(wheel, profile.x, profile.y, profile.width, index)
