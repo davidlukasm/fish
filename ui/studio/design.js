@@ -19,7 +19,8 @@ import {hairField} from './view/balance.js';
 // Sense organs whose one picture holds their cells, sensitivity, adaptation and width.
 const SENSE_PICTURES = Object.freeze({
   lateral : lateralField,
-  balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held)
+  balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held),
+  blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held)
 });
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
@@ -46,7 +47,7 @@ import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
 import {organSettingsBlock, selectedCenter, sensorAdaptation, sensorAnswer} from './view/panels.js';
 import {label} from './view/kit.js';
-import {hormoneTime} from './view/substances.js';
+import {hormonePad, hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 

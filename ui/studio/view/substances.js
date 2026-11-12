@@ -1,6 +1,6 @@
 import {variationGraphic} from './cell_tissue.js';
 import {previewControls, previewContextOf, cellDevelopment} from './development.js';
-import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {ATELIER_LIMITS, BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp} from '../../units.js';
 import {isRegion} from '../model/organs.js';
@@ -12,6 +12,7 @@ import {
   DEATH_RESPONSE,
   effectDirection,
   findCenter,
+  groupReport,
   organOf,
   growsWith,
   lifePhase,
@@ -38,14 +39,16 @@ import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
+import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
 
-const centerWheel = (state, center, choices, reads) =>
+const centerWheel = (state, center, choices, reads, marks = null) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
       choices,
       reads,
       attribute : 'data-wheel-substance',
       extra : ' data-center-id="' + escapeText(center.id) + '"',
-      pad : center.id
+      pad : center.id,
+      marks
     });
 export function glandProfile(state, center) {
   const substances = state.document.substances;
@@ -60,7 +63,31 @@ export function glandProfile(state, center) {
          t('studio.marks.less', {name : label('inspector.glandBinds')}) + '</span></div>';
 }
 const CHIP_DOT = Object.freeze({half : 8, radius : 6});
-export function hormonePad(state, organ, center) {
+// The blood sense in one wheel: which substance (the point, its width at the handle), how faint a
+// level the cells notice (the catching ring, wider the more sensitive), the cells on that ring and,
+// where they get used to a lasting level, the adaptation arc round the wheel.
+function bloodMarks(state, center, held) {
+  const W = WHEEL, at = {x : wheelX(center.q1), y : wheelY(center.q2)};
+  const sensitive = held ?? senseSensitivity(state, center) ?? 0;
+  const ring = W.ring * (W.least + (W.most - W.least) * sensitive);
+  const cells = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
+    const a = Math.PI / 2 + 2 * Math.PI * k / ATELIER_LIMITS.max_copies;
+    return {x : at.x + (ring + W.cells) * Math.cos(a), y : at.y + (ring + W.cells) * Math.sin(a)};
+  });
+  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
+  const up = r => ({x : at.x, y : at.y - r});
+  return {
+    ring,
+    svg : (answer?.adapt?.steps > 0
+               ? adaptationMarks({x : W.centre, y : W.centre}, W.radius + W.arc,
+                                 Math.atan2(at.y - W.centre, at.x - W.centre), center)
+               : '') +
+              cellMarks(cells, center) +
+              sensitivityHandle(up(W.ring * W.least), up(W.ring * W.most), sensitive,
+                                label('inspector.bloodSensitivity'))
+  };
+}
+export function hormonePad(state, organ, center, held = null) {
   const wheel = state.capabilities;
   const all = Array.from({length : wheel?.bloodSubstances ?? 0}, (_, i) => i);
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
@@ -73,7 +100,8 @@ export function hormonePad(state, organ, center) {
       name : substanceName(state, index)
     };
   }, {add : label('inspector.addBloodType'), remove : label('inspector.removeBloodType')}) : '';
-  return chips + centerWheel(state, center, all);
+  return '<div data-sense-block="' + escapeText(organ.id) + '">' + chips +
+         centerWheel(state, center, all, Infinity, bloodMarks(state, center, held)) + '</div>';
 }
 export function chemistry(state, organ, center) {
   const wheel = state.capabilities, doc = state.document;
@@ -365,6 +393,12 @@ export const WHEEL = Object.freeze({
   radius : 51,
   point : 11,
   ring : 15,
+  // The blood sense's catching ring spans this share of the ring from least to most sensitive;
+  // its cells sit just outside it, the adaptation arc well outside the wheel.
+  least : .5,
+  most : 1.6,
+  cells : 5,
+  arc : 40
 });
 const wheelX = x => WHEEL.centre + x * WHEEL.radius, wheelY = y => WHEEL.centre - y * WHEEL.radius;
 export const wheelPatch = (fx, fy) => ({
@@ -399,7 +433,8 @@ function substanceWheel(state, profile, {
   pad = null,
   selected = null,
   reads = Infinity,
-  widthTarget = null
+  widthTarget = null,
+  marks = null
 }) {
   const wheel = state.capabilities;
   if (!wheel)
@@ -436,7 +471,7 @@ function substanceWheel(state, profile, {
                               : '';
   // The profile's point as a ring around it, under the substances, so their marks stay readable.
   const marker = pad ? '<circle class="aid-vector-point" cx="' + px(profile.x) + '" cy="' +
-                           py(profile.y) + '" r="' + WHEEL.ring + '"/>'
+                           py(profile.y) + '" r="' + fixed(marks?.ring ?? WHEEL.ring) + '"/>'
                      : '';
   const attributes = pad           ? 'data-graphic-handle="width"'
                      : widthTarget ? 'data-wheel-width="' + escapeText(widthTarget) + '"'
@@ -452,10 +487,11 @@ function substanceWheel(state, profile, {
                      : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
-         ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
+         (marks ? ' data-sense-field="' + escapeText(pad) + '"' : '') + ' viewBox="0 0 ' +
+         WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
          WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo + marker +
-         points.join('') + handle + '</svg>';
+         points.join('') + (marks?.svg ?? '') + handle + '</svg>';
 }
 function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];

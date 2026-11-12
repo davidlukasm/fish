@@ -366,7 +366,8 @@
     "proposedLink": "CPPN-Kontaktvorschläge",
     "proposalCount": "Kontaktvorschläge",
     "stimulusResponse": "Antwort auf anhaltenden Reiz",
-    "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft"
+    "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft",
+    "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff"
   },
   "effects": [
     "erregt oder hemmt die Zelle",
