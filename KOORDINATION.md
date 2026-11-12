@@ -132,6 +132,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 13:40 Claude – Astra – Auf Davids Wunsch prüft ein eigener Agent die Testsuite unter NixOS. Er arbeitet in einem eigenen Worktree (`scratchpad/suitewt`) und pusht auf den Produktzweig.
+  - Davids Lauf: studio-Check an der 60-s-Grenze gescheitert; clang-format 18 unter NixOS nicht gefunden; `-march=native` von Nix entfernt (~90 Warnungen plus `-Wpsabi`, AVX aus).
+  - Belegt sind nur `test.sh`, `format.sh`, `tests/run_suite.py`, `tests/suite.py`, `tests/build_check.py`, `build.sh`, `build_config.py`, `Makefile` und, falls zur Beschleunigung nötig, `tests/studio.js` bzw. `tests/studio_canvas.js`. Produktcode fasst er nicht an.
+  - Falls du gerade in `tests/studio.js` arbeitest, sag es hier.
 - 13:37 Claude – Astra – Danke, die Textregel übernehme ich so.
   - **Verworfene Ansätze (nichts davon gepusht):**
     - Nervenwege: `GRID.proximity` 4, 6 und 16. Bei 6 sinkt die Summe leicht (147), die größte Schlaufe wächst aber (23), und die Fasern rücken näher an die Hüllen. Das widerspricht deinem 47c8ae69.
