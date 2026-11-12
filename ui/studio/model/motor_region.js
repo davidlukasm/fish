@@ -12,8 +12,10 @@ import {RHYTHM_TAU, TONIC_LEARNING, neuralPlan, pacemakerCell, regionCell} from 
 const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
 // The output nodes drive muscles directly, like motor neurons: more cells and full contacts.
 const DRIVER = Object.freeze({copies : 8, electrical_limit : 1});
-// A first retreat may occur long after maturity; weak spontaneous activity keeps it learnable.
-const RETREAT_DRIVER = Object.freeze({...DRIVER, pace : .5, threshold : .25});
+// A command first needed long after maturity (a retreat, a flight) stays faintly active: weak
+// spontaneous activity keeps it learnable without making it act at rest.
+const FAINT = Object.freeze({pace : .5, threshold : .25});
+const RETREAT_DRIVER = Object.freeze({...DRIVER, ...FAINT});
 // Listeners keep their resting rhythm for life: a meal or a second smell first arrives after
 // hatching, and a contact grows only while its target cell is active.
 const listener = (node, preset, set = {}) => regionCell(node, preset, 'in', set, TONIC_LEARNING);
@@ -47,7 +49,7 @@ export function motorPlan(doc, organ) {
     // Retreat stops rowing on both sides: the fin request may be wired across the body while
     // the reverse muscle is wired on the same side.
     nodes.push(regionCell('reverse', 'relay', 'out', RETREAT_DRIVER, TONIC_LEARNING),
-               listener('retreat', 'relay', {pace : .5, threshold : .25}),
+               listener('retreat', 'relay', FAINT),
                regionCell('backStop', 'inhibit', 'out', RETREAT_DRIVER, TONIC_LEARNING));
     inner.push([ 'retreat', 'reverse' ], [ 'retreat', 'brake' ], [ 'retreat', 'backStop' ],
                [ 'backStop', 'turn' ]);
@@ -74,8 +76,9 @@ export function motorPlan(doc, organ) {
     if (r.retreat)
       cross.push([ 'retreat', 'backStop' ], [ 'retreat', 'brake' ]);
     // Danger on one side turns the fish away from it, with the fins and, through the spine, with
-    // an escape stroke of the tail.
-    nodes.push(listener('flee', 'relay'), regionCell('escape', 'relay', 'out', DRIVER));
+    // an escape stroke of the tail. Flight stays faint at rest: a full resting rhythm would beat
+    // escape strokes all the time and starve the fish.
+    nodes.push(listener('flee', 'relay', FAINT), regionCell('escape', 'relay', 'out', DRIVER));
     cross.push([ 'flee', 'turn' ], [ 'flee', 'escape' ]);
     if (r.compete) {
       nodes.push(listener('oppose', 'inhibit'));

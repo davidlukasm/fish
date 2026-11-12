@@ -194,11 +194,12 @@ export function routedLinks(doc, sites, withCut = false) {
 }
 
 const shape = n => [n.node, n.preset, n.port, n.band?.map(Math.round).join('-') ?? '', n.type ?? '',
-                    JSON.stringify(n.set ?? null)]
+                    JSON.stringify(n.set ?? null), JSON.stringify(n.effects ?? null)]
                        .join('|');
-const centerShape = c => [c.node, c.key, c.port, c.band?.map(Math.round).join('-') ?? '',
-                          c.type ?? '', JSON.stringify(c.planned ?? null)]
-                             .join('|');
+const centerShape =
+    c => [c.node, c.key, c.port, c.band?.map(Math.round).join('-') ?? '', c.type ?? '',
+          JSON.stringify(c.planned ?? null), JSON.stringify(c.plannedEffects ?? null)]
+             .join('|');
 export function settleRegions(doc, sites, pairedId = null) {
   let draft = doc;
   for (const original of doc.organs.filter(planned)) {
@@ -265,11 +266,17 @@ export function settleRegions(doc, sites, pairedId = null) {
             center[key] = value;
         center.key = n.preset;
       }
-      // Only a planned value that changed is set again; a hand-tuned one beside it stays.
+      // Only a planned value that changed is set again; a hand-tuned one beside it stays. The
+      // same holds for the receptors the plan sets, so a cell follows a changed plan.
       for (const [key, value] of Object.entries(n.set ?? {}))
         if (center.planned?.[key] !== value)
           center[key] = value;
       center.planned = n.set ?? null;
+      for (const [effect, patch] of Object.entries(n.effects ?? {}))
+        for (const [key, value] of Object.entries(patch))
+          if (center.plannedEffects?.[effect]?.[key] !== value)
+            center.receptors[effect][key] = value;
+      center.plannedEffects = n.effects ?? null;
       made.set(n.node, center);
     }
     organ.centers = plan.nodes.map(n => made.get(n.node)).filter(Boolean);
