@@ -140,6 +140,28 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 19:50 Fable – Claude, Astra – **Sinnesorgane, Teil 1: Nase und Barteln (Wirkung im Code; noch kein Bild gebaut).** `VISUALISIERUNG.md` gelesen, danke. Davids Richtung von 16:19–16:21 (Nase mono, Barteln als Stereo-Nahsinn, Strömung) ist noch nicht entschieden; die Tabellen beschreiben den heutigen Code.
+
+  **Nase** (`organs.js:96`, Riechzellen außen in Zone 0)
+  | Einstellung | Wirkung im Code | Folge für den Fisch | Darstellung der Wirkung |
+  |---|---|---|---|
+  | Platz der Nase | Jede Zelle misst das Duftfeld an ihrer Hautstelle: `at = Körper + Radius·(longitudinal, lateral)` (`cppn_brain.cc:362–365`); Duftfeld bilinear aus 24-px-Zellen (`small_animals.cc:13, 47`) | An der Schnauzenspitze liegen links und rechts 0,7 px auseinander: kein Seitenunterschied (gemessen 0,002–0,02). Weiter hinten/außen wäre er größer | Zwei Messpunkte auf einem Duftgefälle neben einer Pflanze; der Unterschied zwischen beiden als sichtbare Größe |
+  | Duftart und Breite (q1, q2, qwidth) | `scent_affinities` auf der Duftkugel (`receptor_tuning.hh:33–47`): Gewicht je Duftart, Antwort auf die gewichtete Summe | Was er riecht: Liora nur Pflanzen (1,0; Algen 0,005), eine breite Zelle alles ein wenig | Die acht Nahrungen, jede so deutlich, wie die Zelle sie riecht (heutige Duftkarte passt) |
+  | Schwelle | θ = 0,0003·333^t (`body_plan.cc:319`); Antwort = s/(s+θ+gewohnt) (`cppn_brain.cc:254–265`, `body_plan.cc:1182`) | Ab welcher Verdünnung er etwas riecht, also aus welcher Entfernung zur Quelle | Pflanze mit Duftwolke, Grenze „ab hier riecht er sie" wandert mit der Schwelle |
+  | Gewöhnung (τ) | `adaptation_rate = 1/Zeitschritte` (`body_plan.cc:327`); gewohnter Wert folgt dem Reiz. Gleichbleibender Duft endet bei s/(2s+θ) ≤ 0,5, steigender liegt darüber | Die Zelle meldet vor allem „wird stärker"; in der Wolke stehend bleibt die halbe Antwort. Kurzes τ: nur schnelle Annäherung zählt | Fisch schwimmt in eine Wolke hinein und bleibt stehen: Antwort entlang des Wegs, nicht „Antwort über Zeit" |
+  | Zellzahl | Zellen einer Gruppe teilen einen Rezeptor (`cppn_brain.cc:336–343`): gleiches Signal auf n Nervenzellen; mehr Masse und Unterhalt (`body_plan.cc:276`) | Lautere Stimme der Nase im Gehirn, höhere Kosten | kleine Zahl; Wirkung allenfalls an der Verbindung ins Gehirn |
+  | Feldbreite (`field`) | **wird für Riechzellen nirgends gelesen** (`spatial_width` nur bei Barteln, Tasten, Schmerz, Strömung; `width` nur beim Sehen) | keine | **totes Gen** – nicht darstellen; besser entfernen oder ihm eine Wirkung geben |
+
+  **Barteln** (`organs.js:103`, Schmeckzellen, `field: BARBEL_FEEL`)
+  | Einstellung | Wirkung im Code | Folge für den Fisch | Darstellung der Wirkung |
+  |---|---|---|---|
+  | Zellzahl | Bartellänge = Radius·(0,22 + 0,35·g/(g+3)), g = √Zellen (`body_plan.cc:993–1001`, `barbel::*`); Spitzen ±0,45 rad vor dem Maul | **Mehr Zellen = längere Barteln = er ertastet Futter früher und weiter seitlich** (höchstens 0,57 Radien) | Barteln am Fisch wachsen sichtbar; ihre Reichweite vor dem Maul als Fläche |
+  | Schmecken ↔ Tasten (`field`) | Antwort = (1−f)·Geschmack + f·Berührung an der Spitze (`cppn_brain.cc:381–389`, `tip_contact` mit 2 px Reichweite) | f = 0: meldet nur passende Nahrung; f = 1: meldet jede Berührung, auch Stein und Fisch | Spitze berührt Blatt, Stein, Futter: welche davon die Zelle meldet |
+  | Duftart und Breite | wie Nase (`r.scents`), aber nur was die Spitze berührt | Welche Nahrung als „essbar" erkannt wird; steuert bei Liora Beißen (`barbels → motor.near/grip`) | dieselben acht Nahrungen an der Bartelspitze |
+  | Schwelle, Gewöhnung | Geschmack ist 0 oder 1 je Berührung, kein gewöhnender Sinn (`adapting_sense`, `brain_interface.hh:18`): Schwelle verschiebt nur die Höhe der Antwort (1/(1+θ)), τ wirkt nur als Einblendung nach dem Schlupf (`birth_exposure`) | praktisch keine | **zwei fast tote Einstellungen**; nicht mit Griffen darstellen |
+
+  **Für die Evolution (Davids Punkt von 17:35, „es muss grundsätzlich möglich sein"):** Einstellungen ohne Wirkung sind Gene, an denen keine Mutation etwas verbessern kann. Bisher gefunden: Sehschwelle (behoben, `175c083`), Feldbreite der Nase, Schwelle/τ der Barteln, τ der Sehzelle (nur Einblendung). Ich führe die Liste bei den übrigen Sinnen weiter (Seitenlinie, Gleichgewicht, Tasten, Schmerz, Blut, Nahsinn) und melde sie zusammen.
+
 - 17:35 Claude – Astra, Fable – **Gepusht:** c1802974 Darmsinn. Das Darmbild zeigt nur noch Länge und Zellpunkte. Darunter stehen zwei Bilder:
   - Füllzellen: „halb bei n % Füllung“.
   - Futterzellen: „halb ab n % des Ruhebedarfs“, über den gelieferten Nährstoffen, und darunter die Gewöhnung bei gleichbleibendem Fressen, „halb gewöhnt nach n Schritten“.
