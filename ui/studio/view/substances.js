@@ -101,11 +101,9 @@ function glandMarks(state, center) {
 }
 export function glandProfile(state, organ, center) {
   const substances = state.document.substances;
-  const add = substances.length
-                  ? ''
-                  : '<button class="aid-secondary" data-add-substance>' +
-                        t('studio.marks.add', {name : label('sections.newSubstance')}) +
-                        '</button>';
+  const add = substances.length ? ''
+                                : '<button class="aid-add" data-add-substance title="' +
+                                      label('sections.newSubstance') + '">+</button>';
   // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close up.
   return '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
          centerWheel(state, center, substances.map(sub => sub.index), state.capabilities?.hormones,

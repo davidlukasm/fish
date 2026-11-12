@@ -485,7 +485,7 @@
 .aid-sight-knob{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2;cursor:ew-resize}
 .aid-eye-section{border-top:1px solid #2c4c52;padding:12px 0 6px}
 .aid-eye-section h4{margin:0 0 8px;font:600 11px system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--aid-hint-text)}
-.aid-vision-profiles .aid-add,.aid-side-switch .aid-add{border-style:dashed;color:var(--aid-control-text)}
+.aid-vision-profiles .aid-add,.aid-side-switch .aid-add,.aid-add[data-add-substance]{border-style:dashed;color:var(--aid-control-text)}
 .aid-vision-profiles .aid-subtle{background:none;border-color:transparent;color:var(--aid-hint-text);text-decoration:underline}
 .aid-side-switch{display:flex;margin:10px 0 4px;border:1px solid var(--aid-control-edge);border-radius:9px;overflow:hidden;width:max-content}
 .aid-side-switch button{border:0;border-radius:0;padding:6px 14px}
