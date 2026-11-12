@@ -61,7 +61,8 @@ export function commandLine(state, organ, center, code, kind, oneWay = false) {
          C.width + ',' + C.height + '" data-scale="' + scale + '" data-center="' +
          escapeText(center.id) + '" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' +
          C.handle + '"><title>' + escapeText(word('gateHandle')) + '</title></circle>' +
-         handleWord(at, t('studio.sense.gateWord'), 'under') + '</svg>';
+         // Above the handle, clear of the words for what the organ does either way.
+         handleWord(at, t('studio.sense.gateWord'), 'above') + '</svg>';
 }
 
 // The gate the handle sets, from the pointer `p` in the picture's units, as a patch of the cell.

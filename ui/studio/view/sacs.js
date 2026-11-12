@@ -1,5 +1,4 @@
 import {clamp} from '../../units.js';
-import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
 import {kindLimit, kindNodes, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {groupReport} from '../model/document.js';
@@ -167,8 +166,6 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
              : '';
   const held = Math.round(store.room / store.own.perCell), kept = Math.min(store.growth, held);
   const roomY = levelY(store, store.room), curve = fillCurve(store, organ.type);
-  const stretch = pressure ? activationLevel(unitOfPlan(pressure.threshold)) : null;
-  const stretchY = stretch === null ? 0 : levelY(store, stretch * store.room);
   const least = store.minimum && store.minimum < topOf(store)
                     ? '<path class="aid-sac-least" d="M' + S.left + ' ' +
                           fixed(levelY(store, store.minimum)) + ' H' + S.right + '"/>'
@@ -179,16 +176,15 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
   // The chosen working cells' gate, else the releasing ones', sits in the command line below.
   const motor = [ growth, release ].find(c => c && selected?.key === c.key) ?? release ?? growth;
   // What the cells do, written where it shows: how long the store takes to fill, what one release
-  // gives, whether it waits for a command, and at which fill the stretch cells report.
+  // gives and whether it waits for a command. What the stretch cells report has its own picture.
+  // The filling time ends at the right, where its words always fit.
   const say = (content, x, y, anchor = 'start') => '<text class="aid-handle-word" x="' + fixed(x) +
                                                    '" y="' + fixed(y) + '" text-anchor="' + anchor +
                                                    '">' + escapeText(content) + '</text>';
   const [fillWord, productWord] = [ facts.growth[1], facts.release[1] ];
-  const words = say(fillWord, Math.min(curve.knee.x, S.right), curve.knee.y - S.gap,
-                    curve.knee.x > (S.left + S.right) / 2 ? 'end' : 'start') +
+  const words = say(fillWord, S.right, curve.knee.y - S.gap, 'end') +
                 say(productWord, S.right, S.base + S.below, 'end') +
                 (store.releaseEnabled ? '' : say(facts.release[0], S.right, roomY - S.gap, 'end')) +
-                (pressure ? say(facts.pressure[0], S.right, stretchY + S.below, 'end') : '') +
                 '<text class="aid-handle-word" transform="translate(' + S.title + ' ' +
                 fixed((S.top + S.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
                 escapeText(label('inspector.gonad.store')) + '</text>' +
@@ -201,12 +197,6 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
          part(release, chambers(store, kept, held, 'release', organ.type) + curve.html) +
          '<path class="aid-sac-room" d="M' + S.stack[0] + ' ' + fixed(roomY) + ' H' + S.right +
          '"/>' +
-         part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +
-                            S.right + '"/>') +
-         (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' + S.left +
-                         '" cy="' + fixed(stretchY) + '" r="' + S.handle + '"><title>' +
-                         label('inspector.stretch') + '</title></circle>'
-                   : '') +
          (growth ? '<circle class="aid-graphic-handle" data-sac-handle="cells" cx="' +
                        fixed((S.stack[0] + S.stack[1]) / 2) + '" cy="' + fixed(roomY) + '" r="' +
                        S.handle + '"><title>' + label('inspector.cellsHandle') + '</title></circle>'
@@ -216,16 +206,12 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
                      organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true) +
          (pressure ? pressureCurve(state, organ, pressure, dragged) : '');
 }
-export function sacPatch(state, organ, handle, fy) {
+// The cells the handle on the store's room sets, from the pointer's height.
+export function sacPatch(state, organ, fy) {
   const store = gonadStore(state, organ);
   if (!store)
     return null;
   const energy = energyAt(store, fy * STORE.height);
-  if (handle === 'stretch')
-    return {
-      threshold :
-          planOfUnit(activationQuality(clamp(energy / Math.max(Number.EPSILON, store.room))))
-    };
   const cells = Math.max(1, Math.round(energy / store.own.perCell));
   return {
     nodes : 2 * clamp(Math.round((cells - (store.motors - store.growth)) / 2), 1,
@@ -233,7 +219,7 @@ export function sacPatch(state, organ, handle, fy) {
   };
 }
 // What each part does, for its tooltip: how many cells fill the store and how fast, when it
-// releases and what, and at what filling the stretch cells answer.
+// releases and what.
 function gonadFacts(state, organ, store) {
   const words = key => t('studio.inspector.gonad.' + key, {
     n : Number.isFinite(store.steps) ? store.steps : 0,
@@ -243,7 +229,6 @@ function gonadFacts(state, organ, store) {
     least : Math.round(store.minimum ?? 0),
     duration : store.incubation ?? 0
   });
-  const pressure = organ.centers.find(c => c.key === 'pressure');
   const product = organ.type !== 'eggs'         ? words('sperm')
                   : !store.minimum              ? words('egg')
                   : store.spawn < store.minimum ? words('food')
@@ -253,10 +238,7 @@ function gonadFacts(state, organ, store) {
       words('cells'), Number.isFinite(store.steps) ? words('fullIn') : words('driven'),
       store.motors * store.own.perCell > store.own.most ? words('ceiling') : ''
     ].filter(Boolean),
-    release : [ words(store.releaseEnabled ? 'releaseOn' : 'trigger'), product ],
-    pressure : pressure ? [ t('studio.inspector.gonad.stretch',
-                              {share : percent(activationLevel(unitOfPlan(pressure.threshold)))}) ]
-                        : []
+    release : [ words(store.releaseEnabled ? 'releaseOn' : 'trigger'), product ]
   };
 }
 // What a sac's pressure cells report, below its pictures: over how full the sac is, half at their

@@ -2930,9 +2930,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(sacs.gonadStore({...sacState, previewInput : 0}, small).steps, Infinity);
     const sac = sacs.gonadGraphic(sacState, small);
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
-    assert.ok(sac.includes('data-sac-handle="cells"') && sac.includes('data-sac-handle="stretch"'));
-    assert.ok(sacs.sacPatch(sacState, small, 'cells', .2).nodes > 2);
-    assert.equal(sacs.sacPatch(sacState, small, 'cells', .9).nodes, 2);
+    assert.ok(sac.includes('data-sac-handle="cells"'));
+    assert.ok(!sac.includes('data-sac-handle="stretch"'),
+              'The stretch cells are set in their own report picture, not twice');
+    assert.ok(sacs.sacPatch(sacState, small, .2).nodes > 2);
+    assert.equal(sacs.sacPatch(sacState, small, .9).nodes, 2);
     const testis =
         model.addOrgan(model.newDocument('Spermien'), 'sperm', sites, {x : 708, y : 380});
     const testisState = {document : testis.document, sites, capabilities : sitesResult};

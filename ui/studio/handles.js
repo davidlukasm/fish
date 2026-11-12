@@ -273,7 +273,7 @@ export const GRIPS = Object.freeze([
     graphic : '[data-sac]',
     handle : '[data-sac-handle]',
     held : 'drive',
-    start : (studio, g, h) => ({id : g.dataset.sac, handle : 'sac', name : h.dataset.sacHandle})
+    start : (studio, g) => ({id : g.dataset.sac, handle : 'sac'})
   },
 
   {
@@ -625,14 +625,11 @@ export const handleMethods = {
   },
   sacPointer(drag, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id);
-    const patch = organ && sacPatch(this.state, organ, drag.name, fy);
+    const patch = organ && sacPatch(this.state, organ, fy);
     if (!patch)
       return;
-    const pressure = organ.centers.find(c => c.key === 'pressure');
-    const changed = 'nodes' in patch
-                        ? patch.nodes !== kindNodes(organ).length &&
-                              setOrganNodes(doc, organ.id, patch.nodes, this.state.sites)
-                        : pressure && updateCenter(doc, pressure.id, patch);
+    const changed = patch.nodes !== kindNodes(organ).length &&
+                    setOrganNodes(doc, organ.id, patch.nodes, this.state.sites);
     if (!changed)
       return;
     this.draftDesign(changed, 'sac:' + drag.id);

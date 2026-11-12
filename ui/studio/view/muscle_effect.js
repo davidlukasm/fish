@@ -49,7 +49,8 @@ const ENDURE = Object.freeze({
   title : 12,
   axis : 98,
   costs : [ 112, 124 ],
-  bar : 110,
+  // The cost bars start clear of their words.
+  bar : 124,
   thick : 6,
   handle : 5.5
 });

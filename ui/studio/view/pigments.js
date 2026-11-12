@@ -109,13 +109,14 @@ export function pigmentAmount(fx, fy, room, before = 0, most = room) {
 // Time: after a strong command the spread comes on over the cells' time, 1 − e^(−t/τ).
 const SPREAD = Object.freeze({
   width : 300,
-  height : 74,
+  height : 80,
   left : 56,
   right : 264,
   fish : 16,
   scale : .046,
   axis : 40,
-  words : 66,
+  // The ends' words, clear of a handle's word written below it.
+  words : 72,
   edge : 30,
   count : 5,
   handle : 5.5,
@@ -128,7 +129,9 @@ const spreadColour = (range, d) => {
   const at = clamp(d) * (range.length - 1), k = Math.min(range.length - 2, Math.floor(at));
   return cssColour(range[k].map((v, c) => v + (range[k + 1][c] - v) * (at - k)));
 };
-function spreadRow(organ, center, range, key, spreadAt, handle, word, marks) {
+// `place` puts the handle's word where it fits: above the handle, or below it, growing towards
+// the middle, for words too long to centre on a handle near an end.
+function spreadRow(organ, center, range, key, spreadAt, handle, word, marks, place = 'above') {
   const S = SPREAD, x = share => S.left + (S.right - S.left) * share;
   const fish =
       Array
@@ -155,7 +158,7 @@ function spreadRow(organ, center, range, key, spreadAt, handle, word, marks) {
          '" data-frame="' + S.width + ',' + S.height + '" data-center="' + escapeText(center.id) +
          '"' + marks + ' cx="' + fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' + S.handle +
          '"><title>' + escapeText(label(key + '.handle')) + '</title></circle>' +
-         handleWord(at, word, 'above') + '</svg>';
+         handleWord(at, word, place) + '</svg>';
 }
 function spreadPictures(state, organ, center) {
   const colours = fishColours(state.document, state.anatomy), scale = state.capabilities?.biasScale;
@@ -174,7 +177,7 @@ function spreadPictures(state, organ, center) {
                    share => -Math.expm1(-share * window / tau),
                    {share : tau * Math.LN2 / window, values : {n : window}},
                    label('time.half', {n : formatNumber(tau * Math.LN2, 0)}),
-                   ' data-window="' + window + '"');
+                   ' data-window="' + window + '"', 'below');
 }
 // The change a handle makes, from the pointer `p` in its picture's units, as a patch of the
 // kind's cell.

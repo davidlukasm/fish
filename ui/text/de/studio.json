@@ -263,7 +263,6 @@
       "title": "Seitenführung"
     },
     "kindCount": "{name} ×{n}",
-    "stretch": "Dehnung",
     "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",
     "skin": {
       "field": "Hautfeld ±{degrees}°",
@@ -278,7 +277,6 @@
       "egg": "Ei mit {energy} Energie",
       "food": "Schlupfbedarf etwa {least} bei {duration} Schritten",
       "sperm": "{energy} Energie je Abgabe",
-      "stretch": "meldet ab {share} Füllung",
       "developmentEnergy": "Ei mit {energy} Energie; Schlupfbedarf etwa {least} bei {duration} Schritten",
       "releaseOn": "Auslösekommando liegt an",
       "store": "Vorrat",
@@ -906,12 +904,10 @@
     "gills": {
       "title": "Kiemen",
       "handle": "Ziehen: wie dicht die Kiemenreusen stehen",
-      "open": "offen · viel Wasser",
-      "dense": "dicht · Plankton",
       "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}.",
       "word": "Planktonsieb",
       "passage": "{share} Wasser kommt durch",
-      "kept": "Plankton gehalten {share}"
+      "kept": "hält {share} des Planktons"
     },
     "gutmuscle": {
       "title": "Darmmuskel",
