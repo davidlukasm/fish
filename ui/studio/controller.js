@@ -322,6 +322,10 @@ export class OrganStudio {
       return;
     const target = this.root.querySelector(this.state.mode === 'fish' ? '.aid-scene-frame'
                                                                       : '#' + CPPN_SCENE_ID);
+    const zoom = this.state.camera.zoom;
+    this.frameField();
+    if (zoom !== this.state.camera.zoom)
+      this.showZoom();
     if (target)
       target.innerHTML = this.state.mode === 'fish' ? fishScene(this.state) : cppnGraph(this.state);
     const svg = this.bodyMap();

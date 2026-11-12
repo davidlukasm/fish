@@ -181,6 +181,25 @@ function testLight(state, organ, g) {
              fixed(c.x + r)}" cy="${fixed(c.y)}" r="${LIGHT_KNOB}" aria-label="${
              label(near ? 'objectSize' : 'size')}"/></g>`;
 }
+// The points a chosen field organ needs in view: its eye, the handles on its field with their
+// labels, and the test light once its place is known, for the organ and its twin.
+const EXTENT = Object.freeze({steps : 8, label : 1.15});
+export function fieldExtent(state, organ) {
+  const twin = organ.pair && findOrgan(state.document, organ.pair);
+  return [ organ, twin ].filter(o => o?.field).flatMap(o => {
+    const g = visionGeometry(state, o), f = o.field;
+    if (!g)
+      return [];
+    const light = lightAt(state, o, g), r = light ? state.sightProbe.radius * g.world : 0;
+    return [
+      g.eye,
+      ...Array.from({length : EXTENT.steps + 1},
+                    (_, k) => g.ring(o.side * (f.lo + (f.hi - f.lo) * k / EXTENT.steps),
+                                     g.handle * EXTENT.label)),
+      ...(light ? [ {x : light.x - r, y : light.y - r}, {x : light.x + r, y : light.y + r} ] : [])
+    ];
+  });
+}
 const BANDS = Object.freeze({reach : 2.2, label : 1.7});
 export function tectumBands(state) {
   const doc = state.document, chosen = organOf(doc, state.selected?.id);

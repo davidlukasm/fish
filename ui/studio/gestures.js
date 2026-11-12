@@ -10,12 +10,14 @@ import {
   CAMERA_HOME,
   CAMERA_ZOOM,
   cameraBox,
+  FISH_BOX,
   cameraCoordinates,
   cameraScale,
   STEADY,
   steadyScale,
   viewBoxOf
 } from './view/frame.js';
+import {fieldExtent} from './view/vision.js';
 import {arrowSize} from './view/wires.js';
 import {BODY_MAP, LAYER} from './view/scene.js';
 import {dataAttribute, pointText} from './view/markup.js';
@@ -51,13 +53,15 @@ export const gestureMethods = {
     clearTimeout(this.zoomRest);
     if (gliding && this.glideZoom(previous))
       this.zoomRest = setTimeout(() => this.zoom(c.zoom), ZOOM_REST);
-    else {
+    else
       this.refreshScene();
-      this.refreshSwitches();
-    }
+    this.showZoom();
+  },
+  showZoom() {
+    this.refreshSwitches();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
-      stamp.textContent = zoomStamp(c);
+      stamp.textContent = zoomStamp(this.state.camera);
   },
   // Follows a zoom step without redrawing: the view box, the ground, the steady marks, the node
   // dots and the arrow heads take the new zoom as they would after a redraw.
@@ -98,6 +102,41 @@ export const gestureMethods = {
       c.zoom = Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step);
     if (c.zoom !== start)
       this.zoom(c.zoom);
+  },
+  // A chosen eye or near sense shows its whole field with the handles on it. The view widens once,
+  // when the organ is chosen; it returns when the organ is let go, unless the user moved it.
+  frameField() {
+    const s = this.state, c = s.camera,
+          chosen = s.selected?.kind === 'organ' && s.mode === 'fish'
+                       ? findOrgan(s.document, s.selected.id)
+                       : null;
+    // The test light finds its place only after the organ is chosen; the view is framed again then.
+    const points = chosen?.field ? fieldExtent(s, chosen) : [],
+          id = points.length ? chosen.id + ' ' + points.length : null, framed = this.fieldFrame;
+    if (id === (framed?.id ?? null))
+      return;
+    const same = (a, b) => a.zoom === b.zoom && a.x === b.x && a.y === b.y;
+    if (framed && same(c, framed.shown))
+      Object.assign(c, framed.before);
+    this.fieldFrame = null;
+    if (!id)
+      return;
+    const view = cameraBox(c), edge = VIEW_ROOM.edge / view.zoom;
+    const xs =
+              [
+                view.x + VIEW_ROOM.left / view.zoom, view.x + view.width - edge,
+                ...points.map(p => p.x)
+              ],
+          ys = [ view.y + edge, view.y + view.height - edge, ...points.map(p => p.y) ];
+    const left = Math.min(...xs), top = Math.min(...ys), width = Math.max(...xs) - left,
+          height = Math.max(...ys) - top;
+    const zoom = Math.min(view.zoom, (FISH_BOX.width - VIEW_ROOM.left - VIEW_ROOM.edge) / width,
+                          (FISH_BOX.height - 2 * VIEW_ROOM.edge) / height);
+    const before = {...c};
+    c.zoom = Math.max(CAMERA_ZOOM.min, zoom);
+    c.x = left + width / 2 + (VIEW_ROOM.edge - VIEW_ROOM.left) / (2 * c.zoom);
+    c.y = top + height / 2;
+    this.fieldFrame = {id, before, shown : {...c}};
   },
   drawConnectingLine(from, to) {
     this.root.querySelector(LAYER.line)

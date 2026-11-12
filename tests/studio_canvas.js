@@ -183,7 +183,8 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     state : state(doc),
     root : {querySelector : () => null},
     refreshScene() {},
-    refreshSwitches() {}
+    refreshSwitches() {},
+    showZoom : gestureMethods.showZoom
   };
   const anchor = {x : 320, y : 250}, beforeZoom = {...zoomed.state.camera};
   gestureMethods.zoom.call(zoomed, 1.65, anchor);
@@ -193,6 +194,30 @@ module.exports = async function checkCanvas(model, capabilities, root) {
                        (anchor[axis] - zoomed.state.camera[axis]) * zoomed.state.camera.zoom) <
                   1e-8,
               'The point under the pointer remains fixed while zooming');
+  const {fieldExtent} = await import('../ui/studio/view/vision.js');
+  const {cameraBox} = await import('../ui/studio/view/frame.js');
+  const framed = {state : {...state(pickedEye.document), mode : 'fish'}};
+  const home = {...framed.state.camera};
+  framed.state.selected = {kind : 'organ', id : eye.id};
+  gestureMethods.frameField.call(framed);
+  const shown = cameraBox(framed.state.camera), handles = fieldExtent(framed.state, eye);
+  assert.ok(handles.length > 2 && framed.state.camera.zoom < home.zoom);
+  assert.ok(handles.every(h => h.x >= shown.x + 80 / shown.zoom - 1e-6 &&
+                               h.x <= shown.x + shown.width && h.y >= shown.y &&
+                               h.y <= shown.y + shown.height),
+            'A chosen eye has its whole field and the handles on it in view, clear of the tools');
+  gestureMethods.frameField.call(framed);
+  assert.deepEqual(cameraBox(framed.state.camera), shown, 'The view is framed once');
+  framed.state.selected = null;
+  gestureMethods.frameField.call(framed);
+  assert.deepEqual(framed.state.camera, home, 'Letting the eye go returns the view');
+  framed.state.selected = {kind : 'organ', id : eye.id};
+  gestureMethods.frameField.call(framed);
+  framed.state.camera.x += 5;
+  const kept = {...framed.state.camera};
+  framed.state.selected = null;
+  gestureMethods.frameField.call(framed);
+  assert.deepEqual(framed.state.camera, kept, 'A view the user moved stays where it is');
   const picked = {
     ...dropMethods,
     state : {armed : null, sites : [], document : model.newDocument('')},
