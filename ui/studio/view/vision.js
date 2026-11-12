@@ -32,20 +32,14 @@ const HANDLE = Object.freeze({radius : 235, reach : 150, hint : 1.7});
 const CUT = Object.freeze({margin : 10});
 const FIELD = Object.freeze(
     {resolution_reach : .77, density_start : 14, density_step : 7, density_max : 16, mark : 7});
-function enginePlace(anatomy, side) {
-  const place = anatomy?.eyePlaces?.[sideIndex(side)];
-  return place ? {
-    x : BODY_MIDDLE.x - place[0] * BODY_RADIUS,
-    y : BODY_MIDDLE.y + place[1] * BODY_RADIUS
-  }
-               : null;
-}
 const distance = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 export function visionGeometry(state, organ) {
   const eye = fieldOrigin(state.document, state.sites, organ);
   if (!eye)
     return null;
-  const a = state.anatomy, origin = enginePlace(a, sideOf(organ)) ?? eye;
+  // The field opens at the eye as drawn. The engine places a test light by its bearing and
+  // distance from its own eye (atelier.cc, sight_report), so light and field still agree.
+  const a = state.anatomy, origin = eye;
   const g = {
     origin,
     eye,

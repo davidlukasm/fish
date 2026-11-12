@@ -2569,13 +2569,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(doc.organs.filter(o => o.type === type)
                   .some(o => svg.includes('data-organ="' + o.id + '"')),
               type + ' remains selectable');
-  const fan = vision.visionGeometry(rendered, currentEye),
-        place = seen.eyePlaces[currentEye.side < 0 ? 0 : 1];
+  // The field opens at the eye as drawn.
+  const fan = vision.visionGeometry(rendered, currentEye);
   assert.deepEqual(fan.eye, views.viewOrigin(doc, sites, currentEye.side < 0 ? -1 : 1));
-  assert.ok(
-      Math.abs(fan.origin.x - (geometry.BODY_MIDDLE.x - place[0] * geometry.BODY_RADIUS)) < 1e-9 &&
-      Math.abs(fan.origin.y - (geometry.BODY_MIDDLE.y + place[1] * geometry.BODY_RADIUS)) < 1e-9);
-  assert.ok(fan.cut > Math.hypot(fan.origin.x - fan.eye.x, fan.origin.y - fan.eye.y));
+  assert.deepEqual(fan.origin, fan.eye);
   const inside = {side : currentEye.side, bearing : 30, distance : 0, radius : .01, hue : 20};
   const cleared = vision.clearOfFish(rendered, currentEye, inside);
   const lit = fan.pointText(cleared.bearing, cleared.distance * fan.world);
