@@ -1,404 +1,454 @@
-"""Stations that test a fish with the native tools, one job at a time.
-
-The breeding station lets a fish live in several start worlds without help; the trial lab sets it
-before food or an open mussel and records each approach. Finished runs are kept per genome, so the
-same fish is never tested twice in the same world."""
-import gzip
+"""Interactive native aquaria, with independent command and recording channels."""
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
-import secrets
-import re
-import shutil
-import subprocess
-import tempfile
-import threading
+import math
 from pathlib import Path
+import secrets
+import subprocess
+import threading
 
 from atelier_service import START_DOCUMENTS, genome_text
-from build_config import build_directory
 from file_io import atomic_write
-from protocol_schema import Breeding, TrialKind, TrialLab
-from viewer_paths import ROOT
-from wording import Refusal, worded
 from labor_recording import LifeArchive, read_life
-
-FOLDER = "labor"
-FINGERPRINT_CHARACTERS = 16
-JOB_ID_BYTES = 8
-DETAIL_CHARACTERS = 500
-HABITAT = "aquarium"
+from viewer_paths import ROOT, command_path, engine_path
+from wording import Refusal
 
 
 def start_genome(key):
-    document = START_DOCUMENTS.get(key)
-    if document is None:
+    if not isinstance(key, str) or key not in START_DOCUMENTS:
         raise Refusal("labor.errors.unknownFish")
+    document = START_DOCUMENTS[key]
     return document.with_name(document.name.removesuffix(".fish.json") + ".genome")
 
 
-def fingerprint(genome, engine):
-    return hashlib.sha256((engine + "\0" + genome).encode()).hexdigest()[:FINGERPRINT_CHARACTERS]
+def integer(value, low, high):
+    if isinstance(value, bool) or not isinstance(value, int) or not low <= value <= high:
+        raise Refusal("labor.errors.invalidRequest")
+    return value
 
 
-def whole_number(value):
-    return isinstance(value, int) and not isinstance(value, bool)
+def decimal(value, low, high):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not low <= value <= high:
+        raise Refusal("labor.errors.invalidRequest")
+    return value
 
 
-def parent_generation(sample):
-    """The youngest generation that has had offspring so far, -1 before the first hatch."""
-    return max((g for g, count in sample.get("parents", []) if count > 0), default=-1)
+class NativeWorld:
+    def __init__(self, tool, folder, candidates, seed, copies, steps, parameters=()):
+        self.folder, self.seed, self.limit = Path(folder), seed, steps
+        self.folder.mkdir(parents=True, exist_ok=True)
+        self.candidates = [c["id"] for c in candidates]
+        self.lock, self.transport = threading.RLock(), threading.Lock()
+        self.ready, self.closed = threading.Event(), threading.Event()
+        self.latest, self.scene, self.scene_revision = {}, None, 0
+        self.archives = {name: LifeArchive(self.folder / name) for name in ("trial", "control")}
+        self.lines = {name: {} for name in self.archives}
+        self.events, self.sequence = deque(maxlen=12000), 0
+        self.samples = deque(maxlen=4000)
+        self.pending, self.request_id = {}, 0
+        self.error, self.status = None, "preparing"
+        self.interventions = []
+        self.logs = deque(maxlen=10)
+        self.process = None
+        command = [str(tool), "--laboratory", "--session", str(self.folder), "--seed", str(seed),
+                   "--fish", str(len(candidates) * copies), "--food", "800", "--threads", "2"]
+        for candidate in candidates:
+            command += ["--start-genome", str(candidate["path"])]
+        for name, value in parameters:
+            command += ["--param", f"{name}={value}"]
+        self.process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                        text=True, bufsize=1)
+        threading.Thread(target=self.read, daemon=True).start()
+        threading.Thread(target=self.read_errors, daemon=True).start()
+        threading.Thread(target=self.configure, daemon=True).start()
 
+    def read_errors(self):
+        for line in self.process.stderr:
+            self.logs.append(line.strip())
 
-class World:
-    def __init__(self, seed, steps, folder=None):
-        self.detail_folder = folder
-        self.archive = LifeArchive(folder)
-        self.summary = {"seed": seed, "steps": steps, "samples": [], "deaths": {},
-                        "hatches": 0, "done": False, "lives": self.archive.lives, "scenes": []}
-
-    def prepare(self, event):
-        if event.get("event") == "scene" and self.detail_folder is not None:
-            path = self.detail_folder / f"scene-{event['t']}.json"
-            with path.open("rb") as source, gzip.open(str(path) + ".gz", "wb", compresslevel=1) as target:
-                shutil.copyfileobj(source, target)
-            path.unlink()
-
-    def read(self, event):
-        kind = event.get("event")
-        if kind == "life":
-            self.archive.read(event)
-        elif kind == "setup":
-            self.summary["setup"] = {k: v for k, v in event.items() if k != "event"}
-        elif kind == "recording":
-            self.summary["observation"] = {k: v for k, v in event.items() if k != "event"}
-        elif kind == "scene":
-            self.summary["scenes"].append(event["t"])
-        elif kind == "sample":
-            for life in self.archive.lives.values():
-                if life["hatch"] is None and life["death"] is None:
-                    life["last"] = event["t"]
-            fish = sum(count for _, count in event["swimmers"])
-            self.summary["samples"].append({
-                "step": event["t"], "fish": fish, "eggs": event["n"] - fish,
-                "generation": event["peakGeneration"], "parents": parent_generation(event),
-                "reserve": event["swimmerReserve"], "diet": event["diet"],
-                "availableFeed": event["availableFeed"],
-                "leaves": event["anchoredLeaf"] + event["driftingLeaf"],
-            })
-        elif kind == "hatch":
-            self.summary["hatches"] += 1
-        elif kind == "death":
-            cause = str(event["cause"])
-            self.summary["deaths"][cause] = self.summary["deaths"].get(cause, 0) + 1
-
-
-class Session:
-    """One trial world: the hatch and every trial the lab reports, path included."""
-    TRIAL_EVENTS = {TrialKind.FEED: "trial", TrialKind.MUSSEL: "mussel", TrialKind.CRAB: "crab"}
-
-    def __init__(self, seed, trial):
-        self.event = self.TRIAL_EVENTS[trial]
-        self.summary = {"seed": seed, "trial": trial, "hatch": None, "trials": [], "died": None,
-                        "done": False}
-
-    def prepare(self, event):
-        pass
-
-    def read(self, event):
-        kind = event.get("event")
-        if kind == "hatch":
-            self.summary["hatch"] = event["t"]
-        elif kind == "death":
-            self.summary["died"] = {"egg": bool(event["egg"]), "age": event["age"]}
-        elif kind == self.event:
-            self.summary["trials"].append({k: v for k, v in event.items() if k != "event"})
-
-
-class Results:
-    """Finished runs per fish and variant under data_dir/labor; runs are keyed by seed."""
-
-    def __init__(self, data_dir, prefix, variant, runs, engine):
-        self.folder = Path(data_dir) / FOLDER
-        self.prefix, self.variant, self.runs = prefix, variant, runs
-        self.engine = engine
-
-    def detail_folder(self, mark, variant, seed):
-        return self.folder / f"{self.prefix}-{mark}-{variant}" / str(seed)
-
-    def path(self, mark, variant):
-        return self.folder / f"{self.prefix}-{mark}-{variant}.json"
-
-    def read(self, mark, variant):
+    def configure(self):
+        if not self.ready.wait(90) or self.closed.is_set():
+            return
         try:
-            entry = json.loads(self.path(mark, variant).read_text(encoding="utf-8"))
-            return entry if entry.get("engine") == self.engine else None
-        except (OSError, ValueError):
-            return None
+            self.command(f"lab-stop-at {self.limit}")
+            self.command("delay 10")
+            self.command("resume")
+        except (ValueError, OSError) as error:
+            self.error = str(error)
 
-    def keep(self, mark, variant, name, run):
-        entry = self.read(mark, variant) or {"fingerprint": mark, "engine": self.engine,
-                                             self.variant: variant, self.runs: {}}
-        entry["name"] = name
-        entry[self.runs][str(run["seed"])] = run
-        atomic_write(self.path(mark, variant), json.dumps(entry, separators=(",", ":")))
+    def read(self):
+        try:
+            with (self.folder / "events.jsonl").open("w", encoding="utf-8") as record:
+                for line in self.process.stdout:
+                    event = json.loads(line)
+                    kind = event.get("event")
+                    if kind == "command":
+                        with self.transport:
+                            pending = self.pending.get(event["request"])
+                            if pending:
+                                pending["reply"] = event
+                                pending["done"].set()
+                        continue
+                    if kind == "labor":
+                        with self.lock:
+                            scene = event.pop("scene", None)
+                            if scene is not None:
+                                self.scene, self.scene_revision = scene, self.scene_revision + 1
+                            self.latest = event
+                            self.status = "ready"
+                            if not self.samples or self.samples[-1]["step"] != event["step"]:
+                                self.samples.append({"step": event["step"],
+                                                     "fish": sum(p["hatched"] for p in event["fish"]),
+                                                     "eggs": sum(not p["hatched"] for p in event["fish"]),
+                                                     "reserve": sum(p["energy"] for p in event["fish"]),
+                                                     "intake": sum(p["intake"] for p in event["fish"]),
+                                                     "controlReserve": sum(p["energy"] for p in event.get("control", []))})
+                        self.ready.set()
+                    elif kind in ("life", "labor-line"):
+                        record.write(json.dumps(event, separators=(",", ":")) + "\n")
+                        channel = event.get("world", "trial")
+                        with self.lock:
+                            if kind == "labor-line":
+                                self.lines[channel][str(event["id"])] = event["line"]
+                            else:
+                                self.archives[channel].read(event)
+                                self.sequence += 1
+                                self.events.append({**event, "seq": self.sequence})
+                    elif kind == "labor-error":
+                        self.error = "labor.live.comparisonFailed"
+                record.flush()
+            status = self.process.wait()
+            if status and not self.closed.is_set():
+                self.error = "\n".join(self.logs) or f"Engine: {status}"
+        except (OSError, ValueError, KeyError) as error:
+            self.error = str(error)
+        finally:
+            self.status = "closed" if self.closed.is_set() else "failed"
+            with self.transport:
+                for pending in self.pending.values():
+                    pending["done"].set()
 
-    def all(self):
-        entries = []
-        for path in sorted(self.folder.glob(f"{self.prefix}-*.json")):
+    def command(self, text):
+        if self.closed.is_set() or self.process.poll() is not None:
+            raise Refusal("labor.errors.unknownJob")
+        with self.transport:
+            self.request_id += 1
+            identifier = self.request_id
+            pending = {"done": threading.Event(), "reply": None}
+            self.pending[identifier] = pending
+            self.process.stdin.write(f"request {identifier} {text}\n")
+            self.process.stdin.flush()
+        try:
+            if not pending["done"].wait(3):
+                raise ValueError("labor.live.commandTimeout")
+            answer = pending["reply"]
+            if not answer or not answer["ok"]:
+                raise ValueError(answer.get("message") if answer else "labor.live.closed")
+            return answer
+        finally:
+            with self.transport:
+                self.pending.pop(identifier, None)
+
+    def snapshot(self, after=0, scene=0):
+        with self.lock:
+            lives = []
+            for channel, archive in self.archives.items():
+                for key, life in archive.lives.items():
+                    lives.append({**{k: life[k] for k in (
+                        "id", "parent", "generation", "start", "hatch", "death", "cause", "last",
+                        "intake", "firstIntake", "closings", "emptyClosings")},
+                                  "world": channel, "line": self.lines[channel].get(key, -1)})
+            result = {"seed": self.seed, "status": self.status, "error": self.error,
+                      "limit": self.limit, "state": self.latest.copy(), "lives": lives,
+                      "sequence": self.sequence, "sceneRevision": self.scene_revision,
+                      "events": [e for e in self.events if e["seq"] > after],
+                      "resetPaths": bool(self.events and after < self.events[0]["seq"] - 1),
+                      "samples": list(self.samples), "interventions": list(self.interventions)}
+            if scene != self.scene_revision:
+                result["scene"] = self.scene
+            return result
+
+    def life(self, channel, identifier):
+        if channel not in self.archives:
+            raise Refusal("labor.errors.invalidRequest")
+        path = self.folder / channel / f"fish-{identifier}.jsonl"
+        with self.lock:
+            length = path.stat().st_size if path.exists() else 0
+        return read_life(path.parent, identifier, length)
+
+    def finished(self):
+        with self.lock:
+            return bool(self.latest and (self.latest["step"] >= self.limit or not self.latest["fish"]))
+
+    def close(self):
+        self.closed.set()
+        process = self.process
+        if process and process.poll() is None:
+            process.terminate()
             try:
-                entry = json.loads(path.read_text(encoding="utf-8"))
-                if entry.get("engine") == self.engine:
-                    entries.append(entry)
-            except (OSError, ValueError):
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
+
+
+def rank_candidates(candidates, worlds):
+    rows = []
+    for candidate in candidates:
+        counts, hatched, meals = [], 0, []
+        for world in worlds:
+            if candidate["id"] not in world.candidates:
+                counts.append(0)
                 continue
-        return entries
+            line = world.candidates.index(candidate["id"])
+            with world.lock:
+                lives = [life for key, life in world.archives["trial"].lives.items()
+                         if world.lines["trial"].get(key) == line]
+                descendants = [life for life in lives if life["generation"] > 0]
+                counts.append(sum(life["firstIntake"] is not None for life in descendants))
+                hatched += sum(life["hatch"] is not None for life in descendants)
+                meals.extend(life["firstIntake"] - life["hatch"] for life in lives
+                             if life["firstIntake"] is not None and life["hatch"] is not None)
+        rows.append({k: v for k, v in candidate.items() if k != "path"} | {
+            "fed": counts, "score": sum(counts) / len(counts) if counts else 0,
+            "hatches": hatched, "mealAge": sum(meals) / len(meals) if meals else None,
+            "tested": len(counts) >= 2 and all(w.finished() for w in worlds)})
+    return sorted(rows, key=lambda r: (-r["score"], r["id"]))
 
 
-class Jobs:
-    """One running job per station, answered by start, status, cancel and overview."""
-    TOOL = ""
+def choose_parents(rows, ids=None, count=2):
+    chosen, families = [], {}
+    for row in rows:
+        if not row["viable"] or (ids is not None and row["id"] not in ids):
+            continue
+        family = row["family"]
+        if families.get(family, 0) >= 2:
+            if ids is not None:
+                raise Refusal("labor.live.familyLimit")
+            continue
+        chosen.append(row["id"])
+        families[family] = families.get(family, 0) + 1
+        if ids is None and len(chosen) >= count:
+            break
+    if not chosen or (ids is not None and set(chosen) != set(ids)):
+        raise Refusal("labor.live.chooseParents")
+    return chosen
 
-    def __init__(self, starter_genomes):
-        self.starter_genomes = starter_genomes
-        self.lock = threading.Lock()
+
+class LiveStation:
+    def __init__(self, breeding=False):
+        self.breeding = breeding
+        self.lock = threading.RLock()
         self.job = None
+        self.worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="fish-laboratory")
 
-    def results(self, data_dir, engine):
-        raise NotImplementedError
+    def overview(self):
+        with self.lock:
+            job = self.job
+            return {"fish": [{"key": key} for key in ("brisa", "start", "plants")],
+                    "results": [], "job": self.summary(job) if job else None}
 
-    def executable(self):
-        try:
-            return (build_directory(ROOT) / self.TOOL).read_bytes()
-        except FileNotFoundError:
-            raise Refusal("labor.errors.toolMissing") from None
-
-    def plan(self, data):
-        """The validated settings of a start request: variant, seeds and job fields, among them
-        the count of seeds."""
-        raise NotImplementedError
-
-    def run(self, seed, job, folder=None):
-        """A fresh summary for one seed and the reader that fills it."""
-        raise NotImplementedError
-
-    def arguments(self, tool, path, seed, job, run=None):
-        raise NotImplementedError
+    def summary(self, job):
+        return {k: job[k] for k in ("id", "status", "error", "generation", "steps", "scale", "seeds")}
 
     def request(self, data, data_dir):
         operation = data.get("operation")
+        if operation == "overview":
+            return self.overview()
         if operation == "start":
             return self.start(data, data_dir)
-        if operation == "overview":
-            return self.overview(data_dir)
         with self.lock:
             job = self.job
-            if job is None or data.get("job") != job["id"]:
+            if not job or data.get("job") != job["id"]:
                 raise Refusal("labor.errors.unknownJob")
-            if operation == "cancel" and job["status"] == "running":
-                job["cancel"].set()
-                if job["process"] is not None:
-                    job["process"].kill()
-            elif operation not in ("status", "cancel"):
+            worlds = list(job["worlds"])
+        if operation == "status":
+            cursors = data.get("cursors", {})
+            states = [w.snapshot(integer(cursors.get(str(i), {}).get("after", 0), 0, 2**53),
+                                 integer(cursors.get(str(i), {}).get("scene", 0), 0, 2**53))
+                      for i, w in enumerate(worlds)]
+            rows = rank_candidates(job["candidates"], worlds)
+            return {**self.summary(job), "worlds": states, "candidates": rows,
+                    "generations": list(job["generations"]),
+                    "canBreed": self.breeding and len(worlds) >= 2 and all(w.finished() for w in worlds)}
+        if operation == "cancel":
+            job["cancel"].set()
+            job["status"] = "cancelled"
+            process = job.get("mutationProcess")
+            if process and process.poll() is None:
+                process.terminate()
+            for world in worlds:
+                self.worker.submit(world.close)
+            return self.summary(job)
+        if operation == "next":
+            if not self.breeding or len(worlds) < 2 or not all(w.finished() for w in worlds):
+                raise Refusal("labor.live.finishWorlds")
+            ids = data.get("parents")
+            if ids is not None and (not isinstance(ids, list) or not all(isinstance(v, str) for v in ids)):
                 raise Refusal("labor.errors.invalidRequest")
-            return self.shown(job)
-
-    def overview(self, data_dir):
-        engine = hashlib.sha256(self.executable()).hexdigest()
-        released = {path.resolve() for path in self.starter_genomes()}
-        fish = []
-        for key in START_DOCUMENTS:
-            path = start_genome(key)
-            if path.is_file():
-                fish.append({"key": key, "fingerprint": fingerprint(path.read_text(encoding="utf-8"), engine),
-                             "released": path.resolve() in released})
-        with self.lock:
-            job = self.shown(self.job) if self.job else None
-        return {"engine": engine, "fish": fish, "results": self.results(data_dir, engine).all(),
-                "job": job}
+            rows = rank_candidates(job["candidates"], worlds)
+            selected = choose_parents(rows, ids)
+            with self.lock:
+                if job["status"] == "preparing":
+                    raise Refusal("labor.errors.busy")
+                job["status"] = "preparing"
+                job["generations"].append({"generation": job["generation"], "candidates": rows,
+                                           "parents": selected, "seeds": job["seeds"].copy()})
+            parents = [c for c in job["candidates"] if c["id"] in selected]
+            self.worker.submit(self.generation, job, parents, worlds)
+            return self.summary(job)
+        index = integer(data.get("world", 0), 0, max(0, len(worlds) - 1))
+        if not worlds:
+            raise Refusal("labor.live.preparing")
+        world = worlds[index]
+        if operation == "life":
+            return world.life(data.get("channel", "trial"), integer(data.get("fish"), 1, 2**53))
+        if operation == "export":
+            identifier = integer(data.get("fish"), 1, 2**53)
+            path = world.folder / f"chosen-{identifier}.genome"
+            world.command(f"export-genome {identifier} {command_path(path)}")
+            return {"genome": genome_text(path.read_text(encoding="utf-8"))}
+        if operation != "command":
+            raise Refusal("labor.errors.invalidRequest")
+        action = data.get("action")
+        if action in ("pause", "resume", "step"):
+            command = action
+        elif action == "speed":
+            value = integer(data.get("value"), 0, 1000)
+            command = f"delay {value}"
+        elif action in ("compare", "end-compare") and not self.breeding:
+            command = "lab-" + action
+            if action == "compare":
+                with world.lock:
+                    world.archives["control"] = LifeArchive(world.folder / "control")
+                    world.lines["control"] = {}
+        elif action == "clear" and not self.breeding:
+            command = f"lab-clear {integer(data.get('fish'), 1, 2**53)}"
+        elif action == "control" and not self.breeding:
+            identifier = integer(data.get("fish"), 1, 2**53)
+            axis = data.get("axis")
+            if axis not in {"forward", "turn", "jaw", "suction", "energy", "auto-forward", "auto-turn",
+                            "auto-mouth", "leaves", "egg", "sperm", "vision", "odor", "touch", "flow"}:
+                raise Refusal("labor.errors.invalidRequest")
+            value = decimal(data.get("value"), -2, 1)
+            command = f"lab-control {identifier} {axis} {value}"
+        elif action == "reward" and self.breeding:
+            identifier = integer(data.get("fish"), 1, 2**53)
+            with world.lock:
+                fish = next((p for p in world.latest.get("fish", []) if p["id"] == identifier), None)
+            if not fish:
+                raise Refusal("animalGone")
+            command = f"food {fish['x']} {fish['y']}"
+        else:
+            raise Refusal("labor.errors.invalidRequest")
+        answer = world.command(command)
+        if action not in ("pause", "resume", "step", "speed"):
+            with world.lock:
+                world.interventions.append({"step": world.latest.get("step", 0), "action": action,
+                                             "fish": data.get("fish"), "axis": data.get("axis"),
+                                             "value": data.get("value")})
+        return answer
 
     def start(self, data, data_dir):
-        variant, seeds, fields = self.plan(data)
-        key = data.get("fish")
+        steps = integer(data.get("steps", 8000), 100, 100000)
+        scale = decimal(data.get("scale", .3), 0, 1)
+        key = data.get("fish", "plants")
         if key == "draft":
             genome = genome_text(data.get("genome"))
-            name = data.get("name")
-            if not isinstance(name, str) or not name.strip():
-                raise Refusal("labor.errors.invalidRequest")
         else:
             genome = start_genome(key).read_text(encoding="utf-8")
-            name = key
-        executable = self.executable()
-        engine = hashlib.sha256(executable).hexdigest()
         with self.lock:
-            if self.job and self.job["status"] == "running":
+            if self.job and self.job["status"] not in ("cancelled", "failed"):
                 raise Refusal("labor.errors.busy")
-            self.job = {"id": secrets.token_hex(JOB_ID_BYTES), "status": "running", "fish": key,
-                        "name": name, "fingerprint": fingerprint(genome, engine),
-                        "engine": engine, "variant": variant,
-                        **fields, "runs": [], "error": None, "cancel": threading.Event(),
-                        "process": None}
-            job = self.job
-            threading.Thread(target=self.work, args=(job, genome, executable, seeds, data_dir),
-                             daemon=True).start()
-            return self.shown(job)
+            identity = secrets.token_hex(8)
+            folder = Path(data_dir) / "labor-live" / identity
+            folder.mkdir(parents=True)
+            base = folder / "base.genome"
+            base.write_text(genome, encoding="utf-8")
+            tool = folder / "fish"
+            shutil_data = engine_path().read_bytes()
+            tool.write_bytes(shutil_data)
+            tool.chmod(0o700)
+            candidate = {"id": "g0-0", "name": data.get("name") or key, "family": key,
+                         "path": base, "parent": None, "viable": True, "mutation": 0}
+            job = {"id": identity, "status": "preparing", "error": None, "folder": folder,
+                   "tool": tool, "engine": hashlib.sha256(shutil_data).hexdigest(),
+                   "steps": steps, "scale": scale, "generation": -1, "worlds": [],
+                   "seeds": [], "candidates": [], "generations": [],
+                   "cancel": threading.Event(), "mutationProcess": None}
+            self.job = job
+            self.worker.submit(self.generation, job, [candidate], [])
+            return self.summary(job)
 
-    def work(self, job, genome, executable, seeds, data_dir):
-        results = self.results(data_dir, job["engine"])
-        kept = (results.read(job["fingerprint"], job["variant"]) or {}).get(results.runs, {})
+    def generation(self, job, parents, old_worlds):
         try:
-            with tempfile.TemporaryDirectory(prefix="fish-labor-") as folder:
-                # Every world in a job uses the same executable, even while a rebuild finishes.
-                tool = Path(folder) / self.TOOL
-                tool.write_bytes(executable)
-                tool.chmod(0o700)
-                path = Path(folder) / "fish.genome"
-                path.write_text(genome, encoding="utf-8")
-                for seed in seeds:
-                    if str(seed) in kept and kept[str(seed)]["done"]:
-                        with self.lock:
-                            job["runs"].append(kept[str(seed)])
-                        continue
-                    detail_folder = results.detail_folder(job["fingerprint"], job["variant"], seed)
-                    run = self.run(seed, job, detail_folder)
-                    with self.lock:
-                        job["runs"].append(run.summary)
-                    self.stream(job, self.arguments(tool, path, seed, job, run), run)
+            for world in old_worlds:
+                world.close()
+            number = job["generation"] + 1
+            folder = job["folder"] / f"generation-{number}"
+            folder.mkdir()
+            candidates = []
+            for parent in parents:
+                copies = 3 if self.breeding else 1
+                for variant in range(copies):
                     if job["cancel"].is_set():
-                        break
+                        return
+                    index = len(candidates)
+                    target = folder / f"candidate-{index}.genome"
+                    scale = job["scale"] if variant else 0
+                    command = [str(job["tool"]), "--breed-from", str(parent["path"]),
+                               "--output", str(target), "--mutation-scale", str(scale),
+                               "--seed", str(secrets.randbits(32))]
+                    process = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                               stderr=subprocess.PIPE, text=True)
+                    job["mutationProcess"] = process
+                    out, errors = process.communicate()
+                    if job["cancel"].is_set():
+                        return
+                    if process.returncode:
+                        raise ValueError(errors[-1500:])
+                    result = json.loads(out)
+                    candidates.append({"id": f"g{number}-{index}", "name": parent["name"],
+                                       "family": parent["family"], "parent": parent["id"],
+                                       "path": target, "viable": result["viable"], "mutation": scale})
                     with self.lock:
-                        run.summary["done"] = True
-                    results.keep(job["fingerprint"], job["variant"], job["name"], run.summary)
+                        job["candidates"] = candidates.copy()
+            viable = [c for c in candidates if c["viable"]]
+            if not viable:
+                raise Refusal("labor.live.noViable")
+            seeds = list({secrets.randbits(32) for _ in range(4)})[:2 if self.breeding else 1]
             with self.lock:
-                job["status"] = "cancelled" if job["cancel"].is_set() else "done"
+                job.update(generation=number, candidates=candidates, seeds=seeds, worlds=[])
+            for index, seed in enumerate(seeds):
+                if job["cancel"].is_set():
+                    return
+                world = NativeWorld(job["tool"], folder / f"world-{index}", viable, seed,
+                                    3 if self.breeding else 12, job["steps"])
+                with self.lock:
+                    job["worlds"].append(world)
+            with self.lock:
+                job["status"] = "running"
+            atomic_write(job["folder"] / "experiment.json", json.dumps({
+                **self.summary(job), "engine": job["engine"], "generations": job["generations"],
+                "candidates": [{k: str(v) if k == "path" else v for k, v in c.items()} for c in candidates]}))
         except Exception as error:
             with self.lock:
-                job.update(status="cancelled" if job["cancel"].is_set() else "failed",
-                           error=worded(error))
+                if not job["cancel"].is_set():
+                    job.update(status="failed", error=str(error))
         finally:
-            with self.lock:
-                job["process"] = None
-
-    def stream(self, job, args, run):
-        with tempfile.TemporaryFile(mode="w+") as errors:
-            process = subprocess.Popen([str(a) for a in args], cwd=ROOT, stdout=subprocess.PIPE,
-                                       stderr=errors, text=True)
-            with self.lock:
-                job["process"] = process
-                if job["cancel"].is_set():
-                    process.kill()
-            for line in process.stdout:
-                if job["cancel"].is_set():
-                    break
-                if not line.strip():
-                    continue
-                event = json.loads(line)
-                # Make the immutable archive readable before publishing it. Compression must
-                # leave the command lock free, including when the native process is cancelled.
-                run.prepare(event)
-                with self.lock:
-                    run.read(event)
-            process.wait()
-            if process.returncode and not job["cancel"].is_set():
-                errors.seek(0)
-                raise ValueError(errors.read().strip()[:DETAIL_CHARACTERS] or self.TOOL)
-
-    @staticmethod
-    def shown(job):
-        return json.loads(json.dumps({k: v for k, v in job.items() if k not in ("cancel", "process")}))
+            job["mutationProcess"] = None
 
     def close(self):
         with self.lock:
-            if self.job and self.job["status"] == "running":
-                self.job["cancel"].set()
-                if self.job["process"] is not None:
-                    self.job["process"].kill()
-
-
-class BreedingJobs(Jobs):
-    TOOL = "zuchtbecken"
-
-    def request(self, data, data_dir):
-        if data.get("operation") not in ("life", "scene"):
-            return super().request(data, data_dir)
-        mark, steps, seed = data.get("fingerprint"), data.get("steps"), data.get("seed")
-        if (not isinstance(mark, str) or not re.fullmatch(r"[0-9a-f]{16}", mark) or
-                not whole_number(steps) or steps not in Breeding.STEPS or
-                not whole_number(seed) or seed < 0):
-            raise Refusal("labor.errors.invalidRequest")
-        with self.lock:
             job = self.job
-            active = job and job["fingerprint"] == mark and job["steps"] == steps
-            engine = job["engine"] if active else hashlib.sha256(self.executable()).hexdigest()
-            results = self.results(data_dir, engine)
-            world = next((r for r in job["runs"] if r["seed"] == seed), None) if active else None
-            if world is None:
-                world = (results.read(mark, steps) or {}).get("worlds", {}).get(str(seed))
-            if world is None:
-                raise Refusal("labor.errors.unknownJob")
-            folder = results.detail_folder(mark, steps, seed)
-            if data["operation"] == "scene":
-                step = data.get("step")
-                if not whole_number(step) or step not in world.get("scenes", []):
-                    raise Refusal("labor.errors.invalidRequest")
-            else:
-                identity = data.get("id")
-                if not whole_number(identity) or str(identity) not in world.get("lives", {}):
-                    raise Refusal("labor.errors.invalidRequest")
-                response = json.loads(json.dumps({
-                    "id": identity, "seed": seed, "summary": world["lives"][str(identity)],
-                    "observation": world.get("observation"), "scenes": world.get("scenes", [])}))
-                path = folder / f"fish-{identity}.jsonl"
-                length = path.stat().st_size if path.is_file() else 0
-        # A recorded scene is immutable. A life read is bounded by the committed byte count,
-        # so neither archive can hold up status or cancellation while reading and decoding.
-        if data["operation"] == "scene":
-            with gzip.open(folder / f"scene-{step}.json.gz", "rt", encoding="utf-8") as source:
-                return {"step": step, "frame": json.load(source)}
-        return {**response, **read_life(folder, identity, length)}
-
-    def results(self, data_dir, engine):
-        return Results(data_dir, "zucht", "steps", "worlds", engine)
-
-    def plan(self, data):
-        steps, worlds = data.get("steps"), data.get("worlds")
-        if (not all(whole_number(v) for v in (steps, worlds)) or steps not in Breeding.STEPS or
-                worlds not in Breeding.WORLDS):
-            raise Refusal("labor.errors.invalidRequest")
-        return steps, range(1, worlds + 1), {"steps": steps, "count": worlds}
-
-    def run(self, seed, job, folder=None):
-        return World(seed, job["steps"], folder)
-
-    def arguments(self, tool, path, seed, job, run=None):
-        return [tool, path, seed, job["steps"], Breeding.FOUNDERS, HABITAT, "record=1",
-                "scenes=" + str(run.detail_folder / "scene")]
-
-
-class TrialJobs(Jobs):
-    TOOL = "verhaltenslabor"
-    SETTINGS = {
-        TrialKind.FEED: ["aquarium=1", "supply=0", f"prewait={TrialLab.FEED_SCENT_WAIT}",
-                         f"cluster={TrialLab.FEED_CLUSTER}", f"distance={TrialLab.FEED_DISTANCE}",
-                         f"trial={TrialLab.FEED_STEPS}"],
-        TrialKind.MUSSEL: ["mussel=1", "hungry=1", f"distance={TrialLab.MUSSEL_DISTANCE}",
-                           f"trial={TrialLab.MUSSEL_STEPS}"],
-        TrialKind.CRAB: ["crab=1", "hungry=1", f"distance={TrialLab.CRAB_DISTANCE}",
-                         f"trial={TrialLab.CRAB_STEPS}"],
-    }
-
-    def results(self, data_dir, engine):
-        return Results(data_dir, "versuch", "trial", "seeds", engine)
-
-    def plan(self, data):
-        trial, seeds = data.get("trial"), data.get("seeds")
-        if (not all(whole_number(v) for v in (trial, seeds)) or trial not in self.SETTINGS or
-                seeds not in TrialLab.SEEDS):
-            raise Refusal("labor.errors.invalidRequest")
-        return trial, range(1, seeds + 1), {"trial": trial, "count": seeds}
-
-    def run(self, seed, job, folder=None):
-        return Session(seed, job["trial"])
-
-    def arguments(self, tool, path, seed, job, run=None):
-        return [tool, path, seed, "rounds=1", f"path={TrialLab.PATH_EVERY}",
-                *self.SETTINGS[job["trial"]]]
+            if job:
+                job["cancel"].set()
+                process = job.get("mutationProcess")
+                if process and process.poll() is None:
+                    process.terminate()
+                for world in job["worlds"]:
+                    world.close()
+        self.worker.shutdown(wait=False, cancel_futures=True)

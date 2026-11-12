@@ -1,7 +1,7 @@
 import {formatNumber, t} from '../../strings.js';
 import {escapeText} from './markup.js';
-import {shelfVerdict, START_FISH} from '../../labor/model.js';
-import {runningLine, say, verdictLine, verdictStamp} from '../../labor/view.js';
+const START_FISH = [ 'brisa', 'start', 'plants' ];
+const say = (key, vars) => t('labor.' + key, vars);
 
 const hub = (key, vars) => t('studio.hub.' + key, vars);
 const SPARK = Object.freeze({width : 260, height : 64, edge : 4});
@@ -45,34 +45,20 @@ function station({action, index, title, visual, go, future = false, cls = ''}) {
 
 function breedingVisual(h) {
   const job = h.overview?.job;
-  if (job?.status === 'running')
-    return '<span class="aid-hub-note">' + runningLine(job) + '</span>';
-  const proven = START_FISH.filter(key => {
-    const fish = h.overview?.fish.find(f => f.key === key);
-    return fish && shelfVerdict(h.overview, fish.fingerprint)?.passed;
-  });
-  return '<span class="aid-hub-note">' + hub('provenCount', {n : proven.length}) + '</span>';
+  return '<span class="aid-hub-note">' +
+         (job?.status === 'running' ? t('labor.live.generationLabel', {n : job.generation + 1})
+                                    : t('labor.live.breedingPurpose')) +
+         '</span>';
 }
 
-function shelf(h) {
+function shelf() {
   return START_FISH
-      .map(key => {
-        const fish = h.overview?.fish.find(f => f.key === key),
-              verdict = fish && shelfVerdict(h.overview, fish.fingerprint);
-        return '<article class="aid-hub-fish"><div class="aid-hub-fish-head"><strong>' +
-               say('fish.' + key) + '</strong><span>' + say('role.' + key) +
-               '</span></div><div class="aid-hub-stamps">' +
-               (fish?.released
-                    ? '<span class="aid-lab-stamp released">' + say('released') + '</span>'
-                    : '') +
-               verdictStamp(verdict) + '</div><p>' +
-               (verdict ? escapeText(verdictLine(verdict)) + ' · ' +
-                              say('stepsShort', {steps : formatNumber(verdict.steps)})
-                        : '') +
-               '</p><div class="aid-hub-fish-actions"><button type="button" data-hub-breed="' +
-               key + '">' + hub('breed') + '</button><button type="button" data-hub-atelier="' +
-               key + '">' + hub('atelier') + '</button></div></article>';
-      })
+      .map(key => '<article class="aid-hub-fish"><div class="aid-hub-fish-head"><strong>' +
+                  say('fish.' + key) + '</strong><span>' + say('role.' + key) +
+                  '</span></div><div class="aid-hub-fish-actions">' +
+                  '<button type="button" data-hub-breed="' + key + '">' + hub('breed') +
+                  '</button><button type="button" data-hub-atelier="' + key + '">' +
+                  hub('atelier') + '</button></div></article>')
       .join('');
 }
 
@@ -112,7 +98,7 @@ export function hubShell(h) {
       action : 'trials',
       index : hub('index.behavior'),
       title : say('trials.title'),
-      visual : '<span class="aid-hub-note">' + hub('trialsNote') + '</span>',
+      visual : '<span class="aid-hub-note">' + t('labor.live.laborPurpose') + '</span>',
       go : hub('go.trials'),
       cls : 'trials'
     }),

@@ -1,13 +1,7 @@
-// The tank around a chosen fish at a recorded moment of a breeding run: rocks, plants, food and
-// small animals as they lay then, and the fish themselves, drawn as in the aquarium; the chosen
-// fish is ringed. The run keeps a scene every hundred steps, so the moment shown is the last one at
-// or before the chosen step, and the picture says which step that is.
 import {FISH, FOOD, INVERTEBRATE, PLANT} from '../schema.js';
 import {paintFishGlyph} from '../fish_painter.js';
 import {plantCurveBox, plantRenderParts, plantRibbon} from '../plant_geometry.js';
 import {horizontalDelta, sceneState} from '../state.js';
-import {formatNumber, t} from '../strings.js';
-import {escapeText} from '../studio/view/markup.js';
 
 export const LAB_SCENE = Object.freeze({
   width : 720,
@@ -26,39 +20,23 @@ export const LAB_SCENE = Object.freeze({
   ribbon : 12
 });
 
-// Where the scene sits in the page, with the step it shows when that differs from the chosen one.
-// `failed` is the reason the scene could not be fetched.
-export function sceneSlot(selected, scene, failed = '') {
-  const note = text => '<p class="aid-lab-scene-note">' + escapeText(text) + '</p>';
-  if (!Number.isFinite(selected?.sceneStep))
-    return note(t('labor.scene.none'));
-  if (!scene && failed)
-    return note(t('labor.scene.failed', {reason : failed}));
-  const words = !scene ? t('labor.scene.loading')
-                : scene.step === selected.step
-                    ? ''
-                    : t('labor.scene.at', {step : formatNumber(scene.step)});
-  return '<canvas class="aid-lab-scene" width="' + LAB_SCENE.width + '" height="' +
-         LAB_SCENE.height + '"></canvas>' + (words ? note(words) : '');
-}
-
 // The scene is drawn from its own frame: the fish's shapes and the plants' growth read the
 // frame they belong to (its eye placement, its obstacles), not the aquarium open beside it.
-export function paintLabScene(canvas, frame, fishId) {
+export function paintLabScene(canvas, frame, fishId, camera = null) {
   const shown = sceneState.frame;
   sceneState.frame = frame;
   try {
-    paintFrame(canvas, frame, fishId);
+    paintFrame(canvas, frame, fishId, camera);
   } finally {
     sceneState.frame = shown;
   }
 }
-function paintFrame(canvas, frame, fishId) {
+function paintFrame(canvas, frame, fishId, camera) {
   const S = LAB_SCENE, g = canvas.getContext('2d');
   const chosen = frame.fish?.find(p => p[FISH.id] === fishId);
-  const scale = canvas.width / S.span;
-  const cx = chosen ? chosen[FISH.x] : frame.width / 2,
-        cy = chosen ? chosen[FISH.y] : frame.height / 2;
+  const span = camera?.span ?? S.span, scale = canvas.width / span;
+  const cx = camera?.x ?? (chosen ? chosen[FISH.x] : frame.width / 2),
+        cy = camera?.y ?? (chosen ? chosen[FISH.y] : frame.height / 2);
   // The tank wraps around sideways: everything lies where it is nearest the chosen fish.
   const x = v => horizontalDelta(v - cx, frame.width) * scale + canvas.width / 2,
         y = v => (v - cy) * scale + canvas.height / 2;
@@ -67,7 +45,7 @@ function paintFrame(canvas, frame, fishId) {
   const copies = box => {
     if (y(box.bottom) < 0 || y(box.top) > canvas.height)
       return [];
-    const left = cx - S.span / 2, right = cx + S.span / 2;
+    const left = cx - span / 2, right = cx + span / 2;
     const first = Math.ceil((left - box.right) / frame.width),
           last = Math.floor((right - box.left) / frame.width);
     return Array.from({length : Math.max(0, last - first + 1)},

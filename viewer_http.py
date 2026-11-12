@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 from viewer_commands import CommandRouter, MAX_ID
 from atelier_service import run as run_atelier, CompileJobs
-from labor_service import BreedingJobs, TrialJobs
+from labor_service import LiveStation
 from wording import Refusal, worded, wording
 from protocol_schema import GenomeImport, Route
 
@@ -308,8 +308,8 @@ class WorkerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         self.fps_report = None
         self.commands = CommandRouter(simulation, defaults)
         self.compiler_jobs = CompileJobs()
-        self.breeding = BreedingJobs(simulation.starter_genomes)
-        self.trials = TrialJobs(simulation.starter_genomes)
+        self.breeding = LiveStation(breeding=True)
+        self.trials = LiveStation()
 
     def server_close(self):
         if hasattr(self, "compiler_jobs"):

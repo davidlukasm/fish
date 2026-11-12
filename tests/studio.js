@@ -669,8 +669,11 @@ async function checkFunctionalRegions(model, capabilities) {
                         organ)
               .replace(/<title>.*?<\/title>/g, '');
       assert.ok(changedSpan.includes('>' + (2 * duration) + ' Schritte<'));
-      assert.match(visible, /class="aid-picture-note"/,
-                   'The reference situation is visible without hovering');
+      if (type === 'olfaction')
+        assert.match(visible, /class="aid-picture-note"/);
+      if (type === 'state')
+        assert.match(visible, /Hemmung am Mangelkreis/,
+                     'The state curve names the actual inhibitory input');
     }
 
     for (const key of handles) {
@@ -3486,321 +3489,42 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(frame.viewBoxOf({zoom : 1, ...frame.CAMERA_HOME}).split(' ').length, 4);
   }
   {
-    const labor = await import('../ui/labor/model.js');
-    const {BREEDING} = await import('../ui/schema.js');
-    const enough = BREEDING.proven_generations;
-    const sample = (step, fish, parents) => ({
-      step,
-      fish,
-      eggs : 0,
-      generation : parents + 1,
-      parents,
-      reserve : fish ? [ 2, 4, 8, 12, 16 ] : [],
-      diet : Array(11).fill(0),
-      availableFeed : 100,
-      leaves : 200
-    });
-    const steps = BREEDING.steps[0];
-    const lives = {
-      seed : 1,
-      steps,
-      done : true,
-      samples : [ sample(0, 12, -1), sample(steps, 30, enough) ]
-    },
-          dies = {
-            seed : 2,
-            steps,
-            done : true,
-            samples : [ sample(0, 12, -1), sample(steps, 0, enough) ]
-          },
-          young = {seed : 3, steps, done : true, samples : [ sample(steps, 30, enough - 1) ]};
-    assert.equal(labor.worldVerdict(lives).proven, true,
-                 'Tank-born parents and a living stock prove a world');
-    assert.equal(labor.worldVerdict(dies).proven, false, 'A stock that died out proves nothing');
-    assert.equal(labor.worldVerdict(young).proven, false, 'Too few generations with offspring');
-    const worlds =
-        Array.from({length : BREEDING.proven_worlds}, (_, k) => ({...lives, seed : k + 1}));
-    assert.equal(labor.breedingVerdict(worlds).passed, true, 'Enough proving worlds pass');
-    assert.equal(labor.breedingVerdict([...worlds, dies ]).passed, false,
-                 'Every finished world must prove the fish');
-    assert.equal(labor.breedingVerdict([ {...lives, done : false} ]).done, 0,
-                 'A running world is not judged');
-    const overview = {results : [ {fingerprint : 'f', steps, worlds : {1 : lives}} ]},
-          job =
-              {fingerprint : 'f', steps, count : 2, runs : [ {...lives, seed : 2, done : false} ]};
-    assert.deepEqual(labor.shownWorlds(overview, 'f', steps, job).map(w => w.seed), [ 1, 2 ],
-                     'Kept and running worlds are shown together');
-    assert.deepEqual(labor.shownWorlds(overview, 'f', BREEDING.steps[1], job), [],
-                     'Another step count shows nothing');
-    assert.equal(labor.shelfVerdict(overview, 'f').done, 1, 'The shelf reads the kept run');
-    const {BreedingStation} = await import('../ui/labor/station.js');
-    const station = new BreedingStation({});
-    station.state.draft = {genome : 'genome'};
-    station.state.overview = {engine : 'engine-a'};
-    await station.choose(labor.DRAFT);
-    const mark = station.state.fingerprint;
-    assert.equal(mark,
-                 require('node:crypto')
-                     .createHash('sha256')
-                     .update('engine-a\0genome')
-                     .digest('hex')
-                     .slice(0, 16),
-                 'Draft identity includes the engine, using the service fingerprint');
-    station.state.overview = {engine : 'engine-b'};
-    await station.choose(labor.DRAFT);
-    assert.notEqual(station.state.fingerprint, mark,
-                    'A changed engine cannot reuse the draft’s old qualification');
-    const rebuilt = station.state.fingerprint;
-    for (const status of ['done', 'cancelled']) {
-      const oldJob = {id : 'old-engine', fingerprint : mark, status, steps, runs : worlds};
-      const current = {engine : 'engine-b', fish : [], results : [], job : oldJob};
-      station.state.fingerprint = mark;
-      station.state.overview = {engine : 'engine-a'};
-      station.state.job = {...oldJob, status : 'running'};
-      station.request = async ({operation}) => operation === 'overview' ? current : oldJob;
-      await (status === 'done' ? station.poll() : station.cancel());
-      assert.equal(station.state.fingerprint, rebuilt,
-                   'Finishing or cancelling resolves the selected fish against the current engine');
-      assert.deepEqual(
-          labor.shownWorlds(station.state.overview, station.state.fingerprint, steps,
-                            station.state.job),
-          [], 'An open station cannot present an old-engine job as a current qualification');
-    }
-    const view = await import('../ui/labor/view.js');
-    const page = view.breedingShell({
-      overview : {...overview, fish : [ {key : 'brisa', fingerprint : 'f'} ]},
-      fish : 'brisa',
-      worlds : BREEDING.worlds[0],
-      steps,
-      job : null,
-      running : false,
-      error : '',
-      draft : null,
-      fingerprint : 'f'
-    });
-    assert.match(page, /data-lab="start"/, 'The station offers to breed');
-    assert.match(page, /aid-lab-chart/, 'A kept world is drawn');
-    assert.match(page, /data-lab-fish="draft" disabled/,
-                 'Without an accepted draft it cannot be chosen');
-    assert.match(page, /data-lab-setting="worlds" data-lab-value="/);
-    const feeding = {
-      ...lives,
-      samples : [
-        {...sample(0, 12, -1), eggs : 3, diet : [ 100, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0 ]},
-        {...sample(400, 20, 1), eggs : 8, diet : [ 140, 0, 0, 0, 0, 60, 0, 0, 0, 0, 0 ]},
-        {...sample(500, 21, 1), eggs : 4, diet : [ 150, 0, 0, 0, 0, 70, 0, 0, 0, 0, 0 ]}
-      ]
-    };
-    assert.equal(labor.sampleIntake(feeding, 0), null,
-                 'A first sample cannot establish an intake interval');
-    assert.equal(labor.sampleIntake(feeding, 1).total, 60,
-                 'Intake is the interval change, not the lifetime total');
-    assert.equal(labor.sampleIntake(feeding, 2).rate, .2,
-                 'A shortened final interval uses its actual duration');
-    assert.deepEqual(labor.sampleSeries(feeding, 'population').map(s => s.values),
-                     [ [ 12, 20, 21 ], [ 3, 8, 4 ] ]);
-    assert.deepEqual(labor.sampleSeries({samples : [ sample(0, 0, -1) ]}, 'reserve')[0].values,
-                     [ null ], 'An empty fish population has no zero-energy median');
-    const selection = {fingerprint : 'f', steps, seed : 1, frame : 1};
-    assert.equal(labor.inspectedWorld([ feeding ], selection, 'f', steps).sample.step, 400);
-    assert.equal(
-        labor.inspectedWorld([ feeding ], {...selection, frame : null}, 'f', steps).sample.step,
-        500);
-    assert.equal(labor.inspectedWorld([ feeding ], selection, 'another-fish', steps).following,
-                 true);
-    const analysis = {
-      overview : {results : [ {fingerprint : 'f', steps, worlds : {1 : feeding}} ]},
-      fingerprint : 'f',
-      fish : 'brisa',
-      steps,
-      worlds : 1,
-      job : null,
-      draft : null,
-      inspection : selection,
-      metric : 'population'
-    };
-    for (const metric of labor.BREEDING_METRICS) {
-      const html = view.breedingShell({...analysis, metric});
-      assert.match(html, /data-lab-sample="1"/);
-      assert.match(html, /Aufnahme von Schritt 0 bis 400: 60 Rohenergie/);
-      assert.doesNotMatch(html, /NaN|undefined/);
-    }
-    let panel = {scrollTop : 117}, focused = 0;
-    let eventFold = {dataset : {labFold : 'events'}, open : true};
-    let fishList = {scrollTop : 47, scrollLeft : 89};
-    const root = {
-      ownerDocument : {activeElement : {dataset : {labSampleStep : 'previous'}}},
-      set innerHTML(html) {
-        this.html = html;
-        panel = {scrollTop : 0};
-        eventFold = {dataset : {labFold : 'events'}, open : false};
-        fishList = {scrollTop : 0, scrollLeft : 0};
-      },
-      querySelectorAll() { return [ eventFold ]; },
-      querySelector(selector) {
-        return selector === '.aid-lab-results'           ? panel
-               : selector === '.aid-life-list'           ? fishList
-               : selector === '[data-lab-fold="events"]' ? eventFold
-                                                         : {focus() { ++focused; }};
-      }
-    };
-    const inspecting = new BreedingStation(root);
-    Object.assign(inspecting.state, analysis);
-    inspecting.shown = true;
-    inspecting.render();
-    assert.equal(panel.scrollTop, 117, 'Polling preserves the result scroll position');
-    assert.equal(eventFold.open, true, 'Polling does not close the history being read');
-    assert.deepEqual(fishList, {scrollTop : 47, scrollLeft : 89},
-                     'Both narrow and wide fish lists keep their scroll position');
-    assert.ok(focused, 'Polling preserves the time control’s keyboard focus');
-    const click = dataset => inspecting.click({target : {closest : () => ({dataset})}});
-    click({labMetric : 'intake'});
-    assert.equal(inspecting.state.metric, 'intake');
-    assert.equal(inspecting.state.inspection.frame, 1,
-                 'Changing the chart keeps the inspected time');
-    click({labWorld : '1', labSample : '0'});
-    assert.equal(inspecting.state.inspection.frame, 0);
-    feeding.samples.push({...sample(900, 22, 2), diet : [ 170, 0, 0, 0, 0, 90, 0, 0, 0, 0, 0 ]});
-    inspecting.render();
-    assert.equal(
-        labor.inspectedWorld([ feeding ], inspecting.state.inspection, 'f', steps).sample.step, 0,
-        'New samples cannot move a pinned historical selection');
-    click({labWorld : '1', labSample : 'latest'});
-    assert.equal(
-        labor.inspectedWorld([ feeding ], inspecting.state.inspection, 'f', steps).sample.step,
-        900);
-    const lifeModel = await import('../ui/labor/life.js');
-    const life = {
-      id : 7,
-      parent : 3,
-      generation : 2,
-      start : 0,
-      hatch : 4,
-      last : 30,
-      firstIntake : 10,
-      death : 30,
-      regularSamples : 2,
-      nearSamples : 1,
-      emptyClosings : 1,
-      closings : 5,
-      intake : 12,
-      longestNoFood : {from : 10, to : 30},
-      phases : {feeding : 10, full : 10, emptying : 22},
-      events : [
-        {kind : 'hatch', t : 4}, {kind : 'firstIntake', t : 10}, {kind : 'death', t : 30, cause : 1}
-      ]
-    };
-    const lifeRun = {fingerprint : 'f', steps, seed : 1};
-    const trace = {
-      summary : life,
-      observation : {every : 5},
-      scenes : [ 0, 20 ],
-      points : [ 5, 10, 15, 20, 25 ].map(
-          t => ({t, gut : t === 10 ? .6 : .2, energy : 20, reserveCapacity : 40, maturity : .3})),
-      events : [
-        {kind : 'intake', t : 10, diet : [ 0, 12 ]}, {kind : 'emptying', t : 22},
-        {kind : 'close', t : 23, empty : true}
-      ]
-    };
-    const individual = {
-      ...analysis,
-      job : null,
-      overview : {
-        results : [ {
-          fingerprint : 'f',
-          steps,
-          worlds : {1 : {...feeding, lives : {7 : life}, scenes : [ 0, 20 ]}}
-        } ]
-      },
-      lifeSelection : {run : lifeRun, fishId : 7, step : 22},
-      lifeDetail : {key : lifeModel.lifeKey({run : lifeRun, fishId : 7}), data : trace}
-    };
-    let chosen = lifeModel.selectedLife(individual);
-    assert.equal(chosen.step, 22);
-    assert.equal(chosen.point.t, 20, 'An exact event keeps the actual preceding measurement time');
-    assert.equal(chosen.sceneStep, 20, 'Do not show a future scene for an earlier event');
-    assert.equal(lifeModel.atOrBefore([ 10 ], 5, n => n), null);
-    assert.equal(lifeModel.selectedLife({...individual, fingerprint : 'new-run'}), null,
-                 'Fish identifiers cannot cross runs');
-    const longLife = {...chosen, summary : {...life, last : 900}, step : 800};
-    assert.deepEqual(lifeModel.lifeWindow(longLife, true), {from : 500, to : 900});
-    const lifeHtml = view.breedingShell(individual);
-    assert.match(lifeHtml, /data-lab-life-time="22"/);
-    assert.match(lifeHtml, /gemessen bei Schritt 20/);
-    assert.match(lifeHtml, /Bei 50 % der regelmäßigen Messungen/);
-    assert.match(lifeHtml, /data-lab-scene/);
-    assert.doesNotMatch(lifeHtml, /NaN|undefined/);
-    Object.assign(inspecting.state, individual);
-    click({labLifeTime : '10', labLifePhase : 'feeding'});
-    assert.equal(inspecting.state.lifeSelection.step, 10);
-    assert.equal(inspecting.state.lifeFocused, true);
-    click({labLifeTime : '22', labLifePhase : 'emptying'});
-    assert.equal(lifeModel.selectedLife(inspecting.state).fishId, 7);
-    inspecting.render();
-    assert.equal(inspecting.state.lifeSelection.step, 22, 'Polling preserves an individual event');
-    const pendingRoot = {querySelector() { return null; }};
-    const pendingStation = new BreedingStation(pendingRoot);
-    Object.assign(pendingStation.state, individual);
-    let complete;
-    pendingStation.request = () => new Promise(resolve => { complete = resolve; });
-    const loading = pendingStation.loadLife(chosen);
-    pendingStation.state.fingerprint = 'another-run';
-    pendingStation.state.lifeDetail = null;
-    complete(trace);
-    await loading;
-    assert.equal(pendingStation.state.lifeDetail, null,
-                 'A late response cannot populate another run');
-    {
-      const {FISH, PLANT, PLANT_ORGAN} = await import('../ui/schema.js');
-      (await import('../ui/transport.js')).initialize([ 'lightCache' ]);
-      const sourceFish = Array(FISH.count).fill(null);
-      sourceFish[FISH.id] = 7;
-      sourceFish[FISH.morphology_asset] = 1;
-      const organ = Array(PLANT_ORGAN.count).fill(0), plant = Array(PLANT.count).fill(0);
-      organ[PLANT_ORGAN.curve] = [ 10, 20, 30, 40 ];
-      plant[PLANT.organs] = [ organ ];
-      const shapes = [ [], [], [], [], [], {trunk : [ 1, 2 ]} ];
-      const frame = {
-        fish : [ sourceFish ],
-        assets : {1 : shapes, 2 : [ 255, 255 ]},
-        plants : [ plant ],
-        light : {bytes : [ 255, 128 ], clear_asset : 2}
-      };
-      const sceneStation = new BreedingStation(pendingRoot);
-      sceneStation.render = () => {};
-      sceneStation.request = async () => ({step : 20, frame});
-      await sceneStation.showScene(chosen);
-      const first = sceneStation.state.labScene.data.frame;
-      assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
-      const waiting = [];
-      sceneStation.request = body => new Promise(resolve => waiting.push({body, resolve}));
-      const earlier = sceneStation.showScene({...chosen, sceneStep : 100});
-      const later = sceneStation.showScene({...chosen, sceneStep : 200});
-      waiting[1].resolve({step : 200, frame});
-      await later;
-      waiting[0].resolve({step : 100, frame});
-      await earlier;
-      assert.equal(sceneStation.state.labScene.data.step, 200,
-                   'A delayed scene cannot replace the more recently chosen time');
-      const away = sceneStation.showScene({...chosen, sceneStep : 300});
-      sceneStation.showScene({...chosen, sceneStep : 200});
-      waiting[2].resolve({step : 300, frame});
-      await away;
-      assert.equal(sceneStation.state.labScene.data.step, 200,
-                   'Returning to a cached scene also invalidates the pending selection');
-      assert.deepEqual(first.plants[0][PLANT.organs][0][PLANT_ORGAN.curve], [ 10, 20, 30, 40 ]);
-      assert.equal(first.light.values[0], 1);
-      assert.equal(sourceFish[FISH.body_geometry], null, 'The recorded frame stays untouched');
-      const other = [ [], [], [], [], [], {trunk : [ 3, 4 ]} ];
-      sceneStation.request = async () => ({
-        step : 20,
-        frame : {...frame, light : {...frame.light}, assets : {1 : other, 2 : [ 128, 128 ]}}
-      });
-      await sceneStation.showScene({...chosen, run : {...chosen.run, seed : 999}});
-      assert.deepEqual(sceneStation.state.labScene.data.frame.fish[0][FISH.body_geometry], other[5],
-                       'The same asset number in another world resolves to that world’s shape');
-      assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
-    }
+    const {LiveStation} = await import('../ui/labor/live_station.js');
+    const {lifeLines, eventLanes, tracks} = await import('../ui/labor/live_view.js');
+    const station = new LiveStation({});
+    station.draw = () => {};
+    station.job = {id : 'one'};
+    const pending = [];
+    station.request = data => new Promise(resolve => pending.push({data, resolve}));
+    const first = station.select(1), second = station.select(2);
+    pending[1].resolve({points : [ {t : 10, x : 20} ], events : []});
+    await second;
+    pending[0].resolve({points : [ {t : 5, x : 10} ], events : []});
+    await first;
+    assert.equal(station.selected, 2);
+    assert.equal(station.trace.points[0].x, 20, 'A late response cannot replace the selected fish');
+    const away = station.select(3);
+    await station.select(null);
+    pending[2].resolve({points : [ {t : 15} ], events : []});
+    await away;
+    assert.equal(station.trace, null, 'Deselecting invalidates a pending life request');
+    assert.equal(station.selected, null, 'The tank allows observation without selection');
+    const life = lifeLines([ {
+                             id : 1,
+                             world : 'trial',
+                             start : 0,
+                             hatch : 0,
+                             firstIntake : 0,
+                             death : 8,
+                             generation : 0
+                           } ],
+                           10, null, 10);
+    assert.match(life, /fl-first-meal/);
+    assert.doesNotMatch(life, /NaN|undefined/);
+    assert.doesNotMatch(tracks(null, 0, 0), /NaN|undefined/);
+    const events = Array.from({length : 100}, () => ({kind : 'intake', t : 5}));
+    assert.equal((eventLanes(events, 100, 100).match(/<circle/g) ?? []).length, 1,
+                 'Dense feeding events remain readable as one counted bin');
     {
       const {paintLabScene, LAB_SCENE} = await import('../ui/labor/scene.js');
       const {FISH} = await import('../ui/schema.js');
@@ -3859,155 +3583,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.throws(() => paintLabScene(canvas, frame, 1), /drawing failed/);
       assert.equal(sceneState.frame, previous, 'A failed paint restores the aquarium context');
     }
-    const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
-    const lab = await import('../ui/labor/trials.js');
-    const {trialShell} = await import('../ui/labor/trial_view.js');
-    const reached = {
-      reached : 40,
-      cracked : -1,
-      family : 2,
-      bodyLength : 10,
-      target : [ 40, 0 ],
-      path : [ [ 0, 0 ], [ 20, 1 ], [ 38, 0 ] ]
-    },
-          cracked = {...reached, cracked : 52}, missed = {...reached, reached : -1};
-    assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.mussel), lab.OUTCOME.succeeded);
-    assert.equal(lab.trialOutcome(reached, TRIAL_KIND.mussel), lab.OUTCOME.reached);
-    assert.equal(lab.trialOutcome(cracked, TRIAL_KIND.crab), lab.OUTCOME.succeeded,
-                 'A crab trial succeeds when the shell cracks');
-    assert.equal(lab.successStep(cracked, TRIAL_KIND.crab), cracked.cracked);
-    const vanished = {...missed, vanished : 61};
-    for (const kind of [TRIAL_KIND.mussel, TRIAL_KIND.crab]) {
-      assert.equal(lab.trialOutcome(vanished, kind), lab.OUTCOME.vanished);
-      assert.equal(lab.trialOutcome({...vanished, reached : 40}, kind), lab.OUTCOME.vanished,
-                   'A target lost before the trial ends has a separate outcome');
-      assert.deepEqual(
-          lab.trialTally([ {done : true, trials : [ cracked, reached, missed, vanished ]} ], kind),
-          {trials : 4, evaluated : 3, vanished : 1, reached : 2, succeeded : 1, done : 1},
-          'Disappearing targets do not lower the success rate');
-      assert.deepEqual(lab.trialPath(vanished, kind), vanished.path,
-                       'A discontinued trial keeps its path for inspection');
-    }
-    assert.equal(lab.trialDistance(TRIAL_KIND.crab), TRIAL_LAB.crab_distance);
-    assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near * 2}, TRIAL_KIND.feed),
-                 lab.OUTCOME.missed);
-    assert.equal(lab.trialOutcome({...missed, closest : TRIAL_LAB.feed_near}, TRIAL_KIND.feed),
-                 lab.OUTCOME.reached, 'Close to the food without eating it is reached');
-    assert.equal(lab.trialOutcome(reached, TRIAL_KIND.feed), lab.OUTCOME.succeeded,
-                 'Eating is a feed trial\'s success');
-    const kept = {seed : 1, trial : TRIAL_KIND.mussel, done : true, trials : [ cracked, missed ]},
-          running = {seed : 2, trial : TRIAL_KIND.mussel, done : false, trials : [ reached ]};
-    const trialOverview = {
-      fish : [ {key : 'brisa', fingerprint : 'f'} ],
-      results : [ {fingerprint : 'f', trial : TRIAL_KIND.mussel, seeds : {1 : kept}} ]
-    };
-    const trialJob = {
-      fingerprint : 'f',
-      trial : TRIAL_KIND.mussel,
-      count : 2,
-      status : 'running',
-      runs : [ kept, running ]
-    };
-    const sessions = lab.shownSessions(trialOverview, 'f', TRIAL_KIND.mussel, trialJob);
-    assert.deepEqual(sessions.map(s => s.seed), [ 1, 2 ], 'Kept and running trial worlds');
-    assert.deepEqual(lab.shownSessions(trialOverview, 'f', TRIAL_KIND.feed, trialJob), [],
-                     'Another kind of trial shows nothing');
-    assert.deepEqual(
-        lab.trialTally(sessions, TRIAL_KIND.mussel),
-        {trials : 3, evaluated : 3, vanished : 0, reached : 2, succeeded : 1, done : 1});
-    const trialPage = trialShell({
-      overview : trialOverview,
-      fish : 'brisa',
-      trial : TRIAL_KIND.mussel,
-      seeds : TRIAL_LAB.seeds[1],
-      job : trialJob,
-      running : true,
-      error : '',
-      draft : null,
-      fingerprint : 'f'
-    });
-    const measured = trialShell({
-      overview : trialOverview,
-      fish : 'brisa',
-      trial : TRIAL_KIND.mussel,
-      seeds : TRIAL_LAB.seeds[1],
-      job : trialJob,
-      running : true,
-      error : '',
-      draft : null,
-      fingerprint : 'f',
-      inspection : {fingerprint : 'f', kind : TRIAL_KIND.mussel, seed : 1, index : 0, frame : 1}
-    });
-    assert.match(measured, /aid-trial-scale/);
-    assert.match(measured, /Startabstand: 4 Körperlängen/);
-    assert.match(measured, /ohne Schwanzflosse/);
-    assert.doesNotMatch(measured, /NaN|undefined/);
-    assert.match(trialPage, /aid-trial-chart/, 'Every course is drawn');
-    assert.equal((trialPage.match(/class="aid-trial-course /g) ?? []).length, 3);
-    assert.match(trialPage, /aid-trial-shell/, 'A mussel target shows its shell');
-    const crabPage = trialShell({
-      overview : {
-        fish : trialOverview.fish,
-        results : [ {
-          fingerprint : 'f',
-          trial : TRIAL_KIND.crab,
-          seeds : {1 : {...kept, trial : TRIAL_KIND.crab}}
-        } ]
-      },
-      fish : 'brisa',
-      trial : TRIAL_KIND.crab,
-      seeds : TRIAL_LAB.seeds[1],
-      job : null,
-      running : false,
-      error : '',
-      draft : null,
-      fingerprint : 'f'
-    });
-    assert.equal((crabPage.match(/class="aid-trial-shell"/g) ?? []).length, 2,
-                 'Every crab target is drawn in its colour');
-    assert.match(trialPage, /data-lab="cancel"/, 'A running trial can be cancelled');
-    assert.match(trialPage, /data-lab-setting="trial" data-lab-value="/);
-    const ended = trialShell({
-      overview : {
-        ...trialOverview,
-        results : [ {
-          fingerprint : 'f',
-          trial : TRIAL_KIND.mussel,
-          seeds : {1 : {...kept, died : {egg : false, age : 900}}}
-        } ]
-      },
-      fish : 'brisa',
-      trial : TRIAL_KIND.mussel,
-      seeds : TRIAL_LAB.seeds[0],
-      job : null,
-      running : false,
-      error : '',
-      draft : null,
-      fingerprint : 'f'
-    });
-    assert.match(ended, /class="died"/, 'A world whose fish died says so');
-    const vanishedPage = trialShell({
-      overview : {
-        fish : trialOverview.fish,
-        results : [ {
-          fingerprint : 'f',
-          trial : TRIAL_KIND.mussel,
-          seeds : {1 : {...kept, trials : [ vanished ]}}
-        } ]
-      },
-      fish : 'brisa',
-      trial : TRIAL_KIND.mussel,
-      seeds : TRIAL_LAB.seeds[0],
-      job : null,
-      running : false,
-      error : '',
-      draft : null,
-      fingerprint : 'f'
-    });
-    assert.match(vanishedPage, /aid-trial-course vanished/);
-    assert.match(vanishedPage, /Ziel verschwunden.*nach 62 Schritten/);
-    assert.match(vanishedPage, /Auswertung: 0 Versuche; Ziel verschwunden: 1/);
-    assert.doesNotMatch(vanishedPage, /NaN|undefined|0 von 0/);
   }
   console.log(
       'Atelier: generated organs, sight, connections, hormones, persistence and gestures: OK');
