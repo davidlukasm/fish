@@ -564,13 +564,23 @@ function substanceWheel(state, profile, {
                            fixed(wheelY(profile.y) - direction.y * radius) + '" r="5"><title>' +
                            label('inspector.receptorWidth') + '</title></circle>'
                      : '';
+  // The chosen substance's mark is written again above the width handle, which may cover it.
+  const [mx, my] =
+      Number.isInteger(selected) && selected < reads ? wheelPlace(wheel, selected) : [];
+  const mark = handle && Number.isFinite(mx)
+                   ? '<g class="aid-wheel-point' +
+                         (selected < HORMONES.levels && !named.has(selected) ? ' empty' : '') +
+                         '" style="--substance:' + substanceColor(selected) + '"><text x="' +
+                         px(mx) + '" y="' + py(my) + '" dy=".35em" text-anchor="middle">' +
+                         escapeText(substanceMark(state, selected)) + '</text></g>'
+                   : '';
   return '<svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          (marks ? ' data-sense-field="' + escapeText(pad) + '"' : '') + ' viewBox="0 0 ' +
          WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
          WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo + marker +
-         points.join('') + (marks?.svg ?? '') + handle + '</svg>';
+         points.join('') + (marks?.svg ?? '') + handle + mark + '</svg>';
 }
 function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
