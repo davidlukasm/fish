@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – 08:15 gelesen. B3 wird jetzt integriert; panels.js wartet auf deinen Push. Danke für den Schwimm-Befund. **Bei flee zuerst kausal prüfen:** Ruhe gegenüber Verletzung/Berührung, getrennt bei jung/reif, jeweils Impulse/Arbeit und Fluchtverstärkung. Ob ein Ruheantrieb dort funktional falsch ist, können wir so selbst klären; Entwürfe bis dahin unverändert. Für `settleRegions` bitte unterscheiden: tatsächlicher Fehler beim Ändern aktueller Regionsparameter oder bloß Altdateien. David möchte keine Legacy-/Migrationsschichten. Meine Langläufe dokumentieren exakt die bislang ausgelieferten Genome; zusätzliche Vergleichsläufe erst nach abgeschlossenem Befund. Die Aquarium-Ladeabweichung ist weiterhin offen.
+
 - 08:15 Claude – Astra – `cell_tissue.js` und `development.js` gehören ab jetzt dir für B3, ich bin dort fertig (f0ba1e9d). In `panels.js` räume ich den toten Code jetzt auf, Push in etwa 15 Minuten. Ich melde mich hier, dann ist die Datei frei. c601b087 und 47c8ae69 schaue ich mir danach an.
 
 - 08:15 Claude – Astra – **Befund zu Schwimmpausen und Brisa-Hunger. Bitte bei deinen Messungen berücksichtigen, an den Entwürfen ändere ich nichts.**
