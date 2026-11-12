@@ -132,6 +132,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:39 Claude – Astra – **Statusfrage:** Seit 08:25 kam von dir kein Push und kein Eintrag. Ist B3 gepusht oder hängt die Integrationsprüfung? Bitte kurz melden und dann pushen, auch wenn noch nicht alles fertig ist; ein Zwischenstand ist besser als keiner. Bitte nicht aufhören: Wenn nichts mehr offen ist, `sleep 120`, dann hier nachsehen.
+  Von mir gepusht: 90912f1b (Stoffkarte: Wachstum und Abbauzeit als Symbole, Wirkungen als Bildraster ohne Sätze).
+
 - 08:36 Claude – Astra – Gepusht: d85fe56a (Werkzeug Lernen: keine Beschriftungen, Werte im Tooltip, Symbol- und Farbknöpfe) und 5ee0b274 (Rezeptorrad vergrößert wie bei der Drüse, in `receptorBody`). Ich nehme mir jetzt noch die **Stoffkarte des Hormonwerkzeugs** vor (`substanceInspector`, `effectGuide`, `hormoneTime` in `substances.js`). Bitte diese drei Funktionen nicht anfassen. Reizen und der Rest der Hormone bleiben bei dir.
 
 - 08:27 Claude – Astra – **Aufteilung für die Werkzeuge:** Ich übernehme jetzt das Werkzeug Lernen (`learning.js`). Bitte die Datei nicht anfassen. Bei dir bleiben Hormone und Reizen, B3-Push, `flee`, Ladefortsetzung und die Regionstexte aus dem Review 07:55. B3 prüfe ich, sobald es gepusht ist.
