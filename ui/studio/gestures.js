@@ -12,8 +12,11 @@ import {
   cameraBox,
   cameraCoordinates,
   cameraScale,
+  STEADY,
+  steadyScale,
   viewBoxOf
 } from './view/frame.js';
+import {arrowSize} from './view/wires.js';
 import {BODY_MAP, LAYER} from './view/scene.js';
 import {dataAttribute, pointText} from './view/markup.js';
 import {zoomStamp} from './view/shell.js';
@@ -27,9 +30,13 @@ const MOVED_ITEMS = Object.freeze([ 'organ', 'center', 'assembly' ]);
 // units at full size.
 const VIEW_ROOM = Object.freeze({left : 80, edge : 20}),
       NO_ROOM = Object.freeze({left : 0, edge : 0});
+// While the wheel turns, only the view box and the marks drawn at a steady size follow; the scene
+// is redrawn at the new zoom once the wheel has rested this long (ms), so zooming stays fluid
+// however many nodes the fish has.
+const ZOOM_REST = 140;
 const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']').join(',');
 export const gestureMethods = {
-  zoom(direction, anchor = null) {
+  zoom(direction, anchor = null, gliding = false) {
     const c = this.state.camera, previous = c.zoom;
     c.zoom = typeof direction === 'number' ? clamp(direction, CAMERA_ZOOM.min, CAMERA_ZOOM.max)
              : direction === 'in'          ? Math.min(CAMERA_ZOOM.max, c.zoom * CAMERA_ZOOM.step)
@@ -41,11 +48,39 @@ export const gestureMethods = {
     }
     if (direction === 'fit')
       Object.assign(c, CAMERA_HOME);
-    this.refreshScene();
-    this.refreshSwitches();
+    clearTimeout(this.zoomRest);
+    if (gliding && this.glideZoom(previous))
+      this.zoomRest = setTimeout(() => this.zoom(c.zoom), ZOOM_REST);
+    else {
+      this.refreshScene();
+      this.refreshSwitches();
+    }
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = zoomStamp(c);
+  },
+  // Follows a zoom step without redrawing: the view box, the ground, the steady marks, the node
+  // dots and the arrow heads take the new zoom as they would after a redraw.
+  glideZoom(previous) {
+    const svg = this.bodyMap(), c = this.state.camera;
+    if (!svg)
+      return false;
+    const box = cameraBox(c), node = Math.sqrt(previous / c.zoom);
+    svg.setAttribute('viewBox', viewBoxOf(c));
+    const ground = svg.querySelector('.aid-canvas-ground');
+    for (const key of ['x', 'y', 'width', 'height'])
+      ground?.setAttribute(key, box[key]);
+    for (const mark of svg.querySelectorAll('[' + STEADY + ']'))
+      mark.setAttribute(
+          'transform',
+          mark.getAttribute('transform').replace(/scale\([^)]*\)/, steadyScale(c.zoom)));
+    for (const dot of svg.querySelectorAll('circle.aid-retina-node'))
+      dot.setAttribute('r', Number(dot.getAttribute('r')) * node);
+    for (const marker of svg.querySelectorAll('marker.aid-wire-marker')) {
+      marker.setAttribute('markerWidth', arrowSize(c.zoom));
+      marker.setAttribute('markerHeight', arrowSize(c.zoom));
+    }
+    return true;
   },
   // With `clearTools` the point also keeps clear of the tool bar; a point that follows the pointer
   // does not, as it would zoom out with every step it takes along the edge.
@@ -56,8 +91,11 @@ export const gestureMethods = {
       return point.x >= box.x + R.left / z && point.x <= box.x + box.width - R.edge / z &&
              point.y >= box.y + R.edge / z && point.y <= box.y + box.height - R.edge / z;
     };
+    const start = c.zoom;
     while (!inside() && c.zoom > CAMERA_ZOOM.min)
-      this.zoom('out');
+      c.zoom = Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step);
+    if (c.zoom !== start)
+      this.zoom(c.zoom);
   },
   drawConnectingLine(from, to) {
     this.root.querySelector(LAYER.line)
@@ -70,7 +108,7 @@ export const gestureMethods = {
     event.preventDefault();
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 240 : 1);
     this.zoom(this.state.camera.zoom * Math.exp(-clamp(delta, -240, 240) * .002),
-              cameraCoordinates(event, svg, this.state.camera));
+              cameraCoordinates(event, svg, this.state.camera), true);
   },
   pointerDown(event) {
     const grip = event.target.closest?.('[data-panel-grip]');

@@ -19,7 +19,7 @@ import {BODY_FRAME, sideOf} from '../model/layout.js';
 import {organLocation, gutShape} from './places.js';
 import {gutTurns} from '../../fish_organs.js';
 import {muscleShape} from './muscles.js';
-import {zoomOf, SNOUT_TIP, HEAD} from './frame.js';
+import {steadyAt, zoomOf, SNOUT_TIP, HEAD} from './frame.js';
 import {fixed, escapeText} from './markup.js';
 import {label} from './kit.js';
 import {clamp} from '../../units.js';
@@ -86,8 +86,7 @@ export function anatomyHandlesSvg(state) {
   return '<g class="aid-anatomy-handles">' +
          anatomyHandles(state)
              .map(s => '<g data-anatomy-handle="' + s.key + '" data-anatomy-organ="' +
-                       escapeText(s.id) + '" transform="translate(' + fixed(s.point.x) + ' ' +
-                       fixed(s.point.y) + ') scale(' + fixed(1 / zoom) + ')">' +
+                       escapeText(s.id) + '"' + steadyAt(s.point, zoom) + '>' +
                        '<title>' + escapeText(label('direct.' + s.key)) +
                        '</title><circle class="hit" r="13"/><circle r="5"/>' +
                        '<path d="' +
