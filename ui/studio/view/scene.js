@@ -209,11 +209,15 @@ export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
   const anatomy = bodySvg(state), wires = wiresShown(state, centers);
-  const cones =
-      detailMix(state).fields > 0 && fieldsShown(state)
-          ? state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
-                tectumBands(state)
-          : '';
+  // Fields fade in from a closer zoom on; the field of the chosen eye (and its twin) always shows.
+  const chosen = organOf(state.document, state.selected?.id);
+  const ownField = o => !!chosen && (o.id === chosen.id || o.id === chosen.pair);
+  const fading = detailMix(state).fields > 0 && fieldsShown(state);
+  const fans = state.document.organs.filter(o => o.field);
+  const cones = (fading ? fans.filter(o => !ownField(o)).map(o => visionFan(state, o)).join('') +
+                              tectumBands(state)
+                        : '');
+  const own = fans.filter(ownField).map(o => visionFan(state, o)).join('');
   return '<svg id="' + BODY_MAP_ID + '" viewBox="' + viewBoxOf(state.camera) +
          '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' +
          escapeText(t('studio.app.empty')) + '">' +
@@ -227,7 +231,7 @@ export function fishScene(state) {
          '<g class="aid-centers">' + centersSvg(state) + '</g>' + anatomyHandlesSvg(state) +
          generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '">' + cones +
-         '</g>' +
+         '</g><g class="aid-fov-fields">' + own + '</g>' +
          '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
