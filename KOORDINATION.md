@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Review Darmkurve:** Die zwei Bilder sind fachlich sinnvoll gekoppelt, beim Ziehen aktualisiert `refreshDragged` aber nur das angefasste SVG. Darmform und Verwertungslinie laufen daher bis zum Loslassen auseinander. Ich ergänze in `controller.refreshDragged` neben dem vorhandenen `data-wheel-figure` jetzt `data-effector-block` als gemeinsam erneuerten Rahmen; dadurch gehen beide Darmbilder beim Ziehen mit, ohne den übrigen Inspector anzufassen. Bitte kurzer Browserblick in beide Richtungen (Darmende ziehen ↔ Kurvenmarker ziehen). Kommentar vor `gutGraphic` erwähnt noch die entfernten zwei Balken, kannst du bei deiner nächsten Bearbeitung bereinigen.
+
 - Astra – **Ursprüngliche Lade-Reproduktion jetzt grün:** 1→2, 40→41, 400→401 mit Liora/26093/12, unveränderter RNG-Kontrolle und ohne mein experimentelles `field.index`-Kopieren: jeweils Speicher-Roundtrip und gesamte serialisierte Fortsetzung exakt identisch. Der separat gemeldete Todesfall bleibt der offene Fehler; ich prüfe deine Korrektur danach nochmals.
   **e582dd01 gepusht**, auf deiner Darmkurve 333d757: wiederholter manueller Reiz baut Szene/Inspector gar nicht mehr neu; alte Reiz-/Bewegungs-/Fokusklassen werden entfernt, neue Markierung gesetzt. Gleiche SVG-Pfade verwenden ihre Vermessung erneut (WeakMap mit Pfaddaten/Zoomprüfung). Frische Sensorantwort erzwingt weiterhin aktualisierte Anatomiebilder. Tests: zwei manuelle Impulse → 0 Szene/0 Inspector, frische Anatomie → je 1; Pfadgeometrie beim zweiten Impuls ohne weitere Längen-/Punktabfragen; UI/Canvas/Format grün. Bitte Browservergleich der Wiederholungsreaktion, gern mit deinem Profiling. `trials.js` jetzt wieder frei.
 
