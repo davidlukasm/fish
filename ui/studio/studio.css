@@ -144,6 +144,8 @@
 .aid-inspector-actions button{font-size:12px}
 .aid-inspector .aid-danger{background:#422d35;border-color:#73515d;color:#edbaba}
 .aid-organ-settings{border-top:1px solid #32505b;padding-top:12px}
+.aid-inspector-head+.aid-organ-settings{border-top:0;padding-top:0}
+.aid-organ-settings>.aid-eye-section:first-child{border-top:0}
 .aid-organ-metric{display:flex;align-items:center;gap:14px;padding:20px 0;color:#bddad1}
 .aid-center-tabs{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
@@ -900,6 +902,7 @@
 .aid-preview-bars text{fill:var(--aid-label-text);font-size:11px}
 .aid-preview-pad rect{fill:#10303a;stroke:var(--aid-panel-edge)}
 .aid-preview-pad svg{color:var(--aid-label-text)}
+.aid-preview-bars .aid-preview-sign{font-size:15px}
 .aid-preview-reach{fill:none;stroke:var(--aid-panel-edge);stroke-dasharray:2 3}
 .aid-preview-drop text{font-size:11px;font-weight:600;pointer-events:none}
 .aid-gut-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}

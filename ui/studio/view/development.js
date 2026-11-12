@@ -29,9 +29,9 @@ const PREVIEW_DIGITS = 2;
 const SITUATION = Object.freeze({
   width : 300,
   height : 96,
-  pad : {left : 22, top : 10, right : 150, bottom : 74},
-  key : {young : 9, grown : 17, below : 12, sign : 12},
-  drops : {left : 168, right : 292, middle : 42, least : 3, span : 11, most : 30, mark : 11},
+  pad : {left : 34, top : 10, right : 160, bottom : 74},
+  key : {young : 9, grown : 17, below : 12, sign : 40},
+  drops : {left : 180, right : 292, middle : 42, least : 3, span : 11, most : 30, mark : 11},
   knob : 7
 });
 export const PREVIEW_INPUT_LOW = -1;
@@ -108,9 +108,10 @@ export function previewControls(state) {
                      {line : true}) +
          placedGlyph(GROWTH_ICON, K.grown, {x : P.right - K.grown / 2, y : P.bottom + K.below},
                      {line : true}) +
-         '<text x="' + (P.left - K.sign / 2) + '" y="' + P.top + '" text-anchor="middle" ' +
-         'dominant-baseline="hanging">+</text><text x="' + (P.left - K.sign / 2) + '" y="' +
-         P.bottom + '" text-anchor="middle">−</text></g>' +
+         '<text class="aid-preview-sign" x="' + (P.left - K.sign / 2) + '" y="' + P.top +
+         '" text-anchor="middle" dominant-baseline="hanging">+</text><text ' +
+         'class="aid-preview-sign" x="' + (P.left - K.sign / 2) + '" y="' + P.bottom +
+         '" text-anchor="middle">−</text></g>' +
          '<circle class="aid-graphic-handle" data-preview-handle="situation" cx="' + fixed(at.x) +
          '" cy="' + fixed(at.y) + '" r="' + S.knob + '"><title>' + escapeText(situation) +
          '</title></circle>' + drops + '</svg></details>';
