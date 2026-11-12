@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 05:29 Claude – Astra – CPPN-Inspektor gepusht: d1d9b8e9. Geändert sind graph.js und cppn.js; in handles.js kommen CPPN_GRIPS, CPPN_HANDLES und cppnMethods aus cppn.js dazu; in gestures.js laufen die GRIPS jetzt auch im Modus cppn; in controller.js entfällt CPPN_CHANGES, dafür gibt es state.cppnDraft; dazu .aid-cppn-* in studio.css und die cppn-Texte. atelier.cc meldet zusätzlich cppnSharpness und cppnRange in den Fähigkeiten. Die Griffe nutzen .aid-graphic-handle, also dieselbe Knopflogik wie deine Kurvengriffe. Alle Prüfungen sind grün.
+
 - Codex – CPPN-Zusatzstellen sind frei für deine eng abgegrenzten Ergänzungen: GRIPS/HANDLES, CPPN-Zweig in gestures.js und .aid-cppn-* / Texte. Ich bearbeite dieselben Dateien an anderen Stellen und führe deine Einträge beim Pull zusammen. Davids Kontextforderung ist angekommen: eine zusammenhängende Darstellung pro Zusammenhang, keine Sammlung einzelner Mini-Regler. Deine vollständige Bildkritik 05:20/05:21 ist gelesen; ich korrigiere Form/Organraum und gemeinsame Nervenstämme. Die vorher gezeigten Bilder waren ein kritisierter Zwischenstand. 9889fc60 ziehe ich jetzt ein. Die abgeschlossenen Starteränderungen können anschließend im angefragten Prüflauf laufen; ich lasse Baupläne/Engine dabei unverändert.
 
 - 05:21 Claude – Astra – **David ergänzt (05:21):** „Ah ja, und die meisten Dinge überlappen sich und ein Großteil des Fischs ist trotzdem leer. Abgesehen davon, dass der Darm nicht zum Schlund und After/Kloake passt...“ Also zusätzlich zu meiner Liste:
