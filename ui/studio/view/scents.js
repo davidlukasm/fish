@@ -1,5 +1,6 @@
-import {ATELIER_LIMITS, TUNING} from '../../schema.js';
+import {ATELIER_LIMITS, BARBEL, TUNING} from '../../schema.js';
 import {
+  LONGEST_TIME_CONSTANT,
   preferredScent,
   scentAffinities,
   scentTuning,
@@ -9,8 +10,10 @@ import {
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {escapeText, fixed} from './markup.js';
-import {groupReport, organTypes, typeOfCenter} from '../model/document.js';
-import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
+import {organTypes, typeOfCenter} from '../model/document.js';
+import {handleMark, senseSensitivity} from './sense_marks.js';
+import {fadeRow, intensityRow, SENSE_PLOT, sensePicture} from './sense_curves.js';
+import {stimulusOfShare} from './sensitivity.js';
 import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
 import {typeChips} from './types.js';
@@ -25,15 +28,8 @@ export const SCENT_MAP = Object.freeze({
   icon : .62,
   ring : 14,
   snap : 13,
-  samples : 128,
-  // The catching ring spans this share of the ring at the least and the most sensitive; the
-  // cells sit just outside it, the adaptation arc just outside the map.
-  least : .5,
-  most : 1.5,
-  cells : 5,
-  arc : 8
+  samples : 128
 });
-const TURN_QUARTER = Math.PI / 2;
 const turn = 2 * Math.PI;
 const mapPoint = (colatitude, longitude) => {
   const r = SCENT_MAP.radius * Math.sin(colatitude / 2);
@@ -117,99 +113,112 @@ function profileChips(organ, chosen) {
     };
   }, {add : t('studio.inspector.addProfile'), remove : t('studio.inspector.removeProfile')});
 }
-// The map holds the whole profile: which scents (the halo, its width at the handle), how faint a
-// scent the cells notice (the catching ring round the chosen scent, wider the more sensitive), how
-// many cells there are (dots on that ring) and how long a lasting scent takes until they no longer
-// answer it (the fading arc round the map). `held` is a sensitivity dragged ahead of the design
-// run.
-// Barbels that only touch: the chin with its two barbels, the cells along one of them, the hairs
-// at both tips as long as they are sensitive, and round the tip the adaptation arc.
-const BARBEL_TOUCH = Object.freeze({
+// The barbels: the chin with its two barbels as long as their cells make them (body_plan.cc,
+// barbel_tip: a radius times length + length_per_size · √cells / (√cells + organ_half)); the
+// handle at a tip sets the cells. What a barbel reports, taste or touch at its tip, is chosen
+// above; its threshold and time change next to nothing there (a tip touches or not), so they get
+// no handle.
+const BARBELS = Object.freeze({
   width : 300,
-  height : 160,
+  height : 150,
   chin : 'M0 0 H300 V22 Q150 58 0 22 Z',
   roots : [ [ 118, 40 ], [ 182, 40 ] ],
   bend : 26,
-  tips : [ [ 92, 122 ], [ 208, 122 ] ],
-  cells : [ .18, .92 ],
+  // One body radius in the picture, from the chin down.
+  radius : 180,
   hairs : 7,
   fan : 1.2,
-  least : 6,
-  most : 30,
-  clock : 18
+  hair : 14
 });
-function barbelTouch(organ, center, state, held) {
-  const B = BARBEL_TOUCH, sensitive = held ?? senseSensitivity(state, center) ?? 0;
-  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
-  const curve = k => {
-    const [rx, ry] = B.roots[k], [ tx, ty ] = B.tips[k], side = k ? 1 : -1;
-    const control = {x : (rx + tx) / 2 - side * B.bend, y : (ry + ty) / 2};
+const barbelLength = cells => {
+  const grown = Math.sqrt(Math.max(0, cells));
+  return BARBEL.length + BARBEL.length_per_size * grown / (grown + BARBEL.organ_half);
+};
+function barbelPicture(organ, center) {
+  const B = BARBELS, touch = center.field >= BARBEL_FEEL.touch;
+  const tipAt = (k, cells) => {
+    const [rx, ry] = B.roots[k], side = k ? 1 : -1, reach = B.radius * barbelLength(cells);
     return {
-      d : 'M' + rx + ' ' + ry + ' Q' + fixed(control.x) + ' ' + fixed(control.y) + ' ' + tx + ' ' +
-              ty,
-      at : u => ({
-        x : (1 - u) * (1 - u) * rx + 2 * u * (1 - u) * control.x + u * u * tx,
-        y : (1 - u) * (1 - u) * ry + 2 * u * (1 - u) * control.y + u * u * ty
-      })
+      x : rx + side * reach * Math.sin(BARBEL.spread),
+      y : ry + reach * Math.cos(BARBEL.spread)
     };
   };
-  const barbels = [ 0, 1 ].map(curve);
-  const reach = B.least + (B.most - B.least) * sensitive;
-  const hairs =
-      B.tips
-          .map(([ x, y ]) => Array
-                                 .from({length : B.hairs},
-                                       (_, k) => {
-                                         const a = Math.PI / 2 + B.fan * (k / (B.hairs - 1) - .5);
-                                         return 'M' + x + ' ' + y + ' l' +
-                                                fixed(reach * Math.cos(a)) + ' ' +
-                                                fixed(reach * Math.sin(a));
-                                       })
-                                 .join(' '))
-          .join(' ');
-  const places =
-      Array.from({length : ATELIER_LIMITS.max_copies},
-                 (_, k) => barbels[0].at(B.cells[0] + (B.cells[1] - B.cells[0]) * k /
-                                                          (ATELIER_LIMITS.max_copies - 1)));
-  const [tx, ty] = B.tips[1];
-  return '<div data-scent-block="' + escapeText(center.id) + '"><svg class="aid-barbel-touch" ' +
-         'data-sense-field="' + escapeText(center.id) + '" data-sense-redraw="refreshScentMaps" ' +
-         'viewBox="0 0 ' + B.width + ' ' + B.height + '" role="img"><title>' +
-         escapeText(t('studio.inspector.barbelFeel.touch')) +
-         '</title><path class="aid-skin-fish" d="' + B.chin + '"/>' +
-         barbels.map(b => '<path class="aid-barbel" d="' + b.d + '"/>').join('') +
-         '<path class="aid-skin-hairs" d="' + hairs + '"/>' +
-         (answer?.adapt?.steps > 0
-              ? adaptationMarks({x : tx, y : ty}, B.clock, -Math.PI / 2, center)
-              : '') +
-         cellMarks(places, center) +
-         sensitivityHandle({x : tx, y : ty + B.least}, {x : tx, y : ty + B.most}, sensitive,
-                           t('studio.inspector.skin.touchHandle')) +
-         '</svg></div>';
+  const barbel = k => {
+    const [rx, ry] = B.roots[k], tip = tipAt(k, center.copies), side = k ? 1 : -1;
+    const control = {x : (rx + tip.x) / 2 - side * B.bend, y : (ry + tip.y) / 2};
+    return '<path class="aid-barbel" d="M' + rx + ' ' + ry + ' Q' + fixed(control.x) + ' ' +
+           fixed(control.y) + ' ' + fixed(tip.x) + ' ' + fixed(tip.y) + '"/>';
+  };
+  const hairs = [ 0, 1 ]
+                    .map(k => {
+                      const tip = tipAt(k, center.copies);
+                      return Array
+                          .from({length : B.hairs},
+                                (_, h) => {
+                                  const a = Math.PI / 2 + B.fan * (h / (B.hairs - 1) - .5);
+                                  return 'M' + fixed(tip.x) + ' ' + fixed(tip.y) + ' l' +
+                                         fixed(B.hair * Math.cos(a)) + ' ' +
+                                         fixed(B.hair * Math.sin(a));
+                                })
+                          .join(' ');
+                    })
+                    .join(' ');
+  const places = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => tipAt(1, k + 1));
+  const tip = places[center.copies - 1];
+  return '<svg class="aid-effector-graphic aid-barbel-touch" data-sense-field="' +
+         escapeText(center.id) + '" data-sense-redraw="refreshScentMaps" viewBox="0 0 ' + B.width +
+         ' ' + B.height + '" role="img" aria-label="' + escapeText(t('studio.barbels.title')) +
+         '"><path class="aid-skin-fish" d="' + B.chin + '"/>' + barbel(0) + barbel(1) +
+         (touch ? '<path class="aid-skin-hairs" d="' + hairs + '"/>' : '') +
+         handleMark('cells', tip, t('studio.barbels.handle'),
+                    'data-places="' + places.map(p => fixed(p.x) + ',' + fixed(p.y)).join(' ') +
+                        '"',
+                    t('studio.barbels.length',
+                      {n : center.copies, p : percent(barbelLength(center.copies) / 2)}),
+                    'below') +
+         '</svg>';
 }
+// What the nose's cells report: over the scent's strength, half at their threshold, and while they
+// stay in the same scent, how they get used to it (sense_curves.js).
+// The steady scent of the time row, as many times the cells' half answer: they start at four
+// fifths and settle near four ninths.
+const NOSE_HELD = 4;
+function noseCurves(state, center, held) {
+  const dimmest = state.anatomy?.lightDimmest, sensitive = held ?? senseSensitivity(state, center);
+  if (!(dimmest > 0) || sensitive === null)
+    return '';
+  const half = stimulusOfShare(1 - sensitive, dimmest);
+  const words = (key, values) => t('studio.noseSense.' + key, values);
+  return sensePicture(center, words('title'),
+                      [
+                        intensityRow(sensitive, dimmest, {
+                          report : words('report'),
+                          from : words('faint'),
+                          to : words('strong'),
+                          half : words('half'),
+                          handle : words('handle')
+                        }),
+                        fadeRow(center, NOSE_HELD * half, half, {
+                          report : words('report'),
+                          from : words('stays'),
+                          to : words('later', {n : SENSE_PLOT.window * LONGEST_TIME_CONSTANT}),
+                          half : n => words('fade', {n}),
+                          handle : words('fadeHandle')
+                        })
+                      ],
+                      'refreshScentMaps');
+}
+// The scents a cell answers, on the map of all eight; below, for the nose what its cells report,
+// for barbels how long they grow. Barbels that only touch need no map. `held` is a sensitivity
+// dragged ahead of the design run.
 export function scentMap(organ, center, state = null, held = null) {
-  if (organ.type === 'barbels' && center.field >= BARBEL_FEEL.touch && state)
-    return barbelTouch(organ, center, state, held);
+  const barbels = organ.type === 'barbels';
+  const below = !state    ? ''
+                : barbels ? barbelPicture(organ, center)
+                          : noseCurves(state, center, held);
+  if (barbels && center.field >= BARBEL_FEEL.touch)
+    return '<div data-scent-block="' + escapeText(center.id) + '">' + below + '</div>';
   const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2), wide = scentWidthHandle(center);
-  const sensitive = held ?? (state ? senseSensitivity(state, center) : null);
-  const answer = state ? groupReport(state.document, state.anatomy, 'senses', center.id) : null;
-  const catching = M.ring * (M.least + (M.most - M.least) * (sensitive ?? 0));
-  const ring = r => Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
-    const a = TURN_QUARTER + turn * k / ATELIER_LIMITS.max_copies;
-    return {x : at.x + r * Math.cos(a), y : at.y + r * Math.sin(a)};
-  });
-  const below = r => ({x : at.x, y : at.y - r});
-  const marks =
-      state ? (answer?.adapt?.steps > 0
-                   ? adaptationMarks({x : M.centre, y : M.centre}, M.radius + M.arc,
-                                     Math.atan2(at.y - M.centre, at.x - M.centre), center)
-                   : '') +
-                  cellMarks(ring(catching + M.cells), center) +
-                  (sensitive === null
-                       ? ''
-                       : sensitivityHandle(below(M.ring * M.least), below(M.ring * M.most),
-                                           sensitive, t('studio.inspector.scentSensitivity')))
-            : '';
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
   const others = organTypes(organ)
                      .filter(type => type.id !== chosen.id)
@@ -241,9 +250,9 @@ export function scentMap(organ, center, state = null, held = null) {
          M.radius + '"/><path class="aid-scent-halo" fill-rule="evenodd" d="' +
          haloPath(center.q1, center.q2, radians(tuningSigma(center.qwidth))) + '"/>' + others +
          '<circle class="aid-scent-selector" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
-         '" r="' + fixed(state ? catching : M.ring) + '"/>' + scents + marks +
+         '" r="' + M.ring + '"/>' + scents +
          '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(wide.x) +
          '" cy="' + fixed(wide.y) + '" r="7"><title>' + t('studio.inspector.receptorWidth') +
          '</title></circle>' +
-         '</svg></div>';
+         '</svg>' + below + '</div>';
 }

@@ -323,7 +323,6 @@
     "proposedLink": "CPPN-Kontaktvorschläge",
     "proposalCount": "Kontaktvorschläge",
     "stimulusResponse": "Antwort auf anhaltenden Reiz",
-    "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft",
     "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff",
     "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg",
     "selectLearning": "Wähle einen Nervenknoten, auch in einer Hirnregion.",
@@ -1572,5 +1571,22 @@
     "full": "so viel wie möglich",
     "half": "meldet ab {p} Stoff im Blut",
     "handle": "Ziehen: bei welchem Pegel die Zellen halb melden"
+  },
+  "noseSense": {
+    "title": "Riechzellen",
+    "report": "Meldung",
+    "faint": "kaum Duft",
+    "strong": "starker Duft",
+    "half": "riecht ab hier",
+    "handle": "Ziehen: wie schwachen Duft die Zellen schon melden",
+    "stays": "bleibt im gleichen Duft",
+    "later": "{n} Schritte später",
+    "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
+    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichbleibenden Duft gewöhnen"
+  },
+  "barbels": {
+    "title": "Barteln",
+    "length": "{n} {n:Zelle|Zellen} · Barteln {p} der Fischlänge",
+    "handle": "Ziehen: mehr Zellen machen die Barteln länger, sie erreichen Futter früher"
   }
 }
