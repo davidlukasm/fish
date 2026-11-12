@@ -35,7 +35,7 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
-import {bandGlyph, heading, icon, ICON, iconSwitch, label} from './kit.js';
+import {bandGlyph, heading, icon, ICON, iconSwitch, label, SWITCH_SYMBOL} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
@@ -575,8 +575,9 @@ function growthEditor(state) {
   const growth = state.document.growth;
   if (!growth.active)
     return '';
-  return '<section class="aid-growth">' + heading(label('development.bodyGrowth')) +
-         receptorWheel(state, growth, GROWTH) + effectCurve(state, growth, GROWTH, GROWTH) +
+  return '<section class="aid-growth" title="' + escapeText(label('development.bodyGrowth')) +
+         '"><div class="aid-wheel-close">' + receptorWheel(state, growth, GROWTH) + '</div>' +
+         effectCurve(state, growth, GROWTH, GROWTH) +
          variationGraphic(growth.spread_receptors, GROWTH, 'spread_receptors') + '</section>';
 }
 function organsOf(doc, centers) {
@@ -660,8 +661,8 @@ function substanceInspector(state) {
     const birth = o.centers.some(c => birthAffinity(c, index, wheel) >= NOTICEABLE_AFFINITY);
     return '<button data-select-organ="' + escapeText(o.id) + '">' + icon(o.type, ICON.list) +
            escapeText(organTitle(o, state.sites)) +
-           (birth ? '<small class="aid-bound-effect">' + label('development.birthReceptor') +
-                        '</small>'
+           (birth ? '<span class="aid-bound-effect" title="' + label('development.birthReceptor') +
+                        '">' + glyph(BIRTH_ICON, ICON.mark, {line : true}) + '</span>'
                   : '') +
            [...effects ]
                .map(e => {
@@ -671,9 +672,11 @@ function substanceInspector(state) {
                .join('') +
            '</button>';
   });
-  const row = (key, body) => body ? '<div class="aid-card-row"><span>' +
-                                        label('hormoneCard.' + key) + '</span><div>' + body +
-                                        '</div></div>'
+  // Where the substance comes from and what it acts on, each row led by its symbol.
+  const row = (key, body) => body ? '<div class="aid-card-row" title="' +
+                                        label('hormoneCard.' + key) + '"><span>' +
+                                        glyph(CARD_ROW_ICON[key], ICON.mark, {line : true}) +
+                                        '</span><div>' + body + '</div></div>'
                                   : '';
   return '<header class="aid-inspector-head" style="--substance:' + substanceColor(index) +
          '"><span class="aid-substance-swatch"></span><input class="aid-inline-name ' +
@@ -691,6 +694,8 @@ function substanceInspector(state) {
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
          label('inspector.removeSubstance') + '</button>';
 }
+const CARD_ROW_ICON =
+    Object.freeze({sources : TOOL_ICON.hormone, acts : SWITCH_SYMBOL.receptor.on});
 // What a substance does to a cell, as the receptor turns it (`direction`, 0 for either way).
 const effectWords = (effect, direction) =>
     direction ? tList('studio.' + (direction > 0 ? 'effectsRise' : 'effectsFall'))[effect]

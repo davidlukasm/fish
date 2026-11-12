@@ -782,7 +782,7 @@
 .aid-probe-scents button{width:30px;height:30px;padding:2px;border-radius:50%;border:1px solid #3d5f66;background:var(--aid-chip);cursor:pointer}
 .aid-probe-scents button.active{border-color:var(--aid-chosen);box-shadow:0 0 0 2px #fffbe555}
 .aid-probe-scents svg{display:block;width:100%;height:100%;pointer-events:none}
-.aid-card-row{display:grid;grid-template-columns:58px 1fr;gap:6px;align-items:start;margin-top:8px;font-size:12px}
+.aid-card-row{display:grid;grid-template-columns:24px 1fr;gap:6px;align-items:start;margin-top:8px;font-size:12px}
 .aid-card-row>span{color:#a1c3c0;padding-top:5px}
 .aid-card-row>div{display:flex;flex-wrap:wrap;gap:5px}
 .aid-card-row>div>button{display:flex;align-items:center;gap:5px;flex-wrap:wrap;border:1px solid #3d6a70;background:#14333a;color:#dce8e0;border-radius:8px;padding:4px 7px;font-size:12px}
