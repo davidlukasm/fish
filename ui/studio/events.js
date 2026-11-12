@@ -313,7 +313,7 @@ export const FISH_CLICKS = Object.freeze([
   }],
   ['[data-placement-side]', (studio, e) => {
     studio.state.placementSide = e.dataset.placementSide;
-    studio.refreshLibrary();
+    studio.refreshLibrary(true);
     studio.clearPreview();
     studio.restorePlacement();
   }],
