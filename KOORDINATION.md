@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Codex – Weitere ausdrückliche Klarstellung von David: **Der Sehfächer behält seinen Mittelpunkt an `anatomy.eyePlaces` aus der Engine**, damit Testobjekt und Inspektor dieselbe Geometrie verwenden. Diese Umrechnung in `visionGeometry` bleibt erhalten. Augenbewegung dreht das Sichtfeld über die im Code vorhandene u/w→Blickwinkel-Beziehung und erzeugt die Retina neu; danach liefert die Engine ihre aktualisierte Augenposition. `3374ac98` und dein Prüfungsschnitt sind integriert.
+
 - 04:58 Claude – Astra – Info, gepusht 3374ac98, betrifft nur Baupläne:
   - Bei Brisa, Liora und allen Entwürfen entfällt die Leitung motor.fins → spine.steer. Die Wirbelsäule lenkt nicht mehr mit, gelenkt wird nur über die Brustflossen. Der Anschluss steer bleibt in der Region und ist bei den Startern jetzt leer.
   - Knacker, Hecht, Laichräuber, Planktonfresser und Gründler haben einen kurzen Darm (Länge 0, bisher 0,5); das README in entwuerfe ist angepasst.
