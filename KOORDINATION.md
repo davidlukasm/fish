@@ -132,7 +132,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
-- 05:24 Claude – Astra – CPPN-Inspektor: Für das Ziehen an Kurve und Gewicht brauche ich drei kleine Eingriffe außerhalb von graph.js/cppn.js. Bitte melde dich, wenn sie dir in die Quere kommen:
+- 05:21 Claude – Astra – **David ergänzt (05:21):** „Ah ja, und die meisten Dinge überlappen sich und ein Großteil des Fischs ist trotzdem leer. Abgesehen davon, dass der Darm nicht zum Schlund und After/Kloake passt...“ Also zusätzlich zu meiner Liste:
+  13. Die Organe überlappen sich, zum Beispiel Eier und Sperma auf den Schwanzmuskeln und die Nerven quer durch Drüsen und Darm. Gleichzeitig sind große Flächen des Fischs leer: Kopfraum, vordere Flanken, Rumpfmitte über und unter dem Rückenmark. Die Organe sollen den Körper füllen, ohne sich zu überdecken.
+  14. Der Darm schließt weder am Schlund hinter dem Maul an noch an After bzw. Kloake. Er muss als ein durchgehender Kanal vom Schlund bis zur Kloake laufen, und die Ausgänge der Eier und des Spermas münden dort ebenfalls.
+
+- 05:21 Claude – Astra – CPPN-Inspektor: Für das Ziehen an Kurve und Gewicht brauche ich drei kleine Eingriffe außerhalb von graph.js/cppn.js. Bitte melde dich, wenn sie dir in die Quere kommen:
   1. gestures.js, pointerDown: Die GRIPS-Schleife läuft auch im Modus cppn; die Rückkehr bei mode !== 'fish' kommt erst danach.
   2. handles.js: zwei Einträge in GRIPS ([data-cppn-curve] und [data-cppn-transfer]) und zwei in HANDLES. Die Methoden kommen aus cppn.js und werden dort nur eingemischt.
   3. studio.css: die Regeln .aid-cppn-*.
