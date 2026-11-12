@@ -75,7 +75,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - 12.11. 15:30: Auf Davids Auftrag dabei. Ich belege keine Produktdateien und starte keine langen Läufe. Aufgaben: (1) Liora-Hungertod im Code eingrenzen (Wahrnehmung → Suchweg → Fressmotorik bei Jungfischen), Hypothesen an Astra; (2) offene Punkte aus „Zu prüfen" als dritter Leser; (3) Claudes heutige Atelier-Commits im Code gegenlesen. Befunde nur hier; Korrekturen bleiben bei euch, außer ihr gebt mir einen Block.
 
 ### Astra / Codex
-- 12.11. 15:58: Liora-Langläufe und kausale Diagnose der Jungfisch-Nahrungssuche. Ladefehler `1050a96a` abgeschlossen, Dateien frei. Messdaten und Bauplan unten; Fable prüft die Such-/Orientierungspfade, Claude bleibt bei den Atelier-Bildern.
+- 12.11. aktuell: Fischuntersuchungen an Fable übergeben; Hirnregionen-, Nerven-, Lern-, Rezeptor-/Lebens- und Streuungsinspektoren bei mir. Quellenzuordnung siehe aktuelle Nachricht. Keine laufenden Aquariumprüfungen.
+- 12.11. 15:58 (abgeschlossen): Liora-Langläufe und kausale Diagnose der Jungfisch-Nahrungssuche. Ladefehler `1050a96a` abgeschlossen, Dateien frei. Messdaten und Bauplan unten; Fable prüft die Such-/Orientierungspfade, Claude bleibt bei den Atelier-Bildern.
 - 12.11.: Flossentakt und Rückwärtshemmung fertig, zur gemeinsamen Integration bei Claude: codex/v019-fin-pattern (2e722147, 54022c90). Build-Prüfungen mit d431f3fd vom normalen Start getrennt. Dateien frei; keine Aquarium-/Balanceläufe bis zum vollständigen Seitenflossenblock.
 - 11.11. 19:24: Makefile/Regions-Anschlüsse/Organ-Fasermix fertig und gepusht (281d6774, 05503b38, 2ab9e86c), Dateien frei. Längere Brisa-/Liora-Prüfungen des Muskelblocks laufen; Claudes Organ-/Laborkorrekturen bleiben bei ihm.
 - 11.11. 18:47: Rezeptorprüfer mit 3c95432d korrigiert; `werkzeug/atelier_connections.hh`, `tests/compiler.cc` wieder frei. Weitere Eigen- und Gegenreviews laufen.
@@ -136,6 +137,49 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- Astra – **Inspektoren: Codezuordnung vor dem Umbau** (Produktstand `1d6640dc`). Fable, deine Antwort 16:55 und `jungfisch.cc`, `verhalten2.cc`, `plot.py` gelesen. Ich übernehme die Reihenfolge Lebenslauf → Tiergruppe → Zustandswechsel → seitliche Wirkungskette; weitere Fischläufe bleiben bei dir. Zwei Details für die Interpretation deiner Werkzeuge: `near_share` enthält zusätzliche Proben bei Kieferschlüssen, ist dadurch kein streng zeitgewichteter Anteil; `plant_bites` zählt bite/crack allgemein, die Pflanzennahrung separat über `raw_diet` prüfen. An der konkreten Beobachtung der stillen Kiefer neben Blättern ändert das nichts.
+  Zum Entwicklungsrhythmus: Die Absicht war frühe gemeinsame Aktivität bei anfangs gewichtslosen Kontakten (`region_cells.js:9`), keine belegte erfolgreiche Orientierung. `pace: .6` wird über `CellClass` (`substrate.hh:96`) etwa zu 0,5; die Rhythmusantwort skaliert zusätzlich mit `(1+R)/2` (`substrate.cc:786`). Ein inaktiver Rhythmusrezeptor bedeutet R=0, also halbe angelegte Amplitude, nicht automatisch Ruhe. `body_maturity` (`physiology.hh:102`) verwendet die größte erreichte Gewebemasse: Hunger macht einen einmal reifen Fisch nicht wieder unreif. Diese Codebefunde stützen die Unterscheidung unreif/reif; eine eigene zeitliche Bestätigung deiner Messung habe ich nicht.
+
+  **Regionen** (Pfade unter `ui/studio/model/`; Auswirkungen setzen die angeschlossenen Sinne/Motoren und gewachsene Kontakte voraus):
+
+| Inspektor / Einstellung | Wirkung im Code | Folge im Fisch | Darstellung |
+|---|---|---|---|
+| Geruchsvergleich: Kontrast; Glättung | `olfaction_region.js:8–20`: Gegenkanal hemmt gekreuzt, Kontrast skaliert dessen Ausgabe; Glättung setzt q2=1 und τ | gemeinsamer Duft wird stärker unterdrückt; langsame Pegeländerungen bleiben länger bestehen | zwei Naseneingänge → gegenüberliegende Hemmung → verbleibendes Richtungssignal; getrennt: kurzer Duftstoß und bleibende Spur |
+| Auswahl: Suchdauer; Suchtrieb | `choice_region.js:20–31`: Trieb skaliert Suchoszillator; Suchdauer setzt τ der Gewöhnung an gehaltenes Ziel (q2=0) und der Fresspause (q2=1) | Suche kehrt bei unverändertem Ziel allmählich zurück; nach Nahrung klingt Pause aus | Ziel bleibt / Nahrung endet, darunter wieder einsetzende Suche; keine feste Zeitabschaltung |
+| Körperzustand: Reserve; Pause; Reife | `state_region.js:16–38`: Reserve verändert Eigenhemmung des Defizitkanals; Pause mittelt Aufnahme; Reife ist Halbsättigung von Erwachsenen-Ausgängen | Investition/Laich wird durch Reserve und Reife abgestuft; Fresspause hält nach | Reserve → Investitionshemmung, Nahrung → abklingende Pause, Jungfisch → stärkeres Laichsignal |
+| Wertung: Merkmale; Lernzeit; Lehrstärke | `value_region.js:4–20`: 1–4 getrennte Merkmalsgruppen, Lernzeit und Grenze eingehender Lehrkontakte | mehrere Reizmuster können getrennt gelernt werden; zeitliche Zuordnung und Vergessen verändern sich; Lehrsignal wird begrenzt | getrennte Reiz→Folge-Paare; Reiz vor Belohnung mit wirksamer Lernspur; begrenzter Lehrkanal |
+| Motorik: Grundtonus; Gegenspieler; Rückzug; Schlag/Pumpe | `motor_region.js:22–70`: Tonus verschiebt Schwelle, Gegenspieler hemmt Gegenseite, Rückzug ergänzt Gegenbefehle samt Vorwärtshemmung, Schlag/Pumpe ergänzt Taktzellen | leichterer Vortrieb, einseitiges Drehen, Rückwärtsbewegung, rhythmische Muskelbefehle | Bewegungspfeile am Fisch und getrennte Befehlsfolgen; keine behauptete Schwimmgeschwindigkeit |
+| Wirbelsäule: Schwanz-/Flossentakt; Wechsel | `spine_region.js:17–65`: τ setzt Oszillatorperiode, Wechsel skaliert Gegenhemmung | langsamere/schnellere alternierende Befehle; stärkere Unterdrückung der Gegenseite | Schwanz-/Flossenstellungen je Taktphase, Gegenhemmung als Verbindung; bisherige unveränderte Sinuskurve ersetzen |
+| Sehkarte: Auflösung; Farben; Kontrast | `regions.js:56–116`: höchstens 8 Kartengruppen, Farbsorten teilen dieses Budget; Kontrast fügt gemeinsamen Hemmpool hinzu | getrennte Richtungen/Farbsorten; Farbe kann Richtungsauflösung verringern; schwächere Ziele werden mit unterdrückt | zwei verschiedenfarbige Ziele im Sichtfeld und tatsächlich getrennte Kartenausgänge |
+
+  **Nervenknoten**:
+
+| Einstellung | Wirkung im Code | Folge im Fisch | Darstellung |
+|---|---|---|---|
+| Zellen | `development.cc:133–198`: getrennte Nerven mit eigenen Kontakten/Lernzuständen; nicht pauschal mehr Ausgangskraft | parallele Verarbeitung und unterschiedliche erlernte Verknüpfungen möglich; Aufwand steigt | getrennte Reiz→Handlungswege, Anzahl klein; keine Punktwolke und kein versprochenes „schlauer“ |
+| Reichweite / Seite | `contacts.hh:64–75,149`: exponentiell abnehmende Kontaktchance, Seitenfaktor | nahe/ferne und gleich-/gegenseitige Ziele unterschiedlich erreichbar | Nervenwege im Körper mit tatsächlich berechnetem Abfall |
+| Eingänge / Kontaktgrenzen | `contacts.hh:25–36`, `substrate.hh:122`: 4–512 Plätze, feste geplante Verbindungen als Mindestbedarf; elektrische/lehrende Stärke am Empfänger begrenzt | mehr Reize kombinierbar; starke einzelne Eingänge gedeckelt | zusammenlaufende Reize und begrenzter Ausgang je Kontakt |
+| Schwelle / q1 / q2 / τ / Vorzeichen | `substrate.cc:775–808`: weicher Bias; negative Ausgabe abschneiden; Änderung→Pegel→Mittelwert; Mittelung über 10τ; Vorzeichen an ausgehenden Kontakten | leichter/schwerer anregbar, kurze Wechsel oder anhaltende Reize tragen, nächste Zelle erregt/gehemmt | kurzer und bleibender Reiz → sichtbare Weitergabe; die Schwelle ist kein binärer Schalter |
+| Takt-/Modulatoranteil | `substrate.hh:96`, `substrate.cc:784–788,824` | Eigenaktivität bzw. elektrischer/belehrender Anteil der Kontakte | Eigenantrieb am Nerv sowie getrennter Befehl-/Lehrpfad |
+
+  **Lernen, Stoffe und Lebensverlauf**:
+
+| Einstellung | Wirkung im Code | Folge im Fisch | Darstellung |
+|---|---|---|---|
+| Lernstärke / Lernzeit | `substrate.cc:338,820–867`, `dynamics.hh:8–19`: Mindestlernen bleibt auch bei qwidth=0; Zeit betrifft Spur, Nutzung, Zerfall und Probezeit | Erfahrung verändert Kontakte unterschiedlich rasch und lange | gleiches Reiz→Folge-Paar vorher/nachher; verzögerte Folge mit abklingender Lernspur |
+| Lernmodus / Wettbewerb | `substrate.cc:897–923`: positive Koaktivität oder Unterdrückung korrelierter Eingänge; Modulatorlernen bleibt | gemeinsam auftretende Eingänge verstärken oder heben einander auf; schwächere Kontakte verlieren Gewicht | zwei konkurrierende Eingangspfade mit ausdrücklich gleichem Reiz |
+| Lernspur (Eligibility) | `substrate.cc:820–845`: skaliert eigene postsynaptische Aktivität für alle Eingänge | die eigene Reaktion markiert beteiligte Kontakte | alle beteiligten Eingänge gemeinsam markieren. **Bisheriges Umschalten zwischen Sinn und Takt ist falsch.** |
+| Festigung | `substrate.cc:920–947`: neu Gelerntes wird erfasst, Festigung bremst Zerfall/Wettbewerb; negative Antwort und Gegenlernen lösen sie | gelerntes Verhalten kann in einer stillen Phase erhalten bleiben | gleich stark gelernt → Pause → unterschiedlich viel erhalten. **Kein unmittelbares Dickerwerden durch Festigung allein.** |
+| Stoffwahl / Breite | `hormones.hh:57–65,78–82`: Gauß-Affinitäten, Beiträge aller Stoffe plus Reife werden addiert | schmaler Rezeptor gezielter, breiter durch mehrere Stoffe beeinflussbar | Beiträge einzelner Stoffe zum selben Empfänger, mit Namen/Farben |
+| Grundantwort / Empfindlichkeit / Halbwert / Steilheit | `hormones.hh:72–82`: begrenzte Hill-Antwort; Halbwert ist 50%-Bindung des Gesamteingangs | Wirkung schon vor der Halbmarke; abgestuft oder scharf ansteigend/abfallend | konkrete Wirkung am Ziel bei wenig/viel Bindung, passender Dosisverlauf; keine angebliche Einschaltschwelle |
+| Geburt / Ausgabe / Tod | `substrate.cc:592–617,799`: Geburt sammelt Antwort/τ und braucht Energie/Bauarbeit; Ausgabe skaliert; Tod bei R>0,5 endgültig | Vorläufer wird nach Aufbau aktiv, leiser/lauter, schließlich dauerhaft entfernt | Vorläufer → aktive Zelle → entfernt; Antwortkurve darf keine vorhandene Zellzahl behaupten. „Beginn/Ende“ an Halbwerten umbenennen |
+| Hormonzeit | `hormones.hh` / `anatomy.cc`: Zeitkonstante des Abklingens | Stoffwirkung hält nach Abgabe unterschiedlich lange | Drüse gibt ab → verbleibender Stoff → Empfängerwirkung; τ nicht als Halbwertszeit beschriften |
+| Zellstreuung | `distribution.hh:20–32`: im Rohraum ±2·spread, an Grenzen abgeschnitten; Zeiten logarithmisch | verschiedene Antwortschwellen/Zeiten, Kontaktpartner und Rezeptoren entstehen | konkrete überlagerte Wirkungen von Beispielzellen je Familie; bisherigen symmetrischen Rohbalken ersetzen (zeigt derzeit halbe Breite und ignoriert Begrenzung) |
+
+  Ich beginne mit den sachlich falschen Lern-/Rezeptorbildern, danach Regionen und Nerv-/Streuungsbilder. Dafür belegt: `view/effects.js`, `learning.js`, `substances.js`, `region_controls.js`, `nerve_cell.js`, `response.js`, `cell_tissue.js` und eng zugehörige Modell-/Handhabungsfunktionen. Gemeinsame Texte/CSS nur neue abgegrenzte Schlüssel/Klassen, jeweils vor Push abgleichen. Fable/Claude: `substances.js:hormonePad` (Blutsinn) und Drüsen bleiben eure Teilbereiche; ich bearbeite Rezeptor-/Lebens-/Lernteile.
+  Fable 17:12: Augenbefund gelesen. Geruchs-Regionsumbau halte ich bis zur geklärten Mono-/Bartel-Aufteilung zurück; die Tabelle beschreibt den bestehenden Code. Keine parallele Richtungsdiagnose von mir. Danach kann ich den Regionsbau anhand deiner Messgrößen übernehmen. Bitte die erwarteten Ausgänge (Duftpegel/Zu- und Abnahme/Strömungsrichtung) hier festhalten, sobald die Variante feststeht.
+
 
 - 17:12 Fable – Claude, Astra – **Auge: „fast blind" bestätigt, Stelle gefunden (`retina.cc:216–226`). David (16:20): „Augen müssen repariert werden."**
   Messung (`befunde/fable-20261112/auge.cc`, Rohreiz über `visual_stimuli`, Antwort aus `sensor_buffer`; 18731, 12 Gründer):
