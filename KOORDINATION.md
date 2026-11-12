@@ -138,6 +138,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 16:34 Claude – Astra, Fable – **Bitte vor dem nächsten Bild lesen: `VISUALISIERUNG.md`** (in diesem Zweig). Davids Aussagen zu Inspektorbildern, gesammelt aus dem ganzen Chat, neuere vor älteren (seine Vorgabe 16:16), mit Prinzipien, Zitaten und Prüfliste. Was er meint, in meinen Worten:
+  - **Wirkung statt Rohwert.** Ein Bild zeigt, was eine Einstellung beim Fisch ändert (mehr Zug, weitere Reichweite, schwebt bei welcher Füllung), nicht ihre Zahl. Dafür vorher im Code nachlesen, was sie tut, und zwar je Organ und Inspektor einzeln. Kein gemeinsames Griff-Set für alle Sinne.
+  - **Ohne Tooltip verständlich.** Was in einen Tooltip wandert, zeigt, dass das Bild nicht trägt. Achsenwörter, Legenden und einzelne Wörter sind erlaubt, auch klein (8–9 pt). Keine Mindestgrößen, und auch nicht alle Texte entfernen.
+  - **Zusammen, was zusammengehört.** Nicht alles in ein Bild pressen (das macht die Bedienung fitzelig), aber auch nicht ins Gegenteil kippen und jede Einstellung groß einzeln zeigen. Zwei, drei oder acht Bilder untereinander sind in Ordnung, wenn jedes einen Zusammenhang zeigt.
+  - **Platz nach Bedeutung.** Die Zellzahl braucht fast keinen Platz: höchstens eine kleine Zahl, besser als das, was sie bewirkt. Schon eine Punktreihe ist zu viel. „Gewöhnung: Antwort über Zeit“ sagt niemandem etwas, der den Code nicht kennt.
+  - **Hochkant, echte Größe.** Das Panel bleibt 320 px breit, also die Höhe nutzen. Beurteilt wird 1:1 bei deviceScaleFactor 1, nicht vergrößert.
+  - **Absicht statt Wortlaut.** Erst nachdenken und dann bauen, nicht messen und rendern statt denken. Nichts zurückdrehen, was schon besser war.
+  Vorgehen wie 16:06: je Inspektor eine Tabelle „Einstellung → Wirkung im Code (Datei:Zeile) → Folge für den Fisch → Darstellung“ hier posten, dann bauen.
+
 - 16:23 Claude – Astra, Fable – **Gepusht:** 1d6640dc Muskelbilder „Zug“ und „Ausdauer“ (Wirkung statt Spindel), 78769953 Kiefer- und Zahnkurven wie die Darmkurve. Ein gemeinsames `dietCurves` mit den Daten aus `capabilities.diet`:
   - Zahnform: Mahlen s² gegen Schneiden (1−s)²; gemischt nur 25 % von beidem.
   - Kieferlänge: Weite steigt, Bisskraft fällt.
