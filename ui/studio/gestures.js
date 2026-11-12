@@ -1,3 +1,5 @@
+import {brainLobes} from './view/region_layout.js';
+import {clamp} from '../units.js';
 import {markedKind} from './events.js';
 import {DRAG_CLICK, DRAG_START, GRIPS} from './handles.js';
 import {fieldPlacements} from './model/placement.js';
@@ -18,16 +20,12 @@ import {
   cameraBox,
   cameraCoordinates,
   cameraScale,
-  STEADY,
-  steadyScale,
   viewBoxOf
 } from './view/frame.js';
-import {BODY_MAP, LAYER, organLabelPlace} from './view/scene.js';
-import {dataAttribute, fixed, pointText} from './view/markup.js';
-import {LAYER_KEYS, layerShown} from './view/layers.js';
+import {BODY_MAP, LAYER} from './view/scene.js';
+import {dataAttribute, pointText} from './view/markup.js';
 import {zoomStamp} from './view/shell.js';
 import {label} from './view/kit.js';
-import {arrowSize} from './view/wires.js';
 import {placementPreview} from './view/placing.js';
 
 const PRESSED_ITEMS = Object.freeze([ 'contact', 'center', 'assembly', 'organ', 'wire' ]);
@@ -41,41 +39,28 @@ const itemSelector = kinds => kinds.map(kind => '[' + dataAttribute(kind) + ']')
 export const gestureMethods = {
   zoom(direction, anchor = null) {
     const c = this.state.camera, previous = c.zoom;
-    c.zoom = direction === 'in'    ? Math.min(CAMERA_ZOOM.max, c.zoom * CAMERA_ZOOM.step)
-             : direction === 'out' ? Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step)
-                                   : 1;
+    c.zoom = typeof direction === 'number' ? clamp(direction, CAMERA_ZOOM.min, CAMERA_ZOOM.max)
+             : direction === 'in'          ? Math.min(CAMERA_ZOOM.max, c.zoom * CAMERA_ZOOM.step)
+             : direction === 'out'         ? Math.max(CAMERA_ZOOM.min, c.zoom / CAMERA_ZOOM.step)
+                                           : 1;
     if (anchor && previous !== c.zoom) {
       c.x += (anchor.x - c.x) * (1 - previous / c.zoom);
       c.y += (anchor.y - c.y) * (1 - previous / c.zoom);
     }
     if (direction === 'fit')
       Object.assign(c, CAMERA_HOME);
-    const svg = this.bodyMap();
-    if (svg) {
-      svg.setAttribute('viewBox', viewBoxOf(c));
-      for (const mark of svg.querySelectorAll('[' + STEADY + ']'))
-        mark.setAttribute(
-            'transform',
-            mark.getAttribute('transform').replace(/scale\([^)]*\)/, steadyScale(c.zoom)));
-      for (const label of svg.querySelectorAll('.aid-organ-label[data-label-y]'))
-        for (const [name, value] of Object.entries(
-                 organLabelPlace(Number(label.dataset.labelY), c.zoom)))
-          label.setAttribute(name, fixed(value));
-      for (const marker of svg.querySelectorAll('.aid-wire-marker')) {
-        marker.setAttribute('markerWidth', arrowSize(c.zoom));
-        marker.setAttribute('markerHeight', arrowSize(c.zoom));
-      }
-    } else
-      this.refreshScene();
-    const shown = zoom =>
-        LAYER_KEYS.map(key => layerShown({...this.state, camera : {...c, zoom}}, key)).join();
-    if (shown(previous) !== shown(c.zoom)) {
-      this.refreshScene();
-      this.refreshSwitches();
-    }
+    this.refreshScene();
+    this.refreshSwitches();
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = zoomStamp(c);
+  },
+  focusBrainPart(key) {
+    const part = brainLobes(this.state.document, this.state.sites).find(p => p.key === key);
+    if (!part)
+      return;
+    Object.assign(this.state.camera, {x : part.x, y : part.y});
+    this.zoom(2.3);
   },
   // With `clearTools` the point also keeps clear of the tool bar; a point that follows the pointer
   // does not, as it would zoom out with every step it takes along the edge.
@@ -98,7 +83,9 @@ export const gestureMethods = {
     if (!svg || this.state.mode !== 'fish')
       return;
     event.preventDefault();
-    this.zoom(event.deltaY < 0 ? 'in' : 'out', cameraCoordinates(event, svg, this.state.camera));
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 240 : 1);
+    this.zoom(this.state.camera.zoom * Math.exp(-clamp(delta, -240, 240) * .002),
+              cameraCoordinates(event, svg, this.state.camera));
   },
   pointerDown(event) {
     const grip = event.target.closest?.('[data-panel-grip]');
@@ -130,6 +117,8 @@ export const gestureMethods = {
     const svg = event.target.closest?.(BODY_MAP);
     if (!svg)
       return;
+    if (this.state.armed && event.button === 0)
+      return;
     const item = event.target.closest?.(itemSelector(PRESSED_ITEMS));
     const kind = markedKind(item, PRESSED_ITEMS);
     const id = kind ? item.dataset[kind] : null;
@@ -156,8 +145,8 @@ export const gestureMethods = {
     const drag = this.pointer;
     if (!drag) {
       const svg = event.target?.closest?.(BODY_MAP);
-      if (svg && this.state.armed?.kind === 'wiring')
-        this.aimWire(this.state.armed.value, event);
+      if (svg && this.state.armed)
+        this.dragOver(event);
       if (svg && this.pendingWire?.from && this.state.tool === 'wire') {
         const from = this.wirePoint(this.pendingWire.from);
         if (from)
@@ -228,7 +217,7 @@ export const gestureMethods = {
       return;
     }
     if (drag.pan)
-      return this.cancelChoices();
+      return this.state.armed ? this.restorePlacement() : this.cancelChoices();
     if (!MOVED_ITEMS.includes(drag.kind))
       return this.cancelChoices();
     if (trashed) {

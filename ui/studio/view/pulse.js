@@ -5,17 +5,29 @@ const colour = leg => leg.kind === 'hormone'    ? substanceColor(leg.substance)
                       : leg.kind === 'teaching' ? 'var(--aid-teach)'
                       : leg.sign < 0            ? 'var(--aid-inhibit)'
                                                 : 'var(--aid-light)';
-// A level of the trace takes one interval, shorter when the trace is deep; reached parts glow a
-// little longer. A wave fades as it spreads.
-const PLAY = Object.freeze({interval : 420, whole : 8000, linger : 800, dot : 5, thinning : .7});
+const PLAY = Object.freeze({interval : 520, speed : 180, linger : 800, dot : 5, thinning : .7});
 export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
   const levels = Math.max(1, ...trace.parts.map(part => part.level)) + 1;
-  const interval = Math.min(PLAY.interval, PLAY.whole / levels), linger = PLAY.linger;
+  const linger = PLAY.linger;
+  let intervals = Array(levels).fill(PLAY.interval), times = [];
+  const timing = () => {
+    times = [ 0 ];
+    for (const interval of intervals)
+      times.push(times.at(-1) + interval);
+  };
+  timing();
   let overlay, paths = [], parts = [], waves = [], handle = null, started = null, active = false;
   let nextLeg = 0;
   const shown = new Set(), sentLegs = new Set();
   const attach = next => {
+    const elapsed = started === null ? 0 : performance.now() - started;
+    const nextLevel = times.findIndex((t, i) => i < levels && elapsed < times[i + 1]);
+    const level = nextLevel < 0 ? levels - 1 : nextLevel;
+    const phase = (elapsed - times[level]) / intervals[level];
     overlay?.remove();
+    for (const {cls, elements} of parts)
+      for (const element of elements)
+        element.classList.remove(cls);
     svg = next;
     overlay = svg.ownerDocument.createElementNS(NS, 'g');
     overlay.setAttribute('class', 'aid-plan-pulses');
@@ -25,10 +37,14 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       const path = element.matches('path') ? element : element.querySelector('.aid-wire-ink');
       if (!path)
         continue;
-      for (const pair of element.getAttribute('data-signal-edges').split(' ')) {
+      for (const pair of element.getAttribute('data-signal-edges').split(' ').filter(Boolean)) {
         if (!routes.has(pair))
-          routes.set(pair, new Set());
-        routes.get(pair).add(path);
+          routes.set(pair, []);
+        routes.get(pair).push({
+          path,
+          opacity : Number(element.getAttribute('data-signal-opacity') ?? 1),
+          section : Number(element.getAttribute('data-signal-section') ?? 1)
+        });
       }
     }
     paths = [];
@@ -59,39 +75,37 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       if (leg.kind === 'hormone')
         continue;
       const pair = leg.from + '>' + leg.to;
-      let found = routes.get(pair);
-      if (!found) {
-        const from = point(leg.from), to = point(leg.to);
-        if (!from || !to)
-          continue;
-        const path = svg.ownerDocument.createElementNS(NS, 'path');
-        path.setAttribute('d', 'M' + from.x + ' ' + from.y + ' L' + to.x + ' ' + to.y);
-        path.setAttribute('fill', 'none');
-        path.style.stroke = colour(leg);
-        path.setAttribute('stroke-opacity', leg.kind === 'electrical' ? '.15' : '.45');
-        path.setAttribute('stroke-dasharray', '4 5');
-        overlay.appendChild(path);
-        found = new Set([ path ]);
-        routes.set(pair, found);
-      }
-      for (const path of found) {
-        if (!joined.has(path))
-          joined.set(path, new Set());
-        const key = leg.kind + ':' + leg.sign + ':' + leg.level;
-        if (joined.get(path).has(key))
-          continue;
-        joined.get(path).add(key);
-        const dot = svg.ownerDocument.createElementNS(NS, 'circle');
-        dot.setAttribute('r', String(PLAY.dot));
-        dot.style.fill = colour(leg);
-        dot.setAttribute('opacity', '0');
-        overlay.appendChild(dot);
-        paths.push({leg, path, dot});
-      }
+      const found = routes.get(pair);
+      if (!found?.length)
+        continue;
+      const route = found.sort((a, b) => a.section - b.section).map(entry => entry.path);
+      const trunk = route.find(path => path.classList.contains('aid-wire-ink')) ?? route[0];
+      if (!joined.has(trunk))
+        joined.set(trunk, new Set());
+      const key = leg.kind + ':' + leg.sign + ':' + leg.level;
+      if (joined.get(trunk).has(key))
+        continue;
+      joined.get(trunk).add(key);
+      const dot = svg.ownerDocument.createElementNS(NS, 'circle');
+      dot.style.fill = colour(leg);
+      dot.setAttribute('opacity', '0');
+      overlay.appendChild(dot);
+      paths.push({leg, route, dot, opacity : Math.min(...found.map(entry => entry.opacity))});
     }
     svg.appendChild(overlay);
-    for (const entry of paths)
-      entry.length = entry.path.getTotalLength();
+    const matrix = svg.getScreenCTM();
+    const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+    intervals = Array(levels).fill(PLAY.interval);
+    for (const entry of paths) {
+      entry.lengths = entry.route.map(path => path.getTotalLength());
+      entry.length = entry.lengths.reduce((sum, length) => sum + length, 0);
+      entry.dot.setAttribute('r', String(PLAY.dot / scale));
+      intervals[entry.leg.level] =
+          Math.max(intervals[entry.leg.level], entry.length * scale / PLAY.speed * 1000);
+    }
+    timing();
+    if (started !== null)
+      started = performance.now() - times[level] - phase * intervals[level];
     const cached = new Map();
     parts = trace.parts.map(part => {
       if (!cached.has(part.id))
@@ -122,11 +136,11 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
     for (const item of parts) {
       const {part, cls, elements} = item;
       const key = part.id + ':' + part.kind + ':' + part.sign + ':' + (part.substance ?? '');
-      if (elapsed >= part.level * interval && !shown.has(key)) {
+      if (elapsed >= times[part.level] && !shown.has(key)) {
         shown.add(key);
         reached(part);
       }
-      const on = elapsed >= part.level * interval && elapsed < part.level * interval + linger;
+      const on = elapsed >= times[part.level] && elapsed < times[part.level] + linger;
       if (item.on !== on) {
         item.on = on;
         for (const element of elements)
@@ -134,7 +148,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       }
     }
     // The trace lists its legs level by level, so the legs now due are always the next ones.
-    while (nextLeg < trace.legs.length && elapsed >= trace.legs[nextLeg].level * interval) {
+    while (nextLeg < trace.legs.length && elapsed >= times[trace.legs[nextLeg].level]) {
       const leg = trace.legs[nextLeg++];
       const key =
           leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign + ':' + (leg.substance ?? '');
@@ -144,22 +158,25 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       }
     }
     for (const {leg, circle, reach} of waves) {
-      const fraction = elapsed / interval - leg.level;
+      const fraction = (elapsed - times[leg.level]) / intervals[leg.level];
       const spreading = fraction >= 0 && fraction < 1;
       circle.setAttribute('opacity', spreading ? String(1 - PLAY.thinning * fraction) : '0');
       if (spreading)
         circle.setAttribute('r', String(fraction * reach));
     }
-    for (const {leg, path, dot, length} of paths) {
-      const fraction = elapsed / interval - leg.level;
-      dot.setAttribute('opacity', fraction >= 0 && fraction < 1 ? '1' : '0');
+    for (const {leg, route, dot, length, lengths, opacity} of paths) {
+      const fraction = (elapsed - times[leg.level]) / intervals[leg.level];
+      dot.setAttribute('opacity', fraction >= 0 && fraction < 1 ? String(opacity) : '0');
       if (fraction >= 0 && fraction < 1) {
-        const at = path.getPointAtLength(fraction * length);
+        let distance = fraction * length, index = 0;
+        while (index + 1 < route.length && distance > lengths[index])
+          distance -= lengths[index++];
+        const at = route[index].getPointAtLength(distance);
         dot.setAttribute('cx', String(at.x));
         dot.setAttribute('cy', String(at.y));
       }
     }
-    if (elapsed < levels * interval + linger)
+    if (elapsed < times[levels] + linger)
       handle = requestAnimationFrame(draw);
     else
       stop();
@@ -174,7 +191,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
     },
     // A redrawn scene takes the trace along only while it plays.
     attach : next => {
-      if (active)
+      if (active && next)
         attach(next);
     },
     stop

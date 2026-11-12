@@ -114,7 +114,9 @@ export const STUDIO_CLICKS = Object.freeze([
   [ '[data-tool]', (studio, e) => studio.setTool(e.dataset.tool) ],
   [ '[data-act-kind="wiring"]', (studio, e) => studio.armWiring(e.dataset.actValue) ],
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
+  [ '[data-drag-kind]', (studio, e) => studio.pickUp(e.dataset.dragKind, e.dataset.dragValue) ],
   [ '[data-history]', (studio, e) => studio.stepHistory(e.dataset.history) ],
+  [ '[data-brain-part]', (studio, e) => studio.focusBrainPart(e.dataset.brainPart) ],
   [ '[data-zoom]', (studio, e) => studio.zoom(e.dataset.zoom) ],
   [
     '[data-contacts]',

@@ -4,8 +4,7 @@ export const ZONE_X = Object.freeze([ [ 130, 260 ], [ 260, 470 ], [ 470, 780 ], 
 export const ZONE = Object.freeze({snout : 0, head : 1, trunk : 2, tail : 3});
 // Single nerve nodes sit inside the brain and the cord, where the regions sit, never out at the
 // body wall.
-export const nerveZone = site =>
-    !site.outer && (site.zone === ZONE.head || site.zone === ZONE.trunk);
+export const nerveZone = site => !site.outer && site.zone >= ZONE.head;
 export const BODY_FRAME = Object.freeze({snout : ZONE_X[0][0], tail : 905, middle : 365});
 const CENTRE_Y = BODY_FRAME.middle;
 export const BODY_MIDDLE =
@@ -13,8 +12,8 @@ export const BODY_MIDDLE =
 export const BODY_RADIUS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 
 export const BODY_KNOTS = Object.freeze([
-  [ 130, 40 ], [ 200, 92 ], [ 300, 124 ], [ 420, 138 ], [ 560, 126 ], [ 690, 98 ], [ 800, 62 ],
-  [ 905, 26 ]
+  [ 130, 50 ], [ 200, 150 ], [ 300, 230 ], [ 420, 254 ], [ 560, 236 ], [ 690, 180 ], [ 800, 130 ],
+  [ 905, 44 ]
 ]);
 const TAIL_LEAST = 12;
 export function halfWidth(x) {
@@ -40,23 +39,21 @@ const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 3
 export const NERVE_ROLE = 'nerve';
 export const SKIN_ROLE = 'skin';
 const BRAIN_MAP = Object.freeze({
-  [ZONE.snout] : {front : 196, length : 30, height : 0, out : 26, narrow : 0},
-  [ZONE.head] : {front : 262, length : 150, height : 70, out : 44, narrow : 0},
-  [ZONE.trunk] : {front : 455, length : 105, height : 50, out : 36, narrow : .3},
-  [ZONE.tail] : {front : 620, length : 220, height : 40, out : 16, narrow : 0}
+  [ZONE.head] : {front : 250, length : 290, inner : 65, outer : 155},
+  [ZONE.trunk] : {front : 615, length : 125, inner : 9, outer : 22},
+  [ZONE.tail] : {front : 760, length : 115, inner : 7, outer : 17}
 });
-const MIDDLE_HEIGHT = .5;
-const nerveSite = site => !site.outer && BRAIN_MAP[site.zone] !== undefined;
 function brainPoint(site) {
-  const M = BRAIN_MAP[site.zone];
+  const M = BRAIN_MAP[site.zone], row = Math.max(0, Math.min(1, 3 * site.v - 1));
+  const pitch = M.length / (site.zone === ZONE.tail ? 10 : 8);
   return {
-    x : M.front + (1 - site.u) * M.length + (site.v - MIDDLE_HEIGHT) * M.height,
+    x : M.front + (1 - site.u) * M.length + (onMidline(site) ? (row - .5) * pitch / 2 : 0),
     y : onMidline(site) ? CENTRE_Y
-                        : CENTRE_Y + sideSign(site.side) * M.out * (1 - M.narrow * (1 - site.u))
+                        : CENTRE_Y + sideSign(site.side) * (M.inner + row * (M.outer - M.inner))
   };
 }
 export function sitePoint(site, role = '') {
-  if (role === NERVE_ROLE && nerveSite(site))
+  if (role === NERVE_ROLE && nerveZone(site))
     return brainPoint(site);
   const [start, end] = ZONE_X[site.zone];
   const x = start + (1 - site.u) * (end - start);

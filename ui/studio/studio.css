@@ -1123,3 +1123,25 @@
 .aid-region-picture .region-button:hover rect,.aid-region-picture .region-button:focus-visible rect{stroke:#f0f7df;stroke-width:2}
 .aid-region-picture .region-fan{fill-opacity:.22;stroke:var(--region-primary);stroke-width:1.5}
 .aid-region-picture .region-interneuron{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:2}
+
+.aid-palette-tile[aria-pressed="true"]{background:#31545c;box-shadow:inset 0 0 0 2px #9edaca}
+#station-root[data-armed] #aid-body-map{cursor:crosshair}
+
+.aid-region-card .aid-anatomical-region,.aid-brain-part-shape{fill:#203b48;stroke:#9cb1cb;stroke-width:1.5;stroke-dasharray:none}
+.aid-region-name{fill:#dce6f0;font-size:9px;font-weight:600;pointer-events:none}
+.aid-region-symbol{stroke:#8aa9ba;stroke-width:1.2;fill:#203b48}
+#aid-body-map[data-detail="0"] .aid-brain-fissure{opacity:.2}
+#aid-body-map[data-detail="0"] .aid-wire-ink{opacity:.4}
+#aid-body-map[data-detail="0"] .aid-wire-group.selected .aid-wire-ink{opacity:1}
+
+.aid-neural-seats{fill:none;stroke:#aac2d1;stroke-width:1;opacity:.5;pointer-events:none}
+.aid-region-card.detailed .aid-region-name{paint-order:stroke;stroke:#203b48;stroke-width:2px}
+
+.aid-region-card{--region-ink:#96b5cf;--region-fill:#213b4b}
+.aid-region-card.olfaction{--region-ink:#7fd2b1;--region-fill:#21463f}
+.aid-region-card.tectum{--region-ink:#83bce2;--region-fill:#233e55}
+.aid-region-card.value,.aid-region-card.state{--region-ink:#c1a3dc;--region-fill:#413650}
+.aid-region-card.choice{--region-ink:#e0c18b;--region-fill:#514431}
+.aid-region-card.motor,.aid-region-card.spine{--region-ink:#e6a385;--region-fill:#513c37}
+.aid-region-card .aid-anatomical-region,.aid-brain-part-shape{fill:var(--region-fill);stroke:var(--region-ink)}
+.aid-region-card .aid-region-name{fill:var(--region-ink)}

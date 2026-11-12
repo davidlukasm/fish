@@ -52,7 +52,18 @@ export const dropMethods = {
     if (!item)
       return;
     const {dragKind : kind, dragValue : value} = item.dataset;
+    this.state.armed = null;
+    this.showArmed(false);
+    this.clearPreview();
+    this.cancelChoices();
     this.dragging = {kind, value};
+    this.preparePlacement(kind, value);
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('application/x-fish-organ', kind + ':' + value);
+    if (event.dataTransfer.setDragImage)
+      event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
+  },
+  preparePlacement(kind, value) {
     if (DROP_ON_PARTS.includes(kind))
       this.markDropTargets(kind, value);
     else if (kind === 'wiring')
@@ -66,10 +77,21 @@ export const dropMethods = {
       const placed = ORGAN_FROM_CARD[kind] ?? {kind, value};
       this.showHints(placed.kind, placed.value, placed.kind + ':' + placed.value);
     }
-    event.dataTransfer.effectAllowed = 'copy';
-    event.dataTransfer.setData('application/x-fish-organ', kind + ':' + value);
-    if (event.dataTransfer.setDragImage)
-      event.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2);
+  },
+  pickUp(kind, value) {
+    const previous = this.state.armed;
+    this.release();
+    if (previous?.kind === kind && previous.value === value)
+      return;
+    this.pendingWire = null;
+    this.state.armed = {kind, value};
+    this.showArmed();
+    this.preparePlacement(kind, value);
+  },
+  restorePlacement() {
+    const armed = this.state.armed;
+    if (armed && armed.kind !== 'wiring')
+      this.preparePlacement(armed.kind, armed.value);
   },
   previewModule(kind, value, position) {
     const placed =
@@ -82,17 +104,19 @@ export const dropMethods = {
   },
   dragOver(event) {
     const svg = event.target.closest?.(BODY_MAP);
-    if (!svg || !this.dragging || !this.state.sites.length)
+    const carried = this.dragging ?? this.state.armed;
+    if (!svg || !carried || !this.state.sites.length)
       return;
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
+    if (event.dataTransfer)
+      event.dataTransfer.dropEffect = 'copy';
     const position = cameraCoordinates(event, svg, this.state.camera);
-    if (this.dragging.kind === 'wiring') {
-      this.aimWire(this.dragging.value, event);
+    if (carried.kind === 'wiring') {
+      this.aimWire(carried.value, event);
       return;
     }
-    const teaching = this.ontoNerve(this.dragging.kind, this.dragging.value);
-    if (DROP_ON_PARTS.includes(this.dragging.kind) || teaching) {
+    const teaching = this.ontoNerve(carried.kind, carried.value);
+    if (DROP_ON_PARTS.includes(carried.kind) || teaching) {
       const target = this.dropTarget(event);
       for (const element of svg.querySelectorAll('.aid-drop-hover'))
         element.classList.toggle('aid-drop-hover', element === target?.element);
@@ -100,7 +124,7 @@ export const dropMethods = {
       if (target || !teaching)
         return;
     }
-    if (this.dragging.kind === 'organ' && hasField(this.dragging.value)) {
+    if (carried.kind === 'organ' && hasField(carried.value)) {
       this.showChoices(position);
       return;
     }
@@ -108,7 +132,7 @@ export const dropMethods = {
       this.root.querySelector(LAYER.preview)?.replaceChildren();
       return;
     }
-    const {kind, value} = ORGAN_FROM_CARD[this.dragging.kind] ?? this.dragging;
+    const {kind, value} = ORGAN_FROM_CARD[carried.kind] ?? carried;
     const module = kind === 'module' || kind === 'user-module';
     const preview = this.root.querySelector(LAYER.preview);
     if (preview)
@@ -239,25 +263,35 @@ export const dropMethods = {
     this.state.armed = null;
     this.showArmed();
     this.clearPreview();
+    this.cancelChoices();
     return true;
   },
-  showArmed() {
+  showArmed(redraw = true) {
     const armed = this.state.armed, root = this.root.dataset;
     if (armed) {
       root.armed = armed.kind;
       root.armedValue = armed.value;
-      this.root.style.setProperty('--aid-armed-cursor', armedCursor(armed.value));
+      if (armed.kind === 'wiring')
+        this.root.style.setProperty('--aid-armed-cursor', armedCursor(armed.value));
     } else {
       delete root.armed;
       delete root.armedValue;
       this.root.style.removeProperty('--aid-armed-cursor');
     }
-    this.refreshLibrary();
+    if (redraw)
+      this.refreshLibrary();
   },
   clickArmed(event) {
     const armed = this.state.armed;
-    if (armed?.kind !== 'wiring' || !event.target.closest?.(BODY_MAP))
+    if (!armed || !event.target.closest?.(BODY_MAP))
       return false;
+    if (armed.kind !== 'wiring') {
+      this.dragging = armed;
+      this.state.armed = null;
+      this.showArmed();
+      this.drop(event);
+      return true;
+    }
     const aimed = this.aimWire(armed.value, event);
     if (!aimed || !armed.keep)
       this.release();
@@ -318,7 +352,9 @@ export const dropMethods = {
     const centers =
         organ ? organ.centers
               : [ findCenter(this.state.document, element.dataset.center)?.center ].filter(Boolean);
-    return {element, centers : this.dropCenters(this.dragging.kind, this.dragging.value, centers)};
+    const carried = this.dragging ?? this.state.armed;
+    return carried ? {element, centers : this.dropCenters(carried.kind, carried.value, centers)}
+                   : null;
   },
   dropOnPart(kind, value, target) {
     this.dragging = null;

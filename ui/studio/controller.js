@@ -161,6 +161,7 @@ export class OrganStudio {
     this.root.addEventListener('drop', event => this.drop(event));
     this.root.addEventListener('dragend', () => {
       this.dragging = null;
+      this.refreshLibrary();
       this.clearPreview();
       this.cancelChoices();
     });
@@ -313,6 +314,7 @@ export class OrganStudio {
       this.pulsePlayer?.attach(svg);
     this.markStimulus();
     this.markFocus();
+    this.restorePlacement();
   }
   bodyMap() { return this.root.querySelector(BODY_MAP); }
   refreshViews() {

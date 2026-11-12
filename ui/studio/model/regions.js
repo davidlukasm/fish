@@ -14,10 +14,10 @@ import {olfactionPlan} from './olfaction_region.js';
 import {motorPlan} from './motor_region.js';
 import {spinePlan} from './spine_region.js';
 import {HALF_VIEW, bearing} from './retina.js';
-import {findSite, NERVE_ROLE, sitePoint} from './layout.js';
+import {findSite} from './layout.js';
 import {
   allCenters,
-  closestSite,
+  closestNativeSite,
   defaults,
   expandedWires,
   findCenter,
@@ -224,7 +224,6 @@ export function settleRegions(doc, sites, pairedId = null) {
           used.add(mirror.id);
       }
     const home = findSite(sites, organ.region.site);
-    const near = home ? sitePoint(home, NERVE_ROLE) : null;
     const zones = ORGAN_BY_KEY[organ.type].centers[0].zones;
     const rank = n => n.port === 'out' || n.port === 'both' ? 0 : n.port === 'in' ? 1 : 2;
     const effects = new Map(plan.nodes.map(n => [n.node, JSON.stringify(n.effects ?? {})]));
@@ -240,9 +239,9 @@ export function settleRegions(doc, sites, pairedId = null) {
         // Paired regions keep off the midline while lateral sites last; the engine's medial
         // sites still carry a side, so a full brain falls back to them.
         const side = organ.side || null;
-        const site =
-            near && (closestSite(desc, sites, used, near, side, organ.type) ??
-                     closestSite({...desc, paired : false}, sites, used, near, side, organ.type));
+        const site = home && (closestNativeSite(desc, sites, used, home, side, organ.type) ??
+                              closestNativeSite({...desc, paired : false}, sites, used, home, side,
+                                                organ.type));
         if (!site)
           continue;
         used.add(site.id);

@@ -36,7 +36,7 @@ for directory in ('src','colony-core/ann','colony-core/cppn','colony-core/evolut
     # World-view writers serialize read-only snapshots; view_cache owns template lifetimes.
     # Checkpoint sections preserve saves; command_input bounds whole commands.
     for suffix in ('.cc','.hh'):files.extend(sorted(Path(directory).glob('*'+suffix)))
-files.extend(Path('tests')/name for name in '''build_check.py dom_fixture.js invariants.cc compiler.cc run_suite.py suite.py studio.js test_support.hh texts.js ui_link.js'''.split())
+files.extend(Path('tests')/name for name in '''build_check.py dom_fixture.js invariants.cc compiler.cc run_suite.py suite.py studio.js studio_canvas.js test_support.hh texts.js ui_link.js'''.split())
 for path in files:
     if path.is_symlink() or not path.is_file():raise SystemExit(f'Datei fehlt oder ist ein Link: {path}')
 for name,limit in (('README.md',4096),('AGENTS.md',2048)):

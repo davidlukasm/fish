@@ -1359,5 +1359,21 @@
     "draft": "{name} · {cells} Zellen",
     "breed": "Züchten",
     "atelier": "Im Atelier"
+  },
+  "brainParts": {
+    "0": "Riechen",
+    "1": "Sehen",
+    "2": "Bewertung",
+    "3": "Handlung",
+    "4": "Takt"
+  },
+  "regionNames": {
+    "olfaction": "Riechen",
+    "tectum": "Sehkarte",
+    "value": "Bewertung",
+    "state": "Zustand",
+    "choice": "Handlungswahl",
+    "motor": "Motorik",
+    "spine": "Taktgeber"
   }
 }
