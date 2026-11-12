@@ -71,7 +71,8 @@
 .aid-scene-frame{display:block;position:relative;min-height:0;min-width:0;flex:1;overflow:hidden;touch-action:none}
 #aid-body-map{position:absolute;inset:0;display:block;width:100%;height:100%;min-height:0;user-select:none;touch-action:none}
 .aid-tools{position:absolute;z-index:8;left:12px;top:12px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px;border:1px solid #3d636a;background:#0b2934eb;border-radius:14px;box-shadow:0 6px 24px #0005}
-.aid-tools button{width:35px;height:35px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:#bed9d7;font-size:21px}
+.aid-tools button{min-width:35px;min-height:35px;padding:3px 2px;display:grid;place-items:center;align-content:center;border:0;border-radius:8px;background:transparent;color:#bed9d7;font-size:21px}
+.aid-tools button small{display:block;font-size:8px;line-height:1.15}
 .aid-tools button:hover{background:#2f555a}
 .aid-tools button.active{background:#b6cda9;color:#123039}
 .aid-tools-divider{height:1px;background:#507078;width:26px;margin:5px 0}
@@ -1179,7 +1180,7 @@
 #aid-body-map .aid-pulse-binding .aid-neural-body{stroke:var(--aid-hormone);stroke-width:2}
 
 .aid-placement-sides{display:flex;gap:2px;margin:4px 0 14px;padding:3px;background:var(--aid-graphic);border-radius:9px}
-.aid-placement-sides button{flex:1;padding:6px 3px;font-size:11px;color:var(--aid-soft-text);background:transparent;border:0;border-radius:6px}
+.aid-placement-sides button{flex:1;display:grid;justify-items:center;gap:1px;padding:5px 2px;font-size:10px;color:var(--aid-soft-text);background:transparent;border:0;border-radius:6px}
 .aid-placement-sides button[aria-pressed="true"]{background:var(--aid-chosen-edge);color:#113039}
 .aid-placement-area{fill:#8ed9bd22;stroke:#9edaca;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
 .aid-symmetry-line{fill:none;stroke:#acbdbb;stroke-width:1;stroke-dasharray:7 6;opacity:.28;pointer-events:none}

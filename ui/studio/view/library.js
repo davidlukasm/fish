@@ -359,9 +359,8 @@ export function libraryOf(state) {
                 [ 'both', 'single', 'middle' ]
                     .map(key => '<button type="button" data-placement-side="' + key +
                                 '" aria-pressed="' + ((state.placementSide ?? 'both') === key) +
-                                '" title="' + label('placement.' + key) + '">' +
-                                glyph(PLACEMENT_SYMBOL[key], ICON.list, {line : true}) +
-                                '</button>')
+                                '">' + glyph(PLACEMENT_SYMBOL[key], ICON.list, {line : true}) +
+                                '<small>' + label('placement.' + key) + '</small></button>')
                     .join('') +
                 '</div>'
           : '';
@@ -401,13 +400,14 @@ export function toolPalette(state) {
          '<span class="aid-tools-divider"></span>' +
          tools
              .map(key => '<button type="button" data-tool="' + key + '" class="' +
-                         (state.tool === key ? 'active' : '') + '" title="' +
-                         label('tools.' + key) + '" aria-label="' + label('tools.' + key) + '">' +
-                         glyph(TOOL_ICON[key], ICON.tool, {line : true}) + '</button>')
+                         (state.tool === key ? 'active' : '') + '">' +
+                         glyph(TOOL_ICON[key], ICON.tool, {line : true}) + '<small>' +
+                         label('tools.' + key) + '</small></button>')
              .join('') +
          '<span class="aid-tools-divider"></span>' +
          '<button data-zoom="in" title="' + label('tools.zoomIn') + '">＋</button>' +
          '<button data-zoom="out" title="' + label('tools.zoomOut') + '">−</button>' +
-         '<button data-zoom="fit" title="' + label('tools.fit') + '">⌗</button>' +
+         '<button data-zoom="fit" title="' + label('tools.fit') + '"><small>' +
+         label('tools.fitShort') + '</small></button>' +
          '</div>';
 }

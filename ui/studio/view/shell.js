@@ -81,6 +81,16 @@ function layerSwitch(s, key) {
                 label('layers.' + key), {active : shown});
 }
 export const layerSwitches = s => LAYER_KEYS.map(key => layerSwitch(s, key)).join('');
+// How many of the developed contacts the view draws, the strongest first; only that view has them.
+const contactLimit = s =>
+    '<label class="aid-contact-limit">' + label('tools.contactLimit') +
+    '<select data-contact-limit>' +
+    CONTACT_LIMITS
+        .map(n => '<option value="' + n + '"' +
+                  ((s.contactLimit ?? CONTACT_LIMITS[0]) === n ? ' selected' : '') + '>' +
+                  (n || label('tools.allContacts')) + '</option>')
+        .join('') +
+    '</select></label>';
 function stationStage(s, cppn) {
   if (cppn)
     return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
@@ -98,14 +108,7 @@ function stationStage(s, cppn) {
                button('data-network="focus"', label('tools.focusedNetwork'),
                       {active : s.wireScope === 'focus'})) +
          group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
-         '<label class="aid-contact-limit">' + label('tools.contactLimit') +
-         '<select data-contact-limit>' +
-         CONTACT_LIMITS
-             .map(n => '<option value="' + n + '"' +
-                       ((s.contactLimit ?? CONTACT_LIMITS[0]) === n ? ' selected' : '') + '>' +
-                       (n || label('tools.allContacts')) + '</option>')
-             .join('') +
-         '</select></label>' +
+         (s.contactView === 'actual' ? contactLimit(s) : '') +
          '</div></div><div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
          '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' + zoomStamp(s.camera) +
          '</span></div>';

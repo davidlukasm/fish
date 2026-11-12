@@ -34,8 +34,8 @@
     "panelWidth": "Breite ziehen",
     "hubFooter": "FISH / AID",
     "stationFooter": "v019 · AID",
-    "developedCount": "{cells} potenzielle Zellen · {contacts} Kontaktvorschläge",
-    "plannedCount": "{cells} potenzielle Zellen · Bauplan",
+    "developedCount": "Entwickelt: {cells} Zellen · {contacts} Kontakte",
+    "plannedCount": "Plan: {cells} Zellen",
     "proposalCount": "{n} Kontaktvorschläge"
   },
   "tools": {
@@ -56,8 +56,9 @@
     "developedContacts": "CPPN-Vorschläge",
     "allNetworks": "Alle Verbindungen",
     "focusedNetwork": "Verbindungen der Auswahl",
-    "contactLimit": "Kontaktbündel",
-    "allContacts": "alle"
+    "contactLimit": "die stärksten",
+    "allContacts": "alle",
+    "fitShort": "ganz"
   },
   "layers": {
     "title": "Anzeige",
@@ -815,7 +816,7 @@
     "wire": "Verschalten: erst die Quelle, dann das Ziel anklicken; herangezoomt geht das auch mit einzelnen Knoten. Die Anschlüsse einer Hirnregion zeigen, was ihr noch fehlt.",
     "hormone": "Hormone: Stoffe anlegen, Drüsen geben sie ab, Rezeptoren an Zellen und Körper antworten.",
     "learn": "Lernen: einen Nervenknoten wählen und ihm einen Lehrer geben, einen Modulator oder einen Stoff.",
-    "stimulate": "Reizen: Einen Knoten oder ein Organ anklicken. Die Markierung verfolgt die Verbindungen im Bauplan; Vorzeichen, Lehrkontakte und Hormonbindungen werden unterschieden.",
+    "stimulate": "Reizen: einen Knoten oder ein Organ anklicken. Was er erregt, leuchtet auf, was er hemmt, wird dunkel; was er lehrt, leuchtet golden, was auf seine Stoffe antwortet, violett.",
     "develop": "CPPN erzeugen, Entwicklungsvorschau ansehen und Eier ins Aquarium setzen."
   },
   "muscleTitles": [
@@ -1511,9 +1512,9 @@
   },
   "placement": {
     "side": "Platzierung",
-    "both": "Beidseitig",
-    "single": "Einseitig",
-    "middle": "Mittig"
+    "both": "beidseitig",
+    "single": "einseitig",
+    "middle": "mittig"
   },
   "direct": {
     "gut": "Darm verlängern",
