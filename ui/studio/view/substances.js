@@ -604,13 +604,16 @@ export function receptorBody(state, center, effect) {
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors') + '</div>' +
          effectCurve(state, receptor, effect, receptor.active ? target : null);
 }
+// How long the substance lasts in the blood, as a clock whose tooltip gives the steps.
+const CLOCK_ICON = 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18';
 export function hormoneTime(state, index) {
   const value = state.anatomy?.hormoneTimes?.[index];
-  return '<p class="aid-hint" data-hormone-time="' + index + '">' +
-         label('hormoneCard.timeConstant') + ': ' +
-         (Number.isFinite(value) ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
-                                 : formatNumber(NaN)) +
-         '</p>';
+  return '<span class="aid-hormone-time" data-hormone-time="' + index + '" title="' +
+         escapeText(label('hormoneCard.timeConstant') + ': ' +
+                    (Number.isFinite(value)
+                         ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
+                         : formatNumber(NaN))) +
+         '">' + glyph(CLOCK_ICON, ICON.mark, {line : true}) + '</span>';
 }
 function substanceInspector(state) {
   const {document : doc, capabilities : wheel} = state;
@@ -650,11 +653,12 @@ function substanceInspector(state) {
          'aid-inline-title" data-substance-name="' + index + '" value="' +
          escapeText(substance.name) + '" placeholder="' + escapeText(fallback) + '" maxlength="' +
          SUBSTANCE_NAME_LENGTH + '" aria-label="' + label('inspector.substanceName') +
-         '"></header><button class="aid-growth-mark' + (grows ? ' on' : '') + '" ' +
+         '"></header><div class="aid-card-marks"><button class="aid-growth-mark' +
+         (grows ? ' on' : '') + '" ' +
          (grows ? 'data-growth-off' : 'data-growth-substance="' + index + '"') + ' aria-pressed="' +
-         grows + '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '<span>' +
-         label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') + '</span></button>' +
-         (grows ? growthEditor(state) : '') + hormoneTime(state, index) +
+         grows + '" title="' + label(grows ? 'hormoneCard.growsOn' : 'hormoneCard.growsOff') +
+         '">' + glyph(GROWTH_ICON, ICON.mark, {line : true}) + '</button>' +
+         hormoneTime(state, index) + '</div>' + (grows ? growthEditor(state) : '') +
          row('sources', list(organsOf(doc, producers(doc, index, wheel)))) +
          row('acts', acts.join('')) + effectGuide(state, index) +
          '<button class="aid-danger" data-remove-substance="' + index + '">' +
@@ -678,7 +682,7 @@ export function boundEffect(effect, direction) {
 function effectGuide(state, index) {
   const {document : doc, capabilities : wheel} = state, colour = substanceColor(index);
   const receiving = receivers(doc, index, wheel), words = key => tList('studio.hormoneCard.' + key);
-  return '<section class="aid-effect-guide">' + heading(label('hormoneCard.effectsTitle')) +
+  return '<section class="aid-effect-guide">' +
          EFFECT_ORDER
              .map(effect => {
                const bound = receiving.filter(c => boundEffects(c, index, wheel).includes(effect));
@@ -687,10 +691,10 @@ function effectGuide(state, index) {
                const direction = n ? effectDirection(effect, bound[0].receptors[effect]) : 0;
                return '<div class="aid-effect-card' + (n ? '' : ' off') +
                       '" style="--substance:' + colour + '" title="' +
-                      escapeText(words('tileTitles')[effect] + ' ' + words('where')[effect]) +
+                      escapeText(effectSentence(effect, direction) + ' ' +
+                                 words('tileTitles')[effect] + ' ' + words('where')[effect]) +
                       '">' + effectScene(effect, colour, ends) + '<div><strong>' +
                       boundEffect(effect, direction) +
-                      escapeText(effectSentence(effect, direction)) +
                       (n ? '<span class="aid-effect-count" title="' +
                                escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'
                          : '') +

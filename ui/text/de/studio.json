@@ -1011,7 +1011,6 @@
     ],
     "sentence": "Der Stoff {effect}",
     "here": "hier bei {n} {n:Zelle|Zellen}",
-    "effectsTitle": "Was der Stoff bewirken kann",
     "growsOn": "lässt den Fisch wachsen",
     "growsOff": "lässt den Fisch nicht wachsen",
     "body": "Körpersignale",
