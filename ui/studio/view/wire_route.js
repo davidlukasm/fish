@@ -4,7 +4,7 @@ import {BRAIN, neuralOrgan} from '../model/anatomy.js';
 import {organLocation, regionGeometry} from './places.js';
 import {skinAt, SNOUT_TIP} from './frame.js';
 
-const GRID = Object.freeze({step : 4, margin : 4, half : 126});
+const GRID = Object.freeze({step : 4, margin : 4, half : 126, clearance : 8, proximity : 10});
 const SHAPES = Object.freeze({
   eye : [ 20, 16 ],
   nose : [ 17, 13 ],
@@ -43,20 +43,29 @@ function field(doc, sites) {
     const p = region || organLocation(o, sites, doc);
     return [ {
       id : o.id,
+      region : !!region,
       x : p.x,
       y : p.y,
       rx : (region ? region.width / 2 + 1 : R[0] + GRID.margin),
       ry : (region ? region.height / 2 + 1 : R[1] + GRID.margin)
     } ];
   });
+  const nearby = [];
   const cells = Array.from({length : columns * rows}, (_, i) => {
     const p = point(i);
+    nearby[i] = shapes.filter(s => s.region)
+                    .map(s => ({
+                           id : s.id,
+                           distance : (Math.hypot((p.x - s.x) / s.rx, (p.y - s.y) / s.ry) - 1) *
+                                          Math.min(s.rx, s.ry)
+                         }))
+                    .filter(s => s.distance < GRID.clearance);
     if (p.y < skinAt(p.x, -1) + GRID.margin || p.y > skinAt(p.x, 1) - GRID.margin)
       return null;
     return shapes.filter(s => ((p.x - s.x) / s.rx) ** 2 + ((p.y - s.y) / s.ry) ** 2 < 1)
         .map(s => s.id);
   });
-  const result = {sites, point, index, cells, columns, rows, paths : new Map()};
+  const result = {sites, point, index, cells, nearby, columns, rows, paths : new Map()};
   cached.set(doc, result);
   return result;
 }
@@ -112,7 +121,14 @@ export function nerveRoute(doc, sites, from, to, kind) {
   const safe = p => !!clear(F.index(p));
   const direction = Math.sign(b.x - a.x) || Math.sign(b.y - a.y) || 1;
   const lane = BODY_FRAME.middle + direction * (2 + kind * GRID.step);
-  const weight = p => 1 + Math.min(3, Math.abs(p.y - lane) / 18) * 2;
+  const weight = p => {
+    const proximity = F.nearby[F.index(p)].reduce(
+        (most, s) => s.id === from.organ?.id || s.id === to.organ?.id
+                         ? most
+                         : Math.max(most, 1 - Math.max(0, s.distance) / GRID.clearance),
+        0);
+    return 1 + Math.min(3, Math.abs(p.y - lane) / 18) * 2 + GRID.proximity * proximity ** 2;
+  };
   const visible = (a, b, budget = Infinity) => {
     const count = Math.ceil(Math.hypot(a.x - b.x, a.y - b.y) / (GRID.step / 2));
     let total = 0;
