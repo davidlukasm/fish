@@ -25196,15 +25196,6 @@
    "toPort": "urge"
   },
   {
-   "id": "wire-mwcnsxgn-d",
-   "from": "organ-mwbsowy6-6",
-   "to": "organ-mwcnsxfi-1",
-   "spread": 0,
-   "pairing": "same",
-   "fromPort": "fins",
-   "toPort": "steer"
-  },
-  {
    "id": "wire-mwcnsxgq-e",
    "from": "organ-mwbsowy6-6",
    "to": "organ-mwcnsxfi-1",

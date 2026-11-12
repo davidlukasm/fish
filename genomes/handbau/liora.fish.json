@@ -35537,15 +35537,6 @@
    "toPort": "urge"
   },
   {
-   "id": "wire-mwcnsxm3-f",
-   "from": "organ-mwbt1h3t-w",
-   "to": "organ-mwcnsxkf-1",
-   "spread": 0,
-   "pairing": "same",
-   "fromPort": "fins",
-   "toPort": "steer"
-  },
-  {
    "id": "wire-mwcnsxma-g",
    "from": "organ-mwbt1h3t-w",
    "to": "organ-mwcnsxkf-1",

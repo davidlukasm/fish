@@ -23,7 +23,7 @@
      "threshold": -0.6,
      "tau": 0.5,
      "field": 0.3,
-     "q1": 0,
+     "q1": -1,
      "q2": 0,
      "qwidth": 0.35,
      "sign": 1,
@@ -23431,15 +23431,6 @@
    "pairing": "same",
    "fromPort": "tail",
    "toPort": "urge"
-  },
-  {
-   "id": "wire-mwcnsxgn-d",
-   "from": "organ-mwbsowy6-6",
-   "to": "organ-mwcnsxfi-1",
-   "spread": 0,
-   "pairing": "same",
-   "fromPort": "fins",
-   "toPort": "steer"
   },
   {
    "id": "wire-mwcnsxgq-e",

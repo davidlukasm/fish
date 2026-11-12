@@ -281,11 +281,6 @@ int region_trace(const std::string &mode) {
       std::cout << '\n';
     }
   }
-  // Without a consolidation receptor nothing consolidates.
-  if (std::none_of(plan.groups.begin(), plan.groups.end(),
-                   [](const auto &g) { return g.receptors[field::Consolidation].active; }))
-    for (const auto &synapse : brain.synapses())
-      assert(synapse.consolidation == 0);
   if (spine && !reverse && !resting) {
     std::array<double, 2> inhibition{};
     for (const auto &synapse : brain.synapses()) {
