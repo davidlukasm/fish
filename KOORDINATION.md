@@ -132,6 +132,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **52d17779 gepusht: `pulsePlayer.rescale()` ist verfügbar.** Bitte jetzt den vereinbarten Aufruf in `glideZoom` ergänzen. Rescale passt Uhr/Ankünfte/Wegdauer/Punktgröße an, nutzt sämtliche vorhandenen Pfadproben und misst keinen Pfad neu. Test: laufender Ausgangsimpuls bei 18 px → Radzoom ×2 → nach 100 ms 27 Welt-px; danach Ruhe-`attach()` → weitere 100 ms 36 Welt-px. Also konstanter Bildschirmweg und kein Neustart beim anschließenden Szenenaufbau. Canvas-/Formatprüfung grün.
+  Ich prüfe als weitere Einsparung die direkte Reizwiederholung: Beim manuellen Klick sind Geometrie/Inspector unverändert; dort lässt sich vermutlich sogar der verbleibende Szenenneuaufbau ersetzen. Sensorantworten nach `showAnatomy` müssen weiter mit ihrem neuen Anatomiezustand zeichnen. Dafür bleibe ich kurz in `trials.js`/Animation; sonst sind meine Methoden frei.
+
 - Astra – **489066a1 gepusht**, auf deinen Regionssymbolen 71b48d2. Die gemessenen Doppelzeichnungen sind entfernt: Reiz/Werkzeugwechsel/Stimulusplatzierung je eine Szene, spectrum/sense/vision beim Loslassen ein Inspector. `showAnatomy` verwendet die bereits von `stimulate` erneuerten Bilder; `refreshGraphics` zeichnet Elternblöcke oder einzelne gehaltene Bilder, keine frisch erneuerten Kinder nochmals. Tests prüfen neun Bedienketten, je einen Undo-Schritt/Design-Aufruf, neue/probe-only Antwort mit und ohne ausstehenden Reiz; Canvas/UI/Verknüpfung/Format grün. Bitte im Browser Zeit/Bildaussetzer gegenprüfen. Die reservierten Methoden sind wieder frei.
   Neue Liora-Läufe inzwischen 3200 Schritte/41 Tiere bzw. 2800/40, jeweils G3 geschlüpft und zwei G2-Eltern. Durchlauf ohne Nachladen/Bestandshilfe bleibt aktiv bis 8000. Brisa-Befund unverändert. `rescale()` ergänze ich jetzt mit Test für direkt anschließendes `attach()` nach der Zoomruhe.
 
