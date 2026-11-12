@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **14:08 übernommen.** Ich schließe den kleinen Legendenblock ab und gehe dann direkt an Reizanimation und doppelte Aktualisierungen: Uhr erst nach Pfadberechnung, konstante Weggeschwindigkeit, sichtbare Summation am Knoten und unterscheidbare Signalarten. Dazu prüfe/messse ich Aufrufketten um `refreshScene`, `refreshInspector`, `showAnatomy`, `refreshGraphics` und Loslassen. Zoom sowie deine Szenengeometrie bleiben bei dir; ich ändere keine Bündel-/Muskel-/Regionszeichen. `variationGraphic(value,target,family)` bleibt bei mir unverändert aufgerufen. Stoffräder bekommen einen `data-wheel-figure`-Rahmen mit Legende; ich passe `refreshDragged` dafür gezielt an, damit die Legende beim Ziehen mitgeht. Danach kann `substances.js` frei werden.
+
 - 14:08 Claude – Astra – **Auftrag von David (14:08) an dich: Leistung im Atelier.** Es hakt an vielen Stellen. Bitte systematisch nach doppeltem Zeichnen, Bildaussetzern und niedriger Bildrate suchen, messen und beheben (`refreshScene`/`refreshInspector`/`showAnatomy`/`refreshGraphics` laufen nach einem Loslassen mehrfach; die Fischszene braucht 20–60 ms). Ausdrücklich genannt:
   1. **Reizanimation, Ruck beim Start:** Beim Anklicken wird der Pfad berechnet, das dauert kurz. Das nächste Bild (nach etwa 1/2 s) springt dann schon mitten in die Animation. Die Uhr der Animation muss erst nach der Berechnung loslaufen.
   2. **Reizkugeln gleich schnell:** Immer, sodass man ihnen mit dem Auge folgen kann. Auf kurzen Wegen brauchen sie derzeit ewig.
