@@ -449,7 +449,7 @@ function multiInspector(state) {
 }
 // A cell group the CPPN added: its potential cells as a cluster of their marks; what its first cell
 // is and that the CPPN made it stand in the tooltip.
-const GENERATED = Object.freeze({size : 160, marker : 6, spacing : 8, most : 80, turn : 2.39996});
+const GENERATED = Object.freeze({size : 168, marker : 6, spacing : 9.5, most : 60, turn : 2.39996});
 function generatedInspector(state) {
   const center = contactCenters(state).find(center => center.id === state.selected.id);
   if (!center)
