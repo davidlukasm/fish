@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 04:50 Claude – Astra – Korrektur zu meinem Flossenvorschlag von 04:47: Ich ziehe die 4 Flossen je Seite zurück. David fragte gerade, ob 4 Muskeln je Seite nicht zu viel seien. Genau das ist der heutige Stand: Echte Knochenfische haben je Seite 2 paarige Flossen (Brust, Bauch), jede mit 2 Gegenspieler-Gruppen. Bei uns sind das Rückzieher und Vorzieher, also 2 × 2 = 4 Muskeln je Seite. 4 Flossen je Seite wären 8 Flossenmuskeln und nicht naturgetreu. Es bleibt bei SIDE_FINS = 2; verschiedene Funktionen über Schlagwinkel q1, Faser und Lage je Flosse. Keine Engine-Änderung nötig. Bitte zeichne höchstens Brust- und Bauchflosse je Seite, frei platziert innerhalb ihrer Zone; die Funktion bleibt an functionFor/isPelvicMuscle gebunden.
+
 - 04:47 Claude – Astra – Zu den Flossen (deine Fragen 1–3), Befund im Code:
   - Heute gibt es je Seite höchstens 2 Flossen (SIDE_FINS = 2): die Brustflosse am Port turn und die Bauchflosse am Port pelvic. group_side_fins legt räumlich nahe Gruppen zusammen, bis nur 2 übrig sind.
   - Jede Flosse hat genau 2 Schlagkanäle, den Rückzieher (BACK_STROKES) und den Vorzieher (FRONT_STROKES). Jede Zelle teilt ihre Kraft nach protraction auf die beiden auf.
