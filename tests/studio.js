@@ -3553,6 +3553,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(lifeHtml, /gemessen bei Schritt 20/);
     assert.match(lifeHtml, /Bei 50 % der regelmäßigen Messungen/);
     assert.match(lifeHtml, /data-lab-scene/);
+    // The scene of the chosen moment: fetched first, then a picture that names its own step.
+    assert.match(lifeHtml, /Szene wird geladen/);
+    const sceneHtml = view.breedingShell({
+      ...individual,
+      labScene : {key : lifeModel.sceneKey(chosen), data : {step : 20, frame : {}}}
+    });
+    assert.match(sceneHtml, /<canvas class="aid-lab-scene"/);
+    assert.match(sceneHtml, /Szene bei Schritt 20/);
     assert.doesNotMatch(lifeHtml, /NaN|undefined/);
     Object.assign(inspecting.state, individual);
     click({labLifeTime : '10', labLifePhase : 'feeding'});

@@ -1,6 +1,7 @@
 import {formatNumber, t, tList} from '../strings.js';
 import {escapeText} from '../studio/view/markup.js';
-import {fishLives, lifeTimes, lifeWindow, lifeWorlds, selectedLife} from './life.js';
+import {fishLives, lifeTimes, lifeWindow, lifeWorlds, sceneKey, selectedLife} from './life.js';
+import {sceneSlot} from './scene.js';
 
 const say = (key, vars) => t('labor.life.' + key, vars);
 const number = (n, digits = 0) => formatNumber(n, digits);
@@ -167,7 +168,9 @@ function inspection(selected, s) {
             : '';
   const near =
       life.regularSamples ? number(life.nearSamples / life.regularSamples * 100) + ' %' : '—';
-  return title + phases + '<div data-lab-scene></div>' + navigation + status +
+  const scene = s.labScene?.key === sceneKey(selected) ? s.labScene.data : null;
+  return title + phases + '<div data-lab-scene>' + sceneSlot(selected, scene) + '</div>' +
+         navigation + status +
          '<div class="aid-life-zoom"><button type="button" data-lab-life-focus="0" aria-pressed="' +
          !s.lifeFocused + '">' + say('whole') +
          '</button><button type="button" data-lab-life-focus="1" aria-pressed="' + !!s.lifeFocused +

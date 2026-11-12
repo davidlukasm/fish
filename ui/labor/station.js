@@ -5,7 +5,8 @@ import {BREEDING_METRICS, DRAFT, shownWorlds} from './model.js';
 import {breedingShell, say} from './view.js';
 import {trialShell} from './trial_view.js';
 import {inspectedTrial, shownSessions} from './trials.js';
-import {lifeKey, lifeWindow, lifeWorlds, nearestLifeTime, selectedLife} from './life.js';
+import {lifeKey, lifeWindow, lifeWorlds, nearestLifeTime, sceneKey, selectedLife} from './life.js';
+import {paintLabScene} from './scene.js';
 
 const POLL_MS = 1000, FINGERPRINT_HEX = 16, HEX = 16, BYTE_DIGITS = 2;
 
@@ -218,6 +219,38 @@ export class BreedingStation extends LabStation {
     if (this.shown && selected &&
         (!selected.detail || selected.detail.summary.last < selected.summary.last))
       this.loadLife(selected);
+    if (this.shown && selected)
+      this.showScene(selected);
+  }
+  // The recorded scene at or before the chosen step: painted when it is here, fetched once when
+  // not.
+  showScene(selected) {
+    if (!Number.isFinite(selected.sceneStep))
+      return;
+    const key = sceneKey(selected), scene = this.state.labScene;
+    if (scene?.key === key) {
+      const canvas = this.root.querySelector('[data-lab-scene] canvas');
+      if (canvas)
+        paintLabScene(canvas, scene.data.frame, selected.fishId);
+      return;
+    }
+    if (this.scenePending === key || this.sceneFailed === key)
+      return;
+    this.scenePending = key;
+    this.request({operation : 'scene', ...selected.run, step : selected.sceneStep})
+        .then(data => {
+          this.state.labScene = {key, data};
+          this.state.sceneError = '';
+        })
+        .catch(error => {
+          this.sceneFailed = key;
+          this.state.sceneError = error.message;
+        })
+        .finally(() => {
+          if (this.scenePending === key)
+            this.scenePending = null;
+          this.render();
+        });
   }
   click(event) {
     const lifeTarget = event.target.closest?.(

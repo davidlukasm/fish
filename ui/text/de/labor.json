@@ -178,5 +178,10 @@
       "ripe": "Körper ausgewachsen"
     },
     "population": "Bestand und Generationen"
+  },
+  "scene": {
+    "none": "Von diesem Lauf ist keine Szene aufgezeichnet.",
+    "loading": "Szene wird geladen …",
+    "at": "Szene bei Schritt {step}, der letzten aufgezeichneten davor"
   }
 }

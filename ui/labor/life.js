@@ -2,6 +2,9 @@ import {shownWorlds} from './model.js';
 
 export const LIFE_WINDOW = 400;
 export const lifeKey = ({run, fishId}) => [run.fingerprint, run.steps, run.seed, fishId].join(':');
+// A recorded scene belongs to a world and a step, whichever of its fish is chosen.
+export const sceneKey =
+    ({run, sceneStep}) => [run.fingerprint, run.steps, run.seed, sceneStep].join(':');
 
 export function lifeWorlds(s) {
   return shownWorlds(s.overview, s.fingerprint, s.steps, s.job)
