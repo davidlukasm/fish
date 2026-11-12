@@ -243,9 +243,11 @@ function substancePart(state, center, effect) {
   return '<details class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
          (colour ? ' style="--substance:' + colour + '"' : '') + '><summary title="' +
          escapeText(title) + '">' + glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
-         '</summary>' +
-         effectScene(effect, colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined) +
-         choices + (bound ? effectCurve(state, receptor, effect, center.id + ':' + effect) : '') +
+         '</summary>' + choices +
+         // An effect that reads no substance has nothing to show but the choice of one.
+         (bound ? effectScene(effect, colour, receptorEnds(receptor)) +
+                      effectCurve(state, receptor, effect, center.id + ':' + effect)
+                : '') +
          '</details>';
 }
 function teacherList(state, center, modulators) {
