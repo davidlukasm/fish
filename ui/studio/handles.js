@@ -928,9 +928,15 @@ export const handleMethods = {
                       ? SENSE_WIDTH[found.organ.type]?.(fx, fy, drag.aim)
                       : senseMarkPatch(this.state, drag,
                                        {x : fx * drag.size.width, y : fy * drag.size.height});
-    if (patch)
-      this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'sense:' + drag.id,
-                       drag.redraw);
+    if (!patch)
+      return;
+    // A whole node more or less is the organ's change; everything else is the cells'.
+    const doc = 'nodes' in patch ? patch.nodes !== kindNodes(found.organ).length &&
+                                       setOrganNodes(this.state.document, found.organ.id,
+                                                     patch.nodes, this.state.sites)
+                                 : updateCenter(this.state.document, drag.id, patch);
+    if (doc)
+      this.draftDesign(doc, 'sense:' + drag.id, drag.redraw);
   },
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;

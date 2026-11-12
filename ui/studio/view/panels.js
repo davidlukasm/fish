@@ -9,7 +9,6 @@ import {
   gillGraphic,
   gutGraphic,
   gutMuscleGraphic,
-  nodeControls,
   spineField
 } from './effectors.js';
 import {lateralField} from './lateral.js';
@@ -28,8 +27,6 @@ import {
   functionFor,
   isPelvicMuscle,
   isRegion,
-  kindLimit,
-  kindNodes,
   MUSCLE_LABEL_INDEX,
   ORGAN_BY_KEY
 } from '../model/organs.js';
@@ -66,7 +63,7 @@ import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
 import {organTitle} from './names.js';
-import {bladderGraphic, gonadGraphic, pressureNote} from './sacs.js';
+import {bladderGraphic, gonadGraphic} from './sacs.js';
 import {skinField} from './skin.js';
 import {gutProbeControls} from './probes.js';
 
@@ -125,11 +122,7 @@ const ORGAN_PANELS = Object.freeze({
       barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center, state) : ''),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
   gut : (state, organ, center) => gutGraphic(state, organ, center) + gutProbeControls(state, organ),
-  bladder : (state, organ, center) =>
-      bladderGraphic(organ, center) +
-      nodeControls({...organ, centers : kindNodes(organ)}, MOTOR_KIND.bladder,
-                   kindLimit(organ, state.sites)) +
-      pressureNote(state, organ),
+  bladder : (state, organ, center) => bladderGraphic(state, organ, center),
   muscle : (state, organ) => effectorGraphic(state, organ),
   gills : (state, organ) => gillGraphic(state, organ),
   gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
@@ -290,7 +283,7 @@ function centerSide(state, center) {
 export const selectedCenter = (state, organ) =>
     chosenCenter(state.document, state.selected, state.visionProfile) ?? organ.centers[0] ?? null;
 // Organs whose picture shows their kinds of cells as parts one clicks to choose.
-const PARTS_IN_PICTURE = Object.freeze([ 'gut', 'eggs', 'sperm' ]);
+const PARTS_IN_PICTURE = Object.freeze([ 'gut', 'eggs', 'sperm', 'bladder' ]);
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types ||
       PARTS_IN_PICTURE.includes(organ.type))

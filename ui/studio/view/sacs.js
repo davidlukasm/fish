@@ -1,13 +1,19 @@
 import {clamp} from '../../units.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
-import {kindLimit, nodeLimit, PRESSURE_OF} from '../model/organs.js';
+import {kindLimit, kindNodes, nodeLimit, PRESSURE_OF} from '../model/organs.js';
 import {ATELIER_LIMITS} from '../../schema.js';
 import {groupReport} from '../model/document.js';
 import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
-import {adaptationMarks, cellMarks} from './sense_marks.js';
+import {
+  adaptationMarks,
+  cellMarks,
+  SENSE_MARK,
+  senseSensitivity,
+  sensitivityHandle
+} from './sense_marks.js';
 import {CATEGORY_TONE, centerTitle, tone} from './names.js';
 import {organTitle} from './names.js';
 
@@ -245,55 +251,108 @@ function pressureMarks(state, pressure, at) {
   return (answer?.adapt?.steps > 0 ? adaptationMarks(at, STORE.clock, Math.PI, pressure) : '') +
          cellMarks(places, pressure);
 }
-export function pressureNote(state, organ) {
+// The swim bladder in one picture: the gas sac, the gas glands along its floor (one per node; the
+// first shows its cells, the handle at the last adds or removes glands), and the pressure cells on
+// its roof with their feelers, as long as they are sensitive, and their adaptation arc. A part is
+// chosen by clicking it. `held` is a dragged sensitivity.
+const BLADDER = Object.freeze({
+  width : 300,
+  height : 150,
+  cx : 150,
+  cy : 72,
+  rx : 116,
+  ry : 40,
+  gland : 13,
+  glands : [ 70, 236 ],
+  cell : 9,
+  roof : [ 92, 212 ],
+  feeler : 18,
+  clock : 16
+});
+export function bladderGraphic(state, organ, selected, held = null) {
+  const B = BLADDER, glands = kindNodes(organ), most = kindLimit(organ, state.sites);
+  const pressure = organ.centers.find(c => c.key === PRESSURE_OF[organ.type]?.key);
+  const floor = x => B.cy + B.ry * Math.sqrt(Math.max(0, 1 - ((x - B.cx) / B.rx) ** 2));
+  const roof = x => 2 * B.cy - floor(x);
+  const glandAt = k => {
+    const x = B.glands[0] + (B.glands[1] - B.glands[0]) * k / Math.max(1, most - 1);
+    return {x, y : floor(x) - B.gland};
+  };
+  const chosen = selected?.id === pressure?.id ? pressure : glands[0];
+  const part = (center, body, title) =>
+      '<g class="aid-sac-part' + (center === chosen ? ' selected' : '') + '" data-select-center="' +
+      escapeText(center.id) + '"><title>' + escapeText(title) + '</title>' + body + '</g>';
+  const glandBody = glands
+                        .map((_, k) => {
+                          const at = glandAt(k);
+                          return '<circle class="aid-bladder-gland" cx="' + fixed(at.x) + '" cy="' +
+                                 fixed(at.y) + '" r="' + B.gland + '"/>';
+                        })
+                        .join('');
+  const first = glandAt(0);
+  const glandCells = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
+    const a = 2 * Math.PI * k / ATELIER_LIMITS.max_copies;
+    return {x : first.x + B.cell * Math.cos(a), y : first.y + B.cell * Math.sin(a)};
+  });
+  const nodePlaces = Array.from({length : most}, (_, k) => glandAt(k));
+  const roofCells = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
+    const x = B.roof[0] + (B.roof[1] - B.roof[0]) * k / (ATELIER_LIMITS.max_copies - 1);
+    return {x, y : roof(x) + SENSE_MARK.cell};
+  });
+  let marks = '';
+  if (chosen === pressure && pressure) {
+    const sensitive = held ?? senseSensitivity(state, pressure) ?? 0, start = roofCells[0];
+    const answer = groupReport(state.document, state.anatomy, 'senses', pressure.id);
+    marks =
+        roofCells.slice(0, pressure.copies)
+            .map(p => '<path class="aid-gut-feeler" d="M' + fixed(p.x) + ' ' + fixed(p.y) + ' v' +
+                      fixed(B.feeler * sensitive) + '"/>')
+            .join('') +
+        (answer?.adapt?.steps > 0 ? adaptationMarks(start, B.clock, -Math.PI / 2, pressure) : '') +
+        cellMarks(roofCells, pressure) +
+        sensitivityHandle({x : start.x, y : start.y + SENSE_MARK.cell},
+                          {x : start.x, y : start.y + SENSE_MARK.cell + B.feeler}, sensitive,
+                          t('studio.muscle.gut.sensitivityHandle'));
+  } else if (glands.length) {
+    marks = cellMarks(glandCells, glands[0]) +
+            nodeMarks(nodePlaces, glands.length,
+                      t('studio.inspector.bladderGlands', {n : glands.length, most}));
+  }
+  const pressureDots =
+      pressure && chosen !== pressure
+          ? roofCells.slice(0, pressure.copies)
+                .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' + fixed(p.y) +
+                          '" r="' + SENSE_MARK.cell + '"/>')
+                .join('')
+          : '';
+  const own = chosen ?? glands[0];
+  return '<div data-sense-block="' + escapeText(organ.id) +
+         '"><svg class="aid-bladder" viewBox="0 0 ' + B.width + ' ' + B.height + '"' +
+         (own ? ' data-sense-field="' + escapeText(own.id) + '" data-sense-organ="' +
+                    escapeText(organ.id) + '"'
+              : '') +
+         ' role="img" aria-label="' + escapeText(organTitle(organ)) +
+         '"><ellipse class="aid-bladder-sac" cx="' + B.cx + '" cy="' + B.cy + '" rx="' + B.rx +
+         '" ry="' + B.ry + '"/>' +
+         (glands.length ? part(glands[0], glandBody, centerTitle(glands[0])) : '') +
+         (pressure ? part(pressure,
+                          '<path class="aid-bladder-roof" d="M' + B.roof[0] + ' ' +
+                              fixed(roof(B.roof[0])) + ' A' + B.rx + ' ' + B.ry + ' 0 0 1 ' +
+                              B.roof[1] + ' ' + fixed(roof(B.roof[1])) + '"/>' + pressureDots,
+                          centerTitle(pressure) + ' · ' + pressureText(state, organ))
+                   : '') +
+         marks + '</svg></div>';
+}
+// How many glands: a dot at each place one could grow, the handle at the last one grown.
+function nodeMarks(places, count, title) {
+  const last = places[count - 1];
+  return '<circle class="aid-graphic-handle" data-sense-mark="nodes" data-places="' +
+         places.map(p => fixed(p.x) + ',' + fixed(p.y)).join(' ') + '" cx="' + fixed(last.x) +
+         '" cy="' + fixed(last.y + BLADDER.gland) + '" r="' + SENSE_MARK.handle + '"><title>' +
+         escapeText(title) + '</title></circle>';
+}
+function pressureText(state, organ) {
   const own = PRESSURE_OF[organ.type], cell = organ.centers.find(c => c.key === own?.key);
   const measured = cell ? groupReport(state.document, state.anatomy, 'pressure', cell.id) : null;
-  if (!own || !(measured >= 0))
-    return '';
-  const text = tList('studio.inspector.measures')[measured] ?? '';
-  return measured === own.source
-             ? '<p class="aid-hint">' +
-                   escapeText(t('units.joined', {a : label('inspector.pressureCells'), b : text})) +
-                   '</p>'
-             : '<p class="aid-hint aid-warning">' +
-                   escapeText(t('studio.inspector.measuresWrong', {measures : text})) + '</p>';
-}
-const BLADDER = Object.freeze({
-  width : 286,
-  cx : 142,
-  rx : 125,
-  columns : 3,
-  left : 59,
-  column : 83,
-  row : 47,
-  least : 130,
-  pad : 25,
-  inset : 13,
-  node : [ 27, 19 ],
-  baseline : 5
-});
-export function bladderGraphic(organ, selected) {
-  const B = BLADDER, rows = Math.ceil(organ.centers.length / B.columns);
-  const height = Math.max(B.least, rows * B.row + B.pad);
-  const outline = '<ellipse class="aid-paired-organ" cx="' + B.cx + '" cy="' + fixed(height / 2) +
-                  '" rx="' + B.rx + '" ry="' + fixed(height / 2 - B.inset) +
-                  '" style="--tint:' + tone(organ.type) + '"/>';
-  const nodes =
-      organ.centers
-          .map((center, index) => {
-            const x = B.left + (index % B.columns) * B.column;
-            const y = height / 2 + (Math.floor(index / B.columns) - (rows - 1) / 2) * B.row;
-            const active = selected?.id === center.id ? ' selected' : '';
-            const colour = center.role === 'sensor' ? CATEGORY_TONE.senses : CATEGORY_TONE.internal;
-            return '<g class="aid-gonad-center' + active + '" data-select-center="' +
-                   escapeText(center.id) + '"><title>' + escapeText(centerTitle(center)) +
-                   '</title><ellipse class="aid-paired-node" cx="' + fixed(x) + '" cy="' +
-                   fixed(y) + '" rx="' + B.node[0] + '" ry="' + B.node[1] +
-                   '" style="--tint:' + colour + '"/><text x="' + fixed(x) + '" y="' +
-                   fixed(y + B.baseline) + '" text-anchor="middle">' + (index + 1) + '</text></g>';
-          })
-          .join('');
-  return '<svg class="aid-gonad-graphic" viewBox="0 0 ' + B.width + ' ' + height +
-         '" role="img" aria-label="' + escapeText(organTitle(organ)) + '">' + outline + nodes +
-         '</svg>';
+  return measured >= 0 ? tList('studio.inspector.measures')[measured] ?? '' : '';
 }

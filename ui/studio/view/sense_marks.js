@@ -118,14 +118,14 @@ export function adaptationMarks(centre, radius, start, center) {
 // The change a handle makes, from the pointer in the picture's own units.
 export function senseMarkPatch(state, drag, p) {
   const h = drag.marks;
-  if (drag.handle === 'cells') {
+  if (drag.handle === 'cells' || drag.handle === 'nodes') {
     const places = h.places.split(' ').map(parsePoint);
     let best = 0;
     places.forEach((q, k) => {
       if (Math.hypot(q.x - p.x, q.y - p.y) < Math.hypot(places[best].x - p.x, places[best].y - p.y))
         best = k;
     });
-    return {copies : best + 1};
+    return drag.handle === 'cells' ? {copies : best + 1} : {nodes : best + 1};
   }
   if (drag.handle === 'sensitivity') {
     const least = parsePoint(h.least), most = parsePoint(h.most);

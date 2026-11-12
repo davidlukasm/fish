@@ -319,8 +319,6 @@
       "misst die Tiefe",
       "misst die Körperform"
     ],
-    "measuresWrong": "Der Druckfühler {measures}, nicht dieses Organ: ein anderes Organ liegt ihm näher.",
-    "pressureCells": "Der Druckfühler",
     "driveHalves": {
       "muscle": {
         "above": "wirkt",
@@ -367,7 +365,8 @@
     "proposalCount": "Kontaktvorschläge",
     "stimulusResponse": "Antwort auf anhaltenden Reiz",
     "scentSensitivity": "Ziehen: ein weiterer Ring fängt schwächeren Duft",
-    "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff"
+    "bloodSensitivity": "Ziehen: ein weiterer Ring spürt schon weniger vom Stoff",
+    "bladderGlands": "{n} von {most} Gasdrüsen; ziehen fügt Drüsen hinzu oder nimmt sie weg"
   },
   "effects": [
     "erregt oder hemmt die Zelle",
@@ -1295,7 +1294,6 @@
     "receptorActive": "Rezeptor verwenden",
     "receptorValues": "Rezeptorwerte",
     "netInput": "Summierter Eingang −1 … +1",
-    "gonadConditions": "Planungsbeispiel bei konstantem Beispieleingang und ausreichender Energie. Gezeigt wird eine Füllung bis zur Freigabemenge. Der tatsächliche Ablauf hängt von Energieversorgung, Entwicklung und Auslösekommando ab.",
     "bodyGrowth": "Dieser Rezeptor steuert das Gewebewachstum des Körpers über Hormone. Die Reife ergibt sich aus der größten erreichten Gewebemasse im Verhältnis zur Zielgröße.",
     "phaseHandles": "Ziehen setzt einfache Reiferezeptoren. Die Marken stehen für deren Halbsättigung; breite Rezeptoren reagieren zusätzlich auf die gehaltenen Hormonspiegel.",
     "threshold": "Schwelle / Gegenstück zur Eigenaktivität",

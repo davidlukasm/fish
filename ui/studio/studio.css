@@ -810,6 +810,11 @@
 .aid-gut-tube{fill:none;stroke:var(--aid-gut);stroke-opacity:.55;stroke-linecap:round;stroke-linejoin:round}
 .aid-gut-stretch{fill:none;stroke:#b29bdc;stroke-width:3;stroke-dasharray:3 5;cursor:pointer}
 .aid-gut-cell{fill:var(--aid-senses);stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
+.aid-bladder{display:block;width:100%;height:auto;touch-action:none}
+.aid-bladder-sac{fill:#bfe3f022;stroke:var(--aid-flow);stroke-width:1.6}
+.aid-bladder-gland{fill:#d98a7a;stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
+.aid-bladder-roof{fill:none;stroke:var(--aid-senses);stroke-width:4;stroke-linecap:round;cursor:pointer}
+.aid-sac-part.selected .aid-bladder-gland,.aid-sac-part.selected .aid-bladder-roof{stroke:var(--aid-handle)}
 .aid-gut-feeler{fill:none;stroke:var(--aid-senses);stroke-width:1.2;stroke-linecap:round}
 .aid-diet-track{fill:#0d262c;stroke:var(--aid-sketch-line);stroke-width:.6}
 .aid-sac-part.selected .aid-gut-stretch{stroke:var(--aid-handle)}

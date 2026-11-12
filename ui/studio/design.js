@@ -16,11 +16,13 @@ import {
 } from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {hairField} from './view/balance.js';
+import {bladderGraphic} from './view/sacs.js';
 // Sense organs whose one picture holds their cells, sensitivity, adaptation and width.
 const SENSE_PICTURES = Object.freeze({
   lateral : lateralField,
   balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held),
-  blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held)
+  blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held),
+  bladder : (state, organ, held) => bladderGraphic(state, organ, state.selected, held)
 });
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
