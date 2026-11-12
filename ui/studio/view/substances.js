@@ -318,15 +318,17 @@ const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' +
 // What the axes of an answer mean, without words: along the bottom the substance (or the cell's
 // age) grows in its own colour, at the top of the upright axis sits the answer's symbol.
 const CURVE_KEY = Object.freeze({gap : 4, strip : 6, steps : 12, icon : 16});
-function curveKey(colour, path) {
+function curveKey(colour, path, maturity) {
   const K = CURVE_KEY, step = (CURVE.right - CURVE.left) / K.steps;
-  return Array
-             .from({length : K.steps},
-                   (_, k) => '<rect class="aid-curve-amount" x="' + fixed(CURVE.left + k * step) +
-                             '" y="' + (CURVE.bottom + K.gap) + '" width="' + fixed(step) +
-                             '" height="' + K.strip + '" fill="' + colour + '" fill-opacity="' +
-                             fixed((k + 1) / K.steps) + '"/>')
-             .join('') +
+  return (maturity ? ageKey()
+                   : Array
+                         .from({length : K.steps},
+                               (_, k) => '<rect class="aid-curve-amount" x="' +
+                                         fixed(CURVE.left + k * step) + '" y="' +
+                                         (CURVE.bottom + K.gap) + '" width="' + fixed(step) +
+                                         '" height="' + K.strip + '" fill="' + colour +
+                                         '" fill-opacity="' + fixed((k + 1) / K.steps) + '"/>')
+                         .join('')) +
          placedGlyph(path, K.icon, {x : CURVE.left / 2, y : CURVE.top + K.icon / 2}, {line : true});
 }
 const PHASE_POINTER = Object.freeze({half : 8, height : 14});
@@ -356,9 +358,11 @@ export function effectCurve(state, receptor, effect, target = null) {
          escapeText(unit + ' · ' + along + ' ' +
                     formatNumber(maturity ? 0 : halfMin, CURVE_DIGITS) + ' … ' + formatNumber(1)) +
          '</title>' + marks + curveAxes() +
-         curveKey(substanceColor(receptor.substance), effect === GROWTH  ? GROWTH_ICON
-                                                      : effect === BIRTH ? BIRTH_ICON
-                                                                         : EFFECT_ICON[effect]) +
+         curveKey(substanceColor(receptor.substance),
+                  effect === GROWTH  ? GROWTH_ICON
+                  : effect === BIRTH ? BIRTH_ICON
+                                     : EFFECT_ICON[effect],
+                  maturity) +
          '<polyline class="aid-response-line" points="' + points + '"/>' +
          (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
@@ -373,6 +377,11 @@ export function phasePatch(handle, fx) {
 // and where it dies (the shaded spans). Below, one badge per answer shows the substance its
 // receptor reads; clicking a badge or its line chooses which receptor the pictures below set.
 const LIFE_BADGE = Object.freeze({y : 134, radius : 9});
+// Along the bottom the cell's life runs from the young fish to the grown one.
+const AGE_KEY = Object.freeze({young : 9, grown : 16, y : 124});
+const ageKey = () =>
+    placedGlyph(GROWTH_ICON, AGE_KEY.young, {x : CURVE.left, y : AGE_KEY.y}, {line : true}) +
+    placedGlyph(GROWTH_ICON, AGE_KEY.grown, {x : CURVE.right, y : AGE_KEY.y}, {line : true});
 export const LIFE_EFFECTS = Object.freeze([ BIRTH, HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
 const lifeKind = effect => effect === BIRTH                   ? 'birth'
                            : effect === HORMONE_EFFECT.output ? 'output'
@@ -445,7 +454,7 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
          '" role="img" aria-label="' + label('inspector.lifePhase') + '"><title>' +
          escapeText(label('development.phaseHandles')) + '</title>' +
          '<g class="aid-life-line"' + pick(HORMONE_EFFECT.death) + '><title>' +
-         name(HORMONE_EFFECT.death) + '</title>' + dead + '</g>' + curveAxes() +
+         name(HORMONE_EFFECT.death) + '</title>' + dead + '</g>' + curveAxes() + ageKey() +
          line(HORMONE_EFFECT.output, 'aid-response-line', points) +
          line(BIRTH, 'aid-life-birth', birth) +
          mark('start', phase.start, 0, 'inspector.phaseStart') +
