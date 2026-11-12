@@ -3,9 +3,8 @@
 // command, and how it fades once the gland rests. Its cells set how high (the source grows with
 // them), its cell time how long the substance stays: the blood loses a substance at one over that
 // time per step and the gland's pouring builds up over it (hormone_state.cc).
-// Command: what the gland does at each command. An exciting one makes it pour, an inhibiting one
-// makes it bind the substance, which then leaves the blood faster; a command inside the gate does
-// nothing (substrate.cc, effector output).
+// Command: what the gland does at each command (command_line.js). An exciting one makes it pour,
+// an inhibiting one makes it bind the substance, which then leaves the blood faster.
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
@@ -13,6 +12,7 @@ import {substanceColor} from '../../hormones.js';
 import {wheelAffinity} from '../model/document.js';
 import {sideOf} from '../model/layout.js';
 import {handleWord} from './sense_marks.js';
+import {commandLine} from './command_line.js';
 import {escapeText, fixed} from './markup.js';
 import {formatNumber, percent, t} from '../../strings.js';
 
@@ -37,19 +37,6 @@ const LEVEL = Object.freeze({
   // Shares closer than this part of the main one count as alike.
   alike : .02,
   name : 4
-});
-const COMMAND = Object.freeze({
-  width : 300,
-  height : 76,
-  left : 40,
-  right : 284,
-  middle : 34,
-  reach : 20,
-  words : 70,
-  // The command runs this far either way; the widest gate is the bias scale, well inside it.
-  span : 1,
-  samples : 40,
-  handle : 5.5
 });
 const text = (cls, x, y, content, anchor = 'start') =>
     '<text class="' + cls + '" x="' + fixed(x) + '" y="' + fixed(y) + '" text-anchor="' + anchor +
@@ -145,40 +132,10 @@ function levelPicture(state, organ, center, nameOf) {
                  handleWord(half, word('half', {n : formatNumber(tau * Math.LN2, 0)})));
 }
 
-// The gland's work at each command, from binding (down, left) to pouring (up, right).
-function commandPicture(state, organ, center) {
-  const C = COMMAND, wheel = state.capabilities, mid = (C.left + C.right) / 2;
-  const gate = Math.max(0, center.threshold) * wheel.biasScale;
-  const x = input => mid + (C.right - mid) * input / C.span;
-  const work = input => Math.sign(input) * Math.tanh(Math.max(0, Math.abs(input) - gate));
-  const y = value => C.middle - C.reach * value / Math.tanh(C.span);
-  const d = 'M' + Array
-                      .from({length : 2 * C.samples + 1},
-                            (_, i) => {
-                              const input = C.span * (i / C.samples - 1);
-                              return fixed(x(input)) + ' ' + fixed(y(work(input)));
-                            })
-                      .join(' L');
-  const at = {x : x(gate), y : C.middle};
-  return svg(C, organ, word('command'),
-             '<rect class="aid-gland-gate" x="' + fixed(x(-gate)) + '" y="' + (C.middle - C.reach) +
-                 '" width="' + fixed(x(gate) - x(-gate)) + '" height="' + 2 * C.reach +
-                 '"/><path class="aid-sense-axis" d="M' + C.left + ' ' + C.middle + ' H' + C.right +
-                 '"/><path class="aid-gland-work" d="' + d + '"/>' +
-                 text('aid-handle-word', C.right, C.middle - C.reach, word('pours'), 'end') +
-                 text('aid-handle-word', C.left, C.middle + C.reach, word('binds')) +
-                 text('aid-handle-word', C.left, C.words, word('inhibits')) +
-                 text('aid-handle-word', mid, C.words, word('command'), 'middle') +
-                 text('aid-handle-word', C.right, C.words, word('excites'), 'end') +
-                 grip('gland:gate', at, word('gateHandle'), C,
-                      ' data-scale="' + wheel.biasScale + '" data-center="' +
-                          escapeText(center.id) + '"') +
-                 handleWord(at, t('studio.sense.gateWord'), 'under'));
-}
-
 export const glandPictures = (state, organ, center, nameOf) =>
     state.capabilities?.hormoneRate > 0 && center
-        ? levelPicture(state, organ, center, nameOf) + commandPicture(state, organ, center)
+        ? levelPicture(state, organ, center, nameOf) +
+              commandLine(state, organ, center, MOTOR_KIND.gland, 'gland')
         : '';
 
 // The change a handle makes, from the pointer `p` in its picture's units, as a patch of the
@@ -198,11 +155,6 @@ export function glandPatch(name, p, marks) {
     const mid = (LEVEL.left + LEVEL.right) / 2;
     const steps = (p.x - mid) / (LEVEL.right - LEVEL.left) * 2 * phaseSteps() / Math.LN2;
     return {id, center : {tau : timeConstantOf(Math.max(steps, timeConstantSteps(0)))}};
-  }
-  if (name === 'gland:gate') {
-    const mid = (COMMAND.left + COMMAND.right) / 2;
-    const gate = clamp((p.x - mid) / (COMMAND.right - mid) * COMMAND.span, 0, Number(marks.scale));
-    return {id, center : {threshold : gate / Number(marks.scale)}};
   }
   return null;
 }

@@ -335,7 +335,10 @@
       "tooSmall": "Blase zu klein: der Fisch sinkt bei jeder Füllung",
       "empty": "leer",
       "fill": "Füllung",
-      "full": "voll"
+      "full": "voll",
+      "fillTime": "bei starkem Befehl voll nach {n} Schritten",
+      "cells": "{n} {n:Zelle|Zellen} je Knoten",
+      "cellsHandle": "Ziehen: mehr Zellen je Knoten heben stärker und füllen schneller"
     }
   },
   "effects": [
@@ -1531,12 +1534,20 @@
     "rests": "ruht",
     "half": "halb weg nach {n} {n:Schritt|Schritten}",
     "cellsHandle": "Ziehen: mehr Zellen, der Stoff steigt höher",
-    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt",
-    "command": "Befehl",
-    "pours": "gibt ab",
-    "binds": "bindet",
+    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt"
+  },
+  "command": {
+    "title": "Befehl",
     "inhibits": "hemmend",
     "excites": "erregend",
-    "gateHandle": "Ziehen: wie stark ein Befehl sein muss, bevor die Drüse etwas tut"
+    "gateHandle": "Ziehen: wie stark ein Befehl sein muss, bevor das Organ etwas tut",
+    "gland": {
+      "up": "gibt ab",
+      "down": "bindet"
+    },
+    "bladder": {
+      "up": "füllt",
+      "down": "leert"
+    }
   }
 }

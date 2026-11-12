@@ -552,7 +552,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     }
     std::cout << ']';
   }
-  std::cout << "],\"bladder\":" << a.capacities[fishsim::organ_port::bladder];
+  std::cout << ']';
   std::cout << ",\"fins\":[";
   for (std::size_t i = 0; i < a.fins.size(); ++i) {
     if (i)
@@ -851,7 +851,7 @@ std::string buoyancy_report() {
   const fishsim::PhysiologyParameters physiology{};
   std::ostringstream out;
   out << "{\"sinking\":" << physiology.sinking << ",\"strength\":" << physiology.bladder_strength
-      << '}';
+      << ",\"rate\":" << physiology.bladder_rate << '}';
   return out.str();
 }
 std::string gonad_report() {

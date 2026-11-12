@@ -1,11 +1,11 @@
 import {clamp} from '../../units.js';
 import {activationLevel, activationQuality, planOfUnit, unitOfPlan} from '../../tuning.js';
 import {kindLimit, kindNodes, nodeLimit, PRESSURE_OF} from '../model/organs.js';
-import {ATELIER_LIMITS} from '../../schema.js';
+import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {groupReport} from '../model/document.js';
 import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
-import {percent, t, tList} from '../../strings.js';
+import {formatNumber, percent, t, tList} from '../../strings.js';
 import {label, SLOT_IN} from './kit.js';
 import {
   adaptationMarks,
@@ -17,6 +17,8 @@ import {
 } from './sense_marks.js';
 import {centerTitle} from './names.js';
 import {organTitle} from './names.js';
+import {commandLine} from './command_line.js';
+import {sideOf} from '../model/layout.js';
 
 export function gonadStore(state, organ) {
   const G = state.capabilities?.gonads, base = G?.[organ.type];
@@ -279,24 +281,23 @@ function pressureMarks(state, pressure, at) {
   return (answer?.adapt?.steps > 0 ? adaptationMarks(at, STORE.clock, Math.PI, pressure) : '') +
          cellMarks(places, pressure);
 }
-// The swim bladder in one picture: the gas sac, the gas glands along its floor (one per node; the
-// first shows its cells, the handle at the last adds or removes glands), and the pressure cells on
-// its roof with their feelers, as long as they are sensitive, and their adaptation arc. A part is
-// chosen by clicking it. `held` is a dragged sensitivity.
+// The swim bladder: the gas sac, the gas glands along its floor (one per node, the handle at the
+// last adds or removes glands), and the pressure cells on its roof with their feelers, as long as
+// they are sensitive, and their adaptation arc. A part is chosen by clicking it. Below, what the
+// glands' cells do (the lift) and what a command does (command_line.js). `held` is a dragged
+// sensitivity.
 const BLADDER = Object.freeze({
   width : 300,
-  height : 150,
+  height : 106,
   cx : 150,
-  cy : 72,
+  cy : 56,
   rx : 116,
   ry : 40,
   gland : 13,
   glands : [ 70, 236 ],
-  cell : 9,
   roof : [ 92, 212 ],
   feeler : 18,
-  clock : 16,
-  gate : 284
+  clock : 16
 });
 export function bladderGraphic(state, organ, selected, held = null) {
   const B = BLADDER, glands = kindNodes(organ), most = kindLimit(organ, state.sites);
@@ -318,11 +319,6 @@ export function bladderGraphic(state, organ, selected, held = null) {
                                  fixed(at.y) + '" r="' + B.gland + '"/>';
                         })
                         .join('');
-  const first = glandAt(0);
-  const glandCells = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
-    const a = 2 * Math.PI * k / ATELIER_LIMITS.max_copies;
-    return {x : first.x + B.cell * Math.cos(a), y : first.y + B.cell * Math.sin(a)};
-  });
   const nodePlaces = Array.from({length : most}, (_, k) => glandAt(k));
   const roofCells = Array.from({length : ATELIER_LIMITS.max_copies}, (_, k) => {
     const x = B.roof[0] + (B.roof[1] - B.roof[0]) * k / (ATELIER_LIMITS.max_copies - 1);
@@ -343,13 +339,8 @@ export function bladderGraphic(state, organ, selected, held = null) {
                           {x : start.x, y : start.y + SENSE_MARK.cell + B.feeler}, sensitive,
                           t('studio.muscle.gut.sensitivityHandle'));
   } else if (glands.length) {
-    marks = cellMarks(glandCells, glands[0]) +
-            nodeMarks(nodePlaces, glands.length,
-                      t('studio.inspector.bladderGlands', {n : glands.length, most})) +
-            '<path class="aid-gate-track" d="M' + B.gate + ' ' + (B.cy + B.ry) + ' V' +
-            (B.cy - B.ry) + '"/>' +
-            gateHandle({x : B.gate, y : B.cy + B.ry}, {x : B.gate, y : B.cy - B.ry}, state,
-                       glands[0], label('inspector.motorGate'));
+    marks = nodeMarks(nodePlaces, glands.length,
+                      t('studio.inspector.bladderGlands', {n : glands.length, most}));
   }
   const pressureDots =
       pressure && chosen !== pressure
@@ -374,12 +365,15 @@ export function bladderGraphic(state, organ, selected, held = null) {
                               B.roof[1] + ' ' + fixed(roof(B.roof[1])) + '"/>' + pressureDots,
                           centerTitle(pressure) + ' · ' + pressureText(state, organ))
                    : '') +
-         marks + '</svg>' + bladderLift(state) + '</div>';
+         marks + '</svg>' + bladderLift(state, organ, glands) +
+         commandLine(state, organ, glands[0], MOTOR_KIND.bladder, 'bladder') + '</div>';
 }
-// What the glands' capacity does: the lift a bladder gives at each fill (movement.cc: strength ·
+// What the glands' cells do: the lift a bladder gives at each fill (movement.cc: strength ·
 // capacity / (1 + capacity) · fill) against the fish's sinking. Where the lift line crosses the
-// sinking line the fish hovers; below that fill it sinks, above it rises. A bladder too small never
-// reaches the sinking line and the fish sinks at any fill. The capacity is the design run's.
+// sinking line the fish hovers; below that fill it sinks, above it rises, and a bladder too small
+// never reaches the sinking line. The handle at the full end sets the cells of every gland node,
+// whose capacity is their cells over the most a node holds (atelier_compiler.hh). The same capacity
+// fills the bladder at a strong command by the bladder rate per step (body_plan.cc).
 const LIFT = Object.freeze({
   width : 300,
   height : 108,
@@ -387,24 +381,29 @@ const LIFT = Object.freeze({
   right : 284,
   top : 12,
   base : 76,
-  room : 1.6,
   title : 12,
   axis : 90,
   dot : 3.5,
-  word : 4
+  word : 4,
+  handle : 5.5,
+  time : 104
 });
-function bladderLift(state) {
-  const L = LIFT, physics = state.capabilities?.buoyancy, capacity = state.anatomy?.bladder;
-  if (!physics || !(capacity >= 0))
+const liftCapacity = glands =>
+    glands.reduce((sum, center) => sum + center.copies, 0) / ATELIER_LIMITS.max_copies;
+function bladderLift(state, organ, glands) {
+  const L = LIFT, physics = state.capabilities?.buoyancy;
+  if (!physics || !glands.length)
     return '';
-  const full = physics.strength * capacity / (1 + capacity), most = L.room * physics.sinking;
+  const capacity = liftCapacity(glands);
+  // The frame reaches the most any bladder lifts: its strength, as the capacity grows without end.
+  const full = physics.strength * capacity / (1 + capacity), most = physics.strength;
   const x = fill => L.left + (L.right - L.left) * fill,
         y = force => L.base - (L.base - L.top) * Math.min(1, force / most);
   const hover = full > 0 ? physics.sinking / full : Infinity;
   const word = (key, px, py, anchor = 'start', values) =>
       '<text class="aid-handle-word" x="' + fixed(px) + '" y="' + fixed(py) + '" text-anchor="' +
       anchor + '">' + escapeText(t('studio.inspector.lift.' + key, values)) + '</text>';
-  const sink = y(physics.sinking);
+  const sink = y(physics.sinking), end = {x : L.right, y : y(full)};
   const marks = hover <= 1
                     ? '<line class="aid-use-marker" x1="' + fixed(x(hover)) + '" y1="' + L.top +
                           '" x2="' + fixed(x(hover)) + '" y2="' + L.base + '"/><circle ' +
@@ -413,19 +412,42 @@ function bladderLift(state) {
                           word('hovers', x(hover), L.top, hover < .5 ? 'start' : 'end',
                                {n : percent(hover)}) +
                           word('sinks', L.left + L.word, sink - L.word) +
-                          word('rises', L.right, sink - L.word, 'end')
+                          word('rises', L.right - 2 * L.handle, sink - L.word, 'end')
                     : word('tooSmall', (L.left + L.right) / 2, L.top + L.title, 'middle');
-  return '<svg class="aid-bladder-lift" viewBox="0 0 ' + L.width + ' ' + L.height +
+  return '<svg class="aid-effector-graphic aid-bladder-lift" viewBox="0 0 ' + L.width + ' ' +
+         L.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
+         MOTOR_KIND.bladder + '" data-effector-side="' + sideOf(organ) +
          '" role="img" aria-label="' + escapeText(t('studio.inspector.lift.title')) + '">' +
          '<path class="aid-sense-axis" d="M' + L.left + ' ' + L.top + ' V' + L.base + ' H' +
          L.right + '"/><path class="aid-lift-sink" d="M' + L.left + ' ' + fixed(sink) + ' H' +
-         L.right + '"/><path class="aid-lift-line" d="M' + L.left + ' ' + L.base + ' L' + L.right +
-         ' ' + fixed(y(full)) + '"/>' + marks +
+         L.right + '"/><path class="aid-lift-line" d="M' + L.left + ' ' + L.base + ' L' +
+         fixed(end.x) + ' ' + fixed(end.y) + '"/>' + marks +
          '<text class="aid-handle-word" transform="translate(' + L.title + ' ' +
          fixed((L.top + L.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
          escapeText(t('studio.inspector.lift.title')) + '</text>' + word('empty', L.left, L.axis) +
          word('fill', (L.left + L.right) / 2, L.axis, 'middle') +
-         word('full', L.right, L.axis, 'end') + '</svg>';
+         word('full', L.right, L.axis, 'end') +
+         word('fillTime', (L.left + L.right) / 2, L.time, 'middle',
+              {n : formatNumber(1 / (physics.rate * capacity), 0)}) +
+         '<circle class="aid-graphic-handle" data-effector-handle="lift:cells" data-frame="' +
+         L.width + ',' + L.height + '" data-most="' + most + '" data-strength="' +
+         physics.strength + '" data-nodes="' + glands.length + '" cx="' + fixed(end.x) + '" cy="' +
+         fixed(end.y) + '" r="' + L.handle + '"><title>' +
+         escapeText(t('studio.inspector.lift.cellsHandle')) + '</title></circle>' +
+         word('cells', end.x - 2 * L.handle, end.y + L.handle, 'end', {n : glands[0].copies}) +
+         '</svg>';
+}
+// The cells of each gland node the lift handle sets, from the pointer `p` in its picture's units:
+// the lift asked for at full fill gives the capacity, shared by the gland nodes.
+export function liftPatch(p, marks) {
+  const L = LIFT, strength = Number(marks.strength);
+  const full = Math.min(Number(marks.most) * clamp((L.base - p.y) / (L.base - L.top)),
+                        strength * (1 - Number.EPSILON));
+  const capacity = full / (strength - full);
+  return {
+    copies : clamp(Math.round(capacity * ATELIER_LIMITS.max_copies / Number(marks.nodes)), 1,
+                   ATELIER_LIMITS.max_copies)
+  };
 }
 // How many glands: a dot at each place one could grow, the handle at the last one grown.
 function nodeMarks(places, count, title) {

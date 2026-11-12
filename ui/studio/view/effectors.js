@@ -1,5 +1,7 @@
 import {musclePatch, musclePictures} from './muscle_effect.js';
 import {glandPatch} from './gland_effect.js';
+import {commandPatch} from './command_line.js';
+import {liftPatch} from './sacs.js';
 import {pigmentPatch} from './pigments.js';
 import {
   ANATOMY,
@@ -110,6 +112,14 @@ export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
   if (name.startsWith('pigment:')) {
     const [width, height] = marks.frame.split(',').map(Number);
     return pigmentPatch(name, {x : fx * width, y : fy * height}, marks);
+  }
+  if (name === 'lift:cells') {
+    const [width, height] = marks.frame.split(',').map(Number);
+    return liftPatch({x : fx * width, y : fy * height}, marks);
+  }
+  if (name === 'command:gate') {
+    const [width, height] = marks.frame.split(',').map(Number);
+    return commandPatch({x : fx * width, y : fy * height}, marks);
   }
   if (name.startsWith('gland:')) {
     const [width, height] = marks.frame.split(',').map(Number);

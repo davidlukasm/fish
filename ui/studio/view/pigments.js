@@ -164,7 +164,7 @@ function spreadPictures(state, organ, center) {
   const S = SPREAD, gate = Math.max(0, center.threshold) * scale,
         window = S.window * LONGEST_TIME_CONSTANT;
   const tau = timeConstantSteps(center.tau), x = share => S.left + (S.right - S.left) * share;
-  const zone = '<rect class="aid-gland-gate" x="' + S.left + '" y="' + (S.axis - S.handle) +
+  const zone = '<rect class="aid-command-gate" x="' + S.left + '" y="' + (S.axis - S.handle) +
                '" width="' + fixed(x(gate / S.span) - S.left) + '" height="' + 2 * S.handle + '"/>';
   return spreadRow(organ, center, colours.range, 'command',
                    share => Math.tanh(Math.max(0, share * S.span - gate)),
