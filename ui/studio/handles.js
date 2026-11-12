@@ -816,7 +816,7 @@ export const handleMethods = {
     const drafted = !!this.drafted;
     if (drafted)
       this.settleGraphic();
-    if (drafted && how.done && how.done !== 'settleGraphic')
+    if (drafted && how.done && !['settleGraphic', 'refreshInspector'].includes(how.done))
       this[how.done]();
     this.handleDrag = null;
     this.historyBatch = null;

@@ -301,6 +301,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     Object.assign(global, before);
   }
   checkPulseTiming(createPlanPlayer, (await import('../ui/studio/view/pulse.js')).pulseSchedule);
+  await checkRedraws(model, capabilities, root);
 };
 
 function checkPulseTiming(createPlanPlayer, pulseSchedule) {
@@ -406,5 +407,94 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
   } finally {
     player.stop();
     Object.assign(global, saved);
+  }
+}
+
+async function checkRedraws(model, caps, root) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const doc = JSON.parse(require('node:fs').readFileSync(
+      require('node:path').join(root, 'genomes/handbau/liora.fish.json')));
+  const counts = {};
+  function make() {
+    const studio = new OrganStudio({
+      dataset : {},
+      style : {removeProperty() {}},
+      querySelector : () => null,
+      querySelectorAll : () => []
+    });
+    Object.assign(studio.state, {
+      station : 'studio',
+      document : doc,
+      sites : caps.sites,
+      capabilities : caps,
+      stimulus : {}
+    });
+    const hits = {scene : 0, inspector : 0, skin : 0, design : 0};
+    studio.refreshScene = () => hits.scene++;
+    studio.refreshInspector = () => hits.inspector++;
+    studio.refreshSkin = () => hits.skin++;
+    studio.requestDesign = () => hits.design++;
+    studio.persist = () => {};
+    studio.bringProbes = () => {};
+    studio.notice = () => {};
+    return {studio, hits};
+  }
+  for (const action of ['stimulate', 'setTraceSource', 'setTool', 'placeStimulus']) {
+    const {studio, hits} = make();
+    if (action === 'stimulate')
+      studio.stimulate([ model.allCenters(doc)[0].id ]);
+    if (action === 'setTraceSource')
+      studio.setTraceSource('plan');
+    if (action === 'setTool')
+      studio.setTool('wire');
+    if (action === 'placeStimulus')
+      studio.placeStimulus('light');
+    counts[action] = hits;
+  }
+  for (const held of ['spectrum', 'sense', 'vision', 'skin', 'response']) {
+    const {studio, hits} = make();
+    const cell = model.allCenters(doc)[0];
+    studio.state.document = model.updateCenter(doc, cell.id, {field : .314159});
+    studio.drafted = 'test';
+    studio.draftStart = doc;
+    studio.handleDrag = {held, last : {x : 0, y : 0}};
+    studio.releaseHandle({clientX : 0, clientY : 0});
+    assert.equal(studio.handleDrag, null);
+    assert.equal(studio.undoHistory.length, 1, 'A completed drag remains one undo step');
+    counts['release:' + held] = hits;
+  }
+
+  for (const [action, hits] of Object.entries(counts)) {
+    assert.equal(hits.scene, 1, action + ' draws the fish once');
+    assert.equal(hits.inspector, 1, action + ' draws the inspector once');
+    if (action.startsWith('release:'))
+      assert.equal(hits.design, 1, action + ' requests one design run');
+  }
+
+  const gut = doc.organs.find(o => o.type === 'gut');
+  const anatomy = {senseProbe : model.allCenters(doc).map(() => 1)};
+  for (const alreadyShown of [false, true]) {
+    const {studio, hits} = make();
+    if (alreadyShown)
+      studio.shownDesign = doc;
+    studio.pendingTrace = {organ : gut.id, after : 0};
+    studio.showAnatomy(anatomy, 1);
+    assert.equal(hits.scene, 1, 'An answered probe redraws its scene once');
+    assert.equal(hits.inspector, 1, 'An answered probe redraws its inspector once');
+    assert.equal(studio.pendingTrace, null);
+    assert.ok(studio.state.stimulus.starts.length);
+  }
+  {
+    const {studio, hits} = make(), blocks = [];
+    studio.redrawBlocks = key => blocks.push(key);
+    studio.showAnatomy(anatomy, 1);
+    assert.equal(hits.scene, 1);
+    assert.deepEqual(
+        blocks, [ 'hormoneTime', 'organSettings' ],
+        'An anatomy answer updates parent graphics without immediately rebuilding their children');
+    blocks.length = 0;
+    studio.showAnatomy(anatomy, 2);
+    assert.equal(hits.scene, 1, 'A probe-only answer keeps the existing fish scene');
+    assert.deepEqual(blocks, [ 'visionOrgan', 'nearAnswers', 'gutProbeControls' ]);
   }
 }

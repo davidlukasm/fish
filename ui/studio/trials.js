@@ -28,7 +28,7 @@ export const trialMethods = {
       return;
     if (source === 'cppn' && (!acceptedGenome(this.state) || !this.state.report?.compiler))
       return;
-    this.clearStimulus();
+    this.clearStimulus(false);
     this.state.traceSource = source;
     this.state.contactView = source === 'cppn' ? 'actual' : 'design';
     this.refreshLibrary();
@@ -119,15 +119,17 @@ export const trialMethods = {
   stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
-    this.clearStimulus();
+    this.clearStimulus(false);
     if (this.state.traceSource !== 'cppn')
       this.showDrawnContacts();
     const doc = this.state.document,
           trace = this.state.traceSource === 'cppn'
                       ? cppnTrace(this.state, centerIds)
                       : planTrace(doc, this.state.sites, centerIds, this.state.capabilities);
-    if (!trace.starts.length)
+    if (!trace.starts.length) {
+      this.refreshViews();
       return this.notice(label('status.noPotential'));
+    }
     const stimulus = {
       starts : trace.starts,
       fired : new Set(trace.starts),
@@ -200,8 +202,10 @@ export const trialMethods = {
                     groupReport(this.state.document, this.state.anatomy, 'senseProbe', center.id) ??
                         0);
     const answering = [...answers ].filter(([, answer ]) => answer > ANSWERS).map(([ id ]) => id);
-    if (answering.length)
+    if (answering.length) {
       this.stimulate(answering);
+      return true;
+    }
   },
   setPreviewContext(key, value) {
     if (!Number.isFinite(value))
@@ -301,13 +305,14 @@ export const trialMethods = {
                       : [];
     return [...own, ...(moved ? moved() : []), ...raise ];
   },
-  clearStimulus() {
+  clearStimulus(redraw = true) {
     this.pendingTrace = null;
     this.stopPulse();
     if (!this.state.stimulus)
       return;
     this.state.stimulus = null;
-    this.refreshScene();
+    if (redraw)
+      this.refreshScene();
   },
   stopPulse() {
     this.pulsePlayer?.stop();

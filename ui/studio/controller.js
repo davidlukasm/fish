@@ -248,14 +248,13 @@ export class OrganStudio {
     this.state.tool = tool;
     if (entering) {
       this.state.armed = null;
-      this.clearStimulus();
+      this.clearStimulus(false);
     }
     if (tool === 'wire') {
       this.showDrawnContacts();
       if (entering) {
         this.state.selected = null;
         this.state.multi.clear();
-        this.refreshInspector();
       }
     }
     this.clearPreview();

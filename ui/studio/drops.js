@@ -280,7 +280,7 @@ export const dropMethods = {
       return this.notice(label('status.noRoom'));
     const chosen = organOf(doc, this.state.selected?.id);
     const organ = organs.find(o => o.id === chosen?.id) ?? organs[0];
-    this.clearStimulus();
+    this.clearStimulus(false);
     this.state.selected = {kind : 'organ', id : organ.id};
     this.bringProbes();
     // Only an answer requested after the stimulus was placed has measured it.

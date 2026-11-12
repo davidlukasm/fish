@@ -152,17 +152,22 @@ export const designMethods = {
     this.shownDesign = this.state.document;
     this.state.anatomy = anatomy;
     this.bringProbes();
+    // A newly answered stimulus already rebuilds the scene and inspector with this anatomy.
+    const traced = this.traceAnswered(request);
     if (probesOnly) {
-      this.refreshVision();
-      this.drawSight();
-      this.refreshProbes();
-      return this.traceAnswered(request);
+      if (!traced) {
+        this.refreshVision();
+        this.drawSight();
+        this.refreshProbes();
+      }
+      return;
     }
     this.refreshHeader();
-    this.refreshScene();
-    this.refreshGraphics();
+    if (!traced) {
+      this.refreshScene();
+      this.refreshGraphics();
+    }
     this.checkPressure();
-    this.traceAnswered(request);
   },
   async checkPressure() {
     const doc = this.state.document, pressure = this.state.anatomy?.pressure;
@@ -199,12 +204,15 @@ export const designMethods = {
                       item => hormoneTime(this.state, item.index));
     if (!this.handleDrag)
       this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
-    this.refreshSkin();
-    this.refreshSpectrum();
-    this.refreshEffectors();
-    this.refreshPigment();
+    else {
+      this.refreshSkin();
+      this.refreshSpectrum();
+      this.refreshEffectors();
+      this.refreshPigment();
+      this.refreshProbeControls();
+    }
     this.drawSight();
-    this.refreshProbes();
+    // The scene and organSettings already include their probe graphics and controls.
   },
   refreshProbes() {
     const layer = this.bodyMap()?.querySelector('#' + PROBE_LAYER);
@@ -213,6 +221,9 @@ export const designMethods = {
     const scents = this.root.querySelector('[data-probe-scents-layer]');
     if (scents)
       scents.innerHTML = probeScents(this.state);
+    this.refreshProbeControls();
+  },
+  refreshProbeControls() {
     this.redrawBlocks('nearAnswers', findOrgan, organ => nearAnswers(this.state, organ));
     this.redrawBlocks('gutProbeControls', findOrgan, organ => gutProbeControls(this.state, organ));
   },
