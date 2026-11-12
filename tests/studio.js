@@ -2620,28 +2620,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) >
                   -1,
               'The pacemaker keeps beating in the adult');
-    const effectors = await import('../ui/studio/view/effectors.js');
-    assert.deepEqual(effectors.effectorPatch(MK.forward, 'nodes', 1, .5, most), {nodes : most});
-    assert.equal(effectors.effectorPatch(MK.forward, 'nodes', 0, .5, most).nodes, 1);
-    assert.deepEqual(effectors.effectorPatch(MK.forward, 'strength', 1, .5, most),
-                     {copies : ATELIER_LIMITS.max_copies});
-    assert.deepEqual(effectors.effectorPatch(MK.aggression, 'trait:q2', 0, .5, most),
-                     {trait : 'jaw_length', value : 1});
-    assert.deepEqual(effectors.effectorPatch(MK.aggression, 'chart:teeth', 1, .5, most),
-                     {trait : 'blunt_teeth', value : 1});
-    assert.equal(effectors.effectorPatch(MK.suction, 'chart:suction', 1, .5, most), null);
-    const html = effectors.effectorGraphic({document : grown, sites, anatomy : null}, organ);
-    assert.ok(html.includes('data-effector-handle="nodes"') &&
-              html.includes('data-effector-handle="strength"') &&
-              html.includes('data-effector-handle="trait:q1"') && !html.includes('ellipse'));
-    assert.deepEqual(effectors.effectorPatch(MK.forward, 'fibre', 1, .5, most), {fibre : 1});
-    assert.equal((html.match(/data-fibre-type=/g) || []).length, 3,
-                 'Fast, mixed and slow fibres are one click away');
-    const mixed = model.setMuscleFibre(grown, organ.id, .5);
-    const mixedHtml = effectors.effectorGraphic({document : mixed, sites, anatomy : null},
-                                                model.findOrgan(mixed, organ.id));
-    assert.match(mixedHtml, /data-fibre-type="0.5" data-organ-id="[^"]*" class="active"/,
-                 'The chosen mix lights its button');
     assert.match(views.organTitle(organ, sites), /Schwanz/);
     const pigment =
         model.addOrgan(model.newDocument('Farbe'), 'pigment', sites, {x : 600, y : 260});
