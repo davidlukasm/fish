@@ -152,7 +152,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   **Neues Prinzip (Davids Worte, sinngemäß):**
   - Je länger Fleisch im Darm liegt, desto eher wird es schlecht und giftig (geringerer Nährwert). Je länger Pflanzen im Darm liegen, desto mehr Energie lässt sich daraus verwerten.
   - Mit dem Darmmuskel steuert der Fisch, wie lange etwas im Darm liegt, aber nur in einem Rahmen. Ohne Muskel gibt es eine Grundgeschwindigkeit, zu Lasten von Pflanzenfressern mit kurzem Darm. Es gibt eine Höchstgeschwindigkeit, zu Lasten von Fleischfressern mit langem Darm.
-  - Futterachse: Algen Richtung Pflanzen, Flocken (alle) sehr zentral, Plankton Richtung Fleisch.
+  - Futterachse von Pflanze (0 %) bis Fleisch (100 %): Algen bei etwa 25 %, Flocken (alle) bei 50 %, Plankton bei etwa 75 % (David 00:25: nicht wie Fleisch, nicht wie Pflanzen, sondern dazwischen).
 
   Das Atelier baut den Darminspektor darauf auf: wie lange Futter im Darm bleibt, wie stark der Fisch das variieren kann und welches Futter er damit am besten abdeckt. Bitte melde, wenn das Modell steht, mit den Formeln für Verweildauer (aus Länge und Muskel) und Nährwert je Futter über der Verweildauer.
 
