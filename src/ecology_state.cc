@@ -274,7 +274,7 @@ void Ecosystem::write(std::ostream &out) const {
     out << gene_id(s.genome) << ' ' << s.x << ' ' << s.y << ' ' << s.parent << ' ' << s.energy
         << ' ' << s.depth << ' ' << s.species << ' ' << s.natural << ' ' << s.novelty << ' ' << s.g
         << ' ' << s.color[rgb::red] << ' ' << s.color[rgb::green] << ' ' << s.color[rgb::blue]
-        << ' ' << s.release_radius << ' ' << s.render_id << ' ' << s.feeding_generations << ' '
+        << ' ' << s.release_radius << ' ' << s.id << ' ' << s.feeding_generations << ' '
         << s.fertile << ' ' << s.columns << ' ' << s.rows << ' ' << s.width << ' ' << s.height
         << ' ' << s.cells.size() << '\n';
     for (auto [at, mass] : s.cells)
@@ -823,7 +823,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
     for (auto &c : s.color)
       scalar(in, c, 0, 1);
     scalar(in, s.release_radius, MIN_RELEASE_RADIUS, PLAUSIBLE_LOCAL);
-    value(in, s.render_id);
+    value(in, s.id);
     value(in, s.feeding_generations);
     value(in, s.fertile);
     value(in, s.columns);

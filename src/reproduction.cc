@@ -163,7 +163,7 @@ bool Ecosystem::release_sperm(Individual &p, bool manual) {
                      color});
     sperm.back().release_radius = body_radius(b);
     sperm.back().feeding_generations = b.nutrition > 0 ? p.feeding_generations : 0;
-    sperm.back().render_id = next_sperm_id++;
+    sperm.back().id = next_sperm_id++;
     seed_sperm(sperm.back());
     if (sperm.back().cells.empty()) {
       sperm.pop_back();
@@ -186,10 +186,10 @@ bool Ecosystem::fits(const Individual &egg, const Sperm &cloud) {
     mating_verdicts_.clear();
     verdict_distance_ = taxonomy_.mating_distance;
   }
-  const auto [verdict, fresh] = mating_verdicts_.try_emplace({egg.id, cloud.render_id});
+  const auto [verdict, fresh] = mating_verdicts_.try_emplace({egg.id, cloud.id});
   if (fresh)
     verdict->second =
-        compatible(egg.genome, cloud.genome, taxonomy_.mating_distance, egg.id, cloud.render_id);
+        compatible(egg.genome, cloud.genome, taxonomy_.mating_distance, egg.id, cloud.id);
   return verdict->second;
 }
 std::vector<std::size_t> Ecosystem::mating_order(const Individual &egg, int pass) {
@@ -292,7 +292,7 @@ void Ecosystem::reproduction(bool fertile) {
       cloud.species = p.species;
       cloud.color = b.reproduction_.sperm_signal_color;
       cloud.release_radius = std::max(.001, b.egg_shell_radius);
-      cloud.render_id = next_sperm_id++;
+      cloud.id = next_sperm_id++;
       cloud.fertile = false;
       seed_sperm(cloud);
       if (!cloud.cells.empty()) {

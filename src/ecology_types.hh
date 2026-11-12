@@ -26,7 +26,8 @@ struct Sperm {
   double novelty = 0;
   unsigned g = 0;
   Color color{};
-  std::uint64_t render_id = next_render_id();
+  // Counted by the tank and kept in checkpoints: the mating draw depends on it.
+  std::uint64_t id = 0;
   double release_radius = BODY_RADIUS;
   int columns = 0, rows = 0;
   double width = 0, height = 0;

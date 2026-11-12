@@ -8,9 +8,14 @@ bool Ecosystem::infect(Body &b, unsigned source) {
   ++metrics_.disease_cases[source];
   return true;
 }
+namespace {
+// A disease passes only between fish of one line of descent.
+bool related(const Genome &a, const Genome &b) {
+  return a.cppn && b.cppn && a.cppn->history()->lineage() == b.cppn->history()->lineage();
+}
+}
 double Ecosystem::disease_contact_chance(const Genome &source, const Genome &target) const {
-  if (!source.cppn || !target.cppn ||
-      source.cppn->history()->lineage() != target.cppn->history()->lineage())
+  if (!related(source, target))
     return 0;
   return disease.spread *
          mating_chance(evolution::Genome::compatibility_distance(*source.cppn, *target.cppn),
@@ -60,8 +65,13 @@ void Ecosystem::advance_diseases(bool protected_life) {
                                body_radius(source) - body_radius(target);
                   if (gap >= disease.reach)
                     return;
-                  double chance = disease_contact_chance(p.genome, fish[j].genome);
-                  if (chance > 0 && rng.uniform() < chance)
+                  if (!related(p.genome, fish[j].genome))
+                    return;
+                  // No chance exceeds the spread: only a draw below it needs the genomes compared,
+                  // which is costly and was most of a busy tank's resolve phase.
+                  const double draw = rng.uniform();
+                  if (draw < disease.spread &&
+                      draw < disease_contact_chance(p.genome, fish[j].genome))
                     infect(target, infection_source::contact);
                 });
   }
