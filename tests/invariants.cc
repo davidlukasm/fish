@@ -1168,12 +1168,13 @@ void fins_back_a_fish_out_of_the_mud(const Genome &g) {
   check(stays > FREED && backed < FREED, "fins backing with slack pull a fish out of the mud");
 }
 void side_fins_hold_a_fish_up_on_the_mud(const Genome &g) {
-  // A fish on the mud swims head down into it, the tail's flanks taking turns. Its side fins,
-  // spread on the ground, hold it up: without them it digs in deepest, large ones keep it
-  // highest.
+  // A fish on the mud swims head down into it, the tail's flanks taking turns at cruising
+  // strength, a third of their force as the spine drives them (an escape uses all of it). Its
+  // side fins, spread on the ground, hold it up: without them it digs in deepest, large ones keep
+  // it highest.
   constexpr double MUD = 60, SPREAD = 120, STEP = 1;
   constexpr int DIGGING = 200;
-  constexpr float LARGE = 20;
+  constexpr float LARGE = 20, CRUISE = 1.f / 3;
   const auto depth = [&](float fins) {
     auto layout = std::make_shared<BrainInterface>(*g.interface);
     for (int f = 0; f < SIDE_FINS; ++f)
@@ -1211,7 +1212,7 @@ void side_fins_hold_a_fish_up_on_the_mud(const Genome &g) {
     int tick = 0;
     p.body.set_actuation_probe([&](std::uint32_t cell, float) {
       const auto at = tail.find(cell);
-      return at != tail.end() && (at->second < 0 || at->second == (tick / beat) % 2) ? 1.f : 0.f;
+      return at != tail.end() && (at->second < 0 || at->second == (tick / beat) % 2) ? CRUISE : 0.f;
     });
     for (; tick < DIGGING; ++tick)
       w.tick(false);
@@ -1423,6 +1424,9 @@ void muscle_fibres_each_have_their_strength(const Genome &g) {
     // Along the tank, so that no fibre swims into its floor.
     p.body.angle = 0;
     const auto id = p.id;
+    // Fed throughout, so that every fibre swims the whole trial at full strength; what it pays
+    // comes from the ledger.
+    const double fed = p.body.energy;
     const float bend = float(WARM_UP * w.physiology().stroke_threshold /
                              std::max(tolerance::negligible, capacity[1]));
     int flank = 1;
@@ -1438,6 +1442,7 @@ void muscle_fibres_each_have_their_strength(const Genome &g) {
     double paid = 0, upkeep = 0;
     for (int tick = 0; tick < steps; ++tick) {
       flank = (tick / std::max(1, beat)) % 2;
+      individual(w, id).body.energy = fed;
       const auto &b = individual(w, id).body;
       const double x = b.x, y = b.y, heading = b.angle;
       w.tick(false);

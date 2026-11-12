@@ -11,7 +11,7 @@ und `rhythm` gibt es nicht mehr.
 
 | Datei | Art | Nische | Eigenes gegenüber Brisa |
 | --- | --- | --- | --- |
-| `gruendler.fish.json` | Gründler | gräbt Würmer aus dem Schlamm | Nase und Barteln für Würmer, Brust- und Bauchflossen mit Vorziehern (rückwärts aus dem Schlamm, wenn satt), Flossen tragen ihn am Grund |
+| `gruendler.fish.json` | Gründler | gräbt Würmer aus dem Schlamm | Nase und Barteln für Würmer, Gleichgewichtssinn mit Haaren quer zum Körper (dreht ihn zum Grund), Brust- und Bauchflossen mit Vorziehern (rückwärts aus dem Schlamm, wenn satt), Flossen tragen ihn am Grund |
 | `knacker.fish.json` | Knacker | knackt Muscheln | Nase und Barteln für Muscheln, Kiefer 24 Knoten, stumpfe Zähne, kurzer Kiefer, starke Schwanzwelle |
 | `hecht.fish.json` | Hecht | jagt Fische nach Sicht | Augen (nah, alle Farben) über das Tectum zur Motorik, Kiefer 24 Knoten, spitze Zähne |
 | `laichraeuber.fish.json` | Laichräuber | frisst Eier | Nase für Eier, Kiefer 12 Knoten |
