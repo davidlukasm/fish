@@ -1,7 +1,7 @@
 import {HORMONES} from '../../schema.js';
 import {allCenters} from '../model/document.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
-import {formatNumber, formatSigned, joinParts, namedText} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, namedText, percent, t} from '../../strings.js';
 import {clamp} from '../../units.js';
 import {GROWTH_ICON} from './icons.js';
 import {
@@ -12,7 +12,6 @@ import {
   substanceName
 } from './substances.js';
 import {cellVariation} from './cell_tissue.js';
-import {label} from './kit.js';
 import {substanceColor} from '../../hormones.js';
 
 export const DEFAULT_PREVIEW_CONTEXT =
@@ -20,7 +19,7 @@ export const DEFAULT_PREVIEW_CONTEXT =
 export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
 export const DEFAULT_PREVIEW_INPUT = 1;
 export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
-const word = key => label('development.' + key);
+const word = (key, values) => t('studio.development.' + key, values);
 const PREVIEW_DIGITS = 2;
 // The example situation in one picture. A pad holds age and input together: from the young fish
 // on the left to the grown one on the right, from the strongest negative input at the bottom to
@@ -101,9 +100,10 @@ export function previewControls(state) {
          '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + S.width + ' ' + S.height +
          '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
          '<text class="aid-curve-label" x="' + P.left + '" y="' + (P.top - K.below) + '">' +
-         escapeText(word('inputAxis')) + '</text><text class="aid-curve-label" x="' +
-         (P.left + P.right) / 2 + '" y="' + (S.height - 3) + '" text-anchor="middle">' +
-         escapeText(word('maturity')) + '</text>' +
+         escapeText(word('inputAt', {n : formatSigned(input, PREVIEW_DIGITS)})) +
+         '</text><text class="aid-curve-label" x="' + (P.left + P.right) / 2 + '" y="' +
+         (S.height - 3) + '" text-anchor="middle">' +
+         escapeText(word('maturityAt', {p : percent(context.maturity)})) + '</text>' +
          (substances.length
               ? '<text class="aid-curve-label" x="' + D.left + '" y="' + (P.top - K.below) + '">' +
                     escapeText(word('substanceLevels')) + '</text>'

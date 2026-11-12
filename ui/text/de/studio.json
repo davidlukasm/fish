@@ -1415,7 +1415,9 @@
     "units": {
       "percent": "Anteil der maximal möglichen Stärke",
       "response": "Antwort vor Begrenzung auf −1 … +1"
-    }
+    },
+    "inputAt": "Eingang {n}",
+    "maturityAt": "Reife {p}"
   },
   "symbols": {
     "add": "+"
