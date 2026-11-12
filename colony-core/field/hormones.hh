@@ -22,14 +22,23 @@ constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;
 // energy reserve and the exhaustion of its fast muscle fibres.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
               FATIGUE_SUBSTANCE = HORMONES + 2, BLOOD_SUBSTANCES = HORMONES + 3;
-// Each substance keeps its place on the wheel for good, since blueprints and genomes tune their
-// receptors to these places: the first eight share the wheel evenly, a later one takes the middle
-// of a gap instead of moving the others.
-constexpr int EVEN_SUBSTANCES = 8;
-constexpr std::array<double, BLOOD_SUBSTANCES> SUBSTANCE_TURNS{
-    0. / EVEN_SUBSTANCES, 1. / EVEN_SUBSTANCES, 2. / EVEN_SUBSTANCES,
-    3. / EVEN_SUBSTANCES, 4. / EVEN_SUBSTANCES, 5. / EVEN_SUBSTANCES,
-    6. / EVEN_SUBSTANCES, 7. / EVEN_SUBSTANCES, 7.5 / EVEN_SUBSTANCES};
+// Each substance's place on the wheel, in turns from the right, counterclockwise. Blueprints
+// compile their receptors to these places and genomes carry them, so a place moves only with every
+// shipped genome rebuilt. The hormones share three quarters of the wheel evenly, from the right
+// round to the bottom; the body's own three signals share the last quarter, lower right, as evenly,
+// so that quarter is narrower but even.
+constexpr double HORMONE_ARC = .75, BODY_ARC = 1 - HORMONE_ARC;
+constexpr double HORMONE_STEP = HORMONE_ARC / (HORMONES - 1),
+                 BODY_STEP = BODY_ARC / (BLOOD_SUBSTANCES - HORMONES + 1);
+constexpr std::array<double, BLOOD_SUBSTANCES> SUBSTANCE_TURNS{0 * HORMONE_STEP,
+                                                               1 * HORMONE_STEP,
+                                                               2 * HORMONE_STEP,
+                                                               3 * HORMONE_STEP,
+                                                               4 * HORMONE_STEP,
+                                                               5 * HORMONE_STEP,
+                                                               HORMONE_ARC + 1 * BODY_STEP,
+                                                               HORMONE_ARC + 2 * BODY_STEP,
+                                                               HORMONE_ARC + 3 * BODY_STEP};
 inline double substance_angle(int k) {
   return 2 * M_PI * SUBSTANCE_TURNS[std::size_t(k)];
 }

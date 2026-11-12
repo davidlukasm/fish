@@ -1433,6 +1433,30 @@ async function checkHormoneSystems(model, capabilities) {
         {document : gut.document, id : gut.organId, type : 'gutmuscle', gutMuscle : true});
   }
   {
+    // The substance wheel: the hormones share three quarters evenly from the right round to the
+    // bottom, the body's three signals the lower right quarter as evenly; the starters' blood sense
+    // reads the reserve.
+    const turns = sitesResult.substanceTurns, {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
+    const SAME = 1e-9, QUARTER = .25;
+    const steps = [...turns, 1 ].slice(1).map((t, k) => t - turns[k]);
+    const hormone = steps.slice(0, BLOOD_SUBSTANCE.maturity - 1),
+          body = steps.slice(BLOOD_SUBSTANCE.maturity - 1);
+    assert.ok(hormone.every(g => Math.abs(g - 3 * QUARTER / hormone.length) < SAME),
+              'The hormones share three quarters of the wheel evenly');
+    assert.ok(body.every(g => Math.abs(g - QUARTER / body.length) < SAME),
+              'Maturity, reserve and fatigue share the lower right quarter evenly');
+    for (const name of ['brisa', 'liora']) {
+      const blueprint =
+          JSON.parse(readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
+      for (const c of blueprint.organs.filter(o => o.type === 'blood').flatMap(o => o.centers)) {
+        const reads =
+            turns.map((_, k) => model.wheelAffinity(sitesResult, c.q1, c.q2, c.qwidth, k));
+        assert.equal(reads.indexOf(Math.max(...reads)), BLOOD_SUBSTANCE.reserve,
+                     name + ' reads its energy reserve');
+      }
+    }
+  }
+  {
     // Organs added near each other take over the readings of earlier pressure cells.
     let crowded = model.newDocument('Gedränge');
     for (const type of ['bladder', 'gut', 'eggs'])

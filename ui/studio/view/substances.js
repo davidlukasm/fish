@@ -465,8 +465,10 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
          '<text class="aid-life-word" x="130" y="172" text-anchor="middle">' +
          escapeText(label('development.builtSignal')) + '</text>' + stages + '</svg>';
 }
+// The wheel is wide enough for the body's three signals, a sixteenth of a turn apart in their
+// quarter, to stand apart.
 export const WHEEL =
-    Object.freeze({size : 240, height : 240, centre : 120, radius : 51, point : 11, ring : 15});
+    Object.freeze({size : 240, height : 240, centre : 120, radius : 62, point : 10, ring : 14});
 const wheelX = x => WHEEL.centre + x * WHEEL.radius, wheelY = y => WHEEL.centre - y * WHEEL.radius;
 export const wheelPatch = (fx, fy) => ({
   q1 : clamp((fx * WHEEL.size - WHEEL.centre) / WHEEL.radius, -1),

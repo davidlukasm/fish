@@ -79,15 +79,15 @@ function muscleGraphic(state, center) {
                   .map(s => functionFor(center, s)));
   const chips =
       [...MUSCLE_LABEL_INDEX.entries() ]
-          .map(([ code, index ]) => '<button class="aid-muscle-function' +
-                                    (code === own ? ' current' : '') + '"' +
-                                    (code !== own && reachable.has(code)
-                                         ? ' data-muscle-function="' + code + '" data-center-id="' +
-                                               escapeText(center.id) + '"'
-                                     : code === own ? ' aria-current="true"'
-                                                    : ' disabled') +
-                                    ' title="' + escapeText(tList('studio.muscles')[index] ?? '') +
-                                    '">' + glyph(MUSCLE_ICON[code], ICON.muscle) + '</button>')
+          .map(([ code, index ]) =>
+                   '<button class="aid-muscle-function' + (code === own ? ' current' : '') + '"' +
+                   (code !== own && reachable.has(code)
+                        ? ' data-muscle-function="' + code + '" data-center-id="' +
+                              escapeText(center.id) + '"'
+                    : code === own ? ' aria-current="true"'
+                                   : ' disabled') +
+                   '>' + glyph(MUSCLE_ICON[code], ICON.muscle) + '<span>' +
+                   escapeText(tList('studio.muscles')[index] ?? '') + '</span></button>')
           .join('');
   return '<div class="aid-muscle-functions">' + chips + '</div>';
 }

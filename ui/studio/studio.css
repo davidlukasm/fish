@@ -175,7 +175,7 @@
 .aid-wheel-names{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:11px;color:var(--aid-name-text)}
 .aid-wheel-name{display:flex;align-items:center;gap:5px;min-width:0}
 .aid-wheel-name i{font-style:normal;display:inline-grid;place-items:center;border:1px solid var(--substance);color:var(--substance);border-radius:50%;min-width:22px;height:22px}
-.aid-wheel-name>span{overflow-wrap:anywhere}
+.aid-wheel-name>span{overflow-wrap:break-word;hyphens:auto}
 .aid-wheel-name small{margin-left:auto;white-space:nowrap}
 .aid-picture-caption{font-size:11px;line-height:1.4;color:var(--aid-name-text);margin:8px 0}
 .aid-wheel-names-title{margin:6px 0 4px;font-size:11px;color:var(--aid-soft-text)}
