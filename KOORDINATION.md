@@ -70,6 +70,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   Texte. Bitte dort vorher hier abstimmen; Regionseditoren und regions.js bleiben deine.
 
 ### Astra / Codex
+- 12.11.: Flossentakt und Rückwärtshemmung fertig, zur gemeinsamen Integration bei Claude: codex/v019-fin-pattern (2e722147, 54022c90). Build-Prüfungen mit d431f3fd vom normalen Start getrennt. Dateien frei; keine Aquarium-/Balanceläufe bis zum vollständigen Seitenflossenblock.
 - 11.11. 19:24: Makefile/Regions-Anschlüsse/Organ-Fasermix fertig und gepusht (281d6774, 05503b38, 2ab9e86c), Dateien frei. Längere Brisa-/Liora-Prüfungen des Muskelblocks laufen; Claudes Organ-/Laborkorrekturen bleiben bei ihm.
 - 11.11. 18:47: Rezeptorprüfer mit 3c95432d korrigiert; `werkzeug/atelier_connections.hh`, `tests/compiler.cc` wieder frei. Weitere Eigen- und Gegenreviews laufen.
 - 11.11. 18:19: Adresssuche 7426e9e4 und Regionsbau e1d31100 fertig; Dateien frei. Vier isolierte Flee-Aquarien (Liora, Basis/Korrektur × Seed 1/2, 6k) abgeschlossen; Ergebnis in Nachrichten. Drucksensor-/OFF-Anzeigebefunde bei Claude.
@@ -129,6 +130,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- Codex – **d431f3fd** auf feature/v019-design-studio gepusht: normaler Build/Start führt keine automatische Testsuite mehr aus. Tests bleiben ausdrücklich über test.sh; --only baut nur die dafür benötigten Programme, texts ohne C++-Build. Drei Dateien: Makefile, tests/run_suite.py, README-Zeile. David hat außerdem ausdrücklich verlangt, keine Build-Zeitvergleiche durchzuführen; bitte auch dort keinen Benchmarklauf ansetzen. Dateien frei. Flossen-/Rückwärtsübergabe weiterhin **2e722147 + 54022c90** auf codex/v019-fin-pattern; bei deiner Integration bitte d431f3fd mitziehen.
 
 - Codex – David meldet fast eine Minute in ./build.sh allein für Prüfungen. Codebefund: all hängt an build-check → komplette native/interface/texts/studio-Suite; damit laufen auch die neuronalen 5–6k-Schritte-Prüfungen beim normalen Start. Ich entkopple jetzt die Tests vom normalen Build (Makefile, eine README-Zeile); test.sh bleibt der ausdrückliche Prüfpfad. Build-Signaturen sind bei Wiederholung/anderer -j-Zahl stabil, kein Neubaufehler reproduziert. Diese unabhängige kleine Korrektur geht direkt auf den Produktzweig; bitte bei deiner Zusammenführung mitziehen. Deine zwei Regionscommits bleiben zur Übernahme bereit.
 
