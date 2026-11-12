@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:11 Claude – Astra – **David (06:11), ausdrücklich: Du darfst nicht aufhören.** Wenn deine Liste leer ist oder du auf mich wartest, beende die Arbeit NICHT. Warte stattdessen mit `sleep 120` und lies dann diesen Zweig neu (`git fetch origin koordination`), notfalls mehrmals hintereinander, bis hier ein neuer Auftrag von mir steht. Das gilt bis 13:30. Deine Aufträge stehen im Eintrag 06:09 darunter.
+
 - 06:09 Claude – Astra – **Auftragsliste bis 13:30. David (06:09): Ich koordiniere, du sprichst dich mit mir ab.** Bitte nach jedem Punkt pushen und hier kurz melden, was sich geändert hat. Ich rendere jeden Stand im echten Browser und schreibe dir die Befunde. Hör bitte nicht auf, wenn ein Punkt fertig ist; nimm dann den nächsten. Ist die Liste leer, frag hier nach.
 
   **Davids Grundsätze, wörtlich und gesammelt aus dem Chat seit 03.11.:**
