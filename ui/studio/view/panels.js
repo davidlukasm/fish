@@ -142,7 +142,7 @@ export function organSettingsBlock(state, organ) {
   return '<div class="aid-organ-settings" data-organ-settings="' + escapeText(organ.id) + '">' +
          organSettings(state, organ, selectedCenter(state, organ)) + '</div>';
 }
-// Taste, touch or both, each as its sense's own mark; the barbels' whole story is the tooltip.
+// Taste, touch or both, each as its sense's own mark with its word.
 const BARBEL_ICON =
     Object.freeze({taste : [ 'nose' ], both : [ 'nose', 'touch' ], touch : [ 'touch' ]});
 function barbelFeel(center) {
@@ -150,12 +150,12 @@ function barbelFeel(center) {
          label('inspector.barbelFeel.label') + '" title="' + label('inspector.barbelsTaste') +
          '">' +
          Object.entries(BARBEL_FEEL)
-             .map(([ key, value ]) => '<button class="' + (center.field === value ? 'active' : '') +
-                                      '" data-set-field="field" data-value="' + value +
-                                      '" data-center-id="' + escapeText(center.id) + '" title="' +
-                                      label('inspector.barbelFeel.' + key) + '">' +
-                                      BARBEL_ICON[key].map(kind => icon(kind, ICON.part)).join('') +
-                                      '</button>')
+             .map(([ key, value ]) =>
+                      '<button class="' + (center.field === value ? 'active' : '') +
+                      '" data-set-field="field" data-value="' + value + '" data-center-id="' +
+                      escapeText(center.id) + '" title="' + label('inspector.barbelFeel.' + key) +
+                      '">' + BARBEL_ICON[key].map(kind => icon(kind, ICON.part)).join('') +
+                      '<span>' + label('inspector.barbelFeel.' + key) + '</span></button>')
              .join('') +
          '</div>';
 }

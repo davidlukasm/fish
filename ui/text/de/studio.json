@@ -270,7 +270,7 @@
     },
     "gonad": {
       "cells": "{cells} {cells:Zelle|Zellen}",
-      "fullIn": "voll nach {n} {n:Schritt|Schritten}",
+      "fullIn": "beim Beispieleingang voll nach {n} {n:Schritt|Schritten}",
       "driven": "Füllkommando fehlt",
       "ceiling": "Platz höchstens für {most}",
       "trigger": "wartet auf Auslösekommando",
@@ -807,7 +807,7 @@
       "bright": "doppelt so hell",
       "dark": "schwarz"
     },
-    "keenHalf": "erkennt ab {p} Unterschied",
+    "keenHalf": "halbe Meldung bei {p} Unterschied",
     "keenHandle": "Ziehen: wie schwach ein Unterschied zur Umgebung sein darf, damit die Zellen ihn melden"
   },
   "workflow": {
@@ -834,7 +834,7 @@
     "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
     "fibre": {
       "handle": "Ziehen: rote, ausdauernde oder weiße, schnelle Fasern",
-      "time": "Zeit bei voller Anstrengung",
+      "time": "{n} Schritte volle Anstrengung",
       "work": "kostet je Schlag",
       "rest": "kostet in Ruhe",
       "word": "{share} schnelle Fasern"
@@ -886,8 +886,8 @@
       "open": "offen · viel Wasser",
       "dense": "dicht · Plankton",
       "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}.",
-      "word": "Reusendichte",
-      "passage": "Wasser {share}",
+      "word": "Planktonsieb",
+      "passage": "{share} Wasser kommt durch",
       "kept": "Plankton gehalten {share}"
     },
     "gutmuscle": {
@@ -982,7 +982,6 @@
     "report": "Meldung",
     "faint": "kaum Strömung",
     "strong": "starke Strömung",
-    "half": "spürt ab hier",
     "steady": "gleichmäßige Strömung",
     "later": "{n} Schritte später",
     "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
@@ -1529,7 +1528,8 @@
     "rests": "ruht",
     "half": "halb weg nach {n} {n:Schritt|Schritten}",
     "cellsHandle": "Ziehen: mehr Zellen, der Stoff steigt höher",
-    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt"
+    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt",
+    "peak": "{n} {n:Zelle|Zellen}: bis {p}"
   },
   "command": {
     "title": "Befehl",
@@ -1537,8 +1537,8 @@
     "excites": "erregend",
     "gateHandle": "Ziehen: wie stark ein Befehl sein muss, bevor das Organ etwas tut",
     "gland": {
-      "up": "gibt ab",
-      "down": "bindet"
+      "up": "gibt Stoff ins Blut",
+      "down": "nimmt Stoff aus dem Blut"
     },
     "bladder": {
       "up": "füllt",
@@ -1557,12 +1557,12 @@
     "report": "Meldung",
     "empty": "leer",
     "full": "voll",
-    "fullnessHalf": "meldet ab {p} Füllung",
+    "fullnessHalf": "bei {p} Füllung",
     "fullnessHandle": "Ziehen: bei welcher Füllung die Zellen halb melden",
     "little": "kaum Nährstoffe",
     "much": "viel mehr als nötig",
     "rest": "Grundbedarf",
-    "foodHalf": "spürt ab {p} des Bedarfs",
+    "foodHalf": "bei {p} des Bedarfs",
     "foodHandle": "Ziehen: wie wenig Nährstoffe die Zellen schon melden",
     "eats": "frisst gleichmäßig",
     "later": "{n} Schritte später",
@@ -1574,7 +1574,7 @@
     "report": "Meldung",
     "none": "kein Stoff",
     "full": "so viel wie möglich",
-    "half": "meldet ab {p} Stoff im Blut",
+    "half": "bei {p} Stoff im Blut",
     "handle": "Ziehen: bei welchem Pegel die Zellen halb melden"
   },
   "noseSense": {
@@ -1582,7 +1582,6 @@
     "report": "Meldung",
     "faint": "kaum Duft",
     "strong": "starker Duft",
-    "half": "riecht ab hier",
     "handle": "Ziehen: wie schwachen Duft die Zellen schon melden",
     "stays": "bleibt im gleichen Duft",
     "later": "{n} Schritte später",
@@ -1602,7 +1601,7 @@
       "title": "Tastzellen",
       "from": "leichte Berührung",
       "to": "harter Stoß",
-      "half": "meldet ab {p} Stoßstärke",
+      "half": "bei {p} Stoßstärke",
       "handle": "Ziehen: wie leichte Berührungen die Zellen schon melden"
     },
     "pain": {
@@ -1610,7 +1609,6 @@
       "title": "Schmerzzellen",
       "from": "kleine Wunde",
       "to": "schwere Wunde",
-      "half": "meldet ab hier",
       "handle": "Ziehen: wie kleine Wunden die Zellen schon melden",
       "stays": "Wunde bleibt",
       "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
@@ -1626,7 +1624,7 @@
     "report": "Meldung",
     "empty": "leer",
     "full": "voll",
-    "half": "meldet ab {p} Füllung",
+    "half": "bei {p} Füllung",
     "handle": "Ziehen: bei welcher Füllung die Zellen melden"
   }
 }

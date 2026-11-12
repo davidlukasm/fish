@@ -158,13 +158,8 @@ function skinCurves(state, organ, center, held) {
   return sensePicture(
       center, words('title'),
       [
-        intensityRow(sensitive, dimmest, {
-          report,
-          from : words('from'),
-          to : words('to'),
-          half : words('half'),
-          handle : words('handle')
-        }),
+        intensityRow(sensitive, dimmest,
+                     {report, from : words('from'), to : words('to'), handle : words('handle')}),
         fadeRow(center, SKIN_HELD * half, half, {
           report,
           from : words('stays'),

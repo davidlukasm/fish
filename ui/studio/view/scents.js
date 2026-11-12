@@ -195,7 +195,6 @@ function noseCurves(state, center, held) {
                           report : words('report'),
                           from : words('faint'),
                           to : words('strong'),
-                          half : words('half'),
                           handle : words('handle')
                         }),
                         fadeRow(center, NOSE_HELD * half, half, {

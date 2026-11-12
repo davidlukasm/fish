@@ -70,8 +70,9 @@ function levelPicture(state, organ, center, nameOf) {
   const L = LEVEL, wheel = state.capabilities, rate = wheel.hormoneRate;
   const tau = timeConstantSteps(center.tau), part = shares(wheel, center);
   const main = Math.max(...part), mid = (L.left + L.right) / 2;
-  // The frame reaches the level of the strongest gland: all cells, the longest cell time.
-  const most = builtUp(rate, ATELIER_LIMITS.max_copies, LONGEST_TIME_CONSTANT);
+  // The frame reaches the level this gland's main substance would reach with all cells at its cell
+  // time, so its own peak stands at its share of the cells and stays readable at any cell time.
+  const most = main * builtUp(rate, ATELIER_LIMITS.max_copies, tau);
   const x = step => L.left + (L.right - L.left) * step / (2 * phaseSteps()),
         y = level => L.base - (L.base - L.top) * clamp(level / most);
   const top = builtUp(rate, center.copies, tau);
@@ -123,13 +124,14 @@ function levelPicture(state, organ, center, nameOf) {
                text('aid-handle-word', L.left - L.tick, L.base, percent(0), 'end');
   const marks = ' data-most="' + most + '" data-share="' + main + '" data-rate="' + rate +
                 '" data-tau="' + tau + '" data-center="' + escapeText(center.id) + '"';
-  return svg(L, organ, word('level'),
-             axes + phases + curves + '<path class="aid-gland-phase" d="M' + fixed(half.x) + ' ' +
-                 L.base + ' V' + fixed(y(levelAt(main, gone))) + '"/>' +
-                 grip('gland:cells', peak, word('cellsHandle'), L, marks) +
-                 handleWord(peak, t('studio.sense.cellsWord', {n : center.copies}), 'above') +
-                 grip('gland:time', half, word('timeHandle'), L, marks) +
-                 handleWord(half, word('half', {n : formatNumber(tau * Math.LN2, 0)})));
+  return svg(
+      L, organ, word('level'),
+      axes + phases + curves + '<path class="aid-gland-phase" d="M' + fixed(half.x) + ' ' + L.base +
+          ' V' + fixed(y(levelAt(main, gone))) + '"/>' +
+          grip('gland:cells', peak, word('cellsHandle'), L, marks) +
+          handleWord(peak, word('peak', {n : center.copies, p : percent(main * top)}), 'above') +
+          grip('gland:time', half, word('timeHandle'), L, marks) +
+          handleWord(half, word('half', {n : formatNumber(tau * Math.LN2, 0)})));
 }
 
 export const glandPictures = (state, organ, center, nameOf) =>

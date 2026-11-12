@@ -111,7 +111,6 @@ function lateralCurves(state, center, held, word) {
       report : word('report'),
       from : word('faint'),
       to : word('strong'),
-      half : word('half'),
       handle : word('sensitivityHandle')
     }),
     ...(adapts ? [ fadeRow(center, LATERAL_HELD * half, half, {

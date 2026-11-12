@@ -10,17 +10,18 @@ import {LONGEST_TIME_CONSTANT, timeConstantSteps} from '../../tuning.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {cellCount, fadeHandle, sensitivityHandle} from './sense_marks.js';
 import {escapeText, fixed} from './markup.js';
-import {formatNumber} from '../../strings.js';
+import {formatNumber, percent} from '../../strings.js';
 
 export const SENSE_PLOT = Object.freeze({
   width : 300,
-  left : 40,
+  // Room on the left for the report's title and its scale beside the axis.
+  left : 52,
   right : 284,
   title : 12,
   tick : 4,
   samples : 48,
   // The cell count's short track sits above the plot's left end, clear of its marks on the right.
-  cells : [ 48, 104 ],
+  cells : [ 60, 116 ],
   count : 10,
   // A row: `top` and `base` bound its curve, its axis words sit at `words`, the next row
   // `step` lower.
@@ -50,15 +51,24 @@ const curve = (row, value) =>
 export const senseText = (px, py, content, anchor = 'start') =>
     '<text class="aid-handle-word" x="' + fixed(px) + '" y="' + fixed(py) + '" text-anchor="' +
     anchor + '">' + escapeText(content) + '</text>';
+// The report runs from none to full; its scale stands beside the axis.
 const axes = (row, words) =>
     '<path class="aid-sense-axis" d="M' + P.left + ' ' + row.top + ' V' + row.base + ' H' +
     P.right + '"/><text class="aid-handle-word" transform="translate(' + P.title + ' ' +
     fixed((row.top + row.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
-    escapeText(words.report) + '</text>' + senseText(P.left, row.words, words.from) +
-    senseText(P.right, row.words, words.to, 'end');
-const halfHandle = (row, sensitive, words) =>
-    sensitivityHandle({x : senseX(1), y : y(row, .5)}, {x : senseX(0), y : y(row, .5)}, sensitive,
-                      words.handle, 'sensitivity', words.half, 'right');
+    escapeText(words.report) + '</text>' +
+    senseText(P.left - P.tick, row.top + P.tick, percent(1), 'end') +
+    senseText(P.left - P.tick, row.base, percent(0), 'end') +
+    senseText(P.left, row.words, words.from) + senseText(P.right, row.words, words.to, 'end');
+// The handle sits where the report reaches half, on a dashed line marked with that half; the
+// report starts well before it and grows on past it.
+const halfHandle = (row, sensitive, words) => {
+  const at = senseX(1) + (senseX(0) - senseX(1)) * sensitive;
+  return '<path class="aid-gland-phase" d="M' + P.left + ' ' + fixed(y(row, .5)) + ' H' +
+         fixed(at) + '"/>' + senseText(P.left - P.tick, y(row, .5) + P.tick, percent(.5), 'end') +
+         sensitivityHandle({x : senseX(1), y : y(row, .5)}, {x : senseX(0), y : y(row, .5)},
+                           sensitive, words.handle, 'sensitivity', words.half ?? '', 'right');
+};
 
 // The report over a bounded stimulus, from none to full: `sensitive` is one less the threshold.
 export const boundedRow = (sensitive, words) => row => {

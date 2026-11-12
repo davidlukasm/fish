@@ -124,16 +124,16 @@ function endurancePicture(organ, code, side, attributes) {
       text('aid-handle-word', E.left, E.costs[k], word('fibre.' + key)) +
       '<rect class="aid-cost-bar" x="' + E.bar + '" y="' + (E.costs[k] - E.thick) + '" width="' +
       fixed((E.right - E.bar) * value / most) + '" height="' + E.thick + '"/>';
-  return svg(E, organ, code, side, attributes, word('fibre.time'),
-             '<path class="aid-sense-axis" d="M' + E.left + ' ' + E.top + ' V' + E.base + ' H' +
-                 E.right + '"/>' + upright(E.title, (E.top + E.base) / 2, word('pull')) +
-                 line(0, 'aid-endure-edge') + line(1, 'aid-endure-edge') +
-                 line(fast, 'aid-endure-line') +
-                 text('aid-handle-word', E.right, E.axis, word('fibre.time'), 'end') +
-                 grip('fibre', start, word('fibre.handle'), E) +
-                 handleWord(start, word('fibre.word', {share : percent(fast)}), 'right') +
-                 cost(0, 'rest', fibreUpkeep(fast), MUSCLE_FIBRE.upkeep_slow) +
-                 cost(1, 'work', fibreCost(fast), MUSCLE_FIBRE.cost_fast));
+  return svg(
+      E, organ, code, side, attributes, word('fibre.time', {n : E.steps}),
+      '<path class="aid-sense-axis" d="M' + E.left + ' ' + E.top + ' V' + E.base + ' H' + E.right +
+          '"/>' + upright(E.title, (E.top + E.base) / 2, word('pull')) +
+          line(0, 'aid-endure-edge') + line(1, 'aid-endure-edge') + line(fast, 'aid-endure-line') +
+          text('aid-handle-word', E.right, E.axis, word('fibre.time', {n : E.steps}), 'end') +
+          grip('fibre', start, word('fibre.handle'), E) +
+          handleWord(start, word('fibre.word', {share : percent(fast)}), 'right') +
+          cost(0, 'rest', fibreUpkeep(fast), MUSCLE_FIBRE.upkeep_slow) +
+          cost(1, 'work', fibreCost(fast), MUSCLE_FIBRE.cost_fast));
 }
 export const musclePictures = (state, organ, code, side, most, attributes) =>
     pullPicture(state, organ, code, side, most, attributes) +
