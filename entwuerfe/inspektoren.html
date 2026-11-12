@@ -45,10 +45,10 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
   </section>
   <section class="panel" aria-label="Schwanz">
     <h2>Organ</h2><h3>Schwanz</h3>
-    <svg id="tail" viewBox="0 0 300 356"></svg>
+    <svg id="tail" viewBox="0 0 300 300"></svg>
   </section>
 </main>
-<p class="note"><b>Entwurf zum Anklicken.</b> Gezogen wird an den gelben Griffen. Im Lebenslauf schalten die drei Knöpfe unten, ob Bau, Arbeit und Tod an der Reife hängen oder an einem Botenstoff. Alle Zahlen folgen den Formeln der Engine, siehe LEITLINIE.md.</p>
+<p class="note"><b>Entwurf zum Anklicken.</b> Gezogen wird an den gelben Griffen. Der Darm ist noch der alte Stand: Er wird neu gebaut, sobald Fables neues Verdauungsmodell steht.</p>
 <script>
 'use strict';
 const NS = 'http://www.w3.org/2000/svg';
@@ -300,61 +300,84 @@ function gutFrame(now) {
 requestAnimationFrame(gutFrame);
 
 // ---------- Schwanz ----------
-// muscle_fibre: a cell pulls 0.4·6.25^fast, a stroke lasts 4·12^(1−fast) steps, fast fibres tire
-// (0.028·fast² per step of work, refilled by 1/400 of the gap) and cost 1.2·0.25^fast at rest.
-// environment.hh / movement.cc: wriggling loses up to half the thrust in open water, while the
-// drag of a buried body falls from 12 to 3.
-const tail = {cells : 6, fast : .5, wriggle : .35};
-const force = f => .4 * Math.pow(2.5 / .4, f), stroke = f => 4 * Math.pow(12, 1 - f);
-function endurance(f, steps = 300) {
-  let r = 1; const out = [];
-  for (let s = 0; s < steps; s++) { const a = 1 - f + f * r; out.push(force(f) * a); r = clamp(r - .028 * f * f * a + (1 - r) / 400, 0, 1); }
-  return out;
+// How and how strongly the tail beats, set by what it means: how much push the fish has when it
+// sets off, and how much is left after it has swum flat out for a while. A cell's fibres run from
+// slow to fast (muscle_fibre): fast ones pull 6.25 times as hard in a stroke 12 times as short, but
+// tire (0.028·fast² per step of work, refilled by 1/400 of the gap); slow ones never tire. From the
+// two pushes the inspector works out the number of cells and the fibre mix. Wriggling (movement.cc,
+// environment.hh) loses up to half the push in open water but lowers a buried body's drag from 12
+// to 3.
+const tail = {cells : 6, fast : .55, wriggle : .3};
+const STEPS = 300, MOST_CELLS = 12, MOST_PUSH = 15;
+const force = f => .4 * Math.pow(2.5 / .4, f), strokeSteps = f => 4 * Math.pow(12, 1 - f);
+function staying(f) {
+  let r = 1;
+  for (let s = 0; s < STEPS; s++) { const a = 1 - f + f * r; r = clamp(r - .028 * f * f * a + (1 - r) / 400, 0, 1); }
+  return 1 - f + f * r;
 }
+const curve = f => { let r = 1; const out = []; for (let s = 0; s <= STEPS; s++) { const a = 1 - f + f * r; out.push(a); r = clamp(r - .028 * f * f * a + (1 - r) / 400, 0, 1); } return out; };
+// The fibre mix for a share of the push that is left after flat out: the share falls as the fibres
+// get faster.
+function mixFor(share) {
+  let best = 0, gap = Infinity;
+  for (let k = 0; k <= 200; k++) { const f = k / 200, g = Math.abs(staying(f) - share); if (g < gap) { gap = g; best = f; } }
+  return best;
+}
+let beat = 0, tailSvg = null;
 function drawTail() {
-  const svg = document.getElementById('tail'); svg.replaceChildren();
-  const wave = x => Math.sin((x - 20) / 220 * Math.PI * 2.2) * 16 * tail.wriggle * ((x - 20) / 220);
-  let up = '', down = '';
-  for (let x = 20; x <= 230; x += 5) {
-    const half = 26 - (x - 20) * .085;
-    up += (x === 20 ? 'M' : ' L') + x + ' ' + (52 - half + wave(x)).toFixed(1);
-    down = ` L${x} ${(52 + half + wave(x)).toFixed(1)}` + down;
-  }
-  const tip = 52 + wave(230);
-  el('path', {d : up + ` L272 ${tip - 28} L258 ${tip} L272 ${tip + 28}` + down + ' Z', fill : '#1d4048', stroke : '#8ac7bb', 'stroke-width' : 1.4}, svg);
-  for (let k = 0; k < tail.cells; k++) {
-    const x = 34 + k * 15;
-    for (const s of [-1, 1]) el('circle', {cx : x, cy : 52 + s * 12 + wave(x), r : 3.4, fill : '#eaa886'}, svg);
-  }
-  const cx = 34 + tail.cells * 15;
-  const cg = el('circle', {cx, cy : 52 + wave(cx), r : 6.5, style : 'stroke:var(--motor)'}, svg);
-  drag(svg, cg, p => { tail.cells = clamp(Math.round((p.x - 34) / 15), 1, 12); drawTail(); });
-  txt(svg, 34, 100, tail.cells + ' Zellen je Seite');
-  const wg = el('circle', {cx : 252, cy : tip + 0, r : 6.5}, svg);
-  drag(svg, wg, p => { tail.wriggle = clamp(Math.abs(p.y - 52) / 34, 0, 1); drawTail(); });
-  txt(svg, 290, 100, 'Schlängeln', {'text-anchor' : 'end'});
-  // One stroke of one cell at full drive: force over its duration.
-  txt(svg, 4, 132, 'Ein Schlag', {class : 'head'});
-  const X0 = 6, W = 288, B = 206, H = 60, steps = 48, maxF = force(1);
-  el('path', {d : `M${X0} ${B} H${X0 + W}`, stroke : '#3b6a6c'}, svg);
-  const len = stroke(tail.fast), peak = force(tail.fast), path = [];
-  for (let k = 0; k <= 40; k++) { const t = k / 40, s = Math.sin(Math.PI * t); path.push(`${(X0 + W * t * len / steps).toFixed(1)} ${(B - H * peak * s * s / maxF).toFixed(1)}`); }
-  el('path', {d : 'M' + path.join(' L') + ' Z', fill : '#eaa886', opacity : .6, stroke : '#eaa886', 'stroke-width' : 1.5}, svg);
-  txt(svg, X0, B + 14, '0'); txt(svg, X0 + W, B + 14, steps + ' Schritte', {'text-anchor' : 'end'});
-  const px = X0 + W * len / steps / 2, py = B - H * peak / maxF;
-  const fg = el('circle', {cx : px, cy : py, r : 6.5}, svg);
-  drag(svg, fg, p => { const l = clamp(2 * (p.x - X0) / W * steps, 4, 48); tail.fast = clamp(1 - Math.log(l / 4) / Math.log(12), 0, 1); drawTail(); });
-  txt(svg, px + 12, py + 4, tail.fast > .66 ? 'schnelle Fasern' : tail.fast < .33 ? 'langsame Fasern' : 'gemischt');
-  // Flat out for 300 steps: what is left of the force.
-  txt(svg, 4, 244, 'Vollgas über Zeit', {class : 'head'});
-  const E = endurance(tail.fast), eB = 296, eH = 40;
-  el('path', {d : `M${X0} ${eB} H${X0 + W}`, stroke : '#3b6a6c'}, svg);
-  el('path', {d : 'M' + E.map((v, s) => `${(X0 + W * s / (E.length - 1)).toFixed(1)} ${(eB - eH * v / maxF).toFixed(1)}`).join(' L') + ` L${X0 + W} ${eB} L${X0} ${eB} Z`, fill : '#eaa886', opacity : .35, stroke : '#eaa886', 'stroke-width' : 1.6}, svg);
-  txt(svg, X0, eB + 14, '0'); txt(svg, X0 + W, eB + 14, '300 Schritte', {'text-anchor' : 'end'});
-  // Wriggling: speed in open water against speed buried.
-  const water = 1 - .5 * tail.wriggle, sand = 3 / (12 * Math.pow(3 / 12, tail.wriggle));
-  bar(svg, 76, 322, 180, water, '#8ac7bb', pct(water), 'Im Wasser');
-  bar(svg, 76, 340, 180, sand, '#c9b48c', pct(sand), 'Im Sand');
+  const svg = document.getElementById('tail'); svg.replaceChildren(); tailSvg = svg;
+  // The fish, beating its tail: as hard as its push at the start, as quick as its strokes, as
+  // wavy as it wriggles (animated in tailFrame).
+  el('g', {id : 'tail-fish'}, svg);
+  // Grip on the body: pulled away from the middle line, the body wriggles more.
+  const wg = el('circle', {cx : 170, cy : 44 + 6 + 30 * tail.wriggle, r : 6.5}, svg);
+  drag(svg, wg, p => { tail.wriggle = clamp((p.y - 50) / 30, 0, 1); drawTail(); }, 'wriggle');
+  txt(svg, 180, 44 + 10 + 30 * tail.wriggle, tail.wriggle < .2 ? 'steif' : tail.wriggle > .7 ? 'schlängelt stark' : 'schlängelt');
+  // Push over time when swimming flat out; in open water, and buried in sand.
+  const X0 = 30, W = 256, B = 236, H = 120, X = s => X0 + W * s / STEPS, Y = v => B - H * v / MOST_PUSH;
+  const push = tail.cells * force(tail.fast), c = curve(tail.fast);
+  const water = 1 - .5 * tail.wriggle, sand = 1 / (12 * Math.pow(3 / 12, tail.wriggle));
+  el('path', {d : `M${X0} ${B} H${X0 + W} M${X0} ${B} V${B - H}`, stroke : '#3b6a6c', fill : 'none'}, svg);
+  txt(svg, X0 - 4, B - H + 4, 'Schub', {'text-anchor' : 'end', style : 'writing-mode:initial'});
+  const line = k => 'M' + c.map((a, s) => `${X(s).toFixed(1)} ${Y(push * a * k).toFixed(1)}`).join(' L');
+  el('path', {d : line(water) + ` L${X(STEPS)} ${B} L${X0} ${B} Z`, fill : '#eaa886', opacity : .3, stroke : '#eaa886', 'stroke-width' : 2}, svg);
+  el('path', {d : line(sand), fill : 'none', stroke : '#c9b48c', 'stroke-width' : 2, 'stroke-dasharray' : '5 4'}, svg);
+  txt(svg, X(STEPS) - 2, Y(push * c[STEPS] * water) - 6, 'im Wasser', {'text-anchor' : 'end', style : 'fill:#eaa886'});
+  txt(svg, X(0) + 10, Y(push * sand) - 5, 'im Sand', {style : 'fill:#c9b48c'});
+  txt(svg, X0, B + 14, 'Start'); txt(svg, X0 + W, B + 14, STEPS + ' Schritte Vollgas', {'text-anchor' : 'end'});
+  // Grips: the push when setting off, and the push still there at the end.
+  const g1 = el('circle', {cx : X(0), cy : Y(push * water), r : 7}, svg);
+  drag(svg, g1, p => {
+    const wanted = clamp((B - p.y) / H, .02, 1) * MOST_PUSH / water;
+    tail.cells = clamp(Math.round(wanted / force(tail.fast)), 1, MOST_CELLS); drawTail();
+  }, 'start');
+  const g2 = el('circle', {cx : X(STEPS), cy : Y(push * c[STEPS] * water), r : 7}, svg);
+  drag(svg, g2, p => {
+    const left = clamp((B - p.y) / H * MOST_PUSH / water, 0, push);
+    tail.fast = mixFor(clamp(left / push, .2, 1)); drawTail();
+  }, 'end');
+  const kind = tail.fast > .66 ? 'Sprinter' : tail.fast < .33 ? 'Dauerschwimmer' : 'Allrounder';
+  txt(svg, X0 + 8, B - H + 4, kind, {class : 'head'});
+  // What follows, as information: cells, fibres, beat and upkeep.
+  txt(svg, 4, 276, tail.cells + ' Muskelzellen je Seite · ' + Math.round(tail.fast * 100) + ' % schnelle Fasern', {class : 'value'});
+  txt(svg, 4, 292, 'ein Schlag dauert ' + Math.round(strokeSteps(tail.fast)) + ' Schritte · Unterhalt ' + (tail.cells * 1.2 * Math.pow(.25, tail.fast)).toFixed(1).replace('.', ','), {class : 'value'});
 }
+function tailFrame(now) {
+  requestAnimationFrame(tailFrame);
+  const g = document.getElementById('tail-fish'); if (!g) return;
+  const period = strokeSteps(tail.fast) * 2 * 16, phase = (now % period) / period * Math.PI * 2;
+  const amp = 3 + 18 * clamp(tail.cells * force(tail.fast) / MOST_PUSH, 0, 1);
+  const bend = x => { const t = (x - 40) / 200; return Math.sin(phase - t * (1.5 + 4 * tail.wriggle)) * amp * Math.pow(t, 2 - 1.4 * tail.wriggle); };
+  let up = '', down = '';
+  for (let x = 40; x <= 220; x += 5) {
+    const t = (x - 40) / 180, half = t < .35 ? 6 + 16 * Math.sin(Math.PI / 2 * t / .35) : 4 + 18 * (1 - (t - .35) / .65);
+    up += (x === 40 ? 'M' : ' L') + x + ' ' + (44 - half + bend(x)).toFixed(1);
+    down = ` L${x} ${(44 + half + bend(x)).toFixed(1)}` + down;
+  }
+  const tip = 44 + bend(220);
+  g.innerHTML = `<path d="${up} L250 ${(tip - 22).toFixed(1)} L240 ${tip.toFixed(1)} L250 ${(tip + 22).toFixed(1)}${down} Z" fill="#1d4048" stroke="#8ac7bb" stroke-width="1.4"/><circle cx="62" cy="${(40 + bend(62)).toFixed(1)}" r="3" fill="#e9e2c6"/>`;
+}
+requestAnimationFrame(tailFrame);
+
 drawLife(); drawGut(); drawTail();
 </script>
