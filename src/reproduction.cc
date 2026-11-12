@@ -190,11 +190,12 @@ std::vector<std::size_t> Ecosystem::mating_order(const Individual &egg, int pass
     if (!s.fertile)
       continue;
     const bool self = s.parent == egg.parent;
-    if ((pass == 0 && self) || (pass == 1 && (!self || egg.body.age < int(evo.selfing_delay))) ||
-        !compatible(egg.genome, s.genome, taxonomy_.mating_distance, egg.id, s.render_id))
+    if ((pass == 0 && self) || (pass == 1 && (!self || egg.body.age < int(evo.selfing_delay))))
       continue;
+    // Few clouds reach an egg. Comparing two genomes is the costly test, so it comes last.
     const double density = local_sperm(s, egg.body.x, egg.body.y);
-    if (density <= 0)
+    if (density <= 0 ||
+        !compatible(egg.genome, s.genome, taxonomy_.mating_distance, egg.id, s.render_id))
       continue;
     pool.push_back(i);
     weights.push_back(density);
@@ -319,9 +320,7 @@ void Ecosystem::reproduction(bool fertile) {
         bool self = cloud.parent == egg.parent;
         if ((pass == 0 && self) || (pass == 1 && (!self || egg.body.age < int(evo.selfing_delay))))
           continue;
-        if (local_sperm(cloud, egg.body.x, egg.body.y) <= 0 ||
-            !compatible(egg.genome, cloud.genome, taxonomy_.mating_distance, egg.id,
-                        cloud.render_id))
+        if (local_sperm(cloud, egg.body.x, egg.body.y) <= 0)
           continue;
         if (!egg.body.immortal && !egg.remembered && evo.recruitment_target > 0 &&
             rng.uniform() >= recruitment_chance()) {
