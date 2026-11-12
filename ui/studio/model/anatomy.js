@@ -77,6 +77,8 @@ export function placementArea(type) {
     return {from : 145, to : 258, inner : .6, outer : .96};
   if (type === 'balance')
     return {from : 345, to : 430, inner : .72, outer : .9};
+  if (type === 'gills')
+    return {from : 405, to : 470, inner : .4, outer : .75};
   if (type === 'eggs' || type === 'sperm')
     return {from : 550, to : 780, inner : .25, outer : .65};
   if (type === 'gut' || type === 'gutmuscle')

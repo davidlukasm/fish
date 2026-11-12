@@ -230,12 +230,13 @@ function glandGlyph(state, organ, pos) {
          '<path class="aid-gland-lobules" d="M-8-12 Q-12-5-5-1 M11-10 Q3-6 7 0 ' +
          'M17 5 Q7 3 3 11 M-16 5 Q-6 2-4 9"/></g>';
 }
-function gonadDuct(pos) {
+function gonadDuct(pos, type) {
   const {x, y} = cloacaPoint();
   const side = Math.sign(pos.y - y) || -1;
   return '<path class="aid-gonad-duct" d="M' + fixed(pos.x + 25) + ' ' + fixed(pos.y) + ' C' +
-         fixed(Math.min(pos.x + 100, x - 40)) + ' ' + fixed(pos.y + side * 6) + ' ' +
-         fixed(x - 45) + ' ' + fixed(y + side * 8) + ' ' + x + ' ' + y + '"/>';
+         fixed(Math.min(pos.x + 100, x - 40)) + ' ' +
+         fixed(pos.y + side * (type === 'eggs' ? 12 : 0)) + ' ' + fixed(x - 45) + ' ' +
+         fixed(y + side * 8) + ' ' + x + ' ' + y + '"/>';
 }
 function ovaryGlyph(state, organ, pos) {
   const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
@@ -715,7 +716,7 @@ export function bodySvg(state) {
       continue;
     felt += feltSvg(state, organ);
     if (organ.type === 'eggs' || organ.type === 'sperm')
-      ducts += gonadDuct(organLocation(organ, state.sites, state.document));
+      ducts += gonadDuct(organLocation(organ, state.sites, state.document), organ.type);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (!glyph)
       continue;

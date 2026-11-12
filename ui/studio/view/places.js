@@ -1,4 +1,4 @@
-import {anatomicalPosition} from '../model/anatomy.js';
+import {anatomicalPosition, nerveHalfWidth} from '../model/anatomy.js';
 import {
   BODY_FRAME,
   BODY_MIDDLE,
@@ -36,13 +36,13 @@ export const INSIDE = Object.freeze({
   gut : {
     throat : 190,
     stomach : {x : 540, d : 48, rx : 35, ry : 17},
-    coils : {from : 575, to : 806, wave : 16},
+    coils : {from : 575, to : 775, wave : 16},
     vent : {x : 820},
     steps : 96
   },
   eggs : {x : 650, d : -33},
   sperm : {x : 720, d : -24},
-  glands : {front : 485, step : 55, d : 55, skin : 22},
+  glands : {front : 475, step : 55, d : 62, skin : 22},
   stack : 28,
   node : 11
 });
@@ -55,10 +55,12 @@ export function gutShape(turns, doc = null) {
   const coil = t => {
     const angle = 2 * Math.PI * turns * t, taper = Math.sin(Math.PI * t) ** .6;
     const x = from + (to - from) * t + pitch * .13 * Math.sin(angle);
-    const base = (stomach.y - M) * (1 - t) ** 2 + 10 * t,
-          room = Math.max(0, halfWidth(x) * .62 - 8 - Math.abs(base)),
+    const side = Math.sign(stomach.y - M) || 1, outer = halfWidth(x) * .66 - 8,
+          inner = Math.min(outer, nerveHalfWidth(x) + 7), blend = Math.min(1, t * 5),
+          base = Math.abs(stomach.y - M) * (1 - blend) + (inner + outer) / 2 * blend,
+          room = Math.max(0, Math.min(outer - base, base - inner)),
           wave = Math.min(C.wave * taper, room);
-    return {x, y : M + base + wave * Math.sin(angle)};
+    return {x, y : M + side * (base + wave * Math.sin(angle))};
   };
   const bend = Math.min(420, stomach.x - S.rx - 45);
   const gullet = Array.from({length : 33}, (_, k) => {
@@ -140,7 +142,7 @@ function innerHome(doc, organ) {
     return {x : I.blood.x + k * I.stack, y : middle + I.blood.d};
   }
   if (organ.type === 'balance')
-    return {x : 410, y : middle + sideOf(organ) * 86};
+    return {x : 395, y : middle + sideOf(organ) * 99};
   const home = I[organ.type];
   return {x : home.x, y : middle + home.d};
 }
@@ -176,6 +178,8 @@ function musclePoint(organ, index, sites) {
 export function organLocation(organ, sites, doc) {
   if (organ.type === 'lateral')
     return lateralAnchor(doc, sites, organ);
+  if (organ.type === 'gills')
+    return organ.position ?? {x : 440, y : BODY_FRAME.middle};
   if (organ.position && !isRegion(organ))
     return organ.position;
   if (hasHome(organ.type))
@@ -243,6 +247,16 @@ export function showsNodes(state, organs) {
 }
 export function nodeLocation(doc, sites, center, organType) {
   const site = findSite(sites, center.site);
+  if (organType === 'gills') {
+    const organ = ownerOf(doc, center.id), side = sideSign(site?.side),
+          peers = organ.centers.filter(c => sideSign(findSite(sites, c.site)?.side) === side),
+          spread = (peers.indexOf(center) - (peers.length - 1) / 2) * 6;
+    return {
+      x : (organ.position?.x ?? 440) + spread,
+      y : BODY_FRAME.middle +
+              side * (organ.position ? Math.abs(organ.position.y - BODY_FRAME.middle) : 64)
+    };
+  }
   if (organType === 'lateral') {
     const organ = ownerOf(doc, center.id), line = lateralLine(doc, sites, organ),
           at = (organ.centers.indexOf(center) + .5) / organ.centers.length * (line.length - 1),

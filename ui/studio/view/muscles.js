@@ -39,7 +39,7 @@ function muscleBuild(organ) {
 }
 const SHAPE = Object.freeze({
   tail : {
-    stalk : [ 470, 897 ],
+    stalk : [ 510, 897 ],
     depth : .84,
     length : [ 120, 410 ],
     thick : [ .18, .2 ],
