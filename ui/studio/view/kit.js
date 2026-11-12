@@ -1,6 +1,7 @@
 import {ATELIER_LIMITS} from '../../schema.js';
 import {STUDIO_ICON} from '../../organ_icons.js';
-import {escapeText, glyph} from './markup.js';
+import {escapeText, fixed, glyph} from './markup.js';
+import {HALF_VIEW} from '../model/retina.js';
 import {percent, t} from '../../strings.js';
 
 export const label = key => t('studio.' + key);
@@ -27,6 +28,21 @@ export function slotShape(slot) {
 }
 export const slotFill = slot => slot.filled.length ? 'filled' : slot.required ? 'missing' : 'free';
 export const heading = text => '<h3>' + escapeText(text) + '</h3>';
+// A map node of the visual field as the slice of the field it covers: ahead is up, the side to the
+// right, the whole field outlined and the node's slice filled.
+const BAND_GLYPH = Object.freeze({size : 24, x : 6, y : 14, radius : 13});
+export function bandGlyph([ from, to ]) {
+  const B = BAND_GLYPH, at = (degreesFrom, r = B.radius) => {
+    const a = degreesFrom * Math.PI / 180;
+    return fixed(B.x + r * Math.sin(a)) + ' ' + fixed(B.y - r * Math.cos(a));
+  };
+  const slice = (a, b, cls) => '<path class="' + cls + '" d="M' + B.x + ' ' + B.y + ' L' + at(a) +
+                               ' A' + B.radius + ' ' + B.radius + ' 0 ' + (b - a > 180 ? 1 : 0) +
+                               ' 1 ' + at(b) + 'Z"/>';
+  return '<svg class="aid-band-glyph" viewBox="0 0 ' + B.size + ' ' + B.size + '" width="' +
+         B.size + '" height="' + B.size + '" aria-hidden="true">' + slice(0, HALF_VIEW, 'field') +
+         slice(from, to, 'band') + '</svg>';
+}
 // Switches drawn as what they switch, off and on; the name is the tooltip.
 export const SWITCH_SYMBOL = Object.freeze({
   // A chain, whole while the two sides or a map and its organs go together.

@@ -17,7 +17,7 @@ import {
 import {escapeText, fixed, glyph} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
-import {heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
+import {bandGlyph, heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
 import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
 import {isModulator, isPacemaker, modeLean, nerveClass} from '../model/organs.js';
@@ -315,8 +315,10 @@ function nodeChoice(state, chosen) {
          '">' +
          nodes
              .map(c => '<button class="' + (c.id === chosen.id ? 'active' : '') +
-                       '" data-select-center="' + escapeText(c.id) + '">' + nodeMark(c) +
-                       escapeText(centerTitle(c)) + '</button>')
+                       '" data-select-center="' + escapeText(c.id) + '" title="' +
+                       escapeText(centerTitle(c)) + '">' +
+                       (c.band ? bandGlyph(c.band) : nodeMark(c) + escapeText(centerTitle(c))) +
+                       '</button>')
              .join('') +
          '</div>';
 }

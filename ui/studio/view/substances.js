@@ -34,7 +34,7 @@ import {
 } from '../model/document.js';
 import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
-import {heading, icon, ICON, iconSwitch, label} from './kit.js';
+import {bandGlyph, heading, icon, ICON, iconSwitch, label} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
@@ -753,8 +753,10 @@ function hormoneDetails(state) {
                      ? '<div class="aid-center-tabs">' +
                            choices
                                .map(c => '<button data-select-center="' + escapeText(c.id) +
-                                         '" class="' + (c.id === focus.id ? 'active' : '') + '">' +
-                                         escapeText(centerTitle(c)) + '</button>')
+                                         '" class="' + (c.id === focus.id ? 'active' : '') +
+                                         '" title="' + escapeText(centerTitle(c)) + '">' +
+                                         (c.band ? bandGlyph(c.band) : escapeText(centerTitle(c))) +
+                                         '</button>')
                                .join('') +
                            '</div>'
                      : '';
