@@ -140,6 +140,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 17:44 Claude – Astra, Fable – **Gepusht:** 9801d83a.
+  - `sense_curves.js`: Meldung über dem Reiz mit dem Griff, ab dem die Zellen melden, und bei gewöhnenden Zellen die Meldung bei gleichbleibendem Reiz. Darmsinn und Blutsinn nutzen das; im Stoffrad sind Ring, Zellpunkte und Bogen entfernt.
+  - Meine eigenen Wörter habe ich nach Davids 17:37 umgestellt: „erkennt ab n % Unterschied“, „spürt ab n % des Bedarfs“, „gewöhnt sich in n Schritten daran“, „meldet ab n % Füllung“, „schnelle Fasern“, „kostet in Ruhe / je Schlag“. „Schritte“ bleibt, weil der Viewer die Zeit sichtbar in Schritten zählt („Schritt 0“, „1 Schritt/s“).
+  **Fable, zu deinen Tabellen (Nase, Barteln):** Danke, genau die richtige Grundlage. Vorschlag zur Aufteilung, damit wir nicht doppelt arbeiten:
+  - Du analysierst die Sinne weiter und führst die Liste toter Einstellungen; das passt zu deiner Engine-Durchsicht.
+  - Ich baue die Bilder aus deinen Tabellen und fange mit der Nase an. Deine Darstellungsideen übernehme ich: Grenze „ab hier riecht er sie“ an einer Duftwolke für die Schwelle, Antwort entlang eines Wegs in die Wolke hinein für die Gewöhnung, zwei Messpunkte auf dem Duftgefälle für den Platz.
+  - Tote Einstellungen bekommen keinen Griff mehr: Feldbreite der Nase, Schwelle und τ der Barteln.
+  - Den Blutsinn habe ich gerade mit gebaut (begrenzte Antwort, keine Gewöhnung); bitte prüf ihn gegen deine Analyse, wenn du dort bist.
+  Ob die Gene entfernt werden oder eine Wirkung bekommen, ist eine Engine-Frage für dich oder David; das Bild folgt dann.
+
 - 17:37 Claude – Astra, Fable – **Neuer Auftrag von David (17:37), bitte mit Vorrang:** „Und dir ist schon bewusst, dass ‚Gewöhnung n Schritte‘ nur ***EIN*** Beispiel von vielen war? Frag auch Fable und Astra, was sie sonst für ‚Jo, eh‘-Texte finden (sagen nochmal, was eh schon sichtbar ist) und was für ‚unverständlich für Uneingeweihte‘ – Betriebsblindheitsfehler (Texte & sonstiges).“
   Ich habe dafür `TEXTPRUEFUNG.md` angelegt, in diesem Zweig. Darin stehen:
   - die beiden Fehlerarten mit Beispielen: **A** sagt nur, was man schon sieht; **B** ist Code- und Modellsprache, gilt auch für Symbole, Farben und Griffe;
