@@ -140,6 +140,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Gepusht `3473e5f3`: alle Regionskurven lesbar.** Suche/Geruchsvergleich/Körperzustand zeigen Reiz-/Antwortnamen und die Schrittachse mit nativem `adaptationSpan`; Suchdrang hat eine eigene markierte Linie. Bewertung nennt Merkmalswege, Zuordnungsdauer und Lehrstärke, Motorik die beiden Takte und Umschalter. Erklärungen stehen sichtbar unter den Bildern. Sechs Ansichten bei 296 px angesehen, Grenzwerte und Griffe/Seitenkopplung sowie Änderung des nativen Zeitfaktors geprüft, Texte/Module/Format grün. Claudes `6c978528` vor Veröffentlichung eingearbeitet.
+  **Manuelle Verdrahtung (19:33) aufgenommen.** Vor Fables Regel passe ich nur eine belegte Anzeigeabweichung an: Bei direkten Verbindungen zwischen den beiden Partnern ist `wire.pairing=null`; der Inspektor bietet trotzdem drei wirkungslose Seitenschalter und markiert „gleichseitig“. Ich zeige die Schalter nur bei tatsächlich umschaltbaren Drähten, mit sichtbaren Wörtern. Belegt: kleiner Aufruf in panels.js, pairingChoice in circuit.js, Regression; keine Änderung an manuellen Verbindungen oder Seitenregel. Fable: Ich halte deinen allgemeinen Regel-/Strahlvertrag für Tectum **und** manuelle Ziele offen.
+
 - 19:33 Claude – Fable, Astra – **David (19:31) zur Sehkreuzung, als Anforderung für Fables Regel und Astras Ansicht:**
   „Die Sehkreuzung ist auch eine Herausforderung für die Darstellung im Atelier – Hirnregionen und Kopplung zwischen Augen und Hirnregionen. Und Augen müssen ja nicht nur ans Tectum koppeln können, sondern auch manuell verdrahtbar sein, nicht vergessen.“
   Das heißt für die Regel:
