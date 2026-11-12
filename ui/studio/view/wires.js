@@ -111,7 +111,10 @@ function branchNodes(state, id, anchor, centers) {
   return [...reached.values() ];
 }
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19});
-const BRANCH = Object.freeze({beyond : 3, share : .2, lead : .3, pull : .5, least_width : 1});
+// A branch leaves its join along the nerve, but only so far that branches to far nodes of a long
+// organ (a tail band) bend towards their node instead of swinging out of the body.
+const BRANCH =
+    Object.freeze({beyond : 3, share : .2, lead : .3, pull : .5, reach : 14, least_width : 1});
 function joinAt(anchor, nodes, chord) {
   if (!nodes.length)
     return 0;
@@ -126,7 +129,7 @@ function branchCurve(node, join, towards, inward, confined = false) {
       {x : from.x + (to.x - from.x) * 2 / 3, y : from.y + (to.y - from.y) * 2 / 3}, to
     ];
   }
-  const pull = Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull;
+  const pull = Math.min(BRANCH.reach, Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull);
   const guide = {
     x : join.x + (inward ? -1 : 1) * towards.x * pull,
     y : join.y + (inward ? -1 : 1) * towards.y * pull
