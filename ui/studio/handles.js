@@ -1,7 +1,7 @@
 import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
-import {testLightMarkup, visionDragPatch} from './view/vision.js';
+import {pupilShare, testLightMarkup, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
-import {sensitivityStimulus} from './view/sensitivity.js';
+import {stimulusOfShare} from './view/sensitivity.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
@@ -93,7 +93,6 @@ const HANDLES = Object.freeze({
   response : {follow : 'responsePointer'},
   nerve : {follow : 'nervePointer'},
   region : {follow : 'regionPointer'},
-  sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
@@ -199,14 +198,9 @@ export const GRIPS = Object.freeze([
     start : (studio, g, h) => ({
       target : {...g.dataset},
       handle : h.dataset.spectrumHandle,
-      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height},
+      ...studio.pupilStart(g.dataset, h.dataset.spectrumHandle)
     })
-  },
-  {
-    graphic : '[data-sensitivity]',
-    handle : '[data-sensitivity-handle]',
-    held : 'sensitivity',
-    start : (studio, g) => studio.sensitivityGrip(g)
   },
   {
     graphic : '[data-learning-memory]',
@@ -524,28 +518,10 @@ export const handleMethods = {
       return this.notice(label('status.noRoom'));
     this.draftDesign(changed, 'amount:' + control.id, 'refreshPigment');
   },
-  sensitivityTarget(block) {
-    return this.spectrumTarget({
-      spectrum : 'field',
-      spectrumId : block.dataset.sensitivityId,
-      profileId : block.dataset.profileId
-    });
-  },
   spectrumTarget({spectrumId : id, profileId}) {
     const organ = findOrgan(this.state.document, id);
     const profile = organ?.field?.profiles.find(p => p.id === profileId);
     return profile && {tuning : profile, organ};
-  },
-  // The eye's light cells: the threshold moves by as much as the half answer is dragged.
-  sensitivityPointer(event) {
-    const drag = this.handleDrag, dimmest = this.state.anatomy?.lightDimmest;
-    if (!(dimmest > 0))
-      return;
-    drag.shift = sensitivityStimulus(pointerShare(event, drag.rect).fx, dimmest) / drag.answer.half;
-    const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
-    this.draftDesign(updateField(this.state.document, drag.field,
-                                 {profile : {id : drag.block, threshold}}, this.state.sites),
-                     'threshold:' + drag.block, 'refreshSensitivity');
   },
   previewPointer(event) {
     const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);
@@ -662,6 +638,8 @@ export const handleMethods = {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
     if (!target)
       return;
+    if (drag.handle === 'sensitivity')
+      return this.pupilPointer(event, drag);
     const light = this.state.anatomy?.light
                       ?.[profileIndex(this.state.document, target.organ.id, drag.target.profileId)];
     const {fx, fy} = pointerShare(event, drag.rect);
@@ -685,6 +663,20 @@ export const handleMethods = {
     this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, ...patch}},
                                  this.state.sites),
                      'spectrum:' + id, 'refreshSpectrum');
+  },
+  pupilPointer(event, drag) {
+    const dimmest = this.state.anatomy?.lightDimmest;
+    if (!(dimmest > 0) || !(drag.answer?.half > 0))
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    drag.shift = stimulusOfShare(pupilShare({x : fx * drag.size.width, y : fy * drag.size.height}),
+                                 dimmest) /
+                 drag.answer.half;
+    const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
+    const {spectrumId : id, profileId} = drag.target;
+    this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, threshold}},
+                                 this.state.sites),
+                     'threshold:' + profileId, 'refreshSpectrum');
   },
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
@@ -847,20 +839,14 @@ export const handleMethods = {
     this.root.querySelector('.aid-workspace-main')
         ?.setAttribute('style', panelStyle(this.state.panels));
   },
-  sensitivityGrip(graphic) {
-    const block = graphic.closest('[data-sensitivity-block]');
-    const target = block && this.sensitivityTarget(block);
+  // A drag of the eye's pupil starts from the design run's answer; the threshold then moves by as
+  // much as the half answer is dragged.
+  pupilStart(target, handle) {
+    const found = handle === 'sensitivity' && this.spectrumTarget(target);
     const answer =
-        target && this.state.anatomy?.light
-                      ?.[profileIndex(this.state.document, target.organ.id, target.tuning.id)];
-    return answer?.half > 0 ? {
-      field : target.organ.id,
-      block : target.tuning.id,
-      threshold : target.tuning.threshold,
-      answer,
-      shift : 1
-    }
-                            : null;
+        found && this.state.anatomy?.light
+                     ?.[profileIndex(this.state.document, found.organ.id, found.tuning.id)];
+    return answer?.half > 0 ? {answer, threshold : found.tuning.threshold, shift : 1} : {};
   },
   skinGrip(graphic, handle) {
     const found = findCenter(this.state.document, graphic.dataset.skinField);

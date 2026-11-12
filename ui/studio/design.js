@@ -3,7 +3,6 @@ import {
   clearOfFish,
   nearAnswers,
   nearObject,
-  sensitivityEditor,
   spectrumEditor,
   visionFan
 } from './view/vision.js';
@@ -199,7 +198,6 @@ export const designMethods = {
       this.redrawBlocks('organSettings', findOrgan, organ => organSettingsBlock(this.state, organ));
     this.refreshSkin();
     this.refreshSpectrum();
-    this.refreshSensitivity();
     this.refreshEffectors();
     this.refreshPigment();
     this.drawSight();
@@ -232,17 +230,13 @@ export const designMethods = {
     const block = this.root.querySelector('[data-spectrum-block]');
     const editor = block?.querySelector('[data-spectrum]');
     const target = editor && this.spectrumTarget(editor.dataset);
+    // A dragged pupil shows its new size before the design run answers.
+    const pupil = this.heldHandle('spectrum');
     if (target)
-      block.outerHTML = spectrumEditor(this.state, target.organ, target.tuning);
-  },
-  refreshSensitivity() {
-    const drag = this.heldHandle('sensitivity');
-    this.redrawBlocks('sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block),
-                      target => {
-                        const own = drag?.block === target.tuning.id;
-                        return sensitivityEditor(this.state, target.organ, target.tuning,
-                                                 own ? drag.shift : 1, own ? drag.answer : null);
-                      });
+      block.outerHTML =
+          pupil?.handle === 'sensitivity' && pupil.answer
+              ? spectrumEditor(this.state, target.organ, target.tuning, pupil.shift, pupil.answer)
+              : spectrumEditor(this.state, target.organ, target.tuning);
   },
   refreshEffectors() {
     const sense = this.heldHandle('sense');

@@ -506,12 +506,8 @@
 .aid-spectrum-test{stroke:var(--aid-light);stroke-width:1;stroke-dasharray:3 3}
 .aid-spectrum-handle.light{stroke:var(--aid-light);stroke-width:1.5}
 .aid-spectrum-handle.opponent{fill:#e1788e;cursor:ns-resize}
-.aid-sensitivity{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:var(--aid-graphic);cursor:ew-resize;touch-action:none}
-.aid-sensitivity-axis,.aid-sensitivity-tick{stroke:#7d9b9a;stroke-width:1}
-.aid-sensitivity text{fill:var(--aid-hint-text);font:13px system-ui}
-.aid-sensitivity-half{stroke:var(--aid-handle);stroke-width:1;stroke-dasharray:3 3}
+.aid-sensitivity-axis{stroke:#7d9b9a;stroke-width:1}
 .aid-sensitivity-curve{fill:none;stroke:#e8eed8;stroke-width:2}
-.aid-sensitivity-end{opacity:.6}
 .aid-sight-eyes{display:grid;gap:8px}
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}

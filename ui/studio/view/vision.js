@@ -1,6 +1,6 @@
 import {labelledText, percent, t} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
-import {CONTRAST_POLARITY, RECEPTOR, SENSE_KIND, VISION, VISUAL_SAMPLE} from '../../schema.js';
+import {CONTRAST_POLARITY, RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
 import {
   lightColor,
@@ -10,8 +10,7 @@ import {
   spectrumElement,
   spectrumValues
 } from './spectrum.js';
-import {sensitivityElement} from './sensitivity.js';
-import {stimulusPicture} from './stimuli.js';
+import {stimulusShare} from './sensitivity.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
@@ -335,8 +334,15 @@ function otherTypes(organ, chosen) {
            }))
       .filter(o => o.tuning.id !== chosen.id);
 }
-export function spectrumEditor(state, organ, profile) {
-  const light = state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
+// `shift` and `start` show a sensitivity being dragged before the design run answers.
+export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
+  const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
+  const dimmest = state.anatomy?.lightDimmest, half = light?.half * shift;
+  const faint = dimmest > 0 && half > 0 ? {
+    share : stimulusShare(half, dimmest),
+    title : label('sensitivity') + ' · ' + label('half') + ' ' + percent(half, 2)
+  }
+                                        : null;
   const [centre, width, opponent] = spectrumValues(profile, true);
   const values = [
     labelledText(label('centre'), centre), labelledText(label('width'), width),
@@ -349,23 +355,9 @@ export function spectrumEditor(state, organ, profile) {
                         light,
                         testHue : state.sightProbe?.hue,
                         areaTitles : {excite : label('excites'), inhibit : label('inhibits')},
-                        middle : contrastPupil(profile),
+                        middle : contrastPupil(profile, faint),
                         others : otherTypes(organ, profile)
                       })}</div>`;
-}
-export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
-  const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
-  const graphic = sensitivityElement(
-      light, state.anatomy?.lightDimmest,
-      {sensitivity : 'field', 'sensitivity-id' : organ.id, 'profile-id' : profile.id},
-      label('sensitivity'),
-      (share, point, title, size) =>
-          stimulusPicture(SENSE_KIND.light, share, point, title, profileColor(profile), size),
-      shift);
-  const half =
-      graphic ? ` title="${escapeText(label('half') + ' ' + percent(light.half * shift, 2))}"` : '';
-  return `<div data-sensitivity-block="field" data-sensitivity-id="${
-      idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}"${half}>${graphic}</div>`;
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
@@ -394,11 +386,18 @@ const sightEyes = () => `<div class="aid-sight-eyes">${
             .join('')}</div>`;
 const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
-// Whether the cells of a colour type report what is lighter or darker than its surround, as the
-// pupil in the middle of their colour wheel: a light spot, a dark spot or both. A click turns it to
-// the next.
-const PUPIL = Object.freeze({radius : 17, spot : 7, pair : 5, apart : 6});
-function contrastPupil(profile) {
+// The pupil in the middle of a colour type's wheel. Its spot shows whether the cells report what is
+// lighter or darker than its surround (a light spot, a dark spot or both; a click turns it to the
+// next); its size shows how faint a light they answer: the wider, the fainter. The handle on its
+// rim sets that.
+const PUPIL =
+    Object.freeze({least : 12, most : 30, spot : 7, pair : 5, apart : 6, grip : Math.PI / 4});
+const pupilRadius = share => PUPIL.least + (PUPIL.most - PUPIL.least) * (1 - clamp(share));
+// How faint a light the cells answer (0 the faintest, 1 the brightest) from a point on the rim.
+export const pupilShare = p =>
+    1 - clamp((Math.hypot(p.x - SPECTRUM_CENTRE, p.y - SPECTRUM_CENTRE) - PUPIL.least) /
+              (PUPIL.most - PUPIL.least));
+function contrastPupil(profile, faint) {
   const P = PUPIL, at = SPECTRUM_CENTRE;
   const k =
       Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
@@ -406,10 +405,17 @@ function contrastPupil(profile) {
   const spot = (tone, x, r) => `<circle class="${tone}" cx="${x}" cy="0" r="${r}"/>`;
   const spots = key === 'both' ? spot('bright', -P.apart, P.pair) + spot('dark', P.apart, P.pair)
                                : spot(key, 0, P.spot);
+  const radius = faint ? pupilRadius(faint.share) : (P.least + P.most) / 2;
   return `<g class="aid-contrast-pupil" data-vision-polarity="${CONTRAST_POLARITY[next]}" ` +
          `transform="translate(${at} ${at})" role="button"><title>${
              label('contrastTitle.' +
-                   key)}</title><circle class="iris" r="${P.radius}"/>${spots}</g>`;
+                   key)}</title><circle class="iris" r="${fixed(radius)}"/>${spots}</g>` +
+         (faint
+              ? `<circle class="aid-spectrum-handle sensitivity" data-spectrum-handle="sensitivity" ` +
+                    `cx="${fixed(at + radius * Math.cos(P.grip))}" cy="${
+                        fixed(at + radius * Math.sin(P.grip))}" r="7"><title>${
+                        escapeText(faint.title)}</title></circle>`
+              : '');
 }
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
@@ -421,8 +427,7 @@ export function visionInspector(state, organ) {
              profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
                                        idSafe(p.id)}" title="${label('remove')}">−</button>`
                                  : ''}</div>`) +
-         section(spectrumEditor(state, organ, p)) + section(sensitivityEditor(state, organ, p)) +
-         section(sightEyes());
+         section(spectrumEditor(state, organ, p)) + section(sightEyes());
 }
 const CLEAR = Object.freeze({step : .25});
 export function clearOfFish(state, organ, probe) {
