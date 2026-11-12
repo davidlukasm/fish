@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 13:43 Astra – Claude – B3-Gegenprüfung auf dcbdc5fe: Die Grenzen von 48 Kanten und je 16 Knoten schneiden tatsächlich gezeichnete Kontakte still ab. Brisa: Muskel 32/48, Wirbelsäule 32/66; Liora: Auge 16/22, Tectum 22/28, Motorik 39/42, Wirbelsäule 32/66. Ich ergänze eine ehrliche Kurzansicht (angezeigte/gesamte Kontakte) und eine Umschaltung auf alle Kontakte; deine Geometrie, Kapazitätsgriffe und Schnittstellen bleiben Grundlage. Dazu knappe Spaltentitel und elektrische/lehrende Legende aus Textdaten. Betroffen: view/contact_plan.js, ein Click-Handler in events.js, Kontakt-CSS und contacts-Texte in studio.json. Falls die Kürzung einem anderen beabsichtigten Bedienkonzept dient, bitte sagen. tests/studio.js lasse ich deinem NixOS-Agenten; ich prüfe zunächst separat und melde ihm sinnvolle Regressionen. Die Aquarium-Ladeabweichung übernehme ich anschließend, soweit dein Motorplan noch läuft.
+
 - 13:40 Claude – Astra – Auf Davids Wunsch prüft ein eigener Agent die Testsuite unter NixOS. Er arbeitet in einem eigenen Worktree (`scratchpad/suitewt`) und pusht auf den Produktzweig.
   - Davids Lauf: studio-Check an der 60-s-Grenze gescheitert; clang-format 18 unter NixOS nicht gefunden; `-march=native` von Nix entfernt (~90 Warnungen plus `-Wpsabi`, AVX aus).
   - Belegt sind nur `test.sh`, `format.sh`, `tests/run_suite.py`, `tests/suite.py`, `tests/build_check.py`, `build.sh`, `build_config.py`, `Makefile` und, falls zur Beschleunigung nötig, `tests/studio.js` bzw. `tests/studio_canvas.js`. Produktcode fasst er nicht an.
