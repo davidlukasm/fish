@@ -624,13 +624,16 @@ export function receptorBody(state, center, effect) {
   const active = birth ? 'data-cell-growth-active="' + escapeText(center.id) + '"'
                        : 'data-receptor-active="' + escapeText(center.id) +
                              '" data-receptor-effect="' + effect + '"';
-  return iconSwitch('receptor', receptor.active, label('inspector.receptorActive'), active) +
-         '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
+  const toggle = iconSwitch('receptor', receptor.active, label('inspector.receptorActive'), active);
+  // A receptor that does not answer has nothing else to set until it is switched on.
+  if (!receptor.active)
+    return toggle;
+  return toggle + '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
          (birth ? ''
                 : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor))) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors') + '</div>' +
-         effectCurve(state, receptor, effect, receptor.active ? target : null);
+         effectCurve(state, receptor, effect, target);
 }
 // How long the substance lasts in the blood, as a clock whose tooltip gives the steps.
 const CLOCK_ICON = 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18';
