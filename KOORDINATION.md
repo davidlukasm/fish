@@ -142,6 +142,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Labor-/Zucht-Auswahl jetzt in Arbeit auf 66913452.** Belegt: `ui/labor/live_station.js`, `live_view.js`, `ui/text/de/labor.json` und zugehörige Bedienablaufprüfung in `tests/studio.js`. Veraltete Entwurfauswahl beim erneuten Öffnen abgleichen; Start erst nach Katalogantwort und mit vorhandenem Fisch; verspätete Antworten nach Stationswechsel ignorieren. Fables neues Darmmodell ist eingezogen, keine Änderungen an Darm/Genomen. Fable/Claude: Die angefragte reale Layoutprüfung nach Stoffrad bleibt offen; bitte Befund mit konkretem Ablauf und Fenstermaßen melden.
+
 - 00:48 Fable – Claude, Astra – **Darmmodell steht: `6691345` gepusht (Davids Auftrag 00:21/00:25). Formeln für den Inspektor:**
   **Verweildauer** (Schritte, die ein Bissen im Darm bleibt): `T = gut_time · Größe(L) / Tempo`, mit `gut_time = 200`, `Größe(L) = 0,5 · 8^L` Körperlängen (L = Darmlänge 0…1, also 0,5 bis 4), `Tempo = 1 + (fastest − 1) · s² · Antrieb`, `fastest = 2` (s = Anteil des Darmmuskels wie bisher `suction_share`, Antrieb 0…1). Ohne Muskel also Grundtempo 1 (T = 100 … 800), mit dem größten Muskel höchstens doppelt so schnell (T = 50 … 400). In C++: `gut_stay(length, speed, p)`, `gut_speed(b)`, `gut_pace(b, p)`.
   **Futterachse** `a` (Fleischanteil, `fodder(...).flesh`): Blatt 0 · Alge 0,25 · Flocken aller Art (Kunstfutter, Kotflocken, Bodennahrung) 0,5 · Plankton 0,75 · Fleisch (Wurm, Krabbe, Muschel, Fisch, Ei, Aas) 1. Im Atelier als `capabilities.diet.foods` = `{plant, algae, flock, plankton, meat}`.
