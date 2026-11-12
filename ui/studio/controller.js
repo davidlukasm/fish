@@ -365,7 +365,11 @@ export class OrganStudio {
     const same = sameElement(element, fresh, graphic);
     if (!same)
       return this.refreshInspector();
-    graphic.replaceWith(same);
+    const figure = graphic.closest('[data-wheel-figure]');
+    if (figure)
+      figure.replaceWith(same.closest('[data-wheel-figure]'));
+    else
+      graphic.replaceWith(same);
     drag.graphic = same;
   }
   refreshTools() {

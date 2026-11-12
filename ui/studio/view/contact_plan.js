@@ -200,14 +200,15 @@ export function contactPlan(state, chosen, wire = null) {
                            '" aria-expanded="' + expanded + '">' +
                            escapeText(word(expanded ? 'less' : 'all')) + '</button>'
                      : '';
-  const legend = planned.length ? '<div class="aid-plan-legend">' +
-                                      [ 'excite', 'inhibit', 'electrical', 'teach' ]
-                                          .map(kind => '<span><i class="' + kind +
-                                                       '" aria-hidden="true"></i>' +
-                                                       escapeText(word(kind)) + '</span>')
-                                          .join('') +
-                                      '</div>'
-                                : '';
+  const legend =
+      planned.length
+          ? '<div class="aid-plan-legend">' +
+                [ 'excite', 'inhibit', 'electrical', 'teach' ]
+                    .map(kind => '<span><i class="' + kind + '" aria-hidden="true"></i>' +
+                                 escapeText(word(kind)) + '</span>')
+                    .join('') +
+                '<span class="aid-plan-width">' + escapeText(word('lineWidth')) + '</span></div>'
+          : '';
   return '<details class="aid-contact-plan" open><summary title="' + escapeText(joinParts([
            word('meaning'), word('fields').replace('{n}', neural.contactFields),
            word('learningMeaning')
@@ -261,6 +262,11 @@ function capacity(neural, cell, at, radius, span) {
          '<circle class="aid-tissue-cell" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' +
          fixed(radius) + '"/>' + seats + '<g class="aid-plan-mark" transform="translate(' +
          point(at) + ')">' + centerMarker(cell, P.mark) + '</g></g>' +
+         (sensor ? ''
+                 : '<text class="aid-plan-label" x="' + at.x + '" y="' +
+                       fixed(at.y + radius + P.cell) + '" text-anchor="middle">' +
+                       escapeText(t('studio.contacts.capacity', {n : formatNumber(count)})) +
+                       '</text>') +
          (cell.role === 'nerve'
               ? grip('field', {x : at.x + radius, y : at.y}, label('cellPicture.capacity'),
                      'data-cell="' + fixed(at.x) + ',' + fixed(at.y) + '"')

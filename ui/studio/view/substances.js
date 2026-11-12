@@ -57,6 +57,7 @@ const centerWheel = (state, center, choices, reads, marks = null) =>
       attribute : 'data-wheel-substance',
       extra : ' data-center-id="' + escapeText(center.id) + '"',
       pad : center.id,
+      role : center.role === 'motor' ? 'gland' : 'sense',
       marks
     });
 // The gland in its wheel: which substances it pours out (its point), how little input opens it (the
@@ -532,6 +533,7 @@ function substanceWheel(state, profile, {
   selected = null,
   reads = Infinity,
   widthTarget = null,
+  role = 'receptor',
   marks = null
 }) {
   const wheel = state.capabilities;
@@ -593,13 +595,37 @@ function substanceWheel(state, profile, {
                          px(mx) + '" y="' + py(my) + '" dy=".35em" text-anchor="middle">' +
                          escapeText(substanceMark(state, selected)) + '</text></g>'
                    : '';
-  return '<svg class="aid-substance-wheel"' +
+  const names =
+      Array
+          .from({length : Math.min(reads, wheel.bloodSubstances)},
+                (_, index) => {
+                  if (index < HORMONES.levels && !named.has(index))
+                    return '';
+                  const affinity = profile.active ? wheelAffinity(wheel, profile.x, profile.y,
+                                                                  profile.width, index)
+                                                  : 0;
+                  return '<span class="aid-wheel-name"><i style="--substance:' +
+                         substanceColor(index) + '">' + escapeText(substanceMark(state, index)) +
+                         '</i><span>' + escapeText(substanceName(state, index)) + '</span><small>' +
+                         percent(affinity) + '</small></span>';
+                })
+          .join('');
+  const keys = [
+    'width', ...(marks ? [ 'cells', role === 'gland' ? 'gate' : 'sensitivity' ] : []),
+    ...(role === 'gland' ? [ 'drops' ] : [])
+  ];
+  const legend =
+      '<div class="aid-wheel-names">' + names + '</div>' +
+      '<p class="aid-picture-caption">' + escapeText(label('wheel.' + role)) + '</p>' +
+      '<div class="aid-wheel-key">' +
+      keys.map(key => '<span>' + escapeText(label('wheel.' + key)) + '</span>').join('') + '</div>';
+  return '<div class="aid-wheel-figure" data-wheel-figure><div class="aid-wheel-map"><svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          (marks ? ' data-sense-field="' + escapeText(pad) + '"' : '') + ' viewBox="0 0 ' +
          WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
          WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo + marker +
-         points.join('') + (marks?.svg ?? '') + handle + mark + '</svg>';
+         points.join('') + (marks?.svg ?? '') + handle + mark + '</svg></div>' + legend + '</div>';
 }
 function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
@@ -631,7 +657,8 @@ const receptorEditor = (state, center, effects, effect) =>
         .map(value => '<button data-effect="' + value + '" class="' +
                       (effect === value ? 'active' : '') + '" title="' +
                       escapeText(label('effects.' + value)) + '">' +
-                      glyph(EFFECT_ICON[value], ICON.mark, {line : true}) + '</button>')
+                      glyph(EFFECT_ICON[value], ICON.mark, {line : true}) + '<span>' +
+                      escapeText(tList('studio.axes.effects')[value]) + '</span></button>')
         .join('') +
     '</div>' + receptorBody(state, center, effect);
 function receptorWheel(state, receptor, target) {
@@ -770,6 +797,7 @@ function effectGuide(state, index) {
                                  words('tileTitles')[effect] + ' ' + words('where')[effect]) +
                       '">' + effectScene(effect, colour, ends) + '<div><strong>' +
                       boundEffect(effect, direction) +
+                      escapeText(tList('studio.axes.effects')[effect]) +
                       (n ? '<span class="aid-effect-count" title="' +
                                escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'
                          : '') +

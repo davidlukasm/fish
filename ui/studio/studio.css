@@ -167,8 +167,17 @@
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
 .aid-substance-wheel{width:240px;max-width:100%;display:block;margin:10px auto}
 .aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
-.aid-wheel-close{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;height:250px;width:100%}
+.aid-wheel-close{width:100%}
+.aid-wheel-close .aid-wheel-map{display:flex;justify-content:center;align-items:flex-start;overflow:hidden;height:250px}
 .aid-wheel-close .aid-substance-wheel{flex:none;width:410px;height:410px;max-width:none;max-height:none;margin:-80px 0 0}
+.aid-wheel-figure{width:100%}
+.aid-wheel-names{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:11px;color:var(--aid-name-text)}
+.aid-wheel-name{display:flex;align-items:center;gap:5px;min-width:0}
+.aid-wheel-name i{font-style:normal;display:inline-grid;place-items:center;border:1px solid var(--substance);color:var(--substance);border-radius:50%;min-width:22px;height:22px}
+.aid-wheel-name>span{overflow-wrap:anywhere}
+.aid-wheel-name small{margin-left:auto;white-space:nowrap}
+.aid-picture-caption{font-size:11px;line-height:1.4;color:var(--aid-name-text);margin:8px 0}
+.aid-wheel-key{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;color:var(--aid-soft-text);font-size:11px}
 .aid-wheel-ring{fill:none;stroke:#ffffff22}
 .aid-wheel-halo{fill:#d7c29418;stroke:#d7c29455;stroke-dasharray:3 3}
 .aid-wheel-point{cursor:pointer}
@@ -961,7 +970,7 @@
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}
 .aid-effect-chips{display:flex;flex-wrap:wrap;gap:4px}
-.aid-effect-chips button{display:flex;align-items:center;padding:6px}
+.aid-effect-chips button{display:flex;align-items:center;gap:4px;padding:6px}
 .aid-effect-chips button svg{flex-shrink:0}
 .aid-effect-guide{margin:10px 0}
 .aid-effect-card{display:block;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}
@@ -992,6 +1001,7 @@
 .aid-plan-legend .inhibit{border-color:var(--aid-inhibit)}
 .aid-plan-legend .electrical,.aid-plan-legend .teach{border-color:var(--aid-name-text)}
 .aid-plan-legend .teach{border-top-style:dashed}
+.aid-plan-legend .aid-plan-width{grid-column:1/-1}
 .aid-plan-edge{fill:none;stroke:#9edaca;stroke-linecap:round;stroke-opacity:.8}
 .aid-plan-edge.inhibit{stroke:var(--aid-inhibit)}
 .aid-plan-edge.teach{stroke-dasharray:4 3}

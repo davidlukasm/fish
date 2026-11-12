@@ -1270,6 +1270,16 @@
   "symbols": {
     "add": "+"
   },
+  "wheel": {
+    "receptor": "Farbfüllung: Passung zum Rezeptor. Der Hof zeigt, welche weiteren Stoffe er bindet.",
+    "gland": "Farbfüllung: Auswahl der abgegebenen Stoffe. Ein breiter Hof verteilt die Abgabe auf mehrere Stoffe.",
+    "sense": "Farbfüllung: Gewichtung der gelesenen Stoffe. Ein breiter Hof erfasst mehrere Stoffe.",
+    "width": "Hof: Stoffbreite",
+    "cells": "Punkte: Zellen",
+    "gate": "Ring: Abgabebereitschaft",
+    "sensitivity": "Ring: Empfindlichkeit",
+    "drops": "Tropfen: Abgabe oder Bindung"
+  },
   "axes": {
     "range": "{from} … {to}",
     "maturity": "Reife",
@@ -1290,6 +1300,8 @@
   },
   "contacts": {
     "title": "Kontakte im Bauplan",
+    "lineWidth": "Linienbreite: Höchststärke",
+    "capacity": "max. {n} Eingänge je Zelle",
     "senders": "Sender",
     "chosen": "Auswahl",
     "receivers": "Empfänger",
