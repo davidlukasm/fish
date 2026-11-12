@@ -334,6 +334,7 @@ void Ecosystem::write(std::ostream &out) const {
             << ' ';
     out << '\n';
   }
+  EnvironmentCheckpoint::write_index(out, field);
 }
 void Ecosystem::read(std::istream &in, const Ecosystem *blueprint_cache) {
   Ecosystem loaded(0);
@@ -984,6 +985,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         c.visual = q;
       }
   }
+  auto indexed = EnvironmentCheckpoint::read_index(in, field, fish.size(), corpses.size());
 
   for (auto &p : fish) {
     p.body.identity = p.id;
@@ -997,6 +999,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
   { refresh_food_allowance(); }
   field.update_sediment_light();
   refresh_sperm_field();
+  field.index(indexed.bodies, std::move(indexed.odors));
 }
 
 }

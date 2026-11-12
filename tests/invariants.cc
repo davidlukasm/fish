@@ -488,6 +488,17 @@ void checkpoint_continues_exactly(const Genome &g) {
       serialize_checkpoint(capture_checkpoint(w, founder, 0, true, false, 0, w.ticks, 0)));
   auto copy = std::move(read_checkpoint(state, w.workers).world);
   check(saved(w) == saved(copy), "a checkpoint restores the whole tank");
+  const auto &seen = w.field.visible(), &kept = copy.field.visible();
+  check(!seen.empty() && seen.size() == kept.size() &&
+            std::equal(seen.begin(), seen.end(), kept.begin(),
+                       [](const VisibleBody &a, const VisibleBody &b) {
+                         return a.x == b.x && a.y == b.y && a.id == b.id && a.kind == b.kind &&
+                                a.source == b.source && a.radius == b.radius &&
+                                a.color == b.color && a.flow_x == b.flow_x &&
+                                a.flow_y == b.flow_y && a.odor_energy == b.odor_energy;
+                       }) &&
+            w.field.carrion_odor().size() == copy.field.carrion_odor().size(),
+        "a checkpoint keeps the bodies and scents the next step's food web reads");
   for (int step = 0; step < STEPS / 2; ++step) {
     w.tick();
     copy.tick();

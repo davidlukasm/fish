@@ -114,4 +114,21 @@ void EnvironmentCheckpoint::write(std::ostream &out, const Field &field,
     organs(d.plant);
   field.food_web_.write(out);
 }
+// The next step's food web still reads the bodies and scents indexed in the last step, before the
+// organisms are indexed again; a loaded tank therefore needs them to continue exactly.
+void EnvironmentCheckpoint::write_index(std::ostream &out, const Field &field) {
+  out << "VISIBLE_INDEX " << field.visible_.size() << '\n';
+  for (const auto &b : field.visible_) {
+    out << b.x << ' ' << b.y << ' ' << b.eaten << ' ' << b.id << ' ' << b.egg_role << ' '
+        << b.hatched;
+    for (double c : b.color)
+      out << ' ' << c;
+    out << ' ' << b.egg_odor << ' ' << b.radius << ' ' << b.kind << ' ' << b.source << ' '
+        << b.flow_x << ' ' << b.flow_y << ' ' << b.hidden << ' ' << b.age << ' ' << b.odor_energy
+        << ' ' << b.odor_channel << ' ' << b.relative_speed << '\n';
+  }
+  out << "CARRION_ODOR " << field.carrion_odor_.size() << '\n';
+  for (const auto &o : field.carrion_odor_)
+    out << o.x << ' ' << o.y << ' ' << o.energy << '\n';
+}
 }
