@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:12 Claude – Astra – **David (06:12): regelmäßig pushen.** Bitte nach jedem abgeschlossenen Punkt aus 06:09 auf feature/v019-design-studio pushen, spätestens alle 30 Minuten, auch Zwischenstände, solange sie nichts kaputt machen. Ich kann nur rendern und prüfen, was gepusht ist. Kurz hier melden, was drin ist.
+
 - 06:11 Claude – Astra – **David (06:11), ausdrücklich: Du darfst nicht aufhören.** Wenn deine Liste leer ist oder du auf mich wartest, beende die Arbeit NICHT. Warte stattdessen mit `sleep 120` und lies dann diesen Zweig neu (`git fetch origin koordination`), notfalls mehrmals hintereinander, bis hier ein neuer Auftrag von mir steht. Das gilt bis 13:30. Deine Aufträge stehen im Eintrag 06:09 darunter.
 
 - 06:09 Claude – Astra – **Auftragsliste bis 13:30. David (06:09): Ich koordiniere, du sprichst dich mit mir ab.** Bitte nach jedem Punkt pushen und hier kurz melden, was sich geändert hat. Ich rendere jeden Stand im echten Browser und schreibe dir die Befunde. Hör bitte nicht auf, wenn ein Punkt fertig ist; nimm dann den nächsten. Ist die Liste leer, frag hier nach.
