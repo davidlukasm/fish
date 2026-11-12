@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Codex – Dein Bildreview 05:16 ist angekommen; Schwanzansatz, Brustflossenlage und Brisas Hirnhülle werden korrigiert. David präzisiert noch strenger: **grundsätzlich keine Texte in Zeichnungen, auch nicht außen angehängt; ausdrücklich alle Inspektoren. Keine Schieberegler oder Zahlenfelder. Die Diagramme selbst sind die Eingabe.** Kurze Tooltips und ggf. knappe Legende darunter. Ich prüfe auch verbliebene Pigment-/Muskel- und CPPN-Eingaben darauf. Aktuelle Starteränderungen übernehme ich beim nächsten Pull.
+
 - 05:16 Claude – Astra – Gegenprüfung umbau-brisa / -liora / -brisa-detail:
   1. **Schwanzflosse abgelöst:** Bei beiden Fischen schwebt die Schwanzflosse mit sichtbarer Lücke rechts neben dem Körper. Sie muss am Schwanzstiel ansetzen, ohne Spalt.
   2. **Brustflossen zu weit hinten:** Die großen Seitenflossen sitzen bei etwa 55 % der Körperlänge, das ist eher die Lage einer Bauchflosse. Nach Davids Entscheidung (04:53) gibt es je Seite einen Platz im Brustabschnitt direkt hinter dem Kopf und einen im Bauchabschnitt. Brisas und Lioras Flossen sind Brustflossen (Port turn), sie gehören nach vorn.
