@@ -192,7 +192,7 @@ export function localPoint(G, x, y) {
 }
 export function regionDock(doc, sites, organ, direction) {
   const G = regionGeometry(doc, sites, organ);
-  return {x : G.x + (direction === 'in' ? -.46 : .46) * G.width, y : G.y};
+  return localPoint(G, 0, direction === 'in' ? -.46 : .46);
 }
 function rimWidths(G) {
   const sizes = G.rows.map(r => r.cells.length), biggest = Math.max(1, ...sizes);

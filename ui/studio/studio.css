@@ -676,11 +676,11 @@
 .aid-library .aid-panel-grip{right:-4px}
 .aid-inspector .aid-panel-grip{left:-4px}
 .aid-panel-grip:hover,.aid-panel-grip:active{background:linear-gradient(90deg,transparent 3px,var(--aid-grip) 3px,var(--aid-grip) 5px,transparent 5px)}
-.aid-retina-node.other{opacity:.45}
+.aid-retina-node.other{fill-opacity:.45;stroke-opacity:.45}
 .aid-vision-cell-field{fill:currentColor;fill-opacity:.22;stroke:currentColor;stroke-opacity:.6;stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-wire-branches{pointer-events:none}
-.aid-wire-branch{fill:none;opacity:.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
-.aid-wire-branch.selected{opacity:1}
+.aid-wire-branch{fill:none;stroke-opacity:.6;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.aid-wire-branch.selected{stroke-opacity:1}
 .aid-module-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;font-size:12px;color:var(--aid-soft-text)}
 .aid-module-chips button{border:1px solid var(--aid-control-edge);border-radius:999px;background:var(--aid-control);padding:3px 10px;font-size:12px}
 .aid-module-actions{margin-top:10px}
@@ -704,7 +704,7 @@
 .aid-head-barbel{fill:none;stroke:#d9c99a;stroke-width:3;stroke-linecap:round}
 .aid-head-tooth{fill:var(--aid-tooth);stroke:var(--aid-ink);stroke-width:.5}
 .aid-head-mouth{fill:#0b1d22;stroke:#e9b9a3;stroke-width:1.6}
-.aid-region-inner{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-dasharray:3 3;opacity:.55;pointer-events:none;vector-effect:non-scaling-stroke}
+.aid-region-inner{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-opacity:.55;pointer-events:none;vector-effect:non-scaling-stroke}
 .aid-region-inner.inhibit{stroke:var(--aid-inhibit)}
 .aid-region-slots{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .aid-region-slots li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;align-items:center;min-width:0;padding:6px 8px;border:1px solid var(--aid-panel-edge);border-radius:8px}
@@ -818,7 +818,7 @@
 .aid-muscle-areas rect{opacity:.16}
 .aid-muscle-areas text{fill:var(--aid-name-text);font-weight:600;letter-spacing:.04em;opacity:.9;paint-order:stroke;stroke:var(--aid-ink);stroke-width:3px;pointer-events:none}
 .aid-muscle-areas{pointer-events:none}
-#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted) .aid-retina-node:not(.aid-pulse-fired):not(.aid-pulse-quieted){opacity:.35}
+#aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted) .aid-retina-node:not(.aid-pulse-fired):not(.aid-pulse-quieted){fill-opacity:.35;stroke-opacity:.35}
 #aid-body-map .aid-retina-node.aid-pulse-fired{stroke:#fff3b0;stroke-width:2}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieted{filter:brightness(.55) drop-shadow(0 0 5px var(--aid-inhibit));opacity:.85}
 #aid-body-map.aid-stimulus-view .aid-pulse-quieting{animation:aid-quieting .55s ease-in-out 2}
@@ -1193,8 +1193,8 @@
 .aid-placement-sides button[aria-pressed="true"]{background:var(--aid-chosen-edge);color:var(--aid-name-text)}
 .aid-placement-area{fill:#8ed9bd22;stroke:#9edaca;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
 .aid-symmetry-line{fill:none;stroke:#acbdbb;stroke-width:1;stroke-dasharray:7 6;opacity:.28;pointer-events:none}
-.aid-region-inner{stroke-dasharray:none;opacity:.75;stroke-width:.8;stroke-linecap:round}
-.aid-region-inner.selected{stroke-width:1.7;opacity:1}
+.aid-region-inner{stroke-dasharray:none;stroke-opacity:.75;stroke-width:.8;stroke-linecap:round}
+.aid-region-inner.selected{stroke-width:1.7;stroke-opacity:1}
 .aid-brainstem{fill:#496366;stroke:#9fb9bc;stroke-width:1.6}
 .aid-anatomical-nose path:not(:first-child){fill:none;stroke:#d4eee1;stroke-width:1.1;opacity:.8}
 .aid-anatomical-nose .aid-nose-lumen{stroke:#183b3b;stroke-width:3}
@@ -1205,7 +1205,7 @@
 .aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
 .aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round}
 .aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink{opacity:1}
-.aid-wire-branch{stroke-linecap:round;opacity:.6}
+
 .aid-anatomy-handles g{cursor:grab;pointer-events:all}
 .aid-anatomy-handles circle{fill:#102c33;stroke:#e9dba7;stroke-width:1.4}
 .aid-anatomy-handles .hit{fill:transparent;stroke:none}
@@ -1226,4 +1226,5 @@
 .aid-region-graph marker path{fill:var(--circuit)}.aid-region-graph-node{cursor:pointer}.aid-region-graph-node>circle,.aid-region-port rect{fill:var(--aid-ground);stroke:var(--circuit);stroke-width:1.6}.aid-region-graph-node.pending>circle{fill:#866549;stroke:#efd89d;stroke-width:3}.aid-region-graph-node.mirrored{opacity:.6}.aid-region-graph-node.mirrored>circle{stroke-dasharray:2 2}
 .aid-region-port-branch{fill:none;stroke:var(--circuit);stroke-width:1;opacity:.45}.aid-region-port{cursor:crosshair;color:var(--circuit)}.aid-region-port.filled rect{fill:#315b55}.aid-circuit-tools{display:flex;justify-content:flex-end}.aid-circuit-tools svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}.aid-circuit-tools [aria-pressed=true]{background:#45665b}
 .aid-muscle-tissue,.aid-pigment-palette{display:block;width:100%;height:auto;touch-action:none}.aid-tissue-sheath{fill:#382f35;stroke:#a78689;stroke-width:1.5}.aid-tissue-fibre{fill:none;stroke-width:1;stroke-linecap:round;opacity:.9}.aid-tissue-fibre.reserve{opacity:.4}.aid-tissue-partition{fill:none;stroke:#e5c283;stroke-width:1.5;stroke-dasharray:3 3}.aid-tissue-projection{fill:none;stroke:#a78689;stroke-width:1;opacity:.5}.aid-tissue-curve-hit{fill:none;stroke:transparent;stroke-width:18;cursor:move}.aid-tissue-clock{fill:none;stroke:#a78689;stroke-width:1.2}.aid-pigment-composition{fill:none;stroke-width:13;pointer-events:none}.aid-pigment-composition circle{stroke:#24454b}.aid-pigment-palette .aid-pigment-wheel{width:300px;max-width:none}.aid-operculum{fill:none;stroke:#a2c0bc;stroke-width:1.7;stroke-opacity:.65}
-.aid-wire-sheath{fill:none;opacity:.18;stroke-linecap:round;vector-effect:non-scaling-stroke;pointer-events:none}
+
+.aid-wire-sheath{fill:none;stroke-opacity:.12;stroke-linecap:round;pointer-events:none;vector-effect:non-scaling-stroke}

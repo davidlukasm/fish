@@ -1,5 +1,6 @@
 import {nodeOpacity} from './layers.js';
-import {regionDock, BRAIN} from './region_layout.js';
+import {nerveRoute} from './wire_route.js';
+import {regionDock} from './region_layout.js';
 import {clamp} from '../../units.js';
 import {eyeLocation, nodeLocation, organLocation, showsNodes} from './places.js';
 import {escapeText, fixed, pointText} from './markup.js';
@@ -131,16 +132,40 @@ const branchPath = (...args) => {
   return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 };
 const BENT_STEPS = 14;
-function bentWay(points) {
+function bentWay(points, safe = null) {
   const n = points.length - 1;
-  const piece = k => {
+  const pieces = points.slice(0, -1).map((_, k) => {
     const p0 = points[Math.max(0, k - 1)], p1 = points[k], p2 = points[k + 1],
           p3 = points[Math.min(n, k + 2)];
-    return [
+    const line = [
+      p1, {x : p1.x + (p2.x - p1.x) / 3, y : p1.y + (p2.y - p1.y) / 3},
+      {x : p1.x + (p2.x - p1.x) * 2 / 3, y : p1.y + (p2.y - p1.y) * 2 / 3}, p2
+    ];
+    const curve = [
       p1, {x : p1.x + (p2.x - p0.x) / 6, y : p1.y + (p2.y - p0.y) / 6},
       {x : p2.x - (p3.x - p1.x) / 6, y : p2.y - (p3.y - p1.y) / 6}, p2
     ];
-  };
+    if (safe && n === 1) {
+      const dx = p2.x - p1.x, dy = p2.y - p1.y, length = Math.hypot(dx, dy) || 1;
+      const bow = Math.min(14, length * .16);
+      for (const i of [1, 2]) {
+        curve[i] = {x : line[i].x + dy / length * bow, y : line[i].y - dx / length * bow};
+      }
+    }
+    if (!safe)
+      return curve;
+    for (let blend = 1; blend > .02; blend /= 2) {
+      const candidate = curve.map((p, i) => ({
+                                    x : line[i].x + (p.x - line[i].x) * blend,
+                                    y : line[i].y + (p.y - line[i].y) * blend
+                                  }));
+      if (Array.from({length : 15}, (_, i) => safe(cubicAt(candidate, (i + 1) / 16)))
+              .every(Boolean))
+        return candidate;
+    }
+    return line;
+  });
+  const piece = k => pieces[k];
   const at = s => {
     const t = Math.min(n - 1e-9, Math.max(0, s * n)), k = Math.floor(t);
     return cubicAt(piece(k), t - k);
@@ -174,26 +199,6 @@ function bentWay(points) {
     }
   };
 }
-function spinalWay(from, to, kind) {
-  const M = BODY_FRAME.middle, C = BRAIN.cord;
-  const sign = Math.sign(from.y + to.y - 2 * M) || 1;
-  const lane = M + sign * (4 + kind * 2);
-  const direction = Math.sign(to.x - from.x) || 1;
-  const reach = Math.min(22, Math.abs(to.x - from.x) / 4);
-  if (Math.hypot(from.x - to.x, from.y - to.y) < 40)
-    return bentWay([ from, {x : (from.x + to.x) / 2, y : (from.y + to.y) / 2 - sign * 9}, to ]);
-  return bentWay([
-    from, {x : from.x + direction * reach, y : lane}, {x : to.x - direction * reach, y : lane}, to
-  ]);
-}
-function peripheralHub(point, kind) {
-  const side = Math.sign(point.y - BODY_FRAME.middle) || 1;
-  const x = point.x < BRAIN.cord.from
-                ? BRAIN.cerebrum.to - 12
-                : clamp(BRAIN.cord.from + Math.round((point.x - BRAIN.cord.from) / 54) * 54,
-                        BRAIN.cord.from, BRAIN.cord.to);
-  return {x, y : BODY_FRAME.middle + side * (12 + kind * 2)};
-}
 function bendsOf(doc, link) {
   const bends = link.wire.bends ?? [];
   return linkMirrored(doc, link) ? bends.map(p => ({x : p.x, y : 2 * BODY_FRAME.middle - p.y}))
@@ -216,7 +221,7 @@ const WIRE_KINDS = Object.freeze({
   inhibit : {colour : '#e8a2b5', arrow : 'aid-wire-arrow-inhibit'},
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
-const WIRE_WIDTH = Object.freeze({base : 1, spread : 2.2});
+const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
 const INNER_BOW = -10;
 const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
@@ -243,21 +248,14 @@ function wireBundles(state, centers) {
       continue;
     const kind = signalKind(a.center), bends = bendsOf(doc, link);
     const manual = link.wire.bundle;
-    const fromNeural = isRegion(from.organ) || from.organ?.type === 'brain',
-          toNeural = isRegion(to.organ) || to.organ?.type === 'brain';
-    const peripheral =
-        !manual && !bends.length && fromNeural !== toNeural ? (fromNeural ? 'out' : 'in') : null;
     const key = manual ? manual + ':' + linkMirrored(doc, link) + ':' + kind
-                : peripheral
-                    ? peripheral + ':' + (peripheral === 'in' ? from.key : to.key) + ':' + kind
-                    : from.key + '>' + to.key + '>' + kind + '>' + bendKey(bends);
+                       : from.key + '>' + to.key + '>' + kind + '>' + bendKey(bends);
     if (!bundles.has(key))
       bundles.set(key, {
         from,
         to,
         kind,
         manual,
-        peripheral,
         bends,
         mirrored : linkMirrored(doc, link),
         links : [],
@@ -265,8 +263,8 @@ function wireBundles(state, centers) {
       });
     bundles.get(key).links.push(link);
   }
-  const drawn = [...bundles.values() ].map(
-      ({from, to, kind, manual, peripheral, bends, mirrored, links, opacity}) => {
+  const drawn =
+      [...bundles.values() ].map(({from, to, kind, manual, bends, mirrored, links, opacity}) => {
         from = dockEnd(state, from, 'out');
         to = dockEnd(state, to, 'in');
         const sources = links.map(
@@ -277,23 +275,16 @@ function wireBundles(state, centers) {
           from = {...from, point : centroid(sources.map(a => a.point))};
           to = {...to, point : centroid(targets.map(a => a.point))};
         }
-        if (peripheral) {
-          const kindIndex = Object.keys(WIRE_KINDS).indexOf(kind);
-          if (peripheral === 'in')
-            to = {...to, point : peripheralHub(from.point, kindIndex)};
-          else
-            from = {...from, point : peripheralHub(to.point, kindIndex)};
-        }
-        const shared = manual || peripheral;
+        const route = !bends.length &&
+                      nerveRoute(doc, sites, from, to, Object.keys(WIRE_KINDS).indexOf(kind));
         const way = manual && bends.length > 1 ? bentWay(bends)
-                    : bends.length
-                        ? bentWay([ from.point, ...bends, to.point ])
-                        : spinalWay(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind));
+                    : bends.length             ? bentWay([ from.point, ...bends, to.point ])
+                                               : (route.way ??= bentWay(route.points, route.safe));
         const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
         const ends = links.map((link, k) => {
           const nodes = (id, anchor) => {
             const cells = branchNodes(state, id, anchor, centers);
-            return shared && !cells.length ? [ {id, ...anchor.point, overview : true} ] : cells;
+            return manual && !cells.length ? [ {id, ...anchor.point, overview : true} ] : cells;
           };
           return {
             link,
@@ -316,7 +307,6 @@ function wireBundles(state, centers) {
           bends,
           mirrored,
           manual,
-          peripheral,
           opacity,
           way,
           s0,
@@ -340,7 +330,7 @@ export function wireSvg(state, centers, foreground = false) {
     const {kind, ends, way, s0, s1, start, end, startDirection, endDirection} = bundle;
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
     const d = way.path(s0, s1);
-    const width = Math.min(4, Math.hypot(...ends.map(e => e.width)));
+    const width = Math.hypot(...ends.map(e => e.width));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id) ||
                                        state.multi?.has(e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
