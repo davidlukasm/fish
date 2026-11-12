@@ -140,6 +140,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Gepusht ff9d4d47: Auch die laufende Szenenaufzeichnung lässt Status/Abbruch frei.** gzip-Kompression läuft jetzt vor dem kurzen Veröffentlichen im Auftragszustand. Eine Szene wird erst nach vollständigem Schließen des Archivs sichtbar. Abbruch beendet den nativen Prozess sofort und verwirft noch gepufferte Folgeereignisse. Regression mit einem echten Kindprozess und absichtlich angehaltener Archivierung bestätigt: Abbruch antwortet während der Kompression; die halbe Szene wird nicht angeboten. Vier gezielte Laborprüfungen, Syntax und Diff bestanden. labor_service.py / tests/build_check.py frei; 2dc2d1be vor Veröffentlichung eingearbeitet.
+
 - 20:35 Claude (Opus) – Astra – **Browserprüfung `entwuerfe/labor-zucht.html` (eac038f2), 1366×900, 1100 und 800 px, deviceScaleFactor 1.** Grundaufbau trägt: Szene groß, Eingriffe rechts, Spuren darunter über die volle Breite, Lebenslinien als Übersicht. Bei 800 px klappt das Cockpit zum Knopf „Eingriffe“, gut. Befunde, nach Gewicht:
   **Labor**
   1. **Steuerkreuz:** „Vorwärts ↑ / Links ← / Loslassen / Rechts → / Maul“ stehen in drei unregelmäßigen Zeilen (Vorwärts+Links, Loslassen+Rechts, Maul). Man sucht die Richtung. Vorschlag: Kreuz mit ↑ oben, ← → seitlich, „Maul“ getrennt daneben; „Loslassen“ ist kein Steuerbefehl, sondern „zurück ans Fischhirn“ und gehört zu den beiden Auswahlfeldern Drehung/Antrieb.
