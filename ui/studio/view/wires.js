@@ -1,5 +1,5 @@
 import {nodeOpacity} from './layers.js';
-import {nerveRoute} from './wire_route.js';
+import {nerveRoute, organDock} from './wire_route.js';
 import {regionDock} from './region_layout.js';
 import {clamp} from '../../units.js';
 import {eyeLocation, nodeLocation, organLocation, showsNodes} from './places.js';
@@ -89,10 +89,13 @@ function endpointAnchor(doc, sites, id, centers) {
 function wireEnd(state, centers, wireId, linkId) {
   return endpointAnchor(state.document, state.sites, linkId, centers);
 }
-function dockEnd(state, anchor, direction) {
+function dockEnd(state, anchor, direction, towards = null) {
   if (!anchor.organ || !isRegion(anchor.organ))
-    return anchor;
-  return {...anchor, point : regionDock(state.document, state.sites, anchor.organ, direction)};
+    return towards ? {...anchor, point : organDock(anchor, towards)} : anchor;
+  return {
+    ...anchor,
+    point : regionDock(state.document, state.sites, anchor.organ, direction, towards)
+  };
 }
 function branchNodes(state, id, anchor, centers) {
   const organ = anchor.organ;
@@ -115,7 +118,14 @@ function joinAt(anchor, nodes, chord) {
   const reach = Math.max(...nodes.map(p => Math.hypot(p.x - anchor.x, p.y - anchor.y)));
   return Math.min(BRANCH.share, (reach + BRANCH.beyond) / Math.max(1, chord));
 }
-function branchCurve(node, join, towards, inward) {
+function branchCurve(node, join, towards, inward, confined = false) {
+  if (confined) {
+    const from = inward ? node : join, to = inward ? join : node;
+    return [
+      from, {x : from.x + (to.x - from.x) / 3, y : from.y + (to.y - from.y) / 3},
+      {x : from.x + (to.x - from.x) * 2 / 3, y : from.y + (to.y - from.y) * 2 / 3}, to
+    ];
+  }
   const pull = Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull;
   const guide = {
     x : join.x + (inward ? -1 : 1) * towards.x * pull,
@@ -265,12 +275,15 @@ function wireBundles(state, centers) {
   }
   const drawn =
       [...bundles.values() ].map(({from, to, kind, manual, bends, mirrored, links, opacity}) => {
-        from = dockEnd(state, from, 'out');
-        to = dockEnd(state, to, 'in');
-        const sources = links.map(
-            link => dockEnd(state, wireEnd(state, centers, link.wire.from, link.from), 'out'));
+        const spatial = !manual && !bends.length, a = from.point, b = to.point;
+        from = dockEnd(state, from, 'out', spatial ? b : null);
+        to = dockEnd(state, to, 'in', spatial ? a : null);
+        const sources =
+            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.from, link.from),
+                                      'out', spatial ? b : null));
         const targets =
-            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.to, link.to), 'in'));
+            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.to, link.to), 'in',
+                                      spatial ? a : null));
         if (manual) {
           from = {...from, point : centroid(sources.map(a => a.point))};
           to = {...to, point : centroid(targets.map(a => a.point))};
@@ -362,9 +375,10 @@ export function wireSvg(state, centers, foreground = false) {
     for (const e of ends)
       for (const inward of [true, false]) {
         const nodes = inward ? e.starts : e.arrives;
+        const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
         for (const node of nodes) {
-          const d = inward ? branchPath(node, start, startDirection, true)
-                           : branchPath(node, end, endDirection, false);
+          const d = inward ? branchPath(node, start, startDirection, true, confined)
+                           : branchPath(node, end, endDirection, false, confined);
           const key = Number(inward) + ':' + d, section = inward ? 0 : 2;
           const branch = branchesByPath.get(key) ??
                          {d, section, edges : new Set(), width : 0, opacity : 0, chosen : false};

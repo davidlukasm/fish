@@ -1203,7 +1203,7 @@
 .aid-hidden-passages path{fill:none;stroke:var(--aid-gut);stroke-width:2;stroke-dasharray:5 5;opacity:.45;pointer-events:none}
 .aid-brain-fissure{stroke-width:1.1;opacity:.6}
 .aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
-.aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round}
+.aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round;vector-effect:none}
 .aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink{opacity:1}
 
 .aid-anatomy-handles g{cursor:grab;pointer-events:all}
@@ -1227,4 +1227,4 @@
 .aid-region-port-branch{fill:none;stroke:var(--circuit);stroke-width:1;opacity:.45}.aid-region-port{cursor:crosshair;color:var(--circuit)}.aid-region-port.filled rect{fill:#315b55}.aid-circuit-tools{display:flex;justify-content:flex-end}.aid-circuit-tools svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}.aid-circuit-tools [aria-pressed=true]{background:#45665b}
 .aid-muscle-tissue,.aid-pigment-palette{display:block;width:100%;height:auto;touch-action:none}.aid-tissue-sheath{fill:#382f35;stroke:#a78689;stroke-width:1.5}.aid-tissue-fibre{fill:none;stroke-width:1;stroke-linecap:round;opacity:.9}.aid-tissue-fibre.reserve{opacity:.4}.aid-tissue-partition{fill:none;stroke:#e5c283;stroke-width:1.5;stroke-dasharray:3 3}.aid-tissue-projection{fill:none;stroke:#a78689;stroke-width:1;opacity:.5}.aid-tissue-curve-hit{fill:none;stroke:transparent;stroke-width:18;cursor:move}.aid-tissue-clock{fill:none;stroke:#a78689;stroke-width:1.2}.aid-pigment-composition{fill:none;stroke-width:13;pointer-events:none}.aid-pigment-composition circle{stroke:#24454b}.aid-pigment-palette .aid-pigment-wheel{width:300px;max-width:none}.aid-operculum{fill:none;stroke:#a2c0bc;stroke-width:1.7;stroke-opacity:.65}
 
-.aid-wire-sheath{fill:none;stroke-opacity:.12;stroke-linecap:round;pointer-events:none;vector-effect:non-scaling-stroke}
+.aid-wire-sheath{fill:none;stroke-opacity:.12;stroke-linecap:round;pointer-events:none}

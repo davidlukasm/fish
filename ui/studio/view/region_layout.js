@@ -190,8 +190,24 @@ export function localPoint(G, x, y) {
   return G.side ? {x : G.x + x * G.width, y : G.y - G.side * y * G.height}
                 : {x : G.x + y * G.width, y : G.y + x * G.height};
 }
-export function regionDock(doc, sites, organ, direction) {
+export function regionDock(doc, sites, organ, direction, towards = null) {
   const G = regionGeometry(doc, sites, organ);
+  if (towards && Math.hypot(towards.x - G.x, towards.y - G.y) > 1) {
+    const d = {x : towards.x - G.x, y : towards.y - G.y}, rim = regionRim(G);
+    const cross = (a, b) => a.x * b.y - a.y * b.x;
+    let distance = Infinity;
+    for (let i = 0; i < rim.length; i++) {
+      const a = {x : rim[i].x - G.x, y : rim[i].y - G.y}, b = rim[(i + 1) % rim.length],
+            edge = {x : b.x - rim[i].x, y : b.y - rim[i].y}, denominator = cross(d, edge);
+      if (Math.abs(denominator) < 1e-9)
+        continue;
+      const t = cross(a, edge) / denominator, u = cross(a, d) / denominator;
+      if (t > 0 && u >= 0 && u <= 1)
+        distance = Math.min(distance, t);
+    }
+    if (Number.isFinite(distance))
+      return {x : G.x + d.x * distance, y : G.y + d.y * distance};
+  }
   return localPoint(G, 0, direction === 'in' ? -.46 : .46);
 }
 function rimWidths(G) {

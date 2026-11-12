@@ -17,6 +17,14 @@ const SHAPES = Object.freeze({
   sperm : [ 26, 11 ],
   gut : [ 37, 20 ]
 });
+export function organDock(anchor, towards) {
+  const shape = SHAPES[anchor.organ?.type], p = anchor.point;
+  if (!shape)
+    return p;
+  const dx = towards.x - p.x, dy = towards.y - p.y,
+        radius = Math.hypot(dx / shape[0], dy / shape[1]);
+  return radius > 1 ? {x : p.x + dx / radius, y : p.y + dy / radius} : p;
+}
 const cached = new WeakMap();
 function field(doc, sites) {
   const old = cached.get(doc);
