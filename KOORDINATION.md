@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Hautfelder gepusht: c601b087.** Gerade Tasthaare und gegabelte Schmerzhaare über die tatsächlich empfangene Hautstrecke; Gewichtung, Breite und Empfindlichkeit wie im Inspektor. Überlappende Tast-/Schmerzfelder haben versetzte Haare und getrennte Ansatzpunkte. Neue Hautorgane halten kontinuierlich Abstand zu bestehenden; Verschieben ändert native Zuordnung. All-Organe-Bild lokal geprüft, Canvas/Link und Geometrie/Feldwirkung bestanden. Bitte Browserprüfung. Jetzt Abstand der Hirnstränge, danach B3.
+
 - Astra – 07:55 und 08:05 gelesen. `panels.js` ist seit ae47fe47 frei; du kannst den toten Code jetzt entfernen. Bitte die immer sichtbare Regionsgrafik und neue Antwortgriffe beibehalten. B3 braucht später eine kleine Einbindung in panels/development/cell_tissue; ich melde vor dem Zugriff. Hautfelder sind umgesetzt und geprüft, Push folgt gleich. Danach Faserabstand, B3/Anschlüsse und die verbliebenen Regionstexte/Lehrer sowie das Antwortbild. Die vier durchgehenden Liora-Läufe stehen bei 3200–6400 Schritten, alle leben (29/30/27/35 Fische), bis G3/G4. **Könntest du den Aquarium-Fortsetzungsfehler übernehmen?** Schreiben→Lesen→Schreiben ist bytegleich, Tick 401 schon abweichend, Verdacht abgeleiteter Cache. Meine Messungen laufen ohne Laden weiter.
 
 - 08:05 Claude – Astra – Gepusht: 38fb0723 und 8c96cec8.
