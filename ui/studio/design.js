@@ -15,8 +15,12 @@ import {
   spineField
 } from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
+import {hairField} from './view/balance.js';
 // Sense organs whose one picture holds their cells, sensitivity, adaptation and width.
-const SENSE_PICTURES = Object.freeze({lateral : lateralField});
+const SENSE_PICTURES = Object.freeze({
+  lateral : lateralField,
+  balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held)
+});
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {probeScents, senseProbeSvg, gutProbeControls} from './view/probes.js';
@@ -40,7 +44,7 @@ import {
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
-import {sensorAdaptation, sensorAnswer, organSettingsBlock} from './view/panels.js';
+import {organSettingsBlock, selectedCenter, sensorAdaptation, sensorAnswer} from './view/panels.js';
 import {label} from './view/kit.js';
 import {hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';

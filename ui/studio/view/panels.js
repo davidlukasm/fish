@@ -152,7 +152,7 @@ const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
-const WHOLE_PICTURES = Object.freeze([ 'lateral', 'touch', 'pain', 'nose', 'barbels' ]);
+const WHOLE_PICTURES = Object.freeze([ 'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance' ]);
 // Barbels that only touch have no scent map to hold their marks.
 const wholePicture = (organ, center) =>
     WHOLE_PICTURES.includes(organ.type) &&
@@ -288,7 +288,7 @@ function centerSide(state, center) {
              .join('') +
          '</div>';
 }
-const selectedCenter = (state, organ) =>
+export const selectedCenter = (state, organ) =>
     chosenCenter(state.document, state.selected, state.visionProfile) ?? organ.centers[0] ?? null;
 function centerTabs(state, organ) {
   if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types)

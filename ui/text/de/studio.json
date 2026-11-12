@@ -975,7 +975,8 @@
       "headOther": "Kopf runter",
       "flankOther": "linke Seite unten",
       "tailOther": "Kopf hoch"
-    }
+    },
+    "sensitivityHandle": "Ziehen: ein längeres Härchen spürt schon eine kleinere Neigung"
   },
   "lateral": {
     "title": "Strömung",

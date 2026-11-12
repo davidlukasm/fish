@@ -105,7 +105,6 @@
 .aid-hair-handle{cursor:grab}
 .aid-hair-pose-fish{fill:#cfe2ea24;stroke:var(--aid-fish-line);stroke-width:8}
 .aid-hair-pose.lower .aid-hair-pose-fish{stroke:#f1ecdc}
-.aid-hair-pose text{fill:#cfe2ea;font-size:11px}
 .aid-neural-center{cursor:grab}
 .aid-neural-body{opacity:.25}
 .aid-neural-center.aid-pulse-active .aid-neural-body{opacity:.92;stroke:#eff3bc;stroke-width:2}
