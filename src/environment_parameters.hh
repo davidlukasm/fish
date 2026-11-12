@@ -5,7 +5,7 @@
 #include "protocol_schema.hh"
 #include "small_animals.hh"
 namespace fishsim {
-inline constexpr double DEFAULT_BINOCULAR_ANGLE = .05, DEFAULT_ADAPTATION_ANGLE = 15,
+inline constexpr double DEFAULT_BINOCULAR_ANGLE = .05,
                         DEFAULT_EYE_OFFSET = eye_place::default_offset;
 struct EnvironmentParameters : FoodWebParameters {
   double odor_freshness(double decay_age) const {
@@ -19,8 +19,7 @@ struct EnvironmentParameters : FoodWebParameters {
   double vision_range = 128;
   double vision_inhibition = 1;
   double vision_opponent = 1;
-  double vision_ambient = .6, vision_adaptation = 1,
-         vision_adaptation_angle = DEFAULT_ADAPTATION_ANGLE;
+  double vision_ambient = .6;
   // Neutral water leaves colour-opponent cells silent on open water, so plants and food keep their
   // hue into the distance; a tinted veil would drive the cells tuned to its colour instead.
   double vision_water_red = .30, vision_water_green = .30, vision_water_blue = .30;

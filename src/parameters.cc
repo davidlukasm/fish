@@ -80,8 +80,6 @@ public:
       {"vision_inhibition", &env.vision_inhibition, 0, 2, false, "vision", 0.1, false},
       {"vision_opponent", &env.vision_opponent, 0, 1, false, "vision", 0.01, false},
       {"vision_ambient", &env.vision_ambient, 0, 2, false, "vision", 0.1, false},
-      {"vision_adaptation", &env.vision_adaptation, 0, 1, false, "vision", 0.01, false},
-      {"vision_adaptation_angle", &env.vision_adaptation_angle, 1, 90, false, "vision", 0.1, false},
       {"vision_water_red", &env.vision_water_red, 0, 1, false, "vision", 0.01, false},
       {"vision_water_green", &env.vision_water_green, 0, 1, false, "vision", 0.01, false},
       {"vision_water_blue", &env.vision_water_blue, 0, 1, false, "vision", 0.01, false},

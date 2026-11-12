@@ -83,7 +83,7 @@ struct BrainInterface {
   std::array<std::vector<std::uint32_t>, 2> eye_receptors;
   std::array<std::vector<std::pair<double, std::uint32_t>>, EYES> retinal_neighbors;
   static constexpr int EYE_VIEWS = 3, SINGLE_EYE = 2;
-  std::array<std::array<std::vector<double>, EYE_VIEWS>, EYES> retinal_knots;
+  std::array<std::vector<double>, EYE_VIEWS> retinal_knots;
   std::array<float, ORGAN_PORTS> motor_counts{};
   std::array<double, 2> suction_sides{}, bite_sides{};
   std::array<double, ORGAN_PORTS> capacities{};

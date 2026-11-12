@@ -14,7 +14,5 @@
  "schub": "Schub",
  "ruhephase": "Ruhephase",
  "anteilDerNachkommenMit": "Anteil der Nachkommen mit verstärkter Mutation während dieses Schubs.",
- "angle": "±{n}°",
- "perEye": "je Auge · ±{n}°",
  "factor": "{n} ×"
 }

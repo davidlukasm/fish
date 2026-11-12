@@ -3,6 +3,7 @@
 #include "physiology.hh"
 #include "ecology_internal.hh"
 #include "body_plan.hh"
+#include "perception.hh"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -86,6 +87,43 @@ void start_fish_eats_nearby_food(const Genome &g) {
       check(erased ? individual(w, id).body.nutrition == 0 : individual(w, id).body.nutrition > 1,
             "young and adult fish eat with acquired weights; erasing only weights removes feeding");
     }
+}
+// A morsel stands out from open water by far less than its own brightness. The eye compares each
+// cell's field with a wider surround, and the cell's threshold is the contrast it needs: the
+// morsel reaches the brain from as far as the fish sees clearly, and only through the eye it lies
+// before.
+void eye_reports_a_morsel_against_open_water(const Genome &g) {
+  constexpr double X = 300, Y = 205, BEARING = .6, FOOD = 80, SILENT = 1e-6, CLEAR = .5;
+  for (double distance : {20., 40., 80.}) {
+    Ecosystem w(SEED);
+    w.resize(615, 410);
+    w.safety = false;
+    w.set_parameter("energy_supply", 0);
+    w.field.clear_food();
+    const auto &b = adult(w, g, X, Y).body;
+    const auto &binding = b.active_interface(g);
+    const auto strongest = [&] {
+      const auto seen = visual_stimuli(b, g, w.field);
+      std::array<double, EYES> answer{};
+      for (std::size_t i = 0; i < binding.sensory.size() && i < seen.size(); ++i) {
+        const auto &r = binding.sensory[i];
+        if (r.visual() && !r.proximity)
+          answer[r.lateral >= 0] = std::max(
+              answer[r.lateral >= 0], double(sensory_response(seen[i], r.response_threshold)));
+      }
+      return answer;
+    };
+    const auto open_water = strongest();
+    check(open_water[0] < SILENT && open_water[1] < SILENT, "open water leaves the eyes silent");
+    Food food{X + distance * std::cos(BEARING), Y + distance * std::sin(BEARING), 0, 0, 0, FOOD};
+    food.initial_energy = FOOD;
+    food.color = FEED_COLOR;
+    food.radius = food_radius(FOOD);
+    w.field.append_fragment(food);
+    const auto seen = strongest();
+    check(seen[1] > CLEAR && seen[0] < SILENT,
+          "a morsel beside the fish is seen clearly, and only by the eye on its side");
+  }
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
@@ -620,6 +658,7 @@ int main() {
     worker_counts_preserve_the_simulation(g);
     completed_anatomy_is_admitted_before_runtime_allocation(g);
     start_fish_eats_nearby_food(g);
+    eye_reports_a_morsel_against_open_water(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
     checkpoint_after_death(g);

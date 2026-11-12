@@ -2,6 +2,7 @@
 #include "sight.hh"
 #include "body_plan.hh"
 #include "physiology.hh"
+#include "receptor_tuning.hh"
 #include <numeric>
 #include <limits>
 namespace fishsim {
@@ -13,6 +14,17 @@ constexpr double KNOT_SPACING = PI / 18, BINOCULAR_SHARE = .5;
 constexpr int PROXIMITY_STEPS = 7, PROXIMITY_BANKS = PROXIMITY_STEPS + 1;
 constexpr double NEAR_RANGE = 8, NEAR_SPAN = 16;
 constexpr std::size_t INSPECTED_OBJECTS = 3;
+// A cell compares its field with a surround reaching this many of its own field widths to either
+// side. A surround no wider than the field would hold the same light and cancel what the cell sees.
+constexpr double SURROUND_FIELDS = 3;
+// The contrast against the surround is reported on the scale of the largest threshold. With the
+// response curve x / (x + threshold), a cell then answers half where its field is brighter (or,
+// for its dark share, darker) than the surround by threshold / largest threshold: its threshold
+// is its contrast sensitivity.
+constexpr double CONTRAST_SCALE = tuning::threshold_min * tuning::threshold_range;
+double surround_reach(double left, double right) {
+  return SURROUND_FIELDS * (right - left);
+}
 int proximity_bank(double range) {
   return std::min(PROXIMITY_STEPS - 1, int(range * PROXIMITY_STEPS));
 }
@@ -120,7 +132,7 @@ double retinal_area(const RetinalField &r, double left, double right) {
 }
 void fill_retinal_angles(const std::vector<RetinalField> &fields,
                          const std::vector<VisualObject> &objects, int side,
-                         double adaptation_angle, std::vector<double> &angles) {
+                         std::vector<double> &angles) {
   angles.clear();
   double left = 0, right = 0;
   for (const auto &r : fields) {
@@ -130,11 +142,10 @@ void fill_retinal_angles(const std::vector<RetinalField> &fields,
   }
   if (angles.empty())
     return;
-  if (adaptation_angle > 0) {
-    const double surround = radians(adaptation_angle);
-    for (const auto &r : fields)
-      angles.insert(angles.end(),
-                    {std::max(left, r.angle - surround), std::min(right, r.angle + surround)});
+  for (const auto &r : fields) {
+    const double surround = surround_reach(r.left, r.right);
+    angles.insert(angles.end(),
+                  {std::max(left, r.angle - surround), std::min(right, r.angle + surround)});
   }
   const int n = std::max(1, int(std::ceil((right - left) / KNOT_SPACING)));
   for (int i = 0; i <= n; ++i)
@@ -187,7 +198,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
       return std::size_t(std::lower_bound(knots.begin(), knots.end(), angle) - knots.begin());
     };
     const auto left = at(field.left), middle = at(field.angle), right = at(field.right);
-    const double surround = radians(world.env().vision_adaptation_angle);
+    const double surround = surround_reach(field.left, field.right);
     const auto sl = at(std::max(knots.front(), field.angle - surround)),
                sr = at(std::min(knots.back(), field.angle + surround));
     Color channels{}, darkening{}, received{}, surrounding{};
@@ -213,16 +224,12 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         integrated += (other - integrated) * blend;
       }
       double m = std::max(0., integrated / width);
-      if (!r.proximity && world.env().vision_adaptation > 0 && sr > sl) {
+      if (!r.proximity && sr > sl) {
         const double baseline = surrounding[c] =
-                         (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]),
-                     adapted = r.response_threshold * std::max(0., m - baseline) /
-                               (baseline + r.response_threshold),
-                     blend = world.env().vision_adaptation;
-        // Unadapted light only ever brightens, so darkening is seen only through adaptation.
-        darkening[c] = blend * r.response_threshold * std::max(0., baseline - m) /
-                       (baseline + r.response_threshold);
-        m = (1 - blend) * m + blend * adapted;
+            (sum[sr][c] - sum[sl][c]) / (knots[sr] - knots[sl]);
+        darkening[c] =
+            CONTRAST_SCALE * std::max(0., baseline - m) / (baseline + r.response_threshold);
+        m = CONTRAST_SCALE * std::max(0., m - baseline) / (baseline + r.response_threshold);
       }
       channels[c] = m;
     }
@@ -249,7 +256,7 @@ void integrate_retinal_receptors(const BrainInterface &binding,
         continue;
       // A bright share answers the light an object sends; a dark share answers how much darker
       // than its surround the object leaves the field, as the cell itself does.
-      const double shading = world.env().vision_adaptation * r.response_threshold;
+      const double shading = CONTRAST_SCALE;
       std::vector<double> light(objects.size());
       for (const auto &v : cache.visible) {
         const double area = retinal_area(field, knots[v.band], knots[v.band + 1]) / width;
@@ -285,12 +292,11 @@ void integrate_retinal_receptors(const BrainInterface &binding,
 
 }
 void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float> &values,
-                               double strength, double surround) {
+                               double strength) {
   if (strength <= 0)
     return;
   thread_local std::vector<double> prefix;
   thread_local std::vector<float> original;
-  const double radius = radians(std::max(0., surround));
   for (int side = 0; side < EYES; ++side) {
     const auto &cells = binding.retinal_neighbors[side];
     if (cells.empty())
@@ -301,13 +307,17 @@ void inhibit_retinal_receptors(const BrainInterface &binding, std::vector<float>
       original.push_back(values[c.second]);
       prefix.push_back(prefix.back() + values[c.second]);
     }
-    std::size_t left = 0, right = 0;
+    const auto before = [](const auto &cell, double bearing) { return cell.first < bearing; };
+    const auto beyond = [](double bearing, const auto &cell) { return bearing < cell.first; };
     for (std::size_t k = 0; k < cells.size(); ++k) {
-      const double bearing = cells[k].first;
-      while (left < cells.size() && cells[left].first < bearing - radius)
-        ++left;
-      while (right < cells.size() && cells[right].first <= bearing + radius)
-        ++right;
+      const auto &r = binding.sensory[cells[k].second];
+      const double bearing = cells[k].first, radius = surround_reach(r.view_left, r.view_right);
+      const auto left = std::size_t(
+                     std::lower_bound(cells.begin(), cells.end(), bearing - radius, before) -
+                     cells.begin()),
+                 right = std::size_t(
+                     std::upper_bound(cells.begin(), cells.end(), bearing + radius, beyond) -
+                     cells.begin());
       const double mean = (prefix[right] - prefix[left]) / double(right - left);
       values[cells[k].second] = float(std::max(0., original[k] - strength * mean));
     }
@@ -349,19 +359,17 @@ void prepare_retinal_cache(BrainInterface &binding) {
   }
   for (auto &cells : binding.retinal_neighbors)
     std::sort(cells.begin(), cells.end());
-  for (int adapted = 0; adapted < 2; ++adapted)
-    for (int eye = 0; eye < BrainInterface::EYE_VIEWS; ++eye) {
-      std::vector<RetinalField> fields;
-      for (const auto &ray : binding.visual[0]) {
-        const auto &r = binding.sensory[ray.second];
-        if (eye != BrainInterface::SINGLE_EYE && std::abs(r.angle) >= DEFAULT_BINOCULAR_ANGLE &&
-            (r.lateral >= 0) != (eye == 1))
-          continue;
-        fields.push_back({ray.second, r.view_left, r.angle, r.view_right, 1});
-      }
-      fill_retinal_angles(fields, {}, eye, adapted ? DEFAULT_ADAPTATION_ANGLE : 0,
-                          binding.retinal_knots[adapted][eye]);
+  for (int eye = 0; eye < BrainInterface::EYE_VIEWS; ++eye) {
+    std::vector<RetinalField> fields;
+    for (const auto &ray : binding.visual[0]) {
+      const auto &r = binding.sensory[ray.second];
+      if (eye != BrainInterface::SINGLE_EYE && std::abs(r.angle) >= DEFAULT_BINOCULAR_ANGLE &&
+          (r.lateral >= 0) != (eye == 1))
+        continue;
+      fields.push_back({ray.second, r.view_left, r.angle, r.view_right, 1});
     }
+    fill_retinal_angles(fields, {}, eye, binding.retinal_knots[eye]);
+  }
 }
 
 std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, const Field &world,
@@ -432,10 +440,8 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
     if (eye.exposure <= 0)
       continue;
     auto &knots = cache.knots;
-    const auto &fixed = binding.retinal_knots[world.env().vision_adaptation > 0]
-                                             [paired ? side : BrainInterface::SINGLE_EYE];
-    if (!fixed.empty() && world.env().vision_binocular_angle == DEFAULT_BINOCULAR_ANGLE &&
-        world.env().vision_adaptation_angle == DEFAULT_ADAPTATION_ANGLE) {
+    const auto &fixed = binding.retinal_knots[paired ? side : BrainInterface::SINGLE_EYE];
+    if (!fixed.empty() && world.env().vision_binocular_angle == DEFAULT_BINOCULAR_ANGLE) {
       auto &edges = cache.object_edges;
       edges.clear();
       for (const auto &o : objects)
@@ -451,9 +457,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
       std::merge(fixed.begin(), fixed.end(), edges.begin(), edges.end(), std::back_inserter(knots));
       knots.erase(std::unique(knots.begin(), knots.end()), knots.end());
     } else {
-      fill_retinal_angles(
-          fields, objects, side,
-          world.env().vision_adaptation > 0 ? world.env().vision_adaptation_angle : 0, knots);
+      fill_retinal_angles(fields, objects, side, knots);
     }
     if (knots.size() < 2)
       continue;
@@ -737,8 +741,7 @@ std::vector<float> retinal_vision(const Body &b, const BrainInterface &binding, 
                                     ? &inspected->perception_
                                     : nullptr);
   }
-  inhibit_retinal_receptors(binding, values, world.env().vision_inhibition,
-                            world.env().vision_adaptation_angle);
+  inhibit_retinal_receptors(binding, values, world.env().vision_inhibition);
   if (inspected && diagnostic) {
     auto &samples = inspected->perception_.visual_samples;
     std::sort(samples.begin(), samples.end(),

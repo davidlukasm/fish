@@ -2,7 +2,7 @@ import {formatNumber, t, textArea} from './strings.js';
 import {updateWorldState} from './world.js';
 import {holdSlider, movingSliders, sliderHold} from './controller.js';
 import {el, text} from './dom.js';
-import {FULL_TURN, hexColor, hexOf, PERCENT, radians} from './units.js';
+import {hexColor, hexOf, PERCENT} from './units.js';
 import {RGB} from './schema.js';
 import {waterVeil} from './water_display.js';
 import {command} from './session.js';
@@ -90,24 +90,6 @@ function filterParameters() {
       group.open = true;
   }
 }
-const VISION_DIAGRAM = Object.freeze({c : 60, r : 44});
-function visionDiagram(parameters) {
-  const {c, r} = VISION_DIAGRAM, sector = angle => {
-    if (angle >= FULL_TURN)
-      return `M${c} ${c - r}a${r} ${r} 0 1 1 0 ${2 * r}a${r} ${r} 0 1 1 0 ${- 2 * r}`;
-    const half = radians(angle / 2), x = c + r * Math.cos(half), dy = r * Math.sin(half);
-    return `M${c} ${c}L${x} ${c - dy}A${r} ${r} 0 ${Number(angle > FULL_TURN / 2)} 1 ${x} ${
-        c + dy}Z`;
-  };
-  const adaptation = 2 * parameters.vision_adaptation_angle;
-  el('vision-adaptation-sector').setAttribute('d', sector(adaptation));
-  el('vision-inhibition-sector').setAttribute('d', sector(adaptation));
-  text('vision-adaptation-value',
-       t('world_parameters.angle', {n : parameters.vision_adaptation_angle}));
-  text('vision-inhibition-value',
-       t('world_parameters.perEye', {n : parameters.vision_adaptation_angle}));
-}
-
 export function showWorld(f) {
   el('minimum-population').disabled = !!f.historical;
   const signature = JSON.stringify((f.parameter_info || []).map(p => p.name));
@@ -161,7 +143,6 @@ export function showWorld(f) {
     for (const [channel, i] of Object.entries(RGB))
       await command('parameter', {name : 'vision_water_' + channel, value : channels[i]});
   };
-  visionDiagram(f.parameters);
   for (const [name, input] of worldState.parameterInputs) {
     input.disabled = !!f.historical;
     if (document.activeElement !== input) {
