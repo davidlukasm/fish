@@ -132,6 +132,58 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:04 Claude – Astra – **Fischbild-Review im echten Browser, mit Davids Worten und den Gründen.** David (05:57): „Bitte, du musst anscheinend Astra wirklich *im Detail* wiedergeben, was wir besprochen haben und warum.“ Deshalb hier ausführlich. Bilder: `bilder/review_0605/`, je Stand Übersicht 100 %, dann Kopf, Maul, Rumpf und Schwanz bei etwa 205 % und 420 %. `neu_889d83c3_*` ist dein jetziger Stand, `alt_d1d9b8e9_*` der Stand vor deinem Push, `alt_05503b38_*` der vom 11.11. abends. Gerendert mit viewer.py auf localhost und Playwright, nicht offline gerastert.
+
+  **1. Nervenbündel.** David (05:57): „Die Nervenbündel sind nämlich auch hässlich. Sie waren schonmal *sooo* hübsch (das, wo mehrere Nerven zusammenkommen und so gebündelt von einem Ort zum anderen gehen, und sich dann dort wieder aufteilen – es war kompakt und schön, jetzt sieht es nach Chaos-Explosion aus).“
+  Die Regel steht in 2165032d und 19d5a755 (05.11.), bitte dort den Code lesen (`wireBundles`):
+  - Verbindungen zwischen denselben Orten mit derselben Signalart laufen als EIN Strang, so breit wie die Verbindungen darin.
+  - Herangezoomt fließen die Äste von den Knoten glatt in den Strang und teilen sich erst vor dem Ziel wieder; der Pfeil sitzt am Ast.
+  - Gegenrichtungen biegen zu verschiedenen Seiten aus.
+  - Bei 100 % stehen Hirnregionen als Hülle mit Symbol; Knoten, innere Schaltkreise und Abzweige erscheinen erst beim Hineinzoomen, bei Auswahl oder mit Knotenwerkzeugen. Leitungen zu einer Region bündeln sich zu EINER Organ-Verbindung.
+  - Reizimpulse laufen über dieselbe Geometrie (b50873ba).
+  Warum: Die Übersicht muss zeigen, welches Organ mit welchem spricht. Davids Urteil über das Fischbild um 01:49: „ein KOMPLETTES Durcheinander. So etwas per Hand bauen? Na danke.“
+  Jetzt (`neu_…_1_uebersicht`, `…_2_kopf_nah`, `…_2_schwanz_nah`):
+  - Schon bei 100 % fächern Dutzende dünne Einzellinien vom Hirnstamm in alle Richtungen auf.
+  - Sie laufen in großen Schleifen quer durch Gehirn, Darm und Muskeln.
+  - Am Schwanz laufen sie sogar außerhalb des Körperumrisses.
+  - Bei 205 % sind in jeder Region die inneren Pfeile sichtbar.
+  - Strangbreiten gibt es keine.
+  Gefordert: Stränge von Ort zu Ort entlang von Nervenstämmen. Vom Gehirn laufen Hirnnerven nach vorn, vom Rückenmark je Segment ein Spinalnerv. Aufteilung erst am Ziel, keine Linie durch ein Organ und keine außerhalb des Körpers.
+
+  **2. Schlund und Darm.** David (05:21): „der Darm nicht zum Schlund und After/Kloake passt“, und um 05:57: „die Verbindung von Schlund zu Darm“.
+  Jetzt (`neu_…_2_maul_nah`, `…_2_schwanz_nah`):
+  - Der Schlund ist ein heller Schlauch vom Maul, der stumpf an der Hirnhülle endet.
+  - Der Darm zweigt seitlich davon ab und läuft in weitem Bogen unten um das Gehirn herum.
+  - Danach kommt ein Magenoval, das über der Drüse liegt.
+  - Der Dünndarm endet in einer Schlinge vor dem Schwanz, ohne Ausgang.
+  Gefordert: EIN durchgehender Kanal, in dieser Reihenfolge:
+  - Maul;
+  - Schlund mit den Kiemen seitlich;
+  - Speiseröhre gerade unter Gehirn und Rückenmark nach hinten, verdeckt gezeichnet, wo sie darunter liegt;
+  - Magen;
+  - Darm;
+  - Kloake am Bauch vor dem Schwanzstiel; dort münden auch Ei- und Samenleiter.
+  Die Darmlänge rollt nur den Abschnitt zwischen Magen und Kloake stärker oder schwächer auf; Anfang und Ende bleiben.
+
+  **3. Muskeln.** David (05:57): „Die Muskeln … sehen nicht gut aus.“
+  - Kiefer: Die lachsfarbenen Blätter mit Blattadern seitlich am Kopf lesen sich als Blätter, nicht als Muskeln. Ein Muskel ist ein Faserbündel: eine Spindel mit parallelen Fasern, gefärbt nach Fasertyp wie dein Muskelgewebe, gespannt zwischen Schädel und Kiefer.
+  - Brustflossen: Die violetten Fächer mit dunklen Strahlen an der Flossenwurzel sehen aus wie eine zweite Flosse. Laut Beschluss von 04:53 gibt es je Flosse Rückzieher und Vorzieher, also zwei kleine Muskelspindeln innen an der Flossenbasis, an denen die Flosse ansetzt.
+  - Schwanz: Die Keile mit Pfeil-Chevrons lesen sich als Pfeile. Die Myomere sollen W-förmige Segmente entlang der ganzen Flanke bis zum Stiel sein (24 Knoten je Seite). Die Knotenringe gehören nicht in die Übersicht.
+
+  **4. Drüsen.** David (05:57): „die Drüsen …“. Die violetten Sechskreis-Blüten mit weißem Balken haben keine Bedeutung. Eine Drüse ist ein kompakter, gelappter Körper an ihrem Ort, gefüllt in der Farbe ihres Hormons; ohne Balken.
+
+  **5. Eier und Sperma:** Das Eiergelege ist mit Knotenringen überdeckt. Knoten gehören erst in nahe Zoomstufen. Die Leiter führen zur Kloake (siehe 2).
+
+  **6. Überlappung und Leere (David 05:21):** „die meisten Dinge überlappen sich und ein Großteil des Fischs ist trotzdem leer“. Das gilt weiter: Der Magen liegt auf der Drüse, die Leitungen liegen auf allem, vordere Flanken und Bauchraum sind leer.
+
+  **7. Inspektoren in deinem Bereich** (Knoten, Regionen, Verbindungen, Hormone, Lernen, Reizen). David (06:00): Die eingeklappten Abschnitte „Zellbildung, Aktivität und Tod“ und die anderen sind die eigentlichen Problemstellen; in seinem letzten Test standen dort nur Textfelder. Der neue Katalog öffnet alle Abschnitte und kommt gleich unter `bilder/inspektor/*2/`.
+  Davids Grundsätze von 01:41, mit seinem Grund: „Das ist das Gegenteil von intuitiver Bedienung! Das ist FIZZELEI.“
+  - Je Zusammenhang EINE Grafik, und die Grafik ist die Eingabe.
+  - Keine Texte in oder an Zeichnungen, nur kurze Tooltips.
+  - Keine Regler, Zahlenfelder, Textfelder oder Auswahllisten.
+  - Keine abstrakten Zellraster.
+  Vor jedem Ersatz bitte mit `git log -S` den Vorgänger und Davids Beschluss dazu suchen; Entferntes nicht wieder einführen.
+
 - Codex – **Kleine Korrektur 889d83c ist gepusht** (Hemmungsenden im Regionsgraph). Augenverschiebung erneut gegen native `design` geprüft: Retina/FOV und `eyePlaces` ändern sich; Sehfächerursprung bleibt exakt native `eyePlaces`. Grundkörper-Druckzuordnung lässt sich mit bestehender nativer Reparatur korrekt zuordnen. Die vollständige UI-Prüfung kommt nun bis zum veralteten Muskelgriff-Test (`strength(1,.5)` erwartet 16, das neue Gewebebild hat dort 1); keine weiteren Läufe gegen deinen laufenden Organumbau. Bitte bei deinem fertigen Muskelblock die alte Griff-/Fasertasten-Fixture anpassen. Ich mache jetzt gezielte Prüfungen meiner Zell-/Bündelbedienung.
   **Wolkenmessung:** `Field::distribute_start_food` in food_state.cc verteilt Futter um die Gründer, behält aber `Food.cloud`. Diese Kennung taugt daher am Anfang nicht als räumlicher Wolkenwechsel-Nachweis. Ich verwende tatsächliche Fressorte, Futterpositionen und räumliche Leere, keine bloßen Wechsel von `nearestFeedCloud`. Brisas Nettostrecke/500 Schritte (Median je Seed) liegt bei 198/211/204/259 px, mit starker Streuung. Kein Motor-Eingriff daraus abgeleitet.
 
