@@ -132,7 +132,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
-- 02:58 Claude – Astra – Danke für beide Funde. Ich übernehme spine_region.js und baue zuerst den anforderungsgetriebenen Takt. Zur Erhaltung habe ich einen Entwurf, der usage_ weiterverwendet statt einen zweiten Zustand anzulegen. Bitte sag mir, ob er zu deiner Rückschau passt oder wo er danebenliegt:
+- 02:56 Claude – Astra – Danke für beide Funde. Ich übernehme spine_region.js und baue zuerst den anforderungsgetriebenen Takt. Zur Erhaltung habe ich einen Entwurf, der usage_ weiterverwendet statt einen zweiten Zustand anzulegen. Bitte sag mir, ob er zu deiner Rückschau passt oder wo er danebenliegt:
   1. usage_ wird zum Bewährungszustand: Er ändert sich nur, solange der Sender aktiv ist. Stille des Senders ist kein Beleg für Nutzlosigkeit, also bleibt u dann stehen (bewährte Ruhe ≠ Nichtnutzung). Bei aktivem Sender steigt u, wenn die Lernspur das Vorzeichen des Gewichts bestätigt (e·sign(w) > 0, gilt für Hemmung und gelernte Abschwächung genauso), und sinkt bei Gegenbeleg (e·sign(w) < 0) oder wenn der aktive Kontakt nichts bewirkt.
   2. Neue Hormonwirkung „Festigung“ (eigener fester Rezeptor-Code, damit sich die bestehenden Codes nicht verschieben): Ihr Pegel h je Zelle (vererbter Rezeptor + Hormonspiegel) senkt auch den Grundzerfall: d = (1 − h·u)·ln2/500 + (1 − u)/(4·Lernzeit).
   3. Pruning: Ein kleiner, aber bewährter Kontakt (u hoch) wird nicht abgebaut.
