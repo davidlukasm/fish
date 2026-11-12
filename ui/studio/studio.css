@@ -1088,15 +1088,18 @@
 .aid-cell-variation{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:8px}
 .aid-cell-variation summary,.aid-learn-substance summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
 .aid-variation{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-variation{margin:6px 0}
 .aid-variation text{font-size:11px;fill:var(--aid-label-text);pointer-events:none}
+.aid-variation .aid-variation-title{fill:var(--aid-name-text)}
+.aid-variation .aid-variation-value{fill:var(--aid-handle)}
+.aid-variation-axis{stroke:var(--aid-axis-text);stroke-width:1}
+.aid-variation-band{fill:var(--aid-brain);fill-opacity:.22;stroke:var(--aid-brain);stroke-opacity:.6}
+.aid-variation-cell{fill:var(--aid-brain)}
+.aid-variation-plan{stroke:var(--aid-handle);stroke-width:2}
 .aid-tissue-cell{fill:var(--aid-control);stroke:var(--aid-brain);stroke-width:1.4}
 .aid-contact-seat{fill:var(--aid-light)}
 .aid-contact-fibre{fill:none;stroke:var(--aid-light);stroke-linecap:round;stroke-linejoin:round}
-.aid-variation-sheet{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
-.aid-variation-sheet .aid-variation{background:none}
 .aid-variation{color:var(--aid-brain)}
-.aid-variation g path,.aid-variation g circle:not(.aid-tissue-cell){stroke:currentColor;stroke-width:1.2;fill:none}
-.aid-variation-branch{fill:none;stroke:var(--aid-light);stroke-width:1;opacity:.4}
 .aid-learning-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .aid-learning-modes button{display:flex;flex-direction:column;align-items:center;min-width:0;padding:5px;font-size:11px;color:var(--aid-label-text);background:var(--aid-control);border:1px solid var(--aid-card-edge);border-radius:8px}
 .aid-learning-modes button[aria-pressed=true],.aid-effect-chips button[aria-pressed=true]{border-color:var(--aid-chosen-edge);background:var(--aid-limit)}
@@ -1113,7 +1116,6 @@
 
 .aid-field-boundary{fill:none;stroke:var(--aid-handle);stroke-width:1;stroke-dasharray:3 5;pointer-events:none;opacity:.65}
 
-.aid-variation[data-variation-family=spread_development] g circle:not(.aid-tissue-cell){fill:currentColor}
 
 #aid-body-map.aid-stimulus-view *{filter:none!important}
 #aid-body-map .aid-pulse-active .aid-neural-body,#aid-body-map .aid-pulse-fired .aid-neural-body{stroke:var(--aid-light);stroke-width:2}

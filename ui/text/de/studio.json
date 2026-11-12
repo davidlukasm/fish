@@ -1241,10 +1241,10 @@
     "sign": "Vorzeichen der Ausgänge",
     "pace": "Rhythmus-Anlage",
     "modulator": "Modulator-Anlage",
-    "spread_physiology": "Streuung: Physiologie",
-    "spread_receptors": "Streuung: Rezeptoreigenschaften",
-    "spread_development": "Streuung: Zellbildung",
-    "spread_contacts": "Streuung: Kontakte",
+    "spread_physiology": "Physiologie: Schwelle, Zeitkonstante, Abstimmung",
+    "spread_receptors": "Rezeptoren: Bindung, Empfindlichkeit, Schwelle",
+    "spread_development": "Zellbildung: Ausprägung, Zelltyp, Kapazität",
+    "spread_contacts": "Kontakte: Partnerwahl, Reichweite, Stärke",
     "receptorActive": "Rezeptor verwenden",
     "receptorValues": "Rezeptorwerte",
     "bodyGrowth": "Dieser Rezeptor steuert das Gewebewachstum des Körpers über Hormone. Die Reife ergibt sich aus der größten erreichten Gewebemasse im Verhältnis zur Zielgröße.",
@@ -1261,7 +1261,11 @@
     "currentResponse": "Antwort bei den Beispielwerten",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",
-    "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur"
+    "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur",
+    "spreadValue": "± {n} %",
+    "least": "kleinster Wert",
+    "blueprint": "Bauplan",
+    "greatest": "größter Wert"
   },
   "symbols": {
     "add": "+"
@@ -1365,7 +1369,6 @@
     "teaching_limit": "Lehrwirkung",
     "capacity": "Kontaktplätze",
     "variation": "Unterschiede neuer Zellen",
-    "variationDrag": "Die äußere Zelle ziehen: wie stark neue Zellen voneinander abweichen.",
     "spread_physiology": "Zellantwort",
     "spread_receptors": "Signalempfang",
     "spread_development": "Zellbildung",

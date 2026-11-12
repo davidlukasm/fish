@@ -1,62 +1,75 @@
 import {clamp} from '../../units.js';
+import {formatNumber, t} from '../../strings.js';
 import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
 
-const VARIATION =
-    Object.freeze({width : 150, height : 98, cx : 48, cy : 48, span : 70, radius : 9});
-export const variationPatch = fx =>
-    clamp((fx * VARIATION.width - VARIATION.cx - VARIATION.radius) / VARIATION.span);
-// `at` places the picture inside a larger one.
-export function variationGraphic(value, target, family, at = null) {
-  const V = VARIATION, word = key => label('cellPicture.' + key);
-  const glyphs = [ -1, -.5, 0, .5, 1 ]
-                     .map((q, i) => {
-                       const x = V.cx + V.span * value * Math.abs(q), y = V.cy + 26 * q;
-                       const varied = clamp(2 * value * q, -1);
-                       let inside;
-                       if (family === 'spread_contacts')
-                         inside = '<path d="M-7 0H7 M0 -7V7 M-5 -5L5 5" stroke-width="' +
-                                  fixed(1.8 + varied * 1.2) + '"/>';
-                       else if (family === 'spread_receptors')
-                         inside = '<circle r="' + fixed(4 + varied * 2) + '"/>';
-                       else if (family === 'spread_development')
-                         inside = '<circle r="5" fill="currentColor" fill-opacity="' +
-                                  fixed((1 + varied) / 2) + '"/>';
-                       else
-                         inside = '<path d="M-6 2L-2 2 0 ' + fixed(-4 - varied * 3) + ' 3 2H7"/>';
-                       return '<path class="aid-variation-branch" d="M10 ' + V.cy + 'Q' + V.cx +
-                              ' ' + V.cy + ' ' + fixed(x) + ' ' + fixed(y) +
-                              '"/><g transform="translate(' + fixed(x) + ' ' + fixed(y) +
-                              ')"><circle class="aid-tissue-cell" r="' + V.radius + '"/>' + inside +
-                              '</g>';
-                     })
-                     .join('');
-  // Inside a larger picture the style overrides the full width the stylesheet gives a lone one;
-  // the empty frame keeps the picture's box, which the drag measures, at its full size.
-  const place = at ? ' x="' + at.x + '" y="' + at.y + '" style="width:' + V.width +
-                         'px;height:' + V.height + 'px"'
-                   : '';
+// How far new cells of a group may differ from the blueprint in one family of traits. The axis
+// spans a trait's whole range from its least to its greatest value, the mark in the middle stands
+// for the blueprint's value, and the band around it is where each new cell draws its own value
+// (evenly). The dots are example cells; the handle at the band's edge widens or narrows it.
+const VARIATION = Object.freeze({
+  width : 300,
+  height : 64,
+  left : 22,
+  right : 278,
+  title : 13,
+  axis : 36,
+  band : 14,
+  tick : 6,
+  ends : 56,
+  dot : 3,
+  rows : 3,
+  rise : 3.5,
+  handle : 7,
+  gap : 3,
+  // Beyond this spread the value stands left of the handle, inside the picture.
+  flip : .7
+});
+// Example cells, as fixed places inside the band (−1 … 1), so the picture keeps still while the
+// band is dragged.
+const EXAMPLES = Object.freeze(
+    [ -.93, -.7, -.46, -.27, -.1, .06, .22, .39, .57, .76, .91, -.58, .66, -.18, .13 ]);
+const HALF = (VARIATION.right - VARIATION.left) / 2, MIDDLE = VARIATION.left + HALF;
+const PERCENT = 100;
+export const variationPatch = fx => clamp((fx * VARIATION.width - MIDDLE) / HALF);
+export function variationGraphic(value, target, family) {
+  const V = VARIATION, word = key => label('development.' + key);
+  const reach = HALF * clamp(value);
+  const dots =
+      EXAMPLES
+          .map((e, k) => '<circle class="aid-variation-cell" cx="' + fixed(MIDDLE + e * reach) +
+                         '" cy="' + fixed(V.axis + (k % V.rows - 1) * V.rise) + '" r="' + V.dot +
+                         '"/>')
+          .join('');
+  const text = (x, y, content, anchor = 'middle', cls = '') =>
+      '<text' + (cls ? ' class="' + cls + '"' : '') + ' x="' + fixed(x) + '" y="' + fixed(y) +
+      '" text-anchor="' + anchor + '">' + escapeText(content) + '</text>';
   return '<svg class="aid-variation" data-variation="' + escapeText(target) +
-         '" data-variation-family="' + family + '"' + place + ' viewBox="0 0 ' + V.width + ' ' +
-         V.height + '" role="img" aria-label="' + word(family) + '"><title>' +
-         word('variationDrag') + '</title><rect width="' + V.width + '" height="' + V.height +
-         '" fill="none"/>' + glyphs +
-         '<circle class="aid-graphic-handle" data-variation-handle cx="' +
-         fixed(V.cx + V.span * value + V.radius) + '" cy="' + (V.cy - 26) + '" r="6"/>' +
-         '</svg>';
+         '" data-variation-family="' + family + '" viewBox="0 0 ' + V.width + ' ' + V.height +
+         '" role="img" aria-label="' + word(family) + '">' +
+         text(V.left, V.title, word(family), 'start', 'aid-variation-title') +
+         '<path class="aid-variation-axis" d="M' + V.left + ' ' + (V.axis - V.tick) + 'V' +
+         (V.axis + V.tick) + 'M' + V.left + ' ' + V.axis + 'H' + V.right + 'M' + V.right + ' ' +
+         (V.axis - V.tick) + 'V' + (V.axis + V.tick) + '"/>' +
+         '<rect class="aid-variation-band" x="' + fixed(MIDDLE - reach) + '" y="' +
+         fixed(V.axis - V.band / 2) + '" width="' + fixed(2 * reach) + '" height="' + V.band +
+         '" rx="4"/>' + dots + '<line class="aid-variation-plan" x1="' + MIDDLE + '" y1="' +
+         (V.axis - V.band / 2 - V.tick) + '" x2="' + MIDDLE + '" y2="' + (V.axis + V.band / 2) +
+         '"/>' + text(V.left, V.ends, word('least'), 'start') +
+         text(MIDDLE, V.ends, word('blueprint')) + text(V.right, V.ends, word('greatest'), 'end') +
+         text(MIDDLE + reach + (value > V.flip ? -1 : 1) * (V.handle + V.gap),
+              V.axis - V.band / 2 - V.gap,
+              t('studio.development.spreadValue', {n : formatNumber(Math.round(value * PERCENT))}),
+              value > V.flip ? 'end' : 'start', 'aid-variation-value') +
+         '<circle class="aid-graphic-handle" data-variation-handle cx="' + fixed(MIDDLE + reach) +
+         '" cy="' + (V.axis - V.band / 2) + '" r="' + V.handle + '"/></svg>';
 }
-// How new cells differ, in one picture: one fan of example cells per kind of difference, side by
-// side; each fan keeps its own handle and geometry.
+// How new cells differ: one spread band per family of traits.
 export function cellVariation(center) {
-  const V = VARIATION, kinds = Object.entries(center.distribution);
-  const rows = Math.ceil(kinds.length / 2);
   return '<details class="aid-cell-variation"><summary>' + label('cellPicture.variation') +
-         '</summary><svg class="aid-variation-sheet" viewBox="0 0 ' + 2 * V.width + ' ' +
-         rows * V.height + '" role="img" aria-label="' + label('cellPicture.variation') + '">' +
-         kinds
-             .map(([ key, value ], k) =>
-                      variationGraphic(value, center.id, key,
-                                       {x : (k % 2) * V.width, y : Math.floor(k / 2) * V.height}))
+         '</summary>' +
+         Object.entries(center.distribution)
+             .map(([ key, value ]) => variationGraphic(value, center.id, key))
              .join('') +
-         '</svg></details>';
+         '</details>';
 }
