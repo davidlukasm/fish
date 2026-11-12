@@ -1,6 +1,6 @@
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
-const fmt = (value, digits = 0) => Number(value).toLocaleString('de-AT', {
+const fmt = (value, digits = 0) => Number(value).toLocaleString('de-DE', {
   maximumFractionDigits: digits
 });
 let time = 1850, from = 1450, until = 2150, selected = null, zoom = 1, timer = null;
@@ -20,14 +20,32 @@ const children = id => lives.filter(l => l.parent === id).length;
 const eventMarks = signals.flatMap((r, i) => {
   if (!i) return [];
   const previous = signals[i - 1], marks = [];
-  if (r.bites > previous.bites) marks.push({kind: 'bite', symbol: '●', text: 'Fressaktion'});
+  if (r.bites > previous.bites) marks.push({kind: 'bite', symbol: '●', text: 'Fressaktion', count: r.bites - previous.bites});
   if (r.clos - previous.clos > r.bites - previous.bites)
-    marks.push({kind: 'close', symbol: '×', text: 'Kieferschluss ohne gezählte Fressaktion'});
+    marks.push({kind: 'close', symbol: '×', text: 'Kieferschluss ohne gezählte Fressaktion', count: r.clos - previous.clos - r.bites + previous.bites});
   const fill = r.gut / r.gutcap, before = previous.gut / previous.gutcap;
   if (fill >= .5 && before < .5) marks.push({kind: 'full', symbol: '▲', text: 'Darm über 50 %'});
   if (fill < .5 && before >= .5) marks.push({kind: 'empty', symbol: '▽', text: 'Darm unter 50 %'});
   return marks.map(mark => ({...mark, from: previous.t, t: r.t}));
 });
+function eventRows(events) {
+  const bins = Math.max(1, Math.floor(($('#events').clientWidth || 500) / 34));
+  return [['Fressaktion', ['bite']], ['Kieferschluss', ['close']], ['Darmfüllung', ['full', 'empty']]].map(([name, kinds]) => {
+    const groups = new Map();
+    for (const event of events.filter(e => kinds.includes(e.kind))) {
+      const bin = Math.min(bins - 1, Math.floor((event.t - from) / (until - from) * bins));
+      if (!groups.has(bin)) groups.set(bin, []);
+      groups.get(bin).push(event);
+    }
+    return `<div class="event-lane"><label>${name}</label>` + [...groups].map(([bin, entries]) => {
+      const count = entries.reduce((n, e) => n + (e.count || 1), 0);
+      const first = entries[0], last = entries.at(-1);
+      const symbols = [...new Set(entries.map(e => e.symbol))].join('');
+      return `<button class="event-mark ${first.kind}" style="left:${100 * (bin + .5) / bins}%"
+        data-event-time="${first.t}" title="${entries.map(e => e.text).join('; ')}: ${count} zwischen ${fmt(first.from)} und ${fmt(last.t)}">${symbols}${count > 1 ? count : ''}</button>`;
+    }).join('') + '</div>';
+  }).join('');
+}
 function scaleTop(value) {
   const power = 10 ** Math.floor(Math.log10(Math.max(value, .001)));
   return [1, 2, 5, 10].find(n => n * power >= value) * power;
@@ -57,18 +75,18 @@ function draw() {
       <svg viewBox="0 0 1000 68" preserveAspectRatio="none" data-chart="1">
         ${events.map(e => `<path class="event-guide ${e.kind}" d="M${x(e.t)},8V58"/>`).join('')}
         <path class="axis zero" d="M0,${guide}H1000"/>
-        <path class="ink" stroke="${color}" d="${path}"/>
+        ${signed ? rows.filter(r => value(r) !== null).map(r => `<circle cx="${x(r.t)}" cy="${y(value(r))}" r="2.5" fill="${color}"/>`).join('')
+          : `<path class="ink" stroke="${color}" d="${path}"/>`}
         <path class="cursor" d="M${x(time)},0V68"/>
       </svg><output>${current === null ? '–' : fmt(current, signed ? 3 : 0)} ${unit}</output></div>`;
   }).join('');
-  $('#events').innerHTML = events.map(e => `<button class="event-mark ${e.kind}"
-      style="left:${Math.max(0, Math.min(98, x(e.t) / 10))}%" data-event-time="${e.t}"
-      title="${e.text}: zwischen ${fmt(e.from)} und ${fmt(e.t)}">${e.symbol}</button>`).join('');
+  $('#events').innerHTML = eventRows(events);
 }
 function mode(m) {
   $('#lab').classList.toggle('hidden', m !== 'lab');
   $('#breed').classList.toggle('hidden', m !== 'breed');
   $$('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  if (m === 'breed') sizeTable();
 }
 function pick(id) {
   selected = selected === id ? null : id;
@@ -77,7 +95,7 @@ function pick(id) {
     : 'Beckenübersicht · kein Fisch ausgewählt';
   $('#focus-note').textContent = selected ? 'Ziel: Fisch ' + selected + '. Wirkung ab dem bestätigten Simulationsschritt.'
     : 'Wähle einen Fisch für individuelle Eingriffe.';
-  ['#tracks', '.time', '.scale', '.event-strip', '.event-legend'].forEach(s =>
+  ['#tracks', '.time', '.scale', '.event-strip', '.event-legend', '#phase-buttons'].forEach(s =>
     $(s).classList.toggle('hidden', selected !== 8));
   $('#map-title').textContent = selected === 8
     ? 'Fisch 8 · Originalweg 1.450–2.150 · Signalzeit unten frei wählbar'
@@ -90,6 +108,9 @@ function pick(id) {
     ? 'Originalbild: Pfadfarbe = Zeit, Sterne = Fressaktion, × = Kieferschluss ins Leere. Pflanzenaufnahme bei Schritt 1.000. Das Bild hat eine feste Zeitspanne; die Signalspuren darunter sind zeitlich auswählbar.'
     : 'Originalbild: Alle Wege bei Schritt 0–1.000. Die unterschiedlichen Farben trennen die Fische. Für die endgültige Live-Ansicht werden Wege und zeitgleiche Szenen gemeinsam gezeichnet.';
   $$('.lifeline').forEach(e => e.classList.toggle('selected', Number(e.dataset.id) === selected));
+  const family = new Set(lives.filter(l => l.parent === selected || l.id === lives.find(p => p.id === selected)?.parent).map(l => l.id));
+  $$('.lifeline').forEach(e => e.classList.toggle('family', family.has(Number(e.dataset.id))));
+  $$('.ancestry g').forEach(e => e.classList.toggle('family', Number(e.dataset.parent) === selected || Number(e.dataset.child) === selected));
   $$('[data-control],[data-pulse],#brain-control').forEach(e => e.disabled = !selected);
 }
 function drawLives() {
@@ -98,7 +119,7 @@ function drawLives() {
     const parent = lives.findIndex(p => p.id === l.parent);
     if (parent < 0) return '';
     const p = lives[parent], start = Math.min(l.hatch_t, p.last_t);
-    return `<path d="M${x(start)},${parent * row + row / 2}H${x(l.hatch_t)}V${i * row + row / 2}"/>`;
+    return `<g data-parent="${l.parent}" data-child="${l.id}"><path d="M${x(start)},${parent * row + row / 2}H${x(l.hatch_t)}V${i * row + row / 2}"/><circle cx="${x(start)}" cy="${parent * row + row / 2}" r="3"/></g>`;
   }).join('');
   $('#lifes').innerHTML = `<svg class="ancestry" viewBox="0 0 1000 ${lives.length * row}"
     preserveAspectRatio="none" aria-hidden="true">${lines}</svg>` + lives.map(l =>
@@ -108,6 +129,10 @@ function drawLives() {
       <circle cx="${x(l.hatch_t)}" cy="10" r="3" fill="#dce8e0"/>
       ${l.alive ? '' : `<path d="M${x(l.last_t) - 3},6l6,8m-6,0l6,-8" stroke="#e8a89a"/>`}
       </svg><small>${l.alive ? 'lebt bei ' : 'stirbt bei '}${fmt(l.last_t)}</small></div>`).join('');
+}
+function sizeTable() {
+  const height = $('#breed .cockpit').getBoundingClientRect().height;
+  if (height) $('#breed .table-wrap').style.maxHeight = height + 'px';
 }
 function drawBreeders() {
   const goal = $('#goal').value, score = l => goal === 'offspring' ? children(l.id) : l.intake;
@@ -185,7 +210,13 @@ $('#breeders').onchange = e => {
   $('#prepare').disabled = !parents.size;
 };
 $('#prepare').onclick = () => {
+  const input = $('#variation'), value = Number(input.value.replace(',', '.'));
+  input.setCustomValidity(input.value.trim() && Number.isFinite(value) && value >= 0 && value <= 1 ? '' : 'Faktor zwischen 0 und 1 eingeben.');
+  if (!input.reportValidity()) return;
+  input.value = fmt(value, 2);
   $('#breed-result').textContent = 'Entwurf: ' + parents.size + ' Eltern, Mutationsfaktor '
-    + fmt($('#variation').value, 2) + '. Tatsächliche Erbgut- und Körperänderungen je Nachkomme vergleichen. Hier wird kein neuer Lauf gestartet.';
+    + fmt(value, 2) + '. Tatsächliche Erbgut- und Körperänderungen je Nachkomme vergleichen. Hier wird kein neuer Lauf gestartet.';
+  sizeTable();
 };
+window.addEventListener('resize', () => { draw(); sizeTable(); });
 drawLives(); drawBreeders(); draw(); pick(null);
