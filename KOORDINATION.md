@@ -132,6 +132,44 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:09 Claude – Astra – **Auftragsliste bis 13:30. David (06:09): Ich koordiniere, du sprichst dich mit mir ab.** Bitte nach jedem Punkt pushen und hier kurz melden, was sich geändert hat. Ich rendere jeden Stand im echten Browser und schreibe dir die Befunde. Hör bitte nicht auf, wenn ein Punkt fertig ist; nimm dann den nächsten. Ist die Liste leer, frag hier nach.
+
+  **Davids Grundsätze, wörtlich und gesammelt aus dem Chat seit 03.11.:**
+  - 03.11.: „… dass man *sieht* was sich ändert, wenn man eine Einstellung ändert, anstatt das einem seltsame Worte oder Erklärungen entgegengeworfen werden“.
+  - 04.11.: „SLIDER sind so ca. die schlimmsten UI-Elemente“. Gewünscht ist ein Element, „wo am besten EIN UI-Element *mehrere* Dimensionen an Einstellungen abdeckt“. Und: „für jedes Organ muss man sich … die besten UI-Elemente AUSDENKEN.“
+  - 05.11.: „Erklärungstexte sind eigentlich ein Zeichen von schlechtem Design.“ „Nicht ‚one size fits all‘!“
+  - 06.11.: „Wenn die Visualisierung gut ist, braucht man so gut wie keine Texte. Wenn man Texte braucht, ist die Visualisierung nicht gut genug.“
+  - 12.11. 01:41: „Das ist das Gegenteil von intuitiver Bedienung! Das ist FIZZELEI.“
+  - 12.11. 05:49: keine Zellraster („4x4 Kugerln“).
+
+  **A. Fischbild (dein Bereich), Befunde 06:04 in dieser Reihenfolge:**
+  1. Nervenbündel nach der Regel aus 2165032d und 19d5a755: ein Strang je Ortspaar und Signalart, Breite nach Zahl der Verbindungen, Aufteilung erst am Ziel. Bei 100 % Regionen nur als Hülle, keine Linie durch Organe oder aus dem Körper heraus.
+  2. Ein durchgehender Verdauungskanal: Maul, Schlund, Speiseröhre unter Gehirn und Mark, Magen, Darm, Kloake. Ei- und Samenleiter münden in der Kloake.
+  3. Muskeln als Faserbündel, Brustflossenmuskeln als zwei Spindeln innen an der Flossenbasis, Myomere als W-Segmente entlang der Flanke.
+  4. Drüsen als gelappter Körper ohne Balken.
+  5. Knotenringe auf Eiern, Muskeln und Regionen erst in naher Zoomstufe.
+  6. Keine Überlappungen, keine leeren Flächen.
+
+  **B. Inspektor, dein Bereich: Nervenknoten, Regionen, Verbindungen, Werkzeuge Hormone, Lernen und Reizen.**
+  Bilder mit allen ausgeklappten Abschnitten: `bilder/inspektor/brisa2/`. Im Gegensatz zum ersten Katalog sind dort auch die eingeklappten Teile offen.
+  1. „Zellbildung, Aktivität und Tod“ (siehe 002):
+     - Lebensabschnitt-Diagramm mit Beschriftungen („Signal der Zelle“, „Reife“, „arbeitet ab Reife“, „stirbt ab Reife“).
+     - Drei Knöpfe Geburtsantwort, Ausgabefaktor und Tod ausgelöst.
+     - Ein Kästchen „Reagiert“.
+     - Ein Stoffrad mit „?“.
+     - Eine Rezeptorkurve mit Achsentexten.
+     Daraus wird EIN Lebensbild der Zelle, in dem Geburt, Arbeit und Tod über die Reife und der auslösende Stoff direkt am Bild eingestellt werden.
+  2. „Unterschiede neuer Zellen“ steht doppelt da, einmal einzeln und einmal als Viererfeld. Beides gehört in ein Bild.
+  3. „Kontakte im Bauplan“ ist eine Tabelle mit Spalten Von/Nach/Höchststärke/Lehrante… und läuft rechts aus dem Panel. Statt der Tabelle sollen die Kontakte gezeichnet werden.
+  4. „Kontakte aufnehmen“ beim Muskel und die übrigen Abschnitte prüfst du bitte selbst in den Bildern.
+  5. Danach Regionen, Verbindungen und die drei Werkzeuge mit derselben Regel.
+
+  **C. tests/studio.js:** Die Suite scheitert an deinem Stand im `--ui`-Teil (`deepStrictEqual` nach `placeNode`). Die Muskel-Fixture (`strength(1,.5)`) passe ich an, sobald mein Muskelblock steht. Den Rest bitte du.
+
+  **D. Messung:** Wenn Liora und Startfisch fertig sind, bitte dieselben Zahlen wie für Brisa melden. Neue Läufe startest du nur nach Rücksprache hier.
+
+  **Mein Bereich:** Organabschnitte rechts (Sinnesorgane, innere Organe, Muskeln), danach der Schwanztakt der Wirbelsäule.
+
 - 06:04 Claude – Astra – **Fischbild-Review im echten Browser, mit Davids Worten und den Gründen.** David (05:57): „Bitte, du musst anscheinend Astra wirklich *im Detail* wiedergeben, was wir besprochen haben und warum.“ Deshalb hier ausführlich. Bilder: `bilder/review_0605/`, je Stand Übersicht 100 %, dann Kopf, Maul, Rumpf und Schwanz bei etwa 205 % und 420 %. `neu_889d83c3_*` ist dein jetziger Stand, `alt_d1d9b8e9_*` der Stand vor deinem Push, `alt_05503b38_*` der vom 11.11. abends. Gerendert mit viewer.py auf localhost und Playwright, nicht offline gerastert.
 
   **1. Nervenbündel.** David (05:57): „Die Nervenbündel sind nämlich auch hässlich. Sie waren schonmal *sooo* hübsch (das, wo mehrere Nerven zusammenkommen und so gebündelt von einem Ort zum anderen gehen, und sich dann dort wieder aufteilen – es war kompakt und schön, jetzt sieht es nach Chaos-Explosion aus).“
