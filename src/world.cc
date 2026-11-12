@@ -399,12 +399,18 @@ void Field::index(const std::vector<VisibleBody> &bodies, bool rebuild_plants) {
   if (rebuild_plants)
     index_plants();
   index_geometry();
-  feeding_.grid.reset(geometry_.width, geometry_.height);
+  index_food();
   body_grid_.reset(geometry_.width, geometry_.height);
   visible_ = bodies;
   indexed_body_radius_ = MAX_BODY_RADIUS;
   for (const auto &p : visible_)
     indexed_body_radius_ = std::max(indexed_body_radius_, p.radius);
+  for (std::size_t i = 0; i < visible_.size(); ++i)
+    body_grid_.add(visible_[i].x, visible_[i].y, std::uint32_t(i));
+  indexed_ = true;
+}
+void Field::index_food() {
+  feeding_.grid.reset(geometry_.width, geometry_.height);
   feeding_.consumed.assign(feeding_.pieces.size(), 0);
   feeding_.indexed_food_radius = 0;
   for (std::size_t i = 0; i < feeding_.pieces.size(); ++i) {
@@ -412,9 +418,6 @@ void Field::index(const std::vector<VisibleBody> &bodies, bool rebuild_plants) {
     feeding_.indexed_food_radius =
         std::max(feeding_.indexed_food_radius, food_radius(feeding_.pieces[i]));
   }
-  for (std::size_t i = 0; i < visible_.size(); ++i)
-    body_grid_.add(visible_[i].x, visible_[i].y, std::uint32_t(i));
-  indexed_ = true;
 }
 void Field::compact_food() {
   if (indexed_) {
@@ -1273,6 +1276,9 @@ void Field::motion(const Water *replay_water) {
     feeding_.drained_food += old - feeding_.pieces.size();
   }
   feeding_.food_decayed += std::max(0., food_before - food_energy());
+  // Eaten and decayed pieces are gone and the rest renumbered: the food web, which runs before
+  // the organisms are indexed again, must not find food through the last step's numbers.
+  index_food();
 }
 void Field::resize(double w, double h) {
   geometry_.width = w;

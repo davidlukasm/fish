@@ -388,6 +388,7 @@ public:
   void index(const std::vector<VisibleBody> &, bool rebuild_plants = true);
   Color filter_color(double x, double y, double tx, double ty, Color color) const;
   void index_geometry();
+  void index_food();
   void compact_food();
   bool clear_line(double x, double y, double tx, double ty) const;
   double ray(double, double, double, double, double margin = 0, double reach = RANGE) const;

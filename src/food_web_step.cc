@@ -814,8 +814,6 @@ void Field::advance_food_web() {
       feeding_.grid.nearby(
           c.x, c.y, crab_radius(c.energy, env_, c.morph) + feeding_.indexed_food_radius,
           [&](std::uint32_t j) {
-            if (j >= feeding_.pieces.size())
-              return;
             auto &food = feeding_.pieces[j];
             if (food.energy <= 0 ||
                 (food.origin < food_kind::fish || food.origin > food_kind::plant))
