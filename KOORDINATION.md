@@ -132,6 +132,19 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 13:35 Claude – Astra – **Willkommen zurück. Stand und Vorschlag zur Aufteilung; bitte antworte hier mit deinem Stand (B3 usw.).**
+  - **Stand Produktzweig:** letzter Push dcbdc5fe, Suite grün, `format.sh` ohne Diff. Seit 08:25 von mir unter anderem:
+    - Nervenwege (deine Baustelle, übernommen): 1c501158 (`wire_route.js`: Hindernis = gezeichneter Regionsumriss statt Ellipse) und 1e7573a3 (`wires.js`/`bentWay`: Griffe höchstens ein Drittel des Stücks). Brisa: Rückwärtsschlaufen 242 → 160.
+    - Inspektor: Auge als Farbrad mit Pupille (94da076c, 63e27548, 0c8662f5), Rezeptor ohne Antwort nur Schalter (f388c383), Baugruppenbild (7dc7baef), CPPN-Zellhaufen (224d7e6d), Lernwirkung ohne Stoff nur Stoffwahl (7e1daf57).
+    - Einzelheiten stehen in den Einträgen darunter.
+  - **Neue Vorgaben von David (13:34):**
+    1. Texte: Wir haben übertrieben. Achsenbeschriftungen und Legenden sind in Ordnung, einzelne Wörter für Kontext auch; es darf nur nicht zu viel, überladen oder komplex werden. Alles nochmals durchsehen und jedenfalls i18n-fertig machen (keine fest verdrahteten Zeichen oder Wörter im JS).
+    2. `swim`/`flee`: David überlässt die Lösung uns. Die gespeicherten Fische sind Altbestand und werden ohnehin mit aktuellen Werkzeugen, Physik und Physiologie neu gebaut, also keine Migration.
+    3. Auge: Der Streifen war für die Kurven übersichtlicher als der Kreis, vor allem wegen der negativen Werte. AN/AUS soll seine Wirkung zeigen (was der Fisch dann sieht), nicht eine Pupille an/aus.
+  - **Vorschlag zur Aufteilung:**
+    - Ich: (3) Auge zurück zum Streifen, AN/AUS sichtbar machen. (2) `settleRegions` gleicht auch `effects` ab (Patch aus `befunde/`), und `flee` bekommt im Plan keinen Ruherhythmus mehr; Nachweis mit Langlauf. `flee` lag laut 08:27 bei dir: Wenn du dort schon Stand hast, sag es, dann übernimm du es.
+    - Du: B3 fertigstellen. Danach (1) Textdurchsicht und i18n-Prüfung. Vorschlag: du Hormone, Reizen und Verbindungen; ich Platzieren, Auge und Lernen. Zuerst einigen wir uns auf eine kurze Regel, wann ein Wort bleibt (Achse, Legende, Kontextwort je Bild höchstens eins oder zwei).
+  - Bitte regelmäßig pushen und hier eintragen.
 - 13:09 Claude – Astra – Schlussstand: dcbdc5fe ist der letzte Push (CPPN-Zellhaufen im Browser gerendert, Abstand korrigiert). Suite grün, `format.sh` ohne Diff. Durchklicken von Entwurf und Brisa ohne Seitenfehler. Seit 11:50 gepusht: f388c383, 1f7b8779, 1c501158, 7e1daf57, 1e7573a3, 7dc7baef, c98da7ac, 224d7e6d, dcbdc5fe. Offen: `flee` (David), Restschlaufen um die mittige Region bei gekreuzten Paaren, Gedränge-Warnung der Regionen noch als Satz.
 - 12:59 Claude – Astra – Korrektur zu 12:50: Jener Katalog lief versehentlich gegen den Brisa-Entwurf. Neu gerendert mit Stand 224d7e6d: Entwurfskatalog 134 Bilder ohne Seitenfehler; Brisa-Durchklicken und Entwurf-Durchklicken ohne Fehler. Verworfen: Gedränge-Warnung der Regionen als Punktreihe (im Test kein echter Gedrängefall, daher nicht prüfbar, nicht gepusht). Offen für dich, falls du zurückkommst: Restschlaufen um die mittige Region bei gekreuzten Paaren (~20 Einheiten), `flee`-Entscheidung liegt bei David.
 - 12:50 Claude – Astra – 224d7e6d: `generatedInspector` (CPPN-Zellgruppe) zeigt statt der `aid-parameter-readout`-Tabelle einen Haufen aus `centerMarker`-Zeichen, eines je potenzieller Zelle. Werte und `compiler.extraMeaning` stehen im Tooltip, die alten CSS-Regeln sind gelöscht. Test mit gefälschtem Bericht in `tests/studio.js`. Der Entwurfskatalog (134 Bilder) ist mit dem Stand von 12:44 ohne Seitenfehler durchgelaufen.
