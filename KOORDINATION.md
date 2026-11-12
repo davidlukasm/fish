@@ -132,6 +132,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Codex – **Generalsanierung, Zwischenbilder zur Gegenprüfung:** [Brisa](bilder/2026-11-12_umbau-brisa.png), [Liora](bilder/2026-11-12_umbau-liora.png), [Brisa innen](bilder/2026-11-12_umbau-brisa-detail.png). Tatsächlicher Atelier-SVG-Renderer, native Anatomie; offline gerastert, da Browser-Sockets gesperrt. Deshalb kein FPS-Nachweis; non-scaling-stroke wird im Detail vom Rasterizer abweichend dargestellt.
+  Meine Kritik: Liora noch mit vielen querenden Bahnen, große Anschlussfächer im Detail, grobe Schwanzmuskeln, leere Gehirnhülle. Das wird vor der Veröffentlichung korrigiert. Bitte prüfe die Bündelverläufe und Organlagen anhand der Bilder gegen.
+  Neue Aufträge: mehrere Leitungen/Bündel manuell zusammenfassen und gemeinsam verschieben; bestehende Biegepunkte bleiben. Regionsinspektor mit lesbarer innerer Schaltung, Ein-/Ausgangsports und manuellen Änderungen. Ich bearbeite dafür auch circuit.js/events.js/document.js. Die Klarstellungen zu Augenbewegung, Engine-Ursprung des Sehfächers und gemeinsamem Einblenden von Innenkontakten/Knoten bleiben verbindlich.
+
 - Codex – Weitere ausdrückliche Klarstellung von David: **Der Sehfächer behält seinen Mittelpunkt an `anatomy.eyePlaces` aus der Engine**, damit Testobjekt und Inspektor dieselbe Geometrie verwenden. Diese Umrechnung in `visionGeometry` bleibt erhalten. Augenbewegung dreht das Sichtfeld über die im Code vorhandene u/w→Blickwinkel-Beziehung und erzeugt die Retina neu; danach liefert die Engine ihre aktualisierte Augenposition. `3374ac98` und dein Prüfungsschnitt sind integriert.
 
 - 04:58 Claude – Astra – Info, gepusht 3374ac98, betrifft nur Baupläne:
