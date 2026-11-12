@@ -2,6 +2,7 @@
 #include "physiology.hh"
 #include "perception.hh"
 #include "body_plan.hh"
+#include "eye_geometry.hh"
 #include "field/development_sites.hh"
 #include <algorithm>
 #include <array>
@@ -96,9 +97,15 @@ struct Death {
 // Positions in a trial's start frame, recorded every few steps.
 struct Course {
   const Ecosystem &world;
-  double x0, y0, angle;
+  double x0, y0, angle, body_length;
   int every;
   std::vector<std::array<double, 2>> points{};
+  Course(const Ecosystem &w, const Individual &p, int interval)
+      : world(w), x0(p.body.x), y0(p.body.y), angle(p.body.angle), every(interval) {
+    const ZonalFrame shape(p.body.active_interface(p.genome));
+    body_length =
+        body_radius(p.body) * (shape.boundary.front() - shape.boundary.back()) / shape.scale;
+  }
   std::array<double, 2> local(double x, double y) const {
     const double dx = world.field.delta_x(x - x0), dy = y - y0;
     return {dx * std::cos(angle) + dy * std::sin(angle),
@@ -115,7 +122,7 @@ struct Course {
       std::cout << '[' << std::round(p[0] * PATH_PRECISION) / PATH_PRECISION << ','
                 << std::round(p[1] * PATH_PRECISION) / PATH_PRECISION << ']';
     };
-    std::cout << ",\"target\":";
+    std::cout << ",\"bodyLength\":" << body_length << ",\"target\":";
     point(local(target_x, target_y));
     std::cout << ",\"path\":[";
     for (std::size_t k = 0; k < points.size(); ++k) {
@@ -353,7 +360,7 @@ int main(int argc, char **argv) {
         const auto cycles = b.mouth.cycle;
         int reached = -1, closed = -1, cracked = -1, vanished = -1, step = 0;
         double nearest = distance;
-        Course course{w, b.x, b.y, b.angle, path};
+        Course course{w, *p, path};
         const double shell_x = target->x, shell_y = target->y;
         double shell_radius = mussel_radius(target->energy, w.field.env(), target->morph);
         seen_effect = w.next_combat_effect;
@@ -435,7 +442,7 @@ int main(int argc, char **argv) {
         const auto cycles = b.mouth.cycle;
         int reached = -1, fled = -1, buried = -1, cracked = -1, vanished = -1, step = 0;
         double nearest = distance, pinched = 0, health = b.health;
-        Course course{w, b.x, b.y, b.angle, path};
+        Course course{w, *p, path};
         const double crab_x = target->x, crab_y = target->y;
         double last_x = crab_x, last_y = crab_y,
                last_radius = crab_radius(target->energy, w.field.env(), target->morph);
@@ -527,7 +534,7 @@ int main(int argc, char **argv) {
         }
         const double eaten_before = p->observations().raw_diet[food_type];
         const double start_angle = b.angle;
-        Course course{w, b.x, b.y, b.angle, path};
+        Course course{w, *p, path};
         double closest = distance, travelled = 0, turned_early = 0, forward = 0, turning = 0,
                pumping = 0, biting = 0;
         int steps = 0, reached = -1, near = 0, depleted = -1, left = -1;

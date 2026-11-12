@@ -32,6 +32,8 @@ const COURSE = Object.freeze({
   food : 3.5,
   shell : [ 6, 3.6 ],
   end : 2.6,
+  scaleWidth : 100,
+  scaleHeight : 42,
   digits : 1
 });
 const colour = rgb => 'rgb(' + rgb.map(v => Math.round(v * 255)).join(',') + ')';
@@ -59,7 +61,12 @@ function courseChart(sessions, kind, selected) {
                               .map(x => ({...x, path : trialPath(x, kind)}));
   if (!all.length)
     return '';
-  const points = [ [ 0, 0 ], ...all.flatMap(x => [x.target, ...x.path]) ],
+  const length = selected?.trial.bodyLength;
+  const points =
+            [
+              [ 0, 0 ], ...all.flatMap(x => [x.target, ...x.path]),
+              ...(length > 0 ? [ [ length / 2, 0 ], [ -length / 2, 0 ] ] : [])
+            ],
         distance = trialDistance(kind);
   // Midway between the start and the targets' centre.
   const mid = [ 0, 1 ].map(i => all.reduce((sum, x) => sum + x.target[i], 0) / all.length / 2);
@@ -106,9 +113,10 @@ function courseChart(sessions, kind, selected) {
                                         fixed(ty) + '" r="' + C.food + '"/>';
                      })
                       .join('');
-  const fish = '<path class="aid-trial-fish" d="M' + fixed(ox) + ' ' + fixed(oy - C.fish) + 'L' +
-               fixed(ox + C.fish / 2) + ' ' + fixed(oy + C.fish / 2) + 'L' +
-               fixed(ox - C.fish / 2) + ' ' + fixed(oy + C.fish / 2) + 'Z"/>';
+  const halfFish = length > 0 ? length * scale / 2 : C.fish;
+  const fish = '<path class="aid-trial-fish" d="M' + fixed(ox) + ' ' + fixed(oy - halfFish) + 'L' +
+               fixed(ox + halfFish / 2) + ' ' + fixed(oy + halfFish) + 'L' +
+               fixed(ox - halfFish / 2) + ' ' + fixed(oy + halfFish) + 'Z"/>';
   const hits = selected ? selected.path
                               .map((p, frame) => {
                                 const [x, y] = at(p);
@@ -120,9 +128,20 @@ function courseChart(sessions, kind, selected) {
                               })
                               .join('')
                         : '';
-  return '<svg class="aid-trial-chart" viewBox="0 0 ' + C.size + ' ' + C.size +
-         '" role="img" aria-label="' + trials(selected ? 'detailChart' : 'chart') + '">' + ring +
-         targets + courses + fish + hits + '</svg>';
+  let measure = '';
+  if (length > 0) {
+    const desired = C.scaleWidth / (length * scale), decade = 10 ** Math.floor(Math.log10(desired));
+    const count = [ 1, 2, 5 ].filter(n => n * decade <= desired).at(-1) * decade;
+    const x = C.margin, end = x + count * length * scale, y = C.size + 12;
+    measure = '<g class="aid-trial-scale"><path d="M' + fixed(x) + ' ' + (y - 4) + 'v8m0-4H' +
+              fixed(end) + 'm0-4v8"/><text x="' + x + '" y="' + (y + 20) + '">' +
+              escapeText(trials('bodyScale', {n : formatNumber(count, 2)})) + '</text></g>';
+  }
+  return '<svg class="aid-trial-chart" viewBox="0 0 ' + C.size + ' ' +
+         (C.size + (measure ? C.scaleHeight : 0)) + '" role="img" aria-label="' +
+         trials(selected ? 'detailChart' : 'chart') + '"><svg width="' + C.size + '" height="' +
+         C.size + '" overflow="hidden">' + ring + targets + courses + fish + hits + '</svg>' +
+         measure + '</svg>';
 }
 
 const ending = s => s.died ? '<em class="died">' +
@@ -186,6 +205,18 @@ function inspection(selected, kind) {
   if (!selected)
     return '<p class="aid-trial-hint">' + trials('inspect') + '</p>';
   const frame = selected.frame, last = selected.path.length - 1;
+  const length = selected.trial.bodyLength;
+  const measure =
+      length > 0
+          ? '<p class="aid-trial-hint">' +
+                trials('startDistance',
+                       {n : formatNumber(Math.hypot(...selected.trial.target) / length, 1)}) +
+                (kind === TRIAL_KIND.feed
+                     ? ' ' + trials('nearDistance',
+                                    {n : formatNumber(TRIAL_LAB.feed_near / length, 1)})
+                     : '') +
+                ' ' + trials('bodyReference') + '</p>'
+          : '';
   const button = (key, target, glyph) =>
       '<button type="button" data-lab-frame="' + target + '" data-lab-step="' + key +
       '" aria-label="' + trials(key) + '" title="' + trials(key) + '"' +
@@ -198,8 +229,8 @@ function inspection(selected, kind) {
          button('previous', Math.max(0, frame - 1), '←') + '<output aria-live="polite">' +
          trials('step', {step : formatNumber(sampleStep(frame))}) + '</output>' +
          button('next', Math.min(last, frame + 1), '→') + button('last', last, '↦') + '</div>' +
-         '<p class="aid-trial-hint">' + trials('sampling', {steps : TRIAL_LAB.path_every}) +
-         '</p></div>';
+         measure + '<p class="aid-trial-hint">' +
+         trials('sampling', {steps : TRIAL_LAB.path_every}) + '</p></div>';
 }
 
 function results(s) {
@@ -215,12 +246,8 @@ function results(s) {
 }
 
 function rule(kind) {
-  return trials('rule.' + trialKey(kind), {
-           distance : trialDistance(kind),
-           steps : formatNumber(trialSteps(kind)),
-           cluster : TRIAL_LAB.feed_cluster,
-           near : TRIAL_LAB.feed_near
-         }) +
+  return trials('rule.' + trialKey(kind),
+                {steps : formatNumber(trialSteps(kind)), cluster : TRIAL_LAB.feed_cluster}) +
          ' ' + trials('energyHelp');
 }
 

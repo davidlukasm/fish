@@ -15,10 +15,10 @@
   },
   "choose": {
     "fish": "Fisch",
-    "worlds": "Startwelten",
+    "worlds": "Aquarien",
     "steps": "Schritte je Welt"
   },
-  "rule": "Ohne Bestandshilfe, {founders} Gründer je Welt. Bewiesen, wenn im Becken geborene Generationen selbst Nachwuchs haben und der Bestand am Ende lebt.",
+  "rule": "Je Aquarium starten {founders} Gründer. Danach kommen alle weiteren Fische aus Eiern im Becken. Geprüft wird, ob Folgegenerationen selbst Nachwuchs haben und der Bestand am Ende lebt. Die Aquarien laufen nacheinander mit unterschiedlichen Startwelten.",
   "start": "Züchten",
   "cancel": "Abbrechen",
   "ready": "Bereit",
@@ -52,7 +52,7 @@
     "title": "Verhaltenslabor",
     "choose": {
       "trial": "Versuch",
-      "seeds": "Welten"
+      "seeds": "Versuchsreihen in neuen Welten"
     },
     "kind": {
       "feed": "Futter",
@@ -60,9 +60,9 @@
       "crab": "Krabben"
     },
     "rule": {
-      "feed": "Als Jungfisch im Startaquarium, das kein weiteres Futter bekommt. {cluster} Futterstücke liegen {distance} entfernt, nacheinander in zwölf Richtungen; je Richtung {steps} Schritte Zeit. Erreicht heißt: bis auf {near} heran.",
-      "mussel": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer offenen Muschel und blickt zu ihr; bis zu sechs Muscheln je Welt, je {steps} Schritte Zeit.",
-      "crab": "Im Aquarium aufgezogen, hungrig. Der Fisch steht {distance} vor einer Krabbe, die frei umherläuft, und blickt zu ihr; bis zu sechs Krabben je Welt, je {steps} Schritte Zeit. Krabben fliehen und graben sich ein, Fehlbisse zwicken."
+      "feed": "Ein Jungfisch sucht {cluster} Futterstücke, nacheinander in zwölf Richtungen; je Richtung {steps} Schritte Zeit. Das Aquarium bekommt währenddessen kein weiteres Futter. Der Ring im Wegbild zeigt den Startabstand.",
+      "mussel": "Ein hungriger, im Aquarium aufgezogener Fisch blickt auf eine offene Muschel; bis zu sechs Muscheln je Welt, je {steps} Schritte Zeit. Der Ring im Wegbild zeigt den Startabstand.",
+      "crab": "Ein hungriger, im Aquarium aufgezogener Fisch blickt auf eine frei laufende Krabbe; bis zu sechs Krabben je Welt, je {steps} Schritte Zeit. Krabben fliehen und graben sich ein, Fehlbisse zwicken. Der Ring im Wegbild zeigt den Startabstand."
     },
     "start": "Versuch starten",
     "running": "Welt {world} von {worlds} · {n} {n:Versuch|Versuche} fertig",
@@ -86,8 +86,8 @@
       "fish": "Fisch gestorben, {age} Schritte alt",
       "egg": "Ei gestorben nach {age} Schritten"
     },
-    "energyHelp": "Im Labor wird laufend Energie nachgefüllt. Das Überleben über Generationen prüft die Zuchtstation.",
-    "inspect": "Versuch auswählen, um seinen Weg zu untersuchen.",
+    "energyHelp": "Die Energiereserve des Fisches wird laufend ergänzt. Die Versuchsreihen laufen nacheinander. Das Überleben über Generationen prüft die Zuchtstation.",
+    "inspect": "Versuch auswählen, um seinen Weg und die Abstände in Körperlängen zu untersuchen.",
     "overview": "Alle Wege",
     "step": "Schritt {step}",
     "first": "Zum Anfang",
@@ -95,7 +95,11 @@
     "next": "Eine Aufnahme weiter",
     "last": "Zur letzten Aufnahme",
     "sampling": "Spur anklicken · Aufnahme alle {steps} Schritte. Die Zielmarke zeigt den Ort beim Start.",
-    "detailChart": "Einzelner Schwimmweg: Dreieck am Start, Punkt an der gewählten Position, Zielmarke am ursprünglichen Ort"
+    "detailChart": "Einzelner Schwimmweg: Dreieck am Start, Punkt an der gewählten Position, Zielmarke am ursprünglichen Ort",
+    "bodyScale": "{n} {n:Körperlänge|Körperlängen}",
+    "startDistance": "Startabstand: {n} {n:Körperlänge|Körperlängen}.",
+    "nearDistance": "Als erreicht zählt Futter innerhalb von {n} Körperlängen.",
+    "bodyReference": "Maßstab: Körper zu Versuchsbeginn, ohne Schwanzflosse."
   },
   "analysis": {
     "choose": "Messgröße",

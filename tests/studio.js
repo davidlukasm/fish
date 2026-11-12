@@ -3756,6 +3756,64 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                        'The same asset number in another world resolves to that world’s shape');
       assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
     }
+    {
+      const {paintLabScene, LAB_SCENE} = await import('../ui/labor/scene.js');
+      const {FISH} = await import('../ui/schema.js');
+      const {sceneState} = await import('../ui/state.js');
+      (await import('../ui/dom.js')).initialize([ 'rgb' ]);
+      const egg = Array(FISH.count).fill(0);
+      egg[FISH.id] = 1;
+      egg[FISH.y] = 320;
+      egg[FISH.radius] = 1;
+      egg[FISH.health] = 1;
+      let path = [], polygons = [];
+      const context = {
+        save() {},
+        restore() {},
+        fillRect() {},
+        translate() {},
+        rotate() {},
+        arc() {},
+        stroke() {},
+        beginPath() { path = []; },
+        closePath() {},
+        moveTo(x, y) { path.push([ x, y ]); },
+        lineTo(x, y) { path.push([ x, y ]); },
+        fill() {
+          if (this.fillStyle === LAB_SCENE.rock)
+            polygons.push(path);
+        }
+      };
+      const canvas = {
+        width : LAB_SCENE.width,
+        height : LAB_SCENE.height,
+        getContext : () => context
+      };
+      const frame = {
+        width : 960,
+        height : 640,
+        step : 0,
+        fish : [ egg ],
+        plants : [],
+        shapes : [ [ [ 470, 300 ], [ 490, 300 ], [ 490, 340 ], [ 470, 340 ] ] ]
+      };
+      const previous = sceneState.frame;
+      paintLabScene(canvas, frame, 1);
+      assert.equal(polygons.length, 0, 'A rock opposite the view cannot fill the visible water');
+      assert.equal(sceneState.frame, previous);
+      frame.shapes = [ [ [ 950, 300 ], [ 970, 300 ], [ 970, 340 ], [ 950, 340 ] ] ];
+      paintLabScene(canvas, frame, 1);
+      assert.equal(polygons.length, 1);
+      assert.deepEqual(polygons[0].map(p => p[0]), [ 345, 375, 375, 345 ],
+                       'A rock across the seam retains its width and sits beside the fish');
+      polygons = [];
+      frame.shapes = [ [ [ 0, 300 ], [ 960, 300 ], [ 960, 340 ], [ 0, 340 ] ] ];
+      paintLabScene(canvas, frame, 1);
+      assert.equal(polygons.length, 2, 'Both visible copies of a wide floor are drawn');
+      context.fill = () => { throw new Error('drawing failed'); };
+      assert.throws(() => paintLabScene(canvas, frame, 1), /drawing failed/);
+      assert.equal(sceneState.frame, previous, 'A failed paint restores the aquarium context');
+    }
     const {TRIAL_KIND, TRIAL_LAB} = await import('../ui/schema.js');
     const lab = await import('../ui/labor/trials.js');
     const {trialShell} = await import('../ui/labor/trial_view.js');
@@ -3763,6 +3821,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       reached : 40,
       cracked : -1,
       family : 2,
+      bodyLength : 10,
       target : [ 40, 0 ],
       path : [ [ 0, 0 ], [ 20, 1 ], [ 38, 0 ] ]
     },
@@ -3822,6 +3881,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       draft : null,
       fingerprint : 'f'
     });
+    const measured = trialShell({
+      overview : trialOverview,
+      fish : 'brisa',
+      trial : TRIAL_KIND.mussel,
+      seeds : TRIAL_LAB.seeds[1],
+      job : trialJob,
+      running : true,
+      error : '',
+      draft : null,
+      fingerprint : 'f',
+      inspection : {fingerprint : 'f', kind : TRIAL_KIND.mussel, seed : 1, index : 0, frame : 1}
+    });
+    assert.match(measured, /aid-trial-scale/);
+    assert.match(measured, /Startabstand: 4 Körperlängen/);
+    assert.match(measured, /ohne Schwanzflosse/);
+    assert.doesNotMatch(measured, /NaN|undefined/);
     assert.match(trialPage, /aid-trial-chart/, 'Every course is drawn');
     assert.equal((trialPage.match(/class="aid-trial-course /g) ?? []).length, 3);
     assert.match(trialPage, /aid-trial-shell/, 'A mussel target shows its shell');

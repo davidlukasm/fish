@@ -310,6 +310,8 @@
 .aid-trial-tally strong{font:500 28px Georgia,serif;color:#e3e8d1}
 .aid-trial-view{display:grid;grid-template-columns:minmax(260px,460px) minmax(0,1fr);gap:20px;align-items:start}
 .aid-trial-chart{width:100%;height:auto;background:#0c2930;border:1px solid #2b5058;border-radius:14px}
+.aid-trial-scale path{fill:none;stroke:#bad8cf;stroke-width:1.5}
+.aid-trial-scale text{fill:#bad8cf;font:12px system-ui}
 .aid-trial-ring{fill:none;stroke:#3a6067;stroke-dasharray:3 4}
 .aid-trial-food{fill:#d79a6c}
 .aid-trial-shell{stroke:#e6efe4;stroke-width:.8}

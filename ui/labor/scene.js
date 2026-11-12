@@ -62,37 +62,61 @@ function paintFrame(canvas, frame, fishId) {
   // The tank wraps around sideways: everything lies where it is nearest the chosen fish.
   const x = v => horizontalDelta(v - cx, frame.width) * scale + canvas.width / 2,
         y = v => (v - cy) * scale + canvas.height / 2;
+  // Shift a whole shape across the seam together. Wrapping its vertices separately can turn
+  // a distant rock into a polygon spanning the entire view.
+  const copies = box => {
+    if (y(box.bottom) < 0 || y(box.top) > canvas.height)
+      return [];
+    const left = cx - S.span / 2, right = cx + S.span / 2;
+    const first = Math.ceil((left - box.right) / frame.width),
+          last = Math.floor((right - box.left) / frame.width);
+    return Array.from({length : Math.max(0, last - first + 1)},
+                      (_, i) => v =>
+                          (v + (first + i) * frame.width - cx) * scale + canvas.width / 2);
+  };
   const colour = rgb => 'rgb(' + rgb.map(v => Math.round(255 * v)).join(' ') + ')';
   g.save();
   g.fillStyle = S.water;
   g.fillRect(0, 0, canvas.width, canvas.height);
   g.fillStyle = S.rock;
   for (const shape of frame.shapes ?? []) {
-    g.beginPath();
-    shape.forEach(([ px, py ], k) => k ? g.lineTo(x(px), y(py)) : g.moveTo(x(px), y(py)));
-    g.closePath();
-    g.fill();
+    if (!shape.length)
+      continue;
+    const box = {
+      left : Math.min(...shape.map(p => p[0])),
+      right : Math.max(...shape.map(p => p[0])),
+      top : Math.min(...shape.map(p => p[1])),
+      bottom : Math.max(...shape.map(p => p[1]))
+    };
+    for (const project of copies(box)) {
+      g.beginPath();
+      shape.forEach(([ px, py ], k) =>
+                        k ? g.lineTo(project(px), y(py)) : g.moveTo(project(px), y(py)));
+      g.closePath();
+      g.fill();
+    }
   }
   // Each plant organ as a ribbon along its curve, as wide as it grew, in its own colour.
-  const seen = box => x(box.right) >= 0 && x(box.left) <= canvas.width && y(box.bottom) >= 0 &&
-                      y(box.top) <= canvas.height;
   // Only plants standing on their stump grow organs (vegetation.js).
   for (const plant of frame.plants ?? [])
     for (const part of plant[PLANT.stump] ? plantRenderParts(plant) : []) {
-      if (!seen(plantCurveBox(part.q, part.width)))
+      const visible = copies(plantCurveBox(part.q, part.width));
+      if (!visible.length)
         continue;
       const edge = Array.from({length : S.ribbon + 1},
                               (_, k) => plantRibbon(part.q, part.width, part.kind, k / S.ribbon));
       g.fillStyle = colour(part.color);
-      g.beginPath();
-      edge.forEach(({p, nx, ny, width}, k) => {
-        const px = x(p[0] + nx * width), py = y(p[1] + ny * width);
-        k ? g.lineTo(px, py) : g.moveTo(px, py);
-      });
-      for (const {p, nx, ny, width} of edge.reverse())
-        g.lineTo(x(p[0] - nx * width), y(p[1] - ny * width));
-      g.closePath();
-      g.fill();
+      for (const project of visible) {
+        g.beginPath();
+        edge.forEach(({p, nx, ny, width}, k) => {
+          const px = project(p[0] + nx * width), py = y(p[1] + ny * width);
+          k ? g.lineTo(px, py) : g.moveTo(px, py);
+        });
+        for (const {p, nx, ny, width} of [...edge].reverse())
+          g.lineTo(project(p[0] - nx * width), y(p[1] - ny * width));
+        g.closePath();
+        g.fill();
+      }
     }
   const dot = (px, py, r, rgb) => {
     g.fillStyle = colour(rgb);
