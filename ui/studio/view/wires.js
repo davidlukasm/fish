@@ -154,9 +154,16 @@ function bentWay(points, safe = null) {
       p1, {x : p1.x + (p2.x - p1.x) / 3, y : p1.y + (p2.y - p1.y) / 3},
       {x : p1.x + (p2.x - p1.x) * 2 / 3, y : p1.y + (p2.y - p1.y) * 2 / 3}, p2
     ];
+    // A long neighbouring piece must not swing a short one past its end: each handle reaches at
+    // most a third of the piece.
+    const third = Math.hypot(p2.x - p1.x, p2.y - p1.y) / 3;
+    const handle = (from, dx, dy) => {
+      const k = Math.min(1, third / (Math.hypot(dx, dy) || 1));
+      return {x : from.x + dx * k, y : from.y + dy * k};
+    };
     const curve = [
-      p1, {x : p1.x + (p2.x - p0.x) / 6, y : p1.y + (p2.y - p0.y) / 6},
-      {x : p2.x - (p3.x - p1.x) / 6, y : p2.y - (p3.y - p1.y) / 6}, p2
+      p1, handle(p1, (p2.x - p0.x) / 6, (p2.y - p0.y) / 6),
+      handle(p2, (p1.x - p3.x) / 6, (p1.y - p3.y) / 6), p2
     ];
     if (safe && n === 1) {
       const dx = p2.x - p1.x, dy = p2.y - p1.y, length = Math.hypot(dx, dy) || 1;
