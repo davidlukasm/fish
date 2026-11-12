@@ -1144,7 +1144,23 @@
     "probation": "Schonfrist neuer Kontakte",
     "prune": "Abbauschwelle nach der Schonfrist",
     "decayUnused": "Halbwertszeit bei ungenutztem Kontakt",
-    "decayUsed": "Halbwertszeit bei voller Nutzung"
+    "decayUsed": "Halbwertszeit bei voller Nutzung",
+    "activeInput": "Reiz",
+    "rhythmicInput": "Takteingang",
+    "quietInput": "stiller Eingang",
+    "rhythm": "Takt",
+    "lesson": "Lehrsignal",
+    "reaction": "Reaktion",
+    "prediction": "erwartet",
+    "example": "Beispiel: Reiz und Reaktion gemeinsam",
+    "laterLesson": "Wie viel eine spätere Folge noch verändert",
+    "cueNow": "Reiz jetzt",
+    "later": "Folge später",
+    "modeShort": [
+      "aufheben",
+      "mit Lehrsignal",
+      "verstärken"
+    ]
   },
   "compiler": {
     "title": "Bauprüfung",
@@ -1462,5 +1478,24 @@
     "sensitivityWord": "Empfindlichkeit",
     "gateWord": "Schwelle",
     "adaptWord": "Gewöhnung {n} {n:Schritt|Schritte}"
+  },
+  "effectPicture": {
+    "free": "ohne Bindung",
+    "bound": "voll gebunden",
+    "consolidation": "Gelerntes erhalten",
+    "equalLesson": "Beispiel: gleich viel gelernt",
+    "pause": "{n} Schritte Pause",
+    "protected": "Helle Linie: geschützter Anteil",
+    "effects": [
+      "Gleicher Reiz · andere Erregung",
+      "Erfahrung verändert Kontakte",
+      "Aktive Eingänge verdrängen stille",
+      "Reaktion markiert beteiligte Eingänge",
+      "Stärke des eigenen Takts",
+      "Stärke des weitergegebenen Signals",
+      "Zelle dauerhaft entfernt",
+      "Lehrsignal verändert Kontakte",
+      "Gelerntes bleibt erhalten"
+    ]
   }
 }

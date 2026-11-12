@@ -832,7 +832,7 @@
 .aid-card-marks .aid-growth-mark{margin:0;padding:5px 8px}
 .aid-hormone-time{display:inline-flex;align-items:center;gap:4px;padding:5px;border-radius:8px;border:1px solid #3d6a70;color:var(--aid-name-text);font-size:11px}
 .aid-card-name{flex-basis:100%;color:var(--aid-name-text)}
-.aid-effect-guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.aid-effect-guide{display:grid;grid-template-columns:1fr;gap:6px}
 .aid-effect-guide .aid-effect-card{margin:0}
 #aid-body-map.aid-dropping [data-organ]:not(.aid-drop-target),#aid-body-map.aid-dropping [data-center]:not(.aid-drop-target){opacity:.3}
 #aid-body-map .aid-drop-target{filter:drop-shadow(0 0 4px #f1dca0aa)}
@@ -1225,3 +1225,6 @@
 .aid-node-map-node:hover circle{stroke:var(--aid-handle-hover)}
 .aid-node-map-node.selected circle{fill:var(--aid-chosen);stroke:var(--aid-chosen-edge);stroke-width:2.4}
 .aid-node-map-node.selected{color:#123432}
+
+.aid-effect-scene text{font-size:10px;fill:var(--aid-label-text)}
+.aid-effect-protection{fill:none;stroke:var(--aid-trace);stroke-width:2;stroke-linecap:round}

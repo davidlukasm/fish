@@ -727,7 +727,8 @@ export function receptorBody(state, center, effect) {
   return toggle + '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
          (birth ? ''
-                : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor))) +
+                : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
+                              {capabilities : state.capabilities, center})) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors') + '</div>' +
          effectCurve(state, receptor, effect, target);
 }
@@ -830,8 +831,10 @@ function effectGuide(state, index) {
                       '" style="--substance:' + colour + '" title="' +
                       escapeText(effectSentence(effect, direction) + ' ' +
                                  words('tileTitles')[effect] + ' ' + words('where')[effect]) +
-                      '">' + effectScene(effect, colour, ends) + '<div><strong>' +
-                      boundEffect(effect, direction) +
+                      '">' +
+                      effectScene(effect, colour, ends,
+                                  {capabilities : state.capabilities, center : bound[0]}) +
+                      '<div><strong>' + boundEffect(effect, direction) +
                       escapeText(tList('studio.axes.effects')[effect]) +
                       (n ? '<span class="aid-effect-count" title="' +
                                escapeText(t('studio.hormoneCard.here', {n})) + '">' + n + '</span>'

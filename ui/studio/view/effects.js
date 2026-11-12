@@ -1,7 +1,10 @@
 import {HORMONE_EFFECT} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {effectLevel, startEnds} from '../model/document.js';
-import {fixed} from './markup.js';
+import {escapeText, fixed} from './markup.js';
+import {label} from './kit.js';
+import {t} from '../../strings.js';
+import {learningTime, retainedLearning} from '../model/learning.js';
 import {animate, RESTING_GLOW, TEACH_PULSE, travelling} from './episode.js';
 
 const PANEL = Object.freeze({
@@ -186,18 +189,13 @@ const SCENES = Object.freeze({
            input(P.lower, [], 'still', start - CHANGE.quiet * level, start) +
            output([ T.input[0] ]) + cell([ T.input[0] ]);
   },
-  // A consolidated input keeps what it learned; a pliable one may lose it again.
-  [HORMONE_EFFECT.consolidation] : r =>
-      input(P.cy, [ T.input[0] ], '',
-            P.thick + CHANGE.learn * effectLevel(HORMONE_EFFECT.consolidation, r) / 2) +
-      trace(P.cy, T.input[0], SHADE.trace) + output([ T.input[0] ]) + cell([ T.input[0] ]),
   [HORMONE_EFFECT.eligibility] : r => {
-    const own = effectLevel(HORMONE_EFFECT.eligibility, r), beat = 1 - own;
+    const own = effectLevel(HORMONE_EFFECT.eligibility, r);
     return input(P.upper, [ T.input[0] ], '', P.thick + CHANGE.credit * own) +
-           input(P.lower, [ T.beat ], '', P.thick + CHANGE.credit * beat) +
+           input(P.lower, [ T.input[0] ], '', P.thick + CHANGE.credit * own) +
            trace(P.upper, T.input[0], own * SHADE.credit) +
-           trace(P.lower, T.beat, beat * SHADE.credit) + pacer() + teaching() +
-           output([ T.input[0] ]) + cell([ T.input[0] ]);
+           trace(P.lower, T.input[0], own * SHADE.credit) + teaching() + output([ T.input[0] ]) +
+           cell([ T.input[0] ]);
   }
 });
 function taught(colour, ends) {
@@ -219,21 +217,58 @@ export const EFFECT_ORDER = Object.freeze([
   HORMONE_EFFECT.eligibility, HORMONE_EFFECT.learning, HORMONE_EFFECT.competition,
   HORMONE_EFFECT.consolidation, HORMONE_EFFECT.rhythm
 ]);
-export const effectScene = (effect, colour, ends = startEnds(effect)) => sideBySide(
-    effect === HORMONE_EFFECT.teaching ? taught(colour, ends) : SCENES[effect], colour, ends);
-function sideBySide(draw, colour, ends) {
+export function effectScene(effect, colour, ends = startEnds(effect), example = null) {
+  if (effect === HORMONE_EFFECT.consolidation)
+    return consolidationScene(colour, ends, example);
+  return sideBySide(effect === HORMONE_EFFECT.teaching ? taught(colour, ends) : SCENES[effect],
+                    colour, ends, effect);
+}
+const word = key => label('effectPicture.' + key);
+const words = (x, y, text, anchor = 'middle') => '<text x="' + x + '" y="' + y + '" text-anchor="' +
+                                                 anchor + '">' + escapeText(text) + '</text>';
+function consolidationScene(colour, ends, example) {
+  const constants = example?.capabilities?.neural;
+  if (!constants || !example.center)
+    return '<svg class="aid-effect-scene" viewBox="0 0 240 24">' +
+           words(120, 16, word('consolidation')) + '</svg>';
+  const time = learningTime(example.center);
+  const retained = [ ends.without, ends.with ].map(r => retainedLearning(r, time, constants));
+  const width = 10, cellX = 98;
+  const row = (y, strength, protection) =>
+      '<path class="aid-effect-line ghost" d="M16 ' + y + 'H86" stroke-width="' + width + '"/>' +
+      '<path class="aid-effect-line" d="M16 ' + y + 'H86" stroke-width="' +
+      fixed(width * strength) + '"/><circle class="aid-effect-base" cx="' + cellX + '" cy="' + y +
+      '" r="9"/><circle class="aid-effect-cell" cx="' + cellX + '" cy="' + y +
+      '" r="9" fill-opacity="' + fixed(strength) + '"/>' +
+      '<path class="aid-effect-protection" d="M16 ' + (y + 9) + 'h' + fixed(70 * protection) +
+      '"/>';
+  return '<svg class="aid-effect-scene" viewBox="0 0 240 168" role="img" aria-label="' +
+         escapeText(word('consolidation')) + '">' + words(120, 14, word('equalLesson')) +
+         retained
+             .map((r, k) => '<g transform="translate(' + k * P.width + ' 0)">' +
+                            words(60, 34, word(k ? 'bound' : 'free')) +
+                            row(54, 1, .5 + Math.max(0, k ? ends.with : ends.without) * .25) +
+                            '<path class="aid-effect-line" d="M60 77v24m-4-5 4 5 4-5"/>' +
+                            row(123, r.weight, r.protection) + '</g>')
+             .join('') +
+         words(120, 94, t('studio.effectPicture.pause', {n : constants.baselineSteps})) +
+         words(120, 155, word('protected')) + '</svg>';
+}
+function sideBySide(draw, colour, ends, effect) {
   if (!draw)
     return '';
   const side = (withIt, x) =>
-      '<g transform="translate(' + x + ' 0)">' +
+      '<g transform="translate(' + x + ' 18)">' +
+      words(P.width / 2, -5, word(withIt ? 'bound' : 'free')) +
       (withIt ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy + '" r="' +
                     P.r * P.cloud + '" fill="' + colour + '"/>'
               : '') +
       draw(withIt ? ends.with : ends.without, withIt) + '<circle class="aid-effect-mark' +
       (withIt ? ' with' : '') + '" cx="' + (P.width - P.markAt) + '" cy="' + P.markAt + '" r="' +
       P.mark + '"' + (withIt ? ' style="fill:' + colour + '"' : '') + '/></g>';
-  return '<svg class="aid-effect-scene" viewBox="0 0 ' + 2 * P.width + ' ' + P.height +
-         '" aria-hidden="true">' + side(false, 0) + '<line class="aid-effect-divide" x1="' +
-         P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
-         side(true, P.width) + '</svg>';
+  return '<svg class="aid-effect-scene" viewBox="0 0 ' + 2 * P.width + ' ' + (P.height + 36) +
+         '" role="img" aria-label="' + escapeText(label('effects.' + effect)) + '">' +
+         side(false, 0) + '<line class="aid-effect-divide" x1="' + P.width + '" y1="' + P.side +
+         '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' + side(true, P.width) +
+         words(P.width, P.height + 29, word('effects.' + effect)) + '</svg>';
 }

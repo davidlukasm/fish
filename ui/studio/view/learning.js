@@ -28,6 +28,7 @@ import {effectScene} from './effects.js';
 import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
+import {learningFactors} from '../model/learning.js';
 
 // The learning gain keeps one digit more because it is small.
 const RATE_DIGITS = VALUE_DIGITS + 1;
@@ -58,7 +59,6 @@ const RULE = Object.freeze({
   cancel : 2.4,
   expect : 1.6,
   glow : .55,
-  credit : .5,
   unused : .8,
   apart : 2.6,
   delay : TIME_CONSTANT.learning_min_steps
@@ -66,26 +66,28 @@ const RULE = Object.freeze({
 const remnantOf = center => Math.exp(-RULE.delay / traceSteps(center));
 // Two rounds of the cell's learning: what fires with it grows, a still input fades and, when
 // the cell competes, gives way; a teacher's surprise grows what its trace still holds.
-function learningPicture(center, teachers, colours, values) {
+function learningPicture(state, center, teachers, colours, values) {
   const L = EPISODE_LAYOUT, R = RULE, words = key => label('learnRule.' + key);
-  const rate = center.qwidth, mode = center.mode, pacer = teachers.pacers.length > 0;
+  const factors = learningFactors(state.capabilities, center, previewContextOf(state));
+  const rate = factors.value / factors.max, mode = factors.mode, pacer = teachers.pacers.length > 0;
   const remnant = remnantOf(center), teaches = colours.length > 0;
   const inputs = [
-    {y : L.cy - L.r * R.apart, deed : 'own'}, ...(pacer ? [ {y : L.cy, deed : 'beat'} ] : []),
-    {y : L.cy + L.r * R.apart, deed : null}
+    {y : L.cy - L.r * R.apart, deed : 'own', label : words('activeInput')},
+    ...(pacer ? [ {y : L.cy, deed : 'beat', label : words('rhythmicInput')} ] : []),
+    {y : L.cy + L.r * R.apart, deed : null, label : words('quietInput')}
   ];
-  const competing = R.compete * rate * Math.max(0, mode);
+  const competing = R.compete * rate * Math.max(0, mode) * factors.competition;
   const cancelling = R.cancel * rate * Math.max(0, -mode);
   let expect = 0;
   const rounds = [ 0, 1 ].map(k => {
     const surprise = teaches ? 1 - expect : 0;
     const reward = R.change * rate * surprise * remnant;
-    const own = reward * 2 * R.credit, beat = pacer ? reward * 2 * (1 - R.credit) : 0;
+    const own = reward * factors.credit, beat = pacer ? reward * factors.credit : 0;
     const giveWay = modeLean(mode) > 0 ? -(own + beat) : 0;
     const before = expect;
     if (teaches)
       expect = before + (1 - before) * Math.min(1, R.expect * rate);
-    const trace = [ 2 * R.credit * R.glow, ...(pacer ? [ 2 * (1 - R.credit) * R.glow ] : []), 0 ];
+    const trace = [ factors.credit * R.glow, ...(pacer ? [ factors.credit * R.glow ] : []), 0 ];
     return {
       trace,
       remnant,
@@ -103,12 +105,18 @@ function learningPicture(center, teachers, colours, values) {
                     ])
                   : modeLean(mode) !== 0 ? t('studio.learnRule.untaughtMode', {mode : lean})
                                          : words('untaught');
-  // What the picture shows and the rule's values stand in its tooltip.
   return episodeSvg({
     title : label('inspector.learning'),
     tooltip : joinParts([ caption, values ]),
     inputs,
     output : true,
+    labels : {
+      beat : words('rhythm'),
+      teach : words('lesson'),
+      output : words('reaction'),
+      expect : words('prediction')
+    },
+    caption : words('example'),
     rounds
   });
 }
@@ -150,16 +158,7 @@ export const learnTracePatch = fx => {
   return {learning_tau : learningTimeOf(Math.max(TIME_CONSTANT.learning_min_steps, steps))};
 };
 function learningGain(state, center) {
-  const N = state.capabilities.neural, context = previewContextOf(state);
-  const hormone = receptorResponse(state.capabilities, center.receptors[HORMONE_EFFECT.learning],
-                                   context.hormones, context.maturity);
-  const span = (N.learningGainMax - N.learningFloor) * (1 + hormone) / 2;
-  return {
-    floor : N.learningFloor,
-    span,
-    max : N.learningGainMax,
-    value : N.learningFloor + center.qwidth * span
-  };
+  return learningFactors(state.capabilities, center, previewContextOf(state));
 }
 export function learnMemoryPatch(state, center, handle, fx, fy) {
   if (handle === 'trace')
@@ -194,7 +193,11 @@ function traceGraphic(state, center) {
          T.right + '"/>' +
          (gain.span > 0 ? grip('rate', T.left, y(gain.value), label('cellPicture.learningStrength'))
                         : '') +
-         grip('trace', x(lasts), y(gain.value / Math.E), label('learnRule.traceLength')) + '</svg>';
+         grip('trace', x(lasts), y(gain.value / Math.E), label('learnRule.traceLength')) +
+         '<text x="' + (T.left + 12) + '" y="14">' + label('learnRule.laterLesson') +
+         '</text><text x="' + T.left + '" y="130">' + label('learnRule.cueNow') +
+         '</text><text x="' + T.right + '" y="130" text-anchor="end">' + label('learnRule.later') +
+         '</text></svg>';
 }
 function modeChoices(center) {
   return '<div class="aid-learning-modes">' +
@@ -212,7 +215,8 @@ function modeChoices(center) {
                                   : 3) +
                       '"/><path class="aid-contact-fibre" d="M10 40L55 30" stroke-width="' +
                       (mode > 0 ? 1 : 3) +
-                      '"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg></button>';
+                      '"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>' +
+                      escapeText(label('learnRule.modeShort.' + (mode + 1))) + '</button>';
              })
              .join('') +
          '</div>';
@@ -228,7 +232,8 @@ function substancePart(state, center, effect) {
       '<button class="' + (on ? 'active' : '') + '" data-learn-substance="' + value +
       '" data-center-id="' + escapeText(center.id) + '" data-learn-effect="' + effect + '"' +
       (swatch ? ' style="--substance:' + swatch + '"' : '') + ' title="' + escapeText(text) +
-      '"><span class="aid-substance-swatch' + (swatch ? '' : ' none') + '"></span></button>';
+      '"><span class="aid-substance-swatch' + (swatch ? '' : ' none') + '"></span>' +
+      escapeText(text) + '</button>';
   const choices =
       '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(title) + '">' +
       choice('off', label('learnRule.none'), !bound) +
@@ -243,9 +248,10 @@ function substancePart(state, center, effect) {
   return '<details class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
          (colour ? ' style="--substance:' + colour + '"' : '') + '><summary title="' +
          escapeText(title) + '">' + glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) +
-         '</summary>' + choices +
+         escapeText(label('axes.effects.' + effect)) + '</summary>' + choices +
          // An effect that reads no substance has nothing to show but the choice of one.
-         (bound ? effectScene(effect, colour, receptorEnds(receptor)) +
+         (bound ? effectScene(effect, colour, receptorEnds(receptor),
+                              {capabilities : state.capabilities, center}) +
                       effectCurve(state, receptor, effect, center.id + ':' + effect)
                 : '') +
          '</details>';
@@ -343,7 +349,7 @@ export function learningInspector(state) {
     ...(taught ? [ substanceColor(taught.index) ] : [])
   ];
   return html + heading(centerTitle(chosen)) + previewControls(state) +
-         learningPicture(chosen, teachers, colours, learningValues(state, chosen)) +
+         learningPicture(state, chosen, teachers, colours, learningValues(state, chosen)) +
          teacherList(state, chosen, teachers.modulators) + traceGraphic(state, chosen) +
          modeChoices(chosen) + '<div class="aid-learn-effects">' +
          LEARNING_EFFECTS.map(effect => substancePart(state, chosen, effect)).join('') + '</div>' +
