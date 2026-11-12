@@ -68,6 +68,7 @@ import {
 import {learnModePatch, learnRatePatch, learnResponseOf, learnTracePatch} from './view/learning.js';
 import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
+import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
 
 const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
 const PANEL_STORE = 'aid.atelier.panels';
@@ -97,7 +98,8 @@ const HANDLES = Object.freeze({
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
   preview : {follow : 'previewPointer'},
-  gutProbe : {follow : 'gutProbePointer'}
+  gutProbe : {follow : 'gutProbePointer'},
+  ...CPPN_HANDLES
 });
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
@@ -268,7 +270,8 @@ export const GRIPS = Object.freeze([
                  ? null
                  : {element : g, kind, id : g.dataset[PADS[kind].key], handle};
     }
-  }
+  },
+  ...CPPN_GRIPS
 ]);
 const PAD_STILL = .001;
 export const DRAG_CLICK = 350, DRAG_START = 5;
@@ -300,6 +303,7 @@ function knobGrip(event) {
              : null;
 }
 export const handleMethods = {
+  ...cppnMethods,
   regionPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const organ = findOrgan(doc, drag.id);

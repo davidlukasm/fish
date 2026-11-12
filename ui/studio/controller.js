@@ -56,7 +56,7 @@ import {label} from './view/kit.js';
 import {moduleName} from './view/names.js';
 import {API, API_WAIT, GENOME_SUFFIX, requestBody, START_FISH} from './requests.js';
 import {trialMethods} from './trials.js';
-import {CPPN_CHANGES, CPPN_CLICKS} from './cppn.js';
+import {CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 import {StationHub} from './hub.js';
 import {BreedingStation, TrialStation} from '../labor/station.js';
@@ -102,6 +102,7 @@ export class OrganStudio {
       cppnSelection : null,
       cppnConnectFrom : null,
       cppnConnectPort : 0,
+      cppnDraft : null,
       busy : false,
       compileProgress : null,
       robustness : null,
@@ -828,8 +829,6 @@ export class OrganStudio {
           .catch(error => this.notice(error.message));
       return;
     }
-    if (this.state.mode === 'cppn' && changeOn(this, element, CPPN_CHANGES))
-      return;
     changeOn(this, element, FISH_CHANGES);
   }
   keydown(event) {

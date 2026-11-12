@@ -379,14 +379,31 @@
 .aid-cppn-node.output path{fill:#354e53;stroke:#d6c9a1}
 .aid-cppn-node.hidden circle{fill:#3e4051;stroke:#c0aec9}
 .aid-cppn-node.selected circle,.aid-cppn-node.selected path,.aid-cppn-node.selected rect{stroke:#fff1bd;stroke-width:4}
-.aid-cppn-node-number{fill:#ebeee2;stroke:none;font-size:12px;font-weight:bold;pointer-events:none}
-.aid-cppn-node-caption{fill:#c5d8d2;font-size:11px;pointer-events:none}
 .aid-cppn-link-ink{stroke:#9fd3bc;fill:none;opacity:.5;pointer-events:none}
 .aid-cppn-link.inhibitory .aid-cppn-link-ink{stroke:#e7a1b8}
 .aid-cppn-link.disabled .aid-cppn-link-ink{stroke-dasharray:7 6;opacity:.2}
 .aid-cppn-link.selected .aid-cppn-link-ink{opacity:1;filter:drop-shadow(0 0 6px #e3e1bd)}
 .aid-cppn-link-hit{stroke:transparent;stroke-width:17;fill:none;cursor:pointer}
-.aid-cppn-connection{padding:12px;background:#1d4249;border-radius:9px;margin:12px 0}
+.aid-cppn-node .aid-cppn-node-curve{fill:none;stroke:#e8e2c4;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.aid-cppn-curve{display:block;width:100%;height:auto;margin:10px 0;background:#102d35;border:1px solid #2f545c;border-radius:10px}
+.aid-cppn-axis{stroke:#4d6f76;stroke-width:1;fill:none}
+.aid-cppn-curve-ink{fill:none;stroke:#e8e2c4;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.aid-cppn-transfer.excitatory .aid-cppn-curve-ink{stroke:#9fd3bc}
+.aid-cppn-transfer.inhibitory .aid-cppn-curve-ink{stroke:#e7a1b8}
+.aid-cppn-transfer.disabled .aid-cppn-curve-ink{stroke:#7a948f;stroke-dasharray:7 6}
+.aid-cppn-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px;margin:6px 0 10px}
+.aid-cppn-form{display:grid;place-items:center;aspect-ratio:1;padding:4px;border:1px solid #3e646d;border-radius:9px;background:#1a3a44;cursor:pointer}
+.aid-cppn-form svg{width:100%;height:100%;fill:none;stroke:#c9d8cf;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-cppn-form.active{background:#bfceb0;border-color:#fff1bd}
+.aid-cppn-form.active svg{stroke:#163438}
+.aid-cppn-actions{display:flex;gap:8px;align-items:center;margin:8px 0}
+.aid-cppn-icon{display:grid;place-items:center;width:40px;height:40px;padding:0;border:1px solid #3e646d;border-radius:10px;background:#1a3a44;cursor:pointer}
+.aid-cppn-icon svg,.aid-cppn-port svg,.aid-cppn-gate svg{fill:none;stroke:#d7e4d8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aid-cppn-icon.active{background:#bfceb0}
+.aid-cppn-icon.active svg{stroke:#163438}
+.aid-cppn-port{display:grid;place-items:center;width:40px;height:40px;opacity:.75}
+.aid-cppn-gate{display:grid;place-items:center;margin:10px 0;padding:22px;background:#102d35;border:1px solid #2f545c;border-radius:10px}
+.aid-cppn-gate svg{width:96px;height:96px}
 .aid-inspector-scroll label{display:flex;flex-direction:column;gap:6px;margin:10px 0}
 .aid-inspector-scroll label.aid-checkbox,.aid-inspector-scroll label.aid-compiler-region{flex-direction:row;align-items:center}
 .aid-inspector-scroll input[type=number],.aid-inspector-scroll select{padding:9px;border-radius:9px;background:#102d35;color:#dbe8dc;border:1px solid #55727b;max-width:100%}

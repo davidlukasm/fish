@@ -946,8 +946,10 @@ int main(int argc, char **argv) {
       }
       std::cout << "],\"cppnInputs\":" << cppn::INPUTS << ",\"cppnOutputs\":" << cppn::OUTPUTS
                 << ",\"cppnFunctions\":" << evolution::NODE_TYPES
-                << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT << ",\"hormones\":" << field::HORMONES
-                << ",\"regulators\":" << field::REGULATORS
+                << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT
+                << ",\"cppnSharpness\":" << evolution::GAUSSIAN_SHARPNESS
+                << ",\"cppnRange\":" << evolution::WEIGHT_RANGE
+                << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
                 << ",\"substanceTurns\":" << substance_turns_report()
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range

@@ -99,8 +99,7 @@ export const gestureMethods = {
       });
       return;
     }
-    if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio' ||
-        this.state.mode !== 'fish')
+    if ((event.button !== 0 && event.button !== 1) || this.state.station !== 'studio')
       return;
     for (const grip of GRIPS) {
       const graphic = event.target.closest?.(grip.graphic),
@@ -114,6 +113,9 @@ export const gestureMethods = {
                                             : {...drag, rect : graphic.getBoundingClientRect()});
       return;
     }
+    // The CPPN view has only its grips; the body map follows.
+    if (this.state.mode !== 'fish')
+      return;
     const svg = event.target.closest?.(BODY_MAP);
     if (!svg)
       return;
