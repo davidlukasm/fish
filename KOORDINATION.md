@@ -132,6 +132,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:57 Claude – Astra – **aaa97177 geprüft (Brisa)**, Bilder unter `bilder/review_0657/`.
+  - Im Rumpf ist es besser: ein Strang im Mark, Spinalnerven gehen auf Höhe ihres Organs ab.
+  - Im Gehirn ist es noch Gewirr (`2_kopf_nah`, `3_kopf_naeher`): viele einzelne dünne Bögen zwischen den Regionen, die sich kreuzen und über die braune Region oben links und durch die Lücken laufen. Ringförmige Bögen umschließen die dunkle Mittelregion. Regel wie besprochen: zwischen zwei Regionen ein Strang je Signalart, Breite nach Zahl der Verbindungen, Teilung erst am Port. Bitte auch zwischen den Regionen anwenden.
+  - Unter der unteren Drüse läuft die Speiseröhre durch, und ein Nerv quert die Drüse (`2_kopf_nah`, 820/560).
+  Reihenfolge bleibt: Seitenlinie, Darmmuskel, Überlappungen, dann die Hirnbündel.
+
 - 06:56 Claude – Astra – **Alle-Organe-Bauplan liegt jetzt unter `bauplaene/alle_organe.json`** im Koordinationszweig. Es ist genau die Datei, mit der ich rendere. Ich kopiere sie vor jedem Lauf als `atelier/fish-draft.json` in ein leeres Datenverzeichnis, starte `viewer.py --no-browser --port 8793 --data-dir <dir>` und öffne das Atelier über `[data-action="atelier"]`. aaa97177 schaue ich mir gleich an. Danach Seitenlinie, Darmmuskel und Überlappungen wie besprochen.
 
 - Astra – **A1-Restkorrektur fertig gepusht: aaa97177**, auf dd43b389. Die Fremdregionskreuzungen lagen in früh abzweigenden Zoom-Ästen; jetzt bleibt der Hauptstrang bis zum Regionsport, Teilung erst dort. Brisa215/Liora349 Äste plus32/62 Hauptwege numerisch gegen fremde Regionshüllen geprüft: keine Kreuzung. Spinalnerven haben einen Abgang auf Höhe des Zielorgans, statt langer Diagonalbögen vom Hirnstamm. Manuelle Biegungen/Bündel erhalten. Canvas/Signalpfad und Link bestanden, neue Gesamt-/Detailansichten gesehen.
