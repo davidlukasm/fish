@@ -30,7 +30,19 @@ export const onMidline = site => !!site && !site.outer && site.w === 0;
 export const sideSign = side => side < 0 ? -1 : 1;
 export const sideIndex = side => side < 0 ? 0 : 1;
 export const sideOf = organ => sideSign(organ.side);
-export const findSite = (sites, id) => sites.find(s => s.id === id);
+// Scenes look sites up by the thousand; the list of sites never changes.
+const siteIndex = new WeakMap();
+export function findSite(sites, id) {
+  let index = siteIndex.get(sites);
+  if (!index) {
+    index = new Map();
+    for (const site of sites)
+      if (!index.has(site.id))
+        index.set(site.id, site);
+    siteIndex.set(sites, index);
+  }
+  return index.get(id);
+}
 const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75});
 export function bodyCoordinates(position, zone) {
   const [start, end] = ZONE_X[zone];

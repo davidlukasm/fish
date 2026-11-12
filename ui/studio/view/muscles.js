@@ -159,7 +159,27 @@ export function finAttachments(state) {
   }
   return result;
 }
+// A scene asks for a muscle's shape once per node and wire end; the shape is kept for as long as
+// the muscle stays as it was drawn.
+const shapes = new WeakMap();
 export function muscleShape(organ, sites) {
+  const old = shapes.get(organ);
+  if (old && old.sites === sites && old.centers === organ.centers &&
+      old.count === organ.centers.length && old.position === organ.position &&
+      old.side === organ.side)
+    return old.shape;
+  const shape = drawnShape(organ, sites);
+  shapes.set(organ, {
+    shape,
+    sites,
+    centers : organ.centers,
+    count : organ.centers.length,
+    position : organ.position,
+    side : organ.side
+  });
+  return shape;
+}
+function drawnShape(organ, sites) {
   const code = organFunction(organ, sites);
   const shape = workShape(code, sideOf(organ), muscleBuild(organ), organ.centers.length,
                           code === MOTOR_KIND.turn ? finStroke(organ) : FIN_STROKE.back,

@@ -6,7 +6,7 @@ import {
   PRESSURE_SOURCE,
   SENSE_KIND
 } from '../../schema.js';
-import {NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
+import {findSite, NERVE_ROLE, onMidline, sideSign, SKIN_ROLE} from './layout.js';
 import {REGION_TYPES} from './region_catalog.js';
 import {RHYTHM_TAU} from './region_cells.js';
 import {FIBRE_TYPES, fibreTau} from '../../fibre.js';
@@ -375,7 +375,7 @@ export const kindNodes = organ => organ.centers.filter(c => c.key === organ.cent
 export const kindLimit = (organ, sites) =>
     nodeLimit(organ, sites) - (organ.centers.length - kindNodes(organ).length);
 export function organFunction(organ, sites) {
-  const first = organ.centers[0], site = first && sites?.find(s => s.id === first.site);
+  const first = organ.centers[0], site = first && sites && findSite(sites, first.site);
   return site ? functionFor(first, site) : -1;
 }
 export function fitsOrgan(type, center, site) {

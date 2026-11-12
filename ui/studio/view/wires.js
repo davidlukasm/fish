@@ -86,9 +86,6 @@ function endpointAnchor(doc, sites, id, centers) {
                  organ : found.organ
                };
 }
-function wireEnd(state, centers, wireId, linkId) {
-  return endpointAnchor(state.document, state.sites, linkId, centers);
-}
 function dockEnd(state, anchor, direction, towards = null) {
   if (!anchor.organ || !isRegion(anchor.organ))
     return towards ? {...anchor, point : organDock(anchor, towards)} : anchor;
@@ -275,8 +272,8 @@ function wireBundles(state, centers) {
       continue;
     }
     const a = centers.get(link.from);
-    const from = wireEnd(state, centers, link.wire.from, link.from),
-          to = wireEnd(state, centers, link.wire.to, link.to);
+    const from = endpointAnchor(doc, sites, link.from, centers),
+          to = endpointAnchor(doc, sites, link.to, centers);
     if (!a || !centers.get(link.to) || !from || !to)
       continue;
     const kind = signalKind(a.center), bends = bendsOf(doc, link);
@@ -292,21 +289,19 @@ function wireBundles(state, centers) {
         bends,
         mirrored : linkMirrored(doc, link),
         links : [],
+        anchors : [],
         opacity : 1
       });
     bundles.get(key).links.push(link);
+    bundles.get(key).anchors.push({from, to});
   }
-  const drawn =
-      [...bundles.values() ].map(({from, to, kind, manual, bends, mirrored, links, opacity}) => {
+  const drawn = [...bundles.values() ].map(
+      ({from, to, kind, manual, bends, mirrored, links, anchors, opacity}) => {
         const spatial = !manual && !bends.length, a = from.point, b = to.point;
         from = dockEnd(state, from, 'out', spatial ? b : null);
         to = dockEnd(state, to, 'in', spatial ? a : null);
-        const sources =
-            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.from, link.from),
-                                      'out', spatial ? b : null));
-        const targets =
-            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.to, link.to), 'in',
-                                      spatial ? a : null));
+        const sources = anchors.map(end => dockEnd(state, end.from, 'out', spatial ? b : null));
+        const targets = anchors.map(end => dockEnd(state, end.to, 'in', spatial ? a : null));
         if (manual) {
           from = {...from, point : centroid(sources.map(a => a.point))};
           to = {...to, point : centroid(targets.map(a => a.point))};
@@ -340,10 +335,12 @@ function wireBundles(state, centers) {
 const signalKind = center => isModulator(center) ? 'modulate'
                              : center.sign < 0   ? 'inhibit'
                                                  : 'excite';
-export function wireSvg(state, centers, foreground = false) {
-  const {document : doc, sites, selected} = state;
+// The bundles and, apart from them, the fibres they split into, which the scene draws above the
+// organs.
+export function wireSvg(state, centers) {
+  const {document : doc, selected} = state;
   const {bundles} = wireBundles(state, centers);
-  let html = '';
+  let lines = '', fibres = '';
   for (const bundle of bundles) {
     const {kind, ends, way, s0, s1} = bundle;
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
@@ -356,31 +353,30 @@ export function wireSvg(state, centers, foreground = false) {
                                        state.multi?.has(e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
-    if (!foreground)
-      html +=
-          '<g opacity="' + fixed(bundle.opacity) + '" data-signal-opacity="' +
-          fixed(bundle.opacity) + '" data-signal-edges="' +
-          escapeText([...new Set(ends.flatMap(end => signalPairs(doc, end.link))) ].join(' ')) +
-          '" data-wire="' +
-          escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
-          '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
-          (bundle.mirrored ? ' data-mirrored' : '') +
-          (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
-          (chosen >= 0 ? ' selected' : '') + '">' +
-          '<path d="' + d + '" class="aid-wire-hit"/>' +
-          (ends.length > 1 ? '<path class="aid-wire-sheath" d="' + d + '" stroke="' + style.colour +
-                                 '" stroke-width="' + fixed(width + BUNDLE.sheath) + '"/>'
-                           : '') +
-          '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
-          fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
-          '/><title>' + escapeText(joinParts([
-            linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
-                     endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
-            wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
-          ])) +
-          '</title></g>';
+    const pairs = ends.map(end => signalPairs(doc, end.link));
+    lines +=
+        '<g opacity="' + fixed(bundle.opacity) + '" data-signal-opacity="' + fixed(bundle.opacity) +
+        '" data-signal-edges="' + escapeText([...new Set(pairs.flat()) ].join(' ')) +
+        '" data-wire="' +
+        escapeText(chosen >= 0 && wireIds.size === 1 ? ends[chosen].link.wire.id : next) +
+        '" data-wires="' + escapeText([...wireIds ].join(' ')) + '"' +
+        (bundle.mirrored ? ' data-mirrored' : '') +
+        (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
+        (chosen >= 0 ? ' selected' : '') + '">' +
+        '<path d="' + d + '" class="aid-wire-hit"/>' +
+        (ends.length > 1 ? '<path class="aid-wire-sheath" d="' + d + '" stroke="' + style.colour +
+                               '" stroke-width="' + fixed(width + BUNDLE.sheath) + '"/>'
+                         : '') +
+        '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
+        fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
+        '/><title>' + escapeText(joinParts([
+          linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
+                   endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
+          wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
+        ])) +
+        '</title></g>';
     const branchesByPath = new Map();
-    for (const e of ends)
+    for (const [index, e] of ends.entries())
       for (const inward of [true, false]) {
         const nodes = inward ? e.starts : e.arrives;
         const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
@@ -390,9 +386,9 @@ export function wireSvg(state, centers, foreground = false) {
           const key = Number(inward) + ':' + d, section = inward ? 0 : 2;
           const branch = branchesByPath.get(key) ??
                          {d, section, edges : new Set(), width : 0, opacity : 0, chosen : false};
-          for (const pair of signalPairs(doc, e.link)
-                   .filter(pair => node.overview || (inward ? pair.startsWith(node.id + '>')
-                                                            : pair.endsWith('>' + node.id))))
+          for (const pair of pairs[index].filter(pair => node.overview ||
+                                                         (inward ? pair.startsWith(node.id + '>')
+                                                                 : pair.endsWith('>' + node.id))))
             branch.edges.add(pair);
           branch.width = Math.max(branch.width,
                                   Math.max(BRANCH.least_width, e.width / Math.sqrt(nodes.length)));
@@ -411,12 +407,14 @@ export function wireSvg(state, centers, foreground = false) {
                       '" stroke-width="' + fixed(b.width) + '"' +
                       (b.section === 2 ? ' marker-end="url(#' + style.arrow + ')"' : '') + '/>')
             .join('');
-    if (branches && foreground)
-      html += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
+    if (branches)
+      fibres += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
   }
-  return html + (!foreground && state.tool === 'wire' ? bendHandles(state, bundles) : '');
+  return {
+    lines : lines + (state.tool === 'wire' ? bendHandles(state, bundles) : ''),
+    branches : fibres
+  };
 }
-export const wireBranchesSvg = (state, centers) => wireSvg(state, centers, true);
 function contactOpacity(state, a, b) {
   const visible = ({organ, center}) =>
       nodeOpacity(state, state.selected?.id === organ.id || state.selected?.id === center.id ||

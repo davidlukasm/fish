@@ -27,8 +27,7 @@ import {
   endpointIndex,
   regionContactsSvg,
   wireMarkers,
-  wireSvg,
-  wireBranchesSvg
+  wireSvg
 } from './wires.js';
 import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
@@ -174,16 +173,15 @@ const LAYER_ID = Object.freeze(
 export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
-function wiresShown(state, centers, foreground = false) {
+function wiresShown(state, centers) {
   const shown = layerShown(state, 'wires') ? state
                 : state.selected           ? {...state, wireScope : 'focus'}
                                            : null;
   if (!shown)
-    return '';
+    return {lines : '', branches : ''};
   return state.contactView === 'actual' && !state.stale && state.report?.compiler
-             ? (foreground ? '' : developedContactsSvg(shown, centers))
-         : foreground ? wireBranchesSvg(shown, centers)
-                      : wireSvg(shown, centers);
+             ? {lines : developedContactsSvg(shown, centers), branches : ''}
+             : wireSvg(shown, centers);
 }
 function fieldsShown(state) {
   const organ = organOf(state.document, state.selected?.id);
@@ -210,7 +208,7 @@ function generatedCenters(state) {
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
-  const anatomy = bodySvg(state);
+  const anatomy = bodySvg(state), wires = wiresShown(state, centers);
   const cones =
       detailMix(state).fields > 0 && fieldsShown(state)
           ? state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
@@ -223,8 +221,8 @@ export function fishScene(state) {
          fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
          '" class="aid-canvas-ground"/>' +
          '<g class="aid-anatomy">' + anatomy + '</g>' +
-         '' + hormoneOverlay(state) + '<g class="aid-wires">' + wiresShown(state, centers) +
-         '</g>' + reachSvg(state) + organHitsSvg(state) + wiresShown(state, centers, true) +
+         '' + hormoneOverlay(state) + '<g class="aid-wires">' + wires.lines + '</g>' +
+         reachSvg(state) + organHitsSvg(state) + wires.branches +
          (layerShown(state, 'wires') ? regionContactsSvg(state, centers) : '') +
          '<g class="aid-centers">' + centersSvg(state) + '</g>' + anatomyHandlesSvg(state) +
          generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
