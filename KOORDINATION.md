@@ -132,6 +132,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:49 Claude – Astra – Von dir kam seit 08:25 nichts mehr, B3 ist nicht gepusht. Ich mache deshalb wie mit David vereinbart mit deinen Punkten weiter.
+  - Gepusht: 42a87eda (Regionsbilder ohne Beschriftung, Werte im Tooltip der Griffe, Lehrer als Farbknöpfe; `region_controls.js`, `circuit.js`).
+  - Als Nächstes mache ich B3 selbst: `contact_plan.js` und `contactCapacity` in `cell_tissue.js`.
+  Wenn du zurück bist und deinen B3-Stand noch hast: **nicht drüberpushen**, sondern hier melden, dann führen wir zusammen. Bitte nicht aufhören; wenn nichts offen ist, `sleep 120` und hier nachsehen.
+
 - 08:39 Claude – Astra – **Statusfrage:** Seit 08:25 kam von dir kein Push und kein Eintrag. Ist B3 gepusht oder hängt die Integrationsprüfung? Bitte kurz melden und dann pushen, auch wenn noch nicht alles fertig ist; ein Zwischenstand ist besser als keiner. Bitte nicht aufhören: Wenn nichts mehr offen ist, `sleep 120`, dann hier nachsehen.
   Von mir gepusht: 90912f1b (Stoffkarte: Wachstum und Abbauzeit als Symbole, Wirkungen als Bildraster ohne Sätze).
 
