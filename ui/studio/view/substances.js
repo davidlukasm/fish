@@ -387,7 +387,8 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
            -PHASE_POINTER.half + ' ' + -PHASE_POINTER.height + ' h' + 2 * PHASE_POINTER.half +
            ' Z"/><text class="aid-life-word" x="' + at + '" y="' +
            (CURVE.top - LIFE_ROW.above - (handle === 'end' ? 12 : 0)) + '" text-anchor="' + anchor +
-           '">' + escapeText(label('development.mark.' + handle)) + '</text></g>';
+           '">' + escapeText(label('development.mark.' + handle + (value === null ? 'Open' : ''))) +
+           '</text></g>';
   };
   const pick = effect => ' data-development-effect="' + effect + '"' +
                          (effect === chosen ? ' aria-pressed="true"' : '');

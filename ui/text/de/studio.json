@@ -1381,8 +1381,10 @@
       "death": "entfernt"
     },
     "mark": {
-      "start": "Ausgabe: ½ Bindung",
-      "end": "Todesreiz: ½ Bindung"
+      "start": "halbes Signal",
+      "end": "hier stirbt die Zelle",
+      "startOpen": "Signal von Anfang an",
+      "endOpen": "lebt bis zuletzt"
     },
     "answer": "Aufbau / Signal",
     "stage": [
