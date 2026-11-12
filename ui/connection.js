@@ -28,7 +28,7 @@ import {camera, cameraState, resetCamera, setFollowing, updateCameraState} from 
 import {DisplayScene} from './scene_frame.js';
 import {cockpitState, diversityRows} from './cockpit.js';
 import {refreshHistory, showFrame} from './controller.js';
-import {el, text} from './dom.js';
+import {el, tankVisible, text} from './dom.js';
 import {refreshJournal, resetJournalRequests} from './event_view.js';
 import {journal_modelState, resetJournal} from './journal_model.js';
 import {evolutionState, pinnedSpecies, speciesCards} from './evolution.js';
@@ -331,7 +331,8 @@ async function updateDisplay() {
     if (!connectionState.stopped && !signal.aborted && signal === connectionState.abort.signal)
       connectionState.sceneTimer = setTimeout(
           updateDisplay,
-          connectionState.metadata?.turbo || document.hidden
+          // Behind another station the aquarium is not drawn, so its pictures arrive slowly too.
+          connectionState.metadata?.turbo || document.hidden || !tankVisible()
               ? POLL.slow_ms
               : Math.max(displayFaults.issues.has(t('connection.bildverbindung')) ? POLL.slow_ms
                                                                                   : 0,
