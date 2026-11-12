@@ -14,6 +14,9 @@ import {centerTitle} from './names.js';
 
 const PROBE_SCENE = Object.freeze({
   rings : [ 1, 2, 5, 10 ],
+  // Zoomed far out, a ring closer than this to the one inside it (in steady units) is left out so
+  // the labels do not overlap.
+  ringGap : 28,
   gap : 14,
   far : 150,
   reach : 300,
@@ -53,14 +56,11 @@ const pointAt = (angle, r) => {
   const d = bodyDirection(angle);
   return {x : BODY_MIDDLE.x + d.x * r, y : BODY_MIDDLE.y + d.y * r};
 };
-// Every distance a scent is tried at lies within one body radius beyond the skin, on a log scale,
-// so the answer changes within reach of the drag instead of only far outside the view.
-const SMELL_SPAN = Math.log(PROBE_LIMITS.most.smell / PROBE_LIMITS.least.smell);
-const beyondSkin = distance =>
-    BODY_RADIUS * Math.log(distance / PROBE_LIMITS.least.smell) / SMELL_SPAN;
-const distanceAt = beyond =>
-    clamp(PROBE_LIMITS.least.smell * Math.exp(SMELL_SPAN * beyond / BODY_RADIUS),
-          PROBE_LIMITS.least.smell, PROBE_LIMITS.most.smell);
+// A scent lies as far beyond the skin as it is from the fish, one body radius per unit of
+// distance; dragged further out, the view zooms out with it (keepInView).
+const beyondSkin = distance => (distance - PROBE_LIMITS.least.smell) * BODY_RADIUS;
+const distanceAt = beyond => clamp(PROBE_LIMITS.least.smell + beyond / BODY_RADIUS,
+                                   PROBE_LIMITS.least.smell, PROBE_LIMITS.most.smell);
 const strengthShare = (strength, kind, faintest) =>
     Math.max(0, Math.log(Math.max(strength, faintest) / faintest) /
                     Math.log(PROBE_LIMITS.most[kind] / faintest));
@@ -86,9 +86,14 @@ export function probePatch(kind, position, faintest) {
 }
 function smellRings(zoom) {
   const points = skinAround();
-  return PROBE_SCENE.rings
-      .map(lengths => {
-        const beyond = beyondSkin(lengths * 2);
+  const kept = [];
+  for (const lengths of PROBE_SCENE.rings) {
+    const beyond = beyondSkin(lengths * 2);
+    if ((beyond - (kept.at(-1)?.beyond ?? 0)) * zoom >= PROBE_SCENE.ringGap)
+      kept.push({lengths, beyond});
+  }
+  return kept
+      .map(({lengths, beyond}) => {
         const ring = points.map(p => pointAt(p.angle, p.r + beyond));
         const top = ring.reduce((best, p) => p.y < best.y ? p : best);
         return '<path class="aid-probe-ring" d="M' +

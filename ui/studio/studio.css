@@ -1026,8 +1026,9 @@
 #aid-body-map.aid-stimulus-view .aid-pulse-used .aid-wire-ink{opacity:1}
 #aid-body-map.aid-stimulus-view .aid-pulse-learned .aid-wire-ink{stroke:var(--aid-teach);stroke-width:4.5px;filter:drop-shadow(0 0 5px var(--aid-teach));animation:aid-learned 1.6s ease-out}
 @keyframes aid-learned{from{filter:drop-shadow(0 0 14px var(--aid-teach))}}
-.aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .32s ease-in-out 3}
-@keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(1.22,.82)}}
+/* A muscle shortens within its own outline, in step with the tail beat; it never grows past the skin. */
+.aid-anatomical-organ.aid-pulse-twitch{transform-box:fill-box;transform-origin:center;animation:aid-twitch .42s ease-in-out 3}
+@keyframes aid-twitch{0%,100%{transform:scale(1)}50%{transform:scale(.86,1)}}
 #aid-body-map.aid-stimulus-view .aid-pulse-withdrawn .aid-wire-ink{stroke:var(--aid-inhibit);stroke-dasharray:6 5}
 #aid-body-map .aid-pulse-tuned{filter:drop-shadow(0 0 7px var(--aid-teach))}
 #aid-body-map .aid-pulse-hormone{filter:drop-shadow(0 0 7px var(--aid-hormone))}
