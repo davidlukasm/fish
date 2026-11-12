@@ -34,6 +34,7 @@ import {
   functionFor,
   isPelvicMuscle,
   isRegion,
+  kindNodes,
   MUSCLE_TRAITS,
   NEURON_BY_KEY,
   nodeLimit,
@@ -1025,6 +1026,18 @@ export const SPRINT_THRESHOLD = 1;
 export const sprintNodes = organ =>
     organ.type === 'muscle' ? Math.floor(organ.sprint * organ.centers.length + 1e-9) : 0;
 export const isSprintNode = (organ, index) => index >= organ.centers.length - sprintNodes(organ);
+// How many cells each node of a working organ has: all its nodes alike, the linked twin too.
+export function setNodeCopies(doc, organId, copies) {
+  const organ = findOrgan(doc, organId);
+  if (!organ || !Number.isInteger(copies) || copies < 1 || copies > ATELIER_LIMITS.max_copies)
+    return null;
+  const draft = copy(doc);
+  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
+  for (const o of [main, twin].filter(Boolean))
+    for (const center of kindNodes(o))
+      center.copies = copies;
+  return draft;
+}
 export function setMuscleSprint(doc, organId, share) {
   const organ = findOrgan(doc, organId);
   if (organ?.type !== 'muscle' || !Number.isFinite(share))

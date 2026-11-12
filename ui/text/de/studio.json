@@ -814,7 +814,6 @@
     "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
     "fibre": {
       "title": "Muskelfasern: {share} schnell",
-      "chart": "Querschnitt der Fasern und die Kraft, die der Muskel bei voller Anstrengung über die Zeit hält",
       "handle": "Ziehen: rote, ausdauernde oder weiße, schnelle Fasern",
       "fast": "schnell",
       "mixed": "gemischt",
@@ -936,10 +935,13 @@
       "straight": "Schlägt längs ({degrees}° Abweichung)",
       "outward": "Schlägt {degrees}° nach außen"
     },
-    "sprintWord": "Reserve",
-    "nodesWord": "{n} Knoten",
-    "strengthWord": "Kraft {share}",
-    "tissue": "Muskel"
+    "strengthWord": "{n} {n:Zelle|Zellen} je Knoten",
+    "tissue": "Muskel",
+    "pull": "Zug",
+    "always": "zieht immer",
+    "strongOnly": "nur bei starkem Befehl",
+    "faint": "schwacher Befehl",
+    "strong": "starker Befehl"
   },
   "balance": {
     "title": "Haarrichtung",

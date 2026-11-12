@@ -1,4 +1,4 @@
-import {muscleSpindle, muscleTissuePatch} from './muscle_tissue.js';
+import {musclePatch, musclePictures} from './muscle_effect.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -20,7 +20,7 @@ import {
   gutUse,
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
-import {isPelvicMuscle, nodeLimit, organFunction} from '../model/organs.js';
+import {isPelvicMuscle, kindLimit, organFunction} from '../model/organs.js';
 import {
   antagonistOf,
   centerIndex,
@@ -63,30 +63,9 @@ const handle = (name, x, y, title, shown = '') =>
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
 const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
-// The muscle in a picture of its own, apart from what it moves: its nodes (the spindle's length),
-// the force of each (its thickness), the reserve that works only on a strong command (behind the
-// partition), its fibres (the pie at its anchor) and, below, its gate: how little command opens it.
-const MUSCLE_PICTURE = Object.freeze({
-  width : 300,
-  height : 136,
-  spindle : {axis : [ 64, 52, 240, 52 ], thin : 8, thick : 24},
-  gate : [ 64, 112, 240, 112 ]
-});
-function musclePicture(state, organ, code, side) {
-  const P = MUSCLE_PICTURE, center = organ.centers[0], [ fx, fy, tx, ty ] = P.gate;
-  const spindle = {...P.spindle, rings : code === GUT_MUSCLE_CODE};
-  return '<svg class="aid-effector-graphic aid-muscle-picture" viewBox="0 0 ' + P.width + ' ' +
-         P.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
-         code + '" data-effector-side="' + side + '"' + gateField(organ) +
-         ' role="img" aria-label="' + escapeText(label('tissue')) + '">' +
-         muscleSpindle(organ, nodeLimit(organ, state.sites), spindle) +
-         (center?.role === 'motor'
-              ? '<path class="aid-gate-track" d="M' + fx + ' ' + fy + ' L' + tx + ' ' + ty + '"/>' +
-                    gateHandle({x : fx, y : fy}, {x : tx, y : ty}, state, center,
-                               t('studio.inspector.motorGate'))
-              : '') +
-         '</svg>';
-}
+// What the muscle's settings do follows in pictures of their own below what it moves.
+const musclePicture = (state, organ, code, side) =>
+    musclePictures(state, organ, code, side, kindLimit(organ, state.sites), gateField(organ));
 // The gate is set like a sense's sensitivity, by the working cells it belongs to.
 const gateField = organ => organ.centers[0]?.role === 'motor'
                                ? ' data-sense-field="' + escapeText(organ.centers[0].id) +
@@ -122,9 +101,10 @@ function strokeChooser(state, organ) {
          '</div>';
 }
 export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
-  if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name))
-    return muscleTissuePatch(name, {x : fx * MUSCLE_PICTURE.width, y : fy * MUSCLE_PICTURE.height},
-                             marks, most, organ);
+  if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name)) {
+    const [width, height] = marks.frame.split(',').map(Number);
+    return musclePatch(name, {x : fx * width, y : fy * height}, marks, most, organ);
+  }
   const trait = TRAIT_HANDLES[code]?.[name];
   return trait ? {trait : trait.key, value : clamp(trait.at(fx * FRAME.width, fy * FRAME.height))}
                : null;

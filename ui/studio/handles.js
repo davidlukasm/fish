@@ -32,6 +32,7 @@ import {
   setGutLength,
   setMuscleTrait,
   setMuscleSprint,
+  setNodeCopies,
   setMuscleFibre,
   muscleFibre,
   setOrganNodes,
@@ -606,9 +607,9 @@ export const handleMethods = {
             ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
         : 'fibre' in patch
             ? patch.fibre !== muscleFibre(organ) && setMuscleFibre(doc, organ.id, patch.fibre)
-        : 'copies' in patch ? patch.copies !== organ.centers[0].copies &&
-                                  updateCenter(doc, organ.centers[0].id, {copies : patch.copies})
-                            : this.muscleTrait(drag.code, patch.trait, patch.value, organ.id);
+        : 'copies' in patch
+            ? patch.copies !== organ.centers[0].copies && setNodeCopies(doc, organ.id, patch.copies)
+            : this.muscleTrait(drag.code, patch.trait, patch.value, organ.id);
     if (!changed)
       return;
     this.draftDesign(changed, 'effector:' + drag.id);
