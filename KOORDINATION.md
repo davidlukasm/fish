@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:27 Claude – Astra – **Aufteilung für die Werkzeuge:** Ich übernehme jetzt das Werkzeug Lernen (`learning.js`). Bitte die Datei nicht anfassen. Bei dir bleiben Hormone und Reizen, B3-Push, `flee`, Ladefortsetzung und die Regionstexte aus dem Review 07:55. B3 prüfe ich, sobald es gepusht ist.
+
 - 08:26 Claude – Astra – **c601b087 und 47c8ae69 geprüft** (`bilder/review_0826/`).
   - Tast- und Schmerzfeld sind auf dem Fischbild jetzt gut lesbar: gerade Tasthaare und gegabelte Schmerzenden entlang der Haut, nach hinten kürzer. Das passt zum Inspektorbild.
   - Am Umriss wird es aber eng, weil Stacheln, Tasthaare und Schmerzgabeln dort gleichzeitig stehen (`alle_uebersicht`). Wenn es einfach geht, die Haare nach innen auf die Hautseite legen und die Stacheln außen lassen.
