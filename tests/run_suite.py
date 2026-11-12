@@ -15,7 +15,7 @@ from build_config import available_jobs
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--no-build", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--only", nargs="+", choices=NATIVE + JAVASCRIPT + ["interface"],
+    parser.add_argument("--only", nargs="+", choices=NATIVE + list(JAVASCRIPT) + ["interface"],
                         help="Run only named checks, e.g. --only invariants")
     parser.add_argument("--timeout", type=float, default=60, help="Seconds per check (default: 60)")
     args = parser.parse_args()
@@ -65,15 +65,16 @@ def main():
                        "BUILD_DIR=" + str(BUILD), *dict.fromkeys(targets)]
             if not run("Kompilieren", command, None, show_output=True):
                 return 1
-    commands = [(n, [binary(n + "-tests")]) for n in natives]
-    commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
-    commands += [(n, ["node", "tests/" + n + ".js"]) for n in JAVASCRIPT]
+    commands = [(n, n, [binary(n + "-tests")]) for n in natives]
+    commands.append(("interface", "interface", [sys.executable, "-B", "tests/build_check.py"]))
+    commands += [(n, " ".join([n, *(a.lstrip("-") for a in part)]), ["node", f"tests/{n}.js", *part])
+                 for n, parts in JAVASCRIPT.items() for part in parts]
     if selected:
-        commands = [(name, command) for name, command in commands if name in selected]
+        commands = [command for command in commands if command[0] in selected]
     started = time.monotonic()
     jobs = max(1, min(4, int(os.environ.get("TEST_JOBS") or available_jobs())))
     with ThreadPoolExecutor(max_workers=jobs) as executor:
-        futures = {executor.submit(run, name, command, args.timeout): name for name, command in commands}
+        futures = [executor.submit(run, label, command, args.timeout) for _, label, command in commands]
         results = [f.result() for f in as_completed(futures)]
     failures = results.count(False)
     print(f"{len(results) - failures}/{len(results)} Prüfungen bestanden; "

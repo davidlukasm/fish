@@ -8,7 +8,8 @@ from build_config import build_directory
 BUILD = build_directory(ROOT)
 
 NATIVE = ["invariants", "compiler"]
-JAVASCRIPT = ["texts", "studio"]
+# Parts of a JavaScript check run in parallel; together they cover its whole file.
+JAVASCRIPT = {"texts": [[]], "studio": [["--ui"], ["--region-controls"], ["--blueprints"]]}
 
 
 def binary(name="fish"):

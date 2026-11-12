@@ -961,18 +961,20 @@ async function checkHormoneSystems(model, capabilities) {
                   result.neurons, result.synapses);
       return;
     }
-    await checkSpinalPattern(model, sitesResult.sites, root);
-    await checkSpinalRest(model, sitesResult.sites, root);
-    await checkFinPattern(model, sitesResult.sites, root);
-    await checkReversePattern(model, sitesResult.sites, root);
-    await checkForagingChoice(model, sitesResult.sites, root);
-    await checkResponseControls(model, sitesResult, clicks);
-    await checkFunctionalRegions(model, sitesResult);
-    checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
-                    clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
-    if (process.argv.includes('--region-controls')) {
-      console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
-      return;
+    if (!process.argv.includes('--blueprints')) {
+      await checkSpinalPattern(model, sitesResult.sites, root);
+      await checkSpinalRest(model, sitesResult.sites, root);
+      await checkFinPattern(model, sitesResult.sites, root);
+      await checkReversePattern(model, sitesResult.sites, root);
+      await checkForagingChoice(model, sitesResult.sites, root);
+      await checkResponseControls(model, sitesResult, clicks);
+      await checkFunctionalRegions(model, sitesResult);
+      checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
+                      clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
+      if (process.argv.includes('--region-controls')) {
+        console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
+        return;
+      }
     }
     // Shipped blueprints remain editable and compile to their shipped fish.
     for (const example of ['start', 'plants', 'brisa']) {
@@ -1059,6 +1061,11 @@ async function checkHormoneSystems(model, capabilities) {
       assert.equal(checked.neurons, source.neurons);
       assert.equal(checked.synapses, source.synapses);
       assert.equal(checked.viable, source.viable);
+    }
+    if (process.argv.includes('--blueprints')) {
+      console.log(
+          'Atelier: mitgelieferte Baupläne bleiben bearbeitbar und ergeben ihre Fische: OK');
+      return;
     }
   }
   await require('./studio_canvas.js')(model, sitesResult, root);
@@ -3102,8 +3109,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       const regions = ORGANS.filter(o => o.category === 'regions').map(o => o.key);
       let full = model.newDocument('Alle Regionen');
       for (const type of regions) {
+        // Lazily: every attempt copies the whole document, and the first place is taken.
         const placed =
-            sites.filter(s => !s.outer)
+            sites.values()
+                .filter(s => !s.outer)
                 .map(s => model.addOrgan(full, type, sites, layout.sitePoint(s, 'nerve')))
                 .find(Boolean);
         assert.ok(placed, type + ' still finds room in a brain with every other region');
