@@ -652,6 +652,27 @@ async function checkFunctionalRegions(model, capabilities) {
     const html = regionPicture({document : doc, sites, capabilities}, organ);
     assert.match(html, /data-region-picture/);
     assert.doesNotMatch(html, /NaN|undefined|Infinity|type="range"/);
+    if ([ 'choice', 'olfaction', 'state' ].includes(type)) {
+      const {LONGEST_TIME_CONSTANT} = await import('../ui/tuning.js');
+      const span = capabilities.neural.adaptationSpan;
+      const duration = LONGEST_TIME_CONSTANT * span * (type === 'olfaction' ? 4 : 1);
+      const visible = html.replace(/<title>.*?<\/title>/g, '');
+      assert.ok(visible.includes('>' + duration + ' Schritte<'),
+                'Regional time axes visibly include the native adaptation span');
+      const changedSpan =
+          regionPicture({
+            document : doc,
+            sites,
+            capabilities :
+                {...capabilities, neural : {...capabilities.neural, adaptationSpan : 2 * span}}
+          },
+                        organ)
+              .replace(/<title>.*?<\/title>/g, '');
+      assert.ok(changedSpan.includes('>' + (2 * duration) + ' Schritte<'));
+      assert.match(visible, /class="aid-picture-note"/,
+                   'The reference situation is visible without hovering');
+    }
+
     for (const key of handles) {
       const point = regionHandle(organ, key), back = regionPatch(organ, key, point.fx, point.fy);
       for (const [name, value] of Object.entries(back))

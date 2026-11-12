@@ -8,8 +8,7 @@ import {
   timeConstantOf,
   timeConstantSteps
 } from '../../tuning.js';
-import {joinParts, t} from '../../strings.js';
-import {STUDIO_ICON} from '../../organ_icons.js';
+import {formatNumber, joinParts, t} from '../../strings.js';
 import {RHYTHM_TAU} from '../model/region_cells.js';
 import {regionPlan} from '../model/regions.js';
 import {escapeText, fixed} from './markup.js';
@@ -18,7 +17,7 @@ import {tectumPictures} from './tectum_map.js';
 
 export const REGION_PICTURE = Object.freeze({width : 360, height : 260, left : 40, right : 320});
 const P = REGION_PICTURE, WIDTH = P.right - P.left, SEARCH_BASE = 194, SEARCH_HEIGHT = 100;
-const SCENT_BASE = 202, SCENT_HEIGHT = 114, VALUE_BASE = 218, VALUE_HEIGHT = 108;
+const SCENT_BASE = 202, SCENT_HEIGHT = 114, VALUE_BASE = 218, VALUE_HEIGHT = 94;
 const SPINE_BASE = 76, SPINE_HEIGHT = 55, FIN_BASE = 218;
 const CLOCK_SPAN = 2 * LONGEST_TIME_CONSTANT, CLOCK_CREST = 1.25;
 const OPPONENT = Object.freeze({left : 120, width : 100, y : 127});
@@ -26,7 +25,7 @@ const TAU_SPAN = 4;
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const x = fraction => P.left + WIDTH * fraction;
 const point = (x, y) => ({fx : x / P.width, fy : y / P.height});
-const words = key => label('regions.graphics.' + key);
+const words = (key, vars) => t('studio.regions.graphics.' + key, vars);
 const steps = n => t('studio.regions.graphics.steps', {n : Math.round(n)});
 const cycleSteps = n => t('studio.regions.graphics.clockPeriod', {n : Math.round(n)});
 const path = (d, cls = '') => `<path class="region-line ${cls}" d="${d}"/>`;
@@ -41,9 +40,14 @@ const curve = (sample, start = P.left, end = P.right, count = 160, cls = '') => 
     cls);
 const text = (x, y, value, anchor = 'start') =>
     `<text x="${fixed(x)}" y="${fixed(y)}" text-anchor="${anchor}">${escapeText(value)}</text>`;
-const icon = (key, x, y, size = 24) => `<g class="region-symbol" transform="translate(${
-    x - size / 2} ${y - size / 2}) scale(${size / 24})"><path d="${STUDIO_ICON[key]}"/></g>`;
 const axis = (left, right, y) => path(`M${left} ${y}H${right}`, 'axis');
+const adaptationSpan = state => state.capabilities?.neural?.adaptationSpan ?? 10;
+const timing = (state, tau) => steps(timeConstantSteps(tau) * adaptationSpan(state));
+const timedAxis = (state, y, span = 1, left = P.left, right = P.right) =>
+    axis(left, right, y) + text(left, y + 18, '0') +
+    text(right, y + 18, steps(span * LONGEST_TIME_CONSTANT * adaptationSpan(state)), 'end');
+const colourText = (cls, x, y, value, anchor = 'start') =>
+    `<g class="region-caption ${cls}">${text(x, y, value, anchor)}</g>`;
 const scentValue = smoothing => Math.tanh(smoothing > 0 ? 1 - Math.exp(-1) : 1);
 
 export function regionHandle(organ, key) {
@@ -150,50 +154,55 @@ function button(organ, key, value, x, y, graphic, title, selected = organ.region
 function searchPicture(state, organ) {
   const r = organ.region, duration = LONGEST_TIME_CONSTANT;
   const memory = f => Math.exp(-f * duration / timeConstantSteps(r.searchTime));
-  return icon('choice', 25, 28) + axis(P.left, P.right, SEARCH_BASE) +
+  const drive = SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive;
+  return text(P.left, 20, words('searchAfter')) +
+         colourText('other', P.left, 49, words('cueTrace')) +
+         colourText('', P.right, 49,
+                    words('searchLevel', {n : formatNumber(100 * r.searchDrive, 0)}), 'end') +
+         timedAxis(state, SEARCH_BASE) + path(`M${P.left} ${drive}H${P.right}`, 'level') +
          curve(f => SEARCH_BASE - SEARCH_HEIGHT * memory(f), undefined, undefined, 160, 'other') +
+         text(P.left, 242, words('memoryTime', {time : timing(state, r.searchTime)})) +
          handle(organ, 'search', joinParts([
                   words('search'), words('searchMemory'), words('searchStrength'),
-                  steps(timeConstantSteps(r.searchTime) *
-                        (state.capabilities?.neural?.adaptationSpan ?? 10)),
-                  words('searchDrag')
+                  timing(state, r.searchTime), words('searchDrag')
                 ]));
 }
 function scentPicture(state, organ) {
   const r = organ.region, duration = TAU_SPAN * LONGEST_TIME_CONSTANT;
   const response = f =>
       Math.tanh(r.smoothing > 0 ? 1 - Math.exp(-f * duration / timeConstantSteps(r.smoothing)) : 1);
-  return icon('nose', 32, 32) + path('M40 58H110M40 58V78M250 58H320M320 58V78', 'axis') +
-         path('M110 58L250 78M250 58L110 78', 'other') + axis(P.left, P.right, SCENT_BASE) +
+  return text(P.left, 20, words('scent')) + text(P.left, 40, words('sameScent')) +
+         colourText('', P.left, 65, words('ownNose')) +
+         colourText('other', P.right, 65, words('oppositeNose'), 'end') +
+         timedAxis(state, SCENT_BASE, TAU_SPAN) +
          curve(f => SCENT_BASE - SCENT_HEIGHT * response(f)) +
          curve(f => SCENT_BASE - SCENT_HEIGHT * r.contrast * response(f), undefined, undefined, 160,
                'other') +
+         text(P.left, 244,
+              words('smoothingTime',
+                    {time : r.smoothing > 0 ? timing(state, r.smoothing) : words('direct')})) +
          handle(organ, 'scent', joinParts([
-                  words('scent'),
-                  r.smoothing > 0 ? steps(timeConstantSteps(r.smoothing) *
-                                          (state.capabilities?.neural?.adaptationSpan ?? 10))
-                                  : words('direct'),
+                  words('scent'), r.smoothing > 0 ? timing(state, r.smoothing) : words('direct'),
                   words('scentDrag')
                 ]));
 }
 function statePicture(state, organ) {
   const r = organ.region, scale = state.capabilities?.biasScale ?? .3;
   const hill = f => f ** 8 / (f ** 8 + r.maturity ** 8);
-  return icon('eggs', 20, 60) + axis(P.left, P.right, 100) + curve(f => 100 - 70 * hill(f)) +
+  return text(P.left, 18, words('maturityOutput')) + axis(P.left, P.right, 100) +
+         text(P.left, 118, '0 %') + text(P.right, 118, '100 %', 'end') +
+         curve(f => 100 - 70 * hill(f)) +
          handle(organ, 'maturity', joinParts([ words('maturity'), words('maturityDrag') ])) +
-         icon('blood', 25, 157) + axis(40, 160, 222) +
+         colourText('other', 40, 147, words('reserveInput')) + axis(40, 160, 222) +
+         text(40, 240, '0') + text(160, 240, '1', 'end') +
          curve(f => 222 - 180 * Math.max(0, Math.tanh(scale * (r.reserve - f))), 40, 160, 80,
                'other') +
          handle(organ, 'reserve', joinParts([ words('reserve'), words('reserveDrag') ])) +
-         icon('gut', 212, 157) + axis(210, 320, 222) +
+         colourText('memory', 210, 147, words('foodTrace')) + timedAxis(state, 222, 1, 210, 320) +
          curve(f => 222 - 64 * Math.exp(-f * LONGEST_TIME_CONSTANT / timeConstantSteps(r.rest)),
                210, 320, 80, 'memory') +
-         handle(organ, 'rest', joinParts([
-                  words('rest'),
-                  steps(timeConstantSteps(r.rest) *
-                        (state.capabilities?.neural?.adaptationSpan ?? 10)),
-                  words('restDrag')
-                ]));
+         handle(organ, 'rest',
+                joinParts([ words('rest'), timing(state, r.rest), words('restDrag') ]));
 }
 function valuePicture(organ) {
   const r = organ.region;
@@ -202,13 +211,19 @@ function valuePicture(organ) {
                              (_, i) => {
                                const px = 65 + 76 * i;
                                return button(organ, 'features', i + 1, px, 35,
-                                             `<circle r="6"/><path d="M-11 0h5M6 0h5"/>`,
+                                             text(0, 4, formatNumber(i + 1), 'middle'),
                                              t('studio.regions.graphics.features', {n : i + 1}),
                                              i < r.features) +
                                       (i < r.features ? path(`M${px} 54V66L180 86`, 'axis') : '');
                              })
                        .join('');
-  return branches + icon('value', 180, 88) + axis(P.left, P.right, VALUE_BASE) +
+  return text(P.left, 14, label('regions.settings.features')) + branches +
+         text(P.left, 89,
+              words('associationTime', {time : steps(learningTimeSteps(r.association))})) +
+         colourText('memory', P.left, 110, words('associationTrace')) +
+         axis(P.left, P.right, VALUE_BASE) + text(P.left, 236, '0') +
+         text(P.right, 236, steps(LONGEST_LEARNING_TIME), 'end') +
+         text(P.left, 255, words('teachingLevel', {n : formatNumber(100 * r.teaching, 0)})) +
          curve(f => VALUE_BASE -
                     VALUE_HEIGHT * r.teaching *
                         Math.exp(-f * LONGEST_LEARNING_TIME / learningTimeSteps(r.association)),
@@ -218,9 +233,6 @@ function valuePicture(organ) {
 }
 function motorPicture(organ) {
   const r = organ.region;
-  const fish = '<g transform="translate(180 170) scale(.35) translate(-180 -104)">' +
-               path('M180 52C148 75 154 115 180 142C206 115 212 75 180 52ZM180 142L168 156H192Z') +
-               '</g>';
   const tones = [ 0, 1, 2 ]
                     .map((v, i) => button(
                              organ, 'tone', v, 245 + i * 36, 31,
@@ -236,7 +248,10 @@ function motorPicture(organ) {
           .map(key => {
             const base = key === 'pump' ? 112 : 220, level = r[key];
             const cycle = level ? period(RHYTHM_TAU[level - 1]) : 0;
-            return icon(key === 'pump' ? 'mouth' : 'tail', 21, base) + axis(P.left, P.right, base) +
+            return text(P.left, base - 30, label('regions.settings.' + key)) +
+                   text(P.right, base - 30, cycle ? steps(cycle) : words('off'), 'end') +
+                   axis(P.left, P.right, base) + text(P.left, base + 18, '0') +
+                   text(P.right, base + 18, steps(CLOCK_SPAN), 'end') +
                    curve(f => base -
                               (cycle ? 24 * Math.tanh(.15 + .5 * Math.sin(2 * Math.PI * 2 *
                                                                           LONGEST_TIME_CONSTANT *
@@ -249,7 +264,9 @@ function motorPicture(organ) {
                        ]));
           })
           .join('');
-  return fish + tones +
+  return tones + text(45, 59, words('competeShort'), 'middle') +
+         text(110, 59, words('retreatShort'), 'middle') +
+         text(281, 59, label('regions.settings.tone'), 'middle') +
          button(organ, 'compete', 1 - r.compete, 45, 31,
                 `<path d="${r.compete ? 'M-10-8L10 8M10-8L-10 8' : 'M-10-8V8M10-8V8'}"/>`,
                 label('regions.settings.compete'), !!r.compete) +
@@ -315,7 +332,11 @@ export function regionPicture(state, organ) {
                             escapeText(words(organ.type + 'Reference') +
                                        (customized ? ' ' + words('customized')
                                                    : ''))}</title>${draw(state, organ)}</svg>`;
-  return `<div class="aid-region-picture">${drawing}${
+  const explanation =
+      organ.type !== 'tectum'
+          ? '<p class="aid-picture-note">' + escapeText(words(organ.type + 'Reference')) + '</p>'
+          : '';
+  return `<div class="aid-region-picture">${drawing}${explanation}${
       customized ? '<p class="aid-picture-note">' + escapeText(words('customized')) + '</p>'
                  : ''}</div>`;
 }

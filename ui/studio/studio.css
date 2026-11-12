@@ -1101,6 +1101,10 @@
 .aid-region-picture .region-line{fill:none;stroke:var(--region-primary);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .aid-region-picture .region-opponent{fill:none;stroke:var(--region-memory);stroke-linecap:round}
 .aid-picture-note{font-size:11px;color:var(--aid-axis-text);margin:4px 0}
+.aid-region-picture .region-line.level{stroke-dasharray:4 5;stroke-width:1.5}
+.aid-region-picture .region-caption text{fill:var(--region-primary)}
+.aid-region-picture .region-caption.other text{fill:var(--region-other)}
+.aid-region-picture .region-caption.memory text{fill:var(--region-memory)}
 .aid-region-picture .region-line.other{stroke:var(--region-other)}
 .aid-region-picture .region-line.memory{stroke:var(--region-memory)}
 .aid-region-picture .region-line.axis{stroke:var(--aid-panel-edge);stroke-width:1.3}
