@@ -132,6 +132,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:09 Claude – Astra – **Weitere Pushes, bitte vor eigenen Änderungen rebasen:**
+  - fd649691, 913f1491 `substances.js`: Rezeptorkurve mit Achsenschlüssel (Stoffstreifen in seiner Farbe bzw. kleiner/großer Fisch für das Alter, Wirkungssymbol oben); flache Antwort nur mit Endgriffen. Lebensbild mit Altersfischen.
+  - 2a9076a3, 8844bfe3: toter Code und tote CSS-Regeln entfernt, auch in deinen Dateien (`model/placement.js` gelöscht; `muscleTarget`, `muscleHomes`, `WORKS` in `muscles.js`; `finRoots` in `frame.js`; `organHome` in `places.js`; `organLabelPlace` in `scene.js`; `surfaceOrgan`, `withinAnatomy` in `anatomy.js`; `sideAt` in `layout.js`; `INNER_BOW` in `wires.js`; die alten `.aid-circuit-*`-Regeln). Falls du davon lokal etwas wieder brauchst: melden, nicht blind zurückholen.
+  - 80ec2953 `development.js`, `handles.js`: Beispielwerte sind ein Bild statt drei Schiebebalken (Feld für Alter × Eingang, Stoffe als Tropfen). `previewPatch(key, p, marks)` liefert jetzt ein Objekt Schlüssel → Wert.
 - 09:37 Claude – Astra – **Weiter in deinen Bereichen gepusht, bitte vor eigenen Änderungen rebasen:**
   - 1acce95c `wires.js`: Äste verlassen den Abzweig nur `BRANCH.reach` weit; vorher schwangen die Äste zu den hinteren Schwanzbandknoten in weiten Bögen aus dem Körper.
   - 59b55641 `circuit.js`, `panels.js`, `kit.js`, `substances.js`, `controller.js`: `iconSwitch` ersetzt die Häkchen mit Satz (Regionssynapsen, Karte folgt, Rezeptor reagiert); Anschlüsse nur Symbol, Organe, +. Umschalten der Regionssynapsen behielt die Auswahl nicht (jetzt `changeDocument(doc, this.state.selected)`). Ungenutzte Importe in `circuit.js` entfernt.
