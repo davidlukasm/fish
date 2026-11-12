@@ -249,9 +249,11 @@ export const designMethods = {
     });
   },
   refreshEffectors() {
+    const sense = this.heldHandle('sense');
     this.redrawBlocks('effectorBlock', findOrgan,
                       organ => organ.type === 'gut'
-                                   ? gutGraphic(this.state, organ, this.state.selected)
+                                   ? gutGraphic(this.state, organ, this.state.selected,
+                                                sense?.organ === organ.id ? sense.sensitive : null)
                                : organ.type === 'gills'     ? gillGraphic(this.state, organ)
                                : organ.type === 'gutmuscle' ? gutMuscleGraphic(this.state, organ)
                                                             : effectorGraphic(this.state, organ));

@@ -29,6 +29,7 @@ import {
   finAngle,
   finStroke,
   gillRakers,
+  groupReport,
   gutLength,
   isFibrous,
   muscleFibre,
@@ -51,6 +52,9 @@ import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 import {organCommand} from './preview.js';
+import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
+import {ecologyIconSvg, FOOD_COLORS} from '../../feeding_view.js';
+import {FOOD_SLOT} from '../../nutrition_model.js';
 
 const label = (key, values) => t('studio.muscle.' + key, values);
 // The gut, the gills and the gut muscle are no muscle organs; their handles carry their own codes.
@@ -474,9 +478,22 @@ const GUT = Object.freeze({
   steps : 96,
   track : [ 40, 260 ],
   track_y : 146,
-  cell : 3.2
+  cell : 3.2,
+  // The chosen sense cells' feelers grow to this length with their sensitivity; the adaptation
+  // arc round the first cell; the plant and meat bars below the gut.
+  feeler : 16,
+  clock : 18,
+  bars : 136,
+  barGap : 20,
+  barHeight : 8,
+  icon : .8
 });
-export function gutGraphic(state, organ, selected) {
+// The gut in one picture: its length (handle at its end), what it gets out of plants and meat at
+// that length (the two bars below), and its sense cells: the food cells on the inner wall, the
+// stretch cells on the outer wall. The chosen kind shows its feelers, as long as the cells are
+// sensitive, and, where they get used to a lasting stimulus, the adaptation arc round its first
+// cell. `held` is a dragged sensitivity.
+export function gutGraphic(state, organ, selected, held = null) {
   const G = GUT, code = GUT_CODE;
   const length = gutLength(state.document);
   const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
@@ -491,30 +508,84 @@ export function gutGraphic(state, organ, selected) {
                    '" data-select-center="' + escapeText(center.id) + '">' + body + '</g>'
              : '';
   const food = find('food'), fullness = find('fullness');
-  const dots = food ? Array
-                          .from({length : food.copies},
-                                (_, i) => {
-                                  const k = Math.round((i + .5) / food.copies * G.steps);
-                                  return '<circle class="aid-gut-cell" cx="' + fixed(along(k)) +
-                                         '" cy="' + fixed(across(k) - G.tube / 2) + '" r="' +
-                                         G.cell + '"/>';
-                                })
-                          .join('')
-                    : '';
+  // Cell places along one wall: -1 inner (food), +1 outer (stretch).
+  const wall = side => Array.from({length : ATELIER_LIMITS.max_copies}, (_, i) => {
+    const k = Math.round((i + .5) / ATELIER_LIMITS.max_copies * G.steps);
+    return {x : along(k), y : across(k) + side * (G.tube / 2 + G.cell)};
+  });
+  const chosen = [ food, fullness ].find(c => c && c.id === selected?.id) ?? food ?? fullness;
+  const plain = (center, side) =>
+      center && center !== chosen ? wall(side)
+                                        .slice(0, center.copies)
+                                        .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) +
+                                                  '" cy="' + fixed(p.y) + '" r="' + G.cell + '"/>')
+                                        .join('')
+                                  : '';
   return effectorBlock(
       organ, code, 1, label('gut.title'),
       '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
-          part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
-          part(food, dots) + handle('trait:q1', end, across(G.steps), label('gut.handle')),
-      dietChart(state, 'gut', organ));
+          part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"><title>' +
+                             escapeText(label('gut.stretch')) + '</title></path>' +
+                             plain(fullness, 1)) +
+          part(food, plain(food, -1)) +
+          (chosen ? gutSenseMarks(state, chosen, wall(chosen === food ? -1 : 1),
+                                  chosen === food ? -1 : 1, held)
+                  : '') +
+          dietBars(state) + handle('trait:q1', end, across(G.steps), label('gut.handle')),
+      '',
+      chosen
+          ? ' data-sense-field="' + escapeText(chosen.id) + '" data-sense-redraw="refreshEffectors"'
+          : '');
+}
+function gutSenseMarks(state, center, places, side, held) {
+  const G = GUT, first = places[0];
+  const sensitive = held ?? senseSensitivity(state, center) ?? 0;
+  const feeler = r => ({x : first.x, y : first.y + side * r});
+  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
+  const feelers = places.slice(0, center.copies)
+                      .map(p => '<path class="aid-gut-feeler" d="M' + fixed(p.x) + ' ' +
+                                fixed(p.y) + ' v' + fixed(side * G.feeler * sensitive) + '"/>')
+                      .join('');
+  return feelers +
+         (answer?.adapt?.steps > 0
+              ? adaptationMarks(first, G.clock, side < 0 ? -Math.PI / 2 : Math.PI / 2, center)
+              : '') +
+         cellMarks(places, center) +
+         sensitivityHandle(feeler(G.cell), feeler(G.cell + G.feeler), sensitive,
+                           label('gut.sensitivityHandle'));
+}
+// What the gut gets out of plants and meat at its length, as two bars with the food's mark.
+function dietBars(state) {
+  const data = state.capabilities?.diet?.gut, at = gutLength(state.document), G = GUT;
+  if (!data || at === null)
+    return '';
+  const valueAt = values => {
+    const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
+    return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
+  };
+  return [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ]
+      .map(([ key, slot ], row) => {
+        const share = clamp(valueAt(data[key])), y = G.bars + row * G.barGap,
+              colour = FOOD_COLORS[slot];
+        return '<g class="aid-diet-bar"><title>' +
+               escapeText(t('units.joined', {a : label('diet.gut.' + key), b : percent(share)})) +
+               '</title><g transform="translate(' + G.track[0] / 2 + ' ' + y + ')">' +
+               ecologyIconSvg(slot, colour, G.icon) + '</g><rect class="aid-diet-track" x="' +
+               G.track[0] + '" y="' + (y - G.barHeight / 2) + '" width="' +
+               (G.track[1] - G.track[0]) + '" height="' + G.barHeight + '"/><rect x="' +
+               G.track[0] + '" y="' + (y - G.barHeight / 2) + '" width="' +
+               fixed((G.track[1] - G.track[0]) * share) + '" height="' + G.barHeight + '" fill="' +
+               colour + '"/></g>';
+      })
+      .join('');
 }
 
-const effectorBlock = (organ, code, side, title, graphic, below) =>
+const effectorBlock = (organ, code, side, title, graphic, below, attributes = '') =>
     '<div class="aid-effector-block" data-effector-block="' + escapeText(organ.id) + '">' +
     '<svg class="aid-effector-graphic" viewBox="0 0 ' + FRAME.width + ' ' + FRAME.height +
     '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-    '" data-effector-side="' + side + '" role="img" aria-label="' + escapeText(title) + '">' +
-    graphic + '</svg>' + below + '</div>';
+    '" data-effector-side="' + side + '"' + attributes + ' role="img" aria-label="' +
+    escapeText(title) + '">' + graphic + '</svg>' + below + '</div>';
 function muscleHint(code) {
   const hint = textArea('studio').muscle?.hint?.[code];
   return hint ? '<p class="aid-hint">' + escapeText(hint) + '</p>' : '';

@@ -918,7 +918,9 @@
       "title": "Darm",
       "short": "kurz · Fleisch",
       "long": "lang · Pflanzen",
-      "handle": "Ziehen: Länge des Darms"
+      "handle": "Ziehen: Länge des Darms",
+      "sensitivityHandle": "Ziehen: längere Fühler spüren schon wenig",
+      "stretch": "Dehnungszellen in der Darmwand melden, wie voll der Darm ist"
     },
     "spines": {
       "title": "Schutz rundum",

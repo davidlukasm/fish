@@ -125,8 +125,7 @@ const ORGAN_PANELS = Object.freeze({
   barbels : (state, organ, center) =>
       barbelFeel(center) + (center.field < BARBEL_FEEL.touch ? scentMap(organ, center, state) : ''),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
-  gut : (state, organ, center) => gutGraphic(state, organ, center) + pressureNote(state, organ) +
-                                  gutProbeControls(state, organ),
+  gut : (state, organ, center) => gutGraphic(state, organ, center) + gutProbeControls(state, organ),
   bladder : (state, organ, center) =>
       bladderGraphic(organ, center) +
       nodeControls({...organ, centers : kindNodes(organ)}, MOTOR_KIND.bladder,
@@ -153,7 +152,7 @@ const organPanel = (state, organ, center) =>
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
 const WHOLE_PICTURES =
-    Object.freeze([ 'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood' ]);
+    Object.freeze([ 'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut' ]);
 // Barbels that only touch have no scent map to hold their marks.
 const wholePicture = (organ, center) =>
     WHOLE_PICTURES.includes(organ.type) &&
