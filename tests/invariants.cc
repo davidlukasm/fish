@@ -535,11 +535,14 @@ void organ_muscles_survive_checkpoint(const Genome &g) {
   // Digestion uses the previous step's gut drive before the next neural action replaces it.
   b.gut_motility = .8;
   b.gill_signal = StateAccess::motor(b).gill_pose = .6;
+  StateAccess::motor(b).fin_tension = {.4, -.25, .5, -.75, -1};
   auto copy = w.fork();
   const auto &restored = copy.fish.front().body;
   check(restored.gut_motility == b.gut_motility && restored.gill_signal == b.gill_signal &&
             restored.motor().gill_pose == b.motor().gill_pose,
         "a checkpoint retains the working gut and gill muscles");
+  check(restored.motor().fin_tension == b.motor().fin_tension,
+        "a checkpoint retains forward and backward poses of pectoral and pelvic fins");
   for (int step = 0; step < 4; ++step) {
     w.tick(false);
     copy.tick(false);

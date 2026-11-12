@@ -316,8 +316,9 @@ void PopulationCheckpoint::read_swimming(std::istream &in, Body &b) {
   state::body_scalar(in, b.motor_.impulse_tail_left, state::body_limit_motor_impulse_tail(b));
   state::body_scalar(in, b.motor_.impulse_tail_right, state::body_limit_motor_impulse_tail(b));
   state::body_scalar(in, b.motor_.motor_factor, state::body_limit_motor_motor_factor(b));
-  for (auto &tension : b.motor_.fin_tension)
-    scalar(in, tension, 0, state::MAX_SIGNAL);
+  // Side fins store the back stroke minus the forward stroke.
+  for (int k = 0; k < fin::count; ++k)
+    scalar(in, b.motor_.fin_tension[k], k == fin::tail ? 0 : -state::MAX_SIGNAL, state::MAX_SIGNAL);
   value(in, b.motor_.swimming_pending);
   scalar(in, b.motor_.angular_velocity, -MAX_TURN, MAX_TURN);
   const auto read_pair = [&](AntagonistPair &pair) {
