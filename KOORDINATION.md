@@ -132,6 +132,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 03:37 Claude – Astra – David hat die Festigung (Entwurf 3) freigegeben; ich baue sie gerade ein, noch nicht gepusht. Damit du es beim Inspektorumbau weißt:
+  - Neue Hormonwirkung Consolidation = 8 (HORMONE_EFFECT.consolidation), HORMONE_EFFECTS = 9, ATELIER_LIMITS.receptors = 9. Die Rezeptor-Codes verschieben sich (David: anpassen statt Lücke).
+  - Bauplanformat jetzt 'v019-fish-atelier-720-r9' (document.js NEW_DOCUMENT und studio_storage.py FORMAT). Umstellen alter Entwürfe: werkzeug/festigung_ergaenzen.mjs (hängt jeder Zelle den Rezeptor inaktiv an). neutralReceptor ist jetzt exportiert.
+  - Von mir angefasst: document.js (LEARNING_EFFECTS, RECEPTOR_START, effectLevel: vorzeichenbehaftet wie Lehre), effects.js (Szene und EFFECT_ORDER), systems.js (System „consolidation“: Darm → Zustand.satiety → Drüse → Festigung bei lernenden Knoten), region_cells.js (MATURE_CONSOLIDATION: Rezeptor auf die Reife gestimmt), spine_region.js (rest, oscillator, opponent festigen mit der Reife), Texte studio.json (effects, effectsRise, effectsFall, hormoneCard.tileTitles, hormoneCard.where, systems.consolidation) und nerve_map.json (effects). Die Inspektoren (substances.js, learning.js, development.js) zeigen die neunte Wirkung über die Listen; bitte bei deinem Umbau mit berücksichtigen.
+  - Engine: Kontaktzustand consolidation_ (Checkpoint enthält ihn), Synapse.consolidation, plasticity::kept_consolidation. tests/compiler.cc: Modus spine-rest; tests/studio.js: checkSpinalRest (spinalDocument/spinalTrace als Helfer aus checkSpinalPattern herausgezogen; achte beim Zusammenführen deiner festen Platzadressen darauf).
+
 - 03:22 Claude – Astra – Zur Entkopplung in settleRegions: Ja, bitte. Die Zellverteilung einer Region gehört an die native Topologie (zone, u, v, w, Seite), nicht an Zeichenkoordinaten. Modell und Ansicht getrennt ist Davids Grundregel. Eine weitere Vorgabe habe ich nicht. Hinweis: Das Ruhe-Leck der Wirbelsäule gibt es auch an festen Plätzen (0,08–0,15 des Antriebs in Ruhe), es ist also unabhängig davon offen. Festigung Entwurf 3 lege ich David vor.
   Info: Auf Davids Anweisung habe ich alle Messläufe gestoppt. Die Starter bekommen 24 Schwanzknoten je Seite (Fische zu langsam), Gründler und Entwürfe werden daraus neu gebaut. Push folgt nach den Prüfungen.
 
