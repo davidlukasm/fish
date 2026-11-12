@@ -248,7 +248,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     ...element('path'),
     attributes : {'data-signal-edges' : 'a>b', 'data-signal-section' : String(section)},
     matches : () => true,
-    getTotalLength : () => to - from,
+    getTotalLength : () => (++geometryQueries, to - from),
     getPointAtLength : n => {
       ++geometryQueries;
       return {x : from + n, y : 0};
@@ -335,7 +335,7 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
     ...element('path'),
     attributes : {'data-signal-edges' : pair},
     matches : () => true,
-    getTotalLength : () => length,
+    getTotalLength : () => (++queries, length),
     getPointAtLength : n => (queries++, {x : n, y})
   });
   const routes =
@@ -410,6 +410,13 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
     moved = svg.children.at(-1).children.at(-1);
     assert.equal(Number(moved.attributes.cx), 36,
                  'The settled zoom redraw continues at the same speed without restarting');
+    player.stop();
+    const reusedQueries = queries;
+    const repeated = createPlanPlayer(
+        svg, {parts, legs}, {marks : () => [], point : () => ({x : 0, y : 0}), reached() {}});
+    repeated.start();
+    assert.equal(queries, reusedQueries, 'Another impulse reuses unchanged SVG path geometry');
+    repeated.stop();
   } finally {
     player.stop();
     Object.assign(global, saved);
@@ -502,5 +509,52 @@ async function checkRedraws(model, caps, root) {
     studio.showAnatomy(anatomy, 2);
     assert.equal(hits.scene, 1, 'A probe-only answer keeps the existing fish scene');
     assert.deepEqual(blocks, [ 'visionOrgan', 'nearAnswers', 'gutProbeControls' ]);
+  }
+  {
+    const {studio, hits} = make();
+    const saved = {
+      requestAnimationFrame : global.requestAnimationFrame,
+      cancelAnimationFrame : global.cancelAnimationFrame
+    };
+    global.requestAnimationFrame = () => 1;
+    global.cancelAnimationFrame = () => {};
+    const classes = (...names) => {
+      const set = new Set(names);
+      set.remove = name => set.delete(name);
+      set.contains = name => set.has(name);
+      set.toggle = (name, on) => on ? set.add(name) : set.delete(name);
+      return set;
+    };
+    const marked = {
+      classList : classes('aid-node', 'aid-pulse-fired', 'aid-move-tail', 'aid-focus-near')
+    };
+    const element = () =>
+        ({setAttribute() {}, appendChild() {}, remove() {}, style : {setProperty() {}}});
+    const svg = {
+      ...element(),
+      classList : classes('aid-focus-view'),
+      isConnected : true,
+      ownerDocument : {createElementNS : element},
+      getScreenCTM : () => ({a : 1, b : 0}),
+      querySelectorAll : selector => selector.startsWith('[class*=') ? [ marked ] : []
+    };
+    studio.bodyMap = () => svg;
+    try {
+      const source = model.allCenters(doc)[0].id;
+      studio.stimulate([ source ]);
+      studio.stimulate([ source ]);
+      assert.equal(hits.scene, 0, 'Repeated manual impulses keep the existing fish scene');
+      assert.equal(hits.inspector, 0, 'The inspector does not change with a manual impulse');
+      assert.deepEqual([...marked.classList ], [ 'aid-node' ],
+                       'Previous pulse, movement and focus marks are cleared');
+      assert.ok(svg.classList.contains('aid-stimulus-view'));
+      assert.ok(!svg.classList.contains('aid-focus-view'));
+      studio.stimulate([ source ], true);
+      assert.equal(hits.scene, 1, 'Newly measured anatomy rebuilds the scene');
+      assert.equal(hits.inspector, 1, 'Newly measured anatomy refreshes the inspector');
+    } finally {
+      studio.stopPulse();
+      Object.assign(global, saved);
+    }
   }
 }

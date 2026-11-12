@@ -116,9 +116,19 @@ export const trialMethods = {
     const {elements, owners} = this.stimulusIndex;
     return elements.get(key) ?? elements.get(owners.get(key)) ?? [];
   },
-  stimulate(centerIds) {
+  resetPulseMarks(svg) {
+    svg.classList.remove('aid-stimulus-view');
+    svg.classList.remove('aid-focus-view');
+    for (const element of svg.querySelectorAll(
+             '[class*="aid-pulse-"],[class*="aid-move-"],.aid-focus-near'))
+      for (const cls of [...element.classList])
+        if (cls.startsWith('aid-pulse-') || cls.startsWith('aid-move-') || cls === 'aid-focus-near')
+          element.classList.remove(cls);
+  },
+  stimulate(centerIds, freshAnatomy = false) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)
       return;
+    const contactView = this.state.contactView, previous = this.bodyMap();
     this.clearStimulus(false);
     if (this.state.traceSource !== 'cppn')
       this.showDrawnContacts();
@@ -141,7 +151,11 @@ export const trialMethods = {
       taught : new Map()
     };
     this.state.stimulus = stimulus;
-    this.refreshViews();
+    if (previous && !freshAnatomy && contactView === this.state.contactView) {
+      this.resetPulseMarks(previous);
+      this.markStimulus();
+    } else
+      this.refreshViews();
     const svg = this.bodyMap();
     if (!svg)
       return;
@@ -203,7 +217,7 @@ export const trialMethods = {
                         0);
     const answering = [...answers ].filter(([, answer ]) => answer > ANSWERS).map(([ id ]) => id);
     if (answering.length) {
-      this.stimulate(answering);
+      this.stimulate(answering, true);
       return true;
     }
   },

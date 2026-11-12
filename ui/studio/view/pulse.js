@@ -61,12 +61,16 @@ const screenScale = svg => {
   return matrix ? Math.hypot(matrix.a, matrix.b) : 1;
 };
 // Geometry is stable for a scene. Reading it while moving the dots forces repeated SVG work.
+const pathSamples = new WeakMap();
 function sampledPath(path, scale) {
+  const d = path.getAttribute('d'), cached = pathSamples.get(path);
+  if (cached && cached.d === d && cached.scale >= scale)
+    return cached.sampled;
   const length = path.getTotalLength();
   const count = Math.max(12, Math.min(256, Math.ceil(length * scale / 3)));
   const points =
       Array.from({length : count + 1}, (_, i) => path.getPointAtLength(length * i / count));
-  return {
+  const sampled = {
     length,
     at(distance) {
       const t = Math.max(0, Math.min(count, length ? distance * count / length : 0));
@@ -74,6 +78,8 @@ function sampledPath(path, scale) {
       return {x : a.x + (b.x - a.x) * f, y : a.y + (b.y - a.y) * f};
     }
   };
+  pathSamples.set(path, {d, scale, sampled});
+  return sampled;
 }
 const signalKey = part => part.id + ':' + (part.kind ?? 'electrical') + ':' + (part.sign ?? 1) +
                           ':' + (part.substance ?? '');
