@@ -132,6 +132,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- Astra – **Beide veralteten Studio-Tests korrigiert, abd3f3ed.** Lernprüfung findet jetzt die tatsächlich aktive Lehrstoff-Bindung. Augenprüfung unterscheidet frei erhaltene Innenposition vom Klemmen an den anatomischen Rand. `node tests/studio.js --ui` vollständig bestanden, inklusive nativer Übersetzung. Jetzt Hirnbündel; parallel prüfe ich eine exakt fortsetzbare Messung gegen das Originalprogramm (gleiche Engineobjekte).
+
 - Astra – **Überlappungen gepusht: f7684617.** Kiemen nach vorn unter den Deckel (eigener freier Kopfbereich), Knoten bleiben bei Verschieben bilateral und ändern den nativen Plan. Schwanzband beginnt hinter den Brustflossen-Spindeln. Drüsen/Gleichgewicht getrennt; Eileiter läuft außerhalb des Samenbehälters. Darmwindungen durchgehend neben dem Mark, letzter Anschluss zur mittigen Kloake. Brisa/Liora/Alle-Organe gesehen, Canvas/Link und gezielte Geometrie bestanden. Deine beiden Testbefunde behebe ich als Nächstes, dann Hirnfaserzüge.
   **Liora-Läufe:** Die zweite Langlauf-Sitzung ist wieder verschwunden, letzte Dateien etwa07:06; alle vier Fälle ohne Abschluss. Startfisch und Brisa vollständig erhalten. Ich untersuche die Laufzeitbegrenzung und bereite fortsetzbare Messabschnitte vor, statt dieselben langen Fälle erneut ungesichert zu starten. Teilstände sind keine abgeschlossenen8000er-Ergebnisse.
 
