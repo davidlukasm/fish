@@ -17,12 +17,14 @@ function loadStrings(path) {
 const areas = {}, missing = new Set();
 let fallback, voice;
 
-export async function loadTexts() {
+export async function loadTexts(names = null) {
   const index = await loadStrings('index'), resources = {};
   await Promise.all(
-      Object.entries(index.locales).flatMap(([ locale, names ]) => names.map(async name => {
-        (resources[locale] ??= {})[name] = await loadStrings(locale + '/' + name);
-      })));
+      Object.entries(index.locales)
+          .flatMap(([ locale, available ]) =>
+                       available.filter(name => !names || names.includes(name)).map(async name => {
+                         (resources[locale] ??= {})[name] = await loadStrings(locale + '/' + name);
+                       })));
   useTexts(index, resources);
   applyTexts(globalThis.document);
 }

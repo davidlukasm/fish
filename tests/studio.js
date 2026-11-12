@@ -46,7 +46,7 @@ const ENGINE_REVIEW = Object.freeze({
   "src/observations.hh" : "f6f4936f693e510e",
   "src/eye_geometry.hh" : "3c65ed324049ca17",
   "src/retina.hh" : "a3a169f6e8f4cafd",
-  "ui/fish_forms.js" : "47558e25b81939f7",
+  "ui/fish_forms.js" : "79802adbd0e35783",
   "ui/fish_geometry.js" : "aa899dbb45672f9f",
   "ui/fish_fins.js" : "a07179737e1032b5",
   "ui/fish_organs.js" : "634add3c713caddf",

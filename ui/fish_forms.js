@@ -2,6 +2,7 @@ import {INTERNAL_TISSUE, isSenseTissue, tissueKind} from './tissue.js';
 import {
   ANATOMY,
   BODY_UNIT,
+  CORPSE,
   DEVELOPMENT,
   EYE_PLACE,
   FIN,
@@ -35,12 +36,35 @@ function fishGutCapacity(p) {
          (1 + BODY_UNIT.trait_middle);
 }
 
-export const SNAPSHOT = Object.freeze(
-    {pixels : 16, min_bins : 4, max_bins : 32, bins_per_pixel : 2, layouts : 8, states : 4});
+export const SNAPSHOT = Object.freeze({
+  pixels : 16,
+  min_bins : 4,
+  max_bins : 32,
+  bins_per_pixel : 2,
+  layouts : 8,
+  min_states : 4,
+  states_per_fish : 2
+});
 const snapshotBins = pixels => Math.max(
     SNAPSHOT.min_bins,
     Math.min(SNAPSHOT.max_bins, 2 ** Math.ceil(Math.log2(Math.max(
                                          SNAPSHOT.min_bins, pixels * SNAPSHOT.bins_per_pixel)))));
+function snapshotPopulation(asset) {
+  const source = sceneState.frame;
+  if (!fish_formsState.shapePopulation || fish_formsState.shapePopulationFrame !== source) {
+    const counts = new WeakMap(), add = key => {
+      if (key && typeof key === 'object')
+        counts.set(key, (counts.get(key) || 0) + 1);
+    };
+    for (const p of source?.fish || [])
+      add(p[FISH.forms] || p);
+    for (const p of source?.corpses || [])
+      add(p[CORPSE.morphology_asset]?.[2]);
+    fish_formsState.shapePopulationFrame = source;
+    fish_formsState.shapePopulation = counts;
+  }
+  return fish_formsState.shapePopulation.get(asset) || 1;
+}
 export function fishSnapshotAnatomy(p, pixels = SNAPSHOT.pixels) {
   const epoch = sceneState.frame?.render_epoch;
   if (epoch !== fish_formsState.fishOverviewEpoch) {
@@ -89,10 +113,14 @@ export function fishSnapshotAnatomy(p, pixels = SNAPSHOT.pixels) {
   if (!a) {
     a = fishAnatomy(p);
     a.snapshot = p;
-    entry.states.set(signature, a);
-    if (entry.states.size > SNAPSHOT.states)
-      entry.states.delete(entry.states.keys().next().value);
   }
+  // An asset belongs to a whole species; retain both ends of each fish's interpolated shape.
+  const capacity =
+      Math.max(SNAPSHOT.min_states, SNAPSHOT.states_per_fish * snapshotPopulation(asset));
+  entry.states.delete(signature);
+  entry.states.set(signature, a);
+  while (entry.states.size > capacity)
+    entry.states.delete(entry.states.keys().next().value);
   fishAnatomyCache.set(p, {bins, anatomy : a, visionKey});
   return a;
 }

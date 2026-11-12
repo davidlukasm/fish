@@ -1,20 +1,23 @@
 import {loadTexts, t} from './strings.js';
-import {decodeState, connectionState, initialize as initializeConnection} from './connection.js';
+import {decodeState} from './statistics_frame.js';
 import {initialize as initializeTransport} from './transport.js';
 
 let session, reset, controller;
+const cache = {};
 let speciesFingerprints = new Map();
 function clear() {
   speciesFingerprints.clear();
-  connectionState.speciesProfiles = {};
-  initializeConnection([
-    'stateVersion', 'cachedBrainLayout', 'profileKey', 'cachedIndividualProfile', 'renderAssets',
-    'renderAssetsKey'
-  ]);
+  Object.assign(cache, {
+    renderAssets : {},
+    speciesProfiles : {},
+    cachedBrainLayout : null,
+    cachedIndividualProfile : null,
+    hormones : null
+  });
   initializeTransport([ 'rawScene', 'sceneKey', 'lightCache' ]);
 }
 clear();
-const texts = loadTexts();
+const texts = loadTexts([ 'connection', 'transport', 'statistics_worker' ]);
 self.onmessage = async ({data}) => {
   await texts;
   if (data.cancel) {
@@ -23,11 +26,15 @@ self.onmessage = async ({data}) => {
   }
   controller = new AbortController();
   try {
+    const url = new URL(data.url, self.location.href);
     if (reset !== data.reset) {
       clear();
       reset = data.reset;
+      // The main thread can still name caches that this worker has just discarded.
+      for (const key of ['after', 'scene', 'profile', 'species', 'assets', 'brain'])
+        url.searchParams.delete(key);
     }
-    const start = performance.now(), response = await fetch(data.url, {signal : controller.signal});
+    const start = performance.now(), response = await fetch(url, {signal : controller.signal});
     if (!response.ok)
       throw Error(t('statistics_worker.verbindungUnterbrochen'));
     const body = await response.text(), downloadedAt = performance.now(), result = JSON.parse(body),
@@ -37,7 +44,7 @@ self.onmessage = async ({data}) => {
       session = result.session;
     }
     if (result.frame || result.frame_patches) {
-      result.prepared_frame = decodeState(result, false);
+      result.prepared_frame = decodeState(result, cache, false);
       const species = result.prepared_frame.species || [];
       result.species_order = species.map(s => s.id);
       result.species_updates = [];
