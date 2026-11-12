@@ -20,9 +20,11 @@ export const REGION_TYPES = Object.freeze([
     slots : [
       port('urge', 'in', 'urge', [], true), port('steer', 'in', 'steer'),
       port('escape', 'in', 'escape'),
-      port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true)
+      port('stroke', 'out', [ 'oscillator', 'rest' ], [ 'muscle' ], true), port('fin', 'in', 'fin'),
+      port('row', 'out', [ 'row', 'recoverOpponent' ], [ 'muscle' ]),
+      port('recover', 'out', [ 'recover', 'rowOpponent' ], [ 'muscle' ])
     ],
-    settings : {cycle : unit(.6), alternation : unit(1)}
+    settings : {cycle : unit(.6), finCycle : unit(.6), alternation : unit(1)}
   },
   {
     key : 'olfaction',

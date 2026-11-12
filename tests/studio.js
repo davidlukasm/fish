@@ -327,6 +327,159 @@ async function checkSpinalPattern(model, sites, root) {
   assert.ok(cycles[1] > cycles[0] * 1.5, 'The period control changes the compiled rhythm');
 }
 
+async function checkFinPattern(model, sites, root) {
+  let doc = model.newDocument('Rudern');
+  const ids = {}, names = new Map();
+  for (const [name, type, x,
+              y] of [[ 'spine', 'spine', 600, 300 ], [ 'balance', 'balance', 550, 500 ],
+                     [ 'row', 'muscle', 800, 300 ], [ 'recover', 'muscle', 800, 500 ]]) {
+    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, true);
+    assert.ok(made);
+    doc = made.document;
+    ids[name] = made.organId;
+    const organ = model.findOrgan(doc, made.organId);
+    names.set(organ.id, name);
+    names.set(organ.pair, name);
+  }
+  const port = (id, slot) => ({kind : 'slot', id, slot});
+  for (const [from, to] of [[ {kind : 'organ', id : ids.balance}, port(ids.spine, 'fin') ],
+                            [ port(ids.spine, 'row'), {kind : 'organ', id : ids.row} ],
+                            [ port(ids.spine, 'recover'), {kind : 'organ', id : ids.recover} ]]) {
+    const wired = model.connectSelections(doc, from, to, sites);
+    assert.ok(wired);
+    doc = model.updateWire(wired.document, wired.document.wires.at(-1).id, {pairing : 'same'});
+  }
+  const {updateRegion} = await import('../ui/studio/model/regions.js');
+  const cycles = [];
+  for (const finCycle of [.6, .3]) {
+    doc = updateRegion(doc, ids.spine, {finCycle}, sites);
+    const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
+    plan.groups.forEach((g, i) => {
+      const c = centers[i];
+      g.name = names.get(c.organId) + ':' + (c.node ?? c.key) + ':' + g.side;
+    });
+    const output = execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'spine-fin'
+        ],
+        {
+          cwd : root,
+          input : JSON.stringify(plan),
+          encoding : 'utf8',
+          timeout : 10000,
+          maxBuffer : 6 * 1024 * 1024
+        });
+    const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
+    const columns = [ -1, 1 ].flatMap(
+        side => ['row', 'recover'].map(name => header.indexOf(name + ':muscle:' + side)));
+    assert.ok(columns.every(i => i > 0));
+    const rows =
+        lines.map(row => [Number(row[0]), ...columns.map(i => Math.max(0, Number(row[i])))]);
+    const between = (lo, hi) => rows.filter(row => row[0] > lo && row[0] <= hi);
+    const mean = (i, lo, hi) => {
+      const part = between(lo, hi);
+      return part.reduce((sum, row) => sum + row[i], 0) / part.length;
+    };
+    const steady = between(1800, 2500);
+    for (const first of [1, 3]) {
+      const strength = (mean(first, 1800, 2500) + mean(first + 1, 1800, 2500)) / 2;
+      assert.ok(strength > .15, 'The fin request develops both antagonist commands');
+      const overlap = steady.reduce((sum, row) => sum + Math.min(row[first], row[first + 1]), 0);
+      const activity = steady.reduce((sum, row) => sum + Math.max(row[first], row[first + 1]), 0);
+      assert.ok(overlap < .1 * activity, 'A fin alternates its own pull and return commands');
+      for (const i of [first, first + 1]) {
+        assert.ok(mean(i, 4950, 5200) < .3 * strength, 'Both antagonists rest after the request');
+        const start = first === 1 ? 3100 : 3700, other = i <= 2 ? i + 2 : i - 2;
+        assert.ok(mean(i, start, start + 200) > .15,
+                  'The active fin keeps both phases while the opposite fin rests');
+        assert.ok(mean(other, start, start + 200) < .3 * mean(i, start, start + 200),
+                  'Each fin has its own request gate');
+      }
+    }
+    cycles.push(steady.slice(1)
+                    .filter((row, i) => row[1] - row[2] > .05 && steady[i][1] - steady[i][2] <= .05)
+                    .length);
+  }
+  assert.ok(cycles[1] > cycles[0] * 1.5, 'The fin period changes independently of the tail period');
+}
+
+async function checkReversePattern(model, sites, root) {
+  let doc = model.newDocument('Rückwärts');
+  const ids = {}, names = new Map();
+  for (const [name, type, x, y] of [[ 'motor', 'motor', 500, 300 ], [ 'spine', 'spine', 600, 300 ],
+                                    [ 'balance', 'balance', 550, 500 ],
+                                    [ 'pain', 'pain', 400, 400 ], [ 'row', 'muscle', 800, 300 ],
+                                    [ 'reverse', 'muscle', 800, 500 ]]) {
+    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, true);
+    assert.ok(made);
+    doc = made.document;
+    ids[name] = made.organId;
+    const organ = model.findOrgan(doc, made.organId);
+    names.set(organ.id, name);
+    names.set(organ.pair, name);
+  }
+  const {updateRegion} = await import('../ui/studio/model/regions.js');
+  doc = updateRegion(doc, ids.motor, {retreat : 1, compete : 0, beat : 0, tone : 0}, sites);
+  const port = (id, slot) => ({kind : 'slot', id, slot});
+  for (const [from, to, pairing] of [
+           [ {kind : 'organ', id : ids.balance}, port(ids.motor, 'toward'), 'same' ],
+           [ {kind : 'organ', id : ids.pain}, port(ids.motor, 'back'), 'same' ],
+           [ port(ids.motor, 'fins'), port(ids.spine, 'fin'), 'cross' ],
+           [ port(ids.spine, 'row'), {kind : 'organ', id : ids.row}, 'same' ],
+           [ port(ids.motor, 'reverse'), {kind : 'organ', id : ids.reverse}, 'same' ]]) {
+    const wired = model.connectSelections(doc, from, to, sites);
+    assert.ok(wired);
+    doc = model.updateWire(wired.document, wired.document.wires.at(-1).id, {pairing});
+  }
+  const plan = model.compileDocument(doc, sites), centers = model.allCenters(doc);
+  plan.groups.forEach((g, i) => {
+    const c = centers[i];
+    g.name = names.get(c.organId) + ':' + (c.node ?? c.key) + ':' + g.side;
+  });
+  const output = execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'motor-reverse'
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(plan),
+        encoding : 'utf8',
+        timeout : 10000,
+        maxBuffer : 8 * 1024 * 1024
+      });
+  const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
+  const rows = lines.map(row => row.map(Number));
+  const mean = (node, side, from, to) => {
+    const index = header.indexOf(node + ':muscle:' + side);
+    assert.ok(index > 0);
+    const part = rows.filter(row => row[0] > from && row[0] <= to);
+    return part.reduce((sum, row) => sum + Math.max(0, row[index]), 0) / part.length;
+  };
+  for (const side of [-1, 1]) {
+    const cruising = mean('row', side, 2200, 2800);
+    assert.ok(cruising > .2, 'The crossed fin request produces normal rowing');
+    assert.ok(mean('reverse', side, 2200, 2800) < .1 * cruising,
+              'Rowing does not activate the reverse muscle');
+    for (const from of [3200, 3800])
+      assert.ok(mean('row', side, from, from + 200) < .2 * cruising,
+                'A retreat stops both rowers despite the crossed request wiring');
+    const from = side < 0 ? 3200 : 3800;
+    assert.ok(mean('reverse', side, from, from + 200) > .25,
+              'A first late retreat develops a direct reverse command');
+    assert.ok(mean('reverse', -side, from, from + 200) < .1,
+              'The direct reverse command keeps the requested side');
+    assert.ok(mean('row', side, 4400, 4700) > .5 * cruising, 'Rowing returns after retreat ends');
+    assert.ok(mean('reverse', side, 4400, 4700) < .1 * cruising,
+              'The reverse muscle rests when normal rowing returns');
+  }
+}
+
 async function checkResponseControls(model, capabilities, clicks) {
   const {responseHandle, responsePatch, responseTrace} =
       await import('../ui/studio/view/response.js');
@@ -445,7 +598,7 @@ async function checkFunctionalRegions(model, capabilities) {
   assert.deepEqual(ORGANS.filter(o => o.category === 'regions').map(o => o.key).sort(),
                    [ 'choice', 'motor', 'olfaction', 'spine', 'state', 'tectum', 'value' ]);
   const cases = [
-    [ 'spine', {cycle : .41, alternation : .83}, [ 'spine' ] ],
+    [ 'spine', {cycle : .41, finCycle : .73, alternation : .83}, [ 'spine', 'finCycle' ] ],
     [ 'choice', {searchTime : .61, searchDrive : .73}, [ 'search' ] ],
     [ 'olfaction', {smoothing : .47, contrast : .62}, [ 'scent' ] ],
     [ 'state', {reserve : .42, rest : .37, maturity : .67}, [ 'reserve', 'rest', 'maturity' ] ],
@@ -797,10 +950,16 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
-  if (process.argv.includes('--spine')) {
-    await checkSpinalPattern(model, sitesResult.sites, root);
+  if (process.argv.includes('--spine') || process.argv.includes('--fin') ||
+      process.argv.includes('--reverse')) {
+    if (process.argv.includes('--spine'))
+      await checkSpinalPattern(model, sitesResult.sites, root);
+    if (!process.argv.includes('--reverse'))
+      await checkFinPattern(model, sitesResult.sites, root);
+    if (!process.argv.includes('--fin'))
+      await checkReversePattern(model, sitesResult.sites, root);
     await checkFunctionalRegions(model, sitesResult);
-    console.log('Atelier: Wirbelsäule, Seitenwechsel, Ruhe und einseitige Befehle: OK');
+    console.log('Atelier: angeforderte Bewegungsregionen und ihre Bedienung: OK');
     return;
   }
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
@@ -826,6 +985,8 @@ async function checkHormoneSystems(model, capabilities) {
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkSpinalPattern(model, sitesResult.sites, root);
+  await checkFinPattern(model, sitesResult.sites, root);
+  await checkReversePattern(model, sitesResult.sites, root);
   await checkForagingChoice(model, sitesResult.sites, root);
   await checkResponseControls(model, sitesResult, clicks);
   await checkFunctionalRegions(model, sitesResult);

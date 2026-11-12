@@ -18,7 +18,7 @@ import {label} from './kit.js';
 export const REGION_PICTURE = Object.freeze({width : 360, height : 260, left : 40, right : 320});
 const P = REGION_PICTURE, WIDTH = P.right - P.left, SEARCH_BASE = 194, SEARCH_HEIGHT = 100;
 const SCENT_BASE = 202, SCENT_HEIGHT = 114, VALUE_BASE = 218, VALUE_HEIGHT = 108;
-const SPINE_BASE = 210, SPINE_HEIGHT = 45;
+const SPINE_BASE = 120, SPINE_HEIGHT = 24, FIN_BASE = 234;
 const TAU_SPAN = 4, FACING = .9, FAN_RADIUS = 120, FAN_HOME = {
   x : 180,
   y : 160
@@ -52,6 +52,8 @@ export function regionHandle(organ, key) {
   const r = organ.region;
   if (key === 'spine')
     return point(x(r.cycle), SPINE_BASE - SPINE_HEIGHT * r.alternation);
+  if (key === 'finCycle')
+    return point(x(r.finCycle), FIN_BASE);
   if (key === 'search')
     return point(x(timeConstantSteps(r.searchTime) / LONGEST_TIME_CONSTANT),
                  SEARCH_BASE - SEARCH_HEIGHT * r.searchDrive);
@@ -86,6 +88,8 @@ export function regionPatch(organ, key, fx, fy) {
   const px = fx * P.width, py = fy * P.height, f = clamp((px - P.left) / WIDTH);
   if (key === 'spine')
     return {cycle : f, alternation : clamp((SPINE_BASE - py) / SPINE_HEIGHT)};
+  if (key === 'finCycle')
+    return {finCycle : f};
   if (key === 'search')
     return {
       searchTime : timeConstantOf(Math.max(TIME_CONSTANT.min_steps, f * LONGEST_TIME_CONSTANT)),
@@ -257,18 +261,22 @@ function motorPicture(organ) {
 }
 function spinePicture(organ) {
   const r = organ.region;
+  const waves = y =>
+      axis(P.left, P.right, y) +
+      [ 0, Math.PI ]
+          .map((phase, i) => curve(f => y - 15 * Math.max(0, Math.sin(4 * Math.PI * f + phase)),
+                                   undefined, undefined, 160, i ? 'other' : ''))
+          .join('');
   return icon('spine', 26, 27) + text(47, 31, words('spine')) +
-         text(P.left, 60, label('inspector.side.left')) +
-         text(P.left, 115, label('inspector.side.right')) +
-         [ 0, Math.PI ]
-             .map((phase, i) =>
-                      axis(P.left, P.right, 90 + 55 * i) +
-                      curve(f => 90 + 55 * i - 24 * Math.max(0, Math.sin(4 * Math.PI * f + phase)),
-                            undefined, undefined, 160, i ? 'other' : ''))
-             .join('') +
+         text(P.left, 52, label('inspector.side.left')) +
+         text(P.right, 52, label('inspector.side.right'), 'end') + waves(77) +
          axis(P.left, P.right, SPINE_BASE) + handle(organ, 'spine', words('spineDrag')) +
-         text(P.left, 242, cycleSteps(period(r.cycle))) +
-         text(P.right, 242, label('regions.settings.alternation'), 'end');
+         text(P.left, 142, cycleSteps(period(r.cycle))) +
+         text(P.right, 142, label('regions.settings.alternation'), 'end') +
+         text(P.left, 165, words('finCycle')) + text(P.left, 185, label('regions.slots.row')) +
+         text(P.right, 185, label('regions.slots.recover'), 'end') + waves(211) +
+         axis(P.left, P.right, FIN_BASE) + handle(organ, 'finCycle', words('finCycleDrag')) +
+         text(P.left, 254, cycleSteps(period(r.finCycle)));
 }
 function tectumPicture(state, organ) {
   const r = organ.region, plan = regionPlan(state.document, organ);

@@ -12,6 +12,8 @@ import {RHYTHM_TAU, TONIC_LEARNING, neuralPlan, pacemakerCell, regionCell} from 
 const SWIM_TONE = Object.freeze([ 0, -.5, -1 ]);
 // The output nodes drive muscles directly, like motor neurons: more cells and full contacts.
 const DRIVER = Object.freeze({copies : 8, electrical_limit : 1});
+// A first retreat may occur long after maturity; weak spontaneous activity keeps it learnable.
+const RETREAT_DRIVER = Object.freeze({...DRIVER, pace : .5, threshold : .25});
 // Listeners keep their resting rhythm for life: a meal or a second smell first arrives after
 // hatching, and a contact grows only while its target cell is active.
 const listener = (node, preset, set = {}) => regionCell(node, preset, 'in', set, TONIC_LEARNING);
@@ -42,9 +44,13 @@ export function motorPlan(doc, organ) {
   if (doc.organs.some(o => o.type === 'gutmuscle'))
     nodes.push(regionCell('gut', 'relay', 'out', DRIVER));
   if (r.retreat) {
-    // Retreating pushes with the antagonist fin muscles and brakes the tail.
-    nodes.push(regionCell('reverse', 'relay', 'out', DRIVER), listener('retreat', 'relay'));
-    inner.push([ 'retreat', 'reverse' ], [ 'retreat', 'brake' ]);
+    // Retreat stops rowing on both sides: the fin request may be wired across the body while
+    // the reverse muscle is wired on the same side.
+    nodes.push(regionCell('reverse', 'relay', 'out', RETREAT_DRIVER, TONIC_LEARNING),
+               listener('retreat', 'relay', {pace : .5, threshold : .25}),
+               regionCell('backStop', 'inhibit', 'out', RETREAT_DRIVER, TONIC_LEARNING));
+    inner.push([ 'retreat', 'reverse' ], [ 'retreat', 'brake' ], [ 'retreat', 'backStop' ],
+               [ 'backStop', 'turn' ]);
   }
   const cross = [];
   // Mirrored pacemakers beat in antiphase. One pool on the left side drives both sides, so a beat
@@ -65,6 +71,8 @@ export function motorPlan(doc, organ) {
       }
     }
   if (organ.pair) {
+    if (r.retreat)
+      cross.push([ 'retreat', 'backStop' ], [ 'retreat', 'brake' ]);
     // Danger on one side turns the fish away from it, with the fins and, through the spine, with
     // an escape stroke of the tail.
     nodes.push(listener('flee', 'relay'), regionCell('escape', 'relay', 'out', DRIVER));

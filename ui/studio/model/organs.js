@@ -275,7 +275,8 @@ export const ORGANS = Object.freeze([
               organ.centers.some(c => c.node === 'gut') ? [ 'sated', 'gut' ] : 'sated'),
          slot('contact', 'in', [], false, 'lift'),
          ...(organ.region.retreat ? [ slot('back', 'in', [], false, 'retreat') ] : []),
-         slot('fins', 'out', [], true, 'turn'), slot('tail', 'out', [], true, 'swim'),
+         slot('fins', 'out', [], true, organ.region.retreat ? [ 'turn', 'backStop' ] : 'turn'),
+         slot('tail', 'out', [], true, 'swim'),
          ...(organ.pair ? [ slot('escape', 'out', [], false, 'escape') ] : []),
          slot('mouth', 'out', [], false, 'mouth'), slot('bite', 'out', [], false, 'bite'),
          ...(organ.centers.some(c => c.node === 'gills')
