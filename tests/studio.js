@@ -469,6 +469,25 @@ async function checkResponseControls(model, capabilities, clicks) {
     assert.ok(Math.abs(back.tau - tau) < 1e-9);
     assert.ok(Math.abs(back.threshold - cell.threshold) < 1e-9);
   }
+  for (const pace of [0, 1])
+    for (const sign of [-1, 1])
+      for (const q1 of [0, .4, 1])
+        for (const q2 of [0, .25, .5, .75, 1]) {
+          const cell = {...center, q1, q2, sign, tau : .6, threshold : 0};
+          const situation = {...context, pace, excitation : .2, output : .7};
+          for (const [handle, property] of [[ 'filter', 'q2' ], [ 'rectify', 'q1' ]]) {
+            const at = responseHandle(cell, situation, handle);
+            const back = responsePatch(cell, at.fx, at.fy, situation, handle);
+            assert.ok(Math.abs(back[property] - cell[property]) < 1e-8,
+                      'A curve grip retains its value for either sign and with rhythm');
+          }
+          if (pace) {
+            const at = responseHandle(cell, situation);
+            const back = responsePatch(cell, at.fx, at.fy, situation);
+            assert.ok(Math.abs(back.tau - cell.tau) < 1e-8);
+            assert.ok(Math.abs(back.threshold - cell.threshold) < 1e-8);
+          }
+        }
   const held = responseTrace(center, context);
   assert.ok(Math.abs(held.points[held.on + 1].value - held.points[held.off - 1].value) < 1e-9);
   const fading = responseTrace({...center, q2 : 0}, context);
@@ -501,6 +520,14 @@ async function checkResponseControls(model, capabilities, clicks) {
   const html = regionSettings(state, model.findOrgan(changed, organ.id));
   assert.match(html, /data-region-handle="search"/);
   assert.doesNotMatch(html, /data-region-setting="(?:time|threshold|response|effect)"/);
+  const {inspector} = await import('../ui/studio/view/panels.js');
+  const selectedCell =
+      inspector({...state, multi : new Set(), selected : {kind : 'center', id : center.id}});
+  assert.match(selectedCell, /data-circuit-node=/);
+  assert.match(selectedCell, /aid-region-graph-node selected/);
+  assert.match(selectedCell, /data-response-handle="filter"/);
+  assert.match(selectedCell, /data-response-handle="rectify"/);
+  assert.doesNotMatch(selectedCell, /aid-center-tabs|aid-response-choices/);
   assert.ok(timeConstantSteps(drivePatch('beat', 0, 0, {scale : context.scale}).tau) >=
                 TIME_CONSTANT.pace_min_steps - 1e-9,
             'A dragged beat stops at the native minimum period');

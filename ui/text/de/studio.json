@@ -470,7 +470,8 @@
     "response": {
       "input": "Reiz",
       "output": "Antwort",
-      "positive": "Nur positive Zellantworten",
+      "filter": "Antwortform ziehen: Änderungsreiz, anhaltender Pegel oder Nachwirkung",
+      "rectify": "Grenze ziehen: negative Zellantworten abschwächen oder durchlassen",
       "drag": "Antwort ziehen: Stärke nach oben oder unten, Nachwirkung nach links oder rechts",
       "reference": "Zellantwort auf einen gleichbleibenden Beispielreiz; Verbindungen und Lernen verändern den tatsächlichen Eingang.",
       "rhythm": "Mögliche Zellantworten mit Eigenrhythmus"

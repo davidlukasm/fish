@@ -1,8 +1,7 @@
 import {TIME_CONSTANT} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {LONGEST_TIME_CONSTANT, timeConstantOf, timeConstantSteps} from '../../tuning.js';
-import {tList} from '../../strings.js';
-import {escapeText, fixed, glyph} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {label} from './kit.js';
 import {nerveResponse} from './drive.js';
 import {driveContext} from './preview.js';
@@ -20,10 +19,11 @@ export const RESPONSE = Object.freeze({
   off : .65,
   input : .9,
   span : 3,
-  knob : 8
+  knob : 8,
+  beats : 3,
+  crest : 1.25,
+  tail : .25
 });
-const MODES = Object.freeze(
-    [ 'M2 18h5l2-13 3 13h10', 'M2 18h5V6h11v12h4', 'M2 18h5c4 0 2-12 8-12 4 0 1 12 7 12' ]);
 const FILTER_EPSILON = .001;
 const signOf = center => center.sign < 0 ? -1 : 1;
 const filtered = center => Math.abs(clamp(center.q2) - .5) > FILTER_EPSILON;
@@ -32,48 +32,100 @@ const responseY = value => RESPONSE.zero - RESPONSE.scale * value;
 const responsePoint = (step, value, total) =>
     fixed(responseX(step, total)) + ' ' + fixed(responseY(value));
 const spanOf = context => context.adaptationSpan ?? 10;
-const totalOf = context => RESPONSE.span * spanOf(context) * LONGEST_TIME_CONSTANT;
+const totalOf = context =>
+    (context.pace > 0 ? RESPONSE.beats : RESPONSE.span * spanOf(context)) * LONGEST_TIME_CONSTANT;
+const periodOf = center => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(center.tau));
+const rhythmOf = context => (context.pace ?? 0) * .5 * (1 + (context.rhythmEffect ?? 0));
+const excitationAt = (center, context, step, on) =>
+    context.excitation + rhythmOf(context) * Math.sin(2 * Math.PI * (step - on) / periodOf(center));
 
 function probeOf(center, context) {
   const total = totalOf(context), on = Math.ceil(RESPONSE.on * total);
   const adaptation = spanOf(context) * timeConstantSteps(center.tau);
-  const step = filtered(center) ? on + adaptation : (RESPONSE.on + RESPONSE.off) * total / 2;
+  const step = context.pace > 0   ? on + RESPONSE.crest * periodOf(center)
+               : filtered(center) ? on + adaptation
+                                  : (RESPONSE.on + RESPONSE.off) * total / 2;
   const samples = Math.floor(step) - on + 1;
-  const mean = RESPONSE.input * (1 - (1 - 1 / adaptation) ** samples);
-  return {step, mean, total};
+  const off = Math.ceil(RESPONSE.off * total), held = Math.min(samples, off - on),
+        mean = RESPONSE.input * (1 - (1 - 1 / adaptation) ** held) * (1 - 1 / adaptation) **
+               Math.max(0, samples - held);
+  return {step, mean, total, on, input : step < off ? RESPONSE.input : 0};
 }
-
-export function responseHandle(center, context) {
-  const {step, mean, total} = probeOf(center, context);
+function tailProbe(center, context) {
+  const total = totalOf(context), on = Math.ceil(RESPONSE.on * total),
+        off = Math.ceil(RESPONSE.off * total),
+        adaptation = spanOf(context) * timeConstantSteps(center.tau),
+        step =
+            Math.min(Math.floor(total * (1 - 3 * RESPONSE.knob / (RESPONSE.right - RESPONSE.left))),
+                     off + Math.ceil(RESPONSE.tail * adaptation)),
+        retention = 1 - 1 / adaptation,
+        mean = RESPONSE.input * (1 - retention ** (off - on)) * retention ** (step - off + 1);
+  return {total, step, mean};
+}
+export function responseHandle(center, context, handle = '') {
+  if (handle === 'rectify')
+    return {
+      fx : (RESPONSE.right - RESPONSE.knob) / RESPONSE.width,
+      fy : responseY(-signOf(center) * (1 - center.q1) * context.output) / RESPONSE.height
+    };
+  if (handle === 'filter') {
+    const {step, mean, total} = tailProbe(center, context);
+    return {
+      fx : responseX(step, total) / RESPONSE.width,
+      fy : responseY(signOf(center) * nerveResponse({...center, q1 : 0}, 0, mean, context)) /
+               RESPONSE.height
+    };
+  }
+  const {step, mean, total, on, input} = probeOf(center, context);
   return {
     fx : responseX(step, total) / RESPONSE.width,
-    fy : responseY(signOf(center) * nerveResponse(center, RESPONSE.input, mean, context)) /
+    fy : responseY(
+             signOf(center) *
+             nerveResponse(center, input, mean,
+                           {...context, excitation : excitationAt(center, context, step, on)})) /
              RESPONSE.height
   };
 }
 
-export function responsePatch(center, fx, fy, context) {
+export function responsePatch(center, fx, fy, context, handle = '') {
   if (!(context.scale > 0) || !(context.output > 0))
     return null;
+  const value =
+      signOf(center) * (RESPONSE.zero - fy * RESPONSE.height) / RESPONSE.scale / context.output;
+  if (handle === 'rectify')
+    return {q1 : clamp(1 + value)};
+  if (handle === 'filter') {
+    const {mean} = tailProbe(center, context);
+    return mean > 0 ? {
+      q2 : clamp((1 + (Math.atanh(clamp(value, -.999999, .999999)) +
+                       context.scale * center.threshold - context.excitation) /
+                          mean) /
+                 2)
+    }
+                    : null;
+  }
   const total = totalOf(context), on = Math.ceil(RESPONSE.on * total);
   const step = (fx * RESPONSE.width - RESPONSE.left) / (RESPONSE.right - RESPONSE.left) * total;
-  const tau = filtered(center)
-                  ? timeConstantOf(Math.max(TIME_CONSTANT.min_steps, (step - on) / spanOf(context)))
-                  : center.tau;
-  const {mean} = probeOf({...center, tau}, context);
+  const tau =
+      context.pace > 0
+          ? timeConstantOf(Math.max(TIME_CONSTANT.pace_min_steps, (step - on) / RESPONSE.crest))
+      : filtered(center)
+          ? timeConstantOf(Math.max(TIME_CONSTANT.min_steps, (step - on) / spanOf(context)))
+          : center.tau;
+  const probe = probeOf({...center, tau}, context), {mean, input} = probe;
   const q = clamp(center.q2), level = Math.min(1, 2 * q), memory = Math.max(0, 2 * q - 1);
-  const drive = (1 - memory) * RESPONSE.input + (memory + level - 1) * mean;
-  let target =
-      signOf(center) * (RESPONSE.zero - fy * RESPONSE.height) / RESPONSE.scale / context.output;
+  const drive = (1 - memory) * input + (memory + level - 1) * mean;
+  let target = value;
   if (target < 0) {
     if (center.q1 >= 1)
       target = 0;
     else
       target /= 1 - clamp(center.q1);
   }
-  const threshold = clamp(
-      (context.excitation + drive - Math.atanh(clamp(target, -.999999, .999999))) / context.scale,
-      -1);
+  const threshold = clamp((excitationAt({...center, tau}, context, probe.step, on) + drive -
+                           Math.atanh(clamp(target, -.999999, .999999))) /
+                              context.scale,
+                          -1);
   return {tau, threshold};
 }
 
@@ -81,7 +133,7 @@ export function responseTrace(center, context) {
   const total = totalOf(context), on = Math.ceil(RESPONSE.on * total),
         off = Math.ceil(RESPONSE.off * total);
   const rate = 1 / (spanOf(context) * timeConstantSteps(center.tau));
-  const rhythm = context.pace * .5 * (1 + context.rhythmEffect);
+  const rhythm = rhythmOf(context);
   let mean = 0;
   const points = [];
   for (let step = 0; step <= Math.ceil(total); ++step) {
@@ -91,7 +143,7 @@ export function responseTrace(center, context) {
         signOf(center) * nerveResponse(center, input, mean, {...context, excitation});
     points.push({
       step,
-      value : answer(context.excitation),
+      value : answer(excitationAt(center, context, step, on)),
       low : answer(context.excitation - rhythm),
       high : answer(context.excitation + rhythm)
     });
@@ -99,32 +151,11 @@ export function responseTrace(center, context) {
   return {total, on, off, points, rhythm};
 }
 
-export function responseChoices(center) {
-  const names = tList('studio.regions.values.response');
-  const button = (property, value, active, path, title) =>
-      '<button data-response-cell="' + escapeText(center.id) + '" data-response-property="' +
-      property + '" data-response-value="' + value + '" aria-pressed="' + active + '" title="' +
-      escapeText(title) + '" aria-label="' + escapeText(title) + '">' + glyph(path, 24) +
-      '</button>';
-  return '<div class="aid-response-choices">' +
-         MODES
-             .map((path, i) =>
-                      button('q2', i / 2, Math.abs(center.q2 - i / 2) < .001, path, names[i]))
-             .join('') +
-         '<span></span>' +
-         button('q1', center.q1 >= .5 ? 0 : 1, center.q1 >= .5,
-                center.q1 >= .5 ? 'M2 12h20M3 12l4-8 5 8h9' : 'M2 12h20M3 12l4-8 9 16 5-8',
-                label('regions.response.positive')) +
-         button('sign', -signOf(center), center.sign < 0,
-                center.sign < 0 ? 'M3 12h16M19 5v14' : 'M3 12h16M13 5l7 7-7 7',
-                label(center.sign < 0 ? 'inspector.inhibiting' : 'inspector.exciting')) +
-         '</div>';
-}
-
 export function responseSvg(state, center) {
   const D = RESPONSE, context = driveContext(state, center);
   const {total, on, off, points, rhythm} = responseTrace(center, context);
-  const stride = Math.max(1, Math.floor(total / 240));
+  const stride =
+      Math.max(1, Math.floor(Math.min(total / 240, rhythm ? periodOf(center) / 24 : Infinity)));
   const drawn = points.filter(p => p.step % stride === 0 ||
                                    [ on - 1, on, off - 1, off, Math.ceil(total) ].includes(p.step));
   const point = p => responsePoint(p.step, p.value, total);
@@ -136,6 +167,22 @@ export function responseSvg(state, center) {
                 'Z"><title>' + label('regions.response.rhythm') + '</title></path>'
           : '';
   const handle = responseHandle(center, context);
+  const controls =
+      [ 'filter', 'rectify' ]
+          .map(kind => {
+            const p = responseHandle(center, context, kind), x = p.fx * D.width,
+                  y = p.fy * D.height;
+            const title = label('regions.response.' + kind);
+            const guide = kind === 'filter' ? 'M' + fixed(x) + ' ' + D.zero + 'V' + fixed(y)
+                                            : 'M' + fixed(x - D.knob * 2) + ' ' + fixed(y) + 'H' +
+                                                  fixed(x + D.knob);
+            return '<path class="aid-response-control-guide" d="' + guide + '"/>' +
+                   '<circle class="aid-graphic-handle aid-response-' + kind +
+                   '" data-response-handle="' + kind + '" tabindex="0" role="button" aria-label="' +
+                   escapeText(title) + '" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
+                   D.knob + '"><title>' + escapeText(title) + '</title></circle>';
+          })
+          .join('');
   const inputY = D.inputBase - D.inputScale * D.input;
   return '<svg class="aid-response" data-response="' + escapeText(center.id) + '" viewBox="0 0 ' +
          D.width + ' ' + D.height + '" role="group" aria-label="' +
@@ -150,12 +197,18 @@ export function responseSvg(state, center) {
          '"/><circle class="aid-graphic-handle" data-response-handle="" tabindex="0" role="button"' +
          ' aria-label="' + label('regions.response.drag') + '" cx="' + fixed(handle.fx * D.width) +
          '" cy="' + fixed(handle.fy * D.height) + '" r="' + D.knob +
-         '" style="cursor:' + (filtered(center) ? 'move' : 'ns-resize') + '"><title>' +
-         label('regions.response.drag') + '</title></circle>' +
+         '" style="cursor:' + (filtered(center) || context.pace > 0 ? 'move' : 'ns-resize') +
+         '"><title>' + label('regions.response.drag') + '</title></circle>' + controls +
          '<g class="aid-response-symbol"><title>' + label('regions.response.input') +
          '</title><path d="M8 9h14M17 5l5 4-5 4"/></g>' +
-         '<g class="aid-response-symbol"><title>' + label('regions.response.output') +
-         '</title><path d="M8 72h14M17 68l5 4-5 4"/></g>' +
+         '<g class="aid-response-polarity" data-response-cell="' + escapeText(center.id) +
+         '" data-response-property="sign" data-response-value="' + -signOf(center) +
+         '" tabindex="0" role="button" aria-label="' +
+         label(center.sign < 0 ? 'inspector.inhibiting' : 'inspector.exciting') +
+         '" transform="translate(16 76)"><title>' +
+         label(center.sign < 0 ? 'inspector.inhibiting' : 'inspector.exciting') +
+         '</title><circle r="12"/><path d="' +
+         (center.sign < 0 ? 'M-6 0H6M6-6V6' : 'M-6 0H6M1-5L6 0L1 5') + '"/></g>' +
          '<g class="aid-response-symbol" transform="translate(330 208)"><title>' +
          Math.round(total) + ' · ' + label('learnRule.steps') +
          '</title><circle r="7"/><path d="M0-4v4l3 2"/></g></svg>';

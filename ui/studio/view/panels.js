@@ -203,8 +203,9 @@ function organSettings(state, organ, center) {
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
   if (organ.field)
     return visionInspector(state, organ);
-  if (isRegion(organ) && state.selected?.kind !== 'center')
-    return regionSettings(state, organ);
+  if (isRegion(organ))
+    return regionSettings(state, organ) +
+           (state.selected?.kind === 'center' ? nerveEditor(state, center) : '');
   if (center.role === 'nerve')
     return centerSide(state, center) + nerveEditor(state, center);
   return organPanel(state, organ, center) + cellCount(organ, center) +
@@ -294,19 +295,14 @@ export const selectedCenter = (state, organ) =>
 // Organs whose picture shows their kinds of cells as parts one clicks to choose.
 const PARTS_IN_PICTURE = Object.freeze([ 'gut', 'eggs', 'sperm', 'bladder' ]);
 function centerTabs(state, organ) {
-  if (organ.field || organ.centers.length < 2 || ORGAN_BY_KEY[organ.type]?.types ||
-      PARTS_IN_PICTURE.includes(organ.type))
+  if (isRegion(organ) || organ.field || organ.centers.length < 2 ||
+      ORGAN_BY_KEY[organ.type]?.types || PARTS_IN_PICTURE.includes(organ.type))
     return '';
   const kinds = organ.type === 'brain' ? organ.centers.map(c => [c]) : nodeFamilies(organ);
-  if (kinds.length < 2 && !isRegion(organ))
+  if (kinds.length < 2)
     return '';
   const chosen = kind => kind.some(c => c.id === selectedCenter(state, organ)?.id);
-  const whole = isRegion(organ)
-                    ? '<button data-select-organ="' + escapeText(organ.id) + '" class="' +
-                          (state.selected?.kind === 'organ' ? 'selected' : '') + '">' +
-                          label('inspector.region.whole') + '</button>'
-                    : '';
-  return '<div class="aid-center-tabs">' + whole +
+  return '<div class="aid-center-tabs">' +
          kinds
              .map(kind => '<button data-select-center="' + escapeText(kind[0].id) + '" class="' +
                           (chosen(kind) ? 'selected' : '') + '">' + escapeText(familyTitle(kind)) +

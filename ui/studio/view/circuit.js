@@ -118,5 +118,5 @@ function regionControls(state, organ) {
 }
 export function regionSettings(state, organ) {
   return '<section class="aid-eye-section">' + regionGraph(state, organ) + '</section>' +
-         regionControls(state, organ);
+         (state.selected?.kind === 'center' ? '' : regionControls(state, organ));
 }

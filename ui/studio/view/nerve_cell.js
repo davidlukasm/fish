@@ -1,12 +1,8 @@
 import {ATELIER_LIMITS} from '../../schema.js';
 import {clamp} from '../../units.js';
-import {t} from '../../strings.js';
 import {wiredCrossing} from '../model/document.js';
-import {isPacemaker} from '../model/organs.js';
 import {centerMarker} from './scene.js';
-import {driveElement} from './drive.js';
-import {driveContext} from './preview.js';
-import {responseChoices, responseSvg} from './response.js';
+import {responseSvg} from './response.js';
 import {escapeText, fixed} from './markup.js';
 import {cellWords, label} from './kit.js';
 
@@ -101,14 +97,9 @@ function tissue(state, center) {
          '</svg>';
 }
 export function nerveEditor(state, center) {
-  const rhythmic = isPacemaker(center), context = driveContext(state, center);
-  const response = rhythmic ? driveElement(center, label('inspector.beat'),
-                                           n => t('units.steps', {n}), {...context, rhythm : true})
-                            : responseSvg(state, center);
-  const height = rhythmic ? 124 : 220;
-  return '<div class="aid-nerve-editor">' + responseChoices(center) +
-         '<svg class="aid-nerve-picture" viewBox="0 0 360 ' + (220 + height) + '">' +
-         tissue(state, center) +
-         response.replace('<svg ', '<svg x="0" y="220" width="360" height="' + height + '" ') +
+  return '<div class="aid-nerve-editor">' +
+         '<svg class="aid-nerve-picture" viewBox="0 0 360 440">' + tissue(state, center) +
+         responseSvg(state, center)
+             .replace('<svg ', '<svg x="0" y="220" width="360" height="220" ') +
          '</svg></div>';
 }

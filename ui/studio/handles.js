@@ -179,7 +179,7 @@ export const GRIPS = Object.freeze([
     graphic : '[data-response]',
     handle : '[data-response-handle]',
     held : 'response',
-    start : (studio, g) => ({id : g.dataset.response})
+    start : (studio, g, h) => ({id : g.dataset.response, handle : h.dataset.responseHandle})
   },
   {
     graphic : '[data-gut-bars]',
@@ -427,7 +427,7 @@ export const handleMethods = {
     if (!center)
       return;
     const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = responsePatch(center, fx, fy, driveContext(this.state, center));
+    const patch = responsePatch(center, fx, fy, driveContext(this.state, center), drag.handle);
     if (patch)
       this.draftDesign(updateCenter(doc, drag.id, patch), 'response:' + drag.id);
   },
@@ -440,6 +440,14 @@ export const handleMethods = {
                        'nerve:' + drag.id);
   },
   responseKey(event) {
+    const polarity = event.target.closest?.('[data-response-property="sign"]');
+    if (polarity?.dataset?.responseProperty === 'sign' && [ 'Enter', ' ' ].includes(event.key)) {
+      event.preventDefault();
+      this.changeDocument(updateCenter(this.state.document, polarity.dataset.responseCell,
+                                       {sign : Number(polarity.dataset.responseValue)}),
+                          this.state.selected);
+      return true;
+    }
     const handle = event.target.closest?.('[data-response-handle]');
     const graphic = handle?.closest('[data-response]');
     if (!graphic || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
@@ -448,16 +456,17 @@ export const handleMethods = {
     if (!center)
       return false;
     event.preventDefault();
-    const context = driveContext(this.state, center), point = responseHandle(center, context);
+    const kind = handle.dataset?.responseHandle ?? '';
+    const context = driveContext(this.state, center), point = responseHandle(center, context, kind);
     const dx = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
     const patch = responsePatch(center, point.fx + dx * 4 / RESPONSE.width,
-                                point.fy + dy * 2 / RESPONSE.height, context);
+                                point.fy + dy * 2 / RESPONSE.height, context, kind);
     if (patch)
       this.changeDocument(updateCenter(this.state.document, center.id, patch), this.state.selected);
     [...this.root.querySelectorAll('[data-response]')]
         .find(g => g.dataset.response === center.id)
-        ?.querySelector('[data-response-handle]')
+        ?.querySelector('[data-response-handle="' + kind + '"]')
         ?.focus();
     return true;
   },

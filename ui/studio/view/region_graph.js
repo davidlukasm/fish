@@ -86,7 +86,10 @@ export function regionGraph(state, organ) {
       '<svg class="aid-region-graph" viewBox="0 0 ' + GRAPH.width + ' ' + L.height +
       '" data-region-graph="' + esc(organ.id) + '">' +
       '<defs><marker id="aid-region-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8Z"/></marker>' +
-      '<marker id="aid-region-bar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M5 0H7V8H5Z"/></marker></defs>';
+      '<marker id="aid-region-bar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M5 0H7V8H5Z"/></marker></defs>' +
+      '<rect class="aid-region-graph-area" x="1" y="1" width="' + (GRAPH.width - 2) + '" height="' +
+      (L.height - 2) + '" rx="18" data-select-organ="' + esc(organ.id) + '"><title>' +
+      label('inspector.region.whole') + '</title></rect>';
   for (const dir of ['in', 'out']) {
     const ports = slots.filter(s => s.dir === dir), y = dir === 'in' ? 18 : L.height - 18;
     ports.forEach((slot, i) => {
@@ -124,6 +127,7 @@ export function regionGraph(state, organ) {
   for (const c of [...organ.centers, ...(twin?.centers ?? []).filter(c => external.has(c.id))]) {
     const p = L.points.get(c.id);
     html += '<g class="aid-region-graph-node' + (pending === c.id ? ' pending' : '') +
+            (state.selected?.kind === 'center' && state.selected.id === c.id ? ' selected' : '') +
             (!own.has(c.id) ? ' mirrored' : '') + '" data-circuit-node="' + esc(c.id) +
             '" data-circuit-region="' + esc(organ.id) + '" transform="translate(' + fixed(p.x) +
             ' ' + fixed(p.y) + ')">' +
