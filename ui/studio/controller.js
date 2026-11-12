@@ -647,10 +647,9 @@ export class OrganStudio {
     this.state.busy = true;
     this.refreshHeader();
     try {
+      // Choosing a fish only opens its blueprint; it is compiled when the user asks for it.
       const report = await this.api(requestBody('new', {example}), API_WAIT.long);
       this.loadFish(report.document);
-      this.state.busy = false;
-      await this.develop();
     } catch (error) {
       this.notice(error.message);
     } finally {
