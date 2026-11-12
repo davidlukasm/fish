@@ -15,6 +15,8 @@ import {
   spineField
 } from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
+// Sense organs whose one picture holds their cells, sensitivity, adaptation and width.
+const SENSE_PICTURES = Object.freeze({lateral : lateralField});
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
 import {probeScents, senseProbeSvg, gutProbeControls} from './view/probes.js';
@@ -58,6 +60,13 @@ export const designMethods = {
     this.redrawBlocks('skinBlock', findCenter,
                       found => skinField(this.state, found.organ, found.center,
                                          drag?.id === found.center.id ? drag.sensitive : null));
+  },
+  refreshSense() {
+    const drag = this.heldHandle('sense');
+    this.redrawBlocks('senseBlock', findOrgan, organ => {
+      const draw = SENSE_PICTURES[organ.type];
+      return draw ? draw(this.state, organ, drag?.organ === organ.id ? drag.sensitive : null) : '';
+    });
   },
   refreshScentMaps() {
     this.redrawBlocks('scentBlock', findCenter, found => scentMap(found.organ, found.center));
@@ -238,7 +247,7 @@ export const designMethods = {
                                : organ.type === 'gills'     ? gillGraphic(this.state, organ)
                                : organ.type === 'gutmuscle' ? gutMuscleGraphic(this.state, organ)
                                                             : effectorGraphic(this.state, organ));
-    this.redrawBlocks('lateralBlock', findOrgan, organ => lateralField(this.state, organ));
+    this.refreshSense();
     this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },
   redrawBlocks(key, find, render, within = '') {

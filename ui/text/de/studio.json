@@ -978,9 +978,9 @@
   },
   "lateral": {
     "title": "Strömung",
-    "local": "örtlich",
-    "whole": "ganzer Körper",
-    "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper"
+    "handle": "Ziehen: ob die Zellen das Wasser nahe bei sich spüren oder rund um den Körper",
+    "lobe": "Woher die Zellen Strömung spüren; je größer, desto schwächere Strömung spüren sie",
+    "sensitivityHandle": "Ziehen: nach außen spüren die Zellen schwächere Strömung"
   },
   "systems": {
     "title": "Regelkreise",
@@ -1410,5 +1410,9 @@
     "undulation": "Schwanzbewegung",
     "jaw_length": "Kieferlänge",
     "blunt_teeth": "Zahnform"
+  },
+  "sense": {
+    "cellsHandle": "{n} von {most} Zellen; ziehen fügt Zellen hinzu oder nimmt sie weg",
+    "adaptHandle": "Nach {n} Schritten gleichen Reizes antworten die Zellen nicht mehr; ziehen: schneller oder langsamer gewöhnen"
   }
 }

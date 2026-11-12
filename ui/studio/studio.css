@@ -866,7 +866,9 @@
 .aid-lateral-fish{fill:var(--aid-sketch);stroke:var(--aid-sketch-line);stroke-width:20}
 .aid-lateral-point{fill:#bfe3f04d;stroke:var(--aid-flow);stroke-width:1.2}
 .aid-lateral-arrow{fill:none;stroke:var(--aid-flow-light);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.aid-lateral-field text{fill:var(--aid-label-text);font-size:11px}
+.aid-sense-cell{fill:var(--aid-flow-light);stroke:var(--aid-ink);stroke-width:1.2}
+.aid-sense-free{fill:none;stroke:var(--aid-sketch-line);stroke-width:.8;opacity:.6}
+.aid-sense-adapt{fill:none;stroke:var(--aid-flow);stroke-width:3;stroke-linecap:butt}
 .aid-felt.lateral .aid-lateral-point{stroke-width:2.5}
 .aid-sense-probe{pointer-events:none}
 .aid-probe-ring{fill:none;stroke:var(--aid-flow-light);stroke-opacity:.35;stroke-width:1.2;stroke-dasharray:6 6;vector-effect:non-scaling-stroke}

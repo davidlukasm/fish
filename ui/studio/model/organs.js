@@ -114,10 +114,12 @@ export const ORGANS = Object.freeze([
     scope : 'side',
     centers : [ sensor('distance', SENSE_KIND.proximity, 4) ]
   },
+  // Like the skin senses, a lateral line sits anywhere on the skin, as many on a side as wanted;
+  // each feels the water where it lies.
   {
     key : 'lateral',
     category : 'senses',
-    scope : 'side',
+    skin : true,
     centers : [ sensor('current', SENSE_KIND.flow, 4, 'outer') ]
   },
   // The same hair cells inside the body weigh their direction against gravity. q1 is the hair

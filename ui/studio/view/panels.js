@@ -152,7 +152,10 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
 const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
-const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes &&
+// Organs whose picture holds their cells and how their cells answer; no extra marks below it.
+const WHOLE_PICTURES = Object.freeze([ 'lateral' ]);
+const cellCount = (organ, center) => WHOLE_PICTURES.includes(organ.type) ? ''
+                                     : ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&
                                              !(organ.type === 'bladder' && center.role === 'sensor')
                                          ? ''
@@ -161,6 +164,8 @@ const section = (title, body) =>
     '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
 const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
 function sensorSection(state, organ, center) {
+  if (WHOLE_PICTURES.includes(organ.type))
+    return '';
   if (!SKIN_SENSES.includes(organ.type))
     return section(
         escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})),

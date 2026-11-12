@@ -58,6 +58,7 @@ import {BODY_FRAME} from './model/layout.js';
 import {dataAttribute, fixed} from './view/markup.js';
 import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {skinPatch, skinSensitivity} from './view/skin.js';
+import {senseMarkPatch, senseStart} from './view/sense_marks.js';
 import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
@@ -105,12 +106,15 @@ const HANDLES = Object.freeze({
   probe : {follow : 'probePointer'},
   bend : {follow : 'bendPointer', keepsClick : true},
   skin : {follow : 'skinPointer', done : 'refreshSkin'},
+  sense : {follow : 'sensePointer', done : 'refreshSense'},
   vision : {follow : 'visionPointer', done : 'refreshInspector'},
   graphic : {follow : 'tuneGraphic', done : 'settleGraphic', keepsClick : true},
   preview : {follow : 'previewPointer'},
   gutProbe : {follow : 'gutProbePointer'},
   ...CPPN_HANDLES
 });
+// How each sense picture turns its width handle into a reception width.
+const SENSE_WIDTH = Object.freeze({lateral : lateralPatch});
 const pointerShare = (event, rect) => (
     {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
 const PADS = Object.freeze({
@@ -138,10 +142,6 @@ const PADS = Object.freeze({
   },
   pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
   amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
-  lateral : {
-    key : 'lateralPad',
-    handle : (fx, fy, element) => lateralPatch(fx, fy, Number(element.dataset.lateralAngle))
-  },
   hair : {key : 'hairPad', handle : hairPatch},
   spines : {
     key : 'spinePad',
@@ -304,6 +304,12 @@ export const GRIPS = Object.freeze([
     held : 'vision',
     rect : false,
     start : (studio, g) => ({key : g.dataset.visionHandle, id : g.dataset.visionId})
+  },
+  {
+    graphic : '[data-sense-field]',
+    handle : '[data-sense-mark]',
+    held : 'sense',
+    start : (studio, g, h) => studio.senseGrip(g, h)
   },
   {
     graphic : PAD_SELECTOR,
@@ -896,6 +902,34 @@ export const handleMethods = {
       drag.sensitive = skinSensitivity(this.state, drag.aim, fx, fy);
     this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'skin:' + drag.id,
                      'refreshSkin');
+  },
+  senseGrip(graphic, handle) {
+    const found = findCenter(this.state.document, graphic.dataset.senseField);
+    if (!found)
+      return null;
+    const box = graphic.viewBox.baseVal;
+    return {
+      id : found.center.id,
+      organ : found.organ.id,
+      handle : handle.dataset.senseMark,
+      marks : {...handle.dataset},
+      aim : Number(graphic.dataset.senseAim),
+      size : {width : box.width, height : box.height},
+      start : senseStart(this.state, found.center)
+    };
+  },
+  sensePointer(event) {
+    const drag = this.handleDrag, found = findCenter(this.state.document, drag.id);
+    if (!found)
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = drag.handle === 'width'
+                      ? SENSE_WIDTH[found.organ.type]?.(fx, fy, drag.aim)
+                      : senseMarkPatch(this.state, drag,
+                                       {x : fx * drag.size.width, y : fy * drag.size.height});
+    if (patch)
+      this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'sense:' + drag.id,
+                       'refreshSense');
   },
   adaptationGrip(graphic) {
     const id = graphic.dataset.adaptationId;
