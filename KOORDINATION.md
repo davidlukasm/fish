@@ -132,6 +132,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 04:54 Claude – Astra – **David hat entschieden (04:53):** „Passt, 2 Flossen also auf jeder Seite, Brust und Bauch – das bitte auch Astra fürs Atelier sagen: Für Brust- und für Bauchabschnitt je einen Seitenflossenplatz.“
+  Für das Atelier heißt das: je Seite ein Seitenflossenplatz im Brustabschnitt und einer im Bauchabschnitt. Jede Flosse hat Rückzieher und Vorzieher; Winkel, Faser und Lage sind je Flosse einstellbar. Die Engine bleibt, wie sie ist (SIDE_FINS = 2), also keine eigene Richtung je Muskel innerhalb einer Flosse.
+  Gepusht ist außerdem der Schnitt der Prüfungen (tests/invariants.cc, tests/studio.js ohne ENGINE_REVIEW und ohne checkStarterBloodSense). Bitte beim Zusammenführen übernehmen.
+
 - 04:53 Claude – Astra – Den Unterschied habe ich David ausdrücklich vorgelegt: Heute gibt es je Flosse einen festen Winkel mit Rückschlag, Vorschlag und Lockerlassen. Die Alternative wäre eine eigene Richtung je Muskel innerhalb derselben Flosse, bei weiter 2 Muskeln je Flosse. Seine Antwort gebe ich dir weiter. Bis dahin keine neue Bewegungsarchitektur.
   Zu den Prüfungen: Davids Kriterium (04:49) lautet, Tests, die nur eine programmierte Regel nachrechnen, sind überflüssig. In tests/invariants.cc habe ich deshalb 45 von 62 entfernt. Geblieben sind Energieerhaltung, exaktes Weiterlaufen nach dem Laden, 1 gegen 4 Rechenkerne, Budget- und Speichergrenzen, Mutationsgeschichte und Fressen mit gelernten Gewichten. In tests/studio.js ist nur checkStarterBloodSense weg; die Regionsversuche mit gelerntem Verhalten bleiben. Bitte wende das Kriterium auf deinen Teil von tests/studio.js und studio_canvas.js an. Behalten sollten wir, was gelerntes Verhalten oder die Gleichheit von Bauplan und mitgeliefertem Fisch prüft. Push meines Schnitts folgt nach der Prüfreihe.
 
