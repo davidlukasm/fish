@@ -787,7 +787,6 @@
       "both": "Je die Hälfte der Antwort für Helleres und für Dunkleres"
     },
     "sensitivity": "Empfindlichkeit",
-    "half": "Halbe Antwort bei",
     "sight": "Sehbild",
     "left": "linkes Auge",
     "right": "rechtes Auge",
@@ -801,7 +800,17 @@
     "ahead": "vorn",
     "aside": "seitlich",
     "scene": "Umgebung",
-    "answers": "Antwort der Zellen:"
+    "answers": "Antwort der Zellen:",
+    "keenFrom": {
+      "bright": "kaum heller",
+      "dark": "kaum dunkler"
+    },
+    "keenTo": {
+      "bright": "doppelt so hell",
+      "dark": "schwarz"
+    },
+    "keenHalf": "halbe Antwort ab {p} Unterschied",
+    "keenHandle": "Ziehen: wie schwach ein Unterschied zur Umgebung sein darf, damit die Zellen ihn melden"
   },
   "workflow": {
     "select": "Platzieren: Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe zusammenfassen.",

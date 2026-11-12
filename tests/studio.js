@@ -2051,11 +2051,11 @@ flat=lambda groups:[v for g in groups for interval in g for v in interval]
 assert len(flat(designed['eyeGroups']))==len(flat(built['eyeGroups']))
 assert all(abs(a-b)<1e-4 for a,b in zip(flat(designed['eyeGroups']),flat(built['eyeGroups'])))
 assert empty['neurons']==0
-# Light groups carry the engine's excitation and inhibition for every hue, and their answer over
-# brightness, rising to full light.
+# Light groups carry the engine's excitation and inhibition for every hue, and the contrast
+# against the surround at which they answer half, between the keenest cell's and full contrast.
 lights=[l for l in designed['light'] if l]
-assert lights and all(len(l['excitation'])==len(l['inhibition'])>0 and l['half']>0 for l in lights)
-assert all(all(a<=b+1e-9 for a,b in zip(l['response'],l['response'][1:])) for l in lights)
+assert lights and all(len(l['excitation'])==len(l['inhibition'])>0 for l in lights)
+assert all(designed['contrastLeast']-1e-12<=l['half']<=1+1e-12 for l in lights)
 inspected=run({'operation':'inspect','genome':built['genome']})
 assert inspected['neurons']==built['neurons']
 # Editing a compiled genome retains its design contract.

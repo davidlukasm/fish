@@ -11,6 +11,8 @@ void prepare_retinal_cache(BrainInterface &);
 double spectral_balance(const BrainInterface::Receptor &, const Color &light, double opponent);
 double spectral_drive(const BrainInterface::Receptor &, const Color &light, double opponent);
 double proximity_depth(double range);
+// The contrast against its surround at which a cell with this threshold answers half.
+double half_contrast(double response_threshold);
 void inhibit_retinal_receptors(const BrainInterface &, std::vector<float> &, double strength);
 std::optional<std::array<double, 2>> eye_view_place(const BrainInterface &,
                                                     const EnvironmentParameters &, int side);

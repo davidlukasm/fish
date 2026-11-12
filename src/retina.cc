@@ -32,6 +32,9 @@ int proximity_bank(double range) {
 double proximity_depth(double range) {
   return NEAR_RANGE * std::pow(NEAR_SPAN, range);
 }
+double half_contrast(double response_threshold) {
+  return response_threshold / CONTRAST_SCALE;
+}
 std::optional<std::array<double, 2>> eye_view_place(const BrainInterface &binding,
                                                     const EnvironmentParameters &env, int side) {
   const auto &light = binding.forms[BrainInterface::sense_form(field::Light, side)],

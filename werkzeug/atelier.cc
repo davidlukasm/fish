@@ -250,7 +250,7 @@ void sight_report(const field::Substrate &t,
     std::cout << (i ? "," : "") << owners[i];
   std::cout << "]}";
 }
-constexpr int LIGHT_HUES = 72, LIGHT_LEVELS = 48;
+constexpr int LIGHT_HUES = 72;
 constexpr double LIGHT_DIMMEST = 1e-4;
 constexpr int SENSE_LEVELS = 48;
 constexpr int SPINE_DIRECTIONS = 64;
@@ -304,24 +304,16 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << "],\"inhibition\":[";
     for (int k = 0; k < LIGHT_HUES; ++k)
       std::cout << (k ? "," : "") << inhibition[k];
-    std::cout << "],\"response\":[";
-    for (int k = 0; k < LIGHT_LEVELS; ++k) {
-      auto light = best_light;
-      for (auto &c : light)
-        c *= std::pow(LIGHT_DIMMEST, 1 - double(k) / (LIGHT_LEVELS - 1));
-      std::cout << (k ? "," : "")
-                << fishsim::sensory_response(fishsim::spectral_drive(*cell, light, opponent),
-                                             cell->response_threshold);
-    }
-    const double drive = fishsim::spectral_drive(*cell, best_light, opponent);
+    // How much brighter (or darker) than its surround a thing must be for half an answer.
     std::cout << "],\"half\":";
-    if (drive > 0)
-      std::cout << cell->response_threshold / drive;
+    if (fishsim::spectral_drive(*cell, best_light, opponent) > 0)
+      std::cout << fishsim::half_contrast(cell->response_threshold);
     else
       std::cout << "null";
     std::cout << '}';
   }
-  std::cout << "],\"lightDimmest\":" << LIGHT_DIMMEST;
+  std::cout << "],\"lightDimmest\":" << LIGHT_DIMMEST
+            << ",\"contrastLeast\":" << fishsim::half_contrast(fishsim::tuning::threshold_min);
   std::cout << ",\"senses\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     const fishsim::BrainInterface::Receptor *cell = nullptr;

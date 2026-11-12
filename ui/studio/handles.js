@@ -670,13 +670,13 @@ export const handleMethods = {
                      'spectrum:' + id, 'refreshSpectrum');
   },
   sensitivityPointer(event, drag) {
-    const dimmest = this.state.anatomy?.lightDimmest;
-    if (!(dimmest > 0) || !(drag.answer?.half > 0))
+    const least = this.state.anatomy?.contrastLeast;
+    if (!(least > 0) || !(drag.answer?.half > 0))
       return;
     const {fx, fy} = pointerShare(event, drag.rect);
     drag.shift =
         stimulusOfShare(sensitivityShare({x : fx * drag.size.width, y : fy * drag.size.height}),
-                        dimmest) /
+                        least) /
         drag.answer.half;
     const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
     const {spectrumId : id, profileId} = drag.target;
