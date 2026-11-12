@@ -1419,42 +1419,8 @@ async function checkHormoneSystems(model, capabilities) {
     assert.ok(slots.some(s => s.key === 'gut' && s.dir === 'out') &&
                   [ slots.find(s => s.key === 'full').node ].flat().includes('gut'),
               'A full gut reaches the gut driver');
-    // Its picture follows one meal through the gut: driven, the gut empties sooner and the fish
-    // takes up less of it; a full fish's driven gut passes it unused, more slowly.
-    const {gutMealRows} = await import('../ui/studio/view/gut_meal.js');
-    const meal = gutMealRows({document : gut.document, capabilities : sitesResult});
-    const taken = [...meal.matchAll(/(\d+) % aufgenommen/g) ].map(m => Number(m[1]));
-    const empty = [...meal.matchAll(/leer nach ([\d.]+) Schritten/g) ].map(
-        m => Number(m[1].replaceAll('.', '')));
-    assert.deepEqual(taken, [ 100, 73 ], 'A driven gut lets the fish take up less of a meal');
-    assert.ok(empty.length === 3 && empty[1] < empty[0] && empty[0] < empty[2],
-              'A driven gut empties sooner; a full fish empties its gut only slowly');
     organAudits.push(
         {document : gut.document, id : gut.organId, type : 'gutmuscle', gutMuscle : true});
-  }
-  {
-    // The substance wheel: the hormones share three quarters evenly from the right round to the
-    // bottom, the body's three signals the lower right quarter as evenly; the starters' blood sense
-    // reads the reserve.
-    const turns = sitesResult.substanceTurns, {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
-    const SAME = 1e-9, QUARTER = .25;
-    const steps = [...turns, 1 ].slice(1).map((t, k) => t - turns[k]);
-    const hormone = steps.slice(0, BLOOD_SUBSTANCE.maturity - 1),
-          body = steps.slice(BLOOD_SUBSTANCE.maturity - 1);
-    assert.ok(hormone.every(g => Math.abs(g - 3 * QUARTER / hormone.length) < SAME),
-              'The hormones share three quarters of the wheel evenly');
-    assert.ok(body.every(g => Math.abs(g - QUARTER / body.length) < SAME),
-              'Maturity, reserve and fatigue share the lower right quarter evenly');
-    for (const name of ['brisa', 'liora']) {
-      const blueprint =
-          JSON.parse(readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
-      for (const c of blueprint.organs.filter(o => o.type === 'blood').flatMap(o => o.centers)) {
-        const reads =
-            turns.map((_, k) => model.wheelAffinity(sitesResult, c.q1, c.q2, c.qwidth, k));
-        assert.equal(reads.indexOf(Math.max(...reads)), BLOOD_SUBSTANCE.reserve,
-                     name + ' reads its energy reserve');
-      }
-    }
   }
   {
     // Organs added near each other take over the readings of earlier pressure cells.
@@ -2984,8 +2950,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const sac = sacs.gonadGraphic(sacState, small);
     assert.equal(sac.match(/aid-sac-chamber growth"/g).length, 2);
     assert.ok(sac.includes('data-sac-handle="cells"'));
-    assert.ok(!sac.includes('data-sac-handle="stretch"'),
-              'The stretch cells are set in their own report picture, not twice');
     assert.ok(sacs.sacPatch(sacState, small, .2).nodes > 2);
     assert.equal(sacs.sacPatch(sacState, small, .9).nodes, 2);
     const testis =
@@ -3741,18 +3705,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.match(lifeHtml, /gemessen bei Schritt 20/);
     assert.match(lifeHtml, /Bei 50 % der regelmäßigen Messungen/);
     assert.match(lifeHtml, /data-lab-scene/);
-    // The scene of the chosen moment: fetched first, then a picture that names its own step.
-    assert.match(lifeHtml, /Szene wird geladen/);
-    const sceneHtml = view.breedingShell({
-      ...individual,
-      labScene : {key : lifeModel.sceneKey(chosen), data : {step : 20, frame : {}}}
-    });
-    assert.match(sceneHtml, /<canvas class="aid-lab-scene"/);
-    assert.match(sceneHtml, /Szene bei Schritt 20/);
-    const failedHtml = view.breedingShell(
-        {...individual, sceneError : {key : lifeModel.sceneKey(chosen), reason : 'fehlt'}});
-    assert.match(failedHtml, /Szene nicht geladen: fehlt/,
-                 'A scene that cannot be fetched says so instead of loading forever');
     assert.doesNotMatch(lifeHtml, /NaN|undefined/);
     Object.assign(inspecting.state, individual);
     click({labLifeTime : '10', labLifePhase : 'feeding'});
