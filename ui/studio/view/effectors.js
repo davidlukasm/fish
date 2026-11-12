@@ -408,6 +408,17 @@ export function spinePatch(fx, fy, aim) {
   return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - aim))))};
 }
 const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
+// The key in the corner names the two outlines by their lines.
+const SPINE_KEY = Object.freeze({x : 8, rows : [ 150, 162 ], sample : 14, gap : 4});
+const spineKey = () => [[ 'rest', 'aid-spine-rest' ], [ 'raised', 'aid-spine-raised' ]]
+                           .map(([ key, cls ], k) => {
+                             const K = SPINE_KEY, y = K.rows[k];
+                             return '<path class="' + cls + '" d="M' + K.x + ' ' + y + ' h' +
+                                    K.sample + '"/><text class="aid-handle-word" x="' +
+                                    (K.x + K.sample + K.gap) + '" y="' + y + '" dy=".35em">' +
+                                    escapeText(label('spines.' + key)) + '</text>';
+                           })
+                           .join('');
 // The spines: how far round the fish they guard at rest (solid) and raised (dashed), where its
 // nodes sit and the spread handle; the muscle that raises them follows in its own picture.
 // Without a design run's spines the side view of the skin stands in.
@@ -455,7 +466,7 @@ export function spineField(state, organ) {
          '"/><circle class="aid-spine-limit" cx="' + R.cx + '" cy="' + R.cy + '" r="' + R.inner +
          '"/>' + sector + '<path class="aid-spine-raised" d="' + around(raised) + '">' +
          title('raised') + '</path><path class="aid-spine-rest" d="' + around(rest) + '">' +
-         title('rest') + '</path>' + fish + dots +
+         title('rest') + '</path>' + fish + dots + spineKey() +
          '<circle class="aid-graphic-handle" data-graphic-handle="spread" cx="' + fixed(edge.x) +
          '" cy="' + fixed(edge.y) + '" r="' + HANDLE.radius + '"><title>' +
          escapeText(label('spines.spreadHandle')) + '</title></circle>' +
