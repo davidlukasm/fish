@@ -108,12 +108,12 @@
     "sperm": "Spermien­organ",
     "gland": "Hormon­drüse",
     "tectum": "Seh­zentrum",
-    "state": "Körperzustand",
-    "choice": "Handlungswahl",
+    "state": "Körper­zustand",
+    "choice": "Handlungs­wahl",
     "value": "Bewertung",
-    "olfaction": "Riechverarbeitung",
+    "olfaction": "Riech­verarbeitung",
     "motor": "Motorik",
-    "spine": "Wirbelsäule"
+    "spine": "Wirbel­säule"
   },
   "centers": {
     "retina": "Retinazentrum",
@@ -579,11 +579,11 @@
     "crowded": "Nur {n} von {of} Knoten haben hier Platz; weniger Knoten wählen oder die Region verschieben.",
     "beyond": "Mit so vielen getrennten Farbtypen hat die Karte dafür keinen Platz.",
     "state": {
-      "term": "Körperzustand",
+      "term": "Körper­zustand",
       "purpose": "Stimmt Schlüpfen, Verweilen und Fortpflanzung mit Reife, Nahrung und Reserve ab."
     },
     "choice": {
-      "term": "Handlungswahl",
+      "term": "Handlungs­wahl",
       "purpose": "Wechselt nach ausbleibendem Fressen zur Ortssuche. Neuer Zielreiz unterbricht die Suche, Fresserfolg verlängert das Verweilen. Darmaufnahme an Verweilen anschließen."
     },
     "value": {
@@ -591,7 +591,7 @@
       "purpose": "Verknüpft getrennte Sinnesmerkmale mit Nahrungserfolg und Schaden."
     },
     "olfaction": {
-      "term": "Riechverarbeitung",
+      "term": "Riech­verarbeitung",
       "purpose": "Vergleicht beide Nasen vor der Verstärkung. Gibt Geruchsstärke und Richtung getrennt weiter."
     },
     "graphics": {
@@ -637,7 +637,7 @@
       ]
     },
     "spine": {
-      "term": "Wirbelsäule",
+      "term": "Wirbel­säule",
       "purpose": "Koordiniert die Schwanzhälften und die Gegenspieler der Seitenflossen. Jede Seite kann getrennt rudern; Lenkung und Fluchtstoß steuern zusätzlich den Schwanz."
     }
   },

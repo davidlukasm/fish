@@ -141,6 +141,14 @@ const WIRE_SYMBOL = Object.freeze({
   both : 'M5 6h14M5 18h14M5 6l14 12M5 18l14-12',
   bend : 'M3 18C7 18 8 6 12 6s5 12 9 12M12 6h.01'
 });
+// Where a new organ goes: as a pair on both sides, on one side, or on the midline (the dashed
+// line).
+const PLACEMENT_MIDLINE = 'M12 2v4M12 18v4', PLACEMENT_DOT = 'm-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0';
+const PLACEMENT_SYMBOL = Object.freeze({
+  both : PLACEMENT_MIDLINE + 'M12 9v6M5 12' + PLACEMENT_DOT + 'M19 12' + PLACEMENT_DOT,
+  single : PLACEMENT_MIDLINE + 'M12 9v6M5 12' + PLACEMENT_DOT,
+  middle : PLACEMENT_MIDLINE + 'M12 12' + PLACEMENT_DOT
+});
 const CURSOR = Object.freeze({size : 32, hot : 2, at : 20, disc : 11, scale : .6, line : 2.6});
 export function armedCursor(value) {
   const C = CURSOR, corner = C.at - 12 * C.scale;
@@ -351,7 +359,9 @@ export function libraryOf(state) {
                 [ 'both', 'single', 'middle' ]
                     .map(key => '<button type="button" data-placement-side="' + key +
                                 '" aria-pressed="' + ((state.placementSide ?? 'both') === key) +
-                                '">' + label('placement.' + key) + '</button>')
+                                '" title="' + label('placement.' + key) + '">' +
+                                glyph(PLACEMENT_SYMBOL[key], ICON.list, {line : true}) +
+                                '</button>')
                     .join('') +
                 '</div>'
           : '';
@@ -371,12 +381,13 @@ const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulat
 export function workflow() {
   return '<ol class="aid-workflow">' +
          WORKFLOW
-             .map(key => '<li><button type="button" data-tool="' + key + '" title="' +
-                         label('tools.' + key) + '">' +
+             .map(key => '<li title="' + label('workflow.' + key) +
+                         '"><button type="button" data-tool="' + key + '">' +
                          glyph(TOOL_ICON[key], ICON.workflow, {line : true}) + '</button><span>' +
-                         label('workflow.' + key) + '</span></li>')
+                         label('tools.' + key) + '</span></li>')
              .join('') +
-         '<li><span class="aid-workflow-mark">→</span><span>' + label('workflow.develop') +
+         '<li title="' + label('workflow.develop') +
+         '"><span class="aid-workflow-mark">→</span><span>' + label('app.develop') +
          '</span></li></ol>';
 }
 export function toolPalette(state) {
