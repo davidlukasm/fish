@@ -128,12 +128,14 @@ export const sensitivityHandle = (least, most, sensitive, title, name = 'sensiti
                                   word = t('studio.sense.sensitivityWord'), place = 'below') =>
     handleMark(name, reachPoint(least, most, sensitive), title,
                'data-least="' + point(least) + '" data-most="' + point(most) + '"', word, place);
-// How fast the cells get used to a lasting stimulus, as a handle on a time axis: at `at`, half
-// used to it after their time constant times ln 2; the axis starts at `from` and spans `window`
-// steps over `width`.
-export const fadeHandle = (at, from, width, window, title, word, place = 'below') => handleMark(
-    'fade', at, title, 'data-fade="' + fixed(from) + ',' + fixed(width) + ',' + fixed(window) + '"',
-    word, place);
+// How fast the cells get used to a lasting stimulus, as a handle on a time axis at `at`, which
+// lies `settled` time constants in; the axis starts at `from` and spans `window` steps over
+// `width`.
+export const fadeHandle = (at, from, width, window, settled, title, word, place = 'below') =>
+    handleMark('fade', at, title,
+               'data-fade="' + fixed(from) + ',' + fixed(width) + ',' + fixed(window) + ',' +
+                   settled + '"',
+               word, place);
 // How little input opens a working organ, 0 to 1: the share of the input range its gate leaves.
 export const motorReadiness = (state, center) =>
     1 - clamp((state.capabilities?.biasScale ?? 0) * center.threshold);
@@ -187,8 +189,8 @@ export function senseMarkPatch(state, drag, p) {
     return scale > 0 ? {threshold : clamp((1 - share) / scale, -1)} : null;
   }
   if (drag.handle === 'fade') {
-    const [from, width, window] = h.fade.split(',').map(Number);
-    const steps = clamp((p.x - from) / width) * window / Math.LN2;
+    const [from, width, window, settled] = h.fade.split(',').map(Number);
+    const steps = clamp((p.x - from) / width) * window / settled;
     return {tau : timeConstantOf(Math.max(steps, timeConstantSteps(0)))};
   }
   if (drag.handle === 'adaptation') {

@@ -281,7 +281,7 @@
       "egg": "Ei mit {energy} Energie",
       "food": "Schlupfbedarf etwa {least} bei {duration} Schritten",
       "sperm": "{energy} Energie je Abgabe",
-      "stretch": "meldet halb bei {share} Füllung",
+      "stretch": "meldet ab {share} Füllung",
       "developmentEnergy": "Ei mit {energy} Energie; Schlupfbedarf etwa {least} bei {duration} Schritten",
       "releaseOn": "Auslösekommando liegt an",
       "store": "Vorrat",
@@ -812,7 +812,7 @@
       "bright": "doppelt so hell",
       "dark": "schwarz"
     },
-    "keenHalf": "halbe Antwort ab {p} Unterschied",
+    "keenHalf": "erkennt ab {p} Unterschied",
     "keenHandle": "Ziehen: wie schwach ein Unterschied zur Umgebung sein darf, damit die Zellen ihn melden"
   },
   "workflow": {
@@ -838,18 +838,11 @@
     "sprint": "Spurtknoten: {sprint} von {count}",
     "sprintHandle": "Ziehen: wie viele Knoten erst bei starkem Befehl mitarbeiten",
     "fibre": {
-      "title": "Muskelfasern: {share} schnell",
       "handle": "Ziehen: rote, ausdauernde oder weiße, schnelle Fasern",
-      "fast": "schnell",
-      "mixed": "gemischt",
-      "slow": "ausdauernd",
-      "fastTitle": "Weiße Fasern: der stärkste und raschste Schlag, billig in Ruhe; sie ermüden bald und jede Arbeit kostet viel",
-      "mixedTitle": "Gemischte Fasern: die größte Kraft, die sich lange halten lässt",
-      "slowTitle": "Rote Fasern: die billigste Arbeit, sie ermüden nie; schwach, träge und teuer im Unterhalt",
       "time": "Zeit bei voller Anstrengung",
-      "work": "Arbeit",
-      "rest": "Unterhalt",
-      "word": "{share} schnell"
+      "work": "kostet je Schlag",
+      "rest": "kostet in Ruhe",
+      "word": "{share} schnelle Fasern"
     },
     "stroke": {
       "back": "Rückschlag",
@@ -1274,7 +1267,7 @@
       "title": "Farbe des Fisches nach einem starken Befehl",
       "from": "Befehl kommt",
       "to": "{n} Schritte später",
-      "half": "halb nach {n} {n:Schritt|Schritten}",
+      "half": "Farbe halb gewechselt nach {n} {n:Schritt|Schritten}",
       "handle": "Ziehen: wie schnell die Farbe wechselt"
     }
   },
@@ -1361,9 +1354,7 @@
   "wheel": {
     "receptor": "Farbfüllung: Passung zum Rezeptor. Der Hof zeigt, welche weiteren Stoffe er bindet.",
     "sense": "Farbfüllung: Gewichtung der gelesenen Stoffe. Ein breiter Hof erfasst mehrere Stoffe.",
-    "width": "Hof: Stoffbreite",
-    "cells": "Punkte: Zellen",
-    "sensitivity": "Ring: Empfindlichkeit"
+    "width": "Hof: Stoffbreite"
   },
   "axes": {
     "range": "{from} … {to}",
@@ -1562,16 +1553,24 @@
     "report": "Meldung",
     "empty": "leer",
     "full": "voll",
-    "fullnessHalf": "halb bei {p} Füllung",
+    "fullnessHalf": "meldet ab {p} Füllung",
     "fullnessHandle": "Ziehen: bei welcher Füllung die Zellen halb melden",
     "little": "kaum Nährstoffe",
-    "much": "viel mehr als der Ruhebedarf",
-    "rest": "Ruhebedarf",
-    "foodHalf": "halb ab {p} des Ruhebedarfs",
+    "much": "viel mehr als nötig",
+    "rest": "Grundbedarf",
+    "foodHalf": "spürt ab {p} des Bedarfs",
     "foodHandle": "Ziehen: wie wenig Nährstoffe die Zellen schon melden",
-    "eats": "frisst so viel, wie es ruht",
+    "eats": "frisst gleichmäßig",
     "later": "{n} Schritte später",
-    "fade": "halb gewöhnt nach {n} {n:Schritt|Schritten}",
+    "fade": "gewöhnt sich in {n} {n:Schritt|Schritten} daran",
     "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichbleibendes Futter gewöhnen"
+  },
+  "bloodSense": {
+    "title": "Pegel im Blut",
+    "report": "Meldung",
+    "none": "kein Stoff",
+    "full": "so viel wie möglich",
+    "half": "meldet ab {p} Stoff im Blut",
+    "handle": "Ziehen: bei welchem Pegel die Zellen halb melden"
   }
 }
