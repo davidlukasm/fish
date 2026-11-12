@@ -9,10 +9,12 @@ import {
   activationQuality,
   planOfUnit,
   thresholdQualityShift,
+  timeConstantOf,
   timeConstantSteps,
   unitOfPlan
 } from '../../tuning.js';
 import {groupReport} from '../model/document.js';
+import {ATELIER_LIMITS} from '../../schema.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {escapeText, fixed} from './markup.js';
 import {t} from '../../strings.js';
@@ -49,8 +51,8 @@ export const handleWord = (at, word, place = 'below') => {
   return '<text class="aid-handle-word" x="' + fixed(x) + '" y="' + fixed(y) + '" text-anchor="' +
          anchor + '">' + escapeText(word) + '</text>';
 };
-const handleMark = (name, at, title, geometry, word) =>
-    handleWord(at, word) + '<circle class="aid-graphic-handle" ' +
+export const handleMark = (name, at, title, geometry, word, place = 'below') =>
+    handleWord(at, word, place) + '<circle class="aid-graphic-handle" ' +
     'data-sense-mark="' + name + '" ' + geometry + ' cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
     '" r="' + SENSE_MARK.handle + '"><title>' + escapeText(title) + '</title></circle>';
 
@@ -103,13 +105,35 @@ export function cellMarks(places, center) {
                     'data-places="' + places.map(point).join(' ') + '"',
                     t('studio.sense.cellsWord', {n : copies}));
 }
+// The cells as a number only: a handle slides along a short track of one place per cell, its word
+// saying how many there are.
+export function cellCount(from, to, center, place = 'below') {
+  const places = Array.from({length : ATELIER_LIMITS.max_copies},
+                            (_, k) => ({
+                              x : from.x + (to.x - from.x) * k / (ATELIER_LIMITS.max_copies - 1),
+                              y : from.y + (to.y - from.y) * k / (ATELIER_LIMITS.max_copies - 1)
+                            }));
+  const copies = clamp(center.copies, 1, places.length);
+  return '<path class="aid-cell-track" d="M' + point(from) + ' L' + point(to) + '"/>' +
+         handleMark('cells', places[copies - 1],
+                    t('studio.sense.cellsHandle', {n : copies, most : places.length}),
+                    'data-places="' + places.map(point).join(' ') + '"',
+                    t('studio.sense.cellsWord', {n : copies}), place);
+}
 // Sensitivity as a reach: from `least` (feels only the strongest stimulus) to `most` (the weakest).
+// `word` says what the reach does; without one the handle is named.
 export const reachPoint = (least, most, sensitive) =>
     ({x : least.x + (most.x - least.x) * sensitive, y : least.y + (most.y - least.y) * sensitive});
-export const sensitivityHandle = (least, most, sensitive, title, name = 'sensitivity') =>
+export const sensitivityHandle = (least, most, sensitive, title, name = 'sensitivity',
+                                  word = t('studio.sense.sensitivityWord'), place = 'below') =>
     handleMark(name, reachPoint(least, most, sensitive), title,
-               'data-least="' + point(least) + '" data-most="' + point(most) + '"',
-               t('studio.sense.sensitivityWord'));
+               'data-least="' + point(least) + '" data-most="' + point(most) + '"', word, place);
+// How fast the cells get used to a lasting stimulus, as a handle on a time axis: at `at`, half
+// used to it after their time constant times ln 2; the axis starts at `from` and spans `window`
+// steps over `width`.
+export const fadeHandle = (at, from, width, window, title, word, place = 'below') => handleMark(
+    'fade', at, title, 'data-fade="' + fixed(from) + ',' + fixed(width) + ',' + fixed(window) + '"',
+    word, place);
 // How little input opens a working organ, 0 to 1: the share of the input range its gate leaves.
 export const motorReadiness = (state, center) =>
     1 - clamp((state.capabilities?.biasScale ?? 0) * center.threshold);
@@ -161,6 +185,11 @@ export function senseMarkPatch(state, drag, p) {
       return sensitivityPatch(state, drag.start, share);
     const scale = state.capabilities?.biasScale;
     return scale > 0 ? {threshold : clamp((1 - share) / scale, -1)} : null;
+  }
+  if (drag.handle === 'fade') {
+    const [from, width, window] = h.fade.split(',').map(Number);
+    const steps = clamp((p.x - from) / width) * window / Math.LN2;
+    return {tau : timeConstantOf(Math.max(steps, timeConstantSteps(0)))};
   }
   if (drag.handle === 'adaptation') {
     const [cx, cy, , start] = h.arc.split(',').map(Number);

@@ -263,7 +263,7 @@ export const designMethods = {
     this.redrawBlocks('effectorBlock', findOrgan,
                       organ => organ.type === 'gut'
                                    ? gutGraphic(this.state, organ, this.state.selected,
-                                                sense?.organ === organ.id ? sense.sensitive : null)
+                                                sense?.organ === organ.id ? sense : null)
                                : organ.type === 'gills'     ? gillGraphic(this.state, organ)
                                : organ.type === 'gutmuscle' ? gutMuscleGraphic(this.state, organ)
                                                             : effectorGraphic(this.state, organ));

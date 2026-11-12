@@ -1555,5 +1555,23 @@
     "release": {
       "up": "gibt ab"
     }
+  },
+  "gutSense": {
+    "fullness": "Füllzellen",
+    "food": "Futterzellen",
+    "report": "Meldung",
+    "empty": "leer",
+    "full": "voll",
+    "fullnessHalf": "halb bei {p} Füllung",
+    "fullnessHandle": "Ziehen: bei welcher Füllung die Zellen halb melden",
+    "little": "kaum Nährstoffe",
+    "much": "viel mehr als der Ruhebedarf",
+    "rest": "Ruhebedarf",
+    "foodHalf": "halb ab {p} des Ruhebedarfs",
+    "foodHandle": "Ziehen: wie wenig Nährstoffe die Zellen schon melden",
+    "eats": "frisst so viel, wie es ruht",
+    "later": "{n} Schritte später",
+    "fade": "halb gewöhnt nach {n} {n:Schritt|Schritten}",
+    "fadeHandle": "Ziehen: wie schnell sich die Zellen an gleichbleibendes Futter gewöhnen"
   }
 }

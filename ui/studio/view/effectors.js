@@ -3,6 +3,7 @@ import {glandPatch} from './gland_effect.js';
 import {commandPatch} from './command_line.js';
 import {liftPatch} from './sacs.js';
 import {pigmentPatch} from './pigments.js';
+import {gutSensePictures} from './gut_sense.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -32,7 +33,6 @@ import {
   finAngle,
   finStroke,
   gillRakers,
-  groupReport,
   gutLength,
   muscleTrait
 } from '../model/document.js';
@@ -43,14 +43,7 @@ import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 import {organCommand} from './preview.js';
-import {
-  adaptationMarks,
-  cellMarks,
-  gateHandle,
-  handleWord,
-  senseSensitivity,
-  sensitivityHandle
-} from './sense_marks.js';
+import {handleWord} from './sense_marks.js';
 import {ecologyIconSvg, FOOD_COLORS} from '../../feeding_view.js';
 import {FOOD_SLOT} from '../../nutrition_model.js';
 
@@ -492,19 +485,8 @@ export function spineField(state, organ) {
          escapeText(label('spines.spreadHandle')) + '</title></circle>' +
          '</svg>' + musclePicture(state, organ, MOTOR_KIND.defense, sideOf(organ)) + '</div>';
 }
-const GUT = Object.freeze({
-  from : 24,
-  to : 276,
-  middle : 85,
-  amplitude : 30,
-  tube : 14,
-  steps : 96,
-  cell : 3.2,
-  // The chosen sense cells' feelers grow to this length with their sensitivity; the adaptation
-  // arc round the first cell.
-  feeler : 16,
-  clock : 18
-});
+const GUT = Object.freeze(
+    {from : 24, to : 276, middle : 85, amplitude : 30, tube : 14, steps : 96, cell : 3.2});
 // What the gut gets out of plants and meat over all its lengths, as two curves: the axes span the
 // plot (left, right, top, base), the scale words sit `tick` beside them, the curves end in their
 // food's icon; the dots and their shares mark the gut's own length, which is dragged here as well.
@@ -555,14 +537,14 @@ export function gutGraphic(state, organ, selected, held = null) {
     const k = Math.round((i + .5) / ATELIER_LIMITS.max_copies * G.steps);
     return {x : along(k), y : across(k) + side * (G.tube / 2 + G.cell)};
   });
-  const chosen = [ food, fullness ].find(c => c && c.id === selected?.id) ?? food ?? fullness;
+  // The cells sit as dots along the wall; what they report shows in the pictures below.
   const plain = (center, side) =>
-      center && center !== chosen ? wall(side)
-                                        .slice(0, center.copies)
-                                        .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) +
-                                                  '" cy="' + fixed(p.y) + '" r="' + G.cell + '"/>')
-                                        .join('')
-                                  : '';
+      center ? wall(side)
+                   .slice(0, center.copies)
+                   .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' +
+                             fixed(p.y) + '" r="' + G.cell + '"/>')
+                   .join('')
+             : '';
   return effectorBlock(
       organ, code, 1, label('gut.title'),
       '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
@@ -570,33 +552,8 @@ export function gutGraphic(state, organ, selected, held = null) {
                              escapeText(label('gut.stretch')) + '</title></path>' +
                              plain(fullness, 1)) +
           part(food, plain(food, -1)) +
-          (chosen ? gutSenseMarks(state, chosen, wall(chosen === food ? -1 : 1),
-                                  chosen === food ? -1 : 1, held)
-                  : '') +
           handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.axis')),
-      dietCurves(state, organ, 'gut'),
-      chosen
-          ? ' data-sense-field="' + escapeText(chosen.id) + '" data-sense-redraw="refreshEffectors"'
-          : '');
-}
-function gutSenseMarks(state, center, places, side, held) {
-  const G = GUT, first = places[0];
-  const sensitive = held ?? senseSensitivity(state, center) ?? 0;
-  const feeler = r => ({x : first.x, y : first.y + side * r});
-  const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
-  const feelers = places.slice(0, center.copies)
-                      .map(p => '<path class="aid-gut-feeler" d="M' + fixed(p.x) + ' ' +
-                                fixed(p.y) + ' v' + fixed(side * G.feeler * sensitive) + '"/>')
-                      .join('');
-  // The adaptation arc sits round the middle of the wall, clear of the first cells' handles.
-  const middle = places[Math.floor(places.length / 2)];
-  return feelers +
-         (answer?.adapt?.steps > 0
-              ? adaptationMarks(middle, G.clock, side < 0 ? -Math.PI / 2 : Math.PI / 2, center)
-              : '') +
-         cellMarks(places, center) +
-         sensitivityHandle(feeler(G.cell), feeler(G.cell + G.feeler), sensitive,
-                           label('gut.sensitivityHandle'));
+      dietCurves(state, organ, 'gut') + gutSensePictures(state, organ, held));
 }
 // What a trait of the mouth or gut does over its whole range, as curves: the gut's length against
 // how much of plants and meat it gets out, the teeth's form against what a bite cuts or grinds, the
