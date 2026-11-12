@@ -13,6 +13,8 @@ else
 CXXFLAGS += -O3 -fno-math-errno -fno-trapping-math -ffp-contract=fast -fno-signed-zeros -fassociative-math -freciprocal-math
 ifeq ($(NATIVE),1)
 CXXFLAGS += -march=native
+# Nix shells set NIX_ENFORCE_NO_NATIVE=1, and their compiler wrapper then drops -march=native.
+export NIX_ENFORCE_NO_NATIVE := 0
 endif
 ifeq ($(LTO),1)
 CXXFLAGS += -flto=auto
@@ -49,7 +51,9 @@ endif
 
 # Development and CPPN evaluation also influence the address search. Every object linked
 # into the compiler must use the same generic arithmetic, independently of the aquarium.
-ATELIER_FLAGS := $(filter-out -O% -march=% -mtune=% -mcpu=% -flto% -ffat-lto-objects,$(CXXFLAGS) $(LDFLAGS)) -O3 -fno-fast-math -ffp-contract=off
+# Without AVX, GCC notes that 32-byte vectors are passed differently since GCC 4.6. The compiler
+# links only objects built here with these flags, so no other vector ABI is ever met.
+ATELIER_FLAGS := $(filter-out -O% -march=% -mtune=% -mcpu=% -flto% -ffat-lto-objects,$(CXXFLAGS) $(LDFLAGS)) -O3 -fno-fast-math -ffp-contract=off -Wno-psabi
 ATELIER_OBJECTS := $(patsubst $(BUILD_DIR)/obj/%,$(BUILD_DIR)/atelier-obj/%,$(CORE_OBJECTS))
 ifeq ($(SANITIZE),1)
 ATELIER_FLAGS := $(filter-out -O%,$(ATELIER_FLAGS)) -O1
