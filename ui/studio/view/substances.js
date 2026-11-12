@@ -1,4 +1,5 @@
 import {variationGraphic} from './cell_tissue.js';
+import {receptorVariationExamples} from '../model/variation.js';
 import {previewControls, previewContextOf, cellDevelopment} from './development.js';
 import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
@@ -605,7 +606,9 @@ function growthEditor(state) {
   return '<section class="aid-growth" title="' + escapeText(label('development.bodyGrowth')) +
          '"><div class="aid-wheel-close">' + receptorWheel(state, growth, GROWTH) + '</div>' +
          effectCurve(state, growth, GROWTH, GROWTH) +
-         variationGraphic(growth.spread_receptors, GROWTH, 'spread_receptors') + '</section>';
+         variationGraphic(growth.spread_receptors, GROWTH, 'spread_receptors',
+                          receptorVariationExamples(growth, state.capabilities)) +
+         '</section>';
 }
 function organsOf(doc, centers) {
   const seen = new Set();
@@ -661,8 +664,9 @@ export function receptorBody(state, center, effect) {
          (birth ? ''
                 : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
                               {capabilities : state.capabilities, center})) +
-         variationGraphic(receptor.spread_receptors, target, 'spread_receptors') + '</div>' +
-         effectCurve(state, receptor, effect, target);
+         variationGraphic(receptor.spread_receptors, target, 'spread_receptors',
+                          receptorVariationExamples(receptor, state.capabilities)) +
+         '</div>' + effectCurve(state, receptor, effect, target);
 }
 // How long the substance lasts in the blood, as a clock whose tooltip gives the steps.
 const CLOCK_ICON = 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18';

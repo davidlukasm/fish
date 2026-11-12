@@ -4,6 +4,58 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkVariationPictures() {
+  const {traitVariation, cellVariationExamples, receptorVariationExamples} =
+      await import('../ui/studio/model/variation.js');
+  const {variationGraphic, variationPatch} = await import('../ui/studio/view/cell_tissue.js');
+  const {timeConstantSteps} = await import('../ui/tuning.js');
+  const zero = traitVariation(.9, 0), clipped = traitVariation(.9, .2);
+  assert.deepEqual(zero.examples, [ .9 ]);
+  assert.deepEqual(zero.interval, [ .9, .9 ]);
+  assert.deepEqual(clipped.interval, [ .5, 1 ]);
+  assert.equal(
+      clipped.examples.filter(value => value === 1).length, 3,
+      'Clipping retains probability at the boundary instead of resampling a narrower range');
+  const center = {
+    role : 'nerve',
+    tau : .8,
+    learning_tau : .25,
+    electrical_limit : .9,
+    teaching_limit : .1,
+    distribution : {spread_physiology : .1, spread_contacts : .2, spread_development : 1}
+  };
+  const times = cellVariationExamples(center, 'spread_physiology');
+  assert.equal(times[0].blueprint, timeConstantSteps(.8));
+  for (const [actual, expected] of times[0].interval.map(
+           (v, i) => [v, timeConstantSteps(i ? .9 : .7)]))
+    assert.ok(Math.abs(actual / expected - 1) < 1e-12);
+  assert.ok(Math.abs(times[0].blueprint ** 2 / (times[0].interval[0] * times[0].interval[1]) - 1) <
+                1e-12,
+            'Symmetric gene spread gives multiplicative time intervals');
+  const contacts = cellVariationExamples(center, 'spread_contacts');
+  assert.deepEqual(contacts[0].interval, [ 70, 100 ]);
+  assert.deepEqual(new Set(cellVariationExamples(center, 'spread_development')[0].examples),
+                   new Set([ 0, 1, 2 ]));
+  const wheel = {halfRange : [ .0003, 1 ], sensitivitySpan : 2};
+  const receptor = {baseline : .8, sensitivity : -1, half : .01, spread_receptors : .2};
+  const reception = receptorVariationExamples(receptor, wheel);
+  assert.deepEqual(reception[0].interval, [ .4, 1 ]);
+  assert.ok(Math.abs(reception[1].interval[0] + 1.8) < 1e-12);
+  assert.ok(Math.abs(reception[1].interval[1] + .2) < 1e-12);
+  assert.ok(Math.abs(reception[2].blueprint - receptor.half) < 1e-12);
+  assert.ok(Math.abs(reception[2].interval[1] / receptor.half -
+                     receptor.half / reception[2].interval[0]) < 1e-12);
+  for (const value of [0, .1, .5, 1]) {
+    const markup = variationGraphic(value, 'group', 'spread_physiology', times);
+    assert.ok(!/NaN|undefined/.test(markup));
+    assert.match(markup, /M226\.80 /,
+                 'The blueprint remains at its actual time, away from the middle');
+    const handle = markup.match(/data-variation-handle cx="([\d.]+)"/);
+    assert.ok(Math.abs(variationPatch(Number(handle[1]) / 300) - value) < 1e-12);
+  }
+  assert.ok(!/NaN|undefined/.test(variationGraphic(.2, 'receptor', 'spread_receptors', reception)));
+}
+
 function checkSlotWiring(model, regions, sites, clickSlot) {
   const organ = id => ({kind : 'organ', id});
   const port = (id, slot) => ({kind : 'slot', id, slot});
@@ -811,6 +863,7 @@ async function checkHormoneSystems(model, capabilities) {
       'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor', 'feeding_view'
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  await checkVariationPictures();
   {
     const {
       NEURON,

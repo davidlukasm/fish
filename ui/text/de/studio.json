@@ -1330,10 +1330,7 @@
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",
     "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur",
-    "spreadValue": "± {n} %",
-    "least": "kleinster Wert",
-    "blueprint": "Bauplan",
-    "greatest": "größter Wert",
+    "spreadValue": "Streuung {n} %",
     "key": {
       "birth": "Aufbau",
       "output": "Signal",
@@ -1349,7 +1346,25 @@
       "halb gewachsen",
       "ausgewachsen"
     ],
-    "builtSignal": "Signal einer aufgebauten Zelle"
+    "builtSignal": "Signal einer aufgebauten Zelle",
+    "spreadHandle": "Ziehen: Streuung der Eigenschaften",
+    "planValue": "Bauplan: {value}",
+    "exampleTraits": "Punkte: mögliche Werte je Eigenschaft",
+    "groupRole": "Zelltyp bei Gruppenbildung",
+    "groupRoleNote": "Vor Prüfung des Bauorts",
+    "roleExamples": [
+      "Sinneszelle",
+      "Nervenzelle",
+      "Muskelzelle"
+    ],
+    "logScale": {
+      "steps": "Schritte · logarithmische Skala",
+      "level": "Gesamtsignal · logarithmische Skala"
+    },
+    "units": {
+      "percent": "Anteil der maximal möglichen Stärke",
+      "response": "Antwort vor Begrenzung auf −1 … +1"
+    }
   },
   "symbols": {
     "add": "+"
@@ -1466,7 +1481,7 @@
     "electrical_limit": "Signalstärke",
     "teaching_limit": "Lehrwirkung",
     "capacity": "Kontaktplätze",
-    "variation": "Unterschiede neuer Zellen",
+    "variation": "Streuung beim Zellbau",
     "spread_physiology": "Zellantwort",
     "spread_receptors": "Signalempfang",
     "spread_development": "Zellbildung",
