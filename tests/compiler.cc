@@ -186,7 +186,8 @@ void property_overrides_reach_outputs() {
     }
 }
 int region_trace(const std::string &mode) {
-  const bool fins = mode == "spine-fin", spine = mode == "spine" || fins,
+  const bool reverse = mode == "motor-reverse", fins = mode == "spine-fin",
+             spine = mode == "spine" || fins || reverse,
              late = mode.find("late") != std::string::npos,
              pulsed = mode.find("pulsed") != std::string::npos,
              fed_start = mode.find("fed-start") != std::string::npos;
@@ -231,6 +232,13 @@ int region_trace(const std::string &mode) {
       const auto &s = plan.groups[i].name;
       if (spine) {
         const bool left = plan.groups[i].side < 0;
+        if (reverse) {
+          const bool backing = left ? step >= 3000 && step < 3400 : step >= 3600 && step < 4000;
+          input.push_back(s.find("balance:") == 0           ? (step < 4800 ? .6f : 0)
+                          : s.find("pain:") == 0 && backing ? .8f
+                                                            : 0);
+          continue;
+        }
         const bool swimming = (step >= 800 && step < 2600) || (step >= 3000 && step < 4800);
         const bool steering = left ? step >= 3000 && step < 3400 : step >= 3400 && step < 3800;
         const bool escaping = left ? step >= 3800 && step < 3840 : step >= 4000 && step < 4040;
@@ -268,7 +276,7 @@ int region_trace(const std::string &mode) {
       std::cout << '\n';
     }
   }
-  if (spine) {
+  if (spine && !reverse) {
     std::array<double, 2> inhibition{};
     for (const auto &synapse : brain.synapses()) {
       const auto &source = plan.groups[groups[synapse.source]],
@@ -285,7 +293,8 @@ int region_trace(const std::string &mode) {
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
   if (argc == 2 &&
-      (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]).find("spine") == 0))
+      (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]).find("spine") == 0 ||
+       std::string(argv[1]) == "motor-reverse"))
     return region_trace(argv[1]);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
