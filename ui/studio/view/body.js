@@ -301,10 +301,11 @@ function muscleGlyph(state, organ) {
     return '';
   const tone = workTone({code : organFunction(organ, state.sites), pelvic : isPelvicMuscle(organ)});
   const front = isFinMuscle(organ, state.sites) && finStroke(organ) === FIN_STROKE.front;
-  return '<path class="aid-anatomical-muscle' + (front ? ' front' : '') + '" d="' + shape.path +
-         '" style="--muscle:' + tone + ';--fibre:' + fibreHex(muscleFibre(organ)) +
+  return '<g style="--muscle:' + tone + ';--fibre:' + fibreHex(muscleFibre(organ)) +
+         '"><path class="aid-anatomical-muscle' + (front ? ' front' : '') + '" d="' + shape.path +
+         '"/><path class="aid-muscle-fibres" d="' + (shape.fibres ?? []).join(' ') +
          '"/><path class="aid-muscle-marks" d="' + shape.marks.join(' ') +
-         '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/>';
+         '"/><path class="aid-muscle-marks sprint" d="' + shape.sprint.join(' ') + '"/></g>';
 }
 // Gill slits behind the eye: a few arcs on each pumping node, combed as densely as its rakers.
 const GILL_GLYPH = Object.freeze({arcs : 3, gap : 4, height : 14, bow : 5, comb : [ 2, 6 ]});

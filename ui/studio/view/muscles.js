@@ -30,7 +30,7 @@ export const WORKS = Object.freeze([
 ].map(Object.freeze));
 // A muscle is drawn as one band, not cell by cell: its length grows with the number of nodes and
 // saturates, and a few schematic segments stand for all of them.
-const BAND = Object.freeze({half_fill : 8, segments : 16});
+const BAND = Object.freeze({half_fill : 8, segments : 24});
 export const muscleSegments = count => Math.max(1, Math.min(count, BAND.segments));
 function muscleBuild(organ) {
   const count = organ.centers.length;
@@ -41,22 +41,43 @@ const SHAPE = Object.freeze({
   tail : {
     stalk : [ 470, 897 ],
     depth : .84,
-    length : [ 120, 330 ],
-    thick : [ .12, .2 ],
-    steps : 16,
-    mark : .8,
+    length : [ 120, 410 ],
+    thick : [ .18, .2 ],
+    steps : 32,
+    mark : .92,
     lean : .5
   },
-  // The forward-stroking antagonist leans its fan toward the head.
-  fin : {inset : 6, reach : [ 9, 9 ], lean : .7},
-  pelvic : {inset : 4, reach : [ 7, 6 ], lean : .7},
-  jaw : {at : .82, size : [ [ 16, 10 ], [ 8, 5 ] ], spread : .8, tilt : .6, fibre : .7},
-  throat :
-      {after : 4, length : [ 40, 50 ], off : 20, width : [ 12, 10 ], out : 2.2, in : .4, ring : 1.2}
+  fin : {inset : 6, reach : [ 22, 10 ], width : [ 3.5, 3 ]},
+  pelvic : {inset : 4, reach : [ 17, 8 ], width : [ 3, 2.5 ]},
+  jaw : {at : .9, length : [ 44, 26 ], width : [ 5, 4 ]},
+  throat : {after : 12, length : [ 45, 35 ], off : 11, width : [ 3, 3 ]}
 });
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
+function spindle(from, to, width, cells) {
+  const dx = to.x - from.x, dy = to.y - from.y, length = Math.hypot(dx, dy) || 1;
+  const at = (t, across) =>
+      ({x : from.x + dx * t - dy / length * across, y : from.y + dy * t + dx / length * across});
+  const p = (t, across = 0) => {
+    const q = at(t, across);
+    return point(q.x, q.y);
+  };
+  const count = Math.max(4, muscleSegments(cells));
+  return {
+    from,
+    to,
+    path : 'M' + p(0) + ' C' + p(.2, width) + ' ' + p(.8, width) + ' ' + p(1) + ' C' +
+               p(.8, -width) + ' ' + p(.2, -width) + ' ' + p(0) + 'Z',
+    marks : Array.from({length : count},
+                       (_, k) => {
+                         const across = (2 * (k + .5) / count - 1) * width * .8;
+                         return 'M' + p(.07, across * .25) + ' C' + p(.3, across) + ' ' +
+                                p(.7, across) + ' ' + p(.93, across * .25);
+                       }),
+    nodeAt : t => at(.5 + .18 * Math.sin(t * 2 * Math.PI), (2 * t - 1) * width * .6)
+  };
+}
 function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back, pelvic = false,
                    position = null) {
   const s = sideSign(side), count = muscleSegments(nodes), along = k => (k + .5) / count;
@@ -67,86 +88,61 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
                    ? position.y - (BODY_FRAME.middle + s * halfWidth((start + end) / 2) * T.depth)
                    : 0;
     const at = x => BODY_FRAME.middle + s * halfWidth(x) * T.depth + dy,
-          half = x => halfWidth(x) * grow(T.thick, strength) / 2;
+          half = x => halfWidth(x) * grow(T.thick, strength) / 2 *
+                      Math.max(0, Math.sin(Math.PI * (x - start) / (end - start))) ** .25;
     const top = [], bottom = [];
     for (let k = 0; k <= T.steps; ++k) {
-      const x = start + (end - start) * k / T.steps, swell = Math.sin(Math.PI * k / T.steps);
-      top.push(point(x, at(x) - half(x) * swell));
-      bottom.unshift(point(x, at(x) + half(x) * swell));
+      const x = start + (end - start) * k / T.steps;
+      top.push(point(x, at(x) - half(x)));
+      bottom.unshift(point(x, at(x) + half(x)));
     }
     const marks = Array.from({length : count}, (_, k) => {
       const x = start + (end - start) * along(k), y = at(x), w = half(x) * T.mark,
             back = w * T.lean;
-      return 'M' + point(x + back, y - w) + ' Q' + point(x - back * .5, y - w * .3) + ' ' +
-             point(x - back, y) + ' Q' + point(x - back * .5, y + w * .3) + ' ' +
-             point(x + back, y + w);
+      return 'M' + point(x + back, y - w) + ' L' + point(x - back, y - w * .5) + ' L' +
+             point(x, y) + ' L' + point(x - back, y + w * .5) + ' L' + point(x + back, y + w);
     });
     return {
       path : 'M' + top.join(' L') + ' L' + bottom.join(' L') + 'Z',
       from : {x : start, y : at(start)},
       to : {x : end, y : at(end)},
-      marks
+      marks,
+      fibres : [ -.45, .45 ].map(
+          across => 'M' + Array
+                              .from({length : T.steps + 1},
+                                    (_, k) => {
+                                      const x = start + (end - start) * k / T.steps;
+                                      return point(x, at(x) + across * half(x));
+                                    })
+                              .join(' L')),
+      nodeAt : t => {
+        const x = start + (end - start) * t;
+        return {x, y : at(x)};
+      }
     };
   }
   if (code === MOTOR_KIND.turn) {
     const F = pelvic ? SHAPE.pelvic : SHAPE.fin, B = pelvic ? PELVIC_BASE : FIN_BASE,
-          a = position ? position.x - B.length / 2 : B.at, b = a + B.length, middle = (a + b) / 2;
-    const offset = position ? position.y - (skinAt(middle, s) - s * F.inset) : 0;
-    const base = x => skinAt(x, s) - s * F.inset + offset,
+          x = position?.x ?? B.at + B.length / 2, y = position?.y ?? skinAt(x, s) - s * F.inset;
+    const direction = stroke === FIN_STROKE.front ? -1 : 1,
           reach = grow(F.reach, (fill + strength) / 2);
-    const lean = stroke === FIN_STROKE.front ? F.lean * (b - a) / 2 : 0;
-    const root = {x : middle - lean, y : base(middle) - s * reach};
-    const marks = Array.from({length : count}, (_, k) => {
-      const x = a + (b - a) * along(k);
-      return 'M' + point(root.x, root.y) + ' L' + point(x, base(x));
-    });
-    return {
-      path : 'M' + point(a, base(a)) + ' Q' +
-                 point(middle - 2 * lean, base(middle) - 2 * s * reach) + ' ' + point(b, base(b)) +
-                 'Z',
-      from : {x : a, y : base(a)},
-      to : {x : b, y : base(b)},
-      marks
-    };
+    return spindle({x : x + direction * reach, y : y - s * (reach * .65 + 4)},
+                   {x : x + direction * 3, y : y - s * 2}, grow(F.width, strength), nodes);
   }
   const mouth = mouthAt();
   if (code === MOTOR_KIND.aggression) {
     const J = SHAPE.jaw, x = position?.x ?? mouth.x + HEAD.jaw_back * J.at,
-          y = position?.y ?? mouth.y + s * (HEAD.mouth[1] + HEAD.jaw_spread * J.at);
-    const share = (fill + strength) / 2, rx = grow([ J.size[0][0], J.size[1][0] ], share),
-          ry = grow([ J.size[0][1], J.size[1][1] ], share);
-    const arc = 'A' + fixed(rx) + ' ' + fixed(ry) + ' 0 1 0 ';
-    const marks = Array.from({length : count}, (_, k) => {
-      const dx = rx * (along(k) * 2 - 1) * J.spread;
-      return 'M' + point(x + dx, y - ry * J.fibre) + ' L' +
-             point(x + dx * J.tilt, y + ry * J.fibre);
-    });
-    return {
-      path : 'M' + point(x - rx, y) + ' ' + arc + point(x + rx, y) + ' ' + arc + point(x - rx, y) +
-                 'Z',
-      from : {x : x - rx, y},
-      to : {x : x + rx, y},
-      marks
-    };
+          y = position?.y ?? mouth.y + s * (HEAD.mouth[1] + HEAD.jaw_spread * J.at),
+          half = grow(J.length, fill) / 2;
+    return spindle({x : x - half, y : y - s * half * .32}, {x : x + half, y : y + s * half * .32},
+                   grow(J.width, strength), nodes);
   }
   if (code === MOTOR_KIND.suction) {
     const P = SHAPE.throat,
           a = position ? position.x - grow(P.length, fill) / 2 : mouth.x + HEAD.mouth[0] + P.after,
           end = a + grow(P.length, fill);
-    const y = position?.y ?? BODY_FRAME.middle + s * P.off, half = grow(P.width, strength) / 2;
-    const marks = Array.from({length : count}, (_, k) => {
-      const x = a + (end - a) * along(k);
-      return 'M' + point(x, y - s * half * P.in) + ' L' + point(x, y + s * half * P.ring);
-    });
-    return {
-      path : 'M' + point(a, y) + ' C' + point(a, y + s * half * P.out) + ' ' +
-                 point(end, y + s * half) + ' ' + point(end, y) + ' C' +
-                 point(end, y - s * half * P.in) + ' ' + point(a, y - s * half * P.in) + ' ' +
-                 point(a, y) + 'Z',
-      from : {x : a, y},
-      to : {x : end, y},
-      marks
-    };
+    const y = position?.y ?? BODY_FRAME.middle + s * P.off;
+    return spindle({x : a, y}, {x : end, y : y + s * 5}, grow(P.width, strength), nodes);
   }
   return null;
 }
@@ -193,7 +189,7 @@ export function muscleNode(organ, index, sites) {
     return null;
   const count = organ.centers.length, segments = muscleSegments(count),
         share = (Math.floor(index * segments / Math.max(1, count)) + .5) / segments;
-  return {
+  return shape.nodeAt ? shape.nodeAt(share) : {
     x : shape.from.x + (shape.to.x - shape.from.x) * share,
     y : shape.from.y + (shape.to.y - shape.from.y) * share
   };
