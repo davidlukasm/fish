@@ -522,7 +522,8 @@
 .aid-vision-profiles .aid-subtle{background:none;border-color:transparent;color:var(--aid-hint-text);text-decoration:underline}
 .aid-side-switch{display:flex;margin:10px 0 4px;border:1px solid var(--aid-control-edge);border-radius:9px;overflow:hidden;width:max-content}
 .aid-side-switch button{border:0;border-radius:0;padding:6px 14px}
-.aid-side-switch .aid-side-link{border-left:1px solid var(--aid-control-edge);border-right:1px solid var(--aid-control-edge);font-size:11px;color:var(--aid-control-text)}
+.aid-side-switch .aid-side-link{border-left:1px solid var(--aid-control-edge);border-right:1px solid var(--aid-control-edge);color:var(--aid-control-text)}
+.aid-side-switch button{display:flex;align-items:center;gap:2px}
 .aid-spectrum-zero{stroke:#7d9b9a;stroke-width:1}
 .aid-spectrum-excite{fill:#e8eed838;stroke:#e8eed8b0;stroke-width:1.2}
 .aid-spectrum-inhibit{fill:#e1788e40;stroke:#e1788eb0;stroke-width:1.2}

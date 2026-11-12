@@ -184,24 +184,35 @@ function centerTabs(state, organ) {
              .join('') +
          '</div>';
 }
+// The side pair as symbols: each side as a dot beside the midline, between them a link that is
+// closed while both sides are set alike.
+const SIDE_SYMBOL = Object.freeze({
+  left : 'M15 3v4M15 10v4M15 17v4M7 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  right : 'M9 3v4M9 10v4M9 17v4M17 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  linked : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2M8 12h8',
+  apart : 'M9 8H7a4 4 0 0 0 0 8h2M15 8h2a4 4 0 0 1 0 8h-2',
+  add : 'M12 5v14M5 12h14'
+});
+const sideGlyph = key => glyph(SIDE_SYMBOL[key], ICON.list, {line : true});
 function sideSwitch(organ) {
   if (organ.type === 'brain' || !organ.side || ORGAN_BY_KEY[organ.type]?.scope === 'single')
     return '';
   const here = organ.side < 0 ? 'left' : 'right', there = organ.side < 0 ? 'right' : 'left';
-  const own = '<button class="current" aria-current="true">' + label('inspector.side.' + here) +
-              '</button>';
-  const other = organ.pair
-                    ? '<button data-select-organ="' + escapeText(organ.pair) + '">' +
-                          label('inspector.side.' + there) + '</button>'
-                    : '<button class="aid-add" data-mirror-organ="' + escapeText(organ.id) + '">' +
-                          t('studio.marks.more', {name : label('inspector.side.' + there)}) +
-                          '</button>';
+  const own = '<button class="current" aria-current="true" title="' +
+              label('inspector.side.' + here) + '">' + sideGlyph(here) + '</button>';
+  const other =
+      organ.pair
+          ? '<button data-select-organ="' + escapeText(organ.pair) + '" title="' +
+                label('inspector.side.' + there) + '">' + sideGlyph(there) + '</button>'
+          : '<button class="aid-add" data-mirror-organ="' + escapeText(organ.id) + '" title="' +
+                escapeText(t('studio.marks.more', {name : label('inspector.side.' + there)})) +
+                '">' + sideGlyph('add') + sideGlyph(there) + '</button>';
   const link = organ.pair
                    ? '<button class="aid-side-link" data-link-pair="' + escapeText(organ.id) +
                          '" aria-pressed="' + organ.linked + '" title="' +
-                         label('inspector.side.linkTitle') + '">' +
+                         label('inspector.side.linkTitle') + ' · ' +
                          label(organ.linked ? 'inspector.side.linked' : 'inspector.side.apart') +
-                         '</button>'
+                         '">' + sideGlyph(organ.linked ? 'linked' : 'apart') + '</button>'
                    : '';
   const parts = organ.side < 0 ? [ own, link, other ] : [ other, link, own ];
   return '<div class="aid-side-switch" role="group" aria-label="' + label('inspector.side.label') +
