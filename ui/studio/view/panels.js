@@ -250,8 +250,8 @@ function organInspector(state, organ) {
              moduleChips(state, organ.type === 'brain' ? center?.id : organ.id) +
              sideSwitch(organ) + centerTabs(state, organ);
   html +=
-      '<div class="aid-organ-settings">' + organSettings(state, organ, center) + '</div>' +
-      (isRegion(organ) ? '' : slotsSection(state, organ)) + chemistry(state, organ, center) +
+      organSettingsBlock(state, organ) + (isRegion(organ) ? '' : slotsSection(state, organ)) +
+      chemistry(state, organ, center) +
       (isRegion(organ) && state.selected?.kind !== 'center' ? '' : cellDevelopment(state, center)) +
       contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
                                                                               : [ center ]);

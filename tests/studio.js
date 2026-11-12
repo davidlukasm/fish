@@ -4,6 +4,88 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkInspectorSubstances(model, capabilities, clicks) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
+  const {inspector} = await import('../ui/studio/view/panels.js');
+  const {HORMONE_EFFECT, HORMONES} = await import('../ui/schema.js');
+  const {receptorBody, glandProfile, hormonePad} = await import('../ui/studio/view/substances.js');
+  const root = {querySelector : () => null, querySelectorAll : () => []};
+  const studio = new OrganStudio(root), sites = capabilities.sites;
+  Object.assign(
+      studio.state,
+      {sites, capabilities, station : 'studio', document : newFishDocument('Stoffwahl', sites)});
+  studio.persist = studio.requestDesign = () => {};
+  const organ = studio.state.document.organs.find(o => o.type === 'gut');
+  const id = organ.centers[0].id, selected = {kind : 'organ', id : organ.id};
+  studio.state.selected = selected;
+  const before = studio.state.document;
+  const click = (key, value, extra = {}) =>
+      clicks.find(([ selector ]) => selector === '[data-' + key + ']')[1](studio, {
+        dataset : {...extra, [key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] : String(value)}
+      });
+  studio.change({
+    target : {
+      dataset : {receptorActive : id, receptorEffect : String(HORMONE_EFFECT.output)},
+      checked : true
+    }
+  });
+  assert.deepEqual(studio.state.selected, selected, 'Switching a receptor keeps the organ open');
+  let center = model.findCenter(studio.state.document, id).center;
+  const wheel = receptorBody(studio.state, center, HORMONE_EFFECT.output);
+  assert.match(wheel, /data-receptor-substance="2"/,
+               'An unnamed substance can be selected directly in the organ wheel');
+  assert.doesNotMatch(wheel, /data-define-substance/);
+  const binding = {centerId : id, receptorEffect : String(HORMONE_EFFECT.output)};
+  click('receptor-substance', 2, binding);
+  assert.equal(
+      model.findCenter(studio.state.document, id).center.receptors[HORMONE_EFFECT.output].substance,
+      2);
+  assert.equal(studio.state.document.substances.length, 1);
+  assert.deepEqual(studio.state.selected, selected);
+  assert.equal(studio.state.tool, 'select', 'Choosing a substance keeps the current tool');
+  const bound = studio.state.document;
+  click('receptor-substance', 2, binding);
+  assert.deepEqual(studio.state.document, bound,
+                   'A second selection does not add the substance again');
+  studio.stepHistory('undo');
+  assert.equal(studio.state.document.substances.length, 0,
+               'Creating and binding a substance is a single undo step');
+  studio.stepHistory('redo');
+  click('birth-substance', 4, {centerId : id});
+  assert.equal(model.findCenter(studio.state.document, id).center.growth.substance, 4);
+  click('birth-substance', HORMONES.levels, {centerId : id});
+  assert.equal(studio.state.document.substances.length, 2, 'Maturity is not a new free hormone');
+  assert.deepEqual(studio.state.selected, selected);
+  assert.deepEqual(model.compileDocument(before, sites).groups.map(g => g.name),
+                   model.compileDocument(studio.state.document, sites).groups.map(g => g.name));
+  const markup = inspector(studio.state);
+  assert.ok(markup.includes('data-organ-settings="' + organ.id + '"'),
+            'The initial organ inspector is reachable by the native anatomy refresh');
+  let replacement = '';
+  root.querySelectorAll = selector => selector === '[data-organ-settings]' ? [ {
+    dataset : {organSettings : organ.id},
+    set outerHTML(value) { replacement = value; }
+  } ]
+                                                                           : [];
+  studio.refreshGraphics();
+  assert.ok(replacement.includes('data-organ-settings="' + organ.id + '"'));
+  root.querySelectorAll = () => [];
+  for (const [kind, draw] of [[ 'gland', glandProfile ], [ 'blood', hormonePad ]]) {
+    const placed = model.addOrgan(model.newDocument(kind), kind, sites, {x : 550, y : 300});
+    const organ = model.findOrgan(placed.document, placed.organId), center = organ.centers[0];
+    studio.state.document = placed.document;
+    studio.state.selected = {kind : 'organ', id : organ.id};
+    const chosen = studio.state.selected;
+    assert.match(draw(studio.state, organ, center), /data-wheel-substance="1"/);
+    click('wheel-substance', 1, {centerId : center.id});
+    const updated = model.findCenter(studio.state.document, center.id).center;
+    assert.deepEqual([ updated.q1, updated.q2 ], model.wheelPlace(capabilities, 1));
+    assert.equal(studio.state.document.substances[0].index, 1);
+    assert.deepEqual(studio.state.selected, chosen);
+  }
+}
+
 async function checkVariationPictures() {
   const {traitVariation, cellVariationExamples, receptorVariationExamples} =
       await import('../ui/studio/model/variation.js');
@@ -1097,6 +1179,7 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  await checkInspectorSubstances(model, sitesResult, clicks);
   if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
     await checkResponseControls(model, sitesResult, clicks);
     await checkFunctionalRegions(model, sitesResult);

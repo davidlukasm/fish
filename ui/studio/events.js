@@ -154,6 +154,10 @@ function chosenField(studio) {
   return {organ, profile : profiles.find(p => p.id === studio.state.visionProfile) ?? profiles[0]};
 }
 const keep = (studio, doc) => studio.changeDocument(doc, studio.state.selected);
+const withSubstance = (doc, index) =>
+    index >= HORMONES.levels || doc.substances.some(sub => sub.index === index)
+        ? doc
+        : addSubstance(doc, HORMONES.levels, index);
 const keepIfRoom = (studio, doc) => doc ? keep(studio, doc) : studio.notice(label('status.noRoom'));
 const ITEM_KINDS = Object.freeze(
     [ 'contact', 'generated', 'nerve', 'bundle', 'wire', 'center', 'assembly', 'organ' ]);
@@ -510,8 +514,10 @@ export const FISH_CLICKS = Object.freeze([
     (studio, e) => {
       if (!studio.state.capabilities)
         return PASS;
-      const [q1, q2] = wheelPlace(studio.state.capabilities, Number(e.dataset.wheelSubstance));
-      changeCenter(studio, e.dataset.centerId, {q1, q2});
+      const index = Number(e.dataset.wheelSubstance);
+      const [q1, q2] = wheelPlace(studio.state.capabilities, index);
+      keep(studio, updateCenter(withSubstance(studio.state.document, index), e.dataset.centerId,
+                                {q1, q2}));
     }
   ],
   [
@@ -556,18 +562,6 @@ export const FISH_CLICKS = Object.freeze([
     }
   ],
   [
-    '[data-define-substance]',
-    (studio, e) => {
-      const index = Number(e.dataset.defineSubstance);
-      const doc = addSubstance(studio.state.document, HORMONES.levels, index);
-      if (!doc)
-        return;
-      studio.state.focusSubstance = index;
-      studio.changeDocument(doc, null);
-      studio.setTool('hormone');
-    }
-  ],
-  [
     '[data-remove-substance]',
     (studio, e) =>
         keep(studio, removeSubstance(studio.state.document, Number(e.dataset.removeSubstance),
@@ -580,9 +574,10 @@ export const FISH_CLICKS = Object.freeze([
   [
     '[data-growth-substance]',
     (studio, e) => {
-      const doc = studio.state.document;
+      const index = Number(e.dataset.growthSubstance);
+      const doc = withSubstance(studio.state.document, index);
       keep(studio, updateGrowth(doc, {
-             substance : Number(e.dataset.growthSubstance),
+             substance : index,
              active : 1,
              ...(doc.growth.sensitivity ? {} : GROWTH_START)
            }));
@@ -611,18 +606,17 @@ export const FISH_CLICKS = Object.freeze([
   [ '[data-development-effect]', (studio, e) => showChoice(studio, state => {
       state.developmentEffect = e.dataset.developmentEffect === 'birth' ? 'birth' : Number(e.dataset.developmentEffect);
   }) ],
-  [ '[data-birth-substance]', (studio, e) => keep(studio,
-      updateCellGrowth(studio.state.document, e.dataset.centerId, {active : 1, substance : Number(e.dataset.birthSubstance)})) ],
-  [ '[data-growth-substance]', (studio, e) => keep(studio,
-      updateGrowth(studio.state.document, {active : 1, substance : Number(e.dataset.growthSubstance)})) ],
+  [ '[data-birth-substance]', (studio, e) => {
+      const index = Number(e.dataset.birthSubstance);
+      keep(studio, updateCellGrowth(withSubstance(studio.state.document, index),
+                                    e.dataset.centerId, {active : 1, substance : index}));
+  } ],
   [
     '[data-receptor-substance]',
     (studio, e) => {
-      const id = e.dataset.centerId;
-      studio.changeDocument(bindReceptor(studio.state.document, id,
-                                         Number(e.dataset.receptorEffect),
-                                         Number(e.dataset.receptorSubstance)),
-                            {kind : 'center', id});
+      const index = Number(e.dataset.receptorSubstance);
+      keep(studio, bindReceptor(withSubstance(studio.state.document, index), e.dataset.centerId,
+                                Number(e.dataset.receptorEffect), index));
     }
   ],
   [
@@ -685,9 +679,8 @@ export const FISH_CHANGES = Object.freeze([
     'receptorActive',
     (studio, e) => {
       const id = e.dataset.receptorActive;
-      studio.changeDocument(switchReceptor(studio.state.document, id,
-                                           Number(e.dataset.receptorEffect), e.checked),
-                            {kind : 'center', id});
+      keep(studio, switchReceptor(studio.state.document, id,
+                                  Number(e.dataset.receptorEffect), e.checked));
     }
   ]
 ]);

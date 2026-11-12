@@ -78,7 +78,7 @@ export function glandProfile(state, organ, center) {
   // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close
   // up.
   return chips + '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
-         centerWheel(state, center, substances.map(sub => sub.index),
+         centerWheel(state, center, Array.from({length : wheel?.hormones ?? 0}, (_, i) => i),
                      state.capabilities?.hormones) +
          '</div>' + add + glandPictures(state, organ, center, index => substanceName(state, index));
 }
@@ -526,24 +526,21 @@ function substanceWheel(state, profile, {
     if (index >= reads)
       return '';
     const [x, y] = wheelPlace(wheel, index), name = substanceName(state, index);
-    if (index < HORMONES.levels && !named.has(index))
-      return '<g class="aid-wheel-point empty" data-define-substance="' + index +
-             '" style="--substance:' + substanceColor(index) + '"><circle cx="' + px(x) + '" cy="' +
-             py(y) + '" r="' + WHEEL.point + '"/><text x="' + px(x) + '" y="' + py(y) +
-             '" dy=".35em" text-anchor="middle">' + escapeText(substanceMark(state, index)) +
-             '</text><title>' + label('inspector.defineSubstance') + '</title></g>';
+    const unnamed = index < HORMONES.levels && !named.has(index);
     const bound = profile.active && index < reads
                       ? wheelAffinity(wheel, profile.x, profile.y, profile.width, index)
                       : 0;
     const open = clickable.has(index);
-    return '<g class="aid-wheel-point' + (open ? '' : ' fixed') +
+    return '<g class="aid-wheel-point' + (open ? '' : ' fixed') + (unnamed ? ' empty' : '') +
            (index >= HORMONES.levels ? ' body' : '') + (selected === index ? ' active' : '') + '"' +
            (open ? ' ' + attribute + '="' + index + '"' + extra : '') +
            ' style="--substance:' + substanceColor(index) + ';--bound:' + fixed(bound) +
            '"><circle cx="' + px(x) + '" cy="' + py(y) + '" r="' + WHEEL.point + '"/><text x="' +
            px(x) + '" y="' + py(y) + '" dy=".35em" text-anchor="middle">' +
            escapeText(substanceMark(state, index)) + '</text><title>' +
-           escapeText(joinParts([ name, percent(bound) ])) + '</title></g>';
+           escapeText(unnamed ? label('inspector.defineSubstance')
+                              : joinParts([ name, percent(bound) ])) +
+           '</title></g>';
   });
   const halo = profile.active ? '<circle class="aid-wheel-halo" cx="' + px(profile.x) + '" cy="' +
                                     py(profile.y) + '" r="' +
@@ -644,8 +641,8 @@ function receptorWheel(state, receptor, target) {
   const birth = target.endsWith(':' + BIRTH), body = target === GROWTH;
   const cut = target.lastIndexOf(':'), id = target.slice(0, cut), effect = target.slice(cut + 1);
   return substanceWheel(state, receptorProfile(state, receptor), {
-    choices :
-        [...state.document.substances.map(sub => sub.index), ...(body ? [] : [ HORMONES.levels ]) ],
+    choices : Array.from({length : body ? HORMONES.levels : state.capabilities.regulators},
+                         (_, index) => index),
     attribute : body    ? 'data-growth-substance'
                 : birth ? 'data-birth-substance'
                         : 'data-receptor-substance',
