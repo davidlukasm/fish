@@ -1202,6 +1202,7 @@
 .aid-anatomical-gland{stroke-width:1.5}
 .aid-gland-duct{fill:none;stroke:#ecd8ef;stroke-width:2.8}
 .aid-gonad-duct{fill:none;stroke:#d6c1b3;stroke-width:3;stroke-linecap:round;opacity:.75}
+.aid-cloaca{fill:none;stroke:var(--aid-gut);stroke-width:3;stroke-linecap:round}
 .aid-brain-fissure{stroke-width:1.1;opacity:.6}
 .aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
 .aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round}

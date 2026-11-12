@@ -16,6 +16,7 @@ import {
   groupReport,
   finStroke,
   gillRakers,
+  gutLength,
   muscleFibre,
   isChosen,
   isFinMuscle,
@@ -57,6 +58,7 @@ import {
   regionGeometry,
   brainHalfWidth,
   centerLocation,
+  cloacaPoint,
   EYE,
   eyeLocation,
   eyeRadius,
@@ -225,7 +227,7 @@ function glandGlyph(state, organ, pos) {
          ' ' + fixed(pos.x + 23) + ' ' + fixed(pos.y + 5) + '"/></g>';
 }
 function gonadDuct(pos) {
-  const G = INSIDE.gut, x = G.vent.x, y = BODY_FRAME.middle + G.vent.d;
+  const {x, y} = cloacaPoint();
   return '<path class="aid-gonad-duct" d="M' + fixed(pos.x + 25) + ' ' + fixed(pos.y) + ' C' +
          fixed(pos.x + 100) + ' ' + fixed(pos.y - 5) + ' ' + fixed(x - 45) + ' ' + fixed(y - 58) +
          ' ' + x + ' ' + y + '"/>';
@@ -234,8 +236,8 @@ function ovaryGlyph(state, organ, pos) {
   const O = GLYPH.ovary, cells = organ.centers.filter(c => c.key === 'growth').length;
   const count =
       Math.round(O.eggs[0] + (O.eggs[1] - O.eggs[0]) * cells / Math.max(1, kindLimit(organ, null)));
-  let html = gonadDuct(pos) + '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) +
-             '" cy="' + fixed(pos.y) + '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
+  let html = '<ellipse class="aid-anatomical-ovary" cx="' + fixed(pos.x) + '" cy="' + fixed(pos.y) +
+             '" rx="' + O.sac[0] + '" ry="' + O.sac[1] + '"/>';
   for (let i = 0; i < count; ++i) {
     const r = Math.sqrt((i + .5) / count), a = i * O.turn;
     html += '<circle class="aid-anatomical-egg" cx="' +
@@ -246,8 +248,8 @@ function ovaryGlyph(state, organ, pos) {
 }
 function testisGlyph(state, organ, pos) {
   const T = GLYPH.testis;
-  let html = gonadDuct(pos) + '<ellipse class="aid-anatomical-testis" cx="' + fixed(pos.x) +
-             '" cy="' + fixed(pos.y) + '" rx="' + T.sac[0] + '" ry="' + T.sac[1] + '"/><path ' +
+  let html = '<ellipse class="aid-anatomical-testis" cx="' + fixed(pos.x) + '" cy="' +
+             fixed(pos.y) + '" rx="' + T.sac[0] + '" ry="' + T.sac[1] + '"/><path ' +
              'class="aid-anatomical-sperm" d="';
   for (let i = 0; i < T.streaks; ++i) {
     const y = pos.y + (i - (T.streaks - 1) / 2) * T.gap, x = pos.x - T.length / 2;
@@ -443,9 +445,12 @@ function smoothLine(points) {
   }
   return d;
 }
+const shownGut = state =>
+    gutShape(gutTurns(gutLength(state.document) ?? state.anatomy?.anatomy?.[ANATOMY.gut_length] ??
+                      BODY_UNIT.trait_middle),
+             state.document);
 function gutPath(state) {
-  const turns = gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle);
-  const G = gutShape(turns, state.document), S = INSIDE.gut.stomach;
+  const G = shownGut(state), S = INSIDE.gut.stomach;
   const line = smoothLine;
   return '<path class="aid-anatomical-gut" d="' + line(G.gullet) + ' ' + line(G.intestine) + '"/>' +
          stomachSvg(G.stomach, S);
@@ -458,10 +463,7 @@ function stomachSvg(p, S) {
          fixed(p.y + S.ry * 1.35) + ' ' + fixed(p.x - S.rx) + ' ' + fixed(p.y) + 'Z"/>';
 }
 function gutHit(state) {
-  const G = gutShape(
-            gutTurns(state.anatomy?.anatomy?.[ANATOMY.gut_length] ?? BODY_UNIT.trait_middle),
-            state.document),
-        S = INSIDE.gut.stomach;
+  const G = shownGut(state), S = INSIDE.gut.stomach;
   return '<path class="aid-gut-hit" d="M' +
          G.intestine.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L') + '"/><ellipse cx="' +
          G.stomach.x + '" cy="' + fixed(G.stomach.y) + '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
@@ -653,9 +655,9 @@ function headSvg(state) {
   const mouth = mouthShape(columns);
   const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
                columns[ANATOMY.mouth] > 0;
-  return '<g class="aid-head">' + barbelsSvg(columns) +
-         (eats ? throatSvg(mouth) + intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') +
-         mouthSvg(mouth) + teethSvg(columns, mouth) + '</g>';
+  return '<g class="aid-head">' + barbelsSvg(columns) + throatSvg(mouth) +
+         (eats ? intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') + mouthSvg(mouth) +
+         teethSvg(columns, mouth) + '</g>';
 }
 export const fishOutline = state =>
     fishPath(finSizes(state.anatomy?.fins, finAttachments(state), state.anatomy?.forms));
@@ -697,11 +699,13 @@ export function bodySvg(state) {
   const fill = fishBodyColour(state.document, state.anatomy);
   const drawnEyes = new Set(),
         sizes = finSizes(state.anatomy?.fins, finAttachments(state), state.anatomy?.forms);
-  let organs = '', gut = '', felt = '';
+  let organs = '', gut = '', felt = '', ducts = '';
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
     if (isRegion(organ))
       continue;
     felt += feltSvg(state, organ);
+    if (organ.type === 'eggs' || organ.type === 'sperm')
+      ducts += gonadDuct(organLocation(organ, state.sites, state.document));
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (!glyph)
       continue;
@@ -716,6 +720,7 @@ export function bodySvg(state) {
   }
   const tail = tailFin(sizes), origin = p => fixed(p.x) + 'px ' + fixed(p.y) + 'px';
   const body = fishPath(sizes, false), M = BODY_FRAME.middle, S = BODY_SHADE;
+  const vent = cloacaPoint();
   return sideFins(sizes)
              .map(fin => '<g class="aid-fish-fin" data-part="fin" data-fin="' +
                          (fin.pelvic ? 'pelvic' : 'pectoral') + '" data-side="' + fin.side +
@@ -733,8 +738,10 @@ export function bodySvg(state) {
          S.flank + '"/></linearGradient><path class="aid-fish-shade" d="' + body +
          '" fill="url(#aid-fish-shade)"/><path class="aid-fish-skin" d="' +
          fishPath(sizes, false, true) + '"/>' +
-         '<path class="aid-symmetry-line" d="M130 365 H905"/>' + (gut || gutPath(state)) +
+         '<path class="aid-symmetry-line" d="M130 365 H905"/>' + (gut || gutPath(state)) + ducts +
          brainSvg(fill, state) +
          '<path class="aid-operculum" d="M435 264 Q487 300 448 335 M435 466 Q487 430 448 395"/>' +
-         headSvg(state) + felt + organs;
+         headSvg(state) + felt + organs + '<path class="aid-cloaca" d="M' + fixed(vent.x - 5) +
+         ' ' + fixed(vent.y - 4) + ' Q' + fixed(vent.x) + ' ' + fixed(vent.y + 3) + ' ' +
+         fixed(vent.x + 5) + ' ' + fixed(vent.y - 4) + '"/>';
 }
