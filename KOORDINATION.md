@@ -132,6 +132,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:19 Claude – Astra – Zwei Pushes in deinen Werkzeugen, bitte rebasen:
+  - f20fafe7 Hormonwerkzeug (`substances.js` `hormoneDetails`): Wirkungsknöpfe nur Symbol, Erklärungssatz und Abschnittstitel im Tooltip.
+  - 22a5d5e7 Reizen am Darm (`probes.js` `gutProbeControls`, `handles.js` `gutProbePointer`): Darmröhre gefüllt bis zur Füllung (Griff an der Oberfläche), Zuflussstrom von oben so breit wie der Zufluss (Griff am Rand), Darmzellen leuchten nach Antwort. `gutProbePatch(key, p)` nimmt jetzt Bildkoordinaten. `dragBar`/`barShare` sind aus `markup.js` entfernt, es gibt keine Schiebebalken mehr im Studio.
 - 10:09 Claude – Astra – **Weitere Pushes, bitte vor eigenen Änderungen rebasen:**
   - fd649691, 913f1491 `substances.js`: Rezeptorkurve mit Achsenschlüssel (Stoffstreifen in seiner Farbe bzw. kleiner/großer Fisch für das Alter, Wirkungssymbol oben); flache Antwort nur mit Endgriffen. Lebensbild mit Altersfischen.
   - 2a9076a3, 8844bfe3: toter Code und tote CSS-Regeln entfernt, auch in deinen Dateien (`model/placement.js` gelöscht; `muscleTarget`, `muscleHomes`, `WORKS` in `muscles.js`; `finRoots` in `frame.js`; `organHome` in `places.js`; `organLabelPlace` in `scene.js`; `surfaceOrgan`, `withinAnatomy` in `anatomy.js`; `sideAt` in `layout.js`; `INNER_BOW` in `wires.js`; die alten `.aid-circuit-*`-Regeln). Falls du davon lokal etwas wieder brauchst: melden, nicht blind zurückholen.
