@@ -42,6 +42,7 @@ import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
 import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
 import {glandPictures} from './gland_effect.js';
+import {lifeResponses} from '../model/cell_life.js';
 
 const centerWheel = (state, center, choices, reads, marks = null) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
@@ -345,13 +346,8 @@ export function phasePatch(handle, fx) {
   return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
-// The cell's life in one picture over its maturity: when it starts to work and when it dies (the
-// two marks, named above them), how strongly it answers (the solid line), when new cells are born
-// (the dashed line) and where it dies (the shaded spans). The row below is the key: each answer's
-// badge with the substance its receptor reads, its line and its name; clicking an entry or its line
-// chooses which receptor the pictures below set.
 const LIFE_ROW = Object.freeze({
-  height : 158,
+  height : 230,
   y : 144,
   left : 4,
   width : 85,
@@ -373,33 +369,24 @@ const lifeKind = effect => effect === BIRTH                   ? 'birth'
                                                               : 'death';
 const lifeReceptor = (focus, effect) => effect === BIRTH ? focus.growth : focus.receptors[effect];
 export function lifePhaseEditor(state, focus, chosen = BIRTH) {
-  const phase = lifePhase(focus), output = focus.receptors[HORMONE_EFFECT.output];
+  const phase = lifePhase(focus);
   const context = previewContextOf(state);
-  const level = m => (1 + receptorResponse(state.capabilities, output, context.hormones, m, 1)) / 2;
+  const profile =
+      lifeResponses(state.capabilities, focus, context,
+                    Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points));
   const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
         y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
-  const points = Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points)
-                     .map(m => fixed(x(m)) + ',' + fixed(y(level(m))))
-                     .join(' ');
-  const birth = Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points)
-                    .map(m => fixed(x(m)) + ',' +
-                              fixed(y(Math.max(0, receptorResponse(state.capabilities, focus.growth,
-                                                                   context.hormones, m, 1)))))
-                    .join(' ');
-  const death = focus.receptors[HORMONE_EFFECT.death];
-  const dead = Array
-                   .from({length : CURVE.points},
-                         (_, i) => {
-                           const m = (i + .5) / CURVE.points;
-                           return receptorResponse(state.capabilities, death, context.hormones, m) >
-                                          DEATH_RESPONSE
-                                      ? '<rect class="aid-death-zone" x="' +
-                                            fixed(x(i / CURVE.points)) + '" y="' + CURVE.top +
-                                            '" width="' +
-                                            fixed((CURVE.right - CURVE.left) / CURVE.points + .1) +
-                                            '" height="' + (CURVE.bottom - CURVE.top) + '"/>'
-                                      : '';
-                         })
+  const points = profile.map(p => fixed(x(p.maturity)) + ',' + fixed(y(p.output))).join(' ');
+  const birth = profile.map(p => fixed(x(p.maturity)) + ',' + fixed(y(p.birth))).join(' ');
+  const dead = profile.slice(0, -1)
+                   .map((p, i) => {
+                     return p.dead
+                                ? '<rect class="aid-death-zone" x="' + fixed(x(i / CURVE.points)) +
+                                      '" y="' + CURVE.top + '" width="' +
+                                      fixed((CURVE.right - CURVE.left) / CURVE.points + .1) +
+                                      '" height="' + (CURVE.bottom - CURVE.top) + '"/>'
+                                : '';
+                   })
                    .join('');
   const mark = (handle, value, open, title) => {
     const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
@@ -409,9 +396,9 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
            handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
            '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l' +
            -PHASE_POINTER.half + ' ' + -PHASE_POINTER.height + ' h' + 2 * PHASE_POINTER.half +
-           ' Z"/><text class="aid-life-word" x="' + at + '" y="' + (CURVE.top - LIFE_ROW.above) +
-           '" text-anchor="' + anchor + '">' + escapeText(label('development.mark.' + handle)) +
-           '</text></g>';
+           ' Z"/><text class="aid-life-word" x="' + at + '" y="' +
+           (CURVE.top - LIFE_ROW.above - (handle === 'end' ? 12 : 0)) + '" text-anchor="' + anchor +
+           '">' + escapeText(label('development.mark.' + handle)) + '</text></g>';
   };
   const pick = effect => ' data-development-effect="' + effect + '"' +
                          (effect === chosen ? ' aria-pressed="true"' : '');
@@ -460,6 +447,22 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
                 'transform="translate(' + LIFE_ROW.title + ' ' +
                 fixed((CURVE.top + CURVE.bottom) / 2) + ') rotate(-90)" text-anchor="middle">' +
                 escapeText(label('development.answer')) + '</text>';
+  const stages =
+      [ 0, CURVE.points / 2, CURVE.points ]
+          .map((at, k) => {
+            const p = profile[at], px = 42 + k * 88, py = 195;
+            const signal =
+                p.dead ? '<path class="aid-effect-cross" d="M-7-7L7 7M7-7L-7 7"/>'
+                       : '<path class="aid-effect-line ghost" d="M9 0h25" stroke-width="7"/>' +
+                             '<path class="aid-effect-line" d="M9 0h25" stroke-width="' +
+                             fixed(7 * p.output) +
+                             '"/><circle class="aid-effect-cell" r="9" fill-opacity="' +
+                             fixed(p.output) + '"/>';
+            return '<g transform="translate(' + px + ' ' + py + ')">' + signal +
+                   '<text class="aid-life-word" y="26" text-anchor="middle">' +
+                   escapeText(label('development.stage.' + k)) + '</text></g>';
+          })
+          .join('');
   return '<svg viewBox="0 0 ' + CURVE.width + ' ' + LIFE_ROW.height +
          '" class="aid-response-chart aid-life-picture" data-phase="' + escapeText(focus.id) +
          '" role="img" aria-label="' + label('inspector.lifePhase') + '"><title>' +
@@ -470,7 +473,8 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
          line(BIRTH, 'aid-life-birth', birth) +
          mark('start', phase.start, 0, 'inspector.phaseStart') +
          mark('end', phase.end, 1, 'inspector.phaseEnd') + LIFE_EFFECTS.map(badge).join('') +
-         '</svg>';
+         '<text class="aid-life-word" x="130" y="172" text-anchor="middle">' +
+         escapeText(label('development.builtSignal')) + '</text>' + stages + '</svg>';
 }
 export const WHEEL = Object.freeze({
   size : 240,

@@ -1143,6 +1143,19 @@ async function checkHormoneSystems(model, capabilities) {
     const eligibility = effectScene(E.eligibility, '#abcdef');
     assert.doesNotMatch(eligibility, /aid-effect-wave/,
                         'Eligibility never trades sensory credit for pacemaker credit');
+    const {lifeResponses} = await import('../ui/studio/model/cell_life.js');
+    const mortal = structuredClone(learner);
+    mortal.receptors[E.death] = {
+      ...mortal.receptors[E.death],
+      active : 1,
+      baseline : 1,
+      sensitivity : -2,
+      substance : HORMONES.levels,
+      half : .3
+    };
+    const life = lifeResponses(sitesResult, mortal, context, [ 0, .3, .6, 1 ]);
+    assert.ok(life.every(p => p.dead && p.output === 0 && p.birth === 0),
+              'An early death remains final when its triggering receptor later quietens');
     const aquarium = JSON.parse(readFileSync(join(root, 'ui/text/de/nerve_map.json'), 'utf8'));
     assert.equal(aquarium.effects.length, Object.keys(E).length);
   }

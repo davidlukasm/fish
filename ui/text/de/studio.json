@@ -237,8 +237,8 @@
     "neutral": "nicht",
     "lifePhase": "Lebensabschnitt",
     "cellEffects": "Was Stoffe an dieser Zelle bewirken",
-    "phaseStart": "arbeitet ab Reife",
-    "phaseEnd": "stirbt ab Reife",
+    "phaseStart": "Halbwert des Ausgaberezeptors",
+    "phaseEnd": "Halbwert des Todesrezeptors",
     "signalReach": "Wohin die Ausgänge reichen",
     "sameSide": "eigene Seite",
     "oppositeSide": "Gegenseite",
@@ -1272,7 +1272,7 @@
     "width": "Stoffbreite",
     "preview": "Beispielwerte",
     "previewConditions": "Die Kennlinien und Organansichten verwenden diese Beispielwerte für eine angenommene Situation im späteren Fisch.",
-    "birth": "Geburtsantwort",
+    "birth": "Aufbaufaktor",
     "output": "Ausgabefaktor",
     "death": "Tod ausgelöst",
     "lifecycle": "Zellbildung, Ausgabe und Tod über der Reife",
@@ -1313,15 +1313,21 @@
     "blueprint": "Bauplan",
     "greatest": "größter Wert",
     "key": {
-      "birth": "Zellbildung",
-      "output": "Aktivität",
-      "death": "Tod"
+      "birth": "Aufbau",
+      "output": "Signal",
+      "death": "entfernt"
     },
     "mark": {
-      "start": "Beginn",
-      "end": "Ende"
+      "start": "Ausgabe: ½ Bindung",
+      "end": "Todesreiz: ½ Bindung"
     },
-    "answer": "Antwort"
+    "answer": "Aufbau / Signal",
+    "stage": [
+      "jung",
+      "halb gewachsen",
+      "ausgewachsen"
+    ],
+    "builtSignal": "Signal einer aufgebauten Zelle"
   },
   "symbols": {
     "add": "+"
