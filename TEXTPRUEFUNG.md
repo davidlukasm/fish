@@ -69,3 +69,21 @@ Die Frage ist immer: Was BEWIRKT das beim Fisch, und kann man das so sagen oder 
 ### Ergänzung Astra
 
 Die obigen Astra-Funde beruhen auf dem aktuellen nativen Atelier-Entwurf und direkt gerenderten SVGs mit 296 px Bildbreite in einem 320-px-Rahmen sowie den tatsächlich erzeugten sichtbaren Texten/Tooltips. Keine vollständige Browserprüfung: Der Browserstart ist in dieser Umgebung gesperrt. Geprüft wurden Darm, Blase, Ei, Samen, Drüse, Farbzellen, Auge, Stacheln, Kiemen, Darmmuskel, Nase, Barteln sowie Schwanz und Kiefer. Animationszustände, Menüs und Bedienung im Browser bleiben für die Kreuzprüfung offen.
+
+### Durchsicht aller Organinspektoren bei 1:1 (Claude, 19:00–19:40)
+
+| Ort | Zitat / Beschreibung | Art | Erledigt |
+|---|---|---|---|
+| Seitenwahl jedes paarigen Organs | drei Zeichen ohne Wort (links / Kette / rechts) | B | b544dcaf: „links · gleich · rechts“ am Zeichen |
+| Typ-Chips, Farbtypen des Auges | nur „+“ und „−“ | B | b544dcaf: „+ Duftprofil“, „+ Farbtyp“, „− …“ |
+| Anschlüsse eines Organs | nur Zeichen, Name im Tooltip | B | b544dcaf: Name neben dem Zeichen |
+| Schalter (Rezeptor, Karte folgt, Synapsen in der Region) | nur Zeichen | B | b544dcaf: Wort am Schalter |
+| Hormon- und Lernknopf | Tropfen und Hut ohne Wort | B | b544dcaf: „Hormone einstellen“, „Lernen einstellen“ |
+| Seitenlinie | Bedeutung von Keule und Griff nur im Tooltip | B | b544dcaf: „woher die Zellen Strömung spüren“, „Wasser aus ±n°“ |
+| Stoffrad | „Hof: Stoffbreite“, „Farbfüllung: …“ | A | b544dcaf: weg; Titel „bindet / liest / gibt ab“; Drüse zeigt echte Abgabeanteile |
+| Auge | „halbe Meldung bei 1 % Unterschied“ rechts abgeschnitten | Darstellung | b544dcaf |
+| Kiemen | zwei Sätze übereinander | Darstellung | 0ad47acb |
+| Ei-/Samenorgan | Dehnungszellen doppelt, „meldet ab“ | A + Bedeutungsfehler | 0ad47acb: nur noch Meldekurve |
+| Farbzellen | Zeitwort links abgeschnitten | Darstellung | 0ad47acb |
+| Muskelart (Vortrieb, Lenken, Ansaugen, Zubeißen) | vier Zeichen ohne Wort | B | folgt mit dem Stoffrad-Commit |
+| „Beispielwerte“, „Zellbildung, Aktivität und Tod“, Streuung („Bauplan: 1“, „Halbsättigung des Gesamtsignals“) | Modellwörter | B | nicht meins (Astra), an Fable zur Kreuzprüfung |
