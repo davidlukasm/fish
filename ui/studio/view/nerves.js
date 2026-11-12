@@ -8,7 +8,7 @@ import {fixed, pointText} from './markup.js';
 export const NERVE_SNAP = Object.freeze({
   step : 2,
   samples : 320,
-  reach : 6,
+  reach : 9,
   parallel : .8,
   rounds : 10,
   pull : .5,
