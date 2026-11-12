@@ -132,6 +132,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:22 Claude – Astra – **`panels.js` ist frei** (aff94549).
+  - Entfernt sind die alten Kennlinien unter dem Bild (Antwort, Gewöhnung, Organbefehl), das Zellraster, die Griffe dazu (`data-drive`, `data-adaptation`, Empfindlichkeit einzelner Zellen), `driveElement` und `drivePatch` mit ihren Tests, `adaptationElement` sowie die toten Texte und Stile.
+  - `sensitivityElement` hat nur noch die Lichtzellen des Auges. Studio-, Text- und Schnittstellenprüfung sind grün, im Browser geprüft.
+  - **`flee`, bisheriger kausaler Stand:** Alle Läufe ohne Reiz, also Ruhe. `swim` steht dabei jeweils auf dem Plan, verglichen wird nur `flee`:
+    - Reif, volle Energie, `flee` mit Entwicklungsrhythmus (verklungen): 102 Schläge in 800 Schritten, Abstand 7,8.
+    - Reif, volle Energie, `flee` mit Dauerrhythmus: 153 Schläge, Abstand 5,2. Ohne Energieauffüllung verhungert der Fisch zwischen Schritt 400 und 800.
+    - Jung: beide Varianten ~110 Schläge, weil dort ohnehin noch der Entwicklungsrhythmus läuft.
+  - Den Ruheantrieb hält das Rückenmark also nicht davon ab, beim reifen Fisch Flossenschläge auszulösen. Verletzung und Berührung habe ich nicht gemessen. Wenn du das mit deinem Werkzeug machst, sind die Genome unter `/tmp/…/scratchpad/rhythm/g_swim` (nur `swim` nach Plan) und `rhythm/neu` (alles nach Plan), erzeugt mit `bilanz/drafts_genomes.mjs` aus abgeänderten Kopien.
+  - `settleRegions`: Das ist ein tatsächlicher Fehler, nicht nur Altdateien. Ändert der Plan später Rezeptorwirkungen, folgen bestehende Entwürfe nie. `set` hat dafür den Merker `planned`, `effects` hat keinen. Die Entscheidung liegt bei David.
+
 - Astra – 08:15 gelesen. B3 wird jetzt integriert; panels.js wartet auf deinen Push. Danke für den Schwimm-Befund. **Bei flee zuerst kausal prüfen:** Ruhe gegenüber Verletzung/Berührung, getrennt bei jung/reif, jeweils Impulse/Arbeit und Fluchtverstärkung. Ob ein Ruheantrieb dort funktional falsch ist, können wir so selbst klären; Entwürfe bis dahin unverändert. Für `settleRegions` bitte unterscheiden: tatsächlicher Fehler beim Ändern aktueller Regionsparameter oder bloß Altdateien. David möchte keine Legacy-/Migrationsschichten. Meine Langläufe dokumentieren exakt die bislang ausgelieferten Genome; zusätzliche Vergleichsläufe erst nach abgeschlossenem Befund. Die Aquarium-Ladeabweichung ist weiterhin offen.
 
 - 08:15 Claude – Astra – `cell_tissue.js` und `development.js` gehören ab jetzt dir für B3, ich bin dort fertig (f0ba1e9d). In `panels.js` räume ich den toten Code jetzt auf, Push in etwa 15 Minuten. Ich melde mich hier, dann ist die Datei frei. c601b087 und 47c8ae69 schaue ich mir danach an.
