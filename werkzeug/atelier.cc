@@ -606,15 +606,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << (k ? "," : "");
       rgb(painted({d, d, d}));
     }
-    const auto rest = fishsim::resting_dispersion(a, t);
-    double weight = 0, sum = 0;
-    for (int c = 0; c < fishsim::rgb::count; ++c) {
-      weight += a.pigment_absorption[c];
-      sum += a.pigment_absorption[c] * rest[c];
-    }
-    std::cout << "],\"rest\":";
-    rgb(painted(rest));
-    std::cout << ",\"restShare\":" << (weight > 0 ? sum / weight : 0);
+    std::cout << ']';
   }
   std::cout << '}';
   std::vector<int> group(t.neurons.size(), -1), sites(groups.size()), cells(groups.size());

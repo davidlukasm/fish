@@ -35,7 +35,6 @@ void spread_spines(std::array<double, BODY_SECTORS> &, const BrainInterface::Eff
 std::array<double, BODY_SECTORS> spine_density(const BrainInterface &, const field::Substrate &);
 Color visible_absorption(const BrainInterface &, const Color &dispersion,
                          const PhysiologyParameters &);
-Color resting_dispersion(const BrainInterface &, const field::Substrate &);
 double local_defense(double defense, const std::array<double, BODY_SECTORS> &density,
                      double relative);
 bool has_required_organs(const field::Substrate &);

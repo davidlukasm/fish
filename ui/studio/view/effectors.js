@@ -1,5 +1,6 @@
 import {musclePatch, musclePictures} from './muscle_effect.js';
 import {glandPatch} from './gland_effect.js';
+import {pigmentPatch} from './pigments.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -105,6 +106,10 @@ export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
   if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name)) {
     const [width, height] = marks.frame.split(',').map(Number);
     return musclePatch(name, {x : fx * width, y : fy * height}, marks, most, organ);
+  }
+  if (name.startsWith('pigment:')) {
+    const [width, height] = marks.frame.split(',').map(Number);
+    return pigmentPatch(name, {x : fx * width, y : fy * height}, marks);
   }
   if (name.startsWith('gland:')) {
     const [width, height] = marks.frame.split(',').map(Number);

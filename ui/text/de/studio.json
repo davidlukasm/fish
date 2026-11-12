@@ -1245,12 +1245,19 @@
     "remove": "Farbzelltyp entfernen",
     "wheel": "Pigment: Farbe außen, zur Mitte immer dunkler",
     "amount": "{n} Knoten",
-    "range": "Farbe des Fisches von geballtem bis ausgebreitetem Pigment",
-    "skin": "ohne Pigment",
-    "gathered": "geballt",
-    "rest": "Ruhe",
-    "spread": "ausgebreitet",
-    "times": "Trägheit der Farbkanäle im Bauplan: Rot {red}, Grün {green}, Blau {blue} Schritte. Die Zeitkonstanten der Pigmentzellen bestimmen diese Werte."
+    "command": {
+      "title": "Farbe des Fisches je Befehl",
+      "from": "kein Befehl",
+      "to": "starker Befehl",
+      "handle": "Ziehen: wie stark ein Befehl sein muss, bevor sich die Farbe ändert"
+    },
+    "time": {
+      "title": "Farbe des Fisches nach einem starken Befehl",
+      "from": "Befehl kommt",
+      "to": "{n} Schritte später",
+      "half": "halb nach {n} {n:Schritt|Schritten}",
+      "handle": "Ziehen: wie schnell die Farbe wechselt"
+    }
   },
   "marks": {
     "add": "+ {name}",

@@ -729,10 +729,7 @@
 .aid-pigment-patches path{stroke:none}
 .aid-pigment-choice{fill:none;stroke:var(--aid-point);stroke-width:3;pointer-events:none;filter:drop-shadow(0 0 2px #000a)}
 /* Sits inside the palette picture at its own place and size. */
-.aid-pigment-range{width:240px;height:62px}
-.aid-pigment-range rect{stroke:var(--aid-fin-line);stroke-width:1}
-.aid-pigment-range .aid-pigment-rest{fill:var(--aid-chosen)}
-.aid-pigment-range text{fill:var(--aid-label-text);font-size:10px}
+.aid-spread-fish{stroke:#5d8790;stroke-width:1;vector-effect:non-scaling-stroke}
 .aid-chromatophores circle{stroke:var(--aid-ink);stroke-width:.8}
 .aid-chromatophores .gathered{opacity:.55}
 .aid-chromatophores.chosen .gathered{opacity:.95}

@@ -29,7 +29,7 @@ const SHAPE = Object.freeze({
     stalk : [ 510, 897 ],
     // The band's outer edge keeps this far inside the skin, also where the stalk narrows.
     gap : 6,
-    // Even a large tail muscle stays a compact band over the front of the stalk, its segments close.
+    // Even a large tail muscle stays a compact band of close segments over the stalk's front.
     length : [ 90, 210 ],
     thick : [ .18, .2 ],
     steps : 32,

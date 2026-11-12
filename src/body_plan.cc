@@ -875,18 +875,6 @@ Color visible_absorption(const BrainInterface &a, const Color &dispersion,
                     (p.pigment_rest + (1 - p.pigment_rest) * std::clamp(dispersion[c], 0., 1.));
   return absorption;
 }
-Color resting_dispersion(const BrainInterface &a, const field::Substrate &s) {
-  Color active{};
-  for (const auto &e : a.effectors)
-    if (e.port == organ_port::pigment)
-      for (int c = 0; c < rgb::count; ++c)
-        active[c] += e.strength * (1 - e.color[c]) *
-                     std::max(0., field::resting_output(s.neurons[e.neuron]));
-  Color dispersion{};
-  for (int c = 0; c < rgb::count; ++c)
-    dispersion[c] = a.pigment_absorption[c] > 0 ? active[c] / a.pigment_absorption[c] : 0;
-  return dispersion;
-}
 double Body::local_defense(double bearing) const {
   if (!std::isfinite(bearing))
     return defense();

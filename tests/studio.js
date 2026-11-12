@@ -2007,13 +2007,12 @@ empty=run({'operation':'design','plan':{**plan,'groups':[],'connections':[]},'si
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
 # The fish's colour as the engine paints it: pigment can only darken its skin, the more the more
-# it is spread, and the ground colour lies within that range; the spines shield it all round,
-# raised at least as well as at rest.
+# it is spread; the spines shield it all round, raised at least as well as at rest.
 colour=designed['colour']
 steps=colour['range']
 assert all(0<=q<=r<=s for s,r,q in zip(colour['skin'],steps[0],steps[-1]))
 assert all(all(b<=a+1e-9 for a,b in zip(x,y)) for x,y in zip(steps,steps[1:]))
-assert 0<=colour['restShare']<=1
+assert set(colour)=={'skin','range'}
 assert len(designed['spinesRest'])==len(designed['spinesRaised'])==len(designed['spineGroups'])
 assert all(0<=r<=q<=1 for r,q in zip(designed['spinesRest'],designed['spinesRaised']))
 assert len(designed['zones'])==4 and abs(sum(e for f,e in designed['zones'])-2)<1e-6

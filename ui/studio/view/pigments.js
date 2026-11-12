@@ -3,11 +3,21 @@ import {ORGAN_BY_KEY} from '../model/organs.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
 import {cssColour, fishColours, pigmentColour, pigmentKind} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
-import {skinAt} from './frame.js';
+import {fieldFish, skinAt} from './frame.js';
 import {escapeText, fixed} from './markup.js';
-import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
+import {
+  hueQuality,
+  LONGEST_TIME_CONSTANT,
+  pigmentReflectance,
+  timeConstantOf,
+  timeConstantSteps,
+  tuningHue
+} from '../../tuning.js';
 import {formatNumber, t, tList} from '../../strings.js';
-import {gateHandle} from './sense_marks.js';
+import {handleWord} from './sense_marks.js';
+import {clamp} from '../../units.js';
+import {MOTOR_KIND} from '../../schema.js';
+import {sideOf} from '../model/layout.js';
 
 const label = (key, values) => t('studio.pigment.' + key, values);
 const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
@@ -15,8 +25,6 @@ const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
 const PIGMENT_WHEEL =
     Object.freeze({size : 300, centre : 150, radius : 105, rings : 8, sectors : 36, ring : 8});
 const W = PIGMENT_WHEEL, TURN = 360, HALF_TURN = 180;
-// The chosen kind's gate runs up the palette's right edge, beside the wheel.
-const GATE = Object.freeze({x : 292, least : 280, most : 20});
 const wheelAt = (shown, r) => ({
   x : W.centre + r * Math.sin(shown * Math.PI / HALF_TURN),
   y : W.centre - r * Math.cos(shown * Math.PI / HALF_TURN)
@@ -71,16 +79,8 @@ function pigmentWheel(organ, chosen, state) {
                    .join('');
   const edge = wheelAt(Math.min(.999, (before + chosen.centers.length) / most) * TURN, radius);
   const id = escapeText(center.id);
-  const gate = center.role === 'motor'
-                   ? '<path class="aid-gate-track" d="M' + GATE.x + ' ' + GATE.least + ' V' +
-                         GATE.most + '"/>' +
-                         gateHandle({x : GATE.x, y : GATE.least}, {x : GATE.x, y : GATE.most},
-                                    state, center, t('studio.inspector.motorGate'))
-                   : '';
-  return '<svg class="aid-pigment-palette" viewBox="0 0 300 360"' +
-         (gate ? ' data-sense-field="' + id + '" data-sense-redraw="refreshPigment"' : '') +
-         '><svg width="300" height="300" viewBox="0 0 300 300" data-pigment-amount="' + id +
-         '" data-room="' + room + '" data-before="' + before + '" data-most="' + most + '">' +
+  return '<svg class="aid-pigment-palette" viewBox="0 0 300 300"><svg width="300" height="300" viewBox="0 0 300 300" data-pigment-amount="' +
+         id + '" data-room="' + room + '" data-before="' + before + '" data-most="' + most + '">' +
          '<svg class="aid-pigment-wheel" width="300" height="300" viewBox="0 0 300 300" data-pigment-wheel="' +
          id + '">' +
          '<g class="aid-pigment-patches">' + (patches ??= wheelPatches()) +
@@ -89,8 +89,7 @@ function pigmentWheel(organ, chosen, state) {
          '<g class="aid-pigment-composition"><circle cx="150" cy="150" r="128"/>' + ring + '</g>' +
          '<circle class="aid-graphic-handle" data-graphic-handle="amount" cx="' + fixed(edge.x) +
          '" cy="' + fixed(edge.y) + '" r="6"><title>' +
-         escapeText(label('amount', {n : chosen.centers.length})) + '</title></circle></svg>' +
-         colourRange(state) + gate + '</svg>';
+         escapeText(label('amount', {n : chosen.centers.length})) + '</title></circle></svg></svg>';
 }
 function kindChips(organ, chosen) {
   return typeChips(organ, chosen, type => {
@@ -103,49 +102,103 @@ export function pigmentAmount(fx, fy, room, before = 0, most = room) {
       (Math.atan2(fx * W.size - W.centre, W.centre - fy * W.size) / (2 * Math.PI) + 1) % 1;
   return Math.max(1, Math.min(room, Math.round(angle * most) - before));
 }
-const RANGE = Object.freeze({
-  width : 240,
-  height : 62,
-  skin : 26,
-  gap : 8,
-  top : 20,
-  band : 22,
-  mark : 5,
-  above : 10,
-  label : 58
+// What the chosen kind does to the fish's colour, as rows of little fish in the colour the
+// fish takes (pigment_color over the pigment's spread, body_plan.cc):
+// Command: the spread follows the command past the gate (the effector output, substrate.cc), so
+// a command inside the gate leaves the fish as it is.
+// Time: after a strong command the spread comes on over the cells' time, 1 − e^(−t/τ).
+const SPREAD = Object.freeze({
+  width : 300,
+  height : 74,
+  left : 56,
+  right : 264,
+  fish : 16,
+  scale : .046,
+  axis : 40,
+  words : 66,
+  edge : 30,
+  count : 5,
+  handle : 5.5,
+  // A command this strong spreads the pigment nearly all the way (tanh 2 ≈ .96).
+  span : 2,
+  // The time row runs over twice the longest cell time.
+  window : 2
 });
-function colourRange(state) {
-  const colours = fishColours(state.document, state.anatomy);
-  if (!colours)
+const spreadColour = (range, d) => {
+  const at = clamp(d) * (range.length - 1), k = Math.min(range.length - 2, Math.floor(at));
+  return cssColour(range[k].map((v, c) => v + (range[k + 1][c] - v) * (at - k)));
+};
+function spreadRow(organ, center, range, key, spreadAt, handle, word, marks) {
+  const S = SPREAD, x = share => S.left + (S.right - S.left) * share;
+  const fish =
+      Array
+          .from({length : S.count},
+                (_, i) => {
+                  const share = i / (S.count - 1);
+                  return '<g style="fill:' + spreadColour(range, spreadAt(share)) + '">' +
+                         fieldFish({cx : x(share), cy : S.fish}, S.scale, 'aid-spread-fish') +
+                         '</g>';
+                })
+          .join('');
+  const at = {x : x(handle.share), y : S.axis};
+  return '<svg class="aid-effector-graphic aid-spread-picture" viewBox="0 0 ' + S.width + ' ' +
+         S.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
+         MOTOR_KIND.pigment + '" data-effector-side="' + sideOf(organ) +
+         '" role="img" aria-label="' + escapeText(label(key + '.title')) + '">' +
+         (handle.zone ?? '') + fish + '<path class="aid-sense-axis" d="M' + S.left + ' ' + S.axis +
+         ' H' + S.right + '"/>' +
+         '<text class="aid-handle-word" x="' + S.edge + '" y="' + S.words + '">' +
+         escapeText(label(key + '.from')) + '</text><text class="aid-handle-word" x="' +
+         (S.width - S.edge) + '" y="' + S.words + '" text-anchor="end">' +
+         escapeText(label(key + '.to', handle.values)) + '</text>' +
+         '<circle class="aid-graphic-handle" data-effector-handle="pigment:' + key +
+         '" data-frame="' + S.width + ',' + S.height + '" data-center="' + escapeText(center.id) +
+         '"' + marks + ' cx="' + fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' + S.handle +
+         '"><title>' + escapeText(label(key + '.handle')) + '</title></circle>' +
+         handleWord(at, word, 'above') + '</svg>';
+}
+function spreadPictures(state, organ, center) {
+  const colours = fishColours(state.document, state.anatomy), scale = state.capabilities?.biasScale;
+  if (!colours || !(scale > 0) || center.role !== 'motor')
     return '';
-  const R = RANGE, left = R.skin + R.gap, span = R.width - left;
-  const stops = colours.range
-                    .map((rgb, k) => '<stop offset="' + fixed(k / (colours.range.length - 1)) +
-                                     '" stop-color="' + cssColour(rgb) + '"/>')
-                    .join('');
-  const x = left + span * colours.restShare;
-  return '<svg x="30" y="300" width="240" height="62" class="aid-pigment-range" viewBox="0 0 ' +
-         R.width + ' ' + R.height + '" role="img" aria-label="' + escapeText(label('range')) +
-         '"><defs><linearGradient id="aid-pigment-range">' + stops + '</linearGradient></defs>' +
-         '<rect class="skin" x="0" y="' + R.top + '" width="' + R.skin + '" height="' + R.band +
-         '" fill="' + cssColour(colours.skin) + '"><title>' + escapeText(label('skin')) +
-         '</title></rect><rect x="' + left + '" y="' + R.top + '" width="' + span + '" height="' +
-         R.band + '" fill="url(#aid-pigment-range)"/><path class="aid-pigment-rest" d="M' +
-         fixed(x) + ' ' + R.top + ' l' + -R.mark + ' ' + -R.mark + ' h' + 2 * R.mark +
-         'Z"><title>' + escapeText(label('rest')) + '</title></path></svg>';
+  const S = SPREAD, gate = Math.max(0, center.threshold) * scale,
+        window = S.window * LONGEST_TIME_CONSTANT;
+  const tau = timeConstantSteps(center.tau), x = share => S.left + (S.right - S.left) * share;
+  const zone = '<rect class="aid-gland-gate" x="' + S.left + '" y="' + (S.axis - S.handle) +
+               '" width="' + fixed(x(gate / S.span) - S.left) + '" height="' + 2 * S.handle + '"/>';
+  return spreadRow(organ, center, colours.range, 'command',
+                   share => Math.tanh(Math.max(0, share * S.span - gate)),
+                   {share : gate / S.span, zone}, t('studio.sense.gateWord'),
+                   ' data-scale="' + scale + '"') +
+         spreadRow(organ, center, colours.range, 'time',
+                   share => -Math.expm1(-share * window / tau),
+                   {share : tau * Math.LN2 / window, values : {n : window}},
+                   label('time.half', {n : formatNumber(tau * Math.LN2, 0)}),
+                   ' data-window="' + window + '"');
+}
+// The change a handle makes, from the pointer `p` in its picture's units, as a patch of the
+// kind's cell.
+export function pigmentPatch(name, p, marks) {
+  const S = SPREAD, share = clamp((p.x - S.left) / (S.right - S.left)), id = marks.center;
+  if (name === 'pigment:command') {
+    const scale = Number(marks.scale);
+    return {id, center : {threshold : clamp(share * S.span, 0, scale) / scale}};
+  }
+  if (name === 'pigment:time')
+    return {
+      id,
+      center : {
+        tau :
+            timeConstantOf(Math.max(share * Number(marks.window) / Math.LN2, timeConstantSteps(0)))
+      }
+    };
+  return null;
 }
 export function pigmentInspector(state, organ, center) {
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
-  const times = state.anatomy?.pigmentTimes;
-  const title = times ? label('times', {
-    red : formatNumber(times[0], 1),
-    green : formatNumber(times[1], 1),
-    blue : formatNumber(times[2], 1)
-  })
-                      : '';
-  return '<div data-pigment-block="' + escapeText(organ.id) + '"' +
-         (title ? ' title="' + escapeText(title) + '"' : '') + '>' + kindChips(organ, chosen) +
-         pigmentWheel(organ, chosen, state) + '</div>';
+  return '<div data-pigment-block="' + escapeText(organ.id) + '">' + kindChips(organ, chosen) +
+         pigmentWheel(organ, chosen, state) + '</div>' +
+         spreadPictures(state, organ, chosen.centers[0]);
 }
 const DOTS = Object.freeze({step : 44, ends : [ 1, 2 ], inset : 16, least : 1.6, most : 8});
 export function chromatophoresSvg(state, organ, chosen) {
@@ -153,8 +206,6 @@ export function chromatophoresSvg(state, organ, chosen) {
   const total = types.reduce((n, type) => n + type.centers.length, 0);
   if (!total)
     return '';
-  const rest = fishColours(state.document, state.anatomy)?.restShare ?? 0;
-  const gathered = DOTS.least + (DOTS.most - DOTS.least) * rest;
   const kinds = types.flatMap(
       type => Array(type.centers.length).fill(cssColour(pigmentColour(type.centers[0]))));
   let html = '', k = 0;
@@ -167,7 +218,7 @@ export function chromatophoresSvg(state, organ, chosen) {
                             DOTS.most + '" style="fill:' + colour + '"/>'
                       : '') +
               '<circle class="gathered" cx="' + fixed(x) + '" cy="' + fixed(y) + '" r="' +
-              fixed(gathered) + '" style="fill:' + colour + '"/>';
+              DOTS.least + '" style="fill:' + colour + '"/>';
     }
   }
   return '<g class="aid-chromatophores' + (chosen ? ' chosen' : '') + '">' + html + '</g>';

@@ -11,15 +11,16 @@ const hasPigment = doc => doc.organs.some(organ => organ.type === 'pigment');
 
 export function fishColours(doc, anatomy) {
   const colour = anatomy?.colour;
-  if (!hasPigment(doc) || colour?.skin?.length !== CHANNELS || colour?.rest?.length !== CHANNELS ||
-      !colour?.range?.length || !Number.isFinite(colour.restShare))
+  if (!hasPigment(doc) || colour?.skin?.length !== CHANNELS || !(colour?.range?.length > 1))
     return null;
   return colour;
 }
 export function fishBodyColour(doc, anatomy) {
   const colours = fishColours(doc, anatomy);
-  return cssColour(colours ? UNPIGMENTED.map((value, c) => value + (colours.rest[c] - value) * TINT)
-                           : UNPIGMENTED);
+  // At rest the pigment is gathered: the first colour of the range.
+  return cssColour(colours
+                       ? UNPIGMENTED.map((value, c) => value + (colours.range[0][c] - value) * TINT)
+                       : UNPIGMENTED);
 }
 const PIGMENT_STARTS = Object.freeze([ [ 240, .45 ], [ 180, .65 ], [ 60, .6 ], [ 0, 1 ] ]);
 const NEAR = .05;

@@ -854,7 +854,9 @@ void Body::prepare(const Genome &g) {
   motor_.turn = 0;
   eat_signal = 0;
   reproduction_.egg_role = g.interface->motor_counts[organ_port::eggs] > 0;
-  motor_.pigment = resting_dispersion(*g.interface, *g.blueprint);
+  // Without a command an effector does nothing (its bias only sets the gate), so a fish is born
+  // with its pigment gathered, as it keeps it at rest.
+  motor_.pigment = {};
 }
 void cppn_action(Body &b, const Genome &g, const PhysiologyParameters &physiology,
                  bool protected_life) {

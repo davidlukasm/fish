@@ -67,9 +67,6 @@ inline double connection_length(const Neuron &a, const Neuron &b) {
   return std::sqrt(
       double((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y) + (a.z - b.z) * (a.z - b.z)));
 }
-inline double resting_output(const Neuron &n) {
-  return std::tanh(double(n.bias));
-}
 inline bool hormone_effect_present(Role role, int effect) {
   return effect == Output || effect == Death || role == Role::Nerve ||
          (role == Role::Effector && effect == Excitation);
