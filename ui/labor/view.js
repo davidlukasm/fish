@@ -283,8 +283,8 @@ function results(s) {
   const runningSeed = s.running ? s.job?.runs.find(w => !w.done)?.seed : null, life = lifeView(s);
   return '<section class="aid-lab-results"><div class="aid-lab-verdict">' + verdictStamp(verdict) +
          '<span>' + verdictLine(verdict) + '</span></div>' + life +
-         (life ? '<details class="aid-life-population"><summary>' + say('life.population') +
-                     '</summary>'
+         (life ? '<details class="aid-life-population" data-lab-fold="population"><summary>' +
+                     say('life.population') + '</summary>'
                : '') +
          '<div class="aid-lab-metrics" role="group" aria-label="' + say('analysis.choose') + '">' +
          BREEDING_METRICS

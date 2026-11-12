@@ -109,7 +109,8 @@ function history(selected) {
       label : say('gap', {steps : number(gap.to - gap.from), from : number(gap.from)})
     });
   events.sort((a, b) => a.t - b.t);
-  return '<details class="aid-life-events"><summary>' + say('events') + '</summary><ol>' +
+  return '<details class="aid-life-events" data-lab-fold="events"><summary>' + say('events') +
+         '</summary><ol>' +
          events
              .map(e => '<li>' +
                        jump(e.t,

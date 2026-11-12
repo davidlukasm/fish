@@ -188,6 +188,10 @@ export class BreedingStation extends LabStation {
     }
   }
   render() {
+    const folds = [...(this.root.querySelectorAll?.('[data-lab-fold]') ?? []) ].map(
+        el => [el.dataset.labFold, el.open]);
+    const list = this.root.querySelector?.('.aid-life-list');
+    const position = list && {top : list.scrollTop, left : list.scrollLeft};
     const data = this.root.ownerDocument?.activeElement?.dataset;
     const selector = data?.labLifeTime     ? '[data-lab-life-time="' + data.labLifeTime + '"]'
                      : data?.labLife       ? '[data-lab-life="' + data.labLife + '"]'
@@ -196,6 +200,18 @@ export class BreedingStation extends LabStation {
                      : data?.labWorld      ? '.aid-lab-plot[data-lab-world="' + data.labWorld + '"]'
                                            : null;
     super.render();
+    if (this.shown) {
+      for (const [key, open] of folds) {
+        const fold = this.root.querySelector('[data-lab-fold="' + key + '"]');
+        if (fold)
+          fold.open = open;
+      }
+      const nextList = this.root.querySelector?.('.aid-life-list');
+      if (nextList && position) {
+        nextList.scrollTop = position.top;
+        nextList.scrollLeft = position.left;
+      }
+    }
     if (this.shown && selector)
       this.root.querySelector(selector)?.focus({preventScroll : true});
     const selected = selectedLife(this.state);

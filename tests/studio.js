@@ -3450,20 +3450,32 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       assert.doesNotMatch(html, /NaN|undefined/);
     }
     let panel = {scrollTop : 117}, focused = 0;
+    let eventFold = {dataset : {labFold : 'events'}, open : true};
+    let fishList = {scrollTop : 47, scrollLeft : 89};
     const root = {
       ownerDocument : {activeElement : {dataset : {labSampleStep : 'previous'}}},
       set innerHTML(html) {
         this.html = html;
         panel = {scrollTop : 0};
+        eventFold = {dataset : {labFold : 'events'}, open : false};
+        fishList = {scrollTop : 0, scrollLeft : 0};
       },
-      querySelector(
-          selector) { return selector === '.aid-lab-results' ? panel : {focus() { ++focused; }}; }
+      querySelectorAll() { return [ eventFold ]; },
+      querySelector(selector) {
+        return selector === '.aid-lab-results'           ? panel
+               : selector === '.aid-life-list'           ? fishList
+               : selector === '[data-lab-fold="events"]' ? eventFold
+                                                         : {focus() { ++focused; }};
+      }
     };
     const inspecting = new BreedingStation(root);
     Object.assign(inspecting.state, analysis);
     inspecting.shown = true;
     inspecting.render();
     assert.equal(panel.scrollTop, 117, 'Polling preserves the result scroll position');
+    assert.equal(eventFold.open, true, 'Polling does not close the history being read');
+    assert.deepEqual(fishList, {scrollTop : 47, scrollLeft : 89},
+                     'Both narrow and wide fish lists keep their scroll position');
     assert.ok(focused, 'Polling preserves the time control’s keyboard focus');
     const click = dataset => inspecting.click({target : {closest : () => ({dataset})}});
     click({labMetric : 'intake'});
