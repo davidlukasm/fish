@@ -159,6 +159,7 @@ function simplified(points) {
   mark(0, points.length - 1);
   return points.filter((_, i) => keep[i]);
 }
+const EXIT = Object.freeze({slope : 1.2});
 export function nerveRoute(doc, sites, from, to, kind) {
   const F = field(doc, sites), a = from.point, b = to.point;
   const key = [ from.key, to.key, kind, a.x, a.y, b.x, b.y ].join(':');
@@ -232,8 +233,14 @@ export function nerveRoute(doc, sites, from, to, kind) {
   };
   const neural = endpoint => !endpoint.organ || neuralOrgan(endpoint.organ.type);
   const peripheral = neural(from) && !neural(to) ? to : neural(to) && !neural(from) ? from : null;
+  // A nerve to an organ behind the brain leaves the cord obliquely, before the organ's level, as
+  // far ahead as the organ lies off the cord, but never ahead of the other end.
+  const centre = peripheral === from ? to : from;
+  const leave = peripheral && Math.sign(centre.point.x - peripheral.point.x) *
+                                  Math.min(Math.abs(centre.point.x - peripheral.point.x),
+                                           EXIT.slope * Math.abs(peripheral.point.y - lane));
   const junction = peripheral && peripheral.point.x > BRAIN.cerebrum.to
-                       ? nearest({x : peripheral.point.x, y : lane})
+                       ? nearest({x : peripheral.point.x + leave, y : lane})
                        : -1;
   const walk = junction >= 0
                    ? [...between(a, F.point(junction)), ...between(F.point(junction), b).slice(1) ]
