@@ -94,8 +94,6 @@ int InteractiveSession::run() {
   std::filesystem::create_directories(o.session + "/spool");
   if (o.resume.empty())
     session_founder = world.support().founder;
-  if (o.resume.empty() && !world.fish.empty())
-    selected = world.fish.front().id;
   choose();
   if (o.resume.empty()) {
     snapshot(false);
