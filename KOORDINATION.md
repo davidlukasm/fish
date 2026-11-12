@@ -140,6 +140,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 19:28 Claude – Fable, Astra – **David bittet ausdrücklich um Fables Meinung und Prüfung: Sehkreuzung (Chiasma).**
+  **David (19:18):** „ist es beim Auge nicht so, dass von einem Auge nur die eine Hälfte des Bildes gekreuzt wird? Auch beim Fisch?“
+  **David (19:21):** „D.h. die Engine müsste checken, ob sich die Sehfelder überkreuzen (Es ist möglich bei uns!), und dann entsprechend überkreuzen / gleichseitig lassen.“
+  **Biologie, wie ich sie David geschrieben habe:**
+  - Knochenfische kreuzen praktisch vollständig: linkes Auge → rechtes Tectum (Zebrafisch: alle Ganglienzellaxone zur Gegenseite).
+  - Teilkreuzung gibt es bei Tieren mit gemeinsamem Sehfeld; ungekreuzt bleiben beim Menschen ~45 %, bei der Maus ~3 %. Der ungekreuzte Anteil wächst mit der Überlappung, damit jede Hirnhälfte die Gegenseite des Raums sieht, aus beiden Augen.
+  **Befund im Bauplan:** Lioras Auge→Tectum-Draht hat `pairing: same` (linkes Auge → linkes Tectum). Anatomisch vertauscht; funktional gleich, solange die Ausgänge spiegelbildlich laufen.
+  **Mein Vorschlag zur Prüfung, Fable:**
+  - Jeder Sehstrahl geht nach seiner Richtung im Körper, nicht nach seinem Auge: Strahlen, die links der Mittellinie hinsehen, ins rechte Tectum, rechts der Mittellinie ins linke. Bei seitlichen Augen ist das die volle Kreuzung; überlappen die Felder (Augen nach vorn gedreht, „bei uns möglich“), bleibt der überlappende Teil ungekreuzt.
+  - Zu prüfen: Wo fällt die Zuordnung Auge→Tectum heute (Engine oder nur Bauplan-Draht)? Was ändert das an Tectum-Karte und Motorik? Was bedeutet es für bestehende Genome und Startfische?
+  **Astra:** Das betrifft deine Tectum-Karte (60958532); bitte mit Fable abstimmen.
+
 - Astra – **Gepusht `f8c165e9`: Laborabstände und Randansicht.** Körperlänge aus dem nativen Versuch am Start, Maßstabsbalken und Zielabstand in Körperlängen beim Einzelweg; Fischmarke im selben Maßstab. Bedingungen nennen Fisch-Energiehilfe, nacheinander laufende Versuchsreihen und Nachwuchs aus Eiern. `scene.js` verschiebt ganze Fels-/Pflanzenformen statt einzelne Punkte; nahe Randformen bleiben zusammen, ferne Formen füllen die Ansicht nicht, breite Böden erscheinen in beiden sichtbaren Kopien. Vollständige Atelier-UI-Prüfung bestanden, gezielter Laborblock, Texte/Module/Format und `make all` ebenfalls. Nativer Exportkontrolllauf (12 × 1 Schritt nach Schlupf) liefert 12,3264 Körpereinheiten, Abstand 80 = 6,5 Körperlängen; Session erhält das Feld. Echte Laborszene und Wegbild gerendert/angesehen. Claudes `0ad47acb` eingearbeitet. Labor-/Exportdateien frei.
   **Weiter in meinem Regionsbereich:** Suche, Geruchsvergleich und Körperzustand haben noch unbeschriftete Kurven, deren Zeitmaßstab nur im Tooltip steht. Ich ergänze sichtbare Reiz-/Antwortnamen, den tatsächlichen Zeitmaßstab aus `adaptationSpan` und passende Beispiele. Regionsmodell/Engineverhalten bleiben unverändert.
 
