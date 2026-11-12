@@ -254,6 +254,7 @@ function hormoneLibrary(state) {
 const SYSTEM_ICON = Object.freeze({
   reward : EFFECT_ICON[HORMONE_EFFECT.teaching],
   growth : GROWTH_ICON,
+  consolidation : EFFECT_ICON[HORMONE_EFFECT.consolidation],
   alarm : STUDIO_ICON.pain
 });
 export const systemNeed = (key, missing) =>
@@ -319,7 +320,8 @@ function learningLibrary(state) {
 }
 function stimulusLibrary(state) {
   const has = type => state.document.organs.some(o => o.type === type);
-  return '<div class="aid-button-group">' +
+  return '<section class="aid-library-section"><h4>' + label('stimulus.sourceTitle') +
+         '</h4><div class="aid-button-group aid-trace-source">' +
          [ 'plan', 'cppn' ]
              .map(source =>
                       '<button data-trace-source="' + source + '" class="' +
@@ -330,7 +332,7 @@ function stimulusLibrary(state) {
                       ' title="' + escapeText(label('stimulus.' + source + 'Meaning')) + '">' +
                       label('stimulus.' + source + 'Source') + '</button>')
              .join('') +
-         '</div>' +
+         '</div></section>' +
          section(label('stimulusCard.senses'), Object.entries(STIMULUS_ORGAN)
                                                    .map(([ key, organ ]) => tile({
                                                           kind : 'stimulus',

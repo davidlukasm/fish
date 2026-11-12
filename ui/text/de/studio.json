@@ -1271,8 +1271,9 @@
       "hormone": "Stoffausbreitung"
     },
     "arrivals": "Aufleuchten: erste Wegeankünfte sammeln sich. Die Zellschwelle wird hier nicht ausgewertet.",
-    "planSource": "Bauplanwege",
-    "cppnSource": "CPPN-Wege",
+    "sourceTitle": "Verfolgte Wege",
+    "planSource": "Bauplan",
+    "cppnSource": "CPPN",
     "cppn": "CPPN-Struktur · Kontaktvorschläge",
     "cppnMeaning": "Verfolgt die Kontaktvorschläge des erzeugten CPPN einschließlich zusätzlicher Zellpotenziale. Die Markierung zeigt strukturelle Wege und Lehrkontakte. Zellbildung, Aktivität und gelernte Gewichte werden damit nicht berechnet. Die Sinnesproben darunter werten die geplanten Organe des Entwurfs aus."
   },

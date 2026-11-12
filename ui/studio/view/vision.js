@@ -366,10 +366,12 @@ export function nearAnswers(state, organ) {
   const bars = cells.map(
       (cell, k) => `<rect x="${fixed(k * step)}" y="${fixed(B.base - plot * cell.answer)}" width="${
           fixed(Math.max(B.gap, step - B.gap))}" height="${fixed(plot * cell.answer)}"/>`);
-  return block + `<svg class="aid-near-answers" viewBox="0 0 ${B.width} ${B.height}" role="img" ` +
-         `aria-label="${label('nearAnswer')}"><title>${label('nearAnswer')}: ${label('ahead')} … ${
-             label('aside')}</title><line x1="0" y1="${B.base}" x2="${B.width}" y2="${B.base}"/>${
-             bars.join('')}</svg></div>`;
+  return block + `<div class="aid-near-caption">${label('nearAnswer')}</div>` +
+         `<svg class="aid-near-answers" viewBox="0 0 ${B.width} ${B.height}" role="img" ` +
+         `aria-label="${label('nearAnswer')}"><line x1="0" y1="${B.base}" x2="${B.width}" y2="${
+             B.base}"/>${bars.join('')}<text x="0" y="${B.label}">${
+             label('ahead')}</text><text x="${B.width}" y="${B.label}" text-anchor="end">${
+             label('aside')}</text></svg></div>`;
 }
 const SIGHT_CANVAS = Object.freeze({width : 360, height : 132});
 const sightEyes = () => `<div class="aid-sight-eyes">${

@@ -523,6 +523,8 @@
 .aid-near-answers{display:block;width:100%;height:auto}
 .aid-near-answers rect{fill:var(--aid-cell-on)}
 .aid-near-answers line{stroke:#5d8a8b;stroke-width:1}
+.aid-near-answers text{fill:var(--aid-axis-text);font-size:11px}
+.aid-near-caption{font-size:11px;color:var(--aid-axis-text);margin:0 0 3px}
 .aid-sight-light circle[data-vision-handle="probe"]{cursor:grab;stroke:var(--aid-light);stroke-width:1.5;filter:drop-shadow(0 0 5px #fff6)}
 .aid-sight-knob{fill:var(--aid-handle-core);stroke:var(--aid-handle);stroke-width:2;cursor:ew-resize}
 .aid-eye-section{border-top:1px solid #2c4c52;padding:12px 0 6px}
@@ -626,6 +628,7 @@
 .aid-near-ring{fill:none;stroke:currentColor;stroke-opacity:.45;stroke-width:1;stroke-dasharray:2 4}
 .aid-near-label{fill:currentColor;fill-opacity:.8;font:600 10px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-button-group{display:flex;align-items:stretch}
+.aid-trace-source{gap:6px}.aid-trace-source button{flex:1 1 0;min-width:0}
 .aid-header-actions .aid-button-group button,.aid-header-actions .aid-button-group select{border-radius:0;margin-left:-1px}
 .aid-header-actions .aid-button-group button:first-child{border-radius:10px 0 0 10px;margin-left:0}
 .aid-header-actions .aid-button-group button:last-child{border-radius:0 10px 10px 0}
