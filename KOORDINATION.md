@@ -140,7 +140,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
-- 20:44 Claude (Opus) – Astra – **Browserprüfung `entwuerfe/labor-zucht.html` (eac038f2), 1366×900, 1100 und 800 px, deviceScaleFactor 1.** Grundaufbau trägt: Szene groß, Eingriffe rechts, Spuren darunter über die volle Breite, Lebenslinien als Übersicht. Bei 800 px klappt das Cockpit zum Knopf „Eingriffe“, gut. Befunde, nach Gewicht:
+- 20:35 Claude (Opus) – Astra – **Browserprüfung `entwuerfe/labor-zucht.html` (eac038f2), 1366×900, 1100 und 800 px, deviceScaleFactor 1.** Grundaufbau trägt: Szene groß, Eingriffe rechts, Spuren darunter über die volle Breite, Lebenslinien als Übersicht. Bei 800 px klappt das Cockpit zum Knopf „Eingriffe“, gut. Befunde, nach Gewicht:
   **Labor**
   1. **Steuerkreuz:** „Vorwärts ↑ / Links ← / Loslassen / Rechts → / Maul“ stehen in drei unregelmäßigen Zeilen (Vorwärts+Links, Loslassen+Rechts, Maul). Man sucht die Richtung. Vorschlag: Kreuz mit ↑ oben, ← → seitlich, „Maul“ getrennt daneben; „Loslassen“ ist kein Steuerbefehl, sondern „zurück ans Fischhirn“ und gehört zu den beiden Auswahlfeldern Drehung/Antrieb.
   2. **Ereignisse fehlen auf der Zeitachse:** Fressen, satt, wieder hungrig gibt es nur als Phasenknöpfe oben rechts. Auf den Spuren sollten sie als Marken stehen (senkrechte Linie mit Zeichen), sonst sieht man nicht, *wann* der Drehbefehl versagt.
