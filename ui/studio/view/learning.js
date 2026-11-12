@@ -17,10 +17,10 @@ import {
 import {escapeText, fixed, glyph} from './markup.js';
 import {routedLinks} from '../model/regions.js';
 import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
-import {heading, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
+import {heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
 import {effectCurve, substanceName} from './substances.js';
-import {centerTitle, tone} from './names.js';
-import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
+import {centerTitle, organTitle, tone} from './names.js';
+import {isModulator, isPacemaker, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, previewControls, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
@@ -263,41 +263,42 @@ function teacherList(state, center, modulators) {
   return items ? '<div class="aid-teacher-list">' + items + '</div>' : '';
 }
 const NODE_MARK = Object.freeze({marker : 6, box : 8});
+// Every learning cell, grouped by its organ: the organ's symbol, then one mark per cell; a cell
+// with a teacher wears the teacher's colour as a ring. Names and teachers stand in the tooltip.
 function learnersOverview(state) {
-  const doc = state.document, shown = new Set();
-  const learners = allCenters(doc).filter(c => {
+  const doc = state.document, shown = new Set(), groups = new Map();
+  for (const c of allCenters(doc)) {
     if (!isLearner(c) || shown.has(c.id))
-      return false;
+      continue;
     shown.add(pairEndpoint(doc, c.id));
-    return true;
-  });
-  if (!learners.length)
+    const organ = findCenter(doc, c.id)?.organ;
+    if (!groups.has(organ))
+      groups.set(organ, []);
+    groups.get(organ).push(c);
+  }
+  if (!groups.size)
     return '';
+  const learner = c => {
+    const {modulators} = sendersOf(state, c);
+    const taught = boundSubstance(state, c, HORMONE_EFFECT.teaching);
+    const teachers = [
+      ...modulators.map(m => centerTitle(m)),
+      ...(taught ? [ substanceName(state, taught.index) ] : [])
+    ];
+    const ring = taught ? substanceColor(taught.index) : modulators.length ? tone('brain') : null;
+    return '<button class="aid-learner' + (ring ? ' taught' : '') + '" data-select-center="' +
+           escapeText(c.id) + '"' + (ring ? ' style="--teacher:' + ring + '"' : '') + ' title="' +
+           escapeText(joinParts([ centerTitle(c), ...teachers ])) + '">' + nodeMark(c) +
+           '</button>';
+  };
   return '<section class="aid-learn-part" title="' + label('learnRule.overview') + '">' +
-         '<div class="aid-learners">' +
-         learners
-             .map(c => {
-               const {modulators} = sendersOf(state, c);
-               const taught = boundSubstance(state, c, HORMONE_EFFECT.teaching);
-               const teachers =
-                   modulators
-                       .map(m => '<span class="aid-teacher-chip">' + nodeMark(m) +
-                                 escapeText(centerTitle(m)) + '</span>')
-                       .join('') +
-                   (taught ? '<span class="aid-teacher-chip" style="--teacher:' +
-                                 substanceColor(taught.index) +
-                                 '"><span class="aid-teacher-dot"></span>' +
-                                 escapeText(substanceName(state, taught.index)) + '</span>'
-                           : '');
-               const organ = findCenter(doc, c.id)?.organ;
-               const name =
-                   joinParts([ centerTitle(c), isRegion(organ) ? regionTerm(organ.type) : null ]);
-               return '<button data-select-center="' + escapeText(c.id) + '">' + nodeMark(c) +
-                      '<span>' + escapeText(name) + '</span><span class="aid-learner-teachers">' +
-                      teachers + '</span></button>';
-             })
+         [...groups ]
+             .map(([ organ, cells ]) => '<div class="aid-learner-group" title="' +
+                                        escapeText(organ ? organTitle(organ) : '') + '">' +
+                                        (organ ? icon(organ.type, ICON.list) : '') +
+                                        cells.map(learner).join('') + '</div>')
              .join('') +
-         '</div></section>';
+         '</section>';
 }
 const nodeMark = c => {
   const B = NODE_MARK.box;
