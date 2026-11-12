@@ -1704,10 +1704,7 @@
   "strand": {
     "bundle": "Nervenbündel",
     "nerve": "Nerv",
-    "fibres": "Teilt sich am Anfang in {starts} {starts:Faser|Fasern}, am Ende in {arrives} {arrives:Faser|Fasern}. Das Bündel ist so dick wie seine Fasern zusammen.",
-    "nerveMeaning": "Bündel, die nah beieinander laufen, ziehen zu einem Nerv zusammen. Er ist halb so dick wie sie zusammen.",
-    "bend": "Mit „Verschalten“ setzt ein Doppelklick auf das Bündel einen Kurvenpunkt für alle seine Verbindungen.",
-    "bendNerve": "Mit „Verschalten“ setzt ein Doppelklick auf den Nerv einen Kurvenpunkt für alle seine Bündel.",
+    "fibreCount": "{n} {n:Faser|Fasern}",
     "unbend": "Kurvenpunkte entfernen",
     "gone": "Dieser Nerv besteht nicht mehr"
   }

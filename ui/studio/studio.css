@@ -195,7 +195,13 @@
 .aid-wheel-point text{fill:#f3f7f2;stroke:#082830;stroke-width:2.5px;paint-order:stroke;font-size:10px;font-weight:600;pointer-events:none}
 .aid-growth{margin-top:14px;padding-top:10px;border-top:1px solid #ffffff14}
 .aid-assembly-list{display:flex;flex-direction:column;gap:6px}
-.aid-strand-note{margin:10px 0;font-size:12px;color:var(--aid-soft-text)}
+.aid-strand-picture{display:block;width:100%;height:auto;margin:8px 0 12px}
+.aid-strand-picture text{fill:var(--aid-axis-text);font-size:11px;pointer-events:none;stroke:#143039;stroke-width:3px;paint-order:stroke;stroke-linejoin:round}
+.aid-strand-line,.aid-strand-trunk,.aid-strand-fibres path{fill:none;opacity:.75}
+.aid-strand-trunk{stroke-linecap:round;opacity:.9;pointer-events:none}
+.aid-strand-hit{fill:none;stroke:transparent;stroke-width:16}
+.aid-strand-row{cursor:pointer}
+.aid-strand-row:hover .aid-strand-line,.aid-strand-row:focus .aid-strand-line{opacity:1;filter:drop-shadow(0 0 3px #c4eadb)}
 .aid-assembly-list button{display:flex;align-items:center;gap:9px;padding:9px;background:#183d45;border:1px solid #375961;border-radius:9px}
 .aid-empty-centre{color:#a9b7b0}
 .aid-station-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:26px;padding:3px 12px;border-top:1px solid var(--aid-panel-edge);background:#0b2730;color:#a9c5bc;font-size:11px}

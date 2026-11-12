@@ -525,11 +525,16 @@ export function chosenStrand(state) {
 // A nerve: half as thick as its bundles together, in their colour when they share one. It lists
 // its bundles, so that pointing at it shows them all, and their wires, so that a bend set on it
 // bends them all.
-function nerveSvg(state, nerve) {
+export const strandColour = kind => WIRE_KINDS[kind].colour;
+export function nerveLook(nerve) {
   const kinds = new Set(nerve.members.map(b => b.kind));
-  const colour = kinds.size === 1 ? WIRE_KINDS[[...kinds ][0]].colour : NERVE.colour;
-  const width =
-      Math.min(NERVE.most, NERVE.share * nerve.members.reduce((sum, b) => sum + b.width, 0));
+  return {
+    colour : kinds.size === 1 ? WIRE_KINDS[[...kinds ][0]].colour : NERVE.colour,
+    width : Math.min(NERVE.most, NERVE.share * nerve.members.reduce((sum, b) => sum + b.width, 0))
+  };
+}
+function nerveSvg(state, nerve) {
+  const {colour, width} = nerveLook(nerve);
   const wires = nerve.members.flatMap(b => b.ends.map(e => e.link.wire.id));
   const spec = nerveSpec(nerve),
         chosen = state.selected?.kind === 'nerve' && state.selected.id === spec;
