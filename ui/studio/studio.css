@@ -528,6 +528,9 @@
 .aid-sight-eyes figure{margin:0}
 .aid-sight-eyes figcaption{font-size:11px;color:var(--aid-axis-text);margin:0 0 3px}
 .aid-sight-eyes canvas{display:block;width:100%;height:auto;border-radius:8px;background:#07131b}
+.aid-sight-legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin:4px 0 0;font-size:11px;color:var(--aid-axis-text)}
+.aid-sight-legend span{display:inline-flex;align-items:center;gap:4px}
+.aid-sight-legend b{display:inline-block;min-width:16px;padding:0 3px;border-radius:3px;color:#0a1a20;font:600 10px/16px sans-serif;text-align:center}
 .aid-anatomical-region{fill:#b8c5e11f;stroke:var(--aid-brain);stroke-width:2.5;stroke-dasharray:7 6;vector-effect:non-scaling-stroke}
 .aid-pairing{display:flex;align-items:center;gap:6px;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:3px 8px;font-size:11px;color:var(--aid-control-text)}
 .aid-pairing svg path{fill:none;stroke:var(--aid-handle);stroke-width:2;stroke-linecap:round}

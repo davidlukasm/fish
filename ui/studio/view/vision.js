@@ -1,4 +1,4 @@
-import {labelledText, percent, t} from '../../strings.js';
+import {labelledText, percent, t, tList} from '../../strings.js';
 import {CHANNEL_MAX, clamp, degrees, FULL_TURN, radians} from '../../units.js';
 import {CONTRAST_POLARITY, RECEPTOR, VISION, VISUAL_SAMPLE} from '../../schema.js';
 import {PIXEL, retinalRaster} from '../../vision_view.js';
@@ -381,8 +381,19 @@ const sightEyes = () => `<div class="aid-sight-eyes">${
             .map(side => `<figure><figcaption>${label('sight')} · ${
                              label(side ? 'right' : 'left')}</figcaption><canvas ` +
                          `data-sight-eye="${side}" width="${SIGHT_CANVAS.width}" height="${
-                             SIGHT_CANVAS.height}"></canvas></figure>`)
+                             SIGHT_CANVAS.height}"></canvas><div class="aid-sight-legend" ` +
+                         `data-sight-legend></div></figure>`)
             .join('')}</div>`;
+// The cell types of an eye's picture: each row's coloured mark with its colour's name.
+export const sightLegend = types => {
+  const names = tList('organ_graphics.hues'), marks = tList('organ_graphics.hueMarks');
+  return `<span>${escapeText(label('answers'))}</span>` +
+         types
+             .map(type => `<span><b style="background:${type.colour}">${
+                              escapeText(marks[type.name] ?? '')}` +
+                          `</b>${escapeText(names[type.name] ?? '')}</span>`)
+             .join('');
+};
 const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
 // What the cells of a colour type report, as a scene. Above, a light and a dark thing on a grey

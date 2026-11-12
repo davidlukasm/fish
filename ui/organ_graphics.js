@@ -1038,10 +1038,7 @@ export function drawOrganGraphic(canvas, info, d, tissue) {
   g.font = ORGAN_GRAPHIC.font;
   g.textAlign = 'left';
   g.lineCap = 'round';
-  // A quiet graphic draws no captions; where it is shown, its picture speaks for itself.
   const color = tissueColor(tissue.key), label = (text, x, y, c = ORGAN_GRAPHIC.label) => {
-    if (tissue.quiet)
-      return;
     g.fillStyle = c;
     g.fillText(text, x, y);
   }, bar = (x, y, width, value, c = color) => {

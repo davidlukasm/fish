@@ -787,7 +787,8 @@
     "nearAnswer": "Antwort auf das Testobjekt",
     "ahead": "vorn",
     "aside": "seitlich",
-    "scene": "Umgebung"
+    "scene": "Umgebung",
+    "answers": "Antwort der Zellen:"
   },
   "workflow": {
     "select": "Platzieren: Organe und Hirnregionen aus der Bibliothek auf den Fisch ziehen und anklicken, um sie einzustellen; mit Umschalt-Klick mehrere wählen und zu einer Baugruppe zusammenfassen.",

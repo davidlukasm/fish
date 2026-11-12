@@ -528,11 +528,11 @@ const USE_CHART = Object.freeze({
   share : 8,
   below : 9
 });
-// The gut in one picture: its length (handle at its end), what it gets out of plants and meat at
-// that length (the two bars below), and its sense cells: the food cells on the inner wall, the
-// stretch cells on the outer wall. The chosen kind shows its feelers, as long as the cells are
+// The gut: its length (handle at its end) and its sense cells, the food cells on the inner wall,
+// the stretch cells on the outer wall. The chosen kind shows its feelers, as long as the cells are
 // sensitive, and, where they get used to a lasting stimulus, the adaptation arc round its first
-// cell. `held` is a dragged sensitivity.
+// cell. Below it, the use curve shows what plants and meat yield over all lengths. `held` is a
+// dragged sensitivity.
 export function gutGraphic(state, organ, selected, held = null) {
   const G = GUT, code = GUT_CODE;
   const length = gutLength(state.document);

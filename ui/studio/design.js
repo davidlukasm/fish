@@ -3,6 +3,7 @@ import {
   clearOfFish,
   nearAnswers,
   nearObject,
+  sightLegend,
   spectrumEditor,
   visionFan
 } from './view/vision.js';
@@ -32,7 +33,7 @@ import {probeHandle, probeScents, senseProbeSvg, gutProbeControls} from './view/
 import {scentMap} from './view/scents.js';
 import {pigmentInspector} from './view/pigments.js';
 import {skinField} from './view/skin.js';
-import {eyeSight} from '../organ_readout.js';
+import {eyeSight, eyeTypeAnswers} from '../organ_readout.js';
 import {drawOrganGraphic} from '../organ_graphics.js';
 import {SENSE_TISSUE} from '../tissue.js';
 import {PRESSURE_OF} from './model/organs.js';
@@ -235,9 +236,14 @@ export const designMethods = {
           (sight?.receptors ??
            []).filter(r => !r[RECEPTOR.proximity] && (r[RECEPTOR.lateral] < 0 ? 0 : 1) === side);
       canvas.closest('figure').hidden = !receptors.length;
-      if (receptors.length)
-        drawOrganGraphic(canvas, eyeSight(sight.bands, sight.samples, receptors, side), null,
-                         {key : SENSE_TISSUE.light, quiet : true});
+      if (!receptors.length)
+        continue;
+      const seen = eyeSight(sight.bands, sight.samples, receptors, side);
+      drawOrganGraphic(canvas, seen, null, {key : SENSE_TISSUE.light});
+      // Each row's mark names its cell type below the picture.
+      const legend = canvas.closest('figure').querySelector('[data-sight-legend]');
+      if (legend)
+        legend.innerHTML = sightLegend(eyeTypeAnswers(seen));
     }
   },
   refreshSpectrum() {
