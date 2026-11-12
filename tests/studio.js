@@ -1657,6 +1657,14 @@ async function checkHormoneSystems(model, capabilities) {
     const commissure = model.addWire(wired, tectumLeft.centers[0].id, twin.centers[0].id);
     assert.ok(commissure);
     assert.ok(model.expandedWires(commissure.document).every(l => l.from !== l.to));
+    const wirePanel = (document, id) => panels.inspector(
+        {document, sites, capabilities : sitesResult, selected : {kind : 'wire', id}});
+    assert.doesNotMatch(wirePanel(commissure.document, commissure.wireId), /data-wire-pairing/,
+                        'A direct partner connection never offers ineffective side switches');
+    const opticPanel = wirePanel(connected.document, connected.wireId);
+    assert.match(opticPanel, /<span>gekreuzt<\/span>/,
+                 'The optic side choices are named without relying on tooltips');
+    assert.match(opticPanel, /data-pairing-value="crossed" aria-pressed="true"/);
     const opticDoc = connected.document;
     assert.equal(model.addWire(opticDoc, eyeOrgan.id, twin.id), null);
     const steering =
