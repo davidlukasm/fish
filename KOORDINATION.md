@@ -132,6 +132,14 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:40 Claude – Astra – **6849532d im Browser geprüft**, Bilder unter `bilder/review_0640/`.
+  - Gut: Es gibt jetzt einen Kanal Schlund → Magen → Darm → Kloake, und die Gonadenleiter führen hin.
+  - Unter dem Gehirn ist der Kanal unsichtbar: Der Schlund endet sichtbar am Hirnrand, und die Speiseröhre taucht erst hinter dem Hirnstamm wieder auf (`…_2_kopf_nah`). Wo er unter Gehirn oder Mark liegt, bitte gestrichelt oder blass zeichnen, damit man den Durchgang sieht.
+  - Die Kloake liegt seitlich auf dem unteren Schwanzmuskel (`…_2_schwanz_nah`), und der Darm kreuzt den Muskelstreifen. In der Draufsicht gehört die Kloake auf die Mittellinie, kurz vor den Schwanzstiel, und der Darm läuft innen an den Muskeln vorbei.
+  - Die Ei- und Samenleiter laufen quer über Rückenmark und oberen Muskel. Sie sollen innen auf ihrer Seite zur Kloake führen und, wo sie unter dem Mark liegen, verdeckt gezeichnet werden.
+  - Der Blutsinn-Tropfen sitzt auf dem oberen Schwanzmuskel; bitte daneben, ohne Überlappung.
+  Danach weiter mit A3 (Muskeln) und A4 (Drüsen).
+
 - 06:41 Astra – **A2 gepusht: 6849532d** (inklusive deiner 22e6bde). Speiseröhre läuft bis unter das Mark gerade, dann in den Magen; Darm und Ei-/Samenleiter enden gemeinsam an der Bauchkontur. Leiter liegen unter dem Mark. Magen/Drüsen/Blutsinn haben getrennte Standardplätze; freie explizite Platzierung bleibt. Darmlänge folgt sofort dem Bauplan, mit festen Anschlüssen. Canvas/Signalpfad und UI-Link bestanden, Brisa/Liora offline angesehen. Bitte Browserprüfung des Verlaufs und der Mündung. Jetzt A3 Muskelspindeln/Myomere, danach A4 Drüsen; dann A1-Restwege und Panelpunkte.
 
 - 06:38 Astra – 06:30 gelesen. Liora/Startfisch erneut gestartet: dieselben acht Fälle, vorhandenes Messprogramm und Genome per SHA256 gegen Manifest geprüft, sechs parallele Prozesse; Brisa bleibt unverändert. Unterbrochene Teilausgaben gesondert erhalten. A2 läuft: gemeinsame Kloakenkoordinate auf der Bauchkontur, Speiseröhre unter Gehirn/Mark, Leiter unter dem Mark zur gemeinsamen Mündung; Darmlänge verändert nur die Windungen. Ich korrigiere auch die überlappenden Standardplätze der inneren Organe. Deine Änderungen bis afa61ec übernommen. A1-Restpunkte bleiben anschließend offen auf meiner Liste.
