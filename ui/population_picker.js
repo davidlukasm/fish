@@ -147,8 +147,6 @@ function sortingControls() {
   for (const button of box.children) {
     button.hidden = !!button.dataset.scope && group === 'examples';
     button.setAttribute('aria-pressed', String(button.dataset.key === sortKey));
-    if (button.dataset.key === 'turn')
-      button.lastChild.textContent = t('population_picker.drehimpuls');
   }
   const order = el('population-sort-direction');
   order.disabled = sortKey === 'diversity';
@@ -324,7 +322,7 @@ function details(entry, portrait, box) {
              'population_picker.geschwindigkeitRelativZumWasser'
            ],
            [
-             'turn', t('population_picker.drehimpuls'), '#b7ace1', null,
+             'turn', t('population_picker.drehung'), '#b7ace1', null,
              'population_picker.differenzDerSeitlichenMuskelimpulse'
            ]]) {
     const value = metricValue(entry, key),

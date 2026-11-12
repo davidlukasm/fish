@@ -1463,9 +1463,9 @@
       "breeding": "Zur Zucht",
       "trials": "Ins Labor"
     },
-    "trialsNote": "Futter aus zwölf Richtungen, offene Muscheln",
+    "trialsNote": "Findet der Fisch Futter, knackt er Muscheln, fängt er Krabben?",
     "field": "Feldbeobachtung",
-    "provenCount": "{n} {n:Startfisch trägt|Startfische tragen} sich",
+    "provenCount": "{n} {n:Startfisch erhält|Startfische erhalten} sich über Generationen",
     "draft": "{name} · {cells} Zellen",
     "breed": "Züchten",
     "atelier": "Im Atelier"
