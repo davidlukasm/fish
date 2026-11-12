@@ -2,7 +2,7 @@
 // opens them, and how long they take to get used to a lasting stimulus. Each is set by dragging its
 // handle in the picture; the handle carries the geometry it is dragged along, so one pointer serves
 // every organ.
-import {ATELIER_LIMITS} from '../../schema.js';
+
 import {clamp} from '../../units.js';
 import {
   activationLevel,
@@ -84,12 +84,6 @@ export function cellMarks(places, center) {
                     t('studio.sense.cellsHandle', {n : copies, most : places.length}),
                     'data-places="' + places.map(point).join(' ') + '"');
 }
-export const cellPlaces = (from, to, count = ATELIER_LIMITS.max_copies) =>
-    Array.from({length : count}, (_, k) => ({
-                                   x : from.x + (to.x - from.x) * k / (count - 1),
-                                   y : from.y + (to.y - from.y) * k / (count - 1)
-                                 }));
-
 // Sensitivity as a reach: from `least` (feels only the strongest stimulus) to `most` (the weakest).
 export const reachPoint = (least, most, sensitive) =>
     ({x : least.x + (most.x - least.x) * sensitive, y : least.y + (most.y - least.y) * sensitive});

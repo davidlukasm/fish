@@ -235,7 +235,6 @@ const WIRE_KINDS = Object.freeze({
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
 const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
-const INNER_BOW = -10;
 const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
         .flatMap(source =>

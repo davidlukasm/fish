@@ -174,7 +174,6 @@ const lightAt = (state, organ, g) => {
              ? g.pointText(probe.bearing, probe.distance * g.world)
              : null;
 };
-export const testLightPoint = (state, organ) => lightAt(state, organ, visionGeometry(state, organ));
 function testLight(state, organ, g) {
   const probe = state.sightProbe, c = lightAt(state, organ, g);
   if (!c)

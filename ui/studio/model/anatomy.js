@@ -64,7 +64,6 @@ const NEURAL =
     new Set([ 'brain', 'tectum', 'olfaction', 'value', 'state', 'choice', 'motor', 'spine' ]);
 export const neuralOrgan = type => NEURAL.has(type);
 const SURFACE = new Set([ 'touch', 'pain', 'lateral', 'pigment', 'defense', 'barbels' ]);
-export const surfaceOrgan = type => SURFACE.has(type);
 // These are continuous anatomical areas. Native sites are chosen separately, inside them.
 export function placementArea(type) {
   if (type === 'muscle')
@@ -103,8 +102,4 @@ export function areaPosition(area, position, mode = 'single') {
   }
   const side = position.y < M ? -1 : 1, half = halfWidth(x);
   return {x, y : M + side * clamp(Math.abs(position.y - M), half * area.inner, half * area.outer)};
-}
-export function withinAnatomy(type, p, tolerance = 1) {
-  const q = anatomicalPosition(type, p);
-  return Math.hypot(p.x - q.x, p.y - q.y) <= tolerance;
 }

@@ -186,11 +186,6 @@
 .aid-wheel-point.empty text{fill:var(--substance)}
 .aid-wheel-point.empty{cursor:pointer}
 .aid-substance-wheel .aid-vector-point{fill:none;stroke:var(--aid-point);stroke-width:2.5;pointer-events:none}
-.aid-track{cursor:ew-resize}
-.aid-track line{stroke:#5d8a8b;stroke-width:3;stroke-linecap:round}
-.aid-track line.hit{stroke:transparent;stroke-width:18}
-.aid-track .narrow{fill:var(--aid-substance)}
-.aid-track .wide{fill:#d7c29418;stroke:#d7c29499;stroke-dasharray:3 3}
 .aid-wheel-point.body circle{stroke-dasharray:3 2}
 .aid-wheel-point.active circle{stroke:var(--aid-point);stroke-width:2.5}
 .aid-wheel-point text{fill:#f3f7f2;stroke:#082830;stroke-width:2.5px;paint-order:stroke;font-size:10px;font-weight:600;pointer-events:none}
@@ -452,9 +447,6 @@
 .aid-muscle-fibres{fill:none;stroke:var(--fibre);stroke-opacity:.6;stroke-width:.7;pointer-events:none}
 .aid-muscle-marks{fill:none;stroke:#10292daa;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
 .aid-muscle-marks.sprint{stroke:#f4f1e4;stroke-opacity:.75;stroke-width:1}
-.aid-band{pointer-events:none}
-.aid-band.steady{fill:#7eabe455}
-.aid-band.reserve{fill:#f4f1e455}
 
 
 .aid-anatomical-organ{cursor:grab}
@@ -835,7 +827,6 @@
 .aid-fibre-bar.work{fill:var(--aid-motor)}.aid-fibre-bar.rest{fill:var(--aid-gut)}
 .aid-fibre-choices{flex-wrap:wrap}
 .aid-fibre-icon{flex:none}
-.aid-fibre-chart .aid-track text{font-size:11px;fill:var(--aid-label-text)}
 .aid-diet-hit{fill:transparent;cursor:ew-resize}
 .aid-diet-readout{margin:2px 0 0;font-size:12px;color:#c2d6d2}
 .aid-diet-axis{stroke:var(--aid-limit);stroke-width:1}
@@ -989,7 +980,6 @@
 .aid-effect-line.trace{stroke:var(--aid-trace)}
 .aid-effect-line.teach{stroke:var(--aid-teach)}
 .aid-effect-line.pace{stroke:var(--aid-brain)}
-.aid-effect-modulator{fill:#2b5157;stroke:var(--aid-brain);stroke-width:1.5}
 .aid-effect-wave{fill:none;stroke:var(--aid-brain);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-effect-ring{fill:none;stroke:var(--aid-brain);stroke-width:1.5}
 .aid-effect-cross{fill:none;stroke:#e5675c;stroke-width:3;stroke-linecap:round}

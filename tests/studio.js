@@ -2810,17 +2810,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(strings.namedText('a', 'b'), 'a: b');
     const markup = await import('../ui/studio/view/markup.js');
     assert.equal(markup.dataAttribute('probeBlock'), 'data-probe-block');
-    const pad = {width : 200, height : 100, inset : 10};
-    for (const [across, up] of [[ -1, 0 ], [ .5, .25 ], [ 1, 1 ]]) {
-      const p = markup.padPoint(pad, across, up);
-      const back = markup.padValues(pad, p.x / pad.width, p.y / pad.height);
-      assert.ok(Math.abs(back.across - across) < 1e-9 && Math.abs(back.up - up) < 1e-9,
-                'A pad reads back the point it shows');
-    }
-    assert.match(markup.widthTrack([ 10, 90 ], 5, .5, 'data-x', 'Breite'), /cx="50\.00"/);
-    assert.doesNotMatch(markup.namedTrack([ 10, 90 ], 5, null, 'data-x', 'T', [ 'a', 'b' ]),
-                        /aid-graphic-handle|data-x/, 'A track without a share has no handle');
-    assert.equal(markup.trackShare(50, [ 10, 90 ]), .5);
     const substancesView = await import('../ui/studio/view/substances.js');
     const wheelMarks = substancesView.wheelMarks({q1 : .4, q2 : -.3});
     const wheelMark = Object.values(wheelMarks)[0];

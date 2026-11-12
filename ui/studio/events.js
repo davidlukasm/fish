@@ -41,7 +41,6 @@ import {
   updateCenter,
   updateCellGrowth,
   updateGrowth,
-  updateReceptor,
   updateWire,
   usedSites,
   wheelPlace

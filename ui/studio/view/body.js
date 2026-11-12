@@ -6,9 +6,7 @@ import {
   BODY_RADIUS,
   findSite,
   sideIndex,
-  sideOf,
-  sideSign,
-  sitePoint
+  sideOf
 } from '../model/layout.js';
 import {
   centerIndex,
@@ -51,7 +49,7 @@ import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
 import {skinPatchSvg} from './skin.js';
-import {isPelvicMuscle, isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
+import {isPelvicMuscle, isRegion, kindLimit, organFunction} from '../model/organs.js';
 import {muscleShape, workTone, finAttachments} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
 import {preferredScent} from '../../tuning.js';

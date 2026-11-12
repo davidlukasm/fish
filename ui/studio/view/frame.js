@@ -163,8 +163,6 @@ export const fieldFish = (field, scale, cls) =>
     ') scale(' + scale + ')"/>';
 const finBase = (x, side, F = OUTLINE.fins) =>
     BODY_FRAME.middle + (skinAt(x, side) - BODY_FRAME.middle) * F.inset;
-export const finRoots =
-    (F = OUTLINE.fins) => [-1, 1].map(side => ({x : F.at, y : finBase(F.at, side, F)}));
 export function skinAt(x, side) {
   const W = SKIN_WIDTH;
   let k = 1;

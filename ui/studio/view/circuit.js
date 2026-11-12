@@ -6,7 +6,7 @@ import {isLearner, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
 import {planned, regionPlan, regionSlots} from '../model/regions.js';
-import {joinParts, namedText, t} from '../../strings.js';
+import {joinParts, t} from '../../strings.js';
 import {ICON, icon, iconSwitch, label, slotFill, slotShape} from './kit.js';
 import {organTitle, slotTitle} from './names.js';
 import {regionPicture} from './region_controls.js';
@@ -17,8 +17,6 @@ const PAIRING_GLYPH = Object.freeze({
   crossed : 'M3 6L17 14M3 14L17 6',
   both : 'M3 6h14M3 14h14M3 6L17 14M3 14L17 6'
 });
-const pairingTitle = wire =>
-    namedText(label('inspector.pairing.title'), label('inspector.pairing.' + wire.pairing));
 export const pairingChoice = wire =>
     '<div class="aid-wire-pairing" role="group" aria-label="' + label('inspector.pairing.title') +
     '">' +

@@ -15,7 +15,7 @@ import {
   senseSensitivity,
   sensitivityHandle
 } from './sense_marks.js';
-import {CATEGORY_TONE, centerTitle, tone} from './names.js';
+import {centerTitle} from './names.js';
 import {organTitle} from './names.js';
 
 export function gonadStore(state, organ) {

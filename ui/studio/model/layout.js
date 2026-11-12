@@ -30,9 +30,6 @@ export const onMidline = site => !!site && !site.outer && site.w === 0;
 export const sideSign = side => side < 0 ? -1 : 1;
 export const sideIndex = side => side < 0 ? 0 : 1;
 export const sideOf = organ => sideSign(organ.side);
-const MIDLINE_BAND = 14;
-export const sideAt = point =>
-    Math.abs(point.y - CENTRE_Y) < MIDLINE_BAND ? 0 : Math.sign(point.y - CENTRE_Y);
 export const findSite = (sites, id) => sites.find(s => s.id === id);
 const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75});
 export function bodyCoordinates(position, zone) {

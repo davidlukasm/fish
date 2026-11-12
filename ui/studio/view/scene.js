@@ -3,7 +3,7 @@ import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
 import {nodeLocation, organLocation, regionGeometry, showsNodes} from './places.js';
-import {organTitle, centerTitle} from './names.js';
+import {centerTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
@@ -11,7 +11,6 @@ import {t} from '../../strings.js';
 import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
-  usedSites,
   contactCenters,
   findAssembly,
   findCenter,
@@ -19,15 +18,7 @@ import {
   wiredCrossing,
   shownSubstance
 } from '../model/document.js';
-import {
-  BODY_FRAME,
-  BODY_RADIUS,
-  centroid,
-  findSite,
-  nerveZone,
-  onMidline,
-  sitePoint
-} from '../model/layout.js';
+import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline} from '../model/layout.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
@@ -139,9 +130,6 @@ function assembliesSvg(state) {
       })
       .join('');
 }
-const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
-export const organLabelPlace = (y, zoom) =>
-    ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
 function reachSvg(state) {
   const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;

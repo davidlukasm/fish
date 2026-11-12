@@ -21,7 +21,6 @@ import {placeModule, placeStoredModule} from './model/assemblies.js';
 import {placeSystem, systemMissing} from './model/systems.js';
 import {nearFish, SNAP_DISTANCE} from './model/layout.js';
 import {cameraCoordinates} from './view/frame.js';
-import {placementTarget} from './view/places.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
 import {armedCursor, systemNeed} from './view/library.js';
 import {label} from './view/kit.js';

@@ -212,18 +212,6 @@ function taught(colour, ends) {
                                           : '') +
                         output([ T.input[0] ]) + cell([ T.input[0] ]);
 }
-function modulating(r, withIt) {
-  if (!withIt)
-    return input(P.cy, T.input) + output(T.input) + cell(T.input);
-  return input(P.cy, [ T.input[0] ], '', P.thick + CHANGE.learn) +
-         trace(P.cy, T.input[0], SHADE.trace) +
-         line(P.cx, P.top + P.r, P.cx, P.cy - P.r, 'teach', P.signal) +
-         '<circle class="aid-effect-modulator" cx="' + P.cx + '" cy="' + (P.top + P.r / 2) +
-         '" r="' + fixed(P.r / 2) + '"/>' +
-         travelling(way(P.cx, P.top + P.r, P.cx, P.cy - P.r), T.teach[0] - P.travel, T.teach[0],
-                    P.pulse * TEACH_PULSE, P.play, 'var(--aid-teach)') +
-         output([ T.input[0] ]) + cell([ T.input[0] ]);
-}
 // The learning effects follow the learning inspector: who teaches, when the cell remembers, how
 // fast it learns, what it learns by itself.
 export const EFFECT_ORDER = Object.freeze([
@@ -233,16 +221,14 @@ export const EFFECT_ORDER = Object.freeze([
 ]);
 export const effectScene = (effect, colour, ends = startEnds(effect)) => sideBySide(
     effect === HORMONE_EFFECT.teaching ? taught(colour, ends) : SCENES[effect], colour, ends);
-export const modulatorScene = colour =>
-    sideBySide(modulating, colour, {without : 0, with : 0}, false);
-function sideBySide(draw, colour, ends, cloud = true) {
+function sideBySide(draw, colour, ends) {
   if (!draw)
     return '';
   const side = (withIt, x) =>
       '<g transform="translate(' + x + ' 0)">' +
-      (withIt && cloud ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
-                             '" r="' + P.r * P.cloud + '" fill="' + colour + '"/>'
-                       : '') +
+      (withIt ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy + '" r="' +
+                    P.r * P.cloud + '" fill="' + colour + '"/>'
+              : '') +
       draw(withIt ? ends.with : ends.without, withIt) + '<circle class="aid-effect-mark' +
       (withIt ? ' with' : '') + '" cx="' + (P.width - P.markAt) + '" cy="' + P.markAt + '" r="' +
       P.mark + '"' + (withIt ? ' style="fill:' + colour + '"' : '') + '/></g>';
@@ -251,14 +237,3 @@ function sideBySide(draw, colour, ends, cloud = true) {
          P.width + '" y1="' + P.side + '" x2="' + P.width + '" y2="' + (P.height - P.side) + '"/>' +
          side(true, P.width) + '</svg>';
 }
-export function effectPanel(effect, r, colour, withIt, baseline = 0) {
-  const draw = effect === HORMONE_EFFECT.teaching
-                   ? value => taught(colour, {without : baseline, with : value})(value, true)
-                   : SCENES[effect];
-  return draw ? (withIt ? '<circle class="aid-effect-cloud" cx="' + P.cx + '" cy="' + P.cy +
-                              '" r="' + P.r * P.cloud + '" fill="' + colour + '"/>'
-                        : '') +
-                    draw(r)
-              : '';
-}
-export const EFFECT_PANEL = Object.freeze({width : P.width, height : P.height});

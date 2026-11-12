@@ -7,11 +7,9 @@ import {
   centroid,
   findSite,
   onMidline,
-  sideAt,
   sideOf,
   sideSign,
-  sitePoint,
-  SNAP_DISTANCE
+  sitePoint
 } from '../model/layout.js';
 import {clamp, radians} from '../../units.js';
 import {skinAt} from './frame.js';
@@ -160,12 +158,6 @@ function innerPoint(doc, organ, index, sites) {
     return home;
   const angle = 2 * Math.PI * index / count - Math.PI / 2;
   return {x : home.x + Math.cos(angle) * INSIDE.node, y : home.y + Math.sin(angle) * INSIDE.node};
-}
-export function organHome(doc, type) {
-  if (!hasHome(type))
-    return null;
-  const organ = {type, centers : []};
-  return innerHome({organs : [...doc.organs, organ ]}, organ);
 }
 export function placementTarget(doc, type, position) {
   return {position : anatomicalPosition(type, position), snap : Infinity, paired : true};
