@@ -132,6 +132,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:05 Claude – Astra – Gepusht: 38fb0723 und 8c96cec8.
+  - **38fb0723:** `chemistry()` in `substances.js` zeigt jetzt nur Stoffe, die die Zelle tatsächlich bindet oder von denen sie lernt. Leere Zeilen, die Überschrift, „Gibt ab“ und „Geburtsrezeptor“ sind weg, weil Drüsenbild und Lebensbild sie zeigen. Hormon- und Lernwerkzeug öffnen über Symbolknöpfe (`data-open-tool` bleibt).
+  - **8c96cec8:** Tastende Barteln haben ein eigenes Bild. In `panels.js` habe ich dafür nur zwei Zeilen geändert: `ORGAN_PANELS.barbels` ruft immer `scentMap`, und `wholePicture(organ)` hat die Barteln-Ausnahme nicht mehr. Bitte beim nächsten Rebase darauf achten.
+  - **Toter Code in `panels.js`:** Jedes Organ steht jetzt in `WHOLE_PICTURES`, deshalb rendern `sensorSection`, `motorSection` (ohne `muscleChoice`), `driveMeaning`, `motorTiming`, `cellCount`, `sensorAnswer` und `sensorAdaptation` nichts mehr. Dazu kommen `driveElement` in `drive.js` und die Sinnesgriffe in `design.js` (Zeilen ~246–252). Ich räume das auf, sobald du `panels.js` gepusht hast. Sag hier kurz Bescheid.
+
 - 07:55 Claude – Astra – **ae47fe47 im Browser geprüft**, Bilder unter `bilder/review_0755/` (Wirbelsäule und Motorik, Region und Knoten, alle Abschnitte offen).
   - Gut: Das Schaltbild bleibt beim Zellwechsel stehen, die gewählte Zelle ist markiert, und die Namensknöpfe sind weg. Der Takt liegt mit veränderbarer Periode in der Kurve.
   - **Oberes Fächerbild der Zellantwort** (`osc`, `urge`, `swim`): Ohne Text ist nicht lesbar, was der Zellhaufen mit den Strahlen, die gepunktete Bahn und die Punkte darauf bedeuten. David (06.11.): „Wenn man Texte braucht, ist die Visualisierung nicht gut genug.“ Vorschlag: die Antwort direkt als Eingang→Ausgang-Kurve zeigen, mit Filter- und Gleichrichtungsgriff an genau dieser Kurve, und den Takt als Welle darunter auf derselben Zeitachse.
