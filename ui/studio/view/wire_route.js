@@ -2,9 +2,11 @@ import {BODY_FRAME} from '../model/layout.js';
 import {isRegion} from '../model/organs.js';
 import {BRAIN, neuralOrgan} from '../model/anatomy.js';
 import {organLocation, regionGeometry} from './places.js';
+import {regionRim} from './region_layout.js';
 import {skinAt, SNOUT_TIP} from './frame.js';
 
-const GRID = Object.freeze({step : 4, margin : 4, half : 126, clearance : 8, proximity : 10});
+const GRID =
+    Object.freeze({step : 4, margin : 4, half : 126, clearance : 8, proximity : 10, edge : 1});
 const SHAPES = Object.freeze({
   eye : [ 20, 16 ],
   nose : [ 17, 13 ],
@@ -25,6 +27,20 @@ export function organDock(anchor, towards) {
         radius = Math.hypot(dx / shape[0], dy / shape[1]);
   return radius > 1 ? {x : p.x + dx / radius, y : p.y + dy / radius} : p;
 }
+// How far a point lies outside a region's drawn outline (negative inside), so nerves keep off the
+// region itself and may still pass between two close regions.
+function outlineDistance(rim, p) {
+  let inside = false, nearest = Infinity;
+  for (let i = 0, j = rim.length - 1; i < rim.length; j = i++) {
+    const a = rim[j], b = rim[i], ex = b.x - a.x, ey = b.y - a.y;
+    if ((b.y > p.y) !== (a.y > p.y) && p.x < a.x + ex * (p.y - a.y) / ey)
+      inside = !inside;
+    const t =
+        Math.max(0, Math.min(1, ((p.x - a.x) * ex + (p.y - a.y) * ey) / (ex * ex + ey * ey || 1)));
+    nearest = Math.min(nearest, Math.hypot(p.x - a.x - t * ex, p.y - a.y - t * ey));
+  }
+  return inside ? -nearest : nearest;
+}
 const cached = new WeakMap();
 function field(doc, sites) {
   const old = cached.get(doc);
@@ -40,30 +56,33 @@ function field(doc, sites) {
     const R = SHAPES[o.type], region = isRegion(o) && regionGeometry(doc, sites, o);
     if (!R && !region)
       return [];
-    const p = region || organLocation(o, sites, doc);
+    const p = region || organLocation(o, sites, doc), rim = region ? regionRim(region) : null;
+    const reach = axis => Math.max(...rim.map(q => Math.abs(q[axis] - p[axis])));
     return [ {
       id : o.id,
-      region : !!region,
+      rim,
       x : p.x,
       y : p.y,
-      rx : (region ? region.width / 2 + 1 : R[0] + GRID.margin),
-      ry : (region ? region.height / 2 + 1 : R[1] + GRID.margin)
+      rx : (rim ? reach('x') : R[0]) + GRID.margin,
+      ry : (rim ? reach('y') : R[1]) + GRID.margin
     } ];
   });
+  const regions = shapes.filter(s => s.rim);
   const nearby = [];
   const cells = Array.from({length : columns * rows}, (_, i) => {
     const p = point(i);
-    nearby[i] = shapes.filter(s => s.region)
-                    .map(s => ({
-                           id : s.id,
-                           distance : (Math.hypot((p.x - s.x) / s.rx, (p.y - s.y) / s.ry) - 1) *
-                                          Math.min(s.rx, s.ry)
-                         }))
-                    .filter(s => s.distance < GRID.clearance);
+    // Only regions whose box comes near the point are measured against their outline.
+    const close = regions
+                      .filter(s => Math.abs(p.x - s.x) < s.rx + GRID.clearance &&
+                                   Math.abs(p.y - s.y) < s.ry + GRID.clearance)
+                      .map(s => ({id : s.id, distance : outlineDistance(s.rim, p)}));
+    nearby[i] = close.filter(s => s.distance < GRID.clearance);
     if (p.y < skinAt(p.x, -1) + GRID.margin || p.y > skinAt(p.x, 1) - GRID.margin)
       return null;
-    return shapes.filter(s => ((p.x - s.x) / s.rx) ** 2 + ((p.y - s.y) / s.ry) ** 2 < 1)
-        .map(s => s.id);
+    return [
+      ...shapes.filter(s => !s.rim && ((p.x - s.x) / s.rx) ** 2 + ((p.y - s.y) / s.ry) ** 2 < 1),
+      ...close.filter(s => s.distance < GRID.edge)
+    ].map(s => s.id);
   });
   const result = {sites, point, index, cells, nearby, columns, rows, paths : new Map()};
   cached.set(doc, result);
