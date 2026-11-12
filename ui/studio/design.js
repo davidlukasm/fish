@@ -16,13 +16,16 @@ import {
 } from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {hairField} from './view/balance.js';
-import {bladderGraphic} from './view/sacs.js';
+import {bladderGraphic, gonadGraphic} from './view/sacs.js';
 // Sense organs whose one picture holds their cells, sensitivity, adaptation and width.
 const SENSE_PICTURES = Object.freeze({
   lateral : lateralField,
   balance : (state, organ, held) => hairField(state, organ, selectedCenter(state, organ), held),
   blood : (state, organ, held) => hormonePad(state, organ, selectedCenter(state, organ), held),
-  bladder : (state, organ, held) => bladderGraphic(state, organ, state.selected, held)
+  bladder : (state, organ, held) => bladderGraphic(state, organ, state.selected, held),
+  gland : (state, organ) => glandProfile(state, organ, selectedCenter(state, organ)),
+  eggs : (state, organ) => gonadGraphic(state, organ, selectedCenter(state, organ)),
+  sperm : (state, organ) => gonadGraphic(state, organ, selectedCenter(state, organ))
 });
 import {defaultSight, sightScene} from './model/sight.js';
 import {probeFor, senseScene} from './model/probe.js';
@@ -49,7 +52,7 @@ import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
 import {organSettingsBlock, selectedCenter, sensorAdaptation, sensorAnswer} from './view/panels.js';
 import {label} from './view/kit.js';
-import {hormonePad, hormoneTime} from './view/substances.js';
+import {glandProfile, hormonePad, hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
 

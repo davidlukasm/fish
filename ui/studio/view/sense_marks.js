@@ -1,6 +1,7 @@
-// Marks every sense organ's picture shares: its cells, how weak a stimulus they feel and how long
-// they take to get used to a lasting one. Each is set by dragging its handle in the picture; the
-// handle carries the geometry it is dragged along, so one pointer serves every organ.
+// Marks every organ's picture shares: its cells, how weak a stimulus they feel or how little input
+// opens them, and how long they take to get used to a lasting stimulus. Each is set by dragging its
+// handle in the picture; the handle carries the geometry it is dragged along, so one pointer serves
+// every organ.
 import {ATELIER_LIMITS} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
@@ -92,9 +93,17 @@ export const cellPlaces = (from, to, count = ATELIER_LIMITS.max_copies) =>
 // Sensitivity as a reach: from `least` (feels only the strongest stimulus) to `most` (the weakest).
 export const reachPoint = (least, most, sensitive) =>
     ({x : least.x + (most.x - least.x) * sensitive, y : least.y + (most.y - least.y) * sensitive});
-export const sensitivityHandle = (least, most, sensitive, title) =>
-    handleMark('sensitivity', reachPoint(least, most, sensitive), title,
+export const sensitivityHandle = (least, most, sensitive, title, name = 'sensitivity') =>
+    handleMark(name, reachPoint(least, most, sensitive), title,
                'data-least="' + point(least) + '" data-most="' + point(most) + '"');
+// How little input opens a working organ, 0 to 1: the share of the input range its gate leaves.
+export const motorReadiness = (state, center) =>
+    1 - clamp((state.capabilities?.biasScale ?? 0) * center.threshold);
+// The gate's handle names its cells, so a picture can hold the gates of several kinds of cells.
+export const gateHandle = (least, most, state, center, title) =>
+    handleMark('gate', reachPoint(least, most, motorReadiness(state, center)), title,
+               'data-least="' + point(least) + '" data-most="' + point(most) +
+                   '" data-sense-center="' + escapeText(center.id) + '"');
 
 // Adaptation as an arc round the picture: it starts where the stimulus comes from and fades along
 // the time the cells take to get used to it, longer the slower they adapt.
@@ -127,13 +136,15 @@ export function senseMarkPatch(state, drag, p) {
     });
     return drag.handle === 'cells' ? {copies : best + 1} : {nodes : best + 1};
   }
-  if (drag.handle === 'sensitivity') {
+  if (drag.handle === 'sensitivity' || drag.handle === 'gate') {
     const least = parsePoint(h.least), most = parsePoint(h.most);
     const dx = most.x - least.x, dy = most.y - least.y;
-    const sensitive =
-        clamp(((p.x - least.x) * dx + (p.y - least.y) * dy) / (dx * dx + dy * dy || 1));
-    drag.sensitive = sensitive;
-    return sensitivityPatch(state, drag.start, sensitive);
+    const share = clamp(((p.x - least.x) * dx + (p.y - least.y) * dy) / (dx * dx + dy * dy || 1));
+    drag.sensitive = share;
+    if (drag.handle === 'sensitivity')
+      return sensitivityPatch(state, drag.start, share);
+    const scale = state.capabilities?.biasScale;
+    return scale > 0 ? {threshold : clamp((1 - share) / scale, -1)} : null;
   }
   if (drag.handle === 'adaptation') {
     const [cx, cy, , start] = h.arc.split(',').map(Number);

@@ -904,7 +904,8 @@ export const handleMethods = {
                      'refreshSkin');
   },
   senseGrip(graphic, handle) {
-    const found = findCenter(this.state.document, graphic.dataset.senseField);
+    const found =
+        findCenter(this.state.document, handle.dataset.senseCenter ?? graphic.dataset.senseField);
     if (!found)
       return null;
     const box = graphic.viewBox.baseVal;

@@ -10,6 +10,7 @@ import {label, SLOT_IN} from './kit.js';
 import {
   adaptationMarks,
   cellMarks,
+  gateHandle,
   SENSE_MARK,
   senseSensitivity,
   sensitivityHandle
@@ -179,9 +180,18 @@ export function gonadGraphic(state, organ, selected) {
   const ceiling = store.own.most < store.scale ? '<path class="aid-sac-ceiling" d="M' + S.stack[0] +
                                                      ' ' + S.top + ' H' + S.right + '"/>'
                                                : '';
+  // The chosen working cells' gate stands at the right edge: higher, the less input they need.
+  const motor = [ growth, release ].find(c => c && selected?.key === c.key);
+  const gateX = (S.right + S.width) / 2;
+  const gate = motor ? '<path class="aid-gate-track" d="M' + fixed(gateX) + ' ' + S.base + ' V' +
+                           S.top + '"/>' +
+                           gateHandle({x : gateX, y : S.base}, {x : gateX, y : S.top}, state, motor,
+                                      label('inspector.motorGate'))
+                     : '';
+  const field = pressure ?? motor;
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '" data-sac="' + escapeText(organ.id) + '"' +
-         (pressure ? ' data-sense-field="' + escapeText(pressure.id) + '"' : '') + ' role="img">' +
+         (field ? ' data-sense-field="' + escapeText(field.id) + '"' : '') + ' role="img">' +
          '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
          '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth', organ.type)) +
          part(release, chambers(store, kept, held, 'release', organ.type) + curve.html) +
@@ -198,7 +208,7 @@ export function gonadGraphic(state, organ, selected) {
                        fixed((S.stack[0] + S.stack[1]) / 2) + '" cy="' + fixed(roomY) + '" r="' +
                        S.handle + '"><title>' + label('inspector.cellsHandle') + '</title></circle>'
                  : '') +
-         '</svg>';
+         gate + '</svg>';
 }
 export function sacPatch(state, organ, handle, fy) {
   const store = gonadStore(state, organ);
@@ -267,7 +277,8 @@ const BLADDER = Object.freeze({
   cell : 9,
   roof : [ 92, 212 ],
   feeler : 18,
-  clock : 16
+  clock : 16,
+  gate : 284
 });
 export function bladderGraphic(state, organ, selected, held = null) {
   const B = BLADDER, glands = kindNodes(organ), most = kindLimit(organ, state.sites);
@@ -316,7 +327,11 @@ export function bladderGraphic(state, organ, selected, held = null) {
   } else if (glands.length) {
     marks = cellMarks(glandCells, glands[0]) +
             nodeMarks(nodePlaces, glands.length,
-                      t('studio.inspector.bladderGlands', {n : glands.length, most}));
+                      t('studio.inspector.bladderGlands', {n : glands.length, most})) +
+            '<path class="aid-gate-track" d="M' + B.gate + ' ' + (B.cy + B.ry) + ' V' +
+            (B.cy - B.ry) + '"/>' +
+            gateHandle({x : B.gate, y : B.cy + B.ry}, {x : B.gate, y : B.cy - B.ry}, state,
+                       glands[0], label('inspector.motorGate'));
   }
   const pressureDots =
       pressure && chosen !== pressure

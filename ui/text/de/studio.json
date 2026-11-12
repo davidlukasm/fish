@@ -189,7 +189,6 @@
     "scents": "Gerüche",
     "sensitivity": "Empfindlichkeit",
     "adaptation": "Gewöhnung",
-    "glandOutput": "Stoffprofil der Drüse",
     "substanceName": "Stoffname",
     "substanceLetters": [
       "A",
@@ -225,8 +224,7 @@
     "selected": "Ausgewählt",
     "receptorWidth": "Stoffbreite",
     "receptorActive": "Reagiert",
-    "glandSecretes": "Ausschüttung bei positiver Aktivität",
-    "glandBinds": "Bindung bei negativer Aktivität",
+    "motorGate": "Wie wenig Eingang die Zellen in Gang setzt",
     "makeModule": "Zu Baugruppe zusammenfassen",
     "cancelSelection": "Auswahl aufheben",
     "hormoneProfile": "Stoffprofil",

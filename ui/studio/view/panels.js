@@ -114,7 +114,8 @@ function driveMeaning(state, center) {
     idle : key === 'muscle'
   };
 }
-const gonadPanel = (state, organ, center) => gonadGraphic(state, organ, center);
+const gonadPanel = (state, organ, center) => '<div data-sense-block="' + escapeText(organ.id) +
+                                             '">' + gonadGraphic(state, organ, center) + '</div>';
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => scentMap(organ, center, state),
@@ -127,7 +128,7 @@ const ORGAN_PANELS = Object.freeze({
   gills : (state, organ) => gillGraphic(state, organ),
   gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
   defense : (state, organ) => effectorGraphic(state, organ) + spineField(state, organ),
-  gland : (state, organ, center) => glandProfile(state, center),
+  gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : gonadPanel,
   sperm : gonadPanel,
   lateral : (state, organ) => lateralField(state, organ),
@@ -143,8 +144,10 @@ const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
 const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
-const WHOLE_PICTURES = Object.freeze(
-    [ 'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm' ]);
+const WHOLE_PICTURES = Object.freeze([
+  'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm',
+  'gland', 'bladder'
+]);
 // Barbels that only touch have no scent map to hold their marks.
 const wholePicture = (organ, center) =>
     WHOLE_PICTURES.includes(organ.type) &&
@@ -179,15 +182,18 @@ function motorTiming(state, center) {
            {integration : formatNumber(timing[1], 1), recovery : timing[2]});
 }
 const motorSection = (state, organ, center) =>
-    section(
-        label('inspector.drive'),
-        '<div title="' +
-            escapeText(joinParts([ label('development.organRest'), motorTiming(state, center) ])) +
-            '">' +
-            driveElement(center, label('inspector.drive'), () => label('development.netInput'),
-                         {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
-            '</div>') +
-    (organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '');
+    wholePicture(organ, center)
+        ? ''
+        : section(label('inspector.drive'),
+                  '<div title="' +
+                      escapeText(joinParts(
+                          [ label('development.organRest'), motorTiming(state, center) ])) +
+                      '">' +
+                      driveElement(
+                          center, label('inspector.drive'), () => label('development.netInput'),
+                          {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
+                      '</div>') +
+              (organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '');
 const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)
