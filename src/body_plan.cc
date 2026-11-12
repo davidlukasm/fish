@@ -1423,9 +1423,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const double old_credit = b.mouth.credit;
   advance_mouth(b, impulse[StrokeSuction] > 0, impulse[StrokeBite] > 0,
                 layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
-  // Every contraction costs the same per unit of work; only its fibres set the price.
+  // Every contraction costs the same per unit of work; only its fibres set the price. It moves the
+  // whole body, so it costs with the body's tissue like the muscles' upkeep: a fish of any size
+  // searches about as long on a full reserve.
   const auto contraction = [&](int j) {
-    return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j];
+    return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j] * growth_fraction(b);
   };
   // Gametes are released, not pulled; bites and spines are combat.
   double moving = 0;

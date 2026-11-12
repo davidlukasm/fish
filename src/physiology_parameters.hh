@@ -21,7 +21,7 @@ struct PhysiologyParameters {
   double hatch_mass_floor = 0.2;
   double embryo_nutrient_gain = 0.2;
   double max_bite_force = default_max_bite_force;
-  double gut_time = 400, fill_plant = 2, fill_sediment = 3;
+  double gut_time = 200, fill_plant = 2, fill_sediment = 1.5;
   static constexpr double digestion_cost = .12;
   static constexpr double growth_cost = .3;
   static constexpr double basal_rate = .06, basal_fixed = .35;
@@ -48,7 +48,8 @@ struct PhysiologyParameters {
   double bladder_strength;
   double bladder_rate;
   double bladder_cost;
-  // Energy per unit of muscle work, the same for every contraction; fibres scale it.
+  // Energy per unit of muscle work of a young adult, the same for every contraction; fibres and the
+  // body's tissue scale it.
   double muscle_cost;
   double suction_range;
   double bite_wound;
