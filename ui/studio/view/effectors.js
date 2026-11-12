@@ -1,4 +1,5 @@
 import {musclePatch, musclePictures} from './muscle_effect.js';
+import {glandPatch} from './gland_effect.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -104,6 +105,10 @@ export function effectorPatch(code, name, fx, fy, most, organ, marks = {}) {
   if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name)) {
     const [width, height] = marks.frame.split(',').map(Number);
     return musclePatch(name, {x : fx * width, y : fy * height}, marks, most, organ);
+  }
+  if (name.startsWith('gland:')) {
+    const [width, height] = marks.frame.split(',').map(Number);
+    return glandPatch(name, {x : fx * width, y : fy * height}, marks);
   }
   const trait = TRAIT_HANDLES[code]?.[name];
   return trait ? {trait : trait.key, value : clamp(trait.at(fx * FRAME.width, fy * FRAME.height))}

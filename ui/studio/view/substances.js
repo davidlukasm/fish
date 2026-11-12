@@ -40,15 +40,8 @@ import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from '.
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
-import {
-  adaptationMarks,
-  cellMarks,
-  gateHandle,
-  motorReadiness,
-  senseSensitivity,
-  sensitivityHandle
-} from './sense_marks.js';
-import {organCommand} from './preview.js';
+import {adaptationMarks, cellMarks, senseSensitivity, sensitivityHandle} from './sense_marks.js';
+import {glandPictures} from './gland_effect.js';
 
 const centerWheel = (state, center, choices, reads, marks = null) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
@@ -60,47 +53,8 @@ const centerWheel = (state, center, choices, reads, marks = null) =>
       role : center.role === 'motor' ? 'gland' : 'sense',
       marks
     });
-// The gland in its wheel: which substances it pours out (its point), how little input opens it (the
-// ring round the point, wider the readier), its cells on that ring and, as drops leaving or
-// entering it, what it does with the example input.
-const GLAND = Object.freeze({drops : 8, drop : 4, out : 6});
-function glandMarks(state, center) {
-  const W = WHEEL, G = GLAND, at = {x : wheelX(center.q1), y : wheelY(center.q2)};
-  const ring = W.ring * (W.least + (W.most - W.least) * motorReadiness(state, center));
-  const round = (count, radius, turn = 0) => Array.from({length : count}, (_, k) => {
-    const a = Math.PI / 2 + 2 * Math.PI * (k + turn) / count;
-    return {x : at.x + radius * Math.cos(a), y : at.y + radius * Math.sin(a), a};
-  });
-  const halves = 'studio.inspector.driveHalves.gland.';
-  const command = organCommand(state, center), size = G.drop * Math.abs(command);
-  // Drops point away from the gland while it pours out and towards it while it binds.
-  const drops =
-      size > .5 ? '<g class="aid-gland-drops"><title>' +
-                      escapeText(t(halves + (command > 0 ? 'above' : 'below'))) + ' ' +
-                      percent(Math.abs(command)) + '</title>' +
-                      round(G.drops, ring + W.cells + G.out, .5)
-                          .map(p => {
-                            const dir = Math.sign(command), c = Math.cos(p.a), s = Math.sin(p.a);
-                            const tip = {x : p.x + dir * size * c, y : p.y + dir * size * s};
-                            const side = k => ({
-                              x : p.x - dir * size * c + k * size * .7 * -s,
-                              y : p.y - dir * size * s + k * size * .7 * c
-                            });
-                            return '<path d="M' + fixed(tip.x) + ',' + fixed(tip.y) + ' L' +
-                                   fixed(side(1).x) + ',' + fixed(side(1).y) + ' L' +
-                                   fixed(side(-1).x) + ',' + fixed(side(-1).y) + 'Z"/>';
-                          })
-                          .join('') +
-                      '</g>'
-                : '';
-  const up = r => ({x : at.x, y : at.y - r});
-  return {
-    ring,
-    svg : drops + cellMarks(round(ATELIER_LIMITS.max_copies, ring + W.cells), center) +
-              gateHandle(up(W.ring * W.least), up(W.ring * W.most), state, center,
-                         label('inspector.motorGate'))
-  };
-}
+// The gland: its wheel says which substances it pours, the pictures below what it does to the
+// blood.
 export function glandProfile(state, organ, center) {
   const substances = state.document.substances;
   const add = substances.length
@@ -109,9 +63,9 @@ export function glandProfile(state, organ, center) {
                         label('sections.newSubstance') + '">' + label('symbols.add') + '</button>';
   // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close up.
   return '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
-         centerWheel(state, center, substances.map(sub => sub.index), state.capabilities?.hormones,
-                     glandMarks(state, center)) +
-         '</div>' + add;
+         centerWheel(state, center, substances.map(sub => sub.index),
+                     state.capabilities?.hormones) +
+         '</div>' + add + glandPictures(state, organ, center, index => substanceName(state, index));
 }
 const CHIP_DOT = Object.freeze({half : 8, radius : 6});
 // The blood sense in one wheel: which substance (the point, its width at the handle), how faint a
@@ -645,13 +599,13 @@ function substanceWheel(state, profile, {
                          percent(affinity) + '</small></span>';
                 })
           .join('');
-  const keys = [
-    'width', ...(marks ? [ 'cells', role === 'gland' ? 'gate' : 'sensitivity' ] : []),
-    ...(role === 'gland' ? [ 'drops' ] : [])
-  ];
+  const keys = [ 'width', ...(marks ? [ 'cells', 'sensitivity' ] : []) ];
   const legend =
       '<div class="aid-wheel-names">' + names + '</div>' +
-      '<p class="aid-picture-caption">' + escapeText(label('wheel.' + role)) + '</p>' +
+      // What a gland's wheel chooses shows in its pictures below, as the substances that rise.
+      (role === 'gland'
+           ? ''
+           : '<p class="aid-picture-caption">' + escapeText(label('wheel.' + role)) + '</p>') +
       '<div class="aid-wheel-key">' +
       keys.map(key => '<span>' + escapeText(label('wheel.' + key)) + '</span>').join('') + '</div>';
   return '<div class="aid-wheel-figure" data-wheel-figure><div class="aid-wheel-map"><svg class="aid-substance-wheel"' +

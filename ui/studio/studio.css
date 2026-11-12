@@ -349,7 +349,9 @@
 .aid-assembly-stamp path{stroke:#e6e5c3;stroke-width:2;stroke-linecap:round}
 .aid-assembly-stamp:hover rect,.aid-assembly-stamp.selected rect{fill:#bdcfae;stroke:#fcf0c1}
 .aid-assembly-stamp:hover path,.aid-assembly-stamp.selected path{stroke:#17383b}
-.aid-gland-drops{fill:#e8c46a;stroke:none}
+.aid-gland-phase{fill:none;stroke:#5d8790;stroke-width:1;stroke-dasharray:2 3}
+.aid-gland-gate{fill:#5d879033}
+.aid-gland-work{fill:none;stroke:#e8c46a;stroke-width:2.4;stroke-linejoin:round}
 .aid-gate-track{stroke:#5d8790;stroke-width:2;stroke-dasharray:3 4;fill:none}
 .aid-sense-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
 .aid-bladder-lift{display:block;width:100%;height:auto;margin:6px 0;background:var(--aid-graphic);border-radius:8px}

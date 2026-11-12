@@ -309,12 +309,6 @@
       "misst die Tiefe",
       "misst die Körperform"
     ],
-    "driveHalves": {
-      "gland": {
-        "above": "schüttet aus",
-        "below": "bindet"
-      }
-    },
     "barbelsTaste": "Die Barteln wachsen mit ihren Zellen. Ihre Spitzen schmecken nur, was sie berühren – keine Duftwolke –, und tasten Stein, Boden, Körper und Schlamm. Die Abstimmung wählt, welche Sorten sie schmecken.",
     "barbelFeel": {
       "label": "Bartelspitze",
@@ -1334,13 +1328,10 @@
   },
   "wheel": {
     "receptor": "Farbfüllung: Passung zum Rezeptor. Der Hof zeigt, welche weiteren Stoffe er bindet.",
-    "gland": "Farbfüllung: Auswahl der abgegebenen Stoffe. Ein breiter Hof verteilt die Abgabe auf mehrere Stoffe.",
     "sense": "Farbfüllung: Gewichtung der gelesenen Stoffe. Ein breiter Hof erfasst mehrere Stoffe.",
     "width": "Hof: Stoffbreite",
     "cells": "Punkte: Zellen",
-    "gate": "Ring: Abgabebereitschaft",
-    "sensitivity": "Ring: Empfindlichkeit",
-    "drops": "Tropfen: Abgabe oder Bindung"
+    "sensitivity": "Ring: Empfindlichkeit"
   },
   "axes": {
     "range": "{from} … {to}",
@@ -1497,5 +1488,19 @@
       "Lehrsignal verändert Kontakte",
       "Gelerntes bleibt erhalten"
     ]
+  },
+  "gland": {
+    "level": "Stoff im Blut",
+    "works": "Drüse arbeitet",
+    "rests": "ruht",
+    "half": "halb weg nach {n} {n:Schritt|Schritten}",
+    "cellsHandle": "Ziehen: mehr Zellen, der Stoff steigt höher",
+    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt",
+    "command": "Befehl",
+    "pours": "gibt ab",
+    "binds": "bindet",
+    "inhibits": "hemmend",
+    "excites": "erregend",
+    "gateHandle": "Ziehen: wie stark ein Befehl sein muss, bevor die Drüse etwas tut"
   }
 }

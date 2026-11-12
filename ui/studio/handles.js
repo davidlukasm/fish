@@ -600,9 +600,13 @@ export const handleMethods = {
                                          organ, drag.marks);
     if (!patch)
       return;
+    const cell = 'center' in patch ? findCenter(doc, patch.id)?.center : null;
     const changed =
-        'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
-                               setOrganNodes(doc, organ.id, patch.nodes, sites)
+        'center' in patch
+            ? cell && Object.entries(patch.center).some(([ key, value ]) => cell[key] !== value) &&
+                  updateCenter(doc, patch.id, patch.center)
+        : 'nodes' in patch ? patch.nodes !== kindNodes(organ).length &&
+                                 setOrganNodes(doc, organ.id, patch.nodes, sites)
         : 'sprint' in patch
             ? patch.sprint !== organ.sprint && setMuscleSprint(doc, organ.id, patch.sprint)
         : 'fibre' in patch
