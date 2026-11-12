@@ -399,11 +399,17 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
     frame(100);
     assert.equal(Number(dots[3].attributes.cx), 18);
     scale = 2;
-    player.attach(svg);
+    player.rescale();
+    assert.equal(queries, sampled, 'Wheel zoom reuses the existing path samples');
     frame(100);
-    const moved = svg.children.at(-1).children.at(-1);
+    let moved = svg.children.at(-1).children.at(-1);
     assert.equal(Number(moved.attributes.cx), 27);
     assert.equal(Number(moved.attributes.r), 2.5);
+    player.attach(svg);
+    frame(100);
+    moved = svg.children.at(-1).children.at(-1);
+    assert.equal(Number(moved.attributes.cx), 36,
+                 'The settled zoom redraw continues at the same speed without restarting');
   } finally {
     player.stop();
     Object.assign(global, saved);

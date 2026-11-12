@@ -14,10 +14,12 @@ function pulseMark(svg, leg, scale) {
   dot.style.fill = colour(leg);
   dot.setAttribute('class', 'aid-signal-dot ' + signalShape(leg));
   dot.setAttribute('opacity', '0');
-  dot.setAttribute('r', String(PLAY.dot / scale));
+  const resizeDot = value => dot.setAttribute('r', String(PLAY.dot / value));
+  resizeDot(scale);
   if (leg.kind === 'electrical' && !leg.rhythm && leg.sign >= 0)
     return {
       dot,
+      resize : resizeDot,
       move : p => {
         dot.setAttribute('cx', String(p.x));
         dot.setAttribute('cy', String(p.y));
@@ -29,22 +31,35 @@ function pulseMark(svg, leg, scale) {
   group.setAttribute('opacity', '0');
   dot.setAttribute('opacity', '1');
   group.appendChild(dot);
+  let symbol, ring;
   if (leg.kind === 'teaching' || leg.sign < 0) {
-    const symbol = svg.ownerDocument.createElementNS(NS, 'path');
-    const r = PLAY.dot / scale;
-    symbol.setAttribute('d', leg.kind === 'teaching' ? `M0 ${- r}L${r} 0 0 ${r} ${- r} 0Z`
-                                                     : `M${- r * .6} 0H${r * .6}`);
+    symbol = svg.ownerDocument.createElementNS(NS, 'path');
     symbol.setAttribute('class', 'aid-signal-symbol');
     group.appendChild(symbol);
   }
   if (leg.rhythm) {
-    const ring = svg.ownerDocument.createElementNS(NS, 'circle');
+    ring = svg.ownerDocument.createElementNS(NS, 'circle');
     ring.setAttribute('class', 'aid-signal-rhythm');
-    ring.setAttribute('r', String((PLAY.dot + 3) / scale));
     group.appendChild(ring);
   }
-  return {dot : group, move : p => group.setAttribute('transform', `translate(${p.x} ${p.y})`)};
+  const resize = value => {
+    resizeDot(value);
+    const r = PLAY.dot / value;
+    symbol?.setAttribute('d', leg.kind === 'teaching' ? `M0 ${- r}L${r} 0 0 ${r} ${- r} 0Z`
+                                                      : `M${- r * .6} 0H${r * .6}`);
+    ring?.setAttribute('r', String((PLAY.dot + 3) / value));
+  };
+  resize(scale);
+  return {
+    dot : group,
+    resize,
+    move : p => group.setAttribute('transform', `translate(${p.x} ${p.y})`)
+  };
 }
+const screenScale = svg => {
+  const matrix = svg.getScreenCTM();
+  return matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+};
 // Geometry is stable for a scene. Reading it while moving the dots forces repeated SVG work.
 function sampledPath(path, scale) {
   const length = path.getTotalLength();
@@ -147,7 +162,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
         });
       }
     }
-    const matrix = svg.getScreenCTM(), scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+    const scale = screenScale(svg);
     const geometry = new Map(), durations = new Map(), joined = new Set(), spread = new Map();
     const travel = length => Math.max(PLAY.instant, length * scale / PLAY.speed * 1000);
     paths = [];
@@ -182,13 +197,14 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       if (joined.has(key))
         continue;
       joined.add(key);
-      const {dot, move} = pulseMark(svg, leg, scale);
+      const {dot, move, resize} = pulseMark(svg, leg, scale);
       overlay.appendChild(dot);
       paths.push({
         leg,
         route : sampled,
         dot,
         move,
+        resize,
         length,
         lengths,
         duration,
@@ -226,6 +242,36 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
     });
     if (started !== null)
       started = performance.now() - elapsed * scale / sceneScale;
+    sceneScale = scale;
+  };
+  // A wheel zoom changes the screen scale but keeps every sampled path and its current progress.
+  const rescale = () => {
+    if (!active)
+      return;
+    const scale = screenScale(svg), ratio = scale / sceneScale;
+    if (!(scale > 0) || ratio === 1)
+      return;
+    const now = performance.now();
+    if (started !== null)
+      started = now - (now - started) * ratio;
+    for (const part of parts) {
+      part.at *= ratio;
+      part.waitingAt *= ratio;
+    }
+    for (const path of paths) {
+      path.at *= ratio;
+      path.duration *= ratio;
+      path.resize(scale);
+    }
+    for (const wave of waves) {
+      wave.at *= ratio;
+      wave.duration *= ratio;
+    }
+    for (const leg of schedule.legs) {
+      leg.at *= ratio;
+      leg.duration *= ratio;
+    }
+    schedule.end *= ratio;
     sceneScale = scale;
   };
   const stop = () => {
@@ -306,6 +352,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       if (active && next)
         attach(next);
     },
+    rescale,
     stop
   };
 }
