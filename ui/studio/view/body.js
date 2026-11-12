@@ -64,7 +64,6 @@ import {
   eyeLocation,
   eyeRadius,
   gutShape,
-  GUT_WALL,
   gutWallAt,
   INSIDE,
   lateralLine,
@@ -343,17 +342,20 @@ function gillGlyph(state, organ) {
 }
 // A ring of gut muscle around the gut wall at each node; the nodes sit at its ends.
 function gutMuscleGlyph(state, organ) {
-  const rings = organ.centers.map(center => {
+  const rings = new Map();
+  for (const center of organ.centers) {
     const site = findSite(state.sites, center.site);
     if (!site)
-      return '';
-    const wall = gutWallAt(state.document, site), reach = wall.half + GUT_WALL.ring;
-    return 'M' + fixed(wall.x - wall.across.x * reach) + ' ' +
-           fixed(wall.y - wall.across.y * reach) + ' L' + fixed(wall.x + wall.across.x * reach) +
-           ' ' + fixed(wall.y + wall.across.y * reach);
-  });
-  return '<path class="aid-anatomical-gutmuscle" style="--fibre:' + fibreHex(muscleFibre(organ)) +
-         '" d="' + rings.join(' ') + '"/>';
+      continue;
+    const wall = gutWallAt(state.document, site), reach = wall.half + 2,
+          angle = Math.atan2(-wall.across.x, wall.across.y) * 180 / Math.PI;
+    const key = fixed(wall.x) + ',' + fixed(wall.y);
+    rings.set(key, '<g transform="translate(' + fixed(wall.x) + ' ' + fixed(wall.y) + ') rotate(' +
+                       fixed(angle) + ')"><ellipse class="aid-gut-ring-back" rx="3" ry="' +
+                       fixed(reach) + '"/><path d="M0 ' + fixed(-reach) + ' A3 ' + fixed(reach) +
+                       ' 0 0 1 0 ' + fixed(reach) + '"/></g>');
+  }
+  return '<g class="aid-anatomical-gutmuscle">' + [...rings.values() ].join('') + '</g>';
 }
 const ORGAN_GLYPHS = Object.freeze({
   eye : eyeGlyph,

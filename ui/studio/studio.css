@@ -843,7 +843,8 @@
 .aid-gut-ring{fill:none;stroke-linecap:round}
 .aid-gut-lane{fill:none;stroke:var(--aid-gut);stroke-opacity:.35;stroke-width:12;stroke-linecap:round}
 .aid-gut-food{fill:#d9b98a;stroke:var(--aid-ink);stroke-width:.8}
-.aid-anatomical-gutmuscle{fill:none;stroke:var(--fibre);stroke-width:4;stroke-linecap:round}
+.aid-anatomical-gutmuscle{fill:none;stroke:var(--aid-gut);stroke-width:2.5;stroke-linecap:round}
+.aid-gut-ring-back{stroke-opacity:.35;stroke-width:1.5}
 .aid-fibre-sheath{fill:#3a1f22;stroke:var(--aid-rim);stroke-width:1.5}
 .aid-fibre-cell{stroke:#2a1416;stroke-width:.8}
 .aid-fibre-curve{fill:none;stroke-linejoin:round}
