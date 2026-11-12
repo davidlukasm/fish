@@ -83,6 +83,9 @@ export function contactPlan(state, chosen, wire = null) {
   const rows = Math.max(senders.length, middle.length, receivers.length, single ? 3 : 1);
   const span = P.top * 2 + (rows - 1) * P.step;
   const wedges = single ? WEDGES[centers[middle[0]].role] ?? [] : [];
+  // Without a planned contact and without anything to set there is nothing to draw.
+  if (!edges.length && !wedges.length)
+    return '';
   const height = span + (wedges.length ? P.wedges.rows[wedges.length - 1] + P.wedges.margin : 0);
   const place = new Map();
   const column = (list, x) => list.forEach(
