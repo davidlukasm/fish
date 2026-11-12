@@ -41,6 +41,8 @@ export class LiveStation {
     this.route = breeding ? ROUTE.labor : ROUTE.trials;
     this.state = {fish : null};
     this.offered = [];
+    this.catalogReady = false;
+    this.starting = false;
     this.worlds = [];
     this.paths = [];
     this.parents = new Set();
@@ -91,6 +93,9 @@ export class LiveStation {
     this.bindInputs();
     this.shown = true;
     this.draft = draft;
+    this.catalogReady = false;
+    this.starting = false;
+    this.error = '';
     const epoch = ++this.epoch;
     this.root.innerHTML = liveShell(this.breeding, draft, this.state.fish, this.offered);
     this.root.querySelector('[data-live-setting=steps]').value = this.settings.steps;
@@ -106,13 +111,18 @@ export class LiveStation {
         return;
       this.offered = overview.fish;
       const founders = this.root.querySelector('[data-live-setting=fish]');
-      this.state.fish ??= draft ? 'draft' : this.offered[0]?.key ?? null;
+      const keys = [...(draft ? [ 'draft' ] : []), ...this.offered.map(f => f.key) ];
+      if (!keys.includes(this.state.fish))
+        this.state.fish = keys[0] ?? null;
       founders.innerHTML = founderOptions(draft, this.state.fish, this.offered);
+      this.catalogReady = true;
       this.job = overview.job;
+      this.draw();
       if (this.job)
         this.poll();
     } catch (error) {
-      this.fail(error);
+      if (epoch === this.epoch)
+        this.fail(error);
     }
   }
   close() {
@@ -204,10 +214,30 @@ export class LiveStation {
   current() { return this.worlds[this.world]; }
   time() { return this.cursor ?? this.current()?.state.step ?? 0; }
   async start() {
+    if (!this.shown || !this.catalogReady || this.starting || !this.state.fish)
+      return;
+    const epoch = ++this.epoch;
+    this.starting = true;
+    this.error = '';
+    this.draw();
     try {
+      const scale = this.root.querySelector('[data-live-setting=scale]');
+      this.settings.steps = Number(this.root.querySelector('[data-live-setting=steps]').value);
+      this.settings.scale = scale ? Number(scale.value.replace(',', '.')) : 0;
+      if (!Number.isFinite(this.settings.scale) || this.settings.scale < 0 ||
+          this.settings.scale > 1)
+        throw Error(word('invalidScale'));
+      const request = {
+        operation : 'start',
+        fish : this.state.fish,
+        ...this.settings,
+        ...(this.state.fish === 'draft' ? this.draft : {})
+      };
       if (this.job && !['cancelled', 'failed'].includes(this.job.status))
         await this.request({operation : 'cancel', job : this.job.id});
-      ++this.epoch;
+      if (epoch !== this.epoch)
+        return;
+      this.job = null;
       clearTimeout(this.timer);
       ++this.traceEpoch;
       this.worlds = [];
@@ -217,24 +247,20 @@ export class LiveStation {
       this.trace = null;
       this.selected = null;
       this.cursor = null;
-      this.error = '';
-      const scale = this.root.querySelector('[data-live-setting=scale]');
-      this.settings.steps = Number(this.root.querySelector('[data-live-setting=steps]').value);
-      this.settings.scale = scale ? Number(scale.value.replace(',', '.')) : 0;
-      if (!Number.isFinite(this.settings.scale) || this.settings.scale < 0 ||
-          this.settings.scale > 1)
-        throw Error(word('invalidScale'));
-      this.job = await this.request({
-        operation : 'start',
-        fish : this.state.fish,
-        ...this.settings,
-        ...(this.state.fish === 'draft' ? this.draft : {})
-      });
+      const job = await this.request(request);
+      if (epoch !== this.epoch)
+        return;
+      this.job = job;
       this.root.querySelector('.fl-setup').open = false;
-      this.draw();
-      this.poll();
     } catch (error) {
-      this.fail(error);
+      if (epoch === this.epoch)
+        this.fail(error);
+    } finally {
+      if (epoch === this.epoch) {
+        this.starting = false;
+        this.draw();
+        this.poll();
+      }
     }
   }
   async command(action, values = {}) {
@@ -394,6 +420,14 @@ export class LiveStation {
   draw() {
     if (!this.shown)
       return;
+    const unavailable = !this.catalogReady || this.starting || !this.state.fish;
+    this.root.querySelector('[data-live-setting=fish]').disabled = unavailable;
+    this.root.querySelector('[data-live-action=start]').disabled = unavailable;
+    text(this.root, '[data-live-founders-status]',
+         this.error           ? ''
+         : !this.catalogReady ? word('loadingFish')
+         : !this.state.fish   ? word('noFish')
+                              : '');
     const world = this.current(), state = world?.state, end = state?.step ?? 0,
           cursor = this.time(), fish = state?.fish?.find(p => p.id === this.selected),
           control = state?.controls?.find(c => c.id === this.selected);

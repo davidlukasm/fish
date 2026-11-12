@@ -188,6 +188,8 @@
     "laborPurpose": "Verhalten beobachten, einzelne Funktionen übernehmen und mit demselben Ausgangszustand vergleichen.",
     "setup": "Versuch einrichten",
     "founder": "Ausgangsfisch",
+    "loadingFish": "Fischauswahl wird geladen …",
+    "noFish": "Kein Fisch verfügbar. Öffne im Atelier einen Entwurf.",
     "duration": "Schritte je Welt",
     "mutation": "Mutationsfaktor",
     "start": "Neu starten",

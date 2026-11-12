@@ -4,6 +4,94 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkLiveFounders() {
+  const {LiveStation} = await import('../ui/labor/live_station.js');
+  const offered = [
+    {key : 'drafts/liora', category : 'drafts', name : 'Liora'},
+    {key : 'drafts/brisa', category : 'drafts', name : 'Brisa'}
+  ];
+  for (const breeding of [false, true]) {
+    const nodes = new Map(), pending = [];
+    const root = {
+      addEventListener() {},
+      querySelectorAll : () => [],
+      querySelector(selector) {
+        if (!nodes.has(selector))
+          nodes.set(selector, {value : '', innerHTML : '', addEventListener() {}});
+        return nodes.get(selector);
+      }
+    };
+    const station = new LiveStation(root, breeding);
+    station.poll = () => {};
+    station.request = data =>
+        new Promise((resolve, reject) => pending.push({data, resolve, reject}));
+    const draft = {name : 'Atelier', genome : 'compiled genome'};
+    let opening = station.open(draft);
+    pending.at(-1).resolve({fish : offered, job : null});
+    await opening;
+    assert.equal(station.state.fish, 'draft');
+    station.close();
+    opening = station.open(null);
+    pending.at(-1).resolve({fish : offered, job : null});
+    await opening;
+    assert.equal(station.state.fish, offered[0].key,
+                 'Removing the Atelier draft selects an available catalog fish');
+    assert.match(root.querySelector('[data-live-setting=fish]').innerHTML,
+                 /value="drafts\/liora" selected/);
+    let starting = station.start();
+    assert.equal(pending.at(-1).data.fish, offered[0].key);
+    assert.equal(pending.at(-1).data.genome, undefined);
+    const count = pending.length;
+    await station.start();
+    assert.equal(pending.length, count, 'Repeated start clicks create only one run');
+    pending.at(-1).resolve({id : 'one', status : 'running'});
+    await starting;
+
+    station.state.fish = offered[1].key;
+    opening = station.open(draft);
+    const overview = pending.at(-1);
+    assert.equal(root.querySelector('[data-live-action=start]').disabled, true);
+    await station.start();
+    assert.equal(pending.at(-1), overview, 'Loading the catalog cannot cancel the current run');
+    overview.resolve({fish : offered, job : station.job});
+    await opening;
+    assert.equal(station.state.fish, offered[1].key, 'An available explicit choice is retained');
+
+    opening = station.open(null);
+    pending.at(-1).resolve({fish : [], job : station.job});
+    await opening;
+    assert.equal(station.state.fish, null);
+    assert.equal(root.querySelector('[data-live-action=start]').disabled, true);
+    assert.ok(root.querySelector('[data-live-founders-status]').textContent);
+    const emptyCount = pending.length;
+    await station.start();
+    assert.equal(pending.length, emptyCount, 'An empty catalog cannot cancel or start a run');
+
+    opening = station.open(draft);
+    pending.at(-1).resolve({fish : [], job : null});
+    await opening;
+    starting = station.start();
+    assert.equal(pending.at(-1).data.genome, draft.genome,
+                 'The current Atelier draft can start with an empty catalog');
+    station.close();
+    pending.at(-1).resolve({id : 'late', status : 'running'});
+    await starting;
+    assert.notEqual(station.job?.id, 'late', 'A late start response leaves a closed station alone');
+
+    const oldOpen = station.open(null), oldRequest = pending.at(-1);
+    station.close();
+    opening = station.open(null);
+    oldRequest.reject(Error('old overview failed'));
+    await oldOpen;
+    assert.equal(station.error, '', 'An old failure cannot overwrite the reopened station');
+    pending.at(-1).resolve({fish : offered, job : null});
+    await opening;
+    assert.equal(station.state.fish, offered[0].key);
+    assert.equal(root.querySelector('[data-live-action=start]').disabled, false);
+    station.close();
+  }
+}
+
 async function checkInspectorSubstances(model, capabilities, clicks) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
@@ -1037,6 +1125,11 @@ async function checkHormoneSystems(model, capabilities) {
       'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor', 'feeding_view'
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  await checkLiveFounders();
+  if (process.argv.includes('--live-station')) {
+    console.log('Labor/Zucht: Fischauswahl, Katalogwechsel und verspätete Antworten: OK');
+    return;
+  }
   await checkVariationPictures();
   {
     const {

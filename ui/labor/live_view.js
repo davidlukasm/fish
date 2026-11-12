@@ -33,7 +33,7 @@ export function liveShell(breeding, draft, fish, offered) {
       word(breeding ? 'breedingPurpose'
                     : 'laborPurpose')}</p><span data-live-status role="status"></span></header>
     <main class="fl-main"><details class="fl-setup" open><summary>${word('setup')}</summary>
-    <div class="fl-row"><label>${word('founder')}<select data-live-setting="fish">${
+    <div class="fl-row"><label>${word('founder')}<select data-live-setting="fish" disabled>${
       founderOptions(draft, fish, offered)}</select></label>
     <label>${
       word(
@@ -44,7 +44,8 @@ export function liveShell(breeding, draft, fish, offered) {
                 word(
                     'mutation')}<input data-live-setting="scale" type="text" inputmode="decimal" value="0,3"></label>`
           : ''}
-    ${button('start', word('start'), 'class="fl-primary"')}${button('cancel', word('end'))}
+    ${button('start', word('start'), 'class="fl-primary" disabled')}${button('cancel', word('end'))}
+    <small data-live-founders-status role="status"></small>
     <small>${word(breeding ? 'replicates' : 'realWorld')}</small></div></details>
     <div class="fl-error" role="alert" hidden></div>
     <div class="fl-toolbar"><div class="fl-worlds" data-live-worlds></div><div class="fl-row">${
