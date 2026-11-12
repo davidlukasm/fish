@@ -1275,7 +1275,17 @@
     "spreadValue": "± {n} %",
     "least": "kleinster Wert",
     "blueprint": "Bauplan",
-    "greatest": "größter Wert"
+    "greatest": "größter Wert",
+    "key": {
+      "birth": "Zellbildung",
+      "output": "Aktivität",
+      "death": "Tod"
+    },
+    "mark": {
+      "start": "Beginn",
+      "end": "Ende"
+    },
+    "answer": "Antwort"
   },
   "symbols": {
     "add": "+"

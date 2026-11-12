@@ -392,10 +392,22 @@ export function phasePatch(handle, fx) {
                             : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
 }
 // The cell's life in one picture over its maturity: when it starts to work and when it dies (the
-// two marks), how strongly it answers (the solid line), when new cells are born (the dashed line)
-// and where it dies (the shaded spans). Below, one badge per answer shows the substance its
-// receptor reads; clicking a badge or its line chooses which receptor the pictures below set.
-const LIFE_BADGE = Object.freeze({y : 134, radius : 9});
+// two marks, named above them), how strongly it answers (the solid line), when new cells are born
+// (the dashed line) and where it dies (the shaded spans). The row below is the key: each answer's
+// badge with the substance its receptor reads, its line and its name; clicking an entry or its line
+// chooses which receptor the pictures below set.
+const LIFE_ROW = Object.freeze({
+  height : 158,
+  y : 144,
+  left : 4,
+  width : 85,
+  sample : 10,
+  gap : 3,
+  radius : 7,
+  axis : 126,
+  title : 10,
+  above : 4
+});
 // Along the bottom the cell's life runs from the young fish to the grown one.
 const AGE_KEY = Object.freeze({young : 9, grown : 16, y : 124});
 const ageKey = () =>
@@ -438,11 +450,14 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
   const mark = (handle, value, open, title) => {
     const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
                                                '" y2="' + CURVE.bottom + '"';
+    const anchor = (value ?? open) < .5 ? 'start' : 'end';
     return '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
            handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
            '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l' +
            -PHASE_POINTER.half + ' ' + -PHASE_POINTER.height + ' h' + 2 * PHASE_POINTER.half +
-           ' Z"/></g>';
+           ' Z"/><text class="aid-life-word" x="' + at + '" y="' + (CURVE.top - LIFE_ROW.above) +
+           '" text-anchor="' + anchor + '">' + escapeText(label('development.mark.' + handle)) +
+           '</text></g>';
   };
   const pick = effect => ' data-development-effect="' + effect + '"' +
                          (effect === chosen ? ' aria-pressed="true"' : '');
@@ -451,9 +466,20 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
       '<g class="aid-life-line"' + pick(effect) + '><title>' + name(effect) +
       '</title><polyline class="aid-life-hit" points="' + values + '"/><polyline class="' +
       className + '" points="' + values + '"/></g>';
+  // A key entry: the badge of the substance the answer's receptor reads, its line and its name.
+  const sample = (effect, from) => {
+    const to = from + LIFE_ROW.sample, y = LIFE_ROW.y;
+    return effect === HORMONE_EFFECT.death
+               ? '<rect class="aid-death-zone" x="' + from + '" y="' + (y - LIFE_ROW.sample / 2) +
+                     '" width="' + LIFE_ROW.sample + '" height="' + LIFE_ROW.sample + '"/>'
+               : '<polyline class="' + (effect === BIRTH ? 'aid-life-birth' : 'aid-response-line') +
+                     '" points="' + from + ',' + y + ' ' + to + ',' + y + '"/>';
+  };
   const badge = (effect, k) => {
     const receptor = lifeReceptor(focus, effect), on = receptor?.active;
-    const at = x((k + .5) / LIFE_EFFECTS.length);
+    // The badge leads its entry, so each name ends in open space before the next badge.
+    const at = LIFE_ROW.left + k * LIFE_ROW.width + LIFE_ROW.radius,
+          from = at + LIFE_ROW.radius + LIFE_ROW.gap;
     // A substance no gland makes yet stays an outline, as on the wheel.
     const empty = on && !substanceDefined(state, receptor.substance);
     return '<g class="aid-life-badge ' + lifeKind(effect) + (effect === chosen ? ' chosen' : '') +
@@ -463,20 +489,29 @@ export function lifePhaseEditor(state, focus, chosen = BIRTH) {
              name(effect),
              (on ? substanceName(state, receptor.substance) : label('inspector.answersToNothing'))
            ])) +
-           '</title><circle cx="' + fixed(at) + '" cy="' + LIFE_BADGE.y + '" r="' +
-           LIFE_BADGE.radius + '"/>' +
-           (on ? '<text x="' + fixed(at) + '" y="' + LIFE_BADGE.y +
+           '</title>' + sample(effect, from) + '<text class="aid-life-name" x="' +
+           (from + LIFE_ROW.sample + LIFE_ROW.gap) + '" y="' + LIFE_ROW.y + '" dy=".35em">' +
+           escapeText(label('development.key.' + lifeKind(effect))) + '</text><circle cx="' +
+           fixed(at) + '" cy="' + LIFE_ROW.y + '" r="' + LIFE_ROW.radius + '"/>' +
+           (on ? '<text x="' + fixed(at) + '" y="' + LIFE_ROW.y +
                      '" dy=".35em" text-anchor="middle">' +
                      escapeText(substanceMark(state, receptor.substance)) + '</text>'
                : '') +
            '</g>';
   };
-  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height +
+  // The axes: maturity along the bottom between the young and the grown fish, the answer upwards.
+  const words = '<text class="aid-life-word" x="' + fixed((CURVE.left + CURVE.right) / 2) +
+                '" y="' + LIFE_ROW.axis + '" text-anchor="middle">' +
+                escapeText(label('inspector.maturity')) + '</text><text class="aid-life-word" ' +
+                'transform="translate(' + LIFE_ROW.title + ' ' +
+                fixed((CURVE.top + CURVE.bottom) / 2) + ') rotate(-90)" text-anchor="middle">' +
+                escapeText(label('development.answer')) + '</text>';
+  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + LIFE_ROW.height +
          '" class="aid-response-chart aid-life-picture" data-phase="' + escapeText(focus.id) +
          '" role="img" aria-label="' + label('inspector.lifePhase') + '"><title>' +
          escapeText(label('development.phaseHandles')) + '</title>' +
          '<g class="aid-life-line"' + pick(HORMONE_EFFECT.death) + '><title>' +
-         name(HORMONE_EFFECT.death) + '</title>' + dead + '</g>' + curveAxes() + ageKey() +
+         name(HORMONE_EFFECT.death) + '</title>' + dead + '</g>' + curveAxes() + ageKey() + words +
          line(HORMONE_EFFECT.output, 'aid-response-line', points) +
          line(BIRTH, 'aid-life-birth', birth) +
          mark('start', phase.start, 0, 'inspector.phaseStart') +
