@@ -985,7 +985,7 @@ void Ecosystem::read_state(std::istream &in, const Ecosystem *blueprint_cache) {
         c.visual = q;
       }
   }
-  auto indexed = EnvironmentCheckpoint::read_index(in, field, fish.size(), corpses.size());
+  auto indexed = EnvironmentCheckpoint::read_index(in);
 
   for (auto &p : fish) {
     p.body.identity = p.id;

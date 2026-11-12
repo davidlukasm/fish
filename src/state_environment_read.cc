@@ -8,8 +8,8 @@ using state::scalar;
 using state::value;
 namespace {
 constexpr std::size_t MAX_FOOD_PIECES = 2000000, MAX_FOOD_CLOUDS = 2000, MAX_SEDIMENT_CELLS = 20000;
-// Indexed bodies: fish, eggs, corpses and small animals together; far above any tank, against a
-// corrupt count.
+// Indexed bodies (fish, eggs, corpses and small animals together) and carrion scents: far above
+// any tank, against a corrupt count or source.
 constexpr std::size_t MAX_VISIBLE_BODIES = 4000000;
 constexpr std::uint64_t MAX_RESTING_STEPS = 100000;
 constexpr double MIN_DRIFT_PATCH = .001, MAX_PIECE_ENERGY = 20000, MAX_BUOYANCY = 4,
@@ -328,9 +328,7 @@ void EnvironmentCheckpoint::read(std::istream &in, Field &field, PhysiologyParam
   field.feeding_.clouds = clouds;
   field.refresh_niche_limits();
 }
-EnvironmentCheckpoint::Index EnvironmentCheckpoint::read_index(std::istream &in, const Field &field,
-                                                               std::size_t fish,
-                                                               std::size_t corpses) {
+EnvironmentCheckpoint::Index EnvironmentCheckpoint::read_index(std::istream &in) {
   auto count = [&](std::size_t maximum) { return state::count(in, maximum); };
   auto section = [&](const char *name) {
     std::string tag;
@@ -338,16 +336,13 @@ EnvironmentCheckpoint::Index EnvironmentCheckpoint::read_index(std::istream &in,
     if (tag != name)
       throw std::runtime_error(std::string("missing ") + name);
   };
-  // Each body points into the list it was indexed from, as Ecosystem::index_organisms and
-  // Field::index_small_animals build them.
-  auto sources = [&](int kind) -> std::size_t {
-    const auto &web = field.food_web_;
-    return kind == food_kind::fish || kind == food_kind::egg ? fish
-           : kind == food_kind::carrion                      ? corpses
-           : kind == food_kind::worm                         ? web.heads.size()
-           : kind == food_kind::crab                         ? web.crabs.size()
-           : kind == food_kind::mussel                       ? web.mussels.size()
-                                                             : 0;
+  // Only the kinds Ecosystem::index_organisms and Field::index_small_animals index. Their sources
+  // point into the lists as they stood when indexed: the step may since have removed a dead fish or
+  // an eaten corpse, so a source is not checked against today's lists; the next indexing replaces
+  // them before anything reads a body through its source.
+  auto indexed = [](int kind) {
+    return kind == food_kind::fish || kind == food_kind::egg || kind == food_kind::carrion ||
+           kind == food_kind::worm || kind == food_kind::crab || kind == food_kind::mussel;
   };
   Index index;
   section("VISIBLE_INDEX");
@@ -372,11 +367,12 @@ EnvironmentCheckpoint::Index EnvironmentCheckpoint::read_index(std::istream &in,
     scalar(in, b.odor_energy, 0, PLAUSIBLE_AMOUNT);
     value(in, b.odor_channel);
     scalar(in, b.relative_speed, -PLAUSIBLE_LOCAL, PLAUSIBLE_LOCAL);
-    if (b.source >= sources(b.kind) || b.odor_channel < -1 || b.odor_channel >= odor_kind::count)
+    if (!indexed(b.kind) || b.source >= MAX_VISIBLE_BODIES || b.odor_channel < -1 ||
+        b.odor_channel >= odor_kind::count)
       throw std::runtime_error("invalid indexed body");
   }
   section("CARRION_ODOR");
-  index.odors.resize(count(corpses));
+  index.odors.resize(count(MAX_VISIBLE_BODIES));
   for (auto &o : index.odors) {
     scalar(in, o.x, -tank::max_coordinate, tank::max_coordinate);
     scalar(in, o.y, -tank::max_coordinate, tank::max_coordinate);

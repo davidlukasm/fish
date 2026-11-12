@@ -505,6 +505,26 @@ void checkpoint_continues_exactly(const Genome &g) {
   }
   check(saved(w) == saved(copy), "a restored tank continues exactly like the original");
 }
+// The last step's index still points at the fish list as it was before a death in that step
+// (the first fish dies, so every later one moves up); a checkpoint taken right then loads and
+// continues like the original.
+void checkpoint_after_death(const Genome &g) {
+  auto w = closed_tank(g);
+  for (int step = 0; step < STEPS / 4; ++step)
+    w.tick();
+  const auto living = w.fish.size();
+  w.fish.front().body.health = 0;
+  w.tick(false);
+  check(w.fish.size() < living, "the dead fish leaves the population");
+  auto copy = w.fork();
+  check(copy.field.visible().size() == w.field.visible().size(),
+        "a checkpoint right after a death keeps the last step's bodies");
+  for (int step = 0; step < 4; ++step) {
+    w.tick(false);
+    copy.tick(false);
+  }
+  check(saved(w) == saved(copy), "a tank saved right after a death continues exactly");
+}
 void organ_muscles_survive_checkpoint(const Genome &g) {
   Ecosystem w(SEED);
   w.resize(800, 500);
@@ -599,6 +619,7 @@ int main() {
     start_fish_eats_nearby_food(g);
     closed_tank_creates_no_energy(g);
     checkpoint_continues_exactly(g);
+    checkpoint_after_death(g);
     organ_muscles_survive_checkpoint(g);
     embryo_uses_delivered_muscle_force(g);
     development_queue_is_bounded(g);

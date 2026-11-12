@@ -16,7 +16,7 @@ public:
     std::vector<Field::OdorSource> odors;
   };
   static void write_index(std::ostream &, const Field &);
-  static Index read_index(std::istream &, const Field &, std::size_t fish, std::size_t corpses);
+  static Index read_index(std::istream &);
 
 private:
   static void read_geometry(std::istream &, Field &);
