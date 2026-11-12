@@ -11,7 +11,7 @@ import {
 import {groupReport} from '../model/document.js';
 import {BODY_MIDDLE, findSite, sideSign} from '../model/layout.js';
 import {fishPath, skinAt, skinDirection, skinPoints} from './frame.js';
-import {centerLocation} from './places.js';
+import {nodeLocation, organLocation} from './places.js';
 import {escapeText, fixed} from './markup.js';
 import {adaptationMarks, cellMarks} from './sense_marks.js';
 import {ATELIER_LIMITS} from '../../schema.js';
@@ -37,6 +37,7 @@ const SKIN_FIELD = Object.freeze({
   inset : 14,
   clock : 26
 });
+const CANVAS_SKIN = Object.freeze({step : 12, length : [ 3, 22 ], hit : 13});
 const toFrame = (fx, fy) => ({
   x : BODY_MIDDLE.x + (fx * SKIN_FIELD.width - SKIN_FIELD.cx) / SKIN_FIELD.scale,
   y : BODY_MIDDLE.y + (fy * SKIN_FIELD.height - SKIN_FIELD.cy) / SKIN_FIELD.scale
@@ -46,12 +47,12 @@ const toField = p => ({
   y : SKIN_FIELD.cy + (p.y - BODY_MIDDLE.y) * SKIN_FIELD.scale
 });
 function skinAim(state, organ, center) {
-  const felt = groupReport(state.document, state.anatomy, 'felt', center.id);
+  const felt = !state.stale && groupReport(state.document, state.anatomy, 'felt', center.id);
   if (felt?.length)
     return Math.atan2(felt.reduce((sum, [ aim ]) => sum + Math.sin(aim), 0),
                       felt.reduce((sum, [ aim ]) => sum + Math.cos(aim), 0));
   const site = findSite(state.sites, center.site), side = sideSign(site?.side);
-  const {x} = centerLocation(center, organ.type, state.sites);
+  const {x} = nodeLocation(state.document, state.sites, center, organ.type);
   return skinDirection({x, y : skinAt(x, side)}, state.anatomy?.zones);
 }
 function sensitivityOf(state, center) {
@@ -75,6 +76,39 @@ const nearest = (points, aim, state) => points.reduce(
                      ? p
                      : best);
 const line = (a, b) => 'M' + fixed(a.x) + ' ' + fixed(a.y) + ' L' + fixed(b.x) + ' ' + fixed(b.y);
+export function skinPatchSvg(state, organ) {
+  const C = CANVAS_SKIN, S = SKIN_FIELD, anchor = organLocation(organ, state.sites, state.document);
+  let patch = '', hairs = '';
+  for (const center of organ.centers) {
+    const aim = skinAim(state, organ, center), width = radians(contactHalfAngle(center.field)),
+          sensitive = sensitivityOf(state, center), pieces = weighed(state, aim, width, S.step);
+    patch +=
+        pieces.slice(1)
+            .map((p, k) => p.weight > S.least ? '<path d="' + line(pieces[k], p) +
+                                                    '" stroke-opacity="' + fixed(p.weight) + '"/>'
+                                              : '')
+            .join('');
+    if (sensitive === null)
+      continue;
+    hairs += weighed(state, aim, width, C.step)
+                 .filter((p, k) => p.weight > S.least && k % 2 === (organ.type === 'pain' ? 1 : 0))
+                 .map(p => {
+                   const reach = (C.length[0] + C.length[1] * sensitive) * p.weight,
+                         end = {x : p.x + p.out.x * reach, y : p.y + p.out.y * reach};
+                   if (organ.type === 'touch')
+                     return line(p, end);
+                   const fork = reach * S.fork,
+                         at = {x : end.x - p.out.x * fork, y : end.y - p.out.y * fork};
+                   return line(p, at) + ' ' +
+                          line(at, {x : end.x - p.out.y * fork, y : end.y + p.out.x * fork}) + ' ' +
+                          line(at, {x : end.x + p.out.y * fork, y : end.y - p.out.x * fork});
+                 })
+                 .join(' ');
+  }
+  return '<g class="aid-anatomical-' + organ.type + '">' + patch + '<path d="' + hairs + '"/>' +
+         '<circle class="aid-skin-hit" stroke="none" cx="' + fixed(anchor.x) + '" cy="' +
+         fixed(anchor.y) + '" r="' + C.hit + '"/></g>';
+}
 // `held` is the sensitivity a dragged handle sets, shown before the design run answers.
 export function skinField(state, organ, center, held = null) {
   const S = SKIN_FIELD, aim = skinAim(state, organ, center);

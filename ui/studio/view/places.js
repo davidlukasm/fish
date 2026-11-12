@@ -176,6 +176,8 @@ function musclePoint(organ, index, sites) {
                                                    : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
 }
 export function organLocation(organ, sites, doc) {
+  if (organ.type === 'touch' || organ.type === 'pain')
+    return skinSenseAnchor(organ, sites);
   if (organ.type === 'lateral')
     return lateralAnchor(doc, sites, organ);
   if (organ.type === 'gills')
@@ -237,6 +239,13 @@ function lateralAnchor(doc, sites, organ) {
   const p = organ.position ?? (cells.length ? centroid(cells) : {x : 560, y : 440});
   return {x : p.x, y : clamp(p.y, skinAt(p.x, -1) + LATERAL.inset, skinAt(p.x, 1) - LATERAL.inset)};
 }
+function skinSenseAnchor(organ, sites) {
+  const p =
+      organ.position ?? centroid(organ.centers.map(c => centerLocation(c, organ.type, sites)));
+  const side = Math.sign(p.y - BODY_FRAME.middle) || sideOf(organ),
+        inset = organ.type === 'pain' ? 18 : 8;
+  return {x : p.x, y : skinAt(p.x, side) - side * inset};
+}
 export const EYE =
     Object.freeze({base : 7, per_center : 1, most : 12, aspect : 1.2, pupil : .44, inset : 4});
 export const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5});
@@ -247,6 +256,12 @@ export function showsNodes(state, organs) {
 }
 export function nodeLocation(doc, sites, center, organType) {
   const site = findSite(sites, center.site);
+  if (organType === 'touch' || organType === 'pain') {
+    const organ = ownerOf(doc, center.id), anchor = skinSenseAnchor(organ, sites),
+          rank = organ.centers.indexOf(center) - (organ.centers.length - 1) / 2,
+          x = anchor.x + rank * 8, side = Math.sign(anchor.y - BODY_FRAME.middle) || sideOf(organ);
+    return {x, y : anchor.y + skinAt(x, side) - skinAt(anchor.x, side)};
+  }
   if (organType === 'gills') {
     const organ = ownerOf(doc, center.id), side = sideSign(site?.side),
           peers = organ.centers.filter(c => sideSign(findSite(sites, c.site)?.side) === side),

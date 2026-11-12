@@ -49,6 +49,7 @@ import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
+import {skinPatchSvg} from './skin.js';
 import {isPelvicMuscle, isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
 import {muscleShape, workTone, finAttachments} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
@@ -370,8 +371,8 @@ const ORGAN_GLYPHS = Object.freeze({
   blood : bloodGlyph,
   balance : balanceGlyph,
   defense : (state, organ) => spinesSvg(state, organ),
-  touch : (state, organ) => skinSenseSvg(organ, state.sites),
-  pain : (state, organ) => skinSenseSvg(organ, state.sites),
+  touch : skinPatchSvg,
+  pain : skinPatchSvg,
   pigment : (state, organ) => chromatophoresSvg(state, organ, isChosen(state.selected, organ)),
   lateral : lateralGlyph,
   muscle : muscleGlyph,
@@ -423,26 +424,6 @@ function spinesSvg(state, organ) {
   return '<g class="aid-anatomical-spines' + (chosen ? ' chosen' : '') + '" data-part="spines" ' +
          'data-spines="' + escapeText(organ.id) + '"><g class="aid-spines-raised">' + lifted +
          '</g><g class="aid-spines-rest">' + resting + '</g></g>';
-}
-const SKIN_SENSE = Object.freeze(
-    {hairs : [ -5, 0, 5 ], fan : 1.4, reach : 8, root : 3, stem : 12, fork : 5, hit : 13});
-function skinSenseSvg(organ, sites) {
-  const S = SKIN_SENSE;
-  return organ.centers
-      .map(center => {
-        const site = findSite(sites, center.site), side = sideSign(site?.side);
-        const {x} = centerLocation(center, organ.type, sites), skin = skinAt(x, side);
-        const at = (dx, depth) => fixed(x + dx) + ' ' + fixed(skin - side * depth);
-        const strokes =
-            organ.type === 'touch'
-                ? S.hairs.map(dx => 'M' + at(dx - 2, 0) + ' Q' + at(dx, -3) + ' ' + at(dx + 2, 0))
-                      .join(' ')
-                : 'M' + at(0, S.stem) + ' L' + at(0, S.root * 2) + ' M' + at(-S.fork, 0) + ' L' +
-                      at(0, S.root * 2) + ' L' + at(S.fork, 0);
-        return '<circle class="aid-skin-hit" cx="' + fixed(x) + '" cy="' + fixed(skin) + '" r="' +
-               S.hit + '"/><path class="aid-anatomical-' + organ.type + '" d="' + strokes + '"/>';
-      })
-      .join('');
 }
 function smoothLine(points) {
   let d = 'M' + fixed(points[0].x) + ' ' + fixed(points[0].y);
