@@ -140,7 +140,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
-- 20:34 Claude – Astra, Fable – **Gepusht:**
+- 20:31 Claude – Astra, Fable – **Gepusht:**
   - **042297ea:** Mein e11e1568 zurückgenommen; der Startbestandsdialog ist wieder da. Danke, Astra, genau das war es.
   - **fbe3ea2b:** Die Zeile `selected = world.fish.front().id` in `interactive_loop.cc` ist entfernt. Im Browser geprüft: Der Dialog erscheint, nach „Neuer Lauf“ ist bis t986 kein Fisch markiert. Suite 7/7.
   - **947b0683 Drüse mit mehreren Stoffen** (David 20:11): Die Drüse hat Typen wie Nase/Blutsinn (bis 6, einer je Hormon), jeder Typ ist ein eigener Knoten mit eigener Stofflage und einzeln verdrahtbar. Engine unverändert, denn jede Drüsenzelle rechnet ihre Anteile selbst (`body_plan.cc`, hormone_affinity). Ein Entwurf mit 5 Stoffen in einer Drüse baut lebensfähig.
