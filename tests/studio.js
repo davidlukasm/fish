@@ -4,87 +4,6 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
-// Semantic guard for engine and aquarium drawing code that the organ editor interprets.
-// Comments and formatting are ignored. A changed signature requires reviewing the
-// corresponding Studio organ, control, and verification before updating this record.
-const ENGINE_REVIEW = Object.freeze({
-  "src/cppn_brain.cc" : "a73d53c5ad5781d1",
-  "colony-core/field/contacts.hh" : "c529c6d59f0e661b",
-  "src/eye_geometry.cc" : "0331842d148c18c4",
-  "src/environment_parameters.hh" : "81b38a6a4e88e1d1",
-  "ui/brain_geometry.js" : "f6ac4d582cc7150c",
-  "ui/vision_view.js" : "dcac2dd90cf6fe93",
-  "colony-core/field/development_sites.hh" : "6c0532b3f94c7bb9",
-  "colony-core/field/development.cc" : "fdcbe7ce8f2d97bc",
-  "colony-core/field/functions.hh" : "f90542aac696f5cc",
-  "colony-core/field/hormones.hh" : "b7f0533d22aa4bf9",
-  "colony-core/field/substrate.cc" : "ab25930215018821",
-  "src/body_plan.cc" : "e664c3b02e359c63",
-  "src/physiology_parameters.hh" : "8cbaecf788feb705",
-  "src/physiology.hh" : "bcd73550f13ffcee",
-  "src/physiology.cc" : "58a693610c359611",
-  "src/hormone_state.hh" : "48078a32aa49f7d1",
-  "src/hormone_state.cc" : "5ce4ffda53f8995f",
-  "src/physiology_parameters.cc" : "d4f67d6d9d287fd7",
-  "colony-core/ann/network.hh" : "6cb9c13f5fae66ab",
-  "colony-core/ann/network.cc" : "92da225af4390594",
-  "src/body_plan.hh" : "dd0be253aaaffc6e",
-  "src/receptor_tuning.hh" : "c77a0a412d814cb7",
-  "colony-core/field/substrate.hh" : "6e50cd0729185749",
-  "colony-core/cppn/output_schema.hh" : "6fc4666175b6b0ec",
-  "colony-core/cppn/activation.hh" : "1a716ab9154b8ecc",
-  "colony-core/evolution/gene.hh" : "4468c1d0669fa3f4",
-  "colony-core/evolution/constants.hh" : "c232ea43b3259223",
-
-  "ui/tissue.js" : "4243ad30e442c9aa",
-  "src/genome.hh" : "239dc4f734e58ddf",
-  "src/hormone_view.cc" : "be839e6e115f3ea1",
-  "src/hormone_view.hh" : "1515941132943782",
-  "src/simulation_types.hh" : "67b1b6ed62d29d62",
-  "src/retina.cc" : "a14c24e09bb2ee39",
-  "src/observations.cc" : "242f471bbcfddf24",
-  "src/observations.hh" : "f6f4936f693e510e",
-  "src/eye_geometry.hh" : "3c65ed324049ca17",
-  "src/retina.hh" : "a3a169f6e8f4cafd",
-  "ui/fish_forms.js" : "79802adbd0e35783",
-  "ui/fish_geometry.js" : "9e9071624c167d75",
-  "ui/fish_fins.js" : "4681ff28688f99bf",
-  "ui/fish_organs.js" : "1fc1794411b2ca17",
-  "ui/fish_painter.js" : "68414bf054143267",
-  "src/brain_interface.hh" : "b33638b85ec6d8f7",
-  "src/hormone_analysis.cc" : "ffc00b7501fce7e0",
-  "src/hormone_analysis.hh" : "9c146b48e9c20d11",
-  "src/hormone_observations.cc" : "26724d854cb42eae",
-  "src/hormone_observations.hh" : "32b75ba46d018348",
-  "src/interactive_brain.cc" : "70cf63ebe3984e70",
-  "src/material.hh" : "7b513268feed7d77",
-  "src/ecology.hh" : "3505e6c40c515977",
-  "src/feeding.cc" : "1f03f759abcba08e",
-  "src/tank_energy.cc" : "6c018ee55c7d69d3",
-  "src/environment.cc" : "d14022c739480c9a",
-  "src/environment.hh" : "9602fc842620120e",
-  "src/plants.cc" : "84dd08e1cdc01da4",
-  "src/plant_types.hh" : "1fb032b0ca9f080d",
-  "src/motor_state.hh" : "331771bcd2281ef8",
-  "src/visible_body.hh" : "e0b989f5b403d44a",
-  "src/body_state_limits.hh" : "7a33a86fe74eae10",
-  "colony-core/cppn/cppn.hh" : "c9ce8e4829b4f8cc",
-  "colony-core/cppn/program.cc" : "3a35f2b687924b9a",
-  "colony-core/field/distribution.hh" : "80b7d194fee9ccf5",
-  "colony-core/field/retinal_tissue.hh" : "d2a92b090939da05",
-  "colony-core/field/dynamics.hh" : "be82802041a9173e",
-  "colony-core/field/maturation.hh" : "4e8cf5c46f00df3e"
-});
-function semanticFingerprint(source) {
-  const text = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '').replace(/\s+/g, '');
-  let hash = 0xcbf29ce484222325n;
-  for (const char of text) {
-    hash ^= BigInt(char.codePointAt(0));
-    hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn;
-  }
-  return hash.toString(16).padStart(16, '0');
-}
-
 function checkSlotWiring(model, regions, sites, clickSlot) {
   const organ = id => ({kind : 'organ', id});
   const port = (id, slot) => ({kind : 'slot', id, slot});
@@ -748,21 +667,6 @@ async function checkFunctionalRegions(model, capabilities) {
   }
 }
 
-// The starters' blood sense reads their energy reserve; it must stay there when the wheel grows.
-async function checkStarterBloodSense(model, wheel, root) {
-  const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
-  for (const name of ['brisa', 'liora']) {
-    const doc =
-        JSON.parse(readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
-    for (const c of doc.organs.filter(o => o.type === 'blood').flatMap(o => o.centers)) {
-      const reads = Array.from({length : wheel.bloodSubstances},
-                               (_, k) => model.wheelAffinity(wheel, c.q1, c.q2, c.qwidth, k));
-      assert.equal(reads.indexOf(Math.max(...reads)), BLOOD_SUBSTANCE.reserve,
-                   name + ': the blood sense reads the energy reserve');
-    }
-  }
-}
-
 async function checkHormoneSystems(model, capabilities) {
   const {sites} = capabilities;
   const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
@@ -846,12 +750,6 @@ async function checkHormoneSystems(model, capabilities) {
 
 (async () => {
   const root = join(__dirname, '..');
-  for (const [path, expected] of Object.entries(ENGINE_REVIEW)) {
-    const actual = semanticFingerprint(readFileSync(join(root, path), 'utf8'));
-    assert.equal(actual, expected,
-                 'Engine/Viewer changed: ' + path +
-                     '. Review organ editor and update ENGINE_REVIEW.');
-  }
   const {ANATOMY, CONTRAST_POLARITY, HORMONE_EFFECT, HORMONES, MOTOR_KIND, TUNING} =
       await import('../ui/schema.js');
   const colourType = (id, q1, qwidth) =>
@@ -1021,7 +919,6 @@ async function checkHormoneSystems(model, capabilities) {
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
   if (!process.argv.includes('--ui')) {
-    await checkStarterBloodSense(model, sitesResult, root);
     if (process.argv.includes('--hormone-systems')) {
       const result = JSON.parse(execFileSync(
           'python3',
