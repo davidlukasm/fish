@@ -80,11 +80,11 @@ namespace fishsim {
   X(odor_emission, .023, 0, 1)                                                                     \
   X(odor_mixing, 6, 0, 200)                                                                        \
   X(waterborne_drift, 2, 0, 10)                                                                    \
-  X(odor_lifetime_food, 60, 1, 100000)                                                             \
+  X(odor_lifetime_food, 360, 1, 100000)                                                            \
   X(odor_lifetime_algae, 120, 1, 100000)                                                           \
   X(odor_lifetime_plants, 100, 1, 100000)                                                          \
   X(odor_lifetime_worms, 80, 1, 100000)                                                            \
-  X(odor_lifetime_plankton, 60, 1, 100000)                                                         \
+  X(odor_lifetime_plankton, 360, 1, 100000)                                                        \
   X(odor_lifetime_carrion, 80, 1, 100000)                                                          \
   X(odor_lifetime_eggs, 120, 1, 100000)                                                            \
   X(odor_strength_carrion, 3, 0, 100)                                                              \
