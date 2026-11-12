@@ -943,8 +943,8 @@
 .aid-contact-limit{font-size:10px;color:var(--aid-label-text);display:flex;align-items:center;gap:5px}
 .aid-contact-limit select{max-width:65px;background:var(--aid-control);color:var(--aid-control-text);border:1px solid var(--aid-control-edge);border-radius:5px}
 .aid-scene-top .aid-view-options{flex-wrap:wrap;justify-content:flex-end;gap:6px}
-.aid-effect-chips{display:grid;gap:4px}
-.aid-effect-chips button{display:flex;align-items:center;gap:8px;text-align:left}
+.aid-effect-chips{display:flex;flex-wrap:wrap;gap:4px}
+.aid-effect-chips button{display:flex;align-items:center;padding:6px}
 .aid-effect-chips button svg{flex-shrink:0}
 .aid-effect-guide{margin:10px 0}
 .aid-effect-card{display:block;margin:6px 0;padding:6px;border:1px solid var(--aid-card-edge);border-radius:10px;background:#17363c}

@@ -595,9 +595,9 @@ const receptorEditor = (state, center, effects, effect) =>
     '<div class="aid-effect-chips">' +
     effects
         .map(value => '<button data-effect="' + value + '" class="' +
-                      (effect === value ? 'active' : '') + '">' +
-                      glyph(EFFECT_ICON[value], ICON.mark, {line : true}) +
-                      escapeText(label('effects.' + value)) + '</button>')
+                      (effect === value ? 'active' : '') + '" title="' +
+                      escapeText(label('effects.' + value)) + '">' +
+                      glyph(EFFECT_ICON[value], ICON.mark, {line : true}) + '</button>')
         .join('') +
     '</div>' + receptorBody(state, center, effect);
 function receptorWheel(state, receptor, target) {
@@ -760,9 +760,9 @@ function hormoneDetails(state) {
                                .join('') +
                            '</div>'
                      : '';
-  return html + choose + cellDevelopment(state, focus) + '<div class="aid-receptor-editor">' +
-         heading(label('inspector.cellEffects')) + receptorEditor(state, focus, effects, effect) +
-         '</div>';
+  return html + choose + cellDevelopment(state, focus) +
+         '<div class="aid-receptor-editor" title="' + label('inspector.cellEffects') + '">' +
+         receptorEditor(state, focus, effects, effect) + '</div>';
 }
 
 export function hormoneInspector(state) { return previewControls(state) + hormoneDetails(state); }
