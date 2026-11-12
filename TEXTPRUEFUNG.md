@@ -31,7 +31,26 @@ Die Frage ist immer: Was BEWIRKT das beim Fisch, und kann man das so sagen oder 
 
 | Ort | Zitat / Beschreibung | Art | Vorschlag | gefunden von |
 |---|---|---|---|---|
-| Darmsinn, Futterzellen (Claude, c1802974) | „halb gewöhnt nach 10 Schritten“ | B | „Gewöhnt“ und „Schritte“ sind Code-Sprache. Wirkung: ein Bissen wird nach … nur noch halb so stark gemeldet; Zeit in verständlicher Einheit | Claude (selbst) |
-| Auge, Empfindlichkeit (Claude, 0270a8e0) | „halbe Antwort ab 1 % Unterschied“ | B | „halbe Antwort“ ist Modellsprache. Eher: „sieht schon, was 1 % heller ist als die Umgebung“ | Claude (selbst) |
-| Drüse, Befehlslinie (Claude) | „hemmend/erregend“, Totzone „Schwelle“ | B | prüfen, ob „schwacher Befehl bewirkt nichts“ verständlicher ist | Claude (selbst) |
-| überall | „Schritte“ als Zeitmaß | B | klären, ob eine Einheit wie Sekunden oder Tage im Aquarium sichtbar ist; sonst ein Vergleich wie „ein Atemzug“ | Claude |
+| Darmsinn, Auge, Drüse … (Claude) | „halb gewöhnt“, „halbe Antwort ab …“, „halb bei … Füllung“ | B | **erledigt 9801d83a:** „gewöhnt sich in n Schritten daran“, „erkennt ab n % Unterschied“, „meldet ab n % Füllung“, „spürt ab n % des Bedarfs“ | Claude (selbst) |
+| überall | „Schritte“ als Zeitmaß | – | **bleibt:** Der Viewer zählt die Zeit sichtbar in Schritten („Schritt 0“, „1 Schritt/s“) | Claude |
+| Muskel, Ausdauer (Claude) | „0 % schnell“, „Unterhalt“, „Arbeit“ | B | **erledigt 9801d83a:** „n % schnelle Fasern“, „kostet in Ruhe“, „kostet je Schlag“ | Claude (selbst) |
+| Atelier, Kopfzeile | „AID / WERKSTATT 02“, Startseite „AID / V019“, „01 / BEOBACHTUNG“ | B | interne Nummern und Kürzel; streichen oder den Namen ausschreiben | Claude |
+| Atelier, Kopfzeile | „841 potenzielle Zellen · Bauplan“ | B | Was heißt „potenzielle“? Etwa „Platz für 841 Zellen“, oder weglassen | Claude |
+| Atelier, Kopfzeile und Reiter | „CPPN erzeugen“, „CPPN bearbeiten“, „CPPN-Vorschläge“, Leertext „CPPN erzeugen, Entwicklungsvorschau ansehen“ | B | Fachkürzel. Wirkung benennen, etwa „Erbgut erzeugen“ und „Erbgut bearbeiten“, „Vorschläge aus dem Erbgut“ | Claude |
+| Atelier, rechts oben | „Bauprüfung“ | B | Was wird geprüft? Etwa „Ist der Fisch lebensfähig?“ | Claude |
+| Atelier, Ansichtsleiste | „Kontaktbündel 120“ (Auswahlliste) | B | unverständlich; was ändert die Zahl am Bild? Sonst entfernen | Claude |
+| Atelier, Ansichtsleiste | Ebenen „Verbindungen / Knoten / Hormone“, Knopf „Entwurf“ | B | „Knoten“ ist Modellsprache; „Entwurf“ gegen „Vorschläge“ unklar | Claude |
+| Atelier, Platzieren | drei Symbolknöpfe (◦|◦, ◦|, |◦) ohne Wort | B | Bedeutung nicht erkennbar (beide Seiten, links, rechts?); Wort dazu | Claude |
+| Atelier, Werkzeugleiste links | Symbole ohne Wort, „⌗“ | B | nur Tooltips. Kurzes Wort oder eindeutigeres Bild; „⌗“ ist unklar | Claude |
+| Atelier, Bibliothek | „Tectum“, „Nahsinn“, „Modulator“, „Lernknoten“, „Hemmkreis“, „Bewertung“, „Körperzustand“ | B | Fachwörter. Nach Wirkung benennen: „Tectum“ → „Sehzentrum“; „Nahsinn“: was spürt er? | Claude |
+| Atelier, leerer Inspektor | „Vorzeichen, Lehrkontakte und Hormonbindungen werden unterschieden“ | B | Modellsprache; sagen, was man sieht (Farben, Strichart) | Claude |
+| Zentrale | „0 Startfische tragen sich“ | B | Was heißt „tragen sich“? Etwa „0 Startfische überleben über Generationen“ | Claude |
+| Zentrale, Labor-Karte | „Futter aus zwölf Richtungen, offene Muscheln“ | B | kryptisch; sagen, was man dort herausfindet | Claude |
+| Verhaltenslabor | „Der Fisch steht 40 vor einer offenen Muschel“ | B | Zahl ohne Einheit (40 was?) | Claude |
+| Verhaltenslabor | „WELTEN 1 2 4“ | B | Was ist eine Welt hier (gleichzeitige Wiederholungen)? | Claude |
+| Verhaltenslabor | „Im Labor wird laufend Energie nachgefüllt.“ | B | Wessen Energie? Etwa „Der Fisch verhungert im Labor nicht“ | Claude |
+| Zuchtstation | „STARTWELTEN 2 3 5“, „Ohne Bestandshilfe“ | B | „Bestandshilfe“ ist Modellsprache; „Startwelten“ unklar | Claude |
+| Aquarium, Kopfzeile | „CPU“, „– FPS · – ms max.“ | B | Technikanzeige; für Entwickler, nicht für Spieler | Claude |
+| Aquarium, Nahrungsnetz | „Zufuhr 100 %“, Balken „35 % 12 % 18 % 35 %“ ohne Namen am Balken | B | Anteile wovon? Namen an die Balken | Claude |
+| Aquarium, Neuer Lauf | Karten: „Augen 88 / Nase 8 / Seitenlinie 0“, „Kiefer 100 % Darm 50 % Zähne 50 % Körper 50 %“, Tooltip „Darm: kurz (0) bis lang (100). Erbliche Anatomie.“ | B | Rohwerte ohne Bedeutung, die Erklärung nur im Tooltip; Wirkung zeigen (Darm lang = Pflanzenverwerter) | Claude |
+| Aquarium, Neuer Lauf | „handbau“, „2 Linien“, „Ohne Auswahl: die sieben Beispielklassen“, „Seed für nächsten Lauf“, Sortierknopf „Drehimpuls“ | B | interne Ordnernamen und Fachwörter | Claude |
