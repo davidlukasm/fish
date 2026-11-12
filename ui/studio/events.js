@@ -1,15 +1,20 @@
-import {HORMONES} from '../schema.js';
+import {newFishDocument} from './canvas_placement.js';
+import {HORMONES, MOTOR_KIND} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
-import {ORGAN_BY_KEY, PAIRINGS} from './model/organs.js';
+import {ORGAN_BY_KEY, PAIRINGS, organFunction} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
 import {findSite, sitePoint} from './model/layout.js';
-import {toggleInnerLink, updateRegion} from './model/regions.js';
+import {toggleInnerLink, updateRegion, routedLinks} from './model/regions.js';
 import {
   addAntagonist,
+  addOrgan,
   addOrganType,
   addSubstance,
+  addWire,
   allCenters,
   bentTogether,
+  bundleWires,
+  unbundleWires,
   bindReceptor,
   closestSiteDoing,
   findAssembly,
@@ -21,9 +26,9 @@ import {
   mirrorOrgan,
   moveCenterToSide,
   moveOrgan,
-  newDocument,
   nextTypeTuning,
   removeOrganType,
+  removeWire,
   removeSubstance,
   selectionCenters,
   setBends,
@@ -35,7 +40,6 @@ import {
   unbindReceptor,
   updateCenter,
   updateCellGrowth,
-  updateCellDistribution,
   updateGrowth,
   updateReceptor,
   updateWire,
@@ -51,7 +55,6 @@ import {
 import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
 import {GENOME_FILE_ID} from './view/shell.js';
-import {learningTimeOf, timeConstantOf} from '../tuning.js';
 
 const PASS = Symbol('pass');
 export function clickOn(studio, event, table) {
@@ -76,7 +79,7 @@ const ACTIONS = Object.freeze({
   atelier : studio => studio.navigate('studio'),
   breeding : studio => studio.navigate('breeding'),
   trials : studio => studio.navigate('trials'),
-  new : studio => studio.loadFish(newDocument(label('app.newFish'))),
+  new : studio => studio.loadFish(newFishDocument(label('app.newFish'), studio.state.sites)),
   example : studio => studio.example(),
   check : studio => studio.checkCompiler(),
   'cancel-build' : studio => { studio.cancelCompile = true; },
@@ -116,7 +119,6 @@ export const STUDIO_CLICKS = Object.freeze([
   [ '[data-act-kind="stimulus"]', (studio, e) => studio.placeStimulus(e.dataset.actValue) ],
   [ '[data-drag-kind]', (studio, e) => studio.pickUp(e.dataset.dragKind, e.dataset.dragValue) ],
   [ '[data-history]', (studio, e) => studio.stepHistory(e.dataset.history) ],
-  [ '[data-brain-part]', (studio, e) => studio.focusBrainPart(e.dataset.brainPart) ],
   [ '[data-zoom]', (studio, e) => studio.zoom(e.dataset.zoom) ],
   [
     '[data-contacts]',
@@ -248,6 +250,46 @@ function showChoice(studio, change, library = false) {
 }
 
 export const FISH_CLICKS = Object.freeze([
+  ['[data-circuit-edit]', (studio,e)=>{
+    studio.state.circuitEditing=studio.state.circuitEditing===e.dataset.circuitEdit?null:e.dataset.circuitEdit;
+    studio.state.circuitFrom=null;
+    studio.refreshInspector();
+  }],
+  ['[data-circuit-node]', (studio,e)=>{
+    const id=e.dataset.circuitNode, region=e.dataset.circuitRegion;
+    if(studio.state.circuitEditing!==region) return studio.select('center',id,null,false);
+    const from=studio.state.circuitFrom;
+    if(!from || from===id) {
+      studio.state.circuitFrom=from===id?null:id;
+      return studio.refreshInspector();
+    }
+    const existing=routedLinks(studio.state.document,studio.state.sites,true).find(l=>l.from===from&&l.to===id);
+    if(existing) {
+      studio.state.circuitFrom=null;
+      if(existing.cut) studio.changeDocument(toggleInnerLink(studio.state.document,region,existing.key),{kind:'organ',id:region});
+      else studio.refreshInspector();
+      return;
+    }
+    const result=addWire(studio.state.document,from,id,null,studio.state.sites);
+    studio.state.circuitFrom=null;
+    if(result) studio.changeDocument(result.document,{kind:'organ',id:region});
+    else studio.refreshInspector();
+  }],
+  ['[data-circuit-wire]',(studio,e)=>keep(studio,removeWire(studio.state.document,e.dataset.circuitWire))],
+  ['[data-head-control]', (studio,e)=>{
+    const jaw=e.dataset.headControl==='jaw', code=jaw?MOTOR_KIND.aggression:MOTOR_KIND.suction;
+    const {document:doc,sites}=studio.state;
+    const existing=doc.organs.find(o=>o.type==='muscle'&&organFunction(o,sites)===code);
+    if(existing) return studio.select('organ',existing.id,null,false);
+    const placed=addOrgan(doc,'muscle',sites,{x:jaw?195:275,y:330},Infinity,true,code);
+    if(placed) studio.changeDocument(placed.document,{kind:'organ',id:placed.organId});
+  }],
+  ['[data-placement-side]', (studio, e) => {
+    studio.state.placementSide = e.dataset.placementSide;
+    studio.refreshLibrary();
+    studio.clearPreview();
+    studio.restorePlacement();
+  }],
   [
     '[data-link-pair]',
     (studio, e) => keep(studio, linkPair(studio.state.document, e.dataset.linkPair))
@@ -324,7 +366,7 @@ export const FISH_CLICKS = Object.freeze([
     '[data-response-cell]',
     (studio, e) => {
       const key = e.dataset.responseProperty;
-      if (['q1', 'q2', 'sign'].includes(key))
+      if (['q1', 'q2', 'sign', 'mode'].includes(key))
         keep(studio, updateCenter(studio.state.document, e.dataset.responseCell,
                                   {[key] : Number(e.dataset.responseValue)}));
     }
@@ -382,6 +424,17 @@ export const FISH_CLICKS = Object.freeze([
       const marked = markedKind(e, REMOVE_KINDS), kind = marked.slice(marked.indexOf('-') + 1);
       studio.removeSelection({kind, id : e.getAttribute('data-' + marked)});
     }
+  ],
+  [
+    '[data-bundle-wires]',
+    studio => {
+      const draft=bundleWires(studio.state.document,studio.state.multi);
+      if(draft) studio.changeDocument(draft,studio.state.selected);
+    }
+  ],
+  [
+    '[data-unbundle-wires]',
+    (studio,e)=>keep(studio,unbundleWires(studio.state.document,e.dataset.unbundleWires))
   ],
   [
     '[data-unbend-wire]',
@@ -451,18 +504,7 @@ export const FISH_CLICKS = Object.freeze([
         removeOrganType(studio.state.document, e.dataset.removeType, e.dataset.typeId),
         {kind : 'organ', id : e.dataset.removeType})
   ],
-  [
-    '[data-dose-steepness]',
-    (studio, e) => {
-      const target = e.closest('[data-dose]')?.dataset.dose;
-      if (!target)
-        return PASS;
-      const cut = target.lastIndexOf(':');
-      keep(studio, updateReceptor(studio.state.document, target.slice(0, cut),
-                                  Number(target.slice(cut + 1)),
-                                  {steepness : Number(e.dataset.doseSteepness)}));
-    }
-  ],
+
   [
     '[data-probe-scent]',
     (studio, e) => {
@@ -535,6 +577,15 @@ export const FISH_CLICKS = Object.freeze([
                             {kind : 'center', id});
     }
   ],
+  [ '[data-copy-cell]', (studio, e) => keep(studio,
+      updateCenter(studio.state.document, e.dataset.copyCell, {copies : Number(e.dataset.copyCount)})) ],
+  [ '[data-development-effect]', (studio, e) => showChoice(studio, state => {
+      state.developmentEffect = e.dataset.developmentEffect === 'birth' ? 'birth' : Number(e.dataset.developmentEffect);
+  }) ],
+  [ '[data-birth-substance]', (studio, e) => keep(studio,
+      updateCellGrowth(studio.state.document, e.dataset.centerId, {active : 1, substance : Number(e.dataset.birthSubstance)})) ],
+  [ '[data-growth-substance]', (studio, e) => keep(studio,
+      updateGrowth(studio.state.document, {active : 1, substance : Number(e.dataset.growthSubstance)})) ],
   [
     '[data-receptor-substance]',
     (studio, e) => {
@@ -585,31 +636,7 @@ export const FISH_CHANGES = Object.freeze([
     studio.state.contactLimit = Number(e.value);
     studio.refreshScene();
   } ],
-  [ 'receptorField', (studio, e) => {
-    const patch = {};
-    patch[e.dataset.receptorKey] = Number(e.value);
-    keep(studio, updateReceptor(studio.state.document, e.dataset.receptorField, Number(e.dataset.receptorEffect), patch));
-  } ],
-  [ 'bodyGrowth', (studio, e) => {
-    const patch = {};
-    patch[e.dataset.bodyGrowth] = Number(e.value);
-    keep(studio, updateGrowth(studio.state.document, patch));
-  } ],
   [ 'cellGrowthActive', (studio, e) => keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowthActive, {active : e.checked ? 1 : 0})) ],
-  [ 'cellGrowth', (studio, e) => {
-    const patch = {};
-    patch[e.dataset.growthKey] = Number(e.value);
-    keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowth, patch));
-  } ],
-  [ 'cellTrait', (studio, e) => {
-    const key = e.dataset.traitKey, entered = Number(e.value), neural = studio.state.capabilities.neural;
-    const value = key === 'tau' ? timeConstantOf(entered) : key === 'learning_tau' ? learningTimeOf(entered)
-        : key === 'field' ? Math.log(Math.max(neural.slotMin, entered) / neural.slotMin) / Math.log(neural.slotSpan) : key === 'range' ? (entered-studio.state.capabilities.reachLeast)/(1-studio.state.capabilities.reachLeast) : entered;
-    const patch = {};
-    patch[key] = value;
-    keep(studio, updateCenter(studio.state.document, e.dataset.cellTrait, patch));
-  } ],
-  [ 'cellDistribution', (studio, e) => keep(studio, updateCellDistribution(studio.state.document, e.dataset.cellDistribution, e.dataset.distributionKey, Number(e.value))) ],
   [
     'substanceName',
     (studio, e) => keep(studio, setSubstance(studio.state.document, Number(e.dataset.substanceName),

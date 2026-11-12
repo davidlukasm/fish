@@ -2,12 +2,8 @@ import {BODY_FRAME, findSite, NERVE_ROLE, sideOf, sitePoint} from '../model/layo
 import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
 import {clamp} from '../../units.js';
 
-export const BRAIN = Object.freeze({
-  cerebrum : {from : 220, to : 586, half : 202, front : .9, full : .35, lobes : 5, bulge : .13},
-  cerebellum : {x : 574, rx : 28, ry : 55, folia : 5, bow : .25},
-  cord : {from : 590, to : 875, half : [ 32, 27 ], end : 14, segments : 12},
-  edge : 2.4
-});
+export {BRAIN, brainHalfWidth} from '../model/anatomy.js';
+import {BRAIN, brainHalfWidth, anatomicalPosition, nerveHalfWidth} from '../model/anatomy.js';
 const FORMS = Object.freeze({
   olfaction : {part : 0, aspect : .8, rim : [ .06, .38, .5, .45, .34, .2, .04 ]},
   tectum : {part : 1, aspect : 1.25, rim : [ .08, .39, .5, .49, .44, .32, .12 ]},
@@ -17,13 +13,9 @@ const FORMS = Object.freeze({
   motor : {part : 3, aspect : .8, rim : [ .06, .3, .49, .42, .34, .23, .04 ]},
   spine : {part : 4, aspect : 2.6, rim : [ .1, .38, .48, .44, .48, .38, .1 ]}
 });
-const PACK = Object.freeze({gap : 7, margin : 12, step : 5, shrink : .94, midline : 14});
+const PACK = Object.freeze({gap : 6, margin : 8, step : 5, shrink : .94, midline : 5});
 const CELL = Object.freeze({pitch : 17, padding : 28, columns : 4, along : .55, across : .56});
 const homeSite = (organ, sites) => findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
-export function brainHalfWidth(x) {
-  const C = BRAIN.cerebrum, u = clamp((x - C.from) / (C.to - C.from));
-  return C.half * Math.sin(Math.PI * u) ** C.full * (C.front + (1 - C.front) * u);
-}
 function contents(organ) {
   const form = FORMS[organ.type], rows = [],
         ports = [ 'in', 'none', 'out' ].map(
@@ -67,27 +59,17 @@ function layout(doc, sites) {
       side : ORGAN_BY_KEY[organ.type].scope === 'side' ? sideOf(organ) : 0,
       width : Math.max(...plans.map(p => p.width)),
       height : Math.max(...plans.map(p => p.height)),
-      part : plan.form.part
+      part : plan.form.part,
+      position : organ.position,
+      cord : organ.position ? organ.position.x >= BRAIN.cord.from : organ.type === 'spine'
     });
   }
-  // Area determines each lobe's share of the head. Paired regions occupy mirrored places;
-  // a single state region reserves the midline before either hemisphere is packed.
-  const weights = Array.from(
-      {length : 4},
-      (_, part) => groups.filter(g => g.part === part).reduce((n, g) => n + g.width * g.height, 0));
-  const total = weights.reduce((a, b) => a + b, 0) || 1;
-  const C = BRAIN.cerebrum, span = C.to - C.from - 2 * PACK.margin;
-  let edge = C.from + PACK.margin;
-  const lobes = weights.map(w => {
-    const from = edge;
-    edge += span * w / total;
-    return [ from, edge ];
-  });
+  const C = BRAIN.cerebrum;
   groups.sort((a, b) => Number(!!a.side) - Number(!!b.side) || a.part - b.part ||
                         b.width * b.height - a.width * a.height || a.home.x - b.home.x);
   const anchors = new Map();
   for (const cordOnly of [false, true]) {
-    const partition = groups.filter(g => (g.part === 4) === cordOnly);
+    const partition = groups.filter(g => g.cord === cordOnly);
     for (let k = 1;; k *= PACK.shrink) {
       for (const group of partition)
         for (const organ of group.members)
@@ -95,17 +77,18 @@ function layout(doc, sites) {
       const occupied = [];
       let fits = true;
       for (const group of partition) {
-        const {members, side, part} = group, width = group.width * k, height = group.height * k;
-        const gap = PACK.gap * k, cord = part === 4;
-        const [from, to] = cord ? [ BRAIN.cord.from, BRAIN.cord.to ] : lobes[part];
-        const preference = clamp((group.home.x - C.from) / (C.to - C.from));
-        const targetX = cord ? clamp(group.home.x, from, to)
-                             : (from + to) / 2 + (preference - .5) * (to - from) * .6;
+        const {members, side} = group, width = group.width * k, height = group.height * k;
+        const gap = PACK.gap * k, cord = group.cord;
+        const [from, to] = cord ? [ BRAIN.cord.from, BRAIN.cord.to ]
+                                : [ C.from + PACK.margin, C.to - PACK.margin ];
+        const native = homeSite(group.members[0], sites);
+        const targetX =
+            group.cord ? clamp(group.home.x, from, to) : from + (1 - native.u) * (to - from);
         const targetY = cord ? BRAIN.cord.half[1] / 2 : brainHalfWidth(targetX) * .55;
         const candidates = [];
         for (let x = from + width / 2; x <= to - width / 2; x += PACK.step * k) {
           const half =
-              cord ? BRAIN.cord.half[1]
+              cord ? Math.min(nerveHalfWidth(x - width / 2), nerveHalfWidth(x + width / 2))
                    : Math.min(brainHalfWidth(x - width / 2), brainHalfWidth(x + width / 2)) -
                          PACK.margin;
           if (!side) {
@@ -158,6 +141,20 @@ function layout(doc, sites) {
         break;
     }
   }
+  for (const organ of organs) {
+    if (!organ.position)
+      continue;
+    const G = anchors.get(organ.id), p = anatomicalPosition(organ.type, organ.position);
+    const k = organ.position.scale ?? G.k;
+    anchors.set(organ.id, {
+      ...G,
+      ...p,
+      k,
+      width : G.width * k / G.k,
+      height : G.height * k / G.k,
+      side : organ.side === 0 ? 0 : sideOf(organ)
+    });
+  }
   cache.set(doc, {sites, anchors});
   return anchors;
 }
@@ -195,7 +192,7 @@ export function localPoint(G, x, y) {
 }
 export function regionDock(doc, sites, organ, direction) {
   const G = regionGeometry(doc, sites, organ);
-  return localPoint(G, 0, direction === 'in' ? -.48 : .48);
+  return {x : G.x + (direction === 'in' ? -.46 : .46) * G.width, y : G.y};
 }
 function rimWidths(G) {
   const sizes = G.rows.map(r => r.cells.length), biggest = Math.max(1, ...sizes);
@@ -215,61 +212,4 @@ export function regionRim(G) {
   const half = rimWidths(G);
   const side = sign => half.map((r, i) => localPoint(G, sign * r, i / (half.length - 1) - .5));
   return [...side(1), ...side(-1).reverse() ];
-}
-
-const hull = points => {
-  const sorted = points.toSorted((a, b) => a.x - b.x || a.y - b.y);
-  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  const chain = list => {
-    const result = [];
-    for (const p of list) {
-      while (result.length > 1 && cross(result.at(-2), result.at(-1), p) <= 0)
-        result.pop();
-      result.push(p);
-    }
-    return result.slice(0, -1);
-  };
-  return [...chain(sorted), ...chain(sorted.toReversed()) ];
-};
-const lobeCache = new WeakMap();
-export function brainLobes(doc, sites) {
-  const old = lobeCache.get(doc);
-  if (old?.sites === sites)
-    return old.lobes;
-  const groups = new Map();
-  for (const organ of doc.organs.filter(o => isRegion(o) && o.centers.length)) {
-    const G = regionGeometry(doc, sites, organ), key = G.form.part + ':' + G.side;
-    if (!groups.has(key))
-      groups.set(key, {
-        key,
-        part : G.form.part,
-        side : G.side,
-        organs : [],
-        points : [],
-        type : organ.type,
-        types : new Set()
-      });
-    const group = groups.get(key);
-    group.organs.push(organ.id);
-    group.types.add(organ.type);
-    group.points.push(...regionRim({...G, width : G.width + 12, height : G.height + 12}));
-  }
-  const lobes = [...groups.values() ].map(group => {
-    const xs = group.points.map(p => p.x), ys = group.points.map(p => p.y);
-    const left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys),
-          bottom = Math.max(...ys);
-    return {
-      ...group,
-      x : (left + right) / 2,
-      y : (top + bottom) / 2,
-      width : right - left,
-      height : bottom - top,
-      points : hull(group.points)
-    };
-  });
-  lobeCache.set(doc, {sites, lobes});
-  return lobes;
-}
-export function lobeOf(doc, sites, organ) {
-  return brainLobes(doc, sites).find(lobe => lobe.organs.includes(organ.id));
 }

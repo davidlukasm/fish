@@ -154,8 +154,6 @@
 .aid-center-tabs{display:flex;flex-wrap:wrap;gap:5px;padding-bottom:10px}
 .aid-center-tabs button,.aid-effect-chips button{flex:0 0 auto;padding:7px 11px;border:1px solid #3a5c66;border-radius:9px;background:#1e4249;font-size:12px}
 .aid-center-tabs button.selected,.aid-effect-chips button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
-.aid-cell-track{display:block;width:100%;height:auto;margin:10px 0 4px}
-.aid-cell-track text{font-size:12px;fill:#c2d6d2}
 .aid-gonad-graphic{width:100%;color:#13333b}
 .aid-gonad-graphic text{fill:#e1e9e2;font-size:12px;font-weight:700;pointer-events:none}
 .aid-gonad-center{cursor:pointer}
@@ -179,7 +177,7 @@
 .aid-bound-effect{display:inline-flex;color:var(--substance,var(--aid-soft-text))}
 .aid-range-hints{display:flex;justify-content:space-between;font-size:11px;color:var(--aid-soft-text);margin-top:-6px}
 .aid-life-phase{margin:10px 0 14px;padding-bottom:10px;border-bottom:1px solid #ffffff14}
-.aid-substance-wheel{width:170px;display:block;margin:10px auto}
+.aid-substance-wheel{width:240px;max-width:100%;display:block;margin:10px auto}
 .aid-substance-wheel[data-wheel]{touch-action:none;cursor:crosshair}
 .aid-wheel-ring{fill:none;stroke:#ffffff22}
 .aid-wheel-halo{fill:#d7c29418;stroke:#d7c29455;stroke-dasharray:3 3}
@@ -1004,15 +1002,7 @@
 .aid-effect-spikes{stroke:var(--aid-light);stroke-width:1.6;stroke-linecap:round;fill:none}
 .aid-effect-mark{fill:none;stroke:#9fb9b4;stroke-width:1.2}
 .aid-effect-mark.with{stroke:none}
-.aid-dose{display:block;width:100%;height:auto;margin:6px 0;color:var(--substance);background:var(--aid-graphic);border-radius:8px}
-.aid-dose-band{stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
-.aid-dose-gauge{fill:var(--aid-chip);stroke:var(--aid-card-edge);stroke-width:1;vector-effect:non-scaling-stroke}
-.aid-dose-level{fill:currentColor;opacity:.7}
 .aid-dose-zero{stroke:var(--aid-soft-text);stroke-width:1;vector-effect:non-scaling-stroke}
-.aid-dose-threshold{stroke:#e66a5c;stroke-width:2;vector-effect:non-scaling-stroke}
-.aid-dose-pip{fill:var(--aid-chip);stroke:currentColor;stroke-width:1;cursor:pointer;vector-effect:non-scaling-stroke}
-.aid-dose-pip.active{fill:currentColor}
-.aid-dose-end{fill:var(--aid-label-text);font-size:10px}
 .aid-preview-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
 .aid-preview-bars text{fill:var(--aid-label-text);font-size:11px}
 .aid-preview-level{opacity:.85}
@@ -1041,9 +1031,6 @@
 
 .aid-preview-context,.aid-cell-development{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
 .aid-preview-context summary,.aid-cell-development summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
-.aid-parameter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
-.aid-parameter-grid label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--aid-label-text);min-width:0}
-.aid-parameter-grid input,.aid-parameter-grid select{box-sizing:border-box;width:100%;min-width:0;color:var(--aid-control-text);background:var(--aid-control);border:1px solid var(--aid-control-edge);border-radius:5px;padding:5px}
 .aid-parameter-readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 0}
 .aid-parameter-readout div{background:var(--aid-graphic);border-radius:5px;padding:6px}
 .aid-parameter-readout dt{font-size:10px;color:var(--aid-label-text)}
@@ -1162,3 +1149,70 @@
 .aid-region-card.motor,.aid-region-card.spine{--region-ink:#e6a385;--region-fill:#513c37}
 .aid-region-card .aid-anatomical-region,.aid-brain-part-shape{fill:var(--region-fill);stroke:var(--region-ink)}
 .aid-region-card .aid-region-name{fill:var(--region-ink)}
+
+.aid-receptor-picture{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
+.aid-receptor-picture .aid-effect-scene{max-width:100%}
+.aid-cell-capacity,.aid-cell-variation{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:8px}
+.aid-cell-capacity summary,.aid-cell-variation summary,.aid-learn-substance summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
+.aid-capacity,.aid-variation{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-capacity text,.aid-variation text{font-size:11px;fill:var(--aid-label-text);pointer-events:none}
+.aid-tissue-cell{fill:var(--aid-control);stroke:var(--aid-brain);stroke-width:1.4}
+.aid-contact-seat{fill:var(--aid-light)}
+.aid-contact-fibre{fill:none;stroke:var(--aid-light);stroke-linecap:round;stroke-linejoin:round}
+.aid-capacity .teaching .aid-contact-fibre{stroke:var(--aid-teach)}
+.aid-variation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.aid-variation{color:var(--aid-brain)}
+.aid-variation g path,.aid-variation g circle:not(.aid-tissue-cell){stroke:currentColor;stroke-width:1.2;fill:none}
+.aid-variation-branch{fill:none;stroke:var(--aid-light);stroke-width:1;opacity:.4}
+.aid-learning-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.aid-learning-modes button{display:flex;flex-direction:column;align-items:center;min-width:0;padding:5px;font-size:11px;color:var(--aid-label-text);background:var(--aid-control);border:1px solid var(--aid-card-edge);border-radius:8px}
+.aid-learning-modes button[aria-pressed=true],.aid-effect-chips button[aria-pressed=true]{border-color:var(--aid-chosen-edge);background:var(--aid-limit)}
+.aid-learning-modes svg{display:block;width:100%;height:auto;color:var(--aid-light)}
+.aid-learn-substance summary{display:flex;gap:6px;align-items:center}
+.aid-life-phase .aid-life-birth{fill:none;stroke:var(--aid-senses);stroke-width:2;stroke-dasharray:4 3}
+
+.aid-cell-group{width:100%;height:auto;display:block;touch-action:none}
+.aid-cell-group text{fill:var(--aid-label-text);font-size:12px}
+.aid-cell-copy{fill:var(--aid-chip);stroke:var(--aid-card-edge);stroke-width:1.2;cursor:pointer}
+.aid-cell-copy.filled{fill:var(--aid-brain);stroke:var(--aid-rim)}
+.aid-cell-copy:hover{stroke:var(--aid-handle);stroke-width:3}
+.aid-cell-group .aid-graphic-handle{fill:none;stroke:var(--aid-handle);stroke-width:2.5}
+
+.aid-field-boundary{fill:none;stroke:var(--aid-handle);stroke-width:1;stroke-dasharray:3 5;pointer-events:none;opacity:.65}
+
+.aid-variation[data-variation-family=spread_development] g circle:not(.aid-tissue-cell){fill:currentColor}
+
+#aid-body-map.aid-stimulus-view *{filter:none!important}
+#aid-body-map .aid-pulse-active .aid-neural-body,#aid-body-map .aid-pulse-fired .aid-neural-body{stroke:var(--aid-light);stroke-width:2}
+#aid-body-map .aid-pulse-teaching .aid-neural-body{stroke:var(--aid-teach);stroke-width:2}
+#aid-body-map .aid-pulse-binding .aid-neural-body{stroke:var(--aid-hormone);stroke-width:2}
+
+.aid-placement-sides{display:flex;gap:2px;margin:4px 0 14px;padding:3px;background:var(--aid-graphic);border-radius:9px}
+.aid-placement-sides button{flex:1;padding:6px 3px;font-size:11px;color:var(--aid-soft-text);background:transparent;border:0;border-radius:6px}
+.aid-placement-sides button[aria-pressed="true"]{background:var(--aid-chosen-edge);color:var(--aid-name-text)}
+.aid-placement-area{fill:#8ed9bd22;stroke:#9edaca;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
+.aid-symmetry-line{fill:none;stroke:#acbdbb;stroke-width:1;stroke-dasharray:7 6;opacity:.28;pointer-events:none}
+.aid-region-inner{stroke-dasharray:none;opacity:.75;stroke-width:.8;stroke-linecap:round}
+.aid-region-inner.selected{stroke-width:1.7;opacity:1}
+.aid-brainstem{fill:#496366;stroke:#9fb9bc;stroke-width:1.6}
+.aid-anatomical-nose path:not(:first-child){fill:none;stroke:#d4eee1;stroke-width:1.1;opacity:.8}
+.aid-anatomical-nose .aid-nose-lumen{stroke:#183b3b;stroke-width:3}
+.aid-anatomical-gland{stroke-width:1.5}
+.aid-gland-duct{fill:none;stroke:#ecd8ef;stroke-width:2.8}
+.aid-gonad-duct{fill:none;stroke:#d6c1b3;stroke-width:3;stroke-linecap:round;opacity:.75}
+.aid-brain-fissure{stroke-width:1.1;opacity:.6}
+.aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
+.aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round}
+.aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink{opacity:1}
+.aid-wire-branch{stroke-linecap:round;opacity:.6}
+.aid-anatomy-handles g{cursor:grab;pointer-events:all}
+.aid-anatomy-handles circle{fill:#102c33;stroke:#e9dba7;stroke-width:1.4}
+.aid-anatomy-handles .hit{fill:transparent;stroke:none}
+.aid-anatomy-handles path{fill:none;stroke:#e9dba7;stroke-width:1;pointer-events:none}
+.aid-region-graph{width:100%;display:block;overflow:visible;--circuit:#9dccbf;color:var(--circuit)}
+.aid-region-edge-ink{fill:none;stroke:var(--circuit);stroke-width:1.6}.aid-region-edge.inhibits{--circuit:#e6a890}.aid-region-edge.cut{opacity:.3}.aid-region-edge.cut .aid-region-edge-ink{stroke-dasharray:4 4}
+.aid-region-edge-hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}.aid-region-edge:hover .aid-region-edge-ink{stroke-width:3}
+.aid-region-graph marker path{fill:var(--circuit)}.aid-region-graph-node{cursor:pointer}.aid-region-graph-node>circle,.aid-region-port rect{fill:var(--aid-ground);stroke:var(--circuit);stroke-width:1.6}.aid-region-graph-node.pending>circle{fill:#866549;stroke:#efd89d;stroke-width:3}.aid-region-graph-node.mirrored{opacity:.6}.aid-region-graph-node.mirrored>circle{stroke-dasharray:2 2}
+.aid-region-port-branch{fill:none;stroke:var(--circuit);stroke-width:1;opacity:.45}.aid-region-port{cursor:crosshair;color:var(--circuit)}.aid-region-port.filled rect{fill:#315b55}.aid-circuit-tools{display:flex;justify-content:flex-end}.aid-circuit-tools svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}.aid-circuit-tools [aria-pressed=true]{background:#45665b}
+.aid-muscle-tissue,.aid-pigment-palette{display:block;width:100%;height:auto;touch-action:none}.aid-tissue-sheath{fill:#382f35;stroke:#a78689;stroke-width:1.5}.aid-tissue-fibre{fill:none;stroke-width:1;stroke-linecap:round;opacity:.9}.aid-tissue-fibre.reserve{opacity:.4}.aid-tissue-partition{fill:none;stroke:#e5c283;stroke-width:1.5;stroke-dasharray:3 3}.aid-tissue-projection{fill:none;stroke:#a78689;stroke-width:1;opacity:.5}.aid-tissue-curve-hit{fill:none;stroke:transparent;stroke-width:18;cursor:move}.aid-tissue-clock{fill:none;stroke:#a78689;stroke-width:1.2}.aid-pigment-composition{fill:none;stroke-width:13;pointer-events:none}.aid-pigment-composition circle{stroke:#24454b}.aid-pigment-palette .aid-pigment-wheel{width:300px;max-width:none}.aid-operculum{fill:none;stroke:#a2c0bc;stroke-width:1.7;stroke-opacity:.65}
+.aid-wire-sheath{fill:none;opacity:.18;stroke-linecap:round;vector-effect:non-scaling-stroke;pointer-events:none}

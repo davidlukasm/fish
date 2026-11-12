@@ -1,10 +1,10 @@
-import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
-import {learningTimeSteps, timeConstantSteps} from '../../tuning.js';
-import {allCenters, receptorResponse, wiredCrossing} from '../model/document.js';
+import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {allCenters} from '../model/document.js';
 import {barShare, dragBar, escapeText, fixed} from './markup.js';
 import {formatNumber, namedText} from '../../strings.js';
-import {substanceMark, substanceName} from './substances.js';
-import {label, numberField} from './kit.js';
+import {BIRTH, lifePhaseEditor, receptorBody, substanceMark, substanceName} from './substances.js';
+import {cellVariation, contactCapacity} from './cell_tissue.js';
+import {label} from './kit.js';
 import {substanceColor} from '../../hormones.js';
 
 export const DEFAULT_PREVIEW_CONTEXT =
@@ -14,8 +14,6 @@ export const DEFAULT_PREVIEW_INPUT = 1;
 export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
 const word = key => label('development.' + key);
 const PREVIEW_DIGITS = 2;
-const input = (name, value, min, max, step, attributes) =>
-    numberField(name, value, {min, max, step, attributes});
 // The example situation as bars to drag: body maturity, each substance and the example input.
 const PREVIEW_BARS = Object.freeze(
     {width : 300, height : 96, top : 12, bottom : 70, gauge : 12, knob : 7, mark : 88});
@@ -68,118 +66,22 @@ export function previewControls(state) {
          '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
          bars.join('') + '</svg></details>';
 }
-function lifecycleGraphic(state, center) {
-  if (!state.capabilities)
-    return '';
-  const context = previewContextOf(state), width = 300, height = 105, left = 18, right = 285,
-        top = 10, bottom = 78;
-  const x = maturity => left + (right - left) * maturity,
-        y = value => bottom - (bottom - top) * value;
-  const response = (receptor, maturity, baseline) =>
-      receptorResponse(state.capabilities, receptor, context.hormones, maturity, baseline);
-  const curves = [
-    [ 'birth', m => Math.max(0, response(center.growth, m, 1)) ],
-    [ 'output', m => (1 + response(center.receptors[HORMONE_EFFECT.output], m, 1)) / 2 ],
-    [ 'death', m => response(center.receptors[HORMONE_EFFECT.death], m, 0) > .5 ? 1 : 0 ]
-  ];
-  return '<svg class="aid-lifecycle" viewBox="0 0 ' + width + ' ' + height +
-         '" role="img" aria-label="' + word('lifecycle') + '"><title>' +
-         escapeText(word('explanation')) + '</title>' +
-         curves
-             .map(([ key, value ]) => '<path class="aid-life-' + key + '" d="' +
-                                      Array
-                                          .from({length : 97},
-                                                (_, i) => {
-                                                  const m = i / 96;
-                                                  return (i ? ' L' : 'M') + fixed(x(m)) + ' ' +
-                                                         fixed(y(value(m)));
-                                                })
-                                          .join('') +
-                                      '"/>')
-             .join('') +
-         '<line class="aid-life-current" x1="' + fixed(x(context.maturity)) + '" x2="' +
-         fixed(x(context.maturity)) + '" y1="' + top + '" y2="' + bottom + '"/>' +
-         '<text x="' + left + '" y="98">0</text><text x="' + right +
-         '" y="98" text-anchor="end">1 · ' + word('maturity') + '</text></svg>' +
-         '<div class="aid-life-legend">' +
-         curves.map(([ key ]) => '<span class="aid-life-' + key + '">' + word(key) + '</span>')
-             .join('') +
-         '</div>';
-}
 export function cellDevelopment(state, center) {
-  if (!center)
+  if (!center || !state.capabilities)
     return '';
-  const id = escapeText(center.id), growth = center.growth;
-  const halfMin = state.capabilities?.halfRange[0] ?? .0003,
-        halfMax = state.capabilities?.halfRange[1] ?? 1,
-        sensitivitySpan = state.capabilities?.sensitivitySpan ?? 2,
-        steepnessSteps = state.capabilities?.steepnessSteps ?? 3;
-  const receptor = (key, min, max, step) =>
-      input(word(key), growth[key], min, max, step,
-            'data-cell-growth="' + id + '" data-growth-key="' + key + '"');
-  const property = (key, value, min, max, step, disabled = false, title = key) => input(
-      word(title), value, min, max, step,
-      'data-cell-trait="' + id + '" data-trait-key="' + key + '"' + (disabled ? ' disabled' : ''));
-  const options = Array
-                      .from({length : HORMONES.levels + 1},
-                            (_, index) => '<option value="' + index + '"' +
-                                          (index === growth.substance ? ' selected' : '') + '>' +
-                                          escapeText(substanceName(state, index)) + '</option>')
-                      .join('');
-  const birth = '<label class="aid-checkbox"><input type="checkbox" data-cell-growth-active="' +
-                id + '"' + (growth.active ? ' checked' : '') + '>' + word('receptorActive') +
-                '</label><div class="aid-parameter-grid">' + receptor('baseline', -1, 1, .05) +
-                '<label>' + word('substance') + '<select data-cell-growth="' + id +
-                '" data-growth-key="substance">' + options + '</select></label>' +
-                receptor('sensitivity', -sensitivitySpan, sensitivitySpan, .05) +
-                receptor('half', halfMin, halfMax, .001) + receptor('width', 0, 1, .01) +
-                receptor('steepness', 0, steepnessSteps, 1) +
-                receptor('spread_receptors', 0, 1, .01) + '</div>';
-  let parameters =
-      property('tau', Math.round(timeConstantSteps(center.tau) * 100) / 100,
-               TIME_CONSTANT.min_steps, TIME_CONSTANT.min_steps * TIME_CONSTANT.span, .1);
-  if (center.role === 'nerve')
-    parameters +=
-        property('field',
-                 Math.round(state.capabilities.neural.slotMin *
-                            Math.pow(state.capabilities.neural.slotSpan, center.field)),
-                 state.capabilities.neural.slotMin,
-                 state.capabilities.neural.slotMin * state.capabilities.neural.slotSpan, 1);
-  if (center.role !== 'motor' && state.capabilities) {
-    const crossing = wiredCrossing(state.document, center, state.sites);
-    parameters +=
-        property('range',
-                 state.capabilities.reachLeast + (1 - state.capabilities.reachLeast) * center.range,
-                 state.capabilities.reachLeast, 1, .01) +
-        property('crossing', crossing ?? center.crossing, -1, 1, .01, crossing !== null);
-  }
-  if (center.role !== 'sensor')
-    parameters += property('threshold', center.threshold, -1, 1, .01) +
-                  property('electrical_limit', center.electrical_limit, 0, 1, .01);
-  if (center.role === 'nerve') {
-    parameters +=
-        property('learning_tau', Math.round(learningTimeSteps(center.learning_tau) * 100) / 100,
-                 TIME_CONSTANT.learning_min_steps,
-                 TIME_CONSTANT.learning_min_steps * TIME_CONSTANT.learning_span, .1) +
-        property('teaching_limit', center.teaching_limit, 0, 1, .01) +
-        property('q1', Math.max(0, center.q1), 0, 1, .01, false, 'rectification') +
-        property('q2', Math.max(0, center.q2), 0, 1, .01, false, 'response') +
-        property('qwidth', center.qwidth, 0, 1, .01) + property('mode', center.mode, -1, 1, .01) +
-        property('sign', center.sign, -1, 1, .01) + property('pace', center.pace, -1, 1, .05) +
-        property('modulator', center.modulator, -1, 1, .05);
-  }
-  const variation =
-      [ 'spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts' ]
-          .map(key =>
-                   input(word(key), center.distribution[key], 0, 1, .01,
-                         'data-cell-distribution="' + id + '" data-distribution-key="' + key + '"'))
-          .join('');
-  return '<section class="aid-cell-development"><h4>' + word('title') + '</h4>' +
-         lifecycleGraphic(state, center) + '<details><summary title="' +
-         escapeText(word('birthDefault')) + '">' + word('birthReceptor') + '</summary>' + birth +
-         '</details>' +
-         '<details><summary>' + word('parameters') + '</summary><div class="aid-parameter-grid">' +
-         parameters + '</div></details>' +
-         '<details><summary>' + word('variation') + '</summary><div class="aid-parameter-grid">' +
-         variation + '</div></details></section>';
+  const effects = [ BIRTH, HORMONE_EFFECT.output, HORMONE_EFFECT.death ];
+  const chosen = effects.includes(state.developmentEffect) ? state.developmentEffect : BIRTH;
+  const title = effect => word(effect === BIRTH                   ? 'birth'
+                               : effect === HORMONE_EFFECT.output ? 'output'
+                                                                  : 'death');
+  const tabs =
+      '<div class="aid-effect-chips">' +
+      effects
+          .map(effect => '<button data-development-effect="' + effect + '" aria-pressed="' +
+                         (chosen === effect) + '">' + title(effect) + '</button>')
+          .join('') +
+      '</div>';
+  return '<details class="aid-cell-development"><summary>' + word('title') + '</summary>' +
+         lifePhaseEditor(state, center) + tabs + receptorBody(state, center, chosen) +
+         '</details>' + contactCapacity(state, center) + cellVariation(center);
 }

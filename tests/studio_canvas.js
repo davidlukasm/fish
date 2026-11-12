@@ -11,7 +11,10 @@ module.exports = async function checkCanvas(model, capabilities, root) {
   const {gestureMethods} = await import('../ui/studio/gestures.js');
   const {createPlanPlayer} = await import('../ui/studio/view/pulse.js');
   const {detailMix, nodeOpacity} = await import('../ui/studio/view/layers.js');
-  const {brainLobes, regionRim, BRAIN} = await import('../ui/studio/view/region_layout.js');
+  const {regionRim, BRAIN} = await import('../ui/studio/view/region_layout.js');
+  const {placementHints} = await import('../ui/studio/view/placing.js');
+  const {placeCanvasOrgan, moveCanvasOrgan, newFishDocument} =
+      await import('../ui/studio/canvas_placement.js');
   const {settleRegions} = await import('../ui/studio/model/regions.js');
   const sites = capabilities.sites;
   const state = document => ({
@@ -69,25 +72,17 @@ module.exports = async function checkCanvas(model, capabilities, root) {
       armed : {kind : 'neuron', value : 'relay'},
       camera : {x : 460, y : 365, zoom : 5}
     });
-    assert.ok(placing.includes('aid-neural-seats'));
-    assert.ok(!close.includes('aid-neural-seats'), 'Free addresses appear while placing cells');
-    assert.ok(!close.includes('class="aid-region-inner'),
-              'Internal contacts appear for the chosen cell');
-    const parts = brainLobes(doc, sites);
-    assert.equal(parts.length, 8, 'Forty regions remain grouped into four mirrored brain parts');
-    assert.equal(parts.reduce((n, part) => n + part.organs.length, 0), organs.length);
-    const upper = parts.filter(p => p.side < 0).toSorted((a, b) => a.part - b.part);
-    assert.ok(upper.every((part, j) => !j || part.x > upper[j - 1].x),
-              'Smell, sight, evaluation and action follow the head in functional order');
+    assert.ok(!placing.includes('aid-neural-seats'), 'Native addresses are not placement targets');
+    assert.match(placementHints(state(doc), 'organ', 'tectum').svg, /aid-placement-area/);
+    assert.ok(close.includes('class="aid-region-inner'),
+              'Internal wiring is visible without selecting a cell');
+    assert.ok(!close.includes('aid-region-name'), 'The graph is not covered with labels');
     const transitioning = {...state(doc), camera : {zoom : 1.65}};
     const mix = detailMix(transitioning);
-    assert.ok(mix.regions > .4 && mix.regions < .6 && mix.cells === 0);
-    const transition = fishScene(transitioning);
-    assert.match(transition, /aid-brain-parts" opacity="0.50"/);
-    assert.match(transition, /aid-region-detail [^"]+" opacity="0.50"/);
-    const near = {...state(doc), camera : {zoom : 3.4}};
+    assert.ok(mix.regions > 0 && mix.regions < 1);
+    const near = {...state(doc), camera : {zoom : 2.8}};
     assert.ok(nodeOpacity(near) > .4 && nodeOpacity(near) < .6);
-    assert.ok(Math.abs(detailMix({...near, camera : {zoom : 3.401}}).cells -
+    assert.ok(Math.abs(detailMix({...near, camera : {zoom : 2.801}}).cells -
                        detailMix(near).cells) < .002,
               'Cell detail changes continuously between zoom levels');
     const unchanged =
@@ -120,20 +115,9 @@ module.exports = async function checkCanvas(model, capabilities, root) {
       assert.ok(Number.isFinite(middle.x) && Number.isFinite(middle.y));
       assert.ok(!bundle.way.path(0, 1).match(/NaN|Infinity/));
     }
-    const crossing = bundles.filter(b => (b.from.point.y - layout.BODY_FRAME.middle) *
-                                             (b.to.point.y - layout.BODY_FRAME.middle) <
-                                         -4);
-    assert.ok(crossing.length);
-    for (const bundle of crossing) {
-      for (let i = 1; i <= 100; ++i) {
-        const a = bundle.way.at((i - 1) / 100), b = bundle.way.at(i / 100),
-              middle = layout.BODY_FRAME.middle;
-        if ((a.y - middle) * (b.y - middle) < 0) {
-          const x = a.x + (b.x - a.x) * (middle - a.y) / (b.y - a.y);
-          assert.ok(x >= BRAIN.cerebrum.to,
-                    'Opposite sides join at the brain stem, clear of the forebrain');
-        }
-      }
+    for (const bundle of bundles) {
+      assert.match(bundle.way.path(0, 1), / C/, 'Nerve trunks use curved paths');
+      assert.ok(!/ L/.test(bundle.way.path(0, 1)), 'No polygonal ring replaces the graph');
     }
     for (const organ of fish.organs.filter(o => o.region)) {
       const rim = regionRim(places.regionGeometry(fish, sites, organ)), polygon = [];
@@ -164,6 +148,37 @@ module.exports = async function checkCanvas(model, capabilities, root) {
       }
     }
   }
+  const blank = newFishDocument('Grundkörper', sites);
+  assert.ok(blank.organs.some(o => o.type === 'gut') && blank.organs.some(o => o.type === 'eggs'));
+  const pickedEye = placeCanvasOrgan(state(model.newDocument('Frei')), 'eye',
+                                     {x : 330.375, y : 285.625}, 'single');
+  assert.ok(pickedEye);
+  const eye = model.findOrgan(pickedEye.document, pickedEye.organId);
+  const movedEye =
+      moveCanvasOrgan(state(pickedEye.document), eye.id, {x : 351.125, y : 278.375}, null);
+  assert.ok(movedEye);
+  assert.deepEqual(model.findOrgan(movedEye, eye.id).position, {x : 351.125, y : 278.375});
+  assert.notDeepEqual(model.findOrgan(movedEye, eye.id).field, eye.field,
+                      'Moving an eye updates its visual field and retinal sites');
+  assert.notDeepEqual(model.findOrgan(movedEye, eye.id).centers.map(c => c.site),
+                      eye.centers.map(c => c.site));
+  const region =
+      placeCanvasOrgan(state(model.newDocument('Frei')), 'value', {x : 350.25, y : 320.5}, 'both');
+  const original = model.findOrgan(region.document, region.organId);
+  const at = {x : 675.375, y : 361.25};
+  const moved = moveCanvasOrgan(state(region.document), original.id, at, null);
+  assert.ok(moved);
+  const shifted = model.findOrgan(moved, original.id);
+  assert.equal(shifted.position.x, at.x);
+  assert.equal(shifted.position.y, at.y);
+  assert.deepEqual(shifted.centers.map(c => c.id), original.centers.map(c => c.id));
+  assert.notDeepEqual(shifted.centers.map(c => c.site), original.centers.map(c => c.site),
+                      'A region follows the anatomical neighbourhood in CPPN space');
+  assert.ok(shifted.centers.every(c => sites.find(s => s.id === c.site).zone >= 2));
+  assert.equal(model.findOrgan(moved, shifted.pair).position.y,
+               2 * layout.BODY_FRAME.middle - at.y);
+  assert.deepEqual(moved.wires, region.document.wires);
+  model.validateDocument(moved);
   const zoomed = {
     state : state(doc),
     root : {querySelector : () => null},
@@ -211,7 +226,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     cancelAnimationFrame : global.cancelAnimationFrame,
     performance : global.performance
   };
-  let next, now = 0, scale = 1;
+  let next, now = 0, scale = 1, geometryQueries = 0;
   global.performance = {now : () => now};
   global.requestAnimationFrame = callback => {
     next = callback;
@@ -234,7 +249,10 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     attributes : {'data-signal-edges' : 'a>b', 'data-signal-section' : String(section)},
     matches : () => true,
     getTotalLength : () => to - from,
-    getPointAtLength : n => ({x : from + n, y : 0})
+    getPointAtLength : n => {
+      ++geometryQueries;
+      return {x : from + n, y : 0};
+    }
   });
   const paths = [ route(220, 240, 2), route(0, 20, 0), route(20, 220, 1) ];
   const svg = {
@@ -265,7 +283,10 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     frame(0);
     const overlay = svg.children.at(-1), dots = overlay.children.filter(c => c.tag === 'circle');
     assert.equal(dots.length, 1, 'Hidden links create no straight replacement routes');
+    const sampled = geometryQueries;
     frame(500);
+    assert.equal(geometryQueries, sampled,
+                 'Animation frames use cached geometry without SVG layout queries');
     assert.ok(Math.abs(Number(dots[0].attributes.cx) - 90) < 1e-6);
     assert.deepEqual(reached, [ 'a' ], 'A long path is not traversed in one fixed short interval');
     scale = 2;

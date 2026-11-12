@@ -1,19 +1,22 @@
+import {fishForm} from '../../fish_forms.js';
+import {fishPlan, fishBezier} from '../../fish_geometry.js';
+import {MOTOR_TISSUE} from '../../tissue.js';
 import {clamp} from '../../units.js';
 import {fixed} from './markup.js';
 import {BODY_FRAME, BODY_KNOTS, BODY_MIDDLE, ZONE_X} from '../model/layout.js';
-import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
+import {finVolumeOf, sideFinSize, tailFinSize, tailFinCurves} from '../../fish_organs.js';
 import {FIN} from '../../schema.js';
 
 export const FISH_BOX = Object.freeze({x : 60, y : 0, width : 1000, height : 730});
-export const CAMERA_ZOOM = Object.freeze({min : .04, max : 8, step : 1.35});
+export const CAMERA_ZOOM = Object.freeze({min : .04, max : 20, step : 1.35});
 export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
 const OUTLINE = Object.freeze({
   margin : 1.08,
-  nose : 46,
-  tail : {reach : 100, spread : 96, fork : 46, bulge : .18, notch : .32},
-  fins : {at : 420, length : 92, out : 66, sweep : 78, inset : .9, round : .55, base : .6},
+  nose : 36,
+  tail : {reach : 100, spread : 72, fork : 46, bulge : .18, notch : .32},
+  fins : {at : 445, length : 48, out : 35, sweep : 45, inset : .9, round : .55, base : .6},
   // Pelvic fins sit at the front of the tail zone, smaller than the pectoral fins.
-  pelvic : {at : 782, length : 54, out : 40, sweep : 50, inset : .9, round : .55, base : .6},
+  pelvic : {at : 680, length : 34, out : 26, sweep : 32, inset : .9, round : .55, base : .6},
   rays : 6
 });
 export const FIN_BASE = Object.freeze({at : OUTLINE.fins.at, length : OUTLINE.fins.length});
@@ -46,7 +49,7 @@ const FIN_REFERENCE = 1, FIN_SHOWN = .55;
 // A tail fin too strong for the picture at full size is drawn as large as fits, in its own shape.
 const TAIL_ROOM = (CAMERA_HOME.x + FISH_BOX.width / 2 - BODY_KNOTS.at(-1)[0]) / OUTLINE.tail.reach /
                   OUTLINE.margin;
-export function finSizes(fins = null) {
+export function finSizes(fins = null, anchors = null, forms = null) {
   const ratio = (size, index, key) => {
     const fin = fins?.[index];
     const volume = fin ? finVolumeOf(fin.cells, fin.strength) : FIN_REFERENCE;
@@ -54,13 +57,19 @@ export function finSizes(fins = null) {
   };
   const reach = ratio(tailFinSize, FIN.tail, 'length'), keep = Math.min(1, TAIL_ROOM / reach);
   return {
-    tail : {reach : reach * keep, spread : ratio(tailFinSize, FIN.tail, 'width') * keep},
-    sides : [ FIN.left, FIN.right ].map(index => ({
+    tail : {
+      reach : reach * keep,
+      spread : ratio(tailFinSize, FIN.tail, 'width') * keep,
+      plan : fishPlan({}, 'tail', fishForm({forms}, MOTOR_TISSUE.forward))
+    },
+    sides : [ FIN.left, FIN.right ].map(index => fins && !fins[index]?.cells ? null : ({
+                                          anchor : anchors?.[index],
                                           length : ratio(sideFinSize, index, 'length'),
                                           out : ratio(sideFinSize, index, 'spread')
                                         })),
     // A pelvic fin is drawn only where the engine grew one.
     pelvic : [ FIN.pelvic_left, FIN.pelvic_right ].map(index => fins?.[index]?.cells > 0 ? {
+      anchor : anchors?.[index],
       length : ratio(sideFinSize, index, 'length'),
       out : ratio(sideFinSize, index, 'spread')
     }
@@ -94,30 +103,35 @@ export function fishPath(sizes = finSizes(), withTail = true, open = false) {
 const quadAt = (a, c, b, u) => [0, 1].map(i => (1 - u) * (1 - u) * a[i] + 2 * (1 - u) * u * c[i] +
                                                u * u * b[i]);
 function tailShape(sizes) {
-  const {middle} = BODY_FRAME, T = OUTLINE.tail, root = BODY_KNOTS.at(-1);
-  const reach = T.reach * sizes.tail.reach, spread = T.spread * sizes.tail.spread;
-  const top = [ root[0], middle - root[1] * OUTLINE.margin ],
-        bottom = [ root[0], middle + root[1] * OUTLINE.margin ];
-  const tip = side => [root[0] + reach, middle + side * spread];
-  const fork = [ root[0] + reach - T.fork * sizes.tail.reach, middle ];
-  const lead =
-      (from, side) => [from[0] + reach * T.bulge, middle + side * (spread * (1 + T.bulge))];
-  const trail = side => [root[0] + reach * (1 - T.notch), middle + side * spread * T.notch];
-  const edge = ' Q' + xy(lead(top, -1)) + ' ' + xy(tip(-1)) + ' Q' + xy(trail(-1)) + ' ' +
-               xy(fork) + ' Q' + xy(trail(1)) + ' ' + xy(tip(1)) + ' Q' + xy(lead(bottom, 1)) +
-               ' ' + xy(bottom);
-  const rays =
-      [ -1, 1 ]
-          .flatMap(side => Array.from(
-                       {length : OUTLINE.rays},
-                       (_, k) => {
-                         const end = quadAt(tip(side), trail(side), fork, (k + .5) / OUTLINE.rays);
-                         return 'M' +
-                                xy([ root[0], middle + side * root[1] * (k + .5) / OUTLINE.rays ]) +
-                                ' L' + xy(end);
-                       }))
-          .join(' ');
-  return {top, bottom, edge, rays};
+  const M = BODY_FRAME.middle, T = OUTLINE.tail, root = BODY_KNOTS.at(-1);
+  const curves =
+      tailFinCurves(sizes.tail.plan ?? fishPlan({}, 'tail', fishForm({}, MOTOR_TISSUE.forward)),
+                    {length : T.reach * sizes.tail.reach, width : T.spread * sizes.tail.spread});
+  const maxX = Math.max(...curves.flatMap(c => c.map(p => -p[0]))),
+        room = CAMERA_HOME.x + FISH_BOX.width / 2 - root[0] - 10;
+  const keep = Math.min(1, room / Math.max(1, maxX));
+  const drawn = curves.map(c => c.map(([ x, y ]) => [root[0] - x * keep, M + y * keep]));
+  const top = [ root[0], M - root[1] * OUTLINE.margin ],
+        bottom = [ root[0], M + root[1] * OUTLINE.margin ];
+  drawn[0][0] = top;
+  drawn[0][1] = [ root[0] + 12, top[1] ];
+  drawn.at(-1)[2] = [ root[0] + 12, bottom[1] ];
+  drawn.at(-1)[3] = bottom;
+  const contour = 'M' + xy(drawn[0][0]) + cubics(drawn) + 'Z';
+  const rays = drawn.slice(1, -1)
+                   .map(c => {
+                     const end = fishBezier(c, .5);
+                     return 'M' + root[0] + ' ' + M + ' Q' +
+                            xy([ (root[0] + end[0]) / 2, (M + end[1]) / 2 ]) + ' ' + xy(end);
+                   })
+                   .join(' ');
+  return {
+    top,
+    bottom,
+    edge : ' L' + xy(drawn[0][0]) + cubics(drawn) + ' L' + xy(bottom),
+    rays,
+    contour
+  };
 }
 const SKIN_LINE = Object.freeze({steps : 24});
 export const cubicWeights = u => {
@@ -136,11 +150,7 @@ const SKIN_WIDTH = SKIN_POINTS.filter(([, y ]) => y >= BODY_FRAME.middle)
                        .sort((a, b) => a[0] - b[0]);
 export function tailFin(sizes = finSizes()) {
   const shape = tailShape(sizes), root = BODY_KNOTS.at(-1);
-  return {
-    d : 'M' + xy(shape.top) + shape.edge + 'Z',
-    rays : shape.rays,
-    root : {x : root[0], y : BODY_FRAME.middle}
-  };
+  return {d : shape.contour, rays : shape.rays, root : {x : root[0], y : BODY_FRAME.middle}};
 }
 export const bodyDirection = angle => ({x : -Math.cos(angle), y : Math.sin(angle)});
 export const fieldPoint = (field, angle, r) => {
@@ -195,28 +205,24 @@ export function skinPoints(step) {
 }
 // The side fins to draw: both pectoral fins, and the pelvic fins the fish has.
 export function sideFins(sizes = finSizes()) {
-  const roots = finRoots(), pelvicRoots = finRoots(OUTLINE.pelvic);
   return [
-    ...[-1, 1].map((side, k) => ({
-                     side,
-                     pelvic : false,
-                     root : roots[k],
-                     ...finShape(side, sizes.sides[k], OUTLINE.fins)
-                   })),
-    ...[-1, 1]
-        .map((side, k) => sizes.pelvic?.[k] && {
-          side,
-          pelvic : true,
-          root : pelvicRoots[k],
-          ...finShape(side, sizes.pelvic[k], OUTLINE.pelvic)
-        })
-        .filter(Boolean)
-  ];
+    ...[-1, 1].map((side, k) =>
+                       ({side, pelvic : false, size : sizes.sides[k], base : OUTLINE.fins})),
+    ...[-1, 1].map((side, k) =>
+                       ({side, pelvic : true, size : sizes.pelvic?.[k], base : OUTLINE.pelvic}))
+  ].filter(f => f.size)
+      .map(({side, pelvic, size, base}) => {
+        const F = {...base, at : size.anchor ? size.anchor.x - base.length / 2 : base.at};
+        const root =
+            size.anchor ?? {x : F.at + F.length / 2, y : finBase(F.at + F.length / 2, side, F)};
+        const offset = root.y - finBase(root.x, side, F);
+        return {side, pelvic, root, ...finShape(side, size, F, offset)};
+      });
 }
-function finShape(side, size, F) {
+function finShape(side, size, F, offset = 0) {
   const sweep = F.sweep * size.length, out = F.out * size.out;
-  const front = [ F.at, finBase(F.at, side, F) ],
-        back = [ F.at + F.length, finBase(F.at + F.length, side, F) ];
+  const front = [ F.at, finBase(F.at, side, F) + offset ],
+        back = [ F.at + F.length, finBase(F.at + F.length, side, F) + offset ];
   const tip = [ F.at + F.length / 2 + sweep, front[1] + side * out ];
   const lead = [ F.at + sweep * (1 - F.round), front[1] + side * out * (1 + F.round / 2) ];
   const trail = [ back[0] + sweep / 2, back[1] + side * out / 3 ];
@@ -271,19 +277,19 @@ export function cameraCoordinates(event, svg, camera) {
   return {x : box.x + (event.clientX - left) / scale, y : box.y + (event.clientY - top) / scale};
 }
 export const HEAD = Object.freeze({
-  mouth : [ 15, 30 ],
+  mouth : [ 10, 15 ],
   mouth_in : 16,
   lip : 2.4,
   tooth_arc : 1.4,
-  tooth : [ 8, 13 ],
-  jaw_back : 84,
-  jaw_spread : 20,
+  tooth : [ 4, 7 ],
+  jaw_back : 62,
+  jaw_spread : 14,
   jaw_width : [ 4, 6 ],
-  cheek : [ 52, 22 ],
+  cheek : [ 35, 14 ],
   cheek_least : .6,
   jaw_bow : 1.4,
   throat : 14,
-  throat_end : 195,
+  throat_end : 190,
   intake : {lines : 5, least : 18, span : 46, spread : 1.7, bend : .45, gap : 3, narrow : .45},
   barbel_root : [ 26, 15 ],
   barbel_bend : [ 4, 46 ],

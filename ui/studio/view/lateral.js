@@ -1,8 +1,10 @@
 import {groupReport} from '../model/document.js';
 import {BODY_MIDDLE, BODY_RADIUS} from '../model/layout.js';
 import {fieldFish, fieldPoint, skinAt} from './frame.js';
-import {escapeText, fixed, namedTrack, trackShare} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {t} from '../../strings.js';
+import {contactHalfAngle, contactFieldOf} from '../../tuning.js';
+import {degrees, radians, wrapAngle} from '../../units.js';
 
 export function lateralFeel(state, organ) {
   const found = organ.centers.map(c => groupReport(state.document, state.anatomy, 'lateral', c.id))
@@ -49,11 +51,12 @@ const LATERAL_FIELD = Object.freeze({
   inner : 60,
   reach : 32,
   arrow : 22,
-  track : [ 60, 240 ],
-  track_y : 204
 });
-export const lateralPatch = fx =>
-    ({field : trackShare(fx * LATERAL_FIELD.width, LATERAL_FIELD.track)});
+export const lateralPatch = (fx, fy, direction) => {
+  const L = LATERAL_FIELD;
+  const angle = Math.atan2(fy * L.height - L.cy, -(fx * L.width - L.cx));
+  return {field : contactFieldOf(degrees(Math.abs(wrapAngle(angle - direction))))};
+};
 export function lateralField(state, organ) {
   const L = LATERAL_FIELD, feel = lateralFeel(state, organ), first = organ.centers[0];
   const ring = state.capabilities?.lateralRing;
@@ -77,18 +80,22 @@ export function lateralField(state, organ) {
   const tip = at(angle, L.inner + L.reach * feel.tuning[peak]);
   const arrow = '<path class="aid-lateral-arrow" d="' +
                 arrowPath(at(angle, L.inner + L.reach * feel.tuning[peak] + L.arrow), tip) + '"/>';
+  const half = radians(contactHalfAngle(first.field ?? 0));
+  const boundary = at(angle + half, L.inner + L.reach), other = at(angle - half, L.inner + L.reach);
   const fish = fieldFish(L, L.scale, 'aid-lateral-fish');
   const label = key => escapeText(t('studio.lateral.' + key));
   return block + '<section class="aid-eye-section"><h4>' + label('title') + '</h4>' +
          '<svg class="aid-lateral-field" viewBox="0 0 ' + L.width + ' ' + L.height +
-         '" data-lateral-pad="' + escapeText(first.id) + '" role="img" aria-label="' +
-         label('title') + '"><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
-         '" r="' + L.inner + '"/><circle class="aid-lateral-limit" cx="' + L.cx + '" cy="' + L.cy +
-         '" r="' + (L.inner + L.reach) + '"/><path class="aid-lateral-lobe" d="' + lobe + '"/>' +
-         fish + ringDiscs(lateralRing(ring, centre, length, width), feel.weights, POINT.field) +
-         arrow +
-         namedTrack(L.track, L.track_y, first.field ?? 0, 'data-graphic-handle="width"',
-                    t('studio.lateral.handle'),
-                    [ t('studio.lateral.local'), t('studio.lateral.whole') ]) +
+         '" data-lateral-pad="' + escapeText(first.id) + '" data-lateral-angle="' + angle +
+         '" role="img" aria-label="' + label('title') + '"><circle class="aid-lateral-limit" cx="' +
+         L.cx + '" cy="' + L.cy + '" r="' + L.inner + '"/><circle class="aid-lateral-limit" cx="' +
+         L.cx + '" cy="' + L.cy + '" r="' + (L.inner + L.reach) +
+         '"/><path class="aid-lateral-lobe" d="' + lobe + '"/>' + fish +
+         ringDiscs(lateralRing(ring, centre, length, width), feel.weights, POINT.field) + arrow +
+         '<path class="aid-field-boundary" d="M' + fixed(boundary.x) + ' ' + fixed(boundary.y) +
+         'L' + L.cx + ' ' + L.cy + 'L' + fixed(other.x) + ' ' + fixed(other.y) + '"/>' +
+         '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(boundary.x) +
+         '" cy="' + fixed(boundary.y) + '" r="7"><title>' + t('studio.lateral.handle') +
+         '</title></circle>' +
          '</svg></section></div>';
 }

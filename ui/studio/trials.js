@@ -1,4 +1,5 @@
 import {
+  allCenters,
   contactCenters,
   findCenter,
   findOrgan,
@@ -99,16 +100,21 @@ export const trialMethods = {
     const svg = this.bodyMap();
     if (!svg)
       return [];
-    const escaped = CSS.escape(key);
-    const marks = [
-      ...svg.querySelectorAll('.aid-anatomy [data-organ="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-anatomy [data-center="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-center="' + escaped + '"]'),
-      ...svg.querySelectorAll('.aid-centers [data-organ="' + escaped + '"]'),
-      ...svg.querySelectorAll('[data-generated="' + escaped + '"]')
-    ];
-    const owner = marks.length ? null : findCenter(this.state.document, key)?.organ;
-    return owner && owner.type !== 'brain' ? this.stimulusMarks(owner.id) : marks;
+    if (this.stimulusIndex?.svg !== svg) {
+      const elements = new Map();
+      for (const element of svg.querySelectorAll('[data-organ],[data-center],[data-generated]')) {
+        if (element.closest('.aid-organ-hits'))
+          continue;
+        const id = element.dataset.center ?? element.dataset.generated ?? element.dataset.organ;
+        if (!elements.has(id))
+          elements.set(id, []);
+        elements.get(id).push(element);
+      }
+      const owners = new Map(allCenters(this.state.document).map(c => [c.id, c.organId]));
+      this.stimulusIndex = {svg, elements, owners};
+    }
+    const {elements, owners} = this.stimulusIndex;
+    return elements.get(key) ?? elements.get(owners.get(key)) ?? [];
   },
   stimulate(centerIds) {
     if (!this.state.sites.length || !Array.isArray(centerIds) || !centerIds.length)

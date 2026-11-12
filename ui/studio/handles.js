@@ -1,3 +1,4 @@
+import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
 import {testLightMarkup, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
 import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
@@ -46,8 +47,11 @@ import {
   updateCenter,
   updateField,
   updateGrowth,
+  updateCellGrowth,
+  updateCellDistribution,
   updateReceptor,
-  updateWire
+  updateWire,
+  wheelPlace
 } from './model/document.js';
 import {cameraCoordinates} from './view/frame.js';
 import {BODY_FRAME} from './model/layout.js';
@@ -58,14 +62,15 @@ import {sacPatch} from './view/sacs.js';
 import {panelStyle} from './view/shell.js';
 import {
   GROWTH,
+  BIRTH,
   phasePatch,
-  dosePatch,
   receptorCurvePatch,
   wheelMarks,
   wheelPatch,
-  wheelTrackWidth
+  wheelWidthPatch
 } from './view/substances.js';
-import {learnModePatch, learnRatePatch, learnResponseOf, learnTracePatch} from './view/learning.js';
+import {learnMemoryPatch} from './view/learning.js';
+import {contactCapacityPatch, variationPatch} from './view/cell_tissue.js';
 import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
 import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
@@ -83,9 +88,12 @@ export function storedPanels() {
   }
 }
 const HANDLES = Object.freeze({
+  anatomy : {follow : 'anatomyPointer'},
   panel : {follow : 'panelPointer', done : 'keepPanels', keepsClick : true},
   receptor : {follow : 'receptorPointer'},
-  dose : {follow : 'dosePointer'},
+  capacity : {follow : 'capacityPointer'},
+  variation : {follow : 'variationPointer'},
+  memory : {follow : 'memoryPointer'},
   drive : {follow : 'drivePointer'},
   response : {follow : 'responsePointer'},
   region : {follow : 'regionPointer'},
@@ -106,25 +114,33 @@ const pointerShare = (event, rect) => (
 const PADS = Object.freeze({
   wire : {key : 'wirePad', wire : true, patch : wirePatch, marks : wireMarks},
   output : {key : 'outputPad', patch : outputPatch, marks : outputMarks},
-  learnRate : {key : 'learnRate', handle : learnRatePatch},
-  learnMode : {key : 'learnMode', handle : learnModePatch},
-  learnTrace : {key : 'learnTrace', handle : learnTracePatch},
-  learnReceptor : {key : 'learnReceptor', follow : 'learnReceptorPointer'},
   vector : {
     key : 'vectorPad',
     patch : wheelPatch,
     marks : wheelMarks,
-    handle : fx => ({qwidth : wheelTrackWidth(fx)})
+    handle : (fx, fy, element, state) => {
+      const center = findCenter(state.document, element.dataset.vectorPad)?.center;
+      return center ? {
+        qwidth : wheelWidthPatch(state.capabilities, {x : center.q1, y : center.q2}, fx, fy)
+      }
+                    : null;
+    }
   },
   compass : {
     key : 'compass',
     patch : scentMapTuning,
     redraw : 'refreshScentMaps',
-    handle : fx => ({qwidth : scentMapWidth(fx)})
+    handle : (fx, fy, element, state) => {
+      const center = findCenter(state.document, element.dataset.compass)?.center;
+      return center ? {qwidth : scentMapWidth(center, fx, fy)} : null;
+    }
   },
   pigment : {key : 'pigmentWheel', patch : pigmentWheelPatch, redraw : 'refreshPigment'},
   amount : {key : 'pigmentAmount', follow : 'pigmentAmountPointer'},
-  lateral : {key : 'lateralPad', handle : lateralPatch},
+  lateral : {
+    key : 'lateralPad',
+    handle : (fx, fy, element) => lateralPatch(fx, fy, Number(element.dataset.lateralAngle))
+  },
   hair : {key : 'hairPad', handle : hairPatch},
   spines : {
     key : 'spinePad',
@@ -136,6 +152,16 @@ const padKind = element =>
     Object.keys(PADS).find(kind => element.hasAttribute(dataAttribute(PADS[kind].key)));
 const onlyHandles = pad => !pad.patch && !pad.follow;
 export const GRIPS = Object.freeze([
+  {
+    graphic : '[data-anatomy-handle]',
+    held : 'anatomy',
+    rect : false,
+    start : (studio, g, h, event) => ({
+      spec : anatomyHandles(studio.state, g.dataset.anatomyOrgan)
+                 .find(s => s.key === g.dataset.anatomyHandle),
+      origin : cameraCoordinates(event, studio.bodyMap(), studio.state.camera)
+    })
+  },
   {
     graphic : '[data-region-picture]',
     handle : '[data-region-handle]',
@@ -173,10 +199,22 @@ export const GRIPS = Object.freeze([
     start : (studio, g) => studio.sensitivityGrip(g)
   },
   {
-    graphic : '[data-dose]',
-    handle : '[data-dose-handle]',
-    held : 'dose',
-    start : (studio, g, h) => ({target : g.dataset.dose, handle : h.dataset.doseHandle})
+    graphic : '[data-learning-memory]',
+    handle : '[data-learning-handle]',
+    held : 'memory',
+    start : (studio, g, h) => ({id : g.dataset.learningMemory, handle : h.dataset.learningHandle})
+  },
+  {
+    graphic : '[data-capacity]',
+    handle : '[data-capacity-handle]',
+    held : 'capacity',
+    start : (studio, g, h) => ({id : g.dataset.capacity, handle : h.dataset.capacityHandle})
+  },
+  {
+    graphic : '[data-variation]',
+    handle : '[data-variation-handle]',
+    held : 'variation',
+    start : (studio, g) => ({target : g.dataset.variation, family : g.dataset.variationFamily})
   },
   {
     graphic : '[data-receptor-curve]',
@@ -209,10 +247,10 @@ export const GRIPS = Object.freeze([
     })
   },
   {
-    graphic : '[data-cell-track]',
+    graphic : '[data-cell-group]',
     handle : '[data-cell-handle]',
     held : 'drive',
-    start : (studio, g) => ({id : g.dataset.cellTrack, handle : 'copies'})
+    start : (studio, g) => ({id : g.dataset.cellGroup, handle : 'copies'})
   },
   {
     graphic : '[data-skin-field]',
@@ -304,6 +342,15 @@ function knobGrip(event) {
 }
 export const handleMethods = {
   ...cppnMethods,
+  anatomyPointer(event) {
+    const {spec, origin} = this.handleDrag;
+    if (!spec)
+      return;
+    const p = cameraCoordinates(event, this.bodyMap(), this.state.camera);
+    const doc = anatomyPatch(this.state, spec, p[spec.axis] - origin[spec.axis]);
+    if (doc)
+      this.draftDesign(doc, 'anatomy:' + spec.id + ':' + spec.key);
+  },
   regionPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const organ = findOrgan(doc, drag.id);
@@ -399,13 +446,13 @@ export const handleMethods = {
     const share = pointerShare(event, bounds), fx = clamp(share.fx), fy = clamp(share.fy);
     const doc = this.state.document, pad = PADS[control.kind];
     if (pad.follow)
-      return this[pad.follow](control, fx);
+      return this[pad.follow](control, fx, fy);
     const item = pad.wire ? doc.wires.find(wire => wire.id === control.id)
                           : findCenter(doc, control.id)?.center;
     if (!item)
       return;
     if (control.handle) {
-      const patch = pad.handle?.(fx, fy, control.element);
+      const patch = pad.handle?.(fx, fy, control.element, this.state);
       if (patch)
         this.draftDesign(updateCenter(doc, control.id, patch), 'graphic:' + control.id);
       return;
@@ -425,23 +472,23 @@ export const handleMethods = {
           for (const [name, value] of Object.entries(attributes))
             mark.setAttribute(name, fixed(value));
   },
-  learnReceptorPointer(control, fx) {
-    const doc = this.state.document, effect = Number(control.element.dataset.learnEffect);
-    const receptor = findCenter(doc, control.id)?.center.receptors[effect];
-    if (!receptor)
+  memoryPointer(event) {
+    const drag = this.handleDrag, center = findCenter(this.state.document, drag.id)?.center;
+    if (!center)
       return;
-    const sensitivity = learnResponseOf(fx) - receptor.baseline;
-    if (Math.abs(sensitivity - receptor.sensitivity) < PAD_STILL)
-      return;
-    this.draftDesign(updateReceptor(doc, control.id, effect, {sensitivity}),
-                     'learn-receptor:' + control.id);
+    const {fx, fy} = pointerShare(event, drag.rect);
+    const patch = learnMemoryPatch(this.state, center, drag.handle, fx, fy);
+    if (patch)
+      this.draftDesign(updateCenter(this.state.document, drag.id, patch), 'memory:' + drag.id);
   },
-  pigmentAmountPointer(control, fx) {
+  pigmentAmountPointer(control, fx, fy) {
     const doc = this.state.document, found = findCenter(doc, control.id);
     const type = found && typeOfCenter(found.organ, control.id);
     if (!type)
       return;
-    const count = pigmentAmount(fx, Number(control.element.dataset.room));
+    const count =
+        pigmentAmount(fx, fy, Number(control.element.dataset.room),
+                      Number(control.element.dataset.before), Number(control.element.dataset.most));
     if (count === type.centers.length)
       return;
     const changed = setOrganNodes(doc, found.organ.id, count, this.state.sites, type.id);
@@ -488,37 +535,51 @@ export const handleMethods = {
     if (value !== null)
       this.setPreviewContext(drag.handle, value);
   },
-  dosePointer(event) {
+  capacityPointer(event) {
+    const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);
+    this.draftDesign(
+        updateCenter(this.state.document, drag.id, contactCapacityPatch(drag.handle, fx, fy)),
+        'capacity:' + drag.id);
+  },
+  variationPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
-    const cut = drag.target.lastIndexOf(':'), centerId = drag.target.slice(0, cut),
-          effect = Number(drag.target.slice(cut + 1));
-    const receptor = findCenter(doc, centerId)?.center.receptors[effect];
-    if (!receptor)
-      return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    const patch = dosePatch(this.state, receptor, effect, drag.handle, fx, fy);
-    if (!patch)
-      return;
-    this.draftDesign(updateReceptor(doc, centerId, effect, patch), 'dose:' + drag.target);
+    const value = variationPatch(pointerShare(event, drag.rect).fx);
+    const center = findCenter(doc, drag.target)?.center;
+    const cut = drag.target.lastIndexOf(':'), id = drag.target.slice(0, cut),
+          effect = drag.target.slice(cut + 1);
+    const patch = {spread_receptors : value};
+    const changed = center ? updateCellDistribution(doc, center.id, drag.family, value)
+                    : drag.target === GROWTH ? updateGrowth(doc, patch)
+                    : effect === BIRTH       ? updateCellGrowth(doc, id, patch)
+                                             : updateReceptor(doc, id, Number(effect), patch);
+    if (changed)
+      this.draftDesign(changed, 'variation:' + drag.target);
   },
   receptorPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;
     const growth = drag.target === GROWTH;
     const cut = drag.target.lastIndexOf(':'), centerId = drag.target.slice(0, cut),
-          effect = growth ? GROWTH : Number(drag.target.slice(cut + 1));
-    const receptor = growth ? doc.growth : findCenter(doc, centerId)?.center.receptors[effect];
+          effect = growth                                 ? GROWTH
+                   : drag.target.slice(cut + 1) === BIRTH ? BIRTH
+                                                          : Number(drag.target.slice(cut + 1));
+    const center = findCenter(doc, centerId)?.center;
+    const receptor = growth             ? doc.growth
+                     : effect === BIRTH ? center?.growth
+                                        : center?.receptors[effect];
     if (!receptor)
       return;
     const {fx, fy} = pointerShare(event, drag.rect);
     let patch;
-    if (drag.handle === 'width')
-      patch = {width : wheelTrackWidth(fx)};
-    else
+    if (drag.handle === 'width') {
+      const [x, y] = wheelPlace(this.state.capabilities, receptor.substance);
+      patch = {width : wheelWidthPatch(this.state.capabilities, {x, y}, fx, fy)};
+    } else
       patch = receptorCurvePatch(this.state, receptor, effect, drag.handle, fx, fy);
     if (!patch)
       return;
-    this.draftDesign(growth ? updateGrowth(doc, patch)
-                            : updateReceptor(doc, centerId, effect, patch),
+    this.draftDesign(growth             ? updateGrowth(doc, patch)
+                     : effect === BIRTH ? updateCellGrowth(doc, centerId, patch)
+                                        : updateReceptor(doc, centerId, effect, patch),
                      'receptor:' + drag.target);
   },
   drivePointer(event) {
@@ -529,7 +590,7 @@ export const handleMethods = {
     if (drag.handle === 'sac')
       return this.sacPointer(drag, fy);
     if (drag.handle === 'copies')
-      return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx)),
+      return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx, fy)),
                               'cells:' + drag.id);
     const doc =
         drag.handle === 'start' || drag.handle === 'end'
@@ -543,7 +604,8 @@ export const handleMethods = {
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
-    const patch = organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites));
+    const patch =
+        organ && effectorPatch(drag.code, drag.name, fx, fy, kindLimit(organ, sites), organ);
     if (!patch)
       return;
     const changed =

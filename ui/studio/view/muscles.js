@@ -1,6 +1,14 @@
 import {ATELIER_LIMITS, FIN_STROKE, MOTOR_KIND} from '../../schema.js';
 import {isPelvicMuscle, musclePlaces, organFunction} from '../model/organs.js';
-import {BODY_FRAME, halfWidth, sideOf, sideSign} from '../model/layout.js';
+import {
+  BODY_FRAME,
+  halfWidth,
+  sideOf,
+  sideSign,
+  findSite,
+  sitePoint,
+  centroid
+} from '../model/layout.js';
 import {finStroke, sprintNodes, usedSites} from '../model/document.js';
 import {FIN_BASE, HEAD, PELVIC_BASE, skinAt, SNOUT_TIP} from './frame.js';
 import {fixed} from './markup.js';
@@ -22,7 +30,7 @@ export const WORKS = Object.freeze([
 ].map(Object.freeze));
 // A muscle is drawn as one band, not cell by cell: its length grows with the number of nodes and
 // saturates, and a few schematic segments stand for all of them.
-const BAND = Object.freeze({half_fill : 8, segments : 5});
+const BAND = Object.freeze({half_fill : 8, segments : 16});
 export const muscleSegments = count => Math.max(1, Math.min(count, BAND.segments));
 function muscleBuild(organ) {
   const count = organ.centers.length;
@@ -31,17 +39,17 @@ function muscleBuild(organ) {
 }
 const SHAPE = Object.freeze({
   tail : {
-    stalk : [ 690, 880 ],
-    depth : .5,
-    length : [ 70, 120 ],
-    thick : [ .28, .3 ],
+    stalk : [ 470, 897 ],
+    depth : .84,
+    length : [ 120, 330 ],
+    thick : [ .12, .2 ],
     steps : 16,
     mark : .8,
     lean : .5
   },
   // The forward-stroking antagonist leans its fan toward the head.
-  fin : {inset : 6, reach : [ 22, 18 ], lean : .7},
-  pelvic : {inset : 4, reach : [ 14, 12 ], lean : .7},
+  fin : {inset : 6, reach : [ 9, 9 ], lean : .7},
+  pelvic : {inset : 4, reach : [ 7, 6 ], lean : .7},
   jaw : {at : .82, size : [ [ 16, 10 ], [ 8, 5 ] ], spread : .8, tilt : .6, fibre : .7},
   throat :
       {after : 4, length : [ 40, 50 ], off : 20, width : [ 12, 10 ], out : 2.2, in : .4, ring : 1.2}
@@ -49,12 +57,16 @@ const SHAPE = Object.freeze({
 const grow = ([ least, span ], share) => least + span * share;
 const point = (x, y) => fixed(x) + ' ' + fixed(y);
 const mouthAt = () => ({x : SNOUT_TIP.x + HEAD.mouth_in, y : SNOUT_TIP.y});
-function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back, pelvic = false) {
+function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back, pelvic = false,
+                   position = null) {
   const s = sideSign(side), count = muscleSegments(nodes), along = k => (k + .5) / count;
   if (code === MOTOR_KIND.forward) {
-    const T = SHAPE.tail, end = T.stalk[1],
+    const T = SHAPE.tail, end = position ? position.x + grow(T.length, fill) / 2 : T.stalk[1],
           start = Math.max(T.stalk[0], end - grow(T.length, fill));
-    const at = x => BODY_FRAME.middle + s * halfWidth(x) * T.depth,
+    const dy = position
+                   ? position.y - (BODY_FRAME.middle + s * halfWidth((start + end) / 2) * T.depth)
+                   : 0;
+    const at = x => BODY_FRAME.middle + s * halfWidth(x) * T.depth + dy,
           half = x => halfWidth(x) * grow(T.thick, strength) / 2;
     const top = [], bottom = [];
     for (let k = 0; k <= T.steps; ++k) {
@@ -65,7 +77,8 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
     const marks = Array.from({length : count}, (_, k) => {
       const x = start + (end - start) * along(k), y = at(x), w = half(x) * T.mark,
             back = w * T.lean;
-      return 'M' + point(x + back, y - w) + ' L' + point(x - back, y) + ' L' +
+      return 'M' + point(x + back, y - w) + ' Q' + point(x - back * .5, y - w * .3) + ' ' +
+             point(x - back, y) + ' Q' + point(x - back * .5, y + w * .3) + ' ' +
              point(x + back, y + w);
     });
     return {
@@ -76,9 +89,11 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
     };
   }
   if (code === MOTOR_KIND.turn) {
-    const F = pelvic ? SHAPE.pelvic : SHAPE.fin, B = pelvic ? PELVIC_BASE : FIN_BASE, a = B.at,
-          b = B.at + B.length, middle = (a + b) / 2;
-    const base = x => skinAt(x, s) - s * F.inset, reach = grow(F.reach, (fill + strength) / 2);
+    const F = pelvic ? SHAPE.pelvic : SHAPE.fin, B = pelvic ? PELVIC_BASE : FIN_BASE,
+          a = position ? position.x - B.length / 2 : B.at, b = a + B.length, middle = (a + b) / 2;
+    const offset = position ? position.y - (skinAt(middle, s) - s * F.inset) : 0;
+    const base = x => skinAt(x, s) - s * F.inset + offset,
+          reach = grow(F.reach, (fill + strength) / 2);
     const lean = stroke === FIN_STROKE.front ? F.lean * (b - a) / 2 : 0;
     const root = {x : middle - lean, y : base(middle) - s * reach};
     const marks = Array.from({length : count}, (_, k) => {
@@ -96,8 +111,8 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
   }
   const mouth = mouthAt();
   if (code === MOTOR_KIND.aggression) {
-    const J = SHAPE.jaw, x = mouth.x + HEAD.jaw_back * J.at,
-          y = mouth.y + s * (HEAD.mouth[1] + HEAD.jaw_spread * J.at);
+    const J = SHAPE.jaw, x = position?.x ?? mouth.x + HEAD.jaw_back * J.at,
+          y = position?.y ?? mouth.y + s * (HEAD.mouth[1] + HEAD.jaw_spread * J.at);
     const share = (fill + strength) / 2, rx = grow([ J.size[0][0], J.size[1][0] ], share),
           ry = grow([ J.size[0][1], J.size[1][1] ], share);
     const arc = 'A' + fixed(rx) + ' ' + fixed(ry) + ' 0 1 0 ';
@@ -115,8 +130,10 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
     };
   }
   if (code === MOTOR_KIND.suction) {
-    const P = SHAPE.throat, a = mouth.x + HEAD.mouth[0] + P.after, end = a + grow(P.length, fill);
-    const y = BODY_FRAME.middle + s * P.off, half = grow(P.width, strength) / 2;
+    const P = SHAPE.throat,
+          a = position ? position.x - grow(P.length, fill) / 2 : mouth.x + HEAD.mouth[0] + P.after,
+          end = a + grow(P.length, fill);
+    const y = position?.y ?? BODY_FRAME.middle + s * P.off, half = grow(P.width, strength) / 2;
     const marks = Array.from({length : count}, (_, k) => {
       const x = a + (end - a) * along(k);
       return 'M' + point(x, y - s * half * P.in) + ' L' + point(x, y + s * half * P.ring);
@@ -134,11 +151,31 @@ function workShape(code, side, {fill, strength}, nodes, stroke = FIN_STROKE.back
   return null;
 }
 // The segments at the end of the band stand for the sprint nodes.
+export function muscleAttachment(organ, sites) {
+  if (organ.position)
+    return organ.position;
+  if (organFunction(organ, sites) !== MOTOR_KIND.turn)
+    return null;
+  const places = organ.centers.map(c => findSite(sites, c.site)).filter(Boolean);
+  const u = places.reduce((sum, s) => sum + 1 - s.u, 0) / Math.max(1, places.length);
+  const x = isPelvicMuscle(organ) ? 665 + u * 85 : 435 + u * 65;
+  return {x, y : skinAt(x, sideOf(organ)) - sideOf(organ) * 8};
+}
+export function finAttachments(state) {
+  const result = {};
+  for (const organ of state.document.organs.filter(
+           o => o.type === 'muscle' && organFunction(o, state.sites) === MOTOR_KIND.turn)) {
+    const index = 1 + (sideOf(organ) > 0 ? 1 : 0) + (isPelvicMuscle(organ) ? 2 : 0);
+    if (!result[index] || finStroke(organ) === FIN_STROKE.back)
+      result[index] = muscleAttachment(organ, state.sites);
+  }
+  return result;
+}
 export function muscleShape(organ, sites) {
   const code = organFunction(organ, sites);
   const shape = workShape(code, sideOf(organ), muscleBuild(organ), organ.centers.length,
                           code === MOTOR_KIND.turn ? finStroke(organ) : FIN_STROKE.back,
-                          isPelvicMuscle(organ));
+                          isPelvicMuscle(organ), muscleAttachment(organ, sites));
   if (!shape)
     return null;
   const sprint = sprintNodes(organ), count = shape.marks.length,

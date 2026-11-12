@@ -64,7 +64,7 @@ import {
   t,
   tList
 } from '../../strings.js';
-import {cellTrack, cellWords, heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
+import {cellGroup, cellWords, heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector, modeName} from './learning.js';
@@ -163,7 +163,7 @@ const cellCount = (organ, center) => ORGAN_BY_KEY[organ.type]?.nodes &&
                                              !SACS.includes(organ.type) &&
                                              !(organ.type === 'bladder' && center.role === 'sensor')
                                          ? ''
-                                         : cellTrack(center, cellWords(center));
+                                         : cellGroup(center, cellWords(center));
 const section = (title, body) =>
     '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
 const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
@@ -552,6 +552,9 @@ function wireInspector(state, wire) {
               : '') +
          contactPlan(state, endpointCenters(doc, wire.to), wire) +
          '<div class="aid-inspector-actions">' +
+         (wire.bundle ? '<button data-unbundle-wires="' + escapeText(wire.id) + '">' +
+                            label('wiring.unbundle') + '</button>'
+                      : '') +
          (wire.bends?.length
               ? '<button data-unbend-wire="' + escapeText(wire.id) + '">' +
                     escapeText(t('studio.inspector.unbend', {n : wire.bends.length})) + '</button>'
@@ -590,6 +593,21 @@ function assemblyInspector(state, assembly) {
          label('inspector.removeModule') + '</button></div>';
 }
 function multiInspector(state) {
+  const wires = state.document.wires.filter(w => state.multi.has(w.id));
+  if (wires.length > 1)
+    return '<header class="aid-inspector-head">' +
+           heading(t('studio.app.wireCount', {n : wires.length})) +
+           '</header><div class="aid-assembly-list">' +
+           wires
+               .map(w => '<span>' +
+                         escapeText(linkText(
+                             endpointTitle(state.document, w.from, state.sites, w.fromPort),
+                             endpointTitle(state.document, w.to, state.sites, w.toPort))) +
+                         '</span>')
+               .join('') +
+           '</div><div class="aid-inspector-actions"><button data-bundle-wires>' +
+           label('wiring.bundle') + '</button><button data-clear-multi>' +
+           label('inspector.cancelSelection') + '</button></div>';
   const chosen = [...state.multi ].flatMap(id => {
     const organ = findOrgan(state.document, id);
     if (organ)

@@ -4,7 +4,7 @@ import {organTypes, typeOfCenter} from '../model/document.js';
 import {cssColour, fishColours, pigmentColour, pigmentKind} from '../model/pigment.js';
 import {BODY_FRAME} from '../model/layout.js';
 import {skinAt} from './frame.js';
-import {escapeText, fixed, plainTrack, trackShare} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 import {formatNumber, t, tList} from '../../strings.js';
 
@@ -12,7 +12,7 @@ const label = (key, values) => t('studio.pigment.' + key, values);
 const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
 
 const PIGMENT_WHEEL =
-    Object.freeze({size : 200, centre : 100, radius : 88, rings : 8, sectors : 36, ring : 9});
+    Object.freeze({size : 300, centre : 150, radius : 105, rings : 8, sectors : 36, ring : 8});
 const W = PIGMENT_WHEEL, TURN = 360, HALF_TURN = 180;
 const wheelAt = (shown, r) => ({
   x : W.centre + r * Math.sin(shown * Math.PI / HALF_TURN),
@@ -48,14 +48,38 @@ function wheelPatches() {
   return html;
 }
 let patches = null;
-function pigmentWheel(center) {
-  const at = wheelPoint(center);
-  return '<svg class="aid-pigment-wheel" data-pigment-wheel="' + escapeText(center.id) +
-         '" viewBox="0 0 ' + W.size + ' ' + W.size + '" role="img" aria-label="' +
-         escapeText(label('wheel')) + '"><g class="aid-pigment-patches">' +
-         (patches ??= wheelPatches()) + '</g><circle class="aid-pigment-rim" cx="' + W.centre +
-         '" cy="' + W.centre + '" r="' + W.radius + '"/><circle class="aid-pigment-choice" cx="' +
-         fixed(at.x) + '" cy="' + fixed(at.y) + '" r="' + W.ring + '"/></svg>';
+function pigmentWheel(organ, chosen, state) {
+  const center = chosen.centers[0], at = wheelPoint(center), most = ORGAN_BY_KEY[organ.type].nodes;
+  const before = organ.centers.length - chosen.centers.length, room = most - before, radius = 128;
+  const arc = (from, to) => {
+    const a = wheelAt(from * TURN, radius), b = wheelAt(to * TURN, radius);
+    return 'M' + fixed(a.x) + ' ' + fixed(a.y) + ' A' + radius + ' ' + radius + ' 0 ' +
+           (to - from > .5 ? 1 : 0) + ' 1 ' + fixed(b.x) + ' ' + fixed(b.y);
+  };
+  let offset = 0;
+  const types = organTypes(organ).filter(type => type.id !== chosen.id).concat(chosen);
+  const ring = types
+                   .map(type => {
+                     const start = offset / most;
+                     offset += type.centers.length;
+                     return '<path d="' + arc(start + .002, Math.min(.999, offset / most)) +
+                            '" stroke="' + cssColour(pigmentColour(type.centers[0])) + '"/>';
+                   })
+                   .join('');
+  const edge = wheelAt(Math.min(.999, (before + chosen.centers.length) / most) * TURN, radius);
+  const id = escapeText(center.id);
+  return '<svg class="aid-pigment-palette" viewBox="0 0 300 360"><svg width="300" height="300" viewBox="0 0 300 300" data-pigment-amount="' +
+         id + '" data-room="' + room + '" data-before="' + before + '" data-most="' + most + '">' +
+         '<svg class="aid-pigment-wheel" width="300" height="300" viewBox="0 0 300 300" data-pigment-wheel="' +
+         id + '">' +
+         '<g class="aid-pigment-patches">' + (patches ??= wheelPatches()) +
+         '</g><circle class="aid-pigment-choice" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
+         '" r="' + W.ring + '"><title>' + escapeText(label('wheel')) + '</title></circle></svg>' +
+         '<g class="aid-pigment-composition"><circle cx="150" cy="150" r="128"/>' + ring + '</g>' +
+         '<circle class="aid-graphic-handle" data-graphic-handle="amount" cx="' + fixed(edge.x) +
+         '" cy="' + fixed(edge.y) + '" r="6"><title>' +
+         escapeText(label('amount', {n : chosen.centers.length})) + '</title></circle></svg>' +
+         colourRange(state) + '</svg>';
 }
 function kindChips(organ, chosen) {
   return typeChips(organ, chosen, type => {
@@ -63,21 +87,11 @@ function kindChips(organ, chosen) {
     return {icon : '<i style="background:' + cssColour(rgb) + '"></i>', name : kindName(rgb)};
   }, {add : label('add'), remove : label('remove')});
 }
-const AMOUNT = Object.freeze({width : 240, height : 34, track : [ 30, 200 ], y : 16});
-function amountTrack(organ, chosen) {
-  const most = ORGAN_BY_KEY[organ.type].nodes,
-        room = most - organ.centers.length + chosen.centers.length;
-  const share = room > 1 ? (chosen.centers.length - 1) / (room - 1) : 1;
-  return '<div class="aid-pigment-amount"><span>' +
-         escapeText(label('amount', {n : chosen.centers.length})) + '</span><svg viewBox="0 0 ' +
-         AMOUNT.width + ' ' + AMOUNT.height + '" data-pigment-amount="' +
-         escapeText(chosen.centers[0].id) + '" data-room="' + room + '">' +
-         plainTrack(AMOUNT.track, AMOUNT.y, share, 'data-graphic-handle="amount"',
-                    label('amount', {n : room})) +
-         '</svg></div>';
+export function pigmentAmount(fx, fy, room, before = 0, most = room) {
+  const angle =
+      (Math.atan2(fx * W.size - W.centre, W.centre - fy * W.size) / (2 * Math.PI) + 1) % 1;
+  return Math.max(1, Math.min(room, Math.round(angle * most) - before));
 }
-export const pigmentAmount = (fx, room) =>
-    1 + Math.round(trackShare(fx * AMOUNT.width, AMOUNT.track) * Math.max(0, room - 1));
 const RANGE = Object.freeze({
   width : 240,
   height : 62,
@@ -99,18 +113,15 @@ function colourRange(state) {
                                      '" stop-color="' + cssColour(rgb) + '"/>')
                     .join('');
   const x = left + span * colours.restShare;
-  return '<svg class="aid-pigment-range" viewBox="0 0 ' + R.width + ' ' + R.height +
-         '" role="img" aria-label="' + escapeText(label('range')) +
+  return '<svg x="30" y="300" width="240" height="62" class="aid-pigment-range" viewBox="0 0 ' +
+         R.width + ' ' + R.height + '" role="img" aria-label="' + escapeText(label('range')) +
          '"><defs><linearGradient id="aid-pigment-range">' + stops + '</linearGradient></defs>' +
          '<rect class="skin" x="0" y="' + R.top + '" width="' + R.skin + '" height="' + R.band +
          '" fill="' + cssColour(colours.skin) + '"><title>' + escapeText(label('skin')) +
          '</title></rect><rect x="' + left + '" y="' + R.top + '" width="' + span + '" height="' +
          R.band + '" fill="url(#aid-pigment-range)"/><path class="aid-pigment-rest" d="M' +
          fixed(x) + ' ' + R.top + ' l' + -R.mark + ' ' + -R.mark + ' h' + 2 * R.mark +
-         'Z"/><text x="' + fixed(x) + '" y="' + R.above + '" text-anchor="middle">' +
-         escapeText(label('rest')) + '</text><text x="' + left + '" y="' + R.label + '">' +
-         escapeText(label('gathered')) + '</text><text x="' + R.width + '" y="' + R.label +
-         '" text-anchor="end">' + escapeText(label('spread')) + '</text></svg>';
+         'Z"><title>' + escapeText(label('rest')) + '</title></path></svg>';
 }
 export function pigmentInspector(state, organ, center) {
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
@@ -123,8 +134,7 @@ export function pigmentInspector(state, organ, center) {
                       : '';
   return '<div data-pigment-block="' + escapeText(organ.id) + '"' +
          (title ? ' title="' + escapeText(title) + '"' : '') + '>' + kindChips(organ, chosen) +
-         pigmentWheel(chosen.centers[0]) + amountTrack(organ, chosen) + colourRange(state) +
-         '</div>';
+         pigmentWheel(organ, chosen, state) + '</div>';
 }
 const DOTS = Object.freeze({step : 44, ends : [ 1, 2 ], inset : 16, least : 1.6, most : 8});
 export function chromatophoresSvg(state, organ, chosen) {

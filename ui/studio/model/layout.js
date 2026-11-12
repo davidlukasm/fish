@@ -12,8 +12,8 @@ export const BODY_MIDDLE =
 export const BODY_RADIUS = (BODY_FRAME.tail - BODY_FRAME.snout) / 2;
 
 export const BODY_KNOTS = Object.freeze([
-  [ 130, 50 ], [ 200, 150 ], [ 300, 230 ], [ 420, 254 ], [ 560, 236 ], [ 690, 180 ], [ 800, 130 ],
-  [ 905, 44 ]
+  [ 130, 24 ], [ 200, 65 ], [ 300, 105 ], [ 420, 112 ], [ 560, 94 ], [ 690, 65 ], [ 800, 38 ],
+  [ 905, 12 ]
 ]);
 const TAIL_LEAST = 12;
 export function halfWidth(x) {
@@ -35,13 +35,22 @@ export const sideAt = point =>
     Math.abs(point.y - CENTRE_Y) < MIDLINE_BAND ? 0 : Math.sign(point.y - CENTRE_Y);
 export const findSite = (sites, id) => sites.find(s => s.id === id);
 const SITE_DEPTH = Object.freeze({least : 4, skin : .94, inner : .13, span : .75});
+export function bodyCoordinates(position, zone) {
+  const [start, end] = ZONE_X[zone];
+  const unit = value => Math.max(0, Math.min(1, value));
+  return {
+    u : 1 - unit((position.x - start) / (end - start)),
+    w : unit((Math.abs(position.y - CENTRE_Y) / halfWidth(position.x) - SITE_DEPTH.inner) /
+             SITE_DEPTH.span)
+  };
+}
 const FIN_ANCHOR = Object.freeze({depth : .8, [ZONE.trunk] : 31, [ZONE.tail] : 30});
 export const NERVE_ROLE = 'nerve';
 export const SKIN_ROLE = 'skin';
 const BRAIN_MAP = Object.freeze({
-  [ZONE.head] : {front : 250, length : 290, inner : 65, outer : 155},
-  [ZONE.trunk] : {front : 615, length : 125, inner : 9, outer : 22},
-  [ZONE.tail] : {front : 760, length : 115, inner : 7, outer : 17}
+  [ZONE.head] : {front : 242, length : 178, inner : 12, outer : 50},
+  [ZONE.trunk] : {front : 530, length : 205, inner : 4, outer : 17},
+  [ZONE.tail] : {front : 760, length : 115, inner : 3, outer : 10}
 });
 function brainPoint(site) {
   const M = BRAIN_MAP[site.zone], row = Math.max(0, Math.min(1, 3 * site.v - 1));

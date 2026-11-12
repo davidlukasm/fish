@@ -1,9 +1,8 @@
+import {placeCanvasOrgan} from './canvas_placement.js';
 import {STIMULUS_ORGAN} from './model/organs.js';
-import {hasField, newFieldPlacements} from './model/placement.js';
 import {HORMONE_EFFECT, HORMONES} from '../schema.js';
 import {
   addNeuron,
-  addOrgan,
   addOrganType,
   addWire,
   bindReceptor,
@@ -20,21 +19,13 @@ import {
 } from './model/document.js';
 import {placeModule, placeStoredModule} from './model/assemblies.js';
 import {placeSystem, systemMissing} from './model/systems.js';
-import {nearFish, pointDistance, sitePoint, SNAP_DISTANCE} from './model/layout.js';
-import {muscleTarget} from './view/muscles.js';
+import {nearFish, SNAP_DISTANCE} from './model/layout.js';
 import {cameraCoordinates} from './view/frame.js';
 import {placementTarget} from './view/places.js';
 import {aimedWire, aimMark, drawnBundles} from './view/wires.js';
 import {armedCursor, systemNeed} from './view/library.js';
 import {label} from './view/kit.js';
-import {
-  assemblyPreview,
-  choiceSeats,
-  choicesSvg,
-  hintLegend,
-  organPreview,
-  placementHints
-} from './view/placing.js';
+import {assemblyPreview, hintLegend, organPreview, placementHints} from './view/placing.js';
 import {BODY_MAP, LAYER} from './view/scene.js';
 
 const DROP_ON_PARTS = Object.freeze([ 'effect', 'phase', 'birth' ]);
@@ -55,7 +46,6 @@ export const dropMethods = {
     this.state.armed = null;
     this.showArmed(false);
     this.clearPreview();
-    this.cancelChoices();
     this.dragging = {kind, value};
     this.preparePlacement(kind, value);
     event.dataTransfer.effectAllowed = 'copy';
@@ -71,9 +61,7 @@ export const dropMethods = {
     else if (this.ontoNerve(kind, value)) {
       this.markDropTargets(kind, value);
       this.showHints(kind, value, kind + ':' + value);
-    } else if (kind === 'organ' && hasField(value))
-      this.prepareChoices(newFieldPlacements(this.state.document, value, this.state.sites));
-    else {
+    } else {
       const placed = ORGAN_FROM_CARD[kind] ?? {kind, value};
       this.showHints(placed.kind, placed.value, placed.kind + ':' + placed.value);
     }
@@ -124,10 +112,6 @@ export const dropMethods = {
       if (target || !teaching)
         return;
     }
-    if (carried.kind === 'organ' && hasField(carried.value)) {
-      this.showChoices(position);
-      return;
-    }
     if (!nearFish(position, this.state.sites)) {
       this.root.querySelector(LAYER.preview)?.replaceChildren();
       return;
@@ -171,14 +155,6 @@ export const dropMethods = {
       return this.dropFromCard(kind, value, position);
     this.dragging = null;
     this.clearPreview();
-    if (kind === 'organ' && hasField(value) && this.state.choices) {
-      if (!this.commitChoice(position))
-        return this.notice(label('status.noRoom'));
-      this.state.tool = 'select';
-      this.refreshTools();
-      return this.notice(label('status.placed'));
-    }
-    this.cancelChoices();
     if (!nearFish(position, this.state.sites))
       return this.notice(label('status.noRoom'));
     let result;
@@ -263,7 +239,6 @@ export const dropMethods = {
     this.state.armed = null;
     this.showArmed();
     this.clearPreview();
-    this.cancelChoices();
     return true;
   },
   showArmed(redraw = true) {
@@ -312,7 +287,6 @@ export const dropMethods = {
     // Only an answer requested after the stimulus was placed has measured it.
     this.pendingTrace = {organ : organ.id, after : this.designRequest};
     this.requestDesign();
-    this.showTestLight();
     this.refreshViews();
   },
   ontoNerve(kind, value) {
@@ -393,26 +367,7 @@ export const dropMethods = {
     }
     this.changeDocument(doc, {kind : 'center', id : target.centers[0].id});
   },
-  placeOrgan(type, position) {
-    if (type === 'muscle') {
-      const home = muscleTarget(this.state.document, this.state.sites, position);
-      return home && this.muscleIn(home);
-    }
-    const target = placementTarget(this.state.document, type, position);
-    return addOrgan(this.state.document, type, this.state.sites, target.position, target.snap,
-                    target.paired);
-  },
-  muscleIn(home) {
-    const {document : doc, sites} = this.state;
-    if (home.organ)
-      return {document : doc, organId : home.organ.id, centerId : home.organ.centers[0].id};
-    const site = home.free.reduce((best, s) => pointDistance(s, home.middle, 'muscle') <
-                                                       pointDistance(best, home.middle, 'muscle')
-                                                   ? s
-                                                   : best);
-    return addOrgan(doc, 'muscle', sites, sitePoint(site, 'muscle'), 0, true, home.code,
-                    home.pelvic);
-  },
+  placeOrgan(type, position) { return placeCanvasOrgan(this.state, type, position);},
   dropOntoNerve(key, target, position) {
     this.dragging = null;
     this.clearPreview();
@@ -482,50 +437,6 @@ export const dropMethods = {
     const legend = this.root.querySelector('[data-hint-legend]');
     if (legend)
       legend.hidden = true;
-  },
-  prepareChoices(placements) {
-    this.state.choices = placements.length ? placements : null;
-    this.showChoices(this.choicePoint);
-  },
-  nearestChoice(point) {
-    let best = null, distance = Infinity;
-    for (const choice of this.state.choices ?? [])
-      for (const seat of choiceSeats(this.state, choice)) {
-        const d = Math.hypot(seat.x - point.x, seat.y - point.y);
-        if (d < distance)
-          [best, distance] = [ choice, d ];
-      }
-    return best;
-  },
-  showChoices(point) {
-    this.choicePoint = point;
-    if (this.choiceFrame)
-      return;
-    this.choiceFrame = requestAnimationFrame(() => {
-      this.choiceFrame = 0;
-      const layer = this.root.querySelector(LAYER.choices);
-      if (!layer || !this.state.choices)
-        return;
-      const nearest = this.choicePoint ? this.nearestChoice(this.choicePoint) : null;
-      if (layer.childElementCount && nearest === this.shownChoice)
-        return;
-      this.shownChoice = nearest;
-      layer.innerHTML = choicesSvg(this.state, this.state.choices, nearest);
-    });
-  },
-  commitChoice(point) {
-    const choice = point && this.nearestChoice(point);
-    this.cancelChoices();
-    if (!choice)
-      return false;
-    this.changeDocument(choice.document, {kind : 'organ', id : choice.organId});
-    return true;
-  },
-  cancelChoices() {
-    this.state.choices = null;
-    this.choicePoint = null;
-    this.shownChoice = null;
-    this.root.querySelector(LAYER.choices)?.replaceChildren();
   },
   showTrash(visible) {
     const trash = this.root.querySelector('[data-trash]');

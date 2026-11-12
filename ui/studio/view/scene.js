@@ -1,3 +1,4 @@
+import {anatomyHandlesSvg} from './anatomy_handles.js';
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
@@ -112,15 +113,6 @@ function centersSvg(state) {
                                 : '') +
           '<g style="color:' + color + '">' + centerMarker(center, r) + '</g></g>';
     }
-    // The name shows for the organ chosen itself; a chosen module's organs stay unnamed, so their
-    // names do not pile up.
-    if (!isRegion(organ) && isSelected(selected, 'organ', organ.id)) {
-      const place = organLabelPlace(pos.y, zoom);
-      result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
-                fixed(place.y) + '" text-anchor="middle" class="aid-organ-label" font-size="' +
-                fixed(place['font-size']) + '">' + escapeText(organTitle(organ, state.sites)) +
-                '</text>';
-    }
   }
   return result;
 }
@@ -189,12 +181,8 @@ function reachSvg(state) {
 const REACH = Object.freeze({fill : .32, span : 2});
 const BODY_MAP_ID = 'aid-body-map';
 export const BODY_MAP = '#' + BODY_MAP_ID;
-const LAYER_ID = Object.freeze({
-  hints : 'aid-placement-hints',
-  choices : 'aid-choices',
-  preview : 'aid-drag-preview',
-  line : 'aid-connecting-line'
-});
+const LAYER_ID = Object.freeze(
+    {hints : 'aid-placement-hints', preview : 'aid-drag-preview', line : 'aid-connecting-line'});
 export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
@@ -231,23 +219,6 @@ function generatedCenters(state) {
              .join('') +
          '</g>';
 }
-function neuralSeats(state) {
-  if (!state.armed || detailMix(state).seats <= 0)
-    return '';
-  const used = usedSites(state.document), seen = new Set();
-  return '<g class="aid-neural-seats" opacity="' + fixed(detailMix(state).seats) + '">' +
-         state.sites.filter(s => nerveZone(s) && !used.has(s.id))
-             .map(site => {
-               const p = sitePoint(site, 'nerve'), key = fixed(p.x) + ':' + fixed(p.y);
-               if (seen.has(key))
-                 return '';
-               seen.add(key);
-               return '<circle cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
-                      fixed(2 / zoomOf(state)) + '"/>';
-             })
-             .join('') +
-         '</g>';
-}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
@@ -263,17 +234,16 @@ export function fishScene(state) {
          '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
          fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
          '" class="aid-canvas-ground"/>' +
-         '<g class="aid-anatomy">' + anatomy + '</g>' + neuralSeats(state) + hormoneOverlay(state) +
-         '<g class="aid-wires">' + wiresShown(state, centers) + '</g>' + reachSvg(state) +
-         organHitsSvg(state) + wiresShown(state, centers, true) +
-         regionContactsSvg(state, centers) + '<g class="aid-centers">' + centersSvg(state) +
-         '</g>' + generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) +
-         '</g>' +
+         '<g class="aid-anatomy">' + anatomy + '</g>' +
+         '' + hormoneOverlay(state) + '<g class="aid-wires">' + wiresShown(state, centers) +
+         '</g>' + reachSvg(state) + organHitsSvg(state) + wiresShown(state, centers, true) +
+         (layerShown(state, 'wires') ? regionContactsSvg(state, centers) : '') +
+         '<g class="aid-centers">' + centersSvg(state) + '</g>' + anatomyHandlesSvg(state) +
+         generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
          '<g class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '">' + cones +
          '</g>' +
          '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
-         '<g id="' + LAYER_ID.choices + '" pointer-events="none"></g>' +
          '<g id="' + LAYER_ID.preview + '" pointer-events="none"></g>' +
          '<path id="' + LAYER_ID.line +
          '" d="" class="aid-connecting-line" pointer-events="none"/>' +

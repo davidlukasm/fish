@@ -1,3 +1,4 @@
+import {newFishDocument} from './canvas_placement.js';
 import {
   ANYWHERE_CLICKS,
   changeOn,
@@ -91,6 +92,7 @@ export class OrganStudio {
       sightProbe : null,
       senseProbe : null,
       armed : null,
+      placementSide : 'both',
       visionProfile : null,
       panels : storedPanels(),
       layers : storedLayers(),
@@ -164,7 +166,6 @@ export class OrganStudio {
       this.dragging = null;
       this.refreshLibrary();
       this.clearPreview();
-      this.cancelChoices();
     });
     this.root.addEventListener('pointerdown', event => this.pointerDown(event));
     window.addEventListener('pointermove', event => this.pointerMove(event));
@@ -184,6 +185,7 @@ export class OrganStudio {
       ]);
       this.state.capabilities = results[0];
       this.state.sites = results[0].sites;
+      this.state.document = newFishDocument(label('app.newFish'), this.state.sites);
       this.state.userModules = results[2]?.modules ?? [];
       if (results[1]?.document)
         try {
@@ -420,7 +422,7 @@ export class OrganStudio {
     }[chosen?.kind];
     this.state.selected = exists?.(chosen.id) ? chosen : null;
     for (const id of [...this.state.multi])
-      if (!findCenter(doc, id) && !findOrgan(doc, id))
+      if (!findCenter(doc, id) && !findOrgan(doc, id) && !doc.wires.some(w => w.id === id))
         this.state.multi.delete(id);
     this.pendingWire = null;
     this.designChanged();
@@ -490,9 +492,12 @@ export class OrganStudio {
   select(kind, id, event = null, toggle = true) {
     const current = this.state.selected;
     if ((event?.ctrlKey || event?.metaKey || event?.shiftKey) &&
-        (kind === 'organ' || kind === 'center')) {
+        (kind === 'organ' || kind === 'center' || kind === 'wire')) {
+      if (current && (current.kind === 'wire') !== (kind === 'wire'))
+        this.state.multi.clear();
       if (!this.state.multi.size && current &&
-          (current.kind === 'organ' || current.kind === 'center')) {
+          (current.kind === kind ||
+           kind !== 'wire' && (current.kind === 'organ' || current.kind === 'center'))) {
         if (current.kind === kind && current.id === id) {
           this.state.selected = null;
           this.refreshViews();
@@ -504,7 +509,9 @@ export class OrganStudio {
         this.state.multi.delete(id);
         const remaining = [...this.state.multi ].at(-1);
         this.state.selected = remaining ? {
-          kind : findOrgan(this.state.document, remaining) ? 'organ' : 'center',
+          kind : this.state.document.wires.some(w => w.id === remaining) ? 'wire'
+                 : findOrgan(this.state.document, remaining)             ? 'organ'
+                                                                         : 'center',
           id : remaining
         }
                                         : null;
@@ -525,7 +532,6 @@ export class OrganStudio {
       this.state.visionProfile = cell.center.profile;
     this.stopPulse();
     this.bringProbes();
-    this.showTestLight();
     this.refreshScene();
     this.refreshInspector(true);
   }

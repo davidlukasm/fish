@@ -261,6 +261,7 @@
       "whole": "Ganze Region",
       "cut": "Klicken nimmt diese Verbindung aus dem Plan.",
       "restore": "Klicken nimmt diese Verbindung wieder in den Plan.",
+      "edit": "Verbindung zeichnen: Ausgangsknoten, dann Zielknoten wählen",
       "cutHint": "Ein Klick auf eine Verbindung des Plans nimmt sie heraus oder wieder hinein.",
       "inhibits": "hemmend"
     },
@@ -1063,6 +1064,9 @@
   "wiring": {
     "pairings": "Seiten",
     "shape": "Verlauf",
+    "bundle": "Zu Bündel zusammenfassen",
+    "unbundle": "Bündel auflösen",
+    "bundleHint": "Mit Umschalt mehrere Leitungen oder Bündel auswählen.",
     "same": "gleichseitig",
     "sameTitle": "Jede Seite bleibt bei sich",
     "crossed": "gekreuzt",
@@ -1370,5 +1374,41 @@
     "choice": "Handlungswahl",
     "motor": "Motorik",
     "spine": "Taktgeber"
+  },
+  "cellPicture": {
+    "contacts": "Kontakte aufnehmen",
+    "electrical_limit": "Signalstärke",
+    "teaching_limit": "Lehrwirkung",
+    "capacity": "Kontaktplätze",
+    "variation": "Unterschiede neuer Zellen",
+    "variationDrag": "Die äußere Zelle ziehen: wie stark neue Zellen voneinander abweichen.",
+    "spread_physiology": "Zellantwort",
+    "spread_receptors": "Signalempfang",
+    "spread_development": "Zellbildung",
+    "spread_contacts": "Verbindungen",
+    "learningMemory": "Erfahrung und Erinnerung",
+    "learningStrength": "Wirkung einer Erfahrung",
+    "mode": [
+      "Gemeinsames abschwächen",
+      "Über Lehrsignale",
+      "Gemeinsames stärken"
+    ],
+    "unconsolidated": "Die Zerfallszeiten gelten für ungefestigte Kontakte."
+  },
+  "placement": {
+    "side": "Platzierung",
+    "both": "Beidseitig",
+    "single": "Einseitig",
+    "middle": "Mittig"
+  },
+  "direct": {
+    "gut": "Darm verlängern",
+    "gills": "Reusendichte",
+    "angle": "Schlagrichtung",
+    "fibre": "Fasermischung",
+    "strength": "Muskelstärke",
+    "undulation": "Schwanzbewegung",
+    "jaw_length": "Kieferlänge",
+    "blunt_teeth": "Zahnform"
   }
 }

@@ -1,10 +1,11 @@
 import {degrees} from '../../units.js';
 import {hueQuality} from '../../tuning.js';
 import {CONTRAST_POLARITY, VISION, TUNING} from '../../schema.js';
-import {findSite, ZONE} from './layout.js';
+import {bodyCoordinates, findSite, ZONE} from './layout.js';
 
 export const HALF_VIEW = degrees(Math.PI * VISION.half_view);
 export const bearing = site => HALF_VIEW * (.5 * (1 - site.u) + .5 * site.w);
+export const bearingAt = position => bearing(bodyCoordinates(position, ZONE.head));
 const BEARING_SCALE = 1e6;
 export const latticeBearing = site => Math.round(bearing(site) * BEARING_SCALE) / BEARING_SCALE;
 export const binSites = (sites, side, bin) =>

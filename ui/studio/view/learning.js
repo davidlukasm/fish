@@ -14,11 +14,11 @@ import {
   receptorResponse,
   receptorEnds
 } from '../model/document.js';
-import {escapeText, fixed, glyph, namedTrack, TRACK, trackShare} from './markup.js';
+import {escapeText, fixed, glyph} from './markup.js';
 import {routedLinks} from '../model/regions.js';
-import {formatNumber, formatSigned, joinParts, t, tList} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
 import {heading, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
-import {substanceName} from './substances.js';
+import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, tone} from './names.js';
 import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
@@ -28,24 +28,8 @@ import {EPISODE_LAYOUT, episodeSvg} from './episode.js';
 import {centerMarker} from './scene.js';
 import {contactPlan} from './contact_plan.js';
 
-const TRACKS = Object.freeze({width : 300, height : 50, range : [ 26, 274 ], y : 20, lift : 4});
-// The learning rate is small, so it keeps one digit more.
+// The learning gain keeps one digit more because it is small.
 const RATE_DIGITS = VALUE_DIGITS + 1;
-export const learnRatePatch = fx => ({qwidth : trackShare(fx * TRACKS.width, TRACKS.range)});
-export const learnModePatch = fx => ({mode : 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1});
-export const learnResponseOf = fx => 2 * trackShare(fx * TRACKS.width, TRACKS.range) - 1;
-function learnTrack(kind, center, share, title, ends, {middle = '', extra = ''} = {}) {
-  const T = TRACKS;
-  return '<svg class="aid-learn-track" viewBox="0 0 ' + T.width + ' ' + T.height + '" data-' +
-         kind + '="' + escapeText(center.id) + '"' + extra + ' role="img" aria-label="' +
-         escapeText(title) + '">' +
-         namedTrack(T.range, T.y, share, 'data-graphic-handle="' + kind + '"', title, ends) +
-         (middle ? '<text class="aid-learn-middle" x="' + T.width / 2 + '" y="' +
-                       (T.y - TRACK.gap * T.lift) + '" text-anchor="middle">' + escapeText(middle) +
-                       '</text>'
-                 : '') +
-         '</svg>';
-}
 function sendersOf(state, center) {
   const doc = state.document, organ = findCenter(doc, center.id)?.organ;
   const hears = new Set([ center.id, organ?.id ]);
@@ -63,7 +47,6 @@ const boundSubstance = (state, center, effect) => {
              ? {index : receptor.substance, name : substanceName(state, receptor.substance)}
              : null;
 };
-const fullResponse = receptor => receptorEnds(receptor).with;
 
 const traceSteps = center => learningTimeSteps(center.learning_tau);
 const MODE_NAME = Object.freeze({[-1] : 'cancelling', 0 : 'neutral', 1 : 'competing'});
@@ -153,7 +136,8 @@ function learningValues(state, center) {
   const row = (key, value) =>
       '<div><dt>' + label('learnRule.' + key) + '</dt><dd>' + value + '</dd></div>';
   return '<details class="aid-learn-values"><summary>' + label('learnRule.values') +
-         '</summary><dl class="aid-parameter-readout">' +
+         '</summary><p class="aid-hint">' + label('cellPicture.unconsolidated') +
+         '</p><dl class="aid-parameter-readout">' +
          row('effectiveRate', formatNumber(eta, RATE_DIGITS)) +
          row('mode', label('inspector.' + modeName(cl.mode)) + ' · ' +
                          formatSigned(cl.mode, VALUE_DIGITS)) +
@@ -165,39 +149,82 @@ function learningValues(state, center) {
          row('decayUsed', decayHalf(1) + ' ' + label('learnRule.steps')) + '</dl></details>';
 }
 const TRACE = Object.freeze(
-    {width : 300, height : 70, left : 22, right : 280, top : 8, bottom : 46, samples : 48});
+    {width : 300, height : 138, left : 22, right : 280, top : 20, bottom : 110, samples : 64});
 const traceAxis = LONGEST_LEARNING_TIME;
+const traceLog = Math.log1p(traceAxis / TIME_CONSTANT.learning_min_steps);
+const traceAt = share => TIME_CONSTANT.learning_min_steps * Math.expm1(clamp(share) * traceLog);
 export const learnTracePatch = fx => {
-  const T = TRACE, steps = clamp((fx * T.width - T.left) / (T.right - T.left)) * traceAxis;
+  const T = TRACE, steps = traceAt((fx * T.width - T.left) / (T.right - T.left));
   return {learning_tau : learningTimeOf(Math.max(TIME_CONSTANT.learning_min_steps, steps))};
 };
-function traceGraphic(center) {
-  const T = TRACE, lasts = traceSteps(center);
-  const x = steps => T.left + (T.right - T.left) * steps / traceAxis;
-  const y = level => T.bottom - (T.bottom - T.top) * level;
+function learningGain(state, center) {
+  const N = state.capabilities.neural, context = previewContextOf(state);
+  const hormone = receptorResponse(state.capabilities, center.receptors[HORMONE_EFFECT.learning],
+                                   context.hormones, context.maturity);
+  const span = (N.learningGainMax - N.learningFloor) * (1 + hormone) / 2;
+  return {
+    floor : N.learningFloor,
+    span,
+    max : N.learningGainMax,
+    value : N.learningFloor + center.qwidth * span
+  };
+}
+export function learnMemoryPatch(state, center, handle, fx, fy) {
+  if (handle === 'trace')
+    return learnTracePatch(fx);
+  const T = TRACE, gain = learningGain(state, center);
+  if (!(gain.span > 0))
+    return null;
+  const value = clamp((T.bottom - fy * T.height) / (T.bottom - T.top)) * gain.max;
+  return {qwidth : clamp((value - gain.floor) / gain.span)};
+}
+function traceGraphic(state, center) {
+  const T = TRACE, lasts = traceSteps(center), gain = learningGain(state, center);
+  const x = steps =>
+      T.left + (T.right - T.left) * Math.log1p(steps / TIME_CONSTANT.learning_min_steps) / traceLog;
+  const y = level => T.bottom - (T.bottom - T.top) * level / gain.max;
   const points = Array.from({length : T.samples + 1}, (_, k) => {
-    const steps = traceAxis * k / T.samples;
-    return fixed(x(steps)) + ' ' + fixed(y(Math.exp(-steps / lasts)));
+    const steps = traceAt(k / T.samples);
+    return fixed(x(steps)) + ' ' + fixed(y(gain.value * Math.exp(-steps / lasts)));
   });
-  const title = label('learnRule.traceLength'), knobY = fixed(y(Math.exp(-1)));
-  // The knob runs on a rail from the shortest to the longest trace a cell can keep.
-  const rail =
-      [ TIME_CONSTANT.learning_min_steps, LONGEST_LEARNING_TIME ].map(steps => fixed(x(steps)));
+  const grip = (key, x, y, title) => '<circle class="aid-graphic-handle" data-learning-handle="' +
+                                     key + '" cx="' + fixed(x) + '" cy="' + fixed(y) +
+                                     '" r="7"><title>' + escapeText(title) + '</title></circle>';
   return '<svg class="aid-learn-trace" viewBox="0 0 ' + T.width + ' ' + T.height +
-         '" data-learn-trace="' + escapeText(center.id) + '" role="img" aria-label="' +
-         escapeText(title) + '"><path class="aid-learn-glow" d="M' + T.left + ' ' + T.bottom +
-         ' L' + points.join(' L') + ' L' + T.right + ' ' + T.bottom + ' Z"/><path ' +
-         'class="aid-learn-fade" d="M' + points.join(' L') +
-         '"/><line class="aid-chart-axis" x1="' + T.left + '" y1="' + T.bottom + '" x2="' +
-         T.right + '" y2="' + T.bottom + '"/><line class="aid-learn-rail" x1="' + rail[0] +
-         '" y1="' + knobY + '" x2="' + rail[1] + '" y2="' + knobY +
-         '"/><circle class="aid-graphic-handle" data-graphic-handle="learn-trace" cx="' +
-         fixed(x(lasts)) + '" cy="' + knobY + '" r="' + TRACK.handle + '"><title>' +
-         escapeText(title) + '</title></circle><text x="' + T.left + '" y="' +
-         (T.bottom + TRACK.name) + '">' +
-         escapeText(t('studio.learnRule.short', {n : TIME_CONSTANT.learning_min_steps})) +
-         '</text><text x="' + T.right + '" y="' + (T.bottom + TRACK.name) + '" text-anchor="end">' +
-         escapeText(t('studio.learnRule.lasts', {n : Math.round(lasts)})) + '</text></svg>';
+         '" data-learning-memory="' + escapeText(center.id) + '" role="img" aria-label="' +
+         label('cellPicture.learningMemory') + '"><path class="aid-learn-glow" d="M' + T.left +
+         ' ' + T.bottom + ' L' + points.join(' L') + ' L' + T.right + ' ' + T.bottom + ' Z"/>' +
+         '<path class="aid-learn-fade" d="M' + points.join(' L') + '"/>' +
+         '<path class="aid-chart-axis" d="M' + T.left + ' ' + T.top + 'V' + T.bottom + 'H' +
+         T.right + '"/>' +
+         (gain.span > 0 ? grip('rate', T.left, y(gain.value), label('cellPicture.learningStrength'))
+                        : '') +
+         grip('trace', x(lasts), y(gain.value / Math.E), label('learnRule.traceLength')) +
+         '<text x="' + T.left + '" y="12">' + label('cellPicture.learningStrength') + '</text>' +
+         '<text x="' + T.right + '" y="132" text-anchor="end">' +
+         t('studio.learnRule.lasts', {n : Math.round(lasts)}) + '</text></svg>';
+}
+function modeChoices(center) {
+  return '<div class="aid-learning-modes">' +
+         [ -1, 0, 1 ]
+             .map(mode => {
+               const name = label('cellPicture.mode.' + (mode + 1));
+               return '<button data-response-cell="' + escapeText(center.id) +
+                      '" data-response-property="mode" ' +
+                      'data-response-value="' + mode + '" aria-pressed="' +
+                      (modeLean(center.mode) === mode) + '">' +
+                      '<svg viewBox="0 0 88 54" aria-hidden="true"><circle class="aid-tissue-cell" cx="66" cy="26" r="12"/>' +
+                      '<path class="aid-contact-fibre" d="M10 12L55 22" stroke-width="' +
+                      (mode < 0   ? 1
+                       : mode > 0 ? 6
+                                  : 3) +
+                      '"/><path class="aid-contact-fibre" d="M10 40L55 30" stroke-width="' +
+                      (mode > 0 ? 1 : 3) +
+                      '"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg><span>' + name +
+                      '</span></button>';
+             })
+             .join('') +
+         '</div>';
 }
 function substancePart(state, center, effect) {
   const receptor = center.receptors?.[effect];
@@ -205,15 +232,15 @@ function substancePart(state, center, effect) {
     return '';
   const doc = state.document, bound = boundSubstance(state, center, effect);
   const colour = bound ? substanceColor(bound.index) : null;
-  const words = key => tList('studio.learnRule.' + key)[LEARNING_EFFECTS.indexOf(effect)];
+  const title = label('effects.' + effect);
   const choice = (value, text, on, swatch = '') =>
       '<button class="' + (on ? 'active' : '') + '" data-learn-substance="' + value +
       '" data-center-id="' + escapeText(center.id) + '" data-learn-effect="' + effect + '"' +
       (swatch ? ' style="--substance:' + swatch + '"' : '') + '>' +
       (swatch ? '<span class="aid-substance-swatch"></span>' : '') + escapeText(text) + '</button>';
   const choices =
-      '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(words('by')) +
-      '">' + choice('off', label('learnRule.none'), !bound) +
+      '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(title) + '">' +
+      choice('off', label('learnRule.none'), !bound) +
       [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
           .map(sub => choice(String(sub.index), sub.name || substanceName(state, sub.index),
                              bound?.index === sub.index, substanceColor(sub.index)))
@@ -222,17 +249,13 @@ function substancePart(state, center, effect) {
            ? ''
            : '<button data-add-substance>+ ' + label('sections.newSubstance') + '</button>') +
       '</div>';
-  const strength =
-      bound ? learnTrack('learn-receptor', center, (1 + fullResponse(receptor)) / 2,
-                         words('strength'), [ words('low'), words('high') ],
-                         {middle : words('middle'), extra : ' data-learn-effect="' + effect + '"'})
-            : '';
-  return '<div class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
-         (colour ? ' style="--substance:' + colour + '"' : '') + '><h5>' +
-         glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(words('by')) +
-         '</span></h5>' +
+  return '<details class="aid-learn-substance' + (bound ? ' bound' : '') + '"' +
+         (colour ? ' style="--substance:' + colour + '"' : '') + '><summary>' +
+         glyph(EFFECT_ICON[effect], ICON.mark, {line : true}) + '<span>' + escapeText(title) +
+         '</span></summary>' +
          effectScene(effect, colour ?? 'currentColor', bound ? receptorEnds(receptor) : undefined) +
-         choices + strength + '</div>';
+         choices + (bound ? effectCurve(state, receptor, effect, center.id + ':' + effect) : '') +
+         '</details>';
 }
 function teacherList(state, center, modulators) {
   const taught = boundSubstance(state, center, HORMONE_EFFECT.teaching);
@@ -326,17 +349,9 @@ export function learningInspector(state) {
       '<section class="aid-learn-part">' + heading(label('learnRule.' + key)) + body + '</section>';
   return html + heading(centerTitle(chosen)) + previewControls(state) +
          learningPicture(chosen, teachers, colours) + learningValues(state, chosen) +
-         section('teacher', teacherList(state, chosen, teachers.modulators) +
-                                substancePart(state, chosen, HORMONE_EFFECT.teaching)) +
-         section('traceLength',
-                 traceGraphic(chosen) + substancePart(state, chosen, HORMONE_EFFECT.eligibility)) +
-         section('rate', learnTrack('learn-rate', chosen, chosen.qwidth, label('learnRule.rate'),
-                                    [ label('learnRule.slow'), label('learnRule.fast') ]) +
-                             substancePart(state, chosen, HORMONE_EFFECT.learning)) +
-         section('mode',
-                 learnTrack('learn-mode', chosen, (chosen.mode + 1) / 2, label('learnRule.mode'),
-                            [ label('inspector.cancelling'), label('inspector.competing') ],
-                            {middle : label('inspector.neutral')}) +
-                     substancePart(state, chosen, HORMONE_EFFECT.competition)) +
+         section('teacher', teacherList(state, chosen, teachers.modulators)) +
+         '<section class="aid-learn-part">' + heading(label('cellPicture.learningMemory')) +
+         traceGraphic(state, chosen) + '</section>' + section('mode', modeChoices(chosen)) +
+         LEARNING_EFFECTS.map(effect => substancePart(state, chosen, effect)).join('') +
          cellDevelopment(state, chosen) + contactPlan(state, [ chosen ]);
 }

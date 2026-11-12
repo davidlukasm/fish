@@ -1,3 +1,4 @@
+import {anatomicalPosition} from '../model/anatomy.js';
 import {
   BODY_FRAME,
   BODY_MIDDLE,
@@ -29,31 +30,50 @@ export function centerLocation(center, organType, sites) {
 export {BRAIN, brainHalfWidth, regionAnchors, regionGeometry} from './region_layout.js';
 import {regionAnchors, regionCell as regionPoint} from './region_layout.js';
 export const INSIDE = Object.freeze({
-  blood : {x : 548, d : 128},
-  bladder : {x : 648, d : -90},
+  blood : {x : 585, d : 65},
+  bladder : {x : 560, d : -35},
   gut : {
-    throat : 240,
-    stomach : {x : 640, d : 82, rx : 34, ry : 22},
-    coils : {from : 680, to : 820, d : 76, wave : 14},
-    vent : {x : 842, d : 38},
+    throat : 190,
+    stomach : {x : 520, d : 48, rx : 35, ry : 17},
+    coils : {from : 565, to : 805, d : 39, wave : 16},
+    vent : {x : 820, d : 31},
     steps : 96
   },
-  eggs : {x : 722, d : -93},
-  sperm : {x : 784, d : -84},
-  glands : {front : 600, step : 46, d : 125, skin : 26},
+  eggs : {x : 650, d : -33},
+  sperm : {x : 720, d : -24},
+  glands : {front : 520, step : 45, d : 65, skin : 22},
   stack : 28,
-  node : 16
+  node : 11
 });
-export function gutShape(turns) {
+export function gutShape(turns, doc = null) {
   const G = INSIDE.gut, M = BODY_FRAME.middle, S = G.stomach, C = G.coils;
-  const stomach = {x : S.x, y : M + S.d};
-  const coil = t => (
-      {x : C.from + (C.to - C.from) * t, y : M + C.d + C.wave * Math.sin(2 * Math.PI * turns * t)});
-  const intestine = Array.from({length : G.steps + 1}, (_, k) => coil(k / G.steps));
+  const stomach = doc?.organs.find(o => o.type === 'gut')?.position ?? {x : S.x, y : M + S.d};
+  const from = stomach.x + S.rx, to = Math.max(from + 45, C.to),
+        pitch = (to - from) / Math.max(1, turns);
+  const base = stomach.y + (C.d - S.d);
+  const coil = t => {
+    const angle = 2 * Math.PI * turns * t, taper = Math.sin(Math.PI * t) ** .3;
+    return {
+      x : from + (to - from) * t + pitch * .13 * Math.sin(angle),
+      y : base * (1 - t) + (M + G.vent.d) * t + C.wave * taper * Math.sin(angle)
+    };
+  };
+  const gullet = Array.from({length : 33}, (_, k) => {
+    const t = k / 32, u = 1 - t;
+    return {
+      x : u * u * u * G.throat + 3 * u * u * t * 230 + 3 * u * t * t * (stomach.x - 120) +
+              t * t * t * (stomach.x - S.rx),
+      y : u * u * u * M + 3 * u * u * t * (M + 100) + 3 * u * t * t * (stomach.y + 25) +
+              t * t * t * stomach.y
+    };
+  });
   return {
-    gullet : [ {x : G.throat, y : M}, {x : S.x - S.rx, y : stomach.y} ],
+    gullet,
     stomach,
-    intestine : [ {x : S.x + S.rx, y : stomach.y}, ...intestine, {x : G.vent.x, y : M + G.vent.d} ],
+    intestine : [
+      {x : from, y : stomach.y}, ...Array.from({length : G.steps + 1}, (_, k) => coil(k / G.steps)),
+      {x : G.vent.x, y : M + G.vent.d}
+    ],
     along : coil
   };
 }
@@ -63,7 +83,8 @@ export const GUT_WALL = Object.freeze({tube : 4.5, ring : 8, rows : 24});
 // The gut wall at a place along the body, from the gullet over the stomach to the coils: where
 // its line runs, which way is across it and how far its wall lies from the line.
 export function gutWall(doc, x) {
-  const G = gutShape(gutTurns(gutLength(doc) ?? BODY_UNIT.trait_middle)), S = INSIDE.gut.stomach;
+  const G = gutShape(gutTurns(gutLength(doc) ?? BODY_UNIT.trait_middle), doc),
+        S = INSIDE.gut.stomach;
   const line = [...G.gullet, ...G.intestine ];
   const at = x => {
     const k = clamp(line.findIndex(p => p.x >= x), 1, line.length - 1);
@@ -72,7 +93,8 @@ export function gutWall(doc, x) {
   };
   // Across the gut's course between both rows, not across each bend of the coils.
   const before = at(x - GUT_WALL.rows), after = at(x + GUT_WALL.rows);
-  const length = Math.hypot(after.x - before.x, after.y - before.y) || 1, inside = (x - S.x) / S.rx;
+  const length = Math.hypot(after.x - before.x, after.y - before.y) || 1,
+        inside = (x - G.stomach.x) / S.rx;
   return {
     ...at(x),
     across : {x : -(after.y - before.y) / length, y : (after.x - before.x) / length},
@@ -92,9 +114,11 @@ export function gutWallPoint(doc, sites, center) {
   return {x : wall.x + wall.across.x * reach, y : wall.y + wall.across.y * reach};
 }
 const INNER_TYPES =
-    Object.freeze([ 'blood', 'bladder', 'gut', 'gutmuscle', 'eggs', 'sperm', 'gland' ]);
+    Object.freeze([ 'blood', 'bladder', 'gut', 'gutmuscle', 'eggs', 'sperm', 'gland', 'balance' ]);
 const hasHome = type => INNER_TYPES.includes(type);
 function innerHome(doc, organ) {
+  if (organ.position)
+    return organ.position;
   const I = INSIDE, middle = BODY_FRAME.middle;
   if (organ.type === 'gut')
     return {x : I.gut.stomach.x, y : middle + I.gut.stomach.d};
@@ -113,6 +137,8 @@ function innerHome(doc, organ) {
     const k = Math.max(0, doc.organs.filter(o => o.type === 'blood').indexOf(organ));
     return {x : I.blood.x + k * I.stack, y : middle + I.blood.d};
   }
+  if (organ.type === 'balance')
+    return {x : 410, y : middle + sideOf(organ) * 86};
   const home = I[organ.type];
   return {x : home.x, y : middle + home.d};
 }
@@ -121,10 +147,10 @@ function innerPoint(doc, organ, index, sites) {
     return gutWallPoint(doc, sites, organ.centers[index]);
   const home = innerHome(doc, organ), count = organ.centers.length;
   if (organ.type === 'gut') {
-    const C = INSIDE.gut.coils, t = (index + .5) / Math.max(1, count);
+    const t = (index + .5) / Math.max(1, count);
     return organ.centers[index]?.key === 'fullness'
                ? home
-               : {x : C.from + (C.to - C.from) * t, y : BODY_FRAME.middle + C.d};
+               : gutShape(gutTurns(gutLength(doc) ?? BODY_UNIT.trait_middle), doc).along(t);
   }
   if (count < 2)
     return home;
@@ -138,9 +164,7 @@ export function organHome(doc, type) {
   return innerHome({organs : [...doc.organs, organ ]}, organ);
 }
 export function placementTarget(doc, type, position) {
-  const side = sideAt(position), home = organHome(doc, type);
-  return home ? {position : home, snap : Infinity, paired : side !== 0}
-              : {position, snap : SNAP_DISTANCE, paired : true};
+  return {position : anatomicalPosition(type, position), snap : Infinity, paired : true};
 }
 function musclePoint(organ, index, sites) {
   const first = organ.centers[0];
@@ -148,6 +172,8 @@ function musclePoint(organ, index, sites) {
                                                    : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
 }
 export function organLocation(organ, sites, doc) {
+  if (organ.position && !isRegion(organ))
+    return organ.position;
   if (hasHome(organ.type))
     return innerHome(doc, organ);
   if (isRegion(organ))
@@ -166,6 +192,10 @@ export function organLocation(organ, sites, doc) {
   return centroid(positions);
 }
 export function viewOrigin(doc, sites, side) {
+  const explicit = doc.organs.find(o => o.type === 'eye' && sideOf(o) === side && o.position) ??
+                   doc.organs.find(o => o.field && sideOf(o) === side && o.position);
+  if (explicit)
+    return explicit.position;
   const of = type =>
       doc.organs.filter(o => o.type === type && sideOf(o) === side).flatMap(o => o.centers);
   const centers = of('eye').length ? of('eye') : of('proximity');
@@ -181,7 +211,7 @@ export function eyeLocation(doc, sites, side) {
                                                                       : null;
 }
 export const fieldOrigin = (doc, sites, organ) => viewOrigin(doc, sites, sideOf(organ));
-export const LATERAL = Object.freeze({span : [ 285, 860 ], inset : 9, step : 36, gap : 10});
+export const LATERAL = Object.freeze({span : [ 285, 860 ], inset : -9, step : 36, gap : 10});
 export function lateralLine(doc, sites, organ) {
   const L = LATERAL, out = sideOf(organ), eye = eyeLocation(doc, sites, out);
   const from = Math.max(L.span[0], eye ? eye.x + eyeRadius(doc, out) * EYE.aspect + L.gap : 0);
@@ -196,7 +226,7 @@ function lateralAnchor(doc, sites, organ) {
   return line.reduce((best, p) => Math.abs(p.x - middle) < Math.abs(best.x - middle) ? p : best);
 }
 export const EYE =
-    Object.freeze({base : 11, per_center : 2, most : 21, aspect : 1.4, pupil : .44, inset : 4});
+    Object.freeze({base : 7, per_center : 1, most : 12, aspect : 1.2, pupil : .44, inset : 4});
 export const NODE = Object.freeze({ring : 1.45, layer : .5, radius : 4.5});
 export function showsNodes(state, organs) {
   const chosen = organs.some(o => o.id === state.selected?.id ||
@@ -226,6 +256,11 @@ export function nodeLocation(doc, sites, center, organType) {
                                       : regionPoint(doc, organ, index, sites);
   }
   const at = centerLocation(center, organType, sites);
+  const owner = doc.organs.find(o => o.centers.some(c => c.id === center.id));
+  if (owner?.position) {
+    const home = centroid(owner.centers.map(c => centerLocation(c, organType, sites)));
+    return {x : owner.position.x + at.x - home.x, y : owner.position.y + at.y - home.y};
+  }
   return organType === 'brain' ? midlinePair(doc, sites, site, at) : at;
 }
 const PAIR_GAP = 10;
@@ -247,7 +282,7 @@ const nearPlace = (doc, sites, side) => viewOrigin(doc, sites, side) ?? nostril(
 const HEAD_SENSES =
     Object.freeze({nose : (doc, sites, side) => nostril(side), proximity : nearPlace});
 function headSenseNode(doc, sites, organ, center, index) {
-  const side = sideOf(organ), at = HEAD_SENSES[organ.type](doc, sites, side);
+  const side = sideOf(organ), at = organ.position ?? HEAD_SENSES[organ.type](doc, sites, side);
   if (organ.type === 'nose') {
     const a = Math.PI * (index + 1) / (organ.centers.length + 1);
     return {x : at.x - Math.cos(a) * NOSE.ring, y : at.y - side * Math.sin(a) * NOSE.ring};

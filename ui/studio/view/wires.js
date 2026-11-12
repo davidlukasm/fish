@@ -1,5 +1,5 @@
-import {detailMix, nodeOpacity} from './layers.js';
-import {regionDock, lobeOf, BRAIN, brainHalfWidth} from './region_layout.js';
+import {nodeOpacity} from './layers.js';
+import {regionDock, BRAIN} from './region_layout.js';
 import {clamp} from '../../units.js';
 import {eyeLocation, nodeLocation, organLocation, showsNodes} from './places.js';
 import {escapeText, fixed, pointText} from './markup.js';
@@ -16,7 +16,7 @@ import {
   wireEndpointCenters,
   wholeEndpoint
 } from '../model/document.js';
-import {BODY_FRAME, sideOf} from '../model/layout.js';
+import {BODY_FRAME, centroid, sideOf} from '../model/layout.js';
 import {routedLinks} from '../model/regions.js';
 import {cubicWeights, zoomOf} from './frame.js';
 import {centerTitle, endpointTitle, isSelected} from './names.js';
@@ -91,25 +91,13 @@ function wireEnd(state, centers, wireId, linkId) {
 function dockEnd(state, anchor, direction) {
   if (!anchor.organ || !isRegion(anchor.organ))
     return anchor;
-  const part = lobeOf(state.document, state.sites, anchor.organ), mix = detailMix(state).regions;
-  const end = regionDock(state.document, state.sites, anchor.organ, direction);
-  const near =
-      part ? {x : part.x, y : part.y - part.side * part.height * (direction === 'in' ? -.45 : .45)}
-           : end;
-  return {
-    ...anchor,
-    point : {x : near.x + (end.x - near.x) * mix, y : near.y + (end.y - near.y) * mix}
-  };
+  return {...anchor, point : regionDock(state.document, state.sites, anchor.organ, direction)};
 }
 function branchNodes(state, id, anchor, centers) {
   const organ = anchor.organ;
   if (!organ || !showsNodes(state, [ organ ]))
     return [];
-  const nodes = (findOrgan(state.document, id) ? organ.centers : [
-                  centers.get(id).center
-                ]).filter(c => state.selected?.kind === 'center' && state.selected.id === c.id);
-  if (nodes.length < 2 && findOrgan(state.document, id))
-    return [];
+  const nodes = findOrgan(state.document, id) ? organ.centers : [ centers.get(id).center ];
   // Muscle nodes share their schematic segments; one branch reaches each segment.
   const reached = new Map();
   for (const center of nodes) {
@@ -119,7 +107,7 @@ function branchNodes(state, id, anchor, centers) {
   return [...reached.values() ];
 }
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19});
-const BRANCH = Object.freeze({beyond : 28, share : .4, lead : .3, pull : .5, least_width : 1});
+const BRANCH = Object.freeze({beyond : 3, share : .2, lead : .3, pull : .5, least_width : 1});
 function joinAt(anchor, nodes, chord) {
   if (!nodes.length)
     return 0;
@@ -166,67 +154,45 @@ function bentWay(points) {
       return {x : (b.x - a.x) / length, y : (b.y - a.y) / length};
     },
     path : (s0, s1) => {
-      const count = Math.max(2, Math.ceil((s1 - s0) * n * BENT_STEPS));
-      return 'M' +
-             Array.from({length : count + 1}, (_, k) => pointText(at(s0 + (s1 - s0) * k / count)))
-                 .join(' L');
+      const split = (p, t) => {
+        const mix = (a, b) => ({x : a.x + (b.x - a.x) * t, y : a.y + (b.y - a.y) * t});
+        const a = mix(p[0], p[1]), b = mix(p[1], p[2]), c = mix(p[2], p[3]);
+        const d = mix(a, b), e = mix(b, c), f = mix(d, e);
+        return [ [ p[0], a, d, f ], [ f, e, c, p[3] ] ];
+      };
+      let d = 'M' + pointText(at(s0));
+      for (let k = Math.floor(s0 * n); k < Math.min(n, Math.ceil(s1 * n)); ++k) {
+        const lo = Math.max(0, s0 * n - k), hi = Math.min(1, s1 * n - k);
+        let p = piece(k);
+        if (hi < 1)
+          p = split(p, hi)[0];
+        if (lo > 0)
+          p = split(p, lo / hi)[1];
+        d += ' C' + p.slice(1).map(pointText).join(' ');
+      }
+      return d;
     }
   };
 }
-const STRAND = Object.freeze({offset : 9, gap : 3, bend : 18, samples : 16});
-const sampleCurve = points =>
-    Array.from({length : STRAND.samples + 1}, (_, k) => cubicAt(points, k / STRAND.samples));
 function spinalWay(from, to, kind) {
-  const M = BODY_FRAME.middle, C = BRAIN.cerebrum;
-  const offset = STRAND.offset + kind * STRAND.gap, junction = BRAIN.cord.from + STRAND.bend;
-  const side = p => Math.abs(p.y - M) < 2 ? 0 : Math.sign(p.y - M);
-  const rim = (x, sign) =>
-      ({x, y : M + sign * (brainHalfWidth(x) + STRAND.bend + kind * STRAND.gap)});
-  const along = (a, b, sign) => Array.from({length : STRAND.samples + 1},
-                                           (_, k) => rim(a + (b - a) * k / STRAND.samples, sign));
-  const approach = p => {
-    const sign = side(p), head = sign && p.x < C.to;
-    const x = head ? clamp(p.x, C.from + STRAND.bend, C.to - STRAND.bend) : p.x;
-    const at = head ? rim(x, sign) : {x, y : M + sign * offset};
-    const y = (p.y + at.y) / 2;
-    const branch = sampleCurve([ p, {x : p.x, y}, {x : at.x, y}, at ]);
-    const hub = {x : junction, y : M + sign * offset};
-    return {sign, head, at, branch, hub};
-  };
-  const a = approach(from), b = approach(to);
-  const toHub = end =>
-      end.head ? [...along(end.at.x, C.to, end.sign), end.hub ] : [ end.at, end.hub ];
-  const trunk = a.sign === b.sign && a.head && b.head ? along(a.at.x, b.at.x, a.sign)
-                : a.sign === b.sign && !a.head && !b.head
-                    ? [ a.at, b.at ]
-                    : [...toHub(a), b.hub, ...toHub(b).reverse() ];
-  const points = [...a.branch, ...trunk, ...b.branch.reverse() ];
-  const lengths = [ 0 ];
-  for (let k = 1; k < points.length; ++k)
-    lengths.push(lengths.at(-1) +
-                 Math.hypot(points[k].x - points[k - 1].x, points[k].y - points[k - 1].y));
-  const length = lengths.at(-1) || 1;
-  const index = s =>
-      Math.min(points.length - 1, Math.max(1, lengths.findIndex(n => n >= clamp(s) * length)));
-  const at = s => {
-    const i = index(s), a = points[i - 1], b = points[i];
-    const f = clamp((clamp(s) * length - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1));
-    return {x : a.x + (b.x - a.x) * f, y : a.y + (b.y - a.y) * f};
-  };
-  return {
-    at,
-    direction : s => {
-      const i = index(s), a = points[i - 1], b = points[i], d = lengths[i] - lengths[i - 1] || 1;
-      return {x : (b.x - a.x) / d, y : (b.y - a.y) / d};
-    },
-    path : (s0, s1) =>
-        'M' +
-        [
-          at(s0), ...points.filter((p, i) => lengths[i] > s0 * length && lengths[i] < s1 * length),
-          at(s1)
-        ].map(pointText)
-            .join(' L')
-  };
+  const M = BODY_FRAME.middle, C = BRAIN.cord;
+  const sign = Math.sign(from.y + to.y - 2 * M) || 1;
+  const lane = M + sign * (4 + kind * 2);
+  const direction = Math.sign(to.x - from.x) || 1;
+  const reach = Math.min(22, Math.abs(to.x - from.x) / 4);
+  if (Math.hypot(from.x - to.x, from.y - to.y) < 40)
+    return bentWay([ from, {x : (from.x + to.x) / 2, y : (from.y + to.y) / 2 - sign * 9}, to ]);
+  return bentWay([
+    from, {x : from.x + direction * reach, y : lane}, {x : to.x - direction * reach, y : lane}, to
+  ]);
+}
+function peripheralHub(point, kind) {
+  const side = Math.sign(point.y - BODY_FRAME.middle) || 1;
+  const x = point.x < BRAIN.cord.from
+                ? BRAIN.cerebrum.to - 12
+                : clamp(BRAIN.cord.from + Math.round((point.x - BRAIN.cord.from) / 54) * 54,
+                        BRAIN.cord.from, BRAIN.cord.to);
+  return {x, y : BODY_FRAME.middle + side * (12 + kind * 2)};
 }
 function bendsOf(doc, link) {
   const bends = link.wire.bends ?? [];
@@ -250,7 +216,7 @@ const WIRE_KINDS = Object.freeze({
   inhibit : {colour : '#e8a2b5', arrow : 'aid-wire-arrow-inhibit'},
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
-const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
+const WIRE_WIDTH = Object.freeze({base : 1, spread : 2.2});
 const INNER_BOW = -10;
 const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
@@ -258,15 +224,9 @@ const signalPairs = (doc, link) =>
                      endpointCenters(doc, link.to).map(target => source.id + '>' + target.id));
 function wireBundles(state, centers) {
   const {document : doc, sites, selected, wireScope} = state;
-  const regionDetail = detailMix(state).regions;
   const members = wireScope === 'focus' ? networkMemberSet(doc, selected) : null;
   const bundles = new Map(), inside = [];
   for (const link of routedLinks(doc, sites)) {
-    const sourceOrgan = centers.get(link.from)?.organ, targetOrgan = centers.get(link.to)?.organ;
-    const fromPart = sourceOrgan && isRegion(sourceOrgan) ? lobeOf(doc, sites, sourceOrgan) : null;
-    const toPart = targetOrgan && isRegion(targetOrgan) ? lobeOf(doc, sites, targetOrgan) : null;
-    if (fromPart && fromPart === toPart && regionDetail === 0)
-      continue;
     if (members && !(members.has(link.from) || members.has(link.to)))
       continue;
     const within = !link.wire.inner && centers.get(link.from) && centers.get(link.to) &&
@@ -282,59 +242,97 @@ function wireBundles(state, centers) {
     if (!a || !centers.get(link.to) || !from || !to)
       continue;
     const kind = signalKind(a.center), bends = bendsOf(doc, link);
-    const key = from.key + '>' + to.key + '>' + kind + '>' + bendKey(bends);
+    const manual = link.wire.bundle;
+    const fromNeural = isRegion(from.organ) || from.organ?.type === 'brain',
+          toNeural = isRegion(to.organ) || to.organ?.type === 'brain';
+    const peripheral =
+        !manual && !bends.length && fromNeural !== toNeural ? (fromNeural ? 'out' : 'in') : null;
+    const key = manual ? manual + ':' + linkMirrored(doc, link) + ':' + kind
+                : peripheral
+                    ? peripheral + ':' + (peripheral === 'in' ? from.key : to.key) + ':' + kind
+                    : from.key + '>' + to.key + '>' + kind + '>' + bendKey(bends);
     if (!bundles.has(key))
       bundles.set(key, {
         from,
         to,
         kind,
+        manual,
+        peripheral,
         bends,
         mirrored : linkMirrored(doc, link),
         links : [],
-        opacity : fromPart && fromPart === toPart ? regionDetail : 1
+        opacity : 1
       });
     bundles.get(key).links.push(link);
   }
-  const drawn = [...bundles.values() ].map(({from, to, kind, bends, mirrored, links, opacity}) => {
-    from = dockEnd(state, from, 'out');
-    to = dockEnd(state, to, 'in');
-    const way = bends.length
-                    ? bentWay([ from.point, ...bends, to.point ])
-                    : spinalWay(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind));
-    const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
-    const ends = links.map(link => ({
-                             link,
-                             starts : branchNodes(state, link.from, from, centers),
-                             arrives : branchNodes(state, link.to, to, centers),
-                             width : WIRE_WIDTH.base + WIRE_WIDTH.spread * link.wire.spread
-                           }));
-    const s0 = joinAt(from.point, ends.flatMap(e => e.starts), chord),
-          s1 = 1 - joinAt(to.point, ends.flatMap(e => e.arrives), chord);
-    return {
-      from,
-      to,
-      kind,
-      ends,
-      bends,
-      mirrored,
-      opacity,
-      way,
-      s0,
-      s1,
-      start : way.at(s0),
-      end : way.at(s1),
-      startDirection : way.direction(s0),
-      endDirection : way.direction(s1)
-    };
-  });
+  const drawn = [...bundles.values() ].map(
+      ({from, to, kind, manual, peripheral, bends, mirrored, links, opacity}) => {
+        from = dockEnd(state, from, 'out');
+        to = dockEnd(state, to, 'in');
+        const sources = links.map(
+            link => dockEnd(state, wireEnd(state, centers, link.wire.from, link.from), 'out'));
+        const targets =
+            links.map(link => dockEnd(state, wireEnd(state, centers, link.wire.to, link.to), 'in'));
+        if (manual) {
+          from = {...from, point : centroid(sources.map(a => a.point))};
+          to = {...to, point : centroid(targets.map(a => a.point))};
+        }
+        if (peripheral) {
+          const kindIndex = Object.keys(WIRE_KINDS).indexOf(kind);
+          if (peripheral === 'in')
+            to = {...to, point : peripheralHub(from.point, kindIndex)};
+          else
+            from = {...from, point : peripheralHub(to.point, kindIndex)};
+        }
+        const shared = manual || peripheral;
+        const way = manual && bends.length > 1 ? bentWay(bends)
+                    : bends.length
+                        ? bentWay([ from.point, ...bends, to.point ])
+                        : spinalWay(from.point, to.point, Object.keys(WIRE_KINDS).indexOf(kind));
+        const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
+        const ends = links.map((link, k) => {
+          const nodes = (id, anchor) => {
+            const cells = branchNodes(state, id, anchor, centers);
+            return shared && !cells.length ? [ {id, ...anchor.point, overview : true} ] : cells;
+          };
+          return {
+            link,
+            starts : nodes(link.from, sources[k]),
+            arrives : nodes(link.to, targets[k]),
+            width : WIRE_WIDTH.base + WIRE_WIDTH.spread * link.wire.spread
+          };
+        });
+        const s0 = manual && bends.length > 1
+                       ? 0
+                       : joinAt(from.point, ends.flatMap(e => e.starts), chord),
+              s1 = manual && bends.length > 1
+                       ? 1
+                       : 1 - joinAt(to.point, ends.flatMap(e => e.arrives), chord);
+        return {
+          from,
+          to,
+          kind,
+          ends,
+          bends,
+          mirrored,
+          manual,
+          peripheral,
+          opacity,
+          way,
+          s0,
+          s1,
+          start : way.at(s0),
+          end : way.at(s1),
+          startDirection : way.direction(s0),
+          endDirection : way.direction(s1)
+        };
+      });
   return {bundles : drawn, inside};
 }
 const signalKind = center => isModulator(center) ? 'modulate'
                              : center.sign < 0   ? 'inhibit'
                                                  : 'excite';
 export function wireSvg(state, centers, foreground = false) {
-  if (foreground && state.selected?.kind !== 'center')
-    return '';
   const {document : doc, sites, selected} = state;
   const {bundles} = wireBundles(state, centers);
   let html = '';
@@ -343,7 +341,8 @@ export function wireSvg(state, centers, foreground = false) {
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
     const d = way.path(s0, s1);
     const width = Math.min(4, Math.hypot(...ends.map(e => e.width)));
-    const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id));
+    const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id) ||
+                                       state.multi?.has(e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
     const wireIds = new Set(ends.map(e => e.link.wire.id));
     if (!foreground)
@@ -357,59 +356,91 @@ export function wireSvg(state, centers, foreground = false) {
           (bundle.mirrored ? ' data-mirrored' : '') +
           (ends.some(e => e.link.wire.pairing) ? ' data-paired' : '') + ' class="aid-wire-group' +
           (chosen >= 0 ? ' selected' : '') + '">' +
-          '<path d="' + d + '" class="aid-wire-hit"/><path d="' + d +
-          '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' + fixed(width) +
-          '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
-          escapeText(joinParts([
+          '<path d="' + d + '" class="aid-wire-hit"/>' +
+          (ends.length > 1 ? '<path class="aid-wire-sheath" d="' + d + '" stroke="' + style.colour +
+                                 '" stroke-width="' + fixed(width + 3) + '"/>'
+                           : '') +
+          '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
+          fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
+          '/><title>' + escapeText(joinParts([
             linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
                      endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
             wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
           ])) +
           '</title></g>';
+    const branchesByPath = new Map();
+    for (const e of ends)
+      for (const inward of [true, false]) {
+        const nodes = inward ? e.starts : e.arrives;
+        for (const node of nodes) {
+          const d = inward ? branchPath(node, start, startDirection, true)
+                           : branchPath(node, end, endDirection, false);
+          const key = Number(inward) + ':' + d, section = inward ? 0 : 2;
+          const branch = branchesByPath.get(key) ??
+                         {d, section, edges : new Set(), width : 0, opacity : 0, chosen : false};
+          for (const pair of signalPairs(doc, e.link)
+                   .filter(pair => node.overview || (inward ? pair.startsWith(node.id + '>')
+                                                            : pair.endsWith('>' + node.id))))
+            branch.edges.add(pair);
+          branch.width = Math.max(branch.width,
+                                  Math.max(BRANCH.least_width, e.width / Math.sqrt(nodes.length)));
+          branch.opacity = Math.max(branch.opacity, node.overview ? 1 : nodeOpacity(state, true));
+          branch.chosen ||=
+              isSelected(selected, 'wire', e.link.wire.id) || state.multi?.has(e.link.wire.id);
+          branchesByPath.set(key, branch);
+        }
+      }
     const branches =
-        ends.flatMap(e => {
-              const branch = (nodes, inward) => nodes.map(
-                  node =>
-                      '<path data-signal-section="' + (inward ? 0 : 2) + '" data-signal-edges="' +
-                      escapeText(signalPairs(doc, e.link)
-                                     .filter(pair => inward ? pair.startsWith(node.id + '>')
-                                                            : pair.endsWith('>' + node.id))
-                                     .join(' ')) +
-                      '" class="aid-wire-branch' +
-                      (isSelected(selected, 'wire', e.link.wire.id) ? ' selected' : '') + '" d="' +
-                      (inward ? branchPath(node, start, startDirection, true)
-                              : branchPath(node, end, endDirection, false)) +
-                      '" stroke-width="' +
-                      fixed(Math.max(BRANCH.least_width, e.width / Math.sqrt(nodes.length))) + '"' +
-                      (inward ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/>');
-              return [...branch(e.starts, true), ...branch(e.arrives, false) ];
-            })
+        [...branchesByPath.values() ]
+            .map(b => '<path data-signal-section="' + b.section + '" data-signal-edges="' +
+                      escapeText([...b.edges ].join(' ')) + '" data-signal-opacity="' +
+                      fixed(b.opacity) + '" opacity="' + fixed(b.opacity) +
+                      '" class="aid-wire-branch' + (b.chosen ? ' selected' : '') + '" d="' + b.d +
+                      '" stroke-width="' + fixed(b.width) + '"' +
+                      (b.section === 2 ? ' marker-end="url(#' + style.arrow + ')"' : '') + '/>')
             .join('');
     if (branches && foreground)
-      html += '<g class="aid-wire-branches" opacity="' + fixed(nodeOpacity(state, true)) +
-              '" stroke="' + style.colour + '">' + branches + '</g>';
+      html += '<g class="aid-wire-branches" stroke="' + style.colour + '">' + branches + '</g>';
   }
   return html + (!foreground && state.tool === 'wire' ? bendHandles(state, bundles) : '');
 }
 export const wireBranchesSvg = (state, centers) => wireSvg(state, centers, true);
+function contactOpacity(state, a, b) {
+  const visible = ({organ, center}) =>
+      nodeOpacity(state, state.selected?.id === organ.id || state.selected?.id === center.id ||
+                             state.multi?.has(organ.id) || state.multi?.has(center.id));
+  return Math.min(visible(a), visible(b));
+}
 export function regionContactsSvg(state, centers) {
   const {document : doc, sites, selected} = state;
-  if (selected?.kind !== 'center')
+  if (state.contactView === 'actual' && !state.stale && state.report?.compiler)
     return '';
-  let html = '';
   const inside = routedLinks(doc, sites)
                      .filter(link => centers.get(link.from)?.organ === centers.get(link.to)?.organ);
+  let html = '';
   for (const link of inside) {
     const a = centers.get(link.from), b = centers.get(link.to);
-    if (a && b && showsNodes(state, [ a.organ ]) &&
-        (selected?.id === a.center.id || selected?.id === b.center.id))
-      html += '<path data-signal-edges="' + escapeText(signalPairs(doc, link).join(' ')) +
-              '" class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') + '" d="' +
-              pathTo(nodeLocation(doc, sites, a.center, a.organ.type),
-                     nodeLocation(doc, sites, b.center, b.organ.type), INNER_BOW) +
-              '"/>';
+    if (!a || !b)
+      continue;
+    const opacity = contactOpacity(state, a, b);
+    if (opacity <= 0)
+      continue;
+    const p = nodeLocation(doc, sites, a.center, a.organ.type),
+          q = nodeLocation(doc, sites, b.center, b.organ.type);
+    const dx = q.x - p.x, dy = q.y - p.y, length = Math.hypot(dx, dy) || 1,
+          bow = Math.min(12, length * .2);
+    const path =
+        'M' + pointText(p) + ' Q' +
+        pointText(
+            {x : (p.x + q.x) / 2 - dy / length * bow, y : (p.y + q.y) / 2 + dx / length * bow}) +
+        ' ' + pointText(q);
+    const selectedEdge = selected?.id === a.center.id || selected?.id === b.center.id;
+    html += '<path opacity="' + fixed(opacity) + '" data-signal-opacity="' + fixed(opacity) +
+            '" data-signal-edges="' + escapeText(signalPairs(doc, link).join(' ')) +
+            '" class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') +
+            (selectedEdge ? ' selected' : '') + '" d="' + path + '"/>';
   }
-  return '<g opacity="' + fixed(nodeOpacity(state, true)) + '">' + html + '</g>';
+  return html;
 }
 const BEND_HANDLE = 6;
 function bendHandles(state, bundles) {
@@ -515,6 +546,9 @@ export function developedContactsSvg(state, centers) {
         const a = centers.get(centerList[from].id), b = centers.get(centerList[to].id);
         if (!a || !b)
           return '';
+        const opacity = a.organ === b.organ ? contactOpacity(state, a, b) : 1;
+        if (opacity <= 0)
+          return '';
         const start = nodeLocation(doc, sites, a.center, a.organ.type);
         const end = nodeLocation(doc, sites, b.center, b.organ.type);
         const channels = [
@@ -524,10 +558,9 @@ export function developedContactsSvg(state, centers) {
         if (!channels.length)
           channels.push({kind : 'neutral', count, mean : 0});
         const id = from + ':' + to;
-        return '<g opacity="' + fixed(bundle.opacity) + '" data-signal-opacity="' +
-               fixed(bundle.opacity) + '" data-signal-edges="' +
-               escapeText(centerList[from].id + '>' + centerList[to].id) + '" data-contact="' + id +
-               '" class="aid-wire-group aid-developed-contact' +
+        return '<g opacity="' + fixed(opacity) + '" data-signal-opacity="' + fixed(opacity) +
+               '" data-signal-edges="' + escapeText(centerList[from].id + '>' + centerList[to].id) +
+               '" data-contact="' + id + '" class="aid-wire-group aid-developed-contact' +
                (isSelected(selected, 'contact', id) ? ' selected' : '') + '">' +
                channels
                    .map((channel, lane) => {

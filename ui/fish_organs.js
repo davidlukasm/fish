@@ -1443,6 +1443,25 @@ const SIDE_ROUND = Object.freeze({
   tip : .15,
   tip_per_leading : .60
 });
+export function tailFinCurves(plan, {root = [ 0, 0 ], length, width, flex = 0, swing = 0}) {
+  const half = [
+    [ 0, 0 ], [ plan.lead_along, -plan.lead_out ], [ plan.lobe_along, -plan.lobe_out ],
+    [ plan.tip_along, -plan.tip_out ], [ plan.fork, 0 ]
+  ];
+  for (const k of [TAIL_KNOT.lobe, TAIL_KNOT.tip])
+    half[k][0] = Math.max(half[k][0], Math.abs(half[k][1] * half[k - 1][0] /
+                                               Math.min(-TAIL_FIN.min_slope, half[k - 1][1])) *
+                                          TAIL_FIN.push_out);
+  const knots = [
+    ...half, ...half.slice(TAIL_KNOT.lead, TAIL_KNOT.fork).reverse().map(([ u, v ]) => [u, -v])
+  ];
+  const points =
+      knots.map(([ u, v ]) => [root[0] - length * u, root[1] + flex + width * v + swing * u * u]);
+  return fishClosedCurves(points, [
+    plan.root_round, plan.lead_round, plan.lobe_round, plan.tip_round, plan.fork_round,
+    plan.tip_round, plan.lobe_round, plan.lead_round
+  ]);
+}
 export function fishFinShape(a, index) {
   const signature = [
     a.bodyStretch, a.flex, a.shoulder, ...a.flank,
@@ -1466,28 +1485,14 @@ export function fishFinShape(a, index) {
   if (index === FIN.tail) {
     const root = [ a.tailRoot, 0 ], size = tailFinSize(volume),
           length = size.length * plan.length + TAIL_FIN.length_per_pose * pose,
-          width = size.width * plan.width * (1 - TAIL_FIN.narrowing * pose), half = [
-            [ 0, 0 ], [ plan.lead_along, -plan.lead_out ], [ plan.lobe_along, -plan.lobe_out ],
-            [ plan.tip_along, -plan.tip_out ], [ plan.fork, 0 ]
-          ];
-    for (const k of [TAIL_KNOT.lobe, TAIL_KNOT.tip])
-      half[k][0] = Math.max(half[k][0], Math.abs(half[k][1] * half[k - 1][0] /
-                                                 Math.min(-TAIL_FIN.min_slope, half[k - 1][1])) *
-                                            TAIL_FIN.push_out);
-    const knots =
-              [
-                ...half,
-                ...half.slice(TAIL_KNOT.lead, TAIL_KNOT.fork).reverse().map(([ u, v ]) => [u, -v])
-              ],
-          points = knots.map(
-              ([ u, v ]) => [root[0] - length * u,
-                             (a.flex || 0) + width * v +
-                                 FIN_STROKE.tail_swing * pose * (a.tailDirection ?? 1) * u * u]),
-          rounds = [
-            plan.root_round, plan.lead_round, plan.lobe_round, plan.tip_round, plan.fork_round,
-            plan.tip_round, plan.lobe_round, plan.lead_round
-          ];
-    shape.curves = fishClosedCurves(points, rounds);
+          width = size.width * plan.width * (1 - TAIL_FIN.narrowing * pose);
+    shape.curves = tailFinCurves(plan, {
+      root,
+      length,
+      width,
+      flex : a.flex || 0,
+      swing : FIN_STROKE.tail_swing * pose * (a.tailDirection ?? 1)
+    });
     shape.upper = shape.curves[0];
     shape.lower = fishCurveReverse(shape.curves[shape.curves.length - 1]);
     shape.root = root;

@@ -170,7 +170,13 @@ function wiringLibrary(state) {
                 : false
   });
   return section(label('wiring.pairings'), PAIRINGS.map(wiring).join('')) +
-         section(label('wiring.shape'), wiring('bend'));
+         section(label('wiring.shape'),
+                 wiring('bend') + '<button class="aid-wide" data-bundle-wires' +
+                     (state.document.wires.filter(w => state.multi?.has(w.id)).length < 2
+                          ? ' disabled'
+                          : '') +
+                     ' title="' + label('wiring.bundleHint') + '">' + label('wiring.bundle') +
+                     '</button>');
 }
 function hormoneLibrary(state) {
   const doc = state.document, titles = tList('studio.hormoneCard.tileTitles');
@@ -338,7 +344,18 @@ const LIBRARIES = Object.freeze({
 });
 export function libraryOf(state) {
   const kind = LIBRARIES[state.tool] ? state.tool : 'select';
-  const html = LIBRARIES[kind](state);
+  const sides =
+      kind === 'select'
+          ? '<div class="aid-placement-sides" role="group" aria-label="' + label('placement.side') +
+                '">' +
+                [ 'both', 'single', 'middle' ]
+                    .map(key => '<button type="button" data-placement-side="' + key +
+                                '" aria-pressed="' + ((state.placementSide ?? 'both') === key) +
+                                '">' + label('placement.' + key) + '</button>')
+                    .join('') +
+                '</div>'
+          : '';
+  const html = sides + LIBRARIES[kind](state);
   const armed = state.armed;
   const attribute = armed && 'data-drag-kind="' + armed.kind + '" data-drag-value="' +
                                  escapeText(armed.value) + '"';

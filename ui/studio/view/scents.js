@@ -1,8 +1,14 @@
 import {TUNING} from '../../schema.js';
-import {preferredScent, scentAffinities, scentTuning, tuningHalfOffset} from '../../tuning.js';
+import {
+  preferredScent,
+  scentAffinities,
+  scentTuning,
+  tuningSigma,
+  tuningWidth
+} from '../../tuning.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
-import {escapeText, fixed, trackShare, widthTrack} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {organTypes, typeOfCenter} from '../model/document.js';
 import {clamp, radians} from '../../units.js';
 import {joinParts, percent, t} from '../../strings.js';
@@ -10,7 +16,7 @@ import {typeChips} from './types.js';
 
 export const SCENT_MAP = Object.freeze({
   size : 240,
-  height : 262,
+  height : 240,
   centre : 120,
   radius : 104,
   disc : 10,
@@ -18,8 +24,6 @@ export const SCENT_MAP = Object.freeze({
   ring : 14,
   snap : 13,
   samples : 128,
-  track : [ 72, 168 ],
-  track_y : 248
 });
 const turn = 2 * Math.PI;
 const mapPoint = (colatitude, longitude) => {
@@ -37,12 +41,30 @@ export function scentMapTuning(fx, fy) {
       (_, k) => Math.hypot(scentPoint(k).x - x, scentPoint(k).y - y) <= M.snap);
   if (near >= 0)
     return scentTuning(near);
-  const dx = x - M.centre, dy = M.centre - y;
+  return scentMapAt(fx, fy);
+}
+function scentMapAt(fx, fy) {
+  const M = SCENT_MAP, dx = fx * M.size - M.centre, dy = M.centre - fy * M.height;
   const colatitude = 2 * Math.asin(Math.min(1, Math.hypot(dx, dy) / M.radius));
   const longitude = (Math.atan2(dx, dy) + turn) % turn;
   return {q1 : longitude / Math.PI - 1, q2 : Math.cos(colatitude)};
 }
-export const scentMapWidth = fx => trackShare(fx * SCENT_MAP.size, SCENT_MAP.track);
+const scentVector = center => {
+  const z = clamp(center.q2, -1), r = Math.sqrt(1 - z * z), phi = Math.PI * (center.q1 + 1);
+  return [ r * Math.cos(phi), r * Math.sin(phi), z ];
+};
+export function scentWidthHandle(center) {
+  const p = scentVector(center), phi = Math.PI * (center.q1 + 1),
+        angle = radians(tuningSigma(center.qwidth));
+  const east = [ -Math.sin(phi), Math.cos(phi), 0 ];
+  const v = p.map((x, i) => x * Math.cos(angle) + east[i] * Math.sin(angle));
+  return mapPoint(Math.acos(clamp(v[2], -1)), Math.atan2(v[1], v[0]) + turn);
+}
+export function scentMapWidth(center, fx, fy) {
+  const a = scentVector(center), b = scentVector(scentMapAt(fx, fy));
+  const cosine = a.reduce((n, x, i) => n + x * b[i], 0);
+  return tuningWidth(Math.acos(clamp(cosine, -1)) * 180 / Math.PI);
+}
 const POLE = 1e-9;
 function haloPath(q1, q2, reach) {
   const M = SCENT_MAP, rim = 'M' + (M.centre - M.radius) + ' ' + M.centre + ' a' + M.radius + ' ' +
@@ -87,7 +109,7 @@ function profileChips(organ, chosen) {
   }, {add : t('studio.inspector.addProfile'), remove : t('studio.inspector.removeProfile')});
 }
 export function scentMap(organ, center) {
-  const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2);
+  const M = SCENT_MAP, at = scentMapPoint(center.q1, center.q2), wide = scentWidthHandle(center);
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
   const others = organTypes(organ)
                      .filter(type => type.id !== chosen.id)
@@ -116,10 +138,11 @@ export function scentMap(organ, center) {
          '" tabindex="0" role="img" aria-label="' + escapeText(title) +
          '"><circle class="aid-scent-rim" cx="' + M.centre + '" cy="' + M.centre + '" r="' +
          M.radius + '"/><path class="aid-scent-halo" fill-rule="evenodd" d="' +
-         haloPath(center.q1, center.q2, radians(tuningHalfOffset(center.qwidth))) + '"/>' + others +
+         haloPath(center.q1, center.q2, radians(tuningSigma(center.qwidth))) + '"/>' + others +
          '<circle class="aid-scent-selector" cx="' + fixed(at.x) + '" cy="' + fixed(at.y) +
          '" r="' + M.ring + '"/>' + scents +
-         widthTrack(M.track, M.track_y, center.qwidth, 'data-graphic-handle="width"',
-                    t('studio.inspector.receptorWidth')) +
+         '<circle class="aid-graphic-handle" data-graphic-handle="width" cx="' + fixed(wide.x) +
+         '" cy="' + fixed(wide.y) + '" r="7"><title>' + t('studio.inspector.receptorWidth') +
+         '</title></circle>' +
          '</svg></div>';
 }

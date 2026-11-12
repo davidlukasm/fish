@@ -6,6 +6,21 @@ const colour = leg => leg.kind === 'hormone'    ? substanceColor(leg.substance)
                       : leg.sign < 0            ? 'var(--aid-inhibit)'
                                                 : 'var(--aid-light)';
 const PLAY = Object.freeze({interval : 520, speed : 180, linger : 800, dot : 5, thinning : .7});
+// Geometry is stable for a scene. Reading it while moving the dots forces repeated SVG work.
+function sampledPath(path, scale) {
+  const length = path.getTotalLength();
+  const count = Math.max(12, Math.min(256, Math.ceil(length * scale / 3)));
+  const points =
+      Array.from({length : count + 1}, (_, i) => path.getPointAtLength(length * i / count));
+  return {
+    length,
+    at(distance) {
+      const t = Math.max(0, Math.min(count, length ? distance * count / length : 0));
+      const i = Math.min(count - 1, Math.floor(t)), f = t - i, a = points[i], b = points[i + 1];
+      return {x : a.x + (b.x - a.x) * f, y : a.y + (b.y - a.y) * f};
+    }
+  };
+}
 export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
   const levels = Math.max(1, ...trace.parts.map(part => part.level)) + 1;
   const linger = PLAY.linger;
@@ -96,8 +111,14 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
     const matrix = svg.getScreenCTM();
     const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
     intervals = Array(levels).fill(PLAY.interval);
+    const geometry = new Map();
     for (const entry of paths) {
-      entry.lengths = entry.route.map(path => path.getTotalLength());
+      entry.route = entry.route.map(path => {
+        if (!geometry.has(path))
+          geometry.set(path, sampledPath(path, scale));
+        return geometry.get(path);
+      });
+      entry.lengths = entry.route.map(path => path.length);
       entry.length = entry.lengths.reduce((sum, length) => sum + length, 0);
       entry.dot.setAttribute('r', String(PLAY.dot / scale));
       intervals[entry.leg.level] =
@@ -171,7 +192,7 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
         let distance = fraction * length, index = 0;
         while (index + 1 < route.length && distance > lengths[index])
           distance -= lengths[index++];
-        const at = route[index].getPointAtLength(distance);
+        const at = route[index].at(distance);
         dot.setAttribute('cx', String(at.x));
         dot.setAttribute('cy', String(at.y));
       }

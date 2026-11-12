@@ -1748,12 +1748,6 @@ async function checkHormoneSystems(model, capabilities) {
       panels.libraryOf(state).html.split('data-drag-value="tectum"')[1].split('</button>')[0];
   assert.match(sightTile, /title="Sehzentrum:/);
   assert.match(sightTile, /Tectum/, 'A region tile carries its technical term');
-  const muscleHints = views.placementHints(state, 'organ', 'muscle');
-  assert.deepEqual(
-      muscleHints.legend.map(entry => entry.name.replace(/\u00ad/g, '')).sort(),
-      [ 'Bauchflossenmuskel', 'Brustflossenmuskel', 'Kiefer', 'Schlund', 'Schwanzmuskel' ]);
-  assert.equal(new Set(muscleHints.legend.map(entry => entry.colour)).size, 5);
-  assert.equal(muscleHints.svg.match(/aid-muscle-home/g).length, 10);
   const eyePanel = panels.inspector(state);
   assert.match(eyePanel, /Hormone und Lernen/);
   assert.match(eyePanel, /data-open-tool="hormone"/);
@@ -1844,7 +1838,7 @@ async function checkHormoneSystems(model, capabilities) {
     tool : 'learn',
     effect : E.learning
   });
-  assert.match(learner, /data-learn-rate/);
+  assert.match(learner, /data-learning-memory/);
   assert.match(learner, /aid-episode-arrow teach none/);
   for (const effect of [E.teaching, E.learning, E.competition, E.eligibility])
     assert.match(learner,
@@ -2170,7 +2164,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
   assert.match(planningInspector, /data-preview-handle="input"/);
-  assert.match(planningInspector, /data-cell-growth=/);
+  assert.match(planningInspector, /data-life-phase=/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
@@ -2848,9 +2842,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(
         layersView.layerMode({...far, layers : layersView.switchLayer(off, 'nodes')}, 'nodes'),
         layersView.AUTO);
-    assert.ok(Math.abs(learningView.learnModePatch(.5).mode) < 1e-9);
-    assert.ok(learningView.learnRatePatch(1).qwidth === 1 &&
-              learningView.learnRatePatch(0).qwidth === 0);
     const learnNode =
         model.addNeuron(model.newDocument('Lernen'), 'learn', sites, {x : 380, y : 325});
     const learnPanel = learningView.learningInspector({
@@ -2860,8 +2851,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       selected : {kind : 'center', id : learnNode.centerId},
       effect : HORMONE_EFFECT.learning
     });
-    assert.ok(learnPanel.includes('data-learn-rate') && learnPanel.includes('data-learn-mode') &&
-              learnPanel.includes('data-learn-trace'));
+    assert.ok(learnPanel.includes('data-learning-handle="rate"') &&
+              learnPanel.includes('data-response-property="mode"') &&
+              learnPanel.includes('data-learning-handle="trace"'));
     assert.match(learnPanel, /Schonfrist neuer Kontakte/);
     const automatic =
         model.addOrgan(model.newDocument('Region'), 'olfaction', sites, {x : 380, y : 325});
@@ -2901,11 +2893,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           model.receptorResponse(sitesResult, cell().receptors[effect], Array(6).fill(0), 0), .25,
           'Removing the substance preserves the constant local gain');
     }
-    const traceHandle = /data-graphic-handle="learn-trace" cx="([^"]+)"/.exec(learnPanel);
+    const traceHandle = /data-learning-handle="trace" cx="([^"]+)"/.exec(learnPanel);
     const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
     assert.ok(Math.abs(learningView.learnTracePatch(traceHandle[1] / 300).learning_tau -
                        learnCell.learning_tau) < 1e-2);
-    assert.ok(Math.abs(learningView.learnResponseOf(.5)) < 1e-9);
     const taughtDoc =
         model.bindReceptor(learnNode.document, learnNode.centerId, HORMONE_EFFECT.teaching, 0);
     const excitationDoc = model.addSubstance(

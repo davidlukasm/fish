@@ -4,7 +4,7 @@ export const LAYER_KEYS = Object.freeze([ 'wires', 'nodes', 'hormones' ]);
 export const AUTO = 'auto';
 const LAYER_MODES = Object.freeze([ AUTO, true, false ]);
 const REVEAL = Object.freeze(
-    {regions : [ 1.1, 2.2 ], cells : [ 2.6, 4.2 ], fields : [ 1.6, 2.4 ], seats : [ 3.8, 5 ]});
+    {regions : [ 1.1, 2.2 ], cells : [ 1.8, 3.8 ], fields : [ 1.6, 2.4 ], seats : [ 3.8, 5 ]});
 const fade = (zoom, [ from, to ]) => {
   const x = Math.max(0, Math.min(1, (zoom - from) / (to - from)));
   return x * x * (3 - 2 * x);

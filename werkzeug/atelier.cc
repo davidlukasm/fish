@@ -568,6 +568,14 @@ std::vector<int> anatomy_report(const field::Substrate &t,
     std::cout << "{\"cells\":" << fin.cells << ",\"strength\":" << fin.strength
               << ",\"x\":" << fin.x << ",\"y\":" << fin.y << ",\"spread\":" << fin.spread << '}';
   }
+  std::cout << "],\"forms\":[";
+  for (std::size_t i = 0; i < a.forms.size(); ++i) {
+    if (i)
+      std::cout << ',';
+    const auto &f = a.forms[i];
+    std::cout << '[' << f.x << ',' << f.y << ',' << f.z << ',' << f.sy << ',' << f.sz << ','
+              << f.weight << ']';
+  }
   std::cout << "],\"anatomy\":[";
   for (std::size_t i = 0; i < a.anatomy.size(); ++i) {
     if (i)

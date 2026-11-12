@@ -1,3 +1,4 @@
+import {muscleTissue, muscleTissuePatch} from './muscle_tissue.js';
 import {
   ANATOMY,
   ATELIER_LIMITS,
@@ -45,7 +46,7 @@ import {
 } from '../../fibre.js';
 import {findSite, sideIndex, sideOf} from '../model/layout.js';
 import {fieldFish, fieldPoint, finSizes} from './frame.js';
-import {bandTrack, escapeText, fixed, namedTrack, plainTrack, trackShare} from './markup.js';
+import {bandTrack, escapeText, fixed, plainTrack, trackShare} from './markup.js';
 import {formatNumber, percent, t, textArea} from '../../strings.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
@@ -63,34 +64,7 @@ const handle = (name, x, y, title) =>
     HANDLE.radius + '"><title>' + escapeText(title) + '</title></circle>';
 const RAY = Object.freeze({least : 1, span : 3});
 const rayWidth = copies => RAY.least + RAY.span * copies / ATELIER_LIMITS.max_copies;
-const CONTROLS =
-    Object.freeze({width : 300, track : [ 10, 290 ], rows : [ 34, 78, 122 ], title : 14});
-const countShare = (count, most) => most > 1 ? (count - 1) / (most - 1) : null;
-export function nodeControls(organ, code, most) {
-  const C = CONTROLS, count = organ.centers.length, copies = organ.centers[0]?.copies ?? 1;
-  const row = (y, name, share, text, title) =>
-      '<text class="aid-control-title" x="' + C.track[0] + '" y="' + (y - C.title) + '">' +
-      escapeText(text) + '</text>' +
-      plainTrack(C.track, y, share, 'data-effector-handle="' + name + '"', title);
-  // Only muscles hold sprint nodes; other organs with nodes show the first two rows.
-  const muscle = organ.type === 'muscle', height = C.rows[muscle ? 2 : 1] + C.title;
-  return '<svg class="aid-effector-controls" viewBox="0 0 ' + C.width + ' ' + height +
-         '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' + code +
-         '" data-effector-side="' + sideOf(organ) + '">' +
-         row(C.rows[0], 'nodes', countShare(count, most), label('nodes', {count, most}),
-             label('nodesHandle')) +
-         row(C.rows[1], 'strength', copies / ATELIER_LIMITS.max_copies,
-             label('strength', {share : percent(copies / ATELIER_LIMITS.max_copies)}),
-             label('strengthHandle')) +
-         (muscle
-              ? '<text class="aid-control-title" x="' + C.track[0] + '" y="' +
-                    (C.rows[2] - C.title) + '">' +
-                    escapeText(label('sprint', {sprint : sprintNodes(organ), count})) + '</text>' +
-                    bandTrack(C.track, C.rows[2], 1 - organ.sprint, 'data-effector-handle="sprint"',
-                              label('sprintHandle'))
-              : '') +
-         '</svg>';
-}
+export const nodeControls = muscleTissue;
 const STROKE_ICON = Object.freeze({width : 30, height : 16, shaft : 10, head : 5});
 // The arrow shows where the fin drives the water: toward the tail on the back stroke.
 function strokeIcon(stroke) {
@@ -121,16 +95,9 @@ function strokeChooser(state, organ) {
                     escapeText(label('stroke.antagonist')) + '</button>') +
          '</div>';
 }
-export function effectorPatch(code, name, fx, fy, most) {
-  if (name === 'nodes' || name === 'strength' || name === 'sprint') {
-    const share = trackShare(fx * CONTROLS.width, CONTROLS.track);
-    return name === 'nodes' ? {nodes : 1 + Math.round(share * Math.max(0, most - 1))}
-           : name === 'sprint'
-               ? {sprint : 1 - share}
-               : {copies : Math.max(1, Math.round(share * ATELIER_LIMITS.max_copies))};
-  }
-  if (name === FIBRE_HANDLE)
-    return {fibre : trackShare(fx * FIBRES.width, FIBRES.track)};
+export function effectorPatch(code, name, fx, fy, most, organ) {
+  if ([ 'nodes', 'strength', 'sprint', 'fibre' ].includes(name))
+    return muscleTissuePatch(name, fx, fy, most, organ);
   if (name.startsWith(CHART_HANDLE)) {
     const spec = DIET_CHARTS[name.slice(CHART_HANDLE.length)];
     return spec?.trait ? {
@@ -384,8 +351,11 @@ const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.turn] : Object.fromEntries(
       Object.values(FIN_STROKE)
           .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
-  [GUT_CODE] : {'trait:q1' : {key : GUT_TRAIT, at : x => trackShare(x, GUT.track)}},
-  [GILL_CODE] : {'trait:q1' : {key : GILL_TRAIT, at : x => trackShare(x, GILL.track)}},
+  [GUT_CODE] :
+      {'trait:q1' : {key : GUT_TRAIT, at : x => (x - GUT.from - 110) / (GUT.to - GUT.from - 110)}},
+  [GILL_CODE] : {
+    'trait:q1' : {key : GILL_TRAIT, at : (x, y) => (GILL.bottom - y) / (GILL.bottom - GILL.top)}
+  },
   [MOTOR_KIND.aggression] : {
     'trait:q2' : {key : 'jaw_length', at : x => (jawTip(0) - x) / (jawTip(0) - jawTip(1))},
     'trait:q1' : {
@@ -510,7 +480,8 @@ export function gutGraphic(state, organ, selected) {
   const G = GUT, code = GUT_CODE;
   const length = gutLength(state.document);
   const turns = gutTurns(length ?? BODY_UNIT.trait_middle);
-  const along = k => G.from + (G.to - G.from) * k / G.steps,
+  const end = G.from + 110 + (G.to - G.from - 110) * (length ?? BODY_UNIT.trait_middle);
+  const along = k => G.from + (end - G.from) * k / G.steps,
         across = k => G.middle + G.amplitude * Math.sin(2 * Math.PI * turns * k / G.steps);
   const points =
       Array.from({length : G.steps + 1}, (_, k) => fixed(along(k)) + ' ' + fixed(across(k)));
@@ -534,10 +505,7 @@ export function gutGraphic(state, organ, selected) {
       organ, code, 1, label('gut.title'),
       '<path class="aid-gut-tube" d="M' + points.join(' L') + '" stroke-width="' + G.tube + '"/>' +
           part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"/>') +
-          part(food, dots) +
-          namedTrack(G.track, G.track_y, length ?? BODY_UNIT.trait_middle,
-                     'data-effector-handle="trait:q1"', label('gut.handle'),
-                     [ label('gut.short'), label('gut.long') ]),
+          part(food, dots) + handle('trait:q1', end, across(G.steps), label('gut.handle')),
       dietChart(state, 'gut', organ));
 }
 
@@ -694,67 +662,6 @@ export function fibreIcon(fast, size) {
          'class="aid-fibre-sheath" cx="' + S.radius + '" cy="' + S.radius + '" r="' + S.radius +
          '"/>' + bundleMarkup({...S, x : S.radius, y : S.radius}, fast) + '</svg>';
 }
-function fibreSection(organ, code) {
-  const F = FIBRES, C = F.chart, fast = muscleFibre(organ);
-  const words = (key, values) => label('fibre.' + key, values);
-  const most = C.room * fibreForce(FIBRE_TYPES.fast);
-  const x = k => C.left + (C.right - C.left) * k / (C.steps - 1),
-        y = force => C.base - (C.base - C.top) * force / most;
-  const curve = (f, cls) => {
-    const values = enduranceCurve(f, C.steps);
-    const shown = values.map((v, k) => [k, v]).filter(([ k ]) => k % C.stride === 0);
-    return '<path class="aid-fibre-curve ' + cls + '" d="M' +
-           shown.map(([ k, v ]) => fixed(x(k)) + ' ' + fixed(y(v))).join(' L') + '"' +
-           (cls === 'chosen' ? ' stroke="' + fibreHex(fast) + '"' : '') + '/>';
-  };
-  const references =
-      Object.entries(FIBRE_TYPES)
-          .map(([ key, f ]) => curve(f, 'reference') + '<text class="aid-fibre-name" x="' +
-                               (C.left + C.name) + '" y="' + fixed(y(fibreForce(f)) - C.name) +
-                               '">' + escapeText(words(key)) + '</text>')
-          .join('');
-  const R = F.costs;
-  const bar = (row, key, value, highest) =>
-      '<text class="aid-fibre-label" x="' + R.label + '" y="' + (R.rows[row] + R.bar / 2) + '">' +
-      escapeText(words(key)) + '</text><rect class="aid-fibre-gauge" x="' + R.left + '" y="' +
-      (R.rows[row] - R.bar / 2) + '" width="' + (R.right - R.left) + '" height="' + R.bar +
-      '" rx="' + R.bar / 2 + '"/><rect class="aid-fibre-bar ' + key + '" x="' + R.left + '" y="' +
-      (R.rows[row] - R.bar / 2) + '" width="' + fixed((R.right - R.left) * value / highest) +
-      '" height="' + R.bar + '" rx="' + R.bar / 2 + '"/><text class="aid-fibre-value" x="' +
-      R.value + '" y="' + (R.rows[row] + R.bar / 2) + '" text-anchor="end">' +
-      escapeText(t('units.times', {n : formatNumber(value, 1)})) + '</text>';
-  const M = MUSCLE_FIBRE;
-  const choices = Object.entries(FIBRE_TYPES)
-                      .map(([ key, f ]) => {
-                        const chosen = Math.abs(fast - f) < F.chosen;
-                        return '<button data-fibre-type="' + f + '" data-organ-id="' +
-                               escapeText(organ.id) + '" class="' + (chosen ? 'active' : '') +
-                               '" aria-pressed="' + chosen + '" title="' +
-                               escapeText(words(key + 'Title')) + '">' + fibreIcon(f, F.icon) +
-                               escapeText(words(key)) + '</button>';
-                      })
-                      .join('');
-  return '<section class="aid-eye-section aid-fibres"><h4>' +
-         escapeText(words('title', {share : percent(fast)})) + '</h4><svg class="aid-fibre-chart"' +
-         ' viewBox="0 0 ' + F.width + ' ' + F.height + '" data-effector-graphic="' +
-         escapeText(organ.id) + '" data-effector-code="' + code + '" data-effector-side="' +
-         sideOf(organ) + '" role="img" aria-label="' + escapeText(words('chart')) + '">' +
-         '<circle class="aid-fibre-sheath" cx="' + F.section.x + '" cy="' + F.section.y + '" r="' +
-         F.section.radius + '"/>' + bundleMarkup(F.section, fast) +
-         '<line class="aid-diet-axis" x1="' + C.left + '" y1="' + C.base + '" x2="' + C.right +
-         '" y2="' + C.base + '"/>' + references + curve(fast, 'chosen') +
-         '<text class="aid-diet-end" x="' + C.right + '" y="' + (C.base + R.bar + R.bar / 2) +
-         '" text-anchor="end">' + escapeText(words('time')) + '</text>' +
-         bar(0, 'work', fibreCost(fast), M.cost_fast) +
-         bar(1, 'rest', fibreUpkeep(fast), M.upkeep_slow) +
-         namedTrack(F.track, F.track_y, fast, 'data-effector-handle="' + FIBRE_HANDLE + '"',
-                    words('handle'), [ words('slow'), words('fast') ]) +
-         '</svg><div class="aid-contrast-choices aid-fibre-choices">' + choices +
-         '</div></section>';
-}
-// A gill arch seen from the side: its rakers comb the water the gill covers pump from the mouth
-// (left) to the gills (right). Dense rakers hold the plankton and let little water through,
-// open ones pass much water and keep only coarse pieces.
 const GILL = Object.freeze({
   x : 176,
   top : 18,
@@ -822,12 +729,11 @@ export function gillGraphic(state, organ) {
                      .join('');
   const graphic = water + '<path class="aid-gill-arch" d="' + arch +
                   '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks +
-                  namedTrack(G.track, G.track_y, density, 'data-effector-handle="trait:q1"',
-                             label('gills.handle'), [ label('gills.open'), label('gills.dense') ]);
+                  handle('trait:q1', gillArch(1 - density).x - G.raker, gillArch(1 - density).y,
+                         label('gills.handle'));
   return effectorBlock(
       organ, GILL_CODE, 1, label('gills.title'), graphic,
-      nodeControls(organ, GILL_CODE, nodeLimit(organ, state.sites)) +
-          fibreSection(organ, GILL_CODE) + '<p class="aid-hint">' +
+      nodeControls(organ, GILL_CODE, nodeLimit(organ, state.sites)) + '<p class="aid-hint">' +
           escapeText(label('gills.hint', {water : percent(passage), kept : percent(kept)})) +
           '</p>');
 }
@@ -880,8 +786,7 @@ export function gutMuscleGraphic(state, organ) {
                   lane(G.lanes[0], 0, 'rest') + lane(G.lanes[1], 1, 'hurried');
   return effectorBlock(
       organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), graphic,
-      nodeControls(organ, GUT_MUSCLE_CODE, nodeLimit(organ, state.sites)) +
-          fibreSection(organ, GUT_MUSCLE_CODE) + '<p class="aid-hint">' +
+      nodeControls(organ, GUT_MUSCLE_CODE, nodeLimit(organ, state.sites)) + '<p class="aid-hint">' +
           escapeText(label('gutmuscle.hint',
                            {speed : formatNumber(gutPassage(1)), used : percent(gutUse(1))})) +
           '</p>');
@@ -904,7 +809,7 @@ export function effectorGraphic(state, organ) {
                        draw(state, organ, organ.centers, twin),
                        nodeControls(organ, code, nodeLimit(organ, state.sites)) +
                            (code === MOTOR_KIND.turn ? strokeChooser(state, organ) : '') +
-                           (isFibrous(organ) ? fibreSection(organ, code) : '') +
+
                            muscleHint(pelvic ? 'pelvic' : code) +
                            (code === MOTOR_KIND.aggression
                                 ? dietChart(state, 'teeth', organ) + dietChart(state, 'jaw', organ)

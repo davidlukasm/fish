@@ -1,16 +1,8 @@
-import {brainLobes} from './view/region_layout.js';
+import {moveCanvasOrgan} from './canvas_placement.js';
 import {clamp} from '../units.js';
 import {markedKind} from './events.js';
 import {DRAG_CLICK, DRAG_START, GRIPS} from './handles.js';
-import {fieldPlacements} from './model/placement.js';
-import {
-  closestSite,
-  findCenter,
-  findOrgan,
-  moveCenter,
-  moveOrgan,
-  usedSites
-} from './model/document.js';
+import {closestSite, findCenter, findOrgan, moveCenter, usedSites} from './model/document.js';
 import {moveAssembly} from './model/assemblies.js';
 import {siteRole} from './model/organs.js';
 import {nearFish, nerveZone, pointDistance, SNAP_DISTANCE} from './model/layout.js';
@@ -54,13 +46,6 @@ export const gestureMethods = {
     const stamp = this.root.querySelector('.aid-canvas-toolbar');
     if (stamp)
       stamp.textContent = zoomStamp(c);
-  },
-  focusBrainPart(key) {
-    const part = brainLobes(this.state.document, this.state.sites).find(p => p.key === key);
-    if (!part)
-      return;
-    Object.assign(this.state.camera, {x : part.x, y : part.y});
-    this.zoom(2.3);
   },
   // With `clearTools` the point also keeps clear of the tool bar; a point that follows the pointer
   // does not, as it would zoom out with every step it takes along the edge.
@@ -135,9 +120,6 @@ export const gestureMethods = {
     };
     if (this.state.tool === 'wire' && WIRE_ENDS.includes(kind))
       this.pointer.wireFrom = {kind, id};
-    else if (kind === 'organ' && this.state.tool === 'select' &&
-             findOrgan(this.state.document, id)?.field)
-      this.prepareChoices(fieldPlacements(this.state.document, id, this.state.sites));
     if (this.state.tool === 'pan' || !kind || event.button === 1)
       this.pointer.pan = {x : this.state.camera.x, y : this.state.camera.y};
   },
@@ -183,8 +165,6 @@ export const gestureMethods = {
       if (this.overTrash(event))
         return preview?.replaceChildren();
       const organ = drag.kind === 'organ' ? findOrgan(this.state.document, drag.id) : null;
-      if (organ?.field)
-        return this.showChoices(point);
       if (organ)
         this.showHints('organ', organ.type, drag.id, organ.id);
       const type = organ?.type ?? (drag.kind === 'assembly'
@@ -205,7 +185,7 @@ export const gestureMethods = {
     const trashed = this.overTrash(event);
     this.showTrash(false);
     if (!drag.moved)
-      return this.cancelChoices();
+      return;
     this.ignoreClickUntil = performance.now() + DRAG_CLICK;
     event.preventDefault();
     if (drag.wireFrom) {
@@ -219,21 +199,13 @@ export const gestureMethods = {
       return;
     }
     if (drag.pan)
-      return this.state.armed ? this.restorePlacement() : this.cancelChoices();
+      return this.state.armed && this.restorePlacement();
     if (!MOVED_ITEMS.includes(drag.kind))
-      return this.cancelChoices();
+      return;
     if (trashed) {
-      this.cancelChoices();
       this.clearPreview();
       this.removeSelection({kind : drag.kind, id : drag.id});
       return this.notice(label('status.removed'));
-    }
-    if (drag.kind === 'organ' && findOrgan(this.state.document, drag.id)?.field) {
-      const point = cameraCoordinates(event, drag.svg, this.state.camera);
-      this.clearPreview();
-      if (!this.commitChoice(point))
-        this.notice(label('status.noRoom'));
-      return;
     }
     const bounds = this.root.querySelector('.aid-scene-frame')?.getBoundingClientRect();
     if (!bounds)
@@ -253,7 +225,7 @@ export const gestureMethods = {
                    ? moveCenter(doc, drag.id, site.id, sites)
                    : null;
       },
-      organ : () => moveOrgan(doc, drag.id, sites, point, SNAP_DISTANCE, drag.origin),
+      organ : () => moveCanvasOrgan(this.state, drag.id, point, drag.origin),
       assembly : () => moveAssembly(doc, drag.id, sites, point, drag.origin, SNAP_DISTANCE)
     };
     const moved = moveTo[drag.kind]();

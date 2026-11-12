@@ -1,5 +1,12 @@
 import {clamp} from '../../units.js';
-import {binSites, fieldRecipe, generateRetina, HALF_VIEW, retinalBins} from './retina.js';
+import {
+  bearingAt,
+  binSites,
+  fieldRecipe,
+  generateRetina,
+  HALF_VIEW,
+  retinalBins
+} from './retina.js';
 import {
   ATELIER_LIMITS,
   CONTRAST_POLARITY,
@@ -41,6 +48,7 @@ import {
   slotCenters
 } from './organs.js';
 import {
+  BODY_FRAME,
   centroid,
   findSite,
   NERVE_ROLE,
@@ -51,6 +59,7 @@ import {
   sitePoint
 } from './layout.js';
 import {initialRegion, routedLinks, settleRegions} from './regions.js';
+import {anatomicalPosition, nativeMusclePosition} from './anatomy.js';
 
 let serial = 0;
 // Documents name development sites by index; the 720-site lattice gave every index a new place.
@@ -101,6 +110,11 @@ export function validateDocument(doc) {
     if (!ORGAN_BY_KEY[organ.type] || ids.has(organ.id))
       throw new Error('studio.errors.invalidDocument');
     ids.add(organ.id);
+    if (organ.position &&
+        (!Number.isFinite(organ.position.x) || !Number.isFinite(organ.position.y) ||
+         (organ.position.scale !== undefined &&
+          !(Number.isFinite(organ.position.scale) && organ.position.scale > 0))))
+      throw new Error('studio.errors.invalidDocument');
     if ([ 'eye', 'proximity' ].includes(organ.type)) {
       const f = organ.field;
       if (!f || ![f.lo, f.hi, f.density, f.resolution].every(Number.isFinite) || f.lo < 0 ||
@@ -165,7 +179,8 @@ export function validateDocument(doc) {
          !slotCenters(findOrgan(doc, wire.from), wire.fromPort, 'out').length) ||
         (wire.toPort != null && !slotCenters(findOrgan(doc, wire.to), wire.toPort, 'in').length) ||
         (wire.pairing != null && !PAIRINGS.includes(wire.pairing)) ||
-        (wire.bends !== undefined && !validBends(wire.bends)))
+        (wire.bends !== undefined && !validBends(wire.bends)) ||
+        (wire.bundle !== undefined && typeof wire.bundle !== 'string'))
       throw new Error('studio.errors.invalidDocument');
   }
   return doc;
@@ -175,14 +190,48 @@ const validBends = bends => Array.isArray(bends) && bends.length <= BENDS_MOST &
                             bends.every(p => Number.isFinite(p?.x) && Number.isFinite(p?.y));
 // Wires bent together in one drawn bundle share their bends, so they straighten together too.
 export function bentTogether(doc, id) {
-  const bends = JSON.stringify(doc.wires.find(w => w.id === id)?.bends ?? null);
+  const wire = doc.wires.find(w => w.id === id);
+  if (wire?.bundle)
+    return doc.wires.filter(w => w.bundle === wire.bundle).map(w => w.id);
+  const bends = JSON.stringify(wire?.bends ?? null);
   return doc.wires.filter(w => w.bends && JSON.stringify(w.bends) === bends).map(w => w.id);
+}
+export function bundleWires(doc, ids, bends = []) {
+  const chosen = new Set(ids),
+        groups =
+            new Set(doc.wires.filter(w => chosen.has(w.id)).map(w => w.bundle).filter(Boolean));
+  const draft = copy(doc),
+        wires = draft.wires.filter(w => chosen.has(w.id) || groups.has(w.bundle));
+  if (wires.length < 2 || !validBends(bends))
+    return null;
+  const bundle = identifier('bundle');
+  for (const wire of wires) {
+    wire.bundle = bundle;
+    if (bends.length)
+      wire.bends = copy(bends);
+    else
+      delete wire.bends;
+  }
+  return draft;
+}
+export function unbundleWires(doc, id) {
+  const bundle = doc.wires.find(w => w.id === id)?.bundle;
+  if (!bundle)
+    return null;
+  const draft = copy(doc);
+  for (const wire of draft.wires.filter(w => w.bundle === bundle)) {
+    delete wire.bundle;
+    delete wire.bends;
+  }
+  return draft;
 }
 export function setBends(doc, wireIds, bends) {
   if (!validBends(bends))
     return null;
   const draft = copy(doc), wanted = new Set(wireIds);
-  const wires = draft.wires.filter(w => wanted.has(w.id));
+  const groups =
+      new Set(draft.wires.filter(w => wanted.has(w.id)).map(w => w.bundle).filter(Boolean));
+  const wires = draft.wires.filter(w => wanted.has(w.id) || groups.has(w.bundle));
   if (!wires.length)
     return null;
   for (const wire of wires)
@@ -691,7 +740,6 @@ export function moveCenterToSide(doc, centerId, side, sites) {
                                      pointDistance(b, sitePoint(here, NERVE_ROLE), NERVE_ROLE))[0];
   return target ? moveCenter(doc, centerId, target.id, sites) : null;
 }
-const FIELD_SHIFT = .25;
 export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity,
                           pointerOrigin = null) {
   const original = findOrgan(doc, organId);
@@ -699,9 +747,7 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     return null;
   if (original.field) {
     const anchor = pointerOrigin ?? sitePoint(findSite(sites, original.centers[0].site));
-    const dx = position.x - anchor.x, dy = (position.y - anchor.y) * original.side;
-    const requested = (dx + dy) * FIELD_SHIFT;
-    const delta = clamp(requested, -original.field.lo, HALF_VIEW - original.field.hi);
+    const delta = bearingAt(position) - bearingAt(anchor);
     return updateField(doc, organId,
                        {lo : original.field.lo + delta, hi : original.field.hi + delta}, sites);
   }
@@ -752,6 +798,98 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     findOrgan(moved, other.id).linked = true;
     return moved;
   }
+  return draft;
+}
+export function positionOrgan(doc, organId, sites, position, layout = null, origin = null) {
+  const original = findOrgan(doc, organId);
+  if (!original || original.type === 'brain')
+    return null;
+  const draft = copy(doc), organ = findOrgan(draft, organId);
+  const point = anatomicalPosition(organ.type, position, original.side === 0 ? 'middle' : 'single');
+  const members = [ organ ];
+  if (organ.linked && organ.pair)
+    members.push(findOrgan(draft, organ.pair));
+  if (organ.field) {
+    const anchor = origin ?? original.position ??
+                   centroid(original.centers.map(c => sitePoint(findSite(sites, c.site))));
+    const delta = bearingAt(point) - bearingAt(anchor);
+    for (const member of members) {
+      member.position =
+          member === organ ? point : {x : point.x, y : 2 * BODY_FRAME.middle - point.y};
+      member.side = member.position.y < BODY_FRAME.middle ? -1 : 1;
+    }
+    return updateField(draft, organId,
+                       {lo : original.field.lo + delta, hi : original.field.hi + delta}, sites);
+  }
+  for (const member of [...members]) {
+    const antagonist = isFinMuscle(member, sites) && antagonistOf(draft, member, sites);
+    if (antagonist && !members.includes(antagonist))
+      members.push(antagonist);
+  }
+  const movedIds = new Set(members.map(o => o.id));
+  const used = usedSites(draft, c => !movedIds.has(c.organId));
+  for (const member of members) {
+    const p =
+        member.side === organ.side ? point : {x : point.x, y : 2 * BODY_FRAME.middle - point.y};
+    member.position = {...member.position, ...p};
+    const oldHome = findSite(sites, member.region?.site ?? member.centers[0]?.site);
+    if (!oldHome)
+      continue;
+    const first = member.centers[0], side = member.side === 0         ? null
+                                            : p.y < BODY_FRAME.middle ? -1
+                                                                      : 1;
+    const pool = first.role === 'nerve' ? sites.filter(nerveZone) : sites;
+    const functionPool =
+        first.functionCode === 'site'
+            ? pool.filter(s => functionFor(first, s) === functionFor(first, oldHome))
+            : pool;
+    const native =
+        member.type === 'muscle'
+            ? nativeMusclePosition(sites, p, organFunction(member, sites), isPelvicMuscle(member))
+            : p;
+    const home = closestSite(first, functionPool, used, native, side, member.type);
+    if (!home)
+      return null;
+    const flip = home.side === oldHome.side ? 1 : -1;
+    for (const center of [...member.centers].sort((a, b) => (a.role === 'sensor') -
+                                                            (b.role === 'sensor'))) {
+      const old = findSite(sites, center.site);
+      const wanted = {
+        zone : home.zone,
+        u : home.u + old.u - oldHome.u,
+        v : home.v + old.v - oldHome.v,
+        w : home.w + old.w - oldHome.w,
+        side : old.side * flip
+      };
+      const code = functionFor(center, old);
+      const candidates =
+          center.role === 'nerve' ? pool : sites.filter(s => functionFor(center, s) === code);
+      const at = closestNativeSite(center, candidates, used, wanted, wanted.side, member.type);
+      if (!at)
+        return null;
+      center.site = at.id;
+      used.add(at.id);
+    }
+    if (member.side !== 0)
+      member.side = home.side;
+    if (member.region)
+      member.region.site = home.id;
+  }
+  // A nearby motor can steal a pressure reading. Check all organs, including the neighbours.
+  if (knowsLayout(layout))
+    for (const owner of draft.organs) {
+      const pressure = PRESSURE_OF[owner.type];
+      if (!pressure)
+        continue;
+      for (const center of owner.centers.filter(c => c.key === pressure.key)) {
+        if (pressureReading(draft, findSite(sites, center.site), sites, layout) === pressure.source)
+          continue;
+        const at = pressureSites(draft, center.id, sites, layout)[0];
+        if (!at)
+          return null;
+        center.site = at.id;
+      }
+    }
   return draft;
 }
 // Sites a new node of this organ must leave free: a pressure sensor reads the nearest organ, so
@@ -970,7 +1108,8 @@ export function addAntagonist(doc, organId, sites) {
     centers : [],
     pair : null,
     linked : false,
-    sprint : original.sprint
+    sprint : original.sprint,
+    ...(original.position ? {position : {...original.position}} : {})
   };
   for (const center of original.centers) {
     const home = findSite(sites, center.site);
@@ -1659,6 +1798,8 @@ export function mirrorOrgan(doc, organId, sites) {
     linked : true,
     centers : []
   };
+  if (organ.position)
+    mirror.position = {...organ.position, y : 2 * BODY_FRAME.middle - organ.position.y};
   if (organ.region) {
     const home = mirroredSite(findSite(sites, organ.region.site), sites);
     if (!home)
