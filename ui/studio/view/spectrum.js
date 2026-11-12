@@ -102,17 +102,27 @@ const zeroBack = count =>
         .join(' L');
 const area = values => 'M' + around(values) + ' L' + zeroBack(values.length) + 'Z';
 
-// `areaTitles` names the exciting and the inhibiting answer in their tooltips; `middle` is drawn in
-// the centre of the wheel.
-export function spectrumElement(tuning, target, label, light = null, testHue = null, areaTitles = {
-  excite : '',
-  inhibit : ''
-},
-                                middle = '') {
+// The tuning of a cell type as its curve round the wheel.
+const tuningCurve = tuning => Array.from(
+    {length : SPECTRUM.samples},
+    (_, k) => tuningAffinity(hueOffset(HUE_CIRCLE * k / SPECTRUM.samples, tuningHue(tuning.q1)),
+                             tuning.qwidth));
+// `light` is the design run's answer, `testHue` the test light; `areaTitles` names the exciting
+// and the inhibiting answer in their tooltips; `middle` is drawn in the centre of the wheel;
+// `others` are the other cell types, drawn faintly with a dot at their peak that chooses them
+// ({tuning, choose : attributes, colour, name}).
+export function spectrumElement(tuning, target, label, {
+  light = null,
+  testHue = null,
+  areaTitles = {
+    excite : '',
+    inhibit : ''
+  },
+  middle = '',
+  others = []
+} = {}) {
   const S = SPECTRUM, centre = tuningHue(tuning.q1), sigma = tuningSigma(tuning.qwidth);
-  const gauss = Array.from(
-      {length : S.samples},
-      (_, k) => tuningAffinity(hueOffset(HUE_CIRCLE * k / S.samples, centre), tuning.qwidth));
+  const gauss = tuningCurve(tuning);
   const attributes =
       Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
   const step = HUE_CIRCLE / S.segments;
@@ -137,6 +147,16 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
   if (values)
     html += band('aid-spectrum-excite', values.map(v => Math.max(0, v)), areaTitles.excite) +
             band('aid-spectrum-inhibit', values.map(v => Math.min(0, v)), areaTitles.inhibit);
+  html +=
+      others
+          .map(o => {
+            const at = polar(tuningHue(o.tuning.q1), reachOf(1));
+            return `<g class="aid-spectrum-other" ${o.choose}><title>${
+                       escapeText(o.name)}</title><path d="M${around(tuningCurve(o.tuning))}"/>` +
+                   `<circle cx="${rounded(at.x)}" cy="${rounded(at.y)}" r="${
+                       S.marker}" style="fill:${o.colour}"/></g>`;
+          })
+          .join('');
   html += `<circle class="aid-spectrum-zero" cx="${S.centre}" cy="${S.centre}" r="${S.zero}"/>` +
           `<path class="aid-spectrum-tuning" d="M${around(gauss)}"/>`;
   if (Number.isFinite(testHue)) {

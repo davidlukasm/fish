@@ -321,6 +321,20 @@ export function visionFan(state, organ) {
          cellRays(state, organ, g, profile, rays, chosenNode, reach) + '</g></g>' +
          fieldHandles(state, organ, g, near, middle) + testLight(state, organ, g) + '</g>';
 }
+// The other colour types of the eye, to sit faintly in the same wheel; a click on one chooses it.
+function otherTypes(organ, chosen) {
+  const profiles = organ.field.profiles, names = profiles.map(profileName);
+  const nameOf = i =>
+      names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i] : names[i] + ' ' + (i + 1);
+  return profiles
+      .map((profile, i) => ({
+             tuning : profile,
+             choose : `data-vision-profile="${idSafe(profile.id)}"`,
+             colour : profileColor(profile),
+             name : label('profile') + ' ' + nameOf(i)
+           }))
+      .filter(o => o.tuning.id !== chosen.id);
+}
 export function spectrumEditor(state, organ, profile) {
   const light = state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const [centre, width, opponent] = spectrumValues(profile, true);
@@ -329,10 +343,15 @@ export function spectrumEditor(state, organ, profile) {
     labelledText(label('opponent'), opponent)
   ].join(' · ');
   return `<div data-spectrum-block title="${escapeText(values)}">${
-      spectrumElement(
-          profile, {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
-          label('spectrum'), light, state.sightProbe?.hue,
-          {excite : label('excites'), inhibit : label('inhibits')}, contrastPupil(profile))}</div>`;
+      spectrumElement(profile,
+                      {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
+                      label('spectrum'), {
+                        light,
+                        testHue : state.sightProbe?.hue,
+                        areaTitles : {excite : label('excites'), inhibit : label('inhibits')},
+                        middle : contrastPupil(profile),
+                        others : otherTypes(organ, profile)
+                      })}</div>`;
 }
 export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
   const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
@@ -397,17 +416,7 @@ export function visionInspector(state, organ) {
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
     return section(nearAnswers(state, organ));
-  const names = profiles.map(profileName);
-  const chip = (profile, i) => {
-    const name = names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i]
-                                                                         : names[i] + ' ' + (i + 1);
-    return `<button data-vision-profile="${idSafe(profile.id)}" class="${
-        profile.id === p.id ? 'active'
-                            : ''}" style="--profile:${profileColor(profile)}" aria-label="${
-        label('profile')} ${escapeText(name)}" title="${escapeText(name)}"><i></i></button>`;
-  };
-  return section(`<div class="aid-vision-profiles">${
-             profiles.map(chip).join('')}<button class="aid-add" data-vision-add="${
+  return section(`<div class="aid-vision-profiles"><button class="aid-add" data-vision-add="${
              idSafe(organ.id)}" title="${label('add')}">＋</button>${
              profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
                                        idSafe(p.id)}" title="${label('remove')}">−</button>`
