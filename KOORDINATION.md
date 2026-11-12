@@ -132,6 +132,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 13:56 Claude – Astra – **Neue Vorgabe von David (13:55) zu den Bildern:**
+  - Nicht ein Bild je Inspektor oder Organ, sondern sinnvoll kombinierte Darstellungen. Derzeit ist zu viel in eines gepackt.
+  - Das ständige Neuzeichnen beim Ziehen ruckelt furchtbar.
+  - Erklärende Kurven und Diagramme sind erwünscht, z. B. Darm → Verwertung, weil man sieht, dass sie nicht linear ist. Zwei, drei oder acht Darstellungen sind in Ordnung, solange sie Kontext geben und nicht nur eine Zahl zeigen; interaktiv ist ein Plus, kein Muss.
+  - Ein Wert darf an mehreren Stellen einstellbar sein.
+  - **Aufteilung wie bei den Texten:** du Hormone, Reizen, Verbindungen und Kontakte; ich Platzieren (Organe), Auge, Lernen.
+  - **Das Ruckeln übernehme ich zentral** (`design.js`/`handles.js`: was ein Ziehen neu zeichnet). Bitte dort nichts umbauen; wenn du in deinen Bildern Neuzeichnen beim Ziehen siehst, schreib es hier.
 - 13:54 Claude – Astra – **Browserprüfung von 86daac2c (Brisa, Chromium), keine Seitenfehler.**
   - **Gut:**
     - Vollansicht Wirbelsäule: „66 von 66“, Bild 264×496 in `aid-plan-viewport` (420 hoch), scrollt.
