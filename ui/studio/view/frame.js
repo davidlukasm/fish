@@ -4,7 +4,7 @@ import {BODY_FRAME, BODY_KNOTS, BODY_MIDDLE, ZONE_X} from '../model/layout.js';
 import {finVolumeOf, sideFinSize, tailFinSize} from '../../fish_organs.js';
 import {FIN} from '../../schema.js';
 
-export const FISH_BOX = Object.freeze({x : 60, y : 60, width : 1000, height : 620});
+export const FISH_BOX = Object.freeze({x : 60, y : 0, width : 1000, height : 730});
 export const CAMERA_ZOOM = Object.freeze({min : .04, max : 8, step : 1.35});
 export const CAMERA_HOME = Object.freeze({x : 520, y : 365});
 const OUTLINE = Object.freeze({

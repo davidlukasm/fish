@@ -249,12 +249,17 @@ async function checkForagingChoice(model, sites, root) {
 }
 
 async function checkSpinalPattern(model, sites, root) {
+  const {sitePoint} = await import('../ui/studio/model/layout.js');
+  const {siteRole} = await import('../ui/studio/model/organs.js');
   let doc = model.newDocument('Wirbelsäule');
   const ids = {};
-  for (const [type, x, y, paired] of [[ 'spine', 600, 300, true ], [ 'gut', 720, 365, false ],
-                                      [ 'balance', 550, 500, true ], [ 'pain', 400, 400, true ],
-                                      [ 'muscle', 890, 350, true ]]) {
-    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, paired);
+  // Native addresses keep this behavioural fixture independent of the Atelier projection.
+  for (const [type, address, paired] of [[ 'spine', 704, true ], [ 'gut', 318, false ],
+                                         [ 'balance', 417, true ], [ 'pain', 169, true ],
+                                         [ 'muscle', 578, true ]]) {
+    const home = sites.find(s => s.id === address);
+    const made =
+        model.addOrgan(doc, type, sites, sitePoint(home, siteRole(type)), Infinity, paired);
     assert.ok(made);
     doc = made.document;
     ids[type] = made.organId;
@@ -328,12 +333,15 @@ async function checkSpinalPattern(model, sites, root) {
 }
 
 async function checkFinPattern(model, sites, root) {
+  const {sitePoint} = await import('../ui/studio/model/layout.js');
+  const {siteRole} = await import('../ui/studio/model/organs.js');
   let doc = model.newDocument('Rudern');
   const ids = {}, names = new Map();
-  for (const [name, type, x,
-              y] of [[ 'spine', 'spine', 600, 300 ], [ 'balance', 'balance', 550, 500 ],
-                     [ 'row', 'muscle', 800, 300 ], [ 'recover', 'muscle', 800, 500 ]]) {
-    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, true);
+  for (const [name, type, address] of [[ 'spine', 'spine', 704 ], [ 'balance', 'balance', 417 ],
+                                       [ 'row', 'muscle', 676 ], [ 'recover', 'muscle', 293 ]]) {
+    const made = model.addOrgan(doc, type, sites,
+                                sitePoint(sites.find(s => s.id === address), siteRole(type)),
+                                Infinity, true);
     assert.ok(made);
     doc = made.document;
     ids[name] = made.organId;
@@ -407,13 +415,16 @@ async function checkFinPattern(model, sites, root) {
 }
 
 async function checkReversePattern(model, sites, root) {
+  const {sitePoint} = await import('../ui/studio/model/layout.js');
+  const {siteRole} = await import('../ui/studio/model/organs.js');
   let doc = model.newDocument('Rückwärts');
   const ids = {}, names = new Map();
-  for (const [name, type, x, y] of [[ 'motor', 'motor', 500, 300 ], [ 'spine', 'spine', 600, 300 ],
-                                    [ 'balance', 'balance', 550, 500 ],
-                                    [ 'pain', 'pain', 400, 400 ], [ 'row', 'muscle', 800, 300 ],
-                                    [ 'reverse', 'muscle', 800, 500 ]]) {
-    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, true);
+  for (const [name, type, address] of [[ 'motor', 'motor', 422 ], [ 'spine', 'spine', 704 ],
+                                       [ 'balance', 'balance', 105 ], [ 'pain', 'pain', 169 ],
+                                       [ 'row', 'muscle', 676 ], [ 'reverse', 'muscle', 293 ]]) {
+    const made = model.addOrgan(doc, type, sites,
+                                sitePoint(sites.find(s => s.id === address), siteRole(type)),
+                                Infinity, true);
     assert.ok(made);
     doc = made.document;
     ids[name] = made.organId;
@@ -717,9 +728,9 @@ async function checkFunctionalRegions(model, capabilities) {
 // The starters' blood sense reads their energy reserve; it must stay there when the wheel grows.
 async function checkStarterBloodSense(model, wheel, root) {
   const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
-  for (const name of [ 'brisa', 'liora' ]) {
-    const doc = JSON.parse(
-        readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
+  for (const name of ['brisa', 'liora']) {
+    const doc =
+        JSON.parse(readFileSync(join(root, 'genomes/handbau', name + '.fish.json'), 'utf8'));
     for (const c of doc.organs.filter(o => o.type === 'blood').flatMap(o => o.centers)) {
       const reads = Array.from({length : wheel.bloodSubstances},
                                (_, k) => model.wheelAffinity(wheel, c.q1, c.q2, c.qwidth, k));
@@ -965,6 +976,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  if (process.argv.includes('--canvas')) {
+    await require('./studio_canvas.js')(model, sitesResult, root);
+    console.log('Atelier: 20/40 Regionen, Zoom, ZNS-Kabel, Reizpfade und Klickplatzierung: OK');
+    return;
+  }
   if (process.argv.includes('--spine') || process.argv.includes('--fin') ||
       process.argv.includes('--reverse')) {
     if (process.argv.includes('--spine'))
@@ -977,125 +993,131 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: angeforderte Bewegungsregionen und ihre Bedienung: OK');
     return;
   }
-  await checkStarterBloodSense(model, sitesResult, root);
-  const hormoneSystems = await checkHormoneSystems(model, sitesResult);
-  if (process.argv.includes('--hormone-systems')) {
-    const result = JSON.parse(execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          "import json,sys; from atelier_service import run; r=run({'operation':'build','plan':json.load(sys.stdin)}); print(json.dumps({k:r[k] for k in ('compiler','viable','neurons','synapses')}))"
-        ],
-        {
-          cwd : root,
-          input : JSON.stringify(model.compileDocument(hormoneSystems.example, sitesResult.sites)),
-          encoding : 'utf8',
-          timeout : 60000,
-          maxBuffer : 8 * 1024 * 1024
-        }));
-    assert.ok(result.compiler.ok, JSON.stringify(result.compiler));
-    assert.ok(result.viable);
-    console.log('Atelier: Hormonregionen, getrennte Anschlüsse und Beispielfisch: OK',
-                result.neurons, result.synapses);
-    return;
-  }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
-  await checkSpinalPattern(model, sitesResult.sites, root);
-  await checkFinPattern(model, sitesResult.sites, root);
-  await checkReversePattern(model, sitesResult.sites, root);
-  await checkForagingChoice(model, sitesResult.sites, root);
-  await checkResponseControls(model, sitesResult, clicks);
-  await checkFunctionalRegions(model, sitesResult);
-  checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
-                  clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
-  if (process.argv.includes('--region-controls')) {
-    console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
-    return;
-  }
-  // Shipped blueprints remain editable and compile to their shipped fish.
-  for (const example of ['start', 'plants', 'brisa']) {
-    const source = JSON.parse(execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          "import json; from atelier_service import run, START_DOCUMENTS; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':START_DOCUMENTS[example].with_suffix('').with_suffix('.genome').read_text()}); r.update(d); print(json.dumps(r))",
-          example
-        ],
-        {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
-    assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +
-                     source.extraNodes.reduce((sum, group) => sum + group.copies, 0),
-                 source.neurons);
-    assert.equal(source.contacts.reduce((sum, edge) => sum + edge[2], 0), source.synapses,
-                 'Every generated contact appears, including unplanned sites');
-    const doc = source.document;
-    model.validateDocument(doc);
-    if (example === 'start') {
-      const {updateRegion} = await import('../ui/studio/model/regions.js');
-      let placed = structuredClone(doc);
-      placed.organs.find(o => o.type === 'brain').centers = [];
-      placed.wires = [];
-      placed.assemblies = [];
-      placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
-      for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2} ],
-                                            [ 'olfaction', 285, 415, {contrast : 1} ],
-                                            [ 'choice', 700, 365, {searchTime : .6} ]]) {
-        const r = model.addOrgan(placed, type, sitesResult.sites, {x, y});
-        assert.ok(r, type + ' fits in an occupied body');
-        placed = updateRegion(r.document, r.organId, settings, sitesResult.sites);
-        model.validateDocument(placed);
+  const hormoneSystems = await checkHormoneSystems(model, sitesResult);
+  if (!process.argv.includes('--ui')) {
+    await checkStarterBloodSense(model, sitesResult, root);
+    if (process.argv.includes('--hormone-systems')) {
+      const result = JSON.parse(execFileSync(
+          'python3',
+          [
+            '-B', '-c',
+            "import json,sys; from atelier_service import run; r=run({'operation':'build','plan':json.load(sys.stdin)}); print(json.dumps({k:r[k] for k in ('compiler','viable','neurons','synapses')}))"
+          ],
+          {
+            cwd : root,
+            input :
+                JSON.stringify(model.compileDocument(hormoneSystems.example, sitesResult.sites)),
+            encoding : 'utf8',
+            timeout : 60000,
+            maxBuffer : 8 * 1024 * 1024
+          }));
+      assert.ok(result.compiler.ok, JSON.stringify(result.compiler));
+      assert.ok(result.viable);
+      console.log('Atelier: Hormonregionen, getrennte Anschlüsse und Beispielfisch: OK',
+                  result.neurons, result.synapses);
+      return;
+    }
+    await checkSpinalPattern(model, sitesResult.sites, root);
+    await checkFinPattern(model, sitesResult.sites, root);
+    await checkReversePattern(model, sitesResult.sites, root);
+    await checkForagingChoice(model, sitesResult.sites, root);
+    await checkResponseControls(model, sitesResult, clicks);
+    await checkFunctionalRegions(model, sitesResult);
+    checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
+                    clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
+    if (process.argv.includes('--region-controls')) {
+      console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
+      return;
+    }
+    // Shipped blueprints remain editable and compile to their shipped fish.
+    for (const example of ['start', 'plants', 'brisa']) {
+      const source = JSON.parse(execFileSync(
+          'python3',
+          [
+            '-B', '-c',
+            "import json; from atelier_service import run, START_DOCUMENTS; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':START_DOCUMENTS[example].with_suffix('').with_suffix('.genome').read_text()}); r.update(d); print(json.dumps(r))",
+            example
+          ],
+          {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
+      assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +
+                       source.extraNodes.reduce((sum, group) => sum + group.copies, 0),
+                   source.neurons);
+      assert.equal(source.contacts.reduce((sum, edge) => sum + edge[2], 0), source.synapses,
+                   'Every generated contact appears, including unplanned sites');
+      const doc = source.document;
+      model.validateDocument(doc);
+      if (example === 'start') {
+        const {updateRegion} = await import('../ui/studio/model/regions.js');
+        let placed = structuredClone(doc);
+        placed.organs.find(o => o.type === 'brain').centers = [];
+        placed.wires = [];
+        placed.assemblies = [];
+        placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
+        for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2} ],
+                                              [ 'olfaction', 285, 415, {contrast : 1} ],
+                                              [ 'choice', 700, 365, {searchTime : .6} ]]) {
+          const r = model.addOrgan(placed, type, sitesResult.sites, {x, y});
+          assert.ok(r, type + ' fits in an occupied body');
+          placed = updateRegion(r.document, r.organId, settings, sitesResult.sites);
+          model.validateDocument(placed);
+        }
+        const paired = placed.organs.find(o => o.type === 'olfaction');
+        assert.ok(paired.pair);
+        const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites,
+                                      {fromPort : 'presence'});
+        const tailWire = model.addWire(eggWire.document, paired.id, 'schub--1', 'same',
+                                       sitesResult.sites, {fromPort : 'presence'});
+        const plan = model.compileDocument(tailWire.document, sitesResult.sites);
+        const command = paired.centers.find(c => c.node === 'concentration').id;
+        assert.equal(
+            plan.groups[model.allCenters(tailWire.document).findIndex(c => c.id === command)]
+                .crossing,
+            0, 'One ovary contains targets on both physical sides');
+        const both = model.updateWire(tailWire.document, eggWire.wireId, {pairing : 'both'});
+        const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
+        assert.equal(projections.length, 2);
+        assert.deepEqual(new Set(projections.map(p => p.from)),
+                         new Set([ paired.id, paired.pair ]));
+        const hub = model.addNeuron(both, 'modulate', sitesResult.sites, {x : 335, y : 365});
+        const broadcast = model.addWire(hub.document, hub.centerId, paired.id, 'both',
+                                        sitesResult.sites, {toPort : 'scent'});
+        assert.equal(model.expandedWires(broadcast.document)
+                         .filter(w => w.wire.id === broadcast.wireId)
+                         .length,
+                     2, 'A central teacher can reach both halves');
       }
-      const paired = placed.organs.find(o => o.type === 'olfaction');
-      assert.ok(paired.pair);
-      const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites,
-                                    {fromPort : 'presence'});
-      const tailWire = model.addWire(eggWire.document, paired.id, 'schub--1', 'same',
-                                     sitesResult.sites, {fromPort : 'presence'});
-      const plan = model.compileDocument(tailWire.document, sitesResult.sites);
-      const command = paired.centers.find(c => c.node === 'concentration').id;
-      assert.equal(plan.groups[model.allCenters(tailWire.document).findIndex(c => c.id === command)]
-                       .crossing,
-                   0, 'One ovary contains targets on both physical sides');
-      const both = model.updateWire(tailWire.document, eggWire.wireId, {pairing : 'both'});
-      const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
-      assert.equal(projections.length, 2);
-      assert.deepEqual(new Set(projections.map(p => p.from)), new Set([ paired.id, paired.pair ]));
-      const hub = model.addNeuron(both, 'modulate', sitesResult.sites, {x : 335, y : 365});
-      const broadcast = model.addWire(hub.document, hub.centerId, paired.id, 'both',
-                                      sitesResult.sites, {toPort : 'scent'});
-      assert.equal(model.expandedWires(broadcast.document)
-                       .filter(w => w.wire.id === broadcast.wireId)
-                       .length,
-                   2, 'A central teacher can reach both halves');
+      const saved = JSON.parse(JSON.stringify(doc));
+      assert.ok(model.regenerateFields(saved, sitesResult.sites));
+      assert.deepEqual(saved, doc);
+      const plan = model.compileDocument(saved, sitesResult.sites);
+      assert.equal(plan.source, undefined);
+      assert.equal(plan.groups.length, model.allCenters(doc).length);
+      assert.ok(doc.wires.length < plan.connections.length);
+      // Brisa forages by smell alone and has no sensory field to retune.
+      const near = doc.organs.find(o => o.type === 'proximity');
+      if (near) {
+        const tuned = model.updateField(
+            doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}}, sitesResult.sites);
+        assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length,
+                     plan.groups.length);
+        assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
+                         model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
+      }
+      const checked = JSON.parse(execFileSync(
+          'python3',
+          [
+            '-B', '-c',
+            "import json,sys; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); print(json.dumps({k:r[k] for k in ['neurons','synapses','viable','compiler']}))"
+          ],
+          {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
+      assert.ok(checked.compiler.ok, JSON.stringify(checked.compiler));
+      assert.equal(checked.neurons, source.neurons);
+      assert.equal(checked.synapses, source.synapses);
+      assert.equal(checked.viable, source.viable);
     }
-    const saved = JSON.parse(JSON.stringify(doc));
-    assert.ok(model.regenerateFields(saved, sitesResult.sites));
-    assert.deepEqual(saved, doc);
-    const plan = model.compileDocument(saved, sitesResult.sites);
-    assert.equal(plan.source, undefined);
-    assert.equal(plan.groups.length, model.allCenters(doc).length);
-    assert.ok(doc.wires.length < plan.connections.length);
-    // Brisa forages by smell alone and has no sensory field to retune.
-    const near = doc.organs.find(o => o.type === 'proximity');
-    if (near) {
-      const tuned = model.updateField(
-          doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}}, sitesResult.sites);
-      assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length,
-                   plan.groups.length);
-      assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
-                       model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
-    }
-    const checked = JSON.parse(execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          "import json,sys; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); print(json.dumps({k:r[k] for k in ['neurons','synapses','viable','compiler']}))"
-        ],
-        {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
-    assert.ok(checked.compiler.ok, JSON.stringify(checked.compiler));
-    assert.equal(checked.neurons, source.neurons);
-    assert.equal(checked.synapses, source.synapses);
-    assert.equal(checked.viable, source.viable);
   }
+  await require('./studio_canvas.js')(model, sitesResult, root);
   {
     const {stimulusKind} = await import('../ui/studio/view/stimulus.js');
     const drawn =
@@ -1124,7 +1146,7 @@ async function checkHormoneSystems(model, capabilities) {
   const scale = geometry.cameraScale(shortViewport, camera);
   assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
                                shortViewport.height / cameraBox.height));
-  assert.ok(Math.abs(120 / scale - 77.5) < .01);
+  assert.ok(Math.abs(120 / scale - 91.25) < .01);
   assert.ok(geometry.CAMERA_ZOOM.min < 1 && geometry.CAMERA_ZOOM.max > 1);
   assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   const sites = sitesResult.sites;
@@ -1178,10 +1200,14 @@ async function checkHormoneSystems(model, capabilities) {
     organAudits.push({document : added.document, id : added.organId, type : definition.key});
   }
   {
-    const gut = model.addOrgan(model.newDocument('Auftrieb'), 'gut', sites, {x : 600, y : 360});
-    const bladder = model.addOrgan(gut.document, 'bladder', sites, {x : 650, y : 360});
-    organAudits.push(
-        {document : bladder.document, id : bladder.organId, type : 'bladder', pressure : true});
+    const gut = model.addOrgan(model.newDocument('Auftrieb'), 'gut', sites,
+                               geometry.sitePoint(sites.find(s => s.id === 390)));
+    const bladder = model.addOrgan(gut.document, 'bladder', sites,
+                                   geometry.sitePoint(sites.find(s => s.id === 366)));
+    const cells = model.findOrgan(bladder.document, bladder.organId).centers;
+    let document = model.placeNode(bladder.document, cells[2].id, 368, sites);
+    document = model.placeNode(document, cells[3].id, 344, sites);
+    organAudits.push({document, id : bladder.organId, type : 'bladder', pressure : true});
   }
   {
     // The gut's own cells carry its length; the throat no longer does.
@@ -1683,7 +1709,9 @@ async function checkHormoneSystems(model, capabilities) {
   assert.equal(model.placeStoredModule(model.newDocument(), malformed, sites, position), null);
   assert.ok(geometry.onMidline(
       sites.find(s => s.id === model.findCenter(baseDoc, relay.centerId).center.site)));
-  const beside = model.addNeuron(baseDoc, 'relay', sites, {x : 500, y : 400});
+  const besideSite = sites.find(s => s.zone === geometry.ZONE.head && !s.outer && s.w > 0 &&
+                                     !model.usedSites(baseDoc).has(s.id));
+  const beside = model.addNeuron(baseDoc, 'relay', sites, geometry.sitePoint(besideSite, 'nerve'));
   assert.match(views.fishScene({
     document : beside.document,
     sites,
@@ -2282,6 +2310,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   }
   const rendered = {
     ...state,
+    camera : {...state.camera, zoom : 4.2},
     anatomy : seen,
     report : built,
     stale : false,
@@ -2885,7 +2914,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const layersView = await import('../ui/studio/view/layers.js');
     const far = {tool : 'wire', camera : {zoom : .5}, layers : {}};
     assert.ok(!layersView.layerShown(far, 'nodes') && layersView.layerShown(far, 'wires'));
-    assert.ok(!layersView.layerShown({...far, tool : 'select'}, 'wires'));
+    assert.ok(layersView.layerShown({...far, tool : 'select'}, 'wires'));
     assert.ok(layersView.layerShown({...far, tool : 'hormone'}, 'hormones') &&
               !layersView.layerShown(far, 'hormones'));
     const on = {...far, layers : layersView.switchLayer(far, 'nodes')};
@@ -3017,8 +3046,9 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(Math.abs(skinBack('sensitivity').threshold - touchCell.threshold) < .05);
     const layout = await import('../ui/studio/model/layout.js');
     assert.deepEqual(layout.centroid([ {x : 0, y : 0}, {x : 4, y : 2} ]), {x : 2, y : 1});
-    assert.ok(sites.filter(layout.nerveZone)
-                  .every(s => s.zone === layout.ZONE.head || s.zone === layout.ZONE.trunk));
+    assert.ok(
+        sites.filter(layout.nerveZone)
+            .every(s => !s.outer && s.zone >= layout.ZONE.head && s.zone <= layout.ZONE.tail));
     assert.deepEqual(model.contactBundle([ 1, 2, 3, .5, 2, 1, .7, -.4 ]), {
       from : 1,
       to : 2,
@@ -3113,17 +3143,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         assert.ok(placed, type + ' still finds room in a brain with every other region');
         full = placed.document;
       }
-      const rendered = views.bodySvg({...state, document : full, sites});
-      const boxes = [
-        ...rendered.matchAll(
-            /class="aid-anatomical-region ([^"]+)" cx="([^"]+)" cy="([^"]+)" rx="([^"]+)" ry="([^"]+)"/g)
-      ].map(([, type, x, y, rx, ry ], i) => ({
-              type,
-              i,
-              x : [ Number(x) - Number(rx), Number(x) + Number(rx) ],
-              y : [ Number(y) - Number(ry), Number(y) + Number(ry) ]
-            }));
-      assert.equal(boxes.length, full.organs.filter(o => o.region).length);
+      const rendered = views.fishScene({...state, document : full, sites});
+      const boxes = full.organs.filter(o => o.region).map((organ, i) => {
+        const box = brainPlaces.regionGeometry(full, sites, organ);
+        return {
+          type : organ.type,
+          i,
+          x : [ box.x - box.width / 2, box.x + box.width / 2 ],
+          y : [ box.y - box.height / 2, box.y + box.height / 2 ]
+        };
+      });
+      assert.equal((rendered.match(/class="aid-anatomical-region"/g) ?? []).length, boxes.length);
       const overlap = (a, b) => Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
       const area = box => (box.x[1] - box.x[0]) * (box.y[1] - box.y[0]);
       for (const a of boxes)

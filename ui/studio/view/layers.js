@@ -3,13 +3,25 @@ import {zoomOf} from './frame.js';
 export const LAYER_KEYS = Object.freeze([ 'wires', 'nodes', 'hormones' ]);
 export const AUTO = 'auto';
 const LAYER_MODES = Object.freeze([ AUTO, true, false ]);
-const NODES_ZOOM = 1.35;
-const MOVE_WIRES_ZOOM = 1;
+const REVEAL = Object.freeze(
+    {regions : [ 1.1, 2.2 ], cells : [ 2.6, 4.2 ], fields : [ 1.6, 2.4 ], seats : [ 3.8, 5 ]});
+const fade = (zoom, [ from, to ]) => {
+  const x = Math.max(0, Math.min(1, (zoom - from) / (to - from)));
+  return x * x * (3 - 2 * x);
+};
+export const detailMix = state => Object.fromEntries(
+    Object.entries(REVEAL).map(([ name, interval ]) => [name, fade(zoomOf(state), interval)]));
+export function nodeOpacity(state, chosen = false) {
+  const mode = layerMode(state, 'nodes');
+  return mode === true    ? 1
+         : mode === false ? (chosen ? detailMix(state).cells : 0)
+                          : detailMix(state).cells;
+}
 const HORMONE_TOOLS = Object.freeze([ 'hormone', 'learn' ]);
 const STORE = 'aid.atelier.layer-modes';
 const LAYER_DEFAULTS = Object.freeze({
-  wires : (tool, zoom) => tool !== 'select' || zoom >= MOVE_WIRES_ZOOM,
-  nodes : (tool, zoom) => zoom >= NODES_ZOOM,
+  wires : () => true,
+  nodes : (tool, zoom) => zoom > REVEAL.cells[0],
   hormones : tool => HORMONE_TOOLS.includes(tool)
 });
 export const layerMode = (state, key) =>

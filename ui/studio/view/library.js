@@ -338,10 +338,16 @@ const LIBRARIES = Object.freeze({
 });
 export function libraryOf(state) {
   const kind = LIBRARIES[state.tool] ? state.tool : 'select';
+  const html = LIBRARIES[kind](state);
+  const armed = state.armed;
+  const attribute = armed && 'data-drag-kind="' + armed.kind + '" data-drag-value="' +
+                                 escapeText(armed.value) + '"';
+  const marked = armed && armed.kind !== 'wiring'
+                     ? html.replace(attribute, attribute + ' aria-pressed="true"')
+                     : html;
   return {
     kind,
-    html : '<div class="aid-library-intro">' + heading(label('tools.' + kind)) + '</div>' +
-               LIBRARIES[kind](state)
+    html : '<div class="aid-library-intro">' + heading(label('tools.' + kind)) + '</div>' + marked
   };
 }
 const WORKFLOW = Object.freeze([ 'select', 'wire', 'hormone', 'learn', 'stimulate' ]);

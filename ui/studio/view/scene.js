@@ -1,33 +1,47 @@
 import {clamp} from '../../units.js';
 import {tectumBands, visionFan} from './vision.js';
 import {bodySvg, organHitsSvg} from './body.js';
-import {nodeLocation, organLocation, REGION_CHIP, showsNodes, slotRow} from './places.js';
-import {organTitle, centerTitle, slotTitle} from './names.js';
+import {nodeLocation, organLocation, regionGeometry, showsNodes} from './places.js';
+import {organTitle, centerTitle} from './names.js';
 import {TOOL_ICON} from './icons.js';
-import {escapeText, fixed, glyph, placedGlyph} from './markup.js';
+import {escapeText, fixed, glyph} from './markup.js';
 import {substanceColor} from '../../hormones.js';
-import {joinList, joinParts, namedText, t} from '../../strings.js';
+import {t} from '../../strings.js';
 import {isRegion, nerveKind, ORGAN_BY_KEY} from '../model/organs.js';
 import {
   allCenters,
+  usedSites,
   contactCenters,
   findAssembly,
   findCenter,
-  isChosen,
   organOf,
   wiredCrossing,
   shownSubstance
 } from '../model/document.js';
-import {BODY_FRAME, BODY_RADIUS, centroid, findSite, onMidline} from '../model/layout.js';
-import {regionSlots} from '../model/regions.js';
+import {
+  BODY_FRAME,
+  BODY_RADIUS,
+  centroid,
+  findSite,
+  nerveZone,
+  onMidline,
+  sitePoint
+} from '../model/layout.js';
 import {cameraBox, steadyAt, viewBoxOf, zoomOf} from './frame.js';
 import {hormoneOverlay, hormoneRoles} from './influence.js';
 import {CATEGORY_TONE, isSelected, moduleName, tone} from './names.js';
-import {developedContactsSvg, endpointIndex, wireMarkers, wireSvg} from './wires.js';
-import {ICON, slotFill, slotShape} from './kit.js';
+import {
+  developedContactsSvg,
+  endpointIndex,
+  regionContactsSvg,
+  wireMarkers,
+  wireSvg,
+  wireBranchesSvg
+} from './wires.js';
+import {ICON} from './kit.js';
 import {stimulusKind} from './stimulus.js';
 import {probeScents, senseProbeSvg} from './probes.js';
-import {layerShown} from './layers.js';
+import {detailMix, nodeOpacity, layerShown} from './layers.js';
 
 const MARKER = Object.freeze({
   size : 5.5,
@@ -83,11 +97,16 @@ function centersSvg(state) {
       const selectedCenter = isSelected(selected, 'center', center.id) ||
                              (state.multi?.has(center.id) ?? false) || selectedOrg ||
                              assemblyCenters.has(center.id);
-      const G = CENTER_GLYPH, r = selectedCenter ? G.chosen : G.radius;
+      const G = CENTER_GLYPH, region = isRegion(organ) ? regionGeometry(doc, sites, organ) : null;
+      const spacing = region ? region.spacing : Infinity;
+      const r = Math.min(selectedCenter ? G.chosen : G.radius, spacing * zoom * .32);
       result +=
           '<g class="aid-neural-center' + (selectedCenter ? ' selected' : '') + '" data-center="' +
-          escapeText(center.id) + '"' + steadyAt(cp, zoom) + '>' +
-          '<circle class="aid-neural-body" r="' + fixed(r + G.halo) + '" fill="' + color + '"/>' +
+          escapeText(center.id) + '" opacity="' + fixed(nodeOpacity(state, selectedCenter)) + '"' +
+          steadyAt(cp, zoom) + '>' +
+          '<title>' + escapeText(centerTitle(center)) +
+          '</title><circle class="aid-neural-body" r="' + fixed(r + Math.min(G.halo, r * .35)) +
+          '" fill="' + color + '"/>' +
           (roles.has(center.id) ? '<circle class="aid-hormone-ring ' + roles.get(center.id) +
                                       '" r="' + fixed(r + G.ring) + '" stroke="' + substance + '"/>'
                                 : '') +
@@ -95,7 +114,7 @@ function centersSvg(state) {
     }
     // The name shows for the organ chosen itself; a chosen module's organs stay unnamed, so their
     // names do not pile up.
-    if (isSelected(selected, 'organ', organ.id)) {
+    if (!isRegion(organ) && isSelected(selected, 'organ', organ.id)) {
       const place = organLabelPlace(pos.y, zoom);
       result += '<text data-label-y="' + fixed(pos.y) + '" x="' + fixed(pos.x) + '" y="' +
                 fixed(place.y) + '" text-anchor="middle" class="aid-organ-label" font-size="' +
@@ -131,37 +150,6 @@ function assembliesSvg(state) {
 const ORGAN_LABEL = Object.freeze({below : 47, size : 14});
 export const organLabelPlace = (y, zoom) =>
     ({y : y + ORGAN_LABEL.below / zoom, 'font-size' : ORGAN_LABEL.size / zoom});
-const SLOT = Object.freeze({...REGION_CHIP, round : 6, icon : 14});
-function slotsSvg(state) {
-  const {document : doc, sites, selected} = state, zoom = zoomOf(state);
-  let html = '';
-  for (const organ of doc.organs.filter(o => ORGAN_BY_KEY[o.type].slots)) {
-    const chosen = isChosen(selected, organ);
-    const slots = regionSlots(doc, organ).filter(s => chosen || s.required && !s.filled.length);
-    const points = organ.centers.map(c => nodeLocation(doc, sites, c, organ.type));
-    if (!slots.length || !points.length)
-      continue;
-    const {x, y} = slotRow(organ, points, slots.length, zoom);
-    slots.forEach((slot, i) => {
-      const fill = slotFill(slot);
-      const dx = (i - (slots.length - 1) / 2) * (SLOT.width + SLOT.gap);
-      const need = joinParts([
-        slotTitle(slot), t(slot.required ? 'studio.regions.required' : 'studio.regions.optional')
-      ]);
-      const name = slot.filled.length
-                       ? namedText(need, joinList(slot.filled.map(o => organTitle(o, sites))))
-                       : need;
-      html += '<g class="aid-slot-chip ' + fill + ' ' + slot.dir + '" data-slot-region="' +
-              escapeText(organ.id) + '" data-slot-key="' + escapeText(slot.key) +
-              '" data-slot-dir="' + slot.dir + '"' + steadyAt({x, y}, zoom) + '><title>' +
-              escapeText(name.replace(/\u00ad/g, '')) + '</title><rect x="' +
-              fixed(dx - SLOT.width / 2) + '" y="' + fixed(-SLOT.height / 2) + '" width="' +
-              SLOT.width + '" height="' + SLOT.height + '" rx="' + SLOT.round + '"/>' +
-              placedGlyph(slotShape(slot), SLOT.icon, {x : dx}) + '</g>';
-    });
-  }
-  return html;
-}
 function reachSvg(state) {
   const {document : doc, sites, selected} = state, least = state.capabilities?.reachLeast;
   const found = selected?.kind === 'center' ? findCenter(doc, selected.id) : null;
@@ -210,15 +198,16 @@ const LAYER_ID = Object.freeze({
 export const PROBE_LAYER = 'aid-sense-probe';
 export const LAYER = Object.freeze(
     Object.fromEntries(Object.entries(LAYER_ID).map(([ key, id ]) => [key, '#' + id])));
-function wiresShown(state, centers) {
+function wiresShown(state, centers, foreground = false) {
   const shown = layerShown(state, 'wires') ? state
                 : state.selected           ? {...state, wireScope : 'focus'}
                                            : null;
   if (!shown)
     return '';
   return state.contactView === 'actual' && !state.stale && state.report?.compiler
-             ? developedContactsSvg(shown, centers)
-             : wireSvg(shown, centers);
+             ? (foreground ? '' : developedContactsSvg(shown, centers))
+         : foreground ? wireBranchesSvg(shown, centers)
+                      : wireSvg(shown, centers);
 }
 function fieldsShown(state) {
   const organ = organOf(state.document, state.selected?.id);
@@ -242,12 +231,29 @@ function generatedCenters(state) {
              .join('') +
          '</g>';
 }
+function neuralSeats(state) {
+  if (!state.armed || detailMix(state).seats <= 0)
+    return '';
+  const used = usedSites(state.document), seen = new Set();
+  return '<g class="aid-neural-seats" opacity="' + fixed(detailMix(state).seats) + '">' +
+         state.sites.filter(s => nerveZone(s) && !used.has(s.id))
+             .map(site => {
+               const p = sitePoint(site, 'nerve'), key = fixed(p.x) + ':' + fixed(p.y);
+               if (seen.has(key))
+                 return '';
+               seen.add(key);
+               return '<circle cx="' + fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' +
+                      fixed(2 / zoomOf(state)) + '"/>';
+             })
+             .join('') +
+         '</g>';
+}
 export function fishScene(state) {
   const camera = cameraBox(state.camera);
   const centers = endpointIndex(state.document);
   const anatomy = bodySvg(state);
   const cones =
-      fieldsShown(state)
+      detailMix(state).fields > 0 && fieldsShown(state)
           ? state.document.organs.filter(o => o.field).map(o => visionFan(state, o)).join('') +
                 tectumBands(state)
           : '';
@@ -257,12 +263,14 @@ export function fishScene(state) {
          '<defs>' + wireMarkers(camera.zoom) + '</defs><rect x="' + fixed(camera.x) + '" y="' +
          fixed(camera.y) + '" width="' + fixed(camera.width) + '" height="' + fixed(camera.height) +
          '" class="aid-canvas-ground"/>' +
-         '<g class="aid-anatomy">' + anatomy + '</g>' + hormoneOverlay(state) +
+         '<g class="aid-anatomy">' + anatomy + '</g>' + neuralSeats(state) + hormoneOverlay(state) +
          '<g class="aid-wires">' + wiresShown(state, centers) + '</g>' + reachSvg(state) +
-         organHitsSvg(state) + '<g class="aid-centers">' + centersSvg(state) + '</g>' +
-         generatedCenters(state) + '<g class="aid-slots">' + slotsSvg(state) + '</g>' +
-         '<g class="aid-assemblies">' + assembliesSvg(state) + '</g>' +
-         '<g class="aid-fov-fields">' + cones + '</g>' +
+         organHitsSvg(state) + wiresShown(state, centers, true) +
+         regionContactsSvg(state, centers) + '<g class="aid-centers">' + centersSvg(state) +
+         '</g>' + generatedCenters(state) + '<g class="aid-assemblies">' + assembliesSvg(state) +
+         '</g>' +
+         '<g class="aid-fov-fields" opacity="' + fixed(detailMix(state).fields) + '">' + cones +
+         '</g>' +
          '<g id="' + PROBE_LAYER + '">' + senseProbeSvg(state) + '</g>' +
          '<g id="' + LAYER_ID.hints + '"></g>' +
          '<g id="' + LAYER_ID.choices + '" pointer-events="none"></g>' +

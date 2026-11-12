@@ -1,3 +1,5 @@
+import {regionRim, brainLobes} from './region_layout.js';
+import {detailMix, nodeOpacity} from './layers.js';
 import {
   BODY_FRAME,
   BODY_MIDDLE,
@@ -34,7 +36,6 @@ import {
   skinDirection,
   skinPoints,
   SNOUT_TIP,
-  steadyAt,
   tailFin,
   zoomOf
 } from './frame.js';
@@ -42,18 +43,19 @@ import {ANATOMY, BODY_UNIT, FIN_STROKE} from '../../schema.js';
 import {gutTurns, jawReach, lipWidth, toothForm} from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {t} from '../../strings.js';
-import {escapeText, fixed, placedGlyph} from './markup.js';
+import {escapeText, fixed} from './markup.js';
 import {profileColor} from './spectrum.js';
 import {arrowPath, lateralFeel, lateralRing, ringDiscs} from './lateral.js';
 import {hairVector} from './balance.js';
 import {isPelvicMuscle, isRegion, kindLimit, organFunction, siteRole} from '../model/organs.js';
 import {muscleShape, workTone} from './muscles.js';
 import {fibreHex} from '../../fibre.js';
-import {STUDIO_ICON} from '../../organ_icons.js';
 import {preferredScent} from '../../tuning.js';
 import {scentColors} from '../../brain_model.js';
 import {
   BRAIN,
+  regionGeometry,
+  brainHalfWidth,
   centerLocation,
   EYE,
   eyeLocation,
@@ -73,7 +75,7 @@ import {organTitle} from './names.js';
 const BRAIN_STEPS = 72;
 function hemisphereWidth(u) {
   const C = BRAIN.cerebrum;
-  return C.half * Math.sin(Math.PI * u) ** C.full * (C.front + (1 - C.front) * u);
+  return brainHalfWidth(C.from + u * (C.to - C.from));
 }
 function hemispherePoint(side, [ u, v ]) {
   const C = BRAIN.cerebrum;
@@ -98,18 +100,6 @@ function hemisphere(side) {
   }
   return d + 'Z';
 }
-function smoothThrough(points) {
-  const n = points.length - 1;
-  let d = 'M' + fixed(points[0].x) + ' ' + fixed(points[0].y);
-  for (let k = 0; k < n; k++) {
-    const p0 = points[Math.max(0, k - 1)], p1 = points[k], p2 = points[k + 1],
-          p3 = points[Math.min(n, k + 2)];
-    d += ' C' + fixed(p1.x + (p2.x - p0.x) / 6) + ' ' + fixed(p1.y + (p2.y - p0.y) / 6) + ' ' +
-         fixed(p2.x - (p3.x - p1.x) / 6) + ' ' + fixed(p2.y - (p3.y - p1.y) / 6) + ' ' +
-         fixed(p2.x) + ' ' + fixed(p2.y);
-  }
-  return d;
-}
 function brainSvg(fill) {
   const M = BODY_FRAME.middle, B = BRAIN, E = B.cerebellum, C = B.cord;
   const cerebellum =
@@ -129,16 +119,22 @@ function brainSvg(fill) {
                                    ' ' + M + ' ' + fixed(end) + ' ' + fixed(M + y);
                           })
                     .join(' ');
-  const folds =
-      [ -1, 1 ]
-          .flatMap(side => B.folds.map(f => smoothThrough(f.map(p => hemispherePoint(side, p)))))
+  const segments =
+      Array
+          .from({length : C.segments},
+                (_, i) => {
+                  const x = C.from + (i + 1) * (C.to - C.from) / (C.segments + 1);
+                  const half = C.half[0] + (C.half[1] - C.half[0]) * (x - C.from) / (C.to - C.from);
+                  return 'M' + fixed(x) + ' ' + fixed(M - half) + ' Q' + fixed(x - 7) + ' ' + M +
+                         ' ' + fixed(x) + ' ' + fixed(M + half);
+                })
           .join(' ');
   const part = (shapes, lines) => '<g class="aid-brain-lobe" fill="' + fill + '">' + shapes +
                                   '</g><path class="aid-brain-fissure" d="' + lines + '"/>';
   return '<g class="aid-brain"><title>' + escapeText(t('studio.organs.brain')) +
          '</title><g class="aid-brain-edge" style="stroke-width:' + 2 * B.edge + 'px">' + cord +
-         cerebellum + hemispheres + '</g>' + part(cord, '') + part(cerebellum, folia) +
-         part(hemispheres, folds) + '<g class="aid-brain-tint">' + cord + cerebellum + hemispheres +
+         cerebellum + hemispheres + '</g>' + part(cord, segments) + part(cerebellum, folia) +
+         part(hemispheres, '') + '<g class="aid-brain-tint">' + cord + cerebellum + hemispheres +
          '</g></g>';
 }
 function retinaNodes(state, organs) {
@@ -151,9 +147,10 @@ function retinaNodes(state, organs) {
       const chosen = state.selected?.id === center.id || state.multi?.has(center.id);
       const other = state.visionProfile && center.profile !== state.visionProfile;
       html += '<circle class="aid-retina-node' + (chosen ? ' selected' : '') +
-              (other ? ' other' : '') + '" data-center="' + escapeText(center.id) + '" cx="' +
-              fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) +
-              '" fill="' + (profile ? profileColor(profile) : 'currentColor') + '"/>';
+              (other ? ' other' : '') + '" opacity="' + fixed(nodeOpacity(state, chosen)) +
+              '" data-center="' + escapeText(center.id) + '" cx="' + fixed(p.x) + '" cy="' +
+              fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) + '" fill="' +
+              (profile ? profileColor(profile) : 'currentColor') + '"/>';
     }
   return html;
 }
@@ -425,35 +422,50 @@ function gutHit(state) {
          G.intestine.map(p => fixed(p.x) + ' ' + fixed(p.y)).join(' L') + '"/><ellipse cx="' + S.x +
          '" cy="' + fixed(G.stomach.y) + '" rx="' + S.rx + '" ry="' + S.ry + '"/>';
 }
-const REGION = Object.freeze({pad : 9, least : 16, badge : 11, icon : 14, corner : .7});
-function regionHull(state, organ) {
-  const points = organ.centers.map(c => nodeLocation(state.document, state.sites, c, organ.type));
-  if (!points.length)
-    return null;
-  const xs = points.map(p => p.x), ys = points.map(p => p.y);
-  return {
-    cx : (Math.min(...xs) + Math.max(...xs)) / 2,
-    cy : (Math.min(...ys) + Math.max(...ys)) / 2,
-    rx : Math.max(REGION.least, (Math.max(...xs) - Math.min(...xs)) / 2 + REGION.pad),
-    ry : Math.max(REGION.least, (Math.max(...ys) - Math.min(...ys)) / 2 + REGION.pad)
-  };
-}
+const smoothRim = points => {
+  const mid = (a, b) => ({x : (a.x + b.x) / 2, y : (a.y + b.y) / 2});
+  const p = point => fixed(point.x) + ' ' + fixed(point.y);
+  let d = 'M' + p(mid(points.at(-1), points[0]));
+  for (let i = 0; i < points.length; ++i)
+    d += ' Q' + p(points[i]) + ' ' + p(mid(points[i], points[(i + 1) % points.length]));
+  return d + 'Z';
+};
 function regionGlyph(state, organ) {
-  const hull = regionHull(state, organ);
-  if (!hull)
+  const G = regionGeometry(state.document, state.sites, organ), mix = detailMix(state);
+  if (!G.rows.length)
     return '';
-  const {cx, cy, rx, ry} = hull;
-  return '<ellipse class="aid-anatomical-region ' + escapeText(organ.type) + '" cx="' + fixed(cx) +
-         '" cy="' + fixed(cy) + '" rx="' + fixed(rx) + '" ry="' + fixed(ry) + '"/>' +
-         regionBadge(state, organ, hull);
+  const name = t('studio.regionNames.' + organ.type);
+  const font = Math.min(9 * G.k, G.width * .78 / (name.length * .55));
+  const cells = nodeOpacity(state), zoom = zoomOf(state);
+  return '<g class="aid-region-card aid-region-detail ' + organ.type + '" opacity="' +
+         fixed(mix.regions) + '">' +
+         '<path class="aid-anatomical-region" d="' + smoothRim(regionRim(G)) + '"/>' +
+         '<text class="aid-region-name" style="font-size:' + fixed(font) + 'px" opacity="' +
+         fixed(1 - cells) + '" x="' + fixed(G.x) + '" y="' + fixed(G.y + font * .35) +
+         '" text-anchor="middle">' + escapeText(name) + '</text>' +
+         '<text class="aid-region-name" style="font-size:' + fixed(11 / zoom) + 'px" opacity="' +
+         fixed(cells) + '" x="' + fixed(G.x) + '" y="' + fixed(G.y - G.height / 2 - 3 / zoom) +
+         '" text-anchor="middle">' + escapeText(name) + '</text></g>';
 }
-function regionBadge(state, organ, hull = regionHull(state, organ)) {
-  if (!hull)
-    return '';
-  const {cx, cy, rx, ry} = hull, zoom = zoomOf(state);
-  return '<g class="aid-region-badge"' +
-         steadyAt({x : cx - rx * REGION.corner, y : cy - ry * REGION.corner}, zoom) +
-         '><circle r="' + REGION.badge + '"/>' + placedGlyph(STUDIO_ICON[organ.type], REGION.icon) +
+function brainLobesSvg(state) {
+  const opacity = 1 - detailMix(state).regions;
+  return '<g class="aid-brain-parts" opacity="' + fixed(opacity) + '" pointer-events="' +
+         (opacity > .5 ? 'auto' : 'none') + '">' +
+         brainLobes(state.document, state.sites)
+             .map(lobe => {
+               const
+                   font = 10.5,
+                   text = t(
+                       lobe.types.size === 1 ? 'studio.regionNames.' + lobe.type : 'studio.brainParts.' + lobe.part);
+               return '<g class="aid-region-card aid-lobe-card ' + lobe.type +
+                      '" data-brain-part="' + lobe.key + '">' +
+                      '<path class="aid-brain-part-shape" d="' + smoothRim(lobe.points) + '"/>' +
+                      '<text class="aid-region-name" x="' + fixed(lobe.x) + '" y="' +
+                      fixed(lobe.y + font * .35) +
+                      '" text-anchor="middle" style="font-size:' + fixed(font) + 'px">' +
+                      escapeText(text) + '</text></g>';
+             })
+             .join('') +
          '</g>';
 }
 function organNodes(state, organ) {
@@ -466,9 +478,10 @@ function organNodes(state, organ) {
         const p = nodeLocation(state.document, state.sites, center, organ.type);
         const chosen = state.selected?.id === center.id || state.multi?.has(center.id);
         return '<circle class="aid-retina-node aid-organ-node ' + center.role +
-               (chosen ? ' selected' : '') + '" data-center="' + escapeText(center.id) + '" cx="' +
-               fixed(p.x) + '" cy="' + fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) +
-               '"><title>' + escapeText(t('studio.centers.' + center.key)) + '</title></circle>';
+               (chosen ? ' selected' : '') + '" opacity="' + fixed(nodeOpacity(state, chosen)) +
+               '" data-center="' + escapeText(center.id) + '" cx="' + fixed(p.x) + '" cy="' +
+               fixed(p.y) + '" r="' + fixed(NODE.radius / Math.sqrt(zoom)) + '"><title>' +
+               escapeText(t('studio.centers.' + center.key)) + '</title></circle>';
       })
       .join('');
 }
@@ -620,17 +633,13 @@ function teethSvg(columns, {at, rx, ry}) {
   return html;
 }
 function headSvg(state) {
-  const columns = state.anatomy?.anatomy;
-  if (!Array.isArray(columns))
-    return '';
+  const columns = state.anatomy?.anatomy ?? [];
   const mouth = mouthShape(columns);
   const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
                columns[ANATOMY.mouth] > 0;
   return '<g class="aid-head">' + barbelsSvg(columns) +
-         (eats ? throatSvg(mouth) + intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) +
-                     mouthSvg(mouth)
-               : '') +
-         teethSvg(columns, mouth) + '</g>';
+         (eats ? throatSvg(mouth) + intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') +
+         mouthSvg(mouth) + teethSvg(columns, mouth) + '</g>';
 }
 export const fishOutline = state => fishPath(finSizes(state.anatomy?.fins));
 // Where organs take clicks: above the wires, so a visible organ is chosen where it is seen, and
@@ -640,17 +649,25 @@ export function organHitsSvg(state) {
   const drawnEyes = new Set();
   let html = '';
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
-    if (organ.type === 'brain')
+    if (organ.type === 'brain' || isRegion(organ))
       continue;
-    const glyph = isRegion(organ) ? regionBadge(state, organ)
-                  : organ.type === 'gut'
+    const glyph = organ.type === 'gut'
                       ? gutHit(state)
                       : organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (glyph)
       html +=
           '<g class="aid-organ-hit" data-organ="' + escapeText(organ.id) + '">' + glyph + '</g>';
   }
-  return '<g class="aid-organ-hits">' + html + '</g>';
+  return '<g class="aid-organ-hits">' + html + '</g>' +
+         state.document.organs.filter(isRegion)
+             .map(organ => '<g class="aid-anatomical-organ' +
+                           (organChosen(state, organ) ? ' selected' : '') + '" data-organ="' +
+                           escapeText(organ.id) + '" pointer-events="' +
+                           (detailMix(state).regions > .15 ? 'auto' : 'none') + '"><title>' +
+                           escapeText(organTitle(organ, state.sites)) + '</title>' +
+                           regionGlyph(state, organ) + '</g>')
+             .join('') +
+         brainLobesSvg(state);
 }
 function organChosen(state, organ) {
   const {selected} = state, own = id => id === organ.id || (!!organ.pair && id === organ.pair);
@@ -665,6 +682,8 @@ export function bodySvg(state) {
   const drawnEyes = new Set(), sizes = finSizes(state.anatomy?.fins);
   let organs = '', gut = '', felt = '';
   for (const organ of [...state.document.organs].sort(SKIN_FIRST)) {
+    if (isRegion(organ))
+      continue;
     felt += feltSvg(state, organ);
     const glyph = organGlyph(state, organ, drawnEyes) + organNodes(state, organ);
     if (!glyph)

@@ -411,17 +411,26 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
                            })
   };
 }
+function availableSites(desc, sites, used, requiredSide, organType) {
+  return sites.filter(
+      site => !used.has(site.id) &&
+              (ORGAN_BY_KEY[organType] ? fitsOrgan(organType, desc, site) : eligible(desc, site)) &&
+              (requiredSide === null || site.side === requiredSide));
+}
 function candidates(desc, sites, used, position, requiredSide = null, organType = '') {
-  return sites
-      .filter(site => !used.has(site.id) &&
-                      (ORGAN_BY_KEY[organType] ? fitsOrgan(organType, desc, site)
-                                               : eligible(desc, site)) &&
-                      (requiredSide === null || site.side === requiredSide))
+  return availableSites(desc, sites, used, requiredSide, organType)
       .map(site => ({site, distance : pointDistance(site, position, siteRole(organType))}))
       .sort((a, b) => a.distance - b.distance);
 }
 export function closestSite(desc, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)[0]?.site ?? null;
+}
+export function closestNativeSite(desc, sites, used, home, side = null, organType = '') {
+  return availableSites(desc, sites, used, side, organType)
+             .map(site => ({site, distance : siteSeparation(site, home)}))
+             .sort((a, b) => a.distance - b.distance || a.site.id - b.site.id)[0]
+             ?.site ??
+         null;
 }
 export function closestSiteDoing(desc, code, sites, used, position, side = null, organType = '') {
   return candidates(desc, sites, used, position, side, organType)
