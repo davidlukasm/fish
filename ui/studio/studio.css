@@ -1109,6 +1109,7 @@
 .aid-region-card .aid-anatomical-region{fill:var(--region-fill);stroke:var(--region-ink)}
 .aid-region-card .aid-region-name{fill:var(--region-ink)}
 .aid-region-icon{color:var(--region-ink);pointer-events:none}
+#aid-body-map.aid-stimulus-view .aid-region-icon{display:none}
 
 .aid-receptor-picture{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
 .aid-receptor-picture .aid-effect-scene{max-width:100%}

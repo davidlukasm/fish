@@ -468,15 +468,16 @@ const smoothRim = points => {
   return d + 'Z';
 };
 // A region shows its symbol, the same as in the library, until its own nodes take its place; the
-// symbol keeps a readable size on screen (px) but never fills more than a share of the region.
-const REGION_ICON = Object.freeze({screen : 22, share : .6});
+// symbol keeps a readable size on screen (px) but never fills more than a share of the region, and
+// fades faster than the nodes appear (power `fade`) so the two hardly overlap.
+const REGION_ICON = Object.freeze({screen : 22, share : .6, fade : 3});
 function regionGlyph(state, organ) {
   const G = regionGeometry(state.document, state.sites, organ), mix = detailMix(state);
   if (!G.rows.length)
     return '';
   const size = Math.min(REGION_ICON.screen / zoomOf(state),
                         REGION_ICON.share * Math.min(G.width, G.height)),
-        shown = 1 - nodeOpacity(state);
+        shown = (1 - nodeOpacity(state)) ** REGION_ICON.fade;
   const symbol = shown > 0 ? '<g class="aid-region-icon" opacity="' + fixed(shown) + '">' +
                                  placedGlyph(STUDIO_ICON[organ.type] ?? STUDIO_ICON.brain, size, G,
                                              {line : true}) +

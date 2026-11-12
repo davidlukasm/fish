@@ -80,6 +80,8 @@ export const gestureMethods = {
       marker.setAttribute('markerWidth', arrowSize(c.zoom));
       marker.setAttribute('markerHeight', arrowSize(c.zoom));
     }
+    // A running stimulus keeps its paths and progress at the new screen scale.
+    this.pulsePlayer?.rescale();
     return true;
   },
   // With `clearTools` the point also keeps clear of the tool bar; a point that follows the pointer
