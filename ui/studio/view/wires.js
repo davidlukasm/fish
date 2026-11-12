@@ -293,10 +293,10 @@ function wireBundles(state, centers) {
             width : WIRE_WIDTH.base + WIRE_WIDTH.spread * link.wire.spread
           };
         });
-        const s0 = manual && bends.length > 1
+        const s0 = !manual || bends.length > 1
                        ? 0
                        : joinAt(from.point, ends.flatMap(e => e.starts), chord),
-              s1 = manual && bends.length > 1
+              s1 = !manual || bends.length > 1
                        ? 1
                        : 1 - joinAt(to.point, ends.flatMap(e => e.arrives), chord);
         return {

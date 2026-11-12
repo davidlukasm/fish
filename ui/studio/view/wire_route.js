@@ -1,5 +1,6 @@
 import {BODY_FRAME} from '../model/layout.js';
 import {isRegion} from '../model/organs.js';
+import {BRAIN, neuralOrgan} from '../model/anatomy.js';
 import {organLocation, regionGeometry} from './places.js';
 import {skinAt, SNOUT_TIP} from './frame.js';
 
@@ -100,7 +101,7 @@ export function nerveRoute(doc, sites, from, to, kind) {
     }
     return best;
   };
-  const start = nearest(a), end = nearest(b), safe = p => !!clear(F.index(p));
+  const safe = p => !!clear(F.index(p));
   const direction = Math.sign(b.x - a.x) || Math.sign(b.y - a.y) || 1;
   const lane = BODY_FRAME.middle + direction * (2 + kind * GRID.step);
   const weight = p => 1 + Math.min(3, Math.abs(p.y - lane) / 18) * 2;
@@ -115,60 +116,72 @@ export function nerveRoute(doc, sites, from, to, kind) {
     }
     return Math.hypot(a.x - b.x, a.y - b.y) * (total / Math.max(1, count - 1)) <= budget;
   };
-  const cost = new Float64Array(F.cells.length).fill(Infinity),
-        parent = new Int32Array(F.cells.length).fill(-1), queue = [];
-  if (start >= 0 && end >= 0) {
-    cost[start] = 0;
-    heapPush(queue, {i : start, cost : 0, score : 0});
-  }
-  while (queue.length) {
-    const current = heapPop(queue), i = current.i;
-    if (current.cost !== cost[i])
-      continue;
-    if (i === end)
-      break;
-    const x = i % F.columns, y = Math.floor(i / F.columns);
-    for (let dy = -1; dy <= 1; dy++)
-      for (let dx = -1; dx <= 1; dx++) {
-        if ((!dx && !dy) || x + dx < 0 || x + dx >= F.columns || y + dy < 0 || y + dy >= F.rows)
-          continue;
-        const next = i + dy * F.columns + dx;
-        if (!clear(next) || (dx && dy && (!clear(i + dx) || !clear(i + dy * F.columns))))
-          continue;
-        const p = F.point(next), distance = GRID.step * Math.hypot(dx, dy),
-              candidate = cost[i] + distance * weight(p);
-        if (candidate >= cost[next])
-          continue;
-        cost[next] = candidate;
-        parent[next] = i;
-        const q = F.point(end);
-        heapPush(
-            queue,
-            {i : next, cost : candidate, score : candidate + Math.hypot(p.x - q.x, p.y - q.y)});
+  const between = (a, b) => {
+    const start = nearest(a), end = nearest(b);
+    const cost = new Float64Array(F.cells.length).fill(Infinity),
+          parent = new Int32Array(F.cells.length).fill(-1), queue = [];
+    if (start >= 0 && end >= 0) {
+      cost[start] = 0;
+      heapPush(queue, {i : start, cost : 0, score : 0});
+    }
+    while (queue.length) {
+      const current = heapPop(queue), i = current.i;
+      if (current.cost !== cost[i])
+        continue;
+      if (i === end)
+        break;
+      const x = i % F.columns, y = Math.floor(i / F.columns);
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++) {
+          if ((!dx && !dy) || x + dx < 0 || x + dx >= F.columns || y + dy < 0 || y + dy >= F.rows)
+            continue;
+          const next = i + dy * F.columns + dx;
+          if (!clear(next) || (dx && dy && (!clear(i + dx) || !clear(i + dy * F.columns))))
+            continue;
+          const p = F.point(next), distance = GRID.step * Math.hypot(dx, dy),
+                candidate = cost[i] + distance * weight(p);
+          if (candidate >= cost[next])
+            continue;
+          cost[next] = candidate;
+          parent[next] = i;
+          const q = F.point(end);
+          heapPush(
+              queue,
+              {i : next, cost : candidate, score : candidate + Math.hypot(p.x - q.x, p.y - q.y)});
+        }
+    }
+    const walk = [], budgets = [];
+    if (end >= 0 && Number.isFinite(cost[end]))
+      for (let i = end; i >= 0; i = parent[i]) {
+        walk.unshift(F.point(i));
+        budgets.unshift(cost[i]);
       }
-  }
-  const walk = [], budgets = [];
-  if (end >= 0 && Number.isFinite(cost[end]))
-    for (let i = end; i >= 0; i = parent[i]) {
-      walk.unshift(F.point(i));
-      budgets.unshift(cost[i]);
-    }
-  const points = [ a ];
-  if (walk.length) {
-    walk[0] = a;
-    walk[walk.length - 1] = b;
-    for (let i = 0; i < walk.length - 1;) {
-      let next = i + 1;
-      while (next + 1 < walk.length &&
-             visible(walk[i], walk[next + 1], (budgets[next + 1] - budgets[i]) * 1.12))
-        next++;
-      points.push(walk[next]);
-      i = next;
-    }
-  } else
-    points.push(b);
-  if (points.length === 1)
-    points.push(b);
+    const points = [ a ];
+    if (walk.length) {
+      walk[0] = a;
+      walk[walk.length - 1] = b;
+      for (let i = 0; i < walk.length - 1;) {
+        let next = i + 1;
+        while (next + 1 < walk.length &&
+               visible(walk[i], walk[next + 1], (budgets[next + 1] - budgets[i]) * 1.12))
+          next++;
+        points.push(walk[next]);
+        i = next;
+      }
+    } else
+      points.push(b);
+    if (points.length === 1)
+      points.push(b);
+    return points;
+  };
+  const neural = endpoint => !endpoint.organ || neuralOrgan(endpoint.organ.type);
+  const peripheral = neural(from) && !neural(to) ? to : neural(to) && !neural(from) ? from : null;
+  const junction = peripheral && peripheral.point.x > BRAIN.cerebrum.to
+                       ? nearest({x : peripheral.point.x, y : lane})
+                       : -1;
+  const points =
+      junction >= 0 ? [...between(a, F.point(junction)), ...between(F.point(junction), b).slice(1) ]
+                    : between(a, b);
   const result = {points, safe};
   F.paths.set(key, result);
   return result;
