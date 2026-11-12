@@ -54,15 +54,17 @@ def main():
     selected = set(args.only or [])
     natives = [n for n in NATIVE if not selected or n in selected]
     if not args.no_build:
-        targets = [binary(), *(binary(n + "-tests") for n in natives)]
-        if not selected or {"studio", "interface"} & selected:
-            targets.extend([binary("atelier"), binary("zuchtbecken")])
-        if "studio" in selected:
-            targets.append(binary("compiler-tests"))
-        command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
-                   "BUILD_DIR=" + str(BUILD), *targets]
-        if not run("Kompilieren", command, None, show_output=True):
-            return 1
+        targets = [] if selected else [binary()]
+        targets.extend(binary(n + "-tests") for n in natives)
+        if not selected or "studio" in selected:
+            targets.extend([binary("atelier"), binary("compiler-tests")])
+        if not selected or "interface" in selected:
+            targets.append(binary("zuchtbecken"))
+        if targets:
+            command = ["make", "-s", "-j" + (os.environ.get("BUILD_JOBS") or str(available_jobs())),
+                       "BUILD_DIR=" + str(BUILD), *dict.fromkeys(targets)]
+            if not run("Kompilieren", command, None, show_output=True):
+                return 1
     commands = [(n, [binary(n + "-tests")]) for n in natives]
     commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
     commands += [(n, ["node", "tests/" + n + ".js"]) for n in JAVASCRIPT]

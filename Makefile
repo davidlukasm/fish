@@ -28,18 +28,8 @@ LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
 .PHONY: all objects FORCE
-all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/verhaltenslabor \
-     $(BUILD_DIR)/build-check
+all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/verhaltenslabor
 objects: $(OBJECTS)
-NATIVE_TESTS := $(shell python3 -B tests/suite.py native)
-$(BUILD_DIR)/build-check: $(BUILD_DIR)/native-check $(BUILD_DIR)/interface-check
-	@touch $@
-$(BUILD_DIR)/native-check: $(addprefix $(BUILD_DIR)/,$(addsuffix -tests,$(NATIVE_TESTS))) tests/run_suite.py tests/suite.py
-	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only $(NATIVE_TESTS) --no-build
-	@touch $@
-$(BUILD_DIR)/interface-check: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier $(wildcard ui/*.js ui/studio/*.js ui/studio/*/*.js *.py tests/*.js tests/*.py) viewer.html protocol_schema.json
-	BUILD_DIR="$(abspath $(BUILD_DIR))" python3 -B tests/run_suite.py --only interface texts studio --no-build
-	@touch $@
 
 # GCC fat objects contain optimized machine code as well as production LTO.
 # Tests use the former: each executable links without optimizing the whole engine.
