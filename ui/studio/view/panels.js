@@ -1,4 +1,5 @@
 import {contactPlan} from './contact_plan.js';
+import {centerMarker} from './scene.js';
 import {nerveEditor} from './nerve_cell.js';
 import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
@@ -446,22 +447,37 @@ function multiInspector(state) {
          '<button data-assemble-selected>' + label('inspector.makeModule') + '</button>' +
          '<button data-clear-multi>' + label('inspector.cancelSelection') + '</button></div>';
 }
+// A cell group the CPPN added: its potential cells as a cluster of their marks; what its first cell
+// is and that the CPPN made it stand in the tooltip.
+const GENERATED = Object.freeze({size : 160, marker : 6, spacing : 8, most : 80, turn : 2.39996});
 function generatedInspector(state) {
   const center = contactCenters(state).find(center => center.id === state.selected.id);
   if (!center)
     return '';
-  const cl = center.nativeClass;
-  const row = (key, value) =>
-      '<div><dt>' + label('development.' + key) + '</dt><dd>' + value + '</dd></div>';
+  const cl = center.nativeClass, G = GENERATED, middle = G.size / 2;
+  const value = (key, text) => label('development.' + key) + ' ' + text;
+  const values = joinParts([
+    value('potentialCells', formatNumber(center.copies)),
+    ...(center.role === 'nerve' ? [
+      value('sign', formatSigned(cl.sign, 0)), value('mode', formatSigned(cl.mode, VALUE_DIGITS)),
+      value('pace', formatNumber(cl.pace, VALUE_DIGITS)),
+      value('modulator', formatNumber(cl.modulator, VALUE_DIGITS))
+    ]
+                                : []),
+    label('compiler.extraMeaning')
+  ]);
+  const cells =
+      Array
+          .from({length : Math.min(G.most, center.copies)},
+                (_, k) => '<g transform="translate(' +
+                          fixed(middle + G.spacing * Math.sqrt(k) * Math.cos(k * G.turn)) + ' ' +
+                          fixed(middle + G.spacing * Math.sqrt(k) * Math.sin(k * G.turn)) + ')">' +
+                          centerMarker(center, G.marker) + '</g>')
+          .join('');
   return '<header class="aid-inspector-head">' + heading(centerTitle(center)) +
-         '</header><dl class="aid-parameter-readout" title="' +
-         escapeText(label('compiler.extraMeaning')) + '">' + row('potentialCells', center.copies) +
-         (center.role === 'nerve'
-              ? row('sign', cl.sign) + row('mode', formatSigned(cl.mode, VALUE_DIGITS)) +
-                    row('pace', formatNumber(cl.pace, VALUE_DIGITS)) +
-                    row('modulator', formatNumber(cl.modulator, VALUE_DIGITS))
-              : '') +
-         '</dl>';
+         '</header><svg class="aid-generated-cells" viewBox="0 0 ' + G.size + ' ' + G.size +
+         '" role="img" aria-label="' + escapeText(centerTitle(center)) + '"><title>' +
+         escapeText(values) + '</title>' + cells + '</svg>';
 }
 export function inspector(state) {
   if (state.selected?.kind === 'generated')

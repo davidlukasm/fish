@@ -855,6 +855,7 @@
 .aid-compiler-options p { margin:8px 0; }
 .aid-compiler-options .aid-compiler-issue { display:block; width:100%; white-space:normal;
   text-align:left; color:#ffb1a4; margin:4px 0; }
+.aid-generated-cells{display:block;width:100%;max-width:240px;height:auto;margin:8px auto;color:var(--aid-brain)}
 .aid-module-sides{display:block;width:100%;max-width:280px;height:auto;margin:8px auto}
 .aid-module-body{fill:var(--aid-graphic);stroke:var(--aid-panel-edge);stroke-width:4}
 .aid-module-part circle{fill:var(--aid-handle)}
@@ -937,10 +938,6 @@
 
 .aid-preview-context,.aid-cell-development{border-top:1px solid var(--aid-panel-edge);margin-top:12px;padding-top:10px}
 .aid-preview-context summary,.aid-cell-development summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
-.aid-parameter-readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:9px 0}
-.aid-parameter-readout div{background:var(--aid-graphic);border-radius:5px;padding:6px}
-.aid-parameter-readout dt{font-size:10px;color:var(--aid-label-text)}
-.aid-parameter-readout dd{margin:3px 0 0;font-variant-numeric:tabular-nums;color:var(--aid-name-text)}
 .aid-life-birth{color:#d8c67e;stroke:#d8c67e}
 .aid-life-line{cursor:pointer}
 .aid-life-hit{fill:none;stroke:transparent;stroke-width:12}

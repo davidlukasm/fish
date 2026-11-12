@@ -1697,6 +1697,32 @@ async function checkHormoneSystems(model, capabilities) {
   assert.doesNotMatch(
       moduleSides({document : mirrored.document, sites}, mirrored.document.assemblies[0]),
       /data-mirror-assembly/);
+  // A cell group the CPPN added shows one mark per potential cell; its values are the tooltip.
+  const {inspector} = await import('../ui/studio/view/panels.js');
+  const generated = inspector({
+    document : circuit,
+    sites,
+    stale : false,
+    selected : {kind : 'generated', id : '@cppn-0'},
+    report : {
+      compiler : {},
+      groups : [],
+      sites : [],
+      extraNodes : [ {
+        index : 0,
+        zone : -1,
+        side : 0,
+        u : 0,
+        v : 0,
+        w : 0,
+        role : 1,
+        copies : 5,
+        nativeClass : {sign : -1, mode : 0, pace : 0, modulator : 0}
+      } ]
+    }
+  });
+  assert.equal(generated.match(/<g transform="translate\(/g)?.length, 5);
+  assert.doesNotMatch(generated, /<dl/);
   const removed = model.removeAssembly(mirrored.document, mirrored.assemblyId);
   assert.equal(model.findOrgan(removed, id), null);
   assert.equal(model.findOrgan(removed, pair), null);
