@@ -183,7 +183,11 @@ export const GRIPS = Object.freeze([
     graphic : '[data-preview-bars]',
     handle : '[data-preview-handle]',
     held : 'preview',
-    start : (studio, g, h) => ({handle : h.dataset.previewHandle})
+    start : (studio, g, h) => ({
+      handle : h.dataset.previewHandle,
+      marks : {...h.dataset},
+      size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height}
+    })
   },
   {
     graphic : '[data-spectrum]',
@@ -537,10 +541,11 @@ export const handleMethods = {
                      'threshold:' + drag.block, 'refreshSensitivity');
   },
   previewPointer(event) {
-    const drag = this.handleDrag,
-          value = previewPatch(this.state, drag.handle, pointerShare(event, drag.rect).fy);
-    if (value !== null)
-      this.setPreviewContext(drag.handle, value);
+    const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);
+    const patch = previewPatch(drag.handle, {x : fx * drag.size.width, y : fy * drag.size.height},
+                               drag.marks);
+    for (const [key, value] of Object.entries(patch))
+      this.setPreviewContext(key, value);
   },
   capacityPointer(event) {
     const drag = this.handleDrag, {fx, fy} = pointerShare(event, drag.rect);

@@ -2186,7 +2186,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const planned = {...sampled, genome : '', report : null, stale : true, tool : 'select'};
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
-  assert.match(planningInspector, /data-preview-handle="input"/);
+  assert.match(planningInspector, /data-preview-handle="situation"/);
   assert.match(planningInspector, /data-phase=/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 

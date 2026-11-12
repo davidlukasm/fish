@@ -1253,7 +1253,6 @@
     "range": "Kontaktreichweite in Körperlängen",
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
-    "inputMark": "Ein",
     "currentResponse": "Antwort bei den Beispielwerten",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",

@@ -1,7 +1,9 @@
 import {HORMONES} from '../../schema.js';
 import {allCenters} from '../model/document.js';
-import {barShare, dragBar, escapeText, fixed} from './markup.js';
-import {formatNumber, namedText} from '../../strings.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
+import {formatNumber, joinParts, namedText} from '../../strings.js';
+import {clamp} from '../../units.js';
+import {GROWTH_ICON} from './icons.js';
 import {
   LIFE_EFFECTS,
   lifePhaseEditor,
@@ -20,9 +22,18 @@ export const DEFAULT_PREVIEW_INPUT = 1;
 export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
 const word = key => label('development.' + key);
 const PREVIEW_DIGITS = 2;
-// The example situation as bars to drag: body maturity, each substance and the example input.
-const PREVIEW_BARS = Object.freeze(
-    {width : 300, height : 96, top : 12, bottom : 70, gauge : 12, knob : 7, mark : 88});
+// The example situation in one picture. A pad holds age and input together: from the young fish
+// on the left to the grown one on the right, from the strongest negative input at the bottom to
+// the strongest positive one at the top; one handle sets both. Beside it every substance is a drop
+// that grows with its level; the handle on its top sets it.
+const SITUATION = Object.freeze({
+  width : 300,
+  height : 96,
+  pad : {left : 22, top : 10, right : 150, bottom : 74},
+  key : {young : 9, grown : 17, below : 12, sign : 12},
+  drops : {left : 168, right : 292, middle : 42, least : 3, span : 11, most : 30, mark : 11},
+  knob : 7
+});
 export const PREVIEW_INPUT_LOW = -1;
 // A substance gets an example level once it is named or a cell answers it.
 function previewSubstances(doc) {
@@ -33,44 +44,76 @@ function previewSubstances(doc) {
         used.add(receptor.substance);
   return [...used ].sort((a, b) => a - b);
 }
-function previewColumns(state) {
-  const context = previewContextOf(state);
-  return [
-    {key : 'maturity', value : context.maturity, low : 0, index : HORMONES.levels},
-    ...previewSubstances(state.document)
-        .map(index => ({key : String(index), value : context.hormones[index], low : 0, index})),
-    {key : 'input', value : previewInputOf(state), low : PREVIEW_INPUT_LOW, index : null}
-  ];
-}
-export function previewPatch(state, key, fy) {
-  const column = previewColumns(state).find(c => c.key === key);
-  return column ? column.low + (1 - column.low) * barShare(PREVIEW_BARS, fy) : null;
+const padPoint = (maturity, input) => {
+  const P = SITUATION.pad;
+  return {
+    x : P.left + (P.right - P.left) * maturity,
+    y : P.bottom - (P.bottom - P.top) * (input - PREVIEW_INPUT_LOW) / (1 - PREVIEW_INPUT_LOW)
+  };
+};
+const dropRadius = level => SITUATION.drops.least + SITUATION.drops.span * level;
+// The values a handle sets, from the pointer in the picture's units and the geometry it carries.
+export function previewPatch(key, p, marks) {
+  const P = SITUATION.pad;
+  if (key === 'situation')
+    return {
+      maturity : clamp((p.x - P.left) / (P.right - P.left)),
+      input :
+          PREVIEW_INPUT_LOW + (1 - PREVIEW_INPUT_LOW) * clamp((P.bottom - p.y) / (P.bottom - P.top))
+    };
+  const middle = Number(marks.dropMiddle);
+  return Number.isFinite(middle)
+             ? {[key] : clamp((middle - p.y - SITUATION.drops.least) / SITUATION.drops.span)}
+             : {};
 }
 export function previewControls(state) {
-  const B = PREVIEW_BARS, columns = previewColumns(state), step = B.width / columns.length;
-  const y = (value, low) => B.bottom - (B.bottom - B.top) * (value - low) / (1 - low);
-  const bars = columns.map((c, k) => {
-    const x = step * (k + .5), base = y(Math.max(c.low, 0), c.low), at = y(c.value, c.low);
-    const colour = c.index === null ? 'var(--aid-size)' : substanceColor(c.index);
-    const name = c.index === null ? word('exampleInput') : substanceName(state, c.index);
-    return dragBar(B, x, {
-             base,
-             at,
-             level : 'class="aid-preview-level" fill="' + colour + '"',
-             handle : 'data-preview-handle="' + c.key + '"',
-             title : namedText(name, formatNumber(c.value, PREVIEW_DIGITS)),
-             mark : c.index === null ? label('development.inputMark')
-                                     : substanceMark(state, c.index)
-           }) +
-           (c.low < 0 ? '<path class="aid-dose-zero" d="M' + fixed(x - B.gauge / 2) + ' ' +
-                            fixed(base) + ' h' + B.gauge + '"/>'
-                      : '');
-  });
+  const S = SITUATION, P = S.pad, K = S.key, D = S.drops, context = previewContextOf(state);
+  const input = previewInputOf(state), at = padPoint(context.maturity, input);
+  const zero = padPoint(0, 0).y;
+  const situation = joinParts([
+    namedText(substanceName(state, HORMONES.levels),
+              formatNumber(context.maturity, PREVIEW_DIGITS)),
+    namedText(word('exampleInput'), formatNumber(input, PREVIEW_DIGITS))
+  ]);
+  const substances = previewSubstances(state.document);
+  const step = Math.min(D.most, (D.right - D.left) / Math.max(1, substances.length));
+  const drops = substances
+                    .map((index, k) => {
+                      const x = D.left + step * (k + .5), level = context.hormones[index];
+                      const r = dropRadius(level), colour = substanceColor(index);
+                      return '<g class="aid-preview-drop"><title>' +
+                             escapeText(namedText(substanceName(state, index),
+                                                  formatNumber(level, PREVIEW_DIGITS))) +
+                             '</title><circle class="aid-preview-reach" cx="' + fixed(x) +
+                             '" cy="' + D.middle + '" r="' + dropRadius(1) + '"/><circle cx="' +
+                             fixed(x) + '" cy="' + D.middle + '" r="' + fixed(r) + '" fill="' +
+                             colour + '"/><text x="' + fixed(x) + '" y="' +
+                             (D.middle + dropRadius(1) + D.mark) + '" style="fill:' + colour +
+                             '" text-anchor="middle" dominant-baseline="central">' +
+                             escapeText(substanceMark(state, index)) +
+                             '</text><circle class="aid-graphic-handle" data-preview-handle="' +
+                             index + '" data-drop-middle="' + D.middle + '" cx="' + fixed(x) +
+                             '" cy="' + fixed(D.middle - r) + '" r="' + S.knob + '"/></g>';
+                    })
+                    .join('');
   return '<details class="aid-preview-context"><summary title="' +
          escapeText(word('previewConditions')) + '">' + word('preview') +
-         '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + B.width + ' ' + B.height +
+         '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + S.width + ' ' + S.height +
          '" data-preview-bars role="img" aria-label="' + escapeText(word('preview')) + '">' +
-         bars.join('') + '</svg></details>';
+         '<g class="aid-preview-pad"><title>' + escapeText(situation) + '</title><rect x="' +
+         P.left + '" y="' + P.top + '" width="' + (P.right - P.left) + '" height="' +
+         (P.bottom - P.top) + '"/><path class="aid-dose-zero" d="M' + P.left + ' ' + fixed(zero) +
+         ' H' + P.right + '"/>' +
+         placedGlyph(GROWTH_ICON, K.young, {x : P.left + K.young / 2, y : P.bottom + K.below},
+                     {line : true}) +
+         placedGlyph(GROWTH_ICON, K.grown, {x : P.right - K.grown / 2, y : P.bottom + K.below},
+                     {line : true}) +
+         '<text x="' + (P.left - K.sign / 2) + '" y="' + P.top + '" text-anchor="middle" ' +
+         'dominant-baseline="hanging">+</text><text x="' + (P.left - K.sign / 2) + '" y="' +
+         P.bottom + '" text-anchor="middle">−</text></g>' +
+         '<circle class="aid-graphic-handle" data-preview-handle="situation" cx="' + fixed(at.x) +
+         '" cy="' + fixed(at.y) + '" r="' + S.knob + '"><title>' + escapeText(situation) +
+         '</title></circle>' + drops + '</svg></details>';
 }
 export function cellDevelopment(state, center) {
   if (!center || !state.capabilities)
