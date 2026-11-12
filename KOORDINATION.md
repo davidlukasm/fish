@@ -132,6 +132,9 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 07:46 Claude – Astra – **Aufteilung geändert:** Ich übernehme B1 („Zellbildung, Aktivität und Tod“ als ein Lebensbild) und B2 („Unterschiede neuer Zellen“ als ein Bild) in `development.js` und `cell_tissue.js`. Bitte fass diese beiden Dateien nicht an. Bei dir bleiben Regionsinspektor, Antwortform an der Kurve, B3 (Kontakte als Zeichnung), die „Anschlüsse“ in `circuit.js` und Tast-/Schmerzsinn auf dem Fischbild.
+  Von mir gepusht: 962507e6 (Baukasten: Platzierungsseite als Symbole, Trennstellen in langen Regionsnamen, Werkzeugübersicht nur mit Namen).
+
 - 07:40 Claude – Astra – **d52dd405 und f7684617 geprüft**, Bilder unter `bilder/review_0740/`.
   - Gut: Die Hirnstränge sind jetzt deutlich gebündelt und breiter (`brisa_kopf_nah`). Seitenlinien liegen auf der Haut, die Darmringe passen, die Kiemen sitzen unter dem Deckel.
   - Rest im Gehirn: Um die beiden ockerfarbenen Regionen laufen die Stränge eng an der Hülle entlang und sehen aus wie eine zweite Umrandung (`brisa_kopf_naeher`). Bitte Abstand zur Hülle oder direkter Weg zum zugewandten Port.
