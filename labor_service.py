@@ -330,15 +330,21 @@ class BreedingJobs(Jobs):
                 step = data.get("step")
                 if not whole_number(step) or step not in world.get("scenes", []):
                     raise Refusal("labor.errors.invalidRequest")
-                with gzip.open(folder / f"scene-{step}.json.gz", "rt", encoding="utf-8") as source:
-                    return {"step": step, "frame": json.load(source)}
-            identity = data.get("id")
-            if not whole_number(identity) or str(identity) not in world.get("lives", {}):
-                raise Refusal("labor.errors.invalidRequest")
-            return json.loads(json.dumps({
-                "id": identity, "seed": seed, "summary": world["lives"][str(identity)],
-                "observation": world.get("observation"), "scenes": world.get("scenes", []),
-                **read_life(folder, identity)}))
+            else:
+                identity = data.get("id")
+                if not whole_number(identity) or str(identity) not in world.get("lives", {}):
+                    raise Refusal("labor.errors.invalidRequest")
+                response = json.loads(json.dumps({
+                    "id": identity, "seed": seed, "summary": world["lives"][str(identity)],
+                    "observation": world.get("observation"), "scenes": world.get("scenes", [])}))
+                path = folder / f"fish-{identity}.jsonl"
+                length = path.stat().st_size if path.is_file() else 0
+        # A recorded scene is immutable. A life read is bounded by the committed byte count,
+        # so neither archive can hold up status or cancellation while reading and decoding.
+        if data["operation"] == "scene":
+            with gzip.open(folder / f"scene-{step}.json.gz", "rt", encoding="utf-8") as source:
+                return {"step": step, "frame": json.load(source)}
+        return {**response, **read_life(folder, identity, length)}
 
     def results(self, data_dir, engine):
         return Results(data_dir, "zucht", "steps", "worlds", engine)

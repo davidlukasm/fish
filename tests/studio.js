@@ -3748,6 +3748,22 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       await sceneStation.showScene(chosen);
       const first = sceneStation.state.labScene.data.frame;
       assert.deepEqual(first.fish[0][FISH.body_geometry], shapes[5]);
+      const waiting = [];
+      sceneStation.request = body => new Promise(resolve => waiting.push({body, resolve}));
+      const earlier = sceneStation.showScene({...chosen, sceneStep : 100});
+      const later = sceneStation.showScene({...chosen, sceneStep : 200});
+      waiting[1].resolve({step : 200, frame});
+      await later;
+      waiting[0].resolve({step : 100, frame});
+      await earlier;
+      assert.equal(sceneStation.state.labScene.data.step, 200,
+                   'A delayed scene cannot replace the more recently chosen time');
+      const away = sceneStation.showScene({...chosen, sceneStep : 300});
+      sceneStation.showScene({...chosen, sceneStep : 200});
+      waiting[2].resolve({step : 300, frame});
+      await away;
+      assert.equal(sceneStation.state.labScene.data.step, 200,
+                   'Returning to a cached scene also invalidates the pending selection');
       assert.deepEqual(first.plants[0][PLANT.organs][0][PLANT_ORGAN.curve], [ 10, 20, 30, 40 ]);
       assert.equal(first.light.values[0], 1);
       assert.equal(sourceFish[FISH.body_geometry], null, 'The recorded frame stays untouched');

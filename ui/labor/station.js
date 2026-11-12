@@ -229,6 +229,7 @@ export class BreedingStation extends LabStation {
     if (!Number.isFinite(selected.sceneStep))
       return;
     const key = sceneKey(selected), scene = this.state.labScene;
+    this.sceneRequested = key;
     if (scene?.key === key) {
       const canvas = this.root.querySelector('[data-lab-scene] canvas');
       if (canvas)
@@ -238,21 +239,28 @@ export class BreedingStation extends LabStation {
     if (this.scenePending === key || this.sceneFailed === key)
       return;
     this.scenePending = key;
+    const token = this.sceneToken = (this.sceneToken ?? 0) + 1;
     return this.request({operation : 'scene', ...selected.run, step : selected.sceneStep})
         .then(data => {
+          if (token !== this.sceneToken || this.sceneRequested !== key)
+            return;
           // Each stored scene is complete; its asset numbers belong only to this frame.
           const frame = hydrateRender(data.frame, {renderAssets : data.frame.assets});
           this.state.labScene = {key, data : {...data, frame}};
           this.state.sceneError = null;
         })
         .catch(error => {
+          if (token !== this.sceneToken || this.sceneRequested !== key)
+            return;
           this.sceneFailed = key;
           this.state.sceneError = {key, reason : error.message};
         })
         .finally(() => {
-          if (this.scenePending === key)
-            this.scenePending = null;
-          this.render();
+          if (token !== this.sceneToken)
+            return;
+          this.scenePending = null;
+          if (this.sceneRequested === key)
+            this.render();
         });
   }
   click(event) {

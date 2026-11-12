@@ -69,13 +69,13 @@ class LifeArchive:
                 life["death"], life["cause"] = step, event["cause"]
 
 
-def read_life(folder, identity):
+def read_life(folder, identity, length=None):
     path = Path(folder) / f"fish-{identity}.jsonl"
     if not path.is_file():
         return {"points": [], "events": []}
     points, events = {}, []
-    with path.open(encoding="utf-8") as stream:
-        for line in stream:
+    with path.open("rb") as stream:
+        for line in stream.read(length).splitlines() if length is not None else stream:
             event = json.loads(line)
             if event["kind"] == "point":
                 points[event["t"]] = {k: v for k, v in event.items() if k not in ("event", "kind", "id")}

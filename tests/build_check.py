@@ -155,6 +155,23 @@ def check_labor_lives():
         assert detail['summary']['last'] == 30, 'Concurrent polling cannot mutate an issued response'
         scene = jobs.request(dict(request, operation='scene', step=10), folder)
         assert scene == {'step': 10, 'frame': {'ticks': 10, 'fish': []}}
+        import gzip
+        original_open = gzip.open
+        def unlocked_scene(*args, **kwargs):
+            assert jobs.lock.acquire(blocking=False), 'Scene decoding must allow cancellation'
+            jobs.lock.release()
+            return original_open(*args, **kwargs)
+        with patch('labor_service.gzip.open', side_effect=unlocked_scene):
+            jobs.request(dict(request, operation='scene', step=10), folder)
+        def unlocked_life(folder, identity, length):
+            assert jobs.lock.acquire(blocking=False), 'Life decoding must allow cancellation'
+            jobs.lock.release()
+            with (path / 'fish-7.jsonl').open('a') as stream:
+                stream.write(json.dumps({'kind': 'point', 't': 110, 'id': 7}) + '\n')
+            return read_life(folder, identity, length)
+        with patch('labor_service.read_life', side_effect=unlocked_life):
+            bounded = jobs.request(dict(request, operation='life', id=7), folder)
+        assert max(p['t'] for p in bounded['points']) == 10, 'Concurrent appends stay outside the snapshot'
         for fields in ({'id': 8}, {'id': '../7'}, {'id': True}, {'operation': 'scene', 'step': 11},
                        {'fingerprint': '../outside'}, {'seed': 2}):
             try:
