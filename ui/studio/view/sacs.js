@@ -73,7 +73,10 @@ const STORE = Object.freeze({
   handle : 7,
   // The stretch cells sit along their line from its left end; their adaptation arc round it.
   cells : 9,
-  clock : 14
+  clock : 14,
+  // Words sit this far below a line, and the store's title this far from the left edge.
+  below : 12,
+  title : 6
 });
 const SPERM = Object.freeze({head : 2.6, tail : 12, wave : 2.5, quarters : 4, spread : 5});
 const topOf = store => Math.min(store.own.most, store.scale);
@@ -189,6 +192,21 @@ export function gonadGraphic(state, organ, selected) {
                                       label('inspector.motorGate'))
                      : '';
   const field = pressure ?? motor;
+  // What the cells do, written where it shows: how long the store takes to fill, what one release
+  // gives, whether it waits for a command, and at which fill the stretch cells report.
+  const say = (content, x, y, anchor = 'start') => '<text class="aid-handle-word" x="' + fixed(x) +
+                                                   '" y="' + fixed(y) + '" text-anchor="' + anchor +
+                                                   '">' + escapeText(content) + '</text>';
+  const [fillWord, productWord] = [ facts.growth[1], facts.release[1] ];
+  const words = say(fillWord, Math.min(curve.knee.x, S.right), curve.knee.y - S.gap,
+                    curve.knee.x > (S.left + S.right) / 2 ? 'end' : 'start') +
+                say(productWord, S.right, S.base + S.below, 'end') +
+                (store.releaseEnabled ? '' : say(facts.release[0], S.right, roomY - S.gap, 'end')) +
+                (pressure ? say(facts.pressure[0], S.right, stretchY + S.below, 'end') : '') +
+                '<text class="aid-handle-word" transform="translate(' + S.title + ' ' +
+                fixed((S.top + S.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
+                escapeText(label('inspector.gonad.store')) + '</text>' +
+                say(label('inspector.gonad.time'), S.left, S.base + S.below);
   return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
          organ.type + '" data-sac="' + escapeText(organ.id) + '"' +
          (field ? ' data-sense-field="' + escapeText(field.id) + '"' : '') + ' role="img">' +
@@ -208,7 +226,7 @@ export function gonadGraphic(state, organ, selected) {
                        fixed((S.stack[0] + S.stack[1]) / 2) + '" cy="' + fixed(roomY) + '" r="' +
                        S.handle + '"><title>' + label('inspector.cellsHandle') + '</title></circle>'
                  : '') +
-         gate + '</svg>';
+         gate + words + '</svg>';
 }
 export function sacPatch(state, organ, handle, fy) {
   const store = gonadStore(state, organ);

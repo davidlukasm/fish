@@ -283,7 +283,9 @@
       "sperm": "{energy} Energie je Abgabe",
       "stretch": "meldet halb bei {share} Füllung",
       "developmentEnergy": "Ei mit {energy} Energie; Schlupfbedarf etwa {least} bei {duration} Schritten",
-      "releaseOn": "Auslösekommando liegt an"
+      "releaseOn": "Auslösekommando liegt an",
+      "store": "Vorrat",
+      "time": "Zeit"
     },
     "curve": {
       "baseline": "ohne Stoff",
