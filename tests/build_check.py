@@ -18,14 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def ensure_node():
     if shutil.which('node'):
         return
-    nix = shutil.which('nix-shell')
+    # Only node comes from Nix. A Nix shell would also replace the compiler and its flags,
+    # so the suite would rebuild everything differently from ./build.sh.
+    nix = shutil.which('nix-build')
     if nix:
         print('Node.js wird über Nix für die automatisierten UI-Prüfungen bereitgestellt.',
               flush=True)
-        # Check the new PATH before restarting, so failed setup cannot recurse.
-        command = 'command -v node >/dev/null && ' + shlex.join(
-            [sys.executable, '-B', *sys.argv])
-        os.execv(nix, [nix, '-p', 'nodejs', '--run', command])
+        built = subprocess.run([nix, '<nixpkgs>', '-A', 'nodejs', '--no-out-link'],
+                               stdout=subprocess.PIPE, text=True)
+        node = Path(built.stdout.strip()) / 'bin'
+        if built.returncode == 0 and (node / 'node').is_file():
+            os.environ['PATH'] = str(node) + os.pathsep + os.environ.get('PATH', '')
+            return
     raise SystemExit('Node.js fehlt (Befehl „node“). Node.js für die automatisierten '
                      'UI-Prüfungen installieren und den Aufruf wiederholen.')
 
