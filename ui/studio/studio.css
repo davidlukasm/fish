@@ -1239,7 +1239,7 @@
 .aid-nerve-to-trace{fill:none;stroke:var(--aid-light);stroke-width:1;stroke-dasharray:3 4;opacity:.3}
 .aid-region-edge-ink{fill:none;stroke:var(--circuit);stroke-width:1.6}.aid-region-edge.inhibits{--circuit:#e6a890}.aid-region-edge.cut{opacity:.3}.aid-region-edge.cut .aid-region-edge-ink{stroke-dasharray:4 4}
 .aid-region-edge-hit{fill:none;stroke:transparent;stroke-width:12;cursor:pointer}.aid-region-edge:hover .aid-region-edge-ink{stroke-width:3}
-.aid-region-graph marker path{fill:var(--circuit)}.aid-region-graph-node{cursor:pointer}.aid-region-graph-node>circle,.aid-region-port rect{fill:var(--aid-ground);stroke:var(--circuit);stroke-width:1.6}.aid-region-graph-node.pending>circle{fill:#866549;stroke:#efd89d;stroke-width:3}.aid-region-graph-node.mirrored{opacity:.6}.aid-region-graph-node.mirrored>circle{stroke-dasharray:2 2}
+.aid-region-graph marker path{fill:var(--circuit)}.aid-region-graph-node{cursor:pointer}.aid-region-graph-node>circle,.aid-region-port rect{fill:var(--aid-ground);stroke:var(--circuit);stroke-width:1.6}.aid-region-graph-node.pending>circle{fill:#866549;stroke:#efd89d;stroke-width:3}.aid-region-graph-node.mirrored{opacity:1}.aid-region-graph-node.mirrored>circle{stroke-dasharray:2 2}
 .aid-region-port-branch{fill:none;stroke:var(--circuit);stroke-width:1;opacity:.45}.aid-region-port{cursor:crosshair;color:var(--circuit)}.aid-region-port.filled rect{fill:#315b55}.aid-circuit-tools{display:flex;justify-content:flex-end}.aid-circuit-tools svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}.aid-circuit-tools [aria-pressed=true]{background:#45665b}
 .aid-pigment-palette{display:block;width:100%;height:auto;touch-action:none}.aid-pigment-composition{fill:none;stroke-width:13;pointer-events:none}.aid-pigment-composition circle{stroke:#24454b}.aid-pigment-palette .aid-pigment-wheel{width:300px;max-width:none}.aid-operculum{fill:none;stroke:#a2c0bc;stroke-width:1.7;stroke-opacity:.65}
 
@@ -1312,3 +1312,7 @@
 @media(max-width:1100px){.aid-life-layout{grid-template-columns:1fr}.aid-life-list{flex-direction:row;max-height:160px;overflow:auto}.aid-life-row{min-width:160px}.aid-life-list-key{margin:5px 0}}
 
 .aid-life-population>summary{font:500 20px Georgia,serif;color:#d6dfcd;cursor:pointer;padding:10px 0 20px}
+
+.aid-region-name{font:11px system-ui;fill:var(--aid-axis-text);stroke:var(--aid-ground);stroke-width:3;paint-order:stroke;stroke-linejoin:round}
+.aid-region-heading{font:11px system-ui;fill:var(--aid-soft-text)}
+.aid-circuit-tools button{display:flex;align-items:center;gap:6px;font-size:12px}

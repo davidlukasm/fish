@@ -324,18 +324,19 @@ export function regionPicture(state, organ) {
                          .some(([ e, values ]) => Object.entries(values).some(
                                    ([ k, v ]) => c.receptors[e][k] !== v)));
       });
-  const drawing = organ.type === 'tectum'
-                      ? tectumPictures(state, organ)
-                      : `<svg viewBox="0 0 ${P.width} ${P.height}" data-region-picture="${
-                            escapeText(organ.id)}" role="group" aria-label="${
-                            label('regions.' + organ.type + '.term')}"><title>${
-                            escapeText(words(organ.type + 'Reference') +
-                                       (customized ? ' ' + words('customized')
+  const reference =
+      [ 'choice', 'state' ].includes(organ.type) ? '' : words(organ.type + 'Reference');
+  const drawing =
+      organ.type === 'tectum'
+          ? tectumPictures(state, organ)
+          : `<svg viewBox="0 0 ${P.width} ${P.height}" data-region-picture="${
+                escapeText(organ.id)}" role="group" aria-label="${
+                label('regions.' + organ.type + '.term')}"><title>${
+                escapeText(reference + (customized ? ' ' + words('customized')
                                                    : ''))}</title>${draw(state, organ)}</svg>`;
-  const explanation =
-      organ.type !== 'tectum'
-          ? '<p class="aid-picture-note">' + escapeText(words(organ.type + 'Reference')) + '</p>'
-          : '';
+  const explanation = organ.type !== 'tectum' && reference
+                          ? '<p class="aid-picture-note">' + escapeText(reference) + '</p>'
+                          : '';
   return `<div class="aid-region-picture">${drawing}${explanation}${
       customized ? '<p class="aid-picture-note">' + escapeText(words('customized')) + '</p>'
                  : ''}</div>`;
