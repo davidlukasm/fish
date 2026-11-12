@@ -963,6 +963,7 @@ int main(int argc, char **argv) {
                 << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
                 << ",\"hormoneRate\":" << fishsim::PhysiologyParameters{}.hormones.rate
+                << ",\"gutTime\":" << fishsim::PhysiologyParameters{}.gut_time
                 << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
                 << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN
                 << ",\"unusedDecaySpan\":" << field::plasticity::unused_decay_span

@@ -892,9 +892,14 @@
     },
     "gutmuscle": {
       "title": "Darmmuskel",
-      "rest": "in Ruhe",
-      "hurried": "angetrieben",
-      "hint": "Das Hirn kann den Darm antreiben: dann leert er sich bis zu {speed}-mal so schnell und verwertet nur {used} der Nahrung. Ein satter Fisch macht so Platz für mehr Futter."
+      "meal": "eine Mahlzeit über {n} Schritte",
+      "hungryRest": "hungrig, in Ruhe",
+      "hungryDriven": "hungrig, voll angetrieben",
+      "fullDriven": "satt, voll angetrieben (in Ruhe bliebe sie liegen)",
+      "taken": "{p} aufgenommen",
+      "lost": "{p} ausgeschieden",
+      "empty": "leer nach {n} Schritten",
+      "cells": "mehr Zellen: teurer, nicht schneller"
     },
     "gut": {
       "title": "Darm",
@@ -954,11 +959,21 @@
     },
     "strengthWord": "{n} {n:Zelle|Zellen} je Knoten",
     "tissue": "Muskel",
-    "pull": "Zug",
     "always": "zieht immer",
     "strongOnly": "nur bei starkem Befehl",
     "faint": "schwacher Befehl",
-    "strong": "starker Befehl"
+    "strong": "starker Befehl",
+    "cells": "Zellen",
+    "cellsHandle": "Ziehen: Zellen je Knoten",
+    "effect": {
+      "0": "Schub",
+      "1": "Schub",
+      "2": "Sog",
+      "5": "Biss",
+      "6": "Aufrichten",
+      "-2": "Pumpen",
+      "-3": "Antrieb"
+    }
   },
   "balance": {
     "title": "Haarrichtung",

@@ -21,8 +21,6 @@ import {
   lipWidth,
   tailFinSize,
   toothForm,
-  gutPassage,
-  gutUse,
 } from '../../fish_organs.js';
 import {mouthShare, organSize} from '../../fish_forms.js';
 import {isPelvicMuscle, kindLimit, organFunction} from '../model/organs.js';
@@ -44,6 +42,7 @@ import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {contactFieldOf, contactHalfAngle} from '../../tuning.js';
 import {organCommand} from './preview.js';
 import {handleWord} from './sense_marks.js';
+import {gutMealRows} from './gut_meal.js';
 import {ecologyIconSvg, FOOD_COLORS} from '../../feeding_view.js';
 import {FOOD_SLOT} from '../../nutrition_model.js';
 
@@ -757,48 +756,9 @@ export function gillGraphic(state, organ) {
   return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic,
                        musclePicture(state, organ, GILL_CODE, 1));
 }
-// The gut wall from the side with one ring of muscle per node, and the same meal twice: at rest
-// it stays until it is used up, hurried along more of it passes and leaves half used.
-const GUT_MUSCLE = Object.freeze({
-  tube : [ 24, 276 ],
-  y : 40,
-  width : 22,
-  lanes : [ 96, 136 ],
-  lane : [ 112, 276 ],
-  // Each lane is named at its start: the same meal at rest and hurried along.
-  word : 8,
-  lift : 4,
-  meal : 3,
-  pellet : 6,
-  least : 1.2
-});
+// The gut muscle: one meal through the gut at rest and driven (gut_meal.js), its muscle below.
 export function gutMuscleGraphic(state, organ) {
-  const G = GUT_MUSCLE;
-  const lane = (y, hurried, key) => {
-    const used = gutUse(hurried), pellets = Math.round(G.meal * gutPassage(hurried));
-    const food =
-        Array
-            .from({length : pellets},
-                  (_, i) => {
-                    const share = (i + .5) / pellets,
-                          x = G.lane[0] + (G.lane[1] - G.lane[0]) * share;
-                    return '<circle class="aid-gut-food" cx="' + fixed(x) + '" cy="' + y + '" r="' +
-                           fixed(Math.max(G.least, G.pellet * Math.sqrt(1 - used * share))) + '"/>';
-                  })
-            .join('');
-    return '<g><text class="aid-handle-word" x="' + (G.lane[0] - G.word) + '" y="' + y +
-           '" dy=".35em" text-anchor="end">' + escapeText(label('gutmuscle.' + key)) +
-           '</text><path class="aid-gut-lane" d="M' + G.lane[0] + ' ' + y + ' H' + G.lane[1] +
-           '"/>' + food + '</g>';
-  };
-  const graphic =
-      '<title>' +
-      escapeText(label('gutmuscle.hint',
-                       {speed : formatNumber(gutPassage(1)), used : percent(gutUse(1))})) +
-      '</title><path class="aid-gut-tube" d="M' + G.tube[0] + ' ' + G.y + ' H' + G.tube[1] +
-      '" stroke-width="' + G.width + '"/>' + lane(G.lanes[0], 0, 'rest') +
-      lane(G.lanes[1], 1, 'hurried');
-  return effectorBlock(organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), graphic,
+  return effectorBlock(organ, GUT_MUSCLE_CODE, 1, label('gutmuscle.title'), gutMealRows(state),
                        musclePicture(state, organ, GUT_MUSCLE_CODE, 1));
 }
 export function effectorGraphic(state, organ) {

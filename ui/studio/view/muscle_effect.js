@@ -1,9 +1,13 @@
-// What a muscle's settings do, in two pictures of their own below the picture of what it moves.
-// Pull: one bar per node, as tall as the node's cells pull together; the reserve nodes (outlined)
+// What a muscle's settings do, in two pictures of their own below the picture of what it moves,
+// each named by what the muscle does: thrust, suction, bite, raised spines, pumped water or the
+// gut's drive.
+// Force: one bar per node, as tall as the node's cells pull together; the reserve nodes (outlined)
 // join only a strong command, the others pull whenever the muscle works. Below, the command from
-// faint to strong with the gate: a weaker command leaves the muscle still.
-// Endurance: the pull the muscle holds over steps of all-out effort for its fibre mix, between the
-// lasting (red) and the fast (white) extreme, and what its rest and its work cost.
+// faint to strong with the gate: a weaker command leaves the muscle still. The gut wall's cells
+// are the exception: its drive is the mean of its cells' (body_plan.cc, continuous_organs), so more
+// of them cost more but drive it no harder.
+// Endurance: the force the muscle holds over steps of all-out effort for its fibre mix, between
+// the lasting (red) and the fast (white) extreme, and what its rest and its work cost.
 import {ATELIER_LIMITS, MUSCLE_FIBRE} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {enduranceCurve, fibreCost, fibreForce, fibreHex, fibreUpkeep} from '../../fibre.js';
@@ -14,6 +18,8 @@ import {escapeText, fixed} from './markup.js';
 import {percent, t} from '../../strings.js';
 
 const word = (key, values) => t('studio.muscle.' + key, values);
+// What the muscle does, by its code (effectors.js gives the gills and the gut wall their own).
+const effect = code => word('effect.' + code);
 const PULL = Object.freeze({
   width : 300,
   height : 156,
@@ -65,6 +71,7 @@ const svg = (frame, organ, code, side, attributes, label, body) =>
 
 function pullPicture(state, organ, code, side, most, attributes) {
   const P = PULL, nodes = kindNodes(organ), reserve = sprintNodes(organ);
+  const gut = organ.type === 'gutmuscle', axis = gut ? word('cells') : effect(code);
   const places = clamp(nodes.length + P.room, P.least, Math.max(most, P.least));
   const slot = (P.right - P.left) / places, regular = nodes.length - reserve;
   const height = copies => (P.base - P.top) * copies / ATELIER_LIMITS.max_copies;
@@ -96,12 +103,13 @@ function pullPicture(state, organ, code, side, most, attributes) {
                          gateHandle({x : P.right, y : P.track}, {x : P.left, y : P.track}, state,
                                     center, t('studio.inspector.motorGate'))
                    : '';
-  return svg(P, organ, code, side, attributes, word('pull'),
+  return svg(P, organ, code, side, attributes, axis,
              '<path class="aid-sense-axis" d="M' + P.left + ' ' + P.top + ' V' + P.base + ' H' +
-                 P.right + '"/>' + upright(P.title, (P.top + P.base) / 2, word('pull')) + free +
-                 bars + groupWord(0, regular, 'always') +
+                 P.right + '"/>' + upright(P.title, (P.top + P.base) / 2, axis) + free + bars +
+                 (gut ? text('aid-handle-word', P.left, P.groups, word('gutmuscle.cells'))
+                      : groupWord(0, regular, 'always')) +
                  groupWord(regular, nodes.length, 'strongOnly') +
-                 grip('strength', top, word('strengthHandle'), P) +
+                 grip('strength', top, word(gut ? 'cellsHandle' : 'strengthHandle'), P) +
                  handleWord(top, word('strengthWord', {n : first.copies}), 'above') +
                  (organ.type === 'muscle'
                       ? grip('sprint', split, word('sprintHandle'), P,
@@ -127,7 +135,7 @@ function endurancePicture(organ, code, side, attributes) {
   return svg(
       E, organ, code, side, attributes, word('fibre.time', {n : E.steps}),
       '<path class="aid-sense-axis" d="M' + E.left + ' ' + E.top + ' V' + E.base + ' H' + E.right +
-          '"/>' + upright(E.title, (E.top + E.base) / 2, word('pull')) +
+          '"/>' + upright(E.title, (E.top + E.base) / 2, effect(code)) +
           line(0, 'aid-endure-edge') + line(1, 'aid-endure-edge') + line(fast, 'aid-endure-line') +
           text('aid-handle-word', E.right, E.axis, word('fibre.time', {n : E.steps}), 'end') +
           grip('fibre', start, word('fibre.handle'), E) +

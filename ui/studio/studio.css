@@ -787,7 +787,9 @@
 .aid-gill-rakers{fill:none;stroke:#e9c9b4;stroke-width:2;stroke-linecap:round}
 .aid-gill-water{fill:none;stroke:var(--aid-flow);stroke-opacity:.55;stroke-linecap:round;stroke-linejoin:round}
 .aid-gill-speck{fill:#bfe39a}.aid-gill-speck.held{fill:#e6f5c8}
-.aid-gut-lane{fill:none;stroke:var(--aid-gut);stroke-opacity:.35;stroke-width:12;stroke-linecap:round}
+.aid-meal-taken{fill:#8fd3c0;fill-opacity:.6}
+.aid-meal-gut{fill:#d9b98a;fill-opacity:.8}
+.aid-meal-lost{fill:#a9786a;fill-opacity:.6}
 .aid-gut-food{fill:#d9b98a;stroke:var(--aid-ink);stroke-width:.8}
 .aid-anatomical-gutmuscle{fill:none;stroke:var(--aid-gut);stroke-width:2.5;stroke-linecap:round}
 .aid-gut-ring-back{stroke-opacity:.35;stroke-width:1.5}

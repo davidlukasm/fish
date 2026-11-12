@@ -1328,6 +1328,16 @@ async function checkHormoneSystems(model, capabilities) {
     assert.ok(slots.some(s => s.key === 'gut' && s.dir === 'out') &&
                   [ slots.find(s => s.key === 'full').node ].flat().includes('gut'),
               'A full gut reaches the gut driver');
+    // Its picture follows one meal through the gut: driven, the gut empties sooner and the fish
+    // takes up less of it; a full fish's driven gut passes it unused, more slowly.
+    const {gutMealRows} = await import('../ui/studio/view/gut_meal.js');
+    const meal = gutMealRows({document : gut.document, capabilities : sitesResult});
+    const taken = [...meal.matchAll(/(\d+) % aufgenommen/g) ].map(m => Number(m[1]));
+    const empty = [...meal.matchAll(/leer nach ([\d.]+) Schritten/g) ].map(
+        m => Number(m[1].replaceAll('.', '')));
+    assert.deepEqual(taken, [ 100, 73 ], 'A driven gut lets the fish take up less of a meal');
+    assert.ok(empty.length === 3 && empty[1] < empty[0] && empty[0] < empty[2],
+              'A driven gut empties sooner; a full fish empties its gut only slowly');
     organAudits.push(
         {document : gut.document, id : gut.organId, type : 'gutmuscle', gutMuscle : true});
   }

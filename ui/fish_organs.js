@@ -273,10 +273,21 @@ const GUT = Object.freeze({
   lift : .3,
   height : .48
 });
-// The gut muscle as the engine has it (digest_nutrition): hurried food passes sooner and is used
-// less, the more so the harder the gut is driven.
-export const gutPassage = hurried => 1 + GUT_MOTILITY.speedup * hurried;
-export const gutUse = hurried => 1 - GUT_MOTILITY.loss * hurried * hurried;
+// The gut muscle as the engine has it (digest_nutrition), over its twitches at a steady drive
+// share `driven`: each step the wall takes the pose driven · sin² of the twitch's phase
+// (stroke_shape), moves food on 1 + 2 · speedup · pose times as fast as at rest and lets the fish
+// take up 1 − loss · pose² of what it moves. Over a whole twitch sin² averages these moments:
+const TWITCH = Object.freeze({mean : 1 / 2, square : 3 / 8, cube : 5 / 16});
+// How many times as fast as at rest a hungry fish's driven gut empties.
+export const gutPassage = driven => 1 + GUT_MOTILITY.speedup * driven;
+// The share of what passes that the fish takes up, the twitch's passage-weighted mean.
+export const gutUse = driven => {
+  const S = GUT_MOTILITY.speedup, L = GUT_MOTILITY.loss, d = driven;
+  return 1 - L * d * d * (TWITCH.square + 2 * S * d * TWITCH.cube) / gutPassage(d);
+};
+// A full fish takes up nothing; its gut moves food only as it is driven, the pose's mean times the
+// resting pace, and at rest keeps what it holds.
+export const fullGutPassage = driven => TWITCH.mean * driven;
 export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);
 export function fishSatietyShape(a) {
   const front = a.headBack - GUT.front, back = a.chestBack + GUT.back * a.chestLength,
