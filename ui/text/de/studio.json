@@ -548,7 +548,8 @@
       "teaching": "Lehrstärke",
       "cycle": "Schwanzperiode",
       "alternation": "Gegenhemmung",
-      "finCycle": "Ruderperiode"
+      "finCycle": "Ruderperiode",
+      "taughtBy": "lernt von"
     },
     "follow": "Folgt den angeschlossenen Organen",
     "followHint": "Eigene Verbindungen bleiben, solange ihre Knoten bleiben.",
@@ -1447,7 +1448,7 @@
   },
   "contacts": {
     "title": "Kontakte im Bauplan",
-    "lineWidth": "Linienbreite: Höchststärke",
+    "lineWidth": "dicker: darf stärker werden",
     "capacity": "max. {n} Eingänge je Zelle",
     "senders": "Sender",
     "chosen": "Auswahl",
@@ -1466,7 +1467,8 @@
     "limit": "Höchststärke",
     "modulation": "Lehranteil",
     "probation": "Schonfrist · Schritte",
-    "learningMeaning": "Der Sender bildet je nach Zellidentität elektrische oder lehrende Kontakte. Dafür gilt die jeweilige Höchststärke des Empfängers. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers."
+    "learningMeaning": "Der Sender bildet je nach Zellidentität elektrische oder lehrende Kontakte. Dafür gilt die jeweilige Höchststärke des Empfängers. Die Schonfrist beträgt vier Lernzeiten: bei Eingängen zu Organneuronen zählt die Lernzeit des Senders, sonst die des Empfängers.",
+    "count": "{n} {n:Kontakt|Kontakte}"
   },
   "hub": {
     "lead": "Was wächst da eigentlich?",

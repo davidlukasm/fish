@@ -69,10 +69,12 @@ function regionTeacher(state, organ) {
   const choice = (value, text, swatch = '') =>
       '<button class="' + (one === value ? 'active' : '') + '" data-region-teacher="' +
       escapeText(organ.id) + '" data-teacher-value="' + (value ?? 'off') + '"' +
-      (swatch ? ' style="--substance:' + swatch + '"' : '') + ' title="' + escapeText(text) +
-      '"><span class="aid-substance-swatch' + (swatch ? '' : ' none') + '"></span></button>';
-  return '<div class="aid-region-setting" title="' + label('regions.settings.teacher') +
-         '"><div class="aid-button-group aid-learn-substances">' +
+      (swatch ? ' style="--substance:' + swatch + '"' : '') + '><span class="aid-substance-swatch' +
+      (swatch ? '' : ' none') + '"></span>' + escapeText(text) + '</button>';
+  // The region's learning cells take this substance as their teacher (teachOrgan).
+  return '<div class="aid-region-setting"><p class="aid-wheel-names-title">' +
+         label('regions.settings.taughtBy') +
+         '</p><div class="aid-button-group aid-learn-substances">' +
          choice(null, label('learnRule.none')) +
          [...state.document.substances, {index : HORMONES.levels} ]
              .map(s => choice(s.index, substanceName(state, s.index), substanceColor(s.index)))

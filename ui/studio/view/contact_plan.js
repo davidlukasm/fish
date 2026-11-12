@@ -193,8 +193,11 @@ export function contactPlan(state, chosen, wire = null) {
   const headings = (senders.length ? heading(P.columns[0], 'senders') : '') +
                    (middle.length && !wire ? heading(P.columns[1], 'chosen') : '') +
                    (receivers.length || wire ? heading(P.columns[2], 'receivers') : '');
-  const count = t('studio.contacts.shown',
-                  {shown : formatNumber(shown.length), total : formatNumber(planned.length)});
+  // How many contacts the picture draws; only when it leaves some out is the whole number news.
+  const count = shown.length < planned.length
+                    ? t('studio.contacts.shown',
+                        {shown : formatNumber(shown.length), total : formatNumber(planned.length)})
+                    : t('studio.contacts.count', {n : planned.length});
   const toggle = expanded || shown.length < planned.length
                      ? '<button type="button" data-expand-contacts="' + escapeText(key) +
                            '" aria-expanded="' + expanded + '">' +
