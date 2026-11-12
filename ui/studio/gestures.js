@@ -94,8 +94,9 @@ export const gestureMethods = {
       const drag = !grip.handle || handle ? grip.start(this, graphic, handle, event) : null;
       if (drag)
         this.holdHandle(event, grip.held,
-                        grip.rect === false ? drag
-                                            : {...drag, rect : graphic.getBoundingClientRect()});
+                        grip.rect === false
+                            ? {...drag, graphic}
+                            : {...drag, graphic, rect : graphic.getBoundingClientRect()});
       return;
     }
     // The CPPN view has only its grips; the body map follows.

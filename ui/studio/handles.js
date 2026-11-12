@@ -744,7 +744,7 @@ export const handleMethods = {
   // While an inspector handle is dragged only the inspector, or the part named by `redraw`,
   // follows, once a frame; the fish, the library and the design run catch up when it is let go, so
   // dragging stays smooth.
-  draftDesign(doc, batch, redraw = 'refreshInspector') {
+  draftDesign(doc, batch, redraw = 'refreshDragged') {
     if (!doc)
       return;
     if (!this.drafted) {

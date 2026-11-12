@@ -66,6 +66,17 @@ let instance = null;
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
 const SAVE_DELAY = 400, BUILD_POLL = 150, HISTORY_DEPTH = 40, DELETE_ASKS = 4000;
 const FILE_NAME_UNSAFE = /[^\w\-äöüÄÖÜ ]/g;
+// The element in `fresh` that stands where `old` stands in `current`.
+function sameElement(current, fresh, old) {
+  const data = [...old.attributes ].filter(a => a.name.startsWith('data-'));
+  const kind =
+      old.tagName.toLowerCase() + [...old.classList ].map(c => '.' + CSS.escape(c)).join('');
+  if (data.length)
+    return fresh.querySelector(
+        kind + data.map(a => '[' + a.name + '="' + CSS.escape(a.value) + '"]').join(''));
+  const index = [...current.querySelectorAll(kind) ].indexOf(old);
+  return index < 0 ? null : fresh.querySelectorAll(kind)[index] ?? null;
+}
 export class OrganStudio {
   constructor(root) {
     this.root = root;
@@ -339,6 +350,23 @@ export class OrganStudio {
         summary.parentElement.open = true;
     element.scrollTop = scroll;
     this.drawSight();
+  }
+  // While a handle is dragged only its own graphic is drawn again: the rest of the inspector
+  // waits for the drop, so the drag stays smooth. The graphic is found again in the fresh
+  // inspector by its data attributes, or else by its place among graphics of its kind.
+  refreshDragged() {
+    const drag = this.handleDrag, element = this.root.querySelector('.aid-inspector-scroll');
+    const graphic = drag?.graphic;
+    if (!graphic?.isConnected || !element?.contains(graphic))
+      return this.refreshInspector();
+    const fresh = document.createElement('div');
+    fresh.innerHTML =
+        this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
+    const same = sameElement(element, fresh, graphic);
+    if (!same)
+      return this.refreshInspector();
+    graphic.replaceWith(same);
+    drag.graphic = same;
   }
   refreshTools() {
     const existing = this.root.querySelector('.aid-tools');
