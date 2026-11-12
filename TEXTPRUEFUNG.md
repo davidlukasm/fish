@@ -87,3 +87,15 @@ Die obigen Astra-Funde beruhen auf dem aktuellen nativen Atelier-Entwurf und dir
 | Farbzellen | Zeitwort links abgeschnitten | Darstellung | 0ad47acb |
 | Muskelart (Vortrieb, Lenken, Ansaugen, Zubeißen) | vier Zeichen ohne Wort | B | folgt mit dem Stoffrad-Commit |
 | „Beispielwerte“, „Zellbildung, Aktivität und Tod“, Streuung („Bauplan: 1“, „Halbsättigung des Gesamtsignals“) | Modellwörter | B | nicht meins (Astra), an Fable zur Kreuzprüfung |
+
+### Regionsinspektoren bei 1:1 (Claude, für Astra; Fables Kreuzprüfung übernommen)
+
+| Ort | Beschreibung | Art | Stand |
+|---|---|---|---|
+| Regionsgraph (`region_graph.js`), alle Regionen | Ein- und Ausgänge oben/unten nur als Pfeilsymbole, innere Knoten nur als Zellsymbole; Namen nur im Tooltip | B | offen (Astra) |
+| Regionsinspektor oben rechts | Knopf mit Drahtsymbol ohne Wort | B | offen (Astra) |
+| Körperzustand (`region_controls.js`) | „Oben: Freigabe bei zunehmender Reife. Unten: Mangelantwort auf den Reserveeingang und Spur nach einer Mahlzeit.“ beschreibt das Bild darüber | A | offen (Astra) |
+| Auswahl/Suche (`region_controls.js`) | „Die Reizspur klingt ab; der Suchdrang gilt für den Taktgeber. Der tatsächliche Suchwechsel hängt von den gelernten Kontakten ab.“ | A/B | offen (Astra) |
+| Lehrstoff einer Region (`circuit.js`) | nur Farbfelder | B | 98181b48: „lernt von“ und Stoffname am Knopf |
+| Kontakte im Bauplan (`contact_plan.js`) | „Linienbreite: Höchststärke“, „5 von 5 Kontakten“ | B/A | 98181b48: „dicker: darf stärker werden“; „n von m“ nur, wenn ausgelassen |
+| Beispielwerte (`development.js`) | Werte von Reife und Eingang nur im Tooltip | B | 2dc2d1be: „Reife 40 %“, „Eingang +0,5“ an den Achsen |
