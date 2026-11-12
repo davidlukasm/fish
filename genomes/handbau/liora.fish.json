@@ -19018,7 +19018,25 @@
       "copies": 1,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     },
     {
      "id": "organ-mwaovmby-a:map1",
@@ -19169,7 +19187,25 @@
       "copies": 4,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     },
     {
      "id": "organ-mwaovmby-a:map2",
@@ -19320,7 +19356,25 @@
       "copies": 7,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     }
    ],
    "pair": "organ-mwaovmc8-c",
@@ -19492,7 +19546,25 @@
       "copies": 1,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     },
     {
      "id": "organ-mwaovmc8-c:map1",
@@ -19643,7 +19715,25 @@
       "copies": 4,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     },
     {
      "id": "organ-mwaovmc8-c:map2",
@@ -19794,7 +19884,25 @@
       "copies": 7,
       "pace": 0.6
      },
-     "polarity": 0
+     "polarity": 0,
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
+     }
     }
    ],
    "pair": "organ-mwaovmby-a",
@@ -22068,6 +22176,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22218,6 +22344,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22368,6 +22512,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22518,6 +22680,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22668,6 +22848,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22818,6 +23016,24 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -22968,6 +23184,32 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     },
     {
@@ -23118,6 +23360,27 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     },
     {
@@ -23268,6 +23531,27 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -1,
+       "sensitivity": 2,
+       "half": 0.5,
+       "steepness": 3,
+       "substance": 6
+      }
      }
     }
    ],
@@ -23369,7 +23653,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -23435,6 +23719,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23519,7 +23816,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -23585,6 +23882,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23669,7 +23979,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -23735,6 +24045,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -23885,6 +24208,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -23969,7 +24309,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24035,6 +24375,19 @@
       "q1": 1,
       "q2": 0,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24119,7 +24472,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24185,6 +24538,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24269,7 +24635,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24335,6 +24701,19 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24419,7 +24798,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24485,6 +24864,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -24585,7 +24977,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24651,6 +25043,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24735,7 +25140,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24801,6 +25206,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -24885,7 +25303,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -24951,6 +25369,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25101,6 +25532,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -25185,7 +25633,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -25251,6 +25699,19 @@
       "q1": 1,
       "q2": 0,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25335,7 +25796,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -25401,6 +25862,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25485,7 +25959,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -25551,6 +26025,19 @@
       "q1": 1,
       "q2": 1,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -25635,7 +26122,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -25701,6 +26188,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -25867,6 +26367,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26017,6 +26539,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26167,6 +26711,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26318,6 +26880,24 @@
       "q2": 0.5,
       "pace": 0.6,
       "sign": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -26485,6 +27065,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26635,6 +27237,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26785,6 +27409,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -26936,6 +27578,24 @@
       "q2": 0.5,
       "pace": 0.6,
       "sign": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -27103,6 +27763,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -27187,7 +27865,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -27253,6 +27931,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -27403,6 +28094,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -27553,6 +28262,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -27703,6 +28430,24 @@
       "q1": 0,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -27853,6 +28598,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -28003,6 +28761,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -28153,6 +28924,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -28163,7 +28947,7 @@
      "surface": "inner",
      "site": 566,
      "copies": 4,
-     "threshold": 0,
+     "threshold": 0.25,
      "tau": 0.5,
      "field": 0.5,
      "q1": 1,
@@ -28172,7 +28956,7 @@
      "qwidth": 1,
      "sign": 1,
      "mode": 1,
-     "pace": 0.6,
+     "pace": 0.5,
      "modulator": -1,
      "crossing": 0,
      "range": 1,
@@ -28298,11 +29082,24 @@
       "learning_tau": 1,
       "copies": 4,
       "field": 0.5,
-      "threshold": 0,
+      "threshold": 0.25,
       "tau": 0.5,
       "q1": 1,
       "q2": 0.5,
-      "pace": 0.6
+      "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -28453,6 +29250,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -28603,6 +29418,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -28772,6 +29600,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -28856,7 +29702,7 @@
        "spread_receptors": 0
       },
       {
-       "active": 1,
+       "active": 0,
        "baseline": 0.5,
        "sensitivity": -2,
        "half": 0.8,
@@ -28922,6 +29768,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -29072,6 +29931,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -29222,6 +30099,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -29372,6 +30267,24 @@
       "q1": 0,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -29522,6 +30435,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -29672,6 +30598,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -29822,6 +30761,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -29832,7 +30784,7 @@
      "surface": "inner",
      "site": 567,
      "copies": 4,
-     "threshold": 0,
+     "threshold": 0.25,
      "tau": 0.5,
      "field": 0.5,
      "q1": 1,
@@ -29841,7 +30793,7 @@
      "qwidth": 1,
      "sign": 1,
      "mode": 1,
-     "pace": 0.6,
+     "pace": 0.5,
      "modulator": -1,
      "crossing": 0,
      "range": 1,
@@ -29967,11 +30919,24 @@
       "learning_tau": 1,
       "copies": 4,
       "field": 0.5,
-      "threshold": 0,
+      "threshold": 0.25,
       "tau": 0.5,
       "q1": 1,
       "q2": 0.5,
-      "pace": 0.6
+      "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -30122,6 +31087,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -30272,6 +31255,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     }
    ],
@@ -30441,6 +31437,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -30591,6 +31605,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -30741,6 +31777,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -30907,6 +31961,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     },
     {
@@ -31057,6 +32129,28 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -31207,6 +32301,24 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.6
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 1,
+       "baseline": 0.5,
+       "sensitivity": -2,
+       "half": 0.8,
+       "substance": 6,
+       "steepness": 3
+      }
      }
     }
    ],
@@ -31373,6 +32485,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -31523,6 +32652,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -31673,6 +32815,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -31823,6 +32978,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -31973,6 +33145,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -0.5
+      }
      }
     },
     {
@@ -32123,6 +33312,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -32273,6 +33479,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -32423,6 +33646,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "0": {
+       "active": 1,
+       "baseline": 1
+      },
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -32573,6 +33813,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -32723,6 +33976,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -32873,6 +34139,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -33023,6 +34302,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -33173,6 +34469,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     }
    ],
@@ -33340,6 +34653,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -33490,6 +34820,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -33640,6 +34983,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -33790,6 +35146,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -33940,6 +35313,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": -0.5
+      }
      }
     },
     {
@@ -34090,6 +35480,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -34240,6 +35647,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -34390,6 +35814,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": -1
+     },
+     "plannedEffects": {
+      "0": {
+       "active": 1,
+       "baseline": 1
+      },
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -34540,6 +35981,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 1
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -34690,6 +36144,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -34840,6 +36307,19 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      }
      }
     },
     {
@@ -34990,6 +36470,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     },
     {
@@ -35140,6 +36637,23 @@
       "q1": 1,
       "q2": 0.5,
       "pace": 0.5
+     },
+     "plannedEffects": {
+      "1": {
+       "active": 1,
+       "baseline": 1
+      },
+      "2": {
+       "active": 1,
+       "baseline": 1
+      },
+      "4": {
+       "active": 0
+      },
+      "5": {
+       "active": 1,
+       "baseline": 1
+      }
      }
     }
    ],
