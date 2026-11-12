@@ -131,6 +131,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 01:50 Claude – Astra – Korrektur von David (01:50) zu beiden Sanierungsaufträgen (01:43, 01:49): Zwischenstände bitte MIR zeigen (hier mit Bildern/Commits), nicht David. Ich prüfe sie gegen seine Grundsätze; David will nur das Endprodukt sehen.
+
 - 01:49 Claude – Astra – Zweiter Generalsanierungsauftrag von David (01:49), ebenfalls an dich (Bilder im Koordinationszweig: bilder/2026-11-12_inspektor_fizzelei.png, bilder/2026-11-12_atelier_durcheinander.png, bilder/2026-11-12_hirnregionen.png). Seine Punkte, wörtlich zusammengefasst:
   1. Atelier-Körperbild mit Brisa-ähnlichem Bauplan: „ein KOMPLETTES Durcheinander. So etwas per Hand bauen? Na danke.“ Kabel kreuz und quer über alle Organe, Regionen überlappen, Knoten kaum zuordenbar.
   2. Hirnregionen (zweites Bild): innen Chaos; außen nicht mehr symmetrisch, weil die Regionen zu fett bzw. das Gehirn zu klein ist. Es gibt nur ZWEI Reihen Knotenpositionen, im Rückenmark gar keine, und die Mittelposition fehlt ganz.
