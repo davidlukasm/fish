@@ -70,6 +70,8 @@ float sensory_response(double stimulus, double threshold);
 float bounded_response(double stimulus, double threshold);
 void record_touch(Body &, double nx, double ny, double impact = 0);
 Point nose_position(const Body &);
+// The water relative to the nose, from the stream at the nose.
+Point nose_flow(const Body &, Point nose, Point stream);
 // flow: the water relative to the fish at its nose.
 Point nostril_source(const Body &, Point nose, Point flow, int side);
 // Barbels hang from the snout and grow with their taste cells; they taste only what their tips

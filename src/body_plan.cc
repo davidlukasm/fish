@@ -994,6 +994,12 @@ Point nose_position(const Body &b) {
   const double reach = NOSE_AHEAD * body_radius(b);
   return {b.x + reach * std::cos(b.angle), b.y + reach * std::sin(b.angle)};
 }
+// The water as the nose meets it: the stream there less the nose's own motion, which moves with
+// the body and swings with its turning.
+Point nose_flow(const Body &b, Point nose, Point stream) {
+  return {stream.x - b.motor().vx + b.motor().turn * (nose.y - b.y),
+          stream.y - b.motor().vy - b.motor().turn * (nose.x - b.x)};
+}
 // A fish smells at one point. Its two nostrils differ only in the water that reaches them: the
 // one facing the oncoming water draws it from upstream, the one in its lee smells the water at the
 // nose itself, and water from straight ahead reaches both alike. A nostril washed from where the

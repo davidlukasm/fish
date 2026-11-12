@@ -643,8 +643,11 @@ int main(int argc, char **argv) {
                 ++cells[side];
               }
             {
-              const auto left = olfactory_position(p->body, binding, 0),
-                         right = olfactory_position(p->body, binding, 1);
+              // Where each nostril draws its water from, as the fish's own smell cells do.
+              const auto nose = nose_position(p->body),
+                         flow = nose_flow(p->body, nose, w.field.water().velocity(nose.x, nose.y));
+              const auto left = nostril_source(p->body, nose, flow, 0),
+                         right = nostril_source(p->body, nose, flow, 1);
               std::cout << "{\"event\":\"smell\",\"step\":" << steps << ",\"bearing\":" << bearing
                         << ",\"left\":" << w.field.odor_field(left.x, left.y)[odor_type]
                         << ",\"right\":" << w.field.odor_field(right.x, right.y)[odor_type]

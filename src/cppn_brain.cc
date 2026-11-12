@@ -306,9 +306,7 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
     const auto nose = nose_position(b);
     const auto stream = world.water().velocity(nose.x, nose.y);
     const double buried = world.sediment_immersion(nose.x, nose.y, SEDIMENT_PROBE);
-    // The nose moves with the body and swings with its turning.
-    const Point flow{stream.x - b.motor_.vx + b.motor_.turn * (nose.y - b.y),
-                     stream.y - b.motor_.vy - b.motor_.turn * (nose.x - b.x)};
+    const auto flow = nose_flow(b, nose, stream);
     for (int side = 0; side < NOSES; ++side) {
       noses[side] = nostril_source(b, nose, flow, side);
       noses[side].x = world.wrap_x(noses[side].x);
