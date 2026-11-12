@@ -439,7 +439,7 @@ export function spinePatch(fx, fy, aim) {
 const SPINE_FISH = Object.freeze({scale : .068, dot : 3.5});
 // The erector muscle stands beside the ring, its gate at the other side.
 const SPINE_MUSCLE = Object.freeze(
-    {spindle : {axis : [ 26, 140, 26, 26 ], thin : 5, thick : 11}, gate : [ 286, 160, 286, 30 ]});
+    {spindle : {axis : [ 26, 132, 26, 22 ], thin : 5, thick : 11}, gate : [ 286, 160, 286, 30 ]});
 // The spines in one picture: how far round the fish they guard at rest (solid) and raised
 // (dashed), where its nodes sit, the spread handle, the muscle that raises them and its gate.
 // Without a design run's spines the side view of the skin stands in.

@@ -32,10 +32,10 @@ import {
   wheelSigma,
   shownSubstance
 } from '../model/document.js';
-import {escapeText, fixed, glyph, pointMarks} from './markup.js';
+import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, percent, t, tList} from '../../strings.js';
 import {heading, icon, ICON, iconSwitch, label} from './kit.js';
-import {DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
+import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
 import {EFFECT_ORDER, effectScene} from './effects.js';
 import {centerTitle, organTitle} from './names.js';
 import {typeChips} from './types.js';
@@ -251,16 +251,19 @@ function receptorCurve(state, receptor, effect) {
   };
 }
 const STEEP_PROBE = 2;
+// Where the answer turns and how sharply only show while it changes at all; a flat answer has only
+// its two ends to drag.
+const FLAT_ANSWER = .02;
 function curveHandles(state, receptor, effect, target) {
   const k = receptorCurve(state, receptor, effect);
   const at = c => [k.x(clamp(k.fraction(c))), k.y(k.scale.value(k.response(c)))];
+  const least = k.response(k.atFraction(0)), most = k.response(k.atFraction(1));
+  const turns = Math.abs(most - least) > FLAT_ANSWER;
   const handles = [
-    ...(effect === GROWTH
-            ? []
-            : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(k.response(k.atFraction(0)))) ] ] ]),
-    [ 'sensitivity', [ k.x(1), k.y(k.scale.value(k.response(k.atFraction(1)))) ] ],
-    [ 'half', at(receptor.half) ],
-    ...((state.capabilities?.steepnessSteps ?? 0) > 0
+    ...(effect === GROWTH ? [] : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(least)) ] ] ]),
+    [ 'sensitivity', [ k.x(1), k.y(k.scale.value(most)) ] ],
+    ...(turns ? [ [ 'half', at(receptor.half) ] ] : []),
+    ...(turns && (state.capabilities?.steepnessSteps ?? 0) > 0
             ? [ [ 'steepness', at(receptor.half * STEEP_PROBE) ] ]
             : [])
   ];
@@ -312,6 +315,20 @@ const CURVE = Object.freeze({
 });
 const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' + CURVE.top + ' V' +
                         CURVE.bottom + ' H' + CURVE.right + '"/>';
+// What the axes of an answer mean, without words: along the bottom the substance (or the cell's
+// age) grows in its own colour, at the top of the upright axis sits the answer's symbol.
+const CURVE_KEY = Object.freeze({gap : 4, strip : 6, steps : 12, icon : 16});
+function curveKey(colour, path) {
+  const K = CURVE_KEY, step = (CURVE.right - CURVE.left) / K.steps;
+  return Array
+             .from({length : K.steps},
+                   (_, k) => '<rect class="aid-curve-amount" x="' + fixed(CURVE.left + k * step) +
+                             '" y="' + (CURVE.bottom + K.gap) + '" width="' + fixed(step) +
+                             '" height="' + K.strip + '" fill="' + colour + '" fill-opacity="' +
+                             fixed((k + 1) / K.steps) + '"/>')
+             .join('') +
+         placedGlyph(path, K.icon, {x : CURVE.left / 2, y : CURVE.top + K.icon / 2}, {line : true});
+}
 const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 const CURVE_DIGITS = 3;
 export function effectCurve(state, receptor, effect, target = null) {
@@ -338,8 +355,12 @@ export function effectCurve(state, receptor, effect, target = null) {
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '><title>' +
          escapeText(unit + ' · ' + along + ' ' +
                     formatNumber(maturity ? 0 : halfMin, CURVE_DIGITS) + ' … ' + formatNumber(1)) +
-         '</title>' + marks + curveAxes() + '<polyline class="aid-response-line" points="' +
-         points + '"/>' + (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
+         '</title>' + marks + curveAxes() +
+         curveKey(substanceColor(receptor.substance), effect === GROWTH  ? GROWTH_ICON
+                                                      : effect === BIRTH ? BIRTH_ICON
+                                                                         : EFFECT_ICON[effect]) +
+         '<polyline class="aid-response-line" points="' + points + '"/>' +
+         (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
 const PHASE_OPEN = .05;
 export function phasePatch(handle, fx) {
