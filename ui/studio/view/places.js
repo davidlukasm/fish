@@ -174,6 +174,8 @@ function musclePoint(organ, index, sites) {
                                                    : {x : BODY_FRAME.snout, y : BODY_FRAME.middle});
 }
 export function organLocation(organ, sites, doc) {
+  if (organ.type === 'lateral')
+    return lateralAnchor(doc, sites, organ);
   if (organ.position && !isRegion(organ))
     return organ.position;
   if (hasHome(organ.type))
@@ -183,8 +185,6 @@ export function organLocation(organ, sites, doc) {
            centerLocation(organ.centers[0], organ.type, sites);
   if (HEAD_SENSES[organ.type])
     return HEAD_SENSES[organ.type](doc, sites, sideOf(organ));
-  if (organ.type === 'lateral')
-    return lateralAnchor(doc, sites, organ);
   const positions = isRegion(organ) ? organ.centers.map((c, i) => regionPoint(doc, organ, i, sites))
                     : organ.type === 'muscle'
                         ? organ.centers.map((c, i) => musclePoint(organ, i, sites))
@@ -213,19 +213,25 @@ export function eyeLocation(doc, sites, side) {
                                                                       : null;
 }
 export const fieldOrigin = (doc, sites, organ) => viewOrigin(doc, sites, sideOf(organ));
-export const LATERAL = Object.freeze({span : [ 285, 860 ], inset : -9, step : 36, gap : 10});
+const LATERAL = Object.freeze({inset : 6, step : 8, reach : 90});
 export function lateralLine(doc, sites, organ) {
-  const L = LATERAL, out = sideOf(organ), eye = eyeLocation(doc, sites, out);
-  const from = Math.max(L.span[0], eye ? eye.x + eyeRadius(doc, out) * EYE.aspect + L.gap : 0);
-  const at = x => ({x, y : skinAt(x, out) - out * L.inset});
-  const count = Math.round((L.span[1] - from) / L.step);
-  return Array.from({length : count + 1}, (_, k) => at(from + (L.span[1] - from) * k / count));
+  const L = LATERAL, out = sideOf(organ), anchor = lateralAnchor(doc, sites, organ);
+  const cells = organ.centers.reduce((n, c) => n + (c.copies ?? 1), 0),
+        reach = Math.min(L.reach, 16 + 8 * Math.sqrt(cells)),
+        from = Math.max(BODY_FRAME.snout, anchor.x - reach / 2),
+        to = Math.min(BODY_FRAME.tail - 8, anchor.x + reach / 2),
+        depth = (anchor.y - BODY_FRAME.middle) / (skinAt(anchor.x, out) - BODY_FRAME.middle);
+  const count = Math.max(2, Math.round((to - from) / L.step));
+  return Array.from({length : count + 1}, (_, k) => {
+    const x = from + (to - from) * k / count,
+          y = BODY_FRAME.middle + depth * (skinAt(x, out) - BODY_FRAME.middle);
+    return {x, y : clamp(y, skinAt(x, -1) + L.inset, skinAt(x, 1) - L.inset)};
+  });
 }
 function lateralAnchor(doc, sites, organ) {
-  const line = lateralLine(doc, sites, organ);
   const cells = organ.centers.map(c => centerLocation(c, organ.type, sites));
-  const middle = cells.length ? centroid(cells).x : line[0].x;
-  return line.reduce((best, p) => Math.abs(p.x - middle) < Math.abs(best.x - middle) ? p : best);
+  const p = organ.position ?? (cells.length ? centroid(cells) : {x : 560, y : 440});
+  return {x : p.x, y : clamp(p.y, skinAt(p.x, -1) + LATERAL.inset, skinAt(p.x, 1) - LATERAL.inset)};
 }
 export const EYE =
     Object.freeze({base : 7, per_center : 1, most : 12, aspect : 1.2, pupil : .44, inset : 4});
@@ -237,6 +243,15 @@ export function showsNodes(state, organs) {
 }
 export function nodeLocation(doc, sites, center, organType) {
   const site = findSite(sites, center.site);
+  if (organType === 'lateral') {
+    const organ = ownerOf(doc, center.id), line = lateralLine(doc, sites, organ),
+          at = (organ.centers.indexOf(center) + .5) / organ.centers.length * (line.length - 1),
+          lo = Math.floor(at), t = at - lo;
+    return {
+      x : line[lo].x + (line[Math.min(lo + 1, line.length - 1)].x - line[lo].x) * t,
+      y : line[lo].y + (line[Math.min(lo + 1, line.length - 1)].y - line[lo].y) * t
+    };
+  }
   if (organType === 'eye' && site) {
     const side = sideSign(site.side), eye = eyeLocation(doc, sites, side);
     if (eye) {
@@ -298,8 +313,7 @@ function ownerOf(doc, centerId) {
   let owners = OWNERS.get(doc);
   if (!owners) {
     owners = new Map();
-    for (const organ of doc.organs.filter(o => isRegion(o) || o.type === 'muscle' ||
-                                               hasHome(o.type) || HEAD_SENSES[o.type]))
+    for (const organ of doc.organs)
       for (const center of organ.centers)
         owners.set(center.id, organ);
     OWNERS.set(doc, owners);

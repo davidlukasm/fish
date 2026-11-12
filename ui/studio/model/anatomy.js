@@ -86,9 +86,7 @@ export function placementArea(type) {
       from : 160,
       to : 880,
       inner : type === 'pain' ? .82 : .96,
-      outer : type === 'pain'      ? .94
-              : type === 'lateral' ? 1.12
-                                   : 1.04
+      outer : type === 'pain' ? .94 : 1.04
     };
   return {from : 475, to : 810, inner : .3, outer : .82};
 }

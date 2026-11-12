@@ -172,7 +172,7 @@ const GLYPH = Object.freeze({
   blood_step : 15,
   gland : [ 16, 11 ],
   balance : {sac : [ 10, 7 ], stone : 3, hair : 10},
-  lateral_pore : 3.2
+  lateral_pore : 2.2
 });
 function eyeGlyph(state, organ, pos, drawnEyes) {
   const {document : doc, sites} = state, side = sideOf(organ), eye = eyeLocation(doc, sites, side);
@@ -512,8 +512,9 @@ const FELT =
     Object.freeze({step : 6, least : .04, base : .35, arrow : 58, gap : 6, head : 10, point : 2.2});
 function feltCells(state, organ) {
   return organ.centers.flatMap(
-      c => (groupReport(state.document, state.anatomy, 'felt', c.id) ??
-            []).map(cell => ({cell, at : centerLocation(c, organ.type, state.sites)})));
+      c => (groupReport(state.document, state.anatomy, 'felt', c.id) ?? [])
+               .map(cell =>
+                        ({cell, at : nodeLocation(state.document, state.sites, c, organ.type)})));
 }
 function feltSkin(state, cells) {
   const points = skinPoints(FELT.step);
