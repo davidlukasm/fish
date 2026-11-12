@@ -3624,6 +3624,10 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     });
     assert.match(sceneHtml, /<canvas class="aid-lab-scene"/);
     assert.match(sceneHtml, /Szene bei Schritt 20/);
+    const failedHtml = view.breedingShell(
+        {...individual, sceneError : {key : lifeModel.sceneKey(chosen), reason : 'fehlt'}});
+    assert.match(failedHtml, /Szene nicht geladen: fehlt/,
+                 'A scene that cannot be fetched says so instead of loading forever');
     assert.doesNotMatch(lifeHtml, /NaN|undefined/);
     Object.assign(inspecting.state, individual);
     click({labLifeTime : '10', labLifePhase : 'feeding'});

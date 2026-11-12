@@ -243,11 +243,11 @@ export class BreedingStation extends LabStation {
           // Each stored scene is complete; its asset numbers belong only to this frame.
           const frame = hydrateRender(data.frame, {renderAssets : data.frame.assets});
           this.state.labScene = {key, data : {...data, frame}};
-          this.state.sceneError = '';
+          this.state.sceneError = null;
         })
         .catch(error => {
           this.sceneFailed = key;
-          this.state.sceneError = error.message;
+          this.state.sceneError = {key, reason : error.message};
         })
         .finally(() => {
           if (this.scenePending === key)

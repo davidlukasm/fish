@@ -168,9 +168,10 @@ function inspection(selected, s) {
             : '';
   const near =
       life.regularSamples ? number(life.nearSamples / life.regularSamples * 100) + ' %' : '—';
-  const scene = s.labScene?.key === sceneKey(selected) ? s.labScene.data : null;
-  return title + phases + '<div data-lab-scene>' + sceneSlot(selected, scene) + '</div>' +
-         navigation + status +
+  const key = sceneKey(selected), scene = s.labScene?.key === key ? s.labScene.data : null;
+  return title + phases + '<div data-lab-scene>' +
+         sceneSlot(selected, scene, s.sceneError?.key === key ? s.sceneError.reason : '') +
+         '</div>' + navigation + status +
          '<div class="aid-life-zoom"><button type="button" data-lab-life-focus="0" aria-pressed="' +
          !s.lifeFocused + '">' + say('whole') +
          '</button><button type="button" data-lab-life-focus="1" aria-pressed="' + !!s.lifeFocused +
