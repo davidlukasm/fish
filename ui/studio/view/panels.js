@@ -15,13 +15,8 @@ import {lateralField} from './lateral.js';
 import {hairField} from './balance.js';
 import {pigmentInspector} from './pigments.js';
 import {scentMap} from './scents.js';
-import {ATELIER_LIMITS, MOTOR_KIND, ORGAN_PORT, SENSE_KIND} from '../../schema.js';
+import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
-import {adaptationElement, sensitivityElement, stimulusShare} from './sensitivity.js';
-import {GRAVITY_STIMULUS, stimulusPicture} from './stimuli.js';
-import {scentColors} from '../../brain_model.js';
-import {driveElement} from './drive.js';
-import {preferredScent} from '../../tuning.js';
 import {
   BARBEL_FEEL,
   functionFor,
@@ -40,23 +35,13 @@ import {
   findAssembly,
   findCenter,
   findOrgan,
-  groupReport,
-  wireContacts,
+  wireContacts
 } from '../model/document.js';
 import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph} from './markup.js';
-import {findSite, onMidline} from '../model/layout.js';
-import {
-  formatNumber,
-  formatSigned,
-  joinParts,
-  linkText,
-  namedText,
-  percent,
-  t,
-  tList
-} from '../../strings.js';
-import {cellGroup, cellWords, heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
+import {onMidline} from '../model/layout.js';
+import {formatNumber, formatSigned, linkText, t, tList} from '../../strings.js';
+import {heading, icon, ICON, label, regionTerm, VALUE_DIGITS} from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
 import {learningInspector} from './learning.js';
@@ -101,18 +86,6 @@ const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
                                       muscleGraphic(state, center) + '</div>';
 
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
-function driveMeaning(state, center) {
-  const site = findSite(state.sites, center.site);
-  const code = site ? functionFor(center, site) : -1;
-  const key = code === MOTOR_KIND.bladder ? 'bladder'
-              : code === MOTOR_KIND.gland ? 'gland'
-                                          : 'muscle';
-  return {
-    above : label('inspector.driveHalves.' + key + '.above'),
-    below : label('inspector.driveHalves.' + key + '.below'),
-    idle : key === 'muscle'
-  };
-}
 const gonadPanel = (state, organ, center) => '<div data-sense-block="' + escapeText(organ.id) +
                                              '">' + gonadGraphic(state, organ, center) + '</div>';
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
@@ -140,60 +113,8 @@ const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       escapeText(organTitle(organ)) + '</span></div>';
 const organPanel = (state, organ, center) =>
     (ORGAN_PANELS[organ.type] ?? organMetric)(state, organ, center);
-const SACS = Object.freeze([ 'eggs', 'sperm' ]);
-// Organs whose picture holds their cells and how their cells answer; no extra marks below it.
-const WHOLE_PICTURES = Object.freeze([
-  'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm',
-  'gland', 'bladder', 'muscle', 'gills', 'gutmuscle', 'defense', 'pigment'
-]);
-const wholePicture = organ => WHOLE_PICTURES.includes(organ.type);
-const cellCount = (organ, center) => wholePicture(organ) ? ''
-                                     : ORGAN_BY_KEY[organ.type]?.nodes &&
-                                             !SACS.includes(organ.type) &&
-                                             !(organ.type === 'bladder' && center.role === 'sensor')
-                                         ? ''
-                                         : cellGroup(center, cellWords(center));
-const section = (title, body) =>
-    '<section class="aid-eye-section"><h4>' + title + '</h4>' + body + '</section>';
-const SKIN_SENSES = Object.freeze([ 'touch', 'pain' ]);
-function sensorSection(state, organ, center) {
-  if (wholePicture(organ))
-    return '';
-  if (!SKIN_SENSES.includes(organ.type))
-    return section(
-        escapeText(t('studio.inspector.answerTo', {stimulus : stimulusName(state, center)})),
-        sensorAnswer(state, center) + sensorAdaptation(state, center));
-  const adaptation = sensorAdaptation(state, center);
-  return /<svg/.test(adaptation) ? section(label('inspector.adaptation'), adaptation) : '';
-}
-function motorTiming(state, center) {
-  const kind = stimulusKind(state, center),
-        key = Object.keys(MOTOR_KIND).find(key => MOTOR_KIND[key] === kind);
-  const port = ORGAN_PORT[key === 'aggression' ? 'jaw' : key],
-        timing = state.anatomy?.motorTiming?.find(row => row[0] === port);
-  if (!timing)
-    return '';
-  return t('studio.development.motorTiming',
-           {integration : formatNumber(timing[1], 1), recovery : timing[2]});
-}
 const muscleChoice = (state, organ, center) =>
     organ.type === 'muscle' && !isPelvicMuscle(organ) ? muscleKind(state, center) : '';
-// Organs that hold their gate in their picture show only the choice of what the muscle does.
-const motorSection = (state, organ, center) =>
-    (wholePicture(organ)
-         ? ''
-         : section(
-               label('inspector.drive'),
-               '<div title="' +
-                   escapeText(
-                       joinParts([ label('development.organRest'), motorTiming(state, center) ])) +
-                   '">' +
-                   driveElement(
-                       center, label('inspector.drive'), () => label('development.netInput'),
-                       {...driveContext(state, center), meaning : driveMeaning(state, center)}) +
-                   '</div>')) +
-    muscleChoice(state, organ, center);
-const ROLE_SECTIONS = Object.freeze({sensor : sensorSection, motor : motorSection});
 function organSettings(state, organ, center) {
   if (!center)
     return '<div class="aid-empty-centre">' + label('sections.empty') + '</div>';
@@ -204,54 +125,11 @@ function organSettings(state, organ, center) {
            (state.selected?.kind === 'center' ? nerveEditor(state, center) : '');
   if (center.role === 'nerve')
     return centerSide(state, center) + nerveEditor(state, center);
-  return organPanel(state, organ, center) + cellCount(organ, center) +
-         (ROLE_SECTIONS[center.role]?.(state, organ, center) ?? '');
+  return organPanel(state, organ, center) + muscleChoice(state, organ, center);
 }
 export function organSettingsBlock(state, organ) {
   return '<div class="aid-organ-settings" data-organ-settings="' + escapeText(organ.id) + '">' +
          organSettings(state, organ, selectedCenter(state, organ)) + '</div>';
-}
-function stimulusKind(state, center) {
-  const site = findSite(state.sites, center.site);
-  return site ? functionFor(center, site) : -1;
-}
-// Flow cells inside the body are the balance organ's gravity cells: their stimulus is the tilt.
-const gravityCell = (state, center) =>
-    findCenter(state.document, center.id)?.organ.type === 'balance';
-const stimulusName = (state, center) =>
-    gravityCell(state, center)
-        ? label('inspector.gravityStimulus')
-        : tList('studio.inspector.stimuli')[stimulusKind(state, center)] ?? '';
-function stimulusDrawing(state, center) {
-  const kind = gravityCell(state, center) ? GRAVITY_STIMULUS : stimulusKind(state, center);
-  const colour = kind === SENSE_KIND.odor ? scentColors?.[preferredScent(center)] : null;
-  return (share, point, title, size) => stimulusPicture(kind, share, point, title, colour, size);
-}
-const stimulusAxis = (state, sense) => sense?.intensity ? state.anatomy?.lightDimmest : null;
-export function sensorAnswer(state, center, shift = 1, start = null, dragged = null) {
-  const sense = groupReport(state.document, state.anatomy, 'senses', center.id),
-        answer = start ?? sense;
-  const graphic = sensitivityElement(answer, stimulusAxis(state, answer),
-                                     {sensitivity : 'center', 'sensitivity-id' : center.id},
-                                     label('inspector.sensitivity'), stimulusDrawing(state, center),
-                                     shift, dragged, sense?.adapt?.held);
-  return '<div data-sensitivity-block="center" data-sensitivity-id="' + escapeText(center.id) +
-         '">' + graphic + '</div>';
-}
-export function sensorAdaptation(state, center, stretch = 1, start = null) {
-  const sense = groupReport(state.document, state.anatomy, 'senses', center.id),
-        adapt = start ?? sense?.adapt;
-  const steps =
-      adapt ? t('studio.inspector.steps', {n : Math.round((adapt.response.length - 1) * stretch)})
-            : '';
-  const draw = stimulusDrawing(state, center),
-        share = stimulusShare(adapt?.held ?? 0, stimulusAxis(state, sense)),
-        title = t('studio.inspector.held', {stimulus : stimulusName(state, center)});
-  const graphic = adaptationElement(adapt, {adaptation : 'center', 'adaptation-id' : center.id},
-                                    label('inspector.adaptation'), steps,
-                                    (point, size) => draw(share, point, title, size), stretch);
-  return '<div data-adaptation-block data-adaptation-id="' + escapeText(center.id) + '">' +
-         graphic + '</div>';
 }
 // Taste, touch or both, each as its sense's own mark; the barbels' whole story is the tooltip.
 const BARBEL_ICON =

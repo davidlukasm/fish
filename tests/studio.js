@@ -439,9 +439,6 @@ async function checkResponseControls(model, capabilities, clicks) {
   const {regionSettings} = await import('../ui/studio/view/circuit.js');
   const {settleRegions, updateRegion} = await import('../ui/studio/model/regions.js');
   const {HORMONE_EFFECT} = await import('../ui/schema.js');
-  const {drivePatch} = await import('../ui/studio/view/drive.js');
-  const {timeConstantSteps} = await import('../ui/tuning.js');
-  const {TIME_CONSTANT} = await import('../ui/schema.js');
   const sites = capabilities.sites;
   const placed =
       model.addOrgan(model.newDocument('Reizantwort'), 'choice', sites, {x : 600, y : 300});
@@ -528,9 +525,6 @@ async function checkResponseControls(model, capabilities, clicks) {
   assert.match(selectedCell, /data-response-handle="filter"/);
   assert.match(selectedCell, /data-response-handle="rectify"/);
   assert.doesNotMatch(selectedCell, /aid-center-tabs|aid-response-choices/);
-  assert.ok(timeConstantSteps(drivePatch('beat', 0, 0, {scale : context.scale}).tau) >=
-                TIME_CONSTANT.pace_min_steps - 1e-9,
-            'A dragged beat stops at the native minimum period');
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {driveContext} = await import('../ui/studio/view/preview.js');
   const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
@@ -2769,8 +2763,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const drive = await import('../ui/studio/view/drive.js');
     const scale = sitesResult.biasScale;
     assert.ok(scale > 0);
-    const back = drive.drivePatch('rest', .1, 0, {scale}).threshold;
-    assert.ok(Math.abs(back + 1) < 1e-9, 'The top of the rest band is the lowest threshold');
     const nerve = {threshold : 0, q1 : 1, q2 : 0};
     assert.equal(drive.nerveResponse(nerve, .8, .8, {scale}), 0);
     nerve.q2 = .5;

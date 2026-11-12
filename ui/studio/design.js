@@ -50,7 +50,7 @@ import {
 } from './model/document.js';
 import {sideOf} from './model/layout.js';
 import {dataAttribute} from './view/markup.js';
-import {organSettingsBlock, selectedCenter, sensorAdaptation, sensorAnswer} from './view/panels.js';
+import {organSettingsBlock, selectedCenter} from './view/panels.js';
 import {label} from './view/kit.js';
 import {glandProfile, hormonePad, hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
@@ -237,21 +237,12 @@ export const designMethods = {
   },
   refreshSensitivity() {
     const drag = this.heldHandle('sensitivity');
-    this.redrawBlocks(
-        'sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block), target => {
-          const own = drag?.block === (target.organ ? target.tuning.id : target.center.id);
-          const shift = own ? drag.shift : 1, start = own && drag.log ? drag.answer : null;
-          return target.organ
-                     ? sensitivityEditor(this.state, target.organ, target.tuning, shift, start)
-                     : sensorAnswer(this.state, target.center, shift, start,
-                                    own ? drag.dragged : null);
-        });
-    const adapt = this.heldHandle('adaptation');
-    this.redrawBlocks('adaptationId', (doc, id) => findCenter(doc, id)?.center, center => {
-      const own = adapt?.id === center.id;
-      return sensorAdaptation(this.state, center, own ? adapt.stretch : 1,
-                              own ? adapt.adapt : null);
-    });
+    this.redrawBlocks('sensitivityBlock', (doc, kind, block) => this.sensitivityTarget(block),
+                      target => {
+                        const own = drag?.block === target.tuning.id;
+                        return sensitivityEditor(this.state, target.organ, target.tuning,
+                                                 own ? drag.shift : 1, own ? drag.answer : null);
+                      });
   },
   refreshEffectors() {
     const sense = this.heldHandle('sense');

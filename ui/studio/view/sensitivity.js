@@ -1,8 +1,6 @@
 import {formatNumber} from '../../strings.js';
 import {clamp, PERCENT} from '../../units.js';
-import {idSafe, placedGlyph, rounded} from './markup.js';
-import {linePaint} from '../../glyph.js';
-import {CHANGE_ICON, LEVEL_ICON} from './drive.js';
+import {idSafe, rounded} from './markup.js';
 import {PICTURE} from './stimuli.js';
 
 const SENSITIVITY = Object.freeze({
@@ -35,8 +33,7 @@ export function sensitivityStimulus(fx, dimmest) {
   const S = SENSITIVITY, x = Math.max(S.left, Math.min(S.right, fx * S.width));
   return stimulusAt((x - S.left) / (S.right - S.left), dimmest);
 }
-export function sensitivityElement(answer, dimmest, target, label, picture, shift = 1,
-                                   dragged = null, held = null) {
+export function sensitivityElement(answer, dimmest, target, label, picture, shift = 1) {
   if (!answer?.response?.length || !(answer.half > 0))
     return '';
   const S = SENSITIVITY, count = answer.response.length;
@@ -44,7 +41,7 @@ export function sensitivityElement(answer, dimmest, target, label, picture, shif
     const stimulus = stimulusAt(k / (count - 1), dimmest) * (dimmest ? shift : 1);
     return rounded(axisX(stimulus, dimmest)) + ' ' + rounded(BASELINE - S.plot * r);
   });
-  const half = dragged ?? answer.half * (dimmest ? shift : 1);
+  const half = answer.half * (dimmest ? shift : 1);
   const x = rounded(axisX(half, dimmest)), y = rounded(BASELINE - S.plot / 2);
   const attributes =
       Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
@@ -68,83 +65,7 @@ export function sensitivityElement(answer, dimmest, target, label, picture, shif
          `<line class="aid-sensitivity-axis" x1="${S.left}" y1="${BASELINE}" x2="${S.right}" y2="${
              BASELINE}"/>${ticks}<line class="aid-sensitivity-half" x1="${S.left}" y1="${y}" x2="${
              x}" y2="${y}"/><path class="aid-sensitivity-curve" clip-path="url(#${clip})" d="M${
-             points.join(' L')}"/>${heldMark(answer, dimmest, shift, held)}${pictures}` +
+             points.join(' L')}"/>${pictures}` +
          `<circle class="aid-spectrum-handle" data-sensitivity-handle="half" cx="${x}" cy="${
              y}" r="${S.handle}"/></svg>`;
-}
-function heldMark(answer, dimmest, shift, held) {
-  if (!(held > 0))
-    return '';
-  const count = answer.response.length;
-  const at = k => stimulusAt(k / (count - 1), dimmest) * (dimmest ? shift : 1);
-  let k = 1;
-  while (k < count - 1 && at(k) < held)
-    ++k;
-  const share = clamp((held - at(k - 1)) / ((at(k) - at(k - 1)) || 1));
-  const r = answer.response[k - 1] + (answer.response[k] - answer.response[k - 1]) * share;
-  const x = rounded(axisX(held, dimmest)), y = rounded(BASELINE - SENSITIVITY.plot * r);
-  return `<line class="aid-held-line" x1="${x}" y1="${y}" x2="${x}" y2="${
-      BASELINE}"/><circle class="aid-held-mark" cx="${x}" cy="${y}" r="${HELD_MARK}"/>`;
-}
-const HELD_MARK = 4.5;
-
-const ADAPTATION = Object.freeze({
-  width : 360,
-  height : 140,
-  left : 12,
-  right : 348,
-  top : 10,
-  plot : 66,
-  held : 4,
-  span : .6,
-  size : 1.8,
-  icon : 14,
-  line : 1.6
-});
-const ADAPT_BASE = ADAPTATION.top + ADAPTATION.plot;
-export function adaptationSteps(fx, count) {
-  const A = ADAPTATION, x = Math.max(A.left, Math.min(A.right, fx * A.width));
-  return Math.max(1, (x - A.left) / (A.right - A.left) * count);
-}
-export function adaptationElement(adapt, target, label, stepsLabel, held, stretch = 1) {
-  if (!adapt?.response?.length || !(adapt.steps > 0))
-    return '';
-  const A = ADAPTATION, count = adapt.response.length - 1;
-  const ax = step => A.left + (A.right - A.left) * Math.min(1, step / count);
-  const points = adapt.response.map((r, k) => rounded(ax(k * stretch)) + ' ' +
-                                              rounded(ADAPT_BASE - A.plot * r));
-  const steps = adapt.steps * stretch;
-  const at = adapt.response[Math.min(count, Math.round(adapt.steps))];
-  const attributes =
-      Object.entries(target).map(([ key, value ]) => ` data-${key}="${idSafe(value)}"`).join('');
-  const pictures =
-      Array
-          .from({length : A.held},
-                (_, k) => held({
-                  x : A.left + PICTURE.size * A.size / 2 +
-                          (A.right - A.left - PICTURE.size * A.size) * A.span * k / (A.held - 1),
-                  y : PICTURE_Y
-                },
-                               A.size))
-          .join('');
-
-  const ends =
-      [ CHANGE_ICON, LEVEL_ICON ]
-          .map((path, k) => placedGlyph(
-                   path, A.icon,
-                   {x : k ? A.right - A.icon / 2 : A.left + A.icon / 2, y : ADAPT_BASE + A.icon},
-                   {paint : linePaint({width : A.line})}))
-          .join('');
-  return `<svg class="aid-sensitivity aid-adaptation" viewBox="0 0 ${A.width} ${A.height}"${
-      attributes} role="img" aria-label="${label}"><line class="aid-sensitivity-axis" x1="${
-      A.left}" y1="${ADAPT_BASE}" x2="${A.right}" y2="${
-      ADAPT_BASE}"/><line class="aid-sensitivity-half" x1="${rounded(ax(steps))}" y1="${
-      A.top}" x2="${rounded(ax(steps))}" y2="${
-      ADAPT_BASE}"/><path class="aid-sensitivity-curve" d="M${
-      points.join(' L')}"/><circle class="aid-held-mark" cx="${A.left}" cy="${
-      rounded(ADAPT_BASE - A.plot * adapt.response[0])}" r="${HELD_MARK}"/>${pictures}${
-      ends}<circle class="aid-spectrum-handle" data-adaptation-handle="tau" cx="${
-      rounded(ax(
-          steps))}" cy="${rounded(ADAPT_BASE - A.plot * at)}" r="${SENSITIVITY.handle}"/><text x="${
-      A.right}" y="${A.height - SENSITIVITY.tick}" text-anchor="end">${stepsLabel}</text></svg>`;
 }

@@ -183,8 +183,6 @@
     "removeBloodType": "Diesen Stoff nicht mehr lesen",
     "nerveCells": "{n} Nervenzellen je Knoten",
     "scents": "Gerüche",
-    "sensitivity": "Empfindlichkeit",
-    "adaptation": "Gewöhnung",
     "substanceName": "Stoffname",
     "substanceLetters": [
       "A",
@@ -265,8 +263,6 @@
       "both": "beidseitig",
       "title": "Seitenführung"
     },
-    "steps": "{n} Schritte",
-    "drive": "Organbefehl aus Eingängen",
     "kindCount": "{name} ×{n}",
     "stretch": "Dehnung",
     "cellsHandle": "Ziehen: mehr oder weniger Füllzellen",
@@ -314,14 +310,6 @@
       "misst die Körperform"
     ],
     "driveHalves": {
-      "muscle": {
-        "above": "wirkt",
-        "below": "ohne Wirkung"
-      },
-      "bladder": {
-        "above": "füllt",
-        "below": "leert"
-      },
       "gland": {
         "above": "schüttet aus",
         "below": "bindet"
@@ -335,23 +323,6 @@
       "touch": "Tastet"
     },
     "muscleKind": "Muskelart ändern",
-    "answerTo": "Antwort auf {stimulus}",
-    "held": "{stimulus} gehalten",
-    "gravityStimulus": "Neigung",
-    "stimuli": [
-      "Licht",
-      "Duft",
-      "Strömung",
-      "Berührung",
-      "Nähe",
-      "Nahrung",
-      "Verletzung",
-      "Wassertiefe",
-      "Füllung der Gonaden",
-      "Dehnung",
-      "Stoff im Blut",
-      "Berührung an der Spitze"
-    ],
     "addProfile": "Duftprofil",
     "removeProfile": "Duftprofil entfernen",
     "meanLimit": "Mittlere genetische Höchststärke",
@@ -1263,7 +1234,6 @@
     "steepness": "Steilheit",
     "electrical_limit": "Elektrische Höchststärke",
     "teaching_limit": "Lehrende Höchststärke",
-    "organRest": "Ohne elektrische Eingänge bleibt das Organ in Ruhe. Die Eigenaktivität der Zelle ermöglicht den Lernbeginn.",
     "width": "Stoffbreite",
     "preview": "Beispielwerte",
     "previewConditions": "Die Kennlinien und Organansichten verwenden diese Beispielwerte für eine angenommene Situation im späteren Fisch.",
@@ -1288,7 +1258,6 @@
     "spread_contacts": "Streuung: Kontakte",
     "receptorActive": "Rezeptor verwenden",
     "receptorValues": "Rezeptorwerte",
-    "netInput": "Summierter Eingang −1 … +1",
     "bodyGrowth": "Dieser Rezeptor steuert das Gewebewachstum des Körpers über Hormone. Die Reife ergibt sich aus der größten erreichten Gewebemasse im Verhältnis zur Zielgröße.",
     "phaseHandles": "Ziehen setzt einfache Reiferezeptoren. Die Marken stehen für deren Halbsättigung; breite Rezeptoren reagieren zusätzlich auf die gehaltenen Hormonspiegel.",
     "threshold": "Schwelle / Gegenstück zur Eigenaktivität",
@@ -1300,7 +1269,6 @@
     "exampleInput": "Beispieleingang der Organneuronen",
     "inputMark": "Ein",
     "currentResponse": "Antwort bei den Beispielwerten",
-    "motorTiming": "Organmittel aus dem Bauplan: Integration {integration} Schritte, Erholung nach einem Impuls {recovery} Schritte.",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",
     "response": "Zeitantwort: 0 Änderung · 0,5 Pegel · 1 Merkspur"

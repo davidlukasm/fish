@@ -1,8 +1,7 @@
 import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
 import {testLightMarkup, visionDragPatch} from './view/vision.js';
 import {spectrumPatch} from './view/spectrum.js';
-import {adaptationSteps, sensitivityStimulus} from './view/sensitivity.js';
-import {drivePatch} from './view/drive.js';
+import {sensitivityStimulus} from './view/sensitivity.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
@@ -21,14 +20,7 @@ import {hairPatch} from './view/balance.js';
 import {gutProbePatch, probeHandle, probePatch} from './view/probes.js';
 import {scentMapTuning, scentMapWidth} from './view/scents.js';
 import {pigmentAmount, pigmentWheelPatch} from './view/pigments.js';
-import {
-  activationQuality,
-  planOfUnit,
-  thresholdQualityShift,
-  timeConstantOf,
-  timeConstantSteps,
-  unitOfPlan
-} from '../tuning.js';
+import {planOfUnit, thresholdQualityShift, unitOfPlan} from '../tuning.js';
 import {
   findCenter,
   findOrgan,
@@ -100,7 +92,6 @@ const HANDLES = Object.freeze({
   response : {follow : 'responsePointer'},
   nerve : {follow : 'nervePointer'},
   region : {follow : 'regionPointer'},
-  adaptation : {follow : 'adaptationPointer', done : 'refreshSensitivity'},
   sensitivity : {follow : 'sensitivityPointer', done : 'refreshSensitivity'},
   spectrum : {follow : 'spectrumPointer', done : 'refreshInspector'},
   probe : {follow : 'probePointer'},
@@ -272,18 +263,7 @@ export const GRIPS = Object.freeze([
     held : 'drive',
     start : (studio, g, h) => ({id : g.dataset.sac, handle : 'sac', name : h.dataset.sacHandle})
   },
-  {
-    graphic : '[data-drive]',
-    handle : '[data-drive-handle]',
-    claims : true,
-    held : 'drive',
-    start : (studio, g, h) => ({id : g.dataset.drive, handle : h.dataset.driveHandle})
-  },
-  {
-    graphic : '[data-adaptation]',
-    held : 'adaptation',
-    start : (studio, g) => studio.adaptationGrip(g)
-  },
+
   {
     graphic : '[data-bend-index]',
     held : 'bend',
@@ -528,37 +508,27 @@ export const handleMethods = {
     this.draftDesign(changed, 'amount:' + control.id, 'refreshPigment');
   },
   sensitivityTarget(block) {
-    if (block.dataset.sensitivityBlock === 'field')
-      return this.spectrumTarget({
-        spectrum : 'field',
-        spectrumId : block.dataset.sensitivityId,
-        profileId : block.dataset.profileId
-      });
-    const found = findCenter(this.state.document, block.dataset.sensitivityId);
-    return found && {tuning : found.center, center : found.center};
+    return this.spectrumTarget({
+      spectrum : 'field',
+      spectrumId : block.dataset.sensitivityId,
+      profileId : block.dataset.profileId
+    });
   },
   spectrumTarget({spectrumId : id, profileId}) {
     const organ = findOrgan(this.state.document, id);
     const profile = organ?.field?.profiles.find(p => p.id === profileId);
     return profile && {tuning : profile, organ};
   },
+  // The eye's light cells: the threshold moves by as much as the half answer is dragged.
   sensitivityPointer(event) {
-    const drag = this.handleDrag, dimmest = drag.log ? this.state.anatomy?.lightDimmest : null;
-    if (drag.log && !(dimmest > 0))
+    const drag = this.handleDrag, dimmest = this.state.anatomy?.lightDimmest;
+    if (!(dimmest > 0))
       return;
-    const stimulus = sensitivityStimulus(pointerShare(event, drag.rect).fx, dimmest);
-    let threshold;
-    if (drag.log) {
-      drag.shift = stimulus / drag.answer.half;
-      threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
-    } else {
-      drag.dragged = stimulus;
-      threshold = planOfUnit(activationQuality(stimulus));
-    }
-    const doc = drag.field ? updateField(this.state.document, drag.field,
-                                         {profile : {id : drag.block, threshold}}, this.state.sites)
-                           : updateCenter(this.state.document, drag.block, {threshold});
-    this.draftDesign(doc, 'threshold:' + drag.block, 'refreshSensitivity');
+    drag.shift = sensitivityStimulus(pointerShare(event, drag.rect).fx, dimmest) / drag.answer.half;
+    const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
+    this.draftDesign(updateField(this.state.document, drag.field,
+                                 {profile : {id : drag.block, threshold}}, this.state.sites),
+                     'threshold:' + drag.block, 'refreshSensitivity');
   },
   previewPointer(event) {
     const drag = this.handleDrag,
@@ -623,15 +593,8 @@ export const handleMethods = {
     if (drag.handle === 'copies')
       return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx, fy)),
                               'cells:' + drag.id);
-    const doc =
-        drag.handle === 'start' || drag.handle === 'end'
-            ? this.lifePhase(drag.id, phasePatch(drag.handle, fx))
-            : updateCenter(
-                  this.state.document, drag.id,
-                  drivePatch(
-                      drag.handle, fx, fy,
-                      driveContext(this.state, findCenter(this.state.document, drag.id).center)));
-    this.draftDesign(doc, 'drive:' + drag.id);
+    if (drag.handle === 'start' || drag.handle === 'end')
+      this.draftDesign(this.lifePhase(drag.id, phasePatch(drag.handle, fx)), 'drive:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;
@@ -673,15 +636,6 @@ export const handleMethods = {
     if (!changed)
       return;
     this.draftDesign(changed, 'sac:' + drag.id);
-  },
-  adaptationPointer(event) {
-    const drag = this.handleDrag;
-    const steps =
-        adaptationSteps(pointerShare(event, drag.rect).fx, drag.adapt.response.length - 1);
-    const tau = timeConstantOf(steps);
-    drag.stretch = timeConstantSteps(tau) / drag.adapt.steps;
-    this.draftDesign(updateCenter(this.state.document, drag.id, {tau}), 'tau:' + drag.id,
-                     'refreshSensitivity');
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
@@ -873,20 +827,17 @@ export const handleMethods = {
   sensitivityGrip(graphic) {
     const block = graphic.closest('[data-sensitivity-block]');
     const target = block && this.sensitivityTarget(block);
-    const doc = this.state.document, anatomy = this.state.anatomy;
-    const answer = target?.organ
-                       ? anatomy?.light?.[profileIndex(doc, target.organ.id, target.tuning.id)]
-                       : groupReport(doc, anatomy, 'senses', target?.center.id);
-    return target && answer?.half > 0 ? {
-      field : target.organ?.id ?? null,
+    const answer =
+        target && this.state.anatomy?.light
+                      ?.[profileIndex(this.state.document, target.organ.id, target.tuning.id)];
+    return answer?.half > 0 ? {
+      field : target.organ.id,
       block : target.tuning.id,
       threshold : target.tuning.threshold,
-      log : target.organ ? true : answer.intensity,
       answer,
-      shift : 1,
-      dragged : null
+      shift : 1
     }
-                                      : null;
+                            : null;
   },
   skinGrip(graphic, handle) {
     const found = findCenter(this.state.document, graphic.dataset.skinField);
@@ -949,9 +900,4 @@ export const handleMethods = {
     if (doc)
       this.draftDesign(doc, 'sense:' + drag.id, drag.redraw);
   },
-  adaptationGrip(graphic) {
-    const id = graphic.dataset.adaptationId;
-    const adapt = groupReport(this.state.document, this.state.anatomy, 'senses', id)?.adapt;
-    return adapt ? {id, adapt, stretch : 1} : null;
-  }
 };
