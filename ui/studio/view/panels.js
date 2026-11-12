@@ -145,7 +145,7 @@ const SACS = Object.freeze([ 'eggs', 'sperm' ]);
 // Organs whose picture holds their cells and how their cells answer; no extra marks below it.
 const WHOLE_PICTURES = Object.freeze([
   'lateral', 'touch', 'pain', 'nose', 'barbels', 'balance', 'blood', 'gut', 'eggs', 'sperm',
-  'gland', 'bladder', 'muscle', 'gills', 'gutmuscle', 'defense'
+  'gland', 'bladder', 'muscle', 'gills', 'gutmuscle', 'defense', 'pigment'
 ]);
 // Barbels that only touch have no scent map to hold their marks.
 const wholePicture = (organ, center) =>

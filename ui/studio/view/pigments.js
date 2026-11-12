@@ -7,6 +7,7 @@ import {skinAt} from './frame.js';
 import {escapeText, fixed} from './markup.js';
 import {hueQuality, pigmentReflectance, tuningHue} from '../../tuning.js';
 import {formatNumber, t, tList} from '../../strings.js';
+import {gateHandle} from './sense_marks.js';
 
 const label = (key, values) => t('studio.pigment.' + key, values);
 const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
@@ -14,6 +15,8 @@ const kindName = rgb => tList('studio.pigment.kinds')[pigmentKind(rgb)] ?? '';
 const PIGMENT_WHEEL =
     Object.freeze({size : 300, centre : 150, radius : 105, rings : 8, sectors : 36, ring : 8});
 const W = PIGMENT_WHEEL, TURN = 360, HALF_TURN = 180;
+// The chosen kind's gate runs up the palette's right edge, beside the wheel.
+const GATE = Object.freeze({x : 292, least : 280, most : 20});
 const wheelAt = (shown, r) => ({
   x : W.centre + r * Math.sin(shown * Math.PI / HALF_TURN),
   y : W.centre - r * Math.cos(shown * Math.PI / HALF_TURN)
@@ -68,8 +71,16 @@ function pigmentWheel(organ, chosen, state) {
                    .join('');
   const edge = wheelAt(Math.min(.999, (before + chosen.centers.length) / most) * TURN, radius);
   const id = escapeText(center.id);
-  return '<svg class="aid-pigment-palette" viewBox="0 0 300 360"><svg width="300" height="300" viewBox="0 0 300 300" data-pigment-amount="' +
-         id + '" data-room="' + room + '" data-before="' + before + '" data-most="' + most + '">' +
+  const gate = center.role === 'motor'
+                   ? '<path class="aid-gate-track" d="M' + GATE.x + ' ' + GATE.least + ' V' +
+                         GATE.most + '"/>' +
+                         gateHandle({x : GATE.x, y : GATE.least}, {x : GATE.x, y : GATE.most},
+                                    state, center, t('studio.inspector.motorGate'))
+                   : '';
+  return '<svg class="aid-pigment-palette" viewBox="0 0 300 360"' +
+         (gate ? ' data-sense-field="' + id + '" data-sense-redraw="refreshPigment"' : '') +
+         '><svg width="300" height="300" viewBox="0 0 300 300" data-pigment-amount="' + id +
+         '" data-room="' + room + '" data-before="' + before + '" data-most="' + most + '">' +
          '<svg class="aid-pigment-wheel" width="300" height="300" viewBox="0 0 300 300" data-pigment-wheel="' +
          id + '">' +
          '<g class="aid-pigment-patches">' + (patches ??= wheelPatches()) +
@@ -79,7 +90,7 @@ function pigmentWheel(organ, chosen, state) {
          '<circle class="aid-graphic-handle" data-graphic-handle="amount" cx="' + fixed(edge.x) +
          '" cy="' + fixed(edge.y) + '" r="6"><title>' +
          escapeText(label('amount', {n : chosen.centers.length})) + '</title></circle></svg>' +
-         colourRange(state) + '</svg>';
+         colourRange(state) + gate + '</svg>';
 }
 function kindChips(organ, chosen) {
   return typeChips(organ, chosen, type => {

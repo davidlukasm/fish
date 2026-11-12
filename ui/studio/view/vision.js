@@ -324,17 +324,15 @@ export function visionFan(state, organ) {
 export function spectrumEditor(state, organ, profile) {
   const light = state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
   const [centre, width, opponent] = spectrumValues(profile, true);
-  return `<div data-spectrum-block>${
-             spectrumElement(
-                 profile, {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
-                 label('spectrum'), light, state.sightProbe?.hue,
-                 {excite : label('excites'), inhibit : label('inhibits')})}` +
-         `<div class="aid-spectrum-legend"><span class="centre">${
-             label('centre')}</span><span class="test">${
-             label('probe')}</span></div><div class="aid-profile-values"><span>${
-             labelledText(label('centre'),
-                          centre)}</span><span>${labelledText(label('width'), width)}</span><span>${
-             labelledText(label('opponent'), opponent)}</span></div></div>`;
+  const values = [
+    labelledText(label('centre'), centre), labelledText(label('width'), width),
+    labelledText(label('opponent'), opponent)
+  ].join(' · ');
+  return `<div data-spectrum-block title="${escapeText(values)}">${
+      spectrumElement(profile,
+                      {spectrum : 'field', 'spectrum-id' : organ.id, 'profile-id' : profile.id},
+                      label('spectrum'), light, state.sightProbe?.hue,
+                      {excite : label('excites'), inhibit : label('inhibits')})}</div>`;
 }
 export function sensitivityEditor(state, organ, profile, shift = 1, start = null) {
   const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
@@ -345,11 +343,10 @@ export function sensitivityEditor(state, organ, profile, shift = 1, start = null
       (share, point, title, size) =>
           stimulusPicture(SENSE_KIND.light, share, point, title, profileColor(profile), size),
       shift);
+  const half =
+      graphic ? ` title="${escapeText(label('half') + ' ' + percent(light.half * shift, 2))}"` : '';
   return `<div data-sensitivity-block="field" data-sensitivity-id="${
-      idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}">${graphic}${
-      graphic ? `<div class="aid-profile-values"><span>${label('half')}</span><span>${
-                    percent(light.half * shift, 2)}</span></div>`
-              : ''}</div>`;
+      idSafe(organ.id)}" data-profile-id="${idSafe(profile.id)}"${half}>${graphic}</div>`;
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
@@ -365,20 +362,18 @@ export function nearAnswers(state, organ) {
       (cell, k) => `<rect x="${fixed(k * step)}" y="${fixed(B.base - plot * cell.answer)}" width="${
           fixed(Math.max(B.gap, step - B.gap))}" height="${fixed(plot * cell.answer)}"/>`);
   return block + `<svg class="aid-near-answers" viewBox="0 0 ${B.width} ${B.height}" role="img" ` +
-         `aria-label="${label('nearAnswer')}"><line x1="0" y1="${B.base}" x2="${B.width}" y2="${
-             B.base}"/>${bars.join('')}<text x="0" y="${B.label}">${
-             label('ahead')}</text><text x="${B.width}" y="${B.label}" text-anchor="end">${
-             label('aside')}</text></svg></div>`;
+         `aria-label="${label('nearAnswer')}"><title>${label('nearAnswer')}: ${label('ahead')} … ${
+             label('aside')}</title><line x1="0" y1="${B.base}" x2="${B.width}" y2="${B.base}"/>${
+             bars.join('')}</svg></div>`;
 }
 const SIGHT_CANVAS = Object.freeze({width : 360, height : 132});
 const sightEyes = () => `<div class="aid-sight-eyes">${
         [0, 1]
-            .map(side => `<figure><canvas data-sight-eye="${side}" width="${
-                     SIGHT_CANVAS.width}" height="${SIGHT_CANVAS.height}"></canvas><figcaption>${
-                     label(side ? 'right' : 'left')}</figcaption></figure>`)
+            .map(side => `<figure title="${label(side ? 'right' : 'left')}"><canvas ` +
+                         `data-sight-eye="${side}" width="${SIGHT_CANVAS.width}" height="${
+                             SIGHT_CANVAS.height}"></canvas></figure>`)
             .join('')}</div>`;
-const section = (key, body) =>
-    `<section class="aid-eye-section"><h4>${label(key)}</h4>${body}</section>`;
+const section = body => `<section class="aid-eye-section">${body}</section>`;
 const CONTRAST_CHOICES = Object.freeze([ 'bright', 'dark', 'both' ]);
 const CONTRAST_ICON =
     Object.freeze({width : 26, height : 16, corner : 3, radius : 5, pair : 4, apart : 5});
@@ -399,9 +394,8 @@ function contrastChooser(profile) {
           .map(key => {
             const chosen = profile.polarity === CONTRAST_POLARITY[key];
             return `<button data-vision-polarity="${CONTRAST_POLARITY[key]}" class="${
-                chosen ? 'active'
-                       : ''}" aria-pressed="${chosen}" title="${label('contrastTitle.' + key)}">${
-                contrastIcon(key)}${label('contrastChoice.' + key)}</button>`;
+                chosen ? 'active' : ''}" aria-pressed="${chosen}" title="${
+                label('contrastTitle.' + key)}">${contrastIcon(key)}</button>`;
           })
           .join('')}</div>`;
 }
@@ -409,7 +403,7 @@ export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;
   const p = profiles.find(p => p.id === state.visionProfile) ?? profiles[0];
   if (organ.type !== 'eye')
-    return section('nearAnswer', nearAnswers(state, organ));
+    return section(nearAnswers(state, organ));
   const names = profiles.map(profileName);
   const chip = (profile, i) => {
     const name = names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i]
@@ -417,18 +411,16 @@ export function visionInspector(state, organ) {
     return `<button data-vision-profile="${idSafe(profile.id)}" class="${
         profile.id === p.id ? 'active'
                             : ''}" style="--profile:${profileColor(profile)}" aria-label="${
-        label('profile')} ${escapeText(name)}"><i></i>${escapeText(name)}</button>`;
+        label('profile')} ${escapeText(name)}" title="${escapeText(name)}"><i></i></button>`;
   };
-  return section('profiles',
-                 `<div class="aid-vision-profiles">${
-                     profiles.map(chip).join('')}<button class="aid-add" data-vision-add="${
-                     idSafe(organ.id)}">＋ ${label('add')}</button>${
-                     profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
-                                               idSafe(p.id)}">${label('remove')}</button>`
-                                         : ''}</div>`) +
-         section('spectrum', spectrumEditor(state, organ, p)) +
-         section('contrast', contrastChooser(p)) +
-         section('sensitivity', sensitivityEditor(state, organ, p)) + section('sight', sightEyes());
+  return section(`<div class="aid-vision-profiles">${
+             profiles.map(chip).join('')}<button class="aid-add" data-vision-add="${
+             idSafe(organ.id)}" title="${label('add')}">＋</button>${
+             profiles.length > 1 ? `<button class="aid-subtle" data-vision-remove="${
+                                       idSafe(p.id)}" title="${label('remove')}">−</button>`
+                                 : ''}</div>`) +
+         section(spectrumEditor(state, organ, p)) + section(contrastChooser(p)) +
+         section(sensitivityEditor(state, organ, p)) + section(sightEyes());
 }
 const CLEAR = Object.freeze({step : .25});
 export function clearOfFish(state, organ, probe) {
