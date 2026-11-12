@@ -2,7 +2,7 @@ import {foodDisplayIndex} from './nutrition_model.js';
 import {FOOD_COLORS} from './feeding_view.js';
 import {PERCENT, SECOND_MS} from './units.js';
 import {cssPercent, formatNumber, t} from './strings.js';
-import {el, tankVisible, text} from './dom.js';
+import {el, text} from './dom.js';
 import {glyph, linePaint} from './glyph.js';
 import {command, importGenome, request, serverText} from './session.js';
 import {sceneState} from './state.js';
@@ -643,17 +643,4 @@ export function bindPopulationPicker() {
       command('resume');
     restoreRunning = false;
   };
-}
-
-let offered = false;
-export function shouldOfferPopulation(data) {
-  return !!(data.offer_population && !offered && sceneState.frame && tankVisible());
-}
-
-export function offerPopulation(data) {
-  if (shouldOfferPopulation(data)) {
-    offered = true;
-    command('population-ready');
-    openPopulationPicker();
-  }
 }

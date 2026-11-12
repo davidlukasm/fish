@@ -52,29 +52,20 @@ int InteractiveSession::run() {
                 << ",\"requested\":" << o.pop << "}\n"
                 << std::flush;
     };
-    if (o.choose_population) {
-      if (!o.empty_world)
-        world.starter_world();
-      world.field.configure_seed_food(o.food);
-      world.refresh_food_allowance();
-      world.field.place_initial_food();
-      paused = true;
-    } else {
-      if (o.start_genomes.empty())
-        throw std::runtime_error("Keine Startlinie gewählt.");
-      if (o.start_genomes.size() > std::size_t(o.pop))
-        throw std::runtime_error("Mindestens ein Startfisch je gewählter Linie erforderlich.");
-      std::vector<Genome> chosen;
-      for (const auto &path : o.start_genomes) {
-        auto g = Genome::load(path);
-        if (!viable_entrant(g))
-          throw std::runtime_error("Gewählte Startlinie hat keinen lebensfähigen Körper.");
-        chosen.push_back(g);
-      }
-      if (!o.empty_world)
-        world.starter_world();
-      world.seed(chosen, o.pop, o.food, progress, apply);
+    if (o.start_genomes.empty())
+      throw std::runtime_error("Keine Startlinie gewählt.");
+    if (o.start_genomes.size() > std::size_t(o.pop))
+      throw std::runtime_error("Mindestens ein Startfisch je gewählter Linie erforderlich.");
+    std::vector<Genome> chosen;
+    for (const auto &path : o.start_genomes) {
+      auto g = Genome::load(path);
+      if (!viable_entrant(g))
+        throw std::runtime_error("Gewählte Startlinie hat keinen lebensfähigen Körper.");
+      chosen.push_back(g);
     }
+    if (!o.empty_world)
+      world.starter_world();
+    world.seed(chosen, o.pop, o.food, progress, apply);
   } else {
     std::cout << "{\"event\":\"startup\",\"phase\":\"resume\"}\n" << std::flush;
     std::ifstream in(o.resume);

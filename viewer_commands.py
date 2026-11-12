@@ -27,7 +27,6 @@ def command_steps(data):
 
 class CommandRouter:
     handlers = {
-        "population-ready": "handle_population_ready",
         "population-import": "handle_population_import",
         "favorite-fish": "handle_favorite",
         "favorite-genome": "handle_favorite",
@@ -133,10 +132,6 @@ class CommandRouter:
 
     def handle_population_import(self, data):
         return self.simulation.population_catalog.import_genome(data.get("genome"), data.get("name"))
-
-    def handle_population_ready(self, data):
-        self.simulation.offer_population = False
-        return ""
 
     def handle_favorite(self, data):
         if data["command"] == "favorite-fish":
@@ -751,7 +746,6 @@ class CommandRouter:
         with simulation.lifecycle:
             simulation.close()
             simulation.initial_genomes = chosen
-            simulation.offer_population = False
             for name, value in budgets.items():
                 setattr(simulation.args, name, value)
             simulation.args.fish = fish

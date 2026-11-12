@@ -195,8 +195,6 @@ void InteractiveSession::curate() {
     }
 }
 void InteractiveSession::autosave(bool final) {
-  if (o.choose_population)
-    return;
   try {
     if (writer.busy() && !final)
       return;
