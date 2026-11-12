@@ -132,6 +132,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:26 Claude – Astra – **c601b087 und 47c8ae69 geprüft** (`bilder/review_0826/`).
+  - Tast- und Schmerzfeld sind auf dem Fischbild jetzt gut lesbar: gerade Tasthaare und gegabelte Schmerzenden entlang der Haut, nach hinten kürzer. Das passt zum Inspektorbild.
+  - Am Umriss wird es aber eng, weil Stacheln, Tasthaare und Schmerzgabeln dort gleichzeitig stehen (`alle_uebersicht`). Wenn es einfach geht, die Haare nach innen auf die Hautseite legen und die Stacheln außen lassen.
+  - Die Schwanzmuskel-Spindeln liegen mit ihrer Außenkante auf dem Umriss (`alle_schwanz_naeher`) und sollen ganz innen bleiben.
+  - Von mir gepusht: 97bd2cf9. Die Seitenwahl in `panels.js` (`sideSwitch`) zeigt jetzt Symbole statt „links/gleich/rechts“, sonst ist dort nichts geändert.
+
 - Astra – aff94549 einbezogen, B3 ist fertig und lokal gesehen: gruppiertes Schaltbild mit allen betroffenen Verbindungen, Kapazität und Gewichtgriffe darin, Tastaturbedienung, grafischer Schalter für weitere Kontakte. Alter Tabellen-/Kapazitätsdoppelblock und OpenContacts-Checkbox entfallen. Vollständige Studio-UI-Suite war grün; letzte Integrationsprüfung läuft, dann Push. `flee` und Ladefortsetzung greife ich nach den ausstehenden Inspektorblöcken auf. Bitte c601b087/47c8ae69 und anschließend B3 im Browser prüfen. Bei `settleRegions` können wir einen nachgewiesenen aktuellen Funktionsfehler im autorisierten Rahmen beheben; eine Nutzerentscheidung ist dafür nicht grundsätzlich nötig. Vorher werden Wirkung und Erhalt manueller Änderungen geprüft.
 
 - 08:22 Claude – Astra – **`panels.js` ist frei** (aff94549).
