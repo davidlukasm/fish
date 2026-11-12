@@ -137,6 +137,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 16:09 Claude – Astra, Fable – **Erster Teil meiner Analyse: Muskeln (Schwanz, Flossen, Kiefer, Saugen, Stacheln, Kiemen, Darmmuskel).** Kette im Code: `effector_activity` (src/body_plan.cc:1237) summiert je Muskel `max(0, Zellsignal) × strength`. `anatomical_action` (:1380) macht daraus Schläge (`stroke_step` mit `p.stroke_threshold = .2`), gedämpft durch `fibre::available` (Ermüdung).
+
+| Einstellung | Wirkung im Code | Folge für den Fisch | Darstellung der Wirkung |
+|---|---|---|---|
+| Knoten | eigene Zellgruppen mit eigenem Nerveneingang. `copies` ergibt sich aus `capacity` (development.cc:137); jede Gruppe zählt zur Gesamtkraft, kostet Neuronen und Masse | mehr Gesamtzug; Reserve lässt sich feiner aufteilen | Zug als Stapel aus Knotenblöcken |
+| Kraft (Zellen je Knoten) | `capacity = copies/16` (atelier_compiler.hh:267) → `strength` je Zelle; Masse und Unterhalt wachsen mit (body_plan.cc:49–56) | stärkerer Schlag, höhere Ruhekosten | Höhe jedes Blocks |
+| Reserve | die letzten `floor(sprint·n)` Knoten bekommen Schwelle 1 (document.js:1022, 1919) | schwacher Befehl: sanfter, billiger Zug; starker Befehl (Flucht): volle Kraft | zwei Säulen „schwacher Befehl“ / „starker Befehl“; die Reserveblöcke stehen nur in der zweiten |
+| Fasern | über die Zeitkonstante (muscle_fibre.hh): Kraft ×0,4…×2,5, Arbeitskosten ×0,2…×5, Unterhalt ×1,2…×0,3. Schnelle Fasern verlieren bei Volllast in ~40 Schritten die halbe Kraft, Erholung ~400 Schritte; kürzerer Schlag | Sprinter oder Dauerschwimmer | Kraft über die Zeit bei voller Anstrengung, dazu kleine Kostenmarken |
+| Schwelle | Schwelle der Muskelzellen | wie schwacher ein Befehl den Muskel schon bewegt | Beginn der ersten Säule auf der Befehlsachse |
+
+Ich baue jetzt das Muskelbild als „Zug je Befehl“-Stapel und eine Ausdauerkurve, statt der Spindel. Danach folgen Darm, Blase, Gonaden, Drüse, Auge.
+
 - 16:06 Claude – Astra, Fable – **Neuer Auftrag von David (16:00–16:05), Vorrang vor weiteren Fischläufen.** David: „Bitte nutze deine Kollegen Fable und Astra auch für diese Frage. Bevor sie stundenlang weiter an Fischen herumarbeiten, wo sie nicht verstehen, was die Probleme sind, weil sie dumm testen anstatt zu denken.“ Und: „Du musst dafür IN DEN CODE SCHAUEN … VERSTEHEN, WAS DIE EINSTELLUNGEN BEDEUTEN! Und das wird wohl INDIVIDUELL PRO ORGAN UND INSPEKTOR ZU ERARBEITEN SEIN!“
   **Die Frage je Inspektor und je Einstellung:** Was *bewirkt* sie für den Fisch (in Engine, Entwicklung und Atelier-Compiler nachgelesen, mit Datei:Zeile), und wie zeigt man *diese Wirkung* so, dass jemand ohne Codekenntnis sie versteht? Nicht den Rohwert zeigen, nicht „Antwort über Zeit“. Davids Beispiele:
   - Zellzahl: Was bewirken mehr Zellen? Dort gehört die Einstellung hin. Die Zahl selbst darf klein irgendwo stehen; eine Punktreihe ist schon zu viel.
