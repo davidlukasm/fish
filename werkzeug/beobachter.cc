@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
               << ",\"vy\":" << b.motor().vy << ",\"energy\":" << b.energy
               << ",\"health\":" << b.health << ",\"tissue\":" << b.tissue
               << ",\"maturity\":" << body_maturity(b) << ",\"gutFill\":" << gut_filling(b)
-              << ",\"gutEnergy\":" << b.gut_energy << ",\"gutLabile\":" << b.gut_labile
+              << ",\"gutEnergy\":" << b.gut_energy << ",\"gutFlesh\":" << b.gut_flesh
               << ",\"digestion\":" << b.digestion << ",\"restCost\":" << b.rest_cost
               << ",\"reserveCapacity\":" << reserve_capacity(b)
               << ",\"bladderFill\":" << b.bladder_fill << ",\"buoyancy\":" << b.buoyancy_force

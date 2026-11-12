@@ -82,7 +82,7 @@ class Fish:
     MORPHOLOGY_ASSET = 78
     GUT_FILL = 79
     GUT_ENERGY = 80
-    GUT_LABILE = 81
+    GUT_FLESH = 81
     DIGESTION = 82
     DIGESTED = 83
     FEEDING_ACTION = 84
@@ -1354,16 +1354,14 @@ class MuscleFibre:
 class Digestion:
     SHORTEST = 0.5
     LONGEST = 4.0
-    LABILE_STEPS = 15
-    REFRACTORY_STEPS = 500
-    FASTEST = 8
-    TOLERATED = 0.002
-    CRAMP = 0.004
-    DIARRHOEA = 4
+    FLESH_STEPS = 20
+    PLANT_STEPS = 250
+    SPOIL_STEPS = 160
+    FASTEST = 2.0
+    TOLERATED = 0.3
+    CRAMP = 0.4
+    DIARRHOEA = 2
     HARM = 0.0015
-    BELLY = 0.6
-    WALL_MASS = 0.05
-    UPKEEP = 0.1
     PELLET = 0.02
     WALL = 0.25
     ZONE = 2

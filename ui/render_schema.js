@@ -133,7 +133,7 @@ export const RENDER_RECORDS = Object.freeze({
     {"name" : "species", "type" : "u32", "scale" : 1, "offset" : 143, "bytes" : 4},
     {"name" : "gut_fill", "type" : "f32", "scale" : 1, "offset" : 147, "bytes" : 4},
     {"name" : "gut_energy", "type" : "f32", "scale" : 1, "offset" : 151, "bytes" : 4},
-    {"name" : "gut_labile", "type" : "f32", "scale" : 1, "offset" : 155, "bytes" : 4},
+    {"name" : "gut_flesh", "type" : "f32", "scale" : 1, "offset" : 155, "bytes" : 4},
     {"name" : "digestion", "type" : "f32", "scale" : 1, "offset" : 159, "bytes" : 4},
     {"name" : "digested", "type" : "f32", "scale" : 1, "offset" : 163, "bytes" : 4},
     {"name" : "feeding_action", "type" : "u8", "scale" : 1, "offset" : 167, "bytes" : 1},

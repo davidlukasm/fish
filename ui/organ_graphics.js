@@ -114,7 +114,7 @@ const GUT_GRAPHIC = Object.freeze({
 });
 function drawGutGraphic({g, d, color, label, bar}) {
   const length = d.b.gut_length || 0, fill = d.b.satiety || 0, raw = d.b.gut_energy || 0,
-        usable = d.b.gut_labile || 0;
+        usable = d.b.gut_flesh || 0;
   g.strokeStyle = GUT_GRAPHIC.tube;
   g.lineWidth = GUT_GRAPHIC.tube_width;
   g.beginPath();

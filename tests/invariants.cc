@@ -154,13 +154,13 @@ void nostrils_differ_only_in_oncoming_water() {
             std::abs(washed.x) < CLOSE,
         "the nostril facing the oncoming water smells upstream, the other the nose itself");
 }
-// A gut full of leaves, emptied by a fish that spends what it gains: what the fish gains, what it
-// passes and whether it hurts.
+// A gut full of one food, emptied by a fish that spends what it gains: what the fish gains, what
+// it passes and whether it hurts.
 struct Digested {
   double gained = 0, passed = 0, ache = 0;
   int emptied = 0;
 };
-Digested digest_leaves(double gut_length, double drive, double strength) {
+Digested digest(int food, double gut_length, double drive = 0, double strength = 0) {
   constexpr int STEPS = 20000;
   constexpr double EMPTY = .05;
   const PhysiologyParameters physiology;
@@ -170,8 +170,7 @@ Digested digest_leaves(double gut_length, double drive, double strength) {
   b.gut_length = gut_length;
   b.gut_strength = strength;
   Digested result;
-  const double eaten =
-      take_nutrition(b, gut_room(b, food_kind::plant, physiology), food_kind::plant, physiology);
+  const double eaten = take_nutrition(b, gut_room(b, food, physiology), food, physiology);
   for (int k = 0; k < STEPS && b.gut_energy > 0; ++k) {
     b.energy = 0;
     b.gut_motility = drive / 2;
@@ -184,18 +183,34 @@ Digested digest_leaves(double gut_length, double drive, double strength) {
   result.passed /= eaten;
   return result;
 }
-// The gut takes up what the time allows: a long gut more, a driven gut less but sooner.
+// Plants yield more the longer they stay, flesh spoils when it stays long, and the gut muscle
+// shortens the stay only so far.
 void gut_takes_up_what_time_allows() {
-  constexpr double SHORT = 0, LONG = 1, STRONG = 1e6, CLOSE = 1e-9;
-  const auto brief = digest_leaves(SHORT, 0, 0), thorough = digest_leaves(LONG, 0, 0),
-             hurried = digest_leaves(LONG, 1, STRONG), idle = digest_leaves(LONG, 1, 0);
-  for (const auto &meal : {brief, thorough, hurried})
-    check(std::abs(meal.gained + meal.passed - 1) < CLOSE, "a meal is taken up or passed");
-  check(thorough.gained > 2 * brief.gained, "a long gut takes up far more of a meal of leaves");
-  check(hurried.gained < thorough.gained && hurried.emptied < thorough.emptied / 3,
-        "a driven gut muscle empties the gut sooner and takes up less");
-  check(idle.gained == thorough.gained, "a gut without a muscle cannot be hurried");
-  check(brief.ache > 0 && thorough.ache == 0, "leaves hurt a short gut, not a long one");
+  constexpr double SHORT = 0, MIDDLE = .5, LONG = 1, STRONG = 1e6, CLOSE = 1e-9;
+  constexpr int LEAVES = food_kind::plant, FLESH = food_kind::worm, FLOCK = food_kind::feed;
+  for (int food : {LEAVES, FLOCK, FLESH})
+    for (double length : {SHORT, MIDDLE, LONG}) {
+      const auto meal = digest(food, length);
+      check(std::abs(meal.gained + meal.passed - 1) < CLOSE, "a meal is taken up or passed");
+    }
+  check(digest(LEAVES, LONG).gained > 2 * digest(LEAVES, SHORT).gained,
+        "a long gut takes up far more of a meal of leaves");
+  check(digest(FLESH, SHORT).gained > 2 * digest(FLESH, LONG).gained,
+        "flesh spoils in a long gut: a short gut takes up far more of it");
+  check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0 &&
+            digest(LEAVES, LONG).ache == 0,
+        "spoiled flesh hurts a long gut; a short gut and a gut of leaves stay well");
+  check(digest(FLOCK, MIDDLE).gained > digest(FLOCK, SHORT).gained &&
+            digest(FLOCK, MIDDLE).gained > digest(FLOCK, LONG).gained,
+        "mixed food suits a gut of middle length best");
+  const auto rested = digest(FLESH, LONG), hurried = digest(FLESH, LONG, 1, STRONG);
+  check(hurried.gained > rested.gained && hurried.gained < digest(FLESH, SHORT).gained,
+        "the largest gut muscle saves some flesh in a long gut, but not as much as a short gut");
+  check(digest(LEAVES, LONG, 1, STRONG).gained < digest(LEAVES, LONG).gained &&
+            hurried.emptied < rested.emptied,
+        "a driven gut muscle empties the gut sooner and takes up less of leaves");
+  check(digest(LEAVES, LONG, 1, 0).gained == digest(LEAVES, LONG).gained,
+        "a gut without a muscle cannot be hurried");
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);

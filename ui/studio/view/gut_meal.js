@@ -43,7 +43,7 @@ const ROWS = Object.freeze([
 // longer gut (physiology.hh, gut_transit), read from the gut size curve at the gut's length.
 function restingPassage(state) {
   const time = state.capabilities?.gutTime, sizes = state.capabilities?.diet?.gut?.size;
-  if (!(time > 0) || !sizes?.length || !(state.capabilities.plantLabile > 0))
+  if (!(time > 0) || !sizes?.length || !state.capabilities.diet.foods)
     return null;
   const length = gutLength(state.document) ?? BODY_UNIT.trait_middle;
   const at = Math.min(1, Math.max(0, length)) * (sizes.length - 1), k = Math.floor(at);
@@ -58,7 +58,7 @@ const text = (x, y, content, anchor = 'start') => '<text class="aid-handle-word"
 function mealRow(spec, k, state, transit, window) {
   const top = M.row.top + k * M.step, base = M.row.base + k * M.step, height = base - top;
   const pace = transit / gutPassage(spec.driven, state.anatomy?.gutSpeed ?? 1),
-        meal = steps => gutMeal(state.capabilities.plantLabile, pace, steps, spec.full);
+        meal = steps => gutMeal(state.capabilities.diet.foods.plant, pace, steps, spec.full);
   const x = steps => M.left + (M.right - M.left) * steps / window;
   const y = value => base - height * value;
   // Stacked from below: taken up, then still in the gut, then passed unused on top.

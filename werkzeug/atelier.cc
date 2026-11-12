@@ -906,16 +906,25 @@ std::string diet_report() {
   using namespace fishsim;
   out << "{\"gut\":{";
   const PhysiologyParameters physiology;
-  row(
-      "plant",
-      [&](double l) {
-        return gut_utilisation(l, fodder(food_kind::plant, physiology), physiology);
-      },
-      true);
-  row("meat", [&](double l) {
-    return gut_utilisation(l, fodder(food_kind::worm, physiology), physiology);
-  });
+  // What a resting gut of each length takes up of leaves and of flesh.
+  const auto yield = [&](int food) {
+    return [&physiology, food](double l) {
+      return gut_yield(gut_stay(l, 1, physiology), fodder(food, physiology));
+    };
+  };
+  row("plant", yield(food_kind::plant), true);
+  row("meat", yield(food_kind::worm));
   row("size", [](double l) { return gut_size(l); });
+  out << "},\"foods\":{";
+  // Where each food lies between plant (0) and flesh (1).
+  const std::pair<const char *, int> foods[] = {{"plant", food_kind::plant},
+                                                {"algae", food_kind::algae},
+                                                {"flock", food_kind::feed},
+                                                {"plankton", food_kind::plankton},
+                                                {"meat", food_kind::worm}};
+  for (const auto &[name, food] : foods)
+    out << (food == food_kind::plant ? "" : ",") << '"' << name
+        << "\":" << fodder(food, physiology).flesh;
   out << "},\"teeth\":{";
   row("grind", [](double b) { return tooth_grip(b, BiteKind::grinding); }, true);
   row("cut", [](double b) { return tooth_grip(b, BiteKind::cutting); });
@@ -950,44 +959,43 @@ int main(int argc, char **argv) {
                   << ",\"outer\":" << (field::development_surface(p) ? "true" : "false")
                   << ",\"senses\":" << sensors << ",\"motors\":" << motors << '}';
       }
-      std::cout
-          << "],\"cppnInputs\":" << cppn::INPUTS << ",\"cppnOutputs\":" << cppn::OUTPUTS
-          << ",\"cppnFunctions\":" << evolution::NODE_TYPES << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT
-          << ",\"cppnSharpness\":" << evolution::GAUSSIAN_SHARPNESS
-          << ",\"cppnRange\":" << evolution::WEIGHT_RANGE << ",\"hormones\":" << field::HORMONES
-          << ",\"regulators\":" << field::REGULATORS
-          << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
-          << ",\"substanceTurns\":" << substance_turns_report()
-          << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
-          << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ',' << fishsim::PROBE_MAX_RADIUS
-          << ']' << ",\"nearDepth\":[" << fishsim::proximity_depth(0) << ','
-          << fishsim::proximity_depth(1) << ']'
+      std::cout << "],\"cppnInputs\":" << cppn::INPUTS << ",\"cppnOutputs\":" << cppn::OUTPUTS
+                << ",\"cppnFunctions\":" << evolution::NODE_TYPES
+                << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT
+                << ",\"cppnSharpness\":" << evolution::GAUSSIAN_SHARPNESS
+                << ",\"cppnRange\":" << evolution::WEIGHT_RANGE
+                << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
+                << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
+                << ",\"substanceTurns\":" << substance_turns_report()
+                << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
+                << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
+                << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
+                << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
 
-          << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
-          << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
-          << ",\"biasScale\":" << field::Options{}.bias_scale
-          << ",\"hormoneRate\":" << fishsim::PhysiologyParameters{}.hormones.rate
-          << ",\"gutTime\":" << fishsim::PhysiologyParameters{}.gut_time << ",\"plantLabile\":"
-          << fishsim::fodder(fishsim::food_kind::plant, fishsim::PhysiologyParameters{}).labile
-          << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
-          << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN
-          << ",\"unusedDecaySpan\":" << field::plasticity::unused_decay_span
-          << ",\"baselineSteps\":" << field::plasticity::baseline_steps
-          << ",\"cancellation\":" << field::plasticity::cancellation
-          << ",\"contactTrial\":" << field::plasticity::contact_trial_time_constants
-          << ",\"prune\":" << field::plasticity::prune_share * field::SYNAPSE_UNIT
-          << ",\"developmentInterval\":" << field::CELL_DEVELOPMENT_INTERVAL
-          << ",\"slotMin\":" << field::SLOTS_MIN << ",\"slotSpan\":" << field::SLOTS_RANGE
-          << ",\"contactFields\":" << field::CONTACT_FIELDS
-          << ",\"effectorSlots\":" << field::EFFECTOR_SLOTS
-          << ",\"adaptationSpan\":" << field::SYNAPTIC_ADAPTATION_SPAN << '}'
-          << ",\"lightEffects\":[" << field::Excitation << "]"
-          << ",\"effects\":" << field::HORMONE_EFFECTS
-          << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
-          << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
-          << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
-          << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
-          << "],\"reachLeast\":" << field::MIN_RANGE << ",\"roleEffects\":[";
+                << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
+                << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
+                << ",\"biasScale\":" << field::Options{}.bias_scale
+                << ",\"hormoneRate\":" << fishsim::PhysiologyParameters{}.hormones.rate
+                << ",\"gutTime\":" << fishsim::PhysiologyParameters{}.gut_time
+                << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
+                << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN
+                << ",\"unusedDecaySpan\":" << field::plasticity::unused_decay_span
+                << ",\"baselineSteps\":" << field::plasticity::baseline_steps
+                << ",\"cancellation\":" << field::plasticity::cancellation
+                << ",\"contactTrial\":" << field::plasticity::contact_trial_time_constants
+                << ",\"prune\":" << field::plasticity::prune_share * field::SYNAPSE_UNIT
+                << ",\"developmentInterval\":" << field::CELL_DEVELOPMENT_INTERVAL
+                << ",\"slotMin\":" << field::SLOTS_MIN << ",\"slotSpan\":" << field::SLOTS_RANGE
+                << ",\"contactFields\":" << field::CONTACT_FIELDS
+                << ",\"effectorSlots\":" << field::EFFECTOR_SLOTS
+                << ",\"adaptationSpan\":" << field::SYNAPTIC_ADAPTATION_SPAN << '}'
+                << ",\"lightEffects\":[" << field::Excitation << "]"
+                << ",\"effects\":" << field::HORMONE_EFFECTS
+                << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
+                << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
+                << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
+                << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
+                << "],\"reachLeast\":" << field::MIN_RANGE << ",\"roleEffects\":[";
       for (int role = 0; role < field::ROLES; ++role) {
         std::cout << (role ? ",[" : "[");
         bool first = true;

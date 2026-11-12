@@ -123,45 +123,53 @@ inline double reserve_capacity_for_tissue(double tissue) {
 inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
-// The gut and what it does with a meal. Food is partly quickly digested (cell contents, flesh)
-// and partly slowly (fibre, shell); the gut takes both up at their own pace while it moves its
-// content on. What a meal yields therefore follows from how long it stays: a long gut holds it
-// long, a driven gut muscle hurries it out.
+// The gut and what it does with a meal. Every food lies between plant (0) and flesh (1). The gut
+// takes up flesh quickly and plant matter slowly while it moves its content on, so plants yield
+// more the longer they stay. Flesh spoils in a gut that holds it long: what has spoiled feeds
+// nobody, and much of it in the gut hurts. How long a meal stays follows from the gut's length
+// and from how fast the gut muscle moves it.
 //
 // The shared constants `digestion::`: `shortest` and `longest` are the gut's length in body
-// lengths; the quickly and the slowly digested part are taken up within `labile_steps` and
-// `refractory_steps`; the largest gut muscle moves the content `fastest` times as fast as a
-// resting gut. The gut bears plant fibre passing per step up to the share `tolerated` of what
-// it holds; `cramp` more hurts as much as it can, empties the gut `diarrhoea` times as fast and
-// costs `harm` of the health per step. A gut of the greatest length leaves the gonads
-// `belly` less room; per body length it weighs `wall_mass` of the tissue and raises the basal
-// metabolism by `upkeep`. Faeces leave as a flock once they amount to `pellet` of what the gut
-// holds.
+// lengths; flesh is taken up within `flesh_steps`, plant matter within `plant_steps`; a meal
+// that stays `spoil_steps` loses its flesh to spoiling within that time, and four times as fast
+// when it stays twice as long. The largest gut muscle moves the content `fastest` times as fast
+// as a resting gut. Spoiled matter up to the share `tolerated` of what the gut holds is borne;
+// `cramp` more hurts as much as it can, empties the gut `diarrhoea` times faster on top and
+// costs `harm` of the health per step. Faeces leave as a flock once they amount to `pellet` of
+// what the gut holds.
 namespace digestion {
-inline constexpr double labile_rate = 1. / labile_steps, refractory_rate = 1. / refractory_steps;
+inline constexpr double flesh_rate = 1. / flesh_steps, plant_rate = 1. / plant_steps;
+// Share of the fresh flesh that spoils per step in a gut that holds its content `stay` steps.
+inline double spoil_rate(double stay) {
+  const double slow = stay / spoil_steps;
+  return slow * slow / spoil_steps;
 }
-// What a mouthful is to the gut: how much of it is quickly digested, how much room it takes per
-// energy, and whether it is plant matter.
+}
+// What a mouthful is to the gut: how much of it is flesh, how much room it takes per energy, and
+// whether its remains leave as plant matter.
 struct Fodder {
-  double labile, fill;
+  double flesh, fill;
   bool plant;
 };
-// Faeces drift as flocks before they settle: fine, half digested matter of plant or animal origin.
+// Flocks of every origin, feed and faeces alike, are half flesh, half plant.
+inline constexpr double FLOCK_FLESH = .5;
 inline Fodder flock_fodder(bool plant) {
-  return {plant ? .1 : .5, 1, plant};
+  return {FLOCK_FLESH, 1, plant};
 }
 inline Fodder fodder(int source, const PhysiologyParameters &p) {
   switch (source) {
   case food_kind::plant:
-    return {.2, p.fill_plant, true};
+    return {0, p.fill_plant, true};
   case food_kind::algae:
-    return {.4, p.fill_plant, true};
+    return {.25, p.fill_plant, true};
   case food_kind::benthic:
-    return {.2, p.fill_sediment, true};
+    return {FLOCK_FLESH, p.fill_sediment, true};
   case food_kind::feed:
-    return {.8, 1, false};
+    return {FLOCK_FLESH, 1, false};
+  case food_kind::plankton:
+    return {.75, 1, false};
   default:
-    return {.9, 1, false};
+    return {1, 1, false};
   }
 }
 inline double gut_size(double length) {
@@ -174,11 +182,6 @@ inline double gut_size_factor(const Body &b) {
 inline double gut_capacity(const Body &b) {
   return reserve_capacity_for_tissue(b.tissue) * gut_size_factor(b);
 }
-// Share of the belly the gut leaves the gonads.
-inline double belly_room(const Body &b) {
-  return 1 - digestion::belly * (gut_size_factor(b) - digestion::shortest) /
-                 (digestion::longest - digestion::shortest);
-}
 inline double gut_transit(const Body &b, const PhysiologyParameters &p) {
   return p.gut_time * gut_size_factor(b);
 }
@@ -188,14 +191,16 @@ inline double nutrient_signal(const Body &b) {
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
-// Share of a mouthful a resting gut of this length takes up before it has passed.
-inline double gut_utilisation(double length, const Fodder &f, const PhysiologyParameters &p) {
-  const double passage = 1 / (p.gut_time * gut_size(length));
-  return f.labile * digestion::labile_rate / (digestion::labile_rate + passage) +
-         (1 - f.labile) * digestion::refractory_rate / (digestion::refractory_rate + passage);
+// Share of a mouthful the gut takes up when the mouthful stays `stay` steps.
+inline double gut_yield(double stay, const Fodder &f) {
+  const double passage = 1 / stay;
+  return f.flesh * digestion::flesh_rate /
+             (digestion::flesh_rate + digestion::spoil_rate(stay) + passage) +
+         (1 - f.flesh) * digestion::plant_rate / (digestion::plant_rate + passage);
 }
-inline double digestibility(const Body &b, const Fodder &f, const PhysiologyParameters &p) {
-  return gut_utilisation(b.gut_length, f, p);
+// Steps a mouthful stays in a gut of this length that moves it `speed` times as fast as at rest.
+inline double gut_stay(double length, double speed, const PhysiologyParameters &p) {
+  return p.gut_time * gut_size(length) / speed;
 }
 inline double gut_room(const Body &b, const Fodder &f) {
   return std::max(0., gut_capacity(b) - b.gut_fill) / f.fill;
@@ -296,6 +301,15 @@ inline double gill_area(const Body &b) {
 inline double gut_speed(const Body &b) {
   const double strength = suction_share(b.gut_strength * body_scale(b), b.force_scale);
   return 1 + (digestion::fastest - 1) * strength * strength;
+}
+// Share of its content the gut moves on per step. The wall moves food on with twice its pose,
+// which averages its drive.
+inline double gut_pace(const Body &b, const PhysiologyParameters &p) {
+  return (1 + (gut_speed(b) - 1) * 2 * std::clamp(b.gut_motility, 0., 1.)) / gut_transit(b, p);
+}
+// Share of a mouthful the gut takes up as fast as it moves now.
+inline double digestibility(const Body &b, const Fodder &f, const PhysiologyParameters &p) {
+  return gut_yield(1 / gut_pace(b, p), f);
 }
 // Water the gill covers pump through the open mouth, and the water a mouth opened wider than at
 // rest meets while the fish swims (ram filtering).
