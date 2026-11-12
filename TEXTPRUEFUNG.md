@@ -16,6 +16,8 @@ David: „Und dir ist schon bewusst, dass ‚Gewöhnung n Schritte‘ nur ***EIN
 
 Die Frage ist immer: Was BEWIRKT das beim Fisch, und kann man das so sagen oder zeigen, dass es jemand ohne Codekenntnis versteht?
 
+**Davids Korrektur (18:07):** „Tectum und Modulator sind keine Wörter, für die man den Code kennen muss?“ Echte Fachwörter aus Biologie oder Methode (Tectum, Modulator, Schwelle, Rezeptor, Genom) sind **keine** Betriebsblindheit. Gemeint ist nur, was erst durch **unseren Code oder unser Modell** eine Bedeutung bekommt: interne Namen, Rohwerte, Zahlen ohne Bezug, Modellgrößen wie „Kontaktbündel“ oder „potenzielle Zellen“, Ordnernamen wie „handbau“.
+
 ## Vorgehen
 
 1. **Kreuzprüfung:** Jeder prüft die Bereiche, die er **nicht** selbst gebaut hat, denn bei den eigenen ist man betriebsblind.
@@ -42,7 +44,6 @@ Die Frage ist immer: Was BEWIRKT das beim Fisch, und kann man das so sagen oder 
 | Atelier, Ansichtsleiste | Ebenen „Verbindungen / Knoten / Hormone“, Knopf „Entwurf“ | B | „Knoten“ ist Modellsprache; „Entwurf“ gegen „Vorschläge“ unklar | Claude |
 | Atelier, Platzieren | drei Symbolknöpfe (◦|◦, ◦|, |◦) ohne Wort | B | Bedeutung nicht erkennbar (beide Seiten, links, rechts?); Wort dazu | Claude |
 | Atelier, Werkzeugleiste links | Symbole ohne Wort, „⌗“ | B | nur Tooltips. Kurzes Wort oder eindeutigeres Bild; „⌗“ ist unklar | Claude |
-| Atelier, Bibliothek | „Tectum“, „Nahsinn“, „Modulator“, „Lernknoten“, „Hemmkreis“, „Bewertung“, „Körperzustand“ | B | Fachwörter. Nach Wirkung benennen: „Tectum“ → „Sehzentrum“; „Nahsinn“: was spürt er? | Claude |
 | Atelier, leerer Inspektor | „Vorzeichen, Lehrkontakte und Hormonbindungen werden unterschieden“ | B | Modellsprache; sagen, was man sieht (Farben, Strichart) | Claude |
 | Zentrale | „0 Startfische tragen sich“ | B | Was heißt „tragen sich“? Etwa „0 Startfische überleben über Generationen“ | Claude |
 | Zentrale, Labor-Karte | „Futter aus zwölf Richtungen, offene Muscheln“ | B | kryptisch; sagen, was man dort herausfindet | Claude |
