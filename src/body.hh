@@ -145,9 +145,14 @@ public:
   void clear_probe(const Genome &, const Field &, const PhysiologyParameters & = {});
   void refresh_senses(const Genome &, const Field &, const PhysiologyParameters & = {});
   void disable_sense(int);
+  void enable_sense(int);
   void set_actuation_probe(std::function<float(std::uint32_t, float)> probe) {
     actuation_probe_ = std::move(probe);
   }
+  void hold_energy(std::optional<double> value) { held_energy_ = value; }
+  void balance_held_energy();
+  double supplied_energy() const { return supplied_energy_; }
+  double withdrawn_energy() const { return withdrawn_energy_; }
 
 private:
   void act(const Genome &, const PhysiologyParameters &, bool protected_life);
@@ -160,6 +165,8 @@ private:
   friend void advance_body(Body &, const Genome &, const struct Field *,
                            const PhysiologyParameters &, bool);
   std::function<float(std::uint32_t, float)> actuation_probe_;
+  std::optional<double> held_energy_;
+  double supplied_energy_ = 0, withdrawn_energy_ = 0;
   PerceptionState perception_;
   std::optional<field::Network> brain_;
 

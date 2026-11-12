@@ -26,7 +26,6 @@ files.extend(sorted(p for p in Path('ui/studio').rglob('*') if p.suffix in ('.js
 files.extend(sorted(Path('ui/labor').glob('*.js')))
 # The stations run these: breeding worlds record foliage and generations, trials each approach.
 files.append(Path('werkzeug/zuchtbecken.cc'))
-files.append(Path('werkzeug/life_recorder.hh'))
 files.append(Path('werkzeug/verhaltenslabor.cc'))
 files.extend(sorted(Path('genomes/handbau').glob('*.fish.json')))
 # Shipped fish: the example genomes below genomes/.

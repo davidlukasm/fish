@@ -9,6 +9,8 @@ Individual *InteractiveSession::prepare_inspection() {
                                   o.render_stream ? retinal_focus : neuron_focus);
 }
 bool InteractiveSession::emit(bool done) {
+  if (o.laboratory)
+    return emit_laboratory();
   if (metadata_output.enabled()) {
     if (done)
       metadata_output.finish();

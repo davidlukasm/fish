@@ -95,7 +95,14 @@ int InteractiveSession::run() {
   if (o.resume.empty())
     session_founder = world.support().founder;
   choose();
-  if (o.resume.empty()) {
+  if (o.laboratory) {
+    paused = true;
+    world.safety = false;
+    selected = 0;
+    laboratory_recording = std::make_unique<LaboratoryRecording>("trial");
+    laboratory_recording->begin(world, int(o.start_genomes.size()));
+  }
+  if (o.resume.empty() && !o.laboratory) {
     snapshot(false);
     autosave();
   }
@@ -105,7 +112,7 @@ int InteractiveSession::run() {
   refresh = false;
   CommandInput input_commands;
   while (!cancelled) {
-    if (Clock::now() - last_save >= AUTOSAVE_PERIOD) {
+    if (!o.laboratory && Clock::now() - last_save >= AUTOSAVE_PERIOD) {
       autosave();
       last_save = Clock::now();
     }
@@ -123,6 +130,8 @@ int InteractiveSession::run() {
     if (cancelled)
       break;
     serve_scenes();
+    if (o.laboratory)
+      prepare_laboratory();
     auto tick_now = Clock::now();
     double elapsed = std::chrono::duration<double>(tick_now - last_tick).count();
     last_tick = tick_now;
@@ -132,6 +141,8 @@ int InteractiveSession::run() {
       credit =
           std::min(MAX_CREDIT, credit + elapsed * (delay ? MS_PER_SECOND / delay : TURBO_RATE));
     int batch = single ? 1 : int(credit);
+    if (laboratory_preparing)
+      batch = 0;
     if (!single)
       credit -= batch;
     single = false;
@@ -141,36 +152,43 @@ int InteractiveSession::run() {
       auto start = Clock::now();
       world.watched_id = selected;
       world.profile_steps = true;
+      if (o.laboratory)
+        prepare_laboratory();
       world.tick(evolving, protected_life);
       for (auto &p : world.fish)
         p.body.advance_probe();
-      curate();
+      if (!o.laboratory)
+        curate();
       if (reference)
-        reference->tick(false, protected_life);
+        reference->tick(o.laboratory ? evolving : false, protected_life);
+      if (o.laboratory)
+        observe_laboratory();
       tick_ms =
           (1 - TICK_SMOOTHING) * tick_ms +
           TICK_SMOOTHING * std::chrono::duration<double, std::milli>(Clock::now() - start).count();
       choose();
-      if (!live && evolving &&
+      if (!o.laboratory && !live && evolving &&
           world.ticks >= last_observation + std::max(1, world.observation_interval)) {
         ++completed;
         last_observation = world.ticks;
         snapshot(false);
         world.reset_window();
         seen_notifications = world.taxonomy().milestones.size();
-      } else if (!live && world.taxonomy().milestones.size() > seen_notifications) {
+      } else if (!o.laboratory && !live &&
+                 world.taxonomy().milestones.size() > seen_notifications) {
         snapshot(false);
         seen_notifications = world.taxonomy().milestones.size();
       }
       ++executed;
-      if (Clock::now() - batch_start >= BATCH_TIME)
+      if (paused || Clock::now() - batch_start >= BATCH_TIME)
         break;
     }
     credit = std::min(MAX_CREDIT, credit + batch - executed);
 
     auto now = Clock::now();
-    if (refresh || (!paused && now - last_frame >=
-                                   (o.render_stream || turbo ? STREAM_FRAME_TIME : FRAME_TIME))) {
+    if (refresh || (!paused && now - last_frame >= (o.laboratory ? std::chrono::milliseconds(150)
+                                                    : o.render_stream || turbo ? STREAM_FRAME_TIME
+                                                                               : FRAME_TIME))) {
       if (emit()) {
         refresh = false;
         last_frame = now;
@@ -178,7 +196,8 @@ int InteractiveSession::run() {
     }
     std::this_thread::sleep_for(paused ? PAUSED_SLEEP : RUNNING_SLEEP);
   }
-  autosave(true);
+  if (!o.laboratory)
+    autosave(true);
   emit(true);
   return 0;
 }

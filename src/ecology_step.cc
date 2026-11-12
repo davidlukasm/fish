@@ -432,7 +432,10 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
     metrics_.window_nutrition += b.nutrition - nutrition_before;
     if (prey)
       b.hunger = 0;
+    const double supplied = b.supplied_energy(), withdrawn = b.withdrawn_energy();
     settle_energy(b, protected_life);
+    field.record_external_exchange(b.supplied_energy() - supplied,
+                                   b.withdrawn_energy() - withdrawn);
     if ((ticks + 1) % SAMPLE_PERIOD == 0 || !b.alive)
       remember_breeder(p);
     if (alive && !b.alive && !p.nutrient_egg)
@@ -441,7 +444,10 @@ bool Ecosystem::resolve_population(const std::vector<std::array<double, 2>> &old
   for (std::size_t i = 0; i < fish.size(); ++i) {
     auto &p = fish[i];
     if (bitten[i] && p.body.alive && p.body.health <= 0 && !protected_life && !p.body.immortal) {
+      const double supplied = p.body.supplied_energy(), withdrawn = p.body.withdrawn_energy();
       settle_energy(p.body);
+      field.record_external_exchange(p.body.supplied_energy() - supplied,
+                                     p.body.withdrawn_energy() - withdrawn);
       remember_breeder(p);
       if (p.body.fatal_cause == death_reason::injury)
         ++metrics_.predation_deaths;

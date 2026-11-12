@@ -57,7 +57,8 @@ int main(int argc, char **argv) {
                          std::random_device{}(),
                          {}};
     bool live = false, benchmark = false;
-    std::string compute = "cpu";
+    std::string compute = "cpu", breed_from;
+    double mutation_scale = 1;
     int benchmark_steps = run_limit::benchmark_steps;
     for (int i = 1; i < argc; ++i) {
       std::string flag = argv[i];
@@ -105,6 +106,11 @@ int main(int argc, char **argv) {
         live = true;
         continue;
       }
+      if (flag == "--laboratory") {
+        o.laboratory = true;
+        live = true;
+        continue;
+      }
       if (flag == "--view-stream") {
         o.view_stream = true;
         continue;
@@ -127,7 +133,15 @@ int main(int argc, char **argv) {
         compute = value;
       else if (flag == "--start-genome")
         o.start_genomes.push_back(value);
-      else if (flag == "--preview-genome") {
+      else if (flag == "--breed-from")
+        breed_from = value;
+      else if (flag == "--mutation-scale") {
+        std::size_t used;
+        mutation_scale = std::stod(value, &used);
+        if (used != value.size() || !std::isfinite(mutation_scale) || mutation_scale < 0 ||
+            mutation_scale > 1)
+          throw std::runtime_error("Ungültiger Mutationsfaktor");
+      } else if (flag == "--preview-genome") {
         Genome::begin_run(0);
         Individual p;
         p.genome = Genome::load(value);
@@ -184,6 +198,19 @@ int main(int argc, char **argv) {
     Genome::begin_run(o.seed);
     std::signal(SIGINT, stop);
     std::signal(SIGTERM, stop);
+    if (!breed_from.empty()) {
+      Ecosystem tank(o.seed);
+      for (const auto &[name, value] : o.parameters)
+        if (!tank.set_parameter(name, value))
+          throw std::runtime_error("Unbekannter Parameter: " + name);
+      auto child = Genome::load(breed_from);
+      if (mutation_scale > 0)
+        child.mutate(tank.rng, mutation_scale, true, tank.evo.rates);
+      child.save(o.output);
+      std::cout << "{\"viable\":" << (viable_entrant(child) ? "true" : "false")
+                << ",\"mutationScale\":" << mutation_scale << "}\n";
+      return 0;
+    }
     if (!live)
       throw std::runtime_error("Start mit ./start.sh oder --interactive");
     return interactive(o);

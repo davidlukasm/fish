@@ -7,6 +7,7 @@
 #include "render_stream.hh"
 #include "render_assets.hh"
 #include "command_input.hh"
+#include "laboratory.hh"
 #include <chrono>
 #include <map>
 #include <set>
@@ -23,6 +24,16 @@ class InteractiveSession {
   std::uint64_t experiment_fish = 0, experiment_start = 0;
   int experiment_count = 0;
   std::string experiment_kind;
+  std::map<std::uint64_t, LaboratoryControl> laboratory_controls;
+  std::unique_ptr<LaboratoryRecording> laboratory_recording, laboratory_baseline;
+  std::future<Ecosystem> laboratory_fork;
+  bool laboratory_preparing = false;
+  std::uint64_t laboratory_stop_at = 0;
+  Clock::time_point laboratory_scene_sent{};
+  void execute_laboratory(const std::string &, std::istringstream &, bool &, std::string &);
+  void prepare_laboratory();
+  void observe_laboratory();
+  bool emit_laboratory();
   bool turbo = false, evolving = true, paused = false, protected_life = false, brain_detail = false,
        brain_mode = false, single = false;
   bool live_mode = true, live_protect = false;

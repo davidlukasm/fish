@@ -16,6 +16,7 @@ class LifeRecorder {
   };
   std::map<std::uint64_t, Previous> previous;
   std::ostream &out;
+  std::string channel;
   static constexpr double FILL_MARK = .5;
 
   static double leaf_distance(const Ecosystem &w, const Body &b) {
@@ -35,7 +36,8 @@ class LifeRecorder {
       out << "null";
   }
   void begin(const char *kind, std::uint64_t step, std::uint64_t id) {
-    out << "{\"event\":\"life\",\"kind\":\"" << kind << "\",\"t\":" << step << ",\"id\":" << id;
+    out << "{\"event\":\"life\",\"world\":\"" << channel << "\",\"kind\":\"" << kind
+        << "\",\"t\":" << step << ",\"id\":" << id;
   }
   void sample(const Ecosystem &w, const Individual &p, double leaf, bool regular) {
     const auto &b = p.body;
@@ -46,12 +48,17 @@ class LifeRecorder {
         << ",\"gut\":" << gut_filling(b) << ",\"maturity\":" << body_maturity(b) << ",\"leaf\":";
     number(leaf);
     out << ",\"near\":" << (leaf <= mouth_reach(b) + body_radius(b) ? "true" : "false")
-        << ",\"speed\":" << b.motor().relative_speed << "}\n";
+        << ",\"speed\":" << b.motor().relative_speed << ",\"yolk\":" << b.reproduction().egg_yolk
+        << ",\"pain\":" << b.gut_irritation << ",\"health\":" << b.health
+        << ",\"supplied\":" << b.supplied_energy() << ",\"withdrawn\":" << b.withdrawn_energy()
+        << ",\"cost\":" << b.ledger().movement_cost + b.ledger().brain_cost
+        << ",\"digestion\":" << b.digestion << "}\n";
   }
 
 public:
   static constexpr int EVERY = 5;
-  explicit LifeRecorder(std::ostream &out) : out(out) {}
+  explicit LifeRecorder(std::ostream &out, std::string channel = {})
+      : out(out), channel(std::move(channel)) {}
   void setup(const Ecosystem &w, int scenes_every) {
     out << "{\"event\":\"recording\",\"every\":" << EVERY << ",\"fillMark\":" << FILL_MARK
         << ",\"scenesEvery\":" << scenes_every << ",\"width\":" << w.field.geometry().width
@@ -73,8 +80,8 @@ public:
         }
         if (!p.nutrient_egg) {
           begin("start", w.ticks, p.id);
-          out << ",\"parent\":" << p.parent << ",\"generation\":" << p.g << ",\"age\":" << b.age
-              << "}\n";
+          out << ",\"parent\":" << p.parent << ",\"father\":" << p.father
+              << ",\"generation\":" << p.g << ",\"age\":" << b.age << "}\n";
         }
       }
       if (p.nutrient_egg || !b.hatched)

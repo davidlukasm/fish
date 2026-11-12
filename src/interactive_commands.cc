@@ -172,6 +172,11 @@ void InteractiveSession::execute(const std::string &op, std::istringstream &line
   using Handler = void (InteractiveSession::*)(const std::string &, std::istringstream &, bool &,
                                                std::string &);
   static const std::map<std::string, Handler> commands = {
+      {"lab-control", &InteractiveSession::execute_laboratory},
+      {"lab-clear", &InteractiveSession::execute_laboratory},
+      {"lab-compare", &InteractiveSession::execute_laboratory},
+      {"lab-end-compare", &InteractiveSession::execute_laboratory},
+      {"lab-stop-at", &InteractiveSession::execute_laboratory},
       {"stop", &InteractiveSession::execute_lifecycle},
       {"pause", &InteractiveSession::execute_lifecycle},
       {"resume", &InteractiveSession::execute_lifecycle},

@@ -926,6 +926,11 @@ void Body::disable_sense(int sense) {
     throw std::invalid_argument("invalid sense");
   perception_.disabled_senses[sense] = true;
 }
+void Body::enable_sense(int sense) {
+  if (sense < 0 || sense >= field::SENSE_COUNT)
+    throw std::invalid_argument("invalid sense");
+  perception_.disabled_senses[sense] = false;
+}
 void Body::set_probe(SensoryProbe probe) {
   auto finite = [](double x) { return std::isfinite(x); };
   if (probe.kind < probe_kind::sight || probe.kind > probe_kind::sense || !finite(probe.x) ||

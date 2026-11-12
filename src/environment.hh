@@ -343,6 +343,10 @@ public:
   void set_sperm_field(std::vector<SpermCell>, double opaque);
   bool has_sperm() const { return has_sperm_; }
   void release_waterborne(double amount) { food_web_.released += std::max(0., amount); }
+  void record_external_exchange(double supplied, double withdrawn) {
+    food_web_.introduced += std::max(0., supplied);
+    food_web_.released += std::max(0., withdrawn);
+  }
   double sperm_density(double, double) const;
   struct SpermOptics {
     Color transmission{1, 1, 1}, scattering{};

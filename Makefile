@@ -93,7 +93,7 @@ starter: $(BUILD_DIR)/atelier
 $(BUILD_DIR)/atelier: werkzeug/atelier.cc $(ATELIER_OBJECTS) Makefile $(wildcard werkzeug/atelier*.hh)
 	$(CXX) $(CPPFLAGS) $(ATELIER_FLAGS) $< $(ATELIER_OBJECTS) $(LDLIBS) -o $@.new
 	mv $@.new $@
-$(BUILD_DIR)/zuchtbecken: werkzeug/zuchtbecken.cc werkzeug/life_recorder.hh $(TEST_CORE) Makefile
+$(BUILD_DIR)/zuchtbecken: werkzeug/zuchtbecken.cc src/life_recorder.hh $(TEST_CORE) Makefile
 	$(CXX) $(CPPFLAGS) $(filter-out -O1,$(TEST_FLAGS)) -O3 $< $(TEST_CORE) $(LDLIBS) -o $@.new
 	mv $@.new $@
 $(BUILD_DIR)/beobachter: werkzeug/beobachter.cc $(TEST_CORE) Makefile

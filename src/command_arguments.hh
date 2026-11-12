@@ -9,6 +9,9 @@
 namespace fishsim {
 inline void validate_command_arguments(const std::string &op, std::istringstream &source) {
   static const std::map<std::string, std::string> signatures{{"neural-cost", "n"},
+                                                             {"lab-control", "usn"},
+                                                             {"lab-clear", "u"},
+                                                             {"lab-stop-at", "u"},
                                                              {"parameter", "sn"},
                                                              {"burst", "s"},
                                                              {"feeding", "n"},

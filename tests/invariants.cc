@@ -4,6 +4,7 @@
 #include "ecology_internal.hh"
 #include "body_plan.hh"
 #include "perception.hh"
+#include "laboratory.hh"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -378,6 +379,48 @@ void closed_tank_creates_no_energy(const Genome &g) {
     before = now;
   }
 }
+void laboratory_energy_is_accounted(const Genome &g) {
+  auto w = closed_tank(g);
+  const auto id = w.fish.front().id;
+  auto &b = w.fish.front().body;
+  const double held = b.energy;
+  b.hold_energy(held);
+  const double introduced = w.field.food_web().introduced, released = w.field.food_web().released;
+  double before = tracked_energy(w);
+  for (int k = 0; k < 30; ++k) {
+    w.tick(false);
+    const double now = tracked_energy(w);
+    check(now <= before + 1e-6 * std::max(1., before),
+          "energy assistance uses the existing external energy balance");
+    before = now;
+  }
+  const auto &held_body = individual(w, id).body;
+  check(held_body.energy == held && held_body.supplied_energy() > 0,
+        "holding reserve pays the measured metabolism");
+  check(w.field.food_web().introduced - introduced + 1e-7 >= held_body.supplied_energy() &&
+            w.field.food_web().released - released + 1e-7 >= held_body.withdrawn_energy(),
+        "external totals include laboratory exchange alongside the food web's own exchanges");
+  auto control = w.fork();
+  control.tick(false);
+  check(individual(control, id).body.supplied_energy() == 0,
+        "a control fork does not inherit the intervention");
+}
+void laboratory_uses_the_muscles(const Genome &g) {
+  for (double turn : {-1., 1.}) {
+    Ecosystem w(SEED);
+    w.resize(800, 500);
+    w.safety = false;
+    auto &p = adult(w, g, 400, 250);
+    LaboratoryControl c;
+    c.forward = 0;
+    c.turn = turn;
+    apply_laboratory_control(p, w, c);
+    anatomical_action(p.body, p.body.active_interface(p.genome), w.physiology(), false);
+    const double torque = p.body.motor().drive_left - p.body.motor().drive_right;
+    check(turn * torque > 0, "laboratory turn follows the actual fin torque, on both sides");
+    check(p.body.ledger().muscle_cost > 0, "manual steering pays muscle work");
+  }
+}
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
 void algae_vanish_in_traces(const Genome &g) {
   auto w = closed_tank(g);
@@ -730,6 +773,8 @@ int main() {
     start_fish_eats_nearby_food(g);
     eye_reports_a_morsel_against_open_water(g);
     closed_tank_creates_no_energy(g);
+    laboratory_energy_is_accounted(g);
+    laboratory_uses_the_muscles(g);
     checkpoint_continues_exactly(g);
     checkpoint_after_death(g);
     organ_muscles_survive_checkpoint(g);

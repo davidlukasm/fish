@@ -14,6 +14,7 @@ struct InteractiveOptions {
   bool render_stream = false;
   int metadata_fd = -1;
   std::string render_socket{};
+  bool laboratory = false;
 };
 int interactive(const InteractiveOptions &);
 }

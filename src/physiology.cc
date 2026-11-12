@@ -502,7 +502,18 @@ void Body::finish_step() {
     ++nutrition_steps;
 }
 void settle_energy(Body &b, bool protected_life) {
+  b.balance_held_energy();
   maintain_body(b, protected_life);
+  b.balance_held_energy();
+}
+
+void Body::balance_held_energy() {
+  if (!held_energy_ || !alive || !hatched)
+    return;
+  const double difference = *held_energy_ - energy;
+  supplied_energy_ += std::max(0., difference);
+  withdrawn_energy_ += std::max(0., -difference);
+  energy = *held_energy_;
 }
 
 }
