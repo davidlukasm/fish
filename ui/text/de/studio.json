@@ -336,7 +336,9 @@
     },
     "smells": "riecht {list}",
     "tastes": "schmeckt {list}",
-    "smellsNothing": "nichts"
+    "smellsNothing": "nichts",
+    "addGlandType": "Stoff",
+    "removeGlandType": "Diesen Stoff nicht mehr abgeben"
   },
   "effects": [
     "erregt oder hemmt die Zelle",

@@ -18,6 +18,7 @@ import {
   muscleFibre,
   isChosen,
   isFinMuscle,
+  mainHormone,
   organTypes,
   substanceRead,
   wheelAffinity
@@ -229,7 +230,20 @@ function glandGlyph(state, organ, pos) {
          '<path d="M-17 0 C-23-8-15-16-8-12 C-2-19 10-16 11-10 C21-12 25-1 17 5 ' +
          'C21 13 9 18 3 11 C-7 18-21 12-16 5 C-20 4-20 1-17 0Z"/>' +
          '<path class="aid-gland-lobules" d="M-8-12 Q-12-5-5-1 M11-10 Q3-6 7 0 ' +
-         'M17 5 Q7 3 3 11 M-16 5 Q-6 2-4 9"/></g>';
+         'M17 5 Q7 3 3 11 M-16 5 Q-6 2-4 9"/>' + glandNodes(wheel, organ) + '</g>';
+}
+// A gland pouring several substances shows one dot per node in the colour of what it pours.
+const GLAND_NODE = Object.freeze({radius : 3.5, gap : 8});
+function glandNodes(wheel, organ) {
+  const types = wheel ? organTypes(organ) : [];
+  if (types.length < 2)
+    return '';
+  const G = GLAND_NODE, from = -(types.length - 1) * G.gap / 2;
+  return types
+      .map((type, k) => '<circle class="aid-gland-node" cx="' + fixed(from + k * G.gap) +
+                        '" cy="0" r="' + G.radius + '" style="fill:' +
+                        substanceColor(mainHormone(wheel, type.centers[0])) + '"/>')
+      .join('');
 }
 function gonadDuct(pos, type) {
   const {x, y} = cloacaPoint();

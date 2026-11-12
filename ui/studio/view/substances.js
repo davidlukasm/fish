@@ -31,7 +31,8 @@ import {
   wheelAffinity,
   wheelPlace,
   wheelSigma,
-  shownSubstance
+  shownSubstance,
+  mainHormone
 } from '../model/document.js';
 import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, namedText, percent, t, tList} from '../../strings.js';
@@ -54,36 +55,43 @@ const centerWheel = (state, center, choices, reads) =>
       pad : center.id,
       role : center.role === 'motor' ? 'gland' : 'sense'
     });
+// A chip names its substance as the wheel does: its mark in its colour, the full name beside it.
+const substanceChip = (state, index) => {
+  const mark = substanceMark(state, index), name = substanceName(state, index);
+  return '<i class="aid-substance-mark" style="--substance:' + substanceColor(index) + '">' +
+         escapeText(mark) + '</i>' + (name !== mark ? escapeText(name) : '');
+};
 // The gland: its wheel says which substances it pours, the pictures below what it does to the
 // blood.
 export function glandProfile(state, organ, center) {
-  const substances = state.document.substances;
-  const add = substances.length
-                  ? ''
-                  : '<button class="aid-add" data-add-substance title="' +
-                        label('sections.newSubstance') + '">' + label('symbols.add') + '</button>';
-  // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close up.
-  return '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
+  const substances = state.document.substances, wheel = state.capabilities;
+  // Each node of the gland pours its own substances; a chip chooses the node, by what it pours
+  // most.
+  const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
+  const chips = wheel ? typeChips(organ, chosen, type => {
+    const index = mainHormone(wheel, type.centers[0]);
+    return {icon : substanceChip(state, index), name : substanceName(state, index)};
+  }, {add : label('inspector.addGlandType'), remove : label('inspector.removeGlandType')}) : '';
+  const add = substances.length ? ''
+                                : '<button class="aid-add" data-add-substance>' +
+                                      label('sections.newSubstance') + '</button>';
+  // Nothing of the gland reaches past the wheel's points, so its picture shows the wheel close
+  // up.
+  return chips + '<div class="aid-wheel-close" data-sense-block="' + escapeText(organ.id) + '">' +
          centerWheel(state, center, substances.map(sub => sub.index),
                      state.capabilities?.hormones) +
          '</div>' + add + glandPictures(state, organ, center, index => substanceName(state, index));
 }
-const CHIP_DOT = Object.freeze({half : 8, radius : 6});
 // The blood sense: its wheel says which substance the cells read, the curve below how high a
-// level they report (bounded, half at their threshold; blood is no sense that gets used to what it
-// feels, brain_interface.hh).
+// level they report (bounded, half at their threshold; blood is no sense that gets used to what
+// it feels, brain_interface.hh).
 export function hormonePad(state, organ, center, held = null) {
   const wheel = state.capabilities;
   const all = Array.from({length : wheel?.bloodSubstances ?? 0}, (_, i) => i);
   const chosen = typeOfCenter(organ, center.id) ?? organTypes(organ)[0];
   const chips = wheel ? typeChips(organ, chosen, type => {
     const index = substanceRead(wheel, type.centers[0]);
-    return {
-      icon : '<svg viewBox="' + -CHIP_DOT.half + ' ' + -CHIP_DOT.half + ' ' + 2 * CHIP_DOT.half +
-                 ' ' + 2 * CHIP_DOT.half + '"><circle r="' + CHIP_DOT.radius + '" fill="' +
-                 substanceColor(index) + '"/></svg>',
-      name : substanceName(state, index)
-    };
+    return {icon : substanceChip(state, index), name : substanceName(state, index)};
   }, {add : label('inspector.addBloodType'), remove : label('inspector.removeBloodType')}) : '';
   const sensitive = held ?? senseSensitivity(state, center) ?? 0;
   const words = key => t('studio.bloodSense.' + key);
@@ -196,8 +204,8 @@ function receptorCurve(state, receptor, effect) {
   };
 }
 const STEEP_PROBE = 2;
-// Where the answer turns and how sharply only show while it changes at all; a flat answer has only
-// its two ends to drag.
+// Where the answer turns and how sharply only show while it changes at all; a flat answer has
+// only its two ends to drag.
 const FLAT_ANSWER = .02;
 function curveHandles(state, receptor, effect, target) {
   const k = receptorCurve(state, receptor, effect);

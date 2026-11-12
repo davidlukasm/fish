@@ -1297,10 +1297,23 @@ export function substanceRead(wheel, center) {
                                 ? i
                                 : best);
 }
+// The hormone a gland cell pours most of: its output is split by its fit to each (body_plan.cc).
+export function mainHormone(wheel, center) {
+  const fit = i => wheelAffinity(wheel, center.q1, center.q2, center.qwidth, i);
+  return Array.from({length : wheel.hormones}, (_, i) => i)
+      .reduce((a, b) => fit(b) > fit(a) ? b : a);
+}
 export function nextTypeTuning(organ, wheel) {
   const firsts = organTypes(organ).map(type => type.centers[0]);
   if (organ.type === 'pigment')
     return nextPigment(firsts);
+  if (organ.type === 'gland') {
+    // The next node pours the first hormone none of the gland's nodes pours most of.
+    const poured = new Set(firsts.map(c => mainHormone(wheel, c)));
+    const next = Array.from({length : wheel.hormones}, (_, i) => i).find(i => !poured.has(i));
+    const [q1, q2] = wheelPlace(wheel, next ?? 0);
+    return {q1, q2};
+  }
   if (organ.type === 'blood') {
     const read = new Set(firsts.map(c => substanceRead(wheel, c)));
     const next = Array.from({length : wheel.bloodSubstances}, (_, i) => i).find(i => !read.has(i));

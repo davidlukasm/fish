@@ -243,7 +243,13 @@ export const ORGANS = Object.freeze([
       slot('fullness', 'out', [], false, 'pressure')
     ]
   },
-  {key : 'gland', category : 'internal', centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]},
+  // A gland may pour several substances, each from its own node, driven on its own.
+  {
+    key : 'gland',
+    category : 'internal',
+    types : HORMONES.levels,
+    centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]
+  },
   {
     key : 'tectum',
     category : 'regions',
