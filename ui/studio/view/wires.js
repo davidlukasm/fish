@@ -113,13 +113,26 @@ function branchNodes(state, id, anchor, centers) {
 const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19});
 // A branch leaves its join along the nerve, but only so far that branches to far nodes of a long
 // organ (a tail band) bend towards their node instead of swinging out of the body.
-const BRANCH =
-    Object.freeze({beyond : 3, share : .2, lead : .3, pull : .5, reach : 14, least_width : 1});
-function joinAt(anchor, nodes, chord) {
+const BRANCH = Object.freeze({lead : .3, pull : .5, reach : 14, least_width : 1});
+// Where a bundle splits into its fibres, as a parameter on its way: as far short of its organ's
+// dock as the organ's nodes lie from it (and a little more, at most `SPLIT.most`), measured along
+// the nerve. Its fibres then run on towards their nodes instead of turning back from the organ's
+// centre. A way too short for that splits in its middle.
+const SPLIT = Object.freeze({samples : 96, beyond : 4, most : 36, middle : .5});
+function splitAlong(way, nodes, anchor, atEnd) {
   if (!nodes.length)
-    return 0;
+    return atEnd ? 1 : 0;
   const reach = Math.max(...nodes.map(p => Math.hypot(p.x - anchor.x, p.y - anchor.y)));
-  return Math.min(BRANCH.share, (reach + BRANCH.beyond) / Math.max(1, chord));
+  const wanted = Math.min(SPLIT.most, reach + SPLIT.beyond);
+  let walked = 0, last = way.at(atEnd ? 1 : 0);
+  for (let k = 1; k <= SPLIT.samples; ++k) {
+    const s = atEnd ? 1 - k / SPLIT.samples : k / SPLIT.samples, p = way.at(s);
+    walked += Math.hypot(p.x - last.x, p.y - last.y);
+    if (walked >= wanted)
+      return s;
+    last = p;
+  }
+  return SPLIT.middle;
 }
 function branchCurve(node, join, towards, inward, confined = false) {
   if (confined) {
@@ -242,6 +255,7 @@ const WIRE_KINDS = Object.freeze({
   modulate : {colour : '#e2c487', arrow : 'aid-wire-arrow-modulate'}
 });
 const WIRE_WIDTH = Object.freeze({base : 1.6, spread : 3.5});
+const BUNDLE = Object.freeze({growth : .25, sheath : 2});
 const signalPairs = (doc, link) =>
     endpointCenters(doc, link.from)
         .flatMap(source =>
@@ -302,7 +316,6 @@ function wireBundles(state, centers) {
         const way = manual && bends.length > 1 ? bentWay(bends)
                     : bends.length             ? bentWay([ from.point, ...bends, to.point ])
                                                : (route.way ??= bentWay(route.points, route.safe));
-        const chord = Math.hypot(to.point.x - from.point.x, to.point.y - from.point.y);
         const ends = links.map((link, k) => {
           const nodes = (id, anchor) => {
             const cells = branchNodes(state, id, anchor, centers);
@@ -315,29 +328,12 @@ function wireBundles(state, centers) {
             width : WIRE_WIDTH.base + WIRE_WIDTH.spread * link.wire.spread
           };
         });
-        const s0 = !manual || bends.length > 1
-                       ? 0
-                       : joinAt(from.point, ends.flatMap(e => e.starts), chord),
-              s1 = !manual || bends.length > 1
-                       ? 1
-                       : 1 - joinAt(to.point, ends.flatMap(e => e.arrives), chord);
-        return {
-          from,
-          to,
-          kind,
-          ends,
-          bends,
-          mirrored,
-          manual,
-          opacity,
-          way,
-          s0,
-          s1,
-          start : way.at(s0),
-          end : way.at(s1),
-          startDirection : way.direction(s0),
-          endDirection : way.direction(s1)
-        };
+        // A bundle drawn along several bends keeps them to its ends; any other splits into its
+        // fibres just short of its organs.
+        const bent = manual && bends.length > 1;
+        const s0 = bent ? 0 : splitAlong(way, ends.flatMap(e => e.starts), from.point, false),
+              s1 = bent ? 1 : splitAlong(way, ends.flatMap(e => e.arrives), to.point, true);
+        return {from, to, kind, ends, bends, mirrored, manual, opacity, way, s0, s1};
       });
   return {bundles : drawn, inside};
 }
@@ -349,10 +345,13 @@ export function wireSvg(state, centers, foreground = false) {
   const {bundles} = wireBundles(state, centers);
   let html = '';
   for (const bundle of bundles) {
-    const {kind, ends, way, s0, s1, start, end, startDirection, endDirection} = bundle;
+    const {kind, ends, way, s0, s1} = bundle;
     const style = WIRE_KINDS[kind], splits = ends.some(e => e.arrives.length);
     const d = way.path(s0, s1);
-    const width = Math.hypot(...ends.map(e => e.width));
+    // A bundle is only a little thicker than its thickest fibre, so the fibres stay visible beside
+    // it.
+    const width =
+        Math.max(...ends.map(e => e.width)) * (1 + BUNDLE.growth * Math.log2(ends.length));
     const chosen = ends.findIndex(e => isSelected(selected, 'wire', e.link.wire.id) ||
                                        state.multi?.has(e.link.wire.id));
     const next = ends[(chosen + 1) % ends.length].link.wire.id;
@@ -370,7 +369,7 @@ export function wireSvg(state, centers, foreground = false) {
           (chosen >= 0 ? ' selected' : '') + '">' +
           '<path d="' + d + '" class="aid-wire-hit"/>' +
           (ends.length > 1 ? '<path class="aid-wire-sheath" d="' + d + '" stroke="' + style.colour +
-                                 '" stroke-width="' + fixed(width + 3) + '"/>'
+                                 '" stroke-width="' + fixed(width + BUNDLE.sheath) + '"/>'
                            : '') +
           '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
           fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
@@ -386,8 +385,8 @@ export function wireSvg(state, centers, foreground = false) {
         const nodes = inward ? e.starts : e.arrives;
         const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
         for (const node of nodes) {
-          const d = inward ? branchPath(node, start, startDirection, true, confined)
-                           : branchPath(node, end, endDirection, false, confined);
+          const at = inward ? s0 : s1;
+          const d = branchPath(node, way.at(at), way.direction(at), inward, confined);
           const key = Number(inward) + ':' + d, section = inward ? 0 : 2;
           const branch = branchesByPath.get(key) ??
                          {d, section, edges : new Set(), width : 0, opacity : 0, chosen : false};
