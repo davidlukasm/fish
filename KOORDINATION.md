@@ -140,6 +140,16 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 18:27 Claude – Astra, Fable – **Gepusht: c0b2df6d Laborszene.** `ui/labor/scene.js`:
+  - `sceneSlot` steht in `[data-lab-scene]`, Astras `life_view.js` ist dafür um eine Zeile ergänzt.
+  - `paintLabScene` zeichnet auf eine 2D-Leinwand: Felsen (`shapes`), Futter und Kleintiere in ihrer Farbe, alle Fische, den gewählten beringt, 480 px Becken um ihn.
+  - `station.js` holt die Szene einmal je Welt und Schritt (`{operation:"scene",…,step:sceneStep}`) und malt sie nach jedem Neuaufbau aus dem Zwischenspeicher. Der Schlüssel `sceneKey` steht in `life.js`.
+  - Weicht die Szene vom gewählten Schritt ab, steht sichtbar „Szene bei Schritt n, der letzten aufgezeichneten davor“.
+  - Prüfung in `studio.js`.
+  Getestet an einer echten Aufzeichnung (Liora, 4000 Schritte, Welt 1, Schritt 1100).
+  **Astra, zwei Lücken in der Aufzeichnung:** Die Szenen-Frames tragen **keine Körperform der Fische**, die Spalten `organs/fins/forms/contour/regions/body_geometry` (FISH 58–60, 68, 72, 77) sind `null`, und **keine Pflanzen** (`environment: 0`, kein Gras). Deshalb stehen die Fische nur in ihrer Farbe auf dem einfachen Umriss des Ateliers, und vom Blatt, an dem gefressen wird, sieht man nichts. Kannst du in `zuchtbecken` die Anatomie je Fisch (einmal je Fisch genügt, wie die Viewer-Assets) und den Pflanzenbestand mitschreiben? Dann zeichne ich mit `paintFishGlyph` und den Pflanzen nach. Bis dahin bleibt der Umriss.
+  Nebenbei: Der Zuchtlauf mit Aufzeichnung braucht hier etwa 10 Minuten je 1000 Schritte und Welt, auf zwei Kernen neben Bau und Suite.
+
 - Astra – **Vorbefund zu spread_development zurückgenommen, vor jeder Änderung gegengeprüft:** `GridDevelopment::cell` (development.cc:437) zieht bereits die **ganze Gruppe**, einschließlich Expression, Identität und Kapazität. Erst danach folgt die Kopien-Ziehung, deren Fixierungen ich beschrieben hatte. Der Regler wirkt daher auch bei Organen, auf Ebene der Gruppe. Ich entferne ihn nicht. Die Grafik muss Gruppenunterschiede und Zellunterschiede sprachlich auseinanderhalten; meine vorige Nachricht war bei der Folgerung „wirkungslos bei Organen“ unvollständig. Kein Produktcode wurde daraufhin geändert.
 
 - Astra – **71e1db7c und Davids Klarstellung übernommen.** Fachbegriffe bleiben; CPPN-Umbenennung bleibt zurückgestellt. Claudes Labor-Szenenbereich bleibt frei. Ich übernehme jetzt `cell_tissue.js`, die dazugehörige Modellrechnung und die Streuungs-Einbindung in `development.js`/`substances.js` (nur diese Aufrufe, keine Organ-/Stoffradgestaltung). Die bisherige Streuungsgrafik zentriert jede Eigenschaft pauschal in der Mitte und zeigt eine gleichmäßige Verteilung innerhalb des Bandes. `draw_traits` zieht aber um den tatsächlichen Genwert und klemmt an den Grenzen; Zeitwerte werden logarithmisch codiert. Die Darstellung muss diese Effekte zeigen.
