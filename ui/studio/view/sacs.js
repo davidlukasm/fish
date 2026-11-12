@@ -10,7 +10,6 @@ import {label, SLOT_IN} from './kit.js';
 import {
   adaptationMarks,
   cellMarks,
-  gateHandle,
   SENSE_MARK,
   senseSensitivity,
   sensitivityHandle
@@ -73,8 +72,10 @@ const STORE = Object.freeze({
   sperm : 3,
   tick : 5,
   handle : 7,
-  // The stretch cells sit along their line from its left end; their adaptation arc round it.
+  // The stretch cells sit along their line, `apart` from the handle at its left end so the two
+  // never crowd; their adaptation arc round the first.
   cells : 9,
+  apart : 40,
   clock : 14,
   // Words sit this far below a line, and the store's title this far from the left edge.
   below : 12,
@@ -185,14 +186,8 @@ export function gonadGraphic(state, organ, selected) {
   const ceiling = store.own.most < store.scale ? '<path class="aid-sac-ceiling" d="M' + S.stack[0] +
                                                      ' ' + S.top + ' H' + S.right + '"/>'
                                                : '';
-  // The chosen working cells' gate stands at the right edge: higher, the less input they need.
-  const motor = [ growth, release ].find(c => c && selected?.key === c.key);
-  const gateX = (S.right + S.width) / 2;
-  const gate = motor ? '<path class="aid-gate-track" d="M' + fixed(gateX) + ' ' + S.base + ' V' +
-                           S.top + '"/>' +
-                           gateHandle({x : gateX, y : S.base}, {x : gateX, y : S.top}, state, motor,
-                                      label('inspector.motorGate'))
-                     : '';
+  // The chosen working cells' gate, else the releasing ones', sits in the command line below.
+  const motor = [ growth, release ].find(c => c && selected?.key === c.key) ?? release ?? growth;
   const field = pressure ?? motor;
   // What the cells do, written where it shows: how long the store takes to fill, what one release
   // gives, whether it waits for a command, and at which fill the stretch cells report.
@@ -219,7 +214,7 @@ export function gonadGraphic(state, organ, selected) {
          '"/>' +
          part(pressure, '<path class="aid-sac-line" d="M' + S.left + ' ' + fixed(stretchY) + ' H' +
                             S.right + '"/>') +
-         (pressure ? pressureMarks(state, pressure, {x : S.left, y : stretchY}) : '') +
+         (pressure ? pressureMarks(state, pressure, {x : S.left + S.apart, y : stretchY}) : '') +
          (pressure ? '<circle class="aid-graphic-handle" data-sac-handle="stretch" cx="' + S.left +
                          '" cy="' + fixed(stretchY) + '" r="' + S.handle + '"><title>' +
                          label('inspector.stretch') + '</title></circle>'
@@ -228,7 +223,9 @@ export function gonadGraphic(state, organ, selected) {
                        fixed((S.stack[0] + S.stack[1]) / 2) + '" cy="' + fixed(roomY) + '" r="' +
                        S.handle + '"><title>' + label('inspector.cellsHandle') + '</title></circle>'
                  : '') +
-         gate + words + '</svg>';
+         words + '</svg>' +
+         commandLine(state, organ, motor,
+                     organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true);
 }
 export function sacPatch(state, organ, handle, fy) {
   const store = gonadStore(state, organ);

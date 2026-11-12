@@ -1548,6 +1548,12 @@
     "bladder": {
       "up": "füllt",
       "down": "leert"
+    },
+    "growth": {
+      "up": "füllt den Vorrat"
+    },
+    "release": {
+      "up": "gibt ab"
     }
   }
 }

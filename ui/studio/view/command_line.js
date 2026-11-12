@@ -1,7 +1,8 @@
-// What an organ that works both ways does at each command, from an inhibiting one (down, left) to
-// an exciting one (up, right): a gland pours or binds, a swim bladder fills or empties. A command
-// inside the gate does nothing; past it the organ follows the command (the effector output in
-// substrate.cc: tanh of the command beyond the gate, the bias only setting the gate).
+// What an organ does at each command, from an inhibiting one (down, left) to an exciting one (up,
+// right): a gland pours or binds, a swim bladder fills or empties, a gonad works only one way. A
+// command inside the gate does nothing; past it the organ follows the command (the effector output
+// in substrate.cc: tanh of the command beyond the gate, the bias only setting the gate; organs that
+// work one way take only its positive part, body_plan.cc).
 import {clamp} from '../../units.js';
 import {sideOf} from '../model/layout.js';
 import {handleWord} from './sense_marks.js';
@@ -26,14 +27,16 @@ const text = (x, y, content, anchor = 'start') => '<text class="aid-handle-word"
                                                   '" y="' + fixed(y) + '" text-anchor="' + anchor +
                                                   '">' + escapeText(content) + '</text>';
 
-// `kind` names the organ's two ways in the texts; `code` is its motor kind.
-export function commandLine(state, organ, center, code, kind) {
+// `kind` names the organ's ways in the texts; `code` is its motor kind; a `oneWay` organ does
+// nothing at an inhibiting command.
+export function commandLine(state, organ, center, code, kind, oneWay = false) {
   const C = COMMAND, scale = state.capabilities?.biasScale, mid = (C.left + C.right) / 2;
   if (!center || !(scale > 0))
     return '';
   const gate = Math.max(0, center.threshold) * scale;
   const x = input => mid + (C.right - mid) * input / C.span;
-  const work = input => Math.sign(input) * Math.tanh(Math.max(0, Math.abs(input) - gate));
+  const work = input =>
+      oneWay && input < 0 ? 0 : Math.sign(input) * Math.tanh(Math.max(0, Math.abs(input) - gate));
   const y = value => C.middle - C.reach * value / Math.tanh(C.span);
   const d = 'M' + Array
                       .from({length : 2 * C.samples + 1},
@@ -51,7 +54,7 @@ export function commandLine(state, organ, center, code, kind) {
          2 * C.reach + '"/><path class="aid-sense-axis" d="M' + C.left + ' ' + C.middle + ' H' +
          C.right + '"/><path class="aid-command-work" d="' + d + '"/>' +
          text(C.right, C.middle - C.reach, word(kind + '.up'), 'end') +
-         text(C.left, C.middle + C.reach, word(kind + '.down')) +
+         (oneWay ? '' : text(C.left, C.middle + C.reach, word(kind + '.down'))) +
          text(C.left, C.words, word('inhibits')) + text(mid, C.words, word('title'), 'middle') +
          text(C.right, C.words, word('excites'), 'end') +
          '<circle class="aid-graphic-handle" data-effector-handle="command:gate" data-frame="' +
