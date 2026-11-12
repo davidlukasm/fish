@@ -14,7 +14,7 @@ import {
   typeNameIndex,
   unitOfPlan
 } from '../../tuning.js';
-import {idSafe, rounded} from './markup.js';
+import {escapeText, idSafe, rounded} from './markup.js';
 
 const SPECTRUM_COLOUR = Object.freeze({saturation : 85, lightness : 55});
 export const profileColor = p =>
@@ -37,6 +37,7 @@ const SPECTRUM = Object.freeze({
   samples : 90,
   axis : 11
 });
+const SIGN = Object.freeze({excite : '+', inhibit : '−'});
 const PLOT = SPECTRUM.width - SPECTRUM.left;
 const HUE_STOPS = 12;
 const ZERO = SPECTRUM.top + SPECTRUM.excite;
@@ -87,7 +88,8 @@ const line = values => [...values, values[0]]
                            .join(' L');
 const area = values => `M${SPECTRUM.left} ${ZERO} L${line(values)} L${SPECTRUM.width} ${ZERO} Z`;
 
-export function spectrumElement(tuning, target, label, light = null, testHue = null, axisWords = {
+// The axis shows the sign of each half; `areaTitles` names the halves in their tooltips.
+export function spectrumElement(tuning, target, label, light = null, testHue = null, areaTitles = {
   excite : '',
   inhibit : ''
 }) {
@@ -105,8 +107,9 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
                               SPECTRUM_COLOUR.lightness}%)"/>`)
                     .join('');
   const values = balance(tuning, light);
-  const word = (text, from, to) => `<text class="aid-spectrum-axis" transform="translate(${
-      S.axis} ${rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${text}</text>`;
+  const sign = (text, from, to) => `<text class="aid-spectrum-axis" x="${S.axis}" y="${
+      rounded((from + to) / 2)}" text-anchor="middle" dominant-baseline="central">${text}</text>`;
+  const titled = text => text ? `<title>${escapeText(text)}</title>` : '';
   let html =
       `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT}"${
           attributes} role="img" aria-label="${label}"><defs><linearGradient id="aid-hue-${id}">${
@@ -114,10 +117,12 @@ export function spectrumElement(tuning, target, label, light = null, testHue = n
           STRIP}" width="${PLOT}" height="${S.strip}" fill="url(#aid-hue-${id})"/>` +
       `<line class="aid-spectrum-axis-line" x1="${S.left - 2}" y1="${S.top}" x2="${
           S.left - 2}" y2="${ZERO + S.inhibit}"/>` +
-      word(axisWords.excite, S.top, ZERO) + word(axisWords.inhibit, ZERO, ZERO + S.inhibit);
+      sign(SIGN.excite, S.top, ZERO) + sign(SIGN.inhibit, ZERO, ZERO + S.inhibit);
   if (values)
-    html += `<path class="aid-spectrum-excite" d="${area(values.map(v => Math.max(0, v)))}"/>` +
-            `<path class="aid-spectrum-inhibit" d="${area(values.map(v => Math.min(0, v)))}"/>`;
+    html += `<path class="aid-spectrum-excite" d="${area(values.map(v => Math.max(0, v)))}">${
+                titled(areaTitles.excite)}</path>` +
+            `<path class="aid-spectrum-inhibit" d="${area(values.map(v => Math.min(0, v)))}">${
+                titled(areaTitles.inhibit)}</path>`;
   html +=
       `<line class="aid-spectrum-zero" x1="${S.left}" y1="${ZERO}" x2="${S.width}" y2="${ZERO}"/>` +
       `<path class="aid-spectrum-tuning" d="M${line(gauss)}"/>`;

@@ -530,7 +530,7 @@
 .aid-spectrum-test{stroke:var(--aid-light);stroke-width:1;stroke-dasharray:3 3}
 .aid-spectrum-handle.light{stroke:var(--aid-light);stroke-width:1.5}
 .aid-spectrum-handle.opponent{fill:#e1788e;cursor:ns-resize}
-.aid-spectrum-axis{fill:var(--aid-axis-text);font:11px system-ui}
+.aid-spectrum-axis{fill:var(--aid-axis-text);font:16px system-ui}
 .aid-spectrum-axis-line{stroke:var(--aid-axis-text);stroke-opacity:.5}
 .aid-sensitivity{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:var(--aid-graphic);cursor:ew-resize;touch-action:none}
 .aid-sensitivity-axis,.aid-sensitivity-tick{stroke:#7d9b9a;stroke-width:1}

@@ -326,8 +326,7 @@ export function learningInspector(state) {
   let html = '<header class="aid-inspector-head"><span>' + label('sections.brain') + '</span>' +
              heading(label('tools.learn')) + '</header>';
   if (!chosen || chosen.role !== 'nerve')
-    return html + previewControls(state) + learnersOverview(state) +
-           '<div class="aid-empty-centre">' + label('inspector.selectLearning') + '</div>';
+    return html + previewControls(state) + learnersOverview(state);
   html += nodeChoice(state, chosen);
   const teachers = sendersOf(state, chosen);
   const taught = boundSubstance(state, chosen, HORMONE_EFFECT.teaching);
