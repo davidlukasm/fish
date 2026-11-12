@@ -52,10 +52,10 @@ function choose(studio, selection) {
   studio.state.cppnSelection = selection;
   studio.refreshViews();
 }
-const editLink = (studio, link, change) =>
-    edit(studio, {edit : 'link', id : link.id, weight : link.weight, enabled : link.enabled, ...change});
-const editNode = (studio, node, change) =>
-    edit(studio, {edit : 'node', id : node.id, type : node.type, parameter : node.parameter, ...change});
+const editLink = (studio, link, change) => edit(
+    studio, {edit : 'link', id : link.id, weight : link.weight, enabled : link.enabled, ...change});
+const editNode = (studio, node, change) => edit(
+    studio, {edit : 'node', id : node.id, type : node.type, parameter : node.parameter, ...change});
 
 export const CPPN_CLICKS = Object.freeze([
   [
@@ -134,8 +134,8 @@ export const CPPN_HANDLES = Object.freeze({
   cppnParameter : {follow : 'cppnParameterPointer', done : 'cppnCommit'},
   cppnWeight : {follow : 'cppnWeightPointer', done : 'cppnCommit'}
 });
-const share = (event, rect) =>
-    ({fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
+const share = (event, rect) => (
+    {fx : (event.clientX - rect.left) / rect.width, fy : (event.clientY - rect.top) / rect.height});
 export const cppnMethods = {
   cppnParameterPointer(event) {
     const drag = this.handleDrag, node = findCppnNode(this.state.report, drag.id);
@@ -153,7 +153,8 @@ export const cppnMethods = {
     if (!link)
       return;
     const {fy} = share(event, drag.rect);
-    this.state.cppnDraft = {kind : 'link', id : link.id, value : weightAt(fy, this.state.capabilities)};
+    this.state
+        .cppnDraft = {kind : 'link', id : link.id, value : weightAt(fy, this.state.capabilities)};
     this.refreshInspector();
   },
   cppnCommit() {

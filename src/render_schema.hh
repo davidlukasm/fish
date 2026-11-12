@@ -1,9 +1,14 @@
 #pragma once
 #include <array>
 #include <cstddef>
-namespace fishsim { namespace render_wire {
+namespace fishsim {
+namespace render_wire {
 enum class Type { u8, i8, u16, i16, u32, i32, i64, f32 };
-struct Field { Type type; std::size_t offset, size; double scale; };
+struct Field {
+  Type type;
+  std::size_t offset, size;
+  double scale;
+};
 inline constexpr unsigned version = 24;
 inline constexpr char magic[] = "FSC1";
 inline constexpr std::size_t header_bytes = 120;
@@ -64,7 +69,15 @@ inline constexpr unsigned delta = 1;
 inline constexpr unsigned paused = 2;
 inline constexpr unsigned done = 4;
 }
-enum class Kind { Fish = 0, Food = 1, Corpse = 2, Gamete = 3, Wound = 4, Invertebrate = 5, Count = 6 };
+enum class Kind {
+  Fish = 0,
+  Food = 1,
+  Corpse = 2,
+  Gamete = 3,
+  Wound = 4,
+  Invertebrate = 5,
+  Count = 6
+};
 namespace fish_flag {
 inline constexpr unsigned hatched = 1;
 inline constexpr unsigned fertilised = 2;
@@ -140,70 +153,28 @@ inline constexpr std::size_t filtered = 61;
 inline constexpr std::size_t eye_pull_left = 62;
 inline constexpr std::size_t eye_pull_right = 63;
 inline constexpr std::array<Field, 64> fields = {{
-{Type::i32, 0, 4, 65536.0},
-{Type::i32, 4, 4, 65536.0},
-{Type::i16, 8, 2, 8192.0},
-{Type::i64, 10, 8, 1},
-{Type::u8, 18, 1, 1},
-{Type::u8, 19, 1, 255.0},
-{Type::u8, 20, 1, 255.0},
-{Type::u8, 21, 1, 255.0},
-{Type::u8, 22, 1, 255.0},
-{Type::u8, 23, 1, 255.0},
-{Type::f32, 24, 4, 1},
-{Type::f32, 28, 4, 1},
-{Type::u16, 32, 2, 65535},
-{Type::f32, 34, 4, 1},
-{Type::u16, 38, 2, 65535},
-{Type::f32, 40, 4, 1},
-{Type::u16, 44, 2, 65535},
-{Type::f32, 46, 4, 1},
-{Type::u16, 50, 2, 16.0},
-{Type::f32, 52, 4, 1},
-{Type::u16, 56, 2, 4096},
-{Type::u16, 58, 2, 4096},
-{Type::u16, 60, 2, 4096},
-{Type::u16, 62, 2, 4096},
-{Type::u16, 64, 2, 4096},
-{Type::u16, 66, 2, 4096},
-{Type::u8, 68, 1, 8.0},
-{Type::i16, 69, 2, 1024.0},
-{Type::i16, 71, 2, 1024.0},
-{Type::i16, 73, 2, 1024.0},
-{Type::i16, 75, 2, 1024.0},
-{Type::u16, 77, 2, 4096},
-{Type::u16, 79, 2, 4096},
-{Type::u16, 81, 2, 4096},
-{Type::u16, 83, 2, 4096},
-{Type::i32, 85, 4, 1},
-{Type::i32, 89, 4, 1},
-{Type::i32, 93, 4, 1},
-{Type::i32, 97, 4, 1},
-{Type::i32, 101, 4, 1},
-{Type::f32, 105, 4, 1},
-{Type::f32, 109, 4, 1},
-{Type::f32, 113, 4, 1},
-{Type::f32, 117, 4, 1},
-{Type::f32, 121, 4, 1},
-{Type::u32, 125, 4, 1},
-{Type::f32, 129, 4, 1},
-{Type::u16, 133, 2, 16.0},
-{Type::i64, 135, 8, 1},
-{Type::u32, 143, 4, 1},
-{Type::f32, 147, 4, 1},
-{Type::f32, 151, 4, 1},
-{Type::f32, 155, 4, 1},
-{Type::f32, 159, 4, 1},
-{Type::f32, 163, 4, 1},
-{Type::u8, 167, 1, 1},
-{Type::u8, 168, 1, 1},
-{Type::f32, 169, 4, 1},
-{Type::f32, 173, 4, 1},
-{Type::f32, 177, 4, 1},
-{Type::u8, 181, 1, 1},
-{Type::f32, 182, 4, 1},
-{Type::u16, 186, 2, 65535},
-{Type::u16, 188, 2, 65535},
+    {Type::i32, 0, 4, 65536.0}, {Type::i32, 4, 4, 65536.0}, {Type::i16, 8, 2, 8192.0},
+    {Type::i64, 10, 8, 1},      {Type::u8, 18, 1, 1},       {Type::u8, 19, 1, 255.0},
+    {Type::u8, 20, 1, 255.0},   {Type::u8, 21, 1, 255.0},   {Type::u8, 22, 1, 255.0},
+    {Type::u8, 23, 1, 255.0},   {Type::f32, 24, 4, 1},      {Type::f32, 28, 4, 1},
+    {Type::u16, 32, 2, 65535},  {Type::f32, 34, 4, 1},      {Type::u16, 38, 2, 65535},
+    {Type::f32, 40, 4, 1},      {Type::u16, 44, 2, 65535},  {Type::f32, 46, 4, 1},
+    {Type::u16, 50, 2, 16.0},   {Type::f32, 52, 4, 1},      {Type::u16, 56, 2, 4096},
+    {Type::u16, 58, 2, 4096},   {Type::u16, 60, 2, 4096},   {Type::u16, 62, 2, 4096},
+    {Type::u16, 64, 2, 4096},   {Type::u16, 66, 2, 4096},   {Type::u8, 68, 1, 8.0},
+    {Type::i16, 69, 2, 1024.0}, {Type::i16, 71, 2, 1024.0}, {Type::i16, 73, 2, 1024.0},
+    {Type::i16, 75, 2, 1024.0}, {Type::u16, 77, 2, 4096},   {Type::u16, 79, 2, 4096},
+    {Type::u16, 81, 2, 4096},   {Type::u16, 83, 2, 4096},   {Type::i32, 85, 4, 1},
+    {Type::i32, 89, 4, 1},      {Type::i32, 93, 4, 1},      {Type::i32, 97, 4, 1},
+    {Type::i32, 101, 4, 1},     {Type::f32, 105, 4, 1},     {Type::f32, 109, 4, 1},
+    {Type::f32, 113, 4, 1},     {Type::f32, 117, 4, 1},     {Type::f32, 121, 4, 1},
+    {Type::u32, 125, 4, 1},     {Type::f32, 129, 4, 1},     {Type::u16, 133, 2, 16.0},
+    {Type::i64, 135, 8, 1},     {Type::u32, 143, 4, 1},     {Type::f32, 147, 4, 1},
+    {Type::f32, 151, 4, 1},     {Type::f32, 155, 4, 1},     {Type::f32, 159, 4, 1},
+    {Type::f32, 163, 4, 1},     {Type::u8, 167, 1, 1},      {Type::u8, 168, 1, 1},
+    {Type::f32, 169, 4, 1},     {Type::f32, 173, 4, 1},     {Type::f32, 177, 4, 1},
+    {Type::u8, 181, 1, 1},      {Type::f32, 182, 4, 1},     {Type::u16, 186, 2, 65535},
+    {Type::u16, 188, 2, 65535},
 }};
 inline constexpr std::size_t bytes = 190;
 }
@@ -219,16 +190,16 @@ inline constexpr std::size_t red = 7;
 inline constexpr std::size_t green = 8;
 inline constexpr std::size_t blue = 9;
 inline constexpr std::array<Field, 10> fields = {{
-{Type::i32, 0, 4, 65536.0},
-{Type::i32, 4, 4, 65536.0},
-{Type::f32, 8, 4, 1},
-{Type::i64, 12, 8, 1},
-{Type::i64, 20, 8, 1},
-{Type::f32, 28, 4, 1},
-{Type::u8, 32, 1, 1},
-{Type::u8, 33, 1, 255.0},
-{Type::u8, 34, 1, 255.0},
-{Type::u8, 35, 1, 255.0},
+    {Type::i32, 0, 4, 65536.0},
+    {Type::i32, 4, 4, 65536.0},
+    {Type::f32, 8, 4, 1},
+    {Type::i64, 12, 8, 1},
+    {Type::i64, 20, 8, 1},
+    {Type::f32, 28, 4, 1},
+    {Type::u8, 32, 1, 1},
+    {Type::u8, 33, 1, 255.0},
+    {Type::u8, 34, 1, 255.0},
+    {Type::u8, 35, 1, 255.0},
 }};
 inline constexpr std::size_t bytes = 36;
 }
@@ -253,25 +224,13 @@ inline constexpr std::size_t bone_time = 16;
 inline constexpr std::size_t resting = 17;
 inline constexpr std::size_t sink_phase = 18;
 inline constexpr std::array<Field, 19> fields = {{
-{Type::i32, 0, 4, 65536.0},
-{Type::i32, 4, 4, 65536.0},
-{Type::f32, 8, 4, 1},
-{Type::i64, 12, 8, 1},
-{Type::u8, 20, 1, 255.0},
-{Type::u8, 21, 1, 255.0},
-{Type::u8, 22, 1, 255.0},
-{Type::i16, 23, 2, 8192.0},
-{Type::f32, 25, 4, 1},
-{Type::f32, 29, 4, 1},
-{Type::u8, 33, 1, 1},
-{Type::u32, 34, 4, 1},
-{Type::u32, 38, 4, 1},
-{Type::i64, 42, 8, 1},
-{Type::i64, 50, 8, 1},
-{Type::u8, 58, 1, 1},
-{Type::f32, 59, 4, 1},
-{Type::f32, 63, 4, 1},
-{Type::f32, 67, 4, 1},
+    {Type::i32, 0, 4, 65536.0}, {Type::i32, 4, 4, 65536.0}, {Type::f32, 8, 4, 1},
+    {Type::i64, 12, 8, 1},      {Type::u8, 20, 1, 255.0},   {Type::u8, 21, 1, 255.0},
+    {Type::u8, 22, 1, 255.0},   {Type::i16, 23, 2, 8192.0}, {Type::f32, 25, 4, 1},
+    {Type::f32, 29, 4, 1},      {Type::u8, 33, 1, 1},       {Type::u32, 34, 4, 1},
+    {Type::u32, 38, 4, 1},      {Type::i64, 42, 8, 1},      {Type::i64, 50, 8, 1},
+    {Type::u8, 58, 1, 1},       {Type::f32, 59, 4, 1},      {Type::f32, 63, 4, 1},
+    {Type::f32, 67, 4, 1},
 }};
 inline constexpr std::size_t bytes = 71;
 }
@@ -283,12 +242,12 @@ inline constexpr std::size_t red = 3;
 inline constexpr std::size_t green = 4;
 inline constexpr std::size_t blue = 5;
 inline constexpr std::array<Field, 6> fields = {{
-{Type::i32, 0, 4, 65536.0},
-{Type::i32, 4, 4, 65536.0},
-{Type::f32, 8, 4, 1},
-{Type::u8, 12, 1, 255.0},
-{Type::u8, 13, 1, 255.0},
-{Type::u8, 14, 1, 255.0},
+    {Type::i32, 0, 4, 65536.0},
+    {Type::i32, 4, 4, 65536.0},
+    {Type::f32, 8, 4, 1},
+    {Type::u8, 12, 1, 255.0},
+    {Type::u8, 13, 1, 255.0},
+    {Type::u8, 14, 1, 255.0},
 }};
 inline constexpr std::size_t bytes = 15;
 }
@@ -302,14 +261,14 @@ inline constexpr std::size_t radius = 5;
 inline constexpr std::size_t vx = 6;
 inline constexpr std::size_t vy = 7;
 inline constexpr std::array<Field, 8> fields = {{
-{Type::f32, 0, 4, 1},
-{Type::i32, 4, 4, 65536.0},
-{Type::i32, 8, 4, 65536.0},
-{Type::f32, 12, 4, 1},
-{Type::f32, 16, 4, 1},
-{Type::f32, 20, 4, 1},
-{Type::f32, 24, 4, 1},
-{Type::f32, 28, 4, 1},
+    {Type::f32, 0, 4, 1},
+    {Type::i32, 4, 4, 65536.0},
+    {Type::i32, 8, 4, 65536.0},
+    {Type::f32, 12, 4, 1},
+    {Type::f32, 16, 4, 1},
+    {Type::f32, 20, 4, 1},
+    {Type::f32, 24, 4, 1},
+    {Type::f32, 28, 4, 1},
 }};
 inline constexpr std::size_t bytes = 32;
 }
@@ -335,27 +294,15 @@ inline constexpr std::size_t food_y = 17;
 inline constexpr std::size_t food_kind = 18;
 inline constexpr std::size_t filtered = 19;
 inline constexpr std::array<Field, 20> fields = {{
-{Type::i32, 0, 4, 65536},
-{Type::i32, 4, 4, 65536},
-{Type::f32, 8, 4, 1},
-{Type::f32, 12, 4, 1},
-{Type::u8, 16, 1, 1},
-{Type::f32, 17, 4, 1},
-{Type::f32, 21, 4, 1},
-{Type::f32, 25, 4, 1},
-{Type::f32, 29, 4, 1},
-{Type::f32, 33, 4, 1},
-{Type::f32, 37, 4, 1},
-{Type::f32, 41, 4, 1},
-{Type::f32, 45, 4, 1},
-{Type::u16, 49, 2, 65535},
-{Type::f32, 51, 4, 1},
-{Type::f32, 55, 4, 1},
-{Type::f32, 59, 4, 1},
-{Type::f32, 63, 4, 1},
-{Type::u8, 67, 1, 1},
-{Type::f32, 68, 4, 1},
+    {Type::i32, 0, 4, 65536}, {Type::i32, 4, 4, 65536},  {Type::f32, 8, 4, 1},
+    {Type::f32, 12, 4, 1},    {Type::u8, 16, 1, 1},      {Type::f32, 17, 4, 1},
+    {Type::f32, 21, 4, 1},    {Type::f32, 25, 4, 1},     {Type::f32, 29, 4, 1},
+    {Type::f32, 33, 4, 1},    {Type::f32, 37, 4, 1},     {Type::f32, 41, 4, 1},
+    {Type::f32, 45, 4, 1},    {Type::u16, 49, 2, 65535}, {Type::f32, 51, 4, 1},
+    {Type::f32, 55, 4, 1},    {Type::f32, 59, 4, 1},     {Type::f32, 63, 4, 1},
+    {Type::u8, 67, 1, 1},     {Type::f32, 68, 4, 1},
 }};
 inline constexpr std::size_t bytes = 72;
 }
-}}
+}
+}

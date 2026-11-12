@@ -61,9 +61,8 @@ std::optional<Individual> Ecosystem::fill_natural_egg(Individual &p, std::size_t
     return std::nullopt;
   // The parent's observed incubation includes neural maturation and learning before hatching.
   // Assembly work alone does not measure how long a living embryo needs yolk.
-  const bool nutrient =
-      b.reproduction_.egg_yolk <
-      evo.nutrient_egg_threshold * egg_energy_needed(b, p.genome, physiology_);
+  const bool nutrient = b.reproduction_.egg_yolk <
+                        evo.nutrient_egg_threshold * egg_energy_needed(b, p.genome, physiology_);
   if (!nutrient && occupied >= std::size_t(population_limit))
     return std::nullopt;
   std::size_t nearby = 0;

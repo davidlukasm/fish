@@ -139,50 +139,50 @@ function cppnShape(type, shape) {
     return {
       f : (x, b) => Math.exp(-x * x * sharpness / ((b || 1) * (b || 1))),
       span : limit * half,
-      at : b => [ Math.abs(b || 1) * half, .5 ],
+      at : b => [Math.abs(b || 1) * half, .5],
       from : x => Math.abs(x) / half
     };
   case 'sine':
     return {
       f : (x, b) => Math.sin(x * b),
       span : Math.PI,
-      at : b => [ quarter * inverse(b), 1 ],
+      at : b => [quarter * inverse(b), 1],
       from : x => quarter * inverse(x)
     };
   case 'cosine':
     return {
       f : (x, b) => Math.cos(x * b),
       span : Math.PI,
-      at : b => [ quarter * inverse(b), 0 ],
+      at : b => [quarter * inverse(b), 0],
       from : x => quarter * inverse(x)
     };
   case 'linear':
-    return {f : (x, b) => x * b, span : 1, rise : limit, at : b => [ 1, b ], from : (x, y) => y};
+    return {f : (x, b) => x * b, span : 1, rise : limit, at : b => [1, b], from : (x, y) => y};
   case 'sign':
-    return {f : (x, b) => x + b > 0 ? 1 : -1, span : limit, at : b => [ -b, 0 ], from : x => -x};
+    return {f : (x, b) => x + b > 0 ? 1 : -1, span : limit, at : b => [-b, 0], from : x => -x};
   case 'sigmoid':
     return {
       f : (x, b) => 2 / (1 + Math.exp(b - x)) - 1,
       span : limit,
-      at : b => [ b, 0 ],
+      at : b => [b, 0],
       from : x => x
     };
   case 'cutoff':
-    return {f : (x, b) => x > b ? 1 : -1, span : limit, at : b => [ b, 0 ], from : x => x};
+    return {f : (x, b) => x > b ? 1 : -1, span : limit, at : b => [b, 0], from : x => x};
   case 'cubic':
     return {
       f : (x, b) => Math.pow(x + b / range, 3) / Math.pow(range, 3),
       span : limit / range,
-      at : b => [ -b / range, 0 ],
+      at : b => [-b / range, 0],
       from : x => -x * range
     };
   case 'absolute':
-    return {f : (x, b) => Math.abs(x + b), span : limit, at : b => [ -b, 0 ], from : x => -x};
+    return {f : (x, b) => Math.abs(x + b), span : limit, at : b => [-b, 0], from : x => -x};
   case 'step':
     return {
       f : (x, b) => Math.trunc(x * b),
       span : 2,
-      at : b => [ inverse(b), 1 ],
+      at : b => [inverse(b), 1],
       from : x => inverse(x)
     };
   default:
@@ -223,7 +223,7 @@ function thumbPath(type, size = THUMB.size) {
   if (name === 'gate')
     return null;
   const shape = cppnShape(type, {cppnLimit : 1, cppnSharpness : 1, cppnRange : 1});
-  const [ b, span ] = SAMPLE[name];
+  const [b, span] = SAMPLE[name];
   return plot(x => shape.f(x, b), span, {...THUMB, width : size, height : size}).path;
 }
 function axes(box, sy) {
@@ -327,7 +327,7 @@ export function weightAt(fy, shape) {
 function curvePicture(node, parameter, shape) {
   const form = cppnShape(node.type, shape), C = CURVE;
   const drawn = plot(x => form.f(x, parameter), form.span, C, form.rise ?? null);
-  const [ hx, hy ] = form.at(parameter);
+  const [hx, hy] = form.at(parameter);
   const x = drawn.sx(clamp(hx, -form.span, form.span)), y = drawn.sy(hy);
   const title = label('cppn.parameter.' + typeLabels[node.type]);
   return '<svg class="aid-cppn-curve" viewBox="0 0 ' + C.width + ' ' + C.height +
@@ -343,9 +343,9 @@ function transferPicture(link, weight, shape) {
   return '<svg class="aid-cppn-curve aid-cppn-transfer ' + kind + '" viewBox="0 0 ' + C.width +
          ' ' + C.height + '" data-cppn-transfer="' + link.id + '">' + axes(C, drawn.sy) +
          '<path class="aid-cppn-curve-ink" d="' + drawn.path + '"/>' +
-         '<circle class="aid-graphic-handle" data-cppn-transfer-handle cx="' +
-         fixed(drawn.sx(1)) + '" cy="' + fixed(drawn.sy(weight)) + '" r="' + C.mark +
-         '"><title>' + escapeText(label('cppn.weight')) + '</title></circle></svg>';
+         '<circle class="aid-graphic-handle" data-cppn-transfer-handle cx="' + fixed(drawn.sx(1)) +
+         '" cy="' + fixed(drawn.sy(weight)) + '" r="' + C.mark + '"><title>' +
+         escapeText(label('cppn.weight')) + '</title></circle></svg>';
 }
 function gallery(node) {
   return '<div class="aid-cppn-gallery">' +
