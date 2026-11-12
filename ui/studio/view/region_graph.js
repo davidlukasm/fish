@@ -85,7 +85,8 @@ export function regionGraph(state, organ) {
   let html =
       '<svg class="aid-region-graph" viewBox="0 0 ' + GRAPH.width + ' ' + L.height +
       '" data-region-graph="' + esc(organ.id) + '">' +
-      '<defs><marker id="aid-region-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8Z"/></marker></defs>';
+      '<defs><marker id="aid-region-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L8 4L0 8Z"/></marker>' +
+      '<marker id="aid-region-bar" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M5 0H7V8H5Z"/></marker></defs>';
   for (const dir of ['in', 'out']) {
     const ports = slots.filter(s => s.dir === dir), y = dir === 'in' ? 18 : L.height - 18;
     ports.forEach((slot, i) => {
@@ -113,11 +114,12 @@ export function regionGraph(state, organ) {
                                   : 'data-circuit-wire="' + esc(link.wire.id) + '"';
     const d = path(a, b, i),
           title = label(link.cut ? 'inspector.region.restore' : 'inspector.region.cut');
-    html += '<g ' + attrs + ' class="aid-region-edge' + (link.cut ? ' cut' : '') +
-            (c?.sign < 0 ? ' inhibits' : '') + '">' +
+    const inhibitory = c?.sign < 0, crossing = own.has(link.from) !== own.has(link.to);
+    html += '<g ' + attrs + ' class="aid-region-edge' + (crossing ? ' crossing' : '') +
+            (inhibitory ? ' inhibits' : '') + (link.cut ? ' cut' : '') + '">' +
             '<title>' + esc(title) + '</title><path class="aid-region-edge-hit" d="' + d + '"/>' +
-            '<path class="aid-region-edge-ink" d="' + d +
-            '" marker-end="url(#aid-region-arrow)"/></g>';
+            '<path class="aid-region-edge-ink" d="' + d + '" marker-end="url(#aid-region-' +
+            (inhibitory ? 'bar' : 'arrow') + ')"/></g>';
   });
   for (const c of [...organ.centers, ...(twin?.centers ?? []).filter(c => external.has(c.id))]) {
     const p = L.points.get(c.id);

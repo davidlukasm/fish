@@ -1128,8 +1128,11 @@ async function checkHormoneSystems(model, capabilities) {
     const bladder = model.addOrgan(gut.document, 'bladder', sites,
                                    geometry.sitePoint(sites.find(s => s.id === 366)));
     const cells = model.findOrgan(bladder.document, bladder.organId).centers;
-    let document = model.placeNode(bladder.document, cells[2].id, 368, sites);
-    document = model.placeNode(document, cells[3].id, 344, sites);
+    let document = cells[2].site === 368
+                       ? bladder.document
+                       : model.placeNode(bladder.document, cells[2].id, 368, sites);
+    document =
+        cells[3].site === 344 ? document : model.placeNode(document, cells[3].id, 344, sites);
     organAudits.push({document, id : bladder.organId, type : 'bladder', pressure : true});
   }
   {
@@ -1231,7 +1234,7 @@ async function checkHormoneSystems(model, capabilities) {
       wireScope : 'all',
       contactView : 'design'
     });
-    assert.match(circuit, /aid-circuit-link crossing inhibits[^>]*url\(#aid-circuit-bar\)/);
+    assert.match(circuit, /aid-region-edge crossing inhibits[^]*?url\(#aid-region-bar\)/);
     const moved = model.moveOrgan(placed.document, left.id, sites, {x : 700, y : 420});
     assert.ok(moved);
     const another = model.addOrgan(placed.document, 'olfaction', sites, {x : 730, y : 335});
@@ -1443,7 +1446,7 @@ async function checkHormoneSystems(model, capabilities) {
               'Seeing and steering runs through the optic tectum');
     for (const id of [tectum.organId, tectumLeft.pair]) {
       const circuit = panels.inspector({
-        document : connected.document,
+        document : commissure.document,
         sites,
         capabilities : sitesResult,
         selected : {kind : 'organ', id},
@@ -1454,8 +1457,8 @@ async function checkHormoneSystems(model, capabilities) {
         wireScope : 'all',
         contactView : 'design'
       });
-      assert.match(circuit, /aid-circuit-link crossing/);
-      assert.match(circuit, /data-wire-pairing=/);
+      assert.match(circuit, /aid-region-edge crossing/);
+      assert.ok(circuit.includes('data-circuit-wire="' + commissure.wireId + '"'));
     }
   }
   let doc = model.newDocument('Atelier-Test');
@@ -2164,7 +2167,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
   assert.match(planningInspector, /data-preview-handle="input"/);
-  assert.match(planningInspector, /data-life-phase=/);
+  assert.match(planningInspector, /data-phase=/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));
