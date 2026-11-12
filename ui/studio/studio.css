@@ -750,7 +750,14 @@
 .aid-bladder-roof{fill:none;stroke:var(--aid-senses);stroke-width:4;stroke-linecap:round;cursor:pointer}
 .aid-sac-part.selected .aid-bladder-gland,.aid-sac-part.selected .aid-bladder-roof{stroke:var(--aid-handle)}
 .aid-gut-feeler{fill:none;stroke:var(--aid-senses);stroke-width:1.2;stroke-linecap:round}
-.aid-diet-track{fill:#0d262c;stroke:var(--aid-sketch-line);stroke-width:.6}
+.aid-use-axis{fill:none;stroke:var(--aid-sketch-line);stroke-width:1}
+.aid-use-curve{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.aid-use-marker{stroke:#e5f4dc;stroke-width:1;stroke-dasharray:3 3;opacity:.7}
+.aid-use-dot{stroke:#0c252b;stroke-width:1.2}
+.aid-use-scale,.aid-use-title,.aid-use-food{fill:var(--aid-axis-text);font:10px system-ui}
+.aid-use-title{fill:var(--aid-name-text);font-weight:600}
+.aid-use-share{font:600 11px system-ui;paint-order:stroke;stroke:#0c252b;stroke-width:3px}
+.aid-diet-hit{fill:transparent;cursor:ew-resize}
 .aid-sac-part.selected .aid-gut-stretch{stroke:var(--aid-handle)}
 .aid-sac-part.selected .aid-gut-cell{fill:var(--aid-handle)}
 #aid-body-map.aid-stimulus-view .aid-anatomical-organ:not(.aid-pulse-fired):not(.aid-pulse-quieted) .aid-retina-node:not(.aid-pulse-fired):not(.aid-pulse-quieted){fill-opacity:.35;stroke-opacity:.35}

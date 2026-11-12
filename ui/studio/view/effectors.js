@@ -381,8 +381,11 @@ const TRAIT_HANDLES = Object.freeze({
   [MOTOR_KIND.turn] : Object.fromEntries(
       Object.values(FIN_STROKE)
           .map(stroke => ['trait:q1:' + stroke, {key : FIN_ANGLE_TRAIT, at : angleAt(stroke)}])),
-  [GUT_CODE] :
-      {'trait:q1' : {key : GUT_TRAIT, at : x => (x - GUT.from - 110) / (GUT.to - GUT.from - 110)}},
+  [GUT_CODE] : {
+    'trait:q1' : {key : GUT_TRAIT, at : x => (x - GUT.from - 110) / (GUT.to - GUT.from - 110)},
+    'trait:q2' :
+        {key : GUT_TRAIT, at : x => (x - USE_CHART.left) / (USE_CHART.right - USE_CHART.left)}
+  },
   [GILL_CODE] : {
     'trait:q1' : {key : GILL_TRAIT, at : (x, y) => (GILL.bottom - y) / (GILL.bottom - GILL.top)}
   },
@@ -496,21 +499,34 @@ export function spineField(state, organ) {
 const GUT = Object.freeze({
   from : 24,
   to : 276,
-  middle : 70,
+  middle : 85,
   amplitude : 30,
   tube : 14,
   steps : 96,
-  track : [ 40, 260 ],
-  track_y : 146,
   cell : 3.2,
   // The chosen sense cells' feelers grow to this length with their sensitivity; the adaptation
-  // arc round the first cell; the plant and meat bars below the gut.
+  // arc round the first cell.
   feeler : 16,
-  clock : 18,
-  bars : 136,
-  barGap : 20,
-  barHeight : 8,
-  icon : .8
+  clock : 18
+});
+// What the gut gets out of plants and meat over all its lengths, as two curves: the axes span the
+// plot (left, right, top, base), the scale words sit `tick` beside them, the curves end in their
+// food's icon; the dots and their shares mark the gut's own length, which is dragged here as well.
+const USE_CHART = Object.freeze({
+  width : 300,
+  height : 132,
+  left : 44,
+  title : 12,
+  right : 252,
+  top : 14,
+  base : 100,
+  tick : 6,
+  axis : 16,
+  icon : .7,
+  gap : 16,
+  dot : 3.5,
+  share : 8,
+  below : 9
 });
 // The gut in one picture: its length (handle at its end), what it gets out of plants and meat at
 // that length (the two bars below), and its sense cells: the food cells on the inner wall, the
@@ -555,8 +571,8 @@ export function gutGraphic(state, organ, selected, held = null) {
           (chosen ? gutSenseMarks(state, chosen, wall(chosen === food ? -1 : 1),
                                   chosen === food ? -1 : 1, held)
                   : '') +
-          dietBars(state) + handle('trait:q1', end, across(G.steps), label('gut.handle')),
-      '',
+          handle('trait:q1', end, across(G.steps), label('gut.handle')),
+      gutUseChart(state, organ),
       chosen
           ? ' data-sense-field="' + escapeText(chosen.id) + '" data-sense-redraw="refreshEffectors"'
           : '');
@@ -578,30 +594,76 @@ function gutSenseMarks(state, center, places, side, held) {
          sensitivityHandle(feeler(G.cell), feeler(G.cell + G.feeler), sensitive,
                            label('gut.sensitivityHandle'));
 }
-// What the gut gets out of plants and meat at its length, as two bars with the food's mark.
-function dietBars(state) {
-  const data = state.capabilities?.diet?.gut, at = gutLength(state.document), G = GUT;
-  if (!data || at === null)
+function gutUseChart(state, organ) {
+  const data = state.capabilities?.diet?.gut, at = gutLength(state.document), C = USE_CHART;
+  if (!data)
     return '';
+  const x = share => C.left + (C.right - C.left) * share,
+        y = value => C.base - (C.base - C.top) * value;
   const valueAt = values => {
     const pos = clamp(at) * (values.length - 1), k = Math.floor(pos);
     return values[k] + (values[Math.min(values.length - 1, k + 1)] - values[k]) * (pos - k);
   };
-  return [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ]
-      .map(([ key, slot ], row) => {
-        const share = clamp(valueAt(data[key])), y = G.bars + row * G.barGap,
-              colour = FOOD_COLORS[slot];
-        return '<g class="aid-diet-bar"><title>' +
-               escapeText(t('units.joined', {a : label('diet.gut.' + key), b : percent(share)})) +
-               '</title><g transform="translate(' + G.track[0] / 2 + ' ' + y + ')">' +
-               ecologyIconSvg(slot, colour, G.icon) + '</g><rect class="aid-diet-track" x="' +
-               G.track[0] + '" y="' + (y - G.barHeight / 2) + '" width="' +
-               (G.track[1] - G.track[0]) + '" height="' + G.barHeight + '"/><rect x="' +
-               G.track[0] + '" y="' + (y - G.barHeight / 2) + '" width="' +
-               fixed((G.track[1] - G.track[0]) * share) + '" height="' + G.barHeight + '" fill="' +
-               colour + '"/></g>';
-      })
-      .join('');
+  const words = key => label('diet.gut.' + key);
+  const text = (cls, px, py, content, anchor = 'start', colour = '') =>
+      '<text class="' + cls + '" x="' + fixed(px) + '" y="' + fixed(py) + '" text-anchor="' +
+      anchor + '"' + (colour ? ' style="fill:' + colour + '"' : '') + '>' + escapeText(content) +
+      '</text>';
+  const foods = [ [ 'plant', FOOD_SLOT.plant ], [ 'meat', FOOD_SLOT.fish ] ];
+  const curves =
+      foods
+          .map(([ key, slot ]) => {
+            const values = data[key], colour = FOOD_COLORS[slot], end = values.at(-1);
+            const d =
+                'M' +
+                values.map((v, k) => fixed(x(k / (values.length - 1))) + ' ' + fixed(y(clamp(v))))
+                    .join(' L');
+            return '<path class="aid-use-curve" d="' + d + '" stroke="' + colour + '"/>' +
+                   '<g transform="translate(' + fixed(C.right + C.gap) + ' ' +
+                   fixed(y(clamp(end))) + ')">' + ecologyIconSvg(slot, colour, C.icon) + '</g>' +
+                   text('aid-use-food', C.right + C.gap, y(clamp(end)) + C.axis, words(key),
+                        'middle');
+          })
+          .join('');
+  // The gut's own length: a line across the plot, a dot and the share on each curve.
+  const shares = at === null ? []
+                             : foods.map(([ key, slot ]) => ({slot, v : clamp(valueAt(data[key]))}))
+                                   .sort((a, b) => b.v - a.v);
+  const mark = at === null
+                   ? ''
+                   : '<line class="aid-use-marker" x1="' + fixed(x(at)) + '" y1="' + C.top +
+                         '" x2="' + fixed(x(at)) + '" y2="' + C.base + '"/>' +
+                         shares
+                             .map(({slot, v}, rank) => {
+                               const right = at < .5;
+                               // The higher share is written above its dot, the lower one below,
+                               // so the two never cover each other where the curves cross.
+                               return '<circle class="aid-use-dot" cx="' + fixed(x(at)) + '" cy="' +
+                                      fixed(y(v)) + '" r="' + C.dot + '" fill="' +
+                                      FOOD_COLORS[slot] + '"/>' +
+                                      text('aid-use-share', x(at) + (right ? C.share : -C.share),
+                                           rank ? y(v) + C.dot + C.below : y(v) - C.dot, percent(v),
+                                           right ? 'start' : 'end', FOOD_COLORS[slot]);
+                             })
+                             .join('') +
+                         '<rect class="aid-diet-hit" data-effector-handle="trait:q2" x="' + C.left +
+                         '" y="' + C.top + '" width="' + (C.right - C.left) + '" height="' +
+                         (C.base - C.top) + '"/>' +
+                         handle('trait:q2', x(at), C.base, words('handle'));
+  const axes =
+      '<path class="aid-use-axis" d="M' + C.left + ' ' + C.top + ' V' + C.base + ' H' + C.right +
+      '"/>' + text('aid-use-scale', C.left - C.tick, C.top + C.tick / 2, percent(1), 'end') +
+      text('aid-use-scale', C.left - C.tick, C.base, percent(0), 'end') +
+      text('aid-use-scale', C.left, C.base + C.axis, words('low')) +
+      text('aid-use-scale', C.right, C.base + C.axis, words('high'), 'end') +
+      text('aid-use-title', (C.left + C.right) / 2, C.base + C.axis, words('length'), 'middle') +
+      '<text class="aid-use-title" transform="translate(' + C.title + ' ' +
+      fixed((C.top + C.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
+      escapeText(words('title')) + '</text>';
+  return '<svg class="aid-effector-graphic aid-use-chart" viewBox="0 0 ' + C.width + ' ' +
+         C.height + '" data-effector-graphic="' + escapeText(organ.id) + '" data-effector-code="' +
+         GUT_CODE + '" data-effector-side="1" role="img" aria-label="' +
+         escapeText(words('title')) + '">' + axes + curves + mark + '</svg>';
 }
 
 const effectorBlock = (organ, code, side, title, graphic, below, attributes = '') =>
