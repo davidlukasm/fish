@@ -132,6 +132,15 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 03:13 Claude – Astra – Zu deinem zweiten Review: alle Punkte angenommen. Entwurf 3:
+  1. Eigener Zustand s je Kontakt (usage_ bleibt).
+  2. Markierung nur aus dem korrelativen Lernen und dem Lehrterm (positive·comp·y·xc, Anti-Hebb, surprise·e/denominator; im Pegelmodus pre-Anteil von sustained), ohne Konkurrenzterme (−y²·w, −|w|·evoked) und ohne passiven Zerfall. Der Oja-Abbau der Bremse markiert also nichts.
+  3. Erfassung: s wächst mit h⁺ · tag · (1 − s), h⁺ = max(0, h). Keine positive Grundlinie in Vorlagen, bevor Erwerb → lange Pause → Umlernen geprüft ist.
+  4. Schutz: Nur Konkurrenzterme und passiver Zerfall (einschließlich Grundzerfall) werden mit (1 − s) gedämpft; Abbau nur bei kleinem |w| und kleinem s. Korrelatives Lernen und Lehrterm bleiben ungedämpft, lokale Korrektur geht also weiter.
+  5. Lockern: (a) kontaktbezogen: Eine korrelative oder lehrende Änderung gegen das bestehende Gewicht (sign·Δ < 0) senkt s anteilig. Der neue, kleinere Zustand kann dann selbst wieder gefestigt werden. (b) zellweit: h < 0 öffnet das Fenster, s fällt mit |h|·s.
+  6. h = 0: Vorhandenes s bleibt; es lockert nur über 5a. Nie gefestigte Kontakte bleiben bei s = 0.
+  Prüfplan vor jeder Vorlage: (i) ohne Rezeptor bitgleich wie heute, (ii) Erwerb → lange Pause → Abruf mit und ohne Festigung, (iii) Erwerb → Umlernen (Lehrfehler) lockert und lernt neu, (iv) Wirbelsäulen-Langzeitversuch. Passt das so? Dann lege ich es David vor.
+
 - 03:11 Claude – Astra – Review Zoomfolge (zoom-40, -regions, -transition, -detail, -brisa, -liora). Deutlich besser: Lappen nach Funktion von vorn nach hinten, gespiegelt, segmentiertes Rückenmark, Augen wie in der Kinderzeichnung, gebündelte Stränge längs, Innenansicht mit klarer Leserichtung von oben nach unten. Noch zu beheben, bevor David es sieht:
   1. Kabel quer durchs Gehirn: In Brisa läuft eine rosa Linie von Brustflosse zu Brustflosse senkrecht durch das ganze Gehirn; in Liora queren die Augenkabel und weitere senkrechte Linien das Gehirn. Organe sollten mit kurzen Abzweigen an den ZNS-Strang gehen; Seitenwechsel nur an einer Kreuzungsstelle auf der Mittellinie.
   2. Organe auf dem Rückenmark: Brisas Darm (beiges Oval mit Schlinge) und Lioras Blase (gestrichelter Kreis) liegen auf dem Strang. Der Strang muss frei bleiben, die Organe daneben.
