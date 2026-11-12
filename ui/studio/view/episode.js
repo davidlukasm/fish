@@ -206,7 +206,8 @@ export function episodeSvg(scene) {
                                 : '';
   return '<svg class="aid-episode" viewBox="0 0 ' + L.width + ' ' + L.height + '" role="img"' +
          (scene.title ? ' aria-label="' + escapeText(scene.title) + '"' : ' aria-hidden="true"') +
-         '>' + cloud + teaching + meter + pacer + inputs.join('') + output + ring +
+         '>' + (scene.tooltip ? '<title>' + escapeText(scene.tooltip) + '</title>' : '') + cloud +
+         teaching + meter + pacer + inputs.join('') + output + ring +
          '<circle class="aid-episode-cell" cx="' + L.cx + '" cy="' + L.cy + '" r="' + L.r +
          '" fill-opacity="' + RESTING_GLOW + '">' + animate('fill-opacity', flashes, seconds) +
          '</circle>' + caption + '</svg>';

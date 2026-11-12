@@ -911,6 +911,7 @@
 .aid-learn-substances button{display:flex;align-items:center;gap:5px;padding:4px 9px;border:1px solid #3a5c66;border-radius:8px;background:#1e4249;color:#dce8e0;font-size:12px}
 .aid-learn-substances button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}
 .aid-learn-substances .aid-substance-swatch{background:var(--substance)}
+.aid-learn-substances .aid-substance-swatch.none{background:none;border-style:dashed}
 .aid-learn-nodes{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
 .aid-learn-nodes button{display:flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid #3a5c66;border-radius:8px;background:#1e4249;color:#dce8e0;font-size:12px}
 .aid-learn-nodes button.active{background:#c5d7bb;color:#123432;border-color:#c5d7bb}

@@ -1067,20 +1067,10 @@
     "learns": "Dieser Knoten lernt jetzt schneller: aktive Eingänge wachsen, stille schrumpfen."
   },
   "learnRule": {
-    "teaching": "Lehrsignal",
-    "teacher": "Wer die Zelle lehrt",
     "untaught": "lernt von selbst",
     "gain": "lernt mit {n} % Tempo",
-    "firing": "zugleich aktiv",
-    "inBeat": "im Takt",
-    "still": "still",
-    "expect": "Erwartung",
-    "beat": "Takt",
-    "output": "Ausgang",
-    "values": "Werte der Lernregel",
     "untaughtMode": "von selbst: {mode}",
     "overview": "Wer lernt, und von wem",
-    "untaughtShort": "ohne Lehrer",
     "modulator": "Modulator",
     "substance": "Stoff",
     "rate": "Wie schnell die Zelle lernt",
@@ -1358,8 +1348,7 @@
       "Gemeinsames abschwächen",
       "Über Lehrsignale",
       "Gemeinsames stärken"
-    ],
-    "unconsolidated": "Die Zerfallszeiten gelten für ungefestigte Kontakte."
+    ]
   },
   "placement": {
     "side": "Platzierung",
