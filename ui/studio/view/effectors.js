@@ -68,7 +68,7 @@ const MUSCLE_PLACE = Object.freeze({
   [MOTOR_KIND.forward] :
       {spindle : {axis : [ 34, 50, 146, 70 ], thin : 5, thick : 13}, gate : [ 40, 163, 140, 163 ]},
   [MOTOR_KIND.turn] :
-      {spindle : {axis : [ 40, 40, 150, 52 ], thin : 5, thick : 13}, gate : [ 290, 160, 290, 86 ]},
+      {spindle : {axis : [ 38, 36, 116, 68 ], thin : 5, thick : 13}, gate : [ 290, 160, 290, 86 ]},
   [MOTOR_KIND.suction] : {
     spindle : {axis : [ 272, 126, 150, 108 ], thin : 5, thick : 12},
     gate : [ 14, 162, 14, 126 ]

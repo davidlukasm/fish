@@ -25,9 +25,8 @@ export const pairingChoice = wire =>
     PAIRINGS
         .map(p => '<button class="aid-pairing" data-wire-pairing="' + escapeText(wire.id) +
                   '" data-pairing-value="' + p + '" aria-pressed="' +
-                  ((wire.pairing ?? 'same') === p) + '">' +
-                  glyph(PAIRING_GLYPH[p], PAIRING_BOX, {box : PAIRING_BOX}) + '<span>' +
-                  label('inspector.pairing.' + p) + '</span></button>')
+                  ((wire.pairing ?? 'same') === p) + '" title="' + label('inspector.pairing.' + p) +
+                  '">' + glyph(PAIRING_GLYPH[p], PAIRING_BOX, {box : PAIRING_BOX}) + '</button>')
         .join('') +
     '</div>';
 // Each port as its symbol, framed by whether it is filled, missing or free, followed by the organs

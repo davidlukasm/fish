@@ -40,7 +40,7 @@ import {
 import {modulesOf, oneSided} from '../model/assemblies.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {onMidline} from '../model/layout.js';
-import {formatNumber, formatSigned, linkText, t, tList} from '../../strings.js';
+import {formatNumber, formatSigned, joinParts, linkText, t, tList} from '../../strings.js';
 import {
   heading,
   icon,
@@ -278,24 +278,30 @@ function developedContactInspector(state) {
               ? ''
               : contactPlan(state, [ findCenter(state.document, centers[to].id)?.center ]));
 }
+// What the last development proposed along this connection: how many contacts and how strong they
+// may grow on average, by sign when both occur; the names are the tooltips.
+const RESULT_GLYPH = Object.freeze({
+  count : 'M5 7h.01M5 12h.01M5 17h.01M19 12h.01M5 7l14 5M5 12h14M5 17l14-5',
+  limit : 'M4 12l16-4v8z'
+});
+const resultCard = (key, value, symbol) => '<div title="' + label('inspector.' + key) + '">' +
+                                           glyph(RESULT_GLYPH[symbol], ICON.part, {line : true}) +
+                                           '<strong>' + value + '</strong></div>';
 function contactResult(link) {
   const polarities = [
     {count : link.positive, weight : link.positiveWeight, key : 'excitation', tone : 'excite'},
     {count : link.negative, weight : link.negativeWeight, key : 'inhibition', tone : 'inhibit'}
   ];
   const tone = !link.count ? ' none' : link.negative ? link.positive ? '' : ' inhibit' : ' excite';
-  return '<div class="aid-contact-summary' + tone + '"><div><strong>' +
-         formatNumber(Number(link.count)) + '</strong><span>' + label('inspector.proposalCount') +
-         '</span></div>' +
-         (link.count ? '<div><strong>' + formatSigned(link.weight, 2, true) + '</strong><span>' +
-                           label('inspector.meanLimit') + '</span></div>'
-                     : '') +
+  return '<div class="aid-contact-summary' + tone + '">' +
+         resultCard('proposalCount', formatNumber(Number(link.count)), 'count') +
+         (link.count ? resultCard('meanLimit', formatSigned(link.weight, 2, true), 'limit') : '') +
          '</div>' +
          (link.positive && link.negative
               ? '<div class="aid-contact-polarities">' +
                     polarities
-                        .map(item => '<div class="aid-contact-polarity ' + item.tone + '"><span>' +
-                                     label('inspector.' + item.key) + '</span><strong>' +
+                        .map(item => '<div class="aid-contact-polarity ' + item.tone + '" title="' +
+                                     label('inspector.' + item.key) + '"><strong>' +
                                      formatNumber(item.count) + '</strong><small>' +
                                      formatSigned(item.weight, 2, true) + '</small></div>')
                         .join('') +
@@ -346,16 +352,15 @@ function wireField(wire) {
   return '<div class="aid-wire-field"><svg class="aid-wire-search" data-wire-pad="' +
          escapeText(wire.id) + '" viewBox="0 0 ' + W.size + ' ' + W.size +
          '" tabindex="0" role="img" aria-label="' + label('sections.spread') + '"><title>' +
-         label('inspector.spreadTitle') + '</title>' + circle('aid-wire-boundary', W.boundary) +
-         circle('aid-wire-halo', radius) +
+         escapeText(joinParts([ label('sections.spread'), label('inspector.spreadTitle') ])) +
+         '</title>' + circle('aid-wire-boundary', W.boundary) + circle('aid-wire-halo', radius) +
          otherSenders
              .map((other, k) => '<circle class="aid-wire-other" data-other="' + k + '" cx="' +
                                 fixed(other.x) + '" cy="' + fixed(other.y) + '" r="' + W.other +
                                 '" fill-opacity="' + otherShown(other, radius) + '"/>')
              .join('') +
          circle('aid-wire-source', W.source) +
-         circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg><span>' +
-         label('sections.spread') + '</span></div>';
+         circle('aid-wire-handle', W.handle, W.centre + radius) + '</svg></div>';
 }
 function wireInspector(state, wire) {
   const doc = state.document;

@@ -1,6 +1,7 @@
 // The muscle itself, drawn where it works in its organ's picture: a spindle along an axis, as long
 // as it has nodes and as thick as each node is strong, its fibres white (fast) or red (lasting),
-// the reserve that only joins strong commands behind a dashed partition, and at its anchor its
+// the reserve that only joins strong commands behind a dashed partition (its handle just beyond the
+// sheath, so it stays clear of the tip's handle), and at its anchor its
 // cross-section as a pie of fast and lasting fibres just before it. Every handle carries the
 // geometry it is dragged along, so one patch serves every picture.
 import {ATELIER_LIMITS} from '../../schema.js';
@@ -70,8 +71,9 @@ export function muscleSpindle(organ, most, {axis, thin, thick, rings = false}) {
          (rings ? '' : '<path class="aid-tissue-sheath" d="' + shell + '"/>') + fibres +
          (organ.type === 'muscle'
               ? '<path class="aid-tissue-partition" d="M' + xy(f.at(split, -half)) + ' L' +
-                    xy(f.at(split, half)) + '"/>' +
-                    grip('sprint', f.at(split, half), word('sprintHandle'), geometry)
+                    xy(f.at(split, half + S.handle + S.gap)) + '"/>' +
+                    grip('sprint', f.at(split, half + S.handle + S.gap), word('sprintHandle'),
+                         geometry)
               : '') +
          grip('nodes', f.at(length, 0), word('nodesHandle'), geometry) +
          grip('strength', f.at(length / 2, -half * S.bulge), word('strengthHandle'), geometry) +
