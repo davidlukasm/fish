@@ -6,7 +6,15 @@ import {centerTitle, organTitle} from './names.js';
 import {centerMarker} from './scene.js';
 import {escapeText, fixed} from './markup.js';
 import {label, VALUE_DIGITS} from './kit.js';
-import {formatNumber, joinParts, linkText, percent} from '../../strings.js';
+import {
+  formatNumber,
+  formatSigned,
+  joinParts,
+  linkText,
+  namedText,
+  percent,
+  t
+} from '../../strings.js';
 
 const word = key => label('contacts.' + key);
 // The planned contacts as a drawing: the senders on the left, the chosen cells in the middle, the
@@ -17,7 +25,8 @@ const word = key => label('contacts.' + key);
 const PLAN = Object.freeze({
   width : 300,
   columns : [ 34, 150, 266 ],
-  top : 22,
+  top : 32,
+  heading : 14,
   step : 20,
   most : 16,
   mark : 7,
@@ -28,7 +37,7 @@ const PLAN = Object.freeze({
   seat : 2.2,
   seats : 24,
   handle : 6,
-  wedges : {from : 60, to : 240, rows : [ 20, 40 ], thick : 9, margin : 12}
+  wedges : {from : 60, to : 240, rows : [ 24, 58 ], thick : 9, margin : 12, label : 10}
 });
 const point = p => fixed(p.x) + ' ' + fixed(p.y);
 function limits(source, target) {
@@ -67,18 +76,19 @@ export function contactPlan(state, chosen, wire = null) {
   const index = new Map(centers.map((c, i) => [c.id, i]));
   const own = new Set(chosen.map(c => index.get(c.id)));
   const pairs = wire && wireContactPairs(doc, wire, state.sites);
-  const edges = compileDocument(doc, state.sites)
-                    .connections
-                    .filter(edge => (!pairs || pairs.has(edge.from + ':' + edge.to)) &&
-                                    (own.has(edge.to) || own.has(edge.from)))
-                    .slice(0, P.most * 3);
-  const senders =
-      [...new Set(edges.filter(e => !own.has(e.from)).map(e => e.from)) ].slice(0, P.most);
-  const receivers =
-      [...new Set(edges.filter(e => !own.has(e.to)).map(e => e.to)) ].slice(0, P.most);
+  const key = wire?.id ?? chosen.map(c => c.id).sort().join(','),
+        expanded = state.expandedContacts === key;
+  const planned =
+      compileDocument(doc, state.sites)
+          .connections.filter(edge => (!pairs || pairs.has(edge.from + ':' + edge.to)) &&
+                                      (own.has(edge.to) || own.has(edge.from)));
+  const edges = expanded ? planned : planned.slice(0, P.most * 3);
+  const visible = list => expanded ? list : list.slice(0, P.most);
+  const senders = visible([...new Set(edges.filter(e => !own.has(e.from)).map(e => e.from)) ]);
+  const receivers = visible([...new Set(edges.filter(e => !own.has(e.to)).map(e => e.to)) ]);
   // A wire shows only the cells it joins.
   const middle =
-      [...own ].filter(i => !wire || edges.some(e => e.from === i || e.to === i)).slice(0, P.most);
+      visible([...own ].filter(i => !wire || edges.some(e => e.from === i || e.to === i)));
   const single = middle.length === 1 && !wire;
   const rows = Math.max(senders.length, middle.length, receivers.length, single ? 3 : 1);
   const span = P.top * 2 + (rows - 1) * P.step;
@@ -96,16 +106,15 @@ export function contactPlan(state, chosen, wire = null) {
   column(middle, inner);
   column(receivers, P.columns[2]);
   const at = (i, side) => place.get((own.has(i) ? inner : P.columns[side]) + ':' + i);
+  const shown = edges.filter(edge => at(edge.from, 0) && at(edge.to, 2));
   const name = c => joinParts(
       [ centerTitle(c), organTitle(doc.organs.find(o => o.id === c.organId), state.sites) ]);
   const chosenCell = single ? centers[middle[0]] : null;
   const radius = chosenCell?.role === 'nerve' ? P.cell + chosenCell.field * P.reach : P.cell;
   const lines =
-      edges
+      shown
           .map(edge => {
             const a = at(edge.from, 0), b = at(edge.to, 2);
-            if (!a || !b)
-              return '';
             const source = centers[edge.from], target = centers[edge.to];
             const {sign, teaching, limit} = limits(source, target);
             const learning =
@@ -124,10 +133,10 @@ export function contactPlan(state, chosen, wire = null) {
                    (teaching ? ' teach' : '') + '" d="' + d + '" stroke-width="' +
                    fixed(P.line.least + P.line.span * limit) + '"><title>' + escapeText(joinParts([
                      linkText(centerTitle(source), centerTitle(target)),
-                     word('limit') + ' ' + (sign < 0 ? '−' : '+') +
-                         formatNumber(limit, VALUE_DIGITS),
-                     word('modulation') + ' ' + percent(teaching),
-                     word('probation') + ' ' + Math.ceil(neural.contactTrial * learning)
+                     namedText(word('limit'), formatSigned(sign * limit, VALUE_DIGITS)),
+                     namedText(word('modulation'), percent(teaching)),
+                     namedText(word('probation'),
+                               formatNumber(Math.ceil(neural.contactTrial * learning)))
                    ])) +
                    '</title></path>';
           })
@@ -135,25 +144,50 @@ export function contactPlan(state, chosen, wire = null) {
   const mark = (i, x) => {
     const c = centers[i], p = place.get(x + ':' + i);
     const seats = c.role === 'sensor' ? ''
-                                      : ' · ' + label('cellPicture.capacity') + ' ' +
-                                            formatNumber(seatCount(neural, c));
+                                      : namedText(label('cellPicture.capacity'),
+                                                  formatNumber(seatCount(neural, c)));
     return '<g class="aid-plan-mark" data-select-center="' + escapeText(c.id) +
-           '" transform="translate(' + point(p) + ')"><title>' + escapeText(name(c) + seats) +
-           '</title><circle r="' + (P.mark + 2) + '"/>' + centerMarker(c, P.mark) + '</g>';
+           '" transform="translate(' + point(p) + ')"><title>' +
+           escapeText(joinParts([ name(c), seats ])) + '</title><circle r="' + (P.mark + 2) +
+           '"/>' + centerMarker(c, P.mark) + '</g>';
   };
   const marks = senders.map(i => mark(i, P.columns[0])).join('') +
                 receivers.map(i => mark(i, P.columns[2])).join('') +
                 (single ? '' : middle.map(i => mark(i, inner)).join(''));
+  const heading = (x, key) => '<text class="aid-plan-label" x="' + x + '" y="' + P.heading +
+                              '" text-anchor="middle">' + escapeText(word(key)) + '</text>';
+  const headings = (senders.length ? heading(P.columns[0], 'senders') : '') +
+                   (middle.length && !wire ? heading(P.columns[1], 'chosen') : '') +
+                   (receivers.length || wire ? heading(P.columns[2], 'receivers') : '');
+  const count = t('studio.contacts.shown',
+                  {shown : formatNumber(shown.length), total : formatNumber(planned.length)});
+  const toggle = expanded || shown.length < planned.length
+                     ? '<button type="button" data-expand-contacts="' + escapeText(key) +
+                           '" aria-expanded="' + expanded + '">' +
+                           escapeText(word(expanded ? 'less' : 'all')) + '</button>'
+                     : '';
+  const legend = planned.length ? '<div class="aid-plan-legend">' +
+                                      [ 'excite', 'inhibit', 'electrical', 'teach' ]
+                                          .map(kind => '<span><i class="' + kind +
+                                                       '" aria-hidden="true"></i>' +
+                                                       escapeText(word(kind)) + '</span>')
+                                          .join('') +
+                                      '</div>'
+                                : '';
   return '<details class="aid-contact-plan" open><summary title="' + escapeText(joinParts([
            word('meaning'), word('fields').replace('{n}', neural.contactFields),
            word('learningMeaning')
          ])) +
-         '">' + word('title') + '</summary><svg class="aid-plan-picture"' +
+         '">' + word('title') + '</summary>' + legend +
+         (planned.length ? '<div class="aid-plan-count"><span>' + escapeText(count) + '</span>' +
+                               toggle + '</div>'
+                         : '') +
+         '<div class="aid-plan-viewport"><svg class="aid-plan-picture"' +
          (single ? ' data-capacity="' + escapeText(chosenCell.id) + '"' : '') + ' viewBox="0 0 ' +
-         P.width + ' ' + height + '" role="img" aria-label="' + word('title') + '">' + lines +
-         marks +
+         P.width + ' ' + height + '" role="img" aria-label="' + word('title') + '">' + headings +
+         lines + marks +
          (single ? capacity(neural, chosenCell, {x : inner, y : span / 2}, radius, span) : '') +
-         '</svg></details>';
+         '</svg></div></details>';
 }
 // The chosen cell with its seats, the rim that sets how many it has and the two wedges that set
 // how strong its electrical and its teaching contacts may grow.
@@ -175,12 +209,14 @@ function capacity(neural, cell, at, radius, span) {
                     .join('');
   const wedge = (key, k) => {
     const y = span + W.rows[k], value = cell[key], x = W.from + (W.to - W.from) * value;
-    return '<g class="' + key + '"><path class="aid-plan-wedge" d="M' + W.from + ' ' + y + ' L' +
-           W.to + ' ' + fixed(y - W.thick / 2) + ' V' + fixed(y + W.thick / 2) + 'Z"/>' +
+    return '<g class="' + key + '"><text class="aid-plan-label" x="' + W.from + '" y="' +
+           (y - W.label) + '">' + escapeText(word(key)) +
+           '</text><path class="aid-plan-wedge" d="M' + W.from + ' ' + y + ' L' + W.to + ' ' +
+           fixed(y - W.thick / 2) + ' V' + fixed(y + W.thick / 2) + 'Z"/>' +
            '<path class="aid-plan-wedge-fill" d="M' + W.from + ' ' + y + ' L' + fixed(x) + ' ' +
            fixed(y - W.thick / 2 * value) + ' V' + fixed(y + W.thick / 2 * value) + 'Z"/>' +
            grip(key, {x, y},
-                label('cellPicture.' + key) + ' · ' + formatNumber(value, VALUE_DIGITS)) +
+                namedText(label('cellPicture.' + key), formatNumber(value, VALUE_DIGITS))) +
            '</g>';
   };
   return '<g class="aid-plan-cell">' +

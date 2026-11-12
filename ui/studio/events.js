@@ -267,6 +267,11 @@ function showChoice(studio, change, library = false) {
 }
 
 export const FISH_CLICKS = Object.freeze([
+  ['[data-expand-contacts]', (studio, e) => {
+    studio.state.expandedContacts = studio.state.expandedContacts === e.dataset.expandContacts
+                                      ? null : e.dataset.expandContacts;
+    studio.refreshInspector();
+  }],
   ['[data-circuit-edit]', (studio,e)=>{
     studio.state.circuitEditing=studio.state.circuitEditing===e.dataset.circuitEdit?null:e.dataset.circuitEdit;
     studio.state.circuitFrom=null;

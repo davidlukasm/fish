@@ -970,6 +970,17 @@
 .aid-contact-plan{border-top:1px solid var(--aid-panel-edge);margin-top:10px;padding-top:7px}
 .aid-contact-plan summary{cursor:pointer;color:var(--aid-name-text);padding:5px 0}
 .aid-plan-picture{display:block;width:100%;height:auto;touch-action:none;background:var(--aid-graphic);border-radius:8px}
+.aid-plan-picture:not([data-capacity]){touch-action:pan-y}
+.aid-plan-viewport{max-height:420px;overflow:auto;scrollbar-gutter:stable}
+.aid-plan-label{fill:var(--aid-name-text);font:10px sans-serif}
+.aid-plan-count{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0;font-size:11px;color:var(--aid-name-text)}
+.aid-plan-count button{font:inherit;padding:4px 7px;flex-shrink:0}
+.aid-plan-legend{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;color:var(--aid-name-text);font-size:11px}
+.aid-plan-legend span{display:flex;align-items:center;gap:6px}
+.aid-plan-legend i{width:20px;border-top:2px solid #9edaca}
+.aid-plan-legend .inhibit{border-color:var(--aid-inhibit)}
+.aid-plan-legend .electrical,.aid-plan-legend .teach{border-color:var(--aid-name-text)}
+.aid-plan-legend .teach{border-top-style:dashed}
 .aid-plan-edge{fill:none;stroke:#9edaca;stroke-linecap:round;stroke-opacity:.8}
 .aid-plan-edge.inhibit{stroke:var(--aid-inhibit)}
 .aid-plan-edge.teach{stroke-dasharray:4 3}
