@@ -885,7 +885,9 @@
       "open": "offen · viel Wasser",
       "dense": "dicht · Plankton",
       "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}.",
-      "word": "Reusendichte"
+      "word": "Reusendichte",
+      "passage": "Wasser {share}",
+      "kept": "Plankton gehalten {share}"
     },
     "gutmuscle": {
       "title": "Darmmuskel",

@@ -705,8 +705,7 @@ const GILL = Object.freeze({
   steps : 24,
   rows : 3,
   caught : .4,
-  track : [ 40, 260 ],
-  track_y : 148
+  words : 140
 });
 function gillArch(t) {
   const G = GILL, middle = (G.top + G.bottom) / 2, u = 1 - t;
@@ -759,6 +758,12 @@ export function gillGraphic(state, organ) {
       escapeText(label('gills.hint', {water : percent(passage), kept : percent(kept)})) +
       '</title>' + water + '<path class="aid-gill-arch" d="' + arch +
       '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks +
+      // What the rakers do, where it shows: the water passing (the arrows' width) and the
+      // plankton held (the specks on the arch).
+      '<text class="aid-handle-word" x="' + G.flow[1] + '" y="' + G.words + '" text-anchor="end">' +
+      escapeText(label('gills.passage', {share : percent(passage)})) + '</text>' +
+      '<text class="aid-handle-word" x="' + G.flow[0] + '" y="' + G.words + '">' +
+      escapeText(label('gills.kept', {share : percent(kept)})) + '</text>' +
       handle('trait:q1', gillArch(1 - density).x - G.raker, gillArch(1 - density).y,
              label('gills.handle'), label('gills.word'));
   return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic,
