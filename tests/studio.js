@@ -2900,8 +2900,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
       capabilities : sitesResult,
       selected : {kind : 'center', id : learnNode.centerId}
     });
-    assert.match(taughtPanel, new RegExp('data-learn-receptor="[^"]+" data-learn-effect="' +
-                                         HORMONE_EFFECT.teaching + '"'));
+    assert.match(taughtPanel,
+                 new RegExp('<button class="active" data-learn-substance="0" ' +
+                            'data-center-id="' + learnNode.centerId + '" data-learn-effect="' +
+                            HORMONE_EFFECT.teaching + '"'),
+                 'The bound teaching substance is selected in the learning tool');
     assert.match(taughtPanel, /aid-episode-arrow teach"/);
     const skinView = await import('../ui/studio/view/skin.js');
     const touched = model.addOrgan(model.newDocument('Haut'), 'touch', sites, {x : 400, y : 265});
@@ -3078,8 +3081,13 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                  'A gut without its throat still offers its length');
     const homeTarget = views.placementTarget(model.newDocument(''), 'gut', {x : 300, y : 330});
     assert.equal(homeTarget.snap, Infinity, 'An inner organ goes to its home from any distance');
-    const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
-    assert.deepEqual(freeTarget.position, {x : 300, y : 330});
+    const freeTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 290});
+    assert.deepEqual(freeTarget.position, {x : 300, y : 290},
+                     'An eye keeps its continuous position inside its anatomical area');
+    const innerTarget = views.placementTarget(model.newDocument(''), 'eye', {x : 300, y : 330});
+    assert.equal(innerTarget.position.x, 300);
+    assert.ok(innerTarget.position.y > freeTarget.position.y && innerTarget.position.y < 330,
+              'An eye requested inside the head moves to the inner edge of its flank area');
     const grouped = model.assembleSelection(gutDoc.document, new Set([ gutDoc.organId ]));
     assert.equal(grouped.assemblies.length, 1);
     const ungrouped = model.ungroupAssembly(grouped, grouped.assemblies[0].id);
