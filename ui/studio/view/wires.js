@@ -158,8 +158,10 @@ const branchPath = (...args) => cubic(branchCurve(...args));
 // lane between two rows of cells, runs along that lane and bends into the bundle where the bundle
 // meets the region. `rows` are the places of the region's rows across the bundle's course; the
 // fibre takes the lane next to its own row on the bundle's side. `hop` and `bend` are the lengths
-// of its first and last curve, `gap` what counts as one row, `beside` a lane outside the rows.
-const LANE = Object.freeze({hop : 9, bend : 14, gap : 3, beside : 5});
+// of its first and last curve, `gap` what counts as one row, `beside` a lane outside the rows. A
+// cell nearer the bundle than `least` along its course has no room for a lane: its fibre goes to
+// the bundle in one curve.
+const LANE = Object.freeze({hop : 9, bend : 14, gap : 3, beside : 5, least : 12});
 function cellRows(cells, join, across) {
   const places =
       cells.map(p => (p.x - join.x) * across.x + (p.y - join.y) * across.y).sort((x, y) => x - y);
@@ -173,6 +175,8 @@ function lanePath(node, start, join, along, across, inward, rows) {
   const world = (a, r) =>
       ({x : join.x + along.x * a + across.x * r, y : join.y + along.y * a + across.y * r});
   const n = local(node), j = local(start), run = j.a - n.a, way = Math.sign(run) || 1;
+  if (Math.abs(run) < LANE.least || way !== (inward ? 1 : -1))
+    return branchPath(node, start, along, inward);
   // The lanes: between neighbouring rows and beside the outermost ones.
   const lanes = [
     rows[0] - LANE.beside, ...rows.slice(1).map((r, i) => (r + rows[i]) / 2),

@@ -122,7 +122,7 @@ function heapPop(heap) {
 // The grid walk is relaxed like a smooth string: each point moves towards the middle of its
 // neighbours while it stays clear of other regions, so a turn spreads into a gentle S-curve instead
 // of a corner. A point already close to a region may not come closer.
-const RELAX = Object.freeze({rounds : 40, pull : .5, room : 4, tolerance : .5});
+const RELAX = Object.freeze({rounds : 120, pull : .5, room : 4, tolerance : .5});
 function relaxed(walk, safe, room) {
   const p = walk.map(q => ({x : q.x, y : q.y}));
   for (let round = 0; round < RELAX.rounds; round++)

@@ -20,14 +20,14 @@ export const NERVE_SNAP = Object.freeze({
   touch : .75,
   run : 12,
   gap : 3,
-  bend : .3,
+  bend : 1,
   // Strands lie this share of their width apart, so they overlap and each still shows; a join
   // takes this many points, a strand's way out of the nerve is judged this many points beyond
   // it, and the course is smoothed this often afterwards.
   pack : .5,
   blend : 8,
   beyond : 8,
-  settle : 12
+  settle : 40
 });
 const S = NERVE_SNAP;
 
