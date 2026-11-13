@@ -117,7 +117,9 @@ function fillCurve(store, type) {
   const S = STORE, span = S.right - S.left, below = S.base + S.egg + S.gap;
   if (!Number.isFinite(store.steps))
     return {
-      html : '<path class="aid-sac-fill idle" d="M' + S.left + ' ' + S.base + ' H' + S.right + '"/>'
+      html :
+          '<path class="aid-sac-fill idle" d="M' + S.left + ' ' + S.base + ' H' + S.right + '"/>',
+      knee : {x : S.right, y : S.base}
     };
   const ramp = (x0, energy, width) =>
       Array
@@ -189,8 +191,9 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
                 fixed((S.top + S.base) / 2) + ') rotate(-90)" text-anchor="middle">' +
                 escapeText(label('inspector.gonad.store')) + '</text>' +
                 say(label('inspector.gonad.time'), S.left, S.base + S.below);
-  return '<svg viewBox="0 0 ' + S.width + ' ' + S.height + '" class="aid-gonad-graphic aid-sac ' +
-         organ.type + '" data-sac="' + escapeText(organ.id) + '"' +
+  return '<div data-sense-block="' + escapeText(organ.id) + '"><svg viewBox="0 0 ' + S.width + ' ' +
+         S.height + '" class="aid-gonad-graphic aid-sac ' + organ.type + '" data-sac="' +
+         escapeText(organ.id) + '"' +
          ' role="img">' +
          '<path class="aid-sac-axis" d="M' + S.left + ' ' + S.top + ' V' + S.base + ' H' + S.right +
          '"/>' + ceiling + least + part(growth, chambers(store, 0, kept, 'growth', organ.type)) +
@@ -204,7 +207,7 @@ export function gonadGraphic(state, organ, selected, dragged = null) {
          words + '</svg>' +
          commandLine(state, organ, motor,
                      organ.type === 'eggs' ? MOTOR_KIND.eggs : MOTOR_KIND.sperm, motor?.key, true) +
-         (pressure ? pressureCurve(state, organ, pressure, dragged) : '');
+         (pressure ? pressureCurve(state, organ, pressure, dragged) : '') + '</div>';
 }
 // The cells the handle on the store's room sets, from the pointer's height.
 export function sacPatch(state, organ, fy) {

@@ -92,6 +92,56 @@ async function checkLiveFounders() {
   }
 }
 
+async function checkGonadInspector(model, capabilities) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {gonadStore} = await import('../ui/studio/view/sacs.js');
+  const {inspector, organSettingsBlock} = await import('../ui/studio/view/panels.js');
+  const {HORMONE_EFFECT} = await import('../ui/schema.js');
+  for (const type of ['eggs', 'sperm']) {
+    const placed =
+        model.addOrgan(model.newDocument(type), type, capabilities.sites, {x : 708, y : 380});
+    let markup = '', redraws = 0;
+    const block = {
+      dataset : {senseBlock : placed.organId},
+      set outerHTML(value) {
+        markup = value;
+        ++redraws;
+      }
+    };
+    const studio = new OrganStudio({
+      querySelectorAll : selector =>
+          selector === '[data-sense-block]' && markup.includes('data-sense-block=') ? [ block ] : []
+    });
+    Object.assign(studio.state, {
+      document : placed.document,
+      sites : capabilities.sites,
+      capabilities,
+      selected : {kind : 'organ', id : placed.organId}
+    });
+    const organ = model.findOrgan(placed.document, placed.organId);
+    markup = organSettingsBlock(studio.state, organ);
+    for (const threshold of [.1, .7]) {
+      const pressure = organ.centers.find(c => c.key === 'pressure');
+      studio.state.document = model.updateCenter(studio.state.document, pressure.id, {threshold});
+      studio.refreshSense();
+    }
+    assert.equal(redraws, 2, type + ': repeated pressure changes retain their redraw target');
+    for (const previewInput of [0, -1, 1]) {
+      const state = {...studio.state, previewInput};
+      assert.doesNotMatch(inspector(state), /NaN|Infinity|undefined/,
+                          type + ': a stopped filling drive remains drawable');
+    }
+    let stopped = studio.state.document;
+    for (const c of organ.centers.filter(c => c.key === 'growth'))
+      stopped = model.updateReceptor(stopped, c.id, HORMONE_EFFECT.output,
+                                     {active : 1, baseline : -1, sensitivity : 0});
+    const state = {...studio.state, document : stopped};
+    assert.equal(gonadStore(state, model.findOrgan(stopped, organ.id)).steps, Infinity);
+    assert.doesNotMatch(inspector(state), /NaN|Infinity|undefined/,
+                        'A substance may stop filling without breaking the inspector');
+  }
+}
+
 async function checkInspectorSubstances(model, capabilities, clicks) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
@@ -1252,6 +1302,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  await checkGonadInspector(model, sitesResult);
+  if (process.argv.includes('--gonad-inspector')) {
+    console.log('Ei-/Sameninspektor: stillstehender Vorrat und wiederholtes Ziehen: OK');
+    return;
+  }
   if (process.argv.includes('--canvas')) {
     await require('./studio_canvas.js')(model, sitesResult, root);
     console.log('Atelier: 20/40 Regionen, Zoom, ZNS-Kabel, Reizpfade und Klickplatzierung: OK');

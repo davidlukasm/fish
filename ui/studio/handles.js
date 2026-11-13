@@ -807,21 +807,25 @@ export const handleMethods = {
   heldHandle(held) { return this.handleDrag?.held === held ? this.handleDrag : null;},
   releaseHandle(event) {
     const how = HANDLES[this.handleDrag.held], last = this.handleDrag.last;
-    // Letting go where the pointer already was adds nothing, and must not bring back a value that
-    // undo or redo took away in the middle of the drag.
-    if (event.clientX !== last.x || event.clientY !== last.y)
-      this.followHandle(event);
-    // A drafted drag settles while still held, so a graphic drawn from the drag keeps the dragged
-    // value until the design run answers.
-    const drafted = !!this.drafted;
-    if (drafted)
-      this.settleGraphic();
-    if (drafted && how.done && !['settleGraphic', 'refreshInspector'].includes(how.done))
-      this[how.done]();
-    this.handleDrag = null;
-    this.historyBatch = null;
-    if (!how.keepsClick)
-      this.ignoreClickUntil = performance.now() + DRAG_CLICK;
+    let drafted;
+    try {
+      // Letting go where the pointer already was adds nothing, and must not bring back a value
+      // that undo or redo took away in the middle of the drag.
+      if (event.clientX !== last.x || event.clientY !== last.y)
+        this.followHandle(event);
+      // The graphic keeps its dragged value until the design run answers.
+      drafted = !!this.drafted;
+      if (drafted)
+        this.settleGraphic();
+      if (drafted && how.done && !['settleGraphic', 'refreshInspector'].includes(how.done))
+        this[how.done]();
+    } finally {
+      // A failed drawing must not turn later pointer movement into more edits.
+      this.handleDrag = null;
+      this.historyBatch = null;
+      if (!how.keepsClick)
+        this.ignoreClickUntil = performance.now() + DRAG_CLICK;
+    }
     if (!drafted && how.done)
       this[how.done]();
   },

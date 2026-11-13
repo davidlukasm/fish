@@ -508,6 +508,22 @@ async function checkRedraws(model, caps, root) {
     if (action.startsWith('release:'))
       assert.equal(hits.design, 1, action + ' requests one design run');
   }
+  {
+    const {studio} = make();
+    const cell = model.allCenters(doc)[0];
+    studio.state.document = model.updateCenter(doc, cell.id, {field : .314159});
+    studio.drafted = 'test';
+    studio.draftStart = doc;
+    studio.handleDrag = {held : 'sense', last : {x : 0, y : 0}};
+    studio.refreshInspector = () => { throw Error('drawing failed'); };
+    assert.throws(() => studio.releaseHandle({clientX : 0, clientY : 0}), /drawing failed/);
+    assert.equal(studio.handleDrag, null, 'A drawing error cannot keep dragging after release');
+    assert.equal(studio.drafted, null);
+    let moved = 0;
+    studio.followHandle = () => ++moved;
+    studio.pointerMove({target : {closest : () => null}});
+    assert.equal(moved, 0, 'Moving without a pressed pointer cannot change the failed drag');
+  }
 
   const gut = doc.organs.find(o => o.type === 'gut');
   const anatomy = {senseProbe : model.allCenters(doc).map(() => 1)};

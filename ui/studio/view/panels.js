@@ -97,8 +97,6 @@ const muscleKind = (state, center) => '<div class="aid-muscle-kind" title="' +
                                       muscleGraphic(state, center) + '</div>';
 
 export const biasScale = state => state.capabilities?.biasScale ?? 0;
-const gonadPanel = (state, organ, center) => '<div data-sense-block="' + escapeText(organ.id) +
-                                             '">' + gonadGraphic(state, organ, center) + '</div>';
 const skinPanel = (state, organ, center) => skinField(state, organ, center);
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => scentMap(organ, center, state),
@@ -111,8 +109,8 @@ const ORGAN_PANELS = Object.freeze({
   gutmuscle : (state, organ) => gutMuscleGraphic(state, organ),
   defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
-  eggs : gonadPanel,
-  sperm : gonadPanel,
+  eggs : gonadGraphic,
+  sperm : gonadGraphic,
   lateral : (state, organ) => lateralField(state, organ),
   balance : (state, organ, center) => hairField(state, organ, center),
   touch : skinPanel,
