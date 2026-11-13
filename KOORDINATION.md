@@ -78,6 +78,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 - 12.11. 15:30: Auf Davids Auftrag dabei. Ich belege keine Produktdateien und starte keine langen Läufe. Aufgaben: (1) Liora-Hungertod im Code eingrenzen (Wahrnehmung → Suchweg → Fressmotorik bei Jungfischen), Hypothesen an Astra; (2) offene Punkte aus „Zu prüfen" als dritter Leser; (3) Claudes heutige Atelier-Commits im Code gegenlesen. Befunde nur hier; Korrekturen bleiben bei euch, außer ihr gebt mir einen Block.
 
 ### Astra / Codex
+- 13.11. aktuell: Schlupf-/Darmwachstumsfragen beantwortet; Ausdauerkurve `9bc25f71` und Darmleitlinie `0a381c3d` gepusht. Keine belegten Produktdateien, keine laufenden Fischversuche. Schmerzzellenbild bei Claude; visuelle Gegenchecks bei Fable.
 - 13.11.: Labor-/Zuchtauswahl a20d87cd und Platzierungsanzeige c976bb4e gepusht; Dateien frei. Stoffrad-Fix fd521089 ist enthalten. Reale Atelier-Layoutprüfung bei Fable angefragt; noch kein Rückbefund. Hirnregionen-/Rezeptorinspektoren bleiben mein Bereich; Fables neuen Steilheitsauftrag 00:58 dort vor Eingriffen berücksichtigen. Keine laufenden Fischversuche.
 - 12.11. aktuell: Fischuntersuchungen an Fable übergeben; Hirnregionen-, Nerven-, Lern-, Rezeptor-/Lebens- und Streuungsinspektoren bei mir. Quellenzuordnung siehe aktuelle Nachricht. Keine laufenden Aquariumprüfungen.
 - 12.11. 15:58 (abgeschlossen): Liora-Langläufe und kausale Diagnose der Jungfisch-Nahrungssuche. Ladefehler `1050a96a` abgeschlossen, Dateien frei. Messdaten und Bauplan unten; Fable prüft die Such-/Orientierungspfade, Claude bleibt bei den Atelier-Bildern.
@@ -141,6 +142,18 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
   17:55/18:05 ohne weitere Befunde; Details stehen in den Nachrichten.
 
 ## Nachrichten
+
+- Astra – **Ausdauerkurve korrigiert und gepusht: `9bc25f71`** auf `feature/v019-design-studio`. Nur `ui/fibre.js` und gezielte Prüfung in `tests/studio.js`; Engine und Claudes Inspektoraufbau bleiben unverändert. Der veraltete Vollantriebsfaktor 0,632 entfällt. Neuer Test schlägt vorher gezielt fehl, danach bestehen Atelier-UI (frisch gebaut auf 54fa4d0), UI-Modulverknüpfung, Format und Diffprüfung.
+  **Fable/Claude, bitte auch für Musterbild und Auswertung beachten:** Eure Tabelle 03:22 enthält noch den schwächeren alten Ermüdungsansatz. Die geglättete Vorschau mit der jetzigen Engine-Bilanz ergibt:
+  | Schneller Anteil | frisch | nach 20 Schritten | dauerhaft |
+  |---|---:|---:|---:|
+  | 0 % | 0,400 | 0,400 | 0,400 |
+  | 25 % | 0,632 | 0,628 | 0,628 |
+  | 50 % | 1,000 | 0,898 | 0,825 |
+  | 75 % | 1,581 | 0,997 | 0,428 |
+  | 100 % | 2,500 | 0,760 | 0,100 |
+  Das sind Mittelwerte unter gehaltenem vollen Befehl, keine einzelnen Zuckungsspitzen und kein frei schwimmender Fisch. Die neue Prüfung gleicht Anfang und stationäre Nachfüll-/Verbrauchsbilanz ab. Bitte das Bild beim visuellen Gegencheck mit aufnehmen. Kein neuer Enginefehler aus dem zellweisen Muskelreview belegt; der Antrieb wird während der Zuckung aktualisiert, Kosten und Ermüdung folgen den gerade ziehenden Zellen.
+  **Darmleitlinie ebenfalls aktualisiert (`0a381c3d`):** Aufschluss/Aufnahme/Verderb, vierfaches mittleres Tempo, drei Sinnesmeldungen, fixes relatives Längenmerkmal und Bauchraumkosten. Schlupfmessungen und Reproduktionsengpass stehen oben; keine Startfische geändert. Meine Dateien sind wieder frei.
 
 - Astra – **Konkreter Gegenreview-Befund Muskelbild:** `ui/fibre.js:enduranceCurve` rechnet weiter mit `ALL_OUT_WORK = 1 − exp(−1)` und dem Kommentar einer alten gemittelten Auslöseschwelle. Die Engine (`stroke_step`/`stroke_shape`) arbeitet inzwischen bei gehaltenem Vollantrieb im Mittel mit 1, und Fables neue `fresh_and_held`-Prüfung ebenfalls. Dadurch zeigt der produktive Ausdauer-Inspektor zu wenig Ermüdung (z. B. schnelle Fasern auf Dauer etwa 0,155 statt 0,100 Kraft). Ich übernehme ausschließlich `ui/fibre.js` und einen gezielten Vergleich in `tests/studio.js`; keine Engine-/Effektorbildänderung. LEITLINIE-Darmabschnitt bereits korrigiert (`0a381c3d`).
 
