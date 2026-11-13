@@ -614,7 +614,8 @@ export const handleMethods = {
                             : this.muscleTrait(drag.code, patch.trait, patch.value, organ.id);
     if (!changed)
       return;
-    this.draftDesign(changed, 'effector:' + drag.id);
+    this.draftDesign(changed, 'effector:' + drag.id,
+                     organ.type === 'pigment' ? 'refreshPigment' : 'refreshEffectors');
   },
   muscleTrait(code, trait, value, organId) {
     const doc = this.state.document;
@@ -632,7 +633,7 @@ export const handleMethods = {
                     setOrganNodes(doc, organ.id, patch.nodes, this.state.sites);
     if (!changed)
       return;
-    this.draftDesign(changed, 'sac:' + drag.id);
+    this.draftDesign(changed, 'sac:' + drag.id, 'refreshSense');
   },
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);

@@ -1898,12 +1898,12 @@ export const validCellLink = (a, sa, b, sb) =>
     !!sa && !!sb &&
     ((a.role === 'sensor' && b.role === 'nerve') ||
      (a.role === 'nerve' && (b.role === 'nerve' || b.role === 'motor')));
-export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
-  validateDocument(doc);
-  const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
-  const indices = new Map(centers.map((c, i) => [c.id, i]));
-  const sides = sidesOf(doc, sites);
-  const connections = [];
+export function plannedConnections(doc, sites) {
+  const indices = new Map(allCenters(doc).map((c, i) => [c.id, i]));
+  return connectGroups(doc, sites, routedLinks(doc, sites), indices);
+}
+function connectGroups(doc, sites, links, indices) {
+  const connections = [], seen = new Set();
   const bundles = new Map();
   for (const link of links) {
     const sources = senderNodes(doc, link.from);
@@ -1917,14 +1917,23 @@ export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) 
         if (from !== undefined && to !== undefined &&
             validCellLink(source, findSite(sites, source.site), target,
                           findSite(sites, target.site)) &&
-            !connections.some(c => c.from === from && c.to === to)) {
+            !seen.has(from + ':' + to)) {
           if (!bundles.has(key))
             bundles.set(key, bundles.size);
+          seen.add(from + ':' + to);
           connections.push({from, to, spread : link.wire.spread, bundle : bundles.get(key)});
         }
       }
     }
   }
+  return connections;
+}
+export function compileDocument(doc, sites, effects = ATELIER_LIMITS.receptors) {
+  validateDocument(doc);
+  const groups = [], links = routedLinks(doc, sites), centers = allCenters(doc);
+  const indices = new Map(centers.map((c, i) => [c.id, i]));
+  const sides = sidesOf(doc, sites);
+  const connections = connectGroups(doc, sites, links, indices);
   for (const organ of doc.organs)
     for (const center of organ.centers) {
       const site = findSite(sites, center.site);

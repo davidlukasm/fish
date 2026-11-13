@@ -1,4 +1,4 @@
-import {allCenters, compileDocument, wireContactPairs} from '../model/document.js';
+import {allCenters, plannedConnections, wireContactPairs} from '../model/document.js';
 import {nerveClass} from '../model/organs.js';
 import {learningTimeSteps} from '../../tuning.js';
 import {clamp} from '../../units.js';
@@ -112,9 +112,8 @@ export function contactPlan(state, chosen, wire = null) {
   const pairs = wire && wireContactPairs(doc, wire, state.sites);
   const key = wire?.id ?? chosen.map(c => c.id).sort().join(','),
         expanded = state.expandedContacts === key;
-  const planned =
-      compileDocument(doc, state.sites)
-          .connections.filter(edge => (!pairs || pairs.has(edge.from + ':' + edge.to)) &&
+  const planned = plannedConnections(doc, state.sites)
+                      .filter(edge => (!pairs || pairs.has(edge.from + ':' + edge.to)) &&
                                       (own.has(edge.to) || own.has(edge.from)));
   const edges = expanded ? planned : compactContacts(planned, own);
   const visible = list => expanded ? list : list.slice(0, P.most);

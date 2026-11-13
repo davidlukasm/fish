@@ -126,6 +126,20 @@ async function checkGonadInspector(model, capabilities) {
       studio.refreshSense();
     }
     assert.equal(redraws, 2, type + ': repeated pressure changes retain their redraw target');
+    const growth = organ.centers.find(c => c.key === 'growth');
+    studio.refreshInspector = () => assert.fail('Dragging does not rebuild the whole inspector');
+    studio.draftDesign = (doc, batch, redraw = 'refreshDragged') => {
+      studio.state.document = doc;
+      studio[redraw]();
+    };
+    for (const fx of [.7, .8])
+      studio.effectorPointer({
+        id : organ.id,
+        name : 'command:gate',
+        marks : {frame : '300,76', scale : '1', center : growth.id}
+      },
+                             fx, .5);
+    assert.equal(redraws, 4, type + ': successive command changes redraw the organ directly');
     for (const previewInput of [0, -1, 1]) {
       const state = {...studio.state, previewInput};
       assert.doesNotMatch(inspector(state), /NaN|Infinity|undefined/,
