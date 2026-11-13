@@ -6,7 +6,7 @@ Hier stehen nur offene Befunde. Erledigte und zurückgenommene sind gelöscht; s
 - **17:** Ein Lehrpuls erzeugt seinen eigenen Gegenbeleg. Das mittelwertfreie Lehrsignal (`dteach`) wird am Pulsende negativ und lockert, was der Puls gerade gefestigt hat: A fällt in 800 stillen Schritten von 0,17 auf 0,02. Dass echte Gegenbelege lockern, ist gewollt (Festigungskonzept vom 12.11., 098bc1a6). Fables Patch streicht das Lockern ganz und passt deshalb nicht. Mit dem Konzept vereinbar wäre, nur den Netto-Rückgang über den ganzen Puls zu werten oder ein nicht mittelwertfreies Lehrsignal zu verwenden.
 - **18:** Der Lernschritt ist absolut und hängt nicht von der Kontaktgrenze ab. Bei Lerntempo 0,8 ist ein Schritt größer als das ganze Gewicht.
 - **20 Region, die Futter und Gefahr bewertet** (heute „Wertung“):
-  - Ihre Merkmalszellen haben keinen Festigungsrezeptor. Alles Gelernte hat deshalb 500 Schritte Halbwertszeit.
+  - Ihre Merkmalszellen haben keinen Festigungsrezeptor. Gelerntes zerfällt deshalb ungefestigt: Verlustrate `ln(2)/500 + (1 − Nutzung)/(4 × Lernzeit)`, mal `1 − Festigung`. Bei voller Nutzung 500 Schritte Halbwertszeit; ungenutzt bei Lernzeit 32 etwa 75, bei Lernzeit 512 etwa 370 (Astra 20:04, `colony-core/field/substrate.cc:343–348,856–870,943–970`, `dynamics.hh:12–17`).
   - Mit Festigung und Verknüpfung 0,75 / Lehre 0,5 lernt sie richtig, auch das Umlernen (3 Seeds).
   - Bei der Vorgabe 1/1 steigt B nach Schmerz. Die Ursache ist offen.
 
