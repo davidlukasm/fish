@@ -65,6 +65,7 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
   - Die damalige Abwägung herausfinden: Was sprach dafür, was dagegen, was wurde entschieden?
   - Eine Empfehlung, die eine Entscheidung umdreht, nennt diese Abwägung und sagt, welcher Umstand sich seitdem geändert hat.
 - **Entscheidungen immer auf Grund von Für und Wider.** Eine Empfehlung ohne Abwägung ist keine.
+- **Behelf heißt Behelf.** Wer ein Symptom abstellt, ohne die Ursache zu kennen, nennt das David gegenüber Behelf, im Commit-Text und in der Koordination, und hält fest, was nach Behebung der Ursache zurückzunehmen ist (Schwanz 12.11.: Lenkleitung entfernt, Ursache 18 Minuten später behoben, Leitung nie zurück).
 - **Erbanlagen gibt es nur für Zellen.** Ein neues Gen nennt die Zelle, die es trägt, und die Codezeile, die es liest. Stoffe, Organe und Muster sind Ergebnisse der Zellen (Drüse 13.11.: „Abfrage je Stoff“ war falsch).
 - **Kleinster Fall:** Wer „jede Kombination ist möglich“ schreibt, rechnet den kleinsten Fall vor: eine Zelle, ein Knoten.
 - **Kosten nur als Anteil am Ruhebedarf** (erwachsener Fisch 0,0333 je Schritt). Ohne diese Zahl steht kein Preis in einer Kopfzeile oder Abwägung. Unter etwa 1 % ist es keine Abwägung (Drüse: Abgabe und Binden 0,02 %).
