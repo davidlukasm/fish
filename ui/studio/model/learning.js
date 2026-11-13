@@ -6,8 +6,7 @@ import {nerveClass} from './organs.js';
 
 export function learningFactors(capabilities, center, context) {
   const N = capabilities.neural;
-  const response = effect =>
-      receptorResponse(capabilities, center.receptors[effect], context.hormones, context.maturity);
+  const response = effect => receptorResponse(capabilities, center.receptors[effect], context);
   const span = (N.learningGainMax - N.learningFloor) * (1 + response(HORMONE_EFFECT.learning)) / 2;
   return {
     floor : N.learningFloor,

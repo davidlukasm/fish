@@ -1,5 +1,5 @@
 import {regionNodeMap} from './region_graph.js';
-import {HORMONE_EFFECT, HORMONES, TIME_CONSTANT} from '../../schema.js';
+import {HORMONE_EFFECT, TIME_CONSTANT} from '../../schema.js';
 import {substanceColor} from '../../hormones.js';
 import {clamp, PERCENT} from '../../units.js';
 import {LONGEST_LEARNING_TIME, learningTimeOf, learningTimeSteps} from '../../tuning.js';
@@ -13,7 +13,8 @@ import {
   LEARNING_EFFECTS,
   pairEndpoint,
   receptorResponse,
-  receptorEnds
+  receptorEnds,
+  regulatorySubstances
 } from '../model/document.js';
 import {escapeText, fixed, glyph} from './markup.js';
 import {routedLinks} from '../model/regions.js';
@@ -125,8 +126,8 @@ function learningValues(state, center) {
     return '';
   const constants = state.capabilities.neural, context = previewContextOf(state),
         cl = nerveClass(center);
-  const response = effect => receptorResponse(state.capabilities, center.receptors[effect],
-                                              context.hormones, context.maturity);
+  const response = effect =>
+      receptorResponse(state.capabilities, center.receptors[effect], context);
   const eta = constants.learningFloor + (constants.learningGainMax - constants.learningFloor) *
                                             center.qwidth *
                                             (1 + response(HORMONE_EFFECT.learning)) / 2;
@@ -237,7 +238,7 @@ function substancePart(state, center, effect) {
   const choices =
       '<div class="aid-learn-substances" role="group" aria-label="' + escapeText(title) + '">' +
       choice('off', label('learnRule.none'), !bound) +
-      [...doc.substances, {index : HORMONES.levels, name : label('inspector.maturity')} ]
+      regulatorySubstances(doc, state.capabilities)
           .map(sub => choice(String(sub.index), sub.name || substanceName(state, sub.index),
                              bound?.index === sub.index, substanceColor(sub.index)))
           .join('') +

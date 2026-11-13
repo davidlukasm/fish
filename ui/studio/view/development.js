@@ -1,5 +1,11 @@
-import {HORMONES} from '../../schema.js';
-import {allCenters} from '../model/document.js';
+import {BLOOD_SUBSTANCE, HORMONES} from '../../schema.js';
+import {
+  allCenters,
+  bloodLevel,
+  DEFAULT_BLOOD_CONTEXT,
+  NOTICEABLE_AFFINITY,
+  receptorAffinity
+} from '../model/document.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {formatNumber, formatSigned, joinParts, namedText, percent, t} from '../../strings.js';
 import {clamp} from '../../units.js';
@@ -14,8 +20,7 @@ import {
 import {cellVariation} from './cell_tissue.js';
 import {substanceColor} from '../../hormones.js';
 
-export const DEFAULT_PREVIEW_CONTEXT =
-    Object.freeze({maturity : 0, hormones : Object.freeze(Array(HORMONES.levels).fill(0))});
+export const DEFAULT_PREVIEW_CONTEXT = DEFAULT_BLOOD_CONTEXT;
 export const previewContextOf = state => state.previewContext ?? DEFAULT_PREVIEW_CONTEXT;
 export const DEFAULT_PREVIEW_INPUT = 1;
 export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
@@ -30,17 +35,34 @@ const SITUATION = Object.freeze({
   height : 122,
   pad : {left : 34, top : 24, right : 160, bottom : 88},
   key : {young : 9, grown : 17, below : 12, sign : 40},
-  drops : {left : 180, right : 292, middle : 56, least : 3, span : 11, most : 30, mark : 11},
+  drops : {
+    left : 180,
+    right : 292,
+    middle : 56,
+    least : 3,
+    span : 11,
+    most : 30,
+    mark : 11,
+    columns : 4,
+    rowGap : 48
+  },
   knob : 7
 });
 export const PREVIEW_INPUT_LOW = -1;
 // A substance gets an example level once it is named or a cell answers it.
-function previewSubstances(doc) {
+function previewSubstances(doc, wheel) {
   const used = new Set(doc.substances.map(substance => substance.index));
   for (const center of allCenters(doc))
     for (const receptor of [center.growth, ...center.receptors])
-      if (receptor?.active && receptor.substance < HORMONES.levels)
-        used.add(receptor.substance);
+      if (receptor?.active) {
+        if (receptor.substance !== BLOOD_SUBSTANCE.maturity &&
+            receptor.substance < wheel?.regulators)
+          used.add(receptor.substance);
+        for (const index of [BLOOD_SUBSTANCE.reserve, BLOOD_SUBSTANCE.fatigue])
+          if (index < wheel?.regulators && receptor.sensitivity &&
+              receptorAffinity(wheel, receptor, index) >= NOTICEABLE_AFFINITY)
+            used.add(index);
+      }
   return [...used ].sort((a, b) => a - b);
 }
 const padPoint = (maturity, input) => {
@@ -74,27 +96,30 @@ export function previewControls(state) {
               formatNumber(context.maturity, PREVIEW_DIGITS)),
     namedText(word('exampleInput'), formatNumber(input, PREVIEW_DIGITS))
   ]);
-  const substances = previewSubstances(state.document);
-  const step = Math.min(D.most, (D.right - D.left) / Math.max(1, substances.length));
-  const drops = substances
-                    .map((index, k) => {
-                      const x = D.left + step * (k + .5), level = context.hormones[index];
-                      const r = dropRadius(level), colour = substanceColor(index);
-                      return '<g class="aid-preview-drop"><title>' +
-                             escapeText(namedText(substanceName(state, index),
-                                                  formatNumber(level, PREVIEW_DIGITS))) +
-                             '</title><circle class="aid-preview-reach" cx="' + fixed(x) +
-                             '" cy="' + D.middle + '" r="' + dropRadius(1) + '"/><circle cx="' +
-                             fixed(x) + '" cy="' + D.middle + '" r="' + fixed(r) + '" fill="' +
-                             colour + '"/><text x="' + fixed(x) + '" y="' +
-                             (D.middle + dropRadius(1) + D.mark) + '" style="fill:' + colour +
-                             '" text-anchor="middle" dominant-baseline="central">' +
-                             escapeText(substanceMark(state, index)) +
-                             '</text><circle class="aid-graphic-handle" data-preview-handle="' +
-                             index + '" data-drop-middle="' + D.middle + '" cx="' + fixed(x) +
-                             '" cy="' + fixed(D.middle - r) + '" r="' + S.knob + '"/></g>';
-                    })
-                    .join('');
+  const substances = previewSubstances(state.document, state.capabilities);
+  const rows = Math.ceil(substances.length / D.columns);
+  const columns = Math.ceil(substances.length / Math.max(1, rows));
+  const step = Math.min(D.most, (D.right - D.left) / Math.max(1, columns));
+  const drops =
+      substances
+          .map((index, k) => {
+            const x = D.left + step * (k % columns + .5), level = bloodLevel(context, index);
+            const middle = D.middle + (Math.floor(k / columns) - (rows - 1) / 2) * D.rowGap;
+            const r = dropRadius(level), colour = substanceColor(index);
+            return '<g class="aid-preview-drop"><title>' +
+                   escapeText(namedText(substanceName(state, index),
+                                        formatNumber(level, PREVIEW_DIGITS))) +
+                   '</title><circle class="aid-preview-reach" cx="' + fixed(x) + '" cy="' + middle +
+                   '" r="' + dropRadius(1) + '"/><circle cx="' + fixed(x) + '" cy="' + middle +
+                   '" r="' + fixed(r) + '" fill="' + colour + '"/><text x="' + fixed(x) + '" y="' +
+                   (middle + dropRadius(1) + D.mark) + '" style="fill:' + colour +
+                   '" text-anchor="middle" dominant-baseline="central">' +
+                   escapeText(substanceMark(state, index)) +
+                   '</text><circle class="aid-graphic-handle" data-preview-handle="' + index +
+                   '" data-drop-middle="' + middle + '" cx="' + fixed(x) + '" cy="' +
+                   fixed(middle - r) + '" r="' + S.knob + '"/></g>';
+          })
+          .join('');
   return '<details class="aid-preview-context"><summary title="' +
          escapeText(word('previewConditions')) + '">' + word('preview') +
          '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + S.width + ' ' + S.height +

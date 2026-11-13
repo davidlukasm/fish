@@ -9,6 +9,7 @@ import {
 } from './retina.js';
 import {
   ATELIER_LIMITS,
+  BLOOD_SUBSTANCE,
   CONTRAST_POLARITY,
   FIN_STROKE,
   HORMONE_EFFECT,
@@ -258,12 +259,28 @@ export function receptorAffinity(wheel, receptor, index) {
   const [x, y] = wheelPlace(wheel, receptor.substance);
   return wheelAffinity(wheel, x, y, receptor.width, index);
 }
-export function receptorResponse(wheel, receptor, levels = [], maturity = 0, inactiveBaseline = 0) {
+export const DEFAULT_BLOOD_CONTEXT = Object.freeze({
+  maturity : 0,
+  reserve : 1,
+  fatigue : 0,
+  hormones : Object.freeze(Array(HORMONES.levels).fill(0))
+});
+export function bloodLevel(context, index) {
+  if (index === BLOOD_SUBSTANCE.maturity)
+    return context.maturity ?? DEFAULT_BLOOD_CONTEXT.maturity;
+  if (index === BLOOD_SUBSTANCE.reserve)
+    return context.reserve ?? DEFAULT_BLOOD_CONTEXT.reserve;
+  if (index === BLOOD_SUBSTANCE.fatigue)
+    return context.fatigue ?? DEFAULT_BLOOD_CONTEXT.fatigue;
+  return context.hormones?.[index] ?? 0;
+}
+export function receptorResponse(wheel, receptor, context = DEFAULT_BLOOD_CONTEXT,
+                                 inactiveBaseline = 0) {
   if (!receptor.active)
     return inactiveBaseline;
-  let concentration = receptorAffinity(wheel, receptor, wheel.hormones) * maturity;
-  for (let index = 0; index < wheel.hormones; ++index)
-    concentration += receptorAffinity(wheel, receptor, index) * (levels[index] ?? 0);
+  let concentration = 0;
+  for (let index = 0; index < wheel.regulators; ++index)
+    concentration += receptorAffinity(wheel, receptor, index) * bloodLevel(context, index);
   const ratio = (concentration / receptor.half) ** (2 ** receptor.steepness);
   const bound = Number.isFinite(ratio) ? ratio / (1 + ratio) : 1;
   return clamp(receptor.baseline + receptor.sensitivity * bound, -1, 1);
@@ -287,10 +304,17 @@ export const LEARNING_EFFECTS = Object.freeze([
   HORMONE_EFFECT.eligibility, HORMONE_EFFECT.consolidation
 ]);
 export const isLearner = center => center.role === 'nerve';
+export const regulatorySubstances =
+    (doc, wheel) => [...doc.substances, ...Object.values(BLOOD_SUBSTANCE)
+                                            .filter(index => index < wheel?.regulators)
+                                            .map(index => ({index}))];
 export function teachersOf(doc, center, wheel) {
-  return doc.substances
+  return regulatorySubstances(doc, wheel)
       .filter(sub => boundEffects(center, sub.index, wheel).includes(HORMONE_EFFECT.teaching))
-      .map(sub => ({substance : sub, glands : producers(doc, sub.index, wheel)}));
+      .map(sub => ({
+             substance : sub,
+             glands : sub.index < HORMONES.levels ? producers(doc, sub.index, wheel) : []
+           }));
 }
 export const birthAffinity = (center, index, wheel) =>
     center.growth.active && center.growth.sensitivity !== 0
@@ -1411,7 +1435,7 @@ function receptorPatch(key, value) {
   if (key === 'active')
     return value ? 1 : 0;
   if (key === 'substance')
-    return Math.round(clamp(value, 0, HORMONES.levels));
+    return Math.round(clamp(value, 0, BLOOD_SUBSTANCE.fatigue));
   if (key === 'steepness')
     return clamp(value, 0, 3);
   if (key === 'half')

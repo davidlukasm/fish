@@ -6,7 +6,7 @@ export function lifeResponses(capabilities, center, context, maturities) {
   let dead = false;
   return maturities.map(maturity => {
     const response = (receptor, baseline = 0) =>
-        receptorResponse(capabilities, receptor, context.hormones, maturity, baseline);
+        receptorResponse(capabilities, receptor, {...context, maturity}, baseline);
     dead ||= response(center.receptors[HORMONE_EFFECT.death]) > DEATH_RESPONSE;
     return {
       maturity,

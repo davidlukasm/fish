@@ -10,7 +10,7 @@ import {
 import {organCells} from './view/vision.js';
 import {isPelvicMuscle, organFunction} from './model/organs.js';
 import {sideOf} from './model/layout.js';
-import {HORMONE_EFFECT, MOTOR_KIND} from '../schema.js';
+import {BLOOD_SUBSTANCE, HORMONE_EFFECT, MOTOR_KIND} from '../schema.js';
 import {planTrace, cppnTrace} from './model/trace.js';
 import {routedLinks} from './model/regions.js';
 import {createPlanPlayer} from './view/pulse.js';
@@ -228,6 +228,10 @@ export const trialMethods = {
           next = {...previous, hormones : [...previous.hormones ]};
     if (key === 'maturity')
       next.maturity = clamp(value);
+    else if (Number(key) === BLOOD_SUBSTANCE.reserve)
+      next.reserve = clamp(value);
+    else if (Number(key) === BLOOD_SUBSTANCE.fatigue)
+      next.fatigue = clamp(value);
     else if (key === 'input')
       this.state.previewInput = clamp(value, PREVIEW_INPUT_LOW);
     else if (Number.isInteger(Number(key)) && Number(key) >= 0 &&

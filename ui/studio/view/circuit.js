@@ -1,8 +1,8 @@
 import {regionGraph} from './region_graph.js';
 import {substanceColor} from '../../hormones.js';
 import {ORGAN_BY_KEY, PAIRINGS} from '../model/organs.js';
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
-import {chiasmWire, isLearner, substanceBound} from '../model/document.js';
+import {HORMONE_EFFECT} from '../../schema.js';
+import {chiasmWire, isLearner, regulatorySubstances, substanceBound} from '../model/document.js';
 import {substanceName} from './substances.js';
 import {escapeText, glyph} from './markup.js';
 import {planned, regionPlan, regionSlots} from '../model/regions.js';
@@ -81,7 +81,7 @@ function regionTeacher(state, organ) {
          label('regions.settings.taughtBy') +
          '</p><div class="aid-button-group aid-learn-substances">' +
          choice(null, label('learnRule.none')) +
-         [...state.document.substances, {index : HORMONES.levels} ]
+         regulatorySubstances(state.document, state.capabilities)
              .map(s => choice(s.index, substanceName(state, s.index), substanceColor(s.index)))
              .join('') +
          '</div></div>';

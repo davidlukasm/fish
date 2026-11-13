@@ -8,6 +8,7 @@ import {isRegion} from '../model/organs.js';
 import {regionNodeMap} from './region_graph.js';
 import {
   boundEffects,
+  bloodLevel,
   effectsFor,
   birthAffinity,
   chosenCenter,
@@ -21,9 +22,9 @@ import {
   organTypes,
   producers,
   receivers,
+  regulatorySubstances,
   receptorEnds,
   receptorAffinity,
-  receptorResponse,
   SUBSTANCE_NAME_LENGTH,
   substanceRead,
   teachersOf,
@@ -120,20 +121,22 @@ export function chemistry(state, organ, center) {
       items.length ? '<dt>' + label(title) + '</dt><dd>' + items.join('') + '</dd>' : '';
   let rows = row(
       'inspector.answersTo',
-      doc.substances.flatMap(
-          sub => boundEffects(center, sub.index, wheel)
-                     .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
-                                    effectWords(effect,
-                                                effectDirection(effect, center.receptors[effect])) +
-                                    '</small>')));
+      regulatorySubstances(doc, wheel)
+          .flatMap(
+              sub => boundEffects(center, sub.index, wheel)
+                         .map(effect => chip(sub.index) + '<small class="aid-bound-effect">' +
+                                        effectWords(effect, effectDirection(
+                                                                effect, center.receptors[effect])) +
+                                        '</small>')));
   if (center.role === 'nerve')
-    rows += row('inspector.learnsFrom',
-                teachersOf(doc, center, wheel)
-                    .map(({substance, glands}) =>
-                             chip(substance.index) +
-                             (glands.length ? ''
-                                            : '<small class="aid-bound-effect">' +
-                                                  label('inspector.noGland') + '</small>')));
+    rows +=
+        row('inspector.learnsFrom',
+            teachersOf(doc, center, wheel)
+                .map(({substance, glands}) => chip(substance.index) +
+                                              (glands.length || substance.index >= HORMONES.levels
+                                                   ? ''
+                                                   : '<small class="aid-bound-effect">' +
+                                                         label('inspector.noGland') + '</small>')));
   const open = (tool, text) => '<button class="aid-secondary aid-tool-link" data-open-tool="' +
                                tool + '" data-center-id="' + escapeText(center.id) + '">' +
                                glyph(TOOL_ICON[tool], ICON.tool, {line : true}) + label(text) +
@@ -159,7 +162,7 @@ const SHARE_SCALE =
 const GROWTH_SCALE =
     Object.freeze({low : 0, high : 1, value : r => Math.max(0, r), response : v => v});
 function receptorCurve(state, receptor, effect) {
-  const maturity = receptor.substance === HORMONES.levels && effect !== GROWTH;
+  const bounded = receptor.substance >= HORMONES.levels && effect !== GROWTH;
   const [halfMin, halfMax] = state.capabilities?.halfRange ?? [ receptor.half, receptor.half ];
   const scale = effect === GROWTH  ? GROWTH_SCALE
                 : effect === BIRTH ? EFFECT_SCALE[HORMONE_EFFECT.excitation]
@@ -170,9 +173,7 @@ function receptorCurve(state, receptor, effect) {
       return c;
     let sum = 0;
     for (let i = 0; i < (effect === GROWTH ? HORMONES.levels : wheel.regulators); ++i) {
-      const level = i === r.substance       ? c
-                    : i === HORMONES.levels ? context.maturity
-                                            : context.hormones[i];
+      const level = i === r.substance ? c : bloodLevel(context, i);
       sum += receptorAffinity(wheel, r, i) * level;
     }
     return sum;
@@ -182,13 +183,14 @@ function receptorCurve(state, receptor, effect) {
       !r.active           ? (effect === HORMONE_EFFECT.output || effect === BIRTH ? 1 : 0)
       : effect === GROWTH ? clamp(r.sensitivity * occupancy(c, r))
                           : clamp(r.baseline + r.sensitivity * occupancy(c, r), -1);
-  const atFraction = f => maturity ? f : halfMin * Math.pow(halfMax / halfMin, f);
-  const fraction = c => maturity ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
+  const atFraction = f => bounded ? f : halfMin * Math.pow(halfMax / halfMin, f);
+  const fraction = c => bounded ? c : Math.log(c / halfMin) / Math.log(halfMax / halfMin);
   const x = f => CURVE.left + (CURVE.right - CURVE.left) * f;
   const y = v =>
       CURVE.bottom - (CURVE.bottom - CURVE.top) * (v - scale.low) / (scale.high - scale.low);
   return {
-    maturity,
+    bounded,
+    axis : bounded ? substanceName(state, receptor.substance) : label('axes.concentrationLog'),
     halfMin,
     halfMax,
     scale,
@@ -268,9 +270,9 @@ const curveAxes = () => '<path class="aid-chart-axis" d="M' + CURVE.left + ' ' +
                         CURVE.bottom + ' H' + CURVE.right + '"/>';
 const CURVE_KEY =
     Object.freeze({gap : 4, strip : 6, steps : 12, title : 12, ticks : 22, along : 36});
-function curveKey(colour, maturity) {
+function curveKey(colour, bounded) {
   const K = CURVE_KEY, step = (CURVE.right - CURVE.left) / K.steps;
-  return maturity
+  return bounded
              ? ''
              : Array
                    .from({length : K.steps},
@@ -284,7 +286,7 @@ const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 const CURVE_DIGITS = 3;
 const curveNumber = value => formatNumber(
     value, Math.max(CURVE_DIGITS, value ? -Math.floor(Math.log10(Math.abs(value))) : 0));
-function curveLabels({maturity, scale, atFraction, x, y}, effect) {
+function curveLabels({axis, scale, atFraction, x, y}, effect) {
   const unit = effect === GROWTH  ? label('axes.growth')
                : effect === BIRTH ? label('axes.birth')
                                   : tList('studio.axes.effects')[effect];
@@ -301,12 +303,11 @@ function curveLabels({maturity, scale, atFraction, x, y}, effect) {
              .map((f, i) => text(curveNumber(atFraction(f)), x(f), CURVE.bottom + CURVE_KEY.ticks,
                                  [ 'start', 'middle', 'end' ][i]))
              .join('') +
-         text(label(maturity ? 'axes.maturity' : 'axes.concentrationLog'), x(.5),
-              CURVE.bottom + CURVE_KEY.along, 'middle');
+         text(axis, x(.5), CURVE.bottom + CURVE_KEY.along, 'middle');
 }
 export function effectCurve(state, receptor, effect, target = null) {
   const curve = receptorCurve(state, receptor, effect);
-  const {maturity, scale, response, atFraction, x, y} = curve;
+  const {bounded, axis, scale, response, atFraction, x, y} = curve;
   const points = Array
                      .from({length : CURVE.points + 1},
                            (_, i) => fixed(x(i / CURVE.points)) + ',' +
@@ -323,7 +324,7 @@ export function effectCurve(state, receptor, effect, target = null) {
   const unit = effect === GROWTH  ? label('inspector.growth')
                : effect === BIRTH ? label('development.birth')
                                   : label('effects.' + effect);
-  const along = maturity ? label('inspector.maturity') : label('inspector.concentration');
+  const along = bounded ? axis : label('inspector.concentration');
   return '<svg viewBox="0 0 ' + CURVE.width + ' ' + CURVE.height + '" class="aid-response-chart"' +
          (target ? ' data-receptor-curve="' + escapeText(target) + '"' : '') + '><title>' +
          escapeText(joinParts([
@@ -331,7 +332,7 @@ export function effectCurve(state, receptor, effect, target = null) {
            namedText(along, t('studio.axes.range',
                               {from : curveNumber(atFraction(0)), to : curveNumber(atFraction(1))}))
          ])) +
-         '</title>' + marks + curveAxes() + curveKey(substanceColor(receptor.substance), maturity) +
+         '</title>' + marks + curveAxes() + curveKey(substanceColor(receptor.substance), bounded) +
          curveLabels(curve, effect) + '<polyline class="aid-response-line" points="' + points +
          '"/>' + (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }

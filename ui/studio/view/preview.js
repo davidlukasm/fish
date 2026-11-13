@@ -7,9 +7,7 @@ import {motorResponse} from './drive.js';
 export function driveContext(state, center) {
   const context = previewContextOf(state), wheel = state.capabilities;
   const response = (effect, baseline = 0) =>
-      wheel ? receptorResponse(wheel, center.receptors[effect], context.hormones, context.maturity,
-                               baseline)
-            : baseline;
+      wheel ? receptorResponse(wheel, center.receptors[effect], context, baseline) : baseline;
   return {
     scale : wheel?.biasScale ?? 0,
     excitation : response(HORMONE_EFFECT.excitation),

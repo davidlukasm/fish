@@ -156,6 +156,149 @@ async function checkLiveControls() {
   station.close();
 }
 
+async function checkBloodReceptors(model, capabilities) {
+  const {BLOOD_SUBSTANCE : B, HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const development = await import('../ui/studio/view/development.js');
+  const substances = await import('../ui/studio/view/substances.js');
+  const {lifeResponses} = await import('../ui/studio/model/cell_life.js');
+  const {driveContext} = await import('../ui/studio/view/preview.js');
+  const {learningInspector} = await import('../ui/studio/view/learning.js');
+  const {regionSettings} = await import('../ui/studio/view/circuit.js');
+  const {trialMethods} = await import('../ui/studio/trials.js');
+  const wheel = {...capabilities, regulators : capabilities.bloodSubstances};
+  const placed =
+      model.addNeuron(model.newDocument('Blutstoffe'), 'learn', wheel.sites, {x : 380, y : 325});
+  const empty = {hormones : Array(wheel.hormones).fill(0), maturity : 0, reserve : 0, fatigue : 0};
+  const receptor =
+      {active : 1, baseline : 0, sensitivity : 1, half : .25, steepness : 0, width : 0};
+  for (let index = 0; index < wheel.regulators; ++index) {
+    const r = {...receptor, substance : index};
+    for (const [level, expected] of [[ 0, 0 ], [ .25, .5 ], [ 1, .8 ]]) {
+      const context = structuredClone(empty);
+      const body = Object.keys(B).find(key => B[key] === index);
+      if (body)
+        context[body] = level;
+      else
+        context.hormones[index] = level;
+      assert.ok(Math.abs(model.receptorResponse(wheel, r, context) - expected) < 1e-12,
+                'Every blood substance drives the same receptor response');
+    }
+  }
+  let doc = placed.document;
+  const id = placed.centerId;
+  for (const [key, index] of Object.entries(B)) {
+    doc = model.updateCellGrowth(doc, id, {...receptor, substance : index});
+    doc = model.updateReceptor(doc, id, E.output,
+                               {...receptor, substance : index, baseline : 1, sensitivity : -2});
+    doc = model.updateReceptor(doc, id, E.death, {...receptor, substance : index});
+    doc = model.updateReceptor(doc, id, E.learning, {...receptor, substance : index});
+    doc = model.updateReceptor(doc, id, E.teaching, {...receptor, substance : index});
+    const center = model.findCenter(doc, id).center;
+    const plan = model.compileDocument(doc, wheel.sites);
+    assert.equal(plan.groups[0].growth.substance, index);
+    for (const effect of [E.output, E.death, E.learning])
+      assert.equal(plan.groups[0].receptors[effect].substance, index,
+                   'Editing and compiling keep the chosen body substance');
+    const state = {
+      document : doc,
+      sites : wheel.sites,
+      capabilities : wheel,
+      selected : {kind : 'center', id},
+      previewContext : empty
+    };
+    for (const effect of [substances.BIRTH, E.output, E.death, E.learning]) {
+      const r = effect === substances.BIRTH ? center.growth : center.receptors[effect];
+      const picture = substances.effectCurve(state, r, effect, id);
+      assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
+      assert.ok(picture.includes(substances.substanceName(state, index)));
+      const half = substances.receptorCurvePatch(state, r, effect, 'half', 143 / 260, .5);
+      assert.equal(half.half, .5, 'Body substance curves use a linear 0–1 axis');
+      const wide = substances.effectCurve(state, {...r, width : 1}, effect, id);
+      assert.doesNotMatch(wide, /NaN|Infinity|undefined/,
+                          'Broad receptors read finite values for all nine blood substances');
+    }
+    for (const level of [0, 1]) {
+      const context = {...empty, [key] : level};
+      const living = {...center, receptors : center.receptors.map(r => ({...r}))};
+      living.receptors[E.death].active = 0;
+      const [life] = lifeResponses(wheel, living, context, [ context.maturity ]);
+      assert.ok(Math.abs(life.birth - (level ? .8 : 0)) < 1e-12);
+      assert.ok(Math.abs(life.output - (level ? .2 : 1)) < 1e-12);
+      assert.equal(driveContext({...state, previewContext : context}, living).output, life.output);
+      const [mortal] = lifeResponses(wheel, center, context, [ context.maturity ]);
+      assert.equal(mortal.dead, !!level);
+    }
+    const learning = learningInspector(state);
+    assert.doesNotMatch(learning, /NaN|Infinity|undefined/);
+    for (const index of [B.reserve, B.fatigue])
+      assert.match(learning, new RegExp('data-learn-substance="' + index + '"'));
+    const teachers = model.teachersOf(doc, center, wheel);
+    assert.ok(teachers.some(t => t.substance.index === index && t.glands.length === 0));
+    assert.ok(substances.chemistry(state, model.findCenter(doc, id).organ, center)
+                  .includes(substances.substanceName(state, index)));
+  }
+  const region =
+      model.addOrgan(model.newDocument('Region'), 'olfaction', wheel.sites, {x : 380, y : 325});
+  const regionOrgan = model.findOrgan(region.document, region.organId);
+  for (const regulators of [B.maturity + 1, B.fatigue + 1]) {
+    const capabilities = {...wheel, regulators};
+    const state = {
+      document : region.document,
+      sites : wheel.sites,
+      capabilities,
+      selected : {kind : 'organ', id : region.organId}
+    };
+    const picture = regionSettings(state, regionOrgan);
+    const learning =
+        learningInspector({...state, selected : {kind : 'center', id : region.centerId}});
+    for (const index of Object.values(B)) {
+      assert.equal(picture.includes('data-teacher-value="' + index + '"'), index < regulators);
+      assert.equal(learning.includes('data-learn-substance="' + index + '"'), index < regulators);
+    }
+  }
+  for (let index = 0; index < wheel.hormones; ++index)
+    doc = model.addSubstance(doc, wheel.hormones, index);
+  doc = model.updateReceptor(doc, id, E.learning, {width : 1});
+  const picture = development.previewControls({document : doc, capabilities : wheel});
+  assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
+  const drops = [...picture.matchAll(
+      /data-preview-handle="(\d+)" data-drop-middle="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g) ];
+  assert.deepEqual(drops.map(m => Number(m[1])), [ 0, 1, 2, 3, 4, 5, B.reserve, B.fatigue ]);
+  for (const mark of drops) {
+    const level = model.bloodLevel(model.DEFAULT_BLOOD_CONTEXT, Number(mark[1]));
+    const patch = development.previewPatch(mark[1], {x : Number(mark[3]), y : Number(mark[4])},
+                                           {dropMiddle : mark[2]});
+    assert.ok(Math.abs(patch[mark[1]] - level) < 1e-9, 'Each drop drags from its own row');
+  }
+  for (let a = 0; a < drops.length; ++a)
+    for (let b = a + 1; b < drops.length; ++b)
+      assert.ok(Math.hypot(drops[a][3] - drops[b][3], drops[a][4] - drops[b][4]) >= 14,
+                'The eight preview handles do not overlap');
+  const animation = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = () => 1;
+  try {
+    const studio = {state : {}, clearStimulus() {}, refreshInspector() {}};
+    const change = (key, value) => trialMethods.setPreviewContext.call(studio, key, value);
+    change(String(B.reserve), -.1);
+    const first = studio.state.previewContext;
+    assert.equal(first.reserve, 0);
+    change(String(B.fatigue), 1.2);
+    assert.equal(studio.state.previewContext.fatigue, 1);
+    assert.equal(first.fatigue, 0, 'Preview changes preserve the previous context');
+    change('0', .3);
+    assert.equal(studio.state.previewContext.hormones[0], .3);
+    assert.equal(first.hormones[0], 0);
+    const current = studio.state.previewContext;
+    change(String(B.reserve), Infinity);
+    change('9', .5);
+    assert.equal(studio.state.previewContext, current);
+    assert.equal(model.DEFAULT_BLOOD_CONTEXT.reserve, 1);
+    assert.equal(model.DEFAULT_BLOOD_CONTEXT.fatigue, 0);
+  } finally {
+    globalThis.requestAnimationFrame = animation;
+  }
+}
+
 async function checkGonadInspector(model, capabilities) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {gonadStore} = await import('../ui/studio/view/sacs.js');
@@ -1397,6 +1540,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  await checkBloodReceptors(model, sitesResult);
+  if (process.argv.includes('--blood-receptors')) {
+    console.log('Atelier: neun Blutstoffe, Zellleben, Lernen und Vorschaugriffe: OK');
+    return;
+  }
   await checkGonadInspector(model, sitesResult);
   if (process.argv.includes('--gonad-inspector')) {
     console.log('Ei-/Sameninspektor: stillstehender Vorrat und wiederholtes Ziehen: OK');
@@ -1611,7 +1759,8 @@ async function checkHormoneSystems(model, capabilities) {
     const motor = model.defaults(
         {key : 'muscle', role : 'motor', functionCode : MOTOR_KIND.turn, copies : 3}, sites[0]);
     motor.threshold = 1;
-    const excitation = model.receptorResponse(sitesResult, motor.receptors[E.excitation], [], 1);
+    const excitation =
+        model.receptorResponse(sitesResult, motor.receptors[E.excitation], {maturity : 1});
     assert.ok(excitation > sitesResult.biasScale * motor.threshold,
               'A motor with a closed action gate can still learn its first input');
     assert.equal(motorResponse(motor, 0, {scale : sitesResult.biasScale, excitation}), 0,
@@ -3251,8 +3400,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                           c => near(balancePlan.groups[model.centerIndex(tilted, c.id)].q1, .4))),
         'Both balance organs carry the same hair direction into the plan');
     const beat = pool('beat')[0];
-    assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm], [], 1) >
-                  -1,
+    assert.ok(model.receptorResponse(sitesResult, beat.receptors[HORMONE_EFFECT.rhythm],
+                                     {maturity : 1}) > -1,
               'The pacemaker keeps beating in the adult');
     assert.match(views.organTitle(organ, sites), /Schwanz/);
     const pigment =
@@ -3492,9 +3641,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
           model.updateReceptor(control.state.document, regionCenter, effect, {baseline : .25});
       select('off');
       assert.equal(cell().receptors[effect].baseline, .25);
-      assert.equal(
-          model.receptorResponse(sitesResult, cell().receptors[effect], Array(6).fill(0), 0), .25,
-          'Removing the substance preserves the constant local gain');
+      assert.equal(model.receptorResponse(sitesResult, cell().receptors[effect]), .25,
+                   'Removing the substance preserves the constant local gain');
     }
     const traceHandle = /data-learning-handle="trace" cx="([^"]+)"/.exec(learnPanel);
     const learnCell = model.findCenter(learnNode.document, learnNode.centerId).center;
