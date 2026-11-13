@@ -11,6 +11,11 @@ Hier stehen nur offene Befunde. Erledigte und zurückgenommene sind gelöscht; s
   - Bei der Vorgabe 1/1 steigt B nach Schmerz. Die Ursache ist offen.
 
 ## Vorschläge, Erklärung an David fehlt noch
+- **7 Drüse (Fables Vorschlag, David hat noch nicht entschieden):** Wie lange eine Drüse abgibt, hängt nur von ihrem Eingang ab, das kann 8000 Schritte dauern (`body_plan.cc:1338`). Begrenzt ist etwas anderes, nämlich wie lange der Stoff im Blut bleibt. Er zerfällt mit der Zellzeit der Drüsenzellen, die 4–48 Schritte beträgt (`body_plan.cc:191`, `hormone_state.cc:45`).
+  - **Folge 1:** Nach dem Abschalten ist der Pegel spätestens nach etwa 33 Schritten halbiert.
+  - **Folge 2:** Der Dauerpegel beträgt höchstens 0,48 × Abgabe. Ein hoher Pegel braucht deshalb viele Zellen.
+  - **Fables Vorschlag:** Die Zeitspanne der Drüse wird wie bei der Gewöhnung auf 4–1024 Schritte erweitert. Damit hält ein Stoff auch nach dem Abschalten an (über eine Mahlzeit, eine Flucht, eine Laichzeit), und kleine Drüsen erreichen hohe Pegel.
+  - **Dagegen:** Ein langer Stoff lässt sich nicht schnell wieder abstellen. Das geht dann nur, indem eine Drüse ihn bindet.
 - **8 Schwimmblase:** Sie füllt sich träge, in etwa 250 Schritten. Vorschlag: viermal schneller.
 - **14 Nervenzelle:** Die Schwelle zählt nur × 0,3. Vorschlag: × 1.
 

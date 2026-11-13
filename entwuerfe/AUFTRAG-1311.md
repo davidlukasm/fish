@@ -134,7 +134,7 @@ Danach `kontrast_darm-neben-gleichgewicht.png` öffnen. Das Gleichgewicht zeigt 
 
 **Drüse (21):**
 - Die Mechanik ist falsch dargestellt: Jede Drüse kann Stoffe binden und abgeben, auch Mischungen.
-- Wie lange sie abgibt, hängt vom Eingang ab, schon heute bis 8000 Schritte. Der Vorschlag „4–48 oder 4–1024“ ist damit gegenstandslos.
+- Wie lange sie abgibt, hängt vom Eingang ab, schon heute bis 8000 Schritte. Fables Vorschlag 4–1024 betrifft etwas anderes, nämlich wie lange der Stoff nach dem Abschalten im Blut bleibt (BEFUNDE 7). Der Entwurf hat das nicht erklärt. David hat noch nicht entschieden, es war kein Urteil.
 - Lebenszyklen fehlen.
 
 **Blutsinn (22):** dieselbe Kritik. Es fehlen Optionen, und das Wort „Beispiel“ gehört weg.
