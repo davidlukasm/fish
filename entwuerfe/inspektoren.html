@@ -860,6 +860,8 @@ function senseGroups(id, cell, o) {
     el('path', {d : `M${L} ${SY(g.gate)} H${R}`, stroke : groupColour(i), 'stroke-width' : i === cell.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', opacity : .9}, svg);
   });
   txt(svg, L + 4, S0 + 11, o.strip ?? word);
+  // An open stimulus spans many orders: its log scale runs from a ten-thousandth to one.
+  if (!o.bounded) { txt(svg, L - 4, S0 + 8, '1', {'text-anchor' : 'end', style : 'font-size:9.5px'}); txt(svg, L - 4, S1, '10⁻⁴', {'text-anchor' : 'end', style : 'font-size:9.5px'}); }
   // How far the chosen group's cells spread: a bar at the right over their thresholds, its upper end
   // pulled away from the group's own (the lower end follows).
   {
