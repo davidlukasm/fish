@@ -19,7 +19,7 @@ class Element {
     this.children = [];
     this.listeners = new Map();
     this.classes = new Set();
-    this.classList = {add: name => this.classes.add(name)};
+    this.classList = {add: name => this.classes.add(name), remove: name => this.classes.delete(name)};
   }
   setAttribute(key, value) { this.attributes[key] = String(value); }
   getAttribute(key) { return this.attributes[key]; }
@@ -27,6 +27,10 @@ class Element {
   replaceChildren() { this.children.length = 0; }
   addEventListener(name, listener) { this.listeners.set(name, listener); }
   removeEventListener(name) { this.listeners.delete(name); }
+  querySelectorAll(selector) {
+    assert.ok(/^\.[\w-]+$/.test(selector), `Unbekannter SVG-Selektor ${selector}`);
+    return this.findAll(child => child.classes.has(selector.slice(1)));
+  }
   setPointerCapture() {}
   createSVGPoint() { return {matrixTransform() { return this; }}; }
   getScreenCTM() { return {inverse: () => ({})}; }
@@ -142,7 +146,7 @@ function inspect() {
 }
 
 inspect();
-const curveValues = evaluate('FOOD.map(([name, food]) => [name, gain(food, 50), best(food), gain(food, 800)])');
+const curveValues = evaluate('CURVES.map(c => [c.name, c.gains[0], c.best, c.gains.at(-1)])');
 const target = {Blatt: [null, 92], Alge: [18, 78, 78], Plankton: [34, 72], Fleisch: [null, 82]};
 const columns = ['am linken Rand', 'am Maximum', 'am rechten Rand'];
 for (const [name, ...values] of curveValues)
@@ -158,7 +162,7 @@ const snapshots = [...elements].map(([id, root]) =>
 let dragged = 0;
 for (const [id, names] of snapshots) {
   for (const name of names) {
-    evaluate(`Object.assign(S, JSON.parse(${JSON.stringify(initial)})); draw();`);
+    evaluate(`Object.assign(S, JSON.parse(${JSON.stringify(initial)})); draw(); repaint();`);
     const root = get(id);
     const grip = grips(root).find(el => el.getAttribute('data-name') === name);
     const box = shape(grip);
@@ -166,7 +170,10 @@ for (const [id, names] of snapshots) {
     const center = [box.x + box.w / 2, box.y + box.h / 2];
     const views = [...elements].map(([id, root]) => [id, root.getAttribute('viewBox')]);
     const [left, top, width, height] = root.getAttribute('viewBox').split(/\s+/).map(Number);
-    const update = (x, y) => root.dispatch('pointermove', x, y);
+    const update = (x, y) => {
+      root.dispatch('pointermove', x, y);
+      evaluate('repaint()');
+    };
     try {
       grip.dispatch('pointerdown', ...center);
       for (const [x, y] of [[center[0] - 20, center[1] - 15], [center[0] + 20, center[1] + 15],
@@ -177,6 +184,7 @@ for (const [id, names] of snapshots) {
         inspect();
       }
       root.dispatch('pointerup');
+      evaluate('repaint()');
       dragged++;
     } catch (error) {
       check(false, `${id}/${name}: ${error.message}`);
