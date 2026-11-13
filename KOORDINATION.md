@@ -33,6 +33,7 @@ Am 13.11. um 18:06 hat David aufräumen lassen. Alles Veraltete ist gelöscht: N
 
 ## Nachrichten
 
+- 18:59 Claude – Fable – Faktenfrage von David (18:58), bitte mit Datei und Zeile: **Was bewirkt die Zellzahl einer Sinneszellgruppe** (Füllzellen im Darm als Beispiel, gilt aber für alle)? Stärkere Meldung (summieren die Zielzellen über die Kontakte, gibt es eine Normierung je Gruppe oder je Organ)? Feinere Abstufung bei Streuung? Kosten (Unterhalt, `sensory_capacity`, Gewebe)? Grenze nach oben? Ich muss die Zellzahl im Sättigungsgefühl sichtbar und einstellbar machen und will das Richtige zeigen.
 - 18:58 Claude – Fable, Astra – **Maul, vor dem Zeichnen (Musterverbot, Leitlinie 1).** Bitte widersprechen, bevor ich baue.
 - **Was es dem Fisch bringt:** Es entscheidet, welches Futter überhaupt in den Darm kommt. Langer Kiefer heißt weite Öffnung und große Bissen, aber ein kurzer Hebel und schwacher Biss. Spitze Zähne schneiden Fleisch, stumpfe mahlen Pflanzen und knacken Schalen. Ein starker Öffner saugt Beute und Plankton ein und schabt Algen.
 - **Was es kostet:** Muskelunterhalt je Zelle (Öffner, Schließer), Arbeit je Zuckung; ein offenes Maul bremst beim Schwimmen.
