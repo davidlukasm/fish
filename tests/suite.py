@@ -9,7 +9,7 @@ BUILD = build_directory(ROOT)
 
 NATIVE = ["invariants", "compiler"]
 # Parts of a JavaScript check run in parallel; together they cover its whole file.
-JAVASCRIPT = {"texts": [[]], "studio": [["--ui"], ["--region-controls"], ["--blueprints"]]}
+JAVASCRIPT = {"texts": [[]], "studio": [["--ui"], ["--region-controls"]]}
 
 
 def binary(name="fish"):

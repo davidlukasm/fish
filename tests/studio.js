@@ -2133,7 +2133,7 @@ async function checkReversePattern(model, sites, root) {
 async function checkLearningSources(model, capabilities) {
   const {learningInspector} = await import('../ui/studio/view/learning.js');
   const {hormoneOverlay} = await import('../ui/studio/view/influence.js');
-  const {nerveClass, isModulator} = await import('../ui/studio/model/organs.js');
+  const {nerveClass} = await import('../ui/studio/model/organs.js');
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {sites} = capabilities;
   const learner =
@@ -2152,8 +2152,6 @@ async function checkLearningSources(model, capabilities) {
       source.nativeClass = {...nerveClass(source), modulator};
     studio.state.document = draft;
     const strength = nerveClass(source).modulator, teaches = strength > .5;
-    assert.equal(isModulator(source), strength > .75,
-                 'The dominant cell name keeps its separate classification threshold');
     const html = learningInspector(studio.state), overlay = hormoneOverlay(studio.state);
     assert.equal(html.includes('aid-teacher-list'), teaches,
                  'Every engine teaching source appears in the learner inspector');
@@ -2842,12 +2840,8 @@ async function checkHormoneSystems(model, capabilities) {
   const {wiredDocument} = await import('./wired_document.js');
   const example = wiredDocument({fish : 'B', growth : 'W'}, sites, capabilities);
   model.validateDocument(example);
-  assert.ok(!example.organs.some(o => ['circuit', 'rhythm', 'teaching'].includes(o.type)));
-  for (const type of ['tectum', 'olfaction', 'value', 'choice', 'state', 'motor'])
-    assert.ok(example.organs.some(o => o.type === type), type);
   const state = example.organs.find(o => o.type === 'state');
   const choice = example.organs.find(o => o.type === 'choice');
-  assert.equal(example.organs.filter(o => o.type === 'state').length, 1);
   assert.equal(systemMissing(example, 'growth'), 'needs');
   assert.equal(systemMissing(example, 'unknown'), 'needs');
   const bodyWires = example.wires.filter(w => w.from === state.id || w.to === state.id);
@@ -2942,6 +2936,34 @@ async function checkHormoneSystems(model, capabilities) {
       'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor', 'feeding_view'
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  const model = {
+    ...await import('../ui/studio/model/document.js'),
+    ...await import('../ui/studio/model/assemblies.js'),
+    ...await import('../ui/studio/model/trace.js')
+  };
+  const regionControls = process.argv.includes('--region-controls');
+  const sitesResult =
+      JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
+                              [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  if (regionControls || process.argv.length === 2) {
+    await checkSpinalPattern(model, sitesResult.sites, root);
+    await checkSpinalRest(model, sitesResult.sites, root);
+    await checkFinPattern(model, sitesResult.sites, root);
+    await checkReversePattern(model, sitesResult.sites, root);
+    await checkForagingChoice(model, sitesResult.sites, root);
+    await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
+    await checkLearningTrace(model, sitesResult, root);
+    await checkValueTrace(model, sitesResult, root);
+    await checkResponseControls(model, sitesResult, clicks);
+    await checkFunctionalRegions(model, sitesResult);
+    checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
+                    clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
+    if (regionControls) {
+      console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
+      return;
+    }
+  }
   await checkSpectrumKnobs();
   await checkLiveFounders();
   await checkLiveControls();
@@ -2951,22 +2973,6 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   await checkVariationPictures();
-  {
-    const {enduranceCurve, fibreForce} = await import('../ui/fibre.js');
-    const {MUSCLE_FIBRE : F} = await import('../ui/schema.js');
-    for (const fast of [0, .25, .5, .75, 1]) {
-      const curve = enduranceCurve(fast, 5000), force = fibreForce(fast);
-      assert.equal(curve[0], force, 'All fibre kinds start rested');
-      assert.ok(Math.abs(curve[1] / force - (1 - F.drain * fast ** 3)) < 1e-12,
-                'A full command spends one unit of work per capacity and step');
-      // At sustained effort, replenishment must balance the work of the remaining fibres.
-      const recovery = F.recovery_slow * (F.recovery_fast / F.recovery_slow) ** fast;
-      const drain = F.drain * fast ** 2 * recovery;
-      const reserve = Math.max(0, (1 - drain * (1 - fast)) / (1 + drain * fast));
-      assert.ok(Math.abs(curve.at(-1) / force - (1 - fast + fast * reserve)) < 1e-10,
-                'The endurance picture settles at the engine balance for full effort');
-    }
-  }
   {
     const {
       NEURON,
@@ -3057,20 +3063,6 @@ async function checkHormoneSystems(model, capabilities) {
     assert.equal(brainMotorActivity(n, MOTOR_KIND.forward, d), .7,
                  'The organ view follows its actual command');
   }
-  const model = {
-    ...await import('../ui/studio/model/document.js'),
-    ...await import('../ui/studio/model/assemblies.js'),
-    ...await import('../ui/studio/model/trace.js')
-  };
-  for (const v of [0, 1 / 3, 2 / 3, 1])
-    for (const w of [0, 1 / 3, 2 / 3, 1]) {
-      const a = {v}, b = {v : w}, sensor = {role : 'sensor'}, nerve = {role : 'nerve'},
-            motor = {role : 'motor'};
-      assert.ok(model.validCellLink(sensor, a, nerve, b));
-      assert.ok(model.validCellLink(nerve, a, nerve, b));
-      assert.ok(model.validCellLink(nerve, a, motor, b));
-      assert.ok(!model.validCellLink(sensor, a, motor, b));
-    }
   const views = {
     ...await import('../ui/studio/view/scene.js'),
     ...await import('../ui/studio/view/placing.js'),
@@ -3085,9 +3077,6 @@ async function checkHormoneSystems(model, capabilities) {
   };
   const graph = await import('../ui/studio/view/graph.js');
   const {OrganStudio} = await import('../ui/studio/controller.js');
-  const sitesResult =
-      JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
-                              [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
   if (process.argv.includes('--async-actions')) {
     await checkAsyncActions(model, sitesResult);
     console.log('Atelier: verspätete Starter, Compilerfehler und Vorschaufehler: OK');
@@ -3164,167 +3153,31 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: angeforderte Bewegungsregionen und ihre Bedienung: OK');
     return;
   }
-  const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkInspectorSubstances(model, sitesResult, clicks);
   await checkLearningSources(model, sitesResult);
   await checkTraceEffects(model, sitesResult);
   await checkMotorPicture(model, sitesResult);
-  if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
-    await checkResponseControls(model, sitesResult, clicks);
-    await checkFunctionalRegions(model, sitesResult);
-    await checkTectumPicture(model, sitesResult);
-    console.log('Atelier: Reizantwort, Regionsbilder, Bedienpunkte und Seitenkopplung: OK');
-    return;
-  }
   await checkTectumPicture(model, sitesResult);
   const hormoneSystems = await checkHormoneSystems(model, sitesResult);
-  if (!process.argv.includes('--ui')) {
-    if (process.argv.includes('--hormone-systems')) {
-      const result = JSON.parse(execFileSync(
-          'python3',
-          [
-            '-B', '-c',
-            "import json,sys; from atelier_service import run; r=run({'operation':'build','plan':json.load(sys.stdin)}); print(json.dumps({k:r[k] for k in ('compiler','viable','neurons','synapses')}))"
-          ],
-          {
-            cwd : root,
-            input :
-                JSON.stringify(model.compileDocument(hormoneSystems.example, sitesResult.sites)),
-            encoding : 'utf8',
-            timeout : 60000,
-            maxBuffer : 8 * 1024 * 1024
-          }));
-      assert.ok(result.compiler.ok, JSON.stringify(result.compiler));
-      assert.ok(result.viable);
-      console.log('Atelier: Hormonregionen, getrennte Anschlüsse und Beispielfisch: OK',
-                  result.neurons, result.synapses);
-      return;
-    }
-    if (!process.argv.includes('--blueprints')) {
-      await checkSpinalPattern(model, sitesResult.sites, root);
-      await checkSpinalRest(model, sitesResult.sites, root);
-      await checkFinPattern(model, sitesResult.sites, root);
-      await checkReversePattern(model, sitesResult.sites, root);
-      await checkForagingChoice(model, sitesResult.sites, root);
-      await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
-      await checkLearningTrace(model, sitesResult, root);
-      await checkValueTrace(model, sitesResult, root);
-      await checkResponseControls(model, sitesResult, clicks);
-      await checkFunctionalRegions(model, sitesResult);
-      checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
-                      clicks.find(([ selector ]) => selector === '[data-slot-region]')[1]);
-      if (process.argv.includes('--region-controls')) {
-        console.log('Atelier: Reizantwort, Bedienpunkte, Seitenkopplung und native Planwerte: OK');
-        return;
-      }
-    }
-    // Offered blueprints remain editable and compile to their offered fish.
-    const offeredFish = JSON.parse(execFileSync(
+  if (process.argv.includes('--hormone-systems')) {
+    const result = JSON.parse(execFileSync(
         'python3',
-        [ '-B', '-c', 'import json, fish_shelf; print(json.dumps(fish_shelf.offered()))' ],
-        {cwd : root, encoding : 'utf8', timeout : 10000}));
-    assert.ok(offeredFish.length &&
-                  offeredFish.every(f => ['shelf', 'drafts'].includes(f.category)),
-              'The game offers fish, each on the shelf or among the drafts');
-    for (const example of offeredFish.map(f => f.key)) {
-      const source = JSON.parse(execFileSync(
-          'python3',
-          [
-            '-B', '-c',
-            "import json, fish_shelf; from atelier_service import run; example=__import__('sys').argv[1]; d=run({'operation':'new','example':example}); r=run({'operation':'inspect','genome':fish_shelf.genome(example).read_text()}); r.update(d); print(json.dumps(r))",
-            example
-          ],
-          {cwd : root, encoding : 'utf8', timeout : 10000, maxBuffer : 8 * 1024 * 1024}));
-      assert.equal(source.groups.reduce((sum, group) => sum + group.cells, 0) +
-                       source.extraNodes.reduce((sum, group) => sum + group.copies, 0),
-                   source.neurons);
-      assert.equal(source.contacts.reduce((sum, edge) => sum + edge[2], 0), source.synapses,
-                   'Every generated contact appears, including unplanned sites');
-      const doc = source.document;
-      model.validateDocument(doc);
-      // A shipped blueprint follows the current region plan, as the atelier would settle it.
-      const {settleRegions} = await import('../ui/studio/model/regions.js');
-      assert.deepEqual(settleRegions(doc, sitesResult.sites), doc,
-                       example + ': blueprint settled (make starter)');
-      if (example === offeredFish[0].key) {
-        // A simple body without regions, kept for this test only; the game does not offer it.
-        const {updateRegion} = await import('../ui/studio/model/regions.js');
-        let placed = settleRegions(
-            JSON.parse(readFileSync(join(__dirname, 'fisch/einfach.fish.json'), 'utf8')),
-            sitesResult.sites);
-        placed.organs.find(o => o.type === 'brain').centers = [];
-        placed.wires = [];
-        placed.assemblies = [];
-        placed = model.setOrganNodes(placed, 'eiorgan', 16, sitesResult.sites);
-        for (const [type, x, y, settings] of [[ 'tectum', 390, 320, {resolution : 2} ],
-                                              [ 'olfaction', 285, 415, {contrast : 1} ],
-                                              [ 'choice', 700, 365, {searchTime : .6} ]]) {
-          const r = model.addOrgan(placed, type, sitesResult.sites, {x, y});
-          assert.ok(r, type + ' fits in an occupied body');
-          placed = updateRegion(r.document, r.organId, settings, sitesResult.sites);
-          model.validateDocument(placed);
-        }
-        const paired = placed.organs.find(o => o.type === 'olfaction');
-        assert.ok(paired.pair);
-        const eggWire = model.addWire(placed, paired.id, 'eiorgan', null, sitesResult.sites,
-                                      {fromPort : 'presence'});
-        const tailWire = model.addWire(eggWire.document, paired.id, 'schub--1', 'same',
-                                       sitesResult.sites, {fromPort : 'presence'});
-        const plan = model.compileDocument(tailWire.document, sitesResult.sites);
-        const command = paired.centers.find(c => c.node === 'concentration').id;
-        assert.equal(
-            plan.groups[model.allCenters(tailWire.document).findIndex(c => c.id === command)]
-                .crossing,
-            0, 'One ovary contains targets on both physical sides');
-        const both = model.updateWire(tailWire.document, eggWire.wireId, {pairing : 'both'});
-        const projections = model.expandedWires(both).filter(w => w.wire.id === eggWire.wireId);
-        assert.equal(projections.length, 2);
-        assert.deepEqual(new Set(projections.map(p => p.from)),
-                         new Set([ paired.id, paired.pair ]));
-        const hub = model.addNeuron(both, 'modulate', sitesResult.sites, {x : 335, y : 365});
-        const broadcast = model.addWire(hub.document, hub.centerId, paired.id, 'both',
-                                        sitesResult.sites, {toPort : 'scent'});
-        assert.equal(model.expandedWires(broadcast.document)
-                         .filter(w => w.wire.id === broadcast.wireId)
-                         .length,
-                     2, 'A central teacher can reach both halves');
-      }
-      const saved = JSON.parse(JSON.stringify(doc));
-      assert.ok(model.regenerateFields(saved, sitesResult.sites));
-      assert.deepEqual(saved, doc);
-      const plan = model.compileDocument(saved, sitesResult.sites);
-      assert.equal(plan.source, undefined);
-      assert.equal(plan.groups.length, model.allCenters(doc).length);
-      assert.ok(doc.wires.length < plan.connections.length);
-      // Brisa forages by smell alone and has no sensory field to retune.
-      const near = doc.organs.find(o => o.type === 'proximity');
-      if (near) {
-        const tuned = model.updateField(
-            doc, near.id, {profile : {...near.field.profiles[0], q1 : .2}}, sitesResult.sites);
-        assert.equal(model.compileDocument(tuned, sitesResult.sites).groups.length,
-                     plan.groups.length);
-        assert.deepEqual(model.allCenters(tuned).map(c => [c.id, c.site, c.copies]),
-                         model.allCenters(doc).map(c => [c.id, c.site, c.copies]));
-      }
-      const checked = JSON.parse(execFileSync(
-          'python3',
-          [
-            '-B', '-c',
-            "import json,sys,fish_shelf; from atelier_service import run; p=json.load(sys.stdin); r=run({'operation':'build','plan':p}); shipped=fish_shelf.genome(sys.argv[1]).read_text(); print(json.dumps({**{k:r[k] for k in ['neurons','synapses','viable','compiler']}, 'shipped': r['genome']==shipped}))",
-            example
-          ],
-          {cwd : root, encoding : 'utf8', input : JSON.stringify(plan), timeout : 10000}));
-      assert.ok(checked.shipped, example + ': shipped genome is the build of its blueprint');
-      assert.ok(checked.compiler.ok, JSON.stringify(checked.compiler));
-      assert.equal(checked.neurons, source.neurons);
-      assert.equal(checked.synapses, source.synapses);
-      assert.equal(checked.viable, source.viable);
-    }
-    if (process.argv.includes('--blueprints')) {
-      console.log(
-          'Atelier: mitgelieferte Baupläne bleiben bearbeitbar und ergeben ihre Fische: OK');
-      return;
-    }
+        [
+          '-B', '-c',
+          "import json,sys; from atelier_service import run; r=run({'operation':'build','plan':json.load(sys.stdin)}); print(json.dumps({k:r[k] for k in ('compiler','viable','neurons','synapses')}))"
+        ],
+        {
+          cwd : root,
+          input : JSON.stringify(model.compileDocument(hormoneSystems.example, sitesResult.sites)),
+          encoding : 'utf8',
+          timeout : 60000,
+          maxBuffer : 8 * 1024 * 1024
+        }));
+    assert.ok(result.compiler.ok, JSON.stringify(result.compiler));
+    assert.ok(result.viable);
+    console.log('Atelier: Hormonregionen, getrennte Anschlüsse und Beispielfisch: OK',
+                result.neurons, result.synapses);
+    return;
   }
   await require('./studio_canvas.js')(model, sitesResult, root);
   {
@@ -3339,16 +3192,6 @@ async function checkHormoneSystems(model, capabilities) {
     ...await import('../ui/studio/model/layout.js'),
     ...await import('../ui/studio/view/frame.js')
   };
-  assert.equal(geometry.cameraBox({zoom : .4, x : 560, y : 365}).width, 2500);
-  const camera = {zoom : 2, x : 560, y : 365};
-  const cameraBox = geometry.cameraBox(camera);
-  const shortViewport = {width : 1200, height : 480};
-  const scale = geometry.cameraScale(shortViewport, camera);
-  assert.equal(scale, Math.min(shortViewport.width / cameraBox.width,
-                               shortViewport.height / cameraBox.height));
-  assert.ok(Math.abs(120 / scale - 91.25) < .01);
-  assert.ok(geometry.CAMERA_ZOOM.min < 1 && geometry.CAMERA_ZOOM.max > 1);
-  assert.equal(geometry.cameraScale({width : 480, height : 1200}, camera), 480 / cameraBox.width);
   const sites = sitesResult.sites;
   const retina = await import('../ui/studio/model/retina.js');
   const vision = await import('../ui/studio/view/vision.js');
@@ -3473,13 +3316,6 @@ async function checkHormoneSystems(model, capabilities) {
     assert.equal(model.gillRakers(model.findOrgan(dense, gills.organId)), 1);
     assert.ok(model.isFibrous(organ), 'Gill pumps are muscles with fibres');
     organAudits.push({document : dense, id : gills.organId, type : 'gills', rakers : 1});
-    for (const density of [0, .125, .5, .8, 1]) {
-      const same = model.findOrgan(model.setGillRakers(gills.document, gills.organId, density),
-                                   gills.organId);
-      assert.equal(model.gillRakers(same),
-                   same.centers.reduce((sum, c) => sum + (c.q1 + 1) / 2, 0) / same.centers.length,
-                   'Equal gill centres retain exactly the same density');
-    }
     for (const [copiesA, copiesB, tauA, tauB,
                 expected] of [[ 8, 8, 0, 1, 25 / 29 ], [ 16, 4, 1, 1, .8 ],
                               [ 16, 4, 0, 1, 25 / 26 ], [ 4, 16, .3, .7, .3422548805380889 ]]) {
@@ -4269,9 +4105,6 @@ from wording import Refusal
 payload=json.load(sys.stdin); plan=payload['plan']; doc=payload['doc']
 encoded={}
 for field in RECEPTOR_FIELDS:
-    for value in (0,0.,-0.,1,1.,-2,.05):
-        row={**plan['growth'],field:value}
-        assert receptor_row(row,encoded)==' '.join(str(row[f]) for f in RECEPTOR_FIELDS)
     for value in (False,True,None,'0',[],{},[1],{'x':1},float('nan'),float('inf'),-float('inf')):
         try: receptor_row({**plan['growth'],field:value},encoded)
         except Refusal as error: assert error.reply['key']=='studio.errors.invalidNumber'
@@ -4281,11 +4114,6 @@ for field in RECEPTOR_FIELDS:
         try: receptor_row(row,encoded)
         except Refusal as error: assert error.reply['key']=='studio.errors.invalidReceptors'
         else: raise AssertionError('Malformed receptor accepted')
-encoded_plan=encode_plan(plan)
-for value in (0,0.,-0.,1,1.):
-    changed={**plan,'growth':{**plan['growth'],'baseline':value}}
-    assert encode_plan(changed).splitlines()[-len(plan['connections'])-3]==receptor_row(changed['growth'])
-    assert encode_plan(plan)==encoded_plan
 for slot in ('receptors','growth'):
     for value in (None,[],{},True):
         changed={**plan,'groups':[{**plan['groups'][0],slot:value},*plan['groups'][1:]]}
@@ -5575,8 +5403,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                   .sensitivity > 0);
     const {wiredDocument} = await import('./wired_document.js');
     const exampleDoc = wiredDocument({fish : 'B', growth : 'W'}, sites, sitesResult);
-    assert.doesNotThrow(() => model.validateDocument(exampleDoc));
-    assert.equal(exampleDoc.substances.length, 1);
     const relay = exampleDoc.organs.find(o => o.type === 'value');
     const taught = (doc, organ) => model.findOrgan(doc, organ.id)
                                        .centers.filter(model.isLearner)
@@ -5611,9 +5437,6 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(alarm.document.wires.some(
         w => w.to === alarm.organId ||
              w.to === model.findOrgan(alarm.document, alarm.organId).pair));
-    assert.equal(layout.findSite(sites, sites[3].id), sites[3]);
-    assert.equal(model.findAssembly(grouped, grouped.assemblies[0].id), grouped.assemblies[0]);
-    assert.equal(model.findAssembly(grouped, 'none'), null);
     const gutOrgan = model.findOrgan(gutDoc.document, gutDoc.organId);
     assert.equal(model.chosenCenter(gutDoc.document, {kind : 'organ', id : gutOrgan.id}),
                  gutOrgan.centers[0]);

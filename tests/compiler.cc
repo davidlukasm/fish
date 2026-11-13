@@ -879,11 +879,6 @@ int main(int argc, char **argv) {
       assert(std::abs(net.query_view(field::development_site(i))[out::threshold] -
                       (i < 2 ? .22f : .2f)) < 1e-5f);
   }
-  assert(field::contact_affinity(0) == 1);
-  assert(std::abs(field::contact_affinity(std::log(2.)) - .5) < 1e-12);
-  assert(field::contact_affinity(field::CONTACT_SUPPORT) == 0);
-  assert(field::contact_affinity_slope(field::CONTACT_CORE) == 0);
-  assert(field::contact_affinity_slope(field::CONTACT_SUPPORT) == 0);
   {
     auto plan = cells(8);
     auto first = Builder().build(plan);

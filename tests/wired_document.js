@@ -1,6 +1,13 @@
 // Test fixture: a wired document with every region the system and teaching checks need.
 import {BLOOD_SUBSTANCE} from '../ui/schema.js';
-import {addOrgan, addWire, findOrgan, newDocument, updateCenter, wheelPlace} from '../ui/studio/model/document.js';
+import {
+  addOrgan,
+  addWire,
+  findOrgan,
+  newDocument,
+  updateCenter,
+  wheelPlace
+} from '../ui/studio/model/document.js';
 import {placeSystem} from '../ui/studio/model/systems.js';
 
 const PLACES = Object.freeze({

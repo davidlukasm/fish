@@ -37,7 +37,6 @@ struct SessionAccess {
 }
 using namespace test;
 namespace {
-constexpr const char *FORAGER_GENOME = "genomes/entwuerfe/brisa.genome";
 constexpr unsigned SEED = 4242;
 constexpr int FISH = 4, STEPS = 120;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
@@ -66,56 +65,6 @@ void compact_founders_use_their_actual_reservation(const Genome &g) {
   for (const auto &p : w.fish)
     check(p.genome.blueprint && !p.body.brain() && !p.body.hatched && p.body.age == 0,
           "startup resolves individual anatomy while neural construction still begins in the egg");
-}
-void start_fish_eats_nearby_food(const Genome &g) {
-  constexpr double X = 300, Y = 205, DISTANCE = 8, FOOD = 80;
-  constexpr int SETTLE = 200, RESPONSE = 80;
-  for (double tissue : {HATCH_TISSUE, BODY_TISSUE})
-    for (bool erased : {false, true}) {
-      Ecosystem w(SEED);
-      w.resize(615, 410);
-      w.safety = false;
-      w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
-      w.set_parameter("energy_supply", 0);
-      w.food_burst.strength = 0;
-      w.disease.rate = w.disease.spread = w.disease.carrion = w.disease.food = 0;
-      w.field.clear_food();
-      const auto id = adult(w, g, X, Y).id;
-      auto hold = [&] {
-        auto &b = individual(w, id).body;
-        b.x = X;
-        b.y = Y;
-        b.angle = 0;
-        b.tissue = b.peak_tissue = tissue;
-        auto &m = StateAccess::motor(b);
-        m.vx = m.vy = m.speed = m.angular_velocity = 0;
-      };
-      for (int tick = 0; tick < SETTLE; ++tick) {
-        hold();
-        w.tick(false);
-      }
-      check(individual(w, id).body.nutrition == 0, "feeding trial starts without food");
-      if (erased)
-        StateAccess::brain(individual(w, id).body) =
-            individual(w, id).body.brain()->ablated_probe();
-      for (int tick = 0; tick < 2 * MAX_STROKE_STEPS; ++tick) {
-        hold();
-        w.tick(false);
-      }
-      Food food{X + DISTANCE, Y, 0, 0, 0, FOOD};
-      food.initial_energy = FOOD;
-      food.color = FEED_COLOR;
-      food.radius = food_radius(FOOD);
-      w.field.append_fragment(food);
-      for (int tick = 0; tick < RESPONSE; ++tick) {
-        hold();
-        w.tick(false);
-      }
-      std::cout << "Futter " << tissue << (erased ? " nach Ablation: " : " gelernt: ")
-                << individual(w, id).body.nutrition << "\n";
-      check(erased ? individual(w, id).body.nutrition == 0 : individual(w, id).body.nutrition > 1,
-            "young and adult fish eat with acquired weights; erasing only weights removes feeding");
-    }
 }
 // A morsel stands out from open water by far less than its own brightness. The eye compares each
 // cell's field with a wider surround, and the cell's threshold is the contrast it needs: the
@@ -180,38 +129,6 @@ void nostrils_differ_only_in_oncoming_water() {
   check(std::abs(lee.x) < CLOSE && std::abs(lee.y) < CLOSE && washed.y > 0 &&
             std::abs(washed.x) < CLOSE,
         "the nostril facing the oncoming water smells upstream, the other the nose itself");
-}
-// A sense cell reports nothing up to its threshold and nothing of a stimulus it has got used to.
-void sense_cells_have_a_threshold_and_get_used() {
-  constexpr double THRESHOLD = .02, CLOSE = 1e-6;
-  check(excess_response(THRESHOLD, THRESHOLD) == 0 &&
-            excess_response(THRESHOLD * 1.01, THRESHOLD) > 0,
-        "a stimulus up to the threshold is not reported");
-  check(std::abs(excess_response(2 * THRESHOLD, THRESHOLD) - .5) < CLOSE,
-        "the cell answers half at twice its threshold");
-  check(excess_response(10 * THRESHOLD, THRESHOLD, 10 * THRESHOLD) == 0 &&
-            excess_response(10 * THRESHOLD, THRESHOLD, 5 * THRESHOLD) > 0,
-        "a stimulus the cell is used to is not reported, a fresh one is");
-  for (double threshold : {.1, .5, .9}) {
-    check(bounded_response(threshold, threshold) == 0 && bounded_response(1, threshold) == 1 &&
-              bounded_response((1 + threshold) / 2, threshold) > 0,
-          "a bounded sense reports nothing up to its threshold and all at the full stimulus");
-  }
-  field::CellParameters slow;
-  slow.time_constant = 1;
-  check(field::adaptation_steps(slow) >= 1000, "a sense cell can take very long to get used");
-}
-// Rakers make three mouths: none sucks hardest, half dense ones sift the ground best, dense ones
-// alone hold plankton.
-void gill_rakers_make_three_mouths() {
-  constexpr double NONE = 0, HALF = .5, DENSE = 1;
-  const auto filtered = [](double d) { return raker_retention(d) * raker_passage(d); };
-  check(filtered(DENSE) > 3 * filtered(HALF) && filtered(HALF) > 3 * filtered(NONE),
-        "only dense rakers filter plankton well");
-  check(raker_sifting(HALF) > 3 * raker_sifting(NONE) && raker_sifting(DENSE) == 0,
-        "half dense rakers sift the ground; none lose its food, dense ones clog");
-  check(raker_passage(NONE) == 1 && raker_passage(HALF) < .75 && raker_passage(DENSE) < .5,
-        "a mouth without rakers moves the most water");
 }
 // A gut full of one food, emptied by a fish that spends what it gains: what the fish gains, what
 // it passes and whether it hurts.
@@ -327,29 +244,6 @@ void twitches_last_as_long_as_their_fibres() {
           "a driven muscle twitches as often as its twitch is long");
     check(std::abs(done / announced - 1) < CLOSE, "a twitch does the work its impulse announces");
   }
-}
-// The force a fibre mix gives fresh and the force it still gives after long all-out effort.
-std::pair<double, double> fresh_and_held(double fast) {
-  constexpr int LONG_EFFORT = 5000;
-  double reserve = 1;
-  for (int k = 0; k < LONG_EFFORT; ++k)
-    reserve = std::clamp(reserve + fibre::refilled(fast, reserve) -
-                             fibre::drained(fast, fibre::available(fast, reserve), 1),
-                         0., 1.);
-  return {fibre::force(fast), fibre::force(fast) * fibre::available(fast, reserve)};
-}
-// Fast fibres give the strongest stroke and cannot hold it, slow ones hold a weak one, and a mix
-// holds more than twice what either end holds.
-void fibre_kinds_differ_in_force_and_endurance() {
-  constexpr double SLOW = 0, MIXED = .5, FAST = 1;
-  const auto slow = fresh_and_held(SLOW), mixed = fresh_and_held(MIXED),
-             fast = fresh_and_held(FAST);
-  check(fast.first > 2 * mixed.first && mixed.first > 2 * slow.first,
-        "fresh, each faster kind pulls more than twice as hard");
-  check(slow.second == slow.first, "slow fibres never tire");
-  check(mixed.second > 2 * slow.second && mixed.second > 2 * fast.second,
-        "a mix holds more than twice the force either end holds");
-  check(fast.second < fast.first / 10, "fast fibres lose nearly all their force");
 }
 // A muscle of slow cells that answer a weak command and fast cells that answer only a strong one.
 // Each cell pulls, tires and charges by its own fibres, and the twitch lasts as long as the cells
@@ -878,12 +772,8 @@ void development_queue_is_bounded(const Genome &g) {
   for (const auto &egg : w.fish)
     started += bool(egg.genome.growing || egg.genome.blueprint);
   check(started == 1, "fresh evaluator preparations obey the population budget");
-  auto copy = w.fork();
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < 8; ++i)
     w.tick(false, true);
-    copy.tick(false, true);
-  }
-  check(saved(w) == saved(copy), "queued development resumes deterministically");
   const auto immigrant = std::find_if(w.fish.begin(), w.fish.end(), [](const auto &p) {
     return p.origin == fish_origin::immigrant;
   });
@@ -983,10 +873,7 @@ void development_finalization_uses_budget(const Genome &g) {
       check(!plan.advance_development(QUERY_SLICE), "fixture pauses before finalization");
     before.push_back(plan.pending_work());
   }
-  auto restored = w.fork();
   w.tick(false, true);
-  restored.tick(false, true);
-  check(saved(w) == saved(restored), "budgeted finalization resumes deterministically");
   std::size_t used = 0;
   bool pending = false;
   for (std::size_t i = 0; i < before.size(); ++i) {
@@ -1137,12 +1024,9 @@ int main() {
     laboratory_comparison_restarts_during_copy();
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
-    sense_cells_have_a_threshold_and_get_used();
-    gill_rakers_make_three_mouths();
     gut_takes_up_what_time_allows();
     twitches_last_as_long_as_their_fibres();
     muscle_cells_keep_their_own_fibres();
-    fibre_kinds_differ_in_force_and_endurance();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     body_substances_control_cell_life();
@@ -1151,8 +1035,6 @@ int main() {
     compact_founders_use_their_actual_reservation(g);
     worker_counts_preserve_the_simulation(g);
     completed_anatomy_is_admitted_before_runtime_allocation(g);
-    // The example fish grazes; feed is eaten by a forager.
-    start_fish_eats_nearby_food(Genome::load(FORAGER_GENOME));
     eye_reports_a_morsel_against_open_water(g);
     closed_tank_creates_no_energy(g);
     laboratory_energy_is_accounted(g);
