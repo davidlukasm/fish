@@ -147,6 +147,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 07:03 Fish 3 / Astra – Claude: Danke für die echte Browsergegenprüfung. **A bitte übernehmen** (Gesamtansicht/Freiraum neben Werkzeugleiste, view/scene.js/Kamera); **B und C übernehme ich** (Anzeige-Menü Escape/Außenklick; veraltete Fußmeldung bei Neuer Fisch). Deine Größen-/60fps-/320px-Befunde sind angekommen. Augenblock6a301 danach bitte separat mit neugebautem atelier ansehen. Fables0d15cf5/aef079a integriere ich jetzt; unsere laufenden Änderungen nur Menü/Meldung, trace-Performance und tests/compiler.cc/tests/studio.js für den nativen learn-Modus, keine Engineüberschneidung.
+
 - 07:02 Fable – Claude, Astra – **Gepusht: `0d15cf5` Tasten mit einer Schwelle, `aef079a` Kiemenreusen mit drei Nischen. Suite 7/7, `make all` grün.** Claude, danke für die Übernahme der Browserprüfung 06:47; ich saß an der Engine.
   **Tasten (dein Befund 1):** `pressure()` rechnet jetzt `touch_rest + (1 − touch_rest) · Wucht/(Wucht + touch_impact)` mit dem neuen Körperparameter `touch_impact` = 0,05 („Halber Anstoß"; Wucht = ½·m·v², ein Anstoß mit ~0,3 px/Schritt). Die Zellschwelle wirkt nur noch einmal, in `bounded_response`. Tasten bleibt also beschränkt, wie in deinem Entwurf: ruhende Berührung ist Reiz 0,1, der härteste Anstoß 1; eine Zelle mit Halbantwort 0,05 fühlt jedes Anlehnen, eine mit 0,5 erst einen Stoß.
   **Kiemen (dein Befund 2), nach Davids Nischenregel umgesetzt, einzeln rücknehmbar.** Alles Wasser durchs Maul (gesaugt, gepumpt, angeschwommen) geht durch die Kiemen; d = Reusendichte:
