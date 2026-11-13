@@ -1,11 +1,13 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const {spawnSync} = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const file = process.argv[2] || path.resolve(__dirname, '../inspektoren.html');
+const [, , ...args] = process.argv;
+const file = args.find(arg => arg !== '--layout') || path.resolve(__dirname, '../inspektoren.html');
 const html = fs.readFileSync(file, 'utf8');
 // Run the inline SVG generator and event handlers without a browser. In particular, the
 // percentage check reads the drawn paths rather than asking the model for the same range twice.
@@ -145,7 +147,61 @@ function inspect() {
   for (const [id, root] of elements) checkGeometry(root, id);
 }
 
+const xml = input => String(input).replaceAll('&', '&amp;').replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+// Inkscape supplies glyph bounds at the 298 px inner width of the 320 px panel.
+function checkTextLayout() {
+  const spacing = 3;
+  const edgeTolerance = 1;
+  for (const [id, root] of elements) {
+    const view = root.getAttribute('viewBox');
+    if (!view) continue;
+    const [x, y, w, h] = view.split(/\s+/).map(Number);
+    const css = 'text {font:11px sans-serif} text.value {font-variant-numeric:tabular-nums}';
+    const labels = root.findAll(el => el.tag === 'text' && el.textContent);
+    const ink = labels.map((el, i) => {
+      const attrs = Object.entries(el.attributes)
+          .map(([k, v]) => `${k}="${xml(v)}"`).join(' ');
+      return `<text id="t${i}" ${attrs}>${xml(el.textContent)}</text>`;
+    }).join('');
+    const width = 298, height = h * width / w;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"` +
+        ` viewBox="${x} ${y} ${w} ${h}"><style>${css}</style>${ink}</svg>`;
+    const result = spawnSync('inkscape', ['--pipe', '--query-all'], {input: svg, encoding: 'utf8'});
+    if (result.error) throw result.error;
+    assert.equal(result.status, 0, result.stderr);
+    const boxes = result.stdout.trim().split('\n').filter(line => /^t\d+,/.test(line)).map(line => {
+      const [name, ...values] = line.split(',');
+      const [x, y, w, h] = values.map(Number);
+      return {text: labels[Number(name.slice(1))].textContent, x, y, w, h};
+    });
+    assert.equal(boxes.length, labels.length, `${id}: Textmessung unvollständig`);
+    for (const [i, a] of boxes.entries()) {
+      check(a.x >= -edgeTolerance && a.x + a.w <= width + edgeTolerance &&
+            a.y >= -edgeTolerance && a.y + a.h <= height + edgeTolerance,
+            `${id}: „${a.text}“ ragt aus dem SVG`);
+      for (const b of boxes.slice(i + 1)) {
+        const width = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+        const height = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+        const close = width > -spacing && height > 0;
+        check(!close, `${id}: „${a.text}“ und „${b.text}“ haben keinen sichtbaren Abstand`);
+      }
+      for (const grip of grips(root)) {
+        const b = shape(grip);
+        if (!b) continue;
+        const scale = width / w;
+        const bx = (b.x - x) * scale, by = (b.y - y) * scale;
+        const overlap = a.x < bx + b.w * scale && a.x + a.w > bx &&
+                        a.y < by + b.h * scale && a.y + a.h > by;
+        check(!overlap, `${id}: „${a.text}“ überdeckt Griff ${grip.getAttribute('data-name')}`);
+      }
+    }
+  }
+}
+
 inspect();
+if (args.includes('--layout')) checkTextLayout();
 const curveValues = evaluate('CURVES.map(c => [c.name, c.gains[0], c.best, c.gains.at(-1)])');
 const target = {Blatt: [null, 92], Alge: [18, 78, 78], Plankton: [34, 72], Fleisch: [null, 82]};
 const columns = ['am linken Rand', 'am Maximum', 'am rechten Rand'];
@@ -192,6 +248,8 @@ for (const [id, names] of snapshots) {
   }
 }
 
-console.log(`${dragged} Ziehpfade über SVG-Ereignishandler geprüft. Textlayout und Bildrate benötigen einen Browser.`);
+console.log(`${dragged} Ziehpfade über SVG-Ereignishandler geprüft.`);
+if (args.includes('--layout')) console.log('SVG-Textabstände bei 320 px mit Inkscape geprüft.');
+console.log('Trefferflächen und Bildrate im Browser bleiben separat zu prüfen.');
 for (const issue of issues) console.error(issue);
 process.exitCode = issues.size > 0 ? 1 : 0;
