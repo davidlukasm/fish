@@ -530,16 +530,16 @@ export function gutGraphic(state, organ, selected, held = null) {
       center ? '<g class="aid-sac-part' + (selected?.id === center.id ? ' selected' : '') +
                    '" data-select-center="' + escapeText(center.id) + '">' + body + '</g>'
              : '';
-  const food = find('food'), fullness = find('fullness');
-  // Cell places along one wall: -1 inner (food), +1 outer (stretch).
+  const food = find('food'), fullness = find('fullness'), ache = find('ache');
+  // Cell places along one wall: -1 inner (food, then pain), +1 outer (stretch).
   const wall = side => Array.from({length : ATELIER_LIMITS.max_copies}, (_, i) => {
     const k = Math.round((i + .5) / ATELIER_LIMITS.max_copies * G.steps);
     return {x : along(k), y : across(k) + side * (G.tube / 2 + G.cell)};
   });
   // The cells sit as dots along the wall; what they report shows in the pictures below.
-  const plain = (center, side) =>
+  const plain = (center, side, skip = 0) =>
       center ? wall(side)
-                   .slice(0, center.copies)
+                   .slice(skip, skip + center.copies)
                    .map(p => '<circle class="aid-gut-cell" cx="' + fixed(p.x) + '" cy="' +
                              fixed(p.y) + '" r="' + G.cell + '"/>')
                    .join('')
@@ -550,7 +550,7 @@ export function gutGraphic(state, organ, selected, held = null) {
           part(fullness, '<path class="aid-gut-stretch" d="M' + points.join(' L') + '"><title>' +
                              escapeText(label('gut.stretch')) + '</title></path>' +
                              plain(fullness, 1)) +
-          part(food, plain(food, -1)) +
+          part(food, plain(food, -1)) + part(ache, plain(ache, -1, food?.copies ?? 0)) +
           handle('trait:q1', end, across(G.steps), label('gut.handle'), label('diet.gut.axis')),
       dietCurves(state, organ, 'gut') + gutSensePictures(state, organ, held));
 }

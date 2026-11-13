@@ -66,7 +66,7 @@ export const REGION_TYPES = Object.freeze([
     slots : organ => [...Array.from({length : organ.region.features}, (_, i) => 'feature' + (i + 1))
                           .flatMap(node => [port(node, 'in', node), port(node, 'out', node)]),
                       port('reward', 'in', 'reward', [ 'gut', 'state' ], true),
-                      port('harm', 'in', 'harm', [ 'pain' ])],
+                      port('harm', 'in', 'harm', [ 'pain', 'gut' ])],
     settings : {
       features : {least : 1, most : 4, initial : 2, named : false},
       association : unit(1),
