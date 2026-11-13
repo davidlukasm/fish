@@ -284,7 +284,109 @@ void property_overrides_reach_outputs() {
           assert(reachable.count(node.get_id()));
     }
 }
-int region_trace(const std::string &mode) {
+int learning_trace(const Plan &plan, const fishsim::Genome &genome, std::uint64_t seed,
+                   const std::string &sequence) {
+  assert(sequence == "paired" || sequence == "swapped" || sequence == "simultaneous" ||
+         sequence == "none");
+  assert(genome.blueprint->neurons.size() == 3 && plan.groups.size() == 3);
+  std::array<field::NeuronIndex, 2> sources{};
+  std::array<bool, 2> seen{};
+  field::NeuronIndex target = 0;
+  std::vector<int> sensor_inputs;
+  for (std::size_t i = 0; i < genome.blueprint->neurons.size(); ++i) {
+    const auto &cell = genome.blueprint->neurons[i];
+    const auto group = std::find_if(plan.groups.begin(), plan.groups.end(),
+                                    [&](const Group &g) { return g.contains(cell.location); });
+    assert(group != plan.groups.end());
+    if (cell.role == field::Role::Sensor) {
+      const int index = group->name == "A" ? 0 : 1;
+      assert(group->name == "A" || group->name == "B");
+      assert(!seen[index]);
+      seen[index] = true;
+      sources[index] = field::NeuronIndex(i);
+      sensor_inputs.push_back(index);
+    } else {
+      assert(cell.role == field::Role::Nerve && group->name == "learner");
+      target = field::NeuronIndex(i);
+    }
+  }
+  assert(sensor_inputs.size() == 2 && seen[0] && seen[1] && sources[0] != sources[1]);
+  field::Network brain(genome.blueprint);
+  const auto &cell = genome.blueprint->neurons[target];
+  const auto &teacher = cell.hormone_receptors[field::Teaching];
+  assert(teacher.affinity[0] > .99f && teacher.sensitivity > 0);
+  assert(cell.hormone_receptors[field::Consolidation].baseline > 0);
+  std::cout << "t,phase,seed,sequence,maturity,learning,weight_limit,a_input_mean,b_input_mean,"
+               "substance_mean,"
+               "teacher_mean,output_mean,surprise_mean,weight_a,weight_b,consolidation_a,"
+               "consolidation_b,contact_a,contact_b\n";
+  std::array<double, 6> means{};
+  constexpr int EVERY = 50, DEVELOPMENT = 800, PAIRING_END = 3200, PERIOD = 100, PULSE = 10;
+  for (int step = 0; step < 4800; ++step) {
+    const double maturity = std::min(1., .65 + .35 * step / DEVELOPMENT);
+    std::array<float, 2> input{};
+    field::Hormones hormones{};
+    const char *phase = "quiet";
+    if (step < DEVELOPMENT) {
+      phase = "development";
+      input.fill(step % PERIOD < 2 * PULSE ? .6f : 0);
+    } else if (step < PAIRING_END) {
+      phase = "pairing";
+      const int trial = (step - DEVELOPMENT) / PERIOD, within = (step - DEVELOPMENT) % PERIOD;
+      const int independent = int(field::splitmix(seed ^ std::uint64_t(trial)) % (PERIOD - PULSE));
+      const float paired = within < PULSE ? .8f : 0;
+      const float other = within >= independent && within < independent + PULSE ? .8f : 0;
+      input = sequence == "swapped" ? std::array<float, 2>{other, paired}
+                                    : std::array<float, 2>{paired, other};
+      const int onset = sequence == "simultaneous" ? 0 : PULSE + 2;
+      hormones[0] = sequence != "none" && within >= onset && within < onset + PULSE ? 1 : 0;
+    } else if (step >= 4000 && step < 4200) {
+      phase = "probe_a";
+      input[0] = .8f;
+    } else if (step >= 4400 && step < 4600) {
+      phase = "probe_b";
+      input[1] = .8f;
+    }
+    brain.set_body_levels(maturity, 1, 0);
+    std::vector<float> sensors;
+    for (int index : sensor_inputs)
+      sensors.push_back(input[index]);
+    brain.step(sensors, hormones, seed);
+    const std::array<double, 6> values{input[0],
+                                       input[1],
+                                       hormones[0],
+                                       teacher.response(hormones, maturity, 1, 0),
+                                       brain.signal(target),
+                                       brain.surprise(target)};
+    for (std::size_t i = 0; i < means.size(); ++i)
+      means[i] += values[i] / EVERY;
+    if (step % EVERY != EVERY - 1)
+      continue;
+    std::array<float, 2> weights{}, consolidated{};
+    std::array<int, 2> present{};
+    for (const auto &synapse : brain.synapses())
+      if (synapse.target == target)
+        for (int i = 0; i < 2; ++i)
+          if (synapse.source == sources[i]) {
+            weights[i] = synapse.weight;
+            consolidated[i] = synapse.consolidation;
+            present[i] = 1;
+          }
+    std::cout << step + 1 << ',' << phase << ',' << seed << ',' << sequence << ',' << maturity
+              << ',' << brain.plasticity() << ',' << cell.electrical_limit;
+    for (auto &value : means) {
+      std::cout << ',' << value;
+      value = 0;
+    }
+    for (const auto &pair : {weights, consolidated})
+      for (float value : pair)
+        std::cout << ',' << value;
+    std::cout << ',' << present[0] << ',' << present[1] << '\n';
+  }
+  return 0;
+}
+int region_trace(const std::string &mode, std::uint64_t seed = 27139,
+                 const std::string &sequence = "paired") {
   const bool reverse = mode == "motor-reverse", fins = mode == "spine-fin",
              resting = mode == "spine-rest", spine = mode == "spine" || fins || reverse || resting,
              hunger = mode == "state-hunger", olfaction = mode == "olfaction",
@@ -298,6 +400,8 @@ int region_trace(const std::string &mode) {
   genome.cppn = Builder().build(plan);
   genome.compile(false);
   assert(assess(plan, genome).ok());
+  if (mode == "learn")
+    return learning_trace(plan, genome, seed, sequence);
   field::Network brain(genome.blueprint);
   if (spine || internal)
     for (const auto &synapse : brain.synapses())
@@ -457,6 +561,9 @@ int region_trace(const std::string &mode) {
 }
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
+  if (argc >= 2 && argc <= 4 && std::string(argv[1]) == "learn")
+    return region_trace("learn", argc > 2 ? std::stoull(argv[2]) : 27139,
+                        argc > 3 ? argv[3] : "paired");
   if (argc == 2 &&
       (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]).find("spine") == 0 ||
        std::string(argv[1]) == "motor-reverse" || std::string(argv[1]) == "state-hunger" ||

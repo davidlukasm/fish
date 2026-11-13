@@ -2,7 +2,6 @@ import {
   allCenters,
   contactCenters,
   contactRows,
-  endpointCenters,
   producers,
   receivers,
   validCellLink
@@ -17,16 +16,25 @@ export function planTrace(document, sites, requested, capabilities) {
   const classes = new Map(
       centers.map(center => [center.id, center.role === 'nerve' ? nerveClass(center)
                                                                 : {sign : 1, modulator : 0}]));
+  const endpoints = new Map();
+  for (const organ of document.organs)
+    if (!endpoints.has(organ.id))
+      endpoints.set(organ.id, organ.centers);
+  // An organ endpoint takes precedence over a cell with the same ID.
+  for (const organ of document.organs)
+    for (const center of organ.centers)
+      if (!endpoints.has(center.id))
+        endpoints.set(center.id, [ center ]);
   for (const route of routedLinks(document, sites))
-    for (const source of endpointCenters(document, route.from))
-      for (const target of endpointCenters(document, route.to)) {
+    for (const source of endpoints.get(route.from) ?? [])
+      for (const target of endpoints.get(route.to) ?? []) {
         const pair = source.id + '>' + target.id;
         if (pairs.has(pair) ||
             !validCellLink(source, locations.get(source.site), target, locations.get(target.site)))
           continue;
         pairs.add(pair);
         const cl = classes.get(source.id),
-              teaching = target.role === 'nerve' && isTeachingSource(source);
+              teaching = target.role === 'nerve' && source.role === 'nerve' && cl.modulator > .5;
         if (!teaching)
           links.push({
             from : source.id,
@@ -39,9 +47,13 @@ export function planTrace(document, sites, requested, capabilities) {
           links.push({from : source.id, to : target.id, kind : 'teaching', sign : 0});
       }
   if (capabilities)
-    for (const substance of document.substances)
-      for (const source of producers(document, substance.index, capabilities))
-        for (const target of receivers(document, substance.index, capabilities))
+    for (const substance of document.substances) {
+      const sources = producers(document, substance.index, capabilities);
+      if (!sources.length)
+        continue;
+      const targets = receivers(document, substance.index, capabilities);
+      for (const source of sources)
+        for (const target of targets)
           links.push({
             from : source.id,
             to : target.id,
@@ -49,6 +61,7 @@ export function planTrace(document, sites, requested, capabilities) {
             sign : 0,
             substance : substance.index
           });
+    }
   return traceLinks(starts, links);
 }
 export function cppnTrace(state, requested) {

@@ -188,6 +188,10 @@ export class OrganStudio {
     document.getElementById('open-station-hub')
         ?.addEventListener('click', () => this.navigate('hub'));
     document.addEventListener('keydown', event => this.keydown(event));
+    document.addEventListener('click', event => {
+      if (!event.target.closest?.('.aid-scene-options'))
+        this.closeSceneOptions();
+    });
     this.renderShell();
     this.bootstrap();
   }
@@ -219,6 +223,15 @@ export class OrganStudio {
     const footer = this.root.querySelector('.aid-message');
     if (footer)
       footer.textContent = this.state.notice;
+  }
+  closeSceneOptions(focus = false) {
+    const menu = this.root.querySelector('.aid-scene-options[open]');
+    if (!menu)
+      return false;
+    menu.open = false;
+    if (focus)
+      menu.querySelector('summary')?.focus();
+    return true;
   }
   navigate(station) {
     this.interruptPointer();
@@ -538,6 +551,7 @@ export class OrganStudio {
   // Another fish starts afresh: nothing of the last one stays armed, pending or zoomed in on.
   loadFish(doc) {
     this.interruptPointer();
+    this.notice('');
     this.pendingWire = null;
     this.release();
     this.setMode('fish');
@@ -920,6 +934,10 @@ export class OrganStudio {
     changeOn(this, element, FISH_CHANGES);
   }
   keydown(event) {
+    if (event.key === 'Escape' && this.closeSceneOptions(true)) {
+      event.preventDefault();
+      return;
+    }
     if (this.regionKey(event) || this.responseKey(event))
       return;
     const handle = event.target.closest?.('[data-vision-handle]');

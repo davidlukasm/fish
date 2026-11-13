@@ -1328,6 +1328,102 @@ async function checkForagingChoice(model, sites, root) {
             'A new meal still stops the learned search movement');
 }
 
+async function learningDocument(model, capabilities) {
+  const {valuePlan} = await import('../ui/studio/model/value_region.js');
+  const {learningTimeOf} = await import('../ui/tuning.js');
+  const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const {sites} = capabilities;
+  const learner = model.addNeuron(model.newDocument('Lernen'), 'learn', sites, {x : 500, y : 325});
+  const feature = valuePlan(null, {
+                    region : {features : 1, association : learningTimeOf(32), teaching : 1}
+                  }).nodes[0];
+  let doc = model.updateCenter(learner.document, learner.centerId, {...feature.set, copies : 1});
+  // The actual value-region feature provides developmental rhythm and the mature competition gate.
+  for (const [effect, patch] of Object.entries(feature.effects))
+    doc = model.updateReceptor(doc, learner.centerId, Number(effect), patch);
+  doc = model.updateReceptor(doc, learner.centerId, E.teaching, {
+    active : 1,
+    baseline : 0,
+    sensitivity : 1,
+    half : .5,
+    width : 0,
+    steepness : 0,
+    substance : 0
+  });
+  doc = model.updateReceptor(doc, learner.centerId, E.consolidation,
+                             {active : 1, baseline : 1, sensitivity : 0});
+  const nose = model.addOrgan(doc, 'nose', sites, {x : 245, y : 425});
+  doc = nose.document;
+  for (const center of model.allCenters(doc).filter(c => c.organType === 'nose'))
+    doc = model.updateCenter(doc, center.id, {copies : 1});
+  const wired = model.connectSelections(doc, {kind : 'organ', id : nose.organId},
+                                        {kind : 'center', id : learner.centerId}, sites);
+  assert.ok(wired);
+  doc = model.updateWire(wired.document, wired.wireId, {pairing : 'both'});
+  const centers = model.allCenters(doc), plan = model.compileDocument(doc, sites);
+  plan.groups.forEach((g, i) => g.name = centers[i].role === 'nerve' ? 'learner'
+                                         : g.side < 0                ? 'A'
+                                                                     : 'B');
+  return plan;
+}
+
+async function checkLearningTrace(model, capabilities, root) {
+  const plan = await learningDocument(model, capabilities);
+  const run = (seed, sequence) => {
+    const output = execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'learn',
+          String(seed), sequence
+        ],
+        {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000});
+    const [keys, ...lines] = output.trim().split('\n').map(line => line.split(','));
+    const rows = lines.map(
+        line => Object.fromEntries(keys.map(
+            (key, i) => [key, [ 'phase', 'sequence' ].includes(key) ? line[i] : Number(line[i])])));
+    assert.equal(rows.length, 96);
+    for (const row of rows) {
+      assert.ok(Object.values(row).every(v => typeof v === 'string' || Number.isFinite(v)));
+      assert.equal(row.learning, 1);
+      for (const side of ['a', 'b']) {
+        assert.ok(row['weight_' + side] >= 0 && row['weight_' + side] <= row.weight_limit);
+        assert.ok(row['consolidation_' + side] >= 0 && row['consolidation_' + side] <= 1);
+        assert.ok([ 0, 1 ].includes(row['contact_' + side]));
+      }
+    }
+    const developed = rows.find(row => row.t === 800);
+    assert.equal(developed.weight_limit, .25);
+    assert.equal(developed.weight_a, developed.weight_limit);
+    assert.equal(developed.weight_b, developed.weight_limit);
+    return {output, rows, at : t => rows.find(row => row.t === t)};
+  };
+  for (const seed of [27139, 71237, 99173]) {
+    const paired = run(seed, 'paired'), swapped = run(seed, 'swapped');
+    for (const row of paired.rows.filter(r => r.t <= 4000)) {
+      const other = swapped.at(row.t);
+      for (const prefix of ['weight_', 'consolidation_']) {
+        assert.ok(Math.abs(row[prefix + 'a'] - other[prefix + 'b']) < 1e-6);
+        assert.ok(Math.abs(row[prefix + 'b'] - other[prefix + 'a']) < 1e-6);
+      }
+    }
+    const simultaneous = run(seed, 'simultaneous'), none = run(seed, 'none');
+    const first = paired.at(900), limit = first.weight_limit;
+    assert.ok(first.weight_a < .2 * limit,
+              'In this initially saturated fixture the delayed teaching pulse reduces A');
+    assert.ok(simultaneous.at(900).weight_a > .95 * limit && none.at(900).weight_a > .95 * limit,
+              'The same inputs without teaching or with simultaneous teaching retain A');
+    assert.ok(none.rows.every(row => row.substance_mean === 0));
+    assert.ok(paired.rows.filter(row => row.t > 3200 && row.t <= 4000)
+                  .every(row => row.a_input_mean === 0 && row.b_input_mean === 0 &&
+                                row.substance_mean === 0));
+    if (seed === 27139)
+      assert.equal(run(seed, 'paired').output, paired.output,
+                   'A fixed native experiment repeats exactly');
+  }
+}
+
 async function internalRegionDocument(model, capabilities, mode) {
   const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
   const {sites} = capabilities, ids = {};
@@ -1785,6 +1881,37 @@ async function checkTraceEffects(model, capabilities) {
       assert.equal(trace.legs.some(leg => leg.from === learner.centerId), !teaches);
     }
   }
+  const sender = {...model.findCenter(doc, next.centerId).center, id : 'sender'},
+        target = {...model.findCenter(doc, learner.centerId).center, id : 'target'};
+  const endpoints = {
+    ...model.newDocument('Endpunkte'),
+    organs : [
+      {id : 'shared', type : 'brain', centers : [ sender ]},
+      {id : 'other', type : 'brain', centers : [ {...sender, id : 'shared'}, target ]}
+    ],
+    wires : [
+      {id : 'organ-wire', from : 'shared', to : target.id},
+      {id : 'cell-wire', from : sender.id, to : target.id}
+    ]
+  };
+  const routed = model.planTrace(endpoints, sites, [ sender.id, 'shared', sender.id, 'missing' ]);
+  assert.deepEqual(routed.starts, [ sender.id, 'shared' ]);
+  assert.deepEqual(routed.legs, [ {
+                     from : sender.id,
+                     to : target.id,
+                     kind : 'electrical',
+                     sign : 1,
+                     rhythm : false,
+                     sourceSign : 1,
+                     level : 0
+                   } ],
+                   'Organ endpoints take precedence; overlapping cell routes appear only once');
+  const moved = structuredClone(endpoints);
+  moved.organs[1].centers[1].site = -1;
+  assert.deepEqual(model.planTrace(moved, sites, [ sender.id ]).legs, [],
+                   'A later document uses its own cell locations');
+  assert.deepEqual(model.planTrace(endpoints, sites, [ sender.id, 'shared' ]), routed,
+                   'Returning to the prior document restores the same trace');
 }
 
 async function checkResponseControls(model, capabilities, clicks) {
@@ -2606,6 +2733,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  if (process.argv.includes('--learn')) {
+    await checkLearningTrace(model, sitesResult, root);
+    console.log('Atelier: native Lernverläufe, Lehrzeitpunkt, Festigung und Gegenfolgen: OK');
+    return;
+  }
   if (process.argv.includes('--region-traces') || process.argv.includes('--state-hunger') ||
       process.argv.includes('--olfaction')) {
     const modes = [ 'state-hunger', 'olfaction' ].filter(
@@ -2698,6 +2830,7 @@ async function checkHormoneSystems(model, capabilities) {
       await checkReversePattern(model, sitesResult.sites, root);
       await checkForagingChoice(model, sitesResult.sites, root);
       await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
+      await checkLearningTrace(model, sitesResult, root);
       await checkResponseControls(model, sitesResult, clicks);
       await checkFunctionalRegions(model, sitesResult);
       checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
