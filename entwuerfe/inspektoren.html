@@ -2307,11 +2307,11 @@ function drawFins() {
         .addEventListener('pointerdown', () => { F.chosen = i; F.group = 0; redraw(); });
       const a = Math.PI / 2 * f.q, back = [Math.cos(a), s * Math.sin(a)];
       f.groups.forEach((g, k) => {
-        const scale = 14 + 26 * groupForce(g) / 6, chosen = i === F.chosen && k === F.group, off = (k - (f.groups.length - 1) / 2) * 5;
+        const scale = 46 * groupForce(g) / Math.max(...all.map(groupForce)), chosen = i === F.chosen && k === F.group, off = (k - (f.groups.length - 1) / 2) * 5;
         const ox = tipX - back[1] * off * s, oy = tipY + back[0] * off * s;
         const arrow = (dir, share, colour) => { const ex = ox + dir[0] * scale * share, ey = oy + dir[1] * scale * share;
-          el('path', {d : `M${ox} ${oy} L${ex} ${ey}`, stroke : colour, 'stroke-width' : chosen ? 2.6 : 1.6, 'stroke-linecap' : 'round', opacity : chosen ? 1 : .7}, svg);
-          if (share > .08) { const hx = ex - dir[0] * 5, hy = ey - dir[1] * 5; el('path', {d : `M${ex} ${ey} L${hx - dir[1] * 3.5} ${hy + dir[0] * 3.5} L${hx + dir[1] * 3.5} ${hy - dir[0] * 3.5} Z`, fill : colour, opacity : chosen ? 1 : .7}, svg); }
+          el('path', {d : `M${ox} ${oy} L${ex} ${ey}`, stroke : colour, 'stroke-width' : chosen ? 2.8 : 1.2, 'stroke-linecap' : 'round', opacity : chosen ? 1 : .35}, svg);
+          if (share > .08) { const hx = ex - dir[0] * 5, hy = ey - dir[1] * 5; el('path', {d : `M${ex} ${ey} L${hx - dir[1] * 3.5} ${hy + dir[0] * 3.5} L${hx + dir[1] * 3.5} ${hy - dir[0] * 3.5} Z`, fill : colour, opacity : chosen ? 1 : .35}, svg); }
           return [ex, ey]; };
         const [bx, by] = arrow(back, 1 - g.p, '#79d2be');
         arrow([-back[0], -back[1]], g.p, '#eaa886');
@@ -2330,13 +2330,13 @@ function drawFins() {
   txt(svg, 4, cy + 4, f.kind, {style : 'font-weight:600'});
   signChip(svg, 110, cy, '−', () => { g.cells = Math.max(1, g.cells - 1); redraw(); }, g.cells > 1, 7);
   txt(svg, 128, cy + 4, g.cells, {'text-anchor' : 'middle', class : 'value'});
-  signChip(svg, 146, cy, '+', () => { g.cells = Math.min(8, g.cells + 1); redraw(); }, g.cells < 8, 7);
+  signChip(svg, 146, cy, '+', () => { g.cells = Math.min(16, g.cells + 1); redraw(); }, g.cells < 16, 7);
   txt(svg, 160, cy + 4, 'Zellen der Gruppe', {style : 'font-size:10px'});
   if (f.groups.length > 1) signChip(svg, 284, cy, '×', () => { f.groups.splice(F.group, 1); F.group = 0; redraw(); }, true, 7);
   const gy = cy + 22;
   txt(svg, 4, gy + 4, 'Gruppen', {style : 'font-size:10px'});
-  signChip(svg, 128, gy, '+', () => { f.groups.push({p : g.p < .5 ? .9 : .1, cells : 2, fast : g.fast}); F.group = f.groups.length - 1; redraw(); }, f.groups.length < 3, 7);
-  txt(svg, 146, gy + 4, f.groups.length + ' von höchstens 3', {style : 'font-size:10px'});
+  signChip(svg, 128, gy, '+', () => { f.groups.push({p : g.p < .5 ? .9 : .1, cells : 2, fast : g.fast}); F.group = f.groups.length - 1; redraw(); }, true, 7);
+  txt(svg, 146, gy + 4, f.groups.length === 1 ? 'eine Gruppe' : f.groups.length + ' Gruppen', {style : 'font-size:10px'});
   const fy = gy + 26, fx0 = 92, fx1 = 260;
   if (!document.getElementById('fibregrad')) { const gr = el('linearGradient', {id : 'fibregrad'}, el('defs', {}, svg)); el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, gr); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, gr); }
   el('rect', {x : fx0, y : fy - 4, width : fx1 - fx0, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, svg);
@@ -2355,7 +2355,8 @@ const FIN_MOVES = [['vorwärts', 'row', 'row'], ['drehen', 'row', 'brake'], ['r�
 function finDrives(left, right) {
   let push = 0, across = 0, turn = 0;
   for (const f of FINS.fins) {
-    const a = Math.PI / 2 * f.q, arm = .5 - f.at, lever = .3;
+    // Cross lever about 0.25 + 0.375·(u + |2v − 1|), here its middle; length lever from −1 (tail) to 1.
+    const a = Math.PI / 2 * f.q, arm = 1 - 2 * f.at, lever = .55;
     for (const [side, want] of [[0, left], [1, right]]) for (const g of f.groups) {
       if ((want === 'row') !== (g.p < .5)) continue;
       const net = groupForce(g) * (1 - 2 * g.p);
@@ -2381,7 +2382,10 @@ function finFrame(now) {
   if (P.reset || (P.lastK === 2 && k === 0)) { P.x = 150; P.y = 93; P.angle = Math.PI; P.v = 0; P.vs = 0; P.w = 0; P.trail = []; P.reset = false; }
   P.lastK = k;
   P.labels.forEach((l, j) => l.setAttribute('style', j === k ? 'fill:#f4efd8' : ''));
-  const beat = (t % 400) < 200, [, left, right] = FIN_MOVES[k];
+  // The stroke takes as long as the fibres of the driven groups twitch (4 to 48 steps, 40 ms a step
+  // here); a rest as long follows, so every stroke sweeps fully.
+  const [, left, right] = FIN_MOVES[k], driven = FINS.fins.flatMap(f => f.groups).filter(g => (left === 'row') === (g.p < .5) || (right === 'row') === (g.p < .5));
+  const period = 40 * (driven.length ? driven.reduce((t2, g) => t2 + strokeLen(g.fast), 0) / driven.length : 12), beat = (t % (2 * period)) < period;
   const d = beat ? finDrives(left, right) : {push : 0, across : 0, turn : 0};
   P.v = P.v * .96 + .012 * d.push; P.vs = P.vs * .9 + .01 * d.across; P.w = P.w * .9 + .0025 * d.turn;
   P.angle += P.w;
@@ -2389,12 +2393,12 @@ function finFrame(now) {
   P.x = clamp(P.x + P.v * hx - P.vs * hy, 20, 280); P.y = clamp(P.y + P.v * hy + P.vs * hx, 30, 156);
   P.trail.push([P.x, P.y]); if (P.trail.length > 400) P.trail.shift();
   P.track.setAttribute('d', 'M' + P.trail.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L'));
-  const flap = beat ? Math.sin((t % 200) / 200 * Math.PI) : 0, deg = P.angle * 180 / Math.PI;
+  const flap = beat ? Math.sin((t % period) / period * Math.PI) : 0, deg = P.angle * 180 / Math.PI;
   let fins = '';
   for (const f of FINS.fins) {
     const fx = 14 - 28 * f.at, mean = f.groups.reduce((t2, g) => t2 + g.fast, 0) / f.groups.length;
     for (const [s, want] of [[-1, left], [1, right]]) {
-      const driven = f.groups.some(g => (want === 'row') === (g.p < .5)), swing = driven ? (want === 'row' ? 1 : -1) * flap * 35 * s : 0;
+      const net = f.groups.filter(g => (want === 'row') === (g.p < .5)).reduce((t2, g) => t2 + Math.abs(1 - 2 * g.p) * groupForce(g), 0), swing = (want === 'row' ? 1 : -1) * flap * Math.min(40, 12 * net) * s;
       fins += `<path d="M${fx} ${s * 4} l${-3} ${s * 9} l6 0 z" fill="${fibreColour(mean)}" transform="rotate(${swing.toFixed(1)} ${fx} ${s * 4})"/>`;
     }
   }
