@@ -1472,7 +1472,8 @@ function drawBladder() {
   const c = document.getElementById('bladfill'); c.replaceChildren();
   const L = 56, R = 290, top = 26, base = 116, N = 400, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
   const fill = [BLAD.fill];
-  for (let st = 1; st <= N; st++) fill.push(clamp(fill[st - 1] + .002 * 8 * BLAD.command * (st <= 250 ? 1 : 0), 0, 1));
+  // The same cells that make its capacity fill or empty it: 0.002 × their strength × the command.
+  for (let st = 1; st <= N; st++) fill.push(clamp(fill[st - 1] + .002 * BLAD.cap * BLAD.command * (st <= 250 ? 1 : 0), 0, 1));
   const sign = el('g', {}, c);
   // The command: positive fills, negative empties; a bar from the middle.
   const mid = (top + base) / 2, CY = v => mid - (base - top) / 2 * v;
