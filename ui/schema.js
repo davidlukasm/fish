@@ -1077,6 +1077,7 @@ export const DIGESTION = Object.freeze({
   "fastest" : 4.0,
   "ache_flesh" : 1.5,
   "ache_fibre" : 0.55,
+  "ache_fibre_stay" : 400,
   "cramp" : 0.25,
   "diarrhoea" : 2,
   "harm" : 0.0015,

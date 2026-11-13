@@ -14,6 +14,10 @@ namespace test {
 struct StateAccess;
 }
 namespace fishsim {
+// The stuffs food is made of, as the gut keeps them apart (physiology.hh, digestion::COURSES).
+namespace digestion {
+enum Stuff { flesh, pulp, fibre, shell, soft, sap, STUFFS };
+}
 struct Genome;
 struct Field;
 struct BrainInterface;
@@ -66,7 +70,7 @@ struct BodyState {
   double gut_energy = 0, gut_spent = 0, gut_meal_flesh = 0, gut_meal_fibre = 0, gut_plant = 0,
          gut_fill = 0;
   // What the gut holds of each stuff (digestion::Stuff), still closed and open.
-  std::array<double, 4> gut_closed{}, gut_open{};
+  std::array<double, digestion::STUFFS> gut_closed{}, gut_open{};
   // How much the gut hurts, 0 to 1: it holds more fibre than it can pass.
   double gut_irritation = 0;
   double digestion = 0, digested = 0, feces_pending = 0, feces_plant = 0;

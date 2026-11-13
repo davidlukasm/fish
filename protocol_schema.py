@@ -1375,6 +1375,7 @@ class Digestion:
     FASTEST = 4.0
     ACHE_FLESH = 1.5
     ACHE_FIBRE = 0.55
+    ACHE_FIBRE_STAY = 400
     CRAMP = 0.25
     DIARRHOEA = 2
     HARM = 0.0015

@@ -145,14 +145,13 @@ inline double reserve_capacity(const Body &b) {
 // much. The largest gut muscle moves the content `fastest` times as fast as a resting gut. A
 // full gut hurts when the meal in it is the wrong one for its pace: flesh that stays longer
 // than `ache_flesh` times `flesh_spoil`, and the later the less of the meal is flesh; or a meal
-// that is fibre by more than the share `ache_fibre` and stays shorter than `fibre_open` times
+// that is fibre by more than the share `ache_fibre` and stays shorter than `ache_fibre_stay` times
 // that excess. Past these limits by the share `cramp` it hurts as much as it can, empties the
 // gut `diarrhoea` times faster on top and costs `harm` of the health per step. A gut of the
 // greatest length leaves the gonads `belly` less room; per body length it weighs `wall_mass`
 // of the tissue and raises the basal metabolism by `upkeep`. Faeces leave as a flock once they
 // amount to `pellet` of what the gut holds.
 namespace digestion {
-enum Stuff { flesh, pulp, fibre, shell, soft, sap, STUFFS };
 // Steps to break a stuff half open, to take it up, and to spoil it as fast as that; 0: open at
 // once, never spoiling. `best`: the share of it the gut can take up at all.
 struct Course {
@@ -386,7 +385,8 @@ inline double gut_pace(const Body &b, const PhysiologyParameters &p) {
 inline double gut_ache(double stay, double flesh, double fibre) {
   using namespace digestion;
   const double spoiling = flesh > 0 ? stay * flesh / (ache_flesh * flesh_spoil) - 1 : 0,
-               closed = fibre > ache_fibre ? 1 - stay / (fibre_open * (fibre - ache_fibre)) : 0;
+               closed =
+                   fibre > ache_fibre ? 1 - stay / (ache_fibre_stay * (fibre - ache_fibre)) : 0;
   return std::clamp(std::max(spoiling, closed) / cramp, 0., 1.);
 }
 // Share of what the gut holds now that it takes up as fast as it moves now.

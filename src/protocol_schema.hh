@@ -2042,6 +2042,7 @@ inline constexpr int sharpness = 4;
 inline constexpr double fastest = 4.0;
 inline constexpr double ache_flesh = 1.5;
 inline constexpr double ache_fibre = 0.55;
+inline constexpr int ache_fibre_stay = 400;
 inline constexpr double cramp = 0.25;
 inline constexpr int diarrhoea = 2;
 inline constexpr double harm = 0.0015;
