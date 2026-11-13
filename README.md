@@ -21,7 +21,7 @@ Python 3, Node.js (Nix: automatisch), Make, C++17: `./start.sh`, http://localhos
 
 ## Startpopulation
 
-Fertige Fische stehen im Fischregal (`genomes/regal`, noch leer), getrennt davon die Entwürfe (`genomes/entwuerfe`). Beide sind überall wählbar. `make starter` baut ihre Genome. Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
+Fertige Fische stehen im Fischregal (`genomes/regal`), getrennt davon die Entwürfe (`genomes/entwuerfe`). Beide sind überall wählbar. `make starter` baut ihre Genome. Pflanzenfresser starten an Blättern, andere Linien an Futterquellen.
 
 ## Körper und Evolution
 

@@ -1,7 +1,7 @@
 import {sceneState} from '../state.js';
 import {sessionState} from '../session.js';
 import {populationOverview} from '../population_model.js';
-import {laborRequest} from '../labor/station.js';
+import {laborRequest} from '../labor/live_station.js';
 import {figureText, hubShell, LIVE_FIGURES, liveState, sparkline} from './view/hub.js';
 
 const TICK_MS = 1000, OVERVIEW_TICKS = 5;

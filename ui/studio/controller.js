@@ -60,7 +60,7 @@ import {trialMethods} from './trials.js';
 import {CPPN_CLICKS} from './cppn.js';
 import {gestureMethods} from './gestures.js';
 import {StationHub} from './hub.js';
-import {BreedingStation, TrialStation} from '../labor/station.js';
+import {BreedingStation, TrialStation} from '../labor/live_station.js';
 
 let instance = null;
 const FIELD_KEY_STEP = Object.freeze({resolution : .02});
