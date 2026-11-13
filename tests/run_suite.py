@@ -47,9 +47,9 @@ def main():
                  for name, parts in JAVASCRIPT.items() if name in selected for part in parts]
     if "interface" in selected:
         commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
-    # Balance the long checks across two workers; compiler and texts can fill the tail.
-    priority = ["invariants", "studio ui", "interface", "studio region-controls",
-                "studio canvas", "compiler", "texts"]
+    # Balance the long checks across two workers. Keep enough work queued to finish both lanes.
+    priority = ["invariants", "studio ui", "studio region-controls", "compiler",
+                "interface", "studio canvas", "texts"]
     order = {name: i for i, name in enumerate(priority)}
     commands.sort(key=lambda entry: order.get(entry[0], len(order)))
 

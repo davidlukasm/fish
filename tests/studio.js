@@ -1646,7 +1646,7 @@ async function learningDocument(model, capabilities) {
   return plan;
 }
 
-async function checkLearningTrace(model, capabilities, root) {
+async function checkLearningTrace(model, capabilities, root, checkCounterexamples = true) {
   const plan = await learningDocument(model, capabilities);
   const run = (seed, sequence) => {
     const output = nativeRegionTrace(plan, root, [ 'learn', String(seed), sequence ]);
@@ -1671,20 +1671,24 @@ async function checkLearningTrace(model, capabilities, root) {
     return {output, rows, at : t => rows.find(row => row.t === t)};
   };
   {
-    const seed = 27139, paired = run(seed, 'paired'), swapped = run(seed, 'swapped');
-    for (const row of paired.rows.filter(r => r.t <= 4000)) {
-      const other = swapped.at(row.t);
-      for (const prefix of ['weight_', 'consolidation_']) {
-        assert.ok(Math.abs(row[prefix + 'a'] - other[prefix + 'b']) < 1e-6);
-        assert.ok(Math.abs(row[prefix + 'b'] - other[prefix + 'a']) < 1e-6);
+    const seed = 27139, paired = run(seed, 'paired'), none = run(seed, 'none');
+    if (checkCounterexamples) {
+      const swapped = run(seed, 'swapped');
+      for (const row of paired.rows.filter(r => r.t <= 4000)) {
+        const other = swapped.at(row.t);
+        for (const prefix of ['weight_', 'consolidation_']) {
+          assert.ok(Math.abs(row[prefix + 'a'] - other[prefix + 'b']) < 1e-6);
+          assert.ok(Math.abs(row[prefix + 'b'] - other[prefix + 'a']) < 1e-6);
+        }
       }
+      const simultaneous = run(seed, 'simultaneous').at(900);
+      assert.ok(simultaneous.weight_a > .95 * simultaneous.weight_limit,
+                'Simultaneous teaching retains A');
     }
-    const simultaneous = run(seed, 'simultaneous'), none = run(seed, 'none');
     const first = paired.at(900), limit = first.weight_limit;
     assert.ok(first.weight_a < .2 * limit,
               'In this initially saturated fixture the delayed teaching pulse reduces A');
-    assert.ok(simultaneous.at(900).weight_a > .95 * limit && none.at(900).weight_a > .95 * limit,
-              'The same inputs without teaching or with simultaneous teaching retain A');
+    assert.ok(none.at(900).weight_a > .95 * limit, 'The same inputs without teaching retain A');
     assert.ok(none.rows.every(row => row.substance_mean === 0));
     assert.ok(paired.rows.filter(row => row.t > 3200 && row.t <= 4000)
                   .every(row => row.a_input_mean === 0 && row.b_input_mean === 0 &&
@@ -2945,7 +2949,7 @@ async function checkHormoneSystems(model, capabilities) {
   if (regionControls || process.argv.length === 2) {
     await checkSpinalPattern(model, sitesResult.sites, root);
     await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
-    await checkLearningTrace(model, sitesResult, root);
+    await checkLearningTrace(model, sitesResult, root, !regionControls);
     await checkResponseControls(model, sitesResult, clicks);
     await checkFunctionalRegions(model, sitesResult);
     checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,
