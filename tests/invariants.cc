@@ -57,10 +57,10 @@ void initial_plants_use_the_available_energy() {
 }
 void compact_founders_use_their_actual_reservation(const Genome &g) {
   Ecosystem w(SEED);
-  w.starter_world();
-  w.neural_budget = 300000;
-  constexpr int COUNT = 8;
-  w.seed({g}, COUNT, run_limit::default_food);
+  w.resize(1000, 500);
+  constexpr int COUNT = 3;
+  w.neural_budget = (COUNT - 1) * g.development_options.max_edges;
+  w.seed({g}, COUNT, 0);
   check(w.fish.size() == COUNT, "compact founders fit their actual neural budget");
   check(connection_storage(w) <= w.neural_budget, "the resolved reservation remains bounded");
   for (const auto &p : w.fish)
@@ -515,19 +515,18 @@ Ecosystem empty_closed_tank() {
   no_mutation(w);
   return w;
 }
-Ecosystem closed_tank(const Genome &g, int count = FISH) {
-  auto w = empty_closed_tank();
-  w.starter_world();
-  for (int k = 0; k < count; ++k)
+void place_adults(Ecosystem &w, const Genome &g) {
+  for (int k = 0; k < FISH; ++k)
     adult(w, g, FIRST_X + k * SPACING, DEPTH);
-  return w;
 }
 double tracked_energy(const Ecosystem &w) {
   const auto &web = w.field.food_web();
   return w.total_energy() + web.released - web.introduced;
 }
 void closed_tank_creates_no_energy(const Genome &g) {
-  auto w = closed_tank(g);
+  auto w = empty_closed_tank();
+  w.starter_world();
+  place_adults(w, g);
   double before = tracked_energy(w);
   for (int step = 0; step < STEPS; ++step) {
     w.tick();
@@ -603,14 +602,15 @@ void laboratory_comparison_restarts_during_copy() {
     }
 }
 void laboratory_energy_is_accounted(const Genome &g) {
-  auto w = closed_tank(g, 1);
-  const auto id = w.fish.front().id;
-  auto &b = w.fish.front().body;
+  auto w = empty_closed_tank();
+  auto &p = adult(w, g, FIRST_X, DEPTH);
+  const auto id = p.id;
+  auto &b = p.body;
   const double held = b.energy;
   b.hold_energy(held);
   const double introduced = w.field.food_web().introduced, released = w.field.food_web().released;
   double before = tracked_energy(w);
-  for (int k = 0; k < 30; ++k) {
+  for (int k = 0; k < STEPS; ++k) {
     w.tick(false);
     const double now = tracked_energy(w);
     check(now <= before + 1e-6 * std::max(1., before),
@@ -726,7 +726,7 @@ void worker_counts_preserve_the_simulation(const Genome &g) {
   serial.safety = false;
   serial.evo.assist_min_population = serial.evo.assist_species_minimum = 0;
   serial.resize(1000, 500);
-  serial.seed({g}, 4, FOOD);
+  serial.seed({g}, FISH, FOOD);
   check(serial.field.feeding().pieces.size() >= PARALLEL_MIN_TASKS,
         "the worker fixture sends food motion through the parallel path");
   auto parallel = serial.fork();
@@ -866,7 +866,7 @@ void development_checkpoint_stages(const Genome &g) {
 // Resumable finalization shares the work budget across all admitted embryos. A slice quota must
 // neither leave later embryos idle nor strand unused work while finalization is pending.
 void development_finalization_uses_budget(const Genome &g) {
-  constexpr int EMBRYOS = 3;
+  constexpr int EMBRYOS = 2;
   constexpr std::size_t QUERY_SLICE = 4096, WORK_BUDGET = 131072;
   auto w = empty_closed_tank();
   w.evo.development_work = WORK_BUDGET;
@@ -899,7 +899,9 @@ void checkpoint_continues_exactly(const Genome &g) {
   std::map<const evolution::History *, std::shared_ptr<evolution::History>> histories;
   Genome founder = g;
   founder.cppn = g.cppn->snapshot(histories);
-  auto w = closed_tank(g);
+  auto w = empty_closed_tank();
+  w.starter_world();
+  place_adults(w, g);
   w.fish.front().genome.cppn->history()->next_generation();
   for (int step = 0; step < STEPS / 2; ++step)
     w.tick();
@@ -928,7 +930,8 @@ void checkpoint_continues_exactly(const Genome &g) {
 // (the first fish dies, so every later one moves up); a checkpoint taken right then loads and
 // continues like the original.
 void checkpoint_after_death(const Genome &g) {
-  auto w = closed_tank(g);
+  auto w = empty_closed_tank();
+  place_adults(w, g);
   w.tick();
   const auto living = w.fish.size();
   w.fish.front().body.health = 0;

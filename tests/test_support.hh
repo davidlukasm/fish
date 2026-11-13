@@ -45,7 +45,7 @@ inline Individual &adult(Ecosystem &w, const Genome &g, double x, double y) {
   b.hatch_age = 0;
   b.age = ADULT_AGE;
   std::vector<float> input(g.interface->sensory.size(), 0);
-  for (int tick = 0; tick < 320; ++tick) {
+  for (int tick = 0; tick < ADULT_AGE; ++tick) {
     StateAccess::brain(b)->grow({}, 0, 1, 0, 1e6);
     StateAccess::brain(b)->step(input, {}, b.identity);
   }

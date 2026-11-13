@@ -863,19 +863,28 @@ async function checkInitialFish(model, capabilities, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
   const {stationShell} = await import('../ui/studio/view/shell.js');
-  const native = body => JSON.parse(execFileSync(
-      'python3',
-      [
-        '-B', '-c',
-        "import json,sys; from atelier_service import run; print(json.dumps(run(json.load(sys.stdin))))"
-      ],
-      {
-        cwd : root,
-        input : JSON.stringify(body),
-        encoding : 'utf8',
-        timeout : 30000,
-        maxBuffer : 8 * 1024 * 1024
-      }));
+  // Navigation cases replay identical plans through different controller paths.
+  const reports = new Map();
+  const native = body => {
+    const input = JSON.stringify(body);
+    if (!reports.has(input))
+      reports.set(
+          input,
+          JSON.parse(execFileSync(
+              'python3',
+              [
+                '-B', '-c',
+                "import json,sys; from atelier_service import run; print(json.dumps(run(json.load(sys.stdin))))"
+              ],
+              {
+                cwd : root,
+                input,
+                encoding : 'utf8',
+                timeout : 10000,
+                maxBuffer : 8 * 1024 * 1024
+              })));
+    return structuredClone(reports.get(input));
+  };
   const make = () => {
     const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
     Object.assign(studio.state, {station : 'studio', sites : capabilities.sites, capabilities});
