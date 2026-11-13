@@ -1130,12 +1130,13 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     stimulus = f.nutrient;
     break;
   case field::Damage:
-    // Pain cells inside the body feel the gut alone; in the skin they feel their wounds, and an
-    // aching gut hurts there too.
-    if (!r.inner)
+    // Pain cells in the skin feel their wounds, those inside the body the aching gut.
+    if (r.inner)
+      stimulus = b.gut_irritation;
+    else
       for (int k = 0; k < SECTOR_COUNT; ++k)
         stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
-    stimulus = std::clamp(stimulus + b.gut_irritation, 0., 1.);
+    stimulus = std::clamp(stimulus, 0., 1.);
     break;
   case field::BladderPressure:
   case field::GonadPressure:

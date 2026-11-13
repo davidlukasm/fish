@@ -156,7 +156,7 @@ export const ORGANS = Object.freeze([
     centers : [
       sensor('food', SENSE_KIND.intake, 4, 'inner'),
       sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner'),
-      // Pain cells inside the body feel the gut alone: spoiled flesh, and plants that pass closed.
+      // Pain cells inside the body feel the aching gut: spoiled flesh, and plants that pass closed.
       sensor('ache', SENSE_KIND.damage, 2, 'inner')
     ],
     slots : [
