@@ -155,10 +155,14 @@ export const ORGANS = Object.freeze([
     scope : 'single',
     centers : [
       sensor('food', SENSE_KIND.intake, 4, 'inner'),
-      sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner')
+      sensor('fullness', SENSE_KIND.inner_pressure, 2, 'inner'),
+      // Pain cells inside the body feel the gut alone: spoiled flesh, and plants that pass closed.
+      sensor('ache', SENSE_KIND.damage, 2, 'inner')
     ],
-    slots :
-        [ slot('intake', 'out', [], false, 'food'), slot('fullness', 'out', [], false, 'fullness') ]
+    slots : [
+      slot('intake', 'out', [], false, 'food'), slot('fullness', 'out', [], false, 'fullness'),
+      slot('ache', 'out', [], false, 'ache')
+    ]
   },
   // Smooth muscle in the gut wall moves the food along: a hurried gut empties sooner and keeps
   // less of what passes. It works for hours, so it starts with enduring fibres.
