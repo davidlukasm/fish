@@ -21,10 +21,12 @@ export const NERVE_SNAP = Object.freeze({
   run : 12,
   gap : 3,
   bend : .3,
-  // Strands lie this share of their width apart, a join takes this many points, and the course is
-  // smoothed this often afterwards.
-  pack : .8,
+  // Strands lie this share of their width apart, so they overlap and each still shows; a join
+  // takes this many points, a strand's way out of the nerve is judged this many points beyond
+  // it, and the course is smoothed this often afterwards.
+  pack : .5,
   blend : 8,
+  beyond : 8,
   settle : 12
 });
 const S = NERVE_SNAP;
@@ -275,11 +277,6 @@ export function nerveBundling(lines) {
             members[k].add(c);
     return members;
   });
-  // Where a bundle comes from and goes to, as one place: strands lie across a nerve in the order
-  // of these places, so they leave it on the side they are bound for.
-  const bound = moving.map(
-      ({points}) =>
-          ({x : (points[0].x + points.at(-1).x) / 2, y : (points[0].y + points.at(-1).y) / 2}));
   const turns = moving.map(line => tangents(line.points));
   // The middle of the nerve at each shared point, and the bundle's place across it.
   const centre = moving.map((line, b) => line.points.map((p, i) => {
@@ -294,6 +291,46 @@ export function nerveBundling(lines) {
     }
     return {x : x / n, y : y / n};
   }));
+  // Each strand's stretch in company of another, and the side of the nerve on which the other
+  // parts from it at each end of that stretch (0 where the two end together, within half the
+  // reach). A strand that
+  // parts soon lies outside, on the side it parts to; the others keep the middle, so no strand
+  // has to cross the nerve to leave it, and strands change places by winding round each other.
+  const company = moving.map((line, b) => {
+    const stretches = new Map();
+    line.points.forEach((_, i) => {
+      for (const c of shared[b][i]) {
+        if (c === b)
+          continue;
+        const list = stretches.get(c) ?? [];
+        if (list.length && list.at(-1).last === i - 1)
+          list.at(-1).last = i;
+        else
+          list.push({first : i, last : i});
+        stretches.set(c, list);
+      }
+    });
+    const side = (c, i) => {
+      const j = near[b][i].get(c);
+      if (j === undefined)
+        return 0;
+      const here = line.points[i], t = turns[b][i],
+            flip = t.x < 0 || (t.x === 0 && t.y < 0) ? -1 : 1,
+            across = {x : -t.y * flip, y : t.x * flip}, P = moving[c].points;
+      // The other strand a little further on, on whichever of its ends leads away from the nerve.
+      const off = [ j - S.beyond, j + S.beyond ]
+                      .filter(k => k >= 0 && k < P.length)
+                      .map(k => (P[k].x - here.x) * across.x + (P[k].y - here.y) * across.y)
+                      .reduce((most, o) => Math.abs(o) > Math.abs(most) ? o : most, 0);
+      return Math.abs(off) > S.reach / 2 ? Math.sign(off) : 0;
+    };
+    for (const [c, list] of stretches)
+      for (const stretch of list) {
+        stretch.before = side(c, stretch.first);
+        stretch.after = side(c, stretch.last);
+      }
+    return stretches;
+  });
   const beside = moving.map((line, b) => line.points.map((p, i) => {
     const members = shared[b][i];
     if (members.size < 2)
@@ -301,8 +338,15 @@ export function nerveBundling(lines) {
     // One direction for all strands of the nerve here, whichever way each of them runs.
     const t = turns[b][i], flip = t.x < 0 || (t.x === 0 && t.y < 0) ? -1 : 1,
           across = {x : -t.y * flip, y : t.x * flip}, c = centre[b][i];
-    const side = k => (bound[k].x - c.x) * across.x + (bound[k].y - c.y) * across.y;
-    const order = [...members ].sort((x, y) => side(x) - side(y) || x - y);
+    // How strongly the other strand belongs to one side here: the sooner it parts, the more.
+    const lean = k => {
+      const stretch = company[b].get(k)?.find(s => s.first <= i && i <= s.last);
+      return stretch
+                 ? stretch.before / (1 + i - stretch.first) + stretch.after / (1 + stretch.last - i)
+                 : 0;
+    };
+    const leans = new Map([...members ].map(k => [k, k === b ? 0 : lean(k)]));
+    const order = [...members ].sort((x, y) => leans.get(x) - leans.get(y) || x - y);
     const width = k => moving[k].width * S.pack;
     let before = 0;
     for (const k of order) {

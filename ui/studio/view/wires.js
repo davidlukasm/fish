@@ -120,14 +120,14 @@ const WIRE_BOW = Object.freeze({least : 15, most : 66, share : .19});
 // organ (a tail band) bend towards their node instead of swinging out of the body.
 const BRANCH = Object.freeze({lead : .3, pull : .5, reach : 14});
 // Where a bundle splits into its fibres, as a parameter on its way: as far short of its organ's
-// dock as the organ's nodes lie from it (and a little more, at most `SPLIT.most`), measured along
-// the nerve. Its fibres then run on towards their nodes instead of turning back from the organ's
-// centre. A way too short for that splits in its middle.
+// dock as the organ's nearest node lies from it (and a little more, at most `SPLIT.most`), measured
+// along the nerve, so the bundle comes close to the organ and its fibres still run on towards
+// their nodes instead of turning back. A way too short for that splits in its middle.
 const SPLIT = Object.freeze({samples : 96, beyond : 4, most : 36, middle : .5});
 function splitAlong(way, nodes, anchor, atEnd) {
   if (!nodes.length)
     return atEnd ? 1 : 0;
-  const reach = Math.max(...nodes.map(p => Math.hypot(p.x - anchor.x, p.y - anchor.y)));
+  const reach = Math.min(...nodes.map(p => Math.hypot(p.x - anchor.x, p.y - anchor.y)));
   const wanted = Math.min(SPLIT.most, reach + SPLIT.beyond);
   let walked = 0, last = way.at(atEnd ? 1 : 0);
   for (let k = 1; k <= SPLIT.samples; ++k) {
@@ -440,8 +440,8 @@ function nerveTogether(laid) {
   }
   return together.get(key);
 }
-// The fibres at one end of a bundle: one for every node it reaches there, side by side across the
-// bundle where it splits, so that together they are as wide as the bundle.
+// The fibres at one end of a bundle: one for every node it reaches there, all of one width, united
+// where the bundle begins.
 function fibresAt(state, bundle, inward, pairs) {
   const {ends, way, width} = bundle, at = inward ? bundle.s0 : bundle.s1;
   if (!(inward ? bundle.split.starts : bundle.split.arrives) && !bundle.manual)
@@ -473,22 +473,19 @@ function fibresAt(state, bundle, inward, pairs) {
   const list = [...fibres.values() ].sort(
       (a, b) => (a.node.x - join.x) * across.x + (a.node.y - join.y) * across.y -
                 ((b.node.x - join.x) * across.x + (b.node.y - join.y) * across.y));
-  const share = width / Math.max(1, list.length), organ = (inward ? bundle.from : bundle.to).organ;
+  const organ = (inward ? bundle.from : bundle.to).organ;
   const rows = !bundle.manual && isRegion(organ)
                    ? cellRows(organ.centers.map(
                                   c => nodeLocation(state.document, state.sites, c, organ.type)),
                               join, across)
                    : null;
-  return list.map((fibre, i) => {
-    const offset = (i + .5 - list.length / 2) * share;
-    const start = {x : join.x + across.x * offset, y : join.y + across.y * offset};
-    return {
-      ...fibre,
-      width : share,
-      d : rows ? lanePath(fibre.node, start, join, along, across, inward, rows)
-               : branchPath(fibre.node, start, along, inward)
-    };
-  });
+  // Every fibre is as thin as the next and runs into the bundle's middle: there they are one.
+  return list.map(fibre => ({
+                    ...fibre,
+                    width : FIBRE.width,
+                    d : rows ? lanePath(fibre.node, join, join, along, across, inward, rows)
+                             : branchPath(fibre.node, join, along, inward)
+                  }));
 }
 // The bundles and, apart from them, the fibres they split into, which the scene draws above the
 // organs. Nerves are drawn over the bundles they gather.

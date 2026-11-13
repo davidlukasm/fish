@@ -12,7 +12,7 @@ const FORMS = Object.freeze({
   state : {part : 2, aspect : 1.5, rim : [ .08, .32, .48, .43, .48, .32, .08 ]},
   choice : {part : 3, aspect : .9, rim : [ .08, .4, .34, .5, .36, .28, .05 ]},
   motor : {part : 3, aspect : .8, rim : [ .06, .3, .49, .42, .34, .23, .04 ]},
-  spine : {part : 4, aspect : 2.6, rim : [ .1, .38, .48, .44, .48, .38, .1 ]}
+  spine : {part : 4, aspect : 4.5, rim : [ .1, .38, .48, .44, .48, .38, .1 ]}
 });
 const PACK = Object.freeze({gap : 6, margin : 8, step : 5, shrink : .94, midline : 5});
 const CELL = Object.freeze({pitch : 17, padding : 28, columns : 4, along : .55, across : .56});
