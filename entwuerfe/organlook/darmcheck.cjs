@@ -73,6 +73,10 @@ function shape(el) {
     const r = read(el, 'r');
     return {x: read(el, 'cx') - r, y: read(el, 'cy') - r, w: 2 * r, h: 2 * r};
   }
+  if (el.tag === 'g') {
+    const target = el.children.find(child => child.tag === 'rect');
+    if (target) return shape(target);
+  }
   return null;
 }
 
@@ -214,12 +218,15 @@ for (const [name, ...values] of curveValues)
   });
 
 const initial = evaluate('JSON.stringify(S)');
+const initialAge = evaluate('typeof shown === "undefined" ? null : shown.age');
 const snapshots = [...elements].map(([id, root]) =>
   [id, grips(root).map(grip => grip.getAttribute('data-name'))]);
 let dragged = 0;
 for (const [id, names] of snapshots) {
   for (const name of names) {
-    evaluate(`Object.assign(S, JSON.parse(${JSON.stringify(initial)})); draw(); repaint();`);
+    evaluate(`Object.assign(S, JSON.parse(${JSON.stringify(initial)}));`);
+    if (initialAge !== null) evaluate(`shown.age = ${initialAge}`);
+    evaluate('draw(); repaint();');
     const root = get(id);
     const grip = grips(root).find(el => el.getAttribute('data-name') === name);
     const box = shape(grip);
@@ -236,9 +243,15 @@ for (const [id, names] of snapshots) {
       const state = evaluate('JSON.stringify(S)');
       update(...center);
       const before = JSON.parse(state), after = JSON.parse(evaluate('JSON.stringify(S)'));
-      if (name === 'wall')
+      if (name === 'wall' || name === 'fastest')
         check(Math.abs(before.muscle - after.muscle) < .02,
               `${id}/${name}: Antrieb springt am Griffmittelpunkt von ${before.muscle.toFixed(2)} auf ${after.muscle.toFixed(2)}`);
+      if (name.endsWith('spread')) {
+        const sense = before[id], spread = sense.keys[sense.chosen].spread;
+        const result = after[id].keys[sense.chosen].spread;
+        check(Math.abs(spread - result) < .002,
+              `${id}/${name}: Streuung ändert sich am Griffmittelpunkt von ${spread.toFixed(3)} auf ${result.toFixed(3)}`);
+      }
       for (const [x, y] of [[center[0] - 20, center[1] - 15], [center[0] + 20, center[1] + 15],
                             [left, top], [left + width, top + height]]) {
         update(x, y);
