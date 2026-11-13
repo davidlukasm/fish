@@ -270,7 +270,15 @@ function gutWay() {
 // morsels that travel along it. It outlives every repaint; only a new length lays it anew.
 const SEGMENTS = 120, WAVES = 7, WAVE_PACE = .00012, WALL = [11, 6], TUBE_WIDTH = [6, -4.5];
 const film = {wall : null, tube : null, keys : null, segs : [], bits : [], way : null, length : null, t : 0, last : 0, seen : true};
-const upkeep = f => 1.2 * Math.pow(.25, f);
+// What the gut costs, as the engine charges it. Per unit of its length the basal need rises by
+// GUT_UPKEEP and the tissue weighs GUT_WALL more; the longest gut leaves the eggs GUT_BELLY less
+// room (digestion::upkeep, wall_mass, belly; src/physiology.cc:132, 432, src/physiology.hh:213-217).
+// A muscle node's upkeep is MUSCLE_UPKEEP per unit of its tissue (a full node has MUSCLE_TISSUE),
+// times what its fibres need, against the basal need BASAL (src/brain_interface.hh:164,
+// src/body_plan.cc:54-58, src/physiology_parameters.hh:27; fibres src/protocol_schema.hh:2018-2019).
+const GUT_UPKEEP = .1, GUT_WALL = .05, GUT_BELLY = .25, MUSCLE_UPKEEP = .0004, MUSCLE_TISSUE = 4, BASAL = .06;
+const FIBRE_UPKEEP = [1.2, .3];
+const fibreUpkeep = fast => FIBRE_UPKEEP[0] * Math.pow(FIBRE_UPKEEP[1] / FIBRE_UPKEEP[0], fast);
 function buildFish(fixed, svg) {
   const defs = el('defs', {}, svg);
   el('clipPath', {id : 'fishstomach'}, defs).appendChild(el('path', {d : stomachPath(STOMACH)}));
@@ -308,8 +316,8 @@ function placeBits() {
 function drawFish() {
   const {svg, live} = picture('fish', FIBRES.y + 10, buildFish);
   layGut();
-  const muscle = S.nodes.reduce((t, n) => t + 100 * .0004 * upkeep(n.fast) * 4 * n.strength / .06, 0);
-  const restCost = 10 * S.length + muscle, weight = 5 * S.length, eggs = 25 * (S.length - SHORTEST) / (LONGEST - SHORTEST);
+  const muscle = S.nodes.reduce((t, n) => t + MUSCLE_UPKEEP * fibreUpkeep(n.fast) * MUSCLE_TISSUE * n.strength / BASAL, 0);
+  const restCost = 100 * (GUT_UPKEEP * S.length + muscle), weight = 100 * GUT_WALL * S.length, eggs = 100 * GUT_BELLY * (S.length - SHORTEST) / (LONGEST - SHORTEST);
   txt(live, 8, 10, `+${Math.round(restCost)} % Ruhebedarf · +${Math.round(weight)} % Gewicht · −${Math.round(eggs)} % Platz für Eier`, {style : 'font-size:10px'});
   // The satiety keys at the stomach.
   const st = STOMACH, levelY = v => st.y + st.ry - 2 * st.ry * v, full = S.full;
