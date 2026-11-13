@@ -20,10 +20,19 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
 .grip:hover,.grip.dragging{stroke:#fff3c4;stroke-width:3}
 .grip.dragging{cursor:grabbing}
 .chip{cursor:pointer}
-.triggers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 4px}
-.triggers label{min-width:0;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--axis)}
-.triggers select{width:100%;font:12px system-ui;color:var(--text);background:#0f2c34;border:1px solid var(--edge);border-radius:6px;padding:4px 4px;min-width:0}
-.triggers select:focus-visible{outline:2px solid var(--handle);outline-offset:1px}
+.triggers{display:flex;flex-direction:column;gap:5px;margin:4px 0 10px}
+.trow{display:flex;align-items:center;gap:3px}
+.trow>span{flex:0 0 58px;font-size:12px;color:var(--text)}
+.seg{display:flex;flex:1;min-width:0;gap:0;border:1px solid var(--edge);border-radius:14px;background:var(--track);overflow:hidden}
+.seg>button{font:12px system-ui;color:var(--axis);background:none;border:0;border-left:1px solid var(--edge);padding:0 8px;height:26px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px}
+.seg>button:first-child{border-left:0}
+.seg>button.auto{flex:0 0 74px}.seg>button.mat{flex:0 0 46px}.seg>button.stuff{flex:1;min-width:0;padding:0 4px;gap:2px}
+.seg>button:hover{color:var(--text)}
+.seg>button.on{background:#2c5a5e;color:#f4efd8;box-shadow:inset 0 0 0 1.5px var(--handle)}
+.seg>button:focus-visible{outline:2px solid var(--handle);outline-offset:-2px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 9px system-ui;color:#0d262c;opacity:.4;flex:0 0 auto;transition:transform .1s}
+.dot.pick{opacity:1;transform:scale(1.18);box-shadow:0 0 0 1.5px #fff3c4}
+.dot:hover{opacity:.85}
 .panel h4{margin:14px 0 2px 2px;font:500 12px/1.3 system-ui;color:var(--text)}
 .chip rect{fill:var(--track);stroke:var(--edge)}
 .chip:hover rect{stroke:var(--handle)}
@@ -35,8 +44,8 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
 <main>
   <section class="panel" aria-label="Lebenszyklus der Zelle">
     <h2>Zelle</h2><h3>Lebenszyklus der Zelle</h3>
-    <svg id="life" viewBox="0 0 300 200"></svg>
     <div class="triggers" id="triggers"></div>
+    <svg id="life" viewBox="0 0 300 262"></svg>
     <div id="stuffs"></div>
   </section>
   <section class="panel" aria-label="Darm">
@@ -89,32 +98,48 @@ function bar(svg, x, y, w, share, colour, value, name) {
 
 // ---------- Lebenszyklus ----------
 // Three actions: the cell comes into being, it works, it dies. Each is one answer that switches
-// once, from a level before to a level after, at a point and with a steepness in four steps
-// (hormones.hh: x = (c / half)^(2^steepness), answer = before + (after − before)·x / (1 + x)); c is
-// the fish's maturity or one messenger's level. "automatisch": the cell is there from the egg on,
-// works fully, and never dies before the fish does.
+// once, from a level before to a level after, at a point and with a steepness (hormones.hh:
+// x = (c / half)^(2^steepness), answer = before + (after − before)·x / (1 + x)); c is the fish's
+// maturity or one messenger's level. "automatisch": the cell is there from the egg on, works
+// fully, and never dies before the fish does. The life itself, egg to adult, is the ground the
+// curve is drawn on.
 const STUFF = [['A', '#e8a2b5'], ['B', '#d4b7ee'], ['C', '#9cc8f0'], ['D', '#8fdcc0'], ['E', '#f0c58a'], ['F', '#c9e58f']];
 const ACTIONS = [['become', 'Entstehen'], ['work', 'Aktivität'], ['die', 'Tod']];
 const life = {
   hatch : .3,
-  become : {by : 'maturity', at : .12},
-  work : {by : 'maturity', at : .7, from : 1, to : .3, steep : 2},
-  die : {by : 'auto', at : .9}
+  become : {by : 'maturity', at : .12, stuff : 0},
+  work : {by : 'maturity', at : .7, from : 1, to : .3, steep : 2, stuff : 1},
+  die : {by : 'auto', at : .9, stuff : 5}
 };
+const source = a => a.by === 'stuff' ? 'stuff' + a.stuff : a.by;
 const bound = (c, half, steep) => { const x = Math.pow(Math.max(0, c) / half, Math.pow(2, steep)); return x / (1 + x); };
 const levelAt = (w, c) => w.from + (w.to - w.from) * bound(c, Math.max(.02, w.at), w.steep);
-// The choices: one per action, a messenger picked in the same list.
+// The choices: three buttons side by side for each action; the messenger is picked inside the
+// third one.
 function drawTriggers() {
   const box = document.getElementById('triggers'); box.replaceChildren();
   for (const [key, name] of ACTIONS) {
-    const label = document.createElement('label'), select = document.createElement('select');
-    label.textContent = name; select.id = 'trigger-' + key;
-    for (const [value, word] of [['auto', 'automatisch'], ['maturity', 'Reife'], ...STUFF.map(([n], i) => ['stuff' + i, 'Botenstoff ' + n])]) {
-      const o = document.createElement('option'); o.value = value; o.textContent = word; select.appendChild(o);
-    }
-    select.value = life[key].by;
-    select.addEventListener('change', () => { life[key].by = select.value; drawLife(); });
-    label.appendChild(select); box.appendChild(label);
+    const a = life[key], row = document.createElement('div'), seg = document.createElement('div');
+    row.className = 'trow'; seg.className = 'seg'; seg.setAttribute('role', 'group'); seg.setAttribute('aria-label', name);
+    const label = document.createElement('span'); label.textContent = name;
+    const button = (cls, by) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = cls + (a.by === by ? ' on' : '');
+      b.dataset.trigger = key; b.dataset.by = by; b.setAttribute('aria-pressed', a.by === by);
+      b.addEventListener('click', () => { a.by = by; drawLife(); });
+      seg.appendChild(b); return b;
+    };
+    button('auto', 'auto').textContent = 'automatisch';
+    button('mat', 'maturity').textContent = 'Reife';
+    const s = button('stuff', 'stuff');
+    if (a.by !== 'stuff') s.textContent = 'Botenstoff';
+    else STUFF.forEach(([n, colour], i) => {
+      const d = document.createElement('span');
+      d.className = 'dot' + (i === a.stuff ? ' pick' : ''); d.style.background = colour; d.textContent = n;
+      d.dataset.stuff = i; d.setAttribute('role', 'button'); d.setAttribute('aria-label', 'Botenstoff ' + n);
+      d.addEventListener('click', e => { e.stopPropagation(); a.by = 'stuff'; a.stuff = i; drawLife(); });
+      s.appendChild(d);
+    });
+    row.append(label, seg); box.appendChild(row);
   }
 }
 function drawLife() {
@@ -122,94 +147,96 @@ function drawLife() {
   diagram(document.getElementById('life'), 'maturity');
   // A picture of its own for each messenger in use, with the actions it sets off.
   const box = document.getElementById('stuffs'); box.replaceChildren();
-  const used = [...new Set(ACTIONS.map(([k]) => life[k].by).filter(b => b.startsWith('stuff')))];
+  const used = [...new Set(ACTIONS.map(([k]) => source(life[k])).filter(b => b.startsWith('stuff')))];
   for (const by of used) {
     const [n] = STUFF[Number(by.slice(5))];
     const h = document.createElement('h4');
-    h.textContent = ACTIONS.filter(([k]) => life[k].by === by).map(([, name]) => name).join(', ') + ' abhängig von ' + n;
+    h.textContent = ACTIONS.filter(([k]) => source(life[k]) === by).map(([, name]) => name).join(', ') + ' abhängig von ' + n;
     const svg = document.createElementNS(NS, 'svg'); svg.id = 'life-' + by;
     box.append(h, svg);
     diagram(svg, by);
   }
 }
+function stageIcon(svg, kind, x, cy) {
+  const line = {fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.5};
+  if (kind === 'egg') el('ellipse', {cx : x, cy, rx : 8, ry : 10, ...line}, svg);
+  else if (kind === 'hatch') {
+    el('path', {d : `M${x - 8} ${cy + 2} a8 9 0 0 0 16 0 l-4 -3 -4 3 -4 -3 -4 3 z`, ...line}, svg);
+    el('path', {d : `M${x - 5} ${cy - 6} q5 -7 10 0 q-5 6 -10 0 z`, ...line}, svg);
+  } else {
+    const sz = kind === 'young' ? .75 : 1.25, w = 14 * sz, h = 6 * sz;
+    el('path', {d : `M${x - w} ${cy} Q${x} ${cy - h * 1.6} ${x + w} ${cy} Q${x} ${cy + h * 1.6} ${x - w} ${cy} Z M${x + w} ${cy} l${5 * sz} ${-4 * sz} v${8 * sz} Z`, ...line}, svg);
+  }
+}
 function diagram(svg, by) {
   svg.replaceChildren();
   const stuff = by.startsWith('stuff') ? STUFF[Number(by.slice(5))] : null;
-  const plain = !!stuff && life.work.by !== by;
-  const L = 14, R = 286, X = c => L + (R - L) * clamp(c, 0, 1), top = plain ? 64 : 66, base = plain ? 72 : 178;
+  const b = life.become, w = life.work, d = life.die, here = a => source(a) === by;
+  const plain = !!stuff && !here(w);
+  const L = 14, R = 286, X = c => L + (R - L) * clamp(c, 0, 1), top = 30, base = plain ? 62 : 214;
   const Y = v => base - (base - top) * v, fit = p => clamp((p.x - L) / (R - L), 0, 1);
-  const b = life.become, w = life.work, d = life.die, here = a => a.by === by;
+  // The ground: the fish's life (egg, hatching, young, adult) or the messenger's level.
   if (!stuff) {
-    // The fish's life is the axis: egg, hatching, young fish, adult.
-    el('rect', {x : L, y : 0, width : X(life.hatch) - L, height : 40, rx : 6, fill : '#1a3c44'}, svg);
-    for (const [c, kind] of [[life.hatch * .5, 'egg'], [life.hatch, 'hatch'], [.6, 'young'], [.95, 'adult']]) {
-      const x = X(c), cy = 16;
-      if (kind === 'egg') el('ellipse', {cx : x, cy, rx : 7, ry : 9, fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.5}, svg);
-      else if (kind === 'hatch') {
-        el('path', {d : `M${x - 7} ${cy + 2} a7 8 0 0 0 14 0 l-3 -3 -3 3 -3 -3 -3 3 z`, fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.4}, svg);
-        el('path', {d : `M${x - 4} ${cy - 5} q4 -6 8 0 q-4 5 -8 0 z`, fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.2}, svg);
-      } else {
-        const sz = kind === 'young' ? .7 : 1.15, ww = 14 * sz, h = 6 * sz;
-        el('path', {d : `M${x - ww} ${cy} Q${x} ${cy - h * 1.6} ${x + ww} ${cy} Q${x} ${cy + h * 1.6} ${x - ww} ${cy} Z M${x + ww} ${cy} l${5 * sz} ${-4 * sz} v${8 * sz} Z`, fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.3}, svg);
-      }
+    el('rect', {x : L, y : top, width : R - L, height : base - top, fill : '#112f37'}, svg);
+    el('rect', {x : L, y : top, width : X(life.hatch) - L, height : base - top, fill : '#1d4149'}, svg);
+    el('path', {d : `M${X(life.hatch)} ${top} V${base}`, stroke : '#e9e2c6', opacity : .45}, svg);
+    for (const [c, kind, word, anchor] of [[life.hatch * .5, 'egg', 'Ei', 'middle'], [life.hatch, 'hatch', 'Schlupf', 'middle'], [.62, 'young', 'Jungfisch', 'middle'], [.93, 'adult', 'erwachsen', 'end']]) {
+      stageIcon(svg, kind, X(c), base + 18);
+      txt(svg, kind === 'adult' ? R : X(c), base + 42, word, {'text-anchor' : anchor});
     }
-    txt(svg, L + 4, 35, 'Ei'); txt(svg, X(life.hatch) + 4, 35, 'Schlupf');
-    txt(svg, X(.6), 35, 'Jungfisch', {'text-anchor' : 'middle'}); txt(svg, R, 35, 'erwachsen', {'text-anchor' : 'end'});
   } else {
-    // The messenger's level is the axis: little to much.
     const id = 'lv' + by, grad = el('linearGradient', {id}, el('defs', {}, svg));
-    el('stop', {offset : 0, 'stop-color' : stuff[1], 'stop-opacity' : .06}, grad);
-    el('stop', {offset : 1, 'stop-color' : stuff[1], 'stop-opacity' : .85}, grad);
-    el('rect', {x : L, y : 6, width : R - L, height : 22, rx : 11, fill : `url(#${id})`}, svg);
-    txt(svg, L + 6, 21, 'wenig ' + stuff[0]); txt(svg, R - 6, 21, 'viel ' + stuff[0], {'text-anchor' : 'end', style : 'fill:#0d262c'});
+    el('stop', {offset : 0, 'stop-color' : stuff[1], 'stop-opacity' : .04}, grad);
+    el('stop', {offset : 1, 'stop-color' : stuff[1], 'stop-opacity' : .55}, grad);
+    el('rect', {x : L, y : top, width : R - L, height : base - top, fill : `url(#${id})`}, svg);
+    txt(svg, L, base + 16, 'wenig ' + stuff[0]); txt(svg, R, base + 16, 'viel ' + stuff[0], {'text-anchor' : 'end'});
   }
-  // On the life axis the cell exists from its coming into being to its death; set elsewhere, from
-  // the egg on and to the end.
-  const from = here(b) ? b.at : 0, to = here(d) ? d.at : 1;
-  const working = !stuff || here(w);
+  // The cell exists from its coming into being to its death where these are set on this ground;
+  // otherwise from the egg on and to the end.
+  const from = here(b) ? b.at : 0, to = here(d) ? d.at : 1, working = !plain;
   const level = c => here(w) ? levelAt(w, c) : w.by === 'auto' || stuff ? 1 : .5;
-  el('path', {d : `M${L} ${base} H${R}`, stroke : '#3b6a6c'}, svg);
+  el('path', {d : `M${L} ${base} H${R}`, stroke : '#5d8384'}, svg);
   if (working) {
-    el('path', {d : `M${L} ${top} H${R}`, stroke : '#3b6a6c', 'stroke-dasharray' : '2 4'}, svg);
-    txt(svg, L, top - 5, 'volle Aktivität'); txt(svg, L, base + 14, 'keine Aktivität');
+    el('path', {d : `M${L} ${top} H${R}`, stroke : '#5d8384', 'stroke-dasharray' : '2 4'}, svg);
+    txt(svg, L, top - 6, 'volle Aktivität'); txt(svg, R - 4, base - 6, 'keine Aktivität', {'text-anchor' : 'end'});
   }
-  if (working && from > 0)
-    el('rect', {x : L, y : top, width : X(from) - L, height : base - top, rx : 3, fill : 'none', stroke : '#5d8384', 'stroke-dasharray' : '4 3'}, svg);
   if (working && to > from) {
-    const elsewhere = !stuff && w.by.startsWith('stuff');
+    const elsewhere = !stuff && w.by === 'stuff';
     let path = `M${X(from)} ${base}`;
-    for (let k = 0; k <= 90; k++) { const c = from + (to - from) * k / 90; path += ` L${X(c).toFixed(1)} ${Y(level(c)).toFixed(1)}`; }
-    el('path', {d : path + ` L${X(to)} ${base} Z`, fill : elsewhere ? STUFF[Number(w.by.slice(5))][1] : '#79d2be', opacity : elsewhere ? .16 : .4, stroke : '#79d2be', 'stroke-width' : 1.6, 'stroke-dasharray' : elsewhere ? '4 4' : 'none'}, svg);
-    if (elsewhere) txt(svg, (X(from) + X(to)) / 2, (top + base) / 2 + 4, 'Aktivität abhängig von ' + STUFF[Number(w.by.slice(5))][0], {'text-anchor' : 'middle', class : 'value'});
+    for (let k = 0; k <= 120; k++) { const c = from + (to - from) * k / 120; path += ` L${X(c).toFixed(1)} ${Y(level(c)).toFixed(1)}`; }
+    el('path', {d : path + ` L${X(to)} ${base} Z`, fill : elsewhere ? STUFF[w.stuff][1] : '#79d2be', 'fill-opacity' : elsewhere ? .16 : .38, stroke : '#79d2be', 'stroke-width' : 1.8, 'stroke-dasharray' : elsewhere ? '4 4' : 'none'}, svg);
+    if (elsewhere) txt(svg, (X(from) + X(to)) / 2, (top + base) / 2 + 30, 'Aktivität abhängig von ' + STUFF[w.stuff][0], {'text-anchor' : 'middle', class : 'value'});
   }
   if (here(b)) {
-    el('path', {d : `M${X(b.at)} ${top - 10} V${base}`, stroke : '#e9e2c6', 'stroke-dasharray' : '3 3'}, svg);
-    const g = el('path', {d : `M${X(b.at)} ${base + 2} l-8 12 h16 z`}, svg);
+    const x = X(b.at);
+    el('path', {d : `M${x} ${top} V${base}`, stroke : '#e9e2c6', 'stroke-dasharray' : '3 3'}, svg);
+    const g = el('path', {d : `M${x} ${base - 15} l-8 13 h16 z`}, svg);
     drag(svg, g, p => { b.at = Math.min(fit(p), here(d) ? d.at - .04 : 1); drawLife(); }, 'become');
-    txt(svg, X(b.at) + (X(b.at) < 120 ? 10 : -10), base + 28, 'entsteht', {'text-anchor' : X(b.at) < 120 ? 'start' : 'end'});
+    const left = x < 150;
+    txt(svg, x + (left ? 11 : -11), base - 5, 'entsteht', {'text-anchor' : left ? 'start' : 'end'});
   }
   if (here(w) && to > from) {
-    const g1 = el('circle', {cx : X(from) + 8, cy : Y(level(from)), r : 6.5}, svg);
+    const g1 = el('circle', {cx : X(from) + 9, cy : Y(level(from)), r : 7}, svg);
     drag(svg, g1, p => { w.from = clamp((base - p.y) / (base - top), 0, 1); drawLife(); }, 'before');
-    const g2 = el('circle', {cx : X(to) - 8, cy : Y(level(to)), r : 6.5}, svg);
+    const g2 = el('circle', {cx : X(to) - 9, cy : Y(level(to)), r : 7}, svg);
     drag(svg, g2, p => { w.to = clamp((base - p.y) / (base - top), 0, 1); drawLife(); }, 'after');
     if (Math.abs(w.to - w.from) > .04) {
       // The switch: where along, and how steep (pulled up: abrupt, down: soft).
       const at = clamp(w.at, from + .02, to - .02), cx = X(at), cy = Y(levelAt(w, at));
-      const g3 = el('rect', {x : cx - 6, y : cy - 6, width : 12, height : 12, transform : `rotate(45 ${cx} ${cy})`}, svg);
+      const g3 = el('rect', {x : cx - 6.5, y : cy - 6.5, width : 13, height : 13, transform : `rotate(45 ${cx} ${cy})`}, svg);
       const start = {y : cy, steep : w.steep};
       drag(svg, g3, p => { w.at = clamp(fit(p), from + .02, to - .02); w.steep = clamp(Math.round(start.steep + (start.y - p.y) / 18), 0, 3); drawLife(); }, 'switch');
     }
   }
   if (here(d)) {
-    const cx = X(d.at), cy = top - 22;
-    el('path', {d : `M${cx} ${cy + 8} V${base}`, stroke : '#e8a2b5', 'stroke-dasharray' : '3 3'}, svg);
-    const g = el('circle', {cx, cy, r : 8.5}, svg);
+    const cx = X(d.at), cy = top - 12;
+    el('path', {d : `M${cx} ${cy + 9} V${base}`, stroke : '#e8a2b5', 'stroke-dasharray' : '3 3'}, svg);
+    const g = el('circle', {cx, cy, r : 9}, svg);
     el('path', {d : `M${cx - 4} ${cy - 4} l8 8 m0 -8 l-8 8`, stroke : '#e8a2b5', 'stroke-width' : 2, 'pointer-events' : 'none'}, svg);
     drag(svg, g, p => { d.at = Math.max(fit(p), here(b) ? b.at + .04 : .02); drawLife(); }, 'die');
-    txt(svg, cx - 12, cy + 4, 'stirbt', {'text-anchor' : 'end'});
+    txt(svg, cx - 13, cy + 4, 'stirbt', {'text-anchor' : 'end'});
   }
-  svg.setAttribute('viewBox', `0 0 300 ${base + 34}`);
+  svg.setAttribute('viewBox', `0 0 300 ${base + (stuff ? 22 : 48)}`);
 }
 
 // ---------- Darm ----------
