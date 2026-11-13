@@ -2270,7 +2270,9 @@ function nerveRun(tau = NERVE.tau) {
     const x = (st >= 10 && st < 20) || (st >= 50 && st < 130) ? NERVE.input : 0;
     mean += (x - mean) / (10 * tau);
     const drive = (1 - memory) * x + (memory + level - 1) * mean;
-    const rhythm = NERVE.pace * .5 * Math.sin(2 * Math.PI * st / tau);
+    // The rhythm's period is the time, at least 8 steps (MIN_PACE_PERIOD); phase 0 for this example
+    // cell (a real cell adds the phase of its place).
+    const rhythm = NERVE.pace * .5 * Math.sin(2 * Math.PI * st / Math.max(8, tau));
     const a = Math.tanh(-.3 * NERVE.threshold + rhythm + drive);
     out.push(a + NERVE.q1 * (Math.max(0, a) - a)); inp.push(x);
   }
