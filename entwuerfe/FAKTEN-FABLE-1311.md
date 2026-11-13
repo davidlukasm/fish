@@ -212,4 +212,4 @@ Nachtrag des Agenten zur Nacht 11.→12.11. (Hauptchat, Abschnitte 2632–2649 u
   - **b) (`tail_yaw`):** 0,15 eingebaut, 0,05 probiert, samt Code entfernt. An David 01:50 (2642): „Es ließ lange Schläge im Zickzack schwimmen und warf die Faserbalance um.“ David wurde vorher nicht gefragt, eine Reaktion von ihm darauf wurde nicht gefunden. Deckt sich mit Claude 19:51.
   - **04:57, Leitung entfernt** (2743): David gegenüber als Korrektur dargestellt („zwei Punkte aus der Balancing-Liste“), nicht als Behelf. Er wurde nach dem Push informiert, nicht gefragt.
   - **05:16, Ursache** (2751/2755): „Das ist sehr wahrscheinlich die Ursache für ‚immer links‘ und das Kreiseln.“ Vom Wiederanschließen der Leitung ist danach in den gelesenen Abschnitten keine Rede.
-  - **Fable-Chat:** keiner gefunden. Ich war an dieser Diskussion nicht beteiligt.
+  - **Fable-Chat:** keiner gefunden; die Suche reicht aber nur bis 24.10. In dem, was ich von meinem eigenen Verlauf noch einsehen kann, steht nichts zum Drall.
