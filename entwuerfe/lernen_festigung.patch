@@ -1,0 +1,27 @@
+diff --git a/colony-core/field/substrate.cc b/colony-core/field/substrate.cc
+index 0a3bce5..d2314f1 100644
+--- a/colony-core/field/substrate.cc
++++ b/colony-core/field/substrate.cc
+@@ -943,14 +943,16 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
+           effector ? gather8(topology->learning.data(), ix) : splat8(topology->learning[i]);
+       F8 lasting = consolidated;
+       if (plasticity_enabled) {
+-        // Captured: the share of full strength the contact learned, while the cell consolidates.
+-        // Released: learning against the contact's strength, or a cell made pliable again.
+-        const F8 share = limit > F8{} ? abs8(learned) / limit : F8{},
+-                 against = limit > F8{} && sign * learned < F8{} ? -sign * learned / limit : F8{},
++        // While the cell consolidates, a contact that is not yet lasting becomes so by what it
++        // learns for its own strength and loses it again by what it learns against it. What is
++        // lasting stays so: a teaching pulse that begins and ends teaches for and against the
++        // contact in turn, and must not loosen what it has just taught. Only a cell made pliable
++        // again releases its lasting contacts.
++        const F8 gained = limit > F8{} ? sign * learned / limit : F8{},
+                  capture = consolidating > F8{} ? consolidating : F8{},
+                  pliable = consolidating < F8{} ? -consolidating / time : F8{};
+-        lasting = clamp8(consolidated + capture * share * (1 - consolidated) -
+-                             (against + pliable) * consolidated,
++        lasting = clamp8(consolidated + capture * gained * (1 - consolidated) -
++                             pliable * consolidated,
+                          0, 1);
+         store8(consolidation_.data() + k, lasting);
+       }

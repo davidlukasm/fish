@@ -1,0 +1,30 @@
+diff --git a/colony-core/field/substrate.cc b/colony-core/field/substrate.cc
+index 0a3bce5..5732490 100644
+--- a/colony-core/field/substrate.cc
++++ b/colony-core/field/substrate.cc
+@@ -903,14 +903,14 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
+         }
+       }
+       F8 positive = mode > splat8(0) ? mode : F8{}, negative = mode < splat8(0) ? -mode : F8{};
++      const F8 limit = ordinary * c.electrical_limit + (1 - ordinary) * c.teaching_limit;
+       F8 delta =
+           ordinary * gain *
+           (positive * comp * y * (xc - old * y) -
+            plasticity::cancellation * negative * y * xc * gather8(topology->nerve.data(), ix) +
+-           surprise_value * e / denominator);
++           limit * surprise_value * e / denominator);
+       // The competing share of the change: an active cell pushes out its silent inputs.
+       F8 competition = -(ordinary * gain * positive * comp * y * y * old);
+-      const F8 limit = ordinary * c.electrical_limit + (1 - ordinary) * c.teaching_limit;
+       const F8 sign = gather8(topology->sign.data(), ix);
+       if (level_learning) {
+         const F8 level =
+@@ -921,7 +921,7 @@ void Network::advance(const std::vector<float> &values, const Hormones &h,
+             ordinary * gain * sign * post *
+             (positive * comp * (pre - abs8(old) * evoked) -
+              plasticity::cancellation * negative * pre * gather8(topology->nerve.data(), ix));
+-        const F8 teaching = ordinary * gain * surprise_value * e / denominator;
++        const F8 teaching = ordinary * gain * limit * surprise_value * e / denominator;
+         delta = (1 - level) * delta + level * (sustained + teaching);
+         competition = (1 - level) * competition -
+                       level * ordinary * gain * sign * post * positive * comp * abs8(old) * evoked;
