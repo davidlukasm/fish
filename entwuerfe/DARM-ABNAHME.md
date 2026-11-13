@@ -2,7 +2,7 @@
 
 Rückmeldungen vom 13.11. um 17:54, 21:15 und 22:06, mit den jüngsten Korrekturen zusammengeführt. Prüfen am aktuellen Entwurf bei 320 px und 1:1. [17:54](FEEDBACK-1311.md#L11) · [21:15](FEEDBACK-2115-ERKLAERT.md#darm) · [22:06](../KOORDINATION.md#nachrichten) · [Leitlinie](../LEITLINIE.md#3-bedienung)
 
-Die Änderungen von 22:22–22:37 stehen in den folgenden Punkten. Die frühere Rückmeldung zum Lebensbild bleibt unten als Verlauf dokumentiert.
+Die Änderungen von 22:22–22:44 stehen in den folgenden Punkten. Die [Übergabe an Fable](DARM-UEBERGABE-FABLE.md#davids-rückmeldung-2222--2233--2235-punkt-für-punkt) nennt die 23 jüngsten Rückmeldungen einzeln. Die frühere Rückmeldung zum Lebensbild bleibt unten als Verlauf dokumentiert.
 
 ## Fischbild
 
@@ -29,9 +29,10 @@ Die Änderungen von 22:22–22:37 stehen in den folgenden Punkten. Die frühere 
 
 ## Darstellung von Alter und Muskel ab 22:22
 
-- [ ] Die Achse heißt „Verweildauer im Darm“. Unter ihr zeigen der junge und der ausgewachsene Fisch den Altersbezug. Der braune Balken im Ertrag zeigt das durch den arbeitenden Muskel erreichbare Fenster. Ein Griff verändert dessen schnelles Ende, der runde Griff verändert die Darmlänge mit einer Linie bis zum Balken.
-- [ ] Der größere Magen hat einen Schlund vom Maul. Die Füllung folgt der Sättigungseingabe. Der Darmmuskel arbeitet sichtbar zeitweise.
-- [ ] Eingabegriffe und Einstellungsgriffe haben unterschiedliche Formen. Die Streuung erscheint als Band im Diagramm. Eine gemeinsame Lauflinie führt durch Eingabe und Antwort und zeigt dabei die wechselnde Füllung im Fisch. Die Futterzeilen stehen unten. „Erschöpfung“ ersetzt „halb gewöhnt“. [Koordination 22:37](../KOORDINATION.md#nachrichten)
+- [ ] Die Achse heißt „Verweildauer im Darm“. Der Muskel lässt sich im Ertrag bedienen. Der braune Balken zeigt das durch den Muskel erreichbare Fenster. Ein Griff verändert dessen schnelles Ende, der runde Griff verändert die Darmlänge mit einer gestrichelten Linie bis zum Balken. Die bisherigen Knoten- und Fasergriffe oben im Fisch entfallen zugunsten einer eigenen Darstellung der Muskelwirkung.
+- [ ] Ein neuer Altersbezug zeigt, wann sich welches Futter lohnt, etwa Plankton beim jungen und Blatt beim größeren Fisch. Die zwei Fischsymbole von Version 16 allein erfüllen den Zweck noch nicht.
+- [ ] Der größere Magen hat einen Schlund vom Maul. Die Füllung folgt der Sättigungseingabe und lässt die Schwellen erkennen. Der Darm bewegt sich im Ruhetempo und zeigt zeitweise die stärkeren Muskelwellen.
+- [ ] Eingabegriffe und Einstellungsgriffe haben unterschiedliche Formen. Die Streuung erscheint als Band im Diagramm. Eine gemeinsame Lauflinie führt durch Eingabe und Antwort und zeigt dabei die wechselnde Füllung im Fisch. Die Futterzeilen stehen ganz unten und nennen ihre Wirkung. [Übergabe](DARM-UEBERGABE-FABLE.md#sättigungsgefühl)
 
 ## Frühere Rückmeldung zum Lebensbild
 
@@ -49,7 +50,7 @@ David hat das eigene Lebensbild am 13.11. ab 22:22 gestrichen. Die folgenden Pun
 ## Bauchweh
 
 - [ ] Oben steht die formbare **Eingabe**. Anstieg, Höhe und Ende des Bauchwehs lassen sich ziehen. Die Einstellungen der Zellen bleiben erkennbar getrennt. Schwelle und Streuung stehen beim gewählten Bereich, seine Linie reicht durch das Reizbild. (×) überdeckt weder Kurve noch Griff.
-- [ ] Darunter steht die **Meldung**. Der Griff für Gewöhnung wirkt dort sichtbar. Ein Knick in der Antwort folgt aus Reiz, Schwellen und Gewöhnung. Im Bild lässt sich unterscheiden, ob der Fisch Bauchweh hat und ob die Zellen es melden. Muskelbewegung und Reife ändern den möglichen Reiz über die Verweildauer.
+- [ ] Darunter steht der **Signalverlauf**. Die Anpassung zeigt den Schritt, ab dem bei konstantem Schmerz kein Signal mehr kommt. Der Griff und die Beschriftung bleiben über den einstellbaren Bereich erreichbar. Der Verlauf unterscheidet den Schmerz selbst und die Meldung der Zellen. Muskelbewegung und Reife ändern den möglichen Reiz über die Verweildauer. Die Spanne daraus ist in den Eingabe- und Futterbildern von Bauchweh und Nährgefühl einheitlich dargestellt. Die Bauchwehkurve hat eine zusammenhängende Schattierung.
 - [ ] „Bauchweh“ genügt als Titel. „Volles Bauchweh“, die lose Gesundheitszahl und das alleinstehende „Durchfall“ entfallen.
 - [ ] Die fünf Nahrungen sind dort, wo sie eine Wirkung erklären, breit genug und als Vergleich lesbar. Sie erscheinen weder als enge Knopfreihe noch als Auswahl einer Nahrung, auf die der Schmerzrezeptor eingestellt wird. [Futterzeile von 21:15](../bilder/2026-11-13_feedback2/1_darm_bauchweh_futterzeile_eng.png)
 
