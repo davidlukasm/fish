@@ -58,3 +58,41 @@ Das ist die Ursache von Davids Bild 2 („Fleisch 5–80 %“, die Kurve im Fens
 
 ### Die Gewohnheit dahinter
 Jede Kritik wurde an der Stelle behoben, an der sie sichtbar war, im Zeichencode. Dadurch wuchs dort Logik, die ins Modell gehört, und jedes Bild bekam seine eigene Fassung derselben Größe. Die nächste Korrektur traf dann nur eine der Fassungen. Ein Modell, das als einziges rechnet, macht diese Art Fehler unmöglich: Eine Zahl kann der Kurve nicht widersprechen, wenn beide aus demselben Aufruf kommen.
+
+## Teil 2: Der neue Darm (`entwuerfe/inspektoren.html`, Stand `52407c4`), repariert (22:24)
+
+Auftrag David 22:16: prüfen und selbst reparieren, was offensichtlich falsch ist oder Bildrate kostet. Ich habe die Datei gelesen, umgebaut und nur vom Parser auf Syntax lesen lassen. Im Browser geöffnet oder gezogen habe ich sie nicht; das ist Astras Teil. Das Aussehen sollte unverändert sein.
+
+### Was schon gut war
+Ein Modell oben, Einstellungen in den Einheiten des Spielers (`length`, `nodes`, `from`, `until`), ein Fenster `windowOf()` für Band, Balken und Zeilen, ein Sinnesbild für alle drei Sinne, feste Bildhöhen. Das sind genau die Punkte aus Teil 1.
+
+### Was Bildrate gekostet hat, und was ich geändert habe
+1. **Jeder Zug zeichnete alle sieben Bilder neu, und zwar je Mausereignis.** Mausereignisse kommen öfter als Bilder; bei schnellen Mäusen ein Vielfaches.
+   - Jetzt: `draw(parts)` merkt nur vor, welche Bilder eine Einstellung zeigen, und zeichnet einmal im nächsten Frame. Ein Schwellengriff im Bauchweh zeichnet nur das Bauchweh, ein Muskelgriff alles außer dem Sättigungsgefühl, nur die Darmlänge alles.
+2. **Das Modell wurde je Bild neu gerechnet, das Fenster rund zwanzigmal je Zug** (`windowOf()` in jedem `foodRange`, das fünfmal in den Balken, fünfmal in `kindOf`, je fünfmal in den zwei Futterzeilen), jedes Mal über 61 Lebensalter mit `drive()`.
+   - Jetzt: `M()` rechnet alles einmal je Änderung (`derive`), alle Bilder lesen dasselbe Ergebnis.
+3. **Was nie von einer Einstellung abhängt, wurde bei jedem Zug neu gerechnet und neu gebaut:** die fünf Ertragskurven (705 Aufrufe von `gain`), ihre Strichelung, die Bänder des Lebensbilds (375 Aufrufe), `best` je Futter (705), dazu die Platzsuche für die Kurvennamen. Die Platzsuche war das Teuerste der Seite: je Name bis 282 Kandidaten, jeder gegen 564 Kurvenpunkte.
+   - Jetzt: `CURVES` und `BEST_BANDS` einmal beim Laden; jedes Bild hat eine feste Schicht, die einmal gebaut wird, und nur die Schichten darunter und darüber werden neu gezeichnet (`picture`).
+4. **Der Film des Darms wurde bei jedem Zug an irgendeinem Griff abgerissen und neu gebaut:** 240 Pfade neu, und die sieben Futterkörner sprangen an ihre Startplätze zurück. Das war sichtbares Stottern während jedes Ziehens.
+   - Jetzt: Der Film überlebt das Neuzeichnen; nur eine neue Darmlänge legt ihn neu (`layGut`). Die Körner laufen durch.
+5. **240 Attribute je Frame, auch wenn sich nichts ändert, auch wenn das Bild nicht zu sehen ist.**
+   - Jetzt: Eine Breite wird nur geschrieben, wenn sie sich geändert hat (zwischen zwei Wellen ruht der größte Teil der Stücke). Der Film steht, solange der Fisch nicht auf dem Bildschirm ist, und läuft nicht für jemanden, der weniger Bewegung eingestellt hat.
+6. **Nach dem Loslassen wurde noch einmal alles gezeichnet,** nur um die Markierung des Griffs zu entfernen. Jetzt wird nur die Markierung entfernt.
+
+### Offensichtliche Fehler, behoben
+1. **Der Griff „wie stark der Muskel treibt“ im Lebensbild folgte dem Zeiger nicht,** sobald der Muskel vor dem Erwachsenenalter endet. Die Umkehrung teilte die Summe der Knoten durch die Körperwirkung, obwohl die Summe nicht linear im Tempo ist. Jetzt wird erst das Tempo durch die Körperwirkung geteilt und dann umgekehrt (`sumForDrive`).
+2. **Dieselbe Formel stand zweimal** (Muskelantrieb in `drive()` und ihre Umkehrung im Griff, je mit 0,6, 0,8 und 1,6). Jetzt eine Stelle: `muscleSum`, `driveOf`, `sumForDrive`, mit benannten Werten.
+3. **Totes CSS der alten Seite** (36 Regeln für Knöpfe, Menüs, Häkchen, die es hier nicht gibt) ist entfernt.
+4. Maße, die an zwei Stellen als Ziffern standen (200 Schritte je Länge, Lage der Knoten, der Faserleiste, Versatz des Fischs), haben Namen.
+
+### Nicht geändert, weil es Entscheidungen sind und keine Fehler. Bitte ansehen
+1. **Die Kopfzeile rechnet mit freien Zahlen:** `10 × Länge` Ruhebedarf, `5 × Länge` Gewicht, `25 %` Platz für Eier. In der Engine gibt es dafür Formeln (Platz für Eier: `belly_room`, `src/physiology.hh:213-217`). Das Modell sollte sie benutzen oder die Zahlen als Vorschlag kennzeichnen.
+2. **Der Muskelantrieb ist eine eigene Formel** (`1 + 3 × (1 − exp(−1,6 × Summe))`). Die Engine rechnet `1 + 3 × Kraft²` mit einer sättigenden Kraft (`src/physiology.hh:361-365`). Die Form ist ähnlich, die Werte sind es nicht.
+3. **Ertrag und Bauchweh sind Vorschläge an die Engine,** nicht die Engine: fünf Stoffe statt vier, andere Grenzen. Im Code steht das nur im Kommentar zu den Zielwerten. Ein Block „weicht von der Engine ab“ mit den heutigen Werten daneben würde es sichtbar machen (Bauchweh heute: Abschnitt in KOORD 22:11).
+4. **Das Schwanken des Bauchwehs** (`acheSwing`, geteilt durch 6, höchstens 0,5) hat keine Herkunft im Code.
+5. **„halb gewöhnt“ lässt sich nur bis etwa 400 Schritte ziehen,** weil das Bild bei 300 endet. Die Engine geht bis 1024.
+6. **Ein Kurvenname kann wegfallen,** ohne dass es jemand merkt, wenn die Platzsuche keinen freien Platz findet. Für feste Kurven wären feste Plätze sicherer.
+7. **Kein Griff ist ohne Maus bedienbar.** Für den Entwurf in Ordnung, im Produkt nicht.
+
+### Was Astra daran prüfen sollte
+Die Seite lädt ohne Fehler; jeder Griff bewegt nur seine Bilder und folgt dem Zeiger; die Körner im Darm laufen beim Ziehen weiter; die Zahlen der Balken sind dieselben wie vorher bei gleichen Einstellungen.
