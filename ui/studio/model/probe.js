@@ -5,8 +5,10 @@ export const PROBE_KIND =
     Object.freeze({nose : 'smell', touch : 'touch', pain : 'wound', lateral : 'flow', gut : 'gut'});
 export const PROBE_LIMITS =
     Object.freeze({least : {smell : 1}, most : {smell : 24, touch : 1, wound : .5, flow : 2}});
+// A new scent starts just beyond the snout, so choosing it keeps the view; dragged further out,
+// the view widens with it.
 const START = Object.freeze({
-  smell : {bearing : 40, distance : 8, strength : 0},
+  smell : {bearing : 40, distance : 1.6, strength : 0},
   touch : {bearing : 90, distance : 0, strength : .05},
   wound : {bearing : 90, distance : 0, strength : .02},
   flow : {bearing : 60, distance : 0, strength : .02},
