@@ -289,16 +289,28 @@ export const rakerSifting = density =>
 export const gutPassage = (driven, speed) => 1 + (speed - 1) * driven;
 // Two rates closer than this count as one, where the general solution would divide by nothing.
 const GUT_RATES_APART = 1e-9;
-// The four stuffs food is made of (physiology.hh, digestion::COURSES): the steps to break each
-// half open, to take it up, and to spoil it as fast as that; 0: open at once, never spoiling.
+// The six stuffs food is made of (physiology.hh, digestion::COURSES): the steps to break each
+// half open, to take it up, and to spoil it as fast as that; 0: open at once, never spoiling;
+// `best`: the share of it the gut can take up at all.
 const GUT_COURSES = Object.freeze({
-  flesh : {open : 0, uptake : DIGESTION.flesh_uptake, spoil : DIGESTION.flesh_spoil},
-  pulp : {open : 0, uptake : DIGESTION.pulp_uptake, spoil : DIGESTION.pulp_spoil},
-  fibre : {open : DIGESTION.fibre_open, uptake : DIGESTION.fibre_uptake, spoil : 0},
-  shell :
-      {open : DIGESTION.shell_open, uptake : DIGESTION.shell_uptake, spoil : DIGESTION.shell_spoil}
+  flesh : {open : 0, uptake : DIGESTION.flesh_uptake, spoil : DIGESTION.flesh_spoil, best : 1},
+  pulp : {open : 0, uptake : DIGESTION.pulp_uptake, spoil : DIGESTION.pulp_spoil, best : 1},
+  fibre : {open : DIGESTION.fibre_open, uptake : DIGESTION.fibre_uptake, spoil : 0, best : 1},
+  shell : {
+    open : DIGESTION.shell_open,
+    uptake : DIGESTION.shell_uptake,
+    spoil : DIGESTION.shell_spoil,
+    best : DIGESTION.shell_best
+  },
+  soft : {
+    open : DIGESTION.soft_open,
+    uptake : DIGESTION.soft_uptake,
+    spoil : 0,
+    best : DIGESTION.soft_best
+  },
+  sap : {open : 0, uptake : DIGESTION.sap_uptake, spoil : 0, best : 1}
 });
-// A meal given by its shares of the four stuffs, the rest being ballast, followed for `steps`
+// A meal given by its shares of the six stuffs, the rest being ballast, followed for `steps`
 // through a gut that holds its content `stay` steps: the shares still usable in the gut and taken
 // up so far (physiology.hh, gut_yield). What is open is taken up or spoils; fibre and shell have
 // to be broken open first; the gut moves all of it on. A full fish takes up nothing.
@@ -306,7 +318,7 @@ export function gutMeal(food, stay, steps, full = false) {
   const passage = 1 / stay, progress = needed => (stay / needed) ** DIGESTION.sharpness;
   let held = 0, taken = 0;
   for (const [stuff, course] of Object.entries(GUT_COURSES)) {
-    const share = food[stuff] || 0, uptake = full ? 0 : 1 / course.uptake,
+    const share = (food[stuff] || 0) * course.best, uptake = full ? 0 : 1 / course.uptake,
           spoiling = course.spoil ? Math.min(1, progress(course.spoil) / course.uptake) : 0,
           b = uptake + spoiling + passage, gone = Math.exp(-b * steps);
     if (!share)

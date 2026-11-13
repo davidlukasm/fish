@@ -123,15 +123,19 @@ inline double reserve_capacity_for_tissue(double tissue) {
 inline double reserve_capacity(const Body &b) {
   return b.hatched ? reserve_capacity_for_tissue(b.tissue) : ENERGY_MAX;
 }
-// The gut and what it does with a meal. Food is made of four stuffs, and of ballast that feeds
+// The gut and what it does with a meal. Food is made of six stuffs, and of ballast that feeds
 // nobody. Flesh can be taken up at once and spoils when it stays long. Fibre, the stuff of
 // leaves, has to be broken open first, which needs a long stay, and never spoils. Shell, the
-// stuff of small animals, opens after a short stay and spoils a little later than flesh. Pulp
-// is matter digested once before, the stuff of flocks: taken up quickest of all, spoiling late.
-// So every food has its own span of time in which it is worth most: flesh the shortest, then
-// plankton (flesh and shell), flocks (pulp, some fibre, much ballast), algae (fibre with a
-// little pulp) and leaves. How long a meal stays follows from the gut's length and from how
-// fast the gut muscle moves it.
+// stuff of small animals, opens after a short stay and spoils later than flesh. Pulp is matter
+// digested once before, the stuff of flocks: open at once, slow to take up, spoiling late. Soft
+// fibre, the cell walls of algae, opens sooner than the fibre of leaves; sap, the inside of
+// algae, is open at once and never spoils. Of shell and soft fibre only a share can be taken up
+// at best (`_best`); the rest is ballast. So every food has its own span of time in which it is
+// worth most (David's values, 13.11.: leaves at best 92 %, meat 82 %, plankton 72 %, algae 78 %
+// held to the longest stay; at 50 steps algae 18 % and plankton 34 %): flesh the shortest,
+// then plankton (flesh and shell), flocks (pulp and ballast), algae (sap and soft fibre) and
+// leaves. How long a meal stays follows from the gut's length and from how fast the gut muscle
+// moves it.
 //
 // The shared constants `digestion::`: `shortest` and `longest` are the gut's length in body
 // lengths. For each stuff: what is open is taken up within its `_uptake` steps; what stays its
@@ -148,16 +152,23 @@ inline double reserve_capacity(const Body &b) {
 // of the tissue and raises the basal metabolism by `upkeep`. Faeces leave as a flock once they
 // amount to `pellet` of what the gut holds.
 namespace digestion {
-enum Stuff { flesh, pulp, fibre, shell, STUFFS };
+enum Stuff { flesh, pulp, fibre, shell, soft, sap, STUFFS };
 // Steps to break a stuff half open, to take it up, and to spoil it as fast as that; 0: open at
-// once, never spoiling.
+// once, never spoiling. `best`: the share of it the gut can take up at all.
 struct Course {
-  double open, uptake, spoil;
+  double open, uptake, spoil, best;
 };
-inline constexpr std::array<Course, STUFFS> COURSES{{{0, flesh_uptake, flesh_spoil},
-                                                     {0, pulp_uptake, pulp_spoil},
-                                                     {fibre_open, fibre_uptake, 0},
-                                                     {shell_open, shell_uptake, shell_spoil}}};
+inline constexpr std::array<Course, STUFFS> COURSES{
+    {{0, flesh_uptake, flesh_spoil, 1},
+     {0, pulp_uptake, pulp_spoil, 1},
+     {fibre_open, fibre_uptake, 0, 1},
+     {shell_open, shell_uptake, shell_spoil, shell_best},
+     {soft_open, soft_uptake, 0, soft_best},
+     {0, sap_uptake, 0, 1}}};
+// Fibre of either kind: what makes a meal too rough for a hurried gut (gut_ache).
+inline constexpr bool rough(int stuff) {
+  return stuff == fibre || stuff == soft;
+}
 // How far a process that needs `needed` steps has come in a meal that stays `stay` steps, as
 // the ratio of what it has done to what it has left.
 inline double progress(double stay, double needed) {
@@ -172,7 +183,7 @@ inline double spoiling_rate(double stay, const Course &c) {
   return c.spoil > 0 ? std::min(1., progress(stay, c.spoil) / c.uptake) : 0;
 }
 }
-// What a mouthful is to the gut: its shares of the four stuffs, the rest being ballast; how
+// What a mouthful is to the gut: its shares of the six stuffs, the rest being ballast; how
 // much room it takes per energy; and whether its remains leave as plant matter.
 struct Fodder {
   std::array<double, digestion::STUFFS> stuff;
@@ -180,24 +191,24 @@ struct Fodder {
   bool plant;
 };
 // Flocks of every origin are alike: feed, faeces and what has settled on the ground.
-inline constexpr std::array<double, digestion::STUFFS> FLOCK{0, .62, .1, 0};
+inline constexpr std::array<double, digestion::STUFFS> FLOCK{0, .77, 0, 0, 0, 0};
 inline Fodder flock_fodder(bool plant) {
   return {FLOCK, 1, plant};
 }
 inline Fodder fodder(int source, const PhysiologyParameters &p) {
   switch (source) {
   case food_kind::plant:
-    return {{0, 0, 1, 0}, p.fill_plant, true};
+    return {{0, 0, 1, 0, 0, 0}, p.fill_plant, true};
   case food_kind::algae:
-    return {{0, .18, .82, 0}, p.fill_plant, true};
+    return {{0, 0, 0, 0, .7, .25}, p.fill_plant, true};
   case food_kind::benthic:
     return {FLOCK, p.fill_sediment, true};
   case food_kind::feed:
     return {FLOCK, 1, false};
   case food_kind::plankton:
-    return {{.5, 0, 0, .5}, 1, false};
+    return {{.445, 0, 0, .52, 0, 0}, 1, false};
   default:
-    return {{1, 0, 0, 0}, 1, false};
+    return {{1, 0, 0, 0, 0, 0}, 1, false};
   }
 }
 inline double gut_size(double length) {
@@ -224,8 +235,9 @@ inline double nutrient_signal(const Body &b) {
 inline double mouth_offset(const Body &b) {
   return body_radius(b) * b.snout_position;
 }
-// Share of one stuff the gut takes up when it stays `stay` steps: what is broken open in that
-// time, and of that what is taken up before it spoils or passes; `open` for what is open already.
+// Share of the usable part of one stuff (its `best`) the gut takes up when it stays `stay` steps:
+// what is broken open in that time, and of that what is taken up before it spoils or passes;
+// `open` for what is open already.
 inline double stuff_yield(double stay, const digestion::Course &c, bool open = false) {
   const double passage = 1 / stay, opening = digestion::opening_rate(stay, c),
                uptake = 1 / c.uptake;
@@ -236,7 +248,7 @@ inline double stuff_yield(double stay, const digestion::Course &c, bool open = f
 inline double gut_yield(double stay, const Fodder &f) {
   double taken = 0;
   for (int k = 0; k < digestion::STUFFS; ++k)
-    taken += f.stuff[k] * stuff_yield(stay, digestion::COURSES[k]);
+    taken += f.stuff[k] * digestion::COURSES[k].best * stuff_yield(stay, digestion::COURSES[k]);
   return taken;
 }
 // Steps a mouthful stays in a gut of this length that moves it `speed` times as fast as at rest.

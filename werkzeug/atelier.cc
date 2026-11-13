@@ -1004,7 +1004,7 @@ std::string diet_report() {
   row("meat", yield(food_kind::worm));
   row("size", [](double l) { return gut_size(l); });
   out << "},\"foods\":{";
-  // What each food is made of: its shares of the four stuffs, the rest being ballast.
+  // What each food is made of: its shares of the six stuffs, the rest being ballast.
   const std::pair<const char *, int> foods[] = {{"plant", food_kind::plant},
                                                 {"algae", food_kind::algae},
                                                 {"flock", food_kind::feed},
@@ -1015,6 +1015,7 @@ std::string diet_report() {
     out << (food == food_kind::plant ? "" : ",") << '"' << name
         << "\":{\"flesh\":" << f.stuff[digestion::flesh] << ",\"pulp\":" << f.stuff[digestion::pulp]
         << ",\"fibre\":" << f.stuff[digestion::fibre] << ",\"shell\":" << f.stuff[digestion::shell]
+        << ",\"soft\":" << f.stuff[digestion::soft] << ",\"sap\":" << f.stuff[digestion::sap]
         << '}';
   }
   out << "},\"teeth\":{";

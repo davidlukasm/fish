@@ -207,13 +207,16 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
                usable = accepted * digestibility(b, f, p);
   b.gut_energy += accepted;
   double ballast = accepted;
+  // Of each stuff only its usable share enters the gut's stores; the rest is ballast.
   for (int k = 0; k < digestion::STUFFS; ++k) {
-    (digestion::COURSES[k].open > 0 ? b.gut_closed : b.gut_open)[k] += accepted * f.stuff[k];
-    ballast -= accepted * f.stuff[k];
+    const double usable_stuff = accepted * f.stuff[k] * digestion::COURSES[k].best;
+    (digestion::COURSES[k].open > 0 ? b.gut_closed : b.gut_open)[k] += usable_stuff;
+    ballast -= usable_stuff;
+    if (digestion::rough(k))
+      b.gut_meal_fibre += accepted * f.stuff[k];
   }
   b.gut_spent += std::max(0., ballast);
   b.gut_meal_flesh += accepted * f.stuff[digestion::flesh];
-  b.gut_meal_fibre += accepted * f.stuff[digestion::fibre];
   b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
   b.nutrient_flow += PhysiologyParameters::nutrient_share * usable;
