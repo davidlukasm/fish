@@ -404,42 +404,30 @@ function diagram(svg, by) {
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
 // ---------- Darm ----------
-// The gut as the engine has it (physiology.hh, Fable 7bb7200b). A mouthful stays T steps:
-// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to 4. A food with
-// flesh share a must first be broken open, A = (T / (400·(1 − a)))⁴, and is taken up before it
-// spoils, V = (T·a / 250)⁴: yield = A/(1 + A) · 1/(1 + V + 20/T). It hurts (gut_irritation) when
-// spoiled matter passes 0.3 of the gut's room, or when plant matter leaves still closed faster than
-// 0.002 of the room per step; flocks are digested once already and never hurt. A longer gut holds
-// more, weighs more (+0.05 of the body per size) and raises the resting need (+0.1 per size).
+// The gut as the engine has it (physiology.hh, Fable 391f87d). A mouthful stays T steps:
+// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to 4. Food is made
+// of three stuffs: flesh, taken up at once, spoils soon; fibre must first be broken open, never
+// spoils; pulp (digested once already) is taken up at once, spoils late, never hurts. With k = 1/20,
+// q = 1/T: flesh k/(k + k·(T/250)⁴ + q), pulp k/(k + k·(T/720)⁴ + q), fibre A/(1 + A)·k/(k + q),
+// A = (T/400)⁴. Leaves are fibre; meat is flesh; flocks are pulp; algae ¼ pulp ¾ fibre; plankton
+// ½ flesh ½ fibre. It hurts (gut_irritation) only when food is plainly wrong: when more than 85 % of
+// its flesh spoils, V/(1 + V) > 0.85 with V = (T/250)⁴, or more than 85 % of its fibre leaves still
+// closed, 1/(1 + A) > 0.85. A longer gut holds more, weighs more (+0.05 of the body per size) and
+// raises the resting need (+0.1 per size).
 // Senses: stretch cells report the gut's fill, half at their level (bounded_response), one level
-// per group of cells; food cells report the nourishment coming in against the resting need,
-// s = flow/(flow + rest), as s/(s + threshold + adapted), the adapted level following s with rate
-// 1/τ, τ from 4 to 48 steps (cppn_brain.cc, adapted_response).
-const K = {time : 200, open : 400, spoil : 250, uptake : 20, sharp : 4, tolerated : .3, closed : .002, fastest : 4, shortest : 25, longest : 800};
-const FOOD = [['Blatt', 0, '#8fd16a'], ['Alge', .25, '#55c4a6'], ['Flocken', .5, '#e3cf94', true], ['Plankton', .75, '#9cc8f0'], ['Fleisch', 1, '#ef8f8f']];
+// per group of cells; pain and food cells answer like other pain and food cells (adapted_response).
+const K = {time : 200, open : 400, spoil : 250, pulp : 720, uptake : 20, sharp : 4, fastest : 4, shortest : 25, longest : 800};
+const FOOD = [['Blatt', {flesh : 0, fibre : 1}, '#8fd16a'], ['Alge', {flesh : 0, fibre : .75}, '#55c4a6'], ['Flocken', {flesh : 0, fibre : 0}, '#e3cf94'], ['Plankton', {flesh : .5, fibre : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, fibre : 0}, '#ef8f8f']];
 const gut = {middle : 200, spread : 2.2, levels : [.6], food : {sense : .35, tau : 20}, ache : {sense : .3, tau : 30}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
-const gain = (a, T) => {
-  const A = a >= 1 ? Infinity : Math.pow(T / (K.open * (1 - a)), K.sharp), V = Math.pow(T * a / K.spoil, K.sharp);
-  return (a >= 1 ? 1 : A / (1 + A)) / (1 + V + K.uptake / T);
-};
-// Whether a gut that holds only this food, kept full, hurts: digest_nutrition run to its steady
-// state, with spoiled matter lying and closed plant matter leaving, each against the gut's room.
-const painCache = new Map();
-function hurts(a, T, mild) {
-  if (mild) return false;
-  const key = a + ':' + Math.round(T);
-  if (painCache.has(key)) return painCache.get(key);
-  const up = 1 / K.uptake, opening = a >= 1 ? 1 : Math.min(1, Math.pow(T / (K.open * (1 - a)), K.sharp) / T), spoiling = a <= 0 ? 0 : Math.min(1, up * Math.pow(T * a / K.spoil, K.sharp));
-  let raw = 1, open = 0, r = 0;
-  for (let s = 0; s < 2500; s++) {
-    const p = 1 / T, dig = open * up, op = raw * opening, sp = (open - dig) * spoiling;
-    raw = (raw - op) * (1 - p); open = (open - dig - sp + op) * (1 - p); r = (r + sp) * (1 - p);
-    raw += Math.max(0, 1 - raw - open - r);
-  }
-  const sore = r > K.tolerated || (1 - a) * raw / T > K.closed;
-  painCache.set(key, sore); return sore;
+function gain(f, T) {
+  const k = 1 / K.uptake, q = 1 / T, A = Math.pow(T / K.open, K.sharp), pulp = 1 - f.flesh - f.fibre;
+  return f.flesh * k / (k + k * Math.pow(T / K.spoil, K.sharp) + q) + pulp * k / (k + k * Math.pow(T / K.pulp, K.sharp) + q) + f.fibre * A / (1 + A) * k / (k + q);
+}
+function hurts(f, T) {
+  const V = Math.pow(T / K.spoil, K.sharp), A = Math.pow(T / K.open, K.sharp);
+  return (f.flesh > 0 && V / (1 + V) > .85) || (f.fibre > 0 && 1 / (1 + A) > .85);
 }
 const BODY = 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z';
 // The fish sits 14 lower than its drawing, with room above and below it.
@@ -521,12 +509,12 @@ function drawGut() {
   for (const t of [25, 50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, c); txt(c, X(t), base + 15, t, {'text-anchor' : t === 800 ? 'end' : 'middle'}); }
   txt(c, R, base + 30, 'Verweildauer (Schritte)', {'text-anchor' : 'end'});
   const names = [];
-  for (const [name, a, colour, mild] of FOOD) {
+  for (const [name, a, colour] of FOOD) {
     let good = '', bad = '', last = null, bestT = K.shortest;
     for (let k = 0; k <= 100; k++) {
       const t = K.shortest * Math.pow(2, span * k / 100), pt = `${X(t).toFixed(1)} ${Y(gain(a, t)).toFixed(1)}`;
-      if (!hurts(a, t, mild)) good += (good && !last?.bad ? ' L' : (last ? 'M' + last.pt + ' L' : 'M')) + pt; else bad += (bad && last?.bad ? ' L' : (last ? 'M' + last.pt + ' L' : 'M')) + pt;
-      last = {pt, bad : hurts(a, t, mild)};
+      if (!hurts(a, t)) good += (good && !last?.bad ? ' L' : (last ? 'M' + last.pt + ' L' : 'M')) + pt; else bad += (bad && last?.bad ? ' L' : (last ? 'M' + last.pt + ' L' : 'M')) + pt;
+      last = {pt, bad : hurts(a, t)};
       if (gain(a, t) > gain(a, bestT)) bestT = t;
     }
     if (good) el('path', {d : good, fill : 'none', stroke : colour, 'stroke-width' : 2}, c);
@@ -556,10 +544,10 @@ function drawGut() {
   // ---- Yield of each food over the muscle's reach; a dashed red frame where it hurts. ----
   const bars = document.getElementById('gutbars'); bars.replaceChildren();
   let y = 14;
-  for (const [name, a, colour, mild] of FOOD) {
+  for (const [name, a, colour] of FOOD) {
     const samples = Array.from({length : 25}, (_, k) => fast * Math.pow(T / fast, k / 24)), got = samples.map(t => gain(a, t));
     const lo = Math.min(...got), hi = Math.max(...got), W = 160, x0 = 66;
-    const sore = samples.map((t, k) => hurts(a, t, mild) ? got[k] : null).filter(v => v !== null);
+    const sore = samples.map((t, k) => hurts(a, t) ? got[k] : null).filter(v => v !== null);
     txt(bars, 4, y + 10, name);
     el('rect', {x : x0, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, bars);
     el('rect', {x : x0, y, width : W * lo, height : 12, rx : 3, fill : colour, opacity : .8}, bars);
@@ -646,7 +634,7 @@ function gutFrame(now) {
   f.morsels = f.morsels.filter(m => m.at < 1);
   for (const p of f.dung) { p.age += dt; p.x += .12 * dt; p.y += .15 * dt; }
   f.dung = f.dung.filter(p => p.age < 120).slice(-f.dungBits.length);
-  f.bits.forEach((b, i) => { const m = f.morsels[i]; if (!m) { b.setAttribute('r', 0); return; } const [x, y] = f.way.at(m.at); b.setAttribute('cx', x.toFixed(1)); b.setAttribute('cy', y.toFixed(1)); b.setAttribute('r', (3.6 - 2.2 * m.at * gain(.5, gut.T)).toFixed(2)); });
+  f.bits.forEach((b, i) => { const m = f.morsels[i]; if (!m) { b.setAttribute('r', 0); return; } const [x, y] = f.way.at(m.at); b.setAttribute('cx', x.toFixed(1)); b.setAttribute('cy', y.toFixed(1)); b.setAttribute('r', (3.6 - 2.2 * m.at * gain(FOOD[2][1], gut.T)).toFixed(2)); });
   f.dungBits.forEach((b, i) => { const p = f.dung[i]; if (!p) { b.setAttribute('opacity', 0); return; } b.setAttribute('cx', p.x.toFixed(1)); b.setAttribute('cy', p.y.toFixed(1)); b.setAttribute('opacity', clamp(1 - p.age / 120, 0, 1).toFixed(2)); });
 }
 requestAnimationFrame(gutFrame);
