@@ -95,6 +95,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Duftzellen</h4>
     <svg id="nosesense" viewBox="0 0 300 200"></svg>
   </section>
+  <section class="panel" aria-label="Barteln">
+    <h2>Organ</h2><h3>Barteln</h3>
+    <h4 class="first">Länge und Spitze</h4>
+    <svg id="barbhead" viewBox="0 0 300 162"></svg>
+    <h4>Geschmack</h4>
+    <svg id="barbmap" viewBox="0 0 300 172"></svg>
+    <h4>Spitzenzellen</h4>
+    <svg id="barbsense" viewBox="0 0 300 172"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1163,8 +1172,18 @@ const apart = (a, b) => { const u = sphere(...a), v = sphere(...b); return degOf
 const scentAffinity = (g, k) => { const w = Math.pow(clamp(g.width, 0, 1), 4), sg = 12 + 168 * g.width * g.width, d = apart([g.lat, g.lon], [SCENTS[k][2], SCENTS[k][3]]); return w + (1 - w) * Math.exp(-d * d / (2 * sg * sg)); };
 const halfOffset = width => { const w = Math.pow(width, 4); if (w >= .5) return 180; const sg = 12 + 168 * width * width; return Math.min(180, sg * Math.sqrt(-2 * Math.log((.5 - w) / (1 - w)))); };
 function drawNose() {
-  const svg = document.getElementById('nosemap'); svg.replaceChildren();
-  const redraw = drawNose, hold = () => { NOSE.held = true; }, free = () => { NOSE.held = false; redraw(); };
+  const svg = document.getElementById('nosemap'), redraw = drawNose;
+  scentMap(svg, NOSE, redraw, 'nose', k => { NOSE.example = k; redraw(); }, NOSE.example);
+  const ex = NOSE.example;
+  senseGroups('nosesense', NOSE, {word : 'Duft: ' + SCENTS[ex][0], colour : SCENTS[ex][1], redraw,
+    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 10 ? 0 : st < 60 ? (st - 10) / 50 : st < 90 ? 1 : Math.max(0, 1 - (st - 90) / 20)),
+    newGroup : () => ({lat : -10, lon : 180, width : .2, gate : .1, spread : .3, habit : .5})});
+}
+// The scent disk: every group's half line, the scents as large as the chosen group smells them
+// (a click calls pick), the chosen group's middle and width as grips.
+function scentMap(svg, NOSE, redraw, key, pick, marked) {
+  svg.replaceChildren();
+  const hold = () => { NOSE.held = true; }, free = () => { NOSE.held = false; redraw(); };
   const cx = 150, cy = 92, Rm = 78;
   const at = (lat, lon) => { const r = Rm * Math.sin(rad(90 - lat) / 2); return [cx + r * Math.sin(rad(lon)), cy - r * Math.cos(rad(lon))]; };
   const back = p => { const dx = p.x - cx, dy = p.y - cy, r = Math.min(Rm, Math.hypot(dx, dy)); return [90 - degOf(2 * Math.asin(r / Rm)), degOf(Math.atan2(dx, -dy))]; };
@@ -1186,24 +1205,75 @@ function drawNose() {
   // The scents, each as large as the chosen group smells it; a click makes it the example below.
   SCENTS.forEach(([name, colour, lat, lon], k) => {
     const [x, y] = at(lat, lon), a = scentAffinity(g, k), chip = el('g', {class : 'chip'}, svg);
-    if (k === NOSE.example) el('circle', {cx : x, cy : y, r : 12, fill : 'none', stroke : '#f1dda6', 'stroke-width' : 1.4}, chip);
+    if (k === marked) el('circle', {cx : x, cy : y, r : 12, fill : 'none', stroke : '#f1dda6', 'stroke-width' : 1.4}, chip);
     el('circle', {cx : x, cy : y, r : 2.5 + 6 * a, fill : colour}, chip);
     const right = x >= cx - 2, label = txt(chip, x + (right ? 1 : -1) * 13, y + 4, name, {'text-anchor' : right ? 'start' : 'end', style : 'fill:' + colour});
-    chip.addEventListener('click', () => { NOSE.example = k; redraw(); });
+    chip.addEventListener('click', () => pick(k));
   });
   // The chosen group: its middle and, on its half line straight up, its width.
   const [gx, gy] = at(g.lat, g.lon);
-  drag(svg, el('circle', {cx : gx, cy : gy, r : 7}, svg), p => { const [la, lo] = back(p); g.lat = la; g.lon = lo; redraw(); }, 'nosemid', hold, free);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 7}, svg), p => { const [la, lo] = back(p); g.lat = la; g.lon = lo; redraw(); }, key + 'mid', hold, free);
   const d = halfOffset(g.width), up = g.lat + d <= 90 ? [g.lat + d, g.lon] : [180 - g.lat - d, g.lon + 180];
   const [wx, wy] = at(...up);
   drag(svg, el('rect', {x : wx - 5, y : wy - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => {
-    const want = apart([g.lat, g.lon], back(p)); let lo = 0, hi = 1; for (let n = 0; n < 30; n++) { const m = (lo + hi) / 2; if (halfOffset(m) < want) lo = m; else hi = m; } g.width = (lo + hi) / 2; redraw(); }, 'nosewidth', hold, free);
+    const want = apart([g.lat, g.lon], back(p)); let lo = 0, hi = 1; for (let n = 0; n < 30; n++) { const m = (lo + hi) / 2; if (halfOffset(m) < want) lo = m; else hi = m; } g.width = (lo + hi) / 2; redraw(); }, key + 'width', hold, free);
   svg.setAttribute('viewBox', '0 6 300 172');
-  const ex = NOSE.example;
-  senseGroups('nosesense', NOSE, {word : 'Duft: ' + SCENTS[ex][0], colour : SCENTS[ex][1], redraw,
-    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 10 ? 0 : st < 60 ? (st - 10) / 50 : st < 90 ? 1 : Math.max(0, 1 - (st - 90) / 20)),
-    newGroup : () => ({lat : -10, lon : 180, width : .2, gate : .1, spread : .3, habit : .5})});
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose();
+// ---------- Barteln ----------
+// Barbels (cppn_brain.cc:375–383, body_plan.cc:990): two feelers at the snout, as long as their
+// cells make them; at the tip a cell tastes what it touches, weighed with the scent tuning as the
+// nose smells, or feels the touch itself: (1 − f)·min(1, taste) + f·touched, f from the cells'
+// receptive width. It answers bounded (half at its threshold) and never gets used to it. Below:
+// the tip brushes three things one after another; a click on one changes it.
+const TOUCHABLE = [...SCENTS.map(([n, c], k) => [n, c, k]), ['Stein', '#8d8a7c', -1], ['Fisch', '#8ac7bb', -1]];
+const BARB = {groups : [{lat : 90, lon : 0, width : .3, gate : .3}], chosen : 0, cells : 6, feel : .25, things : [8, 2, 0]};
+function drawBarbels() {
+  const redraw = drawBarbels, hold = () => { BARB.held = true; }, free = () => { BARB.held = false; redraw(); };
+  // The head with its barbels; the tip's grip sets how many cells, the strip below what they do.
+  const svg = document.getElementById('barbhead'); svg.replaceChildren();
+  const S = .85, OX = 22, OY = -6, head = el('g', {transform : `translate(${OX} ${OY}) scale(${S})`}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : .9}, head);
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, head);
+  const root = [OX + 22 * S, OY + 74 * S], len = 16 + 8 * BARB.cells;
+  const tip = [root[0] + 10 + len * .35, root[1] + len * .85];
+  for (const off of [7, 0]) el('path', {d : `M${root[0] + off} ${root[1]} Q${root[0] - 8 + off} ${(root[1] + tip[1]) / 2 + 6} ${tip[0] + off * .6} ${tip[1] - off * .3}`, stroke : '#d9cfae', 'stroke-width' : 2.4, fill : 'none', 'stroke-linecap' : 'round', opacity : off ? .45 : 1}, svg);
+  drag(svg, el('circle', {cx : tip[0], cy : tip[1], r : 7}, svg), p => { BARB.cells = clamp(Math.round(((p.y - root[1]) / .85 - 16) / 8), 1, 12); redraw(); }, 'barbtip', hold, free);
+  txt(svg, tip[0] + 12, tip[1] + 4, BARB.cells + ' Zellen');
+  // How much the tip tastes and how much it only feels.
+  const y = 176, x0 = 76, x1 = 224;
+  const grad = el('linearGradient', {id : 'barbmix'}, el('defs', {}, svg));
+  el('stop', {offset : 0, 'stop-color' : '#a7cf59'}, grad); el('stop', {offset : 1, 'stop-color' : '#8d8a7c'}, grad);
+  el('rect', {x : x0, y : y - 4, width : x1 - x0, height : 8, rx : 4, fill : 'url(#barbmix)', opacity : .85}, svg);
+  txt(svg, x0 - 10, y + 4, 'schmeckt', {'text-anchor' : 'end'}); txt(svg, x1 + 10, y + 4, 'tastet');
+  drag(svg, el('circle', {cx : x0 + (x1 - x0) * BARB.feel, cy : y, r : 7}, svg), p => { BARB.feel = clamp((p.x - x0) / (x1 - x0), 0, 1); redraw(); }, 'barbfeel', hold, free);
+  svg.setAttribute('viewBox', '0 0 300 188');
+  scentMap(document.getElementById('barbmap'), BARB, redraw, 'barb', () => {}, -1);
+
+  // ---- What the tip reports while it brushes three things. ----
+  const c = document.getElementById('barbsense'); c.replaceChildren();
+  const g = BARB.groups[0], L = 56, R = 290, top = 30, base = 120, N = 120, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
+  const spans = [[10, 34], [48, 72], [86, 110]];
+  const touching = st => spans.findIndex(([a, b]) => st >= a && st < b);
+  const conc = st => { const k = touching(st); if (k < 0) return 0; const thing = TOUCHABLE[BARB.things[k]], taste = thing[2] >= 0 ? scentAffinity(g, thing[2]) : 0; return (1 - BARB.feel) * Math.min(1, taste) + BARB.feel; };
+  const said = Array.from({length : N + 1}, (_, st) => conc(st) > 0 ? bounded(conc(st), g.gate) : 0);
+  regler(c, {x : 26, top, base, word : 'Schwelle', value : null, start : hold, end : free, name : 'barbgate',
+    marks : [{value : g.gate, colour : groupColour(0), chosen : true, set : v => { g.gate = clamp(v, .02, .98); redraw(); }}]});
+  grid(c, L, R, top, base, 1);
+  txt(c, L + 4, top - 8, 'Meldung an das Gehirn');
+  el('path', {d : 'M' + said.map((v, st) => `${X(st).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : groupColour(0), opacity : .75, stroke : '#ffffff', 'stroke-width' : 1}, c);
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  // What the tip touches, one block each; a click gives the next thing.
+  spans.forEach(([a, b], k) => {
+    const thing = TOUCHABLE[BARB.things[k]], chip = el('g', {class : 'chip'}, c);
+    el('rect', {x : X(a), y : base + 8, width : X(b) - X(a), height : 22, rx : 4, fill : thing[1], opacity : .35, stroke : thing[1]}, chip);
+    txt(chip, (X(a) + X(b)) / 2, base + 23, thing[0].split(',')[0], {'text-anchor' : 'middle', style : 'fill:#eef4ec'});
+    chip.addEventListener('click', () => { BARB.things[k] = (BARB.things[k] + 1) % TOUCHABLE.length; redraw(); });
+  });
+  txt(c, L, base + 46, 'Schritte');
+  for (const st of [40, 80, 120]) txt(c, X(st), base + 46, st, {'text-anchor' : st === 120 ? 'end' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 52));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels();
 </script>
