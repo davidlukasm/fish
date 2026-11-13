@@ -1160,7 +1160,9 @@ function drawSkin(key) {
   const felt = key === 'lateral'
     ? gr => { let a = 0, w = 0; for (const q of pts) { const k = skinWeight(gr, q); a += k * Math.max(0, Math.cos(q.a - organ.from)); w += k; } return w ? a / w : 0; }
     : gr => skinWeight(gr, sp);
-  if (key === 'defense') return defenseCharts(organ, redraw, hold, free, organ.groups.reduce((t, gr) => t + skinWeight(gr, sp), 0));
+  // How much of all spines stand where the bite comes, times the number of sectors (local_defense).
+  if (key === 'defense') { const all = organ.groups.reduce((t, gr) => t + pts.reduce((u, q) => u + skinWeight(gr, q), 0), 0);
+    return defenseCharts(organ, redraw, hold, free, all ? pts.length * organ.groups.reduce((t, gr) => t + skinWeight(gr, sp), 0) / all : 0); }
   if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 10 && st < 80 ? level * felt(gr) : 0,
     newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : .15, spread : .3, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
@@ -1595,7 +1597,9 @@ function drawGills() {
 // strength; some always stand (resting height from the organ's size), the rest rise with the
 // command, height = height·keep + 0.02·force, at most 0.85. A bite from where spines stand is
 // blocked by their density × height, if the fish can pay 0.5 × the wound × spines in energy;
-// raised spines brake the swim, drag × (1 + 2·height). Above: the fish with its spines and where a
+// raised spines brake the swim, drag × (1 + 2·height). Where a bite comes the spines block
+// height × 16 × the share of all spines standing there (local_defense), at most all of it;
+// at rest a height of 0.3·c/(c + 5) stands, c the organ's strength. Above: the fish with its spines and where a
 // bite comes from; middle: the height over time under the command; below: protection against a
 // bite from there and the brake, over the height.
 function defenseCharts(organ, redraw, hold, free, felt) {
@@ -1620,9 +1624,9 @@ function defenseCharts(organ, redraw, hold, free, felt) {
   const L2 = 40, HX = v => L2 + (R - L2) * v / .85, PY = v => base - (base - top) * v;
   const there = felt;
   grid(d, L2, R, top, base, 1);
-  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => { const v = .85 * k / 40; return `${HX(v).toFixed(1)} ${PY(Math.min(1, there * v / .85)).toFixed(1)}`; }).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2.4}, d);
+  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => { const v = .85 * k / 40; return `${HX(v).toFixed(1)} ${PY(Math.min(1, there * v)).toFixed(1)}`; }).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2.4}, d);
   el('path', {d : 'M' + Array.from({length : 41}, (_, k) => { const v = .85 * k / 40; return `${HX(v).toFixed(1)} ${PY(1 / (1 + 2 * v)).toFixed(1)}`; }).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, d);
-  txt(d, HX(.84), PY(Math.min(1, there)) - 6, 'Schutz vor dem Biss', {'text-anchor' : 'end', style : 'fill:#79d2be'});
+  txt(d, HX(.84), PY(Math.min(1, there * .85)) - 6, 'Schutz vor dem Biss', {'text-anchor' : 'end', style : 'fill:#79d2be'});
   txt(d, HX(.84), PY(1 / (1 + 1.7)) - 6, 'Tempo', {'text-anchor' : 'end', style : 'fill:#eaa886'});
   el('path', {d : `M${L2} ${base} H${R} M${L2} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, d);
   txt(d, L2, base + 15, 'flach'); txt(d, R, base + 15, 'aufgestellt', {'text-anchor' : 'end'}); txt(d, (L2 + R) / 2, base + 15, 'Stachelhöhe', {'text-anchor' : 'middle'});
