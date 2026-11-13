@@ -72,6 +72,8 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 
 ## 5. Arbeitsweise
 
+- **Überall im Code nachsehen, von selbst (David 14.11. 00:19).** Eine Aussage über Engine oder Atelier erst, nachdem der Weg im Code ganz gelesen ist: Modell, Ansicht, Bibliothek, Engine. Mehr nachsehen schadet nie. Fehlbeispiel: „Im Atelier sind Darm und Darmmuskel zwei Organe“ aus der Modelldatei allein geschlossen.
+
 - **Absicht verstehen, nicht wörtlich umsetzen.** Nicht ins Gegenteil kippen.
 - **Nichts wieder einbauen, was David schon verworfen hat, außer die Umstände haben sich geändert** (David 13.11. 19:37).
   - Vorher immer nachsehen, wer mit David über das Thema gesprochen hat: Koordination, Commit-Texte (`git log -S`), README und alte Chats. Claude und Fable lassen dafür Agenten die alten Chats durchsuchen.
