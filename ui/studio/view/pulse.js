@@ -115,7 +115,7 @@ export function pulseSchedule(trace, durations) {
 }
 export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () => {}}) {
   let overlay, paths = [], parts = [], waves = [], schedule = {legs : [], end : 0};
-  let handle = null, started = null, active = false, nextLeg = 0, sceneScale = 1;
+  let handle = null, started = null, active = false, nextEvent = 0, sceneScale = 1, events = [];
   const shown = new Set(), sentLegs = new Set();
   let glowing = new Map();
   const glow = (item, cls, on) => {
@@ -218,7 +218,11 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       });
     }
     schedule = pulseSchedule(trace, durations);
-    nextLeg = 0;
+    events = [
+      ...schedule.parts.map(({part, at}) => ({part, at, level : part.level})),
+      ...schedule.legs.map(({leg, at}) => ({leg, at, level : leg.level}))
+    ].sort((a, b) => a.at - b.at || a.level - b.level || Number(!!a.leg) - Number(!!b.leg));
+    nextEvent = 0;
     const departures = new Map(schedule.legs.map(entry => [entry.leg, entry.at]));
     for (const entry of paths)
       entry.at = departures.get(entry.leg);
@@ -277,6 +281,8 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       leg.at *= ratio;
       leg.duration *= ratio;
     }
+    for (const event of events)
+      event.at *= ratio;
     schedule.end *= ratio;
     sceneScale = scale;
   };
@@ -289,12 +295,26 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
     cleanMarks();
   };
   const paint = elapsed => {
-    for (const item of parts) {
-      const {part, cls, at, waitingAt} = item, key = signalKey(part);
-      if (elapsed >= at && !shown.has(key)) {
-        shown.add(key);
-        reached(part);
+    // A skipped frame must preserve the same causal callback order as uninterrupted playback.
+    while (nextEvent < events.length && elapsed >= events[nextEvent].at) {
+      const {part, leg} = events[nextEvent++];
+      if (part) {
+        const key = signalKey(part);
+        if (!shown.has(key)) {
+          shown.add(key);
+          reached(part);
+        }
+      } else {
+        const key =
+            leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign + ':' + (leg.substance ?? '');
+        if (!sentLegs.has(key)) {
+          sentLegs.add(key);
+          sent(leg);
+        }
       }
+    }
+    for (const item of parts) {
+      const {cls, at, waitingAt} = item;
       const on = elapsed >= at && elapsed < at + PLAY.linger;
       const waiting = elapsed >= waitingAt && elapsed < at;
       if (item.on !== on) {
@@ -304,15 +324,6 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       if (item.waiting !== waiting) {
         item.waiting = waiting;
         glow(item, 'aid-pulse-waiting', waiting);
-      }
-    }
-    while (nextLeg < schedule.legs.length && elapsed >= schedule.legs[nextLeg].at) {
-      const {leg} = schedule.legs[nextLeg++];
-      const key =
-          leg.from + '>' + leg.to + ':' + leg.kind + ':' + leg.sign + ':' + (leg.substance ?? '');
-      if (!sentLegs.has(key)) {
-        sentLegs.add(key);
-        sent(leg);
       }
     }
     for (const {circle, reach, at, duration} of waves) {
@@ -349,6 +360,9 @@ export function createPlanPlayer(svg, trace, {marks, point, reached, sent = () =
       if (active)
         return;
       active = true;
+      started = null;
+      shown.clear();
+      sentLegs.clear();
       attach(svg);
       // Initial callbacks build wire indexes and mark organs before the animation clock starts.
       paint(0);

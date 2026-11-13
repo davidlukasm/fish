@@ -29,6 +29,42 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     contactView : 'design',
     userModules : []
   });
+  const checkCellCopies = document => {
+    for (const center of model.contactCenters(state(document))) {
+      const found = model.findCenter(document, center.id),
+            point = places.nodeLocation(document, sites, found.center, found.organ.type);
+      assert.deepEqual(places.nodeLocation(document, sites, center, center.organType), point,
+                       'A contact copy keeps its original cell position');
+      assert.deepEqual(
+          places.nodeLocation(document, sites, structuredClone(center), center.organType), point);
+    }
+  };
+  for (const type of ['touch', 'pain', 'gills', 'lateral']) {
+    let document = model.newDocument('Zellorte');
+    for (let i = 0; i < (type === 'lateral' ? 4 : 1); ++i)
+      document = model.addOrgan(document, type, sites, {x : 400 + 40 * i, y : 290}, Infinity, false)
+                     .document;
+    const organ = document.organs.find(o => o.type === type);
+    if (type === 'gills')
+      document = model.setOrganNodes(document, organ.id, 8, sites);
+    if (type === 'lateral') {
+      organ.centers = document.organs.filter(o => o.type === type).flatMap(o => o.centers);
+      document.organs = document.organs.filter(o => o.type !== type || o === organ);
+    }
+    model.validateDocument(document);
+    checkCellCopies(document);
+    const cells = model.allCenters(document).filter(c => c.organType === type);
+    assert.equal(
+        new Set(cells.map(c => JSON.stringify(places.nodeLocation(document, sites, c, type)))).size,
+        cells.length, 'Every group keeps its own point, including both gill sides');
+    for (const id of [undefined, 'missing'])
+      for (const site of [cells[0].site, -1]) {
+        const unknown = {...cells[0], id, site};
+        assert.deepEqual(places.nodeLocation(document, sites, unknown, type),
+                         places.centerLocation(unknown, type, sites),
+                         'An unowned cell uses its site fallback, never another cell');
+      }
+  }
   let doc = model.newDocument('Vierzig Regionen');
   for (let i = 0; i < 20; ++i) {
     const made = model.addOrgan(doc, [ 'olfaction', 'tectum', 'value', 'choice' ][i % 4], sites,
@@ -108,6 +144,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
   for (const name of ['brisa', 'liora']) {
     const fish =
         JSON.parse(readFileSync(join(root, 'genomes/entwuerfe', name + '.fish.json'), 'utf8'));
+    checkCellCopies(fish);
     const bundles = drawnBundles(state(fish));
     assert.ok(bundles.length);
     for (const bundle of bundles) {
@@ -349,6 +386,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
     Object.assign(global, before);
   }
   checkPulseTiming(createPlanPlayer, (await import('../ui/studio/view/pulse.js')).pulseSchedule);
+  await checkPulseCallbacks(createPlanPlayer);
   await checkRedraws(model, capabilities, root);
 };
 
@@ -468,6 +506,136 @@ function checkPulseTiming(createPlanPlayer, pulseSchedule) {
   } finally {
     player.stop();
     Object.assign(global, saved);
+  }
+}
+
+async function checkPulseCallbacks(createPlanPlayer) {
+  const {trialMethods} = await import('../ui/studio/trials.js');
+  const before = {
+    performance : global.performance,
+    requestAnimationFrame : global.requestAnimationFrame,
+    cancelAnimationFrame : global.cancelAnimationFrame
+  };
+  const parts = [
+    {id : 'a', kind : 'electrical', sign : 1, level : 0},
+    ...['b', 'c'].map(id => ({id, kind : 'electrical', sign : 1, level : 1})),
+    {id : 'd', kind : 'electrical', sign : 1, level : 2},
+    {id : 'd', kind : 'teaching', sign : 0, level : 2},
+    ...[0, 1].map(substance => ({id : 'd', kind : 'hormone', sign : 0, substance, level : 2})),
+    {id : 'e', kind : 'electrical', sign : 1, level : 3}
+  ];
+  const legs = [
+    ...['b', 'c'].map(to => ({from : 'a', to, level : 0, kind : 'electrical', sign : 1})),
+    {from : 'b', to : 'd', level : 1, kind : 'electrical', sign : 1},
+    {from : 'c', to : 'd', level : 1, kind : 'teaching', sign : 0},
+    ...['b', 'c'].map((from, substance) =>
+                          ({from, to : 'd', level : 1, kind : 'hormone', sign : 0, substance})),
+    {from : 'd', to : 'e', level : 2, kind : 'electrical', sign : 1}
+  ].map(leg => ({...leg, sourceSign : 1}));
+  const run = (times, action = '') => {
+    let now = 0, next, scale = 1;
+    global.performance = {now : () => now};
+    global.requestAnimationFrame = f => (next = f, 1);
+    global.cancelAnimationFrame = () => {};
+    const element = () => ({
+      attributes : {},
+      children : [],
+      classList : {
+        set : new Set(),
+        contains(k) { return this.set.has(k); },
+        add(k) { this.set.add(k); },
+        remove(k) { this.set.delete(k); },
+        toggle(k, on) { on ? this.set.add(k) : this.set.delete(k); }
+      },
+      style : {setProperty() {}},
+      setAttribute(k, v) { this.attributes[k] = v; },
+      getAttribute(k) { return this.attributes[k] ?? null; },
+      appendChild(child) { this.children.push(child); },
+      remove() {}
+    });
+    const paths = legs.filter(leg => leg.kind !== 'hormone')
+                      .map(leg => ({
+                             ...element(),
+                             attributes : {'data-signal-edges' : leg.from + '>' + leg.to},
+                             matches : () => true,
+                             getTotalLength : () => 90,
+                             getPointAtLength : x => ({x, y : 0})
+                           }));
+    const svg = {
+      ...element(),
+      isConnected : true,
+      ownerDocument : {createElementNS : () => element()},
+      querySelectorAll : () => paths,
+      getScreenCTM : () => ({a : scale, b : 0})
+    };
+    const marks = new Map(parts.map(part => [part.id, element()])), callbacks = [];
+    const stimulus = {fired : new Set(), sent : [], learned : [], taught : new Map()};
+    const studio = {
+      state : {document : {organs : []}},
+      teaches : trialMethods.teaches,
+      legWires : () => []
+    };
+    const player = createPlanPlayer(svg, {parts, legs}, {
+      marks : id => [marks.get(id)],
+      point : id => ({x : {a : 0, b : 90, c : 0, d : 180, e : 270}[id], y : 0}),
+      reached : part => {
+        callbacks.push([ 'reached', part.id, part.kind, part.substance ]);
+        if (part.kind === 'electrical' && part.sign > 0)
+          stimulus.fired.add(part.id);
+        trialMethods.learnedPaths.call(studio, part, stimulus);
+      },
+      sent : leg => {
+        callbacks.push([ 'sent', leg.from, leg.to, leg.kind, leg.substance ]);
+        stimulus.sent.push(leg);
+      }
+    });
+    try {
+      player.start();
+      for (const time of times) {
+        now = time;
+        next(time);
+        if (time === 750 && [ 'redraw', 'zoom' ].includes(action)) {
+          if (action === 'zoom') {
+            scale = 2;
+            player.rescale();
+          }
+          player.attach(svg);
+        }
+        if (time === 1900 && !action)
+          assert.ok(marks.get('d').classList.contains('aid-pulse-binding'),
+                    'A second substance keeps the shared mark lit after the first one fades');
+      }
+      const sequence = [...callbacks ];
+      player.stop();
+      assert.ok(!marks.get('d').classList.contains('aid-pulse-binding'));
+      now += 5000;
+      next(now);
+      assert.deepEqual(callbacks, sequence, 'Stopping suppresses a pending animation callback');
+      if (action === 'restart') {
+        player.start();
+        next(now);
+        now += 10000;
+        next(now);
+        assert.deepEqual(callbacks.slice(sequence.length), sequence,
+                         'Restarting replays each chronological callback once');
+      }
+      return {sequence, learned : stimulus.learned.map(leg => leg.from + '>' + leg.to)};
+    } finally {
+      player.stop();
+    }
+  };
+  try {
+    const smooth = run([ 0, 250, 500, 750, 1000, 1250, 1500, 1750, 1900, 2350 ]);
+    assert.deepEqual(smooth.learned, [ 'b>d' ]);
+    assert.deepEqual(run([ 0, 2350 ]), smooth,
+                     'Skipping frames keeps departures, arrivals and golden inputs identical');
+    assert.deepEqual(run([ 0, 500, 750, 2350 ], 'redraw'), smooth,
+                     'Redrawing preserves pending callbacks without duplicating old arrivals');
+    assert.deepEqual(run([ 0, 500, 750, 10000 ], 'zoom'), smooth,
+                     'Zoom scales pending departures and arrivals together');
+    assert.deepEqual(run([ 0, 500, 1000, 1500, 2350 ], 'restart'), smooth);
+  } finally {
+    Object.assign(global, before);
   }
 }
 

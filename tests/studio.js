@@ -3095,6 +3095,26 @@ async function checkHormoneSystems(model, capabilities) {
     assert.equal(model.gillRakers(model.findOrgan(dense, gills.organId)), 1);
     assert.ok(model.isFibrous(organ), 'Gill pumps are muscles with fibres');
     organAudits.push({document : dense, id : gills.organId, type : 'gills', rakers : 1});
+    for (const density of [0, .125, .5, .8, 1]) {
+      const same = model.findOrgan(model.setGillRakers(gills.document, gills.organId, density),
+                                   gills.organId);
+      assert.equal(model.gillRakers(same),
+                   same.centers.reduce((sum, c) => sum + (c.q1 + 1) / 2, 0) / same.centers.length,
+                   'Equal gill centres retain exactly the same density');
+    }
+    for (const [copiesA, copiesB, tauA, tauB,
+                expected] of [[ 8, 8, 0, 1, 25 / 29 ], [ 16, 4, 1, 1, .8 ],
+                              [ 16, 4, 0, 1, 25 / 26 ], [ 4, 16, .3, .7, .3422548805380889 ]]) {
+      const mixed = structuredClone(gills.document), gill = model.findOrgan(mixed, gills.organId);
+      assert.equal(gill.centers.length, 2);
+      Object.assign(gill.centers[0], {q1 : 1, copies : copiesA, tau : tauA});
+      Object.assign(gill.centers[1], {q1 : -1, copies : copiesB, tau : tauB});
+      model.validateDocument(mixed);
+      const rakers = model.gillRakers(gill);
+      assert.ok(Math.abs(rakers - expected) < 1e-12,
+                'Mixed gill centres contribute their cell capacity and fibre force');
+      organAudits.push({document : mixed, id : gills.organId, type : 'gills', rakers});
+    }
   }
   {
     // The gut muscle takes the gut wall in the trunk's midline and nothing else; the motor region
@@ -4153,7 +4173,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const learned = parts => {
       const stimulus = {fired : new Set(), sent : [ leg ], learned : [], taught : new Map()};
       for (const part of parts) {
-        if (part.kind === 'electrical')
+        if (part.kind === 'electrical' && part.sign > 0)
           stimulus.fired.add(part.id);
         learner.learnedPaths(part, stimulus);
       }
@@ -4168,6 +4188,14 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.equal(learned([ node, fires ]), 1, 'A teacher in the step of the firing teaches');
     assert.equal(learned([ {...node, level : 1}, fires ]), 0,
                  'A teacher before the firing does not');
+    assert.equal(learned([ {...node, level : 1}, fires, {...fires, sign : -1, level : 3} ]), 0,
+                 'A later inhibition cannot revive an earlier rejected teaching mark');
+    assert.equal(learned([ {...node, level : 1}, fires, {...held, substance : 1, level : 3} ]), 0,
+                 'A later unrelated substance cannot revive an earlier teaching mark');
+    assert.equal(learned([ fires, {...node, level : 3} ]), 1,
+                 'A teacher arriving after positive input still marks the schematic route');
+    assert.equal(learned([ fires, {...held, level : 3} ]), 1,
+                 'A later bound teaching substance still marks the schematic route');
   }
   const mixedRelayIndex = model.allCenters(doc).findIndex(center => center.id === relay.centerId);
   const mixed = model.cppnTrace({

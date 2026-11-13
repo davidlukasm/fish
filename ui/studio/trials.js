@@ -272,13 +272,14 @@ export const trialMethods = {
     return part.kind === 'hormone' && substanceBound(HORMONE_EFFECT.teaching, receptor) &&
            receptor.substance === part.substance;
   },
-  // A teacher reaching a cell that has fired, by then or in the same step: the inputs that made
-  // it fire are what it learns, and those paths glow golden.
+  // Gold marks the schematic coincidence of positive input and teaching arrivals.
   learnedPaths(part, stimulus) {
-    if (this.teaches(part) && !stimulus.taught.has(part.id))
+    const teaching = this.teaches(part), firing = part.kind === 'electrical' && part.sign > 0;
+    if (!teaching && !firing)
+      return;
+    if (teaching && !stimulus.taught.has(part.id))
       stimulus.taught.set(part.id, part.level);
     const taughtAt = stimulus.taught.get(part.id);
-    const firing = part.kind === 'electrical' && part.sign > 0;
     if (!stimulus.fired.has(part.id) || taughtAt === undefined ||
         (firing && taughtAt !== part.level))
       return;

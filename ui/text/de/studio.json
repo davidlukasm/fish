@@ -1709,7 +1709,7 @@
       "title": "Tastzellen",
       "from": "leichte Berührung",
       "to": "harter Stoß",
-      "half": "bei {p} Stoßstärke",
+      "half": "bei {p} Tastreiz",
       "handle": "Ziehen: wie leichte Berührungen die Zellen schon melden"
     },
     "pain": {

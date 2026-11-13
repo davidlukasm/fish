@@ -249,15 +249,21 @@ export function showsNodes(state, organs) {
 export function nodeLocation(doc, sites, center, organType) {
   const site = findSite(sites, center.site);
   if (organType === 'touch' || organType === 'pain') {
-    const organ = ownerOf(doc, center.id), anchor = skinSenseAnchor(organ, sites),
-          rank = organ.centers.indexOf(center) - (organ.centers.length - 1) / 2,
+    const organ = ownerOf(doc, center.id);
+    if (!organ)
+      return centerLocation(center, organType, sites);
+    const anchor = skinSenseAnchor(organ, sites),
+          rank = organ.centers.findIndex(c => c.id === center.id) - (organ.centers.length - 1) / 2,
           x = anchor.x + rank * 8, side = Math.sign(anchor.y - BODY_FRAME.middle) || sideOf(organ);
     return {x, y : anchor.y + skinAt(x, side) - skinAt(anchor.x, side)};
   }
   if (organType === 'gills') {
-    const organ = ownerOf(doc, center.id), side = sideSign(site?.side),
+    const organ = ownerOf(doc, center.id);
+    if (!organ)
+      return centerLocation(center, organType, sites);
+    const side = sideSign(site?.side),
           peers = organ.centers.filter(c => sideSign(findSite(sites, c.site)?.side) === side),
-          spread = (peers.indexOf(center) - (peers.length - 1) / 2) * 6;
+          spread = (peers.findIndex(c => c.id === center.id) - (peers.length - 1) / 2) * 6;
     return {
       x : (organ.position?.x ?? 440) + spread,
       y : BODY_FRAME.middle +
@@ -265,8 +271,12 @@ export function nodeLocation(doc, sites, center, organType) {
     };
   }
   if (organType === 'lateral') {
-    const organ = ownerOf(doc, center.id), line = lateralLine(doc, sites, organ),
-          at = (organ.centers.indexOf(center) + .5) / organ.centers.length * (line.length - 1),
+    const organ = ownerOf(doc, center.id);
+    if (!organ)
+      return centerLocation(center, organType, sites);
+    const line = lateralLine(doc, sites, organ),
+          at = (organ.centers.findIndex(c => c.id === center.id) + .5) / organ.centers.length *
+               (line.length - 1),
           lo = Math.floor(at), t = at - lo;
     return {
       x : line[lo].x + (line[Math.min(lo + 1, line.length - 1)].x - line[lo].x) * t,

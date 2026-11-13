@@ -367,7 +367,7 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
     labelledText(label('opponent'), opponent)
   ].join(' · ');
   const target = {'spectrum-id' : organ.id, 'profile-id' : profile.id};
-  return `<div data-spectrum-block title="${escapeText(values)}">` +
+  return '<div data-spectrum-block>' +
          spectrumElement(profile, {spectrum : 'field', ...target}, label('spectrum'), {
            light,
            colourTuning : hasColourTuning(organ, profile),
@@ -383,7 +383,8 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
            axis : {excite : label('excites'), inhibit : label('inhibits')},
            others : otherTypes(organ, profile, definition)
          }) +
-         contrastScene(profile, faint, target, spread) + '</div>';
+         contrastScene(profile, faint, target, spread) +
+         `<p class="aid-picture-caption">${escapeText(values)}</p></div>`;
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});

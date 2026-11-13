@@ -28,7 +28,7 @@ import {
   unitOfPlan
 } from '../../tuning.js';
 import {nextPigment} from './pigment.js';
-import {fastShare, fibreTau} from '../../fibre.js';
+import {fastShare, fibreForce, fibreTau} from '../../fibre.js';
 import {
   eligible,
   fitsOrgan,
@@ -1004,10 +1004,19 @@ export function muscleTrait(doc, code, key, sites) {
 }
 // How densely the gill rakers stand, carried by the gill pump cells' first quality: 0 open, 1
 // dense.
-export const gillRakers = organ =>
-    organ.centers.length
-        ? organ.centers.reduce((sum, c) => sum + unitOfPlan(c.q1), 0) / organ.centers.length
-        : null;
+export function gillRakers(organ) {
+  if (!organ.centers.length)
+    return null;
+  const density = unitOfPlan(organ.centers[0].q1);
+  let weight = 0, offset = 0;
+  for (const center of organ.centers) {
+    // The plan's common capacity factor 1/16 and muscle force factor 4 cancel in this mean.
+    const force = center.copies * fibreForce(fastShare(center.tau));
+    weight += force;
+    offset += force * (unitOfPlan(center.q1) - density);
+  }
+  return density + offset / weight;
+}
 export function setGillRakers(doc, organId, density) {
   const organ = findOrgan(doc, organId);
   if (organ?.type !== 'gills' || !Number.isFinite(density))
