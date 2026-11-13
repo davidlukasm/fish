@@ -6,7 +6,7 @@
 #include "receptor_tuning.hh"
 #include "muscle_fibre.hh"
 #include "field/development_sites.hh"
-#include "field/retinal_tissue.hh"
+#include "field/wave_tissue.hh"
 #include <limits>
 #include <map>
 #include <numeric>
