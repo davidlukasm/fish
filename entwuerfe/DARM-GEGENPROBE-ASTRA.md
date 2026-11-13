@@ -17,3 +17,13 @@ Produktstand `970cb242`.
 - **Bissen und Lebensphase:** `muscleWorks()` lässt die Animation in der zweiten Hälfte jeder Runde pumpen, auch bei ausgewähltem Erwachsenenalter und bereits beendeter Muskelphase. Die Lebensleiste aktualisiert beim Ziehen des Alters nur den Ertrag (`:291–299,489,639–642`). Die Stärke der Bauchweh- und Geschmacksprobe ist weiterhin von den Einstellungen zur Verdauung unabhängig; die Futterzeile kommt aus dem Ertragsfenster (`:219–231,543,613–623`).
 - **„Geschmack“ in der Eingabe:** Ein einzelner Bissen speist den Nährstoffwert beim Schlucken. Im Ei speist ihn der Gewebeaufbau. Der Blutsinn liest sechs Hormone, Reife, Reserve und Erschöpfung und enthält keinen eigenen Nährstoffkanal (`src/physiology.cc:205–222,408–413,470–478`, `src/body_plan.cc:1054–1056,1146–1148,1185–1187`).
 
+
+
+## Darm und Darmmuskel im aktuellen Atelier
+
+Produktstand `970cb242`. Die getrennten Modelltypen zeigen sich auch in der Bedienung:
+
+- Die Palette erzeugt für jedes Organ der Kategorie `internal` eine eigene Kachel. `gut` und `gutmuscle` gehören zur selben Kategorie und haben eigene Bezeichnungen (`ui/studio/model/organs.js:158–184`, `ui/studio/view/library.js:40–53,73–103`, `ui/text/de/studio.json:100–101`).
+- Ein Zug aus der Palette übergibt den Typ aus der Kachel an `placeCanvasOrgan` und dann `addOrgan`. Dort erzeugt jeder Typ seine eigenen Knoten und hat eine eigene Identität (`ui/studio/drops.js:145–173,369`, `ui/studio/canvas_placement.js:42–66`, `ui/studio/model/document.js:560–633`).
+- Die Klickzonen tragen die jeweilige Organ-ID. Der Darm hat die Klickfläche über Magen und Schlingen. Der Darmmuskel verwendet die eigenen Muskelringe und Knoten. Der Inspektor löst die gewählte ID auf und rendert `gutGraphic + gutProbeControls` oder `gutMuscleGraphic` (`ui/studio/view/body.js:360–374,457–474,685–698`, `ui/studio/view/panels.js:101–109,123–137,478–508`, `ui/studio/design.js:339–347`).
+- Die Engine erkennt die Muskelzellen an Motorkanal und Wandposition. Die zwei Kacheln und zwei Inspektoren sind Entscheidungen des Ateliers (`ui/studio/model/organs.js:409–427`, `src/body_plan.cc:45–49,388–401`).
