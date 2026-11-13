@@ -62,6 +62,9 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 - **Absicht verstehen, nicht wörtlich umsetzen.** Nicht ins Gegenteil kippen, und nichts wieder einbauen, was David schon verworfen hat. Vorgänger findet man mit `git log -S`.
 - **Echte Größe:** Geprüft wird im Browser bei 320 px Panelbreite und 1:1. Das Panel ist hochkant, also wird untereinander gebaut und die volle Breite genutzt, nicht rechtsbündig.
 - **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`), nie aus einer JS-Nachahmung der Nervendynamik.
+- **Sarkasmus erkennen, Absicht statt Wortlaut** (David 13.11. 18:11). David schreibt oft sarkastisch und will meistens nicht wörtlich genommen werden. Beispiel: Sein „mir ist es egal“ zum Drüsenvorschlag hieß „ich sehe das Problem nicht, erklärt es mir“, nicht „verwerft es“.
+  - Klingt eine Aussage wie ein Urteil, das nicht zu seinem übrigen Text passt, nicht danach handeln. Stattdessen den Zweck dahinter suchen, meist eine fehlende Erklärung.
+  - Im Zweifel nachfragen, statt etwas zu streichen oder umzusetzen.
 - **Davids Rückmeldungen nie wörtlich an andere weitergeben.** Sie gehen an den, mit dem er spricht, und beziehen sich auf dessen Chat. Weitergegeben wird erklärt, mit Bildern als PNG in `bilder/`, denn Astra kann HTML-Entwürfe nicht im Browser öffnen.
 - **Uhrzeiten nie raten**, sondern immer aus der Konsole: `TZ=Europe/Vienna date +%H:%M`.
 - **Entwurfsfische sind veraltet:** Kein Fisch in `genomes/entwuerfe` passt zur heutigen Engine, und Hecht war nie lebensfähig. Keine Messung an einem Entwurf, bevor sein Bauplan generalüberholt und angesehen ist. Hauptaufgabe sind die Inspektoren.
