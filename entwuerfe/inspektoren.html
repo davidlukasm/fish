@@ -102,6 +102,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Strömungszellen</h4>
     <svg id="lateralsense" viewBox="0 0 300 200"></svg>
   </section>
+  <section class="panel" aria-label="Gleichgewicht">
+    <h2>Organ</h2><h3>Gleichgewicht</h3>
+    <h4 class="first">Haarzellen</h4>
+    <svg id="balfish" viewBox="0 0 300 124"></svg>
+    <h4>Lage</h4>
+    <svg id="balsense" viewBox="0 0 300 160"></svg>
+  </section>
   <section class="panel" aria-label="Schmerz">
     <h2>Organ</h2><h3>Schmerz</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1057,5 +1064,81 @@ function drawSkin(key) {
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral');
+// ---------- Gleichgewicht ----------
+// Hair cells on a sac with a stone (body_plan.cc:1083, 324–331): a hair points somewhere between
+// head and tail (gene q1); it is weighed down as far as it points to the bottom,
+// max(0, sin(hair + pitch)), and answers bounded (half at its threshold); it never gets used to it,
+// so that a fish lying still still knows which way is down. Above, the fish in the pose at the
+// dashed line below, its sac and each group's hair; below, what each group reports in every pose.
+const BAL = {groups : [{hair : .5, gate : .3}, {hair : .15, gate : .3}], chosen : 0, pose : .4};
+const bounded = (x, t) => { x = clamp(x, 0, 1); t = clamp(t, .001, .999); return x * (1 - t) / (x * (1 - t) + (1 - x) * t); };
+const balAnswer = (g, pose) => bounded(Math.max(0, Math.sin(Math.PI * g.hair + pose)), g.gate);
+function miniFish(svg, x, y, angle, size, colour = '#5d8384') {
+  const g = el('g', {transform : `translate(${x} ${y}) rotate(${-angle * 180 / Math.PI}) scale(${size / 270}) translate(-149 -65)`}, svg);
+  el('path', {d : BODY, fill : 'none', stroke : colour, 'stroke-width' : 270 / size * 1.2}, g);
+  return g;
+}
+function drawBalance() {
+  const svg = document.getElementById('balfish'); svg.replaceChildren();
+  const redraw = drawBalance, hold = () => { BAL.held = true; }, free = () => { BAL.held = false; redraw(); };
+  const cx = 150, cy = 62, deg = BAL.pose * 180 / Math.PI;
+  // Down, for orientation.
+  el('path', {d : `M282 18 V46 M276 40 L282 47 L288 40`, stroke : '#7f9a99', 'stroke-width' : 1.4, fill : 'none'}, svg);
+  txt(svg, 282, 60, 'unten', {'text-anchor' : 'middle'});
+  const fish = el('g', {transform : `translate(${cx} ${cy}) rotate(${-deg}) scale(.62) translate(-149 -65)`}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1.6}, fish);
+  el('circle', {cx : 30, cy : 52, r : 4, fill : '#e9e2c6'}, fish);
+  // The sac and its hairs, in the fish's frame: 0 towards the head, π towards the tail.
+  const sx = cx, sy = cy;
+  el('circle', {cx : sx, cy : sy, r : 9, fill : '#0f2c34', stroke : '#a7c2be'}, svg);
+  const order = BAL.groups.map((g, i) => i).sort((p, q) => (p === BAL.chosen) - (q === BAL.chosen));
+  for (const i of order) {
+    // A hair from the head (left) turning down to the tail, turned with the fish; longer as it reports.
+    const g = BAL.groups[i], len = 34 + 14 * balAnswer(g, BAL.pose);
+    const dx = -Math.cos(Math.PI * g.hair + BAL.pose), dy = Math.sin(Math.PI * g.hair + BAL.pose);
+    el('path', {d : `M${sx} ${sy} l${(dx * len).toFixed(1)} ${(dy * len).toFixed(1)}`, stroke : groupColour(i), 'stroke-width' : i === BAL.chosen ? 3 : 2, 'stroke-linecap' : 'round', class : 'chip'}, svg)
+      .addEventListener('pointerdown', () => { BAL.chosen = i; redraw(); });
+    if (i === BAL.chosen) drag(svg, el('circle', {cx : sx + dx * len, cy : sy + dy * len, r : 7}, svg), p => {
+      const back = Math.atan2(p.y - sy, -(p.x - sx)) - BAL.pose; g.hair = clamp(skinWrap(back) / Math.PI, 0, 1); redraw(); }, 'balhair', hold, free);
+  }
+  el('circle', {cx : sx, cy : sy, r : 4, fill : '#d9cfae'}, svg);
+  svg.setAttribute('viewBox', '0 0 300 124');
+
+  // ---- What each group reports in every pose; the dashed line is the pose above. ----
+  const c = document.getElementById('balsense'); c.replaceChildren();
+  const L = 56, R = 290, top = 30, base = 126, N = 144, poseAt = k => -Math.PI + 2 * Math.PI * k / N, X = a => L + (R - L) * (a + Math.PI) / (2 * Math.PI);
+  const answers = BAL.groups.map(g => Array.from({length : N + 1}, (_, k) => balAnswer(g, poseAt(k))));
+  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0));
+  const scale = settle(BAL, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), Y = v => base - (base - top) * v / scale;
+  regler(c, {x : 26, top, base, word : 'Schwelle', value : null, start : hold, end : free, name : 'balgate',
+    marks : BAL.groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === BAL.chosen, set : v => { g.gate = clamp(v, .02, .98); BAL.chosen = i; redraw(); }}))});
+  grid(c, L, R, top, base, scale);
+  txt(c, L + 4, top - 8, 'Meldung an das Gehirn');
+  const order2 = BAL.groups.map((g, i) => i).sort((p, q) => BAL.groups[p].gate - BAL.groups[q].gate);
+  let under = Array(N + 1).fill(0);
+  for (const i of order2) {
+    const over = under.map((u, k) => u + answers[i][k]);
+    const d = 'M' + over.map((y, k) => `${X(poseAt(k)).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${X(poseAt(k)).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
+    el('path', {d, fill : groupColour(i), opacity : .75, stroke : i === BAL.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === BAL.chosen ? 1.4 : .6, class : 'chip'}, c)
+      .addEventListener('pointerdown', () => { BAL.chosen = i; redraw(); });
+    under = over;
+  }
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  // The poses along the bottom as small fish: on its back, head up, level, head down, on its back.
+  for (const a of [-Math.PI, -Math.PI / 2, 0, Math.PI / 2, Math.PI]) miniFish(c, clamp(X(a), L + 12, R - 12), base + 16, a, 24);
+  // The pose: a dashed line with its grip, over the picture.
+  const px = X(BAL.pose);
+  el('path', {d : `M${px} ${top - 6} V${base + 6}`, stroke : '#f1dda6', 'stroke-width' : 1.4, 'stroke-dasharray' : '5 4'}, c);
+  drag(c, el('circle', {cx : px, cy : top - 6, r : 7}, c), p => { BAL.pose = clamp((p.x - L) / (R - L), 0, 1) * 2 * Math.PI - Math.PI; redraw(); }, 'balpose', hold, free);
+  const fresh = () => ({hair : clamp(1 - BAL.groups[BAL.chosen].hair, 0, 1), gate : .3});
+  const chip = (x, y, sign, act) => { const g = el('g', {class : 'chip'}, c);
+    el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, g);
+    el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, g);
+    g.addEventListener('click', act); };
+  if (BAL.groups.length < 3) chip(30, base + 22, '+', () => { BAL.groups.push(fresh()); BAL.chosen = BAL.groups.length - 1; redraw(); });
+  if (BAL.groups.length > 1) chip(50, base - (base - top) * BAL.groups[BAL.chosen].gate, '×', () => { BAL.groups.splice(BAL.chosen, 1); BAL.chosen = 0; redraw(); });
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 32));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance();
 </script>
