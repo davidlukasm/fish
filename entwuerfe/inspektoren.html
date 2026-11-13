@@ -76,7 +76,7 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="gutbars" viewBox="0 0 300 130"></svg>
     <h4>Schmerzzellen</h4>
     <svg id="gutpain" viewBox="0 0 300 90"></svg>
-    <h4>Nährstoffzellen</h4>
+    <h4>Futterzellen</h4>
     <svg id="gutsense" viewBox="0 0 300 130"></svg>
   </section>
   <section class="panel" aria-label="Schwanz">
@@ -533,8 +533,8 @@ function drawGut() {
   drawNutrientSense();
 }
 // The pain cells: what they report at each degree of bellyache (gut_irritation), half at their
-// threshold (bounded_response), like the other inner senses. They are not in the engine yet (asked
-// of Fable, David 03:12).
+// threshold (bounded_response), like the other inner senses (pain cells inside the body, Fable
+// 2265bb7d).
 function drawPainSense() {
   const svg = document.getElementById('gutpain'); svg.replaceChildren();
   const L = 8, R = 292, top = 16, base = 62, X = v => L + (R - L) * v, Y = v => base - (base - top) * v;
@@ -618,7 +618,8 @@ requestAnimationFrame(gutFrame);
 // ---------- Schwanz ----------
 // The tail muscle as its nodes, in their order along the body. Each node has its cells, its fibres
 // from slow (red: never tire, cheap work, dear upkeep) to fast (white: 6.25 times the force, tire
-// within some 40 steps flat out, dear work, cheap upkeep; muscle_fibre), and its own threshold: a
+// within some 20 steps flat out, dear work, cheap upkeep; muscle_fibre after Fable 2265bb7d: drain
+// 0.06·fast²·(1 − 1/e), refill in 2·200^fast steps), and its own threshold: a
 // weak command moves only the nodes with a low one (command_line.js: tanh of the command past the
 // gate). Force adds over the nodes; each cell tires on its own and pays its own work (Fable
 // 409b0911). Upkeep per step 0.0004·upkeep(fast) per cell, work 0.00128·cost(fast) per unit of
@@ -628,13 +629,13 @@ const tail = {
   nodes : [{cells : 4, fast : .1, gate : .1}, {cells : 3, fast : .5, gate : .45}, {cells : 3, fast : .95, gate : .75}],
   chosen : 2, command : 1, wriggle : .3
 };
-const STEPS = 300, MOST_CELLS = 8;
+const STEPS = 300, MOST_CELLS = 8, ALL_OUT = 1 - Math.exp(-1);
 const forceOf = f => .4 * Math.pow(2.5 / .4, f);
 const fibreColour = f => { const lo = [184, 68, 63], hi = [242, 235, 226]; return 'rgb(' + lo.map((v, i) => Math.round(v + (hi[i] - v) * f)).join(',') + ')'; };
 const driveOf = (n, c) => c <= n.gate ? 0 : Math.tanh(3 * (c - n.gate)) / Math.tanh(3 * (1 - n.gate));
 function nodeForce(n, c) {
   const d = driveOf(n, c), out = []; let r = 1;
-  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; out.push(n.cells * forceOf(n.fast) * d * a); r = clamp(r - .028 * n.fast * n.fast * a * d + (1 - r) / 400, 0, 1); }
+  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; out.push(n.cells * forceOf(n.fast) * d * a); r = clamp(r + (1 - r) / (2 * Math.pow(200, n.fast)) - .06 * n.fast * n.fast * ALL_OUT * a * d, 0, 1); }
   return out;
 }
 // One scale for both force pictures: room for the strongest command with a little to spare, never
