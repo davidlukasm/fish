@@ -88,3 +88,12 @@ Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2,
 
 ## Uhrzeit
 - Jede Zeitangabe (KOORD, Berichte an David) kommt aus der Konsole: `TZ=Europe/Vienna date +%H:%M`. Nie raten (David 05:49).
+
+## Entwurfsfische sind veraltet (David 13.11. 15:50)
+
+Kein Fisch in `genomes/entwuerfe` ist für die heutige Engine gebaut (Stand vor dem 12.11., seither nur
+maschinell angeglichen). Hecht war nie lebensfähig. Keine Aquarium- oder Verhaltensmessung an
+einem Entwurf, bevor sein Bauplan generalüberholt und im Atelier angesehen ist. Ein Befund aus
+einem veralteten Fisch ist kein Befund über die Engine. Siehe `genomes/entwuerfe/README.md`.
+Hauptaufgabe sind die Inspektoren.
+

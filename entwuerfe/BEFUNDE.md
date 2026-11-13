@@ -14,7 +14,7 @@ Zu entscheiden (Umschalter im Entwurf)
 - 20 Wertung: Merkmalszellen haben keine Festigung → alles Gelernte hat 500 Schritte Halbwertszeit; ohne Lehre löschen die Düfte allein beide Merkmale.
   Mit Festigung der Merkmale und Vorgabe Verknüpfung 0,75 / Lehre 0,5 wertet und lernt sie richtig um (3 Seeds). Bei der heutigen Vorgabe 1/1 steigt B nach Schmerz – in jeder gemessenen Regel. Ursache offen.
 - 22 Allgemein: Kein Baustein schaltet Festigung ein → in jedem Fisch hält Gelerntes nur einige hundert Schritte, außer ein Botenstoff festigt. Grundfestigung für Lernzellen?
-- 21 Hecht verhungert am Kieferunterhalt: Überlebende (5 Seeds × 12) mit Kiefer 2×384: 24/60, mit 2×96: 44/60, bei gleichem Fraß. Die Nase ist nicht schuld (Duft reicht, sie gewöhnt sich nur an den Nebel; kürzere Gewöhnung ändert nichts).
+- 21/19 Hecht (Kiefer, Nase) und Liora-Aquarienläufe: zurückgenommen – an veralteten Entwurfsfischen gemessen, ohne Bauplan-Überholung; Hecht war nie lebensfähig.
 - 7 Drüse: hält höchstens 48 Schritte → Vorschlag 4–1024.
 - 8 Blase: füllt träge (≈ 250 Schritte) → Vorschlag 4× schneller.
 - 14 Nervenzelle: Schwelle zählt nur × 0,3 → Vorschlag × 1.
