@@ -328,6 +328,8 @@ void PopulationCheckpoint::read_swimming(std::istream &in, Body &b) {
       throw std::runtime_error("invalid antagonist state");
   };
   read_pair(b.motor_.tail_pair);
+  for (auto &drive : b.motor_.tail_drive)
+    scalar(in, drive, 0, state::MAX_SIGNAL);
   for (auto &fin : b.motor_.fin_pairs)
     for (auto &pair : fin)
       read_pair(pair);

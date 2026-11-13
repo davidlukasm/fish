@@ -989,6 +989,47 @@ void embryo_uses_delivered_muscle_force(const Genome &g) {
             flow <= physiology.embryo_flow_gain * delivered * progress + tolerance::precision,
         "embryonic water movement is bounded by the muscle force already paid for");
 }
+// One tail flank strikes, rests, and the other answers with the given share of its drive.
+struct TailAnswer {
+  double sweep, forward, turn_left, turn_right;
+  bool answered;
+};
+TailAnswer tail_answer(const Genome &g, float first, float answer) {
+  Ecosystem w(SEED);
+  w.resize(800, 500);
+  auto &b = adult(w, g, 400, 250).body;
+  std::array<std::set<std::uint32_t>, 2> flank;
+  for (const auto &e : g.interface->effectors)
+    if (e.port == organ_port::forward && e.lever != 0)
+      flank[e.lever < 0 ? 0 : 1].insert(e.neuron);
+  check(!flank[0].empty() && !flank[1].empty(), "the tail fixture has muscles on both flanks");
+  std::array<float, 2> level{first, 0};
+  b.set_actuation_probe([&](std::uint32_t cell, float) {
+    return flank[0].count(cell) ? level[0] : flank[1].count(cell) ? level[1] : 0.f;
+  });
+  anatomical_action(b, *g.interface, w.physiology(), false);
+  level = {0, 0};
+  for (int step = 0; step < 64 && b.motor().strokes[StrokeTailLeft].recovery > 0; ++step)
+    anatomical_action(b, *g.interface, w.physiology(), false);
+  level = {0, answer};
+  anatomical_action(b, *g.interface, w.physiology(), false);
+  return {b.motor().sweep[StrokeTailRight], b.motor().drive_forward, b.motor().drive_left,
+          b.motor().drive_right,
+          b.motor().impulse_tail_right > 0 && b.motor().tail_pair.last == 1};
+}
+void a_stronger_answering_tail_stroke_steers(const Genome &g) {
+  const auto equal = tail_answer(g, .8f, .8f), weaker = tail_answer(g, .8f, .4f),
+             stronger = tail_answer(g, .4f, .8f);
+  check(equal.answered && weaker.answered && stronger.answered,
+        "each answer starts a right stroke after the left one");
+  check(std::abs(equal.sweep - 1) < tolerance::precision && equal.turn_left == equal.turn_right,
+        "an equally strong answer only pushes");
+  check(std::abs(weaker.sweep - 1) < tolerance::precision,
+        "a weaker answer only pushes");
+  check(stronger.sweep < 1 && stronger.sweep > antagonist::lone_sweep &&
+            stronger.turn_left > stronger.turn_right,
+        "a stronger right answer steers toward the left like a lone right stroke, less strongly");
+}
 void ancestral_histories_keep_current_mutations() {
   evolution::History old("ancestor");
   const auto connection = old.connection(0, 1);
@@ -1045,6 +1086,7 @@ int main() {
     checkpoint_after_death(g);
     organ_muscles_survive_checkpoint(g);
     embryo_uses_delivered_muscle_force(g);
+    a_stronger_answering_tail_stroke_steers(g);
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);

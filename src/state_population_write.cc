@@ -91,7 +91,8 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     for (double tension : b.motor().fin_tension)
       out << ' ' << tension;
     out << ' ' << b.motor().swimming_pending << ' ' << b.motor().angular_velocity << ' '
-        << b.motor().tail_pair.last << ' ' << b.motor().tail_pair.rest;
+        << b.motor().tail_pair.last << ' ' << b.motor().tail_pair.rest << ' '
+        << b.motor().tail_drive[0] << ' ' << b.motor().tail_drive[1];
     for (const auto &fin : b.motor().fin_pairs)
       for (const auto &pair : fin)
         out << ' ' << pair.last << ' ' << pair.rest;

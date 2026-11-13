@@ -104,6 +104,8 @@ struct MotorState {
   // The antagonists of the tail (left and right flank) and of each side fin (back and forward
   // stroke), and how fully each running stroke sweeps its limb.
   AntagonistPair tail_pair;
+  // The drive each tail flank started its last stroke with.
+  std::array<double, 2> tail_drive{};
   std::array<std::array<AntagonistPair, 2>, SIDE_FINS> fin_pairs{};
   std::array<double, STROKE_COUNT> sweep{};
   // How exhausted the fast fibres are, weighted by their force: 0 rested, 1 spent.

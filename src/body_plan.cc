@@ -1544,7 +1544,11 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   // last stroke lasted is back at rest, without pushing on the way: a slack fin turns edge-on and
   // drifts back as the jaw springs back, so from rest either of its muscles sweeps it fully. The
   // tail rests straight in the middle of its sweep: one flank from there sweeps it half way.
-  const auto antagonists = [&](AntagonistPair &pair, int first, int second, double from_rest) {
+  // A tail flank that answers more strongly than the other flank's last stroke is in part a lone
+  // stroke: its excess bends the body and steers, the rest sweeps. Answering with nothing before it,
+  // it would be a lone stroke; equally strong strokes only push.
+  const auto antagonists = [&](AntagonistPair &pair, int first, int second, double from_rest,
+                               std::array<double, 2> *started_with = nullptr) {
     const std::array<int, 2> muscles{first, second};
     int started = 0;
     for (int k = 0; k < 2; ++k) {
@@ -1554,6 +1558,12 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       b.motor_.sweep[j] = pair.last == 1 - k ? 1
                           : pair.last < 0    ? from_rest
                                              : antagonist::lone_sweep;
+      if (started_with) {
+        const double own = strokes[j].drive, other = (*started_with)[1 - k];
+        if (pair.last == 1 - k && own > other)
+          b.motor_.sweep[j] = 1 - (1 - antagonist::lone_sweep) * (1 - other / own);
+        (*started_with)[k] = own;
+      }
       started += k + 1;
     }
     if (started)
@@ -1563,7 +1573,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
     if (pair.last >= 0 && pair.rest >= layout.stroke_timing[muscles[pair.last]].steps)
       pair.last = -1;
   };
-  antagonists(b.motor_.tail_pair, StrokeTailLeft, StrokeTailRight, antagonist::tail_rest_sweep);
+  antagonists(b.motor_.tail_pair, StrokeTailLeft, StrokeTailRight, antagonist::tail_rest_sweep,
+              &b.motor_.tail_drive);
   for (int fin = 0; fin < SIDE_FINS; ++fin)
     for (int side = 0; side < 2; ++side)
       antagonists(b.motor_.fin_pairs[fin][side], BACK_STROKES[fin][side], FRONT_STROKES[fin][side],
