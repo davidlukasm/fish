@@ -131,10 +131,28 @@ def number(value):
     return str(value)
 
 
-def receptor_row(r):
+def receptor_row(r, encoded=None):
     if not isinstance(r, dict) or any(field not in r for field in RECEPTOR_FIELDS):
         raise Refusal("studio.errors.invalidReceptors")
-    return " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
+    if encoded is not None:
+        parts = []
+        for field in RECEPTOR_FIELDS:
+            value = r[field]
+            if type(value) is int:
+                parts.append(value)
+            elif type(value) is float:
+                # Numeric equality alone would merge int/float and opposite zero signs.
+                parts.append((value, math.copysign(1., value)))
+            else:
+                return receptor_row(r)
+        key = tuple(parts)
+        found = encoded.get(key)
+        if found is not None:
+            return found
+    row = " ".join(number(r[f]) for f in RECEPTOR_FIELDS)
+    if encoded is not None:
+        encoded[key] = row
+    return row
 
 
 def encode_plan(plan):
@@ -145,6 +163,7 @@ def encode_plan(plan):
     if not isinstance(name, str) or not 0 < len(name) <= ATELIER_LIMITS["max_name"] or len(groups) > ATELIER_LIMITS["max_groups"]:
         raise Refusal("studio.errors.invalidName")
     rows = [json.dumps(name, ensure_ascii=False) + " " + str(len(groups))]
+    receptors_encoded = {}
     for group in groups:
         if not isinstance(group, dict) or not isinstance(group.get("name"), str):
             raise Refusal("studio.errors.invalidGroup")
@@ -158,9 +177,9 @@ def encode_plan(plan):
         if not isinstance(receptors, list) or len(receptors) != ATELIER_LIMITS["receptors"]:
             raise Refusal("studio.errors.invalidReceptors")
         for r in receptors:
-            rows.append(receptor_row(r))
-        rows.append(receptor_row(group.get("growth")))
-    rows.append(receptor_row(plan.get("growth")))
+            rows.append(receptor_row(r, receptors_encoded))
+        rows.append(receptor_row(group.get("growth"), receptors_encoded))
+    rows.append(receptor_row(plan.get("growth"), receptors_encoded))
     options = plan.get("compiler")
     connections = plan.get("connections")
     if not isinstance(options, dict) or not isinstance(connections, list) or len(connections) > 129600:

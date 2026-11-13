@@ -1569,14 +1569,7 @@ async function checkForagingChoice(model, sites, root) {
       const c = centers[i];
       g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
     });
-    const output = execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
-        ],
-        {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000});
+    const output = nativeRegionTrace(plan, root, [ mode ]);
     const [header, ...lines] = output.trim().split('\n').map(line => line.split(','));
     const rows = lines.map(row => row.map(Number));
     return (node, from, to, region = 'choice') => {
@@ -1659,15 +1652,7 @@ async function learningDocument(model, capabilities) {
 async function checkLearningTrace(model, capabilities, root) {
   const plan = await learningDocument(model, capabilities);
   const run = (seed, sequence) => {
-    const output = execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'learn',
-          String(seed), sequence
-        ],
-        {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000});
+    const output = nativeRegionTrace(plan, root, [ 'learn', String(seed), sequence ]);
     const [keys, ...lines] = output.trim().split('\n').map(line => line.split(','));
     const rows = lines.map(
         line => Object.fromEntries(keys.map(
@@ -1762,28 +1747,22 @@ async function valueDocument(model, capabilities) {
   return plan;
 }
 
-function nativeValueTrace(plan, root, seed) {
+function nativeRegionTrace(plan, root, args, options = {}) {
   return execFileSync(
       'python3',
       [
         '-B', '-c',
         'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'value',
-        String(seed)
+        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), ...args
       ],
-      {
-        cwd : root,
-        input : JSON.stringify(plan),
-        encoding : 'utf8',
-        timeout : 10000,
-        maxBuffer : 4 * 1024 * 1024
-      });
+      {cwd : root, input : JSON.stringify(plan), encoding : 'utf8', timeout : 10000, ...options});
 }
 
 async function checkValueTrace(model, capabilities, root) {
   const plan = await valueDocument(model, capabilities);
   for (const seed of [27139, 71237, 99173]) {
-    const output = nativeValueTrace(plan, root, seed);
+    const output =
+        nativeRegionTrace(plan, root, [ 'value', String(seed) ], {maxBuffer : 4 * 1024 * 1024});
     const [header, ...lines] = output.trim().split('\n').map(line => line.split(','));
     assert.equal(new Set(header).size, header.length);
     const rows = lines.map(line => {
@@ -1845,8 +1824,9 @@ async function checkValueTrace(model, capabilities, root) {
       assert.ok(rows.some(row => row[path + ':contacts'] > 0),
                 'The complete region has native contacts on ' + path);
     if (seed === 27139)
-      assert.equal(nativeValueTrace(plan, root, seed), output,
-                   'The value-region experiment repeats exactly');
+      assert.equal(
+          nativeRegionTrace(plan, root, [ 'value', String(seed) ], {maxBuffer : 4 * 1024 * 1024}),
+          output, 'The value-region experiment repeats exactly');
   }
 }
 
@@ -1883,20 +1863,7 @@ async function checkInternalRegions(model, capabilities, root, modes) {
       const c = centers[i];
       g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
     });
-    const output = execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
-        ],
-        {
-          cwd : root,
-          input : JSON.stringify(plan),
-          encoding : 'utf8',
-          timeout : 10000,
-          maxBuffer : 4 * 1024 * 1024
-        });
+    const output = nativeRegionTrace(plan, root, [ mode ], {maxBuffer : 4 * 1024 * 1024});
     const [header, ...rows] = output.trim().split('\n').map(row => row.split(','));
     assert.equal(rows.length, 3000);
     assert.ok(rows.every(row => row[header.indexOf('learning')] === '1'),
@@ -1970,20 +1937,8 @@ function spinalTrace(model, sites, root, doc, mode) {
     const c = centers[i];
     g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
   });
-  const output = execFileSync(
-      'python3',
-      [
-        '-B', '-c',
-        'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
-      ],
-      {
-        cwd : root,
-        input : JSON.stringify(plan),
-        encoding : 'utf8',
-        timeout : 20000,
-        maxBuffer : 8 * 1024 * 1024
-      });
+  const output =
+      nativeRegionTrace(plan, root, [ mode ], {timeout : 20000, maxBuffer : 8 * 1024 * 1024});
   const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
   const left = header.indexOf('muscle:muscle:-1'), right = header.indexOf('muscle:muscle:1');
   assert.ok(left > 0 && right > 0);
@@ -2076,20 +2031,7 @@ async function checkFinPattern(model, sites, root) {
       const c = centers[i];
       g.name = names.get(c.organId) + ':' + (c.node ?? c.key) + ':' + g.side;
     });
-    const output = execFileSync(
-        'python3',
-        [
-          '-B', '-c',
-          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'spine-fin'
-        ],
-        {
-          cwd : root,
-          input : JSON.stringify(plan),
-          encoding : 'utf8',
-          timeout : 10000,
-          maxBuffer : 6 * 1024 * 1024
-        });
+    const output = nativeRegionTrace(plan, root, [ 'spine-fin' ], {maxBuffer : 6 * 1024 * 1024});
     const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
     const columns = [ -1, 1 ].flatMap(
         side => ['row', 'recover'].map(name => header.indexOf(name + ':muscle:' + side)));
@@ -2160,20 +2102,7 @@ async function checkReversePattern(model, sites, root) {
     const c = centers[i];
     g.name = names.get(c.organId) + ':' + (c.node ?? c.key) + ':' + g.side;
   });
-  const output = execFileSync(
-      'python3',
-      [
-        '-B', '-c',
-        'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
-        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'motor-reverse'
-      ],
-      {
-        cwd : root,
-        input : JSON.stringify(plan),
-        encoding : 'utf8',
-        timeout : 10000,
-        maxBuffer : 8 * 1024 * 1024
-      });
+  const output = nativeRegionTrace(plan, root, [ 'motor-reverse' ], {maxBuffer : 8 * 1024 * 1024});
   const [header, ...lines] = output.trim().split('\n').map(row => row.split(','));
   const rows = lines.map(row => row.map(Number));
   const mean = (node, side, from, to) => {
@@ -3174,7 +3103,9 @@ async function checkHormoneSystems(model, capabilities) {
     const index = process.argv.indexOf('--value-trace'),
           seed = Number(process.argv[index + 1] ?? 27139);
     assert.ok(Number.isSafeInteger(seed) && seed >= 0);
-    process.stdout.write(nativeValueTrace(await valueDocument(model, sitesResult), root, seed));
+    process.stdout.write(nativeRegionTrace(await valueDocument(model, sitesResult), root,
+                                           [ 'value', String(seed) ],
+                                           {maxBuffer : 4 * 1024 * 1024}));
     return;
   }
   if (process.argv.includes('--value')) {
@@ -4332,9 +4263,35 @@ async function checkHormoneSystems(model, capabilities) {
   assert.match(graph.cppnGraph({...state, report : null}), /aid-cppn/);
   const plan = model.compileDocument(doc, sites);
   const python = `import json,sys,tempfile,time
-from atelier_service import run, CompileJobs
+from atelier_service import run, CompileJobs, encode_plan, receptor_row, RECEPTOR_FIELDS
 from studio_storage import run as store
+from wording import Refusal
 payload=json.load(sys.stdin); plan=payload['plan']; doc=payload['doc']
+encoded={}
+for field in RECEPTOR_FIELDS:
+    for value in (0,0.,-0.,1,1.,-2,.05):
+        row={**plan['growth'],field:value}
+        assert receptor_row(row,encoded)==' '.join(str(row[f]) for f in RECEPTOR_FIELDS)
+    for value in (False,True,None,'0',[],{},[1],{'x':1},float('nan'),float('inf'),-float('inf')):
+        try: receptor_row({**plan['growth'],field:value},encoded)
+        except Refusal as error: assert error.reply['key']=='studio.errors.invalidNumber'
+        else: raise AssertionError('Invalid receptor number accepted')
+    missing={k:v for k,v in plan['growth'].items() if k!=field}
+    for row in (missing,None,[],True,0,''):
+        try: receptor_row(row,encoded)
+        except Refusal as error: assert error.reply['key']=='studio.errors.invalidReceptors'
+        else: raise AssertionError('Malformed receptor accepted')
+encoded_plan=encode_plan(plan)
+for value in (0,0.,-0.,1,1.):
+    changed={**plan,'growth':{**plan['growth'],'baseline':value}}
+    assert encode_plan(changed).splitlines()[-len(plan['connections'])-3]==receptor_row(changed['growth'])
+    assert encode_plan(plan)==encoded_plan
+for slot in ('receptors','growth'):
+    for value in (None,[],{},True):
+        changed={**plan,'groups':[{**plan['groups'][0],slot:value},*plan['groups'][1:]]}
+        try: encode_plan(changed)
+        except Refusal as error: assert error.reply['key']=='studio.errors.invalidReceptors'
+        else: raise AssertionError('Malformed receptor group accepted')
 with tempfile.TemporaryDirectory(prefix='fish-atelier-test-') as directory:
     assert store(directory,{'operation':'save-draft','document':doc})['saved']
     assert store(directory,{'operation':'load-draft'})['document']==doc
