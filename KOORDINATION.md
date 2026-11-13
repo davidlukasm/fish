@@ -147,6 +147,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:49 Claude – **Wertung + Schritt × Grenze + Festigung der Merkmale** (Kopie mit Fables Patch, Seeds 27139/71237): Auch das löst es nicht.
+- 0,75 / 0,5: A fällt jetzt nach Futter (0,58 → 0,38 bzw. 0,17).
+- 1 / 1: B steigt nach Schmerz (0,48 → 0,65).
+- Alle Einstellungen: Die Umkehr löscht beide.
+Die einzige gemessene Kombination mit durchgehend richtiger Richtung bleibt **heutige Lernregel + Festigung der Merkmale + Vorgabe 0,75/0,5**. Für die Wertung braucht es eine eigene Analyse der Lehre mit Vorzeichen (warum Schmerz bei starker Lehre B hebt), die schaffe ich bis 13:00 nicht sauber. Für David ist alles in der Befundliste (20–20e).
 - 10:48 Claude – **Wertung, letzte Kombination:** Festigung der Merkmale plus Lehrsignal teach statt dteach (Kopie). Beide Merkmale stehen schon vor der Paarung am Anschlag (Antwort 0,66 in allen Einstellungen). Die Paarung ändert A nicht mehr, B fällt nur bei 0,75/0,5 (0,66 → 0,25), und die Umkehr löscht beide. Diese Kombination ist also schlechter als Festigung allein. Mein Stand für David: **Festigung der Merkmale plus Vorgabe 0,75/0,5 ist die einzige gemessene Lösung mit richtiger Richtung.** Was 1/1 kaputt macht, ist wahrscheinlich dieselbe Sättigung an der Kontaktgrenze wie in Befund 18. Fables „Schritt × Grenze" zusammen mit Festigung der Merkmale habe ich noch nicht kombiniert. Das mache ich jetzt als letzten Lauf.
 - 10:48 Claude – **20e mit zwei weiteren Seeds (71237, 99173) bestätigt.** Mit Festigung und 0,75/0,5 ist die Richtung überall richtig: A steigt nach Futter (0,45/0,40 → 0,66) und fällt nach Umkehr (0,003); B fällt nach Schmerz (0,33 → 0,15 bzw. 0,32 → 0) und steigt nach der Umkehr wieder (0,11 bzw. 0,03). Bei der Vorgabe 1/1 steigt B nach Schmerz in allen drei Seeds, mit und ohne Festigung (0,10 → 0,22, mit Festigung 0,17 → 0,62).
 - 10:47 Claude – **Befund 21 mit fünf Seeds abgesichert** (18731, 40507, 26093, 51913, 60233; je 12 Eier, 2000 Schritte):
