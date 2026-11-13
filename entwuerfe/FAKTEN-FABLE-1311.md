@@ -78,17 +78,57 @@ Unterschied zur Engine: Dort zieht jede Zelle ihre Schwelle zufällig gleichvert
 - **Gene, die wirken:** die Schwelle (beschränkte Kurve, `body_plan.cc:987-992, 1212-1217`), die Zellzahl, die Streuung in der Gruppe, die Antworten des Lebenszyklus (Bildung, Ausgabe, Tod) und die Kontakte.
 - **Gene ohne Wirkung bei dieser Zellart:** die Zellzeit als Gewöhnung (Drucksinne gewöhnen nicht, `brain_interface.hh:18-20`) und als Einblendzeit nach dem Schlupf (nur Außensinne, siehe 3). Feldbreite und Abstimmung kommen in der Reizberechnung dieser Zellen nicht vor (`body_plan.cc:1150-1180`).
 
-## 5a. Was die Zellzahl einer Sinnesgruppe bewirkt (Davids Frage 18:58)
+## 5a. Was die Zellzahl einer Sinnesgruppe bewirkt (Davids Frage 18:58, nach seiner Korrektur 19:06 neu)
 
-- **Zahl:** Eine Gruppe hat 1 bis 16 Zellen (`development.cc:133-138`, `substrate.hh:131-132`; das Atelier schreibt Zellzahl ÷ 16 in das Gen, `atelier_compiler.hh:269`). Mehr geht nur über weitere Gruppen. Jede Zelle ist eine eigene Zelle mit eigener, um die Gruppe gestreuter Schwelle (`distribution.hh:20-35`).
-- **Jede Zelle meldet für sich**, zwischen 0 und 1 (`substrate.cc:741-745`). Es gibt keine Normierung je Gruppe oder je Organ. Der Anteil `gain` einer Zelle wird nur für Übersichten gezählt (`body_plan.cc:661, 912, 959`), nicht in ihre Meldung gerechnet.
-- **Wirkung 1, stärker bei der Zielzelle:** Jede Zielzelle bekommt von jeder Zelle der Gruppe einen Kontakt (bei voller Verbindung; sonst mit der eingestellten Wahrscheinlichkeit), bis ihre Eingänge voll sind (`development.cc:330-355`): 4 bis 512 bei Nervenzellen, 32 bei Muskel- und Drüsenzellen (`contacts.hh:18-33`). Die Zielzelle addiert Meldung × Gewicht über alle Kontakte und teilt durch nichts (`substrate.cc:776-786`); ihre Antwort sättigt mit tanh (`substrate.cc:801-803`). Jedes Gewicht kann bis zur Kontaktgrenze der Zielzelle wachsen (Vorgabe 0,5, höchstens 1; `substrate.hh:40, 62, 120-127`).
-  - Folge bei Gewichten an der Grenze 0,5: Zwei voll meldende Zellen bringen die Zielzelle auf 76 %, vier auf 96 %. Eine volle Meldung wird mit mehr Zellen also kaum stärker.
-  - Mehr Zellen machen die Zielzelle vor allem **empfindlicher für schwache Meldungen**: Bei 16 Zellen reicht ein Achtel der Meldung für dieselbe Wirkung wie bei zwei.
-- **Wirkung 2, feiner abgestuft:** Streut die Gruppe, liegen die Schwellen der Zellen nebeneinander. Die Summe steigt dann in so vielen Stufen an, wie die Gruppe Zellen hat: bei 2 Zellen ein Schalter mit zwei Stufen, bei 16 fast eine Rampe.
-- **Wirkung 3, über das Leben:** Jede Zelle wird einzeln gebaut, gewichtet und kann einzeln sterben (`substrate.cc:502-516, 607-612, 741-745`). Mehr Zellen sind mehr Reserve.
-- **Kosten je Zelle, alle klein:** Bau 0,00125 Energie, Unterhalt 0,0000016 je Schritt (`maturation.hh:9-12, 23-29`, `body_plan.cc:826-835`), dazu je Kontakt noch weniger. Zum Vergleich: 16 Zellen kosten im Unterhalt etwa 0,00003 je Schritt. Masse: 0,001 × Zellstärke je Zelle zum Organgewicht (`body_plan.cc:15, 369-370`).
-- **Grenze nach oben:** 16 Zellen je Gruppe; darüber die Zahl der Eingänge der Zielzelle. Hat sie weniger Eingänge frei, als Zellen ankommen, wird zufällig ausgewählt (`development.cc:349-355`).
+Meine erste Fassung sprach von „einer Zielzelle“ und von Gewichten an der Grenze. Beides war zu kurz: Zuhörer ist ein Knoten aus 1 bis 16 Zellen, und ein neuer Kontakt hat die Stärke 0.
+
+### 1. Wie eine Sinneszelle ihre Zielzellen findet
+
+- **Eine Wahrscheinlichkeit je Gruppenpaar.** Sinnesgruppe und Knoten sind je eine Gruppe mit 1 bis 16 Zellen (`substrate.hh:131-132`, `development.cc:133-138`). Für jedes Paar aus sendender und empfangender Gruppe rechnet die Engine eine Wahrscheinlichkeit p (`development.cc:625-645`, `contacts.hh:124-150`):
+  - **Adresse:** Abstand zwischen der Sendeadresse der Sinnesgruppe und einer Empfangsadresse des Knotens, gemessen an dessen Suchweite. Innerhalb des Kerns zählt er voll (1), weiter außen fällt er glatt auf 0 (`contacts.hh:40, 47-54, 129-138`). Ein Knoten hat mehrere Empfangsfelder, das beste zählt.
+  - **Seite:** gleiche oder gekreuzte Körperseite, nach `crossing` (`contacts.hh:141-143`).
+  - **Weg:** `exp(−Abstand ÷ Reichweite)`, Abstand in Körperlängen (`contacts.hh:146-149`).
+  - Das Atelier legt die Adressen so, dass gezeichnete Verbindungen im Kern liegen und nicht gezeichnete außerhalb (`werkzeug/atelier_connections.hh:224-253, 552-590`). Bei einer gezeichneten Verbindung bleibt also Seite × Weg.
+- **Gewürfelt wird je Zellpaar.** Jede Zelle des Knotens würfelt für jede Zelle der Sinnesgruppe einzeln mit p (`development.cc:336-343`). Von n Sinneszellen bekommt eine Knotenzelle im Mittel n × p Vorschläge. Bei p = 1 hört jede Knotenzelle jede Sinneszelle.
+- **Eingänge sind begrenzt.** Eine Nervenzelle hat 4 bis 512 Eingänge (`4 × 128^field_width`), Muskel- und Drüsenzellen 32 (`contacts.hh:18-33`, `development.cc:293-297`). Hat eine Knotenzelle aus allen ihren Quellen mehr Vorschläge als Eingänge, bleibt eine zufällige Auswahl (`development.cc:349-355`).
+
+### 2. Start-Stärke
+
+- **Jeder neue Kontakt beginnt mit Stärke 0**, ohne Ausnahme (`substrate.cc:548`; beim Start aller Vorschläge `:397-403`, beim Wachsen `:630-641`). Es gibt im Code keine zweite Stelle, die eine Stärke setzt. Geändert wird sie nur durch die Lernregel (`substrate.cc:959`).
+- **Erblich ist die Obergrenze**, nicht der Start: die Kontaktgrenze der Zielzelle (`synapse_strength`, Vorgabe 0,5; für lehrende Kontakte eine eigene; `substrate.hh:62, 123-126`, `development.cc:76, 185`). Der Vorschlag trägt diese Grenze mit (`development.cc:343, 372`), das Netz liest davon nur Quelle und Ziel (`substrate.cc:400-401`).
+- **Probezeit:** Der Kontakt bekommt 4 × Lernzeit der lernenden Zelle (`substrate.cc:550-551`, `dynamics.hh:13`). Jeder Kontakt kostet Bau, nach Länge (`substrate.cc:541-546`).
+
+### 3. Was Entwicklung und Lernen ändern
+
+- **Wachsen der Stärke** (`substrate.cc:905-939`): Jeder Kontakt hat seine eigene Stärke, zwischen 0 und der Kontaktgrenze.
+  - Gewöhnliche Kontakte wachsen, wenn Sinneszelle und Knotenzelle zugleich von ihrem Üblichen abweichen, und durch Überraschung (Lehrsignal). Die Knotenzelle muss dafür selbst aktiv sein: durch Grundantrieb, Takt, Hormon oder andere Eingänge (`substrate.cc:799-803, 827-833`).
+  - Lehrende Kontakte wachsen mit ihrer Benutzung auf die Grenze zu (`substrate.cc:929`).
+  - Tempo: Lernrate der Zelle × Lernhormon (`substrate.cc:338-342`).
+- **Verdrängen:** Eine aktive Knotenzelle schwächt ihre stillen Eingänge (`substrate.cc:911-912`). Sinneszellen einer Gruppe, die selten melden, verlieren gegen die, die oft melden.
+- **Vergessen:** Jede Stärke fällt mit Halbwertszeit 500 Schritte, unbenutzt schneller (`substrate.cc:343-348`, `dynamics.hh:12, 14`).
+- **Festigung** bremst Verdrängen und Vergessen bis auf null (`substrate.cc:930-932, 943-955`, `:343-346`).
+- **Abbau:** Nach der Probezeit verschwindet ein Kontakt, wenn seine Stärke unter 0,005 liegt und er weniger als halb gefestigt ist (`substrate.cc:962-970`, `:337`, `dynamics.hh:10, 17`). Stirbt die Sinneszelle, verschwindet er sofort (`substrate.cc:771-773`).
+- **Neubildung über das ganze Leben** (`substrate.cc:655-693`, Aufruf `:975-976`): Jede Knotenzelle mit freiem Eingang wählt je Schritt eine ihrer Quellgruppen, würfelt mit demselben p, nimmt daraus eine zufällige Zelle und knüpft den Kontakt mit Wahrscheinlichkeit 1/50, oder sicher, wenn das Lernen ihn gerade stärken würde. Auch dieser Kontakt beginnt bei 0.
+  - Die Quellgruppe wird gleichverteilt gewählt (`:664-665`). Eine Gruppe mit mehr Zellen wird dabei nicht öfter gewählt.
+
+### 4. Was daraus für die Zellzahl folgt
+
+- **Bei p = 1** (gezeichnete Verbindung, nah, gleiche Seite): mehr Kontakte je Knotenzelle, nicht mehr erreichte Knotenzellen. Jede Knotenzelle hört ohnehin alle.
+- **Bei p < 1: beides.** Der Anteil der Knotenzellen ganz ohne Kontakt zur Gruppe ist `(1 − p)^n`:
+
+  | p | 2 Zellen | 8 Zellen | 16 Zellen |
+  |---|---|---|---|
+  | 0,1 | 81 % | 43 % | 19 % |
+  | 0,3 | 49 % | 6 % | 0,3 % |
+  | 0,6 | 16 % | 0,1 % | 0 % |
+
+- **Die Eingänge der Knotenzelle deckeln.** Bei `field_width` 0 hat sie 4 Eingänge für alle Quellen zusammen. Dann finden von 16 Sinneszellen höchstens 4 Platz, und sie verdrängen andere Quellen.
+- **Am Anfang bewirkt die Zellzahl nichts**, weil alle Stärken 0 sind. Was mehr Zellen bringen, entsteht erst durch Lernen:
+  - mehr Kontakte, die einzeln bis zur Grenze wachsen können. Die Knotenzelle addiert Meldung × Stärke über alle Kontakte und teilt durch nichts (`substrate.cc:776-786`), ihre Antwort sättigt mit tanh (`substrate.cc:801-803`). Mit gelernten Stärken reicht bei 16 Zellen ein Achtel der Meldung für dieselbe Wirkung wie bei zwei;
+  - bei gestreuten Schwellen mehr Stufen: Jede Sinneszelle hat ihre eigene Schwelle (`distribution.hh:20-35`) und ihre eigene gelernte Stärke. Der Knoten kann so lernen, auf „halb voll“ anders zu antworten als auf „ganz voll“. Mit 2 Zellen hat er dafür zwei Stufen, mit 16 fast eine Rampe;
+  - Reserve: Jede Zelle wird einzeln gebaut und kann einzeln sterben (`substrate.cc:502-516, 607-612`).
+- **Kosten je Sinneszelle, alle klein:** Bau 0,00125 Energie, Unterhalt 0,0000016 je Schritt (`maturation.hh:9-12, 23-29`, `body_plan.cc:826-835`), Masse 0,001 × Zellstärke (`body_plan.cc:15, 369-370`). Dazu der Bau jedes Kontakts.
+- **Keine Normierung:** Der Anteil `gain` einer Zelle wird nur für Übersichten gezählt (`body_plan.cc:661, 912, 959`).
 
 ## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:02)
 
