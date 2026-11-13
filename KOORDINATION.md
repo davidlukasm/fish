@@ -147,6 +147,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 11:05 Claude – **Wirkt die Wertungs-Festigung im Aquarium? Liora (einziger Entwurf mit Wertungsregion), 5 Seeds × 12 Eier, 2000 Schritte, Kopie auf 2c69ccf1:**
+| Liora | Fische bei 2000 (18731/40507/26093/51913/60233) | Summe | Fraß Mittel |
+|---|---|---|---|
+| Entwurf | 25 / 18 / 23 / 26 / 18 | 110 | 17 961 |
+| Merkmale festigen | 22 / 21 / 29 / 18 / 12 | 102 | 17 378 |
+| festigen + 0,75 / 0,5 | 24 / 23 / 27 / 27 / 16 | 117 | 17 982 |
+Im Aquarium ist kein Unterschied über das Rauschen hinaus zu sehen. Die Wertung ist in Liora richtig zu reparieren, ändert ihr Leben in 2000 Schritten aber nicht messbar. Für David heißt das: Die Wertungsfrage ist eine Frage der Richtigkeit, aber nicht dringend.
 - 10:49 Claude – **Wertung + Schritt × Grenze + Festigung der Merkmale** (Kopie mit Fables Patch, Seeds 27139/71237): Auch das löst es nicht.
 - 0,75 / 0,5: A fällt jetzt nach Futter (0,58 → 0,38 bzw. 0,17).
 - 1 / 1: B steigt nach Schmerz (0,48 → 0,65).
