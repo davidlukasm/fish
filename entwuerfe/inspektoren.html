@@ -154,6 +154,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Füllen und Ablegen</h4>
     <svg id="gontime" viewBox="0 0 300 138"></svg>
   </section>
+  <section class="panel" aria-label="Drüse">
+    <h2>Organ</h2><h3>Drüse</h3>
+    <h4 class="first">Knoten und Botenstoffe</h4>
+    <svg id="glandnodes" viewBox="0 0 300 100"></svg>
+    <h4>Abgabe</h4>
+    <svg id="glandlevel" viewBox="0 0 300 138"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1737,5 +1744,72 @@ function drawGonads() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads();
+// ---------- Drüse ----------
+// Glands (body_plan.cc:1324–1328, hormone_state.cc:36–53): each node pours the messenger its place
+// on the wheel names, driven positive; driven negative it binds it, so it goes sooner. The level
+// moves towards rate·poured / (1/τ + rate·bound), rate 0.01, at that speed, between 0 and 1; τ is
+// how long the messenger lasts. Pouring and binding cost work. Above: a row per node, its messenger
+// (click for the next) and its command; below: each messenger's level over the steps while the
+// glands work, then stop.
+const GLAND = {nodes : [{stuff : 0, cells : 3, command : .7}, {stuff : 1, cells : 2, command : -.3}], last : [120, 60, 200, 90, 90, 90]};
+function drawGland() {
+  const redraw = drawGland, hold = () => { GLAND.held = true; }, free = () => { GLAND.held = false; redraw(); };
+  const svg = document.getElementById('glandnodes'); svg.replaceChildren();
+  const rowH = 34, x0 = 104, x1 = 262, mid = (x0 + x1) / 2;
+  GLAND.nodes.forEach((n, i) => {
+    const y = 18 + i * rowH, colour = PALETTE[n.stuff], g = el('g', {class : 'chip'}, svg);
+    el('circle', {cx : 16, cy : y, r : 9, fill : STUFF[n.stuff].name ? colour : 'none', stroke : colour, 'stroke-dasharray' : STUFF[n.stuff].name ? '' : '2 2'}, g);
+    txt(g, 30, y + 4, stuffName(n.stuff));
+    g.addEventListener('click', () => { n.stuff = (n.stuff + 1) % STUFF.length; redraw(); });
+    // The command, from binding (left) to pouring (right), from the middle.
+    el('rect', {x : x0, y : y - 4, width : x1 - x0, height : 8, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, svg);
+    const at = mid + (x1 - x0) / 2 * n.command;
+    el('rect', {x : Math.min(mid, at), y : y - 4, width : Math.abs(at - mid), height : 8, fill : colour, opacity : .55}, svg);
+    el('path', {d : `M${mid} ${y - 8} v16`, stroke : '#7f9a99'}, svg);
+    drag(svg, el('circle', {cx : at, cy : y, r : 7}, svg), p => { n.command = clamp((p.x - mid) / ((x1 - x0) / 2), -1, 1); redraw(); }, 'glandcmd' + i, hold, free);
+    const chip = el('g', {class : 'chip'}, svg);
+    el('circle', {cx : 284, cy : y, r : 8, fill : '#0f2c34', stroke : '#e8a2b5', 'stroke-width' : 1.4}, chip);
+    el('path', {d : `M281 ${y - 3} l6 6 m0 -6 l-6 6`, stroke : '#e8a2b5', 'stroke-width' : 1.6}, chip);
+    chip.addEventListener('click', () => { if (GLAND.nodes.length > 1) { GLAND.nodes.splice(i, 1); redraw(); } });
+  });
+  const yb = 18 + GLAND.nodes.length * rowH;
+  txt(svg, x0, yb - 6, 'bindet'); txt(svg, x1, yb - 6, 'gibt ab', {'text-anchor' : 'end'});
+  if (GLAND.nodes.length < 6) { const chip = el('g', {class : 'chip'}, svg);
+    el('circle', {cx : 16, cy : yb + 10, r : 8, fill : '#0f2c34', stroke : '#5d8384', 'stroke-width' : 1.4}, chip);
+    el('path', {d : `M12 ${yb + 10} h8 M16 ${yb + 6} v8`, stroke : '#d7e6e3', 'stroke-width' : 1.6}, chip);
+    txt(chip, 30, yb + 14, 'Knoten');
+    chip.addEventListener('click', () => { GLAND.nodes.push({stuff : GLAND.nodes.length % STUFF.length, cells : 2, command : .5}); redraw(); }); }
+  svg.setAttribute('viewBox', '0 0 300 ' + (yb + 24));
+
+  // ---- Each messenger's level over the steps. ----
+  const c = document.getElementById('glandlevel'); c.replaceChildren();
+  const L = 40, R = 290, top = 26, base = 116, N = 400, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
+  const used = [...new Set(GLAND.nodes.map(n => n.stuff))];
+  grid(c, L, R, top, base, 1);
+  for (const k of used) {
+    const pour = GLAND.nodes.filter(n => n.stuff === k).reduce((t, n) => t + n.cells / 3 * Math.max(0, n.command), 0);
+    const bind = GLAND.nodes.filter(n => n.stuff === k).reduce((t, n) => t + n.cells / 3 * Math.max(0, -n.command), 0);
+    const tau = GLAND.last[k];
+    let v = k === 1 ? .6 : 0; const line = [v];
+    for (let st = 1; st <= N; st++) {
+      const on = st < 250, source = .01 * (on ? pour : 0), sink = 1 / tau + .01 * (on ? bind : 0);
+      v = clamp(v + (source / sink - v) * -Math.expm1(-sink), 0, 1); line.push(v);
+    }
+    el('path', {d : 'M' + line.map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L'), fill : 'none', stroke : PALETTE[k], 'stroke-width' : 2.2}, c);
+    txt(c, X(250) - 6, Y(line[249]) - 6, stuffName(k), {'text-anchor' : 'end', style : 'fill:' + PALETTE[k]});
+  }
+  el('path', {d : `M${X(250)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
+  txt(c, X(250) + 5, top + 2, 'Stop');
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L + 4, top - 8, 'Pegel im Blut');
+  txt(c, L, base + 15, 'Schritte');
+  for (const st of [200, 400]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 400 ? 'end' : 'middle'});
+  // How long the first messenger lasts: a grip on its fading after Stop.
+  const k0 = used[0], tau0 = GLAND.last[k0], gx = X(Math.min(N, 250 + tau0 * .7));
+  drag(c, el('rect', {x : gx - 5, y : base - 22, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, c), p => { GLAND.last[k0] = clamp(((p.x - L) / (R - L) * N - 250) / .7, 10, 400); redraw(); }, 'glandtau', hold, free);
+  txt(c, gx, base - 28, 'hält', {'text-anchor' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland();
 </script>
