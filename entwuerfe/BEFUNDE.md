@@ -25,6 +25,10 @@ Hier stehen nur offene Befunde. Erledigte und zurückgenommene sind gelöscht; s
     - (b) Spanne verlängern, mit den Folgen oben;
     - (c) trennen: Die Zellzeit bestimmt nur die Verweilzeit, und die Pegelhöhe hängt nur an der Abgabe, also an Zellen und Knoten;
     - (d) zusätzlich eine eigene Halbwertszeit je Stoff.
+  - **David 18:19:** Er hält (c) für die beste Möglichkeit.
+    - Länger bleibt ein Stoff aber nur, wenn zusätzlich die Spanne verlängert wird, also (c) zusammen mit (b).
+    - Offen ist der Anstieg. In der einfachen Form steigt ein lange bleibender Stoff auch langsam an.
+    - Alternative: Der Stoff steigt schnell mit der Abgabe und klingt dann langsam ab.
 - **8 Schwimmblase:** Sie füllt sich träge, in etwa 250 Schritten. Vorschlag: viermal schneller.
 - **14 Nervenzelle:** Die Schwelle zählt nur × 0,3. Vorschlag: × 1.
 
