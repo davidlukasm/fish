@@ -42,7 +42,6 @@ struct BrainInterface {
     // surround; the rest reports brightening.
     float opponency = .5f, proximity_range = .5f, dark_share = 0;
     bool proximity = false, inner = false;
-    std::uint32_t shared_receptor = 0;
     // The effector a pressure cell lies nearest to, what kind of pressure it feels and, for a
     // stretch receptor, the port of the muscle it lies in.
     int pressure_target = -1, pressure_kind = -1, pressure_port = -1;

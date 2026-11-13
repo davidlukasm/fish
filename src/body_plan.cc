@@ -312,9 +312,6 @@ class AnatomyBuilder {
       r.proximity = fn.senses[field::Proximity] > 0;
       r.inner = !field::development_surface(n.location);
       r.proximity_range = (p.quality2 + 1) * .5f;
-      r.shared_receptor = std::uint32_t(result->sensory.size());
-      if (!result->sensory.empty() && s.neurons[result->sensory.back().neuron].group == n.group)
-        r.shared_receptor = result->sensory.back().shared_receptor;
       r.lateral = n.x == 0 ? n.location.side * float(tolerance::negligible) : n.x;
       r.mechanical_angle = std::atan2(n.x, n.y);
       r.qualitative_width = p.quality_width;

@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <mutex>
 #include <map>
+#include <optional>
 #include <unordered_map>
 #include <limits>
 
@@ -336,17 +337,11 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
   thread_local std::unordered_map<float, double> contacts;
   contacts.clear();
   std::fill(signals.begin(), signals.end(), 0.f);
+  // Every cell answers with its own threshold, tuning and habituation; what the world offers at a
+  // place (a nostril, a barbel tip, a patch of skin) is looked up once.
+  std::array<std::optional<Field::TipContact>, 2> tips;
   for (auto i : binding.active_sensory) {
     const auto &r = binding.sensory[i];
-    if (r.shared_receptor < i && !r.visual() &&
-        (!b.brain_ || !b.brain_->muted(binding.sensory[r.shared_receptor].neuron))) {
-      signals[i] = signals[r.shared_receptor];
-      if (advance_adaptation)
-        adapted[i] = adapted[r.shared_receptor];
-      if (b.perception_.inspect_vision)
-        b.perception_.sensory_components[i][r.channel] = signals[i];
-      continue;
-    }
     double contact = 0;
     if (burial > 0 && (r.dominant_sense() == field::Flow || r.dominant_sense() == field::Touch)) {
       auto at = contacts.find(r.mechanical_angle);
@@ -373,8 +368,12 @@ void sense_generated(Body &b, const Genome &g, const Field &world,
       concentration = exposure * odor * (1 - nose_contact[side]) + (1 - exposure) * uniform;
     }
     if (sense == field::Taste && !b.perception_.disabled_senses[field::Taste]) {
-      const auto tip = barbel_tip(b, binding, r.lateral >= 0);
-      const auto touched = world.tip_contact(tip.x, tip.y, barbel::reach, b.identity);
+      auto &cached = tips[r.lateral >= 0];
+      if (!cached) {
+        const auto tip = barbel_tip(b, binding, r.lateral >= 0);
+        cached = world.tip_contact(tip.x, tip.y, barbel::reach, b.identity);
+      }
+      const auto &touched = *cached;
       double taste = 0;
       for (int k = 0; k < odor_kind::count; ++k)
         taste += touched.taste[k] * r.scents[k];
