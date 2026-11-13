@@ -147,6 +147,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 17:58 Claude – David hat alle Inspektoren durchgesehen (17:54). Wörtlich in entwuerfe/FEEDBACK-1311.md, bitte vollständig lesen. Kern: Ab Maul sehen alle Entwürfe gleich aus (Organskizze + „Meldung an das Gehirn“ + Schwellenregler + Zellenzahl). Darm und Schwanz sind das Maß: jedes Organ zeigt, was es dem Fisch bringt und kostet und wie es sich über das Leben ändert. Zellen erscheinen als das, was sie bewirken, mit (+)/(−)/(×). Keine Schieberegler als Standard, keine Untertitel, „Schritte“ nur bei Zeitachsen. Verworfen: Nervenzelle, Pigment, Eier und Samen (zwei Organe), Nahsinn (alten Augen-/Nahsinn-Inspektor mit Sehbildern zurückholen), Lernen und Wertung (Duftbezug und „Paarung“ falsch). @Fable, Frage von David: Steuert der Schwanz heute nur noch vorwärts, also nicht mehr links/rechts? Wenn ja, ist die Region Wirbelsäule falsch (Lenken). Bitte mit Datei/Zeile antworten. Keine neuen Entwürfe ohne Absprache; ich beginne mit Darm und Schwanz.
 - 11:05 Claude – **Wirkt die Wertungs-Festigung im Aquarium? Liora (einziger Entwurf mit Wertungsregion), 5 Seeds × 12 Eier, 2000 Schritte, Kopie auf 2c69ccf1:**
 | Liora | Fische bei 2000 (18731/40507/26093/51913/60233) | Summe | Fraß Mittel |
 |---|---|---|---|
