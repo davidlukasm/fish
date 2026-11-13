@@ -1080,10 +1080,59 @@ void gland_substances_rise_and_stay_by_their_cells() {
     state.advance(none, bind, 1, parameters, rise, stay);
   check(state.levels()[1] < .55 * before, "binding clears a lasting substance in about 22 steps");
 }
+// The cells of one sense group share their place, not their answer: each reports by its own
+// threshold and gets used to a lasting stimulus at its own pace.
+void cells_of_a_sense_group_answer_each_for_itself() {
+  constexpr double FILLING = .6, ACHE = .8;
+  constexpr int LASTING = 40;
+  Ecosystem w(SEED);
+  const auto cell = [](BrainInterface &layout, int sense, float threshold, float habit) {
+    BrainInterface::Receptor r{};
+    r.neuron = std::uint32_t(layout.sensory.size());
+    r.senses[sense] = 1;
+    r.refresh_modality();
+    r.inner = true;
+    r.threshold = threshold;
+    r.adaptation_rate = habit;
+    layout.active_sensory.push_back(r.neuron);
+    layout.sensory.push_back(r);
+  };
+  auto layout = std::make_shared<BrainInterface>();
+  // Three fullness cells with staggered thresholds, two pain cells that differ only in how fast
+  // they get used to the ache.
+  for (float threshold : {.2f, .5f, .8f})
+    cell(*layout, field::InnerPressure, threshold, 0);
+  for (double steps : {field::ADAPTATION_MIN, field::ADAPTATION_MIN * field::ADAPTATION_SPAN})
+    cell(*layout, field::Damage, .2f, float(1 / steps));
+  Genome g;
+  g.interface = layout;
+  Body b{};
+  b.x = b.y = SIZE / 2;
+  b.hatched = true;
+  b.tissue = BODY_TISSUE;
+  b.gut_fill = FILLING * gut_capacity(b);
+  b.gut_irritation = ACHE;
+  sense_generated(b, g, w.field, nullptr, true, w.physiology());
+  const auto first = b.perception().sensor_buffer;
+  check(first[0] > first[1] && first[1] > 0 && first[2] == 0,
+        "fullness cells of one group report by their own thresholds: the lowest most, the "
+        "highest not yet");
+  check(first[3] > 0 && first[3] == first[4], "a fresh ache reaches both pain cells alike");
+  for (int step = 1; step < LASTING; ++step)
+    sense_generated(b, g, w.field, nullptr, true, w.physiology());
+  const auto &lasting = b.perception().sensor_buffer;
+  const auto &used = b.perception().adapted;
+  check(used[3] > .9 * ACHE && used[4] < .1 * ACHE,
+        "each pain cell keeps its own measure of the ache it is used to");
+  check(lasting[3] == 0 && lasting[4] > .5 * first[4],
+        "the quick cell has fallen silent under a lasting ache, the slow one still reports it");
+  check(lasting[0] == first[0] && lasting[2] == 0, "fullness cells do not get used to a full gut");
+}
 int main() {
   try {
     Genome::begin_run(SEED);
     gland_substances_rise_and_stay_by_their_cells();
+    cells_of_a_sense_group_answer_each_for_itself();
     laboratory_comparison_restarts_during_copy();
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
