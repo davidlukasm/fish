@@ -1882,7 +1882,9 @@ async function checkMotorPicture(model, capabilities) {
 async function checkTectumPicture(model, capabilities) {
   const {tectumBands} = await import('../ui/studio/view/vision.js');
   const {regionPicture} = await import('../ui/studio/view/region_controls.js');
-  const {regionPlan, updateRegion} = await import('../ui/studio/model/regions.js');
+  const {regionPlan, updateRegion, toggleInnerLink} = await import('../ui/studio/model/regions.js');
+  const {profileColor} = await import('../ui/studio/view/spectrum.js');
+  const {ATELIER_LIMITS} = await import('../ui/schema.js');
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {sites} = capabilities;
   const eye = model.addOrgan(model.newDocument('Sehkarte'), 'eye', sites, {x : 345, y : 290});
@@ -1919,6 +1921,72 @@ async function checkTectumPicture(model, capabilities) {
   };
   const current = () => model.findOrgan(studio.state.document, organ.id);
   const picture = () => regionPicture(studio.state, current());
+  const groups = html => [...html.matchAll(/<g data-tectum-node="([^"]+)"[^>]*>(.*?)<\/g>/gs)];
+  const dots = html => (html.match(/class="tectum-cell"/g) ?? []).length;
+  const checkCells = () => {
+    const html = picture();
+    const shown = groups(html);
+    assert.equal(shown.length, current().centers.length);
+    for (const [, node, contents] of shown) {
+      const center = current().centers.find(c => c.node === node);
+      assert.equal(dots(contents), center.copies, 'Every actual cell appears as one point');
+      const frame = contents.match(
+          /class="tectum-(?:channel|inhibition)"[^>]*x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/);
+      const [x, y, w, h] = frame.slice(1).map(Number);
+      for (const point of contents.matchAll(
+               /class="tectum-cell" cx="([^"]+)" cy="([^"]+)" r="([^"]+)"/g)) {
+        const [cx, cy, r] = point.slice(1).map(Number);
+        assert.ok(cx - r > x && cx + r < x + w && cy - r > y && cy + r < y + h,
+                  'All cell points stay inside their group at the largest copy count');
+      }
+    }
+    assert.equal((html.match(/data-tectum-slot=/g) ?? []).length, 8);
+    assert.equal((html.match(/data-tectum-slot="occupied"/g) ?? []).length,
+                 current().centers.filter(c => c.band).length);
+  };
+  studio.state.document =
+      model.updateField(studio.state.document, source.id, {lo : 0, hi : 90}, sites);
+  assert.deepEqual(current().centers.map(c => c.copies), [ 1, 4, 7 ]);
+  checkCells();
+  for (const contrast of [1, 2, 0]) {
+    choose('contrast', contrast);
+    checkCells();
+    assert.equal(dots(groups(picture()).find(g => g[1] === 'inhibit')?.[2] ?? ''),
+                 [ 0, 2, 5 ][contrast]);
+  }
+  choose('contrast', 2);
+  const poolLinks = regionPlan(studio.state.document, current()).inner.map(pair => pair.join('>'));
+  const cutPool = links => {
+    studio.state.document = toggleInnerLink(studio.state.document, organ.id, links.join(' '));
+  };
+  cutPool(poolLinks);
+  assert.doesNotMatch(picture(), /tectum-route/,
+                      'A disconnected inhibition pool has no invented paths');
+  checkCells();
+  cutPool(poolLinks);
+  const incoming = poolLinks.filter(key => key.endsWith('>inhibit'));
+  const outgoing = poolLinks.filter(key => key.startsWith('inhibit>'));
+  const checkPool = (feed, returns) => {
+    const paths =
+        [...picture().matchAll(/class="region-line ([^"]+)" data-tectum-link="([^"]+)"/g) ];
+    const keys = kind =>
+        paths.filter(p => p[1].includes(kind)).map(p => p[2].replaceAll('&gt;', '>')).sort();
+    assert.deepEqual(keys('tectum-feed'), [...feed ].sort());
+    assert.deepEqual(keys('tectum-return'), [...returns ].sort());
+  };
+  checkPool(incoming, outgoing);
+  cutPool([ incoming[1] ]);
+  checkPool(incoming.filter((_, i) => i !== 1), outgoing);
+  cutPool([ incoming[1] ]);
+  cutPool(outgoing);
+  checkPool(incoming, []);
+  cutPool(outgoing);
+  cutPool(incoming);
+  checkPool([], outgoing);
+  cutPool(incoming);
+  choose('contrast', 0);
+  studio.state.document =
+      model.updateField(studio.state.document, source.id, {lo : 20, hi : 105}, sites);
   choose('resolution', 6);
   let html = picture();
   assert.match(html, /Sehfeld: 20–105°/);
@@ -1941,6 +2009,7 @@ async function checkTectumPicture(model, capabilities) {
   for (const node of plan.nodes.filter(n => n.band))
     assert.ok(html.includes('data-tectum-band="' + node.band.join(':') + '"'));
   assert.equal(model.findOrgan(studio.state.document, current().pair).region.colours, 1);
+  checkCells();
   choose('contrast', 2);
   assert.match(picture(), /class="tectum-inhibition"/);
   choose('contrast', 0);
@@ -1949,6 +2018,46 @@ async function checkTectumPicture(model, capabilities) {
   studio.state.document =
       model.updateField(studio.state.document, source.id, {lo : 30, hi : 90}, sites);
   assert.match(picture(), /Sehfeld: 30–90°/, 'Moving the eye field moves its regional map');
+  // The two eyes can tune the same profile position independently; both feed the first band.
+  studio.state.document =
+      model.updateField(studio.state.document, source.id, {lo : 0, hi : 90}, sites);
+  studio.state.document = model.linkPair(studio.state.document, source.id);
+  studio.state.document = model.updateField(
+      studio.state.document, source.id,
+      {profile : {id : source.field.profiles[0].id, q1 : .4, qwidth : .15}}, sites);
+  const otherEye = model.findOrgan(studio.state.document, source.pair);
+  const otherProfile = otherEye.field.profiles[0];
+  studio.state.document =
+      model.updateField(studio.state.document, otherEye.id,
+                        {profile : {id : otherProfile.id, q1 : -.8, qwidth : .15}}, sites);
+  const row = groups(picture()).find(g => g[1] === 'map0.0')[2];
+  const sourceColor =
+      profileColor(model.findOrgan(studio.state.document, source.id).field.profiles[0]);
+  const otherColor =
+      profileColor(model.findOrgan(studio.state.document, otherEye.id).field.profiles[0]);
+  assert.notEqual(sourceColor, otherColor);
+  assert.ok(row.includes('fill:' + sourceColor) && row.includes('fill:' + otherColor),
+            'A shared channel shows both independently tuned eye profiles, routed by position');
+  const outerRow = groups(picture()).find(g => g[1] === 'map1.0')[2];
+  assert.ok(outerRow.includes('fill:' + sourceColor));
+  assert.ok(!outerRow.includes('fill:' + otherColor),
+            'The same-side eye does not colour bands its cells cannot reach');
+  choose('colours', 0);
+  choose('resolution', 6);
+  choose('contrast', 2);
+  for (const center of current().centers)
+    studio.state.document =
+        model.updateCenter(studio.state.document, center.id, {copies : ATELIER_LIMITS.max_copies});
+  checkCells();
+  studio.state.document = model.updateField(studio.state.document, source.id, {
+    addProfile : {id : 'fourth', q1 : -.4, q2 : -1, qwidth : .15, threshold : -.6, polarity : 0}
+  },
+                                            sites);
+  choose('colours', 1);
+  assert.equal(current().centers.filter(c => c.band).length, 8);
+  checkCells();
+  assert.doesNotMatch(picture(), /data-tectum-slot="free"/,
+                      'Four colour types and two bands occupy all eight places');
   current().region.cut = [ 'map0>map1' ];
   assert.match(picture(), /aid-picture-note/, 'A changed circuit is identified as a template view');
 }

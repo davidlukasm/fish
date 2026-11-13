@@ -1021,7 +1021,12 @@
 .aid-region-picture .region-fan{fill:var(--region-primary)}
 .aid-region-picture .region-button .tectum-partition{fill:var(--aid-soft-text);stroke:none}
 .aid-region-picture .region-button.selected .tectum-partition{fill:var(--region-primary)}
-.aid-region-picture .tectum-channel{stroke:var(--aid-graphic);stroke-width:1;rx:3}
+.aid-region-picture .tectum-channel{fill:var(--aid-ground);stroke:var(--aid-graphic);stroke-width:1;rx:3}
+.aid-region-picture .tectum-cell{fill:var(--aid-soft-text);stroke:var(--aid-ground);stroke-width:.7}
+.aid-region-picture .tectum-colour{stroke:none}
+.aid-region-picture .tectum-slot{fill:var(--aid-ground);stroke:var(--aid-graphic);stroke-width:1}
+.aid-region-picture .tectum-slot[data-tectum-slot="occupied"]{fill:var(--aid-soft-text)}
+.aid-region-picture .tectum-route{stroke-dasharray:3 3;stroke-width:1.25}
 .aid-region-picture .tectum-inhibition{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:1.5}
 .aid-region-picture .region-interneuron{fill:var(--aid-ground);stroke:var(--region-memory);stroke-width:2}
 

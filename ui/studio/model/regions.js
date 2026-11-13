@@ -120,7 +120,7 @@ function tectumPlan(doc, organ) {
             : 0;
     return 'map' + band + (region.colours ? '.' + type : '');
   };
-  return {nodes, inner, cross : [], route, view, most : {resolution : bands}};
+  return {nodes, inner, cross : [], route, view, most : {resolution : bands, maps : MAP_NODES}};
 }
 
 const PLANS = Object.freeze({
