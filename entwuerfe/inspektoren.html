@@ -1948,7 +1948,7 @@ function drawGillChain() {
   const c = document.getElementById('gillflow'); c.replaceChildren();
   const d = GILL.density, T = gut.middle, y0 = 18, x0 = 80, x1 = 170, W = 66;
   txt(c, x0, 10, 'Kiemen', {style : 'font-size:10px'}); txt(c, x1, 10, 'Darm', {style : 'font-size:10px'}); txt(c, 296, 10, 'bringt', {'text-anchor' : 'end', style : 'font-size:10px'});
-  [['Plankton', rakerKeep(d) * rakerPass(d) * GILLFILM.pump, gain(FOOD[3][1], T), '#9cc8f0'], ['Bodenfutter', rakerSift(d) * mouthPower().suck, gain(FOOD[2][1], T), '#c9b48c']].forEach(([name, kept, made, colour], k) => {
+  [['Plankton', rakerKeep(d) * rakerPass(d) * GILLFILM.pump, gain(FOOD[3][1], T), '#9cc8f0'], ['Bodenfutter', rakerSift(d) * rakerPass(d) * mouthPower().suck, gain(FOOD[2][1], T), '#c9b48c']].forEach(([name, kept, made, colour], k) => {
     const y = y0 + 20 * k;
     txt(c, 4, y + 10, name, {style : 'fill:' + colour});
     for (const [x, v] of [[x0, kept], [x1, made]]) { el('rect', {x, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, c); el('rect', {x, y, width : W * clamp(v, 0, 1), height : 12, rx : 3, fill : colour, opacity : .8}, c); }
@@ -2004,7 +2004,7 @@ function defPoints() {
   const cx = raw.reduce((t, q) => t + q[0], 0) / N, cy = raw.reduce((t, q) => t + q[1], 0) / N;
   const xs = raw.map(q => q[0]), x0 = Math.min(...xs), x1 = Math.max(...xs);
   defOutline = raw.map((q, k) => { const [ax, ay] = raw[(k + N - 2) % N], [bx, by] = raw[(k + 2) % N]; let nx = by - ay, ny = -(bx - ax); const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-    if (nx * (q[0] - cx) + ny * (q[1] - cy) < 0) { nx = -nx; ny = -ny; } return {x : q[0], y : q[1], nx, ny, u : (q[0] - x0) / (x1 - x0), top : q[1] < cy}; });
+    if (nx * (q[0] - cx) + ny * (q[1] - cy) < 0) { nx = -nx; ny = -ny; } return {x : q[0], y : q[1], nx, ny, u : (q[0] - x0) / (x1 - x0), top : q[1] < cy, ang : Math.atan2(q[1] - cy, q[0] - cx)}; });
   probe.remove();
   return defOutline;
 }
@@ -2012,12 +2012,26 @@ function defPoints() {
 const defStrength = () => DEF.groups.reduce((t, g) => t + g.cells, 0) / 16 * forceOf(DEF.fast);
 const defRest = () => { const c = defStrength(); return .3 * c / (c + 5); };
 const defShare = (g, q) => q.top === g.top && q.u >= DEF_FREE[0] && q.u <= DEF_FREE[1] ? Math.max(0, 1 - Math.abs(q.u - g.at) / g.width) : 0;
-function defRun() {
-  // The active height starts at 0 and rises with the force; what shows is the higher of it and the
-  // resting height (body.hh:109).
-  const N = 240, keep = Math.exp(-1 / strokeLen(DEF.fast)), force = defStrength(), out = [defRest()]; let h = 0;
-  for (let st = 1; st <= N; st++) { h = Math.min(.85, h * keep + .02 * force * (st < 140 ? 1 : 0)); out.push(Math.max(defRest(), h)); }
+// The active height starts at 0 and rises with the force. Protection uses the higher of it and the
+// resting height (body.hh:109); the drag only the active one (movement.cc:78).
+function defActive() {
+  const N = 240, keep = Math.exp(-1 / strokeLen(DEF.fast)), force = defStrength(), out = [0]; let h = 0;
+  for (let st = 1; st <= N; st++) { h = Math.min(.85, h * keep + .02 * force * (st < 140 ? 1 : 0)); out.push(h); }
   return out;
+}
+const defRun = () => defActive().map(h => Math.max(defRest(), h));
+// Protection where the attacker bites: the groups spread over 16 sectors around the body, read
+// between the two nearest and set against the mean (body_plan.cc:837–875). Even cover gives 1.
+function defCover(aq) {
+  const pts = defPoints(), S = 16, sector = q => ((q.ang / (2 * Math.PI) * S) % S + S) % S, density = new Array(S).fill(0);
+  for (const g of DEF.groups) {
+    const sum = pts.reduce((u, q) => u + defShare(g, q), 0); if (!sum) continue;
+    for (const q of pts) { const w = defShare(g, q); if (!w) continue; const at = sector(q), i = Math.floor(at), f = at - i;
+      density[i % S] += g.cells * w / sum * (1 - f); density[(i + 1) % S] += g.cells * w / sum * f; }
+  }
+  const total = density.reduce((t, v) => t + v, 0); if (!total) return 0;
+  const at = sector(aq), i = Math.floor(at), f = at - i;
+  return S * (density[i % S] * (1 - f) + density[(i + 1) % S] * f) / total;
 }
 function drawDefense() {
   const svg = document.getElementById('defenseskin'); svg.replaceChildren();
@@ -2069,14 +2083,12 @@ function drawDefense() {
 // (teal) and the swim's speed left (orange), over the steps; the fibres set how fast they rise. ----
 function drawDefenseTime(aq) {
   const c = document.getElementById('defenserise'); c.replaceChildren();
-  const run = defRun(), N = run.length - 1, L = 30, R = 290, top = 22, base = 118, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
-  // Each group spread over its own width with its strength as weight; 16 sectors (body_plan.cc:837–875).
-  const pts = defPoints(), total = DEF.groups.reduce((t, g) => t + g.cells, 0);
-  const there = 16 / pts.length * DEF.groups.reduce((t, g) => { const sum = pts.reduce((u, q) => u + defShare(g, q), 0); return t + (sum ? g.cells / total * defShare(g, aq) / sum * pts.length : 0); }, 0);
+  const active = defActive(), run = active.map(h => Math.max(defRest(), h)), N = run.length - 1, L = 30, R = 290, top = 22, base = 118, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
+  const there = defCover(aq);
   grid(c, L, R, top, base, 1);
   el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y(h / .85).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : '#d9cfae', opacity : .25, stroke : '#d9cfae', 'stroke-width' : 1.2}, c);
   el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y(Math.min(1, h * there)).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2.4}, c);
-  el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y((1 + 2 * Math.max(0, h - defRest())) / 3).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, c);
+  el('path', {d : 'M' + active.map((h, st) => `${X(st).toFixed(1)} ${Y((1 + 2 * h) / 3).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, c);
   txt(c, L + 4, top - 22, 'Stacheln', {style : 'fill:#d9cfae'}); txt(c, L + 64, top - 22, 'Schutz am Biss', {style : 'fill:#79d2be'}); txt(c, R, top - 8, 'Widerstand im Wasser', {'text-anchor' : 'end', style : 'fill:#eaa886'});
   el('path', {d : `M${X(140)} ${top} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '5 4'}, c);
   txt(c, X(140) + 4, base - 6, 'Gefahr vorbei', {style : 'font-size:10px'});
