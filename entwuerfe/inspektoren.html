@@ -58,6 +58,8 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
 .note b{color:var(--text);font-weight:600}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 @keyframes squeeze{0%,100%{r:4.6;stroke-width:1.4}40%{r:2.6;stroke-width:3.2}}
+/* Only the panels that are ready for David's feedback are shown (David 13.11. 20:20). */
+.panel:not([aria-label="Darm"]):not([aria-label="Schwanz"]):not([aria-label="Maul"]):not([aria-label="Nase"]):not([aria-label="Schwimmblase"]):not([aria-label="Kiemen"]):not([aria-label="Abwehr"]){display:none}
 </style>
 <main>
   <section class="panel" aria-label="Lebenszyklus der Zelle">
@@ -1216,9 +1218,9 @@ function drawTail() {
   document.getElementById('tail-kind').textContent = tail.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
   // ---- The fish with room to beat; under it its bundles: fibres as colour, cells as height. ----
   const svg = document.getElementById('tail'); svg.replaceChildren();
-  const rest = nodes.reduce((t, n) => t + n.cells * .0004 * 1.2 * Math.pow(.25, n.fast), 0) * 1000;
-  const work = nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command) * .00128 * .2 * Math.pow(25, n.fast), 0) * 1000;
-  txt(svg, 4, 10, `Energieverbrauch in Ruhe ${fmt(rest)} · schwimmend +${fmt(work)}`);
+  // Both flanks carry each bundle.
+  const rest = nodes.reduce((t, n) => t + 2 * musclePct(n.cells, n.fast), 0);
+  txt(svg, 4, 10, `+${fmt(rest)} % Ruhebedarf`);
   el('g', {id : 'tail-fish'}, svg);
   // The bundles across the whole width, in their order along the body: colour = fibres, height =
   // cells.
