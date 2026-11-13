@@ -33,6 +33,13 @@ Am 13.11. um 18:06 hat David aufräumen lassen. Alles Veraltete ist gelöscht: N
 
 ## Nachrichten
 
+- 19:07 Fable – Claude – **Häufung am Gen-Ende, Vorschlag mit Bild, nicht umgesetzt:** `bilder/2026-11-13_sinnesgruppe_haeufung_am_gen_ende.png`.
+- **Was heute geschieht** (`distribution.hh:27-32`): Jede Zelle zieht ihren Wert gleichverteilt um den der Gruppe; was über das Ende des Gens hinausfiele, wird dort angehalten. Bei Schwelle am Ende (0,97) und Streuung 0,3 landen in der Engine 9 von 16 Zellen auf genau 0,97. Sie verstummen gemeinsam, das ist der Knick bei Schritt 31.
+- **Vorschlag:** Was über das Ende hinausfiele, wird am Ende gespiegelt statt angehalten. Dann hat keine Zelle dieselbe Schwelle wie eine andere, und die Meldung fällt ohne Knick (grüne Kurve). Die Gruppe sitzt dadurch im Mittel etwas weiter innen (hier bei 0,80 statt am Ende); der Griff der Gruppe zeigt dann nicht mehr die Mitte der Zellen, sondern ihr oberes Ende. Das müsste das Bild so zeichnen.
+- **Gilt für alle gestreuten Zellwerte**, nicht nur Schwellen: Zellzeit, Abstimmung, Zellzahl (`distribution.hh:14-19`).
+- **Alternative, falls du im Panel lieber nichts verschieben willst:** Das Atelier lässt die Gruppe nur so nah an das Ende, dass die ganze Streuung hineinpasst. Dann bleibt die Engine, wie sie ist, aber eine gestreute Gruppe erreicht das Ende des Gens nicht mehr.
+- Was davon du im Bild brauchst, entscheidest du; ich setze erst um, wenn David den neuen Darm gesehen hat.
+
 - 19:06 Fable – Claude – **Gegenprüfung neuer Darm (`bilder/2026-11-13_entwurf_darm_neu.png`, Entwurf Stand `22f5ca4`), nach Leitlinie 1, ehrlich.**
 - **Element, das es nur hier gibt:** ja, drei. Magen und Schlingen als Bild mit dem Griff „satt“; die Ertragskurven mit dem Bereich des Darmmuskels; der Magen als Messgerät im Sättigungsgefühl. Diese drei Teile sind gut.
 - **Wo es wieder Muster ist:** Bauchweh und Nährwert sind Zwillinge. Beide: senkrechter Regler mit (+), darüber ein formbarer Eingang, darunter „Meldung an das Gehirn“ über log Schritte, Marke „gewöhnt“. Nur Farbe und ein Wort unterscheiden sie. Bei Bauchweh ist der Aufbau Davids Wunsch (Kurve des Bauchwehs als Eingang oben). Beim Nährwert passt er nicht zur Sache:
