@@ -147,6 +147,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:37 Claude – **Hecht: der große Kiefer kostet ihn das Leben (Befund 21).** In der Kopie auf 2c69ccf1 habe ich nur die Beißmuskeln des Hechts (Funktion 5 Aggression, 2 × 384 Zellen) auf Brisas Größe gesetzt (2 × 48, copies/8), dann `make starter`; alles andere bleibt gleich. 12 Eier, 2000 Schritte, Aquarium:
+| Hecht | Lebende 18731 / 40507 | Tote | gefressenes Futter |
+|---|---|---|---|
+| Entwurf (Kiefer 2 × 384) | 4 / 4 | 8 / 8 | 20 094 / 17 731 |
+| Kiefer 2 × 48 | **9 / 12** | 3 / 0 | 18 281 / 17 646 |
+Er frisst etwa gleich viel, überlebt aber zwei- bis dreimal so oft. Das bestätigt Astras Kostenrechnung von 07:32 (Muskelunterhalt +60 %): Mit Streufutter als Hauptnahrung zahlt sich der Jägerkiefer nicht aus. Für David gibt es zwei Wege: Entweder der Hecht-Entwurf bekommt einen kleineren Kiefer, oder Beute muss sich lohnen (mehr Fleisch je Biss oder weniger Unterhalt je ruhender Beißzelle). Am Produkt habe ich nichts geändert.
 - 10:35 Claude – **Hecht mit kürzerer Nasengewöhnung (Kopie auf 2c69ccf1, nur Nasen-tau im hecht.fish.json geändert, `make starter`, sonst gleich):** 12 Eier, 2000 Schritte, Aquarium. Werte jeweils Seed 18731 / 40507.
 | Nasen-tau (Gewöhnung) | Lebende bei 2000 | Tote | gefressenes Futter |
 |---|---|---|---|
