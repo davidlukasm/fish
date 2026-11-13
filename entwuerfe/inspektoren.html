@@ -131,9 +131,9 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
   </section>
   <section class="panel" aria-label="Nase">
     <h2>Organ</h2><h3>Nase</h3>
-    <h4 class="first">Düfte</h4>
-    <svg id="nosemap" viewBox="0 0 300 172"></svg>
-    <h4>Duftzellen</h4>
+    <h4 class="first">Gerüche</h4>
+    <svg id="nosemap" viewBox="0 4 300 250"></svg>
+    <h4>Was die Nase meldet</h4>
     <svg id="nosesense" viewBox="0 0 300 200"></svg>
   </section>
   <section class="panel" aria-label="Barteln">
@@ -1554,13 +1554,73 @@ const sphere = (lat, lon) => [Math.cos(rad(lat)) * Math.cos(rad(lon)), Math.cos(
 const apart = (a, b) => { const u = sphere(...a), v = sphere(...b); return degOf(Math.acos(clamp(u[0] * v[0] + u[1] * v[1] + u[2] * v[2], -1, 1))); };
 const scentAffinity = (g, k) => { const w = Math.pow(clamp(g.width, 0, 1), 4), sg = 12 + 168 * g.width * g.width, d = apart([g.lat, g.lon], [SCENTS[k][2], SCENTS[k][3]]); return w + (1 - w) * Math.exp(-d * d / (2 * sg * sg)); };
 const halfOffset = width => { const w = Math.pow(width, 4); if (w >= .5) return 180; const sg = 12 + 168 * width * width; return Math.min(180, sg * Math.sqrt(-2 * Math.log((.5 - w) / (1 - w)))); };
+// The odour sample: a point on the map. Inside a scent's ball it is that scent alone; elsewhere a
+// mixture of the scents near it, the nearer the more (weights exp(−d²/2·25²)).
+NOSE.probe = {lat : 35, lon : 0};
+const probeMix = pr => { const hit = SCENTS.findIndex(([, , la, lo]) => apart([la, lo], [pr.lat, pr.lon]) < 9);
+  if (hit >= 0) return SCENTS.map((_, k) => k === hit ? 1 : 0);
+  const w = SCENTS.map(([, , la, lo]) => Math.exp(-Math.pow(apart([la, lo], [pr.lat, pr.lon]), 2) / (2 * 25 * 25))), t = w.reduce((x, y) => x + y, 0) || 1;
+  return w.map(v => v / t); };
+const groupSmell = (g, mix) => mix.reduce((t, m, k) => t + m * scentAffinity(g, k), 0);
 function drawNose() {
   const svg = document.getElementById('nosemap'), redraw = drawNose;
-  scentMap(svg, NOSE, redraw, 'nose', k => { NOSE.example = k; redraw(); }, NOSE.example);
-  const ex = NOSE.example;
-  senseGroups('nosesense', NOSE, {word : 'Duft', strip : 'Duft: ' + SCENTS[ex][0], colour : SCENTS[ex][1], redraw,
-    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 2 ? 0 : st < 40 ? (st - 2) / 38 : st < SENSE_LASTS ? 1 : Math.max(0, 1 - (st - SENSE_LASTS) / 40)),
-    newGroup : () => ({lat : -10, lon : 180, width : .2, gate : 0.245, spread : .1, habit : .5})});
+  noseMap(svg, redraw);
+  const mix = probeMix(NOSE.probe), main = mix.indexOf(Math.max(...mix));
+  senseGroups('nosesense', NOSE, {word : 'Geruch', strip : 'Geruchsprobe', colour : SCENTS[main][1], redraw,
+    at : (st, level, gr) => level * groupSmell(gr, mix) * (st < 2 ? 0 : st < 40 ? (st - 2) / 38 : st < SENSE_LASTS ? 1 : Math.max(0, 1 - (st - SENSE_LASTS) / 40)),
+    newGroup : () => ({lat : NOSE.probe.lat, lon : NOSE.probe.lon, width : .2, gate : 0.245, spread : .1, habit : .5})});
+}
+// The smell map, large, at even steps from its middle to its rim (so the rim is not crowded). The
+// scents as balls; around each a ring as thick as the nose smells it at all (its best group). Every
+// group's half line; the chosen group's middle and width as grips, (×) beside it, (+) for another
+// group where the sample is. The sample is a red cross, dragged anywhere.
+function noseMap(svg, redraw) {
+  svg.replaceChildren();
+  const hold = () => { NOSE.held = true; }, free = () => { NOSE.held = false; redraw(); };
+  const cx = 150, cy = 122, Rm = 112;
+  const at = (lat, lon) => { const r = Rm * Math.min(1, (90 - lat) / 160); return [cx + r * Math.sin(rad(lon)), cy - r * Math.cos(rad(lon))]; };
+  const back = p => { const dx = p.x - cx, dy = p.y - cy, r = Math.min(Rm, Math.hypot(dx, dy)); return [90 - (r >= Rm - 1 ? 180 : 160 * r / Rm), degOf(Math.atan2(dx, -dy))]; };
+  el('circle', {cx, cy, r : Rm, fill : '#0f2c34', stroke : '#2d5059'}, svg);
+  const g = NOSE.groups[NOSE.chosen];
+  NOSE.groups.forEach((gr, i) => {
+    const d = halfOffset(gr.width), [la, lo] = [gr.lat, gr.lon], u = sphere(la, lo);
+    const east = [-Math.sin(rad(lo)), Math.cos(rad(lo)), 0], north = [-Math.sin(rad(la)) * Math.cos(rad(lo)), -Math.sin(rad(la)) * Math.sin(rad(lo)), Math.cos(rad(la))];
+    let path = '';
+    for (let k = 0; k <= 96; k++) {
+      const bb = 2 * Math.PI * k / 96, v = [0, 1, 2].map(j => Math.cos(rad(d)) * u[j] + Math.sin(rad(d)) * (Math.cos(bb) * north[j] + Math.sin(bb) * east[j]));
+      const [x, y] = at(degOf(Math.asin(clamp(v[2], -1, 1))), degOf(Math.atan2(v[1], v[0])));
+      path += (k ? ' L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    const shape = el('path', {d : path, fill : groupColour(i), 'fill-opacity' : i === NOSE.chosen ? .16 : .07, stroke : groupColour(i), 'stroke-width' : i === NOSE.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', class : 'chip'}, svg);
+    shape.addEventListener('pointerdown', () => { NOSE.chosen = i; redraw(); });
+    if (i !== NOSE.chosen) { const [x, y] = at(la, lo); el('circle', {cx : x, cy : y, r : 4, fill : groupColour(i), class : 'chip'}, svg).addEventListener('pointerdown', () => { NOSE.chosen = i; redraw(); }); }
+  });
+  // The scents: a ball each; its ring is how strongly the nose smells it.
+  SCENTS.forEach(([name, colour, lat, lon], k) => {
+    const [x, y] = at(lat, lon), smelt = Math.max(...NOSE.groups.map(gr => scentAffinity(gr, k)));
+    el('circle', {cx : x, cy : y, r : 9 + 5 * smelt, fill : 'none', stroke : colour, 'stroke-width' : 1 + 6 * smelt, opacity : .45}, svg);
+    el('circle', {cx : x, cy : y, r : 8, fill : colour}, svg);
+    const right = x >= cx - 2;
+    txt(svg, x + (right ? 1 : -1) * (16 + 5 * smelt), y + 4, name, {'text-anchor' : right ? 'start' : 'end', style : 'fill:' + colour + ';font-size:10.5px'});
+  });
+  // The chosen group's grips.
+  const [gx, gy] = at(g.lat, g.lon);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 7}, svg), p => { const [la, lo] = back(p); g.lat = la; g.lon = lo; redraw(); }, 'nosemid', hold, free);
+  const d = halfOffset(g.width), up = g.lat + d <= 90 ? [g.lat + d, g.lon] : [180 - g.lat - d, g.lon + 180];
+  const [wx, wy] = at(...up);
+  drag(svg, el('rect', {x : wx - 5, y : wy - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => {
+    const want = apart([g.lat, g.lon], back(p)); let lo = 0, hi = 1; for (let n = 0; n < 30; n++) { const m = (lo + hi) / 2; if (halfOffset(m) < want) lo = m; else hi = m; } g.width = (lo + hi) / 2; redraw(); }, 'nosewidth', hold, free);
+  if (NOSE.groups.length > 1) signChip(svg, gx + 14, gy - 12, '×', () => { NOSE.groups.splice(NOSE.chosen, 1); NOSE.chosen = 0; redraw(); }, true, 6);
+  // The sample.
+  const [px, py] = at(NOSE.probe.lat, NOSE.probe.lon);
+  const cross = el('g', {}, svg);
+  el('path', {d : `M${px - 6} ${py - 6} l12 12 m0 -12 l-12 12`, stroke : '#ef5f5f', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, cross);
+  drag(svg, el('circle', {cx : px, cy : py, r : 9, style : 'fill:transparent;stroke:none'}, svg), p => { const [la, lo] = back(p); NOSE.probe = {lat : la, lon : lo};
+    const hit = SCENTS.find(([, , sl, so]) => apart([sl, so], [la, lo]) < 9); if (hit) NOSE.probe = {lat : hit[2], lon : hit[3]}; redraw(); }, 'noseprobe', hold, free);
+  txt(svg, 296, cy + Rm + 4, 'Geruchsprobe', {'text-anchor' : 'end', style : 'fill:#ef5f5f;font-size:10.5px'});
+  if (NOSE.groups.length < 3) { signChip(svg, 20, cy + Rm - 6, '+', () => { NOSE.groups.push({lat : NOSE.probe.lat, lon : NOSE.probe.lon, width : .2, gate : .245, spread : .1, habit : .5}); NOSE.chosen = NOSE.groups.length - 1; redraw(); }, true, 8);
+    txt(svg, 32, cy + Rm - 2, 'Riechzellen für die Probe', {style : 'font-size:10px'}); }
+  svg.setAttribute('viewBox', `0 4 300 ${cy + Rm + 12}`);
 }
 // The scent disk: every group's half line, the scents as large as the chosen group smells them
 // (a click calls pick), the chosen group's middle and width as grips.
