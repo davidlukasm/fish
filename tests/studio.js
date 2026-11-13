@@ -326,6 +326,48 @@ async function checkBloodReceptors(model, capabilities) {
   const empty = {hormones : Array(wheel.hormones).fill(0), maturity : 0, reserve : 0, fatigue : 0};
   const receptor =
       {active : 1, baseline : 0, sensitivity : 1, half : .25, steepness : 0, width : 0};
+  const curveState = {document : placed.document, capabilities : wheel, previewContext : empty};
+  for (const substance of [0, ...Object.values(B)])
+    for (const half of [wheel.halfRange[0], .25, .5, .8, 1])
+      for (const steepness of [0, 1, wheel.steepnessSpan])
+        for (const width of [0, .45, 1]) {
+          const r = {...receptor, substance, half, steepness, width};
+          for (const context of [empty, {...empty, reserve : .4, fatigue : .2}]) {
+            const state = {...curveState, previewContext : context};
+            const picture = substances.effectCurve(state, r, E.excitation, placed.centerId);
+            assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
+            const grip = picture.match(/data-curve-handle="steepness" cx="([^"]+)" cy="([^"]+)"/);
+            if (!grip)
+              continue;
+            const x = Number(grip[1]), y = Number(grip[2]);
+            assert.ok(x >= 36 && x <= 250 && y >= 26 && y <= 112);
+            const ordinate = px => {
+              const fraction = Math.max(0, Math.min(1, (px - 36) / (250 - 36)));
+              const concentration =
+                  substance >= wheel.hormones
+                      ? fraction
+                      : wheel.halfRange[0] * (wheel.halfRange[1] / wheel.halfRange[0]) ** fraction;
+              const sample = structuredClone(context);
+              const body = Object.keys(B).find(key => B[key] === substance);
+              if (body)
+                sample[body] = concentration;
+              else
+                sample.hormones[substance] = concentration;
+              return 112 - 86 * (model.receptorResponse(wheel, r, sample) + 1) / 2;
+            };
+            // SVG coordinates round to hundredths; a tiny threshold makes that visible on a
+            // linear axis, so include the coordinate's rounding interval.
+            assert.ok(y >= ordinate(x + .005) - .006 && y <= ordinate(x - .005) + .006,
+                      'The steepness grip lies on the response at its visible concentration: ' +
+                          JSON.stringify({r, context, x, y}));
+            const patch = substances.receptorCurvePatch(state, r, E.excitation, 'steepness',
+                                                        x / 260, y / 150);
+            assert.ok(Number.isFinite(patch?.steepness));
+            assert.ok(Math.abs(patch.steepness - steepness) < .04,
+                      'Taking hold of the steepness grip preserves its current value: ' +
+                          JSON.stringify({r, context, x, y, patch}));
+          }
+        }
   for (let index = 0; index < wheel.regulators; ++index) {
     const r = {...receptor, substance : index};
     for (const [level, expected] of [[ 0, 0 ], [ .25, .5 ], [ 1, .8 ]]) {

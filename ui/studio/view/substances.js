@@ -202,11 +202,25 @@ function receptorCurve(state, receptor, effect) {
   };
 }
 const STEEP_PROBE = 2;
+function steepProbe(k, receptor) {
+  const left = k.atFraction(0), right = k.atFraction(1);
+  const low = k.concentration(left), high = k.concentration(right);
+  if (!(high > low))
+    return null;
+  for (const ratio of [STEEP_PROBE, 1 / STEEP_PROBE]) {
+    const share = (receptor.half * ratio - low) / (high - low);
+    if (share > 0 && share < 1)
+      return left + share * (right - left);
+  }
+  const middle = k.atFraction(.5);
+  return k.concentration(middle) === receptor.half ? null : middle;
+}
 // Where the answer turns and how sharply only show while it changes at all; a flat answer has
 // only its two ends to drag.
 const FLAT_ANSWER = .02;
 function curveHandles(state, receptor, effect, target) {
   const k = receptorCurve(state, receptor, effect);
+  const probe = steepProbe(k, receptor);
   const at = c => [k.x(clamp(k.fraction(c))), k.y(k.scale.value(k.response(c)))];
   const least = k.response(k.atFraction(0)), most = k.response(k.atFraction(1));
   const turns = Math.abs(most - least) > FLAT_ANSWER;
@@ -214,8 +228,8 @@ function curveHandles(state, receptor, effect, target) {
     ...(effect === GROWTH ? [] : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(least)) ] ] ]),
     [ 'sensitivity', [ k.x(1), k.y(k.scale.value(most)) ] ],
     ...(turns ? [ [ 'half', at(receptor.half) ] ] : []),
-    ...(turns && (state.capabilities?.steepnessSpan ?? 0) > 0
-            ? [ [ 'steepness', at(receptor.half * STEEP_PROBE) ] ]
+    ...(turns && probe !== null && (state.capabilities?.steepnessSpan ?? 0) > 0
+            ? [ [ 'steepness', at(probe) ] ]
             : [])
   ];
   return handles
@@ -245,8 +259,12 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const share = receptor.sensitivity ? (r - base) / receptor.sensitivity : 0;
   if (!(share > 0 && share < 1))
     return null;
-  const n = Math.log(share / (1 - share)) /
-            Math.log(k.concentration(receptor.half * STEEP_PROBE) / receptor.half);
+  const probe = steepProbe(k, receptor);
+  if (probe === null)
+    return null;
+  const n = Math.log(share / (1 - share)) / Math.log(k.concentration(probe) / receptor.half);
+  if (!Number.isFinite(n))
+    return null;
   return {
     steepness :
         Math.max(0, Math.min(state.capabilities?.steepnessSpan ?? 0, Math.log2(Math.max(1, n))))
