@@ -388,14 +388,14 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       const double f = double(k) / (SENSE_LEVELS - 1);
       return intensity ? std::pow(LIGHT_DIMMEST, 1 - f) : f;
     };
-    const double half = intensity ? cell->response_threshold : cell->threshold;
+    const double threshold = intensity ? cell->response_threshold : cell->threshold;
     std::cout << "{\"intensity\":" << (intensity ? "true" : "false") << ",\"response\":[";
     for (int k = 0; k < SENSE_LEVELS; ++k)
       std::cout << (k ? "," : "")
                 << fishsim::receptor_response(*cell, stimulus(k)) / cell->senses[sense];
-    std::cout << "],\"half\":" << half << ",\"adapt\":";
+    std::cout << "],\"begins\":" << threshold << ",\"adapt\":";
     if (fishsim::adapting_sense(sense) && cell->adaptation_rate > 0) {
-      const double held = intensity ? ADAPT_HELD * half : 1, steps = 1 / cell->adaptation_rate,
+      const double held = intensity ? ADAPT_HELD * threshold : 1, steps = 1 / cell->adaptation_rate,
                    every = ADAPT_SPAN * steps / ADAPT_SAMPLES;
       // The mean after `k` samples of a stimulus held from nothing.
       std::cout << "{\"steps\":" << steps << ",\"held\":" << held << ",\"every\":" << every

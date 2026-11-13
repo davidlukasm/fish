@@ -127,11 +127,12 @@ export const ORGANS = Object.freeze([
   },
   // The same hair cells inside the body weigh their direction against gravity. q1 is the hair
   // direction, from the head (-1) over the flank (0) to the tail (1); the other side mirrors it.
+  // They start with the lowest threshold: a fish must feel the slightest tilt.
   {
     key : 'balance',
     category : 'senses',
     scope : 'side',
-    centers : [ {...sensor('gravity', SENSE_KIND.flow, 2, 'inner'), threshold : 0} ]
+    centers : [ {...sensor('gravity', SENSE_KIND.flow, 2, 'inner'), threshold : -1} ]
   },
   {
     key : 'touch',

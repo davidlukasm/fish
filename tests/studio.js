@@ -4078,13 +4078,13 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     if (audit.type === 'balance')
       for (const center of model.allCenters(audit.document)) {
         const sensed = response.audited[index].senses[model.centerIndex(audit.document, center.id)];
-        assert.equal(center.threshold, 0);
+        assert.equal(center.threshold, -1);
         assert.equal(sensed.intensity, false);
         assert.equal(sensed.adapt, null);
         assert.ok(
             sensed.response.every((value, step, samples) =>
                                       Math.abs(value - boundedAnswer(step / (samples.length - 1),
-                                                                     sensed.half)) < 1e-6),
+                                                                     sensed.begins)) < 1e-6),
             'The balance cells answer tilt as the sense curves draw it');
       }
     if (audit.pressure)

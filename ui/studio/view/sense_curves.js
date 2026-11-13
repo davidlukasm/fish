@@ -1,8 +1,8 @@
 // What sense cells report, as curves every sense picture can stack under its organ: the report
 // over the stimulus, with the handle where they answer half, and for cells that get used to a
 // lasting stimulus the report over time while it lasts. Each organ names its axes in its own words.
-// Every cell has a threshold below which it reports nothing, and the stimulus `h` at which it
-// answers half (body_plan.cc, bounded_response and excess_response). An adapting cell raises its
+// Every cell has a threshold up to which it reports nothing (body_plan.cc, bounded_response and
+// excess_response). An adapting cell raises its
 // threshold by the running mean of what it felt (cppn_brain.cc, adapted_response), so a lasting
 // stimulus fades to nothing; the mean's rate is one over the cell's adaptation time.
 import {clamp} from '../../units.js';
@@ -28,6 +28,9 @@ export const SENSE_PLOT = Object.freeze({
   row : {top : 22, base : 64, words : 80},
   step : 90,
   bottom : 10,
+  // The handle's words: how high under the curve they stand and the room they need.
+  words : .3,
+  room : 120,
   // The time row runs, on a log scale, from one step to the longest adaptation time; the handle
   // sits one adaptation time after the stimulus began.
   window : 1,
@@ -60,32 +63,34 @@ const axes = (row, words) =>
     senseText(P.left - P.tick, row.top + P.tick, percent(1), 'end') +
     senseText(P.left - P.tick, row.base, percent(0), 'end') +
     senseText(P.left, row.words, words.from) + senseText(P.right, row.words, words.to, 'end');
-// The handle sits where the report reaches half, on a dashed line marked with that half; the
-// report starts well before it and grows on past it.
-const halfHandle = (row, sensitive, words) => {
-  const at = senseX(1) + (senseX(0) - senseX(1)) * sensitive;
-  return '<path class="aid-gland-phase" d="M' + P.left + ' ' + fixed(y(row, .5)) + ' H' +
-         fixed(at) + '"/>' + senseText(P.left - P.tick, y(row, .5) + P.tick, percent(.5), 'end') +
-         sensitivityHandle({x : senseX(1), y : y(row, .5)}, {x : senseX(0), y : y(row, .5)},
-                           sensitive, words.handle, 'sensitivity', words.half ?? '', 'right');
+// The handle sits on the axis where the cells begin to report: below it nothing, above it more
+// and more. Its words stand under the curve, right of where the report reaches half at `halfAt`,
+// or left of the handle, where the report is nothing, if there is no room on the right.
+const thresholdHandle = (row, sensitive, words, halfAt) => {
+  const at = senseX(1) + (senseX(0) - senseX(1)) * sensitive, level = y(row, P.words),
+        right = halfAt + P.tick < P.right - P.room;
+  return sensitivityHandle({x : senseX(1), y : row.base}, {x : senseX(0), y : row.base}, sensitive,
+                           words.handle, 'sensitivity', '') +
+         (words.half ? senseText(right ? halfAt + P.tick : at - P.tick, level, words.half,
+                                 right ? 'start' : 'end')
+                     : '');
 };
 
 // What a cell reports (body_plan.cc): of a stimulus without upper bound, with `mean` what it is
-// used to, and of a stimulus between nothing and all. `half` is where it answers half.
-export function excessAnswer(stimulus, half, mean = 0) {
-  const threshold = half / 2 + mean, excess = stimulus - threshold;
-  return excess > 0 ? excess / (excess + threshold) : 0;
+// used to, and of a stimulus between nothing and all. Up to the threshold it reports nothing.
+export function excessAnswer(stimulus, threshold, mean = 0) {
+  const excess = stimulus - threshold - mean;
+  return excess > 0 ? excess / (excess + threshold + mean) : 0;
 }
-export function boundedAnswer(stimulus, half, mean = 0) {
-  const threshold = half / (2 - half),
-        excess = (clamp(stimulus) - mean - threshold) / (1 - threshold);
+export function boundedAnswer(stimulus, threshold, mean = 0) {
+  const excess = (clamp(stimulus) - mean - threshold) / (1 - threshold);
   return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
 }
 // The report over a bounded stimulus, from none to full: `sensitive` is one less the threshold.
 export const boundedRow = (sensitive, words, marks = () => '') => row => {
   const h = clamp(1 - sensitive, .001, .999);
   return axes(row, words) + marks(row, senseX) + curve(row, x => boundedAnswer(x, h)) +
-         halfHandle(row, sensitive, words);
+         thresholdHandle(row, sensitive, words, senseX(h + (1 - h) * h / (1 + h)));
 };
 // The report over a stimulus spanning many orders, from `dimmest` to one; `marks(row, xOf)` adds
 // what the organ marks on that axis, `xOf` placing a stimulus.
@@ -93,7 +98,7 @@ export const intensityRow = (sensitive, dimmest, words, marks = () => '') => row
   const half = stimulusOfShare(1 - sensitive, dimmest);
   return axes(row, words) + marks(row, s => senseX(stimulusShare(s, dimmest))) +
          curve(row, share => { return excessAnswer(stimulusOfShare(share, dimmest), half); }) +
-         halfHandle(row, sensitive, words);
+         thresholdHandle(row, sensitive, words, senseX(stimulusShare(2 * half, dimmest)));
 };
 // The report while a stimulus `held` lasts, for intensity cells whose half answer is `half`: it
 // falls as their mean catches up, the handle one adaptation time after it began; `bounded` for

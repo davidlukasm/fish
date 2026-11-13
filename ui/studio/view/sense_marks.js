@@ -60,19 +60,19 @@ export const handleMark = (name, at, title, geometry, word, place = 'below') =>
 export function senseSensitivity(state, center) {
   const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
   const dimmest = answer?.intensity ? state.anatomy?.lightDimmest : null;
-  if (answer?.half > 0 && (!answer.intensity || dimmest > 0))
-    return 1 - stimulusShare(answer.half, dimmest);
+  if (answer?.begins > 0 && (!answer.intensity || dimmest > 0))
+    return 1 - stimulusShare(answer.begins, dimmest);
   return answer?.intensity ? null : 1 - activationLevel(unitOfPlan(center.threshold));
 }
 // What a drag starts from: the design run's answer cannot follow the drag, so the threshold moves
 // by as much as the handle moves from where it was.
 export function senseStart(state, center) {
   const answer = groupReport(state.document, state.anatomy, 'senses', center.id);
-  return {intensity : answer?.intensity, half : answer?.half, threshold : center.threshold};
+  return {intensity : answer?.intensity, begins : answer?.begins, threshold : center.threshold};
 }
 export function sensitivityPatch(state, start, sensitive) {
   if (!start?.intensity) {
-    const from = start?.half > 0 ? 1 - stimulusShare(start.half, null) : null;
+    const from = start?.begins > 0 ? 1 - stimulusShare(start.begins, null) : null;
     return {
       threshold : planOfUnit(from === null
                                  ? activationQuality(1 - sensitive)
@@ -81,9 +81,9 @@ export function sensitivityPatch(state, start, sensitive) {
     };
   }
   const dimmest = state.anatomy?.lightDimmest;
-  if (!(dimmest > 0) || !(start.half > 0))
+  if (!(dimmest > 0) || !(start.begins > 0))
     return null;
-  const shift = stimulusOfShare(1 - sensitive, dimmest) / start.half;
+  const shift = stimulusOfShare(1 - sensitive, dimmest) / start.begins;
   return {threshold : planOfUnit(unitOfPlan(start.threshold) + thresholdQualityShift(shift))};
 }
 

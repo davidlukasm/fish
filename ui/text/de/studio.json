@@ -1660,18 +1660,18 @@
     "report": "Meldung",
     "empty": "leer",
     "full": "voll",
-    "fullnessHalf": "bei {p} Füllung",
+    "fullnessHalf": "melden ab {p} Füllung",
     "fullnessHandle": "Ziehen: bei welcher Füllung die Zellen halb melden",
     "calm": "kein Bauchweh",
     "sore": "starkes",
-    "acheHalf": "bei {p} des stärksten Bauchwehs",
+    "acheHalf": "melden ab {p} des stärksten Bauchwehs",
     "acheHandle": "Ziehen: bei wie viel Bauchweh die Zellen halb melden",
     "aches": "hat gleichbleibend Bauchweh",
     "acheFadeHandle": "Ziehen: wie schnell sich die Zellen an anhaltendes Bauchweh gewöhnen",
     "little": "kaum Nährstoffe",
     "much": "viel mehr als nötig",
     "rest": "Grundbedarf",
-    "foodHalf": "bei {p} des Bedarfs",
+    "foodHalf": "melden ab {p} des Bedarfs",
     "foodHandle": "Ziehen: wie wenig Nährstoffe die Zellen schon melden",
     "eats": "frisst gleichmäßig",
     "later": "{n} Schritte später",
@@ -1683,7 +1683,7 @@
     "report": "Meldung",
     "none": "kein Stoff",
     "full": "so viel wie möglich",
-    "half": "bei {p} Stoff im Blut",
+    "half": "melden ab {p} Stoff im Blut",
     "handle": "Ziehen: bei welchem Pegel die Zellen halb melden"
   },
   "noseSense": {
@@ -1710,7 +1710,7 @@
       "title": "Tastzellen",
       "from": "leichte Berührung",
       "to": "harter Stoß",
-      "half": "bei {p} Tastreiz",
+      "half": "melden ab {p} Tastreiz",
       "handle": "Ziehen: wie leichte Berührungen die Zellen schon melden"
     },
     "pain": {
@@ -1733,7 +1733,7 @@
     "report": "Meldung",
     "empty": "leer",
     "full": "voll",
-    "half": "bei {p} Füllung",
+    "half": "melden ab {p} Füllung",
     "handle": "Ziehen: bei welcher Füllung die Zellen melden"
   },
   "strand": {

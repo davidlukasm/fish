@@ -973,22 +973,20 @@ float sensory_response(double stimulus, double threshold) {
   return stimulus > 0 ? float(stimulus / (stimulus + std::max(tolerance::negligible, threshold)))
                       : 0.f;
 }
-// What a sense cell reports of a stimulus without upper bound. `half` is the stimulus it answers
-// with half of what it can; below half of that it reports nothing. What it is used to (`mean`)
-// raises that threshold by as much, so a stimulus that lasts fades to nothing and only what
-// exceeds the accustomed level is reported, measured against that level.
-float excess_response(double stimulus, double half, double mean) {
-  const double threshold = std::max(tolerance::negligible, half / 2) + mean,
-               excess = stimulus - threshold;
+// What a sense cell reports of a stimulus without upper bound: nothing up to its threshold, half
+// of what it can at twice the threshold. What it is used to (`mean`) raises the threshold by as
+// much, so a stimulus that lasts fades to nothing and only what exceeds the accustomed level is
+// reported, measured against that level.
+float excess_response(double stimulus, double threshold, double mean) {
+  threshold = std::max(tolerance::negligible, threshold) + mean;
+  const double excess = stimulus - threshold;
   return excess > 0 ? float(excess / (excess + threshold)) : 0.f;
 }
-// The same for a stimulus between nothing and all: `half` is where the cell answers half; below
-// its threshold, which lies lower, it reports nothing, and all at the full stimulus. Only what
-// exceeds the accustomed level counts.
-float bounded_response(double x, double half, double mean) {
-  half = std::clamp(half, .001, .999);
-  const double threshold = half / (2 - half),
-               excess = (std::clamp(x, 0., 1.) - mean - threshold) / (1 - threshold);
+// The same for a stimulus between nothing and all: nothing up to the threshold, all at the full
+// stimulus. Only what exceeds the accustomed level counts.
+float bounded_response(double x, double threshold, double mean) {
+  threshold = std::clamp(threshold, .001, .999);
+  const double excess = (std::clamp(x, 0., 1.) - mean - threshold) / (1 - threshold);
   return excess > 0 ? float(excess / (excess + threshold * (1 - excess))) : 0.f;
 }
 void record_touch(Body &b, double nx, double ny, double impact) {
