@@ -28,7 +28,7 @@ Am 13.11. um 18:06 hat David aufräumen lassen. Alles Veraltete ist gelöscht: N
 ## Wer gerade was macht
 - **Claude:** zeichnet alle Inspektoren im Entwurf `entwuerfe/inspektoren.html`, ein Organ nach dem anderen, nach Davids Abnahme. Jetzt: verworfene Panels entfernen, danach Darm und Schwanz.
 - **Fable:** Fakten aus dem Code, Fragen in AUFTRAG-1311.md Abschnitt 5: Lenkt der Schwanz? Bauchweh-Buckel? Sinnesunsicherheit? Futterzellen und Blutsinn? Druckzellen? Außerdem die Drüse genauer untersuchen (Befund 7, Abschnitt 5 Punkt 6).
-- **Astra:** alten Augen- bzw. Nahsinn-Inspektor finden und ORGANOPTIONEN.md für die übrigen Organe ergänzen (AUFTRAG-1311.md Abschnitt 5).
+- **Astra:** heutigen Augen- und Nahsinn-Inspektor im Produkt als PNG ablegen (kein Suchen in alten Commits) und ORGANOPTIONEN.md für die übrigen Organe ergänzen (AUFTRAG-1311.md Abschnitt 5).
 
 ## Nachrichten
 

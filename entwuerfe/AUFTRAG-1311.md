@@ -8,6 +8,12 @@ Bilder: `bilder/2026-11-13_feedback/`
 - `gut_darm-neben-schwanz.png`: die zwei guten Beispiele nebeneinander.
 - `kontrast_darm-neben-gleichgewicht.png`: ein gutes Beispiel neben dem schlechtesten.
 
+## 0. Welche Version David kritisiert hat
+
+Er hat **nur den Entwurf** `entwuerfe/inspektoren.html` angesehen, als Artifact im Browser. Alle Bilder in `bilder/2026-11-13_feedback/entwurf_*.png` zeigen diesen Entwurf.
+- **Im Produktzweig** `feature/v019-design-studio` ist davon nichts integriert. Die Inspektoren im Atelier sind dort noch die alten. Das gilt auch für Darm und Schwanz: Die guten Versionen gibt es nur im Entwurf, nicht im Produkt.
+- **Nahsinn:** Mit dem „ausgearbeiteten Inspektor mit Sehbildern“ meint David den **heutigen** Augen- und Nahsinn-Inspektor im Atelier des Produkts (`ui/studio/view/vision.js`, Sehfächer und Testlicht). Augen und Nahsinn wurden im Studio nicht geändert, der neue Entwurf hat das nur ignoriert. Er muss nicht in alten Commits gesucht werden.
+
 ## 1. Was schiefgegangen ist
 
 David hat alle 26 Panels durchgesehen. Nur Darm und Schwanz hält er für gut ausgearbeitet. Ab dem Maul werden die Entwürfe immer schlechter und sehen alle gleich aus.
@@ -61,7 +67,7 @@ Danach `kontrast_darm-neben-gleichgewicht.png` öffnen. Das Gleichgewicht zeigt 
 - Nervenzelle (02, `david_nervenzelle.png`): unverständlich; sechs Regler, die teils nur wirken, wenn andere nicht auf 0 stehen. Claude überlegt sie neu.
 - Pigment (19): Der Nutzer will eine Grundfarbe wählen und je Pigmentknoten einstellen, wie er den Fisch färbt. Braune Fische müssen möglich sein.
 - Eier und Samen (20): Das sind zwei Organe. Samen haben auch eine Tintenfunktion und dienen dem Schlupf.
-- Nahsinn (15): Es gab früher einen ausgearbeiteten Augen- bzw. Nahsinn-Inspektor mit Sehbildern, und der wird zurückgeholt.
+- Nahsinn (15): Der heutige Augen- bzw. Nahsinn-Inspektor im Produkt (`vision.js`, Sehfächer, Testlicht) ist das Original und bleibt Grundlage. Der Entwurf hatte ihn ignoriert.
 - Lernen (11) und Wertung (12): Das Beispiel war ein Duft, aber Lernen hat mit Duft nichts zu tun. Mit „Paarung“ war die Kopplung zweier Reize gemeint, David las Fortpflanzung. „Lehre nach A / mit A“ als Knöpfe ist unverständlich, und „Wertung“ ist ein schlechter Name.
 
 **Darm (03, `david_darm-schmerzzellen-bump.png`):** Das ist ein gutes Panel mit Einzelkorrekturen, die Claude macht.
@@ -167,7 +173,7 @@ Claude zeichnet alle Inspektoren selbst, in dieser Reihenfolge: zuerst Darm und 
    Ergebnis als Verläufe aus der echten Engine, als PNG nach `bilder/`, dazu ein kurzer Text in KOORD.
 
 **Astra**
-1. Den alten Augen- bzw. Nahsinn-Inspektor mit Sehbildern im Git-Verlauf des Produkts finden: Commit, Dateien und ein PNG davon in `bilder/`.
+1. ~~Alten Augen- bzw. Nahsinn-Inspektor im Git-Verlauf suchen~~ entfällt (Missverständnis, siehe Abschnitt 0). Stattdessen den **heutigen** Augen- und Nahsinn-Inspektor im Produkt-Atelier als PNG nach `bilder/` legen (Auge und Nahsinn), damit wir den Entwurf daran messen.
 2. **Nicht nur die Gene des Organs.** Je Organ die fünf Abschnitte aus `ORGANOPTIONEN.md`: eigene Optionen, verwaltete Nervenknoten mit ihren Optionen, eigener Lebenszyklus, Anschlüsse und was sie bei anderen Organen und Regionen voreinstellen, zusammenwirkende Spielfunktionen. Organe: Maul, Seitenflossen, Wirbelsäule, Nase, Barteln, Schwimmblase, Kiemen, Abwehr, Pigment, Eier, Samen, Drüse, Blutsinn, Tasten, Seitenlinie, Gleichgewicht, Schmerz.
 
 Das kommt als Tabelle nach `entwuerfe/ORGANOPTIONEN.md`. Damit fehlen später keine Einstellungen mehr.
