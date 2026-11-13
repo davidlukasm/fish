@@ -9,11 +9,11 @@ Erledigt
 - 9 zurückgenommen.
 
 Zu entscheiden (Umschalter im Entwurf)
-- 17/18 Lernen: Gelerntes verfällt in 800 stillen Schritten (A 0,17 → 0,02); die Vorgabe-Lernzelle (Lerntempo 0,8) lernt gar nicht.
-  Fables Vorschlag „Schritt × Grenze + Festigung" (Patches in entwuerfe/) behebt beides: Gelerntes übersteht Stille und Proben bei jedem Lerntempo; A trennt sich von B umso schärfer, je höher das Tempo (0,2: 0,24 gegen 0,14; Vorgabe 0,8: 0,19 gegen 0,02).
+- 17 Lernen (Engine): Ein Lehrpuls erzeugt seinen eigenen Gegenbeleg – das mittelwertfreie Lehrsignal schlägt am Pulsende ins Negative und lockert, was der Puls gerade gefestigt hat (A 0,17 → 0,02 in 800 stillen Schritten). Gewollt bleibt: echte Gegenbelege lockern (Konzept 12.11., 098bc1a6). Fables Patch streicht das Lockern ganz und passt deshalb nicht zum Konzept; passend wäre Netto-Rückgang über den Puls oder ein nicht mittelwertfreies Lehrsignal.
+- 18 Lernen (Engine): Lernschritt absolut, unabhängig von der Kontaktgrenze – bei Lerntempo 0,8 größer als das ganze Gewicht.
 - 20 Wertung: Merkmalszellen haben keine Festigung → alles Gelernte hat 500 Schritte Halbwertszeit; ohne Lehre löschen die Düfte allein beide Merkmale.
   Mit Festigung der Merkmale und Vorgabe Verknüpfung 0,75 / Lehre 0,5 wertet und lernt sie richtig um (3 Seeds). Bei der heutigen Vorgabe 1/1 steigt B nach Schmerz – in jeder gemessenen Regel. Ursache offen.
-- 22 Allgemein: Kein Baustein schaltet Festigung ein → in jedem Fisch hält Gelerntes nur einige hundert Schritte, außer ein Botenstoff festigt. Grundfestigung für Lernzellen?
+- 22 zurückgenommen als Engine-Befund: Festigung über Botenstoff/Reife ist so gewollt; dass kein Baustein sie nutzt, ist offene Baustein-Arbeit (wie bei den Wertungsmerkmalen).
 - 21/19 Hecht (Kiefer, Nase) und Liora-Aquarienläufe: zurückgenommen – an veralteten Entwurfsfischen gemessen, ohne Bauplan-Überholung; Hecht war nie lebensfähig.
 - 7 Drüse: hält höchstens 48 Schritte → Vorschlag 4–1024.
 - 8 Blase: füllt träge (≈ 250 Schritte) → Vorschlag 4× schneller.
