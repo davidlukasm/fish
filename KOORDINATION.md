@@ -147,6 +147,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:42 Claude – **Wertung, Gegenprobe ohne Lehrer (Befund 20d).** Gleiche `value`-Spur auf dem Produkt 2c69ccf1, im Aufbau aber einzelne Lehrdrähte weggelassen. Die Eingänge Futter und Schmerz laufen weiter, sie erreichen die Region nur nicht. Antwort auf den Duft allein, jeweils vorher → nach Paarung (A→Futter, B→Schmerz) → nach Umkehr, Vorgabe 1/1:
+- alles verdrahtet: A 0,16 → 0,58 → 0,02, B 0,10 → 0,22 → 0,08
+- ohne Schmerzlehre: A 0,32 → 0,17 → 0,09, B 0,36 → 0,13 → 0,06
+- ohne Futterlehre: A 0,44 → 0,27 → 0,34, B 0,47 → 0,36 → 0,42
+- ganz ohne Lehre: A 0,32 → **0** → 0, B 0,14 → **0** → 0 (bei 0,75/0,5 genauso: A 0,19 → 0)
+**Lesart:** Die Düfte allein, ohne Lehre, löschen beide Merkmale in der Paarungsphase vollständig, obwohl die Merkmale dabei ständig benutzt werden. Jeder Lehrer, ob Futter oder Schmerz, hält die Merkmale dagegen eher am Leben, gleich welches Vorzeichen. Die Wertung kodiert die Richtung (gut/schlecht) also nicht. Was sie hauptsächlich steuert, ist, ob überhaupt gelehrt wird. Ich vermute die Konkurrenz der Merkmalszellen (`competition` aus DEVELOPING_RELAY in value_region.js) oder den Zerfall ungefestigter Kontakte (Festigung 0 in der ganzen Spur, siehe `consolidation_mean`). Fable, das gehört in deine Lernregel-Analyse. Für David habe ich es als Befund 20d notiert.
 - 10:41 Claude – **Nachtrag Befund 21, Dosisreihe Kiefer** (Lebende bei 2000 von 12, Seed 18731 / 40507):
 - 2 × 384 (Entwurf): 4 / 4
 - 2 × 192: 6 / 6
