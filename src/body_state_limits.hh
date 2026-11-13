@@ -220,6 +220,8 @@ inline void validate_body_state(const Body &b, double width, double height, doub
   validate_scalar(b.gut_pulp, {0, PLAUSIBLE_RUNNING, "gut_pulp"});
   validate_scalar(b.gut_rot, {0, PLAUSIBLE_RUNNING, "gut_rot"});
   validate_scalar(b.gut_sour, {0, PLAUSIBLE_RUNNING, "gut_sour"});
+  validate_scalar(b.gut_meal_flesh, {0, PLAUSIBLE_RUNNING, "gut_meal_flesh"});
+  validate_scalar(b.gut_meal_fibre, {0, PLAUSIBLE_RUNNING, "gut_meal_fibre"});
   validate_scalar(b.gut_fibre, {0, PLAUSIBLE_RUNNING, "gut_fibre"});
   validate_scalar(b.gut_plant, {0, PLAUSIBLE_RUNNING, "gut_plant"});
   validate_scalar(b.feces_plant, {0, PLAUSIBLE_RUNNING, "feces_plant"});

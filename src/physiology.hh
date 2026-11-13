@@ -136,9 +136,11 @@ inline double reserve_capacity(const Body &b) {
 // broken open; flesh that stays `spoil_steps` and pulp that stays `pulp_steps` spoil as fast as
 // they are taken up. All three run with the power `sharpness` of the stay, so a little too
 // short or too long costs much. The largest gut muscle moves the content `fastest` times as
-// fast as a resting gut. A full gut hurts when more than the share `tolerated` of its flesh
-// spoils instead of being taken up, or of its fibre passes still closed; `cramp` more hurts as
-// much as it can, empties the gut `diarrhoea` times faster on top and costs `harm` of the
+// fast as a resting gut. A full gut hurts when the meal in it is the wrong one for its pace:
+// flesh that stays longer than `ache_flesh` times `spoil_steps`, and the later the less of the
+// meal is flesh; or a meal that is fibre by more than the share `ache_fibre` and stays shorter
+// than `open_steps` times that excess. Past these limits by the share `cramp` it hurts as much
+// as it can, empties the gut `diarrhoea` times faster on top and costs `harm` of the
 // health per step. A gut of the greatest length leaves the gonads `belly` less room; per body
 // length it weighs `wall_mass` of the tissue and raises the basal metabolism by `upkeep`.
 // Faeces leave as a flock once they amount to `pellet` of what the gut holds.
@@ -329,6 +331,14 @@ inline double gut_speed(const Body &b) {
 // which averages its drive.
 inline double gut_pace(const Body &b, const PhysiologyParameters &p) {
   return (1 + (gut_speed(b) - 1) * 2 * std::clamp(b.gut_motility, 0., 1.)) / gut_transit(b, p);
+}
+// How much a full gut hurts that holds a meal of these shares of flesh and of fibre for `stay`
+// steps: nothing within the meal's own span of time, all it can beyond it.
+inline double gut_ache(double stay, double flesh, double fibre) {
+  using namespace digestion;
+  const double spoiling = flesh > 0 ? stay * flesh / (ache_flesh * spoil_steps) - 1 : 0,
+               closed = fibre > ache_fibre ? 1 - stay / (open_steps * (fibre - ache_fibre)) : 0;
+  return std::clamp(std::max(spoiling, closed) / cramp, 0., 1.);
 }
 // Share of what the gut holds now that it takes up as fast as it moves now.
 inline double gut_use(const Body &b, const PhysiologyParameters &p) {

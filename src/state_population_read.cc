@@ -402,6 +402,8 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   scalar(in, b.gut_pulp, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_rot, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_sour, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_meal_flesh, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_meal_fibre, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_fibre, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_plant, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.digestion, 0, PLAUSIBLE_RUNNING);

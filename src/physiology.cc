@@ -143,8 +143,9 @@ double stored_energy(const Body &b) {
 }
 void empty_stores(Body &b) {
   b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
-      b.gut_flesh = b.gut_pulp = b.gut_fibre = b.gut_rot = b.gut_sour = b.gut_plant = b.gut_fill =
-          b.feces_pending = b.feces_plant = b.embryo.secretion = b.embryo.pending = 0;
+      b.gut_flesh = b.gut_pulp = b.gut_fibre = b.gut_rot = b.gut_sour = b.gut_meal_flesh =
+          b.gut_meal_fibre = b.gut_plant = b.gut_fill = b.feces_pending = b.feces_plant =
+              b.embryo.secretion = b.embryo.pending = 0;
 }
 Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
@@ -207,6 +208,8 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
   b.gut_flesh += accepted * f.flesh;
   b.gut_fibre += accepted * f.fibre;
   b.gut_pulp += accepted * (1 - f.flesh - f.fibre);
+  b.gut_meal_flesh += accepted * f.flesh;
+  b.gut_meal_fibre += accepted * f.fibre;
   b.gut_plant += f.plant ? accepted : 0;
   b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
@@ -219,7 +222,7 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
 // spoiled flesh and spent pulp. Closed fibre is broken open; flesh, pulp and open fibre are taken
 // up, each by its share of what is open; flesh and pulp spoil; and all of it moves on, sooner when
 // the gut muscle drives it. A fish with a full reserve takes up nothing and holds its meal. A full
-// gut hurts when most of its flesh spoils or most of its fibre passes closed: then it empties
+// gut hurts when the meal in it is the wrong one for its pace (gut_ache): then it empties
 // itself and the body wears down. Returns what leaves as faeces.
 double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   using namespace digestion;
@@ -232,12 +235,8 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
                ready = b.gut_flesh + b.gut_pulp + opened, pace = gut_pace(b, p), stay = 1 / pace,
                opening = opening_rate(stay), rotting = spoiling_rate(stay, spoil_steps),
                souring = spoiling_rate(stay, pulp_steps);
-  const auto beyond = [](double share) { return std::clamp((share - tolerated) / cramp, 0., 1.); };
   b.gut_irritation =
-      std::clamp(gut_filling(b) *
-                     ((b.gut_flesh + b.gut_rot) / held * beyond(rotting / (uptake_rate + rotting)) +
-                      b.gut_fibre / held * beyond(pace / (opening + pace))),
-                 0., 1.);
+      gut_filling(b) * gut_ache(stay, b.gut_meal_flesh / held, b.gut_meal_fibre / held);
   harm_body(b, harm * b.gut_irritation, death_reason::hunger);
   const bool full = b.energy >= reserve_capacity(b);
   const double room = std::max(0., reserve_capacity(b) - b.energy);
@@ -258,6 +257,8 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.gut_sour = (b.gut_sour + soured) * stays;
   b.gut_energy = left - lost;
   b.gut_plant *= kept;
+  b.gut_meal_flesh *= kept;
+  b.gut_meal_fibre *= kept;
   b.gut_fill *= kept;
   b.energy += (1 - p.digestion_cost) * b.digestion;
   b.digested += b.digestion;

@@ -216,8 +216,13 @@ void gut_takes_up_what_time_allows() {
         "leaves that pass still closed hurt a short gut, not a long one");
   for (double length : {SHORT, MIDDLE, LONG})
     check(digest(FLOCK, length).ache == 0, "flocks hurt no gut");
-  check(digest(ALGAE, MIDDLE).ache == 0 && digest(PLANKTON, MIDDLE).ache == 0,
-        "algae and plankton do not hurt a gut of middle length");
+  for (int food : {LEAVES, ALGAE, PLANKTON, FLESH})
+    check(digest(food, MIDDLE).ache == 0, "a gut of middle length bears every food");
+  check(digest(ALGAE, SHORT, 1, STRONG).ache > 0 && digest(ALGAE, SHORT).ache == 0,
+        "algae hurt only the very shortest stay");
+  check(digest(PLANKTON, LONG).ache > 0 && digest(PLANKTON, SHORT).ache == 0 &&
+            digest(PLANKTON, LONG).ache < digest(FLESH, LONG).ache,
+        "plankton hurts only the longest gut, and less than flesh");
   const auto rested = digest(FLESH, LONG), hurried = digest(FLESH, LONG, 1, STRONG);
   check(hurried.gained > 2 * rested.gained && hurried.gained < flesh,
         "the largest gut muscle saves much flesh in a long gut, but not as much as a short gut");

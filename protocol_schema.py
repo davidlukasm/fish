@@ -1361,8 +1361,9 @@ class Digestion:
     PULP_STEPS = 720
     SHARPNESS = 4
     FASTEST = 4.0
-    TOLERATED = 0.85
-    CRAMP = 0.1
+    ACHE_FLESH = 1.5
+    ACHE_FIBRE = 0.55
+    CRAMP = 0.25
     DIARRHOEA = 2
     HARM = 0.0015
     BELLY = 0.25
