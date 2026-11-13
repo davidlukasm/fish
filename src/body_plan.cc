@@ -153,6 +153,7 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
   a.stroke_timing = {};
   std::array<double, STROKE_COUNT> steps{}, weight{}, fast{};
   std::array<double, field::HORMONES + 3> continuous_steps{}, continuous_weight{};
+  std::array<double, field::HORMONES> residence{};
   a.pulls.clear();
   for (std::size_t i = 0; i < a.effectors.size(); ++i) {
     auto &e = a.effectors[i];
@@ -166,6 +167,8 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
       const double w = e.strength * share;
       continuous_steps[c] += w * tau;
       continuous_weight[c] += w;
+      if (c < field::HORMONES)
+        residence[c] += w * field::residence_steps(s.neurons[e.neuron].parameters);
     }
     for (int j = 0; j < STROKE_COUNT; ++j) {
       const double share = stroke_share(e, j), w = e.strength * share;
@@ -193,6 +196,10 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
         c < field::HORMONES ? a.hormone_timing[c] : a.pigment_timing[c - field::HORMONES];
     timing.set(continuous_weight[c] > 0 ? continuous_steps[c] / continuous_weight[c]
                                         : field::time_constant_steps(field::CellParameters{}));
+    if (c < field::HORMONES)
+      a.hormone_residence[c] = continuous_weight[c] > 0
+                                   ? residence[c] / continuous_weight[c]
+                                   : field::residence_steps(field::CellParameters{});
   }
 }
 class AnatomyBuilder {
@@ -1645,10 +1652,12 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   }
   b.color = pigment_color(visible_absorption(layout, b.motor_.pigment, p), p.pigment_half);
   b.bladder_fill = std::clamp(b.bladder_fill + f * bladder_delta, 0., 1.);
-  field::Hormones tau{};
-  for (int k = 0; k < field::HORMONES; ++k)
-    tau[k] = layout.hormone_timing[k].steps;
-  b.hormones_.advance(secretion, activity.binding, f, p.hormones, tau);
+  field::Hormones rise{}, stay{};
+  for (int k = 0; k < field::HORMONES; ++k) {
+    rise[k] = layout.hormone_timing[k].steps;
+    stay[k] = layout.hormone_residence[k];
+  }
+  b.hormones_.advance(secretion, activity.binding, f, p.hormones, rise, stay);
   // A stroke's pose: its power against the muscles it moves (each tail flank on its own).
   const auto pose = [&](int j) {
     return std::clamp(strokes[j].drive / std::max(tolerance::negligible, layout.stroke_capacity[j]),

@@ -324,6 +324,9 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   std::cout << ",\"hormoneTimes\":[";
   for (int k = 0; k < field::HORMONES; ++k)
     std::cout << (k ? "," : "") << a.hormone_timing[k].steps;
+  std::cout << "],\"hormoneResidence\":[";
+  for (int k = 0; k < field::HORMONES; ++k)
+    std::cout << (k ? "," : "") << a.hormone_residence[k];
   std::cout << "],\"pigmentTimes\":[";
   for (int k = 0; k < fishsim::rgb::count; ++k)
     std::cout << (k ? "," : "") << a.pigment_timing[k].steps;
@@ -1067,7 +1070,8 @@ int main(int argc, char **argv) {
                 << ",\"diet\":" << diet_report() << ",\"lateralRing\":" << lateral_ring_report()
                 << ",\"gonads\":" << gonad_report() << ",\"buoyancy\":" << buoyancy_report()
                 << ",\"biasScale\":" << field::Options{}.bias_scale
-                << ",\"hormoneRate\":" << fishsim::PhysiologyParameters{}.hormones.rate
+                << ",\"hormoneHeight\":" << fishsim::PhysiologyParameters{}.hormones.height
+                << ",\"hormoneBinding\":" << fishsim::PhysiologyParameters{}.hormones.binding_rate
                 << ",\"gutTime\":" << fishsim::PhysiologyParameters{}.gut_time
                 << ",\"neural\":{\"learningFloor\":" << field::MIN_LEARNING_RATE
                 << ",\"learningGainMax\":" << field::MAX_LEARNING_GAIN

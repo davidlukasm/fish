@@ -1095,7 +1095,8 @@
   },
   "hormoneCard": {
     "title": "Stoffe",
-    "decay": "Zeitkonstante",
+    "rise": "steigt",
+    "stays": "bleibt",
     "sources": "Quellen",
     "acts": "Wirkt auf",
     "gland": "Drüse",
@@ -1133,8 +1134,8 @@
     "growthWith": "Wachstum des Körpers · {name}",
     "more": "Neu",
     "noTarget": "Hier wirkt das nicht.",
-    "timeConstant": "Zeitkonstante des Grundabbaus",
-    "timeValue": "{n} Schritte; ergibt sich aus den zugehörigen Drüsenzellen."
+    "timeConstant": "Anstieg mit der Zellzeit, Verbleib nach dem Ende der Abgabe",
+    "timeValue": "steigt in {rise}, bleibt {stay} Schritte; ergibt sich aus den zugehörigen Drüsenzellen."
   },
   "neuronPurpose": {
     "relay": "gibt weiter, was ihn erreicht",
@@ -1630,7 +1631,9 @@
     "rests": "ruht",
     "half": "halb weg nach {n} {n:Schritt|Schritten}",
     "cellsHandle": "Ziehen: mehr Zellen, der Stoff steigt höher",
-    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt",
+    "timeHandle": "Ziehen: wie lange der Stoff im Blut bleibt, wenn die Drüse schweigt",
+    "riseHandle": "Ziehen: wie schnell der Stoff steigt, wenn die Drüse arbeitet",
+    "halfUp": "halb oben nach {n} {n:Schritt|Schritten}",
     "peak": "{n} {n:Zelle|Zellen}: bis {p}"
   },
   "command": {

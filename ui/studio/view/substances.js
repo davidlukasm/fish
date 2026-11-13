@@ -549,20 +549,23 @@ export function receptorBody(state, center, effect) {
                           receptorVariationExamples(receptor, state.capabilities)) +
          '</div>' + effectCurve(state, receptor, effect, target);
 }
-// How long the substance lasts in the blood, as a clock whose tooltip gives the steps.
+// How fast the substance rises and how long it stays in the blood, as a clock whose tooltip gives
+// both in steps.
 const CLOCK_ICON = 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18';
 export function hormoneTime(state, index) {
-  const value = state.anatomy?.hormoneTimes?.[index];
+  const rise = state.anatomy?.hormoneTimes?.[index],
+        stay = state.anatomy?.hormoneResidence?.[index];
+  const known = Number.isFinite(rise) && Number.isFinite(stay);
+  const steps = v => t('units.steps', {n : formatNumber(v, v < 10 ? 1 : 0)});
   return '<span class="aid-hormone-time" data-hormone-time="' + index + '" title="' +
          escapeText(namedText(label('hormoneCard.timeConstant'),
-                              (Number.isFinite(value)
-                                   ? t('studio.hormoneCard.timeValue', {n : formatNumber(value, 1)})
-                                   : formatNumber(NaN)))) +
+                              known ? t('studio.hormoneCard.timeValue',
+                                        {rise : formatNumber(rise, 1), stay : formatNumber(stay, 0)})
+                                    : formatNumber(NaN))) +
          '">' + glyph(CLOCK_ICON, ICON.mark, {line : true}) + '<span>' +
-         escapeText(namedText(label('hormoneCard.decay'),
-                              Number.isFinite(value)
-                                  ? t('units.steps', {n : formatNumber(value, 1)})
-                                  : formatNumber(NaN))) +
+         escapeText(known ? namedText(label('hormoneCard.rise'), steps(rise)) + ' · ' +
+                                namedText(label('hormoneCard.stays'), steps(stay))
+                          : formatNumber(NaN)) +
          '</span></span>';
 }
 function substanceInspector(state) {

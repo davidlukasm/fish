@@ -13,6 +13,10 @@ export const adaptationSteps = tau =>
     TIME_CONSTANT.adaptation_min_steps * TIME_CONSTANT.adaptation_span ** clamp(tau);
 export const adaptationOf = steps => clamp(Math.log(steps / TIME_CONSTANT.adaptation_min_steps) /
                                            Math.log(TIME_CONSTANT.adaptation_span));
+// Steps a gland's substance stays in the blood after the gland falls silent, from its field width
+// (substrate.hh, residence_steps): the same span as getting used to a stimulus.
+export const residenceSteps = field => adaptationSteps(field);
+export const residenceOf = steps => adaptationOf(steps);
 export const LONGEST_ADAPTATION =
     TIME_CONSTANT.adaptation_min_steps * TIME_CONSTANT.adaptation_span;
 export const LONGEST_TIME_CONSTANT = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;

@@ -14,7 +14,8 @@ void finite_range(double v, double lo, double hi) {
 }
 }
 void HormoneParameters::validate() const {
-  finite_range(rate, 0, PLAUSIBLE_AMOUNT);
+  finite_range(height, 0, 1);
+  finite_range(binding_rate, 0, 1);
   finite_range(work_cost, 0, PLAUSIBLE_AMOUNT);
 }
 void HormoneState::set_levels(field::Hormones values) {
@@ -33,20 +34,26 @@ double HormoneState::work_cost(const field::Hormones &p, const field::Hormones &
   }
   return parameters.work_cost * sum;
 }
+// The level heads for the height of what is poured: up with the glands' cell time, down with their
+// residence. Binding takes its share of what is there on top. What the glands added is the level
+// beyond what residence alone would have left.
 void HormoneState::advance(const field::Hormones &p, const field::Hormones &b, double paid,
-                           const HormoneParameters &parameters, const field::Hormones &time_steps) {
+                           const HormoneParameters &parameters, const field::Hormones &rise_steps,
+                           const field::Hormones &residence_steps) {
   finite_range(paid, 0, 1);
-  for (double tau : time_steps)
-    finite_range(tau, tolerance::negligible, PLAUSIBLE_AMOUNT);
+  for (const auto *steps : {&rise_steps, &residence_steps})
+    for (double tau : *steps)
+      finite_range(tau, tolerance::negligible, PLAUSIBLE_AMOUNT);
   work_ = paid * work_cost(p, b, parameters);
   for (int k = 0; k < field::HORMONES; ++k) {
     secretion_[k] = paid * p[k];
     binding_[k] = paid * b[k];
-    const double source = parameters.rate * secretion_[k],
-                 sink = 1 / time_steps[k] + parameters.rate * binding_[k],
-                 equilibrium = source / sink, ordinary = levels_[k] * std::exp(-1 / time_steps[k]),
-                 next = std::clamp(levels_[k] + (equilibrium - levels_[k]) * -std::expm1(-sink), 0.,
-                                   1.);
+    const double target = parameters.height * secretion_[k],
+                 tau = levels_[k] < target ? rise_steps[k] : residence_steps[k],
+                 approached = target + (levels_[k] - target) * std::exp(-1 / tau),
+                 next = std::clamp(approached * std::exp(-parameters.binding_rate * binding_[k]),
+                                   0., 1.),
+                 ordinary = levels_[k] * std::exp(-1 / residence_steps[k]);
     integrated_[k] = next - ordinary;
     levels_[k] = next;
   }

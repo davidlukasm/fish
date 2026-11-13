@@ -1054,9 +1054,36 @@ void ancestral_histories_keep_current_mutations() {
   check(rejected, "conflicting innovation endpoints remain invalid");
 }
 }
+// A gland's substance heads for half of what is poured: up with the cell time, down with its own
+// residence, and binding clears what is left. One substance is fleeting, the other lasting.
+void gland_substances_rise_and_stay_by_their_cells() {
+  const HormoneParameters parameters;
+  HormoneState state;
+  field::Hormones pour{}, none{}, rise{}, stay{};
+  rise.fill(4);
+  stay.fill(8);
+  stay[1] = 512;
+  pour[0] = pour[1] = 1;
+  for (int step = 0; step < 20; ++step)
+    state.advance(pour, none, 1, parameters, rise, stay);
+  check(std::abs(state.levels()[0] - parameters.height) < .01 * parameters.height &&
+            std::abs(state.levels()[1] - parameters.height) < .01 * parameters.height,
+        "a full command holds both substances at the gland's height, whatever their residence");
+  for (int step = 0; step < 40; ++step)
+    state.advance(none, none, 1, parameters, rise, stay);
+  check(state.levels()[0] < .01 * parameters.height && state.levels()[1] > .9 * parameters.height,
+        "after the gland falls silent the fleeting substance is gone and the lasting one stays");
+  field::Hormones bind{};
+  bind[1] = 1;
+  const double before = state.levels()[1];
+  for (int step = 0; step < 22; ++step)
+    state.advance(none, bind, 1, parameters, rise, stay);
+  check(state.levels()[1] < .55 * before, "binding clears a lasting substance in about 22 steps");
+}
 int main() {
   try {
     Genome::begin_run(SEED);
+    gland_substances_rise_and_stay_by_their_cells();
     laboratory_comparison_restarts_during_copy();
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();

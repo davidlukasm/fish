@@ -102,7 +102,10 @@ struct BrainInterface {
   // each tail flank bends the body.
   std::array<double, STROKE_COUNT> fin_push{}, fin_across{}, fin_turn{};
   std::array<double, 2> tail_lever{};
+  // Each substance rises with the cell time of its glands and stays with their residence, both
+  // averaged over the cells that pour it, weighted by strength times share.
   std::array<StrokeTiming, field::HORMONES> hormone_timing{};
+  std::array<double, field::HORMONES> hormone_residence{};
   std::array<StrokeTiming, 3> pigment_timing{};
   std::array<double, 3> pigment_absorption{};
   double sensory_capacity = 0;
