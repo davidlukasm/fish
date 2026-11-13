@@ -207,7 +207,13 @@ function lanePath(node, join, along, inward, frame) {
           : n.r;
   // Where the fibre leaves its lane: at the region's end, or short of a bundle beside the cells.
   const end = way > 0 ? frame.high + LANE.hop : frame.low - LANE.hop,
-        exit = (j.a - end) * way > 0 ? end : j.a - way * LANE.bend, run = (exit - n.a) * way;
+        far = (j.a - end) * way > 0 ? end : j.a - way * LANE.bend;
+  // A bundle that begins close to the lane's end needs room to be turned into: the fibre leaves
+  // its lane that much earlier.
+  const near = world(far, lane),
+        short = 2 * LANE.bend - Math.hypot(join.x - near.x, join.y - near.y),
+        exit = far - way * Math.max(0, Math.min(short, (far - n.a) * way - LANE.least)),
+        run = (exit - n.a) * way;
   // The bundle's course where the fibre meets it, seen from the fibre.
   const meets = inward ? along : {x : -along.x, y : -along.y};
   const into = (from, heading) => {
