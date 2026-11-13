@@ -592,7 +592,7 @@ function drawSense(id) {
     const k = keys[cell.chosen], st = Math.min(N, inp.rise + k.used * Math.LN2), x = X(st);
     el('path', {d : `M${x} ${A0} V${A1}`, stroke : keyColour(cell.chosen), 'stroke-dasharray' : '2 3'}, live);
     txt(live, x + (x > (L + R) / 2 ? -6 : 6), A0 + 10, 'halb gewöhnt', {'text-anchor' : x > (L + R) / 2 ? 'end' : 'start', style : 'font-size:10px'});
-    drag(svg, el('rect', {x : x - 5, y : A1 - 7, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = clamp((stOf(p.x) - inp.rise) / Math.LN2, 4, 1024); draw([id]); }, id + 'used');
+    drag(svg, el('rect', {x : x - 5, y : A1 - 14, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = clamp((stOf(p.x) - inp.rise) / Math.LN2, 4, 1024); draw([id]); }, id + 'used');
   }
   txt(live, L, A1 + 14, 'Schritte');
   for (const st of [100, 200]) txt(live, X(st), A1 + 14, st, {'text-anchor' : 'middle'});
