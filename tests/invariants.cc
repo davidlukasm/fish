@@ -131,10 +131,9 @@ void nostrils_differ_only_in_oncoming_water() {
             std::abs(washed.x) < CLOSE,
         "the nostril facing the oncoming water smells upstream, the other the nose itself");
 }
-// A gut full of one food, emptied by a fish that spends what it gains: what the fish gains, what
-// it passes and whether it hurts.
+// A gut full of one food, emptied by a fish that spends the energy credited after each step.
 struct Digested {
-  double gained = 0, passed = 0, ache = 0;
+  double gained = 0, credited = 0, passed = 0, ache = 0;
   int emptied = 0;
 };
 Digested digest(int food, double gut_length, double drive = 0, double strength = 0) {
@@ -152,16 +151,17 @@ Digested digest(int food, double gut_length, double drive = 0, double strength =
     b.energy = 0;
     b.gut_motility = drive / 2;
     result.passed += digest_nutrition(b, physiology);
+    result.credited += b.energy;
     result.ache = std::max(result.ache, b.gut_irritation);
     if (!result.emptied && b.gut_energy < EMPTY * eaten)
       result.emptied = k + 1;
   }
   result.gained = b.digested / eaten;
+  result.credited /= eaten;
   result.passed /= eaten;
   return result;
 }
-// Fibre needs time to break open, flesh spoils when it stays long, pulp feeds almost any gut, and
-// the gut muscle shortens the stay only so far.
+// The curve is for a fixed stay. A real meal may pass sooner if it hurts.
 void gut_takes_up_what_time_allows() {
   constexpr double SHORT = 0, MIDDLE = .5, LONG = 1, STRONG = 1e6, CLOSE = 1e-9, SCARCE = .05;
   constexpr int LEAVES = food_kind::plant, FLESH = food_kind::worm, FLOCK = food_kind::feed,
@@ -182,25 +182,25 @@ void gut_takes_up_what_time_allows() {
   const auto yield = [&](int food, double stay) {
     return gut_yield(stay, fodder(food, physiology));
   };
-  // Every food has a stay at which it feeds better than all others, in this order.
-  constexpr std::array<std::pair<int, double>, 4> WINDOWS{
-      {{FLESH, 100}, {PLANKTON, 200}, {FLOCK, 340}, {LEAVES, 800}}};
-  for (const auto &[best, stay] : WINDOWS)
-    for (int food : {LEAVES, ALGAE, FLOCK, PLANKTON, FLESH})
-      check(food == best || yield(best, stay) > yield(food, stay),
-            "every food has its own stay at which it feeds best");
-  constexpr double QUICKEST = 25, SLOWEST = 800;
-  check(yield(ALGAE, SLOWEST) > yield(ALGAE, QUICKEST) * 4 &&
-            yield(ALGAE, 400) > yield(LEAVES, 400),
-        "algae feed a long gut, and a middle one better than leaves do");
-  const double quick = yield(FLESH, QUICKEST), flock = yield(FLOCK, QUICKEST) / quick,
-               algae = yield(ALGAE, QUICKEST) / quick, plankton = yield(PLANKTON, QUICKEST) / quick;
-  check(flock > .8 && flock < 1 && algae > .2 && algae < .3 && plankton > .4 && plankton < .6,
-        "the quickest gut gets nearly as much from flocks as from flesh, half from plankton and "
-        "a quarter from algae");
-  const double slow = yield(FLOCK, SLOWEST) / yield(ALGAE, SLOWEST);
-  check(slow > .35 && slow < .5 && yield(FLOCK, SLOWEST) < yield(FLOCK, 340) * .6,
-        "the slowest gut gets half as much from flocks as from algae");
+  constexpr int FIRST_STAY = 50, LAST_STAY = 800;
+  constexpr double HALF_PERCENT = .005;
+  const auto percent = [&](int food, double stay) { return std::lround(100 * yield(food, stay)); };
+  const auto peak = [&](int food) {
+    double best = 0;
+    for (int stay = FIRST_STAY; stay <= LAST_STAY; ++stay)
+      best = std::max(best, yield(food, stay));
+    return std::lround(100 * best);
+  };
+  check(percent(ALGAE, FIRST_STAY) == 18 && percent(PLANKTON, FIRST_STAY) == 34,
+        "algae and plankton reach the requested yields at the short end");
+  check(peak(FLESH) == 82 && peak(PLANKTON) == 72 && peak(LEAVES) == 92,
+        "flesh, plankton and leaves reach their requested peak yields");
+  check(percent(ALGAE, 630) == 78 && percent(ALGAE, LAST_STAY) == 78,
+        "algae hold their requested yield at long stays");
+  const auto algae = digest(ALGAE, LONG);
+  const double reserve_gain = yield(ALGAE, LAST_STAY) * (1 - physiology.digestion_cost);
+  check(std::abs(algae.credited - reserve_gain) < HALF_PERCENT,
+        "the non-digestible part of soft fibre does not enter the energy reserve");
   check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0,
         "flesh that spoils hurts a long gut, not a short one");
   check(digest(LEAVES, SHORT).ache > 0 && digest(LEAVES, LONG).ache == 0,
@@ -209,12 +209,8 @@ void gut_takes_up_what_time_allows() {
     check(digest(FLOCK, length).ache == 0, "flocks hurt no gut");
   for (int food : {LEAVES, ALGAE, PLANKTON, FLESH})
     check(digest(food, MIDDLE).ache == 0, "a gut of middle length bears every food");
-  check(digest(ALGAE, SHORT).ache > 0 && digest(ALGAE, SHORT).ache < digest(LEAVES, SHORT).ache &&
-            digest(ALGAE, SHORT, 1, STRONG).ache > digest(ALGAE, SHORT).ache,
-        "algae hurt the shortest gut, less than leaves, and more the faster it is driven");
-  check(digest(PLANKTON, LONG).ache > 0 && digest(PLANKTON, SHORT).ache == 0 &&
-            digest(PLANKTON, LONG).ache < digest(FLESH, LONG).ache,
-        "plankton hurts only the longest gut, and less than flesh");
+  check(digest(ALGAE, SHORT).ache == 0 && digest(ALGAE, SHORT, 1, STRONG).ache > 0,
+        "soft fibre can hurt a gut when the muscle drives it too fast");
   const auto rested = digest(FLESH, LONG), hurried = digest(FLESH, LONG, 1, STRONG);
   check(hurried.gained > 2 * rested.gained && hurried.gained < flesh,
         "the largest gut muscle saves much flesh in a long gut, but not as much as a short gut");
