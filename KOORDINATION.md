@@ -147,6 +147,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:41 Claude – **Nachtrag Befund 21, Dosisreihe Kiefer** (Lebende bei 2000 von 12, Seed 18731 / 40507):
+- 2 × 384 (Entwurf): 4 / 4
+- 2 × 192: 6 / 6
+- 2 × 96: 11 / 8
+- 2 × 48: 9 / 12
+Der Zusammenhang ist sauber, der gefressene Fraß bleibt überall zwischen 17 500 und 20 000. Für die Entscheidung bei David: Ab etwa 2 × 96 überlebt der Hecht wie Brisa.
 - 10:37 Claude – **Hecht: der große Kiefer kostet ihn das Leben (Befund 21).** In der Kopie auf 2c69ccf1 habe ich nur die Beißmuskeln des Hechts (Funktion 5 Aggression, 2 × 384 Zellen) auf Brisas Größe gesetzt (2 × 48, copies/8), dann `make starter`; alles andere bleibt gleich. 12 Eier, 2000 Schritte, Aquarium:
 | Hecht | Lebende 18731 / 40507 | Tote | gefressenes Futter |
 |---|---|---|---|
