@@ -159,6 +159,13 @@ Claude zeichnet alle Inspektoren selbst, in dieser Reihenfolge: zuerst Darm und 
 4. Futterzellen im Darm und Blutsinn: Was misst jedes?
 5. Sind Druckzellen der Schwimmblase und Füllzellen des Magens dieselbe Zellart? Welche Gene haben sie?
 
+6. **Drüse (Befund 7 in BEFUNDE.md), genauer untersuchen, nicht umsetzen.** David hält (c) für richtig, will aber vor einer Entscheidung mehr wissen. Seine Richtung: schnell hinauf über mehr Zellen und Knoten, langsam hinunter; aktiv abbauen kann jede Drüse durch Binden. Zu klären:
+   - Welche Pegelformel trennt Höhe und Verweilzeit?
+   - Wie verhält sich ein Pegel, der schnell hinauf und langsam hinunter geht, zusammen mit dem Binden?
+   - Was ändert sich an allen Stellen, die Hormonpegel lesen: Regionen, Rezeptoren, Lebenszyklus, Wachstum, Kosten?
+   - Welche Drüsen der heutigen Bausteine und Vorlagen verhalten sich danach anders?
+   Ergebnis als Verläufe aus der echten Engine, als PNG nach `bilder/`, dazu ein kurzer Text in KOORD.
+
 **Astra**
 1. Den alten Augen- bzw. Nahsinn-Inspektor mit Sehbildern im Git-Verlauf des Produkts finden: Commit, Dateien und ein PNG davon in `bilder/`.
 2. **Nicht nur die Gene des Organs.** Je Organ die fünf Abschnitte aus `ORGANOPTIONEN.md`: eigene Optionen, verwaltete Nervenknoten mit ihren Optionen, eigener Lebenszyklus, Anschlüsse und was sie bei anderen Organen und Regionen voreinstellen, zusammenwirkende Spielfunktionen. Organe: Maul, Seitenflossen, Wirbelsäule, Nase, Barteln, Schwimmblase, Kiemen, Abwehr, Pigment, Eier, Samen, Drüse, Blutsinn, Tasten, Seitenlinie, Gleichgewicht, Schmerz.

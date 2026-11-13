@@ -29,6 +29,9 @@ Hier stehen nur offene Befunde. Erledigte und zurückgenommene sind gelöscht; s
     - Länger bleibt ein Stoff aber nur, wenn zusätzlich die Spanne verlängert wird, also (c) zusammen mit (b).
     - Offen ist der Anstieg. In der einfachen Form steigt ein lange bleibender Stoff auch langsam an.
     - Alternative: Der Stoff steigt schnell mit der Abgabe und klingt dann langsam ab.
+  - **David 18:21:** Vor einer Entscheidung genauer untersuchen (Auftrag an Fable).
+    - Seine Richtung: schnell hinauf über mehr Zellen und Knoten, langsam hinunter.
+    - Aktiv abbauen kann jede Drüse auch, durch Binden.
 - **8 Schwimmblase:** Sie füllt sich träge, in etwa 250 Schritten. Vorschlag: viermal schneller.
 - **14 Nervenzelle:** Die Schwelle zählt nur × 0,3. Vorschlag: × 1.
 
