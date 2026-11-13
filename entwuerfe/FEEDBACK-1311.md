@@ -1,6 +1,6 @@
 # Davids Feedback zum Inspektoren-Entwurf (13.11. 17:54, wörtlich)
 
-Gilt für alle (Claude, Fable, Astra). Vor jeder Arbeit an einem Inspektor den zugehörigen Absatz hier lesen.
+An Claude gerichtet, mit Bezügen auf Davids Chat mit Claude. Fable und Astra: nicht als Auftrag lesen, sondern entwuerfe/AUFTRAG-1311.md (erklärt, mit Bildern).
 Screenshots, auf die er sich bezieht: Nervenzelle (Antwort der Zelle + 6 Schieberegler), Darm/Schmerzzellen (Meldung an das Gehirn mit „Bump“), Maul/Saugen und Beißen (zwei Einstellungen), Flossen (zwei Einstellungen: Blatt zeigt nach unten; nur „Rück“), Abwehr/Stacheln (Stacheln an Maul, Auge und Schwanz gleichzeitig).
 
 ---

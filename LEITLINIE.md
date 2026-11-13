@@ -97,3 +97,12 @@ einem Entwurf, bevor sein Bauplan generalüberholt und im Atelier angesehen ist.
 einem veralteten Fisch ist kein Befund über die Engine. Siehe `genomes/entwuerfe/README.md`.
 Hauptaufgabe sind die Inspektoren.
 
+
+## Musterverbot (David 13.11. 18:01)
+
+„Ihr müsst euch gegenseitig verbieten, in Muster oder Templates zu fallen. Erinnert euch regelmäßig an die guten Beispiele und den Kontrast zwischen zwei oder drei der guten Beispiele!“
+
+- **Gute Beispiele:** Darm und Schwanz. Das Bild `bilder/2026-11-13_feedback/gut_darm-neben-schwanz.png` vor jedem Entwurf öffnen.
+- **Das verbotene Muster:** Organskizze, „Meldung an das Gehirn“, Schwellenregler und Zellenzahl. Siehe `kontrast_darm-neben-gleichgewicht.png`.
+- **Vorgehen:** Ablauf und Abnahme stehen in `entwuerfe/AUFTRAG-1311.md`, Abschnitt 3. Wer prüft, nennt das Element, das es nur bei diesem Organ gibt. Gibt es keines, ist der Entwurf abgelehnt.
+- **Rückmeldungen Davids gibt man nie wörtlich weiter.** Man erklärt sie mit Bildern und mit dem Zusammenhang aus dem Chat. Fable und Astra kennen den Chat nicht, und Astra kann die Entwurfsseite nicht im Browser öffnen.
