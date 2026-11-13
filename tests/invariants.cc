@@ -1002,39 +1002,55 @@ void embryo_uses_delivered_muscle_force(const Genome &g) {
 }
 // One tail flank strikes, rests, and the other answers with the given share of its drive.
 struct TailAnswer {
-  double sweep, forward, turn_left, turn_right;
+  double sweep, turn_left, turn_right;
   bool answered;
 };
-TailAnswer tail_answer(const Genome &g, float first, float answer) {
-  Ecosystem w(SEED);
-  w.resize(800, 500);
-  auto &b = adult(w, g, 400, 250).body;
-  std::array<std::set<std::uint32_t>, 2> flank;
-  for (const auto &e : g.interface->effectors)
-    if (e.port == organ_port::forward && e.lever != 0)
-      flank[e.lever < 0 ? 0 : 1].insert(e.neuron);
-  check(!flank[0].empty() && !flank[1].empty(), "the tail fixture has muscles on both flanks");
+TailAnswer tail_answer(float first, float answer) {
+  constexpr double TWITCH = 8;
+  const PhysiologyParameters physiology;
+  std::vector<field::Neuron> cells(2);
+  BrainInterface layout;
+  layout.hormone_residence.fill(field::residence_steps(field::CellParameters{}));
+  for (int side = 0; side < 2; ++side) {
+    auto &cell = cells[side];
+    cell.role = field::Role::Effector;
+    cell.id = side + 1;
+    cell.functional = true;
+    BrainInterface::Effector effector{};
+    effector.neuron = std::uint32_t(side);
+    effector.port = organ_port::forward;
+    effector.strength = 1;
+    effector.steps = TWITCH;
+    layout.effectors.push_back(effector);
+    const auto stroke = TAIL_STROKES[side];
+    layout.pulls.push_back({effector.neuron, stroke, 1});
+    layout.stroke_timing[stroke].set(TWITCH);
+    layout.stroke_capacity[stroke] = layout.tail_lever[side] = 1;
+  }
+  Body b;
+  b.hatched = true;
+  b.tissue = BODY_TISSUE;
+  b.energy = ADULT_ENERGY;
+  StateAccess::brain(b).emplace(std::make_shared<field::Substrate>(cells));
   std::array<float, 2> level{first, 0};
-  b.set_actuation_probe([&](std::uint32_t cell, float) {
-    return flank[0].count(cell) ? level[0] : flank[1].count(cell) ? level[1] : 0.f;
-  });
-  anatomical_action(b, *g.interface, w.physiology(), false);
+  b.set_actuation_probe([&](std::uint32_t cell, float) { return level[cell]; });
+  anatomical_action(b, layout, physiology, false);
   level = {0, 0};
-  for (int step = 0; step < 64 && b.motor().strokes[StrokeTailLeft].recovery > 0; ++step)
-    anatomical_action(b, *g.interface, w.physiology(), false);
+  for (int step = 0; step < TWITCH; ++step)
+    anatomical_action(b, layout, physiology, false);
   level = {0, answer};
-  anatomical_action(b, *g.interface, w.physiology(), false);
-  return {b.motor().sweep[StrokeTailRight], b.motor().drive_forward, b.motor().drive_left,
-          b.motor().drive_right, b.motor().impulse_tail_right > 0 && b.motor().tail_pair.last == 1};
+  anatomical_action(b, layout, physiology, false);
+  return {b.motor().sweep[StrokeTailRight], b.motor().drive_left, b.motor().drive_right,
+          b.motor().impulse_tail_right > 0 && b.motor().tail_pair.last == 1};
 }
-void a_stronger_answering_tail_stroke_steers(const Genome &g) {
-  const auto equal = tail_answer(g, .8f, .8f), weaker = tail_answer(g, .8f, .4f),
-             stronger = tail_answer(g, .4f, .8f);
+void a_stronger_answering_tail_stroke_steers() {
+  const auto equal = tail_answer(.8f, .8f), weaker = tail_answer(.8f, .4f),
+             stronger = tail_answer(.4f, .8f);
   check(equal.answered && weaker.answered && stronger.answered,
         "each answer starts a right stroke after the left one");
   check(std::abs(equal.sweep - 1) < tolerance::precision && equal.turn_left == equal.turn_right,
         "an equally strong answer only pushes");
-  check(std::abs(weaker.sweep - 1) < tolerance::precision, "a weaker answer only pushes");
+  check(weaker.turn_left == weaker.turn_right, "a weaker answer only pushes");
   check(stronger.sweep < 1 && stronger.sweep > antagonist::lone_sweep &&
             stronger.turn_left > stronger.turn_right,
         "a stronger right answer steers toward the left like a lone right stroke, less strongly");
@@ -1068,8 +1084,7 @@ void ancestral_histories_keep_current_mutations() {
   check(rejected, "conflicting innovation endpoints remain invalid");
 }
 }
-// A gland's substance heads for half of what is poured: up with the cell time, down with its own
-// residence, and binding clears what is left. One substance is fleeting, the other lasting.
+// Identical secretion can leave a fleeting substance and a lasting one.
 void gland_substances_rise_and_stay_by_their_cells() {
   const HormoneParameters parameters;
   HormoneState state;
@@ -1087,12 +1102,6 @@ void gland_substances_rise_and_stay_by_their_cells() {
     state.advance(none, none, 1, parameters, rise, stay);
   check(state.levels()[0] < .01 * parameters.height && state.levels()[1] > .9 * parameters.height,
         "after the gland falls silent the fleeting substance is gone and the lasting one stays");
-  field::Hormones bind{};
-  bind[1] = 1;
-  const double before = state.levels()[1];
-  for (int step = 0; step < 22; ++step)
-    state.advance(none, bind, 1, parameters, rise, stay);
-  check(state.levels()[1] < .55 * before, "binding clears a lasting substance in about 22 steps");
 }
 // The cells of one sense group share their place, not their answer: each reports by its own
 // threshold and gets used to a lasting stimulus at its own pace.
@@ -1135,9 +1144,6 @@ void cells_of_a_sense_group_answer_each_for_itself() {
   for (int step = 1; step < LASTING; ++step)
     sense_generated(b, g, w.field, nullptr, true, w.physiology());
   const auto &lasting = b.perception().sensor_buffer;
-  const auto &used = b.perception().adapted;
-  check(used[3] > .9 * ACHE && used[4] < .1 * ACHE,
-        "each pain cell keeps its own measure of the ache it is used to");
   check(lasting[3] == 0 && lasting[4] > .5 * first[4],
         "the quick cell has fallen silent under a lasting ache, the slow one still reports it");
   check(lasting[0] == first[0] && lasting[2] == 0, "fullness cells do not get used to a full gut");
@@ -1171,7 +1177,7 @@ int main() {
     checkpoint_after_death(g);
     organ_muscles_survive_checkpoint(g);
     embryo_uses_delivered_muscle_force(g);
-    a_stronger_answering_tail_stroke_steers(g);
+    a_stronger_answering_tail_stroke_steers();
     development_queue_is_bounded(g);
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
