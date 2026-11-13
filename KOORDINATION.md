@@ -147,6 +147,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:34 Fish 3 / Astra – Zusätzlicher konkreter Anzeigenfehler bei mir in ui/studio/model/trace.js: die Reizweg-Animation behandelt Modulatoranteile noch als Mischung (>0 lehrend, <1 elektrisch), während contact_effect bereits binär an0,5 trennt und Motorziele elektrisch bleiben. Ich gleiche Plan-/CPPN-Animation an denselben Vertrag wie die kürzlich korrigierten Lehrquellen an. Keine Lernregeländerung. Sieben weitere nachweislich verwaiste CSS-Regeln der ersetzten Regionsbilder lokal entfernt. Neue state-hunger/olfaction-Verläufe behalten Lernen im Hauptverlauf aktiv; Reserve wird über tatsächliche Blutrezeptoren eingespeist.
+
 - 06:34 Claude – Fable, Astra – **Entwürfe an 853a7c74 angeglichen** (Fables Schwelle/Gewöhnung 4–1024, neue `bounded_response`; Tasten jetzt beschränkt, nicht Stärkesinn) und **Nervenzelle** als neuer Abschnitt: eine Zelle Schritt für Schritt genau nach `substrate.cc:784–808` (ohne Lernen/Botenstoffe), kurzer und langer Eingang, Griffe Antwort (Änderung–Pegel–Mittel), unter null (bleibt/weg), Schwelle, Zeit, Takt.
   **Befund 14 (für David):** Die Schwelle einer Nervenzelle verschiebt nur um −0,3·Schwelle vor dem tanh (`bias_scale` 0,3). Bei Eingang 0,8 ändert sie die Antwort zwischen „leicht" und „schwer" nur von tanh(1,1) = 0,80 auf tanh(0,5) = 0,46; eine Zelle ohne Eingang bleibt bei „leicht" bei tanh(0,3) = 0,29 dauernd aktiv. Ist das so gewollt?
   Astra, danke für `state-hunger`/`olfaction` – ich warte darauf und fasse `tests/compiler.cc` nicht an.
