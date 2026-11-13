@@ -104,6 +104,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Spitzenzellen</h4>
     <svg id="barbsense" viewBox="0 0 300 172"></svg>
   </section>
+  <section class="panel" aria-label="Nahsinn">
+    <h2>Organ</h2><h3>Nahsinn</h3>
+    <h4 class="first">Blickfeld und Reichweite</h4>
+    <svg id="nearfish" viewBox="0 0 300 150"></svg>
+    <h4>Nahzellen</h4>
+    <svg id="nearsense" viewBox="0 0 300 152"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1275,5 +1282,77 @@ function drawBarbels() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 52));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels();
+// ---------- Nahsinn ----------
+// Near cells (retina.cc:20–22, 161–214, cppn_brain.cc:417): seeing cells without contrast or
+// opposing colour that count only what lies within their reach, 8·16^q2 px (8 to 128): how much of
+// their field it fills, weighed by its colour, answered bounded (half at the threshold); they do
+// not get used to anything. Above: the fish's head, each group's field as a fan to its reach, a
+// fish as the example thing; below, what each group reports with the thing at every distance.
+const NEAR = {groups : [{aim : 0, width : .5, reach : .6, gate : .25}], chosen : 0, distance : 50, size : 9};
+const reachPx = r => 8 * Math.pow(16, r);
+const nearFill = (g, d) => d > reachPx(g.reach) ? 0 : Math.min(1, 2 * Math.atan(NEAR.size / Math.max(d, NEAR.size)) / (2 * g.width));
+function drawNear() {
+  const redraw = drawNear, hold = () => { NEAR.held = true; }, free = () => { NEAR.held = false; redraw(); };
+  const svg = document.getElementById('nearfish'); svg.replaceChildren();
+  // Head on the left looking right; 1 px of the world = 1.6 units here.
+  const ex = 100, ey = 84, U = 1.4, FS = .32, ftx = ex + 2 + FS * 30, fty = ey - 10 - FS * 52;
+  const fish = el('g', {transform : `translate(${ftx} ${fty}) scale(${-FS} ${FS})`}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1 / FS}, fish);
+  el('circle', {cx : ex, cy : ey - 10, r : 2.6, fill : '#e9e2c6'}, svg);
+  const order = NEAR.groups.map((g, i) => i).sort((p, q) => (p === NEAR.chosen) - (q === NEAR.chosen));
+  for (const i of order) {
+    const g = NEAR.groups[i], R = Math.min(reachPx(g.reach) * U, 200), a0 = g.aim - g.width, a1 = g.aim + g.width;
+    const pt = (a, r) => [ex + r * Math.cos(a), ey - 10 + r * Math.sin(a)];
+    const [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R);
+    el('path', {d : `M${ex} ${ey - 10} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z`, fill : groupColour(i), 'fill-opacity' : i === NEAR.chosen ? .18 : .08, stroke : groupColour(i), 'stroke-width' : i === NEAR.chosen ? 1.5 : 1, class : 'chip'}, svg)
+      .addEventListener('pointerdown', () => { NEAR.chosen = i; redraw(); });
+  }
+  // The example: a fish of its size at its distance straight ahead.
+  const tx = ex + NEAR.distance * U;
+  el('circle', {cx : tx, cy : ey - 10, r : NEAR.size * U, fill : '#8ac7bb', opacity : .55, stroke : '#8ac7bb'}, svg);
+  // The chosen group: a ball at the end of its middle sets where it looks and how far; the two
+  // ends of the fan's edge set its width.
+  const g = NEAR.groups[NEAR.chosen], R = Math.min(reachPx(g.reach) * U, 200), pt = (a, r) => [ex + r * Math.cos(a), ey - 10 + r * Math.sin(a)];
+  const [bx, by] = pt(g.aim, R);
+  drag(svg, el('circle', {cx : bx, cy : by, r : 7}, svg), p => {
+    const dx = p.x - ex, dy = p.y - (ey - 10); g.aim = clamp(Math.atan2(dy, dx), -1.2, 1.2); g.reach = clamp(Math.log(Math.max(8, Math.hypot(dx, dy) / U) / 8) / Math.log(16), 0, 1); redraw(); }, 'nearaim', hold, free);
+  for (const [s, k] of [[-1, 'a'], [1, 'b']]) { const [x, y] = pt(g.aim + s * g.width, R * .55);
+    drag(svg, el('rect', {x : x - 5, y : y - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(Math.abs(Math.atan2(p.y - (ey - 10), p.x - ex) - g.aim), .05, 1.4); redraw(); }, 'nearwidth' + k, hold, free); }
+  txt(svg, 296, 14, `Reichweite ${Math.round(reachPx(g.reach))} px`, {'text-anchor' : 'end'});
+  svg.setAttribute('viewBox', '0 22 300 112');
+
+  // ---- What each group reports with the thing at every distance; the dashed line is the example.
+  const c = document.getElementById('nearsense'); c.replaceChildren();
+  const L = 56, R2 = 290, top = 30, base = 120, D = 140, N = 140, X = d => L + (R2 - L) * d / D;
+  const answers = NEAR.groups.map(gr => Array.from({length : N + 1}, (_, k) => bounded(nearFill(gr, k * D / N), gr.gate)));
+  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0));
+  const scale = settle(NEAR, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), Y = v => base - (base - top) * v / scale;
+  regler(c, {x : 26, top, base, word : 'Schwelle', value : null, start : hold, end : free, name : 'neargate',
+    marks : NEAR.groups.map((gr, i) => ({value : gr.gate, colour : groupColour(i), chosen : i === NEAR.chosen, set : v => { gr.gate = clamp(v, .02, .98); NEAR.chosen = i; redraw(); }}))});
+  grid(c, L, R2, top, base, scale);
+  txt(c, L + 4, top - 14, 'Meldung an das Gehirn');
+  let under = Array(N + 1).fill(0);
+  for (const i of NEAR.groups.map((gr, i) => i).sort((p, q) => NEAR.groups[p].gate - NEAR.groups[q].gate)) {
+    const over = under.map((u, k) => u + answers[i][k]);
+    const d = 'M' + over.map((y, k) => `${X(k * D / N).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${X(k * D / N).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
+    el('path', {d, fill : groupColour(i), opacity : .75, stroke : i === NEAR.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === NEAR.chosen ? 1.4 : .6, class : 'chip'}, c)
+      .addEventListener('pointerdown', () => { NEAR.chosen = i; redraw(); });
+    under = over;
+  }
+  el('path', {d : `M${L} ${base} H${R2} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  for (const d of [0, 50, 100]) txt(c, X(d), base + 15, d, {'text-anchor' : 'middle'});
+  txt(c, R2, base + 30, 'Abstand (px)', {'text-anchor' : 'end'});
+  const px = X(NEAR.distance);
+  el('path', {d : `M${px} ${top - 6} V${base + 4}`, stroke : '#f1dda6', 'stroke-width' : 1.4, 'stroke-dasharray' : '5 4'}, c);
+  drag(c, el('circle', {cx : px, cy : top - 6, r : 7}, c), p => { NEAR.distance = clamp((p.x - L) / (R2 - L) * D, 2, D); redraw(); }, 'neardist', hold, free);
+  const chip = (x, y, sign, act) => { const gg = el('g', {class : 'chip'}, c);
+    el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, gg);
+    el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, gg);
+    gg.addEventListener('click', act); };
+  if (NEAR.groups.length < 3) chip(30, base + 22, '+', () => { NEAR.groups.push({aim : 0, width : .25, reach : .9, gate : .25}); NEAR.chosen = NEAR.groups.length - 1; redraw(); });
+  if (NEAR.groups.length > 1) chip(50, base - (base - top) * NEAR.groups[NEAR.chosen].gate, '×', () => { NEAR.groups.splice(NEAR.chosen, 1); NEAR.chosen = 0; redraw(); });
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 36));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear();
 </script>
