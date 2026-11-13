@@ -78,7 +78,19 @@ Unterschied zur Engine: Dort zieht jede Zelle ihre Schwelle zufällig gleichvert
 - **Gene, die wirken:** die Schwelle (beschränkte Kurve, `body_plan.cc:987-992, 1212-1217`), die Zellzahl, die Streuung in der Gruppe, die Antworten des Lebenszyklus (Bildung, Ausgabe, Tod) und die Kontakte.
 - **Gene ohne Wirkung bei dieser Zellart:** die Zellzeit als Gewöhnung (Drucksinne gewöhnen nicht, `brain_interface.hh:18-20`) und als Einblendzeit nach dem Schlupf (nur Außensinne, siehe 3). Feldbreite und Abstimmung kommen in der Reizberechnung dieser Zellen nicht vor (`body_plan.cc:1150-1180`).
 
-## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:10)
+## 5a. Was die Zellzahl einer Sinnesgruppe bewirkt (Davids Frage 18:58)
+
+- **Zahl:** Eine Gruppe hat 1 bis 16 Zellen (`development.cc:133-138`, `substrate.hh:131-132`; das Atelier schreibt Zellzahl ÷ 16 in das Gen, `atelier_compiler.hh:269`). Mehr geht nur über weitere Gruppen. Jede Zelle ist eine eigene Zelle mit eigener, um die Gruppe gestreuter Schwelle (`distribution.hh:20-35`).
+- **Jede Zelle meldet für sich**, zwischen 0 und 1 (`substrate.cc:741-745`). Es gibt keine Normierung je Gruppe oder je Organ. Der Anteil `gain` einer Zelle wird nur für Übersichten gezählt (`body_plan.cc:661, 912, 959`), nicht in ihre Meldung gerechnet.
+- **Wirkung 1, stärker bei der Zielzelle:** Jede Zielzelle bekommt von jeder Zelle der Gruppe einen Kontakt (bei voller Verbindung; sonst mit der eingestellten Wahrscheinlichkeit), bis ihre Eingänge voll sind (`development.cc:330-355`): 4 bis 512 bei Nervenzellen, 32 bei Muskel- und Drüsenzellen (`contacts.hh:18-33`). Die Zielzelle addiert Meldung × Gewicht über alle Kontakte und teilt durch nichts (`substrate.cc:776-786`); ihre Antwort sättigt mit tanh (`substrate.cc:801-803`). Jedes Gewicht kann bis zur Kontaktgrenze der Zielzelle wachsen (Vorgabe 0,5, höchstens 1; `substrate.hh:40, 62, 120-127`).
+  - Folge bei Gewichten an der Grenze 0,5: Zwei voll meldende Zellen bringen die Zielzelle auf 76 %, vier auf 96 %. Eine volle Meldung wird mit mehr Zellen also kaum stärker.
+  - Mehr Zellen machen die Zielzelle vor allem **empfindlicher für schwache Meldungen**: Bei 16 Zellen reicht ein Achtel der Meldung für dieselbe Wirkung wie bei zwei.
+- **Wirkung 2, feiner abgestuft:** Streut die Gruppe, liegen die Schwellen der Zellen nebeneinander. Die Summe steigt dann in so vielen Stufen an, wie die Gruppe Zellen hat: bei 2 Zellen ein Schalter mit zwei Stufen, bei 16 fast eine Rampe.
+- **Wirkung 3, über das Leben:** Jede Zelle wird einzeln gebaut, gewichtet und kann einzeln sterben (`substrate.cc:502-516, 607-612, 741-745`). Mehr Zellen sind mehr Reserve.
+- **Kosten je Zelle, alle klein:** Bau 0,00125 Energie, Unterhalt 0,0000016 je Schritt (`maturation.hh:9-12, 23-29`, `body_plan.cc:826-835`), dazu je Kontakt noch weniger. Zum Vergleich: 16 Zellen kosten im Unterhalt etwa 0,00003 je Schritt. Masse: 0,001 × Zellstärke je Zelle zum Organgewicht (`body_plan.cc:15, 369-370`).
+- **Grenze nach oben:** 16 Zellen je Gruppe; darüber die Zahl der Eingänge der Zielzelle. Hat sie weniger Eingänge frei, als Zellen ankommen, wird zufällig ausgewählt (`development.cc:349-355`).
+
+## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:02)
 
 Nichts davon ist umgesetzt. Bild zum Vorschlag: `bilder/2026-11-13_druese_b_zwei_zeiten.png`. Zum Vergleich: `…druese_vorschlaege.png` (A gegen B) und `…druese_pegelformeln.png` (heute und die verworfenen Formen). Jede Kurve ist `HormoneState::advance` der Engine (`src/hormone_state.cc:37-53`), für die Vorschläge in einer Kopie außerhalb des Produkts mit einer geänderten Zeile.
 
