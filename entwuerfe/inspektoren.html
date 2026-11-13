@@ -538,30 +538,34 @@ function diagram(svg, by) {
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
 // ---------- Darm ----------
-// The gut, proposed to Fable after David 05:41 (engine today: 391f87d). A mouthful stays T steps:
+// The gut as the engine has it (Fable 798303f, David 05:41). A mouthful stays T steps:
 // T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to 4, so T runs from
-// 25 to 800. Food is made of four stuffs: flesh, taken up at once, spoils soon; fibre must first be
-// broken open, never spoils; shell (plankton's) opens soon, never spoils; pulp (digested once
-// already) gives three quarters, spoils late, never hurts. With k = 1/20, q = 1/T:
-// flesh k/(k + k·(T/250)⁴ + q), pulp .75·k/(k + k·(T/820)⁴ + q), fibre A/(1 + A)·k/(k + q) with
-// A = (T/320)⁴, shell the same with A = (T/120)⁴. Leaves are fibre; meat is flesh; flocks are pulp;
-// algae ¼ pulp ¾ fibre; plankton ½ flesh ½ shell. Meat is best up to about 180 steps, plankton to
-// about 240, flocks to about 420, leaves after; no food for all beats a specialist. It hurts (gut_irritation, Fable e9656d9) only when the mouthful is plainly wrong
+// 25 to 800. Food is made of four stuffs and ballast (digestion::COURSES; breaks open half after /
+// taken up in / spoils as fast as taken up after, steps): flesh –/20/250, pulp –/8/720,
+// fibre 400/20/never, shell 80/20/330. A stuff yields open · k/(k + spoil + 1/T), k = 1/taken up,
+// open = r/(r + 1/T) with r = min(1, (T/opens)⁴/T), spoil = min(1, (T/spoils)⁴/taken up).
+// Leaves: fibre; algae: pulp .18, fibre .82; flocks: pulp .62, fibre .10, ballast .28; plankton:
+// flesh .5, shell .5; meat: flesh. Best: meat to ~145, plankton ~145–230, flocks ~230–430, then
+// algae and leaves; nothing rises right of 800. It hurts (gut_irritation, Fable e9656d9) only when the mouthful is plainly wrong
 // for the gut: its flesh stays too long, T·flesh/375 > 1, or its fibre (above 0.55 of it) passes
-// too soon, T < 400·(fibre − 0.55): leaves below 180, algae below 80, plankton above 750, meat above
-// 375 steps, flocks never. A longer gut holds more, weighs more (+0.05 of the body per size) and
+// too soon, T < 400·(fibre − 0.55): leaves below 180, algae below 108, plankton above 750, meat
+// above 375 steps, flocks never. A longer gut holds more, weighs more (+0.05 of the body per size) and
 // raises the resting need (+0.1 per size).
 // Senses: stretch cells report the gut's fill, half at their level (bounded_response), one level
 // per group of cells; pain and food cells answer like other pain and food cells (adapted_response).
-const K = {time : 200, open : 320, shell : 120, spoil : 250, pulp : 820, worth : .75, uptake : 20, sharp : 4, fastest : 4, shortest : 25, longest : 800};
-const FOOD = [['Blatt', {flesh : 0, fibre : 1}, '#8fd16a'], ['Alge', {flesh : 0, fibre : .75}, '#55c4a6'], ['Flocken', {flesh : 0, fibre : 0}, '#e3cf94'], ['Plankton', {flesh : .5, fibre : 0, shell : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, fibre : 0}, '#ef8f8f']];
+const K = {time : 200, spoil : 250, fastest : 4, shortest : 25, longest : 800};
+const COURSES = {flesh : [0, 20, 250], pulp : [0, 8, 720], fibre : [400, 20, Infinity], shell : [80, 20, 330]};
+const FOOD = [['Blatt', {flesh : 0, pulp : 0, fibre : 1, shell : 0}, '#8fd16a'], ['Alge', {flesh : 0, pulp : .18, fibre : .82, shell : 0}, '#55c4a6'], ['Flocken', {flesh : 0, pulp : .62, fibre : .1, shell : 0}, '#e3cf94'], ['Plankton', {flesh : .5, pulp : 0, fibre : 0, shell : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, pulp : 0, fibre : 0, shell : 0}, '#ef8f8f']];
 const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .25, habit : .5, spread : .4}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5, spread : .4}], chosen : 0, level : .6}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
 function gain(f, T) {
-  const k = 1 / K.uptake, q = 1 / T, shell = f.shell ?? 0, pulp = 1 - f.flesh - f.fibre - shell;
-  const open = at => { const A = Math.pow(T / at, K.sharp); return A / (1 + A) * k / (k + q); };
-  return f.flesh * k / (k + k * Math.pow(T / K.spoil, K.sharp) + q) + pulp * K.worth * k / (k + k * Math.pow(T / K.pulp, K.sharp) + q) + f.fibre * open(K.open) + shell * open(K.shell);
+  return Object.entries(COURSES).reduce((t, [stuff, [opens, uptake, spoils]]) => {
+    if (!f[stuff]) return t;
+    const k = 1 / uptake, r = opens ? Math.min(1, Math.pow(T / opens, 4) / T) : Infinity, open = opens ? r / (r + 1 / T) : 1;
+    const spoil = Number.isFinite(spoils) ? Math.min(1, Math.pow(T / spoils, 4) / uptake) : 0;
+    return t + f[stuff] * open * k / (k + spoil + 1 / T);
+  }, 0);
 }
 function hurts(f, T) {
   // Fable e9656d9: the whole mouthful; flesh kept too long, or fibre passing too soon.
