@@ -46,7 +46,7 @@ Die Lebensachse ist die Reife des Fischs: das höchste bisher erreichte Gewebe �
   - Langsame Fasern arbeiten billig und ermüden nie.
 - **Zellen:** Mehr Zellen geben mehr Kraft und kosten mehr Unterhalt.
 - **Schlängeln** (`movement.cc:93`): bringt im Sand Vorteile (Widerstand 3 statt 12) und kostet im freien Wasser Schub.
-- **Richtung:** Laut README schiebt der Schwanz nur, die Brustflossen drehen. Fable prüft das im Code (Frage zur Wirbelsäule).
+- **Richtung** (Fable, aus dem Code): Der Schwanz kann lenken. Schlagen die Flanken im Wechsel, schiebt er nur. Schlägt eine Flanke aus der Ruhe, geht die Hälfte ihrer Kraft in die Drehung, schlägt dieselbe Flanke noch einmal, 70 % (`body_plan.cc:1554-1556, 1581-1583`, `movement.cc:84-88`). Ein Muskel nur auf der Mittellinie kann nicht lenken (`body_plan.cc:88-89`). Einzelheiten: `FAKTEN-FABLE-1311.md`, Abschnitt 1.
 
 ## Übrige Organe
 Folgt (Astra).
