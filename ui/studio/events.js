@@ -1,4 +1,3 @@
-import {newFishDocument} from './canvas_placement.js';
 import {BLOOD_SUBSTANCE, HORMONES, MOTOR_KIND} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
 import {ORGAN_BY_KEY, PAIRINGS, organFunction} from './model/organs.js';
@@ -85,7 +84,7 @@ const ACTIONS = Object.freeze({
   atelier : studio => studio.navigate('studio'),
   breeding : studio => studio.navigate('breeding'),
   trials : studio => studio.navigate('trials'),
-  new : studio => studio.loadFish(newFishDocument(label('app.newFish'), studio.state.sites)),
+  new : studio => studio.newFish(),
   example : studio => studio.example(),
   check : studio => studio.checkCompiler(),
   'cancel-build' : studio => { studio.cancelCompile = true; },

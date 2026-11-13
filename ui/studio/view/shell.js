@@ -69,7 +69,7 @@ function stationHeader(s) {
          '<div class="aid-status" role="status">' + escapeText(headerStatus(s)) + '</div>' +
          '<div class="aid-header-actions">' +
          group(
-             button('data-action="new"', label('app.newFish')) +
+             button('data-action="new"', label('app.newFish'), {disabled : !s.sites?.length}) +
                  button('data-action="example"', label('app.example')) +
                  '<select data-start-fish aria-label="' + label('app.startFish') + '"' +
                  (s.busy ? ' disabled' : '') + '><option value="">' + label('app.startFish') +

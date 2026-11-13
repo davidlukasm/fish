@@ -187,6 +187,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
   }
   const blank = newFishDocument('Grundkörper', sites);
   assert.ok(blank.organs.some(o => o.type === 'gut') && blank.organs.some(o => o.type === 'eggs'));
+  await checkInitialFish(model, capabilities, root);
   const pickedEye = placeCanvasOrgan(state(model.newDocument('Frei')), 'eye',
                                      {x : 330.375, y : 285.625}, 'single');
   assert.ok(pickedEye);
@@ -853,5 +854,238 @@ async function checkRedraws(model, caps, root) {
       studio.stopPulse();
       Object.assign(global, saved);
     }
+  }
+}
+
+async function checkInitialFish(model, capabilities, root) {
+  const {execFileSync} = require('node:child_process');
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {newFishDocument} = await import('../ui/studio/canvas_placement.js');
+  const {stationShell} = await import('../ui/studio/view/shell.js');
+  const native = body => JSON.parse(execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        "import json,sys; from atelier_service import run; print(json.dumps(run(json.load(sys.stdin))))"
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(body),
+        encoding : 'utf8',
+        timeout : 30000,
+        maxBuffer : 8 * 1024 * 1024
+      }));
+  const make = () => {
+    const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+    Object.assign(studio.state, {station : 'studio', sites : capabilities.sites, capabilities});
+    const hits = {design : 0, save : 0, requests : []};
+    for (const key of ['interruptPointer', 'release', 'setMode', 'zoom', 'refreshScene',
+                       'refreshHeader', 'refreshTools', 'refreshToolLibrary', 'refreshInspector',
+                       'showDrawnContacts', 'stopPulse', 'renderShell'])
+      studio[key] = () => {};
+    studio.persist = () => ++hits.save;
+    studio.requestDesign = () => ++hits.design;
+    studio.api = async body => {
+      hits.requests.push(body);
+      return native(body);
+    };
+    return {studio, hits};
+  };
+  const {studio, hits} = make();
+  assert.match(stationShell({...studio.state, sites : []}), /data-action="new" disabled/);
+  assert.doesNotMatch(stationShell(studio.state), /data-action="new" disabled/);
+  for (let i = 0; i < 3; ++i) {
+    studio.notice('Previous message');
+    const previous = studio.state.document, history = studio.undoHistory.length;
+    assert.equal(await studio.newFish(), true);
+    assert.equal(studio.state.notice, '');
+    assert.equal(studio.undoHistory.length, history + 1,
+                 'One new fish is one undo step, including initial pressure placement');
+    assert.equal(studio.undoHistory.at(-1), previous);
+    const answer = native({
+      operation : 'design',
+      plan : model.compileDocument(studio.state.document, capabilities.sites)
+    });
+    assert.deepEqual(model.pressureMismatches(studio.state.document, answer.pressure), []);
+    studio.state.anatomy = answer;
+    const requests = hits.requests.length;
+    await studio.checkPressure();
+    assert.equal(hits.requests.length, requests,
+                 'The first displayed anatomy requires no pressure relocation probes');
+    assert.equal(studio.undoHistory.length, history + 1);
+    assert.equal(studio.state.notice, '');
+  }
+  assert.equal(hits.save, 3, 'Only complete new fish reach draft persistence');
+  assert.equal(hits.design, 3, 'Each completed new fish requests its displayed anatomy once');
+  {
+    const {studio} = make();
+    studio.state.station = 'hub';
+    const probe = studio.api;
+    studio.api = async body => body.operation === 'sites'          ? capabilities
+                               : body.operation === 'load-draft'   ? {document : null}
+                               : body.operation === 'list-modules' ? {modules : []}
+                                                                   : probe(body);
+    await studio.bootstrap();
+    const answer = native({
+      operation : 'design',
+      plan : model.compileDocument(studio.state.document, capabilities.sites)
+    });
+    assert.deepEqual(model.pressureMismatches(studio.state.document, answer.pressure), []);
+    assert.equal(studio.undoHistory.length, 0, 'The initial fish is not an undo step');
+    assert.equal(studio.state.notice, '');
+  }
+  const deferred = () => {
+    const fixture = make(), pending = [];
+    fixture.studio.api = body =>
+        new Promise((resolve, reject) => pending.push({body, resolve, reject}));
+    return {...fixture, pending};
+  };
+  const flush = async () => {
+    for (let i = 0; i < 4; ++i)
+      await Promise.resolve();
+  };
+  const finish = async (pending, task) => {
+    while (pending.length) {
+      const request = pending.shift();
+      request.resolve(native(request.body));
+      await flush();
+    }
+    return task;
+  };
+  {
+    const {studio, pending} = deferred();
+    const first = studio.newFish(), old = pending.shift(), second = studio.newFish();
+    assert.equal(await finish(pending, second), true);
+    const chosen = studio.state.document;
+    old.resolve(native(old.body));
+    assert.equal(await first, false);
+    assert.equal(studio.state.document, chosen,
+                 'An older new-fish answer cannot replace the newer one');
+    assert.equal(studio.undoHistory.length, 1);
+  }
+  for (const action of ['edit', 'redo', 'load', 'leave']) {
+    const {studio, pending} = deferred(), previous = studio.state.document;
+    const task = studio.newFish();
+    const savedDocument = global.document;
+    try {
+      if (action === 'edit' || action === 'redo') {
+        studio.changeDocument({...previous, name : 'Edited'});
+        studio.stepHistory('undo');
+        assert.equal(studio.state.document, previous);
+        if (action === 'redo')
+          studio.stepHistory('redo');
+      } else if (action === 'load') {
+        studio.loadFish(model.newDocument('Loaded'));
+      } else {
+        global.document = {body : {dataset : {}}};
+        studio.hub.close = studio.breeding.close = studio.trials.close = () => {};
+        studio.navigate('hub');
+        studio.navigate('studio');
+      }
+      const chosen = studio.state.document, history = studio.undoHistory.length;
+      assert.equal(await finish(pending, task), false);
+      assert.equal(studio.state.document, chosen, action + ' invalidates the pending new fish');
+      assert.equal(studio.undoHistory.length, history);
+    } finally {
+      global.document = savedDocument;
+    }
+  }
+  const answerBootstrap = async pending => {
+    for (const request of pending.splice(0, 3))
+      request.resolve(request.body.operation === 'sites'        ? capabilities
+                      : request.body.operation === 'load-draft' ? {document : null}
+                                                                : {modules : []});
+    await flush();
+  };
+  for (const when of ['before-sites', 'early-new', 'during-design', 'edit', 'new']) {
+    const {studio, pending} = deferred();
+    studio.state.station = 'hub';
+    studio.state.sites = [];
+    const task = studio.bootstrap(), savedDocument = global.document;
+    try {
+      global.document = {body : {dataset : {}}};
+      studio.hub.close = studio.breeding.close = studio.trials.close = () => {};
+      if (when === 'before-sites' || when === 'early-new')
+        studio.navigate('studio');
+      if (when === 'early-new') {
+        const request = studio.newFishRequest;
+        assert.equal(await studio.newFish(), false);
+        assert.equal(studio.newFishRequest, request,
+                     'A click before sites arrive does not cancel initialization');
+      }
+      await answerBootstrap(pending);
+      assert.equal(pending.length, 1, 'Bootstrap prepares the native initial body');
+      if (when === 'during-design')
+        studio.navigate('studio');
+      if (when === 'edit') {
+        studio.changeDocument(model.newDocument('Initial body superseded'));
+        const chosen = studio.state.document;
+        await finish(pending, task);
+        assert.equal(studio.state.document, chosen);
+      } else if (when === 'new') {
+        const old = pending.shift(), newer = studio.newFish();
+        assert.equal(await finish(pending, newer), true);
+        const chosen = studio.state.document;
+        old.resolve(native(old.body));
+        await task;
+        assert.equal(studio.state.document, chosen);
+        assert.equal(studio.undoHistory.length, 1);
+      } else {
+        await finish(pending, task);
+        assert.equal(studio.state.station, 'studio');
+        assert.ok(studio.state.document.organs.some(o => o.type === 'gut'),
+                  when + ': navigation must not leave an empty initial fish');
+        const answer = native({
+          operation : 'design',
+          plan : model.compileDocument(studio.state.document, capabilities.sites)
+        });
+        assert.deepEqual(model.pressureMismatches(studio.state.document, answer.pressure), []);
+        assert.equal(studio.undoHistory.length, 0);
+      }
+    } finally {
+      global.document = savedDocument;
+    }
+  }
+  {
+    const {studio, pending} = deferred();
+    const task = studio.bootstrap();
+    studio.loadFish(model.newDocument('Loaded during startup'));
+    const chosen = studio.state.document;
+    await answerBootstrap(pending);
+    await task;
+    assert.equal(studio.state.document, chosen);
+    assert.equal(pending.length, 0, 'A loaded document supersedes initial-body preparation');
+  }
+  {
+    const {studio, pending} = deferred(), previous = studio.state.document;
+    const task = studio.newFish();
+    pending.shift().reject(Error('Native design failed'));
+    assert.equal(await task, false);
+    assert.equal(studio.state.document, previous);
+    assert.equal(studio.state.notice, 'Native design failed');
+    assert.equal(studio.undoHistory.length, 0);
+  }
+  {
+    const {studio} = make(), previous = studio.state.document;
+    const body = {
+      operation : 'design',
+      plan : model.compileDocument(newFishDocument('Unsettled', capabilities.sites),
+                                   capabilities.sites)
+    };
+    const wrong = native(body);
+    assert.ok(
+        model.pressureMismatches(newFishDocument('Unsettled', capabilities.sites), wrong.pressure)
+            .length);
+    let requests = 0;
+    studio.api = async () => {
+      ++requests;
+      return wrong;
+    };
+    assert.equal(await studio.newFish(), false);
+    assert.ok(requests > 1 && requests <= 37,
+              'Failed initial placement has a bounded probe budget');
+    assert.equal(studio.state.document, previous);
+    assert.ok(studio.state.notice.includes('Druckfühler'));
+    assert.equal(studio.undoHistory.length, 0);
   }
 }

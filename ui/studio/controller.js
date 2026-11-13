@@ -1,4 +1,3 @@
-import {newFishDocument} from './canvas_placement.js';
 import {
   ANYWHERE_CLICKS,
   changeOn,
@@ -137,6 +136,8 @@ export class OrganStudio {
     this.designRunning = false;
     this.designPending = false;
     this.designRequest = 0;
+    this.newFishRequest = 0;
+    this.stationRevision = 0;
     this.pendingTrace = null;
     this.wireIndex = null;
     this.previewFrame = null;
@@ -196,6 +197,7 @@ export class OrganStudio {
     this.bootstrap();
   }
   async bootstrap() {
+    const request = this.newFishRequest, document = this.state.document;
     try {
       const results = await Promise.all([
         this.api(requestBody('sites')), this.api(requestBody('load-draft')),
@@ -203,19 +205,26 @@ export class OrganStudio {
       ]);
       this.state.capabilities = results[0];
       this.state.sites = results[0].sites;
-      this.state.document = newFishDocument(label('app.newFish'), this.state.sites);
       this.state.userModules = results[2]?.modules ?? [];
+      this.refreshHeader();
+      if (request !== this.newFishRequest || document !== this.state.document)
+        return;
+      let loaded = false;
       if (results[1]?.document)
         try {
           this.state.document =
               validateDocument(settleRegions(results[1].document, this.state.sites));
+          loaded = true;
         } catch {
           this.notice(label('status.draftOutdated'));
         }
+      if (!loaded && !await this.newFish(true))
+        return;
       this.renderShell();
       this.requestDesign();
     } catch (error) {
-      this.notice(error.message);
+      if (request === this.newFishRequest && document === this.state.document)
+        this.notice(error.message);
     }
   }
   notice(value) {
@@ -234,6 +243,8 @@ export class OrganStudio {
     return true;
   }
   navigate(station) {
+    if (station !== this.state.station)
+      ++this.stationRevision;
     this.interruptPointer();
     if (station !== 'studio')
       this.stopPulse();
@@ -423,6 +434,9 @@ export class OrganStudio {
   }
   refreshHeader() {
     const state = this.state;
+    const newFish = this.root.querySelector('[data-action="new"]');
+    if (newFish)
+      newFish.disabled = !state.sites.length;
     if (state.station !== 'studio')
       return;
     const compiler = this.root.querySelector('.aid-compiler');
@@ -550,6 +564,7 @@ export class OrganStudio {
   }
   // Another fish starts afresh: nothing of the last one stays armed, pending or zoomed in on.
   loadFish(doc) {
+    ++this.newFishRequest;
     this.interruptPointer();
     this.notice('');
     this.pendingWire = null;
@@ -559,6 +574,7 @@ export class OrganStudio {
     this.changeDocument(doc);
   }
   designChanged() {
+    ++this.newFishRequest;
     this.stopPulse();
     this.state.stimulus = null;
     this.state.stale = true;

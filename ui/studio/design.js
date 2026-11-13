@@ -39,6 +39,7 @@ import {SENSE_TISSUE} from '../tissue.js';
 import {PRESSURE_OF} from './model/organs.js';
 import {RECEPTOR} from '../schema.js';
 import {
+  allCenters,
   centerIndex,
   compileDocument,
   findCenter,
@@ -55,9 +56,75 @@ import {label} from './view/kit.js';
 import {glandProfile, hormonePad, hormoneTime} from './view/substances.js';
 import {requestBody} from './requests.js';
 import {BODY_MAP, PROBE_LAYER} from './view/scene.js';
+import {newFishDocument} from './canvas_placement.js';
 
 const PRESSURE_TRIES = 12, PRESSURE_BATCH = 'pressure';
 export const designMethods = {
+  async newFish(initial = false) {
+    if (!this.state.sites.length) {
+      this.notice(label('errors.sitesUnavailable'));
+      return false;
+    }
+    const request = ++this.newFishRequest, previous = this.state.document,
+          station = this.state.station, stationRevision = this.stationRevision,
+          sites = this.state.sites;
+    const current = () =>
+        request === this.newFishRequest && this.state.document === previous &&
+        (initial || this.state.station === station && this.stationRevision === stationRevision);
+    if (!initial)
+      this.notice('');
+    try {
+      let document = newFishDocument(label('app.newFish'), sites);
+      const sensors = allCenters(document).filter(c => PRESSURE_OF[c.organType]?.key === c.key);
+      const probe = async doc => {
+        const answer = await this.api(requestBody('design', {plan : compileDocument(doc, sites)}));
+        if (!Array.isArray(answer.pressure) ||
+            sensors.some(c => !(answer.pressure[centerIndex(doc, c.id)] >= 0)))
+          throw Error(label('errors.pressurePlacement'));
+        return answer;
+      };
+      let anatomy = await probe(document), attempts = PRESSURE_TRIES * sensors.length;
+      // The new body's actual geometry must settle before it enters history or the saved draft.
+      while (current()) {
+        const wrong = pressureMismatches(document, anatomy.pressure);
+        if (!wrong.length) {
+          if (initial)
+            this.state.document = document;
+          else
+            this.loadFish(document);
+          return true;
+        }
+        let improved = false;
+        for (const center of wrong) {
+          for (const site of pressureSites(document, center.id, sites, anatomy)
+                   .slice(0, PRESSURE_TRIES)) {
+            if (attempts-- <= 0)
+              break;
+            const moved = placeNode(document, center.id, site.id, sites);
+            if (!moved)
+              continue;
+            const answer = await probe(moved);
+            if (!current())
+              return false;
+            if (pressureMismatches(moved, answer.pressure).length < wrong.length) {
+              document = moved;
+              anatomy = answer;
+              improved = true;
+              break;
+            }
+          }
+          if (improved || attempts <= 0)
+            break;
+        }
+        if (!improved)
+          throw Error(label('errors.pressurePlacement'));
+      }
+    } catch (error) {
+      if (current())
+        this.notice(error.message);
+    }
+    return false;
+  },
   refreshPigment() {
     const selected = this.state.selected;
     this.redrawBlocks('pigmentBlock', findOrgan, organ => {
