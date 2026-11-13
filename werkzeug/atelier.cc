@@ -270,7 +270,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   std::cout << "],\"motorTiming\":[";
   for (int k = 0; k < fishsim::STROKE_COUNT; ++k)
     std::cout << (k ? "," : "") << '[' << fishsim::STROKE_PORTS[k] << ','
-              << a.stroke_timing[k].steps << ',' << a.stroke_timing[k].recovery << ']';
+              << a.stroke_timing[k].steps << ']';
   std::cout << ']';
   std::cout << ",\"light\":[";
   const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;

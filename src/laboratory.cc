@@ -43,15 +43,15 @@ void apply_laboratory_control(Individual &p, const Ecosystem &w, const Laborator
     forward =
         target.found ? std::clamp(target.distance / std::max(1., body_radius(b)), 0., 1.) : 0.;
   if (c.auto_mouth) {
-    const int opening = std::max(1, layout.stroke_timing[StrokeSuction].recovery),
-              closing = std::max(1, layout.stroke_timing[StrokeBite].recovery);
+    const int opening = std::max(1, layout.stroke_timing[StrokeSuction].whole()),
+              closing = std::max(1, layout.stroke_timing[StrokeBite].whole());
     const bool near = target.found && target.distance <= mouth_reach(b) + body_radius(b),
                shut = int(w.ticks % (opening + closing)) >= opening;
     jaw = near && shut ? 1. : 0.;
     suction = near && !shut ? 1. : 0.;
   }
-  const int left_steps = std::max(1, layout.stroke_timing[StrokeTailLeft].recovery),
-            right_steps = std::max(1, layout.stroke_timing[StrokeTailRight].recovery);
+  const int left_steps = std::max(1, layout.stroke_timing[StrokeTailLeft].whole()),
+            right_steps = std::max(1, layout.stroke_timing[StrokeTailRight].whole());
   const int tail_side = int(w.ticks % (left_steps + right_steps)) < left_steps ? 0 : 1;
   std::map<std::uint32_t, float> values;
   for (const auto &e : layout.effectors) {

@@ -47,8 +47,7 @@ constexpr int side_fin_index(int fin, int side) {
 // drive: what drives the muscle now; force: what it delivers this step, as paid; recovery: steps
 // left of its twitch.
 struct StrokeState {
-  double drive = 0, force = 0;
-  int recovery = 0;
+  double drive = 0, force = 0, recovery = 0;
   // Glycogen of the fast fibres: 1 rested, 0 exhausted.
   double reserve = 1;
 };
@@ -56,12 +55,12 @@ inline constexpr double MIN_STROKE_STEPS = field::TIME_CONSTANT_MIN,
                         MAX_STROKE_STEPS = field::TIME_CONSTANT_MIN * field::TIME_CONSTANT_SPAN;
 struct StrokeTiming {
   double steps = MIN_STROKE_STEPS, keep = std::exp(-1 / MIN_STROKE_STEPS);
-  int recovery = int(MIN_STROKE_STEPS);
   void set(double tau) {
     steps = std::clamp(tau, MIN_STROKE_STEPS, MAX_STROKE_STEPS);
     keep = std::exp(-1 / steps);
-    recovery = int(std::lround(steps));
   }
+  // The whole steps a twitch touches, for what happens step by step.
+  int whole() const { return int(std::ceil(steps)); }
 };
 // A pair of antagonist muscles: which of the two pulled last (-1: neither, or the limb is back at
 // rest) and how long both have rested.

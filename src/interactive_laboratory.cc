@@ -94,7 +94,7 @@ void InteractiveSession::execute_laboratory(const std::string &op, std::istrings
     if (layout.stroke_capacity[stroke] <= 0)
       throw Refusal("invalidArgument", {{"command", op}});
     // Hold the release muscle for one full recovery; no stock is created by this command.
-    const auto until = world.ticks + std::max(1, layout.stroke_timing[stroke].recovery);
+    const auto until = world.ticks + std::max(1, layout.stroke_timing[stroke].whole());
     (axis == "egg" ? c.egg_until : c.sperm_until) = until;
   } else
     throw Refusal("invalidArgument", {{"command", op}});

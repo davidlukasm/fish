@@ -20,8 +20,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   auto &m = b.mouth;
   m.closing = false;
   m.swallowed = m.filtered = 0;
-  const double suction = std::clamp(b.eat_signal, 0., 1.),
-               stroke = std::max(1., std::round(pump_steps));
+  const double suction = std::clamp(b.eat_signal, 0., 1.), stroke = std::max(1., pump_steps);
   if (m.biting && ++m.phase >= m.duration) {
     m.biting = false;
     m.phase = -1;
@@ -30,7 +29,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
     ++m.cycle;
     m.biting = true;
     m.phase = 0;
-    m.duration = std::max(1., std::floor(bite_steps));
+    m.duration = std::max(1., bite_steps);
     m.gape = std::max(MOUTH_REST, m.opening);
   }
   if (pump_started) {
@@ -45,7 +44,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   const double snap = jaw_snap(m);
   m.closing = m.biting && m.phase == snap;
   if (jaw_shutting(m))
-    m.opening = m.gape * (1 - (m.phase - snap + 1) / (m.duration - snap));
+    m.opening = m.gape * std::max(0., 1 - (m.phase - snap + 1) / (m.duration - snap));
   else if (pull > 0)
     m.opening = std::min(target, m.opening + (1 - MOUTH_REST) * PI / stroke);
   else

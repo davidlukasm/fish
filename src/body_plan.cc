@@ -179,10 +179,10 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
   }
   fin_mechanics(a);
   a.fins[fin::tail].steps =
-      std::max(a.stroke_timing[StrokeTailLeft].recovery, a.stroke_timing[StrokeTailRight].recovery);
+      std::max(a.stroke_timing[StrokeTailLeft].whole(), a.stroke_timing[StrokeTailRight].whole());
   for (int f = 0; f < SIDE_FINS; ++f)
     for (int side = 0; side < 2; ++side)
-      a.fins[side_fin_index(f, side)].steps = a.stroke_timing[BACK_STROKES[f][side]].recovery;
+      a.fins[side_fin_index(f, side)].steps = a.stroke_timing[BACK_STROKES[f][side]].whole();
   for (int c = 0; c < field::HORMONES + 3; ++c) {
     auto &timing =
         c < field::HORMONES ? a.hormone_timing[c] : a.pigment_timing[c - field::HORMONES];
@@ -1223,24 +1223,31 @@ float anatomical_sensor(const Body &b, const BrainInterface::Receptor &r, double
 }
 // A muscle twitches when it is rested and its drive reaches the threshold. While the twitch lasts
 // its force follows the drive under the twitch's rise and fall, so a muscle pulls only while it is
-// driven: when a rhythm hands over to the antagonist, the muscle goes slack with its drive.
-// Returns the twitch's impulse when it begins, the work it does if its drive holds.
+// driven: when a rhythm hands over to the antagonist, the muscle goes slack with its drive. A
+// twitch lasts as long as its fibres make it, not a whole number of steps: one that ends within
+// a step leaves the rest of that step to the twitch that follows at once, so a driven muscle
+// twitches every `steps` on average. Returns the twitch's impulse when it begins, the work it
+// does if its drive holds.
 double stroke_step(StrokeState &stroke, double drive, const StrokeTiming &timing,
                    double threshold) {
   stroke.drive = std::max(0., drive);
   if (stroke.recovery > 0)
     --stroke.recovery;
-  if (stroke.recovery > 0 || stroke.drive < threshold || stroke.drive <= 0)
+  if (stroke.recovery > 0)
     return 0;
-  stroke.recovery = timing.recovery;
-  return stroke.drive * timing.recovery;
+  if (stroke.drive < threshold || stroke.drive <= 0) {
+    stroke.recovery = 0;
+    return 0;
+  }
+  stroke.recovery += timing.steps;
+  return stroke.drive * timing.steps;
 }
 // The twitch's share of the drive at its present step: it rises to 2 and falls, one on average.
 double stroke_shape(const StrokeState &stroke, const StrokeTiming &timing) {
-  if (stroke.recovery <= 0 || timing.recovery <= 0)
+  if (stroke.recovery <= 0)
     return 0;
-  const int step = timing.recovery - stroke.recovery;
-  const double s = std::sin(PI * (step + .5) / timing.recovery);
+  const double middle = std::min(timing.steps, timing.steps - stroke.recovery + .5),
+               s = std::sin(PI * middle / timing.steps);
   return 2 * s * s;
 }
 EffectorActivity effector_activity(const std::vector<float> &state, const BrainInterface &layout) {
@@ -1504,7 +1511,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       pair.last = started == 3 ? -1 : started - 1;
     const bool resting = strokes[first].recovery <= 0 && strokes[second].recovery <= 0;
     pair.rest = resting ? pair.rest + 1 : 0;
-    if (pair.last >= 0 && pair.rest >= layout.stroke_timing[muscles[pair.last]].recovery)
+    if (pair.last >= 0 && pair.rest >= layout.stroke_timing[muscles[pair.last]].steps)
       pair.last = -1;
   };
   antagonists(b.motor_.tail_pair, StrokeTailLeft, StrokeTailRight, antagonist::tail_rest_sweep);
@@ -1611,7 +1618,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   if (forward > 0 && f > 0 && tail_side >= 0) {
     const int j = TAIL_STROKES[tail_side];
     b.motor_.fin_stroke_age[fin::tail] = b.age;
-    b.motor_.fin_stroke_steps[fin::tail] = layout.stroke_timing[j].recovery;
+    b.motor_.fin_stroke_steps[fin::tail] = layout.stroke_timing[j].whole();
     b.motor_.fin_stroke_peak[fin::tail] =
         b.motor_.fin_tension[fin::tail] * (tail_side == 0 ? -1 : 1);
   }
@@ -1620,7 +1627,7 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
       const int drawn = side_fin_index(fin, side), back = BACK_STROKES[fin][side];
       if ((impulse[back] > 0 || impulse[FRONT_STROKES[fin][side]] > 0) && f > 0) {
         b.motor_.fin_stroke_age[drawn] = b.age;
-        b.motor_.fin_stroke_steps[drawn] = layout.stroke_timing[back].recovery;
+        b.motor_.fin_stroke_steps[drawn] = layout.stroke_timing[back].whole();
         b.motor_.fin_stroke_peak[drawn] = b.motor_.fin_tension[drawn];
       }
     }

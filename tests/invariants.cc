@@ -214,6 +214,28 @@ void gut_takes_up_what_time_allows() {
   check(digest(LEAVES, LONG, 1, 0).gained == digest(LEAVES, LONG).gained,
         "a gut without a muscle cannot be hurried");
 }
+// A twitch lasts as long as its fibres make it, also between whole steps: a muscle driven
+// without pause twitches that often, and does the work its impulses announce.
+void twitches_last_as_long_as_their_fibres() {
+  constexpr int STEPS = 9000;
+  constexpr double CLOSE = .01;
+  for (double steps : {4., 4.25, 4.5, 5.75}) {
+    StrokeTiming timing;
+    timing.set(steps);
+    StrokeState stroke;
+    int twitches = 0;
+    double announced = 0, done = 0;
+    for (int k = 0; k < STEPS; ++k) {
+      const double impulse = stroke_step(stroke, 1, timing, 0);
+      twitches += impulse > 0;
+      announced += impulse;
+      done += stroke_shape(stroke, timing);
+    }
+    check(std::abs(twitches * steps / STEPS - 1) < CLOSE,
+          "a driven muscle twitches as often as its twitch is long");
+    check(std::abs(done / announced - 1) < CLOSE, "a twitch does the work its impulse announces");
+  }
+}
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
   for (std::size_t i = 0; i < cells.size(); ++i) {
@@ -783,6 +805,7 @@ int main() {
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
     gut_takes_up_what_time_allows();
+    twitches_last_as_long_as_their_fibres();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();
