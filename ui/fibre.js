@@ -40,7 +40,7 @@ export function enduranceCurve(f, steps) {
   for (let k = 0; k < steps; ++k) {
     const available = 1 - f + f * reserve;
     curve.push(fibreForce(f) * available);
-    reserve = clamp(reserve + (1 - reserve) / F.recovery_steps -
+    reserve = clamp(reserve + (1 - reserve) / between(F.recovery_slow, F.recovery_fast, f) -
                     F.drain * f * f * ALL_OUT_WORK * available);
   }
   return curve;

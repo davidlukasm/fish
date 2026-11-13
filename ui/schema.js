@@ -1050,8 +1050,9 @@ export const MUSCLE_FIBRE = Object.freeze({
   "cost_fast" : 5,
   "upkeep_slow" : 1.2,
   "upkeep_fast" : 0.3,
-  "drain" : 0.028,
-  "recovery_steps" : 400
+  "drain" : 0.06,
+  "recovery_slow" : 2,
+  "recovery_fast" : 400
 });
 export const DIGESTION = Object.freeze({
   "shortest" : 0.5,

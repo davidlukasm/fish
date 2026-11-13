@@ -1130,9 +1130,11 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
     stimulus = f.nutrient;
     break;
   case field::Damage:
-    for (int k = 0; k < SECTOR_COUNT; ++k)
-      stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
-    // An aching gut hurts everywhere.
+    // Pain cells inside the body feel the gut alone; in the skin they feel their wounds, and an
+    // aching gut hurts there too.
+    if (!r.inner)
+      for (int k = 0; k < SECTOR_COUNT; ++k)
+        stimulus += SECTOR_COUNT * r.contact_weights[k] * b.damage_sectors[k];
     stimulus = std::clamp(stimulus + b.gut_irritation, 0., 1.);
     break;
   case field::BladderPressure:
@@ -1274,7 +1276,7 @@ MuscleDemand muscle_demand(const BrainInterface &layout, const std::vector<doubl
 void tire_fibres(const BrainInterface &layout, const MuscleDemand &demand,
                  const std::array<double, STROKE_COUNT> &work, std::vector<double> &reserve) {
   for (const auto &e : layout.effectors)
-    reserve[e.neuron] += fibre::refilled(reserve[e.neuron]);
+    reserve[e.neuron] += fibre::refilled(e.fibre, reserve[e.neuron]);
   for (std::size_t k = 0; k < layout.pulls.size(); ++k) {
     const auto &pull = layout.pulls[k];
     const auto &e = layout.effectors[pull.effector];

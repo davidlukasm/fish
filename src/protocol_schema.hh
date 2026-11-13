@@ -2015,8 +2015,9 @@ inline constexpr double cost_slow = 0.2;
 inline constexpr int cost_fast = 5;
 inline constexpr double upkeep_slow = 1.2;
 inline constexpr double upkeep_fast = 0.3;
-inline constexpr double drain = 0.028;
-inline constexpr int recovery_steps = 400;
+inline constexpr double drain = 0.06;
+inline constexpr int recovery_slow = 2;
+inline constexpr int recovery_fast = 400;
 }
 namespace digestion {
 inline constexpr double shortest = 0.5;

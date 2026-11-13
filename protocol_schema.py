@@ -1348,8 +1348,9 @@ class MuscleFibre:
     COST_FAST = 5
     UPKEEP_SLOW = 1.2
     UPKEEP_FAST = 0.3
-    DRAIN = 0.028
-    RECOVERY_STEPS = 400
+    DRAIN = 0.06
+    RECOVERY_SLOW = 2
+    RECOVERY_FAST = 400
 
 class Digestion:
     SHORTEST = 0.5

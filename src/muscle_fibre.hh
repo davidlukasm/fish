@@ -5,15 +5,18 @@
 #include "field/substrate.hh"
 namespace fishsim::fibre {
 // Muscle fibres run from slow (0: red, oxidative) to fast (1: white, glycolytic). The cell's time
-// constant gene sets the mix: a fast fibre contracts in a short stroke. Each kind has what the
-// others lack: fast fibres the strongest and quickest stroke and the cheapest rest, slow fibres
-// the cheapest work that never tires, a mix the most force that can be held for long. Upkeep
-// follows the cells, not the force they give, so slow fibres cost a fish that seldom swims.
+// constant gene sets the mix: a fast fibre contracts in a short stroke. What tells the kinds
+// apart is the force they give fresh and the force they can hold. Fast fibres give by far the
+// strongest stroke and lose nearly all of it within a few strokes; slow fibres give a weak one
+// that never tires; a mix gives a middling stroke and holds almost all of it, more than twice
+// what either end holds. Work is cheapest with slow fibres and rest with fast ones. Upkeep follows
+// the cells, not the force they give, so slow fibres cost a fish that seldom swims.
 namespace M = muscle_fibre;
 // Fast fibres burn a glycogen reserve that the blood refills. A stroke spends M::drain of it per
-// unit of work at full capacity, weighted by the square of the fast share; the blood refills
-// 1 / M::recovery_steps of what is missing every step, so a fast muscle loses half its force
-// within some forty steps of all-out effort and needs hundreds to recover.
+// unit of work at full capacity, weighted by the square of the fast share. The slow fibres beside
+// them burn what they leave behind, so the reserve of a cell refills the sooner the more slow
+// fibres it has: within M::recovery_fast steps in a cell of fast fibres only, by the same factor
+// faster per share of slow ones, towards M::recovery_slow.
 inline double fast_share(const field::CellParameters &p) {
   return 1 - std::clamp(double(p.time_constant), 0., 1.);
 }
@@ -38,7 +41,7 @@ inline double available(double fast, double reserve) {
 inline double drained(double fast, double work, double capacity) {
   return capacity > 0 ? M::drain * fast * fast * work / capacity : 0;
 }
-inline double refilled(double reserve) {
-  return (1 - reserve) / M::recovery_steps;
+inline double refilled(double fast, double reserve) {
+  return (1 - reserve) / between(M::recovery_slow, M::recovery_fast, fast);
 }
 }

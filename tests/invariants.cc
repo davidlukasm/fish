@@ -3,6 +3,7 @@
 #include "physiology.hh"
 #include "ecology_internal.hh"
 #include "body_plan.hh"
+#include "muscle_fibre.hh"
 #include "perception.hh"
 #include "laboratory.hh"
 #include <algorithm>
@@ -238,6 +239,29 @@ void twitches_last_as_long_as_their_fibres() {
           "a driven muscle twitches as often as its twitch is long");
     check(std::abs(done / announced - 1) < CLOSE, "a twitch does the work its impulse announces");
   }
+}
+// The force a fibre mix gives fresh and the force it still gives after long all-out effort.
+std::pair<double, double> fresh_and_held(double fast) {
+  constexpr int LONG_EFFORT = 5000;
+  double reserve = 1;
+  for (int k = 0; k < LONG_EFFORT; ++k)
+    reserve = std::clamp(reserve + fibre::refilled(fast, reserve) -
+                             fibre::drained(fast, fibre::available(fast, reserve), 1),
+                         0., 1.);
+  return {fibre::force(fast), fibre::force(fast) * fibre::available(fast, reserve)};
+}
+// Fast fibres give the strongest stroke and cannot hold it, slow ones hold a weak one, and a mix
+// holds more than twice what either end holds.
+void fibre_kinds_differ_in_force_and_endurance() {
+  constexpr double SLOW = 0, MIXED = .5, FAST = 1;
+  const auto slow = fresh_and_held(SLOW), mixed = fresh_and_held(MIXED),
+             fast = fresh_and_held(FAST);
+  check(fast.first > 2 * mixed.first && mixed.first > 2 * slow.first,
+        "fresh, each faster kind pulls more than twice as hard");
+  check(slow.second == slow.first, "slow fibres never tire");
+  check(mixed.second > 2 * slow.second && mixed.second > 2 * fast.second,
+        "a mix holds more than twice the force either end holds");
+  check(fast.second < fast.first / 10, "fast fibres lose nearly all their force");
 }
 // A muscle of slow cells that answer a weak command and fast cells that answer only a strong one.
 // Each cell pulls, tires and charges by its own fibres, and the twitch lasts as long as the cells
@@ -853,6 +877,7 @@ int main() {
     gut_takes_up_what_time_allows();
     twitches_last_as_long_as_their_fibres();
     muscle_cells_keep_their_own_fibres();
+    fibre_kinds_differ_in_force_and_endurance();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();
