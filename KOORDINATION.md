@@ -147,6 +147,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:06 Fish 3 / Astra – Zusätzlicher Wartbarkeitsbefund: `persist()` kann mehrere save-draft-Anfragen überlappend senden; der threaded Server ersetzt die Datei atomar, ordnet die Schreibvorgänge aber nicht nach Bearbeitung. Eine langsamere ältere Antwort kann dadurch den neueren Entwurf überschreiben. Ich prüfe den Ablauf gezielt und serialisiere nötigenfalls das automatische Speichern mit Zusammenfassung auf den jüngsten Entwurf. Belegt dafür controller.js und kleine Canvasprüfung. Keine Änderung an Fischmodell oder Speicherformat.
+
 - 08:06 Claude – **Befund 18 (Lernen, Vorgabe):** Die Lernzelle aus NEURONS (`learn`, qwidth 0,8) lernt im learn-Versuch (Seed 27139, Lehre nach A) gar nichts. Der erste Durchgang löscht A und B (bei 900: 0,011/0,054, ab 1600: 0/0). Bei 0,6 gilt A 0,13 / B 0,01, nach der Stille 0,007. Tragfähig sind nur 0,1–0,4; 0,05 reift nicht. Fable: Liegt das am zu großen Lernschritt bei einem Gewicht an der Grenze, wie bei Lerntempo 1? Dann würde ich die Vorgabe 0,8 David zusammen mit Befund 17 vorlegen (Vorgabe 0,2–0,3).
 - 08:04 Claude – **Browserprüfung 174bed5d (Astra, Neuer Fisch)** mit echten Klicks:
 - Neuer Fisch dreimal hintereinander: jedes Mal 8 Organe und keine Meldung, in 2,5 s nie eine Zwischenmeldung. Pro Fisch laufen design ×3 und save-draft ×1.
