@@ -141,7 +141,11 @@ const PALETTE = ['#9cc8f0', '#e8a2b5', '#d4b7ee', '#8fdcc0', '#f0c58a', '#c9e58f
 // The fish's messengers: named ones in use, the rest free (dashed) until made.
 const STUFF = [{name : 'Wachstum'}, {name : 'Stress'}, {name : 'Laichzeit'}, {name : null}, {name : null}, {name : null}];
 // The wheel: six messengers along an arc, maturity after them (hormones.hh, SUBSTANCE_TURNS).
-const WHEEL = [...PALETTE.map((c, k) => k * 40), 280];
+// The wheel as the engine has it (SUBSTANCE_TURNS): the six messengers every 54° from 0° to 270°,
+// then maturity, reserve and exhaustion at 292.5°, 315° and 337.5°. Since Fable (David 03:47) a cell
+// answers all nine, for coming into being, working and dying alike.
+const WHEEL = [...PALETTE.map((c, k) => k * 54), 292.5, 315, 337.5];
+const SIGNAL = {maturity : {name : 'Reife', colour : '#e9e2c6', at : 6}, reserve : {name : 'Reserve', long : 'Energiereserve', colour : '#d9b86a', at : 7}, fatigue : {name : 'Erschöpfung', colour : '#eaa886', at : 8}};
 const ACTIONS = [['become', 'Entstehen'], ['die', 'Tod'], ['work', 'Aktivität']];
 // Where the young fish counts as grown (maturity), for the picture only.
 const ADULT = .72;
@@ -154,24 +158,27 @@ const life = {
 };
 let menuOpen = null;
 const source = a => !a.on ? 'auto' : a.by === 'stuff' ? 'stuff' + a.stuff : a.by;
+const chipOf = a => a.by === 'stuff' || a.by === 'maturity' ? 'stuff' + a.stuff : a.by;
 const stuffName = i => STUFF[i].name ?? 'Botenstoff ' + (i + 1);
 const mixWeights = () => {
   const m = life.mix, sigma = .15 + 1.85 * m.width;
   return WHEEL.map(deg => { const r = deg * Math.PI / 180, dx = m.x - Math.cos(r), dy = m.y - Math.sin(r); return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)); });
 };
 const mixPaint = () => {
-  const w = mixWeights().slice(0, 6), used = w.map((v, i) => [v, i]).filter(([v, i]) => v > .1 && STUFF[i].name);
+  const colours = [...PALETTE, SIGNAL.maturity.colour, SIGNAL.reserve.colour, SIGNAL.fatigue.colour];
+  const used = mixWeights().map((v, i) => [v, i]).filter(([v, i]) => v > .1 && (i >= 6 || STUFF[i].name));
   if (!used.length) return '#5d8384';
-  return 'conic-gradient(' + used.map(([, i], k) => `${PALETTE[i]} ${k / used.length * 100}% ${(k + 1) / used.length * 100}%`).join(',') + ')';
+  return 'conic-gradient(' + used.map(([, i], k) => `${colours[i]} ${k / used.length * 100}% ${(k + 1) / used.length * 100}%`).join(',') + ')';
 };
-const sourceName = (by, long) => by === 'mix' ? (long ? 'Mischung von Botenstoffen' : 'Mischung') : stuffName(Number(by.slice(5)));
-const sourceColour = by => by === 'mix' ? '#c7d6c0' : PALETTE[Number(by.slice(5))];
+const sourceName = (by, long) => by === 'mix' ? (long ? 'Mischung von Stoffen' : 'Mischung') : SIGNAL[by] ? (long && SIGNAL[by].long) || SIGNAL[by].name : stuffName(Number(by.slice(5)));
+const sourceColour = by => by === 'mix' ? '#c7d6c0' : SIGNAL[by] ? SIGNAL[by].colour : PALETTE[Number(by.slice(5))];
 const bound = (c, half, steep) => { const x = Math.pow(Math.max(0, c) / half, Math.pow(2, steep)); return x / (1 + x); };
 const levelAt = (w, c) => w.from + (w.to - w.from) * bound(c, Math.max(.02, w.at), w.steep);
 const html = (tag, attrs = {}, parent, text) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
 function stuffDot(parent, by) {
   const d = html('span', {class : 'sdot'}, parent);
   if (by === 'mix') d.style.background = mixPaint();
+  else if (SIGNAL[by]) d.style.background = SIGNAL[by].colour;
   else { const i = Number(by.slice(5)); if (STUFF[i].name) d.style.background = PALETTE[i]; else d.classList.add('free'); }
   return d;
 }
@@ -186,10 +193,10 @@ function drawTriggers() {
     const seg = html('div', {class : 'seg' + (a.on ? '' : ' off'), role : 'group', 'aria-label' : name}, row);
     const mat = html('button', {class : 'mat' + (a.on && a.by === 'maturity' ? ' on' : ''), 'data-trigger' : key, 'data-by' : 'maturity'}, seg, 'Reife');
     mat.addEventListener('click', () => { a.by = 'maturity'; menuOpen = null; drawLife(); });
-    const by = a.by === 'mix' ? 'mix' : 'stuff' + a.stuff, chosen = a.on && a.by !== 'maturity';
+    const by = chipOf(a), chosen = a.on && a.by !== 'maturity';
     const st = html('button', {class : 'stuff' + (chosen ? ' on' : ''), 'data-trigger' : key, 'data-by' : 'stuff', 'aria-haspopup' : 'menu', 'aria-expanded' : menuOpen === key}, seg);
     stuffDot(st, by); html('span', {class : 'name'}, st, chosen ? sourceName(by) : 'Botenstoff'); html('span', {class : 'caret'}, st);
-    st.addEventListener('click', e => { e.stopPropagation(); if (a.by === 'maturity') a.by = STUFF[a.stuff].name ? 'stuff' : 'stuff'; menuOpen = menuOpen === key ? null : key; drawLife(); });
+    st.addEventListener('click', e => { e.stopPropagation(); if (a.by === 'maturity') a.by = 'stuff'; menuOpen = menuOpen === key ? null : key; drawLife(); });
     if (menuOpen === key) drawMenu(row, a, key);
   }
 }
@@ -208,6 +215,13 @@ function drawMenu(row, a, key) {
     stuffDot(b, 'stuff' + free); html('span', {class : 'soft'}, b, 'Neuer Botenstoff');
     b.addEventListener('click', () => { STUFF[free].name = 'Botenstoff ' + (free + 1); a.by = 'stuff'; a.stuff = free; menuOpen = null; drawLife(); });
   }
+  // What the body reports of itself: its energy reserve and the exhaustion of its fast fibres.
+  html('hr', {}, menu);
+  for (const key of ['reserve', 'fatigue']) {
+    const b = html('button', {role : 'menuitemradio', class : a.by === key ? 'pick' : '', 'data-stuff' : key}, menu);
+    stuffDot(b, key); html('span', {}, b, SIGNAL[key].long ?? SIGNAL[key].name);
+    b.addEventListener('click', () => { a.by = key; menuOpen = null; drawLife(); });
+  }
   const m = html('button', {role : 'menuitemradio', class : a.by === 'mix' ? 'pick' : '', 'data-stuff' : 'mix'}, menu);
   stuffDot(m, 'mix'); html('span', {}, m, 'Mischung');
   m.addEventListener('click', () => { a.by = 'mix'; drawLife(); });
@@ -221,15 +235,14 @@ function drawMenu(row, a, key) {
 const wheels = new Set();
 function mixWheel(menu) {
   const svg = el('svg', {viewBox : '0 0 150 150', 'data-mix' : 1}, null); menu.appendChild(svg);
-  const C = 75, R = 52, P = (x, y) => [C + R * x, C - R * y];
+  const C = 75, R = 56, P = (x, y) => [C + R * x, C - R * y];
   const paint = () => {
     svg.replaceChildren();
     const w = mixWeights(), m = life.mix, [mx, my] = P(m.x, m.y), sigma = .15 + 1.85 * m.width;
     el('circle', {cx : C, cy : C, r : R, fill : 'none', stroke : '#2d5059'}, svg);
     WHEEL.forEach((deg, k) => {
-      const r = deg * Math.PI / 180, [x, y] = P(Math.cos(r), Math.sin(r)), named = k === 6 || STUFF[k].name;
-      el('circle', {cx : x, cy : y, r : 4 + 6 * w[k], fill : k === 6 ? '#e9e2c6' : named ? PALETTE[k] : 'none', stroke : named ? 'none' : '#9fbcbc', 'stroke-dasharray' : named ? '' : '2 2', opacity : .3 + .7 * w[k]}, svg);
-      if (k === 6) txt(svg, x, y + 18, 'Reife', {'text-anchor' : 'middle'});
+      const r = deg * Math.PI / 180, [x, y] = P(Math.cos(r), Math.sin(r)), body = Object.values(SIGNAL).find(b => b.at === k), named = body || STUFF[k].name;
+      el('circle', {cx : x, cy : y, r : 4 + 6 * w[k], fill : body ? body.colour : named ? PALETTE[k] : 'none', stroke : named ? 'none' : '#9fbcbc', 'stroke-dasharray' : named ? '' : '2 2', opacity : .3 + .7 * w[k]}, svg);
     });
     el('circle', {cx : mx, cy : my, r : R * sigma, fill : '#f1dda6', 'fill-opacity' : .07, stroke : '#f1dda6', 'stroke-dasharray' : '3 3'}, svg);
     const place = el('circle', {cx : mx, cy : my, r : 6}, svg);
@@ -323,8 +336,8 @@ function diagram(svg, by) {
     const elsewhere = !stuff && w.on && w.by !== 'maturity';
     let path = `M${X(from)} ${base}`;
     for (let k = 0; k <= 120; k++) { const c = from + (to - from) * k / 120; path += ` L${X(c).toFixed(1)} ${Y(level(c)).toFixed(1)}`; }
-    el('path', {d : path + ` L${X(to)} ${base} Z`, fill : elsewhere ? sourceColour(w.by === 'mix' ? 'mix' : 'stuff' + w.stuff) : '#79d2be', 'fill-opacity' : .1, stroke : '#79d2be', 'stroke-width' : 1.4, 'stroke-dasharray' : elsewhere ? '4 4' : 'none'}, svg);
-    if (elsewhere) txt(svg, (X(from) + X(to)) / 2, top + 14, 'Aktivität durch ' + sourceName(w.by === 'mix' ? 'mix' : 'stuff' + w.stuff), {'text-anchor' : 'middle', class : 'value'});
+    el('path', {d : path + ` L${X(to)} ${base} Z`, fill : elsewhere ? sourceColour(source(w)) : '#79d2be', 'fill-opacity' : .1, stroke : '#79d2be', 'stroke-width' : 1.4, 'stroke-dasharray' : elsewhere ? '4 4' : 'none'}, svg);
+    if (elsewhere) txt(svg, (X(from) + X(to)) / 2, top + 14, 'Aktivität durch ' + sourceName(source(w)), {'text-anchor' : 'middle', class : 'value'});
   }
   // Greyed when nothing here follows the fish's life; tinted with the messenger that steers instead.
   if (!stuff && !ACTIONS.some(([k]) => here(life[k]))) {
