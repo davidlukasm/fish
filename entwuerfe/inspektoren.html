@@ -161,6 +161,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Abgabe</h4>
     <svg id="glandlevel" viewBox="0 0 300 138"></svg>
   </section>
+  <section class="panel" aria-label="Blutsinn">
+    <h2>Organ</h2><h3>Blutsinn</h3>
+    <h4 class="first">Stoffrad</h4>
+    <svg id="bloodwheel" viewBox="0 0 300 162"></svg>
+    <h4>Blutzellen</h4>
+    <svg id="bloodsense" viewBox="0 0 300 148"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1811,5 +1818,67 @@ function drawGland() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland();
+// ---------- Blutsinn ----------
+// Blood cells (body_plan.cc:1151, hormones.hh:38–45): a cell listens from a place on the substance
+// wheel, as wide as its width, to the six messengers, maturity, reserve and exhaustion, and adds
+// what it hears; it answers bounded (half at its threshold) and never gets used to it, so that a
+// lasting shortage stays reported. Above: the wheel, each group's place and width, the substances
+// as large as the chosen group hears them, a click picks the example; below: what each group
+// reports as the example substance rises from none to full.
+const BLOOD = {groups : [{x : .78, y : -.5, width : .2, gate : .4}], chosen : 0, example : 7};
+const bloodHears = (g, k) => { const sigma = .15 + 1.85 * g.width, r = WHEEL[k] * Math.PI / 180, dx = g.x - Math.cos(r), dy = g.y - Math.sin(r); return Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma)); };
+const wheelName = k => k === 6 ? 'Reife' : k === 7 ? 'Energiereserve' : k === 8 ? 'Erschöpfung' : stuffName(k);
+const wheelColour = k => k === 6 ? SIGNAL.maturity.colour : k === 7 ? SIGNAL.reserve.colour : k === 8 ? SIGNAL.fatigue.colour : PALETTE[k];
+function drawBlood() {
+  const redraw = drawBlood, hold = () => { BLOOD.held = true; }, free = () => { BLOOD.held = false; redraw(); };
+  const svg = document.getElementById('bloodwheel'); svg.replaceChildren();
+  const C = [150, 84], R = 62, P = (x, y) => [C[0] + R * x, C[1] - R * y], g = BLOOD.groups[BLOOD.chosen];
+  el('circle', {cx : C[0], cy : C[1], r : R, fill : 'none', stroke : '#2d5059'}, svg);
+  BLOOD.groups.forEach((gr, i) => { const [mx, my] = P(gr.x, gr.y), sigma = .15 + 1.85 * gr.width;
+    el('circle', {cx : mx, cy : my, r : R * sigma, fill : groupColour(i), 'fill-opacity' : i === BLOOD.chosen ? .14 : .06, stroke : groupColour(i), 'stroke-dasharray' : '3 3', class : 'chip'}, svg)
+      .addEventListener('pointerdown', () => { BLOOD.chosen = i; redraw(); }); });
+  WHEEL.forEach((deg, k) => {
+    const r = deg * Math.PI / 180, [x, y] = P(Math.cos(r), Math.sin(r)), named = k >= 6 || STUFF[k].name, w = bloodHears(g, k), rr = 8 + 5 * w;
+    const chip = el('g', {class : 'chip'}, svg);
+    if (k === BLOOD.example) el('circle', {cx : x, cy : y, r : rr + 4, fill : 'none', stroke : '#f1dda6', 'stroke-width' : 1.4}, chip);
+    el('circle', {cx : x, cy : y, r : rr, fill : named ? wheelColour(k) : 'none', stroke : named ? 'none' : '#9fbcbc', 'stroke-dasharray' : named ? '' : '2 2', opacity : .35 + .65 * w}, chip);
+    txt(chip, x, y + 3.5, k >= 6 ? ['Rf', 'Rs', 'Er'][k - 6] : letterOf(k), {'text-anchor' : 'middle', style : `font:700 9px system-ui;fill:${named ? '#0d262c' : '#9fbcbc'};pointer-events:none`});
+    chip.addEventListener('click', () => { BLOOD.example = k; redraw(); });
+  });
+  const [mx, my] = P(g.x, g.y), sigma = .15 + 1.85 * g.width;
+  drag(svg, el('circle', {cx : mx, cy : my, r : 7}, svg), p => { const x = (p.x - C[0]) / R, y = (C[1] - p.y) / R, n = Math.hypot(x, y); g.x = n > 1.1 ? x / n * 1.1 : x; g.y = n > 1.1 ? y / n * 1.1 : y; redraw(); }, 'bloodplace', hold, free);
+  const wx = Math.min(292, mx + R * sigma);
+  drag(svg, el('rect', {x : wx - 5, y : my - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(((p.x - mx) / R - .15) / 1.85, 0, 1); redraw(); }, 'bloodwidth', hold, free);
+  txt(svg, 4, 164, 'Beispiel: ' + wheelName(BLOOD.example), {style : 'fill:' + wheelColour(BLOOD.example)});
+  svg.setAttribute('viewBox', '0 10 300 162');
+
+  // ---- What each group reports as the example rises. ----
+  const c = document.getElementById('bloodsense'); c.replaceChildren();
+  const L = 56, R2 = 290, top = 30, base = 116, N = 100, X = v => L + (R2 - L) * v;
+  const answers = BLOOD.groups.map(gr => Array.from({length : N + 1}, (_, k) => bounded(bloodHears(gr, BLOOD.example) * k / N, gr.gate)));
+  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0));
+  const scale = settle(BLOOD, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), Y = v => base - (base - top) * v / scale;
+  regler(c, {x : 26, top, base, word : 'Schwelle', value : null, start : hold, end : free, name : 'bloodgate',
+    marks : BLOOD.groups.map((gr, i) => ({value : gr.gate, colour : groupColour(i), chosen : i === BLOOD.chosen, set : v => { gr.gate = clamp(v, .02, .98); BLOOD.chosen = i; redraw(); }}))});
+  grid(c, L, R2, top, base, scale);
+  txt(c, L + 4, top - 14, 'Meldung an das Gehirn');
+  let under = Array(N + 1).fill(0);
+  for (const i of BLOOD.groups.map((gr, i) => i).sort((p, q) => BLOOD.groups[p].gate - BLOOD.groups[q].gate)) {
+    const over = under.map((u, k) => u + answers[i][k]);
+    el('path', {d : 'M' + over.map((y, k) => `${X(k / N).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${X(k / N).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z', fill : groupColour(i), opacity : .75, stroke : i === BLOOD.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === BLOOD.chosen ? 1.4 : .6, class : 'chip'}, c)
+      .addEventListener('pointerdown', () => { BLOOD.chosen = i; redraw(); });
+    under = over;
+  }
+  el('path', {d : `M${L} ${base} H${R2} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L, base + 15, 'kein'); txt(c, R2, base + 15, 'voll', {'text-anchor' : 'end'}); txt(c, (L + R2) / 2, base + 15, wheelName(BLOOD.example), {'text-anchor' : 'middle', style : 'fill:' + wheelColour(BLOOD.example)});
+  const chip = (x, y, sign, act) => { const gg = el('g', {class : 'chip'}, c);
+    el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, gg);
+    el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, gg);
+    gg.addEventListener('click', act); };
+  if (BLOOD.groups.length < 3) chip(30, base + 22, '+', () => { BLOOD.groups.push({x : -.5, y : .6, width : .2, gate : .4}); BLOOD.chosen = BLOOD.groups.length - 1; redraw(); });
+  if (BLOOD.groups.length > 1) chip(50, base - (base - top) * BLOOD.groups[BLOOD.chosen].gate, '×', () => { BLOOD.groups.splice(BLOOD.chosen, 1); BLOOD.chosen = 0; redraw(); });
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 32));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood();
 </script>
