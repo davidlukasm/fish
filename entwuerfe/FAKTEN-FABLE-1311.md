@@ -313,3 +313,21 @@ Nur gelesen, nichts gemessen. Produkt `e176af2`.
 - **In der Engine ist es das Futter, das im Sediment eines Bodenstücks liegt** (`detritus`): abgesunkene Flocken, Kot, gestorbene Würmer und verschüttete Muscheln (`src/small_animals.cc:1016-1042`, `src/food_web_step.cc:336-342, 1266-1271`). Es zerfällt mit der Zeit.
 - **Der Fisch bekommt es nur so** (`src/small_animals.cc:1092-1109`, `feeding.cc:596-604`): Maul im Boden (ab 10 % eingesunken), das Sediment tief genug, und es ist noch Saugvorrat des **Öffners** übrig. Menge = Futter im Bodenstück × (Saugvorrat × Sieben ÷ Sedimentmenge) × Einsinken. Die Kiemenpumpe allein holt nichts aus dem Boden.
 - **Im Darm ist es dasselbe wie Flocken:** 62 % Brei, 10 % Faser, der Rest unverdaulich (`physiology.hh:182-194`). Es braucht aber 1,5-mal so viel Platz, weil Sand mitkommt (`physiology_parameters.hh:24`). Eine eigene Futterart des Darms ist es also nicht, nur ein eigener Platzbedarf. Sand selbst wird nicht aufgenommen; Schlamm wirkt nur über das Sieben.
+
+## 9. Darm über das Leben (21:29)
+
+Nur gelesen, nichts gemessen. Produkt `e176af2`.
+  1. **Verweildauer in Ruhe: ändert sich über das Leben nicht.** Sie ist 200 Schritte × Darmgröße (0,5 bis 4, also 100 bis 800 Schritte) und hängt nicht am Körper (`src/physiology.hh:204-209, 218-220`, `physiology_parameters.hh:24`). Die Darmlänge wird einmal bei der Geburt aus dem Erbgut gesetzt (`src/cppn_brain.cc:836`), als Mittel über die Futterzellen des ganzen Bauplans (`src/body_plan.cc:362-364, 558`). Reifen oder sterben Zellen, wird sie nicht neu gerechnet (`body_plan.cc:925-953, 962-970`).
+     - **Was mit dem Körper wächst, ist der Platz im Darm:** 250 beim Schlüpfling, 400 beim erwachsenen Fisch, jeweils × Darmgröße (`physiology.hh:119-122, 210-212`).
+     - **Gefressen wird ab dem Schritt nach dem Schlupf** (`src/feeding.cc:562`). Im Ei nie.
+  2. **Darmmuskel: ändert sich, auf drei Wegen.**
+     - **Mit den Zellen:** Die Muskelkraft ist die Summe der gerade lebenden Muskelzellen (`body_plan.cc:937, 966`). Sie kommt, wenn die Zellen sich bilden, und geht, wenn sie sterben.
+     - **Mit dem Körper:** Die Wirkung ist Kraft × Körpergröße, gedeckelt (`physiology.hh:361-365, 294-296`). Derselbe Muskel treibt im größeren Fisch stärker, bis zum Deckel bei 4-facher Geschwindigkeit, und zwar überproportional (Kraft²).
+     - **Mit Hormonen:** Jede Muskelzelle hat Antworten für Bildung, Ausgabe und Tod (`colony-core/field/substrate.cc:502-516, 607-612, 819-826`).
+  3. **Schwanken durch Zuckungen: ja, in jedem Schlag.** Die Darmwand nimmt die Haltung der laufenden Zuckung an, die steigt und fällt (`body_plan.cc:1469-1479`). Das Tempo je Schritt ist `(1 + (Höchsttempo − 1) × 2 × Haltung) ÷ Verweildauer` (`physiology.hh:366-370`). Innerhalb einer Zuckung pendelt die Verweildauer also zwischen dem Ruhewert und dem getriebenen Wert; im Mittel über die Zuckung gilt der Befehl. Wie lang eine Zuckung ist, bestimmen die Fasern der Muskelzellen.
+  4. **Was man im Atelier davon wirklich einstellt:**
+     - **Darmlänge:** an den Futterzellen (`quality1`), ein Wert fürs ganze Leben (`ui/studio/model/organs.js:157-170`).
+     - **Darmmuskel** (eigenes Organ, 2 bis 8 Knoten, `organs.js:171-183`): Größe, Schwelle und Fasern je Knoten.
+     - **Lebensphase je Knoten:** ab welcher Reife der Knoten arbeitet (Ausgabe-Antwort auf Reife) und bei welcher Reife er stirbt (Tod-Antwort auf Reife) (`ui/studio/model/document.js:1495-1526`). Das gilt für Muskelknoten und Sinneszellen gleich.
+     - **Nicht einstellbar über das Leben:** die Darmlänge und damit die Ruhe-Verweildauer.
+  - **Für das Lebensbild heißt das:** Über das Leben ändern sich nur der Platz im Darm (mit dem Körper) und der Muskel (Zellen kommen und gehen, wirken im größeren Körper stärker). Einstellbar ist davon allein, von welcher bis zu welcher Reife jeder Muskelknoten arbeitet. Die „Unschärfe“ ist das Pendeln innerhalb jeder Zuckung und ist keine Einstellung; sie folgt aus Befehl und Fasern.
