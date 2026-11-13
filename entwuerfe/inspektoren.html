@@ -76,12 +76,12 @@ function drag(svg, grip, move, name) {
 // A round button; `parts` are the pictures its action changes.
 function chip(parent, x, y, sign, act, parts, enabled = true, r = 7) {
   const g = el('g', {class : 'chip', opacity : enabled ? 1 : .3}, parent), d = r * .45, red = sign === '×';
-  el('circle', {cx : x, cy : y, r, style : `fill:#0f2c34;stroke:${red ? '#e8a2b5' : '#5d8384'};stroke-width:1.4`}, g);
-  el('path', {d : red ? `M${x - d * .8} ${y - d * .8} l${1.6 * d} ${1.6 * d} m0 ${-1.6 * d} l${-1.6 * d} ${1.6 * d}` : `M${x - d} ${y} h${2 * d}` + (sign === '+' ? ` M${x} ${y - d} v${2 * d}` : ''), stroke : red ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.5, 'stroke-linecap' : 'round'}, g);
+  el('circle', {cx : x, cy : y, r, style : `fill:${COLOUR.track};stroke:${red ? COLOUR.remove : COLOUR.chipEdge};stroke-width:1.4`}, g);
+  el('path', {d : red ? `M${x - d * .8} ${y - d * .8} l${1.6 * d} ${1.6 * d} m0 ${-1.6 * d} l${-1.6 * d} ${1.6 * d}` : `M${x - d} ${y} h${2 * d}` + (sign === '+' ? ` M${x} ${y - d} v${2 * d}` : ''), stroke : red ? COLOUR.remove : COLOUR.chipSign, 'stroke-width' : 1.5, 'stroke-linecap' : 'round'}, g);
   if (enabled) g.addEventListener('click', e => { e.stopPropagation(); act(); draw(parts); });
 }
 function stageIcon(parent, kind, x, cy, s) {
-  const line = {fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.6};
+  const line = {fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.6};
   if (kind === 'hatch') {
     el('path', {d : `M${x - 13 * s} ${cy + 4 * s} a${13 * s} ${14 * s} 0 0 0 ${26 * s} 0 l${-6.5 * s} ${-5 * s} ${-6.5 * s} ${5 * s} ${-6.5 * s} ${-5 * s} ${-6.5 * s} ${5 * s} z`, ...line}, parent);
     el('path', {d : `M${x - 8 * s} ${cy - 9 * s} q${8 * s} ${-11 * s} ${16 * s} 0 q${-8 * s} ${9 * s} ${-16 * s} 0 z`, ...line}, parent);
@@ -90,6 +90,8 @@ function stageIcon(parent, kind, x, cy, s) {
 const fibreColour = f => { const lo = [184, 68, 63], hi = [242, 235, 226]; return 'rgb(' + lo.map((v, i) => Math.round(v + (hi[i] - v) * f)).join(',') + ')'; };
 const keyColour = i => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
 const STOMACH_FILL = '#c98f55', STOMACH_EDGE = '#e6b47c', TUBE = '#6b6f5f', MUSCLE = '#9a6a48';
+const COLOUR = {axis : '#3b6a6c', track : '#0f2c34', trackEdge : '#2d5059', line : '#f4efd8', handle : '#f1dda6', chosen : '#ffffff', unchosen : '#0d262c',
+                sore : '#ef8f8f', stomachBack : '#5a4232', morsel : '#e3cf94', body : '#16363e', icon : '#e9e2c6', chipEdge : '#5d8384', chipSign : '#d7e6e3', remove : '#e8a2b5'};
 
 // ===== Settings =====
 const S = {
@@ -120,10 +122,32 @@ const sumForDrive = d => -Math.log(1 - (d - 1) / (FASTEST - 1)) / DRIVE_GAIN;
 const bodyDrive = s => { const push = r => r / (r + .5); return Math.pow(push(2 / 3 + s / 3) / push(1), 2); };
 const LIFE = Array.from({length : 61}, (_, k) => k / 60);
 
-// Foods by their stuffs (David's values: leaf best 92 %, meat 82 %, algae 78 % held to the long
-// end, plankton 72 %; at stay 50 algae 18 % and plankton 34 %).
-const STUFFS = {flesh : [0, 20, 225, 1], shell : [100, 4, 480, .86], pulp : [0, 33, 800, 1], soft : [245, 80, 0, .955], hard : [430, 2, 0, 1]};
-const FOOD = [['Blatt', {hard : 1}, '#8fd16a'], ['Alge', {pulp : .29, soft : .71}, '#55c4a6'], ['Flocken', {pulp : .77}, '#e3cf94'], ['Plankton', {flesh : .45, shell : .55}, '#9cc8f0'], ['Fleisch', {flesh : 1}, '#ef8f8f']];
+// Foods by their stuffs. Each stuff: steps to break half of it open (0: open at once), steps to
+// take it up, steps after which it spoils as fast as it is taken up (0: never), and the share that
+// can be taken up at best. The values meet David's numbers (FEEDBACK-1311, line 12): leaf at best
+// 92 %, meat 82 %, plankton 72 %, algae 78 % and held from about 630 steps to the long end; at the
+// left edge (50 steps) algae 18 % and plankton 34 %.
+//
+// PROPOSAL TO THE ENGINE: this is not what the engine computes today.
+//   stuff   here                        engine today (src/protocol_schema.hh:2024-2037)
+//   flesh   opens 0, up 20, spoils 250  the same
+//   pulp    0, 33, 800                  0, 8, 720
+//   shell   100, 4, 480, at best 86 %   80, 20, 330
+//   hard    430, 2, never               fibre 400, 20, never
+//   soft    230, 4, never, 78 %         none: algae are 82 % of the one fibre
+//   sap     0, 20, never                none: algae's quick part is the pulp of flocks
+//   foods   leaf hard 1; algae sap .25, soft .70; flocks pulp .77; plankton flesh .445, shell .52
+//           engine (src/physiology.hh:183-200): leaf fibre 1; algae pulp .18, fibre .82; flocks
+//           pulp .62, fibre .10; plankton flesh .5, shell .5
+//   The formula is the engine's (stuff_yield, src/physiology.hh:229-234) with one addition: the
+//   share taken up at best. With it the engine can give these curves; it needs two more stuffs.
+//   Algae hold their 78 % to the long end only because their quick part (sap) never spoils. With
+//   the pulp of flocks, which must spoil so that flocks fall off, they cannot.
+//   Bellyache below is a formula of its own; the engine's has other limits and another shape
+//   (gut_ache, src/physiology.hh:374-379: meat from stay x share 375, fibre above 55 % below
+//   400 x the excess).
+const STUFFS = {flesh : [0, 20, 250, 1], shell : [100, 4, 480, .86], pulp : [0, 33, 800, 1], sap : [0, 20, 0, 1], soft : [230, 4, 0, .78], hard : [430, 2, 0, 1]};
+const FOOD = [['Blatt', {hard : 1}, '#8fd16a'], ['Alge', {sap : .25, soft : .7}, '#55c4a6'], ['Flocken', {pulp : .77}, '#e3cf94'], ['Plankton', {flesh : .445, shell : .52}, '#9cc8f0'], ['Fleisch', {flesh : 1}, '#ef8f8f']];
 const KIND = {Blatt : 'Pflanzenfresser', Alge : 'Algenfresser', Flocken : 'Allesfresser', Plankton : 'Planktonfresser', Fleisch : 'Räuber'};
 function stuffYield(t, [opens, uptake, spoils, eff]) {
   const k = 1 / uptake, r = opens > 0 ? Math.min(1, Math.pow(t / opens, 4) / t) : Infinity, open = opens > 0 ? r / (r + 1 / t) : 1;
@@ -252,15 +276,15 @@ function buildFish(fixed, svg) {
   el('clipPath', {id : 'fishstomach'}, defs).appendChild(el('path', {d : stomachPath(STOMACH)}));
   const grad = el('linearGradient', {id : 'fibregrad'}, defs);
   el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, grad); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, grad);
-  el('path', {d : BODY, transform : `translate(0 ${FISH_DOWN})`, fill : '#16363e', stroke : '#3b6a6c'}, fixed);
+  el('path', {d : BODY, transform : `translate(0 ${FISH_DOWN})`, fill : COLOUR.body, stroke : COLOUR.axis}, fixed);
   const g = el('g', {transform : `translate(0 ${FISH_DOWN})`}, fixed), st = STOMACH;
   el('path', {d : `M${st.x - 22} ${st.y - 30} Q${st.x - 18} ${st.y - 18} ${st.x - 12} ${st.y - 22}`, stroke : TUBE, 'stroke-width' : 5, fill : 'none', 'stroke-linecap' : 'round'}, g);
   // The wall (muscle) under the tube; both belong to the film.
   film.wall = el('g', {}, g); film.tube = el('g', {}, g);
-  film.bits = Array.from({length : 7}, (_, k) => ({u : k / 7, e : el('circle', {r : 2.6, fill : '#e3cf94'}, g)}));
+  film.bits = Array.from({length : 7}, (_, k) => ({u : k / 7, e : el('circle', {r : 2.6, fill : COLOUR.morsel}, g)}));
   // The stomach with its content.
   const top = st.y + st.ry - 2 * st.ry * S.stomach;
-  el('path', {d : stomachPath(st), fill : '#5a4232'}, g);
+  el('path', {d : stomachPath(st), fill : COLOUR.stomachBack}, g);
   el('rect', {x : st.x - st.rx, y : top, width : 2 * st.rx, height : st.y + st.ry - top, fill : STOMACH_FILL, opacity : .85, 'clip-path' : 'url(#fishstomach)'}, g);
   el('path', {d : stomachPath(st), fill : 'none', stroke : STOMACH_EDGE, 'stroke-width' : 1.6}, g);
   film.keys = el('g', {}, g);
@@ -293,7 +317,7 @@ function drawFish() {
   full.keys.forEach((k, i) => {
     const y = levelY(k.gate), chosen = i === full.chosen;
     el('path', {d : `M${KEY_X + 7} ${y} H${st.x + st.rx * .4}`, stroke : keyColour(i), 'stroke-dasharray' : '3 3', 'stroke-width' : chosen ? 1.8 : 1.2}, film.keys);
-    drag(svg, el('rect', {x : KEY_X - 7, y : y - 4 + FISH_DOWN, width : 14, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? '#ffffff' : '#0d262c'};stroke-width:${chosen ? 2 : 1}`}, live),
+    drag(svg, el('rect', {x : KEY_X - 7, y : y - 4 + FISH_DOWN, width : 14, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
       p => { k.gate = clamp((st.y + st.ry - (p.y - FISH_DOWN)) / (2 * st.ry), .05, .95); full.chosen = i; draw(SHOW_SATIETY_KEYS); }, 'fishkey' + i);
   });
   txt(live, KEY_X - 10, levelY(Math.max(...full.keys.map(k => k.gate))) + 14, 'satt', {'text-anchor' : 'end'});
@@ -305,7 +329,7 @@ function drawFish() {
   // The muscle's nodes.
   const {x0, x1, base, low, tall} = NODES, w = (x1 - x0) / S.nodes.length, hOf = n => low + tall * n.strength;
   S.nodes.forEach((n, i) => {
-    const r = el('rect', {x : x0 + i * w + 1, y : base - hOf(n), width : w - 2, height : hOf(n), rx : 3, class : 'chip', style : `fill:${fibreColour(n.fast)};stroke:${i === S.chosen ? '#f1dda6' : 'none'};stroke-width:2`}, live);
+    const r = el('rect', {x : x0 + i * w + 1, y : base - hOf(n), width : w - 2, height : hOf(n), rx : 3, class : 'chip', style : `fill:${fibreColour(n.fast)};stroke:${i === S.chosen ? COLOUR.handle : 'none'};stroke-width:2`}, live);
     r.addEventListener('pointerdown', () => { S.chosen = i; draw(['fish']); });
   });
   const cn = S.nodes[S.chosen], cx = x0 + S.chosen * w + w / 2;
@@ -343,7 +367,7 @@ const xOfStay = t => Y.L + (Y.R - Y.L) * Math.log(clamp(t, SHORT, LONG) / SHORT)
 const stayOfX = x => SHORT * Math.pow(LONG / SHORT, clamp((x - Y.L) / (Y.R - Y.L), 0, 1));
 function buildYield(fixed) {
   const {L, R, top, base} = Y, yOf = v => base - (base - top) * v;
-  el('path', {d : `M${L} ${top - 6} V${base} H${R}`, stroke : '#3b6a6c', fill : 'none'}, fixed);
+  el('path', {d : `M${L} ${top - 6} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
   txt(fixed, L + 4, top - 8, 'Ausbeute');
   txt(fixed, L, base + 14, 'kurz'); txt(fixed, (L + R) / 2, base + 14, 'Zeit im Darm', {'text-anchor' : 'middle'}); txt(fixed, R, base + 14, 'lang', {'text-anchor' : 'end'});
   const curves = CURVES.map(c => {
@@ -371,7 +395,7 @@ function buildYield(fixed) {
 }
 function drawYield() {
   const {svg, under, live} = picture('yield', Y.base + 20, buildYield), {top, base} = Y, [lo, hi] = M().window;
-  el('rect', {x : xOfStay(lo), y : top, width : xOfStay(hi) - xOfStay(lo), height : base - top, fill : '#f1dda6', opacity : .1}, under);
+  el('rect', {x : xOfStay(lo), y : top, width : xOfStay(hi) - xOfStay(lo), height : base - top, fill : COLOUR.handle, opacity : .1}, under);
   // The gut's length: the band's right edge.
   drag(svg, el('rect', {x : xOfStay(hi) - 5, y : top - 12, width : 10, height : 14, rx : 3}, live), p => { S.length = clamp(stayOfX(p.x) / REST_PER_LENGTH, SHORTEST, LONGEST); draw(); }, 'length');
 }
@@ -381,7 +405,9 @@ function drawYield() {
 // never moves while dragging; length and drive move the line over the whole height); the bands
 // are the food that pays best at each time and never change. The line is the mean time, the pale
 // band the swing within each twitch. The muscle works from one maturity to another (two grips on
-// the line, sideways); the grip at the grown end sets how hard it drives.
+// the line, sideways); the round grip between them sets how hard it drives. The working life is
+// never shorter than WORKING_LIFE_MIN, so that the three grips do not lie on each other.
+const WORKING_LIFE_MIN = .12;
 const LIFE_BOX = {top : 6, base : 112}, LIFE_SPAN = Math.log(LONG / SHORT);
 const lifeX = s => Y.L + (Y.R - Y.L) * s;
 const lifeY = t => LIFE_BOX.base - (LIFE_BOX.base - LIFE_BOX.top) * Math.log(clamp(t, SHORT, LONG) / SHORT) / LIFE_SPAN;
@@ -398,14 +424,14 @@ const BEST_BANDS = (() => {
 function buildLife(fixed) {
   const L = Y.L, R = Y.R, {top, base} = LIFE_BOX;
   for (const b of BEST_BANDS) el('rect', {x : L, y : b.top, width : R - L, height : b.bottom - b.top, fill : b.food.colour, opacity : .18}, fixed);
-  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : '#3b6a6c', fill : 'none'}, fixed);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
   txt(fixed, L - 3, top + 8, 'lang', {'text-anchor' : 'end', style : 'font-size:9px'}); txt(fixed, L - 3, base, 'kurz', {'text-anchor' : 'end', style : 'font-size:9px'});
   stageIcon(fixed, 'hatch', L + 8, base + 14, .45); stageIcon(fixed, 'adult', R - 14, base + 14, .7);
 }
 function drawLife() {
   const {svg, live} = picture('life', LIFE_BOX.base + 26, buildLife), m = M(), L = Y.L, R = Y.R;
   const line = LIFE.map(s => [lifeX(s), lifeY(m.meanAt(s))]), swing = LIFE.map(s => [lifeX(s), lifeY(m.swingAt(s))]);
-  el('path', {d : `${path(swing)} L${R} ${lifeY(m.rest).toFixed(1)} L${L} ${lifeY(m.rest).toFixed(1)} Z`, fill : '#f4efd8', opacity : .12}, live);
+  el('path', {d : `${path(swing)} L${R} ${lifeY(m.rest).toFixed(1)} L${L} ${lifeY(m.rest).toFixed(1)} Z`, fill : COLOUR.line, opacity : .12}, live);
   // A band's name where neither the line nor the swing crosses it.
   for (const b of BEST_BANDS) {
     if (b.bottom - b.top < 12) continue;
@@ -414,20 +440,20 @@ function drawLife() {
     if (clear(L + 4, L + 6 + w)) txt(live, L + 6, yb, b.food.name, {style : 'fill:' + b.food.colour});
     else if (clear(R - 6 - w, R - 4)) txt(live, R - 6, yb, b.food.name, {'text-anchor' : 'end', style : 'fill:' + b.food.colour});
   }
-  el('path', {d : path(line), fill : 'none', stroke : '#f4efd8', 'stroke-width' : 2.6}, live);
+  el('path', {d : path(line), fill : 'none', stroke : COLOUR.line, 'stroke-width' : 2.6}, live);
   for (const key of ['from', 'until']) {
     const sv = S[key], inside = key === 'from' ? Math.min(1, sv + .001) : sv;
     drag(svg, el('rect', {x : lifeX(sv) - 5, y : lifeY(m.meanAt(inside)) - 7, width : 10, height : 14, rx : 3}, live), p => {
       const v = clamp((p.x - L) / (R - L), 0, 1);
-      if (key === 'from') S.from = Math.min(v, S.until - .05); else S.until = Math.max(v, S.from + .05);
+      if (key === 'from') S.from = Math.min(v, S.until - WORKING_LIFE_MIN); else S.until = Math.max(v, S.from + WORKING_LIFE_MIN);
       draw(SHOW_WORKING_LIFE); }, 'life' + key);
   }
-  // How hard the muscle drives, at the grown end: all nodes together, in proportion. The pace
-  // wanted there is the drive times what the body lets through at that age.
-  const grown = Math.min(S.until, 1);
-  drag(svg, el('circle', {cx : lifeX(grown), cy : lifeY(m.meanAt(grown)), r : 7}, live), p => {
+  // How hard the muscle drives, in the middle of its working life: all nodes together, in
+  // proportion. The pace wanted there is the drive times what the body lets through at that age.
+  const middle = (S.from + S.until) / 2;
+  drag(svg, el('circle', {cx : lifeX(middle), cy : lifeY(m.meanAt(middle)), r : 7}, live), p => {
     const pace = clamp(M().rest / stayOfLifeY(p.y), 1.001, FASTEST - .01);
-    const wanted = clamp(1 + (pace - 1) / bodyDrive(grown), 1.001, FASTEST - .01);
+    const wanted = clamp(1 + (pace - 1) / bodyDrive(middle), 1.001, FASTEST - .01);
     const k = clamp(sumForDrive(wanted) / Math.max(.001, muscleSum()), .05, 20);
     S.nodes.forEach(n => { n.strength = clamp(n.strength * k, .02, 1); });
     draw(SHOW_MUSCLE); }, 'lifedrive');
@@ -438,7 +464,7 @@ function drawLife() {
 // everything from hatching to grown, with the swing; a red frame where a full gut of it hurts.
 // The numbers are the same range.
 const BARS = {x0 : 70, x1 : 236, row : 21, top : 6};
-const SORE = {fill : 'none', stroke : '#ef8f8f', 'stroke-width' : 1.6, 'stroke-dasharray' : '3 2'};
+const SORE = {fill : 'none', stroke : COLOUR.sore, 'stroke-width' : 1.6, 'stroke-dasharray' : '3 2'};
 const barsLegendY = BARS.top + FOOD.length * BARS.row + 8;
 function buildBars(fixed) {
   el('rect', {x : BARS.x0, y : barsLegendY - 8, width : 16, height : 11, rx : 3, ...SORE}, fixed);
@@ -467,9 +493,9 @@ function drawBars() {
 const N = 300, CELLS = 7;
 const SENSE = {
   full : {word : 'Füllung', colour : STOMACH_EDGE, fade : (st, i) => Math.exp(-(st - i.stop) / (M().rest / 2)), row : null, shows : SHOW_SATIETY_KEYS},
-  ache : {word : 'Bauchweh', colour : '#ef8f8f', fade : (st, i) => Math.exp(-(st - i.stop) / (M().rest / 3)), shows : ['ache'],
+  ache : {word : 'Bauchweh', colour : COLOUR.sore, fade : (st, i) => Math.exp(-(st - i.stop) / (M().rest / 3)), shows : ['ache'],
           row : {word : 'je Futter, voller Darm', of : r => r.ache}},
-  feed : {word : 'Nährstoffe', colour : '#e3cf94', fade : (st, i) => Math.pow(.8, st - i.stop), shows : ['feed'],
+  feed : {word : 'Nährstoffe', colour : COLOUR.morsel, fade : (st, i) => Math.pow(.8, st - i.stop), shows : ['feed'],
           row : {word : 'je Futter, volle Mahlzeit', of : r => [r.min, r.max]}}
 };
 // Where the parts of a sense's picture lie, from the top: input, the row of foods if it has one,
@@ -500,12 +526,12 @@ function drawSense(id) {
   if (id === 'full') {
     const st = {x : LX, y : (I0 + I1) / 2, rx : 19, ry : (I1 - I0) / 2}, clip = 'stomach-' + id;
     el('clipPath', {id : clip}, el('defs', {}, live)).appendChild(el('path', {d : stomachPath(st)}));
-    el('path', {d : stomachPath(st), fill : '#5a4232'}, live);
+    el('path', {d : stomachPath(st), fill : COLOUR.stomachBack}, live);
     el('rect', {x : st.x - st.rx, y : IY(inp.height), width : 2 * st.rx, height : I1 - IY(inp.height), fill : STOMACH_FILL, opacity : .7, 'clip-path' : `url(#${clip})`}, live);
     el('path', {d : stomachPath(st), fill : 'none', stroke : STOMACH_EDGE, 'stroke-width' : 1.4}, live);
-  } else el('rect', {x : LX - 4, y : I0, width : 8, height : I1 - I0, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, live);
+  } else el('rect', {x : LX - 4, y : I0, width : 8, height : I1 - I0, rx : 4, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
   // The input.
-  el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : '#0f2c34'}, live);
+  el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
   if (id === 'ache') {
     const u = acheSwing();
     el('path', {d : `${path(stim.map((v, st) => [X(st), IY(Math.min(1, v * (1 + u)))]))} L${back(stim.map((v, st) => [X(st), IY(v * (1 - u))]))} Z`, fill : o.colour, opacity : .18}, live);
@@ -518,7 +544,7 @@ function drawSense(id) {
   keys.forEach((k, i) => {
     const y = IY(k.gate), chosen = i === cell.chosen;
     el('path', {d : `M${LX + 10} ${y} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
-    drag(svg, el('rect', {x : LX - 8, y : y - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? '#ffffff' : '#0d262c'};stroke-width:${chosen ? 2 : 1}`}, live),
+    drag(svg, el('rect', {x : LX - 8, y : y - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
       p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
   });
   {
@@ -534,7 +560,7 @@ function drawSense(id) {
     txt(live, L, B0 - 4, o.row.word);
     CURVES.forEach((c, j) => {
       const [lo, hi] = o.row.of(ranges[j]), x = L + bw * j + 3, w = bw - 6;
-      el('rect', {x, y : B0, width : w, height : B1 - B0, rx : 2, fill : '#0f2c34', stroke : '#2d5059'}, live);
+      el('rect', {x, y : B0, width : w, height : B1 - B0, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
       el('rect', {x, y : BY(lo), width : w, height : B1 - BY(lo), rx : 2, fill : c.colour, opacity : .85}, live);
       el('rect', {x, y : BY(hi), width : w, height : Math.max(0, BY(lo) - BY(hi)), fill : c.colour, opacity : .4}, live);
       txt(live, x + w / 2, B1 + 11, c.name, {'text-anchor' : 'middle', style : `fill:${c.colour};font-size:10px`});
@@ -552,7 +578,7 @@ function drawSense(id) {
     band.addEventListener('pointerdown', () => { cell.chosen = i; draw(o.shows); });
     under = over;
   });
-  el('path', {d : `M${L} ${A0 - 2} V${A1} H${R}`, stroke : '#3b6a6c', fill : 'none'}, live);
+  el('path', {d : `M${L} ${A0 - 2} V${A1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   if (cell.getsUsed) {
     // Half used to it: the cells' adaptation has reached half the stimulus (m += (s − m) / steps).
     const k = keys[cell.chosen], st = Math.min(N, inp.rise + k.used * Math.LN2), x = X(st);
@@ -560,8 +586,9 @@ function drawSense(id) {
     txt(live, x + (x > (L + R) / 2 ? -6 : 6), A0 + 10, 'halb gewöhnt', {'text-anchor' : x > (L + R) / 2 ? 'end' : 'start', style : 'font-size:10px'});
     drag(svg, el('rect', {x : x - 5, y : A1 - 7, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = clamp((stOf(p.x) - inp.rise) / Math.LN2, 4, 1024); draw([id]); }, id + 'used');
   }
-  for (const st of [0, 100, 200]) txt(live, X(st), A1 + 14, st, {'text-anchor' : st ? 'middle' : 'start'});
-  txt(live, R, A1 + 14, N + ' Schritte', {'text-anchor' : 'end'});
+  txt(live, L, A1 + 14, 'Schritte');
+  for (const st of [100, 200]) txt(live, X(st), A1 + 14, st, {'text-anchor' : 'middle'});
+  txt(live, R, A1 + 14, N, {'text-anchor' : 'end'});
 }
 
 // ===== Everything from the model =====

@@ -96,3 +96,27 @@ Ein Modell oben, Einstellungen in den Einheiten des Spielers (`length`, `nodes`,
 
 ### Was Astra daran prüfen sollte
 Die Seite lädt ohne Fehler; jeder Griff bewegt nur seine Bilder und folgt dem Zeiger; die Körner im Darm laufen beim Ziehen weiter; die Zahlen der Balken sind dieselben wie vorher bei gleichen Einstellungen.
+
+## Teil 3: Nachträge nach Claudes Auftrag von 22:18 (22:30)
+
+Astras drei Funde von 22:17 und der Block „Vorschlag an die Engine“, alle in `entwuerfe/inspektoren.html`. Wieder nur gelesen, gerechnet und vom Parser auf Syntax gelesen.
+
+1. **Zwei Griffe übereinander im Lebensbild.** Der runde Griff für die Muskelstärke lag auf dem Griff „bis“. Er sitzt jetzt in der Mitte des Arbeitslebens auf der Linie. Das Arbeitsleben ist mindestens 12 % des Lebens lang (`WORKING_LIFE_MIN`), damit die drei Griffe nebeneinander Platz haben. Vorher waren es 5 %.
+2. **„200“ und „300 Schritte“ liefen zusammen.** Das Wort steht jetzt links an der Achse, dann 100, 200, 300, wie im guten Beispiel („Schritte 10 100 1000“).
+3. **Die Ertragswerte treffen Davids Zahlen** (FEEDBACK-1311, Zeile 12), mit der Formel der Seite nachgerechnet:
+
+   | Futter | bei 50 Schritten | bestes | bei 800 |
+   |---|---|---|---|
+   | Blatt | 0 % | 92 % | 92 % |
+   | Alge | **18 %** | **78 %**, gehalten ab etwa 630 | 78 % |
+   | Flocken | 46 % | 68 % | 38 % |
+   | Plankton | **34 %** | **72 %** bei 164 | 11 % |
+   | Fleisch | 71 % | **82 %** bei 115 | 5 % |
+
+   - Fleisch: Verderben bei 250 statt 225 Schritten. Das ist der heutige Wert der Engine.
+   - Plankton: 44,5 % Fleisch und 52 % Schale statt 45 % und 55 %.
+   - **Alge braucht einen sechsten Stoff.** Solange ihr schneller Anteil derselbe Brei ist wie in den Flocken, kann sie die 78 % nicht bis zum langen Ende halten: Der Brei muss verderben, damit die Flocken abfallen, und nimmt die Alge mit. Jetzt hat die Alge einen eigenen schnellen Anteil, der nicht verdirbt (`sap`, 25 %), und ihre weiche Faser (70 %) ist nach dem Aufbrechen schnell aufgenommen. Der Verlauf dazwischen ist wie vorher (30 % bei 150 Schritten, 64 % bei 300).
+4. **Block „PROPOSAL TO THE ENGINE“** über `STUFFS`: jeder Stoff mit dem Wert der Seite und dem heutigen der Engine, die Fundstellen, und was die Engine dafür bräuchte (einen Anteil „bestenfalls aufgenommen“ je Stoff und zwei weitere Stoffe). Das Bauchweh ist dort als eigene Formel mit anderer Form benannt.
+5. **Farben haben Namen nach ihrer Rolle** (`COLOUR`: Achse, Spur, Linie, Griff, gewählt, Bauchweh …). Übrig sind als Ziffern nur die Futterfarben und die drei Schlüsselfarben, je an einer Stelle.
+
+**Für Astras Prüfung:** Die Alge heißt im Modell jetzt `{sap, soft}`, nicht mehr `{pulp, soft}`.
