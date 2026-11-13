@@ -66,3 +66,15 @@ Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2,
 - Namen statt Buchstaben (Botenstoffe), unbenutzte Dinge erkennbar (gestrichelt) und anlegbar?
 - Kein Text, den eine Form sagen könnte; keine hässlichen Wörter („300 Schritte Vollgas“).
 - Ist ganz ausgegraut, was gerade nichts steuert?
+
+## Gemeinsame Bausteine (aus den drei Muster-Inspektoren, Stand 13.11. 03:16)
+- **Zwischenüberschrift mit Querstrich** über jedem Abschnitt (Auslöser, Lebensphasen, Verdauung, Ertrag je Futter, Muskelknoten, Rekrutierung, Ausdauer, Nische, Schmerzzellen …); Stoffabschnitte mit Farbpunkt und Namen („Tod durch Laichzeit“, „Lebenszyklus durch …“).
+- **Das Ding als Diagramm:** Lebensphasen (Ei, Jungfisch, erwachsen) als Feld, Fisch mit Darm oder Muskelknoten als Bild; Kurven dünn darüber.
+- **Strichlinie als Griff** für einen Zeitpunkt, eine Mitte oder eine Vorschau (Schaltpunkt, Verweildauer-Mitte, Befehl, Schlängeln); sie ragt über das Diagramm hinaus.
+- **Kugel** für einen Wert an einem Ort (Anfang/Ende der Aktivität, Füllstufe), **Kugel mit Kreuz** für Tod, **Dreieck auf der Achse** für eine Schwelle, **Balken mit zwei Enden** für eine Spanne.
+- **Sinneszellen** immer als „Meldung an das Gehirn“ über dem Reiz (Dehnung, Schmerz, Nährstoff), Griff „Empfindlichkeit“, wo nötig „Gewöhnung“.
+- **Schraffur** für Zeiten, in denen etwas nicht da ist (vor Entstehen gelbgrau, nach Tod rotgrau); **rot gestrichelter Rahmen** für Schaden (Bauchschmerzen); **abgedeckt mit Satz**, wenn ein Bild gerade nichts steuert.
+- **Knöpfe mit Text** für Hinzufügen/Entfernen („+ Knoten“), Segmentknöpfe nebeneinander für gleichrangige Wahl, Häkchen für „selbst steuern“; Auswahl im Knopf mit eigenem Menü statt Systemauswahl.
+- **Unbenutztes gestrichelt** und anlegbar (Botenstoffe); Namen statt Buchstaben.
+- **Skalen wachsen mit** statt überzulaufen; unbeschriftete Gitterlinien zeigen, dass skaliert wird.
+- Animationen ruhig (Darm: 100 Schritte in 2 s).
