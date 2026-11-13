@@ -158,7 +158,7 @@ function checkTextLayout() {
     const view = root.getAttribute('viewBox');
     if (!view) continue;
     const [x, y, w, h] = view.split(/\s+/).map(Number);
-    const css = 'text {font:11px sans-serif} text.value {font-variant-numeric:tabular-nums}';
+    const css = 'text {font-family:sans-serif;font-size:11px} text.value {font-variant-numeric:tabular-nums}';
     const labels = root.findAll(el => el.tag === 'text' && el.textContent);
     const ink = labels.map((el, i) => {
       const attrs = Object.entries(el.attributes)
