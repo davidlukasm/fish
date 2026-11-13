@@ -1,6 +1,6 @@
 import {ATELIER_LIMITS, BARBEL, TUNING} from '../../schema.js';
 import {
-  LONGEST_TIME_CONSTANT,
+  LONGEST_ADAPTATION,
   preferredScent,
   scentAffinities,
   scentTuning,
@@ -202,7 +202,7 @@ function noseCurves(state, center, held) {
                         fadeRow(center, NOSE_HELD * half, half, {
                           report : words('report'),
                           from : words('stays'),
-                          to : words('later', {n : SENSE_PLOT.window * LONGEST_TIME_CONSTANT}),
+                          to : words('later', {n : SENSE_PLOT.window * LONGEST_ADAPTATION}),
                           half : n => words('fade', {n}),
                           handle : words('fadeHandle')
                         })

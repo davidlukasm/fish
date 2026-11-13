@@ -20,7 +20,7 @@ import {
   senseText
 } from './sense_curves.js';
 import {fixed} from './markup.js';
-import {LONGEST_TIME_CONSTANT} from '../../tuning.js';
+import {LONGEST_ADAPTATION} from '../../tuning.js';
 import {percent, t} from '../../strings.js';
 
 const word = (key, values) => t('studio.gutSense.' + key, values);
@@ -57,7 +57,7 @@ function achePicture(state, center, held) {
                         fadeRow(center, ACHE, half, {
                           report : word('report'),
                           from : word('aches'),
-                          to : word('later', {n : P.window * LONGEST_TIME_CONSTANT}),
+                          to : word('later', {n : P.window * LONGEST_ADAPTATION}),
                           half : n => word('fade', {n}),
                           handle : word('acheFadeHandle')
                         })
@@ -87,7 +87,7 @@ function foodPicture(state, center, held) {
                         fadeRow(center, REST, half, {
                           report : word('report'),
                           from : word('eats'),
-                          to : word('later', {n : P.window * LONGEST_TIME_CONSTANT}),
+                          to : word('later', {n : P.window * LONGEST_ADAPTATION}),
                           half : n => word('fade', {n}),
                           handle : word('fadeHandle')
                         })

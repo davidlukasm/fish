@@ -3302,6 +3302,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     maxBuffer : 32 * 1024 * 1024
   }));
   const {built, target : seen, outside, blue} = response;
+  const {boundedAnswer} = await import('../ui/studio/view/sense_curves.js');
   for (const [index, audit] of organAudits.entries()) {
     if (audit.type === 'balance')
       for (const center of model.allCenters(audit.document)) {
@@ -3309,9 +3310,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
         assert.equal(center.threshold, 0);
         assert.equal(sensed.intensity, false);
         assert.equal(sensed.adapt, null);
-        assert.ok(sensed.response.every((value, step, samples) =>
-                                            Math.abs(value - step / (samples.length - 1)) < 1e-6),
-                  'The balance editor preserves tilt on a linear stimulus axis');
+        assert.ok(
+            sensed.response.every((value, step, samples) =>
+                                      Math.abs(value - boundedAnswer(step / (samples.length - 1),
+                                                                     sensed.half)) < 1e-6),
+            'The balance cells answer tilt as the sense curves draw it');
       }
     if (audit.pressure)
       assert.deepEqual(model.pressureMismatches(audit.document, response.audited[index].pressure),

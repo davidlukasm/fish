@@ -9,8 +9,8 @@ import {
   activationQuality,
   planOfUnit,
   thresholdQualityShift,
-  timeConstantOf,
-  timeConstantSteps,
+  adaptationOf,
+  adaptationSteps,
   unitOfPlan
 } from '../../tuning.js';
 import {groupReport} from '../model/document.js';
@@ -159,7 +159,7 @@ export function adaptationMarks(centre, radius, start, center) {
            fixed(1 - (1 - S.fade) * k / S.segments) + '" d="M' + point(at(a)) + ' A' +
            fixed(radius) + ' ' + fixed(radius) + ' 0 0 1 ' + point(at(b)) + '"/>';
   }
-  const steps = Math.round(timeConstantSteps(share));
+  const steps = Math.round(adaptationSteps(share));
   return arc +
          handleMark('adaptation', at(start + sweep), t('studio.sense.adaptHandle', {n : steps}),
                     'data-arc="' + point(centre) + ',' + fixed(radius) + ',' + fixed(start) + '"',
@@ -190,8 +190,8 @@ export function senseMarkPatch(state, drag, p) {
   }
   if (drag.handle === 'fade') {
     const [from, width, window, settled] = h.fade.split(',').map(Number);
-    const steps = clamp((p.x - from) / width) * window / settled;
-    return {tau : timeConstantOf(Math.max(steps, timeConstantSteps(0)))};
+    const steps = window ** clamp((p.x - from) / width) / settled;
+    return {tau : adaptationOf(Math.max(steps, adaptationSteps(0)))};
   }
   if (drag.handle === 'adaptation') {
     const [cx, cy, , start] = h.arc.split(',').map(Number);

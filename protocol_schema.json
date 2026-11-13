@@ -2029,7 +2029,9 @@
       "span": 12.0,
       "pace_min_steps": 8.0,
       "learning_min_steps": 4.0,
-      "learning_span": 128.0
+      "learning_span": 128.0,
+      "adaptation_min_steps": 4.0,
+      "adaptation_span": 256.0
     },
     "vision": {
       "pixels": 128,

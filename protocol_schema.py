@@ -1195,6 +1195,8 @@ class TimeConstant:
     PACE_MIN_STEPS = 8.0
     LEARNING_MIN_STEPS = 4.0
     LEARNING_SPAN = 128.0
+    ADAPTATION_MIN_STEPS = 4.0
+    ADAPTATION_SPAN = 256.0
 
 class Vision:
     PIXELS = 128

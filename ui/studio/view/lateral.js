@@ -5,7 +5,7 @@ import {fadeRow, intensityRow, SENSE_PLOT, sensePicture} from './sense_curves.js
 import {stimulusOfShare} from './sensitivity.js';
 import {escapeText, fixed} from './markup.js';
 import {t} from '../../strings.js';
-import {contactHalfAngle, contactFieldOf, LONGEST_TIME_CONSTANT} from '../../tuning.js';
+import {contactHalfAngle, contactFieldOf, LONGEST_ADAPTATION} from '../../tuning.js';
 import {degrees, radians, wrapAngle} from '../../units.js';
 
 export function lateralFeel(state, organ) {
@@ -120,7 +120,7 @@ function lateralCurves(state, center, held, word) {
     ...(adapts ? [ fadeRow(center, LATERAL_HELD * half, half, {
       report : word('report'),
       from : word('steady'),
-      to : word('later', {n : SENSE_PLOT.window * LONGEST_TIME_CONSTANT}),
+      to : word('later', {n : SENSE_PLOT.window * LONGEST_ADAPTATION}),
       half : n => word('fade', {n}),
       handle : word('fadeHandle')
     }) ]

@@ -1,5 +1,5 @@
 import {degrees, radians, wrapAngle} from '../../units.js';
-import {contactFieldOf, contactHalfAngle, LONGEST_TIME_CONSTANT} from '../../tuning.js';
+import {contactFieldOf, contactHalfAngle, LONGEST_ADAPTATION} from '../../tuning.js';
 import {groupReport} from '../model/document.js';
 import {BODY_MIDDLE, findSite, sideSign} from '../model/layout.js';
 import {fishPath, OUTLINE_STEP, skinAt, skinDirection, skinPoints} from './frame.js';
@@ -163,7 +163,7 @@ function skinCurves(state, organ, center, held) {
         fadeRow(center, SKIN_HELD * half, half, {
           report,
           from : words('stays'),
-          to : t('studio.skinSense.later', {n : SENSE_PLOT.window * LONGEST_TIME_CONSTANT}),
+          to : t('studio.skinSense.later', {n : SENSE_PLOT.window * LONGEST_ADAPTATION}),
           half : n => words('fade', {n}),
           handle : words('fadeHandle')
         })

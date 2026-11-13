@@ -257,6 +257,7 @@ constexpr int SPINE_DIRECTIONS = 64;
 constexpr int LATERAL_DIRECTIONS = 48;
 constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
+constexpr int ADAPT_SAMPLES = 96;
 std::vector<int> anatomy_report(const field::Substrate &t,
                                 const std::shared_ptr<const fishsim::BrainInterface> &interface,
                                 const std::vector<Group> &groups, bool developed) {
@@ -340,15 +341,16 @@ std::vector<int> anatomy_report(const field::Substrate &t,
                 << fishsim::receptor_response(*cell, stimulus(k)) / cell->senses[sense];
     std::cout << "],\"half\":" << half << ",\"adapt\":";
     if (fishsim::adapting_sense(sense) && cell->adaptation_rate > 0) {
-      const double held = ADAPT_HELD * half, steps = 1 / cell->adaptation_rate;
-      const int count = int(std::ceil(ADAPT_SPAN * steps));
-      double mean = 0;
-      std::cout << "{\"steps\":" << steps << ",\"held\":" << held << ",\"response\":[";
-      for (int k = 0; k <= count; ++k) {
+      const double held = ADAPT_HELD * half, steps = 1 / cell->adaptation_rate,
+                   every = ADAPT_SPAN * steps / ADAPT_SAMPLES;
+      // The mean after `k` samples of a stimulus held from nothing.
+      std::cout << "{\"steps\":" << steps << ",\"held\":" << held << ",\"every\":" << every
+                << ",\"response\":[";
+      for (int k = 0; k <= ADAPT_SAMPLES; ++k)
         std::cout << (k ? "," : "")
-                  << fishsim::receptor_response(*cell, held, mean) / cell->senses[sense];
-        mean += (held - mean) * cell->adaptation_rate;
-      }
+                  << fishsim::receptor_response(
+                         *cell, held, held * (1 - std::pow(1 - cell->adaptation_rate, k * every))) /
+                         cell->senses[sense];
       std::cout << "]}";
     } else
       std::cout << "null";

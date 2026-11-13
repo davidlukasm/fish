@@ -28,6 +28,10 @@ inline double time_constant_steps(const CellParameters &p) {
   return TIME_CONSTANT_MIN *
          std::pow(TIME_CONSTANT_SPAN, std::clamp(double(p.time_constant), 0., 1.));
 }
+// Steps a sense cell takes to get used to a lasting stimulus: from at once to hardly ever.
+inline double adaptation_steps(const CellParameters &p) {
+  return ADAPTATION_MIN * std::pow(ADAPTATION_SPAN, std::clamp(double(p.time_constant), 0., 1.));
+}
 inline double learning_time_steps(const CellParameters &p) {
   return LEARNING_TIME_MIN *
          std::pow(LEARNING_TIME_SPAN, std::clamp(double(p.learning_time), 0., 1.));

@@ -38,5 +38,6 @@ constexpr std::size_t DEVELOPMENT_SITES = 720;
 constexpr double TIME_CONSTANT_MIN = 4.0, TIME_CONSTANT_SPAN = 12.0;
 constexpr double LEARNING_TIME_MIN = 4.0, LEARNING_TIME_SPAN = 128.0;
 constexpr double TIME_CONSTANT_PACE_MIN = 8.0;
+constexpr double ADAPTATION_MIN = 4.0, ADAPTATION_SPAN = 256.0;
 constexpr int MAX_WORKERS = 64;
 }

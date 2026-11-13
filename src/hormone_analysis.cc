@@ -65,8 +65,7 @@ void HormoneAnalysis::prepare_variant() {
     if (hormone_enabled_ && r.dominant_sense() == field::Blood) {
       const double stimulus =
           field::blood_stimulus(r.hormones, levels, snapshot_->maturity(), reserve_, fatigue_);
-      variant_inputs_[i] = float(r.senses[field::Blood] *
-                                 sensory_response(stimulus, r.response_threshold + adaptation_[i]));
+      variant_inputs_[i] = receptor_response(r, stimulus, adaptation_[i]);
     }
   }
   step_ = 0;

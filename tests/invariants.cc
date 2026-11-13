@@ -181,6 +181,25 @@ void nostrils_differ_only_in_oncoming_water() {
             std::abs(washed.x) < CLOSE,
         "the nostril facing the oncoming water smells upstream, the other the nose itself");
 }
+// A sense cell reports nothing below its threshold, half at the stimulus its gene names, and
+// nothing of a stimulus it has got used to.
+void sense_cells_have_a_threshold_and_get_used() {
+  constexpr double HALF = .02, CLOSE = 1e-6;
+  check(excess_response(HALF / 2, HALF) == 0 && excess_response(HALF * .51, HALF) > 0,
+        "a stimulus below half the half-answer stimulus is not reported");
+  check(std::abs(excess_response(HALF, HALF) - .5) < CLOSE, "the cell answers half where it says");
+  check(excess_response(10 * HALF, HALF, 10 * HALF) == 0 &&
+            excess_response(10 * HALF, HALF, 5 * HALF) > 0,
+        "a stimulus the cell is used to is not reported, a fresh one is");
+  for (double half : {.1, .5, .9}) {
+    check(bounded_response(half / (2 - half), half) == 0 && bounded_response(1, half) == 1 &&
+              std::abs(bounded_response(half, half) - .5) < CLOSE,
+          "a bounded sense reports nothing below its threshold, half where it says, all at most");
+  }
+  field::CellParameters slow;
+  slow.time_constant = 1;
+  check(field::adaptation_steps(slow) >= 1000, "a sense cell can take very long to get used");
+}
 // A gut full of one food, emptied by a fish that spends what it gains: what the fish gains, what
 // it passes and whether it hurts.
 struct Digested {
@@ -1105,6 +1124,7 @@ int main() {
     laboratory_comparison_restarts_during_copy();
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
+    sense_cells_have_a_threshold_and_get_used();
     gut_takes_up_what_time_allows();
     twitches_last_as_long_as_their_fibres();
     muscle_cells_keep_their_own_fibres();

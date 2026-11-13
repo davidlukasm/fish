@@ -332,7 +332,7 @@ class AnatomyBuilder {
       r.time_steps = field::time_constant_steps(p);
       // Gravity does not fade: a fish lying still must still know which way is down.
       if (adapting_sense(r.channel) && !(r.inner && r.channel == field::Flow))
-        r.adaptation_rate = 1 / field::time_constant_steps(p);
+        r.adaptation_rate = 1 / field::adaptation_steps(p);
       if (r.visual())
         r.width = float(visual_width(p.field_width));
       r.hue = float(tuning_hue(p.quality1));
@@ -973,10 +973,22 @@ float sensory_response(double stimulus, double threshold) {
   return stimulus > 0 ? float(stimulus / (stimulus + std::max(tolerance::negligible, threshold)))
                       : 0.f;
 }
-float bounded_response(double x, double t) {
-  x = std::clamp(x, 0., 1.);
-  t = std::clamp(t, .001, .999);
-  return float(x * (1 - t) / (x * (1 - t) + (1 - x) * t));
+// What a sense cell reports of a stimulus without upper bound. `half` is the stimulus it answers
+// with half of what it can; below half of that it reports nothing. What it is used to (`mean`)
+// raises that threshold by as much, so a stimulus that lasts fades to nothing and only what
+// exceeds the accustomed level is reported, measured against that level.
+float excess_response(double stimulus, double half, double mean) {
+  const double threshold = std::max(tolerance::negligible, half / 2) + mean,
+               excess = stimulus - threshold;
+  return excess > 0 ? float(excess / (excess + threshold)) : 0.f;
+}
+// The same for a stimulus between nothing and all: `half` is where the cell answers half; below
+// its threshold, which lies lower, it reports nothing, and all at the full stimulus.
+float bounded_response(double x, double half) {
+  half = std::clamp(half, .001, .999);
+  const double threshold = half / (2 - half),
+               excess = (std::clamp(x, 0., 1.) - threshold) / (1 - threshold);
+  return excess > 0 ? float(excess / (excess + threshold * (1 - excess))) : 0.f;
 }
 void record_touch(Body &b, double nx, double ny, double impact) {
   if (nx == 0 && ny == 0)
@@ -1199,7 +1211,7 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
 float receptor_response(const BrainInterface::Receptor &r, double stimulus, double mean) {
   const int sense = r.dominant_sense();
   const bool intensity = r.intensity();
-  return r.senses[sense] * (intensity ? sensory_response(stimulus, r.response_threshold + mean)
+  return r.senses[sense] * (intensity ? excess_response(stimulus, r.response_threshold, mean)
                                       : bounded_response(stimulus, r.threshold));
 }
 float anatomical_sensor(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,

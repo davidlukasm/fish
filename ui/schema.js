@@ -960,7 +960,9 @@ export const TIME_CONSTANT = Object.freeze({
   "span" : 12.0,
   "pace_min_steps" : 8.0,
   "learning_min_steps" : 4.0,
-  "learning_span" : 128.0
+  "learning_span" : 128.0,
+  "adaptation_min_steps" : 4.0,
+  "adaptation_span" : 256.0
 });
 export const VISION = Object.freeze({"pixels" : 128, "half_view" : 0.65});
 export const CONTRAST_POLARITY = Object.freeze({"bright" : 0, "both" : 0.5, "dark" : 1});

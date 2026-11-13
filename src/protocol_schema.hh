@@ -1862,6 +1862,8 @@ inline constexpr double span = 12.0;
 inline constexpr double pace_min_steps = 8.0;
 inline constexpr double learning_min_steps = 4.0;
 inline constexpr double learning_span = 128.0;
+inline constexpr double adaptation_min_steps = 4.0;
+inline constexpr double adaptation_span = 256.0;
 }
 namespace vision {
 inline constexpr int pixels = 128;

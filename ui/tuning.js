@@ -8,6 +8,13 @@ export const planOfUnit = unit => 2 * clamp(unit) - 1;
 export const timeConstantSteps = tau => TIME_CONSTANT.min_steps * TIME_CONSTANT.span ** clamp(tau);
 export const timeConstantOf = steps =>
     clamp(Math.log(steps / TIME_CONSTANT.min_steps) / Math.log(TIME_CONSTANT.span));
+// Steps a sense cell takes to get used to a lasting stimulus (substrate.hh, adaptation_steps).
+export const adaptationSteps = tau =>
+    TIME_CONSTANT.adaptation_min_steps * TIME_CONSTANT.adaptation_span ** clamp(tau);
+export const adaptationOf = steps => clamp(Math.log(steps / TIME_CONSTANT.adaptation_min_steps) /
+                                           Math.log(TIME_CONSTANT.adaptation_span));
+export const LONGEST_ADAPTATION =
+    TIME_CONSTANT.adaptation_min_steps * TIME_CONSTANT.adaptation_span;
 export const LONGEST_TIME_CONSTANT = TIME_CONSTANT.min_steps * TIME_CONSTANT.span;
 export const learningTimeSteps = tau =>
     TIME_CONSTANT.learning_min_steps * TIME_CONSTANT.learning_span ** clamp(tau);

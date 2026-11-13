@@ -1,12 +1,12 @@
 // What sense cells report, as curves every sense picture can stack under its organ: the report
 // over the stimulus, with the handle where they answer half, and for cells that get used to a
 // lasting stimulus the report over time while it lasts. Each organ names its axes in its own words.
-// Bounded senses answer x(1 − h) / (x(1 − h) + (1 − x) h), half at their threshold h (body_plan.cc,
-// bounded_response); intensity senses answer s / (s + h) on a log scale of the stimulus
-// (sensory_response); an adapting cell adds the running mean of what it felt to h
-// (cppn_brain.cc, adapted_response), its rate one over its time constant.
+// Every cell has a threshold below which it reports nothing, and the stimulus `h` at which it
+// answers half (body_plan.cc, bounded_response and excess_response). An adapting cell raises its
+// threshold by the running mean of what it felt (cppn_brain.cc, adapted_response), so a lasting
+// stimulus fades to nothing; the mean's rate is one over the cell's adaptation time.
 import {clamp} from '../../units.js';
-import {LONGEST_TIME_CONSTANT, timeConstantSteps} from '../../tuning.js';
+import {adaptationSteps, LONGEST_ADAPTATION} from '../../tuning.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {cellCount, fadeHandle, sensitivityHandle} from './sense_marks.js';
 import {escapeText, fixed} from './markup.js';
@@ -28,10 +28,10 @@ export const SENSE_PLOT = Object.freeze({
   row : {top : 22, base : 64, words : 80},
   step : 90,
   bottom : 10,
-  // The time row runs over three times the longest cell time; cells count as used to a stimulus
-  // after three of their time constants, when less than a twentieth of the change is left.
-  window : 3,
-  settled : 3
+  // The time row runs, on a log scale, from one step to the longest adaptation time; the handle
+  // sits one adaptation time after the stimulus began.
+  window : 1,
+  settled : 1
 });
 const P = SENSE_PLOT;
 export const senseX = share => P.left + (P.right - P.left) * share;
@@ -70,10 +70,20 @@ const halfHandle = (row, sensitive, words) => {
                            sensitive, words.handle, 'sensitivity', words.half ?? '', 'right');
 };
 
+// What a cell reports (body_plan.cc): of a stimulus without upper bound, with `mean` what it is
+// used to, and of a stimulus between nothing and all. `half` is where it answers half.
+export function excessAnswer(stimulus, half, mean = 0) {
+  const threshold = half / 2 + mean, excess = stimulus - threshold;
+  return excess > 0 ? excess / (excess + threshold) : 0;
+}
+export function boundedAnswer(stimulus, half) {
+  const threshold = half / (2 - half), excess = (clamp(stimulus) - threshold) / (1 - threshold);
+  return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
+}
 // The report over a bounded stimulus, from none to full: `sensitive` is one less the threshold.
 export const boundedRow = (sensitive, words) => row => {
   const h = clamp(1 - sensitive, .001, .999);
-  return axes(row, words) + curve(row, x => x * (1 - h) / (x * (1 - h) + (1 - x) * h)) +
+  return axes(row, words) + curve(row, x => boundedAnswer(x, h)) +
          halfHandle(row, sensitive, words);
 };
 // The report over a stimulus spanning many orders, from `dimmest` to one; `marks(row, xOf)` adds
@@ -81,19 +91,18 @@ export const boundedRow = (sensitive, words) => row => {
 export const intensityRow = (sensitive, dimmest, words, marks = () => '') => row => {
   const half = stimulusOfShare(1 - sensitive, dimmest);
   return axes(row, words) + marks(row, s => senseX(stimulusShare(s, dimmest))) +
-         curve(row, share => {
-           const s = stimulusOfShare(share, dimmest);
-           return s / (s + half);
-         }) + halfHandle(row, sensitive, words);
+         curve(row, share => { return excessAnswer(stimulusOfShare(share, dimmest), half); }) +
+         halfHandle(row, sensitive, words);
 };
 // The report while a stimulus `held` lasts, for intensity cells whose half answer is `half`: it
 // falls as their mean catches up, the handle where they are used to it. Only intensity senses get
 // used to what they feel (brain_interface.hh).
 export const fadeRow = (center, held, half, words) => row => {
-  const tau = timeConstantSteps(center.tau), window = P.window * LONGEST_TIME_CONSTANT;
-  const at = step => held / (held + half + held * -Math.expm1(-step / tau));
-  const used = P.settled * tau, mark = {x : senseX(used / window), y : y(row, at(used))};
-  return axes(row, words) + curve(row, share => at(share * window)) +
+  const tau = adaptationSteps(center.tau), window = P.window * LONGEST_ADAPTATION;
+  const at = step => excessAnswer(held, half, held * -Math.expm1(-step / tau));
+  const used = P.settled * tau,
+        mark = {x : senseX(Math.log(used) / Math.log(window)), y : y(row, at(used))};
+  return axes(row, words) + curve(row, share => at(window ** share)) +
          fadeHandle(mark, senseX(0), P.right - P.left, window, P.settled, words.handle,
                     words.half(formatNumber(used, 0)));
 };
