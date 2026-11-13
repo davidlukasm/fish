@@ -1372,7 +1372,7 @@ class Digestion:
     SOFT_BEST = 0.78
     SAP_UPTAKE = 20
     SHARPNESS = 4
-    FASTEST = 4.0
+    FASTEST = 3.0
     ACHE_FLESH = 1.5
     ACHE_FIBRE = 0.55
     ACHE_FIBRE_STAY = 400
