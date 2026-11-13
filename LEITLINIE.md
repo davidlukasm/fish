@@ -59,7 +59,12 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 
 ## 5. Arbeitsweise
 
-- **Absicht verstehen, nicht wörtlich umsetzen.** Nicht ins Gegenteil kippen, und nichts wieder einbauen, was David schon verworfen hat. Vorgänger findet man mit `git log -S`.
+- **Absicht verstehen, nicht wörtlich umsetzen.** Nicht ins Gegenteil kippen.
+- **Nichts wieder einbauen, was David schon verworfen hat, außer die Umstände haben sich geändert** (David 13.11. 19:37).
+  - Vorher immer nachsehen, wer mit David über das Thema gesprochen hat: Koordination, Commit-Texte (`git log -S`), README und alte Chats. Claude und Fable lassen dafür Agenten die alten Chats durchsuchen.
+  - Die damalige Abwägung herausfinden: Was sprach dafür, was dagegen, was wurde entschieden?
+  - Eine Empfehlung, die eine Entscheidung umdreht, nennt diese Abwägung und sagt, welcher Umstand sich seitdem geändert hat.
+- **Entscheidungen immer auf Grund von Für und Wider.** Eine Empfehlung ohne Abwägung ist keine.
 - **Echte Größe:** Geprüft wird im Browser bei 320 px Panelbreite und 1:1. Das Panel ist hochkant, also wird untereinander gebaut und die volle Breite genutzt, nicht rechtsbündig.
 - **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`), nie aus einer JS-Nachahmung der Nervendynamik.
 - **Sarkasmus erkennen, Absicht statt Wortlaut** (David 13.11. 18:11). David schreibt oft sarkastisch und will meistens nicht wörtlich genommen werden. Beispiel: Sein „mir ist es egal“ zum Drüsenvorschlag hieß „ich sehe das Problem nicht, erklärt es mir“, nicht „verwerft es“.
