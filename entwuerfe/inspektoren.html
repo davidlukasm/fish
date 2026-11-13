@@ -48,6 +48,7 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
 .menu .soft{color:var(--soft)}
 .menu svg{margin:2px auto 4px;width:150px}
 .panel h4{margin:16px 0 4px 0;padding-top:8px;border-top:1px solid var(--edge);font:600 13px/1.3 system-ui;color:#eef4ec;display:flex;align-items:center;gap:7px}
+.panel h5.mixhead{margin:22px 0 2px;font:500 12px/1.3 system-ui;color:var(--axis);text-align:center}
 .panel h4.first{border-top:0;padding-top:0;margin-top:6px}
 .panel h4 .sdot{width:12px;height:12px}
 .chip rect{fill:var(--track);stroke:var(--edge)}
@@ -70,9 +71,8 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h2>Organ</h2><h3>Darm</h3>
     <h4 id="gut-kind">Allesfresser</h4>
     <svg id="gut" viewBox="0 0 300 116"></svg>
-    <h4>Verdauung</h4>
+    <h4>Ertrag</h4>
     <svg id="gutchart" viewBox="0 0 300 160"></svg>
-    <h4>Ertrag je Futter</h4>
     <svg id="gutbars" viewBox="0 0 300 130"></svg>
     <h4>Schmerzzellen</h4>
     <svg id="gutpain" viewBox="0 0 300 90"></svg>
@@ -81,12 +81,10 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
   </section>
   <section class="panel" aria-label="Schwanz">
     <h2>Organ</h2><h3>Schwanz</h3>
-    <h4>Muskelknoten</h4>
+    <h4 id="tail-kind">Schwanzschläger</h4>
     <svg id="tail" viewBox="0 0 300 150"></svg>
-    <h4>Rekrutierung</h4>
-    <svg id="tailcmd" viewBox="0 0 300 150"></svg>
-    <h4>Ausdauer</h4>
-    <svg id="tailtime" viewBox="0 0 300 150"></svg>
+    <h4>Kraft</h4>
+    <svg id="tailforce" viewBox="0 0 300 170"></svg>
     <h4>Nische</h4>
     <svg id="tailniche" viewBox="0 0 300 130"></svg>
   </section>
@@ -107,7 +105,7 @@ const pct = x => Math.round(x * 100) + ' %';
 // Dragging: the pointer is captured by the drawing itself, which stays while its contents are
 // redrawn on every move; the held grip is marked again after each redraw by its name.
 let held = null;
-function drag(svg, grip, move, name = 'grip' + svg.querySelectorAll('.grip').length) {
+function drag(svg, grip, move, name = 'grip' + svg.querySelectorAll('.grip').length, start = null, end = null) {
   grip.classList.add('grip');
   grip.setAttribute('data-name', name);
   if (held?.svg === svg && held.name === name) grip.classList.add('dragging');
@@ -115,10 +113,11 @@ function drag(svg, grip, move, name = 'grip' + svg.querySelectorAll('.grip').len
     e.preventDefault(); e.stopPropagation();
     svg.setPointerCapture(e.pointerId);
     held = {svg, name};
+    start?.();
     grip.classList.add('dragging');
     const at = ev => { const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
     const onMove = ev => move(at(ev));
-    const up = () => { held = null; svg.removeEventListener('pointermove', onMove); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); svg.querySelectorAll('.dragging').forEach(g => g.classList.remove('dragging')); };
+    const up = () => { held = null; end?.(); svg.removeEventListener('pointermove', onMove); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); svg.querySelectorAll('.dragging').forEach(g => g.classList.remove('dragging')); };
     svg.addEventListener('pointermove', onMove); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
   });
 }
@@ -254,15 +253,15 @@ function drawDiagrams() {
     let part = box.querySelector(`[data-by="${by}"]`);
     if (!part) {
       part = html('div', {'data-by' : by}, box); html('h4', {}, part);
-      // A mix is set where it is used, too: its wheel above its picture.
-      if (by === 'mix') { const wsvg = mixWheel(part); wsvg.style.width = '150px'; wsvg.style.margin = '0 auto'; }
       part.appendChild(el('svg', {id : 'life-' + by}));
+      // A mix is set where it is used, too: its wheel below its picture, apart from it.
+      if (by === 'mix') { html('h5', {class : 'mixhead'}, part, 'Mischverhältnis'); const wsvg = mixWheel(part); wsvg.style.width = '105px'; wsvg.style.margin = '0 auto'; }
     }
     const h = part.firstChild; h.replaceChildren();
     const d = stuffDot(h, by); if (by === 'mix') d.dataset.mix = 1;
     const mine = ACTIONS.filter(([k]) => source(life[k]) === by).map(([, name]) => name);
     h.append((mine.length === 3 ? 'Lebenszyklus' : mine.join(' und ')) + ' durch ' + sourceName(by, true));
-    diagram(part.lastChild, by);
+    diagram(part.querySelector('svg[id^="life-"]'), by);
   }
   for (const w of [...wheels]) { if (w.svg.isConnected) w.paint(); else wheels.delete(w); }
 }
@@ -282,7 +281,7 @@ function diagram(svg, by) {
   const stuff = by !== 'maturity', colour = stuff ? sourceColour(by) : null;
   const b = life.become, w = life.work, d = life.die, here = a => source(a) === by;
   const plain = stuff && !here(w);
-  const L = 14, R = 286, X = c => L + (R - L) * clamp(c, 0, 1), top = 22, base = plain ? 54 : 160;
+  const L = 14, R = 286, X = c => L + (R - L) * clamp(c, 0, 1), top = 30, base = plain ? 62 : 168;
   const Y = v => base - (base - top) * v, fit = p => clamp((p.x - L) / (R - L), 0, 1), lift = p => clamp((base - p.y) / (base - top), 0, 1);
   if (!stuff) {
     // The life: egg, hatching, young fish, adult, drawn into the field itself.
@@ -295,20 +294,20 @@ function diagram(svg, by) {
     stageIcon(svg, 'hatch', X(life.hatch), mid, .6);
     stageIcon(svg, 'young', X(young), mid, 1.25);
     stageIcon(svg, 'adult', X(grown), mid, 2.1);
-    for (const [c, word] of [[life.hatch / 2, 'Ei'], [young, 'Jungfisch'], [grown, 'erwachsen']]) txt(svg, X(c), base + 16, word, {'text-anchor' : 'middle'});
+    for (const [c, word] of [[life.hatch / 2, 'Ei'], [young, 'Jungfisch'], [grown, 'erwachsen']]) txt(svg, X(c), base + 26, word, {'text-anchor' : 'middle'});
   } else {
     const id = 'lv' + by, grad = el('linearGradient', {id}, el('defs', {}, svg));
     el('stop', {offset : 0, 'stop-color' : colour, 'stop-opacity' : .04}, grad);
     el('stop', {offset : 1, 'stop-color' : colour, 'stop-opacity' : .5}, grad);
     el('rect', {x : L, y : top, width : R - L, height : base - top, fill : `url(#${id})`}, svg);
-    const under = base + 16;
+    const under = base + 26;
     txt(svg, L, under, 'wenig'); txt(svg, R, under, 'viel ' + sourceName(by), {'text-anchor' : 'end'});
   }
   const from = here(b) ? b.at : 0, to = here(d) ? d.at : 1, level = c => here(w) ? levelAt(w, c) : w.on && w.by !== 'maturity' && !stuff ? .5 : 1;
   el('path', {d : `M${L} ${base} H${R}`, stroke : '#5d8384'}, svg);
   if (!plain) {
     el('path', {d : `M${L} ${top} H${R}`, stroke : '#5d8384', 'stroke-dasharray' : '2 4'}, svg);
-    txt(svg, L, top - 6, 'volle Aktivität der Zelle');
+    txt(svg, L, top - 16, 'volle Aktivität der Zelle');
   }
   // Before the cell comes into being and after it dies: hatched, dim yellow-grey and red-grey.
   const defs = el('defs', {}, svg);
@@ -335,9 +334,10 @@ function diagram(svg, by) {
     el('rect', {x : L, y : top, width : R - L, height : base - top, rx : 6, fill : '#0f2c34', stroke : '#2d5059', 'stroke-dasharray' : '3 4'}, svg);
     if (other) el('rect', {x : L, y : top, width : R - L, height : base - top, rx : 6, fill : sourceColour(other), opacity : .08}, svg);
     const mid = (top + base) / 2;
-    txt(svg, 150, mid - 2, other ? 'Lebensphasen durch' : 'Die Zelle lebt mit dem Fisch:', {'text-anchor' : 'middle', class : 'value'});
-    txt(svg, 150, mid + 16, other ? 'Botenstoffe gesteuert' : 'von Anfang an, immer aktiv', {'text-anchor' : 'middle', class : 'value'});
-    svg.setAttribute('viewBox', `0 0 300 ${base + 22}`);
+    const big = {'text-anchor' : 'middle', class : 'value', style : 'font-size:16px'};
+    txt(svg, 150, mid - 4, other ? 'Lebensphasen durch' : 'Die Zelle lebt mit dem Fisch:', big);
+    txt(svg, 150, mid + 18, other ? 'Botenstoffe gesteuert' : 'von Anfang an, immer aktiv', big);
+    svg.setAttribute('viewBox', `0 0 300 ${base + 32}`);
     return;
   }
   // The two ends: each one grip. Left: where the cell comes into being (along) and how active it
@@ -361,21 +361,26 @@ function diagram(svg, by) {
   // The words beside their lines, at one height: "entsteht" left of its line, "stirbt" right of
   // its line, unless the edge is too near; never on top of each other.
   const ly = plain ? (top + base) / 2 + 4 : base - 6, gap = 12;
+  // Each word tries its own side first, then the other; where neither leaves room inside the
+  // picture and clear of the other line and word, it is left out.
+  const lines = labels.map(l => l.x), placed = [];
+  const fits = (from, to) => from >= L && to <= R && lines.every(x => x < from - 4 || x > to + 4) && placed.every(q => to < q.from - 6 || from > q.to + 6);
   for (const l of labels) {
-    l.left = l.name === 'become' ? l.x - gap - l.width >= L : !(l.x + gap + l.width <= R);
-    l.from = l.left ? l.x - gap - l.width : l.x + gap; l.to = l.from + l.width;
+    const sides = l.name === 'become' ? [ true, false ] : [ false, true ];
+    for (const left of sides) {
+      const from = left ? l.x - gap - l.width : l.x + gap;
+      if (fits(from, from + l.width)) { placed.push({from, to : from + l.width}); txt(svg, left ? l.x - gap : l.x + gap, ly, l.word, {'text-anchor' : left ? 'end' : 'start'}); break; }
+    }
   }
-  if (labels.length === 2 && labels[0].to > labels[1].from && labels[1].to > labels[0].from) { labels[0].left = true; labels[1].left = false; }
-  for (const l of labels) txt(svg, l.left ? l.x - gap : l.x + gap, ly, l.word, {'text-anchor' : l.left ? 'end' : 'start'});
   if (here(w) && to > from && Math.abs(w.to - w.from) > .04) {
     // The switch: where along, and how steep (pulled up: abrupt, down: soft).
     const at = clamp(w.at, from + .02, to - .02), cx = X(at), cy = Y(levelAt(w, at));
-    el('path', {d : `M${cx} ${top - 10} V${base + 10}`, stroke : '#f1dda6', 'stroke-dasharray' : '4 4', 'stroke-width' : 1.6, opacity : .85, 'pointer-events' : 'none'}, svg);
-    const g3 = el('rect', {x : cx - 7, y : top - 10, width : 14, height : base - top + 20, style : 'fill:transparent;stroke:none;cursor:ew-resize'}, svg);
+    el('path', {d : `M${cx} ${top - 12} V${base + 12}`, stroke : '#f1dda6', 'stroke-dasharray' : '6 4', 'stroke-width' : 3, opacity : .9, 'pointer-events' : 'none'}, svg);
+    const g3 = el('rect', {x : cx - 8, y : top - 12, width : 16, height : base - top + 24, style : 'fill:transparent;stroke:none;cursor:ew-resize'}, svg);
     const start = {y : cy, steep : w.steep};
     drag(svg, g3, p => { w.at = clamp(fit(p), from + .02, to - .02); w.steep = clamp(start.steep + (start.y - p.y) / 20, 0, 3); drawDiagrams(); }, 'switch');
   }
-  svg.setAttribute('viewBox', `0 0 300 ${base + 22}`);
+  svg.setAttribute('viewBox', `0 0 300 ${base + 32}`);
 }
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
@@ -418,11 +423,11 @@ function hurts(a, T, mild) {
   painCache.set(key, sore); return sore;
 }
 const BODY = 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z';
-const VENT = [216, 92], STOMACH = {x : 96, y : 64, rx : 20, ry : 18};
+const VENT = [218, 94], STOMACH = {x : 122, y : 62, rx : 32, ry : 27};
 function gutWay(size) {
   // From the stomach in loops down the belly to the vent near the tail.
-  const folds = Math.max(1, Math.round(size * 1.6)), left = 126, right = 200, high = 44, low = 94;
-  const pts = [[STOMACH.x + STOMACH.rx - 1, STOMACH.y + 6], [left, high + 6]];
+  const folds = Math.max(1, Math.round(size * 1.4)), left = 166, right = 206, high = 42, low = 96;
+  const pts = [[STOMACH.x + STOMACH.rx - 2, STOMACH.y - 4], [left, high + 4]];
   const step = (right - left) / Math.max(1, folds);
   for (let f = 0; f < folds; f++) {
     const x = left + step * f, down = f % 2 === 0;
@@ -468,26 +473,31 @@ function drawGut() {
     el('circle', {cx : GX, cy : y, r : 6.5, fill : '#0f2c34', stroke : '#2d5059'}, g);
     el('path', {d : `M${GX - 3} ${y} h6` + (sign === '+' ? ` M${GX} ${y - 3} v6` : ''), stroke : '#d7e6e3', 'stroke-width' : 1.5}, g);
     if (enabled) g.addEventListener('click', act); };
-  add(98, '+', gut.levels.length < 3, () => { gut.levels.push(clamp(Math.min(...gut.levels) - .25, .1, .9)); drawGut(); });
-  add(112, '−', gut.levels.length > 1, () => { gut.levels.pop(); drawGut(); });
+  const addAt = (x, y, sign, enabled, act) => { const g = el('g', {class : 'chip', opacity : enabled ? 1 : .3, 'data-levels' : sign}, svg);
+    el('circle', {cx : x, cy : y, r : 6.5, fill : '#0f2c34', stroke : '#2d5059'}, g);
+    el('path', {d : `M${x - 3} ${y} h6` + (sign === '+' ? ` M${x} ${y - 3} v6` : ''), stroke : '#d7e6e3', 'stroke-width' : 1.5}, g);
+    if (enabled) g.addEventListener('click', act); };
+  addAt(S.x - 9, S.y + S.ry + 12, '−', gut.levels.length > 1, () => { gut.levels.pop(); drawGut(); });
+  addAt(S.x + 9, S.y + S.ry + 12, '+', gut.levels.length < 3, () => { gut.levels.push(clamp(Math.min(...gut.levels) - .25, .1, .9)); drawGut(); });
   const cells = Math.round(1 + (gut.spread - 1) / (K.fastest - 1) * 9);
   film.cells = Array.from({length : gut.spread > 1.02 ? cells : 0}, (_, i) => (i + .5) / cells);
   film.layer = el('g', {}, svg);
-  svg.setAttribute('viewBox', '0 0 300 120');
+  svg.setAttribute('viewBox', '0 0 300 124');
   // What kind of eater: the food it gets most of in its range.
   const best = FOOD.map(([n, a]) => [n, Math.max(gain(a, T), gain(a, fast), gain(a, gut.middle))]).sort((p, q) => q[1] - p[1])[0][0];
   document.getElementById('gut-kind').textContent = {Blatt : 'Pflanzenfresser', Alge : 'Algenfresser', Flocken : 'Allesfresser', Plankton : 'Planktonfresser', Fleisch : 'Räuber'}[best];
 
   // ---- Digestion: what each food gives over the steps it stays. ----
   const c = document.getElementById('gutchart'); c.replaceChildren();
-  const L = 28, R = 286, ytop = 16, base = 120, span = Math.log2(K.longest / K.shortest);
+  const L = 28, R = 286, ytop = 26, base = 130, span = Math.log2(K.longest / K.shortest);
   const X = t => L + (R - L) * clamp(Math.log2(t / K.shortest) / span, 0, 1), Y = v => base - (base - ytop) * v;
   const tOf = x => K.shortest * Math.pow(2, span * clamp((x - L) / (R - L), 0, 1));
   el('rect', {x : X(fast), y : ytop, width : Math.max(2, X(T) - X(fast)), height : base - ytop, fill : '#f1dda6', opacity : .1}, c);
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${ytop - 6}`, stroke : '#3b6a6c', fill : 'none'}, c);
-  txt(c, L, ytop - 8, 'Ertrag');
+  txt(c, L + 4, ytop + 2, 'je Bissen');
   for (const t of [25, 50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, c); txt(c, X(t), base + 15, t, {'text-anchor' : t === 800 ? 'end' : 'middle'}); }
-  txt(c, R, base + 29, 'Schritte im Darm', {'text-anchor' : 'end'});
+  txt(c, R, base + 30, 'Verweildauer (Schritte)', {'text-anchor' : 'end'});
+  const names = [];
   for (const [name, a, colour, mild] of FOOD) {
     let good = '', bad = '', last = null, bestT = K.shortest;
     for (let k = 0; k <= 100; k++) {
@@ -498,7 +508,16 @@ function drawGut() {
     }
     if (good) el('path', {d : good, fill : 'none', stroke : colour, 'stroke-width' : 2}, c);
     if (bad) el('path', {d : bad, fill : 'none', stroke : colour, 'stroke-width' : 2, 'stroke-dasharray' : '2 4', opacity : .8}, c);
-    txt(c, clamp(X(bestT), L + 22, R - 2), Y(gain(a, bestT)) - 7, name, {'text-anchor' : X(bestT) > R - 30 ? 'end' : 'middle', style : 'fill:' + colour});
+    names.push({name, colour, x : clamp(X(bestT), L + 26, R - 26), y : Y(gain(a, bestT)) - 7});
+  }
+  // Names over their curves' best points, moved up where they would run into each other.
+  names.sort((p, q) => q.y - p.y);
+  const taken = [];
+  for (const n of names) {
+    const w = n.name.length * 6.4;
+    while (taken.some(t => Math.abs(t.x - n.x) < (t.w + w) / 2 + 4 && Math.abs(t.y - n.y) < 12)) n.y -= 3;
+    taken.push({x : n.x, y : n.y, w});
+    txt(c, n.x, n.y, n.name, {'text-anchor' : 'middle', style : 'fill:' + n.colour});
   }
   // The middle: one line, dragged along; the muscle's reach: a bar, both ends pulled apart.
   const mx = X(gut.middle);
@@ -509,11 +528,11 @@ function drawGut() {
   el('path', {d : `M${X(fast)} ${by} H${X(T)}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, c);
   const spreadTo = p => { const d = Math.abs(Math.log2(tOf(p.x) / gut.middle)); gut.spread = clamp(Math.pow(2, 2 * d), 1, K.fastest); keep(); drawGut(); };
   for (const [x, n] of [[X(fast), 'quick'], [X(T), 'slow']]) drag(c, el('rect', {x : x - 5, y : by - 7, width : 10, height : 14, rx : 3, style : 'stroke:#eaa886'}, c), spreadTo, 'spread-' + n);
-  c.setAttribute('viewBox', '0 0 300 154');
+  c.setAttribute('viewBox', '0 0 300 166');
 
   // ---- Yield of each food over the muscle's reach; a dashed red frame where it hurts. ----
   const bars = document.getElementById('gutbars'); bars.replaceChildren();
-  let y = 4;
+  let y = 14;
   for (const [name, a, colour, mild] of FOOD) {
     const samples = Array.from({length : 25}, (_, k) => fast * Math.pow(T / fast, k / 24)), got = samples.map(t => gain(a, t));
     const lo = Math.min(...got), hi = Math.max(...got), W = 160, x0 = 66;
@@ -534,35 +553,42 @@ function drawGut() {
 }
 // Pain and food cells answer the same way (cppn_brain.cc, adapted_response): a stimulus s gives
 // s / (s + threshold + adapted), the adapted level following s with rate 1/τ, τ from 4 to 48 steps.
-// Shown over one episode: a stretch of bellyache, or a meal (food: what is swallowed flows in and
-// ebbs by a fifth every step, s = flow/(flow + rest)). The grip on the first height sets how
-// strongly the cells answer, the one further on how soon they get used to it.
-function senseEpisode(id, cell, stimulusAt, bar, colour) {
+// Shown over one episode with a weak and then a strong stretch: above, what the cells feel; below,
+// what reaches the brain, as nerve pulses, the denser the stronger the message. The dashed line
+// above is where the cells answer at half strength (their sensitivity); the bracket below is how
+// soon they get used to what lasts.
+function senseEpisode(id, cell, stimulusAt, word, colour) {
   const svg = document.getElementById(id); svg.replaceChildren();
-  const L = 8, R = 292, top = 18, base = 92, N = 130, X = s => L + (R - L) * s / N, Y = v => base - (base - top) * v;
-  const answer = (sense, tau) => { const out = []; let adapted = 0; for (let s = 0; s <= N; s++) { const sig = stimulusAt(s); out.push(sig > 0 ? sig / (sig + sense + adapted) : 0); adapted += (sig - adapted) / tau; } return out; };
-  const report = answer(cell.sense, cell.tau);
-  el('rect', {x : X(10), y : base + 5, width : X(90) - X(10), height : 6, rx : 3, fill : colour, opacity : .6}, svg);
-  txt(svg, (X(10) + X(90)) / 2, base + 24, bar, {'text-anchor' : 'middle'});
-  el('path', {d : `M${L} ${base} H${R}`, stroke : '#3b6a6c'}, svg);
-  el('path', {d : 'M' + report.map((v, s) => `${X(s).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${X(N)} ${base} L${X(0)} ${base} Z`, fill : '#79d2be', 'fill-opacity' : .15, stroke : '#79d2be', 'stroke-width' : 2}, svg);
-  txt(svg, L, top - 6, 'Meldung an das Gehirn');
-  const peakAt = report.indexOf(Math.max(...report)), px = X(peakAt), py = Y(report[peakAt]);
-  drag(svg, el('circle', {cx : px, cy : py, r : 6.5}, svg), p => {
-    const want = clamp((base - p.y) / (base - top), .05, .97);
-    let adapted = 0; for (let s = 0; s < peakAt; s++) adapted += (stimulusAt(s) - adapted) / cell.tau;
-    const sig = stimulusAt(peakAt); cell.sense = clamp(sig / want - sig - adapted, .005, 3); senseEpisode(id, cell, stimulusAt, bar, colour);
-  }, 'sense');
-  txt(svg, px + 11, py - 4, 'Empfindlichkeit');
-  const used = Math.min(90, 10 + cell.tau), ux = X(used), uy = Y(report[used]);
-  drag(svg, el('rect', {x : ux - 6, y : uy - 6, width : 12, height : 12, rx : 2}, svg), p => { cell.tau = clamp(Math.round((p.x - L) / (R - L) * N - 10), 4, 48); senseEpisode(id, cell, stimulusAt, bar, colour); }, 'used');
-  txt(svg, ux + 11, uy + 16, 'Gewöhnung');
-  svg.setAttribute('viewBox', `0 0 300 ${base + 30}`);
+  const L = 8, R = 292, N = 120, X = s => L + (R - L) * s / N;
+  const A = {top : 16, base : 52}, B = {top : 74, base : 98}, YA = v => A.base - (A.base - A.top) * v;
+  const report = []; let adapted = 0;
+  for (let s = 0; s <= N; s++) { const sig = stimulusAt(s); report.push(sig > 0 ? sig / (sig + cell.sense + adapted) : 0); adapted += (sig - adapted) / cell.tau; }
+  // What the cells feel.
+  txt(svg, L, A.top - 5, word);
+  el('path', {d : 'M' + report.map((_, s) => `${X(s).toFixed(1)} ${YA(stimulusAt(s)).toFixed(1)}`).join(' L') + ` L${X(N)} ${A.base} L${X(0)} ${A.base} Z`, fill : colour, opacity : .55}, svg);
+  el('path', {d : `M${L} ${A.base} H${R}`, stroke : '#3b6a6c'}, svg);
+  el('path', {d : `M${L} ${YA(cell.sense)} H${R}`, stroke : '#f1dda6', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, svg);
+  drag(svg, el('rect', {x : L, y : YA(cell.sense) - 6, width : R - L, height : 12, style : 'fill:transparent;stroke:none;cursor:ns-resize'}, svg), p => { cell.sense = clamp((A.base - p.y) / (A.base - A.top), .02, .98); senseEpisode(id, cell, stimulusAt, word, colour); }, 'sense');
+  txt(svg, R, YA(cell.sense) - 5, 'Empfindlichkeit', {'text-anchor' : 'end'});
+  // What reaches the brain: a pulse each time the message has added up to one.
+  txt(svg, L, B.top - 6, 'an das Gehirn');
+  el('path', {d : `M${L} ${B.base} H${R}`, stroke : '#3b6a6c'}, svg);
+  let sum = 0, pulses = '';
+  for (let s = 0; s <= N; s++) for (let k = 0; k < 4; k++) { sum += report[s] * .14; if (sum >= 1) { sum -= 1; const x = X(s + k / 4); pulses += `M${x.toFixed(1)} ${B.base} V${(B.base - (B.base - B.top) * (.35 + .65 * report[s])).toFixed(1)}`; } }
+  el('path', {d : pulses, stroke : '#79d2be', 'stroke-width' : 1.6}, svg);
+  // How soon the cells get used to what lasts: a bracket from the strong stretch's start.
+  const from = X(STRONG), to = X(STRONG + cell.tau);
+  el('path', {d : `M${from} ${B.base + 8} V${B.base + 12} H${to} V${B.base + 8}`, stroke : '#f1dda6', fill : 'none', 'stroke-width' : 1.6}, svg);
+  drag(svg, el('rect', {x : to - 6, y : B.base + 6, width : 12, height : 12, rx : 2}, svg), p => { cell.tau = clamp(Math.round((p.x - L) / (R - L) * N - STRONG), 4, 48); senseEpisode(id, cell, stimulusAt, word, colour); }, 'used');
+  txt(svg, to + 10, B.base + 16, 'Gewöhnung');
+  svg.setAttribute('viewBox', `0 0 300 ${B.base + 24}`);
 }
-const ACHE_AT = s => s >= 10 && s <= 90 ? .5 : 0;
-const FOOD_AT = (() => { const out = []; let flow = 0; for (let s = 0; s <= 130; s++) { if (s >= 10 && s <= 90) flow += .25; out.push(flow / (flow + 1)); flow *= .8; } return s => out[s] ?? 0; })();
+// A weak stretch from step 10, a strong one from step 50, nothing after step 95.
+const STRONG = 50;
+const ACHE_AT = s => s < 10 || s > 95 ? 0 : s < STRONG ? .25 : .7;
+const FOOD_AT = (() => { const out = []; let flow = 0; for (let s = 0; s <= 120; s++) { if (s >= 10 && s <= 95) flow += s < STRONG ? .08 : .45; out.push(flow / (flow + 1)); flow *= .8; } return s => out[s] ?? 0; })();
 const drawPainSense = () => senseEpisode('gutpain', gut.ache, ACHE_AT, 'Bauchweh', '#ef8f8f');
-const drawNutrientSense = () => senseEpisode('gutsense', gut.food, FOOD_AT, 'frisst', '#e3cf94');
+const drawNutrientSense = () => senseEpisode('gutsense', gut.food, FOOD_AT, 'Futter', '#e3cf94');
 // The film, at half speed: a mouthful moves from the stomach to the vent in its time and shrinks
 // as the fish takes it up; dung leaves at the vent. Every few seconds the muscle works: the gut
 // narrows at its cells one after another and widens just ahead (peristalsis), and the content
@@ -599,161 +625,170 @@ function gutFrame(now) {
 requestAnimationFrame(gutFrame);
 
 // ---------- Schwanz ----------
-// The tail muscle as its nodes, in their order along the body. Each node has its cells, its fibres
-// from slow (red: never tire, cheap work, dear upkeep) to fast (white: 6.25 times the force, tire
-// within some 20 steps flat out, dear work, cheap upkeep; muscle_fibre after Fable 2265bb7d: drain
-// 0.06·fast² of the work, refill in 2·200^fast steps; ui/fibre.js after Astra 9bc25f71), and its own threshold: a
-// weak command moves only the nodes with a low one (command_line.js: tanh of the command past the
-// gate). Force adds over the nodes; each cell tires on its own and pays its own work (Fable
-// 409b0911). Upkeep per step 0.0004·upkeep(fast) per cell, work 0.00128·cost(fast) per unit of
-// force pulled. Wriggling (movement.cc) loses up to half the push in open water and lowers a
-// buried body's drag from 12 to 3.
+// The tail muscle as its bundles (nodes), in their order along the body. Each bundle has its
+// cells (its force), its fibres from slow (red: never tire, cheap work, dear upkeep) to fast
+// (white: 6.25 times the force, tire within some 20 steps flat out; muscle_fibre after Fable
+// 2265bb7d: drain 0.06·fast² of the work, refill in 2·200^fast steps; ui/fibre.js after Astra
+// 9bc25f71), and its own threshold: a weak command moves only the bundles with a low one
+// (command_line.js: tanh of the command past the gate). Force adds over the bundles; each cell
+// tires on its own (Fable 409b0911). The fish's exhaustion is the tired share of its fast fibres
+// (body_plan.cc: motor fatigue). Upkeep per step 0.0004·upkeep(fast) per cell, work 0.00128·
+// cost(fast) per unit of force. Wriggling (movement.cc) loses up to half the push in open water and
+// lowers a buried body's drag from 12 to 3.
 const tail = {
   nodes : [{cells : 4, fast : .1, gate : .1}, {cells : 3, fast : .5, gate : .45}, {cells : 3, fast : .95, gate : .75}],
   chosen : 2, command : 1, wriggle : .3
 };
-const STEPS = 300, MOST_CELLS = 8, ALL_OUT = 1 - Math.exp(-1);
+const STEPS = 300, MOST_CELLS = 8;
 const forceOf = f => .4 * Math.pow(2.5 / .4, f);
 const fibreColour = f => { const lo = [184, 68, 63], hi = [242, 235, 226]; return 'rgb(' + lo.map((v, i) => Math.round(v + (hi[i] - v) * f)).join(',') + ')'; };
 const driveOf = (n, c) => c <= n.gate ? 0 : Math.tanh(3 * (c - n.gate)) / Math.tanh(3 * (1 - n.gate));
-function nodeForce(n, c) {
-  const d = driveOf(n, c), out = []; let r = 1;
-  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; out.push(n.cells * forceOf(n.fast) * d * a); r = clamp(r + (1 - r) / (2 * Math.pow(200, n.fast)) - .06 * n.fast * n.fast * a * d, 0, 1); }
-  return out;
+// A bundle's force and its fast fibres' reserve over the steps of swimming at the command.
+function nodeSwim(n, c) {
+  const d = driveOf(n, c), force = [], reserve = []; let r = 1;
+  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; force.push(n.cells * forceOf(n.fast) * d * a); reserve.push(r); r = clamp(r + (1 - r) / (2 * Math.pow(200, n.fast)) - .06 * n.fast * n.fast * a * d, 0, 1); }
+  return {force, reserve};
 }
-// One scale for both force pictures: room for the strongest command with a little to spare, never
-// less than a few slow cells' worth; marked by unlabelled lines.
-const forceScale = () => Math.max(4, 1.15 * tail.nodes.reduce((t, n) => t + n.cells * forceOf(n.fast), 0));
+// While a grip is held the scale stays put, so that the grip follows the pointer; it is fitted again
+// when the grip is let go.
+const forceScale = () => tail.hold ?? Math.max(4, 1.15 * tail.nodes.reduce((t, n) => t + n.cells * forceOf(n.fast), 0));
+const holdScale = () => { tail.hold = forceScale(); }, freeScale = () => { tail.hold = null; drawTail(); };
 const pick = i => { tail.chosen = i; drawTail(); };
+const fmt = v => v.toFixed(1).replace('.', ',');
 function grid(svg, L, R, top, base, scale) {
   const step = scale > 24 ? 8 : scale > 12 ? 4 : scale > 6 ? 2 : 1;
   for (let v = step; v < scale; v += step) el('path', {d : `M${L} ${base - (base - top) * v / scale} H${R}`, stroke : '#2d5059', 'stroke-width' : .8, opacity : .7}, svg);
 }
+// The tail muscle's place on the body, front to back, shared by the fish and the bundle map.
+const MUSCLE = {from : 108, to : 226};
 function drawTail() {
   const nodes = tail.nodes, cn = nodes[tail.chosen], scale = forceScale();
-  // ---- The fish with its nodes (drawn in tailFrame); under it the chosen node's cells and fibres. ----
+  document.getElementById('tail-kind').textContent = tail.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
+  // ---- The fish, and under it the map of its bundles with their fibres. ----
   const svg = document.getElementById('tail'); svg.replaceChildren();
-  el('g', {id : 'tail-fish'}, svg);
-  svg.onpointerdown = e => { const i = e.target.dataset?.node; if (i !== undefined) pick(Number(i)); };
-  const row = (y, word) => txt(svg, 4, y + 4, word);
-  row(108, 'Zellen');
-  const cx0 = 64, step = 13;
-  for (let k = 0; k < MOST_CELLS; k++) el('circle', {cx : cx0 + k * step, cy : 108, r : 4.5, fill : k < cn.cells ? fibreColour(cn.fast) : 'none', stroke : k < cn.cells ? 'none' : '#3b6a6c', 'stroke-dasharray' : '2 2'}, svg);
-  drag(svg, el('circle', {cx : cx0 + (cn.cells - 1) * step, cy : 108, r : 6.5}, svg), p => { cn.cells = clamp(Math.round((p.x - cx0) / step) + 1, 1, MOST_CELLS); drawTail(); }, 'cells');
-  row(134, 'Fasern');
-  const fx0 = 70, fx1 = 250, gid = 'fibregrad';
-  const grad = el('linearGradient', {id : gid}, el('defs', {}, svg));
-  el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, grad); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, grad);
-  el('rect', {x : fx0, y : 130, width : fx1 - fx0, height : 8, rx : 4, fill : `url(#${gid})`, opacity : .85}, svg);
-  txt(svg, fx0, 152, 'ausdauernd'); txt(svg, fx1, 152, 'kräftig, ermüdet', {'text-anchor' : 'end'});
-  drag(svg, el('circle', {cx : fx0 + (fx1 - fx0) * cn.fast, cy : 134, r : 7}, svg), p => { cn.fast = clamp((p.x - fx0) / (fx1 - fx0), 0, 1); drawTail(); }, 'fibre');
-  // A node more, or the chosen one taken away: two buttons that say so.
-  const chip = (x, w, word, ok, act, key) => { const g = el('g', {class : 'chip', opacity : ok ? 1 : .3, ['data-' + key] : 1}, svg);
-    el('rect', {x, y : 99, width : w, height : 18, rx : 9, fill : '#0f2c34', stroke : '#2d5059'}, g); txt(g, x + w / 2, 112, word, {'text-anchor' : 'middle', class : 'value'});
-    if (ok) g.addEventListener('click', act); };
-  chip(172, 60, '+ Knoten', nodes.length < 5, () => { nodes.push({cells : 3, fast : .5, gate : .5}); pick(nodes.length - 1); }, 'add');
-  chip(236, 60, '− Knoten', nodes.length > 1, () => { nodes.splice(tail.chosen, 1); tail.chosen = Math.min(tail.chosen, nodes.length - 1); drawTail(); }, 'remove');
-  svg.setAttribute('viewBox', '0 0 300 158');
-
-  // ---- Recruitment: force when fresh, over the command; each node joins at its threshold. ----
-  const c = document.getElementById('tailcmd'); c.replaceChildren();
-  const L = 20, R = 290, top = 8, base = 118, X = v => L + (R - L) * v, Y = v => base - (base - top) * v / scale;
-  grid(c, L, R, top, base, scale);
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top}`, stroke : '#3b6a6c', fill : 'none'}, c);
-  txt(c, L + 4, top + 10, 'Kraft');
-  txt(c, L, base + 26, 'schwacher Befehl'); txt(c, R, base + 26, 'starker', {'text-anchor' : 'end'});
-  const S = 60, cmds = Array.from({length : S + 1}, (_, k) => k / S);
-  let under = cmds.map(() => 0);
-  nodes.forEach((n, i) => {
-    const over = cmds.map((v, k) => under[k] + n.cells * forceOf(n.fast) * driveOf(n, v));
-    const d = 'M' + over.map((y, k) => `${X(cmds[k]).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${X(cmds[k]).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
-    const band = el('path', {d, fill : fibreColour(n.fast), opacity : .75, stroke : i === tail.chosen ? '#fff3c4' : '#0d262c', 'stroke-width' : i === tail.chosen ? 1.6 : .8, class : 'chip'}, c);
-    band.addEventListener('pointerdown', () => pick(i));
-    under = over;
-  });
-  // Each node's threshold: a grip on the axis where its band begins.
-  nodes.forEach((n, i) => {
-    const g = el('path', {d : `M${X(n.gate)} ${base + 1} l-6 9 h12 z`, style : `fill:${fibreColour(n.fast)}`}, c);
-    drag(c, g, p => { n.gate = clamp((p.x - L) / (R - L), 0, .95); tail.chosen = i; drawTail(); }, 'gate' + i);
-  });
-  // The command the swim below is shown at.
-  el('path', {d : `M${X(tail.command)} ${top} V${base}`, stroke : '#f1dda6', 'stroke-dasharray' : '4 4', 'stroke-width' : 1.4}, c);
-  drag(c, el('rect', {x : X(tail.command) - 7, y : top - 4, width : 14, height : base - top + 4, style : 'fill:transparent;stroke:none;cursor:ew-resize'}, c), p => { tail.command = clamp((p.x - L) / (R - L), .02, 1); drawTail(); }, 'command');
-  c.setAttribute('viewBox', '0 0 300 150');
-
-  // ---- Endurance: the same force over a swim at that command, as the cells tire. ----
-  const e = document.getElementById('tailtime'); e.replaceChildren();
-  const T = s => L + (R - L) * s / STEPS;
-  grid(e, L, R, top, base, scale);
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top}`, stroke : '#3b6a6c', fill : 'none'}, e);
-  txt(e, L + 4, top + 10, 'Kraft');
-  for (const st of [0, 100, 200, 300]) txt(e, T(st), base + 15, st, {'text-anchor' : st ? (st === 300 ? 'end' : 'middle') : 'start'});
-  txt(e, R, base + 29, 'Schritte schwimmen', {'text-anchor' : 'end'});
-  under = Array(STEPS + 1).fill(0);
-  let total = under;
-  nodes.forEach((n, i) => {
-    const v = nodeForce(n, tail.command), over = under.map((u, st) => u + v[st]);
-    const d = 'M' + over.map((y, st) => `${T(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, st) => [st, y]).reverse().map(([st, y]) => `${T(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
-    const band = el('path', {d, fill : fibreColour(n.fast), opacity : .75, stroke : i === tail.chosen ? '#fff3c4' : '#0d262c', 'stroke-width' : i === tail.chosen ? 1.6 : .8, class : 'chip'}, e);
-    band.addEventListener('pointerdown', () => pick(i));
-    under = over;
-  });
-  tail.total = total = under;
   const rest = nodes.reduce((t, n) => t + n.cells * .0004 * 1.2 * Math.pow(.25, n.fast), 0) * 1000;
   const work = nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command) * .00128 * .2 * Math.pow(25, n.fast), 0) * 1000;
-  txt(e, 4, base + 44, `Energie je 1000 Schritte: in Ruhe ${rest.toFixed(1).replace('.', ',')} · schwimmend +${work.toFixed(1).replace('.', ',')}`, {class : 'value'});
-  e.setAttribute('viewBox', '0 0 300 168');
+  txt(svg, 4, 10, `Energieverbrauch in Ruhe ${fmt(rest)} · schwimmend +${fmt(work)}`);
+  el('g', {id : 'tail-fish'}, svg);
+  const width = (MUSCLE.to - MUSCLE.from) / nodes.length, MY = 96;
+  nodes.forEach((n, i) => {
+    const r = el('rect', {x : MUSCLE.from + i * width + 1, y : MY, width : width - 2, height : 14, rx : 3, fill : fibreColour(n.fast), stroke : i === tail.chosen ? '#fff3c4' : '#0d262c', 'stroke-width' : i === tail.chosen ? 2 : 1, class : 'chip', 'data-node' : i}, svg);
+    r.addEventListener('click', () => pick(i));
+  });
+  // A dashed place behind the last bundle takes a new one; a cross on the chosen one takes it away.
+  if (nodes.length < 5) {
+    const g = el('g', {class : 'chip', 'data-add' : 1}, svg);
+    el('rect', {x : MUSCLE.to + 4, y : MY, width : 20, height : 14, rx : 3, fill : 'none', stroke : '#9fbcbc', 'stroke-dasharray' : '3 2'}, g);
+    el('path', {d : `M${MUSCLE.to + 10} ${MY + 7} h8 M${MUSCLE.to + 14} ${MY + 3} v8`, stroke : '#9fbcbc', 'stroke-width' : 1.5}, g);
+    g.addEventListener('click', () => { nodes.push({cells : 3, fast : .5, gate : .5}); pick(nodes.length - 1); });
+  }
+  if (nodes.length > 1) {
+    const x = MUSCLE.from + (tail.chosen + 1) * width - 1, g = el('g', {class : 'chip', 'data-remove' : 1}, svg);
+    el('circle', {cx : x, cy : MY, r : 6, fill : '#0f2c34', stroke : '#e8a2b5'}, g);
+    el('path', {d : `M${x - 2.5} ${MY - 2.5} l5 5 m0 -5 l-5 5`, stroke : '#e8a2b5', 'stroke-width' : 1.5}, g);
+    g.addEventListener('click', () => { nodes.splice(tail.chosen, 1); tail.chosen = Math.min(tail.chosen, nodes.length - 1); drawTail(); });
+  }
+  // The chosen bundle's fibres, from enduring to strong.
+  const fx0 = MUSCLE.from, fx1 = MUSCLE.to, FY = 128;
+  const grad = el('linearGradient', {id : 'fibregrad'}, el('defs', {}, svg));
+  el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, grad); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, grad);
+  el('rect', {x : fx0, y : FY - 4, width : fx1 - fx0, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, svg);
+  txt(svg, fx0 - 8, FY + 4, 'ausdauernd', {'text-anchor' : 'end'}); txt(svg, fx1 + 8, FY + 4, 'kräftig');
+  drag(svg, el('circle', {cx : fx0 + (fx1 - fx0) * cn.fast, cy : FY, r : 7}, svg), p => { cn.fast = clamp((p.x - fx0) / (fx1 - fx0), 0, 1); drawTail(); }, 'fibre', holdScale, freeScale);
+  svg.setAttribute('viewBox', '0 0 300 140');
 
-  // ---- Niche: how fast the same tail drives the fish in open water and buried in sand. ----
+  // ---- Force over a swim: the command on the left, each bundle joining at its threshold. ----
+  const c = document.getElementById('tailforce'); c.replaceChildren();
+  const L = 44, R = 290, top = 26, base = 146, X = st => L + (R - L) * st / STEPS, Y = v => base - (base - top) * v / scale, CY = v => base - (base - top) * v;
+  // The command: a bar filled as high as the command; each bundle's threshold a mark on it.
+  txt(c, 4, top - 14, 'Befehl');
+  el('rect', {x : 12, y : top, width : 8, height : base - top, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, c);
+  el('rect', {x : 12, y : CY(tail.command), width : 8, height : base - CY(tail.command), rx : 4, fill : '#f1dda6', opacity : .45}, c);
+  drag(c, el('path', {d : `M${22} ${CY(tail.command)} l10 -7 v14 z`}, c), p => { tail.command = clamp((base - p.y) / (base - top), .02, 1); drawTail(); }, 'command');
+  nodes.forEach((n, i) => {
+    const g = el('rect', {x : 6, y : CY(n.gate) - 3, width : 20, height : 6, rx : 2, style : `fill:${fibreColour(n.fast)};stroke:${i === tail.chosen ? '#fff3c4' : '#0d262c'};stroke-width:${i === tail.chosen ? 2 : 1}`}, c);
+    drag(c, g, p => { n.gate = clamp((base - p.y) / (base - top), 0, .95); tail.chosen = i; drawTail(); }, 'gate' + i);
+  });
+  grid(c, L, R, top, base, scale);
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  for (const st of [100, 200, 300]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 300 ? 'end' : 'middle'});
+  txt(c, L, base + 15, 'Schritte');
+  // Bundles stacked in their order, the front one below.
+  let under = Array(STEPS + 1).fill(0), fastAll = 0; const spent = Array(STEPS + 1).fill(0), bands = [];
+  nodes.forEach((n, i) => {
+    const {force, reserve} = nodeSwim(n, tail.command), over = under.map((u, st) => u + force[st]);
+    const w = n.cells * forceOf(n.fast) * n.fast; fastAll += w; reserve.forEach((r, st) => { spent[st] += w * (1 - r); });
+    const d = 'M' + over.map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, st) => [st, y]).reverse().map(([st, y]) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
+    const band = el('path', {d, fill : fibreColour(n.fast), opacity : .78, stroke : i === tail.chosen ? '#fff3c4' : '#0d262c', 'stroke-width' : i === tail.chosen ? 1.8 : .8, class : 'chip'}, c);
+    band.addEventListener('pointerdown', () => pick(i));
+    bands.push({under : under[0], over : over[0]});
+    under = over;
+  });
+  tail.total = under;
+  // The fish's exhaustion over the swim, on the field's full height.
+  if (fastAll > 0) {
+    const ex = spent.map(v => v / fastAll);
+    el('path', {d : 'M' + ex.map((v, st) => `${X(st).toFixed(1)} ${CY(v).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2, 'stroke-dasharray' : '5 3'}, c);
+    txt(c, R - 2, CY(ex[STEPS]) - 6, 'Erschöpfung', {'text-anchor' : 'end', style : 'fill:#eaa886'});
+  }
+  // The chosen bundle's cells: its band's height at the start, pulled up or down.
+  const cb = bands[tail.chosen], d0 = driveOf(cn, tail.command);
+  if (d0 > 0) {
+    const per = forceOf(cn.fast) * d0;
+    drag(c, el('circle', {cx : X(0) + 9, cy : Y(cb.over), r : 7}, c), p => { cn.cells = clamp(Math.round(((base - p.y) / (base - top) * scale - cb.under) / per), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
+  }
+  c.setAttribute('viewBox', '0 0 300 168');
+
+  // ---- Niche: the same swim in open water and buried in sand, each on its own scale. ----
   const n = document.getElementById('tailniche'); n.replaceChildren();
-  const NB = 96, NT = 10, W = w => L + (R - L) * w, water = w => 1 - .5 * w, sand = w => 1 / (12 * Math.pow(3 / 12, w));
-  const NY = v => NB - (NB - NT) * v;
+  const NT = 14, NB = 96, water = w => 1 - .5 * w, sand = w => 1 / (12 * Math.pow(3 / 12, w));
+  const most = scale / 1.15, wTop = most * water(0), sTop = most * sand(1);
+  const NY = (v, top) => NB - (NB - NT) * clamp(v / top, 0, 1);
   el('path', {d : `M${L} ${NB} H${R} M${L} ${NB} V${NT}`, stroke : '#3b6a6c', fill : 'none'}, n);
-  txt(n, L + 4, NT + 10, 'Tempo');
-  const curve = (f, most, colour, word, dash) => {
-    const pts = Array.from({length : 41}, (_, k) => k / 40);
-    el('path', {d : 'M' + pts.map(w => `${W(w).toFixed(1)} ${NY(f(w) / most).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2, 'stroke-dasharray' : dash}, n);
-    txt(n, R - 2, NY(f(1) / most) + (dash ? -7 : 15), word, {'text-anchor' : 'end', style : 'fill:' + colour});
-  };
-  curve(water, 1, '#9cc8f0', 'im Wasser', '');
-  curve(sand, sand(1), '#c9b48c', 'im Sand', '5 4');
-  txt(n, L, NB + 15, 'steif'); txt(n, R, NB + 15, 'schlängelt', {'text-anchor' : 'end'});
-  el('path', {d : `M${W(tail.wriggle)} ${NT - 4} V${NB}`, stroke : '#f1dda6', 'stroke-dasharray' : '4 4', 'stroke-width' : 1.4}, n);
-  drag(n, el('circle', {cx : W(tail.wriggle), cy : NT - 4, r : 7}, n), p => { tail.wriggle = clamp((p.x - L) / (R - L), 0, 1); drawTail(); }, 'wriggle');
+  txt(n, 4, NT + 4, 'Tempo');
+  const total = tail.total, w = tail.wriggle;
+  el('path', {d : 'M' + total.map((v, st) => `${X(st).toFixed(1)} ${NY(v * water(w), wTop).toFixed(1)}`).join(' L') + ` L${X(STEPS)} ${NB} L${L} ${NB} Z`, fill : '#9cc8f0', opacity : .3, stroke : '#9cc8f0', 'stroke-width' : 2}, n);
+  el('path', {d : 'M' + total.map((v, st) => `${X(st).toFixed(1)} ${NY(v * sand(w), sTop).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#c9b48c', 'stroke-width' : 2, 'stroke-dasharray' : '5 4'}, n);
+  txt(n, X(110), NY(total[110] * water(w), wTop) - 7, 'im Wasser', {'text-anchor' : 'middle', style : 'fill:#9cc8f0'});
+  // Wriggling: the grip at the end of the sand line; up, the body wriggles more, sand gets easier
+  // and open water harder.
+  const endY = NY(total[STEPS] * sand(w), sTop);
+  txt(n, X(230), NY(total[230] * sand(w), sTop) - 7, 'im Sand', {'text-anchor' : 'middle', style : 'fill:#c9b48c'});
+  drag(n, el('circle', {cx : R, cy : endY, r : 7}, n), p => {
+    const want = clamp((NB - p.y) / (NB - NT), 0, 1) * sTop / Math.max(1e-6, total[STEPS]);
+    tail.wriggle = clamp(Math.log(want * 12) / Math.log(4), 0, 1); drawTail();
+  }, 'wriggle');
+  for (const st of [100, 200, 300]) txt(n, X(st), NB + 15, st, {'text-anchor' : st === 300 ? 'end' : 'middle'});
+  txt(n, L, NB + 15, 'Schritte');
   n.setAttribute('viewBox', '0 0 300 118');
 }
-// The fish swims a stretch of 300 steps at the chosen command: the ring fills with the steps, the
-// beat weakens as the cells tire, then it rests and starts again. Its nodes lie on both flanks:
-// colour = fibres, width = cells.
+// The fish beats its tail as hard as its force at this command and as quick as the fibres that
+// pull; it wriggles as set. Its bundles lie on both flanks: colour = fibres.
 function tailFrame(now) {
   requestAnimationFrame(tailFrame);
   const g = document.getElementById('tail-fish'); if (!g || !tail.total) return;
-  const nodes = tail.nodes, cycle = 7500, t = now % cycle, swimming = t < 6000, st = Math.min(STEPS, Math.round(t / 6000 * STEPS));
-  const force = swimming ? tail.total[st] : 0, weight = nodes.reduce((a, n) => a + n.cells * driveOf(n, tail.command), 0) || 1;
+  const nodes = tail.nodes, force = tail.total[0], weight = nodes.reduce((a, n) => a + n.cells * driveOf(n, tail.command), 0) || 1;
   const fast = nodes.reduce((a, n) => a + n.cells * driveOf(n, tail.command) * n.fast, 0) / weight;
-  const period = 4 * Math.pow(12, 1 - fast) * 2 * 26, phase = (now % period) / period * Math.PI * 2;
-  const amp = force > 0 ? 2 + 14 * clamp(force / forceScale(), 0, 1) : 0;
+  const period = 4 * Math.pow(12, 1 - fast) * 2 * 40, phase = (now % period) / period * Math.PI * 2;
+  const amp = force > 0 ? 3 + 22 * clamp(force / (forceScale() / 1.15), 0, 1) : 0;
   const bend = x => { const u = (x - 20) / 220; return Math.sin(phase - u * (1.5 + 4 * tail.wriggle)) * amp * Math.pow(u, 2 - 1.4 * tail.wriggle); };
   const halfAt = x => { const u = (x - 20) / 220; return u < .3 ? 6 + 14 * Math.sin(Math.PI / 2 * u / .3) : 4 + 16 * (1 - (u - .3) / .7); };
+  const mid = 52;
   let up = '', down = '';
-  for (let x = 20; x <= 240; x += 5) { up += (x === 20 ? 'M' : ' L') + x + ' ' + (46 - halfAt(x) + bend(x)).toFixed(1); down = ` L${x} ${(46 + halfAt(x) + bend(x)).toFixed(1)}` + down; }
-  const tip = 46 + bend(240);
+  for (let x = 20; x <= 240; x += 5) { up += (x === 20 ? 'M' : ' L') + x + ' ' + (mid - halfAt(x) + bend(x)).toFixed(1); down = ` L${x} ${(mid + halfAt(x) + bend(x)).toFixed(1)}` + down; }
+  const tip = mid + bend(240);
   let marks = '';
-  const slots = nodes.length, width = 116 / Math.max(3, slots);
-  for (let i = 0; i < slots; i++) {
-    const n = nodes[i], x0 = 108 + i * width + 2, x1 = 108 + (i + 1) * width - 2, w = n ? 2 + 1.1 * n.cells : 5, chosen = i === tail.chosen;
+  const width = (MUSCLE.to - MUSCLE.from) / nodes.length;
+  nodes.forEach((n, i) => {
+    const x0 = MUSCLE.from + i * width + 2, x1 = MUSCLE.from + (i + 1) * width - 2, w = 5, chosen = i === tail.chosen;
     for (const side of [-1, 1]) {
       let d = '';
-      for (let x = x0; x <= x1; x += 3) d += (d ? ' L' : 'M') + x.toFixed(1) + ' ' + (46 + side * (halfAt(x) - w / 2 - 1) + bend(x)).toFixed(1);
-      if (!n) { marks += `<path d="${d}" stroke="#9fbcbc" stroke-width="${w}" fill="none" stroke-dasharray="2 3" opacity=".6" data-node="new" style="cursor:pointer"/>`; continue; }
-      if (chosen) marks += `<path d="${d}" stroke="#fff3c4" stroke-width="${(w + 3).toFixed(1)}" fill="none" stroke-linecap="round" pointer-events="none"/>`;
-      marks += `<path d="${d}" stroke="${fibreColour(n.fast)}" stroke-width="${w.toFixed(1)}" fill="none" stroke-linecap="round" data-node="${i}" style="cursor:pointer"/>`;
+      for (let x = x0; x <= x1; x += 3) d += (d ? ' L' : 'M') + x.toFixed(1) + ' ' + (mid + side * (halfAt(x) - w / 2 - 1) + bend(x)).toFixed(1);
+      if (chosen) marks += `<path d="${d}" stroke="#fff3c4" stroke-width="${w + 3}" fill="none" stroke-linecap="round"/>`;
+      marks += `<path d="${d}" stroke="${fibreColour(n.fast)}" stroke-width="${w}" fill="none" stroke-linecap="round"/>`;
     }
-  }
-  // The ring: the steps of the swim so far.
-  const share = swimming ? st / STEPS : 0, ring = 2 * Math.PI * 13;
-  marks += `<circle cx="18" cy="82" r="13" fill="none" stroke="#2d5059" stroke-width="3"/><circle cx="18" cy="82" r="13" fill="none" stroke="#f1dda6" stroke-width="3" stroke-dasharray="${(ring * share).toFixed(1)} ${ring.toFixed(1)}" transform="rotate(-90 18 82)"/><text x="18" y="86" text-anchor="middle" style="font-size:10px;fill:#d7e6e3">${swimming ? st : 0}</text>`;
-  g.innerHTML = `<path d="${up} L268 ${(tip - 20).toFixed(1)} L258 ${tip.toFixed(1)} L268 ${(tip + 20).toFixed(1)}${down} Z" fill="#1d4048" stroke="#8ac7bb" stroke-width="1.4"/><circle cx="36" cy="${(42 + bend(36)).toFixed(1)}" r="3" fill="#e9e2c6"/>` + marks;
+  });
+  g.innerHTML = `<path d="${up} L268 ${(tip - 20).toFixed(1)} L258 ${tip.toFixed(1)} L268 ${(tip + 20).toFixed(1)}${down} Z" fill="#1d4048" stroke="#8ac7bb" stroke-width="1.4"/><circle cx="36" cy="${(mid - 4 + bend(36)).toFixed(1)}" r="3" fill="#e9e2c6"/>` + marks;
 }
 requestAnimationFrame(tailFrame);
 
