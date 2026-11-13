@@ -1,6 +1,7 @@
-import {BLOOD_SUBSTANCE} from '../../schema.js';
-import {addOrgan, addWire, findOrgan, newDocument, updateCenter, wheelPlace} from './document.js';
-import {placeSystem} from './systems.js';
+// Test fixture: a wired document with every region the system and teaching checks need.
+import {BLOOD_SUBSTANCE} from '../ui/schema.js';
+import {addOrgan, addWire, findOrgan, newDocument, updateCenter, wheelPlace} from '../ui/studio/model/document.js';
+import {placeSystem} from '../ui/studio/model/systems.js';
 
 const PLACES = Object.freeze({
   eye : [ 'eye', 360, 300 ],
@@ -58,13 +59,12 @@ const WIRES = Object.freeze([
   [ 'barbels', 'motor', null, 'grip' ],
   [ 'motor', 'fin', 'fins', null, 'crossed' ],
   [ 'motor', 'spine', 'tail', 'urge' ],
-  [ 'motor', 'spine', 'fins', 'steer' ],
   [ 'motor', 'spine', 'escape', 'escape' ],
   [ 'spine', 'tail', 'stroke' ],
   [ 'motor', 'suck', 'mouth' ],
   [ 'motor', 'bite', 'bite' ]
 ]);
-export function exampleDocument(names, sites, wheel) {
+export function wiredDocument(names, sites, wheel) {
   let doc = newDocument(names.fish);
   const placed = {};
   for (const [key, [ type, x, y ]] of Object.entries(PLACES)) {

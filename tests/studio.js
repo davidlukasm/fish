@@ -2839,8 +2839,8 @@ async function checkHormoneSystems(model, capabilities) {
   const {slotCenters, nerveClass} = await import('../ui/studio/model/organs.js');
   const {routedLinks} = await import('../ui/studio/model/regions.js');
   const {placeSystem, systemMissing} = await import('../ui/studio/model/systems.js');
-  const {exampleDocument} = await import('../ui/studio/model/example.js');
-  const example = exampleDocument({fish : 'B', growth : 'W'}, sites, capabilities);
+  const {wiredDocument} = await import('./wired_document.js');
+  const example = wiredDocument({fish : 'B', growth : 'W'}, sites, capabilities);
   model.validateDocument(example);
   assert.ok(!example.organs.some(o => ['circuit', 'rhythm', 'teaching'].includes(o.type)));
   for (const type of ['tectum', 'olfaction', 'value', 'choice', 'state', 'motor'])
@@ -4415,7 +4415,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const regionModel = await import('../ui/studio/model/regions.js');
   exampleStudio.changeDocument =
       next => { exampleStudio.state.document = regionModel.settleRegions(next, sites); };
-  exampleStudio.example();
+  const {wiredDocument} = await import('./wired_document.js');
+  exampleStudio.loadFish(wiredDocument({fish : 'B', growth : 'W'}, sites, sitesResult));
   const exampleCircuit = exampleStudio.state.document.organs.find(o => o.type === 'olfaction');
   const learning = exampleStudio.state.document.organs.filter(o => o.region)
                        .flatMap(o => o.centers)
@@ -5572,8 +5573,8 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     assert.ok(model.findCenter(switched, receptorCenter.id)
                   .center.receptors[HORMONE_EFFECT.excitation]
                   .sensitivity > 0);
-    const exampleModel = await import('../ui/studio/model/example.js');
-    const exampleDoc = exampleModel.exampleDocument({fish : 'B', growth : 'W'}, sites, sitesResult);
+    const {wiredDocument} = await import('./wired_document.js');
+    const exampleDoc = wiredDocument({fish : 'B', growth : 'W'}, sites, sitesResult);
     assert.doesNotThrow(() => model.validateDocument(exampleDoc));
     assert.equal(exampleDoc.substances.length, 1);
     const relay = exampleDoc.organs.find(o => o.type === 'value');

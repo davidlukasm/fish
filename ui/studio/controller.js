@@ -6,7 +6,6 @@ import {
   FISH_CLICKS,
   STUDIO_CLICKS
 } from './events.js';
-import {exampleDocument} from './model/example.js';
 import {handleMethods, storedPanels} from './handles.js';
 import {storedLayers} from './view/layers.js';
 import {dropMethods} from './drops.js';
@@ -785,10 +784,6 @@ export class OrganStudio {
       this.state.busy = false;
       this.refreshHeader();
     }
-  }
-  example() {
-    const names = {fish : label('app.example'), growth : label('systems.growth.substance')};
-    this.loadFish(exampleDocument(names, this.state.sites, this.state.capabilities));
   }
   removeChosen() {
     const doc = this.state.document;

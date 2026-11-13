@@ -85,7 +85,6 @@ const ACTIONS = Object.freeze({
   breeding : studio => studio.navigate('breeding'),
   trials : studio => studio.navigate('trials'),
   new : studio => studio.newFish(),
-  example : studio => studio.example(),
   check : studio => studio.checkCompiler(),
   'cancel-build' : studio => { studio.cancelCompile = true; },
   develop : studio => studio.develop(),
