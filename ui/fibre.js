@@ -30,10 +30,7 @@ export function fibreBundle(rings, fast) {
         ]);
   return cells.map(([ x, y ], k) => ({x, y, fast : (k * GOLDEN) % 1 < fast}));
 }
-// A stroke fires once the averaged drive reaches 1 - 1/e of its level, so all-out effort does
-// that share of the muscle's capacity in work every step.
-const ALL_OUT_WORK = 1 - Math.exp(-1);
-// The force a muscle holds under all-out effort, step by step, as its fast fibres tire.
+// Average force under a held full command; the engine's twitch shape averages one.
 export function enduranceCurve(f, steps) {
   const curve = [];
   let reserve = 1;
@@ -41,7 +38,7 @@ export function enduranceCurve(f, steps) {
     const available = 1 - f + f * reserve;
     curve.push(fibreForce(f) * available);
     reserve = clamp(reserve + (1 - reserve) / between(F.recovery_slow, F.recovery_fast, f) -
-                    F.drain * f * f * ALL_OUT_WORK * available);
+                    F.drain * f * f * available);
   }
   return curve;
 }

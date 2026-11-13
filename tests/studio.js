@@ -1196,6 +1196,22 @@ async function checkHormoneSystems(model, capabilities) {
   }
   await checkVariationPictures();
   {
+    const {enduranceCurve, fibreForce} = await import('../ui/fibre.js');
+    const {MUSCLE_FIBRE : F} = await import('../ui/schema.js');
+    for (const fast of [0, .25, .5, .75, 1]) {
+      const curve = enduranceCurve(fast, 5000), force = fibreForce(fast);
+      assert.equal(curve[0], force, 'All fibre kinds start rested');
+      assert.ok(Math.abs(curve[1] / force - (1 - F.drain * fast ** 3)) < 1e-12,
+                'A full command spends one unit of work per capacity and step');
+      // At sustained effort, replenishment must balance the work of the remaining fibres.
+      const recovery = F.recovery_slow * (F.recovery_fast / F.recovery_slow) ** fast;
+      const drain = F.drain * fast ** 2 * recovery;
+      const reserve = Math.max(0, (1 - drain * (1 - fast)) / (1 + drain * fast));
+      assert.ok(Math.abs(curve.at(-1) / force - (1 - fast + fast * reserve)) < 1e-10,
+                'The endurance picture settles at the engine balance for full effort');
+    }
+  }
+  {
     const {
       NEURON,
       NEURON_PARAMETER,
