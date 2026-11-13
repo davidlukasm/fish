@@ -579,7 +579,7 @@
 .aid-head-barbel{fill:none;stroke:#d9c99a;stroke-width:3;stroke-linecap:round}
 .aid-head-tooth{fill:var(--aid-tooth);stroke:var(--aid-ink);stroke-width:.5}
 .aid-head-mouth{fill:#0b1d22;stroke:#e9b9a3;stroke-width:1.6}
-.aid-region-inner{fill:none;stroke:var(--aid-brain);stroke-width:1;stroke-opacity:.55;pointer-events:none;vector-effect:non-scaling-stroke}
+.aid-region-inner{fill:none;stroke:var(--aid-brain);stroke-opacity:.55;pointer-events:none}
 .aid-region-inner.inhibit{stroke:var(--aid-inhibit)}
 .aid-region-slots{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .aid-region-slots li{display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:4px;border:1px solid var(--aid-panel-edge);border-radius:8px}
@@ -1089,8 +1089,8 @@
 .aid-placement-sides button[aria-pressed="true"]{background:var(--aid-chosen-edge);color:#113039}
 .aid-placement-area{fill:#8ed9bd22;stroke:#9edaca;stroke-width:1.2;stroke-dasharray:5 4;pointer-events:none}
 .aid-symmetry-line{fill:none;stroke:#acbdbb;stroke-width:1;stroke-dasharray:7 6;opacity:.28;pointer-events:none}
-.aid-region-inner{stroke-dasharray:none;stroke-opacity:.75;stroke-width:.8;stroke-linecap:round}
-.aid-region-inner.selected{stroke-width:1.7;stroke-opacity:1}
+.aid-region-inner{stroke-dasharray:none;stroke-opacity:.75;stroke-linecap:round}
+.aid-region-inner.selected{stroke-opacity:1}
 .aid-brainstem{fill:#496366;stroke:#9fb9bc;stroke-width:1.6}
 .aid-anatomical-nose path:not(:first-child){fill:none;stroke:#d4eee1;stroke-width:1.1;opacity:.8}
 .aid-anatomical-nose .aid-nose-lumen{stroke:#183b3b;stroke-width:3}

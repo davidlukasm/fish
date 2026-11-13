@@ -139,14 +139,7 @@ function splitAlong(way, nodes, anchor, atEnd) {
   }
   return SPLIT.middle;
 }
-function branchCurve(node, join, towards, inward, confined = false) {
-  if (confined) {
-    const from = inward ? node : join, to = inward ? join : node;
-    return [
-      from, {x : from.x + (to.x - from.x) / 3, y : from.y + (to.y - from.y) / 3},
-      {x : from.x + (to.x - from.x) * 2 / 3, y : from.y + (to.y - from.y) * 2 / 3}, to
-    ];
-  }
+function branchCurve(node, join, towards, inward) {
   const pull = Math.min(BRANCH.reach, Math.hypot(join.x - node.x, join.y - node.y) * BRANCH.pull);
   const guide = {
     x : join.x + (inward ? -1 : 1) * towards.x * pull,
@@ -158,10 +151,52 @@ function branchCurve(node, join, towards, inward, confined = false) {
   };
   return inward ? [ node, lead, guide, join ] : [ join, guide, lead, node ];
 }
-const branchPath = (...args) => {
-  const [a, b, c, d] = branchCurve(...args);
-  return 'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
-};
+const cubic = ([ a, b, c, d ]) =>
+    'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
+const branchPath = (...args) => cubic(branchCurve(...args));
+// Inside a region a fibre does not cut across the cells. It leaves its cell sideways into the
+// lane between two rows of cells, runs along that lane and bends into the bundle where the bundle
+// meets the region. `rows` are the places of the region's rows across the bundle's course; the
+// fibre takes the lane next to its own row on the bundle's side. `hop` and `bend` are the lengths
+// of its first and last curve, `gap` what counts as one row, `beside` a lane outside the rows.
+const LANE = Object.freeze({hop : 9, bend : 14, gap : 3, beside : 5});
+function cellRows(cells, join, across) {
+  const places =
+      cells.map(p => (p.x - join.x) * across.x + (p.y - join.y) * across.y).sort((x, y) => x - y);
+  return places.filter((r, i) => !i || r - places[i - 1] > LANE.gap);
+}
+function lanePath(node, start, join, along, across, inward, rows) {
+  const local = p => ({
+    a : (p.x - join.x) * along.x + (p.y - join.y) * along.y,
+    r : (p.x - join.x) * across.x + (p.y - join.y) * across.y
+  });
+  const world = (a, r) =>
+      ({x : join.x + along.x * a + across.x * r, y : join.y + along.y * a + across.y * r});
+  const n = local(node), j = local(start), run = j.a - n.a, way = Math.sign(run) || 1;
+  // The lanes: between neighbouring rows and beside the outermost ones.
+  const lanes = [
+    rows[0] - LANE.beside, ...rows.slice(1).map((r, i) => (r + rows[i]) / 2),
+    rows.at(-1) + LANE.beside
+  ];
+  const towards = n.r > j.r ? lanes.filter(l => l < n.r) : lanes.filter(l => l > n.r);
+  const lane =
+      towards.length
+          ? towards.reduce((best, l) => Math.abs(l - n.r) < Math.abs(best - n.r) ? l : best)
+          : n.r;
+  const length = Math.abs(run), hop = Math.min(LANE.hop, length / 3),
+        bend = Math.min(LANE.bend, length / 3);
+  const onLane = n.a + way * hop, offLane = j.a - way * bend;
+  // From the cell to the bundle; a fibre that arrives is the same course walked back.
+  const points = [
+    world(n.a, n.r), world(n.a + way * hop * .2, n.r + (lane - n.r) * .6),
+    world(n.a + way * hop * .5, lane), world(onLane, lane), world(offLane, lane),
+    world(offLane + way * bend / 2, lane), world(offLane + way * bend / 2, j.r), world(j.a, j.r)
+  ];
+  const P = inward ? points : points.reverse();
+  return 'M' + pointText(P[0]) + ' C' + pointText(P[1]) + ' ' + pointText(P[2]) + ' ' +
+         pointText(P[3]) + ' L' + pointText(P[4]) + ' C' + pointText(P[5]) + ' ' + pointText(P[6]) +
+         ' ' + pointText(P[7]);
+}
 const BENT_STEPS = 14;
 function bentWay(points, safe = null) {
   const n = points.length - 1;
@@ -438,12 +473,21 @@ function fibresAt(state, bundle, inward, pairs) {
   const list = [...fibres.values() ].sort(
       (a, b) => (a.node.x - join.x) * across.x + (a.node.y - join.y) * across.y -
                 ((b.node.x - join.x) * across.x + (b.node.y - join.y) * across.y));
-  const share = width / Math.max(1, list.length);
-  const confined = !bundle.manual && isRegion((inward ? bundle.from : bundle.to).organ);
+  const share = width / Math.max(1, list.length), organ = (inward ? bundle.from : bundle.to).organ;
+  const rows = !bundle.manual && isRegion(organ)
+                   ? cellRows(organ.centers.map(
+                                  c => nodeLocation(state.document, state.sites, c, organ.type)),
+                              join, across)
+                   : null;
   return list.map((fibre, i) => {
     const offset = (i + .5 - list.length / 2) * share;
     const start = {x : join.x + across.x * offset, y : join.y + across.y * offset};
-    return {...fibre, width : share, d : branchPath(fibre.node, start, along, inward, confined)};
+    return {
+      ...fibre,
+      width : share,
+      d : rows ? lanePath(fibre.node, start, join, along, across, inward, rows)
+               : branchPath(fibre.node, start, along, inward)
+    };
   });
 }
 // The bundles and, apart from them, the fibres they split into, which the scene draws above the
@@ -549,6 +593,9 @@ function contactOpacity(state, a, b) {
                              state.multi?.has(organ.id) || state.multi?.has(center.id));
   return Math.min(visible(a), visible(b));
 }
+// A connection inside a region is as thick as one fibre of a nerve outside it, a chosen one
+// thicker by this factor.
+const INNER_CHOSEN = 1.6;
 export function regionContactsSvg(state, centers) {
   const {document : doc, sites, selected} = state;
   if (state.contactView === 'actual' && !state.stale && state.report?.compiler)
@@ -576,7 +623,8 @@ export function regionContactsSvg(state, centers) {
     html += '<path opacity="' + fixed(opacity) + '" data-signal-opacity="' + fixed(opacity) +
             '" data-signal-edges="' + escapeText(signalPairs(doc, link).join(' ')) +
             '" class="aid-region-inner' + (a.center.sign < 0 ? ' inhibit' : '') +
-            (selectedEdge ? ' selected' : '') + '" d="' + path + '"/>';
+            (selectedEdge ? ' selected' : '') + '" stroke-width="' +
+            fixed(FIBRE.width * (selectedEdge ? INNER_CHOSEN : 1)) + '" d="' + path + '"/>';
   }
   return html;
 }

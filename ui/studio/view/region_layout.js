@@ -1,5 +1,6 @@
 import {BODY_FRAME, findSite, NERVE_ROLE, sideOf, sitePoint} from '../model/layout.js';
 import {isRegion, ORGAN_BY_KEY} from '../model/organs.js';
+import {routedLinks} from '../model/regions.js';
 import {clamp} from '../../units.js';
 
 export {BRAIN, brainHalfWidth} from '../model/anatomy.js';
@@ -16,7 +17,34 @@ const FORMS = Object.freeze({
 const PACK = Object.freeze({gap : 6, margin : 8, step : 5, shrink : .94, midline : 5});
 const CELL = Object.freeze({pitch : 17, padding : 28, columns : 4, along : .55, across : .56});
 const homeSite = (organ, sites) => findSite(sites, organ.region?.site ?? organ.centers[0]?.site);
-function contents(organ) {
+// The cells of each row are put in the order of the cells they are wired to in the other rows,
+// row by row, a few times down and up, so that the wiring inside the region crosses itself as
+// little as the rows allow.
+const UNTANGLE_SWEEPS = 4;
+function untangle(rows, links) {
+  const row = new Map(rows.flatMap((r, k) => r.cells.map(c => [c.id, k])));
+  const partners = new Map();
+  for (const {from, to} of links)
+    if (row.has(from) && row.has(to) && row.get(from) !== row.get(to))
+      for (const [a, b] of [[ from, to ], [ to, from ]])
+        partners.set(a, [...(partners.get(a) ?? []), b ]);
+  const place = new Map();
+  const settle = r => r.cells.forEach((c, i) => place.set(c.id, (i + .5) / r.cells.length));
+  rows.forEach(settle);
+  const order = r => {
+    const wanted = c => {
+      const others = partners.get(c.id);
+      return others ? others.reduce((sum, id) => sum + place.get(id), 0) / others.length
+                    : place.get(c.id);
+    };
+    const want = new Map(r.cells.map(c => [c.id, wanted(c)]));
+    r.cells.sort((a, b) => want.get(a.id) - want.get(b.id) || place.get(a.id) - place.get(b.id));
+    settle(r);
+  };
+  for (let sweep = 0; sweep < UNTANGLE_SWEEPS; ++sweep)
+    (sweep % 2 ? [...rows ].reverse() : rows).forEach(order);
+}
+function contents(organ, links) {
   const form = FORMS[organ.type], rows = [],
         ports = [ 'in', 'none', 'out' ].map(
             port => ({
@@ -33,6 +61,7 @@ function contents(organ) {
                                   Math.floor((i + 1) * group.cells.length / count))
       });
   }
+  untangle(rows, links);
   const columns = Math.max(1, ...rows.map(r => r.cells.length));
   const width = (CELL.padding + columns * CELL.pitch) * Math.sqrt(form.aspect);
   const height = (CELL.padding + rows.length * CELL.pitch) / Math.sqrt(form.aspect);
@@ -44,14 +73,14 @@ function layout(doc, sites) {
   if (old?.sites === sites)
     return old.anchors;
   const organs = doc.organs.filter(o => isRegion(o) && o.centers.length && homeSite(o, sites));
-  const seen = new Set(), groups = [];
+  const seen = new Set(), groups = [], links = routedLinks(doc, sites);
   for (const organ of organs) {
     if (seen.has(organ.id))
       continue;
     const pair = organs.find(o => o.id === organ.pair),
           members = pair ? [ organ, pair ] : [ organ ];
     members.forEach(o => seen.add(o.id));
-    const plans = members.map(contents), plan = plans[0];
+    const plans = members.map(o => contents(o, links)), plan = plans[0];
     groups.push({
       members,
       plan,
@@ -114,7 +143,7 @@ function layout(doc, sites) {
                 k,
                 width,
                 height,
-                ...contents(o),
+                ...contents(o, links),
                 side : side ? sideOf(o) : 0
               }));
           for (const point of points) {
