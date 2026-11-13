@@ -98,7 +98,7 @@ function fishIcon(parent, x, cy, s) {
 // its keys (a threshold and how far its cells spread around it; `used` how fast they tire) and the
 // input tried on it.
 const S = {
-  length : 1.4, muscle : .6, from : 0, until : 1,
+  length : 4, muscle : .9, from : 0, until : .5,
   full : {keys : [{gate : .6, spread : .1}], chosen : 0, input : {rise : 120, height : .8, stop : 520}},
   ache : {keys : [{gate : .3, spread : .1, used : 200}], chosen : 0, input : {rise : 60, height : .7, stop : 600}},
   feed : {keys : [{gate : .25, spread : .1, used : 200}], chosen : 0, input : {rise : 40, height : .6, stop : 300}}
@@ -147,9 +147,6 @@ const LIFE = Array.from({length : 41}, (_, k) => k / 40);
 //   The formula is the engine's (stuff_yield, src/physiology.hh:229-234) with one addition: the
 //   share taken up at best. With it the engine can give these curves; it needs two more stuffs.
 //   Algae hold their 78 % to the long end only because their quick part (sap) never spoils.
-//   Bellyache here begins earlier than in the engine, so that it lies where a food still pays
-//   (David 17:54: too little bellyache). Engine (gut_ache, src/physiology.hh:374-379): meat from
-//   stay x share 375, fibre above 55 % below 400 x the excess.
 const STUFFS = {flesh : [0, 20, 250, 1], shell : [100, 4, 480, .86], pulp : [0, 33, 800, 1], sap : [0, 20, 0, 1], soft : [230, 4, 0, .78], hard : [430, 2, 0, 1]};
 const FOOD = [['Blatt', {hard : 1}, '#8fd16a'], ['Alge', {sap : .25, soft : .7}, '#55c4a6'], ['Flocken', {pulp : .77}, '#e3cf94'], ['Plankton', {flesh : .445, shell : .52}, '#9cc8f0'], ['Fleisch', {flesh : 1}, '#ef8f8f']];
 const KIND = {Blatt : 'Pflanzenfresser', Alge : 'Algenfresser', Flocken : 'Allesfresser', Plankton : 'Planktonfresser', Fleisch : 'Räuber'};
@@ -159,16 +156,17 @@ function stuffYield(t, [opens, uptake, spoils, best]) {
   return best * open * k / (k + spoil + 1 / t);
 }
 const gain = (f, t) => Object.entries(f).reduce((a, [s, share]) => a + share * stuffYield(t, STUFFS[s]), 0);
-// Bellyache of a full gut of a food at a stay: meat spoils when it stays long, fibre that passes
-// unopened hurts when it stays short. Flocks never hurt.
+// Bellyache of a full gut of a food at a stay, as the engine has it (gut_ache,
+// src/physiology.hh:374-379): flesh hurts when it stays longer than ACHE_FLESH x its spoiling time
+// / its share; a meal that is fibre by more than ACHE_FIBRE hurts when it stays shorter than
+// FIBRE_OPENS x that excess; past these limits by the share CRAMP it hurts all it can.
+const ACHE_FLESH = 1.5, FLESH_SPOILS = 250, ACHE_FIBRE = .55, FIBRE_OPENS = 400, CRAMP = .25;
 function ache(f, t) {
   const flesh = f.flesh ?? 0, fibre = (f.hard ?? 0) + (f.soft ?? 0);
-  const rot = flesh > 0 ? clamp((t - (140 + 380 * (1 - flesh))) / 180, 0, 1) * Math.sqrt(flesh) : 0;
-  const onset = fibre > .4 ? 360 * (fibre - .4) / .6 : 0;
-  const raw = onset > 0 ? clamp((onset - t) / (.6 * onset), 0, 1) : 0;
-  return Math.max(rot, raw);
+  const spoiling = flesh > 0 ? t * flesh / (ACHE_FLESH * FLESH_SPOILS) - 1 : 0, closed = fibre > ACHE_FIBRE ? 1 - t / (FIBRE_OPENS * (fibre - ACHE_FIBRE)) : 0;
+  return clamp(Math.max(spoiling, closed) / CRAMP, 0, 1);
 }
-const HURTS = .15;
+const HURTS = 0;
 // What does not depend on the settings: every food's yield and ache along the pictures' axis.
 const AXIS = Array.from({length : 141}, (_, k) => SHORT * Math.pow(LONG / SHORT, k / 140));
 const CURVES = FOOD.map(([name, f, colour]) => {
@@ -183,7 +181,8 @@ function rangeIn(c, [lo, hi]) {
   return {min : Math.min(...gains), max : Math.max(...gains), sore : sore.length ? [Math.min(...sore), Math.max(...sore)] : null,
           ache : [Math.min(...aches), Math.max(...aches)]};
 }
-const bestIn = span => CURVES.reduce((b, c) => rangeIn(c, span).max > rangeIn(b, span).max ? c : b);
+// The food that gives most at each stay of the axis.
+const LEADS = AXIS.map((_, k) => CURVES.reduce((b, c) => c.gains[k] > b.gains[k] ? c : b));
 // Everything the pictures read, for the present settings.
 function derive() {
   const rest = REST_PER_LENGTH * S.length, pace = paceOf(S.muscle);
@@ -195,8 +194,7 @@ function derive() {
   const reach = [Math.min(...LIFE.map(fastAt)), rest];
   const ranges = CURVES.map(c => rangeIn(c, reach));
   const top = ranges.reduce((b, r, i) => r.max > ranges[b].max ? i : b, 0);
-  const young = [fastAt(Math.max(0, S.from)), rest], grown = [fastAt(1), rest];
-  return {rest, pace, fastAt, reach, ranges, kind : KIND[CURVES[top].name], bestYoung : bestIn(young), bestGrown : bestIn(grown)};
+  return {rest, pace, fastAt, reach, ranges, kind : KIND[CURVES[top].name]};
 }
 let model = null;
 const M = () => model ??= derive();
@@ -228,10 +226,23 @@ function signal(id, k, stim) {
   const gates = cellGates(k), pace = SENSE[id].tires ? 1 / k.used : 0; let used = 0;
   return stim.map(s => { const r = gates.reduce((t, g) => t + answer(s, g, used), 0) / CELLS; used += (s - used) * pace; return r; });
 }
-// Under a constant input of this height the last cell falls silent after this many steps: the
-// input less what the cells are used to has sunk to its threshold.
-const silentAfter = (k, height) => { const last = Math.min(...cellGates(k)); return height > last ? k.used * Math.log(height / last) : 0; };
-const usedFor = (k, height, steps) => { const last = Math.min(...cellGates(k)); return height > last ? clamp(steps / Math.log(height / last), USED[0], USED[1]) : k.used; };
+// The step at which a key's last cell falls silent under this input: what it is used to has
+// risen to within its threshold of the input. Past the picture's steps if it never does.
+function silentStep(k, stim) {
+  const last = Math.min(...cellGates(k)); let used = 0, heard = false;
+  for (let st = 0; st <= STEPS; st++) {
+    const hears = stim[st] - used > last;
+    if (heard && !hears) return st;
+    heard ||= hears; used += (stim[st] - used) / k.used;
+  }
+  return STEPS + 1;
+}
+// The pace of tiring that puts that step where it is wanted (the slower, the later).
+function usedFor(k, stim, step) {
+  let [lo, hi] = USED;
+  for (let n = 0; n < 24; n++) { const mid = (lo + hi) / 2; if (silentStep({...k, used : mid}, stim) < step) lo = mid; else hi = mid; }
+  return hi;
+}
 
 // ===== Pictures: built once, repainted where the settings changed =====
 // A picture has what never changes (built once) between a layer below it and one above it; only
@@ -370,10 +381,9 @@ function drawFish() {
   const [ex, ey] = film.way.end;
   drag(svg, el('rect', {x : ex - 5, y : ey + down + 5, width : 10, height : 14, rx : 3}, live), p => { S.length = clamp(SHORTEST + (LONGEST - SHORTEST) * (p.x - GUT.right[0]) / (GUT.right[1] - GUT.right[0]), SHORTEST, LONGEST); draw(); }, 'gutend');
   // The muscle: the wall's thickness, dragged outward at the top of the first loop.
-  const wall = TUBE / 2 + WALL[0] + (WALL[1] - WALL[0]) * S.muscle;
-  drag(svg, el('rect', {x : GUT.left - 5, y : GUT.high + down - wall - 12, width : 10, height : 10, rx : 3}, live),
-    p => { S.muscle = clamp((GUT.high + down - 7 - TUBE / 2 - WALL[0] - p.y) / (WALL[1] - WALL[0]) / 2, 0, 1); draw(SHOW_GUT); }, 'wall');
-  txt(live, GUT.left + 9, GUT.high + down - wall - 4, 'Muskel');
+  const WALL_GRIP = {low : GUT.high + down - 16, travel : 18}, wy = WALL_GRIP.low - WALL_GRIP.travel * S.muscle;
+  drag(svg, el('rect', {x : GUT.left - 5, y : wy - 5, width : 10, height : 10, rx : 3}, live), p => { S.muscle = clamp((WALL_GRIP.low - p.y) / WALL_GRIP.travel, 0, 1); draw(SHOW_GUT); }, 'wall');
+  txt(live, GUT.left + 9, wy + 4, 'Muskel');
 }
 
 // ===== Yield: what each food gives at every stay =====
@@ -425,10 +435,15 @@ function drawYield() {
   el('rect', {x : x0, y : top, width : x1 - x0, height : base - top, fill : COLOUR.handle, opacity : .1}, under);
   // The band over the life.
   const edge = LIFE.map(s => [xOfStay(m.fastAt(s)), lifeY(s)]);
-  el('path', {d : `${path(edge)} L${x1.toFixed(1)} ${lifeBase} L${x1.toFixed(1)} ${lifeTop} Z`, fill : COLOUR.muscle, opacity : .55}, live);
-  el('path', {d : `M${x1.toFixed(1)} ${lifeTop} V${lifeBase}`, stroke : COLOUR.handle, 'stroke-width' : 1.6}, live);
-  txt(live, R, lifeTop + 9, m.bestYoung.name, {'text-anchor' : 'end', style : `fill:${m.bestYoung.colour};font-size:10px`});
-  txt(live, R, lifeBase - 2, m.bestGrown.name, {'text-anchor' : 'end', style : `fill:${m.bestGrown.colour};font-size:10px`});
+  // The band has, at each stay, the colour of the food that gives most there: so it shows what
+  // pays at each age.
+  el('clipPath', {id : 'lifeband'}, live).appendChild(el('path', {d : `${path(edge)} L${(x1 + 3).toFixed(1)} ${lifeBase} L${(x1 + 3).toFixed(1)} ${lifeTop} Z`}));
+  const band = el('g', {'clip-path' : 'url(#lifeband)'}, live);
+  for (let k = 0, from = 0; k <= AXIS.length; k++) if (k === AXIS.length || LEADS[k] !== LEADS[from]) {
+    const a = xOfStay(AXIS[from]), b = k === AXIS.length ? R + 3 : xOfStay(AXIS[k]);
+    el('rect', {x : a, y : lifeTop, width : b - a, height : lifeBase - lifeTop, fill : LEADS[from].colour, opacity : .8}, band);
+    from = k;
+  }
   for (const key of ['from', 'until']) {
     const y = lifeY(S[key]);
     el('path', {d : `M${L - 4} ${y} H${x1.toFixed(1)}`, stroke : COLOUR.muscle, 'stroke-dasharray' : '2 3'}, live);
@@ -530,11 +545,10 @@ function drawSense(id) {
   });
   el('path', {d : `M${L} ${A0 - 2} V${A1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   if (o.tires) {
-    // Past the picture's last step the grip waits at the edge and its word says so.
-    const k = keys[cell.chosen], at = inp.rise + silentAfter(k, inp.height), x = X(Math.min(STEPS, at)), left = x > (L + R) / 2;
+    const k = keys[cell.chosen], at = silentStep(k, stim), x = X(Math.min(STEPS, at)), left = x > (L + R) / 2;
     el('path', {d : `M${x} ${A0} V${A1}`, stroke : keyColour(cell.chosen), 'stroke-dasharray' : '2 3'}, live);
-    txt(live, x + (left ? -6 : 6), A0 + 10, at > STEPS ? 'kein Signal mehr nach ' + Math.round(at) : 'kein Signal mehr', {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
-    drag(svg, el('rect', {x : x - 5, y : A1 - 14, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = usedFor(k, inp.height, Math.max(1, stOf(p.x) - inp.rise)); draw([id]); }, id + 'used');
+    if (at <= STEPS) txt(live, x + (left ? -6 : 6), A0 + 10, 'kein Signal mehr', {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
+    drag(svg, el('rect', {x : x - 5, y : A1 - 14, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = usedFor(k, stim, stOf(p.x)); draw([id]); }, id + 'used');
   }
   txt(live, L, A1 + 14, 'Schritte');
   for (const st of [300, 600]) txt(live, X(st), A1 + 14, st, {'text-anchor' : 'middle'});
@@ -563,11 +577,6 @@ function showMoment() {
   for (const {line, x, top, base} of Object.values(play.lines)) line.setAttribute('d', `M${x(st).toFixed(1)} ${top} V${base}`);
   for (const l of play.levels) l.content.setAttribute('y', l.y(full).toFixed(1));
   for (const g of play.glow) g.line.setAttribute('opacity', (play.stim[g.sense]?.[st] ?? 0) >= g.gate ? 1 : .45);
-  // In the fish the gut itself shows what its cells feel: its inside reddens while the bellyache
-  // is over a threshold, its morsels swell while the nutrients are.
-  const felt = id => (play.stim[id]?.[st] ?? 0) >= Math.min(...S[id].keys.map(k => k.gate));
-  film.tube?.setAttribute('stroke', felt('ache') ? COLOUR.sore : COLOUR.tube);
-  for (const b of film.bits) b.e.setAttribute('r', felt('feed') ? 3.6 : 2.2);
 }
 // The gut's waves: its own, calm, always; the muscle's on top while it works. A piece's width is
 // written only when it has changed.
