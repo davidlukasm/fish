@@ -156,6 +156,25 @@ Meine erste Fassung sprach von „einer Zielzelle“ und von Gewichten an der Gr
   - 5a, Punkt 4: „mehr Stufen bei gestreuten Schwellen“ gilt im Aquarium nicht.
   - Mein Vorschlag „Spiegeln am Gen-Ende“ (19:07) ist zurückgezogen. Die Häufung hat im Aquarium keine Wirkung auf die Meldung.
 
+## 5c. Jede Sinneszelle mit eigener Antwort: was je Zelle streut (Davids Entscheidung 20:11, geklärt 20:19)
+
+**Die Zelle braucht keinen eigenen Blick in die Welt. Alle Rohwerte liegen schon je Fisch, je Nasenloch, je Hautsektor oder je Bartelspitze vor; je Zelle kommt nur die Gewichtung dazu.**
+  - **Was je Zelle gezogen wird** (`colony-core/field/development.cc:161-178`, `distribution.hh:14-35`): Schwelle, Zellzeit, Feldbreite, Abstimmung (`quality1`, `quality2`, `quality_width`), dazu Grundantrieb, Lernwerte und Kontaktgrenze. **Nicht je Zelle:** der Ort. Alle Zellen einer Gruppe sitzen am selben Platz („Anatomy and contact fields are shared by a centre“, `development.cc:167`).
+  - **Was das je Sinn im Reiz ändert:**
+
+    | Sinn | je Zelle verschieden | Rohwert, einmal geholt |
+    |---|---|---|
+    | Füllung, Bauchweh, Nährwert, Tiefe, Ei- und Samendruck, Muskeldehnung | nichts außer Schwelle und Gewöhnung | je Fisch (`body_plan.cc:1046-1067, 1154-1180`) |
+    | Geruch | Passung zu den acht Gerüchen | je Nasenloch, vor der Schleife (`cppn_brain.cc:308-325, 364-372`) |
+    | Geschmack (Barteln) | Passung und Anteil Tasten | je Bartelspitze; **heute in der Schleife** (`cppn_brain.cc:375-378`) |
+    | Tasten, Hautschmerz, Seitenlinie | Breite über die 16 Sektoren; die Richtung nicht, sie kommt vom Ort | je Sektor im Fisch (`body_plan.cc:346-359, 1101-1152`) |
+    | Gleichgewicht | Haarrichtung (`quality1`) | Lage des Fischs (`body_plan.cc:330-331, 1098-1100`) |
+    | Blutsinn | Passung zu den Stoffen | Pegel je Fisch (`body_plan.cc:1181-1185`) |
+
+  - **Umbau:** Der Zweig, der die Antwort der ersten Zelle kopiert, fällt weg (`src/cppn_brain.cc:341-348`). Die Schleife dahinter rechnet schon heute jede Zelle vollständig, mit eigenem Gewöhnungsstand (`:254-262, 385`). Dazu den Bartelkontakt einmal je Seite vor die Schleife holen (Astra 19:49), sonst sucht jede Geschmackszelle die Gitter selbst ab.
+  - **Kosten, gemessen** (160 Zellen in 10 Gruppen, `sense_generated`, ohne anliegenden Reiz): je zusätzlicher Zelle und Schritt 7 ns bei Füllzellen, 12 ns bei Hautschmerz, 18 ns bei Tasten, 29 ns bei der Seitenlinie. Tasten mit anliegendem Kontakt und Geschmack habe ich nicht gemessen.
+  - **Das Atelier** baut seine Proben ohne Streuung (`werkzeug/atelier_compiler.hh:309-314`). Soll es die Staffelung zeigen, muss es die Zellen wie für die Lichtvorschau mit Streuung ziehen (`:325-355`).
+
 ## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:02)
 
 Nichts davon ist umgesetzt. Bild zum Vorschlag: `bilder/2026-11-13_druese_b_zwei_zeiten.png`. Zum Vergleich: `…druese_vorschlaege.png` (A gegen B) und `…druese_pegelformeln.png` (heute und die verworfenen Formen). Jede Kurve ist `HormoneState::advance` der Engine (`src/hormone_state.cc:37-53`), für die Vorschläge in einer Kopie außerhalb des Produkts mit einer geänderten Zeile.
@@ -193,6 +212,36 @@ Das Ziel des Pegels ist `0,5 × Abgabe`. Liegt der Pegel darunter, läuft er mit
 - **Zellbildung und Körperwachstum** (`substrate.cc:607-612`, `physiology.hh:98-100`, `physiology.cc:336`): laufen, solange der Stoff da ist. Ein dauerhafter Wachstumsstoff überbrückt die Pausen zwischen Mahlzeiten.
 - **Blutsinn** (`body_plan.cc:1181-1183`): meldet den Stoff, solange er steht.
 - **Bausteine und Vorlagen:** Die Drüse der Bibliothek (`organs.js:256-260`) und die vier Vorlagen Belohnung, Wachstum, Festigung, Alarm (`systems.js:18-64, 120`) bekommen Zeiten nach ihrer Aufgabe: Belohnung und Alarm schnell hinauf und nicht lange bleibend, Wachstum und Festigung dauerhaft.
+
+## 6a. Drüse B, kleinster Fall vor dem Bau (20:19)
+
+Gerechnet mit der Mittelung der Engine (`src/body_plan.cc:157-168, 191-196`: je Stoff über die Zellen, die ihn abgeben, gewichtet mit Stärke × Stoffanteil) und der Formel B in einer Kopie von `hormone_state.cc`. Jeweils Befehl 1 für 20 Schritte, Anstieg 4 Schritte. Spalten: Pegel bei Schritt 20 / 30 / 60 / 120 / 300.
+
+  | Fall | Pegel | Befund |
+  |---|---|---|
+  | 1a. Eine Zelle (Stärke 1), ein Stoff, Abklingen 256 | 0,50 / 0,48 / 0,43 / 0,34 / 0,17 | in Ordnung |
+  | 1b. Drüsenknoten des Ateliers (5/16), sonst gleich | 0,16 / 0,15 / 0,13 / 0,11 / 0,05 | **Höchstpegel ist die halbe Stärke**, hier 0,16 |
+  | 2. Eine Mischzelle 60 % / 40 %, Abklingen 256 | Stoff 0: 0,30 … 0,10; Stoff 1: 0,20 … 0,07 | gleiche Zeit, festes Verhältnis, wie vorhergesagt |
+  | 3. Zwei Zellen, je ein Stoff, Abklingen 8 und 512 | Stoff 0: 0,50 / 0,14 / 0,00; Stoff 1: 0,50 / 0,49 / 0,46 / 0,41 / 0,29 | unabhängig |
+  | 4a. Zelle A gibt Stoff 0 ab (Abklingen 8). Zelle B mischt beide (Abklingen 512) und **schweigt** | Stoff 0: 0,50 / 0,47 / 0,40 / 0,28 / 0,10 | **Schwachstelle**, siehe unten |
+  | 4b. Dasselbe ohne Zelle B | Stoff 0: 0,50 / 0,14 / 0,00 | |
+  | 5a. Eine Zelle, Abklingen 512, bindet von Schritt 60 bis 120 | 0,50 / 0,49 / 0,46 / 0,06 / 0,04 | Halbwertszeit beim Binden 22 Schritte |
+  | 5b. Drüsenknoten des Ateliers, sonst gleich | 0,16 / 0,15 / 0,14 / 0,07 / 0,05 | Halbwertszeit 71 Schritte: **Binden hängt an der Stärke** |
+  | 6a. Zelle A gibt dauernd ab, Zelle B bindet denselben Stoff ab Schritt 60, Anstieg 4 | 0,50 → 0,44 | Binden senkt nur um 13 % |
+  | 6b. Dasselbe mit Anstieg 48 | 0,36 → 0,20 (Ziel 0,50) | Binden hält den Pegel auf 39 % |
+  | 7. Mischzelle 60 % / 40 % bindet | 0,28 : 0,18 → 0,08 : 0,08 | der größere Anteil wird schneller abgebaut, die Mischung verschiebt sich |
+
+  - **Schwachstelle (Fall 4):** Die Abklingzeit eines Stoffs ist ein fester Mittelwert über alle Zellen, die ihn abgeben können, auch über die, die gerade schweigen. Zelle A allein gibt einen flüchtigen Stoff ab (8 Schritte); nur weil es Zelle B gibt, bleibt er mit 176 Schritten. Das Mittel wird in Schritten gebildet, die lange Zeit überwiegt also. Dieselbe Eigenschaft hat heute schon die Anstiegszeit.
+    - **Weg a, so lassen:** + einfach, gleich wie die Anstiegszeit, ein Wert je Stoff, den das Atelier anzeigen kann. − eine flüchtige und eine dauerhafte Drüse für denselben Stoff gibt es nicht; die dauerhafte gewinnt.
+    - **Weg b, gewichten mit dem, was jede Zelle wirklich abgegeben hat:** + was Zelle A abgibt, bleibt so lange, wie Zelle A sagt. − ein gespeicherter Wert je Stoff mehr (im Speicherstand), eine Regel mehr.
+    - **Meine Empfehlung: Weg a.** Im Atelier gibt jeder Drüsenknoten seinen eigenen Stoff ab (`ui/studio/model/organs.js:254-260`), der Fall entsteht dort nur, wenn jemand zwei Knoten für denselben Stoff verschieden einstellt, und dann zeigt die Anzeige je Stoff das Mittel. Weg b ist die Antwort, falls David genau das will.
+  - **Binden schaltet eine laufende Drüse nicht ab (Fall 6).** Es räumt Reste weg. Gegen eine schnell ansteigende Drüse wirkt es kaum. Das ist eine Eigenschaft der Formel, kein Rechenfehler; David sollte sie kennen.
+  - **Für den Bau, damit nichts vergessen wird:**
+    1. Zweite Zeit je Stoff neben `hormone_timing` (`src/brain_interface.hh:106`), gefüllt in derselben Schleife (`body_plan.cc:157-168`), gesetzt bei `:191-196`, übergeben bei `:1640-1643`.
+    2. Eine benannte Funktion Feldbreite → Abklingzeit, 4 bis 1024 Schritte. Die Vorgabe des Ateliers 0,3 (`document.js:432, 451`) ergibt 21 Schritte.
+    3. `hormone_state.cc:36-53`: Auch `integrated_` muss mit der neuen Abklingzeit rechnen, sonst zeigen `ecology_step.cc:339` und `hormone_view.cc:111` falsche Werte.
+    4. `parameters.rate` (`hormone_state.hh:8`) ist danach nur noch die Bindungsrate (1/32). Die Höhe 0,5 und die Rate kommen benannt ins Schema.
+    5. Abwehrzellen lesen `field_width` für die Stachelbreite (`body_plan.cc:857-874`). Eine Zelle hat genau eine Ausgabe (`development.cc:60-61`), es gibt also keine Zelle, die beides ist.
 
 ## 7. Frühere Entscheidungen aus den alten Chats (Suche 19:47, nach Leitlinie 5)
 
