@@ -44,3 +44,25 @@ Die Lebensachse ist die Reife des Fischs: Gewebe ÷ Gewebe des Erwachsenen (`phy
 - **Zellen**: mehr Zellen ergeben mehr Kraft und kosten mehr Unterhalt.
 - **Schlängeln** (`movement.cc:93`): Ein schlängelnder Körper kommt im Sand leichter voran (Widerstand 3 statt 12), verliert dafür im freien Wasser Schub.
 - Daraus folgt das Bild: ein Schwanzschlag über der Zeit, Kraft und Dauer je Faseranteil, dazu Ermüdung bei Dauerschwimmen. Beim Schlängeln: Tempo im Wasser gegen Tempo im Sand.
+
+## Prüfung vor David (David 13.11. 01:59: „würdet ihr auch diese Unzulänglichkeiten in der Modellierung bemängeln? Und dann noch genau das Visuelle auch überdenken?“)
+Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2, ein anderer (Astra) prüft 2 erneut mit dem Auftrag, Mängel zu finden, nicht zu bestätigen.
+
+### 1. Modellkritik (vor dem Zeichnen, Funde als Frage an Fable)
+- Hat jede Einstellung einen Vorteil **und** einen Nachteil? Gibt es eine Einstellung, die immer besser ist?
+- Hat jede Nische (Futter, Lebensweise) ein eigenes Fenster, scharf genug, dass Spezialisten sich lohnen?
+- Wird etwas gemittelt, gerundet, gestuft oder zusammengezählt, was einzeln wirken müsste (Knoten, Zellen, Fasern)?
+- Was würde ein echter Fisch hier anders machen? Was würde ein Spieler unlogisch finden?
+- Passen die Zeitskalen zusammen (Sinn, Verdauung, Bewegung)?
+
+### 2. Bildkritik (an Davids Rückmeldungen)
+- Ist das Ding selbst das Diagramm (Lebensphasen, Fisch, Darm), nicht eine Legende daneben?
+- Liegen Kurven über dem Ding, dünn, nicht aufdringlich?
+- Fallen Werte, die zusammengehören, auf einen Griff (Entstehen = Beginn der Aktivität)?
+- Folgt jeder Griff der Maus, hat er mindestens 40 px Weg, verschwindet er nie, auch bei Extremwerten?
+- Sieht ein Griff nicht aus, als gehöre er zu einer anderen Kurve?
+- Werden Bilder beim Ziehen nicht neu erzeugt (sonst reißt das Ziehen ab)?
+- Gleichartige Wahl nebeneinander, Zusammengehöriges gruppiert, Zwischenüberschriften als solche erkennbar?
+- Namen statt Buchstaben (Botenstoffe), unbenutzte Dinge erkennbar (gestrichelt) und anlegbar?
+- Kein Text, den eine Form sagen könnte; keine hässlichen Wörter („300 Schritte Vollgas“).
+- Ist ganz ausgegraut, was gerade nichts steuert?
