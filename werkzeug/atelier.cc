@@ -575,13 +575,33 @@ std::vector<int> anatomy_report(const field::Substrate &t,
       std::cout << ',';
     std::cout << a.anatomy[i];
   }
-  // How fast the design's gut muscle moves the content of a young adult's gut.
+  // The design as a young adult: how fast its gut muscle moves the gut's content, and what the
+  // body costs at rest, weighs and can store as yolk, each split into what it comes from. The
+  // nerve cells count as planned; their contacts exist only once the fish has developed.
   fishsim::Body adult;
   adult.organ_mass = a.organ_mass;
   adult.tissue = fishsim::BODY_TISSUE;
   adult.gut_strength = a.capacities[fishsim::organ_port::gut];
+  adult.gut_length = a.gut_length;
+  const fishsim::PhysiologyParameters physiology;
+  const fishsim::EvolutionParameters evolution;
+  const double basal = fishsim::basal_cost(adult.tissue, physiology),
+               gut_size = fishsim::gut_size_factor(adult),
+               yolk =
+                   std::min(evolution.egg_capacity, evolution.egg_organ_capacity *
+                                                        a.motor_counts[fishsim::organ_port::eggs]);
+  std::cout << "],\"budget\":{\"rest\":{\"basal\":" << basal
+            << ",\"gut\":" << fishsim::digestion::upkeep * gut_size * basal << ",\"muscles\":"
+            << fishsim::muscle_upkeep(a.muscle_maintenance, adult.tissue, physiology)
+            << ",\"cells\":"
+            << t.neurons.size() * field::scaled_costs(t.options).neuron_maintenance *
+                   physiology.neural_cost
+            << "},\"mass\":{\"tissue\":" << adult.tissue / fishsim::BODY_TISSUE
+            << ",\"gut\":" << fishsim::digestion::wall_mass * gut_size
+            << ",\"organs\":" << a.organ_mass << "},\"yolk\":{\"organ\":" << yolk
+            << ",\"store\":" << fishsim::belly_room(adult) * yolk << "}}";
   const auto &growth = t.growth_receptor;
-  std::cout << "],\"gutSpeed\":" << fishsim::gut_speed(adult)
+  std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
             << ",\"steepness\":" << growth.steepness << ",\"affinity\":[";
   for (int k = 0; k < field::HORMONES; ++k)
