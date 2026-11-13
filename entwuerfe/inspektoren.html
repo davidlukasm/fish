@@ -95,6 +95,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Tastzellen</h4>
     <svg id="touchsense" viewBox="0 0 300 200"></svg>
   </section>
+  <section class="panel" aria-label="Seitenlinie">
+    <h2>Organ</h2><h3>Seitenlinie</h3>
+    <h4 class="first">Fühlfeld</h4>
+    <svg id="lateralskin" viewBox="0 0 300 130"></svg>
+    <h4>Strömungszellen</h4>
+    <svg id="lateralsense" viewBox="0 0 300 200"></svg>
+  </section>
   <section class="panel" aria-label="Schmerz">
     <h2>Organ</h2><h3>Schmerz</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -964,14 +971,21 @@ requestAnimationFrame(tailFrame);
 // used to it). Pain: the wounds there, getting used to old ones. Both answer as the gut's cells do
 // in this draft (threshold, spread, for pain the habit).
 const SKIN = {touch : {groups : [{aim : Math.PI, width : 1.1, gate : .3, spread : .3}], chosen : 0, level : .7, spot : null},
-              pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .3, habit : .5}], chosen : 0, level : .6, spot : null}};
+              pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .3, habit : .5}], chosen : 0, level : .6, spot : null},
+              lateral : {groups : [{aim : Math.PI / 2, width : 1.2, gate : .15, spread : .3, habit : .4}], chosen : 0, level : .6, from : 2.2}};
+// Lateral line (body_plan.cc:1044–1057, 1085–1090): at each patch of skin the water moving past it,
+// the fish's own speed and turning included, minus the water's and the neighbours' wake; a cell
+// counts what moves its way (max(0, relative · its direction)), weighted over its width, and not
+// where it is buried. Here: a current from one side, felt by the cells that face it.
 const skinWrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 let skinOutline = null;
+// The fish of the skin pictures: smaller than in the gut's, in the middle, with room round it.
+const SKIN_AT = {s : .66, x : 61, y : 52, cx : 150, cy : 80};
 function skinPoints() {
   if (skinOutline) return skinOutline;
   const probe = el('svg', {width : 0, height : 0, style : 'position:absolute'}); document.body.appendChild(probe);
   const path = el('path', {d : BODY}, probe), total = path.getTotalLength(), N = 180;
-  const at = k => { const q = path.getPointAtLength(total * ((k + N) % N) / N); return [40 + (q.x - 14) * .8, 30 + (q.y - 22) * .8]; };
+  const at = k => { const q = path.getPointAtLength(total * ((k + N) % N) / N); return [SKIN_AT.x + (q.x - 14) * SKIN_AT.s, SKIN_AT.y + (q.y - 22) * SKIN_AT.s]; };
   const raw = Array.from({length : N}, (_, k) => at(k));
   const cx = raw.reduce((t, q) => t + q[0], 0) / N, cy = raw.reduce((t, q) => t + q[1], 0) / N;
   skinOutline = raw.map((q, k) => {
@@ -993,7 +1007,7 @@ function drawSkin(key) {
   if (organ.spot == null) organ.spot = key === 'touch' ? facing(Math.PI - .5) : facing(-Math.PI / 2 + .3);
   const redraw = () => drawSkin(key), hold = () => { organ.held = true; }, free = () => { organ.held = false; redraw(); };
   el('path', {d : 'M' + pts.map(q => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L') + 'Z', fill : '#16363e', stroke : '#3b6a6c'}, svg);
-  el('circle', {cx : 40 + 16 * .8, cy : 30 + 30 * .8, r : 2.6, fill : '#e9e2c6'}, svg);
+  el('circle', {cx : SKIN_AT.x + 16 * SKIN_AT.s, cy : SKIN_AT.y + 30 * SKIN_AT.s, r : 2.4, fill : '#e9e2c6'}, svg);
   // Each group's hairs, as long as the group feels there; the chosen group in front.
   const order = organ.groups.map((g, i) => i).sort((p, q) => (p === organ.chosen) - (q === organ.chosen));
   for (const i of order) {
@@ -1004,8 +1018,16 @@ function drawSkin(key) {
     hairs.addEventListener('pointerdown', () => { organ.chosen = i; redraw(); });
   }
   // Where it touches or hurts: a pebble against the skin, or a wound in it; pulled along the skin.
-  const sp = pts[organ.spot];
-  if (key === 'touch') {
+  // For the lateral line: where the current comes from, three streaks round the fish.
+  const sp = key === 'lateral' ? null : pts[organ.spot];
+  if (key === 'lateral') {
+    const cx = SKIN_AT.cx, cy = SKIN_AT.cy, u = Math.cos(organ.from), v = Math.sin(organ.from), R0 = 128, rx = 1, ry = .6;
+    for (const off of [-16, 0, 16]) {
+      const sx = cx + u * R0 * rx - v * off, sy = cy + v * R0 * ry + u * off * .6, ex = sx - u * 24, ey = sy - v * 24;
+      el('path', {d : `M${sx.toFixed(1)} ${sy.toFixed(1)} Q${((sx + ex) / 2 + v * 4).toFixed(1)} ${((sy + ey) / 2 - u * 4).toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`, stroke : '#9cc8f0', 'stroke-width' : 2, fill : 'none', 'stroke-linecap' : 'round', opacity : .85}, svg);
+    }
+    drag(svg, el('circle', {cx : cx + u * (R0 + 10) * rx, cy : cy + v * (R0 + 10) * ry, r : 7}, svg), p => { organ.from = Math.atan2((p.y - cy) / ry, (p.x - cx) / rx); redraw(); }, key + 'from', hold, free);
+  } else if (key === 'touch') {
     const r = 7; drag(svg, el('circle', {cx : sp.x + sp.nx * (r + 1), cy : sp.y + sp.ny * (r + 1), r, style : 'fill:#8d8a7c;stroke:#f1dda6'}, svg), p => { organ.spot = nearestSkin(p); redraw(); }, key + 'spot', hold, free);
   } else {
     const tx = -sp.ny, ty = sp.nx;
@@ -1022,8 +1044,12 @@ function drawSkin(key) {
   el('path', {d : arc, fill : 'none', stroke : '#eaa886', 'stroke-width' : 2.5, 'stroke-linecap' : 'round', opacity : .9}, svg);
   drag(svg, el('circle', {cx : m.x + m.nx * 22, cy : m.y + m.ny * 22, r : 7}, svg), p => { g.aim = pts[nearestSkin(p)].a; redraw(); }, key + 'aim', hold, free);
   ends.forEach((k, j) => { const q = pts[k]; drag(svg, el('rect', {x : q.x + q.nx * 22 - 5, y : q.y + q.ny * 22 - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(Math.abs(skinWrap(pts[nearestSkin(p)].a - g.aim)), Math.PI / 8, Math.PI); redraw(); }, key + 'end' + j, hold, free); });
-  svg.setAttribute('viewBox', '0 0 300 128');
-  const felt = gr => skinWeight(gr, sp);
+  svg.setAttribute('viewBox', key === 'lateral' ? '0 0 300 166' : '0 20 300 124');
+  const felt = key === 'lateral'
+    ? gr => { let a = 0, w = 0; for (const q of pts) { const k = skinWeight(gr, q); a += k * Math.max(0, Math.cos(q.a - organ.from)); w += k; } return w ? a / w : 0; }
+    : gr => skinWeight(gr, sp);
+  if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 10 && st < 80 ? level * felt(gr) : 0,
+    newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : .15, spread : .3, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
     ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
@@ -1031,5 +1057,5 @@ function drawSkin(key) {
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain');
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral');
 </script>
