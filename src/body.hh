@@ -63,8 +63,10 @@ struct BodyState {
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF;
   double snout_position = 1, rest_cost = PhysiologyParameters::basal_rate;
   // What the gut holds: all of it, its quickly digested part, its plant matter, and its volume.
-  double gut_energy = 0, gut_flesh = 0, gut_pulp = 0, gut_fibre = 0, gut_rot = 0, gut_sour = 0,
-         gut_meal_flesh = 0, gut_meal_fibre = 0, gut_plant = 0, gut_fill = 0;
+  double gut_energy = 0, gut_spent = 0, gut_meal_flesh = 0, gut_meal_fibre = 0, gut_plant = 0,
+         gut_fill = 0;
+  // What the gut holds of each stuff (digestion::Stuff), still closed and open.
+  std::array<double, 4> gut_closed{}, gut_open{};
   // How much the gut hurts, 0 to 1: it holds more fibre than it can pass.
   double gut_irritation = 0;
   double digestion = 0, digested = 0, feces_pending = 0, feces_plant = 0;

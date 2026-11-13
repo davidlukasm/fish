@@ -168,9 +168,9 @@ void InteractiveSession::write_brain_summary(std::ostream &out, const Individual
       << ",\"soft_bite_force\":" << bite_force(b)
       << ",\"hard_bite_force\":" << bite_force(b, BiteKind::grinding)
       << ",\"scrape_force\":" << scrape_force(b) << ",\"end_tissue\":" << tissue_capacity(b)
-      << ",\"gut_energy\":" << b.gut_energy << ",\"gut_fibre\":" << b.gut_fibre
-      << ",\"gut_rot\":" << b.gut_rot << ",\"gut_irritation\":" << b.gut_irritation
-      << ",\"digestion\":" << b.digestion << ",\"digested\":" << b.digested
+      << ",\"gut_energy\":" << b.gut_energy << ",\"gut_spent\":" << b.gut_spent
+      << ",\"gut_irritation\":" << b.gut_irritation << ",\"digestion\":" << b.digestion
+      << ",\"digested\":" << b.digested
       << ",\"digestion_net\":" << (1 - PhysiologyParameters::digestion_cost) * b.digestion
       << ",\"gut_transit\":" << gut_transit(b, world.physiology())
       << ",\"gut_speed\":" << gut_speed(b);

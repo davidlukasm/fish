@@ -228,14 +228,29 @@ void gut_takes_up_what_time_allows() {
   const double flesh = digest(FLESH, SHORT).gained;
   check(flesh > 2 * digest(FLESH, LONG).gained,
         "flesh spoils in a long gut: a short gut takes up far more of it");
-  check(digest(FLOCK, SHORT).gained > .9 * flesh && digest(FLOCK, MIDDLE).gained > flesh &&
-            digest(FLOCK, LONG).gained < digest(FLOCK, MIDDLE).gained / 2,
-        "flocks feed a short gut like flesh, a middle one best and a long one half as well");
-  const double algae = digest(ALGAE, SHORT).gained / flesh,
-               plankton = digest(PLANKTON, SHORT).gained / flesh;
-  check(algae > .2 && algae < .3 && plankton > .4 && plankton < .6,
-        "a short gut gets a quarter as much from algae as from flesh, and half from plankton");
-  check(digest(ALGAE, LONG).gained > 2 * digest(ALGAE, SHORT).gained, "algae feed a long gut best");
+  const PhysiologyParameters physiology;
+  const auto yield = [&](int food, double stay) {
+    return gut_yield(stay, fodder(food, physiology));
+  };
+  // Every food has a stay at which it feeds better than all others, in this order.
+  constexpr std::array<std::pair<int, double>, 4> WINDOWS{
+      {{FLESH, 100}, {PLANKTON, 200}, {FLOCK, 340}, {LEAVES, 800}}};
+  for (const auto &[best, stay] : WINDOWS)
+    for (int food : {LEAVES, ALGAE, FLOCK, PLANKTON, FLESH})
+      check(food == best || yield(best, stay) > yield(food, stay),
+            "every food has its own stay at which it feeds best");
+  constexpr double QUICKEST = 25, SLOWEST = 800;
+  check(yield(ALGAE, SLOWEST) > yield(ALGAE, QUICKEST) * 4 &&
+            yield(ALGAE, 400) > yield(LEAVES, 400),
+        "algae feed a long gut, and a middle one better than leaves do");
+  const double quick = yield(FLESH, QUICKEST), flock = yield(FLOCK, QUICKEST) / quick,
+               algae = yield(ALGAE, QUICKEST) / quick, plankton = yield(PLANKTON, QUICKEST) / quick;
+  check(flock > .8 && flock < 1 && algae > .2 && algae < .3 && plankton > .4 && plankton < .6,
+        "the quickest gut gets nearly as much from flocks as from flesh, half from plankton and "
+        "a quarter from algae");
+  const double slow = yield(FLOCK, SLOWEST) / yield(ALGAE, SLOWEST);
+  check(slow > .35 && slow < .5 && yield(FLOCK, SLOWEST) < yield(FLOCK, 340) * .6,
+        "the slowest gut gets half as much from flocks as from algae");
   check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0,
         "flesh that spoils hurts a long gut, not a short one");
   check(digest(LEAVES, SHORT).ache > 0 && digest(LEAVES, LONG).ache == 0,
@@ -244,8 +259,9 @@ void gut_takes_up_what_time_allows() {
     check(digest(FLOCK, length).ache == 0, "flocks hurt no gut");
   for (int food : {LEAVES, ALGAE, PLANKTON, FLESH})
     check(digest(food, MIDDLE).ache == 0, "a gut of middle length bears every food");
-  check(digest(ALGAE, SHORT, 1, STRONG).ache > 0 && digest(ALGAE, SHORT).ache == 0,
-        "algae hurt only the very shortest stay");
+  check(digest(ALGAE, SHORT).ache > 0 && digest(ALGAE, SHORT).ache < digest(LEAVES, SHORT).ache &&
+            digest(ALGAE, SHORT, 1, STRONG).ache > digest(ALGAE, SHORT).ache,
+        "algae hurt the shortest gut, less than leaves, and more the faster it is driven");
   check(digest(PLANKTON, LONG).ache > 0 && digest(PLANKTON, SHORT).ache == 0 &&
             digest(PLANKTON, LONG).ache < digest(FLESH, LONG).ache,
         "plankton hurts only the longest gut, and less than flesh");

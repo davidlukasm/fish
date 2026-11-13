@@ -120,11 +120,12 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
       out << x << ' ';
     out << b.reproduction().egg_transfer << ' ' << b.reproduction().sperm_transfer << ' '
         << b.reproduction().sperm_laying << ' ' << b.motor().mouth_pose << '\n';
-    out << "ORGAN_STATE " << b.gut_energy << ' ' << b.gut_flesh << ' ' << b.gut_pulp << ' '
-        << b.gut_rot << ' ' << b.gut_sour << ' ' << b.gut_meal_flesh << ' ' << b.gut_meal_fibre
-        << ' ' << b.gut_fibre << ' ' << b.gut_plant << ' ' << b.digestion << ' ' << b.rest_cost
-        << ' ' << b.digested << ' ' << b.feces_pending << ' ' << b.feces_plant << ' '
-        << b.organ_mass_ref << ' ' << b.feeding_action << ' ' << b.feeding_action_age << ' '
+    out << "ORGAN_STATE " << b.gut_energy << ' ' << b.gut_spent << ' ';
+    for (int k = 0; k < digestion::STUFFS; ++k)
+      out << b.gut_closed[k] << ' ' << b.gut_open[k] << ' ';
+    out << b.gut_meal_flesh << ' ' << b.gut_meal_fibre << ' ' << b.gut_plant << ' ' << b.digestion
+        << ' ' << b.rest_cost << ' ' << b.digested << ' ' << b.feces_pending << ' ' << b.feces_plant
+        << ' ' << b.organ_mass_ref << ' ' << b.feeding_action << ' ' << b.feeding_action_age << ' '
         << b.gut_fill << ' ' << b.bladder_fill << ' ' << b.buoyancy_force << ' '
         << b.reproduction().egg_release << ' ' << b.reproduction().sperm_release << ' '
         << b.gill_signal << ' ' << b.gut_motility;

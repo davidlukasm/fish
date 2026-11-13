@@ -1355,10 +1355,15 @@ class MuscleFibre:
 class Digestion:
     SHORTEST = 0.5
     LONGEST = 4.0
-    UPTAKE_STEPS = 20
-    OPEN_STEPS = 400
-    SPOIL_STEPS = 250
-    PULP_STEPS = 720
+    FLESH_UPTAKE = 20
+    FLESH_SPOIL = 250
+    PULP_UPTAKE = 8
+    PULP_SPOIL = 720
+    FIBRE_OPEN = 400
+    FIBRE_UPTAKE = 20
+    SHELL_OPEN = 80
+    SHELL_UPTAKE = 20
+    SHELL_SPOIL = 330
     SHARPNESS = 4
     FASTEST = 4.0
     ACHE_FLESH = 1.5
