@@ -68,6 +68,11 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="life" viewBox="0 0 300 220"></svg>
     <div id="stuffs"></div>
   </section>
+  <section class="panel" aria-label="Nervenzelle">
+    <h2>Zelle</h2><h3>Nervenzelle</h3>
+    <h4 class="first">Antwort auf einen kurzen und einen langen Reiz</h4>
+    <svg id="nervetrace" viewBox="0 0 300 300"></svg>
+  </section>
   <section class="panel" aria-label="Darm">
     <h2>Organ</h2><h3>Darm</h3>
     <h4 id="gut-kind">Allesfresser</h4>
@@ -2232,5 +2237,56 @@ function drawFinClock() {
   c.setAttribute('viewBox', '0 0 300 ' + (yy + 14));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth(); drawFins(); drawSpine(); drawFinClock(); drawChoice();
+// ---------- Nervenzelle ----------
+// One nerve cell, step by step as the engine has it (substrate.cc:784–808, without learning and
+// messengers): it adds what reaches it (input); its answer setting q2 mixes the input with its slow
+// mean (over 10·τ): change only (q2 0: input − mean), the level (½: input), the mean (1); then
+// a = tanh(−0.3·threshold + rhythm + drive), rhythm = pace·½·sin(2πt/τ); q1 cuts what lies below
+// zero (1: excites only). Below: a short and a lasting input of the strength on the left, the
+// cell's answer above it.
+const NERVE = {input : .8, q2 : .5, q1 : 1, threshold : 0, tau : 16, pace : 0};
+function nerveRun() {
+  const N = 160, out = [], inp = []; let mean = 0;
+  const level = Math.min(1, 2 * NERVE.q2), memory = Math.max(0, 2 * NERVE.q2 - 1);
+  for (let st = 0; st <= N; st++) {
+    const x = (st >= 10 && st < 20) || (st >= 50 && st < 130) ? NERVE.input : 0;
+    mean += (x - mean) / (10 * NERVE.tau);
+    const drive = (1 - memory) * x + (memory + level - 1) * mean;
+    const rhythm = NERVE.pace * .5 * Math.sin(2 * Math.PI * st / NERVE.tau);
+    const a = Math.tanh(-.3 * NERVE.threshold + rhythm + drive);
+    out.push(a + NERVE.q1 * (Math.max(0, a) - a)); inp.push(x);
+  }
+  return {out, inp, N};
+}
+function drawNerve() {
+  const redraw = drawNerve, hold = () => { NERVE.held = true; }, free = () => { NERVE.held = false; redraw(); };
+  const c = document.getElementById('nervetrace'); c.replaceChildren();
+  const {out, inp, N} = nerveRun(), L = 56, R = 290, top = 26, base = 126, mid = (top + base) / 2, X = st => L + (R - L) * st / N, Y = v => mid - (base - top) / 2 * v;
+  regler(c, {x : 26, top, base : mid, word : 'Eingang', value : NERVE.input / 1.5, setValue : v => { NERVE.input = 1.5 * v; redraw(); }, start : hold, end : free, name : 'nerveinput'});
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : '#0f2c34'}, c);
+  el('path', {d : `M${L} ${mid} H${R}`, stroke : '#3b6a6c'}, c);
+  el('path', {d : 'M' + out.map((v, st) => `${X(st).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${R} ${mid} L${L} ${mid} Z`, fill : '#79d2be', opacity : .5, stroke : '#79d2be', 'stroke-width' : 1.6}, c);
+  txt(c, L + 4, top - 8, 'Antwort der Zelle'); txt(c, L - 6, top + 8, '+', {'text-anchor' : 'end'}); txt(c, L - 6, base, '−', {'text-anchor' : 'end'});
+  // The input under it.
+  const S0 = base + 8, S1 = base + 30;
+  el('rect', {x : L, y : S0, width : R - L, height : S1 - S0, fill : '#0f2c34'}, c);
+  el('path', {d : 'M' + inp.map((v, st) => `${X(st).toFixed(1)} ${(S1 - (S1 - S0) * v / 1.5).toFixed(1)}`).join(' L') + ` L${R} ${S1} L${L} ${S1} Z`, fill : '#e3cf94', opacity : .45, stroke : '#e3cf94'}, c);
+  txt(c, L + 4, S0 + 11, 'Eingang', {style : 'font-size:10px;fill:#eef4ec'});
+  txt(c, L, S1 + 14, 'Schritte'); for (const st of [40, 80, 120, 160]) txt(c, X(st), S1 + 14, st, {'text-anchor' : st === 160 ? 'end' : 'middle'});
+  // The settings, one row each.
+  const rows = [['Antwort', 'Änderung', 'Mittel', 'q2', 0, 1], ['unter null', 'bleibt', 'weg', 'q1', 0, 1], ['Schwelle', 'leicht', 'schwer', 'threshold', -1, 1], ['Zeit', 'kurz', 'lang', 'tau', 4, 48], ['Takt', 'keiner', 'stark', 'pace', 0, 1]];
+  let y = S1 + 44;
+  for (const [word, lo, hi, key, a, b] of rows) {
+    const x0 = 132, x1 = 232;
+    txt(c, 4, y + 4, word);
+    el('rect', {x : x0, y : y - 4, width : x1 - x0, height : 8, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, c);
+    txt(c, x0 - 10, y + 4, lo, {'text-anchor' : 'end'}); txt(c, x1 + 10, y + 4, hi);
+    if (key === 'q2') { el('circle', {cx : (x0 + x1) / 2, cy : y, r : 2, fill : '#5d8384'}, c); txt(c, (x0 + x1) / 2, y - 8, 'Pegel', {'text-anchor' : 'middle', style : 'font-size:10px'}); }
+    drag(c, el('circle', {cx : x0 + (x1 - x0) * (NERVE[key] - a) / (b - a), cy : y, r : 7}, c), p => { NERVE[key] = a + (b - a) * clamp((p.x - x0) / (x1 - x0), 0, 1); redraw(); }, 'nerve' + key, hold, free);
+    y += 28;
+  }
+  c.setAttribute('viewBox', '0 0 300 ' + (y - 10));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth(); drawFins(); drawSpine(); drawFinClock(); drawChoice(); drawNerve();
 </script>
