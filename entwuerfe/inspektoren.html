@@ -2046,7 +2046,9 @@ function drawGutLife() {
 // from rest fully as well, but the same stroke again before the fin is back only 0.3; both at once
 // cancel. Above: the fin, its blade (grip at its tip) and the share of the front stroke; below: a
 // row of strokes (click a slot: back, front, rest) and what each one pushes.
-const FIN = {q : .25, protraction : .35, seq : ['B', 'F', 'B', 'F', 'B', 'B', '-', 'B']};
+// Start as Liora, Hecht and Brisa are built (Astra 06:29, from fin_mechanics): pectoral back strokes
+// only, blade flat (push 1, lift 0), a stroke lasting about 8 steps; a slot here is one stroke.
+const FIN = {q : 0, protraction : 0, seq : ['B', 'B', 'B', '-', 'B', '-', 'B', 'B']};
 function drawFins() {
   const redraw = drawFins, hold = () => { FIN.held = true; }, free = () => { FIN.held = false; redraw(); };
   const svg = document.getElementById('finfish'); svg.replaceChildren();
