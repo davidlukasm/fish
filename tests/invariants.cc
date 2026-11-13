@@ -199,15 +199,18 @@ void gut_takes_up_what_time_allows() {
         "leaves need time to break open: a short gut takes up next to nothing of them");
   check(digest(FLESH, SHORT).gained > 2 * digest(FLESH, LONG).gained,
         "flesh spoils in a long gut: a short gut takes up far more of it");
-  check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0 &&
-            digest(LEAVES, LONG).ache == 0,
-        "spoiled flesh hurts a long gut; a short gut and a gut of leaves stay well");
+  check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0,
+        "spoiled flesh hurts a long gut, not a short one");
+  check(digest(LEAVES, SHORT).ache > 0 && digest(LEAVES, LONG).ache == 0,
+        "leaves that pass still closed hurt a short gut, not a long one");
+  for (double length : {SHORT, MIDDLE, LONG})
+    check(digest(FLOCK, length).ache == 0, "flocks hurt no gut");
   check(digest(FLOCK, MIDDLE).gained > digest(FLOCK, SHORT).gained &&
             digest(FLOCK, MIDDLE).gained > digest(FLOCK, LONG).gained,
         "mixed food suits a gut of middle length best");
   const auto rested = digest(FLESH, LONG), hurried = digest(FLESH, LONG, 1, STRONG);
-  check(hurried.gained > rested.gained && hurried.gained < digest(FLESH, SHORT).gained,
-        "the largest gut muscle saves some flesh in a long gut, but not as much as a short gut");
+  check(hurried.gained > 2 * rested.gained && hurried.gained < digest(FLESH, SHORT).gained,
+        "the largest gut muscle saves much flesh in a long gut, but not as much as a short gut");
   check(digest(LEAVES, LONG, 1, STRONG).gained < digest(LEAVES, LONG).gained &&
             hurried.emptied < rested.emptied,
         "a driven gut muscle empties the gut sooner and takes up less of leaves");

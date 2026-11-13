@@ -135,9 +135,11 @@ inline double reserve_capacity(const Body &b) {
 // half broken open, flesh that stays `spoil_steps` spoils as fast as it is taken up; a food
 // between them opens and spoils in proportion to its place. Both run with the power
 // `sharpness` of the stay, so a little too short or too long costs much. The largest gut
-// muscle moves the content `fastest` times as fast as a resting gut. Spoiled matter up to the
-// share `tolerated` of what the gut holds is borne; `cramp` more hurts as much as it can,
-// empties the gut `diarrhoea` times faster on top and costs `harm` of the health per step. A
+// muscle moves the content `fastest` times as fast as a resting gut. Two things hurt the gut:
+// spoiled matter beyond the share `tolerated` of what the gut can hold, and plant matter that
+// leaves it still closed, beyond the share `closed_tolerated` per step. `cramp` or
+// `closed_cramp` more hurts as much as it can, empties the gut `diarrhoea` times faster on top
+// and costs `harm` of the health per step. Flocks are digested before and hurt no gut. A
 // gut of the greatest length leaves the gonads `belly` less room; per body length it weighs
 // `wall_mass` of the tissue and raises the basal metabolism by `upkeep`. Faeces leave as a
 // flock once they amount to `pellet` of what the gut holds.
@@ -157,29 +159,30 @@ inline double spoiling_rate(double stay, double flesh) {
   return flesh > 0 ? std::min(1., uptake_rate * progress(stay * flesh, spoil_steps)) : 0;
 }
 }
-// What a mouthful is to the gut: how much of it is flesh, how much room it takes per energy, and
-// whether its remains leave as plant matter.
+// What a mouthful is to the gut: how much of it is flesh, how much room it takes per energy,
+// whether its remains leave as plant matter, and whether it is mild, hurting no gut.
 struct Fodder {
   double flesh, fill;
-  bool plant;
+  bool plant, mild = false;
 };
-// Flocks of every origin, feed and faeces alike, are half flesh, half plant.
-inline constexpr double FLOCK_FLESH = .5;
+// Flocks are matter digested once before: those of plants count as algae, those of animals as
+// plankton, feed and what has settled on the ground as both in equal parts.
+inline constexpr double ALGAE_FLESH = .25, MIXED_FLESH = .5, PLANKTON_FLESH = .75;
 inline Fodder flock_fodder(bool plant) {
-  return {FLOCK_FLESH, 1, plant};
+  return {plant ? ALGAE_FLESH : PLANKTON_FLESH, 1, plant, true};
 }
 inline Fodder fodder(int source, const PhysiologyParameters &p) {
   switch (source) {
   case food_kind::plant:
     return {0, p.fill_plant, true};
   case food_kind::algae:
-    return {.25, p.fill_plant, true};
+    return {ALGAE_FLESH, p.fill_plant, true};
   case food_kind::benthic:
-    return {FLOCK_FLESH, p.fill_sediment, true};
+    return {MIXED_FLESH, p.fill_sediment, true, true};
   case food_kind::feed:
-    return {FLOCK_FLESH, 1, false};
+    return {MIXED_FLESH, 1, false, true};
   case food_kind::plankton:
-    return {.75, 1, false};
+    return {PLANKTON_FLESH, 1, false};
   default:
     return {1, 1, false};
   }

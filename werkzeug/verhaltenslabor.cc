@@ -352,7 +352,7 @@ int main(int argc, char **argv) {
                                     mussel_capacity(target->morph, w.field.env());
         auto &b = p->body;
         if (hungry)
-          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_plant = 0;
+          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_mild = b.gut_plant = 0;
         b.x = w.field.wrap_x(target->x + surface.normal.x * distance);
         b.y = target->y + surface.normal.y * distance;
         b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
@@ -434,7 +434,7 @@ int main(int argc, char **argv) {
                                     crab_capacity(target->morph, w.field.env());
         auto &b = p->body;
         if (hungry)
-          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_plant = 0;
+          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_mild = b.gut_plant = 0;
         b.x = w.field.wrap_x(target->x + surface.normal.x * distance);
         b.y = target->y + surface.normal.y * distance;
         b.angle = std::atan2(-surface.normal.y, -surface.normal.x);
@@ -498,7 +498,7 @@ int main(int argc, char **argv) {
         auto &b = p->body;
         // A hungry fish starts each trial with an empty gut, as after a long search.
         if (hungry)
-          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_plant = 0;
+          b.gut_fill = b.gut_energy = b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_mild = b.gut_plant = 0;
         const double a = b.angle + bearing * PI / 180;
         double x = w.field.wrap_x(b.x + distance * std::cos(a)),
                y = std::clamp(b.y + distance * std::sin(a), FOOD_MARGIN, TANK_HEIGHT - FOOD_MARGIN);

@@ -1357,10 +1357,12 @@ class Digestion:
     UPTAKE_STEPS = 20
     OPEN_STEPS = 400
     SPOIL_STEPS = 250
-    SHARPNESS = 3
-    FASTEST = 2.0
+    SHARPNESS = 4
+    FASTEST = 4.0
     TOLERATED = 0.3
     CRAMP = 0.4
+    CLOSED_TOLERATED = 0.002
+    CLOSED_CRAMP = 0.004
     DIARRHOEA = 2
     HARM = 0.0015
     BELLY = 0.6

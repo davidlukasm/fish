@@ -143,8 +143,8 @@ double stored_energy(const Body &b) {
 }
 void empty_stores(Body &b) {
   b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
-      b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_plant = b.gut_fill = b.feces_pending =
-          b.feces_plant = b.embryo.secretion = b.embryo.pending = 0;
+      b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_mild = b.gut_plant = b.gut_fill =
+          b.feces_pending = b.feces_plant = b.embryo.secretion = b.embryo.pending = 0;
 }
 Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
@@ -206,6 +206,7 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
   b.gut_energy += accepted;
   b.gut_flesh += accepted * f.flesh;
   b.gut_raw += accepted;
+  b.gut_mild += f.mild ? accepted : 0;
   b.gut_plant += f.plant ? accepted : 0;
   b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
@@ -217,8 +218,8 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
 // One step of the gut. What it holds counts as one food, as much flesh as its parts together.
 // Its closed part is broken open, its open part is taken up or spoils, and all of it moves on;
 // the gut muscle moves it sooner. A fish with a full reserve takes up nothing and holds its
-// meal. Much spoiled matter hurts: the gut empties itself and the body wears down. Returns what
-// leaves as faeces.
+// meal. Much spoiled matter hurts, and so do plants that pass still closed: the gut empties
+// itself and the body wears down. Returns what leaves as faeces.
 double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.digestion = b.gut_irritation = 0;
   if (!b.alive || !b.hatched || b.gut_energy <= 0)
@@ -227,8 +228,13 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
                open = std::max(0., fresh - b.gut_raw),
                flesh = fresh > 0 ? std::clamp(b.gut_flesh / fresh, 0., 1.) : 0,
                pace = gut_pace(b, p), stay = 1 / pace;
-  b.gut_irritation =
-      std::clamp((b.gut_rot / gut_capacity(b) - digestion::tolerated) / digestion::cramp, 0., 1.);
+  // What hurts: spoiled matter lying in the gut, and plant matter passing on still closed.
+  const double harsh = 1 - std::clamp(b.gut_mild / held, 0., 1.), capacity = gut_capacity(b),
+               spoilt = (harsh * b.gut_rot / capacity - digestion::tolerated) / digestion::cramp,
+               closed = (harsh * (1 - flesh) * b.gut_raw * pace / capacity -
+                         digestion::closed_tolerated) /
+                        digestion::closed_cramp;
+  b.gut_irritation = std::clamp(std::max(0., spoilt) + std::max(0., closed), 0., 1.);
   harm_body(b, digestion::harm * b.gut_irritation, death_reason::hunger);
   const bool full = b.energy >= reserve_capacity(b);
   const double room = std::max(0., reserve_capacity(b) - b.energy);
@@ -246,6 +252,7 @@ double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.gut_rot = (b.gut_rot + spoiled) * stays;
   b.gut_energy = left - lost;
   b.gut_plant *= kept;
+  b.gut_mild *= kept;
   b.gut_fill *= kept;
   b.energy += (1 - p.digestion_cost) * b.digestion;
   b.digested += b.digestion;
