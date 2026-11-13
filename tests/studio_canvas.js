@@ -194,6 +194,29 @@ module.exports = async function checkCanvas(model, capabilities, root) {
                        (anchor[axis] - zoomed.state.camera[axis]) * zoomed.state.camera.zoom) <
                   1e-8,
               'The point under the pointer remains fixed while zooming');
+  // Two bundles that run alongside each other become one nerve: side by side across it, as far
+  // apart as their strands are wide, and each bends into the nerve without a corner.
+  const {nerveBundling, polylineWay, NERVE_SNAP} = await import('../ui/studio/view/nerves.js');
+  const straight = (y0, y1) => polylineWay(Array.from(
+      {length : 81}, (_, k) => ({x : 100 + k * 5, y : k < 20 ? y0 + (y1 - y0) * k / 20 : y1})));
+  const strands = nerveBundling([
+    {way : straight(330, 362), safe : () => true, width : 2},
+    {way : straight(400, 366), safe : () => true, width : 2}
+  ]);
+  const upper = strands[0].way, lower = strands[1].way, apart = lower.at(.75).y - upper.at(.75).y;
+  assert.ok(Math.abs(apart - 2 * NERVE_SNAP.pack) < .2,
+            'Strands of one nerve lie beside each other, not on top: ' + apart);
+  assert.equal(strands[0].nerves.length + strands[1].nerves.length, 1);
+  for (const {way} of strands) {
+    const P = way.points;
+    let sharpest = 0;
+    for (let i = 1; i + 1 < P.length; i++) {
+      const a = Math.atan2(P[i].y - P[i - 1].y, P[i].x - P[i - 1].x),
+            b = Math.atan2(P[i + 1].y - P[i].y, P[i + 1].x - P[i].x);
+      sharpest = Math.max(sharpest, Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a))));
+    }
+    assert.ok(sharpest < .2, 'A bundle joins its nerve in a curve, not at a corner: ' + sharpest);
+  }
   const {fieldExtent} = await import('../ui/studio/view/vision.js');
   const {cameraBox} = await import('../ui/studio/view/frame.js');
   const framed = {state : {...state(pickedEye.document), mode : 'fish'}};

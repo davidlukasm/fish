@@ -1,8 +1,11 @@
-// Nerve bundles that run close and alongside each other are drawn together as one nerve instead of
-// as near-parallel lines: each bundle is followed as a line of evenly spaced points, every point is
-// drawn towards the nearest points of the other bundles that run the same way within `reach`, and
-// where they then lie on top of each other over at least `run` they share one nerve. A bundle's
-// first and last `ramp` stay where its organs are; no point moves into an organ or region.
+// Nerve bundles that run close and alongside each other are drawn together as one nerve, strand
+// beside strand, instead of as near-parallel lines: each bundle is followed as a line of evenly
+// spaced points, every point is drawn towards the nearest points of the other bundles that run the
+// same way within `reach`, and where they then lie on top of each other over at least `run` they
+// share one course and lie side by side across it, as wide together as their strands. A bundle
+// joins and leaves that course over `blend`, so it bends into the nerve instead of meeting it at
+// a corner. A bundle's first and last `ramp` stay where its organs are; no point moves into an
+// organ or region.
 import {fixed, pointText} from './markup.js';
 
 export const NERVE_SNAP = Object.freeze({
@@ -17,7 +20,12 @@ export const NERVE_SNAP = Object.freeze({
   touch : .75,
   run : 12,
   gap : 3,
-  bend : .3
+  bend : .3,
+  // Strands lie this share of their width apart, a join takes this many points, and the course is
+  // smoothed this often afterwards.
+  pack : .8,
+  blend : 8,
+  settle : 12
 });
 const S = NERVE_SNAP;
 
@@ -234,15 +242,22 @@ function sharedRuns(lines, near, b, c) {
   const lengths = lengthsOf(lines[b].points);
   return runs.filter(([ i, j ]) => lengths[j] - lengths[i] >= S.run);
 }
-// Draws the given bundle ways together. Each line is {way, safe} or {way} for one that keeps its
-// course; the result gives every line its new way, the stretches (as shares of its length) where
-// its own ink gives way to a nerve, and the nerves, each with its member lines and course.
+// Draws the given bundle ways together. Each line is {way, safe, width} or {way} for one that
+// keeps its course; the result gives every line its new way and the nerves it runs in, each with
+// its member lines and the nerve's middle course.
 export function nerveBundling(lines) {
   const moving = lines.map((line, index) => ({index, line}))
                      .filter(({line}) => line.safe)
                      .map(({index, line}) => {
                        const points = evenPoints(line.way), pins = line.pins ?? [];
-                       return {index, points, pins, safe : line.safe, free : freedom(points, pins)};
+                       return {
+                         index,
+                         points,
+                         pins,
+                         safe : line.safe,
+                         width : line.width,
+                         free : freedom(points, pins)
+                       };
                      });
   if (moving.length > 1)
     attract(moving);
@@ -251,19 +266,6 @@ export function nerveBundling(lines) {
     const found = lookup(b, i, S.touch + S.reach * .25);
     return new Map([...found ].map(([ c, f ]) => [c, f.j]));
   }));
-  // Points that lie on each other meet exactly in their middle.
-  const met = moving.map((line, b) => line.points.map((p, i) => {
-    const found = near[b][i];
-    if (!found.size)
-      return p;
-    let x = p.x, y = p.y;
-    for (const [c, j] of found) {
-      x += moving[c].points[j].x;
-      y += moving[c].points[j].y;
-    }
-    return {x : x / (found.size + 1), y : y / (found.size + 1)};
-  }));
-  moving.forEach((line, b) => { line.points = met[b]; });
   const shared = moving.map((line, b) => {
     const members = line.points.map(() => new Set([ b ]));
     for (let c = 0; c < moving.length; c++)
@@ -273,17 +275,84 @@ export function nerveBundling(lines) {
             members[k].add(c);
     return members;
   });
-  const result = lines.map(line => ({way : line.way, hidden : [], nerves : []}));
+  // Where a bundle comes from and goes to, as one place: strands lie across a nerve in the order
+  // of these places, so they leave it on the side they are bound for.
+  const bound = moving.map(
+      ({points}) =>
+          ({x : (points[0].x + points.at(-1).x) / 2, y : (points[0].y + points.at(-1).y) / 2}));
+  const turns = moving.map(line => tangents(line.points));
+  // The middle of the nerve at each shared point, and the bundle's place across it.
+  const centre = moving.map((line, b) => line.points.map((p, i) => {
+    let x = p.x, y = p.y, n = 1;
+    for (const c of shared[b][i]) {
+      const j = near[b][i].get(c);
+      if (j === undefined)
+        continue;
+      x += moving[c].points[j].x;
+      y += moving[c].points[j].y;
+      n++;
+    }
+    return {x : x / n, y : y / n};
+  }));
+  const beside = moving.map((line, b) => line.points.map((p, i) => {
+    const members = shared[b][i];
+    if (members.size < 2)
+      return p;
+    // One direction for all strands of the nerve here, whichever way each of them runs.
+    const t = turns[b][i], flip = t.x < 0 || (t.x === 0 && t.y < 0) ? -1 : 1,
+          across = {x : -t.y * flip, y : t.x * flip}, c = centre[b][i];
+    const side = k => (bound[k].x - c.x) * across.x + (bound[k].y - c.y) * across.y;
+    const order = [...members ].sort((x, y) => side(x) - side(y) || x - y);
+    const width = k => moving[k].width * S.pack;
+    let before = 0;
+    for (const k of order) {
+      if (k === b)
+        break;
+      before += width(k);
+    }
+    const all = order.reduce((sum, k) => sum + width(k), 0), off = before + width(b) / 2 - all / 2;
+    return {x : c.x + across.x * off, y : c.y + across.y * off};
+  }));
+  // A bundle bends into its place over `blend` points from where the nerve begins or ends.
   moving.forEach((line, b) => {
-    const way = polylineWay(line.points), lengths = way.lengths, out = result[line.index];
+    const count = line.points.length, joinedAt = new Array(count).fill(Infinity);
+    let since = Infinity;
+    for (let i = 0; i < count; i++)
+      joinedAt[i] = since = shared[b][i].size > 1 ? since + 1 : 0;
+    since = Infinity;
+    for (let i = count - 1; i >= 0; i--) {
+      since = shared[b][i].size > 1 ? since + 1 : 0;
+      joinedAt[i] = Math.min(joinedAt[i], since);
+    }
+    const placed = line.points.map((p, i) => {
+      const u = Math.min(1, joinedAt[i] / S.blend), m = u * u * (3 - 2 * u) * line.free[i],
+            q = {x : p.x + (beside[b][i].x - p.x) * m, y : p.y + (beside[b][i].y - p.y) * m};
+      return line.safe(q) ? q : p;
+    });
+    for (let round = 0; round < S.settle; round++)
+      for (let i = 1; i < count - 1; i++) {
+        if (!line.free[i])
+          continue;
+        const q = {
+          x : placed[i].x + ((placed[i - 1].x + placed[i + 1].x) / 2 - placed[i].x) * S.smooth,
+          y : placed[i].y + ((placed[i - 1].y + placed[i + 1].y) / 2 - placed[i].y) * S.smooth
+        };
+        if (line.safe(q))
+          placed[i] = q;
+      }
+    line.course = centre[b];
+    line.points = placed;
+  });
+  const result = lines.map(line => ({way : line.way, nerves : []}));
+  moving.forEach((line, b) => {
+    const way = polylineWay(line.points), out = result[line.index];
     out.way = way;
     const members = shared[b];
     let start = null;
     const close = end => {
       if (start === null)
         return;
-      out.hidden.push([ lengths[start] / way.length, lengths[end] / way.length ]);
-      // The nerve is drawn once, by its first member, piece by piece where its members change.
+      // The nerve is listed once, by its first member, piece by piece where its members change.
       let from = start;
       for (let k = start + 1; k <= end + 1; k++) {
         const same = k <= end && [...members[k] ].join() === [...members[from] ].join();
@@ -293,7 +362,7 @@ export function nerveBundling(lines) {
         if (group[0] === b && k - 1 > from)
           out.nerves.push({
             members : group.map(c => moving[c].index),
-            d : curvePath(line.points.slice(from, k))
+            d : curvePath(line.course.slice(from, k))
           });
         from = k - 1;
       }
@@ -308,23 +377,4 @@ export function nerveBundling(lines) {
     close(members.length - 1);
   });
   return result;
-}
-// The ink of a bundle drawn from share s0 to s1, hidden where it runs inside a nerve: a dash
-// pattern over that drawn part.
-export function inkDashes(hidden, way, s0, s1) {
-  const span = (s1 - s0) * way.length;
-  const gaps = hidden.map(([ a, b ]) => [Math.max(a, s0), Math.min(b, s1)])
-                   .filter(([ a, b ]) => b > a)
-                   .map(([ a, b ]) => [(a - s0) * way.length, (b - s0) * way.length]);
-  if (!gaps.length || !(span > 0))
-    return '';
-  const dashes = [];
-  let at = 0;
-  for (const [a, b] of gaps) {
-    dashes.push(a - at, b - a);
-    at = b;
-  }
-  dashes.push(span - at, 0);
-  return ' pathLength="' + fixed(span) + '" stroke-dasharray="' +
-         dashes.map(d => fixed(Math.max(0, d))).join(' ') + '"';
 }

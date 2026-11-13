@@ -1,6 +1,6 @@
 import {nodeOpacity} from './layers.js';
 import {nerveRoute, organDock, passable} from './wire_route.js';
-import {inkDashes, nerveBundling, polylineWay} from './nerves.js';
+import {nerveBundling, polylineWay} from './nerves.js';
 import {regionDock} from './region_layout.js';
 import {clamp} from '../../units.js';
 import {eyeLocation, nodeLocation, organLocation} from './places.js';
@@ -377,7 +377,6 @@ function wireBundles(state, centers) {
       way,
       s0,
       s1,
-      hidden : joined[index].hidden,
       split : {starts : starts.reveal > 0, arrives : arrives.reveal > 0},
       id : 'b' + index
     };
@@ -396,9 +395,11 @@ const together = new Map(), TOGETHER_KEPT = 8;
 function nerveTogether(laid) {
   const course = b => b.route ? b.route.points.map(pointText).join(' ')
                               : [ b.from.point, ...b.bends, b.to.point ].map(pointText).join(' ');
-  const key = laid.map(b => [b.kind, b.manual ?? '', course(b)].join(':')).join('|');
+  const key =
+      laid.map(b => [b.kind, b.manual ?? '', fixed(b.width), course(b)].join(':')).join('|');
   if (!together.has(key)) {
-    together.set(key, nerveBundling(laid.map(b => ({way : b.way, safe : b.safe, pins : b.pins}))));
+    together.set(key, nerveBundling(laid.map(
+                          b => ({way : b.way, safe : b.safe, pins : b.pins, width : b.width}))));
     if (together.size > TOGETHER_KEPT)
       together.delete(together.keys().next().value);
   }
@@ -473,9 +474,8 @@ export function wireSvg(state, centers) {
         (shown ? ' selected' : '') + '">' +
         '<path d="' + d + '" class="aid-wire-hit"/>' +
         '<path d="' + d + '" class="aid-wire-ink" stroke="' + style.colour + '" stroke-width="' +
-        fixed(width) + '"' + inkDashes(bundle.hidden, way, s0, s1) +
-        (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') + '/><title>' +
-        escapeText(joinParts([
+        fixed(width) + '"' + (splits ? '' : ' marker-end="url(#' + style.arrow + ')"') +
+        '/><title>' + escapeText(joinParts([
           linkText(endpointTitle(doc, ends[0].link.from, state.sites, ends[0].link.wire.fromPort),
                    endpointTitle(doc, ends[0].link.to, state.sites, ends[0].link.wire.toPort)),
           wireIds.size > 1 ? t('studio.app.wireCount', {n : wireIds.size}) : ''
@@ -534,15 +534,13 @@ export function nerveLook(nerve) {
   };
 }
 function nerveSvg(state, nerve) {
-  const {colour, width} = nerveLook(nerve);
   const wires = nerve.members.flatMap(b => b.ends.map(e => e.link.wire.id));
   const spec = nerveSpec(nerve),
         chosen = state.selected?.kind === 'nerve' && state.selected.id === spec;
   return '<g class="aid-nerve' + (chosen ? ' selected' : '') + '" data-strands="' +
          nerve.members.map(b => b.id).join(' ') + '" data-nerve="' + escapeText(spec) +
          '" data-wires="' + escapeText([...new Set(wires) ].join(' ')) + '"><path d="' + nerve.d +
-         '" class="aid-wire-hit"/><path d="' + nerve.d + '" class="aid-nerve-ink" stroke="' +
-         colour + '" stroke-width="' + fixed(width) + '"/><title>' +
+         '" class="aid-wire-hit"/><title>' +
          escapeText(t('studio.app.nerveTitle', {n : nerve.members.length})) + '</title></g>';
 }
 function contactOpacity(state, a, b) {

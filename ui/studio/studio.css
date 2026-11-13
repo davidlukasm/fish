@@ -1100,7 +1100,7 @@
 .aid-brain-fissure{stroke-width:1.1;opacity:.6}
 .aid-anatomical-organ.selected .aid-anatomical-region{stroke-width:2.2;stroke:#e5f4dc}
 /* Square ends, so the fibres leave a bundle across its full width and it meets its nerve flush. */
-.aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:butt;stroke-linejoin:round;vector-effect:none}
+.aid-wire-group .aid-wire-ink{opacity:.52;stroke-linecap:round;stroke-linejoin:round;vector-effect:none}
 .aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink{opacity:1}
 
 .aid-anatomy-handles g{cursor:grab;pointer-events:all}
@@ -1131,12 +1131,7 @@
 /* A bundle's ink gives way where it runs inside a nerve, unless it is the one being looked at. */
 .aid-wire-group:hover .aid-wire-ink,.aid-wire-group.aid-hover .aid-wire-ink,.aid-wire-group.selected .aid-wire-ink,.aid-wire-group.aid-pulse-used .aid-wire-ink,.aid-wire-group.aid-focus-near .aid-wire-ink{stroke-dasharray:none}
 .aid-wire-group.aid-hover .aid-wire-ink{opacity:1;filter:drop-shadow(0 0 4px #c4eadbaa)}
-.aid-nerves{opacity:.52}
-.aid-nerve-ink{fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.aid-nerve:hover .aid-nerve-ink,.aid-nerve.aid-hover .aid-nerve-ink,.aid-nerve.selected .aid-nerve-ink{filter:drop-shadow(0 0 4px #c4eadb)}
-#aid-body-map.aid-stimulus-view .aid-nerves,#aid-body-map.aid-focus-view .aid-nerves{opacity:.14}
 #station-root[data-armed="wiring"]:not([data-armed-value="bend"]) #aid-body-map .aid-nerves{opacity:.2;pointer-events:none}
-#aid-body-map[data-detail="0"] .aid-nerves{opacity:.4}
 .aid-band-glyph .field{fill:none;stroke:currentColor;stroke-width:1.2;opacity:.6}
 .aid-band-glyph .band{fill:currentColor;opacity:.8}
 .aid-node-map{display:block;width:100%;height:auto;margin:6px 0;border-radius:12px;background:var(--aid-graphic)}
