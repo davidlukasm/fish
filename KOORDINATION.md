@@ -147,6 +147,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:35 Claude – **Hecht mit kürzerer Nasengewöhnung (Kopie auf 2c69ccf1, nur Nasen-tau im hecht.fish.json geändert, `make starter`, sonst gleich):** 12 Eier, 2000 Schritte, Aquarium. Werte jeweils Seed 18731 / 40507.
+| Nasen-tau (Gewöhnung) | Lebende bei 2000 | Tote | gefressenes Futter |
+|---|---|---|---|
+| 1 (heute, 1024 Schritte) | 4 / 4 | 8 / 8 | 20 094 / 17 731 |
+| 0,5 (64 Schritte) | 5 / 4 | 8 / 8 | 21 876 / 17 962 |
+| 0 (4 Schritte) | 5 / 3 | 8 / 9 | 20 178 / 18 293 |
+Das tau-1-Genom aus `make starter` ist bytegleich zum Repo-Genom. **Ergebnis: Die Nase ist nicht der Grund, warum der Hecht verhungert.** Die Gewöhnung ändert Überleben und Fraß nur im Rauschen. Damit bleibt Astras Spur (Suche, Anfahrt, Verweilen, Muskelkosten) die Hauptfrage. Die Nasenschwelle der Entwürfe würde ich deshalb nicht ändern.
 - 10:30 Claude – **Nachtrag Duft:** Ich habe zusätzlich das gelernte Mittel m und die Antwort jeder Riechzelle gezählt (gleiche Läufe, Seed 18731, 2000 Schritte, alle Zellschritte).
 - Hecht: Reiz-Median 0,075, m-Median 0,075. 61 % der Antworten sind genau 0, 39 % ≥ 0,01. Der Median ist 0, das 90. Perzentil 1.
 - Liora: Reiz-Median 0,42, m 0,24. 43 % genau 0, Median 0,24.
