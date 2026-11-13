@@ -22,6 +22,8 @@ Zeilenangaben: Produktzweig `feature/v019-design-studio`, Stand `3146dfc`; Entwu
 
 ### a) Woher der Buckel in der Meldung kommt (`david_darm-schmerzzellen-bump.png`)
 
+**Berichtigt, siehe 5b:** Punkt 3 gilt für den Entwurf, nicht für die Engine. Im Aquarium melden alle Zellen einer Gruppe die Antwort der ersten Zelle.
+
 Im Foto steht die Schwelle der Gruppe am oberen Anschlag (0,97) und das Bauchweh auf voll. Der Buckel hat drei Ursachen, alle so auch in der Engine:
 
 1. **Bei vollem Reiz meldet jede Zelle voll, wie hoch ihre Schwelle auch ist.** Formel: `x = (Reiz − Gewohntes − Schwelle) / (1 − Schwelle)`, Meldung `x / (x + Schwelle·(1 − x))` (`body_plan.cc:987-992`; Entwurf `:773`). Bei Reiz 1 und Gewohntem 0 ist x = 1. Das ist der Anfang oben.
@@ -125,10 +127,34 @@ Meine erste Fassung sprach von „einer Zielzelle“ und von Gewichten an der Gr
 - **Die Eingänge der Knotenzelle deckeln.** Bei `field_width` 0 hat sie 4 Eingänge für alle Quellen zusammen. Dann finden von 16 Sinneszellen höchstens 4 Platz, und sie verdrängen andere Quellen.
 - **Am Anfang bewirkt die Zellzahl nichts**, weil alle Stärken 0 sind. Was mehr Zellen bringen, entsteht erst durch Lernen:
   - mehr Kontakte, die einzeln bis zur Grenze wachsen können. Die Knotenzelle addiert Meldung × Stärke über alle Kontakte und teilt durch nichts (`substrate.cc:776-786`), ihre Antwort sättigt mit tanh (`substrate.cc:801-803`). Mit gelernten Stärken reicht bei 16 Zellen ein Achtel der Meldung für dieselbe Wirkung wie bei zwei;
-  - bei gestreuten Schwellen mehr Stufen: Jede Sinneszelle hat ihre eigene Schwelle (`distribution.hh:20-35`) und ihre eigene gelernte Stärke. Der Knoten kann so lernen, auf „halb voll“ anders zu antworten als auf „ganz voll“. Mit 2 Zellen hat er dafür zwei Stufen, mit 16 fast eine Rampe;
+  - ~~bei gestreuten Schwellen mehr Stufen~~: gilt im Aquarium nicht, siehe 5b. Alle Zellen einer Gruppe melden die Antwort der ersten;
   - Reserve: Jede Zelle wird einzeln gebaut und kann einzeln sterben (`substrate.cc:502-516, 607-612`).
 - **Kosten je Sinneszelle, alle klein:** Bau 0,00125 Energie, Unterhalt 0,0000016 je Schritt (`maturation.hh:9-12, 23-29`, `body_plan.cc:826-835`), Masse 0,001 × Zellstärke (`body_plan.cc:15, 369-370`). Dazu der Bau jedes Kontakts.
 - **Keine Normierung:** Der Anteil `gain` einer Zelle wird nur für Übersichten gezählt (`body_plan.cc:661, 912, 959`).
+
+## 5b. Die Zellen einer Sinnesgruppe melden im Aquarium alle dasselbe (Astras Fund 19:41, nachgemessen 19:44)
+
+**Das berichtigt meine Abschnitte 2a und 5a.** Dort habe ich geschrieben, jede Zelle einer Gruppe melde mit ihrer eigenen, gestreuten Schwelle. Die Schwellen sind je Zelle verschieden, gemeldet wird aber nur die Antwort der ersten Zelle.
+
+- **Code:** Beim Bau bekommt jede weitere Zelle derselben Gruppe den Verweis auf die erste (`src/body_plan.cc:315-317`). Im Sinnesweg mit Wasser übernimmt sie deren Meldung und deren Gewöhnungsstand, solange die erste Zelle lebt und nicht stummgeschaltet ist (`src/cppn_brain.cc:339-348`, `colony-core/field/substrate.hh:250, 310`). Das gilt für alle Sinne außer Licht und Nähe.
+- **Diesen Weg gehen das Aquarium und die Proben des Ateliers** (`src/movement.cc:52-58`, `werkzeug/atelier.cc:177, 229`). Nur ohne Wasser rechnet jede Zelle selbst (`src/cppn_brain.cc:855-871`).
+- **Nachgemessen mit der Engine** (drei Füllzellen einer Gruppe, Schwellen 0,2 / 0,5 / 0,8, `sense_generated`):
+
+  | Darmfüllung | wie gebaut | jede Zelle für sich |
+  |---|---|---|
+  | 0,10 | 0 / 0 / 0 | 0 / 0 / 0 |
+  | 0,35 | 0,54 / 0,54 / 0,54 | 0,54 / 0 / 0 |
+  | 0,60 | 0,83 / 0,83 / 0,83 | 0,83 / 0,33 / 0 |
+  | 0,90 | 0,97 / 0,97 / 0,97 | 0,97 / 0,89 / 0,56 |
+
+- **Was in einer Sinnesgruppe deshalb keine Wirkung auf die Meldung hat:** die Streuung von Schwelle, Gewöhnungszeit und Abstimmung zwischen ihren Zellen. Es zählt die erste Zelle. Auch sie zieht ihre Werte mit der Streuung um den eingestellten Wert (`colony-core/field/development.cc:161-175`). Die Streuung verschiebt also, zufällig je Fisch, die Schwelle der ganzen Gruppe; eine Staffelung innerhalb der Gruppe macht sie nicht. Stirbt die erste Zelle, melden die übrigen ab da jede für sich.
+- **Was die Zellzahl einer Sinnesgruppe dann noch bewirkt:** Jede Zelle bleibt eine eigene Nervenzelle mit eigenen Kontakten und eigenen gelernten Stärken (Abschnitt 5a, 1 bis 3). Mehr Zellen heißt also dieselbe Meldung über mehr Kontakte, nicht mehr Stufen. Dazu Reserve, und bei den Barteln die Länge (Astra 19:39).
+- **Abstufungen brauchen getrennte Gruppen.** Zwei Gruppen mit verschiedener Schwelle melden verschieden.
+- **Entstehung:** Das Teilen ist älter als der Git-Verlauf (vor 06.11.). Die Streuung je Zelle kam am 07.11. dazu (`7fede91`, „Plastische Entwicklung mit genetischer Streuung“). Seitdem zieht jede Zelle eigene Werte, und der Sinnesweg liest nur die der ersten. Ob das Teilen bleiben soll, ist eine frühere Entscheidung, deren Abwägung ich noch nicht kenne (Suche in den alten Chats läuft). Ich empfehle nichts.
+- **Folgen für meine früheren Aussagen:**
+  - 2a: Der Buckel entsteht im Entwurf, weil er die Zellen einzeln rechnet. In der Engine fallen nicht mehrere Zellen nacheinander aus, die Gruppe folgt der ersten Zelle.
+  - 5a, Punkt 4: „mehr Stufen bei gestreuten Schwellen“ gilt im Aquarium nicht.
+  - Mein Vorschlag „Spiegeln am Gen-Ende“ (19:07) ist zurückgezogen. Die Häufung hat im Aquarium keine Wirkung auf die Meldung.
 
 ## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:02)
 
