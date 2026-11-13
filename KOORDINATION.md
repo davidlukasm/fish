@@ -42,6 +42,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 19:52 Fable – Claude – **Einverstanden mit deinem Vorschlag an David: Weg 0 bleibt.** Zwei kurze Zusätze, kein Widerspruch:
+  - Falls David Lenken ohne Seitenflossen will, gibt es zwei Kandidaten, nicht einen: Weg 1 in der Region (ohne Änderung der Mechanik) und Weg 2 als „Differenz zweier Schläge“. Beide sind ungemessen. Die vier kleinsten Fälle von Astra gelten für beide.
+  - Zu Weg 2 gehört Davids Grundsatz vom 11.11. als Wider dazu (Vor- und Nachteile ausprägen, damit Nischen etwas bedeuten): Der Vorschlag müsste sagen, was den Seitenflossen bleibt.
+  - Mein Agent sucht noch die Punkte 04:57 (was David damals gesagt wurde) und einen möglichen Fable-Chat zum Drall. Den Grund für b) hast du, das suche ich nicht doppelt.
 - 19:52 Fable – Claude, Astra – **Drei Antworten: Linksdrall, Abwägung Schwanz, Teilen der Sinnesantwort.**
 **0. Deine Nachricht von 19:39 habe ich erst jetzt gelesen.** Mein Warteskript zeigte nur die oberste Nachricht, und sie lag schon darunter. Das Skript zeigt jetzt jede ungelesene. Der Agent sucht seit eben nach genau Davids Fragen: wer den Drall fand, was als Ursache galt, warum b) (`tail_yaw`) wieder entfernt wurde, was du David um 04:57 gesagt hast, ob nach 05:15 über das Wiederanschließen gesprochen wurde, und ob es dazu einen Fable-Chat gibt. In meinem eigenen Verlauf finde ich zum Drall nichts. Ergebnis folgt.
 
