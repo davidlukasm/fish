@@ -1775,10 +1775,11 @@ function drawGonads() {
 // Glands (body_plan.cc:1324–1328, hormone_state.cc:36–53): each node pours the messenger its place
 // on the wheel names, driven positive; driven negative it binds it, so it goes sooner. The level
 // moves towards rate·poured / (1/τ + rate·bound), rate 0.01, at that speed, between 0 and 1; τ is
-// how long the messenger lasts. Pouring and binding cost work. Above: a row per node, its messenger
+// how long the messenger lasts, the mean time constant of the gland's cells, 4 to 48 steps
+// (body_plan.cc:191–196). Pouring and binding cost work. Above: a row per node, its messenger
 // (click for the next) and its command; below: each messenger's level over the steps while the
 // glands work, then stop.
-const GLAND = {nodes : [{stuff : 0, cells : 3, command : .7}, {stuff : 1, cells : 2, command : -.3}], last : [120, 60, 200, 90, 90, 90]};
+const GLAND = {nodes : [{stuff : 0, cells : 3, command : .7}, {stuff : 1, cells : 2, command : -.3}], last : [30, 16, 40, 24, 24, 24]};
 function drawGland() {
   const redraw = drawGland, hold = () => { GLAND.held = true; }, free = () => { GLAND.held = false; redraw(); };
   const svg = document.getElementById('glandnodes'); svg.replaceChildren();
@@ -1810,7 +1811,7 @@ function drawGland() {
 
   // ---- Each messenger's level over the steps. ----
   const c = document.getElementById('glandlevel'); c.replaceChildren();
-  const L = 40, R = 290, top = 26, base = 116, N = 400, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
+  const L = 40, R = 290, top = 26, base = 116, N = 160, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
   const used = [...new Set(GLAND.nodes.map(n => n.stuff))], levels = {};
   grid(c, L, R, top, base, 1);
   for (const k of used) {
@@ -1819,23 +1820,23 @@ function drawGland() {
     const tau = GLAND.last[k];
     let v = k === 1 ? .6 : 0; const line = [v];
     for (let st = 1; st <= N; st++) {
-      const on = st < 250, source = .01 * (on ? pour : 0), sink = 1 / tau + .01 * (on ? bind : 0);
+      const on = st < 100, source = .01 * (on ? pour : 0), sink = 1 / tau + .01 * (on ? bind : 0);
       v = clamp(v + (source / sink - v) * -Math.expm1(-sink), 0, 1); line.push(v);
     }
     levels[k] = line;
     el('path', {d : 'M' + line.map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L'), fill : 'none', stroke : PALETTE[k], 'stroke-width' : 2.2}, c);
-    txt(c, X(250) - 6, Y(line[249]) - 6, stuffName(k), {'text-anchor' : 'end', style : 'fill:' + PALETTE[k]});
+    txt(c, X(100) - 6, Y(line[99]) - 6, stuffName(k), {'text-anchor' : 'end', style : 'fill:' + PALETTE[k]});
   }
-  el('path', {d : `M${X(250)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(250) + 5, top + 2, 'Stop');
+  el('path', {d : `M${X(100)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
+  txt(c, X(100) + 5, top + 2, 'Stop');
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L + 4, top - 8, 'Pegel im Blut');
   txt(c, L, base + 15, 'Schritte');
-  for (const st of [200, 400]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 400 ? 'end' : 'middle'});
+  for (const st of [50, 100, 150]) txt(c, X(st), base + 15, st, {'text-anchor' : 'middle'});
   // How long the first messenger lasts: a grip on its fading after Stop.
   // How long the first messenger lasts: a ball on its line where it has fallen to half after Stop.
-  const k0 = used[0], tau0 = GLAND.last[k0], half = Math.min(N, 250 + tau0 * Math.LN2), y0 = levels[k0][249] / 2;
-  drag(c, el('circle', {cx : X(half), cy : Y(y0), r : 6}, c), p => { GLAND.last[k0] = clamp(((p.x - L) / (R - L) * N - 250) / Math.LN2, 10, 400); redraw(); }, 'glandtau', hold, free);
+  const k0 = used[0], tau0 = GLAND.last[k0], half = Math.min(N, 100 + tau0 * Math.LN2), y0 = levels[k0][99] / 2;
+  drag(c, el('circle', {cx : X(half), cy : Y(y0), r : 6}, c), p => { GLAND.last[k0] = clamp(((p.x - L) / (R - L) * N - 100) / Math.LN2, 4, 48); redraw(); }, 'glandtau', hold, free);
   c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
