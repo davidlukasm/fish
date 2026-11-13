@@ -85,7 +85,7 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="tail" viewBox="0 0 300 150"></svg>
     <h4>Kraft</h4>
     <svg id="tailforce" viewBox="0 0 300 170"></svg>
-    <h4>Tempo</h4>
+    <h4>Geschwindigkeit</h4>
     <svg id="tailniche" viewBox="0 0 300 130"></svg>
   </section>
 </main>
@@ -426,9 +426,10 @@ document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; draw
 // spoils; pulp (digested once already) is taken up at once, spoils late, never hurts. With k = 1/20,
 // q = 1/T: flesh k/(k + k·(T/250)⁴ + q), pulp k/(k + k·(T/720)⁴ + q), fibre A/(1 + A)·k/(k + q),
 // A = (T/400)⁴. Leaves are fibre; meat is flesh; flocks are pulp; algae ¼ pulp ¾ fibre; plankton
-// ½ flesh ½ fibre. It hurts (gut_irritation) only when food is plainly wrong: when more than 85 % of
-// its flesh spoils, V/(1 + V) > 0.85 with V = (T/250)⁴, or more than 85 % of its fibre leaves still
-// closed, 1/(1 + A) > 0.85. A longer gut holds more, weighs more (+0.05 of the body per size) and
+// ½ flesh ½ fibre. It hurts (gut_irritation, Fable e9656d9) only when the mouthful is plainly wrong
+// for the gut: its flesh stays too long, T·flesh/375 > 1, or its fibre (above 0.55 of it) passes
+// too soon, T < 400·(fibre − 0.55): leaves below 180, algae below 80, plankton above 750, meat above
+// 375 steps, flocks never. A longer gut holds more, weighs more (+0.05 of the body per size) and
 // raises the resting need (+0.1 per size).
 // Senses: stretch cells report the gut's fill, half at their level (bounded_response), one level
 // per group of cells; pain and food cells answer like other pain and food cells (adapted_response).
@@ -442,8 +443,9 @@ function gain(f, T) {
   return f.flesh * k / (k + k * Math.pow(T / K.spoil, K.sharp) + q) + pulp * k / (k + k * Math.pow(T / K.pulp, K.sharp) + q) + f.fibre * A / (1 + A) * k / (k + q);
 }
 function hurts(f, T) {
-  const V = Math.pow(T / K.spoil, K.sharp), A = Math.pow(T / K.open, K.sharp);
-  return (f.flesh > 0 && V / (1 + V) > .85) || (f.fibre > 0 && 1 / (1 + A) > .85);
+  // Fable e9656d9: the whole mouthful; flesh kept too long, or fibre passing too soon.
+  const S = T * f.flesh / (1.5 * K.spoil) - 1, C = f.fibre > .55 ? 1 - T / (K.open * (f.fibre - .55)) : -Infinity;
+  return Math.max(S, C) > 0;
 }
 const BODY = 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z';
 // The fish sits 14 lower than its drawing, with room above and below it.
@@ -588,8 +590,9 @@ const SENSE_STEPS = 120, SENSE_STOP = 80;
 const groupColour = (i, n) => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
 function senseGroups(id, cell, word, stimulusAt) {
   const svg = document.getElementById(id); svg.replaceChildren();
-  const L = 56, R = 290, top = 30, base = 120, X = st => L + (R - L) * st / SENSE_STEPS;
-  const groups = cell.groups, n = groups.length, scale = Math.max(1, n) * 1.1, Y = v => base - (base - top) * v / scale;
+  const L = 56, R = 290, top = 30, base = 150, X = st => L + (R - L) * st / SENSE_STEPS;
+  // One scale for up to three groups, so that a group joining does not shrink the others.
+  const groups = cell.groups, n = groups.length, scale = 3.3, Y = v => base - (base - top) * v / scale;
   const redraw = () => senseGroups(id, cell, word, stimulusAt);
   regler(svg, {x : 26, top, base, word, value : cell.level, setValue : v => { cell.level = v; redraw(); }, name : id + 'level',
     marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i, n), chosen : i === cell.chosen, set : v => { g.gate = clamp(v, .02, .98); cell.chosen = i; redraw(); }}))});
@@ -609,7 +612,8 @@ function senseGroups(id, cell, word, stimulusAt) {
     band.addEventListener('pointerdown', () => { cell.chosen = i; redraw(); });
     under = over;
   }
-  txt(svg, L + 4, top + 4, 'an das Gehirn');
+  txt(svg, L + 4, top + 4, word === 'Bauchweh' ? 'Reaktion auf Bauchweh' : 'Reaktion auf Futter');
+  for (const k of [1, 2]) el('path', {d : `M${L} ${Y(k * 1.1)} H${R}`, stroke : '#2d5059', 'stroke-width' : .8, opacity : .7}, svg);
   if (any) { el('path', {d : `M${X(SENSE_STOP)} ${top - 6} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, svg); txt(svg, X(SENSE_STOP) + 5, top + 4, 'Stop'); }
   // Groups: a cross on the chosen one's band to take it away, a plus for another.
   const chip = (x, y, sign, act, key) => { const g = el('g', {class : 'chip', ['data-' + key] : 1}, svg);
@@ -617,13 +621,17 @@ function senseGroups(id, cell, word, stimulusAt) {
     el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, g);
     g.addEventListener('click', act); };
   if (n < 3) chip(26 + 4, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), tau : 20}); cell.chosen = groups.length - 1; redraw(); }, 'add');
-  if (n > 1) chip(26 + 4 + 22, base + 22, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
+  // The cross sits beside the chosen group's mark on the slider.
+  if (n > 1) chip(26 + 4 + 20, base - (base - top) * groups[cell.chosen].gate, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
   // The chosen group's habit: from getting used to it soon (left) to reporting on (right).
-  const cg = groups[cell.chosen], HY = base + 46, hx0 = L + 46, hx1 = R - 84;
+  // How soon the chosen group gets used to what lasts: the engine lets it settle at about half of
+  // its first answer, sooner or later.
+  const cg = groups[cell.chosen], HY = base + 50, hx0 = L + 56, hx1 = R - 56;
   const grad = el('linearGradient', {id : id + 'habit'}, el('defs', {}, svg));
   el('stop', {offset : 0, 'stop-color' : groupColour(cell.chosen, n), 'stop-opacity' : .15}, grad); el('stop', {offset : 1, 'stop-color' : groupColour(cell.chosen, n), 'stop-opacity' : .9}, grad);
   el('rect', {x : hx0, y : HY - 4, width : hx1 - hx0, height : 8, rx : 4, fill : `url(#${id}habit)`}, svg);
-  txt(svg, hx0 - 8, HY + 4, 'gewöhnt sich', {'text-anchor' : 'end'}); txt(svg, hx1 + 8, HY + 4, 'meldet weiter');
+  txt(svg, L - 8, HY - 12, 'Gewöhnung');
+  txt(svg, hx0 - 12, HY + 4, 'schnell', {'text-anchor' : 'end'}); txt(svg, hx1 + 12, HY + 4, 'langsam');
   const tauX = t => hx0 + (hx1 - hx0) * (Math.log(t / 4) / Math.log(12));
   drag(svg, el('circle', {cx : tauX(cg.tau), cy : HY, r : 7}, svg), p => { cg.tau = clamp(4 * Math.pow(12, clamp((p.x - hx0) / (hx1 - hx0), 0, 1)), 4, 48); redraw(); }, id + 'habit');
   svg.setAttribute('viewBox', `0 0 300 ${HY + 14}`);
@@ -714,8 +722,10 @@ const recruitOrder = () => tail.nodes.map((n, i) => i).sort((p, q) => tail.nodes
 // A single slow cell is still 8 px high on the smallest scale; the scale grows once the force
 // reaches the top.
 const needScale = () => Math.max(6, 1.1 * tail.nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command), 0));
-const forceScale = () => tail.hold ? (tail.hold = Math.max(tail.hold, needScale())) : needScale();
-const holdScale = () => { tail.hold = needScale(); }, freeScale = () => { tail.hold = null; drawTail(); };
+// The scale only grows: it makes room as soon as the force reaches the top, and it stays when the
+// force falls again or a grip is let go, so that every grip can be taken back to where it was.
+const forceScale = () => (tail.scale = Math.max(tail.scale ?? 0, needScale()));
+const holdScale = () => {}, freeScale = () => drawTail();
 const pick = i => { tail.chosen = i; drawTail(); };
 const fmt = v => v.toFixed(1).replace('.', ',');
 function grid(svg, L, R, top, base, scale) {
@@ -741,18 +751,15 @@ function drawTail() {
   const work = nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command) * .00128 * .2 * Math.pow(25, n.fast), 0) * 1000;
   txt(svg, 4, 10, `Energieverbrauch in Ruhe ${fmt(rest)} · schwimmend +${fmt(work)}`);
   el('g', {id : 'tail-fish'}, svg);
-  const width = (MUSCLE.to - MUSCLE.from) / nodes.length, MB = 196, CELL = 6, hOf = n => 4 + CELL * n.cells;
-  txt(svg, MUSCLE.from - 12, MB - 4, 'Kraft', {'text-anchor' : 'end'});
-  el('path', {d : `M${MUSCLE.from - 4} ${MB} V${MB - 4 - CELL * MOST_CELLS}`, stroke : '#3b6a6c'}, svg);
+  // The bundles across the whole width, in their order along the body: colour = fibres, height =
+  // cells.
+  const MX0 = 14, MX1 = 262, width = (MX1 - MX0) / nodes.length, MB = 190, CELL = 5, hOf = n => 4 + CELL * n.cells;
   nodes.forEach((n, i) => {
-    const x = MUSCLE.from + i * width + 1, h = hOf(n);
-    const r = el('rect', {x, y : MB - h, width : width - 2, height : h, rx : 3, fill : fibreColour(n.fast), class : 'chip', 'data-node' : i}, svg);
+    const r = el('rect', {x : MX0 + i * width + 1, y : MB - hOf(n), width : width - 2, height : hOf(n), rx : 3, fill : fibreColour(n.fast), class : 'chip', 'data-node' : i}, svg);
     r.addEventListener('click', () => pick(i));
   });
-  // The chosen bundle: a white frame; its top is pulled up or down for more or fewer cells.
-  const cx0 = MUSCLE.from + tail.chosen * width, ch = hOf(cn);
+  const cx0 = MX0 + tail.chosen * width, ch = hOf(cn);
   el('rect', {x : cx0 - 1, y : MB - ch - 2, width : width + 2, height : ch + 4, rx : 4, fill : 'none', stroke : '#fff3c4', 'stroke-width' : 2, 'pointer-events' : 'none'}, svg);
-  drag(svg, el('rect', {x : cx0 + 4, y : MB - ch - 4, width : width - 8, height : 8, rx : 3}, svg), p => { cn.cells = clamp(Math.round((MB - p.y - 4) / CELL), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
   if (nodes.length > 1) {
     const x = cx0 + width - 2, y = MB - ch - 2, g = el('g', {class : 'chip', 'data-remove' : 1}, svg);
     el('circle', {cx : x, cy : y, r : 6.5, fill : '#0f2c34', stroke : '#e8a2b5'}, g);
@@ -760,18 +767,18 @@ function drawTail() {
     g.addEventListener('click', () => { nodes.splice(tail.chosen, 1); tail.chosen = Math.min(tail.chosen, nodes.length - 1); drawTail(); });
   }
   if (nodes.length < 5) {
-    const ax = MUSCLE.to + 22, ay = MB - 12, g = el('g', {class : 'chip', 'data-add' : 1}, svg);
+    const ax = MX1 + 16, ay = MB - 12, g = el('g', {class : 'chip', 'data-add' : 1}, svg);
     el('circle', {cx : ax, cy : ay, r : 8, fill : '#0f2c34', stroke : '#5d8384', 'stroke-width' : 1.4}, g);
     el('path', {d : `M${ax - 4} ${ay} h8 M${ax} ${ay - 4} v8`, stroke : '#d7e6e3', 'stroke-width' : 1.6}, g);
     g.addEventListener('click', () => { nodes.push({cells : 3, fast : .5, gate : freeGate()}); pick(nodes.length - 1); });
   }
-  const fx0 = MUSCLE.from, fx1 = MUSCLE.to, FY = MB + 22;
+  const fx0 = MX0 + 4, fx1 = MX1 + 20, FY = MB + 30;
   const grad = el('linearGradient', {id : 'fibregrad'}, el('defs', {}, svg));
   el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, grad); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, grad);
   el('rect', {x : fx0, y : FY - 4, width : fx1 - fx0, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, svg);
-  txt(svg, fx0 - 8, FY + 4, 'ausdauernd', {'text-anchor' : 'end'}); txt(svg, fx1 + 8, FY + 4, 'kräftig');
+  txt(svg, fx0, FY - 10, 'ausdauernd'); txt(svg, fx1, FY - 10, 'kräftig', {'text-anchor' : 'end'});
   drag(svg, el('circle', {cx : fx0 + (fx1 - fx0) * cn.fast, cy : FY, r : 7}, svg), p => { cn.fast = clamp((p.x - fx0) / (fx1 - fx0), 0, 1); drawTail(); }, 'fibre', holdScale, freeScale);
-  svg.setAttribute('viewBox', `0 0 300 ${FY + 12}`);
+  svg.setAttribute('viewBox', `0 0 300 ${FY + 14}`);
 
   // ---- Force: the command slider on the left with each bundle's threshold; the bundles join. ----
   const c = document.getElementById('tailforce'); c.replaceChildren();
@@ -789,7 +796,7 @@ function drawTail() {
     const polygon = last => 'M' + over.slice(0, last + 1).map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.slice(0, last + 1).map((y, st) => [st, y]).reverse().map(([st, y]) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
     const band = el('path', {d : polygon(STEPS), fill : fibreColour(n.fast), opacity : .85, class : 'chip'}, c);
     band.addEventListener('pointerdown', () => pick(i));
-    if (i === tail.chosen && Math.max(...force) > 0) outline.d = polygon(SWIM - 1);
+    if (i === tail.chosen && Math.max(...force) > 0) { outline.d = polygon(SWIM - 1); outline.over = over; outline.under = under; }
     under = over;
   }
   tail.total = under;
@@ -800,11 +807,22 @@ function drawTail() {
     el('path', {d : `M${X(SWIM)} ${top - 6} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
     txt(c, X(SWIM) + 5, top + 2, 'Stop');
   }
+  let word = SWIM - 70;
   if (pulls && fastAll > 0) {
     const ex = spent.map(v => v / fastAll), peak = ex.indexOf(Math.max(...ex));
     if (ex[peak] > .02) {
+      word = Math.min(peak, SWIM - 70);
       el('path', {d : 'M' + ex.map((v, st) => `${X(st).toFixed(1)} ${CY(v).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, c);
-      txt(c, X(Math.min(peak, SWIM - 70)), CY(ex[peak]) - 7, 'Erschöpfung', {'text-anchor' : 'middle', style : 'fill:#eaa886'});
+      txt(c, X(word), CY(ex[peak]) - 7, 'Erschöpfung', {'text-anchor' : 'middle', style : 'fill:#eaa886'});
+    }
+  }
+  // The chosen bundle's cells: a square on its band's top edge, between the axis and the word
+  // above, nearer the word; pulled up or down for more or fewer cells.
+  if (outline.over) {
+    const st = Math.round(word * .65), per = forceOf(cn.fast) * driveOf(cn, tail.command) * (nodeSwim(cn, tail.command).force[st] / Math.max(1e-9, nodeSwim(cn, tail.command).force[0]));
+    if (per > 1e-6) {
+      const y0 = Y(outline.over[st]), under0 = outline.under[st];
+      drag(c, el('rect', {x : X(st) - 6, y : y0 - 6, width : 12, height : 12, rx : 2}, c), p => { const sc = forceScale(); tail.chosenCells = cn.cells = clamp(Math.round(((base - p.y) / (base - top) * sc - under0) / per), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
     }
   }
   c.setAttribute('viewBox', '0 0 300 168');
@@ -814,7 +832,7 @@ function drawTail() {
   const n = document.getElementById('tailniche'); n.replaceChildren();
   const NT = 28, NB = 118, w = tail.wriggle, water = 1 - .5 * w, sand = 1 / (12 * Math.pow(3 / 12, w));
   const vWater = speedOf(tail.total, water, 14), vSand = speedOf(tail.total, sand, 3);
-  const vScale = Math.max(1, 1.15 * Math.max(...speedOf(tail.total, 1, 14))), NY = v => NB - (NB - NT) * v / vScale;
+  const vScale = (tail.vScale = Math.max(tail.vScale ?? 0, 1, 1.15 * Math.max(...speedOf(tail.total, 1, 14)))), NY = v => NB - (NB - NT) * v / vScale;
   regler(n, {x : 26, top : NT, base : NB, word : 'Schlängeln', value : w, setValue : v => { tail.wriggle = v; drawTail(); }, name : 'wriggle'});
   grid(n, L, R, NT, NB, vScale);
   el('path', {d : `M${L} ${NB} H${R} M${L} ${NB} V${NT}`, stroke : '#3b6a6c', fill : 'none'}, n);
