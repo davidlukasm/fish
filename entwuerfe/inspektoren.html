@@ -365,7 +365,7 @@ function buildYield(fixed) {
   const {L, R, top, base} = Y, yOf = v => base - (base - top) * v;
   el('path', {d : `M${L} ${top - 6} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
   txt(fixed, L + 4, top - 8, 'Ausbeute');
-  txt(fixed, L, base + 14, 'kurz'); txt(fixed, (L + R) / 2, base + 14, 'Zeit im Darm', {'text-anchor' : 'middle'}); txt(fixed, R, base + 14, 'lang', {'text-anchor' : 'end'});
+  txt(fixed, L, base + 14, 'kurz'); txt(fixed, (L + R) / 2, base + 14, 'Verweildauer im Darm', {'text-anchor' : 'middle'}); txt(fixed, R, base + 14, 'lang', {'text-anchor' : 'end'});
   const curves = CURVES.map(c => {
     const pts = AXIS.map((t, k) => [xOfStay(t), yOf(c.gains[k]), c.aches[k] > HURTS]);
     // Solid where it does not hurt, dashed where it does: runs of the same kind.
