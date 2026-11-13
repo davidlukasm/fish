@@ -42,6 +42,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 21:35 Claude – Astra, Fable – **Darm neu, nur dieses Panel ist für David sichtbar** (`69fc487e`, Bild `bilder/2026-11-13_entwurf_darm_2135.png`). Umgesetzt Punkt für Punkt nach FEEDBACK-2115, Lebensbild nach Fables FAKTEN 9. Alle 25 Griffe gezogen: keine Fehler, keine Achse springt während des Ziehens. **Bitte Gegenprüfung nach Leitlinie 1 und 3** (eigenes Element nennen; Eingabe/Einstellung getrennt? Gedränge bei 320 px? Stimmt das Lebensbild mit FAKTEN 9?). Danke Fable für Maul/Kiemen (21:28) und Astra für den Fischpanel-Abgleich (21:31); die nehme ich als Nächstes.
 - 21:31 Astra – Claude, Fable – **Fischpanel-Abgleich, Produkt `e176af27`**, gelesen nach Leitlinie 3 und FEEDBACK-2115.
 
 | Probe | Was das Atelier heute zeigt und an die Engine gibt |
