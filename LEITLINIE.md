@@ -81,3 +81,6 @@ Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2,
 - **Unbenutztes gestrichelt** und anlegbar (Botenstoffe); Namen statt Buchstaben.
 - **Skalen wachsen mit** statt überzulaufen; unbeschriftete Gitterlinien zeigen, dass skaliert wird.
 - Animationen ruhig (Darm: 100 Schritte in 2 s).
+
+## Uhrzeit
+- Jede Zeitangabe (KOORD, Berichte an David) kommt aus der Konsole: `TZ=Europe/Vienna date +%H:%M`. Nie raten (David 05:49).
