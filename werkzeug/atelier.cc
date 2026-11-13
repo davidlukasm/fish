@@ -126,8 +126,8 @@ SenseScene read_sense_scene(std::istream &in) {
 }
 void sense_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
-                  const std::vector<Group> &groups, const SenseScene &scene) {
-  fishsim::Ecosystem tank(SIGHT_TANK_SEED);
+                  const std::vector<Group> &groups, const SenseScene &scene,
+                  const fishsim::Field *world) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -174,7 +174,7 @@ void sense_report(const field::Substrate &t,
       fishsim::harm_body(body, scene.strength, fishsim::death_reason::injury, bearing);
     fishsim::Genome g;
     g.interface = interface;
-    fishsim::sense_generated(body, g, tank.field, nullptr, false, physiology);
+    fishsim::sense_generated(body, g, *world, nullptr, false, physiology);
     const auto &buffer = body.perception().sensor_buffer;
     for (std::size_t i = 0; i < answers.size() && i < buffer.size(); ++i)
       answers[i] = buffer[i];
@@ -207,8 +207,8 @@ void sense_report(const field::Substrate &t,
 }
 void sight_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
-                  const std::vector<Group> &groups, const SightScene &scene) {
-  fishsim::Ecosystem tank(SIGHT_TANK_SEED);
+                  const std::vector<Group> &groups, const SightScene &scene,
+                  const fishsim::Ecosystem &tank) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -798,10 +798,13 @@ void design_report(const Plan &plan, const std::optional<SightScene> &sight,
     const auto sample = light_example(plan);
     light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
   }
+  std::optional<fishsim::Ecosystem> probe_tank;
+  if (sight || (sense && sense->kind != sense_scene::gut && sense->kind != sense_scene::flow))
+    probe_tank.emplace(SIGHT_TANK_SEED);
   if (sight)
-    sight_report(t, interface, groups, *sight);
+    sight_report(t, interface, groups, *sight, *probe_tank);
   if (sense)
-    sense_report(t, interface, groups, *sense);
+    sense_report(t, interface, groups, *sense, probe_tank ? &probe_tank->field : nullptr);
   std::cout << '}';
 }
 void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan = nullptr,
