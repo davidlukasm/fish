@@ -76,7 +76,8 @@ function shape(el) {
   return null;
 }
 
-const grips = root => root.findAll(el => el.classes.has('grip'));
+const grips = root => root.findAll(el => el.getAttribute('data-name') &&
+    (el.classes.has('grip') || el.classes.has('knob')));
 function checkGeometry(root, id) {
   for (const node of root.findAll(() => true))
     for (const [name, value] of Object.entries(node.attributes))
@@ -232,6 +233,12 @@ for (const [id, names] of snapshots) {
     };
     try {
       grip.dispatch('pointerdown', ...center);
+      const state = evaluate('JSON.stringify(S)');
+      update(...center);
+      const before = JSON.parse(state), after = JSON.parse(evaluate('JSON.stringify(S)'));
+      if (name === 'wall')
+        check(Math.abs(before.muscle - after.muscle) < .02,
+              `${id}/${name}: Antrieb springt am Griffmittelpunkt von ${before.muscle.toFixed(2)} auf ${after.muscle.toFixed(2)}`);
       for (const [x, y] of [[center[0] - 20, center[1] - 15], [center[0] + 20, center[1] + 15],
                             [left, top], [left + width, top + height]]) {
         update(x, y);
