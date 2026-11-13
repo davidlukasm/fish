@@ -136,8 +136,9 @@ const pace = s => s >= S.from && s <= S.until ? 1 + (drive() - 1) * bodyDrive(s)
 const meanStay = s => rest() / pace(s);
 const swingStay = s => rest() / (1 + 2 * (pace(s) - 1));
 const LIFE = Array.from({length : 61}, (_, k) => k / 60);
-// Every stay this fish's gut ever has: from the shortest swing over its life to rest.
-const windowOf = () => [Math.min(...LIFE.map(swingStay)), rest()];
+// Every stay this fish's gut ever has: from the shortest swing over its life to rest. The pictures
+// start at 50 steps, so the window does too; the numbers and the band always cover the same stays.
+const windowOf = () => [Math.max(SHORT, Math.min(...LIFE.map(swingStay))), rest()];
 
 // Foods by their stuffs (David's values: leaf best 92 %, meat 82 %, algae 78 % held to the long
 // end, plankton 72 %; at stay 50 algae 18 % and plankton 34 %).
