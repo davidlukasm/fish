@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Muster-Inspektoren Atelier</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -746,25 +747,31 @@ function drawGut() {
   drawPainSense();
   drawNutrientSense();
 }
-// Pain and food cells as David decided 05:49 (sent to Fable; engine today: s / (s + θ + m),
-// cppn_brain.cc adapted_response): a cell answers x / (x + 0.15) with x = max(0, s − θ − m), so
-// nothing below its threshold θ; m follows the stimulus s at rate 1/τ, so a lasting stimulus sinks
-// to nothing, sooner or later: τ from 400 steps (hardly gets used to it) to 4 (at once). The cells
-// of a group spread their thresholds around the group's; the group answers with their mean.
+// Pain and food cells as David decided 05:49, in the engine since Fable 853a7c74: below its
+// threshold θ a cell reports nothing; what it is used to (m, following the stimulus at 1/τ) raises
+// the threshold, so a lasting stimulus sinks to nothing, sooner or later: τ from 1024 steps
+// (hardly gets used to it) to 4 (at once). The cells of a group spread their thresholds around
+// the group's; the group answers with their mean.
 // Laid out like the tail: on the left how strong the bellyache or the food is (only to try out),
 // with each group's threshold on it; above, what each group tells the brain over time; right under
 // it the stimulus itself, when it comes and goes, with the thresholds across it; at the bottom the
 // chosen group's habit.
 const SENSE_STEPS = 120, SENSE_LASTS = 80;
 const groupColour = i => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
-const tauOf = h => 400 * Math.pow(4 / 400, h);
+const tauOf = h => 1024 * Math.pow(4 / 1024, h);
+// The engine's answers since Fable 853a7c74 (body_plan.cc excess_response, bounded_response), here
+// with the threshold t itself: below it nothing; an open stimulus answers the excess over t + m
+// (m what the cell is used to) against t + m, half at twice t; a bounded one (0 to 1) answers
+// all at the full stimulus.
+const excess = (s, t, m = 0) => { const thr = Math.max(1e-6, t) + m, ex = s - thr; return ex > 0 ? ex / (ex + thr) : 0; };
+const boundedAnswer = (x, t) => { t = clamp(t, .001, .999); const ex = (clamp(x, 0, 1) - t) / (1 - t); return ex > 0 ? ex / (ex + t * (1 - ex)) : 0; };
 const SENSE_CELLS = 7, SPREAD_MOST = .4;
 const cellGates = g => Array.from({length : SENSE_CELLS}, (_, j) => clamp(g.gate + g.spread * SPREAD_MOST * (2 * j / (SENSE_CELLS - 1) - 1), 0, 1));
-function senseAnswer(g, stimulus) {
+function senseAnswer(g, stimulus, isBounded = false) {
   let m = 0;
   const gates = cellGates(g);
   return stimulus.map(s => {
-    const r = gates.reduce((t, gate) => { const x = Math.max(0, s - gate - m); return t + x / (x + .15); }, 0) / gates.length;
+    const r = gates.reduce((t, gate) => t + (isBounded ? boundedAnswer(s, gate) : excess(s, gate, m)), 0) / gates.length;
     if (g.habit != null) m += (s - m) / tauOf(g.habit); return r;
   });
 }
@@ -777,7 +784,7 @@ function senseGroups(id, cell, o) {
   const L = 56, R = 290, top = 30, base = 126, X = st => L + (R - L) * st / SENSE_STEPS;
   const groups = cell.groups, n = groups.length;
   const felt = groups.map(g => Array.from({length : SENSE_STEPS + 1}, (_, st) => o.at(st, cell.level, g)));
-  const answers = groups.map((g, i) => senseAnswer(g, felt[i])), stimulus = felt[cell.chosen];
+  const answers = groups.map((g, i) => senseAnswer(g, felt[i], !!o.bounded)), stimulus = felt[cell.chosen];
   // Groups stacked, the most sensitive below; the scale makes room for the whole stack.
   const order = groups.map((g, i) => i).sort((p, q) => groups[p].gate - groups[q].gate);
   const total = felt[0].map((_, st) => answers.reduce((t, a) => t + a[st], 0));
@@ -1185,7 +1192,7 @@ function drawSkin(key) {
   if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 10 && st < 80 ? level * felt(gr) : 0,
     newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : .15, spread : .3, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
-    ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
+    ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, bounded : true, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
     : {word : 'Wunde', colour : '#ef8f8f', redraw, at : (st, level, gr) => st >= 10 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
@@ -1198,7 +1205,7 @@ function drawSkin(key) {
 // so that a fish lying still still knows which way is down. Above, the fish in the pose at the
 // dashed line below, its sac and each group's hair; below, what each group reports in every pose.
 const BAL = {groups : [{hair : .5, gate : .3}, {hair : .15, gate : .3}], chosen : 0, pose : .4};
-const bounded = (x, t) => { x = clamp(x, 0, 1); t = clamp(t, .001, .999); return x * (1 - t) / (x * (1 - t) + (1 - x) * t); };
+const bounded = boundedAnswer;
 const balAnswer = (g, pose) => bounded(Math.max(0, Math.sin(Math.PI * g.hair + pose)), g.gate);
 function miniFish(svg, x, y, angle, size, colour = '#5d8384') {
   const g = el('g', {transform : `translate(${x} ${y}) rotate(${-angle * 180 / Math.PI}) scale(${size / 270}) translate(-149 -65)`}, svg);
