@@ -1459,7 +1459,8 @@ function drawBladder() {
   el('ellipse', {cx : bx0 + len / 2, cy : by, rx : len / 2, ry, fill : 'none', stroke : '#cfe8f2', 'stroke-width' : 1.4}, svg);
   drag(svg, el('circle', {cx : bx0 + len, cy : by, r : 7}, svg), p => { BLAD.cap = clamp((p.x - bx0 - 30) / 26, .2, 4); redraw(); }, 'bladcap', hold, free);
   const hover = hoverAt(BLAD.cap);
-  txt(svg, 296, 128, hover <= 1 ? `schwebt bei ${Math.round(hover * 100)} % Füllung` : 'zu klein: trägt den Fisch nicht', {'text-anchor' : 'end', style : hover <= 1 ? '' : 'fill:#ef8f8f'});
+  // Where it hovers stands as a line below; only a bladder that never carries the fish says so.
+  if (hover > 1) txt(svg, 296, 128, 'zu klein: trägt den Fisch nicht', {'text-anchor' : 'end', style : 'fill:#ef8f8f'});
   svg.setAttribute('viewBox', '0 0 300 136');
 
   // ---- The fill over time under the command; above the line it rises, below it sinks. ----
@@ -1932,7 +1933,6 @@ function drawMouth() {
   el('path', {d : `M${hx + jaw} ${hy} L${hx + jaw - jaw * Math.cos(a)} ${hy - jaw * Math.sin(a)} M${hx + jaw} ${hy} L${hx + jaw - jaw * Math.cos(a)} ${hy + jaw * Math.sin(a)}`, stroke : '#d9cfae', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
   // Water drawn in: streaks into the open mouth, as many as it draws.
   for (let k = 0; k < Math.round(4 * now.flow); k++) el('path', {d : `M${hx - 40 - 10 * k} ${hy - 8 + 6 * k} q12 -4 30 ${-2 + 2 * k}`, stroke : '#9cc8f0', 'stroke-width' : 1.6, fill : 'none', opacity : .8}, svg);
-  txt(svg, 296, 110, `Schritt ${Math.round(MOUTH.at)} · offen ${Math.round(now.opening * 100)} %`, {'text-anchor' : 'end'});
   svg.setAttribute('viewBox', '0 0 300 118');
 
   // ---- Opening and drawn water over the steps; the bite where it snaps. ----
