@@ -1908,7 +1908,7 @@ function drawGills() {
   el('path', {d : 'M26 70 C60 60 110 58 150 64 L150 98 C110 100 60 92 26 76 Z', fill : '#0f2c34'}, svg);
   el('circle', {cx : 70, cy : 44, r : 6, fill : '#e9e2c6'}, svg);
   // The gill arch with its rakers: as many and as fine as the density.
-  const ax = 160, ay0 = 52, ay1 = 112, n = Math.round(3 + 17 * d);
+  const ax = 160, ay0 = 52, ay1 = 112, n = Math.round(20 * d);
   el('path', {d : `M${ax} ${ay0} Q${ax + 10} ${(ay0 + ay1) / 2} ${ax} ${ay1}`, stroke : '#d98a8a', 'stroke-width' : 6, fill : 'none', 'stroke-linecap' : 'round'}, svg);
   for (let k = 0; k < n; k++) { const t = (k + .5) / n, y = ay0 + (ay1 - ay0) * t, x = ax + 10 * 4 * t * (1 - t) * .5; el('path', {d : `M${x - 2} ${y} l-12 ${-2 + 4 * (1 - d)}`, stroke : '#f4efd8', 'stroke-width' : 1 + 1.6 * (1 - d), 'stroke-linecap' : 'round'}, svg); }
   // The gill cover with its pump muscle; its cells as width, its fibres as colour.
@@ -1930,7 +1930,8 @@ function drawGillTrade() {
   const c = document.getElementById('gillrake'); c.replaceChildren();
   const L = 30, R = 286, top = 20, base = 112, X = d => L + (R - L) * d, Y = v => base - (base - top) * v, N = 60;
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
-  for (const [f, colour, word] of [[rakerKeep, '#9cc8f0', 'Plankton bleibt'], [rakerSift, '#c9b48c', 'Bodenfutter bleibt'], [rakerPass, '#79d2be', 'Wasser fließt durch']]) {
+  // Plankton caught is the water through the gills times what the rakers hold of it (Astra 19:19).
+  for (const [f, colour, word] of [[d => rakerKeep(d) * rakerPass(d), '#9cc8f0', 'Plankton gefangen'], [rakerSift, '#c9b48c', 'Bodenfutter bleibt'], [rakerPass, '#79d2be', 'Wasser fließt durch']]) {
     el('path', {d : 'M' + Array.from({length : N + 1}, (_, k) => `${X(k / N).toFixed(1)} ${Y(f(k / N)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2}, c);
     const kx = word.startsWith('Plankton') ? .84 : word.startsWith('Boden') ? .4 : .12, below = word.startsWith('Wasser');
     txt(c, X(kx), Y(f(kx)) + (below ? 15 : -7), word, {'text-anchor' : 'middle', style : `fill:${colour};font-size:10.5px`});
@@ -1947,7 +1948,7 @@ function drawGillChain() {
   const c = document.getElementById('gillflow'); c.replaceChildren();
   const d = GILL.density, T = gut.middle, y0 = 18, x0 = 80, x1 = 170, W = 66;
   txt(c, x0, 10, 'Kiemen', {style : 'font-size:10px'}); txt(c, x1, 10, 'Darm', {style : 'font-size:10px'}); txt(c, 296, 10, 'bringt', {'text-anchor' : 'end', style : 'font-size:10px'});
-  [['Plankton', rakerKeep(d) * GILLFILM.pump, gain(FOOD[3][1], T), '#9cc8f0'], ['Bodenfutter', rakerSift(d), gain(FOOD[2][1], T), '#c9b48c']].forEach(([name, kept, made, colour], k) => {
+  [['Plankton', rakerKeep(d) * rakerPass(d) * GILLFILM.pump, gain(FOOD[3][1], T), '#9cc8f0'], ['Bodenfutter', rakerSift(d) * mouthPower().suck, gain(FOOD[2][1], T), '#c9b48c']].forEach(([name, kept, made, colour], k) => {
     const y = y0 + 20 * k;
     txt(c, 4, y + 10, name, {style : 'fill:' + colour});
     for (const [x, v] of [[x0, kept], [x1, made]]) { el('rect', {x, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, c); el('rect', {x, y, width : W * clamp(v, 0, 1), height : 12, rx : 3, fill : colour, opacity : .8}, c); }
@@ -1965,7 +1966,7 @@ function gillFrame(now) {
   if (!f.last) f.last = now; const dt = Math.min(50, now - f.last) / 16.7; f.last = now;
   if (Math.random() < .25 * rate * dt) {
     const kind = Math.random(), type = kind < .45 ? 'plankton' : kind < .75 ? 'flock' : 'mud';
-    const keep = type === 'plankton' ? rakerKeep(d) : type === 'flock' ? rakerSift(d) : d * .4;
+    const keep = type === 'plankton' ? rakerKeep(d) : type === 'flock' ? rakerSift(d) : 0;
     f.bits.push({x : 24, y : 66 + Math.random() * 24, type, keep : Math.random() < keep, vx : (1.2 + rate) * (.8 + .4 * Math.random())});
   }
   for (const b of f.bits) {
@@ -2007,12 +2008,15 @@ function defPoints() {
   probe.remove();
   return defOutline;
 }
-const defStrength = () => DEF.groups.reduce((t, g) => t + g.cells, 0) / 4;
+// A group is one cell; its 'cells' are its strength in sixteenths (Fable/Astra 19:25–19:26).
+const defStrength = () => DEF.groups.reduce((t, g) => t + g.cells, 0) / 16 * forceOf(DEF.fast);
 const defRest = () => { const c = defStrength(); return .3 * c / (c + 5); };
 const defShare = (g, q) => q.top === g.top && q.u >= DEF_FREE[0] && q.u <= DEF_FREE[1] ? Math.max(0, 1 - Math.abs(q.u - g.at) / g.width) : 0;
 function defRun() {
-  const N = 240, keep = Math.exp(-1 / strokeLen(DEF.fast)), force = forceOf(DEF.fast) * defStrength() * 2, out = [defRest()];
-  for (let st = 1; st <= N; st++) out.push(Math.max(defRest(), Math.min(.85, out[st - 1] * keep + .02 * force * (st < 140 ? 1 : 0))));
+  // The active height starts at 0 and rises with the force; what shows is the higher of it and the
+  // resting height (body.hh:109).
+  const N = 240, keep = Math.exp(-1 / strokeLen(DEF.fast)), force = defStrength(), out = [defRest()]; let h = 0;
+  for (let st = 1; st <= N; st++) { h = Math.min(.85, h * keep + .02 * force * (st < 140 ? 1 : 0)); out.push(Math.max(defRest(), h)); }
   return out;
 }
 function drawDefense() {
@@ -2046,7 +2050,7 @@ function drawDefense() {
     drag(svg, el('rect', {x : ex - 5, y : ey - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(Math.abs(pick(p).u - g.at), .03, .3); redraw(); }, 'defend' + dir); }
   if (D.groups.length > 1) signChip(svg, mx + 16, my, '×', () => { D.groups.splice(D.chosen, 1); D.chosen = 0; redraw(); }, true, 6);
   // The attacker: a jaw that comes at the body from where it is dragged.
-  const aq = pts[Math.round(D.attack * (pts.length - 1))], ax = aq.x + aq.nx * 78, ay = aq.y + aq.ny * 78, a = Math.atan2(-aq.ny, -aq.nx);
+  const aq = pts[Math.round(D.attack * (pts.length - 1))], ax = clamp(aq.x + aq.nx * 78, 16, 284), ay = clamp(aq.y + aq.ny * 78, -36, 176), a = Math.atan2(-aq.ny, -aq.nx);
   el('path', {d : `M${(ax - Math.cos(a) * 18).toFixed(1)} ${(ay - Math.sin(a) * 18).toFixed(1)} L${(ax + 10 * Math.cos(a + 2.5)).toFixed(1)} ${(ay + 10 * Math.sin(a + 2.5)).toFixed(1)} M${(ax - Math.cos(a) * 18).toFixed(1)} ${(ay - Math.sin(a) * 18).toFixed(1)} L${(ax + 10 * Math.cos(a - 2.5)).toFixed(1)} ${(ay + 10 * Math.sin(a - 2.5)).toFixed(1)}`, stroke : '#ef6f6f', 'stroke-width' : 3.6, 'stroke-linecap' : 'round', fill : 'none'}, svg);
   txt(svg, ax + Math.cos(a) * 8, ay + Math.sin(a) * 8 + (aq.ny > 0 ? 14 : -8), 'Angreifer', {'text-anchor' : 'middle', style : 'fill:#ef8f8f;font-size:10px'});
   drag(svg, el('circle', {cx : ax, cy : ay, r : 9, style : 'fill:transparent;stroke:none'}, svg), p => { const k = pts.reduce((b, q, j) => Math.hypot(q.x - p.x, q.y - p.y) < Math.hypot(pts[b].x - p.x, pts[b].y - p.y) ? j : b, 0); D.attack = k / (pts.length - 1); redraw(); }, 'defattack');
@@ -2057,7 +2061,7 @@ function drawDefense() {
   signChip(svg, 140, cy, '−', () => { g.cells = Math.max(1, g.cells - 1); redraw(); }, g.cells > 1, 7);
   txt(svg, 158, cy + 4, g.cells, {'text-anchor' : 'middle', class : 'value'});
   signChip(svg, 176, cy, '+', () => { g.cells = Math.min(16, g.cells + 1); redraw(); }, g.cells < 16, 7);
-  txt(svg, 190, cy + 4, 'Zellen der Gruppe', {style : 'font-size:10px'});
+  txt(svg, 190, cy + 4, 'Stärke (Sechzehntel)', {style : 'font-size:10px'});
   svg.setAttribute('viewBox', `0 -44 300 ${cy + 56}`);
   drawDefenseTime(aq);
 }
@@ -2066,23 +2070,25 @@ function drawDefense() {
 function drawDefenseTime(aq) {
   const c = document.getElementById('defenserise'); c.replaceChildren();
   const run = defRun(), N = run.length - 1, L = 30, R = 290, top = 22, base = 118, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
-  const pts = defPoints(), all = DEF.groups.reduce((t, g) => t + pts.reduce((u, q) => u + defShare(g, q), 0), 0);
-  const there = all ? pts.length * DEF.groups.reduce((t, g) => t + defShare(g, aq), 0) / all : 0;
+  // Each group spread over its own width with its strength as weight; 16 sectors (body_plan.cc:837–875).
+  const pts = defPoints(), total = DEF.groups.reduce((t, g) => t + g.cells, 0);
+  const there = 16 / pts.length * DEF.groups.reduce((t, g) => { const sum = pts.reduce((u, q) => u + defShare(g, q), 0); return t + (sum ? g.cells / total * defShare(g, aq) / sum * pts.length : 0); }, 0);
   grid(c, L, R, top, base, 1);
   el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y(h / .85).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : '#d9cfae', opacity : .25, stroke : '#d9cfae', 'stroke-width' : 1.2}, c);
   el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y(Math.min(1, h * there)).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2.4}, c);
-  el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y(1 / (1 + 2 * h)).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, c);
-  txt(c, L + 4, top - 8, 'Stacheln', {style : 'fill:#d9cfae'}); txt(c, L + 64, top - 8, 'Schutz am Biss', {style : 'fill:#79d2be'}); txt(c, R, top - 8, 'Schwimmtempo', {'text-anchor' : 'end', style : 'fill:#eaa886'});
+  el('path', {d : 'M' + run.map((h, st) => `${X(st).toFixed(1)} ${Y((1 + 2 * Math.max(0, h - defRest())) / 3).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, c);
+  txt(c, L + 4, top - 22, 'Stacheln', {style : 'fill:#d9cfae'}); txt(c, L + 64, top - 22, 'Schutz am Biss', {style : 'fill:#79d2be'}); txt(c, R, top - 8, 'Widerstand im Wasser', {'text-anchor' : 'end', style : 'fill:#eaa886'});
   el('path', {d : `M${X(140)} ${top} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '5 4'}, c);
   txt(c, X(140) + 4, base - 6, 'Gefahr vorbei', {style : 'font-size:10px'});
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 2}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L, base + 15, 'Alarm'); for (const st of [100, 200]) txt(c, X(st), base + 15, st, {'text-anchor' : 'middle'});
   // Fibres: fast ones raise the spines at once, slow ones keep them up longer.
-  const fy = base + 38, fx0 = 92, fx1 = 260;
+  txt(c, L, base + 30, 'Abwehren kostet Energie je Biss; fehlt sie, schützt es weniger.', {style : 'font-size:9.5px'});
+  const fy = base + 50, fx0 = 92, fx1 = 260;
   el('rect', {x : fx0, y : fy - 4, width : fx1 - fx0, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, c);
   drag(c, el('circle', {cx : fx0 + (fx1 - fx0) * DEF.fast, cy : fy, r : 7}, c), q => { DEF.fast = clamp((q.x - fx0) / (fx1 - fx0), 0, 1); drawDefense(); }, 'deffibre');
   txt(c, fx0 - 8, fy + 4, 'ausdauernd', {'text-anchor' : 'end', style : 'font-size:10px'}); txt(c, fx1 + 8, fy + 4, 'kräftig', {style : 'font-size:10px'});
-  c.setAttribute('viewBox', '0 0 300 ' + (fy + 12));
+  c.setAttribute('viewBox', '0 -16 300 ' + (fy + 28));
 }
 
 // ---------- Drüse ----------
@@ -2466,7 +2472,7 @@ function drawFins() {
   signChip(svg, 110, cy, '−', () => { g.cells = Math.max(1, g.cells - 1); redraw(); }, g.cells > 1, 7);
   txt(svg, 128, cy + 4, g.cells, {'text-anchor' : 'middle', class : 'value'});
   signChip(svg, 146, cy, '+', () => { g.cells = Math.min(16, g.cells + 1); redraw(); }, g.cells < 16, 7);
-  txt(svg, 160, cy + 4, 'Zellen der Gruppe', {style : 'font-size:10px'});
+  txt(svg, 160, cy + 4, 'Stärke (Sechzehntel)', {style : 'font-size:10px'});
   if (f.groups.length > 1) signChip(svg, 284, cy, '×', () => { f.groups.splice(F.group, 1); F.group = 0; redraw(); }, true, 7);
   const gy = cy + 22;
   txt(svg, 4, gy + 4, 'Gruppen', {style : 'font-size:10px'});
