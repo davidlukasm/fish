@@ -97,6 +97,7 @@ export class LiveStation {
     this.starting = false;
     this.error = '';
     const epoch = ++this.epoch;
+    this.controlQueue = null;
     this.root.innerHTML = liveShell(this.breeding, draft, this.state.fish, this.offered);
     this.root.querySelector('[data-live-setting=steps]').value = this.settings.steps;
     const scale = this.root.querySelector('[data-live-setting=scale]');
@@ -128,6 +129,7 @@ export class LiveStation {
   close() {
     this.shown = false;
     ++this.epoch;
+    this.controlQueue = null;
     ++this.traceEpoch;
     clearTimeout(this.timer);
   }
@@ -217,6 +219,7 @@ export class LiveStation {
     if (!this.shown || !this.catalogReady || this.starting || !this.state.fish)
       return;
     const epoch = ++this.epoch;
+    this.controlQueue = null;
     this.starting = true;
     this.error = '';
     this.draw();
@@ -277,23 +280,43 @@ export class LiveStation {
   }
   async control(axis, value) {
     const world = this.current();
-    if (this.selected == null || !world)
+    if (!this.shown || !this.job || this.selected == null || !world)
       return;
-    const target = {fish : this.selected, world : this.world}, job = this.job?.id;
+    const target = {fish : this.selected, world : this.world}, job = this.job.id,
+          generation = this.job.generation, epoch = this.epoch;
+    const current = () =>
+        epoch === this.epoch && job === this.job?.id && generation === this.job.generation;
     if (axis === 'energy') {
       const fish = world.state.fish.find(p => p.id === target.fish);
       if (value && !fish)
         return;
       value = value ? Math.max(0, Math.min(1, fish.energy / fish.capacity)) : -2;
     }
-    if (axis !== 'leaves' && !world.state.comparison && !world.state.preparing) {
-      this.resumeWhenReady = !world.state.paused;
-      await this.command('compare', target);
-      world.state.preparing = true;
-    }
-    if (job !== this.job?.id)
-      return;
-    await this.command('control', {...target, axis, value});
+    // The first intervention needs its baseline before later commands may change the fish.
+    const pending = (this.controlQueue ?? Promise.resolve()).catch(() => {}).then(async () => {
+      if (!current())
+        return;
+      const state = this.worlds[target.world]?.state;
+      if (!state)
+        return;
+      if (axis !== 'leaves' && !state.comparison && !state.preparing) {
+        this.resumeWhenReady = !state.paused;
+        try {
+          await this.command('compare', target);
+        } catch (error) {
+          if (current())
+            this.resumeWhenReady = false;
+          throw error;
+        }
+        if (!current())
+          return;
+        this.worlds[target.world].state.preparing = true;
+      }
+      if (current())
+        await this.command('control', {...target, axis, value});
+    });
+    this.controlQueue = pending;
+    return pending;
   }
   async select(id) {
     this.selected = id;

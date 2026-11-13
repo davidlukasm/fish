@@ -92,6 +92,70 @@ async function checkLiveFounders() {
   }
 }
 
+async function checkLiveControls() {
+  const {LiveStation} = await import('../ui/labor/live_station.js');
+  const turn = () => new Promise(resolve => setImmediate(resolve));
+  const station = new LiveStation({}), pending = [];
+  station.shown = true;
+  station.job = {id : 'one', generation : 0};
+  station.selected = 7;
+  const fresh = () => ({state : {comparison : false, preparing : false, paused : false}});
+  station.worlds = [ fresh() ];
+  station.request = data => new Promise((resolve, reject) => pending.push({data, resolve, reject}));
+  const first = station.control('turn', -1), second = station.control('turn', 1);
+  await turn();
+  assert.deepEqual(pending.map(p => p.data.action), [ 'compare' ],
+                   'Rapid controls share one comparison request');
+  station.worlds[0] = fresh(); // A poll can replace the world while the request is in flight.
+  station.selected = 8;
+  pending[0].resolve({});
+  await turn();
+  assert.equal(station.worlds[0].state.preparing, true);
+  assert.equal(pending[1].data.action, 'control');
+  assert.equal(pending[1].data.value, -1);
+  pending[1].resolve({});
+  await turn();
+  assert.equal(pending[2].data.action, 'control');
+  assert.equal(pending[2].data.value, 1);
+  assert.equal(pending[2].data.fish, 7, 'Queued controls retain the fish selected when clicked');
+  pending[2].resolve({});
+  await Promise.all([ first, second ]);
+
+  station.worlds[0] = fresh();
+  const failed = assert.rejects(station.control('jaw', 1), /comparison failed/);
+  const retry = station.control('suction', 1);
+  await turn();
+  pending[3].reject(Error('comparison failed'));
+  await turn();
+  assert.equal(pending[4].data.action, 'compare', 'A failed request leaves later controls usable');
+  pending[4].resolve({});
+  await turn();
+  assert.equal(pending[5].data.axis, 'suction');
+  pending[5].resolve({});
+  await Promise.all([ failed, retry ]);
+
+  station.worlds[0] = fresh();
+  const cancelled = station.control('forward', 1), queued = station.control('turn', 0);
+  await turn();
+  const oldComparison = pending[6];
+  station.close();
+  station.shown = true;
+  station.job = {id : 'two', generation : 0};
+  station.worlds[0] = fresh();
+  const next = station.control('jaw', 1);
+  await turn();
+  assert.equal(pending[7].data.job, 'two', 'A new run does not wait on a stale request');
+  oldComparison.resolve({});
+  await Promise.all([ cancelled, queued ]);
+  assert.equal(pending.length, 8, 'Closing discards both in-flight and queued follow-up controls');
+  pending[7].resolve({});
+  await turn();
+  assert.equal(pending[8].data.job, 'two');
+  pending[8].resolve({});
+  await next;
+  station.close();
+}
+
 async function checkGonadInspector(model, capabilities) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {gonadStore} = await import('../ui/studio/view/sacs.js');
@@ -1190,6 +1254,7 @@ async function checkHormoneSystems(model, capabilities) {
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
   await checkLiveFounders();
+  await checkLiveControls();
   if (process.argv.includes('--live-station')) {
     console.log('Labor/Zucht: Fischauswahl, Katalogwechsel und verspätete Antworten: OK');
     return;
