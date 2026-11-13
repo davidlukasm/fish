@@ -1424,6 +1424,143 @@ async function checkLearningTrace(model, capabilities, root) {
   }
 }
 
+async function valueDocument(model, capabilities) {
+  const {sites} = capabilities, ids = {};
+  let doc = model.newDocument('Wertverlauf');
+  for (const [name, type, x, y] of [[ 'value', 'value', 500, 300 ], [ 'A', 'nose', 245, 425 ],
+                                    [ 'B', 'nose', 245, 275 ], [ 'gut', 'gut', 680, 365 ],
+                                    [ 'pain', 'pain', 400, 500 ]]) {
+    const made = model.addOrgan(doc, type, sites, {x, y}, Infinity, false);
+    assert.ok(made);
+    doc = made.document;
+    ids[name] = made.organId;
+  }
+  assert.notEqual(ids.A, ids.B);
+  const port = (id, slot) => ({kind : 'slot', id, slot});
+  for (const [source, target] of [[ {kind : 'organ', id : ids.A}, 'feature1' ],
+                                  [ {kind : 'organ', id : ids.B}, 'feature2' ],
+                                  [ port(ids.gut, 'intake'), 'reward' ],
+                                  [ {kind : 'organ', id : ids.pain}, 'harm' ]]) {
+    const wired = model.connectSelections(doc, source, port(ids.value, target), sites);
+    assert.ok(wired);
+    doc = wired.document;
+  }
+  const {valuePlan} = await import('../ui/studio/model/value_region.js');
+  const organ = model.findOrgan(doc, ids.value), expected = valuePlan(doc, organ);
+  assert.deepEqual(organ.centers.map(c => c.node), expected.nodes.map(n => n.node));
+  for (const node of expected.nodes) {
+    const center = organ.centers.find(c => c.node === node.node);
+    for (const [key, value] of Object.entries(node.set))
+      assert.equal(center[key], value, 'The diagnostic keeps the actual value-region defaults');
+    for (const [effect, patch] of Object.entries(node.effects))
+      for (const [key, value] of Object.entries(patch))
+        assert.equal(center.receptors[effect][key], value);
+  }
+  const centers = model.allCenters(doc), plan = model.compileDocument(doc, sites);
+  plan.groups.forEach((group, i) => {
+    const c = centers[i];
+    group.name = c.organId === ids.A      ? 'A'
+                 : c.organId === ids.B    ? 'B'
+                 : c.organId === ids.pain ? 'pain'
+                                          : c.node ?? c.key;
+  });
+  assert.equal(new Set(plan.groups.map(g => g.name)).size, plan.groups.length);
+  assert.deepEqual(
+      plan.connections.map(c => plan.groups[c.from].name + '>' + plan.groups[c.to].name).sort(), [
+        'A>feature1', 'B>feature2', 'food>reward', 'harm>feature1', 'harm>feature2', 'pain>harm',
+        'reward>feature1', 'reward>feature2'
+      ]);
+  return plan;
+}
+
+function nativeValueTrace(plan, root, seed) {
+  return execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+        join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), 'value',
+        String(seed)
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(plan),
+        encoding : 'utf8',
+        timeout : 10000,
+        maxBuffer : 4 * 1024 * 1024
+      });
+}
+
+async function checkValueTrace(model, capabilities, root) {
+  const plan = await valueDocument(model, capabilities);
+  for (const seed of [27139, 71237, 99173]) {
+    const output = nativeValueTrace(plan, root, seed);
+    const [header, ...lines] = output.trim().split('\n').map(line => line.split(','));
+    assert.equal(new Set(header).size, header.length);
+    const rows = lines.map(line => {
+      assert.equal(line.length, header.length);
+      return Object.fromEntries(
+          header.map((key, i) => [key, key === 'phase' ? line[i] : Number(line[i])]));
+    });
+    assert.equal(rows.length, 128);
+    const phases = new Set();
+    for (const [i, row] of rows.entries()) {
+      phases.add(row.phase);
+      assert.equal(row.t, 50 * (i + 1));
+      assert.equal(row.seed, seed);
+      assert.equal(row.learning, 1);
+      assert.ok(row.maturity >= .65 && row.maturity <= 1);
+      assert.ok(Object.values(row).every(v => typeof v === 'string' || Number.isFinite(v)));
+      for (const key of header.filter(key => /input_mean$|output_mean$/.test(key)))
+        assert.ok(row[key] >= 0 && row[key] <= 1, key);
+      for (const contact of header.filter(key => key.endsWith(':contacts'))) {
+        const path = contact.slice(0, -'contacts'.length), count = row[contact],
+              limit = row[path + 'limit'];
+        assert.ok(Number.isInteger(count) && count >= 0);
+        for (const field of ['weight_mean', 'weight_min', 'weight_max'])
+          assert.ok(row[path + field] >= Math.min(0, limit) - 1e-7 &&
+                        row[path + field] <= Math.max(0, limit) + 1e-7,
+                    path + field);
+        assert.ok(Math.abs(row[path + 'weight_sum'] - row[path + 'weight_mean'] * count) < 1e-6);
+        assert.ok(row[path + 'weight_min'] <= row[path + 'weight_mean'] + 1e-7);
+        assert.ok(row[path + 'weight_mean'] <= row[path + 'weight_max'] + 1e-7);
+        assert.ok(row[path + 'consolidation_mean'] >= 0 && row[path + 'consolidation_mean'] <= 1);
+        if (!count)
+          assert.equal(row[path + 'weight_sum'], 0);
+      }
+      if (row.phase === 'quiet')
+        for (const channel of ['a', 'b', 'food', 'pain'])
+          assert.equal(row[channel + '_input_mean'], 0);
+      if ([ 'a_food_b_pain', 'a_pain_b_food' ].includes(row.phase)) {
+        const cue = Math.floor((row.t - 1) / 100) % 2, reversed = row.phase === 'a_pain_b_food';
+        const channels = [ 'a', 'b', 'food', 'pain' ];
+        for (const [index, channel] of channels.entries()) {
+          const active =
+              row.t % 100 === 50 && (index === cue || index === 2 + (cue ^ Number(reversed)));
+          assert.ok(Math.abs(row[channel + '_input_mean'] - (active ? .32 : 0)) < 1e-6);
+        }
+      }
+      if (/^(before|paired|reversed)_[ab]$/.test(row.phase)) {
+        const cue = row.phase.endsWith('_a') ? 'a' : 'b';
+        assert.ok(Math.abs(row[cue + '_input_mean'] - .8) < 1e-6);
+        for (const channel of [cue === 'a' ? 'b' : 'a', 'food', 'pain'])
+          assert.equal(row[channel + '_input_mean'], 0);
+      }
+    }
+    assert.deepEqual([...phases ], [
+      'development', 'quiet', 'before_a', 'before_b', 'a_food_b_pain', 'paired_a', 'paired_b',
+      'a_pain_b_food', 'reversed_a', 'reversed_b'
+    ]);
+    for (const path of ['A>feature1', 'B>feature2', 'food>reward', 'pain>harm', 'reward>feature1',
+                        'reward>feature2', 'harm>feature1', 'harm>feature2'])
+      assert.ok(rows.some(row => row[path + ':contacts'] > 0),
+                'The complete region has native contacts on ' + path);
+    if (seed === 27139)
+      assert.equal(nativeValueTrace(plan, root, seed), output,
+                   'The value-region experiment repeats exactly');
+  }
+}
+
 async function internalRegionDocument(model, capabilities, mode) {
   const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
   const {sites} = capabilities, ids = {};
@@ -2738,6 +2875,19 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: native Lernverläufe, Lehrzeitpunkt, Festigung und Gegenfolgen: OK');
     return;
   }
+  // --value checks the real region; --value-trace [seed] emits its native CSV for an inspector.
+  if (process.argv.includes('--value-trace')) {
+    const index = process.argv.indexOf('--value-trace'),
+          seed = Number(process.argv[index + 1] ?? 27139);
+    assert.ok(Number.isSafeInteger(seed) && seed >= 0);
+    process.stdout.write(nativeValueTrace(await valueDocument(model, sitesResult), root, seed));
+    return;
+  }
+  if (process.argv.includes('--value')) {
+    await checkValueTrace(model, sitesResult, root);
+    console.log('Atelier: vollständige Wertregion, Lehrpfade und native Gegenfolgen: OK');
+    return;
+  }
   if (process.argv.includes('--region-traces') || process.argv.includes('--state-hunger') ||
       process.argv.includes('--olfaction')) {
     const modes = [ 'state-hunger', 'olfaction' ].filter(
@@ -2831,6 +2981,7 @@ async function checkHormoneSystems(model, capabilities) {
       await checkForagingChoice(model, sitesResult.sites, root);
       await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
       await checkLearningTrace(model, sitesResult, root);
+      await checkValueTrace(model, sitesResult, root);
       await checkResponseControls(model, sitesResult, clicks);
       await checkFunctionalRegions(model, sitesResult);
       checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,

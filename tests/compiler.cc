@@ -385,6 +385,131 @@ int learning_trace(const Plan &plan, const fishsim::Genome &genome, std::uint64_
   }
   return 0;
 }
+int value_trace(const Plan &plan, const fishsim::Genome &genome, std::uint64_t seed) {
+  const auto &cells = genome.blueprint->neurons;
+  std::vector<int> groups, sensors, counts(plan.groups.size()), representatives(plan.groups.size());
+  std::set<std::string> names;
+  for (const auto &group : plan.groups)
+    assert(names.insert(group.name).second);
+  for (std::size_t i = 0; i < cells.size(); ++i) {
+    const auto found =
+        std::find_if(plan.groups.begin(), plan.groups.end(),
+                     [&](const Group &group) { return group.contains(cells[i].location); });
+    assert(found != plan.groups.end());
+    const int group = int(found - plan.groups.begin());
+    groups.push_back(group);
+    ++counts[group];
+    representatives[group] = int(i);
+    if (cells[i].role == field::Role::Sensor)
+      sensors.push_back(group);
+  }
+  assert(std::all_of(counts.begin(), counts.end(), [](int count) { return count > 0; }));
+  std::map<std::pair<int, int>, std::string> paths;
+  for (const auto &connection : plan.connections)
+    paths[{connection.from, connection.to}] =
+        plan.groups[connection.from].name + ">" + plan.groups[connection.to].name;
+  field::Network brain(genome.blueprint);
+  for (const auto &synapse : brain.synapses())
+    assert(synapse.weight == 0);
+  constexpr int EVERY = 50, DEVELOPMENT = 800, PERIOD = 100, PULSE = 20;
+  // Inputs are transduced sensor patterns. Means cover the preceding 50 ticks; contact fields
+  // describe the endpoint, including zero contacts. Probes keep learning enabled.
+  std::cout
+      << "t,phase,seed,maturity,learning,a_input_mean,b_input_mean,food_input_mean,pain_input_mean";
+  for (const auto &group : plan.groups) {
+    std::cout << ',' << group.name << ":output_mean";
+    if (group.role == int(field::Role::Nerve))
+      std::cout << ',' << group.name << ":surprise_mean";
+  }
+  for (const auto &[pair, name] : paths)
+    for (const auto *field : {"contacts", "weight_sum", "weight_mean", "weight_min", "weight_max",
+                              "limit", "consolidation_mean"})
+      std::cout << ',' << name << ':' << field;
+  std::cout << '\n' << std::setprecision(9);
+  std::array<double, 4> input_means{};
+  std::vector<double> outputs(counts.size()), surprises(counts.size());
+  for (int step = 0; step < 6400; ++step) {
+    const double maturity = std::min(1., .65 + .35 * step / DEVELOPMENT);
+    std::array<float, 4> input{};
+    const char *phase = "quiet";
+    if (step < DEVELOPMENT) {
+      phase = "development";
+      input.fill(step % PERIOD < PULSE ? .6f : 0);
+    } else if ((step >= 1600 && step < 3200) || (step >= 4000 && step < 5600)) {
+      const bool reversed = step >= 4000;
+      phase = reversed ? "a_pain_b_food" : "a_food_b_pain";
+      const int within = step % PERIOD, cue = step / PERIOD % 2;
+      input[cue] = within < PULSE ? .8f : 0;
+      input[2 + (cue ^ int(reversed))] = within >= PULSE + 2 && within < 2 * PULSE + 2 ? .8f : 0;
+    } else {
+      const int probe = step >= 6200                  ? 5
+                        : step >= 5800 && step < 6000 ? 4
+                        : step >= 3800 && step < 4000 ? 3
+                        : step >= 3400 && step < 3600 ? 2
+                        : step >= 1400 && step < 1600 ? 1
+                        : step >= 1000 && step < 1200 ? 0
+                                                      : -1;
+      if (probe >= 0) {
+        constexpr const char *phases[]{"before_a", "before_b",   "paired_a",
+                                       "paired_b", "reversed_a", "reversed_b"};
+        phase = phases[probe];
+        input[probe % 2] = .8f;
+      }
+    }
+    brain.set_body_levels(maturity, 1, 0);
+    std::vector<float> values;
+    for (int group : sensors) {
+      const auto &name = plan.groups[group].name;
+      values.push_back(name == "A"      ? input[0]
+                       : name == "B"    ? input[1]
+                       : name == "food" ? input[2]
+                       : name == "pain" ? input[3]
+                                        : 0);
+    }
+    brain.step(values, {}, seed);
+    for (std::size_t i = 0; i < input.size(); ++i)
+      input_means[i] += input[i] / EVERY;
+    for (std::size_t i = 0; i < cells.size(); ++i) {
+      outputs[groups[i]] += brain.signal(i) / (counts[groups[i]] * double(EVERY));
+      surprises[groups[i]] += brain.surprise(i) / (counts[groups[i]] * double(EVERY));
+    }
+    if (step % EVERY != EVERY - 1)
+      continue;
+    std::cout << step + 1 << ',' << phase << ',' << seed << ',' << maturity << ','
+              << brain.plasticity();
+    for (auto &value : input_means) {
+      std::cout << ',' << value;
+      value = 0;
+    }
+    for (std::size_t i = 0; i < counts.size(); ++i) {
+      std::cout << ',' << outputs[i];
+      if (plan.groups[i].role == int(field::Role::Nerve))
+        std::cout << ',' << surprises[i];
+      outputs[i] = surprises[i] = 0;
+    }
+    const auto synapses = brain.synapses();
+    for (const auto &synapse : synapses)
+      assert(paths.count({groups[synapse.source], groups[synapse.target]}));
+    for (const auto &[pair, name] : paths) {
+      int count = 0;
+      double weight = 0, consolidation = 0, low = 0, high = 0;
+      for (const auto &synapse : synapses)
+        if (groups[synapse.source] == pair.first && groups[synapse.target] == pair.second) {
+          low = count ? std::min(low, double(synapse.weight)) : synapse.weight;
+          high = count ? std::max(high, double(synapse.weight)) : synapse.weight;
+          ++count;
+          weight += synapse.weight;
+          consolidation += synapse.consolidation;
+        }
+      const float limit = field::contact_limit(cells[representatives[pair.first]],
+                                               cells[representatives[pair.second]]);
+      std::cout << ',' << count << ',' << weight << ',' << weight / std::max(1, count) << ',' << low
+                << ',' << high << ',' << limit << ',' << consolidation / std::max(1, count);
+    }
+    std::cout << '\n';
+  }
+  return 0;
+}
 int region_trace(const std::string &mode, std::uint64_t seed = 27139,
                  const std::string &sequence = "paired") {
   const bool reverse = mode == "motor-reverse", fins = mode == "spine-fin",
@@ -402,6 +527,8 @@ int region_trace(const std::string &mode, std::uint64_t seed = 27139,
   assert(assess(plan, genome).ok());
   if (mode == "learn")
     return learning_trace(plan, genome, seed, sequence);
+  if (mode == "value")
+    return value_trace(plan, genome, seed);
   field::Network brain(genome.blueprint);
   if (spine || internal)
     for (const auto &synapse : brain.synapses())
@@ -561,6 +688,8 @@ int region_trace(const std::string &mode, std::uint64_t seed = 27139,
 }
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
+  if (argc >= 2 && argc <= 3 && std::string(argv[1]) == "value")
+    return region_trace("value", argc > 2 ? std::stoull(argv[2]) : 27139);
   if (argc >= 2 && argc <= 4 && std::string(argv[1]) == "learn")
     return region_trace("learn", argc > 2 ? std::stoull(argv[2]) : 27139,
                         argc > 3 ? argv[3] : "paired");
