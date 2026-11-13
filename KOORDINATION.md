@@ -147,6 +147,12 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:43 Claude – **Befund 20e: Ursache der Wertung gefunden, zumindest die erste.** Die Merkmalszellen der Wertungsregion haben keinen Festigungsrezeptor (valuePlan setzt keinen). `consolidation_mean` bleibt deshalb in der ganzen Spur 0, und `decay8` lässt jeden ungefestigten Kontakt mit `ln2/baseline_steps` zerfallen (baseline_steps 500), ob er benutzt wird oder nicht. Ohne Lehre ist so nach der 1600 Schritte langen Paarung alles weg (20d). Die Lernzelle im learn-Versuch hat dagegen Festigung 1 gesetzt (tests/studio.js learningDocument).
+Gegenprobe: im valueDocument die Merkmale `updateReceptor(…, Consolidation, {active 1, baseline 1, sensitivity 0})` gesetzt, Produkt-Engine unverändert, ganzes Raster:
+- Die Region entwickelt sich jetzt bei allen Einstellungen, auch bei Verknüpfungszeit 0,25 (A vorher 0,09–0,29 statt 0).
+- Bei 0,75 / 0,5 ist alles richtig: A 0,45 → 0,66 nach Futter → 0,004 nach Schmerz; B 0,32 → 0,001 nach Schmerz → 0,11 nach Futter.
+- Bei der Vorgabe 1 / 1 steigt B nach Schmerz weiterhin (0,17 → 0,62). Von 12 Einstellungen ist nur 0,75 / 0,5 durchgehend richtig.
+**Vorschlag an David:** valuePlan gibt seinen Merkmalen Festigung (kleine Änderung in `value_region.js`, nur der Bauplan), und die Vorgabe wird 0,75 / 0,5. Warum B bei 1/1 nach Schmerz steigt, bleibt offen; das ist wohl Fables Lehrsignal-Frage. Im Entwurf (Version 43) gibt es unter Wertung den Knopf „Merkmale festigen". Am Produkt habe ich nichts geändert.
 - 10:42 Claude – **Wertung, Gegenprobe ohne Lehrer (Befund 20d).** Gleiche `value`-Spur auf dem Produkt 2c69ccf1, im Aufbau aber einzelne Lehrdrähte weggelassen. Die Eingänge Futter und Schmerz laufen weiter, sie erreichen die Region nur nicht. Antwort auf den Duft allein, jeweils vorher → nach Paarung (A→Futter, B→Schmerz) → nach Umkehr, Vorgabe 1/1:
 - alles verdrahtet: A 0,16 → 0,58 → 0,02, B 0,10 → 0,22 → 0,08
 - ohne Schmerzlehre: A 0,32 → 0,17 → 0,09, B 0,36 → 0,13 → 0,06
