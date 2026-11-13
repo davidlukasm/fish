@@ -129,6 +129,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Pumpen</h4>
     <svg id="gillflow" viewBox="0 0 300 138"></svg>
   </section>
+  <section class="panel" aria-label="Abwehr">
+    <h2>Organ</h2><h3>Abwehr</h3>
+    <h4 class="first">Stacheln</h4>
+    <svg id="defenseskin" viewBox="0 0 300 130"></svg>
+    <h4>Aufstellen</h4>
+    <svg id="defenserise" viewBox="0 0 300 138"></svg>
+    <h4>Schutz und Bremse</h4>
+    <svg id="defenseuse" viewBox="0 0 300 138"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1020,6 +1029,7 @@ requestAnimationFrame(tailFrame);
 // in this draft (threshold, spread, for pain the habit).
 const SKIN = {touch : {groups : [{aim : Math.PI, width : 1.1, gate : .3, spread : .3}], chosen : 0, level : .7, spot : null},
               pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .3, habit : .5}], chosen : 0, level : .6, spot : null},
+              defense : {groups : [{aim : -Math.PI / 2, width : 1.3, gate : .3}], chosen : 0, command : .6, rest : .12, spot : null},
               lateral : {groups : [{aim : Math.PI / 2, width : 1.2, gate : .15, spread : .3, habit : .4}], chosen : 0, level : .6, from : 2.2}};
 // Lateral line (body_plan.cc:1044–1057, 1085–1090): at each patch of skin the water moving past it,
 // the fish's own speed and turning included, minus the water's and the neighbours' wake; a cell
@@ -1052,7 +1062,7 @@ const nearestSkin = p => { const pts = skinPoints(); let best = 0; pts.forEach((
 const facing = aim => { const pts = skinPoints(); let best = 0; pts.forEach((q, k) => { if (Math.abs(skinWrap(q.a - aim)) < Math.abs(skinWrap(pts[best].a - aim))) best = k; }); return best; };
 function drawSkin(key) {
   const organ = SKIN[key], pts = skinPoints(), N = pts.length, svg = document.getElementById(key + 'skin'); svg.replaceChildren();
-  if (organ.spot == null) organ.spot = key === 'touch' ? facing(Math.PI - .5) : facing(-Math.PI / 2 + .3);
+  if (organ.spot == null) organ.spot = key === 'touch' ? facing(Math.PI - .5) : key === 'defense' ? facing(-Math.PI / 2 - .4) : facing(-Math.PI / 2 + .3);
   const redraw = () => drawSkin(key), hold = () => { organ.held = true; }, free = () => { organ.held = false; redraw(); };
   el('path', {d : 'M' + pts.map(q => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L') + 'Z', fill : '#16363e', stroke : '#3b6a6c'}, svg);
   el('circle', {cx : SKIN_AT.x + 16 * SKIN_AT.s, cy : SKIN_AT.y + 30 * SKIN_AT.s, r : 2.4, fill : '#e9e2c6'}, svg);
@@ -1061,8 +1071,12 @@ function drawSkin(key) {
   for (const i of order) {
     const g = organ.groups[i], chosen = i === organ.chosen;
     let d = '';
-    pts.forEach((q, k) => { const w = skinWeight(g, q); if (k % 2 === 0 && w > .02) { const l = 3 + 14 * w; d += `M${q.x.toFixed(1)} ${q.y.toFixed(1)} l${(q.nx * l).toFixed(1)} ${(q.ny * l).toFixed(1)}`; } });
-    const hairs = el('path', {d, stroke : groupColour(i), 'stroke-width' : chosen ? 1.8 : 1.2, opacity : chosen ? 1 : .55, 'stroke-linecap' : 'round', class : 'chip'}, svg);
+    // Spines: triangles as tall as their density and the height they stand at now.
+    const tall = key === 'defense' ? .3 + .7 * organ.command : 1;
+    pts.forEach((q, k) => { const w = skinWeight(g, q); if (k % 2 === 0 && w > .02) { const l = (3 + 14 * w) * tall;
+      d += key === 'defense' ? `M${(q.x - q.ny * 2).toFixed(1)} ${(q.y + q.nx * 2).toFixed(1)} L${(q.x + q.nx * l).toFixed(1)} ${(q.y + q.ny * l).toFixed(1)} L${(q.x + q.ny * 2).toFixed(1)} ${(q.y - q.nx * 2).toFixed(1)}`
+                             : `M${q.x.toFixed(1)} ${q.y.toFixed(1)} l${(q.nx * l).toFixed(1)} ${(q.ny * l).toFixed(1)}`; } });
+    const hairs = el('path', key === 'defense' ? {d, fill : '#d9cfae', 'fill-opacity' : chosen ? .9 : .5, stroke : 'none', class : 'chip'} : {d, stroke : groupColour(i), 'stroke-width' : chosen ? 1.8 : 1.2, opacity : chosen ? 1 : .55, 'stroke-linecap' : 'round', class : 'chip'}, svg);
     hairs.addEventListener('pointerdown', () => { organ.chosen = i; redraw(); });
   }
   // Where it touches or hurts: a pebble against the skin, or a wound in it; pulled along the skin.
@@ -1075,6 +1089,11 @@ function drawSkin(key) {
       el('path', {d : `M${sx.toFixed(1)} ${sy.toFixed(1)} Q${((sx + ex) / 2 + v * 4).toFixed(1)} ${((sy + ey) / 2 - u * 4).toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`, stroke : '#9cc8f0', 'stroke-width' : 2, fill : 'none', 'stroke-linecap' : 'round', opacity : .85}, svg);
     }
     drag(svg, el('circle', {cx : cx + u * (R0 + 10) * rx, cy : cy + v * (R0 + 10) * ry, r : 7}, svg), p => { organ.from = Math.atan2((p.y - cy) / ry, (p.x - cx) / rx); redraw(); }, key + 'from', hold, free);
+  } else if (key === 'defense') {
+    // Where a bite comes from: a jaw outside the skin, pulled round the fish.
+    const jx = sp.x + sp.nx * 44, jy = sp.y + sp.ny * 44, a = Math.atan2(-sp.ny, -sp.nx);
+    el('path', {d : `M${(jx + 9 * Math.cos(a + 2.4)).toFixed(1)} ${(jy + 9 * Math.sin(a + 2.4)).toFixed(1)} L${jx.toFixed(1)} ${jy.toFixed(1)} L${(jx + 9 * Math.cos(a - 2.4)).toFixed(1)} ${(jy + 9 * Math.sin(a - 2.4)).toFixed(1)}`, fill : 'none', stroke : '#ef6f6f', 'stroke-width' : 3, 'stroke-linejoin' : 'round'}, svg);
+    drag(svg, el('circle', {cx : jx - Math.cos(a) * 9, cy : jy - Math.sin(a) * 9, r : 6, style : 'fill:#3a1f24;stroke:#ef8f8f'}, svg), p => { organ.spot = nearestSkin(p); redraw(); }, key + 'spot', hold, free);
   } else if (key === 'touch') {
     const r = 7; drag(svg, el('circle', {cx : sp.x + sp.nx * (r + 1), cy : sp.y + sp.ny * (r + 1), r, style : 'fill:#8d8a7c;stroke:#f1dda6'}, svg), p => { organ.spot = nearestSkin(p); redraw(); }, key + 'spot', hold, free);
   } else {
@@ -1092,10 +1111,11 @@ function drawSkin(key) {
   el('path', {d : arc, fill : 'none', stroke : '#eaa886', 'stroke-width' : 2.5, 'stroke-linecap' : 'round', opacity : .9}, svg);
   drag(svg, el('circle', {cx : m.x + m.nx * 22, cy : m.y + m.ny * 22, r : 7}, svg), p => { g.aim = pts[nearestSkin(p)].a; redraw(); }, key + 'aim', hold, free);
   ends.forEach((k, j) => { const q = pts[k]; drag(svg, el('rect', {x : q.x + q.nx * 22 - 5, y : q.y + q.ny * 22 - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(Math.abs(skinWrap(pts[nearestSkin(p)].a - g.aim)), Math.PI / 8, Math.PI); redraw(); }, key + 'end' + j, hold, free); });
-  svg.setAttribute('viewBox', key === 'lateral' ? '0 0 300 166' : '0 20 300 124');
+  svg.setAttribute('viewBox', key === 'lateral' ? '0 0 300 166' : key === 'defense' ? '0 0 300 140' : '0 20 300 124');
   const felt = key === 'lateral'
     ? gr => { let a = 0, w = 0; for (const q of pts) { const k = skinWeight(gr, q); a += k * Math.max(0, Math.cos(q.a - organ.from)); w += k; } return w ? a / w : 0; }
     : gr => skinWeight(gr, sp);
+  if (key === 'defense') return defenseCharts(organ, redraw, hold, free, organ.groups.reduce((t, gr) => t + skinWeight(gr, sp), 0));
   if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 10 && st < 80 ? level * felt(gr) : 0,
     newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : .15, spread : .3, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
@@ -1523,5 +1543,46 @@ function drawGills() {
   n.setAttribute('viewBox', '0 0 300 ' + (B2 + 22));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills();
+// ---------- Abwehr ----------
+// Spines (body_plan.cc:857–876, 1615–1617, feeding.cc:28–33, movement.cc:79–122, physiology.cc:432):
+// each group of cells sets spines round one way of the body, over its width, as dense as its
+// strength; some always stand (resting height from the organ's size), the rest rise with the
+// command, height = height·keep + 0.02·force, at most 0.85. A bite from where spines stand is
+// blocked by their density × height, if the fish can pay 0.5 × the wound × spines in energy;
+// raised spines brake the swim, drag × (1 + 2·height). Above: the fish with its spines and where a
+// bite comes from; middle: the height over time under the command; below: protection against a
+// bite from there and the brake, over the height.
+function defenseCharts(organ, redraw, hold, free, felt) {
+  const c = document.getElementById('defenserise'); c.replaceChildren();
+  const L = 56, R = 290, top = 26, base = 116, N = 300, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v / .85;
+  const rest = organ.rest, keep = .97, h = [rest];
+  for (let st = 1; st <= N; st++) h.push(Math.max(rest, Math.min(.85, h[st - 1] * keep + .02 * 1.5 * (st < 150 ? organ.command : 0))));
+  regler(c, {x : 26, top, base, word : 'Befehl', value : organ.command, setValue : v => { organ.command = v; redraw(); }, start : hold, end : free, name : 'defcmd'});
+  grid(c, L, R, top, base, .85);
+  el('path', {d : 'M' + h.map((v, st) => `${X(st).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : '#d9cfae', opacity : .35, stroke : '#d9cfae', 'stroke-width' : 1.6}, c);
+  el('path', {d : `M${L} ${Y(rest)} H${R}`, stroke : '#7f9a99', 'stroke-dasharray' : '3 3'}, c);
+  txt(c, R - 2, Y(rest) + 13, 'in Ruhe', {'text-anchor' : 'end'});
+  el('path', {d : `M${X(150)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
+  txt(c, X(150) + 5, top + 2, 'Stop');
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L + 4, top - 8, 'Stachelhöhe');
+  txt(c, L, base + 15, 'Schritte');
+  for (const st of [100, 200, 300]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 300 ? 'end' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+  // Protection from the bite's side and the brake, over the height.
+  const d = document.getElementById('defenseuse'); d.replaceChildren();
+  const L2 = 40, HX = v => L2 + (R - L2) * v / .85, PY = v => base - (base - top) * v;
+  const there = felt;
+  grid(d, L2, R, top, base, 1);
+  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => { const v = .85 * k / 40; return `${HX(v).toFixed(1)} ${PY(Math.min(1, there * v / .85)).toFixed(1)}`; }).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2.4}, d);
+  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => { const v = .85 * k / 40; return `${HX(v).toFixed(1)} ${PY(1 / (1 + 2 * v)).toFixed(1)}`; }).join(' L'), fill : 'none', stroke : '#eaa886', 'stroke-width' : 2}, d);
+  txt(d, HX(.84), PY(Math.min(1, there)) - 6, 'Schutz vor dem Biss', {'text-anchor' : 'end', style : 'fill:#79d2be'});
+  txt(d, HX(.84), PY(1 / (1 + 1.7)) - 6, 'Tempo', {'text-anchor' : 'end', style : 'fill:#eaa886'});
+  el('path', {d : `M${L2} ${base} H${R} M${L2} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, d);
+  txt(d, L2, base + 15, 'flach'); txt(d, R, base + 15, 'aufgestellt', {'text-anchor' : 'end'}); txt(d, (L2 + R) / 2, base + 15, 'Stachelhöhe', {'text-anchor' : 'middle'});
+  el('path', {d : `M${HX(rest)} ${top - 4} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '3 3'}, d);
+  d.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense');
 </script>
