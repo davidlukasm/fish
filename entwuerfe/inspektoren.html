@@ -586,8 +586,8 @@ const STOMACH_FILL = '#c98f55', STOMACH_EDGE = '#e6b47c', TUBE = '#6b6f5f';
 const gut = {
   middle : 200, spread : 2.2, levels : [.6], levelCells : [4], levelSpread : [.08], fill : .45, chosenLevel : 0,
   life : {young : 1, grown : 0},
-  ache : {groups : [{gate : .3, habit : .5, spread : .1}], chosen : 0, input : {rise : 12, height : .7, stop : 300}},
-  food : {groups : [{gate : .25, habit : .5, spread : .1}], chosen : 0, input : {rise : 4, height : .6, stop : 40}}
+  ache : {groups : [{gate : .3, habit : .5, spread : .1}], chosen : 0, input : {food : null, rise : 12, height : .7, stop : 300}},
+  food : {groups : [{gate : .25, habit : .5, spread : .1}], chosen : 0, input : {food : 'Flocken', size : .5, every : 6, stop : 40}}
 };
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
@@ -653,7 +653,7 @@ function drawGut() {
   const body = el('g', {transform : `translate(50 ${DROP}) scale(.889 1) translate(-14 0)`}, svg);
   el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'vector-effect' : 'non-scaling-stroke'}, body);
   el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, body);
-  txt(svg, 296, 12, `+${Math.round(10 * sizeOf(T))} % Ruhebedarf · +${Math.round(5 * sizeOf(T))} % Gewicht`, {'text-anchor' : 'end'});
+  txt(svg, 296, 12, `+${Math.round(10 * sizeOf(T))} % Ruhebedarf · +${Math.round(5 * sizeOf(T))} % Gewicht · −${Math.round(25 * (sizeOf(T) - .5) / 3.5)} % Platz für Eier`, {'text-anchor' : 'end'});
   const way = gutWay(sizeOf(T)); film.way = way;
   film.tube = el('g', {}, svg);
   el('path', {d : `M${50 + 4} ${64 + DROP} Q${(50 + STOMACH.x - STOMACH.rx) / 2} ${STOMACH.y + 4} ${STOMACH.x - STOMACH.rx + 2} ${STOMACH.y}`, stroke : TUBE, 'stroke-width' : 6, fill : 'none', 'stroke-linecap' : 'round'}, svg);
@@ -881,6 +881,14 @@ const SENSES = {
   gutsense : {cell : () => gut.food, colour : '#e3cf94', word : 'Futter', after : (st, inp) => Math.pow(.8, st - inp.stop), of : (f, t) => 2 * gain(f, t) / (2 * gain(f, t) + 1)}
 };
 const SENSE_N = 1024;
+// The food cells feel bites, not a state (Fable 19:06, physiology.cc:207, 219, 408): each bite adds
+// what this gut will make of it, F += 4 · size · yield at the middle stay; F falls to 0.8 every
+// step; the cells feel F / (F + 1).
+function biteInput(inp) {
+  const y = gain(FOOD.find(f => f[0] === inp.food)[1], gut.middle), out = []; let F = 0;
+  for (let st = 0; st <= SENSE_N; st++) { if (st >= 1 && st <= inp.stop && (st - 1) % inp.every === 0) F += 4 * inp.size * y; out.push(F / (F + 1)); F *= .8; }
+  return out;
+}
 function senseInput(id, st) {
   const o = SENSES[id], inp = o.cell().input;
   if (st < 1) return 0;
@@ -893,11 +901,13 @@ function drawGutSense(id) {
   const L = 70, R = 290, X = st => L + (R - L) * Math.log(1 + st) / Math.log(1 + SENSE_N), stOf = x => Math.expm1(clamp((x - L) / (R - L), 0, 1) * Math.log(1 + SENSE_N));
   const hold = () => { cell.held = true; }, free = () => { cell.held = false; drawGutSense(id); }, redraw = () => drawGutSense(id), whole = () => drawGut();
   // Input.
-  const I0 = 24, I1 = 104, IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
-  const stim = Array.from({length : SENSE_N + 1}, (_, st) => senseInput(id, st));
+  const bites = id === 'gutsense', I0 = bites ? 24 : 38, I1 = I0 + 80, IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
+  const stim = bites ? biteInput(inp) : Array.from({length : SENSE_N + 1}, (_, st) => senseInput(id, st));
   el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : '#0f2c34'}, svg);
   el('path', {d : 'M' + stim.map((v, st) => `${X(st).toFixed(1)} ${IY(v).toFixed(1)}`).join(' L') + ` L${R} ${I1} L${L} ${I1} Z`, fill : o.colour, opacity : .35, stroke : o.colour, 'stroke-width' : 1.6}, svg);
-  txt(svg, L, I0 - 8, o.word === 'Bauchweh' ? 'Bauchweh im Darm' : 'Futter im Darm');
+  txt(svg, L, I0 - 8, bites ? 'Bissen ' + inp.food : 'Bauchweh im Darm');
+  // What a full gut's ache costs the fish (physiology.cc:238, 249).
+  if (!bites) txt(svg, 296, 10, 'volles Bauchweh: −0,15 % Gesundheit je Schritt, Durchfall', {'text-anchor' : 'end', style : 'font-size:9.5px'});
   groups.forEach((g, i) => {
     const gates = cellGates(g, true), hi = IY(Math.max(...gates)), lo = IY(Math.min(...gates));
     el('rect', {x : L, y : hi, width : R - L, height : Math.max(0, lo - hi), fill : groupColour(i), opacity : i === cell.chosen ? .22 : .1}, svg);
@@ -905,24 +915,34 @@ function drawGutSense(id) {
     el('path', {d : `M${L} ${IY(g.gate)} H${R}`, stroke : 'transparent', 'stroke-width' : 9, class : 'chip'}, svg).addEventListener('pointerdown', () => { cell.chosen = i; whole(); });
     void line;
   });
-  // The input's corners: when it is fully there (and how strong), when it stops.
-  const xr = X(inp.rise), xs = X(inp.stop), yh = IY(inp.height);
-  drag(svg, el('circle', {cx : xr, cy : yh, r : 6.5}, svg), p => { inp.rise = clamp(Math.round(stOf(p.x)), 1, inp.stop - 1); inp.height = vOf(p.y); redraw(); }, id + 'rise', hold, free);
-  drag(svg, el('rect', {x : xs - 5, y : yh - 7, width : 10, height : 14, rx : 3}, svg), p => { inp.stop = clamp(Math.round(stOf(p.x)), inp.rise + 1, SENSE_N - 1); inp.height = vOf(p.y); redraw(); }, id + 'stop', hold, free);
-  // What each food can give these cells in this gut (a full gut of it, eating twice the resting
-  // need): a thin bar per food from its least to its most over the life and the muscle's swing.
-  // A click takes the food's most as the input.
+  if (!bites) {
+    // The input's corners: when it is fully there (and how strong), when it stops.
+    const xr = X(inp.rise), xs = X(inp.stop), yh = IY(inp.height);
+    drag(svg, el('circle', {cx : xr, cy : yh, r : 6.5}, svg), p => { inp.rise = clamp(Math.round(stOf(p.x)), 1, inp.stop - 1); inp.height = vOf(p.y); inp.food = null; redraw(); }, id + 'rise', hold, free);
+    drag(svg, el('rect', {x : xs - 5, y : yh - 7, width : 10, height : 14, rx : 3}, svg), p => { inp.stop = clamp(Math.round(stOf(p.x)), inp.rise + 1, SENSE_N - 1); inp.height = vOf(p.y); inp.food = null; redraw(); }, id + 'stop', hold, free);
+  } else {
+    // The bites: the first one's height is the bite's size, the second one's place the pause
+    // between bites, the last one's place when eating stops.
+    drag(svg, el('circle', {cx : X(1), cy : IY(stim[1]), r : 6.5}, svg), p => { const want = vOf(p.y), y = gain(FOOD.find(f => f[0] === inp.food)[1], gut.middle); inp.size = clamp(want / (1 - want) / Math.max(.01, 4 * y), .02, 1); redraw(); }, id + 'size', hold, free);
+    drag(svg, el('rect', {x : X(1 + inp.every) - 5, y : I1 - 14, width : 10, height : 14, rx : 3}, svg), p => { inp.every = clamp(Math.round(stOf(p.x)) - 1, 1, 60); inp.stop = Math.max(inp.stop, 1 + inp.every); redraw(); }, id + 'every', hold, free);
+    drag(svg, el('rect', {x : X(inp.stop) - 5, y : I0, width : 10, height : 14, rx : 3}, svg), p => { inp.stop = clamp(Math.round(stOf(p.x)), 1, SENSE_N - 1); redraw(); }, id + 'stop', hold, free);
+  }
+  // The foods by name: a click takes that food as the input, for the bellyache its worst over
+  // this fish's life (muscle swing included), for the bites the food itself.
   FOOD.forEach(([name, f, colour], k) => {
-    const vals = LIFE.flatMap(m => [...swingAt(m), stayAt(m)].map(t => o.of(f, t))), lo = Math.min(...vals), hi = Math.max(...vals), x = 44 + 4.5 * k;
+    const x = L + (R - L) * (k + .5) / FOOD.length, on = inp.food === name;
     const g = el('g', {class : 'chip', 'data-food' : name}, svg);
-    el('rect', {x : x - 3, y : I0, width : 6, height : I1 - I0, style : 'fill:transparent;stroke:none'}, g);
-    el('rect', {x : x - 1.5, y : IY(hi) - 1, width : 3, height : Math.max(2, IY(lo) - IY(hi) + 1), rx : 1.5, style : `fill:${colour};stroke:none;opacity:${hi > 0 ? .95 : .3}`}, g);
-    g.addEventListener('click', () => { inp.height = clamp(hi, .02, 1); redraw(); });
+    const t = txt(g, x, I1 + 15, name, {'text-anchor' : 'middle', style : `fill:${colour};font-size:10.5px;${on ? 'font-weight:700;text-decoration:underline' : ''}`});
+    void t;
+    g.addEventListener('click', () => {
+      inp.food = name;
+      if (!bites) inp.height = clamp(Math.max(...LIFE.flatMap(m => [...swingAt(m), stayAt(m)].map(tt => o.of(f, tt)))), .02, 1);
+      redraw(); });
   });
   // The bar at the left: what the groups answer to.
   regler(svg, {x : 26, top : I0, base : I1, word : '', value : null, start : hold, end : free, name : id + 'gate',
     marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === cell.chosen, set : v => { g.gate = gateClamp(v, true); cell.chosen = i; redraw(); }}))});
-  signChip(svg, 30, I1 + 16, '+', () => { groups.push({gate : gateClamp((Math.max(...groups.map(g => g.gate)) + 1) / 2, true), habit : .5, spread : .1}); cell.chosen = groups.length - 1; whole(); }, n < 3, 7);
+  signChip(svg, 30, I1 + 18, '+', () => { groups.push({gate : gateClamp((Math.max(...groups.map(g => g.gate)) + 1) / 2, true), habit : .5, spread : .1}); cell.chosen = groups.length - 1; whole(); }, n < 3, 7);
   if (n > 1) signChip(svg, 54, IY(groups[cell.chosen].gate), '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; whole(); }, true, 6);
   // How far the chosen group's cells spread: a bar at the right over their thresholds.
   {
@@ -931,7 +951,7 @@ function drawGutSense(id) {
     drag(svg, el('rect', {x : x - 7, y : clamp(y0 - 5, I0 + 1, I1 - 9), width : 14, height : 8, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.spread = clamp((IY(g.gate) - p.y - 5) / ((I1 - I0) * gatePerUnit(true)), 0, 1); redraw(); }, id + 'spread', hold, free);
   }
   // Answers.
-  const A0 = I1 + 34, A1 = A0 + 92;
+  const A0 = I1 + 44, A1 = A0 + 92;
   const answers = groups.map(g => senseAnswer(g, stim, true));
   const total = stim.map((_, st) => answers.reduce((t, a) => t + a[st], 0));
   const scale = settle(cell, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), AY = v => A1 - (A1 - A0) * v / scale;
@@ -2210,9 +2230,10 @@ function drawFins() {
   // Cells of the chosen pair and the second pair: (+) adds the pelvic fins, (×) takes them away.
   const f = F.fins[F.chosen], cy = 150;
   txt(svg, 4, cy + 4, f.kind);
-  signChip(svg, 120, cy, '−', () => { f.cells = Math.max(1, f.cells - 1); redraw(); }, f.cells > 1, 7);
-  txt(svg, 140, cy + 4, f.cells + ' Zellen', {'text-anchor' : 'middle', class : 'value', style : 'font-size:10px'});
-  signChip(svg, 162, cy, '+', () => { f.cells = Math.min(8, f.cells + 1); redraw(); }, f.cells < 8, 7);
+  signChip(svg, 110, cy, '−', () => { f.cells = Math.max(1, f.cells - 1); redraw(); }, f.cells > 1, 7);
+  txt(svg, 128, cy + 4, f.cells, {'text-anchor' : 'middle', class : 'value'});
+  signChip(svg, 146, cy, '+', () => { f.cells = Math.min(8, f.cells + 1); redraw(); }, f.cells < 8, 7);
+  txt(svg, 160, cy + 4, 'Zellen je Flosse', {style : 'font-size:10px'});
   if (F.fins.length < 2) { signChip(svg, topX(.58), TOP.y + topHalf(.58) + 22, '+', () => { F.fins.push({kind : 'Bauchflossen', at : .56, q : .2, p : .4, cells : 2, fast : .4}); F.chosen = 1; redraw(); }, true, 8); txt(svg, topX(.58) + 12, TOP.y + topHalf(.58) + 26, 'Bauchflossen', {style : 'font-size:10px'}); }
   else signChip(svg, 284, cy, '×', () => { F.fins.splice(1, 1); F.chosen = 0; redraw(); }, true, 7);
   // Fibres of the chosen pair, as at the tail.
