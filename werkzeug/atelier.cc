@@ -341,7 +341,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
                 << fishsim::receptor_response(*cell, stimulus(k)) / cell->senses[sense];
     std::cout << "],\"half\":" << half << ",\"adapt\":";
     if (fishsim::adapting_sense(sense) && cell->adaptation_rate > 0) {
-      const double held = ADAPT_HELD * half, steps = 1 / cell->adaptation_rate,
+      const double held = intensity ? ADAPT_HELD * half : 1, steps = 1 / cell->adaptation_rate,
                    every = ADAPT_SPAN * steps / ADAPT_SAMPLES;
       // The mean after `k` samples of a stimulus held from nothing.
       std::cout << "{\"steps\":" << steps << ",\"held\":" << held << ",\"every\":" << every

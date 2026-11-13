@@ -6,9 +6,8 @@ import {fishPath, OUTLINE_STEP, skinAt, skinDirection, skinPoints} from './frame
 import {nodeLocation, organLocation} from './places.js';
 import {escapeText, fixed} from './markup.js';
 import {handleWord, senseSensitivity} from './sense_marks.js';
-import {boundedRow, fadeRow, intensityRow, SENSE_PLOT, sensePicture} from './sense_curves.js';
+import {boundedRow, fadeRow, SENSE_PLOT, sensePicture} from './sense_curves.js';
 import {percent, t} from '../../strings.js';
-import {stimulusOfShare} from './sensitivity.js';
 
 const SKIN_FIELD = Object.freeze({
   width : 334,
@@ -24,8 +23,6 @@ const SKIN_FIELD = Object.freeze({
   least : .05,
   handle : 7
 });
-// The lasting wound of the pain cells' time row, as many times their half answer.
-const SKIN_HELD = 4;
 const CANVAS_SKIN = Object.freeze({length : [ 3, 22 ], hit : 13});
 const toFrame = (fx, fy) => ({
   x : BODY_MIDDLE.x + (fx * SKIN_FIELD.width - SKIN_FIELD.cx) / SKIN_FIELD.scale,
@@ -138,7 +135,7 @@ export function skinField(state, organ, center, held = null) {
          '</svg>' + skinCurves(state, organ, center, held) + '</div>';
 }
 function skinCurves(state, organ, center, held) {
-  const sensitive = held ?? senseSensitivity(state, center), dimmest = state.anatomy?.lightDimmest;
+  const sensitive = held ?? senseSensitivity(state, center);
   if (sensitive === null)
     return '';
   const words = (key, values) => t('studio.skinSense.' + organ.type + '.' + key, values);
@@ -152,21 +149,19 @@ function skinCurves(state, organ, center, held) {
                           handle : words('handle')
                         }) ],
                         'refreshSkin');
-  if (!(dimmest > 0))
-    return '';
-  const half = stimulusOfShare(1 - sensitive, dimmest);
   return sensePicture(
       center, words('title'),
       [
-        intensityRow(sensitive, dimmest,
-                     {report, from : words('from'), to : words('to'), handle : words('handle')}),
-        fadeRow(center, SKIN_HELD * half, half, {
+        boundedRow(sensitive,
+                   {report, from : words('from'), to : words('to'), handle : words('handle')}),
+        fadeRow(center, 1, 1 - sensitive, {
           report,
           from : words('stays'),
           to : t('studio.skinSense.later', {n : SENSE_PLOT.window * LONGEST_ADAPTATION}),
           half : n => words('fade', {n}),
           handle : words('fadeHandle')
-        })
+        },
+                true)
       ],
       'refreshSkin');
 }

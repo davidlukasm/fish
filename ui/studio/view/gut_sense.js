@@ -9,16 +9,8 @@
 // flow covers the resting cost). They get used to a lasting flow: the time row shows the fish
 // eating as much as it rests on.
 import {groupReport} from '../model/document.js';
-import {stimulusOfShare} from './sensitivity.js';
 import {senseSensitivity} from './sense_marks.js';
-import {
-  boundedRow,
-  fadeRow,
-  intensityRow,
-  SENSE_PLOT,
-  sensePicture,
-  senseText
-} from './sense_curves.js';
+import {boundedRow, fadeRow, SENSE_PLOT, sensePicture, senseText} from './sense_curves.js';
 import {fixed} from './markup.js';
 import {LONGEST_ADAPTATION} from '../../tuning.js';
 import {percent, t} from '../../strings.js';
@@ -26,8 +18,6 @@ import {percent, t} from '../../strings.js';
 const word = (key, values) => t('studio.gutSense.' + key, values);
 // The nutrient signal where the gut's flow covers the resting cost.
 const REST = .5;
-// The steady bellyache the time row shows.
-const ACHE = .5;
 
 function fullnessPicture(state, center, held) {
   const sensitive = held ?? senseSensitivity(state, center) ?? 0;
@@ -41,34 +31,31 @@ function fullnessPicture(state, center, held) {
                       'refreshEffectors');
 }
 function achePicture(state, center, held) {
-  const dimmest = state.anatomy?.lightDimmest, sensitive = held ?? senseSensitivity(state, center);
-  if (!(dimmest > 0) || sensitive === null)
-    return '';
-  const half = stimulusOfShare(1 - sensitive, dimmest), P = SENSE_PLOT;
+  const sensitive = held ?? senseSensitivity(state, center) ?? 0, half = 1 - sensitive,
+        P = SENSE_PLOT;
   return sensePicture(center, word('ache'),
                       [
-                        intensityRow(sensitive, dimmest, {
+                        boundedRow(sensitive, {
                           report : word('report'),
                           from : word('calm'),
                           to : word('sore'),
-                          half : word('acheHalf', {p : percent(half, half < .01 ? 1 : 0)}),
+                          half : word('acheHalf', {p : percent(half)}),
                           handle : word('acheHandle')
                         }),
-                        fadeRow(center, ACHE, half, {
+                        fadeRow(center, 1, half, {
                           report : word('report'),
                           from : word('aches'),
                           to : word('later', {n : P.window * LONGEST_ADAPTATION}),
                           half : n => word('fade', {n}),
                           handle : word('acheFadeHandle')
-                        })
+                        },
+                                true)
                       ],
                       'refreshEffectors');
 }
 function foodPicture(state, center, held) {
-  const dimmest = state.anatomy?.lightDimmest, sensitive = held ?? senseSensitivity(state, center);
-  if (!(dimmest > 0) || sensitive === null)
-    return '';
-  const half = stimulusOfShare(1 - sensitive, dimmest), P = SENSE_PLOT;
+  const sensitive = held ?? senseSensitivity(state, center) ?? 0, half = 1 - sensitive,
+        P = SENSE_PLOT;
   // The flow as a share of the resting cost, from the nutrient signal: s / (1 − s).
   const ofRest = s => s / (1 - s);
   const rest = (row, xOf) => '<path class="aid-gland-phase" d="M' + fixed(xOf(REST)) + ' ' +
@@ -76,21 +63,22 @@ function foodPicture(state, center, held) {
                              senseText(xOf(REST) - P.tick, row.base - P.tick, word('rest'), 'end');
   return sensePicture(center, word('food'),
                       [
-                        intensityRow(sensitive, dimmest, {
+                        boundedRow(sensitive, {
                           report : word('report'),
                           from : word('little'),
                           to : word('much'),
-                          half : word('foodHalf', {p : percent(ofRest(half), half < .01 ? 1 : 0)}),
+                          half : word('foodHalf', {p : percent(ofRest(half))}),
                           handle : word('foodHandle')
                         },
-                                     rest),
-                        fadeRow(center, REST, half, {
+                                   rest),
+                        fadeRow(center, 1, half, {
                           report : word('report'),
                           from : word('eats'),
                           to : word('later', {n : P.window * LONGEST_ADAPTATION}),
                           half : n => word('fade', {n}),
                           handle : word('fadeHandle')
-                        })
+                        },
+                                true)
                       ],
                       'refreshEffectors');
 }

@@ -67,7 +67,7 @@ float anatomical_sensor(const Body &, const BrainInterface::Receptor &, const Se
 float anatomical_sensor(const Body &, const BrainInterface::Receptor &, double sediment_contact = 0,
                         Point disturbance = {}, double gonad = 0);
 float sensory_response(double stimulus, double threshold);
-float bounded_response(double stimulus, double half);
+float bounded_response(double stimulus, double half, double mean = 0);
 float excess_response(double stimulus, double half, double mean = 0);
 void record_touch(Body &, double nx, double ny, double impact = 0);
 Point nose_position(const Body &);

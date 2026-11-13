@@ -983,11 +983,12 @@ float excess_response(double stimulus, double half, double mean) {
   return excess > 0 ? float(excess / (excess + threshold)) : 0.f;
 }
 // The same for a stimulus between nothing and all: `half` is where the cell answers half; below
-// its threshold, which lies lower, it reports nothing, and all at the full stimulus.
-float bounded_response(double x, double half) {
+// its threshold, which lies lower, it reports nothing, and all at the full stimulus. Only what
+// exceeds the accustomed level counts.
+float bounded_response(double x, double half, double mean) {
   half = std::clamp(half, .001, .999);
   const double threshold = half / (2 - half),
-               excess = (std::clamp(x, 0., 1.) - threshold) / (1 - threshold);
+               excess = (std::clamp(x, 0., 1.) - mean - threshold) / (1 - threshold);
   return excess > 0 ? float(excess / (excess + threshold * (1 - excess))) : 0.f;
 }
 void record_touch(Body &b, double nx, double ny, double impact) {
@@ -1212,7 +1213,7 @@ float receptor_response(const BrainInterface::Receptor &r, double stimulus, doub
   const int sense = r.dominant_sense();
   const bool intensity = r.intensity();
   return r.senses[sense] * (intensity ? excess_response(stimulus, r.response_threshold, mean)
-                                      : bounded_response(stimulus, r.threshold));
+                                      : bounded_response(stimulus, r.threshold, mean));
 }
 float anatomical_sensor(const Body &b, const BrainInterface::Receptor &r, const SensoryFrame &f,
                         double sediment_contact, std::array<float, field::SENSE_COUNT> *components,

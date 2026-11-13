@@ -19,9 +19,9 @@ inline bool adapting_sense(int s) {
   return s == field::Odor || s == field::Flow || s == field::Intake || s == field::Damage;
 }
 inline bool intensity_sense(int s) {
-  // Blood carries bounded internal levels. Dividing by their recent mean would hide a
-  // sustained shortage of energy or hormones from the brain.
-  return s <= field::Flow || s == field::Intake || s == field::Damage;
+  // Light, scent and flow have no upper bound; every other sense feels a share between nothing
+  // and all.
+  return s <= field::Flow;
 }
 struct BrainInterface {
   struct Receptor {

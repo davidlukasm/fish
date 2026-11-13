@@ -76,14 +76,15 @@ export function excessAnswer(stimulus, half, mean = 0) {
   const threshold = half / 2 + mean, excess = stimulus - threshold;
   return excess > 0 ? excess / (excess + threshold) : 0;
 }
-export function boundedAnswer(stimulus, half) {
-  const threshold = half / (2 - half), excess = (clamp(stimulus) - threshold) / (1 - threshold);
+export function boundedAnswer(stimulus, half, mean = 0) {
+  const threshold = half / (2 - half),
+        excess = (clamp(stimulus) - mean - threshold) / (1 - threshold);
   return excess > 0 ? excess / (excess + threshold * (1 - excess)) : 0;
 }
 // The report over a bounded stimulus, from none to full: `sensitive` is one less the threshold.
-export const boundedRow = (sensitive, words) => row => {
+export const boundedRow = (sensitive, words, marks = () => '') => row => {
   const h = clamp(1 - sensitive, .001, .999);
-  return axes(row, words) + curve(row, x => boundedAnswer(x, h)) +
+  return axes(row, words) + marks(row, senseX) + curve(row, x => boundedAnswer(x, h)) +
          halfHandle(row, sensitive, words);
 };
 // The report over a stimulus spanning many orders, from `dimmest` to one; `marks(row, xOf)` adds
@@ -95,11 +96,12 @@ export const intensityRow = (sensitive, dimmest, words, marks = () => '') => row
          halfHandle(row, sensitive, words);
 };
 // The report while a stimulus `held` lasts, for intensity cells whose half answer is `half`: it
-// falls as their mean catches up, the handle where they are used to it. Only intensity senses get
-// used to what they feel (brain_interface.hh).
-export const fadeRow = (center, held, half, words) => row => {
+// falls as their mean catches up, the handle one adaptation time after it began; `bounded` for
+// a stimulus between nothing and all.
+export const fadeRow = (center, held, half, words, bounded = false) => row => {
   const tau = adaptationSteps(center.tau), window = P.window * LONGEST_ADAPTATION;
-  const at = step => excessAnswer(held, half, held * -Math.expm1(-step / tau));
+  const at = step =>
+      (bounded ? boundedAnswer : excessAnswer)(held, half, held * -Math.expm1(-step / tau));
   const used = P.settled * tau,
         mark = {x : senseX(Math.log(used) / Math.log(window)), y : y(row, at(used))};
   return axes(row, words) + curve(row, share => at(window ** share)) +
