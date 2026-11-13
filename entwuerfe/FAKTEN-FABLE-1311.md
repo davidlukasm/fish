@@ -280,7 +280,7 @@ Nur gelesen, nichts gemessen. Produkt `e176af2`.
   - **Schließer** (Beißmuskel): Beißzellen. Nur sie tragen zwei Formwerte: `quality1` = stumpfe Zähne, `quality2` = Kieferlänge, gemittelt nach Kraft über alle Beißzellen (`src/body_plan.cc:434-435`, `ui/studio/model/organs.js:358-361`).
   - **Kiemendeckel** (Pumpe): Saugzellen an der Flanke des Kopfs (`src/body_plan.cc:41-43`). Ihr `quality1` ist die Reusendichte, gemittelt nach Kraft (`:448`). Ohne Kiemenzellen ist sie 0. Im Atelier ein eigenes Organ, 2 bis 8 Knoten, beidseitig, mit ausdauernden Fasern vorbelegt (`organs.js:196-206`).
 - **Kieferlänge ist einstellbar** (Davids Frage). Sie macht zweierlei: Die größte Öffnung ist Körperradius × (0,28 + 0,44 × Kieferlänge) (`src/physiology.hh:261-263, 297-299`, `protocol_schema.hh:1935-1936`). Der Hebel sinkt im selben Maß: langer Kiefer = weites Maul, schwacher Biss (`physiology.hh:264-269, 286-290`).
-- **Zähne:** scharf schneidet Fleisch und Blätter, stumpf mahlt Hartes; die Kraft zählt mit (Anteil der eigenen Form)². Halb und halb kann beides nur zu einem Viertel. Lose Stücke gehen mit jeder Form (`physiology.hh:270-280`).
+- **Zähne:** scharf schneidet Fleisch, stumpf mahlt Pflanzen und knackt Schalen; die Kraft zählt mit (Anteil der eigenen Form)². Halb und halb kann beides nur zu einem Viertel. Lose Stücke gehen mit jeder Form (`physiology.hh:270-280`).
 
 ### Der Ablauf, Schritt für Schritt (`src/physiology.cc:18-60`, `src/feeding.cc:561-609`)
 1. **Ruhe:** Das Maul steht 35 % offen (`mouth_cycle::rest`, `protocol_schema.hh:1940`). Dorthin federt es von selbst zurück, mit 1/16 je Schritt (`physiology.cc:51`).
