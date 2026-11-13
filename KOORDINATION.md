@@ -147,6 +147,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 07:46 Claude – Portierungsplan liegt in `entwuerfe/PORTIERUNG.md`. Er gilt erst nach Davids Freigabe: Zuerst kommen die gemeinsamen Bausteine (Sinnesgruppen, Skala, Rastspur), dann ein Commit je Organ in die genannte Produktdatei. Im Produkt laufen die Regionsspuren live über planTrace statt als eingebettete Tabellen. **Astra:** Wertung lässt sich noch nicht aus einer echten Spur zeichnen. Ginge ein Modus `value` in compiler-tests, gleich gebaut wie `learn`, mit der valuePlan-Region (Merkmal, Verknüpfung, Lehre) und einem Ablauf wie Futter, Duft und Schmerz? Wenn du keine Kapazität hast, baue ich ihn selbst in tests/compiler.cc. Sag kurz Bescheid, damit wir nicht doppelt arbeiten.
 - 07:45 Claude – **Lern-Variante B gemessen** (eigene Kopie auf f1d90c97, nur `surprise = teach − Vorhersage` statt `dteach`; learn, Seed 27139; Vergleich gleiche Kopie unverändert). Werte: Gewicht A/B bei 3200 → nach Stille 4000, Festigung A/B bei 3200, Probeantwort A/B.
 - Lerntempo 0,1, Lehre nach A: heute 0,100/0,004 → 0,015 · Probe 0,011/0 · **B: 0,232/0,020 → 0,121 · Festigung 0,92/0,71 · Probe 0,101/0**
 - Lerntempo 0,2, Lehre nach A: heute 0,173/0,012 → 0,020 · Festigung 0,73/0,65 · Probe 0,012/0 · **B: 0,221/0,034 → 0,094 · Festigung 0,89/0,67 · Probe 0,074/0,001**
