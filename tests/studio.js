@@ -4,6 +4,152 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkDraggedInspector(model, capabilities, root) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {inspector, organSettingsBlock} = await import('../ui/studio/view/panels.js');
+  const saved = {document : global.document, CSS : global.CSS};
+  const linked = '[data-wheel-figure],[data-effector-block]';
+  class Element {
+    constructor(tag = 'div', attrs = {}) {
+      this.tagName = tag;
+      this.attrs = attrs;
+      this.attributes = Object.entries(attrs).map(([ name, value ]) => ({name, value}));
+      this.classList = (attrs.class || '').split(' ').filter(Boolean);
+      this.dataset = Object.fromEntries(
+          Object.entries(attrs)
+              .filter(([ key ]) => key.startsWith('data-'))
+              .map(([
+                     key, value
+                   ]) => [key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase()), value]));
+      this.children = [];
+      this.isConnected = true;
+    }
+    matches(selector) {
+      return selector.split(',').some(selector => {
+        const tag = selector.match(/^[\w-]+/);
+        return (!tag || tag[0] === this.tagName) &&
+               [...selector.matchAll(/\.([\w-]+)|\[([\w-]+)(?:="([^"]*)")?\]/g) ].every(
+                   ([, cl, key, value ]) => cl ? this.classList.includes(cl)
+                                               : key in this.attrs && (value === undefined ||
+                                                                       this.attrs[key] === value));
+      });
+    }
+    closest(selector) {
+      return this.matches(selector) ? this : this.parent?.closest(selector) ?? null;
+    }
+    contains(node) { return node === this || this.children.some(child => child.contains(node)); }
+    querySelectorAll(selector) {
+      return this.children.flatMap(child => [...(child.matches(selector) ? [ child ] : []),
+                                             ...child.querySelectorAll(selector)]);
+    }
+    querySelector(selector) { return this.querySelectorAll(selector)[0] ?? null; }
+    replaceWith(node) {
+      assert.ok(node);
+      this.parent.children[this.parent.children.indexOf(this)] = node;
+      node.parent = this.parent;
+      this.isConnected = false;
+    }
+    set innerHTML(html) {
+      this.html = html;
+      this.children = [];
+      const stack = [ this ];
+      for (const match of html.matchAll(/<\/?([\w-]+)\b([^>]*)>/g)) {
+        if (match[0].startsWith('</')) {
+          const node = stack.pop();
+          node.outerHTML = html.slice(node.start, match.index + match[0].length);
+          continue;
+        }
+        const attrs = Object.fromEntries([...match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g) ].map(
+            ([, name, value ]) => [name, value ?? '']));
+        const node = new Element(match[1], attrs);
+        node.start = match.index;
+        node.parent = stack.at(-1);
+        node.parent.children.push(node);
+        node.outerHTML = match[0];
+        if (!match[0].endsWith('/>') && !['input', 'img', 'br', 'hr'].includes(node.tagName))
+          stack.push(node);
+      }
+      assert.equal(stack.length, 1, 'Rendered inspector has balanced elements');
+    }
+  }
+  let rendered;
+  global.document = {
+    createElement : () => {
+      rendered = new Element();
+      return rendered;
+    }
+  };
+  global.CSS = {escape : value => value};
+  try {
+    for (const fish of ['liora', 'brisa']) {
+      const source =
+          JSON.parse(readFileSync(join(root, 'genomes/entwuerfe', fish + '.fish.json'), 'utf8'));
+      const cases = [
+        [ 'eggs', '[data-sac]' ], [ 'nose', '[data-sense-field]' ],
+        [ 'muscle', '[data-effector-graphic]' ], [ 'gut', '[data-effector-graphic]' ],
+        [ 'eye', '[data-spectrum]' ], [ 'touch', '[data-skin-field]' ],
+        [ 'motor', '[data-region-picture]' ], [ 'spine', '[data-region-picture]' ],
+        [ 'gland', '[data-vector-pad]' ], [ 'choice', '[data-response]', true ],
+        [ 'choice', '[data-nerve-tissue]', true ], [ 'choice', '[data-variation]', true ],
+        [ 'choice', '[data-preview-bars]', true ]
+      ];
+      for (const [type, selector, cell] of cases) {
+        const organ = source.organs.find(o => o.type === type);
+        if (!organ)
+          continue;
+        const center = organ.centers[0], panel = new Element();
+        const studio = new OrganStudio({querySelector : () => panel, querySelectorAll : () => []});
+        Object.assign(studio.state, {
+          document : source,
+          sites : capabilities.sites,
+          capabilities,
+          selected : {kind : cell ? 'center' : 'organ', id : cell ? center.id : organ.id}
+        });
+        panel.innerHTML = inspector(studio.state);
+        const graphic = panel.querySelector(selector);
+        assert.ok(graphic, fish + ' ' + type + ' ' + selector);
+        studio.handleDrag = {graphic};
+        let fallback = 0;
+        studio.refreshInspector = () => ++fallback;
+        const scoped = Boolean(graphic.closest('[data-organ-settings]'));
+        const untouched = panel.querySelector('.aid-inspector-head');
+        for (const threshold of [.2, .7]) {
+          studio.state.document = model.updateCenter(studio.state.document, center.id, {threshold});
+          const full = new Element();
+          full.innerHTML = inspector(studio.state);
+          const expected = full.querySelector(selector);
+          const before = studio.handleDrag.graphic, block = before.closest(linked);
+          studio.refreshDragged();
+          assert.equal(fallback, 0);
+          assert.notEqual(studio.handleDrag.graphic, before);
+          assert.equal(studio.handleDrag.graphic.outerHTML, expected.outerHTML,
+                       'The dragged picture equals the current full inspector');
+          assert.equal(panel.querySelector('.aid-inspector-head'), untouched);
+          assert.ok(panel.contains(studio.handleDrag.graphic));
+          if (block) {
+            assert.equal(block.isConnected, false);
+            assert.equal(studio.handleDrag.graphic.closest(linked).outerHTML,
+                         expected.closest(linked).outerHTML,
+                         'Wheel labels and effector readouts move with their picture');
+          }
+          assert.equal(
+              rendered.html,
+              scoped ? organSettingsBlock(studio.state,
+                                          model.findOrgan(studio.state.document, organ.id))
+                     : full.html,
+              'Only the containing settings block is rendered; other grips use the full inspector');
+        }
+        studio.handleDrag.graphic.isConnected = false;
+        studio.refreshDragged();
+        assert.equal(fallback, 1, 'A detached grip uses the full refresh');
+      }
+    }
+  } finally {
+    global.document = saved.document;
+    global.CSS = saved.CSS;
+  }
+}
+
 async function checkProbeSettling(model, capabilities, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {sites} = capabilities, cases = [];
@@ -2896,6 +3042,7 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: native Reserve- und Geruchsverläufe mit fortlaufendem Lernen: OK');
     return;
   }
+  await checkDraggedInspector(model, sitesResult, root);
   await checkProbeSettling(model, sitesResult, root);
   if (process.argv.includes('--probe-settling')) {
     console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');

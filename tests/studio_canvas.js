@@ -188,6 +188,7 @@ module.exports = async function checkCanvas(model, capabilities, root) {
   const blank = newFishDocument('Grundkörper', sites);
   assert.ok(blank.organs.some(o => o.type === 'gut') && blank.organs.some(o => o.type === 'eggs'));
   await checkInitialFish(model, capabilities, root);
+  await checkAutosave(model);
   const pickedEye = placeCanvasOrgan(state(model.newDocument('Frei')), 'eye',
                                      {x : 330.375, y : 285.625}, 'single');
   assert.ok(pickedEye);
@@ -1087,5 +1088,151 @@ async function checkInitialFish(model, capabilities, root) {
     assert.equal(studio.state.document, previous);
     assert.ok(studio.state.notice.includes('Druckfühler'));
     assert.equal(studio.undoHistory.length, 0);
+  }
+}
+
+async function checkAutosave(model) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const saved = {setTimeout : global.setTimeout, clearTimeout : global.clearTimeout};
+  let now = 0, next = 0;
+  const timers = new Map();
+  global.setTimeout = (callback, delay) => {
+    timers.set(++next, {callback, at : now + delay});
+    return next;
+  };
+  global.clearTimeout = id => timers.delete(id);
+  const flush = async () => {
+    for (let i = 0; i < 6; ++i)
+      await Promise.resolve();
+  };
+  const advance = async delay => {
+    const until = now + delay;
+    for (;;) {
+      const due = [...timers ]
+                      .filter(([, timer ]) => timer.at <= until)
+                      .sort((a, b) => a[1].at - b[1].at)[0];
+      if (!due)
+        break;
+      const [id, timer] = due;
+      timers.delete(id);
+      now = timer.at;
+      timer.callback();
+      await flush();
+    }
+    now = until;
+  };
+  const make = () => {
+    const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+    const requests = [];
+    let active = 0, maximum = 0, stored = null;
+    studio.api = body => new Promise((resolve, reject) => {
+      assert.equal(body.operation, 'save-draft');
+      maximum = Math.max(maximum, ++active);
+      requests.push({
+        document : body.document,
+        resolve() {
+          --active;
+          stored = body.document;
+          resolve({});
+        },
+        reject(message) {
+          --active;
+          reject(Error(message));
+        }
+      });
+    });
+    const edit = name => {
+      studio.state.document = model.newDocument(name);
+      studio.persist();
+      return studio.state.document;
+    };
+    return {studio, requests, edit, stored : () => stored, maximum : () => maximum};
+  };
+  try {
+    {
+      const {requests, edit, stored, maximum} = make();
+      edit('First');
+      await advance(399);
+      assert.equal(requests.length, 0, 'Autosave still waits 400 ms');
+      await advance(1);
+      assert.equal(requests.length, 1);
+      edit('Intermediate');
+      await advance(400);
+      assert.equal(requests.length, 1, 'A slow first write cannot overlap a second write');
+      const latest = edit('Latest');
+      await advance(400);
+      assert.equal(requests.length, 1);
+      requests[0].resolve();
+      await flush();
+      assert.deepEqual(requests.map(r => r.document.name), [ 'First', 'Latest' ],
+                       'Only the latest due document follows a slow write');
+      requests[1].resolve();
+      await flush();
+      assert.equal(stored(), latest, 'The last completed write contains the newest document');
+      assert.equal(maximum(), 1);
+    }
+    {
+      const {requests, edit} = make();
+      edit('Before pause');
+      await advance(250);
+      edit('After pause');
+      await advance(399);
+      assert.equal(requests.length, 0, 'Every edit restarts the debounce period');
+      await advance(1);
+      assert.deepEqual(requests.map(r => r.document.name), [ 'After pause' ]);
+      edit('Not due yet');
+      await advance(200);
+      requests[0].resolve();
+      await flush();
+      assert.equal(requests.length, 1, 'Finishing a write cannot bypass the next debounce');
+      await advance(200);
+      assert.equal(requests.length, 2);
+      requests[1].resolve();
+      await flush();
+    }
+    {
+      const {studio, requests, edit, stored, maximum} = make();
+      edit('Old fish');
+      await advance(400);
+      edit('New fish');
+      studio.notice('Current fish notice');
+      await advance(400);
+      requests[0].reject('Obsolete failure');
+      await flush();
+      assert.equal(studio.state.notice, 'Current fish notice',
+                   'An old save failure cannot overwrite the newer fish notice');
+      assert.deepEqual(requests.map(r => r.document.name), [ 'Old fish', 'New fish' ]);
+      requests[1].reject('Current failure');
+      await flush();
+      assert.equal(studio.state.notice, 'Current failure', 'A current save failure is visible');
+      const retry = edit('Retry after failure');
+      await advance(400);
+      assert.equal(requests.length, 3, 'A failure cannot strand later saves');
+      requests[2].resolve();
+      await flush();
+      assert.equal(stored(), retry);
+      assert.equal(maximum(), 1);
+    }
+    {
+      const {studio, requests, edit} = make();
+      const original = edit('Before undo');
+      await advance(400);
+      edit('Edited');
+      studio.state.document = original;
+      studio.persist();
+      studio.notice('Undo notice');
+      requests[0].reject('Old failure of same document');
+      await flush();
+      assert.equal(studio.state.notice, 'Undo notice',
+                   'Returning to the same document does not revive an obsolete save error');
+      await advance(400);
+      assert.equal(requests.length, 2);
+      assert.equal(requests[1].document, original);
+      requests[1].resolve();
+      await flush();
+    }
+    assert.equal(timers.size, 0);
+  } finally {
+    Object.assign(global, saved);
   }
 }

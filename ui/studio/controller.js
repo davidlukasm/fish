@@ -39,7 +39,7 @@ import {DEFAULT_PREVIEW_CONTEXT, DEFAULT_PREVIEW_INPUT} from './view/development
 const DOUBLE_CLICK = 450;
 import {BODY_MAP, fishScene} from './view/scene.js';
 import {nodeLocation} from './view/places.js';
-import {inspector} from './view/panels.js';
+import {inspector, organSettingsBlock} from './view/panels.js';
 import {cppnGraph, cppnInspector} from './view/graph.js';
 import {settleRegions} from './model/regions.js';
 import {
@@ -126,6 +126,9 @@ export class OrganStudio {
     this.pointer = null;
     this.dragging = null;
     this.persistTimer = null;
+    this.persistPending = null;
+    this.persistRunning = false;
+    this.persistRevision = 0;
     this.pulsePlayer = null;
     this.pendingWire = null;
     this.ignoreClickUntil = 0;
@@ -406,18 +409,21 @@ export class OrganStudio {
     element.scrollTop = scroll;
     this.drawSight();
   }
-  // While a handle is dragged only its own graphic is drawn again: the rest of the inspector
-  // waits for the drop, so the drag stays smooth. The graphic is found again in the fresh
-  // inspector by its data attributes, or else by its place among graphics of its kind.
+  // During a drag the surrounding inspector waits for the drop. Rebuilding just the containing
+  // settings block also avoids recalculating contact plans and life cycles for each frame.
   refreshDragged() {
     const drag = this.handleDrag, element = this.root.querySelector('.aid-inspector-scroll');
     const graphic = drag?.graphic;
     if (!graphic?.isConnected || !element?.contains(graphic))
       return this.refreshInspector();
+    const settings = graphic.closest('[data-organ-settings]');
+    const organ = this.state.mode === 'fish' && settings &&
+                  findOrgan(this.state.document, settings.dataset.organSettings);
     const fresh = document.createElement('div');
-    fresh.innerHTML =
-        this.state.mode === 'fish' ? inspector(this.state) : cppnInspector(this.state);
-    const same = sameElement(element, fresh, graphic);
+    fresh.innerHTML = organ                        ? organSettingsBlock(this.state, organ)
+                      : this.state.mode === 'fish' ? inspector(this.state)
+                                                   : cppnInspector(this.state);
+    const same = sameElement(organ ? settings : element, fresh, graphic);
     if (!same)
       return this.refreshInspector();
     const linked = '[data-wheel-figure],[data-effector-block]', block = graphic.closest(linked);
@@ -526,10 +532,29 @@ export class OrganStudio {
   }
   persist() {
     clearTimeout(this.persistTimer);
+    const pending = {document : this.state.document, revision : ++this.persistRevision};
     this.persistTimer = setTimeout(() => {
-      this.api(requestBody('save-draft', {document : this.state.document}))
-          .catch(error => this.notice(error.message));
+      this.persistTimer = null;
+      this.persistPending = pending;
+      this.saveDraft();
     }, SAVE_DELAY);
+  }
+  async saveDraft() {
+    if (this.persistRunning || !this.persistPending)
+      return;
+    const {document, revision} = this.persistPending;
+    this.persistPending = null;
+    this.persistRunning = true;
+    // The threaded server can finish writes in either order; only the latest due draft waits.
+    try {
+      await this.api(requestBody('save-draft', {document}));
+    } catch (error) {
+      if (revision === this.persistRevision && document === this.state.document)
+        this.notice(error.message);
+    } finally {
+      this.persistRunning = false;
+      this.saveDraft();
+    }
   }
   changeDocument(doc, selected = null, updateInspector = true, batch = null, finish = false) {
     if (!doc)
