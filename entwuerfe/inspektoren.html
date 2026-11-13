@@ -291,7 +291,8 @@ function regler(svg, {x, top, base, word, value, setValue, marks = [], start = n
     el('rect', {x, y : Y(value), width : 8, height : base - Y(value), rx : 4, fill : '#79d2be', opacity : .35}, svg);
     drag(svg, el('path', {d : `M${x - 2} ${Y(value)} l-12 -7 v14 z`}, svg), p => setValue(at(p)), name, start, end);
   }
-  marks.forEach((m, i) => {
+  // The chosen mark lies on top, so that marks at the same place still give the chosen one.
+  marks.map((m, i) => [m, i]).sort(([p], [q]) => !!p.chosen - !!q.chosen).forEach(([m, i]) => {
     const g = el('rect', {x : x - 4, y : Y(m.value) - 3.5, width : 16, height : 7, rx : 2, style : `fill:${m.colour};stroke:${m.chosen ? '#ffffff' : '#0d262c'};stroke-width:${m.chosen ? 2 : 1}`}, svg);
     drag(svg, g, p => m.set(at(p)), name + 'mark' + i, start, end);
   });
@@ -864,7 +865,7 @@ function senseGroups(id, cell, o) {
   {
     const g = groups[cell.chosen], x = R - 14, gates = cellGates(g, !!o.bounded), y0 = SY(Math.max(...gates)), y1 = SY(Math.min(...gates));
     el('path', {d : `M${x} ${y0} V${y1}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
-    const spreadTo = p => { g.spread = clamp((Math.abs(SY(g.gate) - p.y) - 5) / ((S1 - S0) * gatePerUnit(!!o.bounded)), 0, 1); redraw(); };
+    const spreadTo = p => { g.spread = clamp((SY(g.gate) - p.y - 5) / ((S1 - S0) * gatePerUnit(!!o.bounded)), 0, 1); redraw(); };
     for (const [y, k] of [[clamp(y0 - 5, S0 + 5, S1 - 5), 'hi']]) drag(svg, el('rect', {x : x - 7, y : y - 4, width : 14, height : 8, rx : 3, style : 'stroke:#eaa886'}, svg), spreadTo, id + 'spread' + k, hold, free);
   }
   let TY = S1 + 15;
