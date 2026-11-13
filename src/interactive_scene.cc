@@ -120,7 +120,7 @@ std::string InteractiveSession::encode_scene(std::istringstream &line) {
                << ",\"selected\":" << selected << ",\"inspection_id\":" << json_quoted(key)
                << ",\"fish\":";
     if (chosen)
-      write_individual(inspection, *chosen, lookup.fish(*chosen), world.physiology().neural_cost);
+      write_individual(inspection, *chosen, lookup.fish(*chosen), world.physiology());
     else
       inspection << "null";
     write_eye_view(inspection, chosen);

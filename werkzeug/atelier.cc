@@ -936,15 +936,17 @@ std::string diet_report() {
   row("meat", yield(food_kind::worm));
   row("size", [](double l) { return gut_size(l); });
   out << "},\"foods\":{";
-  // Where each food lies between plant (0) and flesh (1).
+  // What each food is made of: its shares of flesh and of fibre, the rest being pulp.
   const std::pair<const char *, int> foods[] = {{"plant", food_kind::plant},
                                                 {"algae", food_kind::algae},
                                                 {"flock", food_kind::feed},
                                                 {"plankton", food_kind::plankton},
                                                 {"meat", food_kind::worm}};
-  for (const auto &[name, food] : foods)
-    out << (food == food_kind::plant ? "" : ",") << '"' << name
-        << "\":" << fodder(food, physiology).flesh;
+  for (const auto &[name, food] : foods) {
+    const auto f = fodder(food, physiology);
+    out << (food == food_kind::plant ? "" : ",") << '"' << name << "\":{\"flesh\":" << f.flesh
+        << ",\"fibre\":" << f.fibre << '}';
+  }
   out << "},\"teeth\":{";
   row("grind", [](double b) { return tooth_grip(b, BiteKind::grinding); }, true);
   row("cut", [](double b) { return tooth_grip(b, BiteKind::cutting); });

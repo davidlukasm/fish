@@ -174,7 +174,7 @@ void write_morphology(std::ostream &out, const std::shared_ptr<const BrainInterf
       << ',' << s.body << ']';
 }
 void write_individual(std::ostream &out, const Individual &p, std::uint64_t morphology,
-                      double neural_cost) {
+                      const PhysiologyParameters &physiology) {
   namespace F = fish_column;
   const auto &b = p.body;
   const auto &motor = b.motor();
@@ -245,10 +245,10 @@ void write_individual(std::ostream &out, const Individual &p, std::uint64_t morp
           F::satiety, gut_filling(b))(F::damage, 1 - b.health)
       .with(F::hatch_shape,
             [&](std::ostream &o) {
-              o << '[' << predicted_hatch_radius(b, p.genome, neural_cost) << ',' << b.birth_tissue
-                << ']';
+              o << '[' << predicted_hatch_radius(b, p.genome, physiology.neural_cost) << ','
+                << b.birth_tissue << ']';
             })(F::body_geometry, anatomy(shape.body))(F::morphology_asset, morphology)(
-          F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(F::gut_flesh, b.gut_flesh)(
+          F::gut_fill, b.gut_fill)(F::gut_energy, b.gut_energy)(F::gut_use, gut_use(b, physiology))(
           F::digestion, b.digestion)(F::digested, b.digested)(F::feeding_action, b.feeding_action)(
           F::feeding_action_age, b.feeding_action_age)(F::mouth_phase, b.mouth.phase)(
           F::swallowed, b.mouth.swallowed)(F::mouth_offset, mouth_offset(b))(

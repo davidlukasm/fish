@@ -279,29 +279,36 @@ const GUT = Object.freeze({
 export const gutPassage = (driven, speed) => 1 + (speed - 1) * driven;
 // Two rates closer than this count as one, where the general solution would divide by nothing.
 const GUT_RATES_APART = 1e-9;
-// A meal of which the share `flesh` is flesh and the rest plant matter, followed for `steps`
-// through a gut that holds its content `stay` steps: the shares still usable in the gut and taken
-// up so far (physiology.hh, gut_yield). The meal's closed part is broken open the sooner the more
-// flesh it is, its open part is taken up or spoils, the sooner the more flesh it is, and the gut
-// moves both on; a full fish takes up nothing.
-export function gutMeal(flesh, stay, steps, full = false) {
-  const D = DIGESTION, passage = 1 / stay,
-        progress = (span, needed) => (span / needed) ** D.sharpness;
-  const opening = flesh < 1 ? Math.min(1, progress(stay, D.open_steps * (1 - flesh)) / stay) : 1,
-        spoiling =
-            flesh > 0 ? Math.min(1, progress(stay * flesh, D.spoil_steps) / D.uptake_steps) : 0,
-        uptake = full ? 0 : 1 / D.uptake_steps;
-  // Closed matter leaves at `a`, open matter at `b`; the open share rises from the closed one.
-  const a = opening + passage, b = uptake + spoiling + passage;
-  const closed = Math.exp(-a * steps), gone = Math.exp(-b * steps);
-  const apart = Math.abs(b - a) > GUT_RATES_APART;
-  const open = apart ? opening * (closed - gone) / (b - a) : closed && opening * steps * closed;
-  const through = apart ? opening * ((1 - closed) / a - (1 - gone) / b) / (b - a)
+// A meal of which the share `flesh` is flesh and the share `fibre` fibre, the rest pulp, followed
+// for `steps` through a gut that holds its content `stay` steps: the shares still usable in the
+// gut and taken up so far (physiology.hh, gut_yield). Flesh and pulp are taken up at once and
+// spoil, flesh soon and pulp late; fibre has to be broken open first; the gut moves all of it on.
+// A full fish takes up nothing.
+export function gutMeal({flesh, fibre}, stay, steps, full = false) {
+  const D = DIGESTION, passage = 1 / stay, progress = needed => (stay / needed) ** D.sharpness,
+        uptake = full ? 0 : 1 / D.uptake_steps,
+        spoiling = within => Math.min(1, progress(within) / D.uptake_steps),
+        opening = Math.min(1, progress(D.open_steps) / stay);
+  // What is open leaves at `rate`, by uptake, spoiling and passage.
+  const ready = (share, spoils) => {
+    const rate = uptake + spoils + passage, held = share * Math.exp(-rate * steps);
+    return {held, taken : (share - held) * uptake / rate};
+  };
+  // Closed fibre leaves at `a`, by opening and passage; open fibre at `b`.
+  const a = opening + passage, b = uptake + passage, closed = Math.exp(-a * steps),
+        gone = Math.exp(-b * steps), apart = Math.abs(b - a) > GUT_RATES_APART;
+  const open = apart ? opening * (closed - gone) / (b - a) : closed && opening * steps * closed,
+        through = apart ? opening * ((1 - closed) / a - (1 - gone) / b) / (b - a)
                         : opening * (1 - (closed && closed * (1 + a * steps))) / (a * a);
-  return {held : closed + open, taken : uptake * through};
+  const meat = ready(flesh, spoiling(D.spoil_steps)),
+        pulp = ready(1 - flesh - fibre, spoiling(D.pulp_steps));
+  return {
+    held : meat.held + pulp.held + fibre * (closed + open),
+    taken : meat.taken + pulp.taken + fibre * uptake * through
+  };
 }
 // The share of such a meal the fish takes up before it has passed.
-export const gutUse = (flesh, stay) => gutMeal(flesh, stay, Infinity).taken;
+export const gutUse = (food, stay) => gutMeal(food, stay, Infinity).taken;
 export const gutTurns = gutLength => GUT.turns + GUT.turns_per_length * (gutLength || 0);
 export function fishSatietyShape(a) {
   const front = a.headBack - GUT.front, back = a.chestBack + GUT.back * a.chestLength,

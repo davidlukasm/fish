@@ -21,7 +21,7 @@ import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './bra
 import {sceneState} from './state.js';
 import {fibreCost, fibreForce} from './fibre.js';
 import {swimmingGrip} from './fin_stroke.js';
-import {gutPassage, gutUse} from './fish_organs.js';
+import {gutPassage} from './fish_organs.js';
 import {
   ANATOMY,
   BEHAVIOR_SCALE,
@@ -316,7 +316,7 @@ export function brainOrganReadout(d, tissue) {
                                    : d.p[FISH.energy] / Math.max(1, d.p[FISH.reserve_capacity]);
     info.caption = key === GUT_TISSUE ? t('organ_readout.fuellungVerwertungUndDurchgang')
                                       : t('organ_readout.verfuegbareEnergiereserve');
-    info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_flesh))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
+    info.metrics=key==='gut'?[metric(t('organ_readout.darmenergie'),organNumber(d.b.gut_energy)),metric(t('organ_readout.verdaulich'),organNumber(d.b.gut_energy * d.b.gut_use))]:[metric(t('organ_readout.energie'),organNumber(d.p[FISH.energy])),metric(t('organ_readout.fassung'),organNumber(d.p[FISH.reserve_capacity]))];
     return info;
   }
   const ports = MOTOR_PORTS,
@@ -405,9 +405,7 @@ export function brainOrganReadout(d, tissue) {
       // What the gut holds now, at the pace the muscle gives it now.
       info.passage = gutPassage(driven, d.b.gut_speed);
       info.fastest = d.b.gut_speed;
-      info.used = d.b.gut_energy > 0
-                      ? gutUse(d.b.gut_flesh / d.b.gut_energy, d.b.gut_transit / info.passage)
-                      : null;
+      info.used = d.b.gut_energy > 0 ? d.b.gut_use : null;
       info.metrics = [
         metric(t('organ_readout.durchgang'), t('units.times', {n : organNumber(info.passage, 1)}),
                t('organ_readout.durchgangHinweis')),

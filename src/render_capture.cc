@@ -78,7 +78,7 @@ std::string fish_record(const Individual &p, const Ecosystem &world, const Rende
   row.set(F::species, p.species);
   row.set(F::gut_fill, b.gut_fill);
   row.set(F::gut_energy, b.gut_energy);
-  row.set(F::gut_flesh, b.gut_flesh);
+  row.set(F::gut_use, gut_use(b, world.physiology()));
   row.set(F::digestion, b.digestion);
   row.set(F::digested, b.digested);
   row.set(F::feeding_action, b.feeding_action);

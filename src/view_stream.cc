@@ -196,7 +196,7 @@ std::string display_fish(Text text, Text previous, Text selected, double coordin
                                                  C::morphology_asset,
                                                  C::gut_fill,
                                                  C::gut_energy,
-                                                 C::gut_flesh,
+                                                 C::gut_use,
                                                  C::digestion,
                                                  C::digested,
                                                  C::feeding_action,

@@ -17,7 +17,7 @@ void WorldViewWriter::population(ViewSchedule cadence) {
     if (!first)
       out << ',';
     first = false;
-    write_individual(out, p, cache.morphology(out, p), world.physiology().neural_cost);
+    write_individual(out, p, cache.morphology(out, p), world.physiology());
   }
   out << "],\"wounds\":[";
   first = true;

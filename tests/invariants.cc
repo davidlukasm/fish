@@ -184,12 +184,13 @@ Digested digest(int food, double gut_length, double drive = 0, double strength =
   result.passed /= eaten;
   return result;
 }
-// Plants need time to break open, flesh spoils when it stays long, mixed food lies between, and
+// Fibre needs time to break open, flesh spoils when it stays long, pulp feeds almost any gut, and
 // the gut muscle shortens the stay only so far.
 void gut_takes_up_what_time_allows() {
   constexpr double SHORT = 0, MIDDLE = .5, LONG = 1, STRONG = 1e6, CLOSE = 1e-9, SCARCE = .05;
-  constexpr int LEAVES = food_kind::plant, FLESH = food_kind::worm, FLOCK = food_kind::feed;
-  for (int food : {LEAVES, FLOCK, FLESH})
+  constexpr int LEAVES = food_kind::plant, FLESH = food_kind::worm, FLOCK = food_kind::feed,
+                ALGAE = food_kind::algae, PLANKTON = food_kind::plankton;
+  for (int food : {LEAVES, ALGAE, FLOCK, PLANKTON, FLESH})
     for (double length : {SHORT, MIDDLE, LONG}) {
       const auto meal = digest(food, length);
       check(std::abs(meal.gained + meal.passed - 1) < CLOSE, "a meal is taken up or passed");
@@ -198,19 +199,27 @@ void gut_takes_up_what_time_allows() {
         "a long gut takes up far more of a meal of leaves");
   check(digest(LEAVES, SHORT).gained < SCARCE,
         "leaves need time to break open: a short gut takes up next to nothing of them");
-  check(digest(FLESH, SHORT).gained > 2 * digest(FLESH, LONG).gained,
+  const double flesh = digest(FLESH, SHORT).gained;
+  check(flesh > 2 * digest(FLESH, LONG).gained,
         "flesh spoils in a long gut: a short gut takes up far more of it");
+  check(digest(FLOCK, SHORT).gained > .9 * flesh && digest(FLOCK, MIDDLE).gained > flesh &&
+            digest(FLOCK, LONG).gained < digest(FLOCK, MIDDLE).gained / 2,
+        "flocks feed a short gut like flesh, a middle one best and a long one half as well");
+  const double algae = digest(ALGAE, SHORT).gained / flesh,
+               plankton = digest(PLANKTON, SHORT).gained / flesh;
+  check(algae > .2 && algae < .3 && plankton > .4 && plankton < .6,
+        "a short gut gets a quarter as much from algae as from flesh, and half from plankton");
+  check(digest(ALGAE, LONG).gained > 2 * digest(ALGAE, SHORT).gained, "algae feed a long gut best");
   check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0,
-        "spoiled flesh hurts a long gut, not a short one");
+        "flesh that spoils hurts a long gut, not a short one");
   check(digest(LEAVES, SHORT).ache > 0 && digest(LEAVES, LONG).ache == 0,
         "leaves that pass still closed hurt a short gut, not a long one");
   for (double length : {SHORT, MIDDLE, LONG})
     check(digest(FLOCK, length).ache == 0, "flocks hurt no gut");
-  check(digest(FLOCK, MIDDLE).gained > digest(FLOCK, SHORT).gained &&
-            digest(FLOCK, MIDDLE).gained > digest(FLOCK, LONG).gained,
-        "mixed food suits a gut of middle length best");
+  check(digest(ALGAE, MIDDLE).ache == 0 && digest(PLANKTON, MIDDLE).ache == 0,
+        "algae and plankton do not hurt a gut of middle length");
   const auto rested = digest(FLESH, LONG), hurried = digest(FLESH, LONG, 1, STRONG);
-  check(hurried.gained > 2 * rested.gained && hurried.gained < digest(FLESH, SHORT).gained,
+  check(hurried.gained > 2 * rested.gained && hurried.gained < flesh,
         "the largest gut muscle saves much flesh in a long gut, but not as much as a short gut");
   check(digest(LEAVES, LONG, 1, STRONG).gained < digest(LEAVES, LONG).gained &&
             hurried.emptied < rested.emptied,
