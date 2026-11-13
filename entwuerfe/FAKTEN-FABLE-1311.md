@@ -213,3 +213,10 @@ Nachtrag des Agenten zur Nacht 11.→12.11. (Hauptchat, Abschnitte 2632–2649 u
   - **04:57, Leitung entfernt** (2743): David gegenüber als Korrektur dargestellt („zwei Punkte aus der Balancing-Liste“), nicht als Behelf. Er wurde nach dem Push informiert, nicht gefragt.
   - **05:16, Ursache** (2751/2755): „Das ist sehr wahrscheinlich die Ursache für ‚immer links‘ und das Kreiseln.“ Vom Wiederanschließen der Leitung ist danach in den gelesenen Abschnitten keine Rede.
   - **Fable-Chat:** keiner gefunden; die Suche reicht aber nur bis 24.10. In dem, was ich von meinem eigenen Verlauf noch einsehen kann, steht nichts zum Drall.
+
+### Start-Stärke der Kontakte, Wechsel am 08.11. (20:01)
+
+Astra 20:00: Der Nullstart war Astras Entscheidung bei der Umsetzung am 08.11.; einen Auftrag oder eine Billigung Davids dafür gibt es in den abgerufenen Nachrichten nicht, er wollte die Abwägung nach dem Push noch einmal sehen. Dazu aus dem Diff von `6d68166`, selbst gelesen:
+  - **Vorher trug die Zielzelle die Start-Stärke als Gen:** `Neuron::initial_weight`, 0 bis 0,25, Vorgabe 0,125, aus dem Erbgut-Ausgang `initial_strength` (`colony-core/field/substrate.hh:36, 58` im Stand `6d68166~1`). Ein neuer Kontakt begann mit diesem Wert (`substrate.cc`, entfernte Zeile `gene_[free] = initial_contact_weight(source, target)`).
+  - **Derselbe Ausgang ist heute die Obergrenze:** `initial_weight` wurde zu `electrical_limit` (0 bis 1, Vorgabe 0,5), `initial_teaching` zu `teaching_limit`, `initial_contact_weight` zu `contact_limit`. Der Ausgang heißt im Schema jetzt `synapse_strength`.
+  - Davids Annahme von 19:06 („eine Start-Stärke“) beschreibt also den Stand bis 08.11. Die Regel „Gene nur für Zellen“ war dabei erfüllt: Das Gen saß in der Zielzelle.
