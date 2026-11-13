@@ -78,47 +78,40 @@ Unterschied zur Engine: Dort zieht jede Zelle ihre Schwelle zufällig gleichvert
 - **Gene, die wirken:** die Schwelle (beschränkte Kurve, `body_plan.cc:987-992, 1212-1217`), die Zellzahl, die Streuung in der Gruppe, die Antworten des Lebenszyklus (Bildung, Ausgabe, Tod) und die Kontakte.
 - **Gene ohne Wirkung bei dieser Zellart:** die Zellzeit als Gewöhnung (Drucksinne gewöhnen nicht, `brain_interface.hh:18-20`) und als Einblendzeit nach dem Schlupf (nur Außensinne, siehe 3). Feldbreite und Abstimmung kommen in der Reizberechnung dieser Zellen nicht vor (`body_plan.cc:1150-1180`).
 
-## 6. Drüse (Befund 7): Lösungsvorschläge, Vor- und Nachteile, Empfehlung
+## 6. Drüse (Befund 7): Lösungsvorschlag, mit Claude abgestimmt (13.11. 19:10)
 
-Nichts davon ist umgesetzt. Bilder: `bilder/2026-11-13_druese_vorschlaege.png` (die zwei Vorschläge nebeneinander) und `bilder/2026-11-13_druese_pegelformeln.png` (heute und die verworfenen Formen). Jede Kurve ist `HormoneState::advance` der Engine (`src/hormone_state.cc:37-53`), für die Vorschläge in einer Kopie außerhalb des Produkts mit einer geänderten Zeile.
+Nichts davon ist umgesetzt. Bild zum Vorschlag: `bilder/2026-11-13_druese_b_zwei_zeiten.png`. Zum Vergleich: `…druese_vorschlaege.png` (A gegen B) und `…druese_pegelformeln.png` (heute und die verworfenen Formen). Jede Kurve ist `HormoneState::advance` der Engine (`src/hormone_state.cc:37-53`), für die Vorschläge in einer Kopie außerhalb des Produkts mit einer geänderten Zeile.
 
-**Ziel (Davids Richtung):** Ein Stoff steigt schnell über mehr Zellen und Knoten, sinkt langsam, und jede Drüse kann ihn durch Binden aktiv abbauen. Wie lange er bleibt, ist eine Einstellung der Drüse, von 4 bis 1024 Schritten.
+**Ziel (Davids Richtung):** Ein Stoff steigt schnell über mehr Zellen und Knoten, sinkt langsam, jede Drüse kann ihn durch Binden aktiv abbauen, und es soll jede Kombination möglich sein.
 
-**Was heute im Weg steht** (`hormone_state.cc:44-49`): `Pegel' = 0,01 · Abgabe − Pegel / Zellzeit`. Höhe und Verweilzeit hängen an derselben Zahl (Dauerpegel = 0,01 × Abgabe × Zellzeit), Auf und Ab dauern gleich lang, und die Zellzeit ist bei 48 Schritten gekappt (`motor_state.hh:54-59`).
+**Was heute im Weg steht** (`hormone_state.cc:44-49`): `Pegel' = 0,01 · Abgabe − Pegel / Zellzeit`. Höhe und Verweilzeit hängen an derselben Zahl, Auf und Ab dauern gleich lang, und die Zellzeit ist bei 48 Schritten gekappt (`motor_state.hh:54-59`).
 
-### Vorschlag A: Gießen bis zur Decke (empfohlen)
-Die Drüse gießt je Schritt `Abgabe ÷ 32` ins Blut, aber nie über die Decke `0,5 × Abgabe`. Was im Blut ist, klingt mit der Verweilzeit ab. Binden baut je Schritt `Bindung ÷ 32 × Pegel` ab.
-- **Hinauf:** Jede Drüse braucht 16 Schritte bis zu ihrer Decke. Mehr Zellen oder Knoten steigen steiler und höher: Abgabe 2 ist nach 3 Schritten so hoch wie Abgabe 0,5 nach 12.
-- **Hinunter:** mit der Verweilzeit. Bei 1024 Schritten ist der Stoff nach 710 Schritten halbiert.
-- **Binden:** Eine gleich starke Bindung baut so schnell ab, wie gegossen wurde (Bindung 1 halbiert in 22 Schritten). Bei langer Verweilzeit ist Binden der einzige schnelle Weg hinunter; ein halbierter Befehl senkt den Pegel nicht.
-- **Die Verweilzeit wird eine echte Wahl mit drei Nischen:**
-  - *Flüchtig (4–8 Schritte):* an und aus in wenigen Schritten, ganz ohne Binden. Dafür erreicht der Stoff nur ein Viertel bis die Hälfte der Decke; für denselben Pegel braucht die Drüse zwei- bis viermal so viele Zellen.
-  - *Mittel (16–64):* volle Höhe, klingt in einer Mahlzeit oder Flucht von selbst ab.
-  - *Dauerhaft (250–1024):* volle Höhe mit wenigen Zellen, hält über Mahlzeiten und Laichzeiten, kostet fast nichts zu halten. Dafür wird man ihn nur durch Binden wieder los, und auf „weniger“ reagiert er nicht.
-- **Vorteile:** Tempo und Höhe werden beide durch Zellen verdient, wie David es beschreibt. Der Preis bleibt wie heute an der gegossenen Menge. Eine Zeile Änderung in `hormone_state.cc`, dazu eine eigene Abbildung des Gens auf 4–1024 Schritte an der Stelle `body_plan.cc:159-167` (das Gen dient sonst weiter der Bauzeit der Zelle, `substrate.cc:610`).
-- **Nachteile:** Unter 16 Schritten hängt die Höhe noch an der Verweilzeit; das ist die Nische „flüchtig“ und so gewollt, aber es ist keine vollständige Trennung. Die Rampe von 16 Schritten ist für alle gleich.
+### Vorschlag B mit zwei Zeiten (empfohlen)
+Das Ziel des Pegels ist `0,5 × Abgabe`. Liegt der Pegel darunter, läuft er mit der **Anstiegszeit** hinauf; liegt er darüber, klingt er mit der **Verweilzeit** ab. Binden baut je Schritt `Bindung ÷ 32 × Pegel` ab.
+- **Höhe:** nur aus Zellen und Knoten, bei jeder Einstellung der Zeiten (Bild 2). Eine größere Drüse erreicht eine bestimmte Wirkung auch früher, weil ihr Ziel höher liegt.
+- **Anstiegszeit:** die Zellzeit der Drüsenzelle, 4–48 Schritte wie heute (`time_constant`). Sie bleibt zugleich Bauzeit und Spurdauer der Zelle; dort ändert sich nichts.
+- **Verweilzeit:** ein eigenes Gen, 4–1024 Schritte. Frei dafür ist `field_width`: Bei Drüsenzellen liest es die Engine nicht. Gelesen wird es nur bei Sinneszellen (`body_plan.cc:308-350`), bei Nervenzellen für die Zahl der Eingänge (`contacts.hh:25-33`; Effektoren haben eine feste Zahl) und bei Abwehrzellen für die Breite der Stacheln (`body_plan.cc:857-874`). Der Compiler schreibt es für jede Zelle (`atelier_compiler.hh:272`), das Atelier setzt 0,3 vor (`document.js:432, 451`) und zeigt es bei Drüsen nirgends.
+- **Alle vier Kombinationen sind möglich und verschieden** (Bild 1):
+  - *schnell hinauf, langsam hinunter:* Ein kurzer Befehl genügt, der Stoff bleibt; los wird man ihn nur durch Binden.
+  - *schnell hinauf, schnell hinunter:* Der Stoff folgt dem Befehl in beide Richtungen und hält nichts; für einen gehaltenen Pegel muss dauernd gegossen werden.
+  - *langsam hinauf, langsam hinunter:* Kurze Befehle hinterlassen wenig, aber es bleibt; wiederholte Befehle sammeln sich an.
+  - *langsam hinauf, schnell hinunter:* Nur ein anhaltender Befehl wirkt; kurze gehen unter.
+- **Binden** (Bild 3): Bindung 1 halbiert den Pegel in 22 Schritten. Ein halbierter Befehl senkt einen dauerhaften Stoff nicht schnell; das tut nur Binden.
+- **Preis:** bleibt je Schritt Abgabe und Bindung, wie heute (`hormone_state.cc:25-36`). Flüchtig halten heißt dauernd bezahlen; dauerhaft halten kostet fast nichts, dafür kostet das Abbauen.
+- **Im Atelier gehört die Verweilzeit zum Stoff**, nicht zum einzelnen Drüsenknoten. Die Engine mittelt die Zeiten aller Zellen, die einen Stoff abgeben, nach Stärke und Stoffanteil (`body_plan.cc:159-167, 191-196`); zwei Drüsen mit verschiedener Einstellung ergäben ein Mittel, das zu keiner passt. Der Compiler schreibt die Verweilzeit des Stoffs deshalb in alle Zellen, die ihn abgeben. An der Engine ändert das nichts.
+- **Mischungen:** Eine Drüsenzelle gibt mehrere Stoffe im festen Verhältnis ihrer Abstimmung ab (`body_plan.cc:422, 1338-1341`). Jeder Stoff hat dann seine eigene Verweilzeit: Ein Befehl hinterlässt einen kurzen und einen langen Stoff zugleich.
+- **Umfang der Änderung:** eine Zeile in `hormone_state.cc`, die zweite Zeit an der Stelle `body_plan.cc:159-167, 191-196`, zwei benannte Werte im Schema (Höhe 0,5, Spanne der Verweilzeit), im Atelier der Griff am Stoff.
 
-### Vorschlag B: Der Pegel folgt dem Ziel
-Das Ziel ist `0,5 × Abgabe`. Liegt der Pegel darunter, läuft er in 4 Schritten hinauf; liegt er darüber, klingt er mit der Verweilzeit ab. Binden wie bei A.
-- **Vorteile:** Die sauberste Form von (c). Die Höhe hängt bei jeder Verweilzeit nur an Zellen und Knoten, die Verweilzeit nur am Gen. Am schnellsten. Am einfachsten zu zeichnen: drei unabhängige Einstellungen.
-- **Nachteile:**
-  - Das Tempo bekommt jede Drüse geschenkt; Zellen bringen nur Höhe.
-  - Ein flüchtiger Stoff kostet keine Zellen mehr. Es gibt keinen Grund, nicht immer „flüchtig“ zu wählen und bei Bedarf weiterzugießen, außer dem Energiepreis, und der ist bei Drüsen winzig (`hormone_state.hh:8`).
-  - Der Preis muss neu geregelt werden: Heute wird je Schritt Abgabe bezahlt (`hormone_state.cc:25-36`). Bei B setzt ein Befehl von vier Schritten den Pegel für tausend Schritte. Bezahlt werden müsste dann, was wirklich ins Blut kommt.
+### Geprüft und nicht empfohlen
+- **A, Gießen bis zur Decke:** Gegossen wird mit einer Rate, nie über 0,5 × Abgabe. Flüchtige Stoffe bleiben dabei niedrig (bei 4 Schritten ein Viertel der Höhe). Das trennt Höhe und Verweilzeit nicht vollständig, und in B mit zwei Zeiten ist A als Sonderfall enthalten (Anstieg 16).
+- **Nur die Spanne verlängern, Formel wie heute:** Der Dauerpegel wächst mit der Verweilzeit und stößt bei 1 an; schon eine kleine Drüse füllt das Blut, Zellen bedeuten nichts mehr.
+- **(c) in der einfachen Form** (eine Zeit für Auf und Ab): Was lange bleibt, steigt auch lange. Bei 1024 Schritten sind nach 200 Schritten Befehl erst 17 % der Höhe erreicht.
 
-### Verworfen, mit Grund
-- **Nur die Spanne verlängern, Formel wie heute (b):** Der Dauerpegel wächst mit der Verweilzeit und stößt bei 1 an. Schon eine kleine Drüse füllt das Blut, Zellen bedeuten nichts mehr (Bild 2 in `…pegelformeln.png`).
-- **(c) in der einfachen Form** (`Pegel' = (0,5 · Abgabe − Pegel) / Verweilzeit`): Was lange bleibt, steigt auch lange. Bei 1024 Schritten sind nach 200 Schritten Befehl erst 17 % der Höhe erreicht, ein kurzer Befehl hinterlässt nichts (Bilder 3 und 7).
-
-### Empfehlung: A
-A erfüllt alle vier Punkte von Davids Richtung wörtlich und macht aus der Verweilzeit eine Einstellung mit drei klar verschiedenen Nischen, jede mit eigenem Vor- und Nachteil. B trennt sauberer, verschenkt aber das Tempo und macht „flüchtig“ zur stets besten Wahl. Die Zahlen bei A (16 Schritte bis zur Decke, Decke 0,5 × Abgabe, Spanne 4–1024) sind Vorschläge; sie gehören als benannte Werte ins Schema.
-
-### Was sich mit A für alle ändert, die Pegel lesen
-- **Rezeptoren jeder Zelle** (`substrate.cc:502-516`, `hormones.hh:77-89`): Ihre Antwort hält so lange wie der Stoff. Halbwerte der Rezeptoren müssen zur neuen Höhe (bis 0,5 × Abgabe) passen.
-- **Lehre** (`substrate.cc:834-836, 877`): Gelernt wird mit der Abweichung vom laufenden Mittel. Ein Lehrstoff sollte deshalb flüchtig bis mittel sein; ein dauerhafter lehrt nur beim Anstieg. Das berührt Befund 17.
-- **Festigung, Erregung, Ausgabe einer Zelle:** bleiben an, solange der Stoff steht. Für Festigung und Reifesignale ist „dauerhaft“ damit erstmals möglich.
-- **Zelltod** (`substrate.cc:512-515`): Eine Zelle stirbt, sobald ihre Tod-Antwort über ½ steigt, unumkehrbar. Ein dauerhafter Stoff als Auslöser wirkt sicher, ein flüchtiger nur bei genug Zellen.
+### Was sich für alle ändert, die Pegel lesen
+- **Rezeptoren jeder Zelle** (`substrate.cc:502-516`, `hormones.hh:77-89`): Ihre Antwort hält so lange wie der Stoff. Die Halbwerte der Rezeptoren müssen zur Höhe 0,5 × Abgabe passen.
+- **Lehre** (`substrate.cc:834-836, 877`): Gelernt wird mit der Abweichung vom laufenden Mittel. Ein dauerhafter Lehrstoff lehrt nur beim Anstieg. Das berührt Befund 17.
+- **Festigung, Erregung, Ausgabe einer Zelle:** bleiben an, solange der Stoff steht. Für Festigung und Reifesignale wird „dauerhaft“ damit erstmals möglich.
+- **Zelltod** (`substrate.cc:512-515`): Eine Zelle stirbt, sobald ihre Tod-Antwort über ½ steigt, unumkehrbar.
 - **Zellbildung und Körperwachstum** (`substrate.cc:607-612`, `physiology.hh:98-100`, `physiology.cc:336`): laufen, solange der Stoff da ist. Ein dauerhafter Wachstumsstoff überbrückt die Pausen zwischen Mahlzeiten.
 - **Blutsinn** (`body_plan.cc:1181-1183`): meldet den Stoff, solange er steht.
-- **Kosten** (`hormone_state.cc:25-36`, `body_plan.cc:1504`): Bezahlt wird das Gießen und das Binden, nie der Pegel. Dauerhaft halten ist billig, aktiv abbauen kostet.
-- **Bausteine und Vorlagen:** Die Drüse der Bibliothek (`organs.js:256-260`) und die vier Vorlagen Belohnung, Wachstum, Festigung, Alarm (`systems.js:18-64, 120`) bekommen neue Verweilzeiten nach ihrer Aufgabe: Belohnung und Alarm flüchtig bis mittel, Wachstum und Festigung dauerhaft.
+- **Bausteine und Vorlagen:** Die Drüse der Bibliothek (`organs.js:256-260`) und die vier Vorlagen Belohnung, Wachstum, Festigung, Alarm (`systems.js:18-64, 120`) bekommen Zeiten nach ihrer Aufgabe: Belohnung und Alarm schnell hinauf und nicht lange bleibend, Wachstum und Festigung dauerhaft.
