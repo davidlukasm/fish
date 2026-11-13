@@ -26,6 +26,8 @@ export const STIMULUS_ORGAN = Object.freeze({
 const COPIES = 3;
 // A barbel cell's receptive width is the share it feels by touch instead of tasting.
 export const BARBEL_FEEL = Object.freeze({taste : 0, both : .5, touch : 1});
+// A library gland node's strength in sixteenths.
+export const GLAND_COPIES = 5;
 const sensor = (key, functionCode, copies = COPIES, surface = 'any', zones = null) =>
     Object.freeze({key, role : 'sensor', functionCode, copies, surface, zones});
 const motor = (key, functionCode, copies = COPIES, surface = 'any') =>
@@ -256,7 +258,7 @@ export const ORGANS = Object.freeze([
     key : 'gland',
     category : 'internal',
     types : HORMONES.levels,
-    centers : [ motor('secretion', MOTOR_KIND.gland, 5) ]
+    centers : [ motor('secretion', MOTOR_KIND.gland, GLAND_COPIES) ]
   },
   {
     key : 'tectum',

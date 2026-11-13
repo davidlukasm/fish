@@ -10,8 +10,7 @@ namespace fishsim {
 // before rise and residence were separated (0.01 per step times 13.9 steps), so every receptor's
 // half value keeps its meaning.
 struct HormoneParameters {
-  double height = .01 * field::time_constant_steps(field::CellParameters{}),
-         binding_rate = 1. / 32,
+  double height = .01 * field::time_constant_steps(field::CellParameters{}), binding_rate = 1. / 32,
          work_cost = field::DevelopmentCosts{}.neuron_maintenance;
   void validate() const;
 };

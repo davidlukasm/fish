@@ -1,4 +1,4 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {ATELIER_LIMITS, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 import {
   addOrgan,
   addSubstance,
@@ -13,6 +13,7 @@ import {
   updateWire,
   wheelPlace
 } from './document.js';
+import {GLAND_COPIES} from './organs.js';
 import {TONIC_LEARNING} from './region_cells.js';
 
 export const SYSTEMS = Object.freeze([
@@ -61,7 +62,12 @@ export const SYSTEMS = Object.freeze([
   }
 ]);
 const SYSTEM_BY_KEY = Object.freeze(Object.fromEntries(SYSTEMS.map(s => [s.key, s])));
-const ANSWER_HALF = .1, GLAND_TAU = 1;
+// A system's gland is one node of the library's strength at the slowest cell time; the cells that
+// answer it are half on at two thirds of the level it holds under a full command, whatever the
+// height a gland holds its substance at (hormone_state.hh).
+const GLAND_TAU = 1, ANSWER_SHARE = 2 / 3;
+const answerHalf = wheel =>
+    ANSWER_SHARE * wheel.hormoneHeight * GLAND_COPIES / ATELIER_LIMITS.max_copies;
 // The cells that would answer the system's substance and read no substance with those effects
 // yet; cells already tuned to one keep their settings.
 const reads = receptor => receptor?.active && receptor.sensitivity;
@@ -146,7 +152,7 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
       const own = center.receptors[effect], resting = own?.active ? {baseline : own.baseline} : {};
       draft = updateReceptor(
                   draft, center.id, effect,
-                  {...ends, ...resting, active : 1, substance : index, half : ANSWER_HALF}) ??
+                  {...ends, ...resting, active : 1, substance : index, half : answerHalf(wheel)}) ??
               draft;
     }
   return {document : draft, organId : gland.organId, substance : index};

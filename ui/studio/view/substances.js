@@ -559,9 +559,10 @@ export function hormoneTime(state, index) {
   const steps = v => t('units.steps', {n : formatNumber(v, v < 10 ? 1 : 0)});
   return '<span class="aid-hormone-time" data-hormone-time="' + index + '" title="' +
          escapeText(namedText(label('hormoneCard.timeConstant'),
-                              known ? t('studio.hormoneCard.timeValue',
-                                        {rise : formatNumber(rise, 1), stay : formatNumber(stay, 0)})
-                                    : formatNumber(NaN))) +
+                              known
+                                  ? t('studio.hormoneCard.timeValue',
+                                      {rise : formatNumber(rise, 1), stay : formatNumber(stay, 0)})
+                                  : formatNumber(NaN))) +
          '">' + glyph(CLOCK_ICON, ICON.mark, {line : true}) + '<span>' +
          escapeText(known ? namedText(label('hormoneCard.rise'), steps(rise)) + ' · ' +
                                 namedText(label('hormoneCard.stays'), steps(stay))

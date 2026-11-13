@@ -35,8 +35,8 @@ const LEVEL = Object.freeze({
   tick : 4,
   phases : 12,
   // The gland works for the longest cell time: the slowest rise gets about two thirds of the way
-  // to its level. The rest shows the steps after it on a log scale, up to twice the longest
-  // residence, so a quick substance and a lasting one both read.
+  // to its level. The rest shows the steps after it on a log scale, up to the longest residence,
+  // so a quick substance and a lasting one both read.
   phase : 1,
   samples : 48,
   handle : 5.5,
@@ -70,18 +70,17 @@ export function pouredShares(wheel, {x, y, width}) {
   return raw.map(a => sum > 0 ? a / sum : 0);
 }
 const phaseSteps = () => LEVEL.phase * LONGEST_TIME_CONSTANT;
-const REST_STEPS = 2 * LONGEST_ADAPTATION;
+const REST_STEPS = LONGEST_ADAPTATION;
 // The level a full command holds, per unit of share: the gland's height times its strength
 // (hormone_state.cc).
 const held = (height, copies) => height * copies / ATELIER_LIMITS.max_copies;
 const mid = () => (LEVEL.left + LEVEL.right) / 2;
 // Work runs linearly over the left half, rest on a log scale over the right half.
-const xAt = step => step <= phaseSteps()
-                        ? LEVEL.left + (mid() - LEVEL.left) * step / phaseSteps()
-                        : mid() + (LEVEL.right - mid()) * Math.log1p(step - phaseSteps()) /
-                                      Math.log1p(REST_STEPS);
-const restAt = x =>
-    Math.expm1(clamp((x - mid()) / (LEVEL.right - mid())) * Math.log1p(REST_STEPS));
+const xAt = step =>
+    step <= phaseSteps()
+        ? LEVEL.left + (mid() - LEVEL.left) * step / phaseSteps()
+        : mid() + (LEVEL.right - mid()) * Math.log1p(step - phaseSteps()) / Math.log1p(REST_STEPS);
+const restAt = x => Math.expm1(clamp((x - mid()) / (LEVEL.right - mid())) * Math.log1p(REST_STEPS));
 
 function levelPicture(state, organ, center, nameOf) {
   const L = LEVEL, wheel = state.capabilities, height = wheel.hormoneHeight;
@@ -98,9 +97,8 @@ function levelPicture(state, organ, center, nameOf) {
                            : share * top * reached * Math.exp(-(step - phaseSteps()) / stay);
   const steps = Array.from({length : L.samples + 1}, (_, i) => phaseSteps() * i / L.samples)
                     .concat(Array.from({length : L.samples},
-                                       (_, i) => phaseSteps() +
-                                                 Math.expm1(Math.log1p(REST_STEPS) * (i + 1) /
-                                                            L.samples)));
+                                       (_, i) => phaseSteps() + Math.expm1(Math.log1p(REST_STEPS) *
+                                                                           (i + 1) / L.samples)));
   const curve = share =>
       'M' + steps.map(step => fixed(xAt(step)) + ' ' + fixed(y(levelAt(share, step)))).join(' L');
   // Each substance's name stands above its curve halfway up its rise; substances poured alike
@@ -120,15 +118,16 @@ function levelPicture(state, organ, center, nameOf) {
                      .map(({share, ks}) =>
                               '<path class="aid-use-curve" d="' + curve(share) + '" stroke="' +
                               substanceColor(ks[0]) + '"/><text class="aid-handle-word" x="' +
-                              fixed(xAt(named)) + '" y="' + fixed(y(levelAt(share, named)) - L.name) +
-                              '" text-anchor="middle">' +
+                              fixed(xAt(named)) + '" y="' +
+                              fixed(y(levelAt(share, named)) - L.name) + '" text-anchor="middle">' +
                               ks.map(k => '<tspan style="fill:' + substanceColor(k) + '">' +
                                           escapeText(nameOf(k)) + '</tspan>')
                                   .join(' ') +
                               '</text>')
                      .join('');
   const peak = {x : mid(), y : y(main * top * reached)};
-  const up = Math.min(rise * Math.LN2, phaseSteps()), halfUp = {x : xAt(up), y : y(levelAt(main, up))};
+  const up = Math.min(rise * Math.LN2, phaseSteps()),
+        halfUp = {x : xAt(up), y : y(levelAt(main, up))};
   const gone = phaseSteps() + stay * Math.LN2, half = {x : xAt(gone), y : y(levelAt(main, gone))};
   const phases = '<path class="aid-gland-phase" d="M' + fixed(mid()) + ' ' + L.top + ' V' + L.base +
                  '"/>' +
@@ -140,16 +139,15 @@ function levelPicture(state, organ, center, nameOf) {
                text('aid-handle-word', L.left - L.tick, L.base, percent(0), 'end');
   const marks = ' data-most="' + most + '" data-share="' + main + '" data-height="' + height +
                 '" data-reached="' + reached + '" data-center="' + escapeText(center.id) + '"';
-  return svg(
-      L, organ, word('level'),
-      axes + phases + curves +
-          grip('gland:cells', peak, word('cellsHandle'), L, marks) +
-          handleWord(peak, word('peak', {n : center.copies, p : percent(main * top * reached)}),
-                     'above') +
-          grip('gland:rise', halfUp, word('riseHandle'), L, marks) +
-          handleWord(halfUp, word('halfUp', {n : formatNumber(rise * Math.LN2, 0)})) +
-          grip('gland:time', half, word('timeHandle'), L, marks) +
-          handleWord(half, word('half', {n : formatNumber(stay * Math.LN2, 0)})));
+  return svg(L, organ, word('level'),
+             axes + phases + curves + grip('gland:cells', peak, word('cellsHandle'), L, marks) +
+                 handleWord(peak,
+                            word('peak', {n : center.copies, p : percent(main * top * reached)}),
+                            'above') +
+                 grip('gland:rise', halfUp, word('riseHandle'), L, marks) +
+                 handleWord(halfUp, word('halfUp', {n : formatNumber(rise * Math.LN2, 0)})) +
+                 grip('gland:time', half, word('timeHandle'), L, marks) +
+                 handleWord(half, word('half', {n : formatNumber(stay * Math.LN2, 0)})));
 }
 
 export const glandPictures = (state, organ, center, nameOf) =>
@@ -176,6 +174,9 @@ export function glandPatch(name, p, marks) {
     return {id, center : {tau : timeConstantOf(Math.max(steps, timeConstantSteps(0)))}};
   }
   if (name === 'gland:time')
-    return {id, center : {field : residenceOf(Math.max(restAt(p.x) / Math.LN2, residenceSteps(0)))}};
+    return {
+      id,
+      center : {field : residenceOf(Math.max(restAt(p.x) / Math.LN2, residenceSteps(0)))}
+    };
   return null;
 }
