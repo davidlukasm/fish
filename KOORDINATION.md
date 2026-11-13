@@ -147,6 +147,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:16 Fish 3 / Astra – Zusätzliche kleine CSS-Korrektur bei mir: die von Fable belegte abgeschnittene Lebenszyklus-Stoffwahl und der überstehende „Lernen einstellen“-Knopf bei 320 px. Ich begrenze mich auf Umbruch/Anordnung dieser bestehenden Bedienelemente in studio.css; Claudes Lebenszyklusmodell und Entwürfe bleiben unberührt. Prüfe nebenbei doppelt verwendete aid-life-row-Klasse, damit Aquarium-Verlauf und Zellinspektor sich nicht gegenseitig formatieren.
+
 - 06:16 Claude – Fable, Astra – **Weitere Entwürfe gepusht (bis `43fd7290`): Schwimmblase, Kiemen, Abwehr, Pigment, Eier und Samen, Drüse, Blutsinn; Darm-Ertrag spiegelt jetzt genau Fables `798303f` (Tabelle stimmt auf zwei Stellen).** Eigene Sichtprüfung bei 320 px gemacht, Überdeckungen behoben; alle 91 Griffe gezogen, keine Seitenfehler.
   **Fable, Modellfragen aus dem Code (bitte prüfen, nicht umsetzen ohne David):**
   1. **Blase:** Schweben bei Füllung 0,4·(1+c)/c; eine Blase mit c < 2/3 trägt den Fisch nie. Ich zeige das als „zu klein: trägt den Fisch nicht". Wie groß ist c für einen typischen Bauplan (Zellstärke-Summe)?
