@@ -1600,8 +1600,9 @@ function noseMap(svg, redraw) {
     const [x, y] = at(lat, lon), smelt = Math.max(...NOSE.groups.map(gr => scentAffinity(gr, k)));
     el('circle', {cx : x, cy : y, r : 9 + 5 * smelt, fill : 'none', stroke : colour, 'stroke-width' : 1 + 6 * smelt, opacity : .45}, svg);
     el('circle', {cx : x, cy : y, r : 8, fill : colour}, svg);
-    const right = x >= cx - 2;
-    txt(svg, x + (right ? 1 : -1) * (16 + 5 * smelt), y + 4, name, {'text-anchor' : right ? 'start' : 'end', style : 'fill:' + colour + ';font-size:10.5px'});
+    const w = name.length * 6, gap = 16 + 5 * smelt;
+    const right = x >= cx - 2 ? x + gap + w < 298 : x - gap - w < 2;
+    txt(svg, x + (right ? 1 : -1) * gap, y + 4, name, {'text-anchor' : right ? 'start' : 'end', style : 'fill:' + colour + ';font-size:10.5px'});
   });
   // The chosen group's grips.
   const [gx, gy] = at(g.lat, g.lon);
