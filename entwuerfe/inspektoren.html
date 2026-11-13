@@ -327,51 +327,52 @@ function diagram(svg, by) {
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
 // ---------- Darm ----------
-// The gut as the engine has it (physiology.hh, Fable 6691345). A mouthful stays T steps:
-// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) up to the muscle's
-// most (at most 2). Of a food with flesh share a the gut takes up
-// a·kF/(kF + spoil(T) + 1/T) + (1 − a)·kP/(kP + 1/T), kF = 1/20, kP = 1/250,
-// spoil(T) = (T/160)²/160: plants give more the longer they stay, flesh spoils the longer it stays.
-// Spoiled matter above 0.3 of the gut's room hurts (gut_irritation): Bauchweh and Durchfall.
-// Senses: stretch cells report the gut's fill, half at their threshold (bounded_response); food
-// cells report the nourishment flowing in against the resting need, s = flow/(flow + rest), as
-// s/(s + threshold + adapted), the adapted level following s with rate 1/τ, τ from 4 to 48 steps
-// (cppn_brain.cc, adapted_response).
-const gut = {length : .45, speed : 1.6, full : .6, sense : .25, tau : 20};
+// The gut as the engine has it (physiology.hh, Fable 77268f7a). A mouthful stays T steps:
+// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to `fastest`.
+// A food with flesh share a must first be broken open, A = (T / (400·(1 − a)))³, and is taken up
+// before it spoils, V = (T·a / 250)³: yield = A/(1 + A) · 1/(1 + V + 20/T). Spoiled matter above
+// 0.3 of the gut's room hurts (gut_irritation). A longer gut weighs more (+0.05 of the body per
+// size) and raises the resting need (+0.1 per size).
+// Senses: stretch cells report the gut's fill, half at their level (bounded_response), one level
+// per group of cells; food cells report the nourishment flowing in against the resting need,
+// s = flow/(flow + rest), as s/(s + threshold + adapted), the adapted level following s with rate
+// 1/τ, τ from 4 to 48 steps (cppn_brain.cc, adapted_response).
+const K = {time : 200, open : 400, spoil : 250, uptake : 20, sharp : 3, tolerated : .3, fastest : 2, shortest : 50, longest : 800};
 const FOOD = [['Blatt', 0, '#8fd16a'], ['Alge', .25, '#55c4a6'], ['Flocken', .5, '#e3cf94'], ['Plankton', .75, '#9cc8f0'], ['Fleisch', 1, '#ef8f8f']];
-const K = {time : 200, flesh : 1 / 20, plant : 1 / 250, spoil : 160, tolerated : .3, fastest : 2, shortest : 50, longest : 800};
-const restTime = L => K.time * .5 * Math.pow(8, L);
-const spoilRate = T => Math.pow(T / K.spoil, 2) / K.spoil;
-const gain = (a, T) => a * K.flesh / (K.flesh + spoilRate(T) + 1 / T) + (1 - a) * K.plant / (K.plant + 1 / T);
-// Spoiled matter as a share of the gut's room in a fish that eats only flesh and keeps its gut full
-// (digest_nutrition run to its steady state); a food with flesh share a spoils a times as much.
-const ROT = (() => {
-  const table = [];
-  for (let i = 0; i <= 40; i++) {
-    const T = K.shortest * Math.pow(2, 4 * i / 40);
-    let F = 1, R = 0, fill = 1;
-    for (let s = 0; s < 3000; s++) {
-      const held = F + R, p = 1 / T, fl = F * K.flesh, sp = (F - fl) * Math.min(1, spoilRate(T)), left = held - fl, lost = left * p;
-      R = (R + sp) * (1 - p); F = (F - fl - sp) * (1 - p); fill *= (left - lost) / held;
-      const add = Math.max(0, 1 - fill); F += add; fill += add;
-    }
-    table.push(R);
+const gut = {middle : 200, spread : 1.4, levels : [.6], sense : .35, tau : 20};
+const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
+const sizeOf = T => T / K.time;
+const gain = (a, T) => {
+  const A = a >= 1 ? Infinity : Math.pow(T / (K.open * (1 - a)), K.sharp), V = Math.pow(T * a / K.spoil, K.sharp);
+  return (a >= 1 ? 1 : A / (1 + A)) / (1 + V + K.uptake / T);
+};
+// Spoiled matter as a share of the gut's room for a fish that eats only this food and keeps its
+// gut full: digest_nutrition run to its steady state.
+const rotCache = new Map();
+function rot(a, T) {
+  const key = a + ':' + Math.round(T);
+  if (rotCache.has(key)) return rotCache.get(key);
+  const up = 1 / K.uptake, opening = a >= 1 ? 1 : Math.min(1, Math.pow(T / (K.open * (1 - a)), K.sharp) / T), spoiling = a <= 0 ? 0 : Math.min(1, up * Math.pow(T * a / K.spoil, K.sharp));
+  let raw = 1, open = 0, r = 0;
+  for (let s = 0; s < 2500; s++) {
+    const p = 1 / T, dig = open * up, op = raw * opening, sp = (open - dig) * spoiling;
+    raw = (raw - op) * (1 - p); open = (open - dig - sp + op) * (1 - p); r = (r + sp) * (1 - p);
+    raw += Math.max(0, 1 - raw - open - r);
   }
-  return table;
-})();
-const rotAt = T => { const at = clamp(Math.log2(T / K.shortest) / 4 * 40, 0, 40), k = Math.floor(at); return ROT[k] + (ROT[Math.min(40, k + 1)] - ROT[k]) * (at - k); };
-const hurts = (a, T) => a * rotAt(T) > K.tolerated;
-const VENT = [212, 94];
+  rotCache.set(key, r); return r;
+}
+const hurts = (a, T) => rot(a, T) > K.tolerated;
+const VENT = [214, 94], STOMACH = {x : 84, y : 62, rx : 22, ry : 19};
 function gutWay(size) {
   // From the stomach in loops down the belly to the vent near the tail.
-  const folds = Math.max(1, Math.round(size * 1.6)), left = 92, right = 196, high = 48, low = 96, pts = [[72, 64]];
+  const folds = Math.max(1, Math.round(size * 1.6)), left = 118, right = 198, high = 44, low = 96;
+  const pts = [[STOMACH.x + STOMACH.rx - 2, STOMACH.y + 8], [left, high + 4]];
   const step = (right - left) / Math.max(1, folds);
   for (let f = 0; f < folds; f++) {
     const x = left + step * f, down = f % 2 === 0;
     for (let k = 0; k <= 12; k++) pts.push([x, down ? high + (low - high) * k / 12 : low - (low - high) * k / 12]);
     if (f < folds - 1) for (let k = 1; k <= 8; k++) { const t = Math.PI * k / 8; pts.push([x + step / 2 - step / 2 * Math.cos(t), (down ? low : high) + (down ? 1 : -1) * 7 * Math.sin(t)]); }
   }
-  // From the last loop along the belly to the vent.
   const [lx, ly] = pts.at(-1);
   if (ly < low - 1) for (let k = 1; k <= 8; k++) { const t = Math.PI / 2 * k / 8; pts.push([lx + 8 * Math.sin(t), ly + (low - ly) * (1 - Math.cos(t))]); }
   const [bx, by] = pts.at(-1);
@@ -380,139 +381,170 @@ function gutWay(size) {
   for (let i = 1; i < pts.length; i++) lengths.push(lengths[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   const at = s => { const d = clamp(s, 0, 1) * lengths.at(-1); let i = 1; while (i < lengths.length - 1 && lengths[i] < d) i++;
     const t = (d - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; };
-  return {pts, at};
+  return {pts, at, length : lengths.at(-1)};
 }
-let gutLayer = null, gutRings = null, gutWord = null, morsels = [], dung = [], gutClock = 0, gutSpawn = 0, gutLast = 0;
+const film = {tube : null, layer : null, cells : null, morsels : [], dung : [], clock : 0, spawn : 0, last : 0, flow : 0, adapted : 0};
 function drawGut() {
   const svg = document.getElementById('gut'); svg.replaceChildren();
-  const T = restTime(gut.length), fast = T / gut.speed;
-  // ---- The fish with its gut. ----
+  const T = restOf(), fast = fastOf();
+  // ---- The fish with mouth, gullet, stomach and gut. ----
   el('path', {d : 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z', fill : '#16363e', stroke : '#3b6a6c'}, svg);
-  el('circle', {cx : 34, cy : 56, r : 3.2, fill : '#e9e2c6'}, svg);
-  el('path', {d : 'M14 66 L28 66', stroke : '#3b6a6c', 'stroke-width' : 2}, svg);
-  const way = gutWay(.5 * Math.pow(8, gut.length)), d = 'M' + way.pts.map(([x, y]) => x.toFixed(1) + ' ' + y.toFixed(1)).join(' L');
-  el('path', {d, fill : 'none', stroke : '#d9cfae', 'stroke-width' : 8, 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round', opacity : .45}, svg);
-  gutRings = el('g', {}, svg);
-  const rings = Math.round((gut.speed - 1) * 14);
-  for (let r = 0; r < rings; r++) { const [x, y] = way.at((r + .5) / 14); el('circle', {cx : x, cy : y, r : 4.6, fill : 'none', stroke : '#eaa886', 'stroke-width' : 1.4, opacity : .35}, gutRings); }
-  // The stomach, filled as far as its stretch cells take as full; its grip sets that.
-  const sx = 62, sy = 64, rx = 18, ry = 16, level = sy + ry - 2 * ry * gut.full;
-  el('clipPath', {id : 'stomach'}, el('defs', {}, svg)).appendChild(el('ellipse', {cx : sx, cy : sy, rx, ry}));
-  el('rect', {x : sx - rx, y : level, width : 2 * rx, height : sy + ry - level, fill : '#d9cfae', opacity : .5, 'clip-path' : 'url(#stomach)'}, svg);
-  el('ellipse', {cx : sx, cy : sy, rx, ry, fill : 'none', stroke : '#d9cfae', 'stroke-width' : 1.6}, svg);
-  for (const [cx, cy] of [[sx - rx + 2, sy - 6], [sx + rx - 2, sy + 6]]) el('circle', {cx, cy, r : 2.6, fill : '#f1dda6'}, svg);
-  el('path', {d : `M${sx - rx} ${level} H${sx + rx}`, stroke : '#f1dda6', 'stroke-dasharray' : '2 2'}, svg);
-  const fg = el('circle', {cx : sx + rx + 2, cy : level, r : 6}, svg);
-  drag(svg, fg, p => { gut.full = clamp((sy + ry - p.y) / (2 * ry), .05, .95); drawGut(); }, 'full');
-  txt(svg, sx + rx + 2, level - 10, 'satt', {'text-anchor' : 'middle'});
-  gutLayer = el('g', {}, svg); gutWord = txt(svg, 290, 12, '', {'text-anchor' : 'end'});
-  gut.way = way;
-  // What kind of eater the gut makes, from what it takes most of in its range.
-  const mid = Math.sqrt(T * fast), slope = gain(1, mid) - gain(0, mid);
-  txt(svg, 4, 12, slope > .1 ? 'Räuber' : slope < -.1 ? 'Pflanzenfresser' : 'Allesfresser', {class : 'head'});
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, svg);
+  el('path', {d : `M15 66 Q40 68 ${STOMACH.x - STOMACH.rx + 2} ${STOMACH.y + 2}`, fill : 'none', stroke : '#d9cfae', 'stroke-width' : 5, 'stroke-linecap' : 'round', opacity : .45}, svg);
+  const way = gutWay(sizeOf(T)); film.way = way;
+  el('path', {d : 'M' + way.pts.map(([x, y]) => x.toFixed(1) + ' ' + y.toFixed(1)).join(' L'), fill : 'none', stroke : '#d9cfae', 'stroke-width' : 8, 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round', opacity : .4}, svg);
+  film.tube = el('g', {}, svg);
+  // The stomach, filled to each level at which a group of stretch cells reports full.
+  const S = STOMACH, levelY = v => S.y + S.ry - 2 * S.ry * v;
+  el('clipPath', {id : 'stomach'}, el('defs', {}, svg)).appendChild(el('ellipse', {cx : S.x, cy : S.y, rx : S.rx, ry : S.ry}));
+  const top = Math.max(...gut.levels);
+  el('rect', {x : S.x - S.rx, y : levelY(top), width : 2 * S.rx, height : S.y + S.ry - levelY(top), fill : '#d9cfae', opacity : .35, 'clip-path' : 'url(#stomach)'}, svg);
+  el('ellipse', {cx : S.x, cy : S.y, rx : S.rx, ry : S.ry, fill : 'none', stroke : '#d9cfae', 'stroke-width' : 1.6}, svg);
+  gut.levels.forEach((v, i) => {
+    const y = levelY(v), half = S.rx * Math.sqrt(Math.max(0, 1 - Math.pow((y - S.y) / S.ry, 2)));
+    el('path', {d : `M${S.x - half} ${y} H${S.x + half}`, stroke : '#f1dda6', 'stroke-dasharray' : '2 2'}, svg);
+    el('circle', {cx : S.x + half - 3, cy : y, r : 2.6, fill : '#f1dda6'}, svg);
+    const g = el('circle', {cx : S.x - half - 7, cy : y, r : 6}, svg);
+    drag(svg, g, p => { gut.levels[i] = clamp((S.y + S.ry - p.y) / (2 * S.ry), .05, .95); drawGut(); }, 'level' + i);
+    if (v === top) txt(svg, S.x - half - 16, y + 4, 'satt', {'text-anchor' : 'end'});
+  });
+  // More or fewer groups of stretch cells, each with its own level.
+  const add = (x, sign, enabled, act) => { const g = el('g', {class : 'chip', opacity : enabled ? 1 : .3, 'data-levels' : sign}, svg);
+    el('circle', {cx : x, cy : S.y + S.ry + 9, r : 7, fill : '#0f2c34', stroke : '#2d5059'}, g);
+    el('path', {d : `M${x - 3.5} ${S.y + S.ry + 9} h7` + (sign === '+' ? ` M${x} ${S.y + S.ry + 5.5} v7` : ''), stroke : '#d7e6e3', 'stroke-width' : 1.6}, g);
+    if (enabled) g.addEventListener('click', act); };
+  add(S.x - 9, '−', gut.levels.length > 1, () => { gut.levels.pop(); drawGut(); });
+  add(S.x + 9, '+', gut.levels.length < 3, () => { gut.levels.push(clamp(Math.min(...gut.levels) - .25, .1, .9)); drawGut(); });
+  // The muscle cells, spread evenly along the gut; the food cells on its first stretch.
+  const cells = Math.round(1 + (gut.spread - 1) / (K.fastest - 1) * 9);
+  film.cells = Array.from({length : gut.spread > 1.02 ? cells : 0}, (_, i) => (i + .5) / cells);
+  film.food = [.12, .2, .28, .36].map(s => way.at(s));
+  film.foodDots = film.food.map(([x, y]) => el('circle', {cx : x, cy : y - 6, r : 2.6, fill : '#79d2be'}, svg));
+  film.layer = el('g', {}, svg);
+  // What kind of eater the gut makes: the food it gets most from in its range.
+  const best = FOOD.map(([n, a]) => [n, Math.max(gain(a, T), gain(a, fast))]).sort((p, q) => q[1] - p[1])[0][0];
+  txt(svg, 4, 12, {Blatt : 'Pflanzenfresser', Alge : 'Algenfresser', Flocken : 'Allesfresser', Plankton : 'Planktonfresser', Fleisch : 'Räuber'}[best], {class : 'head'});
+  txt(svg, 296, 12, `+${Math.round(10 * sizeOf(T))} % Ruhebedarf · +${Math.round(5 * sizeOf(T))} % Gewicht`, {'text-anchor' : 'end'});
 
   // ---- Retention: what each food gives over the steps it stays. ----
-  const L = 28, R = 236, top = 150, base = 266, X = t => L + (R - L) * clamp(Math.log2(t / K.shortest) / 4, 0, 1), Y = v => base - (base - top) * v;
+  const L = 28, R = 286, ytop = 150, base = 262, X = t => L + (R - L) * clamp(Math.log2(t / K.shortest) / 4, 0, 1), Y = v => base - (base - ytop) * v;
   const tOf = x => K.shortest * Math.pow(2, 4 * clamp((x - L) / (R - L), 0, 1));
-  el('rect', {x : X(fast), y : top - 4, width : Math.max(2, X(T) - X(fast)), height : base - top + 4, fill : '#f1dda6', opacity : .13}, svg);
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 6}`, stroke : '#3b6a6c', fill : 'none'}, svg);
-  txt(svg, L, top - 12, 'Ertrag');
+  el('rect', {x : X(fast), y : ytop, width : Math.max(2, X(T) - X(fast)), height : base - ytop, fill : '#f1dda6', opacity : .1}, svg);
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${ytop - 6}`, stroke : '#3b6a6c', fill : 'none'}, svg);
+  txt(svg, L, ytop - 12, 'Ertrag');
   for (const t of [50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, svg); txt(svg, X(t), base + 15, t, {'text-anchor' : 'middle'}); }
   txt(svg, R, base + 29, 'Schritte im Darm', {'text-anchor' : 'end'});
   const ends = [];
   for (const [name, a, colour] of FOOD) {
-    let good = '', bad = '';
+    let good = '', bad = '', last = null;
     for (let k = 0; k <= 80; k++) {
       const t = K.shortest * Math.pow(2, 4 * k / 80), pt = `${X(t).toFixed(1)} ${Y(gain(a, t)).toFixed(1)}`;
-      if (!hurts(a, t)) good += (good ? ' L' : 'M') + pt;
-      else bad += (bad ? ' L' : 'M' + (good ? good.split(' L').at(-1).replace('M', '') + ' L' : '')) + pt;
+      if (!hurts(a, t)) good += (good ? ' L' : 'M') + pt; else bad += (bad ? ' L' : 'M' + (last ?? pt) + ' L') + pt;
+      last = pt;
     }
-    el('path', {d : good, fill : 'none', stroke : colour, 'stroke-width' : 2}, svg);
+    if (good) el('path', {d : good, fill : 'none', stroke : colour, 'stroke-width' : 2}, svg);
     if (bad) el('path', {d : bad, fill : 'none', stroke : colour, 'stroke-width' : 2, 'stroke-dasharray' : '2 4', opacity : .8}, svg);
-    ends.push({name, colour, y : Y(gain(a, K.longest))});
+    let bestT = K.shortest; for (let k = 0; k <= 80; k++) { const t = K.shortest * Math.pow(2, 4 * k / 80); if (gain(a, t) > gain(a, bestT)) bestT = t; }
+    ends.push({name, colour, x : X(bestT), y : Y(gain(a, bestT))});
   }
-  // Names at the curves' ends, kept apart.
-  ends.sort((p, q) => p.y - q.y).forEach((e, i, all) => { if (i && e.y - all[i - 1].y < 12) e.y = all[i - 1].y + 12; txt(svg, R + 6, e.y + 4, e.name, {style : 'fill:' + e.colour}); });
-  const pain = FOOD.filter(([, a]) => hurts(a, T)).map(([n]) => n);
-  // Grips: the resting gut's time (its length) at the top, the muscle's quickest at the bottom.
-  const rg = el('circle', {cx : X(T), cy : top - 4, r : 7}, svg);
-  drag(svg, rg, p => { const t = clamp(tOf(p.x), 100, 800); gut.length = Math.log(t / 100) / Math.log(8); drawGut(); }, 'rest');
-  txt(svg, X(T) + (X(T) > 200 ? -10 : 10), top - 1, 'in Ruhe', {'text-anchor' : X(T) > 200 ? 'end' : 'start'});
-  const mg = el('circle', {cx : X(fast), cy : base - 10, r : 7, style : 'stroke:#eaa886'}, svg);
-  drag(svg, mg, p => { gut.speed = clamp(T / tOf(p.x), 1, K.fastest); drawGut(); }, 'muscle');
-  txt(svg, X(fast) - 10, base - 6, 'mit Muskel', {'text-anchor' : 'end'});
+  // Each food's name at the top of its own curve.
+  for (const e of ends) txt(svg, clamp(e.x, L + 20, R - 4), e.y - 7, e.name, {'text-anchor' : e.x > R - 30 ? 'end' : 'middle', style : 'fill:' + e.colour});
+  // The middle of the range: one line, dragged along.
+  el('path', {d : `M${X(gut.middle)} ${ytop - 6} V${base}`, stroke : '#f1dda6', 'stroke-width' : 1.4}, svg);
+  const mg = el('circle', {cx : X(gut.middle), cy : ytop - 6, r : 7}, svg);
+  drag(svg, mg, p => { gut.middle = clamp(tOf(p.x), 100 / Math.sqrt(gut.spread) * Math.sqrt(1), 800 / Math.sqrt(gut.spread)); gut.middle = clamp(gut.middle, 100 / Math.sqrt(gut.spread), 800 / Math.sqrt(gut.spread)); drawGut(); }, 'middle');
+  // How far the muscle shifts it: a bar under the field, both ends pulled apart together.
+  const by = base - 10;
+  el('path', {d : `M${X(fast)} ${by} H${X(T)}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
+  const spreadTo = p => { const d = Math.abs(Math.log2(tOf(p.x) / gut.middle)); gut.spread = clamp(Math.pow(2, 2 * d), 1, K.fastest); gut.middle = clamp(gut.middle, 100 / Math.sqrt(gut.spread), 800 / Math.sqrt(gut.spread)); drawGut(); };
+  for (const [x, n] of [[X(fast), 'slow'], [X(T), 'quick']]) drag(svg, el('rect', {x : x - 5, y : by - 7, width : 10, height : 14, rx : 3, style : 'stroke:#eaa886'}, svg), spreadTo, 'spread-' + n);
 
-  // ---- What the fish gets of each food, from the muscle's quickest to the resting gut. ----
-  let y = 312;
+  // ---- What the fish gets of each food over that range; red where it hurts. ----
+  let y = 310;
   txt(svg, 4, y - 8, 'Was der Fisch herausholt', {class : 'head'});
   for (const [name, a, colour] of FOOD) {
-    const g1 = gain(a, T), g2 = gain(a, fast), lo = Math.min(g1, g2), hi = Math.max(g1, g2), W = 150, x0 = 66;
+    const samples = Array.from({length : 25}, (_, k) => fast * Math.pow(T / fast, k / 24)), got = samples.map(t => gain(a, t));
+    const lo = Math.min(...got), hi = Math.max(...got), W = 160, x0 = 66;
+    const sore = samples.map((t, k) => hurts(a, t) ? got[k] : null).filter(v => v !== null);
     txt(svg, 4, y + 10, name);
     el('rect', {x : x0, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, svg);
     el('rect', {x : x0, y, width : W * lo, height : 12, rx : 3, fill : colour, opacity : .8}, svg);
     el('rect', {x : x0 + W * lo, y, width : Math.max(1.5, W * (hi - lo)), height : 12, fill : colour, opacity : .35}, svg);
-    if (hurts(a, T)) el('path', {d : `M${x0 + W * g1} ${y - 2} v16`, stroke : '#ef8f8f', 'stroke-width' : 2, 'stroke-dasharray' : '2 2'}, svg);
+    if (sore.length) { const s0 = Math.min(...sore), s1 = Math.max(...sore); el('rect', {x : x0 + W * s0 - 1, y : y - 2, width : Math.max(3, W * (s1 - s0) + 2), height : 16, rx : 2, fill : '#ef5f5f', opacity : .4, 'data-sore' : name}, svg); }
     txt(svg, 296, y + 10, Math.round(lo * 100) + (hi - lo > .005 ? '–' + Math.round(hi * 100) : '') + ' %', {'text-anchor' : 'end', class : 'value'});
     y += 20;
   }
-  if (pain.length) txt(svg, 4, y + 8, 'Bauchweh in Ruhe: ' + pain.join(', '), {style : 'fill:#ef8f8f'});
-  svg.setAttribute('viewBox', `0 0 300 ${y + 14}`);
+  svg.setAttribute('viewBox', `0 0 300 ${y + 2}`);
   gut.T = T; gut.fast = fast;
   drawNutrientSense();
 }
-// The food cells over a meal: a bite every 12 steps from step 20 to 140, each as much as the
-// fish needs at rest for those steps; the nourishment flows in and ebbs (flow · 0.8 per step).
+// The food cells over one meal: the fish eats from step 10 to 90 as much as it needs at rest; the
+// cells report strongly when food comes and, the sooner they get used to it, the sooner less.
 function drawNutrientSense() {
   const svg = document.getElementById('gutsense'); svg.replaceChildren();
-  const L = 8, R = 292, top = 22, base = 112, N = 200, X = s => L + (R - L) * s / N, Y = v => base - (base - top) * v;
-  const stimulus = [], report = [];
+  const L = 8, R = 292, top = 18, base = 96, N = 130, X = s => L + (R - L) * s / N, Y = v => base - (base - top) * v;
+  const report = [];
   let flow = 0, adapted = 0;
-  const usable = gain(.5, gut.T);
   for (let s = 0; s <= N; s++) {
-    if (s >= 20 && s <= 140 && (s - 20) % 12 === 0) flow += .2 * 12 * usable * 1.6;
+    if (s >= 10 && s <= 90) flow += .2 * 1.25;
     const sig = flow / (flow + 1);
-    stimulus.push(sig); report.push(sig > 0 ? sig / (sig + gut.sense + adapted) : 0);
+    report.push(sig > 0 ? sig / (sig + gut.sense + adapted) : 0);
     adapted += (sig - adapted) / gut.tau; flow *= .8;
   }
-  const line = vals => 'M' + vals.map((v, s) => `${X(s).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L');
-  el('path', {d : line(stimulus) + ` L${X(N)} ${base} L${X(0)} ${base} Z`, fill : '#e3cf94', opacity : .18}, svg);
-  el('path', {d : line(report), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2}, svg);
+  el('rect', {x : X(10), y : base + 4, width : X(90) - X(10), height : 6, rx : 3, fill : '#e3cf94', opacity : .6}, svg);
+  txt(svg, X(10), base + 22, 'frisst'); txt(svg, X(90), base + 22, 'satt', {'text-anchor' : 'end'});
   el('path', {d : `M${L} ${base} H${R}`, stroke : '#3b6a6c'}, svg);
-  for (let s = 20; s <= 140; s += 12) el('circle', {cx : X(s), cy : base + 7, r : 2.4, fill : '#e3cf94'}, svg);
-  txt(svg, X(20), base + 22, 'frisst'); txt(svg, R, base + 22, N + ' Schritte', {'text-anchor' : 'end'});
-  // Grip: how much nourishment the cells take as half (dragged up: they need more).
-  el('path', {d : `M${L} ${Y(gut.sense)} H${R}`, stroke : '#f1dda6', 'stroke-dasharray' : '3 4', opacity : .7}, svg);
-  const hg = el('circle', {cx : X(170), cy : Y(gut.sense), r : 6.5}, svg);
-  drag(svg, hg, p => { gut.sense = clamp((base - p.y) / (base - top), .02, .95); drawNutrientSense(); }, 'sense');
-  txt(svg, X(170) + 10, Y(gut.sense) - 6, 'spürt ab');
-  // Grip: how soon the cells get used to steady food, at the point they have.
-  const used = 20 + gut.tau, ux = X(used), uy = Y(report[Math.round(used)]);
+  el('path', {d : 'M' + report.map((v, s) => `${X(s).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${X(N)} ${base} L${X(0)} ${base} Z`, fill : '#79d2be', 'fill-opacity' : .15, stroke : '#79d2be', 'stroke-width' : 2}, svg);
+  txt(svg, L, top - 6, 'meldet');
+  // Grip on the curve's first height: how strongly the cells answer food (up: more sensitive).
+  const peakAt = report.indexOf(Math.max(...report)), px = X(peakAt), py = Y(report[peakAt]);
+  const pg = el('circle', {cx : px, cy : py, r : 6.5}, svg);
+  drag(svg, pg, p => {
+    // The threshold for which the first answer reaches the height pulled to.
+    const want = clamp((base - p.y) / (base - top), .05, .97), sig0 = report.length && (() => { let f = 0, best = 0; for (let s = 0; s <= peakAt; s++) { if (s >= 10) f += .25; best = f / (f + 1); f *= .8; } return best; })();
+    gut.sense = clamp(sig0 / want - sig0, .005, 3); drawNutrientSense();
+  }, 'sense');
+  // Grip where the answer has fallen while the fish still eats: how soon the cells get used to it.
+  const used = Math.min(90, 10 + gut.tau), ux = X(used), uy = Y(report[used]);
   const ug = el('rect', {x : ux - 6, y : uy - 6, width : 12, height : 12, rx : 2}, svg);
-  drag(svg, ug, p => { gut.tau = clamp(Math.round((p.x - L) / (R - L) * N - 20), 4, 48); drawNutrientSense(); }, 'used');
-  el('path', {d : `M${ux} ${uy - 7} V${top - 4}`, stroke : '#f1dda6', 'stroke-dasharray' : '2 3', opacity : .6}, svg);
-  txt(svg, ux, top - 8, 'gewöhnt sich', {'text-anchor' : 'middle'});
+  drag(svg, ug, p => { gut.tau = clamp(Math.round((p.x - L) / (R - L) * N - 10), 4, 48); drawNutrientSense(); }, 'used');
   svg.setAttribute('viewBox', `0 0 300 ${base + 28}`);
 }
-// The film: a mouthful enters the stomach and moves to the vent in its time; it shrinks as the
-// fish takes it up; what reaches the vent leaves as dung. The muscle works every other few seconds.
+// The film: a mouthful moves from the stomach to the vent in its time and shrinks as the fish takes
+// it up; dung leaves at the vent. Every few seconds the muscle works: the gut narrows at its cells
+// one after another (peristalsis) and the content moves faster. The food cells glow with what
+// they report.
 function gutFrame(now) {
   requestAnimationFrame(gutFrame);
-  if (!gutLayer || now - gutLast < 16) return;
-  const dt = Math.min(6, (now - gutLast) / 16); gutLast = now;
-  const working = gut.speed > 1.02 && Math.floor(now / 3500) % 2 === 1, T = working ? gut.fast : gut.T;
-  gutRings.style.opacity = working ? 1 : .35;
-  gutWord.textContent = working ? 'Muskel arbeitet' : '';
-  gutClock += dt;
-  if (gutClock - gutSpawn > 40) { gutSpawn = gutClock; morsels.push({at : 0}); }
+  const f = film; if (!f.layer || !f.tube?.isConnected) return;
+  if (now - f.last < 16) return;
+  const dt = Math.min(6, (now - f.last) / 16); f.last = now;
+  const working = f.cells.length > 0 && Math.floor(now / 3500) % 2 === 1, T = working ? gut.fast : gut.T;
+  f.clock += dt;
+  // The muscle cells pinch the tube one after another (peristalsis) while the muscle works.
+  f.tube.replaceChildren();
+  const wave = now / 260;
+  for (const [i, c] of f.cells.entries()) {
+    const squeeze = working ? Math.max(0, Math.sin(wave - i * .8)) : 0;
+    const [x0, y0] = f.way.at(c - .01), [x1, y1] = f.way.at(c + .01), len = Math.hypot(x1 - x0, y1 - y0) || 1;
+    const tx = (x1 - x0) / len, ty = (y1 - y0) / len, nx = -ty, ny = tx, [x, y] = f.way.at(c), d = 6 - 3.5 * squeeze;
+    for (const side of [1, -1]) el('path', {d : `M${(x + side * nx * d - tx * 2.5).toFixed(1)} ${(y + side * ny * d - ty * 2.5).toFixed(1)} l${(tx * 5).toFixed(1)} ${(ty * 5).toFixed(1)}`, stroke : '#eaa886', 'stroke-width' : 2.4, 'stroke-linecap' : 'round', opacity : .45 + .55 * squeeze}, f.tube);
+  }
+  if (f.clock - f.spawn > 30) { f.spawn = f.clock; f.morsels.push({at : 0}); }
   // A step of the gut lasts 0.6 frames: 100 steps take a second.
-  for (const m of morsels) m.at += dt / (.6 * T);
-  for (const m of morsels.filter(m => m.at >= 1)) dung.push({x : VENT[0] + 2, y : VENT[1] + 4, age : 0});
-  morsels = morsels.filter(m => m.at < 1);
-  for (const p of dung) { p.age += dt; p.x += .25 * dt; p.y += .35 * dt; }
-  dung = dung.filter(p => p.age < 60);
-  gutLayer.replaceChildren();
-  for (const m of morsels) { const [x, y] = gut.way.at(m.at); el('circle', {cx : x, cy : y, r : 4.5 - 3 * m.at * gain(.5, T), fill : '#e3cf94'}, gutLayer); }
-  for (const p of dung) el('ellipse', {cx : p.x, cy : p.y, rx : 3, ry : 2, fill : '#8a7f6a', opacity : clamp(1 - p.age / 60, 0, 1)}, gutLayer);
+  let taken = 0;
+  for (const m of f.morsels) { m.at += dt / (.6 * T); taken += dt / (.6 * T) * gain(.5, T); }
+  for (const m of f.morsels.filter(m => m.at >= 1)) f.dung.push({x : VENT[0] + 2, y : VENT[1] + 4, age : 0});
+  f.morsels = f.morsels.filter(m => m.at < 1);
+  for (const p of f.dung) { p.age += dt; p.x += .25 * dt; p.y += .3 * dt; }
+  f.dung = f.dung.filter(p => p.age < 60);
+  // The food cells: nourishment in against the need at rest, with their sensitivity and habit.
+  f.flow = f.flow * Math.pow(.8, dt) + taken * 12; const sig = f.flow / (f.flow + 1);
+  const said = sig / (sig + gut.sense + f.adapted); f.adapted += (sig - f.adapted) * dt / gut.tau;
+  f.foodDots.forEach(d => { d.setAttribute('r', 2 + 2.5 * said); d.setAttribute('opacity', .3 + .7 * said); });
+  f.layer.replaceChildren();
+  for (const m of f.morsels) { const [x, y] = f.way.at(m.at); el('circle', {cx : x, cy : y, r : 4 - 2.5 * m.at * gain(.5, T), fill : '#e3cf94'}, f.layer); }
+  for (const p of f.dung) el('ellipse', {cx : p.x, cy : p.y, rx : 3, ry : 2, fill : '#8a7f6a', opacity : clamp(1 - p.age / 60, 0, 1)}, f.layer);
 }
 requestAnimationFrame(gutFrame);
 
