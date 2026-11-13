@@ -762,7 +762,8 @@ function drawGut() {
   drawPainSense();
   drawNutrientSense();
 }
-// Pain and food cells as David decided 05:49, in the engine since Fable 853a7c74: below its
+// Pain and food cells as David decided 05:49, in the engine since Fable 853a7c74 and 41e368e0 (their
+// stimulus lies between nothing and all, so they answer bounded, with the accustomed level): below its
 // threshold θ a cell reports nothing; what it is used to (m, following the stimulus at 1/τ) raises
 // the threshold, so a lasting stimulus sinks to nothing, sooner or later: τ from 1024 steps
 // (hardly gets used to it) to 4 (at once). The cells of a group spread their thresholds around
@@ -779,14 +780,14 @@ const tauOf = h => 1024 * Math.pow(4 / 1024, h);
 // (m what the cell is used to) against t + m, half at twice t; a bounded one (0 to 1) answers
 // all at the full stimulus.
 const excess = (s, t, m = 0) => { const thr = Math.max(1e-6, t) + m, ex = s - thr; return ex > 0 ? ex / (ex + thr) : 0; };
-const boundedAnswer = (x, t) => { t = clamp(t, .001, .999); const ex = (clamp(x, 0, 1) - t) / (1 - t); return ex > 0 ? ex / (ex + t * (1 - ex)) : 0; };
+const boundedAnswer = (x, t, m = 0) => { t = clamp(t, .001, .999); const ex = (clamp(x, 0, 1) - m - t) / (1 - t); return ex > 0 ? ex / (ex + t * (1 - ex)) : 0; };
 const SENSE_CELLS = 7, SPREAD_MOST = .4;
 const cellGates = g => Array.from({length : SENSE_CELLS}, (_, j) => clamp(g.gate + g.spread * SPREAD_MOST * (2 * j / (SENSE_CELLS - 1) - 1), 0, 1));
 function senseAnswer(g, stimulus, isBounded = false) {
   let m = 0;
   const gates = cellGates(g);
   return stimulus.map(s => {
-    const r = gates.reduce((t, gate) => t + (isBounded ? boundedAnswer(s, gate) : excess(s, gate, m)), 0) / gates.length;
+    const r = gates.reduce((t, gate) => t + (isBounded ? boundedAnswer(s, gate, m) : excess(s, gate, m)), 0) / gates.length;
     if (g.habit != null) m += (s - m) / tauOf(g.habit); return r;
   });
 }
@@ -862,8 +863,8 @@ function senseGroups(id, cell, o) {
 // a few steps and ebbs after (flow × 0.8 per step).
 const ACHE_AT = (st, level) => st < SENSE_LASTS ? level : 0;
 const FOOD_AT = (st, level) => st < SENSE_LASTS ? level * (1 - Math.pow(.8, st + 1)) : level * (1 - Math.pow(.8, SENSE_LASTS)) * Math.pow(.8, st - SENSE_LASTS + 1);
-const drawPainSense = () => senseGroups('gutpain', gut.ache, {word : 'Bauchweh', at : ACHE_AT, colour : '#ef8f8f'});
-const drawNutrientSense = () => senseGroups('gutsense', gut.food, {word : 'Futter', at : FOOD_AT, colour : '#e3cf94'});
+const drawPainSense = () => senseGroups('gutpain', gut.ache, {word : 'Bauchweh', at : ACHE_AT, colour : '#ef8f8f', bounded : true});
+const drawNutrientSense = () => senseGroups('gutsense', gut.food, {word : 'Futter', at : FOOD_AT, colour : '#e3cf94', bounded : true});
 // The film: the tube is drawn once; each frame only sets its pieces' widths and moves the
 // mouthfuls. The muscle works in turns: it eases in, sends waves along the whole gut, the next one
 // leaving when the last is just past halfway, and eases out. A wave narrows the gut behind a
@@ -1209,7 +1210,7 @@ function drawSkin(key) {
   senseGroups(key + 'sense', organ, key === 'touch'
     ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, bounded : true, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
-    : {word : 'Wunde', colour : '#ef8f8f', redraw, at : (st, level, gr) => st >= 10 ? level * felt(gr) : 0,
+    : {word : 'Wunde', colour : '#ef8f8f', bounded : true, redraw, at : (st, level, gr) => st >= 10 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
 }
 
@@ -1597,14 +1598,16 @@ function drawGills() {
   // ---- Over the rakers' density: water through, plankton kept of it, the catch. ----
   const c = document.getElementById('gillrake'); c.replaceChildren();
   const L = 40, R = 290, top = 26, base = 116, X = d => L + (R - L) * d, Y = v => base - (base - top) * v;
-  const curves = [['Wasser durch', '#9cc8f0', d => 1 - d / 2], ['behalten', '#d9cfae', d => .3 + .7 * d], ['Fang', '#e7ba77', d => (1 - d / 2) * (.3 + .7 * d) / .52]];
+  // Fable aef079ab: three mouths. Water through (and so the suction) 1 − 0.6·d; plankton held
+  // 0.02 + 0.98·d³, caught = water × held; the ground's flocks sifted (1 − 0.85·(1 − d)⁴)(1 − d⁴).
+  const curves = [['Wasser und Saugen', '#9cc8f0', d => 1 - .6 * d], ['Plankton', '#e7ba77', d => (1 - .6 * d) * (.02 + .98 * d * d * d)], ['Boden', '#c9b48c', d => (1 - .85 * Math.pow(1 - d, 4)) * (1 - Math.pow(d, 4))]];
   grid(c, L, R, top, base, 1);
   for (const [name, colour, f] of curves) {
-    el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(f(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : name === 'Fang' ? 2.6 : 1.6}, c);
+    el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(f(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2.2}, c);
   }
-  txt(c, X(.02), Y(1) - 4, 'Wasser durch', {style : 'fill:#9cc8f0'});
-  txt(c, X(.02), Y(.3) - 6, 'behalten', {style : 'fill:#d9cfae'});
-  txt(c, X(.98), Y(.96) - 6, 'Fang', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
+  txt(c, X(.02), Y(1) - 4, 'Wasser und Saugen', {style : 'fill:#9cc8f0'});
+  txt(c, X(.5), Y(.86) - 6, 'Boden', {'text-anchor' : 'middle', style : 'fill:#c9b48c'});
+  txt(c, X(.98), Y(.4) + 16, 'Plankton', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L, base + 15, 'locker'); txt(c, R, base + 15, 'dicht', {'text-anchor' : 'end'}); txt(c, (L + R) / 2, base + 15, 'Reusen', {'text-anchor' : 'middle'});
   const px = X(GILL.density);
@@ -1615,7 +1618,7 @@ function drawGills() {
   // ---- Over the speed: water pumped and met, and the plankton kept from it. ----
   const n = document.getElementById('gillflow'); n.replaceChildren();
   const L2 = 56, T2 = 26, B2 = 116, SX = v => L2 + (R - L2) * v;
-  const pumped = .25 * GILL.cells / 8 * 2 * GILL.command, ram = v => 2 * .35 * v, pass = 1 - GILL.density / 2, kept = .3 + .7 * GILL.density;
+  const pumped = .25 * GILL.cells / 8 * 2 * GILL.command, ram = v => 2 * .35 * v, pass = 1 - .6 * GILL.density, kept = .02 + .98 * Math.pow(GILL.density, 3);
   const most = 2 * .35 + .25 * 2;
   const SY = v => B2 - (B2 - T2) * v / most;
   regler(n, {x : 26, top : T2, base : B2, word : 'Befehl', value : GILL.command, setValue : v => { GILL.command = v; redraw(); }, start : hold, end : free, name : 'gillcmd'});
