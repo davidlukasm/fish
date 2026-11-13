@@ -1655,8 +1655,8 @@ function drawGills() {
     el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(f(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2.2}, c);
   }
   txt(c, X(.02), Y(1) - 4, 'Wasser und Saugen', {style : 'fill:#9cc8f0'});
-  txt(c, X(.5), Y(.86) - 6, 'Boden', {'text-anchor' : 'middle', style : 'fill:#c9b48c'});
-  txt(c, X(.98), Y(.4) + 16, 'Plankton', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
+  txt(c, X(.3), Y(.77) + 16, 'Boden', {'text-anchor' : 'middle', style : 'fill:#c9b48c'});
+  txt(c, X(.8), Y(.25) + 16, 'Plankton', {'text-anchor' : 'middle', style : 'fill:#e7ba77'});
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L, base + 15, 'locker'); txt(c, R, base + 15, 'dicht', {'text-anchor' : 'end'}); txt(c, (L + R) / 2, base + 15, 'Reusen', {'text-anchor' : 'middle'});
   const px = X(GILL.density);
