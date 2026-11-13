@@ -137,6 +137,16 @@ function regler(svg, {x, top, base, word, value, setValue, marks = [], start = n
     drag(svg, g, p => m.set(at(p)), name + 'mark' + i, start, end);
   });
 }
+// A scale that makes room at once; while a grip of its picture is held (obj.held) it only grows, so
+// that the grip can be taken back to where it was; once let go it glides back to fit.
+const glides = new Set();
+function settle(obj, key, need, redraw) {
+  const now = obj[key];
+  if (now == null || need >= now || now - need < need * .005) return (obj[key] = need);
+  if (obj.held) return now;
+  if (!glides.has(redraw)) { glides.add(redraw); requestAnimationFrame(() => { glides.delete(redraw); redraw(); }); }
+  return (obj[key] = now + (need - now) * .2);
+}
 // A bar of a share, with its value at the right.
 function bar(svg, x, y, w, share, colour, value, name) {
   if (name) txt(svg, 4, y + 10, name);
@@ -420,31 +430,34 @@ function diagram(svg, by) {
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
 // ---------- Darm ----------
-// The gut as the engine has it (physiology.hh, Fable 391f87d). A mouthful stays T steps:
-// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to 4. Food is made
-// of three stuffs: flesh, taken up at once, spoils soon; fibre must first be broken open, never
-// spoils; pulp (digested once already) is taken up at once, spoils late, never hurts. With k = 1/20,
-// q = 1/T: flesh k/(k + k·(T/250)⁴ + q), pulp k/(k + k·(T/720)⁴ + q), fibre A/(1 + A)·k/(k + q),
-// A = (T/400)⁴. Leaves are fibre; meat is flesh; flocks are pulp; algae ¼ pulp ¾ fibre; plankton
-// ½ flesh ½ fibre. It hurts (gut_irritation, Fable e9656d9) only when the mouthful is plainly wrong
+// The gut, proposed to Fable after David 05:41 (engine today: 391f87d). A mouthful stays T steps:
+// T = 200 · size / tempo, size = 0.5 · 8^length, tempo from 1 (muscle at rest) to 4, so T runs from
+// 25 to 800. Food is made of four stuffs: flesh, taken up at once, spoils soon; fibre must first be
+// broken open, never spoils; shell (plankton's) opens soon, never spoils; pulp (digested once
+// already) gives three quarters, spoils late, never hurts. With k = 1/20, q = 1/T:
+// flesh k/(k + k·(T/250)⁴ + q), pulp .75·k/(k + k·(T/820)⁴ + q), fibre A/(1 + A)·k/(k + q) with
+// A = (T/320)⁴, shell the same with A = (T/120)⁴. Leaves are fibre; meat is flesh; flocks are pulp;
+// algae ¼ pulp ¾ fibre; plankton ½ flesh ½ shell. Meat is best up to about 180 steps, plankton to
+// about 240, flocks to about 420, leaves after; no food for all beats a specialist. It hurts (gut_irritation, Fable e9656d9) only when the mouthful is plainly wrong
 // for the gut: its flesh stays too long, T·flesh/375 > 1, or its fibre (above 0.55 of it) passes
 // too soon, T < 400·(fibre − 0.55): leaves below 180, algae below 80, plankton above 750, meat above
 // 375 steps, flocks never. A longer gut holds more, weighs more (+0.05 of the body per size) and
 // raises the resting need (+0.1 per size).
 // Senses: stretch cells report the gut's fill, half at their level (bounded_response), one level
 // per group of cells; pain and food cells answer like other pain and food cells (adapted_response).
-const K = {time : 200, open : 400, spoil : 250, pulp : 720, uptake : 20, sharp : 4, fastest : 4, shortest : 40, longest : 1280};
-const FOOD = [['Blatt', {flesh : 0, fibre : 1}, '#8fd16a'], ['Alge', {flesh : 0, fibre : .75}, '#55c4a6'], ['Flocken', {flesh : 0, fibre : 0}, '#e3cf94'], ['Plankton', {flesh : .5, fibre : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, fibre : 0}, '#ef8f8f']];
-const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .35, tau : 20}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, tau : 30}], chosen : 0, level : .6}};
+const K = {time : 200, open : 320, shell : 120, spoil : 250, pulp : 820, worth : .75, uptake : 20, sharp : 4, fastest : 4, shortest : 25, longest : 800};
+const FOOD = [['Blatt', {flesh : 0, fibre : 1}, '#8fd16a'], ['Alge', {flesh : 0, fibre : .75}, '#55c4a6'], ['Flocken', {flesh : 0, fibre : 0}, '#e3cf94'], ['Plankton', {flesh : .5, fibre : 0, shell : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, fibre : 0}, '#ef8f8f']];
+const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .35, habit : .5}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5}], chosen : 0, level : .6}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
 function gain(f, T) {
-  const k = 1 / K.uptake, q = 1 / T, A = Math.pow(T / K.open, K.sharp), pulp = 1 - f.flesh - f.fibre;
-  return f.flesh * k / (k + k * Math.pow(T / K.spoil, K.sharp) + q) + pulp * k / (k + k * Math.pow(T / K.pulp, K.sharp) + q) + f.fibre * A / (1 + A) * k / (k + q);
+  const k = 1 / K.uptake, q = 1 / T, shell = f.shell ?? 0, pulp = 1 - f.flesh - f.fibre - shell;
+  const open = at => { const A = Math.pow(T / at, K.sharp); return A / (1 + A) * k / (k + q); };
+  return f.flesh * k / (k + k * Math.pow(T / K.spoil, K.sharp) + q) + pulp * K.worth * k / (k + k * Math.pow(T / K.pulp, K.sharp) + q) + f.fibre * open(K.open) + shell * open(K.shell);
 }
 function hurts(f, T) {
   // Fable e9656d9: the whole mouthful; flesh kept too long, or fibre passing too soon.
-  const S = T * f.flesh / (1.5 * K.spoil) - 1, C = f.fibre > .55 ? 1 - T / (K.open * (f.fibre - .55)) : -Infinity;
+  const S = T * f.flesh / (1.5 * K.spoil) - 1, C = f.fibre > .55 ? 1 - T / (400 * (f.fibre - .55)) : -Infinity;
   return Math.max(S, C) > 0;
 }
 const BODY = 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z';
@@ -524,7 +537,7 @@ function drawGut() {
   el('rect', {x : X(fast), y : ytop, width : Math.max(2, X(T) - X(fast)), height : base - ytop, fill : '#f1dda6', opacity : .1}, c);
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${ytop - 6}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L + 4, ytop + 2, 'je Bissen');
-  for (const t of [50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, c); txt(c, X(t), base + 15, t, {'text-anchor' : 'middle'}); }
+  for (const t of [50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, c); txt(c, X(t), base + 15, t, {'text-anchor' : t === 800 ? 'end' : 'middle'}); }
   txt(c, R, base + 30, 'Verweildauer (Schritte)', {'text-anchor' : 'end'});
   const names = [];
   for (const [name, a, colour] of FOOD) {
@@ -570,7 +583,7 @@ function drawGut() {
     el('rect', {x : x0, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, bars);
     el('rect', {x : x0, y, width : W * lo, height : 12, rx : 3, fill : colour, opacity : .8}, bars);
     el('rect', {x : x0 + W * lo, y, width : Math.max(1.5, W * (hi - lo)), height : 12, fill : colour, opacity : .35}, bars);
-    if (sore.length) { const s0 = Math.min(...sore), s1 = Math.max(...sore); el('rect', {x : x0 + W * s0 - 2, y : y - 3, width : Math.max(4, W * (s1 - s0) + 4), height : 18, rx : 3, fill : 'none', stroke : '#ef6f6f', 'stroke-width' : 1.5, 'stroke-dasharray' : '3 2', 'data-sore' : name}, bars); }
+    if (sore.length) { const s0 = Math.min(...sore), s1 = Math.max(...sore); const mid = x0 + W * (s0 + s1) / 2, wide = Math.max(16, W * (s1 - s0) + 6); el('rect', {x : clamp(mid - wide / 2, x0 - 3, x0 + W + 3 - wide), y : y - 3, width : wide, height : 18, rx : 3, fill : 'none', stroke : '#ef6f6f', 'stroke-width' : 1.5, 'stroke-dasharray' : '3 2', 'data-sore' : name}, bars); }
     txt(bars, 296, y + 10, Math.round(lo * 100) + (hi - lo > .005 ? '–' + Math.round(hi * 100) : '') + ' %', {'text-anchor' : 'end', class : 'value'});
     y += 21;
   }
@@ -580,68 +593,78 @@ function drawGut() {
   drawPainSense();
   drawNutrientSense();
 }
-// Pain and food cells answer the same way (cppn_brain.cc, adapted_response): a stimulus s gives
-// s / (s + threshold + adapted) per cell, the adapted level following s with rate 1/τ, τ from 4 to
-// 48 steps. Laid out like the tail: on the left a slider for how strong the bellyache or the food
-// is (only to try out), with each group's threshold on it; groups with different thresholds join
-// one after another (recruitment). On the right what each group tells the brain over time while
-// it lasts, until Stop; under it each group's habit, from getting used to it soon to reporting on.
-const SENSE_STEPS = 120, SENSE_STOP = 80;
-const groupColour = (i, n) => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
-function senseGroups(id, cell, word, stimulusAt) {
+// Pain and food cells, as proposed to Fable and David (engine today: s / (s + θ + m), cppn_brain.cc
+// adapted_response): a group answers r = s² / (s² + (θ + 3·m)²), sharp around its threshold θ, and
+// m follows the stimulus s at rate 1/τ. Getting used to it, a lasting stimulus sinks to a tenth of
+// the first answer; τ from 400 steps (hardly gets used to it) to 4 (at once).
+// Laid out like the tail: on the left how strong the bellyache or the food is (only to try out),
+// with each group's threshold on it; above, what each group tells the brain over time; right under
+// it the stimulus itself, when it comes and goes, with the thresholds across it; at the bottom the
+// chosen group's habit.
+const SENSE_STEPS = 120, SENSE_LASTS = 80;
+const groupColour = i => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
+const tauOf = h => 400 * Math.pow(4 / 400, h);
+function senseAnswer(g, stimulus) {
+  let m = 0;
+  return stimulus.map(s => { const d = g.gate + 3 * m, r = s > 0 ? s * s / (s * s + d * d) : 0; m += (s - m) / tauOf(g.habit); return r; });
+}
+function senseGroups(id, cell, word, stimulusAt, colour) {
   const svg = document.getElementById(id); svg.replaceChildren();
-  const L = 56, R = 290, top = 30, base = 150, X = st => L + (R - L) * st / SENSE_STEPS;
-  // One scale for up to three groups, so that a group joining does not shrink the others.
-  const groups = cell.groups, n = groups.length, scale = 3.3, Y = v => base - (base - top) * v / scale;
-  const redraw = () => senseGroups(id, cell, word, stimulusAt);
-  regler(svg, {x : 26, top, base, word, value : cell.level, setValue : v => { cell.level = v; redraw(); }, name : id + 'level',
-    marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i, n), chosen : i === cell.chosen, set : v => { g.gate = clamp(v, .02, .98); cell.chosen = i; redraw(); }}))});
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top}`, stroke : '#3b6a6c', fill : 'none'}, svg);
-  txt(svg, L, base + 15, 'Schritte');
-  for (const st of [40, 80, 120]) txt(svg, X(st), base + 15, st, {'text-anchor' : st === 120 ? 'end' : 'middle'});
-  // Groups stacked, the most sensitive below.
+  const redraw = () => senseGroups(id, cell, word, stimulusAt, colour);
+  const hold = () => { cell.held = true; }, free = () => { cell.held = false; redraw(); };
+  const L = 56, R = 290, top = 30, base = 126, X = st => L + (R - L) * st / SENSE_STEPS;
+  const groups = cell.groups, n = groups.length;
+  const stimulus = Array.from({length : SENSE_STEPS + 1}, (_, st) => stimulusAt(st, cell.level));
+  const answers = groups.map(g => senseAnswer(g, stimulus));
+  // Groups stacked, the most sensitive below; the scale makes room for the whole stack.
   const order = groups.map((g, i) => i).sort((p, q) => groups[p].gate - groups[q].gate);
-  let under = Array(SENSE_STEPS + 1).fill(0), any = false;
+  const total = stimulus.map((_, st) => answers.reduce((t, a) => t + a[st], 0));
+  const scale = settle(cell, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), Y = v => base - (base - top) * v / scale;
+  regler(svg, {x : 26, top, base, word, value : cell.level, setValue : v => { cell.level = v; redraw(); }, start : hold, end : free, name : id + 'level',
+    marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === cell.chosen, set : v => { g.gate = clamp(v, .02, .98); cell.chosen = i; redraw(); }}))});
+  grid(svg, L, R, top, base, scale);
+  txt(svg, L + 4, top - 8, 'Meldung an das Gehirn');
+  let under = Array(SENSE_STEPS + 1).fill(0);
   for (const i of order) {
-    const g = groups[i], said = []; let adapted = 0;
-    for (let st = 0; st <= SENSE_STEPS; st++) { const sig = stimulusAt(st, cell.level); said.push(sig > 0 ? sig / (sig + g.gate + adapted) : 0); adapted += (sig - adapted) / g.tau; }
-    const over = under.map((u, st) => u + said[st]);
-    if (Math.max(...said) > .01) any = true;
+    const over = under.map((u, st) => u + answers[i][st]);
     const d = 'M' + over.map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, st) => [st, y]).reverse().map(([st, y]) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
-    const band = el('path', {d, fill : groupColour(i, n), opacity : .75, stroke : i === cell.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === cell.chosen ? 1.4 : .6, class : 'chip'}, svg);
+    const band = el('path', {d, fill : groupColour(i), opacity : .75, stroke : i === cell.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === cell.chosen ? 1.4 : .6, class : 'chip'}, svg);
     band.addEventListener('pointerdown', () => { cell.chosen = i; redraw(); });
     under = over;
   }
-  txt(svg, L + 4, top + 4, word === 'Bauchweh' ? 'Reaktion auf Bauchweh' : 'Reaktion auf Futter');
-  for (const k of [1, 2]) el('path', {d : `M${L} ${Y(k * 1.1)} H${R}`, stroke : '#2d5059', 'stroke-width' : .8, opacity : .7}, svg);
-  if (any) { el('path', {d : `M${X(SENSE_STOP)} ${top - 6} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, svg); txt(svg, X(SENSE_STOP) + 5, top + 4, 'Stop'); }
-  // Groups: a cross on the chosen one's band to take it away, a plus for another.
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, svg);
+  // The stimulus under the answers, on the slider's scale, with the thresholds across it.
+  const S0 = base + 8, S1 = base + 40, SY = v => S1 - (S1 - S0) * v;
+  el('rect', {x : L, y : S0, width : R - L, height : S1 - S0, fill : '#0f2c34'}, svg);
+  el('path', {d : 'M' + stimulus.map((v, st) => `${X(st).toFixed(1)} ${SY(v).toFixed(1)}`).join(' L') + ` L${R} ${S1} L${L} ${S1} Z`, fill : colour, opacity : .45, stroke : colour, 'stroke-width' : 1.5}, svg);
+  groups.forEach((g, i) => el('path', {d : `M${L} ${SY(g.gate)} H${R}`, stroke : groupColour(i), 'stroke-width' : i === cell.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', opacity : .9}, svg));
+  txt(svg, L + 4, S0 + 11, word);
+  const TY = S1 + 15;
+  txt(svg, L, TY, 'Schritte');
+  for (const st of [40, 80, 120]) txt(svg, X(st), TY, st, {'text-anchor' : st === 120 ? 'end' : 'middle'});
+  // Groups: a cross beside the chosen one's mark to take it away, a plus under the slider for another.
   const chip = (x, y, sign, act, key) => { const g = el('g', {class : 'chip', ['data-' + key] : 1}, svg);
     el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, g);
     el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, g);
     g.addEventListener('click', act); };
-  if (n < 3) chip(26 + 4, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), tau : 20}); cell.chosen = groups.length - 1; redraw(); }, 'add');
-  // The cross sits beside the chosen group's mark on the slider.
-  if (n > 1) chip(26 + 4 + 20, base - (base - top) * groups[cell.chosen].gate, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
-  // The chosen group's habit: from getting used to it soon (left) to reporting on (right).
-  // How soon the chosen group gets used to what lasts: the engine lets it settle at about half of
-  // its first answer, sooner or later.
-  const cg = groups[cell.chosen], HY = base + 50, hx0 = L + 56, hx1 = R - 56;
+  if (n < 3) chip(30, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), habit : .5}); cell.chosen = groups.length - 1; redraw(); }, 'add');
+  if (n > 1) chip(50, base - (base - top) * groups[cell.chosen].gate, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
+  // The chosen group's habit: from not getting used to it (left) to getting used to it at once.
+  const cg = groups[cell.chosen], HY = TY + 30, hx0 = L + 40, hx1 = R - 40;
   const grad = el('linearGradient', {id : id + 'habit'}, el('defs', {}, svg));
-  el('stop', {offset : 0, 'stop-color' : groupColour(cell.chosen, n), 'stop-opacity' : .15}, grad); el('stop', {offset : 1, 'stop-color' : groupColour(cell.chosen, n), 'stop-opacity' : .9}, grad);
+  el('stop', {offset : 0, 'stop-color' : groupColour(cell.chosen), 'stop-opacity' : .9}, grad); el('stop', {offset : 1, 'stop-color' : groupColour(cell.chosen), 'stop-opacity' : .15}, grad);
   el('rect', {x : hx0, y : HY - 4, width : hx1 - hx0, height : 8, rx : 4, fill : `url(#${id}habit)`}, svg);
   txt(svg, L - 8, HY - 12, 'Gewöhnung');
-  txt(svg, hx0 - 12, HY + 4, 'schnell', {'text-anchor' : 'end'}); txt(svg, hx1 + 12, HY + 4, 'langsam');
-  const tauX = t => hx0 + (hx1 - hx0) * (Math.log(t / 4) / Math.log(12));
-  drag(svg, el('circle', {cx : tauX(cg.tau), cy : HY, r : 7}, svg), p => { cg.tau = clamp(4 * Math.pow(12, clamp((p.x - hx0) / (hx1 - hx0), 0, 1)), 4, 48); redraw(); }, id + 'habit');
+  txt(svg, hx0 - 10, HY + 4, 'keine', {'text-anchor' : 'end'}); txt(svg, hx1 + 10, HY + 4, 'stark');
+  drag(svg, el('circle', {cx : hx0 + (hx1 - hx0) * cg.habit, cy : HY, r : 7}, svg), p => { cg.habit = clamp((p.x - hx0) / (hx1 - hx0), 0, 1); redraw(); }, id + 'habit', hold, free);
   svg.setAttribute('viewBox', `0 0 300 ${HY + 14}`);
 }
 // What the cells feel at the slider's level: bellyache at once while it lasts; food flows in over
 // a few steps and ebbs after (flow × 0.8 per step).
-const ACHE_AT = (st, level) => st < SENSE_STOP ? level : 0;
-const FOOD_AT = (st, level) => st < SENSE_STOP ? level * (1 - Math.pow(.8, st + 1)) : level * (1 - Math.pow(.8, SENSE_STOP)) * Math.pow(.8, st - SENSE_STOP + 1);
-const drawPainSense = () => senseGroups('gutpain', gut.ache, 'Bauchweh', ACHE_AT);
-const drawNutrientSense = () => senseGroups('gutsense', gut.food, 'Futter', FOOD_AT);
+const ACHE_AT = (st, level) => st < SENSE_LASTS ? level : 0;
+const FOOD_AT = (st, level) => st < SENSE_LASTS ? level * (1 - Math.pow(.8, st + 1)) : level * (1 - Math.pow(.8, SENSE_LASTS)) * Math.pow(.8, st - SENSE_LASTS + 1);
+const drawPainSense = () => senseGroups('gutpain', gut.ache, 'Bauchweh', ACHE_AT, '#ef8f8f');
+const drawNutrientSense = () => senseGroups('gutsense', gut.food, 'Futter', FOOD_AT, '#e3cf94');
 // The film: the tube is drawn once; each frame only sets its pieces' widths and moves the
 // mouthfuls. The muscle works in turns: it eases in, sends waves along the whole gut, the next one
 // leaving when the last is just past halfway, and eases out. A wave narrows the gut behind a
@@ -722,21 +745,14 @@ const recruitOrder = () => tail.nodes.map((n, i) => i).sort((p, q) => tail.nodes
 const needScale = () => Math.max(6, 1.1 * tail.nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command), 0));
 // While a grip is held a scale only grows, so that the grip can be taken back to where it was;
 // once it is let go the scale glides back to fit. Room for more is made at once.
-let glide = 0;
-function scaleTo(key, need) {
-  const now = tail[key];
-  if (now == null || need >= now) return (tail[key] = need);
-  if (tail.held) return now;
-  if (now - need < need * .005) return (tail[key] = need);
-  if (!glide) glide = requestAnimationFrame(() => { glide = 0; drawTail(); });
-  return (tail[key] = now + (need - now) * .2);
-}
+const scaleTo = (key, need) => settle(tail, key, need, drawTail);
 const holdScale = () => { tail.held = true; }, freeScale = () => { tail.held = false; drawTail(); };
 const pick = i => { tail.chosen = i; drawTail(); };
 const fmt = v => v.toFixed(1).replace('.', ',');
 function grid(svg, L, R, top, base, scale) {
-  const step = scale > 24 ? 8 : scale > 12 ? 4 : scale > 6 ? 2 : 1;
-  for (let v = step; v < scale; v += step) el('path', {d : `M${L} ${base - (base - top) * v / scale} H${R}`, stroke : '#2d5059', 'stroke-width' : .8, opacity : .7}, svg);
+  // Two to four unlabelled lines at a round step, whatever the scale.
+  const unit = Math.pow(10, Math.floor(Math.log10(scale / 3))), step = unit * [1, 2, 5, 10].find(m => scale / (unit * m) <= 4);
+  for (let v = step; v < scale * .98; v += step) el('path', {d : `M${L} ${base - (base - top) * v / scale} H${R}`, stroke : '#2d5059', 'stroke-width' : .8, opacity : .7}, svg);
 }
 // The end of the swim, the same grey line in both pictures; it cannot be moved.
 const swimEnd = (svg, x, top, base) => el('path', {d : `M${x} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, svg);
@@ -766,6 +782,8 @@ function drawTail() {
   });
   const cx0 = MX0 + tail.chosen * width, ch = hOf(cn);
   el('rect', {x : cx0 - 1, y : MB - ch - 2, width : width + 2, height : ch + 4, rx : 4, fill : 'none', stroke : '#fff3c4', 'stroke-width' : 2, 'pointer-events' : 'none'}, svg);
+  // The same cells grip as in the force chart, on the chosen bundle's top: up for more cells.
+  drag(svg, el('rect', {x : cx0 + width / 2 - 6, y : MB - ch - 8, width : 12, height : 12, rx : 2}, svg), p => { tail.chosenCells = cn.cells = clamp(Math.round((MB - p.y - 4) / CELL), 1, MOST_CELLS); drawTail(); }, 'mapcells', holdScale, freeScale);
   if (nodes.length > 1) {
     const x = cx0 + width - 2, y = MB - ch - 2, g = el('g', {class : 'chip', 'data-remove' : 1}, svg);
     el('circle', {cx : x, cy : y, r : 6.5, fill : '#0f2c34', stroke : '#e8a2b5'}, g);
@@ -822,10 +840,10 @@ function drawTail() {
       txt(c, X(word), CY(ex[peak]) - 7, 'Erschöpfung', {'text-anchor' : 'middle', style : 'fill:#eaa886'});
     }
   }
-  // The chosen bundle's cells: a square on its band's top edge, between the axis and the word
-  // above, nearer the word; pulled up or down for more or fewer cells.
+  // The chosen bundle's cells: a square on its band's top edge, over the r of "Schritte"; pulled up
+  // or down for more or fewer cells.
   if (outline.over) {
-    const st = Math.round(word * .65), per = forceOf(cn.fast) * driveOf(cn, tail.command) * (nodeSwim(cn, tail.command).force[st] / Math.max(1e-9, nodeSwim(cn, tail.command).force[0]));
+    const st = Math.round(20 / (R - L) * STEPS), per = forceOf(cn.fast) * driveOf(cn, tail.command) * (nodeSwim(cn, tail.command).force[st] / Math.max(1e-9, nodeSwim(cn, tail.command).force[0]));
     if (per > 1e-6) {
       const y0 = Y(outline.over[st]), under0 = outline.under[st];
       drag(c, el('rect', {x : X(st) - 6, y : y0 - 6, width : 12, height : 12, rx : 2}, c), p => { const sc = tail.scale; tail.chosenCells = cn.cells = clamp(Math.round(((base - p.y) / (base - top) * sc - under0) / per), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
@@ -838,7 +856,7 @@ function drawTail() {
   const n = document.getElementById('tailniche'); n.replaceChildren();
   const NT = 28, NB = 118, w = tail.wriggle, water = 1 - .5 * w, sand = 1 / (12 * Math.pow(3 / 12, w));
   const vWater = speedOf(tail.total, water, 14), vSand = speedOf(tail.total, sand, 3);
-  const vScale = scaleTo('vScale', Math.max(1, 1.15 * Math.max(...speedOf(tail.total, 1, 14)))), NY = v => NB - (NB - NT) * v / vScale;
+  const vScale = scaleTo('vScale', Math.max(.2, 1.15 * Math.max(...vWater, ...vSand))), NY = v => NB - (NB - NT) * v / vScale;
   regler(n, {x : 26, top : NT, base : NB, word : 'Schlängeln', value : w, setValue : v => { tail.wriggle = v; drawTail(); }, start : holdScale, end : freeScale, name : 'wriggle'});
   grid(n, L, R, NT, NB, vScale);
   el('path', {d : `M${L} ${NB} H${R} M${L} ${NB} V${NT}`, stroke : '#3b6a6c', fill : 'none'}, n);
