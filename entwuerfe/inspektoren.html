@@ -138,6 +138,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Schutz und Bremse</h4>
     <svg id="defenseuse" viewBox="0 0 300 138"></svg>
   </section>
+  <section class="panel" aria-label="Pigment">
+    <h2>Organ</h2><h3>Pigment</h3>
+    <h4 class="first">Farbe</h4>
+    <svg id="pigfish" viewBox="0 0 300 76"></svg>
+    <h4>Farbzellen</h4>
+    <svg id="pigwheel" viewBox="0 0 300 164"></svg>
+    <h4>Farbwechsel</h4>
+    <svg id="pigtime" viewBox="0 0 300 118"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1584,5 +1593,77 @@ function defenseCharts(organ, redraw, hold, free, felt) {
   d.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense');
+// ---------- Pigment ----------
+// Colour cells (body_plan.cc:398–440, 877–884, 1330–1332, 1618–1625, material.hh:175): each group
+// takes away light round its hue (gene q1, width as the scent and colour cells have), as much as
+// its cells; spread out it takes away all of that, drawn in a fifth of it; it spreads as far as it
+// is driven, following over its time. The skin (0.62/0.66/0.64) then reflects
+// 0.5/(0.5 + taken away) of each colour. Above: the fish at rest and with every group spread;
+// middle: the hue circle, each group's hue and width, the circle coloured with what a group there
+// does; below: the fish's colour over the steps while the chosen group is driven, then not.
+const PIG = {groups : [{hue : 200, width : .25, cells : 4, command : .9}, {hue : 20, width : .2, cells : 2, command : 0}], chosen : 0};
+const hueAff = (hue, c, width) => { const off = Math.abs(((hue - 120 * c) % 360 + 540) % 360 - 180); return tuningAffinityDeg(off, width); };
+const tuningAffinityDeg = (off, width) => { const w = Math.pow(clamp(width, 0, 1), 4), sg = 12 + 168 * width * width; return w + (1 - w) * Math.exp(-off * off / (2 * sg * sg)); };
+const skinColour = absorb => [.62, .66, .64].map((r, c) => r * .5 / (.5 + Math.max(0, absorb[c])));
+const rgbCss = col => `rgb(${col.map(v => Math.round(255 * clamp(v * 1.35, 0, 1))).join(',')})`;
+const pigAbsorb = drive => [0, 1, 2].map(c => PIG.groups.reduce((t, g, i) => t + g.cells * .25 * hueAff(g.hue, c, g.width) * (.2 + .8 * drive(g, i)), 0));
+function drawPigment() {
+  const redraw = drawPigment, hold = () => { PIG.held = true; }, free = () => { PIG.held = false; redraw(); };
+  const svg = document.getElementById('pigfish'); svg.replaceChildren();
+  const fishAt = (x, y, s, colour, word) => { const g = el('g', {transform : `translate(${x} ${y}) scale(${s})`}, svg);
+    el('path', {d : BODY, fill : colour, stroke : '#3b6a6c', 'stroke-width' : 1.2 / s}, g); el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#1a1a1a'}, g);
+    txt(svg, x + 135 * s, y + 124 * s, word, {'text-anchor' : 'middle'}); };
+  fishAt(6, 6, .5, rgbCss(skinColour(pigAbsorb(() => 0))), 'in Ruhe');
+  fishAt(156, 6, .5, rgbCss(skinColour(pigAbsorb(() => 1))), 'ganz ausgebreitet');
+  svg.setAttribute('viewBox', '0 0 300 76');
+
+  // ---- The hue circle: coloured with what a group at that hue does to the skin. ----
+  const w = document.getElementById('pigwheel'); w.replaceChildren();
+  const cx = 150, cy = 84, R = 64;
+  for (let h = 0; h < 360; h += 6) {
+    const a0 = (h - 90) * Math.PI / 180, a1 = (h + 6 - 90) * Math.PI / 180, col = skinColour([0, 1, 2].map(c => 1.2 * hueAff(h + 3, c, .25)));
+    el('path', {d : `M${cx + R * Math.cos(a0)} ${cy + R * Math.sin(a0)} A${R} ${R} 0 0 1 ${cx + R * Math.cos(a1)} ${cy + R * Math.sin(a1)} L${cx + (R - 14) * Math.cos(a1)} ${cy + (R - 14) * Math.sin(a1)} A${R - 14} ${R - 14} 0 0 0 ${cx + (R - 14) * Math.cos(a0)} ${cy + (R - 14) * Math.sin(a0)} Z`, fill : rgbCss(col)}, w);
+  }
+  const at = (h, r) => [cx + r * Math.cos((h - 90) * Math.PI / 180), cy + r * Math.sin((h - 90) * Math.PI / 180)];
+  PIG.groups.forEach((g, i) => {
+    const half = Math.min(179, (12 + 168 * g.width * g.width) * 1.18), [x0, y0] = at(g.hue - half, R + 10), [x1, y1] = at(g.hue + half, R + 10), big = half > 90 ? 1 : 0;
+    el('path', {d : `M${x0} ${y0} A${R + 10} ${R + 10} 0 ${big} 1 ${x1} ${y1}`, fill : 'none', stroke : i === PIG.chosen ? '#eaa886' : '#5d8384', 'stroke-width' : i === PIG.chosen ? 2.5 : 1.5, class : 'chip'}, w).addEventListener('pointerdown', () => { PIG.chosen = i; redraw(); });
+    const [bx, by] = at(g.hue, R - 7), ball = el('circle', {cx : bx, cy : by, r : 7}, w);
+    if (i === PIG.chosen) {
+      drag(w, ball, p => { g.hue = (Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI + 90 + 360) % 360; redraw(); }, 'pighue', hold, free);
+      for (const [x, y, k] of [[x0, y0, 'a'], [x1, y1, 'b']]) drag(w, el('rect', {x : x - 5, y : y - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, w), p => {
+        const off = Math.abs(((Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI + 90 - g.hue) % 360 + 540) % 360 - 180); g.width = clamp(Math.sqrt(Math.max(0, off / 1.18 - 12) / 168), 0, 1); redraw(); }, 'pigwidth' + k, hold, free);
+    } else { ball.setAttribute('class', 'chip'); ball.setAttribute('style', 'fill:#153a40;stroke:#5d8384;stroke-width:1.6'); ball.addEventListener('pointerdown', () => { PIG.chosen = i; redraw(); }); }
+  });
+  // The chosen group's cells: a number in the middle, + and − beside it.
+  const g = PIG.groups[PIG.chosen];
+  txt(w, cx, cy + 4, g.cells + ' Zellen', {'text-anchor' : 'middle', class : 'head'});
+  const chip = (x, y, sign, act, on = true) => { const gg = el('g', {class : 'chip', opacity : on ? 1 : .3}, w);
+    el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, gg);
+    el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : sign === '−' ? `M${x - 4} ${y} h8` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, gg);
+    if (on) gg.addEventListener('click', act); };
+  chip(cx - 14, cy + 22, '−', () => { g.cells = Math.max(1, g.cells - 1); redraw(); }, g.cells > 1);
+  chip(cx + 14, cy + 22, '+', () => { g.cells = Math.min(8, g.cells + 1); redraw(); }, g.cells < 8);
+  if (PIG.groups.length < 4) { chip(270, 160, '+', () => { PIG.groups.push({hue : (g.hue + 120) % 360, width : .25, cells : 3, command : 0}); PIG.chosen = PIG.groups.length - 1; redraw(); }); txt(w, 258, 164, 'Farbzellen', {'text-anchor' : 'end'}); }
+  if (PIG.groups.length > 1) chip(cx + 30, cy - 18, '×', () => { PIG.groups.splice(PIG.chosen, 1); PIG.chosen = 0; redraw(); });
+  w.setAttribute('viewBox', '0 8 300 164');
+
+  // ---- The fish's colour over the steps: the chosen group driven, then let go. ----
+  const c = document.getElementById('pigtime'); c.replaceChildren();
+  const L = 56, R2 = 290, top = 26, base = 96, N = 200, X = st => L + (R2 - L) * st / N;
+  regler(c, {x : 26, top, base, word : 'Befehl', value : g.command, setValue : v => { g.command = v; redraw(); }, start : hold, end : free, name : 'pigcmd'});
+  let disp = PIG.groups.map(() => 0);
+  for (let st = 0; st < N; st++) {
+    disp = disp.map((d, i) => d + .06 * ((i === PIG.chosen ? (st < 120 ? PIG.groups[i].command : 0) : 0) - d));
+    el('rect', {x : X(st), y : top, width : (R2 - L) / N + .6, height : base - top, fill : rgbCss(skinColour(pigAbsorb((gr, i) => disp[i])))}, c);
+  }
+  el('path', {d : `M${X(120)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
+  txt(c, X(120) + 5, top - 8, 'Stop');
+  txt(c, L, top - 8, 'Farbe des Fisches');
+  txt(c, L, base + 15, 'Schritte');
+  for (const st of [100, 200]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 200 ? 'end' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment();
 </script>
