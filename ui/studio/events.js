@@ -1,5 +1,5 @@
 import {newFishDocument} from './canvas_placement.js';
-import {HORMONES, MOTOR_KIND} from '../schema.js';
+import {BLOOD_SUBSTANCE, HORMONES, MOTOR_KIND} from '../schema.js';
 import {keepLayers, switchLayer} from './view/layers.js';
 import {ORGAN_BY_KEY, PAIRINGS, organFunction} from './model/organs.js';
 import {nextVisionProfile} from './model/retina.js';
@@ -39,7 +39,6 @@ import {
   teachOrgan,
   unbindReceptor,
   updateCenter,
-  updateCellGrowth,
   updateGrowth,
   updateWire,
   usedSites,
@@ -53,6 +52,14 @@ import {
 } from './model/assemblies.js';
 import {BODY_MAP} from './view/scene.js';
 import {label} from './view/kit.js';
+import {
+  lifeOff,
+  lifeReceptor,
+  lifeShape,
+  MIX_WIDTH,
+  setLifeAction,
+  steers
+} from './view/life_cycle.js';
 import {GENOME_FILE_ID} from './view/shell.js';
 
 const PASS = Symbol('pass');
@@ -158,6 +165,18 @@ const withSubstance = (doc, index) =>
     index >= HORMONES.levels || doc.substances.some(sub => sub.index === index)
         ? doc
         : addSubstance(doc, HORMONES.levels, index);
+// What a life action answers: one substance (or the maturity), or, for `index` null, a mix around
+// the substance it reads now. An action that did not steer yet starts from its usual shape.
+function lifeSourceChange(studio, id, key, index, doc = studio.state.document) {
+  const receptor = lifeReceptor(findCenter(doc, id)?.center ?? {}, key), on = steers(receptor);
+  const substance = index ?? receptor?.substance ?? 0;
+  // The reserve reads the other way round (a cell dies when it runs low): it starts afresh.
+  const fresh = !on || substance === BLOOD_SUBSTANCE.reserve ||
+                receptor?.substance === BLOOD_SUBSTANCE.reserve;
+  const base = fresh ? lifeShape(key, studio.state.capabilities, substance) : {substance};
+  return setLifeAction(index === null ? doc : withSubstance(doc, index), id, key,
+                       {...base, width : index === null ? MIX_WIDTH : 0});
+}
 const keepIfRoom = (studio, doc) => doc ? keep(studio, doc) : studio.notice(label('status.noRoom'));
 const ITEM_KINDS = Object.freeze(
     [ 'contact', 'generated', 'nerve', 'bundle', 'wire', 'center', 'assembly', 'organ' ]);
@@ -603,14 +622,30 @@ export const FISH_CLICKS = Object.freeze([
   ],
   [ '[data-copy-cell]', (studio, e) => keep(studio,
       updateCenter(studio.state.document, e.dataset.copyCell, {copies : Number(e.dataset.copyCount)})) ],
-  [ '[data-development-effect]', (studio, e) => showChoice(studio, state => {
-      state.developmentEffect = e.dataset.developmentEffect === 'birth' ? 'birth' : Number(e.dataset.developmentEffect);
-  }) ],
-  [ '[data-birth-substance]', (studio, e) => {
-      const index = Number(e.dataset.birthSubstance);
-      keep(studio, updateCellGrowth(withSubstance(studio.state.document, index),
-                                    e.dataset.centerId, {active : 1, substance : index}));
+  // A cell's life cycle: ticking an action, choosing what it answers, opening that choice.
+  [ '[data-life-tick]', (studio, e) => {
+      const {centerId : id, lifeAction : key} = e.dataset, doc = studio.state.document;
+      const receptor = lifeReceptor(findCenter(doc, id)?.center ?? {}, key);
+      studio.state.lifeMenu = null;
+      keep(studio, setLifeAction(doc, id, key, steers(receptor) ? lifeOff(key)
+                                                                 : lifeShape(key, studio.state.capabilities)));
   } ],
+  [ '[data-life-source]', (studio, e) => {
+      const {centerId : id, lifeAction : key, lifeSource : value} = e.dataset;
+      studio.state.lifeMenu = null;
+      keep(studio, lifeSourceChange(studio, id, key, value === 'mix' ? null : Number(value)));
+  } ],
+  [ '[data-life-new]', (studio, e) => {
+      const {centerId : id, lifeAction : key} = e.dataset;
+      const doc = addSubstance(studio.state.document, HORMONES.levels);
+      studio.state.lifeMenu = null;
+      if (doc)
+        keep(studio, lifeSourceChange(studio, id, key, doc.substances.at(-1).index, doc));
+  } ],
+  [ '[data-life-menu]', (studio, e) => showChoice(studio, state => {
+      const open = e.dataset.centerId + ':' + e.dataset.lifeAction;
+      state.lifeMenu = state.lifeMenu === open ? null : open;
+  }) ],
   [
     '[data-receptor-substance]',
     (studio, e) => {
@@ -659,7 +694,6 @@ export const FISH_CHANGES = Object.freeze([
     studio.state.contactLimit = Number(e.value);
     studio.refreshScene();
   } ],
-  [ 'cellGrowthActive', (studio, e) => keep(studio, updateCellGrowth(studio.state.document, e.dataset.cellGrowthActive, {active : e.checked ? 1 : 0})) ],
   [
     'substanceName',
     (studio, e) => keep(studio, setSubstance(studio.state.document, Number(e.dataset.substanceName),

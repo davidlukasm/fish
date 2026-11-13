@@ -17,7 +17,6 @@ import {
   findCenter,
   organOf,
   growsWith,
-  lifePhase,
   NOTICEABLE_AFFINITY,
   organTypes,
   producers,
@@ -35,7 +34,7 @@ import {
   shownSubstance,
   mainHormone
 } from '../model/document.js';
-import {escapeText, fixed, glyph, placedGlyph, pointMarks} from './markup.js';
+import {escapeText, fixed, glyph, pointMarks} from './markup.js';
 import {formatNumber, joinParts, namedText, percent, t, tList} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, iconSwitch, label, SWITCH_SYMBOL} from './kit.js';
 import {BIRTH_ICON, DIRECTION_ICON, EFFECT_ICON, GROWTH_ICON, TOOL_ICON} from './icons.js';
@@ -45,7 +44,6 @@ import {typeChips} from './types.js';
 import {senseSensitivity} from './sense_marks.js';
 import {boundedRow, sensePicture} from './sense_curves.js';
 import {glandPictures, pouredShares} from './gland_effect.js';
-import {lifeResponses} from '../model/cell_life.js';
 
 const centerWheel = (state, center, choices, reads) =>
     substanceWheel(state, {x : center.q1, y : center.q2, width : center.qwidth, active : true}, {
@@ -282,7 +280,6 @@ function curveKey(colour, bounded) {
                                    colour + '" fill-opacity="' + fixed((k + 1) / K.steps) + '"/>')
                    .join('');
 }
-const PHASE_POINTER = Object.freeze({half : 8, height : 14});
 const CURVE_DIGITS = 3;
 const curveNumber = value => formatNumber(
     value, Math.max(CURVE_DIGITS, value ? -Math.floor(Math.log10(Math.abs(value))) : 0));
@@ -336,143 +333,6 @@ export function effectCurve(state, receptor, effect, target = null) {
          curveLabels(curve, effect) + '<polyline class="aid-response-line" points="' + points +
          '"/>' + (target ? curveHandles(state, receptor, effect, target) : '') + '</svg>';
 }
-const PHASE_OPEN = .05;
-export function phasePatch(handle, fx) {
-  const m = clamp((fx * CURVE.width - CURVE.left) / (CURVE.right - CURVE.left));
-  return handle === 'start' ? {start : m < PHASE_OPEN ? null : m}
-                            : {end : m > 1 - PHASE_OPEN ? null : Math.max(PHASE_OPEN, m)};
-}
-const LIFE_ROW = Object.freeze({
-  height : 230,
-  y : 144,
-  left : 4,
-  width : 85,
-  sample : 10,
-  gap : 3,
-  radius : 7,
-  axis : 126,
-  title : 10,
-  above : 4
-});
-// Along the bottom the cell's life runs from the young fish to the grown one.
-const AGE_KEY = Object.freeze({young : 9, grown : 16, y : 124});
-const ageKey = () =>
-    placedGlyph(GROWTH_ICON, AGE_KEY.young, {x : CURVE.left, y : AGE_KEY.y}, {line : true}) +
-    placedGlyph(GROWTH_ICON, AGE_KEY.grown, {x : CURVE.right, y : AGE_KEY.y}, {line : true});
-export const LIFE_EFFECTS = Object.freeze([ BIRTH, HORMONE_EFFECT.output, HORMONE_EFFECT.death ]);
-const lifeKind = effect => effect === BIRTH                   ? 'birth'
-                           : effect === HORMONE_EFFECT.output ? 'output'
-                                                              : 'death';
-const lifeReceptor = (focus, effect) => effect === BIRTH ? focus.growth : focus.receptors[effect];
-export function lifePhaseEditor(state, focus, chosen = BIRTH) {
-  const phase = lifePhase(focus);
-  const context = previewContextOf(state);
-  const profile =
-      lifeResponses(state.capabilities, focus, context,
-                    Array.from({length : CURVE.points + 1}, (_, i) => i / CURVE.points));
-  const x = m => CURVE.left + (CURVE.right - CURVE.left) * m,
-        y = v => CURVE.bottom - (CURVE.bottom - CURVE.top) * v;
-  const points = profile.map(p => fixed(x(p.maturity)) + ',' + fixed(y(p.output))).join(' ');
-  const birth = profile.map(p => fixed(x(p.maturity)) + ',' + fixed(y(p.birth))).join(' ');
-  const dead = profile.slice(0, -1)
-                   .map((p, i) => {
-                     return p.dead
-                                ? '<rect class="aid-death-zone" x="' + fixed(x(i / CURVE.points)) +
-                                      '" y="' + CURVE.top + '" width="' +
-                                      fixed((CURVE.right - CURVE.left) / CURVE.points + .1) +
-                                      '" height="' + (CURVE.bottom - CURVE.top) + '"/>'
-                                : '';
-                   })
-                   .join('');
-  const mark = (handle, value, open, title) => {
-    const at = fixed(x(value ?? open)), line = ' x1="' + at + '" y1="' + CURVE.top + '" x2="' + at +
-                                               '" y2="' + CURVE.bottom + '"';
-    const anchor = (value ?? open) < .5 ? 'start' : 'end';
-    return '<g class="aid-phase-mark' + (value === null ? ' open' : '') + '" data-phase-handle="' +
-           handle + '"><title>' + label(title) + '</title><line class="aid-phase-grip"' + line +
-           '/><line' + line + '/><path d="M' + at + ' ' + CURVE.bottom + ' l' +
-           -PHASE_POINTER.half + ' ' + -PHASE_POINTER.height + ' h' + 2 * PHASE_POINTER.half +
-           ' Z"/><text class="aid-life-word" x="' + at + '" y="' +
-           (CURVE.top - LIFE_ROW.above - (handle === 'end' ? 12 : 0)) + '" text-anchor="' + anchor +
-           '">' + escapeText(label('development.mark.' + handle + (value === null ? 'Open' : ''))) +
-           '</text></g>';
-  };
-  const pick = effect => ' data-development-effect="' + effect + '"' +
-                         (effect === chosen ? ' aria-pressed="true"' : '');
-  const name = effect => label('development.' + lifeKind(effect));
-  const line = (effect, className, values) =>
-      '<g class="aid-life-line"' + pick(effect) + '><title>' + name(effect) +
-      '</title><polyline class="aid-life-hit" points="' + values + '"/><polyline class="' +
-      className + '" points="' + values + '"/></g>';
-  // A key entry: the badge of the substance the answer's receptor reads, its line and its name.
-  const sample = (effect, from) => {
-    const to = from + LIFE_ROW.sample, y = LIFE_ROW.y;
-    return effect === HORMONE_EFFECT.death
-               ? '<rect class="aid-death-zone" x="' + from + '" y="' + (y - LIFE_ROW.sample / 2) +
-                     '" width="' + LIFE_ROW.sample + '" height="' + LIFE_ROW.sample + '"/>'
-               : '<polyline class="' + (effect === BIRTH ? 'aid-life-birth' : 'aid-response-line') +
-                     '" points="' + from + ',' + y + ' ' + to + ',' + y + '"/>';
-  };
-  const badge = (effect, k) => {
-    const receptor = lifeReceptor(focus, effect), on = receptor?.active;
-    // The badge leads its entry, so each name ends in open space before the next badge.
-    const at = LIFE_ROW.left + k * LIFE_ROW.width + LIFE_ROW.radius,
-          from = at + LIFE_ROW.radius + LIFE_ROW.gap;
-    // A substance no gland makes yet stays an outline, as on the wheel.
-    const empty = on && !substanceDefined(state, receptor.substance);
-    return '<g class="aid-life-badge ' + lifeKind(effect) + (effect === chosen ? ' chosen' : '') +
-           (empty ? ' empty' : '') + '"' + pick(effect) +
-           (on ? ' style="--substance:' + substanceColor(receptor.substance) + '"' : '') +
-           '><title>' + escapeText(joinParts([
-             name(effect),
-             (on ? substanceName(state, receptor.substance) : label('inspector.answersToNothing'))
-           ])) +
-           '</title>' + sample(effect, from) + '<text class="aid-life-name" x="' +
-           (from + LIFE_ROW.sample + LIFE_ROW.gap) + '" y="' + LIFE_ROW.y + '" dy=".35em">' +
-           escapeText(label('development.key.' + lifeKind(effect))) + '</text><circle cx="' +
-           fixed(at) + '" cy="' + LIFE_ROW.y + '" r="' + LIFE_ROW.radius + '"/>' +
-           (on ? '<text x="' + fixed(at) + '" y="' + LIFE_ROW.y +
-                     '" dy=".35em" text-anchor="middle">' +
-                     escapeText(substanceMark(state, receptor.substance)) + '</text>'
-               : '') +
-           '</g>';
-  };
-  // The axes: maturity along the bottom between the young and the grown fish, the answer upwards.
-  const words = '<text class="aid-life-word" x="' + fixed((CURVE.left + CURVE.right) / 2) +
-                '" y="' + LIFE_ROW.axis + '" text-anchor="middle">' +
-                escapeText(label('inspector.maturity')) + '</text><text class="aid-life-word" ' +
-                'transform="translate(' + LIFE_ROW.title + ' ' +
-                fixed((CURVE.top + CURVE.bottom) / 2) + ') rotate(-90)" text-anchor="middle">' +
-                escapeText(label('development.answer')) + '</text>';
-  const stages =
-      [ 0, CURVE.points / 2, CURVE.points ]
-          .map((at, k) => {
-            const p = profile[at], px = 42 + k * 88, py = 195;
-            const signal =
-                p.dead ? '<path class="aid-effect-cross" d="M-7-7L7 7M7-7L-7 7"/>'
-                       : '<path class="aid-effect-line ghost" d="M9 0h25" stroke-width="7"/>' +
-                             '<path class="aid-effect-line" d="M9 0h25" stroke-width="' +
-                             fixed(7 * p.output) +
-                             '"/><circle class="aid-effect-cell" r="9" fill-opacity="' +
-                             fixed(p.output) + '"/>';
-            return '<g transform="translate(' + px + ' ' + py + ')">' + signal +
-                   '<text class="aid-life-word" y="26" text-anchor="middle">' +
-                   escapeText(label('development.stage.' + k)) + '</text></g>';
-          })
-          .join('');
-  return '<svg viewBox="0 0 ' + CURVE.width + ' ' + LIFE_ROW.height +
-         '" class="aid-response-chart aid-life-picture" data-phase="' + escapeText(focus.id) +
-         '" role="img" aria-label="' + label('inspector.lifePhase') + '"><title>' +
-         escapeText(label('development.phaseHandles')) + '</title>' +
-         '<g class="aid-life-line"' + pick(HORMONE_EFFECT.death) + '><title>' +
-         name(HORMONE_EFFECT.death) + '</title>' + dead + '</g>' + curveAxes() + ageKey() + words +
-         line(HORMONE_EFFECT.output, 'aid-response-line', points) +
-         line(BIRTH, 'aid-life-birth', birth) +
-         mark('start', phase.start, 0, 'inspector.phaseStart') +
-         mark('end', phase.end, 1, 'inspector.phaseEnd') + LIFE_EFFECTS.map(badge).join('') +
-         '<text class="aid-life-word" x="130" y="172" text-anchor="middle">' +
-         escapeText(label('development.builtSignal')) + '</text>' + stages + '</svg>';
-}
 // The wheel is wide enough for the body's three signals, a sixteenth of a turn apart in their
 // quarter, to stand apart.
 export const WHEEL =
@@ -505,7 +365,7 @@ export function substanceName(state, index) {
           : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigue')
                                               : tList('studio.inspector.substanceLetters')[index]);
 }
-function substanceWheel(state, profile, {
+export function substanceWheel(state, profile, {
   choices = [],
   attribute = '',
   extra = '',
@@ -513,7 +373,8 @@ function substanceWheel(state, profile, {
   selected = null,
   reads = Infinity,
   widthTarget = null,
-  role = 'receptor'
+  role = 'receptor',
+  legend = true
 }) {
   const wheel = state.capabilities;
   if (!wheel)
@@ -591,14 +452,15 @@ function substanceWheel(state, profile, {
                 })
           .join('');
   // The list says what the shares are: what a receptor binds, a sense reads, a gland gives off.
-  const legend = '<p class="aid-wheel-names-title">' + escapeText(label('wheel.' + role)) +
-                 '</p><div class="aid-wheel-names">' + names + '</div>';
+  const list = legend ? '<p class="aid-wheel-names-title">' + escapeText(label('wheel.' + role)) +
+                            '</p><div class="aid-wheel-names">' + names + '</div>'
+                      : '';
   return '<div class="aid-wheel-figure" data-wheel-figure><div class="aid-wheel-map"><svg class="aid-substance-wheel"' +
          (pad ? ' data-vector-pad="' + escapeText(pad) + '" data-wheel tabindex="0"' : '') +
          ' viewBox="0 0 ' + WHEEL.size + ' ' + WHEEL.height + '" role="img" aria-label="' +
          label('inspector.hormoneProfile') + '"><circle cx="' + WHEEL.centre + '" cy="' +
          WHEEL.centre + '" r="' + WHEEL.radius + '" class="aid-wheel-ring"/>' + halo + marker +
-         points.join('') + handle + mark + '</svg></div>' + legend + '</div>';
+         points.join('') + handle + mark + '</svg></div>' + list + '</div>';
 }
 function receptorProfile(state, receptor) {
   const [x, y] = state.capabilities ? wheelPlace(state.capabilities, receptor.substance) : [ 0, 0 ];
@@ -637,14 +499,12 @@ const receptorEditor = (state, center, effects, effect) =>
         .join('') +
     '</div>' + receptorBody(state, center, effect);
 function receptorWheel(state, receptor, target) {
-  const birth = target.endsWith(':' + BIRTH), body = target === GROWTH;
+  const body = target === GROWTH;
   const cut = target.lastIndexOf(':'), id = target.slice(0, cut), effect = target.slice(cut + 1);
   return substanceWheel(state, receptorProfile(state, receptor), {
     choices : Array.from({length : body ? HORMONES.levels : state.capabilities.regulators},
                          (_, index) => index),
-    attribute : body    ? 'data-growth-substance'
-                : birth ? 'data-birth-substance'
-                        : 'data-receptor-substance',
+    attribute : body ? 'data-growth-substance' : 'data-receptor-substance',
     reads : body ? HORMONES.levels : state.capabilities?.regulators,
     extra : body ? ''
                  : ' data-center-id="' + escapeText(id) + '" data-receptor-effect="' + effect + '"',
@@ -653,22 +513,20 @@ function receptorWheel(state, receptor, target) {
   });
 }
 export function receptorBody(state, center, effect) {
-  const birth = effect === BIRTH, receptor = birth ? center.growth : center.receptors[effect];
+  const receptor = center.receptors[effect];
   if (!receptor)
     return '';
   const target = center.id + ':' + effect;
-  const active = birth ? 'data-cell-growth-active="' + escapeText(center.id) + '"'
-                       : 'data-receptor-active="' + escapeText(center.id) +
-                             '" data-receptor-effect="' + effect + '"';
+  const active =
+      'data-receptor-active="' + escapeText(center.id) + '" data-receptor-effect="' + effect + '"';
   const toggle = iconSwitch('receptor', receptor.active, label('inspector.receptorActive'), active);
   // A receptor that does not answer has nothing else to set until it is switched on.
   if (!receptor.active)
     return toggle;
   return toggle + '<div class="aid-receptor-picture"><div class="aid-wheel-close">' +
          receptorWheel(state, receptor, target) + '</div>' +
-         (birth ? ''
-                : effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
-                              {capabilities : state.capabilities, center})) +
+         effectScene(effect, substanceColor(receptor.substance), receptorEnds(receptor),
+                     {capabilities : state.capabilities, center}) +
          variationGraphic(receptor.spread_receptors, target, 'spread_receptors',
                           receptorVariationExamples(receptor, state.capabilities)) +
          '</div>' + effectCurve(state, receptor, effect, target);

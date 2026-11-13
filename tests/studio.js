@@ -376,11 +376,11 @@ async function checkBloodReceptors(model, capabilities) {
       const context = {...empty, [key] : level};
       const living = {...center, receptors : center.receptors.map(r => ({...r}))};
       living.receptors[E.death].active = 0;
-      const [life] = lifeResponses(wheel, living, context, [ context.maturity ]);
+      const [life] = lifeResponses(wheel, living, [ context ]);
       assert.ok(Math.abs(life.birth - (level ? .8 : 0)) < 1e-12);
       assert.ok(Math.abs(life.output - (level ? .2 : 1)) < 1e-12);
       assert.equal(driveContext({...state, previewContext : context}, living).output, life.output);
-      const [mortal] = lifeResponses(wheel, center, context, [ context.maturity ]);
+      const [mortal] = lifeResponses(wheel, center, [ context ]);
       assert.equal(mortal.dead, !!level);
     }
     const learning = learningInspector(state);
@@ -566,10 +566,14 @@ async function checkInspectorSubstances(model, capabilities, clicks) {
   assert.equal(studio.state.document.substances.length, 0,
                'Creating and binding a substance is a single undo step');
   studio.stepHistory('redo');
-  click('birth-substance', 4, {centerId : id});
-  assert.equal(model.findCenter(studio.state.document, id).center.growth.substance, 4);
-  click('birth-substance', HORMONES.levels, {centerId : id});
+  // The life cycle chooses what a cell's coming into being answers: a substance, or maturity.
+  click('life-source', 4, {centerId : id, lifeAction : 'birth'});
+  const born = model.findCenter(studio.state.document, id).center.growth;
+  assert.equal(born.substance, 4);
+  assert.ok(born.active && born.sensitivity > 0, 'Choosing a substance ticks the action');
+  click('life-source', HORMONES.levels, {centerId : id, lifeAction : 'birth'});
   assert.equal(studio.state.document.substances.length, 2, 'Maturity is not a new free hormone');
+  await checkLifeCycle(studio, id, click, model);
   assert.deepEqual(studio.state.selected, selected);
   assert.deepEqual(model.compileDocument(before, sites).groups.map(g => g.name),
                    model.compileDocument(studio.state.document, sites).groups.map(g => g.name));
@@ -598,6 +602,52 @@ async function checkInspectorSubstances(model, capabilities, clicks) {
     assert.equal(studio.state.document.substances[0].index, 1);
     assert.deepEqual(studio.state.selected, chosen);
   }
+}
+
+// The life cycle of a cell: ticks, choices and grips change the cell's three receptors as the
+// picture shows them.
+async function checkLifeCycle(studio, id, click, model) {
+  const {lifeCycle, lifeGripPatch, lifeReceptor, steers} =
+      await import('../ui/studio/view/life_cycle.js');
+  const {HORMONE_EFFECT, BLOOD_SUBSTANCE} = await import('../ui/schema.js');
+  const center = () => model.findCenter(studio.state.document, id).center;
+  // Back to a cell that runs by itself in all three.
+  for (const key of ['birth', 'death', 'output'])
+    if (steers(lifeReceptor(center(), key)))
+      click('life-tick', '', {centerId : id, lifeAction : key});
+  let html = lifeCycle(studio.state, center());
+  assert.match(html, /aid-life-cover/, 'A cell left to itself shows its life covered');
+  assert.doesNotMatch(html, /data-life-grip/);
+  click('life-tick', '', {centerId : id, lifeAction : 'output'});
+  click('life-tick', '', {centerId : id, lifeAction : 'death'});
+  html = lifeCycle(studio.state, center());
+  for (const grip of ['start', 'end', 'turn'])
+    assert.match(html, new RegExp('data-life-grip="' + grip + '"'),
+                 'A cell whose activity and death follow maturity has its ' + grip + ' grip');
+  const output = () => center().receptors[HORMONE_EFFECT.output];
+  const axis = String(BLOOD_SUBSTANCE.maturity);
+  // Dragging the right end down lowers the activity the cell ends with, nothing else.
+  const before = {...output()};
+  const end = lifeGripPatch(studio.state, center(), axis, 'end', .9, .9, null);
+  assert.ok(end.output && end.death, 'The right grip carries the end of activity and the death');
+  assert.ok(before.baseline + end.output.sensitivity < before.baseline + before.sensitivity,
+            'Dragged down, the cell ends less active');
+  assert.ok(end.death.half > .7, 'Dragged to the right, the cell dies later');
+  // The left end, dragged up, raises the activity it starts with and keeps the end.
+  const start = lifeGripPatch(studio.state, center(), axis, 'start', .3, .2, null);
+  assert.ok(start.output.baseline > -1 && start.output.baseline <= 1);
+  assert.ok(Math.abs(start.output.baseline + start.output.sensitivity -
+                     (before.baseline + before.sensitivity)) < 1e-9,
+            'Moving the start keeps where the activity ends');
+  // Death answering the reserve leaves the life picture and gets a picture of its own.
+  click('life-source', BLOOD_SUBSTANCE.reserve, {centerId : id, lifeAction : 'death'});
+  html = lifeCycle(studio.state, center());
+  assert.match(html, new RegExp('data-life-axis="' + BLOOD_SUBSTANCE.reserve + '"'));
+  assert.equal(center().receptors[HORMONE_EFFECT.death].substance, BLOOD_SUBSTANCE.reserve);
+  // A mix widens the receptor so that it hears its neighbours, and shows the profile.
+  click('life-source', 'mix', {centerId : id, lifeAction : 'output'});
+  assert.ok(output().width > 0);
+  assert.match(lifeCycle(studio.state, center()), /aid-life-profile/);
 }
 
 async function checkVariationPictures() {
@@ -1958,7 +2008,8 @@ async function checkHormoneSystems(model, capabilities) {
       substance : HORMONES.levels,
       half : .3
     };
-    const life = lifeResponses(sitesResult, mortal, context, [ 0, .3, .6, 1 ]);
+    const life = lifeResponses(sitesResult, mortal,
+                               [ 0, .3, .6, 1 ].map(maturity => ({...context, maturity})));
     assert.ok(life.every(p => p.dead && p.output === 0 && p.birth === 0),
               'An early death remains final when its triggering receptor later quietens');
     const aquarium = JSON.parse(readFileSync(join(root, 'ui/text/de/nerve_map.json'), 'utf8'));
@@ -2759,11 +2810,7 @@ async function checkHormoneSystems(model, capabilities) {
                       /data-add-center|aid-center-tabs|data-field="tau"|data-field="copies"/);
   assert.match(
       panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0}),
-      /data-phase-handle="start"/);
-  assert.deepEqual(panels.phasePatch('start', 0), {start : null});
-  assert.deepEqual(panels.phasePatch('end', 1), {end : null});
-  assert.ok(panels.phasePatch('end', 0).end > 0, 'A cell dies at some maturity, never at none');
-  assert.ok(Math.abs(panels.phasePatch('end', (36 + 107) / 260).end - .5) < 1e-9);
+      /data-life-tick/, 'A chosen cell shows its life cycle in the hormone tool');
   assert.ok(sitesResult.nearDepth[0] > 0 && sitesResult.nearDepth[1] > sitesResult.nearDepth[0]);
   const sensorEffects = [
     ...panels.inspector({...state, tool : 'hormone', effect : E.output, focusSubstance : 0})
@@ -3104,7 +3151,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
   const planningInspector = panels.inspector(planned);
   assert.match(planningInspector, /aid-contact-plan/);
   assert.match(planningInspector, /data-preview-handle="situation"/);
-  assert.match(planningInspector, /data-phase=/);
+  assert.match(planningInspector, /aid-life-cycle/);
   assert.doesNotMatch(planningInspector, /NaN|undefined|studio\.[a-zA-Z]/);
 
   assert.ok(response.example.viable, JSON.stringify(response.example.checks));

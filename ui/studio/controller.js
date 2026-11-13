@@ -29,7 +29,6 @@ import {
   removeWire,
   selectionCenters,
   setBends,
-  setLifePhase,
   updateField,
   validateDocument
 } from './model/document.js';
@@ -715,10 +714,6 @@ export class OrganStudio {
   example() {
     const names = {fish : label('app.example'), growth : label('systems.growth.substance')};
     this.loadFish(exampleDocument(names, this.state.sites, this.state.capabilities));
-  }
-  lifePhase(id, phase) {
-    const c = this.state.capabilities;
-    return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSpan);
   }
   removeChosen() {
     const doc = this.state.document;

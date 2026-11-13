@@ -57,7 +57,6 @@ import {PANEL_WIDTH, panelStyle} from './view/shell.js';
 import {
   GROWTH,
   BIRTH,
-  phasePatch,
   receptorCurvePatch,
   wheelMarks,
   wheelPatch,
@@ -68,6 +67,8 @@ import {nerveTissuePatch} from './view/nerve_cell.js';
 import {variationPatch} from './view/cell_tissue.js';
 import {contactCapacityPatch} from './view/contact_plan.js';
 import {previewPatch} from './view/development.js';
+import {lifeGripPatch, lifeGripStart} from './view/life_cycle.js';
+import {HORMONE_EFFECT} from '../schema.js';
 import {cellPatch, label} from './view/kit.js';
 import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
 
@@ -90,6 +91,7 @@ const HANDLES = Object.freeze({
   variation : {follow : 'variationPointer'},
   memory : {follow : 'memoryPointer'},
   drive : {follow : 'drivePointer'},
+  life : {follow : 'lifePointer'},
   response : {follow : 'responsePointer'},
   nerve : {follow : 'nervePointer'},
   region : {follow : 'regionPointer'},
@@ -238,10 +240,11 @@ export const GRIPS = Object.freeze([
     start : (studio, g, h) => ({target : h.dataset.wheelWidth, handle : 'width'})
   },
   {
-    graphic : '[data-phase]',
-    handle : '[data-phase-handle]',
-    held : 'drive',
-    start : (studio, g, h) => ({id : g.dataset.phase, handle : h.dataset.phaseHandle})
+    graphic : '[data-life-cycle]',
+    handle : '[data-life-grip]',
+    held : 'life',
+    start : (studio, g, h) =>
+        ({id : g.dataset.lifeCycle, axis : g.dataset.lifeAxis, handle : h.dataset.lifeGrip})
   },
   {
     graphic : '[data-effector-graphic]',
@@ -578,6 +581,25 @@ export const handleMethods = {
                                         : updateReceptor(doc, centerId, effect, patch),
                      'receptor:' + drag.target);
   },
+  // A grip of a cell's life cycle: when it comes into being or dies, how active it starts or ends,
+  // where its activity turns and how steeply.
+  lifePointer(event) {
+    const drag = this.handleDrag, doc = this.state.document;
+    const center = findCenter(doc, drag.id)?.center;
+    if (!center)
+      return;
+    const {fx, fy} = pointerShare(event, drag.rect);
+    drag.from ??= lifeGripStart(this.state, center, drag.axis, fy);
+    const changes = lifeGripPatch(this.state, center, drag.axis, drag.handle, fx, fy, drag.from);
+    let next = doc;
+    if (changes.birth)
+      next = updateCellGrowth(next, drag.id, changes.birth) ?? next;
+    for (const key of ['output', 'death'])
+      if (changes[key])
+        next = updateReceptor(next, drag.id, HORMONE_EFFECT[key], changes[key]) ?? next;
+    if (next !== doc)
+      this.draftDesign(next, 'life:' + drag.id);
+  },
   drivePointer(event) {
     const drag = this.handleDrag;
     const {fx, fy} = pointerShare(event, drag.rect);
@@ -588,8 +610,6 @@ export const handleMethods = {
     if (drag.handle === 'copies')
       return this.draftDesign(updateCenter(this.state.document, drag.id, cellPatch(fx, fy)),
                               'cells:' + drag.id);
-    if (drag.handle === 'start' || drag.handle === 'end')
-      this.draftDesign(this.lifePhase(drag.id, phasePatch(drag.handle, fx)), 'drive:' + drag.id);
   },
   effectorPointer(drag, fx, fy) {
     const doc = this.state.document, organ = findOrgan(doc, drag.id), sites = this.state.sites;

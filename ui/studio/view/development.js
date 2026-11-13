@@ -10,13 +10,8 @@ import {escapeText, fixed, placedGlyph} from './markup.js';
 import {formatNumber, formatSigned, joinParts, namedText, percent, t} from '../../strings.js';
 import {clamp} from '../../units.js';
 import {GROWTH_ICON} from './icons.js';
-import {
-  LIFE_EFFECTS,
-  lifePhaseEditor,
-  receptorBody,
-  substanceMark,
-  substanceName
-} from './substances.js';
+import {substanceMark, substanceName} from './substances.js';
+import {lifeCycle} from './life_cycle.js';
 import {cellVariation} from './cell_tissue.js';
 import {substanceColor} from '../../hormones.js';
 
@@ -149,12 +144,10 @@ export function previewControls(state) {
          '" cy="' + fixed(at.y) + '" r="' + S.knob + '"><title>' + escapeText(situation) +
          '</title></circle>' + drops + '</svg></details>';
 }
+// A cell's life cycle (when it comes into being, how active it is, when it dies) and how much its
+// copies differ.
 export function cellDevelopment(state, center) {
   if (!center || !state.capabilities)
     return '';
-  const chosen =
-      LIFE_EFFECTS.includes(state.developmentEffect) ? state.developmentEffect : LIFE_EFFECTS[0];
-  return '<details class="aid-cell-development"><summary>' + word('title') + '</summary>' +
-         lifePhaseEditor(state, center, chosen) + receptorBody(state, center, chosen) +
-         '</details>' + cellVariation(center);
+  return lifeCycle(state, center) + cellVariation(center);
 }
