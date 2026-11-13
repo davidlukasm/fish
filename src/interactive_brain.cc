@@ -95,8 +95,9 @@ void InteractiveSession::write_brain_neurons(std::ostream &out, const Individual
       site[neuron_site_column::side] = n.location.side;
       std::array<double, field::HORMONE_EFFECTS> hormone_response{};
       for (int k = 0; k < field::HORMONE_EFFECTS; ++k)
-        hormone_response[k] =
-            n.hormone_receptors[k].response(b.hormones().levels(), body_maturity(b));
+        hormone_response[k] = n.hormone_receptors[k].response(
+            b.hormones().levels(), body_maturity(b), bounded_filling(b.energy, reserve_capacity(b)),
+            b.motor().fatigue);
       const auto activity =
           b.brain() ? (n.functions.sensory() > 0 ? b.brain()->signal(i) : b.brain()->state()[i])
                     : 0;

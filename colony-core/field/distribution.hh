@@ -36,8 +36,8 @@ inline TraitValues draw_traits(const TraitValues &mean, std::uint64_t seed, std:
 inline HormoneReceptor receptor_parameters(const TraitValues &v) {
   namespace O = cppn::output;
   HormoneReceptor r;
-  r.affinity =
-      hormone_affinity<REGULATORS>(v[O::quality1], v[O::quality2], (v[O::quality_width] + 1) * .5f);
+  r.affinity = hormone_affinity<BLOOD_SUBSTANCES>(v[O::quality1], v[O::quality2],
+                                                  (v[O::quality_width] + 1) * .5f);
   r.baseline = v[O::capacity];
   r.sensitivity = HORMONE_SENSITIVITY_SPAN * v[O::field_width];
   r.steepness = HORMONE_STEEPNESS_SPAN * std::clamp(v[O::time_constant], 0.f, 1.f);

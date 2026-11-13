@@ -87,7 +87,7 @@ Receptor read_receptor(std::istream &input) {
              between(r.sensitivity, -field::HORMONE_SENSITIVITY_SPAN,
                      field::HORMONE_SENSITIVITY_SPAN) &&
              between(r.half, float(field::HORMONE_HALF_MIN), float(field::HORMONE_HALF_MAX)) &&
-             r.substance >= 0 && r.substance < field::REGULATORS && between(r.width, 0, 1) &&
+             r.substance >= 0 && r.substance < field::BLOOD_SUBSTANCES && between(r.width, 0, 1) &&
              between(r.steepness, 0, field::HORMONE_STEEPNESS_SPAN),
          "invalid receptor properties");
   r.active = active != 0;

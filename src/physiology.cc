@@ -386,8 +386,9 @@ void Body::grow_brain(const Genome &g, const PhysiologyParameters &p, bool prote
   const double available = protected_life
                                ? PROTECTED_CONSTRUCTION_ENERGY
                                : std::max(0., energy - missing - reserve - queries - rest_cost);
-  pending_build_cost_ =
-      brain_->grow(hormones_.levels(), body_maturity(*this), available, p.neural_cost);
+  pending_build_cost_ = brain_->grow(hormones_.levels(), body_maturity(*this),
+                                     bounded_filling(energy, reserve_capacity(*this)),
+                                     motor_.fatigue, available, p.neural_cost);
   if (!protected_life) {
     energy -= pending_build_cost_;
     record_incubation(pending_build_cost_);

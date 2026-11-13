@@ -354,6 +354,64 @@ std::string brain_saved(const field::Network &n) {
   n.write_runtime(out);
   return out.str();
 }
+void body_substances_control_cell_life() {
+  for (int substance : {field::RESERVE_SUBSTANCE, field::FATIGUE_SUBSTANCE}) {
+    const double reserve = substance == field::RESERVE_SUBSTANCE ? 1 : 0;
+    const double fatigue = substance == field::FATIGUE_SUBSTANCE ? 1 : 0;
+    field::HormoneReceptor receptor;
+    receptor.affinity[substance] = 1;
+    receptor.sensitivity = 1;
+    receptor.half = .25f;
+    auto tissue = learning_tissue();
+    tissue->neurons[2].development_receptor = receptor;
+    field::Network growing(tissue, true);
+    for (int t = 0; t < 160; ++t)
+      growing.grow({}, .4, 0, 0, 100);
+    check(growing.life(2) == field::Network::CellLife::Precursor,
+          "without its body substance a cell waits to form");
+    for (int t = 0; t < 40; ++t)
+      growing.grow({}, .4, reserve, fatigue, 100);
+    check(growing.life(2) == field::Network::CellLife::Active,
+          "reserve and fatigue can each trigger cell formation");
+
+    auto active_tissue = learning_tissue();
+    auto &output = active_tissue->neurons[0].hormone_receptors[field::Output];
+    output = receptor;
+    output.baseline = 1;
+    output.sensitivity = -2;
+    field::Network active(active_tissue);
+    active.set_body_levels(.4, 0, 0);
+    active.step({1}, {}, 223);
+    check(active.signal(0) == 1, "the unbound output receptor leaves activity intact");
+    active.set_body_levels(.4, reserve, fatigue);
+    active.step({1}, {}, 223);
+    check(std::abs(active.signal(0) - .2f) < 1e-6,
+          "reserve and fatigue each modulate actual cell output");
+    field::Network restored(active_tissue);
+    std::istringstream saved(brain_saved(active));
+    restored.read_runtime(saved);
+    check(brain_saved(active) == brain_saved(restored), "the brain retains its full blood context");
+    for (int t = 0; t < 8; ++t) {
+      active.step({1}, {}, 223);
+      restored.step({1}, {}, 223);
+      check(brain_saved(active) == brain_saved(restored),
+            "restored body receptors continue identically without fresh body inputs");
+    }
+
+    auto dying_tissue = learning_tissue();
+    dying_tissue->neurons[2].hormone_receptors[field::Death] = receptor;
+    field::Network dying(dying_tissue), precursor(dying_tissue, true);
+    dying.set_body_levels(.4, reserve, fatigue);
+    dying.step({0}, {}, 223);
+    check(dying.dead(2), "body substances can kill an active cell during a brain step");
+    for (unsigned t = 0; t < field::CELL_DEVELOPMENT_INTERVAL; ++t)
+      precursor.grow({}, .4, reserve, fatigue, 100);
+    check(precursor.dead(2), "body substances can end a cell before its birth");
+    for (int t = 0; t < 80; ++t)
+      precursor.grow({}, .4, 0, 0, 100);
+    check(precursor.dead(2), "removing the body stimulus never resurrects a dead cell");
+  }
+}
 void contact_turnover_pays_for_its_construction() {
   auto s = learning_tissue();
   s->edges.clear();
@@ -404,7 +462,7 @@ void development_preserves_identity_and_reserves_capacity() {
   check(rejected, "living development always learns");
   double charged = 0;
   for (int t = 0; t < 160; ++t)
-    charged += n.grow({}, .2, 100);
+    charged += n.grow({}, .2, 1, 0, 100);
   check(n.life(0) == field::Network::CellLife::Active &&
             n.life(2) == field::Network::CellLife::Precursor,
         "cell growth is locally gated");
@@ -414,7 +472,7 @@ void development_preserves_identity_and_reserves_capacity() {
   field::Hormones dose{};
   dose[0] = 1;
   for (int t = 0; t < 40; ++t)
-    charged += n.grow(dose, 1, 100);
+    charged += n.grow(dose, 1, 1, 0, 100);
   check(n.life(2) == field::Network::CellLife::Active && n.cell_revision() > revision,
         "late cells can appear after body maturity");
   check(n.state()[1] == state[1] && n.slot_count() <= n.reserved_slots(),
@@ -424,15 +482,15 @@ void development_preserves_identity_and_reserves_capacity() {
   std::istringstream in(brain_saved(n));
   restored.read_runtime(in);
   for (int t = 0; t < 20; ++t) {
-    n.grow(dose, 1, 100);
-    restored.grow(dose, 1, 100);
+    n.grow(dose, 1, 1, 0, 100);
+    restored.grow(dose, 1, 1, 0, 100);
     n.step({float(t % 2)}, dose, 22);
     restored.step({float(t % 2)}, dose, 22);
     check(brain_saved(n) == brain_saved(restored), "development and learning resume together");
   }
   field::Network unfunded(tissue, true);
   for (int t = 0; t < 200; ++t)
-    check(unfunded.grow(dose, 1, 0) == 0, "zero budget has no physical construction charge");
+    check(unfunded.grow(dose, 1, 1, 0, 0) == 0, "zero budget has no physical construction charge");
   check(unfunded.active_count() == 0 && unfunded.slot_count() == 0,
         "unfunded planning creates no tissue");
   auto isolated = learning_tissue();
@@ -446,7 +504,7 @@ void development_preserves_identity_and_reserves_capacity() {
   }
   field::Network dying(isolated, true);
   for (int t = 0; t < 160; ++t)
-    dying.grow({}, 1, 100);
+    dying.grow({}, 1, 1, 0, 100);
   for (int t = 0; t < 200; ++t)
     dying.step({0}, {}, 1);
   check(dying.dead_count() == 0,
@@ -456,7 +514,7 @@ void development_preserves_identity_and_reserves_capacity() {
         "the inherited death receptors control permanent cell death");
   const auto dead = dying.dead_count();
   for (int t = 0; t < 100; ++t)
-    dying.grow({}, 1, 100);
+    dying.grow({}, 1, 1, 0, 100);
   check(dying.dead_count() == dead && dying.life(1) == field::Network::CellLife::Dead,
         "a dead cell identity never grows again");
   field::EmbryoConstruction stage(*tissue);
@@ -940,6 +998,7 @@ int main() {
     fibre_kinds_differ_in_force_and_endurance();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
+    body_substances_control_cell_life();
     development_preserves_identity_and_reserves_capacity();
     const auto g = Genome::load(EXAMPLE_GENOME);
     compact_founders_use_their_actual_reservation(g);

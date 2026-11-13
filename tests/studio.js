@@ -165,7 +165,9 @@ async function checkBloodReceptors(model, capabilities) {
   const {learningInspector} = await import('../ui/studio/view/learning.js');
   const {regionSettings} = await import('../ui/studio/view/circuit.js');
   const {trialMethods} = await import('../ui/studio/trials.js');
-  const wheel = {...capabilities, regulators : capabilities.bloodSubstances};
+  assert.equal(capabilities.regulators, capabilities.bloodSubstances,
+               'The engine exposes all blood substances to cell receptors');
+  const wheel = capabilities;
   const placed =
       model.addNeuron(model.newDocument('Blutstoffe'), 'learn', wheel.sites, {x : 380, y : 325});
   const empty = {hormones : Array(wheel.hormones).fill(0), maturity : 0, reserve : 0, fatigue : 0};

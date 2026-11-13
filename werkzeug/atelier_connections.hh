@@ -419,7 +419,7 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
                sigma_max = field::HORMONE_SIGMA_MIN +
                            (field::HORMONE_SIGMA_MAX - field::HORMONE_SIGMA_MIN) *
                                std::clamp(wanted.width + wanted.spread_receptors, 0.f, 1.f);
-  for (int k = 0; k < field::REGULATORS; ++k) {
+  for (int k = 0; k < field::BLOOD_SUBSTANCES; ++k) {
     const double a = field::substance_angle(k);
     const double px = std::cos(a), py = std::sin(a);
     const double near_x = outside(float(px), float(x[0]), float(x[1])),

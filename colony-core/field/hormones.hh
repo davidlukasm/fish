@@ -17,7 +17,7 @@ enum HormoneEffect {
   Consolidation,
   HORMONE_EFFECTS
 };
-constexpr int HORMONES = 6, REGULATORS = HORMONES + 1;
+constexpr int HORMONES = 6;
 // Besides the hormones the blood carries what the body reports of itself: its maturity, its
 // energy reserve and the exhaustion of its fast muscle fibres.
 constexpr int MATURITY_SUBSTANCE = HORMONES, RESERVE_SUBSTANCE = HORMONES + 1,
@@ -75,7 +75,7 @@ inline std::array<float, N> hormone_affinity(float x, float y, float width) {
   return a;
 }
 struct HormoneReceptor {
-  std::array<float, REGULATORS> affinity{};
+  std::array<float, BLOOD_SUBSTANCES> affinity{};
   float baseline = 0, sensitivity = 0, half = .05;
   // The answer rises with the concentration to the power 2^steepness.
   float steepness = 0;
@@ -83,10 +83,8 @@ struct HormoneReceptor {
     const double x = std::pow(c / half, std::exp2(steepness));
     return float(x / (1 + x));
   }
-  float response(const Hormones &h, double maturity = 0) const {
-    double c = affinity[MATURITY_SUBSTANCE] * maturity;
-    for (int k = 0; k < HORMONES; ++k)
-      c += affinity[k] * h[k];
+  float response(const Hormones &h, double maturity, double reserve, double fatigue) const {
+    const double c = blood_stimulus(affinity, h, maturity, reserve, fatigue);
     return std::clamp(baseline + sensitivity * bound(c), -1.f, 1.f);
   }
   float occupancy(const Hormones &h) const {

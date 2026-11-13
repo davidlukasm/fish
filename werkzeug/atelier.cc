@@ -986,7 +986,8 @@ int main(int argc, char **argv) {
                 << ",\"cppnLimit\":" << CPPN_EDIT_LIMIT
                 << ",\"cppnSharpness\":" << evolution::GAUSSIAN_SHARPNESS
                 << ",\"cppnRange\":" << evolution::WEIGHT_RANGE
-                << ",\"hormones\":" << field::HORMONES << ",\"regulators\":" << field::REGULATORS
+                << ",\"hormones\":" << field::HORMONES
+                << ",\"regulators\":" << field::BLOOD_SUBSTANCES
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
                 << ",\"substanceTurns\":" << substance_turns_report()
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range

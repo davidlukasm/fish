@@ -122,7 +122,29 @@ void inactive_growth_ignores_saved_settings() {
   field::Hormones hormones;
   hormones.fill(1);
   assert(genome.blueprint->growth_receptor.occupancy(hormones) == 0);
-  assert(genome.blueprint->neurons[0].development_receptor.response(hormones, 1) == 1);
+  assert(genome.blueprint->neurons[0].development_receptor.response(hormones, 1, 1, 0) == 1);
+}
+void body_receptors_survive_compilation() {
+  for (int substance : {field::RESERVE_SUBSTANCE, field::FATIGUE_SUBSTANCE}) {
+    std::istringstream encoded("1 0 1 0.25 " + std::to_string(substance) + " 0 0 0");
+    const auto receptor = read_receptor(encoded);
+    assert(receptor.substance == substance);
+    auto plan = cells(1);
+    plan.groups[0].growth = receptor;
+    for (int effect : {field::Output, field::Death, field::Learning})
+      plan.groups[0].receptors[effect] = receptor;
+    fishsim::Genome genome;
+    genome.cppn = Builder().build(plan);
+    genome.compile(false);
+    assert(assess(plan, genome).ok());
+    const auto &cell = genome.blueprint->neurons.at(0);
+    const double reserve = substance == field::RESERVE_SUBSTANCE ? .25 : 0;
+    const double fatigue = substance == field::FATIGUE_SUBSTANCE ? .25 : 0;
+    assert(std::abs(cell.development_receptor.response({}, 0, reserve, fatigue) - .5f) < 1e-5);
+    for (int effect : {field::Output, field::Death, field::Learning})
+      assert(std::abs(cell.hormone_receptors[effect].response({}, 0, reserve, fatigue) - .5f) <
+             1e-5);
+  }
 }
 void receptor_spread_checks_sensitive_cells() {
   auto plan = cells(1);
@@ -240,7 +262,7 @@ int region_trace(const std::string &mode) {
   const int every = spine ? 1 : 50;
   // spine-rest: a long swim, a long rest and a new swim.
   for (int step = 0; step < (resting ? 9000 : spine ? 5200 : 6200); ++step) {
-    brain.set_maturity(std::min(1., .65 + .35 * step / 800));
+    brain.set_body_levels(std::min(1., .65 + .35 * step / 800), 1, 0);
     const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
     const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
     const float food = step < 2000 ? (fed_start || (!late && step % 200 < 40) ? .6f : 0)
@@ -324,6 +346,7 @@ int main(int argc, char **argv) {
   shared_addresses_preserve_each_wire();
   assessment_checks_learning_and_every_cell();
   inactive_growth_ignores_saved_settings();
+  body_receptors_survive_compilation();
   receptor_spread_checks_sensitive_cells();
   receptor_steepness_is_continuous();
   property_overrides_reach_outputs();

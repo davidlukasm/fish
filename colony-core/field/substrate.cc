@@ -508,7 +508,7 @@ void Network::apply_hormones(const Hormones &h) {
   for (auto i : active_) {
     const auto &c = tissue->neurons[i];
     for (int e = 0; e < HORMONE_EFFECTS; ++e)
-      hormone_effect_[e][i] = c.hormone_receptors[e].response(h, maturity_);
+      hormone_effect_[e][i] = c.hormone_receptors[e].response(h, maturity_, reserve_, fatigue_);
     if (plasticity_enabled && hormone_effect_[Death][i] > .5f) {
       die(i);
       died = true;
@@ -558,8 +558,17 @@ bool Network::insert_contact(NeuronIndex s, NeuronIndex t) {
   ++revision_;
   return true;
 }
-double Network::grow(const Hormones &h, double maturity, double available, double scale) {
-  set_maturity(maturity);
+void Network::set_body_levels(double maturity, double reserve, double fatigue) {
+  for (double value : {maturity, reserve, fatigue})
+    if (!std::isfinite(value) || value < 0 || value > 1)
+      throw std::invalid_argument("invalid body blood level");
+  maturity_ = maturity;
+  reserve_ = reserve;
+  fatigue_ = fatigue;
+}
+double Network::grow(const Hormones &h, double maturity, double reserve, double fatigue,
+                     double available, double scale) {
+  set_body_levels(maturity, reserve, fatigue);
   for (double v : h)
     if (!std::isfinite(v) || v < 0 || v > 1)
       throw std::invalid_argument("invalid local modulation");
@@ -568,7 +577,8 @@ double Network::grow(const Hormones &h, double maturity, double available, doubl
     return 0;
   bool died = false;
   for (auto i : active_)
-    if (tissue->neurons[i].hormone_receptors[Death].response(h, maturity_) > .5f) {
+    if (tissue->neurons[i].hormone_receptors[Death].response(h, maturity_, reserve_, fatigue_) >
+        .5f) {
       die(i);
       died = true;
     }
@@ -589,13 +599,13 @@ double Network::grow(const Hormones &h, double maturity, double available, doubl
   for (std::size_t i = 0; i < n; ++i)
     if (!born_[i] && !dead_[i]) {
       const auto &c = tissue->neurons[i];
-      if (c.hormone_receptors[Death].response(h, maturity_) > .5f) {
+      if (c.hormone_receptors[Death].response(h, maturity_, reserve_, fatigue_) > .5f) {
         die(i);
         changed = true;
         continue;
       }
-      const double response =
-          std::clamp(double(c.development_receptor.response(h, maturity_)), 0., 1.);
+      const double response = std::clamp(
+          double(c.development_receptor.response(h, maturity_, reserve_, fatigue_)), 0., 1.);
       progress_[i] = float(
           std::min(1., progress_[i] + CELL_DEVELOPMENT_INTERVAL * response / topology->tau[i]));
       if (progress_[i] >= 1 && response > 0)
@@ -1225,8 +1235,9 @@ void Network::write_runtime(std::ostream &out) const {
       << neural_ticks_ << ' ' << retinal_rng_ << ' ' << turnover_rng_ << ' ' << revision_ << ' '
       << tissue_revision_ << ' ' << development_ticks_ << ' ' << retinal_seeded_ << ' '
       << developing_ << ' ' << diagnostic_ << ' ' << plasticity_enabled << ' ' << maturity_ << ' '
-      << growth_credit_ << ' ' << (std::isfinite(build_budget_) ? build_budget_ : -1) << ' '
-      << build_scale_ << ' ' << wiring_.length << ' ' << formed_.contacts << ' ' << formed_.length;
+      << reserve_ << ' ' << fatigue_ << ' ' << growth_credit_ << ' '
+      << (std::isfinite(build_budget_) ? build_budget_ : -1) << ' ' << build_scale_ << ' '
+      << wiring_.length << ' ' << formed_.contacts << ' ' << formed_.length;
   for (double v : active_hormones_)
     out << ' ' << v;
   out << '\n';
@@ -1294,11 +1305,13 @@ void Network::read_runtime_state(std::istream &in) {
   std::size_t cells = 0, slots = 0;
   if (!(in >> tag >> cells >> slots >> learning_seed >> neural_ticks_ >> retinal_rng_ >>
         turnover_rng_ >> revision_ >> tissue_revision_ >> development_ticks_ >> retinal_seeded_ >>
-        developing_ >> diagnostic_ >> plasticity_enabled >> maturity_ >> growth_credit_ >>
-        build_budget_ >> build_scale_ >> wiring_.length >> formed_.contacts >> formed_.length) ||
+        developing_ >> diagnostic_ >> plasticity_enabled >> maturity_ >> reserve_ >> fatigue_ >>
+        growth_credit_ >> build_budget_ >> build_scale_ >> wiring_.length >> formed_.contacts >>
+        formed_.length) ||
       tag != "BRAINDEV_WORK" || cells != state_.size() || slots > reserved_slots() ||
       slots % LANES || !std::isfinite(maturity_) || maturity_ < 0 || maturity_ > 1 ||
-      !std::isfinite(growth_credit_) || growth_credit_ < 0 ||
+      !std::isfinite(reserve_) || reserve_ < 0 || reserve_ > 1 || !std::isfinite(fatigue_) ||
+      fatigue_ < 0 || fatigue_ > 1 || !std::isfinite(growth_credit_) || growth_credit_ < 0 ||
       growth_credit_ > development_credit_limit(scaled_costs(tissue->options)) ||
       !std::isfinite(build_budget_) || build_budget_ < -1 || !std::isfinite(build_scale_) ||
       build_scale_ < 0 || !std::isfinite(wiring_.length) || wiring_.length < 0 ||
@@ -1488,7 +1501,7 @@ void Network::read_runtime_state(std::istream &in) {
   refresh_active();
   for (auto i : active_)
     for (int e = 0; e < HORMONE_EFFECTS; ++e)
-      hormone_effect_[e][i] =
-          tissue->neurons[i].hormone_receptors[e].response(active_hormones_, maturity_);
+      hormone_effect_[e][i] = tissue->neurons[i].hormone_receptors[e].response(
+          active_hormones_, maturity_, reserve_, fatigue_);
 }
 }

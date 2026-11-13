@@ -234,7 +234,7 @@ class Network {
                 learning_seed = 0;
   bool retinal_seeded_ = false, developing_ = false, diagnostic_ = false, observe = false,
        plasticity_enabled = true;
-  double maturity_ = 0, growth_credit_ = 0;
+  double maturity_ = 0, reserve_ = 0, fatigue_ = 0, growth_credit_ = 0;
   double build_budget_ = std::numeric_limits<double>::infinity(), build_scale_ = 1;
   Hormones active_hormones_{};
   std::array<std::vector<float>, HORMONE_EFFECTS> hormone_effect_;
@@ -283,7 +283,8 @@ private:
 public:
   explicit Network(std::shared_ptr<const Substrate>, bool developing = false);
   explicit Network(const Substrate &s) : Network(std::make_shared<const Substrate>(s)) {}
-  double grow(const Hormones &, double maturity, double available_energy, double cost_scale = 1);
+  double grow(const Hormones &, double maturity, double reserve, double fatigue,
+              double available_energy, double cost_scale = 1);
   void construction_budget(double available, double scale) {
     build_budget_ = std::max(0., available);
     build_scale_ = scale;
@@ -343,7 +344,7 @@ public:
       observed_contributions.clear();
   }
   void refresh_observation();
-  void set_maturity(double m) { maturity_ = std::clamp(m, 0., 1.); }
+  void set_body_levels(double maturity, double reserve, double fatigue);
   double maturity() const { return maturity_; }
   void set_plasticity(bool on);
   bool plasticity() const { return plasticity_enabled; }

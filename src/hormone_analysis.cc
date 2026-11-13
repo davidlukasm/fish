@@ -36,6 +36,7 @@ void HormoneAnalysis::capture(const Individual &p, std::uint64_t tick) {
   levels_ = p.body.hormones().levels();
   reserve_ = bounded_filling(p.body.energy, reserve_capacity(p.body));
   fatigue_ = p.body.motor().fatigue;
+  snapshot_->set_body_levels(body_maturity(p.body), reserve_, fatigue_);
   adaptation_ = p.body.perception().adapted;
   adaptation_.resize(inputs_.size(), 0);
   hormone_enabled_ = !p.body.perception().disabled_senses[field::Blood];

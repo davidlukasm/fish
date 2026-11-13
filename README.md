@@ -29,7 +29,7 @@ Fertige Fische stehen im Fischregal (`genomes/regal`), getrennt davon die Entwü
 
 Der Schwanz schiebt, die Brustflossen drehen und schieben mit: Rückschlag vorwärts, der Vorschlag eines Gegenspielermuskels rückwärts, beide zugleich halten still. Ohne Schwimmen und ohne gefüllte Blase sinkt der Fisch; der Blasenauftrieb wirkt je Körpermasse.
 
-Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone und die körperliche Reife beeinflussen Aktivität und Lernen. Der Körper wächst nur, solange ein Hormon seinen erblichen Wachstumsrezeptor besetzt; welches, bestimmt die Evolution. Hormoneller Zelltod bleibt dauerhaft; der Bauplan erhält seine Zellkennungen.
+Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührung, Schaden, innere Druckziele oder Blutwerte. Sechs freie Hormone, Reife, Reserve und Erschöpfung steuern Zellbildung, Aktivität, Lernen und Zelltod. Der Körper wächst bei Hormonbindung an seinen erblichen Wachstumsrezeptor. Tote Zellen bleiben tot; ihre Kennungen bleiben im Bauplan erhalten.
 
 ## Prüfung
 
