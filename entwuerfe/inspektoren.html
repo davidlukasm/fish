@@ -88,6 +88,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Geschwindigkeit</h4>
     <svg id="tailniche" viewBox="0 0 300 130"></svg>
   </section>
+  <section class="panel" aria-label="Maul">
+    <h2>Organ</h2><h3>Maul</h3>
+    <h4 class="first">Kiefer</h4>
+    <svg id="mouthhead" viewBox="0 0 300 136"></svg>
+    <h4>Saugen und Beißen</h4>
+    <svg id="mouthtime" viewBox="0 0 300 220"></svg>
+  </section>
   <section class="panel" aria-label="Nase">
     <h2>Organ</h2><h3>Nase</h3>
     <h4 class="first">Düfte</h4>
@@ -1886,5 +1893,80 @@ function drawBlood() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 32));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood();
+// ---------- Maul ----------
+// Mouth (physiology.cc:10–60, physiology.hh:388): the opener pulls the mouth open as its twitch
+// rises and lets it spring back as it fades, pull = sin²(π(t + ½)/length), opening towards
+// 0.35 + 0.65·pull; the water it draws follows the pull and its drive. The closer gathers force
+// over the first half of its stroke, keeps the widest gape until then, and snaps shut at the
+// half; the bite takes no more than that gape. A twitch lasts 4 steps for the fastest fibres and
+// 48 for the slowest. Above: the head with its mouth at the moment of the dashed line below;
+// below: opening and drawn water over the steps, the bite as a mark where it snaps.
+const MOUTH = {open : {fast : .5, command : .8}, bite : {fast : .8, command : .7, start : 9}, at : 8};
+const strokeLen = fast => 4 * Math.pow(12, 1 - fast);
+function mouthRun() {
+  const N = 48, out = [], len = strokeLen(MOUTH.open.fast), dur = Math.max(1, Math.round(strokeLen(MOUTH.bite.fast))), snap = Math.floor(dur / 2);
+  let opening = .35, gape = .35, phase = -1, biting = false, bitten = null;
+  for (let st = 0; st <= N; st++) {
+    const t = st - 2, pull = MOUTH.open.command > 0 && t >= 0 && t < len ? Math.pow(Math.sin(Math.PI * (t + .5) / len), 2) : 0;
+    if (MOUTH.bite.command > 0 && st === MOUTH.bite.start) { biting = true; phase = 0; gape = Math.max(.35, opening); }
+    else if (biting && ++phase >= dur) { biting = false; phase = -1; }
+    const shutting = biting && phase >= snap;
+    if (shutting) opening = gape * Math.max(0, 1 - (phase - snap + 1) / Math.max(1, dur - snap));
+    else if (pull > 0) opening = Math.min(.35 + .65 * pull, opening + .65 * Math.PI / len);
+    else opening += clamp(.35 - opening, -1 / 16, 1 / 16);
+    if (biting && phase < snap) gape = Math.max(gape, opening);
+    if (biting && phase === snap) bitten = {st, gape};
+    out.push({opening, flow : shutting ? 0 : MOUTH.open.command * pull});
+  }
+  return {out, bitten, N};
+}
+function drawMouth() {
+  const redraw = drawMouth, hold = () => { MOUTH.held = true; }, free = () => { MOUTH.held = false; redraw(); };
+  const {out, bitten, N} = mouthRun(), now = out[Math.round(MOUTH.at)];
+  const svg = document.getElementById('mouthhead'); svg.replaceChildren();
+  // The head, its snout on the left; the jaws open by the opening at that moment.
+  const head = el('g', {transform : 'translate(70 4) scale(.75)'}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : .9}, head);
+  el('circle', {cx : 34, cy : 50, r : 3.2, fill : '#e9e2c6'}, head);
+  const hx = 70 + 14 * .75 - 12, hy = 4 + 64 * .75, a = (6 + 34 * now.opening) * Math.PI / 180, jaw = 28;
+  el('path', {d : `M${hx + jaw} ${hy} L${hx + jaw - jaw * Math.cos(a)} ${hy - jaw * Math.sin(a)} M${hx + jaw} ${hy} L${hx + jaw - jaw * Math.cos(a)} ${hy + jaw * Math.sin(a)}`, stroke : '#d9cfae', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
+  // Water drawn in: streaks into the open mouth, as many as it draws.
+  for (let k = 0; k < Math.round(4 * now.flow); k++) el('path', {d : `M${hx - 40 - 10 * k} ${hy - 8 + 6 * k} q12 -4 30 ${-2 + 2 * k}`, stroke : '#9cc8f0', 'stroke-width' : 1.6, fill : 'none', opacity : .8}, svg);
+  txt(svg, 296, 110, `Schritt ${Math.round(MOUTH.at)} · offen ${Math.round(now.opening * 100)} %`, {'text-anchor' : 'end'});
+  svg.setAttribute('viewBox', '0 0 300 118');
+
+  // ---- Opening and drawn water over the steps; the bite where it snaps. ----
+  const c = document.getElementById('mouthtime'); c.replaceChildren();
+  const L = 70, R = 290, top = 30, base = 116, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
+  regler(c, {x : 18, top, base, word : 'saugen', value : MOUTH.open.command, setValue : v => { MOUTH.open.command = v; redraw(); }, start : hold, end : free, name : 'mouthopen'});
+  regler(c, {x : 48, top, base, word : '', value : MOUTH.bite.command, setValue : v => { MOUTH.bite.command = v; redraw(); }, start : hold, end : free, name : 'mouthbite'});
+  txt(c, 52, top - 6, 'beißen', {'text-anchor' : 'middle'});
+  grid(c, L, R, top, base, 1);
+  el('path', {d : 'M' + out.map((o, st) => `${X(st).toFixed(1)} ${Y(o.opening).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : '#d9cfae', opacity : .3, stroke : '#d9cfae', 'stroke-width' : 1.6}, c);
+  el('path', {d : 'M' + out.map((o, st) => `${X(st).toFixed(1)} ${Y(o.flow).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#9cc8f0', 'stroke-width' : 2}, c);
+  txt(c, R, top - 8, 'offen', {'text-anchor' : 'end'}); txt(c, R - 40, top - 8, 'Wasser', {'text-anchor' : 'end', style : 'fill:#9cc8f0'});
+  if (bitten) { el('path', {d : `M${X(bitten.st)} ${Y(bitten.gape)} l-6 -9 h12 z`, fill : '#ef8f8f'}, c); txt(c, X(bitten.st) + 8, Y(bitten.gape) - 4, 'schnappt', {style : 'fill:#ef8f8f'}); }
+  // When the bite begins: a dashed line with its grip below the axis; the moment shown above: a
+  // dashed line with its grip on top.
+  const bx = X(MOUTH.bite.start);
+  el('path', {d : `M${bx} ${top} V${base + 8}`, stroke : '#ef8f8f', 'stroke-dasharray' : '3 3'}, c);
+  drag(c, el('circle', {cx : bx, cy : base + 8, r : 6, style : 'fill:#3a1f24;stroke:#ef8f8f;stroke-width:2'}, c), p => { MOUTH.bite.start = clamp(Math.round((p.x - L) / (R - L) * N), 0, N - 4); redraw(); }, 'mouthbitestart', hold, free);
+  const ax = X(MOUTH.at);
+  el('path', {d : `M${ax} ${top - 6} V${base}`, stroke : '#f1dda6', 'stroke-dasharray' : '5 4', 'stroke-width' : 1.4}, c);
+  drag(c, el('circle', {cx : ax, cy : top - 6, r : 7}, c), p => { MOUTH.at = clamp((p.x - L) / (R - L) * N, 0, N); redraw(); }, 'mouthat', hold, free);
+  txt(c, L, base + 24, 'Schritte');
+  for (const st of [16, 32, 48]) txt(c, X(st), base + 24, st, {'text-anchor' : st === 48 ? 'end' : 'middle'});
+  // The fibres of each muscle: fast twitches short and strong, slow ones long.
+  const F = base + 44;
+  [['open', 'Öffner'], ['bite', 'Schließer']].forEach(([k, word], i) => {
+    const y = F + i * 26, x0 = 110, x1 = 260;
+    txt(c, 100, y + 4, word, {'text-anchor' : 'end'});
+    el('rect', {x : x0, y : y - 4, width : x1 - x0, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, c);
+    drag(c, el('circle', {cx : x0 + (x1 - x0) * MOUTH[k].fast, cy : y, r : 7}, c), p => { MOUTH[k].fast = clamp((p.x - x0) / (x1 - x0), 0, 1); redraw(); }, 'mouthfibre' + k, hold, free);
+  });
+  txt(c, 110, F + 56, 'ausdauernd'); txt(c, 260, F + 56, 'kräftig', {'text-anchor' : 'end'});
+  c.setAttribute('viewBox', '0 0 300 ' + (F + 62));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth();
 </script>
