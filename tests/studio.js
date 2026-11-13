@@ -3833,6 +3833,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     await away;
     assert.equal(station.trace, null, 'Deselecting invalidates a pending life request');
     assert.equal(station.selected, null, 'The tank allows observation without selection');
+    station.shown = true;
     station.selected = 7;
     station.worlds =
         [ {state : {comparison : true, fish : [ {id : 7, energy : 20, capacity : 100} ]}} ];
