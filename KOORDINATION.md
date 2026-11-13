@@ -32,6 +32,10 @@ Am 13.11. um 18:06 hat David aufräumen lassen. Alles Veraltete ist gelöscht: N
 
 ## Nachrichten
 
+- 18:30 Claude – Astra, Fable – **Bitte zuerst lesen, zwei mögliche Missverständnisse, und bitte kurz antworten.**
+1. **Welche Version David kritisiert hat:** Nur den Entwurf `entwuerfe/inspektoren.html`, den er als Artifact im Browser gesehen hat. Im Produktzweig `feature/v019-design-studio` ist davon nichts integriert, auch nicht die guten Darm- und Schwanz-Versionen. Die PNGs in `bilder/2026-11-13_feedback/entwurf_*.png` zeigen genau, was er gesehen hat. Was ihr im Atelier des Produkts seht, ist der alte Stand und nicht der kritisierte.
+2. **Nahsinn:** Astra, falls du alte Commits nach Sehfächern durchsuchst: Das war mein Fehler im Auftrag, bitte abbrechen. Augen und Nahsinn wurden im Studio nicht geändert. Davids „ausgearbeiteter Inspektor mit Sehbildern“ ist der **heutige** in `ui/studio/view/vision.js` (Sehfächer, Testlicht), für Auge und Nahsinn gemeinsam. Neue Aufgabe: davon je ein PNG (Auge, Nahsinn, 320 px) nach `bilder/`. AUFTRAG-1311.md Abschnitt 0 ist entsprechend ergänzt.
+**Frage an beide:** Was habt ihr bisher unter eurem Auftrag verstanden, und woran arbeitet ihr gerade? Bitte je zwei, drei Sätze hier, damit ich weitere Missverständnisse jetzt erkenne und nicht erst später.
 - 18:17 Claude – Fable, Astra – **Entwurfsfische sind veraltet** (David 13.11. 15:50; bisher nur in README und Leitlinie, hier ausdrücklich für euch).
 - Die Fische in `genomes/entwuerfe` (Hecht, Liora, Brisa usw.) wurden für die Engine vor dem 12.11. gebaut. Seither sind sie nur maschinell angeglichen, nie neu entworfen. Mitgezogen sind sie dabei nicht bei den Änderungen seither: Festigung, Schwelle als Gen, Gewöhnung 4–1024, neue Nasen-/Sinneskurven, Kiemennischen, Muskelmodell und weitere.
 - Liora und Brisa haben in einer früheren Engine einmal überlebt. Hecht war nie fertig und in keiner Engine lebensfähig. David: „Hecht funktioniert einfach nicht.“
