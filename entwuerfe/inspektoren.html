@@ -393,7 +393,7 @@ document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; draw
 // 1/τ, τ from 4 to 48 steps (cppn_brain.cc, adapted_response).
 const K = {time : 200, open : 400, spoil : 250, uptake : 20, sharp : 4, tolerated : .3, closed : .002, fastest : 4, shortest : 25, longest : 800};
 const FOOD = [['Blatt', 0, '#8fd16a'], ['Alge', .25, '#55c4a6'], ['Flocken', .5, '#e3cf94', true], ['Plankton', .75, '#9cc8f0'], ['Fleisch', 1, '#ef8f8f']];
-const gut = {middle : 200, spread : 2.2, levels : [.6], sense : .35, tau : 20, pain : .3};
+const gut = {middle : 200, spread : 2.2, levels : [.6], food : {sense : .35, tau : 20}, ache : {sense : .3, tau : 30}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
 const gain = (a, T) => {
@@ -532,54 +532,37 @@ function drawGut() {
   drawPainSense();
   drawNutrientSense();
 }
-// The pain cells: what they report at each degree of bellyache (gut_irritation), half at their
-// threshold (bounded_response), like the other inner senses (pain cells inside the body, Fable
-// 2265bb7d).
-function drawPainSense() {
-  const svg = document.getElementById('gutpain'); svg.replaceChildren();
-  const L = 8, R = 292, top = 16, base = 62, X = v => L + (R - L) * v, Y = v => base - (base - top) * v;
-  const answer = x => { const t = clamp(gut.pain, .001, .999), y = clamp(x, 0, 1); return y * (1 - t) / (y * (1 - t) + (1 - y) * t); };
-  const grad = el('linearGradient', {id : 'painGrad'}, el('defs', {}, svg));
-  el('stop', {offset : 0, 'stop-color' : '#ef6f6f', 'stop-opacity' : .03}, grad); el('stop', {offset : 1, 'stop-color' : '#ef6f6f', 'stop-opacity' : .45}, grad);
-  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : 'url(#painGrad)'}, svg);
-  el('path', {d : 'M' + Array.from({length : 61}, (_, k) => k / 60).map(x => `${X(x).toFixed(1)} ${Y(answer(x)).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#79d2be', 'stroke-width' : 2}, svg);
-  el('path', {d : `M${L} ${base} H${R}`, stroke : '#3b6a6c'}, svg);
-  txt(svg, L, top - 5, 'Meldung an das Gehirn');
-  txt(svg, L, base + 15, 'kein Bauchweh'); txt(svg, R, base + 15, 'starkes', {'text-anchor' : 'end'});
-  drag(svg, el('circle', {cx : X(gut.pain), cy : Y(.5), r : 6.5}, svg), p => { gut.pain = clamp((p.x - L) / (R - L), .02, .98); drawPainSense(); }, 'pain');
-  txt(svg, X(gut.pain) + 11, Y(.5) + 4, 'Empfindlichkeit');
-  svg.setAttribute('viewBox', `0 0 300 ${base + 22}`);
-}
-// The food cells over one meal: the fish eats from step 10 to 90; the cells report what comes in,
-// strongly at first and, the sooner they get used to it, the sooner less.
-function drawNutrientSense() {
-  const svg = document.getElementById('gutsense'); svg.replaceChildren();
+// Pain and food cells answer the same way (cppn_brain.cc, adapted_response): a stimulus s gives
+// s / (s + threshold + adapted), the adapted level following s with rate 1/τ, τ from 4 to 48 steps.
+// Shown over one episode: a stretch of bellyache, or a meal (food: what is swallowed flows in and
+// ebbs by a fifth every step, s = flow/(flow + rest)). The grip on the first height sets how
+// strongly the cells answer, the one further on how soon they get used to it.
+function senseEpisode(id, cell, stimulusAt, bar, colour) {
+  const svg = document.getElementById(id); svg.replaceChildren();
   const L = 8, R = 292, top = 18, base = 92, N = 130, X = s => L + (R - L) * s / N, Y = v => base - (base - top) * v;
-  const report = [];
-  let flow = 0, adapted = 0;
-  for (let s = 0; s <= N; s++) {
-    if (s >= 10 && s <= 90) flow += .25;
-    const sig = flow / (flow + 1);
-    report.push(sig > 0 ? sig / (sig + gut.sense + adapted) : 0);
-    adapted += (sig - adapted) / gut.tau; flow *= .8;
-  }
-  el('rect', {x : X(10), y : base + 5, width : X(90) - X(10), height : 6, rx : 3, fill : '#e3cf94', opacity : .6}, svg);
-  txt(svg, (X(10) + X(90)) / 2, base + 24, 'frisst', {'text-anchor' : 'middle'});
+  const answer = (sense, tau) => { const out = []; let adapted = 0; for (let s = 0; s <= N; s++) { const sig = stimulusAt(s); out.push(sig > 0 ? sig / (sig + sense + adapted) : 0); adapted += (sig - adapted) / tau; } return out; };
+  const report = answer(cell.sense, cell.tau);
+  el('rect', {x : X(10), y : base + 5, width : X(90) - X(10), height : 6, rx : 3, fill : colour, opacity : .6}, svg);
+  txt(svg, (X(10) + X(90)) / 2, base + 24, bar, {'text-anchor' : 'middle'});
   el('path', {d : `M${L} ${base} H${R}`, stroke : '#3b6a6c'}, svg);
   el('path', {d : 'M' + report.map((v, s) => `${X(s).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${X(N)} ${base} L${X(0)} ${base} Z`, fill : '#79d2be', 'fill-opacity' : .15, stroke : '#79d2be', 'stroke-width' : 2}, svg);
   txt(svg, L, top - 6, 'Meldung an das Gehirn');
   const peakAt = report.indexOf(Math.max(...report)), px = X(peakAt), py = Y(report[peakAt]);
   drag(svg, el('circle', {cx : px, cy : py, r : 6.5}, svg), p => {
     const want = clamp((base - p.y) / (base - top), .05, .97);
-    let f = 0, sig0 = 0; for (let s = 0; s <= peakAt; s++) { if (s >= 10) f += .25; sig0 = f / (f + 1); f *= .8; }
-    gut.sense = clamp(sig0 / want - sig0, .005, 3); drawNutrientSense();
+    let adapted = 0; for (let s = 0; s < peakAt; s++) adapted += (stimulusAt(s) - adapted) / cell.tau;
+    const sig = stimulusAt(peakAt); cell.sense = clamp(sig / want - sig - adapted, .005, 3); senseEpisode(id, cell, stimulusAt, bar, colour);
   }, 'sense');
   txt(svg, px + 11, py - 4, 'Empfindlichkeit');
-  const used = Math.min(90, 10 + gut.tau), ux = X(used), uy = Y(report[used]);
-  drag(svg, el('rect', {x : ux - 6, y : uy - 6, width : 12, height : 12, rx : 2}, svg), p => { gut.tau = clamp(Math.round((p.x - L) / (R - L) * N - 10), 4, 48); drawNutrientSense(); }, 'used');
+  const used = Math.min(90, 10 + cell.tau), ux = X(used), uy = Y(report[used]);
+  drag(svg, el('rect', {x : ux - 6, y : uy - 6, width : 12, height : 12, rx : 2}, svg), p => { cell.tau = clamp(Math.round((p.x - L) / (R - L) * N - 10), 4, 48); senseEpisode(id, cell, stimulusAt, bar, colour); }, 'used');
   txt(svg, ux + 11, uy + 16, 'Gewöhnung');
   svg.setAttribute('viewBox', `0 0 300 ${base + 30}`);
 }
+const ACHE_AT = s => s >= 10 && s <= 90 ? .5 : 0;
+const FOOD_AT = (() => { const out = []; let flow = 0; for (let s = 0; s <= 130; s++) { if (s >= 10 && s <= 90) flow += .25; out.push(flow / (flow + 1)); flow *= .8; } return s => out[s] ?? 0; })();
+const drawPainSense = () => senseEpisode('gutpain', gut.ache, ACHE_AT, 'Bauchweh', '#ef8f8f');
+const drawNutrientSense = () => senseEpisode('gutsense', gut.food, FOOD_AT, 'frisst', '#e3cf94');
 // The film, at half speed: a mouthful moves from the stomach to the vent in its time and shrinks
 // as the fish takes it up; dung leaves at the vent. Every few seconds the muscle works: the gut
 // narrows at its cells one after another and widens just ahead (peristalsis), and the content
