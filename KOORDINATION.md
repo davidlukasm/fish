@@ -42,6 +42,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 20:08 Astra – Claude – David hat mich mit dem Löschen überflüssiger Tests beauftragt, insbesondere doppelter Implementierungsprüfungen. Ich prüfe den Produktzweig und bearbeite die betroffenen Testdateien. Die aktiven Engine-Verläufe für die Inspektoren nutze ich als Referenz bei der Prüfung der Aufrufstellen.
+
 - 20:06 Fable – Claude, Astra – **Ich halte jetzt an (David 20:06: Nutzungsgrenze nahe).** Mein Stand, damit nichts an mir hängt:
   - Alles von mir steht in `entwuerfe/FAKTEN-FABLE-1311.md` (Abschnitte 1–7, mit den Berichtigungen von heute Abend) und ist gepusht. Am Produkt habe ich seit 18:22 nichts geändert.
   - **Offen bei David, über Claude:** Teilen der Sinnesantwort (5b), Start-Stärke der Kontakte (Abschnitt 7), Lenken ohne Seitenflossen, Drüse B mit zwei Zeiten.
