@@ -82,6 +82,8 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="gutbars" viewBox="0 0 300 130"></svg>
     <h4>Über das Leben</h4>
     <svg id="gutlife" viewBox="0 0 300 150"></svg>
+    <h4>Füllzellen</h4>
+    <svg id="gutfill" viewBox="0 0 300 140"></svg>
     <h4>Schmerzzellen</h4>
     <svg id="gutpain" viewBox="0 0 300 90"></svg>
     <h4>Futterzellen</h4>
@@ -652,6 +654,8 @@ function drawGut() {
   txt(svg, 296, 12, `+${Math.round(10 * sizeOf(T))} % Ruhebedarf · +${Math.round(5 * sizeOf(T))} % Gewicht`, {'text-anchor' : 'end'});
   const way = gutWay(sizeOf(T)); film.way = way;
   film.tube = el('g', {}, svg);
+  // The gullet: from the mouth to the stomach.
+  el('path', {d : `M${50 + 4} ${64 + DROP} Q${(50 + STOMACH.x - STOMACH.rx) / 2} ${STOMACH.y + 4} ${STOMACH.x - STOMACH.rx + 2} ${STOMACH.y}`, stroke : '#6b6f5f', 'stroke-width' : 6, fill : 'none', 'stroke-linecap' : 'round'}, svg);
   const S = STOMACH, levelY = v => S.y + S.ry - 2 * S.ry * v, top = Math.max(...gut.levels);
   el('clipPath', {id : 'stomach'}, el('defs', {}, svg)).appendChild(el('ellipse', {cx : S.x, cy : S.y, rx : S.rx, ry : S.ry}));
   el('ellipse', {cx : S.x, cy : S.y, rx : S.rx, ry : S.ry, fill : '#6b6f5f'}, svg);
@@ -759,6 +763,7 @@ function drawGut() {
   txt(bars, 88, y + 10, 'Bauchschmerzen');
   bars.setAttribute('viewBox', `0 0 300 ${y + 16}`);
   drawGutLife();
+  drawFillSense();
   drawPainSense();
   drawNutrientSense();
 }
@@ -772,7 +777,9 @@ function drawGut() {
 // with each group's threshold on it; above, what each group tells the brain over time; right under
 // it the stimulus itself, when it comes and goes, with the thresholds across it; at the bottom the
 // chosen group's habit.
-const SENSE_STEPS = 120, SENSE_LASTS = 80;
+// Getting used to something can take up to 1024 steps, so the time runs on a log scale to 1024;
+// the stimulus lasts to step 400. Senses that do not get used to anything keep 120 steps.
+const SENSE_STEPS = 1024, SENSE_LASTS = 400;
 const groupColour = i => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
 const tauOf = h => 1024 * Math.pow(4 / 1024, h);
 // The engine's answers since Fable 853a7c74 (body_plan.cc excess_response, bounded_response), here
@@ -797,9 +804,10 @@ function senseGroups(id, cell, o) {
   const svg = document.getElementById(id); svg.replaceChildren();
   const {word, colour} = o, redraw = o.redraw ?? (() => senseGroups(id, cell, o));
   const hold = () => { cell.held = true; }, free = () => { cell.held = false; redraw(); };
-  const L = 56, R = 290, top = 30, base = 126, X = st => L + (R - L) * st / SENSE_STEPS;
+  const steps = o.habit === false ? 120 : SENSE_STEPS, logTime = o.habit !== false;
+  const L = 56, R = 290, top = 30, base = 126, X = st => L + (R - L) * (logTime ? Math.log(1 + st) / Math.log(1 + steps) : st / steps);
   const groups = cell.groups, n = groups.length;
-  const felt = groups.map(g => Array.from({length : SENSE_STEPS + 1}, (_, st) => o.at(st, cell.level, g)));
+  const felt = groups.map(g => Array.from({length : steps + 1}, (_, st) => o.at(st, cell.level, g)));
   const answers = groups.map((g, i) => senseAnswer(g, felt[i], !!o.bounded)), stimulus = felt[cell.chosen];
   // Groups stacked, the most sensitive below; the scale makes room for the whole stack.
   const order = groups.map((g, i) => i).sort((p, q) => groups[p].gate - groups[q].gate);
@@ -809,7 +817,7 @@ function senseGroups(id, cell, o) {
     marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === cell.chosen, set : v => { g.gate = clamp(v, .02, .98); cell.chosen = i; redraw(); }}))});
   grid(svg, L, R, top, base, scale);
   txt(svg, L + 4, top - 8, 'Meldung an das Gehirn');
-  let under = Array(SENSE_STEPS + 1).fill(0);
+  let under = Array(steps + 1).fill(0);
   for (const i of order) {
     const over = under.map((u, st) => u + answers[i][st]);
     const d = 'M' + over.map((y, st) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, st) => [st, y]).reverse().map(([st, y]) => `${X(st).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z';
@@ -837,9 +845,22 @@ function senseGroups(id, cell, o) {
     const spreadTo = p => { g.spread = clamp((Math.abs(SY(g.gate) - p.y) - 5) / ((S1 - S0) * SPREAD_MOST), 0, 1); redraw(); };
     for (const [y, k] of [[clamp(y0 - 5, S0 + 5, S1 - 5), 'hi']]) drag(svg, el('rect', {x : x - 7, y : y - 4, width : 14, height : 8, rx : 3, style : 'stroke:#eaa886'}, svg), spreadTo, id + 'spread' + k, hold, free);
   }
-  const TY = S1 + 15;
+  let TY = S1 + 15;
   txt(svg, L, TY, 'Schritte');
-  for (const st of [40, 80, 120]) txt(svg, X(st), TY, st, {'text-anchor' : st === 120 ? 'end' : 'middle'});
+  for (const st of logTime ? [10, 100, 1000] : [40, 80, 120]) txt(svg, X(st), TY, st, {'text-anchor' : st >= 1000 || st === 120 ? 'end' : 'middle'});
+  // What each food would make the cells feel (o.marks): a bar each on the slider's scale, the
+  // groups' thresholds across them; a click takes that food as the example.
+  if (o.marks) {
+    const B0 = TY + 26, B1 = B0 + 50, BY = v => B1 - (B1 - B0) * clamp(v, 0, 1), w = (R - L) / o.marks.length;
+    txt(svg, L, B0 - 6, o.marksWord);
+    o.marks.forEach(([name, mc, v], k) => { const g = el('g', {class : 'chip'}, svg), x = L + k * w;
+      el('rect', {x : x + 6, y : B0, width : w - 12, height : B1 - B0, fill : '#0f2c34'}, g).setAttribute('style', 'fill:#0f2c34;stroke:none');
+      const bar = el('rect', {x : x + 6, y : BY(v), width : w - 12, height : B1 - BY(v), opacity : .8}, g); bar.setAttribute('style', `fill:${mc};stroke:none`);
+      txt(g, x + w / 2, B1 + 13, name, {'text-anchor' : 'middle', style : 'font-size:10px;fill:' + mc});
+      g.addEventListener('click', () => { cell.level = v; redraw(); }); });
+    groups.forEach((g, i) => el('path', {d : `M${L} ${BY(g.gate)} H${R}`, stroke : groupColour(i), 'stroke-width' : i === cell.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', 'pointer-events' : 'none'}, svg));
+    TY = B1 + 16;
+  }
   // Groups: a cross beside the chosen one's mark to take it away, a plus under the slider for another.
   const chip = (x, y, sign, act, key) => { const g = el('g', {class : 'chip', ['data-' + key] : 1}, svg);
     el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, g);
@@ -861,10 +882,15 @@ function senseGroups(id, cell, o) {
 }
 // What the cells feel at the slider's level: bellyache at once while it lasts; food flows in over
 // a few steps and ebbs after (flow × 0.8 per step).
-const ACHE_AT = (st, level) => st < SENSE_LASTS ? level : 0;
-const FOOD_AT = (st, level) => st < SENSE_LASTS ? level * (1 - Math.pow(.8, st + 1)) : level * (1 - Math.pow(.8, SENSE_LASTS)) * Math.pow(.8, st - SENSE_LASTS + 1);
-const drawPainSense = () => senseGroups('gutpain', gut.ache, {word : 'Bauchweh', at : ACHE_AT, colour : '#ef8f8f', bounded : true});
-const drawNutrientSense = () => senseGroups('gutsense', gut.food, {word : 'Futter', at : FOOD_AT, colour : '#e3cf94', bounded : true});
+const ACHE_AT = (st, level) => st >= 1 && st < SENSE_LASTS ? level : 0;
+const FOOD_AT = (st, level) => st < 1 ? 0 : st < SENSE_LASTS ? level * (1 - Math.pow(.8, st)) : level * (1 - Math.pow(.8, SENSE_LASTS)) * Math.pow(.8, st - SENSE_LASTS + 1);
+// What each food would feel like to these cells in this gut at rest (Fable 06:39): food cells
+// q·y/(q·y + 1), y its yield at this stay, q = 2 (eating twice the resting need); pain cells the
+// bellyache of a full gut of it, clamp(max(S, C)/0.25).
+const foodMarks = T => FOOD.map(([n, a, c]) => [n, c, 2 * gain(a, T) / (2 * gain(a, T) + 1)]);
+const acheMarks = T => FOOD.map(([n, a, c]) => { const S = T * a.flesh / 375 - 1, C = a.fibre > .55 ? 1 - T / (400 * (a.fibre - .55)) : -1; return [n, c, clamp(Math.max(S, C) / .25, 0, 1)]; });
+const drawPainSense = () => senseGroups('gutpain', gut.ache, {word : 'Bauchweh', at : ACHE_AT, colour : '#ef8f8f', bounded : true, marks : acheMarks(restOf()), marksWord : 'Bauchweh je Futter bei vollem Darm'});
+const drawNutrientSense = () => senseGroups('gutsense', gut.food, {word : 'Futter', at : FOOD_AT, colour : '#e3cf94', bounded : true, marks : foodMarks(restOf()), marksWord : 'was jedes Futter diesem Darm bringt'});
 // The film: the tube is drawn once; each frame only sets its pieces' widths and moves the
 // mouthfuls. The muscle works in turns: it eases in, sends waves along the whole gut, the next one
 // leaving when the last is just past halfway, and eases out. A wave narrows the gut behind a
@@ -1205,12 +1231,12 @@ function drawSkin(key) {
   // How much of all spines stand where the bite comes, times the number of sectors (local_defense).
   if (key === 'defense') { const all = organ.groups.reduce((t, gr) => t + pts.reduce((u, q) => u + skinWeight(gr, q), 0), 0);
     return defenseCharts(organ, redraw, hold, free, all ? pts.length * organ.groups.reduce((t, gr) => t + skinWeight(gr, sp), 0) / all : 0); }
-  if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 10 && st < 80 ? level * felt(gr) : 0,
+  if (key === 'lateral') return senseGroups(key + 'sense', organ, {word : 'Strömung', colour : '#9cc8f0', redraw, at : (st, level, gr) => st >= 1 && st < SENSE_LASTS ? level * felt(gr) : 0,
     newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : .15, spread : .3, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
     ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, bounded : true, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
-    : {word : 'Wunde', colour : '#ef8f8f', bounded : true, redraw, at : (st, level, gr) => st >= 10 ? level * felt(gr) : 0,
+    : {word : 'Wunde', colour : '#ef8f8f', bounded : true, redraw, at : (st, level, gr) => st >= 2 ? level * felt(gr) : 0,
        newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
 }
 
@@ -1310,7 +1336,7 @@ function drawNose() {
   scentMap(svg, NOSE, redraw, 'nose', k => { NOSE.example = k; redraw(); }, NOSE.example);
   const ex = NOSE.example;
   senseGroups('nosesense', NOSE, {word : 'Duft', strip : 'Duft: ' + SCENTS[ex][0], colour : SCENTS[ex][1], redraw,
-    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 10 ? 0 : st < 60 ? (st - 10) / 50 : st < 90 ? 1 : Math.max(0, 1 - (st - 90) / 20)),
+    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 2 ? 0 : st < 40 ? (st - 2) / 38 : st < SENSE_LASTS ? 1 : Math.max(0, 1 - (st - SENSE_LASTS) / 40)),
     newGroup : () => ({lat : -10, lon : 180, width : .2, gate : .1, spread : .3, habit : .5})});
 }
 // The scent disk: every group's half line, the scents as large as the chosen group smells them
@@ -2367,6 +2393,32 @@ function drawSmell() {
   snapRow(c, y + 40, 'Kontrast', OLF, 'contrast', ['0.2', '0.6', '1'], 'schwach', 'stark', redraw, hold, free);
   snapRow(c, y + 80, 'Glättung', OLF, 'smoothing', ['0.2', '0.5', '0.8'], 'kurz', 'lang', redraw, hold, free);
   c.setAttribute('viewBox', '0 0 300 ' + (y + 94));
+}
+
+// Stretch (fill) cells (Fable 06:39): the stimulus is how full the gut is, between empty and
+// full; each group of cells answers bounded, half at its level (the stomach's levels above), and
+// none gets used to it. What each group reports at every fill, stacked like the others.
+function drawFillSense() {
+  const c = document.getElementById('gutfill'); if (!c) return; c.replaceChildren();
+  const redraw = () => drawGut(), hold = () => { gut.held = true; }, free = () => { gut.held = false; drawGut(); };
+  const L = 56, R = 290, top = 30, base = 116, M = 100, X = v => L + (R - L) * v;
+  const halfToThreshold = h => h / (2 - h);
+  const answers = gut.levels.map(h => Array.from({length : M + 1}, (_, k) => boundedAnswer(k / M, halfToThreshold(h))));
+  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0));
+  const scale = Math.max(1, 1.1 * Math.max(...total)), Y = v => base - (base - top) * v / scale;
+  regler(c, {x : 26, top, base, word : 'satt', value : null, start : hold, end : free, name : 'fillgate',
+    marks : gut.levels.map((h, i) => ({value : h, colour : groupColour(i), chosen : false, set : v => { gut.levels[i] = clamp(v, .05, .95); drawGut(); }}))});
+  grid(c, L, R, top, base, scale);
+  txt(c, L + 4, top - 8, 'Meldung an das Gehirn');
+  let under = Array(M + 1).fill(0);
+  gut.levels.map((h, i) => i).sort((p, q) => gut.levels[p] - gut.levels[q]).forEach(i => {
+    const over = under.map((u, k) => u + answers[i][k]);
+    el('path', {d : 'M' + over.map((y, k) => `${X(k / M).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${X(k / M).toFixed(1)} ${Y(y).toFixed(1)}`).join(' L') + 'Z', fill : groupColour(i), opacity : .75, stroke : '#0d262c', 'stroke-width' : .6}, c);
+    under = over;
+  });
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L, base + 15, 'leer'); txt(c, R, base + 15, 'voll', {'text-anchor' : 'end'}); txt(c, (L + R) / 2, base + 15, 'Füllung', {'text-anchor' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
 drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth(); drawFins(); drawSpine(); drawFinClock(); drawChoice(); drawNerve(); drawState(); drawSmell();
