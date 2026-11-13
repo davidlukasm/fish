@@ -585,7 +585,7 @@ const STUFFS = {flesh : [0, 20, 225, 1], shell : [100, 4, 480, .86], pulp : [0, 
 const FOOD = [['Blatt', {hard : 1}, '#8fd16a'], ['Alge', {pulp : .29, soft : .71}, '#55c4a6'], ['Flocken', {pulp : .77}, '#e3cf94'], ['Plankton', {flesh : .45, shell : .55}, '#9cc8f0'], ['Fleisch', {flesh : 1}, '#ef8f8f']];
 const STOMACH_FILL = '#c98f55', STOMACH_EDGE = '#e6b47c', TUBE = '#6b6f5f';
 const gut = {
-  middle : 200, spread : 2.2, levels : [.6], fill : .45, chosenLevel : 0,
+  middle : 200, spread : 2.2, levels : [.6], levelCells : [4], levelSpread : [.08], fill : .45, chosenLevel : 0,
   life : {young : 1, grown : 0},
   ache : {groups : [{gate : .3, habit : .5, spread : .1}], chosen : 0, input : {rise : 12, height : .7, stop : 300}},
   food : {groups : [{gate : .25, habit : .5, spread : .1}], chosen : 0, input : {rise : 4, height : .6, stop : 40}}
@@ -692,8 +692,8 @@ function stomachPicture(svg, S, key) {
   });
   if (key === 'top') txt(svg, GX - 12, levelY(Math.max(...gut.levels)) + 4, 'satt', {'text-anchor' : 'end'});
   const cy = S.y + S.ry + (key === 'top' ? 18 : 16);
-  signChip(svg, S.x - 12, cy, '−', () => { gut.levels.splice(gut.chosenLevel, 1); gut.chosenLevel = 0; drawGut(); }, gut.levels.length > 1);
-  signChip(svg, S.x + 12, cy, '+', () => { gut.levels.push(clamp(Math.min(...gut.levels) - .25, .1, .9)); gut.chosenLevel = gut.levels.length - 1; drawGut(); }, gut.levels.length < 3);
+  signChip(svg, S.x - 12, cy, '−', () => { for (const k of ['levels', 'levelCells', 'levelSpread']) gut[k].splice(gut.chosenLevel, 1); gut.chosenLevel = 0; drawGut(); }, gut.levels.length > 1);
+  signChip(svg, S.x + 12, cy, '+', () => { gut.levels.push(clamp(Math.min(...gut.levels) - .25, .1, .9)); gut.levelCells.push(4); gut.levelSpread.push(.08); gut.chosenLevel = gut.levels.length - 1; drawGut(); }, gut.levels.length < 3);
   return levelY;
 }
 // ---- Yield: what each food gives over the stay; the gut's span from its length (rest) to the
@@ -824,29 +824,54 @@ function drawGutBars() {
 // ---- Satiety: the stomach itself, large; its fill runs from below (empty) to the top (full)
 // and is the height of the picture; at its right what the cells tell the brain at every fill,
 // stacked by group. Dragging the content's surface tries a fill. ----
+// Since Fable 13.11. 19:04 (FAKTEN-FABLE-1311.md 5a): every cell of a group reports for itself, at
+// its own threshold spread about the group's; nothing normalises them. The cell that listens adds
+// report × weight over all its contacts (weight at most 0.5 by default) and saturates (tanh). So
+// more cells hardly raise a full report, but make the listener feel a weak one, and with a spread
+// the report climbs in as many steps as the group has cells.
+const satietyGates = i => { const n = gut.levelCells[i], u = unitOf(gut.levels[i], true), w = gut.levelSpread[i];
+  return Array.from({length : n}, (_, j) => gateOf(clamp(u + (n > 1 ? w * (2 * j / (n - 1) - 1) : 0), 0, 1), true)); };
 function drawSatiety() {
   const svg = document.getElementById('gutfill'); svg.replaceChildren();
   const S = {x : 64, y : 78, rx : 34, ry : 58}, levelY = stomachPicture(svg, S, 'big');
-  const L = 128, R = 290, top = S.y - S.ry, base = S.y + S.ry, M = 100;
-  const answers = gut.levels.map(h => Array.from({length : M + 1}, (_, k) => boundedAnswer(k / M, h)));
-  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0)), scale = Math.max(1, Math.max(...total));
-  const X = v => L + (R - L) * v / scale;
+  const L = 128, R = 290, top = S.y - S.ry, base = S.y + S.ry, M = 120, W = .5;
+  // Each group's cells as points in the stomach wall at their own thresholds.
+  gut.levels.forEach((_, i) => satietyGates(i).forEach((g, j, all) => {
+    const y = levelY(g), half = S.rx * Math.sqrt(Math.max(0, 1 - Math.pow((y - S.y) / S.ry, 2)));
+    el('circle', {cx : S.x + half - 1 - 3 * (j % 2), cy : y, r : 2.6, fill : groupColour(i), stroke : '#0d262c', 'stroke-width' : .8}, svg);
+    void all;
+  }));
+  // What the listening cell makes of it, at every fill; the share of each group as its band.
+  const sums = gut.levels.map((_, i) => { const gates = satietyGates(i); return Array.from({length : M + 1}, (_, k) => gates.reduce((t, g) => t + boundedAnswer(k / M, g), 0)); });
+  const total = sums[0].map((_, k) => sums.reduce((t, a) => t + a[k], 0)), felt = total.map(v => Math.tanh(W * v));
+  const X = v => L + (R - L) * v;
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : '#3b6a6c', fill : 'none'}, svg);
   txt(svg, L, top - 8, 'Meldung an das Gehirn');
   let under = Array(M + 1).fill(0);
   gut.levels.map((h, i) => i).sort((p, q) => gut.levels[p] - gut.levels[q]).forEach(i => {
-    const over = under.map((u, k) => u + answers[i][k]);
+    const over = under.map((u, k) => u + (total[k] > 0 ? felt[k] * sums[i][k] / total[k] : 0));
     const band = el('path', {d : 'M' + over.map((v, k) => `${X(v).toFixed(1)} ${levelY(k / M).toFixed(1)}`).join(' L') + ' L' + under.map((v, k) => [k, v]).reverse().map(([k, v]) => `${X(v).toFixed(1)} ${levelY(k / M).toFixed(1)}`).join(' L') + 'Z', fill : groupColour(i), opacity : .75, stroke : i === gut.chosenLevel ? '#ffffff' : '#0d262c', 'stroke-width' : i === gut.chosenLevel ? 1.4 : .6, class : 'chip'}, svg);
     band.addEventListener('pointerdown', () => { gut.chosenLevel = i; drawGut(); });
     under = over;
   });
   // The tried fill: the content's surface, dragged; its report at the right.
-  const fy = levelY(gut.fill), now = total[Math.round(gut.fill * M)];
+  const fy = levelY(gut.fill), now = felt[Math.round(gut.fill * M)];
   el('path', {d : `M${S.x + S.rx} ${fy} H${X(now)}`, stroke : STOMACH_EDGE, 'stroke-dasharray' : '2 3'}, svg);
   el('circle', {cx : X(now), cy : fy, r : 3.5, fill : STOMACH_EDGE}, svg);
   drag(svg, el('rect', {x : S.x - 9, y : fy - 4, width : 18, height : 8, rx : 3, style : `stroke:${STOMACH_EDGE}`}, svg), p => { gut.fill = clamp((S.y + S.ry - p.y) / (2 * S.ry), 0, 1); drawGut(); }, 'fillnow');
   txt(svg, S.x + S.rx + 6, base, 'leer'); txt(svg, S.x + S.rx + 6, top + 9, 'voll');
-  svg.setAttribute('viewBox', `0 0 300 ${base + 34}`);
+  // The chosen group's cells: how many (−/+), and how far their thresholds spread (a grip on the
+  // stomach's right edge, pulled up from the group's level).
+  const c = gut.chosenLevel, cy = base + 36;
+  txt(svg, 4, base + 20, 'Gruppen');
+  txt(svg, 4, cy + 4, 'Zellen');
+  signChip(svg, 58, cy, '−', () => { gut.levelCells[c] = Math.max(1, gut.levelCells[c] - 1); drawGut(); }, gut.levelCells[c] > 1, 7);
+  txt(svg, 78, cy + 4, gut.levelCells[c], {'text-anchor' : 'middle', class : 'value'});
+  signChip(svg, 98, cy, '+', () => { gut.levelCells[c] = Math.min(16, gut.levelCells[c] + 1); drawGut(); }, gut.levelCells[c] < 16, 7);
+  const gates = satietyGates(c), sy = levelY(Math.max(...gates)), sx = S.x + S.rx + 10;
+  el('path', {d : `M${sx} ${levelY(Math.min(...gates))} V${sy}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
+  drag(svg, el('rect', {x : sx - 6, y : sy - 8, width : 12, height : 8, rx : 3, style : 'stroke:#eaa886'}, svg), p => { gut.levelSpread[c] = clamp((levelY(gut.levels[c]) - p.y - 4) / (2 * S.ry * gatePerUnit(true)), 0, .5); drawGut(); }, 'satietyspread');
+  svg.setAttribute('viewBox', `0 0 300 ${cy + 14}`);
 }
 // ---- Bellyache and food sense: above, what the cells get (the input), shaped at its corners:
 // how fast it comes, how strong, when it stops; the groups' thresholds across it, from the bar at
