@@ -49,6 +49,8 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 - **Was nicht gilt, wird nicht gezeigt:** keine Lebensphase, in der nichts passiert (das Ei frisst nicht), keine Achse, die nichts bedeutet (Schritte, wenn die Zeit egal ist), keine gestrichelten Kurven ohne Grund.
 - **Kein Satz im Panel**, auch nicht unten als Hinweis. Ein Wort, das nicht passt, ist ein Zeichen, dass das Bild fehlt.
 - **Kein Zittern, kein Stottern:** Skalen springen nicht beim Ziehen eines anderen Griffs; Animationen laufen flüssig. Prüfen durch Ziehen jedes Griffs im Browser, nicht nur durch Screenshot.
+- **Neu schreiben statt flicken** (David 13.11. 22:06): Ein Panel hat ein Modell als einzige Quelle für alle Bilder und Zahlen. Wird ein Panel kritisiert, wird es neu geschrieben, nicht an einzelnen Stellen geändert. Vor dem Zeigen prüft ein Skript im Entwurfsordner, dass jede Zahl zu ihrer Kurve passt, kein Text einen anderen überdeckt und beim Ziehen nichts springt; dann wird Davids Kritik Punkt für Punkt abgehakt.
+- **Prüflauf des Produkts: 20 Sekunden sind ein hartes Limit** (David 13.11. 22:07). Neue Tests nur, wenn sie ein Verhalten prüfen, das zählt und das kein anderer Test schon abdeckt. Vorher nachdenken; überflüssige Tests sind verboten. Entwurfsprüfungen gehören nicht in den Prüflauf.
 - **Gestaltung vor Messung:** Zeit fließt zuerst ins Bild. Messungen nur, wenn eine Entscheidung davon abhängt.
 
 - **Direkt im Bild bedienen, an Griffen an der Wirkung.** Keine Schieberegler als Standard („HASS“), keine Zahlenfelder, keine Auswahllisten, keine Knopfreihen, die getrennte Varianten vortäuschen, die es nicht gibt.
