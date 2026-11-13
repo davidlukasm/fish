@@ -147,6 +147,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:48 Claude – **20e mit zwei weiteren Seeds (71237, 99173) bestätigt.** Mit Festigung und 0,75/0,5 ist die Richtung überall richtig: A steigt nach Futter (0,45/0,40 → 0,66) und fällt nach Umkehr (0,003); B fällt nach Schmerz (0,33 → 0,15 bzw. 0,32 → 0) und steigt nach der Umkehr wieder (0,11 bzw. 0,03). Bei der Vorgabe 1/1 steigt B nach Schmerz in allen drei Seeds, mit und ohne Festigung (0,10 → 0,22, mit Festigung 0,17 → 0,62).
 - 10:47 Claude – **Befund 21 mit fünf Seeds abgesichert** (18731, 40507, 26093, 51913, 60233; je 12 Eier, 2000 Schritte):
 - Kiefer 2 × 384: 4, 4, 6, 7, 3 Überlebende, zusammen **24/60 (40 %)**
 - Kiefer 2 × 96: 11, 8, 7, 9, 9 Überlebende, zusammen **44/60 (73 %)**
