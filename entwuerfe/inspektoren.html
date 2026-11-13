@@ -88,6 +88,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Geschwindigkeit</h4>
     <svg id="tailniche" viewBox="0 0 300 130"></svg>
   </section>
+  <section class="panel" aria-label="Nase">
+    <h2>Organ</h2><h3>Nase</h3>
+    <h4 class="first">Düfte</h4>
+    <svg id="nosemap" viewBox="0 0 300 172"></svg>
+    <h4>Duftzellen</h4>
+    <svg id="nosesense" viewBox="0 0 300 200"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1140,5 +1147,63 @@ function drawBalance() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 32));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance();
+// ---------- Nase ----------
+// Smell cells (body_plan.cc:343, tuning.js scentAffinities): eight scents lie on a sphere, similar
+// ones near each other; a group of cells is tuned to a point on it and smells every scent by its
+// distance, w + (1 − w)·exp(−d²/2σ²), σ = 12° + 168°·width², w = width⁴. Drawn as a disk seen from
+// above the "food" pole. The group reports the sum of what it smells, getting used to it as the
+// gut's cells do in this draft. Below: the fish swims into the scent clicked on the map, stays,
+// and leaves.
+const SCENTS = [['Futter', '#ed9c75', 90, 0], ['Algen', '#58a849', 35, -25], ['Pflanzen', '#a7cf59', 35, 25], ['Würmer, Krabben', '#dca57e', 35, 155],
+                ['Plankton', '#e7ba77', 35, 205], ['Aas', '#b27c77', -10, 180], ['Laich', '#c293df', -60, 90], ['Muscheln', '#8aabb8', -60, 270]];
+const NOSE = {groups : [{lat : 40, lon : 0, width : .25, gate : .1, spread : .3, habit : .5}], chosen : 0, level : .7, example : 2};
+const rad = d => d * Math.PI / 180, degOf = r => r * 180 / Math.PI;
+const sphere = (lat, lon) => [Math.cos(rad(lat)) * Math.cos(rad(lon)), Math.cos(rad(lat)) * Math.sin(rad(lon)), Math.sin(rad(lat))];
+const apart = (a, b) => { const u = sphere(...a), v = sphere(...b); return degOf(Math.acos(clamp(u[0] * v[0] + u[1] * v[1] + u[2] * v[2], -1, 1))); };
+const scentAffinity = (g, k) => { const w = Math.pow(clamp(g.width, 0, 1), 4), sg = 12 + 168 * g.width * g.width, d = apart([g.lat, g.lon], [SCENTS[k][2], SCENTS[k][3]]); return w + (1 - w) * Math.exp(-d * d / (2 * sg * sg)); };
+const halfOffset = width => { const w = Math.pow(width, 4); if (w >= .5) return 180; const sg = 12 + 168 * width * width; return Math.min(180, sg * Math.sqrt(-2 * Math.log((.5 - w) / (1 - w)))); };
+function drawNose() {
+  const svg = document.getElementById('nosemap'); svg.replaceChildren();
+  const redraw = drawNose, hold = () => { NOSE.held = true; }, free = () => { NOSE.held = false; redraw(); };
+  const cx = 150, cy = 92, Rm = 78;
+  const at = (lat, lon) => { const r = Rm * Math.sin(rad(90 - lat) / 2); return [cx + r * Math.sin(rad(lon)), cy - r * Math.cos(rad(lon))]; };
+  const back = p => { const dx = p.x - cx, dy = p.y - cy, r = Math.min(Rm, Math.hypot(dx, dy)); return [90 - degOf(2 * Math.asin(r / Rm)), degOf(Math.atan2(dx, -dy))]; };
+  el('circle', {cx, cy, r : Rm, fill : '#0f2c34', stroke : '#2d5059'}, svg);
+  const g = NOSE.groups[NOSE.chosen];
+  // Every group's half line: where it smells a scent half as well as at its middle.
+  NOSE.groups.forEach((gr, i) => {
+    const d = halfOffset(gr.width), [la, lo] = [gr.lat, gr.lon], u = sphere(la, lo);
+    // Points at distance d round (la, lo).
+    const east = [-Math.sin(rad(lo)), Math.cos(rad(lo)), 0], north = [-Math.sin(rad(la)) * Math.cos(rad(lo)), -Math.sin(rad(la)) * Math.sin(rad(lo)), Math.cos(rad(la))];
+    let path = '';
+    for (let k = 0; k <= 72; k++) {
+      const b = 2 * Math.PI * k / 72, v = [0, 1, 2].map(j => Math.cos(rad(d)) * u[j] + Math.sin(rad(d)) * (Math.cos(b) * north[j] + Math.sin(b) * east[j]));
+      const [x, y] = at(degOf(Math.asin(clamp(v[2], -1, 1))), degOf(Math.atan2(v[1], v[0])));
+      path += (k ? ' L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }
+    el('path', {d : path, fill : groupColour(i), 'fill-opacity' : i === NOSE.chosen ? .16 : .07, stroke : groupColour(i), 'stroke-width' : i === NOSE.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3'}, svg);
+  });
+  // The scents, each as large as the chosen group smells it; a click makes it the example below.
+  SCENTS.forEach(([name, colour, lat, lon], k) => {
+    const [x, y] = at(lat, lon), a = scentAffinity(g, k), chip = el('g', {class : 'chip'}, svg);
+    if (k === NOSE.example) el('circle', {cx : x, cy : y, r : 12, fill : 'none', stroke : '#f1dda6', 'stroke-width' : 1.4}, chip);
+    el('circle', {cx : x, cy : y, r : 2.5 + 6 * a, fill : colour}, chip);
+    const right = x >= cx - 2, label = txt(chip, x + (right ? 1 : -1) * 13, y + 4, name, {'text-anchor' : right ? 'start' : 'end', style : 'fill:' + colour});
+    chip.addEventListener('click', () => { NOSE.example = k; redraw(); });
+  });
+  // The chosen group: its middle and, on its half line straight up, its width.
+  const [gx, gy] = at(g.lat, g.lon);
+  drag(svg, el('circle', {cx : gx, cy : gy, r : 7}, svg), p => { const [la, lo] = back(p); g.lat = la; g.lon = lo; redraw(); }, 'nosemid', hold, free);
+  const d = halfOffset(g.width), up = g.lat + d <= 90 ? [g.lat + d, g.lon] : [180 - g.lat - d, g.lon + 180];
+  const [wx, wy] = at(...up);
+  drag(svg, el('rect', {x : wx - 5, y : wy - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => {
+    const want = apart([g.lat, g.lon], back(p)); let lo = 0, hi = 1; for (let n = 0; n < 30; n++) { const m = (lo + hi) / 2; if (halfOffset(m) < want) lo = m; else hi = m; } g.width = (lo + hi) / 2; redraw(); }, 'nosewidth', hold, free);
+  svg.setAttribute('viewBox', '0 6 300 172');
+  const ex = NOSE.example;
+  senseGroups('nosesense', NOSE, {word : 'Duft: ' + SCENTS[ex][0], colour : SCENTS[ex][1], redraw,
+    at : (st, level, gr) => level * scentAffinity(gr, ex) * (st < 10 ? 0 : st < 60 ? (st - 10) / 50 : st < 90 ? 1 : Math.max(0, 1 - (st - 90) / 20)),
+    newGroup : () => ({lat : -10, lon : 180, width : .2, gate : .1, spread : .3, habit : .5})});
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose();
 </script>
