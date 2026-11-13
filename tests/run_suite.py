@@ -42,11 +42,13 @@ def main():
 
     environment = {**os.environ, "BUILD_DIR": str(BUILD), "PYTHONDONTWRITEBYTECODE": "1"}
     commands = [(name, [binary(name + "-tests")]) for name in NATIVE if name in selected]
-    if "interface" in selected:
-        commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
     commands += [(" ".join([name, *(arg.lstrip("-") for arg in part)]),
                   ["node", f"tests/{name}.js", *part])
                  for name, parts in JAVASCRIPT.items() if name in selected for part in parts]
+    if "interface" in selected:
+        commands.append(("interface", [sys.executable, "-B", "tests/build_check.py"]))
+    # Give the long checks a head start when only a few workers are available.
+    commands.sort(key=lambda entry: entry[0] in {"compiler", "texts"})
 
     def run(label, command):
         begin = time.monotonic()

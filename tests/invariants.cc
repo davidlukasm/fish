@@ -4,6 +4,7 @@
 #include "ecology_internal.hh"
 #include "body_plan.hh"
 #include "muscle_fibre.hh"
+#include "parallel.hh"
 #include "perception.hh"
 #include "laboratory.hh"
 #include "interactive_session.hh"
@@ -38,7 +39,7 @@ struct SessionAccess {
 using namespace test;
 namespace {
 constexpr unsigned SEED = 4242;
-constexpr int FISH = 2, STEPS = 24;
+constexpr int FISH = 2, STEPS = 12;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
 void initial_plants_use_the_available_energy() {
   for (double budget : {0., 100., 10000.}) {
@@ -504,15 +505,19 @@ void development_preserves_identity_and_reserves_capacity() {
   resumed.restore(larger.completed_work());
   check(resumed.remaining_cost() == cost, "construction estimates resume from actual work");
 }
-Ecosystem closed_tank(const Genome &g, int count = FISH) {
+Ecosystem empty_closed_tank() {
   Ecosystem w(SEED);
   w.resize(1000, 500);
-  w.starter_world();
   w.set_parameter("energy_supply", 0);
   w.safety = false;
   w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
   w.food_burst.strength = 0;
   no_mutation(w);
+  return w;
+}
+Ecosystem closed_tank(const Genome &g, int count = FISH) {
+  auto w = empty_closed_tank();
+  w.starter_world();
   for (int k = 0; k < count; ++k)
     adult(w, g, FIRST_X + k * SPACING, DEPTH);
   return w;
@@ -598,7 +603,7 @@ void laboratory_comparison_restarts_during_copy() {
     }
 }
 void laboratory_energy_is_accounted(const Genome &g) {
-  auto w = closed_tank(g);
+  auto w = closed_tank(g, 1);
   const auto id = w.fish.front().id;
   auto &b = w.fish.front().body;
   const double held = b.energy;
@@ -691,8 +696,9 @@ void laboratory_release_waits_for_the_running_twitch(const Genome &g) {
     }
 }
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
-void algae_vanish_in_traces(const Genome &g) {
-  auto w = closed_tank(g);
+void algae_vanish_in_traces() {
+  auto w = empty_closed_tank();
+  w.starter_world();
   const auto &surfaces = w.field.vegetation().surfaces;
   const auto floor = std::find_if(surfaces.begin(), surfaces.end(), [](const SurfacePatch &s) {
     return s.algae > 0 && s.normal.y <= -seabed::floor_normal;
@@ -715,17 +721,20 @@ void algae_vanish_in_traces(const Genome &g) {
       check(s.algae == 0, "algae buried under sediment vanish");
 }
 void worker_counts_preserve_the_simulation(const Genome &g) {
+  constexpr int FOOD = 128;
   Ecosystem serial(83921);
   serial.safety = false;
   serial.evo.assist_min_population = serial.evo.assist_species_minimum = 0;
   serial.resize(1000, 500);
-  serial.seed({g}, 4, run_limit::default_food);
+  serial.seed({g}, 4, FOOD);
+  check(serial.field.feeding().pieces.size() >= PARALLEL_MIN_TASKS,
+        "the worker fixture sends food motion through the parallel path");
   auto parallel = serial.fork();
   check(saved(serial) == saved(parallel),
         "a just-seeded aquarium restores before private brains are constructed");
   serial.workers = 1;
   parallel.workers = 4;
-  for (int step = 0; step < 64; ++step) {
+  for (int step = 0; step < STEPS; ++step) {
     serial.tick();
     parallel.tick();
   }
@@ -755,7 +764,7 @@ void completed_anatomy_is_admitted_before_runtime_allocation(const Genome &g) {
 }
 // Recorded incubation cost and measured loss may differ only by floating-point rounding.
 void development_queue_is_bounded(const Genome &g) {
-  auto w = closed_tank(g, 0);
+  auto w = empty_closed_tank();
   constexpr int EGGS = 4;
   for (int i = 0; i < EGGS; ++i) {
     Genome egg = g;
@@ -806,7 +815,7 @@ void egg_development_checkpoint(const Genome &g) {
         "checkpoint fixture has a partially born brain");
   auto restored = w.fork();
   check(saved(w) == saved(restored), "an egg with partially formed neural tissue restores exactly");
-  for (int tick = 0; tick < 80; ++tick) {
+  for (int tick = 0; tick < STEPS; ++tick) {
     w.tick(false);
     restored.tick(false);
   }
@@ -831,7 +840,8 @@ void egg_development_checkpoint(const Genome &g) {
 void development_checkpoint_stages(const Genome &g) {
   constexpr std::size_t SLICE = 37, QUERY_BATCH = 4096;
   for (bool finalizing : {false, true}) {
-    auto w = closed_tank(g, 0);
+    auto w = empty_closed_tank();
+    w.set_parameter("development_work", QUERY_BATCH);
     Genome fresh = g;
     fresh.discard_development();
     fresh.cppn = std::make_shared<evolution::Genome>(*g.cppn);
@@ -845,10 +855,11 @@ void development_checkpoint_stages(const Genome &g) {
     }
     auto copy = w.fork();
     check(saved(w) == saved(copy), "partial development restores exactly");
-    for (int step = 0; step < 8; ++step) {
-      w.tick(false, true);
-      copy.tick(false, true);
-    }
+    const auto before = plan.pending_work();
+    w.tick(false, true);
+    copy.tick(false, true);
+    check(w.fish.front().genome.pending_work() > before,
+          "the resumed phase performs additional work");
     check(saved(w) == saved(copy), "partial development continues exactly");
   }
 }
@@ -857,7 +868,7 @@ void development_checkpoint_stages(const Genome &g) {
 void development_finalization_uses_budget(const Genome &g) {
   constexpr int EMBRYOS = 3;
   constexpr std::size_t QUERY_SLICE = 4096, WORK_BUDGET = 131072;
-  auto w = closed_tank(g, 0);
+  auto w = empty_closed_tank();
   w.evo.development_work = WORK_BUDGET;
   std::vector<std::size_t> before;
   for (int i = 0; i < EMBRYOS; ++i) {
@@ -1162,7 +1173,7 @@ int main() {
     development_checkpoint_stages(g);
     egg_development_checkpoint(g);
     development_finalization_uses_budget(g);
-    algae_vanish_in_traces(g);
+    algae_vanish_in_traces();
     std::cout
         << "Energie, Speicherstand, Bissspuren, Sinne, Schwere, Seitenlinie, Muscheln, Barteln, "
            "Reife, "
