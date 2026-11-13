@@ -97,6 +97,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Saugen und Beißen</h4>
     <svg id="mouthtime" viewBox="0 0 300 220"></svg>
   </section>
+  <section class="panel" aria-label="Flossen">
+    <h2>Organ</h2><h3>Flossen</h3>
+    <h4 class="first">Flossenblatt</h4>
+    <svg id="finfish" viewBox="0 0 300 162"></svg>
+    <h4>Rudern</h4>
+    <svg id="finrow" viewBox="0 0 300 152"></svg>
+  </section>
   <section class="panel" aria-label="Nase">
     <h2>Organ</h2><h3>Nase</h3>
     <h4 class="first">Düfte</h4>
@@ -2020,5 +2027,63 @@ function drawGutLife() {
   svg.setAttribute('viewBox', '0 0 300 ' + (base + 30));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth();
+// ---------- Flossen ----------
+// Side fins (body_plan.cc:97–131, 1528–1560, movement.cc:84–99): a fin cell works the back stroke
+// with 1 − p of its force and the front stroke with p (p its protraction); its blade stands at
+// 90°·q, so a stroke pushes cos and lifts sin of its force, and turns the fish by
+// push·|lever| + lift·arm. A back stroke drives forward, a front stroke brakes and turns the other
+// way. What a stroke does depends on the one before: after its antagonist it sweeps the fin fully,
+// from rest fully as well, but the same stroke again before the fin is back only 0.3; both at once
+// cancel. Above: the fin, its blade (grip at its tip) and the share of the front stroke; below: a
+// row of strokes (click a slot: back, front, rest) and what each one pushes.
+const FIN = {q : .25, protraction : .35, seq : ['B', 'F', 'B', 'F', 'B', 'B', '-', 'B']};
+function drawFins() {
+  const redraw = drawFins, hold = () => { FIN.held = true; }, free = () => { FIN.held = false; redraw(); };
+  const svg = document.getElementById('finfish'); svg.replaceChildren();
+  const fish = el('g', {transform : 'translate(20 0) scale(.9)'}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1.1}, fish);
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, fish);
+  // The pectoral fin behind the head; its blade turned by q: flat (pushes) to across (lifts).
+  const fx = 20 + 70 * .9, fy = 76 * .9, ang = Math.PI / 2 * FIN.q, len = 38;
+  const tx = fx + len * Math.cos(Math.PI / 2 + ang), ty = fy + len * Math.sin(Math.PI / 2 + ang);
+  el('path', {d : `M${fx} ${fy} L${(tx - 6).toFixed(1)} ${ty.toFixed(1)} L${(tx + 6).toFixed(1)} ${ty.toFixed(1)} Z`, fill : '#eaa886', opacity : .7}, svg);
+  drag(svg, el('circle', {cx : tx, cy : ty, r : 7}, svg), p => { FIN.q = clamp((Math.atan2(p.y - fy, p.x - fx) - Math.PI / 2) / (Math.PI / 2), -1, 1); redraw(); }, 'finblade', hold, free);
+  // What a back stroke does: forward by cos, up or down by sin.
+  // What a back stroke does to the fish, drawn at the fin: forward by cos, up or down by sin.
+  const push = Math.cos(ang), lift = Math.sin(ang);
+  const arrow = (x0, y0, dx, dy, colour) => { const l = Math.hypot(dx, dy); if (l < 4) return; const ux = dx / l, uy = dy / l, x1 = x0 + dx, y1 = y0 + dy;
+    el('path', {d : `M${x0} ${y0} L${x1} ${y1} M${x1 - 7 * ux + 4 * uy} ${y1 - 7 * uy - 4 * ux} L${x1} ${y1} L${x1 - 7 * ux - 4 * uy} ${y1 - 7 * uy + 4 * ux}`, stroke : colour, 'stroke-width' : 2.6, fill : 'none', 'stroke-linecap' : 'round'}, svg); };
+  arrow(fx + 60, fy + 30, -46 * push, 0, '#79d2be');
+  arrow(fx + 60, fy + 30, 0, -34 * lift, '#9cc8f0');
+  // The share of the front stroke.
+  const y = 150, x0 = 80, x1 = 230;
+  el('rect', {x : x0, y : y - 4, width : x1 - x0, height : 8, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, svg);
+  el('rect', {x : x0, y : y - 4, width : (x1 - x0) * (1 - FIN.protraction), height : 8, rx : 4, fill : '#79d2be', opacity : .5}, svg);
+  txt(svg, x0 - 8, y + 4, 'Rückhub', {'text-anchor' : 'end'}); txt(svg, x1 + 8, y + 4, 'Vorhub');
+  drag(svg, el('circle', {cx : x0 + (x1 - x0) * FIN.protraction, cy : y, r : 7}, svg), p => { FIN.protraction = clamp((p.x - x0) / (x1 - x0), 0, 1); redraw(); }, 'finshare', hold, free);
+  svg.setAttribute('viewBox', '0 0 300 162');
+
+  // ---- A row of strokes and what each one pushes. ----
+  const c = document.getElementById('finrow'); c.replaceChildren();
+  const L = 30, R = 290, n = FIN.seq.length, w = (R - L) / n, mid = 76, H = 52;
+  let last = -1; // -1 at rest, 0 back, 1 front
+  el('path', {d : `M${L} ${mid} H${R}`, stroke : '#3b6a6c'}, c);
+  FIN.seq.forEach((s, k) => {
+    const x = L + k * w, chip = el('g', {class : 'chip'}, c);
+    let sweep = 0, force = 0;
+    if (s === '-') last = -1;
+    else { const me = s === 'B' ? 0 : 1; sweep = last === 1 - me || last === -1 ? 1 : .3; force = me ? FIN.protraction : 1 - FIN.protraction; last = me; }
+    const v = (s === 'B' ? 1 : -1) * sweep * force * Math.cos(Math.PI / 2 * FIN.q);
+    if (s !== '-') el('rect', {x : x + 4, y : v > 0 ? mid - H * v : mid, width : w - 8, height : Math.abs(H * v), rx : 2, fill : s === 'B' ? '#79d2be' : '#eaa886', opacity : sweep < 1 ? .4 : .9}, c);
+    el('rect', {x : x + 3, y : mid + H + 10, width : w - 6, height : 20, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, chip);
+    txt(chip, x + w / 2, mid + H + 24, s === 'B' ? 'Rück' : s === 'F' ? 'Vor' : 'Pause', {'text-anchor' : 'middle', style : 'font-size:10px'});
+    chip.addEventListener('click', () => { FIN.seq[k] = {B : 'F', F : '-', '-' : 'B'}[s]; redraw(); });
+  });
+  txt(c, L, 12, 'Schub je Hub');
+  txt(c, R, 12, 'blass: nicht im Wechsel', {'text-anchor' : 'end', style : 'font-size:10px'});
+  txt(c, L - 4, mid - H + 4, '+', {'text-anchor' : 'end'}); txt(c, L - 4, mid + H, '−', {'text-anchor' : 'end'});
+  c.setAttribute('viewBox', '0 0 300 ' + (mid + H + 36));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth(); drawFins();
 </script>
