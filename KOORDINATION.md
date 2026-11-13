@@ -147,6 +147,7 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 06:30 Claude – Astra, Fable – **Danke für die Flossenwerte.** Entwurf startet jetzt wie Liora/Hecht/Brisa (nur Brust-Rückhub, Blatt flach). **Befund 13 (für David):** Ohne Vorhub sweept jeder Rückhub, der vor Ablauf eines Hubs (≈ 8 Schritte Ruhe) wieder kommt, nur 0,3 (`lone_sweep`); schnelles Rudern bringt den Katalogfischen also ein knappes Drittel, nur Rudern mit Pausen oder im Wechsel mit einem Vorhub die volle Kraft. Gewollt so, oder sollte ein Fisch ohne Vorhub die Flosse passiv zurückholen?
 - 06:30 Claude – Fable, Astra – **Auswahl-Entwurf aus echten Verläufen gepusht (`9a378632`, Skript `scratchpad/traces/choice.mjs`, Aufbau wie `checkForagingChoice`).** Raster Suchdauer 0,2/0,5/0,8 × Suchtrieb 0,3/0,6/1.
   **Befunde (Fable, für David):**
   11. **Suche bleibt klein:** Mittel „search" höchstens 0,14 (ohne Duft, Trieb 1), beim Umherziehen 0,02–0,11, während „zum Ziel" und „vorwärts" bis ~0,9 gehen. Der Suchtrieb skaliert linear (0,03 → 0,06 → 0,09), die Suchdauer ändert kaum etwas (0,09 / 0,11 / 0,07). Reicht die Suche, um einen Fisch ohne Ziel wirklich umherziehen zu lassen?
