@@ -140,7 +140,6 @@ export class OrganStudio {
     this.designPending = false;
     this.designRequest = 0;
     this.newFishRequest = 0;
-    this.stationRevision = 0;
     this.pendingTrace = null;
     this.wireIndex = null;
     this.previewFrame = null;
@@ -223,7 +222,10 @@ export class OrganStudio {
         }
       if (!loaded && !await this.newFish(true))
         return;
-      this.renderShell();
+      if (this.state.station === 'studio')
+        this.renderShell();
+      else
+        this.refreshHubDraft();
       this.requestDesign();
     } catch (error) {
       if (request === this.newFishRequest && document === this.state.document)
@@ -246,8 +248,6 @@ export class OrganStudio {
     return true;
   }
   navigate(station) {
-    if (station !== this.state.station)
-      ++this.stationRevision;
     this.interruptPointer();
     if (station !== 'studio')
       this.stopPulse();
@@ -267,7 +267,8 @@ export class OrganStudio {
       return;
     this.interruptPointer();
     this.state.mode = mode;
-    this.renderShell();
+    if (this.state.station === 'studio')
+      this.renderShell();
   }
   showDrawnContacts() {
     this.state.contactView = 'design';
@@ -657,7 +658,8 @@ export class OrganStudio {
   async develop() {
     if (this.state.busy)
       return;
-    const document = this.state.document;
+    const document = this.state.document, request = this.newFishRequest;
+    const current = () => this.state.document === document && this.newFishRequest === request;
     const plan = compileDocument(document, this.state.sites);
     if (!plan.groups.length) {
       this.state.report = null;
@@ -674,7 +676,7 @@ export class OrganStudio {
       let job = await this.api(requestBody('build-start', {plan}));
       this.compileJob = job.job;
       while (job.status === 'running') {
-        if (this.cancelCompile || this.state.document !== document) {
+        if (this.cancelCompile || !current()) {
           await this.api(requestBody('build-cancel', {job : job.job}));
           return;
         }
@@ -689,7 +691,7 @@ export class OrganStudio {
         throw new Error(job.error?.key?.startsWith('studio.') ? t(job.error.key)
                                                               : serverText(job.error));
       const result = job.result;
-      if (this.state.document !== document)
+      if (!current())
         return;
       this.state.report = result;
       this.state.robustness = null;
@@ -697,13 +699,14 @@ export class OrganStudio {
       this.state.stale = false;
       this.refreshViews();
     } catch (error) {
-      this.notice(error.message);
+      if (current())
+        this.notice(error.message);
     } finally {
       if (this.compileJob)
         this.api(requestBody('build-cancel', {job : this.compileJob})).catch(() => {});
       this.compileJob = null;
       this.state.compileProgress = null;
-      if (this.cancelCompile)
+      if (this.cancelCompile && current())
         this.notice(label('errors.cancelled'));
       this.state.busy = false;
       this.refreshHeader();
@@ -712,17 +715,20 @@ export class OrganStudio {
   async checkCompiler() {
     if (this.state.busy || !acceptedGenome(this.state) || !this.state.report?.compiler)
       return;
-    const document = this.state.document, genome = this.state.genome;
+    const document = this.state.document, genome = this.state.genome, request = this.newFishRequest;
+    const current = () => this.state.document === document && this.state.genome === genome &&
+                          this.newFishRequest === request;
     this.state.busy = true;
     this.refreshHeader();
     try {
       const result = await this.api(
           requestBody('check', {genome, plan : compileDocument(document, this.state.sites)}),
           API_WAIT.long);
-      if (this.state.document === document && this.state.genome === genome)
+      if (current())
         this.state.robustness = result;
     } catch (error) {
-      this.notice(error.message);
+      if (current())
+        this.notice(error.message);
     } finally {
       this.state.busy = false;
       this.refreshHeader();
@@ -763,14 +769,18 @@ export class OrganStudio {
   async startFish(example) {
     if (this.state.busy)
       return;
+    const request = ++this.newFishRequest, document = this.state.document;
+    const current = () => request === this.newFishRequest && this.state.document === document;
     this.state.busy = true;
     this.refreshHeader();
     try {
       // Choosing a fish only opens its blueprint; it is compiled when the user asks for it.
       const report = await this.api(requestBody('new', {example}), API_WAIT.long);
-      this.loadFish(report.document);
+      if (current())
+        this.loadFish(report.document);
     } catch (error) {
-      this.notice(error.message);
+      if (current())
+        this.notice(error.message);
     } finally {
       this.state.busy = false;
       this.refreshHeader();
@@ -893,9 +903,18 @@ export class OrganStudio {
   }
   draftLine() {
     const {anatomy, document : doc} = this.state;
-    return Number.isFinite(anatomy?.neurons)
+    return this.shownDesign === doc && Number.isFinite(anatomy?.neurons)
                ? t('studio.hub.draft', {name : doc.name, cells : anatomy.neurons})
                : doc.name;
+  }
+  refreshHubDraft() {
+    if (this.state.station !== 'hub')
+      return;
+    const draft = this.draftLine();
+    if (this.hub.state.draft === draft)
+      return;
+    this.hub.state.draft = draft;
+    this.hub.render();
   }
   async saveAssembly(id) {
     const assembly = findAssembly(this.state.document, id);

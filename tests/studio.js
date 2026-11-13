@@ -4,6 +4,149 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkAsyncActions(model, capabilities) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {designMethods} = await import('../ui/studio/design.js');
+  const {label} = await import('../ui/studio/view/kit.js');
+  const make = () => {
+    const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+    Object.assign(studio.state, {station : 'studio', sites : capabilities.sites, capabilities});
+    for (const key
+             of ['interruptPointer', 'release', 'setMode', 'zoom', 'refreshScene', 'refreshHeader',
+                 'refreshTools', 'refreshToolLibrary', 'refreshInspector', 'showDrawnContacts',
+                 'stopPulse', 'renderShell', 'refreshViews', 'persist', 'requestDesign'])
+      studio[key] = () => {};
+    const requests = [];
+    studio.api = body =>
+        body.operation === 'build-cancel'
+            ? Promise.resolve({})
+            : new Promise((resolve, reject) => requests.push({body, resolve, reject}));
+    return {studio, requests};
+  };
+  const flush = async () => {
+    for (let i = 0; i < 8; ++i)
+      await Promise.resolve();
+  };
+  const change = (studio, action) => {
+    if (action === 'newFish')
+      return studio.newFish();
+    if (action === 'edit' || action === 'undo') {
+      studio.changeDocument({...studio.state.document, name : 'Edited fish'});
+      if (action === 'undo')
+        studio.stepHistory('undo');
+    } else if (action === 'load') {
+      studio.loadFish(model.newDocument('Loaded fish'));
+    } else if (action === 'navigate') {
+      studio.state.station = 'hub';
+    } else if (action === 'sight') {
+      studio.state.sightProbe = {side : -1, bearing : 0, distance : 1, radius : .1, hue : 30};
+    } else if (action === 'sense') {
+      studio.state.senseProbe = {kind : 'smell', organ : 'different probe'};
+    } else if (action === 'genome') {
+      studio.state.genome = 'Newer genome';
+    }
+    return null;
+  };
+  const finishNew = async (requests, task) => {
+    if (task) {
+      requests.shift().reject(Error('New fish request finished'));
+      await task;
+    }
+  };
+  for (const action of ['current', 'edit', 'undo', 'load', 'newFish', 'navigate'])
+    for (const failed of [false, true]) {
+      const {studio, requests} = make(), task = studio.startFish('brisa'), old = requests.shift();
+      const newer = change(studio, action), chosen = studio.state.document,
+            history = studio.undoHistory.length,
+            current = [ 'current', 'navigate' ].includes(action);
+      studio.notice('Newer notice');
+      if (failed)
+        old.reject(Error('Starter failed'));
+      else
+        old.resolve({document : model.newDocument('Starter')});
+      await task;
+      assert.equal(studio.state.busy, false);
+      if (current) {
+        assert.equal(studio.state.document.name, failed ? chosen.name : 'Starter');
+        assert.equal(studio.state.notice, failed ? 'Starter failed' : '');
+      } else {
+        assert.equal(studio.state.document, chosen,
+                     action + ' supersedes an older starter request');
+        assert.equal(studio.undoHistory.length, history);
+        assert.equal(studio.state.notice, 'Newer notice');
+      }
+      await finishNew(requests, newer);
+    }
+  {
+    const {studio, requests} = make(), older = studio.newFish(), old = requests.shift();
+    const task = studio.startFish('liora');
+    studio.notice('Starter pending');
+    old.reject(Error('Older new fish failed'));
+    assert.equal(await older, false);
+    assert.equal(studio.state.notice, 'Starter pending',
+                 'Choosing a starter supersedes a pending new fish');
+    requests.shift().resolve({document : model.newDocument('Chosen starter')});
+    await task;
+    assert.equal(studio.state.document.name, 'Chosen starter');
+  }
+  const compiled = studio => {
+    studio.state.document = model
+                                .addNeuron(model.newDocument('Original'), 'learn',
+                                           capabilities.sites, {x : 500, y : 325})
+                                .document;
+    Object.assign(studio.state,
+                  {genome : 'Accepted genome', stale : false, report : {compiler : {ok : true}}});
+  };
+  for (const method of ['develop', 'checkCompiler'])
+    for (const action of ['current', 'edit', 'undo', 'newFish',
+                          ...(method === 'checkCompiler' ? [ 'genome' ] : [])]) {
+      const {studio, requests} = make();
+      compiled(studio);
+      const task = studio[method](), old = requests.shift(), newer = change(studio, action);
+      studio.notice('Newer notice');
+      old.reject(Error(method + ' failed'));
+      await task;
+      assert.equal(studio.state.notice, action === 'current' ? method + ' failed' : 'Newer notice',
+                   method + ': only the current operation may report its failure');
+      assert.equal(studio.state.busy, false);
+      assert.equal(studio.compileJob, null);
+      assert.equal(studio.state.compileProgress, null);
+      await finishNew(requests, newer);
+    }
+  for (const action of ['current', 'edit', 'undo']) {
+    const {studio, requests} = make();
+    compiled(studio);
+    const task = studio.develop(), old = requests.shift();
+    change(studio, action);
+    studio.cancelCompile = true;
+    studio.notice('Newer notice');
+    old.resolve({job : 'cancelled-job', status : 'cancelled'});
+    await task;
+    assert.equal(studio.state.notice,
+                 action === 'current' ? label('errors.cancelled') : 'Newer notice');
+    assert.equal(studio.state.busy, false);
+    assert.equal(studio.compileJob, null);
+  }
+  for (const action of ['current', 'edit', 'undo', 'sight', 'sense', 'newFish']) {
+    const {studio, requests} = make();
+    studio.requestDesign = designMethods.requestDesign;
+    studio.senseScene = () => null;
+    studio.showAnatomy = () => {};
+    studio.requestDesign();
+    const old = requests.shift(), newer = change(studio, action);
+    studio.notice('Newer notice');
+    old.reject(Error('Design failed'));
+    await flush();
+    assert.equal(studio.state.notice, action === 'current' ? 'Design failed' : 'Newer notice',
+                 action + ': an obsolete design failure stays silent');
+    await finishNew(requests, newer);
+    for (const request of requests.splice(0))
+      request.resolve({});
+    await flush();
+    assert.equal(studio.designRunning, false);
+  }
+}
+
 async function checkDraggedInspector(model, capabilities, root) {
   const {OrganStudio} = await import('../ui/studio/controller.js');
   const {inspector, organSettingsBlock} = await import('../ui/studio/view/panels.js');
@@ -3016,6 +3159,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  if (process.argv.includes('--async-actions')) {
+    await checkAsyncActions(model, sitesResult);
+    console.log('Atelier: verspätete Starter, Compilerfehler und Vorschaufehler: OK');
+    return;
+  }
   if (process.argv.includes('--learn')) {
     await checkLearningTrace(model, sitesResult, root);
     console.log('Atelier: native Lernverläufe, Lehrzeitpunkt, Festigung und Gegenfolgen: OK');
@@ -3043,6 +3191,7 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   await checkDraggedInspector(model, sitesResult, root);
+  await checkAsyncActions(model, sitesResult);
   await checkProbeSettling(model, sitesResult, root);
   if (process.argv.includes('--probe-settling')) {
     console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');

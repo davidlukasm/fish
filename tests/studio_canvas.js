@@ -964,7 +964,7 @@ async function checkInitialFish(model, capabilities, root) {
                  'An older new-fish answer cannot replace the newer one');
     assert.equal(studio.undoHistory.length, 1);
   }
-  for (const action of ['edit', 'redo', 'load', 'leave']) {
+  for (const action of ['edit', 'redo', 'load']) {
     const {studio, pending} = deferred(), previous = studio.state.document;
     const task = studio.newFish();
     const savedDocument = global.document;
@@ -975,18 +975,77 @@ async function checkInitialFish(model, capabilities, root) {
         assert.equal(studio.state.document, previous);
         if (action === 'redo')
           studio.stepHistory('redo');
-      } else if (action === 'load') {
-        studio.loadFish(model.newDocument('Loaded'));
       } else {
-        global.document = {body : {dataset : {}}};
-        studio.hub.close = studio.breeding.close = studio.trials.close = () => {};
-        studio.navigate('hub');
-        studio.navigate('studio');
+        studio.loadFish(model.newDocument('Loaded'));
       }
       const chosen = studio.state.document, history = studio.undoHistory.length;
       assert.equal(await finish(pending, task), false);
       assert.equal(studio.state.document, chosen, action + ' invalidates the pending new fish');
       assert.equal(studio.undoHistory.length, history);
+    } finally {
+      global.document = savedDocument;
+    }
+  }
+  for (const [station, mode, returned] of [
+           [ 'hub', 'fish', false ], [ 'hub', 'cppn', true ], [ 'trials', 'cppn', false ],
+           [ 'breeding', 'cppn', false ], [ 'aquarium', 'cppn', false ]]) {
+    const {studio, pending, hits} = deferred(), previous = studio.state.document;
+    const savedDocument = global.document, opened = [];
+    try {
+      global.document = {body : {dataset : {}}};
+      studio.state.mode = mode;
+      studio.setMode = OrganStudio.prototype.setMode;
+      studio.renderShell = OrganStudio.prototype.renderShell;
+      studio.requestDesign = () => {
+        ++hits.design;
+        OrganStudio.prototype.requestDesign.call(studio);
+      };
+      for (const name of ['hub', 'breeding', 'trials']) {
+        studio[name].close = () => {};
+        studio[name].open = () => opened.push(name);
+      }
+      const task = studio.newFish();
+      studio.navigate(station);
+      if (returned)
+        studio.navigate('studio');
+      else
+        studio.root.innerHTML = 'Existing station view';
+      const selectedStation = studio.state.station, opens = [...opened ],
+            labs = [ studio.breeding, studio.trials ].map(lab => structuredClone({
+                                                            state : lab.state,
+                                                            settings : lab.settings,
+                                                            epoch : lab.epoch,
+                                                            commands : lab.commandEpoch,
+                                                            worlds : lab.worlds
+                                                          }));
+      assert.equal(await finish(pending, task), true,
+                   station + ': navigation does not cancel the requested fish');
+      assert.equal(studio.state.station, selectedStation);
+      assert.equal(global.document.body.dataset.station, selectedStation);
+      assert.equal(studio.state.mode, 'fish');
+      assert.deepEqual(opened, opens, 'Finishing a fish cannot reopen a hub or laboratory');
+      assert.deepEqual([ studio.breeding, studio.trials ].map(lab => ({
+                                                                state : lab.state,
+                                                                settings : lab.settings,
+                                                                epoch : lab.epoch,
+                                                                commands : lab.commandEpoch,
+                                                                worlds : lab.worlds
+                                                              })),
+                       labs, 'Laboratory state survives completion in the background');
+      if (selectedStation === 'hub') {
+        assert.equal(studio.hub.state.draft, studio.draftLine());
+        assert.ok(studio.root.innerHTML.includes('aid-hub-note'));
+      } else if (!returned)
+        assert.equal(studio.root.innerHTML, 'Existing station view');
+      assert.equal(studio.undoHistory.length, 1);
+      assert.equal(studio.undoHistory[0], previous);
+      assert.equal(hits.save, 1);
+      assert.equal(hits.design, 1);
+      const answer = native({
+        operation : 'design',
+        plan : model.compileDocument(studio.state.document, capabilities.sites)
+      });
+      assert.deepEqual(model.pressureMismatches(studio.state.document, answer.pressure), []);
     } finally {
       global.document = savedDocument;
     }
@@ -998,6 +1057,50 @@ async function checkInitialFish(model, capabilities, root) {
                                                                 : {modules : []});
     await flush();
   };
+  for (const [station, mode, savedDraft] of [
+           [ 'hub', 'fish', false ], [ 'hub', 'cppn', true ], [ 'trials', 'cppn', false ],
+           [ 'breeding', 'fish', true ], [ 'aquarium', 'cppn', false ]]) {
+    const fixture = deferred(), initial = fixture.studio, opened = [];
+    const savedDocument = global.document;
+    try {
+      global.document = {body : {dataset : {}}};
+      initial.state.sites = [];
+      initial.state.mode = mode;
+      initial.renderShell = OrganStudio.prototype.renderShell;
+      initial.requestDesign = OrganStudio.prototype.requestDesign;
+      for (const name of ['hub', 'breeding', 'trials']) {
+        initial[name].close = () => {};
+        initial[name].open = () => opened.push(name);
+      }
+      const task = initial.bootstrap();
+      initial.navigate(station);
+      initial.root.innerHTML = 'Existing initial station';
+      const opens = [...opened ];
+      for (const request of fixture.pending.splice(0, 3))
+        request.resolve(request.body.operation === 'sites' ? capabilities
+                        : request.body.operation === 'load-draft'
+                            ? {document : savedDraft ? studio.state.document : null}
+                            : {modules : []});
+      await flush();
+      await finish(fixture.pending, task);
+      assert.equal(initial.state.station, station);
+      assert.equal(global.document.body.dataset.station, station);
+      assert.equal(initial.state.mode, mode);
+      assert.deepEqual(opened, opens, 'Bootstrap never reopens the selected station');
+      if (station === 'hub') {
+        assert.equal(initial.hub.state.draft, initial.draftLine());
+        assert.ok(initial.root.innerHTML.includes('aid-hub-note'));
+      } else
+        assert.equal(initial.root.innerHTML, 'Existing initial station');
+      assert.ok(initial.state.document.organs.some(o => o.type === 'gut'));
+      assert.deepEqual(
+          model.pressureMismatches(initial.state.document, initial.state.anatomy.pressure), []);
+      assert.equal(initial.undoHistory.length, 0);
+      assert.equal(fixture.hits.save, 0);
+    } finally {
+      global.document = savedDocument;
+    }
+  }
   for (const when of ['before-sites', 'early-new', 'during-design', 'edit', 'new']) {
     const {studio, pending} = deferred();
     studio.state.station = 'hub';

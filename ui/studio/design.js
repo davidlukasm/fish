@@ -65,12 +65,8 @@ export const designMethods = {
       this.notice(label('errors.sitesUnavailable'));
       return false;
     }
-    const request = ++this.newFishRequest, previous = this.state.document,
-          station = this.state.station, stationRevision = this.stationRevision,
-          sites = this.state.sites;
-    const current = () =>
-        request === this.newFishRequest && this.state.document === previous &&
-        (initial || this.state.station === station && this.stationRevision === stationRevision);
+    const request = ++this.newFishRequest, previous = this.state.document, sites = this.state.sites;
+    const current = () => request === this.newFishRequest && this.state.document === previous;
     if (!initial)
       this.notice('');
     try {
@@ -90,8 +86,10 @@ export const designMethods = {
         if (!wrong.length) {
           if (initial)
             this.state.document = document;
-          else
+          else {
             this.loadFish(document);
+            this.refreshHubDraft();
+          }
           return true;
         }
         let improved = false;
@@ -196,7 +194,7 @@ export const designMethods = {
     }
     this.designRunning = true;
     this.designPending = false;
-    const request = ++this.designRequest;
+    const request = ++this.designRequest, fishRequest = this.newFishRequest;
     const document = this.state.document, probe = this.state.sightProbe,
           sense = this.state.senseProbe;
     this.api(requestBody('design', {
@@ -212,7 +210,11 @@ export const designMethods = {
           if (this.state.document === document)
             this.showAnatomy(anatomy, request);
         })
-        .catch(error => this.notice(error.message))
+        .catch(error => {
+          if (this.newFishRequest === fishRequest && this.state.document === document &&
+              this.state.sightProbe === probe && this.state.senseProbe === sense)
+            this.notice(error.message);
+        })
         .finally(() => {
           this.designRunning = false;
           if (this.designPending || this.state.document !== document ||
@@ -226,6 +228,8 @@ export const designMethods = {
     if (anatomy.lightSpread)
       this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
     this.state.anatomy = anatomy;
+    if (this.state.station === 'hub')
+      this.refreshHubDraft();
     this.bringProbes();
     // A newly answered stimulus already rebuilds the scene and inspector with this anatomy.
     const traced = this.traceAnswered(request);
