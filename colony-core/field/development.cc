@@ -217,8 +217,10 @@ public:
 };
 }
 std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,
-                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited) {
-  CellCopies builder(groups, limit);
+                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited,
+                                const std::vector<CellTraits> *traits, std::uint64_t seed,
+                                float bias_scale) {
+  CellCopies builder(groups, limit, traits, seed, bias_scale);
   auto budget = std::numeric_limits<std::size_t>::max();
   builder.advance(budget);
   limited = builder.limited();

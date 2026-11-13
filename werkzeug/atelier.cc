@@ -258,6 +258,65 @@ constexpr int LATERAL_DIRECTIONS = 48;
 constexpr int COLOUR_STEPS = 9;
 constexpr double ADAPT_HELD = 4, ADAPT_SPAN = 4;
 constexpr int ADAPT_SAMPLES = 96;
+std::optional<fishsim::BrainInterface::Receptor> nominal_light(const Group &group) {
+  if (group.role != 0 || group.function != field::Light)
+    return std::nullopt;
+  fishsim::BrainInterface::Receptor r{};
+  r.response_threshold = float(fishsim::response_threshold((group.threshold + 1) * .5));
+  r.opponency = std::clamp((group.q2 + 1) * .5f, 0.f, 1.f);
+  const auto spectrum = fishsim::hue_affinities(fishsim::tuning_hue(group.q1), group.qwidth);
+  const double total = spectrum[0] + spectrum[1] + spectrum[2];
+  for (int c = 0; c < fishsim::rgb::count; ++c)
+    r.spectrum[c] = float(spectrum[c] / total);
+  return r;
+}
+void light_spread_report(const field::Substrate &t, const fishsim::BrainInterface &binding,
+                         const std::vector<Group> &groups, bool example) {
+  const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
+  std::array<fishsim::Color, LIGHT_HUES> lights;
+  for (int k = 0; k < LIGHT_HUES; ++k)
+    lights[k] = fishsim::hue_light(2. * fishsim::tuning::hue_half_circle * k / LIGHT_HUES);
+  std::cout << ",\"lightSpread\":{\"source\":" << json(example ? "example" : "developed")
+            << ",\"groups\":[";
+  for (std::size_t i = 0; i < groups.size(); ++i) {
+    std::array<double, LIGHT_HUES> sum{}, low{}, high{};
+    std::size_t count = 0;
+    double half_sum = 0, half_low = 0, half_high = 0;
+    for (const auto &r : binding.sensory) {
+      if (r.channel != field::Light || !groups[i].contains(t.neurons[r.neuron].location))
+        continue;
+      const double half = fishsim::half_contrast(r.response_threshold);
+      half_sum += half;
+      half_low = count ? std::min(half_low, half) : half;
+      half_high = count ? std::max(half_high, half) : half;
+      for (int k = 0; k < LIGHT_HUES; ++k) {
+        const double value = fishsim::spectral_balance(r, lights[k], opponent);
+        sum[k] += value;
+        low[k] = count ? std::min(low[k], value) : value;
+        high[k] = count ? std::max(high[k], value) : value;
+      }
+      ++count;
+    }
+    std::cout << (i ? "," : "");
+    if (!count) {
+      std::cout << "null";
+      continue;
+    }
+    const auto curve = [&](const char *name, const auto &values, double scale) {
+      std::cout << ",\"" << name << "\":[";
+      for (int k = 0; k < LIGHT_HUES; ++k)
+        std::cout << (k ? "," : "") << values[k] * scale;
+      std::cout << ']';
+    };
+    std::cout << "{\"count\":" << count;
+    curve("mean", sum, 1. / count);
+    curve("min", low, 1);
+    curve("max", high, 1);
+    std::cout << ",\"half\":{\"mean\":" << half_sum / count << ",\"min\":" << half_low
+              << ",\"max\":" << half_high << "}}";
+  }
+  std::cout << "]}";
+}
 std::vector<int> anatomy_report(const field::Substrate &t,
                                 const std::shared_ptr<const fishsim::BrainInterface> &interface,
                                 const std::vector<Group> &groups, bool developed) {
@@ -276,12 +335,7 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   std::cout << ",\"light\":[";
   const double opponent = fishsim::EnvironmentParameters{}.vision_opponent;
   for (std::size_t i = 0; i < groups.size(); ++i) {
-    const fishsim::BrainInterface::Receptor *cell = nullptr;
-    for (const auto &r : a.sensory)
-      if (r.channel == field::Light && groups[i].contains(t.neurons[r.neuron].location)) {
-        cell = &r;
-        break;
-      }
+    const auto cell = nominal_light(groups[i]);
     std::cout << (i ? "," : "");
     if (!cell) {
       std::cout << "null";
@@ -731,14 +785,19 @@ std::vector<int> anatomy_report(const field::Substrate &t,
   std::cout << ']';
   return group;
 }
-void design_report(const std::vector<Group> &groups, const std::optional<SightScene> &sight,
-                   const std::optional<SenseScene> &sense) {
+void design_report(const Plan &plan, const std::optional<SightScene> &sight,
+                   const std::optional<SenseScene> &sense, bool light_spread) {
+  const auto &groups = plan.groups;
   const auto t = planned_substrate(groups);
   const auto interface = fishsim::body_interface(t);
   std::cout << std::setprecision(REPORT_DIGITS) << '{';
   std::cout << "\"neurons\":" << t.neurons.size()
             << ",\"limited\":" << (t.resource_limited ? "true" : "false");
   anatomy_report(t, interface, groups, false);
+  if (light_spread) {
+    const auto sample = light_example(plan);
+    light_spread_report(sample, *fishsim::body_interface(sample), groups, true);
+  }
   if (sight)
     sight_report(t, interface, groups, *sight);
   if (sense)
@@ -794,6 +853,7 @@ void report(const Genome &g, const std::vector<Group> &groups, const Plan *plan 
   adult.tissue = fishsim::tissue_capacity(adult);
   std::cout << ",\"adultScale\":" << fishsim::growth_fraction(adult);
   auto group = anatomy_report(t, g.interface, groups, true);
+  light_spread_report(t, *g.interface, groups, false);
   std::map<std::uint32_t, int> extra;
   std::map<std::uint32_t, int> members;
   for (const auto &cell : t.neurons)
@@ -995,6 +1055,8 @@ int main(int argc, char **argv) {
                 << ",\"bloodSubstances\":" << field::BLOOD_SUBSTANCES
                 << ",\"substanceTurns\":" << substance_turns_report()
                 << ",\"visionRange\":" << fishsim::EnvironmentParameters{}.vision_range
+                << ",\"visionSpectrum\":{\"samples\":" << LIGHT_HUES
+                << ",\"opponent\":" << fishsim::EnvironmentParameters{}.vision_opponent << '}'
                 << ",\"sightRadius\":[" << fishsim::PROBE_MIN_RADIUS << ','
                 << fishsim::PROBE_MAX_RADIUS << ']' << ",\"nearDepth\":["
                 << fishsim::proximity_depth(0) << ',' << fishsim::proximity_depth(1) << ']'
@@ -1037,6 +1099,9 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (argc == 2 && std::string(argv[1]) == "design") {
+      int light_spread = 0;
+      ensure(bool(std::cin >> light_spread) && (light_spread == 0 || light_spread == 1),
+             "invalid light spread flag");
       int seen = 0;
       ensure(bool(std::cin >> seen) && (seen == 0 || seen == 1), "invalid sight flag");
       std::optional<SightScene> sight;
@@ -1047,7 +1112,7 @@ int main(int argc, char **argv) {
       if (seen)
         sense = read_sense_scene(std::cin);
       std::string name;
-      design_report(read_plan(std::cin, name, true).groups, sight, sense);
+      design_report(read_plan(std::cin, name, true), sight, sense, light_spread);
       std::cout << '\n';
       return 0;
     }

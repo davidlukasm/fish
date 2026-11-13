@@ -134,6 +134,7 @@ export const designMethods = {
           sense = this.state.senseProbe;
     this.api(requestBody('design', {
           plan : compileDocument(document, this.state.sites),
+          lightSpread : this.state.lightSpread?.document !== document,
           sight : sightScene(probe),
           sense : this.senseScene()
         }))
@@ -155,6 +156,8 @@ export const designMethods = {
   showAnatomy(anatomy, request) {
     const probesOnly = this.shownDesign === this.state.document;
     this.shownDesign = this.state.document;
+    if (anatomy.lightSpread)
+      this.state.lightSpread = {document : this.state.document, report : anatomy.lightSpread};
     this.state.anatomy = anatomy;
     this.bringProbes();
     // A newly answered stimulus already rebuilds the scene and inspector with this anatomy.

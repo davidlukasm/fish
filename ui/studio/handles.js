@@ -6,7 +6,7 @@ import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
-import {hasColourTuning} from './model/retina.js';
+import {hasColourTuning, nominalSpectrum} from './model/retina.js';
 import {
   effectorPatch,
   FIN_ANGLE_TRAIT,
@@ -26,7 +26,6 @@ import {
   findCenter,
   findOrgan,
   groupReport,
-  profileIndex,
   setBends,
   setFinAngle,
   setGillRakers,
@@ -664,11 +663,9 @@ export const handleMethods = {
       return;
     if (drag.handle === 'sensitivity')
       return this.sensitivityPointer(event, drag);
-    const light = this.state.anatomy?.light
-                      ?.[profileIndex(this.state.document, target.organ.id, drag.target.profileId)];
     const {fx, fy} = pointerShare(event, drag.rect);
     const patch = spectrumPatch(target.tuning, drag.handle,
-                                {x : fx * drag.size.width, y : fy * drag.size.height}, light);
+                                {x : fx * drag.size.width, y : fy * drag.size.height});
     if (!patch)
       return;
     if (drag.handle === 'light') {
@@ -872,9 +869,7 @@ export const handleMethods = {
   // by as much as the half answer is dragged.
   sensitivityStart(target, handle) {
     const found = handle === 'sensitivity' && this.spectrumTarget(target);
-    const answer =
-        found && this.state.anatomy?.light
-                     ?.[profileIndex(this.state.document, found.organ.id, found.tuning.id)];
+    const answer = found && nominalSpectrum(found.tuning, this.state.capabilities?.visionSpectrum);
     return answer?.half > 0 ? {answer, threshold : found.tuning.threshold, shift : 1} : {};
   },
   skinGrip(graphic, handle) {

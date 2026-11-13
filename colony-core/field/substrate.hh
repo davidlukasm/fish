@@ -142,8 +142,11 @@ struct ZoneSpan {
 };
 std::array<ZoneSpan, cppn::input::zones> zone_spans(const std::vector<Neuron> &);
 void lay_out_cells(std::vector<Neuron> &);
+struct CellTraits;
 std::vector<Neuron> cell_copies(const std::vector<Neuron> &groups, std::size_t limit,
-                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited);
+                                std::vector<std::vector<NeuronIndex>> &copies, bool &limited,
+                                const std::vector<CellTraits> *traits = nullptr,
+                                std::uint64_t seed = 0, float bias_scale = 0);
 struct Options {
   float bias_scale = .3f;
   bool reference_development = false;

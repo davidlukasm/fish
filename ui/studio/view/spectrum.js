@@ -35,7 +35,7 @@ const SPECTRUM = Object.freeze({
   left : 30,
   top : 12,
   excite : 50,
-  inhibit : 50,
+  inhibit : 64,
   gap : 6,
   strip : 14,
   handle : 7,
@@ -59,34 +59,24 @@ export const huePoint = (hue, level) => ({x : hueX(hue), y : levelY(level)});
 function balance(tuning, light) {
   if (!light?.excitation?.length)
     return null;
-  const peak = Math.max(...light.excitation);
-  if (!(peak > 0))
+  if (!light.excitation.some(x => x > 0))
     return null;
   const opponency = unitOfPlan(tuning.q2);
-  return light.excitation.map((e, k) => (e - opponency * light.inhibition[k]) / peak);
+  return light.excitation.map((e, k) => e - opponency * light.inhibition[k]);
 }
 const sampleIndex = (values, hue) =>
     Math.round((hueX(hue) - SPECTRUM.left) / PLOT * values.length) % values.length;
 const opposite = tuning => tuningHue(tuning.q1) + HUE_CIRCLE / 2;
 
 // The change a handle makes, from the pointer `p` in the picture's units.
-export function spectrumPatch(tuning, handle, p, light = null) {
+export function spectrumPatch(tuning, handle, p) {
   const hue = clamp((p.x - SPECTRUM.left) / PLOT) * HUE_CIRCLE;
   if (handle === 'width')
     return {qwidth : tuningWidth(Math.abs(hueOffset(hue, tuningHue(tuning.q1))))};
   if (handle === 'light')
     return {hue};
-  if (handle === 'opponent') {
-    if (!light?.excitation?.length)
-      return null;
-    const peak = Math.max(...light.excitation),
-          index = sampleIndex(light.excitation, opposite(tuning));
-    const inhibition = light.inhibition[index];
-    if (!(peak > 0) || !(inhibition > 0))
-      return null;
-    const level = (ZERO - p.y) / SPECTRUM.excite;
-    return {q2 : planOfUnit((light.excitation[index] - level * peak) / inhibition)};
-  }
+  if (handle === 'opponent')
+    return {q2 : planOfUnit((p.y - ZERO) / SPECTRUM.inhibit)};
   return {q1 : hueQuality(hue)};
 }
 
@@ -95,6 +85,12 @@ const line = values => [...values, values[0]]
                                           rounded(levelY(v)))
                            .join(' L');
 const area = values => `M${SPECTRUM.left} ${ZERO} L${line(values)} L${SPECTRUM.width} ${ZERO} Z`;
+const envelope = (low, high) => {
+  const points = values => Array.from({length : values.length + 1},
+                                      (_, k) => rounded(SPECTRUM.left + PLOT * k / values.length) +
+                                                ' ' + rounded(levelY(values[k % values.length])));
+  return 'M' + points(high).join(' L') + ' L' + points(low).reverse().join(' L') + ' Z';
+};
 // The tuning of a cell type as its curve along the strip.
 const tuningCurve = tuning => Array.from(
     {length : SPECTRUM.samples},
@@ -107,6 +103,10 @@ export function spectrumElement(tuning, target, label, {
   light = null,
   testHue = null,
   colourTuning = true,
+  spread = null,
+  spreadLabel = '',
+  planLabel = '',
+  opponentLabel = '',
   axis = {
     excite : '',
     inhibit : ''
@@ -123,6 +123,8 @@ export function spectrumElement(tuning, target, label, {
                               lightColor(HUE_CIRCLE * k / HUE_STOPS)}"/>`)
                     .join('');
   const values = balance(tuning, light);
+  const nominal = values ?? tuningCurve(tuning);
+  const atHue = hue => levelY(nominal[sampleIndex(nominal, hue)]);
   const word = (text, from, to) =>
       `<text class="aid-spectrum-axis" transform="translate(${S.axis} ${
           rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${escapeText(text)}</text>`;
@@ -130,7 +132,7 @@ export function spectrumElement(tuning, target, label, {
   const tuningHandle = key =>
       colourTuning ? `data-spectrum-handle="${key}"` : 'aria-disabled="true"';
   let html =
-      `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT}"${
+      `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT + 26}"${
           attributes} role="img" aria-label="${label}"><defs><linearGradient id="aid-hue-${id}">${
           stops}</linearGradient></defs><rect class="aid-spectrum-strip" x="${S.left}" y="${
           STRIP}" width="${PLOT}" height="${S.strip}" fill="url(#aid-hue-${id})"/>` +
@@ -144,16 +146,26 @@ export function spectrumElement(tuning, target, label, {
                 titled(axis.inhibit)}</path>`;
   html += others
               .map(o => {
-                const at = huePoint(tuningHue(o.tuning.q1), 1);
+                const curve = balance(o.tuning, o.light) ?? tuningCurve(o.tuning);
+                const at = huePoint(tuningHue(o.tuning.q1),
+                                    curve[sampleIndex(curve, tuningHue(o.tuning.q1))]);
                 return `<g class="aid-spectrum-other" ${o.choose}><title>${
-                           escapeText(o.name)}</title><path d="M${line(tuningCurve(o.tuning))}"/>` +
+                           escapeText(o.name)}</title><path d="M${line(curve)}"/>` +
                        `<circle cx="${rounded(at.x)}" cy="${rounded(at.y)}" r="${
                            S.dot}" style="fill:${o.colour}"/></g>`;
               })
               .join('');
+  if (spread?.count > 0)
+    html += `<path class="aid-spectrum-spread" d="${envelope(spread.min, spread.max)}"/>` +
+            `<path class="aid-spectrum-mean" d="M${line(spread.mean)}"/>`;
+  if (spread)
+    html += `<text class="aid-spectrum-sample-label" x="${S.left}" y="${HEIGHT + 18}">${
+        escapeText(spreadLabel)}</text>`;
+  html += `<text class="aid-spectrum-plan-label" x="${S.width - 8}" y="${HEIGHT + 18}" ` +
+          `text-anchor="end">${escapeText(planLabel)}</text>`;
   html +=
       `<line class="aid-spectrum-zero" x1="${S.left}" y1="${ZERO}" x2="${S.width}" y2="${ZERO}"/>` +
-      `<path class="aid-spectrum-tuning" d="M${line(tuningCurve(tuning))}"/>`;
+      `<path class="aid-spectrum-tuning" d="M${line(nominal)}"/>`;
   if (Number.isFinite(testHue)) {
     const x = rounded(hueX(testHue)),
           y = values ? rounded(levelY(values[sampleIndex(values, testHue)])) : ZERO;
@@ -164,17 +176,25 @@ export function spectrumElement(tuning, target, label, {
   }
   if (values) {
     const hue = opposite(tuning);
+    // The raw response may have arbitrarily little slope; its control needs a usable fixed travel.
+    const x = hueX(hue), y = ZERO + unitOfPlan(tuning.q2) * S.inhibit;
+    if (colourTuning)
+      html +=
+          `<path class="aid-spectrum-parameter" d="M${rounded(x)} ${ZERO}V${ZERO + S.inhibit}"/>` +
+          `<text class="aid-spectrum-parameter-label" x="${
+              rounded(x + (x > S.width / 2 ? -10 : 10))}" ` +
+          `y="${ZERO + S.inhibit - 4}" text-anchor="${x > S.width / 2 ? 'end' : 'start'}">${
+              escapeText(opponentLabel)}</text>`;
     html += `<circle class="aid-spectrum-handle opponent" ${tuningHandle('opponent')} cx="${
-        rounded(hueX(
-            hue))}" cy="${rounded(levelY(values[sampleIndex(values, hue)]))}" r="${S.handle}"/>`;
+        rounded(x)}" cy="${rounded(y)}" r="${S.handle}"/>`;
   }
   return html +
          `<rect class="aid-spectrum-handle centre" ${tuningHandle('centre')} x="${
-             rounded(hueX(centre) - S.handle)}" y="${rounded(levelY(1) - S.handle)}" width="${
+             rounded(hueX(centre) - S.handle)}" y="${rounded(atHue(centre) - S.handle)}" width="${
              2 * S.handle}" height="${2 * S.handle}" rx="2"/>` +
          `<circle class="aid-spectrum-handle width" data-spectrum-handle="width" cx="${
-             rounded(hueX(centre + sigma))}" cy="${
-             rounded(levelY(tuningAffinity(sigma, tuning.qwidth)))}" r="${S.handle}"/></svg>`;
+             rounded(hueX(centre +
+                          sigma))}" cy="${rounded(atHue(centre + sigma))}" r="${S.handle}"/></svg>`;
 }
 
 export const spectrumValues =

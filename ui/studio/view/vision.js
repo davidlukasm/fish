@@ -11,10 +11,17 @@ import {
 } from './spectrum.js';
 import {stimulusOfShare, stimulusShare} from './sensitivity.js';
 import {escapeText, fixed, idSafe, pointText} from './markup.js';
-import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
+import {allCenters, findOrgan, isChosen, organOf} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
 import {EYE, eyeRadius, fieldOrigin} from './places.js';
-import {HALF_VIEW, hasColourTuning, receptorWidth, retinalRays} from '../model/retina.js';
+import {
+  HALF_VIEW,
+  hasColourTuning,
+  nominalSpectrum,
+  profileLightSpread,
+  receptorWidth,
+  retinalRays
+} from '../model/retina.js';
 import {
   BODY_FRAME,
   BODY_MIDDLE,
@@ -333,13 +340,14 @@ export function visionFan(state, organ) {
          fieldHandles(state, organ, g, near, middle) + testLight(state, organ, g) + '</g>';
 }
 // The other colour types of the eye, to sit faintly in the same wheel; a click on one chooses it.
-function otherTypes(organ, chosen) {
+function otherTypes(organ, chosen, definition) {
   const profiles = organ.field.profiles, names = profiles.map(profileName);
   const nameOf = i =>
       names.indexOf(names[i]) === names.lastIndexOf(names[i]) ? names[i] : names[i] + ' ' + (i + 1);
   return profiles
       .map((profile, i) => ({
              tuning : profile,
+             light : nominalSpectrum(profile, definition),
              choose : `data-vision-profile="${idSafe(profile.id)}"`,
              colour : profileColor(profile),
              name : label('profile') + ' ' + nameOf(i)
@@ -348,7 +356,9 @@ function otherTypes(organ, chosen) {
 }
 // `shift` and `start` show a sensitivity being dragged before the design run answers.
 export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
-  const light = start ?? state.anatomy?.light?.[profileIndex(state.document, organ.id, profile.id)];
+  const definition = state.capabilities?.visionSpectrum;
+  const light = start ?? nominalSpectrum(profile, definition);
+  const spread = profileLightSpread(state.document, state.lightSpread, organ.id, profile.id);
   const least = state.anatomy?.contrastLeast, half = light?.half * shift;
   const faint = least > 0 && half > 0 ? {share : stimulusShare(half, least), half, least} : null;
   const [centre, width, opponent] = spectrumValues(profile, true);
@@ -361,11 +371,19 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
          spectrumElement(profile, {spectrum : 'field', ...target}, label('spectrum'), {
            light,
            colourTuning : hasColourTuning(organ, profile),
+           spread,
+           spreadLabel : spread
+                             ? t('studio.vision.' +
+                                     (spread.source === 'example' ? 'sampleCells' : 'actualCells'),
+                                 {n : spread.count})
+                             : '',
+           planLabel : label('planCurve'),
+           opponentLabel : label('opponentWord'),
            testHue : state.sightProbe?.hue,
            axis : {excite : label('excites'), inhibit : label('inhibits')},
-           others : otherTypes(organ, profile)
+           others : otherTypes(organ, profile, definition)
          }) +
-         contrastScene(profile, faint, target) + '</div>';
+         contrastScene(profile, faint, target, spread) + '</div>';
 }
 const NEAR_BARS =
     Object.freeze({width : 300, height : 64, top : 6, base : 50, gap : 1, label : 62});
@@ -464,7 +482,7 @@ function keennessRow(tone, faint) {
          `"sensitivity" cx="${fixed(edge)}" cy="${fixed(mid)}" r="${S.handle}"><title>${
              escapeText(label('keenHandle'))}</title></circle>`;
 }
-function contrastScene(profile, faint, target) {
+function contrastScene(profile, faint, target, spread) {
   const S = SCENE;
   const k =
       Math.max(0, CONTRAST_CHOICES.findIndex(key => CONTRAST_POLARITY[key] === profile.polarity));
@@ -483,8 +501,17 @@ function contrastScene(profile, faint, target) {
       Object.entries(target).map(([ name, value ]) => ` data-${name}="${idSafe(value)}"`).join('');
   const band = (cls, top) => `<rect class="${cls}" x="${S.left}" y="${top}" width="${
       S.right - S.left}" height="${S.row}" rx="6"/>`;
+  let variation = '';
+  if (faint && spread?.count > 0) {
+    const y = S.height + 14;
+    const at = key => fixed(sceneX(stimulusShare(spread.half[key], faint.least)));
+    const low = at('min'), high = at('max'), mean = at('mean');
+    variation = word(label('cellRange'), y) +
+                `<path class="aid-spectrum-mean" d="M${low} ${y}H${high}M${low} ${y - 3}v6` +
+                `M${high} ${y - 3}v6M${mean} ${y - 6}v12"/>`;
+  }
   return `<svg class="aid-contrast-scene" data-spectrum="scene"${attributes} viewBox="0 0 ${
-             S.width} ${S.height}" role="img" aria-label="${label('contrast')}">` +
+             S.width} ${S.height + 28}" role="img" aria-label="${label('contrast')}">` +
          `<g class="aid-contrast-choice" data-vision-polarity="${
              CONTRAST_POLARITY[next]}" role="button"><title>${
              label('contrastTitle.' + key)}</title>` +
@@ -493,7 +520,8 @@ function contrastScene(profile, faint, target) {
          thing('aid-scene-thing dark', xs[1], S.rows[0]) +
          word(label('contrast'), middle(S.rows[1])) + band('aid-scene-seen', S.rows[1]) +
          seen('bright', xs[0]) + seen('dark', xs[1]) + '</g>' +
-         (faint ? keennessRow(key === 'dark' ? 'dark' : 'bright', faint) : '') + '</svg>';
+         (faint ? keennessRow(key === 'dark' ? 'dark' : 'bright', faint) : '') + variation +
+         '</svg>';
 }
 export function visionInspector(state, organ) {
   const profiles = organ.field.profiles;

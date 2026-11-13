@@ -138,6 +138,53 @@ async function checkGonadRoom(model, sites, capabilities) {
     }
 }
 
+async function checkLightSnapshots(model, sites) {
+  const {designMethods} = await import('../ui/studio/design.js');
+  const requests = [], replies = [];
+  const studio = {
+    state : {document : model.newDocument('Light snapshot'), sites},
+    designRequest : 0,
+    api : body => {
+      requests.push(body);
+      return new Promise(resolve => replies.push(resolve));
+    },
+    senseScene : () => null,
+    traceAnswered : () => false,
+    notice : error => assert.fail(error),
+    requestDesign: designMethods.requestDesign,
+    showAnatomy: designMethods.showAnatomy
+  };
+  for (const method of ['bringProbes', 'refreshHeader', 'refreshScene', 'refreshGraphics',
+                        'checkPressure', 'refreshVision', 'drawSight', 'refreshProbes'])
+    studio[method] = () => {};
+  const answer = async value => {
+    replies.shift()(value);
+    await new Promise(resolve => setImmediate(resolve));
+  };
+  studio.requestDesign();
+  assert.equal(requests.at(-1).lightSpread, true);
+  const report = {source : 'example', groups : []};
+  await answer({lightSpread : report});
+  const first = studio.state.lightSpread;
+  for (let i = 0; i < 3; ++i) {
+    studio.requestDesign();
+    assert.equal(requests.at(-1).lightSpread, false,
+                 'A pure stimulus request does not recompute or transfer the light snapshot');
+    await answer({});
+    assert.equal(studio.state.lightSpread, first);
+  }
+  studio.state.document = {...studio.state.document, name : 'Changed'};
+  studio.requestDesign();
+  assert.equal(requests.at(-1).lightSpread, true);
+  studio.state.document = {...studio.state.document, name : 'Changed again'};
+  await answer({lightSpread : {source : 'example', groups : [ 'obsolete' ]}});
+  assert.equal(studio.state.lightSpread, first, 'An obsolete reply cannot replace the snapshot');
+  assert.equal(requests.at(-1).lightSpread, true);
+  await answer({lightSpread : report});
+  assert.equal(studio.state.lightSpread.document, studio.state.document);
+  assert.notEqual(studio.state.lightSpread, first);
+}
+
 async function checkSpectrumKnobs() {
   const {spectrumElement, spectrumPatch} = await import('../ui/studio/view/spectrum.js');
   const {spectrumEditor} = await import('../ui/studio/view/vision.js');
@@ -161,15 +208,15 @@ async function checkSpectrumKnobs() {
         const handle = html.match(/data-spectrum-handle="opponent" cx="([^"]+)" cy="([^"]+)"/);
         assert.ok(handle);
         const point = {x : Number(handle[1]), y : Number(handle[2])};
-        const unchanged = spectrumPatch(tuning, 'opponent', point, light);
+        const unchanged = spectrumPatch(tuning, 'opponent', point);
         assert.ok(Math.abs(unchanged.q2 - q2) < .0003,
                   `Picking up the opponent handle preserves q2=${q2} at width=${qwidth}`);
-        const stronger = spectrumPatch(tuning, 'opponent', {...point, y : point.y + 8}, light);
+        const stronger = spectrumPatch(tuning, 'opponent', {...point, y : point.y + 8});
         assert.ok(stronger.q2 >= unchanged.q2,
                   'Dragging the opponent handle down strengthens its inhibition');
       }
     }
-  const profile = {id : 'wide', q1 : .2, q2 : .3, qwidth : 1};
+  const profile = {id : 'wide', q1 : .2, q2 : .3, qwidth : 1, threshold : -.6};
   const center = (id, spread, ownProfile = profile.id) =>
       ({id, profile : ownProfile, qwidth : 1, distribution : {spread_physiology : spread}});
   const light = {excitation : [ 1, 1, 1 ], inhibition : [ 0, 0, 0 ]};
@@ -182,7 +229,11 @@ async function checkSpectrumKnobs() {
     };
     assert.equal(hasColourTuning(organ, profile), spread > 0,
                  'Any centre in the chosen profile can retain colour tuning through spread');
-    const state = {document : {organs : [ organ ]}, anatomy : {light : [ light ]}};
+    const state = {
+      document : {organs : [ organ ]},
+      anatomy : {light : [ light ]},
+      capabilities : {visionSpectrum : {samples : 72, opponent : 1}}
+    };
     const html = spectrumEditor(state, organ, profile);
     for (const handle of ['centre', 'opponent']) {
       const mark = html.match(new RegExp(`<[^>]*class="aid-spectrum-handle ${handle}"[^>]*>`))[0];
@@ -197,6 +248,85 @@ async function checkSpectrumKnobs() {
     assert.equal(hasColourTuning(organ, {...profile, qwidth : .999}), true);
     assert.equal(hasColourTuning({...organ, type : 'proximity'}, profile), true);
   }
+}
+
+async function checkLightDisplay(capabilities) {
+  const {nominalSpectrum, profileLightSpread} = await import('../ui/studio/model/retina.js');
+  const {spectrumEditor} = await import('../ui/studio/view/vision.js');
+  const {spectrumElement, spectrumPatch} = await import('../ui/studio/view/spectrum.js');
+  const definition = capabilities.visionSpectrum;
+  const profile = {id : 'colour', q1 : -.2, q2 : .3, qwidth : .4, threshold : -.6};
+  const center = id =>
+      ({id, profile : profile.id, qwidth : .4, distribution : {spread_physiology : .2}});
+  const eye = {
+    id : 'eye',
+    type : 'eye',
+    field : {profiles : [ profile ]},
+    centers : [ center('first'), center('last'), center('missing') ]
+  };
+  const other = {...eye, id : 'other', centers : [ center('foreign') ]};
+  const doc = {organs : [ eye, other ]};
+  const row = (count, value) => ({
+    count,
+    mean : Array(definition.samples).fill(value),
+    min : Array(definition.samples).fill(value - .1),
+    max : Array(definition.samples).fill(value + .1),
+    half : {mean : value / 2, min : value / 3, max : value}
+  });
+  const snapshot = {
+    document : doc,
+    report : {source : 'example', groups : [ row(1, .2), row(3, .6), null, row(99, .9) ]}
+  };
+  const spread = profileLightSpread(doc, snapshot, eye.id, profile.id);
+  assert.equal(spread.count, 4);
+  assert.ok(spread.mean.every(x => Math.abs(x - .5) < 1e-12));
+  assert.ok(spread.min.every(x => Math.abs(x - .1) < 1e-12));
+  assert.ok(spread.max.every(x => Math.abs(x - .7) < 1e-12));
+  assert.ok(Math.abs(spread.half.mean - .25) < 1e-12);
+  const state =
+      {document : doc, capabilities, lightSpread : snapshot, anatomy : {contrastLeast : .0001}};
+  const html = spectrumEditor(state, eye, profile);
+  assert.match(html, /class="aid-spectrum-spread"/);
+  assert.match(html, /4 Beispielzellen/);
+  assert.match(html, /Zellspanne/);
+  const changed = {...doc};
+  assert.equal(profileLightSpread(changed, snapshot, eye.id, profile.id), null);
+  const pending = spectrumEditor({...state, document : changed}, eye, profile);
+  assert.doesNotMatch(pending, /class="aid-spectrum-spread"|Beispielzellen|Zellspanne/);
+  assert.match(pending, /data-spectrum-handle="centre"/);
+  const boxes = text => [...text.matchAll(/viewBox="([^"]+)"/g)].map(m => m[1]);
+  assert.deepEqual(boxes(pending), boxes(html),
+                   'Hiding the old snapshot never moves a drag target');
+  const empty = {...snapshot, report : {...snapshot.report, groups : []}};
+  const none = spectrumEditor({...state, lightSpread : empty}, eye, profile);
+  assert.match(none, /0 Beispielzellen/);
+  assert.doesNotMatch(none, /class="aid-spectrum-spread"|Zellspanne/);
+  const at = picture => {
+    const match =
+        picture.match(/class="aid-spectrum-handle opponent"[^>]*cx="([^"]+)" cy="([^"]+)"/);
+    return {x : Number(match[1]), y : Number(match[2])};
+  };
+  assert.deepEqual(at(html), at(pending), 'Sampled q2 never changes the nominal handle position');
+  const positions = new Map();
+  for (const qwidth of [0, .1, .2, .8, .999, 1])
+    for (const q2 of [-1, -.7, 0, .5, 1]) {
+      const tuning = {...profile, qwidth, q2}, light = nominalSpectrum(tuning, definition);
+      const picture = spectrumElement(tuning, {}, '', {light, spread, colourTuning : true});
+      const guide = picture.match(/class="aid-spectrum-parameter" d="M[^ ]+ ([^V]+)V([^"]+)"/);
+      assert.ok(guide && (Number(guide[2]) - Number(guide[1])) * 280 / 360 >= 40,
+                'Every opponent parameter has at least 40 pixels at a 280px width');
+      const point = at(picture), unchanged = spectrumPatch(tuning, 'opponent', point);
+      assert.ok(Math.abs(unchanged.q2 - q2) < .0003);
+      const stronger = spectrumPatch(tuning, 'opponent', {...point, y : point.y + 8});
+      assert.ok(stronger.q2 >= unchanged.q2);
+      if (positions.has(q2))
+        assert.deepEqual(point, positions.get(q2),
+                         'Changing width never switches the grip geometry');
+      positions.set(q2, point);
+      if (qwidth === 1)
+        assert.deepEqual(at(spectrumElement(tuning, {}, '', {light, colourTuning : false})), point,
+                         'Becoming ineffective only disables the grip without moving it');
+    }
 }
 
 async function checkDocumentHistory(model, sites, root) {
@@ -2489,6 +2619,12 @@ async function checkHormoneSystems(model, capabilities) {
     console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');
     return;
   }
+  await checkLightSnapshots(model, sitesResult.sites);
+  await checkLightDisplay(sitesResult);
+  if (process.argv.includes('--light-snapshot')) {
+    console.log('Atelier: optical snapshots, group variation and inverse handles: OK');
+    return;
+  }
   await checkDocumentHistory(model, sitesResult.sites, root);
   await checkBloodReceptors(model, sitesResult);
   if (process.argv.includes('--blood-receptors')) {
@@ -3630,6 +3766,22 @@ assert all(g['cells']==p['copies'] if p['role']!=2 else g['cells']==1 for g,p in
 assert all(len(c)==8 and c[2]>0 for c in built['contacts'])
 # The design view: the same cells from the planned groups, without CPPN or development.
 designed=run({'operation':'design','plan':plan,'sight':None})
+assert 'lightSpread' not in designed
+spread=run({'operation':'design','plan':plan,'lightSpread':True})
+assert spread['lightSpread']['source']=='example'
+assert len(spread['lightSpread']['groups'])==len(plan['groups'])
+assert spread['lightSpread']==run({'operation':'design','plan':plan,'lightSpread':True})['lightSpread']
+for row in spread['lightSpread']['groups']:
+    if row:
+        assert row['count']>0 and len(row['mean'])==len(row['min'])==len(row['max'])==72
+        assert all(abs(a-b)<1e-7 and abs(b-c)<1e-7 for a,b,c in zip(row['min'],row['mean'],row['max']))
+        assert row['half']['min']<=row['half']['mean']<=row['half']['max']
+varied={**plan,'groups':[{**g,'spread_physiology':.2} for g in plan['groups']]}
+varied_spread=run({'operation':'design','plan':varied,'lightSpread':True})['lightSpread']
+assert any(row and any(b-a>1e-4 for a,b in zip(row['min'],row['max'])) for row in varied_spread['groups'])
+assert varied_spread==run({'operation':'design','plan':varied,'lightSpread':True})['lightSpread']
+assert built['lightSpread']['source']=='developed'
+
 empty=run({'operation':'design','plan':{**plan,'groups':[],'connections':[]},'sight':None})
 assert designed['neurons']==built['neurons'] and designed['sites']==built['sites']
 assert designed['visionDepth']>0 and designed['bodyRadius']>0 and 'sight' not in designed
@@ -3757,6 +3909,17 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     maxBuffer : 32 * 1024 * 1024
   }));
   const {built, target : seen, outside, blue} = response;
+  for (let i = 0; i < plan.groups.length; ++i) {
+    const expected = response.designed.light[i];
+    if (!expected)
+      continue;
+    const actual = retina.nominalSpectrum(plan.groups[i], sitesResult.visionSpectrum);
+    for (const key of ['excitation', 'inhibition'])
+      assert.ok(actual[key].every((x, k) => Math.abs(x - expected[key][k]) < 2e-6),
+                'Editable RGB curves use the native nominal spectrum');
+    assert.ok(Math.abs(actual.half - expected.half) < 2e-6);
+  }
+
   const {boundedAnswer} = await import('../ui/studio/view/sense_curves.js');
   for (const [index, audit] of organAudits.entries()) {
     if (audit.type === 'balance')

@@ -60,6 +60,65 @@ void wired_cells_find_contact_places() {
   fit_contact_slots(roomy);
   assert(roomy.groups[1].field == 1);
 }
+void light_examples_follow_cell_draws() {
+  for (float development : {0.f, .8f}) {
+    Plan plan;
+    for (std::size_t i = 0; i < field::DEVELOPMENT_SITES && plan.groups.size() < 3; ++i) {
+      const auto at = field::development_site(i);
+      if (at.zone != field::EYE_ZONE || !field::development_surface(at))
+        continue;
+      Group g;
+      g.name = "eye" + std::to_string(i);
+      g.zone = at.zone;
+      g.side = int(at.side);
+      g.u0 = g.u1 = at.u;
+      g.v0 = g.v1 = at.v;
+      g.w0 = g.w1 = at.w;
+      plan.groups.push_back(g);
+    }
+    plan.development_seed = 17;
+    plan.variation_seed = 31;
+    for (auto &g : plan.groups) {
+      g.role = 0;
+      g.function = field::Light;
+      g.copies = 8;
+      g.q1 = .3f;
+      g.q2 = -.3f;
+      g.qwidth = .6f;
+      g.spread_physiology = .2f;
+      g.spread_development = development;
+    }
+    const auto sample = light_example(plan), same = light_example(plan);
+    assert(!sample.neurons.empty());
+    fishsim::Genome genome;
+    genome.cppn = Builder().build(plan);
+    genome.development_seed = plan.development_seed;
+    genome.variation_seed = plan.variation_seed;
+    genome.compile(false);
+    const auto &real = genome.blueprint->neurons;
+    assert(sample.neurons.size() == real.size());
+    for (std::size_t i = 0; i < real.size(); ++i) {
+      const auto &a = sample.neurons[i], &b = real[i];
+      assert(a.id == b.id && a.role == b.role && a.group == b.group);
+      assert(a.functions.senses == b.functions.senses);
+      assert(a.parameters.threshold == same.neurons[i].parameters.threshold);
+      const auto close = [](double x, double y) { return std::abs(x - y) < 2e-5; };
+      assert(close(a.parameters.threshold, b.parameters.threshold));
+      assert(close(a.parameters.time_constant, b.parameters.time_constant));
+      assert(close(a.parameters.quality1, b.parameters.quality1));
+      assert(close(a.parameters.quality2, b.parameters.quality2));
+      assert(close(a.parameters.quality_width, b.parameters.quality_width));
+      assert(close(a.parameters.field_width, b.parameters.field_width));
+    }
+    ++plan.variation_seed;
+    const auto changed = light_example(plan);
+    assert(changed.neurons.size() != sample.neurons.size() ||
+           !std::equal(sample.neurons.begin(), sample.neurons.end(), changed.neurons.begin(),
+                       [](const auto &a, const auto &b) {
+                         return a.parameters.threshold == b.parameters.threshold;
+                       }));
+  }
+}
 void shared_addresses_preserve_each_wire() {
   auto plan = cells(4);
   for (auto &g : plan.groups)
@@ -404,6 +463,7 @@ int main(int argc, char **argv) {
        std::string(argv[1]) == "olfaction"))
     return region_trace(argv[1]);
   duplication_uses_shared_limits();
+  light_examples_follow_cell_draws();
   wired_cells_find_contact_places();
   shared_addresses_preserve_each_wire();
   assessment_checks_learning_and_every_cell();

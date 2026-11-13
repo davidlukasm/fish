@@ -1,6 +1,6 @@
-import {degrees} from '../../units.js';
-import {hueQuality} from '../../tuning.js';
-import {CONTRAST_POLARITY, VISION, TUNING} from '../../schema.js';
+import {clamp, degrees} from '../../units.js';
+import {hueAffinities, hueOffset, hueQuality, tuningHue, unitOfPlan} from '../../tuning.js';
+import {CONTRAST_POLARITY, RGB, VISION, TUNING} from '../../schema.js';
 import {bodyCoordinates, findSite, ZONE} from './layout.js';
 
 export const HALF_VIEW = degrees(Math.PI * VISION.half_view);
@@ -65,6 +65,67 @@ export const hasColourTuning = (organ, profile) =>
     organ.type !== 'eye' || profile.qwidth < 1 ||
     organ.centers.some(c => c.profile === profile.id &&
                             (c.qwidth < 1 || c.distribution.spread_physiology > 0));
+
+// The editable mean uses the same RGB balance as retina.cc; sampled cells never set its handles.
+export function nominalSpectrum(profile, definition) {
+  if (!definition)
+    return null;
+  const affinity = hueAffinities(tuningHue(profile.q1), profile.qwidth);
+  const total = affinity.reduce((sum, x) => sum + x, 0);
+  const spectrum = affinity.map(x => x / total), peak = Math.max(...spectrum);
+  const complement = spectrum.map(x => 1 - x / peak);
+  const untuned = complement.reduce((sum, x) => sum + x, 0);
+  const excitation = [], inhibition = [];
+  for (let k = 0; k < definition.samples; ++k) {
+    const hue = 2 * TUNING.hue_half_circle * k / definition.samples;
+    const light =
+        Object.values(RGB).map(c => clamp(2 - Math.abs(hueOffset(hue, TUNING.channel_hue * c)) /
+                                                  (.5 * TUNING.channel_hue)));
+    excitation.push(spectrum.reduce((sum, x, c) => sum + x * light[c], 0));
+    inhibition.push(untuned > 0
+                        ? definition.opponent *
+                              complement.reduce((sum, x, c) => sum + x * light[c], 0) / untuned
+                        : 0);
+  }
+  return {
+    excitation,
+    inhibition,
+    half : excitation.some((x, k) => x > unitOfPlan(profile.q2) * inhibition[k])
+               ? TUNING.threshold_range ** (unitOfPlan(profile.threshold) - 1)
+               : null
+  };
+}
+
+export function profileLightSpread(doc, snapshot, organId, profileId) {
+  if (snapshot?.document !== doc)
+    return null;
+  const rows = snapshot.report.groups, selected = [];
+  let index = 0;
+  for (const organ of doc.organs)
+    for (const center of organ.centers) {
+      const row = rows[index++];
+      if (organ.id === organId && center.profile === profileId && row?.count > 0)
+        selected.push(row);
+    }
+  const count = selected.reduce((sum, row) => sum + row.count, 0);
+  if (!count)
+    return {source : snapshot.report.source, count};
+  const samples = selected[0].mean.length;
+  return {
+    source : snapshot.report.source,
+    count,
+    mean : Array.from({length : samples},
+                      (_, k) =>
+                          selected.reduce((sum, row) => sum + row.mean[k] * row.count, 0) / count),
+    min : Array.from({length : samples}, (_, k) => Math.min(...selected.map(row => row.min[k]))),
+    max : Array.from({length : samples}, (_, k) => Math.max(...selected.map(row => row.max[k]))),
+    half : {
+      mean : selected.reduce((sum, row) => sum + row.half.mean * row.count, 0) / count,
+      min : Math.min(...selected.map(row => row.half.min)),
+      max : Math.max(...selected.map(row => row.half.max))
+    }
+  };
+}
 
 // Centers are compiler output of a whole-organ recipe. They never acquire independent positions.
 export function generateRetina(organ, sites, used, create) {

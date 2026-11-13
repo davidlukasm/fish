@@ -233,8 +233,11 @@ def run(data, data_dir=None, progress=None, cancel=None):
     if not tool.is_file():
         raise Refusal("studio.errors.compilerMissing")
     if op == "design":
-        body = (sight_line(data.get("sight")) + sense_line(data.get("sense")) +
-                encode_plan(data.get("plan")))
+        spread = data.get("lightSpread", False)
+        if not isinstance(spread, bool):
+            raise Refusal("studio.errors.invalidRequest")
+        body = (str(int(spread)) + "\n" + sight_line(data.get("sight")) +
+                sense_line(data.get("sense")) + encode_plan(data.get("plan")))
         try:
             completed = subprocess.run([str(tool), "design"], cwd=ROOT, input=body, text=True,
                                        capture_output=True, timeout=QUICK_SECONDS)

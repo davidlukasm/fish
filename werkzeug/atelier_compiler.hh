@@ -5,6 +5,7 @@
 #include "../src/stable_hash.hh"
 #include "field/development_sites.hh"
 #include "field/contacts.hh"
+#include "field/distribution.hh"
 #include "cppn/program.hh"
 #include "atelier_plan_schema.hh"
 #include <algorithm>
@@ -315,6 +316,44 @@ field::Substrate planned_substrate(const std::vector<Group> &groups) {
   for (auto &n : s.neurons)
     n.functional = !limited;
   return s;
+}
+
+// Only the optical report consumes this example: other design views retain their planned cells.
+// Keeping every group's count here preserves the global cell budget before selecting light cells.
+field::Substrate light_example(const Plan &plan) {
+  std::vector<field::Neuron> cells;
+  std::vector<field::CellTraits> traits;
+  const auto seed = plan.development_seed ^ field::splitmix(plan.variation_seed);
+  const float bias_scale = field::Options{}.bias_scale;
+  for (std::size_t i = 0; i < field::DEVELOPMENT_SITES; ++i) {
+    const auto site = field::development_site(i);
+    const auto g = std::find_if(plan.groups.begin(), plan.groups.end(),
+                                [&](const Group &group) { return group.contains(site); });
+    if (g == plan.groups.end())
+      continue;
+    const auto mean = outputs(*g);
+    const auto drawn = field::draw_traits(mean, seed, (i + 1) * field::CELL_COPY_LIMIT);
+    auto cell = field::site_cell(site, drawn, i + 1, bias_scale);
+    if (!cell)
+      continue;
+    cell->parameters.learning_time = g->learning_tau;
+    cell->teaching_limit = g->teaching_limit;
+    cell->group = std::uint32_t(cells.size());
+    cells.push_back(*cell);
+    traits.push_back({mean, mean, mean, {}, {}});
+    traits.back().learning[out::time_constant] = 2 * g->learning_tau - 1;
+    traits.back().teaching[out::synapse_strength] = 2 * g->teaching_limit - 1;
+  }
+  field::lay_out_cells(cells);
+  field::Substrate result(std::move(cells));
+  result.development_seed = plan.development_seed;
+  result.variation_seed = plan.variation_seed;
+  fishsim::prepare_zonal_geometry(result);
+  std::vector<std::vector<field::NeuronIndex>> copies;
+  result.neurons =
+      field::cell_copies(result.neurons, std::min(result.options.max_nodes, field::MAX_NODES),
+                         copies, result.resource_limited, &traits, seed, bias_scale);
+  return result;
 }
 
 inline std::vector<Group> compact_groups(std::vector<Group> groups) {
