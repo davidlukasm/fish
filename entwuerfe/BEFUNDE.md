@@ -23,5 +23,5 @@ Offen, Modell
 - 2 Barteln: Gewöhnung ohne Wirkung. 3 Gleichgewicht: Gewöhnung bewusst aus.
 - 4 Nahsinn: Engine mischt zwei Reichweiten. 6 Blase mit Stärke < 2/3 trägt nie.
 - 10 Wirbelsäule: Takt unter 0,28 ohne Wirkung. 11 Auswahl: Suche bleibt klein.
-- 13 Flossen: Katalogfische nur Rückhub. 15 Geruchsvergleich trennt bei langer Glättung + schwachem Kontrast nicht.
+- 13 Flossen: zurückgenommen (an veralteten Entwurfsfischen festgestellt). 15 Geruchsvergleich trennt bei langer Glättung + schwachem Kontrast nicht.
 - 16 Körperzustand: Reserve-Schwelle ändert nur die Stärke des Mangels.
