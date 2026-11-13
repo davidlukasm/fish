@@ -41,6 +41,16 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 
 ## 3. Bedienung
 
+- **Eingaben und Einstellungen sind zwei Dinge** (David 13.11. 21:15). Eingaben (Reize, Befehle, Nahrung) stehen immer als Diagramm mit einer Kurve, die man formen kann, erkennbar als Eingabe-Variation, in allen Panels gleich gesteuert. Regler und Griffe am Organbild sind immer nur Organeinstellungen. Gestrichelte Linien, Bereichswähler und „Befehl aus“ sehen überall gleich aus und bedeuten überall dasselbe.
+- **Proben und Reize gehören ins Fischpanel des Ateliers**, nicht in den Organ-Inspektor: Geruchsprobe, Strömung, Angreifer, Berührung. Dort ist Platz, dort sind die Tests. Der Inspektor zeigt den Effekt. Vor jedem Panel das Fischpanel öffnen und abgleichen: Augen, Sehfächer, Sehbild, Seitenlinien-Strömung (`ui/studio/view/probes.js`), Saugen im Aquarium.
+- **Muskeln sehen überall aus wie beim Schwanz:** Knoten mit Fasern, Rekrutierung, Kraft am Muskel. Kein (+)/(−) ohne sichtbaren Effekt, keine „Sechzehntel“, keine Zellzahl als Einstellung.
+- **Wirkung statt Anzahl:** Ein Griff stellt ein, was sich am Organ ändert, nie „Zellen der Gruppe“ oder „Gruppen“ als Wort.
+- **Nur Gefragtes ändern:** In einer Überarbeitung wird nur geändert, was David kritisiert hat. Was er nicht beanstandet hat, bleibt, wie es war. Vor dem Ändern das frühere Bild ansehen.
+- **Was nicht gilt, wird nicht gezeigt:** keine Lebensphase, in der nichts passiert (das Ei frisst nicht), keine Achse, die nichts bedeutet (Schritte, wenn die Zeit egal ist), keine gestrichelten Kurven ohne Grund.
+- **Kein Satz im Panel**, auch nicht unten als Hinweis. Ein Wort, das nicht passt, ist ein Zeichen, dass das Bild fehlt.
+- **Kein Zittern, kein Stottern:** Skalen springen nicht beim Ziehen eines anderen Griffs; Animationen laufen flüssig. Prüfen durch Ziehen jedes Griffs im Browser, nicht nur durch Screenshot.
+- **Gestaltung vor Messung:** Zeit fließt zuerst ins Bild. Messungen nur, wenn eine Entscheidung davon abhängt.
+
 - **Direkt im Bild bedienen, an Griffen an der Wirkung.** Keine Schieberegler als Standard („HASS“), keine Zahlenfelder, keine Auswahllisten, keine Knopfreihen, die getrennte Varianten vortäuschen, die es nicht gibt.
 - **Jeder Griff hat sichtbar Wirkung, sofort beim Ziehen.** Skalen passen sich während des Ziehens an, in beide Richtungen und nicht erst beim Loslassen. Nichts verschwindet, auch nicht für ein paar Frames.
 - **Ein Griff gehört zu genau einer Einstellung.** Ein Griff, der nur wirkt, wenn ein anderer nicht auf 0 steht, ist falsch. Griffe nur für die Anzeige eines anderen Bildes gibt es nicht.
