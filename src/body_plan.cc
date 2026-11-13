@@ -153,8 +153,11 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
   a.stroke_timing = {};
   std::array<double, STROKE_COUNT> steps{}, weight{}, fast{};
   std::array<double, field::HORMONES + 3> continuous_steps{}, continuous_weight{};
-  for (const auto &e : a.effectors) {
+  a.pulls.clear();
+  for (std::size_t i = 0; i < a.effectors.size(); ++i) {
+    auto &e = a.effectors[i];
     const double tau = field::time_constant_steps(s.neurons[e.neuron].parameters);
+    e.steps = float(tau);
     for (int c = 0; c < field::HORMONES + 3; ++c) {
       const double share =
           c < field::HORMONES
@@ -165,7 +168,9 @@ void effector_timings(BrainInterface &a, const field::Substrate &s) {
       continuous_weight[c] += w;
     }
     for (int j = 0; j < STROKE_COUNT; ++j) {
-      const double w = e.strength * stroke_share(e, j);
+      const double share = stroke_share(e, j), w = e.strength * share;
+      if (share > 0)
+        a.pulls.push_back({std::uint32_t(i), j, float(share)});
       steps[j] += w * tau;
       fast[j] += w * e.fibre;
       weight[j] += w;
@@ -1239,16 +1244,46 @@ double stroke_step(StrokeState &stroke, double drive, const StrokeTiming &timing
     stroke.recovery = 0;
     return 0;
   }
+  stroke.span = timing.steps;
   stroke.recovery += timing.steps;
   return stroke.drive * timing.steps;
 }
 // The twitch's share of the drive at its present step: it rises to 2 and falls, one on average.
-double stroke_shape(const StrokeState &stroke, const StrokeTiming &timing) {
-  if (stroke.recovery <= 0)
+double stroke_shape(const StrokeState &stroke) {
+  if (stroke.recovery <= 0 || stroke.span <= 0)
     return 0;
-  const double middle = std::min(timing.steps, timing.steps - stroke.recovery + .5),
-               s = std::sin(PI * middle / timing.steps);
+  const double middle = std::min(stroke.span, stroke.span - stroke.recovery + .5),
+               s = std::sin(PI * middle / stroke.span);
   return 2 * s * s;
+}
+MuscleDemand muscle_demand(const BrainInterface &layout, const std::vector<double> &amounts,
+                           const std::vector<double> &reserve) {
+  MuscleDemand demand;
+  demand.weights.reserve(layout.pulls.size());
+  for (const auto &pull : layout.pulls) {
+    const auto &e = layout.effectors[pull.effector];
+    const double w =
+        amounts[pull.effector] * fibre::available(e.fibre, reserve[e.neuron]) * pull.share;
+    demand.weights.push_back(w);
+    demand.drive[pull.stroke] += w;
+    demand.steps[pull.stroke] += w * e.steps;
+    demand.price[pull.stroke] += w * fibre::cost(e.fibre);
+  }
+  return demand;
+}
+void tire_fibres(const BrainInterface &layout, const MuscleDemand &demand,
+                 const std::array<double, STROKE_COUNT> &work, std::vector<double> &reserve) {
+  for (const auto &e : layout.effectors)
+    reserve[e.neuron] += fibre::refilled(reserve[e.neuron]);
+  for (std::size_t k = 0; k < layout.pulls.size(); ++k) {
+    const auto &pull = layout.pulls[k];
+    const auto &e = layout.effectors[pull.effector];
+    if (demand.drive[pull.stroke] > 0)
+      reserve[e.neuron] -= fibre::drained(
+          e.fibre, work[pull.stroke] * demand.weights[k] / demand.drive[pull.stroke], e.strength);
+  }
+  for (const auto &e : layout.effectors)
+    reserve[e.neuron] = std::clamp(reserve[e.neuron], 0., 1.);
 }
 EffectorActivity effector_activity(const std::vector<float> &state, const BrainInterface &layout) {
   EffectorActivity activity;
@@ -1258,16 +1293,15 @@ EffectorActivity effector_activity(const std::vector<float> &state, const BrainI
   auto &bladder = activity.bladder;
   auto &secretion = activity.secretion;
   auto &pigment = activity.pigment;
+  activity.cells.reserve(layout.effectors.size());
   for (const auto &e : layout.effectors) {
     const double signal = std::clamp(double(state[e.neuron]), -1., 1.),
                  a = (e.port == organ_port::bladder || e.port == organ_port::gland)
                          ? std::abs(signal)
                          : std::max(0., signal),
                  amount = a * e.strength;
+    activity.cells.push_back(amount);
     sum[e.port] += amount;
-    if (e.port == organ_port::forward)
-      for (int side = 0; side < 2; ++side)
-        activity.tail[side] += amount * flank_share(e, side);
     for (int f = 0; f < SIDE_FINS; ++f)
       if (e.port == FIN_PORTS[f]) {
         const int side = e.lever < 0 ? 0 : 1;
@@ -1370,34 +1404,21 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   const auto &bladder = activity.bladder;
   const auto &secretion = activity.secretion;
   const auto &pigment = activity.pigment;
-  const auto &backs = activity.back, &fronts = activity.front;
-  const std::array<double, STROKE_COUNT> drive{activity.tail[0],
-                                               backs[0][0],
-                                               backs[0][1],
-                                               sum[organ_port::suction],
-                                               egg[1],
-                                               sperm[1],
-                                               sum[organ_port::jaw],
-                                               sum[organ_port::defense],
-                                               fronts[0][0],
-                                               fronts[0][1],
-                                               sum[organ_port::gills],
-                                               sum[organ_port::gut],
-                                               activity.tail[1],
-                                               backs[1][0],
-                                               backs[1][1],
-                                               fronts[1][0],
-                                               fronts[1][1]};
-  static_assert(StrokePelvicReverseRight == STROKE_COUNT - 1);
+  // Every muscle cell pulls on its own: with its drive, as far as its fast fibres are rested.
+  // The muscle twitches as one, as long as the cells that pull now make it.
+  auto &reserve = b.motor_.fibre_reserve;
+  if (reserve.size() < signals->size())
+    reserve.resize(signals->size(), 1.);
+  const auto demand = muscle_demand(layout, activity.cells, reserve);
   // impulse: what a twitch beginning now does at its drive; work: what each muscle does this step.
   std::array<double, STROKE_COUNT> impulse{}, work{};
   auto &strokes = b.motor_.strokes;
-  // Tired fast fibres pull only with what their reserve still holds.
   for (int j = 0; j < STROKE_COUNT; ++j) {
-    impulse[j] =
-        stroke_step(strokes[j], drive[j] * fibre::available(layout.fibre[j], strokes[j].reserve),
-                    layout.stroke_timing[j], p.stroke_threshold);
-    work[j] = strokes[j].drive * stroke_shape(strokes[j], layout.stroke_timing[j]);
+    StrokeTiming timing = layout.stroke_timing[j];
+    if (demand.drive[j] > 0)
+      timing.set(demand.steps[j] / demand.drive[j]);
+    impulse[j] = stroke_step(strokes[j], demand.drive[j], timing, p.stroke_threshold);
+    work[j] = strokes[j].drive * stroke_shape(strokes[j]);
   }
   // The side fins' strokes beginning now, per side.
   std::array<double, 2> fin_impulse{};
@@ -1437,13 +1458,19 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.gill_signal = taken(StrokeGill, layout.capacities[organ_port::gills]);
   b.gut_motility = taken(StrokeGut, layout.capacities[organ_port::gut]);
   const double old_credit = b.mouth.credit;
-  advance_mouth(b, impulse[StrokeSuction] > 0, impulse[StrokeBite] > 0,
-                layout.stroke_timing[StrokeSuction].steps, layout.stroke_timing[StrokeBite].steps);
-  // Every contraction costs the same per unit of work; only its fibres set the price. It moves the
-  // whole body, so it costs with the body's tissue like the muscles' upkeep: a fish of any size
-  // searches about as long on a full reserve.
+  // The jaw moves with the twitch that runs, or would with the muscle's cells all pulling.
+  const auto lasting = [&](int j) {
+    return strokes[j].recovery > 0 ? strokes[j].span : layout.stroke_timing[j].steps;
+  };
+  advance_mouth(b, impulse[StrokeSuction] > 0, impulse[StrokeBite] > 0, lasting(StrokeSuction),
+                lasting(StrokeBite));
+  // Every contraction costs the same per unit of work; only the fibres of the cells that pull set
+  // the price. It moves the whole body, so it costs with the body's tissue like the muscles'
+  // upkeep: a fish of any size searches about as long on a full reserve.
   const auto contraction = [&](int j) {
-    return p.muscle_cost * fibre::cost(layout.fibre[j]) * work[j] * growth_fraction(b);
+    const double price =
+        demand.drive[j] > 0 ? demand.price[j] / demand.drive[j] : fibre::cost(layout.fibre[j]);
+    return p.muscle_cost * price * work[j] * growth_fraction(b);
   };
   // Gametes are released, not pulled; bites and spines are combat.
   double moving = 0;
@@ -1464,21 +1491,27 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   b.motor_.motor_factor = f;
   for (int j = 0; j < STROKE_COUNT; ++j)
     strokes[j].force = work[j] * f;
-  for (int j = 0; j < STROKE_COUNT; ++j)
-    strokes[j].reserve =
-        std::clamp(strokes[j].reserve + fibre::refilled(strokes[j].reserve) -
-                       fibre::drained(layout.fibre[j], work[j] * f, layout.stroke_capacity[j]),
-                   0., 1.);
+  auto paid = work;
+  for (auto &done : paid)
+    done *= f;
+  tire_fibres(layout, demand, paid, reserve);
   static_assert(field::MATURITY_SUBSTANCE == blood_substance::maturity &&
                     field::RESERVE_SUBSTANCE == blood_substance::reserve &&
                     field::FATIGUE_SUBSTANCE == blood_substance::fatigue,
                 "the blood substances of the Atelier wheel");
+  // What the fast fibres have left, per muscle and in the whole body.
+  std::array<double, STROKE_COUNT> fast_force{}, rested{};
   double fast = 0, spent = 0;
-  for (int j = 0; j < STROKE_COUNT; ++j) {
-    const double w = layout.stroke_capacity[j] * layout.fibre[j];
+  for (const auto &pull : layout.pulls) {
+    const auto &e = layout.effectors[pull.effector];
+    const double w = e.strength * pull.share * e.fibre;
+    fast_force[pull.stroke] += w;
+    rested[pull.stroke] += w * reserve[e.neuron];
     fast += w;
-    spent += w * (1 - strokes[j].reserve);
+    spent += w * (1 - reserve[e.neuron]);
   }
+  for (int j = 0; j < STROKE_COUNT; ++j)
+    strokes[j].reserve = fast_force[j] > 0 ? rested[j] / fast_force[j] : 1;
   b.motor_.fatigue = fast > 0 ? spent / fast : 0;
   // Spread on the ground, the side fins carry the body like snowshoes: the larger they are for
   // its weight, the more of it.

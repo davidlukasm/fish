@@ -45,10 +45,10 @@ constexpr int side_fin_index(int fin, int side) {
   return fin::left + 2 * fin + side;
 }
 // drive: what drives the muscle now; force: what it delivers this step, as paid; recovery: steps
-// left of its twitch.
+// left of its twitch; span: the steps that twitch lasts in all.
 struct StrokeState {
-  double drive = 0, force = 0, recovery = 0;
-  // Glycogen of the fast fibres: 1 rested, 0 exhausted.
+  double drive = 0, force = 0, recovery = 0, span = 0;
+  // Glycogen of the muscle's fast fibres together: 1 rested, 0 exhausted.
   double reserve = 1;
 };
 inline constexpr double MIN_STROKE_STEPS = field::TIME_CONSTANT_MIN,
@@ -97,6 +97,8 @@ struct MotorState {
   double bite_pose = 0;
   std::array<unsigned char, field::MOTOR_COUNT> motor_pulses{};
   std::array<StrokeState, STROKE_COUNT> strokes{};
+  // Glycogen of every muscle cell's fast fibres, by the cell's neuron: 1 rested, 0 exhausted.
+  std::vector<double> fibre_reserve;
   Color pigment{};
   std::array<double, fin::count> fin_tension{};
   // The antagonists of the tail (left and right flank) and of each side fin (back and forward

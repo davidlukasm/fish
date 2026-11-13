@@ -78,7 +78,22 @@ Point nostril_source(const Body &, Point nose, Point flow, int side);
 // touch.
 Point barbel_tip(const Body &, const BrainInterface &, int side);
 double stroke_step(StrokeState &, double drive, const StrokeTiming &, double threshold);
-double stroke_shape(const StrokeState &, const StrokeTiming &);
+double stroke_shape(const StrokeState &);
+// What a muscle's cells ask of it this step. Each cell pulls with its own drive, as far as its
+// fibres are rested; the twitch lasts as long as the cells that pull make it, and its work costs
+// what their fibres charge. drive: the cells' pull per stroke; steps, price: their twitch
+// duration and price of work, each weighted with that pull; weights: the pull of every entry of
+// the layout's pulls.
+struct MuscleDemand {
+  std::array<double, STROKE_COUNT> drive{}, steps{}, price{};
+  std::vector<double> weights;
+};
+MuscleDemand muscle_demand(const BrainInterface &, const std::vector<double> &amounts,
+                           const std::vector<double> &reserve);
+// The fast fibres of the cells that did the work spend their glycogen, every cell by its share
+// of the work; the blood refills all of them.
+void tire_fibres(const BrainInterface &, const MuscleDemand &,
+                 const std::array<double, STROKE_COUNT> &work, std::vector<double> &reserve);
 // The drive of a muscle while it twitches, else nothing.
 inline double stroke_drive(const StrokeState &s) {
   return s.recovery > 0 ? s.drive : 0;
@@ -96,8 +111,8 @@ struct EffectorActivity {
   // The force of each side fin's back strokes and of the forward strokes of their antagonists,
   // per fin and side.
   std::array<std::array<double, 2>, SIDE_FINS> back{}, front{};
-  // The tail's flanks, left and right.
-  std::array<double, 2> tail{};
+  // What every effector cell gives, in the layout's order.
+  std::vector<double> cells;
 };
 EffectorActivity effector_activity(const std::vector<float> &, const BrainInterface &);
 struct OrganDrive {

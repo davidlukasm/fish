@@ -364,7 +364,24 @@ void PopulationCheckpoint::read_motors(std::istream &in, Body &b) {
     value(in, stroke.recovery);
     if (stroke.recovery < 0 || stroke.recovery > MAX_STROKE_STEPS)
       throw std::runtime_error("invalid stroke recovery");
+    scalar(in, stroke.span, 0, MAX_STROKE_STEPS);
+    if (stroke.recovery > stroke.span)
+      throw std::runtime_error("invalid stroke recovery");
     scalar(in, stroke.reserve, 0, 1);
+  }
+  std::size_t tired = 0;
+  value(in, tired);
+  b.motor_.fibre_reserve.clear();
+  for (std::size_t k = 0; k < tired; ++k) {
+    std::size_t neuron = 0;
+    double reserve = 1;
+    value(in, neuron);
+    scalar(in, reserve, 0, 1);
+    if (neuron >= field::DEVELOPMENT_SITES)
+      throw std::runtime_error("invalid muscle cell");
+    if (b.motor_.fibre_reserve.size() <= neuron)
+      b.motor_.fibre_reserve.resize(neuron + 1, 1.);
+    b.motor_.fibre_reserve[neuron] = reserve;
   }
   for (auto &x : b.motor_.pigment)
     scalar(in, x, 0, 1);

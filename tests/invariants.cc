@@ -232,12 +232,55 @@ void twitches_last_as_long_as_their_fibres() {
       const double impulse = stroke_step(stroke, 1, timing, 0);
       twitches += impulse > 0;
       announced += impulse;
-      done += stroke_shape(stroke, timing);
+      done += stroke_shape(stroke);
     }
     check(std::abs(twitches * steps / STEPS - 1) < CLOSE,
           "a driven muscle twitches as often as its twitch is long");
     check(std::abs(done / announced - 1) < CLOSE, "a twitch does the work its impulse announces");
   }
+}
+// A muscle of slow cells that answer a weak command and fast cells that answer only a strong one.
+// Each cell pulls, tires and charges by its own fibres, and the twitch lasts as long as the cells
+// that pull make it.
+void muscle_cells_keep_their_own_fibres() {
+  constexpr double SLOW_STEPS = 12, FAST_STEPS = 4, CLOSE = 1e-9;
+  constexpr int SLOW = 0, FAST = 1, ALL_OUT = 60;
+  BrainInterface layout;
+  for (int cell : {SLOW, FAST}) {
+    BrainInterface::Effector e{};
+    e.neuron = std::uint32_t(cell);
+    e.port = organ_port::suction;
+    e.strength = 1;
+    e.fibre = float(cell);
+    e.steps = float(cell == SLOW ? SLOW_STEPS : FAST_STEPS);
+    layout.effectors.push_back(e);
+    layout.pulls.push_back({std::uint32_t(cell), StrokeSuction, 1});
+  }
+  std::vector<double> reserve(2, 1.);
+  const auto weak = muscle_demand(layout, {1, 0}, reserve),
+             strong = muscle_demand(layout, {1, 1}, reserve);
+  const auto lasting = [](const MuscleDemand &d) {
+    return d.steps[StrokeSuction] / d.drive[StrokeSuction];
+  };
+  const auto price = [](const MuscleDemand &d) {
+    return d.price[StrokeSuction] / d.drive[StrokeSuction];
+  };
+  check(std::abs(lasting(weak) - SLOW_STEPS) < CLOSE && lasting(strong) < lasting(weak) &&
+            lasting(strong) > FAST_STEPS,
+        "a weak command twitches as long as the slow cells, a strong one shorter");
+  check(price(strong) > price(weak), "work costs more once the fast cells join");
+  std::array<double, STROKE_COUNT> work{};
+  work[StrokeSuction] = 2;
+  for (int k = 0; k < ALL_OUT; ++k)
+    tire_fibres(layout, muscle_demand(layout, {1, 1}, reserve), work, reserve);
+  check(reserve[SLOW] == 1 && reserve[FAST] < .5, "only the fast cells tire");
+  const auto tired = muscle_demand(layout, {1, 1}, reserve);
+  check(tired.drive[StrokeSuction] < strong.drive[StrokeSuction] &&
+            tired.drive[StrokeSuction] >= 1 && lasting(tired) > lasting(strong),
+        "a tired muscle falls back on its slow cells: weaker, and slower again");
+  for (int k = 0; k < ALL_OUT; ++k)
+    tire_fibres(layout, muscle_demand(layout, {1, 0}, reserve), work, reserve);
+  check(reserve[FAST] > tired.weights[FAST], "fast cells recover while only the slow ones work");
 }
 std::shared_ptr<field::Substrate> learning_tissue(bool negative = false, bool teacher = false) {
   std::vector<field::Neuron> cells(teacher ? 5 : 4);
@@ -809,6 +852,7 @@ int main() {
     nostrils_differ_only_in_oncoming_water();
     gut_takes_up_what_time_allows();
     twitches_last_as_long_as_their_fibres();
+    muscle_cells_keep_their_own_fibres();
     initial_plants_use_the_available_energy();
     contact_turnover_pays_for_its_construction();
     development_preserves_identity_and_reserves_capacity();

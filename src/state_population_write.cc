@@ -108,8 +108,14 @@ void write_population_state(std::ostream &out, const std::vector<Individual> &fi
     out << '\n';
     out << "MOTORS " << STROKE_COUNT << ' ';
     for (const auto &stroke : b.motor().strokes)
-      out << stroke.drive << ' ' << stroke.force << ' ' << stroke.recovery << ' ' << stroke.reserve
-          << ' ';
+      out << stroke.drive << ' ' << stroke.force << ' ' << stroke.recovery << ' ' << stroke.span
+          << ' ' << stroke.reserve << ' ';
+    // Only the muscle cells that are not rested are written, each with its neuron.
+    const auto &fibres = b.motor().fibre_reserve;
+    out << std::count_if(fibres.begin(), fibres.end(), [](double r) { return r < 1; }) << ' ';
+    for (std::size_t i = 0; i < fibres.size(); ++i)
+      if (fibres[i] < 1)
+        out << i << ' ' << fibres[i] << ' ';
     for (double x : b.motor().pigment)
       out << x << ' ';
     out << b.reproduction().egg_transfer << ' ' << b.reproduction().sperm_transfer << ' '

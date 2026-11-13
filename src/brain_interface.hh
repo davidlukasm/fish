@@ -69,8 +69,8 @@ struct BrainInterface {
     // Where a side fin cell sits along the body, ahead of the body's middle (+) or behind it (-),
     // in half body lengths: the arm with which a push across the body turns it.
     float arm = 0;
-    // Fast share of a muscle cell's fibres (muscle_fibre.hh).
-    float fibre = 0;
+    // Fast share of a muscle cell's fibres (muscle_fibre.hh) and the steps its twitch lasts.
+    float fibre = 0, steps = 0;
     std::array<float, field::HORMONES> hormones{};
   };
   bool mobile_reproductive = true;
@@ -90,6 +90,14 @@ struct BrainInterface {
   std::array<StrokeTiming, STROKE_COUNT> stroke_timing{};
   // Force-weighted fast fibre share and summed force of the cells behind each stroke.
   std::array<double, STROKE_COUNT> fibre{}, stroke_capacity{};
+  // What every muscle cell pulls: the cell among the effectors, the stroke and the share of the
+  // cell's force that works it.
+  struct Pull {
+    std::uint32_t effector;
+    int stroke;
+    float share;
+  };
+  std::vector<Pull> pulls;
   // Per unit of force of each side fin stroke: its push along the body, its push across the body
   // (away from its side) and the turning it gives (toward the other side); the lever with which
   // each tail flank bends the body.
