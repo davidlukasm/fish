@@ -37,7 +37,7 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <svg id="full"></svg>
     <h4>Bauchweh</h4>
     <svg id="ache"></svg>
-    <h4>Nährstoffgefühl</h4>
+    <h4>Geschmack</h4>
     <svg id="feed"></svg>
   </section>
 </main>
@@ -113,16 +113,16 @@ const SHORTEST = .5, LONGEST = 4, REST_PER_LENGTH = 200, FASTEST = 4;
 // The stays the pictures show.
 const SHORT = 50, LONG = 800;
 // The muscle's pace at full drive, as the engine has it (gut_speed, src/physiology.hh:363-366):
-// 1 + (FASTEST - 1) x strength squared, where the strength is force / (force + the body's own
-// scale of forces) and the force grows with the body. `muscle` is that strength in the grown
-// body; in a body of the size `scale` (grown: 1) the same muscle has the strength
-// scale x muscle / (scale x muscle + 1 - muscle).
-const strengthAt = (muscle, scale) => muscle >= 1 ? 1 : scale * muscle / (scale * muscle + 1 - muscle);
+// 1 + (FASTEST - 1) x strength squared. The strength is min(1, 2 x force / (force + the body's
+// scale of forces)) (suction_share, src/physiology.hh:305-307), and the force grows with the
+// body. `muscle` is that strength in the grown body; in a body of the size `scale` (grown: 1) the
+// same muscle has the strength 2 x scale x muscle / (2 - muscle + scale x muscle).
+const strengthAt = (muscle, scale) => Math.min(1, 2 * scale * muscle / (2 - muscle + scale * muscle));
 const paceOf = strength => 1 + (FASTEST - 1) * strength * strength;
 const strengthFor = pace => Math.sqrt(clamp((pace - 1) / (FASTEST - 1), 0, 1));
-// The body's size over the life after hatching. ASSUMPTION OF THIS PAGE: a hatchling is half as
-// long as the grown fish; the engine's value has to be put in here.
-const HATCH_SCALE = .5;
+// The body's size over the life after hatching: the hatchling's against the grown fish's (the
+// reference size Claude read from the engine, KOORDINATION 13.11.).
+const HATCH_SCALE = .74;
 const scaleAt = s => HATCH_SCALE + (1 - HATCH_SCALE) * s;
 const WORKING_LIFE_MIN = .15;
 const LIFE = Array.from({length : 41}, (_, k) => k / 40);
@@ -156,14 +156,18 @@ function stuffYield(t, [opens, uptake, spoils, best]) {
   return best * open * k / (k + spoil + 1 / t);
 }
 const gain = (f, t) => Object.entries(f).reduce((a, [s, share]) => a + share * stuffYield(t, STUFFS[s]), 0);
-// Bellyache of a full gut of a food at a stay, as the engine has it (gut_ache,
-// src/physiology.hh:374-379): flesh hurts when it stays longer than ACHE_FLESH x its spoiling time
-// / its share; a meal that is fibre by more than ACHE_FIBRE hurts when it stays shorter than
-// FIBRE_OPENS x that excess; past these limits by the share CRAMP it hurts all it can.
-const ACHE_FLESH = 1.5, FLESH_SPOILS = 250, ACHE_FIBRE = .55, FIBRE_OPENS = 400, CRAMP = .25;
+// Bellyache of a full gut of a food at a stay, by the engine's rule (gut_ache,
+// src/physiology.hh): flesh hurts when its stay x its share passes ACHE_FLESH_STAY; a meal that
+// is fibre by more than ACHE_FIBRE hurts when it stays shorter than ACHE_FIBRE_STAY x that
+// excess; past these limits by the share CRAMP it hurts all it can.
+// PROPOSAL TO THE ENGINE: two of its values are changed here. With the new stuffs the engine's
+// own values (375 and .55) let plankton never hurt and algae only below 60 steps; before the
+// stuffs changed, plankton hurt from 750 steps and algae below 108. These two values bring that
+// back (leaf then hurts below 228 steps instead of 180, meat from 334 instead of 375).
+const ACHE_FLESH_STAY = 334, ACHE_FIBRE = .43, ACHE_FIBRE_STAY = 400, CRAMP = .25;
 function ache(f, t) {
   const flesh = f.flesh ?? 0, fibre = (f.hard ?? 0) + (f.soft ?? 0);
-  const spoiling = flesh > 0 ? t * flesh / (ACHE_FLESH * FLESH_SPOILS) - 1 : 0, closed = fibre > ACHE_FIBRE ? 1 - t / (FIBRE_OPENS * (fibre - ACHE_FIBRE)) : 0;
+  const spoiling = flesh > 0 ? t * flesh / ACHE_FLESH_STAY - 1 : 0, closed = fibre > ACHE_FIBRE ? 1 - t / (ACHE_FIBRE_STAY * (fibre - ACHE_FIBRE)) : 0;
   return clamp(Math.max(spoiling, closed) / CRAMP, 0, 1);
 }
 const HURTS = 0;
@@ -181,29 +185,30 @@ function rangeIn(c, [lo, hi]) {
   return {min : Math.min(...gains), max : Math.max(...gains), sore : sore.length ? [Math.min(...sore), Math.max(...sore)] : null,
           ache : [Math.min(...aches), Math.max(...aches)]};
 }
-// The food that gives most at each stay of the axis.
-const LEADS = AXIS.map((_, k) => CURVES.reduce((b, c) => c.gains[k] > b.gains[k] ? c : b));
 // Everything the pictures read, for the present settings.
 function derive() {
   const rest = REST_PER_LENGTH * S.length, pace = paceOf(S.muscle);
   const works = s => s >= S.from && s <= S.until;
-  // The fastest the gut gets at an age: the muscle's mean pace there, and the swing of its twitch.
+  // The fastest the gut gets at an age: at the muscle's full drive there. Over a meal the drive
+  // counts, not the swing within a twitch (twice the wall's pose averages its drive,
+  // src/body_plan.cc:1470-1479).
   const paceAt = s => works(s) ? paceOf(strengthAt(S.muscle, scaleAt(s))) : 1;
-  const fastAt = s => Math.max(SHORT, rest / (1 + 2 * (paceAt(s) - 1)));
+  const windowAt = s => [rest / paceAt(s), rest];
   // Every stay this fish's gut ever has: from the fastest of its life to rest.
-  const reach = [Math.min(...LIFE.map(fastAt)), rest];
+  const reach = [Math.min(...LIFE.map(s => rest / paceAt(s))), rest];
   const ranges = CURVES.map(c => rangeIn(c, reach));
   const top = ranges.reduce((b, r, i) => r.max > ranges[b].max ? i : b, 0);
-  return {rest, pace, fastAt, reach, ranges, kind : KIND[CURVES[top].name]};
+  return {rest, pace, works, windowAt, reach, ranges, kind : KIND[CURVES[top].name]};
 }
 let model = null;
 const M = () => model ??= derive();
-// The muscle strength that makes `stay` the fastest of the fish's life.
-function muscleForFastest(stay) {
-  const rest = REST_PER_LENGTH * S.length, scale = scaleAt(Math.min(1, S.until));
-  const swing = clamp(rest / stay, 1, 2 * FASTEST - 1), strength = strengthFor(1 + (swing - 1) / 2);
-  return clamp(strength / (scale + strength - scale * strength), 0, 1);
+// The muscle strength that makes `stay` the fastest at an age (strengthAt, turned round).
+function muscleForFastest(stay, age) {
+  const scale = scaleAt(age), strength = strengthFor(REST_PER_LENGTH * S.length / stay);
+  return clamp(2 * strength / (2 * scale + strength - scale * strength), 0, 1);
 }
+// The age the yield is shown at: a trial, not a setting of the organ.
+const shown = {age : .2};
 
 // ===== The senses' model =====
 // Each sense has keys; a key's cells have thresholds spread around it. An input over STEPS steps
@@ -212,9 +217,12 @@ function muscleForFastest(stay) {
 // (the engine: adapting_sense, src/brain_interface.hh:19-21).
 const STEPS = 900, CELLS = 7, USED = [4, 1024];
 const SENSE = {
-  full : {word : 'Füllung', colour : COLOUR.stomachEdge, tires : false, after : 260, shows : ['fish', 'full'], row : null},
-  ache : {word : 'Bauchweh', colour : COLOUR.sore, tires : true, after : 120, shows : ['ache'], row : {word : 'Bauchweh bei vollem Darm', of : r => r.ache}},
-  feed : {word : 'Zufluss aus dem Darm', mark : [.5, 'Ruhebedarf gedeckt'], colour : COLOUR.morsel, tires : true, after : 40, shows : ['feed'], row : {word : 'Zufluss aus einer Mahlzeit', of : r => [r.min, r.max]}}
+  full : {title : 'Signalverlauf bei Magenfüllung', colour : COLOUR.stomachEdge, tires : false, after : 260, shows : ['fish', 'full'], row : null},
+  ache : {title : 'Signalverlauf bei Bauchweh', used : 'an Schmerz gewöhnt', colour : COLOUR.sore, tires : true, after : 120, shows : ['ache'], row : {word : 'Bauchweh bei vollem Darm durch', of : r => r.ache}},
+  // The taste of what is swallowed: at each swallow the engine adds what the bite is worth to
+  // this gut, and it fades within a few steps (take_nutrition, src/physiology.cc:205-222,
+  // nutrient_keep .8 per step).
+  feed : {title : 'Signalverlauf beim Fressen', used : 'an Geschmack gewöhnt', colour : COLOUR.morsel, tires : true, after : 5, shows : ['feed'], row : {word : 'Geschmack eines Bissens von', of : r => [r.min, r.max]}}
 };
 const cellGates = k => Array.from({length : CELLS}, (_, c) => clamp(k.gate + k.spread * ((c + .5) / CELLS - .5), .02, .98));
 const answer = (x, gate, used) => { const over = (clamp(x, 0, 1) - used - gate) / (1 - gate); return over > 0 ? over / (over + gate * (1 - over)) : 0; };
@@ -222,9 +230,11 @@ function stimulus(id) {
   const i = S[id].input, top = i.height * clamp(i.stop / Math.max(1, i.rise), 0, 1), after = SENSE[id].after;
   return Array.from({length : STEPS + 1}, (_, st) => st <= i.stop ? i.height * clamp(st / Math.max(1, i.rise), 0, 1) : top * Math.exp(-(st - i.stop) / after));
 }
-function signal(id, k, stim) {
-  const gates = cellGates(k), pace = SENSE[id].tires ? 1 / k.used : 0; let used = 0;
-  return stim.map(s => { const r = gates.reduce((t, g) => t + answer(s, g, used), 0) / CELLS; used += (s - used) * pace; return r; });
+// What a key's cells send under an input, step by step, and what they have got used to by then.
+function run(id, k, stim) {
+  const gates = cellGates(k), pace = SENSE[id].tires ? 1 / k.used : 0, sent = [], used = []; let u = 0;
+  for (const s of stim) { sent.push(gates.reduce((t, g) => t + answer(s, g, u), 0) / CELLS); used.push(u); u += (s - u) * pace; }
+  return {sent, used};
 }
 // The step at which a key's last cell falls silent under this input: what it is used to has
 // risen to within its threshold of the input. Past the picture's steps if it never does.
@@ -260,7 +270,7 @@ function picture(id, height, build) {
   p.under.replaceChildren(); p.live.replaceChildren();
   return p;
 }
-const EVERY = ['fish', 'yield', 'bars', 'full', 'ache', 'feed'], SHOW_GUT = ['fish', 'yield', 'bars', 'ache', 'feed'], SHOW_LIFE = ['yield', 'bars', 'ache', 'feed'];
+const EVERY = ['fish', 'yield', 'bars', 'full', 'ache', 'feed'], SHOW_GUT = ['fish', 'yield', 'bars', 'ache', 'feed'];
 const dirty = new Set();
 let queued = 0;
 // A setting has changed: its pictures are repainted in the next frame, however often this is
@@ -280,66 +290,95 @@ function repaint() {
 
 // ===== What moves: one clock =====
 // The clock runs through the senses' STEPS again and again. With it run the line through each
-// sense's input and signal, the stomach's content (the fullness input at that moment) and the
-// gut: always its own calm waves, and in the second half of each round the muscle's, stronger and
-// faster as the muscle is.
+// sense's picture, the stomachs' content (the fullness input at that moment), the pulses of the
+// nerve cells (as fast as their signal is strong), the three signals beside the fish, and the gut:
+// always its own calm waves, and in the second half of each round the muscle's, stronger and
+// faster as the muscle is. As many morsels enter the gut as the stomach is full.
 const ROUND_MS = 12000;
-const play = {step : 0, wave : 0, last : 0, seen : true, moving : true, stim : {}, lines : {}, glow : [], levels : []};
+const play = {step : 0, wave : 0, last : 0, seen : true, stim : {}, sent : {}, lines : {}, glow : [], levels : [], nerves : {}, meters : {}};
 const muscleWorks = () => play.step > STEPS / 2 && S.muscle > 0;
 
 // ===== The fish: stomach, gut and its muscle =====
-// The stomach, large, with the gullet from the mouth; its content rises and falls with the
-// fullness input and lights the satiety keys it has passed. The gut loops to the vent, as long as
-// it is (its end is dragged); its wall is the muscle, as thick as it is strong (dragged at the
-// wall).
-const BODY = 'M14 64 Q30 26 110 22 Q200 22 236 52 L284 28 Q276 64 284 100 L236 76 Q200 112 110 108 Q30 104 14 64 Z';
-const FISH = {down : 12, height : 138}, STOMACH = {x : 92, y : 65, rx : 34, ry : 31}, VENT = [234, 92], GUT = {left : 146, right : [168, 228], high : 40, low : 98};
-const KEY_X = 46, WALL = [1.5, 7], TUBE = 6;
-const gutEnd = () => GUT.right[0] + (GUT.right[1] - GUT.right[0]) * (S.length - SHORTEST) / (LONGEST - SHORTEST);
+// The stomach, large, with the gullet from the mouth. Across it lies a band for each satiety key
+// (how far its cells' thresholds spread); its content rises and falls with the fullness input.
+// The gut fills the body behind the stomach in loops that follow the body's outline: the longer
+// it is, the more loops and the further back. Its wall is the muscle, as thick as it is strong.
+// Beside the fish: what its three senses send to the brain at this moment.
+const NOSE = [14, 64], BACK = [110, 10], RUMP = [236, 48], MIDLINE = 64;
+const BODY = `M${NOSE} Q30 14 ${BACK} Q200 10 ${RUMP} L284 18 Q276 64 284 110 L236 80 Q200 118 110 118 Q30 114 ${NOSE} Z`;
+function onCurve([x0, y0], [x1, y1], [x2, y2], x) {
+  let lo = 0, hi = 1, t = .5;
+  for (let n = 0; n < 20; n++) { t = (lo + hi) / 2; if ((1 - t) * (1 - t) * x0 + 2 * t * (1 - t) * x1 + t * t * x2 < x) lo = t; else hi = t; }
+  return (1 - t) * (1 - t) * y0 + 2 * t * (1 - t) * y1 + t * t * y2;
+}
+// The body's upper outline at x; the lower one mirrors it.
+const bodyTop = x => x < BACK[0] ? onCurve(NOSE, [30, 14], BACK, x) : onCurve(BACK, [200, 10], RUMP, x);
+const FISH = {down : 18, height : 172, meters : 152}, STOMACH = {x : 78, y : 60, rx : 31, ry : 30};
+const GUT = {left : 124, right : [150, 212], margin : 20, bulge : 7, folds : [2, 5]}, WALL = [1, 5], TUBE = 6, WALL_GRIP = 12;
+const lengthShare = () => (S.length - SHORTEST) / (LONGEST - SHORTEST);
 function stomachPath({x, y, rx : w, ry : h}) {
   return `M${x - .55 * w} ${y - h} C${x - 1.05 * w} ${y - .6 * h} ${x - 1.1 * w} ${y + .55 * h} ${x - .35 * w} ${y + h}`
        + ` C${x + .35 * w} ${y + 1.12 * h} ${x + 1.05 * w} ${y + .55 * h} ${x + w} ${y - .05 * h}`
        + ` C${x + .95 * w} ${y - .55 * h} ${x + .45 * w} ${y - .55 * h} ${x + .2 * w} ${y - .75 * h}`
        + ` C${x + .05 * w} ${y - .9 * h} ${x - .2 * w} ${y - 1.05 * h} ${x - .55 * w} ${y - h} Z`;
 }
-// A stomach with content up to a level that the clock moves: returns the element to move.
-function stomach(parent, defs, at, name) {
-  el('clipPath', {id : name}, defs).appendChild(el('path', {d : stomachPath(at)}));
+// A stomach whose content the clock moves; `bands` is where the satiety keys' bands are drawn.
+function stomach(parent, at, name, owner) {
+  el('clipPath', {id : name}, parent).appendChild(el('path', {d : stomachPath(at)}));
   el('path', {d : stomachPath(at), fill : COLOUR.stomachBack}, parent);
-  const content = el('rect', {x : at.x - 1.2 * at.rx, y : at.y, width : 2.4 * at.rx, height : 3 * at.ry, fill : COLOUR.stomach, opacity : .85, 'clip-path' : `url(#${name})`}, parent);
+  const inside = el('g', {'clip-path' : `url(#${name})`}, parent);
+  const content = el('rect', {x : at.x - 1.2 * at.rx, y : at.y, width : 2.4 * at.rx, height : 3 * at.ry, fill : COLOUR.stomach, opacity : .85}, inside);
+  const bands = el('g', {}, inside), levelY = v => at.y + at.ry - 2 * at.ry * v;
   el('path', {d : stomachPath(at), fill : 'none', stroke : COLOUR.stomachEdge, 'stroke-width' : 1.6}, parent);
-  play.levels.push({content, y : v => at.y + at.ry - 2 * at.ry * v});
+  play.levels.push({owner, sense : 'full', show : v => content.setAttribute('y', levelY(v).toFixed(1))});
+  return {bands, levelY};
+}
+// A key's band: from its lowest to its highest cell's threshold.
+function keyBand(parent, k, i, chosen, x, width, yOf) {
+  const gates = cellGates(k), top = yOf(Math.max(...gates)), bottom = yOf(Math.min(...gates));
+  return el('rect', {x, y : Math.min(top, yOf(k.gate) - 1.5), width, height : Math.max(bottom - top, 3), fill : keyColour(i), opacity : chosen ? .4 : .22}, parent);
 }
 function gutWay() {
-  const right = gutEnd(), folds = Math.max(2, Math.round(1 + S.length * 1.4)), {left, high, low} = GUT;
-  const pts = [[STOMACH.x + STOMACH.rx - 4, STOMACH.y - 8], [left, high + 4]], step = (right - left) / (folds - 1);
-  for (let f = 0; f < folds; f++) {
-    const x = left + step * f, down = f % 2 === 0;
-    for (let k = 0; k <= 12; k++) pts.push([x, down ? high + (low - high) * k / 12 : low - (low - high) * k / 12]);
-    if (f < folds - 1) for (let k = 1; k <= 8; k++) { const t = Math.PI * k / 8; pts.push([x + step / 2 - step / 2 * Math.cos(t), (down ? low : high) + (down ? 1 : -1) * Math.min(9, step * .7) * Math.sin(t)]); }
-  }
-  const [lx, ly] = pts.at(-1);
-  for (let k = 1; k <= 10; k++) pts.push([lx + (VENT[0] - lx) * k / 10, ly + (VENT[1] - ly) * k / 10]);
+  const share = lengthShare(), folds = Math.round(GUT.folds[0] + (GUT.folds[1] - GUT.folds[0]) * share);
+  const right = GUT.right[0] + (GUT.right[1] - GUT.right[0]) * share, step = (right - GUT.left) / (folds - 1);
+  const high = x => bodyTop(x) + GUT.margin, low = x => 2 * MIDLINE - bodyTop(x) - GUT.margin;
+  const legs = Array.from({length : folds}, (_, f) => { const x = GUT.left + step * f, down = (folds - 1 - f) % 2 === 0; return {x, from : down ? high(x) : low(x), to : down ? low(x) : high(x), down}; });
+  const pts = [], line = ([ax, ay], [bx, by], n) => { for (let k = 1; k <= n; k++) pts.push([ax + (bx - ax) * k / n, ay + (by - ay) * k / n]); };
+  pts.push([STOMACH.x + STOMACH.rx - 3, STOMACH.y - 6]);
+  line(pts[0], [legs[0].x, legs[0].from], 8);
+  legs.forEach((leg, f) => {
+    line([leg.x, leg.from], [leg.x, leg.to], 12);
+    const next = legs[f + 1];
+    if (next) for (let k = 1; k <= 8; k++) { const t = Math.PI * k / 8, across = (1 - Math.cos(t)) / 2; pts.push([leg.x + step * across, leg.to + (next.from - leg.to) * across + (leg.down ? 1 : -1) * GUT.bulge * Math.sin(t)]); }
+  });
   const lengths = [0];
   for (let i = 1; i < pts.length; i++) lengths.push(lengths[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   const at = u => { const d = clamp(u, 0, 1) * lengths.at(-1); let i = 1; while (i < lengths.length - 1 && lengths[i] < d) i++;
     const t = (d - lengths[i - 1]) / (lengths[i] - lengths[i - 1] || 1); return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; };
-  return {at, end : [right, ly]};
+  const last = legs.at(-1);
+  return {at, end : [last.x, last.to], side : [last.x, (last.from + last.to) / 2]};
 }
 // The moving gut: wall and tube in SEGMENTS pieces whose widths the waves change, and the morsels
 // that travel along it. It outlives every repaint; only a new length lays it anew.
-const SEGMENTS = 120, WAVES = 6;
-const film = {wall : null, tube : null, keys : null, segs : [], bits : [], way : null, length : null};
-function buildFish(fixed, svg) {
-  const defs = el('defs', {}, svg), st = STOMACH;
-  el('path', {d : BODY, transform : `translate(0 ${FISH.down})`, fill : COLOUR.body, stroke : COLOUR.axis}, fixed);
-  const g = el('g', {transform : `translate(0 ${FISH.down})`}, fixed);
+const SEGMENTS = 120, WAVES = 6, MORSELS = 8;
+const film = {wall : null, tube : null, keys : null, bands : null, levelY : null, segs : [], bits : [], way : null, length : null};
+const METERS = [['full', 'satt', 8], ['ache', 'Bauchweh', 106], ['feed', 'Geschmack', 204]], METER_WIDTH = 88;
+function buildFish(fixed) {
+  const st = STOMACH, {down, meters} = FISH;
+  el('path', {d : BODY, transform : `translate(0 ${down})`, fill : COLOUR.body, stroke : COLOUR.axis}, fixed);
+  const g = el('g', {transform : `translate(0 ${down})`}, fixed);
   // The gullet, from the mouth to the stomach.
-  el('path', {d : `M17 64 Q${st.x - st.rx - 20} 60 ${st.x - .8 * st.rx} ${st.y - .55 * st.ry}`, stroke : COLOUR.tube, 'stroke-width' : 5, fill : 'none', 'stroke-linecap' : 'round'}, g);
+  el('path', {d : `M${NOSE[0] + 2} ${NOSE[1]} Q${st.x - st.rx - 14} ${st.y - .4 * st.ry} ${st.x - .5 * st.rx} ${st.y - .9 * st.ry}`, stroke : COLOUR.tube, 'stroke-width' : 5, fill : 'none'}, g);
   film.wall = el('g', {stroke : COLOUR.muscle}, g); film.tube = el('g', {stroke : COLOUR.tube}, g);
-  film.bits = Array.from({length : 6}, (_, k) => ({u : k / 6, e : el('circle', {r : 2.4, fill : COLOUR.morsel}, g)}));
-  stomach(g, defs, st, 'fishstomach');
+  film.bits = Array.from({length : MORSELS}, (_, k) => ({u : k / MORSELS, on : true, share : (k + .5) / MORSELS, e : el('circle', {r : 2.4, fill : COLOUR.morsel}, g)}));
+  Object.assign(film, stomach(g, st, 'fishstomach', 'fish'));
   film.keys = el('g', {}, g);
+  // What the senses send to the brain now.
+  for (const [id, word, x] of METERS) {
+    txt(fixed, x, meters + 3, word, {style : 'font-size:10px'});
+    el('rect', {x, y : meters + 8, width : METER_WIDTH, height : 5, rx : 2.5, fill : COLOUR.track, stroke : COLOUR.trackEdge}, fixed);
+    play.meters[id] = el('rect', {x, y : meters + 8, width : 0, height : 5, rx : 2.5, fill : SENSE[id].colour}, fixed);
+  }
 }
 function layGut() {
   if (film.length === S.length) return;
@@ -352,7 +391,7 @@ function layGut() {
   film.segs = Array.from({length : SEGMENTS}, (_, k) => ({wall : piece(k, film.wall), tube : piece(k, film.tube), wallWidth : '', tubeWidth : ''}));
 }
 function drawFish() {
-  const {svg, live} = picture('fish', FISH.height, buildFish), {down} = FISH;
+  const {svg, live} = picture('fish', FISH.height, buildFish), {down} = FISH, st = STOMACH, full = S.full;
   layGut();
   // What the gut costs, as the engine charges it: per unit of length GUT_UPKEEP of the basal need
   // and GUT_WALL of the tissue's weight; the longest gut leaves the eggs GUT_BELLY less room; a
@@ -361,46 +400,46 @@ function drawFish() {
   // src/brain_interface.hh:164, src/protocol_schema.hh:2018).
   const GUT_UPKEEP = .1, GUT_WALL = .05, GUT_BELLY = .25, MUSCLE_UPKEEP = .0004, MUSCLE_TISSUE = 4, FIBRE_UPKEEP = 1.2, BASAL = .06;
   const need = 100 * (GUT_UPKEEP * S.length + MUSCLE_UPKEEP * FIBRE_UPKEEP * MUSCLE_TISSUE * S.muscle / BASAL), weight = 100 * GUT_WALL * S.length;
-  const eggs = 100 * GUT_BELLY * (S.length - SHORTEST) / (LONGEST - SHORTEST);
-  txt(live, 8, 10, `+${Math.round(need)} % Ruhebedarf · +${Math.round(weight)} % Gewicht · −${Math.round(eggs)} % Platz für Eier`, {style : 'font-size:10px'});
-  // The satiety keys at the stomach; a key the content has passed is lit by the clock.
-  const st = STOMACH, levelY = v => st.y + st.ry - 2 * st.ry * v, full = S.full;
-  film.keys.replaceChildren();
-  play.glow = play.glow.filter(g => g.picture !== 'fish');
+  txt(live, 8, 10, `+${Math.round(need)} % Ruhebedarf · +${Math.round(weight)} % Gewicht · −${Math.round(100 * GUT_BELLY * lengthShare())} % Platz für Eier`, {style : 'font-size:10px'});
+  // The satiety keys: a band across the stomach and a grip in it for each; a key the content has
+  // passed is lit by the clock.
+  film.keys.replaceChildren(); film.bands.replaceChildren();
+  play.glow = play.glow.filter(g => g.owner !== 'fish');
+  const keyX = st.x - st.rx + 10;
+  full.keys.forEach((k, i) => keyBand(film.bands, k, i, i === full.chosen, st.x - 1.2 * st.rx, 2.4 * st.rx, film.levelY));
   full.keys.forEach((k, i) => {
-    const y = levelY(k.gate), chosen = i === full.chosen;
-    const line = el('path', {d : `M${KEY_X + 7} ${y} H${st.x + st.rx * .75}`, stroke : keyColour(i), 'stroke-dasharray' : '3 3', 'stroke-width' : chosen ? 1.8 : 1.2}, film.keys);
-    play.glow.push({picture : 'fish', line, gate : k.gate, sense : 'full'});
-    drag(svg, el('rect', {x : KEY_X - 7, y : y - 4 + down, width : 14, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
+    const y = film.levelY(k.gate), chosen = i === full.chosen;
+    const line = el('path', {d : `M${keyX + 7} ${y} H${st.x + st.rx * .8}`, stroke : keyColour(i), 'stroke-dasharray' : '3 3', 'stroke-width' : chosen ? 1.8 : 1.2}, film.keys);
+    play.glow.push({owner : 'fish', line, gate : k.gate, sense : 'full'});
+    drag(svg, el('rect', {x : keyX - 7, y : y - 4 + down, width : 14, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
       p => { k.gate = clamp((st.y + st.ry - (p.y - down)) / (2 * st.ry), .05, .95); full.chosen = i; draw(SENSE.full.shows); }, 'fishkey' + i);
   });
-  txt(live, KEY_X, levelY(Math.max(...full.keys.map(k => k.gate))) + down - 8, 'satt', {'text-anchor' : 'middle'});
-  chip(live, st.x - 10, st.y + st.ry + down + 12, '−', () => { full.keys.splice(full.chosen, 1); full.chosen = 0; }, SENSE.full.shows, full.keys.length > 1);
-  chip(live, st.x + 10, st.y + st.ry + down + 12, '+', () => { full.keys.push({gate : clamp(Math.min(...full.keys.map(k => k.gate)) - .2, .1, .9), spread : .1}); full.chosen = full.keys.length - 1; }, SENSE.full.shows, full.keys.length < 3);
+  txt(live, st.x, st.y - st.ry + down - 5, 'satt', {'text-anchor' : 'middle'});
+  const chipY = st.y + 1.12 * st.ry + down + 11;
+  chip(live, st.x - 10, chipY, '−', () => { full.keys.splice(full.chosen, 1); full.chosen = 0; }, SENSE.full.shows, full.keys.length > 1, 6);
+  chip(live, st.x + 10, chipY, '+', () => { full.keys.push({gate : clamp(Math.min(...full.keys.map(k => k.gate)) - .2, .1, .9), spread : .1}); full.chosen = full.keys.length - 1; }, SENSE.full.shows, full.keys.length < 3, 6);
   // The gut's end: dragged sideways for a longer or shorter gut.
-  const [ex, ey] = film.way.end;
-  drag(svg, el('rect', {x : ex - 5, y : ey + down + 5, width : 10, height : 14, rx : 3}, live), p => { S.length = clamp(SHORTEST + (LONGEST - SHORTEST) * (p.x - GUT.right[0]) / (GUT.right[1] - GUT.right[0]), SHORTEST, LONGEST); draw(); }, 'gutend');
-  // The muscle: the wall's thickness, dragged outward at the top of the first loop.
-  const WALL_GRIP = {low : GUT.high + down - 16, travel : 18}, wy = WALL_GRIP.low - WALL_GRIP.travel * S.muscle;
-  drag(svg, el('rect', {x : GUT.left - 5, y : wy - 5, width : 10, height : 10, rx : 3}, live), p => { S.muscle = clamp((WALL_GRIP.low - p.y) / WALL_GRIP.travel, 0, 1); draw(SHOW_GUT); }, 'wall');
-  txt(live, GUT.left + 9, wy + 4, 'Muskel');
+  const [ex, ey] = film.way.end, [sx, sy] = film.way.side;
+  drag(svg, el('rect', {x : ex - 5, y : ey + down + 3, width : 10, height : 12, rx : 3}, live), p => { S.length = clamp(SHORTEST + (LONGEST - SHORTEST) * (p.x - GUT.right[0]) / (GUT.right[1] - GUT.right[0]), SHORTEST, LONGEST); draw(); }, 'gutend');
+  // The muscle: the wall's thickness, dragged outward beside the last loop.
+  const rest = sx + TUBE / 2 + WALL[1] + 6, mx = rest + WALL_GRIP * S.muscle;
+  drag(svg, el('rect', {x : mx - 5, y : sy + down - 6, width : 10, height : 12, rx : 3}, live), p => { S.muscle = clamp((p.x - rest) / WALL_GRIP, 0, 1); draw(SHOW_GUT); }, 'wall');
+  txt(live, rest - 4, sy + down - 10, 'Muskel');
 }
 
 // ===== Yield: what each food gives at every stay =====
 // Across: how long a meal stays in the gut, short to long; up: how much of the food's energy
-// arrives. Dashed where a full gut of that food hurts. The band is every stay this fish's gut ever
-// has. Its settings, as in the picture David liked: the line with the round grip moves the whole
-// band (the gut's length); the brown bar is the muscle's reach, its left end the muscle's
-// strength, its right end the gut at rest. Below the axis the same band over the life, from
-// hatching (top) to grown (bottom): where the muscle works, the young fish reaches shorter stays;
-// the two grips at its side set from when until when it works. Beside it the food that pays best
-// young and grown.
-const Y = {L : 30, R : 290, top : 22, base : 124, bar : 116, lifeTop : 150, lifeBase : 196, height : 206};
+// arrives. Dashed where a full gut of that food hurts. The light band is every stay of the fish's
+// whole life. The brown bar is what the gut reaches at the age shown: its right end the gut at
+// rest (its length), its left end the muscle at full drive; the line with the round grip moves
+// the whole bar. Below the axis the life from hatching to grown: the brown stretch is where the
+// muscle works (its ends are settings), the round knob is the age shown (a trial, not a setting).
+const Y = {L : 30, R : 290, top : 22, base : 124, bar : 116, life : 152, lifeL : 52, lifeR : 268, height : 166};
 const xOfStay = t => Y.L + (Y.R - Y.L) * Math.log(clamp(t, SHORT, LONG) / SHORT) / Math.log(LONG / SHORT);
 const stayOfX = x => SHORT * Math.pow(LONG / SHORT, clamp((x - Y.L) / (Y.R - Y.L), 0, 1));
-const lifeY = s => Y.lifeTop + (Y.lifeBase - Y.lifeTop) * s, lifeOfY = y => clamp((y - Y.lifeTop) / (Y.lifeBase - Y.lifeTop), 0, 1);
+const xOfAge = s => Y.lifeL + (Y.lifeR - Y.lifeL) * s, ageOfX = x => clamp((x - Y.lifeL) / (Y.lifeR - Y.lifeL), 0, 1);
 function buildYield(fixed) {
-  const {L, R, top, base, lifeTop, lifeBase} = Y, yOf = v => base - (base - top) * v;
+  const {L, R, top, base, life, lifeL, lifeR} = Y, yOf = v => base - (base - top) * v;
   el('path', {d : `M${L} ${top - 6} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
   txt(fixed, L + 4, top - 8, 'Ausbeute');
   txt(fixed, L, base + 14, 'kurz'); txt(fixed, (L + R) / 2, base + 14, 'Verweildauer im Darm', {'text-anchor' : 'middle'}); txt(fixed, R, base + 14, 'lang', {'text-anchor' : 'end'});
@@ -426,48 +465,37 @@ function buildYield(fixed) {
       if (free(box, i)) { taken.push(box); txt(fixed, x, y + lift, c.name, {'text-anchor' : 'middle', style : 'fill:' + c.colour}); return; }
     }
   });
-  fishIcon(fixed, L - 20, lifeTop + 4, .26); fishIcon(fixed, L - 21, lifeBase - 3, .45);
-  el('path', {d : `M${L} ${lifeTop} V${lifeBase}`, stroke : COLOUR.axis, fill : 'none'}, fixed);
+  fishIcon(fixed, lifeL - 16, life, .3); fishIcon(fixed, lifeR + 14, life, .55);
+  el('path', {d : `M${lifeL} ${life} H${lifeR}`, stroke : COLOUR.trackEdge, 'stroke-width' : 4, 'stroke-linecap' : 'round'}, fixed);
 }
 function drawYield() {
-  const {svg, under, live} = picture('yield', Y.height, buildYield), {top, base, bar, lifeTop, lifeBase, L, R} = Y, m = M(), [lo, hi] = m.reach;
-  const x0 = xOfStay(lo), x1 = xOfStay(hi), mid = (x0 + x1) / 2;
-  el('rect', {x : x0, y : top, width : x1 - x0, height : base - top, fill : COLOUR.handle, opacity : .1}, under);
-  // The band over the life.
-  const edge = LIFE.map(s => [xOfStay(m.fastAt(s)), lifeY(s)]);
-  // The band has, at each stay, the colour of the food that gives most there: so it shows what
-  // pays at each age.
-  el('clipPath', {id : 'lifeband'}, live).appendChild(el('path', {d : `${path(edge)} L${(x1 + 3).toFixed(1)} ${lifeBase} L${(x1 + 3).toFixed(1)} ${lifeTop} Z`}));
-  const band = el('g', {'clip-path' : 'url(#lifeband)'}, live);
-  for (let k = 0, from = 0; k <= AXIS.length; k++) if (k === AXIS.length || LEADS[k] !== LEADS[from]) {
-    const a = xOfStay(AXIS[from]), b = k === AXIS.length ? R + 3 : xOfStay(AXIS[k]);
-    el('rect', {x : a, y : lifeTop, width : b - a, height : lifeBase - lifeTop, fill : LEADS[from].colour, opacity : .8}, band);
-    from = k;
-  }
-  for (const key of ['from', 'until']) {
-    const y = lifeY(S[key]);
-    el('path', {d : `M${L - 4} ${y} H${x1.toFixed(1)}`, stroke : COLOUR.muscle, 'stroke-dasharray' : '2 3'}, live);
-    drag(svg, el('rect', {x : L - 7, y : y - 5, width : 14, height : 10, rx : 3}, live), p => {
-      const v = lifeOfY(p.y);
-      if (key === 'from') S.from = Math.min(v, S.until - WORKING_LIFE_MIN); else S.until = Math.max(v, S.from + WORKING_LIFE_MIN);
-      draw(SHOW_LIFE); }, 'life' + key);
-  }
-  // The muscle's reach, and the line that moves the whole band.
+  const {svg, under, live} = picture('yield', Y.height, buildYield), {top, base, bar, life} = Y, m = M();
+  const [lo, hi] = m.reach, [fast, rest] = m.windowAt(shown.age), x0 = xOfStay(fast), x1 = xOfStay(rest), mid = (x0 + x1) / 2;
+  el('rect', {x : xOfStay(lo), y : top, width : xOfStay(hi) - xOfStay(lo), height : base - top, fill : COLOUR.handle, opacity : .1}, under);
+  // What the gut reaches at the age shown, and the line that moves it.
   el('path', {d : `M${x0} ${bar} H${x1}`, stroke : COLOUR.muscle, 'stroke-width' : 6, 'stroke-linecap' : 'round'}, live);
   el('path', {d : `M${mid} ${top - 6} V${bar}`, stroke : COLOUR.handle, 'stroke-width' : 1.4, 'stroke-dasharray' : '4 3'}, live);
-  drag(svg, el('rect', {x : x0 - 5, y : bar - 7, width : 10, height : 14, rx : 3}, live), p => { S.muscle = muscleForFastest(Math.min(stayOfX(p.x), M().rest)); draw(SHOW_GUT); }, 'fastest');
+  if (m.works(shown.age)) drag(svg, el('rect', {x : x0 - 5, y : bar - 7, width : 10, height : 14, rx : 3}, live), p => { S.muscle = muscleForFastest(Math.min(stayOfX(p.x), M().rest), shown.age); draw(SHOW_GUT); }, 'fastest');
   drag(svg, el('rect', {x : x1 - 5, y : bar - 7, width : 10, height : 14, rx : 3}, live), p => { S.length = clamp(stayOfX(p.x) / REST_PER_LENGTH, SHORTEST, LONGEST); draw(); }, 'rest');
   drag(svg, el('circle', {cx : mid, cy : top - 6, r : 7}, live), p => {
-    const {reach : [fast, rest]} = M(), want = stayOfX(p.x) * Math.sqrt(rest / fast);
-    S.length = clamp(want / REST_PER_LENGTH, SHORTEST, LONGEST); draw(); }, 'middle');
+    const [f, r] = M().windowAt(shown.age);
+    S.length = clamp(stayOfX(p.x) * Math.sqrt(r / f) / REST_PER_LENGTH, SHORTEST, LONGEST); draw(); }, 'middle');
+  // The life: where the muscle works, and the age shown.
+  el('path', {d : `M${xOfAge(S.from)} ${life} H${xOfAge(S.until)}`, stroke : COLOUR.muscle, 'stroke-width' : 6, 'stroke-linecap' : 'round'}, live);
+  for (const key of ['from', 'until']) drag(svg, el('rect', {x : xOfAge(S[key]) - 5, y : life - 7, width : 10, height : 14, rx : 3}, live), p => {
+    const v = ageOfX(p.x);
+    if (key === 'from') S.from = Math.min(v, S.until - WORKING_LIFE_MIN); else S.until = Math.max(v, S.from + WORKING_LIFE_MIN);
+    draw(SHOW_GUT); }, 'life' + key);
+  drag(svg, el('circle', {cx : xOfAge(shown.age), cy : life, r : 5.5, fill : COLOUR.icon}, live), p => { shown.age = ageOfX(p.x); draw(['yield']); }, 'age', 'knob');
 }
 
 // ===== What each food gives this fish over its life =====
-// Full bar = the best that food can give in any gut; the filled range is every stay of the fish's
-// life; a red frame where a full gut of it hurts. The numbers are the same range.
+// Every bar's full length is the best that food can give in any gut, all on one scale (leaf's 92 %
+// is the longest); the filled range is every stay of the fish's life; a red frame where a full gut
+// of it hurts. The numbers are the same range.
 const BARS = {x0 : 70, x1 : 236, row : 21, top : 6};
 const SORE = {fill : 'none', stroke : COLOUR.sore, 'stroke-width' : 1.6, 'stroke-dasharray' : '3 2'};
-const barsLegendY = BARS.top + FOOD.length * BARS.row + 8;
+const barsLegendY = BARS.top + FOOD.length * BARS.row + 8, BEST = Math.max(...CURVES.map(c => c.best));
 function buildBars(fixed) {
   el('rect', {x : BARS.x0, y : barsLegendY - 8, width : 16, height : 11, rx : 3, ...SORE}, fixed);
   txt(fixed, BARS.x0 + 22, barsLegendY + 1, 'Bauchweh');
@@ -475,9 +503,9 @@ function buildBars(fixed) {
 function drawBars() {
   const {live} = picture('bars', barsLegendY + 8, buildBars), {x0, x1, row, top} = BARS, ranges = M().ranges;
   CURVES.forEach((c, i) => {
-    const y = top + i * row, r = ranges[i], x = v => x0 + (x1 - x0) * v / c.best;
+    const y = top + i * row, r = ranges[i], x = v => x0 + (x1 - x0) * v / BEST;
     txt(live, 6, y + 10, c.name, {style : 'fill:' + c.colour});
-    el('rect', {x : x0, y, width : x1 - x0, height : 12, rx : 3, fill : c.colour, opacity : .22}, live);
+    el('rect', {x : x0, y, width : x(c.best) - x0, height : 12, rx : 3, fill : c.colour, opacity : .22}, live);
     el('rect', {x : x0, y, width : x(r.min) - x0, height : 12, rx : 3, fill : c.colour, opacity : .85}, live);
     el('rect', {x : x(r.min), y, width : Math.max(2, x(r.max) - x(r.min)), height : 12, rx : 3, fill : c.colour, opacity : .5}, live);
     if (r.sore) el('rect', {x : x(r.sore[0]) - 3, y : y - 3, width : Math.max(6, x(r.sore[1]) - x(r.sore[0]) + 6), height : 18, rx : 3, ...SORE}, live);
@@ -485,105 +513,133 @@ function drawBars() {
   });
 }
 
-// ===== The three senses of the gut: one layout for all three =====
-// Left: what holds the thresholds (the stomach for satiety, a bar for the others) with a key for
-// each; a key's dashed line runs across the input, the band around it is how far its cells'
-// thresholds spread (its edge is dragged). Top: the input over time, shaped by its two knobs.
-// Below: the signal over the same time; for cells that tire, a grip where no signal is left under
-// a constant input. The clock's line runs through both. At the bottom, for bellyache and
-// nutrients, what each food gives these cells in this gut, with the thresholds across.
-function senseBox(hasRow) {
-  const I0 = 16, I1 = I0 + 76, A0 = I1 + 34, A1 = A0 + 64, B0 = A1 + 44, B1 = B0 + 26;
-  return {L : 92, R : 292, LX : 44, I0, I1, A0, A1, B0, B1, height : hasRow ? B1 + 18 : A1 + 20};
+// ===== The three senses of the gut: one picture each, all built alike =====
+// One diagram over one time axis. Upper part: the input, shaped by its two round knobs. Lower
+// part, on its own baseline: what the cells send. Left of the input what holds the thresholds (the
+// stomach for satiety, a bar for the others), filling with the input; in it a grip for each key.
+// A key's dashed line runs across the input; the band around it is how far its cells' thresholds
+// spread, set by the key-shaped grip at its end. Cells that tire: the solid line that rises from
+// the chosen key's dashed one is what they have got used to, and the cells send only what lies
+// above it; the dashed upright is where they send nothing more, its grip sets how fast they tire.
+// Left of the signal a nerve cell that sends pulses as fast as the signal is strong. The clock's
+// line runs through both parts. Bottom right, for bellyache and taste: what each food gives these
+// cells in this gut, darker what it always gives, lighter what it gives depending on the muscle.
+const SENSE_BOX = {L : 92, R : 292, LX : 44, I0 : 20, I1 : 139, A1 : 239, row : 34, rowBar : 30, rowGap : 8};
+function keyGrip(svg, parent, x, y, move, name) {
+  const g = el('g', {}, parent);
+  el('rect', {x : x - 13, y : y - 7, width : 22, height : 14, style : 'fill:transparent;stroke:none'}, g);
+  el('circle', {cx : x + 3, cy : y, r : 4}, g);
+  el('path', {d : `M${x - 1} ${y} H${x - 12} v4 m4 -4 v3`, style : 'fill:none'}, g);
+  drag(svg, g, move, name);
+}
+function nerve(parent, id, x, y, colour) {
+  const line = {stroke : colour, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round'};
+  el('path', {d : `M${x} ${y} l-7 -13 M${x} ${y} l2 -15 M${x} ${y} l10 -11 M${x} ${y} C${x - 4} ${y + 16} ${x - 20} ${y + 6} ${x - 36} ${y + 22}`, ...line}, parent);
+  el('circle', {cx : x, cy : y, r : 6, fill : colour}, parent);
+  const way = t => { const u = 1 - t, a = [x, y], b = [x - 4, y + 16], c = [x - 20, y + 6], d = [x - 36, y + 22]; return [0, 1].map(n => u * u * u * a[n] + 3 * u * u * t * b[n] + 3 * u * t * t * c[n] + t * t * t * d[n]); };
+  play.nerves[id] = {phase : 0, way, pulses : [0, 1, 2].map(() => el('circle', {r : 2.6, fill : COLOUR.line, opacity : 0}, parent))};
 }
 function drawSense(id) {
   const cell = S[id], o = SENSE[id], keys = cell.keys, inp = cell.input, stim = play.stim[id] = stimulus(id);
-  const {L, R, LX, I0, I1, A0, A1, B0, B1, height} = senseBox(!!o.row), {svg, live} = picture(id, height);
+  const {L, R, LX, I0, I1, A1, row, rowBar, rowGap} = SENSE_BOX, {svg, live} = picture(id, A1 + 18 + (o.row ? row + 30 : 0));
   const IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
   const X = st => L + (R - L) * st / STEPS, stOf = x => clamp(Math.round((x - L) / (R - L) * STEPS), 0, STEPS);
   const back = pts => pts.slice().reverse().map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(' L');
-  play.glow = play.glow.filter(g => g.picture !== id);
-  play.levels = play.levels.filter(l => l.picture !== id);
-  // What holds the thresholds.
-  if (id === 'full') {
-    const before = play.levels.length;
-    stomach(live, el('defs', {}, live), {x : LX, y : (I0 + I1) / 2, rx : 28, ry : (I1 - I0) / 2}, 'stomach-' + id);
-    play.levels[before].picture = id;
-  } else el('rect', {x : LX - 4, y : I0, width : 8, height : I1 - I0, rx : 4, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
+  const choose = i => () => { cell.chosen = i; draw(o.shows); };
+  play.glow = play.glow.filter(g => g.owner !== id);
+  play.levels = play.levels.filter(l => l.owner !== id);
+  txt(live, L, I0 - 7, o.title);
+  // What holds the thresholds, filling with the input.
+  let holderBands = null;
+  if (id === 'full') holderBands = stomach(live, {x : LX, y : (I0 + I1) / 2, rx : 37, ry : (I1 - I0) / 2}, 'stomach-' + id, id).bands;
+  else {
+    el('rect', {x : LX - 5, y : I0, width : 10, height : I1 - I0, rx : 5, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
+    const content = el('rect', {x : LX - 4, width : 8, rx : 4, fill : o.colour, opacity : .6}, live);
+    play.levels.push({owner : id, sense : id, show : v => { content.setAttribute('y', IY(v).toFixed(1)); content.setAttribute('height', (I1 - IY(v)).toFixed(1)); }});
+  }
   // The input, and each key's band and line across it.
   el('rect', {x : L, y : I0, width : R - L, height : I1 - I0, fill : COLOUR.track}, live);
   el('path', {d : path(stim.map((v, st) => [X(st), IY(v)])) + ` L${R} ${I1} L${L} ${I1} Z`, fill : o.colour, opacity : .35, stroke : o.colour, 'stroke-width' : 1.6}, live);
-  txt(live, L, I0 - 5, o.word);
-  if (o.mark) { el('path', {d : `M${L} ${IY(o.mark[0])} H${R}`, stroke : COLOUR.axis}, live); txt(live, R - 3, IY(o.mark[0]) - 3, o.mark[1], {'text-anchor' : 'end', style : 'font-size:10px'}); }
   keys.forEach((k, i) => {
-    const y = IY(k.gate), chosen = i === cell.chosen, gates = cellGates(k), top = IY(Math.max(...gates)), bottom = IY(Math.min(...gates));
-    const band = el('rect', {x : L, y : Math.min(top, y - 4), width : R - L, height : Math.max(bottom - top, 8), fill : keyColour(i), opacity : chosen ? .22 : .1, class : 'chip'}, live);
-    band.addEventListener('pointerdown', () => { cell.chosen = i; draw(o.shows); });
-    const line = el('path', {d : `M${LX + 12} ${y} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
-    play.glow.push({picture : id, line, gate : k.gate, sense : id});
-    drag(svg, el('rect', {x : LX - 9, y : y - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
-      p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
-    if (chosen) {
-      drag(svg, el('rect', {x : R - 12, y : top - 4, width : 10, height : 8, rx : 3}, live), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); draw([id]); }, id + 'spread');
-    }
+    const band = keyBand(live, k, i, i === cell.chosen, L, R - L, IY); band.setAttribute('class', 'chip'); band.addEventListener('pointerdown', choose(i));
+    if (holderBands) keyBand(holderBands, k, i, i === cell.chosen, LX - 44, 88, IY);
   });
-  chip(live, LX - 10, I1 + 16, '−', () => { keys.splice(cell.chosen, 1); cell.chosen = 0; }, o.shows, keys.length > 1);
-  chip(live, LX + 10, I1 + 16, '+', () => { keys.push({gate : clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95), spread : .1, ...(o.tires ? {used : 200} : {})}); cell.chosen = keys.length - 1; }, o.shows, keys.length < 3);
-  // The input's knobs: when it is fully there and how strong, and when it stops.
-  drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw([id]); }, id + 'rise', 'knob');
-  drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, STEPS - 10); inp.height = vOf(p.y); draw([id]); }, id + 'stop', 'knob');
-  // The signal over the same time.
-  const AY = v => A1 - (A1 - A0) * v / keys.length;
-  txt(live, L, A0 - 5, 'Signalverlauf');
-  const signals = keys.map(k => signal(id, k, stim));
+  const runs = keys.map(k => run(id, k, stim));
+  keys.forEach((k, i) => {
+    const y = IY(k.gate), chosen = i === cell.chosen;
+    const line = el('path', {d : `M${LX + 12} ${y} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : chosen ? 1.8 : 1.1}, live);
+    play.glow.push({owner : id, line, gate : k.gate, sense : id});
+    if (chosen && o.tires) el('path', {d : path(runs[i].used.map((u, st) => [X(st), IY(Math.min(...cellGates(k)) + u)])), fill : 'none', stroke : keyColour(i), 'stroke-width' : 1.4}, live);
+  });
+  // The signal on its own baseline, under the input.
+  const AY = v => A1 - (A1 - I1 - 14) * v / keys.length;
   let below = Array(STEPS + 1).fill(0);
   keys.map((k, i) => i).sort((a, b) => keys[a].gate - keys[b].gate).forEach(i => {
-    const over = below.map((u, st) => u + signals[i][st]);
+    const over = below.map((u, st) => u + runs[i].sent[st]);
     const band = el('path', {d : `${path(over.map((v, st) => [X(st), AY(v)]))} L${back(below.map((v, st) => [X(st), AY(v)]))} Z`, fill : keyColour(i), opacity : i === cell.chosen ? .85 : .55, class : 'chip'}, live);
-    band.addEventListener('pointerdown', () => { cell.chosen = i; draw(o.shows); });
+    band.addEventListener('pointerdown', choose(i));
     below = over;
   });
-  el('path', {d : `M${L} ${A0 - 2} V${A1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
-  if (o.tires) {
-    const k = keys[cell.chosen], at = silentStep(k, stim), x = X(Math.min(STEPS, at)), left = x > (L + R) / 2;
-    el('path', {d : `M${x} ${A0} V${A1}`, stroke : keyColour(cell.chosen), 'stroke-dasharray' : '2 3'}, live);
-    if (at <= STEPS) txt(live, x + (left ? -6 : 6), A0 + 10, 'kein Signal mehr', {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
-    drag(svg, el('rect', {x : x - 5, y : A1 - 14, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = usedFor(k, stim, stOf(p.x)); draw([id]); }, id + 'used');
-  }
+  play.sent[id] = below.map(v => v / keys.length);
+  el('path', {d : `M${L} ${I0 - 2} V${A1} H${R} M${L} ${I1} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  nerve(live, id, LX + 8, (I1 + A1) / 2 + 2, keyColour(cell.chosen));
   txt(live, L, A1 + 14, 'Schritte');
   for (const st of [300, 600]) txt(live, X(st), A1 + 14, st, {'text-anchor' : 'middle'});
   txt(live, R, A1 + 14, STEPS, {'text-anchor' : 'end'});
-  // The clock's line through input and signal.
+  // The clock's line through both parts.
   play.lines[id] = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : I0, base : A1};
-  // What each food gives these cells in this gut.
+  // Where the chosen key's cells have got used to the input.
+  if (o.tires) {
+    const k = keys[cell.chosen], at = silentStep(k, stim), x = X(Math.min(STEPS, at)), left = x > (L + R) / 2;
+    el('path', {d : `M${x} ${I0} V${A1}`, stroke : keyColour(cell.chosen), 'stroke-dasharray' : '2 3'}, live);
+    if (at <= STEPS) txt(live, x + (left ? -6 : 6), I1 + 11, o.used, {'text-anchor' : left ? 'end' : 'start', style : 'font-size:10px'});
+    drag(svg, el('rect', {x : x - 5, y : A1 - 14, width : 10, height : 14, rx : 3, style : 'stroke:' + keyColour(cell.chosen)}, live), p => { k.used = usedFor(k, stim, stOf(p.x)); draw([id]); }, id + 'used');
+  }
+  // The grips, above everything they could be hidden by: the keys, the chosen key's spread, the
+  // input's knobs (when it is fully there and how strong, and when it stops).
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen;
+    drag(svg, el('rect', {x : LX - 9, y : IY(k.gate) - 4, width : 18, height : 8, rx : 2, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2 : 1}`}, live),
+      p => { k.gate = clamp(vOf(p.y), .03, .97); cell.chosen = i; draw(o.shows); }, id + 'key' + i);
+  });
+  const k = keys[cell.chosen];
+  keyGrip(svg, live, R - 8, IY(Math.max(...cellGates(k))), p => { k.spread = clamp(2 * (vOf(p.y) - k.gate), 0, .8); draw(o.shows); }, id + 'spread');
+  drag(svg, el('circle', {cx : X(inp.rise), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.rise = clamp(stOf(p.x), 1, inp.stop - 1); inp.height = vOf(p.y); draw(o.shows); }, id + 'rise', 'knob');
+  drag(svg, el('circle', {cx : X(inp.stop), cy : IY(inp.height), r : 5.5, fill : o.colour}, live), p => { inp.stop = clamp(stOf(p.x), inp.rise + 1, STEPS - 10); inp.height = vOf(p.y); draw(o.shows); }, id + 'stop', 'knob');
+  chip(live, LX - 30, A1 + 10, '−', () => { keys.splice(cell.chosen, 1); cell.chosen = 0; }, o.shows, keys.length > 1, 6);
+  chip(live, LX - 14, A1 + 10, '+', () => { keys.push({gate : clamp((Math.max(...keys.map(k => k.gate)) + 1) / 2, .05, .95), spread : .1, ...(o.tires ? {used : 200} : {})}); cell.chosen = keys.length - 1; }, o.shows, keys.length < 3, 6);
+  // What each food gives these cells in this gut, with the keys' thresholds across.
   if (o.row) {
-    const BY = v => B1 - (B1 - B0) * clamp(v, 0, 1), bw = (R - L) / FOOD.length, ranges = M().ranges;
-    txt(live, L, B0 - 5, o.row.word);
+    const B0 = A1 + 44, B1 = B0 + row, width = FOOD.length * (rowBar + rowGap) - rowGap, left = R - width, ranges = M().ranges;
+    const BY = v => B1 - (B1 - B0) * clamp(v, 0, 1);
+    txt(live, R, B0 - 6, o.row.word, {'text-anchor' : 'end'});
     CURVES.forEach((c, j) => {
-      const [lo, hi] = o.row.of(ranges[j]), x = L + bw * j + 3, w = bw - 6;
-      el('rect', {x, y : B0, width : w, height : B1 - B0, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
-      el('rect', {x, y : BY(lo), width : w, height : B1 - BY(lo), rx : 2, fill : c.colour, opacity : .85}, live);
-      el('rect', {x, y : BY(hi), width : w, height : Math.max(0, BY(lo) - BY(hi)), fill : c.colour, opacity : .4}, live);
-      txt(live, x + w / 2, B1 + 11, c.name, {'text-anchor' : 'middle', style : `fill:${c.colour};font-size:9px`});
+      const [lo, hi] = o.row.of(ranges[j]), x = left + (rowBar + rowGap) * j;
+      el('rect', {x, y : B0, width : rowBar, height : B1 - B0, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
+      el('rect', {x, y : BY(hi), width : rowBar, height : B1 - BY(hi), rx : 2, fill : c.colour, opacity : .4}, live);
+      el('rect', {x, y : BY(lo), width : rowBar, height : B1 - BY(lo), rx : 2, fill : c.colour, opacity : .9}, live);
+      txt(live, x + rowBar / 2, B1 + 11, c.name, {'text-anchor' : 'middle', style : `fill:${c.colour};font-size:9px`});
     });
-    keys.forEach((k, i) => el('path', {d : `M${L} ${BY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : i === cell.chosen ? 1.6 : 1}, live));
+    keys.forEach((k, i) => el('path', {d : `M${left - 3} ${BY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : i === cell.chosen ? 1.6 : 1}, live));
   }
 }
 
 // ===== The clock =====
-// Shows the present moment: the lines, the stomachs' content, the keys the input has passed.
+// Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
+// the senses send.
 function showMoment() {
-  const st = Math.round(play.step), full = play.stim.full?.[st] ?? 0;
+  const st = Math.round(play.step), now = id => play.stim[id]?.[st] ?? 0;
   for (const {line, x, top, base} of Object.values(play.lines)) line.setAttribute('d', `M${x(st).toFixed(1)} ${top} V${base}`);
-  for (const l of play.levels) l.content.setAttribute('y', l.y(full).toFixed(1));
-  for (const g of play.glow) g.line.setAttribute('opacity', (play.stim[g.sense]?.[st] ?? 0) >= g.gate ? 1 : .45);
+  for (const l of play.levels) l.show(now(l.sense));
+  for (const g of play.glow) g.line.setAttribute('opacity', now(g.sense) >= g.gate ? 1 : .45);
+  for (const [id, bar] of Object.entries(play.meters)) bar.setAttribute('width', (METER_WIDTH * (play.sent[id]?.[st] ?? 0)).toFixed(1));
 }
 // The gut's waves: its own, calm, always; the muscle's on top while it works. A piece's width is
-// written only when it has changed.
+// written only when it has changed. A morsel leaves the stomach only if the stomach holds enough.
 function showGut(dt) {
   const works = muscleWorks(), depth = works ? .25 + .75 * S.muscle : .12, pace = works ? M().pace : 1;
   play.wave += dt * .00009 * pace;
-  const wall = TUBE + 2 * (WALL[0] + (WALL[1] - WALL[0]) * S.muscle);
+  const wall = TUBE + 2 * (WALL[0] + (WALL[1] - WALL[0]) * S.muscle), fill = play.stim.full?.[Math.round(play.step)] ?? 0;
   for (let k = 0; k < SEGMENTS; k++) {
     const seg = film.segs[k], squeeze = Math.pow(.5 + .5 * Math.cos(2 * Math.PI * ((k + .5) / SEGMENTS - play.wave) * WAVES), 6) * depth;
     const outer = (wall + 3 * squeeze).toFixed(1), inner = (TUBE - 4 * squeeze).toFixed(1);
@@ -591,8 +647,20 @@ function showGut(dt) {
     if (inner !== seg.tubeWidth) { seg.tube.setAttribute('stroke-width', inner); seg.tubeWidth = inner; }
   }
   for (const b of film.bits) {
-    b.u = (b.u + dt * .00009 * pace / Math.max(.5, S.length)) % 1;
+    const u = b.u + dt * .00009 * pace / Math.max(.5, S.length);
+    if (u >= 1) { b.on = b.share <= fill; b.e.setAttribute('opacity', b.on ? 1 : 0); }
+    b.u = u % 1;
+    if (!b.on) continue;
     const [x, y] = film.way.at(b.u); b.e.setAttribute('cx', x.toFixed(1)); b.e.setAttribute('cy', y.toFixed(1));
+  }
+}
+// The nerve cells' pulses run down their fibre as fast as the signal is strong.
+function showNerves(dt) {
+  const st = Math.round(play.step);
+  for (const [id, n] of Object.entries(play.nerves)) {
+    const sent = play.sent[id]?.[st] ?? 0;
+    n.phase = (n.phase + dt * .0025 * sent) % 1;
+    n.pulses.forEach((p, i) => { const [x, y] = n.way((n.phase + i / 3) % 1); p.setAttribute('cx', x.toFixed(1)); p.setAttribute('cy', y.toFixed(1)); p.setAttribute('opacity', sent > .02 ? 1 : 0); });
   }
 }
 function tick(now) {
@@ -600,7 +668,7 @@ function tick(now) {
   if (!play.seen || !film.way) { play.last = 0; return; }
   const dt = play.last ? Math.min(50, now - play.last) : 16; play.last = now;
   play.step = (play.step + dt * STEPS / ROUND_MS) % STEPS;
-  showMoment(); showGut(dt);
+  showMoment(); showGut(dt); showNerves(dt);
 }
 
 // ===== Everything from the model =====
