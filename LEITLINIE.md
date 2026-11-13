@@ -24,13 +24,20 @@ Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `
 4. **Lebensphasen gehören zu jedem Organ:** Ei, Schlupf, erwachsen. Wie ändert sich das Organ über das Leben? Im Ei frisst ein Fisch nichts.
 5. **Jede Frage bekommt ihre eigene, passende Diagrammart.** Mehrere Bilder sind erlaubt. Zusammen gehört, was zusammenhängt, und zwar weder alles in ein Bild noch alles zerstückelt.
 6. **Eingänge über dem Diagramm, das ihre Wirkung zeigt:** Befehl, Bauchweh, Reiz. Das Ergebnis, etwa die Meldung an das Gehirn, steht darunter. Was ein Eingang ist und was eine Einstellung des Organs, muss erkennbar sein.
-7. **Alle Optionen, die die Engine bietet**, sind erreichbar. Vorher im Code nachlesen, mit Datei und Zeile, nie aus Namen oder .md-Dateien raten. Was keine Wirkung hat, bekommt keinen Griff, sondern wird ein Befund.
-8. **Zellgruppen bedient man wie beim Darm:**
+7. **Das Organ im ganzen Fisch** (David 13.11. 18:07: „nicht nur Optionen pro Organ, sondern auch das Organ im Kontext des gesamten Fisches!“). Zu klären und zu zeigen sind fünf Ebenen:
+   - **Eigene Optionen des Organs.**
+   - **Die Nervenknoten, die es verwaltet:** Jede Gruppe hat eigene Optionen, und das Organ steuert sie gemeinsam.
+   - **Sein eigener Lebenszyklus:** Bei jedem Organ etwas anderes. Die Netzhautzellen etwa arbeiten schon im Ei, denn sie bekommen Wellensignale zum Lernen.
+   - **Seine Anschlüsse:** Sie verändern Voreinstellungen anderer Organe und Regionen. Das Tectum passt sich zum Beispiel an die Netzhaut an.
+   - **Die Spielfunktionen, die mit ihm zusammenwirken:** Energiesystem (Maul, Kiefer, Kiemen und Darm), Hormone, Lebenszyklus, Wachstum.
+8. **Alle Optionen, die die Engine bietet**, sind erreichbar. Vorher im Code nachlesen, mit Datei und Zeile, nie aus Namen oder .md-Dateien raten. Was keine Wirkung hat, bekommt keinen Griff, sondern wird ein Befund.
+
+9. **Zellgruppen bedient man wie beim Darm:**
    - Man wählt sie im Organbild, im Regler und im Diagramm gleichermaßen.
    - (+) fügt eine Gruppe hinzu, (−) nimmt eine Zelle weg, (×) entfernt die Gruppe.
    - Die Bedienung ist innerhalb eines Panels einheitlich.
-9. **Nur anatomisch Mögliches lässt sich einstellen.** Stacheln an Maul, Auge und Schwanz zugleich, ein Flossenblatt senkrecht nach unten oder ein Biss, der nicht schnappen kann, darf es nicht geben.
-10. **Verbindungen zu anderen Organen zeigen:** Kiemen, Maul und Kiefer gehören zum Darm, die Flossen zur Wirbelsäule. Man soll in den Inspektor des anderen Organs wechseln und es mit einem Klick verbinden können.
+10. **Nur anatomisch Mögliches lässt sich einstellen.** Stacheln an Maul, Auge und Schwanz zugleich, ein Flossenblatt senkrecht nach unten oder ein Biss, der nicht schnappen kann, darf es nicht geben.
+11. **Verbindungen zu anderen Organen zeigen:** Kiemen, Maul und Kiefer gehören zum Darm, die Flossen zur Wirbelsäule. Man soll in den Inspektor des anderen Organs wechseln und es mit einem Klick verbinden können.
 
 ## 3. Bedienung
 

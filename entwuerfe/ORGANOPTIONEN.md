@@ -1,8 +1,27 @@
-# Organoptionen aus der Engine
+# Organoptionen aus der Engine: das Organ im ganzen Fisch
 
-Je Organ: jede Einstellung, die die Engine wirklich bietet, mit Datei und Zeile, ihrer Wirkung und der Angabe, ob sie über die Lebensphasen veränderlich ist. Grundlage für jeden Inspektor (Leitlinie 2.7). Astra ergänzt die fehlenden Organe (Auftrag 13.11., `AUFTRAG-1311.md` Abschnitt 5).
+Grundlage für jeden Inspektor (Leitlinie 2.7 und 2.8). Jede Angabe mit Datei und Zeile. Astra ergänzt die übrigen Organe (`AUFTRAG-1311.md`, Abschnitt 5).
 
-## Lebenslauf einer Zelle (gilt für alle Organe)
+Ein Organ ist mehr als seine eigenen Gene. Je Organ werden fünf Abschnitte ausgefüllt:
+
+1. **Eigene Optionen:** Gen, Wirkung, Wertebereich, Vorteil und Nachteil.
+2. **Verwaltete Nervenknoten:**
+   - Welche Zellgruppen gehören zum Organ?
+   - Welche Optionen hat jede Gruppe (Schwelle, Gewöhnung, Rezeptoren, Kontakte …)?
+   - Was davon steuert das Organ gemeinsam?
+3. **Eigener Lebenszyklus:**
+   - Was tut das Organ im Ei, beim Schlupf und erwachsen?
+   - Beispiel Netzhaut: Sie bekommt schon im Ei Wellensignale und lernt damit.
+   - Welche Reife-, Reserve- oder Hormonauslöser sind sinnvoll?
+4. **Anschlüsse:**
+   - Mit welchen Organen und Regionen ist es verbunden?
+   - Welche Voreinstellungen ändert ein Anschluss dort? Beispiel: Das Tectum passt sich an die Netzhaut an.
+   - Wo legt der Compiler das fest (`werkzeug/atelier_*`, `ui/studio/model/*`)?
+5. **Spielfunktionen, die mit ihm zusammenwirken:**
+   - Energiesystem (Unterhalt, Grundumsatz, Ertrag), Hormone, Wachstum, Bauchraum, Bewegung, Welt.
+   - Beispiel: Maul, Kiefer, Kiemen und Darm bilden zusammen die Nahrungskette des Fischs.
+
+## Allgemeine Zellmechanik des Lebenszyklus (was er je Organ bedeutet, steht beim Organ)
 Die Lebensachse ist die Reife des Fischs: das höchste bisher erreichte Gewebe ÷ Gewebe des Erwachsenen (`physiology.hh:body_maturity`). Sie geht von 0 (Ei) über den Schlupf bis 1 (erwachsen). Bei welcher Reife ein Fisch schlüpft, hängt von der Eigröße ab (`hatch_tissue`).
 - **Bildung** (`substrate.cc:grow`): Eine noch nicht gebaute Zelle wächst, solange ihre Antwort > 0 ist, mit der Geschwindigkeit Antwort ÷ Zellzeit. Bei 1 wird sie gebaut, wenn Energie da ist. Ohne Einstellung baut sie von Anfang an.
 - **Aktivität** (`substrate.cc:733`): Die Zelle wirkt mit ½·(1 + Antwort). Bei −1 ist sie aus, ohne zu sterben.

@@ -161,6 +161,6 @@ Claude zeichnet alle Inspektoren selbst, in dieser Reihenfolge: zuerst Darm und 
 
 **Astra**
 1. Den alten Augen- bzw. Nahsinn-Inspektor mit Sehbildern im Git-Verlauf des Produkts finden: Commit, Dateien und ein PNG davon in `bilder/`.
-2. Je Organ (Maul, Seitenflossen, Wirbelsäule, Nase, Barteln, Schwimmblase, Kiemen, Abwehr, Pigment, Eier, Samen, Drüse, Blutsinn, Tasten, Seitenlinie, Gleichgewicht, Schmerz) die vollständige Liste der Gene und Optionen in der Engine. Für jede: was sie bewirkt und ob sie über die Lebensphasen veränderlich ist.
+2. **Nicht nur die Gene des Organs.** Je Organ die fünf Abschnitte aus `ORGANOPTIONEN.md`: eigene Optionen, verwaltete Nervenknoten mit ihren Optionen, eigener Lebenszyklus, Anschlüsse und was sie bei anderen Organen und Regionen voreinstellen, zusammenwirkende Spielfunktionen. Organe: Maul, Seitenflossen, Wirbelsäule, Nase, Barteln, Schwimmblase, Kiemen, Abwehr, Pigment, Eier, Samen, Drüse, Blutsinn, Tasten, Seitenlinie, Gleichgewicht, Schmerz.
 
 Das kommt als Tabelle nach `entwuerfe/ORGANOPTIONEN.md`. Damit fehlen später keine Einstellungen mehr.
