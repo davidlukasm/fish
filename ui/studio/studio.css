@@ -442,6 +442,7 @@
 .aid-spectrum-test{stroke:var(--aid-light);stroke-width:1;stroke-dasharray:3 3}
 .aid-spectrum-handle.light{stroke:var(--aid-light);stroke-width:1.5}
 .aid-spectrum-handle.opponent{fill:#e1788e;cursor:ns-resize}
+.aid-spectrum-handle[aria-disabled="true"]{opacity:.3;cursor:default;pointer-events:none}
 .aid-sensitivity-axis{stroke:#7d9b9a;stroke-width:1}
 .aid-sensitivity-curve{fill:none;stroke:#e8eed8;stroke-width:2}
 .aid-sight-eyes{display:grid;gap:8px}
@@ -577,7 +578,9 @@
 .aid-chemistry dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 10px;font-size:13px}
 .aid-chemistry dt{color:var(--aid-soft-text)}
 .aid-chemistry dd{margin:0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.aid-chemistry .aid-tool-link{flex:0 0 auto;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px}
+.aid-chemistry .aid-button-group{flex-wrap:wrap;gap:6px}
+.aid-chemistry .aid-tool-link{flex:0 1 auto;max-width:100%;min-width:0;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:12px;white-space:normal;overflow-wrap:anywhere}
+.aid-chemistry .aid-tool-link svg{flex:0 0 auto}
 .aid-substance-chip{display:inline-flex;align-items:center;gap:5px}
 .aid-substance-chip .aid-substance-swatch{height:11px;width:11px;border-width:1.5px}
 .aid-head-barbel{fill:none;stroke:#d9c99a;stroke-width:3;stroke-linecap:round}
@@ -1008,6 +1011,11 @@
 .aid-region-picture .region-button:hover rect,.aid-region-picture .region-button:focus-visible rect{stroke:#f0f7df;stroke-width:2}
 .aid-region-picture .region-fan{fill-opacity:.22;stroke:var(--region-primary);stroke-width:1.5}
 .aid-region-picture>svg+svg{margin-top:10px}
+.aid-motor-picture .motor-target{color:var(--aid-axis-text)}
+.aid-motor-picture .motor-target.free text{fill:var(--aid-soft-text)}
+.aid-motor-picture .motor-connection circle{fill:var(--region-primary);stroke:var(--region-primary)}
+.aid-motor-picture .motor-connection.free circle{fill:var(--aid-graphic)}
+.aid-motor-picture .motor-connection.free .region-line,.aid-motor-picture .motor-command-branches.quiet>.region-line{stroke-dasharray:4 4}
 .aid-region-picture .aid-tectum-map text{font-size:14px}
 .aid-region-picture .aid-tectum-map .tectum-angles text{font-size:11px}
 .aid-region-picture .region-fan{fill:var(--region-primary)}
@@ -1139,60 +1147,6 @@
 .aid-effect-scene text{font-size:10px;fill:var(--aid-label-text)}
 .aid-effect-protection{fill:none;stroke:var(--aid-trace);stroke-width:2;stroke-linecap:round}
 
-.aid-life{margin:24px 0 32px;border-block:1px solid #42646b;padding:18px 0 24px}
-.aid-life button{border:1px solid #42646b;background:#17373d;color:#c8d7ca;border-radius:7px;padding:7px 10px;text-align:left}
-.aid-life button[aria-pressed=true]{background:#c4dda9;color:#18362f;border-color:#c4dda9}
-.aid-life button:disabled{opacity:.35;cursor:default}
-.aid-life-worlds,.aid-life-phases,.aid-life-zoom{display:flex;flex-wrap:wrap;gap:6px}
-.aid-life-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;margin-top:18px}
-.aid-life-layout aside{min-width:0}
-.aid-life-layout h3{margin:0 0 12px;font:500 20px Georgia,serif;color:#e6efe4}
-.aid-life-list{display:flex;flex-direction:column;gap:5px;max-height:500px;overflow:auto;padding-right:4px}
-.aid-life-row{display:block;width:100%}
-.aid-life-row span{display:flex;align-items:baseline;justify-content:space-between;gap:5px}
-.aid-life-row b{font-size:12px;font-weight:500}
-.aid-life-row small{font-size:10px}
-.aid-life-row svg{display:block;width:100%;margin-top:4px}
-.aid-life-span{fill:none;stroke:currentColor;stroke-width:2;opacity:.5}
-.aid-life-row .hatch{fill:#d3e5e7;stroke:#315e69}
-.aid-life-row .intake{fill:#88ce8c;stroke:#346b39}
-.aid-life-row .death{stroke:#eab890;stroke-width:2}
-.aid-life-list-key,.aid-life-scale,.aid-life-key{font-size:11px;color:#a5bfbe}
-.aid-life-inspection{min-width:0}
-.aid-life-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;margin-bottom:10px}
-.aid-life-title h3{font-size:26px;margin:0}
-.aid-life-title span,.aid-life-title button{font-size:11px}
-.aid-life-phases button{flex:1;font-size:12px;min-width:120px}
-.aid-life-state{font-size:12px;color:#d6ddc0;text-align:center}
-.aid-life-zoom{justify-content:flex-end;margin:18px 0 10px}
-.aid-life-zoom button{font-size:11px;padding:5px 8px}
-.aid-life-signals{display:grid;gap:18px}
-.aid-life-track>div{display:flex;justify-content:space-between;gap:12px;color:#b8cfcc;font-size:12px;margin-bottom:6px}
-.aid-life-signals svg{display:block;width:100%;height:58px;overflow:visible}
-.aid-life-bites svg{height:12px}
-.aid-life-signal{fill:none;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.aid-life-signals .gut .aid-life-signal{stroke:#b8daa3}
-.aid-life-signals .reserve .aid-life-signal{stroke:#8ccfd3}
-.aid-life-signals .intake .aid-life-signal{stroke:#e6be79}
-.aid-life-grid{fill:none;stroke:#36555a;stroke-width:1}
-.aid-life-half{fill:none;stroke:#7d997a;stroke-dasharray:5 5;opacity:.5}
-.aid-life-cursor{fill:none;stroke:#f5eedb;stroke-width:1;stroke-dasharray:3 3}
-.aid-life-signals [data-lab-life-plane]{cursor:crosshair}
-.aid-life-signals .close{fill:#97aaa7}.aid-life-signals .empty{fill:#e7a292}
-.aid-life-scale{display:flex;justify-content:space-between;margin-top:2px}
-.aid-life-key{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.aid-life-key i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#97aaa7}
-.aid-life-key i.empty{background:#e7a292;margin-left:10px}
-.aid-life-summary{font-size:12px;color:#c5d5c7;line-height:1.7;border-top:1px solid #36555a;padding-top:12px}
-.aid-life-events{margin-top:16px;color:#c8d7ca;font-size:12px}
-.aid-life-events summary{cursor:pointer;padding:8px 0}
-.aid-life-events ol{list-style:none;padding:0;max-height:260px;overflow:auto}
-.aid-life-events button{display:flex;gap:16px;width:100%;margin-bottom:4px}
-.aid-life-events time{width:55px;flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums;color:inherit}
-@media(max-width:1100px){.aid-life-layout{grid-template-columns:1fr}.aid-life-list{flex-direction:row;max-height:160px;overflow:auto}.aid-life-row{min-width:160px}.aid-life-list-key{margin:5px 0}}
-
-.aid-life-population>summary{font:500 20px Georgia,serif;color:#d6dfcd;cursor:pointer;padding:10px 0 20px}
-
 .aid-region-name{font:11px system-ui;fill:var(--aid-axis-text);stroke:var(--aid-ground);stroke-width:3;paint-order:stroke;stroke-linejoin:round}
 .aid-region-heading{font:11px system-ui;fill:var(--aid-soft-text)}
 .aid-circuit-tools button{display:flex;align-items:center;gap:6px;font-size:12px}
@@ -1202,29 +1156,30 @@
 .aid-life-head{display:flex;align-items:center;gap:7px;margin:16px 0 6px;padding-top:8px;border-top:1px solid var(--aid-panel-edge);font:600 13px/1.3 system-ui;color:var(--aid-name-text)}
 .aid-life-cycle>.aid-life-head:first-child{border-top:0;margin-top:8px;padding-top:0}
 .aid-life-triggers{display:flex;flex-direction:column;gap:5px}
-.aid-life-row{display:flex;align-items:center;gap:6px;position:relative}
-.aid-life-row.apart{margin-top:7px}
+.aid-cell-life-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;position:relative}
+.aid-cell-life-row.apart{margin-top:7px}
 .aid-life-tick{flex:0 0 92px;display:flex;align-items:center;gap:6px;font:12px system-ui;color:var(--aid-name-text);background:none;border:0;padding:0;cursor:pointer;text-align:left}
 .aid-life-tick i{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--aid-panel-edge);background:var(--aid-chip);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
 .aid-life-tick[aria-checked=true] i{border-color:var(--aid-handle);background:var(--aid-sketch)}
 .aid-life-tick[aria-checked=true] i::after{content:"";width:8px;height:4px;border:solid var(--aid-name-text);border-width:0 0 2px 2px;transform:translateY(-1px) rotate(-45deg)}
 .aid-life-tick[aria-checked=false]{color:var(--aid-soft-text)}
-.aid-life-segment{display:flex;flex:1;min-width:0;border:1px solid var(--aid-panel-edge);border-radius:14px;background:var(--aid-chip)}
+.aid-life-segment{display:flex;flex:1 1 200px;min-width:0;border:1px solid var(--aid-panel-edge);border-radius:14px;background:var(--aid-chip)}
 .aid-life-segment.off{opacity:.38;pointer-events:none}
-.aid-life-segment>button{font:12px system-ui;color:var(--aid-axis-text);background:none;border:0;border-left:1px solid var(--aid-panel-edge);padding:0 8px;height:26px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:5px;min-width:0}
+.aid-life-segment>button{font:12px system-ui;color:var(--aid-axis-text);background:none;border:0;border-left:1px solid var(--aid-panel-edge);padding:6px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;min-width:0}
 .aid-life-segment>button:first-child{border-left:0;border-radius:13px 0 0 13px}
 .aid-life-segment>button:last-child{border-radius:0 13px 13px 0}
 .aid-life-segment>button.maturity{flex:0 0 52px;justify-content:center}
 .aid-life-segment>button.stuff{flex:1}
-.aid-life-segment>button.stuff span{overflow:hidden;text-overflow:ellipsis;flex:1;text-align:left}
+.aid-life-segment>button.stuff span{flex:1;min-width:0;text-align:left;white-space:normal;overflow-wrap:anywhere}
 .aid-life-segment>button.stuff b{width:0;height:0;border:4px solid transparent;border-top:5px solid currentColor;margin-top:4px}
 .aid-life-segment>button:hover{color:var(--aid-name-text)}
 .aid-life-segment>button.on{background:var(--aid-sketch);color:var(--aid-name-text);box-shadow:inset 0 0 0 1.5px var(--aid-handle)}
 .aid-life-dot{width:15px;height:15px;border-radius:50%;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font:700 8px/1 system-ui;font-style:normal;color:var(--aid-ink);background:var(--substance)}
 .aid-life-dot.free{background:none;border:1.5px dashed var(--aid-soft-text);color:var(--aid-soft-text)}
 .aid-life-dot.mixed{background:conic-gradient(var(--substance) 0 50%,var(--aid-name-text) 50% 100%)}
-.aid-life-menu{position:absolute;z-index:5;right:0;top:29px;width:206px;background:var(--aid-control);border:1.5px solid var(--aid-handle);border-radius:10px;padding:4px;box-shadow:0 8px 20px #0008;display:flex;flex-direction:column}
+.aid-life-menu{position:absolute;z-index:5;right:0;top:calc(100% + 3px);width:206px;max-width:100%;box-sizing:border-box;background:var(--aid-control);border:1.5px solid var(--aid-handle);border-radius:10px;padding:4px;box-shadow:0 8px 20px #0008;display:flex;flex-direction:column}
 .aid-life-menu button{font:12px system-ui;color:var(--aid-name-text);background:none;border:0;border-radius:6px;padding:5px 6px;display:flex;align-items:center;gap:7px;cursor:pointer;text-align:left}
+.aid-life-menu button span{min-width:0;overflow-wrap:anywhere}
 .aid-life-menu button:hover,.aid-life-menu button[aria-checked=true]{background:var(--aid-sketch)}
 .aid-life-menu hr{border:0;border-top:1px solid var(--aid-panel-edge);margin:3px 2px}
 .aid-life-menu .soft{color:var(--aid-soft-text)}

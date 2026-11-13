@@ -106,6 +106,7 @@ const tuningCurve = tuning => Array.from(
 export function spectrumElement(tuning, target, label, {
   light = null,
   testHue = null,
+  colourTuning = true,
   axis = {
     excite : '',
     inhibit : ''
@@ -126,6 +127,8 @@ export function spectrumElement(tuning, target, label, {
       `<text class="aid-spectrum-axis" transform="translate(${S.axis} ${
           rounded((from + to) / 2)}) rotate(-90)" text-anchor="middle">${escapeText(text)}</text>`;
   const titled = text => text ? `<title>${escapeText(text)}</title>` : '';
+  const tuningHandle = key =>
+      colourTuning ? `data-spectrum-handle="${key}"` : 'aria-disabled="true"';
   let html =
       `<svg class="aid-spectrum-editor" viewBox="0 0 ${S.width} ${HEIGHT}"${
           attributes} role="img" aria-label="${label}"><defs><linearGradient id="aid-hue-${id}">${
@@ -161,12 +164,12 @@ export function spectrumElement(tuning, target, label, {
   }
   if (values) {
     const hue = opposite(tuning);
-    html += `<circle class="aid-spectrum-handle opponent" data-spectrum-handle="opponent" cx="${
+    html += `<circle class="aid-spectrum-handle opponent" ${tuningHandle('opponent')} cx="${
         rounded(hueX(
             hue))}" cy="${rounded(levelY(values[sampleIndex(values, hue)]))}" r="${S.handle}"/>`;
   }
   return html +
-         `<rect class="aid-spectrum-handle centre" data-spectrum-handle="centre" x="${
+         `<rect class="aid-spectrum-handle centre" ${tuningHandle('centre')} x="${
              rounded(hueX(centre) - S.handle)}" y="${rounded(levelY(1) - S.handle)}" width="${
              2 * S.handle}" height="${2 * S.handle}" rx="2"/>` +
          `<circle class="aid-spectrum-handle width" data-spectrum-handle="width" cx="${

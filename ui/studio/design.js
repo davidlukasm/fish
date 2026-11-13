@@ -109,7 +109,10 @@ export const designMethods = {
     next = clearOfFish(this.state, organ, next);
     if (!probe && organ.type === 'eye')
       next = beyondHandles(this.state, organ, next);
-    if (next && next !== probe) {
+    // A short near field can pull a large object into the fish; clearing it restores its old
+    // position. Keep that probe's identity so an anatomy answer cannot request itself again.
+    if (next && next !== probe &&
+        (!probe || Object.entries(next).some(([ key, value ]) => probe[key] !== value))) {
       this.state.sightProbe = next;
       this.requestDesign();
     }

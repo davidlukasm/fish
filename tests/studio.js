@@ -4,6 +4,89 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkProbeSettling(model, capabilities, root) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {sites} = capabilities, cases = [];
+  for (const name of ['brisa', 'liora']) {
+    const source =
+        JSON.parse(readFileSync(join(root, 'genomes/entwuerfe', name + '.fish.json'), 'utf8'));
+    const made = model.addOrgan(source, 'proximity', sites, {x : 320, y : 270});
+    assert.ok(made);
+    const profile = model.findOrgan(made.document, made.organId).field.profiles[0];
+    for (const q2 of [-1, -.9, -.5, 0, 1]) {
+      const document =
+          model.updateField(made.document, made.organId, {profile : {id : profile.id, q2}}, sites);
+      cases.push({document, organ : model.findOrgan(document, made.organId), name, q2});
+    }
+  }
+  const anatomies = JSON.parse(execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        "import json,sys; from atelier_service import run; reports=[run({'operation':'design','plan':p}) for p in json.load(sys.stdin)]; print(json.dumps([{k:r[k] for k in ['bodyRadius','visionDepth']} for r in reports]))"
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(cases.map(c => model.compileDocument(c.document, sites))),
+        encoding : 'utf8',
+        timeout : 30000,
+        maxBuffer : 1024 * 1024
+      }));
+  cases.forEach((c, i) => c.anatomy = anatomies[i]);
+  const probe = (c, radius, bearing) => ({
+    side : c.organ.side,
+    bearing : c.organ.side * bearing,
+    distance : capabilities.visionRange,
+    radius,
+    hue : 20
+  });
+  const editor = (c, sightProbe) => {
+    const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+    Object.assign(studio.state, {
+      document : c.document,
+      sites,
+      capabilities,
+      anatomy : c.anatomy,
+      selected : {kind : 'organ', id : c.organ.id},
+      sightProbe
+    });
+    for (const key of ['refreshVision', 'drawSight', 'refreshProbes', 'refreshHeader',
+                       'refreshScene', 'refreshGraphics', 'checkPressure'])
+      studio[key] = () => {};
+    return studio;
+  };
+  const c = cases[0], middle = (c.organ.field.lo + c.organ.field.hi) / 2;
+  const studio = editor(c, probe(c, capabilities.sightRadius[1], middle)), requests = [];
+  studio.api = body => new Promise(resolve => requests.push({body, resolve}));
+  studio.requestDesign();
+  for (let i = 0; i < 4 && requests[i]; ++i) {
+    requests[i].resolve(c.anatomy);
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(requests.length, 2,
+               'A native anatomy answer settles the corrected near probe without a request loop');
+  assert.equal(studio.designRunning, false);
+  assert.notEqual(requests[0].body.sight.distance, requests[1].body.sight.distance);
+  for (const c of cases)
+    for (const radius of [capabilities.sightRadius[0], .08 * c.anatomy.bodyRadius,
+                          c.anatomy.bodyRadius, capabilities.sightRadius[1]])
+      for (const bearing
+               of [c.organ.field.lo, (c.organ.field.lo + c.organ.field.hi) / 2, c.organ.field.hi]) {
+        const studio = editor(c, probe(c, radius, bearing));
+        let count = 0;
+        studio.requestDesign = () => ++count;
+        studio.bringProbes();
+        const settled = studio.state.sightProbe, initial = count;
+        for (let i = 0; i < 4; ++i) {
+          studio.bringProbes();
+          studio.showAnatomy(c.anatomy, i + 1);
+          assert.equal(studio.state.sightProbe, settled,
+                       `${c.name} q2=${c.q2}: the corrected probe retains its identity`);
+          assert.equal(count, initial, 'An unchanged probe requests no further design');
+        }
+      }
+}
+
 async function checkGonadRoom(model, sites, capabilities) {
   const near = (a, b) => Math.abs(a - b) < 1e-9;
   const {gonadStore, gonadGraphic, sacPatch} = await import('../ui/studio/view/sacs.js');
@@ -57,6 +140,9 @@ async function checkGonadRoom(model, sites, capabilities) {
 
 async function checkSpectrumKnobs() {
   const {spectrumElement, spectrumPatch} = await import('../ui/studio/view/spectrum.js');
+  const {spectrumEditor} = await import('../ui/studio/view/vision.js');
+  const {hasColourTuning} = await import('../ui/studio/model/retina.js');
+  const {handleMethods} = await import('../ui/studio/handles.js');
   const {tuningAffinity, tuningHue, hueOffset} = await import('../ui/tuning.js');
   const count = 90;
   for (const q1 of [-.5, 0, .47])
@@ -83,6 +169,34 @@ async function checkSpectrumKnobs() {
                   'Dragging the opponent handle down strengthens its inhibition');
       }
     }
+  const profile = {id : 'wide', q1 : .2, q2 : .3, qwidth : 1};
+  const center = (id, spread, ownProfile = profile.id) =>
+      ({id, profile : ownProfile, qwidth : 1, distribution : {spread_physiology : spread}});
+  const light = {excitation : [ 1, 1, 1 ], inhibition : [ 0, 0, 0 ]};
+  for (const spread of [0, .01]) {
+    const organ = {
+      id : 'eye',
+      type : 'eye',
+      field : {profiles : [ profile ]},
+      centers : [ center('first', 0), center('last', spread), center('other', .3, 'other') ]
+    };
+    assert.equal(hasColourTuning(organ, profile), spread > 0,
+                 'Any centre in the chosen profile can retain colour tuning through spread');
+    const state = {document : {organs : [ organ ]}, anatomy : {light : [ light ]}};
+    const html = spectrumEditor(state, organ, profile);
+    for (const handle of ['centre', 'opponent']) {
+      const mark = html.match(new RegExp(`<[^>]*class="aid-spectrum-handle ${handle}"[^>]*>`))[0];
+      assert.equal(mark.includes(`data-spectrum-handle="${handle}"`), spread > 0);
+      assert.equal(mark.includes('aria-disabled="true"'), spread === 0);
+      if (!spread)
+        handleMethods.spectrumPointer.call(
+            {handleDrag : {handle}, spectrumTarget : () => ({organ, tuning : profile})}, {});
+    }
+    assert.match(html, /data-spectrum-handle="width"/,
+                 'The user can always narrow a broad profile again');
+    assert.equal(hasColourTuning(organ, {...profile, qwidth : .999}), true);
+    assert.equal(hasColourTuning({...organ, type : 'proximity'}, profile), true);
+  }
 }
 
 async function checkDocumentHistory(model, sites, root) {
@@ -1708,6 +1822,63 @@ async function checkFunctionalRegions(model, capabilities) {
   }
 }
 
+async function checkMotorPicture(model, capabilities) {
+  const {regionPicture, regionHandle, regionPatch} =
+      await import('../ui/studio/view/region_controls.js');
+  const {updateRegion, toggleInnerLink} = await import('../ui/studio/model/regions.js');
+  const {sites} = capabilities;
+  const made = model.addOrgan(model.newDocument('Motorikbild'), 'motor', sites, {x : 610, y : 315});
+  const id = made.organId;
+  const draw = document =>
+      regionPicture({document, sites, capabilities}, model.findOrgan(document, id));
+  assert.doesNotMatch(draw(made.document), /Kiemenbefehl|data-motor-path="reverse"/);
+  assert.match(draw(made.document), /class="motor-connection free"/);
+  let doc = updateRegion(made.document, id, {retreat : 1}, sites);
+  const spine = model.addOrgan(doc, 'spine', sites, {x : 700, y : 315});
+  const gills = model.addOrgan(spine.document, 'gills', sites, {x : 400, y : 315});
+  doc = model
+            .addWire(gills.document, id, spine.organId, null, sites,
+                     {fromPort : 'tail', toPort : 'urge'})
+            .document;
+  doc = model.addWire(doc, id, gills.organId, null, sites, {fromPort : 'gills'}).document;
+  const connected = draw(doc);
+  assert.match(connected, /Kiemenbefehl/);
+  assert.match(connected, /data-motor-target-type="spine"/);
+  assert.match(connected, /data-motor-target-type="gills"/);
+  for (const key of ['beat', 'pump'])
+    for (const level of [0, 1, 2, 3]) {
+      const document = updateRegion(doc, id, {[key] : level}, sites);
+      const organ = model.findOrgan(document, id), state = {document, sites, capabilities};
+      const html = regionPicture(state, organ);
+      const height =
+          Number(html.match(/data-motor-picture="commands" viewBox="0 0 360 ([^"]+)"/)[1]);
+      const grip = html.match(new RegExp('data-region-handle="' + key +
+                                         '"[^>]+transform="translate\\(([^ ]+) ([^)]+)\\)"'));
+      assert.ok(grip);
+      const at = regionHandle(organ, key, state);
+      assert.ok(Math.abs(Number(grip[1]) - at.fx * 360) < .01);
+      assert.ok(Math.abs(Number(grip[2]) - at.fy * height) < .01,
+                'The rendered handle follows the height of its actual connections');
+      assert.equal(regionPatch(organ, key, Number(grip[1]) / 360, Number(grip[2]) / height)[key],
+                   level);
+    }
+  for (const [edge, path] of [[ 'oppose>>turn', 'compete' ], [ 'retreat>reverse', 'reverse' ],
+                              [ 'retreat>brake', 'brake' ], [ 'brake>swim', 'brake' ],
+                              [ 'retreat>backStop', 'backStop' ],
+                              [ 'backStop>turn', 'backStop' ]]) {
+    assert.ok(connected.includes('data-motor-path="' + path + '"'));
+    assert.ok(!draw(toggleInnerLink(doc, id, edge)).includes('data-motor-path="' + path + '"'),
+              'The motor picture omits the disconnected route ' + edge);
+  }
+  const quiet = updateRegion(doc, id, {compete : 0, retreat : 0}, sites);
+  assert.doesNotMatch(draw(quiet), /data-motor-path="(?:compete|reverse|brake|backStop)"/);
+  const lone = model.addOrgan(model.newDocument('Einseitige Motorik'), 'motor', sites,
+                              {x : 610, y : 315}, Infinity, false);
+  const unpaired = regionPicture({document : lone.document, sites, capabilities},
+                                 model.findOrgan(lone.document, lone.organId));
+  assert.doesNotMatch(unpaired, /data-region-setting="compete"|data-motor-path="compete"/);
+}
+
 async function checkTectumPicture(model, capabilities) {
   const {tectumBands} = await import('../ui/studio/view/vision.js');
   const {regionPicture} = await import('../ui/studio/view/region_controls.js');
@@ -2037,6 +2208,11 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  await checkProbeSettling(model, sitesResult, root);
+  if (process.argv.includes('--probe-settling')) {
+    console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');
+    return;
+  }
   await checkDocumentHistory(model, sitesResult.sites, root);
   await checkBloodReceptors(model, sitesResult);
   if (process.argv.includes('--blood-receptors')) {
@@ -2070,6 +2246,7 @@ async function checkHormoneSystems(model, capabilities) {
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkInspectorSubstances(model, sitesResult, clicks);
   await checkLearningSources(model, sitesResult);
+  await checkMotorPicture(model, sitesResult);
   if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
     await checkResponseControls(model, sitesResult, clicks);
     await checkFunctionalRegions(model, sitesResult);

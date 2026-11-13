@@ -61,6 +61,11 @@ export function nextVisionProfile(field, id) {
 export const receptorWidth = field =>
     TUNING.visual_width_min * (TUNING.visual_width_max / TUNING.visual_width_min) ** field;
 
+export const hasColourTuning = (organ, profile) =>
+    organ.type !== 'eye' || profile.qwidth < 1 ||
+    organ.centers.some(c => c.profile === profile.id &&
+                            (c.qwidth < 1 || c.distribution.spread_physiology > 0));
+
 // Centers are compiler output of a whole-organ recipe. They never acquire independent positions.
 export function generateRetina(organ, sites, used, create) {
   const {lo, hi, profiles, density, resolution} = organ.field;

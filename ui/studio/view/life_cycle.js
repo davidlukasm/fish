@@ -194,7 +194,7 @@ function triggers(state, center) {
                const stuff = on && !byMaturity;
                const id =
                    ' data-center-id="' + escapeText(center.id) + '" data-life-action="' + key + '"';
-               return '<div class="aid-life-row' + (key === 'output' ? ' apart' : '') + '">' +
+               return '<div class="aid-cell-life-row' + (key === 'output' ? ' apart' : '') + '">' +
                       '<button type="button" class="aid-life-tick" role="checkbox" aria-checked="' +
                       on + '" data-life-tick' + id + '><i></i><span>' + escapeText(word(key)) +
                       '</span></button><div class="aid-life-segment' + (on ? '' : ' off') +

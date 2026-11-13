@@ -6,6 +6,7 @@ import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
 import {updateRegion} from './model/regions.js';
 import {RHYTHM_TAU} from './model/region_cells.js';
+import {hasColourTuning} from './model/retina.js';
 import {
   effectorPatch,
   FIN_ANGLE_TRAIT,
@@ -393,7 +394,7 @@ export const handleMethods = {
     if (!organ)
       return false;
     event.preventDefault();
-    const key = handle.dataset.regionHandle, at = regionHandle(organ, key);
+    const key = handle.dataset.regionHandle, at = regionHandle(organ, key, this.state);
     const dx = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     const dy = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
     let patch;
@@ -657,6 +658,9 @@ export const handleMethods = {
   spectrumPointer(event) {
     const drag = this.handleDrag, target = this.spectrumTarget(drag.target);
     if (!target)
+      return;
+    if ([ 'centre', 'opponent' ].includes(drag.handle) &&
+        !hasColourTuning(target.organ, target.tuning))
       return;
     if (drag.handle === 'sensitivity')
       return this.sensitivityPointer(event, drag);

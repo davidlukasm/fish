@@ -14,7 +14,7 @@ import {escapeText, fixed, idSafe, pointText} from './markup.js';
 import {allCenters, findOrgan, isChosen, organOf, profileIndex} from '../model/document.js';
 import {fedBy, regionPlan} from '../model/regions.js';
 import {EYE, eyeRadius, fieldOrigin} from './places.js';
-import {HALF_VIEW, receptorWidth, retinalRays} from '../model/retina.js';
+import {HALF_VIEW, hasColourTuning, receptorWidth, retinalRays} from '../model/retina.js';
 import {
   BODY_FRAME,
   BODY_MIDDLE,
@@ -360,6 +360,7 @@ export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
   return `<div data-spectrum-block title="${escapeText(values)}">` +
          spectrumElement(profile, {spectrum : 'field', ...target}, label('spectrum'), {
            light,
+           colourTuning : hasColourTuning(organ, profile),
            testHue : state.sightProbe?.hue,
            axis : {excite : label('excites'), inhibit : label('inhibits')},
            others : otherTypes(organ, profile)

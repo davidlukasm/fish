@@ -1,4 +1,5 @@
 import {TIME_CONSTANT} from '../../schema.js';
+import {STUDIO_ICON} from '../../organ_icons.js';
 import {clamp} from '../../units.js';
 import {
   learningTimeOf,
@@ -10,9 +11,11 @@ import {
 } from '../../tuning.js';
 import {formatNumber, joinParts, t} from '../../strings.js';
 import {RHYTHM_TAU} from '../model/region_cells.js';
-import {regionPlan} from '../model/regions.js';
-import {escapeText, fixed} from './markup.js';
+import {regionPlan, regionSlots} from '../model/regions.js';
+import {findOrgan} from '../model/document.js';
+import {escapeText, fixed, placedGlyph} from './markup.js';
 import {label} from './kit.js';
+import {organTitle} from './names.js';
 import {tectumPictures} from './tectum_map.js';
 
 export const REGION_PICTURE = Object.freeze({width : 360, height : 260, left : 40, right : 320});
@@ -24,7 +27,7 @@ const OPPONENT = Object.freeze({left : 120, width : 100, y : 127});
 const TAU_SPAN = 4;
 const period = tau => Math.max(TIME_CONSTANT.pace_min_steps, timeConstantSteps(tau));
 const x = fraction => P.left + WIDTH * fraction;
-const point = (x, y) => ({fx : x / P.width, fy : y / P.height});
+const point = (x, y, height = P.height) => ({fx : x / P.width, fy : y / height});
 const words = (key, vars) => t('studio.regions.graphics.' + key, vars);
 const steps = n => t('studio.regions.graphics.steps', {n : Math.round(n)});
 const cycleSteps = n => t('studio.regions.graphics.clockPeriod', {n : Math.round(n)});
@@ -50,7 +53,7 @@ const colourText = (cls, x, y, value, anchor = 'start') =>
     `<g class="region-caption ${cls}">${text(x, y, value, anchor)}</g>`;
 const scentValue = smoothing => Math.tanh(smoothing > 0 ? 1 - Math.exp(-1) : 1);
 
-export function regionHandle(organ, key) {
+export function regionHandle(organ, key, state = null) {
   const r = organ.region;
   if (key === 'spine')
     return point(x(CLOCK_CREST * period(r.cycle) / CLOCK_SPAN),
@@ -77,10 +80,9 @@ export function regionHandle(organ, key) {
     return point(40 + 120 * r.reserve, 222);
   if (key === 'rest')
     return point(210 + 110 * timeConstantSteps(r.rest) / LONGEST_TIME_CONSTANT, 222 - 64 / Math.E);
-  if (key === 'beat' || key === 'pump')
-    return point(
-        x(r[key] ? 1.25 * period(RHYTHM_TAU[r[key] - 1]) / (2 * LONGEST_TIME_CONSTANT) : 0),
-        (key === 'pump' ? 112 : 220) - (r[key] ? 24 * Math.tanh(.65) : 0));
+  if (key === 'beat' || key === 'pump') {
+    return motorPoint(organ, key, motorLayout(state, organ));
+  }
   return null;
 }
 
@@ -135,14 +137,14 @@ export function regionPatch(organ, key, fx, fy) {
   }
   return null;
 }
-function handle(organ, key, title) {
-  const p = regionHandle(organ, key);
+function handleAt(key, title, p, height = P.height) {
   return `<g class="region-handle" data-region-handle="${
       key}" tabindex="0" role="button" aria-label="${escapeText(title)}" transform="translate(${
-      fixed(p.fx * P.width)} ${fixed(p.fy * P.height)})"><title>${
+      fixed(p.fx * P.width)} ${fixed(p.fy * height)})"><title>${
       escapeText(
           title)}</title><circle class="hit" r="15"/><circle r="8"/><path d="M-3 0h6M0-3v6"/></g>`;
 }
+const handle = (organ, key, title) => handleAt(key, title, regionHandle(organ, key));
 function button(organ, key, value, x, y, graphic, title, selected = organ.region[key] === value) {
   return `<g class="region-button${selected ? ' selected' : ''}" data-region-setting="${
       key}" data-region-value="${value}" data-organ-id="${
@@ -231,48 +233,222 @@ function valuePicture(organ) {
          handle(organ, 'association',
                 joinParts([ steps(learningTimeSteps(r.association)), words('associationDrag') ]));
 }
-function motorPicture(organ) {
+const MOTOR = Object.freeze({top : 66, amplitude : 24, line : 14, targetGap : 6, inset : 8});
+function motorPoint(organ, key, layout) {
+  const level = organ.region[key];
+  return point(x(level ? CLOCK_CREST * period(RHYTHM_TAU[level - 1]) / CLOCK_SPAN : 0),
+               layout.sections.find(s => s.key === key).base -
+                   (level ? MOTOR.amplitude * Math.tanh(.65) : 0),
+               layout.height);
+}
+function motorNameLines(name, width) {
+  const limit = Math.max(8, Math.floor(width / 6.5)), lines = [];
+  let line = '';
+  for (const word of name.split(/\s+/)) {
+    const plain = word.replaceAll('\u00ad', '');
+    if (line && line.length + plain.length + 1 <= limit) {
+      line += ' ' + plain;
+      continue;
+    }
+    if (line)
+      lines.push(line);
+    line = '';
+    for (const part of word.split('\u00ad')) {
+      if (line && line.length + part.length > limit) {
+        lines.push(line + '-');
+        line = '';
+      }
+      line += part;
+    }
+  }
+  if (line)
+    lines.push(line);
+  return lines;
+}
+function motorTarget(state, slot, left, width) {
+  const seen = new Set(), targets = [];
+  for (const organ of slot?.filled ?? []) {
+    const name = organTitle(organ, state.sites);
+    if (seen.has(name))
+      continue;
+    seen.add(name);
+    targets.push({type : organ.type, lines : motorNameLines(name, width - 2 * MOTOR.inset - 22)});
+  }
+  return {
+    left,
+    width,
+    targets,
+    height :
+        targets.length
+            ? targets.reduce((sum, target) => sum + Math.max(18, target.lines.length * MOTOR.line) +
+                                              MOTOR.targetGap,
+                             0)
+            : MOTOR.line + MOTOR.targetGap
+  };
+}
+function motorTargetPicture(target, top) {
+  const left = target.left + MOTOR.inset;
+  if (!target.targets.length)
+    return '<g class="motor-target free">' + text(left, top + 12, words('motorFree')) + '</g>';
+  let y = top;
+  return target.targets
+      .map(item => {
+        const picture =
+            '<g class="motor-target" data-motor-target-type="' + item.type + '">' +
+            placedGlyph(STUDIO_ICON[item.type] ?? STUDIO_ICON.brain, 18, {x : left + 9, y : y + 8},
+                        {line : true}) +
+            item.lines.map((line, i) => text(left + 24, y + 12 + i * MOTOR.line, line)).join('') +
+            '</g>';
+        y += Math.max(18, item.lines.length * MOTOR.line) + MOTOR.targetGap;
+        return picture;
+      })
+      .join('');
+}
+function motorLayout(state, organ) {
+  const slots = state ? regionSlots(state.document, organ) : [];
+  const nodes = state ? regionPlan(state.document, organ).nodes : organ.centers ?? [];
+  const ports = [
+    [ 'beat', [ [ 'tail', 'motorSwim' ] ] ],
+    [
+      'pump',
+      [
+        [ 'mouth', 'motorOpen' ], [ 'bite', 'motorClose' ],
+        ...(nodes.some(n => n.node === 'gills') ? [ [ 'gills', 'motorGills' ] ] : [])
+      ]
+    ]
+  ];
+  let top = MOTOR.top;
+  const sections = ports.map(([ key, outgoing ]) => {
+    const width = WIDTH / outgoing.length;
+    const targets =
+        outgoing.map(([ port, name ], i) => ({
+                       ...motorTarget(state, slots.find(s => s.dir === 'out' && s.key === port),
+                                      P.left + i * width, width),
+                       port,
+                       name
+                     }));
+    const section = {key, top, base : top + 40, targets};
+    top = section.base + 67 + Math.max(...targets.map(target => target.height)) + 24;
+    return section;
+  });
+  return {sections, height : top - 8};
+}
+function motorCommands(state, organ, layout) {
   const r = organ.region;
   const tones = [ 0, 1, 2 ]
                     .map((v, i) => button(
-                             organ, 'tone', v, 245 + i * 36, 31,
+                             organ, 'tone', v, 245 + i * 36, 26,
                              v ? Array
                                      .from({length : v}, (_, j) => `<path d="M-7 ${5 - 6 * j}L0 ${
                                                              - 2 - 6 * j}L7 ${5 - 6 * j}"/>`)
                                      .join('')
                                : '<circle r="5"/>',
-                             t('studio.regions.graphics.tone', {n : v})))
+                             words('tone', {n : v})))
                     .join('');
-  const curves =
-      [ 'pump', 'beat' ]
-          .map(key => {
-            const base = key === 'pump' ? 112 : 220, level = r[key];
-            const cycle = level ? period(RHYTHM_TAU[level - 1]) : 0;
-            return text(P.left, base - 30, label('regions.settings.' + key)) +
-                   text(P.right, base - 30, cycle ? steps(cycle) : words('off'), 'end') +
-                   axis(P.left, P.right, base) + text(P.left, base + 18, '0') +
-                   text(P.right, base + 18, steps(CLOCK_SPAN), 'end') +
-                   curve(f => base -
-                              (cycle ? 24 * Math.tanh(.15 + .5 * Math.sin(2 * Math.PI * 2 *
-                                                                          LONGEST_TIME_CONSTANT *
-                                                                          f / cycle))
-                                     : 0),
-                         undefined, undefined, 240, key === 'pump' ? 'other' : '') +
-                   handle(
-                       organ, key, joinParts([
-                         label('regions.settings.' + key), cycle ? cycleSteps(cycle) : words('off')
-                       ]));
-          })
-          .join('');
-  return tones + text(45, 59, words('competeShort'), 'middle') +
-         text(110, 59, words('retreatShort'), 'middle') +
-         text(281, 59, label('regions.settings.tone'), 'middle') +
-         button(organ, 'compete', 1 - r.compete, 45, 31,
-                `<path d="${r.compete ? 'M-10-8L10 8M10-8L-10 8' : 'M-10-8V8M10-8V8'}"/>`,
-                label('regions.settings.compete'), !!r.compete) +
-         button(organ, 'retreat', 1 - r.retreat, 110, 31, '<path d="M0-10V10M-7 3L0 10L7 3"/>',
-                label('regions.settings.retreat'), !!r.retreat) +
-         curves;
+  return text(P.left, 31, label('regions.settings.tone')) + tones +
+         layout.sections
+             .map(section => {
+               const {key, top, base, targets} = section, level = r[key];
+               const cycle = level ? period(RHYTHM_TAU[level - 1]) : 0;
+               const title = words(key === 'beat' ? 'motorPush' : 'motorMouth');
+               const xs = targets.map(target => target.left + target.width / 2);
+               const branches =
+                   '<g class="motor-command-branches' + (level ? '' : ' quiet') + '">' +
+                   path(`M180 ${base + 24}V${base + 30}M${xs[0]} ${base + 30}H${xs.at(-1)}`) +
+                   targets
+                       .map((target, i) => '<g class="motor-connection' +
+                                           (target.targets.length ? '' : ' free') + '">' +
+                                           path(`M${xs[i]} ${base + 30}V${base + 40}`) +
+                                           `<circle cx="${xs[i]}" cy="${base + 43}" r="3"/>` +
+                                           '</g>' +
+                                           text(xs[i], base + 58, words(target.name), 'middle') +
+                                           motorTargetPicture(target, base + 67))
+                       .join('') +
+                   '</g>';
+               return `<g data-motor-command="${key}">` + text(P.left, top, title) +
+                      text(P.right, top, cycle ? cycleSteps(cycle) : words('off'), 'end') +
+                      axis(P.left, P.right, base) + text(P.left, base + 18, '0') +
+                      text(P.right, base + 18, steps(CLOCK_SPAN), 'end') +
+                      curve(f => base -
+                                 (cycle ? MOTOR.amplitude *
+                                              Math.tanh(.15 + .5 * Math.sin(2 * Math.PI *
+                                                                            CLOCK_SPAN * f / cycle))
+                                        : 0),
+                            undefined, undefined, 240, key === 'pump' ? 'other' : '') +
+                      branches +
+                      handleAt(key, joinParts([ title, cycle ? cycleSteps(cycle) : words('off') ]),
+                               motorPoint(organ, key, layout), layout.height) +
+                      '</g>';
+             })
+             .join('');
+}
+function motorPaths(state, organ) {
+  const plan = regionPlan(state.document, organ), twin = findOrgan(state.document, organ.pair);
+  const side = side => [organ, twin].find(o => o && o.side === side);
+  const organs = twin ? [ side(-1), side(1) ] : [ organ ];
+  const width = WIDTH / organs.length;
+  const fins = organs.map(
+      (o, i) => motorTarget(
+          state, regionSlots(state.document, o).find(s => s.dir === 'out' && s.key === 'fins'),
+          P.left + i * width, width));
+  const xs = fins.map(target => target.left + target.width / 2),
+        cut = new Set(organ.region.cut ?? []);
+  let html = text(180, 20, twin ? label('regions.settings.compete') : words('motorTurn'), 'middle');
+  html += xs.map((px, i) => {
+              const left = organs[i].side < 0;
+              return text(px, 44, words(left ? 'motorLeftCue' : 'motorRightCue'), 'middle') +
+                     path(`M${px} 54V116m-5-6l5 6 5-6`) +
+                     text(px, 139, words(left ? 'motorTurnLeft' : 'motorTurnRight'), 'middle') +
+                     motorTargetPicture(fins[i], 150);
+            }).join('');
+  if (twin) {
+    const competes = plan.cross.some(([ from, to ]) => from === 'oppose' && to === 'turn') &&
+                     !cut.has('oppose>>turn');
+    if (competes)
+      html += '<g data-motor-path="compete">' +
+              path(`M${xs[0]} 58C${xs[0]} 84 ${xs[1]} 84 ${xs[1]} 106m-7 0h14M${xs[1]} 58C${
+                       xs[1]} 84 ${xs[0]} 84 ${xs[0]} 106m-7 0h14`,
+                   'memory') +
+              '</g>';
+    html +=
+        button(organ, 'compete', 1 - organ.region.compete, 180, 84,
+               `<path d="${organ.region.compete ? 'M-10-8L10 8M10-8L-10 8' : 'M-10-8V8M10-8V8'}"/>`,
+               label('regions.settings.compete'), !!organ.region.compete);
+  }
+  const top = 150 + Math.max(...fins.map(target => target.height)) + 24;
+  html += text(P.left, top, label('regions.settings.retreat')) +
+          button(organ, 'retreat', 1 - organ.region.retreat, 60, top + 47,
+                 '<path d="M0-10V10M-7 3L0 10L7 3"/>', label('regions.settings.retreat'),
+                 !!organ.region.retreat);
+  const reverse =
+      regionSlots(state.document, organ).find(s => s.dir === 'out' && s.key === 'reverse');
+  if (!reverse)
+    return {html : html + text(96, top + 52, words('off')), height : top + 82};
+  const target = motorTarget(state, reverse, P.left, WIDTH);
+  const inner = (from, to) =>
+      plan.inner.some(([ a, b ]) => a === from && b === to) && !cut.has(from + '>' + to);
+  html += text(290, top + 68, words('motorReverse'), 'middle');
+  if (inner('retreat', 'reverse'))
+    html += '<g data-motor-path="reverse">' + path(`M80 ${top + 47}H292m-6-5l6 5-6 5`) + '</g>';
+  if (inner('retreat', 'brake') && inner('brake', 'swim'))
+    html += '<g data-motor-path="brake">' +
+            path(`M112 ${top + 47}V${top + 18}H172m0-7v14`, 'memory') +
+            text(183, top + 23, words('motorPushWord')) + '</g>';
+  if (inner('retreat', 'backStop') && inner('backStop', 'turn'))
+    html += '<g data-motor-path="backStop">' +
+            path(`M112 ${top + 47}V${top + 86}H172m0-7v14`, 'memory') +
+            text(183, top + 91, words('motorRow')) + '</g>';
+  html += motorTargetPicture(target, top + 108);
+  return {html, height : top + 108 + target.height + 16};
+}
+function motorPictures(state, organ) {
+  const layout = motorLayout(state, organ), paths = motorPaths(state, organ);
+  const svg = (height, content, kind) =>
+      `<svg class="aid-motor-picture" data-motor-picture="${kind}" viewBox="0 0 ${P.width} ${
+          height}" data-region-picture="${escapeText(organ.id)}" role="group" aria-label="${
+          label('regions.motor.term')}">${content}</svg>`;
+  return svg(layout.height, motorCommands(state, organ, layout), 'commands') +
+         svg(paths.height, paths.html, 'paths');
 }
 function spinePicture(organ) {
   const r = organ.region;
@@ -309,12 +485,11 @@ const PICTURES = {
   olfaction : scentPicture,
   state : statePicture,
   value : (s, o) => valuePicture(o),
-  motor : (s, o) => motorPicture(o),
   spine : (s, o) => spinePicture(o)
 };
 export function regionPicture(state, organ) {
   const draw = PICTURES[organ.type];
-  if (!draw && organ.type !== 'tectum')
+  if (!draw && !['tectum', 'motor'].includes(organ.type))
     return '';
   const customized =
       !!organ.region.cut?.length || regionPlan(state.document, organ).nodes.some(n => {
@@ -327,8 +502,9 @@ export function regionPicture(state, organ) {
   const reference =
       [ 'choice', 'state' ].includes(organ.type) ? '' : words(organ.type + 'Reference');
   const drawing =
-      organ.type === 'tectum'
-          ? tectumPictures(state, organ)
+      organ.type === 'tectum' ? tectumPictures(state, organ)
+      : organ.type === 'motor'
+          ? motorPictures(state, organ)
           : `<svg viewBox="0 0 ${P.width} ${P.height}" data-region-picture="${
                 escapeText(organ.id)}" role="group" aria-label="${
                 label('regions.' + organ.type + '.term')}"><title>${
