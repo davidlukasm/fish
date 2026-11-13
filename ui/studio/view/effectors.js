@@ -20,6 +20,7 @@ import {
   lipWidth,
   rakerPassage,
   rakerRetention,
+  rakerSifting,
   tailFinSize,
   toothForm,
 } from '../../fish_organs.js';
@@ -693,8 +694,11 @@ const GILL = Object.freeze({
   steps : 24,
   rows : 3,
   caught : .4,
-  // What the rakers hold and let through, one line each.
-  words : [ 140, 154 ]
+  // A mouthful of ground: its flocks come in low, those the rakers sift stay in front of the arch,
+  // the rest falls out behind it.
+  ground : {y : 110, grains : 6, grain : 2.6, gap : 7, past : [ 206, 121 ], fall : 3},
+  // What the rakers hold, sift and let through, one line each.
+  words : [ 138, 151, 164 ]
 });
 function gillArch(t) {
   const G = GILL, middle = (G.top + G.bottom) / 2, u = 1 - t;
@@ -706,6 +710,7 @@ function gillArch(t) {
 export function gillGraphic(state, organ) {
   const G = GILL, density = gillRakers(organ) ?? BODY_UNIT.trait_middle;
   const passage = rakerPassage(density), kept = rakerRetention(density);
+  const sifted = rakerSifting(density);
   const count = Math.round(G.rakers[0] + (G.rakers[1] - G.rakers[0]) * density);
   const arch = 'M' + Array
                          .from({length : G.steps + 1},
@@ -741,18 +746,34 @@ export function gillGraphic(state, organ) {
                                     '"/>';
                            })
                      .join('');
+  const D = G.ground, sits = Math.round(D.grains * sifted);
+  const front = gillArch((D.y - G.top) / (G.bottom - G.top)).x - G.raker;
+  const ground =
+      Array
+          .from({length : D.grains},
+                (_, i) => {
+                  const x = i < sits ? front - D.gap * i : D.past[0] + D.gap * (i - sits);
+                  const y =
+                      i < sits ? D.y + (i % 2 ? 1 : -1) * D.grain : D.past[1] + D.fall * (i - sits);
+                  return '<circle class="aid-gill-grain' + (i < sits ? ' held' : '') + '" cx="' +
+                         fixed(x) + '" cy="' + fixed(y) + '" r="' + D.grain + '"/>';
+                })
+          .join('');
   const graphic =
       '<title>' +
-      escapeText(label('gills.hint', {water : percent(passage), kept : percent(kept)})) +
+      escapeText(
+          label('gills.hint',
+                {water : percent(passage), kept : percent(kept), ground : percent(sifted)})) +
       '</title>' + water + '<path class="aid-gill-arch" d="' + arch +
-      '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks +
-      // What the rakers do, where it shows: the water passing (the arrows' width) and the
-      // plankton held (the specks on the arch).
+      '"/><path class="aid-gill-rakers" d="' + rakers + '"/>' + specks + ground +
+      // What the rakers do, where it shows: the water passing (the arrows' width), the plankton
+      // held (the specks on the arch) and the ground sifted (the grains in front of it).
       '<text class="aid-handle-word" x="' + G.flow[0] + '" y="' + G.words[0] + '">' +
       escapeText(label('gills.kept', {share : percent(kept)})) + '</text>' +
       '<text class="aid-handle-word" x="' + G.flow[1] + '" y="' + G.words[1] +
       '" text-anchor="end">' + escapeText(label('gills.passage', {share : percent(passage)})) +
-      '</text>' +
+      '</text><text class="aid-handle-word" x="' + G.flow[0] + '" y="' + G.words[2] + '">' +
+      escapeText(label('gills.ground', {share : percent(sifted)})) + '</text>' +
       handle('trait:q1', gillArch(1 - density).x - G.raker, gillArch(1 - density).y,
              label('gills.handle'), label('gills.word'));
   return effectorBlock(organ, GILL_CODE, 1, label('gills.title'), graphic,

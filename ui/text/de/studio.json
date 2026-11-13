@@ -952,10 +952,11 @@
     "gills": {
       "title": "Kiemen",
       "handle": "Ziehen: wie dicht die Kiemenreusen stehen",
-      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}.",
+      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}, vom Boden gesiebt {ground}.",
       "word": "Planktonsieb",
       "passage": "{share} Wasser kommt durch",
-      "kept": "hält {share} des Planktons"
+      "kept": "hält {share} des Planktons",
+      "ground": "siebt {share} aus dem Bodengrund"
     },
     "gutmuscle": {
       "title": "Darmmuskel",
