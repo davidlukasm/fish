@@ -1012,10 +1012,8 @@ export function setGillRakers(doc, organId, density) {
   const organ = findOrgan(doc, organId);
   if (organ?.type !== 'gills' || !Number.isFinite(density))
     return null;
-  const draft = copy(doc);
-  for (const center of findOrgan(draft, organId).centers)
-    center.q1 = planOfUnit(clamp(density, 0, 1));
-  return draft;
+  return editCenters(doc, organ.centers,
+                     center => { center.q1 = planOfUnit(clamp(density, 0, 1)); });
 }
 // A gut's length is carried by the quality of its intake cells.
 const GUT_LENGTH = Object.freeze({organ : 'gut', center : 'food', quality : 'q1'});
@@ -1028,21 +1026,18 @@ export function gutLength(doc) {
                 : null;
 }
 export function setGutLength(doc, length) {
-  if (!gutCells(doc).length || !Number.isFinite(length))
+  const cells = gutCells(doc);
+  if (!cells.length || !Number.isFinite(length))
     return null;
-  const draft = copy(doc);
-  for (const center of gutCells(draft))
-    center[GUT_LENGTH.quality] = planOfUnit(clamp(length, 0, 1));
-  return draft;
+  return editCenters(doc, cells,
+                     center => { center[GUT_LENGTH.quality] = planOfUnit(clamp(length, 0, 1)); });
 }
 export function setMuscleTrait(doc, code, key, trait, sites) {
   const quality = Object.keys(MUSCLE_TRAITS[code] ?? {}).find(q => MUSCLE_TRAITS[code][q] === key);
-  if (!quality || !musclesOf(doc, code, sites).length)
+  const cells = quality ? musclesOf(doc, code, sites) : [];
+  if (!cells.length)
     return null;
-  const draft = copy(doc);
-  for (const center of musclesOf(draft, code, sites))
-    center[quality] = planOfUnit(trait);
-  return draft;
+  return editCenters(doc, cells, center => { center[quality] = planOfUnit(trait); });
 }
 // The last nodes of a muscle are sprint nodes: they answer only a strong command, so a weak drive
 // moves the muscle gently and a strong one recruits its whole force.
@@ -1050,27 +1045,25 @@ export const SPRINT_THRESHOLD = 1;
 export const sprintNodes = organ =>
     organ.type === 'muscle' ? Math.floor(organ.sprint * organ.centers.length + 1e-9) : 0;
 export const isSprintNode = (organ, index) => index >= organ.centers.length - sprintNodes(organ);
+const linkedOrgans =
+    (doc, organ) => [organ, organ.linked ? findOrgan(doc, organ.pair) : null].filter(Boolean);
 // How many cells each node of a working organ has: all its nodes alike, the linked twin too.
 export function setNodeCopies(doc, organId, copies) {
   const organ = findOrgan(doc, organId);
   if (!organ || !Number.isInteger(copies) || copies < 1 || copies > ATELIER_LIMITS.max_copies)
     return null;
-  const draft = copy(doc);
-  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
-  for (const o of [main, twin].filter(Boolean))
-    for (const center of kindNodes(o))
-      center.copies = copies;
-  return draft;
+  return editCenters(doc, linkedOrgans(doc, organ).flatMap(kindNodes),
+                     center => { center.copies = copies; });
 }
 export function setMuscleSprint(doc, organId, share) {
   const organ = findOrgan(doc, organId);
   if (organ?.type !== 'muscle' || !Number.isFinite(share))
     return null;
-  const draft = copy(doc);
-  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
-  for (const o of [main, twin].filter(Boolean))
-    o.sprint = clamp(share, 0, 1);
-  return draft;
+  const targets = new Set(linkedOrgans(doc, organ));
+  return {
+    ...doc,
+    organs : doc.organs.map(o => targets.has(o) ? {...o, sprint : clamp(share, 0, 1)} : o)
+  };
 }
 // A muscle's fibres, carried by its cells' time constant: 1 all fast, 0 all slow. Spine erectors
 // are muscles too.
@@ -1081,12 +1074,8 @@ export function setMuscleFibre(doc, organId, fast) {
   const organ = findOrgan(doc, organId);
   if (!isFibrous(organ) || !Number.isFinite(fast))
     return null;
-  const draft = copy(doc);
-  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
-  for (const o of [main, twin].filter(Boolean))
-    for (const c of o.centers)
-      c.tau = fibreTau(fast);
-  return draft;
+  return editCenters(doc, linkedOrgans(doc, organ).flatMap(o => o.centers),
+                     center => { center.tau = fibreTau(fast); });
 }
 // A pectoral fin muscle strokes the fin back, pushing the fish forward, or forward as the
 // antagonist, pushing it back. Its cells carry the direction in their polarity.
@@ -1097,12 +1086,8 @@ export function setFinStroke(doc, organId, stroke, sites) {
   const organ = findOrgan(doc, organId);
   if (!isFinMuscle(organ, sites) || !Object.values(FIN_STROKE).includes(stroke))
     return null;
-  const draft = copy(doc);
-  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
-  for (const o of [main, twin].filter(Boolean))
-    for (const c of o.centers)
-      c.polarity = stroke;
-  return draft;
+  return editCenters(doc, linkedOrgans(doc, organ).flatMap(o => o.centers),
+                     center => { center.polarity = stroke; });
 }
 const opposite = stroke => stroke === FIN_STROKE.back ? FIN_STROKE.front : FIN_STROKE.back;
 export const antagonistOf = (doc, organ, sites) =>
@@ -1117,12 +1102,8 @@ export function setFinAngle(doc, organId, angle, sites) {
   const organ = findOrgan(doc, organId);
   if (!isFinMuscle(organ, sites) || !Number.isFinite(angle))
     return null;
-  const draft = copy(doc);
-  const main = findOrgan(draft, organId), twin = main.linked ? findOrgan(draft, main.pair) : null;
-  for (const o of [main, twin].filter(Boolean))
-    for (const c of o.centers)
-      c.q1 = planOfUnit(angle);
-  return draft;
+  return editCenters(doc, linkedOrgans(doc, organ).flatMap(o => o.centers),
+                     center => { center.q1 = planOfUnit(angle); });
 }
 // The antagonist of a fin muscle: as many nodes at free fin sites beside it, stroking the other
 // way, on both sides when the muscle has a twin.
@@ -1393,9 +1374,11 @@ export function removeOrganType(doc, organId, typeId) {
 }
 // History retains earlier documents; only the edited tissue needs private mutable cells.
 function editTissue(doc, id, edit) {
-  const targets = new Set(tissueTargets(doc, id));
-  if (!targets.size)
-    return null;
+  const cells = tissueTargets(doc, id);
+  return cells.length ? editCenters(doc, cells, edit) : null;
+}
+function editCenters(doc, cells, edit) {
+  const targets = new Set(cells);
   return {
     ...doc,
     organs : doc.organs.map(organ => {

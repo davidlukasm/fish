@@ -10,7 +10,7 @@ import {escapeText, fixed, placedGlyph} from './markup.js';
 import {formatNumber, formatSigned, joinParts, namedText, percent, t} from '../../strings.js';
 import {clamp} from '../../units.js';
 import {GROWTH_ICON} from './icons.js';
-import {substanceMark, substanceName} from './substances.js';
+import {substanceName} from './substances.js';
 import {lifeCycle} from './life_cycle.js';
 import {cellVariation} from './cell_tissue.js';
 import {substanceColor} from '../../hormones.js';
@@ -21,28 +21,15 @@ export const DEFAULT_PREVIEW_INPUT = 1;
 export const previewInputOf = state => state.previewInput ?? DEFAULT_PREVIEW_INPUT;
 const word = (key, values) => t('studio.development.' + key, values);
 const PREVIEW_DIGITS = 2;
-// The example situation in one picture. A pad holds age and input together: from the young fish
-// on the left to the grown one on the right, from the strongest negative input at the bottom to
-// the strongest positive one at the top; one handle sets both. Beside it every substance is a drop
-// that grows with its level; the handle on its top sets it.
 const SITUATION = Object.freeze({
   width : 300,
   height : 122,
-  pad : {left : 34, top : 24, right : 160, bottom : 88},
+  pad : {left : 34, top : 24, right : 278, bottom : 88},
   key : {young : 9, grown : 17, below : 12, sign : 40},
-  drops : {
-    left : 180,
-    right : 292,
-    middle : 56,
-    least : 3,
-    span : 11,
-    most : 30,
-    mark : 11,
-    columns : 4,
-    rowGap : 48
-  },
   knob : 7
 });
+const LEVEL =
+    Object.freeze({width : 100, height : 32, left : 12, right : 88, middle : 16, depth : 12});
 export const PREVIEW_INPUT_LOW = -1;
 // A substance gets an example level once it is named or a cell answers it.
 function previewSubstances(doc, wheel) {
@@ -67,7 +54,6 @@ const padPoint = (maturity, input) => {
     y : P.bottom - (P.bottom - P.top) * (input - PREVIEW_INPUT_LOW) / (1 - PREVIEW_INPUT_LOW)
   };
 };
-const dropRadius = level => SITUATION.drops.least + SITUATION.drops.span * level;
 // The values a handle sets, from the pointer in the picture's units and the geometry it carries.
 export function previewPatch(key, p, marks) {
   const P = SITUATION.pad;
@@ -77,13 +63,34 @@ export function previewPatch(key, p, marks) {
       input :
           PREVIEW_INPUT_LOW + (1 - PREVIEW_INPUT_LOW) * clamp((P.bottom - p.y) / (P.bottom - P.top))
     };
-  const middle = Number(marks.dropMiddle);
-  return Number.isFinite(middle)
-             ? {[key] : clamp((middle - p.y - SITUATION.drops.least) / SITUATION.drops.span)}
+  const left = Number(marks.levelLeft), right = Number(marks.levelRight);
+  return Number.isFinite(left) && Number.isFinite(right) && right > left
+             ? {[key] : clamp((p.x - left) / (right - left))}
              : {};
 }
+function substanceLevel(state, index, context) {
+  const L = LEVEL, span = L.right - L.left, level = bloodLevel(context, index);
+  const name = index < HORMONES.levels
+                   ? state.document.substances.find(substance => substance.index === index)?.name ||
+                         word('unnamedSubstance', {n : index + 1})
+                   : substanceName(state, index);
+  const colour = substanceColor(index);
+  const x = L.left + span * level, top = L.middle - L.depth / 2;
+  return '<div class="aid-preview-level-row"><span>' + escapeText(name) +
+         '</span><svg class="aid-preview-level" width="' + L.width + '" height="' + L.height +
+         '" viewBox="0 0 ' + L.width + ' ' + L.height +
+         '" data-preview-bars data-preview-substance="' + index + '" role="img" aria-label="' +
+         escapeText(namedText(name, percent(level))) + '" style="--substance:' + colour +
+         '"><rect class="aid-preview-vessel" x="' + L.left + '" y="' + top + '" width="' + span +
+         '" height="' + L.depth + '" rx="' + L.depth / 2 +
+         '"/><rect class="aid-preview-amount" x="' + L.left + '" y="' + top + '" width="' +
+         fixed(span * level) + '" height="' + L.depth + '" rx="' + L.depth / 2 +
+         '"/><circle class="aid-graphic-handle" data-preview-handle="' + index +
+         '" data-level-left="' + L.left + '" data-level-right="' + L.right + '" cx="' + fixed(x) +
+         '" cy="' + L.middle + '" r="' + SITUATION.knob + '"/></svg></div>';
+}
 export function previewControls(state) {
-  const S = SITUATION, P = S.pad, K = S.key, D = S.drops, context = previewContextOf(state);
+  const S = SITUATION, P = S.pad, K = S.key, context = previewContextOf(state);
   const input = previewInputOf(state), at = padPoint(context.maturity, input);
   const zero = padPoint(0, 0).y;
   const situation = joinParts([
@@ -92,29 +99,6 @@ export function previewControls(state) {
     namedText(word('exampleInput'), formatNumber(input, PREVIEW_DIGITS))
   ]);
   const substances = previewSubstances(state.document, state.capabilities);
-  const rows = Math.ceil(substances.length / D.columns);
-  const columns = Math.ceil(substances.length / Math.max(1, rows));
-  const step = Math.min(D.most, (D.right - D.left) / Math.max(1, columns));
-  const drops =
-      substances
-          .map((index, k) => {
-            const x = D.left + step * (k % columns + .5), level = bloodLevel(context, index);
-            const middle = D.middle + (Math.floor(k / columns) - (rows - 1) / 2) * D.rowGap;
-            const r = dropRadius(level), colour = substanceColor(index);
-            return '<g class="aid-preview-drop"><title>' +
-                   escapeText(namedText(substanceName(state, index),
-                                        formatNumber(level, PREVIEW_DIGITS))) +
-                   '</title><circle class="aid-preview-reach" cx="' + fixed(x) + '" cy="' + middle +
-                   '" r="' + dropRadius(1) + '"/><circle cx="' + fixed(x) + '" cy="' + middle +
-                   '" r="' + fixed(r) + '" fill="' + colour + '"/><text x="' + fixed(x) + '" y="' +
-                   (middle + dropRadius(1) + D.mark) + '" style="fill:' + colour +
-                   '" text-anchor="middle" dominant-baseline="central">' +
-                   escapeText(substanceMark(state, index)) +
-                   '</text><circle class="aid-graphic-handle" data-preview-handle="' + index +
-                   '" data-drop-middle="' + middle + '" cx="' + fixed(x) + '" cy="' +
-                   fixed(middle - r) + '" r="' + S.knob + '"/></g>';
-          })
-          .join('');
   return '<details class="aid-preview-context"><summary title="' +
          escapeText(word('previewConditions')) + '">' + word('preview') +
          '</summary><svg class="aid-preview-bars" viewBox="0 0 ' + S.width + ' ' + S.height +
@@ -124,10 +108,6 @@ export function previewControls(state) {
          '</text><text class="aid-curve-label" x="' + (P.left + P.right) / 2 + '" y="' +
          (S.height - 3) + '" text-anchor="middle">' +
          escapeText(word('maturityAt', {p : percent(context.maturity)})) + '</text>' +
-         (substances.length
-              ? '<text class="aid-curve-label" x="' + D.left + '" y="' + (P.top - K.below) + '">' +
-                    escapeText(word('substanceLevels')) + '</text>'
-              : '') +
          '<g class="aid-preview-pad"><title>' + escapeText(situation) + '</title><rect x="' +
          P.left + '" y="' + P.top + '" width="' + (P.right - P.left) + '" height="' +
          (P.bottom - P.top) + '"/><path class="aid-dose-zero" d="M' + P.left + ' ' + fixed(zero) +
@@ -142,7 +122,13 @@ export function previewControls(state) {
          '" text-anchor="middle">' + formatSigned(PREVIEW_INPUT_LOW) + '</text></g>' +
          '<circle class="aid-graphic-handle" data-preview-handle="situation" cx="' + fixed(at.x) +
          '" cy="' + fixed(at.y) + '" r="' + S.knob + '"><title>' + escapeText(situation) +
-         '</title></circle>' + drops + '</svg></details>';
+         '</title></circle></svg>' +
+         (substances.length
+              ? '<div class="aid-preview-levels">' +
+                    substances.map(index => substanceLevel(state, index, context)).join('') +
+                    '</div>'
+              : '') +
+         '</details>';
 }
 // A cell's life cycle (when it comes into being, how active it is, when it dies) and how much its
 // copies differ.

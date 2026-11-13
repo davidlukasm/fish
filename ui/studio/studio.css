@@ -852,8 +852,12 @@
 .aid-preview-pad rect{fill:#10303a;stroke:var(--aid-panel-edge)}
 .aid-preview-pad svg{color:var(--aid-label-text)}
 .aid-preview-bars .aid-preview-sign{font-size:15px}
-.aid-preview-reach{fill:none;stroke:var(--aid-panel-edge);stroke-dasharray:2 3}
-.aid-preview-drop text{font-size:11px;font-weight:600;pointer-events:none}
+.aid-preview-levels{display:grid;gap:4px;margin:8px 0}
+.aid-preview-level-row{display:grid;grid-template-columns:minmax(0,1fr) 100px;align-items:center;gap:8px;min-height:32px}
+.aid-preview-level-row>span{min-width:0;overflow-wrap:anywhere;color:var(--aid-label-text)}
+.aid-preview-level{display:block;touch-action:none}
+.aid-preview-vessel{fill:var(--aid-ground);stroke:var(--substance);stroke-opacity:.6}
+.aid-preview-amount{fill:var(--substance);fill-opacity:.6;pointer-events:none}
 .aid-gut-bars{display:block;width:100%;height:auto;margin:6px 0;border-radius:8px;background:var(--aid-graphic);touch-action:none}
 .aid-gut-bars text{fill:var(--aid-label-text);font-size:11px}
 .aid-gut-tube{fill:none;stroke:var(--aid-gut);stroke-width:2}

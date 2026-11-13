@@ -35,7 +35,8 @@ async function checkSpectrumKnobs() {
 }
 
 async function checkDocumentHistory(model, sites, root) {
-  const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const {HORMONE_EFFECT : E, FIN_STROKE} = await import('../ui/schema.js');
+  const {MUSCLE_TRAITS, organFunction} = await import('../ui/studio/model/organs.js');
   const {settleRegions} = await import('../ui/studio/model/regions.js');
   const freeze = object => {
     if (object && typeof object === 'object' && !Object.isFrozen(object)) {
@@ -46,7 +47,9 @@ async function checkDocumentHistory(model, sites, root) {
   };
   const loaded = JSON.parse(readFileSync(join(root, 'genomes/entwuerfe/liora.fish.json'), 'utf8'));
   const lone = model.addNeuron(model.newDocument('History'), 'learn', sites, {x : 380, y : 325});
-  for (const original of [loaded, lone.document]) {
+  const gills =
+      JSON.parse(readFileSync(join(root, 'genomes/entwuerfe/brisa_kiemen.fish.json'), 'utf8'));
+  for (const original of [loaded, gills, lone.document]) {
     const source = freeze(original), before = JSON.stringify(source);
     for (const organ of source.organs) {
       const id = organ.centers[0]?.id;
@@ -60,6 +63,23 @@ async function checkDocumentHistory(model, sites, root) {
         doc => model.setLifePhase(doc, id, {start : .3, end : .8}, 2, 1),
         doc => model.updateGrowth(doc, {active : 1, sensitivity : 1, half : .4})
       ];
+      if (model.isFibrous(organ)) {
+        changes.push(doc => model.setNodeCopies(doc, organ.id, 5),
+                     doc => model.setMuscleFibre(doc, organ.id, .7));
+      }
+      if (organ.type === 'muscle') {
+        changes.push(doc => model.setMuscleSprint(doc, organ.id, .6));
+        const code = organFunction(organ, sites);
+        for (const key of Object.values(MUSCLE_TRAITS[code] ?? {}))
+          changes.push(doc => model.setMuscleTrait(doc, code, key, .4, sites));
+      }
+      if (model.isFinMuscle(organ, sites))
+        changes.push(doc => model.setFinAngle(doc, organ.id, .8, sites),
+                     doc => model.setFinStroke(doc, organ.id, FIN_STROKE.front, sites));
+      if (organ.type === 'gills')
+        changes.push(doc => model.setGillRakers(doc, organ.id, .8));
+      if (organ.type === 'gut')
+        changes.push(doc => model.setGutLength(doc, .2));
       let doc = source;
       const history = [];
       for (const change of changes) {
@@ -533,21 +553,50 @@ async function checkBloodReceptors(model, capabilities) {
   for (let index = 0; index < wheel.hormones; ++index)
     doc = model.addSubstance(doc, wheel.hormones, index);
   doc = model.updateReceptor(doc, id, E.learning, {width : 1});
-  const picture = development.previewControls({document : doc, capabilities : wheel});
-  assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
-  const drops = [...picture.matchAll(
-      /data-preview-handle="(\d+)" data-drop-middle="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g) ];
-  assert.deepEqual(drops.map(m => Number(m[1])), [ 0, 1, 2, 3, 4, 5, B.reserve, B.fatigue ]);
-  for (const mark of drops) {
-    const level = model.bloodLevel(model.DEFAULT_BLOOD_CONTEXT, Number(mark[1]));
-    const patch = development.previewPatch(mark[1], {x : Number(mark[3]), y : Number(mark[4])},
-                                           {dropMiddle : mark[2]});
-    assert.ok(Math.abs(patch[mark[1]] - level) < 1e-9, 'Each drop drags from its own row');
+  const unused = model.newDocument('Vorschau');
+  const one = model.addSubstance(unused, wheel.hormones, 0);
+  for (const [document, expected] of [[ unused, [] ], [ one, [ 0 ] ],
+                                      [ doc, [ 0, 1, 2, 3, 4, 5, B.reserve, B.fatigue ] ]]) {
+    for (const value of [0, .25, .5, .75, 1]) {
+      const previewContext = {
+        ...model.DEFAULT_BLOOD_CONTEXT,
+        hormones : Array(wheel.hormones).fill(value),
+        reserve : value,
+        fatigue : value
+      };
+      const picture = development.previewControls({document, capabilities : wheel, previewContext});
+      assert.doesNotMatch(picture, /NaN|Infinity|undefined/);
+      const levels = [
+        ...picture.matchAll(
+            /data-preview-handle="(\d+)" data-level-left="([^"]+)" data-level-right="([^"]+)" cx="([^"]+)" cy="([^"]+)"/g)
+      ];
+      assert.deepEqual(levels.map(m => Number(m[1])), expected);
+      assert.equal((picture.match(/class="aid-preview-level-row"/g) ?? []).length, expected.length);
+      for (const mark of levels) {
+        const left = Number(mark[2]), right = Number(mark[3]);
+        assert.ok(right - left >= 40,
+                  'Each fixed-size vessel leaves at least 40 pixels for dragging');
+        const marks = {levelLeft : mark[2], levelRight : mark[3]};
+        const patch = (x, y) => development.previewPatch(mark[1], {x, y}, marks)[mark[1]];
+        assert.ok(Math.abs(patch(Number(mark[4]), Number(mark[5])) - value) < 1e-9,
+                  'Touching any substance handle retains its current level');
+        for (const y of [-1e3, Number(mark[5]), 1e3]) {
+          assert.equal(patch(left - 1, y), 0);
+          assert.equal(patch(right + 1, y), 1);
+          assert.equal(patch((left + right) / 2, y), .5, 'The row position cannot change a level');
+        }
+      }
+    }
   }
-  for (let a = 0; a < drops.length; ++a)
-    for (let b = a + 1; b < drops.length; ++b)
-      assert.ok(Math.hypot(drops[a][3] - drops[b][3], drops[a][4] - drops[b][4]) >= 14,
-                'The eight preview handles do not overlap');
+  const named = model.setSubstance(one, 0, '<Langer eigener Stoffname>');
+  const namedPicture = development.previewControls({document : named, capabilities : wheel});
+  assert.match(namedPicture, /<span>&lt;Langer eigener Stoffname&gt;<\/span>/);
+  assert.match(development.previewControls({document : one, capabilities : wheel}),
+               /<span>Botenstoff 1<\/span>/);
+  const fullPicture = development.previewControls({document : doc, capabilities : wheel});
+  assert.match(fullPicture, /<span>Energiereserve<\/span>/);
+  assert.match(fullPicture, /<span>Muskelerschöpfung<\/span>/);
+  assert.deepEqual(development.previewPatch('0', {x : 50, y : 0}, {}), {});
   const animation = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = () => 1;
   try {
@@ -1302,6 +1351,37 @@ async function checkResponseControls(model, capabilities, clicks) {
             assert.ok(Math.abs(back.threshold - cell.threshold) < 1e-8);
           }
         }
+  for (const pace of [0, 1])
+    for (const sign of [-1, 1])
+      for (const q1 of [0, .4, 1])
+        for (const q2 of [0, .25, .5, .75, 1]) {
+          const cell = {...center, q1, q2, sign, tau : .6, threshold : .8};
+          const situation = {...context, pace, excitation : -.9, output : .7};
+          const at = responseHandle(cell, situation);
+          const back = responsePatch(cell, at.fx, at.fy, situation);
+          assert.ok(Math.abs(back.tau - cell.tau) < 1e-8);
+          assert.ok(Math.abs(back.threshold - cell.threshold) < 1e-8,
+                    'Picking up a suppressed response retains its threshold');
+        }
+  const silent = {...center, q1 : 1, q2 : 0, tau : .6, threshold : .8};
+  const suppression = {...context, excitation : -.5};
+  const silentAt = responseHandle(silent, suppression);
+  const shifted = responsePatch(silent, silentAt.fx + .04, silentAt.fy, suppression);
+  assert.ok(shifted.tau > silent.tau);
+  assert.equal(shifted.threshold, silent.threshold,
+               'Moving a silent response in time preserves the sufficient threshold');
+  const below = responsePatch(silent, silentAt.fx, silentAt.fy + .02, suppression);
+  assert.equal(below.threshold, silent.threshold,
+               'Dragging beyond a rectified response cannot change its hidden threshold');
+  const lifted = responsePatch(silent, silentAt.fx, silentAt.fy - .02, suppression);
+  const liftedAt = responseHandle({...silent, ...lifted}, suppression);
+  assert.ok(Math.abs(liftedAt.fy - (silentAt.fy - .02)) < 1e-8,
+            'A rectified response still reaches a positive target');
+  const active = {...silent, threshold : -.8};
+  const lowered = responsePatch(active, silentAt.fx, silentAt.fy, suppression);
+  assert.ok(lowered.threshold > active.threshold);
+  assert.ok(Math.abs(responseHandle({...active, ...lowered}, suppression).fy - silentAt.fy) < 1e-8,
+            'An active rectified response still reaches zero');
   const held = responseTrace(center, context);
   assert.ok(Math.abs(held.points[held.on + 1].value - held.points[held.off - 1].value) < 1e-9);
   const fading = responseTrace({...center, q2 : 0}, context);
@@ -1544,6 +1624,7 @@ async function checkFunctionalRegions(model, capabilities) {
 }
 
 async function checkTectumPicture(model, capabilities) {
+  const {tectumBands} = await import('../ui/studio/view/vision.js');
   const {regionPicture} = await import('../ui/studio/view/region_controls.js');
   const {regionPlan, updateRegion} = await import('../ui/studio/model/regions.js');
   const {OrganStudio} = await import('../ui/studio/controller.js');
@@ -1596,6 +1677,11 @@ async function checkTectumPicture(model, capabilities) {
   assert.doesNotMatch(html, /data-region-setting="resolution" data-region-value="3"/,
                       'Three colour types leave room for two directional bands');
   const plan = regionPlan(studio.state.document, current());
+  const field = tectumBands(studio.state);
+  assert.equal((field.match(/<text /g) ?? []).length, plan.most.resolution,
+               'The fish field labels the directional bands that fit its colour channels');
+  assert.equal((field.match(/<path /g) ?? []).length, plan.most.resolution + 1,
+               'The fish field and Tectum map use the same band boundaries');
   for (const node of plan.nodes.filter(n => n.band))
     assert.ok(html.includes('data-tectum-band="' + node.band.join(':') + '"'));
   assert.equal(model.findOrgan(studio.state.document, current().pair).region.colours, 1);

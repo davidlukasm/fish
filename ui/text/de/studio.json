@@ -1380,7 +1380,7 @@
     "crossing": "Seitenführung −1 … +1",
     "exampleInput": "Beispieleingang der Organneuronen",
     "inputAxis": "Eingang",
-    "substanceLevels": "Stoffpegel",
+    "unnamedSubstance": "Botenstoff {n}",
     "currentResponse": "Antwort bei den Beispielwerten",
     "potentialCells": "Potenzielle Zellen",
     "rectification": "Gleichrichtung 0 … 1",

@@ -127,7 +127,11 @@ export function responsePatch(center, fx, fy, context, handle = '') {
                            Math.atanh(clamp(target, -.999999, .999999))) /
                               context.scale,
                           -1);
-  return {tau, threshold};
+  // Full rectification hides every response below zero; retain an already sufficient threshold.
+  return {
+    tau,
+    threshold : center.q1 >= 1 && target <= 0 ? Math.max(center.threshold, threshold) : threshold
+  };
 }
 
 export function responseTrace(center, context) {

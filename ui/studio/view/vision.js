@@ -206,7 +206,7 @@ export function tectumBands(state) {
   if (chosen?.type !== 'tectum')
     return '';
   const plan = regionPlan(doc, chosen), {lo, hi} = plan.view;
-  const bands = chosen.region.resolution, step = (hi - lo) / bands;
+  const bands = plan.most.resolution, step = (hi - lo) / bands;
   let html = '';
   for (const eye of fedBy(doc, chosen).filter(o => o.type === 'eye')) {
     const g = visionGeometry(state, eye);

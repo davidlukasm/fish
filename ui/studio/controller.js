@@ -317,7 +317,17 @@ export class OrganStudio {
     if (s.station === 'breeding' || s.station === 'trials')
       return this[s.station].open(acceptedGenome(s) ? {genome : s.genome, name : s.document.name}
                                                     : null);
+    const options = this.root.querySelector('.aid-scene-options');
+    const menuControls = 'summary, button, select';
+    const focused =
+        options ? [...options.querySelectorAll(menuControls) ].indexOf(document.activeElement) : -1;
     this.root.innerHTML = stationShell(s);
+    const freshOptions = this.root.querySelector('.aid-scene-options');
+    if (options && freshOptions) {
+      freshOptions.open = options.open;
+      if (focused >= 0)
+        freshOptions.querySelectorAll(menuControls)[focused]?.focus({preventScroll : true});
+    }
     this.drawSight();
   }
   refreshScene() {

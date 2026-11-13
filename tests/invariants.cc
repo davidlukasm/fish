@@ -6,9 +6,35 @@
 #include "muscle_fibre.hh"
 #include "perception.hh"
 #include "laboratory.hh"
+#include "interactive_session.hh"
 #include <algorithm>
 #include <map>
 #include <set>
+namespace test {
+struct SessionAccess {
+  static Ecosystem &world(InteractiveSession &s) { return s.world; }
+  static const std::optional<Ecosystem> &reference(const InteractiveSession &s) {
+    return s.reference;
+  }
+  static bool preparing(const InteractiveSession &s) { return s.laboratory_preparing; }
+  static std::uint64_t comparison_start(const InteractiveSession &s) { return s.experiment_start; }
+  static void pending(InteractiveSession &s, std::future<Ecosystem> task) {
+    s.laboratory_fork = std::move(task);
+    s.laboratory_preparing = true;
+  }
+  static void command(InteractiveSession &s, const std::string &op) {
+    bool effect = false;
+    std::string reply;
+    std::istringstream args;
+    s.execute_laboratory(op, args, effect, reply);
+  }
+  static void prepare(InteractiveSession &s) { s.prepare_laboratory(); }
+  static bool finish(InteractiveSession &s) {
+    return !s.laboratory_fork.valid() ||
+           s.laboratory_fork.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+  }
+};
+}
 using namespace test;
 namespace {
 constexpr const char *FORAGER_GENOME = "genomes/entwuerfe/brisa.genome";
@@ -563,6 +589,71 @@ void closed_tank_creates_no_energy(const Genome &g) {
     before = now;
   }
 }
+void laboratory_comparison_restarts_during_copy() {
+  struct Output {
+    std::ostringstream events, errors;
+    std::streambuf *out = std::cout.rdbuf(events.rdbuf()), *err = std::cerr.rdbuf(errors.rdbuf());
+    ~Output() {
+      std::cout.rdbuf(out);
+      std::cerr.rdbuf(err);
+    }
+  };
+  for (bool failure : {false, true})
+    for (bool cancel : {false, true}) {
+      InteractiveOptions options{};
+      options.laboratory = true;
+      options.seed = SEED;
+      InteractiveSession session(options);
+      auto &world = SessionAccess::world(session);
+      std::promise<Ecosystem> abandoned;
+      SessionAccess::pending(session, abandoned.get_future());
+      SessionAccess::command(session, "lab-end-compare");
+      world.ticks = 17;
+      SessionAccess::command(session, "lab-compare");
+      bool duplicate_rejected = false;
+      try {
+        SessionAccess::command(session, "lab-compare");
+      } catch (const std::runtime_error &) {
+        duplicate_rejected = true;
+      }
+      check(duplicate_rejected, "an active comparison is not requested twice");
+      SessionAccess::command(session, "lab-end-compare");
+      world.ticks = 23;
+      SessionAccess::command(session, "lab-compare");
+      world.ticks = 31;
+      SessionAccess::prepare(session);
+      check(SessionAccess::preparing(session) && !SessionAccess::reference(session),
+            "a restarted comparison waits for the old worker without accepting its result");
+      if (cancel)
+        SessionAccess::command(session, "lab-end-compare");
+      if (failure)
+        abandoned.set_exception(std::make_exception_ptr(std::runtime_error("abandoned copy")));
+      else {
+        Ecosystem previous(SEED);
+        previous.ticks = 7;
+        abandoned.set_value(std::move(previous));
+      }
+      Output output;
+      SessionAccess::prepare(session);
+      check(!SessionAccess::reference(session), "a canceled result never becomes the reference");
+      check(output.events.str().empty() && output.errors.str().empty(),
+            "a canceled success or failure emits no reset or comparison error");
+      check(SessionAccess::finish(session), "a replacement reference completes promptly");
+      SessionAccess::prepare(session);
+      check(!SessionAccess::preparing(session), "the comparison preparation ends");
+      if (cancel)
+        check(!SessionAccess::reference(session) && output.events.str().empty(),
+              "ending a queued comparison prevents its launch");
+      else {
+        const auto &reference = SessionAccess::reference(session);
+        check(reference && reference->ticks == 23 && SessionAccess::comparison_start(session) == 23,
+              "only the latest request becomes the reference, frozen at request time");
+        check(output.events.str().find("labor-reset") != std::string::npos &&
+                  output.events.str().find("labor-error") == std::string::npos,
+              "the latest reference resets the recording without stale errors");
+      }
+    }
+}
 void laboratory_energy_is_accounted(const Genome &g) {
   auto w = closed_tank(g);
   const auto id = w.fish.front().id;
@@ -995,6 +1086,7 @@ void ancestral_histories_keep_current_mutations() {
 int main() {
   try {
     Genome::begin_run(SEED);
+    laboratory_comparison_restarts_during_copy();
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
     gut_takes_up_what_time_allows();

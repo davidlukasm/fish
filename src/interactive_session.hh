@@ -12,9 +12,13 @@
 #include <map>
 #include <set>
 #include <sstream>
+namespace test {
+struct SessionAccess;
+}
 namespace fishsim {
 using Clock = std::chrono::steady_clock;
 class InteractiveSession {
+  friend struct test::SessionAccess;
   InteractiveOptions o;
   const std::string render_epoch;
   Ecosystem world;
@@ -26,7 +30,9 @@ class InteractiveSession {
   std::string experiment_kind;
   std::map<std::uint64_t, LaboratoryControl> laboratory_controls;
   std::unique_ptr<LaboratoryRecording> laboratory_recording, laboratory_baseline;
+  // Destroying a running async future would block input; queue only the latest frozen restart.
   std::future<Ecosystem> laboratory_fork;
+  std::optional<Checkpoint> laboratory_pending;
   bool laboratory_preparing = false;
   std::uint64_t laboratory_stop_at = 0;
   Clock::time_point laboratory_scene_sent{};

@@ -10,20 +10,20 @@ void InteractiveSession::execute_laboratory(const std::string &op, std::istrings
   if (!o.laboratory)
     throw Refusal("invalidArgument", {{"command", op}});
   if (op == "lab-compare") {
-    if (laboratory_fork.valid())
+    if (laboratory_preparing)
       throw Refusal("invalidArgument", {{"command", op}});
+    auto frozen = capture_checkpoint(world, session_founder, 0, evolving, false, 0, 0, 0);
+    laboratory_pending = std::move(frozen);
     paused = true;
     reference.reset();
     laboratory_baseline.reset();
     experiment_start = world.ticks;
     laboratory_preparing = true;
-    auto frozen = capture_checkpoint(world, session_founder, 0, evolving, false, 0, 0, 0);
-    laboratory_fork = std::async(std::launch::async,
-                                 [saved = std::move(frozen)]() { return saved.world.fork(); });
     return;
   }
   if (op == "lab-end-compare") {
     laboratory_preparing = false;
+    laboratory_pending.reset();
     reference.reset();
     laboratory_baseline.reset();
     return;
@@ -98,11 +98,20 @@ void InteractiveSession::execute_laboratory(const std::string &op, std::istrings
   apply_laboratory_control(p, world, c);
 }
 void InteractiveSession::prepare_laboratory() {
+  const auto failed = [&](const std::exception &e) {
+    laboratory_preparing = false;
+    reference.reset();
+    laboratory_baseline.reset();
+    refresh = true;
+    std::cerr << "Laborvergleich: " << e.what() << '\n';
+    std::cout << "{\"event\":\"labor-error\",\"message\":\"comparison\"}\n";
+  };
   if (laboratory_fork.valid() &&
       laboratory_fork.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+    const bool current = laboratory_preparing && !laboratory_pending;
     try {
       auto result = laboratory_fork.get();
-      if (laboratory_preparing) {
+      if (current) {
         reference = std::move(result);
         reference->workers = world.workers;
         for (auto &p : reference->fish)
@@ -113,11 +122,23 @@ void InteractiveSession::prepare_laboratory() {
         laboratory_baseline->begin(*reference, int(o.start_genomes.size()));
       }
     } catch (const std::exception &e) {
-      std::cerr << "Laborvergleich: " << e.what() << '\n';
-      std::cout << "{\"event\":\"labor-error\",\"message\":\"comparison\"}\n";
+      if (current)
+        failed(e);
     }
-    laboratory_preparing = false;
+    if (current)
+      laboratory_preparing = false;
     refresh = true;
+  }
+  if (!laboratory_fork.valid() && laboratory_pending) {
+    try {
+      auto frozen = std::move(*laboratory_pending);
+      laboratory_pending.reset();
+      laboratory_fork = std::async(std::launch::async,
+                                   [saved = std::move(frozen)]() { return saved.world.fork(); });
+    } catch (const std::exception &e) {
+      laboratory_pending.reset();
+      failed(e);
+    }
   }
   for (auto &p : world.fish) {
     const auto it = laboratory_controls.find(p.id);
