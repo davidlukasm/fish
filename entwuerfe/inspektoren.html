@@ -569,6 +569,6 @@ const PAINT = {fish : drawFish, yield : drawYield, life : drawLife, bars : drawB
 for (const part of EVERY) dirty.add(part);
 repaint();
 // The gut moves only while it is on the screen, and not for someone who has asked for less motion.
-new IntersectionObserver(seen => { film.seen = seen.at(-1).isIntersecting; }).observe(document.getElementById('fish'));
-if (!matchMedia('(prefers-reduced-motion: reduce)').matches) requestAnimationFrame(fishFrame);
+if (typeof IntersectionObserver === 'function') new IntersectionObserver(seen => { film.seen = seen.at(-1).isIntersecting; }).observe(document.getElementById('fish'));
+if (typeof matchMedia !== 'function' || !matchMedia('(prefers-reduced-motion: reduce)').matches) requestAnimationFrame(fishFrame);
 </script>
