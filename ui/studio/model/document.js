@@ -1413,7 +1413,7 @@ function receptorPatch(key, value) {
   if (key === 'substance')
     return Math.round(clamp(value, 0, HORMONES.levels));
   if (key === 'steepness')
-    return Math.round(clamp(value, 0, 3));
+    return clamp(value, 0, 3);
   if (key === 'half')
     return clamp(value, .0003, 1);
   if (key === 'sensitivity')

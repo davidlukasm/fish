@@ -1,4 +1,5 @@
 #include "../werkzeug/atelier_connections.hh"
+#include "field/distribution.hh"
 #include <cassert>
 #include <iostream>
 
@@ -152,6 +153,23 @@ void receptor_spread_checks_sensitive_cells() {
         r.steepness = 0;
       },
       true);
+}
+// A receptor's steepness is as fine as the genome sets it: every value between the steps gives
+// its own curve, steeper than the one below it and flatter than the one above.
+void receptor_steepness_is_continuous() {
+  namespace O = cppn::output;
+  constexpr float BETWEEN = .5f, ABOVE_HALF = 2, CLOSE = 1e-6f;
+  field::TraitValues values{};
+  values[O::field_width] = 1;
+  const auto answer = [&](float time_constant) {
+    values[O::time_constant] = time_constant;
+    const auto r = field::receptor_parameters(values);
+    return std::pair{r.steepness, r.bound(ABOVE_HALF * r.half)};
+  };
+  const float step = 1 / field::HORMONE_STEEPNESS_SPAN;
+  const auto low = answer(step), middle = answer(step * (1 + BETWEEN)), high = answer(2 * step);
+  assert(std::abs(middle.first - (1 + BETWEEN)) < CLOSE);
+  assert(low.second < middle.second && middle.second < high.second);
 }
 void property_overrides_reach_outputs() {
   for (bool learning : {false, true})
@@ -307,6 +325,7 @@ int main(int argc, char **argv) {
   assessment_checks_learning_and_every_cell();
   inactive_growth_ignores_saved_settings();
   receptor_spread_checks_sensitive_cells();
+  receptor_steepness_is_continuous();
   property_overrides_reach_outputs();
   {
     auto plan = cells(2);

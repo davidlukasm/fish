@@ -144,9 +144,7 @@ export function chemistry(state, organ, center) {
          '</div></section>';
 }
 function bound(receptor, c) {
-  let x = c / receptor.half;
-  for (let k = 0; k < receptor.steepness; ++k)
-    x *= x;
+  const x = (c / receptor.half) ** (2 ** receptor.steepness);
   return x / (1 + x);
 }
 const EFFECT_SCALE = Object.freeze({
@@ -216,7 +214,7 @@ function curveHandles(state, receptor, effect, target) {
     ...(effect === GROWTH ? [] : [ [ 'baseline', [ k.x(0), k.y(k.scale.value(least)) ] ] ]),
     [ 'sensitivity', [ k.x(1), k.y(k.scale.value(most)) ] ],
     ...(turns ? [ [ 'half', at(receptor.half) ] ] : []),
-    ...(turns && (state.capabilities?.steepnessSteps ?? 0) > 0
+    ...(turns && (state.capabilities?.steepnessSpan ?? 0) > 0
             ? [ [ 'steepness', at(receptor.half * STEEP_PROBE) ] ]
             : [])
   ];
@@ -250,8 +248,8 @@ export function receptorCurvePatch(state, receptor, effect, handle, fx, fy) {
   const n = Math.log(share / (1 - share)) /
             Math.log(k.concentration(receptor.half * STEEP_PROBE) / receptor.half);
   return {
-    steepness : Math.max(
-        0, Math.min(state.capabilities?.steepnessSteps ?? 0, Math.round(Math.log2(Math.max(1, n)))))
+    steepness :
+        Math.max(0, Math.min(state.capabilities?.steepnessSpan ?? 0, Math.log2(Math.max(1, n))))
   };
 }
 export const GROWTH = 'growth';

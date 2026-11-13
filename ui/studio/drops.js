@@ -352,7 +352,7 @@ export const dropMethods = {
       if (kind === 'phase') {
         const c = this.state.capabilities;
         doc = setLifePhase(doc, center.id, {[value] : PHASE_DROPPED[value]}, c.sensitivitySpan,
-                           c.steepnessSteps) ??
+                           c.steepnessSpan) ??
               doc;
         continue;
       }

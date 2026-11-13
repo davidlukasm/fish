@@ -992,7 +992,7 @@ int main(int argc, char **argv) {
                 << ",\"lightEffects\":[" << field::Excitation << "]"
                 << ",\"effects\":" << field::HORMONE_EFFECTS
                 << ",\"sensitivitySpan\":" << field::HORMONE_SENSITIVITY_SPAN
-                << ",\"steepnessSteps\":" << field::HORMONE_STEEPNESS_STEPS << ",\"halfRange\":["
+                << ",\"steepnessSpan\":" << field::HORMONE_STEEPNESS_SPAN << ",\"halfRange\":["
                 << field::HORMONE_HALF_MIN << ',' << field::HORMONE_HALF_MAX << "],\"sigmaRange\":["
                 << field::HORMONE_SIGMA_MIN << ',' << field::HORMONE_SIGMA_MAX
                 << "],\"reachLeast\":" << field::MIN_RANGE << ",\"roleEffects\":[";

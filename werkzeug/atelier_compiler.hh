@@ -37,7 +37,8 @@ namespace out = cppn::output;
 struct Receptor {
   bool active = false;
   float baseline = 0, sensitivity = 0, half = .05f, width = 0;
-  int substance = 0, steepness = 0;
+  int substance = 0;
+  float steepness = 0;
   float spread_receptors = 0;
 };
 struct Group {
@@ -87,7 +88,7 @@ Receptor read_receptor(std::istream &input) {
                      field::HORMONE_SENSITIVITY_SPAN) &&
              between(r.half, float(field::HORMONE_HALF_MIN), float(field::HORMONE_HALF_MAX)) &&
              r.substance >= 0 && r.substance < field::REGULATORS && between(r.width, 0, 1) &&
-             r.steepness >= 0 && r.steepness <= field::HORMONE_STEEPNESS_STEPS,
+             between(r.steepness, 0, field::HORMONE_STEEPNESS_SPAN),
          "invalid receptor properties");
   r.active = active != 0;
   ensure(between(r.spread_receptors, 0, 1), "invalid receptor spread");
@@ -509,7 +510,7 @@ public:
     assign(gate, out::capacity, r.baseline - neutral);
     assign(gate, out::field_width, r.sensitivity / field::HORMONE_SENSITIVITY_SPAN);
     assign(gate, out::threshold, half);
-    assign(gate, out::time_constant, float(r.steepness) / field::HORMONE_STEEPNESS_STEPS);
+    assign(gate, out::time_constant, float(r.steepness) / field::HORMONE_STEEPNESS_SPAN);
     assign(gate, out::quality1, std::cos(a));
     assign(gate, out::quality2, std::sin(a));
     assign(gate, out::quality_width, 2 * r.width - 1);

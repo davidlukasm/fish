@@ -2253,7 +2253,7 @@ async function checkHormoneSystems(model, capabilities) {
             'A gland that also feeds a substance that stays is kept');
   const phased =
       model.setLifePhase(doc, model.findOrgan(doc, id).centers[0].id, {start : .6, end : .9},
-                         sitesResult.sensitivitySpan, sitesResult.steepnessSteps);
+                         sitesResult.sensitivitySpan, sitesResult.steepnessSpan);
   assert.deepEqual(model.lifePhase(model.findOrgan(phased, id).centers[0]), {start : .6, end : .9});
   assert.ok(model.growsWith(doc, 0, sitesResult));
   const phaseWithColor =

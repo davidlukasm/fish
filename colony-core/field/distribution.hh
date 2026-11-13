@@ -40,8 +40,7 @@ inline HormoneReceptor receptor_parameters(const TraitValues &v) {
       hormone_affinity<REGULATORS>(v[O::quality1], v[O::quality2], (v[O::quality_width] + 1) * .5f);
   r.baseline = v[O::capacity];
   r.sensitivity = HORMONE_SENSITIVITY_SPAN * v[O::field_width];
-  r.steepness =
-      int(std::lround(HORMONE_STEEPNESS_STEPS * std::clamp(v[O::time_constant], 0.f, 1.f)));
+  r.steepness = HORMONE_STEEPNESS_SPAN * std::clamp(v[O::time_constant], 0.f, 1.f);
   r.half = float(HORMONE_HALF_MIN *
                  std::pow(HORMONE_HALF_MAX / HORMONE_HALF_MIN, (v[O::threshold] + 1) * .5));
   return r;

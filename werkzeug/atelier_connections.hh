@@ -438,14 +438,13 @@ inline float receptor_deviation(const Receptor &wanted, const field::HormoneRece
   deviation = std::max(deviation,
                        outside(half_difference, -wanted.spread_receptors, wanted.spread_receptors));
   const auto steepness = [&](float delta) {
-    return float(std::lround(
-        field::HORMONE_STEEPNESS_STEPS *
-        std::clamp(float(wanted.steepness) / field::HORMONE_STEEPNESS_STEPS + delta, 0.f, 1.f)));
+    return field::HORMONE_STEEPNESS_SPAN *
+           std::clamp(wanted.steepness / field::HORMONE_STEEPNESS_SPAN + delta, 0.f, 1.f);
   };
   return std::max(deviation,
                   outside(float(actual.steepness), steepness(-2 * wanted.spread_receptors),
                           steepness(2 * wanted.spread_receptors)) /
-                      field::HORMONE_STEEPNESS_STEPS);
+                      field::HORMONE_STEEPNESS_SPAN);
 }
 inline float trait_deviation(const Group &wanted, const field::Neuron &cell,
                              const field::Neuron &expected) {

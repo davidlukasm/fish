@@ -713,7 +713,7 @@ export class OrganStudio {
   }
   lifePhase(id, phase) {
     const c = this.state.capabilities;
-    return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSteps);
+    return setLifePhase(this.state.document, id, phase, c.sensitivitySpan, c.steepnessSpan);
   }
   removeChosen() {
     const doc = this.state.document;

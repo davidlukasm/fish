@@ -60,7 +60,7 @@ constexpr double HORMONE_HALF_MIN = .0003, HORMONE_HALF_MAX = 1;
 // A receptor's sensitivity spans HORMONE_SENSITIVITY_SPAN times its CPPN output (-1..1), so that
 // one receptor can turn an effect fully off and on: R from -1 to +1.
 constexpr float HORMONE_SENSITIVITY_SPAN = 2;
-constexpr int HORMONE_STEEPNESS_STEPS = 3;
+constexpr float HORMONE_STEEPNESS_SPAN = 3;
 using Hormones = std::array<double, HORMONES>;
 template <std::size_t N = HORMONES>
 inline std::array<float, N> hormone_affinity(float x, float y, float width) {
@@ -77,11 +77,10 @@ inline std::array<float, N> hormone_affinity(float x, float y, float width) {
 struct HormoneReceptor {
   std::array<float, REGULATORS> affinity{};
   float baseline = 0, sensitivity = 0, half = .05;
-  int steepness = 0;
+  // The answer rises with the concentration to the power 2^steepness.
+  float steepness = 0;
   float bound(double c) const {
-    double x = c / half;
-    for (int k = 0; k < steepness; ++k)
-      x *= x;
+    const double x = std::pow(c / half, std::exp2(steepness));
     return float(x / (1 + x));
   }
   float response(const Hormones &h, double maturity = 0) const {
