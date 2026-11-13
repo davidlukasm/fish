@@ -1,108 +1,61 @@
-# Leitlinie für Inspektoren (aus Davids FEEDBACK.md, 12.11.)
+# Leitlinie für Inspektoren (gültig, Stand 13.11. 18:10)
 
-Gilt für alle Inspektoren im Atelier. Jeder Inspektor behält seine eigenen Einstellungen; die Leitlinie legt nur die gemeinsame Bildsprache fest.
+Das ist die einzige Leitlinie. Ältere Fassungen sind gelöscht: VISUALISIERUNG.md, FEEDBACK.md, TEXTPRUEFUNG.md und die Bausteinliste. Sie stehen nur noch im Git-Verlauf und gelten nicht mehr. Was hier nicht steht, gilt nicht.
 
-## Bild
-- Ein Bild nur, wenn es mehr zeigt als ein Regler: einen Ablauf (Lebenslauf, Mahlzeit, Schlag), einen Zielkonflikt (mehr X kostet Y) oder einen Ort am Fisch. Ein Bild, das nur eine Zahl trägt, ist ein Regler und wird einer.
-- Gezogen wird im Bild, an dem Ding, das sich ändert. Griffe sehen aus wie Griffe; ein Griff gehört zu genau einer Einstellung.
-- Was sich nicht einstellen lässt und nicht aus einer Einstellung folgt, wird nicht gezeigt.
-- Zusammenhänge zeigen die Formen selbst (Dicke, Länge, Füllung, Zeitpunkt), nicht Legenden.
+Davids aktuelle Rückmeldung zu allen Panels steht erklärt und mit Bildern in `entwuerfe/AUFTRAG-1311.md`. Fakten aus der Engine je Organ stehen in `entwuerfe/ORGANOPTIONEN.md`.
 
-## Wörter
-- Titel und Einheit, keine Sätze. Höchstens ein Wort an einem Griff, und nur, wenn die Form es nicht schon sagt.
-- Keine Legende, die erklärt, was ein Bild zeigt. Braucht ein Bild eine Legende, ist es das falsche Bild.
-- Nur Begriffe, die man ohne Code versteht: Ei, Schlupf, erwachsen, Futter, Pflanzen, Eier, Kraft, Ausdauer. Nie: Signal, Meldung, Bauplan, Streuung, Grundantwort, Höchststärke, Kontakte im Bauplan.
-- Kein Text darf abgeschnitten werden. Was nicht passt, fliegt raus, nicht kleiner.
-
-## Bedienung
-- Ziehen mit voller Bildrate (Ziel: unter 16 ms je Bild beim Ziehen, auch bei vollem Fisch).
-- Jede Einstellung bewirkt sichtbar etwas im Bild, sofort beim Ziehen.
-- Kein Klick darf abstürzen; jedes Bedienelement wird bei der Abnahme angeklickt bzw. gezogen.
-
-## Abnahme (nicht durch den, der es gebaut hat)
-Neuer Fisch und Beispielfisch, jedes Organ: jeden Griff ziehen, jeden Knopf drücken, Bildzeit messen, Konsole prüfen, bei 320 px Inspektorbreite und 1:1 ansehen. Prüffragen: Wie viele Wörter? Ist etwas abgeschnitten? Versteht man ohne Code, was die Einstellung am Fisch ändert? Erst danach geht es an David.
-
-## Was die drei Muster-Organe laut Engine-Code einstellen
-
-### Lebenslauf einer Zelle (Zellbildung, Aktivität, Tod)
-Die Lebensachse ist die Reife des Fischs: höchstes bisher erreichtes Gewebe ÷ Gewebe des Erwachsenen (`physiology.hh:body_maturity`), von 0 (Ei) über den Schlupf bis 1 (erwachsen). Bei welcher Reife ein Fisch schlüpft, hängt von der Eigröße ab (`hatch_tissue`).
-- **Bildung** (`substrate.cc:grow`): Eine noch nicht gebaute Zelle wächst, solange ihre Antwort > 0 ist, mit der Geschwindigkeit Antwort ÷ Zellzeit; bei 1 wird sie gebaut, wenn Energie da ist. Ohne Einstellung baut sie von Anfang an.
-- **Aktivität** (`substrate.cc:733`): Die Zelle wirkt mit ½·(1 + Antwort). Bei −1 ist sie also aus, bei 0 halb, bei +1 voll. Damit lässt sich eine Zelle abschalten, ohne dass sie stirbt.
-- **Tod** (`substrate.cc:571`): Die Zelle stirbt, sobald ihre Antwort über ½ steigt.
-- Jede Antwort ist ein Übergang von einem Anfangs- zu einem Endwert (`hormones.hh:HormoneReceptor`), ausgelöst durch Reife, Reserve, Erschöpfung oder einen der sechs Botenstoffe. Breite Rezeptoren mischen die Stoffe entsprechend ihrer Bindung.
-- Daraus folgt das Bild: drei Spuren über der Lebensachse Ei | Schlupf | erwachsen. Jede Spur hat ihren Anfangswert, ihren Endwert und einen Umschaltpunkt. Hängt eine Spur an einem Botenstoff statt an der Reife, wird ihre Achse zum Pegel dieses Stoffs.
-
-### Darm
-- **Länge:** Das Gen 0 bis 1 ergibt exponentiell 0,5 bis 4 Körperlängen (`gut_size`). Länger bedeutet mehr Fassungsvermögen und längere Verweildauerskala (`gut_capacity`, `gut_transit`); bei `gut_time=200` sind das ruhend 100 bis 800 Schritte. Diese Skala ist keine Wartefrist: Nahrung wird sofort aufgeschlossen, ab dem zweiten Verdauungsschritt aufgenommen.
-- **Ertrag:** `gut_yield` beschreibt Aufschluss, Aufnahme, Verderb und Abgang. Pflanzen brauchen lange Verweilzeiten; tierisches Futter verdirbt bei zu langer Passage. Algen, Mischfutter und Plankton liegen dazwischen. Flocken sind mild und lösen keine Bauchschmerzen aus, werden aber nicht automatisch vollständig aufgenommen. Die laufende Engine berücksichtigt zusätzlich Füllung, Reservemangel bzw. volle Reserve und Durchfall; die Ertragskurve ist deshalb kein vollständiger Fischversuch.
-- **Preis der Länge:** Der Darm erhöht den körperlichen Grundumsatz um 0,1 × seine Länge (bis +40 %), bringt Wandmasse mit und nimmt dem Eiorgan Bauchraum (`belly_room`, bis 25 % weniger Platz). Die Länge verändert damit auch, wie viel Dotter ein Ei höchstens bekommen kann.
-- **Darmmuskel:** `gut_speed` erreicht bei großer Muskelkraft höchstens das Vierfache als Mittel über volle Zuckungen. Die momentane Passage schwankt mit der Zuckung (`gut_pace`, doppelte Pose). Das macht Platz und verkürzt die Verweildauer. Unaufgeschlossen ausgeschiedene Pflanzen und verdorbenes tierisches Futter reizen den Darm (`gut_irritation`): Durchfall und Gesundheitsschaden.
-- **Drei Meldungen:** Dehnungszellen melden Füllung, Futterzellen den erwarteten verwertbaren Anteil gerade geschluckter Nahrung im Verhältnis zum Ruhebedarf (klingt rasch ab), Schmerzzellen innen melden Bauchweh. Die Energiereserve gehört zum Blut- und Hormonsinn. Bauchweh verwendet die normale Intensitätsantwort mit Gewöhnung; Dehnung die begrenzte Antwort ohne Gewöhnung.
-- **Wachstum:** Das Fassungsvermögen wächst mit dem Körper, wegen der Mindestkapazität erst oberhalb 25 Gewebe. Die relative Darmlänge wird beim Bau aus den Intake-Zellen bestimmt und bleibt bislang lebenslang gleich. Der Darmmuskel kann sich durch Zellgeburt und Aktivitätsrezeptoren mit der Reife verändern; eine echte Entwicklung der relativen Darmlänge ist noch nicht umgesetzt.
-- **Bild:** Eine Mahlzeit je Futterart wandert durch den Darm; Aufnahme und Verluste folgen ihrer Verweildauer. Bauchraum, Grundumsatz und Ertrag müssen gemeinsam mit der Länge sichtbar sein. Die drei Sinnesgruppen erhalten eigene Reizantworten.
-
-### Schwanzflosse und Schwanzmuskeln
-- **Zuckung** (`body_plan.cc:stroke_step`): Ein Muskel zuckt, wenn er ausgeruht ist und sein Antrieb die Schwelle erreicht (in der Welt fest 0,2, `stroke_threshold`). Die Kraft folgt dem Antrieb, ein Stoß dauert eine Zuckung.
-- **Fasertyp** (`muscle_fibre.hh`): schnelle Fasern geben den stärksten und kürzesten Stoß und ruhen am billigsten, ermüden aber nach etwa 40 Schritten Vollgas und brauchen Hunderte zur Erholung. Langsame Fasern arbeiten am billigsten und ermüden nie.
-- **Zellen**: mehr Zellen ergeben mehr Kraft und kosten mehr Unterhalt.
-- **Schlängeln** (`movement.cc:93`): Ein schlängelnder Körper kommt im Sand leichter voran (Widerstand 3 statt 12), verliert dafür im freien Wasser Schub.
-- Daraus folgt das Bild: ein Schwanzschlag über der Zeit, Kraft und Dauer je Faseranteil, dazu Ermüdung bei Dauerschwimmen. Beim Schlängeln: Tempo im Wasser gegen Tempo im Sand.
-
-## Prüfung vor David (David 13.11. 01:59: „würdet ihr auch diese Unzulänglichkeiten in der Modellierung bemängeln? Und dann noch genau das Visuelle auch überdenken?“)
-Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2, ein anderer (Astra) prüft 2 erneut mit dem Auftrag, Mängel zu finden, nicht zu bestätigen.
-
-### 1. Modellkritik (vor dem Zeichnen, Funde als Frage an Fable)
-- Hat jede Einstellung einen Vorteil **und** einen Nachteil? Gibt es eine Einstellung, die immer besser ist?
-- Hat jede Nische (Futter, Lebensweise) ein eigenes Fenster, scharf genug, dass Spezialisten sich lohnen?
-- Wird etwas gemittelt, gerundet, gestuft oder zusammengezählt, was einzeln wirken müsste (Knoten, Zellen, Fasern)?
-- Was würde ein echter Fisch hier anders machen? Was würde ein Spieler unlogisch finden?
-- Passen die Zeitskalen zusammen (Sinn, Verdauung, Bewegung)?
-
-### 2. Bildkritik (an Davids Rückmeldungen)
-- Ist das Ding selbst das Diagramm (Lebensphasen, Fisch, Darm), nicht eine Legende daneben?
-- Liegen Kurven über dem Ding, dünn, nicht aufdringlich?
-- Fallen Werte, die zusammengehören, auf einen Griff (Entstehen = Beginn der Aktivität)?
-- Folgt jeder Griff der Maus, hat er mindestens 40 px Weg, verschwindet er nie, auch bei Extremwerten?
-- Sieht ein Griff nicht aus, als gehöre er zu einer anderen Kurve?
-- Werden Bilder beim Ziehen nicht neu erzeugt (sonst reißt das Ziehen ab)?
-- Gleichartige Wahl nebeneinander, Zusammengehöriges gruppiert, Zwischenüberschriften als solche erkennbar?
-- Namen statt Buchstaben (Botenstoffe), unbenutzte Dinge erkennbar (gestrichelt) und anlegbar?
-- Kein Text, den eine Form sagen könnte; keine hässlichen Wörter („300 Schritte Vollgas“).
-- Ist ganz ausgegraut, was gerade nichts steuert?
-
-## Gemeinsame Bausteine (aus den drei Muster-Inspektoren, Stand 13.11. 03:16)
-- **Zwischenüberschrift mit Querstrich** über jedem Abschnitt (Auslöser, Lebensphasen, Verdauung, Ertrag je Futter, Muskelknoten, Rekrutierung, Ausdauer, Nische, Schmerzzellen …); Stoffabschnitte mit Farbpunkt und Namen („Tod durch Laichzeit“, „Lebenszyklus durch …“).
-- **Das Ding als Diagramm:** Lebensphasen (Ei, Jungfisch, erwachsen) als Feld, Fisch mit Darm oder Muskelknoten als Bild; Kurven dünn darüber.
-- **Strichlinie als Griff** für einen Zeitpunkt, eine Mitte oder eine Vorschau (Schaltpunkt, Verweildauer-Mitte, Befehl, Schlängeln); sie ragt über das Diagramm hinaus.
-- **Kugel** für einen Wert an einem Ort (Anfang/Ende der Aktivität, Füllstufe), **Kugel mit Kreuz** für Tod, **Dreieck auf der Achse** für eine Schwelle, **Balken mit zwei Enden** für eine Spanne.
-- **Sinneszellen** immer als „Meldung an das Gehirn“ über dem Reiz (Dehnung, Schmerz, Nährstoff), Griff „Empfindlichkeit“, wo nötig „Gewöhnung“.
-- **Schraffur** für Zeiten, in denen etwas nicht da ist (vor Entstehen gelbgrau, nach Tod rotgrau); **rot gestrichelter Rahmen** für Schaden (Bauchschmerzen); **abgedeckt mit Satz**, wenn ein Bild gerade nichts steuert.
-- **Knöpfe mit Text** für Hinzufügen/Entfernen („+ Knoten“), Segmentknöpfe nebeneinander für gleichrangige Wahl, Häkchen für „selbst steuern“; Auswahl im Knopf mit eigenem Menü statt Systemauswahl.
-- **Unbenutztes gestrichelt** und anlegbar (Botenstoffe); Namen statt Buchstaben.
-- **Skalen wachsen mit** statt überzulaufen; unbeschriftete Gitterlinien zeigen, dass skaliert wird.
-- Animationen ruhig (Darm: 100 Schritte in 2 s).
-- **Reizstreifen** unter jeder „Meldung an das Gehirn": der Reiz selbst über die Zeit (wann er kommt und geht), darin die Schwellen der Gruppen als Strichlinien und die Spreizung ihrer Zellen als Band; kein „Stop" bei Sinnen.
-- **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`, Skripte unter `scratchpad/traces/`), nie aus einer JS-Nachahmung der Nervendynamik; Einstellungen, die die Engine nur in Stufen gelaufen ist, rasten auf diesen Stufen ein. Lagen (Schwimmen, Lenken, Schmerz …) als Segmentknöpfe, darunter die Eingänge als Streifen.
-- **Eine Zelle allein** (Nervenzelle) darf genau nach `substrate.cc` nachgerechnet werden, solange Lernen und Botenstoffe nicht mitspielen.
-- **Wirkungslose Einstellungen** bekommen keinen Griff; sie gehen als Befund an David (Liste in KOORD, Befunde 1–14).
-
-## Uhrzeit
-- Jede Zeitangabe (KOORD, Berichte an David) kommt aus der Konsole: `TZ=Europe/Vienna date +%H:%M`. Nie raten (David 05:49).
-
-## Entwurfsfische sind veraltet (David 13.11. 15:50)
-
-Kein Fisch in `genomes/entwuerfe` ist für die heutige Engine gebaut (Stand vor dem 12.11., seither nur
-maschinell angeglichen). Hecht war nie lebensfähig. Keine Aquarium- oder Verhaltensmessung an
-einem Entwurf, bevor sein Bauplan generalüberholt und im Atelier angesehen ist. Ein Befund aus
-einem veralteten Fisch ist kein Befund über die Engine. Siehe `genomes/entwuerfe/README.md`.
-Hauptaufgabe sind die Inspektoren.
-
-
-## Musterverbot (David 13.11. 18:01)
+## 1. Musterverbot (David 13.11. 18:01)
 
 „Ihr müsst euch gegenseitig verbieten, in Muster oder Templates zu fallen. Erinnert euch regelmäßig an die guten Beispiele und den Kontrast zwischen zwei oder drei der guten Beispiele!“
 
-- **Gute Beispiele:** Darm und Schwanz. Das Bild `bilder/2026-11-13_feedback/gut_darm-neben-schwanz.png` vor jedem Entwurf öffnen.
-- **Das verbotene Muster:** Organskizze, „Meldung an das Gehirn“, Schwellenregler und Zellenzahl. Siehe `kontrast_darm-neben-gleichgewicht.png`.
-- **Vorgehen:** Ablauf und Abnahme stehen in `entwuerfe/AUFTRAG-1311.md`, Abschnitt 3. Wer prüft, nennt das Element, das es nur bei diesem Organ gibt. Gibt es keines, ist der Entwurf abgelehnt.
-- **Rückmeldungen Davids gibt man nie wörtlich weiter.** Man erklärt sie mit Bildern und mit dem Zusammenhang aus dem Chat. Fable und Astra kennen den Chat nicht, und Astra kann die Entwurfsseite nicht im Browser öffnen.
+- **Gute Beispiele:** Darm und Schwanz in `bilder/2026-11-13_feedback/gut_darm-neben-schwanz.png`. Vor jedem Entwurf ansehen. Sie sind völlig verschieden aufgebaut und folgen doch denselben Gedanken (siehe 2).
+- **Verbotenes Muster:** Organskizze, „Meldung an das Gehirn“, senkrechter Schwellenregler, Zellenzahl, Schieberegler darunter, Untertitel. Siehe `kontrast_darm-neben-gleichgewicht.png`. In dieses Muster sind ab dem 13.11. früh alle neuen Panels gefallen. David: „1000 Welten.“
+- **Vor dem Zeichnen** schreibt man drei Sätze in KOORD:
+  - Was bringt das Organ dem Fisch?
+  - Was kostet es?
+  - Wie ändert es sich über das Leben?
+- **Abnahme durch einen anderen:** Wer prüft, nennt das Element, das es nur bei diesem Organ gibt. Gibt es keines, ist der Entwurf abgelehnt. Der Entwurf wird dafür als PNG neben Darm und Schwanz gelegt.
+
+## 2. Was ein gutes Panel ausmacht
+
+1. **Das Organ selbst ist das zentrale Bild**, und man bedient es dort. Beim Darm sind es Magen und Schlingen, beim Schwanz der Muskel mit den Faserbändern. Was die App schon gut zeigt, wird mitbenutzt: die Strömung im Fischpanel, die Sehbilder des Auges, die Geruchskarte.
+2. **Wirkung statt Wert:** Gezeigt wird, was eine Einstellung beim Fisch bewirkt, nicht ihr Rohwert. Die Zellenzahl ist nie das Thema, sondern das, was mehr Zellen bewirken. Eine Zahl, eine Punktreihe oder Kugeln allein reichen nicht.
+3. **Nutzen und Kosten oben**, als knappe Kopfzeile: „Räuber · +15 % Ruhebedarf · +7 % Gewicht“.
+4. **Lebensphasen gehören zu jedem Organ:** Ei, Schlupf, erwachsen. Wie ändert sich das Organ über das Leben? Im Ei frisst ein Fisch nichts.
+5. **Jede Frage bekommt ihre eigene, passende Diagrammart.** Mehrere Bilder sind erlaubt. Zusammen gehört, was zusammenhängt, und zwar weder alles in ein Bild noch alles zerstückelt.
+6. **Eingänge über dem Diagramm, das ihre Wirkung zeigt:** Befehl, Bauchweh, Reiz. Das Ergebnis, etwa die Meldung an das Gehirn, steht darunter. Was ein Eingang ist und was eine Einstellung des Organs, muss erkennbar sein.
+7. **Alle Optionen, die die Engine bietet**, sind erreichbar. Vorher im Code nachlesen, mit Datei und Zeile, nie aus Namen oder .md-Dateien raten. Was keine Wirkung hat, bekommt keinen Griff, sondern wird ein Befund.
+8. **Zellgruppen bedient man wie beim Darm:**
+   - Man wählt sie im Organbild, im Regler und im Diagramm gleichermaßen.
+   - (+) fügt eine Gruppe hinzu, (−) nimmt eine Zelle weg, (×) entfernt die Gruppe.
+   - Die Bedienung ist innerhalb eines Panels einheitlich.
+9. **Nur anatomisch Mögliches lässt sich einstellen.** Stacheln an Maul, Auge und Schwanz zugleich, ein Flossenblatt senkrecht nach unten oder ein Biss, der nicht schnappen kann, darf es nicht geben.
+10. **Verbindungen zu anderen Organen zeigen:** Kiemen, Maul und Kiefer gehören zum Darm, die Flossen zur Wirbelsäule. Man soll in den Inspektor des anderen Organs wechseln und es mit einem Klick verbinden können.
+
+## 3. Bedienung
+
+- **Direkt im Bild bedienen, an Griffen an der Wirkung.** Keine Schieberegler als Standard („HASS“), keine Zahlenfelder, keine Auswahllisten, keine Knopfreihen, die getrennte Varianten vortäuschen, die es nicht gibt.
+- **Jeder Griff hat sichtbar Wirkung, sofort beim Ziehen.** Skalen passen sich während des Ziehens an, in beide Richtungen und nicht erst beim Loslassen. Nichts verschwindet, auch nicht für ein paar Frames.
+- **Ein Griff gehört zu genau einer Einstellung.** Ein Griff, der nur wirkt, wenn ein anderer nicht auf 0 steht, ist falsch. Griffe nur für die Anzeige eines anderen Bildes gibt es nicht.
+- **Flüssig:** Beim Ziehen wird nur das betroffene Bild neu gezeichnet. Kein Klick darf abstürzen.
+- **Nichts Fitzeliges:** Ränder und Übergänge brauchen genug Fläche, kleine Ziele werden größer, Griffe liegen weit genug auseinander.
+
+## 4. Wörter
+
+- **Namen sagen, was etwas bewirkt, nicht was es ist:** „Sättigungsgefühl“ statt „Füllzellen“, „Seitenflossen“ statt „Flossen“.
+- **Keine Untertitel unter dem Organnamen.** Keine Sätze, die das Bild beschreiben, und keine Erklärungen im Tooltip, das wäre ein „Cheat“.
+- **Erlaubt** sind Achsenwörter, Legenden und einzelne Kontextwörter. Kleine Schrift (8–9 pt) ist in Ordnung, es gibt keine Mindestgrößen. Kein Text darf abgeschnitten sein oder sich überlagern.
+- **„Schritte“ nur an echten Zeitachsen**, nicht doppelt und nicht auf Achsen, die keine Zeit zeigen.
+- **Unbekannte Wörter vermeiden:** keine erfundenen wie „Rückhub“, „Schub je Hub“ oder „Investition“, keine Modellwörter wie „Bauplan“, „Streuung“ oder „Höchststärke“, und das Wort „Beispiel“ nur, wenn es nötig ist.
+- **Biologische Fachwörter sind erlaubt**, etwa Tectum, Rezeptor, Schwelle. Gemeint sind mit der Regel nur Wörter, die erst durch unseren Code eine Bedeutung bekommen.
+- Alle Texte stehen in `ui/text/de`.
+
+## 5. Arbeitsweise
+
+- **Absicht verstehen, nicht wörtlich umsetzen.** Nicht ins Gegenteil kippen, und nichts wieder einbauen, was David schon verworfen hat. Vorgänger findet man mit `git log -S`.
+- **Echte Größe:** Geprüft wird im Browser bei 320 px Panelbreite und 1:1. Das Panel ist hochkant, also wird untereinander gebaut und die volle Breite genutzt, nicht rechtsbündig.
+- **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`), nie aus einer JS-Nachahmung der Nervendynamik.
+- **Davids Rückmeldungen nie wörtlich an andere weitergeben.** Sie gehen an den, mit dem er spricht, und beziehen sich auf dessen Chat. Weitergegeben wird erklärt, mit Bildern als PNG in `bilder/`, denn Astra kann HTML-Entwürfe nicht im Browser öffnen.
+- **Uhrzeiten nie raten**, sondern immer aus der Konsole: `TZ=Europe/Vienna date +%H:%M`.
+- **Entwurfsfische sind veraltet:** Kein Fisch in `genomes/entwuerfe` passt zur heutigen Engine, und Hecht war nie lebensfähig. Keine Messung an einem Entwurf, bevor sein Bauplan generalüberholt und angesehen ist. Hauptaufgabe sind die Inspektoren.
+- **Lernen ist Hirnentwicklung:** Reifung und Hormone gehören dazu. Die Festigung bestimmt der Fisch selbst, evolutionär und dynamisch. Fehlt ein Baustein, ist das eine Baustein-Frage, nicht automatisch ein Fehler der Engine.
