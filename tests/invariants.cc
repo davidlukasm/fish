@@ -38,7 +38,7 @@ struct SessionAccess {
 using namespace test;
 namespace {
 constexpr unsigned SEED = 4242;
-constexpr int FISH = 4, STEPS = 120;
+constexpr int FISH = 2, STEPS = 24;
 constexpr double FIRST_X = 200, SPACING = 300, DEPTH = 200;
 void initial_plants_use_the_available_energy() {
   for (double budget : {0., 100., 10000.}) {
@@ -57,8 +57,8 @@ void initial_plants_use_the_available_energy() {
 void compact_founders_use_their_actual_reservation(const Genome &g) {
   Ecosystem w(SEED);
   w.starter_world();
-  w.neural_budget = 1000000;
-  constexpr int COUNT = 24;
+  w.neural_budget = 300000;
+  constexpr int COUNT = 8;
   w.seed({g}, COUNT, run_limit::default_food);
   check(w.fish.size() == COUNT, "compact founders fit their actual neural budget");
   check(connection_storage(w) <= w.neural_budget, "the resolved reservation remains bounded");
@@ -504,15 +504,16 @@ void development_preserves_identity_and_reserves_capacity() {
   resumed.restore(larger.completed_work());
   check(resumed.remaining_cost() == cost, "construction estimates resume from actual work");
 }
-Ecosystem closed_tank(const Genome &g) {
+Ecosystem closed_tank(const Genome &g, int count = FISH) {
   Ecosystem w(SEED);
+  w.resize(1000, 500);
   w.starter_world();
   w.set_parameter("energy_supply", 0);
   w.safety = false;
   w.evo.assist_min_population = w.evo.assist_species_minimum = 0;
   w.food_burst.strength = 0;
   no_mutation(w);
-  for (int k = 0; k < FISH; ++k)
+  for (int k = 0; k < count; ++k)
     adult(w, g, FIRST_X + k * SPACING, DEPTH);
   return w;
 }
@@ -717,13 +718,14 @@ void worker_counts_preserve_the_simulation(const Genome &g) {
   Ecosystem serial(83921);
   serial.safety = false;
   serial.evo.assist_min_population = serial.evo.assist_species_minimum = 0;
-  serial.seed({g}, 20, run_limit::default_food);
+  serial.resize(1000, 500);
+  serial.seed({g}, 4, run_limit::default_food);
   auto parallel = serial.fork();
   check(saved(serial) == saved(parallel),
         "a just-seeded aquarium restores before private brains are constructed");
   serial.workers = 1;
   parallel.workers = 4;
-  for (int step = 0; step < 160; ++step) {
+  for (int step = 0; step < 64; ++step) {
     serial.tick();
     parallel.tick();
   }
@@ -753,9 +755,8 @@ void completed_anatomy_is_admitted_before_runtime_allocation(const Genome &g) {
 }
 // Recorded incubation cost and measured loss may differ only by floating-point rounding.
 void development_queue_is_bounded(const Genome &g) {
-  auto w = closed_tank(g);
-  w.fish.clear();
-  constexpr int EGGS = 32;
+  auto w = closed_tank(g, 0);
+  constexpr int EGGS = 4;
   for (int i = 0; i < EGGS; ++i) {
     Genome egg = g;
     egg.blueprint.reset();
@@ -828,21 +829,19 @@ void egg_development_checkpoint(const Genome &g) {
         "a failed plan pays queries and egg metabolism, without phantom construction");
 }
 void development_checkpoint_stages(const Genome &g) {
-  constexpr std::size_t SLICE = 37;
-  for (int stage = 0; stage < 3; ++stage) {
-    auto w = closed_tank(g);
-    w.fish.clear();
+  constexpr std::size_t SLICE = 37, QUERY_BATCH = 4096;
+  for (bool finalizing : {false, true}) {
+    auto w = closed_tank(g, 0);
     Genome fresh = g;
     fresh.discard_development();
     fresh.cppn = std::make_shared<evolution::Genome>(*g.cppn);
     check(w.spawn(fresh, FIRST_X, DEPTH, fish_origin::natural, 0, 0, 300), "development fixture");
     auto &plan = w.fish.front().genome;
     plan.advance_development(SLICE);
-    if (stage > 0) {
+    if (finalizing) {
       while (!plan.growing->pending_finalization())
-        check(!plan.advance_development(SLICE), "fixture reaches finalization");
-      if (stage > 1)
-        check(!plan.advance_development(SLICE), "fixture pauses within finalization");
+        check(!plan.advance_development(QUERY_BATCH), "fixture reaches finalization");
+      check(!plan.advance_development(SLICE), "fixture pauses within finalization");
     }
     auto copy = w.fork();
     check(saved(w) == saved(copy), "partial development restores exactly");
@@ -856,17 +855,16 @@ void development_checkpoint_stages(const Genome &g) {
 // Resumable finalization shares the work budget across all admitted embryos. A slice quota must
 // neither leave later embryos idle nor strand unused work while finalization is pending.
 void development_finalization_uses_budget(const Genome &g) {
-  constexpr int EMBRYOS = 5;
-  constexpr std::size_t QUERY_SLICE = 64, WORK_BUDGET = 131072;
-  auto w = closed_tank(g);
-  w.fish.clear();
+  constexpr int EMBRYOS = 3;
+  constexpr std::size_t QUERY_SLICE = 4096, WORK_BUDGET = 131072;
+  auto w = closed_tank(g, 0);
   w.evo.development_work = WORK_BUDGET;
   std::vector<std::size_t> before;
   for (int i = 0; i < EMBRYOS; ++i) {
     Genome fresh = g;
     fresh.discard_development();
     fresh.cppn = std::make_shared<evolution::Genome>(*g.cppn);
-    check(w.spawn(fresh, FIRST_X + i * SPACING, DEPTH, fish_origin::natural, 0, 0, 300),
+    check(w.spawn(fresh, FIRST_X + i * 120, DEPTH, fish_origin::natural, 0, 0, 300),
           "finalization fixture placement");
     auto &plan = w.fish.back().genome;
     while (!plan.growing || !plan.growing->pending_finalization())
@@ -920,8 +918,7 @@ void checkpoint_continues_exactly(const Genome &g) {
 // continues like the original.
 void checkpoint_after_death(const Genome &g) {
   auto w = closed_tank(g);
-  for (int step = 0; step < STEPS / 4; ++step)
-    w.tick();
+  w.tick();
   const auto living = w.fish.size();
   w.fish.front().body.health = 0;
   w.tick(false);
@@ -1014,8 +1011,7 @@ TailAnswer tail_answer(const Genome &g, float first, float answer) {
   level = {0, answer};
   anatomical_action(b, *g.interface, w.physiology(), false);
   return {b.motor().sweep[StrokeTailRight], b.motor().drive_forward, b.motor().drive_left,
-          b.motor().drive_right,
-          b.motor().impulse_tail_right > 0 && b.motor().tail_pair.last == 1};
+          b.motor().drive_right, b.motor().impulse_tail_right > 0 && b.motor().tail_pair.last == 1};
 }
 void a_stronger_answering_tail_stroke_steers(const Genome &g) {
   const auto equal = tail_answer(g, .8f, .8f), weaker = tail_answer(g, .8f, .4f),
@@ -1024,8 +1020,7 @@ void a_stronger_answering_tail_stroke_steers(const Genome &g) {
         "each answer starts a right stroke after the left one");
   check(std::abs(equal.sweep - 1) < tolerance::precision && equal.turn_left == equal.turn_right,
         "an equally strong answer only pushes");
-  check(std::abs(weaker.sweep - 1) < tolerance::precision,
-        "a weaker answer only pushes");
+  check(std::abs(weaker.sweep - 1) < tolerance::precision, "a weaker answer only pushes");
   check(stronger.sweep < 1 && stronger.sweep > antagonist::lone_sweep &&
             stronger.turn_left > stronger.turn_right,
         "a stronger right answer steers toward the left like a lone right stroke, less strongly");

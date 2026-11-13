@@ -9,7 +9,6 @@ jobs:
     timeout-minutes: 25
     env:
       BUILD_JOBS: "3"
-      TEST_JOBS: "2"
       LTO: "0"
       NATIVE: "0"
       CLANG_FORMAT: clang-format-18
@@ -20,6 +19,6 @@ jobs:
       - name: Verify formatting
         run: ./format.sh
       - name: Build
-        run: ./build.sh
+        run: ./build.sh all checks
       - name: Tests and engine/Studio contract
         run: ./test.sh

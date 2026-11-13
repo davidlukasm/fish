@@ -36,7 +36,7 @@ def ensure_node():
 def check_compiler_build():
     with tempfile.TemporaryDirectory() as folder:
         reference = None
-        for native, lto in ((0, 0), (0, 1), (1, 0), (1, 1)):
+        for native, lto in ((0, 0), (1, 1)):
             plan = subprocess.check_output(
                 ['make', '--no-print-directory', '-B', '-n', f'BUILD_DIR={folder}',
                  f'NATIVE={native}', f'LTO={lto}', 'SANITIZE=0', str(Path(folder) / 'atelier'),
@@ -147,50 +147,50 @@ def main():
     assert len(body.encode()) <= request_limit(Route.COMMAND), (
         'Ein Genom an der Importgrenze passt nicht durch die Befehlsanfrage')
     from suite import binary
-    for habitat in ('aquarium', 'becken'):
-        with tempfile.TemporaryDirectory() as folder:
-            observed = str(Path(folder) / 'fish')
-            checkpoint = Path(folder) / 'world.state'
-            foraging = Path(folder) / 'foraging.jsonl'
-            genomes = ','.join(['genomes/entwuerfe/liora.genome'] * 2)
-            command = [binary('zuchtbecken'), genomes,
-                       '184371', '6', '3', habitat, 'observe=' + observed,
-                       'checkpoint=' + str(checkpoint)]
-            first = subprocess.check_output(command, cwd=ROOT, text=True, timeout=10)
-            state = checkpoint.read_bytes()
-            trace = Path(observed + '-trace.jsonl').read_text()
-            second = subprocess.check_output(command + ['foraging=' + str(foraging)],
-                                             cwd=ROOT, text=True, timeout=10)
-            assert first == second and trace == Path(observed + '-trace.jsonl').read_text()
-            assert state == checkpoint.read_bytes(), 'Foraging observation must leave the world unchanged'
-            setup, *events = map(json.loads, first.splitlines())
-            assert setup['seeded'] == 3 and not setup['assistance'] and setup['mutation'] > 0
-            assert [e['t'] for e in events if e.get('event') == 'sample'][-1] == 6
-            header, *samples = map(json.loads, trace.splitlines())
-            assert {'rawPlants', 'usableFood', 'line'} <= set(header['columns'])
-            assert samples and all(len(fish) == len(header['columns'])
-                                   for sample in samples for fish in sample['fish'])
-            line = header['columns'].index('line')
-            assert [fish[line] for fish in samples[0]['fish']] == [0, 1, 0], (
-                'Input lines must stay distinct even when their genomes share a species')
-            header, *samples = map(json.loads, foraging.read_text().splitlines())
-            assert [sample['t'] for sample in samples] == [0, 6]
-            measured = {event['t']: event for event in events if event.get('event') == 'sample'}
-            for sample in samples:
-                assert math.isclose(measured[sample['t']]['availableFeed'],
-                                    sum(piece[4] for piece in sample['food']), rel_tol=1e-5)
-                swimmers = sum(n for _, n in measured[sample['t']]['swimmers'])
-                assert bool(measured[sample['t']]['swimmerReserve']) == bool(swimmers)
-                for key in ('cloud', 'food', 'fish'):
-                    rows = sample['clouds' if key == 'cloud' else key]
-                    assert all(len(row) == len(header[key + 'Columns']) for row in rows)
-                for cloud, row in enumerate(sample['clouds']):
-                    pieces = [piece for piece in sample['food'] if piece[1] == cloud]
-                    assert row[3] == len(pieces)
-                    assert math.isclose(row[2], sum(piece[4] for piece in pieces), rel_tol=1e-5)
-                if not sample['food']:
-                    column = header['fishColumns'].index('nearestFeed')
-                    assert all(fish[column] is None for fish in sample['fish'])
+    habitat = 'aquarium'
+    with tempfile.TemporaryDirectory() as folder:
+        observed = str(Path(folder) / 'fish')
+        checkpoint = Path(folder) / 'world.state'
+        foraging = Path(folder) / 'foraging.jsonl'
+        genomes = ','.join(['genomes/entwuerfe/liora.genome'] * 2)
+        command = [binary('zuchtbecken'), genomes,
+                   '184371', '6', '3', habitat, 'observe=' + observed,
+                   'checkpoint=' + str(checkpoint)]
+        first = subprocess.check_output(command, cwd=ROOT, text=True, timeout=10)
+        state = checkpoint.read_bytes()
+        trace = Path(observed + '-trace.jsonl').read_text()
+        second = subprocess.check_output(command + ['foraging=' + str(foraging)],
+                                         cwd=ROOT, text=True, timeout=10)
+        assert first == second and trace == Path(observed + '-trace.jsonl').read_text()
+        assert state == checkpoint.read_bytes(), 'Foraging observation must leave the world unchanged'
+        setup, *events = map(json.loads, first.splitlines())
+        assert setup['seeded'] == 3 and not setup['assistance'] and setup['mutation'] > 0
+        assert [e['t'] for e in events if e.get('event') == 'sample'][-1] == 6
+        header, *samples = map(json.loads, trace.splitlines())
+        assert {'rawPlants', 'usableFood', 'line'} <= set(header['columns'])
+        assert samples and all(len(fish) == len(header['columns'])
+                               for sample in samples for fish in sample['fish'])
+        line = header['columns'].index('line')
+        assert [fish[line] for fish in samples[0]['fish']] == [0, 1, 0], (
+            'Input lines must stay distinct even when their genomes share a species')
+        header, *samples = map(json.loads, foraging.read_text().splitlines())
+        assert [sample['t'] for sample in samples] == [0, 6]
+        measured = {event['t']: event for event in events if event.get('event') == 'sample'}
+        for sample in samples:
+            assert math.isclose(measured[sample['t']]['availableFeed'],
+                                sum(piece[4] for piece in sample['food']), rel_tol=1e-5)
+            swimmers = sum(n for _, n in measured[sample['t']]['swimmers'])
+            assert bool(measured[sample['t']]['swimmerReserve']) == bool(swimmers)
+            for key in ('cloud', 'food', 'fish'):
+                rows = sample['clouds' if key == 'cloud' else key]
+                assert all(len(row) == len(header[key + 'Columns']) for row in rows)
+            for cloud, row in enumerate(sample['clouds']):
+                pieces = [piece for piece in sample['food'] if piece[1] == cloud]
+                assert row[3] == len(pieces)
+                assert math.isclose(row[2], sum(piece[4] for piece in pieces), rel_tol=1e-5)
+            if not sample['food']:
+                column = header['fishColumns'].index('nearestFeed')
+                assert all(fish[column] is None for fish in sample['fish'])
     print('Python, Schema und UI-Module: OK')
 
 

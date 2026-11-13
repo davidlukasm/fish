@@ -29,8 +29,9 @@ OBJECTS := $(addprefix $(BUILD_DIR)/obj/,$(SOURCES:.cc=.o))
 LDLIBS += -ldl
 CORE_OBJECTS := $(filter-out $(BUILD_DIR)/obj/src/main.o,$(OBJECTS))
 .DELETE_ON_ERROR:
-.PHONY: all diagnostics objects FORCE
+.PHONY: all checks diagnostics objects FORCE
 all: $(BUILD_DIR)/fish $(BUILD_DIR)/atelier
+checks: $(BUILD_DIR)/atelier $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/invariants-tests $(BUILD_DIR)/compiler-tests
 diagnostics: $(BUILD_DIR)/zuchtbecken $(BUILD_DIR)/verhaltenslabor
 objects: $(OBJECTS)
 

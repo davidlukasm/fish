@@ -1545,8 +1545,8 @@ void anatomical_action(Body &b, const BrainInterface &layout, const PhysiologyPa
   // drifts back as the jaw springs back, so from rest either of its muscles sweeps it fully. The
   // tail rests straight in the middle of its sweep: one flank from there sweeps it half way.
   // A tail flank that answers more strongly than the other flank's last stroke is in part a lone
-  // stroke: its excess bends the body and steers, the rest sweeps. Answering with nothing before it,
-  // it would be a lone stroke; equally strong strokes only push.
+  // stroke: its excess bends the body and steers, the rest sweeps. Answering with nothing before
+  // it, it would be a lone stroke; equally strong strokes only push.
   const auto antagonists = [&](AntagonistPair &pair, int first, int second, double from_rest,
                                std::array<double, 2> *started_with = nullptr) {
     const std::array<int, 2> muscles{first, second};

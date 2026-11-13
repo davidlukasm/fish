@@ -33,7 +33,7 @@ Sinneszellen messen örtliches Licht oder Nähe, Duft, Wasserbewegung, Berührun
 
 ## Prüfung
 
-`./build.sh`: Programme bauen. `./test.sh`: Prüfungen mit 60-s-Zeitgrenze, `--only invariants` prüft eine. Nur die dafür benötigten Programme werden gebaut; `--only texts` braucht keinen C++-Build. Prüft Energieerhaltung, Speicherstände, UI-Verknüpfungen und Texte. `make objects`: nur kompilieren. `./format.sh --write`: clang-format 18, unter NixOS holt es nix-shell; fehlt es, überspringt `./test.sh` die Formatprüfung. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
+`./build.sh` baut das Programm, `./build.sh checks` die Prüfprogramme. `./test.sh` prüft Engine und Oberfläche in insgesamt höchstens 20 Sekunden. `--only texts` braucht nur Node.js. `make objects` kompiliert ohne zu linken. `./format.sh` prüft das Format mit clang-format 18. Texte: `ui/text/<Sprache>/*.json`; Server und Engine senden Schlüssel und Werte.
 
 Zuchtstation: erbliche Varianten in zwei Aquarien beobachten, Nachkommen mit eigener Nahrung bewerten, Eltern auswählen und weiterzüchten.
 Labor: Live-Aquarium mit Pfaden, Lebensläufen und Kontrollkopie; Motorik, Autopilot, Sinne, Energie und Laichabgabe steuern. Pause und Einzelschritte jederzeit. CLI: `make diagnostics` baut `bin/zuchtbecken` und `bin/verhaltenslabor` (JSONL).

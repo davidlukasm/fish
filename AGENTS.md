@@ -12,11 +12,11 @@ Pflege:
 - GPU-Berechnungen mit OpenCL.
 - package.sh listet alle Lieferdateien; Ergänzungen begründen.
 - Gemessene und verifizierte Beschleunigungen automatisch ausliefern.
-- C++/JS: clang-format 18, ./format.sh --write; ./test.sh prüft das Format.
+- C++/JS: clang-format 18, ./format.sh prüft das Format, ./format.sh --write korrigiert es.
 - Engine- und Fischdarstellungsänderungen: Studio-Vertrag in tests/studio.js prüfen; ENGINE_REVIEW erst nach Prüfung der betroffenen Organeditoren und Ansichten aktualisieren.
 - Modulzustände über ihre APIs ändern; Initialisierungsschritte benennen.
 - Version nur auf Nutzeranweisung ändern; veröffentlichte Pakete unverändert.
 - Frische Daten je Version; keine Migrationen oder Legacy-Leser.
-- Automatisierte Funktions-/Kompilierprüfungen kurz halten; Startfische zusätzlich über Generationen prüfen.
+- `./build.sh checks` baut die Prüfprogramme. `./test.sh` dauert insgesamt höchstens 20 Sekunden. Startfische zusätzlich über Generationen prüfen.
 - Startfische erst ausliefern, wenn sie ohne Bestandshilfe mehrere fortpflanzungsfähige Folgegenerationen im Aquarium erreicht haben; mit mehreren Startwelten prüfen.
 - Beauftragte Änderungen nach bestandenen Prüfungen automatisch auf GitHub pushen; die dauerhafte Nutzerfreigabe liegt vor.
