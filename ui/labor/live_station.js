@@ -43,6 +43,7 @@ export class LiveStation {
     this.offered = [];
     this.catalogReady = false;
     this.starting = false;
+    this.cancelling = false;
     this.worlds = [];
     this.paths = [];
     this.parents = new Set();
@@ -55,6 +56,9 @@ export class LiveStation {
     this.shown = false;
     this.epoch = 0;
     this.traceEpoch = 0;
+    this.commandEpoch = 0;
+    this.commandRevision = 0;
+    this.resumeWhenReady = new Set();
     this.settings = {steps : 8000, scale : .3};
   }
   bindInputs() {
@@ -95,9 +99,10 @@ export class LiveStation {
     this.draft = draft;
     this.catalogReady = false;
     this.starting = false;
+    this.cancelling = false;
     this.error = '';
     const epoch = ++this.epoch;
-    this.controlQueue = null;
+    this.resetCommands();
     this.root.innerHTML = liveShell(this.breeding, draft, this.state.fish, this.offered);
     this.root.querySelector('[data-live-setting=steps]').value = this.settings.steps;
     const scale = this.root.querySelector('[data-live-setting=scale]');
@@ -129,9 +134,14 @@ export class LiveStation {
   close() {
     this.shown = false;
     ++this.epoch;
-    this.controlQueue = null;
+    this.resetCommands();
     ++this.traceEpoch;
     clearTimeout(this.timer);
+  }
+  resetCommands() {
+    ++this.commandEpoch;
+    this.commandQueue = null;
+    this.resumeWhenReady.clear();
   }
   fail(error) {
     const message = String(error.message ?? error);
@@ -142,7 +152,8 @@ export class LiveStation {
     clearTimeout(this.timer);
     if (!this.shown || !this.job)
       return;
-    const epoch = this.epoch, job = this.job.id;
+    const epoch = this.epoch, job = this.job.id, commands = this.commandEpoch,
+          revision = this.commandRevision;
     try {
       const result = await this.request({
         operation : 'status',
@@ -150,9 +161,11 @@ export class LiveStation {
         cursors : Object.fromEntries(
             this.worlds.map((w, i) => [i, {after : w.sequence ?? 0, scene : w.sceneRevision ?? 0}]))
       });
-      if (epoch !== this.epoch || job !== this.job?.id)
+      if (epoch !== this.epoch || job !== this.job?.id || commands !== this.commandEpoch ||
+          revision !== this.commandRevision)
         return;
       if (this.job.generation !== result.generation) {
+        this.resetCommands();
         this.worlds = [];
         this.paths = [];
         this.parents.clear();
@@ -200,11 +213,9 @@ export class LiveStation {
         this.worlds[index] = next;
       });
       this.draw();
-      if (this.resumeWhenReady && this.current()?.state.comparison &&
-          !this.current()?.state.preparing) {
-        this.resumeWhenReady = false;
-        await this.command('resume');
-      }
+      for (const world of this.resumeWhenReady)
+        if (this.worlds[world]?.state.comparison && !this.worlds[world]?.state.preparing)
+          await this.command('resume', {world}, true);
     } catch (error) {
       if (epoch === this.epoch)
         this.fail(error);
@@ -219,7 +230,7 @@ export class LiveStation {
     if (!this.shown || !this.catalogReady || this.starting || !this.state.fish)
       return;
     const epoch = ++this.epoch;
-    this.controlQueue = null;
+    this.resetCommands();
     this.starting = true;
     this.error = '';
     this.draw();
@@ -266,57 +277,84 @@ export class LiveStation {
       }
     }
   }
-  async command(action, values = {}) {
+  async command(action, values = {}, automatic = false) {
+    if (!this.shown || this.starting || this.cancelling)
+      return;
     if (!this.job)
       throw Error(word('noJob'));
-    return this.request({
-      operation : 'command',
-      job : this.job.id,
-      world : this.world,
-      action,
-      fish : this.selected,
-      ...values
+    const target = {fish : this.selected, world : this.world, ...values};
+    const job = this.job.id, generation = this.job.generation, epoch = this.epoch,
+          commands = this.commandEpoch;
+    const current = () => epoch === this.epoch && commands === this.commandEpoch &&
+                          job === this.job?.id && generation === this.job.generation &&
+                          !['cancelled', 'failed'].includes(this.job.status);
+    const stopsResume = [ 'pause', 'step', 'compare', 'end-compare', 'resume' ].includes(action);
+    if (stopsResume && !automatic)
+      this.resumeWhenReady.delete(target.world);
+    const pending = (this.commandQueue ?? Promise.resolve()).catch(() => {}).then(async () => {
+      if (!current() || automatic && !this.resumeWhenReady.has(target.world))
+        return;
+      const state = this.worlds[target.world]?.state;
+      if (!state)
+        return;
+      if (stopsResume)
+        this.resumeWhenReady.delete(target.world);
+      const send = async (command, fields) => {
+        const result =
+            await this.request({operation : 'command', job, action : command, ...fields});
+        if (current())
+          ++this.commandRevision;
+        return result;
+      };
+      try {
+        // The baseline and intervention stay together before later commands can release or stop
+        // them.
+        if (action === 'control' && target.axis !== 'leaves' && !state.comparison &&
+            !state.preparing) {
+          if (!state.paused)
+            this.resumeWhenReady.add(target.world);
+          await send('compare', {fish : target.fish, world : target.world});
+          if (!current())
+            return;
+          Object.assign(this.worlds[target.world].state,
+                        {preparing : true, comparison : false, paused : true});
+        }
+        if (action === 'compare' && state.preparing)
+          return;
+        const result = await send(action, target);
+        if (!current())
+          return;
+        const latest = this.worlds[target.world].state;
+        if (action === 'pause' || action === 'step')
+          latest.paused = true;
+        if (action === 'resume')
+          latest.paused = false;
+        if (action === 'compare')
+          Object.assign(latest, {preparing : true, comparison : false, paused : true});
+        if (action === 'end-compare')
+          Object.assign(latest, {preparing : false, comparison : false});
+        return result;
+      } catch (error) {
+        if (current()) {
+          this.resumeWhenReady.delete(target.world);
+          throw error;
+        }
+      }
     });
+    this.commandQueue = pending;
+    return pending;
   }
   async control(axis, value) {
     const world = this.current();
     if (!this.shown || !this.job || this.selected == null || !world)
       return;
-    const target = {fish : this.selected, world : this.world}, job = this.job.id,
-          generation = this.job.generation, epoch = this.epoch;
-    const current = () =>
-        epoch === this.epoch && job === this.job?.id && generation === this.job.generation;
     if (axis === 'energy') {
-      const fish = world.state.fish.find(p => p.id === target.fish);
+      const fish = world.state.fish.find(p => p.id === this.selected);
       if (value && !fish)
         return;
       value = value ? Math.max(0, Math.min(1, fish.energy / fish.capacity)) : -2;
     }
-    // The first intervention needs its baseline before later commands may change the fish.
-    const pending = (this.controlQueue ?? Promise.resolve()).catch(() => {}).then(async () => {
-      if (!current())
-        return;
-      const state = this.worlds[target.world]?.state;
-      if (!state)
-        return;
-      if (axis !== 'leaves' && !state.comparison && !state.preparing) {
-        this.resumeWhenReady = !state.paused;
-        try {
-          await this.command('compare', target);
-        } catch (error) {
-          if (current())
-            this.resumeWhenReady = false;
-          throw error;
-        }
-        if (!current())
-          return;
-        this.worlds[target.world].state.preparing = true;
-      }
-      if (current())
-        await this.command('control', {...target, axis, value});
-    });
-    this.controlQueue = pending;
-    return pending;
+    return this.command('control', {axis, value});
   }
   async select(id) {
     this.selected = id;
@@ -342,7 +380,7 @@ export class LiveStation {
   async change(event) {
     if (!this.shown)
       return;
-    const element = event.target;
+    const element = event.target, epoch = this.epoch;
     try {
       if (element.dataset.liveSetting === 'fish')
         this.state.fish = element.value;
@@ -362,7 +400,8 @@ export class LiveStation {
                                                          ? Number(element.checked)
                                                          : Number(element.value));
     } catch (error) {
-      this.fail(error);
+      if (epoch === this.epoch)
+        this.fail(error);
     }
   }
   async click(event) {
@@ -381,7 +420,7 @@ export class LiveStation {
     const button = event.target.closest('[data-live-action]');
     if (!button || button.disabled)
       return;
-    const action = button.dataset.liveAction;
+    const action = button.dataset.liveAction, epoch = this.epoch, job = this.job?.id;
     try {
       this.error = '';
       if (action === 'start')
@@ -397,8 +436,16 @@ export class LiveStation {
         return this.draw();
       }
       if (action === 'cancel') {
-        this.job = await this.request({operation : 'cancel', job : this.job.id});
-        this.resumeWhenReady = false;
+        this.resetCommands();
+        this.cancelling = true;
+        try {
+          const result = await this.request({operation : 'cancel', job});
+          if (epoch === this.epoch && job === this.job?.id)
+            this.job = result;
+        } finally {
+          if (epoch === this.epoch)
+            this.cancelling = false;
+        }
       } else if (action === 'export') {
         const result = await this.request(
             {operation : 'export', job : this.job.id, world : this.world, fish : this.selected});
@@ -414,7 +461,8 @@ export class LiveStation {
           job : this.job.id,
           ...(action === 'next-selected' ? {parents : [...this.parents ]} : {})
         });
-        Object.assign(this.job, result);
+        if (epoch === this.epoch && job === this.job?.id)
+          Object.assign(this.job, result);
       } else if ([
                    'forward', 'left', 'right', 'hold-turn', 'open-mouth', 'close-mouth', 'egg',
                    'sperm'
@@ -431,13 +479,12 @@ export class LiveStation {
         };
         await this.control(...settings[action]);
       } else {
-        if (action === 'pause' || action === 'end-compare')
-          this.resumeWhenReady = false;
         await this.command(action);
       }
       this.draw();
     } catch (error) {
-      this.fail(error);
+      if (epoch === this.epoch)
+        this.fail(error);
     }
   }
   draw() {

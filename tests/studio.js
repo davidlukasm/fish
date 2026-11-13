@@ -156,6 +156,159 @@ async function checkLiveControls() {
   station.close();
 }
 
+async function checkLiveCommandOrder() {
+  const {LiveStation} = await import('../ui/labor/live_station.js');
+  const turn = () => new Promise(resolve => setImmediate(resolve));
+  const fixture = () => {
+    const station = new LiveStation({}), pending = [];
+    station.shown = true;
+    station.job = {id : 'order', generation : 0};
+    station.selected = 7;
+    station.worlds = [ {state : {comparison : false, preparing : false, paused : false}} ];
+    station.draw = () => {};
+    station.request = data =>
+        new Promise((resolve, reject) => pending.push({data, resolve, reject}));
+    const click = action => station.click({
+      target : {
+        closest : selector =>
+            selector === '[data-live-action]' ? {dataset : {liveAction : action}} : null
+      }
+    });
+    return {station, pending, click};
+  };
+  for (const action of ['clear', 'pause', 'end-compare']) {
+    const {station, pending, click} = fixture();
+    const control = station.control('turn', -1);
+    await turn();
+    const ending = click(action);
+    assert.deepEqual(pending.map(p => p.data.action), [ 'compare' ],
+                     action + ': finishing commands wait for the preceding intervention');
+    station.selected = 8;
+    pending[0].resolve({});
+    await turn();
+    assert.equal(pending[1].data.action, 'control');
+    pending[1].resolve({});
+    await turn();
+    assert.equal(pending[2].data.action, action);
+    assert.equal(pending[2].data.fish, 7);
+    pending[2].resolve({});
+    await Promise.all([ control, ending ]);
+    if (action === 'pause')
+      assert.equal(station.worlds[0].state.paused, true);
+    if (action === 'end-compare') {
+      assert.equal(station.worlds[0].state.preparing, false);
+      assert.equal(station.worlds[0].state.comparison, false);
+    }
+    station.close();
+  }
+  {
+    const {station, pending} = fixture();
+    const comparison = station.command('compare'), control = station.control('jaw', 1);
+    await turn();
+    pending[0].resolve({});
+    await turn();
+    assert.equal(pending[1].data.action, 'control',
+                 'A manual comparison is shared with the next control');
+    pending[1].resolve({});
+    await Promise.all([ comparison, control ]);
+    assert.equal(station.resumeWhenReady.size, 0, 'A manual comparison remains paused');
+    station.close();
+  }
+  {
+    const {station, pending} = fixture();
+    station.resumeWhenReady.add(0);
+    const speed = station.command('speed', {value : 30});
+    await turn();
+    const resume = station.command('resume', {}, true), pause = station.command('pause');
+    pending[0].resolve({});
+    await turn();
+    assert.deepEqual(pending.map(p => p.data.action), [ 'speed', 'pause' ],
+                     'An explicit pause cancels an automatic resume still waiting in the queue');
+    pending[1].resolve({});
+    await Promise.all([ speed, resume, pause ]);
+    station.close();
+  }
+  {
+    const {station, pending} = fixture();
+    const poll = station.poll();
+    const pause = station.command('pause');
+    await turn();
+    pending[1].resolve({});
+    await pause;
+    pending[0].resolve(
+        {id : 'order', generation : 0, worlds : [ {state : {paused : false}, events : []} ]});
+    await poll;
+    assert.equal(station.worlds[0].state.paused, true,
+                 'A status response from before the command cannot undo its confirmed state');
+    station.close();
+  }
+  {
+    const {station} = fixture();
+    station.worlds.push({state : {comparison : true, preparing : false, paused : true}});
+    station.resumeWhenReady.add(0);
+    station.world = 1;
+    const commands = [];
+    station.request = async data => {
+      if (data.operation === 'status')
+        return {
+          id : 'order',
+          generation : 0,
+          worlds : station.worlds.map(
+              w => ({state : {...w.state, comparison : true, preparing : false}, events : []}))
+        };
+      commands.push(data);
+      return {};
+    };
+    await station.poll();
+    assert.deepEqual(commands.map(c => [c.action, c.world]), [ [ 'resume', 0 ] ],
+                     'Finishing a baseline resumes its original world after a view switch');
+    assert.equal(station.worlds[1].state.paused, true);
+    station.close();
+    assert.equal(station.resumeWhenReady.size, 0);
+  }
+  {
+    const {station, pending} = fixture();
+    const stale = station.control('turn', 1);
+    await turn();
+    const poll = station.poll();
+    pending[1].resolve({
+      id : 'order',
+      generation : 1,
+      worlds : [ {state : {comparison : false, preparing : false, paused : false}, events : []} ]
+    });
+    await poll;
+    station.selected = 9;
+    const fresh = station.control('jaw', 1);
+    await turn();
+    assert.equal(pending[2].data.action, 'compare', 'A new generation has a fresh command queue');
+    pending[0].reject(Error('old generation failed'));
+    await stale;
+    assert.equal(station.error, undefined,
+                 'An old failure does not contaminate the new generation');
+    pending[2].resolve({});
+    await turn();
+    assert.equal(pending[3].data.fish, 9);
+    pending[3].resolve({});
+    await fresh;
+    station.close();
+  }
+  {
+    const {station, pending, click} = fixture();
+    const control = station.control('turn', 1);
+    await turn();
+    const cancel = click('cancel');
+    assert.equal(pending[1].data.operation, 'cancel',
+                 'Cancelling does not wait for queued commands');
+    pending[1].resolve({id : 'order', generation : 0, status : 'cancelled'});
+    await cancel;
+    pending[0].resolve({});
+    await control;
+    assert.equal(pending.length, 2,
+                 'Cancelling discards the intervention behind a pending baseline');
+    station.close();
+  }
+}
+
 async function checkBloodReceptors(model, capabilities) {
   const {BLOOD_SUBSTANCE : B, HORMONE_EFFECT : E} = await import('../ui/schema.js');
   const development = await import('../ui/studio/view/development.js');
@@ -1400,6 +1553,7 @@ async function checkHormoneSystems(model, capabilities) {
   });
   await checkLiveFounders();
   await checkLiveControls();
+  await checkLiveCommandOrder();
   if (process.argv.includes('--live-station')) {
     console.log('Labor/Zucht: Fischauswahl, Katalogwechsel und verspätete Antworten: OK');
     return;
@@ -3988,16 +4142,16 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     station.worlds =
         [ {state : {comparison : true, fish : [ {id : 7, energy : 20, capacity : 100} ]}} ];
     const controls = [];
-    station.command = async (action, values) => controls.push({action, ...values});
+    station.request = async data => controls.push(data);
     await station.control('energy', 1);
     await station.control('energy', 0);
     assert.deepEqual(
         controls.map(c => c.value), [ .2, -2 ],
         'Energy holding preserves the current reserve; switching it off releases the clamp');
     station.worlds[0].state.comparison = false;
-    station.command = async (action, values) => {
-      controls.push({action, ...values});
-      if (action === 'compare')
+    station.request = async data => {
+      controls.push(data);
+      if (data.action === 'compare')
         station.selected = 8;
     };
     await station.control('forward', 1);
