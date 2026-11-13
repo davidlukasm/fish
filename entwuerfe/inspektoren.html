@@ -120,6 +120,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Druckzellen</h4>
     <svg id="bladsense" viewBox="0 0 300 142"></svg>
   </section>
+  <section class="panel" aria-label="Kiemen">
+    <h2>Organ</h2><h3>Kiemen</h3>
+    <h4 class="first">Kiemendeckel und Reusen</h4>
+    <svg id="gillhead" viewBox="0 0 300 140"></svg>
+    <h4>Reusen</h4>
+    <svg id="gillrake" viewBox="0 0 300 138"></svg>
+    <h4>Pumpen</h4>
+    <svg id="gillflow" viewBox="0 0 300 138"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1449,5 +1458,70 @@ function drawBladder() {
   d.setAttribute('viewBox', '0 0 300 ' + (B2 + 32));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder();
+// ---------- Kiemen ----------
+// Gills (physiology.hh:310–368, feeding.cc:535–546, movement.cc:118–121): the gill covers pump water
+// through the open mouth, pumped = area(cells)·2·drive·opening, and a fish swimming with its mouth
+// open meets water as well, ram = 2·gape·open·speed. The rakers (gene q1, density d) let water pass,
+// 1 − d/2, and keep plankton, 0.3 + 0.7·d, so the catch is passage × kept; dense rakers also hold
+// water back in the open mouth (drag × (1 + d/2)) and let less mud through. Above: the head, the
+// gill cover as large as its cells, its rakers as dense as d; middle: water, kept share and catch
+// over the density, the dashed line the fish's; below: the water and its plankton over the speed.
+const GILL = {density : .6, cells : 4, command : .6};
+function drawGills() {
+  const redraw = drawGills, hold = () => { GILL.held = true; }, free = () => { GILL.held = false; redraw(); };
+  const svg = document.getElementById('gillhead'); svg.replaceChildren();
+  const head = el('g', {transform : 'translate(10 -4) scale(1.1)'}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1}, head);
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, head);
+  // The gill cover: an arc behind the eye, wider with more cells; the rakers as a comb inside it.
+  const gx = 10 + 1.1 * 62, gy = -4 + 1.1 * 64, gr = 12 + 4 * GILL.cells;
+  el('path', {d : `M${gx} ${gy - gr} A${gr * .55} ${gr} 0 0 1 ${gx} ${gy + gr}`, fill : 'none', stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
+  const teeth = Math.round(4 + 22 * GILL.density);
+  let comb = '';
+  for (let k = 0; k <= teeth; k++) { const y = gy - gr * .8 + 1.6 * gr * k / teeth; comb += `M${gx - 4} ${y.toFixed(1)} h-10`; }
+  el('path', {d : comb, stroke : '#d9cfae', 'stroke-width' : 1.1}, svg);
+  drag(svg, el('circle', {cx : gx + gr * .55, cy : gy, r : 7}, svg), p => { GILL.cells = clamp(Math.round((Math.hypot((p.x - gx) / .55, p.y - gy) - 12) / 4), 1, 8); redraw(); }, 'gillcells', hold, free);
+  txt(svg, gx + gr * .55 + 12, gy + 4, GILL.cells + ' Zellen');
+  svg.setAttribute('viewBox', '0 0 300 140');
+
+  // ---- Over the rakers' density: water through, plankton kept of it, the catch. ----
+  const c = document.getElementById('gillrake'); c.replaceChildren();
+  const L = 40, R = 290, top = 26, base = 116, X = d => L + (R - L) * d, Y = v => base - (base - top) * v;
+  const curves = [['Wasser durch', '#9cc8f0', d => 1 - d / 2], ['behalten', '#d9cfae', d => .3 + .7 * d], ['Fang', '#e7ba77', d => (1 - d / 2) * (.3 + .7 * d) / .52]];
+  grid(c, L, R, top, base, 1);
+  for (const [name, colour, f] of curves) {
+    el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(f(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : name === 'Fang' ? 2.6 : 1.6}, c);
+  }
+  txt(c, X(.02), Y(1) - 4, 'Wasser durch', {style : 'fill:#9cc8f0'});
+  txt(c, X(.02), Y(.3) - 6, 'behalten', {style : 'fill:#d9cfae'});
+  txt(c, X(.98), Y(.96) - 6, 'Fang', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L, base + 15, 'locker'); txt(c, R, base + 15, 'dicht', {'text-anchor' : 'end'}); txt(c, (L + R) / 2, base + 15, 'Reusen', {'text-anchor' : 'middle'});
+  const px = X(GILL.density);
+  el('path', {d : `M${px} ${top - 6} V${base + 4}`, stroke : '#f1dda6', 'stroke-width' : 1.4, 'stroke-dasharray' : '5 4'}, c);
+  drag(c, el('circle', {cx : px, cy : top - 6, r : 7}, c), p => { GILL.density = clamp((p.x - L) / (R - L), 0, 1); redraw(); }, 'gilldensity', hold, free);
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+
+  // ---- Over the speed: water pumped and met, and the plankton kept from it. ----
+  const n = document.getElementById('gillflow'); n.replaceChildren();
+  const L2 = 56, T2 = 26, B2 = 116, SX = v => L2 + (R - L2) * v;
+  const pumped = .25 * GILL.cells / 8 * 2 * GILL.command, ram = v => 2 * .35 * v, pass = 1 - GILL.density / 2, kept = .3 + .7 * GILL.density;
+  const most = 2 * .35 + .25 * 2;
+  const SY = v => B2 - (B2 - T2) * v / most;
+  regler(n, {x : 26, top : T2, base : B2, word : 'Befehl', value : GILL.command, setValue : v => { GILL.command = v; redraw(); }, start : hold, end : free, name : 'gillcmd'});
+  grid(n, L2, R, T2, B2, most);
+  const area = (lo, hi, colour, op) => el('path', {d : 'M' + Array.from({length : 41}, (_, k) => `${SX(k / 40).toFixed(1)} ${SY(hi(k / 40)).toFixed(1)}`).join(' L') + ' L' + Array.from({length : 41}, (_, k) => 40 - k).map(k => `${SX(k / 40).toFixed(1)} ${SY(lo(k / 40)).toFixed(1)}`).join(' L') + 'Z', fill : colour, opacity : op}, n);
+  area(() => 0, () => pumped * pass, '#eaa886', .55);
+  area(() => pumped * pass, v => (pumped + ram(v)) * pass, '#9cc8f0', .45);
+  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => `${SX(k / 40).toFixed(1)} ${SY((pumped + ram(k / 40)) * pass * kept).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#e7ba77', 'stroke-width' : 2.4, 'stroke-dasharray' : '1 0'}, n);
+  txt(n, SX(.03), SY(pumped * pass) - 4, 'gepumpt', {style : 'fill:#eaa886'});
+  txt(n, SX(.97), SY((pumped + ram(1)) * pass) - 4, 'beim Schwimmen', {'text-anchor' : 'end', style : 'fill:#9cc8f0'});
+  txt(n, SX(.97), SY((pumped + ram(1)) * pass * kept) + 14, 'Plankton', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
+  el('path', {d : `M${L2} ${B2} H${R} M${L2} ${B2} V${T2 - 4}`, stroke : '#3b6a6c', fill : 'none'}, n);
+  txt(n, L2 + 4, T2 - 8, 'Wasser durch die Kiemen');
+  txt(n, L2, B2 + 15, 'steht'); txt(n, R, B2 + 15, 'schnell', {'text-anchor' : 'end'}); txt(n, (L2 + R) / 2, B2 + 15, 'Schwimmen, Maul offen', {'text-anchor' : 'middle'});
+  n.setAttribute('viewBox', '0 0 300 ' + (B2 + 22));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills();
 </script>
