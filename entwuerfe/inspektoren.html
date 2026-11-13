@@ -571,7 +571,7 @@ function drawSense(id) {
       el('rect', {x, y : B0, width : w, height : B1 - B0, rx : 2, fill : COLOUR.track, stroke : COLOUR.trackEdge}, live);
       el('rect', {x, y : BY(lo), width : w, height : B1 - BY(lo), rx : 2, fill : c.colour, opacity : .85}, live);
       el('rect', {x, y : BY(hi), width : w, height : Math.max(0, BY(lo) - BY(hi)), fill : c.colour, opacity : .4}, live);
-      txt(live, x + w / 2, B1 + 11, c.name, {'text-anchor' : 'middle', style : `fill:${c.colour};font-size:10px`});
+      txt(live, x + w / 2, B1 + 11, c.name, {'text-anchor' : 'middle', style : `fill:${c.colour};font-size:9px`});
     });
     keys.forEach((k, i) => el('path', {d : `M${L} ${BY(k.gate)} H${R}`, stroke : keyColour(i), 'stroke-dasharray' : '4 3', 'stroke-width' : i === cell.chosen ? 1.6 : 1}, live));
   }
