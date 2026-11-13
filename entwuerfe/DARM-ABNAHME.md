@@ -2,6 +2,8 @@
 
 Rückmeldungen vom 13.11. um 17:54, 21:15 und 22:06, mit den jüngsten Korrekturen zusammengeführt. Prüfen am aktuellen Entwurf bei 320 px und 1:1. [17:54](FEEDBACK-1311.md#L11) · [21:15](FEEDBACK-2115-ERKLAERT.md#darm) · [22:06](../KOORDINATION.md#nachrichten) · [Leitlinie](../LEITLINIE.md#3-bedienung)
 
+Die Änderungen von 22:22–22:37 stehen in den folgenden Punkten. Die frühere Rückmeldung zum Lebensbild bleibt unten als Verlauf dokumentiert.
+
 ## Fischbild
 
 - [ ] Magen und Darmschlingen bleiben das eigene, bedienbare Bild dieses Organs. Der Magen hat eine erkennbare Magenform und dieselbe warme Farbe wie beim Sättigungsgefühl. Der Schwellenwert „satt“ oben ist derselbe Wert wie unten und beide Ansichten folgen einer Änderung sofort.
@@ -25,12 +27,18 @@ Rückmeldungen vom 13.11. um 17:54, 21:15 und 22:06, mit den jüngsten Korrektur
 - [ ] Die Strichelung hat eine klare Bedeutung und ist lesbar. Sie kennzeichnet den Bereich, in dem das jeweilige Futter bei vollem Darm Bauchweh verursacht. Ertragskurve, Bauchweh-Rahmen und Bauchwehbild stimmen bei gleicher Verweildauer und Füllung überein. Den Fall Blatt/Alge bei kürzerer Verweildauer und Fleisch bei längerer prüfen. Die Bauchweh-Spanne bleibt sichtbar, auch im Balken über das ganze Leben. [Bauchweh-Buckel](../bilder/2026-11-13_feedback/david_darm-schmerzzellen-bump.png)
 - [ ] Unter den Kurven steht kein loses „Darmmuskel“. Muskeln zeigen wie beim Schwanz, welche Knoten und Fasern bei welcher Rekrutierung wirken.
 
-## Über das Leben
+## Darstellung von Alter und Muskel ab 22:22
 
-- [ ] Das Lebensbild steht direkt unter dem Ertrag und über den Balken. Es nutzt dieselbe Breite wie der Ertrag und beginnt beim Schlupf. Die Achse lässt sich im Bild verstehen, ohne bedeutungslose Zahlen oder Platzhalter.
-- [ ] Die ganze erreichbare Höhe lässt sich nutzen. Die Anteile der Nahrungsbänder folgen den Kurven. Fleisch belegt weder durch die Skala die halbe Fläche noch verschwindet es durch falsche Grenzen. Alge und Blatt bleiben benennbar, soweit sie im dargestellten Bereich führen.
-- [ ] Die Griffe setzen tatsächlich vorhandene Eigenschaften. Die Ruhe-Verweildauer folgt der erblichen Darmlänge und bleibt über das Leben fest. Der Platz im Darm wächst mit dem Fisch. Beginn und Ende der Muskelwirkung gehören zu den Knoten und ihrer Reife, die Wirkung hängt auch von der Körpergröße ab. Das Pendeln innerhalb einer Zuckung ist ein Ergebnis von Muskelbefehl und Fasern. [Engine-Fakten zum Lebensbild](FAKTEN-FABLE-1311.md#9-darm-über-das-leben-2129)
-- [ ] Änderungen im Lebensbild sind über den vorgesehenen Bereich möglich. Ertrag und Balken reagieren aus demselben Modell. Alle Griffe bleiben erreichbar, die Kurve hat keinen unbegründeten Einbruch und beim Ziehen springt die Skala nicht. [Bild 1](../bilder/2026-11-13_feedback3/1_lebensbild_kaputt.png)
+- [ ] Die Achse heißt „Verweildauer im Darm“. Unter ihr zeigen der junge und der ausgewachsene Fisch den Altersbezug. Der braune Balken im Ertrag zeigt das durch den arbeitenden Muskel erreichbare Fenster. Ein Griff verändert dessen schnelles Ende, der runde Griff verändert die Darmlänge mit einer Linie bis zum Balken.
+- [ ] Der größere Magen hat einen Schlund vom Maul. Die Füllung folgt der Sättigungseingabe. Der Darmmuskel arbeitet sichtbar zeitweise.
+- [ ] Eingabegriffe und Einstellungsgriffe haben unterschiedliche Formen. Die Streuung erscheint als Band im Diagramm. Eine gemeinsame Lauflinie führt durch Eingabe und Antwort und zeigt dabei die wechselnde Füllung im Fisch. Die Futterzeilen stehen unten. „Erschöpfung“ ersetzt „halb gewöhnt“. [Koordination 22:37](../KOORDINATION.md#nachrichten)
+
+## Frühere Rückmeldung zum Lebensbild
+
+David hat das eigene Lebensbild am 13.11. ab 22:22 gestrichen. Die folgenden Punkte dokumentieren, was sich an ihm gezeigt hatte.
+
+- Das Lebensbild sollte gleich breit direkt unter dem Ertrag stehen und beim Schlupf beginnen. Die Nahrungsbänder sollten der erreichbaren Verweildauer folgen, Fleisch nicht aus falschen Skalengrenzen verschwinden und die Kurve beim Ziehen nicht einbrechen oder zittern. [Bild 1](../bilder/2026-11-13_feedback3/1_lebensbild_kaputt.png)
+- Die Ruhe-Verweildauer folgt der erblichen Darmlänge. Der Platz im Darm wächst mit dem Fisch. Beginn und Ende der Muskelwirkung gehören zu den Knoten und ihrer Reife. Das Pendeln innerhalb einer Zuckung folgt aus Muskelbefehl und Fasern. [Engine-Fakten](FAKTEN-FABLE-1311.md#9-darm-über-das-leben-2129)
 
 ## Sättigungsgefühl
 
