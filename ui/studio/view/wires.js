@@ -154,29 +154,47 @@ function branchCurve(node, join, towards, inward) {
 const cubic = ([ a, b, c, d ]) =>
     'M' + pointText(a) + ' C' + pointText(b) + ' ' + pointText(c) + ' ' + pointText(d);
 const branchPath = (...args) => cubic(branchCurve(...args));
-// Inside a region a fibre does not cut across the cells. It leaves its cell sideways into the
-// lane between two rows of cells, runs along that lane and bends into the bundle where the bundle
-// meets the region. `rows` are the places of the region's rows across the bundle's course; the
-// fibre takes the lane next to its own row on the bundle's side. `hop` and `bend` are the lengths
-// of its first and last curve, `gap` what counts as one row, `beside` a lane outside the rows. A
-// cell nearer the bundle than `least` along its course has no room for a lane: its fibre goes to
-// the bundle in one curve.
-const LANE = Object.freeze({hop : 9, bend : 14, gap : 3, beside : 5, least : 12});
-function cellRows(cells, join, across) {
-  const places =
-      cells.map(p => (p.x - join.x) * across.x + (p.y - join.y) * across.y).sort((x, y) => x - y);
-  return places.filter((r, i) => !i || r - places[i - 1] > LANE.gap);
-}
-function lanePath(node, start, join, along, across, inward, rows) {
+// Inside a region a fibre does not cut across the cells. The region's cells stand in rows along
+// its long axis; a fibre leaves its cell sideways into the lane between two rows, runs along that
+// lane to the end of the region on the bundle's side and from there in one curve into the bundle.
+// A bundle that meets the region beside its cells is reached from the lane at its height. `hop`
+// and `bend` are the lengths of the fibre's first and last curve inside the region, `gap` what
+// counts as one row, `beside` a lane outside the rows, `pull` how far the curve to the bundle
+// keeps its direction at either end, as a share of its length. A cell with less than `least`
+// along the axis to go has no room for a lane: its fibre leaves along its row in one curve.
+const LANE = Object.freeze({hop : 9, bend : 14, gap : 3, beside : 5, least : 12, pull : .4});
+// The frame of a region's cells: their middle, their long axis, the places of their rows across
+// it and how far they reach along it.
+function cellFrame(cells, fallback) {
+  const n = cells.length, cx = cells.reduce((sum, p) => sum + p.x, 0) / n,
+        cy = cells.reduce((sum, p) => sum + p.y, 0) / n;
+  let xx = 0, xy = 0, yy = 0;
+  for (const p of cells) {
+    xx += (p.x - cx) ** 2;
+    xy += (p.x - cx) * (p.y - cy);
+    yy += (p.y - cy) ** 2;
+  }
+  // The direction in which the cells spread most.
+  const turn = Math.atan2(2 * xy, xx - yy) / 2,
+        axis = xx + yy > 0 ? {x : Math.cos(turn), y : Math.sin(turn)} : fallback,
+        across = {x : -axis.y, y : axis.x};
   const local = p => ({
-    a : (p.x - join.x) * along.x + (p.y - join.y) * along.y,
-    r : (p.x - join.x) * across.x + (p.y - join.y) * across.y
+    a : (p.x - cx) * axis.x + (p.y - cy) * axis.y,
+    r : (p.x - cx) * across.x + (p.y - cy) * across.y
   });
-  const world = (a, r) =>
-      ({x : join.x + along.x * a + across.x * r, y : join.y + along.y * a + across.y * r});
-  const n = local(node), j = local(start), run = j.a - n.a, way = Math.sign(run) || 1;
-  if (Math.abs(run) < LANE.least || way !== (inward ? 1 : -1))
-    return branchPath(node, start, along, inward);
+  const places = cells.map(local), sorted = places.map(p => p.r).sort((x, y) => x - y);
+  return {
+    local,
+    world : (a, r) => ({x : cx + axis.x * a + across.x * r, y : cy + axis.y * a + across.y * r}),
+    axis,
+    rows : sorted.filter((r, i) => !i || r - sorted[i - 1] > LANE.gap),
+    low : Math.min(...places.map(p => p.a)),
+    high : Math.max(...places.map(p => p.a))
+  };
+}
+function lanePath(node, join, along, inward, frame) {
+  const {local, world, axis, rows} = frame, n = local(node), j = local(join),
+                             way = j.a >= n.a ? 1 : -1;
   // The lanes: between neighbouring rows and beside the outermost ones.
   const lanes = [
     rows[0] - LANE.beside, ...rows.slice(1).map((r, i) => (r + rows[i]) / 2),
@@ -187,19 +205,35 @@ function lanePath(node, start, join, along, across, inward, rows) {
       towards.length
           ? towards.reduce((best, l) => Math.abs(l - n.r) < Math.abs(best - n.r) ? l : best)
           : n.r;
-  const length = Math.abs(run), hop = Math.min(LANE.hop, length / 3),
-        bend = Math.min(LANE.bend, length / 3);
-  const onLane = n.a + way * hop, offLane = j.a - way * bend;
-  // From the cell to the bundle; a fibre that arrives is the same course walked back.
-  const points = [
-    world(n.a, n.r), world(n.a + way * hop * .2, n.r + (lane - n.r) * .6),
-    world(n.a + way * hop * .5, lane), world(onLane, lane), world(offLane, lane),
-    world(offLane + way * bend / 2, lane), world(offLane + way * bend / 2, j.r), world(j.a, j.r)
+  // Where the fibre leaves its lane: at the region's end, or short of a bundle beside the cells.
+  const end = way > 0 ? frame.high + LANE.hop : frame.low - LANE.hop,
+        exit = (j.a - end) * way > 0 ? end : j.a - way * LANE.bend, run = (exit - n.a) * way;
+  // The bundle's course where the fibre meets it, seen from the fibre.
+  const meets = inward ? along : {x : -along.x, y : -along.y};
+  const into = (from, heading) => {
+    const reach = Math.hypot(join.x - from.x, join.y - from.y) * LANE.pull;
+    return [
+      {x : from.x + heading.x * reach, y : from.y + heading.y * reach},
+      {x : join.x - meets.x * reach, y : join.y - meets.y * reach}, join
+    ];
+  };
+  const heading = {x : axis.x * way, y : axis.y * way};
+  const text = points => points.map(pointText).join(' ');
+  if (run < LANE.least) {
+    const curve = [ node, ...into(node, heading) ];
+    return inward ? 'M' + pointText(node) + ' C' + text(curve.slice(1))
+                  : 'M' + pointText(join) + ' C' + text(curve.slice(0, 3).reverse());
+  }
+  const hop = Math.min(LANE.hop, run / 3), left = world(exit, lane);
+  const enter = [
+    world(n.a + way * hop * .2, n.r + (lane - n.r) * .6), world(n.a + way * hop * .5, lane),
+    world(n.a + way * hop, lane)
   ];
-  const P = inward ? points : points.reverse();
-  return 'M' + pointText(P[0]) + ' C' + pointText(P[1]) + ' ' + pointText(P[2]) + ' ' +
-         pointText(P[3]) + ' L' + pointText(P[4]) + ' C' + pointText(P[5]) + ' ' + pointText(P[6]) +
-         ' ' + pointText(P[7]);
+  const leave = into(left, heading);
+  return inward ? 'M' + pointText(node) + ' C' + text(enter) + ' L' + pointText(left) + ' C' +
+                      text(leave)
+                : 'M' + pointText(join) + ' C' + text([ leave[1], leave[0], left ]) + ' L' +
+                      pointText(enter[2]) + ' C' + text([ enter[1], enter[0], node ]);
 }
 const BENT_STEPS = 14;
 function bentWay(points, safe = null) {
@@ -478,17 +512,17 @@ function fibresAt(state, bundle, inward, pairs) {
       (a, b) => (a.node.x - join.x) * across.x + (a.node.y - join.y) * across.y -
                 ((b.node.x - join.x) * across.x + (b.node.y - join.y) * across.y));
   const organ = (inward ? bundle.from : bundle.to).organ;
-  const rows = !bundle.manual && isRegion(organ)
-                   ? cellRows(organ.centers.map(
-                                  c => nodeLocation(state.document, state.sites, c, organ.type)),
-                              join, across)
-                   : null;
+  const frame = !bundle.manual && isRegion(organ)
+                    ? cellFrame(organ.centers.map(
+                                    c => nodeLocation(state.document, state.sites, c, organ.type)),
+                                along)
+                    : null;
   // Every fibre is as thin as the next and runs into the bundle's middle: there they are one.
   return list.map(fibre => ({
                     ...fibre,
                     width : FIBRE.width,
-                    d : rows ? lanePath(fibre.node, join, join, along, across, inward, rows)
-                             : branchPath(fibre.node, join, along, inward)
+                    d : frame ? lanePath(fibre.node, join, along, inward, frame)
+                              : branchPath(fibre.node, join, along, inward)
                   }));
 }
 // The bundles and, apart from them, the fibres they split into, which the scene draws above the
