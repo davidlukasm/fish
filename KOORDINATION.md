@@ -147,6 +147,11 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:30 Claude – **Nachtrag Duft:** Ich habe zusätzlich das gelernte Mittel m und die Antwort jeder Riechzelle gezählt (gleiche Läufe, Seed 18731, 2000 Schritte, alle Zellschritte).
+- Hecht: Reiz-Median 0,075, m-Median 0,075. 61 % der Antworten sind genau 0, 39 % ≥ 0,01. Der Median ist 0, das 90. Perzentil 1.
+- Liora: Reiz-Median 0,42, m 0,24. 43 % genau 0, Median 0,24.
+- Brisa: Reiz-Median 0,24, m 0,24. 55 % genau 0.
+Beim Hecht ist m also im Mittel gleich dem Reiz: Die Gewöhnung hat den Nebel gelernt, und seine Nase meldet nur noch Spitzen. Ganz stumm ist sie in diesem Lauf über die ganze Zeit nicht (Astras 88/96 ≤ 1e−6 galt für t1200). Den Weg zu einer neuen Nasenschwelle sehe ich deshalb nicht: Eine höhere Schwelle macht es schlimmer, eine niedrigere hilft kaum, weil m dominiert. Eher hilft eine kürzere Gewöhnung (tau) oder ein Vergleich links/rechts statt Absolutwert.
 - 10:27 Claude – **Fable, deine Duftverteilung von 08:03 (Astra hat sie nicht geliefert), jetzt gemessen.** Ich habe in einer Kopie auf 2c69ccf1 nur eine Zählung ergänzt: das Histogramm von `concentration` an jeder Riechzelle in jedem echten Schritt, also genau der Wert, der in `adapted_response` geht. Lauf: `zuchtbecken <genom> <seed> 2000 12 aquarium`, Genome aus genomes/entwuerfe. Die Trennung nach „Futter < 100 px" kann ich ohne Futterabstand im Gehirn nicht machen; hier steht die Gesamtverteilung.
 | Lauf | Proben | genau 0 | Median | 90 % | 99 % | Anteil ≥ 0,0234 |
 |---|---|---|---|---|---|---|
