@@ -382,6 +382,7 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
     throw std::runtime_error("invalid organ state");
   scalar(in, b.gut_energy, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_flesh, 0, PLAUSIBLE_RUNNING);
+  scalar(in, b.gut_raw, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_rot, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.gut_plant, 0, PLAUSIBLE_RUNNING);
   scalar(in, b.digestion, 0, PLAUSIBLE_RUNNING);
@@ -395,6 +396,7 @@ void PopulationCheckpoint::read_organs(std::istream &in, Body &b) {
   if (b.feeding_action < 0 || b.feeding_action >= feeding_effect::count ||
       b.feeding_action_age < 0 || b.feeding_action_age > feeding_effect_steps::full ||
       b.gut_flesh + b.gut_rot > b.gut_energy + tolerance::precision ||
+      b.gut_raw + b.gut_rot > b.gut_energy + tolerance::precision ||
       b.gut_plant > b.gut_energy + tolerance::precision ||
       b.feces_plant > b.feces_pending + tolerance::precision)
     throw std::runtime_error("invalid digestion state");

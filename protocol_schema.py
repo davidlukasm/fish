@@ -1354,14 +1354,18 @@ class MuscleFibre:
 class Digestion:
     SHORTEST = 0.5
     LONGEST = 4.0
-    FLESH_STEPS = 20
-    PLANT_STEPS = 250
-    SPOIL_STEPS = 160
+    UPTAKE_STEPS = 20
+    OPEN_STEPS = 400
+    SPOIL_STEPS = 250
+    SHARPNESS = 3
     FASTEST = 2.0
     TOLERATED = 0.3
     CRAMP = 0.4
     DIARRHOEA = 2
     HARM = 0.0015
+    BELLY = 0.6
+    WALL_MASS = 0.05
+    UPKEEP = 0.1
     PELLET = 0.02
     WALL = 0.25
     ZONE = 2

@@ -125,15 +125,16 @@ double gut_filling(const Body &b) {
   return bounded_filling(b.gut_fill, gut_capacity(b));
 }
 double ovary_capacity(const Body &b, const Genome &g, double ceiling, double per_cell) {
-  return organ_capacity(b, g, organ_port::eggs, ceiling, per_cell);
+  return belly_room(b) * organ_capacity(b, g, organ_port::eggs, ceiling, per_cell);
 }
 
 double body_mass(const Body &b) {
   return std::max(MIN_BODY_MASS,
-                  b.tissue / BODY_TISSUE + (std::max(0., b.energy) + b.reproduction().egg_yolk +
-                                            b.reproduction().sperm_store + b.gut_fill +
-                                            b.embryo.secretion + b.embryo.pending) /
-                                               RESERVE_ENERGY_PER_MASS) +
+                  (1 + digestion::wall_mass * gut_size_factor(b)) * b.tissue / BODY_TISSUE +
+                      (std::max(0., b.energy) + b.reproduction().egg_yolk +
+                       b.reproduction().sperm_store + b.gut_fill + b.embryo.secretion +
+                       b.embryo.pending) /
+                          RESERVE_ENERGY_PER_MASS) +
          b.organ_mass;
 }
 double stored_energy(const Body &b) {
@@ -143,8 +144,8 @@ double stored_energy(const Body &b) {
 }
 void empty_stores(Body &b) {
   b.energy = b.tissue = b.reproduction_.egg_yolk = b.reproduction_.sperm_store = b.gut_energy =
-      b.gut_flesh = b.gut_rot = b.gut_plant = b.gut_fill = b.feces_pending = b.feces_plant =
-          b.embryo.secretion = b.embryo.pending = 0;
+      b.gut_flesh = b.gut_raw = b.gut_rot = b.gut_plant = b.gut_fill = b.feces_pending =
+          b.feces_plant = b.embryo.secretion = b.embryo.pending = 0;
 }
 Color corpse_color(const Color &base, double age, double energy, double bright, double half_life) {
   double fresh = std::exp2(-age / half_life);
@@ -205,6 +206,7 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
                usable = accepted * digestibility(b, f, p);
   b.gut_energy += accepted;
   b.gut_flesh += accepted * f.flesh;
+  b.gut_raw += accepted;
   b.gut_plant += f.plant ? accepted : 0;
   b.gut_fill += accepted * f.fill;
   b.nutrition += usable;
@@ -213,37 +215,36 @@ double take_nutrition(Body &b, double amount, const Fodder &f, const PhysiologyP
     b.hunger = 0;
   return accepted;
 }
-// One step of the gut: it takes up flesh quickly and plant matter slowly, fresh flesh spoils the
-// faster the longer the gut holds its content, and what is left moves on; the gut muscle moves
-// it sooner. A fish with a full reserve takes up nothing and holds its meal. Much spoiled matter
-// hurts: the gut empties itself and the body wears down. Returns what leaves as faeces.
+// One step of the gut. What it holds counts as one food, as much flesh as its parts together.
+// Its closed part is broken open, its open part is taken up or spoils, and all of it moves on;
+// the gut muscle moves it sooner. A fish with a full reserve takes up nothing and holds its
+// meal. Much spoiled matter hurts: the gut empties itself and the body wears down. Returns what
+// leaves as faeces.
 double digest_nutrition(Body &b, const PhysiologyParameters &p) {
   b.digestion = b.gut_irritation = 0;
   if (!b.alive || !b.hatched || b.gut_energy <= 0)
     return 0;
-  const double held = b.gut_energy, plant = std::max(0., held - b.gut_flesh - b.gut_rot),
-               pace = gut_pace(b, p);
+  const double held = b.gut_energy, fresh = std::max(0., held - b.gut_rot),
+               open = std::max(0., fresh - b.gut_raw),
+               flesh = fresh > 0 ? std::clamp(b.gut_flesh / fresh, 0., 1.) : 0,
+               pace = gut_pace(b, p), stay = 1 / pace;
   b.gut_irritation =
       std::clamp((b.gut_rot / gut_capacity(b) - digestion::tolerated) / digestion::cramp, 0., 1.);
   harm_body(b, digestion::harm * b.gut_irritation, death_reason::hunger);
   const bool full = b.energy >= reserve_capacity(b);
-  double flesh = full ? 0 : b.gut_flesh * digestion::flesh_rate,
-         slow = full ? 0 : plant * digestion::plant_rate;
-  const double gain = (1 - p.digestion_cost) * (flesh + slow),
-               room = std::max(0., reserve_capacity(b) - b.energy);
-  if (gain > room) {
-    flesh *= room / gain;
-    slow *= room / gain;
-  }
-  b.digestion = flesh + slow;
-  const double spoiled = (b.gut_flesh - flesh) * std::min(1., digestion::spoil_rate(1 / pace));
+  const double room = std::max(0., reserve_capacity(b) - b.energy);
+  b.digestion = full ? 0 : std::min(open * digestion::uptake_rate, room / (1 - p.digestion_cost));
+  const double opened = b.gut_raw * digestion::opening_rate(stay, flesh),
+               spoiled = (open - b.digestion) * digestion::spoiling_rate(stay, flesh);
   const bool resting = full && b.gut_motility <= 0 && b.gut_irritation <= 0;
   const double passage =
                    resting ? 0 : std::min(1., pace * (1 + digestion::diarrhoea * b.gut_irritation)),
-               left = held - b.digestion, lost = left * passage, kept = (left - lost) / held;
+               left = held - b.digestion, lost = left * passage, kept = (left - lost) / held,
+               stays = 1 - passage;
   b.feces_plant += b.gut_plant * lost / held;
-  b.gut_flesh = (b.gut_flesh - flesh - spoiled) * (1 - passage);
-  b.gut_rot = (b.gut_rot + spoiled) * (1 - passage);
+  b.gut_flesh *= fresh > 0 ? (fresh - b.digestion - spoiled) * stays / fresh : 0;
+  b.gut_raw = (b.gut_raw - opened) * stays;
+  b.gut_rot = (b.gut_rot + spoiled) * stays;
   b.gut_energy = left - lost;
   b.gut_plant *= kept;
   b.gut_fill *= kept;
@@ -410,7 +411,7 @@ bool Body::prepare_step(const Genome &g, const PhysiologyParameters &physiology,
   pending_build_cost_ = 0;
   prepare(g);
   refresh_organs(g);
-  rest_cost = basal_cost(tissue, physiology) +
+  rest_cost = (1 + digestion::upkeep * gut_size_factor(*this)) * basal_cost(tissue, physiology) +
               muscle_upkeep(active_muscle_maintenance, tissue, physiology) +
               (development_ ? neural_upkeep() * physiology.neural_cost : 0);
   force_scale = physiology.max_bite_force;

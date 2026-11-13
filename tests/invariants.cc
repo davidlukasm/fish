@@ -183,10 +183,10 @@ Digested digest(int food, double gut_length, double drive = 0, double strength =
   result.passed /= eaten;
   return result;
 }
-// Plants yield more the longer they stay, flesh spoils when it stays long, and the gut muscle
-// shortens the stay only so far.
+// Plants need time to break open, flesh spoils when it stays long, mixed food lies between, and
+// the gut muscle shortens the stay only so far.
 void gut_takes_up_what_time_allows() {
-  constexpr double SHORT = 0, MIDDLE = .5, LONG = 1, STRONG = 1e6, CLOSE = 1e-9;
+  constexpr double SHORT = 0, MIDDLE = .5, LONG = 1, STRONG = 1e6, CLOSE = 1e-9, SCARCE = .05;
   constexpr int LEAVES = food_kind::plant, FLESH = food_kind::worm, FLOCK = food_kind::feed;
   for (int food : {LEAVES, FLOCK, FLESH})
     for (double length : {SHORT, MIDDLE, LONG}) {
@@ -195,6 +195,8 @@ void gut_takes_up_what_time_allows() {
     }
   check(digest(LEAVES, LONG).gained > 2 * digest(LEAVES, SHORT).gained,
         "a long gut takes up far more of a meal of leaves");
+  check(digest(LEAVES, SHORT).gained < SCARCE,
+        "leaves need time to break open: a short gut takes up next to nothing of them");
   check(digest(FLESH, SHORT).gained > 2 * digest(FLESH, LONG).gained,
         "flesh spoils in a long gut: a short gut takes up far more of it");
   check(digest(FLESH, LONG).ache > 0 && digest(FLESH, SHORT).ache == 0 &&
