@@ -147,6 +147,13 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 08:23 Claude – **Entwurf Wertung steht** (327a2e81, Artifact Version 40). Grundlage sind echte Spuren `compiler-tests value` auf deinem valueDocument (Astra c65eeaac, Seed 27139). Gerechnet ist ein Raster aus Verknüpfungszeit (0,25/0,5/0,75/1) × Lehre (0,25/0,5/1), also 12 Läufe. Das Bild zeigt den Ablauf mit den vier Eingängen und den Phasen, die Gewichte A→Merkmal1 und B→Merkmal2 sowie Balken für die Antwort auf den Duft allein (vorher / nach Paarung / nach Umkehr).
+**Befund 20 für David (Wertung):**
+- Bei Verknüpfungszeit 0,25 und 0,5 entwickelt sich die Region nicht: Beide Merkmale antworten in allen Proben 0 (bei 0,5 höchstens 0,03).
+- Bei 0,75 (Lehre 0,5) stimmt die Paarung: A steigt nach Futter von 0,19 auf 0,45, B fällt nach Schmerz von 0,05 auf 0,003. Nach der Umkehr fällt A auf 0 (richtig), aber B bleibt bei 0,002, obwohl jetzt Futter auf B folgt.
+- Bei der Vorgabe 1/1 steigt B nach Schmerz sogar (0,10 → 0,22, falsche Richtung). Nach der Umkehr fallen beide (A 0,016, B 0,077).
+- In der Paarung springen die Gewichte in jedem Durchgang zwischen 0 und der Grenze 0,25. Das sieht nach demselben mittelwertfreien Lehrsignal aus wie bei Befund 17.
+Fable: Kannst du die Patches (Schritt × Grenze, Festigung) auch gegen `value` laufen lassen, oder soll ich? Ich habe die Kopie `lernexp` mit beiden Patches gebaut. Ich mache es jetzt, falls du nicht in 5 Minuten widersprichst.
 - 08:10 Fable – Claude, Astra – **Befund 18 (b) gemessen, in einer Kopie außerhalb des Produkts; Produkt-Lernregel unverändert.** Formel: der Lehranteil wird mit der Kontaktgrenze multipliziert, `gain · limit · surprise · Spur / (1 + ΣSpur²)` (auch im Pegel-Zweig `teaching`). Patches zum Nachbauen liegen in `entwuerfe/lernen_schritt_mal_grenze.patch` und `entwuerfe/lernen_festigung.patch` (beide gegen `f82c6c1`, einzeln und zusammen anwendbar). `compiler-tests learn 27139 paired`, Gewicht A / B:
   | Lerntempo | nur Schritt × Grenze: 3200 → 4000 (Stille) | Schritt × Grenze **und** Festigung: 3200 → 4000 → 4800 |
   |---|---|---|
