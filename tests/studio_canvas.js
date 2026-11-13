@@ -231,6 +231,22 @@ module.exports = async function checkCanvas(model, capabilities, root) {
                        (anchor[axis] - zoomed.state.camera[axis]) * zoomed.state.camera.zoom) <
                   1e-8,
               'The point under the pointer remains fixed while zooming');
+  // Every kind of sense curve draws finite numbers and keeps its handle's words inside the picture.
+  {
+    const curves = await import('../ui/studio/view/sense_curves.js');
+    const words = {report : 'r', from : 'a', to : 'b', half : 'h', handle : 't'};
+    const cell = {id : 'c', copies : 2, tau : .5};
+    const picture = curves.sensePicture(cell, 'x', [
+      curves.boundedRow(.6, words), curves.intensityRow(.6, 1e-4, words),
+      curves.fadeRow(cell, 1, .2, {...words, half : n => 'n' + n}, true),
+      curves.fadeRow(cell, .01, .002, {...words, half : n => 'n' + n})
+    ]);
+    assert.ok(!/NaN|undefined|Infinity/.test(picture), 'Sense curves draw finite numbers only');
+    assert.ok(curves.SENSE_PLOT.window > 0 && curves.SENSE_PLOT.settled > 0);
+    assert.equal(curves.boundedAnswer(.3, .3), 0);
+    assert.ok(curves.boundedAnswer(1, .3) === 1 && curves.excessAnswer(.02, .01) === .5);
+    assert.equal(curves.excessAnswer(.05, .01, .05), 0, 'A stimulus the cell is used to is silent');
+  }
   // Two bundles that run alongside each other become one nerve: side by side across it, as far
   // apart as their strands are wide, and each bends into the nerve without a corner.
   const {nerveBundling, polylineWay, NERVE_SNAP} = await import('../ui/studio/view/nerves.js');

@@ -26,11 +26,12 @@ export const SENSE_PLOT = Object.freeze({
   // A row: `top` and `base` bound its curve, its axis words sit at `words`, the next row
   // `step` lower.
   row : {top : 22, base : 64, words : 80},
-  step : 90,
-  bottom : 10,
-  // The handle's words: how high under the curve they stand and the room they need.
-  words : .3,
-  room : 120,
+  step : 103,
+  bottom : 6,
+  // A handle's words: how far under the axis words they stand and how far before the handle
+  // they begin.
+  under : 13,
+  lead : 20,
   // The time row runs, on a log scale, from one step to the longest adaptation time; the handle
   // sits one adaptation time after the stimulus began.
   window : 1,
@@ -63,17 +64,22 @@ const axes = (row, words) =>
     senseText(P.left - P.tick, row.top + P.tick, percent(1), 'end') +
     senseText(P.left - P.tick, row.base, percent(0), 'end') +
     senseText(P.left, row.words, words.from) + senseText(P.right, row.words, words.to, 'end');
+// A handle's words stand on a line of their own under the axis words, beginning or ending near
+// the handle on the side that has more room, so they never meet a curve, an axis or its words.
+const wordsUnder = (row, x, content) => {
+  if (!content)
+    return '';
+  const left = x < (P.left + P.right) / 2;
+  return senseText(left ? Math.max(P.left, x - P.lead) : Math.min(P.right, x + P.lead),
+                   row.words + P.under, content, left ? 'start' : 'end');
+};
 // The handle sits on the axis where the cells begin to report: below it nothing, above it more
-// and more. Its words stand under the curve, right of where the report reaches half at `halfAt`,
-// or left of the handle, where the report is nothing, if there is no room on the right.
-const thresholdHandle = (row, sensitive, words, halfAt) => {
-  const at = senseX(1) + (senseX(0) - senseX(1)) * sensitive, level = y(row, P.words),
-        right = halfAt + P.tick < P.right - P.room;
+// and more.
+const thresholdHandle = (row, sensitive, words) => {
+  const at = senseX(1) + (senseX(0) - senseX(1)) * sensitive;
   return sensitivityHandle({x : senseX(1), y : row.base}, {x : senseX(0), y : row.base}, sensitive,
                            words.handle, 'sensitivity', '') +
-         (words.half ? senseText(right ? halfAt + P.tick : at - P.tick, level, words.half,
-                                 right ? 'start' : 'end')
-                     : '');
+         wordsUnder(row, at, words.half);
 };
 
 // What a cell reports (body_plan.cc): of a stimulus without upper bound, with `mean` what it is
@@ -90,7 +96,7 @@ export function boundedAnswer(stimulus, threshold, mean = 0) {
 export const boundedRow = (sensitive, words, marks = () => '') => row => {
   const h = clamp(1 - sensitive, .001, .999);
   return axes(row, words) + marks(row, senseX) + curve(row, x => boundedAnswer(x, h)) +
-         thresholdHandle(row, sensitive, words, senseX(h + (1 - h) * h / (1 + h)));
+         thresholdHandle(row, sensitive, words);
 };
 // The report over a stimulus spanning many orders, from `dimmest` to one; `marks(row, xOf)` adds
 // what the organ marks on that axis, `xOf` placing a stimulus.
@@ -98,7 +104,7 @@ export const intensityRow = (sensitive, dimmest, words, marks = () => '') => row
   const half = stimulusOfShare(1 - sensitive, dimmest);
   return axes(row, words) + marks(row, s => senseX(stimulusShare(s, dimmest))) +
          curve(row, share => { return excessAnswer(stimulusOfShare(share, dimmest), half); }) +
-         thresholdHandle(row, sensitive, words, senseX(stimulusShare(2 * half, dimmest)));
+         thresholdHandle(row, sensitive, words);
 };
 // The report while a stimulus `held` lasts, for intensity cells whose half answer is `half`: it
 // falls as their mean catches up, the handle one adaptation time after it began; `bounded` for
@@ -110,8 +116,8 @@ export const fadeRow = (center, held, half, words, bounded = false) => row => {
   const used = P.settled * tau,
         mark = {x : senseX(Math.log(used) / Math.log(window)), y : y(row, at(used))};
   return axes(row, words) + curve(row, share => at(window ** share)) +
-         fadeHandle(mark, senseX(0), P.right - P.left, window, P.settled, words.handle,
-                    words.half(formatNumber(used, 0)));
+         fadeHandle(mark, senseX(0), P.right - P.left, window, P.settled, words.handle, '') +
+         wordsUnder(row, mark.x, words.half(formatNumber(used, 0)));
 };
 // The picture: its name top right, the cells' count top left, the rows below one another.
 // `redraw` names the refresh a drag calls when the picture sits outside a sense block.

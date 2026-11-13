@@ -93,7 +93,8 @@ export function hairField(state, organ, center, held = null) {
                                 Math.atan2(towards.y - H.cy, towards.x - H.cx), center)
               : '') +
          cellMarks(cells, center) +
+         // The handle sits on the hair inside the fish, where a word would cover the picture.
          sensitivityHandle(at(own, H.short), at(own, H.reach), sensitive,
-                           label('sensitivityHandle')) +
+                           label('sensitivityHandle'), 'sensitivity', '') +
          '</svg></div>';
 }
