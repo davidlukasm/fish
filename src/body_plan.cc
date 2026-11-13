@@ -32,9 +32,9 @@ constexpr bool contractile(int motor) {
   return field::muscle_motor(motor) || motor == field::Defense;
 }
 constexpr bool contractile_port(int port) {
-  return port == organ_port::forward || port == organ_port::turn || port == organ_port::suction ||
-         port == organ_port::jaw || port == organ_port::defense || port == organ_port::gills ||
-         port == organ_port::gut;
+  return port == organ_port::forward || port == organ_port::turn || port == organ_port::pelvic ||
+         port == organ_port::suction || port == organ_port::jaw || port == organ_port::defense ||
+         port == organ_port::gills || port == organ_port::gut;
 }
 // Pumping cells on the flanks of the head move the gill covers; inside and below they open the
 // mouth.
