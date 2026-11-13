@@ -584,8 +584,8 @@ requestAnimationFrame(gutFrame);
 // to fast (white, 6.25 times the force, tire within some 40 steps flat out and need hundreds to
 // recover: drain 0.028·fast² per step of work, refill 1/400 of the gap), and its own threshold:
 // a weak command moves only the nodes with a low one (command_line.js: tanh of the command past
-// the gate). Force adds over the nodes (effector_activity). Here each node also tires on its own;
-// the engine still mixes the nodes' fibres into one twitch per muscle (asked of Fable, 01:57).
+// the gate). Force adds over the nodes; each cell tires on its own and pays its own price for work,
+// and the muscle twitches as long as the cells that pull (Fable 409b0911).
 // Wriggling (movement.cc) loses up to half the push in open water and lowers a buried body's drag
 // from 12 to 3.
 const tail = {
