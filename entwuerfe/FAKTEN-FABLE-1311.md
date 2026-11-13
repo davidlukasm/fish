@@ -269,3 +269,47 @@ Astra 20:00: Der Nullstart war Astras Entscheidung bei der Umsetzung am 08.11.; 
   - **Vorher trug die Zielzelle die Start-Stärke als Gen:** `Neuron::initial_weight`, 0 bis 0,25, Vorgabe 0,125, aus dem Erbgut-Ausgang `initial_strength` (`colony-core/field/substrate.hh:36, 58` im Stand `6d68166~1`). Ein neuer Kontakt begann mit diesem Wert (`substrate.cc`, entfernte Zeile `gene_[free] = initial_contact_weight(source, target)`).
   - **Derselbe Ausgang ist heute die Obergrenze:** `initial_weight` wurde zu `electrical_limit` (0 bis 1, Vorgabe 0,5), `initial_teaching` zu `teaching_limit`, `initial_contact_weight` zu `contact_limit`. Der Ausgang heißt im Schema jetzt `synapse_strength`.
   - Davids Annahme von 19:06 („eine Start-Stärke“) beschreibt also den Stand bis 08.11. Die Regel „Gene nur für Zellen“ war dabei erfüllt: Das Gen saß in der Zielzelle.
+
+## 8. Maul und Kiemen als Ablauf (21:28, für die nächste Fassung der Panels)
+
+Nur gelesen, nichts gemessen. Produkt `e176af2`.
+
+### Was es gibt
+- **Drei Muskeln, je eigene Zellen:**
+  - **Öffner** (Saugmuskel): Saugzellen am Maul (`MOTOR_KIND.suction`, nicht an der Flanke).
+  - **Schließer** (Beißmuskel): Beißzellen. Nur sie tragen zwei Formwerte: `quality1` = stumpfe Zähne, `quality2` = Kieferlänge, gemittelt nach Kraft über alle Beißzellen (`src/body_plan.cc:434-435`, `ui/studio/model/organs.js:358-361`).
+  - **Kiemendeckel** (Pumpe): Saugzellen an der Flanke des Kopfs (`src/body_plan.cc:41-43`). Ihr `quality1` ist die Reusendichte, gemittelt nach Kraft (`:448`). Ohne Kiemenzellen ist sie 0. Im Atelier ein eigenes Organ, 2 bis 8 Knoten, beidseitig, mit ausdauernden Fasern vorbelegt (`organs.js:196-206`).
+- **Kieferlänge ist einstellbar** (Davids Frage). Sie macht zweierlei: Die größte Öffnung ist Körperradius × (0,28 + 0,44 × Kieferlänge) (`src/physiology.hh:261-263, 297-299`, `protocol_schema.hh:1935-1936`). Der Hebel sinkt im selben Maß: langer Kiefer = weites Maul, schwacher Biss (`physiology.hh:264-269, 286-290`).
+- **Zähne:** scharf schneidet Fleisch und Blätter, stumpf mahlt Hartes; die Kraft zählt mit (Anteil der eigenen Form)². Halb und halb kann beides nur zu einem Viertel. Lose Stücke gehen mit jeder Form (`physiology.hh:270-280`).
+
+### Der Ablauf, Schritt für Schritt (`src/physiology.cc:18-60`, `src/feeding.cc:561-609`)
+1. **Ruhe:** Das Maul steht 35 % offen (`mouth_cycle::rest`, `protocol_schema.hh:1940`). Dorthin federt es von selbst zurück, mit 1/16 je Schritt (`physiology.cc:51`).
+2. **Öffner zuckt:** Das Maul geht mit der Zuckung auf, Zugform sin², bis ganz offen bei vollem Zug (`physiology.cc:40-49`). Die Dauer ist die Zuckungsdauer der Öffnerfasern (`body_plan.cc:1483-1486`).
+3. **Währenddessen saugt es.** Je Schritt entsteht Saugvorrat = Saugfläche × Reusendurchlass × Saugbefehl × Zug (`physiology.cc:58-59`). Saugfläche = 4 × größte Öffnung² × Saugkraft, und sie sinkt beim schnellen Schwimmen (`physiology.hh:318-323`).
+4. **Was der Saugvorrat holt, in dieser Reihenfolge** (`feeding.cc:581-606`):
+   - ganze Stücke, die durchs offene Maul passen und in Reichweite liegen: Futterbrocken, Algenflocken, kleine Fische, Eier (`:357-390, 404`);
+   - dann Plankton aus dem Wasser, mit dem Anteil, den die Reusen halten (`:584-586`);
+   - zuletzt, nur mit dem Maul im Boden, das Futter im Sediment (`:596-597`, siehe unten).
+5. **Schließer zuckt = Biss.** Beim Beginn merkt sich der Kiefer, wie weit er offen war (`physiology.cc:28-34`). In der ersten Hälfte der Zuckung bleibt er offen und kann noch weiter aufgehen; in der Mitte, am Kraftgipfel, schnappt er zu (`physiology.hh:409-414`, `physiology.cc:44-47`). **Genau in diesem einen Schritt wird gebissen** (`feeding.cc:568-571`).
+6. **Was der Biss trifft:** das Nächste in Reichweite (`feeding.cc:174-232`). Größer als die Öffnung beim Bissbeginn wird nichts abgebissen oder ganz geschluckt (`physiology.hh:303-313`). Je Ziel:
+   - Fisch: ein Stück Fleisch, eine Wunde (`feeding.cc:263-286`); Ei: ganz, wenn es durch die Öffnung passt (`:287-297`);
+   - Pflanze: ein Stück, Hartes mit Knacken (`:149-172`); Krabbe und Muschel: mahlende Kraft gegen die Schale (`:335-337`); lose Brocken und Aas: jede Zahnform (`:311`);
+   - Maul im Boden vergraben: gräbt nach Krabben und Würmern (`:233-259`).
+7. **Solange der Kiefer zuschnappt, strömt nichts:** kein Saugen, kein Pumpen durchs Maul (`physiology.cc:54-56`, `feeding.cc:573-576`).
+8. **Öffnen und Schließen sind unabhängig befehlbar.** Wer nur den Öffner treibt, saugt ohne zu beißen. Wer nur den Schließer treibt, beißt aus der Ruheöffnung 35 %. Ein großer Biss braucht erst den Öffner.
+
+### Kiemen
+- **Alles Wasser, das das Maul saugt, pumpt oder beim Schwimmen trifft, geht durch die Kiemen hinaus** (`physiology.hh:324-333`). Die Reusen tun dabei drei Dinge:
+  - **Durchlass des Wassers:** 1 − 0,6 × Dichte (`:340-342`). Er bremst **auch den Saugvorrat des Öffners** (`physiology.cc:59`) und erhöht den Widerstand des offenen Mauls beim Schwimmen (`src/movement.cc:118-122`).
+  - **Rückhalt des Planktons:** 2 % ohne Reusen, steigt mit Dichte³ auf 100 % (`:334-338`).
+  - **Sieben des Bodens:** (1 − 0,85 × (1 − Dichte)⁴) × (1 − Dichte⁴) (`:344-348`): ohne Reusen rutschen 85 % durch, bei mittlerer Dichte bleibt fast alles, bei dichten verstopft der Schlamm.
+- **Zwei Wege, Wasser durch die Kiemen zu bekommen, beide ohne Öffner** (`physiology.hh:395-403`, `feeding.cc:536-549`):
+  - **Pumpen:** Pumpfläche × 2 × Pumpbefehl × Maulöffnung. Pumpfläche wie die Saugfläche, nur mit der Kraft der Kiemendeckel (`physiology.hh:355-360`).
+  - **Fahrt:** 2 × größte Öffnung × (Öffnung über Ruhe) × Tempo. Dafür muss das Maul weiter als in Ruhe offen stehen.
+  - Beides fängt **nur Plankton**, mit Durchlass × Rückhalt.
+- **Davids Frage, ob der Saugmuskel beim Pumpen mitwirkt:** Mittelbar ja. Die Pumpe zieht nur durch ein offenes Maul (× Maulöffnung). In Ruhe sind das 35 %, mit gezogenem Öffner bis 100 %. Der Öffner schafft außerdem seinen eigenen Sog. Im sichtbaren Wasserstrom am Maul stehen beide zusammen: Saugbefehl × Zug + Pumpbefehl × Öffnung (`physiology.cc:55-56`).
+
+### „Bodenfutter“
+- **In der Engine ist es das Futter, das im Sediment eines Bodenstücks liegt** (`detritus`): abgesunkene Flocken, Kot, gestorbene Würmer und verschüttete Muscheln (`src/small_animals.cc:1016-1042`, `src/food_web_step.cc:336-342, 1266-1271`). Es zerfällt mit der Zeit.
+- **Der Fisch bekommt es nur so** (`src/small_animals.cc:1092-1109`, `feeding.cc:596-604`): Maul im Boden (ab 10 % eingesunken), das Sediment tief genug, und es ist noch Saugvorrat des **Öffners** übrig. Menge = Futter im Bodenstück × (Saugvorrat × Sieben ÷ Sedimentmenge) × Einsinken. Die Kiemenpumpe allein holt nichts aus dem Boden.
+- **Im Darm ist es dasselbe wie Flocken:** 62 % Brei, 10 % Faser, der Rest unverdaulich (`physiology.hh:182-194`). Es braucht aber 1,5-mal so viel Platz, weil Sand mitkommt (`physiology_parameters.hh:24`). Eine eigene Futterart des Darms ist es also nicht, nur ein eigener Platzbedarf. Sand selbst wird nicht aufgenommen; Schlamm wirkt nur über das Sieben.
