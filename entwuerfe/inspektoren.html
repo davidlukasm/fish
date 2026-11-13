@@ -602,7 +602,7 @@ requestAnimationFrame(gutFrame);
 // The tail muscle as its nodes, in their order along the body. Each node has its cells, its fibres
 // from slow (red: never tire, cheap work, dear upkeep) to fast (white: 6.25 times the force, tire
 // within some 20 steps flat out, dear work, cheap upkeep; muscle_fibre after Fable 2265bb7d: drain
-// 0.06·fast²·(1 − 1/e), refill in 2·200^fast steps), and its own threshold: a
+// 0.06·fast² of the work, refill in 2·200^fast steps; ui/fibre.js after Astra 9bc25f71), and its own threshold: a
 // weak command moves only the nodes with a low one (command_line.js: tanh of the command past the
 // gate). Force adds over the nodes; each cell tires on its own and pays its own work (Fable
 // 409b0911). Upkeep per step 0.0004·upkeep(fast) per cell, work 0.00128·cost(fast) per unit of
@@ -618,7 +618,7 @@ const fibreColour = f => { const lo = [184, 68, 63], hi = [242, 235, 226]; retur
 const driveOf = (n, c) => c <= n.gate ? 0 : Math.tanh(3 * (c - n.gate)) / Math.tanh(3 * (1 - n.gate));
 function nodeForce(n, c) {
   const d = driveOf(n, c), out = []; let r = 1;
-  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; out.push(n.cells * forceOf(n.fast) * d * a); r = clamp(r + (1 - r) / (2 * Math.pow(200, n.fast)) - .06 * n.fast * n.fast * ALL_OUT * a * d, 0, 1); }
+  for (let s = 0; s <= STEPS; s++) { const a = 1 - n.fast + n.fast * r; out.push(n.cells * forceOf(n.fast) * d * a); r = clamp(r + (1 - r) / (2 * Math.pow(200, n.fast)) - .06 * n.fast * n.fast * a * d, 0, 1); }
   return out;
 }
 // One scale for both force pictures: room for the strongest command with a little to spare, never
