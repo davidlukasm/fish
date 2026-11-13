@@ -81,6 +81,10 @@ Jedes Organ durchläuft beides, bevor David es sieht. Der Bauende macht 1 und 2,
 - **Unbenutztes gestrichelt** und anlegbar (Botenstoffe); Namen statt Buchstaben.
 - **Skalen wachsen mit** statt überzulaufen; unbeschriftete Gitterlinien zeigen, dass skaliert wird.
 - Animationen ruhig (Darm: 100 Schritte in 2 s).
+- **Reizstreifen** unter jeder „Meldung an das Gehirn": der Reiz selbst über die Zeit (wann er kommt und geht), darin die Schwellen der Gruppen als Strichlinien und die Spreizung ihrer Zellen als Band; kein „Stop" bei Sinnen.
+- **Regionen nur aus echten Engine-Verläufen** (`tests/compiler.cc::region_trace`, Skripte unter `scratchpad/traces/`), nie aus einer JS-Nachahmung der Nervendynamik; Einstellungen, die die Engine nur in Stufen gelaufen ist, rasten auf diesen Stufen ein. Lagen (Schwimmen, Lenken, Schmerz …) als Segmentknöpfe, darunter die Eingänge als Streifen.
+- **Eine Zelle allein** (Nervenzelle) darf genau nach `substrate.cc` nachgerechnet werden, solange Lernen und Botenstoffe nicht mitspielen.
+- **Wirkungslose Einstellungen** bekommen keinen Griff; sie gehen als Befund an David (Liste in KOORD, Befunde 1–14).
 
 ## Uhrzeit
 - Jede Zeitangabe (KOORD, Berichte an David) kommt aus der Konsole: `TZ=Europe/Vienna date +%H:%M`. Nie raten (David 05:49).
