@@ -147,6 +147,13 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Farbwechsel</h4>
     <svg id="pigtime" viewBox="0 0 300 118"></svg>
   </section>
+  <section class="panel" aria-label="Eier und Samen">
+    <h2>Organ</h2><h3>Eier und Samen</h3>
+    <h4 class="first">Größe</h4>
+    <svg id="gonfish" viewBox="0 0 300 148"></svg>
+    <h4>Füllen und Ablegen</h4>
+    <svg id="gontime" viewBox="0 0 300 138"></svg>
+  </section>
   <section class="panel" aria-label="Tasten">
     <h2>Organ</h2><h3>Tasten</h3>
     <h4 class="first">Fühlfeld</h4>
@@ -1665,5 +1672,70 @@ function drawPigment() {
   c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
 }
 
-drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment();
+// ---------- Eier und Samen ----------
+// Gonads (reproduction.cc:24–60, 145–180, physiology.cc:118–128, physiology.hh:214): a sac holds at
+// most 10 per cell (eggs: at most 160, times the room the gut leaves in the belly,
+// 1 − 0.25·(gut size − 0.5)/3.5; sperm: at most 40), grown up. Driven, it fills from the reserve,
+// eggs 2 per step, sperm 0.2 per step, never below the mother's own reserve. With the release
+// command (from 0.2) an ovary lays its whole yolk as one egg once it is 95 % full, a testis lets
+// its whole store go once it holds 2. An egg needs enough yolk for its young (here 70 as an
+// example; the engine has it per fish), less is only food. Above: the sac in the belly, as large as
+// it may become (grip: cells); below: the store over the steps under the two commands.
+const GON = {kind : 'eggs', cells : 10, gut : .45, fill : .7, release : .5, needed : 70};
+const gutSizeOf = L => .5 * Math.pow(8, L), bellyRoom = L => 1 - .25 * (gutSizeOf(L) - .5) / 3.5;
+const gonLimit = () => GON.kind === 'eggs' ? bellyRoom(GON.gut) * Math.min(160, 10 * GON.cells) : Math.min(40, 10 * GON.cells);
+function drawGonads() {
+  const redraw = drawGonads, hold = () => { GON.held = true; }, free = () => { GON.held = false; redraw(); };
+  const eggs = GON.kind === 'eggs', colour = eggs ? '#d4b7ee' : '#f1e6c8', limit = gonLimit();
+  const svg = document.getElementById('gonfish'); svg.replaceChildren();
+  // Eggs or sperm: two buttons side by side.
+  ['eggs', 'sperm'].forEach((k, i) => { const g = el('g', {class : 'chip'}, svg);
+    el('rect', {x : 92 + i * 60, y : 2, width : 58, height : 22, rx : i ? 0 : 11, fill : GON.kind === k ? '#2c5a5e' : '#0f2c34', stroke : GON.kind === k ? '#f1dda6' : '#2d5059'}, g);
+    txt(g, 121 + i * 60, 17, i ? 'Samen' : 'Eier', {'text-anchor' : 'middle', style : GON.kind === k ? 'fill:#f4efd8' : ''});
+    g.addEventListener('click', () => { GON.kind = k; GON.scale = null; redraw(); }); });
+  const fish = el('g', {transform : 'translate(16 26) scale(.9)'}, svg);
+  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1.1}, fish);
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, fish);
+  // The sac: its area as large as what it may hold; the grip at its end sets the cells.
+  const most = eggs ? 160 : 40, r = 6 + 22 * Math.sqrt(limit / 160), cx = 160, cy = 26 + .9 * 76;
+  el('ellipse', {cx, cy, rx : r * 1.5, ry : r * .75, fill : colour, 'fill-opacity' : .25, stroke : colour, 'stroke-width' : 1.4}, svg);
+  drag(svg, el('circle', {cx : cx + r * 1.5, cy, r : 7}, svg), p => { const want = Math.pow(clamp((p.x - cx) / 1.5 - 6, 0, 22) / 22, 2) * 160; GON.cells = clamp(Math.round(want / (10 * (eggs ? bellyRoom(GON.gut) : 1))), 1, 16); redraw(); }, 'goncells', hold, free);
+  txt(svg, 296, 140, `${GON.cells} Zellen · fasst ${Math.round(limit)}` + (eggs ? ` · Platz neben dem Darm ${Math.round(bellyRoom(GON.gut) * 100)} %` : ''), {'text-anchor' : 'end'});
+  svg.setAttribute('viewBox', '0 0 300 148');
+
+  // ---- The store over the steps under the two commands. ----
+  const c = document.getElementById('gontime'); c.replaceChildren();
+  const L = 70, R = 290, top = 40, base = 126, N = 400, X = st => L + (R - L) * st / N;
+  const store = [0], laid = [];
+  for (let st = 1; st <= N; st++) {
+    let v = store[st - 1] + (eggs ? 2 : .2) * GON.fill;
+    v = Math.min(v, limit);
+    if (GON.release >= .2 && (eggs ? v >= .95 * limit : v >= 2)) { laid.push([st, v]); v = 0; }
+    store.push(v);
+  }
+  const scale = settle(GON, 'scale', Math.max(eggs ? 80 : 10, 1.1 * limit), redraw), Y = v => base - (base - top) * v / scale;
+  regler(c, {x : 18, top, base, word : 'füllen', value : GON.fill, setValue : v => { GON.fill = v; redraw(); }, start : hold, end : free, name : 'gonfill'});
+  regler(c, {x : 48, top, base, word : '', name2 : 'Ablegen', value : GON.release, setValue : v => { GON.release = v; redraw(); }, start : hold, end : free, name : 'gonrelease'});
+  txt(c, 52, top - 6, 'ablegen', {'text-anchor' : 'middle'});
+  el('path', {d : `M44 ${base - (base - top) * .2} h16`, stroke : '#7f9a99', 'stroke-dasharray' : '2 2'}, c);
+  grid(c, L, R, top, base, scale);
+  el('path', {d : 'M' + store.map((v, st) => `${X(st).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : colour, opacity : .3, stroke : colour, 'stroke-width' : 1.6}, c);
+  el('path', {d : `M${L} ${Y(limit)} H${R}`, stroke : colour, 'stroke-dasharray' : '3 3', opacity : .7}, c);
+  if (eggs) {
+    el('path', {d : `M${L} ${Y(GON.needed)} H${R}`, stroke : '#f1dda6', 'stroke-dasharray' : '5 4', 'stroke-width' : 1.2}, c);
+    txt(c, R - 2, Y(GON.needed) + 13, 'reicht für ein Junges', {'text-anchor' : 'end', style : 'fill:#f1dda6'});
+  }
+  // Each laid egg or released cloud of sperm where it leaves; an egg too small for a young is grey.
+  for (const [st, v] of laid) {
+    if (eggs) el('circle', {cx : X(st), cy : top - 8, r : 3 + 5 * Math.sqrt(v / 160), fill : v >= GON.needed ? colour : '#6e7b7a'}, c);
+    else el('path', {d : `M${X(st) - 4} ${top - 8} q2 -3 4 0 t4 0`, stroke : colour, 'stroke-width' : 1.4, fill : 'none'}, c);
+  }
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  txt(c, L + 4, top + 10, eggs ? 'Dotter' : 'Samen');
+  txt(c, L, base + 15, 'Schritte');
+  for (const st of [200, 400]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 400 ? 'end' : 'middle'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads();
 </script>
