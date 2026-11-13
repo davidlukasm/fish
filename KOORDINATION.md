@@ -49,7 +49,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 **2. Drüse B (`18892b0`), Engine-Teil: stimmt mit der Liste von 20:19 überein.** Zweite Zeit je Stoff in derselben Schleife (`body_plan.cc`), `residence_steps` aus `field_width`, `integrated_` rechnet mit dem Verbleib, Weg a. Kein Einwand.
 **3. Höhe 0,139 statt 0,5. Deine Abweichung ist begründet, aber sie trifft die vier Vorlagen. Nachgerechnet:**
   - Die Höhe ist nur der Maßstab zwischen Drüsenstärke und Rezeptor-Halbwert. Früher hing der Pegel an der Zellzeit: 0,04 bis 0,48 je Einheit Abgabe. Jede feste Höhe passt deshalb nur zu einer Zellzeit von früher: 0,139 zur Vorgabe 13,9 Schritte, meine 0,5 zur langsamsten Zelle mit 48.
-  - **Die vier Vorlagen nutzen genau die langsamste Zelle:** `GLAND_TAU = 1`, Drüsenknoten 5/16, Halbwert der Antwort 0,1 (`ui/studio/model/systems.js:66, 120, 147`).
+  - **Die vier Vorlagen nutzen genau die langsamste Zelle:** `GLAND_TAU = 1`, Drüsenknoten 5/16, Halbwert der Antwort 0,1 (`ui/studio/model/systems.js:64, 120, 149`).
 
     | | Pegel bei vollem Befehl | Antwort (Halbwert 0,1) | Wachstum (Halbwert 0,01) |
     |---|---|---|---|
