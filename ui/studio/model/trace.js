@@ -7,7 +7,7 @@ import {
   receivers,
   validCellLink
 } from './document.js';
-import {nerveClass} from './organs.js';
+import {isTeachingSource, nerveClass} from './organs.js';
 import {routedLinks} from './regions.js';
 
 export function planTrace(document, sites, requested, capabilities) {
@@ -25,8 +25,9 @@ export function planTrace(document, sites, requested, capabilities) {
             !validCellLink(source, locations.get(source.site), target, locations.get(target.site)))
           continue;
         pairs.add(pair);
-        const cl = classes.get(source.id), modulation = target.role === 'motor' ? 0 : cl.modulator;
-        if (modulation < 1)
+        const cl = classes.get(source.id),
+              teaching = target.role === 'nerve' && isTeachingSource(source);
+        if (!teaching)
           links.push({
             from : source.id,
             to : target.id,
@@ -34,7 +35,7 @@ export function planTrace(document, sites, requested, capabilities) {
             sign : cl.sign,
             rhythm : cl.pace > 0
           });
-        if (modulation > 0)
+        else
           links.push({from : source.id, to : target.id, kind : 'teaching', sign : 0});
       }
   if (capabilities)
@@ -62,10 +63,8 @@ export function cppnTrace(state, requested) {
     if (!count || !centers[from] || !centers[to])
       continue;
     const source = centers[from], target = centers[to];
-    const modulation = target.role === 'motor' || source.role === 'sensor' ? 0
-                       : source.generated ? source.nativeClass.modulator
-                                          : state.report.groups[from]?.nerve?.[3] ?? 0;
-    if (modulation < 1) {
+    const teaching = target.role === 'nerve' && isTeachingSource(source);
+    if (!teaching) {
       const rhythm = source.role === 'nerve' &&
                      (source.generated ? source.nativeClass.pace
                                        : state.report.groups[from]?.nerve?.[2] ?? 0) > 0;
@@ -73,8 +72,7 @@ export function cppnTrace(state, requested) {
         links.push({from : source.id, to : target.id, kind : 'electrical', sign : 1, rhythm});
       if (negative)
         links.push({from : source.id, to : target.id, kind : 'electrical', sign : -1, rhythm});
-    }
-    if (modulation > 0)
+    } else
       links.push({from : source.id, to : target.id, kind : 'teaching', sign : 0});
   }
   return traceLinks(starts, links);

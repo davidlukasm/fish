@@ -461,8 +461,6 @@
 .aid-wire-pairing .aid-pairing{flex-direction:column;justify-content:center;gap:2px;padding:5px 2px;min-width:0;cursor:pointer}
 .aid-wire-pairing .aid-pairing svg{flex-shrink:0}
 .aid-wire-pairing .aid-pairing[aria-pressed="true"]{border-color:#ecdba8;background:#35504a}
-.aid-region-node{display:grid;gap:6px;margin:8px 0}
-.aid-region-node>button{justify-self:start;border:1px solid var(--aid-control-edge);background:var(--aid-control);border-radius:8px;padding:5px 10px}
 .aid-hint{font-size:12px;color:var(--aid-hint-text);margin:10px 0}
 .aid-graphic-handle{fill:var(--aid-handle);stroke:var(--aid-handle-core);stroke-width:2;cursor:grab}
 .aid-response-word{fill:var(--aid-axis-text);font:12px system-ui}
@@ -539,9 +537,6 @@
 .aid-view-options .aid-button-group button{border-radius:0;margin-left:-1px}
 .aid-view-options .aid-button-group button:first-child{border-radius:8px 0 0 8px;margin-left:0}
 .aid-view-options .aid-button-group button:last-child{border-radius:0 8px 8px 0}
-.aid-circuit{display:block;width:100%;height:auto;margin:4px 0;border-radius:9px;background:var(--aid-graphic)}
-#aid-circuit-bar path{fill:none;stroke:var(--aid-inhibit);stroke-width:3;stroke-linecap:round}
-#aid-circuit-arrow path,.aid-circuit marker path{fill:var(--aid-circuit-text)}
 .aid-organ-node.sensor{fill:var(--aid-senses)}
 .aid-organ-node.motor{fill:var(--aid-motor)}
 .aid-organ-node.nerve{fill:var(--aid-brain)}
@@ -607,8 +602,6 @@
 .aid-tectum-bands path{stroke:var(--aid-brain);stroke-width:1.2;stroke-dasharray:6 5;opacity:.8;vector-effect:non-scaling-stroke}
 .aid-tectum-bands text{fill:#dfe6f5;font:600 13px system-ui;paint-order:stroke;stroke:var(--aid-ground);stroke-width:3}
 .aid-hint.aid-warning{color:#e9b08f}
-.aid-region-badge circle{fill:#1d3d4a;stroke:var(--aid-brain);stroke-width:1.5}
-.aid-region-badge path{fill:none;stroke:#e9a886;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .aid-slot-add{padding:2px 8px;border-radius:7px;border:1px dashed #6f9aa0;background:transparent;color:#cfe3dc;font-size:12px}
 .aid-region-slots li.missing .aid-slot-add{border-color:#e9a27f;color:#f0c1a6}
 .aid-reach{pointer-events:none}

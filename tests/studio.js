@@ -1198,6 +1198,91 @@ async function checkForagingChoice(model, sites, root) {
             'A new meal still stops the learned search movement');
 }
 
+async function internalRegionDocument(model, capabilities, mode) {
+  const {BLOOD_SUBSTANCE} = await import('../ui/schema.js');
+  const {sites} = capabilities, ids = {};
+  let doc = model.newDocument(mode);
+  for (const [type, x, y] of mode === 'state-hunger'
+           ? [ [ 'state', 570, 365 ], [ 'blood', 530, 365 ] ]
+           : [ [ 'olfaction', 300, 409 ], [ 'nose', 245, 425 ] ]) {
+    const made = model.addOrgan(doc, type, sites, {x, y});
+    assert.ok(made);
+    doc = made.document;
+    ids[type] = made.organId;
+  }
+  if (mode === 'state-hunger') {
+    const [q1, q2] = model.wheelPlace(capabilities, BLOOD_SUBSTANCE.reserve);
+    for (const center of model.findOrgan(doc, ids.blood).centers)
+      doc = model.updateCenter(doc, center.id, {q1, q2, qwidth : 0, threshold : 0});
+  }
+  const wired = model.connectSelections(
+      doc, {kind : 'organ', id : ids.blood ?? ids.nose},
+      {kind : 'slot', id : ids.state ?? ids.olfaction, slot : ids.state ? 'reserve' : 'scent'},
+      sites);
+  assert.ok(wired);
+  return wired.document;
+}
+
+async function checkInternalRegions(model, capabilities, root, modes) {
+  for (const mode of modes) {
+    const doc = await internalRegionDocument(model, capabilities, mode);
+    const plan = model.compileDocument(doc, capabilities.sites), centers = model.allCenters(doc);
+    plan.groups.forEach((g, i) => {
+      const c = centers[i];
+      g.name = c.organType + ':' + (c.node ?? c.key) + ':' + g.side;
+    });
+    const output = execFileSync(
+        'python3',
+        [
+          '-B', '-c',
+          'import json,sys,subprocess; from atelier_service import encode_plan; print(subprocess.check_output(sys.argv[1:], input=encode_plan(json.load(sys.stdin)), text=True), end="")',
+          join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'compiler-tests'), mode
+        ],
+        {
+          cwd : root,
+          input : JSON.stringify(plan),
+          encoding : 'utf8',
+          timeout : 10000,
+          maxBuffer : 4 * 1024 * 1024
+        });
+    const [header, ...rows] = output.trim().split('\n').map(row => row.split(','));
+    assert.equal(rows.length, 3000);
+    assert.ok(rows.every(row => row[header.indexOf('learning')] === '1'),
+              'Learning continues throughout the inspector trace');
+    const mean = (name, lo, hi) => {
+      const columns =
+          header.flatMap((key, i) => key === name || key.startsWith(name + ':') ? [ i ] : []);
+      assert.ok(columns.length, name);
+      const values = rows.filter(row => Number(row[0]) > lo && Number(row[0]) <= hi)
+                         .flatMap(row => columns.map(i => Number(row[i])));
+      assert.ok(values.length && values.every(Number.isFinite));
+      return values.reduce((sum, x) => sum + x, 0) / values.length;
+    };
+    if (mode === 'state-hunger') {
+      assert.ok(mean('blood:chemistry', 1400, 1500) > .8);
+      assert.ok(mean('blood:chemistry', 2000, 2100) < .01,
+                'The actual blood receptor reports a depleted reserve');
+      assert.ok(mean('state:deficit', 2000, 2100) > mean('state:deficit', 1400, 1500) + .1,
+                'Falling reserve recruits the deficit pool');
+      for (const [lo, hi] of [[ 1400, 1500 ], [ 2900, 3000 ]])
+        assert.ok(mean('state:investment', lo, hi) > mean('state:investment', 2000, 2100) + .05,
+                  'Restoring reserve releases investment again');
+      assert.equal(rows[1500][header.indexOf('phase')], 'falling');
+      assert.equal(rows[2100][header.indexOf('phase')], 'rising');
+    } else {
+      for (const [side, lo, hi] of [[ -1, 1700, 1800 ], [ 1, 2300, 2400 ], [ -1, 2900, 3000 ]]) {
+        const wanted = mean('olfaction:gradient:' + side, lo, hi);
+        assert.ok(wanted > .2 && wanted > mean('olfaction:gradient:' + -side, lo, hi) + .2,
+                  'The stronger nose selects its own gradient output, including a returning cue');
+      }
+      assert.ok(mean('olfaction:gradient', 2600, 2700) < .02,
+                'Removing both nasal signals silences both directional outputs');
+      assert.ok(mean('olfaction:gradient', 2000, 2100) < .02,
+                'After experiencing a gradient, equal nasal inputs cancel');
+    }
+  }
+}
+
 async function spinalDocument(model, sites) {
   const {sitePoint} = await import('../ui/studio/model/layout.js');
   const {siteRole} = await import('../ui/studio/model/organs.js');
@@ -1495,6 +1580,80 @@ async function checkLearningSources(model, capabilities) {
                  'The teaching mark follows the engine contact type');
     assert.equal(overlay.includes('aid-teach-way'), teaches,
                  'The lesson path follows the engine contact type');
+  }
+}
+
+async function checkTraceEffects(model, capabilities) {
+  const {nerveClass} = await import('../ui/studio/model/organs.js');
+  const {sites} = capabilities;
+  const teacher =
+      model.addNeuron(model.newDocument('Reizwege'), 'modulate', sites, {x : 420, y : 325});
+  const learner = model.addNeuron(teacher.document, 'learn', sites, {x : 380, y : 325});
+  const next = model.addNeuron(learner.document, 'relay', sites, {x : 460, y : 325});
+  const muscle = model.addOrgan(next.document, 'muscle', sites, {x : 740, y : 330});
+  const motor = model.findOrgan(muscle.document, muscle.organId).centers[0];
+  let doc = muscle.document;
+  for (const [from, to] of [[ teacher.centerId, learner.centerId ],
+                            [ learner.centerId, next.centerId ], [ teacher.centerId, motor.id ]])
+    doc = model.addWire(doc, from, to, null, sites).document;
+  const check = (trace, source, target, kind, signs) => {
+    const legs = trace.legs.filter(leg => leg.from === source && leg.to === target);
+    assert.deepEqual([...new Set(legs.map(leg => leg.kind)) ], [ kind ],
+                     'A contact has exactly its engine effect');
+    assert.deepEqual([...new Set(legs.map(leg => leg.sign)) ].sort(), signs);
+  };
+  for (const modulator of [.5, .500001, .65, .75, 1, null]) {
+    const draft = model.updateCenter(doc, teacher.centerId, {modulator : .65});
+    const source = model.findCenter(draft, teacher.centerId).center;
+    if (modulator !== null)
+      source.nativeClass = {...nerveClass(source), modulator};
+    const cl = nerveClass(source), teaching = cl.modulator > .5;
+    const kind = teaching ? 'teaching' : 'electrical';
+    const planned = model.planTrace(draft, sites, [ source.id ]);
+    check(planned, source.id, learner.centerId, kind, teaching ? [ 0 ] : [ 1 ]);
+    check(planned, source.id, motor.id, 'electrical', [ 1 ]);
+    assert.equal(planned.legs.some(leg => leg.from === learner.centerId), !teaching,
+                 'Teaching a learner does not fire its outgoing electrical route');
+    const centers = model.allCenters(draft), index = id => centers.findIndex(c => c.id === id);
+    const from = index(source.id), to = index(learner.centerId), downstream = index(next.centerId);
+    const rows = [
+      [ from, to, 2, 0, 1, 1, .5, -.5 ], [ from, index(motor.id), 2, 0, 1, 1, .5, -.5 ],
+      [ to, downstream, 1, .5, 1, 0, .5, 0 ]
+    ];
+    const report = {
+      compiler : {},
+      groups : centers.map(c => {
+        const n = c.role === 'nerve' ? nerveClass(c) : null;
+        return {cells : 1, nerve : n && [ n.sign, n.mode, n.pace, n.modulator ]};
+      }),
+      contacts : rows
+    };
+    const compiled = structuredClone(draft),
+          original = model.findCenter(compiled, source.id).center;
+    delete original.nativeClass;
+    original.modulator = -1;
+    const state = {document : compiled, sites, stale : false, report};
+    const actual = model.cppnTrace(state, [ source.id ]);
+    check(actual, source.id, learner.centerId, kind, teaching ? [ 0 ] : [ -1, 1 ]);
+    check(actual, source.id, motor.id, 'electrical', [ -1, 1 ]);
+    assert.equal(actual.legs.some(leg => leg.from === learner.centerId), !teaching);
+    const place = sites.find(site => site.id === source.site), generated = centers.length;
+    for (const role of [0, 1]) {
+      const extra = {
+        ...state,
+        report : {
+          ...report,
+          extraNodes : [ {...place, index : generated, role, nativeClass : cl} ],
+          contacts : rows.map(row => row[0] === from ? [ generated, ...row.slice(1) ] : row)
+        }
+      };
+      const id = '@cppn-' + generated, trace = model.cppnTrace(extra, [ id ]);
+      const teaches = role === 1 && teaching;
+      check(trace, id, learner.centerId, teaches ? 'teaching' : 'electrical',
+            teaches ? [ 0 ] : [ -1, 1 ]);
+      check(trace, id, motor.id, 'electrical', [ -1, 1 ]);
+      assert.equal(trace.legs.some(leg => leg.from === learner.centerId), !teaches);
+    }
   }
 }
 
@@ -2317,6 +2476,14 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  if (process.argv.includes('--region-traces') || process.argv.includes('--state-hunger') ||
+      process.argv.includes('--olfaction')) {
+    const modes = [ 'state-hunger', 'olfaction' ].filter(
+        mode => process.argv.includes('--region-traces') || process.argv.includes('--' + mode));
+    await checkInternalRegions(model, sitesResult, root, modes);
+    console.log('Atelier: native Reserve- und Geruchsverläufe mit fortlaufendem Lernen: OK');
+    return;
+  }
   await checkProbeSettling(model, sitesResult, root);
   if (process.argv.includes('--probe-settling')) {
     console.log('Atelier: native Nahsinn-Vorschauen und wiederholte Anatomieantworten: OK');
@@ -2355,6 +2522,7 @@ async function checkHormoneSystems(model, capabilities) {
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkInspectorSubstances(model, sitesResult, clicks);
   await checkLearningSources(model, sitesResult);
+  await checkTraceEffects(model, sitesResult);
   await checkMotorPicture(model, sitesResult);
   if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
     await checkResponseControls(model, sitesResult, clicks);
@@ -2393,6 +2561,7 @@ async function checkHormoneSystems(model, capabilities) {
       await checkFinPattern(model, sitesResult.sites, root);
       await checkReversePattern(model, sitesResult.sites, root);
       await checkForagingChoice(model, sitesResult.sites, root);
+      await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);
       await checkResponseControls(model, sitesResult, clicks);
       await checkFunctionalRegions(model, sitesResult);
       checkSlotWiring(model, await import('../ui/studio/model/regions.js'), sitesResult.sites,

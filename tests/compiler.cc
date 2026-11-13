@@ -228,7 +228,8 @@ void property_overrides_reach_outputs() {
 int region_trace(const std::string &mode) {
   const bool reverse = mode == "motor-reverse", fins = mode == "spine-fin",
              resting = mode == "spine-rest", spine = mode == "spine" || fins || reverse || resting,
-             late = mode.find("late") != std::string::npos,
+             hunger = mode == "state-hunger", olfaction = mode == "olfaction",
+             internal = hunger || olfaction, late = mode.find("late") != std::string::npos,
              pulsed = mode.find("pulsed") != std::string::npos,
              fed_start = mode.find("fed-start") != std::string::npos;
   std::string name;
@@ -239,7 +240,7 @@ int region_trace(const std::string &mode) {
   genome.compile(false);
   assert(assess(plan, genome).ok());
   field::Network brain(genome.blueprint);
-  if (spine)
+  if (spine || internal)
     for (const auto &synapse : brain.synapses())
       assert(synapse.weight == 0);
   std::vector<int> groups, sensors, count(plan.groups.size());
@@ -255,22 +256,77 @@ int region_trace(const std::string &mode) {
       sensors.push_back(group);
   }
   std::cout << "t";
+  if (internal)
+    std::cout << ",phase,maturity,reserve,nose_left,nose_right,learning";
   for (const auto &g : plan.groups)
     std::cout << ',' << g.name;
   std::cout << '\n';
   std::vector<double> total(plan.groups.size());
-  const int every = spine ? 1 : 50;
+  const int every = spine || internal ? 1 : 50;
+  assert(!internal || genome.interface->sensory.size() == sensors.size());
   // spine-rest: a long swim, a long rest and a new swim.
-  for (int step = 0; step < (resting ? 9000 : spine ? 5200 : 6200); ++step) {
-    brain.set_body_levels(std::min(1., .65 + .35 * step / 800), 1, 0);
+  for (int step = 0; step < (internal ? 3000 : resting ? 9000 : spine ? 5200 : 6200); ++step) {
+    const double maturity = std::min(1., .65 + .35 * step / 800);
+    double reserve = 1, left_nose = 0, right_nose = 0;
+    const char *phase = "training";
+    if (hunger) {
+      if (step < 1200)
+        reserve = step / 200 % 2 ? .1 : .9;
+      else if (step < 1500 || step >= 2400) {
+        phase = "full";
+        reserve = .9;
+      } else if (step < 1800) {
+        phase = "falling";
+        reserve = .9 - .8 * (step - 1500) / 300.;
+      } else if (step < 2100) {
+        phase = "low";
+        reserve = .1;
+      } else {
+        phase = "rising";
+        reserve = .1 + .8 * (step - 2100) / 300.;
+      }
+    }
+    if (olfaction) {
+      const int period = step < 1200 ? 0 : (step - 1200) / 300;
+      if (period == 1 || period == 5) {
+        phase = step < 1200 ? "training" : "left";
+        left_nose = .8;
+        right_nose = .2;
+      } else if (period == 3) {
+        phase = step < 1200 ? "training" : "right";
+        left_nose = .2;
+        right_nose = .8;
+      } else if (period == 4) {
+        phase = "off";
+      } else {
+        phase = step < 1200 ? "training" : "equal";
+        left_nose = right_nose = .6;
+      }
+    }
+    brain.set_body_levels(maturity, reserve, 0);
     const float cue = step >= 4000 && step < 4400 ? 0 : .8f;
     const bool feeding = step >= 2000 && (step < 2800 || (step >= 5000 && step < 5800));
     const float food = step < 2000 ? (fed_start || (!late && step % 200 < 40) ? .6f : 0)
                        : feeding && (!pulsed || step % 80 < 20) ? .6f
                                                                 : 0;
     std::vector<float> input;
-    for (int i : sensors) {
+    for (std::size_t sensor = 0; sensor < sensors.size(); ++sensor) {
+      const int i = sensors[sensor];
       const auto &s = plan.groups[i].name;
+      if (internal) {
+        const auto &r = genome.interface->sensory[sensor];
+        assert(groups[r.neuron] == i);
+        if (hunger) {
+          assert(r.channel == field::Blood && r.hormones[field::RESERVE_SUBSTANCE] > .99f);
+          input.push_back(fishsim::receptor_response(
+              r, field::blood_stimulus(r.hormones, field::Hormones{}, maturity, reserve, 0)));
+        } else {
+          assert(r.channel == field::Odor);
+          // This is the signal entering the regional circuit, after nasal transduction.
+          input.push_back(float(plan.groups[i].side < 0 ? left_nose : right_nose));
+        }
+        continue;
+      }
       if (spine) {
         const bool left = plan.groups[i].side < 0;
         if (reverse) {
@@ -314,6 +370,9 @@ int region_trace(const std::string &mode) {
     }
     if (step % every == every - 1) {
       std::cout << step + 1;
+      if (internal)
+        std::cout << ',' << phase << ',' << maturity << ',' << reserve << ',' << left_nose << ','
+                  << right_nose << ',' << brain.plasticity();
       for (auto &value : total) {
         std::cout << ',' << value / every;
         value = 0;
@@ -333,13 +392,16 @@ int region_trace(const std::string &mode) {
     }
     assert(inhibition[0] > .05 && inhibition[1] > .05);
   }
+  if (internal)
+    assert(brain.plasticity() && brain.learned_connections() > 0);
   return 0;
 }
 int main(int argc, char **argv) {
   fishsim::Genome::begin_run(34981);
   if (argc == 2 &&
       (std::string(argv[1]).find("choice") == 0 || std::string(argv[1]).find("spine") == 0 ||
-       std::string(argv[1]) == "motor-reverse"))
+       std::string(argv[1]) == "motor-reverse" || std::string(argv[1]) == "state-hunger" ||
+       std::string(argv[1]) == "olfaction"))
     return region_trace(argv[1]);
   duplication_uses_shared_limits();
   wired_cells_find_contact_places();
