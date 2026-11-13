@@ -130,6 +130,8 @@ const STUFF = [{name : 'Wachstum'}, {name : 'Stress'}, {name : 'Laichzeit'}, {na
 // The wheel: six messengers along an arc, maturity after them (hormones.hh, SUBSTANCE_TURNS).
 const WHEEL = [...PALETTE.map((c, k) => k * 40), 280];
 const ACTIONS = [['become', 'Entstehen'], ['die', 'Tod'], ['work', 'Aktivität']];
+// Where the young fish counts as grown (maturity), for the picture only.
+const ADULT = .72;
 const life = {
   hatch : .3,
   become : {on : true, by : 'maturity', stuff : 0, at : .12},
@@ -149,7 +151,7 @@ const mixPaint = () => {
   if (!used.length) return '#5d8384';
   return 'conic-gradient(' + used.map(([, i], k) => `${PALETTE[i]} ${k / used.length * 100}% ${(k + 1) / used.length * 100}%`).join(',') + ')';
 };
-const sourceName = by => by === 'mix' ? 'Mischung' : stuffName(Number(by.slice(5)));
+const sourceName = (by, long) => by === 'mix' ? (long ? 'Mischung von Botenstoffen' : 'Mischung') : stuffName(Number(by.slice(5)));
 const sourceColour = by => by === 'mix' ? '#c7d6c0' : PALETTE[Number(by.slice(5))];
 const bound = (c, half, steep) => { const x = Math.pow(Math.max(0, c) / half, Math.pow(2, steep)); return x / (1 + x); };
 const levelAt = (w, c) => w.from + (w.to - w.from) * bound(c, Math.max(.02, w.at), w.steep);
@@ -203,6 +205,7 @@ function drawMenu(row, a, key) {
   h.addEventListener('click', () => { h.lastChild.textContent = 'öffnet im Atelier die Hormonansicht'; });
 }
 // The wheel in the button: the place the cell listens from and how wide it listens.
+const wheels = new Set();
 function mixWheel(menu) {
   const svg = el('svg', {viewBox : '0 0 150 150', 'data-mix' : 1}, null); menu.appendChild(svg);
   const C = 75, R = 52, P = (x, y) => [C + R * x, C - R * y];
@@ -217,12 +220,13 @@ function mixWheel(menu) {
     });
     el('circle', {cx : mx, cy : my, r : R * sigma, fill : '#f1dda6', 'fill-opacity' : .07, stroke : '#f1dda6', 'stroke-dasharray' : '3 3'}, svg);
     const place = el('circle', {cx : mx, cy : my, r : 6}, svg);
-    drag(svg, place, p => { const x = (p.x - C) / R, y = (C - p.y) / R, n = Math.hypot(x, y); life.mix.x = n > 1.1 ? x / n * 1.1 : x; life.mix.y = n > 1.1 ? y / n * 1.1 : y; paint(); drawDiagrams(); refreshDots(); }, 'mixplace');
+    drag(svg, place, p => { const x = (p.x - C) / R, y = (C - p.y) / R, n = Math.hypot(x, y); life.mix.x = n > 1.1 ? x / n * 1.1 : x; life.mix.y = n > 1.1 ? y / n * 1.1 : y; drawDiagrams(); refreshDots(); }, 'mixplace');
     const wx = Math.min(146, mx + R * sigma);
     const width = el('rect', {x : wx - 5, y : my - 5, width : 10, height : 10, rx : 2}, svg);
-    drag(svg, width, p => { life.mix.width = clamp(((p.x - mx) / R - .15) / 1.85, 0, 1); paint(); drawDiagrams(); refreshDots(); }, 'mixwidth');
+    drag(svg, width, p => { life.mix.width = clamp(((p.x - mx) / R - .15) / 1.85, 0, 1); drawDiagrams(); refreshDots(); }, 'mixwidth');
   };
-  paint();
+  paint(); wheels.add({svg, paint});
+  return svg;
 }
 const refreshDots = () => document.querySelectorAll('#triggers .seg .sdot, #stuffs h4 .sdot').forEach(d => { if (d.dataset.mix) d.style.background = mixPaint(); });
 function drawLife() { drawTriggers(); drawDiagrams(); }
@@ -234,12 +238,18 @@ function drawDiagrams() {
   for (const old of [...box.children]) if (!used.includes(old.dataset.by)) old.remove();
   for (const by of used) {
     let part = box.querySelector(`[data-by="${by}"]`);
-    if (!part) { part = html('div', {'data-by' : by}, box); html('h4', {}, part); part.appendChild(el('svg', {id : 'life-' + by})); }
+    if (!part) {
+      part = html('div', {'data-by' : by}, box); html('h4', {}, part);
+      // A mix is set where it is used, too: its wheel above its picture.
+      if (by === 'mix') { const wsvg = mixWheel(part); wsvg.style.width = '150px'; wsvg.style.margin = '0 auto'; }
+      part.appendChild(el('svg', {id : 'life-' + by}));
+    }
     const h = part.firstChild; h.replaceChildren();
     const d = stuffDot(h, by); if (by === 'mix') d.dataset.mix = 1;
-    h.append(ACTIONS.filter(([k]) => source(life[k]) === by).map(([, name]) => name).join(' und ') + ' durch ' + sourceName(by));
+    h.append(ACTIONS.filter(([k]) => source(life[k]) === by).map(([, name]) => name).join(' und ') + ' durch ' + sourceName(by, true));
     diagram(part.lastChild, by);
   }
+  for (const w of [...wheels]) { if (w.svg.isConnected) w.paint(); else wheels.delete(w); }
 }
 function stageIcon(svg, kind, x, cy, s) {
   const line = {fill : 'none', stroke : '#e9e2c6', 'stroke-width' : 1.6};
@@ -264,25 +274,36 @@ function diagram(svg, by) {
     el('rect', {x : L, y : top, width : R - L, height : base - top, fill : '#112f37'}, svg);
     el('rect', {x : L, y : top, width : X(life.hatch) - L, height : base - top, fill : '#1d4149'}, svg);
     const mid = (top + base) / 2;
-    stageIcon(svg, 'egg', X(life.hatch / 2), mid, 1.35);
-    stageIcon(svg, 'hatch', X(life.hatch), mid, 1.1);
-    stageIcon(svg, 'young', X(.56), mid, 1.5);
-    stageIcon(svg, 'adult', X(.83), mid, 2.2);
-    for (const [c, word] of [[life.hatch / 2, 'Ei'], [life.hatch, 'Schlupf'], [.56, 'Jungfisch'], [.83, 'erwachsen']]) txt(svg, X(c), base + 30, word, {'text-anchor' : 'middle'});
+    // Three phases; hatching is the step between the first two and needs no word.
+    const young = (life.hatch + ADULT) / 2, grown = (ADULT + 1) / 2;
+    stageIcon(svg, 'egg', X(life.hatch / 2), mid, 1);
+    stageIcon(svg, 'hatch', X(life.hatch), mid, .8);
+    stageIcon(svg, 'young', X(young), mid, 1.5);
+    stageIcon(svg, 'adult', X(grown), mid, 2);
+    for (const [c, word] of [[life.hatch / 2, 'Ei'], [young, 'Jungfisch'], [grown, 'erwachsen']]) txt(svg, X(c), base + 16, word, {'text-anchor' : 'middle'});
   } else {
     const id = 'lv' + by, grad = el('linearGradient', {id}, el('defs', {}, svg));
     el('stop', {offset : 0, 'stop-color' : colour, 'stop-opacity' : .04}, grad);
     el('stop', {offset : 1, 'stop-color' : colour, 'stop-opacity' : .5}, grad);
     el('rect', {x : L, y : top, width : R - L, height : base - top, fill : `url(#${id})`}, svg);
-    const under = plain ? base + 16 : base + 30;
+    const under = base + 16;
     txt(svg, L, under, 'wenig'); txt(svg, R, under, 'viel ' + sourceName(by), {'text-anchor' : 'end'});
   }
   const from = here(b) ? b.at : 0, to = here(d) ? d.at : 1, level = c => here(w) ? levelAt(w, c) : w.on && w.by !== 'maturity' && !stuff ? .5 : 1;
   el('path', {d : `M${L} ${base} H${R}`, stroke : '#5d8384'}, svg);
   if (!plain) {
     el('path', {d : `M${L} ${top} H${R}`, stroke : '#5d8384', 'stroke-dasharray' : '2 4'}, svg);
-    txt(svg, L, top - 6, 'volle Aktivität'); txt(svg, L, base + 14, 'keine Aktivität');
+    txt(svg, L, top - 6, 'volle Aktivität der Zelle');
   }
+  // Before the cell comes into being and after it dies: hatched, dim yellow-grey and red-grey.
+  const defs = el('defs', {}, svg);
+  for (const [id, colour] of [['unborn', '#b6ab7a'], ['dead', '#c98a8a']]) {
+    const pat = el('pattern', {id : id + by, width : 6, height : 6, patternUnits : 'userSpaceOnUse', patternTransform : 'rotate(45)'}, defs);
+    el('rect', {width : 6, height : 6, fill : '#0b2228', opacity : .55}, pat);
+    el('path', {d : 'M0 0 V6', stroke : colour, 'stroke-width' : 1.2, opacity : .55}, pat);
+  }
+  if (here(b) && from > 0) el('rect', {x : L, y : top, width : X(from) - L, height : base - top, fill : `url(#unborn${by})`}, svg);
+  if (here(d) && to < 1) el('rect', {x : X(to), y : top, width : R - X(to), height : base - top, fill : `url(#dead${by})`}, svg);
   // The curve lies over the picture, thin and almost clear.
   if (!plain && to > from) {
     const elsewhere = !stuff && w.on && w.by !== 'maturity';
@@ -299,7 +320,7 @@ function diagram(svg, by) {
   }
   // The two ends: each one grip. Left: where the cell comes into being (along) and how active it
   // starts (up and down); right: where it dies (along, with the cross) and how active it ends.
-  const ends = [[here(b), from, w.from, 'from', 'become', 'entsteht'], [here(d), to, w.to, 'to', 'die', 'stirbt']];
+  const labels = [], ends = [[here(b), from, w.from, 'from', 'become', 'entsteht'], [here(d), to, w.to, 'to', 'die', 'stirbt']];
   for (const [timed, at, lv, key, name, word] of ends) {
     const levelled = here(w);
     if (!timed && !levelled) continue;
@@ -313,16 +334,26 @@ function diagram(svg, by) {
       if (levelled) w[key] = lift(p);
       drawDiagrams();
     }, name);
-    if (timed) { const right = name === 'die'; txt(svg, cx + (right ? -12 : 12), plain ? cy - 12 : base - 6, word, {'text-anchor' : right ? 'end' : 'start'}); }
+    if (timed) labels.push({name, x : cx, word, width : name === 'die' ? 34 : 46});
   }
+  // The words beside their lines, at one height: "entsteht" left of its line, "stirbt" right of
+  // its line, unless the edge is too near; never on top of each other.
+  const ly = plain ? (top + base) / 2 + 4 : base - 6, gap = 12;
+  for (const l of labels) {
+    l.left = l.name === 'become' ? l.x - gap - l.width >= L : !(l.x + gap + l.width <= R);
+    l.from = l.left ? l.x - gap - l.width : l.x + gap; l.to = l.from + l.width;
+  }
+  if (labels.length === 2 && labels[0].to > labels[1].from && labels[1].to > labels[0].from) { labels[0].left = true; labels[1].left = false; }
+  for (const l of labels) txt(svg, l.left ? l.x - gap : l.x + gap, ly, l.word, {'text-anchor' : l.left ? 'end' : 'start'});
   if (here(w) && to > from && Math.abs(w.to - w.from) > .04) {
     // The switch: where along, and how steep (pulled up: abrupt, down: soft).
     const at = clamp(w.at, from + .02, to - .02), cx = X(at), cy = Y(levelAt(w, at));
-    const g3 = el('rect', {x : cx - 6, y : cy - 6, width : 12, height : 12, transform : `rotate(45 ${cx} ${cy})`}, svg);
+    el('path', {d : `M${cx} ${top} V${base}`, stroke : '#f1dda6', 'stroke-dasharray' : '4 4', 'stroke-width' : 1.4, opacity : .75, 'pointer-events' : 'none'}, svg);
+    const g3 = el('rect', {x : cx - 7, y : top, width : 14, height : base - top, style : 'fill:transparent;stroke:none;cursor:ew-resize'}, svg);
     const start = {y : cy, steep : w.steep};
     drag(svg, g3, p => { w.at = clamp(fit(p), from + .02, to - .02); w.steep = clamp(start.steep + (start.y - p.y) / 20, 0, 3); drawDiagrams(); }, 'switch');
   }
-  svg.setAttribute('viewBox', `0 0 300 ${base + (plain ? 22 : 38)}`);
+  svg.setAttribute('viewBox', `0 0 300 ${base + 22}`);
 }
 document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; drawTriggers(); } });
 
