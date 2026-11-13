@@ -12,6 +12,8 @@ struct LaboratoryControl {
   bool leaves = false;
   std::set<int> muted;
   std::uint64_t egg_until = 0, sperm_until = 0;
+  void set_mouth(bool closing, std::optional<double> drive);
+  void release_gametes(bool eggs, const Body &, std::uint64_t tick);
 };
 struct LaboratoryTarget {
   double x = 0, y = 0, distance = 0, bearing = 0;

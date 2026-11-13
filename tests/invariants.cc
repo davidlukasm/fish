@@ -533,6 +533,57 @@ void laboratory_uses_the_muscles(const Genome &g) {
     check(p.body.ledger().muscle_cost > 0, "manual steering pays muscle work");
   }
 }
+void laboratory_mouth_hands_over_to_manual_control(const Genome &g) {
+  Ecosystem w(SEED);
+  w.resize(800, 500);
+  auto &p = adult(w, g, 400, 250);
+  LaboratoryControl c;
+  c.auto_mouth = true;
+  for (bool closing : {false, true, false}) {
+    c.set_mouth(closing, 1.);
+    check(!c.auto_mouth, "a manual mouth command disables its autopilot");
+    apply_laboratory_control(p, w, c);
+    anatomical_action(p.body, p.body.active_interface(g), w.physiology(), false);
+    check(closing ? p.body.bite_signal > 0 && p.body.eat_signal == 0
+                  : p.body.eat_signal > 0 && p.body.bite_signal == 0,
+          "opening and closing hand over without the antagonist still pulling");
+  }
+  c.set_mouth(true, 0.);
+  check(c.jaw == 0. && c.suction == 0., "zero manual drive leaves both mouth muscles slack");
+  c.set_mouth(false, std::nullopt);
+  check(!c.jaw && !c.suction, "returning the mouth to the brain clears both overrides");
+}
+void laboratory_release_waits_for_the_running_twitch(const Genome &g) {
+  Ecosystem w(SEED);
+  w.resize(800, 500);
+  auto &p = adult(w, g, 400, 250);
+  const auto &layout = p.body.active_interface(g);
+  for (bool eggs : {false, true})
+    for (double remaining : {0., .25, 4., 4.25, MAX_STROKE_STEPS - .5}) {
+      const int index = eggs ? StrokeEgg : StrokeSperm;
+      auto &stroke = StateAccess::motor(p.body).strokes[index];
+      stroke = {};
+      stroke.span = MAX_STROKE_STEPS;
+      stroke.recovery = remaining;
+      LaboratoryControl c;
+      c.release_gametes(eggs, p.body, w.ticks);
+      const auto until = eggs ? c.egg_until : c.sperm_until;
+      check((eggs ? c.sperm_until : c.egg_until) == 0,
+            "a release request leaves the other gonad alone");
+      int impulses = 0;
+      while (w.ticks < until) {
+        apply_laboratory_control(p, w, c);
+        anatomical_action(p.body, layout, w.physiology(), false);
+        const bool released =
+            eggs ? p.body.reproduction().egg_release : p.body.reproduction().sperm_release;
+        impulses += released;
+        check(released == (w.ticks + 1 == until),
+              "the release command ends at the first available impulse");
+        ++w.ticks;
+      }
+      check(impulses == 1, "one laboratory request produces one release impulse");
+    }
+}
 constexpr double BURY_DEPTH = 30, BURY_RADIUS = 2;
 void algae_vanish_in_traces(const Genome &g) {
   auto w = closed_tank(g);
@@ -891,6 +942,8 @@ int main() {
     closed_tank_creates_no_energy(g);
     laboratory_energy_is_accounted(g);
     laboratory_uses_the_muscles(g);
+    laboratory_mouth_hands_over_to_manual_control(g);
+    laboratory_release_waits_for_the_running_twitch(g);
     checkpoint_continues_exactly(g);
     checkpoint_after_death(g);
     organ_muscles_survive_checkpoint(g);

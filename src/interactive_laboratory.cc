@@ -62,10 +62,8 @@ void InteractiveSession::execute_laboratory(const std::string &op, std::istrings
   } else if (axis == "turn") {
     c.turn = v;
     c.auto_turn = false;
-  } else if (axis == "jaw")
-    c.jaw = v;
-  else if (axis == "suction")
-    c.suction = v;
+  } else if (axis == "jaw" || axis == "suction")
+    c.set_mouth(axis == "jaw", v);
   else if (axis == "energy")
     c.energy = v ? std::make_optional(reserve_capacity(p.body) * *v) : std::nullopt;
   else if (axis == "auto-forward")
@@ -93,9 +91,7 @@ void InteractiveSession::execute_laboratory(const std::string &op, std::istrings
     const int stroke = axis == "egg" ? StrokeEgg : StrokeSperm;
     if (layout.stroke_capacity[stroke] <= 0)
       throw Refusal("invalidArgument", {{"command", op}});
-    // Hold the release muscle for one full recovery; no stock is created by this command.
-    const auto until = world.ticks + std::max(1, layout.stroke_timing[stroke].whole());
-    (axis == "egg" ? c.egg_until : c.sperm_until) = until;
+    c.release_gametes(axis == "egg", p.body, world.ticks);
   } else
     throw Refusal("invalidArgument", {{"command", op}});
   laboratory_controls[id] = c;

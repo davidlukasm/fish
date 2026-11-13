@@ -6,6 +6,19 @@
 #include <numeric>
 
 namespace fishsim {
+void LaboratoryControl::set_mouth(bool closing, std::optional<double> drive) {
+  auto_mouth = false;
+  const auto antagonist = drive ? std::make_optional(0.) : std::nullopt;
+  jaw = closing ? drive : antagonist;
+  suction = closing ? antagonist : drive;
+}
+void LaboratoryControl::release_gametes(bool eggs, const Body &b, std::uint64_t tick) {
+  const auto &stroke = b.motor().strokes[eggs ? StrokeEgg : StrokeSperm];
+  // Recruitment may have changed since this twitch began. Wait for its actual remainder,
+  // then hand control back after the next release impulse.
+  const auto until = tick + std::uint64_t(std::max(1., std::ceil(stroke.recovery)));
+  (eggs ? egg_until : sperm_until) = until;
+}
 LaboratoryTarget laboratory_target(const Ecosystem &w, const Body &b, bool leaves) {
   LaboratoryTarget result;
   result.distance = std::numeric_limits<double>::infinity();
