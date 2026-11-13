@@ -743,6 +743,11 @@ function drawYield() {
   drag(c, el('circle', {cx : mx, cy : ytop - 8, r : 7}, c), p => { gut.middle = tOf(p.x); keep(); drawGut(); }, 'middle');
   const by = base - 10;
   el('path', {d : `M${X(fast)} ${by} H${X(T)}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, c);
+  // The bar is the gut muscle's reach, an organ of its own that works only on the brain's command.
+  const right = R - X(T) > 64;
+  txt(c, right ? X(T) + 9 : X(fast) - 9, by + 4, 'Darmmuskel', {'text-anchor' : right ? 'start' : 'end', style : 'fill:#eaa886;font-size:10px'});
+  // Faster than the picture shows (below 50 steps): an arrow at the left edge.
+  if (fast < K.shortest) el('path', {d : `M${L + 2} ${by} l7 -5 v10 z`, fill : '#eaa886'}, c);
   const ends = (slow, quick) => { gut.middle = Math.sqrt(slow * quick); gut.spread = slow / quick; drawGut(); };
   const slowTo = p => { const slow = clamp(tOf(p.x), K.rest[0], K.rest[1]); ends(slow, clamp(fast, slow / K.fastest, slow)); };
   const quickTo = p => ends(T, clamp(tOf(p.x), T / K.fastest, T));
