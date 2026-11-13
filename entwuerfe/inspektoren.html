@@ -447,7 +447,7 @@ document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; draw
 // per group of cells; pain and food cells answer like other pain and food cells (adapted_response).
 const K = {time : 200, open : 320, shell : 120, spoil : 250, pulp : 820, worth : .75, uptake : 20, sharp : 4, fastest : 4, shortest : 25, longest : 800};
 const FOOD = [['Blatt', {flesh : 0, fibre : 1}, '#8fd16a'], ['Alge', {flesh : 0, fibre : .75}, '#55c4a6'], ['Flocken', {flesh : 0, fibre : 0}, '#e3cf94'], ['Plankton', {flesh : .5, fibre : 0, shell : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, fibre : 0}, '#ef8f8f']];
-const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .35, habit : .5}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5}], chosen : 0, level : .6}};
+const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .25, habit : .5, spread : .4}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5, spread : .4}], chosen : 0, level : .6}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
 function gain(f, T) {
@@ -539,7 +539,6 @@ function drawGut() {
   txt(c, L + 4, ytop + 2, 'je Bissen');
   for (const t of [50, 100, 200, 400, 800]) { el('path', {d : `M${X(t)} ${base} v4`, stroke : '#3b6a6c'}, c); txt(c, X(t), base + 15, t, {'text-anchor' : t === 800 ? 'end' : 'middle'}); }
   txt(c, R, base + 30, 'Verweildauer (Schritte)', {'text-anchor' : 'end'});
-  const names = [];
   for (const [name, a, colour] of FOOD) {
     let good = '', bad = '', last = null, bestT = K.shortest;
     for (let k = 0; k <= 100; k++) {
@@ -550,26 +549,39 @@ function drawGut() {
     }
     if (good) el('path', {d : good, fill : 'none', stroke : colour, 'stroke-width' : 2}, c);
     if (bad) el('path', {d : bad, fill : 'none', stroke : colour, 'stroke-width' : 2, 'stroke-dasharray' : '2 4', opacity : .8}, c);
-    names.push({name, colour, x : clamp(X(bestT), L + 26, R - 26), y : Y(gain(a, bestT)) - 7});
   }
-  // Names over their curves' best points, moved up where they would run into each other.
-  names.sort((p, q) => q.y - p.y);
-  const taken = [];
-  for (const n of names) {
-    const w = n.name.length * 6.4;
-    while (taken.some(t => Math.abs(t.x - n.x) < (t.w + w) / 2 + 4 && Math.abs(t.y - n.y) < 12)) n.y -= 3;
-    taken.push({x : n.x, y : n.y, w});
-    txt(c, n.x, n.y, n.name, {'text-anchor' : 'middle', style : 'fill:' + n.colour});
+  // Each name sits on its own curve where it is free: not on another name, not on another curve,
+  // not on the middle line and its grip, as near its curve's best as can be.
+  const mx = X(gut.middle), taken = [{x0 : L + 2, x1 : L + 62, y0 : ytop - 8, y1 : ytop + 4}], pts = FOOD.map(([, a]) => Array.from({length : 61}, (_, k) => { const t = K.shortest * Math.pow(2, span * k / 60); return [X(t), Y(gain(a, t))]; }));
+  const order = FOOD.map((f, i) => i).sort((p, q) => Math.max(...pts[q].map(v => -v[1])) - Math.max(...pts[p].map(v => -v[1])));
+  for (const i of order) {
+    const [name, , colour] = FOOD[i], w = name.length * 6.2, top = Math.min(...pts[i].map(v => v[1]));
+    let best = null;
+    for (const [x, y] of pts[i]) for (const lift of [-7, 13]) {
+      const box = {x0 : x - w / 2, x1 : x + w / 2, y0 : y + lift - 10, y1 : y + lift + 2};
+      if (box.x0 < L + 2 || box.x1 > R + 4 || box.y0 < ytop - 14 || box.y1 > base - 2) continue;
+      let cost = (y - top) * .6 + (lift > 0 ? 6 : 0);
+      for (const t of taken) if (box.x0 < t.x1 + 3 && box.x1 > t.x0 - 3 && box.y0 < t.y1 + 2 && box.y1 > t.y0 - 2) cost += 200;
+      if (box.x0 < mx + 8 && box.x1 > mx - 8) cost += 120;
+      pts.forEach((other, j) => { if (j !== i) for (const [ox, oy] of other) if (ox > box.x0 && ox < box.x1 && oy > box.y0 - 1 && oy < box.y1 + 1) cost += 25; });
+      if (!best || cost < best.cost) best = {cost, x, y : y + lift, box};
+    }
+    if (!best) continue;
+    taken.push(best.box);
+    txt(c, best.x, best.y, name, {'text-anchor' : 'middle', style : 'fill:' + colour});
   }
   // The middle: one line, dragged along; the muscle's reach: a bar, both ends pulled apart.
-  const mx = X(gut.middle);
   el('path', {d : `M${mx} ${ytop - 8} V${base}`, stroke : '#f1dda6', 'stroke-width' : 1.4}, c);
   const keep = () => { gut.middle = clamp(gut.middle, 100 / Math.sqrt(gut.spread), 800 / Math.sqrt(gut.spread)); };
   drag(c, el('circle', {cx : mx, cy : ytop - 8, r : 7}, c), p => { gut.middle = tOf(p.x); keep(); drawGut(); }, 'middle');
   const by = base - 10;
   el('path', {d : `M${X(fast)} ${by} H${X(T)}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, c);
-  const spreadTo = p => { const d = Math.abs(Math.log2(tOf(p.x) / gut.middle)); gut.spread = clamp(Math.pow(2, 2 * d), 1, K.fastest); keep(); drawGut(); };
-  for (const [x, n] of [[X(fast), 'quick'], [X(T), 'slow']]) drag(c, el('rect', {x : x - 5, y : by - 7, width : 10, height : 14, rx : 3, style : 'stroke:#eaa886'}, c), spreadTo, 'spread-' + n);
+  // Each end follows the pointer by itself: the slow end is the gut at rest (its length), the quick
+  // end the gut with the muscle at full work, at most four times as fast.
+  const ends = (slow, quick) => { gut.middle = Math.sqrt(slow * quick); gut.spread = slow / quick; drawGut(); };
+  const slowTo = p => { const slow = clamp(tOf(p.x), 100, 800); ends(slow, clamp(fast, slow / K.fastest, slow)); };
+  const quickTo = p => ends(T, clamp(tOf(p.x), T / K.fastest, T));
+  for (const [x, n, to] of [[X(fast), 'quick', quickTo], [X(T), 'slow', slowTo]]) drag(c, el('rect', {x : x - 5, y : by - 7, width : 10, height : 14, rx : 3, style : 'stroke:#eaa886'}, c), to, 'spread-' + n);
   c.setAttribute('viewBox', '0 0 300 166');
 
   // ---- Yield of each food over the muscle's reach; a dashed red frame where it hurts. ----
@@ -593,10 +605,11 @@ function drawGut() {
   drawPainSense();
   drawNutrientSense();
 }
-// Pain and food cells, as proposed to Fable and David (engine today: s / (s + θ + m), cppn_brain.cc
-// adapted_response): a group answers r = s² / (s² + (θ + 3·m)²), sharp around its threshold θ, and
-// m follows the stimulus s at rate 1/τ. Getting used to it, a lasting stimulus sinks to a tenth of
-// the first answer; τ from 400 steps (hardly gets used to it) to 4 (at once).
+// Pain and food cells as David decided 05:49 (sent to Fable; engine today: s / (s + θ + m),
+// cppn_brain.cc adapted_response): a cell answers x / (x + 0.15) with x = max(0, s − θ − m), so
+// nothing below its threshold θ; m follows the stimulus s at rate 1/τ, so a lasting stimulus sinks
+// to nothing, sooner or later: τ from 400 steps (hardly gets used to it) to 4 (at once). The cells
+// of a group spread their thresholds around the group's; the group answers with their mean.
 // Laid out like the tail: on the left how strong the bellyache or the food is (only to try out),
 // with each group's threshold on it; above, what each group tells the brain over time; right under
 // it the stimulus itself, when it comes and goes, with the thresholds across it; at the bottom the
@@ -604,9 +617,15 @@ function drawGut() {
 const SENSE_STEPS = 120, SENSE_LASTS = 80;
 const groupColour = i => ['#79d2be', '#5fb3a8', '#a6e3d3'][i % 3];
 const tauOf = h => 400 * Math.pow(4 / 400, h);
+const SENSE_CELLS = 7, SPREAD_MOST = .4;
+const cellGates = g => Array.from({length : SENSE_CELLS}, (_, j) => clamp(g.gate + g.spread * SPREAD_MOST * (2 * j / (SENSE_CELLS - 1) - 1), 0, 1));
 function senseAnswer(g, stimulus) {
   let m = 0;
-  return stimulus.map(s => { const d = g.gate + 3 * m, r = s > 0 ? s * s / (s * s + d * d) : 0; m += (s - m) / tauOf(g.habit); return r; });
+  const gates = cellGates(g);
+  return stimulus.map(s => {
+    const r = gates.reduce((t, gate) => { const x = Math.max(0, s - gate - m); return t + x / (x + .15); }, 0) / gates.length;
+    m += (s - m) / tauOf(g.habit); return r;
+  });
 }
 function senseGroups(id, cell, word, stimulusAt, colour) {
   const svg = document.getElementById(id); svg.replaceChildren();
@@ -634,11 +653,23 @@ function senseGroups(id, cell, word, stimulusAt, colour) {
   }
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, svg);
   // The stimulus under the answers, on the slider's scale, with the thresholds across it.
-  const S0 = base + 8, S1 = base + 40, SY = v => S1 - (S1 - S0) * v;
+  const S0 = base + 8, S1 = base + 58, SY = v => S1 - (S1 - S0) * clamp(v, 0, 1);
   el('rect', {x : L, y : S0, width : R - L, height : S1 - S0, fill : '#0f2c34'}, svg);
-  el('path', {d : 'M' + stimulus.map((v, st) => `${X(st).toFixed(1)} ${SY(v).toFixed(1)}`).join(' L') + ` L${R} ${S1} L${L} ${S1} Z`, fill : colour, opacity : .45, stroke : colour, 'stroke-width' : 1.5}, svg);
-  groups.forEach((g, i) => el('path', {d : `M${L} ${SY(g.gate)} H${R}`, stroke : groupColour(i), 'stroke-width' : i === cell.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', opacity : .9}, svg));
+  el('path', {d : 'M' + stimulus.map((v, st) => `${X(st).toFixed(1)} ${SY(v).toFixed(1)}`).join(' L') + ` L${R} ${S1} L${L} ${S1} Z`, fill : colour, opacity : .4, stroke : colour, 'stroke-width' : 1.5}, svg);
+  // Each group's cells: their thresholds as a band, the group's own as a dashed line.
+  groups.forEach((g, i) => {
+    const gates = cellGates(g), hi = SY(Math.max(...gates)), lo = SY(Math.min(...gates));
+    el('rect', {x : L, y : hi, width : R - L, height : Math.max(0, lo - hi), fill : groupColour(i), opacity : i === cell.chosen ? .22 : .1}, svg);
+    el('path', {d : `M${L} ${SY(g.gate)} H${R}`, stroke : groupColour(i), 'stroke-width' : i === cell.chosen ? 1.6 : 1, 'stroke-dasharray' : '4 3', opacity : .9}, svg);
+  });
   txt(svg, L + 4, S0 + 11, word);
+  // How far the chosen group's cells spread: a bar with two ends at the right, pulled apart.
+  {
+    const g = groups[cell.chosen], x = R - 14, gates = cellGates(g), y0 = SY(Math.max(...gates)), y1 = SY(Math.min(...gates));
+    el('path', {d : `M${x} ${y0} V${y1}`, stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
+    const spreadTo = p => { g.spread = clamp((Math.abs(SY(g.gate) - p.y) - 5) / ((S1 - S0) * SPREAD_MOST), 0, 1); redraw(); };
+    for (const [y, k] of [[y0 - 5, 'hi'], [y1 + 5, 'lo']]) drag(svg, el('rect', {x : x - 7, y : y - 4, width : 14, height : 8, rx : 3, style : 'stroke:#eaa886'}, svg), spreadTo, id + 'spread' + k, hold, free);
+  }
   const TY = S1 + 15;
   txt(svg, L, TY, 'Schritte');
   for (const st of [40, 80, 120]) txt(svg, X(st), TY, st, {'text-anchor' : st === 120 ? 'end' : 'middle'});
@@ -647,7 +678,7 @@ function senseGroups(id, cell, word, stimulusAt, colour) {
     el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, g);
     el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, g);
     g.addEventListener('click', act); };
-  if (n < 3) chip(30, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), habit : .5}); cell.chosen = groups.length - 1; redraw(); }, 'add');
+  if (n < 3) chip(30, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), habit : .5, spread : .3}); cell.chosen = groups.length - 1; redraw(); }, 'add');
   if (n > 1) chip(50, base - (base - top) * groups[cell.chosen].gate, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
   // The chosen group's habit: from not getting used to it (left) to getting used to it at once.
   const cg = groups[cell.chosen], HY = TY + 30, hx0 = L + 40, hx1 = R - 40;
