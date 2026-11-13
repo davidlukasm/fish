@@ -608,7 +608,7 @@ document.addEventListener('click', () => { if (menuOpen) { menuOpen = null; draw
 const K = {time : 200, spoil : 250, fastest : 4, shortest : 25, longest : 800};
 const COURSES = {flesh : [0, 20, 250], pulp : [0, 8, 720], fibre : [400, 20, Infinity], shell : [80, 20, 330]};
 const FOOD = [['Blatt', {flesh : 0, pulp : 0, fibre : 1, shell : 0}, '#8fd16a'], ['Alge', {flesh : 0, pulp : .18, fibre : .82, shell : 0}, '#55c4a6'], ['Flocken', {flesh : 0, pulp : .62, fibre : .1, shell : 0}, '#e3cf94'], ['Plankton', {flesh : .5, pulp : 0, fibre : 0, shell : .5}, '#9cc8f0'], ['Fleisch', {flesh : 1, pulp : 0, fibre : 0, shell : 0}, '#ef8f8f']];
-const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .25, habit : .5, spread : .4}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5, spread : .4}], chosen : 0, level : .6}};
+const gut = {middle : 200, spread : 2.2, levels : [.6], food : {groups : [{gate : .25, habit : .5, spread : .1}], chosen : 0, level : .6}, ache : {groups : [{gate : .3, habit : .5, spread : .1}], chosen : 0, level : .6}};
 const restOf = () => gut.middle * Math.sqrt(gut.spread), fastOf = () => gut.middle / Math.sqrt(gut.spread);
 const sizeOf = T => T / K.time;
 function gain(f, T) {
@@ -1163,8 +1163,8 @@ requestAnimationFrame(tailFrame);
 // times how hard (engine: rest 0.1 plus the impact's answer; then a bounded answer, no getting
 // used to it). Pain: the wounds there, getting used to old ones. Both answer as the gut's cells do
 // in this draft (threshold, spread, for pain the habit).
-const SKIN = {touch : {groups : [{aim : Math.PI, width : 1.1, gate : .3, spread : .3}], chosen : 0, level : .7, spot : null},
-              pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .3, habit : .5}], chosen : 0, level : .6, spot : null},
+const SKIN = {touch : {groups : [{aim : Math.PI, width : 1.1, gate : .3, spread : .1}], chosen : 0, level : .7, spot : null},
+              pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .1, habit : .5}], chosen : 0, level : .6, spot : null},
               defense : {groups : [{aim : -Math.PI / 2, width : 1.3, gate : .3}], chosen : 0, command : .6, rest : .12, spot : null},
               lateral : {groups : [{aim : Math.PI / 2, width : 1.2, gate : 0.245, spread : .1, habit : .4}], chosen : 0, level : .6, from : 2.2}};
 // Lateral line (body_plan.cc:1044–1057, 1085–1090): at each patch of skin the water moving past it,
@@ -1258,9 +1258,9 @@ function drawSkin(key) {
     newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.2, gate : 0.245, spread : .1, habit : .4})});
   senseGroups(key + 'sense', organ, key === 'touch'
     ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, bounded : true, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
-       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
+       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .1})}
     : {word : 'Wunde', colour : '#ef8f8f', bounded : true, redraw, at : (st, level, gr) => st >= 2 ? level * felt(gr) : 0,
-       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
+       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .1, habit : .5})});
 }
 
 // ---------- Gleichgewicht ----------
