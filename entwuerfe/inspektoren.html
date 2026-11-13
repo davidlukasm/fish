@@ -156,12 +156,12 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
   </section>
   <section class="panel" aria-label="Kiemen">
     <h2>Organ</h2><h3>Kiemen</h3>
-    <h4 class="first">Kiemendeckel und Reusen</h4>
+    <h4 id="gill-kind">Bodensieber</h4>
     <svg id="gillhead" viewBox="0 0 300 140"></svg>
     <h4>Reusen</h4>
-    <svg id="gillrake" viewBox="0 0 300 138"></svg>
-    <h4>Pumpen</h4>
-    <svg id="gillflow" viewBox="0 0 300 138"></svg>
+    <svg id="gillrake" viewBox="0 0 300 132"></svg>
+    <h4>Kiemen und Darm</h4>
+    <svg id="gillflow" viewBox="0 0 300 62"></svg>
   </section>
   <section class="panel" aria-label="Abwehr">
     <h2>Organ</h2><h3>Abwehr</h3>
@@ -1811,71 +1811,101 @@ function drawBladder() {
 }
 
 // ---------- Kiemen ----------
-// Gills (physiology.hh:310–368, feeding.cc:535–546, movement.cc:118–121): the gill covers pump water
-// through the open mouth, pumped = area(cells)·2·drive·opening, and a fish swimming with its mouth
-// open meets water as well, ram = 2·gape·open·speed. The rakers (gene q1, density d) let water pass,
-// 1 − d/2, and keep plankton, 0.3 + 0.7·d, so the catch is passage × kept; dense rakers also hold
-// water back in the open mouth (drag × (1 + d/2)) and let less mud through. Above: the head, the
-// gill cover as large as its cells, its rakers as dense as d; middle: water, kept share and catch
-// over the density, the dashed line the fish's; below: the water and its plankton over the speed.
-const GILL = {density : .6, cells : 4, command : .6};
+// Gills (physiology.hh:330–360, 395–402, feeding.cc:535–597; protocol_schema gill_filter): all water
+// the mouth takes in leaves through the gills. Rakers, from none (0) to dense (1), keep plankton
+// 0.02 + 0.98·d³ of it, let water through 1 − 0.6·d, and of the stirred-up bed keep
+// (1 − 0.85·(1 − d)⁴)·(1 − d⁴): none let the bed's flocks slip, half-dense ones hold them while the
+// mud passes, dense ones clog. The gill covers pump water through the open mouth with their cells'
+// force; swimming with the mouth open meets more (ram). What the rakers hold goes to the gut.
+// Above: the head cut open, the gill arch with its rakers as a comb (its fineness is the grip),
+// water and its load passing; the pump on the gill cover with its cells. Middle: the three things
+// a raker density trades, over all densities. Below: mouth, gills and gut together.
+const GILL = {density : .6, cells : 4, fast : .3};
+const rakerKeep = d => .02 + .98 * Math.pow(d, 3), rakerPass = d => 1 - .6 * d, rakerSift = d => (1 - .85 * Math.pow(1 - d, 4)) * (1 - Math.pow(d, 4));
+const GILLFILM = {g : null, bits : []};
 function drawGills() {
-  const redraw = drawGills, hold = () => { GILL.held = true; }, free = () => { GILL.held = false; redraw(); };
   const svg = document.getElementById('gillhead'); svg.replaceChildren();
-  const head = el('g', {transform : 'translate(10 -4) scale(1.1)'}, svg);
-  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1}, head);
-  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, head);
-  // The gill cover: an arc behind the eye, wider with more cells; the rakers as a comb inside it.
-  const gx = 10 + 1.1 * 62, gy = -4 + 1.1 * 64, gr = 12 + 4 * GILL.cells;
-  el('path', {d : `M${gx} ${gy - gr} A${gr * .55} ${gr} 0 0 1 ${gx} ${gy + gr}`, fill : 'none', stroke : '#eaa886', 'stroke-width' : 3, 'stroke-linecap' : 'round'}, svg);
-  const teeth = Math.round(4 + 22 * GILL.density);
-  let comb = '';
-  for (let k = 0; k <= teeth; k++) { const y = gy - gr * .8 + 1.6 * gr * k / teeth; comb += `M${gx - 4} ${y.toFixed(1)} h-10`; }
-  el('path', {d : comb, stroke : '#d9cfae', 'stroke-width' : 1.1}, svg);
-  drag(svg, el('circle', {cx : gx + gr * .55, cy : gy, r : 7}, svg), p => { GILL.cells = clamp(Math.round((Math.hypot((p.x - gx) / .55, p.y - gy) - 12) / 4), 1, 8); redraw(); }, 'gillcells', hold, free);
-  txt(svg, gx + gr * .55 + 12, gy + 4, GILL.cells + ' Zellen');
+  const G = GILL, redraw = drawGills, d = G.density;
+  const pump = Math.min(1, 2 * effForce(G.cells * forceOf(G.fast)));
+  const rest = G.cells * Math.pow(.25, G.fast) * .48;
+  const kind = d < .25 ? 'Schlinger' : d < .75 ? 'Bodensieber' : 'Planktonfilterer';
+  document.getElementById('gill-kind').textContent = kind;
+  txt(svg, 296, 12, `Unterhalt in Ruhe ${fmt(rest)} · Wasser staut im Maul ×${fmt(1 / rakerPass(d))}`, {'text-anchor' : 'end'});
+  // The head, cut open: snout left, mouth cavity, the gill arch behind it, the cover over it.
+  el('path', {d : 'M18 74 C34 40 140 18 215 18 C255 18 285 26 300 30 V134 C270 134 235 130 205 120 C175 110 120 104 18 84 Z', fill : '#1b3f48', stroke : '#4a7c7e', 'stroke-width' : 1.4}, svg);
+  el('path', {d : 'M26 70 C60 60 110 58 150 64 L150 98 C110 100 60 92 26 76 Z', fill : '#0f2c34'}, svg);
+  el('circle', {cx : 70, cy : 44, r : 6, fill : '#e9e2c6'}, svg);
+  // The gill arch with its rakers: as many and as fine as the density.
+  const ax = 160, ay0 = 52, ay1 = 112, n = Math.round(3 + 17 * d);
+  el('path', {d : `M${ax} ${ay0} Q${ax + 10} ${(ay0 + ay1) / 2} ${ax} ${ay1}`, stroke : '#d98a8a', 'stroke-width' : 6, fill : 'none', 'stroke-linecap' : 'round'}, svg);
+  for (let k = 0; k < n; k++) { const t = (k + .5) / n, y = ay0 + (ay1 - ay0) * t, x = ax + 10 * 4 * t * (1 - t) * .5; el('path', {d : `M${x - 2} ${y} l-12 ${-2 + 4 * (1 - d)}`, stroke : '#f4efd8', 'stroke-width' : 1 + 1.6 * (1 - d), 'stroke-linecap' : 'round'}, svg); }
+  // The gill cover with its pump muscle; its cells as width, its fibres as colour.
+  el('path', {d : `M200 34 Q230 80 196 126`, stroke : fibreColour(G.fast), 'stroke-width' : 3 + 1.6 * G.cells, fill : 'none', 'stroke-linecap' : 'round', opacity : .85}, svg);
+  signChip(svg, 236, 70, '−', () => { G.cells = Math.max(1, G.cells - 1); redraw(); }, G.cells > 1, 7);
+  signChip(svg, 254, 70, '+', () => { G.cells = Math.min(8, G.cells + 1); redraw(); }, G.cells < 8, 7);
+  txt(svg, 245, 92, 'Pumpe', {'text-anchor' : 'middle', style : 'font-size:10px'});
+  // The comb's fineness, dragged up and down along the arch: up is coarse, down is dense.
+  const gy = ay0 + (ay1 - ay0) * d;
+  drag(svg, el('rect', {x : ax - 22, y : gy - 5, width : 12, height : 10, rx : 3}, svg), q => { G.density = clamp((q.y - ay0) / (ay1 - ay0), 0, 1); redraw(); }, 'gilldensity');
+  txt(svg, ax - 28, ay0 - 4, 'grob', {'text-anchor' : 'end', style : 'font-size:10px'}); txt(svg, ax - 28, ay1 + 10, 'dicht', {'text-anchor' : 'end', style : 'font-size:10px'});
+  // The water and its load: drawn by the film.
+  GILLFILM.g = el('g', {}, svg); GILLFILM.pump = pump; GILLFILM.arch = ax;
   svg.setAttribute('viewBox', '0 0 300 140');
-
-  // ---- Over the rakers' density: water through, plankton kept of it, the catch. ----
-  const c = document.getElementById('gillrake'); c.replaceChildren();
-  const L = 40, R = 290, top = 26, base = 116, X = d => L + (R - L) * d, Y = v => base - (base - top) * v;
-  // Fable aef079ab: three mouths. Water through (and so the suction) 1 − 0.6·d; plankton held
-  // 0.02 + 0.98·d³, caught = water × held; the ground's flocks sifted (1 − 0.85·(1 − d)⁴)(1 − d⁴).
-  const curves = [['Wasser und Saugen', '#9cc8f0', d => 1 - .6 * d], ['Plankton', '#e7ba77', d => (1 - .6 * d) * (.02 + .98 * d * d * d)], ['Boden', '#c9b48c', d => (1 - .85 * Math.pow(1 - d, 4)) * (1 - Math.pow(d, 4))]];
-  grid(c, L, R, top, base, 1);
-  for (const [name, colour, f] of curves) {
-    el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(f(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2.2}, c);
-  }
-  txt(c, X(.02), Y(1) - 4, 'Wasser und Saugen', {style : 'fill:#9cc8f0'});
-  txt(c, X(.3), Y(.77) + 16, 'Boden', {'text-anchor' : 'middle', style : 'fill:#c9b48c'});
-  txt(c, X(.8), Y(.25) + 16, 'Plankton', {'text-anchor' : 'middle', style : 'fill:#e7ba77'});
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
-  txt(c, L, base + 15, 'locker'); txt(c, R, base + 15, 'dicht', {'text-anchor' : 'end'}); txt(c, (L + R) / 2, base + 15, 'Reusen', {'text-anchor' : 'middle'});
-  const px = X(GILL.density);
-  el('path', {d : `M${px} ${top - 6} V${base + 4}`, stroke : '#f1dda6', 'stroke-width' : 1.4, 'stroke-dasharray' : '5 4'}, c);
-  drag(c, el('circle', {cx : px, cy : top - 6, r : 7}, c), p => { GILL.density = clamp((p.x - L) / (R - L), 0, 1); redraw(); }, 'gilldensity', hold, free);
-  c.setAttribute('viewBox', '0 0 300 ' + (base + 22));
-
-  // ---- Over the speed: water pumped and met, and the plankton kept from it. ----
-  const n = document.getElementById('gillflow'); n.replaceChildren();
-  const L2 = 56, T2 = 26, B2 = 116, SX = v => L2 + (R - L2) * v;
-  const pumped = .25 * GILL.cells / 8 * 2 * GILL.command, ram = v => 2 * .35 * v, pass = 1 - .6 * GILL.density, kept = .02 + .98 * Math.pow(GILL.density, 3);
-  const most = 2 * .35 + .25 * 2;
-  const SY = v => B2 - (B2 - T2) * v / most;
-  regler(n, {x : 26, top : T2, base : B2, word : 'Befehl', value : GILL.command, setValue : v => { GILL.command = v; redraw(); }, start : hold, end : free, name : 'gillcmd'});
-  grid(n, L2, R, T2, B2, most);
-  const area = (lo, hi, colour, op) => el('path', {d : 'M' + Array.from({length : 41}, (_, k) => `${SX(k / 40).toFixed(1)} ${SY(hi(k / 40)).toFixed(1)}`).join(' L') + ' L' + Array.from({length : 41}, (_, k) => 40 - k).map(k => `${SX(k / 40).toFixed(1)} ${SY(lo(k / 40)).toFixed(1)}`).join(' L') + 'Z', fill : colour, opacity : op}, n);
-  area(() => 0, () => pumped * pass, '#eaa886', .55);
-  area(() => pumped * pass, v => (pumped + ram(v)) * pass, '#9cc8f0', .45);
-  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => `${SX(k / 40).toFixed(1)} ${SY((pumped + ram(k / 40)) * pass * kept).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#e7ba77', 'stroke-width' : 2.4, 'stroke-dasharray' : '1 0'}, n);
-  txt(n, SX(.03), SY(pumped * pass) - 4, 'gepumpt', {style : 'fill:#eaa886'});
-  txt(n, SX(.97), SY((pumped + ram(1)) * pass) - 4, 'beim Schwimmen', {'text-anchor' : 'end', style : 'fill:#9cc8f0'});
-  txt(n, SX(.97), SY((pumped + ram(1)) * pass * kept) + 14, 'Plankton', {'text-anchor' : 'end', style : 'fill:#e7ba77'});
-  el('path', {d : `M${L2} ${B2} H${R} M${L2} ${B2} V${T2 - 4}`, stroke : '#3b6a6c', fill : 'none'}, n);
-  txt(n, L2 + 4, T2 - 8, 'Wasser durch die Kiemen');
-  txt(n, L2, B2 + 15, 'steht'); txt(n, R, B2 + 15, 'schnell', {'text-anchor' : 'end'}); txt(n, (L2 + R) / 2, B2 + 15, 'Schwimmen, Maul offen', {'text-anchor' : 'middle'});
-  n.setAttribute('viewBox', '0 0 300 ' + (B2 + 22));
+  drawGillTrade(); drawGillChain();
 }
+// ---- What a density trades: plankton kept, bed food kept, water let through. ----
+function drawGillTrade() {
+  const c = document.getElementById('gillrake'); c.replaceChildren();
+  const L = 30, R = 286, top = 20, base = 112, X = d => L + (R - L) * d, Y = v => base - (base - top) * v, N = 60;
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  for (const [f, colour, word] of [[rakerKeep, '#9cc8f0', 'Plankton bleibt'], [rakerSift, '#c9b48c', 'Bodenfutter bleibt'], [rakerPass, '#79d2be', 'Wasser fließt durch']]) {
+    el('path', {d : 'M' + Array.from({length : N + 1}, (_, k) => `${X(k / N).toFixed(1)} ${Y(f(k / N)).toFixed(1)}`).join(' L'), fill : 'none', stroke : colour, 'stroke-width' : 2}, c);
+    const kx = word.startsWith('Plankton') ? .84 : word.startsWith('Boden') ? .4 : .12, below = word.startsWith('Wasser');
+    txt(c, X(kx), Y(f(kx)) + (below ? 15 : -7), word, {'text-anchor' : 'middle', style : `fill:${colour};font-size:10.5px`});
+  }
+  const x = X(GILL.density);
+  el('path', {d : `M${x} ${top - 6} V${base}`, stroke : '#f1dda6', 'stroke-width' : 1.4}, c);
+  drag(c, el('circle', {cx : x, cy : top - 6, r : 7}, c), q => { GILL.density = clamp((q.x - L) / (R - L), 0, 1); drawGills(); }, 'gilltrade');
+  txt(c, L, base + 15, 'keine Reusen'); txt(c, R, base + 15, 'dicht', {'text-anchor' : 'end'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 20));
+}
+// ---- Mouth, gills and gut: plankton and bed food, what stays in the gills times what the gut
+// makes of it (prey taken whole is the mouth's: see there). ----
+function drawGillChain() {
+  const c = document.getElementById('gillflow'); c.replaceChildren();
+  const d = GILL.density, T = gut.middle, y0 = 18, x0 = 80, x1 = 170, W = 66;
+  txt(c, x0, 10, 'Kiemen', {style : 'font-size:10px'}); txt(c, x1, 10, 'Darm', {style : 'font-size:10px'}); txt(c, 296, 10, 'bringt', {'text-anchor' : 'end', style : 'font-size:10px'});
+  [['Plankton', rakerKeep(d) * GILLFILM.pump, gain(FOOD[3][1], T), '#9cc8f0'], ['Bodenfutter', rakerSift(d), gain(FOOD[2][1], T), '#c9b48c']].forEach(([name, kept, made, colour], k) => {
+    const y = y0 + 20 * k;
+    txt(c, 4, y + 10, name, {style : 'fill:' + colour});
+    for (const [x, v] of [[x0, kept], [x1, made]]) { el('rect', {x, y, width : W, height : 12, rx : 3, fill : '#0f2c34', stroke : '#2d5059'}, c); el('rect', {x, y, width : W * clamp(v, 0, 1), height : 12, rx : 3, fill : colour, opacity : .8}, c); }
+    txt(c, x0 + W + 12, y + 10, '×', {'text-anchor' : 'middle'});
+    txt(c, 296, y + 10, Math.round(100 * kept * made) + ' %', {'text-anchor' : 'end', class : 'value'});
+  });
+  c.setAttribute('viewBox', '0 0 300 62');
+}
+// The film: water and its load stream in at the mouth; at the arch each grain stays or passes as
+// the rakers decide; what stays goes on to the gut, what passes leaves under the cover.
+function gillFrame(now) {
+  requestAnimationFrame(gillFrame);
+  const f = GILLFILM; if (!f.g?.isConnected) return;
+  const d = GILL.density, rate = .3 + 1.2 * f.pump;
+  if (!f.last) f.last = now; const dt = Math.min(50, now - f.last) / 16.7; f.last = now;
+  if (Math.random() < .25 * rate * dt) {
+    const kind = Math.random(), type = kind < .45 ? 'plankton' : kind < .75 ? 'flock' : 'mud';
+    const keep = type === 'plankton' ? rakerKeep(d) : type === 'flock' ? rakerSift(d) : d * .4;
+    f.bits.push({x : 24, y : 66 + Math.random() * 24, type, keep : Math.random() < keep, vx : (1.2 + rate) * (.8 + .4 * Math.random())});
+  }
+  for (const b of f.bits) {
+    b.x += b.vx * dt * rakerPass(d);
+    if (b.x > f.arch - 12 && !b.decided) { b.decided = true; if (b.keep) { b.vx *= .6; b.down = true; } }
+    if (b.decided && !b.keep) { b.y += .5 * dt; }
+    if (b.down) b.y += .25 * dt;
+  }
+  f.bits = f.bits.filter(b => b.x < 300 && b.y < 140 && f.bits.length < 120);
+  f.g.innerHTML = f.bits.map(b => `<circle cx="${b.x.toFixed(1)}" cy="${b.y.toFixed(1)}" r="${b.type === 'mud' ? 2.2 : 1.8}" fill="${b.type === 'plankton' ? '#9cc8f0' : b.type === 'flock' ? '#c9b48c' : '#6b5a48'}" opacity="${b.decided && !b.keep ? .45 : .95}"/>`).join('');
+}
+requestAnimationFrame(gillFrame);
 
 // ---------- Abwehr ----------
 // Spines (body_plan.cc:857–876, 1615–1617, feeding.cc:28–33, movement.cc:79–122, physiology.cc:432):
@@ -2205,7 +2235,7 @@ function drawMouthTime() {
 function mouthChain() {
   const p = mouthPower(), T = gut.middle, gutOf = name => gain(FOOD.find(x => x[0] === name)[1], T);
   return [['Fleisch', p.cut, 'Fleisch', '#ef8f8f', 'Schnapper'], ['Muscheln', p.grind, 'Plankton', '#c9b48c', 'Knacker'], ['Blatt', p.grind, 'Blatt', '#8fd16a', 'Zupfer'],
-    ['Alge', p.scrape, 'Alge', '#55c4a6', 'Schaber'], ['Flocken', p.loose, 'Flocken', '#e3cf94', 'Sammler'], ['Plankton', p.suck * .5, 'Plankton', '#9cc8f0', 'Sauger']]
+    ['Alge', p.scrape, 'Alge', '#55c4a6', 'Schaber'], ['Flocken', p.loose, 'Flocken', '#e3cf94', 'Sammler'], ['Plankton', p.suck * rakerKeep(GILL.density), 'Plankton', '#9cc8f0', 'Sauger']]
     .map(([name, take, g, colour, kind]) => [name, take, gutOf(g), colour, kind]);
 }
 function drawMouthChain() {
