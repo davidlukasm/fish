@@ -1391,20 +1391,61 @@ export function removeOrganType(doc, organId, typeId) {
   settleAssemblies(draft);
   return draft;
 }
+// History retains earlier documents; only the edited tissue needs private mutable cells.
+function editTissue(doc, id, edit) {
+  const targets = new Set(tissueTargets(doc, id));
+  if (!targets.size)
+    return null;
+  return {
+    ...doc,
+    organs : doc.organs.map(organ => {
+      if (!organ.centers.some(c => targets.has(c)))
+        return organ;
+      return {
+        ...organ,
+        centers : organ.centers.map(center => {
+          if (!targets.has(center))
+            return center;
+          const changed = copy(center);
+          edit(changed, organ);
+          return changed;
+        })
+      };
+    })
+  };
+}
+function syncFieldProfile(organ) {
+  if (!organ.field)
+    return organ;
+  let changed = false;
+  const profiles = organ.field.profiles.map(profile => {
+    const center = organ.centers.find(c => c.profile === profile.id);
+    if (!center)
+      return profile;
+    const keys = [ 'q1', 'q2', 'qwidth', 'threshold', 'polarity' ];
+    if (keys.every(key => profile[key] === center[key]))
+      return profile;
+    changed = true;
+    return {...profile, ...Object.fromEntries(keys.map(key => [key, center[key]]))};
+  });
+  const density = organ.centers[0].copies, resolution = organ.centers[0].field;
+  return changed || density !== organ.field.density || resolution !== organ.field.resolution
+             ? {...organ, field : {...organ.field, profiles, density, resolution}}
+             : organ;
+}
 export function updateCenter(doc, id, patch) {
   const found = findCenter(doc, id);
   if (!found)
     return null;
-  const draft = copy(doc);
   const keys = [
     'copies', 'threshold', 'tau', 'field', 'q1', 'q2', 'polarity', 'qwidth', 'crossing', 'range',
     'sign', 'mode', 'pace', 'modulator', 'electrical_limit', 'teaching_limit', 'learning_tau'
   ];
-  for (const c of tissueTargets(draft, id)) {
+  const draft = editTissue(doc, id, (c, organ) => {
     for (const key of keys)
       if (Number.isFinite(patch[key])) {
-        const paired = findCenter(draft, c.id).organ.id !== found.organ.id;
-        const value = paired ? c[key] + patch[key] - found.center[key] : patch[key];
+        const value =
+            organ.id !== found.organ.id ? c[key] + patch[key] - found.center[key] : patch[key];
         c[key] = key === 'copies' ? clamp(Math.round(value), 1, ATELIER_LIMITS.max_copies)
                                   : clamp(value,
                                           [
@@ -1415,18 +1456,8 @@ export function updateCenter(doc, id, patch) {
                                               : -1,
                                           1);
       }
-  }
-  for (const organ of draft.organs.filter(o => o.field)) {
-    for (const profile of organ.field.profiles) {
-      const c = organ.centers.find(c => c.profile === profile.id);
-      if (!c)
-        continue;
-      for (const key of ['q1', 'q2', 'qwidth', 'threshold', 'polarity'])
-        profile[key] = c[key];
-    }
-    organ.field.density = organ.centers[0].copies;
-    organ.field.resolution = organ.centers[0].field;
-  }
+  });
+  draft.organs = draft.organs.map(syncFieldProfile);
   return draft;
 }
 function receptorPatch(key, value) {
@@ -1447,36 +1478,27 @@ function receptorPatch(key, value) {
   return clamp(value, -1, 1);
 }
 export function updateCellGrowth(doc, id, patch) {
-  const draft = copy(doc), targets = tissueTargets(draft, id);
-  if (!targets.length)
-    return null;
-  for (const c of targets)
+  return editTissue(doc, id, center => {
     for (const key of Object.keys(neutralReceptor()))
       if (Number.isFinite(patch[key]))
-        c.growth[key] = receptorPatch(key, patch[key]);
-  return draft;
+        center.growth[key] = receptorPatch(key, patch[key]);
+  });
 }
 export function updateCellDistribution(doc, id, key, value) {
-  const draft = copy(doc);
   if (!['spread_physiology', 'spread_receptors', 'spread_development', 'spread_contacts'].includes(
           key) ||
       !Number.isFinite(value))
     return null;
-  for (const center of tissueTargets(draft, id))
-    center.distribution[key] = clamp(value);
-  return draft;
+  return editTissue(doc, id, center => { center.distribution[key] = clamp(value); }) ?? {...doc};
 }
 export function updateReceptor(doc, id, effect, patch) {
-  if (!Number.isInteger(effect))
+  if (!Number.isInteger(effect) || !findCenter(doc, id)?.center.receptors[effect])
     return null;
-  const draft = copy(doc), targets = tissueTargets(draft, id);
-  if (!targets.length || !targets[0].receptors[effect])
-    return null;
-  for (const center of targets)
+  return editTissue(doc, id, center => {
     for (const key of Object.keys(neutralReceptor()))
       if (Number.isFinite(patch[key]))
         center.receptors[effect][key] = receptorPatch(key, patch[key]);
-  return draft;
+  });
 }
 export function lifePhase(center) {
   const output = center.receptors[HORMONE_EFFECT.output],
@@ -1488,10 +1510,7 @@ export function lifePhase(center) {
   };
 }
 export function setLifePhase(doc, id, phase, span, steps) {
-  const draft = copy(doc), targets = tissueTargets(draft, id);
-  if (!targets.length)
-    return null;
-  for (const center of targets) {
+  return editTissue(doc, id, center => {
     if ('start' in phase)
       center.receptors[HORMONE_EFFECT.output] =
           phase.start === null ? neutralReceptor(HORMONE_EFFECT.output) : {
@@ -1511,8 +1530,7 @@ export function setLifePhase(doc, id, phase, span, steps) {
         half : phase.end,
         substance : HORMONES.levels
       };
-  }
-  return draft;
+  });
 }
 export const GROWTH_START = Object.freeze({sensitivity : 1, half : .01});
 const RECEPTOR_START = Object.freeze({
@@ -1577,7 +1595,7 @@ export function switchReceptor(doc, id, effect, on) {
       {...(on && !receptor?.sensitivity ? receptorStart(effect) : {}), active : on ? 1 : 0});
 }
 export function updateGrowth(doc, patch) {
-  const draft = copy(doc);
+  const draft = {...doc, growth : {...doc.growth}};
   for (const key of Object.keys(neutralReceptor()))
     if (Number.isFinite(patch[key]))
       draft.growth[key] = receptorPatch(key, patch[key]);

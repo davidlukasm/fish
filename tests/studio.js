@@ -4,6 +4,83 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkSpectrumKnobs() {
+  const {spectrumElement, spectrumPatch} = await import('../ui/studio/view/spectrum.js');
+  const {tuningAffinity, tuningHue, hueOffset} = await import('../ui/tuning.js');
+  const count = 90;
+  for (const q1 of [-.5, 0, .47])
+    for (const qwidth of [.2, .6, 1]) {
+      const hue = tuningHue(q1);
+      const light = {
+        excitation : Array.from({length : count},
+                                (_, i) => tuningAffinity(hueOffset(i * 360 / count, hue), qwidth)),
+        inhibition :
+            Array.from({length : count},
+                       (_, i) => tuningAffinity(hueOffset(i * 360 / count, hue + 180), qwidth))
+      };
+      for (const q2 of [-1, -.7, 0, .5, 1]) {
+        const tuning = {q1, q2, qwidth};
+        const html = spectrumElement(tuning, {center : 'colour'}, 'Colour', {light});
+        const handle = html.match(/data-spectrum-handle="opponent" cx="([^"]+)" cy="([^"]+)"/);
+        assert.ok(handle);
+        const point = {x : Number(handle[1]), y : Number(handle[2])};
+        const unchanged = spectrumPatch(tuning, 'opponent', point, light);
+        assert.ok(Math.abs(unchanged.q2 - q2) < .0003,
+                  `Picking up the opponent handle preserves q2=${q2} at width=${qwidth}`);
+        const stronger = spectrumPatch(tuning, 'opponent', {...point, y : point.y + 8}, light);
+        assert.ok(stronger.q2 >= unchanged.q2,
+                  'Dragging the opponent handle down strengthens its inhibition');
+      }
+    }
+}
+
+async function checkDocumentHistory(model, sites, root) {
+  const {HORMONE_EFFECT : E} = await import('../ui/schema.js');
+  const {settleRegions} = await import('../ui/studio/model/regions.js');
+  const freeze = object => {
+    if (object && typeof object === 'object' && !Object.isFrozen(object)) {
+      Object.values(object).forEach(freeze);
+      Object.freeze(object);
+    }
+    return object;
+  };
+  const loaded = JSON.parse(readFileSync(join(root, 'genomes/entwuerfe/liora.fish.json'), 'utf8'));
+  const lone = model.addNeuron(model.newDocument('History'), 'learn', sites, {x : 380, y : 325});
+  for (const original of [loaded, lone.document]) {
+    const source = freeze(original), before = JSON.stringify(source);
+    for (const organ of source.organs) {
+      const id = organ.centers[0]?.id;
+      if (!id)
+        continue;
+      const changes = [
+        doc => model.updateCenter(doc, id, {threshold : .71, copies : 4, q1 : -.4, field : .2}),
+        doc => model.updateCellGrowth(doc, id, {active : 1, sensitivity : 1, half : .2}),
+        doc => model.updateCellDistribution(doc, id, 'spread_physiology', .4),
+        doc => model.updateReceptor(doc, id, E.output, {active : 1, baseline : -.5, half : .7}),
+        doc => model.setLifePhase(doc, id, {start : .3, end : .8}, 2, 1),
+        doc => model.updateGrowth(doc, {active : 1, sensitivity : 1, half : .4})
+      ];
+      let doc = source;
+      const history = [];
+      for (const change of changes) {
+        history.push({document : freeze(doc), text : JSON.stringify(doc)});
+        doc = change(doc);
+        assert.ok(doc);
+        model.validateDocument(doc);
+      }
+      const settled = settleRegions(freeze(doc), sites);
+      model.validateDocument(settled);
+      model.compileDocument(settled, sites);
+      for (const old of history.reverse()) {
+        assert.equal(JSON.stringify(old.document), old.text,
+                     'Further edits and region settlement preserve every undo state');
+        model.validateDocument(old.document);
+      }
+      assert.equal(JSON.stringify(source), before, 'Inspector edits preserve the loaded fish');
+    }
+  }
+}
+
 async function checkLiveFounders() {
   const {LiveStation} = await import('../ui/labor/live_station.js');
   const offered = [
@@ -1643,6 +1720,7 @@ async function checkHormoneSystems(model, capabilities) {
       'studio', 'organ_graphics', 'organ_readout', 'brain', 'units', 'labor', 'feeding_view'
     ].map(area => [area, JSON.parse(readFileSync(join(root, `ui/text/de/${area}.json`), 'utf8'))]))
   });
+  await checkSpectrumKnobs();
   await checkLiveFounders();
   await checkLiveControls();
   await checkLiveCommandOrder();
@@ -1788,6 +1866,7 @@ async function checkHormoneSystems(model, capabilities) {
   const sitesResult =
       JSON.parse(execFileSync(join(resolve(process.env.BUILD_DIR ?? join(root, 'bin')), 'atelier'),
                               [ 'sites' ], {encoding : 'utf8', timeout : 10000}));
+  await checkDocumentHistory(model, sitesResult.sites, root);
   await checkBloodReceptors(model, sitesResult);
   if (process.argv.includes('--blood-receptors')) {
     console.log('Atelier: neun Blutstoffe, Zellleben, Lernen und Vorschaugriffe: OK');

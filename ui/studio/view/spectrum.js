@@ -27,7 +27,7 @@ export const lightColor = hue =>
 // The colours a cell type answers, as a strip: hue runs from left to right (the coloured band
 // below), the answer rises above the zero line where the light excites the cells and falls below it
 // where the opposite colour inhibits them. The handles sit where they act: the square at the tuned
-// hue, the circle on the curve's flank for its width, the one below the line at the opposite hue
+// hue, the circle on the curve's flank for its width, the one at the opposite hue
 // for the opponent, the diamond on the band for the test light. The other cell types of the eye
 // show as dashed curves with a dot at their peak that chooses them.
 const SPECTRUM = Object.freeze({
@@ -162,8 +162,8 @@ export function spectrumElement(tuning, target, label, {
   if (values) {
     const hue = opposite(tuning);
     html += `<circle class="aid-spectrum-handle opponent" data-spectrum-handle="opponent" cx="${
-        rounded(hueX(hue))}" cy="${
-        rounded(levelY(Math.min(0, values[sampleIndex(values, hue)])))}" r="${S.handle}"/>`;
+        rounded(hueX(
+            hue))}" cy="${rounded(levelY(values[sampleIndex(values, hue)]))}" r="${S.handle}"/>`;
   }
   return html +
          `<rect class="aid-spectrum-handle centre" data-spectrum-handle="centre" x="${

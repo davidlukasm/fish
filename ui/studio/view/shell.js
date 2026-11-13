@@ -109,7 +109,8 @@ function stationStage(s, cppn) {
     return '<div class="aid-scene-top"><span>' + label('cppn.graph') + '</span></div>' +
            '<div id="' + CPPN_SCENE_ID + '" class="aid-scene-body">' + cppnGraph(s) + '</div>';
   return '<div class="aid-scene-top"><span>' + label('app.empty') +
-         '</span><div class="aid-view-options">' +
+         '</span><details class="aid-scene-options"><summary>' + label('layers.title') +
+         '</summary><div class="aid-view-options">' +
          group(button('data-contacts="design"', label('tools.drawnContacts'),
                       {active : s.contactView === 'design'}) +
                button('data-contacts="actual"', label('tools.developedContacts'), {
@@ -122,9 +123,9 @@ function stationStage(s, cppn) {
                       {active : s.wireScope === 'focus'})) +
          group(layerSwitches(s), label('layers.title'), 'aid-layer-switches') +
          (s.contactView === 'actual' ? contactLimit(s) : '') +
-         '</div></div><div class="aid-scene-body"><div class="aid-scene-frame">' + fishScene(s) +
-         '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' + zoomStamp(s.camera) +
-         '</span></div>';
+         '</div></details></div><div class="aid-scene-body"><div class="aid-scene-frame">' +
+         fishScene(s) + '</div>' + toolPalette(s) + '<span class="aid-canvas-toolbar">' +
+         zoomStamp(s.camera) + '</span></div>';
 }
 const grip = panel => '<div class="aid-panel-grip" data-panel-grip="' + panel + '" title="' +
                       label('app.panelWidth') + '"></div>';
