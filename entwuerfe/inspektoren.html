@@ -2037,7 +2037,8 @@ function mouthHead(svg, opening) {
   const m = MOUTH, run = MOUTHFILM.run;
   const hinge = [172, 86], len = 60 + 70 * m.jaw, tip = [hinge[0] - len, hinge[1] - 4];
   const ang = (3 + 38 * (opening - .35) / .65) * Math.PI / 180;
-  const rot = ([x, y]) => { const dx = x - hinge[0], dy = y - hinge[1], c = Math.cos(ang), s = Math.sin(ang); return [hinge[0] + dx * c - dy * s, hinge[1] + dx * s + dy * c]; };
+  // The snout is to the left, so opening turns the lower jaw's tip down: about the hinge by −ang.
+  const rot = ([x, y]) => { const dx = x - hinge[0], dy = y - hinge[1], c = Math.cos(ang), s = -Math.sin(ang); return [hinge[0] + dx * c - dy * s, hinge[1] + dx * s + dy * c]; };
   const g = el('g', {}, svg);
   // Head and the front of the body; the snout reaches as far as the jaw.
   el('path', {d : `M${tip[0] - 2} ${tip[1] - 6} C${tip[0] + 20} ${tip[1] - 40} ${150} ${18} ${215} ${18} C${255} ${18} ${285} ${26} ${300} ${30} V${132} C${270} ${132} ${235} ${128} ${205} ${118} C${185} ${112} ${170} ${104} ${hinge[0]} ${hinge[1] + 4}`, fill : '#1b3f48', stroke : '#4a7c7e', 'stroke-width' : 1.4}, g);
@@ -2064,7 +2065,7 @@ function mouthHead(svg, opening) {
     const u = .06 + (k + .5) / n * .5, ux = tip[0] + (hinge[0] - tip[0]) * u, uy = tip[1] - 6 * u + 1.5;
     tooth(ux, uy, true, 0);
     const [lx, ly] = rot(low(u));
-    tooth(lx, ly - 2, false, ang * 180 / Math.PI);
+    tooth(lx, ly - 2, false, -ang * 180 / Math.PI);
   }
   // Water drawn in while the opener pulls.
   const now = run ? run.out[Math.min(run.N, Math.round(MOUTHFILM.at ?? 0))] : {flow : 0};
@@ -2096,7 +2097,7 @@ function drawMouth() {
   cellsAt('open', 252, 104);
   txt(svg, 270, 76, 'Schließer', {'text-anchor' : 'middle', style : 'font-size:10px'});
   txt(svg, 270, 124, 'Öffner', {'text-anchor' : 'middle', style : 'font-size:10px'});
-  svg.setAttribute('viewBox', '0 0 300 140');
+  svg.setAttribute('viewBox', '0 0 300 162');
   drawMouthTime(); drawMouthChain();
 }
 // ---- The bite over time: how far the mouth opens, the water it draws, the closer's pull and the
