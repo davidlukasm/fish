@@ -88,6 +88,20 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Geschwindigkeit</h4>
     <svg id="tailniche" viewBox="0 0 300 130"></svg>
   </section>
+  <section class="panel" aria-label="Tasten">
+    <h2>Organ</h2><h3>Tasten</h3>
+    <h4 class="first">Fühlfeld</h4>
+    <svg id="touchskin" viewBox="0 0 300 130"></svg>
+    <h4>Tastzellen</h4>
+    <svg id="touchsense" viewBox="0 0 300 200"></svg>
+  </section>
+  <section class="panel" aria-label="Schmerz">
+    <h2>Organ</h2><h3>Schmerz</h3>
+    <h4 class="first">Fühlfeld</h4>
+    <svg id="painskin" viewBox="0 0 300 130"></svg>
+    <h4>Schmerzzellen</h4>
+    <svg id="painsense" viewBox="0 0 300 200"></svg>
+  </section>
 </main>
 <p class="note"><b>Entwurf zum Anklicken.</b> Gezogen wird an den gelben Griffen.</p>
 <script>
@@ -624,20 +638,22 @@ function senseAnswer(g, stimulus) {
   const gates = cellGates(g);
   return stimulus.map(s => {
     const r = gates.reduce((t, gate) => { const x = Math.max(0, s - gate - m); return t + x / (x + .15); }, 0) / gates.length;
-    m += (s - m) / tauOf(g.habit); return r;
+    if (g.habit != null) m += (s - m) / tauOf(g.habit); return r;
   });
 }
-function senseGroups(id, cell, word, stimulusAt, colour) {
+// o: word (the stimulus), colour, at(step, level, group) what a group feels, habit (false for
+// senses that do not get used to anything), redraw (when the organ has more pictures), newGroup.
+function senseGroups(id, cell, o) {
   const svg = document.getElementById(id); svg.replaceChildren();
-  const redraw = () => senseGroups(id, cell, word, stimulusAt, colour);
+  const {word, colour} = o, redraw = o.redraw ?? (() => senseGroups(id, cell, o));
   const hold = () => { cell.held = true; }, free = () => { cell.held = false; redraw(); };
   const L = 56, R = 290, top = 30, base = 126, X = st => L + (R - L) * st / SENSE_STEPS;
   const groups = cell.groups, n = groups.length;
-  const stimulus = Array.from({length : SENSE_STEPS + 1}, (_, st) => stimulusAt(st, cell.level));
-  const answers = groups.map(g => senseAnswer(g, stimulus));
+  const felt = groups.map(g => Array.from({length : SENSE_STEPS + 1}, (_, st) => o.at(st, cell.level, g)));
+  const answers = groups.map((g, i) => senseAnswer(g, felt[i])), stimulus = felt[cell.chosen];
   // Groups stacked, the most sensitive below; the scale makes room for the whole stack.
   const order = groups.map((g, i) => i).sort((p, q) => groups[p].gate - groups[q].gate);
-  const total = stimulus.map((_, st) => answers.reduce((t, a) => t + a[st], 0));
+  const total = felt[0].map((_, st) => answers.reduce((t, a) => t + a[st], 0));
   const scale = settle(cell, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), Y = v => base - (base - top) * v / scale;
   regler(svg, {x : 26, top, base, word, value : cell.level, setValue : v => { cell.level = v; redraw(); }, start : hold, end : free, name : id + 'level',
     marks : groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === cell.chosen, set : v => { g.gate = clamp(v, .02, .98); cell.chosen = i; redraw(); }}))});
@@ -678,8 +694,10 @@ function senseGroups(id, cell, word, stimulusAt, colour) {
     el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, g);
     el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, g);
     g.addEventListener('click', act); };
-  if (n < 3) chip(30, base + 22, '+', () => { const gates = groups.map(g => g.gate); groups.push({gate : clamp((Math.max(...gates) + 1) / 2, .02, .95), habit : .5, spread : .3}); cell.chosen = groups.length - 1; redraw(); }, 'add');
+  const fresh = o.newGroup ?? (() => ({gate : clamp((Math.max(...groups.map(g => g.gate)) + 1) / 2, .02, .95), habit : .5, spread : .3}));
+  if (n < 3) chip(30, base + 22, '+', () => { groups.push(fresh()); cell.chosen = groups.length - 1; redraw(); }, 'add');
   if (n > 1) chip(50, base - (base - top) * groups[cell.chosen].gate, '×', () => { groups.splice(cell.chosen, 1); cell.chosen = 0; redraw(); }, 'remove');
+  if (o.habit === false) { svg.setAttribute('viewBox', `0 0 300 ${TY + 8}`); return; }
   // The chosen group's habit: from not getting used to it (left) to getting used to it at once.
   const cg = groups[cell.chosen], HY = TY + 30, hx0 = L + 40, hx1 = R - 40;
   const grad = el('linearGradient', {id : id + 'habit'}, el('defs', {}, svg));
@@ -694,8 +712,8 @@ function senseGroups(id, cell, word, stimulusAt, colour) {
 // a few steps and ebbs after (flow × 0.8 per step).
 const ACHE_AT = (st, level) => st < SENSE_LASTS ? level : 0;
 const FOOD_AT = (st, level) => st < SENSE_LASTS ? level * (1 - Math.pow(.8, st + 1)) : level * (1 - Math.pow(.8, SENSE_LASTS)) * Math.pow(.8, st - SENSE_LASTS + 1);
-const drawPainSense = () => senseGroups('gutpain', gut.ache, 'Bauchweh', ACHE_AT, '#ef8f8f');
-const drawNutrientSense = () => senseGroups('gutsense', gut.food, 'Futter', FOOD_AT, '#e3cf94');
+const drawPainSense = () => senseGroups('gutpain', gut.ache, {word : 'Bauchweh', at : ACHE_AT, colour : '#ef8f8f'});
+const drawNutrientSense = () => senseGroups('gutsense', gut.food, {word : 'Futter', at : FOOD_AT, colour : '#e3cf94'});
 // The film: the tube is drawn once; each frame only sets its pieces' widths and moves the
 // mouthfuls. The muscle works in turns: it eases in, sends waves along the whole gut, the next one
 // leaving when the last is just past halfway, and eases out. A wave narrows the gut behind a
@@ -938,5 +956,80 @@ function tailFrame(now) {
 }
 requestAnimationFrame(tailFrame);
 
-drawLife(); drawGut(); drawTail();
+// ---------- Haut: Tasten und Schmerz ----------
+// Where skin cells feel (body_plan.cc anatomical_stimulus): each group faces one way (its place) and
+// feels the skin whose outward direction lies within its width of it, fully at the middle and
+// fading to nothing at the edge (1 − |angle|/width, width 22.5° to 180°). Touch: a contact there,
+// times how hard (engine: rest 0.1 plus the impact's answer; then a bounded answer, no getting
+// used to it). Pain: the wounds there, getting used to old ones. Both answer as the gut's cells do
+// in this draft (threshold, spread, for pain the habit).
+const SKIN = {touch : {groups : [{aim : Math.PI, width : 1.1, gate : .3, spread : .3}], chosen : 0, level : .7, spot : null},
+              pain : {groups : [{aim : -Math.PI / 2, width : 1.6, gate : .2, spread : .3, habit : .5}], chosen : 0, level : .6, spot : null}};
+const skinWrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+let skinOutline = null;
+function skinPoints() {
+  if (skinOutline) return skinOutline;
+  const probe = el('svg', {width : 0, height : 0, style : 'position:absolute'}); document.body.appendChild(probe);
+  const path = el('path', {d : BODY}, probe), total = path.getTotalLength(), N = 180;
+  const at = k => { const q = path.getPointAtLength(total * ((k + N) % N) / N); return [40 + (q.x - 14) * .8, 30 + (q.y - 22) * .8]; };
+  const raw = Array.from({length : N}, (_, k) => at(k));
+  const cx = raw.reduce((t, q) => t + q[0], 0) / N, cy = raw.reduce((t, q) => t + q[1], 0) / N;
+  skinOutline = raw.map((q, k) => {
+    const [ax, ay] = raw[(k + N - 2) % N], [bx, by] = raw[(k + 2) % N];
+    let nx = by - ay, ny = -(bx - ax); const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    return {x : q[0], y : q[1], nx, ny};
+  });
+  // The outward side: on the whole away from the middle.
+  const flip = skinOutline.reduce((t, q) => t + q.nx * (q.x - cx) + q.ny * (q.y - cy), 0) < 0 ? -1 : 1;
+  for (const q of skinOutline) { q.nx *= flip; q.ny *= flip; q.a = Math.atan2(q.ny, q.nx); }
+  probe.remove();
+  return skinOutline;
+}
+const skinWeight = (g, q) => Math.max(0, 1 - Math.abs(skinWrap(q.a - g.aim)) / g.width);
+const nearestSkin = p => { const pts = skinPoints(); let best = 0; pts.forEach((q, k) => { if (Math.hypot(q.x - p.x, q.y - p.y) < Math.hypot(pts[best].x - p.x, pts[best].y - p.y)) best = k; }); return best; };
+const facing = aim => { const pts = skinPoints(); let best = 0; pts.forEach((q, k) => { if (Math.abs(skinWrap(q.a - aim)) < Math.abs(skinWrap(pts[best].a - aim))) best = k; }); return best; };
+function drawSkin(key) {
+  const organ = SKIN[key], pts = skinPoints(), N = pts.length, svg = document.getElementById(key + 'skin'); svg.replaceChildren();
+  if (organ.spot == null) organ.spot = key === 'touch' ? facing(Math.PI - .5) : facing(-Math.PI / 2 + .3);
+  const redraw = () => drawSkin(key), hold = () => { organ.held = true; }, free = () => { organ.held = false; redraw(); };
+  el('path', {d : 'M' + pts.map(q => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L') + 'Z', fill : '#16363e', stroke : '#3b6a6c'}, svg);
+  el('circle', {cx : 40 + 16 * .8, cy : 30 + 30 * .8, r : 2.6, fill : '#e9e2c6'}, svg);
+  // Each group's hairs, as long as the group feels there; the chosen group in front.
+  const order = organ.groups.map((g, i) => i).sort((p, q) => (p === organ.chosen) - (q === organ.chosen));
+  for (const i of order) {
+    const g = organ.groups[i], chosen = i === organ.chosen;
+    let d = '';
+    pts.forEach((q, k) => { const w = skinWeight(g, q); if (k % 2 === 0 && w > .02) { const l = 3 + 14 * w; d += `M${q.x.toFixed(1)} ${q.y.toFixed(1)} l${(q.nx * l).toFixed(1)} ${(q.ny * l).toFixed(1)}`; } });
+    const hairs = el('path', {d, stroke : groupColour(i), 'stroke-width' : chosen ? 1.8 : 1.2, opacity : chosen ? 1 : .55, 'stroke-linecap' : 'round', class : 'chip'}, svg);
+    hairs.addEventListener('pointerdown', () => { organ.chosen = i; redraw(); });
+  }
+  // Where it touches or hurts: a pebble against the skin, or a wound in it; pulled along the skin.
+  const sp = pts[organ.spot];
+  if (key === 'touch') {
+    const r = 7; drag(svg, el('circle', {cx : sp.x + sp.nx * (r + 1), cy : sp.y + sp.ny * (r + 1), r, style : 'fill:#8d8a7c;stroke:#f1dda6'}, svg), p => { organ.spot = nearestSkin(p); redraw(); }, key + 'spot', hold, free);
+  } else {
+    const tx = -sp.ny, ty = sp.nx;
+    el('path', {d : `M${(sp.x - tx * 7).toFixed(1)} ${(sp.y - ty * 7).toFixed(1)} L${(sp.x + tx * 7).toFixed(1)} ${(sp.y + ty * 7).toFixed(1)}`, stroke : '#ef6f6f', 'stroke-width' : 4, 'stroke-linecap' : 'round'}, svg);
+    drag(svg, el('circle', {cx : sp.x - sp.nx * 8, cy : sp.y - sp.ny * 8, r : 6}, svg), p => { organ.spot = nearestSkin(p); redraw(); }, key + 'spot', hold, free);
+  }
+  // The chosen group: a ball outside its middle to move it round the body, and the two ends of its
+  // width as a bar along the skin.
+  const g = organ.groups[organ.chosen], mid = facing(g.aim), m = pts[mid];
+  const walk = dir => { let k = mid; for (let n = 0; n < N / 2; n++) { const next = (k + dir + N) % N; if (Math.abs(skinWrap(pts[next].a - g.aim)) >= g.width) break; k = next; } return k; };
+  const ends = [walk(-1), walk(1)];
+  let arc = '';
+  for (let k = ends[0], n = 0; n <= N; k = (k + 1) % N, n++) { const q = pts[k]; arc += (n ? ' L' : 'M') + (q.x + q.nx * 22).toFixed(1) + ' ' + (q.y + q.ny * 22).toFixed(1); if (k === ends[1]) break; }
+  el('path', {d : arc, fill : 'none', stroke : '#eaa886', 'stroke-width' : 2.5, 'stroke-linecap' : 'round', opacity : .9}, svg);
+  drag(svg, el('circle', {cx : m.x + m.nx * 22, cy : m.y + m.ny * 22, r : 7}, svg), p => { g.aim = pts[nearestSkin(p)].a; redraw(); }, key + 'aim', hold, free);
+  ends.forEach((k, j) => { const q = pts[k]; drag(svg, el('rect', {x : q.x + q.nx * 22 - 5, y : q.y + q.ny * 22 - 5, width : 10, height : 10, rx : 3, style : 'stroke:#eaa886'}, svg), p => { g.width = clamp(Math.abs(skinWrap(pts[nearestSkin(p)].a - g.aim)), Math.PI / 8, Math.PI); redraw(); }, key + 'end' + j, hold, free); });
+  svg.setAttribute('viewBox', '0 0 300 128');
+  const felt = gr => skinWeight(gr, sp);
+  senseGroups(key + 'sense', organ, key === 'touch'
+    ? {word : 'Anstoß', colour : '#c9c3a8', habit : false, redraw, at : (st, level, gr) => st >= 10 && st < 70 ? level * felt(gr) : 0,
+       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.1, gate : .3, spread : .3})}
+    : {word : 'Wunde', colour : '#ef8f8f', redraw, at : (st, level, gr) => st >= 10 ? level * felt(gr) : 0,
+       newGroup : () => ({aim : skinWrap(g.aim + Math.PI), width : 1.6, gate : .2, spread : .3, habit : .5})});
+}
+
+drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain');
 </script>
