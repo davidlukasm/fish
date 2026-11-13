@@ -74,6 +74,8 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Ertrag</h4>
     <svg id="gutchart" viewBox="0 0 300 160"></svg>
     <svg id="gutbars" viewBox="0 0 300 130"></svg>
+    <h4>Über das Leben</h4>
+    <svg id="gutlife" viewBox="0 0 300 150"></svg>
     <h4>Schmerzzellen</h4>
     <svg id="gutpain" viewBox="0 0 300 90"></svg>
     <h4>Futterzellen</h4>
@@ -721,6 +723,7 @@ function drawGut() {
   el('rect', {x : 66, y : y + 1, width : 16, height : 10, rx : 2, fill : 'none', stroke : '#ef6f6f', 'stroke-width' : 1.5, 'stroke-dasharray' : '3 2'}, bars);
   txt(bars, 88, y + 10, 'Bauchschmerzen');
   bars.setAttribute('viewBox', `0 0 300 ${y + 16}`);
+  drawGutLife();
   drawPainSense();
   drawNutrientSense();
 }
@@ -1966,6 +1969,49 @@ function drawMouth() {
   });
   txt(c, 110, F + 56, 'ausdauernd'); txt(c, 260, F + 56, 'kräftig', {'text-anchor' : 'end'});
   c.setAttribute('viewBox', '0 0 300 ' + (F + 62));
+}
+
+// ---------- Darm über das Leben ----------
+// The gut keeps its length for life (Astra 03:2x, Body::prepare); what changes is the gut muscle:
+// its cells may work more in the young fish and less in the grown one (or the other way), through
+// their own life cycle. Each height is a stay T, coloured by the food the gut gets most from there
+// (engine yields); the line is the fish's T from egg to adult: T at rest over its tempo,
+// 1 + (most − 1)·activity. Grips: the muscle's activity young and grown.
+const GUTLIFE = {young : 1, grown : 0, turn : .5};
+function drawGutLife() {
+  const svg = document.getElementById('gutlife'); svg.replaceChildren();
+  const redraw = drawGutLife, hold = () => { GUTLIFE.held = true; }, free = () => { GUTLIFE.held = false; redraw(); };
+  const L = 40, R = 286, top = 14, base = 120, span = Math.log2(K.longest / K.shortest);
+  const Y = t => base - (base - top) * clamp(Math.log2(t / K.shortest) / span, 0, 1), X = m => L + (R - L) * m;
+  // Bands: the best food at each stay.
+  const rows = 60;
+  for (let k = 0; k < rows; k++) {
+    const t0 = K.shortest * Math.pow(2, span * k / rows), t1 = K.shortest * Math.pow(2, span * (k + 1) / rows), t = Math.sqrt(t0 * t1);
+    const best = FOOD.map(([n, a, c]) => [gain(a, t), c]).sort((p, q) => q[0] - p[0])[0];
+    el('rect', {x : L, y : Y(t1), width : R - L, height : Y(t0) - Y(t1) + .5, fill : best[1], opacity : .22}, svg);
+  }
+  // The names of the bands at the left, where each is widest.
+  let last = null, from = 0;
+  for (let k = 0; k <= rows; k++) {
+    const t = K.shortest * Math.pow(2, span * Math.min(k, rows - 1 + .5) / rows), best = k < rows ? FOOD.map(([n, a]) => [gain(a, t), n]).sort((p, q) => q[0] - p[0])[0][1] : null;
+    if (best !== last) {
+      if (last && (k - from) * (base - top) / rows >= 11) { const tm = K.shortest * Math.pow(2, span * (from + k) / 2 / rows), c = FOOD.find(f => f[0] === last)[2]; txt(svg, L + 4, Y(tm) + 4, last, {style : 'fill:' + c}); }
+      last = best; from = k;
+    }
+  }
+  // The fish's stay from egg to adult.
+  const T = restOf(), most = gut.spread, act = m => GUTLIFE.young + (GUTLIFE.grown - GUTLIFE.young) / (1 + Math.exp(-(m - GUTLIFE.turn) * 12));
+  const at = m => T / (1 + (most - 1) * act(m));
+  el('path', {d : 'M' + Array.from({length : 51}, (_, k) => `${X(k / 50).toFixed(1)} ${Y(at(k / 50)).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#f4efd8', 'stroke-width' : 2.6}, svg);
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top}`, stroke : '#3b6a6c', fill : 'none'}, svg);
+  for (const t of [50, 100, 200, 400, 800]) txt(svg, L - 4, Y(t) + 4, t, {'text-anchor' : 'end'});
+  stageIcon(svg, 'egg', L + 10, base + 16, .45); stageIcon(svg, 'hatch', X(.35), base + 16, .45); stageIcon(svg, 'adult', R - 14, base + 16, .7);
+  // The muscle's activity young and grown: a ball on the line at each end, up = quicker = shorter.
+  const ends = [['young', .03], ['grown', .97]];
+  for (const [key, m] of ends) drag(svg, el('circle', {cx : X(m), cy : Y(at(m)), r : 7}, svg), p => {
+    const want = clamp(K.shortest * Math.pow(2, span * (base - p.y) / (base - top)), T / most, T);
+    GUTLIFE[key] = most > 1 ? clamp((T / want - 1) / (most - 1), 0, 1) : 0; redraw(); }, 'gutlife' + key, hold, free);
+  svg.setAttribute('viewBox', '0 0 300 ' + (base + 30));
 }
 
 drawLife(); drawGut(); drawTail(); drawSkin('touch'); drawSkin('pain'); drawSkin('lateral'); drawBalance(); drawNose(); drawBarbels(); drawNear(); drawBladder(); drawGills(); drawSkin('defense'); drawPigment(); drawGonads(); drawGland(); drawBlood(); drawMouth();
