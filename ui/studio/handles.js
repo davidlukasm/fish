@@ -53,7 +53,7 @@ import {driveContext, wireMarks, wirePatch} from './view/panels.js';
 import {skinPatch} from './view/skin.js';
 import {senseMarkPatch, senseStart} from './view/sense_marks.js';
 import {sacPatch} from './view/sacs.js';
-import {panelStyle} from './view/shell.js';
+import {PANEL_WIDTH, panelStyle} from './view/shell.js';
 import {
   GROWTH,
   BIRTH,
@@ -71,14 +71,13 @@ import {previewPatch} from './view/development.js';
 import {cellPatch, label} from './view/kit.js';
 import {CPPN_GRIPS, CPPN_HANDLES, cppnMethods} from './cppn.js';
 
-const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
 const PANEL_STORE = 'aid.atelier.panels';
 export function storedPanels() {
   try {
     const stored = JSON.parse(localStorage.getItem(PANEL_STORE) ?? '{}');
     return Object.fromEntries(Object.keys(PANEL_WIDTH)
                                   .filter(key => Number.isFinite(stored[key]))
-                                  .map(key => [key, stored[key]]));
+                                  .map(key => [key, clamp(stored[key], ...PANEL_WIDTH[key])]));
   } catch {
     return {};
   }

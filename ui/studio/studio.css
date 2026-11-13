@@ -23,7 +23,7 @@
 .aid-modes{flex:0 0 auto;display:flex;gap:1px;justify-content:space-between;background:#0e2d34;border-bottom:1px solid #34505a}
 .aid-modes>button{display:flex;flex-direction:column;gap:2px;align-items:flex-start;flex:1;max-width:270px;padding:9px 18px;border:0;background:transparent;color:#a0bfc1}
 .aid-modes button.active{color:#e0eee4;box-shadow:inset 0 -3px #d2debb}
-.aid-workspace-main{display:grid;grid-template-columns:var(--aid-library,184px) minmax(0,1fr) var(--aid-inspector,320px);min-height:0;flex:1;overflow:hidden}
+.aid-workspace-main{--aid-library:184px;--aid-inspector:320px;--aid-stage-min:320px;display:grid;grid-template-columns:minmax(var(--aid-library-min),var(--aid-library)) minmax(var(--aid-stage-min),1fr) minmax(var(--aid-inspector-min),var(--aid-inspector));min-height:0;flex:1;overflow:hidden}
 .aid-library{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid #284650;background:#102d36}
 .aid-library-scroll{overflow:auto;padding:10px 9px 24px}
 .aid-library-intro h3{font-size:18px;margin:2px 0 17px;font-weight:600}
@@ -272,7 +272,7 @@
 .aid-hormone-receiver .aid-hormone-aura{fill:none;stroke:var(--hormone);stroke-width:2.5}
 .aid-hormone-receiver .aid-hormone-core{fill:var(--hormone);fill-opacity:.45}
 .aid-hormone-receiver .aid-hormone-core.focused{fill-opacity:.95;stroke:#fff3ca;stroke-width:2.5}
-@media(max-width:1200px){.aid-workspace-main{grid-template-columns:var(--aid-library,170px) minmax(0,1fr) var(--aid-inspector,290px)}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
+@media(max-width:1200px){.aid-workspace-main{--aid-library:170px;--aid-inspector:290px}.aid-palette-grid{gap:5px}.aid-header{padding:9px 12px}.aid-header-actions button{padding:7px}}
 @media(max-width:840px){.aid-workspace-main{grid-template-columns:180px minmax(0,1fr)}.aid-inspector{position:absolute;right:0;top:135px;bottom:36px;width:280px;box-shadow:-8px 0 30px #0008;z-index:10}.aid-library-scroll{padding:12px 7px}.aid-scene-top span{font-size:19px}.aid-hub-figures,.aid-hub-shelf{grid-template-columns:repeat(2,minmax(0,1fr))}.aid-hub-station,.aid-hub-station.aquarium,.aid-hub-station.atelier,.aid-hub-station.future{grid-column:span 6}}
 .aid-cppn-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #385960}
 .aid-cppn-toolbar button{padding:8px 11px;border:1px solid #3e646d;border-radius:8px;background:#1a3a44}

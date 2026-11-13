@@ -255,6 +255,20 @@ export const gestureMethods = {
             nearFish(point, this.state.sites) ? placementPreview(this.state, {type}, point) : '';
     }
   },
+  interruptPointer() {
+    const drag = this.handleDrag;
+    if (!drag && !this.pointer && !this.dragging)
+      return;
+    this.pointer = this.dragging = this.pendingWire = null;
+    this.clearPreview();
+    this.showTrash(false);
+    this.ignoreClickUntil = performance.now() + DRAG_CLICK;
+    // Keep the value already shown, without treating the interruption as a drop location.
+    if (drag)
+      this.releaseHandle({clientX : drag.last.x, clientY : drag.last.y});
+    else
+      this.refreshLibrary();
+  },
   pointerUp(event) {
     if (this.handleDrag)
       return this.releaseHandle(event);

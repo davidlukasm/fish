@@ -181,6 +181,8 @@ export class OrganStudio {
     this.root.addEventListener('pointerdown', event => this.pointerDown(event));
     window.addEventListener('pointermove', event => this.pointerMove(event));
     window.addEventListener('pointerup', event => this.pointerUp(event));
+    window.addEventListener('pointercancel', () => this.interruptPointer());
+    window.addEventListener('blur', () => this.interruptPointer());
     this.root.addEventListener('wheel', event => this.wheel(event), {passive : false});
     this.root.addEventListener('pointerover', event => this.pointLinked(event, true));
     this.root.addEventListener('pointerout', event => this.pointLinked(event, false));
@@ -220,6 +222,7 @@ export class OrganStudio {
       footer.textContent = this.state.notice;
   }
   navigate(station) {
+    this.interruptPointer();
     if (station !== 'studio')
       this.stopPulse();
     if (station !== 'hub')
@@ -236,6 +239,7 @@ export class OrganStudio {
   setMode(mode) {
     if (this.state.mode === mode)
       return;
+    this.interruptPointer();
     this.state.mode = mode;
     this.renderShell();
   }
@@ -524,6 +528,7 @@ export class OrganStudio {
   }
   // Another fish starts afresh: nothing of the last one stays armed, pending or zoomed in on.
   loadFish(doc) {
+    this.interruptPointer();
     this.pendingWire = null;
     this.release();
     this.setMode('fish');

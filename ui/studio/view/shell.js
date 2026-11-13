@@ -22,8 +22,13 @@ const footer = (message, brand) => '<footer class="aid-station-footer"><span cla
                                    escapeText(message) + '</span><span>' + brand +
                                    '</span></footer>';
 
+export const PANEL_WIDTH = Object.freeze({library : [ 150, 380 ], inspector : [ 280, 680 ]});
 export const panelStyle = panels =>
-    Object.entries(panels).map(([ key, width ]) => `--aid-${key}:${width}px`).join(';');
+    Object.entries(PANEL_WIDTH)
+        .map(([ key, limits ]) =>
+                 `--aid-${key}-min:${limits[0]}px` +
+                 (Number.isFinite(panels[key]) ? `;--aid-${key}:${panels[key]}px` : ''))
+        .join(';');
 export const headerStatus = state =>
     state.compileProgress ? compilerProgress(state) : cellStatus(state);
 export function developAction(state) {

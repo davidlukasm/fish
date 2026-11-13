@@ -525,6 +525,55 @@ async function checkRedraws(model, caps, root) {
     assert.equal(moved, 0, 'Moving without a pressed pointer cannot change the failed drag');
   }
 
+  {
+    const {storedPanels} = await import('../ui/studio/handles.js');
+    const saved = {
+      window : global.window,
+      document : global.document,
+      localStorage : global.localStorage,
+      requestAnimationFrame : global.requestAnimationFrame,
+      cancelAnimationFrame : global.cancelAnimationFrame
+    };
+    try {
+      global.localStorage = {getItem : () => JSON.stringify({library : -50, inspector : 99999})};
+      assert.deepEqual(storedPanels(), {library : 150, inspector : 680},
+                       'Stored panel widths obey the same limits as dragging');
+      global.localStorage = {getItem : () => '{broken'};
+      assert.deepEqual(storedPanels(), {});
+      for (const interrupted of ['blur', 'pointercancel']) {
+        const events = {}, frames = new Map();
+        global.window = {addEventListener : (key, fn) => events[key] = fn};
+        global.document = {getElementById : () => null, addEventListener() {}};
+        global.requestAnimationFrame = fn => {
+          frames.set(1, fn);
+          return 1;
+        };
+        global.cancelAnimationFrame = id => frames.delete(id);
+        const {studio} = make();
+        studio.root.addEventListener = () => {};
+        studio.renderShell = studio.bootstrap = () => {};
+        studio.initialize();
+        const cell = model.allCenters(doc)[0];
+        const changed = model.updateCenter(doc, cell.id, {field : .314159});
+        studio.handleDrag = {held : 'sense', last : {x : 20, y : 30}};
+        studio.pointer = {kind : 'organ', moved : true};
+        studio.draftDesign(changed, 'interrupted');
+        assert.equal(frames.size, 1);
+        events[interrupted]({clientX : 0, clientY : 0});
+        assert.equal(studio.state.document, changed, interrupted + ' retains the visible value');
+        assert.equal(studio.handleDrag, null);
+        assert.equal(studio.pointer, null);
+        assert.equal(studio.drafted, null);
+        assert.equal(frames.size, 0, 'No delayed redraw remains after interruption');
+        assert.equal(studio.undoHistory.length, 1);
+        events.pointermove({clientX : 300, clientY : 400});
+        assert.equal(studio.state.document, changed, 'Later pointer motion does not edit the fish');
+      }
+    } finally {
+      Object.assign(global, saved);
+    }
+  }
+
   const gut = doc.organs.find(o => o.type === 'gut');
   const anatomy = {senseProbe : model.allCenters(doc).map(() => 1)};
   for (const alreadyShown of [false, true]) {
