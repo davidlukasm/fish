@@ -592,8 +592,8 @@ public:
         b.feeding_action_age = feeding_effect_steps::brief;
       }
     }
-    // Mud clogs dense gill rakers: they let less of the stirred-up sediment through.
-    const double bed = world.field.graze_bed(mx, my, gape, area * raker_passage(b),
+    // Rakers sift the stirred-up ground: none let its food slip, dense ones clog with mud.
+    const double bed = world.field.graze_bed(mx, my, gape, area * raker_sifting(b.raker_density),
                                              gut_room(b, food_kind::benthic, world.physiology_));
     if (bed > 0) {
       ingest(bed, food_kind::benthic);

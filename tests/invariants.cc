@@ -200,6 +200,18 @@ void sense_cells_have_a_threshold_and_get_used() {
   slow.time_constant = 1;
   check(field::adaptation_steps(slow) >= 1000, "a sense cell can take very long to get used");
 }
+// Rakers make three mouths: none sucks hardest, half dense ones sift the ground best, dense ones
+// alone hold plankton.
+void gill_rakers_make_three_mouths() {
+  constexpr double NONE = 0, HALF = .5, DENSE = 1;
+  const auto filtered = [](double d) { return raker_retention(d) * raker_passage(d); };
+  check(filtered(DENSE) > 3 * filtered(HALF) && filtered(HALF) > 3 * filtered(NONE),
+        "only dense rakers filter plankton well");
+  check(raker_sifting(HALF) > 3 * raker_sifting(NONE) && raker_sifting(DENSE) == 0,
+        "half dense rakers sift the ground; none lose its food, dense ones clog");
+  check(raker_passage(NONE) == 1 && raker_passage(HALF) < .75 && raker_passage(DENSE) < .5,
+        "a mouth without rakers moves the most water");
+}
 // A gut full of one food, emptied by a fish that spends what it gains: what the fish gains, what
 // it passes and whether it hurts.
 struct Digested {
@@ -1125,6 +1137,7 @@ int main() {
     ancestral_histories_keep_current_mutations();
     nostrils_differ_only_in_oncoming_water();
     sense_cells_have_a_threshold_and_get_used();
+    gill_rakers_make_three_mouths();
     gut_takes_up_what_time_allows();
     twitches_last_as_long_as_their_fibres();
     muscle_cells_keep_their_own_fibres();

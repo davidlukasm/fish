@@ -8,6 +8,7 @@ import {
   FIN,
   FIN_SHAPE,
   DIGESTION,
+  GILL_FILTER,
   MOTOR_KIND,
   ORGAN_FORM,
   REGION_LAYOUT,
@@ -273,6 +274,15 @@ const GUT = Object.freeze({
   lift : .3,
   height : .48
 });
+// Gill rakers as the engine has them (physiology.hh): the share of the plankton they hold, of the
+// water they let through, and of the bed's food a mouthful of ground leaves in the fish.
+export const rakerRetention = density =>
+    GILL_FILTER.rakerless_retention +
+    (1 - GILL_FILTER.rakerless_retention) * density ** GILL_FILTER.retention_power;
+export const rakerPassage = density => 1 - GILL_FILTER.raker_drag * density;
+export const rakerSifting = density =>
+    (1 - GILL_FILTER.flock_slip * (1 - density) ** GILL_FILTER.sift_power) *
+    (1 - density ** GILL_FILTER.sift_power);
 // The gut as the engine has it (digest_nutrition). Its muscle, at a steady drive share `driven`,
 // moves the content on this many times as fast as at rest; `speed` is what the muscle reaches at
 // full drive, from its size.

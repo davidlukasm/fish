@@ -321,15 +321,36 @@ inline double swallow_area(const Body &b) {
          suction_share(b.suction_strength * body_scale(b), b.force_scale) /
          (1 + SWALLOW_SPEED_LOSS * speed * speed);
 }
-// Water through the gills keeps the plankton the rakers hold: dense rakers nearly all of it, a
-// fish without rakers only what sticks to its gills.
-inline double raker_retention(const Body &b) {
+// Gill rakers, from none (0) to dense (1), make three kinds of fish. All water a mouth sucks
+// in, pumps or meets leaves through the gills. Without rakers all of it passes, and with it
+// nearly all plankton and most of what the bed holds: a mouth that sucks hardest, for prey
+// swallowed whole. Half dense rakers hold the bed's flocks while the mud still passes: a mouth
+// that sifts the ground. Dense rakers hold nearly all plankton, but they hold back much of the
+// water and clog with mud. `gill_filter::`: gills without rakers keep the share
+// `rakerless_retention` of the plankton, the rest grows with the density to the power
+// `retention_power`; the densest rakers hold back the share `raker_drag` of the water; gills
+// without rakers let the share `flock_slip` of the bed's flocks slip through, and mud clogs
+// rakers with the power `sift_power` of their density.
+inline double raker_retention(double density) {
   namespace G = gill_filter;
-  return G::rakerless_retention + (1 - G::rakerless_retention) * b.raker_density;
+  return G::rakerless_retention +
+         (1 - G::rakerless_retention) * std::pow(density, G::retention_power);
 }
-// Share of the water dense rakers still let through.
+// Share of the water the rakers let through.
+inline double raker_passage(double density) {
+  return 1 - gill_filter::raker_drag * density;
+}
+// Share of the bed's food a mouthful of ground leaves in the fish.
+inline double raker_sifting(double density) {
+  namespace G = gill_filter;
+  return (1 - G::flock_slip * std::pow(1 - density, G::sift_power)) *
+         (1 - std::pow(density, G::sift_power));
+}
+inline double raker_retention(const Body &b) {
+  return raker_retention(b.raker_density);
+}
 inline double raker_passage(const Body &b) {
-  return 1 - gill_filter::raker_drag * b.raker_density;
+  return raker_passage(b.raker_density);
 }
 // Water the gill covers can draw through a mouth held wide open at full pumping.
 inline double gill_area(const Body &b) {

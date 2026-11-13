@@ -1,16 +1,7 @@
 import {TAIL_END} from './fish_geometry.js';
 import {hormoneColors} from './hormones.js';
 import './tissue.js';
-import {
-  FISH,
-  GILL_FILTER,
-  HORMONES,
-  LATERAL_SAMPLE,
-  MOTOR_KIND,
-  NEURON,
-  RECEPTOR,
-  TUNING
-} from './schema.js';
+import {FISH, HORMONES, LATERAL_SAMPLE, MOTOR_KIND, NEURON, RECEPTOR, TUNING} from './schema.js';
 import {t, tList, percent} from './strings.js';
 import {paintEcologyIcon} from './feeding_view.js';
 import {chartContext} from './dom.js';
@@ -31,6 +22,7 @@ import {
   fishTeeth,
   fishReservePath,
   fishReserveShape,
+  rakerPassage,
 } from './fish_organs.js';
 import {eyeImage, eyeTypeAnswers, organNumber, organPercent} from './organ_readout.js';
 import {organSignalHistory} from './organs.js';
@@ -177,7 +169,7 @@ function drawGillGraphic({g, info, color, label, bar}) {
       u * u * G.top + 2 * u * t * middle + t * t * G.bottom
     ];
   };
-  const water = G.water * (1 - GILL_FILTER.raker_drag * rakers) * brainClamp(info.fill);
+  const water = G.water * rakerPassage(rakers) * brainClamp(info.fill);
   if (water > 0) {
     g.strokeStyle = color;
     g.lineWidth = water;

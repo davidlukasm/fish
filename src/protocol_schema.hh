@@ -2048,8 +2048,11 @@ inline constexpr double wall = 0.25;
 inline constexpr int zone = 2;
 }
 namespace gill_filter {
-inline constexpr double rakerless_retention = 0.3;
-inline constexpr double raker_drag = 0.5;
+inline constexpr double rakerless_retention = 0.02;
+inline constexpr int retention_power = 3;
+inline constexpr double raker_drag = 0.6;
+inline constexpr double flock_slip = 0.85;
+inline constexpr int sift_power = 4;
 inline constexpr double flank = 0.75;
 }
 namespace stroke_grip {

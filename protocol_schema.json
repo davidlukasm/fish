@@ -2216,8 +2216,11 @@
       "zone": 2
     },
     "gill_filter": {
-      "rakerless_retention": 0.3,
-      "raker_drag": 0.5,
+      "rakerless_retention": 0.02,
+      "retention_power": 3,
+      "raker_drag": 0.6,
+      "flock_slip": 0.85,
+      "sift_power": 4,
       "flank": 0.75
     },
     "stroke_grip": {

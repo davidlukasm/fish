@@ -21,14 +21,13 @@ import {brainScentWeights, PAIRED_MOTORS, PAIRED_SENSES, scentNames} from './bra
 import {sceneState} from './state.js';
 import {fibreCost, fibreForce} from './fibre.js';
 import {swimmingGrip} from './fin_stroke.js';
-import {gutPassage} from './fish_organs.js';
+import {gutPassage, rakerPassage, rakerRetention} from './fish_organs.js';
 import {
   ANATOMY,
   BEHAVIOR_SCALE,
   BODY_UNIT,
   EFFECTOR,
   FISH,
-  GILL_FILTER,
   HORMONES,
   IMAGE_BAND,
   MOTOR_KIND,
@@ -390,9 +389,8 @@ export function brainOrganReadout(d, tissue) {
       info.metrics = [
         {...nextPulse, label : t('organ_readout.naechsterSchlag')},
         metric(t('organ_readout.reusen'), organPercent(rakers), t('organ_readout.reusenHalten', {
-                 kept : organPercent(GILL_FILTER.rakerless_retention +
-                                     (1 - GILL_FILTER.rakerless_retention) * rakers),
-                 water : organPercent(1 - GILL_FILTER.raker_drag * rakers)
+                 kept : organPercent(rakerRetention(rakers)),
+                 water : organPercent(rakerPassage(rakers))
                }))
       ];
       info.series = driven;

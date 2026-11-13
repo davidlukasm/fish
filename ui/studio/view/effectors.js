@@ -10,7 +10,6 @@ import {
   BODY_UNIT,
   FIN,
   FIN_STROKE,
-  GILL_FILTER,
   MOTOR_KIND,
   SIDE_FIN
 } from '../../schema.js';
@@ -19,6 +18,8 @@ import {
   gutTurns,
   jawReach,
   lipWidth,
+  rakerPassage,
+  rakerRetention,
   tailFinSize,
   toothForm,
 } from '../../fish_organs.js';
@@ -704,8 +705,7 @@ function gillArch(t) {
 }
 export function gillGraphic(state, organ) {
   const G = GILL, density = gillRakers(organ) ?? BODY_UNIT.trait_middle;
-  const passage = 1 - GILL_FILTER.raker_drag * density,
-        kept = GILL_FILTER.rakerless_retention + (1 - GILL_FILTER.rakerless_retention) * density;
+  const passage = rakerPassage(density), kept = rakerRetention(density);
   const count = Math.round(G.rakers[0] + (G.rakers[1] - G.rakers[0]) * density);
   const arch = 'M' + Array
                          .from({length : G.steps + 1},

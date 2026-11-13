@@ -56,7 +56,7 @@ void advance_mouth(Body &b, bool pump_started, bool bite_started, double pump_st
   m.flow = open ? std::min(1., suction * pull + drawn) : 0;
   // The twitch's shares 2 * pull average one over its length, like the force of every twitch.
   if (open)
-    m.credit += swallow_area(b) * suction * 2 * pull * MOUTH_TRANSPORT_RATE;
+    m.credit += swallow_area(b) * raker_passage(b) * suction * 2 * pull * MOUTH_TRANSPORT_RATE;
 }
 double maternal_reserve(const Body &b, double adult_reserve) {
   return std::max(0., adult_reserve) * std::sqrt(std::max(0., b.tissue) / BODY_TISSUE);

@@ -1381,8 +1381,11 @@ class Digestion:
     ZONE = 2
 
 class GillFilter:
-    RAKERLESS_RETENTION = 0.3
-    RAKER_DRAG = 0.5
+    RAKERLESS_RETENTION = 0.02
+    RETENTION_POWER = 3
+    RAKER_DRAG = 0.6
+    FLOCK_SLIP = 0.85
+    SIFT_POWER = 4
     FLANK = 0.75
 
 class StrokeGrip:

@@ -1082,8 +1082,14 @@ export const DIGESTION = Object.freeze({
   "wall" : 0.25,
   "zone" : 2
 });
-export const GILL_FILTER =
-    Object.freeze({"rakerless_retention" : 0.3, "raker_drag" : 0.5, "flank" : 0.75});
+export const GILL_FILTER = Object.freeze({
+  "rakerless_retention" : 0.02,
+  "retention_power" : 3,
+  "raker_drag" : 0.6,
+  "flock_slip" : 0.85,
+  "sift_power" : 4,
+  "flank" : 0.75
+});
 export const STROKE_GRIP = Object.freeze({"tail_at_rest" : 0.5, "fin_at_speed" : 0.5});
 export const ANTAGONIST = Object.freeze({"lone_sweep" : 0.3, "tail_rest_sweep" : 0.5});
 export const SIDE_FIN = Object.freeze({"gap" : 0.3, "angle" : 90, "bearing_half" : 20});
