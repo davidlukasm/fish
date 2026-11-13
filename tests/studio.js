@@ -4,6 +4,57 @@ const {readFileSync} = require('node:fs');
 const {resolve} = require('node:path');
 const {join} = require('node:path');
 
+async function checkGonadRoom(model, sites, capabilities) {
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const {gonadStore, gonadGraphic, sacPatch} = await import('../ui/studio/view/sacs.js');
+  const {DIGESTION} = await import('../ui/schema.js');
+  const added = model.addOrgan(model.newDocument('Gonad room'), 'eggs', sites, {x : 708, y : 380});
+  const small = model.setOrganNodes(added.document, added.organId, 2, sites);
+  const gut = model.addOrgan(small, 'gut', sites, {x : 650, y : 300});
+  assert.ok(gut);
+  const organ = model.findOrgan(gut.document, added.organId);
+  const wheel = {
+    ...capabilities,
+    gonads : {...capabilities.gonads, eggs : {...capabilities.gonads.eggs, perCell : 5}}
+  };
+  const state = (length, adultScale = 1, stale = false) => ({
+    document : model.setGutLength(gut.document, length),
+    sites,
+    capabilities : wheel,
+    stale,
+    report : {adultScale, eggMinimum : 17, eggIncubation : 111},
+    anatomy : {budget : {yolk : {organ : 20, store : 20}}}
+  });
+  const short = state(0), long = state(1);
+  assert.ok(gonadStore(short, organ).spawn > 17 && gonadStore(long, organ).spawn < 17,
+            'The long gut turns an otherwise viable egg into a food egg at the same motor count');
+  assert.doesNotMatch(gonadGraphic(short, organ), /class="aid-sac-egg food"/);
+  assert.match(gonadGraphic(long, organ), /class="aid-sac-egg food"/);
+  for (const stale of [false, true])
+    for (const adultScale of [.5, 1, 2]) {
+      const full = state(0, adultScale, stale), cramped = state(1, adultScale, stale);
+      const normal = gonadStore(full, organ), less = gonadStore(cramped, organ);
+      const scale = stale ? 1 : adultScale;
+      assert.ok(near(normal.room, 20 * scale) &&
+                    near(less.room, 20 * scale * (1 - DIGESTION.belly)),
+                'Capacity follows the current gut even while an older anatomy report is shown');
+      assert.equal(less.own.fill, normal.own.fill, 'The gut reduces room, not the transfer rate');
+      assert.equal(less.minimum, stale ? null : 17,
+                   'Old incubation verdicts stay hidden after edits');
+      const sperm = {...organ, type : 'sperm'};
+      assert.deepEqual(gonadStore(full, sperm), gonadStore(cramped, sperm),
+                       'The sperm store is not reduced by the gut');
+      for (const current of [full, cramped]) {
+        const picture = gonadGraphic(current, organ);
+        const grip = picture.match(/data-sac-handle="cells"[^>]*cy="([^"]+)"/);
+        const height = picture.match(/viewBox="0 0 [^ ]+ ([^"]+)"/);
+        assert.ok(grip && height);
+        assert.equal(sacPatch(current, organ, Number(grip[1]) / Number(height[1])).nodes, 2,
+                     'Picking up the capacity handle preserves its growth cells');
+      }
+    }
+}
+
 async function checkSpectrumKnobs() {
   const {spectrumElement, spectrumPatch} = await import('../ui/studio/view/spectrum.js');
   const {tuningAffinity, tuningHue, hueOffset} = await import('../ui/tuning.js');
@@ -1299,6 +1350,40 @@ async function checkReversePattern(model, sites, root) {
   }
 }
 
+async function checkLearningSources(model, capabilities) {
+  const {learningInspector} = await import('../ui/studio/view/learning.js');
+  const {hormoneOverlay} = await import('../ui/studio/view/influence.js');
+  const {nerveClass, isModulator} = await import('../ui/studio/model/organs.js');
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {sites} = capabilities;
+  const learner =
+      model.addNeuron(model.newDocument('Lehrquellen'), 'learn', sites, {x : 380, y : 325});
+  const teacher = model.addNeuron(learner.document, 'modulate', sites, {x : 420, y : 325});
+  const doc =
+      model.addWire(teacher.document, teacher.centerId, learner.centerId, null, sites).document;
+  const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(
+      studio.state,
+      {sites, capabilities, tool : 'learn', selected : {kind : 'center', id : learner.centerId}});
+  for (const modulator of [.5, .500001, .65, .75, .750001, 1, null]) {
+    const draft = model.updateCenter(doc, teacher.centerId, {modulator : .65});
+    const source = model.findCenter(draft, teacher.centerId).center;
+    if (modulator !== null)
+      source.nativeClass = {...nerveClass(source), modulator};
+    studio.state.document = draft;
+    const strength = nerveClass(source).modulator, teaches = strength > .5;
+    assert.equal(isModulator(source), strength > .75,
+                 'The dominant cell name keeps its separate classification threshold');
+    const html = learningInspector(studio.state), overlay = hormoneOverlay(studio.state);
+    assert.equal(html.includes('aid-teacher-list'), teaches,
+                 'Every engine teaching source appears in the learner inspector');
+    assert.equal(overlay.includes('aid-teach-mark'), teaches,
+                 'The teaching mark follows the engine contact type');
+    assert.equal(overlay.includes('aid-teach-way'), teaches,
+                 'The lesson path follows the engine contact type');
+  }
+}
+
 async function checkResponseControls(model, capabilities, clicks) {
   const {responseHandle, responsePatch, responseTrace} =
       await import('../ui/studio/view/response.js');
@@ -1984,6 +2069,7 @@ async function checkHormoneSystems(model, capabilities) {
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
   await checkInspectorSubstances(model, sitesResult, clicks);
+  await checkLearningSources(model, sitesResult);
   if (process.argv.includes('--ui') && process.argv.includes('--region-controls')) {
     await checkResponseControls(model, sitesResult, clicks);
     await checkFunctionalRegions(model, sitesResult);
@@ -3840,10 +3926,11 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
                      [ 'release', 'release', 'pressure', 'pressure' ]);
     assert.equal(model.compileDocument(fertile, sites).groups.length, keys.length);
     const sacs = await import('../ui/studio/view/sacs.js');
+    await checkGonadRoom(model, sites, sitesResult);
     const initial = model.findOrgan(ovary.document, ovary.organId);
     const initialStore =
         sacs.gonadStore({document : ovary.document, sites, capabilities : sitesResult}, initial);
-    assert.equal(initialStore.room, sitesResult.gonads.eggs.most,
+    assert.equal(initialStore.room, initialStore.own.most,
                  'Pressure cells do not subtract chambers from the ovary storage ceiling');
     assert.ok(initialStore.spawn > response.example.eggMinimum,
               'A newly placed ovary can fund the compiled example egg without adding cells');
@@ -3853,7 +3940,7 @@ print(json.dumps({'built':built,'designed':designed,'target':target,'outside':ou
     const small = model.findOrgan(fewer, gonad.id);
     const sacState = {document : fewer, sites, capabilities : sitesResult};
     const store = sacs.gonadStore(sacState, small);
-    assert.equal(store.room, sitesResult.gonads.eggs.perCell * 4);
+    assert.equal(store.room, store.own.perCell * 4);
     assert.ok(Number.isFinite(store.steps),
               'The plan shows filling for an assumed input before CPPN compilation');
     assert.equal(sacs.gonadStore({...sacState, previewInput : 0}, small).steps, Infinity);

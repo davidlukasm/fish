@@ -1,7 +1,7 @@
 import {clamp} from '../../units.js';
 import {kindLimit, kindNodes, nodeLimit, PRESSURE_OF} from '../model/organs.js';
-import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
-import {groupReport} from '../model/document.js';
+import {ATELIER_LIMITS, BODY_UNIT, DIGESTION, MOTOR_KIND} from '../../schema.js';
+import {groupReport, gutLength} from '../model/document.js';
 import {organCommand} from './preview.js';
 import {escapeText, fixed, placedGlyph} from './markup.js';
 import {formatNumber, percent, t, tList} from '../../strings.js';
@@ -18,10 +18,15 @@ export function gonadStore(state, organ) {
   if (!base)
     return null;
   const bodyScale = !state.stale ? state.report?.adultScale ?? 1 : 1;
+  const length = gutLength(state.document) ?? BODY_UNIT.trait_middle;
+  const size = DIGESTION.shortest * (DIGESTION.longest / DIGESTION.shortest) ** clamp(length, 0, 1);
+  const belly = organ.type === 'eggs' ? 1 - DIGESTION.belly * (size - DIGESTION.shortest) /
+                                                (DIGESTION.longest - DIGESTION.shortest)
+                                      : 1;
   const own = {
     ...base,
-    most : base.most * bodyScale,
-    perCell : base.perCell * bodyScale,
+    most : base.most * bodyScale * belly,
+    perCell : base.perCell * bodyScale * belly,
     fill : base.fill * bodyScale
   };
   const cells = kind => organ.centers.filter(c => c.key === kind);

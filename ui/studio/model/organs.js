@@ -59,6 +59,9 @@ export function nerveClass(center) {
 // A class names a cell only where it clearly dominates: region cells with half an own rhythm stay
 // relays.
 const DOMINANT_CLASS = .75;
+// The engine chooses teaching contacts before modulation dominates the cell's name.
+export const isTeachingSource = center =>
+    center.role === 'nerve' && nerveClass(center).modulator > .5;
 export const isModulator = center =>
     center.role === 'nerve' && nerveClass(center).modulator > DOMINANT_CLASS;
 export const isPacemaker = center =>

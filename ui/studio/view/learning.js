@@ -22,7 +22,7 @@ import {formatNumber, formatSigned, joinParts, t} from '../../strings.js';
 import {bandGlyph, heading, icon, ICON, label, VALUE_DIGITS} from './kit.js';
 import {effectCurve, substanceName} from './substances.js';
 import {centerTitle, organTitle, tone} from './names.js';
-import {isModulator, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
+import {isTeachingSource, isPacemaker, isRegion, modeLean, nerveClass} from '../model/organs.js';
 import {EFFECT_ICON} from './icons.js';
 import {cellDevelopment, previewControls, previewContextOf} from './development.js';
 import {effectScene} from './effects.js';
@@ -40,7 +40,7 @@ function sendersOf(state, center) {
                       .filter(link => hears.has(link.to))
                       .map(link => endpointCenters(doc, link.from)[0])
                       .filter(Boolean);
-  const modulators = senders.filter(c => c.role === 'nerve' && isModulator(c));
+  const modulators = senders.filter(isTeachingSource);
   const pacers = senders.filter(c => c.role === 'nerve' && isPacemaker(c));
   return {modulators, pacers};
 }

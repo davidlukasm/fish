@@ -4,7 +4,7 @@ import {fixed, placedGlyph} from './markup.js';
 import {HORMONE_EFFECT} from '../../schema.js';
 import {BODY_SIGNAL, DIRECTION_ICON, EFFECT_ICON, BIRTH_ICON, PHASE_ICON} from './icons.js';
 import {CATEGORY_TONE} from './names.js';
-import {isModulator} from '../model/organs.js';
+import {isTeachingSource} from '../model/organs.js';
 import {routedLinks} from '../model/regions.js';
 import {EFFECT_ORDER} from './effects.js';
 import {substanceColor} from '../../hormones.js';
@@ -122,7 +122,7 @@ function teachingOverlay(state) {
   const modulatorsOf = (center, organ) =>
       links.filter(link => link.to === center.id || link.to === organ.id)
           .map(link => endpointCenters(doc, link.from)[0])
-          .filter(c => c?.role === 'nerve' && isModulator(c));
+          .filter(c => c && isTeachingSource(c));
   let marks = '';
   for (const organ of doc.organs)
     for (const center of organ.centers)

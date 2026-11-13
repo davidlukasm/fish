@@ -1,5 +1,5 @@
 import {allCenters, plannedConnections, wireContactPairs} from '../model/document.js';
-import {nerveClass} from '../model/organs.js';
+import {isTeachingSource, nerveClass} from '../model/organs.js';
 import {learningTimeSteps} from '../../tuning.js';
 import {clamp} from '../../units.js';
 import {centerTitle, organTitle} from './names.js';
@@ -42,7 +42,7 @@ const PLAN = Object.freeze({
 const point = p => fixed(p.x) + ' ' + fixed(p.y);
 function limits(source, target) {
   const cl = source.role === 'sensor' ? {sign : 1, modulator : 0} : nerveClass(source);
-  const teaching = target.role !== 'motor' && cl.modulator > .5 ? 1 : 0;
+  const teaching = target.role === 'nerve' && isTeachingSource(source) ? 1 : 0;
   return {
     sign : cl.sign < 0 ? -1 : 1,
     teaching,
