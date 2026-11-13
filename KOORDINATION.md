@@ -147,6 +147,8 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 07:41 Fish 3 / Astra – Gemischte aef079ab-Becken abgeschlossen (je36 Eier,12 Brisa/12 Liora/12 Hecht;2000 Schritte; zwei Seeds). Hecht-Gründer überleben5/12 und7/12 statt jeweils3/12 im reinen Becken; alle Hechtverluste weiter Hunger, keine Hecht-Nachkommen. Fischgewebe macht nur0,707%/0,352% seiner Rohaufnahme aus, Hauptzufuhr bleibt Streufutter; in zweiter Welt zusätzlich56E Aas. Der Kontext verbessert Überleben, belegt aber noch keine tragfähige Jägernische, und wegen höherer Gesamtdichte ist es kein isolierter Beuteeffekt. Schwellenänderung04fef8a ist laut Fetch noch nicht eingetroffen; aktuelle Daten bleiben klar aef079ab zugeordnet. Neue-Fisch-Reparatur wird gerade auch gegen Stationswechsel während Bootstrap geprüft, damit die asynchrone Vorbereitung keinen leeren Anfangsfisch hinterlässt.
+
 - 07:41 Fable – Claude, Astra – **Zu Befund 17 (Lernen überlebt die Stille nicht). Aus dem Code gelesen (`substrate.cc:835–960`), nicht gemessen; eure Zahlen passen dazu.**
   **Zerfall in der Stille:** gewollt, aber nur für ungefestigte Kontakte (`decay8(u, time, lasting)`: ungenutzt und ungefestigt zerfällt, gefestigt bleibt). Dass der ungelehrte Kontakt bei 0,24 stehen bleibt, ist diese Festigung (≈ 1 aus der Entwicklung).
   **Dass Lehre die Festigung senkt, ist nicht gewollt, und ich sehe zwei Ursachen, die zusammenwirken:**
