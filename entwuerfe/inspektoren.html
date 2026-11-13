@@ -717,15 +717,21 @@ function nodeSwim(n, c) {
 function speedOf(push, k, lag) { const out = []; let v = 0; for (const p of push) { v += (p * k - v) / lag; out.push(v); } return out; }
 // The bundles in the order they join: the lowest threshold first, at the bottom.
 const recruitOrder = () => tail.nodes.map((n, i) => i).sort((p, q) => tail.nodes[p].gate - tail.nodes[q].gate);
-// The scale fits the strongest command with room to spare; while a grip is held it only grows, so
-// that nothing runs off the top, and it fits again when the grip is let go.
 // A single slow cell is still 8 px high on the smallest scale; the scale grows once the force
 // reaches the top.
 const needScale = () => Math.max(6, 1.1 * tail.nodes.reduce((t, n) => t + n.cells * forceOf(n.fast) * driveOf(n, tail.command), 0));
-// The scale only grows: it makes room as soon as the force reaches the top, and it stays when the
-// force falls again or a grip is let go, so that every grip can be taken back to where it was.
-const forceScale = () => (tail.scale = Math.max(tail.scale ?? 0, needScale()));
-const holdScale = () => {}, freeScale = () => drawTail();
+// While a grip is held a scale only grows, so that the grip can be taken back to where it was;
+// once it is let go the scale glides back to fit. Room for more is made at once.
+let glide = 0;
+function scaleTo(key, need) {
+  const now = tail[key];
+  if (now == null || need >= now) return (tail[key] = need);
+  if (tail.held) return now;
+  if (now - need < need * .005) return (tail[key] = need);
+  if (!glide) glide = requestAnimationFrame(() => { glide = 0; drawTail(); });
+  return (tail[key] = now + (need - now) * .2);
+}
+const holdScale = () => { tail.held = true; }, freeScale = () => { tail.held = false; drawTail(); };
 const pick = i => { tail.chosen = i; drawTail(); };
 const fmt = v => v.toFixed(1).replace('.', ',');
 function grid(svg, L, R, top, base, scale) {
@@ -743,7 +749,7 @@ function freeGate() {
 }
 const MUSCLE = {from : 108, to : 226}, FISH = 76;
 function drawTail() {
-  const nodes = tail.nodes, cn = nodes[tail.chosen], scale = forceScale();
+  const nodes = tail.nodes, cn = nodes[tail.chosen], scale = scaleTo('scale', needScale());
   document.getElementById('tail-kind').textContent = tail.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
   // ---- The fish with room to beat; under it its bundles: fibres as colour, cells as height. ----
   const svg = document.getElementById('tail'); svg.replaceChildren();
@@ -822,7 +828,7 @@ function drawTail() {
     const st = Math.round(word * .65), per = forceOf(cn.fast) * driveOf(cn, tail.command) * (nodeSwim(cn, tail.command).force[st] / Math.max(1e-9, nodeSwim(cn, tail.command).force[0]));
     if (per > 1e-6) {
       const y0 = Y(outline.over[st]), under0 = outline.under[st];
-      drag(c, el('rect', {x : X(st) - 6, y : y0 - 6, width : 12, height : 12, rx : 2}, c), p => { const sc = forceScale(); tail.chosenCells = cn.cells = clamp(Math.round(((base - p.y) / (base - top) * sc - under0) / per), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
+      drag(c, el('rect', {x : X(st) - 6, y : y0 - 6, width : 12, height : 12, rx : 2}, c), p => { const sc = tail.scale; tail.chosenCells = cn.cells = clamp(Math.round(((base - p.y) / (base - top) * sc - under0) / per), 1, MOST_CELLS); drawTail(); }, 'cells', holdScale, freeScale);
     }
   }
   c.setAttribute('viewBox', '0 0 300 168');
@@ -832,8 +838,8 @@ function drawTail() {
   const n = document.getElementById('tailniche'); n.replaceChildren();
   const NT = 28, NB = 118, w = tail.wriggle, water = 1 - .5 * w, sand = 1 / (12 * Math.pow(3 / 12, w));
   const vWater = speedOf(tail.total, water, 14), vSand = speedOf(tail.total, sand, 3);
-  const vScale = (tail.vScale = Math.max(tail.vScale ?? 0, 1, 1.15 * Math.max(...speedOf(tail.total, 1, 14)))), NY = v => NB - (NB - NT) * v / vScale;
-  regler(n, {x : 26, top : NT, base : NB, word : 'Schlängeln', value : w, setValue : v => { tail.wriggle = v; drawTail(); }, name : 'wriggle'});
+  const vScale = scaleTo('vScale', Math.max(1, 1.15 * Math.max(...speedOf(tail.total, 1, 14)))), NY = v => NB - (NB - NT) * v / vScale;
+  regler(n, {x : 26, top : NT, base : NB, word : 'Schlängeln', value : w, setValue : v => { tail.wriggle = v; drawTail(); }, start : holdScale, end : freeScale, name : 'wriggle'});
   grid(n, L, R, NT, NB, vScale);
   el('path', {d : `M${L} ${NB} H${R} M${L} ${NB} V${NT}`, stroke : '#3b6a6c', fill : 'none'}, n);
   el('path', {d : 'M' + vWater.map((v, st) => `${X(st).toFixed(1)} ${NY(v).toFixed(1)}`).join(' L') + ` L${X(STEPS)} ${NB} L${L} ${NB} Z`, fill : '#9cc8f0', opacity : .3, stroke : '#9cc8f0', 'stroke-width' : 2}, n);
