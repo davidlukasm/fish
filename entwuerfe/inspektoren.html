@@ -147,12 +147,11 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
   </section>
   <section class="panel" aria-label="Schwimmblase">
     <h2>Organ</h2><h3>Schwimmblase</h3>
-    <h4 class="first">Größe</h4>
-    <svg id="bladfish" viewBox="0 0 300 136"></svg>
-    <h4>Füllen und Leeren</h4>
+    <svg id="bladfish" viewBox="0 0 300 124"></svg>
+    <h4>Schweben</h4>
     <svg id="bladfill" viewBox="0 0 300 138"></svg>
-    <h4>Druckzellen</h4>
-    <svg id="bladsense" viewBox="0 0 300 142"></svg>
+    <h4>Tiefensinn</h4>
+    <svg id="bladsense" viewBox="0 0 300 200"></svg>
   </section>
   <section class="panel" aria-label="Kiemen">
     <h2>Organ</h2><h3>Kiemen</h3>
@@ -1720,95 +1719,116 @@ function drawBarbels() {
 }
 
 // ---------- Blase ----------
-// Swim bladder (movement.cc:127–132, body_plan.cc:1316, 1487–1490, 1626): cells driven positive
-// fill it, driven negative empty it, fill += 0.002·(filling − emptying) per step, costing
-// 0.03 per unit of change. It lifts 0.03·c/(1 + c)·fill against a sinking of 0.012, c its capacity
-// (the cells' strength), so it hovers at fill 0.4·(1 + c)/c: a small bladder (c < 2/3) cannot
-// carry the fish at all. Its pressure cells feel the depth (0 at the top, 1 at the ground) and
-// answer bounded. Above: the fish with its bladder (grip at its end: its size) and how full it is;
-// in the middle: the fill over time under the command on the left, the line where it hovers;
-// below: what the pressure cells report at every depth.
-const BLAD = {cap : 1.6, fill : .3, command : .5, groups : [{gate : .5}], chosen : 0, depth : .5};
-const hoverAt = c => .4 * (1 + c) / c;
+// Swim bladder (movement.cc:127–133, body_plan.cc:969, 1310–1318, 1500–1506, 1639,
+// physiology_parameters.cc: sinking 0.012, bladder_strength 0.03, bladder_rate 0.002, bladder_cost
+// 0.03). Its cells make its capacity c (here 0.25 a cell); driven positive they fill it, negative
+// they empty it: fill += 0.002·(filling − emptying) a step, paying 0.03 per unit of fill. Its lift
+// per mass is 0.03·c/(1 + c)·fill against a sinking of 0.012: the fish floats where they are equal,
+// at fill 0.4·(1 + c)/c; below c = 2/3 the bladder never carries the fish. Its pressure cells
+// feel how deep the fish is, from the surface (0) to the ground (1), not how full the bladder is
+// (Fable 19:06), bounded, without getting used to it.
+// Above: the fish with its bladder, as large as its cells make it, as full as tried. Middle: the
+// water from the surface to the ground; the fish rises or sinks with the tried fill, and the lift
+// against the weight shows where it floats. Below: the depth sense, the water column itself as the
+// gauge, like the stomach for satiety.
+const BLAD = {cells : 6, fill : .5, groups : [.5], groupCells : [4], groupSpread : [.06], chosen : 0, depth : .5};
+const bladCap = () => .25 * BLAD.cells, bladLift = f => .03 * bladCap() / (1 + bladCap()) * f, SINKING = .012;
+const BLADFILM = {fish : null, y : .5, v : 0};
 function drawBladder() {
-  const redraw = drawBladder, hold = () => { BLAD.held = true; }, free = () => { BLAD.held = false; redraw(); };
   const svg = document.getElementById('bladfish'); svg.replaceChildren();
-  const fish = el('g', {transform : 'translate(18 4) scale(.9)'}, svg);
-  el('path', {d : BODY, fill : '#16363e', stroke : '#3b6a6c', 'stroke-width' : 1.1}, fish);
-  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, fish);
-  // The bladder: as long as its capacity, filled from below as far as it is full.
-  const bx0 = 92, by = 52, len = 30 + 26 * BLAD.cap, ry = 13;
-  el('clipPath', {id : 'bladclip'}, el('defs', {}, svg)).appendChild(el('ellipse', {cx : bx0 + len / 2, cy : by, rx : len / 2, ry}));
-  el('ellipse', {cx : bx0 + len / 2, cy : by, rx : len / 2, ry, fill : '#0f2c34'}, svg);
-  el('rect', {x : bx0, y : by + ry - 2 * ry * BLAD.fill, width : len, height : 2 * ry * BLAD.fill, fill : '#cfe8f2', opacity : .55, 'clip-path' : 'url(#bladclip)'}, svg);
-  el('ellipse', {cx : bx0 + len / 2, cy : by, rx : len / 2, ry, fill : 'none', stroke : '#cfe8f2', 'stroke-width' : 1.4}, svg);
-  drag(svg, el('circle', {cx : bx0 + len, cy : by, r : 7}, svg), p => { BLAD.cap = clamp((p.x - bx0 - 30) / 26, .2, 4); redraw(); }, 'bladcap', hold, free);
-  const hover = hoverAt(BLAD.cap);
-  // Where it hovers stands as a line below; only a bladder that never carries the fish says so.
-  if (hover > 1) txt(svg, 296, 128, 'zu klein: trägt den Fisch nicht', {'text-anchor' : 'end', style : 'fill:#ef8f8f'});
-  svg.setAttribute('viewBox', '0 0 300 136');
-
-  // ---- The fill over time under the command; above the line it rises, below it sinks. ----
-  const c = document.getElementById('bladfill'); c.replaceChildren();
-  const L = 56, R = 290, top = 26, base = 116, N = 400, X = st => L + (R - L) * st / N, Y = v => base - (base - top) * v;
-  const fill = [BLAD.fill];
-  // The same cells that make its capacity fill or empty it: 0.002 × their strength × the command.
-  const rate = BLAD.rule === 'fable' ? .008 : .002;
-  for (let st = 1; st <= N; st++) fill.push(clamp(fill[st - 1] + rate * BLAD.cap * BLAD.command * (st <= 250 ? 1 : 0), 0, 1));
-  const sign = el('g', {}, c);
-  // The command: positive fills, negative empties; a bar from the middle.
-  const mid = (top + base) / 2, CY = v => mid - (base - top) / 2 * v;
-  txt(c, 30, top - 10, 'Befehl', {'text-anchor' : 'middle'});
-  el('rect', {x : 26, y : top, width : 8, height : base - top, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, c);
-  el('rect', {x : 26, y : Math.min(mid, CY(BLAD.command)), width : 8, height : Math.abs(CY(BLAD.command) - mid), fill : '#79d2be', opacity : .35}, c);
-  el('path', {d : `M22 ${mid} h16`, stroke : '#7f9a99'}, c);
-  txt(c, 44, top + 9, '+', {'text-anchor' : 'middle', class : 'head'}); txt(c, 44, base - 1, '−', {'text-anchor' : 'middle', class : 'head'});
-  drag(c, el('path', {d : `M24 ${CY(BLAD.command)} l-12 -7 v14 z`}, c), p => { BLAD.command = clamp((mid - p.y) / ((base - top) / 2), -1, 1); redraw(); }, 'bladcmd', hold, free);
-  el('path', {d : 'M' + fill.map((v, st) => `${X(st).toFixed(1)} ${Y(v).toFixed(1)}`).join(' L') + ` L${R} ${base} L${L} ${base} Z`, fill : '#cfe8f2', opacity : .3, stroke : '#cfe8f2', 'stroke-width' : 1.6}, c);
-  if (hover <= 1) {
-    el('path', {d : `M${L} ${Y(hover)} H${R}`, stroke : '#f1dda6', 'stroke-dasharray' : '5 4', 'stroke-width' : 1.2}, c);
-    txt(c, R - 2, Y(hover) - 5, 'steigt', {'text-anchor' : 'end'}); txt(c, R - 2, Y(hover) + 13, 'sinkt', {'text-anchor' : 'end'});
-  }
-  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
-  txt(c, L + 4, top - 8, 'Füllung');
-  // Where the command stops: the same grey line as the tail's.
-  el('path', {d : `M${X(250)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(250) + 5, top + 2, 'Befehl aus');
-  // The fill to start from: a ball at the curve's start.
-  drag(c, el('circle', {cx : L, cy : Y(BLAD.fill), r : 7}, c), p => { BLAD.fill = clamp((base - p.y) / (base - top), 0, 1); redraw(); }, 'bladstart', hold, free);
-  txt(c, L, base + 15, 'Schritte');
-  for (const st of [100, 200, 300, 400]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 400 ? 'end' : 'middle'});
-  // Fable's proposal for finding 8: the bladder fills four times as fast.
-  ruleRow(c, base + 26, BLAD, [['today', 'Füllen heute (0,002)'], ['fable', 'Vorschlag: 0,008']], redraw);
-  c.setAttribute('viewBox', '0 0 300 ' + (base + 52));
-
-  // ---- What the pressure cells report at every depth. ----
-  const d = document.getElementById('bladsense'); d.replaceChildren();
-  const T2 = 30, B2 = 110, M = 100, DX = v => L + (R - L) * v;
-  const answers = BLAD.groups.map(g => Array.from({length : M + 1}, (_, k) => bounded(k / M, g.gate)));
-  const total = answers[0].map((_, k) => answers.reduce((t, a) => t + a[k], 0));
-  const scale = settle(BLAD, 'scale', Math.max(1, 1.1 * Math.max(...total)), redraw), DY = v => B2 - (B2 - T2) * v / scale;
-  regler(d, {x : 26, top : T2, base : B2, word : 'Schwelle', value : null, start : hold, end : free, name : 'bladgate',
-    marks : BLAD.groups.map((g, i) => ({value : g.gate, colour : groupColour(i), chosen : i === BLAD.chosen, set : v => { g.gate = gateClamp(v, true); BLAD.chosen = i; redraw(); }}))});
-  grid(d, L, R, T2, B2, scale);
-  txt(d, L + 4, T2 - 14, 'Meldung an das Gehirn');
-  let under = Array(M + 1).fill(0);
-  for (const i of BLAD.groups.map((g, i) => i).sort((p, q) => BLAD.groups[p].gate - BLAD.groups[q].gate)) {
-    const over = under.map((u, k) => u + answers[i][k]);
-    el('path', {d : 'M' + over.map((y, k) => `${DX(k / M).toFixed(1)} ${DY(y).toFixed(1)}`).join(' L') + ' L' + under.map((y, k) => [k, y]).reverse().map(([k, y]) => `${DX(k / M).toFixed(1)} ${DY(y).toFixed(1)}`).join(' L') + 'Z', fill : groupColour(i), opacity : .75, stroke : i === BLAD.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === BLAD.chosen ? 1.4 : .6, class : 'chip'}, d)
-      .addEventListener('pointerdown', () => { BLAD.chosen = i; redraw(); });
-    under = over;
-  }
-  el('path', {d : `M${L} ${B2} H${R} M${L} ${B2} V${T2 - 4}`, stroke : '#3b6a6c', fill : 'none'}, d);
-  txt(d, L, B2 + 15, 'Oberfläche'); txt(d, R, B2 + 15, 'Grund', {'text-anchor' : 'end'}); txt(d, (L + R) / 2, B2 + 15, 'Tiefe', {'text-anchor' : 'middle'});
-  const chip = (x, y, sign, act) => { const gg = el('g', {class : 'chip'}, d);
-    el('circle', {cx : x, cy : y, r : 8, fill : '#0f2c34', stroke : sign === '×' ? '#e8a2b5' : '#5d8384', 'stroke-width' : 1.4}, gg);
-    el('path', {d : sign === '×' ? `M${x - 3} ${y - 3} l6 6 m0 -6 l-6 6` : `M${x - 4} ${y} h8 M${x} ${y - 4} v8`, stroke : sign === '×' ? '#e8a2b5' : '#d7e6e3', 'stroke-width' : 1.6}, gg);
-    gg.addEventListener('click', act); };
-  if (BLAD.groups.length < 3) chip(30, B2 + 22, '+', () => { BLAD.groups.push({gate : .8}); BLAD.chosen = BLAD.groups.length - 1; redraw(); });
-  if (BLAD.groups.length > 1) chip(50, B2 - (B2 - T2) * BLAD.groups[BLAD.chosen].gate, '×', () => { BLAD.groups.splice(BLAD.chosen, 1); BLAD.chosen = 0; redraw(); });
-  d.setAttribute('viewBox', '0 0 300 ' + (B2 + 32));
+  const B = BLAD, redraw = drawBladder, c = bladCap(), hover = .4 * (1 + c) / c;
+  txt(svg, 296, 12, `Unterhalt in Ruhe ${fmt(B.cells * .0004 * 480)} · Füllen kostet 0,03 je Füllstand`, {'text-anchor' : 'end'});
+  const body = el('g', {transform : 'translate(30 14) scale(.86 .9)'}, svg);
+  el('path', {d : BODY, fill : '#1b3f48', stroke : '#4a7c7e', 'vector-effect' : 'non-scaling-stroke', 'stroke-width' : 1.4}, body);
+  el('circle', {cx : 30, cy : 52, r : 3.2, fill : '#e9e2c6'}, body);
+  // The bladder above the gut, between head and tail: long as its cells, round as its fill.
+  const cx = 138, cy = 54, rx = 18 + 5 * Math.min(B.cells, 12), ry = 5 + 13 * B.fill;
+  el('ellipse', {cx, cy, rx, ry : 18, fill : 'none', stroke : '#9cc8f0', 'stroke-dasharray' : '3 3', opacity : .5}, svg);
+  el('ellipse', {cx, cy, rx, ry, fill : '#bfe3f7', opacity : .55, stroke : '#9cc8f0', 'stroke-width' : 1.4}, svg);
+  signChip(svg, cx - 12, cy + 34, '−', () => { B.cells = Math.max(1, B.cells - 1); redraw(); }, B.cells > 1, 7);
+  signChip(svg, cx + 12, cy + 34, '+', () => { B.cells = Math.min(16, B.cells + 1); redraw(); }, B.cells < 16, 7);
+  txt(svg, cx + 28, cy + 38, B.cells + ' Zellen', {style : 'font-size:10px'});
+  // The tried fill: the bladder's top edge.
+  drag(svg, el('rect', {x : cx - 6, y : cy - ry - 5, width : 12, height : 10, rx : 3}, svg), q => { B.fill = clamp((cy - q.y - 5) / 13, 0, 1); redraw(); }, 'bladfill');
+  svg.setAttribute('viewBox', '0 0 300 124');
+  drawBladLift(hover); drawBladSense();
 }
+// ---- Lift against weight over the fill; where they meet the fish floats; at the left the water
+// with the fish rising or sinking at the tried fill. ----
+function drawBladLift(hover) {
+  const c = document.getElementById('bladfill'); c.replaceChildren();
+  const L = 92, R = 290, top = 20, base = 120, most = .03, X = f => L + (R - L) * f, Y = v => base - (base - top) * v / most;
+  el('rect', {x : 8, y : top, width : 60, height : base - top, rx : 4, fill : '#0f2c34', stroke : '#2d5059'}, c);
+  txt(c, 38, top - 6, 'Oberfläche', {'text-anchor' : 'middle', style : 'font-size:9.5px'}); txt(c, 38, base + 13, 'Grund', {'text-anchor' : 'middle', style : 'font-size:9.5px'});
+  BLADFILM.fish = el('g', {}, c); BLADFILM.top = top; BLADFILM.base = base;
+  el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
+  el('path', {d : `M${L} ${Y(SINKING)} H${R}`, stroke : '#ef8f8f', 'stroke-width' : 1.6, 'stroke-dasharray' : '5 3'}, c);
+  txt(c, R, Y(SINKING) - 5, 'Gewicht', {'text-anchor' : 'end', style : 'fill:#ef8f8f;font-size:10.5px'});
+  el('path', {d : 'M' + Array.from({length : 41}, (_, k) => `${X(k / 40).toFixed(1)} ${Y(bladLift(k / 40)).toFixed(1)}`).join(' L'), stroke : '#9cc8f0', 'stroke-width' : 2, fill : 'none'}, c);
+  txt(c, X(.25), Y(bladLift(.25)) - 6, 'Auftrieb', {'text-anchor' : 'middle', style : 'fill:#9cc8f0;font-size:10.5px'});
+  if (hover <= 1) { el('circle', {cx : X(hover), cy : Y(SINKING), r : 4, fill : '#f4efd8'}, c); txt(c, X(hover), base + 13, 'schwebt', {'text-anchor' : 'middle', style : 'font-size:10px'}); }
+  else txt(c, (L + R) / 2, top + 10, 'trägt den Fisch nie', {'text-anchor' : 'middle', style : 'fill:#ef8f8f'});
+  const fx = X(BLAD.fill);
+  el('path', {d : `M${fx} ${top - 6} V${base}`, stroke : '#f1dda6', 'stroke-width' : 1.4}, c);
+  drag(c, el('circle', {cx : fx, cy : top - 6, r : 7}, c), q => { BLAD.fill = clamp((q.x - L) / (R - L), 0, 1); drawBladder(); }, 'bladfill2');
+  txt(c, L, base + 13, 'leer', {style : 'font-size:10px'}); txt(c, R, base + 13, 'voll', {'text-anchor' : 'end', style : 'font-size:10px'});
+  // How long the bladder needs from empty to floating, at full command.
+  if (hover <= 1) txt(c, L + 4, top + 8, `leer bis schweben: ${Math.round(hover / .002)} Schritte`, {style : 'font-size:10px'});
+  c.setAttribute('viewBox', '0 0 300 ' + (base + 18));
+}
+// ---- The depth sense: the water column as the gauge, the groups' depths as lines with their
+// cells as points; at the right how many cells report at every depth. ----
+function drawBladSense() {
+  const svg = document.getElementById('bladsense'); svg.replaceChildren();
+  const B = BLAD, top = 16, base = 136, W0 = 30, W1 = 90, Yd = d => top + (base - top) * d;
+  el('rect', {x : W0, y : top, width : W1 - W0, height : base - top, rx : 4, fill : '#123a48', stroke : '#2d5059'}, svg);
+  el('rect', {x : W0, y : base - 8, width : W1 - W0, height : 8, fill : '#6b5a48'}, svg);
+  txt(svg, (W0 + W1) / 2, top - 4, 'Oberfläche', {'text-anchor' : 'middle', style : 'font-size:9.5px'});
+  const gates = i => { const n = B.groupCells[i], w = B.groupSpread[i]; return Array.from({length : n}, (_, j) => clamp(B.groups[i] + (n > 1 ? w * (2 * j / (n - 1) - 1) : 0), .03, .97)); };
+  B.groups.forEach((g, i) => {
+    el('path', {d : `M${W0 - 14} ${Yd(g)} H${290}`, stroke : groupColour(i), 'stroke-dasharray' : '3 3', 'stroke-width' : i === B.chosen ? 1.8 : 1.1}, svg);
+    gates(i).forEach((d, j) => el('circle', {cx : W1 - 4 - 3 * (j % 2), cy : Yd(d), r : 2.4, fill : groupColour(i), stroke : '#0d262c', 'stroke-width' : .8}, svg));
+    const gr = el('rect', {x : W0 - 22, y : Yd(g) - 4, width : 14, height : 8, rx : 2, style : `fill:${groupColour(i)};stroke:${i === B.chosen ? '#ffffff' : '#0d262c'};stroke-width:${i === B.chosen ? 2 : 1}`}, svg);
+    drag(svg, gr, q => { B.groups[i] = clamp((q.y - top) / (base - top), .03, .97); B.chosen = i; drawBladSense(); }, 'bladgate' + i);
+  });
+  // The tried depth: the fish in the column, dragged.
+  const fy = Yd(B.depth);
+  el('path', {d : `M${(W0 + W1) / 2 - 12} ${fy} q12 -6 22 0 q-10 6 -22 0 z M${(W0 + W1) / 2 + 10} ${fy} l5 -4 v8 z`, fill : '#8ac7bb'}, svg);
+  drag(svg, el('circle', {cx : (W0 + W1) / 2, cy : fy, r : 12, style : 'fill:transparent;stroke:none'}, svg), q => { B.depth = clamp((q.y - top) / (base - top), 0, 1); drawBladSense(); }, 'bladdepth');
+  // Reports: how many cells report at every depth (bounded, the deeper the more).
+  const L = 112, R = 290, M = 100, sums = B.groups.map((_, i) => Array.from({length : M + 1}, (_, k) => gates(i).reduce((t, gg) => t + boundedAnswer(k / M, gg), 0)));
+  const most = B.groupCells.reduce((t, n) => t + n, 0), X = v => L + (R - L) * v / most;
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : '#3b6a6c', fill : 'none'}, svg);
+  txt(svg, L, top - 4, 'Meldung an das Gehirn', {style : 'font-size:10.5px'});
+  let under = Array(M + 1).fill(0);
+  B.groups.forEach((_, i) => { const over = under.map((u, k) => u + sums[i][k]);
+    const band = el('path', {d : 'M' + over.map((v, k) => `${X(v).toFixed(1)} ${Yd(k / M).toFixed(1)}`).join(' L') + ' L' + under.map((v, k) => [k, v]).reverse().map(([k, v]) => `${X(v).toFixed(1)} ${Yd(k / M).toFixed(1)}`).join(' L') + 'Z', fill : groupColour(i), opacity : .75, stroke : i === B.chosen ? '#ffffff' : '#0d262c', 'stroke-width' : i === B.chosen ? 1.4 : .6, class : 'chip'}, svg);
+    band.addEventListener('pointerdown', () => { B.chosen = i; drawBladSense(); }); under = over; });
+  const now = sums.reduce((t, a) => t + a[Math.round(B.depth * M)], 0);
+  el('path', {d : `M${W1} ${fy} H${X(now)}`, stroke : '#8ac7bb', 'stroke-dasharray' : '2 3'}, svg);
+  el('circle', {cx : X(now), cy : fy, r : 3.5, fill : '#8ac7bb'}, svg);
+  txt(svg, R, base + 13, most + ' Zellen', {'text-anchor' : 'end', style : 'font-size:10px'});
+  // Groups and cells.
+  const c = B.chosen, y1 = base + 30, y2 = base + 52;
+  signChip(svg, 30, y1, '−', () => { for (const k of ['groups', 'groupCells', 'groupSpread']) B[k].splice(c, 1); B.chosen = 0; drawBladSense(); }, B.groups.length > 1, 7);
+  signChip(svg, 64, y1, '+', () => { B.groups.push(clamp(B.groups[c] + .25, .05, .95)); B.groupCells.push(4); B.groupSpread.push(.06); B.chosen = B.groups.length - 1; drawBladSense(); }, B.groups.length < 3, 7);
+  txt(svg, 80, y1 + 4, 'Gruppen');
+  signChip(svg, 30, y2, '−', () => { B.groupCells[c] = Math.max(1, B.groupCells[c] - 1); drawBladSense(); }, B.groupCells[c] > 1, 7);
+  txt(svg, 47, y2 + 4, B.groupCells[c], {'text-anchor' : 'middle', class : 'value'});
+  signChip(svg, 64, y2, '+', () => { B.groupCells[c] = Math.min(16, B.groupCells[c] + 1); drawBladSense(); }, B.groupCells[c] < 16, 7);
+  txt(svg, 80, y2 + 4, 'Zellen der Gruppe');
+  svg.setAttribute('viewBox', `0 0 300 ${y2 + 12}`);
+}
+// The fish in the water column rises or sinks with the tried fill and stops at surface or ground.
+function bladFrame() {
+  requestAnimationFrame(bladFrame);
+  const f = BLADFILM; if (!f.fish?.isConnected) return;
+  const net = bladLift(BLAD.fill) - SINKING;
+  f.v = f.v * .9 - net * .4; f.y = clamp(f.y + f.v, 0, 1); if (f.y <= 0 || f.y >= 1) f.v = 0;
+  const y = f.top + 8 + (f.base - f.top - 16) * f.y;
+  f.fish.innerHTML = `<path d="M26 ${y.toFixed(1)} q12 -6 22 0 q-10 6 -22 0 z M48 ${y.toFixed(1)} l5 -4 v8 z" fill="#8ac7bb"/>`;
+}
+requestAnimationFrame(bladFrame);
 
 // ---------- Kiemen ----------
 // Gills (physiology.hh:330–360, 395–402, feeding.cc:535–597; protocol_schema gill_filter): all water
