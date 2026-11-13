@@ -168,6 +168,7 @@ public:
       {"bladder_rate", &world.physiology_.bladder_rate, .0001, .05, false, "energy", 0.0001, true},
       {"bladder_cost", &world.physiology_.bladder_cost, 0, 1, false, "energy", 0.001, true},
       {"touch_rest", &world.physiology_.touch_rest, 0, 1, false, "senses", 0.01, true},
+      {"touch_impact", &world.physiology_.touch_impact, .001, 10, false, "senses", 0.001, true},
       {"stroke_threshold", &world.physiology_.stroke_threshold, 0, 10, false, "body", 0.01, true},
       {"drag_along", &world.physiology_.drag_along, 0, 2, false, "body", 0.001, true},
       {"drag_across", &world.physiology_.drag_across, 0, 2, false, "body", 0.001, true},

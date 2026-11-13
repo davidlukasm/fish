@@ -34,7 +34,7 @@ struct PhysiologyParameters {
   static constexpr double senescence_share = .37, fasting_share = 1.5;
   double organ_mass_ref = DEFAULT_ORGAN_MASS_REF, undulation_loss = .5;
   double resting_spines = .3, resting_spines_half = 5, pigment_half = .5, pigment_rest = .2;
-  double touch_rest = .1, stroke_threshold = .2;
+  double touch_rest = .1, touch_impact = .05, stroke_threshold = .2;
   double drag_along = .028512, drag_across = .38016;
   double transfer_cost = .004, pigment_cost = .0002;
   double spine_rate = .02, spine_max = MAX_SPINE_EXTENT;

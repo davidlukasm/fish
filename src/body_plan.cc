@@ -1090,8 +1090,10 @@ double anatomical_stimulus(const Body &b, const BrainInterface::Receptor &r, con
       b.perception().disabled_senses[dominant])
     return 0;
   double lateral = 0, contact = 0;
+  // What a touch presses: a little without any blow, all with the hardest. How much of it a
+  // cell reports is left to the cell's threshold alone.
   auto pressure = [&](double impact) {
-    return p.touch_rest + (1 - p.touch_rest) * sensory_response(impact, r.response_threshold);
+    return p.touch_rest + (1 - p.touch_rest) * sensory_response(impact, p.touch_impact);
   };
   if (r.dominant_sense() == field::Flow || r.dominant_sense() == field::Touch) {
     const double angle = b.angle + r.mechanical_angle, dx = std::cos(angle), dy = std::sin(angle);
