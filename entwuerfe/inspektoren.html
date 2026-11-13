@@ -1077,7 +1077,7 @@ function drawTail() {
   if (outline.d) el('path', {d : outline.d, fill : 'none', stroke : '#ffffff', 'stroke-width' : 1.3, 'pointer-events' : 'none'}, c);
   if (pulls) {
     el('path', {d : `M${X(SWIM)} ${top - 6} V${base}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-    txt(c, X(SWIM) + 5, top + 2, 'Stop');
+    txt(c, X(SWIM) + 5, top + 2, 'Befehl aus');
   }
   let word = SWIM - 70;
   if (pulls && fastAll > 0) {
@@ -1112,7 +1112,7 @@ function drawTail() {
   el('path', {d : 'M' + vSand.map((v, st) => `${X(st).toFixed(1)} ${NY(v).toFixed(1)}`).join(' L'), fill : 'none', stroke : '#c9b48c', 'stroke-width' : 2}, n);
   if (pulls) {
     el('path', {d : `M${X(SWIM)} ${NT - 6} V${NB}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, n);
-    txt(n, X(SWIM) + 5, NT + 2, 'Stop');
+    txt(n, X(SWIM) + 5, NT + 2, 'Befehl aus');
     // Names only where their lines stand clear of the floor and of each other.
     const wy = NY(vWater[120]), sy = NY(vSand[120]);
     if (NB - wy > 14) txt(n, X(120), wy - 7, 'im Wasser', {'text-anchor' : 'middle', style : 'fill:#9cc8f0'});
@@ -1582,7 +1582,7 @@ function drawBladder() {
   txt(c, L + 4, top - 8, 'Füllung');
   // Where the command stops: the same grey line as the tail's.
   el('path', {d : `M${X(250)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(250) + 5, top + 2, 'Stop');
+  txt(c, X(250) + 5, top + 2, 'Befehl aus');
   // The fill to start from: a ball at the curve's start.
   drag(c, el('circle', {cx : L, cy : Y(BLAD.fill), r : 7}, c), p => { BLAD.fill = clamp((base - p.y) / (base - top), 0, 1); redraw(); }, 'bladstart', hold, free);
   txt(c, L, base + 15, 'Schritte');
@@ -1706,7 +1706,7 @@ function defenseCharts(organ, redraw, hold, free, felt) {
   el('path', {d : `M${L} ${Y(rest)} H${R}`, stroke : '#7f9a99', 'stroke-dasharray' : '3 3'}, c);
   txt(c, R - 2, Y(rest) + 13, 'in Ruhe', {'text-anchor' : 'end'});
   el('path', {d : `M${X(150)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(150) + 5, top + 2, 'Stop');
+  txt(c, X(150) + 5, top + 2, 'Befehl aus');
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L + 4, top - 8, 'Stachelhöhe');
   txt(c, L, base + 15, 'Schritte');
@@ -1792,7 +1792,7 @@ function drawPigment() {
     el('rect', {x : X(st), y : top, width : (R2 - L) / N + .6, height : base - top, fill : rgbCss(skinColour(pigAbsorb((gr, i) => disp[i])))}, c);
   }
   el('path', {d : `M${X(120)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(120) + 5, top - 8, 'Stop');
+  txt(c, X(120) + 5, top - 8, 'Befehl aus');
   txt(c, L, top - 8, 'Farbe des Fisches');
   txt(c, L, base + 15, 'Schritte');
   for (const st of [100, 200]) txt(c, X(st), base + 15, st, {'text-anchor' : st === 200 ? 'end' : 'middle'});
@@ -1921,7 +1921,7 @@ function drawGland() {
     txt(c, X(100) - 6, Y(line[99]) - 6, stuffName(k), {'text-anchor' : 'end', style : 'fill:' + PALETTE[k]});
   }
   el('path', {d : `M${X(100)} ${top - 6} V${base + 4}`, stroke : '#7f9a99', 'stroke-dasharray' : '6 4', 'stroke-width' : 2}, c);
-  txt(c, X(100) + 5, top + 2, 'Stop');
+  txt(c, X(100) + 5, top + 2, 'Befehl aus');
   el('path', {d : `M${L} ${base} H${R} M${L} ${base} V${top - 4}`, stroke : '#3b6a6c', fill : 'none'}, c);
   txt(c, L + 4, top - 8, 'Pegel im Blut');
   txt(c, L, base + 15, 'Schritte');
