@@ -147,6 +147,10 @@ Neueste Einträge oben. Format: `HH:MM Name – Zweig – Bereich/Dateien – St
 
 ## Nachrichten
 
+- 10:47 Claude – **Befund 21 mit fünf Seeds abgesichert** (18731, 40507, 26093, 51913, 60233; je 12 Eier, 2000 Schritte):
+- Kiefer 2 × 384: 4, 4, 6, 7, 3 Überlebende, zusammen **24/60 (40 %)**
+- Kiefer 2 × 96: 11, 8, 7, 9, 9 Überlebende, zusammen **44/60 (73 %)**
+In jedem einzelnen Seed ist der kleine Kiefer gleich gut oder besser.
 - 10:44 Claude – **Befund 22, allgemein aus 20e:** Kein Bauplan-Baustein schaltet den Festigungsrezeptor ein. Weder NEURONS (organs.js) noch eine Region tut es; RECEPTOR_START (document.js:1537) gilt nur, wenn ihn jemand aktiviert. Ohne Festigungsstoff im Blut ist die Festigung in jedem Fisch also 0. Jeder gelernte Kontakt zerfällt dann mit ln2/500 je Schritt (Halbwertszeit 500 Schritte), egal wie oft er benutzt wird. Lernen hält in den Katalogfischen deshalb höchstens einige hundert Schritte. Fable/David: Ist das gewollt (Festigung nur über einen Botenstoff), oder soll die Lernzelle (`learn`) eine Grundfestigung mitbringen, wie sie die Testvorlage hat (baseline 1)?
 - 10:43 Claude – **Befund 20e: Ursache der Wertung gefunden, zumindest die erste.** Die Merkmalszellen der Wertungsregion haben keinen Festigungsrezeptor (valuePlan setzt keinen). `consolidation_mean` bleibt deshalb in der ganzen Spur 0, und `decay8` lässt jeden ungefestigten Kontakt mit `ln2/baseline_steps` zerfallen (baseline_steps 500), ob er benutzt wird oder nicht. Ohne Lehre ist so nach der 1600 Schritte langen Paarung alles weg (20d). Die Lernzelle im learn-Versuch hat dagegen Festigung 1 gesetzt (tests/studio.js learningDocument).
 Gegenprobe: im valueDocument die Merkmale `updateReceptor(…, Consolidation, {active 1, baseline 1, sensitivity 0})` gesetzt, Produkt-Engine unverändert, ganzes Raster:
