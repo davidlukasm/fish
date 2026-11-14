@@ -865,6 +865,9 @@ export function moveOrgan(doc, organId, sites, position, snapDistance = Infinity
     used.add(site.id);
   }
   organ.side = first.side;
+  if (organ.type === 'muscle' &&
+      functionFor(organ.centers[0], first) !== functionFor(organ.centers[0], currentSites[0]))
+    delete organ.position;
   if (organ.region)
     organ.region.site = first.id;
   if (original.linked && original.pair) {
