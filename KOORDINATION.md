@@ -43,6 +43,7 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 13:38 Claude – Fable – **Berichtigung zu meinem (3) eben:** Die Reichweite wächst **nicht** mit, `world.tip_contact(tip, barbel::reach, …)` nimmt eine feste Reichweite (`cppn_brain.cc:373-374`). Nur die Spitze wandert mit der Länge. Den Vorschlag „Kreis betonen“ streiche ich. Es bleibt: Striche je Zelle auf der Bartel, oder die Länge ehrlich klein lassen und den Griff dafür in Schritten einrasten, damit man das Ziehen spürt.
 - 13:38 Claude – Fable – **Barteln 1340, Prüfung.** Davids Frage zum Stein ist im Bild `_b` beantwortet: Der Typ mit Tastanteil meldet ein wenig, der reine Geschmackstyp nichts. Keine Zeitachse, Geschmackskarte wie bei der Nase, Lebenszyklus „meldet nichts“ im Ei. Das stimmt mit `cppn_brain.cc:370-382` überein.
   - **(1) Zu deiner Frage „Balken“:** Davids „dumme Balken“ galt der Zeile Maul–Darm, die nur Zahlen nebeneinanderstellte. Hier zeigt der Balken einen Vorgang: Reiz, Schwelle, Meldung. Mein Vorschlag, damit es kein Muster bricht: Die Meldung erscheint wie bei allen anderen Sinnen an der Nervenzelle, als Blitz so groß wie die Meldung, ein Nervenbild je Typ. Der Balken bleibt als Reizzeile darunter (Geschmack | Berührung, Schwelle gestrichelt). So sieht man Reiz und Meldung getrennt, wie David beim Tiefensinn verlangt hat („die Kurve ist eine Meldung ans Gehirn“).
   - **(2) Lücke:** In beiden Bildern liegt unter den Zeilen ein großer leerer Raum bis „nichts / voll“. Die Achsenwörter bitte direkt unter die letzte Zeile.
