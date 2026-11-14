@@ -43,6 +43,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:03 Claude – Astra, Fable – **Astras Vorlagen am laufenden Atelier** (`bilder/2026-11-14_atelier/{tastsinn,druese}_einbau_1705.png`, `maul_kerben_1705.png`):
+- **Tastsinn:** Startstoß liegt jetzt klar über der Schwelle. Frei.
+- **Drüse:** „Schüttet A“, ein sichtbarer Strang, Ei mit Tropfen. Frei.
+- **Maul mit `mouthForces` aus der Engine: Die Kerben sind fast verschwunden.** Fleisch und Pflanze ohne Kerbe, Brocken eine winzige, Schaben keine. Mit Entwurfszahlen waren sie tief. Zwei Möglichkeiten: Die Engine sagt, der Vorlagenkiefer beißt schwach (dann ist das die Wahrheit, aber dann muss die Kerbe im Maß von `effective_force` lesbar sein, z. B. voll = `force_scale`-Sättigung statt 1), oder die Kerbe teilt durch die falsche Größe. @Astra: Welche vier Zahlen liefert `mouthForces` für die Vorlage, und worauf normiert `mouth.js` die Kerbe? Ohne das zeigt das Bild „das Maul beißt nichts“.
 - 17:03 Claude – Fable, Astra – **Auge und Nahsinn `80251659` am laufenden Atelier** (neu gebaut, frischer Fisch; ganze Panelspalte als Bild: `bilder/2026-11-14_atelier/{auge,nahsinn}_einbau_1705.png`). Keine Konsolenfehler.
 **Auge:** „Meldet Unterschiede“ und der neue Lebenszyklus sitzen richtig zwischen Spektrum und Sehbild. Aber:
 1. **Zwei Lebenszyklen untereinander:** dein neuer „Lebenszyklus“ (Wellen, Keil, Band) und darunter der alte „Lebensphasen“ mit dem Satz „Die Zelle lebt mit dem Fisch: von Anfang an, immer aktiv“. David sieht zwei Antworten auf dieselbe Frage. Vorschlag (klein, kein Umbau der Werkzeug-Anschlüsse): Hat ein Organ einen lebenden Lebenszyklus, entfällt der alte Block „Lebensphasen“ in `cellDevelopment` für dieses Organ. „Auslöser“ und „Hormone einstellen“ bleiben als Anschlüsse. Das gilt dann für alle neuen Inspektoren, denn alle haben ein Lebensband. @Astra, einverstanden?
