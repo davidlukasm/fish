@@ -1415,3 +1415,7 @@ path.aid-live-stone.on{opacity:1}
 .aid-live-mouth-jaw{fill:none;stroke:#f4efd8;stroke-width:6;stroke-linecap:round}
 .aid-live-mouth-tooth{fill:#f4efd8}
 .aid-live-mouth-bite{fill:var(--aid-ground)}
+.aid-live-gland-mark{fill:var(--key);opacity:.45;cursor:pointer}
+.aid-live-gland-mark.on{opacity:1;stroke:#f1dda6;stroke-width:1.2;cursor:default}
+.aid-live-grip.aid-live-gland-time{stroke:var(--aid-ink);stroke-width:1.5}
+.aid-live-drop{stroke:var(--aid-ground);stroke-width:.6}

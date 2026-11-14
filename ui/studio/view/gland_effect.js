@@ -150,6 +150,9 @@ function levelPicture(state, organ, center, nameOf) {
                  handleWord(half, word('half', {n : formatNumber(stay * Math.LN2, 0)})));
 }
 
+// The gate of the gland's command, below its live inspector.
+export const glandCommand = (state, organ, center) =>
+    center ? commandLine(state, organ, center, MOTOR_KIND.gland, 'gland') : '';
 export const glandPictures = (state, organ, center, nameOf) =>
     state.capabilities?.hormoneHeight > 0 && center
         ? levelPicture(state, organ, center, nameOf) +

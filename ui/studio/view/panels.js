@@ -68,6 +68,8 @@ import './live/defense.js';
 import './live/pigment.js';
 import './live/fin.js';
 import './live/mouth.js';
+import './live/gland.js';
+import {glandCommand} from './gland_effect.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -122,7 +124,7 @@ const ORGAN_PANELS = Object.freeze({
   // Gut and gut muscle are one organ to the eye: one live inspector for both.
   gutmuscle : () => livePlace('gut', {id : 'gut'}),
   defense : (state, organ) => livePlace('defense', organ),
-  gland : (state, organ, center) => glandProfile(state, organ, center),
+  gland : (state, organ, center) => livePlace('gland', organ) + glandCommand(state, organ, center),
   eggs : (state, organ) => livePlace('eggs', organ),
   sperm : (state, organ) => livePlace('sperm', organ),
   lateral : (state, organ) => livePlace('lateral', organ),

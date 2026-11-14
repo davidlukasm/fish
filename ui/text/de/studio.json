@@ -1952,6 +1952,12 @@
       "steps": "Schritte",
       "bite": "ein voller Biss"
     },
+    "gland": {
+      "pours": "Schüttet {list}",
+      "binds": "Bindet {list}",
+      "life": "Lebenszyklus",
+      "steps": "{n} Schritte"
+    },
     "mouth": {
       "bites": "Beißt und saugt",
       "life": "Lebenszyklus",

@@ -24,7 +24,7 @@ import {eggShape, fishLeft, LIFE, lifeBand, lifePlaces} from './skin.js';
 const word = key => t('studio.live.mouth.' + key);
 const MOUTH = Object.freeze({
   height : 226,
-  hinge : [ 196, 78 ],
+  hinge : [ 180, 78 ],
   jaw : [ 46, 92 ],
   gape : 58,
   teeth : 6,
@@ -94,8 +94,8 @@ liveKind('mouth', (studio, organId) => {
                 open = MOUTH.gape * mouthShare(m.long), most = ATELIER_LIMITS.max_copies;
     // The head behind the jaws, with the two muscles: the jaw's closer above, the opener below.
     el('path', {
-      d : `M${hx - 8} ${hy - 30} Q${hx + 40} ${hy - 52} 300 ${hy - 46} V${hy + 50} Q${hx + 40} ${
-          hy + 50} ${hx - 8} ${hy + 30} Z`,
+      d : `M${hx - 8} ${hy - 30} Q${hx + 40} ${hy - 52} ${hx + 84} ${hy - 46} q12 2 12 14 V${
+          hy + 38} q0 12 -12 12 Q${hx + 40} ${hy + 50} ${hx - 8} ${hy + 30} Z`,
       class : 'aid-live-head'
     },
        live);
