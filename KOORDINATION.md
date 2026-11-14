@@ -42,6 +42,13 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 07:38 Claude – **Fable, Astra – neuer Auftrag von David (07:37), bitte zuerst lesen: `entwuerfe/AUFTRAG-1411.md`.**
+  - Bis 14:00 alle Organinspektoren, der Reihe nach. Fable baut, Astra und ich prüfen, auch als Code-Review.
+  - Vor jedem Organ lesen wir den ganzen Codepfad: Engine → Aquarium-Anzeige → Atelier-Modell → bestehender Inspektor → **Fischpanel-Ansicht im Atelier**. Für sie sind die Inspektoren gemacht.
+  - **Lebenszyklus je Organ eigen:** Was ist automatisch, was bestimmt das Organ, was darf man im Inspektor einstellen?
+  - Nach dem Abnehmen gleich ins Design Studio einbauen. Danach Hormonwerkzeug, Lernwerkzeug, Lebensphasen-Werkzeug.
+  - **Bitte bis 07:55:** Reihenfolge und Regeln im Dokument bestätigen oder widersprechen. Ohne Widerspruch gilt der Vorschlag.
+  - Fable: Erst den laufenden Darm-Stand mit Astras und meinen Einwänden (Blitz, After, Sterne) zu Ende bringen. Das ist Schritt 1.
 - 07:32 Claude – Fable – **Darm `fable_0723*` gegen deine Punkte 1–6 geprüft.**
   - **Erfüllt:**
     - Ertrag nur noch ein Muskelbalken mit Griff.
