@@ -94,6 +94,17 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="egglife"></svg>
   </section>
+  <section class="panel" aria-label="Samen">
+    <h2>Organ</h2><h3>Samen</h3>
+    <h4 id="sperm-kind" class="first">Samen</h4>
+    <svg id="sperm"></svg>
+    <h4>Füllen und Abgeben</h4>
+    <svg id="spermfill"></svg>
+    <h4>Füllgefühl</h4>
+    <svg id="spermfull"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="spermlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -172,7 +183,8 @@ const S = {
   // reaches in the bladder's trial.
   depth : {keys : [{gate : .5, spread : .1}], chosen : 0, input : null},
   // The egg organ's pressure cells; what they are offered is its filling in the organ's trial.
-  eggfull : {keys : [{gate : .8, spread : .1}], chosen : 0, input : null}
+  eggfull : {keys : [{gate : .8, spread : .1}], chosen : 0, input : null},
+  spermfull : {keys : [{gate : .8, spread : .1}], chosen : 0, input : null}
 };
 
 // ===== The model: the one source for every picture and number =====
@@ -288,7 +300,8 @@ const SENSE = {
           row : {word : 'Reizschwelle für Bauchweh nach Futterart', of : r => r.ache, any : c => c.aches.some(a => a > 0)}},
   // The swim bladder's depth cells; their picture is its own (drawDepth).
   depth : {title : 'Tiefe und Meldung ans Gehirn', colour : '#9cc8f0', tires : false, steps : 900},
-  eggfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#e8c66a', tires : false, steps : 900}
+  eggfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#e8c66a', tires : false, steps : 900},
+  spermfull : {title : 'Füllung und Meldung ans Gehirn', colour : '#dfe8f2', tires : false, steps : 900}
 };
 // The reward signal (David 14.11.): at each swallow the engine adds what the bite will give this
 // gut at its present pace to a flow that fades within some ten steps (take_nutrition,
@@ -354,7 +367,7 @@ let queued = 0;
 // A setting has changed: its pictures are repainted in the next frame, however often this is
 // called before.
 function draw(parts = EVERY) {
-  model = tailModel = bladderModel = eggModel = null;
+  model = tailModel = bladderModel = eggModel = spermModel = null;
   for (const part of parts) dirty.add(part);
   queued ||= requestAnimationFrame(repaint);
 }
@@ -364,7 +377,7 @@ function repaint() {
   document.getElementById('tail-kind').textContent = T.wriggle > .5 ? 'Schlängler' : 'Schwanzschläger';
   for (const part of dirty) PAINT[part]();
   dirty.clear();
-  showMoment(); showNerves(0); showTail(0); showBladder(); showGills(0); showEggs();
+  showMoment(); showNerves(0); showTail(0); showBladder(); showGills(0); showEggs(); showSperm();
 }
 
 // ===== What moves: one clock =====
@@ -1717,8 +1730,8 @@ function eggMark(parent, x, y, r, young) {
 // The pressure sense: the nerve cells, and under them over the steps how full the organ is in
 // the trial (the fine line) and, for each key, what its cells report to the brain. The
 // thresholds are the dashed lines; each has its grip at the left and its spread at the right.
-function drawEggFull() {
-  const id = 'eggfull', cell = S.eggfull, keys = cell.keys, stim = play.stim.eggfull = EM().filling, {I0, I1} = SENSE_BOX, {L, R} = DEPTH, {svg, live} = picture('eggfull', I1 + 34);
+function drawPressure(id, filling, parts, colour) {
+  const cell = S[id], keys = cell.keys, stim = play.stim[id] = filling, {I0, I1} = SENSE_BOX, {L, R} = DEPTH, {svg, live} = picture(id, I1 + 34), EGG_PARTS = parts, YOLK = colour;
   const X = st => L + (R - L) * st / STEPS, IY = v => I1 - (I1 - I0) * clamp(v, 0, 1), vOf = y => clamp((I1 - y) / (I1 - I0), 0, 1);
   const choose = i => () => { cell.chosen = i; draw(EGG_PARTS); };
   play.glow = play.glow.filter(g => g.owner !== id);
@@ -1790,6 +1803,172 @@ function showEggs() {
     eggFilm.eggs.replaceChildren();
     done.forEach((e, i) => eggMark(eggFilm.eggs, 292 - 13 * (i % 6) - 6 * (Math.floor(i / 6) % 2), ground - 6 - 9 * Math.floor(i / 6), 3 + 3 * Math.sqrt(e.yolk / EGG.most), e.young));
   }
+}
+
+const drawEggFull = () => drawPressure('eggfull', EM().filling, EGG_PARTS, YOLK), drawSpermFull = () => drawPressure('spermfull', SM().filling, SPERM_PARTS, MILT);
+// ===== The sperm organ: a cloud that fertilises, a secretion that thins the shell, ink =====
+// Read in the engine (reproduction.cc:20-45, 144-180, 203-218, 262-296; physiology.cc:116-119;
+// embryo.cc:38-41; sperm_field.cc:230-297; ecology_types.hh:74; physiology_parameters.*):
+//   room     = body size x min(40, 10 x cells): four cells reach the ceiling
+//   filling  = command x 0.2 x body size a step, never beyond the room
+//   after hatching: a stroke of the laying cells gives off the whole store once it holds at
+//              least 2; the cloud fertilises an egg where it is denser than a limit, and it
+//              dims what lies behind it
+//   in the egg: the store is a secretion; a stroke of the laying cells spends it on the shell,
+//              which grows thinner by secretion / shell radius, and outside it shows as a
+//              cloud that fertilises nothing. The embryo can hatch once the shell is below
+//              0.95 and its tail or fins push harder than 0.2 + 4 x shell.
+// ASSUMED for the picture: the body's size is its maturity; the fish has reserve to spare; the
+// laying cells beat once, at the step the knob sets; a shell radius of SPERM.shell; a cloud keeps its amount and spreads evenly, so it reaches as far
+// as the root of its amount (how the engine's cloud spreads and fades was not read).
+const SPERM = {perCell : 10, most : 40, rate : .2, least : 2, cells : 12, hatch : .5, shell : 24, thin : .95, force : [.2, 4], reach : 14, fade : 260,
+               F : {height : 138, fishX : 86, fishY : 60, ground : 122, vent : 150, eggs : [176, 286]},
+               C : {L : 64, R : 290, c0 : 16, c1 : 46, top : 78, base : 148, height : 172},
+               LIFE : {L : 44, R : 264, top : 18, base : 88, icons : 106, height : 120, beside : 16, whole : .015, least : .08}};
+const SPERM_PARTS = ['sperm', 'spermfill', 'spermfull', 'spermlife'];
+const SP = {cells : 3, laying : 1, from : 0, until : 1, input : {fill : .8, lay : 300, egg : .45, maturity : 1}};
+const MILT = '#dfe8f2';
+const spermWorks = r => r >= SP.from && (SP.until >= 1 || r < SP.until);
+const spermRoom = (r = SP.input.maturity, cells = SP.cells + SP.laying) => spermWorks(r) ? r * Math.min(SPERM.most, SPERM.perCell * cells) : 0;
+// One trial: the store step by step, the clouds given off, and in the egg the shell.
+function deriveSperm() {
+  const inp = SP.input, room = spermRoom(), inEgg = inp.maturity < SPERM.hatch, store = [], filling = [], shell = [], clouds = []; let s = 0, sh = 1;
+  for (let st = 0; st <= STEPS; st++) {
+    store.push(s); filling.push(room > 0 ? s / room : 0); shell.push(sh);
+    if (room <= 0) continue;
+    if (st === inp.lay && (inEgg ? s > 0 : s >= SPERM.least)) {
+      if (inEgg) sh = Math.max(0, sh - s / SPERM.shell);
+      clouds.push({step : st, amount : s, fertile : !inEgg}); s = 0; continue;
+    }
+    s = Math.min(room, s + inp.fill * SPERM.rate * inp.maturity);
+  }
+  const reach = clouds.length ? SPERM.reach * Math.sqrt(clouds[0].amount) : 0, {eggs, vent} = SPERM.F, eggX = eggs[0] + (eggs[1] - eggs[0]) * inp.egg;
+  return {room, inEgg, store, filling, shell, clouds, reach, eggX, reached : !inEgg && reach >= eggX - vent, thin : shell.at(-1), needs : SPERM.force[0] + SPERM.force[1] * shell.at(-1)};
+}
+let spermModel = null;
+const SM = () => spermModel ??= deriveSperm();
+const spermFilm = {store : null, sac : null, clouds : null, egg : null, plant : null, shell : null};
+function buildSperm(fixed) {
+  const {ground} = SPERM.F;
+  el('path', {d : `M0 ${ground} H300`, stroke : SAND, 'stroke-width' : 2, opacity : .6}, fixed);
+}
+function drawSperm() {
+  const {svg, under, live} = picture('sperm', SPERM.F.height, buildSperm), {fishX, fishY, ground, vent, eggs} = SPERM.F, m = SM(), inp = SP.input;
+  document.getElementById('sperm-kind').textContent = m.inEgg ? (m.thin < SPERM.thin ? 'Dünnt die Schale aus' : 'Schale bleibt dick') : !m.clouds.length ? 'Gibt nichts ab' : m.reached ? 'Befruchtet das Ei' : 'Wolke zu dünn';
+  if (m.clouds.length) txt(live, 4, 10, m.inEgg ? `Schale ${Math.round(100 * m.thin)} % · schlüpft ab Kraft ${comma(m.needs)}` : `${comma(m.clouds[0].amount)} Samen je Wolke`, {style : 'font-size:10px'});
+  const frame = el('clipPath', {id : 'spermframe'}, under);
+  el('rect', {x : 0, y : 14, width : 300, height : SPERM.F.height - 14}, frame);
+  spermFilm.clouds = el('g', {'clip-path' : 'url(#spermframe)'}, under);
+  // The body: the embryo in its shell, or the fish; the organ in its belly.
+  const scale = m.inEgg ? .5 : .82, bx = m.inEgg ? 150 : fishX, by = m.inEgg ? fishY + 6 : fishY, g = el('g', {transform : `translate(${bx} ${by}) scale(${scale})`}, live);
+  spermFilm.shell = m.inEgg ? el('ellipse', {cx : 150, cy : by, rx : 66, ry : 46, fill : 'none', stroke : COLOUR.icon}, under) : null;
+  el('path', {d : EGG_FISH, fill : HEAD, stroke : COLOUR.axis, 'stroke-width' : 1.4 / scale}, g);
+  el('circle', {cx : -62, cy : -6, r : 3.4, fill : COLOUR.icon}, g);
+  // The organ with its cells: the filling ones in front, the laying ones (lighter) at the rear.
+  const sizeOf = room => [14 + 50 * Math.sqrt(room / SPERM.most), 5 + 8 * Math.sqrt(room / SPERM.most)], [widest, highest] = sizeOf(inp.maturity * SPERM.most), [long, high] = sizeOf(m.room), x0 = -34, cy = 14, all = SP.cells + SP.laying;
+  el('ellipse', {cx : x0 + widest / 2, cy, rx : widest / 2, ry : highest, fill : 'none', stroke : COLOUR.icon, 'stroke-dasharray' : '2 4', opacity : .55}, g);
+  spermFilm.sac = {long, high};
+  el('ellipse', {cx : x0 + long / 2, cy, rx : long / 2, ry : high, fill : COLOUR.track, stroke : MILT, 'stroke-width' : 1.4, opacity : m.room > 0 ? 1 : .35}, g);
+  spermFilm.store = el('ellipse', {cx : x0 + long / 2, cy, fill : MILT, opacity : .9}, g);
+  const clip = el('clipPath', {id : 'spermsac'}, g);
+  el('ellipse', {cx : x0 + long / 2, cy, rx : long / 2, ry : high}, clip);
+  const cells = el('g', {'clip-path' : 'url(#spermsac)', 'pointer-events' : 'none'}, g);
+  el('rect', {x : x0 + long * SP.cells / all, y : cy - high, width : long * SP.laying / all, height : 2 * high, fill : COLOUR.track, opacity : .35}, cells);
+  for (let i = 1; i < all; i++) el('path', {d : `M${x0 + long * i / all} ${cy - high} v${2 * high}`, stroke : COLOUR.track, 'stroke-width' : 1}, cells);
+  // The filling cells: the grip where they end (in the picture's own measure). The laying cells: the buttons.
+  const gx = bx + scale * (x0 + long * SP.cells / all), gy = by + scale * cy;
+  drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${MILT}`}, live), p => {
+    SP.cells = clamp(Math.round(1 + (p.x - bx - scale * x0 - 8) / (scale * 6)), 1, SPERM.cells - SP.laying); draw(SPERM_PARTS); }, 'spermsize');
+  chip(live, bx + scale * (x0 + widest) + 12, by + scale * (cy + highest) + 6, '−', () => { SP.laying--; }, SPERM_PARTS, SP.laying > 1, 6);
+  chip(live, bx + scale * (x0 + widest) + 28, by + scale * (cy + highest) + 6, '+', () => { SP.laying++; }, SPERM_PARTS, all < SPERM.cells, 6);
+  if (m.inEgg) return;
+  // An egg on the ground, as far behind the fish as the knob puts it, and a plant behind the
+  // cloud, which the cloud dims.
+  spermFilm.plant = el('path', {d : `M${vent + 34} ${ground} q-4 -20 2 -34 M${vent + 40} ${ground} q6 -16 0 -28 M${vent + 46} ${ground} q8 -12 6 -22`, stroke : '#8fd16a', 'stroke-width' : 2.2, fill : 'none', 'stroke-linecap' : 'round'}, under);
+  spermFilm.egg = el('g', {}, live);
+  drag(svg, el('circle', {cx : m.eggX, cy : ground + 9, r : 5.5, fill : YOLK}, live), p => { inp.egg = clamp((p.x - eggs[0]) / (eggs[1] - eggs[0]), 0, 1); draw(SPERM_PARTS); }, 'spermegg', 'knob');
+}
+// Filling and giving off: the commands tried, the store over the steps and the clouds given
+// off; in the egg also the shell, which each cloud thins.
+function drawSpermFill() {
+  const {svg, live} = picture('spermfill', SPERM.C.height), {L, R, c0, c1, top, base} = SPERM.C, m = SM(), inp = SP.input, mid = (c0 + c1) / 2;
+  const X = st => L + (R - L) * st / STEPS, Y = v => base - (base - top) * clamp(v / SPERM.most, 0, 1), SY = v => base - (base - top) * clamp(v, 0, 1);
+  txt(live, 4, c0 + 10, 'füllen'); txt(live, 4, c1 + 3, 'abgeben');
+  el('path', {d : `M${L} ${mid} H${R}`, stroke : COLOUR.trackEdge}, live);
+  el('path', {d : `M${L} ${mid} V${mid - (mid - c0) * inp.fill} H${R} V${mid} Z`, fill : COLOUR.line, opacity : .3, stroke : COLOUR.line, 'stroke-width' : 1.4}, live);
+  // The laying cells' one stroke.
+  el('path', {d : `M${X(inp.lay)} ${mid} V${c1}`, stroke : COLOUR.line, 'stroke-width' : 3, opacity : .6}, live);
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, live);
+  el('path', {d : path(m.store.map((v, st) => [X(st), Y(v)])) + ` L${R} ${base} L${L} ${base} Z`, fill : MILT, opacity : .4, stroke : MILT, 'stroke-width' : 1.6}, live);
+  if (m.room > 0) { el('path', {d : `M${L} ${Y(m.room)} H${R}`, stroke : COLOUR.line, 'stroke-dasharray' : '5 4', 'stroke-width' : 1.2}, live); txt(live, 4, Y(m.room) + 3, 'voll'); }
+  if (m.inEgg) {
+    el('path', {d : path(m.shell.map((v, st) => [X(st), SY(v)])), stroke : COLOUR.icon, 'stroke-width' : 2, fill : 'none'}, live);
+    txt(live, R - 3, SY(m.shell.at(-1)) - 5, 'Schale', {'text-anchor' : 'end', style : `font-size:10px;paint-order:stroke;stroke:${COLOUR.track};stroke-width:3px`});
+  }
+  for (const c of m.clouds) el('circle', {cx : X(c.step), cy : top - 9, r : 2 + 1.1 * Math.sqrt(c.amount), fill : MILT, opacity : c.fertile ? .85 : .35}, live);
+  el('path', {d : `M${L} ${top - 2} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  txt(live, 4, base, 'leer');
+  txt(live, L, base + 15, 'Schritte');
+  for (const st of [STEPS / 3, 2 * STEPS / 3]) txt(live, X(st), base + 15, st, {'text-anchor' : 'middle'});
+  txt(live, R, base + 15, STEPS, {'text-anchor' : 'end'});
+  play.lines.spermfill = {line : el('path', {stroke : COLOUR.line, 'stroke-width' : 1.2, opacity : .8}, live), x : X, top : c0, base, steps : STEPS};
+  drag(svg, el('circle', {cx : (L + X(Math.max(60, inp.lay))) / 2, cy : mid - (mid - c0) * inp.fill, r : 5.5, fill : COLOUR.line}, live), p => { inp.fill = clamp((mid - p.y) / (mid - c0), 0, 1); draw(SPERM_PARTS); }, 'spermcmd', 'knob');
+  drag(svg, el('circle', {cx : X(inp.lay), cy : c1, r : 5.5, fill : COLOUR.line}, live), p => { inp.lay = clamp(Math.round((p.x - L) / (R - L) * STEPS), 0, STEPS); draw(SPERM_PARTS); }, 'spermlay', 'knob');
+}
+// Life cycle: across, the fish's maturity; up, what the organ holds when full. In the egg it
+// holds the secretion that thins the shell, after hatching the sperm.
+function buildSpermLife(fixed) {
+  const {L, R, top, icons} = SPERM.LIFE, hatch = L + (R - L) * SPERM.hatch, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+  txt(fixed, L + 4, top + 11, 'Schlupfsekret', {style : 'font-size:10px'}); txt(fixed, hatch + 5, top + 11, 'Samen', {style : 'font-size:10px'});
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 36, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 60} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
+}
+function drawSpermLife() {
+  const {svg, under, live} = picture('spermlife', SPERM.LIFE.height, buildSpermLife), {L, R, top, base, beside, whole, least} = SPERM.LIFE, until = Math.min(1, SP.until);
+  const X = r => L + (R - L) * clamp(r, 0, 1), rOf = x => clamp((x - L) / (R - L), 0, 1), Y = v => base - (base - top - 16) * clamp(v / SPERM.most, 0, 1);
+  el('rect', {x : L, y : top, width : R - L, height : base - top, fill : COLOUR.track}, under);
+  const pts = until > SP.from ? Array.from({length : 41}, (_, k) => { const r = SP.from + (until - SP.from - .0005) * k / 40; return [X(r), Y(spermRoom(r))]; }) : [];
+  if (pts.length) {
+    el('path', {d : path(pts) + ` L${X(until)} ${base} L${X(SP.from)} ${base} Z`, fill : MILT, opacity : .3}, under);
+    el('path', {d : path(pts), stroke : MILT, 'stroke-width' : 2, fill : 'none'}, live);
+  }
+  el('path', {d : `M${X(SPERM.hatch)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
+  el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
+  const grip = (r, inside, name, move) => {
+    const x = inside ? X(r) : name === 'spermfrom' ? L - beside : R + beside, y = inside ? clamp(Y(spermRoom(r + (name === 'spermfrom' ? .001 : -.001))), top + 6, base - 6) : base - 7;
+    drag(svg, el('rect', {x : x - 4, y : y - 5.5, width : 8, height : 11, rx : 2, style : `fill:${MILT}`}, live), p => { move(rOf(p.x)); draw(SPERM_PARTS); }, name);
+  };
+  grip(SP.from, SP.from > 0, 'spermfrom', to => { SP.from = to < whole ? 0 : Math.min(to, until - least); });
+  grip(until, until < 1, 'spermuntil', to => { SP.until = to > 1 - whole ? 1 : Math.max(to, SP.from + least); });
+  const r = SP.input.maturity;
+  el('path', {d : `M${X(r)} ${top} V${base}`, stroke : COLOUR.line, 'stroke-dasharray' : '2 4', 'stroke-width' : 1.2}, live);
+  drag(svg, el('circle', {cx : X(r), cy : Y(spermRoom(r)), r : 5.5, fill : COLOUR.line}, live), p => { SP.input.maturity = Math.max(.05, rOf(p.x)); draw(SPERM_PARTS); }, 'spermmaturity', 'knob');
+}
+// The organ at this moment: its store; the clouds given off, spreading and thinning; the egg,
+// fertilised once a cloud dense enough has reached it; the plant behind the cloud, dimmed; in
+// the egg the shell, as thick as it still is.
+function showSperm() {
+  if (!spermFilm.store || !spermFilm.sac) return;
+  const m = SM(), level = between(m.filling, play.step), {long, high} = spermFilm.sac, {vent, ground, fishY} = SPERM.F;
+  spermFilm.store.setAttribute('rx', (long / 2 * Math.sqrt(level)).toFixed(1)); spermFilm.store.setAttribute('ry', (high * Math.sqrt(level)).toFixed(1));
+  spermFilm.clouds.replaceChildren();
+  let dim = 0, done = false;
+  for (const c of m.clouds) {
+    const age = play.step - c.step;
+    if (age < 0 || age > SPERM.fade) continue;
+    const grown = Math.min(1, age / 90), reach = SPERM.reach * Math.sqrt(c.amount), radius = 6 + reach * grown, dense = (1 - age / SPERM.fade) * (c.fertile ? 1 : .5);
+    if (m.inEgg) el('ellipse', {cx : 150, cy : fishY + 6, rx : 70 + 16 * grown, ry : 50 + 12 * grown, fill : 'none', stroke : MILT, 'stroke-width' : 2 + .5 * Math.sqrt(c.amount), opacity : (.6 * dense).toFixed(2)}, spermFilm.clouds);
+    else el('circle', {cx : vent, cy : fishY + 16, r : radius, fill : MILT, opacity : (.5 * dense).toFixed(2)}, spermFilm.clouds);
+    dim = Math.max(dim, dense * Math.min(1, c.amount / 12));
+    done ||= c.fertile && age > 90 * Math.min(1, (m.eggX - vent) / Math.max(1, reach)) && reach >= m.eggX - vent;
+  }
+  if (spermFilm.shell) spermFilm.shell.setAttribute('stroke-width', (1 + 7 * between(m.shell, play.step)).toFixed(1));
+  if (m.inEgg) return;
+  spermFilm.plant.setAttribute('opacity', (1 - .8 * dim).toFixed(2));
+  const was = spermFilm.egg.dataset.done === '1';
+  if (spermFilm.egg.childElementCount === 0 || was !== done) { spermFilm.egg.replaceChildren(); spermFilm.egg.dataset.done = done ? '1' : '0'; eggMark(spermFilm.egg, m.eggX, ground - 6, 5.5, done); }
 }
 
 // ===== The clock =====
@@ -1889,7 +2068,7 @@ function tick(now) {
   const dt = play.last ? Math.min(50, now - play.last) : 16; play.last = now;
   // The clock stands while the grip that rides on the bladder's fish is held.
   if (held?.name !== 'sacsize') play.step = (play.step + dt * STEPS / ROUND_MS) % STEPS;
-  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder(); showGills(dt); showEggs();
+  showMoment(); showGut(dt); showNerves(dt); showTail(dt); showBladder(); showGills(dt); showEggs(); showSperm();
 }
 
 // ===== Everything from the model =====
@@ -1899,9 +2078,10 @@ choiceList(document.getElementById('presets'), 'Vorlage', PRESETS.map(p => p[0])
 const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawLife, full : () => drawSense('full'), ache : () => drawSense('ache'), feed : drawReward, tail : drawTail, tailforce : drawTailForce, tailspeed : drawTailSpeed, taillife : drawTailLife,
                bladder : drawBladder, bladderfill : drawBladderFill, depth : drawDepth, bladderlife : drawBladderLife,
                gills : drawGills, rakers : drawRakers, gillwater : drawGillWater, gilllife : drawGillLife,
-               eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife};
+               eggs : drawEggs, eggfill : drawEggFill, eggfull : drawEggFull, egglife : drawEggLife,
+               sperm : drawSperm, spermfill : drawSpermFill, spermfull : drawSpermFull, spermlife : drawSpermLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
