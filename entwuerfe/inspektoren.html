@@ -1860,9 +1860,9 @@ function buildSperm(fixed) {
 }
 function drawSperm() {
   const {svg, under, live} = picture('sperm', SPERM.F.height, buildSperm), {fishX, fishY, ground, vent, eggs} = SPERM.F, m = SM(), inp = SP.input;
-  document.getElementById('sperm-kind').textContent = m.inEgg ? (m.thin < SPERM.thin ? 'Dünnt die Schale aus' : 'Schale bleibt dick') : !m.clouds.length ? 'Gibt nichts ab' : m.reached ? 'Befruchtet das Ei' : 'Wolke zu dünn';
-  // Without a stroke the shell stays whole, and behind a whole shell no fish hatches, however strong.
-  if (m.inEgg) txt(live, 4, 10, m.thin < SPERM.thin ? `Schale ${Math.round(100 * m.thin)} % nach Abgabe` : 'schlüpft nicht', {style : 'font-size:10px'});
+  document.getElementById('sperm-kind').textContent = m.inEgg ? (m.thin < SPERM.thin ? 'Dünnt die Schale aus' : 'Schale bleibt dick') : !m.clouds.length ? 'Gibt nichts ab' : m.reached ? 'Wolke erreicht das Ei' : 'Wolke zu dünn';
+  // Without a stroke the shell stays as it is.
+  if (m.inEgg) txt(live, 4, 10, m.thin < 1 ? `Schale ${Math.round(100 * m.thin)} % nach Abgabe` : 'Schale unverändert', {style : 'font-size:10px'});
   else if (m.clouds.length) txt(live, 4, 10, `${comma(m.clouds[0].amount)} Samen je Wolke`, {style : 'font-size:10px'});
   const frame = el('clipPath', {id : 'spermframe'}, under);
   el('rect', {x : 0, y : 14, width : 300, height : SPERM.F.height - 14}, frame);
@@ -1886,7 +1886,11 @@ function drawSperm() {
   // The filling cells: the grip where they end (in the picture's own measure). The laying cells: the buttons.
   const gx = bx + scale * (x0 + long * SP.cells / all), gy = by + scale * cy;
   drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2, style : `fill:${MILT}`}, live), p => {
-    SP.cells = clamp(Math.round(1 + (p.x - bx - scale * x0 - 8) / (scale * 6)), 1, SPERM.cells - SP.laying); draw(SPERM_PARTS); }, 'spermsize');
+    // The number of filling cells whose border lies nearest the pointer: the same measure as the grip's place.
+    const border = c => bx + scale * (x0 + sizeOf(spermRoom(inp.maturity, c + SP.laying))[0] * c / (c + SP.laying));
+    let best = SP.cells;
+    for (let c = 1; c <= SPERM.cells - SP.laying; c++) if (Math.abs(border(c) - p.x) < Math.abs(border(best) - p.x)) best = c;
+    SP.cells = best; draw(SPERM_PARTS); }, 'spermsize');
   chip(live, bx + scale * (x0 + widest) + 12, by + scale * (cy + highest) + 6, '−', () => { SP.laying--; }, SPERM_PARTS, SP.laying > 1, 6);
   chip(live, bx + scale * (x0 + widest) + 28, by + scale * (cy + highest) + 6, '+', () => { SP.laying++; }, SPERM_PARTS, all < SPERM.cells, 6);
   if (m.inEgg) return;
