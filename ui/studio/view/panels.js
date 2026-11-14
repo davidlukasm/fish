@@ -254,7 +254,7 @@ function organInspector(state, organ) {
           chemistry(state, organ, center) +
           (isRegion(organ) && state.selected?.kind !== 'center'
                ? ''
-               : cellDevelopment(state, center, !LIVE_LIFE.has(organ.type))) +
+               : cellDevelopment(state, center, LIVE_LIFE.has(organ.type))) +
           contactPlan(state, isRegion(organ) && state.selected?.kind !== 'center' ? organ.centers
                                                                                   : [ center ]);
   if (isRegion(organ))

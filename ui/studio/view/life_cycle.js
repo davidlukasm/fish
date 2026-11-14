@@ -385,11 +385,16 @@ function sourceTitle(state, center, source) {
                                  : mine.map(key => word(key)).join(' ' + word('and') + ' ');
   return word('through', {what, name});
 }
-// `phases`: whether the cell's life along its maturity is drawn here; an organ whose live
-// inspector draws its own life leaves it out.
-export function lifeCycle(state, center, phases = true) {
+// `own`: the organ's live inspector draws the cells' life itself. Then the life along the
+// maturity is drawn here only where one of the cell's life receptors reads the maturity: there it
+// shows and shapes what the live band does not (how active the cell is along it). Where none
+// does, it would only say that the cell lives with the fish, as the band does.
+export function lifeCycle(state, center, own = false) {
   if (!center || !state.capabilities)
     return '';
+  const phases =
+      !own || LIFE_ACTIONS.some(key => lifeSource(state.capabilities, lifeReceptor(center, key)) ===
+                                       MATURITY);
   const sources = [
     ...new Set(LIFE_ACTIONS.map(key => lifeSource(state.capabilities, lifeReceptor(center, key))))
   ].filter(source => source !== 'auto' && source !== MATURITY);
