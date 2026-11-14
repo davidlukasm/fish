@@ -6,8 +6,8 @@
 // from. Pain cells weigh the sectors like the other skin cells and feel 16 x weight x what is
 // booked there, at most all. A fed fish heals 0.001 of its health each step and the booked wounds
 // shrink with it. The answer is bounded, and the cells get used to a wound that stays.
-// The wound is the fish panel's probe (probes.js). The cells' place is the plan's report
-// (anatomy.felt).
+// The wound is the fish panel's probe (probes.js), where it lies and how deep it is; the bite
+// falls at the start of the course. The cells' place is the plan's report (anatomy.felt).
 // Not in the pictures: harm without a place (hunger, illness, age), which lies evenly on all
 // sectors; that a hungry fish does not heal.
 import {SKIN_RESPONSE} from '../../../schema.js';
@@ -19,7 +19,7 @@ import {BOUNDED, keysOf, senseCourse, STEPS} from './sense.js';
 import {fishAbove, placeOf, sectorAngle, sectorOf, wedge} from './skin.js';
 
 const word = (key, values) => t('studio.live.pain.' + key, values);
-const ROUND_MS = 12000;
+const ROUND_MS = 12000, BITE_STEP = 12;
 const WOUND =
     Object.freeze({height : 132, cx : 150, cy : 66, s : 2.5, rx : 70, ry : 27, bite : 13});
 const radians = d => d * Math.PI / 180, degrees = r => r * 180 / Math.PI;
@@ -41,7 +41,7 @@ liveKind('pain', (studio, organId) => {
   const fish = svgOf();
   heading(word('cells'));
   const ache = svgOf();
-  const own = {chosen : 0, input : {rise : 90, height : SKIN_RESPONSE.bite_wound, stop : 0}};
+  const own = {chosen : 0, input : {rise : BITE_STEP, height : 0, stop : 0}};
   let step = 0, share = 0, clock = null;
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
@@ -53,6 +53,7 @@ liveKind('pain', (studio, organId) => {
     tires : true,
     most : 1,
     heals : SKIN_RESPONSE.heal_rate,
+    given : true,
     mark : {at : SKIN_RESPONSE.bite_wound, word : word('bite')},
     scale : BOUNDED,
     words : {course : word('course'), used : word('used'), steps : word('steps')},
@@ -121,6 +122,8 @@ liveKind('pain', (studio, organId) => {
     const cell = organ()?.centers[0];
     if (!cell)
       return;
+    const probe = studio.state.senseProbe;
+    own.input.height = probe?.kind === 'wound' ? probe.strength : 0;
     drawFish(cell);
     course.draw();
     tick(0);

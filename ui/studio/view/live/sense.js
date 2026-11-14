@@ -174,7 +174,8 @@ export const keyGrip = (i, on) => 'aid-live-keygrip k' + i + (on ? ' on' : '');
 // `held()`: a constant stimulus from the fish panel, in native units. `colour()`: the input's
 // colour, if it changes; `fewer(k)`, `more(gate)`: the keys' pair of
 // buttons; `most`: how many keys there may be; `scale`: the stimulus's scale; `heals`: the input is
-// a wound that closes by this much each step (one knob: when and how deep); `mark`: a height
+// a wound that closes by this much each step (one knob: when and how deep; none where the wound
+// is `given` from outside); `mark`: a height
 // named on the input's scale. Returns draw(), and
 // what the clock moves: moment(step), pulse(dt, step).
 export function senseCourse(svg, {
@@ -184,6 +185,7 @@ export function senseCourse(svg, {
   after,
   most = 3,
   heals = 0,
+  given = false,
   mark = null,
   scale = BOUNDED,
   words,
@@ -451,7 +453,7 @@ export function senseCourse(svg, {
                redraw();
              },
              name + part, 'knob');
-    if (!held) {
+    if (!held && !given) {
       knob(inp.rise, 'rise', st => { inp.rise = clamp(st, 1, heals ? STEPS - 10 : inp.stop - 1); });
       if (!heals)
         knob(inp.stop, 'stop', st => { inp.stop = clamp(st, inp.rise + 1, STEPS - 10); });
