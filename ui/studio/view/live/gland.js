@@ -138,7 +138,10 @@ liveKind('gland', (studio, organId) => {
     const {svg, live} = picture(blood, GLAND.height), {L, R, top} = GLAND, n = wheel().hormones,
                 row = GLAND.rows / n, thick = row * GLAND.fill, base = top + GLAND.rows,
                 Y = k => top + row * k + row / 2, shares = sharesOf(cell),
-                main = shares.indexOf(Math.max(...shares)), most = wheel().hormoneHeight;
+                main = shares.indexOf(Math.max(...shares)),
+                // A strand is full where the gland's main hormone stands with all the cells a node
+                // can have, so that a weak gland shows too.
+        most = wheel().hormoneHeight * shares[main];
     title.textContent = word(own.command < 0 ? 'binds' : 'pours', {
       list : shares.map((s, k) => s > .5 * shares[main] ? substanceName(studio.state, k) : null)
                  .filter(Boolean)
@@ -186,8 +189,13 @@ liveKind('gland', (studio, organId) => {
     // The glands before the strands they pour into: as long as their width, as thick as their
     // cells. The chosen one carries the grips.
     cells.forEach((c, i) => {
-      const chosen = c === cell, at = rowOf(c), wide = 4 + 12 * strength(c),
-            reach = row * (.5 + 2.6 * c.qwidth), gy = Y(at), gx = L - 8 - (chosen ? 0 : 2);
+      // The mark reaches over the strands the gland pours at least half as much into as into
+      // its main one.
+      const chosen = c === cell, wide = 4 + 12 * strength(c), own = sharesOf(c),
+            poured = own.map((v, k) => v > .5 * Math.max(...own) ? k : -1).filter(k => k >= 0),
+            at = Math.hypot(c.q1, c.q2) < 1e-6 ? (poured[0] + poured.at(-1)) / 2 : rowOf(c),
+            reach = row * (Math.max(at - poured[0], poured.at(-1) - at, 0) + .5), gy = Y(at),
+            gx = L - 8 - (chosen ? 0 : 2);
       const mark = el('rect', {
         x : gx - wide,
         y : Math.max(top - 14, gy - reach),
@@ -219,8 +227,8 @@ liveKind('gland', (studio, organId) => {
            settle);
       drag(svg,
            el('circle', {cx : gx - wide / 2, cy : Math.min(base + 8, gy + reach), r : 4.5}, live),
-           p => set({qwidth : clamp((Math.abs(p.y - gy) / row - .5) / 2.6)}), 'glandwidth', 'grip',
-           settle);
+           p => set({qwidth : clamp((Math.abs(p.y - gy) / row - .5) / (n / 2))}), 'glandwidth',
+           'grip', settle);
       drag(svg,
            el('rect', {
              x : gx - wide - 9,
@@ -278,9 +286,9 @@ liveKind('gland', (studio, organId) => {
                     clamp((off - GLAND.knob[0]) / (GLAND.knob[1] - GLAND.knob[0]), GLAND.least, 1);
       show();
     }, 'glandcommand', 'knob');
-    txt(live, mid(), GLAND.height - 4, word('steps', {n : GLAND.work}),
-        {'text-anchor' : 'middle', class : 'aid-live-small'});
-    txt(live, R, GLAND.height - 4, GLAND.work + GLAND.rest,
+    txt(live, L, base + 14, 0, {'text-anchor' : 'middle', class : 'aid-live-small'});
+    txt(live, mid(), base + 14, GLAND.work, {'text-anchor' : 'middle', class : 'aid-live-small'});
+    txt(live, R, base + 14, word('steps', {n : GLAND.work + GLAND.rest}),
         {'text-anchor' : 'end', class : 'aid-live-small'});
     now = el('path', {class : 'aid-live-now'}, live);
     move();
@@ -304,8 +312,12 @@ liveKind('gland', (studio, organId) => {
     for (const [x] of places) {
       const r = (x - L) / (R - L);
       if (r >= from && r <= until)
-        el('path',
-           {d : `M${x} ${y - 5} q5 6 0 9 q-5 -3 0 -9 Z`, fill : colour, class : 'aid-live-drop'},
+        el('path', {
+          d : x === egg ? `M${x + 2} ${y - 7} q8 9 0 14 q-8 -5 0 -14 Z`
+                        : `M${x} ${y - 5} q5 6 0 9 q-5 -3 0 -9 Z`,
+          fill : colour,
+          class : 'aid-live-drop'
+        },
            live);
     }
     lifeBand(svg, under, live, {studio, center : cell, name : 'gland', draft, settle});
