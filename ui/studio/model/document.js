@@ -27,7 +27,7 @@ import {
   timeConstantOf,
   unitOfPlan
 } from '../../tuning.js';
-import {DEVELOPING_RELAY} from './region_cells.js';
+import {DEVELOPING_PACE, DEVELOPING_RELAY} from './region_cells.js';
 import {nextPigment} from './pigment.js';
 import {fastShare, fibreForce, fibreTau} from '../../fibre.js';
 import {
@@ -743,8 +743,10 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
   if (!site || pointDistance(site, position, NERVE_ROLE) > snapDistance)
     return null;
   const draft = copy(doc);
-  const center = {...defaults(desc, site), ...properties};
-  // A single nerve cell grows and hardens its paths in the egg like a region's relay.
+  // A single nerve cell grows and hardens its paths in the egg like a region's relay, with the
+  // same share of pacemaker for its embryonic rhythm.
+  const center =
+      {...defaults(desc, site), ...properties, pace : Math.max(properties.pace, DEVELOPING_PACE)};
   for (const [effect, patch] of Object.entries(DEVELOPING_RELAY))
     Object.assign(center.receptors[effect], patch);
   draft.organs.find(o => o.id === 'brain').centers.push(center);

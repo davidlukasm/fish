@@ -151,8 +151,11 @@ export function placeSystem(doc, key, sites, wheel, position, name) {
     draft = updateGrowth(draft, {active : 1, substance : index, ...GROWTH_START});
   for (const {center, answer} of answering(draft, system))
     for (const [effect, ends] of answer.effects) {
-      // A resting tone, such as a muscle's open learning gate, stays under the new answer.
-      const own = center.receptors[effect], resting = own?.active ? {baseline : own.baseline} : {};
+      // A resting tone, such as a muscle's open learning gate, stays under the new answer; the
+      // hardening in the egg is no resting tone and goes.
+      const own = center.receptors[effect], resting = own?.active && !sameAnswer(own, EGG_HARDENING)
+                                                          ? {baseline : own.baseline}
+                                                          : {};
       draft = updateReceptor(
                   draft, center.id, effect,
                   {...ends, ...resting, active : 1, substance : index, half : answerHalf(wheel)}) ??

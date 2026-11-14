@@ -29,6 +29,8 @@ export const DEVELOPING_RELAY = Object.freeze({
     steepness : 3
   }
 });
+// A share of pacemaker in every developing cell, so that its embryonic rhythm can sound.
+export const DEVELOPING_PACE = .6;
 export const CIRCUIT_LEARNING =
     Object.freeze({qwidth : 1, electrical_limit : 1, teaching_limit : 1, learning_tau : 1});
 export const TONIC_LEARNING =
@@ -61,7 +63,7 @@ export function regionCell(node, preset, port, set = {}, effects = {}) {
       tau : .5,
       q1 : 1,
       q2 : .5,
-      pace : .6,
+      pace : DEVELOPING_PACE,
       ...set
     }
   };
