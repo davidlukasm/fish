@@ -374,7 +374,7 @@ export function senseCourse(svg, {
     // A height the input's scale is read by.
     if (mark) {
       el('path', {d : `M${R - 12} ${IY(mark.at)} H${R}`, class : 'aid-live-sense-mark'}, live);
-      txt(live, R - 15, IY(mark.at) + 3.5, mark.word,
+      txt(live, R - 15, IY(mark.at) - 5, mark.word,
           {'text-anchor' : 'end', class : 'aid-live-onground'});
     }
     txt(live, L, I1 + 16, words.steps);

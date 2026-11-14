@@ -22,9 +22,9 @@ import {eggShape, fishAbove, lifeBand, lifePlaces, LIFE} from './skin.js';
 
 const word = (key, values) => t('studio.live.defense.' + key, values);
 const SPINE = Object.freeze({
-  height : 236,
+  height : 204,
   cx : 150,
-  cy : 118,
+  cy : 102,
   s : 1.9,
   rx : 52,
   ry : 21,
@@ -104,7 +104,7 @@ liveKind('defense', (studio, organId) => {
     // the circle's measure: it swallows the fish whole only if they clear it.
     const big = SPINE.body * (1 + height), fits = mouth.gape >= 1 + height,
           ux = Math.cos(radians(mouth.bearing)), uy = -Math.sin(radians(mouth.bearing)),
-          from = out => [cx - 4 - out * ux, cy - out * uy], [ mx, my ] = from(big + 46),
+          from = out => [cx - 4 - out * ux, cy - out * uy], [ mx, my ] = from(big + 38),
           [ tx, ty ] = from(big + 5), half = SPINE.body * mouth.gape,
           jaw = side => [tx + side * uy * half, ty - side * ux * half];
     el('circle',
@@ -117,7 +117,7 @@ liveKind('defense', (studio, organId) => {
     // The bite: what the spines there hold off stops at them, the rest goes into the body;
     // beside it what holding it off costs: a drop of the reserve, as big as the harm held off.
     const held = guard[at(mouth.bearing)], [ bx, by ] = rim(mouth.bearing, SPINE.long * held + 3),
-          [ ix, iy ] = rim(mouth.bearing, -16 * (1 - held)), [ sx, sy ] = from(big + 30);
+          [ ix, iy ] = rim(mouth.bearing, -16 * (1 - held)), [ sx, sy ] = from(big + 24);
     el('path', {d : `M${sx} ${sy} L${bx} ${by}`, class : 'aid-live-jaw', 'stroke-width' : 5}, live);
     if (held < 1)
       el('path',
