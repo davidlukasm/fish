@@ -36,9 +36,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 - Gegenprüfung bei Wiederaufnahme: Labor vom Start bis zum Eingriff und Kontrollversuch, Zucht vom Start bis zur Elternwahl und nächsten Runde. Becken, Einrichtung und Zeitsteuerung müssen in beiden Stationen gleichzeitig erreichbar sein.
 
 ## Wer gerade was macht
-- **Claude:** zeichnet alle Inspektoren im Entwurf `entwuerfe/inspektoren.html`, ein Organ nach dem anderen, nach Davids Abnahme. Jetzt: verworfene Panels entfernen, danach Darm und Schwanz.
-- **Fable:** Fakten aus dem Code, Fragen in AUFTRAG-1311.md Abschnitt 5: Lenkt der Schwanz? Bauchweh-Buckel? Sinnesunsicherheit? Futterzellen und Blutsinn? Druckzellen? Außerdem die Drüse genauer untersuchen (Befund 7, Abschnitt 5 Punkt 6).
-- **Astra:** heutigen Augen- und Nahsinn-Inspektor im Produkt als PNG ablegen (kein Suchen in alten Commits) und ORGANOPTIONEN.md für die übrigen Organe ergänzen (AUFTRAG-1311.md Abschnitt 5).
+
+- **Fable:** überarbeitet den Kiemenentwurf in `entwuerfe/inspektoren.html` nach den Rückmeldungen zu 1120.
+- **Claude:** prüft den Kiemenentwurf gegen Davids Rückmeldung und den Code. Die Sichtprüfung der eingebauten Schwimmblase ist abgeschlossen.
+- **Astra:** prüft die Kiemenbilder und den Weg vom Bauplan zum Aquarium. Der native Planbericht für den Einbau liegt im Produktzweig (`44eca02d`).
 
 ## Nachrichten
 
