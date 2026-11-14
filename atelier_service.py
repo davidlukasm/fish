@@ -221,7 +221,7 @@ def sight_line(sight):
     return "1 " + " ".join(number(v) for v in values) + "\n"
 
 
-SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5}
+SENSE_SCENES = {"smell": 1, "touch": 2, "flow": 3, "wound": 4, "gut": 5, "taste": 6}
 
 
 def sense_line(sense):

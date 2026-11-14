@@ -1,6 +1,6 @@
 import {findOrgan, groupReport, isChosen, organTypes} from '../model/document.js';
 import {profileNames} from './scents.js';
-import {PROBE_LIMITS} from '../model/probe.js';
+import {PROBE_LIMITS, STONE} from '../model/probe.js';
 import {BODY_MIDDLE, BODY_RADIUS, sideSign} from '../model/layout.js';
 import {bodyDirection, skinPoints, steadyAt, zoomOf} from './frame.js';
 import {organLocation} from './places.js';
@@ -8,6 +8,7 @@ import {arrowPath} from './lateral.js';
 import {escapeText, fixed, idSafe} from './markup.js';
 import {ecologyIconSvg} from '../../feeding_view.js';
 import {scentColors, scentIcons, scentNames} from '../../brain_model.js';
+import {BARBEL, ODOR_KIND, SENSORY_PROBE} from '../../schema.js';
 import {clamp, degrees, radians, wrapAngle} from '../../units.js';
 import {formatNumber, namedText, percent, t} from '../../strings.js';
 import {centerTitle} from './names.js';
@@ -68,6 +69,8 @@ const shareStrength = (share, kind, faintest) =>
     faintest * (PROBE_LIMITS.most[kind] / faintest) ** clamp(share);
 function handleRadius(probe, faintest) {
   const P = PROBE_SCENE, angle = radians(probe.bearing), skin = skinDistance(angle);
+  if (probe.kind === 'taste')
+    return probe.distance * BODY_RADIUS;
   return probe.kind === 'smell' ? skin + beyondSkin(probe.distance)
                                 : skin + (probe.kind === 'flow' ? P.far : P.gap) +
                                       P.reach * strengthShare(probe.strength, probe.kind, faintest);
@@ -79,6 +82,8 @@ export const probeFlow = probe =>
 export function probePatch(kind, position, faintest) {
   const dx = position.x - BODY_MIDDLE.x, dy = position.y - BODY_MIDDLE.y;
   const angle = Math.atan2(dy, -dx), r = Math.hypot(dx, dy), bearing = degrees(angle);
+  if (kind === 'taste')
+    return {bearing, distance : clamp(r / BODY_RADIUS, 0, PROBE_LIMITS.most.taste)};
   const beyond = r - skinDistance(angle);
   const from = kind === 'flow' ? PROBE_SCENE.far : PROBE_SCENE.gap;
   return kind === 'smell' ? {bearing, distance : distanceAt(beyond)} : {
@@ -121,7 +126,7 @@ function stimulusSvg(probe, faintest, zoom) {
            escapeText(t('studio.probe.lengths', {n : formatNumber(probe.distance / 2, P.digits)})) +
            '</text></g>';
   }
-  if (probe.kind === 'flow')
+  if (probe.kind === 'flow' || probe.kind === 'taste')
     return '';
   return '<path class="aid-probe-arrow ' + probe.kind + '" d="' + arrowPath(at, onto) + '"/>';
 }
@@ -213,6 +218,23 @@ function answerSvg(state, organ, zoom) {
       })
       .join('');
 }
+function barbelProbeSvg(state) {
+  const body = state.anatomy.bodyRadius;
+  if (!(body > 0))
+    return '';
+  return (state.anatomy.barbelPlaces ?? [])
+      .map((point, side) => {
+        if (!point)
+          return '';
+        const contact = state.anatomy.barbelProbe?.[side];
+        const [forward, across] = point, x = BODY_MIDDLE.x - forward * BODY_RADIUS,
+                        y = BODY_MIDDLE.y + across * BODY_RADIUS;
+        return '<circle class="aid-probe-tip' + (contact?.felt > 0 ? ' on' : '') + '" cx="' +
+               fixed(x) + '" cy="' + fixed(y) + '" r="' + fixed(BARBEL.reach * BODY_RADIUS / body) +
+               '"/>';
+      })
+      .join('');
+}
 // Food in the gut as a picture: the tube filled as high as it is full (drag the food's surface),
 // the stream falling in as wide as the nutrient flowing in (drag its edge; it runs on a log scale,
 // as signals of very different size matter), and beside it every gut cell lit by its answer.
@@ -293,12 +315,21 @@ function visibleProbe(state) {
              ? {probe, organ, faintest, zoom : zoomOf(state)}
              : null;
 }
-function probeGrip(organ, probe, faintest, zoom) {
+function probeGrip(organ, probe, faintest, zoom, bodyRadius) {
   const at = probeHandle(probe, faintest);
+  const taste = probe.kind === 'taste';
+  const radius = taste && bodyRadius > 0  ? SENSORY_PROBE.radius * BODY_RADIUS / bodyRadius * zoom
+                 : probe.kind === 'smell' ? PROBE_SCENE.source
+                                          : PROBE_SCENE.handle;
   return '<g class="aid-probe-handle ' + probe.kind + '" data-sense-control="' + probe.kind +
          '" data-sense-handle="' + escapeText(organ.id) + '"' + steadyAt(at, zoom) + '><title>' +
          escapeText(t('studio.probe.handle.' + probe.kind)) + '</title><circle r="' +
-         (probe.kind === 'smell' ? PROBE_SCENE.source : PROBE_SCENE.handle) + '"/></g>';
+         fixed(radius) + '"/>' + (taste ? probeObject(probe.scent) : '') + '</g>';
+}
+function probeObject(scent) {
+  if (scent === STONE)
+    return '<path class="aid-probe-stone" d="M-8 2 L-6 -5 L1 -8 L8 -3 L6 5 L-3 7Z"/>';
+  return ecologyIconSvg(scentIcons?.[scent], scentColors?.[scent] ?? '', PROBE_SCENE.icon);
 }
 export function senseProbeSvg(state) {
   const config = visibleProbe(state);
@@ -309,8 +340,10 @@ export function senseProbeSvg(state) {
                      ? flowArrows(radians(flow.bearing), probeHandle(flow, faintest), PROBE_SCENE)
                      : '';
   return '<g class="aid-sense-probe">' + arrows + stimulusSvg(probe, faintest, zoom) +
-         answerSvg(state, organ, zoom) +
-         (probe.kind === 'flow' ? '' : probeGrip(organ, probe, faintest, zoom)) +
+         (probe.kind === 'taste' ? barbelProbeSvg(state) : '') + answerSvg(state, organ, zoom) +
+         (probe.kind === 'flow'
+              ? ''
+              : probeGrip(organ, probe, faintest, zoom, state.anatomy.bodyRadius)) +
          (flow ? probeGrip(organ, flow, faintest, zoom) : '') + '</g>';
 }
 export function probeWater(state) {
@@ -325,17 +358,21 @@ export function probeWater(state) {
 }
 export function probeScents(state) {
   const probe = state.senseProbe, organ = probe ? findOrgan(state.document, probe.organ) : null;
-  if (probe?.kind !== 'smell' || !organ || !isChosen(state.selected, organ))
+  if (!organ || !isChosen(state.selected, organ) || !['smell', 'taste'].includes(probe.kind))
     return '';
+  const taste = probe.kind === 'taste';
+  const choices = (scentNames ?? []).map((name, index) => ({name, index}));
+  if (taste) {
+    choices.splice(ODOR_KIND.plankton, 1);
+    choices.push({name : t('studio.probe.stone'), index : STONE});
+  }
   return '<div class="aid-probe-scents" role="group" aria-label="' +
-         escapeText(t('studio.probe.title.smell')) + '">' +
-         (scentNames ?? [])
-             .map((name, k) =>
-                      '<button type="button" data-probe-scent="' + k + '" class="' +
-                      (k === probe.scent ? 'active' : '') + '" title="' + escapeText(name) +
-                      '"><svg viewBox="-14 -14 28 28">' +
-                      ecologyIconSvg(scentIcons?.[k], scentColors?.[k] ?? '', PROBE_SCENE.icon) +
-                      '</svg></button>')
+         escapeText(t('studio.probe.title.' + probe.kind)) + '">' +
+         choices
+             .map(({name, index}) =>
+                      '<button type="button" data-probe-scent="' + index + '" class="' +
+                      (index === probe.scent ? 'active' : '') + '" title="' + escapeText(name) +
+                      '"><svg viewBox="-14 -14 28 28">' + probeObject(index) + '</svg></button>')
              .join('') +
          '</div>';
 }

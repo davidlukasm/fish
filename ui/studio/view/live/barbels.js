@@ -11,10 +11,11 @@
 // Not in the pictures: several tastes touched at once.
 import {ATELIER_LIMITS, BARBEL} from '../../../schema.js';
 import {t} from '../../../strings.js';
-import {activationLevel, unitOfPlan} from '../../../tuning.js';
+import {activationLevel, scentAffinities, scentTuning, unitOfPlan} from '../../../tuning.js';
 import {
   addOrganType,
   findOrgan,
+  groupReport,
   lifePhase,
   organTypes,
   removeOrganType,
@@ -23,15 +24,17 @@ import {
 } from '../../model/document.js';
 import {label} from '../kit.js';
 import {clamp, drag, el, liveKind, picture, txt} from './kit.js';
-import {bestScents, sampleColour, sampleShare, scentMap} from './scentmap.js';
-import {answer, BOUNDED, IRRITANT, keyGrip, setGate, typeLife} from './sense.js';
+import {sideIndex} from '../../model/layout.js';
+import {STONE} from '../../model/probe.js';
+import {bestScents, sampleColour, scentMap} from './scentmap.js';
+import {BOUNDED, IRRITANT, keyGrip, setGate, typeLife} from './sense.js';
 
 const word = (key, values) => t('studio.live.barbels.' + key, values);
 const MOST = 4, NEW_WIDTH = .25, NEW_TOUCH = .3, NEW_GATE = .3;
 // The head from above, snout to the left; one body radius in the picture, a tip's reach, and
 // how far each barbel's root lies from the middle.
-const HEAD = Object.freeze(
-    {height : 150, mouthX : 150, mouthY : 78, radius : 150, reach : 9, root : 10, thing : 7});
+const HEAD =
+    Object.freeze({height : 150, mouthX : 150, mouthY : 78, radius : 150, reach : 9, root : 10});
 const ROWS = Object.freeze({L : 84, R : 280, top : 14, row : 26});
 const lengthOf = cells => {
   const g = Math.sqrt(Math.max(0, cells));
@@ -67,7 +70,7 @@ liveKind('barbels', (studio, organId) => {
   heading(word('life'));
   const life = svgOf();
   // What is tried on the barbels and which of their types is chosen: not part of the fish.
-  const own = {chosen : 0, probe : null, thing : null};
+  const own = {chosen : 0, probe : null};
   const organ = () => findOrgan(studio.state.document, organId);
   const draft = doc => doc && studio.draftDesign(doc, 'live:' + organId, 'refreshLive');
   const settle = () => studio.drafted && studio.settleGraphic();
@@ -91,12 +94,7 @@ liveKind('barbels', (studio, organId) => {
     own.chosen = organTypes(organ()).length;
     change(added.document);
   }
-  // The side whose tip touches the thing (-1 above, 1 below), or 0: each side's cells feel their
-  // own tip.
-  const touching = cells => [-1, 1].find(side => {
-    const [x, y] = tipOf(side, cells);
-    return Math.hypot(x - own.thing.x, y - own.thing.y) <= HEAD.reach + HEAD.thing;
-  }) ?? 0;
+  const copies = organ => (organ?.centers ?? []).reduce((sum, cell) => sum + cell.copies, 0);
   function buildHead(fixed) {
     const {mouthX : x, mouthY : y} = HEAD;
     el('path', {
@@ -111,33 +109,32 @@ liveKind('barbels', (studio, organId) => {
          fixed);
     }
   }
-  // The barbels as long as their cells make them; the grip at the upper tip sets the chosen
-  // type's cells, the round knob is the thing a tip may touch.
-  function drawHead(cells, chosen) {
+  // The grip at the tip of the selected side sets the chosen type's cells.
+  function drawHead(organ, chosen, contacts) {
     const {svg, live} = picture(head, HEAD.height, buildHead), {mouthX, mouthY} = HEAD,
-                all = cells.reduce((sum, c) => sum + c.copies, 0), others = all - chosen.copies,
-                colour = sampleColour(own.probe);
-    // At first the thing lies at the upper tip.
-    own.thing ??= {x : tipOf(-1, all)[0] - HEAD.thing - 5, y : tipOf(-1, all)[1]};
-    const touched = touching(all);
-    txt(live, 6, HEAD.height - 6, word(touched ? 'touching' : 'apart'), {class : 'aid-live-small'});
+                all = copies(organ), others = all - chosen.copies, colour = sampleColour(own.probe),
+                twin = findOrgan(studio.state.document, organ.pair);
+    const touching = contacts.some(contact => contact?.felt > 0);
+    txt(live, 6, HEAD.height - 6, word(touching ? 'touching' : 'apart'),
+        {class : 'aid-live-small'});
     for (const side of [-1, 1]) {
-      const [x, y] = tipOf(side, all), from = [ mouthX + 8, mouthY + side * HEAD.root ],
-                mid = [ (from[0] + x) / 2, (from[1] + y) / 2 + side * 6 ];
+      const count = side === organ.side ? all : copies(twin);
+      if (!count)
+        continue;
+      const touched = contacts[sideIndex(side)]?.felt > 0, [ x, y ] = tipOf(side, count),
+            from = [ mouthX + 8, mouthY + side * HEAD.root ],
+            mid = [ (from[0] + x) / 2, (from[1] + y) / 2 + side * 6 ];
       el('path', {d : `M${from} Q${mid} ${x} ${y}`, class : 'aid-live-barbel'}, live);
       // Its reach at the tip: drawn full where it touches the thing.
-      const ring = el('circle', {
-        cx : x,
-        cy : y,
-        r : HEAD.reach,
-        class : 'aid-live-reach' + (touched === side ? ' on' : '')
-      },
-                      live);
-      if (touched === side && colour)
+      const ring =
+          el('circle',
+             {cx : x, cy : y, r : HEAD.reach, class : 'aid-live-reach' + (touched ? ' on' : '')},
+             live);
+      if (touched && colour)
         ring.style.stroke = colour;
       // A stroke across the barbel for each of its cells.
-      for (let c = 1; c <= all; c++) {
-        const s = c / (all + 1), u = 1 - s, bx = u * u * from[0] + 2 * s * u * mid[0] + s * s * x,
+      for (let c = 1; c <= count; c++) {
+        const s = c / (count + 1), u = 1 - s, bx = u * u * from[0] + 2 * s * u * mid[0] + s * s * x,
               by = u * u * from[1] + 2 * s * u * mid[1] + s * s * y;
         el('path', {
           d : `M${(bx - 1.5).toFixed(1)} ${(by - 4).toFixed(1)} l3 8`,
@@ -146,31 +143,22 @@ liveKind('barbels', (studio, organId) => {
            live);
       }
     }
-    const [gx, gy] = tipOf(-1, all);
+    const [gx, gy] = tipOf(organ.side, all);
     drag(svg, el('rect', {x : gx - 4, y : gy - 5.5, width : 8, height : 11, rx : 2}, live), p => {
       let best = chosen.copies;
       for (let c = 1; c <= ATELIER_LIMITS.max_copies; c++)
-        if (Math.abs(tipOf(-1, others + c)[0] - p.x) < Math.abs(tipOf(-1, others + best)[0] - p.x))
+        if (Math.abs(tipOf(organ.side, others + c)[0] - p.x) <
+            Math.abs(tipOf(organ.side, others + best)[0] - p.x))
           best = c;
       if (best !== chosen.copies)
         draft(updateCenter(studio.state.document, chosen.id, {copies : best}));
     }, 'barbcells', 'grip', settle);
-    const thing =
-        el('circle', {cx : own.thing.x, cy : own.thing.y, r : HEAD.thing, class : 'aid-live-stone'},
-           live);
-    if (colour)
-      thing.style.fill = colour;
-    drag(svg, thing, p => {
-      own.thing = {x : clamp(p.x, 8, 292), y : clamp(p.y, 20, HEAD.height - 8)};
-      again();
-    }, 'barbthing', 'knob');
-    return touched;
   }
   // For each type a row: the stimulus the thing at the tip gives its cells, its taste (in the
   // taste's colour) and beside it its mere touch (light), with the type's threshold as a dashed
   // mark; before the row the type's nerve cell with what it reports of that. The round grip
   // sets taste against touch, the square one the threshold.
-  function drawRows(cells, touched) {
+  function drawRows(cells, contact, anatomy) {
     const {L, R, top, row} = ROWS, {svg, live} = picture(rows, top + row * cells.length + 22),
                       X = v => L + (R - L) * clamp(v), vOf = x => clamp((x - L) / (R - L)),
                       colour = sampleColour(own.probe), foot = top + row * cells.length + 10;
@@ -179,10 +167,13 @@ liveKind('barbels', (studio, organId) => {
     txt(live, L, top - 3, word('tastes'), {class : 'aid-live-small'});
     txt(live, R, top - 3, word('feels'), {'text-anchor' : 'end', class : 'aid-live-small'});
     cells.forEach((cell, i) => {
-      const on = i === own.chosen, y = top + row * i, met = touched ? 1 : 0,
-            taste = (1 - cell.field) * Math.min(1, sampleShare(cell, own.probe)) * met,
-            sum = taste + cell.field * met, gate = activationLevel(unitOfPlan(cell.threshold)),
-            pick = () => {
+      const affinities = scentAffinities(cell.q1, cell.q2, cell.qwidth),
+            received =
+                contact?.taste.reduce((sum, level, k) => sum + level * affinities[k], 0) ?? 0,
+            on = i === own.chosen, y = top + row * i,
+            taste = (1 - cell.field) * Math.min(1, received),
+            sum = taste + cell.field * (contact?.felt ?? 0),
+            gate = activationLevel(unitOfPlan(cell.threshold)), pick = () => {
               own.chosen = i;
               again();
             };
@@ -219,7 +210,8 @@ liveKind('barbels', (studio, organId) => {
       },
          live);
       // The type's nerve cell before its row: what it reports, as a flash as big as the report.
-      const cy = y + row / 2 - 4, report = answer(sum, gate, 0);
+      const cy = y + row / 2 - 4,
+            report = groupReport(studio.state.document, anatomy, 'senseProbe', cell.id) ?? 0;
       el('path', {
         d : `M${L - 16} ${cy} q-10 -2 -16 -10 M${L - 16} ${cy} l8 0`,
         class : 'aid-live-nerve-fibre k' + i
@@ -262,17 +254,20 @@ liveKind('barbels', (studio, organId) => {
     const barbels = organ();
     if (!barbels)
       return;
-    const kinds = organTypes(barbels), cells = kinds.map(type => type.centers[0]),
-          caps = studio.state.capabilities;
+    const {anatomy, capabilities : caps, senseProbe} = studio.state;
+    const kinds = organTypes(barbels), cells = kinds.map(type => type.centers[0]);
     own.chosen = Math.min(own.chosen, cells.length - 1);
-    own.probe ??= {q1 : cells[0].q1, q2 : cells[0].q2};
+    const scent = senseProbe?.kind === 'taste' ? senseProbe.scent : 0;
+    own.probe = scent === STONE ? {...scentTuning(0), stone : true} : scentTuning(scent);
     kind.textContent = word('tasting', {list : bestScents(cells)});
-    const touched = drawHead(barbels.centers, cells[own.chosen]);
+    const contacts = anatomy?.barbelProbe ?? [];
+    drawHead(barbels, cells[own.chosen], contacts);
     scentMap(map, {
       name : 'barbels',
       own,
       cells,
       stone : true,
+      fixedSample : true,
       words : {sample : word('sample'), stone : word('stone')},
       most : MOST,
       place : (i, tuning) => updateCenter(studio.state.document, cells[i].id, tuning),
@@ -283,7 +278,7 @@ liveKind('barbels', (studio, organId) => {
       settle,
       redraw : again
     });
-    drawRows(cells, touched);
+    drawRows(cells, contacts[sideIndex(barbels.side)], anatomy);
     typeLife(life, {
       name : 'barbels',
       own,

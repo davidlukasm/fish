@@ -1276,8 +1276,10 @@
     "filling": "Füllung",
     "inflow": "Zufluss",
     "response": "Antwort",
+    "stone": "Stein",
     "title": {
       "smell": "Duft testen",
+      "taste": "Geschmack und Berührung testen",
       "touch": "Berührung testen",
       "wound": "Biss testen",
       "flow": "Strömung testen",
@@ -1286,6 +1288,7 @@
     "lengths": "{n} {n:Fischlänge|Fischlängen}",
     "handle": {
       "smell": "Duftquelle: Richtung und Abstand",
+      "taste": "Gegenstand an die Bartelspitze ziehen",
       "touch": "Berührung: Richtung und Stärke",
       "wound": "Biss: Richtung und Schwere",
       "flow": "Strömung: Richtung und Stärke"

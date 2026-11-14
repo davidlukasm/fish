@@ -575,15 +575,19 @@ function feltSvg(state, organ) {
          '</g>';
 }
 const headTitle = key => '<title>' + escapeText(t(key)) + '</title>';
-function barbelsSvg(columns) {
+function barbelsSvg(columns, probe) {
   const tip = SNOUT_TIP, H = HEAD;
   return [ -1, 1 ]
       .filter(side => columns[ANATOMY.barbel_left + sideIndex(side)] > 0)
-      .map(side => '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
-                   fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
-                   ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' +
-                   fixed(tip.x + H.barbel_end[0]) + ' ' + fixed(tip.y + side * H.barbel_end[1]) +
-                   '">' + headTitle('studio.head.barbels') + '</path>')
+      .map(side => {
+        const point = probe?.[sideIndex(side)],
+              x = point ? BODY_MIDDLE.x - point[0] * BODY_RADIUS : tip.x + H.barbel_end[0],
+              y = point ? BODY_MIDDLE.y + point[1] * BODY_RADIUS : tip.y + side * H.barbel_end[1];
+        return '<path class="aid-head-barbel" d="M' + fixed(tip.x + H.barbel_root[0]) + ' ' +
+               fixed(tip.y + side * H.barbel_root[1]) + ' Q' + fixed(tip.x + H.barbel_bend[0]) +
+               ' ' + fixed(tip.y + side * H.barbel_bend[1]) + ' ' + fixed(x) + ' ' + fixed(y) +
+               '">' + headTitle('studio.head.barbels') + '</path>';
+      })
       .join('');
 }
 function mouthShape(columns) {
@@ -674,9 +678,9 @@ function headSvg(state) {
   const mouth = mouthShape(columns);
   const eats = columns[ANATOMY.suction_strength] > 0 || columns[ANATOMY.aggression] > 0 ||
                columns[ANATOMY.mouth] > 0;
-  return '<g class="aid-head">' + barbelsSvg(columns) + throatSvg(mouth) +
-         (eats ? intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') + mouthSvg(mouth) +
-         teethSvg(columns, mouth) + '</g>';
+  return '<g class="aid-head">' + barbelsSvg(columns, state.anatomy?.barbelPlaces) +
+         throatSvg(mouth) + (eats ? intakeSvg(mouth) + cheeksSvg(mouth) + jawsSvg(mouth) : '') +
+         mouthSvg(mouth) + teethSvg(columns, mouth) + '</g>';
 }
 export const fishOutline = state =>
     fishPath(finSizes(state.anatomy?.fins, finAttachments(state), state.anatomy?.forms));

@@ -80,8 +80,22 @@ export const bestScents = cells => [...new Set(cells.map(cell => {
 // first cell of each type; `stone`: whether a stone lies beside the map for the sample;
 // `place(i, tuning)`, `width(i, qwidth)`: the document with that type moved or widened;
 // `remove(i)`, `add()`: the types' buttons.
-export function scentMap(
-    svg, {name, own, cells, stone, words, most, place, width, remove, add, draft, settle, redraw}) {
+export function scentMap(svg, {
+  name,
+  own,
+  cells,
+  stone,
+  words,
+  most,
+  place,
+  width,
+  remove,
+  add,
+  draft,
+  settle,
+  redraw,
+  fixedSample = false
+}) {
   const {live} = picture(svg, MAP.height), {cx, cy, R, ball, samples, clear} = MAP,
         taken = cells.map(shares), all = scents(),
         most_taken = all.map((_, k) => Math.max(...taken.map(t => t[k])));
@@ -141,11 +155,7 @@ export function scentMap(
       d : `M${STONE[0] - 9} ${STONE[1] + 4} l3 -9 l8 -3 l7 5 l-2 8 l-10 3 Z`,
       class : 'aid-live-stone aid-live-chip' + (probe.stone ? ' on' : '')
     },
-       live)
-        .addEventListener('pointerdown', () => {
-          own.probe = {...probe, stone : true};
-          redraw();
-        });
+       live);
     txt(live, STONE[0], STONE[1] + 22, words.stone,
         {'text-anchor' : 'middle', class : 'aid-live-small'});
   }
@@ -153,13 +163,16 @@ export function scentMap(
   const [sx, sy] = probe.stone ? STONE : pointOf(vector(probe)), cross = el('g', {}, live);
   el('circle', {cx : sx, cy : sy, r : 11, fill : 'transparent'}, cross);
   el('path', {d : `M${sx - 8} ${sy - 8} l16 16 m0 -16 l-16 16`, class : 'aid-live-sample'}, cross);
-  drag(svg, cross, p => {
-    own.probe = stone && Math.hypot(p.x - STONE[0], p.y - STONE[1]) < 16 ? {...probe, stone : true}
-                                                                         : snapped(p);
-    redraw();
-  }, name + 'sample', 'knob');
-  cross.classList.remove('aid-live-knob');
-  cross.classList.add('aid-live-samplegrip');
+  if (fixedSample)
+    cross.setAttribute('pointer-events', 'none');
+  else {
+    drag(svg, cross, p => {
+      own.probe = snapped(p);
+      redraw();
+    }, name + 'sample', 'knob');
+    cross.classList.remove('aid-live-knob');
+    cross.classList.add('aid-live-samplegrip');
+  }
   // The types' grips: at their place; the chosen one's width on its patch's edge, and its (×).
   cells.forEach((cell, i) => {
     const on = i === own.chosen, [ x, y ] = pointOf(vector(cell));

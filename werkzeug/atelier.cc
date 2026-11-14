@@ -108,7 +108,7 @@ struct SenseScene {
   double flow_bearing = 0, flow_strength = 0;
 };
 namespace sense_scene {
-constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5;
+constexpr int smell = 1, touch = 2, flow = 3, wound = 4, gut = 5, taste = 6;
 }
 constexpr double SENSE_SCENE_REACH = 40, SENSE_SCENE_STRENGTH = 20;
 SenseScene read_sense_scene(std::istream &in) {
@@ -117,12 +117,14 @@ SenseScene read_sense_scene(std::istream &in) {
   ensure(
       bool(in >> scene.kind >> scene.bearing >> scene.distance >> scene.strength >> scene.scent >>
            scene.nutrient) &&
-          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::gut &&
+          scene.kind >= sense_scene::smell && scene.kind <= sense_scene::taste &&
           between(scene.bearing, -half_turn, half_turn) &&
           between(scene.distance, 0, SENSE_SCENE_REACH) &&
           between(scene.strength, 0, scene.kind == sense_scene::gut ? 1 : SENSE_SCENE_STRENGTH) &&
-          between(scene.nutrient, 0, SENSE_SCENE_STRENGTH) && scene.scent >= 0 &&
-          scene.scent < fishsim::odor_kind::count,
+          between(scene.nutrient, 0, SENSE_SCENE_STRENGTH) &&
+          (scene.scent >= 0 || (scene.kind == sense_scene::taste && scene.scent == -1)) &&
+          scene.scent < fishsim::odor_kind::count &&
+          (scene.kind != sense_scene::taste || scene.scent != fishsim::odor_kind::plankton),
       "invalid sense scene");
   if (scene.kind == sense_scene::smell)
     ensure(bool(in >> scene.flow_bearing >> scene.flow_strength) &&
@@ -134,7 +136,7 @@ SenseScene read_sense_scene(std::istream &in) {
 void sense_report(const field::Substrate &t,
                   const std::shared_ptr<const fishsim::BrainInterface> &interface,
                   const std::vector<Group> &groups, const SenseScene &scene,
-                  const fishsim::Field *world) {
+                  fishsim::Field *world) {
   fishsim::Body body;
   body.x = body.y = fishsim::SIZE / 2;
   body.organ_mass = interface->organ_mass;
@@ -175,6 +177,36 @@ void sense_report(const field::Substrate &t,
       probe.scents.fill(0);
       probe.scents[scene.scent] = 1;
       body.set_probe(probe);
+    } else if (scene.kind == sense_scene::taste) {
+      const double x = body.x + scene.distance * radius * std::cos(bearing),
+                   y = body.y + scene.distance * radius * std::sin(bearing);
+      constexpr double object_radius = fishsim::sensory_probe::radius;
+      std::vector<fishsim::VisibleBody> objects;
+      if (scene.scent < 0)
+        world->insert_obstacle({x, y, object_radius});
+      else {
+        fishsim::VisibleBody object{x, y, 0, 0};
+        object.kind = fishsim::food_kind::feed;
+        object.radius = object_radius;
+        object.odor_channel = scene.scent;
+        objects.push_back(object);
+      }
+      world->index(objects);
+      std::cout << ",\"barbelProbe\":[";
+      for (int side = 0; side < 2; ++side) {
+        if (interface->anatomy[fishsim::anatomy_column::barbel_left + side] <= 0) {
+          std::cout << (side ? ",null" : "null");
+          continue;
+        }
+        const auto tip = fishsim::barbel_tip(body, *interface, side);
+        const auto contact =
+            world->tip_contact(tip.x, tip.y, fishsim::barbel::reach, body.identity);
+        std::cout << (side ? "," : "") << "{\"felt\":" << contact.felt << ",\"taste\":[";
+        for (int k = 0; k < fishsim::odor_kind::count; ++k)
+          std::cout << (k ? "," : "") << contact.taste[k];
+        std::cout << "]}";
+      }
+      std::cout << ']';
     } else if (scene.kind == sense_scene::touch)
       fishsim::record_touch(body, std::cos(bearing), std::sin(bearing), scene.strength);
     else
@@ -189,6 +221,7 @@ void sense_report(const field::Substrate &t,
   const auto stirred = [&](int sense) {
     return scene.kind == sense_scene::gut ? sense == field::Intake || sense == field::InnerPressure
            : scene.kind == sense_scene::smell ? sense == field::Odor
+           : scene.kind == sense_scene::taste ? sense == field::Taste
            : scene.kind == sense_scene::flow  ? sense == field::Flow
            : scene.kind == sense_scene::touch ? sense == field::Touch
                                               : sense == field::Damage;
@@ -562,6 +595,20 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
   const double radius = fishsim::structural_radius(fishsim::BODY_TISSUE, a.organ_mass);
   std::cout << ",\"bodyRadius\":" << radius
             << ",\"visionDepth\":" << fishsim::EnvironmentParameters{}.vision_range / radius;
+  fishsim::Body preview;
+  preview.organ_mass = a.organ_mass;
+  preview.tissue = fishsim::BODY_TISSUE;
+  std::cout << ",\"barbelPlaces\":[";
+  for (int side = 0; side < 2; ++side) {
+    std::cout << (side ? "," : "");
+    if (a.anatomy[fishsim::anatomy_column::barbel_left + side] > 0) {
+      const auto tip = fishsim::barbel_tip(preview, a, side);
+      std::cout << '[' << (tip.x - preview.x) / radius << ',' << (tip.y - preview.y) / radius
+                << ']';
+    } else
+      std::cout << "null";
+  }
+  std::cout << ']';
   std::cout << ",\"eyePlaces\":[";
   for (int side = 0; side < fishsim::EYES; ++side) {
     const auto place = fishsim::eye_view_place(a, fishsim::EnvironmentParameters{}, side);
