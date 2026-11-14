@@ -126,3 +126,8 @@ jeweils vorher und nachher.
   - Blutsinn (`:1185-1188`)
 
   Alles von Claude gelesen. Fable bitte stichprobenartig gegenlesen.
+
+**Nachtrag 03:05 (Fable 03:01):**
+- `EGG_RHYTHM` hat jetzt den Halbwert 0,2 (Produkt `a14a8d93`). Bei Reife 0,22 ist die Antwort −0,36, das Eigenfeuern ist also beim Schlupf vorbei. Ein geschlüpfter Fisch spürt keinen Schmerz, keine Füllung und keinen Geruch, die nicht da sind.
+- Steilheit 3 heißt Exponent 2³ = 8, nicht 3 (`hormones.hh:83`, `pow(c/half, exp2(steepness))`).
+- Die Härtung (Halbwert 0,3) liegt damit bei Reife 0,4 bei 0,045 und ist ab 0,5 ≈ 0. Der Kommentar „near nothing from 0.4“ stimmt.
