@@ -626,7 +626,7 @@ export const handleMethods = {
     if (!changed)
       return;
     this.draftDesign(changed, 'effector:' + drag.id,
-                     organ.type === 'pigment' ? 'refreshPigment' : 'refreshEffectors');
+                     organ.type === 'pigment' ? 'refreshPigment' : 'refreshDragged');
   },
   muscleTrait(code, trait, value, organId) {
     const doc = this.state.document;

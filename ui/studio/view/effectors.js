@@ -53,7 +53,7 @@ const musclePicture = (state, organ, code, side) =>
 // The gate is set like a sense's sensitivity, by the working cells it belongs to.
 const gateField = organ => organ.centers[0]?.role === 'motor'
                                ? ' data-sense-field="' + escapeText(organ.centers[0].id) +
-                                     '" data-sense-redraw="refreshEffectors"'
+                                     '" data-sense-redraw="refreshDragged"'
                                : '';
 const STROKE_ICON = Object.freeze({width : 30, height : 16, shaft : 10, head : 5});
 // The arrow shows where the fin drives the water: toward the tail on the back stroke.

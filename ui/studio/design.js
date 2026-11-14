@@ -7,7 +7,7 @@ import {
   spectrumEditor,
   visionFan
 } from './view/vision.js';
-import {effectorGraphic, spineField} from './view/effectors.js';
+import {spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {hairField} from './view/balance.js';
 // Organs whose sense pictures are drawn again while one of their handles is dragged.
@@ -348,7 +348,8 @@ export const designMethods = {
               : spectrumEditor(this.state, target.organ, target.tuning);
   },
   refreshEffectors() {
-    this.redrawBlocks('effectorBlock', findOrgan, organ => effectorGraphic(this.state, organ));
+    if (this.handleDrag?.graphic?.closest('[data-effector-block],[data-effector-graphic]'))
+      this.refreshDragged();
     this.refreshSense();
     this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },
