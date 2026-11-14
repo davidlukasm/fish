@@ -564,6 +564,68 @@ async function checkLightDisplay(capabilities) {
     }
 }
 
+async function checkEyeControls(model, capabilities, root) {
+  const {OrganStudio} = await import('../ui/studio/controller.js');
+  const {FISH_CLICKS} = await import('../ui/studio/events.js');
+  const {GRIPS} = await import('../ui/studio/handles.js');
+  const {visionInspector} = await import('../ui/studio/view/vision.js');
+  const {CONTRAST_POLARITY} = await import('../ui/schema.js');
+  const {sites} = capabilities;
+  const eye = model.addOrgan(model.newDocument('Auge'), 'eye', sites, {x : 325, y : 263});
+  assert.ok(eye);
+  const studio = new OrganStudio({querySelector : () => null, querySelectorAll : () => []});
+  Object.assign(studio.state, {
+    document : eye.document,
+    selected : {kind : 'organ', id : eye.organId},
+    capabilities,
+    sites
+  });
+  const contrastLeast = JSON.parse(execFileSync(
+      'python3',
+      [
+        '-B', '-c',
+        "import json,sys; from atelier_service import run; print(json.dumps(run({'operation':'design','plan':json.load(sys.stdin)})['contrastLeast']))"
+      ],
+      {
+        cwd : root,
+        input : JSON.stringify(model.compileDocument(eye.document, sites)),
+        encoding : 'utf8'
+      }));
+  studio.state.anatomy = {contrastLeast};
+  const organ = () => model.findOrgan(studio.state.document, eye.organId);
+  const picture = () => visionInspector(studio.state, organ());
+  assert.match(picture(), /data-sight-eye="0"[\s\S]*data-sight-eye="1"/);
+  studio.editField = (id, patch) => {
+    studio.state.document = model.updateField(studio.state.document, id, patch, sites);
+  };
+  const option = pattern => picture().match(pattern)?.[1];
+  const cycle = FISH_CLICKS.find(([ key ]) => key === '[data-vision-polarity]')[1];
+  for (const polarity
+           of [CONTRAST_POLARITY.dark, CONTRAST_POLARITY.both, CONTRAST_POLARITY.bright]) {
+    const next = option(/data-vision-polarity="([^"]+)"/);
+    cycle(studio, {dataset : {visionPolarity : next}});
+    assert.equal(organ().field.profiles[0].polarity, polarity);
+  }
+  studio.draftDesign = (doc, batch, draw) => {
+    assert.equal(draw, 'refreshSpectrum');
+    studio.state.document = doc;
+  };
+  const grip = GRIPS.find(g => g.held === 'spectrum');
+  studio.handleDrag = {
+    ...grip.start(studio, {
+      dataset : {spectrumId : eye.organId, profileId : organ().field.profiles[0].id},
+      viewBox : {baseVal : {width : 300, height : 156}}
+    },
+                  {dataset : {spectrumHandle : 'sensitivity'}}),
+    rect : {left : 0, top : 0, width : 300, height : 156}
+  };
+  for (const x of [292, 190, 92, 157]) {
+    studio.spectrumPointer({clientX : x, clientY : 99});
+    const knob = option(/data-spectrum-handle="sensitivity" cx="([^"]+)"/);
+    assert.ok(Math.abs(Number(knob) - x) < .05, 'The grip agrees with the saved threshold');
+  }
+}
+
 async function checkDocumentHistory(model, sites, root) {
   const {HORMONE_EFFECT : E, FIN_STROKE} = await import('../ui/schema.js');
   const {MUSCLE_TRAITS, organFunction} = await import('../ui/studio/model/organs.js');
@@ -2927,6 +2989,11 @@ async function checkHormoneSystems(model, capabilities) {
     return;
   }
   const clicks = (await import('../ui/studio/events.js')).FISH_CLICKS;
+  if (process.argv.includes('--eye-controls')) {
+    await checkEyeControls(model, sitesResult, root);
+    console.log('Atelier: Umgebung/Meldet und Empfindlichkeit am Plan geprüft');
+    return;
+  }
   if (regionControls || process.argv.length === 2) {
     await checkSpinalPattern(model, sitesResult.sites, root);
     await checkInternalRegions(model, sitesResult, root, [ 'state-hunger', 'olfaction' ]);

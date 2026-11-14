@@ -355,12 +355,11 @@ function otherTypes(organ, chosen, definition) {
            }))
       .filter(o => o.tuning.id !== chosen.id);
 }
-// `shift` and `start` show a sensitivity being dragged before the design run answers.
-export function spectrumEditor(state, organ, profile, shift = 1, start = null) {
+export function spectrumEditor(state, organ, profile) {
   const definition = state.capabilities?.visionSpectrum;
-  const light = start ?? nominalSpectrum(profile, definition);
+  const light = nominalSpectrum(profile, definition);
   const spread = profileLightSpread(state.document, state.lightSpread, organ.id, profile.id);
-  const least = state.anatomy?.contrastLeast, half = light?.half * shift;
+  const least = state.anatomy?.contrastLeast, half = light?.half;
   const faint = least > 0 && half > 0 ? {share : stimulusShare(half, least), half, least} : null;
   const [centre, width, opponent] = spectrumValues(profile, true);
   const values = [

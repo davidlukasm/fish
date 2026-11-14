@@ -1,7 +1,7 @@
 import {anatomyHandles, anatomyPatch} from './view/anatomy_handles.js';
 import {sensitivityShare, testLightMarkup, visionDragPatch} from './view/vision.js';
 import {stimulusOfShare} from './view/sensitivity.js';
-import {planOfUnit, thresholdQualityShift, unitOfPlan} from '../tuning.js';
+import {planOfUnit, thresholdQualityShift} from '../tuning.js';
 import {spectrumPatch} from './view/spectrum.js';
 import {RESPONSE, responseHandle, responsePatch} from './view/response.js';
 import {REGION_PICTURE, regionHandle, regionPatch} from './view/region_controls.js';
@@ -145,7 +145,7 @@ export const GRIPS = Object.freeze([
       target : {...g.dataset},
       handle : h.dataset.spectrumHandle,
       size : {width : g.viewBox.baseVal.width, height : g.viewBox.baseVal.height},
-      ...studio.sensitivityStart(g.dataset, h.dataset.spectrumHandle)
+      least : studio.state.anatomy?.contrastLeast
     })
   },
   {
@@ -580,26 +580,22 @@ export const handleMethods = {
                      'spectrum:' + id, 'refreshSpectrum');
   },
   sensitivityPointer(event, drag) {
-    const least = this.state.anatomy?.contrastLeast;
-    if (!(least > 0) || !(drag.answer?.half > 0))
+    if (!(drag.least > 0))
       return;
-    const {fx, fy} = pointerShare(event, drag.rect);
-    drag.shift =
-        stimulusOfShare(sensitivityShare({x : fx * drag.size.width, y : fy * drag.size.height}),
-                        least) /
-        drag.answer.half;
-    const threshold = planOfUnit(unitOfPlan(drag.threshold) + thresholdQualityShift(drag.shift));
+    const {fx} = pointerShare(event, drag.rect);
+    const found = this.spectrumTarget(drag.target);
+    const half =
+        found && nominalSpectrum(found.tuning, this.state.capabilities.visionSpectrum)?.half;
+    if (!(half > 0))
+      return;
+    const target = stimulusOfShare(sensitivityShare({x : fx * drag.size.width}), drag.least);
+    const threshold = planOfUnit(1 + thresholdQualityShift(target));
+    if (Math.abs(threshold - found.tuning.threshold) < PAD_STILL)
+      return;
     const {spectrumId : id, profileId} = drag.target;
     this.draftDesign(updateField(this.state.document, id, {profile : {id : profileId, threshold}},
                                  this.state.sites),
                      'threshold:' + profileId, 'refreshSpectrum');
-  },
-  // A drag of the eye's sensitivity starts from the design run's answer; the threshold then moves
-  // by as much as the half answer is dragged.
-  sensitivityStart(target, handle) {
-    const found = handle === 'sensitivity' && this.spectrumTarget(target);
-    const answer = found && nominalSpectrum(found.tuning, this.state.capabilities?.visionSpectrum);
-    return answer?.half > 0 ? {answer, threshold : found.tuning.threshold, shift : 1} : {};
   },
   bendPointer(event) {
     const drag = this.handleDrag, doc = this.state.document;

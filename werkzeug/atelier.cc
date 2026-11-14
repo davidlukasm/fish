@@ -277,7 +277,7 @@ void sight_report(const field::Substrate &t,
   probe.radius = scene.radius;
   probe.color = fishsim::hue_light(scene.hue);
   body.set_probe(probe);
-  body.set_inspection(true, true, -1, true);
+  body.set_inspection(true, true, -1);
   fishsim::Genome g;
   g.interface = interface;
   fishsim::sense_generated(body, g, tank.field, nullptr, false, tank.physiology());
@@ -298,19 +298,6 @@ void sight_report(const field::Substrate &t,
     const auto owner = std::find_if(groups.begin(), groups.end(),
                                     [&](const Group &g) { return g.contains(location); });
     owners.push_back(owner == groups.end() ? -1 : int(owner - groups.begin()));
-  }
-  std::cout << "],\"retinalLight\":[";
-  const auto rgb = [](const fishsim::Color &c) {
-    std::cout << '[' << c[0] << ',' << c[1] << ',' << c[2] << ']';
-  };
-  bool first = true;
-  for (const auto &sample : state.retinal_light) {
-    std::cout << (first ? "[" : ",[") << sample.neuron << ',' << sample.eye << ',';
-    rgb(sample.field);
-    std::cout << ',';
-    rgb(sample.surround);
-    std::cout << ']';
-    first = false;
   }
   std::cout << "],\"groups\":[";
   for (std::size_t i = 0; i < owners.size(); ++i)
