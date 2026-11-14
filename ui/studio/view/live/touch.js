@@ -129,7 +129,7 @@ liveKind('touch', (studio, organId) => {
     const away = probe && tx < X(0) ? 1 : -1, gx = X(0) + away * (2 * half + 6),
           gy = skin + clamp(gate / most, CUT.least, 1) * deep;
     txt(live, gx + away * 10, gy - 7, word('reports'),
-        {'text-anchor' : away > 0 ? 'start' : 'end', class : 'aid-live-small'});
+        {'text-anchor' : away > 0 ? 'start' : 'end', class : 'aid-live-small aid-live-inflesh'});
     drag(svg,
          el('rect', {
            x : gx - 5,
