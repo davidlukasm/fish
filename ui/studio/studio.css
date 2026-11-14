@@ -1272,3 +1272,33 @@
 .aid-live-food-line{fill:none;stroke:currentColor;stroke-width:2}
 .aid-live-food-fill{fill:currentColor}
 .aid-live-picture text.aid-live-food-word{fill:currentColor}
+.aid-live-stomach-back{fill:#5a4232}
+.aid-live-stomach-content{fill:#c98f55;opacity:.85}
+.aid-live-stomach{fill:none;stroke:#e6b47c;stroke-width:1.6}
+.aid-live .k0{--key:#c2f5e9}
+.aid-live .k1{--key:#5fb8a6}
+.aid-live .k2{--key:#1c6e63}
+.aid-live-keyband{fill:var(--key);opacity:.22}
+.aid-live-keyband.on{opacity:.4}
+.aid-live-keyline{fill:none;stroke:var(--key);stroke-dasharray:4 3;stroke-width:1.1}
+.aid-live-keyline.on{stroke-width:1.8}
+.aid-live-keymark{fill:none;stroke:var(--key);stroke-width:2.5}
+.aid-live-keygrip{fill:var(--key);stroke:var(--aid-ink);stroke-width:1}
+.aid-live-keygrip.on{stroke:var(--aid-handle);stroke-width:2.5}
+.aid-live-tire{stroke:var(--key)}
+.aid-live-sense-full{color:#e6b47c}
+.aid-live-sense-ache{color:#ef8f8f}
+.aid-live-sense-fill{fill:currentColor}
+.aid-live-sense-input{fill:currentColor;fill-opacity:.35;stroke:currentColor;stroke-width:1.6}
+.aid-live-sense-knob{fill:currentColor}
+.aid-live-ground{fill:var(--aid-chip)}
+.aid-live-felt{fill:none;stroke:#f4efd8;stroke-width:1.6}
+.aid-live-spread{fill:none;stroke:var(--aid-handle);stroke-width:2}
+.aid-live-picture text.aid-live-onground{font-size:10px;paint-order:stroke;stroke:var(--aid-chip);stroke-width:4px;stroke-linejoin:round}
+.aid-live-nerve-bundle{fill:none;stroke:#e9e2c6;stroke-width:3;stroke-linecap:round}
+.aid-live-nerve-fibre{fill:none;stroke:var(--key);stroke-width:1.6;stroke-linecap:round}
+.aid-live-nerve-ends{fill:none;stroke:var(--key);stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+.aid-live-soma{fill:var(--key);stroke:var(--aid-ink);stroke-width:1;cursor:pointer}
+.aid-live-soma.on{stroke:var(--aid-handle);stroke-width:2.5}
+.aid-live-pulse{fill:#f4efd8}
+.aid-live-irritant{fill:currentColor}

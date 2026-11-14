@@ -8,7 +8,6 @@ import {visionInspector} from './vision.js';
 import {
   effectorGraphic,
   gillGraphic,
-  gutGraphic,
   spineField
 } from './effectors.js';
 import {lateralField} from './lateral.js';
@@ -105,15 +104,14 @@ const ORGAN_PANELS = Object.freeze({
   nose : (state, organ, center) => scentMap(organ, center, state),
   barbels : (state, organ, center) => barbelFeel(center) + scentMap(organ, center, state),
   pigment : (state, organ, center) => pigmentInspector(state, organ, center),
-  gut : (state, organ, center) => gutGraphic(state, organ, center) + gutProbeControls(state, organ),
+  gut : (state, organ) => livePlace('gut', {id : 'gut'}) + gutProbeControls(state, organ),
   bladder : (state, organ, center) => bladderGraphic(state, organ, center),
   // The tail muscle has a live inspector; the other muscles keep their pictures until their turn.
   muscle : (state, organ) => organFunction(organ, state.sites) === MOTOR_KIND.forward
                                  ? livePlace('tail', organ)
                                  : effectorGraphic(state, organ),
   gills : (state, organ) => gillGraphic(state, organ),
-  // Gut and gut muscle are one organ to the eye: one live inspector for both. (The gut's own
-  // entry follows when its senses are in it.)
+  // Gut and gut muscle are one organ to the eye: one live inspector for both.
   gutmuscle : () => livePlace('gut', {id : 'gut'}),
   defense : (state, organ) => spineField(state, organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
