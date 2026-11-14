@@ -1,8 +1,21 @@
-import {HORMONE_EFFECT, HORMONES} from '../../schema.js';
+import {BLOOD_SUBSTANCE, HORMONE_EFFECT, HORMONES} from '../../schema.js';
 
+// A learning cell hardens what it learns in the egg and in its first days: the paths that grew on
+// its inputs' activity before hatching stay when those inputs later fall silent for long. The
+// hardening fades with maturity (half at 0.3, near nothing from 0.4) and never turns into
+// softening; later hardening comes from the consolidation system, which replaces this answer.
+export const EGG_HARDENING = Object.freeze({
+  active : 1,
+  baseline : .5,
+  sensitivity : -.5,
+  half : .3,
+  substance : BLOOD_SUBSTANCE.maturity,
+  steepness : 3
+});
 export const ACTIVE_LEARNING = Object.freeze({
   [HORMONE_EFFECT.learning] : {active : 1, baseline : 1},
-  [HORMONE_EFFECT.competition] : {active : 1, baseline : 1}
+  [HORMONE_EFFECT.competition] : {active : 1, baseline : 1},
+  [HORMONE_EFFECT.consolidation] : EGG_HARDENING
 });
 export const DEVELOPING_RELAY = Object.freeze({
   ...ACTIVE_LEARNING,

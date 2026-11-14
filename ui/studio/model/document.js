@@ -27,6 +27,7 @@ import {
   timeConstantOf,
   unitOfPlan
 } from '../../tuning.js';
+import {DEVELOPING_RELAY} from './region_cells.js';
 import {nextPigment} from './pigment.js';
 import {fastShare, fibreForce, fibreTau} from '../../fibre.js';
 import {
@@ -430,6 +431,14 @@ export const isChosen = (selected, organ) =>
     !!organ && (selected?.id === organ.id || organ.centers.some(c => c.id === selected?.id));
 
 const NEW_CENTER = Object.freeze({sense_threshold : -.6, tau : .5, field : .3, qwidth : .35});
+export const EGG_RHYTHM = Object.freeze({
+  active : 1,
+  baseline : 1,
+  sensitivity : -2,
+  half : .3,
+  substance : BLOOD_SUBSTANCE.maturity,
+  steepness : 3
+});
 export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
   const N = NEW_CENTER;
   const cycle = desc.role !== 'motor' ? null
@@ -471,6 +480,12 @@ export function defaults(desc, site, effects = ATELIER_LIMITS.receptors) {
                              // Motor membranes must learn even when their action gate is closed.
                              if (desc.role === 'motor' && effect === HORMONE_EFFECT.excitation)
                                Object.assign(receptor, {active : 1, baseline : .5});
+                             // Every other sense cell fires on its own in the egg, so that its
+                             // paths into the brain grow before hatching; it falls silent with
+                             // maturity around hatching (the retina has its waves instead).
+                             if (desc.role === 'sensor' && desc.functionCode !== SENSE_KIND.light &&
+                                 effect === HORMONE_EFFECT.rhythm)
+                               Object.assign(receptor, EGG_RHYTHM);
                              if (desc.role === 'sensor' && desc.functionCode === SENSE_KIND.light &&
                                  effect === HORMONE_EFFECT.excitation)
                                Object.assign(receptor, {
@@ -727,6 +742,9 @@ export function addNeuron(doc, preset, sites, position, snapDistance = Infinity)
     return null;
   const draft = copy(doc);
   const center = {...defaults(desc, site), ...properties};
+  // A single nerve cell grows and hardens its paths in the egg like a region's relay.
+  for (const [effect, patch] of Object.entries(DEVELOPING_RELAY))
+    Object.assign(center.receptors[effect], patch);
   draft.organs.find(o => o.id === 'brain').centers.push(center);
   return {document : draft, centerId : center.id, organId : 'brain'};
 }

@@ -14,7 +14,7 @@ import {
   wheelPlace
 } from './document.js';
 import {GLAND_COPIES} from './organs.js';
-import {TONIC_LEARNING} from './region_cells.js';
+import {EGG_HARDENING, TONIC_LEARNING} from './region_cells.js';
 
 export const SYSTEMS = Object.freeze([
   {
@@ -69,8 +69,11 @@ const GLAND_TAU = 1, ANSWER_SHARE = 2 / 3;
 const answerHalf = wheel =>
     ANSWER_SHARE * wheel.hormoneHeight * GLAND_COPIES / ATELIER_LIMITS.max_copies;
 // The cells that would answer the system's substance and read no substance with those effects
-// yet; cells already tuned to one keep their settings.
-const reads = receptor => receptor?.active && receptor.sensitivity;
+// yet; cells already tuned to one keep their settings. The hardening in the egg is no such
+// tuning: a consolidation system takes its place.
+const sameAnswer = (a, b) => Object.keys(b).every(key => a?.[key] === b[key]);
+const reads = receptor =>
+    receptor?.active && receptor.sensitivity && !sameAnswer(receptor, EGG_HARDENING);
 const answering = (doc, system) => system.answers.flatMap(
     answer => doc.organs.flatMap(
         organ => organ.centers
