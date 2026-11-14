@@ -1240,3 +1240,14 @@
 .aid-live-input{fill:none;stroke:#f4efd8;stroke-dasharray:2 4;stroke-width:1.2}
 .aid-live-key{stroke:var(--aid-ink);stroke-width:1}
 .aid-live-key.on{stroke:var(--aid-handle);stroke-width:2.5}
+.aid-live-picture text.aid-live-small{font-size:10px}
+.aid-live-now{fill:none;stroke:#f4efd8;stroke-width:1.2;opacity:.8}
+.aid-live-shell{fill:none;stroke:#e9e2c6;stroke-width:1.4;stroke-dasharray:5 4;opacity:.7;pointer-events:none}
+.aid-live-egg{fill:none;stroke:#e9e2c6;stroke-width:1.5;opacity:.8}
+.aid-live-arrow{fill:none;stroke:#e9e2c6;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}
+.aid-live-water{fill:#9cc8f04d;stroke:#9cc8f0;stroke-width:2}
+.aid-live-sand{fill:none;stroke:#c9b48c;stroke-width:2}
+.aid-live-picture text.aid-live-water-word{fill:#9cc8f0}
+.aid-live-picture text.aid-live-sand-word{fill:#c9b48c}
+.aid-live-dim{fill:var(--aid-chip);opacity:.55;pointer-events:none}
+.aid-live-hatch{fill:none;stroke:#e9e2c6;stroke-dasharray:3 3}

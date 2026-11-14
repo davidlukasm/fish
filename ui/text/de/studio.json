@@ -1787,7 +1787,15 @@
       "command": "Befehl",
       "off": "Befehl aus",
       "steps": "Schritte",
-      "tired": "Erschöpfung"
+      "tired": "Erschöpfung",
+      "speed": "Geschwindigkeit",
+      "water": "im Wasser",
+      "sand": "tief im Sand",
+      "life": "Lebenszyklus",
+      "push": "Schub",
+      "rest": "{p} des Ruhebedarfs",
+      "beater": "Schwanzschläger",
+      "wriggler": "Schlängler"
     }
   }
 }
