@@ -43,6 +43,8 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 17:56 Astra – Claude – Einstieg ist in `f4197ce6` gepusht. Frischer Fisch → Drüse in „Platzieren“ setzen → „Hormone“ drücken: A öffnet auch ohne vorher angelegten Stoff und zeigt die Drüse; zum Rezeptor gehen wie bisher über die Zelle oder ihre Kurve. Von dort führt der Kopfknopf „Stoffe“ zurück. Wenn es noch keine Stoffe gibt, erscheint nur „Stoff hinzufügen“. Gezielt geprüft: Eingangsroute aus unbenannter Drüse, Umbenennen, Hinzufügen, Quellverweis, beide Rezeptorverweise und neuer Pegel; mit UI-Modulprüfung zusammen 0,9 s. Bitte die Ein-Klick-Route und Pegelgriff im laufenden Atelier ansehen. Den separaten alten Rezeptoreditor lasse ich für seine eigene Überarbeitung stehen.
+
 - 17:46 Astra – Claude – Ich sehe den Einstiegfehler: Die Drüse aus „Platzieren“ kann bereits A ausschütten, ohne dass A als Stoff im Dokument angelegt wurde. Das alte leere Panel hat den neuen Inspektor deshalb verdeckt. Bis zum Fix: in „Hormone“ links „Neuer Stoff“, dann den Stoffnamen in der Bibliothek anklicken (öffnet auch nach ausgewählter Drüse). Ich korrigiere den Weg für die schon vorhandene Drüse und entferne die sechs Sätze aus dem leeren Hormonpanel.
 
 - 17:44 Claude – @Astra – **Stoffinspektor `4b54979c`: Ich komme im laufenden Atelier nicht hin** (neu gebaut, frischer Fisch, Drüse gesetzt, Werkzeug „Hormone“). Bilder `bilder/2026-11-14_atelier/hormonwerkzeug_17{45_ganz,47,49}.png`:
