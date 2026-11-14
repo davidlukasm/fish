@@ -1351,14 +1351,15 @@ function showBladder() {
 // 2057-2063), for a body of the reference size with a jaw of middle length (mouth 2 wide):
 //   pump share   s = min(1, 2 F / (F + 110)), F the pump muscle's strength: cells x copies / 16
 //                x 4 x its fibres' force (the tail's fibres, 0.4 enduring to 2.5 strong)
-//   pumped water   = 32 s x command x mouth opening
+//   pumped water   = 32 s x stroke x mouth opening; the stroke is the command, less what the
+//                fibres have lost by beating long (the strength stays, body_plan.cc:1469-1475)
 //   met swimming   = 4 x speed x (opening - 0.35) / 0.65, nothing with the mouth at rest
 //   through the rakers goes the share 1 - 0.6 d of it (d the rakers' density)
 //   of its plankton stays 0.02 + 0.98 d^3; of the flocks in a mouthful of ground stays
 //   (1 - 0.85 (1 - d)^4) (1 - d^4); sand never stays; nothing stays once the gut is full.
 // A schema: the head is cut level and seen from above, the specks stand for food, not for water.
-// The pump beats all day, so what counts is what its fibres give when they have beaten long
-// (the tail's reserve, bundleSwim). ASSUMED: flocks come with suction strokes into the ground,
+// The pump beats all day, so the stroke shown is the one after long beating (the tail's
+// reserve, bundleSwim). ASSUMED: flocks come with suction strokes into the ground,
 // which the jaw's opener makes; the picture takes them as given by the knob at the sand.
 // upkeep: the pump's upkeep in the default plan as a share of the rest of its resting need (the
 // plan report of 44eca02d gives 2.73 % of the whole).
@@ -1374,14 +1375,14 @@ const rakerKeeps = d => GILL.bare + (1 - GILL.bare) * d ** GILL.power, rakerPass
       rakerSifts = d => (1 - GILL.slip * (1 - d) ** GILL.sift) * (1 - d ** GILL.sift);
 // What the fast fibres still give after beating long at this command.
 const pumpLeft = (fast = GI.fast, drive = GI.input.pump) => { let r = 1; for (let st = 0; st < GILL.long; st++) r = clamp(r + (1 - r) / fibreBetween(FIBRE.refill, fast) - FIBRE.drain * fast * fast * (1 - fast + fast * r) * drive, 0, 1); return 1 - fast + fast * r; };
-const pumpForce = (cells = 2 * GI.pairs * GI.copies) => cells / GILL.full * 4 * forceOf(GI.fast) * pumpLeft();
+const pumpForce = (cells = 2 * GI.pairs * GI.copies) => cells / GILL.full * 4 * forceOf(GI.fast);
 const pumpShare = cells => { const f = pumpForce(cells); return Math.min(1, 2 * f / (f + GILL.force)); };
 const pumpWorks = r => r >= GI.from && (GI.until >= 1 || r < GI.until);
 // The water through the gills, pumped and met while swimming, before the rakers brake it.
-const gillPumped = (cells, r = GI.input.maturity, open = GI.input.open) => pumpWorks(r) ? GILL.mouth * pumpShare(cells) * GI.input.pump * open : 0;
+const gillPumped = (cells, r = GI.input.maturity, open = GI.input.open) => pumpWorks(r) ? GILL.mouth * pumpShare(cells) * GI.input.pump * pumpLeft() * open : 0;
 const gillMet = (open = GI.input.open, speed = GI.input.speed) => GILL.ram * speed * Math.max(0, open - GILL.rest) / (1 - GILL.rest);
 // The most water any pump and any swim offered here gives: the scale of the water's pictures.
-const GILL_MOST = (() => { let most = 0; for (let k = 0; k <= 20; k++) { const f = 2 * GILL.pairs * 4 * forceOf(k / 20) * pumpLeft(k / 20, 1); most = Math.max(most, GILL.mouth * Math.min(1, 2 * f / (f + GILL.force))); } return most + GILL.ram * GILL.fastest; })();
+const GILL_MOST = (() => { let most = 0; for (let k = 0; k <= 20; k++) { const f = 2 * GILL.pairs * 4 * forceOf(k / 20); most = Math.max(most, GILL.mouth * Math.min(1, 2 * f / (f + GILL.force)) * pumpLeft(k / 20, 1)); } return most + GILL.ram * GILL.fastest; })();
 const gillFilm = {lids : [], eyes : [], skin : null, room : null, specks : null, list : [], beat : 0};
 function buildGills(fixed) {
   const {mid, throat, gut} = GILL.H;
@@ -1390,7 +1391,7 @@ function buildGills(fixed) {
   el('path', {d : `M${throat} ${mid - 7} H${gut} M${throat} ${mid + 7} H${gut}`, stroke : COLOUR.tube, 'stroke-width' : 2}, fixed);
   for (const side of [-1, 1]) {
     const eye = el('g', {}, fixed);
-    el('circle', {r : 5.5, fill : COLOUR.icon}, eye); el('circle', {r : 2.4, cx : -1, fill : COLOUR.track}, eye);
+    el('circle', {r : 5, fill : COLOUR.unchosen, stroke : COLOUR.axis, 'stroke-width' : 1.2}, eye); el('circle', {r : 1.3, cx : -1.8, cy : -1.5, fill : COLOUR.icon}, eye);
     gillFilm.eyes[(side + 1) / 2] = eye;
     gillFilm.lids[(side + 1) / 2] = el('path', {stroke : COLOUR.icon, 'stroke-width' : 3, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
   }
@@ -1401,8 +1402,8 @@ const rakerAt = (k, n, side) => { const [[x0, y0], [x1, y1]] = GILL.H.arch, t = 
 const rakerCount = d => 3 + Math.round(11 * d);
 // What a mouthful brings at this moment, of each kind: how much comes, what share of it stays.
 function gillStream() {
-  const inp = GI.input, d = GI.rakers, water = (gillPumped() + gillMet()) * rakerPassage(d), fed = inp.maturity >= GILL.hatch && inp.gut < 1, ground = inp.suck > 0 && inp.open > 0 ? inp.suck : 0;
-  return {water, kinds : [{colour : FOOD[3][2], rate : water, keeps : fed ? rakerKeeps(d) : 0, size : 2.2},
+  const inp = GI.input, d = GI.rakers, water = (gillPumped() + gillMet()) * rakerPassage(d), out = inp.maturity >= GILL.hatch, fed = out && inp.gut < 1, ground = out && inp.open > 0 ? inp.suck : 0;
+  return {water, kinds : [{colour : FOOD[3][2], rate : out ? water : 0, keeps : fed ? rakerKeeps(d) : 0, size : 2.2},
                           {colour : FOOD[2][2], rate : 2.2 * ground, keeps : fed ? rakerSifts(d) : 0, size : 3}, {colour : SAND, rate : 3 * ground, keeps : 0, grain : true}]};
 }
 function drawGills() {
@@ -1413,8 +1414,8 @@ function drawGills() {
   // Sand before the mouth, as far as the fish sucks at the ground.
   const edge = (tip + 2) * Math.min(1, inp.suck * 4), hash = i => { const v = Math.sin(i * 127.1) * 43758.5453; return v - Math.floor(v); };
   if (inp.suck > 0) {
-    el('path', {d : `M0 16 H${edge} Q${edge + 5} ${height / 3} ${edge} ${height / 2} T${edge} ${height} H0 Z`, fill : SAND, opacity : .3}, under);
-    for (let i = 0; i < 60; i++) el('rect', {x : hash(i) * edge, y : 18 + hash(i + 500) * (height - 20), width : 2, height : 2, fill : SAND, opacity : .8}, under);
+    el('path', {d : `M0 16 H${edge} Q${edge + 5} ${height / 3} ${edge} ${height / 2} T${edge} ${height - 30} H0 Z`, fill : SAND, opacity : .3}, under);
+    for (let i = 0; i < 60; i++) el('rect', {x : hash(i) * edge, y : 18 + hash(i + 500) * (height - 52), width : 2, height : 2, fill : SAND, opacity : .8}, under);
   }
   for (const side of [-1, 1]) {
     // The arch and its rakers: teeth into the mouth's room, the denser the more of them.
@@ -1428,13 +1429,13 @@ function drawGills() {
   // The gut behind the throat: how full it is (the knob), and beside that what arrives of each kind.
   const g0 = gut, g1 = gut + 46, top = mid - 17, base = mid + 17, level = base - (base - top) * inp.gut;
   el('rect', {x : g0, y : top, width : g1 - g0, height : base - top, rx : 7, fill : COLOUR.stomachBack, stroke : COLOUR.stomachEdge, 'stroke-width' : 1.4}, live);
-  el('rect', {x : g0 + 2, y : level, width : 20, height : base - level - 2, rx : 3, fill : COLOUR.stomach}, live);
+  el('rect', {x : g0 + 2, y : Math.min(level, base - 2), width : 20, height : Math.max(0, base - level - 2), rx : 3, fill : COLOUR.stomach}, live);
   stream.kinds.slice(0, 2).forEach((kind, i) => {
     const arrives = clamp(kind.rate * kind.keeps / (i ? 2.2 : GILL_MOST * .4), 0, 1);
     el('rect', {x : g0 + 26 + 9 * i, y : top + 3, width : 6, height : base - top - 6, rx : 2, fill : COLOUR.track}, live);
     el('rect', {x : g0 + 26 + 9 * i, y : base - 3 - (base - top - 6) * arrives, width : 6, height : (base - top - 6) * arrives, rx : 2, fill : kind.colour}, live);
   });
-  drag(svg, el('circle', {cx : g0 + 12, cy : level, r : 5.5, fill : COLOUR.stomachEdge}, live), p => { inp.gut = clamp((base - p.y) / (base - top), 0, 1); draw(GILL_PARTS); }, 'gillgut', 'knob');
+  drag(svg, el('circle', {cx : g0 + 12, cy : clamp(level, top + 4, base - 4), r : 5.5, fill : COLOUR.stomachEdge}, live), p => { inp.gut = clamp((base - p.y) / (base - top), 0, 1); draw(GILL_PARTS); }, 'gillgut', 'knob');
   const link = txt(live, (g0 + g1) / 2, base + 13, 'Darm ›', {'text-anchor' : 'middle', style : 'font-size:10px', class : 'chip'});
   link.addEventListener('click', () => document.querySelector('.panel[aria-label="Darm"]').scrollIntoView({behavior : 'smooth'}));
   // What the organ is: the rakers' density on the arch; the pump muscle's cells on the cover,
@@ -1448,13 +1449,12 @@ function drawGills() {
   // What the organ is given: how wide the mouth stands open (the jaw's muscle), how hard the
   // pump is told to beat, how hard the fish sucks at the ground.
   drag(svg, el('circle', {cx : tip, cy : mid + 3 + gape * inp.open, r : 5.5, fill : COLOUR.line}, live), p => { inp.open = clamp((p.y - mid - 3) / gape, 0, 1); draw(GILL_PARTS); }, 'gillopen', 'knob');
-  txt(live, tip + 2, mid + gape + 36, 'Maulöffnung', {'text-anchor' : 'middle', style : 'font-size:10px'});
-  el('path', {d : `M${tip} ${mid + gape + 26} V${mid + gape + 12}`, stroke : COLOUR.axis}, live);
+  txt(live, tip + 8, mid + half + 13, 'Maulöffnung', {style : 'font-size:10px'});
   drag(svg, el('circle', {cx : cheek + lid - 8, cy : mid + half + 20 + 12 * inp.pump, r : 5.5, fill : COLOUR.line}, live), p => { inp.pump = clamp((p.y - mid - half - 20) / 12, 0, 1); draw(GILL_PARTS); }, 'gillpump', 'knob');
   txt(live, cheek + lid, mid + half + 36, 'Pumpbefehl', {style : 'font-size:10px'});
   const sx = 8 + (tip - 14) * inp.suck;
-  drag(svg, el('circle', {cx : sx, cy : height - 26, r : 5.5, fill : SAND}, live), p => { inp.suck = clamp((p.x - 8) / (tip - 14), 0, 1); draw(GILL_PARTS); }, 'gillsand', 'knob');
-  txt(live, 2, height - 6, 'Saugen im Sand', {style : 'font-size:10px'});
+  drag(svg, el('circle', {cx : sx, cy : height - 14, r : 5.5, fill : SAND}, live), p => { inp.suck = clamp((p.x - 8) / (tip - 14), 0, 1); draw(GILL_PARTS); }, 'gillsand', 'knob');
+  txt(live, tip + 2, height - 10, 'Saugen im Sand', {style : 'font-size:10px'});
 }
 // The head at this moment: the mouth as wide as it is held, the covers at their stroke, and the
 // specks on their way: those the rakers keep stay on a tooth and go down the throat, the others
