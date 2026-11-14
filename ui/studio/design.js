@@ -7,7 +7,7 @@ import {
   spectrumEditor,
   visionFan
 } from './view/vision.js';
-import {effectorGraphic, gillGraphic, spineField} from './view/effectors.js';
+import {effectorGraphic, spineField} from './view/effectors.js';
 import {lateralField} from './view/lateral.js';
 import {hairField} from './view/balance.js';
 import {gonadGraphic} from './view/sacs.js';
@@ -331,9 +331,7 @@ export const designMethods = {
               : spectrumEditor(this.state, target.organ, target.tuning);
   },
   refreshEffectors() {
-    this.redrawBlocks('effectorBlock', findOrgan,
-                      organ => organ.type === 'gills' ? gillGraphic(this.state, organ)
-                                                      : effectorGraphic(this.state, organ));
+    this.redrawBlocks('effectorBlock', findOrgan, organ => effectorGraphic(this.state, organ));
     this.refreshSense();
     this.redrawBlocks('spineBlock', findOrgan, organ => spineField(this.state, organ));
   },

@@ -945,15 +945,6 @@
       "5": "Der Schließer beißt aus der Öffnung zu, die er vorfindet: Aus weit offenem Maul reicht der Biss weiter. Schnelle Fasern schnappen kräftig zu, langsame mahlen ausdauernd.",
       "pelvic": "Die Bauchflosse sitzt vorn am Schwanzteil, hinter der Brustflosse, und hat eigene Muskeln und Gegenspieler wie sie. Weil sie weiter hinten sitzt, dreht ein Schlag nach außen den Fisch weniger, hinter der Körpermitte sogar andersherum."
     },
-    "gills": {
-      "title": "Kiemen",
-      "handle": "Ziehen: wie dicht die Kiemenreusen stehen",
-      "hint": "Die Kiemendeckel pumpen Wasser durch das offene Maul; mit offen gehaltenem Maul filtert auch das Schwimmen (Staufiltern). Durchfluss {water}, Plankton gehalten {kept}, vom Boden gesiebt {ground}.",
-      "word": "Planktonsieb",
-      "passage": "{share} Wasser kommt durch",
-      "kept": "hält {share} des Planktons",
-      "ground": "siebt {share} aus dem Bodengrund"
-    },
     "spines": {
       "title": "Schutz rundum",
       "spreadHandle": "Ziehen: wie weit sich die Stacheln jedes Knotens verteilen",
