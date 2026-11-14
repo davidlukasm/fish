@@ -814,6 +814,10 @@ const alive = (n, maturity) => n.until >= 1 || maturity < n.until, works = (n, m
 // healthy fish whose full tissue is the reference body's, so its mass is its maturity; reserve,
 // organs and gut content left out (body_mass, src/physiology.cc:130-138).
 const THRUST_FLOOR = .5;
+// The earliest a fish hatches: with HATCH_TISSUE 20 of the reference body's 40 (mature_body,
+// src/physiology.cc:166-173, src/physiology.hh:20). Before that it is in the egg, where the tail's
+// twitches work on the egg and its shell (src/movement.cc:52-64, src/embryo.cc:7-25; Astra).
+const HATCHES = .5;
 const pushAt = maturity => T.nodes.reduce((sum, n) => sum + (works(n, maturity) ? n.cells * forceOf(n.fast) : 0), 0) / Math.max(THRUST_FLOOR, maturity);
 // How hard a bundle pulls at a command: nothing below its threshold, all of it at a full command.
 const driveOf = (n, command) => command <= n.gate ? 0 : Math.tanh(3 * (command - n.gate)) / Math.tanh(3 * (1 - n.gate));
@@ -845,7 +849,8 @@ function deriveTail() {
     fastAll += weight; reserve.forEach((r, st) => { spent[st] += weight * (1 - r); });
     bands.push({i, under, over, each : forceOf(n.fast) * drive}); under = over;
   }
-  const w = T.wriggle, water = speedOf(under, 1 - .5 * w, 14), sand = speedOf(under, 1 / (12 * Math.pow(3 / 12, w)), 3);
+  // The push moves the body the fish has at the maturity shown.
+  const w = T.wriggle, mass = Math.max(THRUST_FLOOR, maturity), water = speedOf(under, (1 - .5 * w) / mass, 14), sand = speedOf(under, 1 / (12 * Math.pow(3 / 12, w)) / mass, 3);
   // The fibres that pull, weighted by how hard: how quick the fish beats.
   const pulling = T.nodes.filter(n => works(n, maturity)), pull = pulling.reduce((sum, n) => sum + n.cells * driveOf(n, height), 0);
   return {bands, total : under, tired : fastAll > 0 ? spent.map(v => v / fastAll) : null, water, sand, pulls : Math.max(...under) > 1e-3,
@@ -985,13 +990,18 @@ function drawTailSpeed() {
 // the order they join, as the force above. A bundle's layer begins where it begins to work and
 // ends where it dies; its two grips sit on those edges, in the layer. The same muscle pushes a
 // small body harder than a large one, so every layer thins as the fish grows. The round knob on
-// the curve chooses the maturity at which the pictures above show the fish.
+// the curve chooses the maturity at which the pictures above show the fish. Left of the dashed line
+// the fish is still in the egg (dimmed): what works there twitches against the shell.
 const TLIFE = {L : 30, R : 282, top : 14, base : 86, icons : 104, height : 118, samples : 126, edge : .004};
 function buildTailLife(fixed) {
   const {L, R, top, base, icons} = TLIFE;
   txt(fixed, L + 4, top + 2, 'Schub');
-  fishIcon(fixed, L + 8, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 16, icons, AGE_SIZE.grown, COLOUR.icon);
-  el('path', {d : `M${L + 26} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'}, fixed);
+  // Under the axis: the egg, the hatchling where it hatches at the earliest, the grown fish.
+  const hatch = L + (R - L) * HATCHES, arrow = {stroke : COLOUR.icon, 'stroke-width' : 1.3, fill : 'none', 'stroke-linecap' : 'round', 'stroke-linejoin' : 'round'};
+  el('ellipse', {cx : L + 8, cy : icons, rx : 6, ry : 5, fill : 'none', stroke : COLOUR.icon, 'stroke-width' : 1.4}, fixed);
+  el('circle', {cx : L + 8, cy : icons, r : 1.8, fill : COLOUR.icon}, fixed);
+  fishIcon(fixed, hatch, icons, AGE_SIZE.young, COLOUR.icon); fishIcon(fixed, R - 16, icons, AGE_SIZE.grown, COLOUR.icon);
+  el('path', {d : `M${L + 22} ${icons} H${hatch - 16} m-6 -3.5 l6 3.5 l-6 3.5 M${hatch + 18} ${icons} H${R - 40} m-6 -3.5 l6 3.5 l-6 3.5`, ...arrow}, fixed);
 }
 function drawTailLife() {
   const {L, R, top, base, samples, edge} = TLIFE, nodes = T.nodes, {svg, live} = picture('taillife', TLIFE.height, buildTailLife);
@@ -1001,11 +1011,16 @@ function drawTailLife() {
   // A bundle's layer at a maturity: from what the bundles under it give to that and its own.
   const layer = (i, r) => { let under = 0; for (const j of order) { if (j === i) break; under += share(nodes[j], r); } return [under, under + share(nodes[i], r)]; };
   const most = Math.max(1e-6, ...Array.from({length : samples + 1}, (_, k) => pushAt(k / samples))), Y = v => base - (base - top - 12) * v / most;
+  // Where any bundle joins or dies, and where the mass begins to count, every layer has a corner.
+  const breaks = [THRUST_FLOOR, ...nodes.flatMap(n => [n.from, Math.min(1, n.until)])].flatMap(r => [r - edge, r]);
   for (const i of order) {
-    const n = nodes[i], until = Math.min(1, n.until), at = Array.from({length : samples + 1}, (_, k) => n.from + (until - n.from) * k / samples).map(r => Math.min(r, until - edge));
+    const n = nodes[i], until = Math.min(1, n.until), at = [...Array.from({length : samples + 1}, (_, k) => n.from + (until - n.from) * k / samples), ...breaks].filter(r => r >= n.from && r <= until).map(r => Math.min(r, until - edge)).sort((p, q) => p - q);
     const upper = at.map(r => [X(r), Y(layer(i, r)[1])]), lower = at.map(r => [X(r), Y(layer(i, r)[0])]).reverse();
     el('path', {d : path(upper) + ' L' + path(lower).slice(1) + 'Z', fill : fibreColour(n.fast), opacity : .85, class : 'chip'}, live).addEventListener('pointerdown', () => { T.chosen = i; draw(TAIL_PARTS); });
   }
+  // In the egg: the layers stand dimmed, up to where the fish hatches.
+  el('rect', {x : L, y : top, width : X(HATCHES) - L, height : base - top, fill : COLOUR.track, opacity : .55, 'pointer-events' : 'none'}, live);
+  el('path', {d : `M${X(HATCHES)} ${top} V${base + 5}`, stroke : COLOUR.icon, 'stroke-dasharray' : '3 3'}, live);
   el('path', {d : `M${L} ${top} V${base} H${R}`, stroke : COLOUR.axis, fill : 'none'}, live);
   // The fish shown above.
   const r = T.input.maturity;
