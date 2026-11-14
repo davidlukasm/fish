@@ -8,8 +8,8 @@ Gelesen: Engine (`src/body_plan.cc`, `src/cppn_brain.cc`, `colony-core/field/sub
 
 - **Entstehen und Wachsen:** Ein Kontakt beginnt bei 0. Er entsteht, wenn Sender und Empfänger gemeinsam vom Gewohnten abweichen, sonst mit 2 % Zufall (`substrate.cc:681-693`). Er wächst mit Signal des Senders × Aktivität des Empfängers (`:913-921`).
 - **Lernende Zelle:** Das ist der Empfänger, nur bei Kontakten in einen Muskel der Sender (`:888-903`).
-- **Vergessen:** Ohne Festigung vergisst er mit Halbwertszeit 500 Schritte, ungenutzt schneller (`:343-348`).
-- **Abbau:** Unter 5 % und weniger als halb gefestigt wird er abgebaut (`:965-970`).
+- **Vergessen:** Ohne Festigung vergisst er mit Halbwertszeit 500 Schritte, ungenutzt schneller (`:352-357`).
+- **Abbau:** Unter 5 % und weniger als halb gefestigt wird er abgebaut (`:982`).
 - **Festigung:** Die Festigungsantwort der lernenden Zelle hält fest, was der Kontakt in der Zeit selbst lernt, in der sie positiv ist. Ist sie negativ, löst sie Festigung wieder (`:944-955`).
 
 ## 2. Was jede Zelle im Ei bekommt
@@ -65,8 +65,10 @@ Keine Vorlage härtet etwas vor dem Schlupf. Festigung gibt es nur über das Hor
 **Jedes Sinnesorgan bringt die Eigenaktivität seiner Zellen selbst mit.** Das geschieht als Vorgabe der Vorlage, so wie die Netzhaut ihre Erregungsantwort mitbringt.
 
 - **Rhythmusantwort auf Reife** für die Sinneszellen der zehn stummen Arten aus 3.1, dazu für Seitenlinie, Tastsinn, Blutsinn und Nährzellen. Mechanismus seit Engine `8579edf5`.
-  - Grundwert 1, Empfindlichkeit −2, Halbwert 0,2 (wie die Netzhaut), Steilheit 3. Die Zellen feuern im Ei in Stößen, im Takt ihrer Zellzeit und zu eigenen Zeitpunkten nach ihrer Lage.
-  - Um den Schlupf (Reife ≈ 0,2) verstummt das, danach melden sie nur noch ihren Reiz.
+  - Grundwert 1, Empfindlichkeit −2, Halbwert 0,3, Steilheit 3.
+  - Damit feuern die Zellen im Ei in Stößen, im Takt ihrer Zellzeit und zu eigenen Zeitpunkten nach ihrer Lage. Bei Reife 0,22 liegt die Antwort noch bei +0,85, bei 0,3 bei 0, ab 0,35 ist sie aus.
+  - Der Schlupf liegt bei Reife ≥ 0,22, bei großen Eiern höher (Gewebe beim Schlupf ÷ `tissue_capacity`, `physiology.hh:101-106`, 420-423; Fable 02:36). Bei kleinen Eiern endet die Eigenaktivität also kurz nach dem Schlupf, bei großen davor.
+  - Den Zeitpunkt kann die Evolution oder der Gestalter über den Halbwert verschieben.
 - **Die Netzhaut** bleibt bei ihren Wellen.
 - **Beleg aus echten Fischen:**
   - Riechzellen haben Grundaktivität mit gleichem Muster je Rezeptor, aber nicht gleichzeitig.
@@ -75,7 +77,9 @@ Keine Vorlage härtet etwas vor dem Schlupf. Festigung gibt es nur über das Hor
   - Für die übrigen Sinne ist es ein Behelf ohne Beleg.
 
 **Jede Hirnregion härtet, was sie im Ei an ihren Eingängen gelernt hat.** Das ist dieselbe Vorgabe wie ihr Rhythmus und gilt für alle Zellen mit `DEVELOPING_RELAY`, `TONIC_LEARNING` und `ACTIVE_LEARNING`.
-- **Festigungsantwort auf Reife:** Grundwert 0,5, Empfindlichkeit −0,5, Halbwert 0,2, Steilheit 3. Sie ist im Ei positiv und geht um den Schlupf auf 0, nie darunter. Gehärtete Kontakte bleiben also. Danach lernen sie weiter, und nach dem Schlupf härtet die Sattheit über das System „Festigung“.
+- **Festigungsantwort auf Reife:** Grundwert 0,5, Empfindlichkeit −0,5, Halbwert 0,3, Steilheit 3.
+  - Verlauf: 0,46 bei Reife 0,22, 0,25 bei 0,3, 0,05 bei 0,4. Nie unter 0, gehärtete Kontakte bleiben also.
+  - Die Härtung reicht damit als **Prägungszeit** über den Schlupf hinaus bis etwa Reife 0,4. Was der Jungfisch in seinen ersten Erfahrungen lernt, härtet also mit. Fable 02:36: Das muss so dastehen, nicht „endet beim Schlupf“.
 - **Warum in der Region:** Die Region empfängt die Bahn und ist die lernende Zelle. Die Sinneszelle kann ihre Bahn in einen Nerv nicht selbst festigen.
 - **Für:** Ein Gestalter, der ein Sinnesorgan an eine Region hängt, bekommt die gehärtete Bahn ohne eigenes Zutun.
 - **Wider:**
