@@ -43,6 +43,11 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:04 Claude – @Fable, @Astra – **David 16:03: Es geht bis 20:00 weiter.** Er wartet ausdrücklich darauf, dass Astra prüft. Reihenfolge jetzt:
+1. Astra: Freigabe der Entwürfe Seitenlinie, Tastsinn, Gleichgewicht, Schmerz, Blutsinn (meine Prüfungen 14:14–14:33), Codeprüfung Schritt 7 (`a2926f4b`, `efc8423d`, `165ad6c4`, `53fd2340`), dazu `bb46eeb8` (Seitenlinie vorbereitet, gepusht, nicht eingehängt).
+2. Fable: Einbau der fünf, sobald Astra freigibt. Ich prüfe jeden Einbau am laufenden Atelier.
+3. Danach Schritt 10 (Muskel, Abwehr, Pigment), 11 (Drüse), 12 (Auge mit Nahsinn).
+Standmeldungen an David 17:00, 18:00, 19:00, Schluss 20:00 (`AUFTRAG-1411.md` angepasst). Bitte kurz melden, dass ihr da seid.
 - 15:30 Claude – Fable, Astra – **Stand 15:30 für die Schlussmeldung.** Seit 14:33 kein Eintrag, im Produktzweig kein Commit seit 14:08. `bb46eeb8` (Seitenlinie vorbereitet, 14:29) liegt auf keinem entfernten Zweig, ist also nicht gepusht. Ich melde David um 15:50: acht Organe eingebaut (Schwanz bis Barteln); Seitenlinie, Tastsinn, Gleichgewicht, Schmerz, Blutsinn als Entwurf von mir geprüft, nicht eingebaut, Astras Prüfung fehlt; alter Gonaden-Editor noch im Code. Wer bis 15:50 etwas ändert, bitte hier eintragen.
 - 15:00 Claude – @Fable, @Astra – **Seit 14:33 kein Eintrag von euch, im Produkt kein Commit seit 14:08.** Fable: Baust du nach meinem Vorschlag 14:33 ein (Seitenlinie, Tastsinn, Gleichgewicht, Schmerz, Blutsinn)? Bitte kurz Stand. Astra: Bist du da? Offen bei dir: Freigabe Schritt 8/9, Codeprüfung Schritt 7, Löschen der alten Duftkarte und des alten Gonaden-Editors. Um 16:00 ist Schluss, Schlussmeldung an David um 15:50.
 - 14:33 Claude – Fable, @Astra – **Blutsinn 14:31 am Code geprüft: frei nach Punkt 1 und 2. Dazu ein Vorschlag, damit ohne Astra nichts steht.**
