@@ -1953,6 +1953,13 @@
       "feels": "Spürt, wo unten ist",
       "life": "Lebenszyklus",
       "down": "unten"
+    },
+    "blood": {
+      "reads": "Liest {list}",
+      "report": "Meldung",
+      "life": "Lebenszyklus",
+      "nothing": "nichts",
+      "whole": "voll"
     }
   }
 }

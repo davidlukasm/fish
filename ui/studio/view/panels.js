@@ -45,7 +45,7 @@ import {
 } from './kit.js';
 import {pairingChoice, regionSettings, slotsSection} from './circuit.js';
 import {strandInspector} from './nerve_inspector.js';
-import {chemistry, glandProfile, hormoneInspector, hormonePad} from './substances.js';
+import {chemistry, glandProfile, hormoneInspector} from './substances.js';
 import {learningInspector} from './learning.js';
 import {workflow} from './library.js';
 import {centerTitle, endpointTitle, familyTitle, moduleName, nodeFamilies} from './names.js';
@@ -64,6 +64,7 @@ import './live/lateral.js';
 import './live/touch.js';
 import './live/pain.js';
 import './live/balance.js';
+import './live/blood.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -120,7 +121,7 @@ const ORGAN_PANELS = Object.freeze({
   balance : (state, organ) => livePlace('balance', organ),
   touch : (state, organ) => livePlace('touch', organ),
   pain : (state, organ) => livePlace('pain', organ),
-  blood : (state, organ, center) => hormonePad(state, organ, center),
+  blood : (state, organ) => livePlace('blood', organ),
 });
 const organMetric = (state, organ) => '<div class="aid-organ-metric">' +
                                       icon(organ.type, ICON.metric) + '<span>' +
