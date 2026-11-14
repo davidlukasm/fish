@@ -373,6 +373,7 @@ export function substanceMark(state, index) {
   return index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturityMark')
          : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserveMark')
          : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigueMark')
+         : index === BLOOD_SUBSTANCE.cell_maturity ? label('inspector.cellMaturityMark')
                                              : Array.from(substanceName(state, index))[0];
 }
 export function substanceName(state, index) {
@@ -381,6 +382,7 @@ export function substanceName(state, index) {
          (index === BLOOD_SUBSTANCE.maturity  ? label('inspector.maturity')
           : index === BLOOD_SUBSTANCE.reserve ? label('inspector.reserve')
           : index === BLOOD_SUBSTANCE.fatigue ? label('inspector.fatigue')
+          : index === BLOOD_SUBSTANCE.cell_maturity ? label('inspector.cellMaturity')
                                               : tList('studio.inspector.substanceLetters')[index]);
 }
 export function substanceWheel(state, profile, {

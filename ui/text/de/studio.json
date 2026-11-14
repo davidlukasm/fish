@@ -231,6 +231,8 @@
     "reserveMark": "En",
     "fatigue": "Muskelerschöpfung",
     "fatigueMark": "Er",
+    "cellMaturity": "Reife der Zelle",
+    "cellMaturityMark": "Zr",
     "growth": "Wachstum des Körpers",
     "concentration": "Konzentration",
     "cancelling": "ausgleichen",

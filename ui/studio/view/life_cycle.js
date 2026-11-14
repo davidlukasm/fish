@@ -82,6 +82,8 @@ function contextAt(state, axis, level) {
       out.reserve = level;
     else if (index === BLOOD_SUBSTANCE.fatigue)
       out.fatigue = level;
+    else if (index === BLOOD_SUBSTANCE.cell_maturity)
+      out.cellMaturity = level;
     else
       out.hormones[index] = level;
   };
@@ -168,8 +170,12 @@ function menu(state, center, key, receptor) {
               : item('data-life-new', substanceDot(state, free) + '<span class="soft">' +
                                           escapeText(word('newSubstance')) + '</span>')) +
          '<hr>' +
-         [ BLOOD_SUBSTANCE.reserve, BLOOD_SUBSTANCE.fatigue ]
-             .filter(i => i < (state.capabilities?.regulators ?? 0))
+         // The cell's own maturity is no blood: it is always there to read, but not for a cell
+         // that is yet to form, which has no age.
+         [ BLOOD_SUBSTANCE.reserve, BLOOD_SUBSTANCE.fatigue, BLOOD_SUBSTANCE.cell_maturity ]
+             .filter(i => i === BLOOD_SUBSTANCE.cell_maturity
+                              ? key !== 'birth'
+                              : i < (state.capabilities?.regulators ?? 0))
              .map(i => item('data-life-source="' + i + '"',
                             substanceDot(state, i) + '<span>' +
                                 escapeText(substanceName(state, i)) + '</span>',

@@ -257,13 +257,21 @@ export function wheelAffinity(wheel, x, y, width, index) {
   return Math.exp(-((x - px) ** 2 + (y - py) ** 2) / (2 * sigma * sigma));
 }
 export function receptorAffinity(wheel, receptor, index) {
+  // A receptor that reads the maturity of its own cell binds nothing in the blood, and nothing
+  // else reads that maturity: it has no place on the wheel.
+  const own = BLOOD_SUBSTANCE.cell_maturity;
+  if (receptor.substance === own || index === own)
+    return receptor.substance === index ? 1 : 0;
   const [x, y] = wheelPlace(wheel, receptor.substance);
   return wheelAffinity(wheel, x, y, receptor.width, index);
 }
+// cellMaturity: the cell's own age since it formed, as the share of the span the engine counts
+// (1: a cell long formed).
 export const DEFAULT_BLOOD_CONTEXT = Object.freeze({
   maturity : 0,
   reserve : 1,
   fatigue : 0,
+  cellMaturity : 1,
   hormones : Object.freeze(Array(HORMONES.levels).fill(0))
 });
 export function bloodLevel(context, index) {
@@ -273,14 +281,18 @@ export function bloodLevel(context, index) {
     return context.reserve ?? DEFAULT_BLOOD_CONTEXT.reserve;
   if (index === BLOOD_SUBSTANCE.fatigue)
     return context.fatigue ?? DEFAULT_BLOOD_CONTEXT.fatigue;
+  if (index === BLOOD_SUBSTANCE.cell_maturity)
+    return context.cellMaturity ?? DEFAULT_BLOOD_CONTEXT.cellMaturity;
   return context.hormones?.[index] ?? 0;
 }
 export function receptorResponse(wheel, receptor, context = DEFAULT_BLOOD_CONTEXT,
                                  inactiveBaseline = 0) {
   if (!receptor.active)
     return inactiveBaseline;
-  let concentration = 0;
-  for (let index = 0; index < wheel.regulators; ++index)
+  // Either the cell's own maturity alone, or the blood by what the receptor binds of it.
+  const own = receptor.substance === BLOOD_SUBSTANCE.cell_maturity;
+  let concentration = own ? bloodLevel(context, receptor.substance) : 0;
+  for (let index = 0; !own && index < wheel.regulators; ++index)
     concentration += receptorAffinity(wheel, receptor, index) * bloodLevel(context, index);
   const ratio = (concentration / receptor.half) ** (2 ** receptor.steepness);
   const bound = Number.isFinite(ratio) ? ratio / (1 + ratio) : 1;
@@ -1480,7 +1492,7 @@ function receptorPatch(key, value) {
   if (key === 'active')
     return value ? 1 : 0;
   if (key === 'substance')
-    return Math.round(clamp(value, 0, BLOOD_SUBSTANCE.fatigue));
+    return Math.round(clamp(value, 0, BLOOD_SUBSTANCE.cell_maturity));
   if (key === 'steepness')
     return clamp(value, 0, 3);
   if (key === 'half')
