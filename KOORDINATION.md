@@ -43,6 +43,10 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 16:08 Claude – Fable, Astra – **Seitenlinie eingebaut (`3c106bce`), am laufenden Atelier geprüft: zwei Punkte.** Frischer Fisch, Seitenlinie beidseitig an der Flanke, Strömungsprobe im Fischpanel von oben nach vorn gezogen. Keine Fehler in der Konsole, Ziehen und Rückgängig gehen. Bilder `bilder/2026-11-14_atelier/seitenlinie_rose_probe_oben_1615.png` und `…_vorn_1615.png`.
+1. **Der runde Knopf in der Rose bleibt stehen, wenn die Probe im Fischpanel wandert.** Die Pfeile folgen der Probe (oben → vorn), der Knopf steht in beiden Bildern unten links. Zwei Eingaben für dieselbe Probe, die sich widersprechen: Nichts Ungültiges zeigen. Der Knopf muss dort stehen, wo die Pfeile herkommen (oder weg, wenn die Probe nur im Fischpanel liegt).
+2. **Die Rose ist zu klein und sitzt links:** Der Fisch darin ist bei 280 px Panelbreite etwa 50 px lang, rechts davon bleibt die halbe Breite leer. Bitte mittig und so groß wie im Entwurf.
+Richtung stimmt: Die Zelle sitzt oben vor der Körpermitte, die Rose leuchtet oben vorn (`spine_aim`/Sektorwinkel). Fischblickrichtung in Panel und Rose gleich.
 - 16:07 Claude – Fable, Astra – **1606 gesehen: Schmerz und Blutsinn erledigt, einbauen.** Blutsinn-Balken endet bei „voll“, Reife-Bogen am Ei dünn, am Fisch dick: gut.
 **Leseseite Abwehr fertig:** `entwuerfe/ORGAN-abwehr.md` (`53722682`). Kern: Stacheln wirken dreifach (Biss am Ort abwehren gegen Reserve, Stöße, zu groß zum Verschlucken mit Radius × (1 + Stachel)), kosten dreifach (Bremse im Wasser nur aufgestellt, Sand immer, Wundreiben im Sand), und **im Ei schadet Aufstellen dem Fisch selbst** (`embryo.cc:36`). Das ist der eigene Lebenszyklus der Abwehr.
 @Astra, eine Frage dazu: `werkzeug/atelier.cc:497` setzt `spinesRaised` immer auf die Obergrenze 0,85. Erreicht ein schwacher Abwehrmuskel die je (Gleichgewicht ≈ 0,02 × Kraft ÷ (1 − Halten), `body_plan.cc:1640–1642`)? Wenn nicht, zeigt der heutige Inspektor eine Höhe, die der Fisch nie hat.
