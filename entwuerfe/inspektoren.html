@@ -1356,7 +1356,9 @@ function showBladder() {
 //   of its plankton stays 0.02 + 0.98 d^3; of the flocks in a mouthful of ground stays
 //   (1 - 0.85 (1 - d)^4) (1 - d^4); sand never stays; nothing stays while the gut is full.
 // A schema: the head is cut level and seen from above, the specks stand for food, not for water.
-const GILL = {force : 110, copy : .1, least : 16, most : 128, mouth : 32, ram : 4, rest : .35, cruise : .75, fastest : 1.5, hatch : .5, bare : .02, power : 3, drag : .6, slip : .85, sift : 4,
+// upkeep: the pump's upkeep at its smallest size as a share of the rest of the plan's resting
+// need (the plan report of 44eca02d gives 2.73 % of the whole for the default gills).
+const GILL = {upkeep : .0273 / (1 - .0273), force : 110, copy : .1, least : 16, most : 128, mouth : 32, ram : 4, rest : .35, cruise : .75, fastest : 1.5, hatch : .5, bare : .02, power : 3, drag : .6, slip : .85, sift : 4,
               H : {height : 164, mid : 80, tip : 40, gape : 17, cheek : 116, half : 40, lid : 74, arch : [[182, 8], [124, 33]], throat : 182, gut : 254, sand : 36},
               R : {L : 44, R : 264, top : 16, base : 86, height : 104},
               W : {L : 44, R : 264, top : 16, base : 86, height : 106, most : 9},
@@ -1392,6 +1394,8 @@ const rakerCount = d => 3 + Math.round(11 * d);
 function drawGills() {
   const {svg, under, live} = picture('gills', GILL.H.height, buildGills), {mid, tip, gape, cheek, half, lid, arch, throat, gut} = GILL.H, d = GI.rakers, inp = GI.input, n = rakerCount(d);
   document.getElementById('gill-kind').textContent = d < .25 ? 'Offene Kiemen' : d < .72 ? 'Siebt den Grund' : 'Planktonfilter';
+  const upkeep = GILL.upkeep * GI.cells / GILL.least;
+  txt(live, 4, 10, `${comma(100 * upkeep / (1 + upkeep))} % des Ruhebedarfs`, {style : 'font-size:10px'});
   // Sand before the mouth: the fish noses into the ground.
   if (inp.sand > 0) {
     const edge = (GILL.H.tip + 4) * inp.sand, hash = i => { const v = Math.sin(i * 127.1) * 43758.5453; return v - Math.floor(v); };
