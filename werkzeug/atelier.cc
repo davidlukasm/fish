@@ -818,8 +818,9 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
                gut_upkeep = fishsim::digestion::upkeep * gut_size * basal,
                muscle_upkeep =
                    fishsim::muscle_upkeep(a.muscle_maintenance, adult.tissue, physiology),
-               cell_upkeep = t.neurons.size() * field::scaled_costs(t.options).neuron_maintenance *
-                             physiology.neural_cost,
+               one_cell_upkeep =
+                   field::scaled_costs(t.options).neuron_maintenance * physiology.neural_cost,
+               cell_upkeep = t.neurons.size() * one_cell_upkeep,
                yolk =
                    std::min(evolution.egg_capacity, evolution.egg_organ_capacity *
                                                         a.motor_counts[fishsim::organ_port::eggs]);
@@ -964,12 +965,19 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
               << ",\"function\":" << function << ",\"cells\":" << copies[n.group]
               << ",\"group\":" << group[i] << '}';
   }
+  std::vector<double> group_maintenance(groups.size());
+  for (const auto &effector : a.effectors)
+    if (group[effector.neuron] >= 0)
+      group_maintenance[group[effector.neuron]] += fishsim::effector_upkeep(effector);
   std::cout << "],\"groups\":[";
   for (std::size_t i = 0; i < groups.size(); ++i) {
     if (i)
       std::cout << ',';
+    const double upkeep = one_cell_upkeep * cells[i] +
+                          fishsim::muscle_upkeep(group_maintenance[i], adult.tissue, physiology);
     std::cout << "{\"name\":" << json(groups[i].name) << ",\"sites\":" << sites[i]
-              << ",\"cells\":" << cells[i] << ",\"receptors\":[";
+              << ",\"cells\":" << cells[i] << ",\"restShare\":" << upkeep / rest
+              << ",\"receptors\":[";
     for (int effect = 0; effect < field::HORMONE_EFFECTS; ++effect) {
       if (effect)
         std::cout << ',';
