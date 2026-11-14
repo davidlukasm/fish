@@ -689,6 +689,13 @@ std::vector<int> anatomy_report(const Genome &g, const std::vector<Group> &group
             << ",\"pumpArea\":" << fishsim::gill_area(adult)
             << ",\"mouthAperture\":" << fishsim::maximum_mouth_aperture(adult) << ",\"forceScale\":"
             << adult.force_scale / (fishsim::body_scale(adult) * fishsim::MUSCLE_CELL_FORCE) << '}';
+  std::cout << ",\"gonads\":{\"eggs\":{\"fillDrive\":" << a.egg_parts[0]
+            << ",\"releaseDrive\":" << a.egg_parts[1]
+            << "},\"sperm\":{\"fillDrive\":" << a.sperm_parts[0]
+            << ",\"releaseDrive\":" << a.sperm_parts[1] << ",\"store\":"
+            << fishsim::organ_capacity(adult, g, fishsim::organ_port::sperm,
+                                       physiology.sperm_capacity)
+            << "}}";
   const auto &growth = t.growth_receptor;
   std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult, physiology)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
