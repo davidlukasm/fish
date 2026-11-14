@@ -1967,6 +1967,18 @@
       "maturity": "Reife",
       "reserve": "Reserve",
       "fatigue": "Erschöpfung"
+    },
+    "defense": {
+      "guards": "Hält Bisse ab und sperrt im Maul",
+      "life": "Lebenszyklus"
+    },
+    "pigment": {
+      "colours": "Färbt den Fisch für fremde Augen",
+      "cells": "Pigmentzellen",
+      "life": "Lebenszyklus",
+      "rest": "Ruhe",
+      "full": "voll",
+      "steps": "Schritte"
     }
   }
 }

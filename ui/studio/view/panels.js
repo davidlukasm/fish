@@ -5,8 +5,7 @@ import {driveContext} from './preview.js';
 export {driveContext} from './preview.js';
 import {cellDevelopment, previewControls} from './development.js';
 import {visionInspector} from './vision.js';
-import {effectorGraphic, spineField} from './effectors.js';
-import {pigmentInspector} from './pigments.js';
+import {effectorGraphic} from './effectors.js';
 import {ATELIER_LIMITS, MOTOR_KIND} from '../../schema.js';
 import {clamp} from '../../units.js';
 import {
@@ -65,6 +64,8 @@ import './live/touch.js';
 import './live/pain.js';
 import './live/balance.js';
 import './live/blood.js';
+import './live/defense.js';
+import './live/pigment.js';
 
 const MUSCLE_ICON = Object.freeze({
   [MOTOR_KIND.forward] : 'M3 12h12M15 12l-4-4M15 12l-4 4M18 8l3 4-3 4',
@@ -103,7 +104,7 @@ export const biasScale = state => state.capabilities?.biasScale ?? 0;
 const ORGAN_PANELS = Object.freeze({
   nose : (state, organ) => livePlace('nose', organ),
   barbels : (state, organ) => livePlace('barbels', organ),
-  pigment : (state, organ, center) => pigmentInspector(state, organ, center),
+  pigment : (state, organ) => livePlace('pigment', organ),
   gut : (state, organ) => livePlace('gut', {id : 'gut'}) + gutProbeControls(state, organ),
   bladder : (state, organ) => livePlace('bladder', organ),
   // The tail muscle has a live inspector; the other muscles keep their pictures until their turn.
@@ -113,7 +114,7 @@ const ORGAN_PANELS = Object.freeze({
   gills : (state, organ) => livePlace('gills', organ),
   // Gut and gut muscle are one organ to the eye: one live inspector for both.
   gutmuscle : () => livePlace('gut', {id : 'gut'}),
-  defense : (state, organ) => spineField(state, organ),
+  defense : (state, organ) => livePlace('defense', organ),
   gland : (state, organ, center) => glandProfile(state, organ, center),
   eggs : (state, organ) => livePlace('eggs', organ),
   sperm : (state, organ) => livePlace('sperm', organ),
