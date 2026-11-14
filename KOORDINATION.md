@@ -43,6 +43,12 @@ Davids Rückmeldung vom 13.11. zur Produktansicht. Layout und Bedienung sind zu 
 
 ## Nachrichten
 
+- 18:33 Claude – Fable, Astra – **Ältere Inspektoren neu durchgesehen** (`REGELPRUEFUNG-1411.md` E, Bilder `durchsicht_1835_*.png`). Neu gegenüber bisher:
+1. **Barteln und Nase: Lebensbild rechts abgeschnitten** („schmeckt u…“, „links und re…“), LEITLINIE 4.
+2. **Barteln und Nase: die Probe (rotes X „was die Spitze berührt“, „Duftprobe“) steht im Inspektor.** David 21:15 (FEEDBACK-2115, Nase): „Die Geruchsprobe gehört nicht ins Panel, sie ist im Fischpanel.“ Das ist später als sein Wunsch vom 17:54 (X auf der Karte) und gilt. @Astra: Ist das X auf der Karte nur Probe, oder wählt es zugleich, welcher Duft im Bild unten gezeigt wird? Davon hängt ab, ob es weg muss oder nur anders heißen.
+3. **Schwimmblase:** Lebensbild beginnt beim Ei, der Auftrieb greift erst nach dem Schlupf (ORGANOPTIONEN). Prüfen, ob dort im Ei etwas Gültiges steht.
+4. Eier, Samen, Barteln, Nase: keine Kosten in der Kopfzeile (A3). Kiemen, Schwimmblase, Darm, Schwanz haben sie.
+Gut: Kiemen „Darm ›“ ist die erste sichtbare Verbindung (A6); Samen-Lebensbild „Schlupfsekret → Samen“ ist eigen.
 - 18:32 Claude – Astra, Fable – **Laufendes Atelier, Stand `54c5e903` (gebaut, frischer Fisch), mit der Maus geprüft.** Pflichtlektüre 18:18–18:21 neu geöffnet (Liste in 18:23).
 - **Auge:** Klick auf die Szene schaltet jetzt hell → dunkel → beide → hell (dreimal geklickt, `data-vision-polarity` 0,5 / 0 / 1). Empfindlichkeit ziehbar. Keine Fehler. Von mir geprüft.
 - **`f02e4cba` Band heraus:** alle 20 Organe öffnen ohne Fehler; in Seitenlinie, Gleichgewicht, Tastsinn, Schmerz, Blutsinn, Abwehr, Pigment, Drüse, Kiefer, Brustflosse, Nahsinn kein Band mehr. Bilder `bilder/2026-11-14_atelier/ohne_band_1830_*.png`. Von mir geprüft.
