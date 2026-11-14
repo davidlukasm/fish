@@ -785,15 +785,19 @@ function drawReward() {
 // (src/body_plan.cc:562): it eases the way through sand and costs push in open water
 // (src/movement.cc:80, 93). What is tried on the muscle is a command: how strong, and until when.
 const TAIL = {steps : 300, most : 8, bundles : 5, cell : 5, fishY : 76, from : 108, to : 226, M0 : 14, M1 : 250, MB : 190, FY : 208, height : 236,
-              L : 64, R : 290, top : 28, base : 146, holder : 26, VT : 28, VB : 118, bendFrom : 70, bendTo : 200};
+              L : 64, R : 290, top : 28, base : 146, holder : 26, VT : 28, VB : 118, nose : 20, body : 220, swing : .25};
 const T = {nodes : [{cells : 4, fast : .1, gate : .1}, {cells : 3, fast : .5, gate : .45}, {cells : 3, fast : .95, gate : .75}], chosen : 2, wriggle : .3, input : {height : 1, stop : 200}};
 const TAIL_PARTS = ['tail', 'tailforce', 'tailspeed'];
 const FIBRE = {force : [.4, 2.5], upkeep : [1.2, .3], drain : .06, refill : [2, 400], slow : [184, 68, 63], fast : [242, 235, 226]};
 const fibreBetween = ([slow, fast], share) => slow * Math.pow(fast / slow, share);
 const forceOf = fast => fibreBetween(FIBRE.force, fast);
 const fibreColour = fast => 'rgb(' + FIBRE.slow.map((v, i) => Math.round(v + (FIBRE.fast[i] - v) * fast)).join(',') + ')';
-// Upkeep as a share of a grown fish's resting need: a bundle of n cells has tissue n / 4 and costs
-// MUSCLE_UPKEEP x its fibres' upkeep per unit, against the basal need (as the gut's muscle above).
+// Upkeep as a share of the resting need of a body of the reference size: a muscle cell's tissue
+// is its strength x 4 whatever its fibres (effector_tissue, src/body_plan.cc:49-52, MUSCLE_CELL_
+// FORCE :18, :398-401), its upkeep that tissue x 0.0004 x its fibres' upkeep (:54-58,
+// src/brain_interface.hh:166), against the basal rate 0.06 (src/physiology.hh:42-49,
+// src/physiology_parameters.hh:27; the gut's surcharge left out). ASSUMED: a cell here is a
+// sixteenth of a full strength, so a bundle of n cells has tissue n / 4.
 const TAIL_UPKEEP = .0004, TAIL_BASAL = .06;
 const bundleCost = n => 100 * TAIL_UPKEEP * fibreBetween(FIBRE.upkeep, n.fast) * n.cells / 4 / TAIL_BASAL;
 // How hard a bundle pulls at a command: nothing below its threshold, all of it at a full command.
@@ -842,31 +846,38 @@ function freeGate() {
   for (let i = 1; i < gates.length; i++) if (gates[i] - gates[i - 1] > gap) { gap = gates[i] - gates[i - 1]; best = (gates[i] + gates[i - 1]) / 2; }
   return clamp(best, .02, .95);
 }
+// How far the body swings at a place along it (0 nose, 1 tail's tip), as a share of the tip's
+// swing: the stiffer the fish, the nearer to the tail it begins.
+const swingAt = (along, wriggle) => Math.pow(along, 2 - 1.4 * wriggle);
+// Where on the spine the body swings TAIL.swing of the tip's swing, and the wriggling that puts
+// that place at x.
+const wriggleFrom = wriggle => TAIL.nose + TAIL.body * Math.pow(TAIL.swing, 1 / (2 - 1.4 * wriggle));
+const wriggleAt = x => clamp((2 - Math.log(TAIL.swing) / Math.log(clamp((x - TAIL.nose) / TAIL.body, .05, .5))) / 1.4, 0, 1);
 const comma = v => v.toFixed(1).replace('.', ',');
 // The fish, seen from above; it outlives every repaint, the clock bends it. marks: the bundles on
 // both flanks, laid anew when the bundles change.
-const tailFilm = {body : null, eye : null, marks : null, paths : [], amp : 0, phase : 0, level : null};
+const tailFilm = {body : null, eye : null, spine : null, marks : null, paths : [], amp : 0, phase : 0, level : null};
 function buildTail(fixed) {
   const {M0, M1, FY} = TAIL, x1 = M1 + 26, grad = el('linearGradient', {id : 'fibregrad'}, el('defs', {}, fixed));
   tailFilm.body = el('path', {fill : COLOUR.body, stroke : COLOUR.axis, 'stroke-width' : 1.4}, fixed);
   tailFilm.eye = el('circle', {cx : 36, r : 3, fill : COLOUR.icon}, fixed);
+  tailFilm.spine = el('path', {stroke : COLOUR.handle, 'stroke-width' : 1.6, fill : 'none', 'stroke-linecap' : 'round'}, fixed);
   tailFilm.marks = el('g', {fill : 'none', 'stroke-linecap' : 'round', 'stroke-width' : 5}, fixed);
   el('stop', {offset : 0, 'stop-color' : fibreColour(0)}, grad); el('stop', {offset : 1, 'stop-color' : fibreColour(1)}, grad);
   el('rect', {x : M0 + 4, y : FY - 4, width : x1 - M0 - 4, height : 8, rx : 4, fill : 'url(#fibregrad)', opacity : .85}, fixed);
   txt(fixed, M0 + 4, FY + 21, 'ausdauernd'); txt(fixed, x1, FY + 21, 'kräftig', {'text-anchor' : 'end'});
 }
 function drawTail() {
-  const {svg, live} = picture('tail', TAIL.height, buildTail), {M0, M1, MB, FY, cell, most, fishY, bendFrom, bendTo} = TAIL, nodes = T.nodes, cn = nodes[T.chosen];
+  const {svg, live} = picture('tail', TAIL.height, buildTail), {M0, M1, MB, FY, cell, most, fishY} = TAIL, nodes = T.nodes, cn = nodes[T.chosen];
   const width = (M1 - M0) / nodes.length, hOf = n => 4 + cell * n.cells, x0 = M0 + T.chosen * width, h = hOf(cn), fx0 = M0 + 4, fx1 = M1 + 26;
   txt(live, 4, 10, `+${comma(TM().cost)} % Ruhebedarf`, {style : 'font-size:10px'});
   // The bundles on the fish's flanks.
   tailFilm.marks.replaceChildren();
   const along = (TAIL.to - TAIL.from) / nodes.length;
   tailFilm.paths = nodes.flatMap((n, i) => [-1, 1].map(side => ({side, from : TAIL.from + i * along + 2, to : TAIL.from + (i + 1) * along - 2, e : el('path', {stroke : fibreColour(n.fast)}, tailFilm.marks)})));
-  // How much of the body wriggles: from the tail's root forwards, as far as the round grip.
-  const bx = bendTo - (bendTo - bendFrom) * T.wriggle, by = fishY + 36;
-  el('path', {d : `M${bx} ${by} H${TAIL.to + 14}`, stroke : COLOUR.handle, 'stroke-width' : 2}, live);
-  drag(svg, el('circle', {cx : bx, cy : by, r : 4.5}, live), p => { T.wriggle = clamp((bendTo - p.x) / (bendTo - bendFrom), 0, 1); draw(TAIL_PARTS); }, 'wriggle');
+  // How much of the body wriggles: the grip sits on the spine where the body swings a quarter as
+  // far as the tail's tip; from there to the tip the spine is drawn and swings with the fish.
+  drag(svg, el('circle', {cx : wriggleFrom(T.wriggle), cy : fishY, r : 4.5}, live), p => { T.wriggle = wriggleAt(p.x); draw(TAIL_PARTS); }, 'wriggle');
   // The bundles across the width, in their order along the body: colour = fibres, height =
   // strength. The chosen one is framed and carries its grip (up for stronger) and its (×).
   nodes.forEach((n, i) => el('rect', {x : M0 + i * width + 1, y : MB - hOf(n), width : width - 2, height : hOf(n), rx : 3, fill : fibreColour(n.fast), class : 'chip'}, live)
@@ -965,13 +976,16 @@ function showTail(dt) {
   tailFilm.amp += (wanted - tailFilm.amp) * Math.min(1, dt / 250);
   tailFilm.phase += dt / (320 * Math.pow(12, 1 - m.quick)) * 2 * Math.PI * (wanted > 0 ? 1 : .15);
   const amp = tailFilm.amp, w = T.wriggle;
-  const bend = x => { const u = (x - 20) / 220; return Math.sin(tailFilm.phase - u * (1.5 + 4 * w)) * amp * Math.pow(u, 2 - 1.4 * w); };
+  const bend = x => { const u = (x - TAIL.nose) / TAIL.body; return Math.sin(tailFilm.phase - u * (1.5 + 4 * w)) * amp * swingAt(u, w); };
   const half = x => { const u = (x - 20) / 220; return u < .3 ? 6 + 14 * Math.sin(Math.PI / 2 * u / .3) : 4 + 16 * (1 - (u - .3) / .7); };
   const upper = [], lower = [];
   for (let x = 20; x <= 240; x += 5) { upper.push([x, fishY - half(x) + bend(x)]); lower.push([x, fishY + half(x) + bend(x)]); }
   const tip = fishY + bend(240);
   tailFilm.body.setAttribute('d', `${path(upper)} L268 ${(tip - 20).toFixed(1)} L258 ${tip.toFixed(1)} L268 ${(tip + 20).toFixed(1)} L${path(lower.reverse()).slice(1)} Z`);
   tailFilm.eye.setAttribute('cy', (fishY - 4 + bend(36)).toFixed(1));
+  const spine = [[wriggleFrom(w), fishY]];
+  for (let x = Math.ceil(wriggleFrom(w) / 5) * 5 + 5; x <= 240; x += 5) spine.push([x, fishY + bend(x)]);
+  tailFilm.spine.setAttribute('d', path(spine));
   for (const p of tailFilm.paths) {
     const pts = [];
     for (let x = p.from; x <= p.to; x += 3) pts.push([x, fishY + p.side * (half(x) - 3.5) + bend(x)]);
