@@ -681,7 +681,8 @@ std::vector<int> anatomy_report(const field::Substrate &t,
             << ",\"bladder\":{\"restShare\":" << bladder_upkeep / rest << '}'
             << ",\"gills\":{\"restShare\":" << gill_upkeep / rest
             << ",\"pumpArea\":" << fishsim::gill_area(adult)
-            << ",\"mouthAperture\":" << fishsim::maximum_mouth_aperture(adult) << '}';
+            << ",\"mouthAperture\":" << fishsim::maximum_mouth_aperture(adult) << ",\"forceScale\":"
+            << adult.force_scale / (fishsim::body_scale(adult) * fishsim::MUSCLE_CELL_FORCE) << '}';
   const auto &growth = t.growth_receptor;
   std::cout << ",\"gutSpeed\":" << fishsim::gut_speed(adult, physiology)
             << ",\"growth\":{\"sensitivity\":" << growth.sensitivity << ",\"half\":" << growth.half
