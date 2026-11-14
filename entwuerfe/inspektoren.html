@@ -159,6 +159,15 @@ svg text.value{fill:var(--text);font-variant-numeric:tabular-nums}
     <h4>Lebenszyklus</h4>
     <svg id="painlife"></svg>
   </section>
+  <section class="panel" aria-label="Blutsinn">
+    <h2>Organ</h2><h3>Blutsinn</h3>
+    <h4 id="blood-kind" class="first">Blutsinn</h4>
+    <svg id="blood"></svg>
+    <h4>Meldung</h4>
+    <svg id="bloodrows"></svg>
+    <h4>Lebenszyklus</h4>
+    <svg id="bloodlife"></svg>
+  </section>
 </main>
 <script>
 'use strict';
@@ -251,6 +260,8 @@ const S = {
   touch : {keys : [{gate : .2, spread : .1}], chosen : 0, input : {rise : 60, height : .7, stop : 520}, field : .1, probe : 0, off : false},
   // The sense of balance: hair: where the cells' hair points, in degrees from the snout over the flank (90) to the tail (180); tilt: where the snout points, the posture tried (0 = to the right, 90 = down).
   balance : {keys : [{gate : .06}], hair : 90, tilt : 25},
+  // The blood sense. Each type of cells has a place among the substances (x, y: the substances lie on the unit circle) and a width; levels: what is in the blood now, the input tried.
+  blood : {keys : [{gate : .3, x : .707, y : -.707, width : .05}, {gate : .25, x : .2, y : .9, width : .1}], chosen : 0, levels : [.15, .7, .1, 0, .3, 0, .6, .45, .2]},
   // Pain in the skin. input: the bite (rise: when, height: how much of the fish's health it takes); probe: where the wound is, as an angle from the cells' place; all: harm all through the body (hunger, illness, age) instead of a bite.
   pain : {keys : [{gate : .12, spread : .1, used : 200}], chosen : 0, input : {rise : 90, height : .25, stop : 0}, field : .15, probe : 0, all : false}
 };
@@ -2603,6 +2614,89 @@ function drawPainLife() {
   skinLife('pain', svg, under, live, PAIN_PARTS);
 }
 
+// ----- The blood sense: the body's own state -----
+// Read in the engine (colony-core/field/hormones.hh:20-24, 29-48, 51-58, 65-66, 70-79;
+// src/body_plan.cc:345-346, 1181-1184; src/brain_interface.hh:18-24; ui/studio/model/organs.js:160-165):
+//   the blood carries six hormones and what the body reports of itself: its maturity, its energy
+//   reserve and the exhaustion of its fast fibres; the nine lie on a wheel, the hormones on three
+//   quarters of it, the body's three in the last quarter;
+//   a type of blood cells has a place on the wheel's plane and a width; it takes of each substance
+//   exp(-distance^2 / (2 sigma^2)), sigma 0.15 to 2, not brought to a sum of one;
+//   its stimulus is the sum of what it takes x the level in the blood; the answer is bounded, the
+//   cells do not get used to it, and they read the blood in the egg as outside.
+// The wheel is drawn as the circulation: each substance a stretch of the ring, as thick as its
+// level in the blood now; the round knob on it sets that level (the input). A type's grip lies
+// among them; lines run from it to the substances it takes, the stronger the more.
+const BLOOD = {height : 232, cx : 138, cy : 116, ring : 74, plane : 60, thin : 3, thick : 14, arc : [.15, .0625], sigma : [.15, 2], listed : .08, most : 8, reach : [16, 44],
+               names : ['A', 'B', 'C', 'D', 'E', 'F', 'Reife', 'Reserve', 'Erschöpfung'], colours : ['#d4a0ee', '#77d2bd', '#e9b66d', '#8daded', '#ee9f9a', '#b8d47a', '#b7d3c9', '#b7d3c9', '#b7d3c9'],
+               turns : [0, .15, .3, .45, .6, .75, .8125, .875, .9375], rows : {L : 84, R : 280, top : 8, row : 26}};
+const BLOOD_PARTS = ['blood', 'bloodrows', 'bloodlife'];
+const bloodTakes = k => BLOOD.turns.map(turn => { const a = 2 * Math.PI * turn, sigma = BLOOD.sigma[0] + (BLOOD.sigma[1] - BLOOD.sigma[0]) * k.width; return Math.exp(-((k.x - Math.cos(a)) ** 2 + (k.y - Math.sin(a)) ** 2) / (2 * sigma * sigma)); });
+// What a type's cells get of the blood as it is: of each substance what they take x its level.
+const bloodParts = k => bloodTakes(k).map((a, j) => a * S.blood.levels[j]);
+function drawBlood() {
+  const cell = S.blood, keys = cell.keys, {svg, live} = picture('blood', BLOOD.height), {cx, cy, ring, plane} = BLOOD;
+  const on = (turn, r) => [cx + r * Math.cos(2 * Math.PI * turn), cy - r * Math.sin(2 * Math.PI * turn)], best = keys.map(k => { const t = bloodTakes(k); return BLOOD.names[t.indexOf(Math.max(...t))]; });
+  document.getElementById('blood-kind').textContent = 'Liest ' + [...new Set(best)].map(n => n.length === 1 ? 'Stoff ' + n : n).join(', ');
+  // The lines from each type to what it takes, under everything else.
+  keys.forEach((k, i) => bloodTakes(k).forEach((a, j) => { if (a >= BLOOD.listed) { const [x, y] = on(BLOOD.turns[j], ring - 3); el('path', {d : `M${cx + plane * k.x} ${cy - plane * k.y} L${x} ${y}`, stroke : keyColour(i), 'stroke-width' : .6 + 3 * a, opacity : (i === cell.chosen ? .35 : .15) + .5 * a, 'stroke-linecap' : 'round'}, live); } }));
+  // The substances: each a stretch of the ring as thick as its level, named outside it.
+  BLOOD.turns.forEach((turn, j) => {
+    const half = BLOOD.arc[j < 6 ? 0 : 1] * .4, level = cell.levels[j], wide = BLOOD.thin + (BLOOD.thick - BLOOD.thin) * level, colour = BLOOD.colours[j];
+    el('path', {d : path(Array.from({length : 9}, (_, n) => on(turn - half + 2 * half * n / 8, ring + wide / 2))), stroke : colour, 'stroke-width' : wide, fill : 'none', opacity : .35 + .65 * level}, live);
+    const [nx, ny] = on(turn, ring + BLOOD.thick + 13), right = nx >= cx;
+    txt(live, nx + (j >= 6 ? 4 : 0), ny + 4, BLOOD.names[j], {'text-anchor' : j >= 6 ? 'start' : 'middle', fill : colour, style : 'font-size:10.5px'});
+    const [kx, ky] = on(turn, ring + wide + 2);
+    drag(svg, el('circle', {cx : kx, cy : ky, r : 4.5, fill : colour}, live), p => { cell.levels[j] = clamp((Math.hypot(p.x - cx, p.y - cy) - ring - BLOOD.thin - 2) / (BLOOD.thick - BLOOD.thin), 0, 1); draw(BLOOD_PARTS); }, 'bloodlevel' + j, 'knob');
+  });
+  // The types: a grip at each one's place; the chosen one's width on a short arm, and its (×).
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen, x = cx + plane * k.x, y = cy - plane * k.y;
+    if (chosen) {
+      const arm = BLOOD.reach[0] + (BLOOD.reach[1] - BLOOD.reach[0]) * k.width, ux = x >= cx ? -1 : 1;
+      el('path', {d : `M${x} ${y} h${ux * arm}`, stroke : keyColour(i), 'stroke-width' : 1.2, 'stroke-dasharray' : '2 3'}, live);
+      drag(svg, el('circle', {cx : x + ux * arm, cy : y, r : 4.5}, live), p => { k.width = clamp((Math.abs(p.x - x) - BLOOD.reach[0]) / (BLOOD.reach[1] - BLOOD.reach[0]), 0, 1); draw(BLOOD_PARTS); }, 'bloodwidth');
+      if (keys.length > 1) chip(live, x, y + (y <= cy ? 17 : -17), '×', () => { keys.splice(i, 1); cell.chosen = 0; }, BLOOD_PARTS, true, 6);
+    }
+    drag(svg, el('rect', {x : x - 5, y : y - 5, width : 10, height : 10, rx : 2.5, style : `fill:${keyColour(i)};stroke:${chosen ? COLOUR.chosen : COLOUR.unchosen};stroke-width:${chosen ? 2.5 : 1}`}, live), p => {
+      // A place dragged close to a substance is that substance; none lies outside the wheel.
+      let nx = (p.x - cx) / plane, ny = (cy - p.y) / plane; const far = Math.hypot(nx, ny);
+      if (far > 1) { nx /= far; ny /= far; }
+      const near = BLOOD.turns.find(turn => Math.hypot(nx - Math.cos(2 * Math.PI * turn), ny - Math.sin(2 * Math.PI * turn)) < .14);
+      if (near !== undefined) { nx = Math.cos(2 * Math.PI * near); ny = Math.sin(2 * Math.PI * near); }
+      k.x = nx; k.y = ny; cell.chosen = i; draw(BLOOD_PARTS); }, 'bloodtype' + i);
+  });
+  chip(live, 288, BLOOD.height - 10, '+', () => { keys.push({gate : .3, x : 0, y : 0, width : .1}); cell.chosen = keys.length - 1; }, BLOOD_PARTS, keys.length < BLOOD.most, 7);
+}
+// For each type a row: what its cells get of the blood now, each substance's part in its colour,
+// with the threshold as a dashed mark and its grip; before the row the type's nerve cell with
+// what it reports.
+function drawBloodRows() {
+  const cell = S.blood, keys = cell.keys, {L, R, top, row} = BLOOD.rows, {svg, live} = picture('bloodrows', top + row * keys.length + 20), X = v => L + (R - L) * clamp(v, 0, 1);
+  txt(live, L, top + row * keys.length + 8, 'nichts', {style : 'font-size:10px'}); txt(live, R, top + row * keys.length + 8, 'voll', {'text-anchor' : 'end', style : 'font-size:10px'});
+  keys.forEach((k, i) => {
+    const chosen = i === cell.chosen, y = top + row * i, parts = bloodParts(k), sum = parts.reduce((a, b) => a + b, 0), pick = () => { cell.chosen = i; draw(BLOOD_PARTS); };
+    el('rect', {x : L, y, width : R - L, height : row - 8, rx : 4, fill : COLOUR.track, stroke : chosen ? keyColour(i) : COLOUR.trackEdge, 'stroke-width' : chosen ? 1.8 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    let at = 0;
+    parts.forEach((v, j) => { if (v > .004 && at < 1) { el('rect', {x : X(at), y : y + 1, width : X(Math.min(1, at + v)) - X(at), height : row - 10, fill : BLOOD.colours[j], opacity : .9, 'pointer-events' : 'none'}, live); at += v; } });
+    const cy = y + row / 2 - 4, report = answer(Math.min(1, sum), k.gate, 0);
+    el('path', {d : `M${L - 16} ${cy} q-10 -2 -16 -10 M${L - 16} ${cy} l8 0`, stroke : keyColour(i), 'stroke-width' : 1.4, fill : 'none', 'stroke-linecap' : 'round'}, live);
+    el('circle', {cx : L - 16, cy, r : 6, fill : keyColour(i), stroke : chosen ? COLOUR.chosen : COLOUR.unchosen, 'stroke-width' : chosen ? 2.5 : 1, class : 'chip'}, live).addEventListener('pointerdown', pick);
+    if (report > 0) el('path', {d : IRRITANT, fill : COLOUR.line, transform : `translate(${L - 42} ${cy - 8}) scale(${(.45 + .9 * report).toFixed(2)})`}, live);
+    el('path', {d : `M${X(k.gate)} ${y - 2} v${row - 4}`, stroke : keyColour(i), 'stroke-dasharray' : '3 2', 'stroke-width' : 1.6}, live);
+    if (chosen) drag(svg, el('rect', {x : X(k.gate) - 4, y : y + row - 12, width : 8, height : 10, rx : 2, style : `fill:${keyColour(i)}`}, live), p => { k.gate = clamp((p.x - L) / (R - L), .03, .97); draw(BLOOD_PARTS); }, 'bloodgate');
+  });
+}
+// Its life: the cells read the blood in the egg as outside.
+function drawBloodLife() {
+  const {L, R, band, hatch} = SKIN.life, {svg, under, live} = picture('bloodlife', SKIN.life.height, fixed => {
+    const ex = (L + L + (R - L) * hatch) / 2, fx = (L + (R - L) * hatch + R) / 2, y = band - 26;
+    eggShape(fixed, ex, y, 19, false); fishSide(fixed, fx, y, .62);
+    for (const [x, dy] of [[ex + 1, 3], [fx - 2, 1]]) el('path', {d : `M${x} ${y + dy - 6} q5 6 0 9 q-5 -3 0 -9 Z`, fill : COLOUR.sore}, fixed);
+  });
+  skinLife('blood', svg, under, live, BLOOD_PARTS);
+}
+
 // ===== The clock =====
 // Shows the present moment: the lines, what the holders hold, the keys the input has passed, what
 // irritants at the nerve cells.
@@ -2717,9 +2811,10 @@ const PAINT = {fish : drawFish, yield : drawYield, bars : drawBars, life : drawL
                flowrose : drawRose, flow : () => drawSense('flow'), flowlife : drawFlowLife,
                touchskin : drawSkinCut, touch : () => drawSense('touch'), touchlife : drawTouchLife,
                tilt : drawTilt, tiltlife : drawTiltLife,
-               wound : drawWound, pain : () => drawSense('pain'), painlife : drawPainLife};
+               wound : drawWound, pain : () => drawSense('pain'), painlife : drawPainLife,
+               blood : drawBlood, bloodrows : drawBloodRows, bloodlife : drawBloodLife};
 // The senses first: the fish's stomach follows the fullness input.
-for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife']) dirty.add(part);
+for (const part of ['full', 'ache', 'feed', 'fish', 'yield', 'bars', 'life', ...TAIL_PARTS, 'depth', 'bladder', 'bladderfill', 'bladderlife', ...GILL_PARTS, 'eggfull', 'eggs', 'eggfill', 'egglife', 'spermfull', 'sperm', 'spermfill', 'spermlife', 'smell', 'scentmap', 'noselife', 'tastemap', 'barbels', 'tastes', 'barblife', 'flow', 'flowrose', 'flowlife', 'touch', 'touchskin', 'touchlife', 'tilt', 'tiltlife', 'pain', 'wound', 'painlife', 'blood', 'bloodrows', 'bloodlife']) dirty.add(part);
 repaint();
 showGut(0);
 // Nothing moves while the panel is off the screen, or for someone who has asked for less motion:
